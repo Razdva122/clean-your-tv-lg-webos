@@ -176,7 +176,11 @@ if (window.HomeI18n) window.HomeI18n.add({
     "Homebrew keeps this setting after Clean Your TV is removed. You can change it in Homebrew Channel.": "Homebrew keeps this setting after Clean Your TV is removed. You can change it in Homebrew Channel.",
     "Homebrew blocking is set to on.": "Homebrew blocking is set to on.",
     "Homebrew blocking is set to off.": "Homebrew blocking is set to off.",
-    "Changes apply after a TV restart. Standby is not enough. Active blocking is not verified here.": "Changes apply after a TV restart. Standby is not enough. Active blocking is not verified here."
+    "Changes apply after a TV restart. Standby is not enough. Active blocking is not verified here.": "Changes apply after a TV restart. Standby is not enough. Active blocking is not verified here.",
+    "System": "System",
+    "eARC audio delay fix": "eARC audio delay fix",
+    "Block Bluetooth": "Block Bluetooth",
+    "Block microphone": "Block microphone"
   },
   "de": {
     "Checking the updated launcher and restored settings…": "Der aktualisierte Home-Bildschirm und die wiederhergestellten Einstellungen werden geprüft…",
@@ -354,7 +358,11 @@ if (window.HomeI18n) window.HomeI18n.add({
     "Homebrew keeps this setting after Clean Your TV is removed. You can change it in Homebrew Channel.": "Homebrew behält diese Einstellung nach dem Entfernen von Clean Your TV. Sie können sie in Homebrew Channel ändern.",
     "Homebrew blocking is set to on.": "Homebrew-Sperre ist eingeschaltet.",
     "Homebrew blocking is set to off.": "Homebrew-Sperre ist ausgeschaltet.",
-    "Changes apply after a TV restart. Standby is not enough. Active blocking is not verified here.": "Änderungen gelten nach einem TV-Neustart. Standby reicht nicht aus. Die aktive Sperre wird hier nicht geprüft."
+    "Changes apply after a TV restart. Standby is not enough. Active blocking is not verified here.": "Änderungen gelten nach einem TV-Neustart. Standby reicht nicht aus. Die aktive Sperre wird hier nicht geprüft.",
+    "System": "System",
+    "eARC audio delay fix": "eARC-Audioverzögerung beheben",
+    "Block Bluetooth": "Bluetooth blockieren",
+    "Block microphone": "Mikrofon blockieren"
   },
   "es": {
     "Checking the updated launcher and restored settings…": "Comprobando Home actualizado y los ajustes restaurados…",
@@ -532,7 +540,11 @@ if (window.HomeI18n) window.HomeI18n.add({
     "Homebrew keeps this setting after Clean Your TV is removed. You can change it in Homebrew Channel.": "Homebrew conserva este ajuste al desinstalar Clean Your TV. Puedes cambiarlo en Homebrew Channel.",
     "Homebrew blocking is set to on.": "El bloqueo de Homebrew está activado.",
     "Homebrew blocking is set to off.": "El bloqueo de Homebrew está desactivado.",
-    "Changes apply after a TV restart. Standby is not enough. Active blocking is not verified here.": "Los cambios se aplican tras reiniciar el TV. El modo de espera no basta. Aquí no se verifica el bloqueo activo."
+    "Changes apply after a TV restart. Standby is not enough. Active blocking is not verified here.": "Los cambios se aplican tras reiniciar el TV. El modo de espera no basta. Aquí no se verifica el bloqueo activo.",
+    "System": "Sistema",
+    "eARC audio delay fix": "Corrección de retardo de audio eARC",
+    "Block Bluetooth": "Bloquear Bluetooth",
+    "Block microphone": "Bloquear micrófono"
   },
   "pt-BR": {
     "Checking the updated launcher and restored settings…": "Verificando o Home atualizado e as configurações restauradas…",
@@ -710,7 +722,11 @@ if (window.HomeI18n) window.HomeI18n.add({
     "Homebrew keeps this setting after Clean Your TV is removed. You can change it in Homebrew Channel.": "O Homebrew mantém esta configuração após remover o Clean Your TV. Você pode alterá-la no Homebrew Channel.",
     "Homebrew blocking is set to on.": "O bloqueio do Homebrew está ativado.",
     "Homebrew blocking is set to off.": "O bloqueio do Homebrew está desativado.",
-    "Changes apply after a TV restart. Standby is not enough. Active blocking is not verified here.": "As alterações valem após reiniciar a TV. O modo de espera não basta. O bloqueio ativo não é verificado aqui."
+    "Changes apply after a TV restart. Standby is not enough. Active blocking is not verified here.": "As alterações valem após reiniciar a TV. O modo de espera não basta. O bloqueio ativo não é verificado aqui.",
+    "System": "Sistema",
+    "eARC audio delay fix": "Correção de atraso de áudio eARC",
+    "Block Bluetooth": "Bloquear Bluetooth",
+    "Block microphone": "Bloquear microfone"
   },
   "fr": {
     "Checking the updated launcher and restored settings…": "Vérification de Home mis à jour et des réglages restaurés…",
@@ -888,7 +904,11 @@ if (window.HomeI18n) window.HomeI18n.add({
     "Homebrew keeps this setting after Clean Your TV is removed. You can change it in Homebrew Channel.": "Homebrew conserve ce réglage après la suppression de Clean Your TV. Vous pouvez le modifier dans Homebrew Channel.",
     "Homebrew blocking is set to on.": "Le blocage Homebrew est activé.",
     "Homebrew blocking is set to off.": "Le blocage Homebrew est désactivé.",
-    "Changes apply after a TV restart. Standby is not enough. Active blocking is not verified here.": "Les changements s’appliquent après un redémarrage du TV. La veille ne suffit pas. Le blocage effectif n’est pas vérifié ici."
+    "Changes apply after a TV restart. Standby is not enough. Active blocking is not verified here.": "Les changements s’appliquent après un redémarrage du TV. La veille ne suffit pas. Le blocage effectif n’est pas vérifié ici.",
+    "System": "Système",
+    "eARC audio delay fix": "Correction du délai audio eARC",
+    "Block Bluetooth": "Bloquer le Bluetooth",
+    "Block microphone": "Bloquer le microphone"
   },
   "it": {
     "Checking the updated launcher and restored settings…": "Verifica di Home aggiornato e delle impostazioni ripristinate…",
@@ -1066,7 +1086,11 @@ if (window.HomeI18n) window.HomeI18n.add({
     "Homebrew keeps this setting after Clean Your TV is removed. You can change it in Homebrew Channel.": "Homebrew conserva questa impostazione dopo la rimozione di Clean Your TV. Puoi cambiarla in Homebrew Channel.",
     "Homebrew blocking is set to on.": "Il blocco Homebrew è attivato.",
     "Homebrew blocking is set to off.": "Il blocco Homebrew è disattivato.",
-    "Changes apply after a TV restart. Standby is not enough. Active blocking is not verified here.": "Le modifiche si applicano dopo un riavvio della TV. Lo standby non basta. Il blocco effettivo non viene verificato qui."
+    "Changes apply after a TV restart. Standby is not enough. Active blocking is not verified here.": "Le modifiche si applicano dopo un riavvio della TV. Lo standby non basta. Il blocco effettivo non viene verificato qui.",
+    "System": "Sistema",
+    "eARC audio delay fix": "Correzione ritardo audio eARC",
+    "Block Bluetooth": "Blocca Bluetooth",
+    "Block microphone": "Blocca microfono"
   },
   "ko": {
     "Checking the updated launcher and restored settings…": "업데이트된 Home과 복원된 설정을 확인하는 중…",
@@ -1244,7 +1268,11 @@ if (window.HomeI18n) window.HomeI18n.add({
     "Homebrew keeps this setting after Clean Your TV is removed. You can change it in Homebrew Channel.": "Clean Your TV를 제거해도 Homebrew는 이 설정을 유지합니다. Homebrew Channel에서 변경할 수 있습니다.",
     "Homebrew blocking is set to on.": "Homebrew 차단이 켜져 있습니다.",
     "Homebrew blocking is set to off.": "Homebrew 차단이 꺼져 있습니다.",
-    "Changes apply after a TV restart. Standby is not enough. Active blocking is not verified here.": "변경 사항은 TV를 다시 시작한 후 적용됩니다. 대기 모드로는 충분하지 않습니다. 실제 차단 여부는 여기서 확인하지 않습니다."
+    "Changes apply after a TV restart. Standby is not enough. Active blocking is not verified here.": "변경 사항은 TV를 다시 시작한 후 적용됩니다. 대기 모드로는 충분하지 않습니다. 실제 차단 여부는 여기서 확인하지 않습니다.",
+    "System": "시스템",
+    "eARC audio delay fix": "eARC 오디오 지연 수정",
+    "Block Bluetooth": "블루투스 차단",
+    "Block microphone": "마이크 차단"
   },
   "hi": {
     "Checking the updated launcher and restored settings…": "अपडेट किए गए Home और बहाल सेटिंग की जाँच हो रही है…",
@@ -1422,7 +1450,11 @@ if (window.HomeI18n) window.HomeI18n.add({
     "Homebrew keeps this setting after Clean Your TV is removed. You can change it in Homebrew Channel.": "Clean Your TV हटाने के बाद भी Homebrew यह सेटिंग रखता है। इसे Homebrew Channel में बदल सकते हैं।",
     "Homebrew blocking is set to on.": "Homebrew अवरोध चालू है।",
     "Homebrew blocking is set to off.": "Homebrew अवरोध बंद है।",
-    "Changes apply after a TV restart. Standby is not enough. Active blocking is not verified here.": "बदलाव टीवी पुनः शुरू होने के बाद लागू होते हैं। स्टैंडबाय पर्याप्त नहीं है। यहाँ वास्तविक अवरोध की पुष्टि नहीं होती।"
+    "Changes apply after a TV restart. Standby is not enough. Active blocking is not verified here.": "बदलाव टीवी पुनः शुरू होने के बाद लागू होते हैं। स्टैंडबाय पर्याप्त नहीं है। यहाँ वास्तविक अवरोध की पुष्टि नहीं होती।",
+    "System": "सिस्टम",
+    "eARC audio delay fix": "eARC ऑडियो विलंब सुधार",
+    "Block Bluetooth": "ब्लूटूथ ब्लॉक करें",
+    "Block microphone": "माइक्रोफ़ोन ब्लॉक करें"
   },
   "pl": {
     "Checking the updated launcher and restored settings…": "Sprawdzanie zaktualizowanego Home i przywróconych ustawień…",
@@ -1600,7 +1632,11 @@ if (window.HomeI18n) window.HomeI18n.add({
     "Homebrew keeps this setting after Clean Your TV is removed. You can change it in Homebrew Channel.": "Homebrew zachowuje to ustawienie po usunięciu Clean Your TV. Można je zmienić w Homebrew Channel.",
     "Homebrew blocking is set to on.": "Blokada Homebrew jest włączona.",
     "Homebrew blocking is set to off.": "Blokada Homebrew jest wyłączona.",
-    "Changes apply after a TV restart. Standby is not enough. Active blocking is not verified here.": "Zmiany działają po ponownym uruchomieniu TV. Czuwanie nie wystarczy. Działanie blokady nie jest tutaj sprawdzane."
+    "Changes apply after a TV restart. Standby is not enough. Active blocking is not verified here.": "Zmiany działają po ponownym uruchomieniu TV. Czuwanie nie wystarczy. Działanie blokady nie jest tutaj sprawdzane.",
+    "System": "System",
+    "eARC audio delay fix": "Naprawa opóźnienia dźwięku eARC",
+    "Block Bluetooth": "Blokuj Bluetooth",
+    "Block microphone": "Blokuj mikrofon"
   },
   "ru": {
     "Checking the updated launcher and restored settings…": "Проверяем обновлённый Home и восстановленные настройки…",
@@ -1778,6 +1814,10 @@ if (window.HomeI18n) window.HomeI18n.add({
     "Homebrew keeps this setting after Clean Your TV is removed. You can change it in Homebrew Channel.": "Homebrew сохраняет эту настройку после удаления Clean Your TV. Изменить её можно в Homebrew Channel.",
     "Homebrew blocking is set to on.": "Блокировка Homebrew включена в настройках.",
     "Homebrew blocking is set to off.": "Блокировка Homebrew выключена в настройках.",
-    "Changes apply after a TV restart. Standby is not enough. Active blocking is not verified here.": "Изменения применяются после перезапуска ТВ. Режима ожидания недостаточно. Фактическая блокировка здесь не проверяется."
+    "Changes apply after a TV restart. Standby is not enough. Active blocking is not verified here.": "Изменения применяются после перезапуска ТВ. Режима ожидания недостаточно. Фактическая блокировка здесь не проверяется.",
+    "System": "Система",
+    "eARC audio delay fix": "Исправление задержки звука eARC",
+    "Block Bluetooth": "Блокировать Bluetooth",
+    "Block microphone": "Блокировать микрофон"
   }
 });

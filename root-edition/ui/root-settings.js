@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   function t(source, params) { if (window.HomeI18n) return window.HomeI18n.t(source, params); return String(source).replace(/\{(\w+)\}/g, function (_, key) { return params && params[key] !== undefined ? params[key] : '{' + key + '}'; }); }
-  var panel, message, buttons, selected = 0, busy = false, previous, rootStatus = null;
+  var panel, message, buttons, selected = 0, busy = false, previous, rootStatus = null, toggleState = {};
   var checkingUpdates = false;
   function checkUpdates() {
     if (checkingUpdates || !window.RootUpdates || !window.RootUpdates.rpc) return;
@@ -74,7 +74,34 @@
       refreshMode().then(function () { message.textContent = t(error); });
     });
   }
-  var order = [3, 1, 5, 4, 0, 6, 2];
+  function refreshToggles() {
+    request('luna://com.cleanyourtv.root.preview.service/getToggles', {}, 10000).then(function (r) {
+      if (r && r.returnValue && r.toggles) {
+        toggleState = r.toggles;
+        if (buttons[7]) buttons[7].setAttribute('aria-checked', String(!!toggleState.earcFix));
+        if (buttons[8]) buttons[8].setAttribute('aria-checked', String(!!toggleState.disableBluetooth));
+        if (buttons[9]) buttons[9].setAttribute('aria-checked', String(!!toggleState.disableMicrophone));
+      }
+    }).catch(function () {});
+  }
+  function toggleSetting(key, buttonIndex) {
+    if (busy) return;
+    var next = !toggleState[key];
+    busy = true; buttons.forEach(function (b) { b.disabled = true; });
+    request('luna://com.cleanyourtv.root.preview.service/setToggle', {key: key, value: next}, 10000).then(function (r) {
+      busy = false; buttons.forEach(function (b) { b.disabled = false; });
+      if (r && r.returnValue && r.toggles) {
+        toggleState = r.toggles;
+        buttons[buttonIndex].setAttribute('aria-checked', String(!!toggleState[key]));
+      }
+      if (!panel.hidden) focus(buttonIndex);
+    }).catch(function (e) {
+      busy = false; buttons.forEach(function (b) { b.disabled = false; });
+      message.textContent = t(e.message);
+      if (!panel.hidden) focus(buttonIndex);
+    });
+  }
+  var order = [3, 1, 7, 8, 9, 5, 4, 6, 0, 2];
   function focus(index) {
     selected = index;
     if (!buttons[selected].disabled) buttons[selected].focus();
@@ -96,6 +123,9 @@
     if (index === 2) return close();
     if (index === 5) { if (window.HomeI18n) window.HomeI18n.openLanguagePicker(); return; }
     if (index === 3) return changeMode();
+    if (index === 7) return toggleSetting('earcFix', 7);
+    if (index === 8) return toggleSetting('disableBluetooth', 8);
+    if (index === 9) return toggleSetting('disableMicrophone', 9);
     if (index === 6) {
       if (!window.RootFirmware) return;
       panel.hidden = true;
@@ -129,6 +159,9 @@
     text(home, 'h2', 'Your Home screen');
     message = text(home, 'p', '', 'settings-status'); message.setAttribute('aria-live','polite');
     var homeActions = document.createElement('div'); homeActions.className = 'renewal-actions home-routing-actions'; home.appendChild(homeActions);
+    var system = document.createElement('section'); system.className = 'settings-section'; card.appendChild(system);
+    text(system, 'h2', 'System');
+    var systemToggles = document.createElement('div'); systemToggles.className = 'renewal-actions home-routing-actions'; system.appendChild(systemToggles);
     var more = document.createElement('section'); more.className = 'settings-section'; card.appendChild(more);
     var links = document.createElement('div'); links.className = 'renewal-actions settings-links'; more.appendChild(links);
     var firmware = document.createElement('div'); firmware.className = 'renewal-actions settings-firmware'; more.appendChild(firmware);
@@ -137,10 +170,10 @@
     var back = document.createElement('div'); back.className = 'renewal-actions'; footer.appendChild(back);
     buttons = [];
     order.forEach(function (i) {
-      var labels = ['TV settings','Open LG Home','Back to Home','Change Home','Software updates','Language','LG firmware updates'];
+      var labels = ['TV settings','Open LG Home','Back to Home','Change Home','Software updates','Language','LG firmware updates','eARC audio delay fix','Block Bluetooth','Block microphone'];
       var b = document.createElement('button'); b.textContent = t(labels[i]);
-      if (i === 3) { b.className = 'home-routing-switch'; b.setAttribute('role','switch'); b.setAttribute('aria-checked','false'); }
-      var target = i === 6 ? firmware : i === 3 || i === 1 ? homeActions : i === 4 || i === 0 || i === 5 ? links : back;
+      if (i === 3 || i === 7 || i === 8 || i === 9) { b.className = 'home-routing-switch'; b.setAttribute('role','switch'); b.setAttribute('aria-checked','false'); }
+      var target = i === 7 || i === 8 || i === 9 ? systemToggles : i === 6 ? firmware : i === 3 || i === 1 ? homeActions : i === 4 || i === 0 || i === 5 ? links : back;
       if (i === 1) {
         b.className = 'home-visit-button';
         b.setAttribute('aria-describedby', 'rootHomeVisitHint');
@@ -173,6 +206,7 @@
       message.textContent = t('Checking whether Home control is on…');
       panel.hidden = false; focus(3); refreshMode().then(function () { if (!panel.hidden && !busy && !buttons[3].disabled) focus(3); });
       checkUpdates();
+      refreshToggles();
     }
   };
 }());

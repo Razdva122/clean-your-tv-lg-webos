@@ -1,5 +1,6 @@
 'use strict';
 var Service = require('webos-service');
+var fs = require('fs');
 var execFile = require('child_process').execFile;
 var service = new Service('com.cleanyourtv.root.preview.service');
 function pythonCommand(){return require('/var/lib/clean-your-tv-root/python_boot.js').command('/var/lib/clean-your-tv-root');}
@@ -25,6 +26,38 @@ Object.keys(handlers).forEach(function (method) {
   });
 });
 // Activity registration belongs to the root installer, not the web service.
+
+var TOGGLES_PATH = '/media/developer/natxo/settings.json';
+var TOGGLE_KEYS = ['earcFix', 'disableBluetooth', 'disableMicrophone'];
+var APPLY_SCRIPT = __dirname + '/apply-toggles.sh';
+function readToggles() {
+  try { return JSON.parse(fs.readFileSync(TOGGLES_PATH, 'utf8')); }
+  catch (_) { return {}; }
+}
+function saveToggles(toggles) {
+  try { fs.mkdirSync('/media/developer/natxo', {recursive: true}); } catch (_) {}
+  fs.writeFileSync(TOGGLES_PATH + '.tmp', JSON.stringify(toggles, null, 2));
+  fs.renameSync(TOGGLES_PATH + '.tmp', TOGGLES_PATH);
+}
+function applyToggles() {
+  execFile('/bin/sh', [APPLY_SCRIPT], {timeout: 30000}, function () {});
+}
+service.register('getToggles', function (message) {
+  try { message.respond({returnValue: true, toggles: readToggles()}); }
+  catch (e) { message.respond({returnValue: false, errorText: String(e)}); }
+});
+service.register('setToggle', function (message) {
+  try {
+    var key = message.payload.key, value = !!message.payload.value;
+    if (TOGGLE_KEYS.indexOf(key) < 0) { message.respond({returnValue: false, errorText: 'Invalid toggle key'}); return; }
+    var toggles = readToggles();
+    toggles[key] = value;
+    saveToggles(toggles);
+    applyToggles();
+    message.respond({returnValue: true, toggles: toggles});
+  } catch (e) { message.respond({returnValue: false, errorText: String(e)}); }
+});
+applyToggles();
 
 var inventoryPending=null;
 service.register('listApps',function(message){
