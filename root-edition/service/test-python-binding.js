@@ -10,7 +10,7 @@ const fakeFs={lstatSync(name){
  return {uid:meta.uid===undefined?0:meta.uid,mode:meta.mode===undefined?(file?0o100700:0o40755):meta.mode,nlink:1,size:file?Buffer.byteLength(files[name]):0,isSymbolicLink:()=>!!meta.link,isFile:()=>file,isDirectory:()=>!file};
 },readFileSync(name,encoding){return encoding?files[name]:Buffer.from(files[name]);}};
 const marker=path.join(fs.mkdtempSync(path.join(os.tmpdir(),'root-binding-')),'executed');
-const child={execFile(){spawns++;throw Error('unexpected service spawn');},spawnSync(command){
+const child={execFile(...a){spawns++;const cb=a[a.length-1];if(typeof cb==='function')return cb(Error('unexpected service spawn'));throw Error('unexpected service spawn');},spawnSync(command){
  spawns++;
  if(files[command]&&files[command].indexOf('touch ')!==-1)require('child_process').execFileSync('/bin/sh',['-c',files[command]]);
  return {status:0};
@@ -27,6 +27,7 @@ vm.runInNewContext(fs.readFileSync(__dirname+'/service.js','utf8'),{require(name
  if(name===state+'/python_boot.js')return helper;
  return require(name);
 },__dirname,process:{getuid:()=>0}});
+spawns=0;
 (async()=>{
  assert.equal(helper.command(state),'/usr/bin/python3');
  files[executable]='verified-python';
