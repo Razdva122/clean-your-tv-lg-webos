@@ -1,5 +1,11 @@
 # Homebrew Installer candidate acceptance
 
+Current session: [2026-10-27 catalog preparation](../../homebrew/catalog/SUBMISSION.md)
+records a successful isolated package install and a webOS 11/Homebrew 0.7.3
+API-access blocker. These bounded observations do not complete the product
+installation matrix below. Its supervised temporary upstream-patch test must
+remain separate from compatibility with an unmodified Homebrew installation.
+
 Status: **UNRELEASED CANDIDATE — physical acceptance NOT RUN**.
 No new model, firmware, webOS, input ABI, boot or Homebrew catalog compatibility
 is established. All current implementation and code reviews were AI-assisted;
