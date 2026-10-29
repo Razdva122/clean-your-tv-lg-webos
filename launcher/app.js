@@ -57,6 +57,7 @@
     focusGlassVisible = false,
     moveState = null,
     activeBridges = [];
+  if (CONFIG.theme === "ruska") document.body.classList.add("theme-ruska");
   // Retain service bridges until their replies arrive; subscriptions stay alive.
   function callLuna(uri, params, callback, timeout) {
     var bridge, timer, done = false;
@@ -748,6 +749,11 @@
     }
   }
   function updateAmbient(rgb) {
+    if (CONFIG.theme === "ruska") {
+      var tint = (rgb || [180, 190, 205]).join(",");
+      focusGlass.style.boxShadow = "0 0 8px 2px rgba(" + tint + ",0.7), 0 0 28px 6px rgba(" + tint + ",0.35)";
+      return;
+    }
     if (rgb) {
       var color = rgb.join(",");
       if (color !== ambientColor) {

@@ -34,6 +34,18 @@ html, body {
   cursor: default;
 }
 
+/* Ruska artwork and visual settings from Gathin23/cleanyourtv (MIT).
+   Opt in with CONFIG.theme = "ruska"; existing layouts keep their geometry. */
+body.theme-ruska {
+  background: #07080d url('themes/ruska/wallpaper.jpg') center center / cover no-repeat;
+}
+body.theme-ruska .ambient { display: none; }
+body.theme-ruska #dockBand { background: rgba(20, 20, 22, 0.7); }
+body.theme-ruska #glass {
+  transition: opacity 180ms ease, transform 420ms cubic-bezier(0.25, 0.8, 0.3, 1);
+}
+body.theme-ruska .item.focused .card { transition: transform 260ms ease-out; }
+
 /* ---- ambient glow ---------------------------------------------------------------------------- */
 
 .ambient {
