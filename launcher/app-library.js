@@ -18,6 +18,7 @@
   }
   function create(storage, inventory, config) {
     var catalog = clean(inventory), hidden = unique(config.hiddenApps || []), ids, saved;
+    var fixed = Array.isArray(config.homeApps) ? unique(config.homeApps) : null;
     try {
       saved = JSON.parse(storage.getItem(KEY));
       if (!saved || saved.version !== 1 || !Array.isArray(saved.ids) || !Array.isArray(saved.hidden) || !Array.isArray(saved.catalog)) saved = null;
@@ -30,7 +31,7 @@
       var first = legacy && legacy.dock === (config.dockApps || []).join(',') && Array.isArray(legacy.ids) ? legacy.ids : (config.dockApps || []).slice(0, config.columns || 4);
       ids = unique(first.concat(catalog.slice().sort(function(a,b) { return a.title.localeCompare(b.title); }).map(function(a) { return a.id; })));
     }
-    function visible() { return ids.map(find).filter(function(a) { return a && hidden.indexOf(a.id) < 0; }); }
+    function visible() { return (fixed || ids).map(find).filter(function(a) { return a && (fixed !== null || hidden.indexOf(a.id) < 0); }); }
     function find(id) { return catalog.filter(function(a) { return a.id === id; })[0]; }
     function save(nextIds, nextHidden) {
       var state = {version:1, ids:unique(nextIds), hidden:unique(nextHidden), catalog:catalog};

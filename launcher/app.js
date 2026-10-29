@@ -58,6 +58,7 @@
     moveState = null,
     activeBridges = [];
   if (CONFIG.theme === "ruska") document.body.classList.add("theme-ruska");
+  if (Array.isArray(CONFIG.homeApps)) document.body.classList.add("minimal-home");
   // Retain service bridges until their replies arrive; subscriptions stay alive.
   function callLuna(uri, params, callback, timeout) {
     var bridge, timer, done = false;
@@ -179,31 +180,33 @@
   function rebuild(focusId) {
     tilesContainer.innerHTML = "";
     tiles = library.visible().map(createTile);
-    var el = document.createElement('div');
-    el.className = 'item add-app';
-    el.setAttribute('role', 'button');
-    el.setAttribute('aria-label', tr('Add app'));
-    el.innerHTML = ht('<div class="card"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 10v28M10 24h28"/></svg></div><div class="name">Add app</div>');
-    var item = {
-      add: true,
-      app: {
-        title: tr('Add app')
-      },
-      el: el,
-      color: [100, 110, 125]
-    };
-    el.addEventListener('mouseover', function () {
-      if (!moveState && !pickerOpen && !undoState) {
-        focusTile(tiles.length - 1);
-      }
-    });
-    el.addEventListener('click', function () {
-      if (!moveState) {
-        openPicker();
-      }
-    });
-    tilesContainer.appendChild(el);
-    tiles.push(item);
+    if (!Array.isArray(CONFIG.homeApps)) {
+      var el = document.createElement('div');
+      el.className = 'item add-app';
+      el.setAttribute('role', 'button');
+      el.setAttribute('aria-label', tr('Add app'));
+      el.innerHTML = ht('<div class="card"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 10v28M10 24h28"/></svg></div><div class="name">Add app</div>');
+      var item = {
+        add: true,
+        app: {
+          title: tr('Add app')
+        },
+        el: el,
+        color: [100, 110, 125]
+      };
+      el.addEventListener('mouseover', function () {
+        if (!moveState && !pickerOpen && !undoState) {
+          focusTile(tiles.length - 1);
+        }
+      });
+      el.addEventListener('click', function () {
+        if (!moveState) {
+          openPicker();
+        }
+      });
+      tilesContainer.appendChild(el);
+      tiles.push(item);
+    }
     layoutTiles();
     tiles.forEach(function (tile) {
       tile.el.classList.add('shown');
@@ -216,7 +219,8 @@
         break;
       }
     }
-    focusTile(nextFocus);
+    if (tiles.length) focusTile(nextFocus);
+    else focusTopButton(0);
   }
   function activateTile(item) {
     if (item.add) {
@@ -239,7 +243,7 @@
     okPressed = false;
   }
   function beginMoving(item) {
-    if (!item || item.add || moveState || pickerOpen || undoState) {
+    if (Array.isArray(CONFIG.homeApps) || !item || item.add || moveState || pickerOpen || undoState) {
       return;
     }
     moveState = {
@@ -641,7 +645,8 @@
     return Math.floor(index / columnCount);
   }
   function tileLeft(index) {
-    return GRID_LEFT + index % columnCount * columnWidth + (columnWidth - CARD_WIDTH) / 2;
+    var offset = Array.isArray(CONFIG.homeApps) ? (columnCount - Math.min(columnCount, tiles.length)) * columnWidth / 2 : 0;
+    return GRID_LEFT + offset + index % columnCount * columnWidth + (columnWidth - CARD_WIDTH) / 2;
   }
   function tileTop(index) {
     var row = rowFor(index);
@@ -878,7 +883,8 @@
       e.classList.remove("focused");
     });
     focusZone = "none";
-    focusTile(focusedTile);
+    if (tiles.length) focusTile(focusedTile);
+    else focusTopButton(0);
   }
   document.addEventListener("keyup", function (event) {
     if (window.RenewalPanel && window.RenewalPanel.isOpen()) {

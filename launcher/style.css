@@ -46,6 +46,10 @@ body.theme-ruska #glass {
 }
 body.theme-ruska .item.focused .card { transition: transform 260ms ease-out; }
 
+/* Fixed, deliberately small Home selection. The normal app layout is retained. */
+body.minimal-home #hero { display: none; }
+body.minimal-home .item.dock .name { display: block; opacity: 1; transform: none; }
+
 /* ---- ambient glow ---------------------------------------------------------------------------- */
 
 .ambient {
