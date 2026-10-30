@@ -8,6 +8,8 @@ Root setup may download a separate verified TV Python runtime when eligible.
 Prepare the TV using [the installation guide](INSTALL.md), then follow your
 computer's steps below. For Android, use the [Android guide](../android/README.md).
 
+**Unreleased:** a [visible TV checklist](CLI.md#visible-tv-checks-unreleased) shows individual prerequisite results and keeps them on the error screen. Unrun checks remain unverified; `doctor` does not prepare Python or request control pairing.
+
 ## macOS
 
 1. Download `cytv-macos-arm64.zip` for an Apple Silicon Mac (M1 or later), or

@@ -17,6 +17,25 @@ except ImportError:
 
 @unittest.skipUnless(HAS_QT, 'Desktop build dependencies are optional for CLI tests')
 class GuiTests(unittest.TestCase):
+    def test_check_results_survive_error_steps_and_reset_at_home(self):
+        w = Wizard()
+        self.addCleanup(w.close)
+        self.assertTrue(hasattr(w, 'check_panel'), 'Checks need a persistent visible panel')
+        for name, status in [('ssh', 'pass'), ('python3', 'fail'), ('TV Node.js 8+', 'fail'), ('pairing', 'pending')]:
+            w.receive('check', {'id': name, 'label': name, 'status': status, 'detail': '<private>'})
+        w.receive('step', (4, 'Installing', True))
+        w.receive('done', 2)
+        self.assertFalse(w.check_panel.isHidden())
+        text = w.check_panel.toPlainText()
+        self.assertIn('Passed', text)
+        self.assertIn('Failed', text)
+        self.assertIn('Not checked', text)
+        self.assertIn('Node.js 8+', w.subtitle.text(), 'Failed requirement must be visible without scrolling')
+        self.assertIn('&lt;private&gt;', w.check_panel.toHtml())
+        w.home()
+        self.assertTrue(w.check_panel.isHidden())
+        self.assertEqual(w.check_panel.toPlainText(), '')
+
     def test_error_text_is_red_and_escaped_without_coloring_progress(self):
         w = Wizard()
         self.addCleanup(w.close)

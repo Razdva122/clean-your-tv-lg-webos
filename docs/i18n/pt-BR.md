@@ -6,6 +6,8 @@
 
 Este guia descreve a versão publicada **[1.4.1](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.4.1)**. A aceitação no C3 abrange os testes registrados de energia, Home, foco, estado desligado e reversão manual. Outras TVs, áudio eARC e dispositivos Android físicos continuam sem verificação; instalar com sucesso não comprova compatibilidade. [Escopo testado (inglês)](../RELEASE-1.4.0-ACCEPTANCE.md).
 
+**Instalador ainda não publicado:** console, desktop e Android mostram cada verificação da TV como não verificada, em andamento, aprovada, falha ou não confirmada. Os resultados permanecem após um erro. Node.js/Python são verificados na TV; `doctor` não prepara Python nem solicita pareamento de controle. Salve o relatório antes de tentar novamente.
+
 ## Escolher a edição
 
 No-root e Root são opções equivalentes para diferentes configurações da TV. Escolha No-root para LG Developer Mode ou Root se já tiver acesso root por SSH. A compatibilidade e os testes realizados são específicos de cada edição.

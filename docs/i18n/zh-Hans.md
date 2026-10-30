@@ -6,6 +6,8 @@
 
 本指南适用于已发布的 **[1.4.1](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.4.1)**。C3 验收仅涵盖已记录的电源、Home、焦点、保持关闭状态及手动回滚测试。其他电视、eARC 音频和实体 Android 设备仍未验证；安装成功并不证明兼容。[测试范围（英文）](../RELEASE-1.4.0-ACCEPTANCE.md)。
 
+**未发布的安装程序：**控制台、桌面和 Android 界面会分别显示电视检查状态：未检查、正在检查、通过、未通过或无法验证。出错后仍保留结果。Node.js/Python 检查针对电视的运行环境；`doctor` 不会准备 Python，也不会请求遥控配对。重试前请保存报告。
+
 ## 选择版本
 
 No-root 和 Root 是适用于不同电视配置的同等选项。使用 LG 开发者模式请选择 No-root；已有 root SSH 访问请选择 Root。两种版本的兼容性与测试范围分别记录。
