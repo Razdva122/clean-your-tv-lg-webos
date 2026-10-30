@@ -1,7 +1,8 @@
 # v1.5.3 — Ribbon, installer checks and legacy Helper runtime
 
 Status: unpublished candidate. The maintainer approved adding Ribbon to 1.5.3
-and rebuilding the frozen candidate. The prior successful build and
+and rebuilding after the remaining planned PRs are integrated. The intermediate
+build was cancelled at the maintainer’s request. The prior successful build and
 [verification report](history/2026-10-30-release-1.5.3-final-verification.md)
 remain historical evidence for their original artifacts. The expanded candidate
 requires a new complete build and affected acceptance; see the
@@ -10,6 +11,8 @@ Physical TV acceptance, the new Helper transition and the unresolved standby
 decision remain pending. This release must not be presented as universal TV compatibility.
 
 ## Changes
+
+- #191: separate Appearance layout/app controls from Themes, add ID-first theme installation, show the effective Columns count and place language choices directly in their category. Remote navigation, delayed-status focus and twelve-language browser checks passed; physical TV acceptance remains pending.
 
 - #188: bundle Ribbon for offline selection in both editions, with theme-driven
   scenic ribbon geometry, slanted cards and shortcut placement. Navigation enters

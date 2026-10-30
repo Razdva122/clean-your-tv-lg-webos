@@ -31,7 +31,7 @@ LG screens or obtain root access.
 ## Themes
 
 Change the layout, background and app-card styling with built-in and community
-themes. Manage installed themes and discover more from Settings on your TV.
+themes. Manage installed themes and discover more in **Settings → Themes** on your TV.
 
 **[Browse and try themes in your browser →](https://razdva122.github.io/clean-your-tv-lg-webos/)**
 

@@ -67,6 +67,16 @@
       "pr": 188,
       "issues": [],
       "summary": "Add built-in Ribbon with theme-driven scenic ribbon options"
+    },
+    {
+      "pr": 189,
+      "issues": [],
+      "summary": "Avoid GitHub large-page failures during Root QA admission"
+    },
+    {
+      "pr": 191,
+      "issues": [],
+      "summary": "Separate theme settings and expose language and column choices"
     }
   ],
   "excluded": [],
