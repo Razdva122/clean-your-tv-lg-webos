@@ -1,7 +1,44 @@
 {
   "schema": 1,
   "version": null,
-  "changes": [],
+  "changes": [
+    {
+      "pr": 117,
+      "issues": [
+        116
+      ],
+      "summary": "Explain Homebrew Installer exec denial and preserve recovery requests"
+    },
+    {
+      "pr": 175,
+      "issues": [
+        160,
+        164
+      ],
+      "summary": "Show TV prerequisite checks in CLI, desktop and Android installers"
+    },
+    {
+      "pr": 176,
+      "issues": [
+        170
+      ],
+      "summary": "Preserve Appearance scroll when fixed themes hide Columns"
+    },
+    {
+      "pr": 177,
+      "issues": [
+        133
+      ],
+      "summary": "Prepare isolated read-only Root recovery admission"
+    },
+    {
+      "pr": 180,
+      "issues": [
+        171
+      ],
+      "summary": "Record guarded Root wake refusals and power stream outcomes"
+    }
+  ],
   "excluded": [],
   "acceptance": ""
 }
