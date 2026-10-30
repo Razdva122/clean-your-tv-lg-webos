@@ -1,7 +1,8 @@
 # v1.5.3 — Ribbon, installer checks and legacy Helper runtime
 
 Status: unpublished candidate. The maintainer approved adding Ribbon to 1.5.3
-and rebuilding the frozen candidate. The prior successful build and
+and rebuilding after the remaining planned PRs are integrated. The intermediate
+build was cancelled at the maintainer’s request. The prior successful build and
 [verification report](history/2026-10-30-release-1.5.3-final-verification.md)
 remain historical evidence for their original artifacts. The expanded candidate
 requires a new complete build and affected acceptance; see the
