@@ -180,6 +180,14 @@ class Recovery:
                 if not isinstance(value,dict):raise ValueError('missing_atomic_cancellation_proof')
         return value
 
+    def saved_candidate(self, identifier):
+        """Read one explicit operation's selector; full admission still follows."""
+        request=_optional_record(self.store,'request-'+operation_id(identifier))
+        candidate=request.get('candidate_sha256') if isinstance(request,dict) else None
+        if not isinstance(candidate,str) or not re.fullmatch('[a-f0-9]{64}',candidate):
+            raise ValueError('original_candidate_required')
+        return candidate
+
     def inspect(self, identifier, candidate):
         recovery=self.receipt(identifier)
         if recovery is not None:
@@ -201,7 +209,8 @@ class Recovery:
         if recovery and recovery.get('proof_sha256')!=proof:raise ValueError('cancellation_proof_changed')
         state=recovery['stage'] if recovery else 'admissible'
         if state=='cancelled-and-removed' and not lease['terminal']:state='cancellation-terminal-pending'
-        return dict(operation=identifier,state=state,lease_terminal=lease['terminal'],proof_sha256=proof,payload_files=len(hashes),home_changed=False)
+        return dict(operation=identifier,candidate_sha256=candidate,code_sha256=self.code_sha256,
+                    state=state,lease_terminal=lease['terminal'],proof_sha256=proof,payload_files=len(hashes),home_changed=False)
 
     def verify_absent(self, terminal, *, cleanup=False, provision=None):
         if not terminal_removal(terminal,APP):raise ValueError('actual_remove_terminal_required')
@@ -283,7 +292,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action',choices=('inspect','remove'))
     parser.add_argument('--operation',required=True)
-    parser.add_argument('--candidate',required=True)
+    parser.add_argument('--candidate')
     parser.add_argument('--code-sha256',required=True)
     parser.add_argument('--proof-sha256')
     args=parser.parse_args()
@@ -294,9 +303,9 @@ def main():
     if trusted_code_digest(code)!=args.code_sha256:raise ValueError('reviewed_recovery_code_changed')
     owner=Ownership.__new__(Ownership);owner.store=store
     recovery=Recovery(LocalDevice(),owner,code_sha256=args.code_sha256)
-    if args.action=='inspect':result=recovery.inspect(args.operation,args.candidate)
+    if args.action=='inspect':result=recovery.inspect(args.operation,args.candidate if args.candidate is not None else recovery.saved_candidate(args.operation))
     else:
-        if args.proof_sha256 is None:parser.error('remove requires a reviewed admission proof')
+        if args.candidate is None or args.proof_sha256 is None:parser.error('remove requires the original candidate and a reviewed admission proof')
         result=recovery.remove(args.operation,args.candidate,args.proof_sha256)
     print(json.dumps(result,sort_keys=True))
 
