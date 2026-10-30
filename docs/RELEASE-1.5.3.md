@@ -1,9 +1,9 @@
 # v1.5.3 — Installer checks, Appearance and legacy Helper runtime
 
-Status: unpublished candidate. The first frozen source passed its complete
-[build and automated verification](history/2026-10-30-release-1.5.3-verification.md).
-Current documentation corrections change build inputs and require a new final
-build; exact-artifact verification and affected physical acceptance remain pending. This release must not be presented as universal TV compatibility.
+Status: unpublished candidate. Corrected source passed the complete final build
+and [delivered-artifact/host/Android verification](history/2026-10-30-release-1.5.3-final-verification.md).
+Physical TV acceptance, the new Helper transition and the unresolved standby
+decision remain pending. This release must not be presented as universal TV compatibility.
 
 ## Changes
 
@@ -40,8 +40,8 @@ build; exact-artifact verification and affected physical acceptance remain pendi
 | System supervisor | 1.1.2 | 1.1.2 | Executable supervisor/IPK closure unchanged |
 
 Home, Helper, Root/infrastructure, both Updaters and all computer/Android installers
-must be rebuilt from this source. An unchanged Helper version would select the
-published package and omit the runtime change. Existing supervisors remain pinned;
+must be rebuilt from this source. The changed Helper runtime requires a new
+version; published 0.6.20 must not be replaced with different bytes. Existing supervisors remain pinned;
 normal admission, signatures and minimum-supervisor checks remain unchanged.
 
 ## Delivery and acceptance limits
@@ -65,7 +65,8 @@ release approval. Root firmware support and other users' retained recovery remai
 separate unresolved work. The independent Homebrew Installer stays unreleased
 with promotion disabled.
 
-The coordinator must pin the final complete build after documentation corrections, record scoped controls,
-startup, UI and update/rollback results, finish documentation and satisfy Release
+The coordinator pinned the final complete build at run 41095949258 / attempt 2.
+Remaining work is to record scoped controls,
+startup, UI and update/rollback results and satisfy Release
 policy before main/publication. No new physical compatibility, phone test,
 installer success or completed device recovery is claimed by these notes.
