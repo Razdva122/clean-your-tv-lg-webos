@@ -57,6 +57,11 @@ const source = file => fs.readFileSync(path.join(root, file), 'utf8');
             assert.equal(result.focus,focused==='body'?'':focused,'preserve actual focus');
           }
           // CSS overriding display for footprint must not expose a hidden control.
+          assert.equal(await page.locator('#row').getAttribute('aria-hidden'),'true');
+          assert.equal(await page.locator('#homeColumns').evaluate(el=>{
+            const r=el.getBoundingClientRect();
+            return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===el;
+          }),false,'pointer hit-testing skips hidden Columns');
           await page.locator('#homeColumns').evaluate(el=>el.focus());
           assert.notEqual(await page.evaluate(()=>document.activeElement.id),'homeColumns');
           await page.locator('#field').focus();await page.keyboard.press('Tab');
@@ -66,6 +71,7 @@ const source = file => fs.readFileSync(path.join(root, file), 'utf8');
           assert(!ax.nodes.some(node=>!node.ignored && node.role?.value==='button' && node.name?.value==='Columns'),
             'hidden Columns absent from accessibility tree');await session.detach();
           await page.evaluate(()=>{available=true;document.dispatchEvent(new Event('home-layout-change'));});
+          assert.equal(await page.locator('#row').getAttribute('aria-hidden'),'false');
           await page.locator('#homeColumns').focus();
           assert.equal(await page.evaluate(()=>document.activeElement.id),'homeColumns','available Columns focus works');
           await page.evaluate(()=>{available=false;document.dispatchEvent(new Event('home-layout-change'));});

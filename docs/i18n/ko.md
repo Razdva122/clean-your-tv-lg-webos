@@ -2,6 +2,8 @@
 
 > v1.5.0: 테마, 갤러리 및 PC에서 TV로 전송. 알려진 Root 제한: Appearance가 110 px 이동할 수 있으며 대기 모드 후 Home이 자동으로 열리지 않을 수 있습니다. 기기별 검증 범위는 제한적입니다. [1.5.0](../RELEASE-1.5.0.md).
 
+> 다음 후보 버전(미출시): 고정 레이아웃 테마는 숨겨진 Columns 행의 공간을 유지하여 Apply 시 Appearance의 스크롤 위치를 보존합니다. 포인터, 키보드 및 접근성 탐색은 숨겨진 Columns를 건너뜁니다. 실제 TV 검증은 아직 진행되지 않았습니다.
+
 [문서](../README.md) · [문제 신고](../FEEDBACK.md)
 
 이 안내서는 공개된 **[1.4.1](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.4.1)** 기준입니다. C3 승인은 기록된 전원, Home, 포커스, 비활성 상태 유지 및 수동 롤백 시험에 한정됩니다. 다른 TV, eARC 오디오와 실제 Android 기기는 확인되지 않았습니다. 설치 성공만으로 호환성을 입증할 수 없습니다. [시험 범위(영어)](../RELEASE-1.4.0-ACCEPTANCE.md).

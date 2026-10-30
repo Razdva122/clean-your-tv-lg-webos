@@ -2,6 +2,8 @@
 
 > v1.5.0：主题、展示页和电脑向电视传输。已知 Root 限制：Appearance 可能偏移 110 px；待机唤醒后 Home 可能不会自动打开。设备实机验证范围仍有限。 [1.5.0](../RELEASE-1.5.0.md).
 
+> 下一候选版本（尚未发布）：固定布局主题保留隐藏 Columns 行的空间，以便 Apply 时保持 Appearance 的滚动位置。指针、键盘和无障碍导航会跳过隐藏的 Columns。实机电视验证尚待完成。
+
 [文档导航](../README.md) · [报告问题](../FEEDBACK.md)
 
 本指南适用于已发布的 **[1.4.1](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.4.1)**。C3 验收仅涵盖已记录的电源、Home、焦点、保持关闭状态及手动回滚测试。其他电视、eARC 音频和实体 Android 设备仍未验证；安装成功并不证明兼容。[测试范围（英文）](../RELEASE-1.4.0-ACCEPTANCE.md)。
