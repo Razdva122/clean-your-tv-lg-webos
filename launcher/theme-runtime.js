@@ -42,6 +42,7 @@
     /* Trusted layouts currently implement only the Classic scale values. */
     if (manifest.layout.spacingScale !== 1 || manifest.layout.textScale !== 1 || manifest.layout.focusScale !== 1.1) fail('layout-invalid', 'unsupported scale preset');
     if (manifest.layout.preset !== 'dock-grid' && (!root.HomeLayoutState || !root.HomeLayoutState.setThemeLayout)) fail('layout-invalid', 'unsupported renderer preset');
+    if (manifest.layout.ribbon && (!root.HomeLayoutState || root.HomeLayoutState.supportsRibbonOptions !== true)) fail('layout-invalid', 'unsupported ribbon options');
     if (manifest.layout.allowColumnOverride === false && (!root.HomeLayoutState || root.HomeLayoutState.supportsColumnPolicy !== true)) fail('layout-invalid', 'unsupported column policy');
     var handles = input.assetHandles || {}, overrides = input.overrides || {}, own = Object.prototype.hasOwnProperty;
     Object.keys(overrides).forEach(function (key) { if (['accent', 'dim', 'wallpaperAssetId'].indexOf(key) < 0) fail('manifest-invalid', 'overrides'); });
@@ -87,6 +88,36 @@
         appendCss('\n' + background.replace(/;\}$/, '!important;}'));
       });
     });
+    if (manifest.layout.ribbon) {
+      var r = manifest.layout.ribbon, prefix = '#homeSurface.ctv-home[data-ribbon="true"] ';
+      function ribbonRule(selector, declarations) { appendCss('\n' + prefix + selector + '{' + declarations + '}'); }
+      ribbonRule('#viewport', 'top:0;bottom:0;overflow:hidden;');
+      ribbonRule('#stage', 'top:0;');
+      ribbonRule('.ctv-position', 'display:none!important;');
+      // Transform the hit target itself: browser pointer hit-testing follows its slanted shape.
+      ribbonRule('.item', 'height:' + r.cardHeight + 'px;padding-bottom:0;border-radius:0;transform:skewX(' + r.skewDeg + 'deg)!important;transform-origin:center bottom;');
+      ribbonRule('.item .card', 'transform:none!important;transition:none;');
+      ribbonRule('.item.focused .card', 'height:' + (r.cardHeight + r.focusLift) + 'px!important;top:-' + r.focusLift + 'px;border:3px solid ' + accent + '!important;transform:none!important;');
+      ribbonRule('.item.moving .card', 'animation:none;');
+      ribbonRule('.item .card img', 'width:' + (r.iconScale * 100) + '%;height:' + (r.cardHeight * r.iconScale) + 'px;left:' + ((1 - r.iconScale) * 50) + '%;top:' + (r.cardHeight * (1 - r.iconScale) / 2) + 'px;');
+      ribbonRule('.add-app svg', 'width:' + (64 * r.iconScale) + 'px;height:' + (64 * r.iconScale) + 'px;');
+      ribbonRule('.item .ctv-icon', 'transform:skewX(' + (-r.skewDeg) + 'deg)!important;');
+      ribbonRule('.item .name', 'transform:skewX(' + (-r.skewDeg) + 'deg)!important;');
+      if (r.labels === 'focused-above') {
+        ribbonRule('#hero', 'display:none!important;');
+        ribbonRule('.item .name', 'display:none!important;');
+        ribbonRule('.item.focused .name', 'display:block!important;position:absolute;left:0;right:0;bottom:' + (r.cardHeight + r.focusLift + 20) + 'px;margin:0 -40px;height:auto;max-height:96px;line-height:32px;white-space:normal;overflow:hidden;opacity:1!important;color:#fff!important;text-shadow:0 2px 8px #000;');
+      }
+      else ribbonRule('.item .name', 'position:absolute;top:' + (r.cardHeight + 16) + 'px;left:0;right:0;margin:0 -32px;line-height:32px;height:32px;');
+      if (!r.showClock) ribbonRule('#timeRow', 'display:none!important;');
+      if (r.shortcuts === 'bottom-left') {
+        ribbonRule('header', 'top:0;bottom:0;left:0;right:0;pointer-events:none;');
+        ribbonRule('#timeRow', 'position:absolute;top:104px;left:112px;');
+        ribbonRule('#topButtons', 'position:absolute;left:28px;right:auto;top:auto;bottom:28px;margin:0;pointer-events:auto;');
+        ribbonRule('#topButtons .pill', 'width:72px;height:72px;padding:0;margin:0 12px 0 0;justify-content:center;font-size:0;');
+        ribbonRule('#topButtons .pill svg', 'width:32px;height:32px;margin:0;');
+      }
+    }
     /* All untrusted input is checked before either geometry or styles are changed. */
     if (root.HomeLayoutState && root.HomeLayoutState.setThemeLayout) root.HomeLayoutState.setThemeLayout(manifest.layout);
     else if (root.HomeLayoutState && root.HomeLayoutState.setThemeColumns) root.HomeLayoutState.setThemeColumns(manifest.layout.columns);

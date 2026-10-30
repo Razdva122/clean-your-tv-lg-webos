@@ -2,6 +2,8 @@
 'use strict';
 const fs = require('node:fs');
 const path = require('node:path');
+const crypto = require('node:crypto');
+const policy = require('../launcher/theme-policy.js');
 const {loadRegistry, keyFor, readLocal} = require('./check-theme-submissions.cjs');
 const projectRoot = path.resolve(__dirname, '..');
 function generateCatalog(options = {}) {
@@ -12,11 +14,27 @@ function generateCatalog(options = {}) {
   for (const name of ['classic-preview.png', 'CLASSIC-CREDITS.txt']) {
     add('theme-catalog/' + name, readLocal(path.join(projectRoot, 'showcase'), 'assets/' + name, 6291456));
   }
-  const alpine = JSON.parse(fs.readFileSync(path.join(projectRoot, 'launcher/themes/alpine/cytv-theme.json')));
-  const themes = [
-    {id:'builtin:classic', title:'Classic', builtin:true, preview:'theme-catalog/classic-preview.png'},
-    {id:'builtin:alpine', title:'Alpine', builtin:true, preview:'themes/alpine/' + alpine.assets.find(a => a.id === alpine.previewAssetId).path}
-  ];
+  const builtinRoot = options.builtinRoot || path.join(projectRoot, 'launcher');
+  const registry = JSON.parse(readLocal(builtinRoot, 'builtin-themes.json', 65536));
+  if (registry.schemaVersion !== 1 || !Array.isArray(registry.themes) || registry.themes.length > 64) throw new Error('Invalid built-in theme registry');
+  const themes = [{id:'builtin:classic', title:'Classic', builtin:true, preview:'theme-catalog/classic-preview.png', credits:'theme-catalog/CLASSIC-CREDITS.txt'}];
+  const ids = new Set(['builtin:classic']);
+  const hash = bytes => crypto.createHash('sha256').update(bytes).digest('hex');
+  for (const entry of registry.themes) {
+    if (!entry || typeof entry.id !== 'string' || !/^builtin:[a-z0-9][a-z0-9-]*$/.test(entry.id) || ids.has(entry.id) || typeof entry.url !== 'string' || !/^themes\//.test(entry.url) || !/\/cytv-theme\.json$/.test(entry.url)) throw new Error('Invalid built-in theme entry');
+    const descriptor = readLocal(builtinRoot, entry.url, 65536);
+    if (hash(descriptor) !== entry.digest) throw new Error('Built-in descriptor digest mismatch: ' + entry.id);
+    const manifest = policy.validateManifest(JSON.parse(descriptor));
+    if (manifest.id !== entry.id || manifest.title !== entry.title || manifest.themeVersion !== entry.version) throw new Error('Built-in registry/manifest mismatch: ' + entry.id);
+    const base = entry.url.slice(0, entry.url.lastIndexOf('/') + 1);
+    for (const file of [manifest.rules, ...manifest.assets, ...manifest.documents]) {
+      const bytes = readLocal(builtinRoot, base + file.path, file.size);
+      if (bytes.length !== file.size || hash(bytes) !== file.sha256) throw new Error('Built-in byte/hash mismatch: ' + base + file.path);
+    }
+    const preview = manifest.assets.find(asset => asset.id === manifest.previewAssetId);
+    themes.push({id:entry.id, title:manifest.title, version:manifest.themeVersion, builtin:true, description:manifest.description, author:manifest.author.name, license:manifest.license.identifier, preview:base + preview.path, credits:base + manifest.license.creditsPath, licenseFile:base + manifest.license.textPath, url:entry.url, digest:entry.digest});
+    ids.add(entry.id);
+  }
   for (const {record:r, manifest:m, base} of entries) {
     if (r.availability === 'removed' || r.availability === 'unavailable') continue;
     const directory = 'theme-catalog/' + keyFor(r.id) + '/' + r.descriptorSha256 + '/';

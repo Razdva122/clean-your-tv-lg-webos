@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "themeApiVersion": 1,
+  "id": "builtin:ribbon",
+  "title": "Ribbon",
+  "description": "Original galaxy wallpaper with a fixed eight-card skewed bottom ribbon, raised focus and bottom-left shortcuts.",
+  "author": {
+    "name": "Clean Your TV contributors",
+    "url": "https://github.com/razdva122"
+  },
+  "themeVersion": "1.0.0",
+  "layout": {
+    "preset": "scenic-grid",
+    "columns": 8,
+    "spacingScale": 1,
+    "textScale": 1,
+    "focusScale": 1.1,
+    "allowColumnOverride": false,
+    "ribbon": {
+      "left": 340,
+      "right": 84,
+      "bottom": 0,
+      "cardHeight": 180,
+      "gap": 0,
+      "skewDeg": -13,
+      "focusLift": 36,
+      "iconScale": 0.65,
+      "shortcuts": "bottom-left",
+      "edgeNavigation": "shortcuts",
+      "labels": "focused-above",
+      "showClock": false
+    }
+  },
+  "defaults": {
+    "wallpaperAssetId": "wallpaper",
+    "dim": 0,
+    "accent": "#ffffff"
+  },
+  "assets": [
+    {
+      "id": "wallpaper",
+      "path": "assets/wallpaper-57510eb83e098765c978197826252ae563ed2e09344ea717611e47b0f668760c.png",
+      "mediaType": "image/png",
+      "width": 1920,
+      "height": 1080,
+      "size": 776305,
+      "sha256": "57510eb83e098765c978197826252ae563ed2e09344ea717611e47b0f668760c"
+    },
+    {
+      "id": "preview",
+      "path": "assets/preview-dbf77986dfebeb26c646824e90cb53126420f3b985609bb3f575bdf2d9d0a81a.jpg",
+      "mediaType": "image/jpeg",
+      "width": 960,
+      "height": 540,
+      "size": 56183,
+      "sha256": "dbf77986dfebeb26c646824e90cb53126420f3b985609bb3f575bdf2d9d0a81a"
+    }
+  ],
+  "previewAssetId": "preview",
+  "license": {
+    "identifier": "MIT",
+    "textPath": "documents/0-f497a621e75e2ccabaac016c8ada95b415a7810fb9994798b282fa9f9d03920f.txt",
+    "creditsPath": "documents/1-6ef40776aa6fbb8d1c62bedf595c7baec036d4a1fea9bdfc1f24d071b77de56c.txt"
+  },
+  "source": {
+    "repository": "https://github.com/razdva122/clean-your-tv-lg-webos",
+    "commit": "dbb22f897f6a044154466405c9a1236373ac2b6b"
+  },
+  "requires": {
+    "minimumHomeVersion": "1.6.1",
+    "capabilities": [
+      "ribbon-layout-v1"
+    ]
+  },
+  "rules": {
+    "path": "rules/0c202869f7e03965d2e6bec29d77e9d1783381498037b961ff868102c2c88b31.json",
+    "size": 4923,
+    "sha256": "0c202869f7e03965d2e6bec29d77e9d1783381498037b961ff868102c2c88b31"
+  },
+  "documents": [
+    {
+      "path": "documents/0-f497a621e75e2ccabaac016c8ada95b415a7810fb9994798b282fa9f9d03920f.txt",
+      "size": 546,
+      "sha256": "f497a621e75e2ccabaac016c8ada95b415a7810fb9994798b282fa9f9d03920f"
+    },
+    {
+      "path": "documents/1-6ef40776aa6fbb8d1c62bedf595c7baec036d4a1fea9bdfc1f24d071b77de56c.txt",
+      "size": 787,
+      "sha256": "6ef40776aa6fbb8d1c62bedf595c7baec036d4a1fea9bdfc1f24d071b77de56c"
+    }
+  ]
+}

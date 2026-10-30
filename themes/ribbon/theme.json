@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "themeApiVersion": 1,
+  "id": "builtin:ribbon",
+  "title": "Ribbon",
+  "description": "Original galaxy wallpaper with a fixed eight-card skewed bottom ribbon, raised focus and bottom-left shortcuts.",
+  "author": {
+    "name": "Clean Your TV contributors",
+    "url": "https://github.com/razdva122"
+  },
+  "themeVersion": "1.0.0",
+  "layout": {
+    "preset": "scenic-grid",
+    "columns": 8,
+    "spacingScale": 1,
+    "textScale": 1,
+    "focusScale": 1.1,
+    "allowColumnOverride": false,
+    "ribbon": {
+      "left": 340,
+      "right": 84,
+      "bottom": 0,
+      "cardHeight": 180,
+      "gap": 0,
+      "skewDeg": -13,
+      "focusLift": 36,
+      "shortcuts": "bottom-left",
+      "edgeNavigation": "shortcuts",
+      "labels": "focused-above",
+      "showClock": false,
+      "iconScale": 0.65
+    }
+  },
+  "defaults": {
+    "wallpaperAssetId": "wallpaper",
+    "dim": 0,
+    "accent": "#ffffff"
+  },
+  "assets": [
+    {
+      "id": "wallpaper",
+      "path": "assets/galaxy.png",
+      "mediaType": "image/png",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "id": "preview",
+      "path": "assets/preview.jpg",
+      "mediaType": "image/jpeg",
+      "width": 960,
+      "height": 540
+    }
+  ],
+  "previewAssetId": "preview",
+  "license": {
+    "identifier": "MIT",
+    "textPath": "LICENSE.txt",
+    "creditsPath": "CREDITS.txt"
+  }
+}

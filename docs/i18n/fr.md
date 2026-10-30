@@ -140,6 +140,10 @@ Pour un thème publié, ouvrez **Options supplémentaires → Ajouter par URL** 
 
 Les versions publiées peuvent ne pas encore proposer ces commandes. Les tests navigateur ne prouvent pas la compatibilité TV. [Guide complet](../THEMES.md).
 
+Ce candidat non encore publié intègre **Ribbon** avec Classic et Alpine, sans téléchargement du thème. Classic reste le choix par défaut. Après la mise à jour de Home, choisissez Ribbon dans Paramètres → Apparence.
+
+Les thèmes à ruban configurable non encore publiés peuvent placer Entrées, Wi-Fi et Paramètres en bas à gauche. Si activée, la navigation Gauche depuis la première application visible sélectionne Paramètres, puis Wi-Fi et Entrées ; Droite depuis Paramètres revient à la même application visible. Un thème nécessitant une nouvelle fonction Home est refusé à l’installation sur une version incompatible ; l’apparence et la sélection restent inchangées. Mettez Home à jour d’abord. Une rétrogradation ultérieure peut restaurer Classic au démarrage.
+
 Thèmes affiche les aperçus des thèmes intégrés et de tous ceux que vous avez installés, même hors ligne. Un bouton séparé ouvre le catalogue publié ; une installation personnelle ne publie pas le thème.
 
 Dans la version candidate, Apparence affiche de grandes vignettes des thèmes installés et indique le thème sélectionné. La galerie et la réception depuis un ordinateur sont les actions principales. Plus d’options regroupe l’ajout par URL, le retour à Classic et la suppression des thèmes téléchargés. Les flèches parcourent les vignettes et boutons ; à gauche au bord, elles reviennent aux catégories.

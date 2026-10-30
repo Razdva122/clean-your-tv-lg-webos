@@ -236,6 +236,8 @@ preference returns on switching to an adjustable theme. This does not unlock
 arbitrary card placement. In this candidate, use exactly `spacingScale: 1`,
 `textScale: 1` and `focusScale: 1.1`; other combinations are rejected.
 
+Unreleased parameterized scenic ribbons use optional `layout.ribbon` with fixed columns. See the [bounded ribbon parameters](THEME-CSS.md#parameterized-scenic-ribbons-unreleased) for geometry and `ribbon-layout-v1`. Use a matching explicit PR runtime; the reviewed toolkit pin does not gain capabilities automatically. Unsupported Home rejects the new theme before installation, retaining its selection.
+
 For wallpaper, declare a local PNG/JPEG/WebP asset with its real dimensions and
 media type, then use its ID in `defaults.wallpaperAssetId`. `defaults.dim` accepts
 0–0.85. Check readability over both bright and dark parts of the image.
@@ -681,7 +683,7 @@ announcing that others can install it through Showcase.
 
 Voting and automatic promotion into built-in themes are **not implemented**.
 Popularity is not approval, and a public listing does not bundle a theme with
-Home. Current built-ins are Classic and Alpine; Channel is an external listing.
+Home. Published built-ins are Classic and Alpine; this unreleased candidate also bundles Ribbon. Channel remains an external listing.
 
 ## 12. Maintain and update your theme
 

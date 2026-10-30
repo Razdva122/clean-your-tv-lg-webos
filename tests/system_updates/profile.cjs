@@ -18,7 +18,7 @@ function harness(edition, {unavailable=false, corrupt=false, versionMismatch=fal
 async function startAppearance(h) {
   const context={Promise,setTimeout,clearTimeout,Date,CustomEvent:function(){},requestAnimationFrame:fn=>fn(),document:{dispatchEvent(){}},localStorage:h.ctx.localStorage,
     ThemeRuntime:{reset(){},apply(){}},ThemeStore:{get:async()=>null},ThemeData:{
-      request:async url=>url==='appinfo.json'?{version:'1.6.1'}:{schemaVersion:1,themes:[{id:'builtin:alpine'}]},decode:JSON.stringify,
+      request:async url=>url==='appinfo.json'?{version:'1.6.1'}:{schemaVersion:1,themes:[{id:'builtin:alpine',title:'Alpine',version:'1.0.0',url:'themes/alpine/cytv-theme.json',digest:'b'.repeat(64)}]},decode:JSON.stringify,
       load:async()=>({id:'builtin:alpine'}),prepare:async pack=>({manifest:{id:pack.id},assetHandles:{}}),dispose(){}}};
   vm.runInNewContext(fs.readFileSync('launcher/theme-manager.js','utf8'),context);
   await context.ThemeManager.start();return context.ThemeManager.current();

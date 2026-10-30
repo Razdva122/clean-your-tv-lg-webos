@@ -105,6 +105,87 @@
     "allowColumnOverride": {
       "type": "boolean",
       "default": true
+    },
+    "ribbon": {
+      "optional": true,
+      "preset": "scenic-grid",
+      "allowColumnOverride": false,
+      "capability": "ribbon-layout-v1",
+      "defaults": {
+        "left": 112,
+        "right": 112,
+        "bottom": 162,
+        "cardHeight": 128,
+        "gap": 24,
+        "skewDeg": 0,
+        "focusLift": 0,
+        "shortcuts": "header",
+        "edgeNavigation": "wrap",
+        "labels": "below",
+        "showClock": true,
+        "iconScale": 1
+      },
+      "bounds": {
+        "left": [
+          64,
+          640
+        ],
+        "right": [
+          32,
+          320
+        ],
+        "bottom": [
+          0,
+          200
+        ],
+        "cardHeight": [
+          96,
+          240
+        ],
+        "gap": [
+          0,
+          64
+        ],
+        "skewDeg": [
+          -18,
+          18
+        ],
+        "focusLift": [
+          0,
+          64
+        ],
+        "iconScale": [
+          0.4,
+          1
+        ]
+      },
+      "integers": [
+        "left",
+        "right",
+        "bottom",
+        "cardHeight",
+        "gap",
+        "focusLift"
+      ],
+      "shortcuts": [
+        "header",
+        "bottom-left"
+      ],
+      "edgeNavigation": [
+        "wrap",
+        "shortcuts"
+      ],
+      "labels": [
+        "below",
+        "focused-above"
+      ],
+      "showClock": {
+        "type": "boolean"
+      },
+      "bottomLeftMinimumLeft": 340,
+      "minimumCardWidth": 64,
+      "unknownKeys": "reject",
+      "belowLabelsMinimumBottom": 64
     }
   },
   "defaults": {
@@ -166,6 +247,13 @@
         "hidden",
         "visible"
       ]
+    },
+    "ribbon-layout-v1": {
+      "layout": "ribbon",
+      "preset": "scenic-grid",
+      "allowColumnOverride": false,
+      "paired": true,
+      "belowLabelsMinimumBottom": 64
     }
   },
   "clockDateFontSize": [

@@ -141,6 +141,10 @@ Para um tema publicado, abra **Mais opções → Adicionar por URL** e digite o 
 
 Os pacotes publicados podem ainda não incluir esses controles. Testes de navegador não comprovam compatibilidade na TV. [Guia completo](../THEMES.md).
 
+Este candidato ainda não publicado inclui **Ribbon** junto com Classic e Alpine, sem baixar o tema. Classic continua sendo o padrão. Após atualizar o Home, escolha Ribbon em Configurações → Aparência.
+
+Temas com faixa configurável ainda não publicados podem colocar entradas, Wi-Fi e configurações no canto inferior esquerdo. Quando ativado, Esquerda no primeiro aplicativo visível seleciona configurações, depois Wi-Fi e entradas; Direita nas configurações retorna ao mesmo aplicativo visível. A instalação de um tema que exige um novo recurso do Home é recusada nas versões incompatíveis, mantendo aparência e seleção atuais. Atualize primeiro o Home. Um downgrade posterior pode restaurar Classic na inicialização.
+
 Temas mostra prévias dos temas integrados e de todos os que você instalou, inclusive offline. Um botão separado abre o catálogo publicado; instalar um tema pessoal não o publica.
 
 No candidato, Aparência mostra prévias grandes dos temas instalados e indica o selecionado. A vitrine e receber do computador são as ações principais. Mais opções contém adicionar por URL, restaurar Classic e limpar temas baixados. As setas movem o foco entre cartões e botões; esquerda na borda volta às categorias.
