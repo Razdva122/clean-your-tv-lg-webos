@@ -176,7 +176,8 @@
  },true);
  if(window.SettingsCategories)categories=SettingsCategories.attach(panel,main,[
   {id:'home',label:'Your Home screen',elements:[main.querySelector('.settings-home')]},
-  {id:'appearance',label:'Appearance',elements:[document.getElementById('homeThemeHost').parentNode,document.getElementById('homeColumns').parentNode,document.getElementById('homeAppSettings')]},
+  {id:'appearance',label:'Appearance',elements:[document.getElementById('homeColumns').parentNode,document.getElementById('homeAppSettings')]},
+  {id:'themes',label:'Themes',elements:[document.getElementById('homeThemeHost').parentNode]},
   {id:'language',label:'Language',elements:[document.getElementById('homeLanguage')]},
   {id:'updates',label:'Software updates',elements:[document.getElementById('renewalUpdates')]},
   {id:'advanced',label:'Advanced',elements:[document.getElementById('renewalTV')]},

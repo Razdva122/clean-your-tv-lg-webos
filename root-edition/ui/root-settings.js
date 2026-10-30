@@ -182,7 +182,8 @@
     text(home, 'p', 'Open LG Home once, keeping your Home choice.', 'home-visit-hint').id = 'rootHomeVisitHint';
     if(window.SettingsCategories) categories = SettingsCategories.attach(panel, card, [
       {id:'home',label:'Your Home screen',elements:[home]},
-      {id:'appearance',label:'Appearance',elements:[themes,layout,apps]},
+      {id:'appearance',label:'Appearance',elements:[layout,apps]},
+      {id:'themes',label:'Themes',elements:[themes]},
       {id:'language',label:'Language',elements:[buttons[5]]},
       {id:'updates',label:'Software updates',elements:[buttons[4],buttons[6]]},
       {id:'advanced',label:'Advanced',elements:[buttons[0],buttons[7]]}

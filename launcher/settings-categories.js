@@ -15,6 +15,7 @@
  var paths=[
   'M3 11L12 3l9 8M5 10v11h14V10M9 21v-7h6v7',
   'M12 3a9 9 0 1 0 0 18h2a2 2 0 0 0 0-4h-1a2 2 0 0 1 0-4h4a4 4 0 0 0 4-4c0-4-5-6-9-6zM7 10h.01M10 6h.01M16 7h.01',
+  'M4 4h16v16H4zM4 15l5-5 4 4 3-3 4 4M15 8h.01',
   'M3 5h12M9 3v2M5 5c0 6 4 10 9 12M13 5c0 6-4 10-10 13M14 21l4-10 4 10M16 17h4',
   'M20 8a8 8 0 1 0 0 8M20 3v5h-5M12 8v5l3 2',
   'M4 5h16v12H4zM8 21h8M12 17v4',
@@ -33,7 +34,7 @@
    if(current!==index&&root.HomeThemePanel)HomeThemePanel.activate(false);
    current=index;
    tabs.forEach(function(tab,i){tab.setAttribute('aria-selected',String(i===index));tab.tabIndex=i===index?0:-1;panes[i].hidden=i!==index;});
-   if(root.HomeThemePanel)HomeThemePanel.activate(groups[index].id==='appearance');
+   if(root.HomeThemePanel)HomeThemePanel.activate(groups[index].id==='themes');
   }
   groups.forEach(function(group,i){
    var tab=document.createElement('button'),pane=document.createElement('section'),title=document.createElement('h3');
@@ -47,7 +48,8 @@
    }
    pane.className='settings-pane renewal-actions';pane.id='settings-pane-'+group.id;pane.setAttribute('role','tabpanel');pane.setAttribute('aria-labelledby',tab.id);
    title.textContent=t(group.label);pane.appendChild(title);
-   group.elements.forEach(function(el){if(el)pane.appendChild(el);});
+   if(group.id==='language'&&root.HomeI18n&&HomeI18n.mountLanguagePicker)HomeI18n.mountLanguagePicker(pane);
+   else group.elements.forEach(function(el){if(el)pane.appendChild(el);});
    tab.addEventListener('focusin',function(){if(document.activeElement===tab)select(i);});tab.onclick=function(){select(i);tab.focus();};
    nav.appendChild(tab);content.appendChild(pane);tabs.push(tab);panes.push(pane);
   });
@@ -61,6 +63,16 @@
   },open:function(){select(0);tabs[0].focus();},key:function(e){
    var key=e.keyCode,active=document.activeElement,inNav=nav.contains(active),list=actions();
    if(key===27||key===461){if(!inNav){tabs[current].focus();return true;}return false;}
+   var languageChoices=document.getElementById('settingsLanguageChoices');
+   if(!inNav&&languageChoices&&languageChoices.contains(active)&&[37,38,39,40].indexOf(key)>=0){
+    var languages=Array.prototype.slice.call(languageChoices.querySelectorAll('button')),at=languages.indexOf(active);
+    var columns=languages.slice(1).filter(function(button){return button.offsetTop===languages[1].offsetTop;}).length||1,next=at;
+    if(key===37){if(at===0||(at-1)%columns===0){tabs[current].focus();return true;}next=at-1;}
+    if(key===39){if(at>0&&at%columns===0)return true;next=at+1;}
+    if(key===38)next=at<=columns?0:at-columns;
+    if(key===40)next=at===0?1:at+columns;
+    if(next<languages.length)languages[next].focus();else footer.querySelector('button').focus();return true;
+   }
    // Theme previews form a real grid. Match remote direction to visible geometry.
    var themes=document.getElementById('homeThemePanel');
    if(!inNav&&themes&&themes.contains(active)&&[37,38,39,40].indexOf(key)>=0){

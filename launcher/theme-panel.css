@@ -49,7 +49,7 @@
 #homeThemePanel.theme-picker .theme-option button:first-child { flex:none; box-sizing:border-box; }
 #homeThemePanel.theme-picker .theme-option img { height:auto; max-height:100px; }
 #homeThemePanel.theme-picker .theme-option .theme-meta { box-sizing:border-box; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
-/* Theme controls live inside the standard Appearance pane in both editions. */
+/* Theme controls live inside the standard Themes pane in both editions. */
 #homeThemePanel.theme-inline { position:static; display:block; width:100%; min-width:0; background:transparent; color:inherit; z-index:auto; }
 #homeThemePanel.theme-inline[hidden],#homeThemePanel [hidden] { display:none; }
 #homeThemePanel.theme-inline .theme-settings-card { width:auto; max-width:none; max-height:none; padding:0; border:0; border-radius:0; background:transparent; overflow:visible; }
@@ -75,9 +75,6 @@
 #homeThemePanel.theme-inline .theme-picker-actions { display:flex; margin:0 0 12px; }
 #homeThemePanel.theme-inline .theme-entry-action { flex:1; min-width:0; max-width:400px; margin:8px; padding:18px; text-align:left; background:#283b54; border-color:#526d90; font-weight:bold; }
 #homeThemePanel.theme-inline .theme-entry-action small { display:block; margin:6px 0 0; font-size:19px; line-height:1.3; font-weight:normal; color:#c4d0df; }
-#homeThemePanel.theme-inline #themeMore { background:transparent; color:#bfccdd; border-color:#465362; }
-#homeThemePanel.theme-inline .theme-advanced { margin-top:14px; padding:12px; border:1px solid #465362; border-radius:8px; }
-#homeThemePanel.theme-inline .theme-advanced button { margin:6px; font-size:22px; }
 #homeThemePanel.theme-inline .theme-catalog-grid { margin:0; }
 #homeThemePanel.theme-inline .theme-catalog-card { box-sizing:border-box; width:calc(50% - 16px); margin:8px; padding:12px; }
 #homeThemePanel.theme-inline .theme-catalog-card strong { font-size:26px; }
@@ -93,7 +90,6 @@
 #homeThemePanel #themeReceiverAddress { font-size:30px; overflow-wrap:break-word; }
 #homeThemePanel #themeReceiverDeadline { font-size:20px; color:#c5ced9; }
 
-#settings-pane-appearance .theme-context-hidden { display:none; }
 
 /* Reserve the badge's space so selecting another card cannot resize the lane. */
 #homeThemePanel .theme-option[data-selected="false"] .theme-selected { visibility:hidden; }

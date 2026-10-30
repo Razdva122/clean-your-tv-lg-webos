@@ -21,27 +21,26 @@ const base=process.env.PREVIEW_URL||'http://127.0.0.1:8876';
     await client.detach();
    }
    assert((await page.locator('#tiles .item .name').allTextContents()).includes('YouTube'),'third-party app names must not be translated');
-   const languageButton=()=>edition==='launcher'?page.locator('#homeLanguage'):page.locator('.root-settings .settings-pane button').filter({hasText:new RegExp('^'+({en:'Language',de:'Sprache',es:'Idioma','pt-BR':'Idioma',fr:'Langue',it:'Lingua',ko:'언어',hi:'भाषा',pl:'Język',ru:'Язык','zh-Hans':'语言','zh-Hant':'語言'}[locale])+'$')});
-   await page.locator('#btnSettings').click();await page.locator('[data-category=language]').click();await languageButton().waitFor({state:'visible'});
-   assert(await page.locator(edition==='launcher'?'#renewalPanel':'.root-settings').evaluate(el=>getComputedStyle(el).fontFamily.includes('CYTV')),'settings must retain packaged language font fallbacks');
-   await (edition==='launcher'?page.locator('#homeLanguage'):page.locator('.root-settings .settings-pane button').filter({hasText:await page.evaluate(()=>HomeI18n.t('Language'))})).click();assert.equal(await page.locator('#languageChoices button').count(),14);
-   await page.evaluate(()=>{const parent=document.querySelector('#homeVisit')||document.querySelector('.root-settings button');parent.focus();});
-   assert.equal(await page.evaluate(()=>document.activeElement.dataset.language),'auto','delayed settings replies cannot steal modal focus');
-   // Remote navigation follows the displayed row-major order; Back restores focus.
-   await page.keyboard.press('ArrowDown');assert.equal(await page.evaluate(()=>document.activeElement.dataset.language),'de');
-   await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>document.activeElement.textContent),await page.evaluate(()=>HomeI18n.t('Language')));
-   await (edition==='launcher'?page.locator('#homeLanguage'):page.locator('.root-settings .settings-pane button').filter({hasText:await page.evaluate(()=>HomeI18n.t('Language'))})).click();
+   await page.locator('#btnSettings').click();await page.locator('[data-category=language]').click();
+   assert.equal(await page.locator('#settingsLanguageChoices button').count(),13,'languages are directly available in the category');
+   assert.equal(await page.locator('#languagePicker').isVisible(),false,'no extra modal is needed');
+   assert(await page.locator(edition==='launcher'?'#renewalPanel':'.root-settings').evaluate(el=>getComputedStyle(el).fontFamily.includes('CYTV')),'settings retain packaged language fonts');
+   await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>document.activeElement.dataset.language),'auto');
+   await page.keyboard.press('ArrowDown');assert.equal(await page.evaluate(()=>document.activeElement.dataset.language),'en');
+   await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>document.activeElement.dataset.language),'de');
+   await page.keyboard.press('ArrowLeft');assert.equal(await page.evaluate(()=>document.activeElement.dataset.language),'en');
+   await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>document.activeElement.getAttribute('data-category')),'language');
    const target=locale==='ru'?'de':'ru';await page.locator('[data-language="'+target+'"]').click();
    await page.waitForFunction(code=>document.documentElement.lang===code,target);
    await page.locator('#tiles .add-app').waitFor();
    assert.equal(await page.evaluate(()=>localStorage.getItem('tvhome.language')),target);
    await page.reload();await page.locator('#tiles .add-app').waitFor();assert.equal(await page.locator('html').getAttribute('lang'),target);
-   await page.locator('#btnSettings').click();await page.locator('[data-category=language]').click();await (edition==='launcher'?page.locator('#homeLanguage'):page.locator('.root-settings .settings-pane button').filter({hasText:await page.evaluate(()=>HomeI18n.t('Language'))})).click();await page.locator('[data-language="auto"]').click();
+   await page.locator('#btnSettings').click();await page.locator('[data-category=language]').click();await page.locator('[data-language="auto"]').click();
    await page.waitForFunction(code=>document.documentElement.lang===code,locale);await page.locator('#tiles .add-app').waitFor();
-   await page.locator('#btnSettings').click();await page.locator('[data-category=language]').click();await languageButton().waitFor({state:'visible'});
+   await page.locator('#btnSettings').click();await page.locator('[data-category=language]').click();await page.locator('#settingsLanguageChoices').waitFor({state:'visible'});
    await page.screenshot({path:'/tmp/cytv-settings-'+edition+'-'+locale+'.png'});
    assert.deepEqual(errors,[],locale+' browser errors');await context.close();
   }
-  console.log('PASS twelve UI languages, app name preservation, remote modal, persisted override and automatic reset');
+  console.log('PASS twelve UI languages, app name preservation, inline remote navigation, persisted override and automatic reset');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exit(1);});
