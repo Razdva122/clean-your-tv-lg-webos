@@ -48,9 +48,10 @@ normal admission, signatures and minimum-supervisor checks remain unchanged.
 
 The existing Helper rollback record approves only the exact 0.6.19 to 0.6.20
 transition. It does not approve 0.6.20 to 0.6.21 or cover the vendored/runtime
-changes under a permission-only exception. Prepare the new raw/canonical Helper
-hashes and authenticate published Home 1.6.0 / Helper 0.6.20 rollback bytes. The
-new transition still needs applicable acceptance or explicit exact-scope approval;
+changes under a permission-only exception. The new raw/canonical Helper hashes
+and authenticated published Home 1.6.0 / Helper 0.6.20 rollback bytes are recorded
+in the final verification report. The new transition still needs applicable
+acceptance or explicit exact-scope approval;
 publication must remain blocked until that gate is truthfully satisfied.
 
 The [unattended C3 record](history/2026-10-30-unattended-c3-ui-proof.md) tested the
