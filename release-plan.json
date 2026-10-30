@@ -7,7 +7,7 @@
       "issues": [
         116
       ],
-      "summary": "Explain Homebrew Installer exec denial and preserve recovery requests"
+      "summary": "Explain Homebrew exec denials and retain requests; partial #116, supported upstream prerequisite and device acceptance remain pending"
     },
     {
       "pr": 175,
@@ -15,28 +15,43 @@
         160,
         164
       ],
-      "summary": "Show TV prerequisite checks in CLI, desktop and Android installers"
+      "summary": "Show individual TV prerequisite checks in CLI, desktop and Android; diagnostic improvement only for #160 and #164"
     },
     {
       "pr": 176,
       "issues": [
         170
       ],
-      "summary": "Preserve Appearance scroll when fixed themes hide Columns"
+      "summary": "Prevent Appearance Apply scroll clamping when fixed themes hide Columns; #170 physical acceptance pending"
     },
     {
       "pr": 177,
       "issues": [
         133
       ],
-      "summary": "Prepare isolated read-only Root recovery admission"
+      "summary": "Isolate trusted read-only Root admission preparation; partial #133, individual recovery and firmware routing support remain unresolved"
     },
     {
       "pr": 180,
       "issues": [
         171
       ],
-      "summary": "Record guarded Root wake refusals and power stream outcomes"
+      "summary": "Record guarded wake refusals and power stream outcomes; diagnostics only, original #171 standby failure unresolved"
+    },
+    {
+      "pr": 181,
+      "issues": [
+        152
+      ],
+      "summary": "Support compiled Home Helper on Node 0.10.25 while retaining pairing and input guards; #152 device acceptance pending"
+    },
+    {
+      "pr": 183,
+      "issues": [
+        160,
+        164
+      ],
+      "summary": "Keep diagnostic report guidance visible alongside failed prerequisite checks; follow-up to #175, original #160 and #164 runtime reports remain unresolved"
     }
   ],
   "excluded": [],
