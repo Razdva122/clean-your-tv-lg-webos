@@ -140,6 +140,8 @@ Für ein veröffentlichtes Design unter **Weitere Optionen → Über URL hinzuf�
 
 Veröffentlichte Pakete enthalten diese Funktion möglicherweise noch nicht. Browserprüfungen sind kein TV-Kompatibilitätsnachweis. [Vollständige Anleitung](../THEMES.md).
 
+Noch unveröffentlichte anpassbare Leisten-Themen können Eingänge, WLAN und Einstellungen links unten platzieren. Wenn aktiviert, wählt Links bei der ersten App Einstellungen, dann WLAN und Eingänge; Rechts in den Einstellungen kehrt zur ersten App zurück. Benötigt ein Thema eine neue Home-Funktion, wird seine Installation in einer nicht unterstützten Version abgelehnt; Aussehen und Auswahl bleiben erhalten. Aktualisieren Sie zuerst Home. Ein späteres Downgrade kann beim Start Classic wiederherstellen.
+
 Designs zeigt Vorschauen der integrierten und aller selbst installierten Designs, auch offline. Die separate Schaltfläche für den Designkatalog öffnet veröffentlichte Designs; eine persönliche Installation veröffentlicht kein Design.
 
 Im Appearance-Kandidaten zeigen große Vorschaubilder die installierten Themes und markieren das ausgewählte. Theme showcase und Receive from computer sind die Hauptaktionen. More options enthält Add by URL, Restore Classic und Clear downloaded themes. Pfeiltasten bewegen den Fokus zwischen Karten und Schaltflächen; Links am Rand führt zu den Kategorien.

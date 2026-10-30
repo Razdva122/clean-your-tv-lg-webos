@@ -146,6 +146,8 @@ In the Appearance candidate, large preview cards show installed themes and mark 
 
 In the browser preview, Receive from computer explains the steps to perform on the TV; it does not start a TV receiver on the computer. Use Send to TV above the preview. Removing a downloaded theme asks for confirmation; removing the active theme restores Classic first. Cancel keeps the theme.
 
+Unreleased parameterized ribbon themes can place the small Inputs, Wi-Fi and Settings buttons at the bottom left. When a theme enables this navigation, Left from the first app selects Settings, then Wi-Fi and Inputs; Right from Settings returns to the first app. A theme that requires a newer Home capability is rejected during installation on an unsupported version, keeping the current appearance and selection. Update Home before retrying. Downgrading Home after selecting such a theme can instead trigger the existing recovery to Classic at startup.
+
 <a id="settings-categories-unpublished-candidate"></a>
 
 ## Settings categories (1.5.0)

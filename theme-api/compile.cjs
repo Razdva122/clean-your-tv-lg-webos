@@ -341,6 +341,7 @@ async function compileSource(input) {
     textScale: 1,
     focusScale: 1.1
   }, source.layout);
+  if (Object.hasOwn(source.layout, 'ribbon')) source.requires.capabilities.push('ribbon-layout-v1');
   if (compiled.bundle.rules.some(r => r.declarations.some(d => d.property === 'transform')) && (source.layout.preset !== 'scenic-grid' || source.layout.columns > 5 || source.layout.allowColumnOverride !== false)) error('layout-invalid', 'icon scale requires fixed scenic-grid with at most five columns');
   source.defaults = Object.assign({
     wallpaperAssetId: null,
@@ -360,7 +361,8 @@ async function compileSource(input) {
     data,
     ...d
   }) => d);
-  policy.validateManifest(source);
+  const normalized = policy.validateManifest(source);
+  source.layout = normalized.layout;
   return {
     manifest: source,
     rules: compiled.bundle,
