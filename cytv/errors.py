@@ -49,7 +49,10 @@ class TVRejected(UserError):
         self.luna = {
             'operation': {'com.webos.appInstallService/dev/install':'package-install',
                           'com.webos.appInstallService/dev/remove':'package-remove',
-                          'com.webos.appInstallService/status':'package-status'}.get(uri, 'luna-call'),
+                          'com.webos.appInstallService/status':'package-status',
+                          'com.local.nativehome.service/disable':'helper-disable',
+                          'com.webos.service.eim/deleteDevice':'eim-delete-device',
+                          'com.webos.applicationManager/launch':'application-launch'}.get(uri, 'luna-call'),
             'error_code': number(reply.get('errorCode')),
             'details_error_code': number(details.get('errorCode')),
             'status_value': number(reply.get('statusValue')),

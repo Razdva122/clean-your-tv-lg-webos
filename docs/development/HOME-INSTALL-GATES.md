@@ -19,6 +19,36 @@ Existing state path validation, trusted directory ownership, shared-group checks
 no world writes, exclusive staging and cleanup on failure remain required.
 No new persistent preference, permission, or network endpoint is introduced.
 
+### Legacy process matching (unpublished follow-up for #152)
+
+The installer scans NUL-separated `/proc/*/cmdline` arguments for the controller
+identity, exact `native.js` path or exact relay path. An installed app or the
+separate `com.local.nativehome.service` worker alone is not an active input
+controller. The original `grep -Fx` assumption is incompatible with older
+BusyBox: [1.20.2 grep.c](https://github.com/mirror/busybox/blob/1_20_2/findutils/grep.c)
+uses substring matching for `-F` without checking `-x`. It can therefore match
+the SSH probe's own command text on an otherwise idle TV. Anchored basic regular
+expressions with literal dots avoid that behavior while retaining real controller
+and orphan-relay refusal. Stale PID handling, unreadable/ambiguous-state refusal,
+ownership checks and emergency latches are unchanged.
+
+`tests/cytv/test_helper_preflight.py` executes the real shell probe against a
+local proc fixture, including its own SSH command. A wrapper models the old
+fixed-string behavior; this is not a run of the TV's BusyBox binary. The legacy
+false positive fails before the change and passes afterward, while real processes
+remain blocked. This proves a host-reproduced portability defect, not the actual
+EF950V cause: its grep implementation/version and device behavior remain unknown.
+
+Restore rejection diagnostics now distinguish fixed `helper-disable`,
+`eim-delete-device` and `application-launch` categories. Unknown calls remain
+`luna-call`; no arbitrary URI, application ID or remote error text is exported.
+An LS2 `-101` alone is not proof that the controller is active or that a particular
+service is absent. A failed `control.json` upload also does not establish which
+shell utility, state directory or permission failed. Upload and stop behavior are
+unchanged; no fallback, automatic directory creation or guard bypass is added.
+These failures need a future scoped observation if they recur. Do not repeat
+Restore/Uninstall, clear state or change pairing merely to diagnose them.
+
 ## Root firmware interfaces
 
 Product preflight and explicit low-level component installation read Settings
