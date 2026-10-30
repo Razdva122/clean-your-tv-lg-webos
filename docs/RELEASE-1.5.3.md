@@ -1,12 +1,14 @@
 # v1.5.3 — Ribbon, installer checks and legacy Helper runtime
 
-Status: unpublished, combined candidate frozen after integration of the remaining
-planned PRs. One complete rebuild is required before artifact verification and
-owner-present TV acceptance; see the [combined freeze record](history/2026-10-31-release-1.5.3-combined-freeze.md).
-The previous successful build and [verification report](history/2026-10-30-release-1.5.3-final-verification.md)
-remain historical evidence for their original artifacts. Physical TV acceptance,
-the new Helper transition and the unresolved standby decision remain pending.
-This release must not be presented as universal TV compatibility.
+Status: unpublished, corrected combined candidate. Complete build
+[41118810865 / attempt 1](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/41118810865)
+from `160f3294d565b25925a8bf128d92a4146860a0b9` is successful and selected.
+[Current verification](history/2026-10-31-release-1.5.3-combined-verification.md)
+records all ten artifacts, nine installer payloads, macOS host execution and the
+exact Android APK/emulator checks. The [freeze record](history/2026-10-31-release-1.5.3-combined-freeze.md)
+retains the failed test and its correction. Physical TV acceptance, the new Helper
+transition and the unresolved standby decision remain pending. This release must
+not be presented as universal TV compatibility.
 
 ## Changes
 
@@ -62,7 +64,7 @@ This release must not be presented as universal TV compatibility.
 | System supervisor | 1.1.2 | 1.1.2 | Executable supervisor/IPK closure unchanged |
 
 Home, Helper, Root/infrastructure, both Updaters and all computer/Android installers
-must be rebuilt from this source. The changed Helper runtime requires a new
+were rebuilt together from the selected source. The changed Helper runtime requires a new
 version; published 0.6.20 must not be replaced with different bytes. Existing supervisors remain pinned;
 normal admission, signatures and minimum-supervisor checks remain unchanged.
 
@@ -88,8 +90,8 @@ release approval. Root firmware support and other users' retained recovery remai
 separate unresolved work. The independent Homebrew Installer stays unreleased
 with promotion disabled.
 
-The previous selected build was run 41095949258 / attempt 2. Its pin was removed
-when the scope expanded; the final combined complete build must be selected.
+The selected combined build is 41118810865 / attempt 1. Older build
+41095949258 / attempt 2 retains only its historical artifact scope.
 Remaining work is to record scoped controls,
 startup, UI and update/rollback results and satisfy Release
 policy before main/publication. No new physical compatibility, phone test,

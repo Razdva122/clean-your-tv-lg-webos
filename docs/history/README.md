@@ -41,6 +41,8 @@ one model or artifact does not certify later releases or a different TV.
 
 ## Acceptance and validation
 
+- [1.5.3 corrected combined verification](2026-10-31-release-1.5.3-combined-verification.md): selected full build, ten delivered archives, nine payloads, native macOS and exact Android emulator checks; physical gates remain pending.
+
 - [1.5.3 combined candidate freeze](2026-10-31-release-1.5.3-combined-freeze.md): final integrated scope and explicit build/device gates; no new acceptance claim.
 
 - [1.5.3 final automated verification](2026-10-30-release-1.5.3-final-verification.md): corrected-source full CI, all delivered artifacts, macOS host checks and Android original-signer/emulator results; physical gates remain separate.
