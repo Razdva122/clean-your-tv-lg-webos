@@ -2,6 +2,8 @@
 
 > v1.5.0: themes, Showcase and PC-to-TV transfer. Known Root limits: Appearance can shift 110 px; automatic Home after standby can fail. Device-specific acceptance remains limited. [1.5.0](../RELEASE-1.5.0.md).
 
+> Next candidate (unreleased): fixed-layout themes keep the empty Columns row to preserve Appearance scroll position during Apply. Hidden Columns is skipped by pointer, keyboard and accessibility navigation. Physical-TV verification is pending.
+
 [Documentation](../README.md) · [Report a problem](../FEEDBACK.md)
 
 This guide covers published **[1.4.1](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.4.1)**. C3 acceptance covers the recorded power, Home, focus, off-state and manual rollback tests. Other TVs, eARC audio and physical Android devices remain unverified; installation alone does not prove compatibility. [Tested scope (English)](../RELEASE-1.4.0-ACCEPTANCE.md).

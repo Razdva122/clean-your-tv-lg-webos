@@ -9,7 +9,11 @@
     if (isOpen() && !available) close();
     // Hiding the entry can clear activeElement before later layout listeners.
     if (event && entry && document.activeElement === entry) event.homeColumnsFocus = entry;
-    if (entry) { entry.hidden = !available; entry.parentNode.classList.toggle('hidden', !available); }
+    if (entry) {
+      entry.parentNode.classList.add('home-columns-entry');
+      entry.parentNode.setAttribute('aria-hidden', String(!available));
+      entry.hidden = !available; entry.parentNode.classList.toggle('hidden', !available);
+    }
     return available;
   }
   function isOpen() { return !!panel && !panel.hidden; }

@@ -2,6 +2,8 @@
 
 > v1.5.0: motywy, galeria i przesyłanie z komputera na TV. Znane ograniczenia Root: Appearance może przesunąć się o 110 px; Home może nie otworzyć się automatycznie po czuwaniu. Zakres testów urządzeń jest ograniczony. [1.5.0](../RELEASE-1.5.0.md).
 
+> Następny kandydat (nieopublikowany): motywy o stałym układzie zachowują miejsce ukrytego wiersza Columns, aby Apply nie zmieniało pozycji przewijania Appearance. Wskaźnik, klawiatura i narzędzia dostępności pomijają Columns. Weryfikacja na TV pozostaje do wykonania.
+
 [Dokumentacja](../README.md) · [Zgłoś problem](../FEEDBACK.md)
 
 Poradnik opisuje opublikowaną wersję **[1.4.1](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.4.1)**. Akceptacja C3 obejmuje zapisane testy zasilania, Home, fokusu, zachowania stanu wyłączenia i ręcznego cofnięcia wersji. Inne telewizory, dźwięk eARC i fizyczne urządzenia Android pozostają niezweryfikowane; udana instalacja nie dowodzi zgodności. [Zakres testów (angielski)](../RELEASE-1.4.0-ACCEPTANCE.md).
