@@ -866,6 +866,10 @@
 
 .settings-pane button[hidden],.settings-pane .settings-layout.hidden { display: none; }
 
+/* Keep Appearance scroll geometry when a theme owns its column count. */
+.settings-pane .settings-layout.home-columns-entry.hidden { display: flex; visibility: hidden; }
+.settings-pane .home-columns-entry>button[hidden] { display: flex; visibility: hidden; }
+
 .settings-categories button[data-update-available="true"] .settings-update-dot { display: inline-block; }
 .settings-categories .settings-update-dot { margin-left: 16px; width: 12px; height: 12px; }
 
