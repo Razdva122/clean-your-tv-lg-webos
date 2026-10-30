@@ -27,6 +27,8 @@ save another language. Root and No-root are equal options for different TV acces
 Current versions and evidence are in the [1.4.0 release notes](../docs/RELEASE-1.4.0.md)
 and [Android acceptance](STABLE-READINESS.md).
 
+**Unreleased:** a [visible TV checklist](../docs/CLI.md#visible-tv-checks-unreleased) shows individual prerequisite results and keeps them on the error screen. Unrun checks remain unverified; `doctor` does not prepare Python or request control pairing.
+
 ## Install and connect
 
 1. Copy the signed APK to a **64-bit ARM phone running Android 7.0 or later with Android System WebView/Chrome 108+**. Allow the browser/file manager to install this APK when Android requests it.

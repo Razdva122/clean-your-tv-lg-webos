@@ -6,6 +6,8 @@
 
 이 안내서는 공개된 **[1.4.1](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.4.1)** 기준입니다. C3 승인은 기록된 전원, Home, 포커스, 비활성 상태 유지 및 수동 롤백 시험에 한정됩니다. 다른 TV, eARC 오디오와 실제 Android 기기는 확인되지 않았습니다. 설치 성공만으로 호환성을 입증할 수 없습니다. [시험 범위(영어)](../RELEASE-1.4.0-ACCEPTANCE.md).
 
+**미출시 설치 프로그램:** 콘솔, 데스크톱 및 Android에서 각 TV 점검을 미확인, 확인 중, 통과, 실패 또는 확인 불가로 표시합니다. 오류 후에도 결과가 남습니다. Node.js/Python 점검은 TV의 실행 환경을 대상으로 하며 `doctor`는 Python 준비나 제어 페어링을 수행하지 않습니다. 재시도 전에 보고서를 저장하세요.
+
 ## 에디션 선택
 
 No-root와 Root는 서로 다른 TV 환경에 맞는 동등한 선택지입니다. LG Developer Mode를 사용하면 No-root를, 기존 root SSH 접근 권한이 있으면 Root를 선택하세요. 호환성과 테스트 범위는 각 버전마다 다릅니다.

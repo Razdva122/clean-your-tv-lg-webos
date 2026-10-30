@@ -15,6 +15,22 @@ do not need Git, Node.js, Python, Bash, Zig or a separate SSH client.
 This is a new installer, not an expansion of the hardware compatibility claim.
 Hardware evidence remains scoped to the documented models. Source/automated checks cannot replace real TV acceptance.
 
+## Visible TV checks (unreleased)
+
+Console, desktop and Android installers show the existing prerequisites one by
+one: SSH sign-in, edition-specific runtimes, webOS tools/directories, routing
+conflicts and Helper readiness where applicable, followed by control pairing and
+inventory during installation. Each row has a text status as well as a visual
+marker. Results remain visible after failure; subsequent steps stay **Not checked**.
+An interrupted probe is **Could not verify**, not evidence of a missing runtime.
+
+Python and Node.js checks concern the **TV**, not the computer running cytv.
+Root setup can prepare private Python only when its other prerequisites pass;
+`doctor` does not prepare a runtime or request control pairing. A failed runtime
+check does not justify deleting profiles, resetting pairing or re-rooting. Save
+the diagnostic report and identify the failed requirement first. These rows reuse
+the existing probes; they do not add TV changes or establish hardware acceptance.
+
 ## Run
 
 Download the console executable matching your computer from the

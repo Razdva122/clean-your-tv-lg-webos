@@ -32,17 +32,27 @@ object Operation {
     }
 
     @Synchronized fun emit(event: String) {
-        if (JSONObject(event).optString("kind") == "finished") {
+        val parsed = JSONObject(event)
+        val checkIndex = if (parsed.optString("kind") == "check") {
+            // Check IDs come from the fixed Python catalogue. Retain their
+            // latest result when Activity recreation replays a long operation.
+            events.indexOfFirst {
+                val previous = JSONObject(it)
+                previous.optString("kind") == "check" && previous.optString("checkId") == parsed.optString("checkId")
+            }
+        } else -1
+        if (parsed.optString("kind") == "finished") {
             active = false
             promptId = null
         }
-        events.add(event)
+        if (checkIndex >= 0) events[checkIndex] = event else events.add(event)
         // Retain the first started event for Activity replay.
         if (events.size > 450) {
             // Keep the started event and any unanswered prompt available to a
             // recreated Activity, even when background logs fill the replay.
             val disposable = (1 until events.size).first {
-                JSONObject(events[it]).optString("id") != promptId
+                val saved = JSONObject(events[it])
+                saved.optString("id") != promptId && saved.optString("kind") != "check"
             }
             events.removeAt(disposable)
         }
