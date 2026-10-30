@@ -241,10 +241,13 @@ profile/packaged inventory instead of reading a fresh SSAP inventory:
 Before daily use check arrows/OK, short Home, in-app Back and exit confirmation,
 volume/pointer, standby/wake and cold boot. Both editions use three short Home presses within two seconds for emergency exit.
 
-## Candidate: shared Root operations
+<a id="candidate-shared-root-operations"></a>
 
-**Unreleased source behavior:** Root installation and complete removal share the
-on-TV coordinator with CYTV Installer. The normal cytv platform/edition choices,
+## Shared Root operations
+
+Root installation and complete removal in the published installer use the shared
+on-TV coordinator. The separate CYTV Installer client for Homebrew remains
+[unreleased](../homebrew/README.md); its source uses the same coordinator. The normal cytv platform/edition choices,
 SSH trust and No-root flow remain. A current verified product can be inspected,
 restored and removed across either client without reinstalling or resetting its
 profile. Older or uncertain infrastructure is not silently migrated.
@@ -360,9 +363,11 @@ uses the guarded fallback. Rejection alone does not establish that an older
 registration is absent: an EIM input-list readback establishes absence when
 available. An unknown EIM result still requires confirmed cleanup before uninstall.
 
-## Candidate: Root System rollback readiness
+<a id="candidate-root-system-rollback-readiness"></a>
 
-**Unpublished candidate only:** after a verified Root System rollback reaches a
+## Root System rollback readiness
+
+With a matching published installer, after a verified Root System rollback reaches a
 launcher-readiness timeout with all package installers completed, use the same
 saved/trusted Root connection:
 

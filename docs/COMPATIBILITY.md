@@ -44,7 +44,7 @@ their original scope. It is not a list of universally supported TVs.
 
 ## Limits to understand before use
 
-- **Root OTA from original 1.3.0 to published 1.4.0 is blocked by its pinned infrastructure.** Preserve the aborted journal; do not retry or edit private pins. The next-candidate correction is unpublished. [Update guidance](UPDATES.md).
+- **Root OTA from original 1.3.0 to published 1.4.0 is blocked by its pinned infrastructure.** Preserve the aborted journal; do not retry or edit private pins. Guarded compatibility/replacement preparation shipped in 1.5.0; it does not rewrite the incompatible 1.4.0 release or approve a retained operation. [Update guidance](UPDATES.md).
 - An unrooted TV is updated through the computer installer. Whole-edition on-TV updates need compatible, separately prepared rooted infrastructure.
 - Developer Mode expiry can remove sideloaded apps. Automatic renewal is optional Beta; real renewal on unrooted TVs remains unverified. Monitor the official timer.
 - Startup is not instant. Check standby/wake and a true cold boot separately; either can initially show a black screen or LG Home.

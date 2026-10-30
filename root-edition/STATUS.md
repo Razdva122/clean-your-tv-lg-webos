@@ -3,22 +3,30 @@
 Start with [installation and controls](README.md), [updates](UPDATES.md), or
 [recovery](RECOVERY.md).
 
-## Current release: 1.4.0
+<a id="current-release-140"></a>
+## Published 1.5.2 and candidate 1.5.3
 
-Root 0.5.0 and Root Updater 0.3.1 are the 1.4.0 components. The
-[1.4.0 acceptance record](../docs/RELEASE-1.4.0-ACCEPTANCE.md) identifies exact
+Published **1.5.2** contains **Root 0.6.1 / Root Updater 0.3.3**. The unpublished
+**1.5.3** candidate selects **Root 0.6.2 / Root Updater 0.3.4**. System Updater
+remains **1.1.2**. Automatic Home presentation after standby remains unresolved
+in [#171](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/171); the
+candidate adds diagnostics only. Its new packages require affected acceptance
+under the [1.5.3 release limits](../docs/RELEASE-1.5.3.md).
+
+The historical **1.4.0 / Root 0.5.0 / Root Updater 0.3.1**
+[acceptance record](../docs/RELEASE-1.4.0-ACCEPTANCE.md) identifies exact
 artifacts and the C3 / firmware 43.21.71 / SDK 11.2.0 test scope: corrected
 startup, standby, off/emergency preservation and manual whole-product rollback.
 It does not establish compatibility with other models or automatic signed rollback.
 
 **Existing original 1.3.0 System Updater:** published 1.4.0 is incompatible with
 its destination inventory. An aborted pre-replacement attempt installed nothing.
-Preserve its journal and private pins; see [the #115 correction and pending TV
-validation](../docs/development/ROOT-OTA-13-COMPATIBILITY.md).
+Preserve its journal and private pins; see [the supported #115 replacement and
+recovery boundaries](../docs/development/ROOT-OTA-13-COMPATIBILITY.md).
 
 Other models/firmwares, original C2/C5/NANO reports, audible eARC recovery and
 physical Android phone-to-TV recovery remain unverified. Homebrew Installer is
-unreleased. [Release notes](../docs/RELEASE-1.4.0.md) describe the delivery scope;
+unreleased. [Candidate release notes](../docs/RELEASE-1.5.3.md) describe the scope;
 [Homebrew acceptance](../docs/development/HOMEBREW-INSTALL-ACCEPTANCE.md) is separate.
 
 ## Historical evidence

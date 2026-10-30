@@ -1,8 +1,9 @@
 # v1.5.3 — Installer checks, Appearance and legacy Helper runtime
 
-Status: frozen candidate preparation, not a published release. Full candidate
-build, exact-artifact verification and affected physical acceptance remain
-pending. This release must not be presented as universal TV compatibility.
+Status: unpublished candidate. The first frozen source passed its complete
+[build and automated verification](history/2026-10-30-release-1.5.3-verification.md).
+Current documentation corrections change build inputs and require a new final
+build; exact-artifact verification and affected physical acceptance remain pending. This release must not be presented as universal TV compatibility.
 
 ## Changes
 
@@ -64,7 +65,7 @@ release approval. Root firmware support and other users' retained recovery remai
 separate unresolved work. The independent Homebrew Installer stays unreleased
 with promotion disabled.
 
-The coordinator will pin the successful complete build, record scoped controls,
+The coordinator must pin the final complete build after documentation corrections, record scoped controls,
 startup, UI and update/rollback results, finish documentation and satisfy Release
 policy before main/publication. No new physical compatibility, phone test,
 installer success or completed device recovery is claimed by these notes.
