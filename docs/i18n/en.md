@@ -154,6 +154,6 @@ Unreleased parameterized ribbon themes can place the small Inputs, Wi-Fi and Set
 
 ## Settings categories (1.5.0)
 
-In both editions, Home settings has categories on the left and the selected settings on the right: Your Home screen, Appearance (Themes and Columns), Language, Software updates and Advanced. No-root also has Developer Mode; Root includes LG firmware updates under Software updates and HDMI sound under Advanced. Use Up/Down within a column, Right to enter its settings and Left to return to categories. Back returns to categories first, then closes settings; Tab also reaches Back to Home.
+In both editions, Home settings has categories on the left and the selected settings on the right: Your Home screen, Appearance, Themes, Language, Software updates and Advanced. No-root also has Developer Mode; Root includes LG firmware updates under Software updates and HDMI sound under Advanced. Use Up/Down within a column, Right to enter its settings and Left to return to categories. Back returns to categories first, then closes settings; Tab also reaches Back to Home.
 
 A yellow dot on both Software updates and its update button means an update is available. Both indicators clear after a successful check confirms no update; a failed check retains the last confirmed state.

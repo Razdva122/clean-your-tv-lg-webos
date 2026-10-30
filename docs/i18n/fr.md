@@ -154,6 +154,6 @@ Dans l’aperçu du navigateur, Recevoir depuis un ordinateur explique les étap
 
 ## Catégories des paramètres (1.5.0)
 
-Dans les deux éditions, les catégories sont à gauche et leurs réglages à droite : écran d’accueil, Apparence (thèmes et colonnes), Langue, Mises à jour et Avancé. No-root ajoute Developer Mode ; Root place le firmware LG dans les mises à jour et le son HDMI dans Avancé. Haut/Bas parcourt une colonne, Droite entre dans les réglages et Gauche revient aux catégories. Retour revient aux catégories, puis ferme les paramètres. Tab permet aussi d’atteindre le bouton de retour à Home.
+Dans les deux éditions, les catégories sont à gauche et leurs réglages à droite : écran d’accueil, Apparence, Thèmes, Langue, Mises à jour et Avancé. No-root ajoute Developer Mode ; Root place le firmware LG dans les mises à jour et le son HDMI dans Avancé. Haut/Bas parcourt une colonne, Droite entre dans les réglages et Gauche revient aux catégories. Retour revient aux catégories, puis ferme les paramètres. Tab permet aussi d’atteindre le bouton de retour à Home.
 
 Un point jaune sur Mises à jour et sur le bouton associé indique une mise à jour disponible. Les deux disparaissent lorsqu’une vérification réussie confirme son absence ; en cas d’échec, le dernier état confirmé reste affiché.
