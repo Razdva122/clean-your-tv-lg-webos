@@ -1,11 +1,15 @@
 # Root Edition test plan
 
-Current result (2026-10-27): [corrected C3 acceptance and manual physical rollback](../docs/RELEASE-1.4.0-ACCEPTANCE.md) passed in the recorded scope. The maintainer accepted #90 and requested closure. Pending statements below describe earlier investigation checkpoints; other hardware remains unverified.
+Historical result (2026-10-27): [corrected C3 acceptance and manual physical rollback](../docs/RELEASE-1.4.0-ACCEPTANCE.md) passed in the recorded scope. The maintainer accepted #90 and requested closure. Pending statements below describe earlier investigation checkpoints; other hardware remains unverified.
 
 For current setup use [installation](../docs/INSTALL.md), [update preparation](UPDATES.md)
-and [published acceptance](../docs/RELEASE-1.4.0-ACCEPTANCE.md). This is a developer
-test plan; bounded trials below are not a normal installer Keep/confirmation step.
-Dated checkpoints retain their original builds and do not override current results.
+and [current release limits](../docs/RELEASE-1.5.3.md). The
+[1.4.0 acceptance](../docs/RELEASE-1.4.0-ACCEPTANCE.md) remains historical; the
+Root 0.6.1 standby failure in [#171](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/171)
+is unresolved, and candidate Root 0.6.2 adds diagnostics rather than a proven fix.
+This is a developer test plan; bounded trials below are not a normal installer
+Keep/confirmation step. Dated checkpoints retain their original builds and do
+not override later issue evidence or accept new candidate artifacts.
 
 ## When to repeat this matrix
 
@@ -124,15 +128,20 @@ Permanent-mode supervision is a separate path; test it through `enable` or
 turning **Change Home** on, using the same emergency and fault matrix. No Keep
 confirmation is required by the current normal activation flow.
 
-## Unreleased cold-start correction (#104)
+<a id="unreleased-cold-start-correction-104"></a>
+## Historical cold-start investigation (#104)
 
 Test initial foreground separately from short Home routing. See the
 [cold-start investigation, source policy and remaining device matrix](../docs/development/ROOT-COLD-BOOT.md).
-The two existing-source AC-off results do not validate the new nonce or optional
-foreground request. Preserve the standby issue #90 limitation and explicit off.
-## Issue 90: intermittent wake input startup (diagnostic source)
+At this investigation checkpoint, the two existing-source AC-off results did
+not validate the then-new nonce or optional foreground request. The #90
+checkpoint below retains its original scope; it does not describe the later
+Root 0.6.1 standby failure in #171. Preserve explicit off in every retest.
 
-The first failed standby on Root 0.4.0 remains unresolved. Its `input_lost`
+<a id="issue-90-intermittent-wake-input-startup-diagnostic-source"></a>
+## Historical issue 90: intermittent wake input startup
+
+At this diagnostic checkpoint, the first failed standby on Root 0.4.0 remained unresolved. Its `input_lost`
 recovery occurred in durable phase `starting`; subsequent successful standby and
 AC-off tests do not identify that failure's cause. A held wake key is a hypothesis.
 
@@ -205,13 +214,14 @@ Root state is retained and updater states archived. No new-runtime cold-boot
 acceptance is established. See the [candidate transition record](../docs/RC-1.4.0-TESTING.md#root-040-transition-regression-111).
 
 
-## Exact 9194 first AC failure and shutdown regression coverage
+<a id="exact-9194-first-ac-failure-and-shutdown-regression-coverage"></a>
+## Historical 9194 first AC failure and shutdown regression coverage
 
 Exact CI40489987476/source9194c16a Root0.5 installed on the maintainer's C3.
 Active intent/guardian/recovery and owner-confirmed Emby/Home/basic controls
 passed before AC testing. The first new-runtime remote-off10s/AC-off30s cycle
 failed: LiveTV remained after one minute without Home, ENODEV revoked intent,
-and stock LG Home/controls were restored. Root remains disabled.
+and stock LG Home/controls were restored. Root was left disabled after that attempt.
 
 A separate passive Root-disabled diagnostic cycle proved Active Standby before
 input loss and systemd stopping afterward. It does not accept standby or establish
@@ -228,7 +238,8 @@ and repeat the affected supervised matrix (unknown/shared impact requires the fu
 fault-disabled Root automatically or edit installed runtime/receipts.
 
 
-## Candidate: original 1.3.0 System OTA (#115)
+<a id="candidate-original-130-system-ota-115"></a>
+## Original 1.3.0 System OTA contract (#115)
 
 [Compatibility contract and offline evidence](../docs/development/ROOT-OTA-13-COMPATIBILITY.md)
 cover the original supervisor, exact paths/LS2 plan, signed current-runtime

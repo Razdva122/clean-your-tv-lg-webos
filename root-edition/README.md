@@ -1,6 +1,6 @@
 # Root Edition
 
-> Unpublished 1.5.0 candidate: see the [release scope and pending acceptance](../docs/RELEASE-1.5.0.md). Published stable is 1.4.1; historical acceptance retains its original scope.
+> Unpublished 1.5.3 candidate: see the [release scope and pending acceptance](../docs/RELEASE-1.5.3.md). Published stable is 1.5.2; historical acceptance retains its original scope.
 
 Use Clean Your TV as the system Home on an **already rooted LG webOS TV**.
 Short Home opens Clean; confirmed Back exit returns through native Home routing.
@@ -42,7 +42,14 @@ routing recovery. Keep journals, backups and referenced Python slots. See
 
 ## Current release and limits
 
-Release **1.4.0** uses **Root 0.5.0 / Root Updater 0.3.1**. Its
+Published **1.5.2** uses **Root 0.6.1 / Root Updater 0.3.3**, with System
+Updater 1.1.2. The unpublished **1.5.3** candidate selects **Root 0.6.2 / Root
+Updater 0.3.4** and retains System Updater 1.1.2. Automatic Home presentation
+after standby remains unresolved in [#171](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/171);
+the candidate adds diagnostics, not a demonstrated standby fix. New packages
+require their own affected acceptance.
+
+The historical **1.4.0 / Root 0.5.0 / Root Updater 0.3.1**
 [C3 acceptance record](../docs/RELEASE-1.4.0-ACCEPTANCE.md) covers corrected startup,
 standby, off/emergency preservation and manual whole-product rollback on
 OLED55C3RLA / firmware 43.21.71 / SDK 11.2.0. Clean may appear after Live TV;
@@ -80,7 +87,8 @@ Historical acceptance is model-, build- and scenario-specific.
 <a id="candidate-two-setup-clients-one-installation"></a>
 The former setup-client notes are summarized under [Homebrew Installer](#homebrew-installer-unreleased).
 <a id="what-works-on-the-tested-setup"></a>
-See [current acceptance](../docs/RELEASE-1.4.0-ACCEPTANCE.md).
+See [historical C3 acceptance](../docs/RELEASE-1.4.0-ACCEPTANCE.md) and
+[current release limits](../docs/RELEASE-1.5.3.md).
 <a id="requirements-and-limits"></a>
 See [installation prerequisites](#install-and-activate) and [current limits](#current-release-and-limits).
 <a id="recovery-startup-diagnostics-130-issue-55"></a>

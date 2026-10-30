@@ -1,5 +1,9 @@
 # Root runtime contract
 
+Published 1.5.2 contains Root 0.6.1; the unpublished 1.5.3 candidate selects
+Root 0.6.2. Historical tests retain their exact artifact scope; see the
+[current release and acceptance limits](../../docs/RELEASE-1.5.3.md).
+
 Install these Python files under `/var/lib/clean-your-tv-root/runtime` as root-owned files without group/world write permission. Python 3.9+ and `/usr/bin/luna-send` are required; Root setup also requires TV Node.js 8+,
 Homebrew services and supported ARM32 input. With system Python, invoke
 `/usr/bin/python3 /var/lib/clean-your-tv-root/runtime/cli.py COMMAND` as root.
@@ -39,7 +43,7 @@ state instead of using this Root runtime.
 
 A confirmed normal shutdown retains the Home override, generated profile and transaction binding so bootd can select Clean Your TV as its first app. Startup recovery still restores the old transaction before arming fresh health protection. Explicit exit, input failure without a shutdown signal, and failsafe recovery restore LG Home.
 
-The candidate shutdown monitor accepts only fresh transaction/session-bound evidence.
+The shutdown monitor accepts only fresh transaction/session-bound evidence.
 Its local tvpower subscription must observe ON before Active Standby/Power Off;
 initial OFF snapshots, unknown replies and lost subscriptions grant no authority.
 Only actual pushes refresh the existing five-second evidence window. Returning ON
@@ -49,7 +53,7 @@ observer defers enabled old-session intent to boot dispatch; escape, failsafe an
 package loss still override it. See [evidence and limits](../../docs/development/ROOT-COLD-BOOT.md).
 
 
-Unreleased cold-start correction: startup identity combines the kernel UUID with
+Startup identity combines the kernel UUID with
 one private volatile session nonce, rather than clock-dependent `btime`. The
 nonce and its lock live beside the normal-start marker in
 `/tmp/clean-your-tv-root-boot`; creation is serialized, records are ownership/type
@@ -113,7 +117,7 @@ new code is still required separately for RC-START-05 and RC-START-08. Active
 intent and installation alone do not establish automatic foreground acceptance.
 
 For the unresolved Root 0.6.1 standby report [#171](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/171),
-the preparation branch adds diagnostic coverage only. Every invoked wake presenter,
+the 1.5.3 candidate adds diagnostic coverage only. Every invoked wake presenter,
 including early cancellation/session/intent/health refusal, records its outcome
 and fixed last-check stage through the existing private `boot-decision.json`.
 The power reader also keeps one root-owned, atomic volatile snapshot per transaction
@@ -159,14 +163,15 @@ intent before restoring original routing. A fault does the same. No-root helper
 is never automatically resumed. A later explicit enable is required after a fault,
 failsafe or emergency exit. Installation alone does not enable Root mode.
 
-Permanent activation was introduced in RC15. Current model/build evidence is in
-[1.4.0 acceptance](../../docs/RELEASE-1.4.0-ACCEPTANCE.md); source bundle metadata
-is not a cross-model compatibility certificate.
+Permanent activation was introduced in RC15. The
+[1.4.0 acceptance](../../docs/RELEASE-1.4.0-ACCEPTANCE.md) is historical model/build
+evidence; [current release limits](../../docs/RELEASE-1.5.3.md) retain the unresolved
+standby report. Source bundle metadata is not a compatibility certificate.
 The historical provisioning schema name `recovery-only` remains an integrity
 receipt format, not a promise that a confirmed boot intent cannot activate Home.
 
 
-Unreleased cold-boot correction: rooted SDK DATA may have ordinary `0777` modes.
+Rooted SDK DATA may have ordinary `0777` modes.
 The corrected private readers require independent original package hashes; they
 do not repair shared permissions or execute shared source. Missing/conflicting
 current, transaction or own-package proof keeps automatic Home rearm inhibited,
@@ -178,7 +183,8 @@ an explicit activation through the normal setup/settings flow. See the
 [candidate authority and acceptance record](../../docs/development/HOMEBREW-INSTALL-ACCEPTANCE.md#cold-boot-data-authority-correction).
 
 
-## Candidate: original 1.3.0 OTA contract
+<a id="candidate-original-130-ota-contract"></a>
+## Original 1.3.0 OTA contract
 
 Audio commands now use the existing `cli.py audio <command>` entry point and
 `cli.py audio worker <generation> <boot|watch>`. No additional executable path is
