@@ -461,7 +461,9 @@ for cytv_file in /proc/[0-9]*/cmdline; do
     if [ ! -r "$cytv_file" ]; then cytv_state=CYTV_HELPER_UNCERTAIN; continue; fi
     cytv_args=$(tr '\000' '\n' < "$cytv_file" 2>/dev/null) || { cytv_state=CYTV_HELPER_UNCERTAIN; continue; }
     if [ "$cytv_file" = "/proc/${cytv_pid:-}/cmdline" ] && [ -z "$cytv_args" ]; then cytv_state=CYTV_HELPER_UNCERTAIN; fi
-    if printf '%s\n' "$cytv_args" | grep -Fx -e 'com.local.nativehome' -e 'HELPER_ROOT/native.js' -e 'HELPER_ROOT/relay' >/dev/null 2>&1; then
+    # Older BusyBox grep ignores -x with -F, matching this SSH script itself.
+    # Use anchored basic expressions and escape the literal path dots instead.
+    if printf '%s\n' "$cytv_args" | grep -e '^com[.]local[.]nativehome$' -e '^HELPER_ROOT/native[.]js$' -e '^HELPER_ROOT/relay$' >/dev/null 2>&1; then
         printf CYTV_HELPER_ACTIVE; exit 0
     else
         cytv_match=$?
@@ -469,7 +471,7 @@ for cytv_file in /proc/[0-9]*/cmdline; do
     fi
 done
 printf '%s' "$cytv_state"
-'''.replace('HELPER_STATE', HELPER_STATE).replace('HELPER_ROOT', BASE + '/applications/' + HELPER)
+'''.replace('HELPER_STATE', HELPER_STATE).replace('HELPER_ROOT', (BASE + '/applications/' + HELPER).replace('.', '[.]'))
         result = self.remote.run(script).strip()
         return {'CYTV_HELPER_IDLE': 'stopped', 'CYTV_HELPER_STALE': 'stale',
                 'CYTV_HELPER_ACTIVE': 'running'}.get(result, 'uncertain')
