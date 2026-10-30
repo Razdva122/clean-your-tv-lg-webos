@@ -139,13 +139,15 @@ const profiles = ['modern', 'no-inset', 'no-inset-or-es2015'];
           const r = el.getBoundingClientRect(); return [r.x, r.y, r.width, r.height];
         }), [0, 0, 1920, 1080]);
         await page.locator('[data-category=language]').click();
-        await page.locator('#homeLanguage').click();
-        assert.deepEqual(await page.locator('#languagePicker').evaluate(el => {
-          const r = el.getBoundingClientRect(); return [r.x, r.y, r.width, r.height];
-        }), [0, 0, 1920, 1080]);
+        await page.locator('#settingsLanguageChoices').waitFor({state: 'visible'});
+        assert.equal(await page.locator('#settingsLanguageChoices button').count(), 13,
+          'automatic and twelve languages must remain reachable without ES2015 APIs');
+        await page.keyboard.press('ArrowRight');
+        assert.equal(await page.evaluate(() => document.activeElement.dataset.language), 'auto');
         await page.keyboard.press('Escape');
+        assert.equal(await page.evaluate(() => document.activeElement.dataset.category), 'language');
         await page.keyboard.press('Escape');
-        await page.keyboard.press('Escape');
+        await page.locator('#renewalPanel').waitFor({state: 'hidden'});
         await page.locator('#tiles .add-app').dispatchEvent('click');
         assert.deepEqual(await page.locator('#appPicker').evaluate(el => {
           const r = el.getBoundingClientRect(); return [r.x, r.y, r.width, r.height];
