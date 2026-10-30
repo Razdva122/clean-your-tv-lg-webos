@@ -93,6 +93,8 @@ Home 설정 통신 경로 수정은 아직 배포되지 않았습니다. 호환�
 
 Root HDMI 소리 복구는 실험적이며 **기본적으로 꺼져 있습니다**. 필요할 때만 켜세요. 정상적인 소리를 끊을 수 있으며 eARC 호환성이 확인된 것은 아닙니다. [소리 복구(영어)](../development/ROOT-AUDIO-RECOVERY.md). 별도 **Homebrew CYTV Installer는 아직 출시되지 않았습니다**. 공개된 컴퓨터 또는 Android 설치 프로그램을 사용하세요.
 
+Homebrew Channel이 이 설치 프로그램의 접근을 거부했습니다. webOS 11에서는 Homebrew 0.7.3에 개발자의 호환성 업데이트가 필요합니다. 수정 사항이 포함된 지원 Homebrew 버전이 나올 때까지 공개된 컴퓨터 또는 Android 설치 프로그램을 사용하세요. [#116](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/116).
+
 미출시 후보 전용: 이전 Root 디렉터리의 쓰기 권한 때문에 펌웨어 API 접근이 거부되면 `cytv enable-firmware-access --edition root --repair-package-permissions` 명령이 신뢰할 수 있는 비공개 패키지 기록으로 현재 파일을 검증한 뒤 Root 소유 경로의 그룹 및 기타 사용자 쓰기 권한만 제거합니다. 알 수 없거나 변경된 파일이 있으면 중단합니다. 프로필, Home 선택 및 펌웨어 차단 설정은 유지됩니다. [세부 정보(영어)](../LG-FIRMWARE-UPDATES.md#explicit-package-permission-repair-candidate).
 
 미공개 후보 버전 전용: `cytv recover-system-rollback --edition root`는 검증된 Root 롤백에서 모든 패키지 설치가 끝났지만 런처 준비 시간이 초과된 경우에만 사용합니다. 실제 런처의 준비 신호가 필요하며 설치 결과가 불명확하면 거부합니다. 패키지, 고정된 코드·키, 실패 증거와 명시적으로 끈 Home 제어 상태를 보존합니다. 제한된 시도를 비공개 기록으로 남깁니다. 일반 재시도는 기한을 연장하지 않습니다. 이전 120초 기한이 지난 뒤 승인된 준비 신호나 불명확한 설치 결과가 없을 때만 `--new-recovery-attempt`가 이전 기록 전체를 UUID/해시로 보관하고 명시적으로 새 시도를 시작합니다. 완료된 복구는 다시 시작하지 않으며 자동 반복 시도는 없습니다. [절차와 제한 사항(영어)](../RECOVERY.md#root-system-rollback-readiness-candidate).

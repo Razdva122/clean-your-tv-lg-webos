@@ -93,6 +93,8 @@ Home 设置通信修复尚未发布：有配套候选版后，请同时更新 Ho
 
 Root HDMI 声音恢复是实验功能，**默认关闭**，仅在需要时自行启用。它可能中断正常音频，并不证明 eARC 兼容性。[声音恢复（英文）](../development/ROOT-AUDIO-RECOVERY.md)。独立的 **Homebrew CYTV Installer 尚未发布**；请使用已发布的电脑或 Android 安装程序。
 
+Homebrew Channel 拒绝此安装程序访问。在 webOS 11 上，Homebrew 0.7.3 需要开发者提供兼容性更新。在受支持的 Homebrew 版本包含此修复前，请使用已发布的电脑或 Android 安装程序。 [#116](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/116).
+
 仅限未发布候选版：如果旧 Root 目录的可写权限导致固件 API 访问被拒绝，可显式运行 `cytv enable-firmware-access --edition root --repair-package-permissions`。该命令先用可信的私有软件包记录验证当前文件，再仅移除 Root 自有路径的组及其他用户写权限。遇到未知或已修改文件就停止；保留个人配置、Home 选择和固件屏蔽设置。[修复详情（英文）](../LG-FIRMWARE-UPDATES.md#explicit-package-permission-repair-candidate)。
 
 仅限未发布候选版：`cytv recover-system-rollback --edition root` 仅用于已验证的 Root 回滚：所有软件包安装程序均已完成，但启动器就绪等待超时。必须由真实启动器发送就绪信号；安装结果不明时拒绝恢复。保留软件包、固定代码和密钥、失败证据及明确关闭的 Home 控制状态，并以私有记录保存有时限的尝试。 普通重试不会延长时限。仅在之前的 120 秒到期、没有已接受的就绪信号且不存在不明安装结果后，才可用 `--new-recovery-attempt` 按 UUID/哈希归档完整旧记录，并明确开始新尝试。已完成的恢复不会重新开始，也不会自动连续重试。 [流程与限制（英文）](../RECOVERY.md#root-system-rollback-readiness-candidate)。
