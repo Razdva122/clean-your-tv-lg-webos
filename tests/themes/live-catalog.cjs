@@ -6,17 +6,17 @@ const sha='a'.repeat(40),api='https://api.github.com/repos/Razdva122/clean-your-
 let remote=structuredClone(local),mode='',calls=[];
 const context={Promise,ThemeData:Object.assign({},real,{request:async(url,limit,isLocal,signal)=>{
  calls.push({url,limit,isLocal});if(signal&&signal.cancelled)throw Error('Cancelled');
- if(isLocal)return real.encode(JSON.stringify(local));
+ if(isLocal)return real.encode(JSON.stringify(url==='builtin-themes.json'?JSON.parse(fs.readFileSync('launcher/builtin-themes.json')):local));
  if(mode==='offline')throw Error('Network error');
  if(mode==='cancel'){signal.cancelled=true;throw Error('Cancelled');}
  return real.encode(JSON.stringify(url===api?{ref:'refs/heads/main',object:{sha,type:'commit'}}:remote));
 }})};
 vm.runInNewContext(fs.readFileSync('launcher/theme-manager.js','utf8'),context);
 (async()=>{
- let shown;let items=await context.ThemeManager.catalog(null,entries=>{shown=entries;assert.equal(calls.length,1);});
+ let shown;let items=await context.ThemeManager.catalog(null,entries=>{shown=entries;assert.equal(calls.length,2);});
  assert.equal(shown[2].preview,local.themes[2].preview);
  await assert.rejects(context.ThemeManager.catalog(null,()=>{throw Error('Render failed');}),/Render failed/);
- assert.equal(calls[1].url,api);assert.equal(calls[2].url,'https://raw.githubusercontent.com/Razdva122/clean-your-tv-lg-webos/'+sha+'/launcher/theme-catalog.json');
+ assert.equal(calls[2].url,api);assert.equal(calls[3].url,'https://raw.githubusercontent.com/Razdva122/clean-your-tv-lg-webos/'+sha+'/launcher/theme-catalog.json');
  assert.equal(items[2].preview,'https://raw.githubusercontent.com/Razdva122/clean-your-tv-lg-webos/'+sha+'/launcher/'+local.themes[2].preview);
  remote.themes[2].title='Reviewed update';remote.themes[0].title='Wrong built-in';
  items=await context.ThemeManager.catalog();assert.equal(items[2].title,'Reviewed update');assert.equal(items[0].title,'Classic');
