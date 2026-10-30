@@ -57,13 +57,13 @@
       "pr": 184,
       "issues": [],
       "summary": "Retain the Android native runner for candidate verification"
+    },
+    {
+      "pr": 186,
+      "issues": [],
+      "summary": "Correct current release and historical acceptance documentation"
     }
   ],
   "excluded": [],
-  "acceptance": "",
-  "build": {
-    "run_id": 41090177094,
-    "attempt": 1,
-    "source": "fb2d950a479b8705157548399eb14af1eb5087e1"
-  }
+  "acceptance": ""
 }
