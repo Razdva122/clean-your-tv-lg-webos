@@ -89,6 +89,11 @@
       "pr": 193,
       "issues": [],
       "summary": "Refresh README and retire the standalone theme catalogue page"
+    },
+    {
+      "pr": 195,
+      "issues": [],
+      "summary": "Fix Ribbon browser check after Themes settings split"
     }
   ],
   "excluded": [],
