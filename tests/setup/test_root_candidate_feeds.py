@@ -65,7 +65,7 @@ class AdmissionTests(unittest.TestCase):
      if damage=='tag-network-error':raise subprocess.CalledProcessError(1,['gh'],output=b'connection failed')
      if damage=='tag-collision':return {'ref':'refs/tags/codex/device-qa','object':{'type':'commit','sha':'a'*40}}
      raise missing()
-    if path=='actions/runs/12/attempts/1/jobs?per_page=100':
+    if path=='actions/runs/12/attempts/1/jobs?per_page=10':
      job=self.package_job()
      if damage=='old-attempt':job['run_attempt']=0
      if damage=='queued-job':job['status']='queued'
@@ -82,6 +82,38 @@ class AdmissionTests(unittest.TestCase):
      self.assertEqual(metadata['package_job']['id'],56)
     else:
      with self.assertRaises((ValueError,subprocess.CalledProcessError)):m.inspect_build(12,'v1.5.0',preliminary=True,source_sha='a'*40,branch='codex/device-qa')
+ def test_small_job_pages_preserve_complete_attempt_admission(self):
+  from unittest.mock import patch
+  import subprocess
+  run=dict(self.run,run_attempt=2)
+  artifact={'id':34,'name':'cytv-macos-arm64','expired':False,'size_in_bytes':50,'digest':'sha256:'+'b'*64,'workflow_run':{'id':12,'head_sha':'a'*40}}
+  final={'name':'validation / full-release','conclusion':'success'}
+  first=[dict(name=name,conclusion='success') for name in sorted(m.BUILD_JOBS) if name!=final['name']]+[{'name':'scope','conclusion':'success'}]
+  self.assertEqual(len(first),10)
+  for damage in (None,'missing-second-page','failed-second-page','later-page-error'):
+   calls=[]
+   def output(args):
+    path=args[2].removeprefix('repos/'+m.REPO+'/');calls.append((path,args[3:]))
+    if path=='actions/runs/12':return json.dumps(run).encode()
+    if path=='actions/runs/12/attempts/2/jobs?per_page=100':raise subprocess.CalledProcessError(1,args,output=b'HTTP 502')
+    if path=='actions/runs/12/attempts/2/jobs?per_page=10':
+     self.assertEqual(args[3:],['--paginate','--slurp'])
+     pages=[{'total_count':11,'jobs':first}]
+     if damage=='later-page-error':raise subprocess.CalledProcessError(1,args,output=json.dumps(pages).encode())
+     if damage!='missing-second-page':pages.append({'total_count':11,'jobs':[dict(final,conclusion='failure') if damage=='failed-second-page' else final]})
+     return json.dumps(pages).encode()
+    if path=='releases?per_page=100':return b'[[]]'
+    if path=='actions/runs/12/artifacts?per_page=100':return json.dumps([{'artifacts':[artifact]}]).encode()
+    raise AssertionError('Unexpected API: '+path)
+   def contents(name,source):
+    if name=='release-plan.json':return {'version':'1.5.0'}
+    return dict(self.versions,release='1.4.1') if source=='main' else self.versions
+   with self.subTest(damage=damage),patch.object(m.subprocess,'check_output',side_effect=output),patch.object(m,'contents',side_effect=contents):
+    if damage is None:
+     metadata=m.inspect_build(12,'v1.5.0')
+     self.assertEqual(metadata['attempt'],2);self.assertEqual(metadata['artifact']['id'],34)
+    else:
+     with self.assertRaises((ValueError,subprocess.CalledProcessError)):m.inspect_build(12,'v1.5.0')
  def test_preliminary_admits_only_finished_arm64_job_while_validation_is_pending(self):
   value=self.preliminary()
   self.assertIs(value['preliminary'],True);self.assertEqual(value['branch'],'codex/device-qa')
