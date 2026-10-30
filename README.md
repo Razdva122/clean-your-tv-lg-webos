@@ -1,3 +1,5 @@
+> **Unpublished issue #152 test build.** The version table below is test metadata, not a public release announcement. Use No-root only for the requested EF950V test. No TV acceptance or signed OTA approval is granted.
+
 ![Clean Your TV — for LG webOS](assets/brand/readme-logo.png#gh-light-mode-only)
 ![Clean Your TV — for LG webOS](assets/brand/readme-logo-dark.png#gh-dark-mode-only)
 
@@ -37,7 +39,7 @@ LG screens or obtain root access.
 > Home may not open automatically after standby. See [release notes and tested scope](docs/RELEASE-1.5.0.md).
 
 <!-- release:downloads -->
-Current stable release: **[v1.5.1](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.5.1)** — [release notes](docs/RELEASE-1.5.1.md).
+Current stable release: **[v1.5.2](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.5.2)** — [release notes](docs/RELEASE-1.5.2.md).
 <!-- /release:downloads -->
 
 [![Download Windows x64 graphical installer — GUI ZIP](assets/brand/downloads/windows.svg)](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/cytv-windows-x64-desktop.zip)
@@ -117,16 +119,16 @@ For contributors: [build and technical references](docs/development/README.md),
 <!-- release:components -->
 | Component | Stable version |
 | --- | --- |
-| cytv installer | 0.6.0 |
-| Home | 1.6.0 |
-| Home Helper | 0.6.20 |
+| cytv installer | 0.6.1 |
+| Home | 1.6.1 |
+| Home Helper | 0.6.21 |
 | Root edition | 0.6.1 |
 | Both edition Updaters | 0.3.3 |
 | Android installer / versionCode | 0.5.0 / 15 |
 <!-- /release:components -->
 
 System Updater: 1.1.2 / protocol 1 (existing supervisors stay pinned).
-See the [release notes](docs/RELEASE-1.5.1.md)
+See the [release notes](docs/RELEASE-1.5.2.md)
 and [TV acceptance and limits](docs/RELEASE-1.5.0.md).
 
 </details>
