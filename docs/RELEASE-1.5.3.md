@@ -12,6 +12,8 @@ decision remain pending. This release must not be presented as universal TV comp
 
 ## Changes
 
+- #191: separate Appearance layout/app controls from Themes, add ID-first theme installation, show the effective Columns count and place language choices directly in their category. Remote navigation, delayed-status focus and twelve-language browser checks passed; physical TV acceptance remains pending.
+
 - #188: bundle Ribbon for offline selection in both editions, with theme-driven
   scenic ribbon geometry, slanted cards and shortcut placement. Navigation enters
   Settings at the visible left edge, including after the application window moves.

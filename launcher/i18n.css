@@ -74,13 +74,13 @@ html,body,button {
   margin: 12px 0 20px;
 }
 
-#languageChoices {
+#languageChoices, #settingsLanguageChoices {
   display: flex;
   flex-wrap: wrap;
   margin: -8px;
 }
 
-#languageChoices button {
+#languageChoices button, #settingsLanguageChoices button {
   font: inherit;
   font-size: 26px;
   line-height: 1.5;
@@ -93,11 +93,11 @@ html,body,button {
   text-align: left;
 }
 
-#languageChoices button[aria-pressed="true"] {
+#languageChoices button[aria-pressed="true"], #settingsLanguageChoices button[aria-pressed="true"] {
   border-color: #7f9ecb;
 }
 
-#languageChoices button:focus {
+#languageChoices button:focus, #settingsLanguageChoices button:focus {
   outline: 3px solid #b8d3ff;
   outline-offset: 3px;
   background: #46556c;
@@ -231,7 +231,7 @@ html[lang="hi"] #greeting,html[lang="hi"] #date {
 
 /* Margin spacing also works before grid/flex gap support. */
 
-#languageChoices button {
+#languageChoices button, #settingsLanguageChoices button {
   width: calc(50% - 16px);
   margin: 8px;
 }
@@ -252,10 +252,16 @@ html[lang="zh-Hant"],html[lang="zh-Hant"] body,html[lang="zh-Hant"] button,html[
   font-family: Outfit,"CYTV NotoSansTC","CYTV NotoSans",sans-serif;
 }
 
-#languageChoices button[lang="zh-Hans"] {
+#languageChoices button[lang="zh-Hans"], #settingsLanguageChoices button[lang="zh-Hans"] {
   font-family: "CYTV NotoSansSC",sans-serif;
 }
 
-#languageChoices button[lang="zh-Hant"] {
+#languageChoices button[lang="zh-Hant"], #settingsLanguageChoices button[lang="zh-Hant"] {
   font-family: "CYTV NotoSansTC",sans-serif;
+}
+
+#settingsLanguageChoices button { width:calc(33.333% - 16px); }
+#settingsLanguageChoices button[data-language="auto"] { width:calc(100% - 16px); }
+@media (max-height:800px) {
+ #settingsLanguageChoices button { min-height:48px; padding:8px 12px; font-size:22px; }
 }

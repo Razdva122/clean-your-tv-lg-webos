@@ -125,19 +125,19 @@ Po błędzie lub przerwaniu sprawdź stan i zapisz raport diagnostyczny tej pró
 
 ## Motywy – kandydat rozwojowy
 
-W kandydacie z obsługą motywów otwórz **Ustawienia → Wygląd**. **Classic** i **Alpine** są wbudowane i nie wymagają pobierania motywu; domyślny pozostaje Classic. **Channel** jest zewnętrznym motywem ze showcase. Podczas próby w galerii: Wybierz motyw i **Zachowaj motyw** w ciągu **20 sekund**. **Przywróć**, Back lub upływ czasu przywraca poprzedni. Przerwana próba uruchomi Home z Classic. Motywy wbudowane i pobrane wybrane z listy zainstalowanych są stosowane i zapisywane od razu, bez odliczania. Dotyczy to również motywów z komputera lub URL. Tylko Wypróbuj motyw w galerii rozpoczyna próbę 20 sekund.
+W kandydacie z obsługą motywów otwórz **Ustawienia → Motywy**. **Classic** i **Alpine** są wbudowane i nie wymagają pobierania motywu; domyślny pozostaje Classic. **Channel** jest zewnętrznym motywem ze showcase. Podczas próby w galerii: Wybierz motyw i **Zachowaj motyw** w ciągu **20 sekund**. **Przywróć**, Back lub upływ czasu przywraca poprzedni. Przerwana próba uruchomi Home z Classic. Motywy wbudowane i pobrane wybrane z listy zainstalowanych są stosowane i zapisywane od razu, bez odliczania. Dotyczy to również motywów z komputera lub URL. Tylko Wypróbuj motyw w galerii rozpoczyna próbę 20 sekund.
 
 Zainstalowane motywy są w jednym przewijanym poziomo rzędzie. Aktywny motyw jest zawsze pierwszy, a jego karta jest wyróżniona. Do przeglądania użyj strzałek w lewo/prawo.
 
 Galeria pokazuje tylko motywy niezainstalowane na tym TV. Classic, Alpine i pobrane motywy są ukryte, także gdy istnieje nowsza wersja. Po usunięciu motyw pojawia się ponownie. Aktualizuj przez URL lub transfer z komputera.
 
-Karty motywów są osadzone bezpośrednio w Wyglądzie obok kategorii. Galeria, instalacja z linku i przesyłanie z komputera otwierają się w tym panelu; tylko próba w galerii tymczasowo pokazuje Home.
+Karty motywów są osadzone bezpośrednio w Motywyzie obok kategorii. Galeria, instalacja z linku i przesyłanie z komputera otwierają się w tym panelu; tylko próba w galerii tymczasowo pokazuje Home.
 
-Otwarcie galerii lub wybranie Odśwież sprawdza zatwierdzone aktualizacje katalogu w głównym repozytorium bez aktualizacji Home i przeładowania strony. Nowe wpisy pojawiają się po zwykłym scaleniu; niescalony kandydat może pokazywać katalog dołączony. Offline lub przy błędach używane są dołączone wpisy i podglądy. Wbudowane motywy odpowiadają zainstalowanej wersji Home. Otwórz podgląd Channel i wybierz **Pobierz motyw** (wymagany internet). Po pobraniu wypróbuj i wybierz **Zachowaj motyw** w ciągu **20 sekund**. Zainstalowane motywy działają offline. **Dodaj przez URL** nadal obsługuje przypięte linki.
+Otwarcie galerii lub wybranie Odśwież sprawdza zatwierdzone aktualizacje katalogu w głównym repozytorium bez aktualizacji Home i przeładowania strony. Nowe wpisy pojawiają się po zwykłym scaleniu; niescalony kandydat może pokazywać katalog dołączony. Offline lub przy błędach używane są dołączone wpisy i podglądy. Wbudowane motywy odpowiadają zainstalowanej wersji Home. Otwórz podgląd Channel i wybierz **Pobierz motyw** (wymagany internet). Po pobraniu wypróbuj i wybierz **Zachowaj motyw** w ciągu **20 sekund**. Zainstalowane motywy działają offline. **Dodaj przez ID** nadal obsługuje przypięte linki.
 
-Aby przetestować nieopublikowany motyw, najpierw otwórz na TV **Ustawienia → Wygląd → Odbierz z komputera**. Wpisz adres TV i sześciocyfrowy PIN w **Send to TV** w podglądzie na komputerze, wyślij i wybierz **Zastosuj motyw** na TV. Główna metoda łączy PC z TCP **8879 telewizora**, bez zmiany zapory komputera. Oba urządzenia muszą być w tej samej zaufanej sieci domowej. Odbiornik zamyka się po jednym wysłaniu, anulowaniu, wyjściu lub **10 minutach**. PIN nie jest zapisywany; motyw działa offline. Publikacja w GitHub nie jest wymagana.
+Aby przetestować nieopublikowany motyw, najpierw otwórz na TV **Ustawienia → Motywy → Odbierz z komputera**. Wpisz adres TV i sześciocyfrowy PIN w **Send to TV** w podglądzie na komputerze, wyślij i wybierz **Zastosuj motyw** na TV. Główna metoda łączy PC z TCP **8879 telewizora**, bez zmiany zapory komputera. Oba urządzenia muszą być w tej samej zaufanej sieci domowej. Odbiornik zamyka się po jednym wysłaniu, anulowaniu, wyjściu lub **10 minutach**. PIN nie jest zapisywany; motyw działa offline. Publikacja w GitHub nie jest wymagana.
 
-Dla opublikowanego motywu otwórz **Więcej opcji → Dodaj przez URL** i wpisz ID (np. `102300a209`), `da.gd/102300a209` lub pełny link GitHub. Home pokaże adres da.gd przed wczytaniem, a następnie sprawdzi cel GitHub i pakiet motywu. Autor może skopiować ID z opisu wydania albo **TV link → Copy ID** w podglądzie na komputerze.
+Dla opublikowanego motywu otwórz **Dodaj przez ID** i wpisz ID (np. `102300a209`), `da.gd/102300a209` lub pełny link GitHub. Home pokaże adres da.gd przed wczytaniem, a następnie sprawdzi cel GitHub i pakiet motywu. Autor może skopiować ID z opisu wydania albo **TV link → Copy ID** w podglądzie na komputerze.
 
 Opublikowane pakiety mogą jeszcze nie mieć tych opcji. Test przeglądarki nie potwierdza zgodności z fizycznym TV. [Pełny poradnik](../THEMES.md).
 
@@ -147,7 +147,7 @@ Nieopublikowane motywy z konfigurowalną wstęgą mogą umieszczać wejścia, Wi
 
 Motywy pokazują podglądy wbudowanych i wszystkich samodzielnie zainstalowanych motywów, także offline. Osobny przycisk otwiera opublikowany katalog; prywatna instalacja nie publikuje motywu.
 
-W kandydacie Wygląd pokazuje duże podglądy zainstalowanych motywów i oznacza wybrany. Galeria motywów i odbieranie z komputera to główne działania. Więcej opcji zawiera dodawanie przez URL, przywracanie Classic i usuwanie pobranych motywów. Strzałki przenoszą fokus między kartami i przyciskami; lewa strzałka na krawędzi wraca do kategorii.
+Wygląd zawiera Kolumny z bieżącą liczbą i ustawienia aplikacji. Osobna kategoria Motywy zawiera zainstalowane motywy, galerię, odbiór z komputera i Dodaj przez ID po prawej (np. 102300a209). Przywróć Classic jego kartą i usuwaj pobrane motywy pojedynczo. W kategorii Język wybierasz język bezpośrednio.
 
 W podglądzie przeglądarki Odbierz z komputera wyjaśnia kroki na telewizorze i nie uruchamia odbiornika TV na komputerze. Użyj Send to TV nad podglądem. Usunięcie pobranego motywu wymaga potwierdzenia; przy aktywnym motywie najpierw przywracany jest Classic. Anulowanie zachowuje motyw.
 
@@ -155,6 +155,6 @@ W podglądzie przeglądarki Odbierz z komputera wyjaśnia kroki na telewizorze i
 
 ## Kategorie ustawień (1.5.0)
 
-W obu edycjach kategorie są po lewej, a ustawienia po prawej: ekran główny, Wygląd (motywy i kolumny), Język, Aktualizacje i Zaawansowane. No-root ma też Developer Mode; Root zawiera aktualizacje firmware LG w aktualizacjach i dźwięk HDMI w Zaawansowanych. Góra/dół porusza się w kolumnie, prawo otwiera ustawienia, a lewo wraca do kategorii. Wstecz najpierw wraca do kategorii, potem zamyka ustawienia. Tab pozwala też wybrać powrót do Home.
+W obu edycjach kategorie są po lewej, a ustawienia po prawej: ekran główny, Wygląd, Motywy, Język, Aktualizacje i Zaawansowane. No-root ma też Developer Mode; Root zawiera aktualizacje firmware LG w aktualizacjach i dźwięk HDMI w Zaawansowanych. Góra/dół porusza się w kolumnie, prawo otwiera ustawienia, a lewo wraca do kategorii. Wstecz najpierw wraca do kategorii, potem zamyka ustawienia. Tab pozwala też wybrać powrót do Home.
 
 Żółta kropka przy kategorii aktualizacji i jej przycisku oznacza dostępne uaktualnienie. Obie znikają, gdy udane sprawdzenie potwierdzi brak aktualizacji; przy błędzie pozostaje ostatni potwierdzony stan.

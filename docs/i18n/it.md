@@ -126,19 +126,19 @@ Dopo un errore o un’interruzione, controlla lo stato e salva il rapporto diagn
 
 ## Temi: candidato in sviluppo
 
-Nel candidato compatibile: **Impostazioni → Aspetto**. **Classic** e **Alpine** sono integrati e non richiedono il download del tema; Classic resta predefinito. **Channel** è esterno, dallo showcase. Durante una prova nella galleria: Scegli il tema e **Mantieni tema** entro **20 secondi**. **Ripristina**, Back o la scadenza ripristinano il precedente. Una prova interrotta avvia nuovamente Home con Classic. I temi integrati e scaricati scelti nell’elenco installato vengono applicati e salvati subito, senza timer. Vale anche per quelli ricevuti dal computer o installati tramite URL. Solo Prova tema nella galleria avvia una prova di 20 secondi.
+Nel candidato compatibile: **Impostazioni → Temi**. **Classic** e **Alpine** sono integrati e non richiedono il download del tema; Classic resta predefinito. **Channel** è esterno, dallo showcase. Durante una prova nella galleria: Scegli il tema e **Mantieni tema** entro **20 secondi**. **Ripristina**, Back o la scadenza ripristinano il precedente. Una prova interrotta avvia nuovamente Home con Classic. I temi integrati e scaricati scelti nell’elenco installato vengono applicati e salvati subito, senza timer. Vale anche per quelli ricevuti dal computer o installati tramite URL. Solo Prova tema nella galleria avvia una prova di 20 secondi.
 
 I temi installati appaiono in una sola riga a scorrimento orizzontale. Il tema attivo è sempre il primo e la sua scheda è evidenziata. Usa Sinistra/Destra per scorrere la riga.
 
 La galleria mostra solo temi non installati su questo TV. Classic, Alpine e i temi scaricati sono nascosti, anche se esiste una versione più recente. Dopo la rimozione il tema riappare. Aggiorna tramite URL o trasferimento dal computer.
 
-Le schede sono integrate in Aspetto, accanto alle categorie. Galleria, installazione tramite link e trasferimento dal computer si aprono nello stesso pannello; solo una prova della galleria mostra temporaneamente Home.
+Le schede sono integrate in Temi, accanto alle categorie. Galleria, installazione tramite link e trasferimento dal computer si aprono nello stesso pannello; solo una prova della galleria mostra temporaneamente Home.
 
-Aprire la galleria o scegliere Aggiorna verifica gli aggiornamenti revisionati nel repository principale senza aggiornare Home o ricaricare la pagina. Le nuove voci arrivano dopo la normale integrazione; un candidato non integrato può mostrare il catalogo incluso. Offline o in caso di errore si usano voci e anteprime incluse. I temi integrati corrispondono alla versione installata di Home. Apri l’anteprima di Channel, poi **Scarica tema** (serve internet). Dopo il download, prova e scegli **Mantieni tema** entro **20 secondi**. I temi installati funzionano offline. **Aggiungi tramite URL** resta disponibile per i link fissati.
+Aprire la galleria o scegliere Aggiorna verifica gli aggiornamenti revisionati nel repository principale senza aggiornare Home o ricaricare la pagina. Le nuove voci arrivano dopo la normale integrazione; un candidato non integrato può mostrare il catalogo incluso. Offline o in caso di errore si usano voci e anteprime incluse. I temi integrati corrispondono alla versione installata di Home. Apri l’anteprima di Channel, poi **Scarica tema** (serve internet). Dopo il download, prova e scegli **Mantieni tema** entro **20 secondi**. I temi installati funzionano offline. **Aggiungi tramite ID** resta disponibile per i link fissati.
 
-Per provare un tema non pubblicato, apri prima **Impostazioni → Aspetto → Ricevi dal computer** sul TV. Inserisci indirizzo TV e PIN a sei cifre in **Send to TV** nell’anteprima del computer, invia e scegli **Applica tema** sul TV. Il metodo principale collega il PC alla porta TCP **8879 del TV**, senza modificare il firewall del computer. Entrambi devono essere nella stessa rete domestica fidata. Il ricevitore si chiude dopo un invio, annullamento, uscita o **10 minuti**. Il PIN non viene salvato; il tema installato funziona offline. Non serve pubblicare su GitHub.
+Per provare un tema non pubblicato, apri prima **Impostazioni → Temi → Ricevi dal computer** sul TV. Inserisci indirizzo TV e PIN a sei cifre in **Send to TV** nell’anteprima del computer, invia e scegli **Applica tema** sul TV. Il metodo principale collega il PC alla porta TCP **8879 del TV**, senza modificare il firewall del computer. Entrambi devono essere nella stessa rete domestica fidata. Il ricevitore si chiude dopo un invio, annullamento, uscita o **10 minuti**. Il PIN non viene salvato; il tema installato funziona offline. Non serve pubblicare su GitHub.
 
-Per un tema pubblicato, apri **Altre opzioni → Aggiungi tramite URL** e inserisci l’ID (ad esempio `102300a209`), `da.gd/102300a209` o il link GitHub completo. Home mostra l’indirizzo da.gd prima del caricamento e verifica destinazione GitHub e pacchetto. L’autore può copiare l’ID dalle note di rilascio o da **TV link → Copy ID** nell’anteprima.
+Per un tema pubblicato, apri **Aggiungi tramite ID** e inserisci l’ID (ad esempio `102300a209`), `da.gd/102300a209` o il link GitHub completo. Home mostra l’indirizzo da.gd prima del caricamento e verifica destinazione GitHub e pacchetto. L’autore può copiare l’ID dalle note di rilascio o da **TV link → Copy ID** nell’anteprima.
 
 I pacchetti pubblicati potrebbero non avere ancora questi comandi. I test nel browser non provano la compatibilità TV. [Guida completa](../THEMES.md).
 
@@ -148,7 +148,7 @@ I temi con barra configurabile non ancora pubblicati possono collocare Ingressi,
 
 Temi mostra le anteprime dei temi integrati e di tutti quelli installati personalmente, anche offline. Un pulsante separato apre il catalogo pubblicato; installare un tema personale non lo pubblica.
 
-Nel candidato, Aspetto mostra grandi anteprime dei temi installati e indica quello selezionato. La vetrina e la ricezione dal computer sono le azioni principali. Altre opzioni contiene aggiunta tramite URL, ripristino di Classic e cancellazione dei temi scaricati. Le frecce spostano il focus tra schede e pulsanti; a sinistra sul bordo si torna alle categorie.
+Aspetto contiene Colonne con il numero attuale e i controlli delle app. La categoria Temi contiene temi installati, galleria, ricezione dal computer e Aggiungi tramite ID a destra (es. 102300a209). Ripristina Classic dalla scheda e rimuovi i download singolarmente. Lingua offre direttamente la scelta.
 
 Nell’anteprima del browser, Ricevi dal computer spiega i passaggi sul televisore senza avviare un ricevitore TV sul computer. Usa Send to TV sopra l’anteprima. Rimuovere un tema scaricato richiede conferma; se è attivo, viene prima ripristinato Classic. Annulla conserva il tema.
 
@@ -156,6 +156,6 @@ Nell’anteprima del browser, Ricevi dal computer spiega i passaggi sul televiso
 
 ## Categorie delle impostazioni (1.5.0)
 
-Entrambe le edizioni mostrano le categorie a sinistra e le impostazioni a destra: schermata Home, Aspetto (temi e colonne), Lingua, Aggiornamenti software e Avanzate. No-root aggiunge Developer Mode; Root include il firmware LG negli aggiornamenti e l’audio HDMI in Avanzate. Su/Giù naviga nella colonna, Destra entra nelle impostazioni e Sinistra torna alle categorie. Indietro torna prima alle categorie, poi chiude le impostazioni. Tab raggiunge anche il pulsante per tornare a Home.
+Entrambe le edizioni mostrano le categorie a sinistra e le impostazioni a destra: schermata Home, Aspetto, Temi, Lingua, Aggiornamenti software e Avanzate. No-root aggiunge Developer Mode; Root include il firmware LG negli aggiornamenti e l’audio HDMI in Avanzate. Su/Giù naviga nella colonna, Destra entra nelle impostazioni e Sinistra torna alle categorie. Indietro torna prima alle categorie, poi chiude le impostazioni. Tab raggiunge anche il pulsante per tornare a Home.
 
 Un punto giallo su Aggiornamenti software e sul pulsante interno indica un aggiornamento disponibile. Entrambi scompaiono quando una verifica riuscita conferma che non ci sono aggiornamenti; in caso di errore resta l’ultimo stato confermato.
