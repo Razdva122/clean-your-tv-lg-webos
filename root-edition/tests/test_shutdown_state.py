@@ -216,3 +216,71 @@ class WakeWorkerTests(unittest.TestCase):
   with patch.object(s.subprocess,'Popen',return_value=child),patch.object(s.select,'select',return_value=([child.stdout],[],[])),patch.object(s.os,'read',side_effect=read):
    s.observe_power('tx','boot-a',threading.Event(),wake=lambda cancelled:callbacks.append(cancelled))
   self.assertEqual(len(callbacks),1);self.assertTrue(callbacks[0]())
+
+
+class WakeDiagnosticTests(PowerTests):
+ def snapshot(self):
+  import json,persistent_health as h
+  return json.loads(h.path('tx').with_suffix('.wake').read_text())
+ def test_missing_transition_and_real_wake_have_distinct_bounded_records(self):
+  power=s.PowerState('tx','boot-a')
+  self.assertEqual(self.snapshot()['event'],'observing')
+  self.event(power,'Active',True)
+  self.assertEqual(self.snapshot()['wake_count'],0)
+  self.event(power,'Active Standby')
+  self.assertEqual(self.snapshot()['event'],'off-observed')
+  self.event(power,'Active Standby')
+  self.assertEqual(self.snapshot()['off_count'],1)
+  token=power.event(dict(returnValue=True,state='Active'))
+  self.assertIsNotNone(token)
+  self.assertEqual(self.snapshot()['event'],'wake-observed')
+  self.assertEqual(self.snapshot()['wake_count'],1)
+  self.assertEqual(self.snapshot()['revision'],token)
+  for _ in range(50):self.event(power,'Active')
+  self.assertEqual(self.snapshot()['event'],'wake-observed')
+  self.assertEqual(self.snapshot()['wake_count'],1)
+  power.close()
+  self.assertEqual(self.snapshot()['event'],'closed')
+ def test_new_active_baseline_is_recorded_without_inventing_a_wake(self):
+  for state in ('Active Standby','unknown','Active'):
+   power=s.PowerState('tx','boot-a')
+   self.event(power,state,True)
+   if state == 'Active':
+    self.assertIsNone(power.event(dict(returnValue=True,state='Active',onOff='off')))
+   self.assertIsNone(power.event(dict(returnValue=True,state='Active')))
+   snapshot=self.snapshot()
+   self.assertTrue(snapshot['on']);self.assertFalse(snapshot['asleep'])
+   self.assertEqual(snapshot['wake_count'],0)
+
+ def test_unknown_reply_is_classified_without_persisting_raw_data(self):
+  power=s.PowerState('tx','boot-a');self.event(power,'Active',True)
+  self.event(power,'private-state-with-address')
+  snapshot=self.snapshot()
+  self.assertEqual(snapshot['event'],'unknown-state')
+  self.assertNotIn('private',str(snapshot))
+  self.assertIsNone(power.event(dict(returnValue=True,state='Active')))
+ def test_stream_eof_leaves_reason_and_cancels_edge(self):
+  import threading
+  from unittest.mock import Mock
+  callbacks=[];child=Mock();child.stdout.fileno.return_value=7;child.poll.return_value=None
+  frames=b'{"returnValue":true,"subscribed":true,"state":"Active"}{"returnValue":true,"state":"Active Standby"}{"returnValue":true,"state":"Active"}'
+  with patch.object(s.subprocess,'Popen',return_value=child),patch.object(s.select,'select',return_value=([child.stdout],[],[])),patch.object(s.os,'read',side_effect=[frames,b'']):
+   s.observe_power('tx','boot-a',threading.Event(),wake=lambda cancelled:callbacks.append(cancelled))
+  snapshot=self.snapshot()
+  self.assertEqual(snapshot['event'],'eof');self.assertEqual(snapshot['wake_count'],1)
+  self.assertTrue(callbacks[0]());self.assertFalse(snapshot['on'])
+ def test_diagnostic_file_cannot_replace_or_follow_a_foreign_symlink(self):
+  import persistent_health as h
+  target=h.ROOT/'foreign';target.write_text('keep')
+  h.path('tx').with_suffix('.wake').symlink_to(target)
+  power=s.PowerState('tx','boot-a');self.event(power,'Active',True)
+  self.event(power,'Active Standby')
+  self.assertIsNotNone(power.event(dict(returnValue=True,state='Active')))
+  self.assertEqual(target.read_text(),'keep')
+ def test_diagnostic_io_failure_does_not_revoke_an_eligible_edge(self):
+  power=s.PowerState('tx','boot-a')
+  with patch.object(s.tempfile,'mkstemp',side_effect=OSError('full')):
+   self.event(power,'Active',True)
+  self.event(power,'Active Standby')
+  with patch.object(s.tempfile,'mkstemp',side_effect=OSError('full')):
+   self.assertIsNotNone(power.event(dict(returnValue=True,state='Active')))

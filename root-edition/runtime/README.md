@@ -112,6 +112,20 @@ and verify the corrected metadata gate; installation/physical acceptance of the
 new code is still required separately for RC-START-05 and RC-START-08. Active
 intent and installation alone do not establish automatic foreground acceptance.
 
+For the unresolved Root 0.6.1 standby report [#171](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/171),
+the preparation branch adds diagnostic coverage only. Every invoked wake presenter,
+including early cancellation/session/intent/health refusal, records its outcome
+and fixed last-check stage through the existing private `boot-decision.json`.
+The power reader also keeps one root-owned, atomic volatile snapshot per transaction
+at `/tmp/clean-your-tv-root-health/<transaction-sha256>.wake`. It records a fixed
+stream/transition event, session/transaction, monotonic uptime, revision, primed/on/
+asleep flags, observed OFF-edge count and eligible-wake-edge count. Duplicate Active
+snapshots do not rewrite it. It never stores firmware replies, arbitrary state
+strings, foreground IDs, error messages or app inventories. This file has no role
+in authorization or recovery; diagnostic I/O failures leave existing decisions
+unchanged. No new durable state, permission, endpoint or reconnect is introduced.
+See [standby investigation and record interpretation](../../docs/development/ROOT-WAKE-DIAGNOSTICS.md).
+
 Manual enable and short Home retain their existing behavior. See
 [cold-start investigation and acceptance](../../docs/development/ROOT-COLD-BOOT.md).
 
