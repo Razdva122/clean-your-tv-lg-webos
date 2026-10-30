@@ -6,18 +6,14 @@ for this change. Published v1.5.0 remains subject to its documented standby limi
 
 ## Established evidence and blocker
 
-The maintainer-owned OLED55C3RLA, firmware 43.21.71 / webOS SDK 11.2.0,
-Root 0.6.1 / shared UI 1.6.0, Root Updater 0.3.3 and System Updater 1.1.2,
-left LG Channels visible after ordinary remote-off/wake with Home replacement
-previously enabled. The installer host was macOS ARM64; remote model unknown.
-The separate AC-off cold-start observation showed LG Channels first and then
-Clean Your TV, and passed in that scoped observation window. Neither cold boot
-nor a package install establishes standby acceptance.
+The existing public issue records the exact device, firmware, component versions,
+installer platform, artifact and observation scope. With Home replacement
+previously enabled, ordinary remote-off/wake left LG Channels visible. The
+separate AC-off cold start showed Channels first and then Clean Your TV and
+passed in its scoped window. Neither cold boot nor package installation
+establishes standby acceptance. Device/build identifiers are not repeated here.
 
-The recorded Root IPK SHA-256 is
-`419de466e43095b426d9652c102fabd2c3ebd5a58c4dbb0f4928056b6d4b9f64`;
-source `1f41a9cf3d66a6858de71e91dcebcef417e81bd4`, build 41036602865/1,
-QA signing 41037318681/1. The current failure has no captured matching power
+The current failure has no captured matching power
 stream, wake decision or post-wake intent/guardian/input-health state. Earlier
 Root 0.6.0 readbacks established retained routing in their own cycles, and the
 historical closed #90 concerned a different input-readiness failure. Neither
