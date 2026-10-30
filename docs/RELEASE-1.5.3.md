@@ -1,11 +1,22 @@
-# v1.5.3 — Installer checks, Appearance and legacy Helper runtime
+# v1.5.3 — Ribbon, installer checks and legacy Helper runtime
 
-Status: unpublished candidate. Corrected source passed the complete final build
-and [delivered-artifact/host/Android verification](history/2026-10-30-release-1.5.3-final-verification.md).
+Status: unpublished candidate. The maintainer approved adding Ribbon to 1.5.3
+and rebuilding the frozen candidate. The prior successful build and
+[verification report](history/2026-10-30-release-1.5.3-final-verification.md)
+remain historical evidence for their original artifacts. The expanded candidate
+requires a new complete build and affected acceptance; see the
+[scope reset record](history/2026-10-30-release-1.5.3-ribbon-rescope.md).
 Physical TV acceptance, the new Helper transition and the unresolved standby
 decision remain pending. This release must not be presented as universal TV compatibility.
 
 ## Changes
+
+- #188: bundle Ribbon for offline selection in both editions, with theme-driven
+  scenic ribbon geometry, slanted cards and shortcut placement. Navigation enters
+  Settings at the visible left edge, including after the application window moves.
+  The existing Classic default remains. Theme authoring uses the optional
+  `ribbon-layout-v1` capability; older Home versions reject unsupported imports
+  before replacing the selected theme. Physical remote acceptance is pending.
 
 - #175 and #183 (#160, #164): visible prerequisite results in console, desktop
   and Android, retained failure rows and diagnostic-report guidance. Root still
@@ -32,7 +43,7 @@ decision remain pending. This release must not be presented as universal TV comp
 | Component | Published 1.5.2 | Candidate 1.5.3 | Reason |
 | --- | --- | --- | --- |
 | cytv | 0.6.0 | 0.6.1 | Changed preflight, visible checks and recovery tooling |
-| Home | 1.6.0 | 1.6.1 | Changed layout module and Appearance CSS |
+| Home | 1.6.0 | 1.6.1 | Ribbon, shared layout module and Appearance CSS |
 | Home Helper | 0.6.20 | 0.6.21 | Node 0.10.25/runtime and pairing-key handling |
 | Root | 0.6.1 | 0.6.2 | Shared UI and infrastructure diagnostics |
 | Both edition Updaters | 0.3.3 | 0.3.4 | Both embed changed Appearance CSS |
@@ -66,7 +77,8 @@ release approval. Root firmware support and other users' retained recovery remai
 separate unresolved work. The independent Homebrew Installer stays unreleased
 with promotion disabled.
 
-The coordinator pinned the final complete build at run 41095949258 / attempt 2.
+The previous selected build was run 41095949258 / attempt 2. Its pin was removed
+when Ribbon expanded the frozen scope; a new complete build must be selected.
 Remaining work is to record scoped controls,
 startup, UI and update/rollback results and satisfy Release
 policy before main/publication. No new physical compatibility, phone test,

@@ -62,13 +62,13 @@
       "pr": 186,
       "issues": [],
       "summary": "Correct current release and historical acceptance documentation"
+    },
+    {
+      "pr": 188,
+      "issues": [],
+      "summary": "Add built-in Ribbon with theme-driven scenic ribbon options"
     }
   ],
   "excluded": [],
-  "acceptance": "",
-  "build": {
-    "run_id": 41095949258,
-    "attempt": 2,
-    "source": "5e8caee856b28f48a3bec7b88606be17157caacd"
-  }
+  "acceptance": ""
 }
