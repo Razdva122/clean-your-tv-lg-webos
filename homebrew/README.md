@@ -16,6 +16,17 @@ bundled pinned ARMv7 Python 3.13 runtime. Runtime preparation requires 320 MiB f
 the approximately 57 MiB development IPK also requires unmeasured package-manager
 staging capacity. No new model, firmware or webOS compatibility is claimed.
 
+On webOS 11, stock Homebrew Channel **0.7.3** can reject Installer's `exec`
+request with `Denied method call` even when the same entry works from root SSH.
+Homebrew's [upstream correction #233](https://github.com/webosbrew/webos-homebrew-channel/pull/233)
+grants its elevated service to the `lunabus.query` group used by newer apps.
+That correction is not in the published 0.7.3 release. Checking root execution
+from SSH alone does not validate the application's access. An appinfo-only
+`requiredPermissions` declaration did not grant the group on the tested TV.
+Do not silently patch Homebrew's ACLs or count a temporary prerequisite patch
+as an unmodified public installation. See the
+[current submission record](catalog/SUBMISSION.md).
+
 Homebrew updates the separate `com.cleanyourtv.installer` application. Root Home,
 Root Updater and optional System Updater retain their product and recovery
 contracts; complete product updates belong to System Updater. Removing the
