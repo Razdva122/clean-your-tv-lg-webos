@@ -113,7 +113,9 @@ Open **http://127.0.0.1:8878/** to exercise Home/Settings, or `/themes/` for the
 
 ## Parameterized ribbons (unreleased)
 
-Themes can optionally configure the existing scenic ribbon's card sizes, spacing, skew, focused-card lift, captions and clock visibility. The theme chooses whether compact Inputs, Wi-Fi and Settings shortcuts appear at bottom left. With shortcut edge navigation, Left from the first application selects Settings, then Wi-Fi and Inputs; Right from Settings returns to the first application. Themes without these options retain their previous appearance and controls.
+**Ribbon is bundled by this unreleased candidate** in both editions, alongside Classic and Alpine. Update Home, then select Ribbon in Settings → Appearance; no theme download or network connection is needed. Classic remains the default. Bundled Ribbon cannot be removed or replaced through downloaded-theme controls.
+
+Themes can optionally configure the existing scenic ribbon's card sizes, spacing, skew, focused-card lift, captions and clock visibility. The theme chooses whether compact Inputs, Wi-Fi and Settings shortcuts appear at bottom left. With shortcut edge navigation, Left from the first visible application selects Settings, then Wi-Fi and Inputs; Right from Settings returns to that same visible edge. Themes without these options retain their previous appearance and controls.
 
 These themes require the `ribbon-layout-v1` capability in Home. On a theme-enabled Home without this capability, both Add by URL and Receive from computer reject the new descriptor before saving/applying it: your current theme and saved selection stay unchanged. Exact error text depends on the installed version and may report an unsupported capability/API. Update Home and retry. A theme package does not upgrade Home. If you downgrade Home after already selecting an unsupported theme, startup recovery can restore Classic; that differs from a rejected new installation.
 

@@ -83,7 +83,7 @@ Unreleased candidate only, in both editions: open **Home settings → Appearance
 
 Unreleased candidate, both editions: in **Home settings → Appearance**, turn off **Show Add app tile** to hide the + tile. It is on by default. Use **Add app** in the same section to add or restore apps while + is hidden. Ordering and hiding remain available; the choice survives restart. If every app is hidden, the top controls and Settings remain available.
 
-In candidate theme previews with the optional sidebar layout, Up/Down selects a menu item, Right enters the apps, and Left from the first app column returns to the menu.
+In candidate theme previews with the optional sidebar layout, Up/Down selects a menu item, Right enters the apps, and Left from the first visible app column returns to the menu.
 
 No-root 1.5.0: Helper can recover a transient watchdog timeout after standby, with at most five attempts in ten minutes. Stop and triple Home still require an explicit Start Helper; repeated failures stay stopped. TV acceptance is pending. [Behavior and limits (English)](../HELPER-DIAGNOSTICS.md#watchdog-recovery-unpublished-candidate-155).
 
@@ -140,13 +140,15 @@ For a published theme, open **More options → Add by URL** and enter its ID (fo
 
 Published packages may not contain these controls yet. Browser tests are not physical-TV acceptance. See the [complete theme guide](../THEMES.md) for supported URLs, storage limits and recovery.
 
+This unreleased candidate also bundles **Ribbon**, alongside Classic and Alpine, so it works without a theme download. Classic remains the default. Select Ribbon in Settings → Appearance after updating Home.
+
 Themes shows previews of built-in themes and every theme you installed yourself, including offline. A separate Theme showcase button opens the published catalogue; personal installation does not publish a theme.
 
 In the Appearance candidate, large preview cards show installed themes and mark the selected theme. Theme showcase and Receive from computer are the main actions. More options contains Add by URL, Restore Classic and Clear downloaded themes. Use the arrow keys between cards and controls; Left at the edge returns to categories.
 
 In the browser preview, Receive from computer explains the steps to perform on the TV; it does not start a TV receiver on the computer. Use Send to TV above the preview. Removing a downloaded theme asks for confirmation; removing the active theme restores Classic first. Cancel keeps the theme.
 
-Unreleased parameterized ribbon themes can place the small Inputs, Wi-Fi and Settings buttons at the bottom left. When a theme enables this navigation, Left from the first app selects Settings, then Wi-Fi and Inputs; Right from Settings returns to the first app. A theme that requires a newer Home capability is rejected during installation on an unsupported version, keeping the current appearance and selection. Update Home before retrying. Downgrading Home after selecting such a theme can instead trigger the existing recovery to Classic at startup.
+Unreleased parameterized ribbon themes can place the small Inputs, Wi-Fi and Settings buttons at the bottom left. When a theme enables this navigation, Left from the first visible app selects Settings, then Wi-Fi and Inputs; Right from Settings returns to the same visible edge. A theme that requires a newer Home capability is rejected during installation on an unsupported version, keeping the current appearance and selection. Update Home before retrying. Downgrading Home after selecting such a theme can instead trigger the existing recovery to Classic at startup.
 
 <a id="settings-categories-unpublished-candidate"></a>
 

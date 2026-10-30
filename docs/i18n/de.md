@@ -140,7 +140,9 @@ Für ein veröffentlichtes Design unter **Weitere Optionen → Über URL hinzuf�
 
 Veröffentlichte Pakete enthalten diese Funktion möglicherweise noch nicht. Browserprüfungen sind kein TV-Kompatibilitätsnachweis. [Vollständige Anleitung](../THEMES.md).
 
-Noch unveröffentlichte anpassbare Leisten-Themen können Eingänge, WLAN und Einstellungen links unten platzieren. Wenn aktiviert, wählt Links bei der ersten App Einstellungen, dann WLAN und Eingänge; Rechts in den Einstellungen kehrt zur ersten App zurück. Benötigt ein Thema eine neue Home-Funktion, wird seine Installation in einer nicht unterstützten Version abgelehnt; Aussehen und Auswahl bleiben erhalten. Aktualisieren Sie zuerst Home. Ein späteres Downgrade kann beim Start Classic wiederherstellen.
+Dieser unveröffentlichte Kandidat enthält neben Classic und Alpine auch **Ribbon**, ohne separaten Download. Classic bleibt die Vorgabe. Nach dem Home-Update wählen Sie Ribbon unter Einstellungen → Erscheinungsbild.
+
+Noch unveröffentlichte anpassbare Leisten-Themen können Eingänge, WLAN und Einstellungen links unten platzieren. Wenn aktiviert, wählt Links bei der ersten sichtbaren App Einstellungen, dann WLAN und Eingänge; Rechts in den Einstellungen kehrt zur selben sichtbaren App zurück. Benötigt ein Thema eine neue Home-Funktion, wird seine Installation in einer nicht unterstützten Version abgelehnt; Aussehen und Auswahl bleiben erhalten. Aktualisieren Sie zuerst Home. Ein späteres Downgrade kann beim Start Classic wiederherstellen.
 
 Designs zeigt Vorschauen der integrierten und aller selbst installierten Designs, auch offline. Die separate Schaltfläche für den Designkatalog öffnet veröffentlichte Designs; eine persönliche Installation veröffentlicht kein Design.
 

@@ -17,7 +17,8 @@ const hash=b=>crypto.createHash('sha256').update(b).digest('hex'),encode=x=>Buff
  const documents=[...new Set([manifest.license.textPath,manifest.license.creditsPath])].map(name=>({path:name,data:readLocal(source,name,32768)}));
  const inputs=['theme.json','theme.css',...assets.map(a=>a.path),...documents.map(d=>d.path)];
  // Keep exact source provenance stable across later unrelated commits.
- for(const name of inputs){const actual=readLocal(source,name,6291456),pinned=cp.execFileSync('git',['show',commit+':'+path.relative(root,path.join(source,name)).split(path.sep).join('/')],{cwd:root,maxBuffer:8*1024*1024});if(!actual.equals(pinned))throw Error('Commit changed theme source and remove its old generated bundle before rebuilding');}
+ // A shallow CI checkout can verify reproducible bytes without fetching source history.
+ if(!check)for(const name of inputs){const actual=readLocal(source,name,6291456),pinned=cp.execFileSync('git',['show',commit+':'+path.relative(root,path.join(source,name)).split(path.sep).join('/')],{cwd:root,maxBuffer:8*1024*1024});if(!actual.equals(pinned))throw Error('Commit changed theme source and remove its old generated bundle before rebuilding');}
  const home=JSON.parse(fs.readFileSync(path.join(root,'launcher/appinfo.json')));
  const result=await compileSource({manifest,css:readLocal(source,'theme.css',262144).toString('utf8'),assets,documents,source:{repository:'https://github.com/razdva122/clean-your-tv-lg-webos',commit},minimumHomeVersion:previous?previous.requires.minimumHomeVersion:home.themeEngineVersion||home.version});
  const files=new Map(),m=result.manifest;m.rules.path='rules/'+m.rules.sha256+'.json';files.set(m.rules.path,Buffer.from(JSON.stringify(result.rules)+'\n'));

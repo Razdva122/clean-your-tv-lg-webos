@@ -45,7 +45,12 @@ Files in separate toolkit: lib/toolkit.cjs, examples/ribbon/, tests/ribbon.cjs, 
 
 - [x] Document full numeric contract, developer walkthrough, user capability rejection and shortcut behavior in all12 localized guides. Clearly mark unreleased support.
 - [x] Exercise actual pre-change policy/data/manager for LAN and URL installs; assert current choice/visual unchanged and zero cache writes.
-- [ ] Run `bash scripts/test.sh`, appropriate browser regressions and toolkit `npm test`; fix scoped failures and disclose unrelated blockers.
+- [x] Run `bash scripts/test.sh`, appropriate browser regressions and toolkit `npm test`; fix scoped failures and disclose unrelated blockers.
 - [x] Request independent code review of both complete diffs; resolve material findings and rerun affected checks.
 - [ ] Commit sources separately, push feature branches, open and attach paired PRs targeting release/next, cross-link dependencies and verified tests.
 - [ ] Keep review artifacts outside temporary worktrees; remove/archive worktrees after changes are committed and pushed. Report PR links, exact old-TV outcome and any untested TV behavior.
+
+
+## Approved follow-up completed
+
+Bundled Ribbon was requested during implementation. Added generic packaged-theme registry handling, data-only source/bundle and catalog/inventory entries; Classic remains default. Verified both editions offline, saved selection, 720p settings controls, no builtin removal and preference restoration. Fixed pointer-focus scrolling when the installed list first overflows. User clarified that shortcut boundary follows the visible edge; scoped tests pass with a logical first app in the middle. A Reddit reply with the requested 13-second simulated demonstration was posted and playback verified; no physical-TV report or acceptance is implied.

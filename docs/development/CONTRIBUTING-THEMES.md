@@ -683,7 +683,7 @@ announcing that others can install it through Showcase.
 
 Voting and automatic promotion into built-in themes are **not implemented**.
 Popularity is not approval, and a public listing does not bundle a theme with
-Home. Current built-ins are Classic and Alpine; Channel is an external listing.
+Home. Published built-ins are Classic and Alpine; this unreleased candidate also bundles Ribbon. Channel remains an external listing.
 
 ## 12. Maintain and update your theme
 

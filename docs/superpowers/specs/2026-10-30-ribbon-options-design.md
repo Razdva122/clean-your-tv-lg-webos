@@ -12,7 +12,7 @@ The first Ribbon example uses left340,right84,bottom0,cardHeight180,gap0,skewDeg
 
 ## Interaction and lifecycle
 
-With edgeNavigation shortcuts, Left at app index0 selects Settings and resets the row to its start; successive Left selects Wi-Fi and Inputs. Right from Settings returns app0. Other ribbons preserve wrap. Inputs popup stays on screen above bottom controls. Pointer and wheel, app order, hold/reorder, settings suspension, theme reset and rollback remain functional. Native Home/emergency delivery and key-up handlers remain untouched.
+With edgeNavigation shortcuts, Left at visible slot0 selects Settings without moving the row; successive Left selects Wi-Fi and Inputs. Right from Settings returns the same visible first card. Other ribbons preserve wrap. Inputs popup stays on screen above bottom controls. Pointer and wheel, app order, hold/reorder, settings suspension, theme reset and rollback remain functional. Native Home/emergency delivery and key-up handlers remain untouched.
 
 ## Tooling and installation
 
@@ -23,3 +23,12 @@ Installing a descriptor with ribbon-layout-v1 on a Home that supports themes but
 ## Validation
 
 Unit tests cover option bounds, capability pairing, default preservation and atomic state. Browser tests cover both editions, arbitrary alternate parameters, bounds and focus, shortcut/pointer/wheel navigation, reorder, overlays/suspension/reset and no page errors. Test an actual pre-change policy/data/manager with the new descriptor for URL and LAN installation: no store writes or visual/selection changes. Run repository regression script and toolkit suite. Record actual environment limits. No physical-TV acceptance is implied or performed by this task.
+
+
+## Approved scope extension: bundled Ribbon
+
+The user subsequently requested Ribbon as a built-in theme, with Classic remaining the default. Package the same data-only theme under builtin:ribbon, generalize the trusted packaged-theme registry rather than adding Ribbon name branches, and include it in both Root/No-root distribution inventories. Appearance must show, apply and persist it offline with no removal action; unknown future remote built-ins cannot claim local installation. The toolkit's independent author example remains under candidate-examples/ribbon until its reviewed stable runtime supports the capability. Its existing catalogue stays compatible with the older runtime pin.
+
+The user authorized a Reddit reply to maxlmuller announcing the next-release built-in theme, initially with their exact screenshot and subsequently a short demonstration video. Public media contains only the simulated/reference launcher. This is not a physical-TV installation report.
+
+The user corrected the initial logical-index boundary after trying a scrolled row. Regressions cover logical app zero appearing in the middle, Left/Right remaining adjacent, and Settings return preserving the current visible window.

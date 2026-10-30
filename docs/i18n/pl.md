@@ -141,7 +141,9 @@ Dla opublikowanego motywu otwórz **Więcej opcji → Dodaj przez URL** i wpisz 
 
 Opublikowane pakiety mogą jeszcze nie mieć tych opcji. Test przeglądarki nie potwierdza zgodności z fizycznym TV. [Pełny poradnik](../THEMES.md).
 
-Nieopublikowane motywy z konfigurowalną wstęgą mogą umieszczać wejścia, Wi-Fi i ustawienia w lewym dolnym rogu. Gdy opcja jest włączona, Lewo przy pierwszej aplikacji wybiera ustawienia, potem Wi-Fi i wejścia; Prawo w ustawieniach wraca do pierwszej aplikacji. Instalacja motywu wymagającego nowej funkcji Home jest odrzucana w nieobsługiwanej wersji, zachowując wygląd i wybór. Najpierw zaktualizuj Home. Późniejsze obniżenie wersji może przywrócić Classic podczas startu.
+Ten nieopublikowany kandydat zawiera **Ribbon** obok Classic i Alpine, bez pobierania motywu. Classic pozostaje domyślny. Po aktualizacji Home wybierz Ribbon w Ustawienia → Wygląd.
+
+Nieopublikowane motywy z konfigurowalną wstęgą mogą umieszczać wejścia, Wi-Fi i ustawienia w lewym dolnym rogu. Gdy opcja jest włączona, Lewo przy pierwszej widocznej aplikacji wybiera ustawienia, potem Wi-Fi i wejścia; Prawo w ustawieniach wraca do tej samej widocznej aplikacji. Instalacja motywu wymagającego nowej funkcji Home jest odrzucana w nieobsługiwanej wersji, zachowując wygląd i wybór. Najpierw zaktualizuj Home. Późniejsze obniżenie wersji może przywrócić Classic podczas startu.
 
 Motywy pokazują podglądy wbudowanych i wszystkich samodzielnie zainstalowanych motywów, także offline. Osobny przycisk otwiera opublikowany katalog; prywatna instalacja nie publikuje motywu.
 

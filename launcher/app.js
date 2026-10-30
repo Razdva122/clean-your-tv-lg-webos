@@ -714,8 +714,8 @@
   }
   function ribbonSlot(index) { return ((index - ribbonStart) % tiles.length + tiles.length) % tiles.length; }
   function stepRibbon(direction) {
-    if (direction < 0 && focusedTile === 0 && layoutGeometry.ribbon && layoutGeometry.ribbon.edgeNavigation === 'shortcuts') {
-      ribbonStart = 0; layoutTiles(); focusTopButton(2); return;
+    if (direction < 0 && ribbonSlot(focusedTile) === 0 && layoutGeometry.ribbon && layoutGeometry.ribbon.edgeNavigation === 'shortcuts') {
+      focusTopButton(2); return;
     }
     var index = (focusedTile + direction + tiles.length) % tiles.length;
     if (tiles.length > columnCount && ribbonSlot(index) >= columnCount) {
@@ -1119,7 +1119,7 @@
         } else if (37 === key) {
           focusTopButton(focusedTopButton - 1);
         } else if (39 === key) {
-          if (focusedTopButton === 2 && layoutGeometry.ribbon && layoutGeometry.ribbon.edgeNavigation === 'shortcuts') { ribbonStart = 0; focusTile(0); }
+          if (focusedTopButton === 2 && layoutGeometry.ribbon && layoutGeometry.ribbon.edgeNavigation === 'shortcuts') { focusTile(ribbonStart); }
           else focusTopButton(focusedTopButton + 1);
         } else if (40 === key) {
           focusTile(0 === rowFor(focusedTile) ? focusedTile : 0);
