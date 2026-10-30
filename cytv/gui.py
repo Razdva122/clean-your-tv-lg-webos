@@ -538,7 +538,7 @@ class Wizard(QMainWindow):
             self.button('Back to start', self.home, not recover and not (failed and self.report))
             failed_checks = [result for result in self.check_results.values() if result['status'] in ('fail', 'unknown')]
             if failed and failed_checks:
-                self.subtitle.setText(tr('Failed') + ': ' + ', '.join(tr(result['label']) for result in failed_checks))
+                self.subtitle.setText(tr('Failed') + ': ' + ', '.join(tr(result['label']) for result in failed_checks) + '\n' + self.subtitle.text())
 
     def show_prompt(self, prompt):
         self.check_panel.hide()
