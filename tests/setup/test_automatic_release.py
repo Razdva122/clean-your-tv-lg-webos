@@ -34,6 +34,9 @@ class AutomaticRelease(unittest.TestCase):
                 self.assertEqual(release.resolve_build_source('b' * 40, explicit), run)
                 validate.assert_called_once_with(run, 'b' * 40)
                 self.assertIn('actions/runs/42/jobs', api.call_args.args[0])
+                if not explicit:
+                    self.assertNotIn('&event=push', api.call_args_list[0].args[0],
+                                     'full workflow_dispatch builds must be discoverable without a pin')
         for incomplete in (jobs[1:], [{**job, 'conclusion': 'skipped'} if job['name'] == 'android' else job for job in jobs]):
             with self.subTest(jobs=incomplete), \
                  patch.object(release, 'github', side_effect=[run, incomplete]), \

@@ -2,9 +2,11 @@
 
 > v1.5.0: 테마, 갤러리 및 PC에서 TV로 전송. 알려진 Root 제한: Appearance가 110 px 이동할 수 있으며 대기 모드 후 Home이 자동으로 열리지 않을 수 있습니다. 기기별 검증 범위는 제한적입니다. [1.5.0](../RELEASE-1.5.0.md).
 
+> 다음 후보 버전(미출시): 고정 레이아웃 테마는 숨겨진 Columns 행의 공간을 유지하여 Apply 시 Appearance의 스크롤 위치를 보존합니다. 포인터, 키보드 및 접근성 탐색은 숨겨진 Columns를 건너뜁니다. 실제 TV 검증은 아직 진행되지 않았습니다.
+
 [문서](../README.md) · [문제 신고](../FEEDBACK.md)
 
-이 안내서는 공개된 **[1.4.1](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.4.1)** 기준입니다. C3 승인은 기록된 전원, Home, 포커스, 비활성 상태 유지 및 수동 롤백 시험에 한정됩니다. 다른 TV, eARC 오디오와 실제 Android 기기는 확인되지 않았습니다. 설치 성공만으로 호환성을 입증할 수 없습니다. [시험 범위(영어)](../RELEASE-1.4.0-ACCEPTANCE.md).
+이 안내서는 공개된 **[1.5.2](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.5.2)** 기준입니다. C3 승인은 기록된 전원, Home, 포커스, 비활성 상태 유지 및 수동 롤백 시험에 한정됩니다. 다른 TV, eARC 오디오와 실제 Android 기기는 확인되지 않았습니다. 설치 성공만으로 호환성을 입증할 수 없습니다. [시험 범위(영어)](../RELEASE-1.4.0-ACCEPTANCE.md).
 
 **미출시 설치 프로그램:** 콘솔, 데스크톱 및 Android에서 각 TV 점검을 미확인, 확인 중, 통과, 실패 또는 확인 불가로 표시합니다. 오류 후에도 결과가 남습니다. Node.js/Python 점검은 TV의 실행 환경을 대상으로 하며 `doctor`는 Python 준비나 제어 페어링을 수행하지 않습니다. 재시도 전에 보고서를 저장하세요.
 
@@ -21,7 +23,9 @@ Root에는 Settings Service 및 System Profile (`com.webos.service.systemprofile
 
 TV를 켜고 컴퓨터와 같은 신뢰할 수 있는 로컬 네트워크에 연결하세요. 설치 후에는 컴퓨터를 꺼도 됩니다. 호환성은 모델, 펌웨어, 리모컨에 따라 다릅니다. Root는 실제 기기 검증이 남아 있습니다.
 
-No-root Helper에는 TV Node.js **0.12.2+**가 필요합니다. Root에는 Node.js **8+**와 정상 작동하는 Python **3.9+**가 필요합니다. 필요하면 설치 프로그램이 검증된 전용 Python을 다운로드하며, 초기 준비에는 **320 MiB** 여유 공간이 필요합니다. 시스템 Python을 교체하지 않습니다. 복구에 쓰이는 런타임은 보관하세요. [Python 안내(영어)](../OPTIONAL-PYTHON.md). Developer Mode 자동 갱신은 **Beta이며 기본적으로 꺼져 있습니다**. root 없는 TV의 실제 갱신은 확인되지 않았으므로 공식 타이머를 계속 확인하세요.
+Node 0.10.25 지원은 미출시 소스/테스트 빌드에 해당합니다. 출시된 설치 프로그램은 여전히 0.12.2+가 필요합니다. [호환성](../COMPATIBILITY.md)을 참조하세요.
+
+No-root Helper에는 TV Node.js **0.10.25+**가 필요합니다. Root에는 Node.js **8+**와 정상 작동하는 Python **3.9+**가 필요합니다. 필요하면 설치 프로그램이 검증된 전용 Python을 다운로드하며, 초기 준비에는 **320 MiB** 여유 공간이 필요합니다. 시스템 Python을 교체하지 않습니다. 복구에 쓰이는 런타임은 보관하세요. [Python 안내(영어)](../OPTIONAL-PYTHON.md). Developer Mode 자동 갱신은 **Beta이며 기본적으로 꺼져 있습니다**. root 없는 TV의 실제 갱신은 확인되지 않았으므로 공식 타이머를 계속 확인하세요.
 
 ### Developer Mode 설정 (No-root)
 
@@ -89,15 +93,17 @@ No-root 1.5.0: 대기 모드 해제 후 일시적인 watchdog 시간 초과가 �
 
 Home 설정 → 소프트웨어 업데이트에서 제시된 버전을 확인한 뒤 승인하세요. TV에서 업데이트와 롤백을 하려면 No-root 에디션도 **root, Homebrew Channel**과 미리 준비한 호환 업데이트 구성요소가 필요합니다. root가 없으면 컴퓨터를 사용하세요. 전체 시스템 업데이트 준비는 별도로 명시적으로 실행합니다. [업데이트(영어)](../UPDATES.md). 복구 화면에서 저장된 롤백 버전을 확인하세요. 롤백하면 이후 설정 변경이 사라질 수 있습니다.
 
-**기존 1.3.0 설치:** 허용 파일 목록이 바뀌어 기존 System Updater로는 1.4.0을 적용할 수 없습니다. 교체 전에 중단되었다면 기록을 보관하고 멈추세요. 상태를 지우거나 무작정 재시도하지 마세요. 확인 절차를 거친 복구와 새로운 1.4.0 설치로 이전하세요. 앱만 업데이트하면 보존된 Root 드라이버는 교체되지 않습니다. 다음 OTA 수정은 **아직 공개되지 않았습니다**. [이전과 복구(영어)](../UPDATES.md#one-time-computer-preparation).
+**기존 1.3.0 설치:** 원래 System Updater는 변경된 인프라를 거부할 수 있습니다. 중단된 작업을 보존하고 1.5.0+ 문서의 검증된 복구 및 교체 준비 절차를 따르세요. 기록을 삭제하거나 무작정 재시도하지 마세요. 앱만 업데이트하면 고정된 Root 인프라는 교체되지 않습니다. [이전과 복구(영어)](../UPDATES.md#one-time-computer-preparation).
 
-Home 설정 통신 경로 수정은 아직 배포되지 않았습니다. 호환되는 후보 버전이 준비되면 Home과 Helper를 함께 업데이트하세요. Home만 업데이트하면 수정이 적용되지 않습니다. 최종 릴리스 빌드의 TV 실기 검증은 아직 완료되지 않았습니다. [#146](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/146).
+Home 설정 통신 경로 수정은 1.5.0에 배포되었습니다. 호환되는 공개 설치 프로그램으로 Home과 Helper를 함께 업데이트하세요. Home만 업데이트하면 Helper는 바뀌지 않습니다. 검증 범위는 기록된 모델로 제한됩니다. [#146](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/146).
 
 Root HDMI 소리 복구는 실험적이며 **기본적으로 꺼져 있습니다**. 필요할 때만 켜세요. 정상적인 소리를 끊을 수 있으며 eARC 호환성이 확인된 것은 아닙니다. [소리 복구(영어)](../development/ROOT-AUDIO-RECOVERY.md). 별도 **Homebrew CYTV Installer는 아직 출시되지 않았습니다**. 공개된 컴퓨터 또는 Android 설치 프로그램을 사용하세요.
 
-미출시 후보 전용: 이전 Root 디렉터리의 쓰기 권한 때문에 펌웨어 API 접근이 거부되면 `cytv enable-firmware-access --edition root --repair-package-permissions` 명령이 신뢰할 수 있는 비공개 패키지 기록으로 현재 파일을 검증한 뒤 Root 소유 경로의 그룹 및 기타 사용자 쓰기 권한만 제거합니다. 알 수 없거나 변경된 파일이 있으면 중단합니다. 프로필, Home 선택 및 펌웨어 차단 설정은 유지됩니다. [세부 정보(영어)](../LG-FIRMWARE-UPDATES.md#explicit-package-permission-repair-candidate).
+Homebrew Channel이 이 설치 프로그램의 접근을 거부했습니다. webOS 11에서는 Homebrew 0.7.3에 개발자의 호환성 업데이트가 필요합니다. 수정 사항이 포함된 지원 Homebrew 버전이 나올 때까지 공개된 컴퓨터 또는 Android 설치 프로그램을 사용하세요. [#116](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/116).
 
-미공개 후보 버전 전용: `cytv recover-system-rollback --edition root`는 검증된 Root 롤백에서 모든 패키지 설치가 끝났지만 런처 준비 시간이 초과된 경우에만 사용합니다. 실제 런처의 준비 신호가 필요하며 설치 결과가 불명확하면 거부합니다. 패키지, 고정된 코드·키, 실패 증거와 명시적으로 끈 Home 제어 상태를 보존합니다. 제한된 시도를 비공개 기록으로 남깁니다. 일반 재시도는 기한을 연장하지 않습니다. 이전 120초 기한이 지난 뒤 승인된 준비 신호나 불명확한 설치 결과가 없을 때만 `--new-recovery-attempt`가 이전 기록 전체를 UUID/해시로 보관하고 명시적으로 새 시도를 시작합니다. 완료된 복구는 다시 시작하지 않으며 자동 반복 시도는 없습니다. [절차와 제한 사항(영어)](../RECOVERY.md#root-system-rollback-readiness-candidate).
+1.5.0+: 이전 Root 디렉터리의 쓰기 권한 때문에 펌웨어 API 접근이 거부되면 `cytv enable-firmware-access --edition root --repair-package-permissions` 명령이 신뢰할 수 있는 비공개 패키지 기록으로 현재 파일을 검증한 뒤 Root 소유 경로의 그룹 및 기타 사용자 쓰기 권한만 제거합니다. 알 수 없거나 변경된 파일이 있으면 중단합니다. 프로필, Home 선택 및 펌웨어 차단 설정은 유지됩니다. [세부 정보(영어)](../LG-FIRMWARE-UPDATES.md#explicit-package-permission-repair-candidate).
+
+1.5.0+: `cytv recover-system-rollback --edition root`는 검증된 Root 롤백에서 모든 패키지 설치가 끝났지만 런처 준비 시간이 초과된 경우에만 사용합니다. 실제 런처의 준비 신호가 필요하며 설치 결과가 불명확하면 거부합니다. 패키지, 고정된 코드·키, 실패 증거와 명시적으로 끈 Home 제어 상태를 보존합니다. 제한된 시도를 비공개 기록으로 남깁니다. 일반 재시도는 기한을 연장하지 않습니다. 이전 120초 기한이 지난 뒤 승인된 준비 신호나 불명확한 설치 결과가 없을 때만 `--new-recovery-attempt`가 이전 기록 전체를 UUID/해시로 보관하고 명시적으로 새 시도를 시작합니다. 완료된 복구는 다시 시작하지 않으며 자동 반복 시도는 없습니다. [절차와 제한 사항(영어)](../RECOVERY.md#root-system-rollback-readiness-candidate).
 
 1.5.0: 교체 패키지에는 System Updater 1.1.2가 포함됩니다. TV OTA 전에 `cytv replace-system-updater --edition root`로 1.1.0 또는 1.1.1을 명시적으로 교체하세요. System Updater만 교체하며 Root/Root Updater 앱, 전체 프로필과 Home 선택은 보존하고 이전 상태는 보관합니다. 불명확하거나 미완료된 작업이 있으면 중단합니다. 이 요구 사항은 No-root 피드에는 적용되지 않습니다. [교체 절차(영어)](../RECOVERY.md#replace-the-root-system-updater-candidate).
 
@@ -134,6 +140,10 @@ Root HDMI 소리 복구는 실험적이며 **기본적으로 꺼져 있습니다
 게시된 테마는 **ID로 추가**에서 ID(예: `102300a209`), `da.gd/102300a209` 또는 전체 GitHub 링크를 입력하세요. Home은 로드 전에 da.gd 주소를 표시하고 GitHub 대상과 테마 패키지를 검증합니다. 작성자는 릴리스 노트 또는 컴퓨터 미리보기의 **TV link → Copy ID**에서 ID를 복사할 수 있습니다.
 
 공개 배포 패키지에는 아직 이 기능이 없을 수 있습니다. 브라우저 테스트는 실제 TV 호환성 검증이 아닙니다. [전체 안내](../THEMES.md).
+
+이 미출시 후보에는 Classic 및 Alpine과 함께 **Ribbon**이 내장되어 별도 테마 다운로드 없이 작동합니다. 기본 테마는 Classic입니다. Home 업데이트 후 설정 → 모양에서 Ribbon을 선택하세요.
+
+아직 출시되지 않은 맞춤 리본 테마는 입력, Wi-Fi, 설정을 왼쪽 아래에 배치할 수 있습니다. 이 탐색을 사용하면 첫 번째 보이는 앱에서 왼쪽으로 설정, Wi-Fi, 입력 순서로 이동하고 설정에서 오른쪽을 누르면 같은 보이는 앱으로 돌아갑니다. 새 Home 기능이 필요한 테마는 미지원 버전에서 설치가 거부되며 현재 모양과 선택은 유지됩니다. 먼저 Home을 업데이트하세요. 이후 버전을 낮추면 시작 시 Classic이 복구될 수 있습니다.
 
 테마에는 기본 테마와 직접 설치한 모든 테마의 미리보기가 오프라인에서도 표시됩니다. 별도 버튼으로 공개 테마 목록을 엽니다. 개인 설치는 테마를 공개하지 않습니다.
 

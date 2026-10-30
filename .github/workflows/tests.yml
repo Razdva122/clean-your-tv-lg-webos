@@ -3,6 +3,11 @@ on:
   pull_request:
   workflow_call:
     inputs:
+      full_suite:
+        description: 'Complete frozen candidate validation; preliminary checks never grant this evidence'
+        required: false
+        type: boolean
+        default: false
       source_sha:
         required: true
         type: string
@@ -17,6 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       any: ${{ steps.scope.outputs.any }}
+      ui: ${{ steps.scope.outputs.ui }}
+      macos: ${{ steps.scope.outputs.macos }}
       runtime: ${{ steps.scope.outputs.runtime }}
       tv: ${{ steps.scope.outputs.tv }}
       installer: ${{ steps.scope.outputs.installer }}
@@ -34,25 +41,26 @@ jobs:
           python-version: '3.12'
       - id: scope
         env:
-          CI_FULL_SUITE: ${{ inputs.source_sha != '' }}
+          CI_FULL_SUITE: ${{ inputs.full_suite }}
+          CI_QUICK_SUITE: ${{ inputs.source_sha != '' && !inputs.full_suite }}
         run: python scripts/ci-scope.py
-  tests:
+  runtime:
     needs: scope
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Documentation-only change
-        if: needs.scope.outputs.any != 'true'
-        run: echo 'No application checks needed.'
+      - name: Explain selected platform checks
+        if: needs.scope.outputs.any != 'true' || (runner.os != 'Linux' && needs.scope.outputs.macos != 'true')
+        run: echo 'No affected platform runtime checks; release metadata is validated when present.'
       - uses: actions/checkout@v4
         if: needs.scope.outputs.any == 'true'
         with:
           ref: ${{ inputs.source_sha || github.sha }}
           persist-credentials: false
       - uses: actions/setup-node@v4
-        if: needs.scope.outputs.any == 'true'
+        if: needs.scope.outputs.any == 'true' && (runner.os == 'Linux' || needs.scope.outputs.macos == 'true')
         with:
           node-version: 22
       - uses: actions/setup-python@v5
@@ -60,14 +68,14 @@ jobs:
         with:
           python-version: "3.12"
       - run: npm ci --ignore-scripts --no-audit --no-fund
-        if: needs.scope.outputs.any == 'true'
+        if: needs.scope.outputs.any == 'true' && (runner.os == 'Linux' || needs.scope.outputs.macos == 'true')
       - run: python -m pip install -r cytv/requirements.txt
-        if: needs.scope.outputs.any == 'true'
+        if: (needs.scope.outputs.setup == 'true' || needs.scope.outputs.installer == 'true' || needs.scope.outputs.tv == 'true') && (runner.os == 'Linux' || needs.scope.outputs.macos == 'true')
       - name: Identify merged test inputs and installed runtime
         id: fingerprint
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && inputs.source_sha == '' && needs.scope.outputs.runtime == 'true'
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && inputs.source_sha == '' && needs.scope.outputs.runtime == 'true' && (runner.os == 'Linux' || needs.scope.outputs.macos == 'true')
         env:
-          TEST_SELECTION: ${{ needs.scope.outputs.tv }},${{ needs.scope.outputs.installer }},${{ needs.scope.outputs.android }},${{ needs.scope.outputs.preview }}
+          TEST_SELECTION: ${{ needs.scope.outputs.ui }},${{ needs.scope.outputs.tv }},${{ needs.scope.outputs.installer }},${{ needs.scope.outputs.android }},${{ needs.scope.outputs.preview }}
         run: python scripts/release-inputs.py --test-key
       - uses: actions/cache/restore@v4
         continue-on-error: true
@@ -92,20 +100,25 @@ jobs:
           runpy.run_path('scripts/release-flow.py')['validate_shape'](json.loads(Path('release-plan.json').read_text()))
           PYTHON
       - name: Check affected setup and packaging
-        if: needs.scope.outputs.setup == 'true'
+        if: needs.scope.outputs.setup == 'true' && (runner.os == 'Linux' || needs.scope.outputs.macos == 'true')
         run: scripts/test.sh setup
-      - name: Prepare pinned Node 0.12.2 for Helper regression
+      - name: Prepare pinned Node 0.10.25 and 0.12.2 for Helper regression
         if: steps.reuse.outputs.hit != 'true' && runner.os == 'Linux' && (needs.scope.outputs.tv == 'true' || needs.scope.outputs.installer == 'true')
         shell: bash
         run: |
           cd "$RUNNER_TEMP"
+          curl --fail --silent --show-error --location https://nodejs.org/dist/v0.10.25/node-v0.10.25-linux-x64.tar.gz --output node-v0.10.25-linux-x64.tar.gz
+          echo '1dac61c21fa21e47fc6e799757569c6c3914897ca46fc8f4dd2c8f13f0400626  node-v0.10.25-linux-x64.tar.gz' | sha256sum --check -
+          tar -xzf node-v0.10.25-linux-x64.tar.gz
+          echo "NODE010=$RUNNER_TEMP/node-v0.10.25-linux-x64/bin/node" >> "$GITHUB_ENV"
           curl --fail --silent --show-error --location https://nodejs.org/dist/v0.12.2/node-v0.12.2-linux-x64.tar.gz --output node-v0.12.2-linux-x64.tar.gz
           echo '4e1578efc2a2cc67651413a05ccc4c5d43f6b4329c599901c556f24d93cd0508  node-v0.12.2-linux-x64.tar.gz' | sha256sum --check -
           tar -xzf node-v0.12.2-linux-x64.tar.gz
           echo "NODE012=$RUNNER_TEMP/node-v0.12.2-linux-x64/bin/node" >> "$GITHUB_ENV"
       - name: Test affected runtime components
-        if: needs.scope.outputs.runtime == 'true' && steps.reuse.outputs.hit != 'true'
+        if: needs.scope.outputs.runtime == 'true' && steps.reuse.outputs.hit != 'true' && (runner.os == 'Linux' || needs.scope.outputs.macos == 'true')
         env:
+          UI: ${{ needs.scope.outputs.ui }}
           TV: ${{ needs.scope.outputs.tv }}
           INSTALLER: ${{ needs.scope.outputs.installer }}
           ANDROID: ${{ needs.scope.outputs.android }}
@@ -113,27 +126,12 @@ jobs:
         shell: bash
         run: |
           components=()
+          [ "$UI" != true ] || components+=(ui)
           [ "$TV" != true ] || components+=(tv)
           [ "$INSTALLER" != true ] || components+=(installer)
           [ "$ANDROID" != true ] || components+=(android)
           [ "$PREVIEW" != true ] || components+=(preview)
           scripts/test.sh "${components[@]}"
-      - name: Check compiled Home with legacy browser limitations
-        if: steps.reuse.outputs.hit != 'true' && runner.os == 'Linux' && needs.scope.outputs.tv == 'true'
-        run: |
-          npx playwright install --with-deps chromium
-          python scripts/tv_web_build.py --input launcher --output build/legacy-ui
-          BROWSER_CHANNEL=chromium TV_WEB_DIR=build/legacy-ui npm run test:legacy-ui
-          BROWSER_CHANNEL=chromium TV_WEB_DIR=build/legacy-ui npm run test:geometry
-          BROWSER_CHANNEL=chromium npm run test:themes:browser
-      - name: Check settings categories and update indicators
-        if: steps.reuse.outputs.hit != 'true' && runner.os == 'Linux' && needs.scope.outputs.tv == 'true'
-        run: |
-          python scripts/preview.py --port 8876 > /tmp/cytv-settings-preview.log 2>&1 &
-          settings_preview_pid=$!
-          trap 'kill "$settings_preview_pid"' EXIT
-          BROWSER_CHANNEL=chromium node tests/settings-ui.cjs
-          BROWSER_CHANNEL=chromium node tests/settings-update-badges.cjs
       - name: Verify real webOS-style file ownership
         if: steps.reuse.outputs.hit != 'true' && runner.os == 'Linux' && needs.scope.outputs.tv == 'true'
         run: sudo "$(command -v node)" native/prototype/test-state-permissions-linux.cjs
@@ -173,3 +171,83 @@ jobs:
         run: python scripts/test-python-runtime.py
       - name: Verify shell provisioning boundaries as root
         run: sudo "$(command -v python)" -m unittest tests.cytv.test_python_runtime
+
+  browser:
+    needs: scope
+    if: needs.scope.outputs.tv == 'true' || needs.scope.outputs.ui == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Check compiled Home with legacy browser limitations
+        if: needs.scope.outputs.tv == 'true' || needs.scope.outputs.ui == 'true'
+        run: |
+          npx playwright install --with-deps chromium
+          python scripts/tv_web_build.py --input launcher --output build/legacy-ui
+          BROWSER_CHANNEL=chromium TV_WEB_DIR=build/legacy-ui npm run test:legacy-ui
+          BROWSER_CHANNEL=chromium TV_WEB_DIR=build/legacy-ui npm run test:geometry
+      - name: Check settings categories and update indicators
+        if: needs.scope.outputs.tv == 'true' || needs.scope.outputs.ui == 'true'
+        run: |
+          python scripts/preview.py --port 8876 > /tmp/cytv-settings-preview.log 2>&1 &
+          settings_preview_pid=$!
+          trap 'kill "$settings_preview_pid"' EXIT
+          BROWSER_CHANNEL=chromium node tests/settings-ui.cjs
+          BROWSER_CHANNEL=chromium node tests/settings-update-badges.cjs
+      - name: Check compiled development UI isolation and themes
+        run: BROWSER_CHANNEL=chromium node tests/tv-dev-ui.cjs
+      - name: Full theme browser regressions
+        if: inputs.full_suite
+        run: BROWSER_CHANNEL=chromium npm run test:themes:browser
+
+  tests:
+    needs: [scope, runtime, browser, optional-python]
+    if: always()
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require selected checks to pass
+        env:
+          SCOPE: ${{ needs.scope.result }}
+          RUNTIME: ${{ needs.runtime.result }}
+          BROWSER: ${{ needs.browser.result }}
+          PYTHON: ${{ needs.optional-python.result }}
+          BROWSER_REQUIRED: ${{ needs.scope.outputs.tv == 'true' || needs.scope.outputs.ui == 'true' }}
+          PYTHON_REQUIRED: ${{ needs.scope.outputs.installer }}
+        run: |
+          test "$SCOPE" = success
+          test "$RUNTIME" = success
+          case "$BROWSER" in success|skipped) ;; *) exit 1 ;; esac
+          case "$PYTHON" in success|skipped) ;; *) exit 1 ;; esac
+          if [ "$BROWSER_REQUIRED" = true ]; then test "$BROWSER" = success; fi
+          if [ "$PYTHON_REQUIRED" = true ]; then test "$PYTHON" = success; fi
+
+  full-release:
+    needs: [tests, browser, optional-python]
+    if: always() && inputs.full_suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require complete frozen-source validation
+        env:
+          TESTS: ${{ needs.tests.result }}
+          BROWSER: ${{ needs.browser.result }}
+          PYTHON: ${{ needs.optional-python.result }}
+          SOURCE: ${{ inputs.source_sha }}
+        run: |
+          test -n "$SOURCE"
+          test "$TESTS" = success
+          test "$BROWSER" = success
+          test "$PYTHON" = success
+          echo "Full release validation passed for $SOURCE"

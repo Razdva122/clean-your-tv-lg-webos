@@ -4,12 +4,9 @@ import json
 import os
 from pathlib import Path
 import re
-import runpy
 import subprocess
 
-INPUTS = runpy.run_path(str(Path(__file__).with_name('release-inputs.py')))
-
-COMPONENTS = ('tv', 'installer', 'android', 'setup', 'preview')
+COMPONENTS = ('ui', 'tv', 'installer', 'android', 'setup', 'preview')
 
 
 def components(paths):
@@ -22,13 +19,15 @@ def components(paths):
                 or path.lower().endswith(('.md', '.rst'))
                 or path == 'LICENSE'):
             continue
-        if path.startswith('homebrew/'):
+        if path.startswith(('launcher/', 'root-edition/ui/', 'updater-app/')) and Path(path).suffix in ('.css', '.svg', '.png', '.jpg', '.woff', '.woff2', '.ttf'):
+            selected.update(('ui', 'preview'))
+        elif path.startswith('homebrew/'):
             selected.update(('installer', 'tv', 'setup'))
         elif path.startswith('cytv/'):
             selected.add('installer')
             if Path(path).name not in ('desktop.py', 'desktop_entry.py', 'gui_style.py', 'build-requirements.txt'):
                 selected.update(('android', 'setup'))
-        elif path.startswith(('launcher/', 'root-edition/', 'native/', 'renewal-service/', 'updater-app/', 'updater-service/')):
+        elif path.startswith(('launcher/', 'root-edition/', 'native/', 'renewal-service/', 'updater-app/', 'updater-service/', 'system-updater/')):
             selected.update(('tv', 'installer', 'setup'))
             if path.startswith(('launcher/', 'root-edition/ui/', 'updater-app/')) or path == 'root-edition/preview.py':
                 selected.add('preview')
@@ -77,15 +76,32 @@ def draft_branch_build(event, kind, ref):
                 and expected and isinstance(repository, str) and repository.lower() == expected.lower())
 
 
+def full_candidate(event, kind, ref):
+    requested = event.get('inputs', {}).get('full_candidate')
+    repository = event.get('repository', {}).get('full_name')
+    expected = os.environ.get('GITHUB_REPOSITORY')
+    return bool(kind == 'workflow_dispatch' and requested in (True, 'true')
+                and ref == 'refs/heads/release/next' and expected
+                and isinstance(repository, str) and repository.lower() == expected.lower())
+
+
 def build_installers(event, kind, ref, plan, version, previous, notes):
-    release_branch = ref == 'refs/heads/release/next'
-    if not notes or not (kind == 'push' and release_branch or draft_branch_build(event, kind, ref)):
+    if not notes or not (full_candidate(event, kind, ref) or draft_branch_build(event, kind, ref)):
         return False
     return prepared_version(plan, version, previous)
 
 
 def git(*args):
     return subprocess.check_output(['git', *args])
+
+
+def draft_components():
+    # A preliminary build still exercises every affected safety group.
+    try:
+        paths = git('diff', '--name-only', '--no-renames', '-z', 'origin/main...HEAD').decode().split('\0')[:-1]
+        return components(paths)
+    except subprocess.CalledProcessError:
+        return set(COMPONENTS)  # Unknown base must broaden coverage.
 
 
 def main():
@@ -99,6 +115,8 @@ def main():
     else:
         diff = None
     selected = components(git('diff', '--name-only', '--no-renames', '-z', *diff).decode().split('\0')[:-1]) if diff and os.environ.get('CI_FULL_SUITE') != 'true' else set(COMPONENTS)
+    if os.environ.get('CI_QUICK_SUITE') == 'true' and os.environ.get('CI_FULL_SUITE') != 'true':
+        selected = draft_components()
     candidate = installers = False
     ref = os.environ.get('GITHUB_REF')
     release_branch = ref == 'refs/heads/release/next'
@@ -109,20 +127,14 @@ def main():
         notes = Path('docs/RELEASE-' + version + '.md').is_file()
         candidate = release_branch and is_candidate(plan, version, previous) and notes
         installers = build_installers(event, kind, ref, plan, version, previous, notes)
-    # A selected build survives only documentation/evidence edits. Never skip on trust alone.
-    if installers and INPUTS['build_pin'](plan) and not (kind == 'workflow_dispatch' and event.get('inputs', {}).get('test_build') in (True, 'true')):
-        try:
-            INPUTS['verify_inputs'](plan['build']['source'], git('rev-parse', 'HEAD').decode().strip(), Path.cwd())
-        except ValueError:
-            pass  # Changed inputs need a new build and an updated pin before release.
-        else:
-            installers = False
     if (kind == 'pull_request' and event['pull_request']['base'].get('ref') == 'main'
             and event['pull_request']['head'].get('ref') == 'release/next'
             and os.environ.get('CI_FULL_SUITE') != 'true'):
         selected = {'setup'}  # Release policy requires full tests from the trusted build.
     outputs = {name: name in selected for name in COMPONENTS}
-    outputs.update(any=bool(selected), runtime=bool(selected - {'setup'}), candidate=candidate, installers=installers)
+    outputs.update(any=bool(selected), runtime=bool(selected - {'setup'}), candidate=candidate, installers=installers,
+                   full=installers and full_candidate(event, kind, ref),
+                   macos=bool(selected & {'tv', 'installer'}))
     lines = ''.join(f'{name}={str(value).lower()}\n' for name, value in outputs.items())
     print(lines, end='')
     with open(os.environ['GITHUB_OUTPUT'], 'a') as output:

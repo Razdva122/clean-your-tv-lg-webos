@@ -2,6 +2,11 @@ name: cytv standalone builds
 on:
   workflow_dispatch:
     inputs:
+      full_candidate:
+        description: 'Freeze this release/next source and build all release artifacts with complete validation'
+        type: boolean
+        required: false
+        default: false
       test_build:
         description: 'Build draft installers from the selected repository branch for device feedback; no release acceptance or publication'
         type: boolean
@@ -12,19 +17,18 @@ on:
         type: boolean
         required: false
         default: false
-  push:
-    branches: [release/next]
 permissions:
   contents: read
   actions: read
 concurrency:
   group: cytv-candidate-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   scope:
     runs-on: ubuntu-latest
     outputs:
       candidate: ${{ steps.scope.outputs.candidate }}
+      full: ${{ steps.scope.outputs.full }}
       installers: ${{ steps.scope.outputs.installers }}
       homebrew_required: ${{ steps.scope.outputs.homebrew_required }}
     steps:
@@ -49,6 +53,7 @@ jobs:
     uses: ./.github/workflows/tests.yml
     with:
       source_sha: ${{ github.sha }}
+      full_suite: ${{ needs.scope.outputs.full == 'true' }}
   android:
     needs: scope
     if: needs.scope.outputs.installers == 'true'
@@ -109,6 +114,13 @@ jobs:
           overwrite: true
           name: cytv-android-arm64
           path: dist/android/cytv-android-arm64*
+          if-no-files-found: error
+      - name: Retain the native Android verification runner
+        uses: actions/upload-artifact@v4
+        with:
+          overwrite: true
+          name: cytv-android-native-tests
+          path: android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
           if-no-files-found: error
   build:
     needs: scope

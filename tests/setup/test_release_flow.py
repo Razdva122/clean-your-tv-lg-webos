@@ -57,6 +57,13 @@ class ReleaseFlow(unittest.TestCase):
             with self.subTest(jobs=broken), self.assertRaises(ValueError):
                 self.flow.validate_build_jobs(broken)
 
+    def test_quick_success_cannot_replace_full_suite_and_browser_evidence(self):
+        jobs = [{'name': name, 'conclusion': 'success'} for name in self.flow.BUILD_JOBS]
+        for required in ('validation / full-release', 'validation / browser'):
+            self.assertIn(required, self.flow.BUILD_JOBS)
+            with self.subTest(required=required), self.assertRaises(ValueError):
+                self.flow.validate_build_jobs([job for job in jobs if job['name'] != required])
+
     def test_related_issue_line_ignores_unrelated_mentions(self):
         self.assertEqual(self.flow.related_issues('Discuss #99.\nRelated issues: #8, #9\nOther #12'), {8, 9})
 

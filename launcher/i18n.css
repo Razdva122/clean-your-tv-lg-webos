@@ -252,11 +252,11 @@ html[lang="zh-Hant"],html[lang="zh-Hant"] body,html[lang="zh-Hant"] button,html[
   font-family: Outfit,"CYTV NotoSansTC","CYTV NotoSans",sans-serif;
 }
 
-#languageChoices button[lang="zh-Hans"] {
+#languageChoices button[lang="zh-Hans"], #settingsLanguageChoices button[lang="zh-Hans"] {
   font-family: "CYTV NotoSansSC",sans-serif;
 }
 
-#languageChoices button[lang="zh-Hant"] {
+#languageChoices button[lang="zh-Hant"], #settingsLanguageChoices button[lang="zh-Hant"] {
   font-family: "CYTV NotoSansTC",sans-serif;
 }
 

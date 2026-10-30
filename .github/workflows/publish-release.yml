@@ -22,6 +22,10 @@ on:
         description: 'Root QA only: successful release/next cytv build run; requires publish=false'
         type: string
         default: ''
+      direct_tv_qa:
+        description: 'Use the explicit direct Root TV candidate artifact; requires preliminary_root_qa and publish=false'
+        type: boolean
+        default: false
       preliminary_root_qa:
         description: 'Preliminary Root device QA before full validation; never final acceptance; publish must be false'
         type: boolean
@@ -41,7 +45,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   publish:
-    if: github.ref == 'refs/heads/main' && !inputs.candidate_build_run && !inputs.preliminary_root_qa && !inputs.candidate_source_sha && !inputs.candidate_branch
+    if: github.ref == 'refs/heads/main' && !inputs.candidate_build_run && !inputs.preliminary_root_qa && !inputs.candidate_source_sha && !inputs.candidate_branch && !inputs.direct_tv_qa
     environment: release-signing
     permissions:
       contents: write
@@ -129,7 +133,10 @@ jobs:
         run: |
           python -m unittest discover -s tests/setup -p test_root_candidate_feeds.py
           node tests/updates/root-candidate-signing.cjs
-          python -m pip install pyinstaller==6.22.3
+          python -m unittest discover -s tests/setup -p test_direct_tv_candidate.py
+      - name: Install legacy CLI archive reader only for CLI candidates
+        if: inputs.direct_tv_qa == false
+        run: python -m pip install pyinstaller==6.22.3
       - name: Admit an exact successful unpublished candidate build
         id: candidate
         working-directory: qa-tools
@@ -138,10 +145,15 @@ jobs:
           BUILD_RUN: ${{ inputs.candidate_build_run }}
           RELEASE_TAG: ${{ inputs.tag }}
           PRELIMINARY: ${{ inputs.preliminary_root_qa }}
+          DIRECT_TV: ${{ inputs.direct_tv_qa }}
           SOURCE_SHA: ${{ inputs.candidate_source_sha }}
           SOURCE_BRANCH: ${{ inputs.candidate_branch }}
         run: |
           args=()
+          if [ "$DIRECT_TV" = true ]; then
+            [ "$PRELIMINARY" = true ] || { echo "Direct TV builds are preliminary QA only"; exit 1; }
+            args+=(--direct-tv)
+          fi
           if [ "$PRELIMINARY" = true ]; then
             args+=(--preliminary --source-sha "$SOURCE_SHA" --branch "$SOURCE_BRANCH")
           else

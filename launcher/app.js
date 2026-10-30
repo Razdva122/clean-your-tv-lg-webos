@@ -26,10 +26,10 @@
     TILE_BASE = DOCK_TOP + DOCK_PADDING,
     HERO_OFFSET = 176,
     layoutPreset = "dock-grid", layoutGeometry, ribbonStart = 0, ribbonWheelTime = 0;
-  function updateGeometry(columns, preset) {
+  function updateGeometry(columns, preset, ribbon) {
     layoutPreset = preset || 'dock-grid';
     ribbonStart = 0;
-    layoutGeometry = HomeLayout.geometry(layoutPreset, columns);
+    layoutGeometry = HomeLayout.geometry(layoutPreset, columns, ribbon);
     columnCount = columns;
     GRID_LEFT = layoutGeometry.left; GRID_WIDTH = layoutGeometry.width;
     columnWidth = layoutGeometry.columnWidth;
@@ -38,6 +38,8 @@
     TILE_BASE = layoutGeometry.top; ROW_GAP = layoutGeometry.rowGap;
     DOCK_HEIGHT = CARD_HEIGHT + DOCK_PADDING * 2;
     document.getElementById('homeSurface').setAttribute('data-layout', layoutPreset);
+    if (layoutGeometry.ribbon) document.getElementById('homeSurface').setAttribute('data-ribbon', 'true');
+    else document.getElementById('homeSurface').removeAttribute('data-ribbon');
     document.getElementById('homeSurface').classList.toggle('ctv-channel-multi', layoutPreset === 'channel-list' && columns > 1);
     document.getElementById('homeSurface').classList.toggle('ctv-channel-compact', layoutPreset === 'channel-list' && columns >= 5);
   }
@@ -712,6 +714,9 @@
   }
   function ribbonSlot(index) { return ((index - ribbonStart) % tiles.length + tiles.length) % tiles.length; }
   function stepRibbon(direction) {
+    if (direction < 0 && ribbonSlot(focusedTile) === 0 && layoutGeometry.ribbon && layoutGeometry.ribbon.edgeNavigation === 'shortcuts') {
+      focusTopButton(2); return;
+    }
     var index = (focusedTile + direction + tiles.length) % tiles.length;
     if (tiles.length > columnCount && ribbonSlot(index) >= columnCount) {
       ribbonStart = direction < 0 ? index : (index - columnCount + 1 + tiles.length) % tiles.length;
@@ -755,7 +760,7 @@
     dockBand.style.height = DOCK_HEIGHT + "px";
   }
   if (layoutState) layoutState.onchange = function (state) {
-    updateGeometry(state.columns, state.preset);
+    updateGeometry(state.columns, state.preset, state.ribbon);
     scrollOffset = 0;
     layoutTiles();
     focusTile(focusedTile);
@@ -955,6 +960,11 @@
         inputsPanel.style.left = e.left + "px";
         inputsPanel.style.top = e.bottom + 20 + "px";
         inputsPanel.style.minWidth = Math.max(e.width, 300) + "px";
+        inputsPanel.style.maxHeight = ''; inputsPanel.style.overflowY = '';
+        if (layoutGeometry.ribbon && layoutGeometry.ribbon.shortcuts === 'bottom-left') {
+          inputsPanel.style.maxHeight = Math.max(100, e.top - 32) + 'px'; inputsPanel.style.overflowY = 'auto';
+          inputsPanel.style.top = Math.max(16, e.top - inputsPanel.offsetHeight - 20) + 'px';
+        }
         inputsPanel.classList.remove("hidden");
         setPartState(topButtons[focusedTopButton], 'focused', false);
         focusZone = "inputs";
@@ -991,6 +1001,11 @@
     inputRows[focusedInput] && setPartState(inputRows[focusedInput], 'focused', false);
     focusedInput = Math.max(0, Math.min(index, inputRows.length - 1));
     setPartState(inputRows[focusedInput], 'focused', true);
+    if (layoutGeometry.ribbon && layoutGeometry.ribbon.shortcuts === 'bottom-left' && inputRows[focusedInput]) {
+      var row = inputRows[focusedInput];
+      if (row.offsetTop < inputsPanel.scrollTop) inputsPanel.scrollTop = row.offsetTop;
+      else if (row.offsetTop + row.offsetHeight > inputsPanel.scrollTop + inputsPanel.clientHeight) inputsPanel.scrollTop = row.offsetTop + row.offsetHeight - inputsPanel.clientHeight;
+    }
   }
   function closeInputs() {
     inputsPanel.classList.add("hidden");
@@ -1104,7 +1119,8 @@
         } else if (37 === key) {
           focusTopButton(focusedTopButton - 1);
         } else if (39 === key) {
-          focusTopButton(focusedTopButton + 1);
+          if (focusedTopButton === 2 && layoutGeometry.ribbon && layoutGeometry.ribbon.edgeNavigation === 'shortcuts') { focusTile(ribbonStart); }
+          else focusTopButton(focusedTopButton + 1);
         } else if (40 === key) {
           focusTile(0 === rowFor(focusedTile) ? focusedTile : 0);
         } else if (key === KEY_OK) {

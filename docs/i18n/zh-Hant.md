@@ -2,9 +2,11 @@
 
 > v1.5.0：主題、展示頁與電腦向電視傳輸。已知 Root 限制：Appearance 可能偏移 110 px；待機喚醒後 Home 可能不會自動開啟。裝置實機驗證範圍仍有限。 [1.5.0](../RELEASE-1.5.0.md).
 
+> 下一候選版本（尚未發布）：固定版面主題保留隱藏 Columns 列的空間，以便 Apply 時維持 Appearance 的捲動位置。指標、鍵盤和無障礙導覽會略過隱藏的 Columns。電視實機驗證尚待完成。
+
 [文件導覽](../README.md) · [回報問題](../FEEDBACK.md)
 
-本指南適用於已發佈的 **[1.4.1](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.4.1)**。C3 驗收僅涵蓋已記錄的電源、Home、焦點、保持關閉狀態及手動回復版本測試。其他電視、eARC 音訊和實體 Android 裝置仍未驗證；安裝成功不代表相容。[測試範圍（英文）](../RELEASE-1.4.0-ACCEPTANCE.md)。
+本指南適用於已發佈的 **[1.5.2](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.5.2)**。C3 驗收僅涵蓋已記錄的電源、Home、焦點、保持關閉狀態及手動回復版本測試。其他電視、eARC 音訊和實體 Android 裝置仍未驗證；安裝成功不代表相容。[測試範圍（英文）](../RELEASE-1.4.0-ACCEPTANCE.md)。
 
 **尚未發布的安裝程式：**主控台、桌面與 Android 介面會分別顯示電視檢查狀態：未檢查、正在檢查、通過、未通過或無法驗證。出錯後仍保留結果。Node.js/Python 檢查針對電視的執行環境；`doctor` 不會準備 Python，也不會要求遙控配對。重試前請儲存報告。
 
@@ -21,7 +23,9 @@ Root 需要可用的 Settings Service 和 System Profile Home 介面（`com.webo
 
 安裝期間保持電視開機，將電腦與電視連線到同一個可信本地網路。完成後無需電腦持續開機。兼容性取決於型號、固件和遙控器；Root 仍有待完成的實機檢查。
 
-No-root Helper 需要電視 Node.js **0.12.2+**。Root 需要 Node.js **8+** 及可用的 Python **3.9+**。如有需要，安裝程式會下載經驗證的專用 Python；首次準備需要 **320 MiB** 可用空間。它不會取代系統 Python。請保留復原功能引用的執行環境。[Python 說明（英文）](../OPTIONAL-PYTHON.md)。Developer Mode 自動續期為 **Beta，預設關閉**；無 root 電視上的實際續期尚未確認，請繼續檢查官方計時器。
+Node 0.10.25 支援僅適用於尚未發佈的原始碼/測試建置；已發佈的安裝程式仍要求 0.12.2+。參閱[相容性](../COMPATIBILITY.md)。
+
+No-root Helper 需要電視 Node.js **0.10.25+**。Root 需要 Node.js **8+** 及可用的 Python **3.9+**。如有需要，安裝程式會下載經驗證的專用 Python；首次準備需要 **320 MiB** 可用空間。它不會取代系統 Python。請保留復原功能引用的執行環境。[Python 說明（英文）](../OPTIONAL-PYTHON.md)。Developer Mode 自動續期為 **Beta，預設關閉**；無 root 電視上的實際續期尚未確認，請繼續檢查官方計時器。
 
 ### 設定 Developer Mode（No-root）
 
@@ -89,15 +93,17 @@ No-root 1.5.0：從待機喚醒後，Helper 可嘗試恢復暫時的 watchdog �
 
 開啟 Home 設定 → 軟體更新，確認前檢查提供的版本。即使使用 No-root 版本，在電視上更新和回復版本也需要 **root、Homebrew Channel** 以及事先準備好的配套更新基礎設施。無 root 電視請用電腦安裝程式。完整系統更新的準備是單獨明確執行的操作，請參閱[更新（英文）](../UPDATES.md)。復原介面顯示儲存的回復版本；回復可能遺失之後的設定變更。
 
-**現有 1.3.0 安裝：**由於允許的檔案清單改變，原有 System Updater 無法套用 1.4.0。如果嘗試在替換前停止，請保留記錄並停止操作；不要清除狀態或盲目重試。遷移需經過檢查的復原流程和全新 1.4.0 設定；只更新應用程式不會取代保留的 Root 驅動程式。下一次 OTA 修正**尚未發佈**。[遷移與復原（英文）](../UPDATES.md#one-time-computer-preparation)。
+**現有 1.3.0 安裝：**原有 System Updater 可能拒絕基礎設施變更。請保留中斷操作，遵循 1.5.0+ 文件中的已驗證復原與替換準備流程；不要清除記錄或盲目重試。僅更新應用程式不會取代固定的 Root 基礎設施。[遷移與復原（英文）](../UPDATES.md#one-time-computer-preparation)。
 
-Home 設定通訊修正尚未發布：有配套候選版本後，請同時更新 Home 與 Helper。只更新 Home 無法套用此修正。最終發布組建的電視實機驗證仍待完成。 [#146](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/146).
+Home 設定通訊修正已在 1.5.0 發布。請使用配套的已發布安裝程式同時更新 Home 和 Helper；僅更新 Home 不會變更 Helper。驗證範圍仍限於已記錄的機型。 [#146](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/146).
 
 Root HDMI 聲音復原是實驗功能，**預設關閉**，僅在需要時自行啟用。它可能中斷正常音訊，並不證明 eARC 相容性。[聲音復原（英文）](../development/ROOT-AUDIO-RECOVERY.md)。獨立的 **Homebrew CYTV Installer 尚未發佈**；請使用已發佈的電腦或 Android 安裝程式。
 
-僅限未發布候選版：若舊 Root 目錄的可寫入權限導致韌體 API 存取遭拒，可明確執行 `cytv enable-firmware-access --edition root --repair-package-permissions`。指令會先以可信的私人套件記錄驗證目前檔案，再僅移除 Root 自有路徑的群組及其他使用者寫入權限。遇到未知或已修改檔案便停止；保留個人設定、Home 選擇和韌體封鎖設定。[修復詳情（英文）](../LG-FIRMWARE-UPDATES.md#explicit-package-permission-repair-candidate)。
+Homebrew Channel 拒絕此安裝程式存取。在 webOS 11 上，Homebrew 0.7.3 需要開發者提供相容性更新。在受支援的 Homebrew 版本包含此修正前，請使用已發布的電腦或 Android 安裝程式。 [#116](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/116).
 
-僅限未發布候選版：`cytv recover-system-rollback --edition root` 僅用於已驗證的 Root 回復版本：所有套件安裝程式均已完成，但啟動器就緒等待逾時。必須由真正的啟動器傳送就緒訊號；安裝結果不明時拒絕恢復。保留套件、固定程式碼和金鑰、失敗證據及明確關閉的 Home 控制狀態，並以私人記錄保存有時限的嘗試。 一般重試不會延長時限。僅在先前的 120 秒到期、沒有已接受的就緒訊號且不存在不明安裝結果後，才可用 `--new-recovery-attempt` 按 UUID/雜湊封存完整舊記錄，並明確開始新嘗試。已完成的恢復不會重新開始，也不會自動連續重試。 [流程與限制（英文）](../RECOVERY.md#root-system-rollback-readiness-candidate)。
+1.5.0+: 若舊 Root 目錄的可寫入權限導致韌體 API 存取遭拒，可明確執行 `cytv enable-firmware-access --edition root --repair-package-permissions`。指令會先以可信的私人套件記錄驗證目前檔案，再僅移除 Root 自有路徑的群組及其他使用者寫入權限。遇到未知或已修改檔案便停止；保留個人設定、Home 選擇和韌體封鎖設定。[修復詳情（英文）](../LG-FIRMWARE-UPDATES.md#explicit-package-permission-repair-candidate)。
+
+1.5.0+: `cytv recover-system-rollback --edition root` 僅用於已驗證的 Root 回復版本：所有套件安裝程式均已完成，但啟動器就緒等待逾時。必須由真正的啟動器傳送就緒訊號；安裝結果不明時拒絕恢復。保留套件、固定程式碼和金鑰、失敗證據及明確關閉的 Home 控制狀態，並以私人記錄保存有時限的嘗試。 一般重試不會延長時限。僅在先前的 120 秒到期、沒有已接受的就緒訊號且不存在不明安裝結果後，才可用 `--new-recovery-attempt` 按 UUID/雜湊封存完整舊記錄，並明確開始新嘗試。已完成的恢復不會重新開始，也不會自動連續重試。 [流程與限制（英文）](../RECOVERY.md#root-system-rollback-readiness-candidate)。
 
 1.5.0：替換套件包含 System Updater 1.1.2。電視 OTA 前，請明確執行 `cytv replace-system-updater --edition root` 替換 1.1.0 或 1.1.1。只替換 System Updater，保留 Root/Root Updater 應用程式、完整設定和 Home 選擇，並封存舊狀態。結果不明或尚未完成的操作會阻止替換。此要求不限制 No-root 更新來源。[替換流程（英文）](../RECOVERY.md#replace-the-root-system-updater-candidate)。
 
@@ -133,6 +139,10 @@ Root HDMI 聲音復原是實驗功能，**預設關閉**，僅在需要時自行
 安裝已發佈主題時，開啟**透過 ID 新增**，輸入 ID（例如 `102300a209`）、`da.gd/102300a209` 或完整 GitHub 連結。Home 會在載入前顯示補全的 da.gd 位址，然後驗證 GitHub 目標與主題套件。作者可從版本說明或電腦預覽的 **TV link → Copy ID** 複製 ID。
 
 公開發行的套件可能尚無這些選項。瀏覽器測試不等同實體電視相容性驗證。[完整指南](../THEMES.md)。
+
+此未發佈候選版在 Classic 和 Alpine 之外內建 **Ribbon**，無需下載主題。預設仍為 Classic。更新 Home 後，在設定 → 外觀中選取 Ribbon。
+
+尚未發佈的可設定應用程式列主題可將輸入、Wi-Fi 和設定放在左下角。啟用此導覽時，在第一個可見應用程式上按左鍵依序選取設定、Wi-Fi 和輸入；在設定上按右鍵返回同一可見應用程式。需要新 Home 功能的主題在不支援的版本上安裝會遭拒，現有外觀和選擇保持不變。請先更新 Home。之後降級可能在啟動時還原 Classic。
 
 主題頁面顯示內建主題和您自行安裝的所有主題預覽，離線也可查看。獨立的展示按鈕開啟已發佈目錄；個人安裝不會發佈主題。
 

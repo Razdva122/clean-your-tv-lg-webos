@@ -1,0 +1,20 @@
+/* Appearance only. The trusted scenic-grid renderer owns layout.ribbon geometry. */
+.ctv-home { background-color: #10131e; color: #ffffff; }
+.ctv-ambient { background-image: linear-gradient(0deg, transparent 0%, transparent 100%); }
+.ctv-hero { color: transparent; text-shadow: 0 0 0 transparent; }
+.ctv-clock { color: #ffffff; font-size: 22px; }
+.ctv-date { color: #cccccc; font-size: 22px; }
+.ctv-period { color: #cccccc; }
+.ctv-position { color: transparent; }
+.ctv-card { border-radius: 0; border-width: 0; border-style: none; box-shadow: 0 0 0 transparent; }
+.ctv-card.is-focused { border-radius: 0; border-color: #ffffff; }
+.ctv-label { color: #ffffff; font-weight: 400; text-shadow: 0 2px 6px #000000; }
+.ctv-shortcut { background-image: linear-gradient(0deg, transparent 0%, transparent 100%); background-color: transparent; color: #ffffff; border-width: 0; border-style: none; border-radius: 0; }
+.ctv-shortcut.is-focused { background-color: #ce0e55; color: #ffffff; }
+.ctv-library { background-color: #171921; }
+.ctv-library-panel { background-color: #252733; border-color: #555866; border-radius: 0; }
+.ctv-library-row { background-color: #30323c; color: #ffffff; border-radius: 0; }
+.ctv-library-row.is-focused { background-color: #ce0e55; color: #ffffff; }
+.ctv-inputs { background-color: #252733; border-radius: 0; }
+.ctv-input-row { background-color: #30323c; color: #ffffff; border-radius: 0; }
+.ctv-input-row.is-focused { background-color: #ce0e55; color: #ffffff; }

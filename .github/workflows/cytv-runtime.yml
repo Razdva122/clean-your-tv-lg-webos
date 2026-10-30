@@ -2,7 +2,17 @@ name: Frozen desktop installer runtime
 on:
   pull_request:
     paths:
-      - 'cytv/**'
+      - 'cytv/__main__.py'
+      - 'cytv/__init__.py'
+      - 'cytv/cli.py'
+      - 'cytv/desktop*.py'
+      - 'cytv/gui.py'
+      - 'cytv/gui_style.py'
+      - 'cytv/terminal.py'
+      - 'cytv/runtime_check.py'
+      - 'cytv/requirements.txt'
+      - 'cytv/build-requirements.txt'
+      - 'tests/cytv/test_console_encoding.py'
       - 'scripts/build-cytv.py'
       - 'scripts/desktop_packaging.py'
       - '.github/workflows/cytv-runtime.yml'

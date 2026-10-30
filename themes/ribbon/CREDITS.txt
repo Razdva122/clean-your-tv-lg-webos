@@ -1,0 +1,5 @@
+Original theme styling and procedural galaxy wallpaper: CYTV themes, 2026, MIT.
+Design reference: LG webOS 5.0 (2020). Independent fan recreation; not affiliated with LG. No LG screenshots or UI image assets are included.
+Browser preview captures depict reference application icons belonging to their respective owners and supplied by the project reference fixture. Original icon files are not distributed separately as replacement theme assets.
+Preview images: actual trusted Home browser renderer, No-root and Root editions; captured with the Ribbon source theme. assets/preview.jpg is downsampled from previews/no-root-home.png. Runtime and browser provenance: previews/provenance.json.
+Requested by maxlmuller: https://www.reddit.com/r/LGOLED/comments/1xjk45h/comment/19rw1bumndts2/

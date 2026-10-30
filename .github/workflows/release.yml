@@ -113,6 +113,7 @@ jobs:
           path: ${{ runner.temp }}/release-builds
       - name: Verify desktop and Android installers and assemble final public bundles
         env:
+          GH_TOKEN: ${{ github.token }}
           SOURCE_BUILD_RUN: ${{ needs.plan.outputs.build_run }}
           BUILD_COMMIT: ${{ needs.plan.outputs.build_commit }}
         run: python release-tools/scripts/assemble-release.py --artifacts "$RUNNER_TEMP/release-builds" --output "$RUNNER_TEMP/release-assets" --build-commit "$BUILD_COMMIT"
@@ -145,6 +146,7 @@ jobs:
     if: needs.plan.outputs.release == 'true' && inputs.validate_only != true
     permissions:
       contents: write
+      actions: read
       pull-requests: write
       issues: write
     uses: ./.github/workflows/publish-release.yml

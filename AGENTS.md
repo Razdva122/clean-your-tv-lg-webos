@@ -49,6 +49,22 @@ Use [the feedback guide](docs/FEEDBACK.md) and installation-result issue form fo
 user reports. These rules authorize records within the current task; they do not
 create a background monitor or automatic issue bot.
 
+## Release coordination and verification scope
+
+Use one coordinator for a release candidate. Other tasks supply focused changes
+and evidence; they do not concurrently change its scope, selected build or
+acceptance. At freeze hold new feature merges until publication. Follow the
+focused-development/full-candidate split in CONTRIBUTING.md and the explicit
+candidate workflow in docs/RELEASE-FLOW.md. A preliminary TV build is never a
+substitute for final release evidence.
+
+Keep the current PR summary compact and link dated observations. Reuse already
+read issue/PR evidence within the task, while reading every new comment, review,
+timeline event and changed release record before making a decision. Re-read the
+current issue immediately before status updates and preserve concurrent edits.
+This avoids repeated collection of unchanged history; it does not waive the
+complete-evidence or reporter-consent rules below.
+
 ## Issue labels and status
 
 Maintain GitHub issue labels as part of every issue investigation, implementation,

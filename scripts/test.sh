@@ -2,16 +2,23 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 # No arguments runs the full suite (local checks and release validation).
-selected=" ${*:-tv installer android setup preview} "
+selected=" ${*:-ui tv installer android setup preview} "
 for component in "$@"; do
-  case "$component" in tv|installer|android|setup|preview) ;; *) echo "Unknown test component: $component" >&2; exit 2 ;; esac
+  case "$component" in ui|tv|installer|android|setup|preview) ;; *) echo "Unknown test component: $component" >&2; exit 2 ;; esac
 done
 has() { [[ "$selected" == *" $1 "* ]]; }
 
+if has ui || has tv; then
+  npm run test:compat
+  npm run lint:compat
+  npm run test:themes
+  for test in root-edition/ui/test-*.cjs; do
+    if [[ "$test" != *"-browser.cjs" ]]; then node "$test"; fi
+  done
+  for file in root-edition/ui/*.js; do node --check "$file"; done
+fi
+
 if has tv; then
-npm run test:compat
-npm run lint:compat
-npm run test:themes
 node tests/helper-compat.cjs
 for test in tests/apps/*.cjs; do
   if [[ "$test" != *"/ui.cjs" ]]; then node "$test"; fi
@@ -54,19 +61,7 @@ node root-edition/service/test-audio-recovery.cjs
 node root-edition/service/test-handlers.js
 node root-edition/service/test-persistent.js
 node root-edition/service/test-python-binding.js
-node root-edition/ui/test-catalogs.cjs
-node root-edition/ui/test-localization.cjs
-node root-edition/ui/test-updater-localization.cjs
-node root-edition/ui/test-exit.cjs
-node root-edition/ui/test-audio.cjs
-node root-edition/ui/test-settings.cjs
-node root-edition/ui/test-firmware.cjs
-node root-edition/ui/test-firmware-control.cjs
-node root-edition/ui/test-persistent.cjs
-node root-edition/ui/test-profile.cjs
-node root-edition/ui/test-updates.cjs
 for test in root-edition/tests/test_update_*.cjs; do node "$test"; done
-for file in root-edition/ui/*.js; do node --check "$file"; done
 for file in root-edition/updater/*.js; do node --check "$file"; done
 python3 -m unittest discover -s root-edition/tests
 

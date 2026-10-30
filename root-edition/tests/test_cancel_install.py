@@ -66,6 +66,28 @@ class CancellationTests(unittest.TestCase):
         self.assertTrue({'theme-policy.js','theme-runtime.js','home-layout.js','layout-panel.js','layout-panel.css','theme-defaults.css'}.issubset(names))
         self.assertEqual(before,sorted(str(p.relative_to(self.f.base)) for p in self.f.base.rglob('*')))
         self.assert_original()
+    def test_saved_candidate_is_read_only_and_full_admission_still_checks_submission(self):
+        candidate=self.recovery.saved_candidate(self.identifier)
+        self.assertEqual(candidate,self.candidate)
+        proof=self.recovery.inspect(self.identifier,candidate)
+        self.assertEqual(proof['candidate_sha256'],candidate)
+        self.assertEqual(proof['code_sha256'],'c'*64)
+        self.assert_original()
+        record=self.f.owner.store.read('submission-'+self.identifier)
+        record['candidate_sha256']='d'*64;self.f.owner.store.write('submission-'+self.identifier,record)
+        with self.assertRaisesRegex(ValueError,'original_failed_install_required'):
+            self.recovery.inspect(self.identifier,self.recovery.saved_candidate(self.identifier))
+        self.assertEqual(self.calls,[])
+
+    def test_missing_or_malformed_saved_candidate_does_not_write_evidence(self):
+        for value in (None,'',{'sha256':self.candidate},'A'*64):
+            self.f.owner.store.write('request-'+self.identifier,{**self.record,'candidate_sha256':value})
+            before=(self.f.state/('request-'+self.identifier+'.json')).read_bytes()
+            with self.subTest(value=value),self.assertRaisesRegex(ValueError,'original_candidate_required'):
+                self.recovery.saved_candidate(self.identifier)
+            self.assertEqual((self.f.state/('request-'+self.identifier+'.json')).read_bytes(),before)
+            self.assertEqual(self.calls,[])
+
     def test_one_remove_preserves_original_and_terminalizes_cancellation(self):
         result=self.cancel();self.assertEqual(result['state'],'cancelled-and-removed');self.assertEqual(len(self.calls),1)
         self.assertTrue(self.f.owner.status()['terminal']);self.assertEqual(self.f.owner.status()['stage'],'cancelled-and-removed')

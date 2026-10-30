@@ -35,9 +35,17 @@ instructions separate from published downloads and historical hardware evidence.
 Run `npm ci` first. TV web packages use Babel/core-js and PostCSS, with a strict
 compatibility check after conversion; see [TV web build](docs/TV-WEB-BUILD.md).
 Helper app/service JS uses a separate Babel/core-js/safe-buffer build for TV
-Node 0.12.2+. Set `NODE012` to run its regression against that exact runtime.
-Keep changes small and reproducible. Run `scripts/test.sh`; describe the test model,
-firmware, expected behavior and actual behavior. Separate standby tests from cold
+Node 0.10.25+. Set `NODE010` and `NODE012` to run its regression against exact
+Node 0.10.25 and 0.12.2 runtimes alongside current Node.
+Keep changes small and reproducible. During implementation run the tests for the
+changed behavior and its dependencies; `scripts/test.sh ui`, `tv`, `installer`, `setup`,
+`android` and `preview` select existing groups. Follow the affected PR checks and
+run a broader group for shared or unknown dependencies. The complete
+`scripts/test.sh` and browser suites remain required on the frozen release
+candidate; do not repeat an unchanged full local run merely to copy its result
+into another record. New code, failures or changed test preconditions justify a
+new affected run. Describe the test model, firmware, expected behavior and actual
+behavior. Separate standby tests from cold
 boots. Never claim compatibility from a successful package installation alone.
 
 Input changes must preserve triple-Home emergency release (long Home in legacy
@@ -87,3 +95,26 @@ product/build input changes require a new build and affected acceptance. Use
 candidate PR's machine-owned block. See the scoped acceptance and rollout rules
 in [Release integration flow](docs/RELEASE-FLOW.md). Do not rerun unchanged manual
 cases when their artifact hashes and device/state preconditions still match.
+
+## Short development and release cycles
+
+Use [TV development](docs/development/TV-DEVELOPMENT.md) for UI-only live feedback
+and explicit signed Root package QA. These preliminary results cannot satisfy
+the complete release gate. Themes use the existing computer-to-TV receiver.
+
+One coordinator owns the candidate, inventory, build selection and release PR.
+At freeze, finish versions and documentation together and explicitly dispatch
+the complete candidate build. Hold new features in their working branches until
+this release ships. Admit only changes needed to resolve a release blocker;
+each such product change requires a new build and affected acceptance.
+
+Loss of control/data/audio, broken update/recovery and regressions in emergency
+behavior block delivery. Other findings need an explicit fix-now or documented
+follow-up decision, with remaining failures and untested paths visible. No agent
+may silently convert a failure to a pass or infer acceptance of a new risk.
+
+Keep one current summary of build, tests and blockers in the release PR, linking
+dated evidence. Update affected instructions with the feature, retain reviews of
+unchanged guides, and let the existing generated block own inventory/version
+facts. Group necessary physical observations into a bounded owner-supervised
+session; automate repeatable UI checks where available.

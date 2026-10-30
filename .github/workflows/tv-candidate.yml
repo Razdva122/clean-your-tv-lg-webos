@@ -1,0 +1,79 @@
+name: Direct Root TV candidate
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Exact commit at the selected branch; preliminary Root device QA only
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: root-tv-candidate-${{ github.run_id }}
+  cancel-in-progress: false
+jobs:
+  build-root-tv:
+    name: build-root-tv
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Require exact dispatch source
+        env:
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          [[ "$SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]] && [ "$SOURCE_SHA" = "$GITHUB_SHA" ]
+          [[ "$GITHUB_REF" == refs/heads/* ]]
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Check direct artifact admission
+        run: |
+          python -m unittest discover -s tests/setup -p test_direct_tv_candidate.py
+          node tests/updates/root-candidate-signing.cjs
+      - name: Select affected TV safety checks
+        id: safety_scope
+        env:
+          CI_QUICK_SUITE: true
+        run: python scripts/ci-scope.py
+      - name: Install behavioral TV test dependencies
+        if: steps.safety_scope.outputs.tv == 'true'
+        run: python -m pip install -r cytv/requirements.txt
+      - name: Prepare pinned Node 0.10.25 and 0.12.2 for Helper safety regression
+        if: steps.safety_scope.outputs.tv == 'true'
+        run: |
+          cd "$RUNNER_TEMP"
+          curl --fail --silent --show-error --location https://nodejs.org/dist/v0.10.25/node-v0.10.25-linux-x64.tar.gz --output node-v0.10.25-linux-x64.tar.gz
+          echo '1dac61c21fa21e47fc6e799757569c6c3914897ca46fc8f4dd2c8f13f0400626  node-v0.10.25-linux-x64.tar.gz' | sha256sum --check -
+          tar -xzf node-v0.10.25-linux-x64.tar.gz
+          echo "NODE010=$RUNNER_TEMP/node-v0.10.25-linux-x64/bin/node" >> "$GITHUB_ENV"
+          curl --fail --silent --show-error --location https://nodejs.org/dist/v0.12.2/node-v0.12.2-linux-x64.tar.gz --output node-v0.12.2-linux-x64.tar.gz
+          echo '4e1578efc2a2cc67651413a05ccc4c5d43f6b4329c599901c556f24d93cd0508  node-v0.12.2-linux-x64.tar.gz' | sha256sum --check -
+          tar -xzf node-v0.12.2-linux-x64.tar.gz
+          echo "NODE012=$RUNNER_TEMP/node-v0.12.2-linux-x64/bin/node" >> "$GITHUB_ENV"
+      - name: Verify affected TV safety
+        env:
+          TV_REQUIRED: ${{ steps.safety_scope.outputs.tv }}
+        run: |
+          test "$TV_REQUIRED" = true || test "$TV_REQUIRED" = false
+          if [ "$TV_REQUIRED" = true ]; then
+            scripts/test.sh tv
+          else
+            scripts/test.sh ui
+          fi
+      - name: Build and inspect production-format Root packages
+        run: python scripts/build-tv-candidate.py --output "$RUNNER_TEMP/root-tv-candidate" --source "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" --attempt "$GITHUB_RUN_ATTEMPT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: root-tv-candidate
+          path: ${{ runner.temp }}/root-tv-candidate/
+          if-no-files-found: error
+          overwrite: true

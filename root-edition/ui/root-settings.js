@@ -64,7 +64,7 @@
       buttons[3].setAttribute('aria-checked', String(active));
       buttons[3].disabled = !!phase && phase !== 'active' && phase !== 'disabled';
       message.textContent = t(active ? 'Home and return from apps open Clean Your TV.' : buttons[3].disabled ? 'Changing Home control…' : 'Home and return from apps open LG Home.');
-      if (!panel.hidden && buttons[selected].disabled) move(1);
+      if (!panel.hidden && buttons[selected].disabled && (!categories || document.activeElement === buttons[selected])) move(1);
     }).catch(function (e) { message.textContent = t(e.message); });
   }
   function changeMode() {

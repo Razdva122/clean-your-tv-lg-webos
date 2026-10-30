@@ -20,7 +20,7 @@ of your TV or a new source checkout.
 | Requirement | No-root | Root |
 | --- | --- | --- |
 | TV access | LG Developer Mode, Key Server, SSH `prisoner:9922` | Existing root, a trusted SSH host key, authentication without an interactive password |
-| On the TV | Active Developer Mode session; TV Node.js 0.12.2+ for the updated Helper; local control access | Python 3.9+ (manual commands assume `/usr/bin/python3`), Node.js 8+, `/usr/bin/luna-send`, Homebrew services, `/media/developer/apps`, a compatible ARM32 Magic Remote input interface |
+| On the TV | Active Developer Mode session; TV Node.js 0.10.25+ for the source/test Helper (published installers: 0.12.2+); local control access | Python 3.9+ (manual commands assume `/usr/bin/python3`), Node.js 8+, `/usr/bin/luna-send`, Homebrew services, `/media/developer/apps`, a compatible ARM32 Magic Remote input interface |
 | Ready-made artifacts | A personalized Home IPK and, optionally, a Helper IPK | The **entire** Root bundle: IPK, `setup.py`, support files, `runtime/`, manifests and checksums |
 | Build from source | Git, Python 3.9+ with pip/venv, Node.js 20.19+ with npm, webOS CLI 3.2.6; Zig 0.14.1 for Helper | Git, Python 3.9+, Node.js 20.19+ and npm for compatible web assets; no webOS CLI/Zig |
 | Additional tools for the full test suite | Bash, Node.js, Python 3, a C compiler named `cc` | The same tools; the build and SSH installer themselves do not require Bash |

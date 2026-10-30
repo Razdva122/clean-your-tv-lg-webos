@@ -5,13 +5,36 @@
       "id": "builtin:classic",
       "title": "Classic",
       "builtin": true,
-      "preview": "theme-catalog/classic-preview.png"
+      "preview": "theme-catalog/classic-preview.png",
+      "credits": "theme-catalog/CLASSIC-CREDITS.txt"
     },
     {
       "id": "builtin:alpine",
       "title": "Alpine",
+      "version": "1.4.4",
       "builtin": true,
-      "preview": "themes/alpine/assets/preview-b122290c433d2f3921259c4efbc12dff57e805a1fe0cbbb45f31aa338b9eb2dc.png"
+      "description": "A quiet alpine panorama, large clock and one infinitely looping horizontal app ribbon.",
+      "author": "Clean Your TV contributors",
+      "license": "MIT AND CC-BY-SA-3.0",
+      "preview": "themes/alpine/assets/preview-b122290c433d2f3921259c4efbc12dff57e805a1fe0cbbb45f31aa338b9eb2dc.png",
+      "credits": "themes/alpine/documents/1-818ab3a39df2f0306896671bb68aa8f4fa53967c3c00e0344350e83e29f33603.txt",
+      "licenseFile": "themes/alpine/documents/0-c50810017f170c3682cfc6e2640a5e3be416755ab52143e6966627f69e24995b.txt",
+      "url": "themes/alpine/cytv-theme.json",
+      "digest": "3192d976cbd9fead9c0f22d3f7cb13aaaa3671e3a038c737c477c5bd6de110e6"
+    },
+    {
+      "id": "builtin:ribbon",
+      "title": "Ribbon",
+      "version": "1.0.0",
+      "builtin": true,
+      "description": "Original galaxy wallpaper with a fixed eight-card skewed bottom ribbon, raised focus and bottom-left shortcuts.",
+      "author": "Clean Your TV contributors",
+      "license": "MIT",
+      "preview": "themes/ribbon/assets/preview-dbf77986dfebeb26c646824e90cb53126420f3b985609bb3f575bdf2d9d0a81a.jpg",
+      "credits": "themes/ribbon/documents/1-6ef40776aa6fbb8d1c62bedf595c7baec036d4a1fea9bdfc1f24d071b77de56c.txt",
+      "licenseFile": "themes/ribbon/documents/0-f497a621e75e2ccabaac016c8ada95b415a7810fb9994798b282fa9f9d03920f.txt",
+      "url": "themes/ribbon/cytv-theme.json",
+      "digest": "5eb9cebf58cddafa8df59497880eaa134565465ba75dab60ec1903b956be4f5d"
     },
     {
       "id": "github:razdva122/clean-your-tv-lg-theme:itachi",

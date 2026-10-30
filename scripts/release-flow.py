@@ -21,6 +21,8 @@ BUILD_JOBS = {
     'validation / tests (ubuntu-latest)',
     'validation / tests (macos-latest)',
     'validation / optional-python',
+    'validation / browser',
+    'validation / full-release',
     'build (windows-latest, cytv-windows-x64, dist/cytv.exe)',
     'build (ubuntu-22.04, cytv-linux-x64, dist/cytv)',
     'build (macos-15, cytv-macos-arm64, dist/cytv)',

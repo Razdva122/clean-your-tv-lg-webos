@@ -8,24 +8,28 @@ The normal release trigger is a finalized `release/next` PR merged into `main`.
 Choose the version at candidate freeze, not when creating the preparation branch. Set
 `release` and the changed component versions in `release-versions.json`, update
 the matching application/service manifests and add `docs/RELEASE-X.Y.Z.md`.
-No tag, terminal command, draft creation or Publish click is needed.
+Publication itself needs no manual tag, draft creation or Publish click.
 
-The four desktop builds and Android build run on trusted `release/next` pushes
-only after candidate freeze: a newer final release version, matching plan,
-nonempty acceptance evidence and release notes must exist. Ordinary PRs run
-component checks without producing platform installers. For device feedback
-before acceptance, an explicit `test_build=true` dispatch of **cytv standalone
-builds** on `release/next` produces draft installer artifacts. It does not publish,
+After freezing a newer release version, matching plan and release notes, dispatch
+**cytv standalone builds** on `release/next` with `full_candidate=true`. This
+runs complete validation and all four desktop builds plus Android. Ordinary
+pushes do not start or cancel candidate builds. Ordinary PRs run affected checks
+without producing platform installers. For device feedback before acceptance,
+`test_build=true` produces preliminary installer artifacts; the faster direct
+Root route is documented in [TV development](development/TV-DEVELOPMENT.md).
+Neither preliminary route publishes,
 sign feeds or satisfy the final release gate; see [candidate preparation](RELEASE-FLOW.md#freeze-and-validate-the-candidate).
 After merging the
 candidate into `main`, **Automatic release**:
 
-1. Finds the successful trusted build of the merge's exact second parent,
+1. Finds the successful trusted build pinned by the merge's second parent (or
+   the exact second-parent build when unpinned), verifies equivalent build inputs,
    requires all five platform jobs to succeed, verifies that the candidate and
    merge have identical Git trees, and checks that the release is unpublished.
-2. Runs the full test suite on Linux and macOS against that exact commit.
+2. Verifies the complete candidate test record, including Linux/macOS, browser
+   and ARM checks, without repeating the full suite after merge.
 3. Downloads only that build's artifacts, checks payload versions and hashes in
-   all seven installer files, and creates the public No-root ZIP and Root TAR
+   all installer files, and creates the public No-root ZIP and Root TAR
    bundles, release notes, `BUILD-INFO.json` and checksums.
 4. Creates/resumes a draft targeting the exact `main` merge commit and uploads the
    prepared assets. A draft/tag for another commit stops the workflow.
@@ -61,8 +65,9 @@ An installer-only release preserves the existing older signed Home rollback.
 A new Home release uses the nearest previous stable release's actual Home IPK.
 
 The GitHub **release-signing** environment holds `UPDATE_SIGNING_PRIVATE_KEY` as
-an encrypted environment secret. Only branch `main` may use that environment.
-The secret is passed only to the preparation step and is never written into an
+an encrypted environment secret. Stable publication uses `main`; the separate
+Root-only QA job uses trusted `release/next` tools and cannot publish. The secret
+is passed only to trusted signing/preparation steps and is never written into an
 artifact or a log. Keep the offline key backup. Re-provisioning requires an
 explicit operator action; changing the signing identity also requires updating
 and deploying the clients' pinned public key.

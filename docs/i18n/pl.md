@@ -2,9 +2,11 @@
 
 > v1.5.0: motywy, galeria i przesyłanie z komputera na TV. Znane ograniczenia Root: Appearance może przesunąć się o 110 px; Home może nie otworzyć się automatycznie po czuwaniu. Zakres testów urządzeń jest ograniczony. [1.5.0](../RELEASE-1.5.0.md).
 
+> Następny kandydat (nieopublikowany): motywy o stałym układzie zachowują miejsce ukrytego wiersza Columns, aby Apply nie zmieniało pozycji przewijania Appearance. Wskaźnik, klawiatura i narzędzia dostępności pomijają Columns. Weryfikacja na TV pozostaje do wykonania.
+
 [Dokumentacja](../README.md) · [Zgłoś problem](../FEEDBACK.md)
 
-Poradnik opisuje opublikowaną wersję **[1.4.1](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.4.1)**. Akceptacja C3 obejmuje zapisane testy zasilania, Home, fokusu, zachowania stanu wyłączenia i ręcznego cofnięcia wersji. Inne telewizory, dźwięk eARC i fizyczne urządzenia Android pozostają niezweryfikowane; udana instalacja nie dowodzi zgodności. [Zakres testów (angielski)](../RELEASE-1.4.0-ACCEPTANCE.md).
+Poradnik opisuje opublikowaną wersję **[1.5.2](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.5.2)**. Akceptacja C3 obejmuje zapisane testy zasilania, Home, fokusu, zachowania stanu wyłączenia i ręcznego cofnięcia wersji. Inne telewizory, dźwięk eARC i fizyczne urządzenia Android pozostają niezweryfikowane; udana instalacja nie dowodzi zgodności. [Zakres testów (angielski)](../RELEASE-1.4.0-ACCEPTANCE.md).
 
 **Nieopublikowany instalator:** konsola, aplikacja desktopowa i Android pokazują stan każdej kontroli TV: niesprawdzona, w toku, zaliczona, niezaliczona lub niemożliwa do potwierdzenia. Wyniki pozostają po błędzie. Node.js/Python jest sprawdzany w telewizorze; `doctor` nie przygotowuje Pythona ani nie prosi o parowanie sterowania. Zapisz raport przed ponowną próbą.
 
@@ -21,7 +23,9 @@ Root wymaga działających interfejsów Home usług Settings Service i System Pr
 
 Włącz telewizor i połącz go z tą samą zaufaną siecią lokalną co komputer. Później komputer może być wyłączony. Zgodność zależy od modelu, oprogramowania i pilota; Root ma nieukończone testy sprzętowe.
 
-No-root Helper wymaga Node.js **0.12.2+** na TV. Root wymaga Node.js **8+** i działającego Pythona **3.9+**. W razie potrzeby instalator pobierze zweryfikowanego prywatnego Pythona; początkowe przygotowanie wymaga **320 MiB** wolnego miejsca. Nie zastępuje Pythona systemowego. Zachowaj środowiska potrzebne do odzyskiwania. [Python (angielski)](../OPTIONAL-PYTHON.md). Odnawianie Developer Mode to **Beta, domyślnie wyłączona**; rzeczywiste odnawianie bez roota nie zostało potwierdzone. Nadal sprawdzaj oficjalny licznik.
+Node 0.10.25 dotyczy nieopublikowanej kompilacji źródłowej/testowej; opublikowane instalatory nadal wymagają 0.12.2+. Zobacz [zgodność](../COMPATIBILITY.md).
+
+No-root Helper wymaga Node.js **0.10.25+** na TV. Root wymaga Node.js **8+** i działającego Pythona **3.9+**. W razie potrzeby instalator pobierze zweryfikowanego prywatnego Pythona; początkowe przygotowanie wymaga **320 MiB** wolnego miejsca. Nie zastępuje Pythona systemowego. Zachowaj środowiska potrzebne do odzyskiwania. [Python (angielski)](../OPTIONAL-PYTHON.md). Odnawianie Developer Mode to **Beta, domyślnie wyłączona**; rzeczywiste odnawianie bez roota nie zostało potwierdzone. Nadal sprawdzaj oficjalny licznik.
 
 ### Konfiguracja Developer Mode (No-root)
 
@@ -89,15 +93,17 @@ Po połączeniu cytv pokazuje wersję zainstalowaną → dołączoną i rozróż
 
 Otwórz ustawienia Home → Aktualizacje oprogramowania i sprawdź wersje przed potwierdzeniem. Aktualizacje i cofanie wersji na TV wymagają **roota, Homebrew Channel** i przygotowanej zgodnej infrastruktury aktualizacji, również dla edycji No-root. Bez roota użyj komputera. Przygotowanie pełnych aktualizacji systemu to osobna świadoma czynność: [aktualizacje (angielski)](../UPDATES.md). Odzyskiwanie pokazuje zapisaną wersję; cofnięcie może utracić późniejsze zmiany ustawień.
 
-**Istniejąca instalacja 1.3.0:** pierwotny System Updater nie może zastosować 1.4.0 z powodu zmiany listy dozwolonych plików. Jeśli próba zatrzymała się przed wymianą, zachowaj dziennik i przerwij; nie kasuj stanu i nie ponawiaj w ciemno. Przejdź przez sprawdzane odzyskiwanie i nową instalację 1.4.0; aktualizacja samej aplikacji nie zastępuje zachowanych sterowników Root. Następna poprawka OTA **nie została opublikowana**. [Migracja i odzyskiwanie (angielski)](../UPDATES.md#one-time-computer-preparation).
+**Istniejąca instalacja 1.3.0:** pierwotny System Updater może odmówić zmiany infrastruktury. Zachowaj przerwaną operację i postępuj według sprawdzonego odzyskiwania i przygotowania wymiany dla 1.5.0+; nie usuwaj dzienników ani nie ponawiaj w ciemno. Aktualizacja samej aplikacji nie zastępuje przypiętej infrastruktury Root. [Migracja i odzyskiwanie (angielski)](../UPDATES.md#one-time-computer-preparation).
 
-Nieopublikowana poprawka kanału ustawień Home: zaktualizuj Home i Helper razem, gdy będzie dostępny zgodny kandydat. Aktualizacja samego Home nie wystarczy. Weryfikacja końcowej kompilacji wydania na TV pozostaje do wykonania. [#146](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/146).
+Poprawka kanału ustawień Home została wydana w 1.5.0. Zaktualizuj Home i Helper razem zgodnym opublikowanym instalatorem; aktualizacja samego Home nie zmienia Helpera. Weryfikacja pozostaje ograniczona do opisanych modeli. [#146](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/146).
 
 Odzyskiwanie dźwięku HDMI w Root jest eksperymentalne i **domyślnie wyłączone**; włączaj tylko w razie potrzeby. Może przerwać poprawny dźwięk i nie dowodzi zgodności eARC. [Odzyskiwanie dźwięku (angielski)](../development/ROOT-AUDIO-RECOVERY.md). Osobny **CYTV Installer dla Homebrew nie jest jeszcze wydany**; użyj opublikowanego instalatora komputerowego lub Android.
 
-Tylko nieopublikowany kandydat: gdy stare zapisywalne katalogi Root blokują dostęp do API oprogramowania TV, `cytv enable-firmware-access --edition root --repair-package-permissions` sprawdza bieżący pakiet według zaufanych danych prywatnych i usuwa zapis dla grupy/innych wyłącznie we własnych ścieżkach Root. Nieznane lub zmienione pliki zatrzymują naprawę. Profil, wybór Home i blokowanie aktualizacji pozostają bez zmian; [szczegóły (angielski)](../LG-FIRMWARE-UPDATES.md#explicit-package-permission-repair-candidate).
+Homebrew Channel odmówił temu instalatorowi dostępu. W webOS 11 Homebrew 0.7.3 wymaga aktualizacji zgodności od swoich twórców. Dopóki obsługiwana wersja Homebrew nie zawiera poprawki, użyj opublikowanego instalatora na komputer lub Android. [#116](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/116).
 
-Tylko nieopublikowany kandydat: `cytv recover-system-rollback --edition root` obsługuje zweryfikowane przywracanie Root, gdy wszystkie instalatory pakietów zakończyły pracę, ale upłynął czas gotowości launchera. Wymaga prawdziwego sygnału launchera i odrzuca nieznane wyniki instalacji. Zachowuje pakiety, przypięty kod i klucze, dowody błędu oraz jawnie wyłączone sterowanie Home. Prywatny zapis dokumentuje ograniczoną próbę. Zwykłe ponowienie nie wydłuża terminu. Dopiero po 120 sekundach, bez zaakceptowanego sygnału gotowości i nieznanych wyników instalacji, `--new-recovery-attempt` archiwizuje cały poprzedni zapis pod UUID/haszem i jawnie rozpoczyna nową próbę. Ukończone odzyskiwanie pozostaje idempotentne; brak automatycznych kolejnych prób. [Procedura i ograniczenia (angielski)](../RECOVERY.md#root-system-rollback-readiness-candidate).
+1.5.0+: gdy stare zapisywalne katalogi Root blokują dostęp do API oprogramowania TV, `cytv enable-firmware-access --edition root --repair-package-permissions` sprawdza bieżący pakiet według zaufanych danych prywatnych i usuwa zapis dla grupy/innych wyłącznie we własnych ścieżkach Root. Nieznane lub zmienione pliki zatrzymują naprawę. Profil, wybór Home i blokowanie aktualizacji pozostają bez zmian; [szczegóły (angielski)](../LG-FIRMWARE-UPDATES.md#explicit-package-permission-repair-candidate).
+
+1.5.0+: `cytv recover-system-rollback --edition root` obsługuje zweryfikowane przywracanie Root, gdy wszystkie instalatory pakietów zakończyły pracę, ale upłynął czas gotowości launchera. Wymaga prawdziwego sygnału launchera i odrzuca nieznane wyniki instalacji. Zachowuje pakiety, przypięty kod i klucze, dowody błędu oraz jawnie wyłączone sterowanie Home. Prywatny zapis dokumentuje ograniczoną próbę. Zwykłe ponowienie nie wydłuża terminu. Dopiero po 120 sekundach, bez zaakceptowanego sygnału gotowości i nieznanych wyników instalacji, `--new-recovery-attempt` archiwizuje cały poprzedni zapis pod UUID/haszem i jawnie rozpoczyna nową próbę. Ukończone odzyskiwanie pozostaje idempotentne; brak automatycznych kolejnych prób. [Procedura i ograniczenia (angielski)](../RECOVERY.md#root-system-rollback-readiness-candidate).
 
 1.5.0: pakiet wymiany zawiera System Updater 1.1.2. Przed OTA jawnie zastąp 1.1.0 lub 1.1.1 poleceniem `cytv replace-system-updater --edition root`. Wymieniany jest tylko System Updater; aplikacje Root/Root Updater, pełny profil i wybór Home pozostają, a stary stan jest archiwizowany. Nieznane lub niedokończone operacje blokują wymianę. Wymóg nie blokuje kanałów No-root. [Procedura (angielski)](../RECOVERY.md#replace-the-root-system-updater-candidate).
 
@@ -134,6 +140,10 @@ Aby przetestować nieopublikowany motyw, najpierw otwórz na TV **Ustawienia →
 Dla opublikowanego motywu otwórz **Dodaj przez ID** i wpisz ID (np. `102300a209`), `da.gd/102300a209` lub pełny link GitHub. Home pokaże adres da.gd przed wczytaniem, a następnie sprawdzi cel GitHub i pakiet motywu. Autor może skopiować ID z opisu wydania albo **TV link → Copy ID** w podglądzie na komputerze.
 
 Opublikowane pakiety mogą jeszcze nie mieć tych opcji. Test przeglądarki nie potwierdza zgodności z fizycznym TV. [Pełny poradnik](../THEMES.md).
+
+Ten nieopublikowany kandydat zawiera **Ribbon** obok Classic i Alpine, bez pobierania motywu. Classic pozostaje domyślny. Po aktualizacji Home wybierz Ribbon w Ustawienia → Wygląd.
+
+Nieopublikowane motywy z konfigurowalną wstęgą mogą umieszczać wejścia, Wi-Fi i ustawienia w lewym dolnym rogu. Gdy opcja jest włączona, Lewo przy pierwszej widocznej aplikacji wybiera ustawienia, potem Wi-Fi i wejścia; Prawo w ustawieniach wraca do tej samej widocznej aplikacji. Instalacja motywu wymagającego nowej funkcji Home jest odrzucana w nieobsługiwanej wersji, zachowując wygląd i wybór. Najpierw zaktualizuj Home. Późniejsze obniżenie wersji może przywrócić Classic podczas startu.
 
 Motywy pokazują podglądy wbudowanych i wszystkich samodzielnie zainstalowanych motywów, także offline. Osobny przycisk otwiera opublikowany katalog; prywatna instalacja nie publikuje motywu.
 

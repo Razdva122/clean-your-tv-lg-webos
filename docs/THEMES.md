@@ -8,6 +8,8 @@ Authors: follow the [complete theme contribution walkthrough](development/CONTRI
 
 **Classic** and **Alpine** are built into both No-root and Root editions. They work without downloading a theme. Classic remains the initial default. Alpine has a mountain panorama, a large clock and one looping horizontal app ribbon. Its fixed eight-slot composition hides the Columns setting while active. Your saved column preference returns when you switch to an adjustable theme.
 
+Next candidate (unreleased): when a fixed-layout theme hides Columns, its empty row keeps the same space so applying the theme does not shorten Appearance’s scroll range. The hidden control is skipped by pointer, keyboard and accessibility navigation. This correction has browser regression coverage; physical-TV acceptance is pending.
+
 **Channel** is an ordinary external theme in showcase. It is not part of the TV package. It uses a numbered list, selected-app artwork and pixel shortcut icons; its one-column default can be overridden by the user.
 
 ## Change to an included theme
@@ -107,3 +109,14 @@ python3 -m http.server 8878 --bind 127.0.0.1 --directory build/theme-site
 ```
 
 Open **http://127.0.0.1:8878/** to exercise Home/Settings, or `/themes/` for the catalog. Browser storage is separate from your TV. Developer details: [TV theme lifecycle](development/TV-THEMES.md), [CSS API](development/THEME-CSS.md), [candidate status](development/THEMES.md).
+
+
+## Parameterized ribbons (unreleased)
+
+**Ribbon is bundled by this unreleased candidate** in both editions, alongside Classic and Alpine. Update Home, then select Ribbon in Settings → Appearance; no theme download or network connection is needed. Classic remains the default. Bundled Ribbon cannot be removed or replaced through downloaded-theme controls.
+
+Themes can optionally configure the existing scenic ribbon's card sizes, spacing, skew, focused-card lift, captions and clock visibility. The theme chooses whether compact Inputs, Wi-Fi and Settings shortcuts appear at bottom left. With shortcut edge navigation, Left from the first visible application selects Settings, then Wi-Fi and Inputs; Right from Settings returns to that same visible edge. Themes without these options retain their previous appearance and controls.
+
+These themes require the `ribbon-layout-v1` capability in Home. On a theme-enabled Home without this capability, both Add by URL and Receive from computer reject the new descriptor before saving/applying it: your current theme and saved selection stay unchanged. Exact error text depends on the installed version and may report an unsupported capability/API. Update Home and retry. A theme package does not upgrade Home. If you downgrade Home after already selecting an unsupported theme, startup recovery can restore Classic; that differs from a rejected new installation.
+
+This support is under review. Browser checks do not establish physical-TV compatibility or public availability. See the [author contract](development/THEME-CSS.md#parameterized-scenic-ribbons-unreleased).

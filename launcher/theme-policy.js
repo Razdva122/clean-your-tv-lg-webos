@@ -44,6 +44,33 @@
     assetBytes: 2097152,
     totalAssetBytes: 6291456
   };
+  // Kept in sync across the standalone HomeLayout and ThemePolicy browser modules.
+  function normalizeRibbon(input) {
+    var defaults = {left: 112, right: 112, bottom: 162, cardHeight: 128, gap: 24, skewDeg: 0, focusLift: 0, iconScale: 1,
+      shortcuts: 'header', edgeNavigation: 'wrap', labels: 'below', showClock: true};
+    var bounds = {left: [64, 640], right: [32, 320], bottom: [0, 200], cardHeight: [96, 240], gap: [0, 64], skewDeg: [-18, 18], focusLift: [0, 64], iconScale: [.4, 1]};
+    if (!input || typeof input !== 'object' || Array.isArray(input) ||
+        Object.getPrototypeOf(input) !== Object.prototype && Object.getPrototypeOf(input) !== null) fail('layout-invalid', 'ribbon');
+    Object.keys(input).forEach(function (key) {
+      if (!Object.prototype.hasOwnProperty.call(defaults, key)) fail('layout-invalid', 'ribbon');
+      var value = input[key], range = bounds[key];
+      if (range) {
+        if (typeof value !== 'number' || !isFinite(value) || value < range[0] || value > range[1] || key !== 'skewDeg' && key !== 'iconScale' && value % 1) fail('layout-invalid', 'ribbon');
+      } else if (key === 'showClock') {
+        if (typeof value !== 'boolean') fail('layout-invalid', 'ribbon');
+      } else if ((key === 'shortcuts' ? ['header', 'bottom-left'] : key === 'edgeNavigation' ? ['wrap', 'shortcuts'] : ['below', 'focused-above']).indexOf(value) < 0) fail('layout-invalid', 'ribbon');
+      defaults[key] = value;
+    });
+    if (defaults.shortcuts === 'bottom-left' && defaults.left < 340) fail('layout-invalid', 'ribbon');
+    if (defaults.labels === 'below' && defaults.bottom < 64) fail('layout-invalid', 'ribbon');
+    return defaults;
+  }
+  function ribbonWidth(ribbon, columns) {
+    var margin = Math.abs(Math.tan(ribbon.skewDeg * Math.PI / 180) * (ribbon.cardHeight + ribbon.focusLift));
+    var width = 1920 - ribbon.left - ribbon.right - 2 * margin;
+    if (Math.min(360, width / columns - ribbon.gap) < 64) fail('layout-invalid', 'ribbon');
+    return width;
+  }
   function fail(code, field) {
     var e = new Error(code + ': invalid ' + field);
     e.name = 'ThemeError';
@@ -116,8 +143,8 @@
     if (m.id.indexOf('github:') === 0 && m.id.split(':')[1] !== m.source.repository.slice(19).toLowerCase()) fail('manifest-invalid', 'source.identity');
     object(m.requires, ['minimumHomeVersion', 'capabilities'], 'manifest-invalid', 'requires');
     version(m.requires.minimumHomeVersion);
-    list(m.requires.capabilities, 1, 'api-unsupported', 'capabilities').forEach(function (capability) { if (capability !== 'modern-icon-css-v1') fail('api-unsupported', 'capabilities'); });
-    object(m.layout, ['preset', 'columns', 'spacingScale', 'textScale', 'focusScale'], 'layout-invalid', 'layout', ['allowColumnOverride']);
+    list(m.requires.capabilities, 2, 'api-unsupported', 'capabilities').forEach(function (capability, index) { if (['modern-icon-css-v1', 'ribbon-layout-v1'].indexOf(capability) < 0 || m.requires.capabilities.indexOf(capability) !== index) fail('api-unsupported', 'capabilities'); });
+    object(m.layout, ['preset', 'columns', 'spacingScale', 'textScale', 'focusScale'], 'layout-invalid', 'layout', ['allowColumnOverride', 'ribbon']);
     if (['dock-grid', 'icon-grid', 'side-grid', 'channel-list', 'scenic-grid'].indexOf(m.layout.preset) < 0) fail('layout-invalid', 'preset');
     if (Object.prototype.hasOwnProperty.call(m.layout, 'allowColumnOverride') && typeof m.layout.allowColumnOverride !== 'boolean') fail('layout-invalid', 'allowColumnOverride');
     number(m.layout.columns, 1, 8, 'layout-invalid', 'columns');
@@ -125,6 +152,13 @@
     number(m.layout.spacingScale, .8, 1.2, 'layout-invalid', 'spacingScale');
     number(m.layout.textScale, .9, 1.25, 'layout-invalid', 'textScale');
     number(m.layout.focusScale, 1.05, 1.15, 'layout-invalid', 'focusScale');
+    var hasRibbon = Object.prototype.hasOwnProperty.call(m.layout, 'ribbon'), normalizedRibbon;
+    if (hasRibbon !== (m.requires.capabilities.indexOf('ribbon-layout-v1') >= 0)) fail('api-unsupported', 'ribbon-layout-v1');
+    if (hasRibbon) {
+      if (m.layout.preset !== 'scenic-grid' || m.layout.allowColumnOverride !== false) fail('layout-invalid', 'ribbon');
+      normalizedRibbon = normalizeRibbon(m.layout.ribbon);
+      ribbonWidth(normalizedRibbon, m.layout.columns);
+    }
     object(m.defaults, ['wallpaperAssetId', 'dim', 'accent'], 'manifest-invalid', 'defaults');
     number(m.defaults.dim, 0, .85, 'manifest-invalid', 'dim');
     if (typeof m.defaults.accent !== 'string' || !/^#[a-fA-F0-9]{6}$/.test(m.defaults.accent)) fail('manifest-invalid', 'accent');
@@ -167,7 +201,9 @@
     object(m.license, ['identifier', 'textPath', 'creditsPath'], 'manifest-invalid', 'license');
     string(m.license.identifier, 100, 'manifest-invalid', 'license.identifier');
     if (!docs[m.license.textPath] || !docs[m.license.creditsPath]) fail('asset-invalid', 'license.documents');
-    return JSON.parse(JSON.stringify(m));
+    var result = JSON.parse(JSON.stringify(m));
+    if (hasRibbon) result.layout.ribbon = normalizedRibbon;
+    return result;
   }
   function decimal(n) {
     return n.toFixed(6).replace(/\.?0+$/, '') || '0';
@@ -343,6 +379,7 @@
     states: states,
     properties: properties,
     limits: limits,
+    normalizeRibbon: normalizeRibbon,
     validateManifest: validateManifest,
     validateRules: validateRules,
     compileRules: compileRules,

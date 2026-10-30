@@ -13,34 +13,41 @@ responsible for trust, installation, health and rollback.
 
 ## Host and signing gates
 
-1. Record the exact successful `cytv.yml` feedback run, source SHA and versions.
-   Require Android and all four desktop platform jobs to succeed. Retain the
-   Actions artifact digests and independently verify embedded payloads, native
-   Windows Root IPK/LF, Android signer/source/versionCode and Helper exact bytes.
-2. Assemble with the existing `scripts/assemble-release.py` verifier from a clean
-   snapshot of that source. Feedback builds are `workflow_dispatch`, so they do
-   not satisfy `validate_build_run` or the final production merge gate. Verify
-   this provenance separately; do not forge a push event or a main merge.
-3. Create a temporary **private draft**, `prerelease=false`, at the numeric
-   candidate tag and exact candidate source. Upload the checked assembly's assets,
-   both system manifests, BUILD-INFO and checksums. Record the draft ID and source.
-   Draft contents are not public delivery. Do not use `--latest`, publish it or
-   modify an existing published release.
-4. Reuse the trusted signing workflow on `main`:
+For normal early Root feedback, use the direct package route documented in
+[TV development](TV-DEVELOPMENT.md). It builds only the three coherent Root
+packages, verifies run/source/artifact provenance in the protected signer and
+downloads a production-key-verified unpublished artifact. No temporary GitHub
+release or desktop executable is needed. The device admission, owner-presence,
+rollback and evidence requirements below still apply. Preliminary results never
+replace the complete frozen release build or final acceptance.
+
+The desktop-artifact route remains available when `cytv.yml` already produced a
+feedback build:
+
+1. Record its exact run, attempt, branch, source SHA and unpublished version. The
+   macOS ARM64 package job must have succeeded and no job may be known failed or
+   cancelled. Keep the branch at this source until signing and recheck finish.
+2. Dispatch the protected Root-only signer:
 
    ```sh
-   gh workflow run publish-release.yml --ref main -f tag=v1.4.1 -f publish=false
+   gh workflow run publish-release.yml --ref release/next \
+     -f tag=vX.Y.Z -f publish=false -f preliminary_root_qa=true \
+     -f candidate_build_run=RUN_ID -f candidate_source_sha=EXACT_SOURCE_SHA \
+     -f candidate_branch=SOURCE_BRANCH
    ```
 
-   Substitute the actual selected version. `publish=false` signs and saves
-   `signed-release-feeds` as an Actions artifact; it does not upload signed assets,
-   publish, start a cycle or send shipping notices. The production private key
-   remains inside the protected Actions environment. Record workflow run/head SHA.
-5. Download that artifact. Verify the exact root system envelope with the checked
-   production public key and `system-updater/policy.js`; bind its raw SHA-256 to
-   the request. Verify BUILD-INFO, candidate source and every manifest component
-   against the assembled assets. Preserve this evidence privately. A signature
-   alone does not establish the selected build's provenance.
+   Leave `direct_tv_qa` false for this route. The trusted tools inspect the
+   digest-bound macOS artifact and its embedded payload without executing
+   candidate source. The private key stays in the protected Actions environment.
+3. Download `signed-root-candidate-RUN_ID-ATTEMPT` from the signing run. Verify
+   the production signature with `system-updater/policy.js`, source-bound notes,
+   provenance, manifest versions and all three package hashes before admission.
+   Bind the exact envelope bytes' SHA-256 to the request and retain both run IDs.
+
+Neither preliminary route uses `assemble-release.py` or creates a temporary
+GitHub release. The assembler requires a complete full candidate and final merge
+provenance; never weaken it or fabricate those facts for feedback builds. Root
+QA does not establish desktop, Android, No-root or final release acceptance.
 
 ## Device admission
 
@@ -110,13 +117,13 @@ This accepts separately authorized offer admission, signed package handling,
 original worker update and rollback. It does **not** accept normal public feed
 selection, anonymous draft download, fresh computer provision or all TV models.
 
-Before posting a new installation-result report, show the exact redacted text and
-destination and obtain the owner's consent under AGENTS.md. Routine release/issue
-maintenance authorization does not authorize publishing private installation logs.
+For another user's device, show the exact redacted report and destination and
+obtain the owner's consent under AGENTS.md. Authorized maintainer QA on a
+maintainer/project-owned test device may record concise technical results within
+the approved release scope. Neither case authorizes publishing private logs.
 
-Preserve the signed evidence privately, then remove the temporary **unpublished**
-draft/tag before the final release pipeline binds the actual frozen merge SHA.
-Never overwrite a published version. Record acceptance honestly, rerun all required
-platform builds at the final frozen head, verify intended TV component bytes still
-match the accepted bytes, and complete Release policy before main integration.
+Preserve the signed evidence privately. Never overwrite a published version.
+Record acceptance honestly, complete and pin all required platform builds at the
+frozen source, verify intended TV component bytes still match the accepted bytes,
+and complete Release policy before main integration.
 Production publication and shipping notices remain the normal protected workflow.

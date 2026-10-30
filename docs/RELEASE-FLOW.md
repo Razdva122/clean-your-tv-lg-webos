@@ -136,25 +136,48 @@ CI does not establish that documentation matches product behavior.
 
 ## Freeze and validate the candidate
 
-Select versions and write candidate notes before physical acceptance. A prepared
-new version on `release/next` automatically builds the full Linux/macOS suite,
-Android and all four desktop platforms. The release PR stays draft until actual
-acceptance is recorded. `workflow_dispatch` with `test_build=true` explicitly
-requests another build; it neither publishes nor grants acceptance.
+One coordinator owns the frozen inventory, selected build and acceptance record.
+Select versions and write candidate notes before physical acceptance. Finish
+product changes before freeze; queue unrelated changes for the following cycle.
+Then explicitly start the full candidate:
+
+```sh
+gh workflow run cytv.yml --ref release/next -f full_candidate=true
+```
+
+This runs the complete Linux/macOS suite, browser matrix, ARM Python checks,
+Android and all four desktop builds. Browser validation runs alongside runtime
+tests. Ordinary pushes do not start installer builds or cancel this run. The
+release PR stays draft until actual acceptance is recorded. A new product input
+requires a new full candidate; evidence-only edits can retain the verified pin.
+`test_build=true` produces preliminary feedback artifacts and cannot satisfy the
+full-release validation marker.
 
 For preliminary device feedback before integration, the same explicit dispatch
 can build a named branch in this repository other than `main`. Select that branch
 and enable `test_build`; pushes to feature branches, tags, PR refs and dispatches
 without this option do not produce installers. The branch still needs prepared
 version metadata and matching release notes. All platform payload, compatibility,
-packaging and signature checks remain enabled, alongside parallel full validation.
+packaging and signature checks remain enabled, alongside affected validation.
 These are draft test artifacts tied to the dispatched source commit, never a
 release candidate or release acceptance. Stable signing/publication and trusted release
 policy still require their existing `release/next`/`main` provenance; branch test
 builds cannot satisfy those gates or replace the final candidate build.
 
+For the shortest Root feedback cycle, use the direct `tv-candidate.yml` workflow
+or the [TV development command](development/TV-DEVELOPMENT.md). It compiles only
+the coherent Root application, updater and infrastructure packages, without
+desktop bundling or Android. The admitted build job first runs affected UI checks
+or the TV runtime suite; behavioral and unknown/shared changes retain controls,
+watchdog, emergency and recovery regressions before any signed device delivery.
+The protected signer verifies the exact source,
+workflow run/attempt, artifact digest, package inventory and pinned public key.
+`direct_tv_qa=true` selects this input in **Sign and publish release** with
+`publish=false` and `preliminary_root_qa=true`. This produces unpublished signed
+QA artifacts; it cannot satisfy final build or hardware acceptance gates.
+
 Existing Root installations require signed coherent System packages rather than
-reinstallation. For early device feedback, a maintainer may explicitly dispatch
+reinstallation. The older desktop-artifact path remains available: a maintainer may explicitly dispatch
 **Sign and publish release** from protected `release/next` with `publish=false`,
 `preliminary_root_qa=true`, the draft `candidate_build_run`, exact
 `candidate_source_sha` and `candidate_branch`. The macOS ARM64 package job and
@@ -239,7 +262,8 @@ It rejects:
 - Omitted issues linked to included PRs. The gate checks closing references and
   `Related issues:` lines and verifies that listed issues are actual issues.
 - An unsuccessful/incomplete trusted candidate build or full-suite result.
-  Android, four desktop jobs, Linux/macOS tests and ARM Python checks must succeed.
+  Android, four desktop jobs, Linux/macOS tests, browser validation, the full-release
+  marker and ARM Python checks must succeed.
   A selected build may come from a trusted push or explicit dispatch on
   `release/next`. Unpinned candidates retain exact-head validation.
 
@@ -298,14 +322,13 @@ acceptance pin. Fix deterministic failures before retrying. Pin only the final s
 attempt, then accept its bytes. Publication/notification recovery keeps its normal
 separate retry paths; do not rebuild or republish merely to retry a comment.
 
-### Rollout after the current release
+### Policy rollout
 
-This change is held for the next release cycle. The first release containing the
-new workflows still uses the old trusted policy from `main`: keep that candidate
-unpinned and complete its exact-head build/acceptance workflow. After it merges,
-trusted policy and `workflow_run` refresh become available on `main`; subsequent
-candidates can use pinned reuse. No live protection changes or bypasses are needed.
-Do not use the draft PR or its tests as acceptance of the current release.
+Pinned build reuse is already available in trusted `main` policy. When changing
+workflow gates, preserve the existing required job names for the first release
+and also complete the new full-release/browser gates. After the release merges,
+trusted policy requires those additional gates on subsequent candidates. Never
+weaken branch protection or use a preliminary build as final acceptance.
 
 ## Merge, publish and notify
 
@@ -318,10 +341,16 @@ A merge means integrated;
 shipping is confirmed only after publication and verification of the packages
 and signed update feeds.
 
-Ordinary PRs run only affected checks: TV/webOS, installer, Android, preview or
+Ordinary PRs run only affected checks: UI, TV/webOS, installer, Android, preview or
 packaging/release tools. Shared dependencies enable every affected group; unknown
 paths conservatively enable all checks. Documentation-only changes skip application
 checks and Pages builds while keeping the required Linux/macOS status names green.
+Visual UI changes compile the affected web applications and run focused browser
+smoke checks. TV behavior changes retain the critical runtime, controls, watchdog,
+recovery and update checks. The complete theme browser matrix and frozen desktop
+runtime matrix run at candidate freeze; native runtime changes also select their
+PR checks. Required status summaries fail if any selected check fails or is
+unexpectedly skipped.
 Feature branches run affected tests on PR events. Successful runtime results may
 be reused within the same PR/day when the checked-out merge tree (including base
 changes), selected groups, OS/image, exact Python/Node and installed Python
@@ -337,7 +366,10 @@ Feature branches run affected tests on PR events. The prepared candidate build
 runs the full suite once. Release PR checks retain the required Linux/macOS status
 names and run metadata/setup checks; the trusted Release policy enforces the full
 candidate suite. Standalone push suites and the full publication suite are removed.
-Pinned-equivalent documentation/evidence changes do not rebuild installers. Preview Pages runs its own focused tests instead of the full suite.
+Pinned-equivalent documentation/evidence changes do not rebuild installers. Preview
+validation belongs to Tests and the full candidate suite; Preview Pages compiles
+and deploys that source without duplicating the same preview tests in a second
+PR workflow.
 
 Packaging saves `RELEASE-INVENTORY.json` with the tag, exact source commit,
 release PR, included implementation PRs, their issues and delivered summaries.

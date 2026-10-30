@@ -39,10 +39,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python -m pip install -r cytv/requirements.txt
       - run: npm ci --ignore-scripts --no-audit --no-fund
-      - name: Test
-        run: scripts/test.sh preview
       - name: Build preview and theme showcase in one Pages artifact
         run: |
           python3 scripts/preview.py --build build/preview --showcase

@@ -13,8 +13,11 @@ Local changes:
 - `async-limiter@1.0.1` (MIT, SHA-1
   `dd379e94f0db8310b08291f9d64c3209766617fd`) is vendored as
   `lib/async-limiter.js`; its import is relative and its license is included.
+- Import `events.EventEmitter` explicitly: Node 0.10 exports an object rather
+  than the constructor directly. Skip optional `cork`/`uncork` write batching on
+  Node 0.10 TLS streams, retaining both writes and the completion callback.
 
-Upstream targets newer Node. Our Node 0.12 compatibility comes from the Helper
+Upstream targets newer Node. Our Node 0.10.25+ compatibility comes from the Helper
 Babel/core-js/safe-buffer build and runtime regression, not an upstream claim.
 SSAP clients disable compression and enforce payload/handshake limits. They
 connect only to the TV's own LAN addresses. No WebSocket server is started by

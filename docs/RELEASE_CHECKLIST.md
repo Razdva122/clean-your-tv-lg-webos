@@ -10,7 +10,11 @@
   with `python3 -m unittest discover -s tests/setup -p test_readme_release.py`.
 - Verify the complete candidate CI suite and platform builds once; retain the run,
   attempt and artifact hashes. Use the pinned result across evidence-only edits.
-- Run scripts/test.sh and scripts/build.sh for local implementation verification.
+- Run affected tests while implementing. Run the full suite and final package
+  checks on the explicitly frozen candidate; preserve results for unchanged
+  inputs rather than repeating every local/CI check for an evidence edit.
+- Hold new features after freeze. Record an explicit decision for every new
+  blocker or accepted limitation; never infer acceptance from silence.
 - Record matching `acceptance_build` (run:attempt); selecting a different build
   invalidates prior acceptance. Review `acceptance-report` and carry unchanged
   scenarios only with identical artifact hashes and device/state preconditions.

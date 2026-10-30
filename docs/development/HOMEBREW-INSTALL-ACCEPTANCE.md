@@ -1,5 +1,11 @@
 # Homebrew Installer candidate acceptance
 
+Current session: [2026-10-27 catalog preparation](../../homebrew/catalog/SUBMISSION.md)
+records a successful isolated package install and a webOS 11/Homebrew 0.7.3
+API-access blocker. These bounded observations do not complete the product
+installation matrix below. Its supervised temporary upstream-patch test must
+remain separate from compatibility with an unmodified Homebrew installation.
+
 Status: **UNRELEASED CANDIDATE — physical acceptance NOT RUN**.
 No new model, firmware, webOS, input ABI, boot or Homebrew catalog compatibility
 is established. All current implementation and code reviews were AI-assisted;
@@ -381,3 +387,18 @@ passed. This proves application foreground identity, not manual screen/remote
 acceptance. Supervised product transition was subsequently authorized; its results
 are still pending. All-platform integrated builds and final publication acceptance
 remain separate. No Homebrew public approval record is added.
+
+## Issue #116 access preflight follow-up (2026-10-30)
+
+Upstream release verification still finds Homebrew 0.7.3 as latest; its webOS 11
+correction #233 is merged source only. The candidate now classifies the exact LS2
+`exec` denial and displays a localized prerequisite/workaround screen. It retains
+saved requests and provides read-only inspection retry without resubmission or
+permission changes. No supported minimum Homebrew version can be named yet.
+See [current prerequisites](../../homebrew/README.md) and [PR #117](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/117).
+
+This is source/browser verification only. No new device operation or physical
+acceptance was performed; all earlier C3 observations retain their original
+artifact and temporary-prerequisite scope. Public promotion remains disabled;
+exact-artifact full installation-path acceptance and named human review remain
+required after a supported prerequisite exists.

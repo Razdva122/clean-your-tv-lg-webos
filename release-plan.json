@@ -1,7 +1,74 @@
 {
   "schema": 1,
-  "version": null,
-  "changes": [],
+  "version": "1.5.3",
+  "changes": [
+    {
+      "pr": 117,
+      "issues": [
+        116
+      ],
+      "summary": "Explain Homebrew exec denials and retain requests; partial #116, supported upstream prerequisite and device acceptance remain pending"
+    },
+    {
+      "pr": 175,
+      "issues": [
+        160,
+        164
+      ],
+      "summary": "Show individual TV prerequisite checks in CLI, desktop and Android; diagnostic improvement only for #160 and #164"
+    },
+    {
+      "pr": 176,
+      "issues": [
+        170
+      ],
+      "summary": "Prevent Appearance Apply scroll clamping when fixed themes hide Columns; #170 physical acceptance pending"
+    },
+    {
+      "pr": 177,
+      "issues": [
+        133
+      ],
+      "summary": "Isolate trusted read-only Root admission preparation; partial #133, individual recovery and firmware routing support remain unresolved"
+    },
+    {
+      "pr": 180,
+      "issues": [
+        171
+      ],
+      "summary": "Record guarded wake refusals and power stream outcomes; diagnostics only, original #171 standby failure unresolved"
+    },
+    {
+      "pr": 181,
+      "issues": [
+        152
+      ],
+      "summary": "Support compiled Home Helper on Node 0.10.25 while retaining pairing and input guards; #152 device acceptance pending"
+    },
+    {
+      "pr": 183,
+      "issues": [
+        160,
+        164
+      ],
+      "summary": "Keep diagnostic report guidance visible alongside failed prerequisite checks; follow-up to #175, original #160 and #164 runtime reports remain unresolved"
+    },
+    {
+      "pr": 184,
+      "issues": [],
+      "summary": "Retain the Android native runner for candidate verification"
+    },
+    {
+      "pr": 186,
+      "issues": [],
+      "summary": "Correct current release and historical acceptance documentation"
+    },
+    {
+      "pr": 188,
+      "issues": [],
+      "summary": "Add built-in Ribbon with theme-driven scenic ribbon options"
+    }
+  ],
   "excluded": [],
   "acceptance": ""
 }

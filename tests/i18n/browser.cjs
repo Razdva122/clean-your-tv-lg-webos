@@ -21,11 +21,14 @@ const base=process.env.PREVIEW_URL||'http://127.0.0.1:8876';
     await client.detach();
    }
    assert((await page.locator('#tiles .item .name').allTextContents()).includes('YouTube'),'third-party app names must not be translated');
+   if(locale==='en')await page.evaluate(()=>{const Bridge=window.PalmServiceBridge;window.languagePendingStatus=[];window.PalmServiceBridge=function(){const bridge=new Bridge();this.cancel=()=>bridge.cancel();this.call=(uri,payload)=>{bridge.onservicecallback=raw=>{const reply=()=>this.onservicecallback(raw);if(/\/(?:status|homeStatus)$/.test(uri))languagePendingStatus.push(reply);else reply();};bridge.call(uri,payload);};};});
    await page.locator('#btnSettings').click();await page.locator('[data-category=language]').click();
    assert.equal(await page.locator('#settingsLanguageChoices button').count(),13,'languages are directly available in the category');
    assert.equal(await page.locator('#languagePicker').isVisible(),false,'no extra modal is needed');
    assert(await page.locator(edition==='launcher'?'#renewalPanel':'.root-settings').evaluate(el=>getComputedStyle(el).fontFamily.includes('CYTV')),'settings retain packaged language fonts');
+   for(const [code,font] of [['zh-Hans','CYTV NotoSansSC'],['zh-Hant','CYTV NotoSansTC']])assert((await page.locator('#settingsLanguageChoices [data-language="'+code+'"]').evaluate(el=>getComputedStyle(el).fontFamily)).includes(font),'Chinese option retains its script font in '+locale);
    await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>document.activeElement.dataset.language),'auto');
+   if(locale==='en'){await page.waitForFunction(()=>languagePendingStatus.length>0);await page.evaluate(()=>languagePendingStatus.splice(0).forEach(reply=>reply()));assert.equal(await page.evaluate(()=>document.activeElement.dataset.language),'auto','late settings status preserves inline language focus');}
    await page.keyboard.press('ArrowDown');assert.equal(await page.evaluate(()=>document.activeElement.dataset.language),'en');
    await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>document.activeElement.dataset.language),'de');
    await page.keyboard.press('ArrowLeft');assert.equal(await page.evaluate(()=>document.activeElement.dataset.language),'en');

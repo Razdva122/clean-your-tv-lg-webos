@@ -75,7 +75,7 @@
   }
   homeEnabled=r.enabled;homeToggle.hidden=false;homeToggle.disabled=false;homeToggle.setAttribute('aria-checked',String(homeEnabled));
   homeStatus.textContent=homeEnabled?tr('Home and return from apps open Clean Your TV.'):tr('Home and return from apps open LG Home.');
-  if(openNow()&&(!categories||(panel.contains(document.activeElement)&&!categories.nav.contains(document.activeElement))))focus(index);
+  if(openNow()&&(!categories||(buttons.indexOf(document.activeElement)>=0)))focus(index);
  }
  function refreshHome(){hideHomeChoice();homeStatus.textContent=tr('Checking Home control…');homeRPC('homeStatus',{},renderHome);}
  homeToggle.onclick=function(){
@@ -110,10 +110,10 @@
   text+='\n'+tr('Last checked: {date}',{date:date(last.checkedAt)})+'\n'+tr('Last confirmed renewal: {date}',{date:date(state.lastRenewedAt)});
   if(state.error==='disable-not-saved')text+='\n'+tr('Disable could not be saved. Retry before restarting the service.');
   if(state.error)text+='\n'+tr('Setup error: {error}. Use Developer Mode manually.',{error:state.error});
-  status.textContent=text;if(!details.classList.contains('hidden'))renderDiagnostics();if(openNow()&&(!categories||(panel.contains(document.activeElement)&&!categories.nav.contains(document.activeElement))))focus(index);
+  status.textContent=text;if(!details.classList.contains('hidden'))renderDiagnostics();if(openNow()&&(!categories||(buttons.indexOf(document.activeElement)>=0)))focus(index);
  }
  function action(method){if(busy)return;busy=true;status.textContent=tr('Working…');summary.textContent=tr('Working…');toggle.disabled=true;check.disabled=true;
-  rpc(method,function(r){busy=false;if(!r||r.returnValue!==true){state=null;serviceVersion=null;status.textContent=tr('Service unavailable. Install the complete Home package and try again. Manage your Developer Mode timer manually.');summary.textContent=status.textContent;summary.classList.add('settings-danger');toggle.disabled=true;check.disabled=true;if(!details.classList.contains('hidden'))renderDiagnostics();if(openNow()&&(!categories||(panel.contains(document.activeElement)&&!categories.nav.contains(document.activeElement))))focus(index);return;}serviceVersion=typeof r.version==='string'&&/^\d{1,4}\.\d{1,4}\.\d{1,4}$/.test(r.version)?r.version:null;state=r.state;render();});
+  rpc(method,function(r){busy=false;if(!r||r.returnValue!==true){state=null;serviceVersion=null;status.textContent=tr('Service unavailable. Install the complete Home package and try again. Manage your Developer Mode timer manually.');summary.textContent=status.textContent;summary.classList.add('settings-danger');toggle.disabled=true;check.disabled=true;if(!details.classList.contains('hidden'))renderDiagnostics();if(openNow()&&(!categories||(buttons.indexOf(document.activeElement)>=0)))focus(index);return;}serviceVersion=typeof r.version==='string'&&/^\d{1,4}\.\d{1,4}\.\d{1,4}$/.test(r.version)?r.version:null;state=r.state;render();});
  }
  toggle.onclick=function(){if(state)action(state.enabled?'disable':'enable');};
  check.onclick=function(){action('check');};

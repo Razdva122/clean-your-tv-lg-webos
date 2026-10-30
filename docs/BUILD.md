@@ -11,6 +11,13 @@ scripts/test.sh
 scripts/build.sh
 ```
 
+The commands above run full verification and package builds. For an ordinary
+edit, start with the affected `scripts/test.sh ui`, `tv`, `installer`, `setup`,
+`android` or `preview` group and its dependencies; the frozen release still runs
+all groups. For compiled UI reload and direct signed Root QA, use
+[TV development](development/TV-DEVELOPMENT.md) instead of rebuilding every
+desktop installer. See [Contributing](../CONTRIBUTING.md) for verification scope.
+
 Use `ZIG=/absolute/path/to/zig` and `ARES_PACKAGE=/absolute/path/to/ares-package`
 when tools are not on PATH. Generic builds use an empty app inventory. For a useful
 launcher, run `sync-apps.py` before packaging. Do not publish personalized packages.

@@ -104,7 +104,7 @@ def resolve_build_source(commit, build_run=None):
         pin = INPUTS['pin_at'](candidate, ROOT)
         if pin:
             return resolve_build_source(commit, pin['run_id'])
-        runs = github('actions/workflows/cytv.yml/runs?branch=release%2Fnext&event=push&status=success&head_sha=' + candidate + '&per_page=100')['workflow_runs']
+        runs = github('actions/workflows/cytv.yml/runs?branch=release%2Fnext&status=success&head_sha=' + candidate + '&per_page=100')['workflow_runs']
         if not runs:
             raise ValueError('No successful build exists for the exact release candidate')
         run = max(runs, key=lambda item: item['id'])

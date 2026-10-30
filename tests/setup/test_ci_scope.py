@@ -11,6 +11,47 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class CIScope(unittest.TestCase):
+    def test_visual_assets_use_ui_checks_without_device_recovery_or_emulation(self):
+        spec = importlib.util.spec_from_file_location('ci_scope', ROOT/'scripts/ci-scope.py')
+        scope = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(scope)
+        for path in ('launcher/style.css', 'root-edition/ui/logo.svg', 'updater-app/font.woff2'):
+            with self.subTest(path=path):
+                self.assertEqual(scope.components([path]), {'ui', 'preview'})
+        for path in ('native/prototype/filter.c', 'root-edition/input/evdev.py',
+                     'updater-service/service.js', 'system-updater/service.py'):
+            with self.subTest(path=path):
+                self.assertIn('tv', scope.components([path]))
+        self.assertEqual(scope.components(['shared-unknown.py']), set(scope.COMPONENTS))
+
+    @patch.dict(os.environ, {'GITHUB_REPOSITORY': 'owner/repo'})
+    def test_full_candidate_is_an_explicit_same_repository_release_branch_freeze(self):
+        spec = importlib.util.spec_from_file_location('ci_scope', ROOT/'scripts/ci-scope.py')
+        scope = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(scope)
+        event = {'inputs': {'full_candidate': True}, 'repository': {'full_name': 'owner/repo'}}
+        plan = {'version': '1.1.0', 'acceptance': ''}
+        self.assertTrue(scope.build_installers(event, 'workflow_dispatch', 'refs/heads/release/next', plan, '1.1.0', '1.0.0', True))
+        for ref in ('refs/heads/main', 'refs/heads/codex/draft', 'refs/tags/v1.1.0'):
+            with self.subTest(ref=ref):
+                self.assertFalse(scope.build_installers(event, 'workflow_dispatch', ref, plan, '1.1.0', '1.0.0', True))
+        self.assertFalse(scope.build_installers(event, 'push', 'refs/heads/release/next', plan, '1.1.0', '1.0.0', True))
+
+    def test_draft_scope_retains_each_affected_safety_group(self):
+        spec = importlib.util.spec_from_file_location('ci_scope', ROOT/'scripts/ci-scope.py')
+        scope = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(scope)
+        for path, expected in (
+            ('cytv/operations.py', {'installer', 'android', 'setup'}),
+            ('launcher/style.css', {'ui', 'preview'}),
+            ('native/prototype/filter.c', {'tv', 'installer', 'setup'}),
+            ('shared-unknown.py', set(scope.COMPONENTS)),
+        ):
+            with self.subTest(path=path), patch.object(scope, 'git', return_value=(path + '\0').encode()):
+                self.assertEqual(scope.draft_components(), expected)
+        with patch.object(scope, 'git', side_effect=subprocess.CalledProcessError(1, ['git'])):
+            self.assertEqual(scope.draft_components(), set(scope.COMPONENTS))
+
     def test_theme_catalog_changes_select_preview_checks(self):
         spec = importlib.util.spec_from_file_location('ci_scope', ROOT/'scripts/ci-scope.py')
         scope = importlib.util.module_from_spec(spec)
@@ -30,7 +71,7 @@ class CIScope(unittest.TestCase):
         self.assertTrue(scope.build_installers(event, 'workflow_dispatch',
             'refs/heads/release/next', plan, '1.1.0', '1.0.3', True))
         self.assertFalse(scope.is_candidate(plan, '1.1.0', '1.0.3'))
-        self.assertTrue(scope.build_installers({}, 'push', 'refs/heads/release/next', plan, '1.1.0', '1.0.3', True))
+        self.assertFalse(scope.build_installers({}, 'push', 'refs/heads/release/next', plan, '1.1.0', '1.0.3', True))
         for kind, ref, inputs, version, notes in (
             ('pull_request', 'refs/heads/release/next', event, '1.1.0', True),
             ('workflow_dispatch', 'refs/heads/main', event, '1.1.0', True),
@@ -43,7 +84,7 @@ class CIScope(unittest.TestCase):
             with self.subTest(kind=kind, ref=ref, inputs=inputs, version=version, notes=notes):
                 self.assertFalse(scope.build_installers(inputs, kind, ref, plan, version, '1.0.3', notes))
 
-    def test_pinned_evidence_skips_build_but_product_changes_rebuild(self):
+    def test_builds_require_dispatch_even_after_product_or_metadata_changes(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             def git(*args):
@@ -73,7 +114,7 @@ class CIScope(unittest.TestCase):
                 event_path.write_text(json.dumps(event))
                 subprocess.check_output(['python3', str(ROOT / 'scripts/ci-scope.py')], cwd=root, env={**env, **updates})
                 return dict(line.split('=') for line in output.read_text().splitlines())
-            self.assertEqual(route({'before': base, 'after': source})['installers'], 'true')
+            self.assertEqual(route({'before': base, 'after': source})['installers'], 'false')
             draft_event = {'inputs': {'test_build': 'true'}, 'repository': {'full_name': 'owner/repo'}}
             draft_env = {'GITHUB_EVENT_NAME': 'workflow_dispatch', 'GITHUB_REF': 'refs/heads/codex/rc-fix', 'GITHUB_REPOSITORY': 'owner/repo'}
             draft = route(draft_event, **draft_env)
@@ -101,9 +142,16 @@ class CIScope(unittest.TestCase):
             result = route({'before': source, 'after': pinned})
             self.assertEqual(result['installers'], 'false')
             self.assertEqual(result['tv'], 'false')
+            frozen_event = {'inputs': {'full_candidate': 'true'}, 'repository': {'full_name': 'owner/repo'}}
+            frozen = route(frozen_event, GITHUB_EVENT_NAME='workflow_dispatch', GITHUB_REPOSITORY='owner/repo')
+            self.assertEqual(frozen['installers'], 'true', 'explicit freeze must build even with an equivalent old pin')
+            self.assertEqual(frozen['full'], 'true')
+            quick = route(draft_event, **draft_env, CI_QUICK_SUITE='true')
+            self.assertEqual({name for name in ('ui', 'tv', 'installer', 'setup', 'android', 'preview') if quick[name] == 'true'}, {'ui', 'tv', 'installer', 'android', 'setup', 'preview'})
+            self.assertEqual(quick['full'], 'false')
             (root / 'product.js').write_text('new input')
             changed = commit('new code')
-            self.assertEqual(route({'before': pinned, 'after': changed})['installers'], 'true')
+            self.assertEqual(route({'before': pinned, 'after': changed})['installers'], 'false')
             event = {'pull_request': {'base': {'sha': base, 'ref': 'main'}, 'head': {'sha': changed, 'ref': 'release/next'}}}
             checks = route(event, GITHUB_EVENT_NAME='pull_request', GITHUB_REF='refs/pull/1/merge')
             self.assertEqual({name for name in ('tv','installer','setup','android','preview') if checks[name] == 'true'}, {'setup'})

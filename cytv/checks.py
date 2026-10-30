@@ -9,7 +9,7 @@ LABELS = {
     'apps-directory': 'webOS applications directory',
     'luna-services-directory': 'webOS service directory',
     'architecture': 'ARM32 userspace for Home Helper',
-    'helper-node': 'TV Node.js 0.12.2+',
+    'helper-node': 'TV Node.js 0.10.25+',
     'root-conflict': 'No conflicting Root Home routing',
     'helper-idle': 'Home Helper is stopped',
     'pairing': 'TV remote-control pairing', 'inventory': 'Read TV applications and inputs',

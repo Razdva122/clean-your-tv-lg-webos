@@ -1,4 +1,4 @@
-// ES5: executed unchanged by Node 0.12.2 as well as current Node.
+// ES5: executed unchanged by Node 0.10.25, 0.12.2 and current Node.
 'use strict';
 var assert=require('assert'),path=require('path'),root=process.argv[2];
 require(path.join(root,'state-permissions'));
@@ -16,7 +16,27 @@ var oversized=receiver(2);oversized.on('error',function(e){assert(/payload/i.tes
 oversized.write(Buffer.from([0x81,3,0x61,0x62,0x63]));
 // Only TV hardware and Luna are substituted; execute the compiled controller
 // and its real policies under the selected Node runtime.
-var vm=require('vm'),fs=require('fs'),Emitter=require('events');
+var vm=require('vm'),fs=require('fs'),Emitter=require('events').EventEmitter;
+// Exercise the key replacement against real files, including the descriptor
+// read on Node 0.10. Never substitute a pathname read after opening the key.
+if(process.getuid){
+ var state=path.join(root,'runtime-state-'+process.version),secure=require(path.join(root,'state-permissions'));
+ fs.mkdirSync(state,504);fs.chmodSync(state,504);
+ fs.writeFileSync(path.join(state,'ssap-key.json'),JSON.stringify({key:'runtime-test'}));
+ fs.chmodSync(path.join(state,'ssap-key.json'),384);
+ var chmod=fs.fchmodSync,denied=false;
+ fs.fchmodSync=function(fd,mode){
+  if(mode===416&&!denied){denied=true;var e=Error('foreign key');e.code='EPERM';throw e;}
+  return chmod.apply(fs,arguments);
+ };
+ try{assert.equal(secure(state),true);
+  assert(denied,'exercise foreign-key replacement');
+  assert.equal(JSON.parse(fs.readFileSync(path.join(state,'ssap-key.json'),'utf8')).key,'runtime-test');
+  assert.equal(fs.statSync(path.join(state,'ssap-key.json')).mode&511,416);
+  assert.equal(secure(state,null,true),true);
+  assert.equal(fs.readFileSync(path.join(state,'control.json'),'utf8'),'{}');
+ }finally{fs.fchmodSync=chmod;}
+}
 var logs=[],handlers={},commands=[],start,fatalExit,exitCode,failLog=false;
 var worker=new Emitter();worker.stdin=new Emitter();worker.stdout=new Emitter();worker.stderr=new Emitter();
 worker.stdin.write=function(command){commands.push(command);};worker.stdin.end=function(){throw Error('broken pipe');};
