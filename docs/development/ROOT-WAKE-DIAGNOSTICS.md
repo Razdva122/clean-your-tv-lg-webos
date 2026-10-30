@@ -2,7 +2,7 @@
 
 This is preparation for the unresolved [Root 0.6.1 standby report](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/171),
 not a standby fix or a hardware acceptance record. No TV operation was performed
-for this change. Published v1.5.0 remains subject to its documented standby limitation.
+for this change. Published v1.5.2 retains the unresolved standby limitation; candidate 1.5.3 adds diagnostics, not a verified standby fix.
 
 ## Established evidence and blocker
 

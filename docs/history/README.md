@@ -41,6 +41,8 @@ one model or artifact does not certify later releases or a different TV.
 
 ## Acceptance and validation
 
+- [1.5.3 frozen-candidate verification](2026-10-30-release-1.5.3-verification.md): successful full build, verified published baselines/local payload and explicit artifact/Android/device blockers.
+
 - [1.5.2 maintenance validation](2026-10-30-release-1.5.2-validation.md): full CI, identical TV artifacts and the actual direct signed-delivery command; no device install.
 
 - [1.5.1 maintenance validation](2026-10-30-release-1.5.1-validation.md): full CI and identical TV artifacts; no new hardware session.
