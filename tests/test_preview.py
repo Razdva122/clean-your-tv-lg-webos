@@ -61,7 +61,7 @@ class PreviewTest(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / 'clean-your-tv-lg-webos'
-            preview.export_site(output, showcase=True)
+            preview.export_site(output)
             for page in ['index.html', 'launcher/index.html', 'root-launcher/index.html']:
                 resources = Resources()
                 resources.feed((output / page).read_text())
@@ -90,6 +90,43 @@ class PreviewTest(unittest.TestCase):
             self.assertFalse((output / 'root-launcher/renewal-panel.js').exists())
             self.assertFalse((output / '.lgtv-key.json').exists())
             self.assertFalse((output / 'scripts').exists())
+            self.assertFalse((output / 'themes').exists())
+            self.assertNotIn('themes/index.html', (output / 'index.html').read_text())
+            self.assertNotIn('__THEME_SHOWCASE_LINK__', (output / 'index.html').read_text())
+            themes = json.loads((output / 'preview/themes.json').read_bytes())
+            catalog = (ROOT / 'launcher/theme-catalog.json').read_bytes()
+            self.assertEqual(themes['themes'], json.loads(catalog)['themes'])
+            self.assertTrue(themes['packages'], 'inline preview retains reviewed theme packages')
+            for edition in ('launcher', 'root-launcher'):
+                self.assertEqual((output / edition / 'theme-catalog.json').read_bytes(), catalog)
+
+    def test_static_export_refuses_retired_catalog_output_without_deleting_it(self):
+        spec = importlib.util.spec_from_file_location('preview', ROOT / 'scripts/preview.py')
+        preview = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(preview)
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / 'site'
+            retired = output / 'themes'
+            retired.mkdir(parents=True)
+            (retired / 'index.html').write_text('existing output must not be deleted')
+            with self.assertRaisesRegex(ValueError, 'fresh'):
+                preview.export_site(output)
+            self.assertEqual((retired / 'index.html').read_text(), 'existing output must not be deleted')
+            self.assertFalse((output / 'index.html').exists())
+            linked = Path(directory) / 'linked-site'
+            linked.mkdir()
+            (linked / 'themes').symlink_to(retired, target_is_directory=True)
+            with self.assertRaisesRegex(ValueError, 'fresh'):
+                preview.export_site(linked)
+            self.assertTrue((linked / 'themes').is_symlink())
+
+    def test_retired_showcase_flag_cannot_publish_a_separate_catalog(self):
+        import subprocess, sys
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / 'site'
+            result = subprocess.run([sys.executable, str(ROOT / 'scripts/preview.py'), '--build', str(output), '--showcase'], capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertFalse(output.exists())
 
     def test_preview_serves_launcher_without_exposing_workspace(self):
         script = ROOT / 'scripts/preview.py'

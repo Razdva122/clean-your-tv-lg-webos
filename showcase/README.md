@@ -112,21 +112,22 @@ the unavailable state without a copy/install control. For removal, set
 page becomes a tombstone; image/distribution bytes are omitted from the site.
 Moderated records retain local review evidence but skip live remote checks. Do not fabricate compatibility or silently substitute a new source.
 
-## Static Pages integration and publication
+## Browser preview and local catalogue review
 
-`buildShowcase(destination, {showcaseRoot})` is exported from
-`scripts/build-showcase.cjs`; `destination` is the generated `/themes` directory,
-not the shared site root. The caller supplies a fresh staging directory. The
-builder exports relative links, `catalog.json`, per-ID pages and reviewed assets.
-Use `scripts/preview.py --build OUTPUT --showcase` to compose one Pages artifact, preserving the
-existing root preview, `/launcher/`, `/root-launcher/` and `/preview/` paths.
+The public site uses the [primary browser preview](https://razdva122.github.io/clean-your-tv-lg-webos/)
+with inline theme cards. It does not publish a separate `/themes/` catalogue or
+theme detail pages. `scripts/preview.py --build OUTPUT` exports the main preview,
+both editions, theme data and the existing launcher/preview paths into fresh staging.
+
+`scripts/build-showcase.cjs` and its `buildShowcase(destination, {showcaseRoot})`
+export remain available for local author/reviewer inspection. Their HTML output
+is not included in the public Pages workflow. The on-TV Showcase uses reviewed
+registry/catalogue JSON and is unchanged by removing the separate web page.
 
 Publication follows registry PR → `release/next` → normal main release → existing
-Pages deployment with its current-main check. PRs may create inspection artifacts
-but must not deploy. Faster independent catalog delivery needs an explicitly
-approved release-policy change. Verify the deployed site and copied descriptor
-before claiming it is available. No publication is authorized by running this
-local builder.
+Pages deployment with its current-main check. PR inspection artifacts must not
+deploy. Verify the deployed site before claiming public availability; a local
+build does not publish it.
 
 ## Preview cards
 

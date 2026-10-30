@@ -63,7 +63,7 @@ If the service is unavailable, use the original full GitHub descriptor URL.
 
 ## Add another repository by URL
 
-1. Browse the main project's showcase (the **Theme showcase** link on Preview Pages). Open a theme detail page and use **Copy TV link**. Transfer that exact URL using the TV keyboard or your normal TV text-entry method; the computer transfer above is the easier path for unpublished local work.
+1. Browse themes in the [main browser preview](https://razdva122.github.io/clean-your-tv-lg-webos/) using the cards above Home. To install on the TV, use the on-TV Theme showcase, or copy the exact commit-pinned descriptor URL from the reviewed theme repository and enter it with the TV keyboard. Computer transfer above is the easier path for unpublished local work.
 2. On TV, open **Settings → Themes → Add by ID**. Focus **Theme ID** and use OK/native keyboard to type or paste. Move to **Load** and select it.
 3. Choose the returned theme. For a repository containing several themes, choose the specific entry; the installer does not select one silently. The download progress is shown. Cancel or Back stops the request.
 4. After validation/saving, choose the new **Downloaded** version in Themes. Review its author/license and select it to apply and save immediately, without a timer.
@@ -101,14 +101,14 @@ Theme images/choice are not included in legacy profile backup/export. A legacy p
 
 Start with the [tested toolkit candidate and bundled runtime](https://github.com/Razdva122/clean-your-tv-lg-theme/blob/48a7594c872794229801f0a6495952d3733a3f99/docs/CANDIDATE.md). Use [the author toolkit](https://github.com/Razdva122/clean-your-tv-lg-theme) and its [author walkthrough](https://github.com/Razdva122/clean-your-tv-lg-theme/blob/48a7594c872794229801f0a6495952d3733a3f99/docs/tutorial.md). The toolkit's local showcase is an author preview, separate from on-TV installed selection. Apps/services are simulated; it does not establish TV compatibility. See [submission rules](../showcase/README.md) to request a public listing. Personal installation does not require a showcase PR.
 
-From the main checkout, build the preview website including the catalog into a fresh directory:
+From the main checkout, build the primary preview website into a fresh directory:
 
 ```sh
-python3 scripts/preview.py --build build/theme-site --showcase
+python3 scripts/preview.py --build build/theme-site
 python3 -m http.server 8878 --bind 127.0.0.1 --directory build/theme-site
 ```
 
-Open **http://127.0.0.1:8878/** to exercise Home/Settings, or `/themes/` for the catalog. Browser storage is separate from your TV. Developer details: [TV theme lifecycle](development/TV-THEMES.md), [CSS API](development/THEME-CSS.md), [candidate status](development/THEMES.md).
+Open **http://127.0.0.1:8878/** to exercise Home/Settings and switch themes with the cards above the simulated TV. Browser storage is separate from your TV. Developer details: [TV theme lifecycle](development/TV-THEMES.md), [CSS API](development/THEME-CSS.md), [candidate status](development/THEMES.md).
 
 
 ## Parameterized ribbons (unreleased)

@@ -5,6 +5,7 @@ const http=require('node:http');
  const site=stage(),server=http.createServer((req,res)=>{const file=path.resolve(site,'.'+new URL(req.url,'http://localhost').pathname);if(!file.startsWith(site+path.sep)||!fs.existsSync(file))return res.writeHead(404).end();res.setHeader('Content-Type',({'.js':'application/javascript','.json':'application/json','.css':'text/css','.png':'image/png','.jpg':'image/jpeg','.ttf':'font/ttf'})[path.extname(file)]||'text/html');res.end(fs.readFileSync(file));});
  await new Promise(r=>server.listen(0,'127.0.0.1',r));const browser=await chromium.launch({headless:true,channel:process.env.BROWSER_CHANNEL||'chrome'});
  let page;try{page=await browser.newPage({viewport:{width:1440,height:1000},locale:'en-US'});await page.route(/^https:/,r=>r.abort());page.setDefaultTimeout(10000);const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('http://127.0.0.1:'+server.address().port+'/index.html');
+  assert.equal(await page.getByRole('link',{name:'Theme showcase',exact:true}).count(),0);assert.equal((await page.request.get('http://127.0.0.1:'+server.address().port+'/themes/index.html')).status(),404,'standalone catalogue is not exported');
   const frame=page.frameLocator('#screen');await page.getByRole('region',{name:'Themes',exact:true}).waitFor();
   await frame.locator('#tiles .focused').waitFor();const order=await frame.locator('#tiles .item[data-app-id]').evaluateAll(items=>items.map(i=>i.dataset.appId));
   for(const edition of ['No-root Edition','Root Edition']){
