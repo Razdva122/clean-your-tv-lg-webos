@@ -24,9 +24,21 @@ LG screens or obtain root access.
 [Try the browser demo](https://razdva122.github.io/clean-your-tv-lg-webos/) ·
 [Installation guide](docs/INSTALL.md) · [Help and recovery](docs/RECOVERY.md)
 
-![Demo launcher with Netflix, YouTube, Prime Video, Disney+ and Apple TV](docs/launcher-international.png)
+![Ribbon home screen with reference app icons](docs/launcher-ribbon.jpg)
 
-*Six-column demo layout with international apps; apps are not bundled. TV functions are simulated.*
+*Ribbon in the 1.5.3 candidate, shown with reference apps. Apps are not bundled; TV functions are simulated.*
+
+## Themes
+
+Change the layout, background and app-card styling with built-in and community
+themes. Manage installed themes and discover more from Settings on your TV.
+
+**[Browse and try themes in your browser →](https://razdva122.github.io/clean-your-tv-lg-webos/)**
+
+Use the theme cards above the simulated TV to switch themes and compare layouts,
+then choose Root or No-root to preview either edition. No TV connection or
+installation is needed. See the [theme guide](docs/THEMES.md) for installation
+and creating your own theme.
 
 <a id="install-with-cytv"></a>
 <a id="get-started"></a>

@@ -66,14 +66,15 @@ Browser checks use installed Chrome by default. CI sets `BROWSER_CHANNEL=chromiu
 after installing Playwright Chromium. Showcase browser checks also support an
 explicit `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` for an existing system Chrome.
 
-The Pages workflow creates one artifact with the existing preview plus `/themes/`:
+The Pages workflow publishes the primary launcher preview with inline theme cards:
 
 ```sh
-python3 scripts/preview.py --build build/theme-pages --showcase
+python3 scripts/preview.py --build build/theme-pages
 ```
 
-Use an empty showcase output directory. Build rejects a nonempty directory so
-removed listings cannot survive unnoticed as stale generated pages.
+Use fresh staging. An export containing the retired `/themes/` subtree is refused
+before files are written, so old catalogue pages cannot survive a new deployment.
+The main preview retains both editions, theme switching and the TV catalogue JSON.
 
 The optional candidate `modern-icon-css-v1` capability supports bounded CSS-only
 icon effects on browsers with filter/screen support. It never replaces original

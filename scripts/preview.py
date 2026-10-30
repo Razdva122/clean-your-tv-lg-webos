@@ -85,14 +85,16 @@ def root_launcher():
     return files
 
 
-def preview_html(live=True, showcase=False):
+def preview_html(live=True):
     script = ('<script src="preview/live-reload.js" data-version="' + revision() + '"></script>') if live else ''
-    page = (ROOT / 'preview/index.html').read_text().replace('__LIVE_RELOAD__', script).replace('__THEME_SHOWCASE_LINK__', '' if not showcase else '<a class="theme-link" href="themes/index.html">Theme showcase ↗</a>')
+    page = (ROOT / 'preview/index.html').read_text().replace('__LIVE_RELOAD__', script)
     return page if live else page.replace('live reload enabled', 'latest main build').replace('Home · Local Preview', 'Home · Preview')
 
 
-def export_site(destination, showcase=False):
+def export_site(destination):
     destination = Path(destination)
+    if (destination / 'themes').exists() or (destination / 'themes').is_symlink():
+        raise ValueError('Use a fresh preview export directory; retired themes output must not be published.')
     destination.mkdir(parents=True, exist_ok=True)
     for name in sorted(LAUNCHER_FILES):
         target = destination / 'launcher' / name
@@ -113,10 +115,7 @@ def export_site(destination, showcase=False):
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(data)
     (destination / 'preview/themes.json').write_bytes(preview_themes())
-    (destination / 'index.html').write_text(preview_html(live=False, showcase=showcase), encoding='utf-8')
-    if showcase:
-        subprocess.run(['node', str(ROOT / 'scripts/build-showcase.cjs'),
-                        str(destination / 'themes')], check=True, cwd=ROOT)
+    (destination / 'index.html').write_text(preview_html(live=False), encoding='utf-8')
     (destination / '.nojekyll').touch()
     for name in ['LICENSE', 'THIRD_PARTY_NOTICES.md']:
         shutil.copyfile(ROOT / name, destination / name)
@@ -191,11 +190,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--port', type=int, default=8765)
     parser.add_argument('--open', action='store_true', help='open preview in the default browser')
-    parser.add_argument('--showcase', action='store_true', help='include the reviewed theme catalog in a static build (requires Node dependencies)')
     parser.add_argument('--build', type=Path, metavar='DIRECTORY', help='export a static preview for GitHub Pages')
     args = parser.parse_args()
     if args.build:
-        export_site(args.build, showcase=args.showcase)
+        export_site(args.build)
         print(f'Static preview: {args.build}')
         return
     with make_server(args.port) as server:

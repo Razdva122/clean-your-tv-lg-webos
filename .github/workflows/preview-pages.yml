@@ -40,9 +40,9 @@ jobs:
         with:
           python-version: "3.12"
       - run: npm ci --ignore-scripts --no-audit --no-fund
-      - name: Build preview and theme showcase in one Pages artifact
+      - name: Build launcher preview with inline theme selection
         run: |
-          python3 scripts/preview.py --build build/preview --showcase
+          python3 scripts/preview.py --build build/preview
       - uses: actions/upload-pages-artifact@v4
         with:
           path: build/preview
