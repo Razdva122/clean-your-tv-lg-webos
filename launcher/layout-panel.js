@@ -10,6 +10,7 @@
     // Hiding the entry can clear activeElement before later layout listeners.
     if (event && entry && document.activeElement === entry) event.homeColumnsFocus = entry;
     if (entry) {
+      if (window.HomeLayoutState) entry.textContent = t('Columns: {count}', {count: window.HomeLayoutState.state().columns});
       entry.parentNode.classList.add('home-columns-entry');
       entry.parentNode.setAttribute('aria-hidden', String(!available));
       entry.hidden = !available; entry.parentNode.classList.toggle('hidden', !available);

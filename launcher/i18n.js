@@ -40,13 +40,22 @@
  function formatDateTime(value){try{return new Date(value).toLocaleString(active);}catch(_){return new Date(value).toLocaleString();}}
  function formatTime(value){try{return new Date(value).toLocaleTimeString(active,{hour:'2-digit',minute:'2-digit'});}catch(_){var d=new Date(value);return d.getHours()+':'+('0'+d.getMinutes()).slice(-2);}}
  function closePicker(){if(dialog)dialog.hidden=true;if(root.ThemeRuntime)root.ThemeRuntime.resume('language');if(previous&&previous.focus)previous.focus();}
+ function renderLanguageChoices(list,error){
+  var doc=root.document,buttons=[],selected=0,choices=[{code:'auto',name:t('Automatic (system language)')}].concat(languages);
+  choices.forEach(function(item,index){var button=doc.createElement('button');button.type='button';button.textContent=item.name;button.lang=item.code==='auto'?active:item.code;button.dataset.language=item.code;button.setAttribute('aria-pressed',String(preference()===item.code));if(preference()===item.code)selected=index;
+   button.onclick=function(){if(!setLanguage(item.code))error.textContent=t('Could not save language. Please try again.');};list.appendChild(button);buttons.push(button);});
+  return {buttons:buttons,selected:selected};
+ }
+ function mountLanguagePicker(host){
+  var doc=root.document,hint=doc.createElement('p'),list=doc.createElement('div'),error=doc.createElement('p');
+  hint.textContent=t('Choose a language. Home will reload.');list.id='settingsLanguageChoices';error.setAttribute('role','alert');
+  host.appendChild(hint);host.appendChild(list);host.appendChild(error);renderLanguageChoices(list,error);
+ }
  function openLanguagePicker(){
   if(!root.document)return;if(root.ThemeRuntime)root.ThemeRuntime.suspend('language');var doc=root.document;previous=doc.activeElement;
   if(!dialog){dialog=doc.createElement('section');dialog.id='languagePicker';dialog.setAttribute('role','dialog');dialog.setAttribute('aria-modal','true');dialog.setAttribute('aria-labelledby','languageTitle');doc.body.appendChild(dialog);}
   dialog.hidden=false;dialog.innerHTML='<div class="language-card"><h2 id="languageTitle">'+escape(t('Language'))+' / Language</h2><p>'+escape(t('Choose a language. Home will reload.'))+'</p><div id="languageChoices"></div><p id="languageError" role="alert"></p></div>';
-  var list=doc.getElementById('languageChoices'),buttons=[],selected=0,choices=[{code:'auto',name:t('Automatic (system language)')}].concat(languages);
-  choices.forEach(function(item,index){var button=doc.createElement('button');button.type='button';button.textContent=item.name;button.lang=item.code==='auto'?active:item.code;button.dataset.language=item.code;button.setAttribute('aria-pressed',String(preference()===item.code));if(preference()===item.code)selected=index;
-   button.onclick=function(){if(!setLanguage(item.code))doc.getElementById('languageError').textContent=t('Could not save language. Please try again.');};list.appendChild(button);buttons.push(button);});
+  var list=doc.getElementById('languageChoices'),state=renderLanguageChoices(list,doc.getElementById('languageError')),buttons=state.buttons,selected=state.selected;
   var back=doc.createElement('button');back.textContent=t('Back');back.onclick=closePicker;list.appendChild(back);buttons.push(back);dialog._buttons=buttons;dialog._selected=selected;buttons[selected].focus();
  }
  // Shared by Home updates and the independent recovery app; loaded before their key handlers.
@@ -76,7 +85,7 @@
   confirmationButtons[0].textContent=t('Cancel');confirmationButtons[1].textContent=t(options.action);
   confirmationCallback=callback;confirmationSelected=0;confirmation.hidden=false;confirmationButtons[0].focus();
  }
- root.HomeI18n={ready:function(cb){if(pending)callbacks.push(cb);else cb();},languages:languages,normalize:normalize,language:function(){return active;},preference:preference,refresh:refresh,add:add,t:t,html:html,apply:apply,setLanguage:setLanguage,formatDate:formatDate,formatDateTime:formatDateTime,formatTime:formatTime,openLanguagePicker:openLanguagePicker,confirm:confirmAction};
+ root.HomeI18n={ready:function(cb){if(pending)callbacks.push(cb);else cb();},languages:languages,normalize:normalize,language:function(){return active;},preference:preference,refresh:refresh,add:add,t:t,html:html,apply:apply,setLanguage:setLanguage,formatDate:formatDate,formatDateTime:formatDateTime,formatTime:formatTime,openLanguagePicker:openLanguagePicker,mountLanguagePicker:mountLanguagePicker,confirm:confirmAction};
  refresh();
  if(root.PalmServiceBridge&&preference()==='auto'){
   pending=true;var bridge,timer,finished=false;
