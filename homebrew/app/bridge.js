@@ -21,9 +21,9 @@
    if(typeof root.PalmServiceBridge!=='function')fail();
    return new Promise(function(resolve,reject){
     var bridge=new root.PalmServiceBridge(),done=false,timer;
-    function finish(error,value){if(done)return;done=true;clearTimeout(timer);try{bridge.cancel();}catch(_){}if(error)reject(new Error('installer_unavailable'));else resolve(value);}
+    function finish(error,value){if(done)return;done=true;clearTimeout(timer);try{bridge.cancel();}catch(_){}if(error)reject(new Error(error==='homebrew_exec_denied'?error:'installer_unavailable'));else resolve(value);}
     timer=setTimeout(function(){finish(true);},125000);
-    bridge.onservicecallback=function(raw){try{var reply=JSON.parse(raw);if(reply.returnValue!==true||typeof reply.stdoutString!=='string'||reply.stdoutString.length>65536)fail();var value=JSON.parse(reply.stdoutString);if(!value||typeof value.state!=='string')fail();finish(false,value);}catch(_){finish(true);}};
+    bridge.onservicecallback=function(raw){try{var reply=JSON.parse(raw);if(reply.returnValue===false&&typeof reply.errorText==='string'&&/^Denied method call "exec" for category "\/"\.?$/.test(reply.errorText)){finish('homebrew_exec_denied');return;}if(reply.returnValue!==true||typeof reply.stdoutString!=='string'||reply.stdoutString.length>65536)fail();var value=JSON.parse(reply.stdoutString);if(!value||typeof value.state!=='string')fail();finish(false,value);}catch(_){finish(true);}};
     try{bridge.call('luna://org.webosbrew.hbchannel.service/exec',JSON.stringify({command:command}));}catch(_){finish(true);}
    });
   });

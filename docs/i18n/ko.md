@@ -2,9 +2,13 @@
 
 > v1.5.0: 테마, 갤러리 및 PC에서 TV로 전송. 알려진 Root 제한: Appearance가 110 px 이동할 수 있으며 대기 모드 후 Home이 자동으로 열리지 않을 수 있습니다. 기기별 검증 범위는 제한적입니다. [1.5.0](../RELEASE-1.5.0.md).
 
+> 다음 후보 버전(미출시): 고정 레이아웃 테마는 숨겨진 Columns 행의 공간을 유지하여 Apply 시 Appearance의 스크롤 위치를 보존합니다. 포인터, 키보드 및 접근성 탐색은 숨겨진 Columns를 건너뜁니다. 실제 TV 검증은 아직 진행되지 않았습니다.
+
 [문서](../README.md) · [문제 신고](../FEEDBACK.md)
 
 이 안내서는 공개된 **[1.4.1](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.4.1)** 기준입니다. C3 승인은 기록된 전원, Home, 포커스, 비활성 상태 유지 및 수동 롤백 시험에 한정됩니다. 다른 TV, eARC 오디오와 실제 Android 기기는 확인되지 않았습니다. 설치 성공만으로 호환성을 입증할 수 없습니다. [시험 범위(영어)](../RELEASE-1.4.0-ACCEPTANCE.md).
+
+**미출시 설치 프로그램:** 콘솔, 데스크톱 및 Android에서 각 TV 점검을 미확인, 확인 중, 통과, 실패 또는 확인 불가로 표시합니다. 오류 후에도 결과가 남습니다. Node.js/Python 점검은 TV의 실행 환경을 대상으로 하며 `doctor`는 Python 준비나 제어 페어링을 수행하지 않습니다. 재시도 전에 보고서를 저장하세요.
 
 ## 에디션 선택
 
@@ -94,6 +98,8 @@ Home 설정 → 소프트웨어 업데이트에서 제시된 버전을 확인한
 Home 설정 통신 경로 수정은 아직 배포되지 않았습니다. 호환되는 후보 버전이 준비되면 Home과 Helper를 함께 업데이트하세요. Home만 업데이트하면 수정이 적용되지 않습니다. 최종 릴리스 빌드의 TV 실기 검증은 아직 완료되지 않았습니다. [#146](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/146).
 
 Root HDMI 소리 복구는 실험적이며 **기본적으로 꺼져 있습니다**. 필요할 때만 켜세요. 정상적인 소리를 끊을 수 있으며 eARC 호환성이 확인된 것은 아닙니다. [소리 복구(영어)](../development/ROOT-AUDIO-RECOVERY.md). 별도 **Homebrew CYTV Installer는 아직 출시되지 않았습니다**. 공개된 컴퓨터 또는 Android 설치 프로그램을 사용하세요.
+
+Homebrew Channel이 이 설치 프로그램의 접근을 거부했습니다. webOS 11에서는 Homebrew 0.7.3에 개발자의 호환성 업데이트가 필요합니다. 수정 사항이 포함된 지원 Homebrew 버전이 나올 때까지 공개된 컴퓨터 또는 Android 설치 프로그램을 사용하세요. [#116](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/116).
 
 미출시 후보 전용: 이전 Root 디렉터리의 쓰기 권한 때문에 펌웨어 API 접근이 거부되면 `cytv enable-firmware-access --edition root --repair-package-permissions` 명령이 신뢰할 수 있는 비공개 패키지 기록으로 현재 파일을 검증한 뒤 Root 소유 경로의 그룹 및 기타 사용자 쓰기 권한만 제거합니다. 알 수 없거나 변경된 파일이 있으면 중단합니다. 프로필, Home 선택 및 펌웨어 차단 설정은 유지됩니다. [세부 정보(영어)](../LG-FIRMWARE-UPDATES.md#explicit-package-permission-repair-candidate).
 

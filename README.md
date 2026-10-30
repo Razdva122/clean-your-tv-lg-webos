@@ -33,11 +33,11 @@ LG screens or obtain root access.
 
 ## Download and install
 
-> Known Root limits retained in 1.5.1: Appearance can shift 110 px when applying a theme;
+> Known Root limits retained in 1.5.2: Appearance can shift 110 px when applying a theme;
 > Home may not open automatically after standby. See [release notes and tested scope](docs/RELEASE-1.5.0.md).
 
 <!-- release:downloads -->
-Current stable release: **[v1.5.1](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.5.1)** — [release notes](docs/RELEASE-1.5.1.md).
+Current stable release: **[v1.5.2](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.5.2)** — [release notes](docs/RELEASE-1.5.2.md).
 <!-- /release:downloads -->
 
 [![Download Windows x64 graphical installer — GUI ZIP](assets/brand/downloads/windows.svg)](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/cytv-windows-x64-desktop.zip)
@@ -126,7 +126,7 @@ For contributors: [build and technical references](docs/development/README.md),
 <!-- /release:components -->
 
 System Updater: 1.1.2 / protocol 1 (existing supervisors stay pinned).
-See the [release notes](docs/RELEASE-1.5.1.md)
+See the [release notes](docs/RELEASE-1.5.2.md)
 and [TV acceptance and limits](docs/RELEASE-1.5.0.md).
 
 </details>

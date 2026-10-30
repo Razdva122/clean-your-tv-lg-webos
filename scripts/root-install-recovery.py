@@ -19,6 +19,34 @@ sys.path.insert(0,str(PROJECT))
 from cytv import state
 
 
+# -I removes cwd/PYTHONPATH/user-site; only this freshly staged, pinned bundle
+# enters sys.path. Never execute python_binding.py from retained Root state.
+RECOVERY_ENTRY = r'''
+import runpy, sys
+sys.path.insert(0, sys.argv.pop(1))
+sys.argv.pop(0)
+from python_binding import verify_binding
+if verify_binding('/var/lib/clean-your-tv-root') != sys.executable:
+    raise ValueError('recovery_interpreter_binding_changed')
+runpy.run_path(sys.argv[0], run_name='__main__')
+'''
+
+
+def recovery_python(remote):
+    from cytv.operations import _RETAINED_PYTHON_CHECK
+    from cytv.python_runtime import RUNTIME_ROOT, SHA256
+    # Trusted host-side Node verifies the binding/launcher as DATA before any
+    # private interpreter starts. Full inventory verification follows in the
+    # staged python_binding module. No runtime provisioning or smoke writes.
+    check=_RETAINED_PYTHON_CHECK+'\nprocess.stdout.write(pythonCommand(process.argv[1]));'
+    selected=remote.run(shlex.join(['env','-u','NODE_OPTIONS','-u','NODE_PATH','/usr/bin/node','-e',check,
+                                   '/var/lib/clean-your-tv-root'])).strip()
+    if selected=='/usr/bin/python3':return selected
+    if selected=='/var/lib/clean-your-tv-root/python-launcher':
+        return RUNTIME_ROOT+'/'+SHA256+'/bin/python3.13'
+    raise ValueError('verified_recovery_interpreter_required')
+
+
 def reconcile(store, profile, identifier, candidate, proof, inspect):
     pending=store.pending(profile)
     if (profile['edition']!='root' or not isinstance(pending,dict)
@@ -65,6 +93,7 @@ def main():
     manifest,modules,pin=code_inventory(args.code_bundle)
     if args.action=='digest':print(pin);return
     for field,length in (('operation',32),('candidate',64),('code_sha256',64)):
+        if field=='candidate' and args.action=='inspect' and args.candidate is None:continue
         if not isinstance(getattr(args,field),str) or not re.fullmatch('[a-f0-9]{'+str(length)+'}',getattr(args,field)):
             parser.error('--'+field.replace('_','-')+' is required')
     if args.code_sha256!=pin:raise ValueError('reviewed_local_recovery_code_changed')
@@ -79,7 +108,6 @@ def main():
     with store.lock(profile):
         remote=SSH.connect(profile,store.device_dir(profile),secret,lambda *_:False)
         try:
-            installer=Installer(remote,store,profile,args.code_bundle.parent,{},progress=lambda *_:None)
             stage='/tmp/cytv-recovery-'+uuid.uuid4().hex
             remote.run('umask 077; mkdir '+shlex.quote(stage))
             finished=False
@@ -89,10 +117,12 @@ def main():
                 for name in (*manifest['files'],'bundle.json'):
                     remote.upload(stage+'/'+name,(args.code_bundle/name).read_bytes(),mode=0o600)
                 for name,raw in modules.items():remote.upload(stage+'/'+name,raw,mode=0o600)
+                python=recovery_python(remote)
                 def invoke(action,identifier,candidate):
-                    command=[installer._python(),'-B',stage+'/cancel_install.py',action,'--operation',identifier,'--candidate',candidate,'--code-sha256',pin]
+                    command=[python,'-I','-B','-c',RECOVERY_ENTRY,stage,stage+'/cancel_install.py',action,'--operation',identifier,'--code-sha256',pin]
+                    if candidate is not None:command+=['--candidate',candidate]
                     if action=='remove':command+=['--proof-sha256',args.proof_sha256]
-                    return json.loads(remote.run(installer._python_command(command),timeout=180))
+                    return json.loads(remote.run(Installer._python_command(command),timeout=180))
                 if args.action=='reconcile':
                     result=reconcile(store,profile,args.operation,args.candidate,args.proof_sha256,lambda identifier,candidate:invoke('inspect',identifier,candidate))
                 else:result=invoke(args.action,args.operation,args.candidate)

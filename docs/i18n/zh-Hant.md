@@ -2,9 +2,13 @@
 
 > v1.5.0：主題、展示頁與電腦向電視傳輸。已知 Root 限制：Appearance 可能偏移 110 px；待機喚醒後 Home 可能不會自動開啟。裝置實機驗證範圍仍有限。 [1.5.0](../RELEASE-1.5.0.md).
 
+> 下一候選版本（尚未發布）：固定版面主題保留隱藏 Columns 列的空間，以便 Apply 時維持 Appearance 的捲動位置。指標、鍵盤和無障礙導覽會略過隱藏的 Columns。電視實機驗證尚待完成。
+
 [文件導覽](../README.md) · [回報問題](../FEEDBACK.md)
 
 本指南適用於已發佈的 **[1.4.1](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.4.1)**。C3 驗收僅涵蓋已記錄的電源、Home、焦點、保持關閉狀態及手動回復版本測試。其他電視、eARC 音訊和實體 Android 裝置仍未驗證；安裝成功不代表相容。[測試範圍（英文）](../RELEASE-1.4.0-ACCEPTANCE.md)。
+
+**尚未發布的安裝程式：**主控台、桌面與 Android 介面會分別顯示電視檢查狀態：未檢查、正在檢查、通過、未通過或無法驗證。出錯後仍保留結果。Node.js/Python 檢查針對電視的執行環境；`doctor` 不會準備 Python，也不會要求遙控配對。重試前請儲存報告。
 
 ## 選擇版本
 
@@ -94,6 +98,8 @@ No-root 1.5.0：從待機喚醒後，Helper 可嘗試恢復暫時的 watchdog �
 Home 設定通訊修正尚未發布：有配套候選版本後，請同時更新 Home 與 Helper。只更新 Home 無法套用此修正。最終發布組建的電視實機驗證仍待完成。 [#146](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/146).
 
 Root HDMI 聲音復原是實驗功能，**預設關閉**，僅在需要時自行啟用。它可能中斷正常音訊，並不證明 eARC 相容性。[聲音復原（英文）](../development/ROOT-AUDIO-RECOVERY.md)。獨立的 **Homebrew CYTV Installer 尚未發佈**；請使用已發佈的電腦或 Android 安裝程式。
+
+Homebrew Channel 拒絕此安裝程式存取。在 webOS 11 上，Homebrew 0.7.3 需要開發者提供相容性更新。在受支援的 Homebrew 版本包含此修正前，請使用已發布的電腦或 Android 安裝程式。 [#116](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/116).
 
 僅限未發布候選版：若舊 Root 目錄的可寫入權限導致韌體 API 存取遭拒，可明確執行 `cytv enable-firmware-access --edition root --repair-package-permissions`。指令會先以可信的私人套件記錄驗證目前檔案，再僅移除 Root 自有路徑的群組及其他使用者寫入權限。遇到未知或已修改檔案便停止；保留個人設定、Home 選擇和韌體封鎖設定。[修復詳情（英文）](../LG-FIRMWARE-UPDATES.md#explicit-package-permission-repair-candidate)。
 

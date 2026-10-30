@@ -1,19 +1,7 @@
 {
   "schema": 1,
-  "version": "1.5.1",
-  "changes": [
-    {
-      "pr": 174,
-      "issues": [],
-      "summary": "Speed up CI and add direct TV development delivery"
-    }
-  ],
+  "version": null,
+  "changes": [],
   "excluded": [],
-  "acceptance": "Developer/CI maintenance only. Full candidate 41060638294 attempt 1 passed. Exact digest-bound CI payload proves all six TV components byte-identical to signed published 1.5.0; existing signed Home 1.5.1 rollback IPK verified. See docs/history/2026-10-30-release-1.5.1-validation.md for SHA-256 values and host evidence. No TV connected or modified, no new model/firmware/remote session and no new Home/control/audio/standby/cold-boot/OTA/rollback acceptance. Published 1.5.0 evidence retains its original scope and known Appearance/standby failures. Real hosted UI and new command device use remain untested.",
-  "build": {
-    "run_id": 41060638294,
-    "attempt": 1,
-    "source": "0dc7a5f85cef7164ea3d1ece80f9aaf31bb86d68"
-  },
-  "acceptance_build": "41060638294:1"
+  "acceptance": ""
 }

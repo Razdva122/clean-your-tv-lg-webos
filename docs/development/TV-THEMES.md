@@ -73,6 +73,12 @@ Historical evidence for the retired pull transport, 2026-10-29: `scripts/test.sh
 Installed-theme cards use `ThemeManager.preview(item)` to load the exact cached digest, verify its manifest/files and identity, and expose only its preview asset through a MIME-typed Blob URL. The UI owns an idempotent lease and revokes it on redraw, navigation, close, stale completion or image failure. These URLs are never persisted. Built-in previews use bundled files; the independent published showcase does not include personal installations. `installed-previews.cjs` verifies actual preview bytes and rejection of tampering; `installed-previews-ui.cjs` covers a custom theme absent from the catalogue offline in both editions and exercises lifecycle cleanup.
 
 
+## Hidden Columns scroll geometry (next candidate)
+
+The shared layout panel marks the Columns wrapper with `home-columns-entry` and keeps the button’s `hidden` flag for existing remote navigation. Both settings styles retain the hidden row/button flex geometry using `visibility: hidden`; the wrapper also carries `aria-hidden`. This reserves the row and margin below the theme lane instead of shortening the scroll range and clamping the viewport during Apply. Genuine Columns focus still uses the #169 fallback; Apply and theme-card nodes are retained.
+
+`columns-entry-geometry-ui.cjs` exercises both editions at 1080p/720p and narrow width, including Tab, direct focus and the accessibility tree. `selection-ui.cjs` visits the real By theme dialog and records Apply frames at the content’s lower scroll limit. These are browser regressions; new physical-TV acceptance is pending.
+
 ## Embedded Appearance controls (theme-followups)
 
 The follow-up mounts HomeThemePanel inside the Appearance pane in both editions. Installed cards, catalogue/details and URL/LAN forms use the existing settings content surface; the category sidebar remains available. SettingsCategories activates/deactivates the embedded controller and yields keyboard handling only for its active subviews. Parent settings close and category changes cancel pending work and release preview leases. Ordinary installed selection keeps Settings styling suspended and saves immediately. Only an explicit showcase trial temporarily moves its trusted confirmation to the document body, reveals Home and then reattaches to Appearance on Keep/Revert/timeout. No new storage keys, network hosts or privileged services are introduced.

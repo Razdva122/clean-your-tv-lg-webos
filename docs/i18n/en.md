@@ -2,9 +2,13 @@
 
 > v1.5.0: themes, Showcase and PC-to-TV transfer. Known Root limits: Appearance can shift 110 px; automatic Home after standby can fail. Device-specific acceptance remains limited. [1.5.0](../RELEASE-1.5.0.md).
 
+> Next candidate (unreleased): fixed-layout themes keep the empty Columns row to preserve Appearance scroll position during Apply. Hidden Columns is skipped by pointer, keyboard and accessibility navigation. Physical-TV verification is pending.
+
 [Documentation](../README.md) · [Report a problem](../FEEDBACK.md)
 
 This guide covers published **[1.4.1](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.4.1)**. C3 acceptance covers the recorded power, Home, focus, off-state and manual rollback tests. Other TVs, eARC audio and physical Android devices remain unverified; installation alone does not prove compatibility. [Tested scope (English)](../RELEASE-1.4.0-ACCEPTANCE.md).
+
+**Unreleased installer:** TV checks show each requirement as not checked, checking, passed, failed or unverifiable in the console, desktop and Android interfaces. Results remain visible after an error. A failed Node.js/Python check concerns the TV runtime; `doctor` does not prepare Python or request control pairing. Save the report before retrying.
 
 ## Choose an edition
 
@@ -94,6 +98,8 @@ Unpublished Home settings transport fix: update Home and Helper together when a 
 **Existing 1.3.0:** the original System Updater cannot apply 1.4.0 because its permitted file inventory changed. If an attempt stopped before replacement, preserve its journal and stop; do not clear state or retry blindly. Use checked recovery and fresh 1.4.0 setup for migration; an app-only update does not replace retained Root drivers. The next OTA correction is **not published**. [Migration and recovery (English)](../UPDATES.md#one-time-computer-preparation).
 
 Root HDMI sound recovery is experimental and **off by default**; opt in only if needed. It can interrupt healthy audio and does not establish eARC compatibility. [Sound recovery (English)](../development/ROOT-AUDIO-RECOVERY.md). The separate Homebrew **CYTV Installer remains unreleased**; use the published computer/Android installer.
+
+Homebrew Channel denied access to this installer. On webOS 11, Homebrew 0.7.3 needs an upstream compatibility update. Use the published computer or Android installer until a supported Homebrew release includes the fix. [#116](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/116).
 
 Unpublished candidate only: if firmware API access is refused because an old Root package retained writable directories, the explicit command `cytv enable-firmware-access --edition root --repair-package-permissions` verifies the current private package before removing write access for group/others from Root-owned paths. Unknown or changed files stop repair. It preserves your profile, Home choice and firmware-blocking preference; see [repair details](../LG-FIRMWARE-UPDATES.md#explicit-package-permission-repair-candidate).
 

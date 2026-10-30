@@ -9,6 +9,23 @@ SOURCE = Path(__file__).resolve().parents[1] / 'app/src/main/python/android_brid
 
 
 class BridgeTests(unittest.TestCase):
+    def test_check_events_translate_text_but_preserve_ids_and_status(self):
+        from cytv import i18n
+        self.addCleanup(i18n.set_language, 'en')
+        i18n.set_language('ru')
+        class Native:
+            def __init__(self): self.events = []
+            def emit(self, raw): self.events.append(json.loads(raw))
+        native = Native()
+        console = self.module().AndroidConsole(self.module().Callbacks(native))
+        self.assertNotEqual(type(console).check, __import__('cytv.terminal', fromlist=['Console']).Console.check,
+                            'Android must emit semantic checks')
+        console.check({'id':'ssh', 'label':'SSH connection and sign-in', 'status':'pass', 'detail':''})
+        event = native.events[-1]
+        self.assertEqual((event['kind'], event['checkId'], event['status']), ('check', 'ssh', 'pass'))
+        self.assertNotEqual(event['label'], 'SSH connection and sign-in')
+        self.assertNotEqual(event['statusText'], 'Passed')
+
     def test_cli_errors_reach_android_as_error_events(self):
         module = self.module()
         class Native:

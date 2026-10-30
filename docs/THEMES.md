@@ -8,6 +8,8 @@ Authors: follow the [complete theme contribution walkthrough](development/CONTRI
 
 **Classic** and **Alpine** are built into both No-root and Root editions. They work without downloading a theme. Classic remains the initial default. Alpine has a mountain panorama, a large clock and one looping horizontal app ribbon. Its fixed eight-slot composition hides the Columns setting while active. Your saved column preference returns when you switch to an adjustable theme.
 
+Next candidate (unreleased): when a fixed-layout theme hides Columns, its empty row keeps the same space so applying the theme does not shorten Appearance’s scroll range. The hidden control is skipped by pointer, keyboard and accessibility navigation. This correction has browser regression coverage; physical-TV acceptance is pending.
+
 **Channel** is an ordinary external theme in showcase. It is not part of the TV package. It uses a numbered list, selected-app artwork and pixel shortcut icons; its one-column default can be overridden by the user.
 
 ## Change to an included theme

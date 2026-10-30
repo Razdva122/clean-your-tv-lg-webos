@@ -87,6 +87,16 @@ class Console:
         self.heading('Diagnostic report')
         self.raw('  ' + str(path.resolve()))
 
+    def check(self, event):
+        from .checks import STATUS
+        message = '[' + tr(STATUS[event['status']]) + '] ' + tr(event['label'])
+        if event['status'] in ('fail', 'unknown'):
+            self.error(message)
+        else:
+            self.text(message)
+        if event['detail'] and event['status'] in ('fail', 'unknown'):
+            self.text(event['detail'])
+
     def recovery(self, profile):
         self('Removal is unfinished. Choose Set up my TV to finish removal and reinstall.')
 

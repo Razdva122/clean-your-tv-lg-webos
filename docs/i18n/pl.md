@@ -2,9 +2,13 @@
 
 > v1.5.0: motywy, galeria i przesyłanie z komputera na TV. Znane ograniczenia Root: Appearance może przesunąć się o 110 px; Home może nie otworzyć się automatycznie po czuwaniu. Zakres testów urządzeń jest ograniczony. [1.5.0](../RELEASE-1.5.0.md).
 
+> Następny kandydat (nieopublikowany): motywy o stałym układzie zachowują miejsce ukrytego wiersza Columns, aby Apply nie zmieniało pozycji przewijania Appearance. Wskaźnik, klawiatura i narzędzia dostępności pomijają Columns. Weryfikacja na TV pozostaje do wykonania.
+
 [Dokumentacja](../README.md) · [Zgłoś problem](../FEEDBACK.md)
 
 Poradnik opisuje opublikowaną wersję **[1.4.1](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.4.1)**. Akceptacja C3 obejmuje zapisane testy zasilania, Home, fokusu, zachowania stanu wyłączenia i ręcznego cofnięcia wersji. Inne telewizory, dźwięk eARC i fizyczne urządzenia Android pozostają niezweryfikowane; udana instalacja nie dowodzi zgodności. [Zakres testów (angielski)](../RELEASE-1.4.0-ACCEPTANCE.md).
+
+**Nieopublikowany instalator:** konsola, aplikacja desktopowa i Android pokazują stan każdej kontroli TV: niesprawdzona, w toku, zaliczona, niezaliczona lub niemożliwa do potwierdzenia. Wyniki pozostają po błędzie. Node.js/Python jest sprawdzany w telewizorze; `doctor` nie przygotowuje Pythona ani nie prosi o parowanie sterowania. Zapisz raport przed ponowną próbą.
 
 ## Wybierz edycję
 
@@ -94,6 +98,8 @@ Otwórz ustawienia Home → Aktualizacje oprogramowania i sprawdź wersje przed 
 Nieopublikowana poprawka kanału ustawień Home: zaktualizuj Home i Helper razem, gdy będzie dostępny zgodny kandydat. Aktualizacja samego Home nie wystarczy. Weryfikacja końcowej kompilacji wydania na TV pozostaje do wykonania. [#146](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/146).
 
 Odzyskiwanie dźwięku HDMI w Root jest eksperymentalne i **domyślnie wyłączone**; włączaj tylko w razie potrzeby. Może przerwać poprawny dźwięk i nie dowodzi zgodności eARC. [Odzyskiwanie dźwięku (angielski)](../development/ROOT-AUDIO-RECOVERY.md). Osobny **CYTV Installer dla Homebrew nie jest jeszcze wydany**; użyj opublikowanego instalatora komputerowego lub Android.
+
+Homebrew Channel odmówił temu instalatorowi dostępu. W webOS 11 Homebrew 0.7.3 wymaga aktualizacji zgodności od swoich twórców. Dopóki obsługiwana wersja Homebrew nie zawiera poprawki, użyj opublikowanego instalatora na komputer lub Android. [#116](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/116).
 
 Tylko nieopublikowany kandydat: gdy stare zapisywalne katalogi Root blokują dostęp do API oprogramowania TV, `cytv enable-firmware-access --edition root --repair-package-permissions` sprawdza bieżący pakiet według zaufanych danych prywatnych i usuwa zapis dla grupy/innych wyłącznie we własnych ścieżkach Root. Nieznane lub zmienione pliki zatrzymują naprawę. Profil, wybór Home i blokowanie aktualizacji pozostają bez zmian; [szczegóły (angielski)](../LG-FIRMWARE-UPDATES.md#explicit-package-permission-repair-candidate).
 

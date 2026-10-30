@@ -177,24 +177,33 @@ def present_wake(transaction, boot, cancelled):
     Never recover/rearm here: stale or stopping contexts belong to recovery.
     The caller revokes the edge on OFF, uncertainty, stream loss or teardown.
     """
+    outcome = 'unavailable'
+    result = {'presentation_context':{'stage':'cancelled'}}
     try:
-        if cancelled() or boot_identity() != boot: return 'unavailable'
+        if cancelled(): return outcome
+        result['presentation_context']['stage'] = 'session'
+        if boot_identity() != boot: return outcome
+        result['presentation_context']['stage'] = 'intent'
         c = coordinator()
-        if c is None: return 'unavailable'
+        if c is None: return outcome
         intent = c.store.read()
         if (intent['phase'] != 'active' or intent['enabled'] is not True
-                or intent['boot'] != boot): return 'unavailable'
-        if c._healthy(intent) != transaction: return 'unavailable'
-        result = dict(intent=intent,trial=dict(transaction=transaction))
+                or intent['boot'] != boot): return outcome
+        result['presentation_context']['stage'] = 'health-routing'
+        if c._healthy(intent) != transaction: return outcome
+        result.update(intent=intent,trial=dict(transaction=transaction))
         outcome = _present_home(c,result,cancelled=cancelled,wake=True)
+        return outcome
+    except Exception:
+        return outcome  # Optional presentation never revokes healthy routing.
+    finally:
+        # Early refusals used to vanish, leaving no distinction between a lost
+        # edge and a wake rejected by current intent/health. Never log raw RPCs.
         try:
             from boot_gate import audit
             audit('wake-presentation',outcome=outcome,boot=boot,
-                  context=result.get('presentation_context',{}))
+                  context=result['presentation_context'])
         except Exception: pass
-        return outcome
-    except Exception:
-        return 'unavailable'  # Optional presentation never revokes healthy routing.
 
 
 def _native_channel(sam, app):
@@ -214,6 +223,8 @@ def _present_home(c, result, cancelled=lambda:False, wake=False):
     try:
         intent = result['intent']; tx = result['trial']['transaction']
         if intent['phase'] != 'active' or intent['enabled'] is not True: return 'unavailable'
+        context = result.setdefault('presentation_context',{})
+        context['stage'] = 'startup-setting'
         sam = d.sam_transport()
         settings = sam.call('luna://com.webos.settingsservice/getSystemSettings',
                             {'category':'general','keys':['homeAutoLaunch']},timeout=.5)
@@ -221,12 +232,15 @@ def _present_home(c, result, cancelled=lambda:False, wake=False):
             return 'preserved-startup-setting'
         boot = {}
         if not wake:
+            context['stage'] = 'boot-status'
             boot = sam.call('luna://com.webos.bootManager/getBootStatus',{},timeout=.5)
             if (boot.get('bootTarget') != 'hardware' or boot.get('powerStatus') != 'active'
                     or boot.get('bootStatus') != 'normal' or boot.get('firstAppLaunched') is not True):
                 return 'preserved-startup-setting'
         from persistent_health import require_fresh
+        context['stage'] = 'input-health'
         require_fresh(tx)
+        context['stage'] = 'foreground'
         foreground = sam.call('luna://com.webos.applicationManager/getForegroundAppInfo',{},timeout=.5)
         app = foreground.get('appId')
         # Diagnostics carry fixed classes, never private foreground IDs.
@@ -234,26 +248,34 @@ def _present_home(c, result, cancelled=lambda:False, wake=False):
         first = boot.get('firstAppId')
         result['presentation_context'] = dict(foreground_kind=kinds.get(app,'other-or-missing'),
                                              first_app_matches=(first == app) if first else None)
+        if wake: result['presentation_context']['stage'] = 'foreground'
         if app not in ('com.webos.app.livetv','com.webos.app.home'):
+            if wake: result['presentation_context']['stage'] = 'native-metadata'
             if not _native_channel(sam,app): return 'preserved-foreground'
             result['presentation_context']['foreground_kind'] = 'native-channel'
             # Metadata is optional and can be slow. Keep an app selected while
             # it was checked, including a manual Home or a third-party app.
+            if wake: result['presentation_context']['stage'] = 'foreground-recheck'
             latest = sam.call('luna://com.webos.applicationManager/getForegroundAppInfo',{},timeout=.5)
             if latest.get('appId') != app:
                 result['presentation_context'] = dict(
                     foreground_kind=kinds.get(latest.get('appId'),'other-or-missing'),
                     first_app_matches=(first == latest.get('appId')) if first else None)
+                if wake: result['presentation_context']['stage'] = 'foreground-recheck'
                 return 'preserved-foreground'
         # Recheck after optional RPCs, which can outlive the two-second lease.
+        if wake: result['presentation_context']['stage'] = 'final-input-health'
         require_fresh(tx)
         if wake:
             from persistent_health import require_guardian
+            result['presentation_context']['stage'] = 'final-guardian'
             require_guardian(tx)
+            result['presentation_context']['stage'] = 'final-intent'
         if cancelled() or c.store.read() != intent or d.FAILSAFE.exists(): return 'unavailable'
         # Never hold the operation lock over optional RPC: an off request must win.
         # Foreground observation and launch are separate platform calls; an app
         # switch after this last observation can still race this single request.
+        if wake: result['presentation_context']['stage'] = 'launch'
         sam.call('luna://com.webos.applicationManager/launch',{'id':d.CANDIDATE},timeout=.5)
         return 'launch-requested' if c.store.read() == intent and not cancelled() else 'superseded'
     except Exception:

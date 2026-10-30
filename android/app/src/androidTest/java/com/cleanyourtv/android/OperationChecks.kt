@@ -139,12 +139,21 @@ class OperationChecks : Instrumentation() {
             // A detached Activity misses live events. Its replacement must be
             // able to replay the pending question even after the log is bounded.
             Operation.listener = null
+            Operation.emit("""{"kind":"check","checkId":"ssh","status":"running"}""")
+            Operation.emit("""{"kind":"check","checkId":"node-version","status":"pending"}""")
+            Operation.emit("""{"kind":"check","checkId":"ssh","status":"pass"}""")
+            Operation.emit("""{"kind":"check","checkId":"node-version","status":"fail"}""")
             repeat(500) { Operation.emit("{\"kind\":\"log\",\"text\":\"line $it\"}") }
             val replay = events()
             check(replay.size <= 450) { "Replay must remain bounded" }
             check(replay.first().getJSONObject("config").getString("edition") == edition)
             check(replay.count { it.optString("kind") == "started" } == 1)
             check(replay.any { it.optString("id") == id }) { "Pending prompt lost during Activity replay" }
+            val checks = replay.filter { it.optString("kind") == "check" }
+            check(checks.map { it.getString("checkId") } == listOf("ssh", "node-version")) { "Keep check display order" }
+            check(checks.count { it.optString("checkId") == "ssh" } == 1) { "Keep only the latest check result" }
+            check(checks.single { it.optString("checkId") == "ssh" }.getString("status") == "pass")
+            check(checks.single { it.optString("checkId") == "node-version" }.getString("status") == "fail")
             Operation.answer("stale-prompt-id", "wrong-answer")
             Operation.answer(id, "test-only-secret")
             check(pending.get(5, TimeUnit.SECONDS) == "test-only-secret") { "Stale answer accepted" }

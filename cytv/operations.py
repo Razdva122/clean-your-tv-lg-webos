@@ -64,11 +64,13 @@ def root_updater_paths():
 
 
 class Installer:
-    def __init__(self, remote, store, profile, payload, manifest, progress=print, tv_info=None):
+    def __init__(self, remote, store, profile, payload, manifest, progress=print, tv_info=None, checks=None):
         self.remote, self.store, self.profile = remote, store, profile
         self.payload, self.manifest, self.progress = Path(payload), manifest, progress
         self.helper_retry = lambda: False
         self.tv_info = tv_info if tv_info is not None else {}
+        from .checks import CheckList
+        self.checks = checks if checks is not None else CheckList()
 
     @staticmethod
     def _python_command(args):
@@ -359,13 +361,17 @@ with os.fdopen(f,'rb') as stream:
                 probe = probe.replace('test -x /usr/bin/python3', 'test -x '+shlex.quote(python))
                 command = ('if ( ' + probe.replace('/usr/bin/python3', ('env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=1 ' if python.startswith('/var/lib/clean-your-tv-python/') else '') + shlex.quote(python)) + ' ) >/dev/null 2>&1; then printf CYTV_ROOT_READY; '
                            'else printf CYTV_ROOT_MISSING; fi')
-                reply = self.remote.run(command).strip()
-                checks[name] = {'CYTV_ROOT_READY': 'pass', 'CYTV_ROOT_MISSING': 'fail'}.get(reply, 'unknown')
+                def run():
+                    reply = self.remote.run(command).strip()
+                    return {'CYTV_ROOT_READY': True, 'CYTV_ROOT_MISSING': False}.get(reply)
+                result = self.checks.probe(name, run)
+                checks[name] = {True: 'pass', False: 'fail'}.get(result, 'unknown')
             for name, probe in zip(diagnostics.ROOT_REQUIREMENTS, probes):
                 check(name, probe)
             python_names = {'python3', 'python-json', 'python-fcntl', 'python-version'}
             if (install and any(checks[name] != 'pass' for name in python_names)
                     and all(result == 'pass' for name, result in checks.items() if name not in python_names)):
+                self.checks.update('python3', 'running')
                 python = self._selected_python = self._select_python(provision=True)
                 for name, probe in zip(diagnostics.ROOT_REQUIREMENTS, probes):
                     if name in python_names:
@@ -386,6 +392,7 @@ with os.fdopen(f,'rb') as stream:
                 if existing and not maintain:
                     raise ExistingRoot('Root is already installed or recovery state remains. Connect interactively to review reinstallation; existing state was left unchanged.')
         else:
+            self.checks.update('architecture', 'running')
             arch = self.remote.run('uname -m').strip()
             self.tv_info.update(kernel_arch=arch if arch in diagnostics.KERNEL_ARCHES else 'unknown',
                                 userland_abi='unknown', arm32_supported=False)
@@ -402,20 +409,30 @@ with os.fdopen(f,'rb') as stream:
                 abi = {(1, 40): 'arm32', (2, 183): 'arm64'}.get((header[4], machine), 'other')
             supported = abi == 'arm32' and arch in ('armv7l', 'armv7', 'armv8l', 'aarch64', 'arm64')
             self.tv_info.update(userland_abi=abi, arm32_supported=supported)
+            self.checks.update('architecture', 'pass' if supported else 'fail',
+                               '' if supported else 'The bundled Home Helper requires ARM32. A compatible TV runtime could not be confirmed.')
             if not supported:
                 raise UserError('The bundled Home Helper requires ARM32. A compatible TV runtime could not be confirmed.')
             if install:
+                self.checks.update('helper-node', 'running')
                 node = self.remote.run('if /usr/bin/node -e \'var v=process.versions.node.split(".").map(Number);process.exit(v[0]>0||v[1]>10||(v[1]===10&&v[2]>=25)?0:1)\'; then printf CYTV_NODE_READY; fi')
+                self.checks.update('helper-node', 'pass' if node.strip() == 'CYTV_NODE_READY' else 'fail',
+                                   '' if node.strip() == 'CYTV_NODE_READY' else 'Home Helper requires TV Node.js 0.10.25 or newer. Installation has not started.')
                 if node.strip() != 'CYTV_NODE_READY':
                     raise UserError('Home Helper requires TV Node.js 0.10.25 or newer. Installation has not started.')
+            self.checks.update('root-conflict', 'running')
             root_state = self.remote.run(
                 'if [ -e /var/webos-profile/override/clean-your-tv-root.json ] || '
                 '[ -L /var/webos-profile/override/clean-your-tv-root.json ]; then printf CYTV_ROOT_STATE; fi')
+            self.checks.update('root-conflict', 'fail' if root_state.strip() else 'pass',
+                               'Root Home routing is present. Restore it with cytv --edition root restore first.' if root_state.strip() else '')
             if root_state.strip():
                 raise UserError('Root Home routing is present. Restore it with cytv --edition root restore first.')
             if not install:
                 return
+            self.checks.update('helper-idle', 'running')
             helper = self.helper_state()
+            self.checks.update('helper-idle', 'unknown' if helper == 'uncertain' else 'fail' if helper == 'running' else 'pass')
             if helper == 'running':
                 raise UserError('Home Helper is running. Installation has not started; installed versions are unchanged. Press Home three times within two seconds (older Helper: hold Home for two seconds) to stop it, then rerun installation.')
             if helper == 'uncertain':

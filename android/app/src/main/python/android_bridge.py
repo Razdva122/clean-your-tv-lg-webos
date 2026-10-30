@@ -86,6 +86,12 @@ class AndroidConsole(Console):
         # Input mistakes can be corrected; the CLI exit code decides the result.
         self.callbacks.emit(kind='error', text=i18n.translate(message), heading=heading, fatal=False)
 
+    def check(self, event):
+        from cytv.checks import STATUS
+        self.callbacks.emit(kind='check', checkId=event['id'], status=event['status'],
+                            label=i18n.translate(event['label']), detail=i18n.translate(event['detail']),
+                            statusText=i18n.translate(STATUS[event['status']]), title=i18n.translate('TV checks'))
+
     def text(self, message, bold=False):
         stages = {'Installing Home Helper…': 2, 'Installing Home…': 2,
                   'Uploading Root and recovery runtime…': 2,
