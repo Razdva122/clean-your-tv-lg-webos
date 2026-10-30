@@ -1,21 +1,7 @@
 {
   "schema": 1,
-  "version": "1.5.2",
-  "changes": [
-    {
-      "pr": 179,
-      "issues": [
-        172
-      ],
-      "summary": "Authenticate the final release assembler API recheck and cover effective workflow credentials/permissions; completes the automatic publication correction tracked in #172."
-    }
-  ],
+  "version": null,
+  "changes": [],
   "excluded": [],
-  "acceptance": "Workflow-only maintenance. Complete candidate 41069111699/1 passed in 11m21s; all six actual CI TV packages are byte-identical to verified signed 1.5.0/1.5.1 packages. Existing signed Home 1.5.1 rollback was independently verified. The real tv-dev candidate command completed direct build 41069718155/1, protected preliminary signing 41070497206/1 and local signature/provenance/hash verification; all three signed Root packages match the full candidate. See docs/history/2026-10-30-release-1.5.2-validation.md. No TV connected or modified, no new model/firmware/remote session or Home/control/audio/standby/cold-boot/OTA/device-rollback acceptance. Known Appearance/standby failures and prior physical evidence retain their original scope. Main automatic publication and public verification follow merge.",
-  "build": {
-    "run_id": 41069111699,
-    "attempt": 1,
-    "source": "36e4e1d75e107780660ed5dd5033b6f63f05b1fc"
-  },
-  "acceptance_build": "41069111699:1"
+  "acceptance": ""
 }
