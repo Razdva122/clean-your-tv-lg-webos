@@ -37,6 +37,17 @@
       "digest": "5eb9cebf58cddafa8df59497880eaa134565465ba75dab60ec1903b956be4f5d"
     },
     {
+      "id": "github:invrnt/tv-themes:minimal",
+      "title": "Minimal",
+      "version": "1.0.0",
+      "author": "invrnt",
+      "license": "MIT",
+      "description": "Pure black, four large cards with no dock band, soft shadows and a quiet header without the greeting.",
+      "preview": "theme-catalog/invrnt--tv-themes--minimal/2711ef0de617f4e4ee13e08ae2e10c8f8cae9f10c33475e99f1c762e35d02270/preview.png",
+      "url": "https://raw.githubusercontent.com/invrnt/tv-themes/f2e8c922bec7d960d9fd2c82cf2cd4828060e7b0/distributions/minimal/1.0.0/cytv-theme.json",
+      "digest": "2711ef0de617f4e4ee13e08ae2e10c8f8cae9f10c33475e99f1c762e35d02270"
+    },
+    {
       "id": "github:razdva122/clean-your-tv-lg-theme:itachi",
       "title": "Itachi · Sharingan",
       "version": "1.0.2",
