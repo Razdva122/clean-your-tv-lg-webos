@@ -72,6 +72,11 @@
       "pr": 189,
       "issues": [],
       "summary": "Avoid GitHub large-page failures during Root QA admission"
+    },
+    {
+      "pr": 191,
+      "issues": [],
+      "summary": "Separate theme settings and expose language and column choices"
     }
   ],
   "excluded": [],
