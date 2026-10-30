@@ -37,7 +37,7 @@ def ar(parts):
     return buffer.getvalue()
 
 
-def build(output, version='0.0.1'):
+def build(output, version='0.0.1', legacy_node_prototype=False):
     output = Path(output).absolute()
     if '..' in output.parts or any(path.is_symlink() for path in (output, *output.parents)):
         raise ValueError('Output must not traverse symlinks or parent segments')
@@ -58,6 +58,9 @@ def build(output, version='0.0.1'):
     payload['usr/palm/applications/'+app_id+'/startup.sh']=packaged_content(app_id)
     from scripts.theme_receiver import inject
     private_service = inject({name[len(service_prefix):]: data for name, data in payload.items() if name.startswith(service_prefix)}, standalone=True)
+    if legacy_node_prototype:
+        from scripts.root_node_build import compile_root_node
+        private_service = compile_root_node(private_service)
     payload.update({service_prefix + name: data for name, data in private_service.items()})
     service_info = json.loads(payload[service_prefix + 'services.json'])
     service_package = json.loads(payload[service_prefix + 'package.json'])
@@ -88,6 +91,8 @@ def build(output, version='0.0.1'):
     source = Path(__file__).resolve().parent
     support = {name: checked_file(source, name) for name in SUPPORT_FILES}
     support.update({'runtime/' + name: checked_file(source, 'runtime/' + name) for name in RUNTIME_FILES})
+    if legacy_node_prototype:
+        support = compile_root_node(support)
     output.mkdir(parents=False, exist_ok=False)
     (output / name).write_bytes(package)
     (output / 'SHA256SUMS').write_text(hashlib.sha256(package).hexdigest() + '  ' + name + '\n')
@@ -110,9 +115,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True, help='New directory; parent must exist')
     parser.add_argument('--version', default='0.0.1', help='Root release version, X.Y.Z')
+    parser.add_argument('--legacy-node-prototype', action='store_true', help='Host-only Node 0.12 prototype; admission remains Node 8+')
     args = parser.parse_args()
     try:
-        package = build(args.output, version=args.version)
+        package = build(args.output, version=args.version, legacy_node_prototype=args.legacy_node_prototype)
     except (ValueError, OSError) as exc:
         parser.exit(1, 'Candidate build failed: ' + str(exc) + '\n')
     print('Built ' + str(package) + '. Offline only; hardware validation pending.')

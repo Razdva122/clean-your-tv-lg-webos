@@ -28,7 +28,7 @@ def assigned(path,name):
     raise ValueError('Missing inventory')
 
 
-def build(output):
+def build(output, legacy_node_prototype=False):
     output=Path(output).absolute()
     if '..' in output.parts or any(p.is_symlink() for p in (output,*output.parents)):raise ValueError('Indirect output')
     code={'system_updater/__init__.py':b'', 'system_updater/support/__init__.py':b''}
@@ -63,6 +63,9 @@ def build(output):
     files[ap+'startup.sh']=packaged_content(APP)
     code['system-updater.ipk']=package.ipk(APP,VERSION,files,executable={ap+'startup.sh'})
     code['setup-system-updater.py']=source(ROOT/'system-updater/setup.py')
+    if legacy_node_prototype:
+        from scripts.root_node_build import compile_root_node
+        code = compile_root_node(code)
     output.mkdir(parents=True,exist_ok=False)
     for name,raw in code.items():
         target=output/name;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(raw)
@@ -147,4 +150,6 @@ def prepare_release(payload,output,release,notes):
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--output',type=Path,required=True)
-    print(build(parser.parse_args().output))
+    parser.add_argument('--legacy-node-prototype',action='store_true',help='Host-only Node 0.12 prototype; admission remains Node 8+')
+    args=parser.parse_args()
+    print(build(args.output,legacy_node_prototype=args.legacy_node_prototype))

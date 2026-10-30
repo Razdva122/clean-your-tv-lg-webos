@@ -13,7 +13,7 @@ async function offerFixture(status,body,error){
  const vm=require('vm'),fs=require('fs'),path=require('path'),EventEmitter=require('events');
  const callbacks={},output={stdout:'',stderr:'',exitCode:0},directory=path.resolve(__dirname,'../../system-updater');
  const request=new EventEmitter();request.destroy=()=>{};
- const fakeHttps={get(url,options,respond){queueMicrotask(()=>{
+ const fakeHttps={get(options,respond){queueMicrotask(()=>{
   if(error==='timeout')return;
   if(error){request.emit('error',Object.assign(Error('/private/internal network detail'),{code:error}));return;}
   const response=new EventEmitter();response.statusCode=status;response.headers={};response.resume=()=>{};response.destroy=()=>{};respond(response);
