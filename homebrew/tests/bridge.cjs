@@ -32,6 +32,15 @@ async function rejects(fn){var failed=false;try{await fn();}catch(e){failed=true
  var beforeCoercion=calls.length,coercions=0,coercible={toString:function(){coercions++;return SHA+'; printf COERCION_INJECTION';}};
  for(var objectOptions of [{operation:ID,candidate:coercible},{operation:coercible,candidate:SHA},{operation:ID,candidate:SHA,prepareSupervisor:coercible},{operation:ID,candidate:SHA,migrate:coercible}])await rejects(function(){return bridge.start(objectOptions);});
  assert.equal(calls.length,beforeCoercion,'coercible objects never reach HBC');assert.equal(coercions,0,'tokens must remain validated primitives');
+ // LS2 denial is distinct from missing service/root/backend failure; never expose raw text.
+ for(var denialText of ['Denied method call "exec" for category "/"','Denied method call "exec" for category "/".']){
+  bridge=loadBridge({returnValue:false,errorCode:-1,errorText:denialText});
+  await assert.rejects(bridge.inspect(),{message:'homebrew_exec_denied'});
+  await assert.rejects(bridge.start({operation:ID,candidate:SHA}),{message:'homebrew_exec_denied'});
+ }
+ for(var errorReply of [{returnValue:false,errorText:'Unknown method'},{returnValue:false,errorText:'private diagnostics Denied method call "exec" for category "/"'},{returnValue:true,errorText:'Denied method call "exec" for category "/"',stdoutString:'not json'},{returnValue:false,errorText:'Denied method call "inspect" for category "/"'}]){
+  bridge=loadBridge(errorReply);await assert.rejects(bridge.inspect(),{message:'installer_unavailable'});
+ }
  bridge=loadBridge({returnValue:true,stdout:'{}'});await rejects(function(){return bridge.inspect();});
  bridge=loadBridge({returnValue:false,errorText:'Unknown method'});await rejects(function(){return bridge.inspect();});
  bridge=loadBridge({returnValue:true,stdoutString:'private diagnostics'});await rejects(function(){return bridge.inspect();});
@@ -54,5 +63,5 @@ async function rejects(fn){var failed=false;try{await fn();}catch(e){failed=true
  deps.execute=function(){return Promise.reject(new Error('child exited'));};await rejects(function(){return bootstrap.run(['restore'],deps);});assert.equal(cleanups,priorCleanups+2,'failed child still cleans this private stage after exit');
  deps.process.geteuid=function(){return 1000;};await rejects(function(){return bootstrap.run(['inspect'],deps);});
  deps.process.geteuid=function(){return 0;};deps.process.versions.node='0.12.2';await rejects(function(){return bootstrap.run(['inspect'],deps);});
- console.log('PASS fixed HBC exec reply, input boundaries, root/Node gates, read-only prerequisites/status, explicit runtime and original resume');
+ console.log('PASS fixed HBC exec reply, exact LS2 denial classification, input boundaries, root/Node gates, read-only prerequisites/status, explicit runtime and original resume');
 })().catch(function(e){console.error(e);process.exitCode=1;});

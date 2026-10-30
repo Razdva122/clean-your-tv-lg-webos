@@ -1,7 +1,7 @@
 (function(root){
  'use strict';
  var bridge=root.InstallerBridge,i18n=root.InstallerI18n,doc=root.document,content=doc.getElementById('content'),hint=doc.getElementById('hint'),key='cytv.installer.operation';
- var inspected=null,job=null,operation=null,supervisor=false,migrate=false,poll=null,busy=false,confirmation=null,opener=null,screen='checking',message=null;
+ var inspected=null,job=null,operation=null,supervisor=false,migrate=false,poll=null,busy=false,confirmation=null,opener=null,screen='checking',message=null,accessDenied=false;
  function t(k){return i18n.t(k);}
  function remember(id){if(!/^[a-f0-9]{32}$/.test(id))throw new Error('invalid_request');root.localStorage.setItem(key,id);operation=id;}
  try{var saved=root.localStorage.getItem(key);if(/^[a-f0-9]{32}$/.test(saved||''))operation=saved;}catch(_){}
@@ -15,6 +15,11 @@
  function cancel(){confirmation=null;render();focus(opener);}
  function versions(){var v=inspected&&inspected.installation&&inspected.installation.versions;if(!v)return;var node=element('p',Object.keys(v).map(function(k){return (k==='root'?'Root Home':'Root Updater')+' '+v[k];}).join(' · '));node.id='versions';content.appendChild(node);}
  function render(){
+  if(accessDenied){
+   begin('homebrew-access','homebrewDeniedTitle');paragraph('homebrewDeniedBody');
+   if(operation){paragraph('lost');content.appendChild(element('p',t('request')+': '+operation,'details'));}
+   var denied=controls();button(denied,'refresh',t('refresh'),refresh);button(denied,'close',t('close'),close);focus('refresh');return;
+  }
   if(!inspected){begin('checking','checking');return;}
   if(job){
    var pending=job.state==='pending',unknown=job.state==='unknown';
@@ -49,19 +54,19 @@
  function refresh(focusId){
   if(busy)return;busy=true;clearTimeout(poll);var previous=doc.activeElement&&doc.activeElement.id;
   bridge.inspect({prepareSupervisor:supervisor}).then(function(result){
-   inspected=result;var active=result.active_operation;
+   accessDenied=false;inspected=result;var active=result.active_operation;
    if(active&&/^[a-f0-9]{32}$/.test(active.operation||''))remember(active.operation);
    if(operation&&result.state!=='prerequisites'&&result.state!=='unsupported')return bridge.status(operation).then(function(status){
     if(status.state==='complete'&&(status.current===true||(result.state==='installed'&&result.installation&&result.installation.can_maintain===true))){job=null;if(status.action==='remove'){operation=null;try{root.localStorage.removeItem(key);}catch(_){}}}
     else job=status;
    });
    job=null;
-  }).then(function(){busy=false;render();focus(typeof focusId==='string'?focusId:previous);},function(){busy=false;if(operation){job=job||{state:'unknown'};message='lost';}else{inspected={state:'unsupported'};}render();});
+  }).then(function(){busy=false;render();focus(typeof focusId==='string'?focusId:previous);},function(error){busy=false;accessDenied=error.message==='homebrew_exec_denied';if(operation){job=job||{state:'unknown'};message='lost';}else{inspected={state:'unsupported'};}render();});
  }
  function pollStatus(){
   if(busy||!operation||doc.hidden)return;busy=true;
   var previous=doc.activeElement&&doc.activeElement.id;
-  bridge.status(operation).then(function(result){busy=false;job=result;if(result.state==='complete'&&result.current===true){job=null;refresh();return;}render();focus(previous);},function(){busy=false;message='lost';render();focus(previous);});
+  bridge.status(operation).then(function(result){busy=false;job=result;if(result.state==='complete'&&result.current===true){job=null;refresh();return;}render();focus(previous);},function(error){busy=false;accessDenied=error.message==='homebrew_exec_denied';message='lost';render();focus(previous);});
  }
  function uuid(){if(!root.crypto||!root.crypto.getRandomValues)throw new Error('secure_id_required');var bytes=new Uint8Array(16);root.crypto.getRandomValues(bytes);return Array.prototype.map.call(bytes,function(b){return ('0'+b.toString(16)).slice(-2);}).join('');}
  function submit(){
@@ -79,7 +84,7 @@
   if(action!=='install'&&action!=='remove'&&action!=='resume'){begin('checking','checking');paragraph(action==='prepare-runtime'?'runtimeBody':action==='activate'?'activateConfirm':'restoreConfirm');}
   promise.then(function(result){busy=false;if(action==='install'||action==='remove'||action==='resume'){job=result;message=null;render();return;}
    if(result.state==='complete'||result.state==='runtime_ready'){message=action==='activate'?'activationDone':action==='restore'?'restoreDone':null;refresh();}else{message='failed';inspected=result;render();}
-  },function(){busy=false;message=operation?'lost':'failed';if(operation)job=job||{state:'unknown'};render();});
+  },function(error){busy=false;accessDenied=error.message==='homebrew_exec_denied';message=operation?'lost':'failed';if(operation)job=job||{state:'unknown'};render();});
  }
  function close(){if(root.close)root.close();}
  doc.getElementById('language').onclick=function(){if(busy)return;var old=screen;begin('language','language');var list=controls();Object.keys(i18n.names).forEach(function(code){var choice=button(list,'lang-'+code,i18n.names[code],function(){i18n.set(code);render();focus('language');});choice.lang=code;});button(list,'back',t('back'),function(){screen=old;render();focus('language');});focus('lang-'+doc.documentElement.lang);};
