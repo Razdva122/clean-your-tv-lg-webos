@@ -8,16 +8,16 @@
     "sourceProfile": "https://github.com/invrnt"
   },
   "sourceRepository": "https://github.com/invrnt/tv-themes",
-  "sourceCommit": "89690d7d3fddd70664c22c0e81e4b5567a810ae3",
-  "descriptorUrl": "https://raw.githubusercontent.com/invrnt/tv-themes/f2e8c922bec7d960d9fd2c82cf2cd4828060e7b0/distributions/minimal/1.0.0/cytv-theme.json",
-  "descriptorSha256": "2711ef0de617f4e4ee13e08ae2e10c8f8cae9f10c33475e99f1c762e35d02270",
-  "themeVersion": "1.0.0",
+  "sourceCommit": "51b65fe670dde710f8409eadc238137345075e80",
+  "descriptorUrl": "https://raw.githubusercontent.com/invrnt/tv-themes/71ab7552df27b67c48100c9faf36e7e5b30ea8d8/distributions/minimal/1.0.1/cytv-theme.json",
+  "descriptorSha256": "42ba8d15fce491e2cb4474c42333ab8489c8fba5d35fd7a80513bce73351bf22",
+  "themeVersion": "1.0.1",
   "themeApiVersion": 1,
   "license": "MIT",
-  "creditsFile": "assets/invrnt--tv-themes--minimal/2711ef0de617f4e4ee13e08ae2e10c8f8cae9f10c33475e99f1c762e35d02270/documents/1-4f96effe278b5a2dff68d0c190e8131fb2277d402a0e8832513c69325d88744f.txt",
+  "creditsFile": "assets/invrnt--tv-themes--minimal/42ba8d15fce491e2cb4474c42333ab8489c8fba5d35fd7a80513bce73351bf22/documents/1-4f96effe278b5a2dff68d0c190e8131fb2277d402a0e8832513c69325d88744f.txt",
   "previewFiles": [
-    "assets/invrnt--tv-themes--minimal/2711ef0de617f4e4ee13e08ae2e10c8f8cae9f10c33475e99f1c762e35d02270/assets/preview-ac673ebcfde73a01aebea17820db511ec380ce5ca51397a6da58e9e59b390345.png",
-    "assets/invrnt--tv-themes--minimal/2711ef0de617f4e4ee13e08ae2e10c8f8cae9f10c33475e99f1c762e35d02270/assets/preview-inputs-46e5d5d271fbca12bf322cc6f135705af78a1a05475e8cac8e3eefaff4db952a.png"
+    "assets/invrnt--tv-themes--minimal/42ba8d15fce491e2cb4474c42333ab8489c8fba5d35fd7a80513bce73351bf22/assets/preview-ac673ebcfde73a01aebea17820db511ec380ce5ca51397a6da58e9e59b390345.png",
+    "assets/invrnt--tv-themes--minimal/42ba8d15fce491e2cb4474c42333ab8489c8fba5d35fd7a80513bce73351bf22/assets/preview-inputs-46e5d5d271fbca12bf322cc6f135705af78a1a05475e8cac8e3eefaff4db952a.png"
   ],
   "tags": [
     "dark",
@@ -28,7 +28,7 @@
   "evidence": [
     {
       "kind": "browser",
-      "summary": "Toolkit preview and screenshots command (No-root, Home 1.6.0 runtime from release v1.5.2): Home with dock and grid focus, header shortcut focus and the Inputs menu; standard Settings isolation captured. Physical remote behavior is not covered by the browser check."
+      "summary": "Toolkit preview and screenshots command (No-root, Home 1.6.0 runtime from release v1.5.2): Home with dock and grid focus, header shortcut focus and the Inputs menu; standard Settings isolation captured. Physical remote behavior is not covered by the browser check. 1.0.1: app library rows keep white names and a dark focus, checked in the preview."
     },
     {
       "kind": "device",

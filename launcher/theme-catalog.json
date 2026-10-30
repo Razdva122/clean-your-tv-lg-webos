@@ -39,13 +39,13 @@
     {
       "id": "github:invrnt/tv-themes:minimal",
       "title": "Minimal",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "author": "invrnt",
       "license": "MIT",
       "description": "Pure black, four large cards with no dock band, soft shadows and a quiet header without the greeting.",
-      "preview": "theme-catalog/invrnt--tv-themes--minimal/2711ef0de617f4e4ee13e08ae2e10c8f8cae9f10c33475e99f1c762e35d02270/preview.png",
-      "url": "https://raw.githubusercontent.com/invrnt/tv-themes/f2e8c922bec7d960d9fd2c82cf2cd4828060e7b0/distributions/minimal/1.0.0/cytv-theme.json",
-      "digest": "2711ef0de617f4e4ee13e08ae2e10c8f8cae9f10c33475e99f1c762e35d02270"
+      "preview": "theme-catalog/invrnt--tv-themes--minimal/42ba8d15fce491e2cb4474c42333ab8489c8fba5d35fd7a80513bce73351bf22/preview.png",
+      "url": "https://raw.githubusercontent.com/invrnt/tv-themes/71ab7552df27b67c48100c9faf36e7e5b30ea8d8/distributions/minimal/1.0.1/cytv-theme.json",
+      "digest": "42ba8d15fce491e2cb4474c42333ab8489c8fba5d35fd7a80513bce73351bf22"
     },
     {
       "id": "github:razdva122/clean-your-tv-lg-theme:itachi",
