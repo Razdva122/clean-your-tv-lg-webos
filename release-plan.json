@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": null,
+  "version": "1.5.3",
   "changes": [
     {
       "pr": 117,
@@ -52,6 +52,11 @@
         164
       ],
       "summary": "Keep diagnostic report guidance visible alongside failed prerequisite checks; follow-up to #175, original #160 and #164 runtime reports remain unresolved"
+    },
+    {
+      "pr": 184,
+      "issues": [],
+      "summary": "Retain the Android native runner for candidate verification"
     }
   ],
   "excluded": [],

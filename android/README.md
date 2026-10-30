@@ -1,6 +1,6 @@
 # Install Clean Your TV from Android
 
-> Unpublished 1.5.0 candidate: Android 0.5.0 / versionCode 15. See the [release scope and pending acceptance](../docs/RELEASE-1.5.0.md). Published stable is 1.4.1 (Android 0.4.1 / versionCode 14); historical acceptance below retains its original scope.
+> Unpublished 1.5.3 candidate: Android 0.5.1 / versionCode 16. See the [release scope and pending acceptance](../docs/RELEASE-1.5.3.md). Published stable is 1.5.2 (Android 0.5.0 / versionCode 15); historical acceptance below retains its original scope.
 
 Use your phone to install either **No-root** (Developer Mode) or **Root**
 (existing root SSH) on an LG webOS TV. No PC, Termux, phone Python installation

@@ -187,9 +187,11 @@ maintainer confirmation and its evidence limits. Original-device checks remain
 separate.
 
 
-## Explicit package permission repair (candidate)
+<a id="explicit-package-permission-repair-candidate"></a>
 
-The unpublished candidate adds an explicit maintenance option for an installed
+## Explicit package permission repair (1.5.0+)
+
+Installers since 1.5.0 provide an explicit maintenance option for an installed
 Root package whose own SDK directories retained group/other write permissions:
 
 ```sh

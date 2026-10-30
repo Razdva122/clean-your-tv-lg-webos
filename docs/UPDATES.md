@@ -5,8 +5,10 @@
 **Existing Root installations:** published 1.4.0 is incompatible with the original
 1.3.0 System Updater destination inventory. Do not force that update or edit
 private pins. An aborted pre-replacement attempt installed nothing; retain its
-journal. The [next candidate correction](development/ROOT-OTA-13-COMPATIBILITY.md)
-is unpublished and still needs physical update/rollback acceptance.
+journal. The [supported replacement preparation](development/ROOT-OTA-13-COMPATIBILITY.md)
+was delivered in 1.5.0. Use its verified recovery/replacement boundary; do not
+force an old retained supervisor to accept incompatible destinations. New
+candidate artifacts still need their own affected update/rollback acceptance.
 
 ## Choose your update method
 

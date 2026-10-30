@@ -315,9 +315,11 @@ a compatible TV loader/libc and additional staging space; it does not replace
 Node.js, root services or input compatibility. [Runtime details](OPTIONAL-PYTHON.md).
 Status, doctor, restore and uninstall never download a new interpreter.
 
-## Candidate Root System Updater replacement
+<a id="candidate-root-system-updater-replacement"></a>
 
-The unpublished 1.5.0 Root candidate contains System Updater 1.1.2. The explicit
+## Root System Updater replacement
+
+Root installers since 1.5.0 contain System Updater 1.1.2. The explicit
 replacement command accepts an installed 1.1.0 or 1.1.1 after verifying its
 retained code, owner package, registration and finished recovery state.
 With the existing trusted Root connection:

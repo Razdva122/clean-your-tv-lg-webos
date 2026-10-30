@@ -1,6 +1,6 @@
 {
   "id": "com.local.nativehome",
-  "version": "0.6.20",
+  "version": "0.6.21",
   "type": "native",
   "main": "detach",
   "title": "Home Helper",

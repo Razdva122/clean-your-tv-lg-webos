@@ -6,7 +6,7 @@
 
 [文件導覽](../README.md) · [回報問題](../FEEDBACK.md)
 
-本指南適用於已發佈的 **[1.4.1](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.4.1)**。C3 驗收僅涵蓋已記錄的電源、Home、焦點、保持關閉狀態及手動回復版本測試。其他電視、eARC 音訊和實體 Android 裝置仍未驗證；安裝成功不代表相容。[測試範圍（英文）](../RELEASE-1.4.0-ACCEPTANCE.md)。
+本指南適用於已發佈的 **[1.5.2](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.5.2)**。C3 驗收僅涵蓋已記錄的電源、Home、焦點、保持關閉狀態及手動回復版本測試。其他電視、eARC 音訊和實體 Android 裝置仍未驗證；安裝成功不代表相容。[測試範圍（英文）](../RELEASE-1.4.0-ACCEPTANCE.md)。
 
 **尚未發布的安裝程式：**主控台、桌面與 Android 介面會分別顯示電視檢查狀態：未檢查、正在檢查、通過、未通過或無法驗證。出錯後仍保留結果。Node.js/Python 檢查針對電視的執行環境；`doctor` 不會準備 Python，也不會要求遙控配對。重試前請儲存報告。
 
@@ -93,17 +93,17 @@ No-root 1.5.0：從待機喚醒後，Helper 可嘗試恢復暫時的 watchdog �
 
 開啟 Home 設定 → 軟體更新，確認前檢查提供的版本。即使使用 No-root 版本，在電視上更新和回復版本也需要 **root、Homebrew Channel** 以及事先準備好的配套更新基礎設施。無 root 電視請用電腦安裝程式。完整系統更新的準備是單獨明確執行的操作，請參閱[更新（英文）](../UPDATES.md)。復原介面顯示儲存的回復版本；回復可能遺失之後的設定變更。
 
-**現有 1.3.0 安裝：**由於允許的檔案清單改變，原有 System Updater 無法套用 1.4.0。如果嘗試在替換前停止，請保留記錄並停止操作；不要清除狀態或盲目重試。遷移需經過檢查的復原流程和全新 1.4.0 設定；只更新應用程式不會取代保留的 Root 驅動程式。下一次 OTA 修正**尚未發佈**。[遷移與復原（英文）](../UPDATES.md#one-time-computer-preparation)。
+**現有 1.3.0 安裝：**原有 System Updater 可能拒絕基礎設施變更。請保留中斷操作，遵循 1.5.0+ 文件中的已驗證復原與替換準備流程；不要清除記錄或盲目重試。僅更新應用程式不會取代固定的 Root 基礎設施。[遷移與復原（英文）](../UPDATES.md#one-time-computer-preparation)。
 
-Home 設定通訊修正尚未發布：有配套候選版本後，請同時更新 Home 與 Helper。只更新 Home 無法套用此修正。最終發布組建的電視實機驗證仍待完成。 [#146](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/146).
+Home 設定通訊修正已在 1.5.0 發布。請使用配套的已發布安裝程式同時更新 Home 和 Helper；僅更新 Home 不會變更 Helper。驗證範圍仍限於已記錄的機型。 [#146](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/146).
 
 Root HDMI 聲音復原是實驗功能，**預設關閉**，僅在需要時自行啟用。它可能中斷正常音訊，並不證明 eARC 相容性。[聲音復原（英文）](../development/ROOT-AUDIO-RECOVERY.md)。獨立的 **Homebrew CYTV Installer 尚未發佈**；請使用已發佈的電腦或 Android 安裝程式。
 
 Homebrew Channel 拒絕此安裝程式存取。在 webOS 11 上，Homebrew 0.7.3 需要開發者提供相容性更新。在受支援的 Homebrew 版本包含此修正前，請使用已發布的電腦或 Android 安裝程式。 [#116](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/116).
 
-僅限未發布候選版：若舊 Root 目錄的可寫入權限導致韌體 API 存取遭拒，可明確執行 `cytv enable-firmware-access --edition root --repair-package-permissions`。指令會先以可信的私人套件記錄驗證目前檔案，再僅移除 Root 自有路徑的群組及其他使用者寫入權限。遇到未知或已修改檔案便停止；保留個人設定、Home 選擇和韌體封鎖設定。[修復詳情（英文）](../LG-FIRMWARE-UPDATES.md#explicit-package-permission-repair-candidate)。
+1.5.0+: 若舊 Root 目錄的可寫入權限導致韌體 API 存取遭拒，可明確執行 `cytv enable-firmware-access --edition root --repair-package-permissions`。指令會先以可信的私人套件記錄驗證目前檔案，再僅移除 Root 自有路徑的群組及其他使用者寫入權限。遇到未知或已修改檔案便停止；保留個人設定、Home 選擇和韌體封鎖設定。[修復詳情（英文）](../LG-FIRMWARE-UPDATES.md#explicit-package-permission-repair-candidate)。
 
-僅限未發布候選版：`cytv recover-system-rollback --edition root` 僅用於已驗證的 Root 回復版本：所有套件安裝程式均已完成，但啟動器就緒等待逾時。必須由真正的啟動器傳送就緒訊號；安裝結果不明時拒絕恢復。保留套件、固定程式碼和金鑰、失敗證據及明確關閉的 Home 控制狀態，並以私人記錄保存有時限的嘗試。 一般重試不會延長時限。僅在先前的 120 秒到期、沒有已接受的就緒訊號且不存在不明安裝結果後，才可用 `--new-recovery-attempt` 按 UUID/雜湊封存完整舊記錄，並明確開始新嘗試。已完成的恢復不會重新開始，也不會自動連續重試。 [流程與限制（英文）](../RECOVERY.md#root-system-rollback-readiness-candidate)。
+1.5.0+: `cytv recover-system-rollback --edition root` 僅用於已驗證的 Root 回復版本：所有套件安裝程式均已完成，但啟動器就緒等待逾時。必須由真正的啟動器傳送就緒訊號；安裝結果不明時拒絕恢復。保留套件、固定程式碼和金鑰、失敗證據及明確關閉的 Home 控制狀態，並以私人記錄保存有時限的嘗試。 一般重試不會延長時限。僅在先前的 120 秒到期、沒有已接受的就緒訊號且不存在不明安裝結果後，才可用 `--new-recovery-attempt` 按 UUID/雜湊封存完整舊記錄，並明確開始新嘗試。已完成的恢復不會重新開始，也不會自動連續重試。 [流程與限制（英文）](../RECOVERY.md#root-system-rollback-readiness-candidate)。
 
 1.5.0：替換套件包含 System Updater 1.1.2。電視 OTA 前，請明確執行 `cytv replace-system-updater --edition root` 替換 1.1.0 或 1.1.1。只替換 System Updater，保留 Root/Root Updater 應用程式、完整設定和 Home 選擇，並封存舊狀態。結果不明或尚未完成的操作會阻止替換。此要求不限制 No-root 更新來源。[替換流程（英文）](../RECOVERY.md#replace-the-root-system-updater-candidate)。
 

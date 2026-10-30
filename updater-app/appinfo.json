@@ -1,6 +1,6 @@
 {
   "id": "com.cleanyourtv.updater",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "vendor": "Clean Your TV",
   "type": "web",
   "main": "index.html",
