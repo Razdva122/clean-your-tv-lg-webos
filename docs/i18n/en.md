@@ -19,7 +19,9 @@ Root requires working Settings Service and System Profile Home interfaces (`com.
 
 Keep the TV on and the computer on the same trusted local network. No always-on computer is needed afterward. Compatibility depends on model, firmware and remote; Root has outstanding hardware checks.
 
-No-root Helper needs TV Node.js **0.12.2+**. Root needs Node.js **8+** and working Python **3.9+**. Setup can download a verified private Python if needed; initial staging needs **320 MiB** free. It does not replace system Python. Keep runtime slots used by recovery. [Optional Python (English)](../OPTIONAL-PYTHON.md). Developer Mode auto-renewal is **Beta, off by default**, and real renewal on unrooted TVs is not confirmed; keep checking the official timer.
+Node 0.10.25 support is for the unpublished source/test build; published installers still require 0.12.2+. See [compatibility](../COMPATIBILITY.md).
+
+No-root Helper needs TV Node.js **0.10.25+**. Root needs Node.js **8+** and working Python **3.9+**. Setup can download a verified private Python if needed; initial staging needs **320 MiB** free. It does not replace system Python. Keep runtime slots used by recovery. [Optional Python (English)](../OPTIONAL-PYTHON.md). Developer Mode auto-renewal is **Beta, off by default**, and real renewal on unrooted TVs is not confirmed; keep checking the official timer.
 
 ### Developer Mode setup (No-root)
 

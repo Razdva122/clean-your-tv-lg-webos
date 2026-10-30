@@ -19,7 +19,9 @@ Root wymaga działających interfejsów Home usług Settings Service i System Pr
 
 Włącz telewizor i połącz go z tą samą zaufaną siecią lokalną co komputer. Później komputer może być wyłączony. Zgodność zależy od modelu, oprogramowania i pilota; Root ma nieukończone testy sprzętowe.
 
-No-root Helper wymaga Node.js **0.12.2+** na TV. Root wymaga Node.js **8+** i działającego Pythona **3.9+**. W razie potrzeby instalator pobierze zweryfikowanego prywatnego Pythona; początkowe przygotowanie wymaga **320 MiB** wolnego miejsca. Nie zastępuje Pythona systemowego. Zachowaj środowiska potrzebne do odzyskiwania. [Python (angielski)](../OPTIONAL-PYTHON.md). Odnawianie Developer Mode to **Beta, domyślnie wyłączona**; rzeczywiste odnawianie bez roota nie zostało potwierdzone. Nadal sprawdzaj oficjalny licznik.
+Node 0.10.25 dotyczy nieopublikowanej kompilacji źródłowej/testowej; opublikowane instalatory nadal wymagają 0.12.2+. Zobacz [zgodność](../COMPATIBILITY.md).
+
+No-root Helper wymaga Node.js **0.10.25+** na TV. Root wymaga Node.js **8+** i działającego Pythona **3.9+**. W razie potrzeby instalator pobierze zweryfikowanego prywatnego Pythona; początkowe przygotowanie wymaga **320 MiB** wolnego miejsca. Nie zastępuje Pythona systemowego. Zachowaj środowiska potrzebne do odzyskiwania. [Python (angielski)](../OPTIONAL-PYTHON.md). Odnawianie Developer Mode to **Beta, domyślnie wyłączona**; rzeczywiste odnawianie bez roota nie zostało potwierdzone. Nadal sprawdzaj oficjalny licznik.
 
 ### Konfiguracja Developer Mode (No-root)
 

@@ -105,10 +105,11 @@ class BuildAssetsTests(unittest.TestCase):
                 target = Path(directory) / name
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_bytes(raw)
-            result = subprocess.run([os.environ.get('NODE012', 'node'), '-e',
-                'var secure=require(process.argv[1]);if(typeof secure!=="function"||typeof Object.assign!=="function"||typeof Promise!=="function")process.exit(1);',
-                str(Path(directory) / prefix / 'state-permissions.js')], capture_output=True)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            for runtime in dict.fromkeys(filter(None, ['node', os.environ.get('NODE010'), os.environ.get('NODE012')])):
+                result = subprocess.run([runtime, '-e',
+                    'var secure=require(process.argv[1]);if(typeof secure!=="function"||typeof Object.assign!=="function"||typeof Promise!=="function")process.exit(1);',
+                    str(Path(directory) / prefix / 'state-permissions.js')], capture_output=True)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn(b"require('./state-permissions')", files[prefix + 'service.js'])
         self.assertNotIn('state-permissions.js', service, 'Do not mutate the source mapping')
 

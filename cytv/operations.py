@@ -405,9 +405,9 @@ with os.fdopen(f,'rb') as stream:
             if not supported:
                 raise UserError('The bundled Home Helper requires ARM32. A compatible TV runtime could not be confirmed.')
             if install:
-                node = self.remote.run('if /usr/bin/node -e \'var v=process.versions.node.split(".").map(Number);process.exit(v[0]>0||v[1]>12||(v[1]===12&&v[2]>=2)?0:1)\'; then printf CYTV_NODE_READY; fi')
+                node = self.remote.run('if /usr/bin/node -e \'var v=process.versions.node.split(".").map(Number);process.exit(v[0]>0||v[1]>10||(v[1]===10&&v[2]>=25)?0:1)\'; then printf CYTV_NODE_READY; fi')
                 if node.strip() != 'CYTV_NODE_READY':
-                    raise UserError('Home Helper requires TV Node.js 0.12.2 or newer. Installation has not started.')
+                    raise UserError('Home Helper requires TV Node.js 0.10.25 or newer. Installation has not started.')
             root_state = self.remote.run(
                 'if [ -e /var/webos-profile/override/clean-your-tv-root.json ] || '
                 '[ -L /var/webos-profile/override/clean-your-tv-root.json ]; then printf CYTV_ROOT_STATE; fi')

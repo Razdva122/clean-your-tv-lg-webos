@@ -7,10 +7,16 @@ an IPK does not prove that Home, recovery or startup works on a particular TV.
 
 ## TV requirements
 
+The Node 0.10.25 minimum below applies to the unpublished source/test build for
+[#152](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/152).
+Published installers still require Node 0.12.2+. Host runtime tests do not
+establish EF950V launcher, input, Home routing, standby, cold-boot or recovery
+compatibility. Use the matching test installer; do not bypass an older gate.
+
 | | No-root | Root |
 | --- | --- | --- |
 | Access | Active LG Developer Mode, Key Server and local networking | Existing root, trusted root SSH and compatible Homebrew services |
-| TV runtime | Node.js 0.12.2+ for the compiled Helper | Node.js 8+ and Python 3.9+ with the required modules |
+| TV runtime | Node.js 0.10.25+ for the compiled Helper | Node.js 8+ and Python 3.9+ with the required modules |
 | Input | Compatible remote devices and native input access | Supported ARM32 userspace and compatible Magic Remote input |
 | Ongoing requirement | Keep Developer Mode active and Helper pairing/networking available | Keep independent recovery services and their referenced runtime intact |
 

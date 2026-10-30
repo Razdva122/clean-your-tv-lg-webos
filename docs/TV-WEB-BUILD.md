@@ -108,7 +108,7 @@ performance or Home-button compatibility.
 
 ## Helper Node compatibility
 
-`scripts/helper_build.py` and `scripts/compile-helper.cjs` target **Node 0.12**
+`scripts/helper_build.py` and `scripts/compile-helper.cjs` target **Node 0.10**
 independently of Browserslist. Both `build-cytv.py` and `build.sh` compile the
 Helper app and its status/inventory service, including vendored JS. Every
 emitted `.js` file passes an ES5 parse check. Babel always runs, including on
@@ -124,14 +124,24 @@ ws 7.5.11; see its retained source notes. SSAP clients disable compression and
 keep their handshake/payload limits. TV-provided webos-service remains external.
 Published historical Helper baselines retain their original bytes.
 
-Run `node tests/helper-compat.cjs` with current Node, or set `NODE012` to a
-Node 0.12.2 executable. The regression compiles the actual Helper sources,
+Run `node tests/helper-compat.cjs` with current Node; set `NODE010` to Node
+0.10.25 and `NODE012` to Node 0.12.2 to test all three runtimes. The regression
+compiles the actual Helper sources, exercises real pairing-key replacement
+using bounded descriptor reads (Node 0.10 cannot use `readFileSync(fd)`),
 exercises controller startup/error handling with TV hardware/Luna substitutes,
 and service status/listApps, and performs a real local WSS register/subscribe,
 fragmented text, ping/pong and close exchange. Invalid UTF-8 and oversized
 payloads must be rejected. CI downloads a SHA-256-pinned official Linux x64
-Node 0.12.2 archive. Packaged service tests also use that runtime when available.
+Node 0.10.25 and 0.12.2 archives. Packaged service tests also use those runtimes
+when available. The legacy WebSocket imports the named EventEmitter constructor
+and skips optional TLS write batching when unavailable on Node 0.10.
 This verifies Node compatibility, not access to a TV's evdev devices.
+
+Node 0.10.25 support is an unpublished source/test-build change for issue #152.
+The EF950V reporter confirmed the computer-to-TV connection in v1.5.0, but the
+published installer stopped before installation on that runtime. Launcher,
+Home/Back, emergency release, standby, cold boot and recovery still require
+separate physical-device acceptance; do not bypass the published version gate.
 
 References: [LG engine versions](https://webostv.developer.lge.com/develop/specifications/web-api-and-web-engine),
 [Babel preset-env](https://babeljs.io/docs/babel-preset-env),
