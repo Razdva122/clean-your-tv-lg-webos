@@ -77,6 +77,18 @@
       "pr": 191,
       "issues": [],
       "summary": "Separate theme settings and expose language and column choices"
+    },
+    {
+      "pr": 192,
+      "issues": [
+        152
+      ],
+      "summary": "Avoid false active Helper detection with legacy grep and retain bounded LS2 failures; partial #152, original installation/control report and target-device acceptance remain unresolved"
+    },
+    {
+      "pr": 193,
+      "issues": [],
+      "summary": "Refresh README and retire the standalone theme catalogue page"
     }
   ],
   "excluded": [],

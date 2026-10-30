@@ -1,16 +1,24 @@
 # v1.5.3 — Ribbon, installer checks and legacy Helper runtime
 
-Status: unpublished candidate. The maintainer approved adding Ribbon to 1.5.3
-and rebuilding after the remaining planned PRs are integrated. The intermediate
-build was cancelled at the maintainer’s request. The prior successful build and
-[verification report](history/2026-10-30-release-1.5.3-final-verification.md)
-remain historical evidence for their original artifacts. The expanded candidate
-requires a new complete build and affected acceptance; see the
-[scope reset record](history/2026-10-30-release-1.5.3-ribbon-rescope.md).
-Physical TV acceptance, the new Helper transition and the unresolved standby
-decision remain pending. This release must not be presented as universal TV compatibility.
+Status: unpublished, combined candidate frozen after integration of the remaining
+planned PRs. One complete rebuild is required before artifact verification and
+owner-present TV acceptance; see the [combined freeze record](history/2026-10-31-release-1.5.3-combined-freeze.md).
+The previous successful build and [verification report](history/2026-10-30-release-1.5.3-final-verification.md)
+remain historical evidence for their original artifacts. Physical TV acceptance,
+the new Helper transition and the unresolved standby decision remain pending.
+This release must not be presented as universal TV compatibility.
 
 ## Changes
+
+- #193: refresh the Ribbon README screenshot and link theme browsing to the main
+  interactive preview. Remove the standalone public theme catalogue page and its
+  navigation link; on-TV Showcase and offline author review remain available.
+- #192 (#152): avoid false active-Helper detection when legacy grep ignores exact
+  matching, preserving real-process and uncertain-state guards. Add bounded LS2
+  diagnostic categories. Original EF950V installation/control failures remain
+  unresolved; reporter history and target-device confirmation are still needed.
+- #189: use smaller complete GitHub job pages for signed Root QA admission while
+  retaining exact-attempt, source, package and signature verification.
 
 - #191: separate Appearance layout/app controls from Themes, add ID-first theme installation, show the effective Columns count and place language choices directly in their category. Remote navigation, delayed-status focus and twelve-language browser checks passed; physical TV acceptance remains pending.
 
@@ -81,7 +89,7 @@ separate unresolved work. The independent Homebrew Installer stays unreleased
 with promotion disabled.
 
 The previous selected build was run 41095949258 / attempt 2. Its pin was removed
-when Ribbon expanded the frozen scope; a new complete build must be selected.
+when the scope expanded; the final combined complete build must be selected.
 Remaining work is to record scoped controls,
 startup, UI and update/rollback results and satisfy Release
 policy before main/publication. No new physical compatibility, phone test,
