@@ -1,7 +1,8 @@
-# Home installation gates (unreleased source changes)
+# Home installation gates
 
-Related issues: #140, #133. These changes target the next integration cycle;
-they are not present in the immutable published Helper 0.6.19 package.
+Related issues: #140, #133. The controller-state and firmware gates shipped in
+v1.5.0; immutable Helper 0.6.19 does not contain them. The Node 0.10.25 target
+below is an unpublished follow-up for #152.
 
 ## No-root controller state
 
@@ -45,7 +46,7 @@ Root compatibility support and has no target-TV acceptance yet.
 
 At candidate freeze select a new Helper version, synchronize manifests and
 release metadata, and build it from source: builders deliberately reuse the
-published baseline when the Helper version remains 0.6.19. Rebuild the affected
+published baseline when the Helper version remains unchanged. Rebuild the affected
 Root/Root Updater code bundles and installers as well. The signed Helper
 transition also needs a new Home candidate and an explicitly tested rollback
 compatibility archive pin: changing `native.js` is outside the narrow
@@ -54,7 +55,7 @@ changed during this preparation.
 
 Run `scripts/test.sh`, including ownership fixtures, controller/emergency tests
 and Root preflight tests. The multi-UID kernel test requires Linux root and runs
-in CI; macOS reports it skipped. Helper compilation targets Node 0.12.2+, with
-`NODE012` needed to validate that exact runtime. Automated checks are not device
+in CI; macOS reports it skipped. Current Helper source targets Node 0.10.25+;
+set `NODE010` and `NODE012` to validate the exact Node 0.10.25 and 0.12.2 runtimes. Automated checks are not device
 acceptance. Fresh-install Home, Back, triple-Home, pairing-backed monitoring,
 standby, cold boot and recovery/removal need separate target-TV validation.

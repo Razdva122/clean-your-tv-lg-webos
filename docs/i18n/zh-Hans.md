@@ -23,7 +23,9 @@ Root 需要可用的 Settings Service 和 System Profile Home 接口（`com.webo
 
 安装期间保持电视开机，将电脑与电视连接到同一个可信本地网络。完成后无需电脑持续开机。兼容性取决于型号、固件和遥控器；Root 仍有待完成的实机检查。
 
-No-root Helper 需要电视 Node.js **0.12.2+**。Root 需要 Node.js **8+** 及可用的 Python **3.9+**。如有需要，安装程序会下载经验证的专用 Python；首次准备需要 **320 MiB** 可用空间。它不会替换系统 Python。请保留恢复功能引用的运行环境。[Python 说明（英文）](../OPTIONAL-PYTHON.md)。Developer Mode 自动续期为 **Beta，默认关闭**；无 root 电视上的实际续期尚未确认，请继续检查官方计时器。
+Node 0.10.25 支持仅适用于尚未发布的源码/测试构建；已发布的安装程序仍要求 0.12.2+。参见[兼容性](../COMPATIBILITY.md)。
+
+No-root Helper 需要电视 Node.js **0.10.25+**。Root 需要 Node.js **8+** 及可用的 Python **3.9+**。如有需要，安装程序会下载经验证的专用 Python；首次准备需要 **320 MiB** 可用空间。它不会替换系统 Python。请保留恢复功能引用的运行环境。[Python 说明（英文）](../OPTIONAL-PYTHON.md)。Developer Mode 自动续期为 **Beta，默认关闭**；无 root 电视上的实际续期尚未确认，请继续检查官方计时器。
 
 ### 设置 Developer Mode（No-root）
 

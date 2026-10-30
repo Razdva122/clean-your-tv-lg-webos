@@ -23,7 +23,9 @@ Root benötigt funktionierende Home-Schnittstellen von Settings Service und Syst
 
 Fernseher einschalten und mit demselben vertrauenswürdigen Heimnetz wie den Computer verbinden. Danach muss der Computer nicht eingeschaltet bleiben. Die Kompatibilität hängt von Modell, Firmware und Fernbedienung ab; für Root stehen noch Gerätetests aus.
 
-No-root Helper benötigt TV-Node.js **0.12.2+**. Root benötigt Node.js **8+** und funktionierendes Python **3.9+**. Bei Bedarf lädt der Installer ein geprüftes privates Python; die erste Vorbereitung braucht **320 MiB** freien Platz. System-Python wird nicht ersetzt. Für die Wiederherstellung benötigte Laufzeitversionen behalten. [Python (Englisch)](../OPTIONAL-PYTHON.md). Developer-Mode-Verlängerung ist **Beta, standardmäßig aus**; echte Verlängerung ohne Root ist nicht bestätigt. Den offiziellen Timer weiterhin prüfen.
+Node 0.10.25 gilt für den unveröffentlichten Quell-/Testbuild; veröffentlichte Installer benötigen weiterhin 0.12.2+. Siehe [Kompatibilität](../COMPATIBILITY.md).
+
+No-root Helper benötigt TV-Node.js **0.10.25+**. Root benötigt Node.js **8+** und funktionierendes Python **3.9+**. Bei Bedarf lädt der Installer ein geprüftes privates Python; die erste Vorbereitung braucht **320 MiB** freien Platz. System-Python wird nicht ersetzt. Für die Wiederherstellung benötigte Laufzeitversionen behalten. [Python (Englisch)](../OPTIONAL-PYTHON.md). Developer-Mode-Verlängerung ist **Beta, standardmäßig aus**; echte Verlängerung ohne Root ist nicht bestätigt. Den offiziellen Timer weiterhin prüfen.
 
 ### Developer Mode einrichten (No-root)
 

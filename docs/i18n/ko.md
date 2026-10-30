@@ -23,7 +23,9 @@ Root에는 Settings Service 및 System Profile (`com.webos.service.systemprofile
 
 TV를 켜고 컴퓨터와 같은 신뢰할 수 있는 로컬 네트워크에 연결하세요. 설치 후에는 컴퓨터를 꺼도 됩니다. 호환성은 모델, 펌웨어, 리모컨에 따라 다릅니다. Root는 실제 기기 검증이 남아 있습니다.
 
-No-root Helper에는 TV Node.js **0.12.2+**가 필요합니다. Root에는 Node.js **8+**와 정상 작동하는 Python **3.9+**가 필요합니다. 필요하면 설치 프로그램이 검증된 전용 Python을 다운로드하며, 초기 준비에는 **320 MiB** 여유 공간이 필요합니다. 시스템 Python을 교체하지 않습니다. 복구에 쓰이는 런타임은 보관하세요. [Python 안내(영어)](../OPTIONAL-PYTHON.md). Developer Mode 자동 갱신은 **Beta이며 기본적으로 꺼져 있습니다**. root 없는 TV의 실제 갱신은 확인되지 않았으므로 공식 타이머를 계속 확인하세요.
+Node 0.10.25 지원은 미출시 소스/테스트 빌드에 해당합니다. 출시된 설치 프로그램은 여전히 0.12.2+가 필요합니다. [호환성](../COMPATIBILITY.md)을 참조하세요.
+
+No-root Helper에는 TV Node.js **0.10.25+**가 필요합니다. Root에는 Node.js **8+**와 정상 작동하는 Python **3.9+**가 필요합니다. 필요하면 설치 프로그램이 검증된 전용 Python을 다운로드하며, 초기 준비에는 **320 MiB** 여유 공간이 필요합니다. 시스템 Python을 교체하지 않습니다. 복구에 쓰이는 런타임은 보관하세요. [Python 안내(영어)](../OPTIONAL-PYTHON.md). Developer Mode 자동 갱신은 **Beta이며 기본적으로 꺼져 있습니다**. root 없는 TV의 실제 갱신은 확인되지 않았으므로 공식 타이머를 계속 확인하세요.
 
 ### Developer Mode 설정 (No-root)
 

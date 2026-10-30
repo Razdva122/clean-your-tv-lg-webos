@@ -29,11 +29,12 @@ try {
   cp.execFileSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '1',
     '-subj', '/CN=localhost', '-keyout', path.join(output, 'test-key.pem'),
     '-out', path.join(output, 'test-cert.pem')], {stdio: 'pipe'});
-  const runtime = process.env.NODE012 || process.execPath;
-  const result = cp.spawnSync(runtime, [path.resolve('tests/helper-runtime.js'), output], {encoding: 'utf8', timeout: 30000});
-  assert.equal(result.status, 0, result.stdout + result.stderr);
-  assert.match(result.stdout, /PASS Helper runtime/);
-  console.log(result.stdout.trim());
+  for (const runtime of new Set([process.execPath, process.env.NODE010, process.env.NODE012].filter(Boolean))) {
+    const result = cp.spawnSync(runtime, [path.resolve('tests/helper-runtime.js'), output], {encoding: 'utf8', timeout: 30000});
+    assert.equal(result.status, 0, runtime + '\n' + result.stdout + result.stderr);
+    assert.match(result.stdout, /PASS Helper runtime/);
+    console.log(result.stdout.trim());
+  }
   cp.execFileSync(process.execPath, ['--test', 'tests/controller-watchdog.cjs'], {env: {...process.env, HELPER_CONTROLLER_ROOT: output}, stdio: 'pipe'});
   console.log('PASS compiled Helper watchdog recovery and stop regressions');
 } finally {
