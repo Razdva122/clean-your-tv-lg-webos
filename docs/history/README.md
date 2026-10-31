@@ -8,6 +8,7 @@ one model or artifact does not certify later releases or a different TV.
 
 ## Scoped feature checks
 
+- [No-root recovery and legacy WebKit, 2026-10-31](2026-10-31-ef950-recovery-webkit.md): integrated source/host checks for #212; original #152 device recovery and controls remain unverified.
 - [Supervised 1.5.0 candidate findings, 2026-10-30](2026-10-30-supervised-candidate-findings.md): owner observations and installed-TV automation; eight regressions remain separate from later fixes.
 - [Unattended candidate preparation, 2026-10-30](2026-10-30-unattended-candidate-readiness.md): exact artifact/host checks and their remaining device gates.
 - [Exact Helper 0.6.20 limited-evidence approval, 2026-10-30](2026-10-30-helper-0.6.20-approval.md): owner-approved package/archive/rollback pins and explicitly untested physical No-root scope.

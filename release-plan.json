@@ -1,7 +1,15 @@
 {
   "schema": 1,
   "version": null,
-  "changes": [],
+  "changes": [
+    {
+      "pr": 212,
+      "issues": [
+        152
+      ],
+      "summary": "Guarded No-root Helper stop after service refusal and prefixed WebKit layouts; #152 actual device recovery/control acceptance remains pending"
+    }
+  ],
   "excluded": [],
   "acceptance": ""
 }
