@@ -180,6 +180,63 @@ class ShutdownTests(IntegrationTests):
   super().setUp()
   boot=patch('intent_runtime.boot_identity',return_value='boot-a')
   boot.start();self.addCleanup(boot.stop)
+ def decision(self,proof=False,home=True,failsafe=False,unknown=False,reason='observer_exit'):
+  import io
+  from contextlib import redirect_stdout
+  from types import SimpleNamespace
+  from unittest.mock import Mock
+  from persistent_recovery import bound_exit
+  flag=SimpleNamespace(exists=Mock(return_value=failsafe));output=io.StringIO()
+  with patch.object(d,'home_present',return_value=home),patch.object(d,'FAILSAFE',flag),patch('intent_runtime.boot_identity',return_value='boot-a',side_effect=ValueError('unavailable') if unknown else None),patch('shutdown_state.stopping',return_value=proof) as stopping,redirect_stdout(output):
+   self.assertTrue(bound_exit('route-a',reason=reason))
+  events=[json.loads(line) for line in output.getvalue().splitlines() if line.startswith('{')]
+  event=next(value for value in events if value.get('event')=='bound-exit-decision')
+  self.assertTrue({'home_present','failsafe_present','current_session_known','same_session','shutdown_proof'}<=set(event),'Decision diagnostics missing')
+  return event,stopping.call_args_list,flag.exists.call_count
+
+ def test_decision_reports_false_proof_once_and_still_disables(self):
+  event,calls,_=self.decision(proof=False)
+  self.assertEqual(event['shutdown_proof'],False);self.assertEqual(len(calls),1)
+  self.assertEqual(calls[0].args,('route-a',));self.assertFalse(event['shutdown'])
+  self.assertTrue(event['home_present']);self.assertFalse(event['failsafe_present'])
+  self.assertTrue(event['current_session_known']);self.assertTrue(event['same_session'])
+  self.assertFalse(self.store.read()['enabled']);self.assertEqual(self.read(),self.baseline)
+
+ def test_decision_reports_true_proof_once_and_still_retains(self):
+  event,calls,_=self.decision(proof=True)
+  self.assertTrue(event['shutdown_proof']);self.assertTrue(event['shutdown']);self.assertEqual(len(calls),1)
+  self.assertEqual(self.store.read()['phase'],'stopping');self.assertTrue(self.store.read()['enabled'])
+  self.assertTrue(self.target.exists())
+
+ def test_decision_reports_failsafe_without_reading_power_proof(self):
+  event,calls,reads=self.decision(failsafe=True)
+  self.assertTrue(event['failsafe_present']);self.assertIsNone(event['shutdown_proof'])
+  self.assertEqual(calls,[]);self.assertEqual(reads,1);self.assertFalse(event['shutdown'])
+  self.assertFalse(self.store.read()['enabled']);self.assertEqual(self.read(),self.baseline)
+
+ def test_decision_reports_unknown_session_without_reading_power_proof(self):
+  event,calls,_=self.decision(unknown=True)
+  self.assertFalse(event['current_session_known']);self.assertIsNone(event['same_session'])
+  self.assertIsNone(event['shutdown_proof']);self.assertEqual(calls,[])
+  self.assertFalse(self.store.read()['enabled']);self.assertEqual(self.read(),self.baseline)
+
+ def test_decision_preserves_home_missing_short_circuit(self):
+  event,calls,reads=self.decision(home=False)
+  self.assertFalse(event['home_present']);self.assertIsNone(event['failsafe_present'])
+  self.assertIsNone(event['shutdown_proof']);self.assertEqual(calls,[]);self.assertEqual(reads,0)
+  self.assertFalse(self.store.read()['enabled']);self.assertEqual(self.read(),self.baseline)
+
+ def test_decision_does_not_requery_already_stopping_intent(self):
+  self.intent,_=self.store.apply(self.intent,dict(kind='shutdown',generation=1,token='attempt-a'))
+  event,calls,_=self.decision()
+  self.assertTrue(event['shutdown']);self.assertIsNone(event['shutdown_proof']);self.assertEqual(calls,[])
+  self.assertEqual(self.store.read()['phase'],'stopping');self.assertTrue(self.store.read()['enabled'])
+
+ def test_decision_escape_never_queries_power_or_retains_intent(self):
+  event,calls,_=self.decision(proof=True,reason='escape')
+  self.assertIsNone(event['shutdown_proof']);self.assertEqual(calls,[]);self.assertFalse(event['shutdown'])
+  self.assertFalse(self.store.read()['enabled']);self.assertEqual(self.read(),self.baseline)
+
  def test_input_observer_accepts_retained_shutdown_profile(self):
   from emergency_trial import recover
   with patch('shutdown_state.stopping',return_value=True):

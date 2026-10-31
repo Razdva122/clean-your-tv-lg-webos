@@ -70,6 +70,8 @@ Strzałki wybierają, OK otwiera; przytrzymaj OK, aby zmienić kolejność. Kró
 
 No-root: Aby wznowić sterowanie Home, otwórz Home Helper, wybierz Uruchom Helper i potwierdź. Zapisany wybór ekranu Home zostaje zachowany. Root: włącz **Zmień Home** w ustawieniach Home, aby wznowić. **Otwórz LG Home** otwiera LG Home jednorazowo bez zmiany celu przycisku Home. Aby przywrócić LG Home jako stały cel, wyłącz **Zmień Home** lub uruchom `cytv restore`. Nie uruchamiaj obu kontrolerów jednocześnie. Przy powtarzającym się błędzie pozostań przy LG Home.
 
+> **Nieopublikowany kandydat 1.5.3 — tylko Root:** jawne włączenie **Zmień Home**, gdy Root działa prawidłowo, tworzy własne natywne wejście **Clean** CYTV i zapamiętuje Clean jako wejście. Wyłączenie sterowania Home, zatrzymanie awaryjne, błąd, wstrzymanie na czas aktualizacji lub odinstalowanie usuwa wpis CYTV. Poprzednie zapamiętane wejście jest przywracane tylko wtedy, gdy bieżąca wartość nadal jest wartością ustawioną przez CYTV; inne wejścia i aplikacje na pierwszym planie pozostają bez zmian. Na nieobsługiwanych TV lub przy cudzych wpisach pozostaje zwykłe sterowanie Home z zabezpieczeniami. Nie ma gwarancji, że Clean pojawi się natychmiast jako pierwszy ekran. Jedna próba pierwszego ekranu na C3 powiodła się; końcowe testy czuwania, zimnego startu, wyłączenia sterowania Home, aktualizacji i cofania wersji nadal są w toku. [Szczegóły kandydata (angielski)](../development/ROOT-NATIVE-INPUT.md).
+
 ```sh
 ./cytv --language pl status
 ./cytv --language pl doctor --report
