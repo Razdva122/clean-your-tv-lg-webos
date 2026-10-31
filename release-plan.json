@@ -94,13 +94,15 @@
       "pr": 195,
       "issues": [],
       "summary": "Fix Ribbon browser check after Themes settings split"
+    },
+    {
+      "pr": 199,
+      "issues": [
+        198
+      ],
+      "summary": "Keep the theme receiver service alive during a session"
     }
   ],
   "excluded": [],
-  "acceptance": "",
-  "build": {
-    "run_id": 41118810865,
-    "attempt": 1,
-    "source": "160f3294d565b25925a8bf128d92a4146860a0b9"
-  }
+  "acceptance": ""
 }

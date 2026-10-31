@@ -1,16 +1,30 @@
 # v1.5.3 — Ribbon, installer checks and legacy Helper runtime
 
-Status: unpublished, corrected combined candidate. Complete build
+Status: unpublished combined fix batch under review. The previous complete build
 [41118810865 / attempt 1](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/41118810865)
-from `160f3294d565b25925a8bf128d92a4146860a0b9` is successful and selected.
-[Current verification](history/2026-10-31-release-1.5.3-combined-verification.md)
-records all ten artifacts, nine installer payloads, macOS host execution and the
-exact Android APK/emulator checks. The [freeze record](history/2026-10-31-release-1.5.3-combined-freeze.md)
-retains the failed test and its correction. Physical TV acceptance, the new Helper
-transition and the unresolved standby decision remain pending. This release must
-not be presented as universal TV compatibility.
+from `160f3294d565b25925a8bf128d92a4146860a0b9` remains historical evidence;
+its selection is invalidated by the newly integrated receiver fix. No replacement
+build is selected and acceptance remains empty. Finish all reviewed batch changes
+before dispatching one complete replacement build.
+
+[Previous verification](history/2026-10-31-release-1.5.3-combined-verification.md)
+records its ten artifacts, nine installer payloads, macOS execution and Android
+checks. The [physical matrix](history/2026-10-31-release-1.5.3-physical-qa.md)
+records two update Home-resume failures and a separate standby failure. These
+results do not accept replacement bytes or universal TV compatibility.
 
 ## Changes
+
+- #199 (#198): hold the receiver service activity until its session ends, so the
+  standalone service idle timer cannot close the HTTP listener while a PIN waits.
+  Integrated in `release/next`; normal delivery and original webOS 5/No-root
+  confirmation remain pending.
+- Under review: #204 owned native EIM first-screen startup and cleanup;
+  #202 automatic recovery preserving update Home resumption; #203 bounded
+  compressed maintainer SSH admission; refreshed Classic README main screenshot
+  and three built-in theme previews. See the candidate PR for current integration.
+  The EIM enabled-mode C3 experiment is not final package acceptance or a fix for
+  #171. Additional shutdown-decision diagnostics preserve existing safety policy.
 
 - #193: refresh the Ribbon README screenshot and link theme browsing to the main
   interactive preview. Remove the standalone public theme catalogue page and its
@@ -58,13 +72,13 @@ not be presented as universal TV compatibility.
 | cytv | 0.6.0 | 0.6.1 | Changed preflight, visible checks and recovery tooling |
 | Home | 1.6.0 | 1.6.1 | Ribbon, shared layout module and Appearance CSS |
 | Home Helper | 0.6.20 | 0.6.21 | Node 0.10.25/runtime and pairing-key handling |
-| Root | 0.6.1 | 0.6.2 | Shared UI and infrastructure diagnostics |
+| Root | 0.6.1 | 0.6.2 | Shared UI, Home resume, native startup and infrastructure diagnostics |
 | Both edition Updaters | 0.3.3 | 0.3.4 | Both embed changed Appearance CSS |
 | Android / versionCode | 0.5.0 / 15 | 0.5.1 / 16 | Changed UI/native replay/bridge and embedded payload |
 | System supervisor | 1.1.2 | 1.1.2 | Executable supervisor/IPK closure unchanged |
 
 Home, Helper, Root/infrastructure, both Updaters and all computer/Android installers
-were rebuilt together from the selected source. The changed Helper runtime requires a new
+must rebuild together after the batch is integrated. The changed Helper runtime requires a new
 version; published 0.6.20 must not be replaced with different bytes. Existing supervisors remain pinned;
 normal admission, signatures and minimum-supervisor checks remain unchanged.
 
@@ -90,9 +104,8 @@ release approval. Root firmware support and other users' retained recovery remai
 separate unresolved work. The independent Homebrew Installer stays unreleased
 with promotion disabled.
 
-The selected combined build is 41118810865 / attempt 1. Older build
-41095949258 / attempt 2 retains only its historical artifact scope.
-Remaining work is to record scoped controls,
-startup, UI and update/rollback results and satisfy Release
-policy before main/publication. No new physical compatibility, phone test,
-installer success or completed device recovery is claimed by these notes.
+Build 41118810865 / attempt 1 and older 41095949258 / attempt 2 retain only
+their historical artifact scope. The replacement candidate needs complete CI,
+artifact verification, signing and affected physical acceptance. Standby #171
+and the Helper transition gate remain explicit publication blockers. No new
+physical compatibility, phone acceptance or completed device recovery is claimed.
