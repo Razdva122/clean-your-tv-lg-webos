@@ -24,8 +24,12 @@
     "minimal"
   ],
   "addedAt": "2026-10-30",
-  "reviewedAt": "2026-10-30",
+  "reviewedAt": "2026-10-31",
   "evidence": [
+    {
+      "kind": "browser",
+      "summary": "Maintainer review on release/next plus PR #197, Home 1.6.1 runtime: local synthetic preview applies Minimal in No-root and Root; Home focus, Inputs navigation/back and standard Settings checked in both editions. No-root app library was checked with a hidden reference app: focused and unfocused names remain readable and adding it back works. Automated inline preview checks block external HTTPS and cover both editions, offline theme selection and preserved app order. Catalogue order keeps existing themes first and appends Minimal. This is browser acceptance only; no new physical-TV testing."
+    },
     {
       "kind": "browser",
       "summary": "Toolkit preview and screenshots command (No-root, Home 1.6.0 runtime from release v1.5.2): Home with dock and grid focus, header shortcut focus and the Inputs menu; standard Settings isolation captured. Physical remote behavior is not covered by the browser check. 1.0.1: app library rows keep white names and a dark focus, checked in the preview."
