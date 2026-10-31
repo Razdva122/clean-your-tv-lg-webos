@@ -8,6 +8,8 @@ one model or artifact does not certify later releases or a different TV.
 
 ## Scoped feature checks
 
+- [Passive Root diagnostic preparation, 2026-10-31](2026-10-31-root-passive-diagnostics.md): reviewed initial read-only procedure for #161; actual recovery remains blocked on owner evidence.
+- [No-root recovery and legacy WebKit, 2026-10-31](2026-10-31-ef950-recovery-webkit.md): integrated source/host checks for #212; original #152 device recovery and controls remain unverified.
 - [Supervised 1.5.0 candidate findings, 2026-10-30](2026-10-30-supervised-candidate-findings.md): owner observations and installed-TV automation; eight regressions remain separate from later fixes.
 - [Unattended candidate preparation, 2026-10-30](2026-10-30-unattended-candidate-readiness.md): exact artifact/host checks and their remaining device gates.
 - [Exact Helper 0.6.20 limited-evidence approval, 2026-10-30](2026-10-30-helper-0.6.20-approval.md): owner-approved package/archive/rollback pins and explicitly untested physical No-root scope.
@@ -41,6 +43,12 @@ one model or artifact does not certify later releases or a different TV.
 
 ## Acceptance and validation
 
+- [1.5.3 owner-supervised C3 matrix](2026-10-31-release-1.5.3-physical-qa.md): exact installed candidate, successful scoped checks and two unresolved Home failures; candidate not accepted.
+
+- [1.5.3 corrected combined verification](2026-10-31-release-1.5.3-combined-verification.md): selected full build, ten delivered archives, nine payloads, native macOS and exact Android emulator checks; physical gates remain pending.
+
+- [1.5.3 combined candidate freeze](2026-10-31-release-1.5.3-combined-freeze.md): final integrated scope and explicit build/device gates; no new acceptance claim.
+
 - [1.5.3 final automated verification](2026-10-30-release-1.5.3-final-verification.md): corrected-source full CI, all delivered artifacts, macOS host checks and Android original-signer/emulator results; physical gates remain separate.
 
 - [1.5.3 frozen-candidate verification](2026-10-30-release-1.5.3-verification.md): successful full build, verified published baselines/local payload and explicit artifact/Android/device blockers.
@@ -69,3 +77,5 @@ Historical files stay at their existing paths so release and issue links continu
 to work. Current guidance lives in the user/developer indexes rather than being
 appended to these records. Private logs and device backups are not part of this
 public documentation.
+
+- [2026-10-31: coordinated native startup/recovery batch](2026-10-31-release-1.5.3-native-startup-batch.md).

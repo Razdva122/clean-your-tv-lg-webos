@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "id": "github:invrnt/tv-themes:minimal",
+  "title": "Minimal",
+  "description": "Pure black, four large cards with no dock band, soft shadows and a quiet header without the greeting.",
+  "author": {
+    "name": "invrnt",
+    "sourceProfile": "https://github.com/invrnt"
+  },
+  "sourceRepository": "https://github.com/invrnt/tv-themes",
+  "sourceCommit": "51b65fe670dde710f8409eadc238137345075e80",
+  "descriptorUrl": "https://raw.githubusercontent.com/invrnt/tv-themes/71ab7552df27b67c48100c9faf36e7e5b30ea8d8/distributions/minimal/1.0.1/cytv-theme.json",
+  "descriptorSha256": "42ba8d15fce491e2cb4474c42333ab8489c8fba5d35fd7a80513bce73351bf22",
+  "themeVersion": "1.0.1",
+  "themeApiVersion": 1,
+  "license": "MIT",
+  "creditsFile": "assets/invrnt--tv-themes--minimal/42ba8d15fce491e2cb4474c42333ab8489c8fba5d35fd7a80513bce73351bf22/documents/1-4f96effe278b5a2dff68d0c190e8131fb2277d402a0e8832513c69325d88744f.txt",
+  "previewFiles": [
+    "assets/invrnt--tv-themes--minimal/42ba8d15fce491e2cb4474c42333ab8489c8fba5d35fd7a80513bce73351bf22/assets/preview-ac673ebcfde73a01aebea17820db511ec380ce5ca51397a6da58e9e59b390345.png",
+    "assets/invrnt--tv-themes--minimal/42ba8d15fce491e2cb4474c42333ab8489c8fba5d35fd7a80513bce73351bf22/assets/preview-inputs-46e5d5d271fbca12bf322cc6f135705af78a1a05475e8cac8e3eefaff4db952a.png"
+  ],
+  "tags": [
+    "dark",
+    "minimal"
+  ],
+  "addedAt": "2026-10-30",
+  "reviewedAt": "2026-10-31",
+  "evidence": [
+    {
+      "kind": "browser",
+      "summary": "Maintainer review on release/next plus PR #197, Home 1.6.1 runtime: local synthetic preview applies Minimal in No-root and Root; Home focus, Inputs navigation/back and standard Settings checked in both editions. No-root app library was checked with a hidden reference app: focused and unfocused names remain readable and adding it back works. Automated inline preview checks block external HTTPS and cover both editions, offline theme selection and preserved app order. Catalogue order keeps existing themes first and appends Minimal. This is browser acceptance only; no new physical-TV testing."
+    },
+    {
+      "kind": "browser",
+      "summary": "Toolkit preview and screenshots command (No-root, Home 1.6.0 runtime from release v1.5.2): Home with dock and grid focus, header shortcut focus and the Inputs menu; standard Settings isolation captured. Physical remote behavior is not covered by the browser check. 1.0.1: app library rows keep white names and a dark focus, checked in the preview."
+    },
+    {
+      "kind": "device",
+      "summary": "LG 60UN7310PDA, webOS 5.6.2, firmware 04.64.00, Magic Remote, No-root, Home 1.6.0 + Helper 0.6.20. Sent with Receive from computer and applied. Home rendered as in the preview and the owner uses it daily. App library, Inputs, reorder, standby and cold boot not checked on the device. The first receiver attempt showed Theme receiver unavailable; Retry worked.",
+      "url": "https://github.com/razdva122/clean-your-tv-lg-webos/issues/196"
+    }
+  ]
+}

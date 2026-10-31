@@ -20,6 +20,7 @@ import sys
 import tempfile
 import time
 import zipfile
+import zlib
 
 ROOT = Path(__file__).resolve().parents[1]
 APP_ID = 'com.cleanyourtv.dev.ui'
@@ -378,12 +379,21 @@ def select_installed_python(remote, profile, store):
     return Installer(remote, store, profile, ROOT, {})._python(SYSTEM_UPDATER_STATE)
 
 
+def acceptance_command(python, source):
+    # Keep exact controller bytes below Dropbear's exec limit; request stays stdin.
+    encoded = base64.b64encode(zlib.compress(source, 9)).decode('ascii')
+    bootstrap = "import base64,zlib;exec(compile(zlib.decompress(base64.b64decode('" + encoded + "')),'<root-candidate-acceptance>','exec'),{'__name__':'__main__'})"
+    command = shlex.join(['env', '-u', 'PYTHONHOME', '-u', 'PYTHONPATH',
+                          '-u', 'NODE_OPTIONS', '-u', 'NODE_PATH', python, '-I', '-B', '-c', bootstrap])
+    if len(command.encode('utf-8')) > 8192:
+        raise ValueError('acceptance_command_too_large')
+    return command
+
+
 def admit(remote, profile, request, store):
-    from cytv.operations import Installer
     python = select_installed_python(remote, profile, store)
-    # Controller text is a shell-quoted -c argument; sensitive request stays stdin.
     # No remote executable upload, mutable source imports or candidate code runs.
-    command = Installer._python_command([python, '-I', '-B', '-c', read_file(ROOT / 'scripts/root-candidate-acceptance.py').decode()])
+    command = acceptance_command(python, read_file(ROOT / 'scripts/root-candidate-acceptance.py'))
     reply = json.loads(remote.run(command, data=json.dumps(request, allow_nan=False).encode(), timeout=600))
     if reply.get('returnValue') is not True or not isinstance(reply.get('result'), dict):
         raise ValueError('Device admission refused; preserve recovery state and inspect cytv status')

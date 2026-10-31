@@ -1,82 +1,30 @@
 {
   "schema": 1,
-  "version": "1.5.3",
+  "version": null,
   "changes": [
     {
-      "pr": 117,
-      "issues": [
-        116
-      ],
-      "summary": "Explain Homebrew exec denials and retain requests; partial #116, supported upstream prerequisite and device acceptance remain pending"
+      "pr": 197,
+      "issues": [],
+      "summary": "Add Minimal 1.0.1 and preserve existing theme order; append new community themes, with maintainer browser acceptance only"
     },
     {
-      "pr": 175,
-      "issues": [
-        160,
-        164
-      ],
-      "summary": "Show individual TV prerequisite checks in CLI, desktop and Android; diagnostic improvement only for #160 and #164"
-    },
-    {
-      "pr": 176,
-      "issues": [
-        170
-      ],
-      "summary": "Prevent Appearance Apply scroll clamping when fixed themes hide Columns; #170 physical acceptance pending"
-    },
-    {
-      "pr": 177,
-      "issues": [
-        133
-      ],
-      "summary": "Isolate trusted read-only Root admission preparation; partial #133, individual recovery and firmware routing support remain unresolved"
-    },
-    {
-      "pr": 180,
-      "issues": [
-        171
-      ],
-      "summary": "Record guarded wake refusals and power stream outcomes; diagnostics only, original #171 standby failure unresolved"
-    },
-    {
-      "pr": 181,
+      "pr": 212,
       "issues": [
         152
       ],
-      "summary": "Support compiled Home Helper on Node 0.10.25 while retaining pairing and input guards; #152 device acceptance pending"
+      "summary": "Guarded No-root Helper stop after service refusal and prefixed WebKit layouts; #152 actual device recovery/control acceptance remains pending"
     },
     {
-      "pr": 183,
+      "pr": 213,
       "issues": [
-        160,
-        164
+        161
       ],
-      "summary": "Keep diagnostic report guidance visible alongside failed prerequisite checks; follow-up to #175, original #160 and #164 runtime reports remain unresolved"
+      "summary": "Document passive bounded Root worker diagnostics before admission; #161 actual recovery remains unresolved pending owner evidence"
     },
     {
-      "pr": 184,
+      "pr": 214,
       "issues": [],
-      "summary": "Retain the Android native runner for candidate verification"
-    },
-    {
-      "pr": 186,
-      "issues": [],
-      "summary": "Correct current release and historical acceptance documentation"
-    },
-    {
-      "pr": 188,
-      "issues": [],
-      "summary": "Add built-in Ribbon with theme-driven scenic ribbon options"
-    },
-    {
-      "pr": 189,
-      "issues": [],
-      "summary": "Avoid GitHub large-page failures during Root QA admission"
-    },
-    {
-      "pr": 191,
-      "issues": [],
-      "summary": "Separate theme settings and expose language and column choices"
+      "summary": "Simplify theme suggestions and move review work to maintainers"
     }
   ],
   "excluded": [],

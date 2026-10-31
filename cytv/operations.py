@@ -461,7 +461,9 @@ for cytv_file in /proc/[0-9]*/cmdline; do
     if [ ! -r "$cytv_file" ]; then cytv_state=CYTV_HELPER_UNCERTAIN; continue; fi
     cytv_args=$(tr '\000' '\n' < "$cytv_file" 2>/dev/null) || { cytv_state=CYTV_HELPER_UNCERTAIN; continue; }
     if [ "$cytv_file" = "/proc/${cytv_pid:-}/cmdline" ] && [ -z "$cytv_args" ]; then cytv_state=CYTV_HELPER_UNCERTAIN; fi
-    if printf '%s\n' "$cytv_args" | grep -Fx -e 'com.local.nativehome' -e 'HELPER_ROOT/native.js' -e 'HELPER_ROOT/relay' >/dev/null 2>&1; then
+    # Older BusyBox grep ignores -x with -F, matching this SSH script itself.
+    # Use anchored basic expressions and escape the literal path dots instead.
+    if printf '%s\n' "$cytv_args" | grep -e '^com[.]local[.]nativehome$' -e '^HELPER_ROOT/native[.]js$' -e '^HELPER_ROOT/relay$' >/dev/null 2>&1; then
         printf CYTV_HELPER_ACTIVE; exit 0
     else
         cytv_match=$?
@@ -469,7 +471,7 @@ for cytv_file in /proc/[0-9]*/cmdline; do
     fi
 done
 printf '%s' "$cytv_state"
-'''.replace('HELPER_STATE', HELPER_STATE).replace('HELPER_ROOT', BASE + '/applications/' + HELPER)
+'''.replace('HELPER_STATE', HELPER_STATE).replace('HELPER_ROOT', (BASE + '/applications/' + HELPER).replace('.', '[.]'))
         result = self.remote.run(script).strip()
         return {'CYTV_HELPER_IDLE': 'stopped', 'CYTV_HELPER_STALE': 'stale',
                 'CYTV_HELPER_ACTIVE': 'running'}.get(result, 'uncertain')
@@ -661,7 +663,21 @@ print('CYTV_UPDATER_VERIFIED')
     def stop_helper(self):
         apps = {app['id'] for app in self.installed_apps()}
         if HELPER in apps:
-            self.remote.luna('com.local.nativehome.service/disable', {})
+            try:
+                self.remote.luna('com.local.nativehome.service/disable', {})
+            except TVRejected as error:
+                if (self.profile['edition'] != 'no-root' or error.luna['operation'] != 'helper-disable'
+                        or error.luna['error_code'] != -1):
+                    raise
+                from .helper_stop import PROGRAM
+                if self.remote.run('/usr/bin/node', data=PROGRAM.encode(), timeout=15).strip() != 'CYTV_HELPER_STOP_REQUESTED':
+                    raise UserError('Home Helper stop could not be verified. Keep recovery state and run cytv status.')
+                for attempt in range(16):
+                    if self.helper_state() in ('stopped', 'stale'):
+                        return
+                    if attempt < 15:
+                        time.sleep(1)
+                raise UserError('Home Helper stop could not be verified. Keep recovery state and run cytv status.')
         self.remote.run(
             'if [ -f ' + HELPER_STATE + '/controller.pid ]; then '
             'printf \'{"cmd":"stop"}\' > ' + HELPER_STATE + '/control.json; '

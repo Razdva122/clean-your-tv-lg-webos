@@ -90,17 +90,36 @@ def later_legacy_trial(c):
     return binding['restored'] and journal.get('transaction') != binding['transaction']
 
 
+def _legacy_native_recovery(c=None):
+    # Without an owned receipt, retain the legacy caller's recovery fallback.
+    if not os.path.lexists(d.STATE/'native-input.json'): return None
+    c = Coordinator(Store(d.STATE)) if c is None else c
+    expected = c.store.read()
+    with c.locked(expected):
+        if expected['phase'] != 'disabled': expected,_ = c.event(expected,'exit')
+        result = d.main('recover')
+        if result not in ('restored','absent'): raise ValueError('Routing restoration incomplete')
+        if expected['phase'] == 'recovering': c.event(expected,'restored')
+        d.native_input_disable()  # A bad EIM receipt may block completion, never route restoration.
+        return result
+
+
 def restore():
     c = coordinator()
-    if c is None or later_legacy_trial(c): return None
+    if c is None or later_legacy_trial(c): return _legacy_native_recovery(c)
     intent = c.store.read()
-    if intent['phase'] == 'disabled': return None
+    if intent['phase'] == 'disabled': return _legacy_native_recovery(c)
     result = c.exit(intent)
     return 'restored' if result.get('restored_transaction') else None
 
 
 def boot():
-    if not os.path.lexists(d.STATE/'persistent-intent.json'): return None
+    if not os.path.lexists(d.STATE/'persistent-intent.json'):
+        if os.path.lexists(d.STATE/'profile-trial.json'):
+            from profile_recovery import validate
+            journal = d.safe_json(d.STATE/'profile-trial.json');validate(journal)
+            if d.active_guardian(journal): return None
+        return _legacy_native_recovery()
     d.trusted_dir(d.STATE)
     fd=os.open(d.STATE/'boot-dispatch.lock',os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW,0o600)
     try:
@@ -120,7 +139,8 @@ def boot():
 
 def _boot():
     c = coordinator()
-    if c is None or later_legacy_trial(c): return None
+    if c is None: return _legacy_native_recovery()
+    if later_legacy_trial(c): return None
     intent = c.store.read()
     try: identity = boot_identity()
     except (OSError,ValueError):
@@ -134,7 +154,9 @@ def _boot():
         try: journal = d.safe_json(d.STATE/'profile-trial.json')
         except FileNotFoundError: journal = None
         if journal is not None and d.active_guardian(journal): return 'guarded-intent-trial'
-        if intent['phase'] == 'disabled': return 'restored'
+        if intent['phase'] == 'disabled':
+            _legacy_native_recovery(c)
+            return 'restored'
         # Expired trial or interrupted startup in this same boot: disable intent,
         # never infer health from an application merely existing in /proc.
         from boot_gate import audit, observation

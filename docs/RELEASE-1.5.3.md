@@ -1,16 +1,36 @@
-# v1.5.3 — Ribbon, installer checks and legacy Helper runtime
+# v1.5.3 — Themes, Root startup and recovery
 
-Status: unpublished candidate. The maintainer approved adding Ribbon to 1.5.3
-and rebuilding after the remaining planned PRs are integrated. The intermediate
-build was cancelled at the maintainer’s request. The prior successful build and
-[verification report](history/2026-10-30-release-1.5.3-final-verification.md)
-remain historical evidence for their original artifacts. The expanded candidate
-requires a new complete build and affected acceptance; see the
-[scope reset record](history/2026-10-30-release-1.5.3-ribbon-rescope.md).
-Physical TV acceptance, the new Helper transition and the unresolved standby
-decision remain pending. This release must not be presented as universal TV compatibility.
+Status: unpublished preparation superseded by [1.5.4](RELEASE-1.5.4.md). Publication stopped before signing/upload because the exact Helper approval record was stale. No stable 1.5.3 was delivered. All 17 implementation PRs are inherited by 1.5.4. Full candidate
+[41185537404:1](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/41185537404)
+builds product source `f4bab0ea60c825994445b0b63625f5fd734bff4e`.
+See the [signed Root QA and release decision](history/2026-10-31-release-1.5.3-signed-root-qa.md)
+for exact package hashes, startup/controls observations and accepted limitations.
+Historical builds 41118810865:1 and earlier retain their original scope.
 
 ## Changes
+
+- #199 (#198): hold the receiver service activity until its session ends, so the
+  standalone service idle timer cannot close the HTTP listener while a PIN waits.
+  Integrated in `release/next`; normal delivery and original webOS 5/No-root
+  confirmation remain pending.
+- #205: #204 owned native EIM first-screen startup and cleanup;
+  #202 automatic recovery preserving update Home resumption; #203 bounded
+  compressed maintainer SSH admission; refreshed Classic README main screenshot
+  and three built-in theme previews. [Batch verification](history/2026-10-31-release-1.5.3-native-startup-batch.md) records final PR CI and limits.
+  The EIM enabled-mode C3 experiment is not final package acceptance or a fix for
+  #171. Additional shutdown-decision diagnostics preserve existing safety policy.
+  Actual signed QA still found Home preference loss on forward update and active
+  rollback; #202 remains deferred, with normal explicit enable as the workaround.
+
+- #193: refresh the Ribbon README screenshot and link theme browsing to the main
+  interactive preview. Remove the standalone public theme catalogue page and its
+  navigation link; on-TV Showcase and offline author review remain available.
+- #192 (#152): avoid false active-Helper detection when legacy grep ignores exact
+  matching, preserving real-process and uncertain-state guards. Add bounded LS2
+  diagnostic categories. Original EF950V installation/control failures remain
+  unresolved; reporter history and target-device confirmation are still needed.
+- #189: use smaller complete GitHub job pages for signed Root QA admission while
+  retaining exact-attempt, source, package and signature verification.
 
 - #191: separate Appearance layout/app controls from Themes, add ID-first theme installation, show the effective Columns count and place language choices directly in their category. Remote navigation, delayed-status focus and twelve-language browser checks passed; physical TV acceptance remains pending.
 
@@ -48,41 +68,47 @@ decision remain pending. This release must not be presented as universal TV comp
 | cytv | 0.6.0 | 0.6.1 | Changed preflight, visible checks and recovery tooling |
 | Home | 1.6.0 | 1.6.1 | Ribbon, shared layout module and Appearance CSS |
 | Home Helper | 0.6.20 | 0.6.21 | Node 0.10.25/runtime and pairing-key handling |
-| Root | 0.6.1 | 0.6.2 | Shared UI and infrastructure diagnostics |
+| Root | 0.6.1 | 0.6.2 | Shared UI, Home resume, native startup and infrastructure diagnostics |
 | Both edition Updaters | 0.3.3 | 0.3.4 | Both embed changed Appearance CSS |
 | Android / versionCode | 0.5.0 / 15 | 0.5.1 / 16 | Changed UI/native replay/bridge and embedded payload |
 | System supervisor | 1.1.2 | 1.1.2 | Executable supervisor/IPK closure unchanged |
 
 Home, Helper, Root/infrastructure, both Updaters and all computer/Android installers
-must be rebuilt from this source. The changed Helper runtime requires a new
+must rebuild together after the batch is integrated. The changed Helper runtime requires a new
 version; published 0.6.20 must not be replaced with different bytes. Existing supervisors remain pinned;
 normal admission, signatures and minimum-supervisor checks remain unchanged.
 
 ## Delivery and acceptance limits
 
-The existing Helper rollback record approves only the exact 0.6.19 to 0.6.20
-transition. It does not approve 0.6.20 to 0.6.21 or cover the vendored/runtime
-changes under a permission-only exception. The new raw/canonical Helper hashes
-and authenticated published Home 1.6.0 / Helper 0.6.20 rollback bytes are recorded
-in the final verification report. The new transition still needs applicable
-acceptance or explicit exact-scope approval;
-publication must remain blocked until that gate is truthfully satisfied.
+The maintainer explicitly accepted release without the physical No-root Helper
+0.6.20 to 0.6.21 transition test. This exact path remains untested; package,
+signature, control and rollback regression checks remain required. The older
+0.6.19 to 0.6.20 record is not reused as a new passing test.
 
-The [unattended C3 record](history/2026-10-30-unattended-c3-ui-proof.md) tested the
-installed Root 0.6.1 baseline plus a temporary in-memory footprint proof. It is
-not acceptance of these new packages. Its clean restoration and renderer result
-retain their original artifact scope.
+The signed C3 record shows first-screen Clean on one same-session standby and
+one true cold boot, controls/audio, profile retention, native Off/emergency and
+rollback cleanup. #171's earlier different-session retained-intent failure remains
+unresolved follow-up; no ENODEV exemption or automatic fault re-enable was added.
+The maintainer requested proceeding with the tested source and recorded known
+limitations; this is not universal firmware/TV compatibility.
 
-#171 standby remains unresolved. The previous release's limited-risk decision
-is not a new passing result or automatic approval of this release. Record an
-explicit fix/follow-up decision and the affected artifact tests before final
-release approval. Root firmware support and other users' retained recovery remain
-separate unresolved work. The independent Homebrew Installer stays unreleased
-with promotion disabled.
+Final Android APK checks and original-signer v1.5.2/code15 to code16 update passed
+on an isolated Android 15/API35 ARM64 emulator without uninstall or loss of four
+synthetic private files. Physical phone/TV operation and native instrumentation
+were not rerun. The independent Homebrew Installer remains unreleased and its
+promotion disabled. Other users' runtime/recovery reports remain unresolved where
+only diagnostics or partial improvements ship.
 
-The previous selected build was run 41095949258 / attempt 2. Its pin was removed
-when Ribbon expanded the frozen scope; a new complete build must be selected.
-Remaining work is to record scoped controls,
-startup, UI and update/rollback results and satisfy Release
-policy before main/publication. No new physical compatibility, phone test,
-installer success or completed device recovery is claimed by these notes.
+Mandatory complete CI, final artifact/signature and verified publication checks
+remain in force; a merge alone does not establish shipping.
+
+## Accepted remaining limitations
+
+The maintainer deferred further fixes/retests for [Home preference loss during
+update/rollback (#202)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/202)
+and [stale Home settings after emergency/resume (#206)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/206).
+After a transition, explicitly enable Change Home in normal settings if needed;
+close and reopen Settings if its toggle is stale, then wait for the Clean status.
+These are known failures, not successful automatic Home resumption.
+The [signed C3 QA record](history/2026-10-31-release-1.5.3-signed-root-qa.md)
+separates startup/controls passes from failures and untested paths.

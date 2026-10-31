@@ -742,7 +742,7 @@
       if (e.card && typeof e.brandBackground === 'string') e.card.style.background = layoutPreset === 'channel-list' ? '' : e.brandBackground;
       var slot = layoutPreset === 'scenic-grid' ? ribbonSlot(t) : null;
       var previousSlot = Number(e.el.getAttribute('data-ribbon-slot'));
-      e.el.style.transition = slot === null ? '' : e.el.hasAttribute('data-ribbon-slot') && Math.abs(previousSlot - slot) === 1 && previousSlot <= columnCount && slot <= columnCount ? 'left 160ms ease-out' : 'none';
+      e.el.style.webkitTransition = e.el.style.transition = slot === null ? '' : e.el.hasAttribute('data-ribbon-slot') && Math.abs(previousSlot - slot) === 1 && previousSlot <= columnCount && slot <= columnCount ? 'left 160ms ease-out' : 'none';
       e.el.style.pointerEvents = slot !== null && slot >= columnCount ? 'none' : '';
       e.el.style.visibility = slot !== null && slot >= columnCount ? 'hidden' : '';
       if (slot === null) e.el.removeAttribute('data-ribbon-slot'); else e.el.setAttribute('data-ribbon-slot', slot);
@@ -816,7 +816,7 @@
   function focusTile(index) {
     if (!tiles.length) {
       focusGlassVisible = false; focusGlass.style.opacity = '0';
-      scrollOffset = 0; stage.style.transform = 'translateY(0px)';
+      scrollOffset = 0; stage.style.webkitTransform = stage.style.transform = 'translateY(0px)';
       clearTimeout(heroTitle.swap); heroVisible = false; heroTitle.style.opacity = '0';
       if (channelArtwork) channelArtwork.style.visibility = 'hidden';
       getElement('viewport').removeAttribute('data-position');
@@ -850,7 +850,7 @@
         if (top - scrollOffset + CARD_HEIGHT + 70 > floor) scrollOffset = top + CARD_HEIGHT + 70 - floor;
         if (top - scrollOffset - 24 < ceiling) scrollOffset = Math.max(0, top - 24 - ceiling);
       }
-      stage.style.transform = "translateY(" + -scrollOffset + "px)";
+      stage.style.webkitTransform = stage.style.transform = "translateY(" + -scrollOffset + "px)";
       var header = document.querySelector("header"),
         headerBottom = header.offsetTop + header.offsetHeight;
       document.body.classList.toggle("scrolled", layoutPreset === "dock-grid" && DOCK_TOP - scrollOffset < headerBottom + 24);
@@ -860,8 +860,8 @@
         glassTop = top + CARD_HEIGHT / 2 - glassHeight / 2;
       focusGlass.style.width = glassWidth + "px";
       focusGlass.style.height = glassHeight + "px";
-      focusGlass.style.transform = "translate(" + glassLeft + "px," + glassTop + "px)";
-      focusGlassVisible || (focusGlass.style.transition = "none", focusGlass.offsetWidth, focusGlass.style.transition = "", focusGlass.style.opacity = "1", focusGlassVisible = true);
+      focusGlass.style.webkitTransform = focusGlass.style.transform = "translate(" + glassLeft + "px," + glassTop + "px)";
+      focusGlassVisible || (focusGlass.style.webkitTransition = focusGlass.style.transition = "none", focusGlass.offsetWidth, focusGlass.style.webkitTransition = focusGlass.style.transition = "", focusGlass.style.opacity = "1", focusGlassVisible = true);
       if (layoutPreset === 'channel-list') {
         if (!channelArtwork) {
           channelArtwork = document.createElement('img'); channelArtwork.id = 'channelArtwork';
@@ -883,18 +883,18 @@
         if (layoutPreset === 'channel-list' || layoutPreset === 'scenic-grid') {
           clearTimeout(heroTitle.swap);
           heroTitle.textContent = t;
-          heroTitle.style.transform = 'none';
+          heroTitle.style.webkitTransform = heroTitle.style.transform = 'none';
           heroTitle.style.opacity = '1';
           heroVisible = true;
-        } else heroVisible ? heroTitle.textContent !== t && (heroTitle.style.opacity = "0", heroTitle.style.transform = "translateX(-24px)", clearTimeout(heroTitle.swap), heroTitle.swap = setTimeout(function () {
+        } else heroVisible ? heroTitle.textContent !== t && (heroTitle.style.opacity = "0", heroTitle.style.webkitTransform = heroTitle.style.transform = "translateX(-24px)", clearTimeout(heroTitle.swap), heroTitle.swap = setTimeout(function () {
           heroTitle.textContent = t;
-          heroTitle.style.transition = "none";
-          heroTitle.style.transform = "translateX(24px)";
+          heroTitle.style.webkitTransition = heroTitle.style.transition = "none";
+          heroTitle.style.webkitTransform = heroTitle.style.transform = "translateX(24px)";
           heroTitle.offsetWidth;
-          heroTitle.style.transition = "";
-          heroTitle.style.transform = "none";
+          heroTitle.style.webkitTransition = heroTitle.style.transition = "";
+          heroTitle.style.webkitTransform = heroTitle.style.transform = "none";
           heroTitle.style.opacity = "1";
-        }, 120)) : (heroTitle.textContent = t, heroTitle.style.transform = "none", heroTitle.style.opacity = "1", heroVisible = true);
+        }, 120)) : (heroTitle.textContent = t, heroTitle.style.webkitTransform = heroTitle.style.transform = "none", heroTitle.style.opacity = "1", heroVisible = true);
         updateAmbient(e.color);
       }(tiles[index]) : heroVisible && (heroVisible = false, heroTitle.style.opacity = "0");
       updateAmbient(tiles[index].color);

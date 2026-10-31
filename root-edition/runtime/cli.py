@@ -244,19 +244,36 @@ def reconcile_firmware_access():
     return ready
 
 
+def _restore_home(cancel_resume):
+    try:
+        inhibit(d.STATE)
+    except Exception: pass  # Optional audio state must never block Home recovery.
+    from intent_runtime import restore
+    try:
+        if cancel_resume:
+            from update_guard import cancel
+            cancel(d.STATE,d.EXPECTED_UID)
+    finally:
+        # Damaged updater evidence must never prevent explicit Home recovery.
+        result = restore()
+        result = d.main('recover') if result is None else result
+    return result
+
+
 def main(mode, transaction=None):
     if os.geteuid() != 0:
         raise PermissionError('Root required')
     if mode in ('enable','intent-trial','confirm','trial','emergency-trial','boot'):
         from update_guard import control, ProductPending
-        # Boot during an update must restore, never reactivate a prior intent.
+        # Automatic recovery restores safely without cancelling the updater
+        # ticket; only explicit Off or emergency escape revokes Home resume.
         if mode == 'boot' and os.path.lexists(d.STATE/'update-block.json'):
-            return main('restore')
+            return _restore_home(cancel_resume=False)
         try:
             with control(d.STATE,d.EXPECTED_UID):
                 return execute(mode,transaction)
         except ProductPending:
-            if mode == 'boot': return main('restore')
+            if mode == 'boot': return _restore_home(cancel_resume=False)
             raise
     return execute(mode,transaction)
 
@@ -286,18 +303,7 @@ def execute(mode, transaction=None):
         from bounded_profile_trial import begin, spawn
         return begin(spawn)
     if mode == 'restore':
-        try:
-            inhibit(d.STATE)
-        except Exception: pass  # Optional audio state must never block Home recovery.
-        from update_guard import cancel
-        from intent_runtime import restore
-        try:
-            cancel(d.STATE,d.EXPECTED_UID)
-        finally:
-            # Damaged updater evidence must never prevent explicit Home recovery.
-            result = restore()
-            result = d.main('recover') if result is None else result
-        return result
+        return _restore_home(cancel_resume=True)
     if mode == 'boot':
         from intent_runtime import boot
         result = boot()

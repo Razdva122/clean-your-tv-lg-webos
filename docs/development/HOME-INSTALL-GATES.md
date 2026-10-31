@@ -2,7 +2,25 @@
 
 Related issues: #140, #133. The controller-state and firmware gates shipped in
 v1.5.0; immutable Helper 0.6.19 does not contain them. The Node 0.10.25 target
-below is an unpublished follow-up for #152.
+below shipped in v1.5.4. The SSH stop fallback described below is unreleased.
+
+## No-root recovery after Helper service refusal (#152)
+
+Only a definite `helper-disable` rejection with code `-1` in No-root enables
+the trusted installer-side ES5 stop program. It is streamed to `/usr/bin/node`
+over the existing SSH session (no `-` option, unsupported by Node 0.10/0.12),
+without executing installed Helper JS. Checked real shared state paths receive
+an exclusive persistent `blocked` latch and atomic `control.json` stop request.
+A new latch keeps the state directory group and group write access so a live
+controller with another UID can execute its normal stop/cleanup path. Existing
+latches, watchdog state and Home preference are preserved. Symlink/hardlinked
+stop files, unsafe directories and uncertain process state are refused.
+
+The existing read-only process probe must confirm no controller or relay before
+Restore may launch LG Home or removal may proceed. A stale PID alone is not an
+active process. Other failures and Root keep their existing behavior. No new
+permission, endpoint or state filename is introduced. File/operation fixtures
+and actual Node 0.10.25/0.12.2 host checks are not EF950V hardware acceptance.
 
 ## No-root controller state
 
@@ -18,6 +36,36 @@ do not remove the key to work around a control-file permission error.
 Existing state path validation, trusted directory ownership, shared-group checks,
 no world writes, exclusive staging and cleanup on failure remain required.
 No new persistent preference, permission, or network endpoint is introduced.
+
+### Legacy process matching (unpublished follow-up for #152)
+
+The installer scans NUL-separated `/proc/*/cmdline` arguments for the controller
+identity, exact `native.js` path or exact relay path. An installed app or the
+separate `com.local.nativehome.service` worker alone is not an active input
+controller. The original `grep -Fx` assumption is incompatible with older
+BusyBox: [1.20.2 grep.c](https://github.com/mirror/busybox/blob/1_20_2/findutils/grep.c)
+uses substring matching for `-F` without checking `-x`. It can therefore match
+the SSH probe's own command text on an otherwise idle TV. Anchored basic regular
+expressions with literal dots avoid that behavior while retaining real controller
+and orphan-relay refusal. Stale PID handling, unreadable/ambiguous-state refusal,
+ownership checks and emergency latches are unchanged.
+
+`tests/cytv/test_helper_preflight.py` executes the real shell probe against a
+local proc fixture, including its own SSH command. A wrapper models the old
+fixed-string behavior; this is not a run of the TV's BusyBox binary. The legacy
+false positive fails before the change and passes afterward, while real processes
+remain blocked. This proves a host-reproduced portability defect, not the actual
+EF950V cause: its grep implementation/version and device behavior remain unknown.
+
+Restore rejection diagnostics now distinguish fixed `helper-disable`,
+`eim-delete-device` and `application-launch` categories. Unknown calls remain
+`luna-call`; no arbitrary URI, application ID or remote error text is exported.
+An LS2 `-101` alone is not proof that the controller is active or that a particular
+service is absent. A failed `control.json` upload also does not establish which
+shell utility, state directory or permission failed. Upload and stop behavior are
+unchanged; no fallback, automatic directory creation or guard bypass is added.
+These failures need a future scoped observation if they recur. Do not repeat
+Restore/Uninstall, clear state or change pairing merely to diagnose them.
 
 ## Root firmware interfaces
 

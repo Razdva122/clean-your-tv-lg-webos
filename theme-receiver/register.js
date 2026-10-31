@@ -6,10 +6,34 @@ var texts = {
   'receiver-unavailable':'Receiver could not start', 'not-received':'No theme has been received',
   'invalid-offset':'Invalid read offset', 'invalid-request':'Invalid receiver request'
 };
+// webos-service exits a standalone service five seconds after its last
+// activity ends. The HTTP listener is not an activity, so a session holds one;
+// otherwise the process exits while the TV still shows the PIN.
+function activityHold(service) {
+  var manager = service && service.activityManager;
+  if (!manager || typeof manager.create !== 'function' || typeof manager.complete !== 'function') return null;
+  return function () {
+    var activity = null, released = false;
+    function complete(a) { try { manager.complete(a, function () {}); } catch (_) {} }
+    try {
+      manager.create('themeReceiver', function (a) {
+        if (!a || !a.activityId) return;
+        if (released) complete(a); else activity = a;
+      });
+    } catch (_) {}
+    return function () {
+      released = true;
+      if (activity) { var a = activity; activity = null; complete(a); }
+    };
+  };
+}
 function register(service, options) {
   options = options || {};
   if (!options.appId || typeof options.appId !== 'string') throw new Error('appId required');
-  var receiver = core.create(options);
+  var settings = {};
+  Object.keys(options).forEach(function (key) { settings[key] = options[key]; });
+  if (typeof settings.hold !== 'function') settings.hold = activityHold(service);
+  var receiver = core.create(settings);
   var methods = {themeReceiverStart:'start', themeReceiverStatus:'status', themeReceiverRead:'read', themeReceiverStop:'stop'};
   Object.keys(methods).forEach(function (method) {
     service.register(method, function (message) {

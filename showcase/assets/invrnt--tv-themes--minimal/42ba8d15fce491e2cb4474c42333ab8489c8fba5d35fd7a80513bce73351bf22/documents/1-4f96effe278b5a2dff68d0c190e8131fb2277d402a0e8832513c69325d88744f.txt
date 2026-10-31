@@ -1,0 +1,11 @@
+# Credits
+
+CSS: original work by invrnt, MIT License (see LICENSE.txt).
+
+Preview images (assets/preview.png, assets/preview-inputs.png): captures of the
+Clean Your TV Home preview renderer, made with the theme toolkit's `screenshots`
+command, using its synthetic app inventory and fixed clock. The app icons shown
+are the preview's reference artwork, credited in the main project's
+showcase/assets/CLASSIC-CREDITS.txt
+(https://github.com/Razdva122/clean-your-tv-lg-webos). Brand names and logos
+belong to their respective owners. No other third-party assets are included.

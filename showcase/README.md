@@ -6,9 +6,28 @@ listing, pinned to its separately committed toolkit distribution. Channel 1.3.3 
 external Alpine record is archived; it is not an additional download.
 There are no votes, popularity counts or automatic built-in promotions.
 
-Start with the [complete author contribution walkthrough](../docs/development/CONTRIBUTING-THEMES.md) for setup, live PC preview, LAN testing, source/distribution commits and a step-by-step PR submission. This page is the registry and maintainer-review reference.
+Use the simple author path below to suggest a theme. The [author walkthrough](../docs/development/CONTRIBUTING-THEMES.md) is optional for creating and packaging themes yourself. The rest of this page defines maintainer integration and review.
+
+## Suggest a theme: author path
+
+[Open a theme suggestion](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/new?template=theme-submission.yml)
+with a theme name, a public link to its source or package, and its license/asset
+permissions. A normal issue or a PR with the same information is also welcome.
+A repository link is enough to start; maintainers can help prepare the fixed
+package and catalogue entry. A screenshot and known limitations are optional.
+
+Authors do not need to fork this repository, prepare registry JSON, generate the
+TV catalogue, install Playwright, run repository tests, write a review report or
+test on a physical TV to request inclusion. Maintainers own those review and
+integration steps. Suggestions are evaluated by maintainers; submission does not
+automatically approve or publish a theme.
+
+The sections below describe the maintainer integration contract. Authors who
+prefer to prepare a complete PR may use it, but it is not an admission requirement.
 
 ## Submit one fixed theme version
+
+This is the maintainer integration path.
 
 Use the pinned author toolkit in `clean-your-tv-lg-theme` to validate/build your
 CSS and assets. The main project's `theme-api/compile.cjs` and shared
@@ -17,7 +36,7 @@ part of a theme. Authors may keep several themes in one repository; submit one
 record per stable `github:owner/repository:slug` ID. Approval of a collection does
 not approve its other themes or future versions.
 
-Submit a PR targeting `release/next` containing:
+Maintainers prepare or finish a PR targeting `release/next` containing:
 
 - `showcase/registry/owner--repository--slug.json`, matching `schema.json`.
 - `showcase/assets/owner--repository--slug/<descriptorSha256>/cytv-theme.json`
@@ -46,8 +65,10 @@ credits files use `.txt`; images use their actual PNG/JPEG/WebP extension. The e
 licenses require a reviewed policy change, not a misleading identifier.
 
 Dates use `YYYY-MM-DD`. Maintainers assign `addedAt` and `reviewedAt`; drafts can
-propose dates but cannot approve themselves. Include `browser` or `device`
+propose dates but cannot approve themselves. Maintainers record actual `browser` or `device`
 evidence with a concise public summary and optional repository issue/PR link.
+The final registry requires review evidence; the initial author suggestion does
+not. Never label an untested draft as a completed browser or device check.
 Browser evidence does not establish TV compatibility. Device reports follow
 `AGENTS.md` consent/redaction requirements and distinguish known model, firmware,
 remote, edition, versions, tests, expected/actual results and untested fields.
@@ -86,14 +107,18 @@ must verify author control through matching committed repository content or
 explicit permission for third-party work. Matching profile text alone does not
 prove ownership, and attribution is not redistribution permission.
 
-Before approval, use the trusted preview runtime with validated theme data,
-synthetic app inventory/fixed clock and external network blocked. Produce Home,
-library, Inputs and standard Settings isolation screenshots plus policy/resource
-reports. Compare submitted preview bytes to that exact reviewed version. The
-static builder validates/copies review artifacts; it does not generate these
-screenshots or certify device acceptance. Initial Alpine/Channel evidence is recorded in [the catalog review](review/initial-themes.md).
-These are candidate browser-reviewed versions; the normal PR review/merge is
-still required and no physical-TV compatibility is claimed.
+Before approval, maintainers use the trusted preview runtime with validated theme
+data, synthetic apps and external network blocked. Check Home focus/navigation,
+app library labels, Inputs and standard Settings isolation. Record the checked
+version, actual results and untested paths in a short PR comment or description,
+then put a concise summary in the final registry evidence. Check that the listed
+preview represents that version. Save screenshots when they help explain a
+problem or design decision; a separate screenshot set, policy/resource report or
+review document is not mandatory. Automated validation still enforces the
+allowed selectors, resource limits and hashes. Authors may share their own
+observations, but maintainers own acceptance and must not demand a report or
+physical-TV testing as the price of submitting a theme. Browser checks do not
+certify device compatibility.
 
 Review outcomes are needs changes, approved fixed version, unavailable source or
 removed listing. Approval is represented by the reviewed merge and fixed digest;
@@ -112,21 +137,22 @@ the unavailable state without a copy/install control. For removal, set
 page becomes a tombstone; image/distribution bytes are omitted from the site.
 Moderated records retain local review evidence but skip live remote checks. Do not fabricate compatibility or silently substitute a new source.
 
-## Static Pages integration and publication
+## Browser preview and local catalogue review
 
-`buildShowcase(destination, {showcaseRoot})` is exported from
-`scripts/build-showcase.cjs`; `destination` is the generated `/themes` directory,
-not the shared site root. The caller supplies a fresh staging directory. The
-builder exports relative links, `catalog.json`, per-ID pages and reviewed assets.
-Use `scripts/preview.py --build OUTPUT --showcase` to compose one Pages artifact, preserving the
-existing root preview, `/launcher/`, `/root-launcher/` and `/preview/` paths.
+The public site uses the [primary browser preview](https://razdva122.github.io/clean-your-tv-lg-webos/)
+with inline theme cards. It does not publish a separate `/themes/` catalogue or
+theme detail pages. `scripts/preview.py --build OUTPUT` exports the main preview,
+both editions, theme data and the existing launcher/preview paths into fresh staging.
+
+`scripts/build-showcase.cjs` and its `buildShowcase(destination, {showcaseRoot})`
+export remain available for local author/reviewer inspection. Their HTML output
+is not included in the public Pages workflow. The on-TV Showcase uses reviewed
+registry/catalogue JSON and is unchanged by removing the separate web page.
 
 Publication follows registry PR → `release/next` → normal main release → existing
-Pages deployment with its current-main check. PRs may create inspection artifacts
-but must not deploy. Faster independent catalog delivery needs an explicitly
-approved release-policy change. Verify the deployed site and copied descriptor
-before claiming it is available. No publication is authorized by running this
-local builder.
+Pages deployment with its current-main check. PR inspection artifacts must not
+deploy. Verify the deployed site before claiming public availability; a local
+build does not publish it.
 
 ## Preview cards
 
@@ -138,6 +164,16 @@ synthetic renderer capture in `assets/classic-preview.png`, with credits and
 capture provenance alongside it. A built-in preview is not a reviewed installable
 community descriptor or a hardware acceptance claim.
 
+
+### Catalogue order
+
+Built-in themes stay first. `showcase/order.json` preserves the existing order
+of community themes for the TV catalogue and primary interactive preview.
+New registry entries absent from that list appear after its entries, with
+filename order as a deterministic fallback. When integrating a new theme,
+maintainers append its ID to the end of this list so later submissions cannot
+move it. Updates keep the same position; removed/unavailable entries remain
+hidden under the existing moderation rules. Authors do not need to edit this file.
 
 ### On-TV catalogue snapshot
 
