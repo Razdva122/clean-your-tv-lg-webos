@@ -79,6 +79,8 @@ No-root: Para reiniciar o controle de Home, abra Home Helper, escolha Iniciar He
 ./cytv --language pt-BR uninstall
 ```
 
+> Ainda não publicado (#152): se desativar o Helper for rejeitado, a restauração/remoção No-root poderá usar uma parada verificada por SSH. O estado de parada é preservado; resultados incertos mantêm o registro. Não apague arquivos de estado. A confirmação no EF950V está pendente. [#152](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/152)
+
 Após uma interrupção, execute primeiro `status` e preserve os registros. `restore` restaura LG Home sem remover aplicativos; `uninstall` restaura antes de remover. Os dados de recuperação Root são mantidos de propósito: não os apague para forçar a reinstalação. Revise relatórios antes de compartilhar; não publique chaves nem pastas de perfis.
 
 1.5.4: abra **Configurações do Home → Aparência → Colunas** e escolha de 1 a 8 colunas, ou **Conforme o tema** para usar o valor do tema (Classic: 5). Um número explícito tem prioridade sobre o tema. Temas com disposição fixa ocultam a opção Colunas e usam o valor do autor. Sua escolha salva volta a valer ao mudar para um tema que ofereça esse ajuste. Na prévia candidata Alpine, os apps ficam em uma única faixa horizontal circular: Esquerda/Direita rola, Cima abre os atalhos e Baixo volta ao mesmo app. Na prévia Alpine, a roda do mouse ou o touchpad também rola a faixa; Home não se move atrás de uma caixa de diálogo aberta.
