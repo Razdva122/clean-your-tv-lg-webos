@@ -110,9 +110,15 @@
         203,
         204
       ],
-      "summary": "Own native Root startup/cleanup, preserve new-runtime update resume and bound SSH admission; #171 diagnostic-only, #202 update/rollback Home loss deferred by maintainer; refresh Classic and built-in README previews"
+      "summary": "Own native Root startup/cleanup and bound SSH admission; separate automatic recovery cancellation, but #202 update/rollback Home loss remains deferred; #171 diagnostic-only; refresh Classic and built-in README previews"
     }
   ],
   "excluded": [],
-  "acceptance": ""
+  "acceptance": "Maintainer-owned OLED55C3RLA, firmware43.21.71/webOS SDK11.2.0, remote model unknown, macOS ARM64. Signed Root QA41178376979:1/signing41178920042:1 sourcef4bab0ea; final fullbuild41185537404:1 carries byte-identical Root32b0acf41f65b1620d1f0a2679058d5be5d1f5f6a49cf97105eae4c97b882469, updater375ffccfd5ac42dbc31d808fc27262c23bbfdf49d148cd909461a153f75844ad and infrastructure341de52d865a364a0b10db4c272b33237648b96d642114cb0d633dfd6cd16033. Controls/Home/arrows/OK/Back/volume/audible sound, native Off/tripleHome cleanup, same-session standby and true AC cold first-screen Clean, actual profile/theme/columns retention and all3component rollback/native baseline cleanup passed within recorded scope. Forward Home resume cancelled and active rollback resume skipped; maintainer explicitly deferred #202/#206 fixes/retests and accepted release with normal explicit-enable/Settings reopen workaround. #171 earlier different-session failure unresolved follow-up. Maintainer explicitly accepts untested physical Helper0.6.20->0.6.21 transition. Final Android0.5.1/code16 APK46099d6be1100a3754698245ee83a794eadf9feb6a117c40554b477c6ed9079a original-signer code15->16 emulator install-r/force-stop retained4syntheticfiles; physicalphone/nativeinstrumentation untested. All10Actions artifacts digest-verified, nine installer payloads/all6TVIPKs identical, final macOS CLI/GUI runtime checks passed. NoRootwebOS5receiver published-package confirmation, uninstall/additionalinput/firmware combinations untested. See docs/history/2026-10-31-release-1.5.3-signed-root-qa.md; TV left stable0.6.1 with owner-confirmed controls/audio. No universalcompatibility claim.",
+  "build": {
+    "run_id": 41185537404,
+    "attempt": 1,
+    "source": "f4bab0ea60c825994445b0b63625f5fd734bff4e"
+  },
+  "acceptance_build": "41185537404:1"
 }

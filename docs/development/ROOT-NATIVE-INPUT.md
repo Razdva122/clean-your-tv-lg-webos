@@ -1,6 +1,6 @@
 # Root native startup input
 
-Status: unpublished 1.5.3 candidate behavior, not a claim about stable 1.5.2.
+Status: 1.5.3 behavior; device acceptance is limited to the recorded scope.
 Track implementation and affected acceptance in [#204](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/204).
 
 ## Behavior
@@ -67,8 +67,4 @@ DTV input and remove the trial entry. Foreground and Home intent were unchanged;
 the original remembered input and unrelated entries were verified afterward.
 This validates the inverse API, not the new implementation's package acceptance.
 
-Final signed-package acceptance still needs ordinary enable/disable, triple-Home,
-fault/failsafe recovery, independent app/input preservation, standby, cold boot,
-update/retained rollback and uninstall. In particular, [#171](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/171)
-remains a separate unresolved retained-intent failure after remote-power input
-teardown. An enabled-mode first-screen experiment does not fix or accept it.
+[Signed C3 QA](../history/2026-10-31-release-1.5.3-signed-root-qa.md) records first-screen, standby, cold-boot, controls, normal Off and triple-Home passes on the exact tested packages. It also records Home preference loss during update/rollback (#202), stale Settings (#206), untested paths and the maintainer's explicit release decision. Close/reopen Settings if stale, then explicitly enable Change Home and wait for Clean status. These results do not establish universal first-screen compatibility or resolve [#171](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/171). Uninstall and unrelated external-input combinations remain untested.

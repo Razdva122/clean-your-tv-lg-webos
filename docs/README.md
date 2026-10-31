@@ -10,7 +10,7 @@ Start with a task. You do not need the developer reports to install or use Clean
 | Open the installer on Windows, macOS or Linux | [Desktop setup](DESKTOP_INSTALL.md) |
 | Use an Android phone | [Android setup](../android/README.md) |
 | Learn the remote controls | [Controls and emergency exit](CONTROLS.md) |
-| Browse or create themes (development candidate) | [Theme catalog and author tools](THEMES.md) |
+| Browse or create themes | [Theme catalog and author tools](THEMES.md) |
 | Contribute a theme to Showcase | [Author contribution walkthrough](development/CONTRIBUTING-THEMES.md) |
 | Arrange or hide apps | [App management](APP-MANAGEMENT.md) |
 | Update, disable or uninstall | [Maintenance](MAINTENANCE.md) |

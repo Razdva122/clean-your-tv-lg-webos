@@ -1,17 +1,11 @@
 # v1.5.3 — Themes, Root startup and recovery
 
-Status: unpublished combined fix batch integrated into `release/next`. The previous complete build
-[41118810865 / attempt 1](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/41118810865)
-from `160f3294d565b25925a8bf128d92a4146860a0b9` remains historical evidence;
-its selection is invalidated by the integrated receiver and startup/recovery batch. No replacement
-build is selected and acceptance remains empty. All 17 implementation PRs are integrated. First perform focused signed Root QA
-for the old-runtime update window, then dispatch one complete replacement build.
-
-[Previous verification](history/2026-10-31-release-1.5.3-combined-verification.md)
-records its ten artifacts, nine installer payloads, macOS execution and Android
-checks. The [physical matrix](history/2026-10-31-release-1.5.3-physical-qa.md)
-records two update Home-resume failures and a separate standby failure. These
-results do not accept replacement bytes or universal TV compatibility.
+Status: prepared 1.5.3 release, 17 implementation PRs integrated. Full candidate
+[41185537404:1](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/41185537404)
+builds product source `f4bab0ea60c825994445b0b63625f5fd734bff4e`.
+See the [signed Root QA and release decision](history/2026-10-31-release-1.5.3-signed-root-qa.md)
+for exact package hashes, startup/controls observations and accepted limitations.
+Historical builds 41118810865:1 and earlier retain their original scope.
 
 ## Changes
 
@@ -25,8 +19,8 @@ results do not accept replacement bytes or universal TV compatibility.
   and three built-in theme previews. [Batch verification](history/2026-10-31-release-1.5.3-native-startup-batch.md) records final PR CI and limits.
   The EIM enabled-mode C3 experiment is not final package acceptance or a fix for
   #171. Additional shutdown-decision diagnostics preserve existing safety policy.
-  An old callback can still run before its runtime is replaced; #202 therefore
-  needs actual old-baseline update acceptance, not cancellation-receipt clearing.
+  Actual signed QA still found Home preference loss on forward update and active
+  rollback; #202 remains deferred, with normal explicit enable as the workaround.
 
 - #193: refresh the Ribbon README screenshot and link theme browsing to the main
   interactive preview. Remove the standalone public theme catalogue page and its
@@ -86,31 +80,27 @@ normal admission, signatures and minimum-supervisor checks remain unchanged.
 
 ## Delivery and acceptance limits
 
-The existing Helper rollback record approves only the exact 0.6.19 to 0.6.20
-transition. It does not approve 0.6.20 to 0.6.21 or cover the vendored/runtime
-changes under a permission-only exception. The new raw/canonical Helper hashes
-and authenticated published Home 1.6.0 / Helper 0.6.20 rollback bytes are recorded
-in the final verification report. The new transition still needs applicable
-acceptance or explicit exact-scope approval;
-publication must remain blocked until that gate is truthfully satisfied.
+The maintainer explicitly accepted release without the physical No-root Helper
+0.6.20 to 0.6.21 transition test. This exact path remains untested; package,
+signature, control and rollback regression checks remain required. The older
+0.6.19 to 0.6.20 record is not reused as a new passing test.
 
-The [unattended C3 record](history/2026-10-30-unattended-c3-ui-proof.md) tested the
-installed Root 0.6.1 baseline plus a temporary in-memory footprint proof. It is
-not acceptance of these new packages. Its clean restoration and renderer result
-retain their original artifact scope.
+The signed C3 record shows first-screen Clean on one same-session standby and
+one true cold boot, controls/audio, profile retention, native Off/emergency and
+rollback cleanup. #171's earlier different-session retained-intent failure remains
+unresolved follow-up; no ENODEV exemption or automatic fault re-enable was added.
+The maintainer requested proceeding with the tested source and recorded known
+limitations; this is not universal firmware/TV compatibility.
 
-#171 standby remains unresolved. The previous release's limited-risk decision
-is not a new passing result or automatic approval of this release. Record an
-explicit fix/follow-up decision and the affected artifact tests before final
-release approval. Root firmware support and other users' retained recovery remain
-separate unresolved work. The independent Homebrew Installer stays unreleased
-with promotion disabled.
+Final Android APK checks and original-signer v1.5.2/code15 to code16 update passed
+on an isolated Android 15/API35 ARM64 emulator without uninstall or loss of four
+synthetic private files. Physical phone/TV operation and native instrumentation
+were not rerun. The independent Homebrew Installer remains unreleased and its
+promotion disabled. Other users' runtime/recovery reports remain unresolved where
+only diagnostics or partial improvements ship.
 
-Build 41118810865 / attempt 1 and older 41095949258 / attempt 2 retain only
-their historical artifact scope. The replacement candidate needs complete CI,
-artifact verification, signing and affected physical acceptance. Standby #171
-and the Helper transition gate remain explicit publication blockers. No new
-physical compatibility, phone acceptance or completed device recovery is claimed.
+Mandatory complete CI, final artifact/signature and verified publication checks
+remain in force; a merge alone does not establish shipping.
 
 ## Accepted remaining limitations
 
