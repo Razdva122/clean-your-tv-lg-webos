@@ -11,12 +11,17 @@ class NativeInputTests(unittest.TestCase):
   self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
   self.root=Path(self.tmp.name);self.root.chmod(0o700)
   self.baseline={'type':'DTV','appId':'com.webos.app.livetv'}
-  self.last=dict(self.baseline);self.devices=[];self.calls=[];self.fail=None
+  self.last=dict(self.baseline);self.devices=[];self.calls=[];self.fault_hook=None
+  self.startup='on'
   for target,name,value in ((d,'STATE',self.root),(d,'EXPECTED_UID',os.getuid()),(d,'sam_transport',lambda:self)):
    p=patch.object(target,name,value);p.start();self.addCleanup(p.stop)
  def call(self,uri,payload,timeout=5):
   method=uri.rsplit('/',1)[-1];self.calls.append((method,copy.deepcopy(payload)))
-  if self.fail: self.fail(method,payload)
+  if self.fault_hook: self.fault_hook(method,payload)
+  if method=='getSystemSettings':
+   self.assertEqual(uri,'luna://com.webos.settingsservice/getSystemSettings')
+   self.assertEqual(payload,{'category':'general','keys':['homeAutoLaunch']})
+   return {'returnValue':True,'settings':{'homeAutoLaunch':self.startup}}
   if method=='getAllInputStatus':return {'returnValue':True,'devices':copy.deepcopy(self.devices)}
   if method=='getLastInput':return dict(returnValue=True,lastSourceId=self.last['type'],lastSourceAppId=self.last['appId'])
   if method=='addDevice':self.devices.append({'appId':d.CANDIDATE,'id':'MVPD_IP-'+d.CANDIDATE,'label':'Home Root'})
@@ -30,16 +35,34 @@ class NativeInputTests(unittest.TestCase):
   self.assertEqual(native.native_input_disable(),'disabled');self.assertEqual(self.last,self.baseline);self.assertEqual(self.devices,[])
   self.assertNotIn('launch',[name for name,_ in self.calls])
   self.assertEqual(native.native_input_disable(),'disabled')
+ def test_fresh_enable_preserves_off_or_unknown_startup_setting(self):
+  for value in ('off','unknown',None):
+   with self.subTest(value=value):
+    self.startup=value
+    self.assertEqual(native.native_input_enable(),'preserved-startup-setting')
+    self.assertEqual(self.last,self.baseline);self.assertEqual(self.devices,[])
+    self.assertFalse((self.root/'native-input.json').exists())
+    self.assertFalse({'addDevice','setLastInput','deleteDevice'} & {name for name,_ in self.calls})
+
+ def test_startup_setting_read_failure_cannot_mutate_native_input(self):
+  def fail(method,payload):
+   if method=='getSystemSettings':raise TimeoutError('startup unavailable')
+  self.fault_hook=fail
+  with self.assertRaisesRegex(TimeoutError,'startup unavailable'):native.native_input_enable()
+  self.assertEqual(self.last,self.baseline);self.assertEqual(self.devices,[])
+  self.assertFalse((self.root/'native-input.json').exists())
+  self.assertNotIn('addDevice',[name for name,_ in self.calls])
+
  def test_total_budget_shrinks_rpc_timeout_and_stops_before_late_add(self):
   from types import SimpleNamespace
   timeouts=[]
   def timed(uri,payload,timeout):
    timeouts.append(timeout)
    return self.call(uri,payload,timeout)
-  with patch.object(d.time,'monotonic',side_effect=[100,100,101.4,101.6]),patch.object(d,'sam_transport',return_value=SimpleNamespace(call=timed)):
+  with patch.object(d.time,'monotonic',side_effect=[100,100,100,101.4,101.6]),patch.object(d,'sam_transport',return_value=SimpleNamespace(call=timed)):
    with self.assertRaisesRegex(TimeoutError,'deadline'):native.native_input_enable()
-  self.assertEqual(len(timeouts),2);self.assertEqual(timeouts[0],.5)
-  self.assertAlmostEqual(timeouts[1],.05)
+  self.assertEqual(len(timeouts),3);self.assertEqual(timeouts[:2],[.5,.5])
+  self.assertAlmostEqual(timeouts[2],.05)
   self.assertNotIn('addDevice',[name for name,_ in self.calls])
   self.assertEqual(self.saved()['phase'],'adding');self.assertEqual(self.devices,[])
   self.assertEqual(native.native_input_disable(),'disabled')
@@ -49,10 +72,10 @@ class NativeInputTests(unittest.TestCase):
    if method=='addDevice':
     self.devices=[{'appId':d.CANDIDATE,'id':'MVPD_IP-'+d.CANDIDATE}]
     raise TimeoutError('lost ack')
-  self.fail=fault
+  self.fault_hook=fault
   with self.assertRaises(TimeoutError):native.native_input_enable()
   self.assertEqual(self.saved()['phase'],'adding')
-  self.fail=None;self.assertEqual(native.native_input_disable(),'disabled')
+  self.fault_hook=None;self.assertEqual(native.native_input_disable(),'disabled')
   self.assertEqual(sum(name=='addDevice' for name,_ in self.calls),1)
  def test_preexisting_entry_is_not_adopted_or_deleted(self):
   self.devices=[{'appId':d.CANDIDATE,'id':'MVPD_IP-'+d.CANDIDATE}]
@@ -66,16 +89,16 @@ class NativeInputTests(unittest.TestCase):
   native.native_input_enable()
   def fault(method,payload):
    if method=='deleteDevice':self.devices=[];raise TimeoutError('lost ack')
-  self.fail=fault
+  self.fault_hook=fault
   with self.assertRaises(TimeoutError):native.native_input_disable()
-  self.assertEqual(self.saved()['phase'],'removing');self.fail=None
+  self.assertEqual(self.saved()['phase'],'removing');self.fault_hook=None
   self.assertEqual(native.native_input_disable(),'disabled')
   self.assertEqual(sum(name=='deleteDevice' for name,_ in self.calls),1)
  def test_wrong_readback_blocks_completion(self):
   native.native_input_enable()
   def fault(method,payload):
    if method=='setLastInput':raise TimeoutError('unverified restore')
-  self.fail=fault
+  self.fault_hook=fault
   with self.assertRaises(TimeoutError):native.native_input_disable()
   self.assertEqual(self.saved()['phase'],'removing');self.assertEqual(len(self.devices),1)
  def test_disabled_receipt_is_not_permission_to_delete_new_entry(self):
@@ -84,8 +107,9 @@ class NativeInputTests(unittest.TestCase):
   self.assertEqual(native.native_input_disable(),'disabled');self.assertEqual(len(self.devices),1)
   with self.assertRaisesRegex(ValueError,'unowned'):native.native_input_enable()
  def test_repeated_enable_does_not_steal_new_input(self):
-  native.native_input_enable();self.last={'type':'HDMI_1','appId':'com.webos.app.hdmi1'}
+  native.native_input_enable();self.startup='off';self.last={'type':'HDMI_1','appId':'com.webos.app.hdmi1'}
   self.assertEqual(native.native_input_enable(),'active');self.assertEqual(self.last['type'],'HDMI_1')
+  self.assertEqual(sum(name=='getSystemSettings' for name,_ in self.calls),1)
  def test_missing_entry_is_not_silently_reregistered(self):
   native.native_input_enable();self.devices=[]
   with self.assertRaisesRegex(ValueError,'changed'):native.native_input_enable()
@@ -140,6 +164,27 @@ class NativeRecoveryTests(recovery.IntegrationTests):
   self.assertEqual(receipt.read_bytes(),original)
   self.assertEqual(intent_runtime.restore(),'restored')
   self.assertEqual(self.read(),self.baseline)
+
+ def test_explicit_restore_disables_starting_intent_before_later_legacy_recovery(self):
+  import intent_runtime
+  (self.root/'native-input.json').write_text(json.dumps({'schema':1,'appId':d.CANDIDATE,'phase':'active','baseline':{'type':'DTV','appId':'com.webos.app.livetv'}}))
+  starting=self.c.boot(self.intent,'boot-b','new-attempt',False)['intent']
+  self.assertTrue(starting['enabled']);self.assertEqual(starting['phase'],'starting')
+  self.create_route('legacy-trial')
+  recover=d.main;observed=[]
+  def routes(mode):
+   self.assertFalse(self.store.read()['enabled'])
+   observed.append('routes');return recover(mode)
+  def native_cleanup():
+   self.assertEqual(self.read(),self.baseline)
+   self.assertEqual(self.store.read()['phase'],'disabled')
+   observed.append('native');return 'disabled'
+  with patch.object(d,'main',side_effect=routes),patch.object(d,'native_input_disable',side_effect=native_cleanup):
+   try:result=intent_runtime.restore()
+   except ValueError as error:self.fail('Explicit restoration blocked: '+str(error))
+   self.assertEqual(result,'restored')
+  self.assertEqual(observed,['routes','native'])
+  self.assertFalse(self.store.read()['enabled']);self.assertEqual(self.read(),self.baseline)
 
  def activation(self,healthy=True):
   import time

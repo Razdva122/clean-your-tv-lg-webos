@@ -8,7 +8,9 @@ Track implementation and affected acceptance in [#204](https://github.com/Razdva
 After explicit **Change Home** activation has passed the existing input-health,
 independent guardian and routing checks, Root optionally registers its existing
 app as a native External Input Manager (EIM) input. It remembers that input through
-EIM's `setLastInput` API. On the tested C3, bootd can choose this remembered MVPD
+EIM's `setLastInput` API. Fresh registration requires the native
+`general.homeAutoLaunch` preference to be exactly `on`; off, unknown or unreadable
+settings preserve the ordinary guarded fallback. On the tested C3, bootd can choose this remembered MVPD
 app for Cover App before the later guarded Home handler runs. The entry uses the
 existing `supportGIP` and large icon; no firmware patch, new endpoint or LS2 grant
 is introduced.

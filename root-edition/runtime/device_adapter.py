@@ -216,7 +216,8 @@ def _native_call(method,payload,deadline):
  if remaining<=0:raise TimeoutError('Native input operation deadline')
  # transport.call may also spend up to timeout reaping its child. Both halves
  # must fit the total budget so emergency recovery can acquire the owner lock.
- return sam_transport().call(NATIVE_EIM+method,payload,timeout=min(.5,remaining/2))
+ uri='luna://com.webos.settingsservice/getSystemSettings' if method=='startupSettings' else NATIVE_EIM+method
+ return sam_transport().call(uri,payload,timeout=min(.5,remaining/2))
 
 def _native_pair(value):
  pair={'type':value.get('lastSourceId'),'appId':value.get('lastSourceAppId')}
@@ -276,6 +277,8 @@ def native_input_enable():
   return 'active'  # Never overwrite an input selected after enable.
  if saved is not None and saved['phase']!='disabled':raise ValueError('Native input recovery required')
  if present:raise ValueError('Refusing unowned native input')
+ startup=_native_call('startupSettings',{'category':'general','keys':['homeAutoLaunch']},deadline)
+ if startup.get('settings',{}).get('homeAutoLaunch')!='on':return 'preserved-startup-setting'
  baseline=_native_pair(_native_call('getLastInput',{},deadline))
  if baseline['appId']==CANDIDATE:raise ValueError('Unowned remembered Root input')
  saved=dict(schema=1,appId=CANDIDATE,phase='adding',baseline=baseline)

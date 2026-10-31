@@ -96,9 +96,10 @@ def _legacy_native_recovery(c=None):
     c = Coordinator(Store(d.STATE)) if c is None else c
     expected = c.store.read()
     with c.locked(expected):
-        if expected['enabled']: raise ValueError('Native cleanup requires disabled intent')
+        if expected['phase'] != 'disabled': expected,_ = c.event(expected,'exit')
         result = d.main('recover')
         if result not in ('restored','absent'): raise ValueError('Routing restoration incomplete')
+        if expected['phase'] == 'recovering': c.event(expected,'restored')
         d.native_input_disable()  # A bad EIM receipt may block completion, never route restoration.
         return result
 
