@@ -110,7 +110,7 @@
         203,
         204
       ],
-      "summary": "Own native Root startup/cleanup, preserve new-runtime update resume and bound SSH admission; #171 diagnostic-only, #202 old-runtime upgrade acceptance pending; refresh Classic and built-in README previews"
+      "summary": "Own native Root startup/cleanup, preserve new-runtime update resume and bound SSH admission; #171 diagnostic-only, #202 update/rollback Home loss deferred by maintainer; refresh Classic and built-in README previews"
     }
   ],
   "excluded": [],

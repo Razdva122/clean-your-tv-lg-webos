@@ -111,3 +111,14 @@ their historical artifact scope. The replacement candidate needs complete CI,
 artifact verification, signing and affected physical acceptance. Standby #171
 and the Helper transition gate remain explicit publication blockers. No new
 physical compatibility, phone acceptance or completed device recovery is claimed.
+
+## Accepted remaining limitations
+
+The maintainer deferred further fixes/retests for [Home preference loss during
+update/rollback (#202)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/202)
+and [stale Home settings after emergency/resume (#206)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/206).
+After a transition, explicitly enable Change Home in normal settings if needed;
+close and reopen Settings if its toggle is stale, then wait for the Clean status.
+These are known failures, not successful automatic Home resumption.
+The [signed C3 QA record](history/2026-10-31-release-1.5.3-signed-root-qa.md)
+separates startup/controls passes from failures and untested paths.
