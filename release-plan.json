@@ -8,6 +8,13 @@
         152
       ],
       "summary": "Guarded No-root Helper stop after service refusal and prefixed WebKit layouts; #152 actual device recovery/control acceptance remains pending"
+    },
+    {
+      "pr": 213,
+      "issues": [
+        161
+      ],
+      "summary": "Document passive bounded Root worker diagnostics before admission; #161 actual recovery remains unresolved pending owner evidence"
     }
   ],
   "excluded": [],

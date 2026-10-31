@@ -8,6 +8,7 @@ one model or artifact does not certify later releases or a different TV.
 
 ## Scoped feature checks
 
+- [Passive Root diagnostic preparation, 2026-10-31](2026-10-31-root-passive-diagnostics.md): reviewed initial read-only procedure for #161; actual recovery remains blocked on owner evidence.
 - [No-root recovery and legacy WebKit, 2026-10-31](2026-10-31-ef950-recovery-webkit.md): integrated source/host checks for #212; original #152 device recovery and controls remain unverified.
 - [Supervised 1.5.0 candidate findings, 2026-10-30](2026-10-30-supervised-candidate-findings.md): owner observations and installed-TV automation; eight regressions remain separate from later fixes.
 - [Unattended candidate preparation, 2026-10-30](2026-10-30-unattended-candidate-readiness.md): exact artifact/host checks and their remaining device gates.
