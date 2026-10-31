@@ -6,11 +6,12 @@ const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const postcss = require('postcss');
 const {fileURLToPath, pathToFileURL} = require('node:url');
 const root = path.resolve(__dirname, '..');
 const appRoot = process.env.TV_WEB_DIR ? path.resolve(process.env.TV_WEB_DIR) : path.join(root, 'launcher');
 const artifacts = path.join(root, 'build/tests/issue-20');
-const profiles = ['modern', 'no-inset', 'no-inset-or-es2015'];
+const profiles = ['modern', 'no-inset', 'no-inset-or-es2015', 'prefixed-webkit'];
 
 (async () => {
   fs.mkdirSync(artifacts, {recursive: true});
@@ -26,8 +27,17 @@ const profiles = ['modern', 'no-inset', 'no-inset-or-es2015'];
         if (profile !== 'modern') {
           await page.route('**/*.css', route => {
             // Old parsers ignore the unsupported declaration; preserve everything else.
-            const css = fs.readFileSync(fileURLToPath(route.request().url()), 'utf8')
+            let css = fs.readFileSync(fileURLToPath(route.request().url()), 'utf8')
               .replace(/\binset\s*:[^;}]+;?/g, '');
+            if (profile === 'prefixed-webkit') {
+              const tree = postcss.parse(css);
+              tree.walkDecls(d => {
+                if (/^(transform(?:-origin)?|transition(?:-.+)?|animation(?:-.+)?|align-.+|justify-content|flex(?:-.+)?)$/.test(d.prop) ||
+                    (d.prop === 'display' && /^(inline-)?flex$/.test(d.value))) d.remove();
+              });
+              tree.walkAtRules('keyframes', rule => rule.remove());
+              css = tree.toString();
+            }
             return route.fulfill({contentType: 'text/css', body: css});
           });
         }
@@ -64,6 +74,29 @@ const profiles = ['modern', 'no-inset', 'no-inset-or-es2015'];
             };
           };
         }, profile === 'no-inset-or-es2015');
+        if (profile === 'prefixed-webkit') await page.addInitScript(() => {
+          // Model WebKit's unsupported unprefixed CSSOM writes as well as CSS parsing.
+          const nativeStyle = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'style'), styles = new WeakMap();
+          const unsupported = new Set(['transform', 'transition']);
+          Object.defineProperty(HTMLElement.prototype, 'style', {...nativeStyle, get() {
+            const style = nativeStyle.get.call(this);
+            if (!styles.has(style)) styles.set(style, new Proxy(style, {
+              has(target, name) {return !unsupported.has(name) && Reflect.has(target, name);},
+              get(target, name) {
+                if (unsupported.has(name)) return undefined;
+                const value = Reflect.get(target, name, target);
+                return typeof value === 'function' ? value.bind(target) : value;
+              },
+              set(target, name, value) {return unsupported.has(name) || Reflect.set(target, name, value, target);}
+            }));
+            return styles.get(style);
+          }});
+          const text = Object.getOwnPropertyDescriptor(Node.prototype, 'textContent');
+          Object.defineProperty(Node.prototype, 'textContent', {...text, set(value) {
+            if (this.nodeName === 'STYLE') value = value.replace(/(^|[;{])\s*(?:transform(?:-origin)?|transition|animation|justify-content):[^;}]+/g, '$1');
+            text.set.call(this, value);
+          }});
+        });
         await page.route('**/config.js', route => route.fulfill({body:
           'window.CONFIG={columns:5,dockApps:["test.0","test.1","test.2","test.3","test.4","test.5","test.6"],hiddenApps:[],liveTvApp:"test.live"};'}));
         await page.route('**/apps.js', route => route.fulfill({body: 'window.TV_APPS=' + JSON.stringify({
@@ -111,6 +144,16 @@ const profiles = ['modern', 'no-inset', 'no-inset-or-es2015'];
           {id: 'stage', width: 1920, height: 1080}
         ], 'the app grid must occupy the TV screen, even without inset support');
         assert.deepEqual(errors, [], 'launcher must initialize without unsupported API errors');
+        if (profile === 'prefixed-webkit') {
+          const rows = await page.locator('#topButtons .pill').evaluateAll(buttons => buttons.map(b => Math.round(b.getBoundingClientRect().top)));
+          assert(rows.length >= 3 && rows.every(y => y === rows[0]), 'WebKit shortcuts remain in one horizontal row');
+          const centres = await page.evaluate(() => {
+            const c = document.querySelector('#tiles .focused .card').getBoundingClientRect();
+            const g = document.getElementById('glass').getBoundingClientRect();
+            return [Math.abs(c.x + c.width / 2 - g.x - g.width / 2), Math.abs(c.y + c.height / 2 - g.y - g.height / 2)];
+          });
+          assert(centres.every(d => d < 1), 'WebKit focus frame follows the selected card');
+        }
         assert.equal(await page.locator('#tiles .focused').getAttribute('data-app-id'), 'test.0');
         assert.equal(await page.locator('#tiles img').evaluateAll(images =>
           images.filter(image => image.complete && image.naturalWidth > 0).length), 6);
@@ -227,6 +270,22 @@ const profiles = ['modern', 'no-inset', 'no-inset-or-es2015'];
           } else {
             assert.deepEqual(await page.evaluate(() => launches), ['test.0'], 'releasing OK still launches the selected app');
           }
+        }
+        if (profile === 'prefixed-webkit') {
+          await page.evaluate(fixture => {
+            fixture.layout = {preset:'scenic-grid',columns:8,allowColumnOverride:false,spacingScale:1,textScale:1,focusScale:1.1,
+              ribbon:{left:340,right:84,bottom:0,cardHeight:180,gap:0,skewDeg:-13,focusLift:36,shortcuts:'bottom-left',labels:'focused-above',showClock:false}};
+            fixture.requires.capabilities.push('ribbon-layout-v1');
+            ThemeRuntime.apply({manifest:fixture,rules:{schemaVersion:1,rules:[]},assetHandles:{}});
+          }, require('./themes/fixtures/valid-manifest.json'));
+          await page.clock.runFor(1000);
+          const ribbon = await page.locator('#tiles .focused').evaluate(item => {
+            const card = item.querySelector('.card').getBoundingClientRect();
+            return {transform:getComputedStyle(item).getPropertyValue('-webkit-transform'),bottom:card.bottom};
+          });
+          assert.notEqual(ribbon.transform, 'none', 'runtime Ribbon skew survives the prefixed WebKit parser');
+          assert(Math.abs(ribbon.bottom - 1080) < 2, 'runtime Ribbon resets the base card transform and remains bottom aligned');
+          await page.screenshot({path:path.join(artifacts, profile + '-ribbon.png')});
         }
         assert.deepEqual(errors, [], 'late replies and return events must not raise errors');
         console.log('PASS', profile, 'visible cards, icons, scroll, launch, Inputs and full-screen dialogs');

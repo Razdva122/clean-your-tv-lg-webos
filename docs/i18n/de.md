@@ -79,6 +79,8 @@ No-root: Öffnen Sie zum Neustart der Home-Steuerung Home Helper, wählen Sie He
 ./cytv --language de uninstall
 ```
 
+> Noch unveröffentlicht (#152): Bei abgelehntem Helper-Stopp kann die No-root-Wiederherstellung/Entfernung einen geprüften SSH-Stopp nutzen. Der Stoppzustand bleibt erhalten; bei unklarem Ergebnis bleibt das Journal bestehen. Keine Zustandsdateien löschen. Die Gerätebestätigung am EF950V steht aus. [#152](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/152)
+
 Nach einer Unterbrechung zuerst `status` ausführen und Protokolle behalten. `restore` stellt LG Home ohne App-Entfernung wieder her; `uninstall` stellt es vor der Entfernung wieder her. Root-Wiederherstellungsdaten bleiben absichtlich erhalten; nicht zum Erzwingen einer Neuinstallation löschen. Diagnoseberichte vor Weitergabe prüfen; Schlüssel und Profilordner nicht veröffentlichen.
 
 1.5.4: Öffne **Home-Einstellungen → Darstellung → Spalten** und wähle 1–8 Spalten oder **Nach Theme**, um dessen Wert zu verwenden (Classic: 5). Eine feste Zahl hat Vorrang vor dem Theme. Themes mit festem Layout blenden die Spaltenoption aus und verwenden den Wert des Autors. Deine gespeicherte Auswahl gilt wieder, sobald du zu einem Theme wechselst, das diese Einstellung unterstützt. In der Alpine-Kandidatenvorschau liegen Apps in einem endlosen horizontalen Band: Links/Rechts blättert im Kreis, Oben öffnet die Schnellzugriffe und Unten kehrt zur selben App zurück. In der Alpine-Vorschau lässt sich das Band auch mit Mausrad oder Touchpad bewegen; bei geöffnetem Dialog bleibt Home stehen.

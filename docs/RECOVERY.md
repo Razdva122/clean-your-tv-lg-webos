@@ -43,6 +43,19 @@ An unknown package outcome is not automatically retried. Returning to LG Home
 alone does not finish removal. The removal confirmation cannot be bypassed with
 `--yes` or approved by noninteractive setup.
 
+### Unreleased: No-root Helper service refusal (#152)
+
+The #152 source correction lets the existing Restore/removal flow request a
+stop through Developer Mode SSH when `Helper disable` returns a definite `-1`
+rejection. It writes the existing persistent stop latch and stop command, then
+requires the controller and relay to be absent before proceeding. Saved Home
+preference and watchdog state are retained; this does not automatically restart
+Helper. Unknown connection outcomes, unsafe state and a live/orphaned relay
+still stop recovery and retain the journal. No new command or confirmation is
+needed. Use only an installer containing this correction; v1.5.4 does not have it.
+Do not delete state files or repeat a failed removal. Actual EF950V recovery and
+Home/Back/emergency behavior require owner-supervised confirmation on new bytes.
+
 Console users: run `cytv status` with the same profile, then
 `cytv doctor --report`. [CLI recovery details](CLI.md#interrupted-operations).
 Status, restore and removal do not download Python; referenced recovery runtimes

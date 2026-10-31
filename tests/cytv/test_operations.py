@@ -252,6 +252,36 @@ class OperationTests(unittest.TestCase):
         self.assertTrue(any(call[0] == 'luna' and call[1].endswith('/launch')
                             and call[2]['id'] == 'com.webos.app.home' for call in installer.remote.calls))
 
+    def test_denied_helper_disable_restores_then_resumes_pending_removal(self):
+        from cytv.errors import TVRejected
+        remote = Remote()
+        remote.installed = [{'id': operations.HELPER}, {'id': operations.HOME}]
+        original_luna, original_run = remote.luna, remote.run
+        def luna(uri, payload, **kwargs):
+            if uri.endswith('/disable'):
+                raise TVRejected('denied', {'returnValue': False, 'errorCode': -1}, uri)
+            if uri == 'com.webos.appInstallService/status':
+                return {'returnValue': True, 'status': {'apps': []}}
+            if uri.endswith('/dev/remove'):
+                remote.calls.append(('luna', uri, payload))
+                remote.installed = [app for app in remote.installed if app['id'] != payload['id']]
+                return {'returnValue': True, 'details': {'state': 'removed'}}
+            return original_luna(uri, payload, **kwargs)
+        def run(command, data=None, **kwargs):
+            if command == '/usr/bin/node':
+                self.assertIn(b'CYTV_HELPER_STOP_REQUESTED', data)
+                return 'CYTV_HELPER_STOP_REQUESTED'
+            return original_run(command, **kwargs)
+        remote.luna, remote.run = luna, run
+        installer = self.installer(remote)
+        self.store.begin(installer.profile, 'uninstall')
+        self.assertTrue(installer.restore()['restored'])
+        self.assertEqual(self.store.pending(installer.profile)['action'], 'uninstall')
+        installer.uninstall()
+        self.assertIsNone(self.store.pending(installer.profile))
+        removals = [c[2]['id'] for c in remote.calls if c[0] == 'luna' and c[1].endswith('/dev/remove')]
+        self.assertEqual(removals, [operations.HELPER, operations.HOME])
+
     def test_version_review_distinguishes_update_reinstall_downgrade_and_missing(self):
         for current, expected in [('1.2.1', '1.2.1 → 1.2.2 (Update)'),
                                   ('1.2.2', '1.2.2 → 1.2.2 (Reinstall)'),

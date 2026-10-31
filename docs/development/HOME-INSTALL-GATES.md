@@ -2,7 +2,25 @@
 
 Related issues: #140, #133. The controller-state and firmware gates shipped in
 v1.5.0; immutable Helper 0.6.19 does not contain them. The Node 0.10.25 target
-below is an unpublished follow-up for #152.
+below shipped in v1.5.4. The SSH stop fallback described below is unreleased.
+
+## No-root recovery after Helper service refusal (#152)
+
+Only a definite `helper-disable` rejection with code `-1` in No-root enables
+the trusted installer-side ES5 stop program. It is streamed to `/usr/bin/node`
+over the existing SSH session (no `-` option, unsupported by Node 0.10/0.12),
+without executing installed Helper JS. Checked real shared state paths receive
+an exclusive persistent `blocked` latch and atomic `control.json` stop request.
+A new latch keeps the state directory group and group write access so a live
+controller with another UID can execute its normal stop/cleanup path. Existing
+latches, watchdog state and Home preference are preserved. Symlink/hardlinked
+stop files, unsafe directories and uncertain process state are refused.
+
+The existing read-only process probe must confirm no controller or relay before
+Restore may launch LG Home or removal may proceed. A stale PID alone is not an
+active process. Other failures and Root keep their existing behavior. No new
+permission, endpoint or state filename is introduced. File/operation fixtures
+and actual Node 0.10.25/0.12.2 host checks are not EF950V hardware acceptance.
 
 ## No-root controller state
 

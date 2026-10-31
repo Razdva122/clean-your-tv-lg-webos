@@ -102,3 +102,23 @@ context.ThemeRuntime.apply({manifest:{...modernManifest,layout:{...modernManifes
 assert.match(nodes['ctv-theme-style'].textContent,/transform:scale\(1.6\)!important/);
 context.ThemeRuntime.reset();
 console.log('PASS bounded CSS enlargement, fixed-column guard and trusted icon cascade');
+// Runtime-injected rules bypass the static PostCSS build. Model a prefixed-only CSSOM.
+document.documentElement={style:{webkitTransform:''}};
+context.ThemeRuntime.apply({manifest:{...modernManifest,layout:{...modernManifest.layout,allowColumnOverride:false}},rules:enlargedIcons,assetHandles:{}});
+assert.match(nodes['ctv-theme-style'].textContent,/-webkit-transform:scale\(1.6\)!important/);
+assert.match(nodes['ctv-theme-style'].textContent,/;transform:scale\(1.6\)!important/,'standard declaration remains for later engines');
+const prefixedCss=nodes['ctv-theme-style'].textContent,layoutsBeforePrefixBudget=layouts.length;
+context.ThemePolicy={...runtimePolicy,limits:{...policy.limits,emittedCssBytes:prefixedCss.length-1}};
+assert.throws(()=>context.ThemeRuntime.apply({manifest:{...modernManifest,layout:{...modernManifest.layout,allowColumnOverride:false}},rules:enlargedIcons,assetHandles:{}}),/css-budget/);
+assert.equal(nodes['ctv-theme-style'].textContent,prefixedCss,'prefix expansion cannot exceed the budget or replace accepted styles');
+assert.equal(layouts.length,layoutsBeforePrefixBudget,'prefix budget is checked before geometry mutation');
+context.ThemePolicy=runtimePolicy;
+context.ThemeRuntime.reset();
+context.HomeLayoutState.supportsRibbonOptions=true;
+const ribbonManifest={...manifest,requires:{...manifest.requires,capabilities:['ribbon-layout-v1']},layout:{...manifest.layout,preset:'scenic-grid',allowColumnOverride:false,ribbon:{skewDeg:-12,shortcuts:'bottom-left',left:400}}};
+context.ThemeRuntime.apply({manifest:ribbonManifest,rules,assetHandles:{}});
+assert.match(nodes['ctv-theme-style'].textContent,/-webkit-transform:skewX\(-12deg\)!important/);
+assert.match(nodes['ctv-theme-style'].textContent,/-webkit-animation:none/);
+assert.match(nodes['ctv-theme-style'].textContent,/-webkit-justify-content:center/);
+context.ThemeRuntime.reset();
+console.log('PASS prefixed runtime theme transforms, animations and flex alignment');
