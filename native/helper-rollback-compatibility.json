@@ -1,9 +1,9 @@
 {
-  "from_helper": "0.6.19",
-  "to_helper": "0.6.20",
-  "rollback_home": "1.5.1",
-  "rollback_sha256": "009e737942f3442ee8a6d114dcbc7daf3e455e82ea401bb1277bbe4724cce1f4",
-  "prior_helper_sha256": "52510c9115a518a05849f6618516b41886aea54b7f74ea4763ffeeaf63c03e7b",
-  "candidate_archive_sha256": "20c5611695478d9d0ef3010a003c6053864a23ce88b4259eaf5dc0ab7febe463",
-  "acceptance": "2026-10-30: after reviewing the exact hashes and limited evidence, the maintainer explicitly accepted the outstanding physical No-root/input/standby/cold-boot/rollback risks for this Helper 0.6.19 to 0.6.20 transition only. Candidate IPK SHA256 8ed42c5ae12ce3312ae90be3152cfe7972dec433c03254443ffea251291438fe and canonical archive hash above were independently verified; a current official-function source rebuild matches trusted CI40944127403/1. Published v1.4.1 Home 1.5.1 and Helper 0.6.19 rollback packages match official asset digests, SHA256SUMS and system-manifests. Compiled compatibility/WSS, controller/watchdog/resume/Home-channel regressions passed. No physical No-root Helper, standby/wake, cold boot, input, sound, OTA or actual Home/Helper rollback result is claimed; C3 Root testing does not accept No-root Helper. Final combined CI must match these exact package/archive/baseline hashes before use; changed bytes require fresh evidence and approval. This grants neither universal compatibility nor main merge/publication approval. See docs/history/2026-10-30-helper-0.6.20-approval.md."
+  "from_helper": "0.6.20",
+  "to_helper": "0.6.21",
+  "rollback_home": "1.6.0",
+  "rollback_sha256": "9dc14c402c096491659f63c154953498c75638baa0ee71cc4293d82109bc476b",
+  "prior_helper_sha256": "8ed42c5ae12ce3312ae90be3152cfe7972dec433c03254443ffea251291438fe",
+  "candidate_archive_sha256": "996d950af7a5c47edb4076b0f4323a106510dc9a845f8dbdb1dcc85171bd3ab3",
+  "acceptance": "2026-10-31: maintainer explicitly accepted release without physical No-root Helper0.6.20 to0.6.21 transition testing for this candidate, retaining mandatory automated package/signature/control/rollback checks. Exact candidate IPK SHA256 98924c880118528993ebe388cddabbcdf392a58c999d8019ec80aa7eef54d84e; canonical archive pinned above. Baseline Home1.6.0 and Helper0.6.20 from published v1.5.2 authenticated against GitHub asset digests and SHA256SUMS. Full CI41185537404:1 sourcef4bab0ea passed; all nine installer payloads contain identical Helper. No physical No-root Helper/input/audio/standby/cold/OTA/rollback result is claimed; maintainer C3 Root tests do not accept No-root. Final recovery candidate must reproduce these exact candidate/canonical/baseline hashes. This records a limited-evidence risk decision, not a fabricated physical pass or universal compatibility. See docs/history/2026-10-31-helper-0.6.21-approval.md."
 }
