@@ -1,21 +1,21 @@
 # Choose and install themes
 
-Theme support is included in Home 1.6.0 / release 1.5.0. The separate Themes category, ID-focused form and inline language selection described here are candidate changes. Older packages do not gain the feature by copying a theme link. Root has two known limitations: applying a theme can shift Appearance by 110 px, and automatic Home after standby can fail. See [release notes and scoped acceptance](RELEASE-1.5.0.md).
+Theme support is included in Home 1.6.0 / release 1.5.0. The separate Themes category, ID-focused form and inline language selection ship in 1.5.4. Older packages do not gain the feature by copying a theme link. Fixed-layout Apply geometry has browser coverage; exact installed Appearance acceptance remains pending. Root Home can remain disabled after update/rollback, Settings can retain stale status after emergency/resume, and the earlier different-session standby failure remains unresolved. See [1.5.4 scope and limitations](RELEASE-1.5.4.md).
 
-Authors: follow the [complete theme contribution walkthrough](development/CONTRIBUTING-THEMES.md) to create a theme, preview it on PC, test it on TV and submit it to Showcase.
+Authors: [suggest your theme](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/new?template=theme-submission.yml) with a public link and license information. Maintainers handle catalogue integration and review. The [author walkthrough](development/CONTRIBUTING-THEMES.md) is optional for building and packaging it yourself.
 
 ## Included with Home
 
-**Classic** and **Alpine** are built into both No-root and Root editions. They work without downloading a theme. Classic remains the initial default. Alpine has a mountain panorama, a large clock and one looping horizontal app ribbon. Its fixed eight-slot composition hides the Columns setting while active. Your saved column preference returns when you switch to an adjustable theme.
+**Classic**, **Alpine** and **Ribbon** are built into both No-root and Root editions. They work without downloading a theme. Classic remains the initial default. Alpine has a mountain panorama, a large clock and one looping horizontal app ribbon. Its fixed eight-slot composition hides the Columns setting while active. Your saved column preference returns when you switch to an adjustable theme.
 
-Next candidate (unreleased): when a fixed-layout theme hides Columns, its empty row keeps the same space so applying the theme does not shorten Appearance’s scroll range. The hidden control is skipped by pointer, keyboard and accessibility navigation. This correction has browser regression coverage; physical-TV acceptance is pending.
+1.5.4: when a fixed-layout theme hides Columns, its empty row keeps the same space so applying the theme does not shorten Appearance’s scroll range. The hidden control is skipped by pointer, keyboard and accessibility navigation. This correction has browser regression coverage; physical-TV acceptance is pending.
 
 **Channel** is an ordinary external theme in showcase. It is not part of the TV package. It uses a numbered list, selected-app artwork and pixel shortcut icons; its one-column default can be overridden by the user.
 
 ## Change to an included theme
 
 1. Open Home, select **Settings → Themes**. The Themes pane itself contains preview cards for built-in and all downloaded themes, alongside the settings categories. Personal themes use their saved package preview, including offline and without a showcase listing. The separate Theme showcase button opens the published catalogue.
-2. Choose **Classic** or **Alpine** in the installed list. The choice applies and saves immediately, without a confirmation timer. Downloaded themes in this list work the same way.
+2. Choose **Classic**, **Alpine** or **Ribbon** in the installed list. The choice applies and saves immediately, without a confirmation timer. Downloaded themes in this list work the same way.
 3. Return with **Back**, then **Back to Home**.
 
 The accepted choice is restored on the next launch. Only **Try theme** inside **Theme showcase** starts a 20-second trial, after downloading a new theme. If Home closes during an unconfirmed showcase trial, the next launch starts Classic. Changing appearance does not replace your app order, hidden apps, inputs or Home-button routing. Settings, confirmations and recovery keep their standard appearance.

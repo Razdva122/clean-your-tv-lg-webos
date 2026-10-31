@@ -24,16 +24,20 @@ LG screens or obtain root access.
 [Try the browser demo](https://razdva122.github.io/clean-your-tv-lg-webos/) ·
 [Installation guide](docs/INSTALL.md) · [Help and recovery](docs/RECOVERY.md)
 
-![Ribbon home screen with reference app icons](docs/launcher-ribbon.jpg)
+![Classic menu with reference app icons](docs/launcher-classic.jpg)
 
-*Ribbon in the 1.5.3 candidate, shown with reference apps. Apps are not bundled; TV functions are simulated.*
+*Classic, the default built-in theme, shown in the browser preview. Reference apps are not bundled; TV functions are simulated.*
 
 ## Themes
 
-Change the layout, background and app-card styling with built-in and community
-themes. Manage installed themes and discover more in **Settings → Themes** on your TV.
+Choose built-in **Classic**, **Alpine** or **Ribbon**, or install community themes.
+Manage them in **Settings → Themes** on your TV.
 
-**[Browse and try themes in your browser →](https://razdva122.github.io/clean-your-tv-lg-webos/)**
+| Classic menu | Alpine | Ribbon |
+| --- | --- | --- |
+| <img src="docs/launcher-classic.jpg" alt="Classic menu browser preview" width="280"> | <img src="docs/launcher-alpine.jpg" alt="Alpine browser preview" width="280"> | <img src="docs/launcher-ribbon.jpg" alt="Ribbon browser preview" width="280"> |
+
+**[Try the themes in the main browser preview →](https://razdva122.github.io/clean-your-tv-lg-webos/)**
 
 Use the theme cards above the simulated TV to switch themes and compare layouts,
 then choose Root or No-root to preview either edition. No TV connection or
@@ -45,11 +49,11 @@ and creating your own theme.
 
 ## Download and install
 
-> Root Home may not open automatically after standby (#171). The 1.5.3 candidate includes the Appearance scroll correction; see [changes and acceptance limits](docs/RELEASE-1.5.3.md).
+> Root Home may not open automatically after standby (#171). The 1.5.4 candidate includes the Appearance scroll correction; see [changes and acceptance limits](docs/RELEASE-1.5.4.md).
 > On `release/next`, the versioned metadata below describes the prepared candidate until publication. The download buttons always follow the latest published release.
 
 <!-- release:downloads -->
-Current stable release: **[v1.5.3](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.5.3)** — [release notes](docs/RELEASE-1.5.3.md).
+Current stable release: **[v1.5.4](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.5.4)** — [release notes](docs/RELEASE-1.5.4.md).
 <!-- /release:downloads -->
 
 [![Download Windows x64 graphical installer — GUI ZIP](assets/brand/downloads/windows.svg)](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/cytv-windows-x64-desktop.zip)
@@ -138,7 +142,7 @@ For contributors: [build and technical references](docs/development/README.md),
 <!-- /release:components -->
 
 System Updater: 1.1.2 / protocol 1 (existing supervisors stay pinned).
-See the [release notes](docs/RELEASE-1.5.3.md)
+See the [release notes](docs/RELEASE-1.5.4.md)
 and [TV acceptance and limits](docs/RELEASE-1.5.0.md).
 
 </details>

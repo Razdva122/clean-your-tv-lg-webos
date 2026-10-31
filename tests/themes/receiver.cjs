@@ -37,8 +37,27 @@ async function test(){
  assert.equal((await call('themeReceiverStatus',{sessionId:s.sessionId},'com.test')).state,'waiting');
  assert.equal((await call('themeReceiverRead',{sessionId:s.sessionId,offset:0},'com.test')).returnValue,false);
  assert.equal((await call('themeReceiverStop',{sessionId:s.sessionId},'com.test')).returnValue,true);
+ // A session keeps its hold until it ends, whichever way it ends.
+ let holds=0,releases=0;const hold=()=>{holds++;let done=false;return()=>{assert(!done,'release once');done=true;releases++;};};
+ const held=core.create({port:0,hold});s=await held.start();assert.deepEqual([holds,releases],[1,0]);assert.equal(await post(s),202);assert.equal(releases,0,'received theme is still read through the session');await held.stop(s.sessionId);assert.deepEqual([holds,releases],[1,1]);
+ const heldExp=core.create({port:0,ttlMs:35,hold});s=await heldExp.start();await delay(60);assert.deepEqual([holds,releases],[2,2]);
+ const heldWrong=core.create({port:0,maxWrongPins:1,hold});s=await heldWrong.start();await post(s,body,{'X-CYTV-PIN':'bad'});await delay(10);assert.deepEqual([holds,releases],[3,3]);
+ const blocker=net.createServer();await new Promise(resolve=>blocker.listen(0,'0.0.0.0',resolve));
+ await assert.rejects(core.create({port:blocker.address().port,hold}).start(),/receiver-unavailable/);blocker.close();assert.deepEqual([holds,releases],[4,4]);
+ // register() holds a webos-service activity, so the idle timer cannot exit the service mid-session.
+ const am={created:[],completed:[],create(name,cb){const a={activityId:this.created.length+1,name};this.created.push(a);cb(a);},complete(a,cb){this.completed.push(a.activityId);cb(a);}};
+ const amMethods={};register({register:(name,fn)=>amMethods[name]=fn,activityManager:am},{appId:'com.test',port:0});
+ const amCall=(name,payload)=>new Promise(resolve=>amMethods[name]({payload,ls2Message:{applicationID:()=>'com.test'},respond:resolve}));
+ reply=await amCall('themeReceiverStart',{});assert(reply.returnValue);assert.equal(am.created.length,1);assert.deepEqual(am.completed,[]);
+ assert.equal((await amCall('themeReceiverStop',{sessionId:reply.sessionId})).returnValue,true);assert.deepEqual(am.completed,[1]);
+ // An activity granted after the session already ended is completed at once.
+ let late;const lateAm={completed:[],create(name,cb){late=cb;},complete(a,cb){this.completed.push(a.activityId);cb(a);}};
+ const lateMethods={};register({register:(name,fn)=>lateMethods[name]=fn,activityManager:lateAm},{appId:'com.test',port:0});
+ reply=await new Promise(resolve=>lateMethods.themeReceiverStart({payload:{},ls2Message:{applicationID:()=>'com.test'},respond:resolve}));
+ await new Promise(resolve=>lateMethods.themeReceiverStop({payload:{sessionId:reply.sessionId},ls2Message:{applicationID:()=>'com.test'},respond:resolve}));
+ late({activityId:7});assert.deepEqual(lateAm.completed,[7]);
  if(process.env.NODE012){const result=require('child_process').spawnSync(process.env.NODE012,['-e','('+legacy.toString()+')()'],{cwd:process.cwd(),encoding:'utf8',timeout:60000});assert.equal(result.status,0,result.stderr||result.error);assert.match(result.stdout,/PASS Node 0.12.2/);console.log(result.stdout.trim());}
- console.log('PASS receiver real HTTP, bounds, expiry, one-shot, ES5 and LS2 authorization');
+ console.log('PASS receiver real HTTP, bounds, expiry, one-shot, session activity hold, ES5 and LS2 authorization');
 }
 function legacy(){
  require(process.cwd()+'/node_modules/core-js-bundle/minified.js');

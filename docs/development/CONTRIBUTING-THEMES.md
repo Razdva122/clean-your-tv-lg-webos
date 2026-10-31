@@ -5,6 +5,20 @@ reviewable Showcase pull request. Theme sources stay in **your own repository**;
 the main project stores a reviewed, fixed distribution and its catalogue record.
 You can test a private, unfinished theme on your TV without submitting anything.
 
+## The simplest way to request inclusion
+
+[Open a theme suggestion](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/new?template=theme-submission.yml)
+and share the theme name, a public source/package link and license/asset
+permissions. Add a preview or known limitations if you have them. You can also
+open a normal issue or PR with that information. Maintainers assess the design,
+prepare the registry/package integration, run checks and record their review.
+
+You do not need a main-project fork, generated submission, test report,
+Playwright installation or physical TV. The detailed workflow below is an
+optional self-service path for authors who want to build/package the theme or
+prepare a complete PR themselves. Its review and catalogue steps are maintainer
+responsibilities, not prerequisites for an initial suggestion.
+
 **Candidate status:** the author toolkit/runtime and theme-enabled TV controls
 are still development candidates. Do not assume a published Home package contains
 them. The current controls live in **Settings → Appearance**. No official
@@ -305,6 +319,10 @@ OTA or rollback compatibility. Record untested scenarios honestly.
 
 ## 6. Prepare real preview images and credits
 
+Optional author tooling: maintainers can capture the catalogue preview during
+review. You do not need to produce a screenshot set or provenance report to
+suggest a theme. Asset licenses and credits still need to permit distribution.
+
 Install the toolkit's pinned browser explicitly, separately from npm setup:
 
 ```sh
@@ -385,7 +403,8 @@ node "$THEME_TOOLKIT/bin/theme.cjs" screenshots themes/ocean \
   --runtime "$THEME_RUNTIME" --edition no-root --out review/ocean-final
 ```
 
-Keep the final provenance with your review evidence. Do not put credentials,
+For maintainer/full-PR review, keep final provenance if it helps reproduce a
+check; it is not required for an author suggestion. Do not put credentials,
 real device screenshots, network names, addresses or private app inventories into
 public previews. Optional physical-device reports need the device owner's
 permission before publication; follow the main project's [report rules](../../AGENTS.md#installation-results-and-user-consent).
@@ -506,8 +525,11 @@ as its source commit instead of reusing a stale value of `THEME_SOURCE_COMMIT`.
 
 ## 9. Generate a Showcase submission
 
-Keep the variables from step 8. Replace the evidence text with the scenarios and
-results you actually observed, including browser/runtime versions in the PR:
+This optional advanced path is also used by maintainers when completing an
+author suggestion. The generator requires evidence: use only observations from
+checks you actually performed. If you have not run them, submit the public link
+instead and let maintainers generate the reviewed record after their checks.
+Keep the variables from step 8:
 
 ```sh
 THEME_REVIEW_DATE=$(date -u +%F)
@@ -587,7 +609,8 @@ files and packaged inventory. Commit its changed files together. Do not commit
 generated website output under `build/` or your author toolkit, runtime export,
 `node_modules`, local credentials or private review captures.
 
-Run the submission checks from the main-project PR checkout:
+Maintainers run the submission checks from the main-project PR checkout. Authors
+preparing a full PR may run them too, but are not required to install these tools:
 
 ```sh
 node scripts/check-theme-submissions.cjs
@@ -611,17 +634,18 @@ needs a new/empty destination; use a new output directory on a repeat run.
 record has disappeared, identify which source failed in the PR; do not rewrite
 someone else's package to make the check pass.
 
-For the full repository regression entry point, run `bash scripts/test.sh` with
-the tools described in [build requirements](../BUILD.md). The commands above
-are the focused Showcase checks, not a replacement for repository contribution
-requirements.
+Maintainers select affected checks under CONTRIBUTING.md. The full repository
+regression belongs to the frozen release candidate; it is not a requirement for
+an author suggestion.
 
 Review `git diff --stat` and `git diff` before committing. Stage only your new
 record/package and the catalogue files changed by the generator; inspect its
 console output and `git status --short` for the exact file list. Commit, push
 your branch to your fork, then open a PR to upstream **`release/next`**.
 
-Suggested PR title: **Add Ocean 1.0.0 theme to Showcase**. A useful body contains:
+Suggested PR title: **Add Ocean 1.0.0 theme to Showcase**. The short suggestion
+form is sufficient for authors. The following is an optional maintainer/full-PR
+record; maintainers fill validation and evidence from actual review:
 
 ```text
 Theme: Ocean 1.0.0
@@ -657,7 +681,9 @@ resource bounds and all referenced hashes. The remote job fetches pinned bytes
 without redirects or credentials. Submission checks do not execute your
 repository's scripts, dependency hooks or workflows.
 
-Maintainers review design usability, focus/navigation, preview accuracy,
+Maintainers own acceptance and record a short result in the PR; a separate
+screenshot set or review report is not required from the author. They review
+design usability, focus/navigation, preview accuracy,
 attribution, license permissions, evidence and source ownership. A matching
 profile string is not proof that you own someone else's work. Approval applies
 to a fixed descriptor digest and the normal reviewed merge; there is no
@@ -687,10 +713,17 @@ Home. Published built-ins are Classic and Alpine; this unreleased candidate also
 
 ## 12. Maintain and update your theme
 
-For a release such as Ocean 1.1.0:
+To suggest an update, reply to the existing theme issue/PR with the new public
+link and a short description of changes. No new author report, screenshot set
+or device test is required. Maintainers repeat the relevant review and prepare
+the catalogue update.
+
+For maintainers or authors choosing the optional full-PR path, a release such as
+Ocean 1.1.0 uses these steps:
 
 1. Keep the same `id`; change `themeVersion` and document visible changes.
-2. Update CSS/assets/credits and repeat preview, validation and relevant TV checks.
+2. Update CSS/assets/credits. Maintainers repeat relevant browser and automated
+   checks, recording physical-TV paths as untested unless actually checked.
 3. Commit the new source A, build into a new empty
    `distributions/ocean/1.1.0` directory, then commit/push distribution B.
 4. Generate a new draft using the new descriptor URL, digest, evidence and date.

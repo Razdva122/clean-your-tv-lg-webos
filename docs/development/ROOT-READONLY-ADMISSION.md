@@ -1,5 +1,10 @@
 # Read-only admission for an interrupted Root install
 
+When the original worker error is missing, start with the separate
+[passive failure diagnostic](ROOT-PASSIVE-DIAGNOSTICS.md). It reads bounded saved
+data without staging code or calling recovery/routing services. It cannot grant
+cancellation admission, and third-party Home routing still blocks removal.
+
 This maintainer procedure prepares a device-specific proof for the
 [existing narrow cancellation tool](../ROOT-INSTALL-CANCELLATION.md). It is
 not a recovery result or firmware support. The isolated entry/candidate lookup
