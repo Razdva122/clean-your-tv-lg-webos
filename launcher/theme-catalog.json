@@ -37,17 +37,6 @@
       "digest": "5eb9cebf58cddafa8df59497880eaa134565465ba75dab60ec1903b956be4f5d"
     },
     {
-      "id": "github:invrnt/tv-themes:minimal",
-      "title": "Minimal",
-      "version": "1.0.1",
-      "author": "invrnt",
-      "license": "MIT",
-      "description": "Pure black, four large cards with no dock band, soft shadows and a quiet header without the greeting.",
-      "preview": "theme-catalog/invrnt--tv-themes--minimal/42ba8d15fce491e2cb4474c42333ab8489c8fba5d35fd7a80513bce73351bf22/preview.png",
-      "url": "https://raw.githubusercontent.com/invrnt/tv-themes/71ab7552df27b67c48100c9faf36e7e5b30ea8d8/distributions/minimal/1.0.1/cytv-theme.json",
-      "digest": "42ba8d15fce491e2cb4474c42333ab8489c8fba5d35fd7a80513bce73351bf22"
-    },
-    {
       "id": "github:razdva122/clean-your-tv-lg-theme:itachi",
       "title": "Itachi · Sharingan",
       "version": "1.0.2",
@@ -68,6 +57,17 @@
       "preview": "theme-catalog/razdva122--clean-your-tv-lg-theme--terminal/da7da0848ac0ecd60ebbcd964cb65a68fdf4fab54f30eebd56218c9d3141e17c/preview.png",
       "url": "https://raw.githubusercontent.com/razdva122/clean-your-tv-lg-theme/b7e413752ce5d4b30f1af8fd9a2361dd5955bec7/distributions/channel/1.3.3/cytv-theme.json",
       "digest": "da7da0848ac0ecd60ebbcd964cb65a68fdf4fab54f30eebd56218c9d3141e17c"
+    },
+    {
+      "id": "github:invrnt/tv-themes:minimal",
+      "title": "Minimal",
+      "version": "1.0.1",
+      "author": "invrnt",
+      "license": "MIT",
+      "description": "Pure black, four large cards with no dock band, soft shadows and a quiet header without the greeting.",
+      "preview": "theme-catalog/invrnt--tv-themes--minimal/42ba8d15fce491e2cb4474c42333ab8489c8fba5d35fd7a80513bce73351bf22/preview.png",
+      "url": "https://raw.githubusercontent.com/invrnt/tv-themes/71ab7552df27b67c48100c9faf36e7e5b30ea8d8/distributions/minimal/1.0.1/cytv-theme.json",
+      "digest": "42ba8d15fce491e2cb4474c42333ab8489c8fba5d35fd7a80513bce73351bf22"
     }
   ]
 }
