@@ -1,0 +1,36 @@
+name: Suggest a theme
+description: Share your theme; maintainers handle review and catalogue integration.
+title: '[Theme] '
+labels: ['enhancement', 'status:triage']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share a public link and license information. Maintainers will assess the theme and help prepare its catalogue entry.
+        No fork, test report, screenshot set or physical TV is required. Do not attach private TV logs or personal screenshots.
+  - type: input
+    id: theme-name
+    attributes:
+      label: Theme name
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Public theme link
+      description: A repository or package link is enough to start.
+      placeholder: https://github.com/your-name/your-theme
+    validations:
+      required: true
+  - type: textarea
+    id: permissions
+    attributes:
+      label: License and asset permissions
+      description: State your license and the sources/permissions for any images or other assets. A link to your license and credits is enough.
+    validations:
+      required: true
+  - type: textarea
+    id: optional-details
+    attributes:
+      label: Preview or anything else (optional)
+      description: Add a synthetic preview, describe your design or mention known limitations if you wish. Tests and device reports are optional.
