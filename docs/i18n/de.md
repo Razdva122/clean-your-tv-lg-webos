@@ -70,6 +70,8 @@ Pfeile wählen eine Kachel, OK öffnet sie; OK gedrückt halten zum Verschieben.
 
 No-root: Öffnen Sie zum Neustart der Home-Steuerung Home Helper, wählen Sie Helper starten und bestätigen Sie. Ihre gespeicherte Home-Auswahl bleibt erhalten. Root: **Home ändern** in den Home-Einstellungen einschalten, um fortzufahren. **LG Home öffnen** öffnet LG Home einmalig, ohne das Home-Ziel zu ändern. Für LG Home als dauerhaftes Ziel **Home ändern** ausschalten oder `cytv restore` ausführen. Beide Steuerungen nie gleichzeitig betreiben. Bei wiederholtem Fehler LG Home aktiv lassen.
 
+> **Unveröffentlichter Kandidat 1.5.3 — nur Root:** Wenn Root fehlerfrei arbeitet und Sie **Home ändern** ausdrücklich einschalten, legt CYTV einen eigenen nativen Eingang **Clean** an und speichert Clean als gemerkten Eingang. Beim Abschalten der Home-Steuerung, Notfallstopp, Fehler, Pausieren für ein Update oder Deinstallieren wird der eigene Eintrag entfernt. Der vorherige Eingang wird nur wiederhergestellt, solange noch der von CYTV gesetzte Wert gilt; andere Eingänge und Vordergrund-Apps bleiben erhalten. Nicht unterstützte Fernseher oder fremde Einträge nutzen die normale abgesicherte Home-Steuerung. Clean ist nicht garantiert der sofortige erste Bildschirm. Ein erster Bildschirmtest auf einem C3 bestand; abschließende Tests für Bereitschaft, Kaltstart, abgeschaltete Home-Steuerung, Update und Rollback stehen aus. [Details zum Kandidaten (Englisch)](../development/ROOT-NATIVE-INPUT.md).
+
 ```sh
 ./cytv --language de status
 ./cytv --language de doctor --report

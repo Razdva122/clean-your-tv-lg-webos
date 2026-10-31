@@ -70,6 +70,8 @@ Setas selecionam; OK abre; segure OK para reorganizar. Um toque em Voltar manté
 
 No-root: Para reiniciar o controle de Home, abra Home Helper, escolha Iniciar Helper e confirme. Sua tela Home escolhida será mantida. Root: ative **Alterar Home** nas configurações do Home para retomar. **Abrir LG Home** abre LG Home uma vez sem mudar o destino de Home. Para restaurar LG Home como destino permanente, desative **Alterar Home** ou execute `cytv restore`. Nunca execute os dois controladores juntos. Se a falha voltar, mantenha LG Home ativo.
 
+> **Candidato 1.5.3 não publicado — somente Root:** ativar explicitamente **Alterar Home** com o Root funcionando corretamente cria uma entrada nativa **Clean** do CYTV e salva Clean como entrada lembrada. Desativar o controle do Home, uma parada de emergência, falha, pausa para atualização ou desinstalação remove a entrada do CYTV e restaura a anterior somente se o valor atual ainda for o definido pelo CYTV; outras entradas e aplicativos em primeiro plano são preservados. TVs incompatíveis ou entradas que não pertencem ao CYTV usam o controle normal do Home com suas proteções. Não há garantia de Clean ser a primeira tela imediata. Um experimento de primeira tela em um C3 passou; faltam os testes finais de espera, inicialização a frio, Home desativado, atualização e reversão. [Detalhes do candidato (inglês)](../development/ROOT-NATIVE-INPUT.md).
+
 ```sh
 ./cytv --language pt-BR status
 ./cytv --language pt-BR doctor --report

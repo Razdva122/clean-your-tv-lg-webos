@@ -24,16 +24,20 @@ LG screens or obtain root access.
 [Try the browser demo](https://razdva122.github.io/clean-your-tv-lg-webos/) ·
 [Installation guide](docs/INSTALL.md) · [Help and recovery](docs/RECOVERY.md)
 
-![Ribbon home screen with reference app icons](docs/launcher-ribbon.jpg)
+![Classic menu with reference app icons](docs/launcher-classic.jpg)
 
-*Ribbon in the 1.5.3 candidate, shown with reference apps. Apps are not bundled; TV functions are simulated.*
+*Classic, the default built-in theme, shown in the browser preview. Reference apps are not bundled; TV functions are simulated.*
 
 ## Themes
 
-Change the layout, background and app-card styling with built-in and community
-themes. Manage installed themes and discover more in **Settings → Themes** on your TV.
+Choose built-in **Classic**, **Alpine** or **Ribbon**, or install community themes.
+Manage them in **Settings → Themes** on your TV.
 
-**[Browse and try themes in your browser →](https://razdva122.github.io/clean-your-tv-lg-webos/)**
+| Classic menu | Alpine | Ribbon |
+| --- | --- | --- |
+| <img src="docs/launcher-classic.jpg" alt="Classic menu browser preview" width="280"> | <img src="docs/launcher-alpine.jpg" alt="Alpine browser preview" width="280"> | <img src="docs/launcher-ribbon.jpg" alt="Ribbon browser preview" width="280"> |
+
+**[Try the themes in the main browser preview →](https://razdva122.github.io/clean-your-tv-lg-webos/)**
 
 Use the theme cards above the simulated TV to switch themes and compare layouts,
 then choose Root or No-root to preview either edition. No TV connection or

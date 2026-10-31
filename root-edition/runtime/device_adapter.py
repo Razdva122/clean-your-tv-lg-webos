@@ -3,6 +3,7 @@ import fcntl
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import stat
 import subprocess
@@ -205,6 +206,101 @@ def main(mode):
         if result not in ('pending','recovering'): return result
         time.sleep(5)
     return 'recovering'
+
+
+# Owned EIM presentation uses the existing authenticated runtime destination.
+NATIVE_EIM='luna://com.webos.service.eim/'
+
+def _native_call(method,payload,deadline):
+ remaining=deadline-time.monotonic()
+ if remaining<=0:raise TimeoutError('Native input operation deadline')
+ # transport.call may also spend up to timeout reaping its child. Both halves
+ # must fit the total budget so emergency recovery can acquire the owner lock.
+ return sam_transport().call(NATIVE_EIM+method,payload,timeout=min(.5,remaining/2))
+
+def _native_pair(value):
+ pair={'type':value.get('lastSourceId'),'appId':value.get('lastSourceAppId')}
+ _native_validate_pair(pair)
+ return pair
+
+def _native_validate_pair(pair):
+ if (not isinstance(pair,dict) or set(pair)!={'type','appId'}
+     or not isinstance(pair['type'],str) or not re.fullmatch('[A-Z0-9_]{1,64}',pair['type'])
+     or not isinstance(pair['appId'],str) or not re.fullmatch('[a-zA-Z0-9_.-]{1,128}',pair['appId'])):
+  raise ValueError('Invalid native input baseline')
+
+def _native_entry(deadline):
+ devices=_native_call('getAllInputStatus',{},deadline).get('devices')
+ if not isinstance(devices,list) or any(not isinstance(x,dict) for x in devices):raise ValueError('Unknown native input inventory')
+ matches=[x for x in devices if x.get('appId')==CANDIDATE or x.get('id')=='MVPD_IP-'+CANDIDATE]
+ if len(matches)>1 or matches and (matches[0].get('appId')!=CANDIDATE or matches[0].get('id')!='MVPD_IP-'+CANDIDATE):
+  raise ValueError('Native input entry changed')
+ return bool(matches)
+
+def _native_read():
+ path=STATE/'native-input.json'
+ try:value=safe_json(path)
+ except FileNotFoundError:return None
+ if (not isinstance(value,dict) or set(value)!={'schema','appId','phase','baseline'}
+     or type(value['schema']) is not int or value['schema']!=1 or value['appId']!=CANDIDATE
+     or value['phase'] not in ('adding','active','removing','disabled')):
+  raise ValueError('Invalid native input receipt')
+ _native_validate_pair(value['baseline'])
+ if value['baseline']['appId']==CANDIDATE:raise ValueError('Native input baseline cannot be Root')
+ return value
+
+def _native_save(value):
+ trusted_dir(STATE)
+ fd,name=tempfile.mkstemp(prefix='.native-input-',dir=STATE)
+ try:
+  with os.fdopen(fd,'w') as out:
+   json.dump(value,out,sort_keys=True);out.flush();os.fsync(out.fileno())
+  os.replace(name,STATE/'native-input.json');sync(STATE)
+ finally:
+  if os.path.lexists(name):os.unlink(name)
+
+def _native_set(pair,deadline):
+ _native_call('setLastInput',pair,deadline)
+ # NATIVE_EIM updates its own state synchronously, settings persistence may lag.
+ for attempt in range(5):
+  if _native_pair(_native_call('getLastInput',{},deadline))==pair:return
+  if attempt<4:time.sleep(.05)
+ raise ValueError('Native remembered input was not verified')
+
+def native_input_enable():
+ """Explicit healthy enable only; uncertain operations must recover first."""
+ deadline=time.monotonic()+1.5
+ saved=_native_read();present=_native_entry(deadline)
+ if saved is not None and saved['phase']=='active':
+  if not present:raise ValueError('Native input entry changed')
+  return 'active'  # Never overwrite an input selected after enable.
+ if saved is not None and saved['phase']!='disabled':raise ValueError('Native input recovery required')
+ if present:raise ValueError('Refusing unowned native input')
+ baseline=_native_pair(_native_call('getLastInput',{},deadline))
+ if baseline['appId']==CANDIDATE:raise ValueError('Unowned remembered Root input')
+ saved=dict(schema=1,appId=CANDIDATE,phase='adding',baseline=baseline)
+ _native_save(saved)  # A timeout is uncertainty, not permission to replay addDevice.
+ _native_call('addDevice',{'appId':CANDIDATE,'pigImage':'','mvpdIcon':''},deadline)
+ if not _native_entry(deadline):raise ValueError('Native input registration was not verified')
+ _native_set({'type':'MVPD_IP','appId':CANDIDATE},deadline)
+ _native_save(dict(saved,phase='active'))
+ return 'active'
+
+def native_input_disable():
+ """Retarget only our remembered input, then remove only our owned entry."""
+ deadline=time.monotonic()+1.5
+ saved=_native_read()
+ if saved is None:return 'absent'
+ if saved['phase']=='disabled':return 'disabled'
+ _native_save(dict(saved,phase='removing'))
+ present=_native_entry(deadline)
+ if _native_pair(_native_call('getLastInput',{},deadline))['appId']==CANDIDATE:
+  _native_set(saved['baseline'],deadline)
+ if present:_native_call('deleteDevice',{'appId':CANDIDATE},deadline)
+ if _native_entry(deadline) or _native_pair(_native_call('getLastInput',{},deadline))['appId']==CANDIDATE:
+  raise ValueError('Native input cleanup was not verified')
+ _native_save(dict(saved,phase='disabled'))
+ return 'disabled'
 
 
 if __name__ == '__main__':

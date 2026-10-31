@@ -95,7 +95,9 @@ class Coordinator:
                 from cli import inhibit
                 inhibit(d.STATE)
             except Exception: pass  # Audio state must never block emergency Home restoration.
-            return self._recover(intent) if effect == 'recover' else dict(intent=intent,effect=effect)
+            if effect == 'recover': return self._recover(intent)
+            d.native_input_disable()
+            return dict(intent=intent,effect=effect)
 
     def boot(self, expected, boot, token, failsafe):
         with self.locked(expected):
@@ -108,6 +110,16 @@ class Coordinator:
             return self._recover(expected)
 
     def _recover(self, intent):
+        try:
+            return self._recover_route(intent)
+        finally:
+            # Routing/emergency restoration takes priority over optional EIM RPCs.
+            # Failed cleanup retains its receipt and is retried by explicit/boot
+            # recovery, even when the routing intent is already disabled.
+            if not self.store.read()['enabled']:
+                d.native_input_disable()
+
+    def _recover_route(self, intent):
         if intent['enabled'] and not d.home_present():intent,_=self.event(intent,'fault')
         try:
             if not os.path.lexists(self.binding) and not intent['enabled']:
@@ -235,7 +247,16 @@ class Coordinator:
                 except (OSError, ValueError):
                     if attempt == 19: raise
                     time.sleep(.1)
-            return self.confirm(result['intent'])
+            confirmed = self.confirm(result['intent'])
+            with self.locked(confirmed['intent']):
+                try:
+                    confirmed['native_input'] = d.native_input_enable()
+                except Exception:
+                    # Missing EIM is an optional optimization. An issued native
+                    # mutation must be cleaned before continuing ordinary Home.
+                    d.native_input_disable()
+                    confirmed['native_input'] = 'unavailable'
+            return confirmed
         except Exception:
             current = self.store.read()
             if (current['generation'], current['token']) == (expected['generation'] + 1, token):
@@ -271,7 +292,8 @@ def bound_exit(transaction, reason=None):
     try: current_boot = boot_identity()
     except (OSError,ValueError): current_boot = None
     home = d.home_present(purpose='live')
-    safe = home and not d.FAILSAFE.exists()
+    failsafe = d.FAILSAFE.exists() if home else None
+    safe = home and not failsafe
     if (reason != 'escape' and safe and intent['enabled']
             and intent['phase'] in ('active','stopping') and current_boot is not None
             and intent['boot'] != current_boot):
@@ -286,10 +308,15 @@ def bound_exit(transaction, reason=None):
             c.exit(intent, reason='fault')
             raise
     from shutdown_state import stopping
-    shutdown = safe and current_boot == intent['boot'] and reason != 'escape' and intent['enabled'] and (
-        intent['phase'] == 'stopping' or (intent['phase'] == 'active' and stopping(transaction)))
+    eligible = safe and current_boot == intent['boot'] and reason != 'escape' and intent['enabled']
+    proof = stopping(transaction) if eligible and intent['phase'] == 'active' else None
+    shutdown = eligible and (intent['phase'] == 'stopping' or (intent['phase'] == 'active' and proof))
     print(json.dumps(dict(event='bound-exit-decision',transaction=transaction,reason=reason,
-                         phase=intent['phase'],enabled=intent['enabled'],shutdown=shutdown)),flush=True)
+                         phase=intent['phase'],enabled=intent['enabled'],shutdown=shutdown,
+                         home_present=home,failsafe_present=failsafe,
+                         current_session_known=current_boot is not None,
+                         same_session=current_boot == intent['boot'] if current_boot is not None else None,
+                         shutdown_proof=proof)),flush=True)
     if shutdown:
         print('Confirmed system shutdown: retaining active intent for boot recovery', flush=True)
         return c.shutdown(intent)

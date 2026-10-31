@@ -70,6 +70,8 @@ TV를 선택하거나 IP를 입력하고 에디션과 설치 요약을 확인하
 
 No-root: Home 제어를 다시 시작하려면 Home Helper를 열고 Helper 시작을 선택한 다음 확인하세요. 저장된 Home 화면 선택은 유지됩니다. Root는 Home 설정에서 **Home 변경**을 켜서 재개하세요. **LG Home 열기**는 Home의 연결 대상을 바꾸지 않고 LG Home을 한 번 엽니다. LG Home을 계속 사용할 기본 대상으로 복원하려면 **Home 변경**을 끄거나 `cytv restore`를 실행하세요. 두 제어 프로그램을 동시에 실행하지 마세요. 문제가 반복되면 LG Home을 유지하세요.
 
+> **미출시 1.5.3 후보 — Root 전용:** Root가 정상일 때 **Home 변경**을 명시적으로 켜면 TV 입력 목록에 CYTV 소유의 **Clean** 항목을 만들고 기억된 입력을 Clean으로 설정합니다. Home 제어 끄기, 비상 중지, 오류, 업데이트를 위한 일시 중단 또는 제거 시 CYTV의 항목을 삭제합니다. 현재 값이 여전히 CYTV가 설정한 값일 때만 이전에 기억된 입력을 복원하며, 다른 입력과 전면 앱은 유지합니다. 지원되지 않는 TV나 CYTV 소유가 아닌 항목에서는 기존 보호 기능이 적용된 Home 제어를 사용합니다. Clean이 즉시 첫 화면으로 나타난다는 보장은 없습니다. C3 한 대의 첫 화면 실험은 통과했지만 대기 모드, 전원을 완전히 끈 뒤 시작, Home 제어 끄기, 업데이트 및 롤백의 최종 검증은 남아 있습니다. [후보 상세 정보(영어)](../development/ROOT-NATIVE-INPUT.md).
+
 ```sh
 ./cytv --language ko status
 ./cytv --language ko doctor --report

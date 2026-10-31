@@ -70,6 +70,8 @@ Le frecce selezionano, OK apre; tieni premuto OK per riordinare. Un breve Indiet
 
 No-root: Per riavviare il controllo Home, apri Home Helper, scegli Avvia Helper e conferma. La tua scelta della schermata Home viene mantenuta. Root: attiva **Cambia Home** nelle impostazioni Home per riprendere. **Apri LG Home** apre LG Home una volta senza cambiare la destinazione di Home. Per ripristinare LG Home come destinazione permanente, disattiva **Cambia Home** o esegui `cytv restore`. Non eseguire entrambi i controllori insieme. Se il problema ricompare, lascia attivo LG Home.
 
+> **Candidato 1.5.3 non pubblicato — solo Root:** attivando esplicitamente **Cambia Home** con Root funzionante, CYTV crea un proprio ingresso nativo **Clean** e memorizza Clean come ingresso. Disattivazione del controllo Home, arresto di emergenza, errore, sospensione per aggiornamento o disinstallazione rimuovono la voce di CYTV e ripristinano l’ingresso precedente solo se il valore corrente è ancora quello impostato da CYTV; gli altri ingressi e le app in primo piano restano invariati. Su TV non supportati o con voci non appartenenti a CYTV rimane il normale controllo Home con le sue protezioni. Non è garantito che Clean appaia subito come prima schermata. Un esperimento della prima schermata su un C3 è riuscito; restano le verifiche finali di standby, avvio a freddo, controllo Home disattivato, aggiornamento e ripristino della versione precedente. [Dettagli del candidato (inglese)](../development/ROOT-NATIVE-INPUT.md).
+
 ```sh
 ./cytv --language it status
 ./cytv --language it doctor --report
