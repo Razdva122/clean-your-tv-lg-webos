@@ -1,11 +1,11 @@
-# v1.5.3 — Ribbon, installer checks and legacy Helper runtime
+# v1.5.3 — Themes, Root startup and recovery
 
-Status: unpublished combined fix batch under review. The previous complete build
+Status: unpublished combined fix batch integrated into `release/next`. The previous complete build
 [41118810865 / attempt 1](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/41118810865)
 from `160f3294d565b25925a8bf128d92a4146860a0b9` remains historical evidence;
-its selection is invalidated by the newly integrated receiver fix. No replacement
-build is selected and acceptance remains empty. Finish all reviewed batch changes
-before dispatching one complete replacement build.
+its selection is invalidated by the integrated receiver and startup/recovery batch. No replacement
+build is selected and acceptance remains empty. All 17 implementation PRs are integrated. First perform focused signed Root QA
+for the old-runtime update window, then dispatch one complete replacement build.
 
 [Previous verification](history/2026-10-31-release-1.5.3-combined-verification.md)
 records its ten artifacts, nine installer payloads, macOS execution and Android
@@ -19,12 +19,14 @@ results do not accept replacement bytes or universal TV compatibility.
   standalone service idle timer cannot close the HTTP listener while a PIN waits.
   Integrated in `release/next`; normal delivery and original webOS 5/No-root
   confirmation remain pending.
-- Under review: #204 owned native EIM first-screen startup and cleanup;
+- #205: #204 owned native EIM first-screen startup and cleanup;
   #202 automatic recovery preserving update Home resumption; #203 bounded
   compressed maintainer SSH admission; refreshed Classic README main screenshot
-  and three built-in theme previews. See the candidate PR for current integration.
+  and three built-in theme previews. [Batch verification](history/2026-10-31-release-1.5.3-native-startup-batch.md) records final PR CI and limits.
   The EIM enabled-mode C3 experiment is not final package acceptance or a fix for
   #171. Additional shutdown-decision diagnostics preserve existing safety policy.
+  An old callback can still run before its runtime is replaced; #202 therefore
+  needs actual old-baseline update acceptance, not cancellation-receipt clearing.
 
 - #193: refresh the Ribbon README screenshot and link theme browsing to the main
   interactive preview. Remove the standalone public theme catalogue page and its

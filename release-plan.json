@@ -100,7 +100,17 @@
       "issues": [
         198
       ],
-      "summary": "Keep the theme receiver service alive during a session"
+      "summary": "Hold receiver service activity for the complete theme session; #198 original webOS 5/No-root confirmation on normal delivery remains pending"
+    },
+    {
+      "pr": 205,
+      "issues": [
+        171,
+        202,
+        203,
+        204
+      ],
+      "summary": "Own native Root startup/cleanup, preserve new-runtime update resume and bound SSH admission; #171 diagnostic-only, #202 old-runtime upgrade acceptance pending; refresh Classic and built-in README previews"
     }
   ],
   "excluded": [],

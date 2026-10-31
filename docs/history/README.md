@@ -75,3 +75,5 @@ Historical files stay at their existing paths so release and issue links continu
 to work. Current guidance lives in the user/developer indexes rather than being
 appended to these records. Private logs and device backups are not part of this
 public documentation.
+
+- [2026-10-31: coordinated native startup/recovery batch](2026-10-31-release-1.5.3-native-startup-batch.md).
