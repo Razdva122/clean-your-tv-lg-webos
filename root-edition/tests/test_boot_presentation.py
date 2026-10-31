@@ -152,6 +152,62 @@ class WakePresentationTests(PresentationTests):
   self.call.side_effect=expire
   self.assertEqual(self.wake(),'unavailable');self.assertEqual(self.launches,[])
 
+ def wake_decision(self):
+  import json
+  return json.loads((runtime.d.STATE/'boot-decision.json').read_text())
+ def test_missing_post_wake_health_is_recorded_without_promotion_or_launch(self):
+  health.path('route-a').unlink()
+  self.assertEqual(self.wake(),'unavailable')
+  decision=self.wake_decision()
+  self.assertEqual(decision['event'],'wake-presentation')
+  self.assertEqual(decision['outcome'],'unavailable')
+  self.assertEqual(decision['context']['stage'],'health-routing')
+  self.assertEqual(self.store.read(),self.intent);self.assertEqual(self.launches,[])
+ def test_real_power_edge_with_missing_health_reaches_a_recorded_refusal(self):
+  import json,shutdown_state as power
+  from unittest.mock import Mock
+  health.path('route-a').unlink()
+  monitor=power.Monitor();child=Mock();child.stdout.fileno.return_value=7;child.poll.return_value=None
+  frames=b'{"returnValue":true,"subscribed":true,"state":"Active"}{"returnValue":true,"state":"Active Standby"}{"returnValue":true,"state":"Active"}'
+  chunks=[frames]
+  def read(*args):
+   if chunks:return chunks.pop()
+   self.assertIsNotNone(monitor.presentation)
+   monitor.presentation.join(1)
+   self.assertFalse(monitor.presentation.is_alive())
+   self.assertEqual(self.wake_decision()['context']['stage'],'health-routing')
+   return b''
+  with patch.object(power.subprocess,'Popen',return_value=child),patch.object(power.select,'select',return_value=([child.stdout],[],[])),patch.object(power.os,'read',side_effect=read):
+   try:
+    power.observe_power('route-a','boot-a',monitor,wake=lambda cancelled:monitor.request_wake('route-a','boot-a',cancelled))
+   finally:monitor.close()
+  snapshot=json.loads(health.path('route-a').with_suffix('.wake').read_text())
+  self.assertEqual(snapshot['wake_count'],1);self.assertEqual(snapshot['event'],'eof')
+  self.assertEqual(self.launches,[]);self.assertEqual(self.store.read(),self.intent)
+
+ def test_cancelled_session_and_disabled_wake_refusals_are_recorded(self):
+  import json
+  cases=(('cancelled',lambda:self.wake(lambda:True)),
+         ('session',lambda:runtime.present_wake('route-a','old-boot',lambda:False)))
+  for stage,run in cases:
+   self.assertEqual(run(),'unavailable')
+   self.assertEqual(self.wake_decision()['context']['stage'],stage)
+  self.store.path.write_text(json.dumps(dict(self.intent,phase='disabled',enabled=False)))
+  self.assertEqual(self.wake(),'unavailable')
+  self.assertEqual(self.wake_decision()['context']['stage'],'intent')
+ def test_optional_rpc_failure_records_stage_without_private_error_or_app_id(self):
+  def private_error(*args,**kwargs):raise TimeoutError('private address and token')
+  self.call.side_effect=private_error
+  self.assertEqual(self.wake(),'unavailable')
+  decision=self.wake_decision()
+  self.assertEqual(decision['context']['stage'],'startup-setting')
+  self.assertNotIn('private',str(decision))
+  self.assertEqual(self.store.read(),self.intent)
+ def test_diagnostic_write_failure_cannot_change_wake_outcome(self):
+  with patch('boot_gate.audit',side_effect=OSError('diagnostic unavailable')):
+   self.assertEqual(self.wake(),'launch-requested')
+  self.assertEqual(self.launches,[CANDIDATE])
+
  def test_disabled_stopping_and_trial_intent_cannot_be_promoted_by_wake(self):
   import json
   for phase,enabled in (('disabled',False),('stopping',True),('trial',False)):

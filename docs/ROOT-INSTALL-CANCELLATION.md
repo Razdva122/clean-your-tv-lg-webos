@@ -4,7 +4,10 @@ This is a narrow maintainer recovery operation, not normal setup, an install
 continuation, a repair command or a release acceptance claim. It is currently
 limited to a failed product install at `root-deploy`, an independently saved
 genuine SDK install terminal, no migration and no Root Updater/System state.
-The maintained **unreleased source** admits two exact Root journals:
+The cancellation baseline shipped in v1.5.0 and admits two exact Root journals.
+The isolated inspection entry and optional candidate lookup below are
+**unreleased source changes**; use their exact reviewed checkout, not an older
+installer or a patched retained worker:
 
 - `install-observed`: provisioning never started (the failure reported in #101).
 - `provision-finalize-starting`: a saved finalize failure at `stock-home` or
@@ -27,6 +30,7 @@ Build the maintained Root Updater **code bundle** without installing it:
 
 ```sh
 npm ci
+mkdir -p build
 python3 root-edition/build_updater.py --output build/root-recovery-code
 python3 scripts/root-install-recovery.py digest --code-bundle build/root-recovery-code
 ```
@@ -39,24 +43,37 @@ through an admitted cancellation; do not upgrade an in-progress cancellation.
 The host uses exactly one saved Root profile whose pending operation matches
 the explicit operation UUID, with saved automatic SSH authentication.
 
-Run `inspect`, supplying the original UUID/candidate and reviewed code digest:
+Before connecting, follow the [read-only admission handoff](development/ROOT-READONLY-ADMISSION.md)
+to identify the original UUID locally and agree on the bounded inspection with
+the owner. Run `inspect`, supplying that UUID and reviewed code digest. The
+optional `--candidate ORIGINAL_CANDIDATE_SHA256` pins a candidate already known
+to the maintainer; without it, inspection reads the candidate from that operation's
+original device request and still authenticates it against the submission and
+complete snapshot:
 
 ```sh
 python3 scripts/root-install-recovery.py inspect \
   --code-bundle build/root-recovery-code \
-  --operation ORIGINAL_UUID --candidate ORIGINAL_CANDIDATE_SHA256 \
+  --operation ORIGINAL_UUID \
   --code-sha256 REVIEWED_RECOVERY_CODE_SHA256
 ```
 
 This uploads trusted code to a new private temporary directory and checks the
 original immutable snapshot, private support/runtime and interpreter binding,
 request, submission, candidate, saved SDK terminal and exact product lease.
+Before any private Python starts, trusted host-side Node checks the retained
+interpreter binding as data. The tool calls only a fixed system interpreter or
+the pinned private interpreter, with `-I -B`; its staged `python_binding.py`
+checks the full binding/runtime inventory. Retained Python helpers, launchers,
+user site modules, current-directory modules and `PYTHONPATH` are not executed.
+Missing or changed binding evidence refuses inspection; it does not provision a
+new interpreter or run the normal installer's smoke/write checks.
 Every installed Root byte must match the original package. It rejects unknown
 private entries (including dangling links), other product
 components, project routing, non-LG Home routes, installer activity and live
 original workers or private recovery processes. Do not kill a process or reboot
 the TV just to bypass this refusal; review how to obtain a quiescent state.
-The result includes a proof digest; `admissible` does not mean
+The result includes the original candidate, code pin and proof digest; `admissible` does not mean
 that installation or cancellation completed. No product record, package or
 host pending receipt changes during inspection. The temporary code directory is
 removed after a successful invocation; preserve it on a failed/unknown invocation

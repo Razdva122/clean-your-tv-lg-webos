@@ -9,7 +9,7 @@ from cytv.errors import UserError
 
 
 class HelperPreflightTests(unittest.TestCase):
-    def probe(self, pid=None, processes=None, symlink=False, grep_error=False):
+    def probe(self, pid=None, processes=None, symlink=False, grep_error=False, legacy_grep=False):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         root = Path(self.tmp.name)
@@ -33,6 +33,13 @@ class HelperPreflightTests(unittest.TestCase):
                     return '127 69 76 70 1 1 1 0 0 0 0 0 0 0 0 0 2 0 40 0'
                 if 'CYTV_ROOT_STATE' in command: return ''
                 script = command.replace(HELPER_STATE, state.as_posix()).replace('/proc/', proc.as_posix() + '/')
+                if legacy_grep:
+                    # BusyBox 1.20.2 grep.c uses strstr for -F, ignoring -x.
+                    # Include the real SSH shell command in the proc fixture.
+                    own = proc / '999'
+                    own.mkdir(exist_ok=True)
+                    (own / 'cmdline').write_bytes(b'sh\0-c\0' + script.encode() + b'\0')
+                    script = 'grep() { if [ "$1" = -Fx ]; then shift; command grep -F "$@"; else command grep "$@"; fi; }\n' + script
                 if grep_error:
                     script = 'grep() { return 2; }\n' + script
                 return subprocess.check_output(['sh', '-c', script], text=True)
@@ -64,6 +71,26 @@ class HelperPreflightTests(unittest.TestCase):
 
     def test_idle_tv_can_install(self):
         self.probe().preflight(install=True)
+
+    def test_legacy_grep_does_not_match_ssh_probe_or_service(self):
+        for processes in ({}, {123: b'node\0/usr/bin/run-js-service\0com.local.nativehome.service\0'}):
+            with self.subTest(processes=processes):
+                installer = self.probe(processes=processes, legacy_grep=True)
+                self.assertEqual(installer.helper_state(), 'stopped')
+
+    def test_legacy_grep_still_blocks_controller_and_relay(self):
+        for args in (b'com.local.nativehome\0',
+                     b'node\0/media/developer/apps/usr/palm/applications/com.local.nativehome/native.js\0',
+                     b'/media/developer/apps/usr/palm/applications/com.local.nativehome/relay\0'):
+            with self.subTest(args=args):
+                self.assertEqual(self.probe(processes={123: args}, legacy_grep=True).helper_state(), 'running')
+
+    def test_process_patterns_are_literal_whole_arguments(self):
+        for args in (b'comXlocalXnativehome\0', b'com.local.nativehome.service\0',
+                     b'/media/developer/apps/usr/palm/applications/com.local.nativehome/nativeXjs\0',
+                     b'/media/developer/apps/usr/palm/applications/com.local.nativehome/relay-cleanup\0'):
+            with self.subTest(args=args):
+                self.assertEqual(self.probe(processes={123: args}).helper_state(), 'stopped')
 
     def test_empty_target_cmdline_or_missing_proc_is_uncertain(self):
         installer = self.probe('123', {123: b''})

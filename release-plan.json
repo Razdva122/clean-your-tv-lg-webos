@@ -1,21 +1,124 @@
 {
   "schema": 1,
-  "version": "1.5.2",
+  "version": "1.5.3",
   "changes": [
     {
-      "pr": 179,
+      "pr": 117,
       "issues": [
-        172
+        116
       ],
-      "summary": "Authenticate the final release assembler API recheck and cover effective workflow credentials/permissions; completes the automatic publication correction tracked in #172."
+      "summary": "Explain Homebrew exec denials and retain requests; partial #116, supported upstream prerequisite and device acceptance remain pending"
+    },
+    {
+      "pr": 175,
+      "issues": [
+        160,
+        164
+      ],
+      "summary": "Show individual TV prerequisite checks in CLI, desktop and Android; diagnostic improvement only for #160 and #164"
+    },
+    {
+      "pr": 176,
+      "issues": [
+        170
+      ],
+      "summary": "Prevent Appearance Apply scroll clamping when fixed themes hide Columns; #170 physical acceptance pending"
+    },
+    {
+      "pr": 177,
+      "issues": [
+        133
+      ],
+      "summary": "Isolate trusted read-only Root admission preparation; partial #133, individual recovery and firmware routing support remain unresolved"
+    },
+    {
+      "pr": 180,
+      "issues": [
+        171
+      ],
+      "summary": "Record guarded wake refusals and power stream outcomes; diagnostics only, original #171 standby failure unresolved"
+    },
+    {
+      "pr": 181,
+      "issues": [
+        152
+      ],
+      "summary": "Support compiled Home Helper on Node 0.10.25 while retaining pairing and input guards; #152 device acceptance pending"
+    },
+    {
+      "pr": 183,
+      "issues": [
+        160,
+        164
+      ],
+      "summary": "Keep diagnostic report guidance visible alongside failed prerequisite checks; follow-up to #175, original #160 and #164 runtime reports remain unresolved"
+    },
+    {
+      "pr": 184,
+      "issues": [],
+      "summary": "Retain the Android native runner for candidate verification"
+    },
+    {
+      "pr": 186,
+      "issues": [],
+      "summary": "Correct current release and historical acceptance documentation"
+    },
+    {
+      "pr": 188,
+      "issues": [],
+      "summary": "Add built-in Ribbon with theme-driven scenic ribbon options"
+    },
+    {
+      "pr": 189,
+      "issues": [],
+      "summary": "Avoid GitHub large-page failures during Root QA admission"
+    },
+    {
+      "pr": 191,
+      "issues": [],
+      "summary": "Separate theme settings and expose language and column choices"
+    },
+    {
+      "pr": 192,
+      "issues": [
+        152
+      ],
+      "summary": "Avoid false active Helper detection with legacy grep and retain bounded LS2 failures; partial #152, original installation/control report and target-device acceptance remain unresolved"
+    },
+    {
+      "pr": 193,
+      "issues": [],
+      "summary": "Refresh README and retire the standalone theme catalogue page"
+    },
+    {
+      "pr": 195,
+      "issues": [],
+      "summary": "Fix Ribbon browser check after Themes settings split"
+    },
+    {
+      "pr": 199,
+      "issues": [
+        198
+      ],
+      "summary": "Hold receiver service activity for the complete theme session; #198 original webOS 5/No-root confirmation on normal delivery remains pending"
+    },
+    {
+      "pr": 205,
+      "issues": [
+        171,
+        202,
+        203,
+        204
+      ],
+      "summary": "Own native Root startup/cleanup and bound SSH admission; separate automatic recovery cancellation, but #202 update/rollback Home loss remains deferred; #171 diagnostic-only; refresh Classic and built-in README previews"
     }
   ],
   "excluded": [],
-  "acceptance": "Workflow-only maintenance. Complete candidate 41069111699/1 passed in 11m21s; all six actual CI TV packages are byte-identical to verified signed 1.5.0/1.5.1 packages. Existing signed Home 1.5.1 rollback was independently verified. The real tv-dev candidate command completed direct build 41069718155/1, protected preliminary signing 41070497206/1 and local signature/provenance/hash verification; all three signed Root packages match the full candidate. See docs/history/2026-10-30-release-1.5.2-validation.md. No TV connected or modified, no new model/firmware/remote session or Home/control/audio/standby/cold-boot/OTA/device-rollback acceptance. Known Appearance/standby failures and prior physical evidence retain their original scope. Main automatic publication and public verification follow merge.",
+  "acceptance": "Maintainer-owned OLED55C3RLA, firmware43.21.71/webOS SDK11.2.0, remote model unknown, macOS ARM64. Signed Root QA41178376979:1/signing41178920042:1 sourcef4bab0ea; final fullbuild41185537404:1 carries byte-identical Root32b0acf41f65b1620d1f0a2679058d5be5d1f5f6a49cf97105eae4c97b882469, updater375ffccfd5ac42dbc31d808fc27262c23bbfdf49d148cd909461a153f75844ad and infrastructure341de52d865a364a0b10db4c272b33237648b96d642114cb0d633dfd6cd16033. Controls/Home/arrows/OK/Back/volume/audible sound, native Off/tripleHome cleanup, same-session standby and true AC cold first-screen Clean, actual profile/theme/columns retention and all3component rollback/native baseline cleanup passed within recorded scope. Forward Home resume cancelled and active rollback resume skipped; maintainer explicitly deferred #202/#206 fixes/retests and accepted release with normal explicit-enable/Settings reopen workaround. #171 earlier different-session failure unresolved follow-up. Maintainer explicitly accepts untested physical Helper0.6.20->0.6.21 transition. Final Android0.5.1/code16 APK46099d6be1100a3754698245ee83a794eadf9feb6a117c40554b477c6ed9079a original-signer code15->16 emulator install-r/force-stop retained4syntheticfiles; physicalphone/nativeinstrumentation untested. All10Actions artifacts digest-verified, nine installer payloads/all6TVIPKs identical, final macOS CLI/GUI runtime checks passed. NoRootwebOS5receiver published-package confirmation, uninstall/additionalinput/firmware combinations untested. See docs/history/2026-10-31-release-1.5.3-signed-root-qa.md; TV left stable0.6.1 with owner-confirmed controls/audio. No universalcompatibility claim.",
   "build": {
-    "run_id": 41069111699,
+    "run_id": 41185537404,
     "attempt": 1,
-    "source": "36e4e1d75e107780660ed5dd5033b6f63f05b1fc"
+    "source": "f4bab0ea60c825994445b0b63625f5fd734bff4e"
   },
-  "acceptance_build": "41069111699:1"
+  "acceptance_build": "41185537404:1"
 }

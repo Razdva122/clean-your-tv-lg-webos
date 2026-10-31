@@ -18,6 +18,11 @@ function fixture(options={}){
   fchmodSync(fd,mode){if(io.fstatSync(fd).uid!==actor)throw denied();fs.fchmodSync(fd,mode);},
   fchownSync(fd,uid,gid){if(io.fstatSync(fd).uid!==actor||gid!==5000)throw denied();owners.set(fds.get(fd),{uid,gid});},
   writeSync(...args){if(options.writeFailure)throw denied();return fs.writeSync(...args);},
+  readSync(fd,buffer,offset,length,position){
+   if(options.readFailure)throw denied();
+   if(options.shortRead)return 0;
+   return fs.readSync(fd,buffer,offset,options.partialRead?Math.min(length,3):length,position);
+  },
   fsyncSync(fd){
    fs.fsyncSync(fd);
    if(options.concurrentUpdate){const tmp=key+'.new';fs.writeFileSync(tmp,'{"key":"newer-key"}');fs.renameSync(tmp,key);}
@@ -45,7 +50,10 @@ test('foreign boot-expanded key is replaced and readable by the service group',{
 test('replacement keeps the shared supplementary group instead of the helper primary group',{primaryGroup:5367},f=>{
  a.equal(f.run(),true);a.deepEqual(f.owners.get(f.key),{uid:5367,gid:5000});a.equal(f.run(5380),true);
 });
-for(const failure of ['renameFailure','writeFailure'])test(failure+' preserves original key and removes staging files',{[failure]:true},f=>{
+test('partial descriptor reads preserve the complete pairing key',{partialRead:true},f=>{
+ a.equal(f.run(),true);a.equal(fs.readFileSync(f.key,'utf8'),'{"key":"test-private-key"}');
+});
+for(const failure of ['renameFailure','writeFailure','readFailure','shortRead'])test(failure+' preserves original key and removes staging files',{[failure]:true},f=>{
  const before=fs.statSync(f.key).ino;a.equal(f.run(),false);a.equal(fs.statSync(f.key).ino,before);
  a.equal(fs.readFileSync(f.key,'utf8'),'{"key":"test-private-key"}');a.equal(fs.readdirSync(f.state).length,2);
 });

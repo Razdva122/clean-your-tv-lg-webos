@@ -35,7 +35,8 @@ instructions separate from published downloads and historical hardware evidence.
 Run `npm ci` first. TV web packages use Babel/core-js and PostCSS, with a strict
 compatibility check after conversion; see [TV web build](docs/TV-WEB-BUILD.md).
 Helper app/service JS uses a separate Babel/core-js/safe-buffer build for TV
-Node 0.12.2+. Set `NODE012` to run its regression against that exact runtime.
+Node 0.10.25+. Set `NODE010` and `NODE012` to run its regression against exact
+Node 0.10.25 and 0.12.2 runtimes alongside current Node.
 Keep changes small and reproducible. During implementation run the tests for the
 changed behavior and its dependencies; `scripts/test.sh ui`, `tv`, `installer`, `setup`,
 `android` and `preview` select existing groups. Follow the affected PR checks and

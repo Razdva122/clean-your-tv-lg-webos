@@ -48,8 +48,14 @@ exports.create = function (options) {
     s.listening = false;
     try { s.server.close(); } catch (_) {}
   }
+  function release(s) {
+    var done = s.release;
+    s.release = null;
+    if (done) try { done(); } catch (_) {}
+  }
   function dispose(s) {
     clearTimeout(s.timer);
+    release(s);
     s.buffer = null;
     closeListener(s);
     s.sockets.slice().forEach(function (socket) { socket.destroy(); });
@@ -116,7 +122,8 @@ exports.create = function (options) {
       starting = true;
       return new Promise(function (resolve, reject) {
         var s = {id:crypto.randomBytes(24).toString('hex'), pin:('000000' + (crypto.randomBytes(4).readUInt32BE(0) % 1000000)).slice(-6),
-          addresses:addresses(), wrong:0, state:'waiting', buffer:null, sockets:[], listening:false};
+          addresses:addresses(), wrong:0, state:'waiting', buffer:null, sockets:[], listening:false,
+          release:typeof options.hold === 'function' ? options.hold() : null};
         s.server = http.createServer(function (req, res) { handle(s, req, res); });
         s.server.on('connection', function (socket) {
           s.sockets.push(socket);
@@ -125,6 +132,7 @@ exports.create = function (options) {
         });
         s.server.on('error', function () {
           starting = false;
+          release(s);
           if (session === s) dispose(s);
           reject(error('receiver-unavailable'));
         });

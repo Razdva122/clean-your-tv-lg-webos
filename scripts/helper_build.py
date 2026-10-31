@@ -1,4 +1,4 @@
-"""Compile Helper app and service JS for the TV's Node 0.12 (not the web engine)."""
+"""Compile Helper app and service JS for the TV's Node 0.10 (not the web engine)."""
 import argparse
 import json
 from pathlib import Path

@@ -1,7 +1,8 @@
-# Home installation gates (unreleased source changes)
+# Home installation gates
 
-Related issues: #140, #133. These changes target the next integration cycle;
-they are not present in the immutable published Helper 0.6.19 package.
+Related issues: #140, #133. The controller-state and firmware gates shipped in
+v1.5.0; immutable Helper 0.6.19 does not contain them. The Node 0.10.25 target
+below is an unpublished follow-up for #152.
 
 ## No-root controller state
 
@@ -17,6 +18,36 @@ do not remove the key to work around a control-file permission error.
 Existing state path validation, trusted directory ownership, shared-group checks,
 no world writes, exclusive staging and cleanup on failure remain required.
 No new persistent preference, permission, or network endpoint is introduced.
+
+### Legacy process matching (unpublished follow-up for #152)
+
+The installer scans NUL-separated `/proc/*/cmdline` arguments for the controller
+identity, exact `native.js` path or exact relay path. An installed app or the
+separate `com.local.nativehome.service` worker alone is not an active input
+controller. The original `grep -Fx` assumption is incompatible with older
+BusyBox: [1.20.2 grep.c](https://github.com/mirror/busybox/blob/1_20_2/findutils/grep.c)
+uses substring matching for `-F` without checking `-x`. It can therefore match
+the SSH probe's own command text on an otherwise idle TV. Anchored basic regular
+expressions with literal dots avoid that behavior while retaining real controller
+and orphan-relay refusal. Stale PID handling, unreadable/ambiguous-state refusal,
+ownership checks and emergency latches are unchanged.
+
+`tests/cytv/test_helper_preflight.py` executes the real shell probe against a
+local proc fixture, including its own SSH command. A wrapper models the old
+fixed-string behavior; this is not a run of the TV's BusyBox binary. The legacy
+false positive fails before the change and passes afterward, while real processes
+remain blocked. This proves a host-reproduced portability defect, not the actual
+EF950V cause: its grep implementation/version and device behavior remain unknown.
+
+Restore rejection diagnostics now distinguish fixed `helper-disable`,
+`eim-delete-device` and `application-launch` categories. Unknown calls remain
+`luna-call`; no arbitrary URI, application ID or remote error text is exported.
+An LS2 `-101` alone is not proof that the controller is active or that a particular
+service is absent. A failed `control.json` upload also does not establish which
+shell utility, state directory or permission failed. Upload and stop behavior are
+unchanged; no fallback, automatic directory creation or guard bypass is added.
+These failures need a future scoped observation if they recur. Do not repeat
+Restore/Uninstall, clear state or change pairing merely to diagnose them.
 
 ## Root firmware interfaces
 
@@ -45,7 +76,7 @@ Root compatibility support and has no target-TV acceptance yet.
 
 At candidate freeze select a new Helper version, synchronize manifests and
 release metadata, and build it from source: builders deliberately reuse the
-published baseline when the Helper version remains 0.6.19. Rebuild the affected
+published baseline when the Helper version remains unchanged. Rebuild the affected
 Root/Root Updater code bundles and installers as well. The signed Helper
 transition also needs a new Home candidate and an explicitly tested rollback
 compatibility archive pin: changing `native.js` is outside the narrow
@@ -54,7 +85,7 @@ changed during this preparation.
 
 Run `scripts/test.sh`, including ownership fixtures, controller/emergency tests
 and Root preflight tests. The multi-UID kernel test requires Linux root and runs
-in CI; macOS reports it skipped. Helper compilation targets Node 0.12.2+, with
-`NODE012` needed to validate that exact runtime. Automated checks are not device
+in CI; macOS reports it skipped. Current Helper source targets Node 0.10.25+;
+set `NODE010` and `NODE012` to validate the exact Node 0.10.25 and 0.12.2 runtimes. Automated checks are not device
 acceptance. Fresh-install Home, Back, triple-Home, pairing-backed monitoring,
 standby, cold boot and recovery/removal need separate target-TV validation.

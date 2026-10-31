@@ -24,20 +24,36 @@ LG screens or obtain root access.
 [Try the browser demo](https://razdva122.github.io/clean-your-tv-lg-webos/) ·
 [Installation guide](docs/INSTALL.md) · [Help and recovery](docs/RECOVERY.md)
 
-![Demo launcher with Netflix, YouTube, Prime Video, Disney+ and Apple TV](docs/launcher-international.png)
+![Classic menu with reference app icons](docs/launcher-classic.jpg)
 
-*Six-column demo layout with international apps; apps are not bundled. TV functions are simulated.*
+*Classic, the default built-in theme, shown in the browser preview. Reference apps are not bundled; TV functions are simulated.*
+
+## Themes
+
+Choose built-in **Classic**, **Alpine** or **Ribbon**, or install community themes.
+Manage them in **Settings → Themes** on your TV.
+
+| Classic menu | Alpine | Ribbon |
+| --- | --- | --- |
+| <img src="docs/launcher-classic.jpg" alt="Classic menu browser preview" width="280"> | <img src="docs/launcher-alpine.jpg" alt="Alpine browser preview" width="280"> | <img src="docs/launcher-ribbon.jpg" alt="Ribbon browser preview" width="280"> |
+
+**[Try the themes in the main browser preview →](https://razdva122.github.io/clean-your-tv-lg-webos/)**
+
+Use the theme cards above the simulated TV to switch themes and compare layouts,
+then choose Root or No-root to preview either edition. No TV connection or
+installation is needed. See the [theme guide](docs/THEMES.md) for installation
+and creating your own theme.
 
 <a id="install-with-cytv"></a>
 <a id="get-started"></a>
 
 ## Download and install
 
-> Known Root limits retained in 1.5.2: Appearance can shift 110 px when applying a theme;
-> Home may not open automatically after standby. See [release notes and tested scope](docs/RELEASE-1.5.0.md).
+> Root Home may not open automatically after standby (#171). The 1.5.3 candidate includes the Appearance scroll correction; see [changes and acceptance limits](docs/RELEASE-1.5.3.md).
+> On `release/next`, the versioned metadata below describes the prepared candidate until publication. The download buttons always follow the latest published release.
 
 <!-- release:downloads -->
-Current stable release: **[v1.5.2](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.5.2)** — [release notes](docs/RELEASE-1.5.2.md).
+Current stable release: **[v1.5.3](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.5.3)** — [release notes](docs/RELEASE-1.5.3.md).
 <!-- /release:downloads -->
 
 [![Download Windows x64 graphical installer — GUI ZIP](assets/brand/downloads/windows.svg)](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/cytv-windows-x64-desktop.zip)
@@ -117,16 +133,16 @@ For contributors: [build and technical references](docs/development/README.md),
 <!-- release:components -->
 | Component | Stable version |
 | --- | --- |
-| cytv installer | 0.6.0 |
-| Home | 1.6.0 |
-| Home Helper | 0.6.20 |
-| Root edition | 0.6.1 |
-| Both edition Updaters | 0.3.3 |
-| Android installer / versionCode | 0.5.0 / 15 |
+| cytv installer | 0.6.1 |
+| Home | 1.6.1 |
+| Home Helper | 0.6.21 |
+| Root edition | 0.6.2 |
+| Both edition Updaters | 0.3.4 |
+| Android installer / versionCode | 0.5.1 / 16 |
 <!-- /release:components -->
 
 System Updater: 1.1.2 / protocol 1 (existing supervisors stay pinned).
-See the [release notes](docs/RELEASE-1.5.2.md)
+See the [release notes](docs/RELEASE-1.5.3.md)
 and [TV acceptance and limits](docs/RELEASE-1.5.0.md).
 
 </details>

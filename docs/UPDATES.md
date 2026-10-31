@@ -1,12 +1,14 @@
 # Update Clean Your TV
 
-> For 1.5.0 changes, known limitations and scoped acceptance, see the [release notes](RELEASE-1.5.0.md). Historical acceptance retains its original scope.
+> Release 1.5.3 has [release scope and explicit acceptance limits](RELEASE-1.5.3.md). Historical [1.5.0 limitations and acceptance](RELEASE-1.5.0.md) retain their original scope.
 
 **Existing Root installations:** published 1.4.0 is incompatible with the original
 1.3.0 System Updater destination inventory. Do not force that update or edit
 private pins. An aborted pre-replacement attempt installed nothing; retain its
-journal. The [next candidate correction](development/ROOT-OTA-13-COMPATIBILITY.md)
-is unpublished and still needs physical update/rollback acceptance.
+journal. The [supported replacement preparation](development/ROOT-OTA-13-COMPATIBILITY.md)
+was delivered in 1.5.0. Use its verified recovery/replacement boundary; do not
+force an old retained supervisor to accept incompatible destinations. New
+candidate artifacts still need their own affected update/rollback acceptance.
 
 ## Choose your update method
 
@@ -139,15 +141,17 @@ the reference above. Current release publication instructions are in the
 
 <a id="candidate-141-root-supervisor-prerequisite"></a>
 
-## Candidate 1.5.0 Root supervisor prerequisite
+<a id="candidate-150-root-supervisor-prerequisite"></a>
+
+## Root supervisor prerequisite (1.5.0+)
 
 Release 1.5.0 provides System Updater 1.1.2 for the updated
 Root receiver/runtime flow. Existing 1.1.0 and 1.1.1 installations can use the
 explicit [supervisor-only replacement](RECOVERY.md#replace-the-root-system-updater-candidate)
-with a complete matching 1.5.0 installer before on-TV updating. That command
+with a complete matching published installer before on-TV updating. That command
 verifies the retained owner/code, archives the old supervisor state and preserves
 Root and Home preferences. Do not modify retained state to force admission.
 Each supported transition still needs matching artifact/device acceptance.
 Published 1.4.1 used System Updater 1.1.1; its historical acceptance does not certify
-this candidate. The fixed readiness service retains its bounded ownership-lock
+later artifacts. The fixed readiness service retains its bounded ownership-lock
 wait without extending the launcher's health deadline.

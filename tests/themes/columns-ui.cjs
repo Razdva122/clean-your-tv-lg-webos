@@ -26,7 +26,7 @@ const {assert, chromium, stage, open} = require('./browser.cjs');
           };
         });
         await page.locator('#btnSettings').click();await page.locator('[data-category=appearance]').click();
-        assert.equal(await page.locator('#homeColumns').count(), 1, 'column settings entry is missing');
+        assert.equal(await page.locator('#homeColumns').innerText(), 'Columns: 5', 'entry shows the effective count before opening');
         await page.locator('#homeColumns').click();
         await page.keyboard.press('ArrowRight');
         await page.keyboard.press('Tab');
@@ -46,6 +46,7 @@ const {assert, chromium, stage, open} = require('./browser.cjs');
         for (const count of [8, 1, 4, 5]) {
           await page.locator('[data-columns="' + count + '"]').click();
           assert.equal(await page.locator('#tiles .dock').count(), count);
+          assert.equal(await page.locator('#homeColumns').innerText(), 'Columns: '+count);
           assert.deepEqual(await page.locator('#tiles [data-app-id]').evaluateAll(items => items.map(el => el.dataset.appId)), ids);
         }
         await page.locator('[data-columns="8"]').click();

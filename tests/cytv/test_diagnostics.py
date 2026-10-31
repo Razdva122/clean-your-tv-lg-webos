@@ -8,6 +8,23 @@ from cytv import cli, diagnostics, state
 
 
 class DiagnosticTests(unittest.TestCase):
+    def test_restore_rejections_identify_only_allowlisted_operations(self):
+        from cytv.transport import terminal_reply
+        from cytv.errors import TVRejected
+        for uri, operation in (
+            ('com.local.nativehome.service/disable', 'helper-disable'),
+            ('com.webos.service.eim/deleteDevice', 'eim-delete-device'),
+            ('com.webos.applicationManager/launch', 'application-launch'),
+            ('PRIVATE-SERVICE/PRIVATE-METHOD', 'luna-call'),
+        ):
+            with self.subTest(uri=uri), tempfile.TemporaryDirectory() as tmp:
+                with self.assertRaises(TVRejected) as caught:
+                    terminal_reply({'returnValue': False, 'errorCode': -101,
+                                    'errorText': 'PRIVATE-REMOTE-TEXT'}, uri=uri)
+                path = diagnostics.create_report(state.Store(tmp), 'restore', None, 'restore', caught.exception)
+                self.assertEqual(json.loads(path.read_text())['luna']['operation'], operation)
+                self.assertNotIn('PRIVATE-', path.read_text())
+
     def test_package_rejection_preserves_safe_metadata_from_luna_to_report(self):
         from cytv.transport import SSH
         from cytv.errors import TVRejected

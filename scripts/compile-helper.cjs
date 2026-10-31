@@ -1,4 +1,4 @@
-// Build-time Node only. Helper itself targets the TV's Node 0.12 runtime.
+// Build-time Node only. Helper itself targets the TV's Node 0.10 runtime.
 const fs = require('node:fs');
 const path = require('node:path');
 const babel = require('@babel/core');
@@ -13,7 +13,7 @@ function compile(files) {
     let code = babel.transformSync(source, {
       filename: name, configFile: false, babelrc: false, sourceType: 'script',
       presets: [[require.resolve('@babel/preset-env'), {
-        targets: {node: '0.12'}, forceAllTransforms: true, modules: false, useBuiltIns: false
+        targets: {node: '0.10'}, forceAllTransforms: true, modules: false, useBuiltIns: false
       }]]
     }).code;
     // Every app/service entry point initializes its own process before imports.

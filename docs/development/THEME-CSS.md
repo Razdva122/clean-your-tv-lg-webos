@@ -357,3 +357,52 @@ a theme replacement map; the CSS renderer does not rewrite the selected source.
 
 The `.ctv-position` part styles the decorative scenic-ribbon position indicator.
 A transparent `color` hides its count and arrows without changing navigation.
+
+
+## Parameterized scenic ribbons (unreleased)
+
+Use optional `layout.ribbon` with `preset: "scenic-grid"`, an explicit 1–8 column count and `allowColumnOverride: false`. The compiler automatically emits `ribbon-layout-v1`; descriptor policy requires options and capability together. Older Home rejects this capability before storing/applying a new package, retaining its current theme. No release version is selected yet. Existing layouts without `ribbon` remain unchanged.
+
+| Field | Allowed value | Default |
+| --- | --- | --- |
+| `left` | integer 64–640 px | 112 |
+| `right` | integer 32–320 px | 112 |
+| `bottom` | integer 0–200 px | 162 |
+| `cardHeight` | integer 96–240 px | 128 |
+| `gap` | integer 0–64 px | 24 |
+| `skewDeg` | finite number −18–18 degrees | 0 |
+| `focusLift` | integer 0–64 px | 0 |
+| `iconScale` | finite number 0.4–1 | 1 |
+| `shortcuts` | `header`, `bottom-left` | `header` |
+| `edgeNavigation` | `wrap`, `shortcuts` | `wrap` |
+| `labels` | `below`, `focused-above` | `below` |
+| `showClock` | boolean | `true` |
+
+Unknown keys and invalid combinations reject. Bottom-left shortcuts require `left >= 340`; below captions require `bottom >= 64`. Geometry reserves maximum focused skew extent on both sides and rejects a computed card width below 64 px; width is capped at 360 px. Combined checks use the fixed column count. The selected card grows and raises by `focusLift`, preserving its bottom edge. Captions, icon counter-skew and matching hit targets are trusted geometry. `iconScale` shrinks the original app-image box inside its card; Add app retains its native SVG artwork. Author CSS retains appearance hooks, wallpaper and colors.
+
+```json
+{
+  "preset": "scenic-grid",
+  "columns": 8,
+  "allowColumnOverride": false,
+  "spacingScale": 1,
+  "textScale": 1,
+  "focusScale": 1.1,
+  "ribbon": {
+    "left": 340,
+    "right": 84,
+    "bottom": 0,
+    "cardHeight": 180,
+    "gap": 0,
+    "skewDeg": -13,
+    "focusLift": 36,
+    "iconScale": 0.65,
+    "shortcuts": "bottom-left",
+    "edgeNavigation": "shortcuts",
+    "labels": "focused-above",
+    "showClock": false
+  }
+}
+```
+
+This is the value of `layout`, not a complete manifest. The separate toolkit needs an explicit exported runtime declaring `ribbon-layout-v1`. Its stable reviewed runtime pin is not silently replaced by a PR candidate. Arbitrary author `position`, `skew`, `translate`, selectors or JavaScript remain unsupported. Version and capability checks both apply. Optional icon effects still require `modern-icon-css-v1` separately.

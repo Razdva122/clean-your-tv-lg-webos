@@ -1,9 +1,13 @@
 # Root OTA compatibility with the published 1.3.0 supervisor
 
-Issue #115 tracks the reproduced C3 failure. This is next-candidate source work,
-not a change to published 1.4.0 or a claim of new physical acceptance. No TV was
-contacted during implementation. The C3 remains on 1.3.0 and is in another task's
-use; future hardware checks must be coordinated separately.
+Issue #115 records the historical C3 failure. The guarded compatibility and
+replacement preparation was delivered in 1.5.0; this reference does not change
+immutable 1.4.0 or approve an individual retained operation. The C3 was still on
+1.3.0 at the initial implementation checkpoint, not at the current release
+checkpoint. Later device observations retain their exact artifact scope in
+[1.5.0 acceptance](../RELEASE-1.5.0.md) and the
+[unattended C3 record](../history/2026-10-30-unattended-c3-ui-proof.md).
+New artifacts still require their own affected acceptance.
 
 ## Observed boundary
 

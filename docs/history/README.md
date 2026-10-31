@@ -41,6 +41,16 @@ one model or artifact does not certify later releases or a different TV.
 
 ## Acceptance and validation
 
+- [1.5.3 owner-supervised C3 matrix](2026-10-31-release-1.5.3-physical-qa.md): exact installed candidate, successful scoped checks and two unresolved Home failures; candidate not accepted.
+
+- [1.5.3 corrected combined verification](2026-10-31-release-1.5.3-combined-verification.md): selected full build, ten delivered archives, nine payloads, native macOS and exact Android emulator checks; physical gates remain pending.
+
+- [1.5.3 combined candidate freeze](2026-10-31-release-1.5.3-combined-freeze.md): final integrated scope and explicit build/device gates; no new acceptance claim.
+
+- [1.5.3 final automated verification](2026-10-30-release-1.5.3-final-verification.md): corrected-source full CI, all delivered artifacts, macOS host checks and Android original-signer/emulator results; physical gates remain separate.
+
+- [1.5.3 frozen-candidate verification](2026-10-30-release-1.5.3-verification.md): successful full build, verified published baselines/local payload and explicit artifact/Android/device blockers.
+
 - [1.5.2 maintenance validation](2026-10-30-release-1.5.2-validation.md): full CI, identical TV artifacts and the actual direct signed-delivery command; no device install.
 
 - [1.5.1 maintenance validation](2026-10-30-release-1.5.1-validation.md): full CI and identical TV artifacts; no new hardware session.
@@ -65,3 +75,5 @@ Historical files stay at their existing paths so release and issue links continu
 to work. Current guidance lives in the user/developer indexes rather than being
 appended to these records. Private logs and device backups are not part of this
 public documentation.
+
+- [2026-10-31: coordinated native startup/recovery batch](2026-10-31-release-1.5.3-native-startup-batch.md).

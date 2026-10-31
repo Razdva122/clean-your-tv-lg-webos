@@ -15,6 +15,22 @@ do not need Git, Node.js, Python, Bash, Zig or a separate SSH client.
 This is a new installer, not an expansion of the hardware compatibility claim.
 Hardware evidence remains scoped to the documented models. Source/automated checks cannot replace real TV acceptance.
 
+## Visible TV checks (unreleased)
+
+Console, desktop and Android installers show the existing prerequisites one by
+one: SSH sign-in, edition-specific runtimes, webOS tools/directories, routing
+conflicts and Helper readiness where applicable, followed by control pairing and
+inventory during installation. Each row has a text status as well as a visual
+marker. Results remain visible after failure; subsequent steps stay **Not checked**.
+An interrupted probe is **Could not verify**, not evidence of a missing runtime.
+
+Python and Node.js checks concern the **TV**, not the computer running cytv.
+Root setup can prepare private Python only when its other prerequisites pass;
+`doctor` does not prepare a runtime or request control pairing. A failed runtime
+check does not justify deleting profiles, resetting pairing or re-rooting. Save
+the diagnostic report and identify the failed requirement first. These rows reuse
+the existing probes; they do not add TV changes or establish hardware acceptance.
+
 ## Run
 
 Download the console executable matching your computer from the
@@ -225,10 +241,13 @@ profile/packaged inventory instead of reading a fresh SSAP inventory:
 Before daily use check arrows/OK, short Home, in-app Back and exit confirmation,
 volume/pointer, standby/wake and cold boot. Both editions use three short Home presses within two seconds for emergency exit.
 
-## Candidate: shared Root operations
+<a id="candidate-shared-root-operations"></a>
 
-**Unreleased source behavior:** Root installation and complete removal share the
-on-TV coordinator with CYTV Installer. The normal cytv platform/edition choices,
+## Shared Root operations
+
+Root installation and complete removal in the published installer use the shared
+on-TV coordinator. The separate CYTV Installer client for Homebrew remains
+[unreleased](../homebrew/README.md); its source uses the same coordinator. The normal cytv platform/edition choices,
 SSH trust and No-root flow remain. A current verified product can be inspected,
 restored and removed across either client without reinstalling or resetting its
 profile. Older or uncertain infrastructure is not silently migrated.
@@ -299,9 +318,11 @@ a compatible TV loader/libc and additional staging space; it does not replace
 Node.js, root services or input compatibility. [Runtime details](OPTIONAL-PYTHON.md).
 Status, doctor, restore and uninstall never download a new interpreter.
 
-## Candidate Root System Updater replacement
+<a id="candidate-root-system-updater-replacement"></a>
 
-The unpublished 1.5.0 Root candidate contains System Updater 1.1.2. The explicit
+## Root System Updater replacement
+
+Root installers since 1.5.0 contain System Updater 1.1.2. The explicit
 replacement command accepts an installed 1.1.0 or 1.1.1 after verifying its
 retained code, owner package, registration and finished recovery state.
 With the existing trusted Root connection:
@@ -342,9 +363,11 @@ uses the guarded fallback. Rejection alone does not establish that an older
 registration is absent: an EIM input-list readback establishes absence when
 available. An unknown EIM result still requires confirmed cleanup before uninstall.
 
-## Candidate: Root System rollback readiness
+<a id="candidate-root-system-rollback-readiness"></a>
 
-**Unpublished candidate only:** after a verified Root System rollback reaches a
+## Root System rollback readiness
+
+With a matching published installer, after a verified Root System rollback reaches a
 launcher-readiness timeout with all package installers completed, use the same
 saved/trusted Root connection:
 

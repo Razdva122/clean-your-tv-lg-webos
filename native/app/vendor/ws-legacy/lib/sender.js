@@ -345,10 +345,12 @@ class Sender {
    */
   sendFrame(list, cb) {
     if (list.length === 2) {
-      this._socket.cork();
+      // Node 0.10 TLS streams lack this optional write-batching API.
+      const cork = typeof this._socket.cork === 'function';
+      if (cork) this._socket.cork();
       this._socket.write(list[0]);
       this._socket.write(list[1], cb);
-      this._socket.uncork();
+      if (cork) this._socket.uncork();
     } else {
       this._socket.write(list[0], cb);
     }

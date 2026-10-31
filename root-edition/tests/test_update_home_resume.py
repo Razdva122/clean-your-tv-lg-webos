@@ -39,6 +39,53 @@ class ResumeTests(unittest.TestCase):
         self.assertEqual(self.finish(),{'status':'restored'});self.assertEqual(self.enables,1)
         with guard.control(self.root,self.uid):pass
 
+    def boot_cli(self):
+        import importlib.util
+        import intent_runtime
+        source=Path(__file__).resolve().parents[1]/'runtime/cli.py'
+        spec=importlib.util.spec_from_file_location('home_resume_boot_cli',source)
+        cli=importlib.util.module_from_spec(spec);spec.loader.exec_module(cli)
+        for target,name,value in ((cli.d,'STATE',self.root),(cli.d,'EXPECTED_UID',self.uid),
+                                  (cli.os,'geteuid',lambda:0),(cli,'inhibit',lambda root:None),
+                                  (intent_runtime,'restore',self.restore)):
+            self.enterContext(patch.object(target,name,value))
+        return cli
+
+    def assert_boot_preserves_resume(self,pending=False):
+        cli=self.boot_cli();self.suspend()
+        original=(self.root/'update-home-resume.json').read_bytes()
+        if pending:
+            # The update reservation can appear after boot's first path check.
+            exists=os.path.lexists
+            checked=[]
+            def before_reservation(path):
+                if path==self.root/'update-block.json' and not checked:
+                    checked.append(True);return False
+                return exists(path)
+            self.enterContext(patch.object(cli.os.path,'lexists',before_reservation))
+            self.enterContext(patch.object(guard,'control',side_effect=guard.ProductPending('update started')))
+        self.assertEqual(cli.main('boot'),'restored')
+        self.assertEqual(cli.main('boot'),'restored')
+        self.assertFalse((self.root/'update-home-cancel.json').exists())
+        self.assertEqual((self.root/'update-home-resume.json').read_bytes(),original)
+        self.assertFalse(self.intent['enabled'])
+        self.assertEqual(self.finish(),{'status':'restored'})
+        self.assertTrue(self.intent['enabled']);self.assertEqual(self.enables,1)
+        self.assertEqual(self.finish(),{'status':'restored'});self.assertEqual(self.enables,1)
+
+    def test_automatic_boot_during_update_preserves_home_resume(self):
+        self.assert_boot_preserves_resume()
+
+    def test_automatic_boot_after_product_race_preserves_home_resume(self):
+        self.assert_boot_preserves_resume(pending=True)
+
+    def test_automatic_boot_cannot_clear_explicit_cancellation(self):
+        cli=self.boot_cli();self.suspend();guard.cancel(self.root,self.uid)
+        original=(self.root/'update-home-cancel.json').read_bytes()
+        self.assertEqual(cli.main('boot'),'restored')
+        self.assertEqual((self.root/'update-home-cancel.json').read_bytes(),original)
+        self.assertEqual(self.finish(),{'status':'cancelled'});self.assertEqual(self.enables,0)
+
     def test_disabled_intent_is_not_enabled(self):
         self.intent.update(enabled=False,phase='disabled')
         self.suspend();self.assertEqual(self.finish(),{'status':'skipped'});self.assertEqual(self.enables,0)

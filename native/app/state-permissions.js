@@ -28,7 +28,10 @@ module.exports=function(directory,log,initializeControl){
   try{
    if(before.gid!==directoryStat.gid||groups.indexOf(before.gid)===-1)throw Error('unshared-key-group');
    if(before.nlink!==1||before.size>65536)throw Error('unsafe-key');
-   var bytes=fs.readFileSync(fd),key;
+   // Node 0.10 readFileSync accepts paths only. Read the already checked inode;
+   // reopening its pathname would reintroduce a symlink/replacement race.
+   var bytes=Buffer.alloc(before.size),read=0,key;
+   while(read<bytes.length){var count=fs.readSync(fd,bytes,read,bytes.length-read,read);if(count<=0)throw Error('short-read');read+=count;}
    try{key=JSON.parse(bytes.toString('utf8'));}catch(ignore){throw Error('invalid-key');}
    if(!key||typeof key.key!=='string'||!key.key)throw Error('invalid-key');
    checkDirectory();

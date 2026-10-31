@@ -41,7 +41,9 @@ Upstream evidence: [configuration API](https://github.com/webosbrew/webos-homebr
 [startup implementation](https://github.com/webosbrew/webos-homebrew-channel/blob/main/services/startup.sh),
 and [early update-check limitation](https://github.com/webosbrew/webos-homebrew-channel/issues/96).
 
-## Unreleased diagnostics correction and webOS 11 access (#110)
+<a id="unreleased-diagnostics-correction-and-webos-11-access-110"></a>
+
+## Diagnostics and webOS 11 access (#110)
 
 Root SSH access does not grant Root Home access to Homebrew's Luna API. On the
 maintainer's C3 (webOS 11.2.0, firmware 43.21.71, Homebrew 0.7.3, installed Root
@@ -64,12 +66,12 @@ change alone grants every client access: the installed Home client still needs
 an intersecting supported grant. See also the related Installer investigation
 [#116](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/116).
 
-The candidate UI distinguishes denied API access, missing service, Homebrew
+The UI distinguishes denied API access, missing service, Homebrew
 running without root, timeout and unsupported configuration replies. Raw remote
 errors and configuration fields are not displayed. A denied call leaves the
 switch disabled and directs the user to change the setting in Homebrew Channel
 itself, whose own API grant is separate. The diagnostics change alone does not enable the denied API or establish
-active blocking. The following candidate access correction provides a separate
+active blocking. The following supported access procedure provides a separate
 CYTV-owned grant; its lifecycle and device acceptance are tracked separately.
 
 No Homebrew ACL, flag, overlay, service or package was modified during the
@@ -78,9 +80,11 @@ and after. On/off
 writes, a real restart, effective server blocking and the new UI on the TV were
 not tested. Preserve the restart/security-update limitations above.
 
-## Candidate: Root Home configuration API access (#110)
+<a id="candidate-root-home-configuration-api-access-110"></a>
 
-The candidate provides a CYTV-owned grant for Homebrew `getConfiguration` and
+## Root Home configuration API access (#110)
+
+Published installers provide a CYTV-owned grant for Homebrew `getConfiguration` and
 `setConfiguration`, scoped to Root Home's existing private control group. It
 works independently of Homebrew's `public`/`lunabus.query` grants and does not
 edit Homebrew ACLs, binaries or configuration flags. LS2 grants a whole method,
@@ -92,7 +96,7 @@ optional registration failure is reported as `firmware_permissions_registered:
 false` without failing core Home/recovery setup; verify the actual control and
 use the explicit maintenance command rather than treating core readiness as API
 access acceptance. For an
-existing supported Root installation, use the **new candidate installer**, with
+existing supported Root installation, use a **complete matching published installer**, with
 the saved trusted Root connection and no pending installation/removal:
 
 ```sh
@@ -140,14 +144,14 @@ application directory. Enabling access retains the strict SDK identity and
 permission checks. This does not repair an unsafe SDK tree or make enabling
 access supported there; use Homebrew itself while that installation needs review.
 
-The candidate runtime reconciles the reference on boot and after a complete
+The runtime reconciles the reference on boot and after a complete
 update, under the existing product/control locks. Failures never prevent Home,
 emergency or rollback recovery. It uses the existing `runtime/cli.py` path, so
 it does not expand the original 1.3 OTA executable inventory. A host-side grant
 repair leaves an older installed runtime unchanged: after a later app-only
 update regenerates the SDK manifest, rerun `enable-firmware-access` until that
 runtime is upgraded through a supported complete update or computer migration.
-All package rebuild/version decisions remain candidate gates.
+New package versions still require affected artifact/device acceptance.
 
 On the maintainer's C3 / webOS 11.2.0 / firmware 43.21.71 / Homebrew 0.7.3,
 the verified candidate helper registered the grant for installed Root Home
@@ -187,9 +191,11 @@ maintainer confirmation and its evidence limits. Original-device checks remain
 separate.
 
 
-## Explicit package permission repair (candidate)
+<a id="explicit-package-permission-repair-candidate"></a>
 
-The unpublished candidate adds an explicit maintenance option for an installed
+## Explicit package permission repair (1.5.0+)
+
+Installers since 1.5.0 provide an explicit maintenance option for an installed
 Root package whose own SDK directories retained group/other write permissions:
 
 ```sh

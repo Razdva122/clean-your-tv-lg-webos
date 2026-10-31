@@ -7,6 +7,13 @@
       "version": "1.4.4",
       "url": "themes/alpine/cytv-theme.json",
       "digest": "3192d976cbd9fead9c0f22d3f7cb13aaaa3671e3a038c737c477c5bd6de110e6"
+    },
+    {
+      "id": "builtin:ribbon",
+      "title": "Ribbon",
+      "version": "1.0.0",
+      "url": "themes/ribbon/cytv-theme.json",
+      "digest": "5eb9cebf58cddafa8df59497880eaa134565465ba75dab60ec1903b956be4f5d"
     }
   ]
 }

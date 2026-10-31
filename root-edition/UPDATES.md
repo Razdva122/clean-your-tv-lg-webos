@@ -1,18 +1,19 @@
 # Update Root Edition
 
-> Unpublished 1.5.0 candidate: see the [release scope and pending acceptance](../docs/RELEASE-1.5.0.md). Published stable is 1.4.1; historical acceptance retains its original scope.
+> Unpublished 1.5.3 candidate: see the [release scope and pending acceptance](../docs/RELEASE-1.5.3.md). Published stable is 1.5.2; historical acceptance retains its original scope.
 
-**Original 1.3.0 supervisor → published 1.4.0 is currently blocked:** the
-published destination inventory is incompatible. An aborted pre-replacement
-attempt installed nothing. Keep the journal and private pins unchanged.
-The [#115 source correction](../docs/development/ROOT-OTA-13-COMPATIBILITY.md)
-preserves the original contract; physical signed update/rollback acceptance is pending.
-Use the supported installer/recovery flow after reviewing retained state.
+**Historical 1.3.0 supervisor → published 1.4.0 boundary:** that immutable
+release has an incompatible destination inventory. An aborted pre-replacement
+attempt installed nothing. Keep the journal and private pins unchanged. The
+[guarded #115 compatibility and replacement preparation](../docs/development/ROOT-OTA-13-COMPATIBILITY.md)
+was delivered in 1.5.0. Use the supported installer/recovery flow after reviewing
+retained state; do not force the old supervisor to accept incompatible paths.
+New 1.5.3 artifacts still require affected signed update/rollback acceptance.
 
 Root updates use an independent **System Updater supervisor** for signed complete
 edition sets: Root Home, Root Updater and compatible recovery infrastructure.
 Third-party apps, TV firmware and No-root packages are outside that set.
-[1.4.0 acceptance](../docs/RELEASE-1.4.0-ACCEPTANCE.md) includes manual physical
+Historical [1.4.0 acceptance](../docs/RELEASE-1.4.0-ACCEPTANCE.md) includes manual physical
 whole-product rollback on the C3; it does not validate automatic signed rollback.
 
 ## Computer-assisted bootstrap
@@ -114,11 +115,14 @@ submitted twice automatically. See [CLI recovery](../docs/CLI.md#interrupted-ope
 ## Release preparation and validation
 
 Use the [release flow](../docs/RELEASE-FLOW.md),
-[current release scope](../docs/RELEASE-1.4.0.md) and
-[exact acceptance record](../docs/RELEASE-1.4.0-ACCEPTANCE.md).
+[1.5.3 candidate scope and remaining acceptance](../docs/RELEASE-1.5.3.md) and
+[published 1.5.2 notes](../docs/RELEASE-1.5.2.md). The
+[1.4.0 acceptance record](../docs/RELEASE-1.4.0-ACCEPTANCE.md) remains bound to its
+original artifacts; it does not accept a new candidate.
 QEMU, package installation and host tests cannot establish TV compatibility.
 
-## Candidate: firmware configuration API permission
+<a id="candidate-firmware-configuration-api-permission"></a>
+## Firmware configuration API permission
 
 Firmware configuration access has a separate grant and lifecycle; it never
 toggles the saved blocking preference. For repair and revocation, see

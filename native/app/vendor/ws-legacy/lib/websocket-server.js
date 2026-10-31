@@ -1,6 +1,6 @@
 'use strict';
 
-const EventEmitter = require('events');
+const EventEmitter = require('events').EventEmitter;
 const crypto = require('crypto');
 const http = require('http');
 

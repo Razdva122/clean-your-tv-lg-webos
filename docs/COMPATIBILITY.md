@@ -7,10 +7,18 @@ an IPK does not prove that Home, recovery or startup works on a particular TV.
 
 ## TV requirements
 
+Release 1.5.3 includes Home Helper 0.6.21 with TV Node.js 0.10.25+ support for
+[#152](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/152).
+Root still requires Node.js 8+. Host runtime tests do not establish EF950V
+launcher, input, Home routing, standby, cold-boot or recovery compatibility.
+The physical No-root Helper 0.6.20→0.6.21 transition remains untested under the
+maintainer's explicit release decision; see [scoped QA](history/2026-10-31-release-1.5.3-signed-root-qa.md).
+Do not bypass a failed runtime gate.
+
 | | No-root | Root |
 | --- | --- | --- |
 | Access | Active LG Developer Mode, Key Server and local networking | Existing root, trusted root SSH and compatible Homebrew services |
-| TV runtime | Node.js 0.12.2+ for the compiled Helper | Node.js 8+ and Python 3.9+ with the required modules |
+| TV runtime | Node.js 0.10.25+ for the compiled Helper | Node.js 8+ and Python 3.9+ with the required modules |
 | Input | Compatible remote devices and native input access | Supported ARM32 userspace and compatible Magic Remote input |
 | Ongoing requirement | Keep Developer Mode active and Helper pairing/networking available | Keep independent recovery services and their referenced runtime intact |
 
@@ -38,7 +46,7 @@ their original scope. It is not a list of universally supported TVs.
 
 ## Limits to understand before use
 
-- **Root OTA from original 1.3.0 to published 1.4.0 is blocked by its pinned infrastructure.** Preserve the aborted journal; do not retry or edit private pins. The next-candidate correction is unpublished. [Update guidance](UPDATES.md).
+- **Root OTA from original 1.3.0 to published 1.4.0 is blocked by its pinned infrastructure.** Preserve the aborted journal; do not retry or edit private pins. Guarded compatibility/replacement preparation shipped in 1.5.0; it does not rewrite the incompatible 1.4.0 release or approve a retained operation. [Update guidance](UPDATES.md).
 - An unrooted TV is updated through the computer installer. Whole-edition on-TV updates need compatible, separately prepared rooted infrastructure.
 - Developer Mode expiry can remove sideloaded apps. Automatic renewal is optional Beta; real renewal on unrooted TVs remains unverified. Monitor the official timer.
 - Startup is not instant. Check standby/wake and a true cold boot separately; either can initially show a black screen or LG Home.

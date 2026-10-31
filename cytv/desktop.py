@@ -86,6 +86,9 @@ class DesktopConsole(Console):
     def report(self, path):
         self.emit('report', str(path.resolve()))
 
+    def check(self, event):
+        self.emit('check', event)
+
     def recovery(self, profile):
         super().recovery(profile)
         self.emit('recovery', dict(profile))

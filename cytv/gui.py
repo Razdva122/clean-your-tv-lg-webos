@@ -145,6 +145,14 @@ class Wizard(QMainWindow):
             'p { margin-top: 6px; margin-bottom: 12px; line-height: 140%; } '
             'h3 { color: #f3ede3; font-size: 16px; margin-top: 12px; margin-bottom: 10px; }')
         layout.addWidget(self.content, 1)
+        self.check_results = {}
+        self.check_panel = QTextBrowser()
+        self.check_panel.setAccessibleName(tr('TV checks'))
+        self.check_panel.setOpenLinks(False)
+        self.check_panel.setFrameShape(QFrame.Shape.NoFrame)
+        self.check_panel.setMinimumHeight(150)
+        self.check_panel.hide()
+        layout.addWidget(self.check_panel, 2)
         self.progress = QProgressBar()
         self.progress.setRange(0, 0)
         self.progress.setTextVisible(False)
@@ -255,7 +263,14 @@ class Wizard(QMainWindow):
         dialog.setStyleSheet('QLabel { color: #ff6b6b; }')
         dialog.exec()
 
+    def reset_checks(self):
+        self.check_results.clear()
+        self.check_panel.clear()
+        self.check_panel.hide()
+        self.content.setMaximumHeight(16777215)
+
     def home(self):
+        self.reset_checks()
         self.recovery_profile = None
         self.preparation = []
         self.collect_preparation = False
@@ -387,6 +402,7 @@ class Wizard(QMainWindow):
         if self.running:
             return
         self.running = True
+        self.reset_checks()
         self.set_error_state(False)
         self.command = command
         self.operation_title = next((label for label, key in MAINTENANCE_ACTIONS if key == command), 'Set up my TV')
@@ -430,7 +446,24 @@ class Wizard(QMainWindow):
         self.worker.start()
 
     def receive(self, kind, value):
-        if kind == 'step':
+        if kind == 'check':
+            self.check_panel.setAccessibleName(tr('TV checks'))
+            self.content.setMaximumHeight(140)
+            self.check_results[value['id']] = dict(value)
+            from .checks import STATUS
+            colors = {'pass': '#90cfad', 'fail': '#ff8580', 'unknown': '#e8c17d',
+                      'running': '#eddbc2', 'pending': '#c0b5a5'}
+            rows = []
+            for result in self.check_results.values():
+                status = result['status']
+                label, detail = html.escape(tr(result['label'])), html.escape(tr(result['detail']))
+                marker = {'pass': '✓', 'fail': '!', 'unknown': '?', 'running': '…', 'pending': '·'}[status]
+                rows.append(f'<tr><td style="color:{colors[status]};padding:5px">{marker}</td>'
+                            f'<td style="padding:5px">{label}' + (f'<br><small>{detail}</small>' if detail else '') + '</td>'
+                            f'<td style="color:{colors[status]};padding:5px">{html.escape(tr(STATUS[status]))}</td></tr>')
+            self.check_panel.setHtml('<h3>' + html.escape(tr('TV checks')) + '</h3><table width="100%">' + ''.join(rows) + '</table>')
+            self.check_panel.show()
+        elif kind == 'step':
             number, title, clear = value
             self.collect_preparation = number == 3
             if self.collect_preparation:
@@ -503,8 +536,13 @@ class Wizard(QMainWindow):
             if failed:
                 self.button('Open an issue', lambda: QDesktopServices.openUrl(QUrl(diagnostics.ISSUE_URL)))
             self.button('Back to start', self.home, not recover and not (failed and self.report))
+            failed_checks = [result for result in self.check_results.values() if result['status'] in ('fail', 'unknown')]
+            if failed and failed_checks:
+                self.subtitle.setText(tr('Failed') + ': ' + ', '.join(tr(result['label']) for result in failed_checks) + '\n' + self.subtitle.text())
 
     def show_prompt(self, prompt):
+        self.check_panel.hide()
+        self.content.setMaximumHeight(16777215)
         self.pending = prompt
         self.progress.hide()
         self.cancel.setEnabled(True)
@@ -611,6 +649,9 @@ class Wizard(QMainWindow):
             self.content.clear()
             self.title.setText(tr('Connecting to your TV'))
         self.pending = None
+        if self.check_results:
+            self.content.setMaximumHeight(140)
+            self.check_panel.show()
         self.clear_form()
         self.cancel.setEnabled(False)
         self.progress.show()

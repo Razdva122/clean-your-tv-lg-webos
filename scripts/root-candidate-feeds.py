@@ -182,7 +182,7 @@ def inspect_build(run_id,tag,*,preliminary=False,source_sha=None,branch=None,dir
     run=api('actions/runs/'+str(run_id))
     attempt=run.get('run_attempt')
     if type(attempt) is not int or attempt<=0:raise ValueError('Exact positive build attempt required')
-    jobs=[j for page in api('actions/runs/'+str(run_id)+'/attempts/'+str(attempt)+'/jobs?per_page=100',True) for j in page['jobs']]
+    jobs=[j for page in api('actions/runs/'+str(run_id)+'/attempts/'+str(attempt)+'/jobs?per_page=10',True) for j in page['jobs']]
     source=run.get('head_sha','')
     if not re.fullmatch('[a-f0-9]{40}',source):raise ValueError('Invalid candidate source')
     versions=contents('release-versions.json',source)

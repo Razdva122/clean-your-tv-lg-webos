@@ -2,9 +2,13 @@
 
 > v1.5.0: temas, galería y envío del PC al TV. Límites conocidos de Root: Appearance puede desplazarse 110 px; Home puede no abrirse automáticamente tras el modo de espera. La validación por dispositivo sigue limitada. [1.5.0](../RELEASE-1.5.0.md).
 
+> **1.5.3:** los temas de diseño fijo conservan el espacio de la fila Columns oculta para mantener la posición de desplazamiento de Appearance al aplicar. El puntero, el teclado y las ayudas de accesibilidad omiten Columns.
+
 [Documentación](../README.md) · [Informar de un problema](../FEEDBACK.md)
 
-Esta guía describe la versión publicada **[1.4.1](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.4.1)**. La aceptación del C3 cubre las pruebas registradas de alimentación, Home, foco, estado desactivado y reversión manual. Otros televisores, audio eARC y dispositivos Android físicos siguen sin verificar; instalar correctamente no demuestra compatibilidad. [Alcance probado (inglés)](../RELEASE-1.4.0-ACCEPTANCE.md).
+Esta guía describe la versión publicada **[1.5.3](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.5.3)**. La aceptación del C3 cubre las pruebas registradas de alimentación, Home, foco, estado desactivado y reversión manual. Otros televisores, audio eARC y dispositivos Android físicos siguen sin verificar; instalar correctamente no demuestra compatibilidad. [Alcance probado (inglés)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
+
+**1.5.3:** consola, escritorio y Android muestran cada comprobación del TV como pendiente, en curso, correcta, fallida o no verificable. Los resultados permanecen tras un error. Node.js/Python se comprueba en el TV; `doctor` no prepara Python ni solicita emparejamiento de control. Guarda el informe antes de reintentar.
 
 ## Elegir edición
 
@@ -19,7 +23,9 @@ Root necesita las interfaces de Home de Settings Service y System Profile (`com.
 
 Enciende el televisor y conecta ambos equipos a la misma red local de confianza. Después, el ordenador puede estar apagado. La compatibilidad depende del modelo, firmware y mando; Root tiene pruebas físicas pendientes.
 
-No-root Helper necesita Node.js **0.12.2+** en el televisor. Root necesita Node.js **8+** y Python **3.9+** funcional. Si hace falta, el instalador descarga un Python privado verificado; la preparación inicial necesita **320 MiB** libres. No sustituye Python del sistema. Conserva los entornos que use la recuperación. [Python (inglés)](../OPTIONAL-PYTHON.md). La renovación de Developer Mode es **Beta, desactivada por defecto**; la renovación real sin root no está confirmada. Sigue vigilando el temporizador oficial.
+1.5.3 incluye Home Helper **0.6.21** para Node.js **0.10.25+** en el TV; Root sigue necesitando Node.js **8+**. [Compatibility](../COMPATIBILITY.md).
+
+No-root Helper necesita Node.js **0.10.25+** en el televisor. Root necesita Node.js **8+** y Python **3.9+** funcional. Si hace falta, el instalador descarga un Python privado verificado; la preparación inicial necesita **320 MiB** libres. No sustituye Python del sistema. Conserva los entornos que use la recuperación. [Python (inglés)](../OPTIONAL-PYTHON.md). La renovación de Developer Mode es **Beta, desactivada por defecto**; la renovación real sin root no está confirmada. Sigue vigilando el temporizador oficial.
 
 ### Configurar Developer Mode (No-root)
 
@@ -64,6 +70,8 @@ Las flechas seleccionan y OK abre; mantén OK para reordenar. Una pulsación bre
 
 No-root: Para reiniciar el control de Home, abre Home Helper, elige Iniciar Helper y confirma. Se conserva tu pantalla Home elegida. Root: activa **Cambiar Home** en los ajustes de Home para reanudar. **Abrir LG Home** lo abre una vez sin cambiar el destino de Home. Para recuperar LG Home como destino permanente, desactiva **Cambiar Home** o ejecuta `cytv restore`. No ejecutes ambos controladores a la vez. Si el fallo se repite, deja LG Home activo.
 
+> **1.5.3 — Root:** al activar explícitamente **Cambiar Home** con Root funcionando correctamente, CYTV crea su propia entrada nativa **Clean** y guarda Clean como entrada recordada. Al desactivar el control de Home, detenerlo por emergencia, producirse un fallo, suspenderlo para actualizar o desinstalar, elimina su entrada y restaura la anterior solo si el valor actual sigue siendo el que puso CYTV; conserva otras entradas y aplicaciones en primer plano. En televisores no compatibles o con entradas que no pertenecen a CYTV se mantiene el control habitual de Home con sus protecciones. No se garantiza que Clean sea la primera pantalla inmediata. Pasaron las pruebas registradas de primera pantalla, suspensión y arranque sin alimentación en el C3; no garantizan compatibilidad universal. Home puede quedar desactivado tras actualizar/revertir (#202), y Ajustes puede mostrar un estado antiguo (#206): cierra y abre Ajustes, activa Cambiar Home explícitamente y espera el estado Clean. [1.5.3 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md) · [Native input (English)](../development/ROOT-NATIVE-INPUT.md).
+
 ```sh
 ./cytv --language es status
 ./cytv --language es doctor --report
@@ -73,11 +81,11 @@ No-root: Para reiniciar el control de Home, abre Home Helper, elige Iniciar Help
 
 Tras una interrupción, ejecuta primero `status` y conserva los registros. `restore` recupera LG Home sin quitar aplicaciones; `uninstall` lo restaura antes de eliminarlas. Los datos de recuperación Root se conservan deliberadamente: no los borres para forzar otra instalación. Revisa los informes antes de compartirlos; no publiques claves ni carpetas de perfiles.
 
-Solo en el candidato no publicado, en ambas ediciones: abre **Ajustes de Home → Apariencia → Columnas** y elige de 1 a 8 columnas, o **Según el tema** para usar su valor (Classic: 5). Un número explícito tiene prioridad sobre el tema. Los temas con una distribución fija ocultan la opción Columnas y usan el valor del autor. Tu elección guardada se recupera al cambiar a un tema que admita este ajuste. En la vista previa candidata de Alpine, las apps forman una cinta horizontal circular: Izquierda/Derecha desplaza, Arriba abre los accesos y Abajo vuelve a la misma app. En la vista previa de Alpine también puedes desplazar la cinta con la rueda o el panel táctil; Home no se mueve detrás de un diálogo abierto.
+1.5.3: abre **Ajustes de Home → Apariencia → Columnas** y elige de 1 a 8 columnas, o **Según el tema** para usar su valor (Classic: 5). Un número explícito tiene prioridad sobre el tema. Los temas con una distribución fija ocultan la opción Columnas y usan el valor del autor. Tu elección guardada se recupera al cambiar a un tema que admita este ajuste. En la vista previa candidata de Alpine, las apps forman una cinta horizontal circular: Izquierda/Derecha desplaza, Arriba abre los accesos y Abajo vuelve a la misma app. En la vista previa de Alpine también puedes desplazar la cinta con la rueda o el panel táctil; Home no se mueve detrás de un diálogo abierto.
 
-Candidato aún no publicado, ambas ediciones: en **Ajustes de Home → Apariencia**, desactiva **Mostrar tarjeta «Añadir app»** para ocultar +. Está activada de forma predeterminada. Usa **Añadir app** en la misma sección para añadir o recuperar apps aunque + esté oculto. Puedes seguir ordenando y ocultando apps; la elección se conserva al reiniciar. Si ocultas todas las apps, los controles superiores y los ajustes siguen disponibles.
+1.5.3: en **Ajustes de Home → Apariencia**, desactiva **Mostrar tarjeta «Añadir app»** para ocultar +. Está activada de forma predeterminada. Usa **Añadir app** en la misma sección para añadir o recuperar apps aunque + esté oculto. Puedes seguir ordenando y ocultando apps; la elección se conserva al reiniciar. Si ocultas todas las apps, los controles superiores y los ajustes siguen disponibles.
 
-En las vistas previas de temas del candidato no publicado con barra lateral opcional, Arriba/Abajo selecciona una opción del menú, Derecha pasa a las aplicaciones e Izquierda desde la primera columna de aplicaciones vuelve al menú.
+En las vistas previas de temas de 1.5.3 con barra lateral opcional, Arriba/Abajo selecciona una opción del menú, Derecha pasa a las aplicaciones e Izquierda desde la primera columna de aplicaciones vuelve al menú.
 
 No-root 1.5.0: Helper puede recuperarse de un tiempo de espera temporal del watchdog al salir del modo de espera, con un máximo de cinco intentos en diez minutos. Stop y pulsar Home tres veces siguen requiriendo iniciar Helper explícitamente; los fallos repetidos lo dejan detenido. La validación en TV está pendiente. [Comportamiento y límites (inglés)](../HELPER-DIAGNOSTICS.md#watchdog-recovery-unpublished-candidate-155).
 
@@ -87,15 +95,17 @@ Guarda paquetes funcionales y copias privadas de ajustes. Para sustituir paquete
 
 Abre ajustes de Home → Actualizaciones de software y revisa las versiones antes de confirmar. Actualizar y revertir desde el televisor requiere **root, Homebrew Channel** e infraestructura de actualización compatible ya preparada, incluso en No-root. Sin root, usa el instalador del ordenador. Preparar actualizaciones completas es una acción explícita aparte: [actualizaciones (inglés)](../UPDATES.md). Recuperación muestra la versión guardada; revertir puede perder ajustes posteriores.
 
-**Si ya tienes 1.3.0:** el System Updater original no puede aplicar 1.4.0 porque cambió la lista de archivos permitidos. Si el intento se detuvo antes del reemplazo, conserva el registro y para; no borres el estado ni repitas a ciegas. Migra mediante recuperación comprobada e instalación nueva de 1.4.0; actualizar solo la app no sustituye los controladores Root conservados. La siguiente corrección OTA **no está publicada**. [Migración y recuperación (inglés)](../UPDATES.md#one-time-computer-preparation).
+**Si ya tienes 1.3.0:** su System Updater original puede rechazar cambios de infraestructura. Conserva la operación interrumpida y sigue la recuperación y preparación de reemplazo verificadas para 1.5.0+; no borres registros ni repitas a ciegas. Actualizar solo la app no sustituye la infraestructura Root fijada. [Migración y recuperación (inglés)](../UPDATES.md#one-time-computer-preparation).
 
-Corrección aún no publicada del canal de ajustes de Home: actualiza Home y Helper juntos cuando haya un candidato coordinado. Actualizar solo Home no incluye la corrección. Falta verificar la compilación final de la versión en el TV. [#146](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/146).
+La corrección del canal de ajustes de Home se publicó en 1.5.0. Actualiza Home y Helper juntos con un instalador publicado compatible; actualizar solo Home no cambia Helper. La validación sigue limitada a los modelos registrados. [#146](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/146).
 
 La recuperación de sonido HDMI de Root es experimental y está **desactivada por defecto**; actívala solo si la necesitas. Puede interrumpir audio que funciona y no demuestra compatibilidad eARC. [Recuperación de sonido (inglés)](../development/ROOT-AUDIO-RECOVERY.md). El **CYTV Installer de Homebrew sigue sin publicarse**; usa el instalador publicado para ordenador o Android.
 
-Solo candidato no publicado: si el acceso a la API de firmware falla por directorios Root antiguos con permisos de escritura, `cytv enable-firmware-access --edition root --repair-package-permissions` verifica el paquete actual con datos privados de confianza y elimina la escritura para grupo/otros solo en rutas propias de Root. Los archivos desconocidos o modificados detienen la reparación. Conserva el perfil, Home y el bloqueo de firmware; [detalles (inglés)](../LG-FIRMWARE-UPDATES.md#explicit-package-permission-repair-candidate).
+Homebrew Channel denegó el acceso a este instalador. En webOS 11, Homebrew 0.7.3 necesita una actualización de compatibilidad de sus desarrolladores. Usa el instalador publicado para ordenador o Android hasta que una versión compatible de Homebrew incluya la corrección. [#116](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/116).
 
-Solo en el candidato no publicado: `cytv recover-system-rollback --edition root` recupera una reversión Root verificada cuyos instaladores terminaron, pero venció el plazo de disponibilidad del lanzador. Exige la señal auténtica del lanzador y rechaza resultados de instalación desconocidos. Conserva paquetes, código y claves fijados, pruebas del fallo y la desactivación explícita de Home. Un registro privado conserva el intento limitado. Repetir normalmente no amplía el plazo. Solo tras vencer los 120 segundos, sin señal de disponibilidad aceptada ni resultado de instalación desconocido, `--new-recovery-attempt` archiva el registro anterior completo con su UUID/hash e inicia explícitamente otro intento. Una recuperación completada sigue siendo idempotente; no hay intentos automáticos. [Procedimiento y límites (inglés)](../RECOVERY.md#root-system-rollback-readiness-candidate).
+1.5.0+: si el acceso a la API de firmware falla por directorios Root antiguos con permisos de escritura, `cytv enable-firmware-access --edition root --repair-package-permissions` verifica el paquete actual con datos privados de confianza y elimina la escritura para grupo/otros solo en rutas propias de Root. Los archivos desconocidos o modificados detienen la reparación. Conserva el perfil, Home y el bloqueo de firmware; [detalles (inglés)](../LG-FIRMWARE-UPDATES.md#explicit-package-permission-repair-candidate).
+
+1.5.0+: `cytv recover-system-rollback --edition root` recupera una reversión Root verificada cuyos instaladores terminaron, pero venció el plazo de disponibilidad del lanzador. Exige la señal auténtica del lanzador y rechaza resultados de instalación desconocidos. Conserva paquetes, código y claves fijados, pruebas del fallo y la desactivación explícita de Home. Un registro privado conserva el intento limitado. Repetir normalmente no amplía el plazo. Solo tras vencer los 120 segundos, sin señal de disponibilidad aceptada ni resultado de instalación desconocido, `--new-recovery-attempt` archiva el registro anterior completo con su UUID/hash e inicia explícitamente otro intento. Una recuperación completada sigue siendo idempotente; no hay intentos automáticos. [Procedimiento y límites (inglés)](../RECOVERY.md#root-system-rollback-readiness-candidate).
 
 1.5.0: el paquete de sustitución incluye System Updater 1.1.2. Antes de OTA, sustituye explícitamente 1.1.0 o 1.1.1 con `cytv replace-system-updater --edition root`. Solo cambia System Updater; se conservan las apps Root/Root Updater, el perfil completo y Home, y se archiva el estado anterior. Las operaciones desconocidas o pendientes bloquean la sustitución. Este requisito no bloquea los feeds No-root. [Procedimiento (inglés)](../RECOVERY.md#replace-the-root-system-updater-candidate).
 
@@ -114,34 +124,38 @@ Tras un fallo o interrupción, comprueba el estado y guarda el informe de diagn�
 <a id="candidato-sin-publicar-recuperación-de-sonido-hdmi-root"></a>
 
 
-## Temas: candidato en desarrollo
+## Temas (1.5.3)
 
-En el candidato compatible: **Ajustes → Apariencia**. **Classic** y **Alpine** están integrados y no necesitan descargar el tema; Classic sigue como predeterminado. **Channel** es externo, desde showcase. En las pruebas de la galería: Elige el tema y **Conservar tema** antes de **20 segundos**. **Revertir**, Back o el tiempo agotado recuperan el anterior. Una prueba interrumpida inicia Home con Classic. Los temas integrados y descargados elegidos en la lista instalada se aplican y guardan al instante, sin temporizador. Esto incluye los recibidos del ordenador o instalados por URL. Solo Probar tema dentro de la galería inicia una prueba de 20 segundos.
+1.5.3: **Ajustes → Temas**. **Classic**, **Alpine**, **Ribbon** están integrados y no necesitan descargar el tema; Classic sigue como predeterminado. **Channel** es externo, desde showcase. En las pruebas de la galería: Elige el tema y **Conservar tema** antes de **20 segundos**. **Revertir**, Back o el tiempo agotado recuperan el anterior. Una prueba interrumpida inicia Home con Classic. Los temas integrados y descargados elegidos en la lista instalada se aplican y guardan al instante, sin temporizador. Esto incluye los recibidos del ordenador o instalados por URL. Solo Probar tema dentro de la galería inicia una prueba de 20 segundos.
 
 Los temas instalados aparecen en una sola fila con desplazamiento horizontal. El tema activo siempre está primero y su tarjeta está resaltada. Usa Izquierda/Derecha para recorrer la fila.
 
-La galería solo muestra temas no instalados en este TV. Classic, Alpine y los descargados se ocultan, incluso si hay una versión más reciente. Al eliminar un tema vuelve a aparecer. Actualiza por URL o desde el ordenador.
+La galería solo muestra temas no instalados en este TV. Classic, Alpine, Ribbon y los descargados se ocultan, incluso si hay una versión más reciente. Al eliminar un tema vuelve a aparecer. Actualiza por URL o desde el ordenador.
 
-Las tarjetas están integradas en Apariencia, junto a las categorías. La galería, la instalación por enlace y la transferencia desde el ordenador se abren ahí; solo una prueba de la galería muestra Home temporalmente.
+Las tarjetas están integradas en Temas, junto a las categorías. La galería, la instalación por enlace y la transferencia desde el ordenador se abren ahí; solo una prueba de la galería muestra Home temporalmente.
 
-Al abrir la galería o elegir Actualizar se consultan las novedades revisadas del repositorio principal sin actualizar Home ni recargar la página. Las nuevas entradas aparecen tras la integración normal; un candidato sin integrar puede mostrar el catálogo incluido. Sin conexión o ante errores se usan entradas y vistas previas incluidas. Los temas integrados corresponden a la versión instalada de Home. Abre la vista previa de Channel y elige **Descargar tema** (requiere internet). Tras descargarlo, pruébalo y elige **Conservar tema** en **20 segundos**. Los temas instalados funcionan sin conexión. **Añadir por URL** sigue disponible para enlaces fijados.
+Al abrir la galería o elegir Actualizar se consultan las novedades revisadas del repositorio principal sin actualizar Home ni recargar la página. Las nuevas entradas aparecen tras la integración normal; un candidato sin integrar puede mostrar el catálogo incluido. Sin conexión o ante errores se usan entradas y vistas previas incluidas. Los temas integrados corresponden a la versión instalada de Home. Abre la vista previa de Channel y elige **Descargar tema** (requiere internet). Tras descargarlo, pruébalo y elige **Conservar tema** en **20 segundos**. Los temas instalados funcionan sin conexión. **Añadir por ID** sigue disponible para enlaces fijados.
 
-Para probar un tema no publicado, abre primero **Ajustes → Apariencia → Recibir del ordenador** en el TV. Introduce su dirección y PIN de seis dígitos en **Send to TV** de la vista previa del ordenador, envía y elige **Aplicar tema** en el TV. El método principal conecta desde el PC al puerto TCP **8879 del TV**, sin modificar el cortafuegos del ordenador. Ambos deben estar en la misma red doméstica de confianza. El receptor se cierra tras una carga, cancelar, salir o **10 minutos**. El PIN no se guarda; el tema instalado funciona sin conexión. No es necesario publicar en GitHub.
+Para probar un tema no publicado, abre primero **Ajustes → Temas → Recibir del ordenador** en el TV. Introduce su dirección y PIN de seis dígitos en **Send to TV** de la vista previa del ordenador, envía y elige **Aplicar tema** en el TV. El método principal conecta desde el PC al puerto TCP **8879 del TV**, sin modificar el cortafuegos del ordenador. Ambos deben estar en la misma red doméstica de confianza. El receptor se cierra tras una carga, cancelar, salir o **10 minutos**. El PIN no se guarda; el tema instalado funciona sin conexión. No es necesario publicar en GitHub.
 
-Para un tema publicado, abre **Más opciones → Añadir por URL** e introduce su ID (por ejemplo `102300a209`), `da.gd/102300a209` o el enlace completo de GitHub. Home muestra la dirección da.gd antes de cargar y verifica el destino GitHub y el paquete. El autor puede copiar el ID de las notas de versión o de **TV link → Copy ID** en la vista previa.
+Para un tema publicado, abre **Añadir por ID** e introduce su ID (por ejemplo `102300a209`), `da.gd/102300a209` o el enlace completo de GitHub. Home muestra la dirección da.gd antes de cargar y verifica el destino GitHub y el paquete. El autor puede copiar el ID de las notas de versión o de **TV link → Copy ID** en la vista previa.
 
-Los paquetes publicados quizá aún no tengan estos controles. Las pruebas de navegador no demuestran compatibilidad física. [Guía completa](../THEMES.md).
+[Themes (English)](../THEMES.md) · [1.5.3 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
+
+1.5.3: **Classic**, **Alpine**, **Ribbon** — **Ajustes → Temas**. [1.5.3 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
+
+Los temas de cinta configurable de 1.5.3 pueden colocar entradas, Wi-Fi y ajustes abajo a la izquierda. Si se activa, Izquierda desde la primera app visible selecciona ajustes, luego Wi-Fi y entradas; Derecha desde ajustes vuelve a la misma app visible. La instalación de un tema que exige una función nueva de Home se rechaza en versiones incompatibles, conservando el aspecto y la selección actuales. Actualiza Home primero. Un downgrade posterior puede restaurar Classic al iniciar.
 
 Temas muestra vistas previas de los temas integrados y de todos los que hayas instalado, incluso sin conexión. Un botón aparte abre el catálogo de temas publicados; instalar un tema personal no lo publica.
 
-En la versión candidata, Apariencia muestra tarjetas grandes de los temas instalados y marca el elegido. La galería y recibir desde el ordenador son las acciones principales. Más opciones contiene añadir por URL, restaurar Classic y borrar temas descargados. Las flechas recorren tarjetas y botones; izquierda en el borde vuelve a las categorías.
+Apariencia contiene Columnas con la cantidad actual y los controles de aplicaciones. La categoría Temas contiene los temas instalados, la galería, recibir del ordenador y Añadir por ID a la derecha (p. ej. 102300a209). Restaura Classic con su tarjeta y elimina descargas individualmente. Idioma permite elegir directamente.
 
 En la vista previa del navegador, Recibir del ordenador explica los pasos del televisor; no inicia un receptor de TV en el ordenador. Usa Send to TV encima de la vista previa. Eliminar un tema descargado requiere confirmación; si está activo, se restaura Classic primero. Cancelar conserva el tema.
 
 <a id="categorías-de-ajustes-candidato-no-publicado"></a>
 
-## Categorías de ajustes (1.5.0)
+## Categorías de ajustes (1.5.3)
 
-Ambas ediciones muestran categorías a la izquierda y ajustes a la derecha: pantalla de inicio, Apariencia (temas y columnas), Idioma, Actualizaciones de software y Avanzado. No-root añade Developer Mode; Root incluye el firmware LG en actualizaciones y sonido HDMI en Avanzado. Arriba/abajo recorre una columna; derecha entra en los ajustes e izquierda vuelve a las categorías. Atrás vuelve primero a las categorías y después cierra los ajustes. Tab también permite volver a Home.
+Ambas ediciones muestran categorías a la izquierda y ajustes a la derecha: pantalla de inicio, Apariencia, Temas, Idioma, Actualizaciones de software y Avanzado. No-root añade Developer Mode; Root incluye el firmware LG en actualizaciones y sonido HDMI en Avanzado. Arriba/abajo recorre una columna; derecha entra en los ajustes e izquierda vuelve a las categorías. Atrás vuelve primero a las categorías y después cierra los ajustes. Tab también permite volver a Home.
 
 Un punto amarillo en Actualizaciones de software y en el botón interior indica que hay una actualización. Ambos desaparecen cuando una comprobación correcta confirma que no hay actualizaciones; si falla, se conserva el último estado confirmado.

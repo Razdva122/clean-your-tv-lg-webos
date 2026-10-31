@@ -161,6 +161,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
         write('cytv ' + __version__)
         return 0
     write = write if isinstance(write, Console) else Console(write, interactive=False if args.non_interactive else None)
+    from .checks import CheckList
+    checks = CheckList(write.check)
     ask = write.reader(ask)
     remote = None
     store, profile, phase, tv_info = state.Store(args.data_dir), None, 'select-tv', {}
@@ -298,14 +300,18 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             if args.command == 'clean-wam-cache' and store.pending(profile):
                 raise UserError('Resolve the pending installation or removal before clearing WAM data. Keep recovery records.')
             phase = 'ssh-connect'
+            if args.command in ('install', 'doctor'):
+                checks.prepare(profile['edition'], args.command)
+            checks.update('ssh', 'running')
             write('Connecting to the TV…')
             if connect:
                 remote = connect(profile, store.device_dir(profile), secret_with_help, trust)
             else:
                 remote = SSH.connect(profile, store.device_dir(profile), secret_with_help, trust,
                                      identity_prompt=None if args.non_interactive else lambda: prompts.root_credentials(ask, write))
+            checks.update('ssh', 'pass')
             store.save(profile)
-            installer = Installer(remote, store, profile, payload, manifest, write, tv_info=tv_info)
+            installer = Installer(remote, store, profile, payload, manifest, write, tv_info=tv_info, checks=checks)
             if args.command == 'install':
                 reinstall = None
                 resume = False
@@ -386,12 +392,17 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     while True:
                         try:
                             phase = 'pair-tv'
+                            checks.update('pairing', 'running', '')
                             with SSAP(profile['host'], store.device_dir(profile), write) as tv:
+                                checks.update('pairing', 'pass')
                                 phase = 'read-inventory'
+                                checks.update('inventory', 'running', '')
                                 inventory = tv.inventory((payload / 'fallback.png').read_bytes())
                                 key = tv.key
+                                checks.update('inventory', 'pass')
                             break
                         except TVNotReady:
+                            checks.finish_running()
                             if args.non_interactive:
                                 raise
                             prompts.wait_for_tv(ask, write)
@@ -513,10 +524,12 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     write.recovery(profile)
         return 0
     except (EOFError, KeyboardInterrupt, StopIteration):
+        checks.finish_running(cancelled=True)
         write('Cancelled. Installation has not started.' if args.command == 'install' and phase in ('pair-tv', 'read-inventory', 'prepare-payload', 'select-tv', 'select-edition', 'inspect-tv', 'ssh-connect', 'inspect-installation')
               else 'Cancelled. If an installation was submitted, run cytv status before retrying.')
         return 130
     except UserError as exc:
+        checks.finish_running()
         write.error('Could not complete this step', heading=True)
         write.error(str(exc))
         if phase in ('pair-tv', 'read-inventory'):
@@ -526,6 +539,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
         diagnostics.suggest_issue(write, store, args.command, profile, phase, exc, tv_info)
         return 2
     except Exception as exc:
+        checks.finish_running()
         write.error('Could not complete this step', heading=True)
         kind = type(exc).__name__
         hints = {

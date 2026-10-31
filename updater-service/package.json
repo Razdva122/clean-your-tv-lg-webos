@@ -1,5 +1,5 @@
 {
   "name": "com.cleanyourtv.updater.service",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "main": "service.js"
 }

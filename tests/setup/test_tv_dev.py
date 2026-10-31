@@ -1,7 +1,12 @@
 """Local developer safety checks; never connects to a TV."""
+import base64
 import hashlib
 import importlib.util
 import json
+import os
+import random
+import shlex
+import sys
 from pathlib import Path
 import subprocess
 import tempfile
@@ -126,11 +131,53 @@ if(actualCalls!==0)throw Error('native service reached');
         self.assertEqual(result,{'phase':'preflight'})
         self.assertEqual(len(remote.calls),1)
         command,data,_=remote.calls[0]
-        self.assertTrue(command.startswith('/usr/bin/python3 -I -B -c '))
+        self.assertLessEqual(len(command.encode()), 8192)
+        self.assertEqual(shlex.split(command)[9:13], ['/usr/bin/python3', '-I', '-B', '-c'])
         self.assertEqual(json.loads(data),{'action':'preflight'})
         with patch.object(dev,'select_installed_python',return_value='/usr/bin/python3'):
             with patch.object(remote,'run',return_value='{"returnValue":false}'):
                 with self.assertRaises(ValueError): dev.admit(remote,{}, {},None)
+
+
+    def test_admission_transport_roundtrips_exact_controller_bytes_within_ssh_bound(self):
+        dev=module()
+        source=(ROOT/'scripts/root-candidate-acceptance.py').read_bytes()
+        command=dev.acceptance_command('/usr/bin/python3',source)
+        self.assertLessEqual(len(command.encode('utf-8')),8192)
+        decoded=[]
+        def capture(raw, filename, mode):
+            decoded.append(raw)
+            return compile('pass',filename,mode)
+        # Stop at the controller execution boundary: never run device code locally.
+        exec(shlex.split(command)[-1], {'compile':capture})
+        self.assertEqual(decoded,[source])
+
+    def test_admission_executes_isolated_controller_with_scrubbed_env_and_request_on_stdin(self):
+        dev=module()
+        source=b"""import json,os,sys
+if __name__ == '__main__':
+    print(json.dumps({'returnValue':True,'result':{'request':json.load(sys.stdin),'environment':{k:os.environ.get(k) for k in ('PYTHONHOME','PYTHONPATH','NODE_OPTIONS','NODE_PATH')},'isolated':sys.flags.isolated,'bytecode_disabled':sys.dont_write_bytecode}}))
+"""+b'# preserve exact bytes and compress this comment\n'*500
+        request={'action':'preflight','private':'only-on-stdin','unicode':'é'}
+        environment=dict(os.environ, PYTHONHOME='/missing-python',PYTHONPATH='/untrusted',NODE_OPTIONS='--require=/untrusted',NODE_PATH='/untrusted')
+        class LocalRemote:
+            def run(inner,command,data=None,timeout=30):
+                self.assertLessEqual(len(command.encode()),8192)
+                self.assertNotIn('only-on-stdin',command)
+                return subprocess.run(command,shell=True,input=data,env=environment,capture_output=True,check=True,timeout=timeout).stdout
+        with patch.object(dev,'select_installed_python',return_value=sys.executable), patch.object(dev,'read_file',return_value=source):
+            result=dev.admit(LocalRemote(),{},request,None)
+        self.assertEqual(result,{'request':request,'environment':{'PYTHONHOME':None,'PYTHONPATH':None,'NODE_OPTIONS':None,'NODE_PATH':None},'isolated':1,'bytecode_disabled':True})
+
+    def test_admission_refuses_oversized_command_before_remote_execution(self):
+        dev=module()
+        class Remote:
+            def run(self,*args,**kwargs):
+                raise AssertionError('Oversized command reached SSH')
+        source=b'#'+base64.b64encode(random.Random(203).randbytes(12000))
+        with patch.object(dev,'select_installed_python',return_value='/usr/bin/python3'), patch.object(dev,'read_file',return_value=source):
+            with self.assertRaisesRegex(ValueError,'acceptance_command_too_large'):
+                dev.admit(Remote(),{}, {'action':'preflight'},None)
 
 
 

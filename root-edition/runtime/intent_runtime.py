@@ -90,17 +90,36 @@ def later_legacy_trial(c):
     return binding['restored'] and journal.get('transaction') != binding['transaction']
 
 
+def _legacy_native_recovery(c=None):
+    # Without an owned receipt, retain the legacy caller's recovery fallback.
+    if not os.path.lexists(d.STATE/'native-input.json'): return None
+    c = Coordinator(Store(d.STATE)) if c is None else c
+    expected = c.store.read()
+    with c.locked(expected):
+        if expected['phase'] != 'disabled': expected,_ = c.event(expected,'exit')
+        result = d.main('recover')
+        if result not in ('restored','absent'): raise ValueError('Routing restoration incomplete')
+        if expected['phase'] == 'recovering': c.event(expected,'restored')
+        d.native_input_disable()  # A bad EIM receipt may block completion, never route restoration.
+        return result
+
+
 def restore():
     c = coordinator()
-    if c is None or later_legacy_trial(c): return None
+    if c is None or later_legacy_trial(c): return _legacy_native_recovery(c)
     intent = c.store.read()
-    if intent['phase'] == 'disabled': return None
+    if intent['phase'] == 'disabled': return _legacy_native_recovery(c)
     result = c.exit(intent)
     return 'restored' if result.get('restored_transaction') else None
 
 
 def boot():
-    if not os.path.lexists(d.STATE/'persistent-intent.json'): return None
+    if not os.path.lexists(d.STATE/'persistent-intent.json'):
+        if os.path.lexists(d.STATE/'profile-trial.json'):
+            from profile_recovery import validate
+            journal = d.safe_json(d.STATE/'profile-trial.json');validate(journal)
+            if d.active_guardian(journal): return None
+        return _legacy_native_recovery()
     d.trusted_dir(d.STATE)
     fd=os.open(d.STATE/'boot-dispatch.lock',os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW,0o600)
     try:
@@ -120,7 +139,8 @@ def boot():
 
 def _boot():
     c = coordinator()
-    if c is None or later_legacy_trial(c): return None
+    if c is None: return _legacy_native_recovery()
+    if later_legacy_trial(c): return None
     intent = c.store.read()
     try: identity = boot_identity()
     except (OSError,ValueError):
@@ -134,7 +154,9 @@ def _boot():
         try: journal = d.safe_json(d.STATE/'profile-trial.json')
         except FileNotFoundError: journal = None
         if journal is not None and d.active_guardian(journal): return 'guarded-intent-trial'
-        if intent['phase'] == 'disabled': return 'restored'
+        if intent['phase'] == 'disabled':
+            _legacy_native_recovery(c)
+            return 'restored'
         # Expired trial or interrupted startup in this same boot: disable intent,
         # never infer health from an application merely existing in /proc.
         from boot_gate import audit, observation
@@ -177,24 +199,33 @@ def present_wake(transaction, boot, cancelled):
     Never recover/rearm here: stale or stopping contexts belong to recovery.
     The caller revokes the edge on OFF, uncertainty, stream loss or teardown.
     """
+    outcome = 'unavailable'
+    result = {'presentation_context':{'stage':'cancelled'}}
     try:
-        if cancelled() or boot_identity() != boot: return 'unavailable'
+        if cancelled(): return outcome
+        result['presentation_context']['stage'] = 'session'
+        if boot_identity() != boot: return outcome
+        result['presentation_context']['stage'] = 'intent'
         c = coordinator()
-        if c is None: return 'unavailable'
+        if c is None: return outcome
         intent = c.store.read()
         if (intent['phase'] != 'active' or intent['enabled'] is not True
-                or intent['boot'] != boot): return 'unavailable'
-        if c._healthy(intent) != transaction: return 'unavailable'
-        result = dict(intent=intent,trial=dict(transaction=transaction))
+                or intent['boot'] != boot): return outcome
+        result['presentation_context']['stage'] = 'health-routing'
+        if c._healthy(intent) != transaction: return outcome
+        result.update(intent=intent,trial=dict(transaction=transaction))
         outcome = _present_home(c,result,cancelled=cancelled,wake=True)
+        return outcome
+    except Exception:
+        return outcome  # Optional presentation never revokes healthy routing.
+    finally:
+        # Early refusals used to vanish, leaving no distinction between a lost
+        # edge and a wake rejected by current intent/health. Never log raw RPCs.
         try:
             from boot_gate import audit
             audit('wake-presentation',outcome=outcome,boot=boot,
-                  context=result.get('presentation_context',{}))
+                  context=result['presentation_context'])
         except Exception: pass
-        return outcome
-    except Exception:
-        return 'unavailable'  # Optional presentation never revokes healthy routing.
 
 
 def _native_channel(sam, app):
@@ -214,6 +245,8 @@ def _present_home(c, result, cancelled=lambda:False, wake=False):
     try:
         intent = result['intent']; tx = result['trial']['transaction']
         if intent['phase'] != 'active' or intent['enabled'] is not True: return 'unavailable'
+        context = result.setdefault('presentation_context',{})
+        context['stage'] = 'startup-setting'
         sam = d.sam_transport()
         settings = sam.call('luna://com.webos.settingsservice/getSystemSettings',
                             {'category':'general','keys':['homeAutoLaunch']},timeout=.5)
@@ -221,12 +254,15 @@ def _present_home(c, result, cancelled=lambda:False, wake=False):
             return 'preserved-startup-setting'
         boot = {}
         if not wake:
+            context['stage'] = 'boot-status'
             boot = sam.call('luna://com.webos.bootManager/getBootStatus',{},timeout=.5)
             if (boot.get('bootTarget') != 'hardware' or boot.get('powerStatus') != 'active'
                     or boot.get('bootStatus') != 'normal' or boot.get('firstAppLaunched') is not True):
                 return 'preserved-startup-setting'
         from persistent_health import require_fresh
+        context['stage'] = 'input-health'
         require_fresh(tx)
+        context['stage'] = 'foreground'
         foreground = sam.call('luna://com.webos.applicationManager/getForegroundAppInfo',{},timeout=.5)
         app = foreground.get('appId')
         # Diagnostics carry fixed classes, never private foreground IDs.
@@ -234,26 +270,34 @@ def _present_home(c, result, cancelled=lambda:False, wake=False):
         first = boot.get('firstAppId')
         result['presentation_context'] = dict(foreground_kind=kinds.get(app,'other-or-missing'),
                                              first_app_matches=(first == app) if first else None)
+        if wake: result['presentation_context']['stage'] = 'foreground'
         if app not in ('com.webos.app.livetv','com.webos.app.home'):
+            if wake: result['presentation_context']['stage'] = 'native-metadata'
             if not _native_channel(sam,app): return 'preserved-foreground'
             result['presentation_context']['foreground_kind'] = 'native-channel'
             # Metadata is optional and can be slow. Keep an app selected while
             # it was checked, including a manual Home or a third-party app.
+            if wake: result['presentation_context']['stage'] = 'foreground-recheck'
             latest = sam.call('luna://com.webos.applicationManager/getForegroundAppInfo',{},timeout=.5)
             if latest.get('appId') != app:
                 result['presentation_context'] = dict(
                     foreground_kind=kinds.get(latest.get('appId'),'other-or-missing'),
                     first_app_matches=(first == latest.get('appId')) if first else None)
+                if wake: result['presentation_context']['stage'] = 'foreground-recheck'
                 return 'preserved-foreground'
         # Recheck after optional RPCs, which can outlive the two-second lease.
+        if wake: result['presentation_context']['stage'] = 'final-input-health'
         require_fresh(tx)
         if wake:
             from persistent_health import require_guardian
+            result['presentation_context']['stage'] = 'final-guardian'
             require_guardian(tx)
+            result['presentation_context']['stage'] = 'final-intent'
         if cancelled() or c.store.read() != intent or d.FAILSAFE.exists(): return 'unavailable'
         # Never hold the operation lock over optional RPC: an off request must win.
         # Foreground observation and launch are separate platform calls; an app
         # switch after this last observation can still race this single request.
+        if wake: result['presentation_context']['stage'] = 'launch'
         sam.call('luna://com.webos.applicationManager/launch',{'id':d.CANDIDATE},timeout=.5)
         return 'launch-requested' if c.store.read() == intent and not cancelled() else 'superseded'
     except Exception:

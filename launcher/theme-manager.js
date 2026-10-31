@@ -6,7 +6,7 @@
  function classic(){root.ThemeRuntime.reset();active={id:'builtin:classic',title:'Classic'};}
  function persist(choice){localStorage.setItem(choiceKey,JSON.stringify(choice));if(localStorage.getItem(choiceKey)!==JSON.stringify(choice))throw Error('Could not save theme selection');}
  function recover(error){generation++;if(trial)clearTimeout(trial.timer);trial=null;rollback=null;classic();try{localStorage.removeItem(choiceKey);localStorage.removeItem(trialKey);}catch(_){}notice=error||'Theme recovery: Classic restored';emit();}
- function selection(){var raw=localStorage.getItem(choiceKey);if(raw===null)return {id:'builtin:classic',title:'Classic'};var s=JSON.parse(raw);if(!s||typeof s.id!=='string'||typeof s.title!=='string'||s.title.length>100||s.id!=='builtin:classic'&&s.id!=='builtin:alpine'&&!/^github:/.test(s.id)||s.id.indexOf('github:')===0&&!/^[a-f0-9]{64}$/.test(s.digest))throw Error('Invalid saved theme selection');return s;}
+ function selection(){var raw=localStorage.getItem(choiceKey);if(raw===null)return {id:'builtin:classic',title:'Classic'};var s=JSON.parse(raw);if(!s||typeof s.id!=='string'||typeof s.title!=='string'||s.title.length>100||!/^builtin:[a-z0-9][a-z0-9-]{0,63}$/.test(s.id)&&!/^github:/.test(s.id)||s.id.indexOf('github:')===0&&!/^[a-f0-9]{64}$/.test(s.digest))throw Error('Invalid saved theme selection');return s;}
  // The caller exposes Home only after validated appearance (or bounded Classic recovery).
  function start(present){if(ready)return ready;if(root.CYTV_THEME_AUTHOR_PREVIEW){ready=Promise.resolve().then(function(){if(present)present();});return ready;}
   ready=new Promise(function(resolve,reject){
@@ -27,10 +27,19 @@
    }).then(function(){finish();},finish);
   });return ready;
  }
- function environment(){if(homeVersion&&builtin)return Promise.resolve();return data.request('appinfo.json',65536,true).then(function(a){var info=JSON.parse(data.decode(a)),engine=info.themeEngineVersion===undefined?info.version:info.themeEngineVersion;if(typeof engine!=='string'||engine.length>32||!/^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/.test(engine))throw Error('Home version unavailable');homeVersion=engine;return data.request('builtin-themes.json',65536,true);}).then(function(a){builtin=JSON.parse(data.decode(a));if(builtin.schemaVersion!==1||builtin.themes.length!==1||builtin.themes[0].id!=='builtin:alpine')throw Error('Built-in theme catalog is invalid');});}
- function payload(s){if(s.id==='builtin:alpine'){var entry=builtin.themes[0];return data.load(entry,homeVersion,null,null,true);}return root.ThemeStore.get(s.digest).then(function(pack){if(!pack)throw Error('Saved theme files are missing');var parsed=data.verify(pack,homeVersion);if(parsed.manifest.id!==s.id)throw Error('Saved theme identity mismatch');return pack;});}
+ function bundled(id){return builtin&&builtin.themes.filter(function(entry){return entry.id===id;})[0];}
+ function registry(){if(builtin)return Promise.resolve();return data.request('builtin-themes.json',65536,true).then(function(bytes){
+  var catalog=JSON.parse(data.decode(bytes)),seen=Object.create(null);
+  if(!catalog||catalog.schemaVersion!==1||!Array.isArray(catalog.themes)||catalog.themes.length>32)throw Error('Built-in theme catalog is invalid');
+  catalog.themes.forEach(function(entry){
+   if(!entry||typeof entry.id!=='string'||!/^builtin:[a-z0-9][a-z0-9-]{0,63}$/.test(entry.id)||entry.id==='builtin:classic'||seen[entry.id]||typeof entry.title!=='string'||!entry.title||entry.title.length>100||/[\u0000-\u001f\u007f]/.test(entry.title)||typeof entry.version!=='string'||entry.version.length>64||!/^\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?$/.test(entry.version)||typeof entry.url!=='string'||!/^themes\/[a-z0-9][a-z0-9-]{0,63}\/cytv-theme\.json$/.test(entry.url)||typeof entry.digest!=='string'||! /^[a-f0-9]{64}$/.test(entry.digest))throw Error('Built-in theme catalog entry is invalid');
+   seen[entry.id]=true;
+  });builtin=catalog;
+ });}
+ function environment(){if(homeVersion&&builtin)return Promise.resolve();return data.request('appinfo.json',65536,true).then(function(a){var info=JSON.parse(data.decode(a)),engine=info.themeEngineVersion===undefined?info.version:info.themeEngineVersion;if(typeof engine!=='string'||engine.length>32||!/^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/.test(engine))throw Error('Home version unavailable');homeVersion=engine;return registry();});}
+ function payload(s){if(s.id.indexOf('builtin:')===0){var entry=bundled(s.id);if(!entry)return Promise.reject(Error('Unknown built-in theme'));return data.load(entry,homeVersion,null,null,true);}return root.ThemeStore.get(s.digest).then(function(pack){if(!pack)throw Error('Saved theme files are missing');var parsed=data.verify(pack,homeVersion);if(parsed.manifest.id!==s.id)throw Error('Saved theme identity mismatch');return pack;});}
  function apply(pack,s,token){return data.prepare(pack,homeVersion,function(){return token!==undefined&&token!==generation;}).then(function(input){try{if(token!==undefined&&token!==generation)throw Error('Cancelled');root.ThemeRuntime.apply(input);active={id:s.id,title:input.manifest.title,digest:pack.digest};emit();}catch(e){data.dispose(input.assetHandles);throw e;}});}
- function list(){return start().then(environment).then(function(){return root.ThemeStore.list().catch(function(e){notice=e.message;return [];});}).then(function(packages){var items=[{id:'builtin:classic',title:'Classic',builtin:true},{id:'builtin:alpine',title:'Alpine',builtin:true}];packages.forEach(function(pack){try{var parsed=data.verify(pack,homeVersion);if(parsed.manifest.id.indexOf('github:')!==0)throw Error('Invalid external identity');items.push({id:parsed.manifest.id,title:parsed.manifest.title,digest:pack.digest,version:parsed.manifest.themeVersion,license:parsed.manifest.license.identifier,author:parsed.manifest.author.name});}catch(_){notice='An invalid cached theme was ignored';}});return items;});}
+ function list(){return start().then(environment).then(function(){return root.ThemeStore.list().catch(function(e){notice=e.message;return [];});}).then(function(packages){var items=[{id:'builtin:classic',title:'Classic',builtin:true}];builtin.themes.forEach(function(entry){items.push({id:entry.id,title:entry.title,builtin:true,version:entry.version,digest:entry.digest});});packages.forEach(function(pack){try{var parsed=data.verify(pack,homeVersion);if(parsed.manifest.id.indexOf('github:')!==0)throw Error('Invalid external identity');items.push({id:parsed.manifest.id,title:parsed.manifest.title,digest:pack.digest,version:parsed.manifest.themeVersion,license:parsed.manifest.license.identifier,author:parsed.manifest.author.name});}catch(_){notice='An invalid cached theme was ignored';}});return items;});}
  function preview(item){
   if(!item||typeof item.id!=='string'||item.id.indexOf('github:')!==0||! /^[a-f0-9]{64}$/.test(item.digest))return Promise.reject(Error('Invalid installed preview'));
   return environment().then(function(){return root.ThemeStore.get(item.digest);}).then(function(pack){
@@ -66,21 +75,22 @@
  function installEnvelope(envelope,signal){return start().then(environment).then(function(){if(signal&&signal.cancelled)throw Error('Cancelled');return savePackage(data.unpackEnvelope(envelope,homeVersion),signal);});}
  function catalogEntries(bytes){
   var catalog=JSON.parse(data.decode(bytes));if(!catalog||catalog.schemaVersion!==1||!Array.isArray(catalog.themes)||catalog.themes.length>64)throw Error('Invalid theme catalog');var seen=Object.create(null);
-  catalog.themes.forEach(function(item){
+  var entries=[];catalog.themes.forEach(function(item){
    if(!item||typeof item.id!=='string'||typeof item.title!=='string'||!item.title||item.title.length>100||seen[item.id])throw Error('Invalid theme catalog entry');seen[item.id]=true;
-   data.path(item.preview);if(!/^(theme-catalog|themes\/alpine)\//.test(item.preview))throw Error('Invalid theme preview');
-   if(item.builtin===true){if(['builtin:classic','builtin:alpine'].indexOf(item.id)<0)throw Error('Unknown built-in theme');}
-   else{
+   if(item.builtin===true&&item.id!=='builtin:classic'&&!bundled(item.id))return;
+   data.path(item.preview);if(!/^(theme-catalog|themes\/[a-z0-9][a-z0-9-]{0,63})\//.test(item.preview))throw Error('Invalid theme preview');
+   if(item.builtin!==true){
     var origin=data.source(item.url),identity=/^github:([a-z0-9][a-z0-9-]*)\/([a-z0-9][a-z0-9._-]*):([a-z0-9][a-z0-9-]{0,63})$/.exec(item.id);
     if(item.builtin!==undefined||!origin.commit||!identity||identity[1]!==origin.owner||identity[2]!==origin.repo||! /^[a-f0-9]{64}$/.test(item.digest))throw Error('Invalid theme catalog source');
     ['version','author','license','description'].forEach(function(key){if(typeof item[key]!=='string'||!item[key]||item[key].length>(key==='description'?2000:200))throw Error('Invalid theme catalog details');});
    }
-  });return catalog.themes;
+   entries.push(item);
+  });return entries;
  }
  function catalog(signal,onLocal){
   var local,project='https://raw.githubusercontent.com/Razdva122/clean-your-tv-lg-webos/';
   function cancelled(){if(signal&&signal.cancelled)throw Error('Cancelled');}
-  return Promise.resolve().then(function(){cancelled();return data.request('theme-catalog.json',65536,true,signal);}).then(function(bytes){
+  return Promise.resolve().then(function(){cancelled();return registry();}).then(function(){cancelled();return data.request('theme-catalog.json',65536,true,signal);}).then(function(bytes){
    cancelled();var bundled=catalogEntries(bytes);if(onLocal)onLocal(bundled);local=bundled;return data.request('https://api.github.com/repos/Razdva122/clean-your-tv-lg-webos/git/ref/heads/main',65536,false,signal);
   }).then(function(bytes){
    cancelled();var ref=JSON.parse(data.decode(bytes)),commit=ref&&ref.object;if(!ref||ref.ref!=='refs/heads/main'||!commit||commit.type!=='commit'||! /^[a-f0-9]{40}$/.test(commit.sha))throw Error('Invalid theme catalog commit');

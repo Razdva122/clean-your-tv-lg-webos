@@ -20,12 +20,14 @@ before using a low-level recovery or installation procedure.
 
 ## Understand behavior and diagnose failures
 
+- [Root native startup input](ROOT-NATIVE-INPUT.md): unpublished owned EIM lifecycle and acceptance limits.
 - [Theme development status](THEMES.md), [Home styling parts and CSS rules](THEME-CSS.md).
 
 - [Home settings transport](HOME-CONTROL-TRANSPORT.md): unreleased service-owned IPC, packaging and rollback requirements.
 - [Home installation gates](HOME-INSTALL-GATES.md): unreleased control-file ownership and Root firmware preflight fixes, packaging requirements and retained-recovery limits.
 - [Companion entry points](../COMPANION-APPS.md), [Helper diagnostics](../HELPER-DIAGNOSTICS.md), [Home/settings diagnostics](../SETTINGS-DIAGNOSTICS.md).
 - [Root doctor](../../root-edition/DOCTOR.md), [current Root limits](../../root-edition/STATUS.md), [Root validation](../../root-edition/TESTING.md).
+- [Read-only Root admission](ROOT-READONLY-ADMISSION.md): private owner handoff, isolated inspection and unsupported firmware boundaries.
 - [Interrupted Root installation](../ROOT-INSTALL-CANCELLATION.md), [private Python](../OPTIONAL-PYTHON.md), [native cache cleanup](../WAM-CLEANUP.md).
 - [Firmware update control](../LG-FIRMWARE-UPDATES.md), [experimental HDMI sound recovery](ROOT-AUDIO-RECOVERY.md), [Developer Mode renewal Beta](../DEVELOPER-MODE-BETA.md).
 - [TLS trust](../TLS-TRUST.md), [icons](../../assets/icons/README.md), [brand assets](../../assets/brand/README.md), [published Helper baseline](../../native/published/README.md).
