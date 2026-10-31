@@ -3,6 +3,14 @@
   "version": null,
   "changes": [
     {
+      "pr": 194,
+      "issues": [
+        160,
+        164
+      ],
+      "summary": "Add opt-in host-only Root Node 0.12.2 prototype and legacy HTTPS options correction; Node 8+ admission retained, #160/#164 installation paths remain unresolved"
+    },
+    {
       "pr": 197,
       "issues": [],
       "summary": "Add Minimal 1.0.1 and preserve existing theme order; append new community themes, with maintainer browser acceptance only"
