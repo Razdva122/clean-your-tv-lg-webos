@@ -34,7 +34,8 @@ function get(url,limit,redirects){return new Promise(function(resolve,reject){
  var done=false,total=0,chunks=[],req,timer;
  function finish(error,value){if(done)return;done=true;clearTimeout(timer);if(error){if(req)req.destroy();reject(error);}else resolve(value);}
  function transport(error){var failure=Error('download-failed');failure.updateError='connection-error';finish(failure);}
- req=https.get(url,{rejectUnauthorized:true,ca:fs.readFileSync(__dirname+'/ca-bundle.crt','utf8'),headers:{'User-Agent':'CleanYourTV-System-Updater','Accept':'application/octet-stream'}},function(res){
+ var options=Object.assign(require('url').parse(url),{rejectUnauthorized:true,ca:fs.readFileSync(__dirname+'/ca-bundle.crt','utf8'),headers:{'User-Agent':'CleanYourTV-System-Updater','Accept':'application/octet-stream'}});
+ req=https.get(options,function(res){
   if([301,302,303,307,308].indexOf(res.statusCode)>=0){res.resume();try{var next=new URL(res.headers.location,url).href;get(next,limit,(redirects||0)+1).then(function(b){finish(null,b);},finish);}catch(e){finish(e);}return;}
   if(res.statusCode!==200){res.resume();var failure=Error('download-http');failure.updateError=res.statusCode===404?'feed-unavailable':'connection-error';finish(failure);return;}
   res.on('data',function(b){total+=b.length;if(total>limit){res.destroy();finish(Error('download-too-large'));}else chunks.push(b);});res.on('end',function(){finish(null,Buffer.concat(chunks));});res.on('error',transport);res.on('aborted',transport);

@@ -20,7 +20,9 @@ All production TV web packages pass through `scripts/tv_web_build.py`:
 No-root Home, Root Home, Home Updater and Root Updater. Desktop and Android
 installers embed these compiled packages. Native executables, TV Node services
 and Python code retain their own runtimes. Helper JavaScript has a separate
-Node-targeted build described below; other TV Node services are not transformed.
+Node-targeted build described below; other TV Node services are not transformed in ordinary builds. The opt-in
+[Root Node prototype](development/ROOT-NODE-PROTOTYPE.md) separately compiles the
+Root runtime closure for host tests; Root admission remains Node 8+.
 The installed cytv apps do not require Node/npm on the user's computer.
 
 ## Processing and validation

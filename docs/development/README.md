@@ -64,3 +64,5 @@ no author scripts or theme-repository code is executed. Static exports include
 the same selector and packages, so selection also works without internet access.
 This previews fixed reviewed versions rather than unpublished toolkit edits.
 Browser simulations do not establish physical-TV compatibility.
+
+- [Root Node 0.12.2 prototype](ROOT-NODE-PROTOTYPE.md): opt-in host builds and generated-closure tests; Node 8+ gate retained.
