@@ -1,6 +1,6 @@
 # Root native startup input
 
-Status: 1.5.3 behavior; device acceptance is limited to the recorded scope.
+Status: 1.5.4 behavior; device acceptance is limited to the recorded scope.
 Track implementation and affected acceptance in [#204](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/204).
 
 ## Behavior

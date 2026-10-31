@@ -49,11 +49,11 @@ and creating your own theme.
 
 ## Download and install
 
-> Root Home may not open automatically after standby (#171). The 1.5.3 candidate includes the Appearance scroll correction; see [changes and acceptance limits](docs/RELEASE-1.5.3.md).
+> Root Home may not open automatically after standby (#171). The 1.5.4 candidate includes the Appearance scroll correction; see [changes and acceptance limits](docs/RELEASE-1.5.4.md).
 > On `release/next`, the versioned metadata below describes the prepared candidate until publication. The download buttons always follow the latest published release.
 
 <!-- release:downloads -->
-Current stable release: **[v1.5.3](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.5.3)** — [release notes](docs/RELEASE-1.5.3.md).
+Current stable release: **[v1.5.4](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.5.4)** — [release notes](docs/RELEASE-1.5.4.md).
 <!-- /release:downloads -->
 
 [![Download Windows x64 graphical installer — GUI ZIP](assets/brand/downloads/windows.svg)](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/cytv-windows-x64-desktop.zip)
@@ -142,7 +142,7 @@ For contributors: [build and technical references](docs/development/README.md),
 <!-- /release:components -->
 
 System Updater: 1.1.2 / protocol 1 (existing supervisors stay pinned).
-See the [release notes](docs/RELEASE-1.5.3.md)
+See the [release notes](docs/RELEASE-1.5.4.md)
 and [TV acceptance and limits](docs/RELEASE-1.5.0.md).
 
 </details>

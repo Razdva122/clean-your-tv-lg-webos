@@ -7,7 +7,7 @@ an IPK does not prove that Home, recovery or startup works on a particular TV.
 
 ## TV requirements
 
-Release 1.5.3 includes Home Helper 0.6.21 with TV Node.js 0.10.25+ support for
+Release 1.5.4 includes Home Helper 0.6.21 with TV Node.js 0.10.25+ support for
 [#152](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/152).
 Root still requires Node.js 8+. Host runtime tests do not establish EF950V
 launcher, input, Home routing, standby, cold-boot or recovery compatibility.

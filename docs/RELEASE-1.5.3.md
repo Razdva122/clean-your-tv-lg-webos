@@ -1,6 +1,6 @@
 # v1.5.3 — Themes, Root startup and recovery
 
-Status: prepared 1.5.3 release, 17 implementation PRs integrated. Full candidate
+Status: unpublished preparation superseded by [1.5.4](RELEASE-1.5.4.md). Publication stopped before signing/upload because the exact Helper approval record was stale. No stable 1.5.3 was delivered. All 17 implementation PRs are inherited by 1.5.4. Full candidate
 [41185537404:1](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/41185537404)
 builds product source `f4bab0ea60c825994445b0b63625f5fd734bff4e`.
 See the [signed Root QA and release decision](history/2026-10-31-release-1.5.3-signed-root-qa.md)

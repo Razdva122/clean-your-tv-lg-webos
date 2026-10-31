@@ -1,6 +1,6 @@
 # Update Clean Your TV
 
-> Release 1.5.3 has [release scope and explicit acceptance limits](RELEASE-1.5.3.md). Historical [1.5.0 limitations and acceptance](RELEASE-1.5.0.md) retain their original scope.
+> Release 1.5.4 has [release scope and explicit acceptance limits](RELEASE-1.5.4.md). Historical [1.5.0 limitations and acceptance](RELEASE-1.5.0.md) retain their original scope.
 
 **Existing Root installations:** published 1.4.0 is incompatible with the original
 1.3.0 System Updater destination inventory. Do not force that update or edit
