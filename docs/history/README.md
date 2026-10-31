@@ -41,6 +41,8 @@ one model or artifact does not certify later releases or a different TV.
 
 ## Acceptance and validation
 
+- [1.5.3 owner-supervised C3 matrix](2026-10-31-release-1.5.3-physical-qa.md): exact installed candidate, successful scoped checks and two unresolved Home failures; candidate not accepted.
+
 - [1.5.3 corrected combined verification](2026-10-31-release-1.5.3-combined-verification.md): selected full build, ten delivered archives, nine payloads, native macOS and exact Android emulator checks; physical gates remain pending.
 
 - [1.5.3 combined candidate freeze](2026-10-31-release-1.5.3-combined-freeze.md): final integrated scope and explicit build/device gates; no new acceptance claim.
