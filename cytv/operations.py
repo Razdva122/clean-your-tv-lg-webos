@@ -663,7 +663,21 @@ print('CYTV_UPDATER_VERIFIED')
     def stop_helper(self):
         apps = {app['id'] for app in self.installed_apps()}
         if HELPER in apps:
-            self.remote.luna('com.local.nativehome.service/disable', {})
+            try:
+                self.remote.luna('com.local.nativehome.service/disable', {})
+            except TVRejected as error:
+                if (self.profile['edition'] != 'no-root' or error.luna['operation'] != 'helper-disable'
+                        or error.luna['error_code'] != -1):
+                    raise
+                from .helper_stop import PROGRAM
+                if self.remote.run('/usr/bin/node', data=PROGRAM.encode(), timeout=15).strip() != 'CYTV_HELPER_STOP_REQUESTED':
+                    raise UserError('Home Helper stop could not be verified. Keep recovery state and run cytv status.')
+                for attempt in range(16):
+                    if self.helper_state() in ('stopped', 'stale'):
+                        return
+                    if attempt < 15:
+                        time.sleep(1)
+                raise UserError('Home Helper stop could not be verified. Keep recovery state and run cytv status.')
         self.remote.run(
             'if [ -f ' + HELPER_STATE + '/controller.pid ]; then '
             'printf \'{"cmd":"stop"}\' > ' + HELPER_STATE + '/control.json; '

@@ -79,6 +79,8 @@ No-root: Aby wznowić sterowanie Home, otwórz Home Helper, wybierz Uruchom Help
 ./cytv --language pl uninstall
 ```
 
+> Jeszcze nieopublikowane (#152): po odmowie wyłączenia Helper przywracanie/usuwanie No-root będzie mogło użyć sprawdzonego zatrzymania przez SSH. Stan zatrzymania zostaje zachowany; niepewny wynik zachowuje dziennik. Nie usuwaj plików stanu. Potwierdzenie na EF950V nadal jest potrzebne. [#152](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/152)
+
 Po przerwaniu operacji najpierw uruchom `status` i zachowaj dzienniki. `restore` przywraca LG Home bez usuwania aplikacji; `uninstall` przywraca je przed usunięciem. Dane odzyskiwania Root pozostają celowo: nie kasuj ich, by wymusić ponowną instalację. Sprawdź raporty przed udostępnieniem; nie publikuj kluczy ani katalogów profili.
 
 1.5.4: otwórz **Ustawienia Home → Wygląd → Kolumny** i wybierz od 1 do 8 kolumn lub **Według motywu**, aby użyć wartości motywu (Classic: 5). Wybrana liczba ma pierwszeństwo przed motywem. Motywy ze stałym układem ukrywają opcję kolumn i używają wartości autora. Zapisany wybór wraca po przełączeniu na motyw obsługujący to ustawienie. W podglądzie kandydata Alpine aplikacje tworzą jeden zapętlony poziomy pasek: Lewo/Prawo przewija, Góra otwiera skróty, a Dół wraca do tej samej aplikacji. W podglądzie Alpine pasek można też przewijać kółkiem myszy lub touchpadem; Home nie przesuwa się za otwartym oknem dialogowym.

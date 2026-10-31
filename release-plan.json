@@ -1,31 +1,40 @@
 {
   "schema": 1,
-  "version": "1.5.4",
+  "version": null,
   "changes": [
     {
-      "pr": 209,
+      "pr": 194,
       "issues": [
-        116,
-        133,
-        152,
         160,
-        164,
-        170,
-        171,
-        198,
-        202,
-        203,
-        204
+        164
       ],
-      "summary": "First publish inherited themes/receiver/native Root/SSH/diagnostic fixes from unpublished1.5.3 with exact Helper transition approval; #202/#171 and partial original reports remain unresolved"
+      "summary": "Add opt-in host-only Root Node 0.12.2 prototype and legacy HTTPS options correction; Node 8+ admission retained, #160/#164 installation paths remain unresolved"
+    },
+    {
+      "pr": 197,
+      "issues": [],
+      "summary": "Add Minimal 1.0.1 and preserve existing theme order; append new community themes, with maintainer browser acceptance only"
+    },
+    {
+      "pr": 212,
+      "issues": [
+        152
+      ],
+      "summary": "Guarded No-root Helper stop after service refusal and prefixed WebKit layouts; #152 actual device recovery/control acceptance remains pending"
+    },
+    {
+      "pr": 213,
+      "issues": [
+        161
+      ],
+      "summary": "Document passive bounded Root worker diagnostics before admission; #161 actual recovery remains unresolved pending owner evidence"
+    },
+    {
+      "pr": 214,
+      "issues": [],
+      "summary": "Simplify theme suggestions and move review work to maintainers"
     }
   ],
   "excluded": [],
-  "acceptance": "Maintainer-owned OLED55C3RLA, firmware43.21.71/webOS SDK11.2.0, remote model unknown, macOS ARM64. Signed Root QA41178376979:1/signing41178920042:1 sourcef4bab0ea; final fullbuild41187137269:1 source5f60408c carries byte-identical Root32b0acf41f65b1620d1f0a2679058d5be5d1f5f6a49cf97105eae4c97b882469, updater375ffccfd5ac42dbc31d808fc27262c23bbfdf49d148cd909461a153f75844ad and infrastructure341de52d865a364a0b10db4c272b33237648b96d642114cb0d633dfd6cd16033. Controls/Home/arrows/OK/Back/volume/audible sound, native Off/tripleHome cleanup, same-session standby and true AC cold first-screen Clean, actual profile/theme/columns retention and all3component rollback/native baseline cleanup passed within recorded scope. Forward Home resume cancelled and active rollback resume skipped; maintainer explicitly deferred #202/#206 fixes/retests and accepted release with normal explicit-enable/Settings reopen workaround. #171 earlier different-session failure unresolved follow-up. Maintainer explicitly accepts untested physical Helper0.6.20->0.6.21 transition. Final Android0.5.1/code16 APK7aeba9cc8235b7871292adfeedf49497e31496f73cb7d33a908c2ad02dd67fed original-signer code15->16 emulator install-r/force-stop retained4syntheticfiles; physicalphone/nativeinstrumentation untested. Final APK all6TVIPKs and complete Root infrastructure match tested bytes; Helper raw/canonical pins match corrected exact approval209; final macOS CLI/GUI runtime checks passed. Complete trusted fullCI and platform packaging checks passed. NoRootwebOS5receiver published-package confirmation, uninstall/additionalinput/firmware combinations untested. See docs/history/2026-10-31-release-1.5.3-signed-root-qa.md; TV left stable0.6.1 with owner-confirmed controls/audio. No universalcompatibility claim. New complete1.5.4 candidate follows maintainer-authorized recovery after unpublished1.5.3 failed stale Helper approval before signedupload. Existing strict actual candidate/rollback verifier and10feed tests pass. No new physical1.5.4feed/update/rollback operation claimed. See docs/history/2026-10-31-release-1.5.4-publication-recovery.md.",
-  "build": {
-    "run_id": 41187137269,
-    "attempt": 1,
-    "source": "5f60408c898d9e8a417092ed51141b83fd8ae159"
-  },
-  "acceptance_build": "41187137269:1"
+  "acceptance": ""
 }

@@ -3,7 +3,10 @@
 The web frontend targets **Chromium 38**, the engine documented for webOS 3.x.
 The same compiled assets run on later Chromium-based webOS engines. This is a
 frontend build target, not a claim that Home Helper, input devices or firmware
-services work on every TV. webOS 1.x/2.x WebKit engines are outside this target.
+services work on every TV. An unreleased #152 correction also emits the prefixed
+layout/transform/animation forms required by webOS 2.x WebKit 538.2. Autoprefixer
+uses Safari 8 as its prefix profile; that is not a complete WebKit compatibility
+target or physical EF950V acceptance. The unsupported-feature gate remains intact.
 
 Source builds require Node.js **20.19+** (Node 22 is used in CI) and npm:
 
@@ -17,7 +20,9 @@ All production TV web packages pass through `scripts/tv_web_build.py`:
 No-root Home, Root Home, Home Updater and Root Updater. Desktop and Android
 installers embed these compiled packages. Native executables, TV Node services
 and Python code retain their own runtimes. Helper JavaScript has a separate
-Node-targeted build described below; other TV Node services are not transformed.
+Node-targeted build described below; other TV Node services are not transformed in ordinary builds. The opt-in
+[Root Node prototype](development/ROOT-NODE-PROTOTYPE.md) separately compiles the
+Root runtime closure for host tests; Root admission remains Node 8+.
 The installed cytv apps do not require Node/npm on the user's computer.
 
 ## Processing and validation
@@ -27,9 +32,9 @@ The installed cytv apps do not require Node/npm on the user's computer.
 - A bundled core-js runtime loads before application scripts and supplies missing
   ECMAScript built-ins. It is packaged locally, with licenses, without a CDN.
   It does not supply platform-specific Luna APIs or every modern browser API.
-- PostCSS preset-env/Autoprefixer target the same Browserslist entry in
-  `package.json`. For example, `inset` becomes physical offsets and alpha hex
-  colors become compatible color notation. CSS files, `<style>` elements and
+- PostCSS preset-env/Autoprefixer use the Browserslist entry in `package.json`
+  plus the Safari 8 prefix profile. For example, `inset` becomes physical offsets
+  and alpha hex colors become compatible color notation. CSS files, `<style>` elements and
   `style` attributes all pass through this step.
 - doiuse checks the **transformed** CSS. Unsupported features left after PostCSS,
   including CSS Grid and flexbox gap, fail the build. Use compatible layouts and
@@ -96,6 +101,15 @@ It checks actual card hit-testing, dimensions, icon fallback, scrolling,
 launch/navigation and full-screen dialogs. This models the reported engine
 limitations in a current browser; it is not an emulator of an entire old TV.
 Hardware confirmation is still required on the original webOS 3.5 device.
+
+The `prefixed-webkit` profile additionally ignores unprefixed flex, transforms,
+transitions and animations, including runtime-injected theme styles and CSSOM
+writes. It checks horizontal shortcuts, focus-frame alignment, scrolling,
+dialogs and runtime Ribbon skew/bottom alignment. `launcher/app.js` writes both
+CSSOM transform/transition forms. Theme runtime prefixes its validated output
+only when the CSSOM exposes the legacy WebKit form, enforcing the emitted CSS
+budget before changing layout or styles. Browser API, firmware input and actual
+EF950V controls/recovery remain separate unverified device paths.
 
 The geometry regression renders one through eight columns and checks spacing
 between the focus frame and neighbouring cards, frame alignment, remote
