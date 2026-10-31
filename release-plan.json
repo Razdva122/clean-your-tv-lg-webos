@@ -3,6 +3,11 @@
   "version": null,
   "changes": [
     {
+      "pr": 197,
+      "issues": [],
+      "summary": "Add Minimal 1.0.1 and preserve existing theme order; append new community themes, with maintainer browser acceptance only"
+    },
+    {
       "pr": 212,
       "issues": [
         152
@@ -15,6 +20,11 @@
         161
       ],
       "summary": "Document passive bounded Root worker diagnostics before admission; #161 actual recovery remains unresolved pending owner evidence"
+    },
+    {
+      "pr": 214,
+      "issues": [],
+      "summary": "Simplify theme suggestions and move review work to maintainers"
     }
   ],
   "excluded": [],
