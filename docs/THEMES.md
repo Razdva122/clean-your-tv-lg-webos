@@ -2,7 +2,7 @@
 
 Theme support is included in Home 1.6.0 / release 1.5.0. The separate Themes category, ID-focused form and inline language selection ship in 1.5.4. Older packages do not gain the feature by copying a theme link. Fixed-layout Apply geometry has browser coverage; exact installed Appearance acceptance remains pending. Root Home can remain disabled after update/rollback, Settings can retain stale status after emergency/resume, and the earlier different-session standby failure remains unresolved. See [1.5.4 scope and limitations](RELEASE-1.5.4.md).
 
-Authors: follow the [complete theme contribution walkthrough](development/CONTRIBUTING-THEMES.md) to create a theme, preview it on PC, test it on TV and submit it to Showcase.
+Authors: [suggest your theme](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/new?template=theme-submission.yml) with a public link and license information. Maintainers handle catalogue integration and review. The [author walkthrough](development/CONTRIBUTING-THEMES.md) is optional for building and packaging it yourself.
 
 ## Included with Home
 

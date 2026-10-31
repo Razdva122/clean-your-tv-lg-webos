@@ -66,7 +66,14 @@ automatically only after verified publication.
 
 ## Contribute a theme
 
-Use the [theme contribution walkthrough](docs/development/CONTRIBUTING-THEMES.md) to create, preview, test, package and submit an independently hosted theme. The [Showcase reference](showcase/README.md) defines registry and review requirements. Theme submission PRs also target `release/next`; they do not publish a release by themselves.
+To suggest a theme, [open a theme suggestion](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/new?template=theme-submission.yml)
+with a name, public source/package link and license/asset permissions. Previews
+and author test results are optional. Maintainers prepare the catalogue entry,
+run validation and assess inclusion. Authors do not need a fork, repository test
+suite or review report. The [theme contribution walkthrough](docs/development/CONTRIBUTING-THEMES.md)
+is an optional advanced path; the [Showcase reference](showcase/README.md)
+defines the maintainer integration contract. Integration PRs target
+`release/next`; they do not publish a release by themselves.
 
 ## Documentation organization
 
