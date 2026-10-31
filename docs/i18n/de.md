@@ -2,13 +2,13 @@
 
 > v1.5.0: Designs, Galerie und PC-TV-Übertragung. Bekannte Root-Grenzen: Appearance kann um 110 px springen; Home startet nach Standby möglicherweise nicht automatisch. Die Geräteprüfung bleibt begrenzt. [1.5.0](../RELEASE-1.5.0.md).
 
-> **1.5.3:** Designs mit festem Layout behalten den Platz der ausgeblendeten Columns-Zeile, damit Apply die Scrollposition in Appearance erhält. Zeiger, Tastatur und Bedienungshilfen überspringen Columns.
+> **1.5.4:** Designs mit festem Layout behalten den Platz der ausgeblendeten Columns-Zeile, damit Apply die Scrollposition in Appearance erhält. Zeiger, Tastatur und Bedienungshilfen überspringen Columns.
 
 [Dokumentation](../README.md) · [Problem melden](../FEEDBACK.md)
 
-Diese Anleitung gilt für die veröffentlichte **[1.5.3](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.5.3)**. Die C3-Abnahme umfasst die dokumentierten Strom-, Home-, Fokus-, Aus-Zustand- und manuellen Rollback-Tests. Andere TVs, eARC-Audio und echte Android-Geräte sind nicht bestätigt; eine erfolgreiche Installation beweist keine Kompatibilität. [Prüfumfang (Englisch)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
+Diese Anleitung gilt für die veröffentlichte **[1.5.4](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.5.4)**. Die C3-Abnahme umfasst die dokumentierten Strom-, Home-, Fokus-, Aus-Zustand- und manuellen Rollback-Tests. Andere TVs, eARC-Audio und echte Android-Geräte sind nicht bestätigt; eine erfolgreiche Installation beweist keine Kompatibilität. [Prüfumfang (Englisch)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
 
-**1.5.3:** Konsole, Desktop und Android zeigen für jede TV-Prüfung den Zustand: nicht geprüft, läuft, bestanden, fehlgeschlagen oder nicht verifizierbar. Ergebnisse bleiben nach Fehlern sichtbar. Node.js/Python wird auf dem TV geprüft; `doctor` bereitet Python nicht vor und fordert keine Steuerungskopplung an. Speichern Sie den Bericht vor einem neuen Versuch.
+**1.5.4:** Konsole, Desktop und Android zeigen für jede TV-Prüfung den Zustand: nicht geprüft, läuft, bestanden, fehlgeschlagen oder nicht verifizierbar. Ergebnisse bleiben nach Fehlern sichtbar. Node.js/Python wird auf dem TV geprüft; `doctor` bereitet Python nicht vor und fordert keine Steuerungskopplung an. Speichern Sie den Bericht vor einem neuen Versuch.
 
 ## Edition wählen
 
@@ -23,7 +23,7 @@ Root benötigt funktionierende Home-Schnittstellen von Settings Service und Syst
 
 Fernseher einschalten und mit demselben vertrauenswürdigen Heimnetz wie den Computer verbinden. Danach muss der Computer nicht eingeschaltet bleiben. Die Kompatibilität hängt von Modell, Firmware und Fernbedienung ab; für Root stehen noch Gerätetests aus.
 
-1.5.3 enthält Home Helper **0.6.21** für TV-Node.js **0.10.25+**; Root benötigt weiterhin Node.js **8+**. [Compatibility](../COMPATIBILITY.md).
+1.5.4 enthält Home Helper **0.6.21** für TV-Node.js **0.10.25+**; Root benötigt weiterhin Node.js **8+**. [Compatibility](../COMPATIBILITY.md).
 
 No-root Helper benötigt TV-Node.js **0.10.25+**. Root benötigt Node.js **8+** und funktionierendes Python **3.9+**. Bei Bedarf lädt der Installer ein geprüftes privates Python; die erste Vorbereitung braucht **320 MiB** freien Platz. System-Python wird nicht ersetzt. Für die Wiederherstellung benötigte Laufzeitversionen behalten. [Python (Englisch)](../OPTIONAL-PYTHON.md). Developer-Mode-Verlängerung ist **Beta, standardmäßig aus**; echte Verlängerung ohne Root ist nicht bestätigt. Den offiziellen Timer weiterhin prüfen.
 
@@ -70,7 +70,7 @@ Pfeile wählen eine Kachel, OK öffnet sie; OK gedrückt halten zum Verschieben.
 
 No-root: Öffnen Sie zum Neustart der Home-Steuerung Home Helper, wählen Sie Helper starten und bestätigen Sie. Ihre gespeicherte Home-Auswahl bleibt erhalten. Root: **Home ändern** in den Home-Einstellungen einschalten, um fortzufahren. **LG Home öffnen** öffnet LG Home einmalig, ohne das Home-Ziel zu ändern. Für LG Home als dauerhaftes Ziel **Home ändern** ausschalten oder `cytv restore` ausführen. Beide Steuerungen nie gleichzeitig betreiben. Bei wiederholtem Fehler LG Home aktiv lassen.
 
-> **1.5.3 — Root:** Wenn Root fehlerfrei arbeitet und Sie **Home ändern** ausdrücklich einschalten, legt CYTV einen eigenen nativen Eingang **Clean** an und speichert Clean als gemerkten Eingang. Beim Abschalten der Home-Steuerung, Notfallstopp, Fehler, Pausieren für ein Update oder Deinstallieren wird der eigene Eintrag entfernt. Der vorherige Eingang wird nur wiederhergestellt, solange noch der von CYTV gesetzte Wert gilt; andere Eingänge und Vordergrund-Apps bleiben erhalten. Nicht unterstützte Fernseher oder fremde Einträge nutzen die normale abgesicherte Home-Steuerung. Clean ist nicht garantiert der sofortige erste Bildschirm. Die dokumentierten C3-Prüfungen für ersten Bildschirm, Bereitschaft und AC-Kaltstart bestanden; dies gilt nicht für alle Geräte. Nach Update/Rollback kann Home aus bleiben (#202), Einstellungen können veraltet sein (#206): Einstellungen schließen/öffnen, Home ändern ausdrücklich einschalten und auf Clean-Status warten. [1.5.3 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md) · [Native input (English)](../development/ROOT-NATIVE-INPUT.md).
+> **1.5.4 — Root:** Wenn Root fehlerfrei arbeitet und Sie **Home ändern** ausdrücklich einschalten, legt CYTV einen eigenen nativen Eingang **Clean** an und speichert Clean als gemerkten Eingang. Beim Abschalten der Home-Steuerung, Notfallstopp, Fehler, Pausieren für ein Update oder Deinstallieren wird der eigene Eintrag entfernt. Der vorherige Eingang wird nur wiederhergestellt, solange noch der von CYTV gesetzte Wert gilt; andere Eingänge und Vordergrund-Apps bleiben erhalten. Nicht unterstützte Fernseher oder fremde Einträge nutzen die normale abgesicherte Home-Steuerung. Clean ist nicht garantiert der sofortige erste Bildschirm. Die dokumentierten C3-Prüfungen für ersten Bildschirm, Bereitschaft und AC-Kaltstart bestanden; dies gilt nicht für alle Geräte. Nach Update/Rollback kann Home aus bleiben (#202), Einstellungen können veraltet sein (#206): Einstellungen schließen/öffnen, Home ändern ausdrücklich einschalten und auf Clean-Status warten. [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md) · [Native input (English)](../development/ROOT-NATIVE-INPUT.md).
 
 ```sh
 ./cytv --language de status
@@ -81,11 +81,11 @@ No-root: Öffnen Sie zum Neustart der Home-Steuerung Home Helper, wählen Sie He
 
 Nach einer Unterbrechung zuerst `status` ausführen und Protokolle behalten. `restore` stellt LG Home ohne App-Entfernung wieder her; `uninstall` stellt es vor der Entfernung wieder her. Root-Wiederherstellungsdaten bleiben absichtlich erhalten; nicht zum Erzwingen einer Neuinstallation löschen. Diagnoseberichte vor Weitergabe prüfen; Schlüssel und Profilordner nicht veröffentlichen.
 
-1.5.3: Öffne **Home-Einstellungen → Darstellung → Spalten** und wähle 1–8 Spalten oder **Nach Theme**, um dessen Wert zu verwenden (Classic: 5). Eine feste Zahl hat Vorrang vor dem Theme. Themes mit festem Layout blenden die Spaltenoption aus und verwenden den Wert des Autors. Deine gespeicherte Auswahl gilt wieder, sobald du zu einem Theme wechselst, das diese Einstellung unterstützt. In der Alpine-Kandidatenvorschau liegen Apps in einem endlosen horizontalen Band: Links/Rechts blättert im Kreis, Oben öffnet die Schnellzugriffe und Unten kehrt zur selben App zurück. In der Alpine-Vorschau lässt sich das Band auch mit Mausrad oder Touchpad bewegen; bei geöffnetem Dialog bleibt Home stehen.
+1.5.4: Öffne **Home-Einstellungen → Darstellung → Spalten** und wähle 1–8 Spalten oder **Nach Theme**, um dessen Wert zu verwenden (Classic: 5). Eine feste Zahl hat Vorrang vor dem Theme. Themes mit festem Layout blenden die Spaltenoption aus und verwenden den Wert des Autors. Deine gespeicherte Auswahl gilt wieder, sobald du zu einem Theme wechselst, das diese Einstellung unterstützt. In der Alpine-Kandidatenvorschau liegen Apps in einem endlosen horizontalen Band: Links/Rechts blättert im Kreis, Oben öffnet die Schnellzugriffe und Unten kehrt zur selben App zurück. In der Alpine-Vorschau lässt sich das Band auch mit Mausrad oder Touchpad bewegen; bei geöffnetem Dialog bleibt Home stehen.
 
-1.5.3: Schalte unter **Home-Einstellungen → Darstellung** die Option **Kachel „App hinzufügen“ anzeigen** aus, um + auszublenden. Standardmäßig ist sie eingeschaltet. Über **App hinzufügen** im selben Bereich kannst du weiterhin Apps hinzufügen oder zurückholen. Verschieben und Ausblenden bleiben möglich; die Auswahl bleibt nach einem Neustart erhalten. Sind alle Apps ausgeblendet, bleiben die oberen Schaltflächen und Einstellungen erreichbar.
+1.5.4: Schalte unter **Home-Einstellungen → Darstellung** die Option **Kachel „App hinzufügen“ anzeigen** aus, um + auszublenden. Standardmäßig ist sie eingeschaltet. Über **App hinzufügen** im selben Bereich kannst du weiterhin Apps hinzufügen oder zurückholen. Verschieben und Ausblenden bleiben möglich; die Auswahl bleibt nach einem Neustart erhalten. Sind alle Apps ausgeblendet, bleiben die oberen Schaltflächen und Einstellungen erreichbar.
 
-In Theme-Vorschauen in 1.5.3 mit optionaler Seitenleiste wählst du mit Oben/Unten einen Menüpunkt, wechselst mit Rechts zu den Apps und kehrst mit Links aus der ersten App-Spalte zum Menü zurück.
+In Theme-Vorschauen in 1.5.4 mit optionaler Seitenleiste wählst du mit Oben/Unten einen Menüpunkt, wechselst mit Rechts zu den Apps und kehrst mit Links aus der ersten App-Spalte zum Menü zurück.
 
 No-root 1.5.0: Helper kann sich nach einem vorübergehenden Watchdog-Timeout beim Aufwachen erholen, höchstens fünfmal in zehn Minuten. Stop und dreifaches Home erfordern weiterhin einen ausdrücklichen Start Helper; wiederholte Fehler lassen Helper gestoppt. Die TV-Abnahme steht aus. [Verhalten und Grenzen (Englisch)](../HELPER-DIAGNOSTICS.md#watchdog-recovery-unpublished-candidate-155).
 
@@ -124,9 +124,9 @@ Nach Fehlern oder Unterbrechungen Status prüfen und den Diagnosebericht dieses 
 <a id="unveröffentlichter-kandidat-hdmi-ton-wiederherstellen-root"></a>
 
 
-## Designs (1.5.3)
+## Designs (1.5.4)
 
-1.5.3: **Einstellungen → Themes**. **Classic**, **Alpine**, **Ribbon** sind integriert und benötigen keinen Design-Download; Classic bleibt Standard. **Channel** ist ein externes Showcase-Design. Beim Galerietest: Nach der Auswahl innerhalb von **20 Sekunden** **Design behalten** wählen. **Zurücksetzen**, Back oder Zeitablauf stellt das vorherige Design wieder her. Ein unterbrochener Versuch startet beim nächsten Home-Aufruf mit Classic. Integrierte und heruntergeladene Designs aus der installierten Liste werden sofort ohne Bestätigungstimer angewendet und gespeichert. Das gilt auch für vom Computer oder per URL installierte Designs. Nur Design testen in der Galerie startet einen 20-Sekunden-Test.
+1.5.4: **Einstellungen → Themes**. **Classic**, **Alpine**, **Ribbon** sind integriert und benötigen keinen Design-Download; Classic bleibt Standard. **Channel** ist ein externes Showcase-Design. Beim Galerietest: Nach der Auswahl innerhalb von **20 Sekunden** **Design behalten** wählen. **Zurücksetzen**, Back oder Zeitablauf stellt das vorherige Design wieder her. Ein unterbrochener Versuch startet beim nächsten Home-Aufruf mit Classic. Integrierte und heruntergeladene Designs aus der installierten Liste werden sofort ohne Bestätigungstimer angewendet und gespeichert. Das gilt auch für vom Computer oder per URL installierte Designs. Nur Design testen in der Galerie startet einen 20-Sekunden-Test.
 
 Installierte Designs stehen in einer horizontal scrollbaren Reihe. Das aktive Design steht immer zuerst und seine Karte ist hervorgehoben. Mit Links/Rechts wechseln Sie zwischen den Karten.
 
@@ -140,11 +140,11 @@ Für ein unveröffentlichtes Design zuerst am TV **Einstellungen → Themes → 
 
 Für ein veröffentlichtes Design unter **Weitere Optionen → Über URL hinzufügen** die ID (z. B. `102300a209`), `da.gd/102300a209` oder die vollständige GitHub-URL eingeben. Home zeigt vor dem Laden die ergänzte da.gd-Adresse und prüft danach GitHub-Ziel und Designpaket. Die ID steht in den Versionshinweisen oder unter **TV link → Copy ID** in der Computer-Vorschau.
 
-[Themes (English)](../THEMES.md) · [1.5.3 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
+[Themes (English)](../THEMES.md) · [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
 
-1.5.3: **Classic**, **Alpine**, **Ribbon** — **Einstellungen → Themes**. [1.5.3 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
+1.5.4: **Classic**, **Alpine**, **Ribbon** — **Einstellungen → Themes**. [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
 
-Anpassbare Leisten-Themen in 1.5.3 können Eingänge, WLAN und Einstellungen links unten platzieren. Wenn aktiviert, wählt Links bei der ersten sichtbaren App Einstellungen, dann WLAN und Eingänge; Rechts in den Einstellungen kehrt zur selben sichtbaren App zurück. Benötigt ein Thema eine neue Home-Funktion, wird seine Installation in einer nicht unterstützten Version abgelehnt; Aussehen und Auswahl bleiben erhalten. Aktualisieren Sie zuerst Home. Ein späteres Downgrade kann beim Start Classic wiederherstellen.
+Anpassbare Leisten-Themen in 1.5.4 können Eingänge, WLAN und Einstellungen links unten platzieren. Wenn aktiviert, wählt Links bei der ersten sichtbaren App Einstellungen, dann WLAN und Eingänge; Rechts in den Einstellungen kehrt zur selben sichtbaren App zurück. Benötigt ein Thema eine neue Home-Funktion, wird seine Installation in einer nicht unterstützten Version abgelehnt; Aussehen und Auswahl bleiben erhalten. Aktualisieren Sie zuerst Home. Ein späteres Downgrade kann beim Start Classic wiederherstellen.
 
 Designs zeigt Vorschauen der integrierten und aller selbst installierten Designs, auch offline. Die separate Schaltfläche für den Designkatalog öffnet veröffentlichte Designs; eine persönliche Installation veröffentlicht kein Design.
 
@@ -154,7 +154,7 @@ In der Browser-Vorschau erklärt Vom Computer empfangen die Schritte am Fernsehe
 
 <a id="einstellungskategorien-unveröffentlichter-kandidat"></a>
 
-## Einstellungskategorien (1.5.3)
+## Einstellungskategorien (1.5.4)
 
 In beiden Editionen stehen die Kategorien links und ihre Einstellungen rechts: Startbildschirm, Darstellung, Themes, Sprache, Software-Updates und Erweitert. No-root bietet zusätzlich Developer Mode; Root bietet LG-Firmware-Updates unter Software-Updates und HDMI-Ton unter Erweitert. Oben/Unten navigiert innerhalb einer Spalte, Rechts öffnet die Einstellungen und Links kehrt zu den Kategorien zurück. Zurück führt zuerst zu den Kategorien und schließt danach die Einstellungen. Tab erreicht auch die Schaltfläche zur Rückkehr zu Home.
 

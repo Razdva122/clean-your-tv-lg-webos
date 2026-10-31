@@ -1,7 +1,25 @@
 {
   "schema": 1,
-  "version": null,
-  "changes": [],
+  "version": "1.5.4",
+  "changes": [
+    {
+      "pr": 209,
+      "issues": [
+        116,
+        133,
+        152,
+        160,
+        164,
+        170,
+        171,
+        198,
+        202,
+        203,
+        204
+      ],
+      "summary": "Record exact accepted Helper0.6.20->0.6.21 rollback compatibility; first public delivery of inherited unpublished1.5.3 fixes, original partial reports remain unresolved"
+    }
+  ],
   "excluded": [],
   "acceptance": ""
 }

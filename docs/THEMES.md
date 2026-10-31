@@ -1,6 +1,6 @@
 # Choose and install themes
 
-Theme support is included in Home 1.6.0 / release 1.5.0. The separate Themes category, ID-focused form and inline language selection ship in 1.5.3. Older packages do not gain the feature by copying a theme link. Fixed-layout Apply geometry has browser coverage; exact installed Appearance acceptance remains pending. Root Home can remain disabled after update/rollback, Settings can retain stale status after emergency/resume, and the earlier different-session standby failure remains unresolved. See [1.5.3 scope and limitations](RELEASE-1.5.3.md).
+Theme support is included in Home 1.6.0 / release 1.5.0. The separate Themes category, ID-focused form and inline language selection ship in 1.5.4. Older packages do not gain the feature by copying a theme link. Fixed-layout Apply geometry has browser coverage; exact installed Appearance acceptance remains pending. Root Home can remain disabled after update/rollback, Settings can retain stale status after emergency/resume, and the earlier different-session standby failure remains unresolved. See [1.5.4 scope and limitations](RELEASE-1.5.4.md).
 
 Authors: follow the [complete theme contribution walkthrough](development/CONTRIBUTING-THEMES.md) to create a theme, preview it on PC, test it on TV and submit it to Showcase.
 
@@ -8,7 +8,7 @@ Authors: follow the [complete theme contribution walkthrough](development/CONTRI
 
 **Classic**, **Alpine** and **Ribbon** are built into both No-root and Root editions. They work without downloading a theme. Classic remains the initial default. Alpine has a mountain panorama, a large clock and one looping horizontal app ribbon. Its fixed eight-slot composition hides the Columns setting while active. Your saved column preference returns when you switch to an adjustable theme.
 
-1.5.3: when a fixed-layout theme hides Columns, its empty row keeps the same space so applying the theme does not shorten Appearance’s scroll range. The hidden control is skipped by pointer, keyboard and accessibility navigation. This correction has browser regression coverage; physical-TV acceptance is pending.
+1.5.4: when a fixed-layout theme hides Columns, its empty row keeps the same space so applying the theme does not shorten Appearance’s scroll range. The hidden control is skipped by pointer, keyboard and accessibility navigation. This correction has browser regression coverage; physical-TV acceptance is pending.
 
 **Channel** is an ordinary external theme in showcase. It is not part of the TV package. It uses a numbered list, selected-app artwork and pixel shortcut icons; its one-column default can be overridden by the user.
 
