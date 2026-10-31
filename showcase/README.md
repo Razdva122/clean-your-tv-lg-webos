@@ -165,6 +165,16 @@ capture provenance alongside it. A built-in preview is not a reviewed installabl
 community descriptor or a hardware acceptance claim.
 
 
+### Catalogue order
+
+Built-in themes stay first. `showcase/order.json` preserves the existing order
+of community themes for the TV catalogue and primary interactive preview.
+New registry entries absent from that list appear after its entries, with
+filename order as a deterministic fallback. When integrating a new theme,
+maintainers append its ID to the end of this list so later submissions cannot
+move it. Updates keep the same position; removed/unavailable entries remain
+hidden under the existing moderation rules. Authors do not need to edit this file.
+
 ### On-TV catalogue snapshot
 
 After approving or changing a registry entry, run `node scripts/build-tv-theme-catalog.cjs`

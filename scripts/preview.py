@@ -57,6 +57,7 @@ def revision():
     files += [ROOT / 'root-edition/ui' / name for name in ('root-locales.js', 'root-exit.js', 'root-firmware-control.js', 'root-firmware.js', 'root-audio.js', 'root-audio-locales.js', 'root-settings.js', 'root-settings.css', 'root-profile-data.js', 'root-profile.js', 'root-updates.js')]
     files += [ROOT / 'preview/index.html', ROOT / 'preview/bridge.js', ROOT / 'preview/live-reload.js', ROOT / 'preview/themes.js', ROOT / 'scripts/build-preview-themes.cjs']
     files += list((ROOT / 'showcase/registry').glob('*.json'))
+    files += [ROOT / 'showcase/order.json']
     files += [ROOT / 'preview/icons' / name for name in sorted(ICON_FILES)]
     files += [ROOT / 'preview' / name for name in sorted(REFERENCE_FILES)]
     stamps = []

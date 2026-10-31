@@ -11,7 +11,7 @@ const http=require('node:http');
   for(const edition of ['No-root Edition','Root Edition']){
    await page.getByRole('button',{name:edition,exact:true}).click();await page.waitForFunction(root=>document.getElementById('screen').getAttribute('src')===(root?'root-launcher/index.html':'launcher/index.html'),edition==='Root Edition');await page.locator('#previewThemes[aria-busy="false"]').waitFor();await frame.locator('#tiles .focused').waitFor();
    if(edition==='Root Edition')assert.equal(await frame.locator('body').evaluate(()=>ThemeManager.current().title),'Itachi · Sharingan','selected theme survives edition switch');
-   for(const title of ['Channel','Alpine','Classic','Itachi · Sharingan']){
+   for(const title of ['Channel','Alpine','Classic','Minimal','Itachi · Sharingan']){
     await page.getByRole('button',{name:title,exact:true}).click();await page.waitForFunction(title=>{const w=document.getElementById('screen').contentWindow;return w.ThemeManager&&w.ThemeManager.current().title===title;},title);
     assert.equal(await page.getByRole('button',{name:title,exact:true}).getAttribute('aria-pressed'),'true');assert.deepEqual(await frame.locator('#tiles .item[data-app-id]').evaluateAll(items=>items.map(i=>i.dataset.appId)),order);
    }
