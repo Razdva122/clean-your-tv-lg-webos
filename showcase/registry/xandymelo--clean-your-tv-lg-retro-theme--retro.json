@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "github:xandymelo/clean-your-tv-lg-retro-theme:retro",
+  "title": "Retro",
+  "description": "A neon pixel-inspired theme with square cards, hard shadows and a night-blue grid.",
+  "author": {
+    "name": "xandymelo",
+    "sourceProfile": "https://github.com/xandymelo"
+  },
+  "sourceRepository": "https://github.com/xandymelo/clean-your-tv-lg-retro-theme",
+  "sourceCommit": "d7aa64515f867167de862c46a67fa7fa8bf39f82",
+  "descriptorUrl": "https://raw.githubusercontent.com/xandymelo/clean-your-tv-lg-retro-theme/bf6f6470d3df623eb5d73ef7d241c267bd5d212c/distributions/retro/1.0.0/cytv-theme.json",
+  "descriptorSha256": "e03a9455f59067d4c79da719e6b2113615f31b7790e66585d5fcea97db12f2c6",
+  "themeVersion": "1.0.0",
+  "themeApiVersion": 1,
+  "license": "MIT",
+  "creditsFile": "assets/xandymelo--clean-your-tv-lg-retro-theme--retro/e03a9455f59067d4c79da719e6b2113615f31b7790e66585d5fcea97db12f2c6/documents/1-0a67a2cf4189f3ad1e896892c018caddad19077ea2e488ac974f9ff78b62903e.txt",
+  "previewFiles": [
+    "assets/xandymelo--clean-your-tv-lg-retro-theme--retro/e03a9455f59067d4c79da719e6b2113615f31b7790e66585d5fcea97db12f2c6/assets/preview-6afff7724b35f089e33969f0b523424547de6c6068e6a3e55e7939940e487c9a.png"
+  ],
+  "tags": [],
+  "addedAt": "2026-10-31",
+  "reviewedAt": "2026-10-31",
+  "evidence": [
+    {
+      "kind": "browser",
+      "summary": "Browser renderer scenarios captured: Home, Inputs and Settings; no physical-TV validation performed."
+    }
+  ]
+}
