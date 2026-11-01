@@ -166,3 +166,9 @@ Homebrew Channel 拒絕此安裝程式存取。在 webOS 11 上，Homebrew 0.7.3
 兩個版本均在左側顯示分類，右側顯示所選設定：主畫面、外觀、主題、語言、軟體更新及進階。No-root 另有 Developer Mode；Root 的 LG 韌體更新位於更新分類，HDMI 聲音位於進階分類。上下鍵在目前欄內移動，右鍵進入設定，左鍵返回分類。返回鍵先返回分類，再關閉設定。也可用 Tab 選擇返回 Home 按鈕。
 
 軟體更新分類及內部按鈕上的黃色圓點表示有可用更新。成功檢查確認沒有更新後，兩處圓點同時消失；檢查失敗時保留上次確認的狀態。
+
+## 自動圖形解析度（候選版本）
+
+即將發布的電腦/Android 安裝程式和已遷移的 OTA 用戶端會根據電視回報的能力選擇 720p 或 1080p。無法驗證時，操作會停止。獨立安裝的舊更新程式需要依文件透過電腦遷移；復原程序保留原始套件。
+
+[HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).

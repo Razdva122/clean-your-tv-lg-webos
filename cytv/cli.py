@@ -350,6 +350,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     elif store.pending(profile):
                         raise UserError('The previous operation could not be safely resolved. Recovery data was kept. Save the diagnostic report; installation has not restarted.')
                 if profile['edition'] == 'root' and not resume:
+                    installer.select_graphics()
                     phase = 'inspect-installation'
                     try:
                         installer.preflight(install=True)
@@ -385,6 +386,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     if not args.yes and not prompts.confirm('Install these versions?', ask, write, default=True):
                         write('Cancelled. No TV changes were made.')
                         return 0
+                if not resume:
+                    installer.select_graphics()
                 phase = 'read-inventory'
                 inventory, key = None, None
                 if not args.migrate_home and not resume:

@@ -8,6 +8,7 @@ import subprocess
 import sys
 import time
 
+from updater.luna import call
 from updater.package import APP, inspect_package, safe_bytes, verify_payload
 from package_identity import identity, owners_present, TransitionUnknown, ROOT, UPDATER, SYSTEM
 
@@ -89,16 +90,34 @@ class Device:
     def installed(self):
         return {'version':self.owner_identity(APP)['version']}
 
+    @staticmethod
+    def graphics_resolution():
+        # UHD is graphics capability evidence; never infer from the current app viewport.
+        reply=call('luna://com.webos.service.tv.systemproperty/getSystemInfo',{'keys':['UHD']})
+        if isinstance(reply,dict) and reply.get('returnValue') is True:
+            value=reply.get('UHD')
+            if value is True or type(value) is str and value=='true':return '1920x1080'
+            if value is False or type(value) is str and value=='false':return '1280x720'
+        raise ValueError('TV graphics capability could not be verified')
+
     def offer(self):
+        resolution=self.graphics_resolution()
         self.require_components()
         self.integrity()
-        candidate=self.fetch('offer')['candidate'];self.descriptor(candidate,True)
+        candidate=self.fetch('offer',{'resolution':resolution})['candidate'];self.descriptor(candidate,True)
+        self.require_graphics(candidate,resolution)
         prior=self.store.read('current');installed=self.installed()['version']
         reason='available'
         if tuple(map(int,candidate['version'].split('.')))<=tuple(map(int,installed.split('.'))):reason='current'
         elif not prior or prior.get('version')!=installed:reason='missing-rollback'
         elif not (self.state/'cache'/(prior['sha256']+'.ipk')).is_file():reason='missing-rollback'
         return {'installed':installed,'candidate':candidate,'prior':prior,'canInstall':reason=='available','reason':reason}
+
+    @staticmethod
+    def require_graphics(candidate,resolution):
+        suffix='_720p' if resolution=='1280x720' else ''
+        expected='https://github.com/Razdva122/clean-your-tv-lg-webos/releases/download/'+candidate['release']+'/'+APP+'_'+candidate['version']+suffix+'_all.ipk'
+        if candidate.get('url')!=expected:raise ValueError('Signed graphics variant mismatch')
 
     def cached(self, descriptor):
         digest=descriptor.get('sha256','')
@@ -107,6 +126,7 @@ class Device:
         return self.state/'cache'/(digest+'.ipk')
 
     def prepare(self, candidate, prior):
+        self.require_graphics(candidate,self.graphics_resolution())
         self.require_components()
         self.integrity();self.descriptor(candidate,True);self.descriptor(prior)
         previous=safe_bytes(self.cached(prior),uid=0);inspect_package(previous,prior)

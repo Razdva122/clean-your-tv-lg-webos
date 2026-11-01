@@ -54,11 +54,13 @@ class ReleaseTests(unittest.TestCase):
         self.cert_output = 'Signer #1 certificate SHA-256 digest: ' + ':'.join(['AB'] * 32) + '\n'
         self.signing_error = False
         self.build_info = {'schema': 1, 'source_commit': 'a' * 40, 'versions': VERSIONS}
+        self.graphics = None
         self.write_apk()
 
     def write_apk(self, corrupt=None, empty=False):
         manifest = {'files': {n: hashlib.sha256(b).hexdigest() for n, b in self.files.items()},
                     'home_version': '1.3.4', 'helper_version': '0.6.16'}
+        if self.graphics is not None:manifest['graphics']=self.graphics
         with zipfile.ZipFile(self.apk, 'w') as archive:
             if self.build_info is not None:
                 archive.writestr('assets/cytv-build.json', json.dumps(self.build_info))
@@ -80,10 +82,28 @@ class ReleaseTests(unittest.TestCase):
         self.assertEqual(command, ['git', 'rev-parse', 'HEAD'])
         return 'a' * 40 + '\n'
 
-    def verify(self):
+    def verify(self, allow_legacy=True):
         with patch.dict('os.environ', {'ANDROID_HOME': '/fake/android-sdk'}), \
                 patch.object(verifier.subprocess, 'check_output', side_effect=self.run_binary):
-            return verifier.verify_apk(self.apk, root=self.root)
+            return verifier.verify_apk(self.apk, root=self.root, allow_legacy=allow_legacy)
+
+    def test_current_apk_rejects_fhd_only_payload_with_valid_hashes(self):
+        with self.assertRaisesRegex(ValueError,'graphics'):
+            self.verify(allow_legacy=False)
+
+    def test_current_dual_graphics_apk_passes_strict_verification(self):
+        self.graphics={'1920x1080':{'launcher':'launcher.ipk','root':'root'},'1280x720':{'launcher':'launcher-720p.ipk','root':'root-720p'}}
+        for graphics,paths in self.graphics.items():
+            for kind,app,key in [('launcher','com.gathin.tvhome','home'),('root',package.ROOT_APP,'root')]:
+                name=paths[kind]+('/root.ipk' if kind=='root' else '')
+                self.files[name]=package.ipk(app,VERSIONS[key],{'usr/palm/applications/'+app+'/appinfo.json':json.dumps({'id':app,'version':VERSIONS[key],'resolution':graphics}).encode()})
+                if kind=='root':
+                    self.files[paths[kind]+'/bundle.json']=b'{"package":"root.ipk"}'
+                    self.files[paths[kind]+'/release.json']=json.dumps({'version':VERSIONS['root']}).encode()
+        self.write_apk();self.verify(allow_legacy=False)
+        del self.files['launcher-720p.ipk'];self.write_apk()
+        with self.assertRaisesRegex(ValueError,'Unhashed'):
+            self.verify(allow_legacy=False)
 
     def test_valid_apk_report_binds_versions_signer_and_bytes(self):
         report = self.verify()

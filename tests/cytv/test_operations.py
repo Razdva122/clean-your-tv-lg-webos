@@ -60,6 +60,8 @@ class Remote:
 
     def luna(self, uri, payload, terminal=None, timeout=30, app_id=None):
         self.calls.append(('luna', uri, payload))
+        if uri == 'com.webos.service.tv.systemproperty/getSystemInfo':
+            return {'returnValue': True, 'UHD': True}
         if uri == 'com.cleanyourtv.root.updater.service/status':
             if self.fail == 'updater-service': raise RuntimeError('updater service unavailable')
             return {'returnValue': True, 'result': None}
@@ -113,6 +115,7 @@ class OperationTests(unittest.TestCase):
         remote.run.assert_not_called()
 
     def test_failed_python_provisioning_stops_before_the_root_install_receipt(self):
+        self.root_bundle()
         import subprocess, sys
         remote = Remote()
         original_run = remote.run
@@ -319,6 +322,7 @@ class OperationTests(unittest.TestCase):
         self.installer(remote).preflight()
 
     def test_existing_root_is_refused_before_creating_new_receipt(self):
+        self.root_bundle()
         remote = Remote()
         run = remote.run
         remote.run = lambda command, **kwargs: 'CYTV_EXISTING_ROOT' if 'CYTV_EXISTING_ROOT' in command else run(command, **kwargs)
@@ -617,11 +621,100 @@ class OperationTests(unittest.TestCase):
         self.manifest = {'files': {}, 'launcher': 'launcher.ipk', 'helper': 'helper.ipk',
                          'home_version': '1.2.2', 'helper_version': '0.6.13'}
         for app, name, version in [(operations.HOME, 'launcher.ipk', '1.2.2'), (operations.HELPER, 'helper.ipk', '0.6.13')]:
-            (self.payload / name).write_bytes(package.ipk(app, version, {'usr/palm/applications/' + app + '/appinfo.json': json.dumps({'id': app, 'version': version}).encode()}))
+            (self.payload / name).write_bytes(package.ipk(app, version, {'usr/palm/applications/' + app + '/appinfo.json': json.dumps({'id': app, 'version': version, 'resolution': '1920x1080'}).encode()}))
+        self.manifest['graphics'] = {'1920x1080': {'launcher': 'launcher.ipk', 'root': 'root'},
+                                     '1280x720': {'launcher': 'launcher-720p.ipk', 'root': 'root-720p'}}
+        import hashlib
+        self.manifest['files'].update({p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in self.payload.iterdir()})
 
     def installer(self, remote, edition='no-root'):
         tv = state.target('192.0.2.10', edition)
         return operations.Installer(remote, self.store, tv, self.payload, self.manifest, lambda _: None)
+
+    def test_graphics_preselection_is_reused_by_install(self):
+        remote = Remote()
+        installer = self.installer(remote)
+        installer.select_graphics()
+        installer.install(self.inventory, 'secret')
+        probes = [c for c in remote.calls if c[0] == 'luna' and c[1].endswith('/getSystemInfo')]
+        self.assertEqual(len(probes), 1)
+
+    def test_hd_capability_selects_hd_bytes_before_personalization(self):
+        import hashlib
+        info = {'id': operations.HOME, 'version': '1.2.2', 'resolution': '1280x720'}
+        raw = package.ipk(operations.HOME, '1.2.2', {'usr/palm/applications/'+operations.HOME+'/appinfo.json': json.dumps(info).encode()})
+        (self.payload/'launcher-720p.ipk').write_bytes(raw)
+        self.manifest['files']['launcher-720p.ipk'] = hashlib.sha256(raw).hexdigest()
+        remote = Remote()
+        original = remote.luna
+        remote.luna = lambda uri, payload, **kw: {'returnValue': True, 'UHD': False} if uri.endswith('/getSystemInfo') else original(uri, payload, **kw)
+        self.installer(remote).install(self.inventory, 'secret')
+        installed = next(data for path, data in remote.uploads.items() if path.endswith('/launcher.ipk'))
+        files = package.data_files(installed)
+        self.assertEqual(json.loads(files['usr/palm/applications/'+operations.HOME+'/appinfo.json'])['resolution'], '1280x720')
+
+    def test_hd_root_selection_preserves_baseline_bytes_and_hashes(self):
+        import hashlib, shutil
+        source = self.root_bundle()
+        target = self.payload/'root-720p'
+        shutil.copytree(source, target)
+        manifest = json.loads((target/'bundle.json').read_text())
+        name = manifest['package']
+        files = package.data_files((target/name).read_bytes())
+        appinfo = 'usr/palm/applications/'+package.ROOT_APP+'/appinfo.json'
+        info = json.loads(files[appinfo]); info['resolution'] = '1280x720'
+        files[appinfo] = json.dumps(info).encode()
+        (target/name).write_bytes(package.ipk(package.ROOT_APP, '0.0.1', files))
+        manifest['files'] = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in target.iterdir() if p.name != 'bundle.json'}
+        (target/'bundle.json').write_text(json.dumps(manifest))
+        self.manifest['files'].update({p.relative_to(self.payload).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest() for p in target.iterdir()})
+        remote = Remote()
+        original = remote.luna
+        probes = []
+        def luna(uri, payload, **kwargs):
+            if uri.endswith('/getSystemInfo'):
+                probes.append((uri, payload))
+                return {'returnValue': True, 'UHD': 'false'}
+            return original(uri, payload, **kwargs)
+        remote.luna = luna
+        self.installer(remote, 'root').install(self.inventory)
+        uploaded = next(raw for path, raw in remote.uploads.items() if path.endswith('/root/'+name))
+        self.assertEqual(json.loads(package.data_files(uploaded)[appinfo])['resolution'], '1280x720')
+        self.assertEqual(probes, [('com.webos.service.tv.systemproperty/getSystemInfo', {'keys': ['UHD']})])
+        uploaded_release = json.loads(next(raw for path, raw in remote.uploads.items() if path.endswith('/root/release.json')))
+        self.assertEqual(uploaded_release['files']['usr/palm/applications/'+package.ROOT_APP+'/apps.js'], hashlib.sha256(package.inventory_script(self.inventory)).hexdigest())
+
+    def test_unknown_capability_stops_before_preflight_or_receipt(self):
+        remote = Remote()
+        remote.luna = lambda *args, **kwargs: {'returnValue': True}
+        installer = self.installer(remote, 'root')
+        with self.assertRaisesRegex(RuntimeError, 'graphics'):
+            installer.install(self.inventory)
+        self.assertEqual(remote.calls, [])
+        self.assertIsNone(self.store.pending(installer.profile))
+
+    def test_invalid_graphics_payload_stops_before_upload(self):
+        for problem in ('legacy', 'path', 'hash', 'resolution', 'version', 'identity'):
+            with self.subTest(problem=problem):
+                import copy
+                manifest = copy.deepcopy(self.manifest)
+                if problem == 'legacy': manifest.pop('graphics')
+                elif problem == 'path': manifest['graphics']['1920x1080']['launcher'] = '../launcher.ipk'
+                elif problem == 'hash': manifest['files']['launcher.ipk'] = '0'*64
+                else:
+                    import hashlib
+                    info = {'id': operations.HOME, 'version': '1.2.2', 'resolution': '1920x1080'}
+                    info[{'resolution': 'resolution', 'version': 'version', 'identity': 'id'}[problem]] = {'resolution': '1280x720', 'version': '9.0.0', 'identity': 'another.app'}[problem]
+                    raw = package.ipk(operations.HOME, '1.2.2', {'usr/palm/applications/'+operations.HOME+'/appinfo.json': json.dumps(info).encode()})
+                    (self.payload/'launcher.ipk').write_bytes(raw)
+                    manifest['files']['launcher.ipk'] = hashlib.sha256(raw).hexdigest()
+                remote = Remote()
+                installer = self.installer(remote)
+                installer.manifest = manifest
+                with self.assertRaisesRegex(RuntimeError, 'graphics'):
+                    installer.install(self.inventory, 'secret')
+                self.assertFalse(any(c[0] in ('run', 'upload') for c in remote.calls))
+                self.assertIsNone(self.store.pending(installer.profile))
 
     def test_no_root_installs_helper_then_home_and_verifies_before_launch(self):
         remote = Remote()
@@ -655,11 +748,13 @@ class OperationTests(unittest.TestCase):
         root = self.payload / 'root'
         root.mkdir()
         name = package.ROOT_APP + '_0.0.1_all.ipk'
-        (root / name).write_bytes(package.ipk(package.ROOT_APP, '0.0.1', {'usr/palm/applications/' + package.ROOT_APP + '/apps.js': b'empty'}))
-        (root / 'release.json').write_text(json.dumps({'application_id': package.ROOT_APP, 'files': {}}))
+        (root / name).write_bytes(package.ipk(package.ROOT_APP, '0.0.1', {'usr/palm/applications/' + package.ROOT_APP + '/apps.js': b'empty',
+            'usr/palm/applications/' + package.ROOT_APP + '/appinfo.json': json.dumps({'id': package.ROOT_APP, 'version': '0.0.1', 'resolution': '1920x1080'}).encode()}))
+        (root / 'release.json').write_text(json.dumps({'application_id': package.ROOT_APP, 'version': '0.0.1', 'files': {}}))
         (root / 'deploy.py').write_bytes(b'original device driver')
         (root / 'SHA256SUMS').write_text('old')
         (root / 'bundle.json').write_text(json.dumps({'package': name, 'files': {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in root.iterdir()}}))
+        self.manifest['files'].update({p.relative_to(self.payload).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest() for p in root.iterdir()})
         return root
 
     def test_root_installs_updater_with_same_baseline_before_activation(self):
@@ -712,6 +807,7 @@ class OperationTests(unittest.TestCase):
         # Migration retains the supplied package; secure own directories are valid,
         # so this fixture must contain genuinely unsafe writable directory modes.
         with self.assertRaisesRegex(ValueError, 'rollback'):
+            installer._graphics_paths = {'root': 'root'}
             installer.install_root(self.inventory, migrate=True, reinstall='installed')
         self.assertIsNone(self.store.pending(installer.profile))
         self.assertFalse(any(c[0] == 'upload' or ' uninstall' in c[1] for c in remote.calls))
@@ -809,7 +905,7 @@ class OperationTests(unittest.TestCase):
         installer=self.installer(remote,'root')
         with self.assertRaisesRegex(RuntimeError, 'recovery could not be verified'):
             installer.install(self.inventory)
-        self.assertFalse(any(c[0]=='luna' or (c[0]=='run' and '/control.json' in c[1]) for c in remote.calls))
+        self.assertFalse(any((c[0]=='luna' and not c[1].endswith('/getSystemInfo')) or (c[0]=='run' and '/control.json' in c[1]) for c in remote.calls))
 
     def test_root_launch_disconnect_keeps_receipt_without_repeating_launch(self):
         self.root_bundle()
@@ -906,7 +1002,7 @@ class OperationTests(unittest.TestCase):
         (root/'deploy.py').write_bytes(b'corrupt replacement driver')
         remote = Remote()
         installer = self.installer(remote, 'root')
-        with self.assertRaisesRegex(ValueError, 'integrity mismatch'):
+        with self.assertRaisesRegex(RuntimeError, 'graphics packages'):
             installer.install(self.inventory, reinstall='installed')
         self.assertFalse(any('uninstall' in call[1] or call[0]=='upload' for call in remote.calls))
         self.assertIsNone(self.store.pending(installer.profile))
@@ -973,7 +1069,7 @@ class OperationTests(unittest.TestCase):
                     installer.install(self.inventory, 'key')
                 self.assertEqual(installer.tv_info['userland_abi'], abi)
                 self.assertFalse(installer.tv_info['arm32_supported'])
-                self.assertFalse(any(c[0] in ('upload', 'luna') for c in remote.calls))
+                self.assertFalse(any(c[0] == 'upload' or (c[0] == 'luna' and not c[1].endswith('/getSystemInfo')) for c in remote.calls))
                 self.assertIsNone(self.store.pending(installer.profile))
 
     def test_restore_does_not_clear_uncertain_install_receipt(self):

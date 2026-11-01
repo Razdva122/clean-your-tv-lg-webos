@@ -167,3 +167,9 @@ W podglądzie przeglądarki Odbierz z komputera wyjaśnia kroki na telewizorze i
 W obu edycjach kategorie są po lewej, a ustawienia po prawej: ekran główny, Wygląd, Motywy, Język, Aktualizacje i Zaawansowane. No-root ma też Developer Mode; Root zawiera aktualizacje firmware LG w aktualizacjach i dźwięk HDMI w Zaawansowanych. Góra/dół porusza się w kolumnie, prawo otwiera ustawienia, a lewo wraca do kategorii. Wstecz najpierw wraca do kategorii, potem zamyka ustawienia. Tab pozwala też wybrać powrót do Home.
 
 Żółta kropka przy kategorii aktualizacji i jej przycisku oznacza dostępne uaktualnienie. Obie znikają, gdy udane sprawdzenie potwierdzi brak aktualizacji; przy błędzie pozostaje ostatni potwierdzony stan.
+
+## Automatyczna rozdzielczość grafiki (kandydat)
+
+Nadchodzące instalatory komputerowe/Android i zmigrowane klienty OTA wybierają 720p lub 1080p na podstawie możliwości TV. Jeśli nie można ich potwierdzić, operacja zostaje zatrzymana. Starsze osobno instalowane aktualizatory wymagają opisanej migracji z komputera; odzyskiwanie zachowuje oryginalne pakiety.
+
+[HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).

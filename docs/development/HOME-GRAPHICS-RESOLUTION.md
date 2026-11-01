@@ -46,12 +46,53 @@ python3 root-edition/build.py --output work/root-hd-candidate --version 0.0.1 --
 ```
 
 These are build commands, not installation instructions. Keep the output paired
-with its exact manifest/hash and coherent component set. This task does not add
-automatic model detection, choose a different signed feed artifact, or substitute
-HD bytes for an unchanged-version package. Normal desktop/Android release builds
-still use the selected default manifest. Before claiming normal-channel HD
-delivery, select and verify the appropriate final artifacts/update path; do not
-patch a signed payload or bypass a version, baseline or rollback refusal.
+with its exact manifest/hash and coherent component set. Never patch a signed
+payload, substitute equal-version bytes or bypass a baseline/rollback refusal.
+
+## Automatic selection and OTA
+
+The candidate desktop/console and Android installers embed both Home packages
+and both complete Root bundles. Before pairing/provisioning/install effects on a
+fresh installation, query only `getSystemInfo` with `keys: ["UHD"]` on
+`com.webos.service.tv.systemproperty`. LG documents this property since webOS 1.2:
+[TV Device Information](https://webostv.developer.lge.com/develop/references/tv-device-information).
+A successful reply with boolean true or exact string `true` selects 1920×1080;
+false or exact `false` selects 1280×720. Missing, denied or malformed capability
+stops the operation without guessing. Model names, current application viewport
+and HDMI/video dimensions are not detection inputs. Status and retained recovery
+remain available without a new capability query.
+
+Selection is from a fixed, hashed payload catalogue; the selected package must
+have the expected ID, version and `appinfo.json` resolution before personalization.
+Root selection uses a complete coherent bundle, not an IPK swap inside an existing
+bundle. Personalization preserves the selected resolution and rehashes its data.
+Android uses this shared installer logic and verifies the same payload entries.
+
+New OTA clients select independent signed schema-1 HD feeds:
+`system-update-root-720p.json`, `system-update-no-root-720p.json` and
+`root-update-720p.json`. Existing default feed names retain FHD and their original
+schema for published clients. HD public packages have `_720p_all.ipk` names;
+this does not change application identity or package architecture. The client
+checks the selected signed launcher URL and actual package resolution, so a valid
+FHD signature cannot substitute for an HD offer. URL/hash/proof fields are never
+rewritten after verification.
+
+The first HD release must increase Home and Root component versions relative to
+the published FHD baseline. An HD legacy Home feed (`update-720p.json`) is emitted
+only after a genuinely published compatible prior HD rollback package exists;
+until then this legacy updater refuses the unavailable feed. The complete System
+Updater can use its authenticated actual installed baseline for exact rollback.
+Recovery/resume/rollback retain original bytes and proofs, even when those bytes
+are FHD; they do not reselect a preferred variant during recovery. Existing
+same-version, downgrade, signature, Helper and baseline restrictions stay intact.
+
+Existing independently provisioned Root/System updater code does not acquire the
+selector merely through application OTA. Use the supported computer setup or
+explicit verified supervisor replacement workflow after publication, preserving
+its recovery state and original rollback baseline. Do not edit retained code,
+receipts or keys. Old clients keep their old channel behavior until migrated;
+new installer builds provision the selector. See [System updates](../UPDATES.md)
+for setup and migration prerequisites. No migration or TV test was performed here.
 
 Actual 720p graphics/package behavior on the reported LJ550T remains pending a
 separately agreed owner session. Browser geometry is implementation evidence,

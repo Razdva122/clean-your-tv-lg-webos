@@ -1,5 +1,6 @@
 """Exercise the desktop recovery journey with real CLI/state and simulated TV IO."""
 import json
+import hashlib
 import os
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 from pathlib import Path
@@ -38,11 +39,15 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.payload.mkdir()
         (self.payload / 'fallback.png').write_bytes(b'icon')
         self.manifest = {'files': {}, 'launcher': 'launcher.ipk', 'helper': 'helper.ipk',
-                         'home_version': '1.2.2', 'helper_version': '0.6.13'}
+                         'home_version': '1.2.2', 'helper_version': '0.6.13',
+                         'graphics': {'1920x1080': {'launcher': 'launcher.ipk', 'root': 'root'},
+                                      '1280x720': {'launcher': 'launcher-720p.ipk', 'root': 'root-720p'}}}
         for app, name, version in [('com.gathin.tvhome', 'launcher.ipk', '1.2.2'),
-                                   ('com.local.nativehome', 'helper.ipk', '0.6.13')]:
+                                   ('com.local.nativehome', 'helper.ipk', '0.6.13'),
+                                   ('com.gathin.tvhome', 'launcher-720p.ipk', '1.2.2')]:
             (self.payload / name).write_bytes(package.ipk(app, version, {
-                'usr/palm/applications/' + app + '/appinfo.json': json.dumps({'id': app, 'version': version}).encode()}))
+                'usr/palm/applications/' + app + '/appinfo.json': json.dumps({'id': app, 'version': version, 'resolution': '1280x720' if name == 'launcher-720p.ipk' else '1920x1080'}).encode()}))
+            self.manifest['files'][name] = hashlib.sha256((self.payload / name).read_bytes()).hexdigest()
         self.remote = Remote()
         self.remote.close = lambda: None
         original = self.remote.luna

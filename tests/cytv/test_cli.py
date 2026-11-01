@@ -9,6 +9,26 @@ from cytv import cli, state
 
 
 class CLITests(unittest.TestCase):
+    def test_unknown_graphics_stops_no_root_before_pairing(self):
+        from unittest.mock import MagicMock
+        from cytv.errors import UserError
+        with tempfile.TemporaryDirectory() as tmp, patch('cytv.cli.Installer') as cls, patch('cytv.cli.package.verify_payload', return_value={}), patch('cytv.tv.SSAP') as ssap:
+            cls.return_value.select_graphics.side_effect = UserError('TV graphics capability could not be verified')
+            code, output, _ = self.run_cli(['install', '--host', '192.0.2.10', '--edition', 'no-root', '--data-dir', tmp, '--yes'], remote=MagicMock())
+            self.assertEqual(code, 2, output)
+            ssap.assert_not_called()
+            cls.return_value.install.assert_not_called()
+
+    def test_unknown_graphics_stops_root_before_runtime_provisioning(self):
+        from unittest.mock import MagicMock
+        from cytv.errors import UserError
+        with tempfile.TemporaryDirectory() as tmp, patch('cytv.cli.Installer') as cls, patch('cytv.cli.package.verify_payload', return_value={}):
+            cls.return_value.select_graphics.side_effect = UserError('TV graphics capability could not be verified')
+            code, output, _ = self.run_cli(['install', '--host', '192.0.2.10', '--edition', 'root', '--data-dir', tmp, '--yes'], remote=MagicMock())
+            self.assertEqual(code, 2, output)
+            cls.return_value.preflight.assert_not_called()
+            cls.return_value.install.assert_not_called()
+
     def test_system_updater_replacement_preserves_root_and_rejects_pending_work(self):
         from unittest.mock import MagicMock
         for pending in [None]:
@@ -335,7 +355,7 @@ class CLITests(unittest.TestCase):
             def close(self): pass
         with tempfile.TemporaryDirectory() as tmp, \
              patch('cytv.cli.package.verify_payload', return_value={}), \
-             patch('cytv.cli.payload_dir', return_value=Path(tmp)/'unbuilt-payload'), \
+             patch('cytv.cli.payload_dir', return_value=Path(tmp)/'unbuilt-payload'), patch('cytv.cli.Installer.select_graphics'), \
              patch('cytv.cli.Installer.version_summary', return_value=['Root: 0.1.4 → 0.1.5 (Update)']), \
              patch('cytv.tv.SSAP') as ssap:
             remote = Remote()
@@ -351,7 +371,7 @@ class CLITests(unittest.TestCase):
             with self.subTest(flags=flags), tempfile.TemporaryDirectory() as tmp, \
                  patch('cytv.cli.Installer.version_summary', return_value=['Root: 0.1.4 → 0.1.5 (Update)']), \
                  patch('cytv.cli.package.verify_payload', return_value={}), \
-                 patch('cytv.cli.payload_dir', return_value=Path(tmp)/'unbuilt-payload'), patch('cytv.tv.SSAP') as ssap:
+                 patch('cytv.cli.payload_dir', return_value=Path(tmp)/'unbuilt-payload'), patch('cytv.cli.Installer.select_graphics'), patch('cytv.tv.SSAP') as ssap:
                 remote=Remote()
                 code, output, _ = self.run_cli(['--host','192.0.2.10','--edition','root','--data-dir',tmp]+flags, answers, remote=remote)
                 self.assertEqual(code, expected, output)
@@ -379,6 +399,7 @@ class CLITests(unittest.TestCase):
                 self.assertEqual(code, 0 if resolved or resume else 2, output)
                 inst.status.assert_called()
                 self.assertEqual(inst.resume_root_setup.call_count, int(resume and accept))
+                if resume: inst.select_graphics.assert_not_called()
                 inst.install.assert_not_called()
                 ssap.assert_not_called()
                 if not resolved and not (resume and accept): self.assertIsNotNone(store.pending(profile))

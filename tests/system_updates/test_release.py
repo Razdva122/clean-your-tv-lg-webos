@@ -56,6 +56,23 @@ class ReleaseTests(unittest.TestCase):
             self.assertEqual(service_files['service/startup-diagnostics.js'],b'final startup-diagnostics.js')
             self.assertEqual(service_files['service/service.js'],b'final service.js')
             self.assertEqual(files['com.gathin.tvhome_1.0.0_all.ipk'],(payload/'launcher.ipk').read_bytes())
+            import shutil
+            shutil.copytree(payload/'root',payload/'root-720p')
+            for source,target,app in [('launcher.ipk','launcher-720p.ipk',build.APPS['home']),('root/root.ipk','root-720p/root.ipk',build.APPS['root'])]:
+                entries=package.data_files((payload/source).read_bytes());name='usr/palm/applications/'+app+'/appinfo.json'
+                info=json.loads(entries[name]);info['resolution']='1280x720';entries[name]=json.dumps(info).encode()
+                (payload/target).write_bytes(package.ipk(app,info['version'],entries))
+            all_manifests=build.prepare_release(payload,output,'v1.0.3','Changes')
+            self.assertEqual(set(all_manifests),{'root','no-root','root-720p','no-root-720p'})
+            all_files={p.name:p.read_bytes() for p in output.iterdir()}
+            prepare.verify_system_assets(all_manifests,{'tag':'v1.0.3','versions':versions},all_files)
+            hd_infra=next(c for c in all_manifests['root-720p']['components'] if c['name']=='root-infrastructure')
+            self.assertEqual(hd_infra,infra,'Identical infrastructure must share the exact public artifact')
+            self.assertEqual(all_files['com.gathin.tvhome_1.0.0_720p_all.ipk'],(payload/'launcher-720p.ipk').read_bytes())
+            bad=json.loads(json.dumps(all_manifests));bad['root-720p']=bad['root']
+            with self.assertRaisesRegex(ValueError,'resolution'):
+                prepare.verify_system_assets(bad,{'tag':'v1.0.3','versions':versions},all_files)
+
             import copy
             for bad in (None,'1.1.0','bad'):
                 changed=copy.deepcopy(manifests)

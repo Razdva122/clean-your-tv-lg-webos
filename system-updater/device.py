@@ -135,13 +135,25 @@ class Device:
         self._verify_release(baseline,baseline['edition'])
         return all(self.verify_installed(c) for c in baseline['components'])
 
+    @staticmethod
+    def graphics_resolution():
+        # UHD is graphics capability evidence; never infer from the current app viewport.
+        reply=call('luna://com.webos.service.tv.systemproperty/getSystemInfo',{'keys':['UHD']})
+        if isinstance(reply,dict) and reply.get('returnValue') is True:
+            value=reply.get('UHD')
+            if value is True or type(value) is str and value=='true':return '1920x1080'
+            if value is False or type(value) is str and value=='false':return '1280x720'
+        raise ValueError('TV graphics capability could not be verified')
+
     def offer(self,edition):
+        resolution=self.graphics_resolution()
         self.require_components()
         self.integrity()
         if edition not in SETS:raise ValueError('Invalid edition')
-        value=self.fetch('offer',{'edition':edition})
+        value=self.fetch('offer',{'edition':edition,'resolution':resolution})
         try:candidate=self._verify_release(value['candidate'],edition)
         except (ValueError,KeyError,TypeError):raise ValueError(VERIFICATION_ERROR) from None
+        self.require_graphics(candidate,resolution)
         prior=self._baseline(edition);reason='available'
         if any(version(c['version'])<version(p['version']) for c,p in zip(candidate['components'],prior['components'])):reason='component-downgrade'
         elif version(candidate['release'][1:])<=version(prior['release'][1:]) or all(c['version']==p['version'] for c,p in zip(candidate['components'],prior['components'])):reason='current'
@@ -162,6 +174,14 @@ class Device:
             installed=old['version'] if c['kind']=='infrastructure' else self.installed(c['application'])
             components.append({'name':c['name'],'installed':installed,'version':c['version']})
         return {'edition':edition,'release':candidate['release'],'notes':candidate['notes'],'components':components,'canInstall':reason=='available','reason':reason,'candidate':candidate,'prior':prior}
+
+    @staticmethod
+    def require_graphics(candidate,resolution):
+        name='root' if candidate['edition']=='root' else 'home'
+        component=next(c for c in candidate['components'] if c['name']==name)
+        suffix='_720p' if resolution=='1280x720' else ''
+        expected='https://github.com/Razdva122/clean-your-tv-lg-webos/releases/download/'+candidate['release']+'/'+IDENTITIES[name]+'_'+component['version']+suffix+'_all.ipk'
+        if component.get('url')!=expected:raise ValueError('Signed graphics variant mismatch')
 
     def check(self,edition):
         try:offer=self.offer(edition)
@@ -230,11 +250,15 @@ class Device:
         appinfo=json.loads(files.get(prefix+'appinfo.json',b'{}'));pkg=json.loads(files.get(info,b'{}'))
         if appinfo.get('id')!=app or appinfo.get('version')!=c['version'] or pkg.get('id')!=app or pkg.get('app')!=app or pkg.get('version')!=c['version'] or not isinstance(pkg.get('services'),list) or set(pkg['services'])-services:raise ValueError('Package application identity mismatch')
         if c['name'] in ('home','root') and appinfo.get('systemUpdateProtocol')!=1:raise ValueError('Launcher profile/health protocol incompatible')
+        if c['name'] in ('home','root') and 'url' in c:
+            expected='1280x720' if c['url'].endswith('_720p_all.ipk') else '1920x1080'
+            if appinfo.get('resolution','1920x1080')!=expected:raise ValueError('Package graphics variant mismatch')
         main=appinfo.get('main')
         if not isinstance(main,str) or prefix+main not in files:raise ValueError('Missing package entry point')
         return {name:digest(value) for name,value in files.items()}
 
     def prepare(self,candidate,prior):
+        self.require_graphics(candidate,self.graphics_resolution())
         self.require_components()
         self.integrity();self._verify_release(candidate,candidate['edition']);self._verify_release(prior,prior['edition'])
         for c in prior['components']:self.inspect(self.cache_bytes(c),c)

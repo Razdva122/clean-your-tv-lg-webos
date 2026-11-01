@@ -24,7 +24,7 @@ async function offerFixture(status,body,error){
  const fakeFs={readFileSync(file){if(file===directory+'/release-public.pem')return publicKey.export({type:'spki',format:'pem'});if(file===directory+'/ca-bundle.crt')return 'offline CA fixture';throw Error('unexpected fixture file');}};
  const main={exports:{}};const load=name=>name==='https'?fakeHttps:name==='fs'?fakeFs:require(name);load.main=main;
  vm.runInNewContext(fs.readFileSync(directory+'/policy.js','utf8'),{require:load,module:main,__dirname:directory,process:fakeProcess,Buffer,setTimeout:error==='timeout'?(fn=>{queueMicrotask(fn);return 1;}):setTimeout,clearTimeout});
- callbacks.data('{"edition":"root"}');await callbacks.end();return output;
+ callbacks.data('{"edition":"root","resolution":"1920x1080"}');await callbacks.end();return output;
 }
 (async()=>{
  for(const [status,body,error,expected] of [[404,'',null,'feed-unavailable'],[503,'',null,'connection-error'],[null,'','ECONNRESET','connection-error'],[null,'','timeout','connection-error'],[200,'broken',null,'verification-error'],[200,JSON.stringify(envelope),null,'verification-error']]){
