@@ -142,6 +142,15 @@
         207
       ],
       "summary": "Separate package/launch/startup and explicitly owner-reported Home with default skip and local reports; #207 IR routing remains unresolved"
+    },
+    {
+      "pr": 235,
+      "issues": [
+        133,
+        216,
+        217
+      ],
+      "summary": "Check existing Root Home interfaces before runtime/package preparation and show typed localized connection guidance; original #133/#216 recovery and #217 connection remain unresolved"
     }
   ],
   "excluded": [],
