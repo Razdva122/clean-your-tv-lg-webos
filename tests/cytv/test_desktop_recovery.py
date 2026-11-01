@@ -246,7 +246,7 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.assertTrue(w.report.is_file())
 
     def test_no_recovery_offer_for_completed_removal_or_other_pending_operations(self):
-        for action, stage in ((None, None), ('unknown', 'pending'), ('uninstall', 'removing')):
+        for action, stage in ((None, None), ('unknown', 'pending')):
             with self.subTest(action=action, stage=stage):
                 if self.store.pending(self.profile):
                     self.store.finish(self.profile)
@@ -257,6 +257,20 @@ class DesktopRecoveryTests(unittest.TestCase):
                 self.assertIsNone(self.button(w, 'Recover and reinstall'))
                 self.assertFalse(any(c[0] == 'upload' for c in self.remote.calls))
                 w.close()
+
+    def test_retained_removing_journal_offers_explicit_recovery_without_mutation(self):
+        # Empty app inventories no longer prove an unfinished uninstall terminal.
+        self.store.finish(self.profile)
+        self.store.begin(self.profile, 'uninstall', stage='removing')
+        before = self.store.pending(self.profile)
+        w = self.window()
+        self.check(w, 'status')
+        self.assertIsNotNone(self.button(w, 'Recover and reinstall'))
+        self.assertEqual(self.store.pending(self.profile), before)
+        self.assertFalse(any(c[0] == 'upload' or c[1] in (
+            'com.webos.appInstallService/dev/install', 'com.webos.appInstallService/dev/remove')
+            for c in self.remote.calls))
+        w.close()
 
     def test_missing_report_shows_help_and_cannot_reuse_a_previous_attempts_report(self):
         w = self.window()
