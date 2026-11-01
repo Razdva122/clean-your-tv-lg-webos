@@ -46,7 +46,7 @@ def normalize_digest(value):
     return digest
 
 
-def verify_apk(apk, root=ROOT):
+def verify_apk(apk, root=ROOT, *, allow_legacy=False):
     apk, root = Path(apk).resolve(), Path(root).resolve()
     versions = json.loads((root / 'release-versions.json').read_text())
     sdk = os.environ.get('ANDROID_HOME')
@@ -77,7 +77,7 @@ def verify_apk(apk, root=ROOT):
             raise ValueError('APK build provenance is missing or invalid') from error
         if build_info != {'schema': 1, 'source_commit': commit, 'versions': versions}:
             raise ValueError('APK build provenance does not match the release source')
-        verify_embedded(lambda name: archive.read('assets/payload/' + name), versions)
+        verify_embedded(lambda name: archive.read('assets/payload/' + name), versions, allow_legacy=allow_legacy)
     return {'schema': 1, 'source_commit': commit, 'versions': versions, **metadata,
             'signer_sha256': expected_digest, 'sha256': hashlib.sha256(apk.read_bytes()).hexdigest()}
 
