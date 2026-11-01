@@ -10,6 +10,7 @@ const base=process.env.PREVIEW_URL||'http://127.0.0.1:8879';
    await page.goto(base+'/root-launcher/index.html');await page.locator('#tiles .add-app').waitFor();
    await page.evaluate(()=>document.fonts.ready);
    await page.locator('#btnSettings').click();
+   await page.locator('[data-category=updates]').click();
    const entry=page.getByRole('button',{name:await page.evaluate(()=>HomeI18n.t('LG firmware updates')),exact:true});
    await entry.click();
    const toggle=page.getByRole('switch',{name:await page.evaluate(()=>HomeI18n.t('Block LG firmware updates')),exact:true});
@@ -23,6 +24,7 @@ const base=process.env.PREVIEW_URL||'http://127.0.0.1:8879';
    }
    if(['en','ru'].includes(locale))await page.screenshot({path:'/tmp/cytv-firmware-'+locale+'-'+height+'.png'});
    await page.keyboard.press('Escape');assert.equal(await entry.evaluate(e=>e===document.activeElement),true);
+   await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>document.activeElement.dataset.category),'updates');
    await page.keyboard.press('Escape');assert.equal(await page.locator('.root-settings:visible').count(),0);
    assert.deepEqual(errors,[]);await page.close();
   }
