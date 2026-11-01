@@ -38,3 +38,20 @@ class PythonCacheCLITests(unittest.TestCase):
             import json
             report = next((Path(tmp) / 'reports').glob('*.json'))
             self.assertEqual(json.loads(report.read_text())['phase'], 'prepare-python-runtime')
+
+    def test_real_cache_failure_exports_safe_reason_without_contacting_tv(self):
+        import json
+        from cytv import python_runtime
+        def no_tv(*args, **kwargs):
+            self.fail('Offline cache diagnostics must not contact a TV')
+        with tempfile.TemporaryDirectory() as tmp, \
+             patch.object(python_runtime.urllib.request, 'build_opener') as builder:
+            builder.return_value.open.side_effect = OSError('PRIVATE-NETWORK-URL')
+            output = []
+            code = cli.main(['--prepare-python-runtime', '--language', 'en', '--data-dir', str(Path(tmp).resolve())],
+                            ask=no_tv, secret=no_tv, connect=no_tv, search=no_tv,
+                            inspect=no_tv, write=output.append)
+            self.assertEqual(code, 2)
+            report = next((Path(tmp) / 'reports').glob('*.json'))
+            self.assertEqual(json.loads(report.read_text())['python_cache'], {'reason': 'network'})
+            self.assertNotIn('PRIVATE-NETWORK', report.read_text() + '\n'.join(output))

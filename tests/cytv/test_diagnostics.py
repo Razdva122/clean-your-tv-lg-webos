@@ -8,6 +8,15 @@ from cytv import cli, diagnostics, state
 
 
 class DiagnosticTests(unittest.TestCase):
+    def test_python_cache_reason_is_revalidated_before_export(self):
+        from cytv.errors import PythonCacheError
+        with tempfile.TemporaryDirectory() as tmp:
+            error = PythonCacheError('network')
+            error.reason = 'PRIVATE-URL-AND-PATH'
+            path = diagnostics.create_report(state.Store(tmp), 'install', None, 'preflight', error)
+            self.assertEqual(json.loads(path.read_text())['python_cache'], {'reason': 'unknown'})
+            self.assertNotIn('PRIVATE', path.read_text())
+
     def test_restore_rejections_identify_only_allowlisted_operations(self):
         from cytv.transport import terminal_reply
         from cytv.errors import TVRejected

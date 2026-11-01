@@ -5,6 +5,17 @@ class UserError(RuntimeError):
     """An installer-owned message which contains no remote data or credentials."""
 
 
+class PythonCacheError(UserError):
+    """Allowlisted host acquisition failure; never carry remote exception text."""
+    DOWNLOAD_ERROR = 'The private Python download could not be verified. Check the connection or prepare the Python cache again.'
+    CACHE_ERROR = 'The private Python cache is unsafe or damaged. Remove its pinned archive and prepare the cache again.'
+
+    def __init__(self, reason='unknown'):
+        self.reason = reason if reason in ('network', 'tls', 'http', 'response-policy',
+            'size', 'sha256', 'deadline', 'cache-access', 'cache-replace', 'cache-invalid') else 'unknown'
+        super().__init__(self.CACHE_ERROR if self.reason == 'cache-invalid' else self.DOWNLOAD_ERROR)
+
+
 class PythonPreflightError(UserError):
     """Fixed reason plus bounded counters; never retain remote error text."""
     def __init__(self, reason='unknown', available_kib=None, required_kib=None, wam_session_kib=None):
