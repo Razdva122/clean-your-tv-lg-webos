@@ -41,14 +41,15 @@ const server = createServer((req, res) => {
 });
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
 const host = "http://127.0.0.1:" + server.address().port;
-const browser = await chromium.launch({
-  headless: true,
-  channel: process.env.BROWSER_CHANNEL || "chrome",
-});
+let browser;
 const errors = [];
 const shots = process.env.WEBSITE_SCREENSHOTS;
 if (shots) mkdirSync(shots, { recursive: true });
 try {
+  browser = await chromium.launch({
+    headless: true,
+    channel: process.env.BROWSER_CHANNEL || "chrome",
+  });
   // Crawlable content and navigation must work with JavaScript disabled.
   const staticPage = await browser.newPage({
     javaScriptEnabled: false,
@@ -156,6 +157,6 @@ try {
     "PASS 60 pages without JavaScript; keyboard language switching; mobile layouts; legacy fragment routing; offline Root/No-root theme demo",
   );
 } finally {
-  await browser.close();
+  await browser?.close();
   await new Promise((r) => server.close(r));
 }
