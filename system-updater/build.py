@@ -72,29 +72,31 @@ def build(output, legacy_node_prototype=False):
     (output/'bundle.json').write_text(json.dumps({'schema':1,'supervisor':1,'health_lock_wait_seconds':10,'files':{n:digest(b) for n,b in sorted(code.items())}},indent=2)+'\n')
     return output/'system-updater.ipk'
 
-def component(name,raw,local=True,release=None):
+def component(name,raw,local=True,release=None,graphics="1920x1080"):
     result={'name':name,'kind':'ipk','application':APPS[name],'sha256':digest(raw),'size':len(raw)}
     info=json.loads(package.data_files(raw)['usr/palm/applications/'+APPS[name]+'/appinfo.json'])
     if info['id']!=APPS[name]:raise ValueError('Package identity mismatch')
     result['version']=info['version']
+    if name in ('home','root') and info.get('resolution', '1920x1080')!=graphics:raise ValueError('Package graphics resolution mismatch')
     if local:result['local']=True
     else:
         arch='arm' if name=='helper' else 'all'
-        result['url']='https://github.com/Razdva122/clean-your-tv-lg-webos/releases/download/'+release+'/'+APPS[name]+'_'+info['version']+'_'+arch+'.ipk'
+        result['url']='https://github.com/Razdva122/clean-your-tv-lg-webos/releases/download/'+release+'/'+APPS[name]+'_'+info['version']+('_720p' if graphics=='1280x720' and name in ('home','root') else '')+'_'+arch+'.ipk'
     return result
 
-def infrastructure(payload):
+def infrastructure(payload,graphics="1920x1080"):
+    root_folder="root-720p" if graphics=="1280x720" else "root"
     files={}
-    for folder,prefix in (('root',''),('root-updater','updater/')):
+    for folder,prefix in ((root_folder,''),('root-updater','updater/')):
         root=Path(payload)/folder
         manifest=json.loads(source(root/'bundle.json'))
         for name,expected in manifest['files'].items():
             package.safe_name(name)
-            if (folder=='root' and not name.startswith('runtime/')) or (folder=='root-updater' and name in ('root-updater.ipk','setup-updater.py')):continue
+            if (folder==root_folder and not name.startswith('runtime/')) or (folder=='root-updater' and name in ('root-updater.ipk','setup-updater.py')):continue
             raw=source(root/name)
             if digest(raw)!=expected:raise ValueError('Infrastructure bundle hash mismatch')
             files[prefix+name]=raw
-    root=Path(payload)/'root';manifest=json.loads(source(root/'bundle.json'))
+    root=Path(payload)/root_folder;manifest=json.loads(source(root/'bundle.json'))
     for name in ('python_binding.py','python_boot.js','package_data.py','package_identity.py','updater/store.py','updater/package.py','startup_guard.py'):
         binding=source(root/name)
         if digest(binding)!=manifest['files'].get(name):raise ValueError('Root Python binding helper hash mismatch')
@@ -106,30 +108,32 @@ def infrastructure(payload):
         files['service/'+name]=package_files['usr/palm/services/com.cleanyourtv.root.preview.service/'+name]
     return package.tgz(files,directories=False),{n:digest(b) for n,b in sorted(files.items())}
 
-def release_set(payload,edition,release,local=True,notes='Computer-provisioned baseline.'):
+def release_set(payload,edition,release,local=True,notes='Computer-provisioned baseline.',graphics='1920x1080'):
+    if graphics not in ('1920x1080','1280x720'):raise ValueError('Invalid graphics resolution')
+    root_folder='root-720p' if graphics=='1280x720' else 'root'
     if edition not in ('root','no-root'):raise ValueError('Invalid edition')
     payload=Path(payload);raws={}
     if edition=='no-root':
-        for name,filename in (('home','launcher.ipk'),('helper','helper.ipk'),('updater','updater.ipk')):
+        for name,filename in (('home','launcher-720p.ipk' if graphics=='1280x720' else 'launcher.ipk'),('helper','helper.ipk'),('updater','updater.ipk')):
             raws[name]=source(payload/filename)
     if edition=='root':
-        root=json.loads(source(payload/'root/bundle.json'))
-        raws['root']=source(payload/'root'/root['package'])
+        root=json.loads(source(payload/root_folder/'bundle.json'))
+        raws['root']=source(payload/root_folder/root['package'])
         raws['root-updater']=source(payload/'root-updater/root-updater.ipk')
-    components=[component(n,b,local,release) for n,b in raws.items()]
+    components=[component(n,b,local,release,graphics) for n,b in raws.items()]
     if edition=='root':
-        raw,files=infrastructure(payload);raws['root-infrastructure']=raw
+        raw,files=infrastructure(payload,graphics);raws['root-infrastructure']=raw
         item={'name':'root-infrastructure','kind':'infrastructure','version':components[-2]['version'],'sha256':digest(raw),'size':len(raw)}
         if local:item.update(local=True,files=files,absent=[])
-        else:item['url']='https://github.com/Razdva122/clean-your-tv-lg-webos/releases/download/'+release+'/root-infrastructure_'+item['version']+'.tar.gz'
+        else:item['url']='https://github.com/Razdva122/clean-your-tv-lg-webos/releases/download/'+release+'/root-infrastructure_'+item['version']+('_720p' if graphics=='1280x720' and raw!=infrastructure(payload)[0] else '')+'.tar.gz'
         components.append(item)
     manifest={'schema':1,'edition':edition,'release':release,'supervisor':1,'notes':notes,'components':components}
     if edition=='root' and not local:manifest['minimumSupervisorVersion']='1.1.1'
     return manifest,raws
 
-def prepare_baseline(payload,edition,output,release=None):
+def prepare_baseline(payload,edition,output,release=None,graphics="1920x1080"):
     release=release or 'v'+json.loads((ROOT/'release-versions.json').read_text())['release']
-    manifest,raws=release_set(payload,edition,release)
+    manifest,raws=release_set(payload,edition,release,graphics=graphics)
     output=Path(output);output.mkdir(parents=True,exist_ok=False);(output/'cache').mkdir()
     for item in manifest['components']:(output/'cache'/item['sha256']).write_bytes(raws[item['name']])
     (output/'baseline.json').write_text(json.dumps(manifest,indent=2)+'\n')
@@ -138,9 +142,11 @@ def prepare_baseline(payload,edition,output,release=None):
 def prepare_release(payload,output,release,notes):
     output=Path(output);output.mkdir(parents=True,exist_ok=True)
     manifests={}
-    for edition in ('root','no-root'):
-        manifest,raws=release_set(payload,edition,release,local=False,notes=notes)
-        manifests[edition]=manifest
+    variants=('1920x1080','1280x720') if (Path(payload)/'launcher-720p.ipk').exists() else ('1920x1080',)
+    for key in (edition+('-720p' if graphics=='1280x720' else '') for graphics in variants for edition in ('root','no-root')):
+        edition=key.removesuffix('-720p');graphics='1280x720' if key.endswith('-720p') else '1920x1080'
+        manifest,raws=release_set(payload,edition,release,local=False,notes=notes,graphics=graphics)
+        manifests[key]=manifest
         for item in manifest['components']:
             filename=item['url'].rsplit('/',1)[1];raw=raws[item['name']];target=output/filename
             if target.exists() and target.read_bytes()!=raw:raise ValueError('Release asset collision')

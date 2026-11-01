@@ -73,6 +73,10 @@ def pack_app(appfiles, servicefiles, architecture='all', helper=False):
     return package.ipk(app, version, files, executables, helper_state=helper, architecture=architecture)
 
 
+GRAPHICS = {'1920x1080': {'launcher': 'launcher.ipk', 'root': 'root'},
+            '1280x720': {'launcher': 'launcher-720p.ipk', 'root': 'root-720p'}}
+
+
 def verify_release_versions(payload, versions):
     from cytv import __version__
     if __version__ != versions['cytv']:
@@ -81,6 +85,14 @@ def verify_release_versions(payload, versions):
         files=package.data_files((payload/'updater.ipk').read_bytes())
         for name in ('usr/palm/applications/com.cleanyourtv.updater/appinfo.json','usr/palm/services/com.cleanyourtv.updater.service/package.json'):
             if json.loads(files[name])['version']!=versions['updater']:raise ValueError('No-root Updater version mismatch')
+    for graphics, paths in GRAPHICS.items():
+        for kind, app in (('launcher', 'com.gathin.tvhome'), ('root', package.ROOT_APP)):
+            folder=payload/paths[kind]
+            raw=(folder/json.loads((folder/'bundle.json').read_text())['package']).read_bytes() if kind=='root' else folder.read_bytes()
+            files=package.data_files(raw);info=json.loads(files['usr/palm/applications/'+app+'/appinfo.json'])
+            service=app+'.service' if kind=='root' else 'com.gathin.tvhome.renewal'
+            if json.loads(files['usr/palm/services/'+service+'/package.json']).get('version')!=versions['root' if kind=='root' else 'home']:raise ValueError('Embedded application/service version mismatch')
+            if info.get('id')!=app or info.get('version')!=versions['root' if kind=='root' else 'home'] or info.get('resolution')!=graphics:raise ValueError('Embedded graphics resolution/version mismatch')
     root = payload / 'root'
     bundle = json.loads((root / 'bundle.json').read_text())
     if json.loads((root / 'release.json').read_text())['version'] != versions['root']:
@@ -172,7 +184,10 @@ def build_payload():
     launcher['config.js'] = b'window.CONFIG = {columns:5,dockApps:[],hiddenApps:["com.gathin.tvhome","com.local.nativehome"]};\n'
     launcher['apps.js'] = b'window.TV_APPS = {apps:[],inputs:[]};\n'
     renewal = {n: b for n, b in tracked_files('renewal-service').items() if not n.startswith('state/')}
-    (payload / 'launcher.ipk').write_bytes(pack_app(launcher, renewal))
+    for graphics, paths in GRAPHICS.items():
+        app=dict(launcher);info=json.loads(app['appinfo.json']);info['resolution']=graphics
+        app['appinfo.json']=(json.dumps(info,indent=2)+'\n').encode()
+        (payload / paths['launcher']).write_bytes(pack_app(app, renewal))
     (payload / 'fonts').mkdir()
     for name, data in launcher.items():
         if name.startswith('fonts/Noto'):
@@ -181,7 +196,8 @@ def build_payload():
     (payload / 'installer.png').write_bytes((ROOT / 'assets/icons/installer.png').read_bytes())
     stage_brand_assets(payload)
     stage_guide_assets(payload)
-    subprocess.run([sys.executable, 'root-edition/build.py', '--output', str(payload / 'root'), '--version', versions['root']], cwd=ROOT, check=True)
+    for graphics, paths in GRAPHICS.items():
+        subprocess.run([sys.executable, 'root-edition/build.py', '--output', str(payload / paths['root']), '--version', versions['root'], '--resolution', graphics], cwd=ROOT, check=True)
     subprocess.run([sys.executable, 'root-edition/build_updater.py', '--output', str(payload / 'root-updater')], cwd=ROOT, check=True)
     stage_updater(payload)
     subprocess.run([sys.executable,'system-updater/build.py','--output',str(payload/'system-updater')],cwd=ROOT,check=True)
@@ -204,7 +220,7 @@ def build_payload():
                     target = payload / 'licenses' / name / path.name
                     target.parent.mkdir(parents=True, exist_ok=True)
                     target.write_bytes(path.read_bytes())
-    manifest = {'schema': 1, 'launcher': 'launcher.ipk', 'helper': 'helper.ipk',
+    manifest = {'schema': 1, 'launcher': 'launcher.ipk', 'helper': 'helper.ipk', 'graphics': GRAPHICS,
                 'home_version': json.loads(launcher['appinfo.json'])['version'],
                 'helper_version': versions['helper'],
                 'files': {p.relative_to(payload).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()

@@ -166,3 +166,9 @@ En la vista previa del navegador, Recibir del ordenador explica los pasos del te
 Ambas ediciones muestran categorías a la izquierda y ajustes a la derecha: pantalla de inicio, Apariencia, Temas, Idioma, Actualizaciones de software y Avanzado. No-root añade Developer Mode; Root incluye el firmware LG en actualizaciones y sonido HDMI en Avanzado. Arriba/abajo recorre una columna; derecha entra en los ajustes e izquierda vuelve a las categorías. Atrás vuelve primero a las categorías y después cierra los ajustes. Tab también permite volver a Home.
 
 Un punto amarillo en Actualizaciones de software y en el botón interior indica que hay una actualización. Ambos desaparecen cuando una comprobación correcta confirma que no hay actualizaciones; si falla, se conserva el último estado confirmado.
+
+## Resolución gráfica automática (candidato)
+
+Los próximos instaladores para ordenador/Android y clientes OTA migrados eligen 720p o 1080p según la capacidad del TV. Si no puede verificarse, la operación se detiene. Los actualizadores antiguos instalados por separado requieren la migración documentada desde el ordenador; la recuperación conserva sus paquetes originales.
+
+[HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).

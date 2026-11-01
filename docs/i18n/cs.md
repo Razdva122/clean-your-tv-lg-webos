@@ -53,3 +53,9 @@ Kompatibilita závisí na konkrétním modelu, firmwaru a ovladači.
 [Kompatibilita (anglicky)](../COMPATIBILITY.md) ·
 [Zpětná vazba (anglicky)](../FEEDBACK.md) ·
 [Technické podklady (anglicky)](../development/README.md)
+
+## Automatické rozlišení grafiky (kandidát)
+
+Připravované instalátory pro počítač/Android a migrovaní klienti OTA volí 720p nebo 1080p podle schopností TV. Pokud je nelze ověřit, operace se zastaví. Starší samostatně instalované aktualizátory vyžadují popsanou migraci z počítače; obnova zachová původní balíčky.
+
+[HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).

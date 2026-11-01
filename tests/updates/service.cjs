@@ -1,12 +1,13 @@
 const assert=require('assert'),vm=require('vm'),fs=require('fs'),crypto=require('crypto'),path=require('path');
 const keys=crypto.generateKeyPairSync('rsa',{modulusLength:2048});
-function signed(home,release){const m={schema:1,home,release,helper:'0.6.13',url:`https://github.com/Razdva122/clean-your-tv-lg-webos/releases/download/${release}/com.gathin.tvhome_${home}_all.ipk`,sha256:'a'.repeat(64),notes:'Test'};const b=Buffer.from(JSON.stringify(m));return {payload:b.toString('base64'),signature:crypto.sign('RSA-SHA256',b,keys.privateKey).toString('base64')};}
+function signed(home,release,hd=false){const m={schema:1,home,release,helper:'0.6.13',url:`https://github.com/Razdva122/clean-your-tv-lg-webos/releases/download/${release}/com.gathin.tvhome_${home}${hd?'_720p':''}_all.ipk`,sha256:'a'.repeat(64),notes:'Test'};const b=Buffer.from(JSON.stringify(m));return {payload:b.toString('base64'),signature:crypto.sign('RSA-SHA256',b,keys.privateKey).toString('base64')};}
 const envelope=signed('1.2.1','v0.8.1');envelope.previous=signed('1.2.0','v0.8.0');
 const profile={schema:1,inventory:{apps:[],inputs:[]},config:{columns:5,dockApps:[],hiddenApps:[]},settings:{}};
-let methods={},disk={},calls=[],corrupt=false,homeVersion="1.2.0",feed=envelope,streamError=false;
+let uhd=true,channels=[],methods={},disk={},calls=[],corrupt=false,homeVersion="1.2.0",feed=envelope,streamError=false;
 const store={read:n=>{if(corrupt&&n==='profile')throw Error('corrupt');return disk[n]||null;},write:(n,v)=>{disk[n]=JSON.parse(JSON.stringify(v));}};
 function Service(){this.subscribe=(uri,p)=>{calls.push({uri,p});return {on:(event,cb)=>{assert.equal(event,'response');setImmediate(()=>{cb({payload:{statusText:'Downloading…'}});cb({payload:streamError?{returnValue:false,errorText:'service disconnected'}:{returnValue:true,finished:true}});});},cancel:()=>{}};};this.register=(n,fn)=>{methods[n]=fn;};this.call=(uri,p,cb)=>{calls.push({uri,p});setImmediate(()=>{
- if(uri.endsWith('/checkRoot'))cb({payload:{returnValue:true}});
+ if(uri.endsWith('/getSystemInfo'))cb({payload:{returnValue:true,UHD:uhd}});
+ else if(uri.endsWith('/checkRoot'))cb({payload:{returnValue:true}});
  else if(uri.endsWith('/getAppInfo'))cb({payload:{returnValue:true,appInfo:{id:p.id,version:p.id==='com.gathin.tvhome'?homeVersion:'0.6.13'}}});
  else if(uri.endsWith('/pauseForUpdate'))cb({payload:{returnValue:true,state:{enabled:false,updatePause:{id:p.id,wasEnabled:false,confirmed:true}}}});
  else if(uri.endsWith('/importUpdatePause'))cb({payload:{returnValue:true,state:{enabled:false,updatePause:p.receipt}}});
@@ -16,12 +17,17 @@ function Service(){this.subscribe=(uri,p)=>{calls.push({uri,p});return {on:(even
  else throw Error(uri);
  });return {cancel:()=>{}};};}
 const dir=path.resolve('updater-service');
-const context={require:n=>n==='webos-service'?Service:n==='fs'?{readFileSync:()=>keys.publicKey.export({type:'spki',format:'pem'})}:n==='./storage'?()=>store:n==='./transport'?{get:async()=>JSON.stringify(feed)}:require(path.join(dir,n)),__dirname:dir,Promise,setTimeout,clearTimeout};
+const context={require:n=>n==='webos-service'?Service:n==='fs'?{readFileSync:()=>keys.publicKey.export({type:'spki',format:'pem'})}:n==='./storage'?()=>store:n==='./transport'?{get:async url=>{channels.push(url);return JSON.stringify(feed);}}:require(path.join(dir,n)),__dirname:dir,Promise,setTimeout,clearTimeout};
 vm.runInNewContext(fs.readFileSync(dir+'/service.js','utf8'),context);
 function request(name,p={},id='com.gathin.tvhome'){return new Promise(resolve=>methods[name]({payload:p,ls2Message:{applicationID:()=>id},respond:resolve}));}
 (async()=>{
  assert.equal((await request('check',{},'other.app')).returnValue,false);assert.equal(calls.length,0);
  const offered=await request('check');assert.equal(offered.result.canInstall,true);
+ assert(channels.at(-1).endsWith('/update.json'));
+ for(const invalid of [null,0,1,'TRUE',{},[]]){uhd=invalid;const before=channels.length;assert.equal((await request('check')).returnValue,false);assert.equal(channels.length,before);assert.deepEqual(disk,{});}
+ uhd=false;assert.equal((await request('check')).returnValue,false,'valid FHD signature cannot substitute an HD offer');assert(channels.at(-1).endsWith('/update-720p.json'));
+ feed=signed('1.2.1','v0.8.1',true);feed.previous=signed('1.2.0','v0.8.0',true);assert.equal((await request('check')).result.canInstall,true);
+ uhd=true;feed=envelope;
  feed={...envelope,signature:'invalid'};assert.equal((await request('install',{version:'1.2.1',profile})).returnValue,false);assert.deepEqual(disk,{},'bad signature must not write state');
  feed={...signed('1.2.2','v0.8.2'),previous:envelope.previous};assert.equal((await request('install',{version:'1.2.1',profile})).returnValue,false);assert.deepEqual(disk,{},'changed release needs a new confirmation');
  feed=envelope;

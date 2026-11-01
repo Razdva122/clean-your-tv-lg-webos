@@ -7,12 +7,14 @@ var APP='com.cleanyourtv.root.preview',MAX=32*1024*1024;
 function version(v){if(typeof v!=='string'||!/^\d{1,4}\.\d{1,4}\.\d{1,4}$/.test(v))throw Error('invalid-version');return v.split('.').map(Number);}
 function compare(a,b){a=version(a);b=version(b);for(var i=0;i<3;i++)if(a[i]!==b[i])return a[i]>b[i]?1:-1;return 0;}
 function allowed(raw){try{var u=new URL(raw);return u.protocol==='https:'&&!u.username&&!u.password&&!u.port&&((u.hostname==='github.com'&&u.pathname.indexOf('/Razdva122/clean-your-tv-lg-webos/releases/')===0)||u.hostname==='release-assets.githubusercontent.com'||u.hostname==='objects.githubusercontent.com');}catch(_){return false;}}
+function feedName(resolution){if(['1280x720','1920x1080'].indexOf(resolution)<0)throw Error('invalid-graphics-selection');return 'root-update'+(resolution==='1280x720'?'-720p':'')+'.json';}
+function graphics(m,resolution){feedName(resolution);if(m.url!==REPO+'download/'+m.release+'/'+APP+'_'+m.version+(resolution==='1280x720'?'_720p':'')+'_all.ipk')throw Error('signed-graphics-mismatch');return m;}
 function validate(m){
  if(!m||typeof m!=='object')throw Error('invalid-manifest');version(m.version);
  var fields=['schema','edition','application','release','version','runtime','updater','profile','url','sha256','size','notes'];
  if(Object.keys(m).some(function(k){return fields.indexOf(k)<0;})||m.schema!==1||m.edition!=='root'||m.application!==APP||m.runtime!==1||m.updater!==1||m.profile!==1||
  typeof m.release!=='string'||!/^v\d{1,4}\.\d{1,4}\.\d{1,4}$/.test(m.release)||
- m.url!==REPO+'download/'+m.release+'/'+APP+'_'+m.version+'_all.ipk'||!/^([a-f0-9]{64})$/.test(m.sha256)||
+ [REPO+'download/'+m.release+'/'+APP+'_'+m.version+'_all.ipk',REPO+'download/'+m.release+'/'+APP+'_'+m.version+'_720p_all.ipk'].indexOf(m.url)<0||!/^([a-f0-9]{64})$/.test(m.sha256)||
  !Number.isInteger(m.size)||m.size<1||m.size>MAX||typeof m.notes!=='string'||m.notes.length>4000)throw Error('incompatible-root-release');
  return m;
 }
@@ -36,15 +38,15 @@ function get(url,limit,redirects){return new Promise(function(resolve,reject){
  });
  timer=setTimeout(function(){finish(Error('download-timeout'));},60000);req.on('error',finish);
 });}
-module.exports={verify:verify,validate:validate,compare:compare,allowed:allowed,get:get};
+module.exports={feedName:feedName,graphics:graphics,verify:verify,validate:validate,compare:compare,allowed:allowed,get:get};
 if(require.main===module){
  var input='',method=process.argv[2];
  process.stdin.setEncoding('utf8');process.stdin.on('data',function(s){input+=s;if(Buffer.byteLength(input)>65536)process.exit(2);});
  process.stdin.on('end',async function(){try{
   var key=fs.readFileSync(__dirname+'/release-public.pem'),p=JSON.parse(input||'{}'),result;
   if(method==='offer'){
-   var raw=JSON.parse((await get(REPO+'latest/download/root-update.json',65536)).toString('utf8'));
-   result={candidate:Object.assign({},verify(raw,key),{proof:{payload:raw.payload,signature:raw.signature}})};
+   var raw=JSON.parse((await get(REPO+'latest/download/'+feedName(p.resolution),65536)).toString('utf8'));
+   result={candidate:Object.assign({},graphics(verify(raw,key),p.resolution),{proof:{payload:raw.payload,signature:raw.signature}})};
   }else if(method==='verify')result=verify(p.proof,key);
   else if(method==='package'){
    var m=verify(p.proof,key),bytes=await get(m.url,m.size);

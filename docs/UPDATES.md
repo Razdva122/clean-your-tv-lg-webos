@@ -155,3 +155,7 @@ Each supported transition still needs matching artifact/device acceptance.
 Published 1.4.1 used System Updater 1.1.1; its historical acceptance does not certify
 later artifacts. The fixed readiness service retains its bounded ownership-lock
 wait without extending the launcher's health deadline.
+
+## Automatic graphics selection (candidate)
+
+Upcoming installer builds contain both HD/FHD packages. New or explicitly migrated updater clients choose the signed 720p channel for a verified non-UHD TV and the existing 1080p channel for a verified UHD TV. Unknown capability stops before installation. Existing independently provisioned updater code needs the supported computer migration above; ordinary component OTA does not replace it. Retained rollback packages and version/signature rules remain unchanged. The first legacy Home HD channel waits for an actual compatible published HD rollback baseline. [Selection, signed feeds and migration limits](development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).

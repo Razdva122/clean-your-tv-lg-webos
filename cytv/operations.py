@@ -9,7 +9,7 @@ import tempfile
 import time
 import uuid
 
-from . import package, i18n, diagnostics
+from . import package, i18n, diagnostics, graphics
 from .errors import UserError, TVRejected, ExistingRoot, TVCommandError, root_recovery_details
 
 HOME = 'com.gathin.tvhome'
@@ -486,6 +486,48 @@ printf '%s' "$cytv_state"
         return {'CYTV_HELPER_IDLE': 'stopped', 'CYTV_HELPER_STALE': 'stale',
                 'CYTV_HELPER_ACTIVE': 'running'}.get(result, 'uncertain')
 
+    def select_graphics(self):
+        """Resolve only new installs; retained recovery keeps its original bytes."""
+        if hasattr(self, '_graphics_paths'):
+            return
+        try:
+            selected = graphics.resolution(self.remote.luna(graphics.URI, {'keys': ['UHD']}))
+        except (OSError, RuntimeError, ValueError, TypeError):
+            raise UserError('TV graphics capability could not be verified. Installation has not started.') from None
+        variants = {'1920x1080': {'launcher': 'launcher.ipk', 'root': 'root'},
+                    '1280x720': {'launcher': 'launcher-720p.ipk', 'root': 'root-720p'}}
+        try:
+            if self.manifest.get('graphics') != variants:
+                raise ValueError('Missing graphics variants')
+            paths = variants[selected]
+            def verified(name):
+                path = self.payload / package.safe_name(name)
+                if path.is_symlink() or any((self.payload / parent).is_symlink() for parent in PurePosixPath(name).parents):
+                    raise ValueError('Indirect graphics payload')
+                raw = path.read_bytes()
+                if hashlib.sha256(raw).hexdigest() != self.manifest['files'][name]:
+                    raise ValueError('Graphics payload mismatch')
+                return raw
+            if self.profile['edition'] == 'root':
+                directory = paths['root']
+                bundle = json.loads(verified(directory + '/bundle.json'))
+                for name, digest in bundle['files'].items():
+                    if hashlib.sha256(verified(directory + '/' + package.safe_name(name))).hexdigest() != digest:
+                        raise ValueError('Graphics bundle mismatch')
+                raw = verified(directory + '/' + package.safe_name(bundle['package']))
+                release = json.loads(verified(directory + '/release.json'))
+                app, version = package.ROOT_APP, release['version']
+            else:
+                raw = verified(paths['launcher'])
+                app, version = HOME, self.manifest['home_version']
+            info = json.loads(package.data_files(raw)['usr/palm/applications/' + app + '/appinfo.json'])
+            if info.get('id') != app or info.get('version') != version or info.get('resolution') != selected:
+                raise ValueError('Graphics application mismatch')
+        except (OSError, ValueError, KeyError, TypeError):
+            raise UserError('Embedded graphics packages are missing or invalid. Use a complete installer build. Installation has not started.') from None
+        self._graphics_paths = paths
+        self.tv_info['graphics_resolution'] = selected
+
     def install(self, inventory, ssap_key=None, migrate=False, reinstall=None):
         # All local validation precedes the durable mutation receipt.
         if self.store.pending(self.profile):
@@ -496,12 +538,13 @@ printf '%s' "$cytv_state"
             package.inventory_script(inventory)
         if reinstall not in (None, 'installed', 'removed') or (reinstall and self.profile['edition'] != 'root'):
             raise UserError('Invalid reinstallation request.')
+        self.select_graphics()
         self.preflight(install=not reinstall)
         if self.profile['edition'] == 'root':
             return self.install_root(inventory, migrate, reinstall)
         if not ssap_key:
             raise ValueError('Remote-control pairing is required for No-root.')
-        launcher, _ = package.personalize((self.payload / self.manifest['launcher']).read_bytes(), HOME, inventory)
+        launcher, _ = package.personalize((self.payload / self._graphics_paths['launcher']).read_bytes(), HOME, inventory)
         helper = (self.payload / self.manifest['helper']).read_bytes()
         expected = {}
         for data in (helper, launcher):
@@ -567,7 +610,7 @@ printf '%s' "$cytv_state"
                 raise UserError('Root Updater already exists or setup state remains. Use Software updates on the TV; if unavailable, inspect recovery before reinstalling.')
         with tempfile.TemporaryDirectory(prefix='cytv-root-') as tmp:
             bundle = Path(tmp).resolve() / 'root'
-            shutil.copytree(self.payload / 'root', bundle)
+            shutil.copytree(self.payload / self._graphics_paths['root'], bundle)
             if not migrate:
                 package.personalize_root(bundle, inventory)
             manifest = json.loads((bundle / 'bundle.json').read_text())
