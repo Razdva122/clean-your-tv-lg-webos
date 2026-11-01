@@ -3,7 +3,7 @@
   'use strict';
   function t(source, params) { if (window.HomeI18n) return window.HomeI18n.t(source, params); return String(source).replace(/\{(\w+)\}/g, function (_, key) { return params && params[key] !== undefined ? params[key] : '{' + key + '}'; }); }
   var panel, message, buttons, selected = 0, busy = false, previous, rootStatus = null;
-  var checkingUpdates = false, categories;
+  var checkingUpdates = false, categories, statusGeneration = 0;
   function checkUpdates() {
     if (checkingUpdates || !window.RootUpdates || !window.RootUpdates.rpc) return;
     checkingUpdates = true;
@@ -55,18 +55,41 @@
       return reply.result.result;
     });
   }
-  function refreshMode() {
+  function invalidateMode() {
+    statusGeneration++;
     rootStatus = null; buttons[3].disabled = true;
+    buttons[12].hidden = true; buttons[12].disabled = true;
+  }
+  function refreshMode() {
+    invalidateMode();
+    var generation = statusGeneration;
+
     message.textContent = t('Checking Home control…');
     return control('status').then(function (status) {
+      if (generation !== statusGeneration || panel.hidden || document.hidden) return;
+      if (!status || typeof status !== 'object' || !('intent' in status) ||
+          status.intent !== null && (!status.intent || typeof status.intent.phase !== 'string')) throw new Error('Invalid service response');
       rootStatus = status;
       var phase = status.intent && status.intent.phase, active = phase === 'active';
       buttons[3].setAttribute('aria-checked', String(active));
       buttons[3].disabled = !!phase && phase !== 'active' && phase !== 'disabled';
       message.textContent = t(active ? 'Home and return from apps open Clean Your TV.' : buttons[3].disabled ? 'Changing Home control…' : 'Home and return from apps open LG Home.');
       if (!panel.hidden && buttons[selected].disabled && (!categories || document.activeElement === buttons[selected])) move(1);
-    }).catch(function (e) { message.textContent = t(e.message); });
+    }).catch(function (e) {
+      if (generation !== statusGeneration || panel.hidden || document.hidden) return;
+      rootStatus = null; buttons[3].disabled = true;
+      message.textContent = t(e.message);
+      buttons[12].hidden = false; buttons[12].disabled = false;
+      if (!categories || document.activeElement === buttons[selected]) focus(12);
+    });
   }
+  function resumeMode() {
+    if (!panel) return;
+    invalidateMode();
+    if (!panel.hidden && !document.hidden && !busy) refreshMode();
+  }
+  document.addEventListener('visibilitychange', resumeMode);
+  document.addEventListener('webOSRelaunch', resumeMode);
   function changeMode() {
     if (!rootStatus || buttons[3].disabled || busy) return;
     var active = rootStatus.intent && rootStatus.intent.phase === 'active';
@@ -81,7 +104,7 @@
       refreshMode().then(function () { message.textContent = t(error); });
     });
   }
-  var order = [3, 1, 9, 8, 10, 11, 5, 4, 0, 7, 6, 2];
+  var order = [3, 1, 12, 9, 8, 10, 11, 5, 4, 0, 7, 6, 2];
   function focus(index) {
     selected = index;
     if (!buttons[selected].disabled && !buttons[selected].hidden) buttons[selected].focus();
@@ -96,6 +119,7 @@
   function close() {
     if (busy) return;
     if(window.HomeThemePanel)HomeThemePanel.unmount();
+    invalidateMode();
     panel.hidden = true;
     if (window.ThemeRuntime) window.ThemeRuntime.resume('settings');
     if (previous && previous.focus) previous.focus();
@@ -103,6 +127,7 @@
   function activate(index) {
     if (busy || buttons[index].disabled) return;
     if (index === 2) return close();
+    if (index === 12) { refreshMode(); focus(1); return; }
     if (index === 5) { if (window.HomeI18n) window.HomeI18n.openLanguagePicker(); return; }
     if (index === 9) { if (window.HomeThemePanel) window.HomeThemePanel.open(); return; }
     if (index === 8) { if (window.HomeLayoutPanel) window.HomeLayoutPanel.open(); return; }
@@ -112,13 +137,13 @@
     if (index === 7) {
       if (!window.RootAudio) return;
       panel.hidden = true;
-      window.RootAudio.open(request, function () { panel.hidden = false; focus(7); });
+      window.RootAudio.open(request, function () { panel.hidden = false; refreshMode(); focus(7); });
       return;
     }
     if (index === 6) {
       if (!window.RootFirmware) return;
       panel.hidden = true;
-      window.RootFirmware.open(request, function () { panel.hidden = false; focus(6); });
+      window.RootFirmware.open(request, function () { panel.hidden = false; refreshMode(); focus(6); });
       return;
     }
     if (index === 4) {
@@ -131,7 +156,10 @@
     message.textContent = t('Opening LG Home…');
     launch('com.webos.app.home').then(function () { busy = false; close(); }).catch(function (e) {
       busy = false; message.textContent = t(e.message);
-    }).finally(function () { buttons.forEach(function (b) { b.disabled = false; }); if (!panel.hidden) focus(1); });
+    }).finally(function () {
+      buttons.forEach(function (b) { b.disabled = false; });
+      if (!panel.hidden) { refreshMode(); focus(1); }
+    });
   }
   function build() {
     panel = document.createElement('section'); panel.className = 'root-settings'; panel.hidden = true;
@@ -157,11 +185,12 @@
     var footer = document.createElement('div'); footer.className = 'settings-footer'; card.appendChild(footer);
     var back = document.createElement('div'); back.className = 'renewal-actions'; footer.appendChild(back);
     buttons = [];
-    order.forEach(function (i) {
-      var labels = ['TV settings','Open LG Home','Back to Home','Change Home','Software updates','Language','LG firmware updates','HDMI sound','Columns','Themes','Show Add app tile','Add app'];
+    [3, 1, 9, 8, 10, 11, 5, 4, 0, 7, 6, 2, 12].forEach(function (i) {
+      var labels = ['TV settings','Open LG Home','Back to Home','Change Home','Software updates','Language','LG firmware updates','HDMI sound','Columns','Themes','Show Add app tile','Add app','Check status'];
       var b = document.createElement('button'); b.textContent = t(labels[i]);
+      if (i === 12) { b.hidden = true; b.disabled = true; }
       if (i === 3) { b.className = 'home-routing-switch'; b.setAttribute('role','switch'); b.setAttribute('aria-checked','false'); }
-      var target = i === 10 || i === 11 ? apps : i === 9 ? themes : i === 8 ? layout : i === 6 || i === 7 ? firmware : i === 3 || i === 1 ? homeActions : i === 4 || i === 0 || i === 5 ? links : back;
+      var target = i === 10 || i === 11 ? apps : i === 9 ? themes : i === 8 ? layout : i === 6 || i === 7 ? firmware : i === 3 || i === 12 || i === 1 ? homeActions : i === 4 || i === 0 || i === 5 ? links : back;
       if (i === 10) { b.id = 'homeShowAddApp'; b.className = 'home-routing-switch'; b.setAttribute('role','switch'); b.setAttribute('aria-checked','true'); }
       if (i === 11) b.id = 'homeAddApp';
       if (i === 9) { b.hidden=true; b.disabled=true; }
@@ -210,7 +239,7 @@
       if (window.ThemeRuntime) window.ThemeRuntime.suspend('settings');
       previous = document.activeElement;
       message.textContent = t('Checking whether Home control is on…');
-      panel.hidden = false; focus(3); refreshMode(); if(categories)categories.open();
+      panel.hidden = false; selected = 3; refreshMode().then(function () { if (!categories && !panel.hidden && selected === 3) focus(3); }); if(categories)categories.open();
       checkUpdates();
     }
   };

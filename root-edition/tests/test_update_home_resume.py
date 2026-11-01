@@ -86,6 +86,31 @@ class ResumeTests(unittest.TestCase):
         self.assertEqual((self.root/'update-home-cancel.json').read_bytes(),original)
         self.assertEqual(self.finish(),{'status':'cancelled'});self.assertEqual(self.enables,0)
 
+    def test_delayed_published_cli_boot_cancels_forward_ticket_and_new_runtime_cannot_erase_it(self):
+        # Old callback already loaded before infrastructure replacement. Both
+        # historical boot fallbacks use explicit restore. This reproduces a
+        # causal mechanism, not a claim that this caller ran on the reported TV.
+        from types import SimpleNamespace
+        for pending in (False,True):
+            with self.subTest(product_race=pending):
+                self.tx=('b' if pending else 'a')*32
+                guard.reserve(self.tx,self.root,self.uid);self.intent.update(phase='active',enabled=True)
+                self.suspend()
+                source=Path(__file__).with_name('fixtures')/'legacy-home-cli-v1.5.2.py.txt'
+                namespace=dict(os=os,d=SimpleNamespace(STATE=self.root,EXPECTED_UID=self.uid),inhibit=lambda root:None)
+                exec(compile(source.read_text(),str(source),'exec'),namespace)
+                cli=self.boot_cli()
+                with patch.object(guard,'control',side_effect=guard.ProductPending('replacement in progress')):
+                    if pending:
+                        exists=os.path.lexists
+                        with patch.object(os.path,'lexists',side_effect=lambda path:False if path==self.root/'update-block.json' else exists(path)):
+                            self.assertEqual(namespace['main']('boot'),'restored')
+                    else:self.assertEqual(namespace['main']('boot'),'restored')
+                cancellation=(self.root/'update-home-cancel.json').read_bytes()
+                self.assertEqual(cli.main('boot'),'restored')
+                self.assertEqual((self.root/'update-home-cancel.json').read_bytes(),cancellation)
+                self.assertEqual(self.finish(),{'status':'cancelled'});self.assertEqual(self.enables,0)
+
     def test_disabled_intent_is_not_enabled(self):
         self.intent.update(enabled=False,phase='disabled')
         self.suspend();self.assertEqual(self.finish(),{'status':'skipped'});self.assertEqual(self.enables,0)
@@ -124,6 +149,28 @@ class ResumeTests(unittest.TestCase):
         for fn in (guard.suspend,guard.finish,guard.abort):
             with self.assertRaises(ValueError):fn('b'*32,self.root,self.uid)
         self.assertTrue((self.root/'update-block.json').exists());self.assertEqual(self.enables,0)
+
+    def test_suspend_captures_and_disables_before_rollback_anchor_retargets_authority(self):
+        observed=[]
+        def anchor(*args):
+            t=guard.ticket(self.root,self.uid)
+            self.assertIsNotNone(t,'rollback authority cannot change before intent capture')
+            self.assertTrue(t['desired']);self.assertEqual(t['before']['phase'],'active')
+            self.assertFalse(self.intent['enabled'],'restore routing before retargeting package authority')
+            observed.append(True)
+        with patch.object(guard,'stage_system_rollback_anchor',anchor):self.suspend()
+        self.assertEqual(observed,[True]);self.assertEqual(self.finish(),{'status':'restored'})
+
+    def test_interrupted_anchor_never_replays_active_preference(self):
+        with patch.object(guard,'stage_system_rollback_anchor',side_effect=KeyboardInterrupt()):
+            with self.assertRaises(KeyboardInterrupt):self.suspend()
+        self.assertFalse(self.intent['enabled']);self.assertIsNone(guard.ticket(self.root,self.uid)['suspended'])
+        self.suspend();self.assertEqual(self.finish(),{'status':'skipped'});self.assertEqual(self.enables,0)
+
+    def test_off_during_anchor_remains_authoritative(self):
+        with patch.object(guard,'stage_system_rollback_anchor',side_effect=lambda *args:guard.cancel(self.root,self.uid)):
+            self.suspend()
+        self.assertEqual(self.finish(),{'status':'cancelled'});self.assertEqual(self.enables,0)
 
     def test_suspend_retry_keeps_original_intent(self):
         self.suspend();self.suspend();self.finish();self.assertEqual(self.enables,1)
