@@ -63,6 +63,17 @@
       "summary": "Add allowlisted host Python download/cache failure reasons; #200 original macOS cause and pending Root recovery remain unresolved"
     },
     {
+      "pr": 221,
+      "issues": [
+        101,
+        133,
+        161,
+        200,
+        216
+      ],
+      "summary": "Prepare pinned individual Root recovery handoffs and fixed host command-boundary diagnostics; original #101/#133/#161/#216/#200 recovery remains unresolved"
+    },
+    {
       "pr": 222,
       "issues": [
         202,
