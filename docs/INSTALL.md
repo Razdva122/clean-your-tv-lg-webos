@@ -1,5 +1,7 @@
 # Install Clean Your TV
 
+> Frozen1.6.0 candidate is not published. Public downloads remain v1.5.4. See [selected versions, installer changes and limits](RELEASE-1.6.0.md); final package/device acceptance is still pending.
+
 Use **cytv** to install No-root or Root. It includes the computer runtime and TV
 packages; no source build is needed. After setup, the computer can be switched off.
 Download the [published release](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest).

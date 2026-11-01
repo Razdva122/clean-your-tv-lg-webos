@@ -1,5 +1,7 @@
 # Clean Your TV — guide d’utilisation
 
+> Le candidat 1.6.0 est figé, pas encore publié ; la version stable reste 1.5.4. Il inclut les cinq améliorations de l’installateur. À leur réouverture, les réglages Root lisent l’état réel ; un contrôle échoué n’active pas Home. System Updater 1.2.0 concerne une nouvelle installation admissible ou le remplacement vérifié de 1.1.0/1.1.1. Le 1.1.2 installé conserve ses anciens canaux ; aucune migration générale n’est fournie. Conservez les données de récupération et ne forcez pas le remplacement. [Versions et limites](../RELEASE-1.6.0.md).
+
 > v1.5.0 : thèmes, galerie et transfert du PC au téléviseur. Limites Root connues : Appearance peut se décaler de 110 px ; Home peut ne pas s’ouvrir automatiquement après la veille. La validation par appareil reste limitée. [1.5.0](../RELEASE-1.5.0.md).
 
 > **1.5.4:** les thèmes à disposition fixe conservent l’espace de la ligne Columns masquée pour préserver le défilement d’Appearance lors de l’application. Le pointeur, le clavier et les outils d’accessibilité ignorent Columns.

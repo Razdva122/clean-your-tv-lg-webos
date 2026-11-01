@@ -141,19 +141,21 @@ controls, audio, standby or cold boot; check actual behavior separately. [Connec
 
 ## Replace the Root System Updater (candidate)
 
-**Release 1.5.0.** The replacement bundle contains
-System Updater 1.1.2. The original 1.1.0 can reject a launcher's one-shot readiness
+**Frozen1.6.0 candidate, not published.** The replacement bundle targets
+System Updater 1.2.0; published 1.5.4 used1.1.2. The original 1.1.0 can reject a launcher's one-shot readiness
 response while its worker holds the installation lock; this can cause an unnecessary rollback.
 Signed Root offers retain a minimum supervisor version of 1.1.1 and are rejected
 by the original 1.1.0; the new receiver/runtime path needs separate verification. Historical signed baselines remain valid for rollback.
 
 This command supports replacing 1.1.0 or 1.1.1 after authenticating the retained
 code, owner package, registration and finished recovery state. Other installed
-versions are rejected. Physical acceptance of a particular transition remains
+versions, including1.1.2, are rejected. Existing1.1.2 stays pinned with its old
+channels; no general migration is provided. Do not reinstall or delete state to
+force replacement. Physical acceptance of a particular transition remains
 separate from the command's source and fixture checks.
 
 After any current update or rollback has completed, use the same trusted Root
-connection and a complete 1.5.0 installer:
+connection and the complete matching installer after publication:
 
 ```sh
 cytv replace-system-updater --edition root
@@ -169,7 +171,7 @@ transaction or backup also blocks replacement, even if marked complete; preserve
 it for review rather than deleting it to force replacement. It does not patch
 retained pinned code in place or replay an uncertain remove/install request.
 
-A completed earlier replacement to 1.1.1 can start a new 1.1.2 operation only
+A completed earlier replacement to 1.1.1 can start a new 1.2.0 operation only
 after the installer authenticates its saved bundle, baseline, original archive,
 terminal removal and current owner, and confirms that later recovery has finished.
 The original completed journal is durably archived with its existing evidence;

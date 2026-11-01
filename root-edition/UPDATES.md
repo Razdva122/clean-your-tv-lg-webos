@@ -1,6 +1,6 @@
 # Update Root Edition
 
-> Unpublished 1.5.3 candidate: see the [release scope and pending acceptance](../docs/RELEASE-1.5.3.md). Published stable is 1.5.2; historical acceptance retains its original scope.
+> Frozen1.6.0 candidate, not published: see [versions, migration and pending acceptance](../docs/RELEASE-1.6.0.md). Public stable remains1.5.4; historical acceptance retains its original scope.
 
 **Historical 1.3.0 supervisor → published 1.4.0 boundary:** that immutable
 release has an incompatible destination inventory. An aborted pre-replacement
@@ -8,7 +8,7 @@ attempt installed nothing. Keep the journal and private pins unchanged. The
 [guarded #115 compatibility and replacement preparation](../docs/development/ROOT-OTA-13-COMPATIBILITY.md)
 was delivered in 1.5.0. Use the supported installer/recovery flow after reviewing
 retained state; do not force the old supervisor to accept incompatible paths.
-New 1.5.3 artifacts still require affected signed update/rollback acceptance.
+New1.6.0 artifacts require exact signed update/rollback acceptance. Existing System 1.1.2 stays pinned; no general migration is provided.
 
 Root updates use an independent **System Updater supervisor** for signed complete
 edition sets: Root Home, Root Updater and compatible recovery infrastructure.
@@ -115,8 +115,8 @@ submitted twice automatically. See [CLI recovery](../docs/CLI.md#interrupted-ope
 ## Release preparation and validation
 
 Use the [release flow](../docs/RELEASE-FLOW.md),
-[1.5.3 candidate scope and remaining acceptance](../docs/RELEASE-1.5.3.md) and
-[published 1.5.2 notes](../docs/RELEASE-1.5.2.md). The
+[1.6.0 candidate scope and remaining acceptance](../docs/RELEASE-1.6.0.md) and
+[published 1.5.4 notes](../docs/RELEASE-1.5.4.md). The
 [1.4.0 acceptance record](../docs/RELEASE-1.4.0-ACCEPTANCE.md) remains bound to its
 original artifacts; it does not accept a new candidate.
 QEMU, package installation and host tests cannot establish TV compatibility.

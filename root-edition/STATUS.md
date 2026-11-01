@@ -4,14 +4,15 @@ Start with [installation and controls](README.md), [updates](UPDATES.md), or
 [recovery](RECOVERY.md).
 
 <a id="current-release-140"></a>
-## Published 1.5.2 and candidate 1.5.3
+## Published 1.5.4 and frozen candidate 1.6.0
 
-Published **1.5.2** contains **Root 0.6.1 / Root Updater 0.3.3**. The unpublished
-**1.5.3** candidate selects **Root 0.6.2 / Root Updater 0.3.4**. System Updater
-remains **1.1.2**. Automatic Home presentation after standby remains unresolved
-in [#171](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/171); the
-candidate adds diagnostics only. Its new packages require affected acceptance
-under the [1.5.3 release limits](../docs/RELEASE-1.5.3.md).
+Published **1.5.4** contains **Root 0.6.2 / Root Updater 0.3.4 / System 1.1.2**.
+Frozen **1.6.0**, not published, selects **Root/infrastructure0.7.0 / Root
+Updater 0.4.0 / System 1.2.0**. Existing supervisors stay pinned; installed 1.1.2
+has no general migration to1.2.0 in this candidate. Settings refresh and retained
+rollback have source improvements; forward-update cancellation #202, earlier
+standby failure #171 and individual recoveries remain unresolved. See the
+[release scope and acceptance gates](../docs/RELEASE-1.6.0.md).
 
 The historical **1.4.0 / Root 0.5.0 / Root Updater 0.3.1**
 [acceptance record](../docs/RELEASE-1.4.0-ACCEPTANCE.md) identifies exact
@@ -26,7 +27,7 @@ recovery boundaries](../docs/development/ROOT-OTA-13-COMPATIBILITY.md).
 
 Other models/firmwares, original C2/C5/NANO reports, audible eARC recovery and
 physical Android phone-to-TV recovery remain unverified. Homebrew Installer is
-unreleased. [Candidate release notes](../docs/RELEASE-1.5.3.md) describe the scope;
+unreleased. [Candidate release notes](../docs/RELEASE-1.6.0.md) describe the scope;
 [Homebrew acceptance](../docs/development/HOMEBREW-INSTALL-ACCEPTANCE.md) is separate.
 
 ## Historical evidence

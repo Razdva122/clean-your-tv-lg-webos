@@ -1,5 +1,7 @@
 # Documentation
 
+Frozen [1.6.0 candidate](RELEASE-1.6.0.md) is not published; public downloads remain1.5.4.
+
 Start with a task. You do not need the developer reports to install or use Clean Your TV.
 
 | I want to… | Read |

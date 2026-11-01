@@ -1,6 +1,6 @@
 # Root Edition
 
-> Unpublished 1.5.3 candidate: see the [release scope and pending acceptance](../docs/RELEASE-1.5.3.md). Published stable is 1.5.2; historical acceptance retains its original scope.
+> Frozen 1.6.0 candidate, not published: Root/infrastructure0.7.0 and Root Updater 0.4.0. Public stable is 1.5.4. See [scope, migration and pending acceptance](../docs/RELEASE-1.6.0.md); historical results retain their original scope.
 
 Use Clean Your TV as the system Home on an **already rooted LG webOS TV**.
 Short Home opens Clean; confirmed Back exit returns through native Home routing.
@@ -35,19 +35,21 @@ restore LG Home and disable Root intent independently of the web interface.
 once while preserving the routing preference. Long Home can invoke LG features;
 it is not the Root emergency gesture.
 
-After a failure, run `cytv status` before taking another action.
-`cytv doctor --report` collects read-only diagnostics; `cytv restore` requests
-routing recovery. Keep journals, backups and referenced Python slots. See
-[recovery](RECOVERY.md) before retrying setup, removing packages or returning to No-root.
+Candidate cytv 0.7.0 offers `cytv recover` with the same saved connection for an
+interrupted operation. Inspection and changes have separate default-No prompts;
+Root inspection may stage verified support code and is not fully passive.
+Keep journals, backups and referenced Python slots. Do not blindly retry,
+restore or remove packages; review the [recovery rules](../docs/RECOVERY.md).
 
 ## Current release and limits
 
-Published **1.5.2** uses **Root 0.6.1 / Root Updater 0.3.3**, with System
-Updater 1.1.2. The unpublished **1.5.3** candidate selects **Root 0.6.2 / Root
-Updater 0.3.4** and retains System Updater 1.1.2. Automatic Home presentation
-after standby remains unresolved in [#171](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/171);
-the candidate adds diagnostics, not a demonstrated standby fix. New packages
-require their own affected acceptance.
+Published **1.5.4** uses **Root 0.6.2 / Root Updater 0.3.4 / System 1.1.2**.
+Frozen, unpublished **1.6.0** selects **Root/infrastructure0.7.0 / Root
+Updater 0.4.0 / System 1.2.0**. Existing System 1.1.2 stays pinned with its old
+channels and has no general replacement path in this candidate. Earlier standby
+failure [#171](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/171)
+and forward-update cancellation #202 remain unresolved. New packages require
+exact-package acceptance; source diagnostics do not establish a standby fix.
 
 The historical **1.4.0 / Root 0.5.0 / Root Updater 0.3.1**
 [C3 acceptance record](../docs/RELEASE-1.4.0-ACCEPTANCE.md) covers corrected startup,
@@ -88,7 +90,7 @@ Historical acceptance is model-, build- and scenario-specific.
 The former setup-client notes are summarized under [Homebrew Installer](#homebrew-installer-unreleased).
 <a id="what-works-on-the-tested-setup"></a>
 See [historical C3 acceptance](../docs/RELEASE-1.4.0-ACCEPTANCE.md) and
-[current release limits](../docs/RELEASE-1.5.3.md).
+[current candidate limits](../docs/RELEASE-1.6.0.md).
 <a id="requirements-and-limits"></a>
 See [installation prerequisites](#install-and-activate) and [current limits](#current-release-and-limits).
 <a id="recovery-startup-diagnostics-130-issue-55"></a>
