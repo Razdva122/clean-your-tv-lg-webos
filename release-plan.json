@@ -99,6 +99,13 @@
         207
       ],
       "summary": "Add adaptive 720p Home and explicit HD source builds plus read-only IR/panel diagnostics; standard-remote routing and normal-channel HD delivery remain unresolved"
+    },
+    {
+      "pr": 226,
+      "issues": [
+        207
+      ],
+      "summary": "Select verified HD/FHD packages across desktop/Android and signed OTA; preserve exact rollback, require updater migration and retain unresolved IR/physical acceptance"
     }
   ],
   "excluded": [],
