@@ -11,6 +11,17 @@ class LanguageTests(unittest.TestCase):
         self.addCleanup(i18n.set_language, 'en')
         return i18n
 
+    def test_home_observation_prompt_and_desktop_title_translate_in_all_locales(self):
+        from cytv.desktop import Prompt
+        lang = self.language()
+        prompt = 'Home button result [3]: '
+        title = Prompt(prompt).title
+        for code in set(lang.LANGUAGES) - {'en','auto'}:
+            with self.subTest(language=code):
+                lang.set_language(code)
+                self.assertNotEqual(lang.translate(prompt).strip(), prompt.strip())
+                self.assertNotEqual(lang.translate(title), title)
+
     def test_locale_variants_and_unsupported_fallback(self):
         lang = self.language()
         for value, expected in [('pt_PT.UTF-8', 'pt-BR'), ('de_AT', 'de'), ('ru-RU', 'ru'), ('zh_CN', 'zh-Hans'), ('C', 'en')]:

@@ -64,3 +64,10 @@ model/firmware/remote are not applicable to these fixtures. No owner installatio
 result or raw evidence is published. Original #207 standard-remote routing remains
 unresolved and open/planned; this is partial diagnosis/workflow improvement.
 Final selected CI and integration are recorded below after verification.
+
+A final prompt-localization regression found that whitespace in the full prompt
+key and the desktop's stripped title left English text in non-English sessions.
+The new test failed in all eleven translated locales, then passed after fixing
+both keys. Hindi now explicitly says press and release Home once briefly. All
+64 affected localization/actual-Qt/Android-bridge cases pass after this correction;
+no device behavior or observation default changed.
