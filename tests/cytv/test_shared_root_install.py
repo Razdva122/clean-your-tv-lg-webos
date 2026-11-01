@@ -20,6 +20,40 @@ class SharedRootInstallTests(unittest.TestCase):
         installer._selected_python='/usr/bin/python3';installer._coordinator_code='/tmp/trusted-current-code'
         return installer,remote,store,profile
 
+    def test_status_command_keeps_selected_private_python_and_posix_driver_arguments(self):
+        import shlex
+        installer,remote,store,profile=self.fixture({'operation':'a'*32,'state':'recovery_required'})
+        installer._selected_python='/var/lib/clean-your-tv-python/4a71641c8d5536175e404a961624e8656eba30e97b5026f6bd7dc31e4bbeaaea/bin/python3.13'
+        installer._coordinator_code="/tmp/space and ' quote"
+        installer.product_action('status','a'*32)
+        self.assertEqual(shlex.split(remote.run.call_args.args[0]),[
+            'env','-u','PYTHONHOME','-u','PYTHONPATH','PYTHONDONTWRITEBYTECODE=1','PYTHONNOUSERSITE=1',
+            '/var/lib/clean-your-tv-python/4a71641c8d5536175e404a961624e8656eba30e97b5026f6bd7dc31e4bbeaaea/bin/python3.13',
+            "/tmp/space and ' quote/install_driver.py",'status','--operation','a'*32])
+        self.assertEqual(remote.run.call_count,1)
+
+    def test_failed_status_records_host_boundary_without_replaying_or_retiring_pending(self):
+        from cytv.errors import TVCommandError
+        from cytv.diagnostics import create_report
+        from unittest.mock import patch
+        for boundary in ('coordinator-stage', 'python-select', 'driver'):
+            with self.subTest(boundary=boundary):
+                installer,remote,store,profile=self.fixture({})
+                store.begin(profile,'install',stage='coordinator-submitted',product_operation='a'*32)
+                original=store.pending(profile)
+                error=TVCommandError(127)
+                stage=patch.object(installer,'coordinator_code',side_effect=error) if boundary=='coordinator-stage' else patch.object(installer,'coordinator_code',return_value='/tmp/private-stage')
+                python=patch.object(installer,'_python',side_effect=error) if boundary=='python-select' else patch.object(installer,'_python',return_value='/usr/bin/python3')
+                remote.run.side_effect=error
+                with stage,python,self.assertRaises(TVCommandError) as caught:
+                    installer.product_action('status','a'*32)
+                report=json.loads(create_report(store,'status',profile,'status',caught.exception).read_text())
+                self.assertEqual(report['ssh_command'],{'exit_status':127,'root_action':'status','root_boundary':boundary})
+                self.assertEqual(store.pending(profile),original)
+                self.assertLessEqual(remote.run.call_count,1)
+                remote.luna.assert_not_called()
+                self.assertNotIn('private-stage',json.dumps(report))
+
     def test_tv_origin_is_inspected_with_current_code_without_reinstall_or_profile_reset(self):
         event={'operation':None,'stage':'inspect','state':'installed','code':'inspected',
                'installation':{'state':'installed','reason':'verified_components','can_install':False,'can_maintain':True}}

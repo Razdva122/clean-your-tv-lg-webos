@@ -254,16 +254,26 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
         if action not in ('inspect','install','status','remove'): raise ValueError('Unsupported product action')
         if action!='inspect' and (not isinstance(operation,str) or not re.fullmatch('[a-f0-9]{32}',operation)):
             raise ValueError('Invalid product operation')
-        driver=(payload+'/root-updater' if payload else self.coordinator_code())+'/install_driver.py'
-        args=[self._python(),driver,action]
-        if operation: args+=['--operation',operation]
-        if payload:
-            args+=['--payload',payload]
-            candidate=getattr(self,'_product_candidates',{}).get(payload)
-            if candidate: args+=['--candidate',candidate]
-        if migrate: args.append('--migrate-packaged-home')
-        if verify_current:args.append('--verify-current')
-        reply=json.loads(self.remote.run(self._python_command(args),timeout=90))
+        # Keep execution-boundary evidence without exporting commands, paths or
+        # stderr. A status failure is not the retained deployment failure.
+        boundary='coordinator-stage'
+        try:
+            driver=(payload+'/root-updater' if payload else self.coordinator_code())+'/install_driver.py'
+            boundary='python-select'
+            args=[self._python(),driver,action]
+            if operation: args+=['--operation',operation]
+            if payload:
+                args+=['--payload',payload]
+                candidate=getattr(self,'_product_candidates',{}).get(payload)
+                if candidate: args+=['--candidate',candidate]
+            if migrate: args.append('--migrate-packaged-home')
+            if verify_current:args.append('--verify-current')
+            boundary='driver'
+            reply=json.loads(self.remote.run(self._python_command(args),timeout=90))
+        except TVCommandError as error:
+            error.root_action=action
+            error.root_boundary=boundary
+            raise
         if (not isinstance(reply,dict) or reply.get('operation')!=operation
                 or reply.get('state') not in ('pending','complete','recovery_required','unknown','fresh','installed','unsupported','conflict','migration_required')):
             raise UserError('Root operation was not confirmed. Run cytv status; retain recovery state.')
