@@ -3,7 +3,7 @@
  'use strict';
  var views=[];
  var labels={
-  de:['Darstellung','Erweitert'],es:['Apariencia','Avanzado'],'pt-BR':['Aparência','Avançado'],fr:['Apparence','Avancé'],it:['Aspetto','Avanzate'],
+  cs:['Vzhled','Pokročilé'],de:['Darstellung','Erweitert'],es:['Apariencia','Avanzado'],'pt-BR':['Aparência','Avançado'],fr:['Apparence','Avancé'],it:['Aspetto','Avanzate'],
   ko:['화면 꾸미기','고급'],hi:['दिखावट','उन्नत'],pl:['Wygląd','Zaawansowane'],ru:['Внешний вид','Дополнительно'],'zh-Hans':['外观','高级'],'zh-Hant':['外觀','進階']
  };
  function t(source){

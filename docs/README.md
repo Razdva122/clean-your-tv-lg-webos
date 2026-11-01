@@ -22,7 +22,7 @@ Start with a task. You do not need the developer reports to install or use Clean
 [English](i18n/en.md) · [Deutsch](i18n/de.md) · [Español](i18n/es.md) ·
 [Português (Brasil)](i18n/pt-BR.md) · [Français](i18n/fr.md) · [Italiano](i18n/it.md) ·
 [한국어](i18n/ko.md) · [हिन्दी](i18n/hi.md) · [Polski](i18n/pl.md) ·
-[Русский](i18n/ru.md) · [简体中文](i18n/zh-Hans.md) · [繁體中文](i18n/zh-Hant.md).
+[Čeština — TV interface, unreleased](i18n/cs.md) · [Русский](i18n/ru.md) · [简体中文](i18n/zh-Hans.md) · [繁體中文](i18n/zh-Hant.md).
 
 ## Specific features
 
