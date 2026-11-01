@@ -400,6 +400,9 @@ stack **file/function/line locations**. It excludes exception text, source lines
 locals, addresses, identity paths, credentials, app lists, environment and raw TV
 logs. No report is submitted automatically.
 
+Unreleased (#200): host private-Python acquisition failures add only an allowlisted
+`python_cache.reason`. See [cache failure categories](OPTIONAL-PYTHON.md#unreleased-host-cache-failure-categories-200).
+
 Since 1.2.0 (#51): a definite Luna rejection adds a `luna` object with a fixed
 operation category (`package-install`, `package-remove`, `package-status` or
 `luna-call`), signed 32-bit numeric `error_code`, `details_error_code` and

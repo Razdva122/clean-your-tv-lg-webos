@@ -11,7 +11,7 @@ import uuid
 from . import __version__
 from .state import private_write
 from .terminal import console
-from .errors import TVConnectionError, DeveloperKeyError, UserError, TVCommandError, TVRejected, PythonPreflightError, root_recovery_details
+from .errors import TVConnectionError, DeveloperKeyError, UserError, TVCommandError, TVRejected, PythonPreflightError, PythonCacheError, root_recovery_details
 
 ISSUE_URL = 'https://github.com/Razdva122/clean-your-tv-lg-webos/issues/new'
 KERNEL_ARCHES = ('armv7l', 'armv7', 'armv8l', 'aarch64', 'arm64', 'x86_64', 'i686', 'unknown')
@@ -44,6 +44,8 @@ def create_report(store, action, profile, phase, error=None, tv_info=None):
         if recovery: report['root_recovery'] = recovery
     if isinstance(error, TVRejected):
         report['luna'] = error.luna
+    if isinstance(error, PythonCacheError):
+        report['python_cache'] = {'reason': PythonCacheError(error.reason).reason}
     if isinstance(error, PythonPreflightError):
         safe = PythonPreflightError(error.reason, error.available_kib, error.required_kib, error.wam_session_kib)
         report['python_runtime'] = {'reason': safe.reason}
