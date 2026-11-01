@@ -35,6 +35,13 @@
       "summary": "Simplify theme suggestions and move review work to maintainers"
     },
     {
+      "pr": 215,
+      "issues": [
+        69
+      ],
+      "summary": "Integrate Retro 1.0.0 API 1 with verified corrected distribution pin and offline catalogue; original font/effect/date requirements in #69 remain follow-up"
+    },
+    {
       "pr": 218,
       "issues": [
         201

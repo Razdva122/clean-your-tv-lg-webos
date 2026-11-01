@@ -8,6 +8,8 @@ one model or artifact does not certify later releases or a different TV.
 
 ## Scoped feature checks
 
+- [Retro API 1 integration, 2026-11-01](2026-11-01-retro-integration.md): pinned package/browser review for #215; original font/effect/date scope and physical-TV acceptance remain separate.
+
 - [Installer journal/cache integration, 2026-11-01](2026-11-01-installer-journal-cache-integration.md): #218/#220 host checks and partial #201/#200 scope; no device recovery or publication claim.
 
 - [Root Node prototype integration, 2026-10-31](2026-10-31-root-node-prototype.md): host-only exact-runtime checks for #194; Node 8+ admission and unresolved #160/#164 device support remain unchanged.
