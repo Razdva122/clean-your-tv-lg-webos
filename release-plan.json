@@ -156,6 +156,11 @@
       "pr": 236,
       "issues": [],
       "summary": "Align Android smoke checks with safe error navigation: no blind Status/Restore, no automatic request and preserved connection; product behavior unchanged"
+    },
+    {
+      "pr": 238,
+      "issues": [],
+      "summary": "Freeze 1.6.0 component versions/documentation and fixed System1.2.0 target; preserve restricted replacement admission and repair receiver smoke timing"
     }
   ],
   "excluded": [],
