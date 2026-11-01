@@ -8,6 +8,8 @@ one model or artifact does not certify later releases or a different TV.
 
 ## Scoped feature checks
 
+- [Issue 207: 720p and passive diagnostics, 2026-11-01](2026-11-01-issue207-720p-diagnostics.md): #225 adaptive graphics/manual HD builds, Helper status and passive IR preparation; original IR routing and normal-channel HD delivery remain unresolved.
+
 - [Candidate readiness and policy repair, 2026-11-01](2026-11-01-candidate-readiness-audit.md): closed-PR status repair, #223/#224 integration, Czech TV checks and remaining freeze/build/Android/device gates.
 
 - [Parallel Root integration review, 2026-11-01](2026-11-01-parallel-root-integration-review.md): independent #221/#222 review, combined Qt/browser/host checks and outstanding signed-package/device gates.

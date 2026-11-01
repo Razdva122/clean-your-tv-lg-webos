@@ -92,6 +92,13 @@
         211
       ],
       "summary": "Add Czech TV Home/Root/settings/theme/audio/updater localization and preserve cs profiles; installer language scope unchanged"
+    },
+    {
+      "pr": 225,
+      "issues": [
+        207
+      ],
+      "summary": "Add adaptive 720p Home and explicit HD source builds plus read-only IR/panel diagnostics; standard-remote routing and normal-channel HD delivery remain unresolved"
     }
   ],
   "excluded": [],
