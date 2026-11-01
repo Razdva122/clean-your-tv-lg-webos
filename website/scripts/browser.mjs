@@ -100,6 +100,7 @@ try {
   for (const [lang, width] of [
     ["en", 1440],
     ["ru", 390],
+    ["de", 320],
     ["de", 360],
     ["hi", 390],
     ["zh-Hans", 390],
@@ -109,12 +110,16 @@ try {
     await page.setViewportSize({ width, height: 1000 });
     for (const section of ["", "install/"]) {
       await page.goto(host + base + lang + "/" + section);
+      if (lang === "de")
+        await page.addStyleTag({
+          content: ":root { font-family: Verdana, sans-serif; }",
+        });
       await page.locator("img").first().waitFor({ state: "visible" });
       assert(
         await page.evaluate(
           () => document.documentElement.scrollWidth <= innerWidth + 1,
         ),
-        `${lang}/${section} horizontal overflow at ${width}`,
+        `${lang}/${section} horizontal overflow at ${width}: ${JSON.stringify(await page.locator("body *").evaluateAll((nodes) => nodes.filter((n) => n.getBoundingClientRect().right > innerWidth + 1).map((n) => ({ tag: n.tagName, class: n.className, text: n.textContent?.slice(0, 80), width: n.getBoundingClientRect().width }))))}`,
       );
       // Load below-the-fold lazy images before judging resources or full-page QA.
       for (const img of await page.locator("img").all()) {

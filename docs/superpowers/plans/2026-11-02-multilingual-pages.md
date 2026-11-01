@@ -25,3 +25,5 @@ Acceptance: All localized HTML is readable without JS, with language-appropriate
 ## Verified result
 
 2026-11-02: Static build/export verification passed for all 60 localized routes; Astro check reported 0 errors, warnings or hints. Browser acceptance passed no-JavaScript pages, keyboard language navigation, selected 360/390 px mobile layouts, all loaded images, legacy fragments and offline demo switching. Existing `scripts/test.sh preview` passed, as did all 10 CI-scope and 3 README-release tests. Desktop and mobile screenshots were visually inspected. Independent read-only review found no blocking issues. No physical-TV tests or search-engine indexation were performed.
+
+Linux CI exposed a German mobile heading overflow with a wider system font. Reproduced locally at 320 px with Verdana: the heading's min-content width expanded the hero grid to 365 px. The fix uses zero-minimum grid tracks, shrinkable hero copy and localized heading wrapping/hyphenation. The browser regression now exercises German at 320 and 360 px with the wider font; static build and browser acceptance pass locally after the fix.
