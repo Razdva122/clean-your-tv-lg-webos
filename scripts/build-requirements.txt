@@ -1,0 +1,2 @@
+# Build/preview font preparation only; never install on the TV.
+fonttools==4.60.1

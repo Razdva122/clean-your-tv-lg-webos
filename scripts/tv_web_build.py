@@ -4,11 +4,15 @@ import json
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 
 
 def compile_web(files):
+    from scripts.chinese_fonts import with_fonts
+    files = with_fonts(files)
     web = {name: raw.decode('utf-8') for name, raw in files.items()
            if name.endswith(('.js', '.css', '.html'))}
     try:

@@ -9,7 +9,7 @@ from PySide6.QtWidgets import QWidget, QComboBox, QRadioButton
 # warm charcoal surfaces and restrained controls rather than bright brand fills.
 STYLE = '''
 QMainWindow, QMessageBox, QDialog { background: #1d1c1a; }
-QWidget { font-family: "Segoe UI", "Noto Sans", "Helvetica Neue"; font-size: 16px; color: #f3ede3; }
+QWidget { font-family: "Segoe UI", "Noto Sans", "Noto Sans SC", "Noto Sans TC", "Helvetica Neue"; font-size: 16px; color: #f3ede3; }
 QWidget#sidebar { background: #171614; }
 QLabel { background: transparent; }
 QLabel#railTitle { color: #e0d4c4; font-size: 14px; font-weight: 600; }

@@ -11,7 +11,7 @@ From the repository root, prepare a public TV payload using the existing build f
 
 ```sh
 python3.12 -m venv android/.build-venv
-android/.build-venv/bin/pip install -r cytv/requirements.txt ziglang==0.14.1
+android/.build-venv/bin/pip install -r scripts/build-requirements.txt -r cytv/requirements.txt ziglang==0.14.1
 android/.build-venv/bin/python scripts/build-cytv.py --payload-only
 export CYTV_BUILD_PYTHON="$PWD/android/.build-venv/bin/python"
 export ANDROID_HOME=/path/to/android-sdk

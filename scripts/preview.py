@@ -8,11 +8,14 @@ import mimetypes
 import shutil
 import runpy
 import subprocess
+import sys
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 import webbrowser
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from scripts.chinese_fonts import prepare_fonts
 
 def preview_themes():
     return subprocess.check_output(['node', str(ROOT / 'scripts/build-preview-themes.cjs')], cwd=ROOT)
@@ -97,10 +100,13 @@ def export_site(destination):
     if (destination / 'themes').exists() or (destination / 'themes').is_symlink():
         raise ValueError('Use a fresh preview export directory; retired themes output must not be published.')
     destination.mkdir(parents=True, exist_ok=True)
+    fonts = prepare_fonts()
     for name in sorted(LAUNCHER_FILES):
         target = destination / 'launcher' / name
         target.parent.mkdir(parents=True, exist_ok=True)
-        if name == 'index.html':
+        if name in fonts:
+            target.write_bytes(fonts[name])
+        elif name == 'index.html':
             target.write_text(launcher_html(), encoding='utf-8')
         elif name == 'config.js':
             target.write_bytes(preview_config((ROOT / 'launcher' / name).read_bytes()))
@@ -164,6 +170,8 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path == '/':
             body = preview_html().encode('utf-8')
+        if path.startswith('/launcher/fonts/NotoSans') and path.endswith('.ttf'):
+            body = prepare_fonts().get(path[len('/launcher/'):], body)
         if path == '/launcher/index.html':
             body = launcher_html().encode('utf-8')
         mime = mimetypes.guess_type(file.name)[0] or 'application/octet-stream'
@@ -184,6 +192,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def make_server(port):
+    prepare_fonts()
     return ThreadingHTTPServer(('127.0.0.1', port), Handler)
 
 
