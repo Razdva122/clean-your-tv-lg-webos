@@ -83,7 +83,7 @@ class ExistingRoot(UserError):
 class TVCommandError(UserError):
     """A failed SSH command with a numeric status, never remote output."""
     def __init__(self, exit_status):
-        super().__init__('TV command failed. Run cytv doctor; retain the operation journal.')
+        super().__init__('TV command failed. Save the diagnostic report and keep recovery data.')
         self.exit_status = exit_status if type(exit_status) is int and -1 <= exit_status <= 255 else None
 
 

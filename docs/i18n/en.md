@@ -19,6 +19,8 @@ No-root and Root are equal options for different TV setups. Choose No-root for L
 
 Root requires working Settings Service and System Profile Home interfaces (`com.webos.service.systemprofile`); existing root access alone does not establish compatibility.
 
+> Unreleased installer: Root setup checks the required Home interfaces before preparing private Python or packages. A failed check stops setup; passing it does not prove firmware compatibility or physical Home operation. Known connection errors now show specific advice. Keep saved profiles, trust and recovery data; unresolved operations require verified recovery, not a blind retry. Save and review the diagnostic report. [Details](../development/INSTALLER-PREFLIGHT-HELP.md).
+
 ## Before installation
 
 Keep the TV on and the computer on the same trusted local network. No always-on computer is needed afterward. Compatibility depends on model, firmware and remote; Root has outstanding hardware checks.

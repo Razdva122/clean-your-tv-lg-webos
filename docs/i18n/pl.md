@@ -19,6 +19,8 @@ No-root i Root to równorzędne opcje dla różnych konfiguracji telewizora. Wyb
 
 Root wymaga działających interfejsów Home usług Settings Service i System Profile (`com.webos.service.systemprofile`); sam dostęp root nie potwierdza zgodności.
 
+> Nieopublikowany instalator: Root sprawdza wymagane interfejsy Home przed przygotowaniem prywatnego Pythona lub pakietów. Błąd zatrzymuje instalację; powodzenie nie potwierdza zgodności oprogramowania ani działania przycisku Home. Znane błędy połączenia mają osobne wskazówki. Zachowaj profile, dane zaufania i odzyskiwania; niedokończone operacje wymagają zweryfikowanego odzyskiwania, bez ponawiania w ciemno. Zapisz i sprawdź raport. [Szczegóły](../development/INSTALLER-PREFLIGHT-HELP.md).
+
 ## Wymagania
 
 Włącz telewizor i połącz go z tą samą zaufaną siecią lokalną co komputer. Później komputer może być wyłączony. Zgodność zależy od modelu, oprogramowania i pilota; Root ma nieukończone testy sprzętowe.

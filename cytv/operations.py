@@ -354,7 +354,7 @@ with os.fdopen(f,'rb') as stream:
             raise UserError('Root operation was not confirmed. Run cytv status; retain recovery state.', reason_code='root-operation-unconfirmed')
         return reply
 
-    def preflight(self, install=False):
+    def preflight(self, install=False, home_interfaces=False):
         if self.profile['edition'] == 'root':
             from .python_runtime import SYSTEM_PROBE
             probes = ('test "$(id -u)" = 0', 'test -x /usr/bin/python3',
@@ -382,6 +382,12 @@ with os.fdopen(f,'rb') as stream:
             for name, probe in zip(diagnostics.ROOT_REQUIREMENTS, probes):
                 check(name, probe)
             python_names = {'python3', 'python-json', 'python-fcntl', 'python-version'}
+            if home_interfaces:
+                from .root_capabilities import verify, CALLS
+                if all(checks[name]=='pass' for name in checks if name not in python_names):
+                    verify(self.remote, self.checks, self.tv_info)
+                else:
+                    checks.update(dict.fromkeys(CALLS, 'unknown'))
             if (install and any(checks[name] != 'pass' for name in python_names)
                     and all(result == 'pass' for name, result in checks.items() if name not in python_names)):
                 self.checks.update('python3', 'running')
@@ -544,7 +550,10 @@ printf '%s' "$cytv_state"
             raise UserError('Invalid reinstallation request.')
         self.outcome.begin()
         self.select_graphics()
-        self.preflight(install=not reinstall)
+        if self.profile['edition']=='root':
+            self.preflight(install=not reinstall, home_interfaces=True)
+        else:
+            self.preflight(install=not reinstall)
         if self.profile['edition'] == 'root':
             return self.install_root(inventory, migrate, reinstall)
         if not ssap_key:
@@ -637,7 +646,7 @@ printf '%s' "$cytv_state"
             bundle_sha = hashlib.sha256((bundle / 'bundle.json').read_bytes()).hexdigest()
             if reinstall:
                 self.prepare_root_reinstall(already_removed=reinstall == 'removed')
-                self.preflight(install=True)
+                self.preflight(install=True, home_interfaces=True)
             operation=uuid.uuid4().hex
             self.store.begin(self.profile,'install',release_sha=release_sha,bundle_sha=bundle_sha,migrate=migrate,
                              requires_updater=True,product_operation=operation,stage='coordinator-upload')

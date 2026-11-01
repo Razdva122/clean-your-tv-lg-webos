@@ -20,6 +20,8 @@ before using a low-level recovery or installation procedure.
 
 ## Understand behavior and diagnose failures
 
+- [Early Root admission and connection guidance](INSTALLER-PREFLIGHT-HELP.md): existing Home-interface contract before runtime preparation, typed localized advice and unchanged recovery/trust authority; unreleased.
+
 - [Root native startup input](ROOT-NATIVE-INPUT.md): unpublished owned EIM lifecycle and acceptance limits.
 - [Theme development status](THEMES.md), [Home styling parts and CSS rules](THEME-CSS.md).
 

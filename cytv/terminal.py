@@ -97,6 +97,11 @@ class Console:
         if event['detail'] and event['status'] in ('fail', 'unknown'):
             self.text(event['detail'])
 
+    def failure_help(self, value):
+        self.heading(value['title'])
+        self(value['detail'])
+        self(value['next_step'])
+
     def recovery(self, profile):
         self('Review recovery options')
 

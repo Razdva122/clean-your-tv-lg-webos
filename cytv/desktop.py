@@ -64,9 +64,9 @@ class DesktopConsole(Console):
             'TV package operation failed. Run cytv status before retrying.':
                 'The TV package operation failed. No automatic retry was attempted.',
             'TV command failed. Run cytv doctor; retain the operation journal.':
-                'This step could not be confirmed. Check that the TV is on and connected to the same network.',
+                'TV command failed. Save the diagnostic report and keep recovery data.',
             'Operation could not be confirmed. Check TV connectivity and run cytv status or cytv doctor. Retain local and TV recovery state; do not retry blindly.':
-                'This step could not be confirmed. Check that the TV is on and connected to the same network.',
+                'Operation could not be confirmed. Save the diagnostic report and keep recovery data; do not retry blindly.',
         }.get(message, message)
         self.emit('error-heading' if heading else 'error', message)
 
@@ -88,6 +88,10 @@ class DesktopConsole(Console):
 
     def check(self, event):
         self.emit('check', event)
+
+    def failure_help(self, value):
+        super().failure_help(value)
+        self.emit('failure-help', dict(value))
 
     def recovery_plan(self, value):
         super().recovery_plan(value)

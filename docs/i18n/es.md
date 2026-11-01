@@ -19,6 +19,8 @@ No-root y Root son opciones equivalentes para distintas configuraciones del tele
 
 Root necesita las interfaces de Home de Settings Service y System Profile (`com.webos.service.systemprofile`); tener acceso root no garantiza la compatibilidad.
 
+> Instalador aún no publicado: Root comprueba las interfaces Home necesarias antes de preparar Python privado o paquetes. Un fallo detiene la instalación; superar la prueba no demuestra compatibilidad del firmware ni el funcionamiento del botón Home. Los errores de conexión conocidos muestran consejos específicos. Conserva perfiles, datos de confianza y recuperación; las operaciones pendientes requieren recuperación verificada, no repetir a ciegas. Guarda y revisa el informe. [Detalles](../development/INSTALLER-PREFLIGHT-HELP.md).
+
 ## Requisitos
 
 Enciende el televisor y conecta ambos equipos a la misma red local de confianza. Después, el ordenador puede estar apagado. La compatibilidad depende del modelo, firmware y mando; Root tiene pruebas físicas pendientes.

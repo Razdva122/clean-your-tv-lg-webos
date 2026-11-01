@@ -19,6 +19,8 @@ No-root und Root sind gleichwertige Optionen für unterschiedliche TV-Konfigurat
 
 Root benötigt funktionierende Home-Schnittstellen von Settings Service und System Profile (`com.webos.service.systemprofile`); vorhandener Root-Zugriff allein bestätigt keine Kompatibilität.
 
+> Unveröffentlichter Installer: Root prüft die benötigten Home-Schnittstellen vor der Vorbereitung von privatem Python oder Paketen. Ein Fehler stoppt die Einrichtung; ein erfolgreicher Test belegt weder Firmware-Kompatibilität noch die Funktion der Home-Taste. Bekannte Verbindungsfehler erhalten gezielte Hinweise. Profile, Vertrauensdaten und Wiederherstellungsdaten behalten; offene Vorgänge erfordern geprüfte Wiederherstellung statt blinder Wiederholung. Diagnosebericht speichern und prüfen. [Details](../development/INSTALLER-PREFLIGHT-HELP.md).
+
 ## Voraussetzungen
 
 Fernseher einschalten und mit demselben vertrauenswürdigen Heimnetz wie den Computer verbinden. Danach muss der Computer nicht eingeschaltet bleiben. Die Kompatibilität hängt von Modell, Firmware und Fernbedienung ab; für Root stehen noch Gerätetests aus.
