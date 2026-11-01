@@ -280,23 +280,27 @@ def refresh_policy(event):
     for target in targets:
         pr = api('pulls/' + str(number(target['number'])))
         head = pr['head']['sha']
-        if pr['state'] != 'open':
-            continue
         context = 'Integration policy' if pr['base']['ref'] == BRANCH else 'Release policy'
         url = os.environ.get('GITHUB_SERVER_URL', 'https://github.com') + '/' + REPO + '/actions/runs/' + os.environ['GITHUB_RUN_ID']
-        api('statuses/' + head, method='POST', data={'context': context, 'state': 'pending',
-            'description': 'Validating current candidate and build provenance', 'target_url': url})
-        try:
-            git('fetch', '--no-tags', 'origin', 'refs/pull/' + str(pr['number']) + '/head')
-            check_pr({'pull_request': pr})
-            state, description = 'success', 'Release routing and required validation verified'
-        except PendingBuild as error:
-            state, description = 'pending', str(error)
-        except (ValueError, subprocess.CalledProcessError) as error:
-            state, description = 'failure', str(error)
+        if pr['state'] != 'open':
+            state, description = 'success', 'PR closed; merge policy is no longer applicable'
+        else:
+            api('statuses/' + head, method='POST', data={'context': context, 'state': 'pending',
+                'description': 'Validating current candidate and build provenance', 'target_url': url})
+            try:
+                git('fetch', '--no-tags', 'origin', 'refs/pull/' + str(pr['number']) + '/head')
+                check_pr({'pull_request': pr})
+                state, description = 'success', 'Release routing and required validation verified'
+            except PendingBuild as error:
+                state, description = 'pending', str(error)
+            except (ValueError, subprocess.CalledProcessError) as error:
+                state, description = 'failure', str(error)
+            current = api('pulls/' + str(pr['number']))
+            if current['head']['sha'] != head:
+                continue  # Never overwrite the status of a newer candidate revision.
+            if current['state'] != 'open':
+                state, description = 'success', 'PR closed; merge policy is no longer applicable'
         print(context + ': ' + state + ': ' + description)
-        if api('pulls/' + str(pr['number']))['head']['sha'] != head:
-            continue  # Never overwrite the status of a newer candidate revision.
         url = os.environ.get('GITHUB_SERVER_URL', 'https://github.com') + '/' + REPO + '/actions/runs/' + os.environ['GITHUB_RUN_ID']
         api('statuses/' + head, method='POST', data={'context': context, 'state': state,
             'description': description[:140], 'target_url': url})

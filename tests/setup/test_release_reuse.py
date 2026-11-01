@@ -134,6 +134,44 @@ class CandidateReuse(unittest.TestCase):
             self.assertEqual(states, prior)
 
 
+    def test_editing_closed_pr_finishes_status_without_validating_candidate_code(self):
+        for merged in (True, False):
+            pr = {'number': 7, 'state': 'closed', 'merged': merged,
+                  'base': {'ref': 'release/next'}, 'head': {'sha': self.head}}
+            writes = []
+            def provider(path, **kwargs):
+                if path == 'pulls/7':
+                    return pr
+                if path.startswith('statuses/'):
+                    writes.append(kwargs['data'])
+                    return {}
+                raise AssertionError(path)
+            with self.subTest(merged=merged), patch.object(flow, 'api', side_effect=provider), \
+                 patch.object(flow, 'git') as git, patch.object(flow, 'check_pr') as check, \
+                 patch.dict(flow.os.environ, GITHUB_RUN_ID='99'):
+                flow.refresh_policy({'pull_request': pr})
+                git.assert_not_called()
+                check.assert_not_called()
+            self.assertEqual([(w['context'], w['state']) for w in writes], [('Integration policy', 'success')])
+            self.assertIn('closed', writes[0]['description'])
+            self.assertNotIn('verified', writes[0]['description'])
+
+    def test_pr_closed_during_validation_does_not_leave_active_gate(self):
+        pr = {'number': 7, 'state': 'open', 'base': {'ref': 'release/next'}, 'head': {'sha': self.head}}
+        writes = []
+        reads = iter([pr, {**pr, 'state': 'closed'}])
+        def provider(path, **kwargs):
+            if path == 'pulls/7':
+                return next(reads)
+            writes.append(kwargs['data'])
+            return {}
+        with patch.object(flow, 'api', side_effect=provider), patch.object(flow, 'git'), \
+             patch.object(flow, 'check_pr', side_effect=flow.PendingBuild('build running')), \
+             patch.dict(flow.os.environ, GITHUB_RUN_ID='99'):
+            flow.refresh_policy({'pull_request': pr})
+        self.assertEqual([w['state'] for w in writes], ['pending', 'success'])
+        self.assertIn('closed', writes[-1]['description'])
+
     def test_jobs_api_pagination_extracts_jobs_from_object_pages(self):
         raw = json.dumps([{'total_count': 2, 'jobs': [{'name': 'first'}]},
                           {'total_count': 2, 'jobs': [{'name': 'second'}]}]).encode()

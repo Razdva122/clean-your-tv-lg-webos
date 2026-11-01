@@ -21,7 +21,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Block the PR head before checkout or external API reads
-        if: github.event_name == 'pull_request_target'
+        if: github.event_name == 'pull_request_target' && github.event.pull_request.state == 'open'
         uses: actions/github-script@v7
         with:
           script: |
