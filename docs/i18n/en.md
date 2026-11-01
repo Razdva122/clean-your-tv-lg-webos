@@ -172,3 +172,5 @@ A yellow dot on both Software updates and its update button means an update is a
 The upcoming computer/Android installers and migrated OTA clients select 720p or 1080p from the TV’s reported capability. If it cannot be verified, the operation stops. Older independently installed updaters need the documented computer migration; recovery keeps its original packages.
 
 [HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).
+
+> Unreleased installer diagnostics: save the original failed-attempt report. New reports separate a recorded first error from later checks and include a filtered Doctor/status summary; successful setup/status/restore also offer an export. Missing older evidence remains unknown; this does not authorize recovery. [↗](../development/INSTALLER-DIAGNOSTICS.md).

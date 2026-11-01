@@ -173,3 +173,5 @@ Homebrew Channel이 이 설치 프로그램의 접근을 거부했습니다. web
 예정된 컴퓨터/Android 설치 프로그램과 마이그레이션된 OTA 클라이언트는 TV가 보고한 기능에 따라 720p 또는 1080p를 선택합니다. 확인할 수 없으면 작업이 중단됩니다. 별도로 설치된 구형 업데이트 도구는 문서에 나온 컴퓨터 마이그레이션이 필요하며, 복구는 원래 패키지를 유지합니다.
 
 [HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).
+
+> 미출시 설치 프로그램 진단: 처음 실패한 시도의 보고서를 보관하세요. 새 보고서는 기록된 첫 오류와 이후 점검을 구분하고 필터링된 Doctor/상태 요약을 포함합니다. 설정, 상태 확인 또는 복원이 성공한 뒤에도 보고서를 내보낼 수 있습니다. 없는 과거 증거는 알 수 없음으로 남으며, 보고서가 복구 작업을 허용하지는 않습니다. [↗](../development/INSTALLER-DIAGNOSTICS.md).

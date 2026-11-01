@@ -172,3 +172,5 @@ Un point jaune sur Mises à jour et sur le bouton associé indique une mise à j
 Les prochains installateurs ordinateur/Android et clients OTA migrés choisissent 720p ou 1080p selon les capacités du téléviseur. Si elles ne peuvent être vérifiées, l’opération s’arrête. Les anciens outils de mise à jour installés séparément nécessitent la migration documentée depuis un ordinateur ; la récupération conserve ses paquets d’origine.
 
 [HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).
+
+> Diagnostic du programme d’installation non publié : conservez le rapport de l’échec initial. Les nouveaux rapports séparent la première erreur enregistrée des vérifications suivantes et contiennent un résumé filtré de Doctor/état. Un export est aussi proposé après une installation, une vérification d’état ou une restauration réussie. Les anciennes données manquantes restent inconnues ; ce rapport n’autorise aucune récupération. [↗](../development/INSTALLER-DIAGNOSTICS.md).

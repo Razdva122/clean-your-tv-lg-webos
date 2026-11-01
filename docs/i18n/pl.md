@@ -173,3 +173,5 @@ W obu edycjach kategorie są po lewej, a ustawienia po prawej: ekran główny, W
 Nadchodzące instalatory komputerowe/Android i zmigrowane klienty OTA wybierają 720p lub 1080p na podstawie możliwości TV. Jeśli nie można ich potwierdzić, operacja zostaje zatrzymana. Starsze osobno instalowane aktualizatory wymagają opisanej migracji z komputera; odzyskiwanie zachowuje oryginalne pakiety.
 
 [HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).
+
+> Nieopublikowana diagnostyka instalatora: zachowaj raport z pierwotnej nieudanej próby. Nowe raporty oddzielają pierwszy zapisany błąd od kolejnych kontroli i zawierają filtrowane podsumowanie Doctor/stanu. Eksport jest dostępny także po udanej instalacji, kontroli stanu lub przywróceniu. Brakujące starsze dane pozostają nieznane; raport nie uprawnia do odzyskiwania. [↗](../development/INSTALLER-DIAGNOSTICS.md).

@@ -19,6 +19,18 @@ A good title is **Installation result: TV model / firmware / edition**.
 Use the [installation result form](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/new?template=installation-result.yml).
 For an existing problem, add new evidence to its issue instead of opening a duplicate.
 
+## Unreleased installer diagnostic context
+
+Save the report from the original failed attempt before running another check.
+Upcoming installers retain a recorded first error separately from later status
+errors and include checklist results plus a filtered Doctor/status summary.
+Successful setup, status and restore also offer a report. Older failures cannot
+be reconstructed retroactively; missing primary evidence is explicitly marked.
+Known TV and CYTV versions are included when readable; supply missing details
+from TV settings without posting a serial number. A successful Doctor check is
+not confirmation that installation or physical Home works. These changes are not
+in v1.5.4. [Fields and limits](development/INSTALLER-DIAGNOSTICS.md).
+
 ## Keep private data private
 
 Review a draft before posting. Prefer the installer's redacted diagnostic summary

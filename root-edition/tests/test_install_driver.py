@@ -51,6 +51,28 @@ class CoordinatorTests(unittest.TestCase):
                 self.assertEqual(device.calls,calls)
                 with self.assertRaises(Busy): driver.install('b'*32,'/verified')
                 self.assertNotIn('private diagnostic',str(result))
+    def test_initial_worker_failure_survives_status_without_private_command(self):
+        import subprocess
+        def deploy(payload, options):
+            raise subprocess.CalledProcessError(127, ['PRIVATE-COMMAND'], output=b'PRIVATE-OUTPUT', stderr=b'PRIVATE-ERROR')
+        self.device.deploy=deploy
+        result=self.driver.install(self.identifier,'/verified')
+        self.assertEqual(result.get('failure'), {'exception_type':'CalledProcessError','exit_status':127})
+        self.assertEqual(self.driver.status(self.identifier)['failure'],result['failure'])
+        self.assertNotIn('PRIVATE',str(result))
+        self.assertEqual(self.driver.install(self.identifier,'/verified'),result)
+
+    def test_broken_private_log_does_not_replace_original_worker_failure(self):
+        import subprocess
+        def fail_deploy(payload, options):
+            raise subprocess.CalledProcessError(127, ['PRIVATE-COMMAND'])
+        def fail_log(error):
+            raise OSError('PRIVATE-LOG')
+        self.device.deploy=fail_deploy; self.device.log=fail_log
+        result=self.driver.install(self.identifier,'/verified')
+        self.assertEqual(result['state'],'recovery_required')
+        self.assertEqual(result['failure'],{'exception_type':'CalledProcessError','exit_status':127})
+
     def test_same_contract_handoff_maintains_without_submission(self):
         self.device.installed=True
         self.assertEqual(self.driver.install(self.identifier,'/verified')['state'],'complete')
