@@ -127,6 +127,14 @@
         230
       ],
       "summary": "Preserve operation-bound initiating failures and safe worker categories; export Doctor/status/check/version context across installers; original #229/#230 device reports remain unresolved"
+    },
+    {
+      "pr": 233,
+      "issues": [
+        201,
+        216
+      ],
+      "summary": "Add separately confirmed installer recovery with existing guard revalidation and no implicit reinstall; original #201/#216 recovery remains unresolved"
     }
   ],
   "excluded": [],

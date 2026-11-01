@@ -77,3 +77,22 @@ Final desktop outcome regression also hides the new-install step rail and names
 recovery when setup delegates to it. The regression failed before the fix; the
 31-case actual Qt recovery/GUI run passes afterward. Android localization/browser
 checks also pass across all twelve locales.
+
+## Integration
+
+[PR #233](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/233) merged into
+`release/next` as `e3a566dc589f294f4d7d980db917c8a64ecb25f4` after final source
+`726716ee23ffe38c487bcb21e9c0be333fc43aaa` passed the selected
+[Linux/macOS/ARM checks](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/41324668630),
+[frozen Windows/macOS Intel runtime](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/41324668585)
+and [integration policy](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/41324666623).
+Linux CI ran 600 installer cases (33 expected optional/platform skips), 24 Android
+and 220 setup tests. Actual Qt was verified locally as recorded above. Browser,
+release build and publication were correctly skipped for the focused CI scope;
+the real Chrome Android checks were run locally. The merged product/test tree
+matches that verified source. Markdown relative-file links pass.
+
+Candidate #210 inventory records this partial improvement without choosing a
+version, frozen build or physical acceptance. Original #201/#216 stay open at
+`status:planned`; source integration does not prove device recovery or public
+release. New source comments and current labels are verified during integration.
