@@ -17,7 +17,7 @@ class UpdateUiPackageTests(unittest.TestCase):
                 (root/folder).mkdir(parents=True)
             shutil.copytree(ROOT/'updater-app', root/'updater-app')
             shutil.copy(ROOT/'scripts/build-updater.sh', root/'scripts/build-updater.sh')
-            for name in ('tv_web_build.py', 'compile-tv-web.cjs'):
+            for name in ('tv_web_build.py', 'chinese_fonts.py', 'compile-tv-web.cjs'):
                 shutil.copy(ROOT/'scripts'/name, root/'scripts'/name)
             shutil.copy(ROOT/'package.json', root/'package.json')
             for name in ('system-updates.js', 'release-notes.js', 'renewal-panel.css', 'i18n.js', 'i18n.css', 'catalogs.js', 'user-data.js'):

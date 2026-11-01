@@ -203,7 +203,26 @@ jobs:
         run: |
           python scripts/preview.py --port 8876 > /tmp/cytv-settings-preview.log 2>&1 &
           settings_preview_pid=$!
-          trap 'kill "$settings_preview_pid"' EXIT
+          trap 'kill "$settings_preview_pid" 2>/dev/null || true' EXIT
+          settings_preview_ready=false
+          settings_preview_deadline=$((SECONDS + 180))
+          while (( SECONDS < settings_preview_deadline )); do
+            if ! kill -0 "$settings_preview_pid" 2>/dev/null; then
+              cat /tmp/cytv-settings-preview.log
+              wait "$settings_preview_pid" || true
+              exit 1
+            fi
+            if curl --fail --silent --max-time 2 http://127.0.0.1:8876/preview/version > /dev/null; then
+              settings_preview_ready=true
+              break
+            fi
+            sleep 0.25
+          done
+          if [ "$settings_preview_ready" != true ]; then
+            cat /tmp/cytv-settings-preview.log
+            echo 'Preview did not become ready within 180 seconds' >&2
+            exit 1
+          fi
           BROWSER_CHANNEL=chromium node tests/settings-ui.cjs
           BROWSER_CHANNEL=chromium node tests/home-viewport-ui.cjs
           BROWSER_CHANNEL=chromium node tests/helper-panel-diagnostics.cjs --browser
