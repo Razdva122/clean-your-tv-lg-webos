@@ -28,6 +28,7 @@ before using a low-level recovery or installation procedure.
 - [Home graphics resolution](HOME-GRAPHICS-RESOLUTION.md) and [passive remote diagnostic](PASSIVE-REMOTE-DIAGNOSTICS.md): candidate 720p layout/build support and read-only evidence; physical IR mapping remains unverified.
 - [Companion entry points](../COMPANION-APPS.md), [Helper diagnostics](../HELPER-DIAGNOSTICS.md), [Home/settings diagnostics](../SETTINGS-DIAGNOSTICS.md).
 - [Root doctor](../../root-edition/DOCTOR.md), [current Root limits](../../root-edition/STATUS.md), [Root validation](../../root-edition/TESTING.md).
+- [Installer recovery journey](INSTALLER-RECOVERY.md): separately confirmed recovery, existing authority guards and frontend outcome semantics; unreleased.
 - [Installer diagnostic evidence](INSTALLER-DIAGNOSTICS.md): primary-error retention, safe status/check projections and private host correlation; unreleased.
 - [Individual Root recovery handoffs](ROOT-RECOVERY-HANDOFFS.md): per-issue decisions, authentication blockers and pending-operation diagnostic boundaries.
 - [Read-only Root admission](ROOT-READONLY-ADMISSION.md): private owner handoff, isolated inspection and unsupported firmware boundaries.

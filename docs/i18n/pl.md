@@ -115,7 +115,7 @@ Homebrew Channel odmówił temu instalatorowi dostępu. W webOS 11 Homebrew 0.7.
 
 ## Pomoc i dalsze instrukcje
 
-Po błędzie lub przerwaniu sprawdź stan i zapisz raport diagnostyczny tej próby. Prowadzone odzyskiwanie prosi oddzielnie o zgodę na usunięcie i ponowną instalację. Przy niepewnym wyniku przerwij i zachowaj prywatne logi, dzienniki oraz pliki odzyskiwania; nigdy nie usuwaj ich, aby wymusić ponowienie. [Odzyskiwanie (angielski)](../RECOVERY.md). Prosząc o pomoc podaj model, firmware, edycję, wersję instalatora, nieudany krok oraz oczekiwane/rzeczywiste zachowanie; przed udostępnieniem przejrzyj raport i usuń sekrety.
+Nieopublikowany kandydat: wybierz **Sprawdź opcje odzyskiwania** dla tego samego zapisanego TV lub uruchom `cytv recover`. Kontrola i zmiany wymagają osobnych potwierdzeń z domyślnym Nie; `--yes` ich nie zatwierdza. Root kontynuuje tylko po istniejących weryfikacjach. No-root proponuje usuwanie wyłącznie za zgodą dotychczasowej kontroli usługi pakietów; ustawienia Home mogą zostać zresetowane. Nowa instalacja nie zaczyna się automatycznie. Przy nieznanym stanie lub odmowie dostępu zapisz raport i zatrzymaj się. Zachowaj dzienniki i nie powtarzaj usuwania. Nadal brakuje dowodów zakończenia dla #201 i potwierdzenia odzyskania TV dla #216. [Recovery](../RECOVERY.md). Prosząc o pomoc podaj model, firmware, edycję, wersję instalatora, nieudany krok oraz oczekiwane/rzeczywiste zachowanie; przed udostępnieniem przejrzyj raport i usuń sekrety.
 
 [Dokumentacja](../README.md) · [Zgłoś problem](../FEEDBACK.md)
 

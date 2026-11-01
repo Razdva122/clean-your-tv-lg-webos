@@ -115,7 +115,7 @@ Homebrew Channel a refusé l’accès à cet installateur. Sur webOS 11, Homebre
 
 ## Aide et autres instructions
 
-Après un échec ou une interruption, vérifiez l’état et enregistrez le rapport de diagnostic de cet essai. La récupération guidée confirme séparément suppression et réinstallation. Si le résultat est incertain, arrêtez et conservez journaux privés et fichiers de récupération ; ne les supprimez jamais pour forcer un nouvel essai. [Récupération (anglais)](../RECOVERY.md). Pour obtenir de l’aide, précisez modèle, micrologiciel, édition, version de l’installateur, étape en échec et résultat attendu/réel ; vérifiez et expurgez le rapport avant partage.
+Candidat non publié : choisissez **Examiner les options de récupération** pour le même téléviseur enregistré ou lancez `cytv recover`. Vérification et modifications exigent des confirmations distinctes, avec Non par défaut ; `--yes` ne les autorise pas. Root continue uniquement après les vérifications existantes. No-root propose la suppression seulement si le contrôle du service de paquets le permet ; les préférences Home peuvent être réinitialisées. Aucune nouvelle installation ne démarre automatiquement. Si l’état est inconnu ou l’accès refusé, enregistrez le rapport et arrêtez. Conservez les journaux et ne répétez pas la suppression. Les preuves de fin de #201 et la récupération réelle de #216 restent à confirmer. [Recovery](../RECOVERY.md). Pour obtenir de l’aide, précisez modèle, micrologiciel, édition, version de l’installateur, étape en échec et résultat attendu/réel ; vérifiez et expurgez le rapport avant partage.
 
 [Documentation](../README.md) · [Signaler un problème](../FEEDBACK.md)
 

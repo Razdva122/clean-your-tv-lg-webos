@@ -115,7 +115,7 @@ Homebrew Channel ha negato l’accesso a questo programma di installazione. Su w
 
 ## Aiuto e altre istruzioni
 
-Dopo un errore o un’interruzione, controlla lo stato e salva il rapporto diagnostico di quel tentativo. Il recupero guidato chiede conferme separate per rimozione e reinstallazione. Se il risultato è incerto, fermati e conserva registri privati e file di recupero; non eliminarli mai per forzare un tentativo. [Recupero (inglese)](../RECOVERY.md). Per assistenza indica modello, firmware, edizione, versione dell’installer, passaggio fallito e risultato atteso/effettivo; verifica e rimuovi i segreti dal rapporto prima di condividerlo.
+Candidato non pubblicato: scegli **Esamina le opzioni di ripristino** per la stessa TV salvata o esegui `cytv recover`. Verifica e modifiche richiedono conferme separate con No predefinito; `--yes` non le autorizza. Root continua solo dopo le verifiche esistenti. No-root propone la rimozione solo se il controllo del servizio pacchetti la consente; le preferenze Home possono essere azzerate. Una nuova installazione non parte automaticamente. Se lo stato è sconosciuto o l’accesso è negato, salva il rapporto e fermati. Conserva i registri e non ripetere la rimozione. Restano aperte le prove di conclusione di #201 e il ripristino reale di #216. [Recovery](../RECOVERY.md). Per assistenza indica modello, firmware, edizione, versione dell’installer, passaggio fallito e risultato atteso/effettivo; verifica e rimuovi i segreti dal rapporto prima di condividerlo.
 
 [Documentazione](../README.md) · [Segnalare un problema](../FEEDBACK.md)
 

@@ -1161,8 +1161,9 @@ print('CYTV_PROJECT_REMOVED')
             resuming_remove = pending['action'] == 'uninstall' and self.profile['edition'] == 'no-root'
             if pending['action'] != 'install' and not resuming_remove:
                 raise UserError('Previous operation is unresolved. Run cytv status and retain recovery evidence before removal.')
-            idle = self.remote.luna('com.webos.appInstallService/status', {'subscribe': True})
-            if idle.get('status', {}).get('apps') != []:
+            idle = self.remote.luna('com.webos.appInstallService/status', {'subscribe': True}, timeout=10)
+            if (not isinstance(idle, dict) or idle.get('returnValue') is not True or
+                    not isinstance(idle.get('status'), dict) or idle['status'].get('apps') != []):
                 raise UserError('TV installer is not confirmed idle. Keep the receipt and run cytv status before removal.')
             if not resuming_remove:
                 self.store.checkpoint(self.profile, previous=pending, action='uninstall', stage='pending')

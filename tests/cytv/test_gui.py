@@ -97,6 +97,7 @@ class GuiTests(unittest.TestCase):
 
     def test_maintenance_buttons_dispatch_selected_command_and_keep_action_visible(self):
         for index, (command, title) in enumerate([
+                ('recover', 'Review recovery options'),
                 ('status', 'Check TV status'),
                 ('doctor', 'Check connection and create a diagnostic report'),
                 ('restore', 'Return to LG Home'),

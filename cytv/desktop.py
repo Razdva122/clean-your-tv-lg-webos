@@ -89,6 +89,10 @@ class DesktopConsole(Console):
     def check(self, event):
         self.emit('check', event)
 
+    def recovery_plan(self, value):
+        super().recovery_plan(value)
+        self.emit('recovery-plan', dict(value))
+
     def recovery(self, profile):
         super().recovery(profile)
         self.emit('recovery', dict(profile))

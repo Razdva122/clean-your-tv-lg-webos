@@ -43,7 +43,7 @@ def parser():
     result._positionals.title = i18n.translate('positional arguments')
     result._optionals.title = i18n.translate('options')
     result.add_argument('-h', '--help', action='help', help=i18n.translate('Show this help message and exit'))
-    result.add_argument('command', nargs='?', default='install', choices=('install', 'status', 'doctor', 'home-diagnostics', 'restore', 'uninstall', 'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access', 'recover-system-rollback', 'replace-system-updater', 'clean-wam-cache'))
+    result.add_argument('command', nargs='?', default='install', choices=('install', 'status', 'doctor', 'home-diagnostics', 'recover', 'restore', 'uninstall', 'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access', 'recover-system-rollback', 'replace-system-updater', 'clean-wam-cache'))
     result.add_argument('--language', choices=tuple(i18n.LANGUAGES), help=i18n.translate('Interface language (auto uses the computer language)'))
     result.add_argument('--version', action='store_true', help=i18n.translate('Print installer version'))
     result.add_argument('--host', help=i18n.translate('TV IPv4 address or hostname'))
@@ -310,7 +310,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 remote = SSH.connect(profile, store.device_dir(profile), secret_with_help, trust,
                                      identity_prompt=None if args.non_interactive else lambda: prompts.root_credentials(ask, write))
             checks.update('ssh', 'pass')
-            if args.command in ('install', 'status', 'doctor'):
+            if args.command in ('install', 'status', 'doctor', 'recover'):
                 diagnostics.context.collect_metadata(remote, tv_info)
             store.save(profile)
             installer = Installer(remote, store, profile, payload, manifest, write, tv_info=tv_info, checks=checks)
@@ -318,39 +318,12 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 reinstall = None
                 resume = False
                 if store.pending(profile):
-                    phase = 'inspect-installation'
-                    write('Checking the previous installation on the TV…')
-                    existing = installer.status()
-                    pending = store.pending(profile)
-                    if (profile['edition'] == 'no-root' and pending and
-                            (pending.get('action') == 'uninstall' or
-                             (pending.get('action') == 'install' and pending.get('stage') == 'pending'))):
-                        write.heading('Recover and reinstall' if pending['action'] == 'install' else 'Unfinished removal')
-                        if pending['action'] == 'install':
-                            write('The previous installation did not finish. Remove its packages before installing again.')
-                        write('Finish removing Clean Your TV before installing again. LG Home will be restored and remaining Clean Your TV packages removed.')
-                        write('After removal is verified, setup continues with the bundled versions.')
-                        if args.non_interactive:
-                            raise UserError('Open cytv interactively to finish the previous removal, or run cytv uninstall for this TV, then retry installation.')
-                        if not prompts.confirm('Finish removal before installing again?', ask, write):
-                            write('Recovery data kept. Installation has not restarted.')
-                            return 0
-                        phase = 'uninstall'
-                        installer.uninstall()
-                        phase = 'inspect-installation'
-                        if store.pending(profile):
-                            raise UserError('The previous operation could not be safely resolved. Recovery data was kept. Save the diagnostic report; installation has not restarted.')
-                    if existing.get('can_resume_root_setup') is True:
-                        if args.non_interactive:
-                            raise UserError('Root setup is ready to finish. Open cytv interactively to confirm Home activation.')
-                        write.heading('Ready to finish Root setup')
-                        write('Root and Root Updater are installed and verified. Continue to stop the old Helper, turn on Home control and open Clean Your TV Home.')
-                        if not prompts.confirm('Finish Root setup?', ask, write, default=True):
-                            write('Setup left unchanged. You can continue here next time.')
-                            return 0
-                        resume = True
-                    elif store.pending(profile):
-                        raise UserError('The previous operation could not be safely resolved. Recovery data was kept. Save the diagnostic report; installation has not restarted.')
+                    from .recovery import recover
+                    phase = args.command = 'recover'
+                    recover(installer, ask, write, args.non_interactive)
+                    diagnostics.save_result(write, store, 'recover', profile, phase, tv_info,
+                                            checks=checks.results, status=tv_info.get('status'))
+                    return 0
                 if profile['edition'] == 'root' and not resume:
                     installer.select_graphics()
                     phase = 'inspect-installation'
@@ -453,6 +426,10 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     write('Packages installed; Home Helper launch requested. Check short Home, arrows/OK, Back, volume, standby and cold boot.')
                     write('Emergency exit: three short Home presses within two seconds. Keep Developer Mode active. The computer can now be switched off.')
                     write('Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.')
+            elif args.command == 'recover':
+                from .recovery import recover
+                phase = 'recover'
+                recover(installer, ask, write, args.non_interactive)
             elif args.command == 'replace-system-updater':
                 phase = args.command
                 installer.replace_system_updater()
@@ -523,16 +500,15 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     write('Return to the start screen, choose Set up my TV and confirm reinstallation. In the console, run cytv install.')
                 else:
                     write.raw(json.dumps(result, indent=2))
-            if args.command in ('install', 'status', 'restore'):
+            if args.command in ('install', 'status', 'restore', 'recover'):
                 diagnostics.save_result(write, store, args.command, profile,
                     'install-complete' if args.command == 'install' else phase, tv_info,
-                    checks=checks.results, status=result if args.command != 'install' else tv_info.get('status'))
+                    checks=checks.results, status=result if args.command in ('status', 'restore') else tv_info.get('status'))
             if args.command == 'install':
                 diagnostics.context.clear_previous_attempt(store, profile)
-            if args.command in ('status', 'doctor', 'restore') and profile['edition'] == 'no-root':
+            if args.command in ('status', 'doctor', 'restore'):
                 pending = store.pending(profile)
-                if pending and (pending.get('action') == 'uninstall' or
-                                (pending.get('action') == 'install' and pending.get('stage') == 'pending')):
+                if pending:
                     write.recovery(profile)
         return 0
     except (EOFError, KeyboardInterrupt, StopIteration):
@@ -547,7 +523,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
         if phase in ('pair-tv', 'read-inventory'):
             write('Installation has not started. No TV packages were changed by this attempt.')
         if args.command == 'uninstall' and phase == 'uninstall' and profile['edition'] == 'root' and store.pending(profile):
-            write('Keep the TV on and choose Remove again. The app checks its state before continuing.')
+            from .recovery import plan, BLOCKED
+            plan(write, 'blocked', BLOCKED)
         diagnostics.suggest_issue(write, store, args.command, profile, phase, exc, tv_info, checks=checks.results, status=tv_info.get('status'))
         return 2
     except Exception as exc:
@@ -562,7 +539,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
         write.error('Could not read the TV applications. Keep the TV on and accept its pairing request. Installation has not started.'
               if phase in ('pair-tv', 'read-inventory') and kind != 'ModuleNotFoundError' else hints.get(kind, 'Operation could not be confirmed. Check TV connectivity and run cytv status or cytv doctor. Retain local and TV recovery state; do not retry blindly.'))
         if args.command == 'uninstall' and phase == 'uninstall' and profile['edition'] == 'root' and store.pending(profile):
-            write('Keep the TV on and choose Remove again. The app checks its state before continuing.')
+            from .recovery import plan, BLOCKED
+            plan(write, 'blocked', BLOCKED)
         diagnostics.suggest_issue(write, store, args.command, profile, phase, exc, tv_info, checks=checks.results, status=tv_info.get('status'))
         return 1
     finally:

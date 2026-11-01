@@ -80,25 +80,25 @@ real-TV acceptance; automated tests do not establish hardware compatibility.
 
 ## Installation wizard
 
-If a previous No-root removal is unfinished, installation offers to finish it
-before continuing. This is a separate, default-No confirmation, including with
-`--yes`. It restores LG Home and resumes the existing verified package-removal
-flow; it does not delete the operation journal to bypass recovery. Declining
-keeps recovery data. Non-interactive installation stops with instructions to
-use the interactive installer or `cytv uninstall` for the same saved TV/profile.
-If recovery fails, attach the new diagnostic report for the `uninstall` phase.
+**Unreleased candidate:** `cytv recover` reviews an interrupted setup/removal for
+the same saved TV. Desktop and Android expose **Review recovery options**. A
+pending `install` enters this journey and then returns; no new installation
+starts automatically, even after successful cleanup.
 
-Desktop behavior in 1.3.0 (absent from earlier v1.2.0 installers): successful
-status, doctor or restore checks with an unfinished No-root removal offer
-**Recover and reinstall** for the same saved connection. This uses the existing
-interactive install/removal flow and preserves its separate default-No recovery
-confirmation. Desktop report delivery uses a dedicated report event rather than
-recognizing a filename in translated log text. Failure reports retain the failed
-action, phase, traceback locations and allowlisted error metadata; the window
-offers **Save diagnostic report…** without another doctor run. CLI and Android
-still receive the existing report path through their normal output adapters.
-No new TV endpoint, permission, persistent recovery state or automatic retry is
-introduced. Issue #65's original device failure remains under investigation.
+The check itself and each offered change require separate default-No confirmation,
+including with `--yes`; noninteractive recovery stops. Root checks may run verified
+support code. Only verified Root/updater state permits separately confirmed Home
+activation. No-root removal requires the existing package-service idle guard
+before the offer and again at mutation; unknown removal outcomes or conflicts
+stop before cleanup. Removing packages may reset Home preferences.
+
+Unknown/denied/busy/incomplete state retains all recovery records and offers the
+current attempt's report (`action`/`phase`: `recover`). It never recommends blindly
+repeating Remove, deletes a receipt, infers transaction completion from app lists
+or starts a new setup. Inspect reports before sharing. Report export remains
+optional and cannot invalidate successful TV work. No new endpoint, permission
+or persistent recovery-authority state is introduced. #201's missing package
+terminal evidence and #216's original device failure remain unresolved.
 
 Developer Mode key failures include a safe `connection` object in diagnostic
 JSON: `protocol: developer-key` and an allowlisted `reason_code`:
@@ -347,7 +347,8 @@ A private local receipt is synchronized before installation/removal, and
 recovery attempts have separate receipts. A failed command never means a package
 was not installed. **Do not delete journals or rerun installation blindly.**
 
-Run `cytv status` first. In the unreleased #201 correction, No-root status
+In the unreleased candidate, choose `cytv recover` to review allowed actions
+with separate confirmation. `cytv status` remains a state check. No-root status
 keeps an interrupted install/removal receipt unchanged. Matching versions,
 installed files/hashes or absent apps do not prove that the original installer
 transaction terminated or that service registration completed. There is no

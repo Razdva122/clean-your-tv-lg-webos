@@ -26,6 +26,24 @@ class BridgeTests(unittest.TestCase):
         self.assertNotEqual(event['label'], 'SSH connection and sign-in')
         self.assertNotEqual(event['statusText'], 'Passed')
 
+    def test_recovery_is_explicit_and_emits_safe_plan_and_default_no(self):
+        module = self.module()
+        args = module.arguments({'host':'192.0.2.10', 'edition':'no-root', 'action':'recover'}, '/private/profiles')
+        self.assertEqual(args[0], 'recover')
+        self.assertNotIn('--yes', args)
+        class Native:
+            def __init__(self): self.events = []
+            def emit(self, raw): self.events.append(json.loads(raw))
+            def request(self, raw):
+                self.events.append(json.loads(raw)); return 'n'
+        native = Native(); callbacks = module.Callbacks(native)
+        module.AndroidConsole(callbacks).recovery({'host':'PRIVATE-TARGET'})
+        event = native.events[-1]
+        self.assertEqual((event['kind'], event['state']), ('recovery-plan', 'review'))
+        self.assertNotIn('PRIVATE-TARGET', json.dumps(native.events))
+        callbacks.ask('Remove remaining Clean Your TV packages? [y/N]: ')
+        self.assertTrue(native.events[-1]['defaultNo'])
+
     def test_cli_errors_reach_android_as_error_events(self):
         module = self.module()
         class Native:
