@@ -108,7 +108,9 @@ records the earlier host/UI checks; it does not substitute for the frozen build.
 [Freeze/build record](history/2026-11-02-release-1.6.0-freeze.md) records the selected
 source, run/attempt, artifact checks and remaining work as execution proceeds.
 
-Require the complete full_candidate workflow, all four desktop platforms,
+The complete candidate run41343868494:2 passed and is pinned; see the
+[verified artifact hashes](history/2026-11-02-release-1.6.0-artifacts.md).
+The release gate requires all four desktop platforms,
 Android signer/provenance checks, full Linux/macOS/browser/ARM suites and artifact
 inventories. Pin successful source/run/attempt/hashes before physical acceptance.
 Then verify original-certificate Android in-place upgrade and exact-package TV
