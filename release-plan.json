@@ -42,6 +42,13 @@
       "summary": "Preserve pending No-root journals when installer termination is unproven; #201 reconciliation remains unresolved"
     },
     {
+      "pr": 219,
+      "issues": [
+        69
+      ],
+      "summary": "Remove retired standalone web Showcase builder/assets/tests; retain inline theme preview, TV catalogue and author runtime cards"
+    },
+    {
       "pr": 220,
       "issues": [
         200
