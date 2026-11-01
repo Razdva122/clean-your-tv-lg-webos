@@ -1042,7 +1042,8 @@ class OperationTests(unittest.TestCase):
         installer = self.installer(remote)
         installer.preflight(install=True)
         self.assertEqual(installer.tv_info, {
-            'kernel_arch': 'aarch64', 'userland_abi': 'arm32', 'arm32_supported': True})
+            'kernel_arch': 'aarch64', 'userland_abi': 'arm32', 'arm32_supported': True,
+            'helper_state': 'stopped'})
         self.assertFalse(any(c[0] == 'upload' for c in remote.calls))
 
     def test_no_root_requires_valid_little_endian_arm32_elf_before_mutation(self):

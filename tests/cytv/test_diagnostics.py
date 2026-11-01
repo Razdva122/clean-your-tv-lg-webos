@@ -8,6 +8,14 @@ from cytv import cli, diagnostics, state
 
 
 class DiagnosticTests(unittest.TestCase):
+    def test_helper_state_rejects_unknown_or_structured_remote_values(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            for value in ('PRIVATE-PROCESS', {'process': 'PRIVATE-PATH'}, None, True):
+                path = diagnostics.create_report(state.Store(tmp), 'install', None, 'preflight',
+                                                 tv_info={'helper_state': value})
+                self.assertEqual(json.loads(path.read_text())['tv'].get('helper_state'), 'unknown')
+                self.assertNotIn('PRIVATE-', path.read_text())
+
     def test_python_cache_reason_is_revalidated_before_export(self):
         from cytv.errors import PythonCacheError
         with tempfile.TemporaryDirectory() as tmp:
