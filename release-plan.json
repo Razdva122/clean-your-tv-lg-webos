@@ -80,6 +80,18 @@
         206
       ],
       "summary": "Refresh Root Settings status before resumed actions and preserve retained-rollback Home capture; partial #202, old forward cancellation and exact-package device acceptance remain unresolved"
+    },
+    {
+      "pr": 223,
+      "issues": [],
+      "summary": "Skip closed-PR policy preflight writes; preserve SHA-shared open gates; workflow prevention activates on normal main release"
+    },
+    {
+      "pr": 224,
+      "issues": [
+        211
+      ],
+      "summary": "Add Czech TV Home/Root/settings/theme/audio/updater localization and preserve cs profiles; installer language scope unchanged"
     }
   ],
   "excluded": [],

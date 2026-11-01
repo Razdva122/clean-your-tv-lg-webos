@@ -8,6 +8,8 @@ one model or artifact does not certify later releases or a different TV.
 
 ## Scoped feature checks
 
+- [Candidate readiness and policy repair, 2026-11-01](2026-11-01-candidate-readiness-audit.md): closed-PR status repair, #223/#224 integration, Czech TV checks and remaining freeze/build/Android/device gates.
+
 - [Parallel Root integration review, 2026-11-01](2026-11-01-parallel-root-integration-review.md): independent #221/#222 review, combined Qt/browser/host checks and outstanding signed-package/device gates.
 
 - [Root Settings and update intent, 2026-11-01](2026-11-01-root-home-settings-intent.md): host regressions for #206 and partial #202 retained rollback; old forward-callback cancellation and physical acceptance remain unresolved.
