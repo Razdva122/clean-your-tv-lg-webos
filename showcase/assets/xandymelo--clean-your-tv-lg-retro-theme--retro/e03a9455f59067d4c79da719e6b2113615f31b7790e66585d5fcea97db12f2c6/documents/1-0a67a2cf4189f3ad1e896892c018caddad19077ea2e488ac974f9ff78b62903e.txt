@@ -1,0 +1,8 @@
+# Credits
+
+CSS: original work by xandymelo.
+Preview: generated from the Clean Your TV author toolkit browser renderer; see screenshots/retro/provenance.json.
+
+Planned engine follow-up (not bundled): Press Start 2P by CodeMan38, SIL Open Font License 1.1,
+https://fonts.google.com/specimen/Press+Start+2P. API 1 does not accept local fonts, @font-face,
+steps(), blinking pseudo-elements or arbitrary date positioning, so no font bytes are distributed.
