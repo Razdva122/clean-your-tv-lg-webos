@@ -224,6 +224,17 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.assertIsNotNone(self.store.pending(self.profile))
         self.assertFalse(any(c[0] == 'upload' or c[1] == 'com.webos.appInstallService/status' for c in self.remote.calls))
 
+    def test_delegated_recovery_hides_install_steps_and_names_actual_action(self):
+        w = self.window()
+        w.command = 'install'
+        w.steps.show()
+        w.receive('recovery-plan', {'state':'review', 'summary':'Review recovery options',
+                                  'next_step':'Recovery data kept. Installation has not restarted.'})
+        self.assertTrue(w.steps.isHidden())
+        self.assertEqual(w.rail_title.text(), 'Review recovery options')
+        w.receive('done', 0)
+        self.assertEqual(w.title.text(), 'Review recovery options')
+
     def test_report_event_offers_save_even_without_a_diagnostic_filename_in_log_text(self):
         w = self.window()
         report = self.root / 'failure.json'

@@ -72,3 +72,8 @@ Final local affected verification: `scripts/test.sh installer android` passes
 Homebrew payload/runtime/bridge/continuation checks. Setup's 220-case pass above
 covers unchanged setup dependencies. Final source journey tests and GUI dispatch
 are included in that successful run. `git diff --check` passes.
+
+Final desktop outcome regression also hides the new-install step rail and names
+recovery when setup delegates to it. The regression failed before the fix; the
+31-case actual Qt recovery/GUI run passes afterward. Android localization/browser
+checks also pass across all twelve locales.

@@ -504,6 +504,8 @@ class Wizard(QMainWindow):
                 self.report = path
         elif kind == 'recovery-plan':
             self.recovery_plan = dict(value)
+            self.steps.hide()
+            self.rail_title.setText(tr('Review recovery options'))
         elif kind == 'recovery':
             self.recovery_profile = dict(value)
         elif kind == 'prompt':
