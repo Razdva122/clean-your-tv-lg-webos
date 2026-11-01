@@ -71,6 +71,8 @@ class Installer:
         self.tv_info = tv_info if tv_info is not None else {}
         from .checks import CheckList
         self.checks = checks if checks is not None else CheckList()
+        from .outcomes import SetupOutcome
+        self.outcome = SetupOutcome(self.checks, self.tv_info)
 
     @staticmethod
     def _python_command(args):
@@ -452,7 +454,7 @@ with os.fdopen(f,'rb') as stream:
             if helper == 'stale':
                 self.progress('A stale Helper PID file was found; no Helper process is running. Continuing installation without deleting state files.')
 
-    def helper_state(self):
+    def helper_state(self, timeout=None):
         # Read only: a stale PID is harmless once no controller/worker is found.
         # A symlink, unreadable process or failed probe must never permit replacement.
         script = r'''
@@ -484,7 +486,7 @@ for cytv_file in /proc/[0-9]*/cmdline; do
 done
 printf '%s' "$cytv_state"
 '''.replace('HELPER_STATE', HELPER_STATE).replace('HELPER_ROOT', (BASE + '/applications/' + HELPER).replace('.', '[.]'))
-        result = self.remote.run(script).strip()
+        result = self.remote.run(script, **({'timeout': timeout} if timeout is not None else {})).strip()
         return {'CYTV_HELPER_IDLE': 'stopped', 'CYTV_HELPER_STALE': 'stale',
                 'CYTV_HELPER_ACTIVE': 'running'}.get(result, 'uncertain')
 
@@ -540,6 +542,7 @@ printf '%s' "$cytv_state"
             package.inventory_script(inventory)
         if reinstall not in (None, 'installed', 'removed') or (reinstall and self.profile['edition'] != 'root'):
             raise UserError('Invalid reinstallation request.')
+        self.outcome.begin()
         self.select_graphics()
         self.preflight(install=not reinstall)
         if self.profile['edition'] == 'root':
@@ -572,6 +575,7 @@ printf '%s' "$cytv_state"
             self.remote.upload(path, data, mode=0o644)
             self.remote.luna('com.webos.appInstallService/dev/install', {'id': app, 'ipkUrl': path, 'subscribe': True}, terminal='installed', timeout=150)
         self.verify_installed()
+        self.outcome.packages_verified()
         self.progress('Configuring Home Helper…')
         self.remote.upload(HELPER_STATE + '/ssap-key.json', key_data, mode=0o640)
         self.remote.upload(HELPER_STATE + '/apps.json', apps_data, mode=0o644)
@@ -585,12 +589,21 @@ printf '%s' "$cytv_state"
         except RuntimeError:
             self.store.checkpoint(self.profile, eim_registered='unknown')
             self.progress('Warning: early input restoration was not confirmed; startup will use the guarded fallback.')
+        self.progress('Starting Home Helper…')
+        self.outcome.launch_submitted()
         self.remote.luna('com.webos.applicationManager/launch', {'id': HELPER, 'params': {'nativeHomeStart': True}})
+        self.outcome.launch_accepted()
         from .state import private_write
         private_write(self.store.device_dir(self.profile) / 'installation.json',
                       json.dumps({'eim_registered': self.store.pending(self.profile).get('eim_registered', 'unknown')}).encode())
         self.store.finish(self.profile)
         self.remote.run('rm -f ' + stage + '/helper.ipk ' + stage + '/launcher.ipk; rmdir ' + stage)
+        try:
+            observed = self.helper_state(timeout=5)
+            self.outcome.startup_observed('process-observed' if observed == 'running' else
+                                          'not-observed' if observed in ('stopped', 'stale') else 'unverified')
+        except Exception:
+            self.outcome.startup_observed('unverified')
         return {'installed': 'no-root', 'launch_requested': True, 'hardware_verified': False}
 
     def install_root(self, inventory, migrate, reinstall=None):
@@ -641,6 +654,7 @@ printf '%s' "$cytv_state"
                 raise UserError('Root updater recovery verification failed. Keep recovery state and run cytv status.')
             self.store.checkpoint(self.profile,stage='verify',baseline_sha=baseline_sha)
             self.verify_root_updater(baseline_sha)
+            self.outcome.packages_verified()
             self.store.checkpoint(self.profile, action='activate-root', stage='stop-helper', updates_ready=True)
             self.activate_root()
             return dict(result, home_changed=True, launch_requested=True, updates_ready=True)
@@ -707,11 +721,15 @@ print('CYTV_UPDATER_VERIFIED')
             self.root_action('enable')
             self.store.checkpoint(self.profile, stage='launch')
             self.progress('Opening Clean Your TV Home…')
+            self.outcome.launch_submitted()
             self.remote.luna('com.webos.applicationManager/launch', {'id': package.ROOT_APP})
+            self.outcome.launch_accepted()
             self.store.checkpoint(self.profile, launch_requested=True)
             if not self.root_active(self.root_action('status').get('result', {})):
                 raise UserError('Root activation or recovery readback was not confirmed. Run cytv status or cytv restore. Recovery data was kept.')
+            self.outcome.startup_observed('root-state-verified')
         except (RuntimeError, ValueError):
+            self.outcome.startup_observed('unverified')
             raise UserError('Root is installed, but activation or opening Home could not be confirmed. Run cytv status to inspect it, or cytv restore to return to LG Home. Recovery data was kept; do not reinstall blindly.') from None
         self.store.finish(self.profile)
 
@@ -907,8 +925,10 @@ print('CYTV_UPDATER_VERIFIED')
 
     def resume_root_setup(self):
         # Revalidate after the user's confirmation; never resubmit package setup.
+        self.outcome.begin()
         if self.status().get('can_resume_root_setup') is not True:
             raise UserError('Root setup could not be verified for continuation. Recovery data was kept.')
+        self.outcome.packages_verified()
         self.store.checkpoint(self.profile, action='activate-root', stage='stop-helper', updates_ready=True)
         self.activate_root()
         return {'installed': package.ROOT_APP, 'home_changed': True, 'launch_requested': True, 'updates_ready': True}

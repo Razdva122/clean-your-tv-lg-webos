@@ -62,6 +62,8 @@ chmod +x cytv
 
 Wybierz telewizor lub podaj IP, wybierz edycję i sprawdź podsumowanie. Nową tożsamość SSH zatwierdzaj tylko dla własnego telewizora w zaufanej sieci; zmieniony zapisany klucz blokuje dostęp. Root przygotowuje odzyskiwanie i od razu aktywuje Home, bez okresu próbnego ani potwierdzenia zachowania ustawień. Sprawdź strzałki, OK, Home, Wstecz/Anuluj, głośność, czuwanie i uruchomienie po całkowitym odłączeniu zasilania.
 
+Nieopublikowany kandydat: weryfikacja pakietów, odczyt startu i Twoja obserwacja fizycznego Home są oddzielne. Potwierdzenie startu lub proces Helper nie dowodzą przechwytywania Home. Otwórz inną aplikację, krótko naciśnij Home raz i wybierz zaobserwowany wynik; domyślnie **Nie sprawdzono / pomiń**. `--yes` nie odpowiada za Ciebie, a tryb nieinteraktywny pozostawia test niewykonany. Błąd Home lub pominięcie nie usuwa pakietów i nie uruchamia ponownej instalacji. Zapisz lokalny raport, jeśli potrzebujesz pomocy; nie jest publikowany automatycznie. Inne przyciski, dźwięk, czuwanie i zimny start pozostają osobnymi testami.
+
 ## Obsługa i odzyskiwanie
 
 Strzałki wybierają, OK otwiera; przytrzymaj OK, aby zmienić kolejność. Krótkie Wstecz zachowuje nawigację aplikacji i jej potwierdzenie wyjścia. Home otwiera ekran Clean Your TV, gdy sterowanie jest aktywne. Przytrzymaj Wstecz przez 1,2 sekundy, aby jednorazowo otworzyć LG Home. Przełącznik sterowania Home i ustawienia pozostają bez zmian.

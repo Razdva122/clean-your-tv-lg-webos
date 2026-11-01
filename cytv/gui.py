@@ -458,7 +458,8 @@ class Wizard(QMainWindow):
             colors = {'pass': '#90cfad', 'fail': '#ff8580', 'unknown': '#e8c17d',
                       'running': '#eddbc2', 'pending': '#c0b5a5'}
             rows = []
-            for result in self.check_results.values():
+            priority = {'packages':0, 'startup':1, 'home-button':2}
+            for result in sorted(self.check_results.values(), key=lambda item: priority.get(item['id'],3)):
                 status = result['status']
                 label, detail = html.escape(tr(result['label'])), html.escape(tr(result['detail']))
                 marker = {'pass': '✓', 'fail': '!', 'unknown': '?', 'running': '…', 'pending': '·'}[status]
@@ -532,6 +533,14 @@ class Wizard(QMainWindow):
             if self.recovery_plan:
                 self.title.setText(tr('Review recovery options'))
                 self.subtitle.setText(tr(self.recovery_plan['summary']))
+            setup_review = False
+            if value == 0 and 'packages' in self.check_results:
+                confirmed = all(self.check_results.get(key, {}).get('status') == 'pass'
+                                for key in ('packages', 'startup', 'home-button'))
+                setup_review = not confirmed
+                self.title.setText(tr('Home button confirmed by you' if confirmed else 'Review TV checks'))
+                self.subtitle.setText(tr('Package verification, startup readback and your Home-button observation are separate results.'))
+                self.badge.setText(self.title.text())
             if recover:
                 profile = dict(self.recovery_profile)
                 self.title.setText(tr('Review recovery options'))
@@ -539,14 +548,14 @@ class Wizard(QMainWindow):
                 self.subtitle.setText(tr('Checking recovery does not reinstall or remove packages. Root checks may run verified support code.'))
                 self.button('Review recovery options', lambda: self.start('recover', profile), True)
             if self.report:
-                self.button('Save diagnostic report…', self.save_report, failed)
+                self.button('Save diagnostic report…', self.save_report, failed or setup_review)
                 if failed:
                     self.subtitle.setText(tr('Save the report from this failed attempt and attach it to your issue. Recovery data has been kept.'))
             elif failed:
                 self.subtitle.setText(tr('A diagnostic report could not be created. Include the visible error when opening an issue.'))
-            if failed:
+            if failed or self.check_results.get('home-button', {}).get('status') == 'fail':
                 self.button('Open an issue', lambda: QDesktopServices.openUrl(QUrl(diagnostics.ISSUE_URL)))
-            self.button('Back to start', self.home, not recover and not (failed and self.report))
+            self.button('Back to start', self.home, not recover and not ((failed or setup_review) and self.report))
             failed_checks = [result for result in self.check_results.values() if result['status'] in ('fail', 'unknown')]
             if failed and failed_checks:
                 self.subtitle.setText(tr('Failed') + ': ' + ', '.join(tr(result['label']) for result in failed_checks) + '\n' + self.subtitle.text())

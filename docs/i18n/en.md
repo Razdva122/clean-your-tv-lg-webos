@@ -62,6 +62,8 @@ chmod +x cytv
 
 Choose the TV (or enter its IP), choose the edition and review the summary. Approve first-use SSH trust only for your own TV on a trusted network; a changed saved key blocks access. Root credentials are distinct from the Developer Mode passphrase. Root installs recovery and activates Home immediately, without a trial or Keep step. Check arrows, OK, Home, Back/Cancel, volume, standby/wake and cold boot on your own TV.
 
+Unreleased candidate: setup shows package verification, startup readback and your physical Home observation separately. A launch acknowledgement or observed Helper process does not prove Home interception. Open another TV app, press Home once briefly, then choose what you saw; the default is **Not tested / skip**. `--yes` does not answer this check, and noninteractive setup leaves it untested. A failed or skipped Home check does not undo installed packages or start a reinstall. Save the local report for help; it is not published automatically. Other controls, sound, standby and cold boot remain separate checks.
+
 ## Everyday use and recovery
 
 Arrows select tiles; OK opens them; hold OK to reorder. Short Back retains the app's navigation and exit confirmation. Short Home opens Clean Your TV while Home control is active. Hold Back for 1.2 seconds to open LG Home once. The Home-control switch and your settings remain unchanged.

@@ -120,6 +120,42 @@ let browser;
     assert.equal(await page.locator('[data-action=confirm]').count(),1);
     await page.close();
   }
+  for (const [locale,dictionary] of Object.entries(words)) {
+    const page=await browser.newPage({locale,viewport:{width:320,height:667}});
+    await page.addInitScript(()=>{
+      window.answers=[];
+      window.CYTV={hasKey:()=>false,snapshot:()=> '[]',answer:raw=>answers.push(JSON.parse(raw))};
+    });
+    await page.goto('file://'+path.join(ui,'index.html'));
+    for(const homeStatus of ['unknown','fail','pass']){
+      await page.evaluate(homeStatus=>{
+        receiveNative({kind:'started',config:{host:'192.0.2.10',edition:'no-root',action:'install'}});
+        receiveNative({kind:'check',checkId:'ssh',status:'pass',label:'ssh',detail:'',statusText:'pass',title:'TV checks'});
+        for(const [checkId,status] of [['packages','pass'],['startup','pass'],['home-button',homeStatus]])
+          receiveNative({kind:'check',checkId,status,label:checkId,detail:'',statusText:status,title:'TV checks'});
+        receiveNative({kind:'report-ready',name:'diagnostic-123456abcdef.json'});
+        receiveNative({kind:'finished',code:0});
+      },homeStatus);
+      assert.equal(await page.locator('h1').innerText(),dictionary[homeStatus==='pass'?'homeObserved':'tvChecksReview']);
+      assert.equal(await page.locator('.review-symbol').count(),homeStatus==='pass'?0:1);
+      assert((await page.locator('.tv-checks li').first().innerText()).includes('packages'));
+      assert.equal(await page.locator('[data-action=save-report]').count(),1);
+      assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),locale+' result overflow');
+    }
+    await page.evaluate(()=>receiveNative({kind:'question',id:'home-test',context:'Physical Home check',
+      options:[{value:'1',label:'Home opened'},{value:'2',label:'Home did not work'},{value:'3',label:'Not tested'}],defaultChoice:'3'}));
+    await page.waitForFunction(()=>document.activeElement?.dataset.value==='3');
+    assert.equal(await page.locator('[data-action=confirm]').count(),0);
+    await page.keyboard.press('Enter');
+    assert.equal(await page.evaluate(()=>answers.at(-1).value),'3');
+    await page.evaluate(()=>{
+      receiveNative({kind:'started',config:{host:'192.0.2.11',edition:'root',action:'status'}});
+      receiveNative({kind:'finished',code:0});
+    });
+    assert.equal(await page.locator('h1').innerText(),dictionary.statusDone);
+    assert.equal(await page.locator('.tv-checks').count(),0);
+    await page.close();
+  }
   await browser.close();
   console.log('PASS Android maintenance: twelve locales, correct commands, connection flow, progress, replay, readable text and responsive widths');
 })().catch(async error=>{console.error(error);if(browser)await browser.close();process.exitCode=1});

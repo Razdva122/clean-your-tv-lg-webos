@@ -32,7 +32,8 @@ def recover(installer, ask, write, non_interactive=False):
             if prompts.confirm('Finish Root setup?', ask, write):
                 # Re-reads status and verifies the updater before Home activation.
                 installer.resume_root_setup()
-                plan(write, 'complete', 'Root is ready', 'Check controls on the TV after installation.')
+                installer.outcome.review_home(ask, write)
+                plan(write, 'complete', 'Review TV checks', 'Save diagnostic report…')
             return
         if not pending:
             verified_removal = (result.get('reconciled') == 'product-removal-verified' and

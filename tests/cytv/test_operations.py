@@ -730,6 +730,54 @@ class OperationTests(unittest.TestCase):
                 self.assertFalse(any(c[0] in ('run', 'upload') for c in remote.calls))
                 self.assertIsNone(self.store.pending(installer.profile))
 
+    def test_package_and_launch_success_do_not_certify_startup_or_home(self):
+        installer = self.installer(Remote())
+        installer.install(self.inventory, 'private-pairing')
+        outcome = installer.tv_info['setup_outcome']
+        self.assertEqual(outcome, {'packages':'verified','launch_request':'accepted',
+                                  'startup':'not-observed','home_button':'not-tested'})
+        self.assertIsNone(self.store.pending(installer.profile))
+
+    def test_launch_failure_preserves_verified_packages_and_pending_receipt(self):
+        remote = Remote(); original = remote.luna
+        def luna(uri, payload, **kwargs):
+            if uri.endswith('/launch'): raise RuntimeError('lost launch response')
+            return original(uri, payload, **kwargs)
+        remote.luna = luna
+        installer = self.installer(remote)
+        with self.assertRaises(RuntimeError): installer.install(self.inventory, 'private-pairing')
+        outcome = installer.tv_info['setup_outcome']
+        self.assertEqual(outcome['packages'], 'verified')
+        self.assertEqual(outcome['launch_request'], 'submitted-unconfirmed')
+        self.assertEqual(outcome['home_button'], 'not-tested')
+        self.assertIsNotNone(self.store.pending(installer.profile))
+
+    def test_optional_startup_probe_failure_cannot_undo_successful_install(self):
+        remote = Remote(); original, luna = remote.run, remote.luna
+        launched = False
+        def launch(uri, payload, **kwargs):
+            nonlocal launched
+            if uri.endswith('/launch'): launched = True
+            return luna(uri, payload, **kwargs)
+        def run(command, **kwargs):
+            if launched and 'CYTV_HELPER_IDLE' in command:
+                self.assertEqual(kwargs.get('timeout'), 5)
+                raise TimeoutError('private transport text')
+            return original(command, **kwargs)
+        remote.luna, remote.run = launch, run
+        installer = self.installer(remote)
+        installer.install(self.inventory, 'private-pairing')
+        self.assertEqual(installer.tv_info['setup_outcome']['startup'], 'unverified')
+        self.assertIsNone(self.store.pending(installer.profile))
+
+    def test_root_existing_runtime_readback_is_separate_from_home_observation(self):
+        self.root_bundle()
+        installer = self.installer(Remote(), 'root')
+        installer.install(self.inventory)
+        self.assertEqual(installer.tv_info['setup_outcome'],
+            {'packages':'verified','launch_request':'accepted',
+             'startup':'root-state-verified','home_button':'not-tested'})
+
     def test_no_root_installs_helper_then_home_and_verifies_before_launch(self):
         remote = Remote()
         installer = self.installer(remote)

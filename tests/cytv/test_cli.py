@@ -617,7 +617,7 @@ class CLITests(unittest.TestCase):
             session.inventory.assert_called_once_with(b'test-fallback')
             installer.return_value.install.assert_called_once_with(inventory, None, False)
             installer.return_value.trial.assert_not_called()
-            self.assertIn('Root is ready', output)
+            self.assertIn('Review TV checks', output)
             self.assertNotRegex(output.lower(), r'trial|countdown|keep using|preview release')
 
     def test_installation_failure_is_never_caught_as_inventory_retry(self):

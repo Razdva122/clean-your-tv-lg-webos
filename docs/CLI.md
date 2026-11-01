@@ -31,6 +31,32 @@ check does not justify deleting profiles, resetting pairing or re-rooting. Save
 the diagnostic report and identify the failed requirement first. These rows reuse
 the existing probes; they do not add TV changes or establish hardware acceptance.
 
+## Package, startup and physical Home checks (unreleased)
+
+After new setup or separately confirmed Root setup completion, three result rows
+remain separate: **Installed packages**, **Startup readback**, and **Home button —
+your observation**. Package verification is not a launch result. A submitted
+launch with an unknown response is distinct from an accepted request.
+
+No-root makes one optional, read-only, five-second existing Helper process probe
+after successful setup. A process observation does not certify controller/relay
+health or physical Home interception. Missing processes or probe failure remain
+unverified and cannot undo installed packages. Root reuses its existing guardian
+and Home-route readback without an additional activation or status operation.
+
+Open another TV app and briefly press Home once, then report the observed result:
+CYTV Home opened, LG Home/no expected response, or **Not tested / skip** (default).
+`--yes` cannot supply this observation; noninteractive setup leaves it untested.
+EOF/Ctrl+C here skips this optional check after installation, without recovery or
+reinstallation. The response is local and explicitly owner-reported, not an
+automated physical test or permission to publish. Failed/skipped Home results
+preserve installed packages and prioritize report export. Other controls, audio,
+standby, cold boot, OTA and rollback remain separate untested scenarios.
+
+Reports revalidate only fixed `tv.setup_outcome` fields and check statuses.
+Follow-up Status/Doctor do not inherit an earlier owner's Home observation or
+use it as recovery/installation authority. [Evidence contract](development/INSTALLER-OUTCOMES.md).
+
 ## Run
 
 Download the console executable matching your computer from the

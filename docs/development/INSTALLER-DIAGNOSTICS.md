@@ -76,3 +76,10 @@ revalidated at export. Unknown strings become fixed unknown categories; no raw
 logs or free-form exception messages are added. Diagnostic evidence never
 clears pending, launches recovery, retries a package transaction, enables Home,
 clears emergency stop or changes permissions.
+
+## Setup outcomes (unreleased)
+
+`tv.setup_outcome` distinguishes fixed package verification, launch request,
+startup observation and owner-reported physical Home results. These are
+invocation-local evidence, not deployment authority. Unknown or extra persisted
+values are removed/reclassified at export. See the [outcome contract](INSTALLER-OUTCOMES.md).
