@@ -1,0 +1,34 @@
+/* Appearance only. Theme API 1 has no blur, so the glass is translucent gradients, bright rims and soft shadows over a pre-softened wallpaper. */
+.ctv-home { background-color: #070a1a; color: #ffffff; }
+.ctv-ambient { background-image: linear-gradient(0deg, transparent 0%, transparent 100%); }
+.ctv-hero { color: #ffffff; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35); }
+.ctv-clock { color: #ffffff; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35); }
+.ctv-greeting { color: rgba(255, 255, 255, 0.7); }
+.ctv-date { color: rgba(255, 255, 255, 0.7); }
+.ctv-period { color: rgba(255, 255, 255, 0.7); }
+.ctv-divider { background-color: rgba(255, 255, 255, 0.25); }
+
+.ctv-shortcut { background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0.1) 55%, rgba(255, 255, 255, 0.14) 100%); border-color: rgba(255, 255, 255, 0.45); border-width: 1px; border-style: solid; border-radius: 32px; color: #ffffff; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28); transition: box-shadow 240ms ease-out; }
+.ctv-shortcut.is-focused { background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.78) 100%); border-color: rgba(255, 255, 255, 0.9); color: #0b0d18; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28), 0 0 24px 4px rgba(170, 200, 255, 0.35); }
+
+.ctv-dock { background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.06) 55%, rgba(255, 255, 255, 0.1) 100%); background-color: transparent; border-color: rgba(255, 255, 255, 0.35); border-width: 1px; border-style: solid; border-radius: 32px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3); }
+.ctv-focus { background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.42) 0%, rgba(255, 255, 255, 0.08) 30%, rgba(255, 255, 255, 0.04) 75%, rgba(255, 255, 255, 0.16) 100%); border-color: rgba(255, 255, 255, 0.65); border-width: 1px; border-style: solid; border-radius: 32px; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3), 0 0 24px 4px rgba(170, 200, 255, 0.3); }
+.ctv-card { border-radius: 28px; border-color: rgba(255, 255, 255, 0.22); border-width: 1px; border-style: solid; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3); }
+.ctv-card.is-focused { box-shadow: 0 16px 36px rgba(0, 0, 0, 0.4), 0 0 24px 4px rgba(170, 200, 255, 0.3); }
+.ctv-label { color: #ffffff; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.45); }
+
+/* The focused tile's shadows stay within the 20px below it, so the shelf window never clips them. */
+.ctv-input-tile { background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0.1) 55%, rgba(255, 255, 255, 0.14) 100%); background-color: transparent; border-color: rgba(255, 255, 255, 0.45); border-width: 1px; border-style: solid; border-radius: 28px; color: #ffffff; box-shadow: 0 6px 14px rgba(0, 0, 0, 0.28); transition: box-shadow 240ms ease-out; }
+.ctv-input-tile.is-focused { background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.78) 100%); border-color: rgba(255, 255, 255, 0.9); color: #0b0d18; box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35), 0 0 14px 2px rgba(170, 200, 255, 0.35); }
+.ctv-input-tile.is-previewing { background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.3) 100%); }
+.ctv-input-status { color: rgba(255, 255, 255, 0.7); }
+.ctv-input-tile.is-focused .ctv-input-status { color: rgba(11, 13, 24, 0.65); }
+
+/* Without blur, panels need mostly opaque dark glass to keep text readable. */
+.ctv-inputs { background-image: linear-gradient(180deg, rgba(40, 44, 70, 0.82) 0%, rgba(22, 24, 40, 0.88) 100%); border-color: rgba(255, 255, 255, 0.3); border-width: 1px; border-style: solid; border-radius: 32px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4); }
+.ctv-input-row { color: #ffffff; border-radius: 24px; }
+.ctv-input-row.is-focused { background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.78) 100%); color: #0b0d18; }
+.ctv-library { background-color: rgba(5, 7, 18, 0.72); }
+.ctv-library-panel { background-image: linear-gradient(180deg, rgba(40, 44, 70, 0.82) 0%, rgba(22, 24, 40, 0.88) 100%); border-color: rgba(255, 255, 255, 0.3); border-width: 1px; border-style: solid; border-radius: 32px; }
+.ctv-library-row { background-color: rgba(255, 255, 255, 0.08); color: #ffffff; border-radius: 24px; }
+.ctv-library-row.is-focused { background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.78) 100%); color: #0b0d18; }
