@@ -44,21 +44,24 @@ provides app listing/install/removal. Source review is pinned to official
   contract. The reviewed CLI source supplies no replacement historical terminal
   query or evidence that a file snapshot can replace this gate.
 
-The follow-up's denied `/listApps` probe does **not** establish denial of
-`/dev/listApps`. Its reported `package-status` refusal does establish failure of
+The [C2 owner's exact-endpoint correction](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/201#issuecomment-6556401396)
+confirms that `/dev/listApps` succeeds and returns Home 1.6.0 and Helper 0.6.20.
+The original denied probe used `/listApps`. The endpoint question is answered
+for this C2; do not ask that owner to repeat it. Its reported `package-status` refusal does establish failure of
 that attempt's existing recovery gate. Neither observation proves that the
 original install completed. Package hashes in `operation.json` bind expected
 content; they do not identify a live installer transaction or prove registration.
 
 ## Remaining evidence
 
-Before implementing reconciliation, obtain separately owner-agreed read-only
-observations on each affected firmware, using the original trusted Developer Mode
-identity and keeping inventories/private logs local:
+The next work belongs to maintainer research into terminal authority, rather
+than another C2 inventory request. Before implementing reconciliation, establish
+the following contracts; any later device observations require separately agreed
+read-only scope and the original trusted Developer Mode identity:
 
-1. The exact `com.webos.applicationManager/dev/listApps` method, separately from
-   `/listApps`. Retain only success/denial category and the two project's app
-   identities/versions in a redacted result; never publish the full inventory.
+1. Exact `/dev/listApps` evidence is complete for the C2 follow-up only.
+   Keep the original UK6400 pending-uninstall case separate; do not transfer
+   the C2 result to it. App inventory still cannot establish transaction completion.
 2. The precise `appInstallService/status` response schema and semantics over its
    bounded subscription: initial acceptance, active operations, idle, termination
    and denial/disconnect behavior. Do not submit a new package transaction merely

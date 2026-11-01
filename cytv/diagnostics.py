@@ -61,7 +61,8 @@ def create_report(store, action, profile, phase, error=None, tv_info=None):
         report['tv']['root_requirements'] = {
             name: checks[name] if checks[name] in ('pass', 'fail', 'unknown') else 'unknown'
             for name in ROOT_REQUIREMENTS if name in checks}
-    for name, allowed in (('kernel_arch', KERNEL_ARCHES),
+    for name, allowed in (('helper_state', ('running', 'stopped', 'stale', 'uncertain')),
+                          ('kernel_arch', KERNEL_ARCHES),
                           ('userland_abi', ('arm32', 'arm64', 'other', 'unknown'))):
         if tv_info and name in tv_info:
             report['tv'][name] = tv_info[name] if tv_info[name] in allowed else 'unknown'

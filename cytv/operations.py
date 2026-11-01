@@ -442,6 +442,7 @@ with os.fdopen(f,'rb') as stream:
                 return
             self.checks.update('helper-idle', 'running')
             helper = self.helper_state()
+            self.tv_info['helper_state'] = helper
             self.checks.update('helper-idle', 'unknown' if helper == 'uncertain' else 'fail' if helper == 'running' else 'pass')
             if helper == 'running':
                 raise UserError('Home Helper is running. Installation has not started; installed versions are unchanged. Press Home three times within two seconds (older Helper: hold Home for two seconds) to stop it, then rerun installation.')
