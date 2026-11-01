@@ -18,7 +18,7 @@
 The first `python3 -B -m unittest discover -s tests/setup -p test_chinese_preparation.py` failed because the shared preparation module did not exist. The implemented regressions reproduce absent retained `形`/`力` glyphs by injecting a runtime catalog, cover escaped template text and a new compiler-input catalog, and require exact static weight-400 coverage. Tests refuse unsupported full-source glyphs and corrupted source/subset caches, regenerate identical bytes with networking disabled, and confirm tracked fonts remain unchanged.
 
 Passed with the pinned build environment:
-- Chinese preparation/package tests: 9 tests.
+- Chinese preparation/package tests: 15 tests.
 - Installer asset tests: 9 tests.
 - Static Outfit compatibility tests: 2 tests.
 - Live/static preview tests: 5 tests, including both SC/TC font URLs for both editions.
@@ -26,4 +26,13 @@ Passed with the pinned build environment:
 - `npm run test:compat`.
 - `scripts/build-cytv.py --payload-only`, including full payload hashes and release-version verification.
 
-Independent review confirmed module/collector/cache behavior, concurrent offline generation, and CI dependency conditions for preview-only and UI-only runs. Actual generated faces are SC 131,620 bytes and TC 153,188 bytes. All six font-bearing IPKs and standalone fonts contain identical prepared bytes. Home FHD is 5,461,676 bytes compressed / 8,646,270 bytes unpacked; Root FHD is 5,331,844 / 8,616,189. Every affected package remains below 32 MiB compressed, 64 MiB unpacked and 16 MiB per member. Generated faces remain below 1 MiB each. No tracked font binary, release version, Helper or OTA code was changed. Physical-TV font rendering/performance remains untested.
+Independent review confirmed module/collector/cache behavior, concurrent offline generation, and CI dependency conditions for preview-only and UI-only runs. Actual generated faces are SC 213,636 bytes and TC 178,288 bytes. All six font-bearing IPKs and standalone fonts contain identical prepared bytes. Home FHD is 5,530,090 bytes compressed / 8,753,530 bytes unpacked; Root FHD is 5,399,718 / 8,723,485. Every affected package remains below 32 MiB compressed, 64 MiB unpacked and 16 MiB per member. Generated faces remain below 1 MiB each. No tracked font binary, release version, Helper or OTA code was changed. Physical-TV font rendering/performance remains untested.
+
+
+## Collector completeness review
+
+An additional failing regression reproduced four omitted input forms: unscoped escaped JavaScript/templates, JSON titles, HTML entities/inline runtime code, and CSS escaped content. These now use the existing Acorn/parse5/PostCSS parsers without evaluating runtime code. Tests distinguish locale metadata from ordinary `id` fields, normalize foreign locale tags and selector spacing, retain shared inline code under an initially English document, and conservatively collect negated/mixed CSS selectors.
+
+The two declared font faces form a cascade in all UI locales, preserving Chinese regional preference while allowing shared `简约` titles and a Traditional Chinese catalog quoting `简书`. Actual font-generation tests verify union coverage. Unsupported glyphs fail only when both pinned originals lack them. Source and subset cache FIFO fixtures are refused immediately without blocking. The complete six-package payload was rebuilt and all 209 hashes, shared font bytes and package bounds rechecked after this change; compatibility tests and lints passed.
+
+The thirteen-language Chromium browser regression passed for both Home editions, including actual custom-font inspection: mixed `简體` uses packaged SC in English and SC fallback plus preferred TC in Traditional Chinese. This is host-browser evidence, not physical-TV rendering/performance acceptance.

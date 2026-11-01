@@ -87,3 +87,64 @@ class PreparationTests(unittest.TestCase):
         files['new-runtime-module.js']=('HomeI18n.add('+json.dumps({locale:{'new':chr(code)} for locale in fonts.SCRIPTS.values()})+');').encode()
         prepared=compile_web(files)
         for s in fonts.SCRIPTS:self.assertIn(code,fonts.coverage(prepared[f'fonts/NotoSans{s}.ttf']))
+
+    def test_unscoped_static_compiler_inputs_are_decoded(self):
+        inputs={
+            'widget.js':b'window.title="\\u9f98"; window.hint=`\\u529b`;',
+            'widget.json':b'{"title":"\\u5f62","id":"\\u9f98","en":{"foreign":"\\u9fa0"}}',
+            'widget.html':b'<div title="&#x9f98;">&#x5f62;</div><script>window.caption="\\u529b";</script>',
+            'widget.css':b'.label::before{content:"\\9f98 ";}',
+        }
+        for name,raw in inputs.items():
+            with self.subTest(name=name):
+                chars=fonts.required_characters(files={name:raw})
+                wanted={'widget.js':'龘力','widget.json':'形龘','widget.html':'形龘力','widget.css':'龘'}[name]
+                for script in fonts.SCRIPTS:self.assertTrue({ord(c) for c in wanted} <= chars[script])
+        scoped=fonts.required_characters(files={'widget.js':b'const choices=[{code:"zh-Hans",name:"\\u7b80"}];const messages={en:{title:"\\u9fa0"}};'})
+        self.assertNotIn(ord('简'),scoped['TC'])
+        for script in fonts.SCRIPTS:self.assertNotIn(ord('龠'),scoped[script])
+
+    def test_mixed_script_titles_and_scoped_brands_use_declared_cascade(self):
+        from scripts.tv_web_build import compile_web
+        files={f'fonts/NotoSans{s}.ttf':(ROOT/f'launcher/fonts/NotoSans{s}.ttf').read_bytes() for s in fonts.SCRIPTS}
+        files.update({'community.json':json.dumps({'title':'简约'}).encode(),
+                      'brand.js':b'HomeI18n.add({"zh-Hant":{"brand":"\\u7b80\\u4e66"}});'})
+        prepared=compile_web(files)
+        combined=set.union(*(fonts.coverage(prepared[f'fonts/NotoSans{s}.ttf']) for s in fonts.SCRIPTS))
+        self.assertTrue({ord(c) for c in '简约书'} <= combined)
+        self.assertIn(ord('简'),fonts.coverage(prepared['fonts/NotoSansSC.ttf']))
+        # Every locale can display a shared community title; Hant retains priority.
+        css=(ROOT/'launcher/i18n.css').read_text()
+        self.assertIn('Outfit,"CYTV NotoSansTC","CYTV NotoSansSC"',css)
+        self.assertIn('"CYTV NotoSansDevanagari","CYTV NotoSansSC","CYTV NotoSansTC","CYTV NotoSansKR"',css)
+        homebrew=(ROOT/'homebrew/app/style.css').read_text()
+        self.assertIn('font-family:CYTVChineseTC,CYTVChineseSC,CYTV',homebrew)
+        self.assertIn('font-family:CYTV,CYTVChineseSC,CYTVChineseTC',homebrew)
+
+    def test_foreign_markup_and_css_are_excluded_but_nested_chinese_survives(self):
+        inputs={'foreign.html':b'<html lang="en"><span lang="ko-KR">&#x3409;</span><script>HomeI18n.add({"zh-Hans":{"x":"\\u529b"}});</script></html>',
+                'foreign.css':b'html[lang = "ko"]::after{content:"\\340a ";}html:lang(zh-Hant)::after{content:"\\529b ";}'}
+        chars=fonts.required_characters(files=inputs)
+        self.assertIn(ord('力'),chars['SC']);self.assertIn(ord('力'),chars['TC'])
+        for script in fonts.SCRIPTS:
+            self.assertNotIn(0x3409,chars[script]);self.assertNotIn(0x340A,chars[script])
+
+    @unittest.skipUnless(hasattr(__import__('os'),'mkfifo'),'FIFO fixtures require POSIX')
+    def test_nonregular_source_and_subset_cache_entries_are_refused(self):
+        import base64,os,shutil
+        prepared=fonts.prepare_fonts()
+        with tempfile.TemporaryDirectory() as tmp:
+            cache=Path(tmp)/'cache';shutil.copytree(fonts.default_cache(),cache)
+            match=next(p for p in (cache/'subsets').glob('*.json') if base64.b64decode(json.loads(p.read_text())['data'])==prepared['fonts/NotoSansSC.ttf'])
+            match.unlink();os.mkfifo(match)
+            with self.assertRaisesRegex(ValueError,'cache'):fonts.prepare_fonts(cache=cache)
+            path=cache/'sources'/fonts.SOURCES['SC']['sha256'];path.unlink();os.mkfifo(path)
+            with self.assertRaisesRegex(ValueError,'source'):fonts.source_font('SC',cache)
+
+    def test_document_language_does_not_hide_shared_inline_runtime_code(self):
+        chars=fonts.required_characters(files={'index.html':b'<html lang="en"><script>window.title="\\u3400";</script><script type="application/json">{"title":"\\u3402"}</script><style>.theme{content:"\\3401 "}</style></html>'})
+        for script in fonts.SCRIPTS:self.assertTrue({0x3400,0x3401,0x3402} <= chars[script])
+
+    def test_negated_and_shared_css_selectors_cannot_hide_chinese_content(self):
+        chars=fonts.required_characters(files={'widget.css':b'html:not(:lang(en))::before{content:"\\3400 ";}.shared,html:lang(ko){content:"\\3401 ";}'})
+        for script in fonts.SCRIPTS:self.assertTrue({0x3400,0x3401} <= chars[script])

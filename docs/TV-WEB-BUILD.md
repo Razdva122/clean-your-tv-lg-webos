@@ -184,7 +184,10 @@ Packages, standalone installer fonts and live/static previews use the same
 `scripts/chinese_fonts.py` preparation path. It decodes Chinese locale literals
 (including Unicode escapes and static template text) from runtime catalogs,
 including themes, Root audio, installers and updater screens, plus calendar and
-language labels. Retained static faces are reused only when they cover all required
+language labels. Compiler inputs also contribute unscoped JavaScript/template
+text, JSON strings, HTML text/entities/inline code and CSS content/escapes, so a
+new locale module or static label needs no central source-list edit. Foreign
+locale branches stay separate; initial HTML language does not hide shared code. Retained static faces are reused only when they cover all required
 characters. Otherwise the build automatically generates small static weight-400
 subsets; adding translations never requires editing tracked font binaries.
 
@@ -195,7 +198,11 @@ and TC `864727d210d54f2537bbe23b3a839436c3992af72de9322af5270897246bd44f`.
 Verified originals and deterministic subsets live in `build/chinese-font-cache`
 (or `CYTV_FONT_CACHE`). Reuse that directory for offline builds; CI can cache it.
 Corrupted cache entries fail with an integrity error rather than being trusted.
-An unavailable glyph in the complete pinned source also fails explicitly.
+Each UI locale prefers its own regional Chinese face, then the other packaged
+face. Shared theme names and quoted mixed-script brands use that cascade; each
+subset retains the required glyphs supported by its full pinned original. A
+glyph absent from both pinned originals fails explicitly. Nonregular cache
+entries are refused before reading.
 `scripts/subset-chinese-fonts.py` optionally primes this same cache; it does not
 modify source assets. User app names outside the UI subset use system fallback.
 These fonts do not establish

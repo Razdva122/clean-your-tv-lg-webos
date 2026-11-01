@@ -17,12 +17,14 @@ from scripts.chinese_fonts import coverage as cmap, required_characters
 class ChineseFontTests(unittest.TestCase):
     def check_fonts(self, files):
         required_by_script = required_characters()
+        combined=set.union(*(cmap(files[f'fonts/NotoSans{s}.ttf']) for s in ('SC','TC')))
+        self.assertTrue(set.union(*required_by_script.values()) <= combined, 'declared font cascade must cover every runtime character')
         for name in ('SC', 'TC'):
             required = required_by_script[name]
             data = files['fonts/NotoSans%s.ttf' % name]
             self.assertNotIn(b'fvar', tables(data), 'old TV engines need static fonts')
             self.assertEqual(struct.unpack_from('>H', tables(data)[b'OS/2'], 4)[0], 400)
-            self.assertFalse(required - cmap(data), 'prepared Chinese font must cover all runtime translations')
+            self.assertFalse(required - combined, 'prepared Chinese cascade must cover all runtime translations')
             self.assertTrue({ord(c) for c in ('简体中文週' if name == 'SC' else '繁體中文週')} <= cmap(data), 'known runtime regression glyphs must survive independently of the collector')
             self.assertIn('fonts/NotoSans%s-OFL.txt' % name, files)
 

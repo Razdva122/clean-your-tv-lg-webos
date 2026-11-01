@@ -7,6 +7,7 @@ import io
 import json
 import os
 from pathlib import Path
+import stat
 import struct
 import subprocess
 import tempfile
@@ -24,18 +25,50 @@ SOURCES = {
 JS_ROOTS = ('launcher', 'root-edition/ui', 'updater-app', 'root-edition/updater/app',
             'homebrew/app', 'android/app/src/main/assets/ui')
 COLLECT = r"""
-const fs=require('fs'),acorn=require('acorn'),out={'zh-Hans':[],'zh-Hant':[]};
-function strings(node,values){if(!node||typeof node!=='object')return;
- if(node.type==='Literal'&&typeof node.value==='string')values.push(node.value);
- if(node.type==='TemplateElement'&&typeof node.value.cooked==='string')values.push(node.value.cooked);
- for(const [key,value] of Object.entries(node))if(key!=='start'&&key!=='end'){
-  if(Array.isArray(value))value.forEach(n=>strings(n,values));else if(value&&typeof value==='object')strings(value,values);}}
-function visit(node){if(!node||typeof node!=='object')return;
- if(node.type==='Property'){
-  const key=node.key.value||node.key.name;
-  if(Object.hasOwn(out,key)){strings(node.value,out[key]);return;}}
- for(const value of Object.values(node)){if(Array.isArray(value))value.forEach(visit);else if(value&&typeof value==='object')visit(value);}}
-for(const source of JSON.parse(fs.readFileSync(0,'utf8')))visit(acorn.parse(source,{ecmaVersion:'latest',sourceType:'script'}));
+const fs=require('fs'),acorn=require('acorn'),postcss=require('postcss'),html=require('parse5');
+const out={'zh-Hans':[],'zh-Hant':[],shared:[]},chinese=['zh-Hans','zh-Hant'],locales=new Set(['en','cs','de','es','pt-BR','fr','it','ko','hi','pl','ru',...chinese]);
+function known(value){return typeof value==='string'&&(['zh','pt'].includes(value.replace(/_/g,'-').split('-')[0].toLowerCase())||locales.has(value.replace(/_/g,'-').split('-')[0].toLowerCase()));}
+function language(value){const parts=String(value).replace(/_/g,'-').toLowerCase().split('-');return parts[0]==='zh'?(parts.includes('hant')||parts.some(p=>['tw','hk','mo'].includes(p))?'zh-Hant':'zh-Hans'):'foreign';}
+function emit(value,scope){if(scope!=='foreign')out[scope||'shared'].push(value);}
+function visit(node,scope){if(!node||typeof node!=='object')return;
+ if(node.type==='ObjectExpression'){
+  const code=node.properties.find(p=>p.type==='Property'&&['code','lang','language'].includes(p.key.value||p.key.name)&&p.value.type==='Literal'&&known(p.value.value));
+  if(code){scope=language(code.value.value);if(scope==='foreign')return;}}
+ if(node.type==='Property'&&known(node.key.value||node.key.name)){
+  const scope=language(node.key.value||node.key.name);if(scope!=='foreign')visit(node.value,scope);return;}
+ if(node.type==='Literal'&&typeof node.value==='string')emit(node.value,scope);
+ if(node.type==='TemplateElement'&&typeof node.value.cooked==='string')emit(node.value.cooked,scope);
+ for(const value of Object.values(node)){if(Array.isArray(value))value.forEach(n=>visit(n,scope));else if(value&&typeof value==='object')visit(value,scope);}}
+function js(source,scope){visit(acorn.parse(source,{ecmaVersion:'latest',sourceType:'script'}),scope);}
+function data(value,scope){if(typeof value==='string'){emit(value,scope);return;}
+ if(Array.isArray(value)){value.forEach(v=>data(v,scope));return;}
+ if(!value||typeof value!=='object')return;
+ const code=value.code||value.lang||value.language;if(known(code)){scope=language(code);if(scope==='foreign')return;}
+ for(const [key,item] of Object.entries(value)){
+  if(known(key)){const scope=language(key);if(scope!=='foreign')data(item,scope);}else{emit(key,scope);data(item,scope);}}}
+function css(source,scope){postcss.parse(source).walkDecls(decl=>{
+ const scopes=(decl.parent.selector||'').split(',').map(selector=>{
+  if(/:(?:not|is|where|has)\(/.test(selector))return undefined;
+  const tags=[...selector.matchAll(/:lang\(\s*["']?([^\s)"']+)["']?\s*\)|\[lang\s*(?:\|)?=\s*["']?([^\s\]"']+)["']?\s*\]/g)];
+  const codes=[...new Set(tags.map(match=>language(match[1]||match[2])))];return codes.length===1?codes[0]:undefined;
+ });
+ const selected=scopes.every(code=>code===scopes[0])?scopes[0]:scope;
+ emit(decl.value.replace(/\\([0-9a-fA-F]{1,6})(?:\r\n|[ \t\r\n\f])?/g,(_,code)=>String.fromCodePoint(parseInt(code,16)||0xfffd)),selected);
+ });}
+function markup(node,scope){
+ const attrs=Object.fromEntries((node.attrs||[]).map(a=>[a.name,a.value]));if(attrs.lang)scope=language(attrs.lang);
+ for(const [key,value] of Object.entries(attrs)){if(key==='style')css('x{'+value+'}',scope);else if(key.startsWith('on'))js(value,scope);else emit(value,scope);}
+ if(node.tagName==='script'){
+  const source=(node.childNodes||[]).map(n=>n.value||'').join('');
+  const own=attrs.lang?language(attrs.lang):undefined;
+  if((attrs.type||'').includes('json'))data(JSON.parse(source),own);else if((attrs.type||'').includes('html'))markup(html.parseFragment(source),own);else js(source,own);return;}
+ if(node.tagName==='style'){css((node.childNodes||[]).map(n=>n.value||'').join(''),attrs.lang?language(attrs.lang):undefined);return;}
+ if(node.nodeName==='#text')emit(node.value,scope);
+ for(const child of node.childNodes||[])markup(child,scope);
+ if(node.content)markup(node.content,scope);
+}
+for(const [kind,source] of JSON.parse(fs.readFileSync(0,'utf8'))){
+ if(kind==='.js')js(source);else if(kind==='.json')data(JSON.parse(source));else if(kind==='.css')css(source);else markup(html.parse(source));}
 process.stdout.write(JSON.stringify(out));
 """
 
@@ -47,10 +80,11 @@ def default_cache(root=ROOT):
 def required_characters(root=ROOT, files=None):
     """Read decoded per-locale literals from every first-party runtime catalog."""
     root = Path(root)
-    sources = [p.read_text(encoding='utf-8') for directory in JS_ROOTS
-               for p in sorted((root/directory).glob('*.js'))]
-    sources.extend(raw.decode('utf-8') for name, raw in sorted((files or {}).items())
-                   if name.endswith('.js'))
+    kinds = ('.js', '.html', '.css', '.json')
+    sources = [(p.suffix, p.read_text(encoding='utf-8')) for directory in JS_ROOTS
+               for p in sorted((root/directory).glob('*')) if p.suffix in kinds and p.is_file()]
+    sources.extend((Path(name).suffix, raw.decode('utf-8')) for name, raw in sorted((files or {}).items())
+                   if Path(name).suffix in kinds)
     python = root/'cytv/translations.py'
     python_text = python.read_text(encoding='utf-8') if python.is_file() else ''
     return {script: set(codes) for script, codes in _characters(tuple(sources), python_text).items()}
@@ -81,8 +115,12 @@ def _characters(sources, python_text):
     def chinese(code):
         return (0x2000 <= code <= 0x9fff or 0xf900 <= code <= 0xfaff
                 or 0xff00 <= code <= 0xffef or 0x20000 <= code <= 0x323af)
-    return {script: {ord(c) for c in ''.join(text[locale])+shared+labels[script] if chinese(ord(c))}
-            for script, locale in SCRIPTS.items()}
+    generic = {ord(c) for c in ''.join(text['shared']) if chinese(ord(c))}
+    required = {script: {ord(c) for c in ''.join(text[locale])+shared+labels[script] if chinese(ord(c))} | generic
+                for script, locale in SCRIPTS.items()}
+    required['_shared'] = generic
+    return required
+
 
 
 def tables(raw):
@@ -151,7 +189,7 @@ def source_font(script, cache):
     spec = SOURCES[script]
     path = checked_path(Path(cache).resolve()/'sources'/spec['sha256'])
     if path.exists():
-        if path.stat().st_size != spec['size']:
+        if not stat.S_ISREG(path.stat().st_mode) or path.stat().st_size != spec['size']:
             raise ValueError('Chinese font source cache integrity mismatch')
         raw = path.read_bytes()
     else:
@@ -168,16 +206,31 @@ def source_font(script, cache):
     return raw
 
 
+@lru_cache(maxsize=8)
+def _source_coverage(script, cache):
+    return coverage(source_font(script, cache))
+
+
 def prepare_fonts(root=ROOT, cache=None, files=None):
     root = Path(root)
     cache = (default_cache(root) if cache is None else Path(cache)).resolve()
     required = required_characters(root, files=files)
+    retained = {script: (root/f'launcher/fonts/NotoSans{script}.ttf').read_bytes() for script in SCRIPTS}
+    available = {script: coverage(raw) for script, raw in retained.items()}
+    if not all(static_regular(retained[script]) and required[script] <= available[script] for script in SCRIPTS):
+        # Either face may supply a quoted brand/theme name; keep each face's own
+        # regional outlines wherever its pinned original supports the character.
+        needed = set.union(*required.values())
+        supported = {script: _source_coverage(script, str(cache)) for script in SCRIPTS}
+        missing = needed-set.union(*supported.values())
+        if missing:
+            raise ValueError('Chinese source font lacks runtime characters: '+','.join(f'U+{c:04X}' for c in sorted(missing)))
+        required = {script: needed & supported[script] for script in SCRIPTS}
     output = {}
     for script in SCRIPTS:
         name = f'fonts/NotoSans{script}.ttf'
-        retained = (root/'launcher'/name).read_bytes()
-        if static_regular(retained) and required[script] <= coverage(retained):
-            output[name] = retained
+        if static_regular(retained[script]) and required[script] <= available[script]:
+            output[name] = retained[script]
             continue
         inputs = {'source': SOURCES[script]['sha256'], 'fonttools': VERSION,
                   'weight': 400, 'characters': sorted(required[script]), 'schema': 1}
@@ -185,7 +238,7 @@ def prepare_fonts(root=ROOT, cache=None, files=None):
         path = checked_path(cache/'subsets'/(key+'.json'))
         if path.exists():
             try:
-                if path.stat().st_size > 4*1024*1024:
+                if not stat.S_ISREG(path.stat().st_mode) or path.stat().st_size > 4*1024*1024:
                     raise ValueError('Oversized font cache')
                 record = json.loads(path.read_bytes())
                 raw = base64.b64decode(record['data'], validate=True)

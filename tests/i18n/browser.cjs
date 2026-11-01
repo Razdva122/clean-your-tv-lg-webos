@@ -20,6 +20,16 @@ const base=process.env.PREVIEW_URL||'http://127.0.0.1:8876';
     assert(fonts.some(font=>font.isCustomFont&&font.familyName==='Noto Sans '+(locale==='zh-Hans'?'SC':'TC')&&font.glyphCount>0),'Chinese settings must render with the packaged script font: '+JSON.stringify(fonts));
     await client.detach();
    }
+   if(locale==='en'||locale==='zh-Hant'){
+    await page.evaluate(()=>{const node=document.createElement('span');node.id='fontFallbackProbe';node.textContent='简體';document.body.append(node);getComputedStyle(node).fontFamily;});
+    await page.evaluate(()=>document.fonts.ready);
+    const client=await context.newCDPSession(page);await client.send('DOM.enable');await client.send('CSS.enable');
+    const document=await client.send('DOM.getDocument'),node=await client.send('DOM.querySelector',{nodeId:document.root.nodeId,selector:'#fontFallbackProbe'});
+    const {fonts}=await client.send('CSS.getPlatformFontsForNode',{nodeId:node.nodeId});
+    assert(fonts.some(font=>font.isCustomFont&&font.familyName==='Noto Sans SC'&&font.glyphCount>0),'shared Simplified glyph uses packaged SC fallback in '+locale+': '+JSON.stringify(fonts));
+    if(locale==='zh-Hant')assert(fonts.some(font=>font.isCustomFont&&font.familyName==='Noto Sans TC'&&font.glyphCount>0),'Traditional glyph retains its preferred TC face');
+    await client.detach();await page.locator('#fontFallbackProbe').evaluate(node=>node.remove());
+   }
    assert((await page.locator('#tiles .item .name').allTextContents()).includes('YouTube'),'third-party app names must not be translated');
    if(locale==='en')await page.evaluate(()=>{const Bridge=window.PalmServiceBridge;window.languagePendingStatus=[];window.PalmServiceBridge=function(){const bridge=new Bridge();this.cancel=()=>bridge.cancel();this.call=(uri,payload)=>{bridge.onservicecallback=raw=>{const reply=()=>this.onservicecallback(raw);if(/\/(?:status|homeStatus)$/.test(uri))languagePendingStatus.push(reply);else reply();};bridge.call(uri,payload);};};});
    await page.locator('#btnSettings').click();await page.locator('[data-category=language]').click();
