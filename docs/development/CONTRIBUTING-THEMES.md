@@ -619,17 +619,16 @@ node scripts/build-tv-theme-catalog.cjs --check
 node tests/showcase/registry.cjs
 node tests/showcase/submission-security.cjs
 node tests/showcase/remote.cjs
-node tests/showcase/site.cjs
-node tests/showcase/browser.cjs
-node scripts/build-showcase.cjs build/theme-submission-review/themes
+BROWSER_CHANNEL=chromium node tests/preview-themes-ui.cjs
+python3 scripts/preview.py --build build/theme-submission-review
 ```
 
-The Showcase browser test needs Playwright Chromium (installed in step 6 with
-`npm exec playwright install chromium`), or an explicit
-`PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` pointing at an existing browser. A custom
-browser is a diagnostic departure from the pinned browser; record which one you
-used. CI installs Chromium itself. The final builder
-needs a new/empty destination; use a new output directory on a repeat run.
+The inline theme preview test needs Playwright Chromium (installed in step 6
+with `npm exec playwright install chromium`). `BROWSER_CHANNEL=chromium` selects
+that installed browser; record any custom browser departure. CI installs Chromium
+itself. Open the exported `index.html` through a local HTTP server to review both
+editions with the theme switcher above Home. There is no separate `/themes/`
+page or standalone Showcase HTML builder.
 `--remote` checks every active pinned record, not just your new one. If another
 record has disappeared, identify which source failed in the PR; do not rewrite
 someone else's package to make the check pass.
