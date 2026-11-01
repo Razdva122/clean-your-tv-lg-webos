@@ -55,19 +55,24 @@ h.made[0].fire('playing');
 assert.deepEqual(h.changes, ['com.webos.app.hdmi2'], 'playing is reported once');
 assert.equal(h.controller.playing(), true);
 
-// A repeated focus on the same source (a shelf re-render) keeps the running preview.
+// A repeated focus on the same source (a shelf re-render) keeps the running preview,
+// and remount moves the same media into the rebuilt tile and restores its state.
 h.controller.focus({...hdmi2, label: 'renamed'});
+h.controller.remount();
 advance(5000);
 assert.equal(h.live().length, 1, 'same source keeps its media');
+assert.equal(h.made.length, 1, 'no new media for a re-render');
+assert.deepEqual(h.mounted, ['com.webos.app.hdmi2', 'com.webos.app.hdmi2'], 'the same media is mounted again');
+assert.deepEqual(h.changes, ['com.webos.app.hdmi2', 'com.webos.app.hdmi2'], 'the rebuilt tile is marked previewing');
 
 // Moving on releases the old media in the verified order before a new one exists.
 h.controller.focus(hdmi1);
 assert.equal(h.live().length, 0, 'old media is released immediately');
 assert.deepEqual(h.made[0].video.calls, ['pause', 'source remove src', 'remove src', 'load']);
-assert.deepEqual(h.changes, ['com.webos.app.hdmi2', null]);
+assert.deepEqual(h.changes, ['com.webos.app.hdmi2', 'com.webos.app.hdmi2', null]);
 advance(800);
 assert.equal(h.live().length, 1, 'a single media element at a time');
-assert.deepEqual(h.mounted, ['com.webos.app.hdmi2', 'com.webos.app.hdmi1']);
+assert.deepEqual(h.mounted, ['com.webos.app.hdmi2', 'com.webos.app.hdmi2', 'com.webos.app.hdmi1']);
 
 // Rapid focus changes never stack media.
 for (let i = 0; i < 10; i++) { h.controller.focus(i % 2 ? hdmi1 : hdmi2); advance(400); }
@@ -126,6 +131,21 @@ h.controller.focus({...hdmi1, connected: false});
 assert.equal(h.live().length, 0);
 assert.deepEqual(h.changes, ['com.webos.app.hdmi1', null]);
 
+// No tile to mount into ends the preview without a failure cooldown; a remount that
+// finds no tile releases the media.
+let tile = false;
+h = harness({mount: media => { if (!tile) return false; media.parentNode = {removeChild: child => { child.parentNode = null; child.removed = true; }}; return true; }});
+h.controller.focus(hdmi1); advance(800);
+assert.deepEqual(h.made[0].video.calls, ['pause', 'source remove src', 'remove src', 'load'], 'an unmounted preview is released at once');
+tile = true;
+h.controller.focus(hdmi2); h.controller.focus(hdmi1); advance(800);
+assert.equal(h.made.length, 2, 'no cooldown after a missing tile');
+h.made[1].fire('playing');
+tile = false;
+h.controller.remount();
+assert.equal(h.made[1].removed, true, 'a remount without a tile releases the preview');
+assert.deepEqual(h.changes, ['com.webos.app.hdmi1', null]);
+
 // The default media is a muted webOS video with a typed source.
 const created = [];
 global.document = {createElement: tag => { const el = {tag, attrs: {}, children: [], setAttribute(k, v) { this.attrs[k] = v; }, appendChild(c) { this.children.push(c); }}; created.push(el); return el; }};
@@ -134,5 +154,4 @@ assert.equal(wrapper.tag, 'div');
 assert.equal(video.muted, true);
 assert.deepEqual(video.attrs, {autoplay: '', muted: ''});
 assert.deepEqual(source.attrs, {type: 'service/webos-external', src: 'ext://hdmi:3'});
-assert.equal(preview.createVideo('tv://').children[0].children[0].attrs.type, 'service/webos-broadcast');
-console.log('PASS input preview: dwell, single media, failure cooldown, release order and eligibility');
+console.log('PASS input preview: dwell, single media, re-render remount, failure cooldown, release order and eligibility');

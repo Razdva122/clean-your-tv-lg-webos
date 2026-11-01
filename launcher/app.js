@@ -116,16 +116,18 @@
     // The input launched last from the shelf or dropdown, until focus moves elsewhere.
     returnInput = null,
     restoring = false,
-    // Live TV previews need a tuned broadcast, which the hardware check could not cover.
-    LIVE_TV_PREVIEW = false,
+    // Cleared while a system overlay or another app holds window focus.
+    windowFocused = true,
     inputPreview = window.InputPreview ? InputPreview.create({
       createMedia: function (uri) { return window.PREVIEW_INPUT_MEDIA ? window.PREVIEW_INPUT_MEDIA(uri) : InputPreview.createVideo(uri); },
-      enabled: function () { return layoutPreset === "dock-grid" && window.HomeInputShelf.previewEnabled(); },
+      // Only the foreground Home may claim the TV's video pipeline.
+      enabled: function () { return layoutPreset === "dock-grid" && !document.hidden && windowFocused && window.HomeInputShelf.previewEnabled(); },
       mount: function (media, input) {
         var tile = shelfTiles[focusedShelf];
-        if (!tile || tile.input.appId !== input.appId) return;
+        if (!tile || tile.input.appId !== input.appId) return false;
         media.className = "input-preview ctv-input-preview";
         tile.el.insertBefore(media, tile.el.firstChild);
+        return true;
       },
       onchange: function (input) {
         shelfTiles.forEach(function (tile) { setPartState(tile.el, 'previewing', !!input && tile.input.appId === input.appId); });
@@ -236,6 +238,11 @@
     suppressClick = false,
     // Held arrows repeat; taps glide the rows, held runs stay immediate.
     lastKeyRepeat = false,
+    lastArrow = 0,
+    lastArrowAt = 0,
+    // Some remote paths send a held key as keydown/keyup pairs without `repeat`; presses
+    // of the same arrow this close together count as held.
+    REPEAT_GAP = 150,
     scrollGlideTimer = null,
     edgeBumpTimer = null;
   // A scrolling list can cross a stationary cursor and generate mouseover.
@@ -249,18 +256,30 @@
   document.addEventListener('keydown', function (event) {
     if ([13, 27, 37, 38, 39, 40, 461].indexOf(event.keyCode) >= 0) pointerNavigation = false;
     if ([37, 38, 39, 40].indexOf(event.keyCode) >= 0) {
-      lastKeyRepeat = event.repeat === true;
-      getElement('homeSurface').classList.add('ctv-remote-navigation');
+      // The event's own clock: only ever compared with the previous arrow's.
+      var surface = getElement('homeSurface'), at = event.timeStamp || Date.now();
+      lastKeyRepeat = event.repeat === true || event.keyCode === lastArrow && at - lastArrowAt < REPEAT_GAP;
+      lastArrow = event.keyCode;
+      lastArrowAt = at;
+      surface.classList.add('ctv-remote-navigation');
+      // A held arrow cuts any running glide short, even if this step does not scroll.
+      if (lastKeyRepeat) {
+        clearTimeout(scrollGlideTimer);
+        surface.classList.remove('ctv-scroll-glide');
+      }
     }
   }, true);
+  // Glide and bump belong to unthemed Classic; other layouts and themes stay immediate.
+  function classicMotion(surface) {
+    return layoutPreset === 'dock-grid' && !surface.classList.contains('ctv-theme-active');
+  }
   // Remote scrolling: a tap glides to the new row; a held arrow (or a repeat during a
   // glide) jumps straight there, so the list never chases an unfinished scroll.
   function setScroll(offset) {
     var surface = getElement('homeSurface'), target = "translateY(" + -offset + "px)";
     if (stage.style.transform !== target && surface.classList.contains('ctv-remote-navigation')) {
       clearTimeout(scrollGlideTimer);
-      // Scenic and Channel List keep their own immediate scrolling.
-      if (lastKeyRepeat || layoutPreset === 'scenic-grid' || layoutPreset === 'channel-list') surface.classList.remove('ctv-scroll-glide');
+      if (lastKeyRepeat || !classicMotion(surface)) surface.classList.remove('ctv-scroll-glide');
       else {
         surface.classList.add('ctv-scroll-glide');
         scrollGlideTimer = setTimeout(function () { surface.classList.remove('ctv-scroll-glide'); }, 320);
@@ -271,7 +290,7 @@
   // A fresh press that cannot move nudges the grid or shelf toward that direction.
   function edgeBump(direction) {
     var surface = getElement('homeSurface');
-    if (lastKeyRepeat || moveState || layoutPreset === 'scenic-grid' || layoutPreset === 'channel-list') return;
+    if (lastKeyRepeat || moveState || !classicMotion(surface)) return;
     clearTimeout(edgeBumpTimer);
     ['ctv-edge-bump', 'bump-down', 'bump-left', 'bump-right', 'bump-shelf-left', 'bump-shelf-right'].forEach(function (name) { surface.classList.remove(name); });
     surface.offsetWidth;
@@ -873,6 +892,7 @@
     renderShelf();
     "shelf" !== focusZone && focusTile(focusedTile);
     updateClock();
+    window.HomeInputShelf && window.HomeInputShelf.refresh();
     var event = document.createEvent('Event'); event.initEvent('home-layout-change', false, false); document.dispatchEvent(event);
   };
   function tileBackground(hex) {
@@ -1102,7 +1122,7 @@
   }
   function inputEntries() {
     var entries = inputSources ? inputSources.list() : [];
-    if (CONFIG.liveTvApp) entries.push({appId: CONFIG.liveTvApp, label: tr("Live TV"), deviceName: null, connected: null, kind: "tv", source: LIVE_TV_PREVIEW ? "tv://" : null});
+    if (CONFIG.liveTvApp) entries.push({appId: CONFIG.liveTvApp, label: tr("Live TV"), deviceName: null, connected: null, kind: "tv", source: null});
     return entries;
   }
   function stopPreview() {
@@ -1181,10 +1201,10 @@
     return {el: element, input: input};
   }
   // Rebuilds in place; focus follows the same source, or its old position if it left.
-  // A running preview restarts on the rebuilt tile after the usual dwell.
+  // A running preview of the same source moves to the rebuilt tile in the same task,
+  // so a CEC name or status update never blanks or restarts it.
   function renderShelf() {
     if (!shelf) return;
-    stopPreview();
     var focusedId = shelfTiles[focusedShelf] && shelfTiles[focusedShelf].input.appId,
       enabled = layoutPreset === "dock-grid" && !!window.InputSources && InputSources.shelfEnabled(localStorage),
       entries = enabled ? inputEntries() : [],
@@ -1202,7 +1222,11 @@
     shelf.style.width = GRID_WIDTH + SHELF_INSET * 2 + "px";
     focusedShelf = next;
     shelfLayout = null;
-    if ("shelf" === focusZone) shelfTiles.length ? focusShelf(focusedShelf) : focusTile(rowFor(focusedTile) === 0 ? focusedTile : 0);
+    if ("shelf" === focusZone && shelfTiles.length) {
+      // Keeps a preview of the same eligible source (else stops it), then moves it in.
+      focusShelf(focusedShelf);
+      inputPreview && inputPreview.remount();
+    } else if ("shelf" === focusZone) { stopPreview(); focusTile(rowFor(focusedTile) === 0 ? focusedTile : 0); }
     else layoutShelf();
   }
   // Applies the grow-and-push geometry; skipped when nothing changed since the last pass.
@@ -1293,10 +1317,12 @@
   window.HomeInputShelf = {
     enabled: function () { return !!window.InputSources && InputSources.shelfEnabled(localStorage); },
     previewEnabled: function () { return !!window.InputSources && InputSources.previewEnabled(localStorage); },
+    // The shelf exists only in Classic; other layouts hide both switches (Settings
+    // navigation skips hidden buttons), as with the Columns entry.
     refresh: function () {
-      var button = getElement("homeShowInputs"), preview = getElement("homePreviewInputs");
-      if (button) button.setAttribute("aria-checked", String(window.HomeInputShelf.enabled()));
-      if (preview) preview.setAttribute("aria-checked", String(window.HomeInputShelf.previewEnabled()));
+      var button = getElement("homeShowInputs"), preview = getElement("homePreviewInputs"), classic = layoutPreset === "dock-grid";
+      if (button) { button.setAttribute("aria-checked", String(window.HomeInputShelf.enabled())); button.hidden = !classic; }
+      if (preview) { preview.setAttribute("aria-checked", String(window.HomeInputShelf.previewEnabled())); preview.hidden = !classic; }
     },
     togglePreview: function () {
       var error = getElement("homeAppsError");
@@ -1305,7 +1331,7 @@
         if (error) error.textContent = "";
       } catch (_) { if (error) error.textContent = tr("Couldn't save changes. Please try again."); }
       stopPreview();
-      if ("shelf" === focusZone && shelfTiles[focusedShelf]) inputPreview.focus(shelfTiles[focusedShelf].input);
+      if ("shelf" === focusZone && shelfTiles[focusedShelf] && inputPreview) inputPreview.focus(shelfTiles[focusedShelf].input);
       window.HomeInputShelf.refresh();
     },
     toggle: function () {
@@ -1632,8 +1658,9 @@
     document.hidden ? stopPreview() : restoreFocus();
   });
   // A system overlay can take window focus without hiding Home; resume the preview after it.
-  window.addEventListener("blur", stopPreview);
+  window.addEventListener("blur", function () { windowFocused = false; stopPreview(); });
   window.addEventListener("focus", function () {
+    windowFocused = true;
     if ("shelf" === focusZone && shelfTiles[focusedShelf] && inputPreview) inputPreview.focus(shelfTiles[focusedShelf].input);
   });
   initializeApps();

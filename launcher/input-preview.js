@@ -4,9 +4,6 @@
   else root.InputPreview = factory();
 }(this, function () {
   'use strict';
-  function type(uri) {
-    return /^tv:/.test(uri) ? 'service/webos-broadcast' : 'service/webos-external';
-  }
   // webOS draws the input on a hardware video plane: transforms apply, rounded clipping and opacity do not.
   function createVideo(uri) {
     var wrapper = document.createElement('div'),
@@ -15,7 +12,7 @@
     video.setAttribute('autoplay', '');
     video.setAttribute('muted', '');
     video.muted = true;
-    source.setAttribute('type', type(uri));
+    source.setAttribute('type', 'service/webos-external');
     source.setAttribute('src', uri);
     video.appendChild(source);
     wrapper.appendChild(video);
@@ -81,7 +78,8 @@
       }, true);
       media.addEventListener('error', function () { fail(preview); }, true);
       preview.timer = setTimeout(function () { fail(preview); }, timeout);
-      mount(media, input);
+      // No tile to show it in (focus moved on): not a playback failure, so no cooldown.
+      if (mount(media, input) === false) end();
     }
     function stop() {
       wanted = null;
@@ -102,6 +100,13 @@
         dwell = setTimeout(begin, delay);
       },
       stop: stop,
+      // Moves the running preview into a rebuilt tile; call in the same task as the
+      // rebuild so the detached media element never pauses.
+      remount: function () {
+        if (!active) return;
+        if (mount(active.media, active.input) === false) { end(); return; }
+        if (active.playing) onchange(active.input, active.media);
+      },
       playing: function () { return !!(active && active.playing); }
     };
   }

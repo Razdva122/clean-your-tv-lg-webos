@@ -118,7 +118,9 @@ const CURVE = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
         }
         assert.equal(await page.locator('#homeSurface').evaluate(el => el.classList.contains('ctv-edge-bump')), false, 'held arrows at the last row never bump');
         assert.equal(await page.locator('#viewport').evaluate(el => el.classList.contains('row-peek')), false, 'no bottom fade on the last row');
-        // A fresh Down on the last row bumps and springs back.
+        // A fresh Down on the last row bumps and springs back. Presses of the same arrow
+        // under 150 ms apart count as held, so let the held run end first.
+        await page.waitForTimeout(200);
         const bump = await page.evaluate(() => track(260, () => key(40, false)));
         assert(/bump-down/.test(bump[0].bump), 'a fresh press at the end bumps');
         assert(bump.some(frame => frame.bumpY > 1), 'the grid nudges down during the bump (a compositor transform)');
@@ -126,6 +128,7 @@ const CURVE = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
         assert(bump.every(frame => frame.lagX <= 1 && frame.lagY <= 1), 'the glass moves with the bump');
         // Up back to the dock glides home to offset 0.
         for (let i = 0; i < rows - 2; i++) await page.evaluate(() => key(38, true));
+        await page.waitForTimeout(200);
         const home = await page.evaluate(() => track(420, () => key(38, false)));
         assert.equal(home[home.length - 1].target, 0);
         assert(home.some(frame => frame.now < -1) && Math.abs(home[home.length - 1].now) <= 1, 'returning to the dock glides');
@@ -134,6 +137,7 @@ const CURVE = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
         await page.evaluate(() => key(38, false));
         assert.equal(await page.locator('.ctv-input-tile.is-focused').count(), 1);
         for (let i = 0; i < 6; i++) await page.evaluate(() => key(37, true));
+        await page.waitForTimeout(200);
         const shelfBump = await page.evaluate(() => new Promise(resolve => {
           key(37, false);
           setTimeout(() => resolve({cls: document.getElementById('homeSurface').className, x: new WebKitCSSMatrix(getComputedStyle(document.getElementById('inputShelfWindow')).transform).m41}), 60);
@@ -163,6 +167,36 @@ const CURVE = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
         await page.waitForTimeout(300);
         assert.equal(await page.locator('#viewport').evaluate(el => getComputedStyle(el, '::before').opacity), '0', 'themes keep the top edge');
         await page.evaluate(() => document.getElementById('homeSurface').classList.remove('ctv-theme-active'));
+        // Remote paths that send a held key as separate presses (no `repeat`) stay
+        // immediate, and a held arrow cuts a running glide short even without scrolling.
+        for (let i = 0; i < rows; i++) await page.evaluate(() => key(38, true));
+        await page.waitForTimeout(400);
+        const pairs = await page.evaluate(() => new Promise(resolve => {
+          key(40, false);
+          setTimeout(() => { key(40, false); requestAnimationFrame(() => resolve(stageY())); }, 60);
+        }));
+        assert(Math.abs(pairs.now - pairs.target) <= 1, 'a second press within 150 ms counts as held: ' + JSON.stringify(pairs));
+        await page.waitForTimeout(400);
+        const cut = await page.evaluate(() => new Promise(resolve => {
+          key(40, false);
+          const gliding = document.getElementById('homeSurface').classList.contains('ctv-scroll-glide');
+          setTimeout(() => { key(39, true); resolve({gliding, after: document.getElementById('homeSurface').classList.contains('ctv-scroll-glide')}); }, 30);
+        }));
+        assert.deepEqual(cut, {gliding: true, after: false}, 'a held sideways arrow ends the glide at once');
+        // Other layouts and themed Homes keep fully immediate remote focus.
+        assert.deepEqual(await page.evaluate(() => {
+          const surface = document.getElementById('homeSurface'), card = document.querySelector('#tiles .card'), glass = document.getElementById('glass');
+          const read = () => [getComputedStyle(card).transitionDuration, getComputedStyle(glass).transitionDuration];
+          surface.classList.add('ctv-remote-navigation');
+          const classic = read();
+          surface.setAttribute('data-layout', 'side-grid');
+          const side = read();
+          surface.setAttribute('data-layout', 'dock-grid');
+          surface.classList.add('ctv-theme-active');
+          const themed = read();
+          surface.classList.remove('ctv-theme-active');
+          return {classic: classic[0] !== '0s', side, themed};
+        }), {classic: true, side: ['0s', '0s'], themed: ['0s', '0s']});
         // Reduced motion: no glide, no bump.
         await page.emulateMedia({reducedMotion: 'reduce'});
         for (let i = 0; i < rows; i++) await page.evaluate(() => key(38, true));

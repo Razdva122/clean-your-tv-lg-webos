@@ -690,8 +690,9 @@ body.editing header {
 /* Old engines keep normal motion; this optional accessibility override is safe to ignore. */
 /* doiuse-disable prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
-  .item, .card, #glass, .name, #stage, #hero, .pill, #inputShelfTrack, .input-tile,
-  .input-glyph, .input-dot, .input-name, .input-detail, #viewport {
+  .item, .card, #glass, .name, #stage, #hero, .pill, #inputShelf, #inputShelfWindow, #inputShelfTrack,
+  .input-tile, .input-glyph, .input-dot, .input-name, .input-detail, #viewport, #viewport::before,
+  #viewport::after, .ambient {
     transition: none !important;
     animation: none !important;
   }
@@ -831,10 +832,29 @@ body.editing #homeSurface[data-layout="scenic-grid"] .ctv-position { display: no
 
 /* Remote focus follows every key immediately; pointer movement keeps its transitions.
    In particular, repeated arrows must not continually retarget an unfinished scroll.
-   The focused card still grows in place; app.js lands the glass on it at card size so
-   the frame grows with the card instead of gliding behind it. */
+   In unthemed Classic the focused card still grows in place; app.js lands the glass on
+   it at card size so the frame grows with the card instead of gliding behind it. */
 #homeSurface.ctv-remote-navigation:not(.ctv-scroll-glide) #stage,
 #homeSurface.ctv-remote-navigation .item {
+  transition: none !important;
+}
+/* Other layouts and themed Homes keep fully immediate remote focus. (Chrome 38 has no
+   attribute selectors inside :not(), so the other presets are listed.) */
+#homeSurface.ctv-remote-navigation[data-layout="icon-grid"] #glass,
+#homeSurface.ctv-remote-navigation[data-layout="icon-grid"] .card,
+#homeSurface.ctv-remote-navigation[data-layout="icon-grid"] .name,
+#homeSurface.ctv-remote-navigation[data-layout="side-grid"] #glass,
+#homeSurface.ctv-remote-navigation[data-layout="side-grid"] .card,
+#homeSurface.ctv-remote-navigation[data-layout="side-grid"] .name,
+#homeSurface.ctv-remote-navigation[data-layout="channel-list"] #glass,
+#homeSurface.ctv-remote-navigation[data-layout="channel-list"] .card,
+#homeSurface.ctv-remote-navigation[data-layout="channel-list"] .name,
+#homeSurface.ctv-remote-navigation[data-layout="scenic-grid"] #glass,
+#homeSurface.ctv-remote-navigation[data-layout="scenic-grid"] .card,
+#homeSurface.ctv-remote-navigation[data-layout="scenic-grid"] .name,
+#homeSurface.ctv-remote-navigation.ctv-theme-active #glass,
+#homeSurface.ctv-remote-navigation.ctv-theme-active .card,
+#homeSurface.ctv-remote-navigation.ctv-theme-active .name {
   transition: none !important;
 }
 /* A single tap glides to the next row; app.js removes this during held arrows. */

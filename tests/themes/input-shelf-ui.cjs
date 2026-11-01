@@ -241,6 +241,38 @@ function recordStatusBridge() {
         assert.deepEqual(await page.locator('.ctv-input-tile .input-name').allTextContents(), ['HDMI 1 · Console', 'Live TV'], 'an empty live list returns to the captured inventory');
         assert.equal(await page.locator('.ctv-input-tile.is-connected, .ctv-input-tile.is-disconnected').count(), 0, 'inventory fallback shows no status');
 
+        // A status update while a preview plays keeps the same picture on the rebuilt tile.
+        await reload();
+        await press('ArrowUp');
+        assert.equal(await focused(), 'shelf:HDMI 1');
+        await playing();
+        await page.evaluate(() => { document.querySelector('.ctv-input-preview').marked = true; });
+        const live = name => [{id: 'HDMI_1', appId: 'preview.hdmi1', label: 'HDMI 1', connected: true, deviceName: name},
+          {id: 'HDMI_2', appId: 'preview.hdmi2', label: 'HDMI 2', connected: true, deviceName: 'Apple TV'}];
+        await push(live('Renamed console'));
+        assert.deepEqual(await page.evaluate(() => {
+          const media = document.querySelector('.ctv-input-tile.is-focused.is-previewing .ctv-input-preview');
+          return {same: !!media && media.marked === true, count: document.querySelectorAll('.ctv-input-preview').length,
+            detail: document.querySelector('.ctv-input-tile.is-focused .input-detail').textContent};
+        }), {same: true, count: 1, detail: 'Renamed console'}, 'a rename keeps the running preview in the rebuilt tile');
+        // ...and never starts one while Home is hidden or another window has focus.
+        await visibility(true);
+        await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+        await push(live('Hidden update'));
+        await page.waitForTimeout(1200);
+        assert.deepEqual(await previews(), idle, 'no preview starts while Home is hidden');
+        await visibility(false);
+        await press('ArrowUp');
+        assert.equal(await focused(), 'shelf:HDMI 1');
+        await playing();
+        await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+        assert.deepEqual(await previews(), idle, 'losing window focus stops the preview');
+        await push(live('Blurred update'));
+        await page.waitForTimeout(1200);
+        assert.deepEqual(await previews(), idle, 'no preview starts without window focus');
+        await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+        await playing();
+
         // A denied status call keeps the captured inventory without dimming anything.
         await page.addInitScript(() => { window.PREVIEW_INPUT_STATUS = null; });
         await reload();
@@ -275,8 +307,19 @@ function recordStatusBridge() {
           await press('Escape');
         }
         assert.equal(await page.locator('.ctv-input-preview').count(), 0, 'other layouts never preview');
+        // The shelf switches only apply to Classic, so other layouts hide them.
+        const switches = async () => {
+          await page.locator('#btnSettings').click();
+          await page.locator('[data-category=appearance]').click();
+          const shown = await page.evaluate(() => ['homeShowInputs', 'homePreviewInputs'].map(id => document.getElementById(id).offsetHeight > 0));
+          await press('Escape', 'Escape');
+          await page.mouse.move(0, 0);
+          return shown;
+        };
+        assert.deepEqual(await switches(), [false, false], 'other layouts hide the shelf switches');
         await page.evaluate(() => HomeLayoutState.setThemeLayout({preset: 'dock-grid', columns: 5, allowColumnOverride: true, spacingScale: 1, textScale: 1, focusScale: 1.1}));
         assert.equal(await page.locator('#inputShelf').isVisible(), true, 'returning to Classic restores the shelf');
+        assert.deepEqual(await switches(), [true, true], 'Classic shows the shelf switches');
         assert.deepEqual(errors, [], 'renderer errors');
         console.log('PASS Inputs shelf: ' + edition);
       } finally { await page.close(); }

@@ -22,10 +22,12 @@
 - Preview the focused shelf input live: after an 800 ms rest, a connected HDMI
   tile plays its source muted through the webOS external-input video pipeline
   (`<video>` with `service/webos-external`, `ext://hdmi:N`), one at a time. Moving
-  away, the header, dropdown or Settings, launching, blur or hiding Home release it;
-  errors or no picture within 4 s fall back to the static tile and skip that source
-  for 60 s. New `tvhome.inputs.preview.v1` preference (Settings → Appearance →
-  Preview inputs on focus, on by default), theme part `.ctv-input-preview` and
+  away, the header, dropdown or Settings, launching, blur or hiding Home release it,
+  and none starts while Home is hidden or unfocused; a live status update (such as a
+  CEC rename) keeps a running preview. Errors or no picture within 4 s fall back to
+  the static tile and skip that source for 60 s. New `tvhome.inputs.preview.v1`
+  preference (Settings → Appearance → Preview inputs on focus, on by default, shown
+  only in Classic like Show inputs on Home), theme part `.ctv-input-preview` and
   state `previewing`. The pipeline is undocumented; picture placement, ~0.2–0.3 s
   start, release and no CEC wake were checked on one webOS 6 No-root TV. Live TV
   previews are off until a tuned broadcast can be tested.
@@ -39,8 +41,9 @@
   title crossfades in step with focus; returning to Home after switching to an
   input focuses that input's shelf tile until focus moves elsewhere; 12-hour
   languages show the clock without a leading zero ("6:13 PM").
-- Rows glide over 300 ms on a single Up/Down press and stay instant while an arrow
-  is held (a repeat also cuts a running glide short), so held arrows never chase
+- In Classic without a theme, rows glide over 300 ms on a single Up/Down press and
+  stay instant while an arrow is held (a key repeat, or the same arrow again within
+  150 ms, also cuts a running glide short), so held arrows never chase
   an unfinished scroll; `startup-motion-ui` skips its exact stage/item position
   check only during such a glide or an edge bump. Classic fades the top and bottom
   screen edges while rows lie beyond them, and a fresh press that cannot move
