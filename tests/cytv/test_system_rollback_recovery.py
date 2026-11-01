@@ -8,6 +8,8 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+import types
+from unittest.mock import patch
 
 if os.name != 'posix':
     raise unittest.SkipTest('TV rollback recovery requires POSIX locks and filesystem semantics')
@@ -25,15 +27,19 @@ assert hashlib.sha256(fixture.read_bytes()).hexdigest()==provenance['sha256']
 with tarfile.open(fixture) as archive:
     original_core=archive.extractfile('supervisor/system_updater/core.py').read()
     original_device=archive.extractfile('supervisor/system_updater/device.py').read()
+    original_identity=archive.extractfile('supervisor/package_identity.py').read()
 assert hashlib.sha256(original_core).hexdigest()==provenance['files']['supervisor/system_updater/core.py']
 original_namespace={'__name__':'system_updater.original_recovery_core','__package__':'system_updater'}
 exec(compile(original_core,'<verified original supervisor core>','exec'),original_namespace)
 Manager=original_namespace['Manager']
+assert hashlib.sha256(original_identity).hexdigest()==provenance['files']['supervisor/package_identity.py']
+OriginalIdentity=types.ModuleType('package_identity')
+exec(compile(original_identity,'<verified original supervisor package identity>','exec'),OriginalIdentity.__dict__)
 assert hashlib.sha256(original_device).hexdigest()==provenance['files']['supervisor/system_updater/device.py']
 original_namespace={'__name__':'system_updater.original_recovery_device','__package__':'system_updater','__file__':str(ROOT/'system-updater/device.py')}
-exec(compile(original_device,'<verified original supervisor device>','exec'),original_namespace)
+with patch.dict(sys.modules,{'package_identity':OriginalIdentity}):
+    exec(compile(original_device,'<verified original supervisor device>','exec'),original_namespace)
 OriginalDevice=original_namespace['Device']
-assert hashlib.sha256((ROOT/'root-edition/package_identity.py').read_bytes()).hexdigest()==provenance['files']['supervisor/package_identity.py']
 from installation import Ownership, Busy
 
 class RecoveryIO(RootIO):
@@ -52,6 +58,10 @@ class RecoveryIO(RootIO):
 
 class Tests(unittest.TestCase):
     def setUp(self):
+        # Freeze the original supervisor's selector for this test only. Current
+        # Root lifecycle changes must neither fail provenance nor replace the
+        # historical selector via imports inside OriginalDevice/recovery.
+        self.enterContext(patch.dict(sys.modules,{'package_identity':OriginalIdentity}))
         try:self.module=importlib.import_module('cytv.system_rollback_recovery')
         except ModuleNotFoundError:self.fail('explicit rollback-readiness recovery is missing')
         import types
