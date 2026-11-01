@@ -164,7 +164,8 @@ failure stays with its separate investigation regardless of Windows progress.
 
 ## Code identity and records
 
-Use the exact code commit and pin in the dated preparation record linked below.
+Use the exact code commit and pin in the
+[dated preparation record](../history/2026-11-01-root-recovery-handoffs.md#exact-source-and-retained-code).
 Rebuild from that commit, then require the locally generated `digest` output to
 match the pin in #133 before any separately agreed inspection. Retain the entire
 generated bundle and both cancellation modules together outside a temporary
