@@ -498,17 +498,105 @@ class OperationTests(unittest.TestCase):
         self.assertEqual(json.loads(attempts[0].read_text())['stage'], 'complete')
         self.assertEqual(self.store.pending(installer.profile)['action'], 'install')
 
-    def test_completed_no_root_install_can_be_reconciled_after_lost_acknowledgment(self):
+    def test_c2_pending_install_keeps_receipt_despite_matching_versions_and_hashes(self):
         remote = Remote()
         installer = self.installer(remote)
-        remote.installed = [{'id': operations.HOME, 'version': '1.2.2'}, {'id': operations.HELPER, 'version': '0.6.13'}]
+        remote.installed = [{'id': operations.HOME, 'version': '1.2.2'},
+                            {'id': operations.HELPER, 'version': '0.6.13'}]
         self.store.begin(installer.profile, 'install')
         files = {operations.BASE + '/applications/com.gathin.tvhome/apps.js': 'a' * 64}
         self.store.checkpoint(installer.profile, expected=files)
         remote.run = lambda *args, **kwargs: 'a' * 64 + '  ' + next(iter(files)) + '\n'
+        receipt = self.store.device_dir(installer.profile) / 'operation.json'
+        original = receipt.read_bytes()
         result = installer.status()
-        self.assertIsNone(self.store.pending(installer.profile))
-        self.assertEqual(result['reconciled'], 'installed-files-verified; helper launch requires TV check')
+        self.assertTrue(receipt.exists(), 'Status must retain an unresolved journal')
+        self.assertEqual(receipt.read_bytes(), original)
+        self.assertIsNone(result['reconciled'])
+        self.assertEqual(result['pending']['action'], 'install')
+        self.assertFalse((receipt.parent / 'installation.json').exists())
+
+    def test_uk6400_absent_packages_do_not_prove_pending_removal_terminated(self):
+        installer = self.installer(Remote())
+        self.store.begin(installer.profile, 'uninstall', previous={'action': 'install'})
+        self.store.checkpoint(installer.profile, stage='removing',
+                              removals={operations.HELPER: 'submitted'})
+        receipt = self.store.device_dir(installer.profile) / 'operation.json'
+        original = receipt.read_bytes()
+        result = installer.status()
+        self.assertTrue(receipt.exists(), 'Status must retain an unresolved journal')
+        self.assertEqual(receipt.read_bytes(), original)
+        self.assertIsNone(result['reconciled'])
+        self.assertEqual(result['pending']['action'], 'uninstall')
+
+    def test_both_issue201_actions_retain_journal_when_idle_is_unavailable(self):
+        from cytv.errors import TVRejected, UserError
+        for action in ('install', 'uninstall'):
+            for outcome in ('denied', 'timeout', 'active', 'unknown'):
+                with self.subTest(action=action, outcome=outcome):
+                    remote = Remote()
+                    installer = self.installer(remote)
+                    self.store.begin(installer.profile, action, previous={'action': 'install'})
+                    receipt = self.store.device_dir(installer.profile) / 'operation.json'
+                    original = receipt.read_bytes()
+                    def luna(uri, payload, **kwargs):
+                        remote.calls.append(('luna', uri, payload))
+                        self.assertEqual(uri, 'com.webos.appInstallService/status')
+                        self.assertEqual(payload, {'subscribe': True})
+                        if outcome == 'denied':
+                            raise TVRejected('Rejected', {'returnValue': False, 'errorCode': -1}, uri)
+                        if outcome == 'timeout':
+                            raise UserError('Timed out')
+                        return {'returnValue': True, 'status': {'apps': [{}]}} if outcome == 'active' else {'returnValue': True}
+                    remote.luna = luna
+                    with self.assertRaises(UserError):
+                        installer.uninstall()
+                    self.assertEqual(receipt.read_bytes(), original)
+                    self.assertEqual(len(remote.calls), 1)
+                    # Clear only this synthetic test receipt between independent cases.
+                    receipt.unlink()
+
+    def test_denied_listapps_is_distinct_from_denied_dev_listapps(self):
+        from cytv.errors import TVRejected
+        for denied in ('com.webos.applicationManager/listApps',
+                       'com.webos.applicationManager/dev/listApps'):
+            with self.subTest(denied=denied):
+                remote = Remote()
+                original = remote.luna
+                def luna(uri, payload, **kwargs):
+                    if uri == denied:
+                        raise TVRejected('Rejected', {'returnValue': False, 'errorCode': -1}, uri)
+                    return original(uri, payload, **kwargs)
+                remote.luna = luna
+                installer = self.installer(remote)
+                self.store.begin(installer.profile, 'install', expected={})
+                receipt = self.store.device_dir(installer.profile) / 'operation.json'
+                original_receipt = receipt.read_bytes()
+                if denied.endswith('/dev/listApps'):
+                    with self.assertRaises(TVRejected):
+                        installer.status()
+                else:
+                    self.assertEqual(installer.status()['device']['apps'], [])
+                self.assertEqual(receipt.read_bytes(), original_receipt)
+                receipt.unlink()
+
+    def test_partial_stale_and_corrupt_receipts_are_not_inferred_complete(self):
+        for record in (b'{',
+                       b'{"action":"install","stage":"pending","expected":{}}',
+                       b'{"action":"install","stage":"pending","versions":{"wrong":"9.9.9"},"expected":{"stale":"bad-hash"}}',
+                       b'{"action":"uninstall","stage":"removing","removals":{}}'):
+            with self.subTest(record=record):
+                remote = Remote()
+                remote.installed = [{'id': operations.HOME, 'version': '1.2.2'}]
+                installer = self.installer(remote)
+                receipt = self.store.device_dir(installer.profile) / 'operation.json'
+                state.private_write(receipt, record)
+                self.assertIsNone(installer.status()['reconciled'])
+                self.assertEqual(receipt.read_bytes(), record)
+                self.assertTrue(all(call[0] == 'luna' and call[1].endswith('/dev/listApps')
+                                    or call[0] == 'run' and 'CYTV_HELPER_' in call[1]
+                                    for call in remote.calls))
+                receipt.unlink()
 
     def test_partial_install_can_be_explicitly_removed_only_after_installer_is_idle(self):
         remote = Remote()
