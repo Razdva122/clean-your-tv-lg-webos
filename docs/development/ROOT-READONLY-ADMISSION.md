@@ -8,20 +8,22 @@ cancellation admission, and third-party Home routing still blocks removal.
 This maintainer procedure prepares a device-specific proof for the
 [existing narrow cancellation tool](../ROOT-INSTALL-CANCELLATION.md). It is
 not a recovery result or firmware support. The isolated entry/candidate lookup
-is **unreleased**. Pin a reviewed source commit and generated code bundle before
+was integrated before v1.5.4 and remains an internal source procedure. Pin a
+reviewed source commit and generated code bundle before
 any owner-side use. Do not substitute a release number for those exact bytes.
 
 ## Agree on the scope before connecting
 
-For #133, the latest reporter response already answers the LG Home/control and
-preserved-state questions. Do not ask for those historical answers again. The
-original saved connection has not been rechecked. First ask only whether the
-original installer profile is still available on the same PC user account;
-this is not a request to reconnect, pair, reinstall or reset anything.
+For #101 and #133, profile availability has already been answered. Do not ask
+for those historical answers again. Use the [individual preparation decisions](ROOT-RECOVERY-HANDOFFS.md)
+to select the appropriate next step; presence of saved files authorizes neither
+an SSH connection nor temporary staging.
 
-After that prerequisite, coordinate **one inspection** with the owner. Explain
+Coordinate **one inspection** with the owner after reviewing its authentication prerequisites. Explain
 that it uses their existing pinned SSH identity/host key; no new trust prompt,
-password request or pairing is admitted. Authentication failure is a stop, not
+password request or pairing is admitted by the existing tool. In particular, a
+profile which requires a password is not admitted merely because ordinary SSH
+can prompt for one. Authentication failure is a stop, not
 permission to alter the saved profile, trust store or TV. Do not use ordinary
 Restore, Uninstall, install/resume, recovery-service calls or retained runtime
 status as substitutes for this procedure.

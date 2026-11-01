@@ -40,6 +40,11 @@ def create_report(store, action, profile, phase, error=None, tv_info=None):
         report['connection'] = {'protocol': 'developer-key', 'reason_code': error.reason_code}
     if isinstance(error, TVCommandError):
         report['ssh_command'] = {'exit_status': error.exit_status}
+        for key, allowed in (('root_action', ('inspect','install','status','remove')),
+                             ('root_boundary', ('coordinator-stage','python-select','driver'))):
+            value = getattr(error, key, None)
+            if isinstance(value, str) and value in allowed:
+                report['ssh_command'][key] = value
         recovery = root_recovery_details(getattr(error, 'root_recovery', None))
         if recovery: report['root_recovery'] = recovery
     if isinstance(error, TVRejected):

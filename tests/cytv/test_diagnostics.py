@@ -17,6 +17,15 @@ class DiagnosticTests(unittest.TestCase):
             self.assertEqual(json.loads(path.read_text())['python_cache'], {'reason': 'unknown'})
             self.assertNotIn('PRIVATE', path.read_text())
 
+    def test_root_command_context_is_allowlisted_again_at_export(self):
+        from cytv.errors import TVCommandError
+        with tempfile.TemporaryDirectory() as tmp:
+            error=TVCommandError(127)
+            error.root_action='PRIVATE-ACTION';error.root_boundary={'private':'PRIVATE-PATH'}
+            text=diagnostics.create_report(state.Store(tmp),'status',None,'status',error).read_text()
+            self.assertEqual(json.loads(text)['ssh_command'],{'exit_status':127})
+            self.assertNotIn('PRIVATE-',text)
+
     def test_restore_rejections_identify_only_allowlisted_operations(self):
         from cytv.transport import terminal_reply
         from cytv.errors import TVRejected

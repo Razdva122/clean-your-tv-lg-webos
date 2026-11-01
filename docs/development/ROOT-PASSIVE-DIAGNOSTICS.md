@@ -75,13 +75,19 @@ env -u NODE_OPTIONS -u NODE_PATH /usr/bin/node <<'CYTV_DIAGNOSTIC'
     out.operation = matches.length === 1 ? 'one-root-deploy-failure' : matches.length ? 'ambiguous' : 'not-found';
     if (matches.length === 1) {
       var text = read(base + '/request-' + matches[0] + '/worker.log', 16777216, 8192);
-      out.worker = {exception: 'unknown', frames: []};
+      out.worker = {exception: 'unknown', frames: [], child: 'unknown'};
+      var children = [];
+      out.recovery_binding = 'unverified';
       text.split('\n').forEach(function (line) {
         var e = /^(?:(?:subprocess|builtins)[.])?(ValueError|RuntimeError|CalledProcessError|OSError|PermissionError|FileNotFoundError|TypeError|KeyError):/.exec(line);
         if (e) out.worker.exception = e[1];
+        // Parse only the complete fixed child command, never evaluate its repr.
+        var child = /^subprocess[.]CalledProcessError: Command '\['(?:\/usr\/bin\/python3|\/var\/lib\/clean-your-tv-root\/python-launcher|\/var\/lib\/clean-your-tv-python\/4a71641c8d5536175e404a961624e8656eba30e97b5026f6bd7dc31e4bbeaaea\/bin\/python3[.]13)', '\/var\/lib\/clean-your-tv-root\/provision[.]py', '(apply|refresh|finalize|rollback)'\]' returned non-zero exit status ([1-9][0-9]{0,2})[.]$/.exec(line);
+        if (e) children.push(child && Number(child[2]) <= 255 ? {program: 'provision', action: child[1], exit_status: Number(child[2])} : 'unknown');
         var f = /^\s*File "[^"\r\n]*\/(install_driver[.]py|install_device[.]py|deploy[.]py|provision[.]py)", line [0-9]+, in (_run|perform|deploy|install|command|finalize|main|run)$/.exec(line);
         if (f) { out.worker.frames.push(f[1] + ':' + f[2]); out.worker.frames = out.worker.frames.slice(-8); }
       });
+      if (children.length === 1) out.worker.child = children[0];
     }
     out.status = 'read';
   } catch (_) { out = {schema: 1, status: 'unavailable-or-unsafe'}; }
@@ -98,6 +104,21 @@ Do not ask for private profiles, snapshots or the entire worker log. If it says
 guess another operation, run a retained helper or bypass the check.
 
 ## Interpretation and next step
+
+`worker.child` classifies only one complete, allowlisted `CalledProcessError`
+terminal for a fixed provisioning child in that selected worker's bounded tail.
+Unknown, repeated, truncated or other commands remain `unknown`; no command or
+exception text is exported or executed. This is an untrusted saved-log category,
+not authenticated execution evidence. It can distinguish a reported finalize
+child from a generic worker exception without collecting a raw command.
+
+`recovery_binding: unverified` is deliberate, even when the child is `finalize`.
+The legacy worker does not persist a matching per-operation attempt token in
+this separate failure record. A matching phase or timestamps cannot create that
+missing binding. Before using a cancellation path, the reviewed admission tool
+must authenticate the original UUID, submission/candidate/snapshot, exact deploy
+journal and provisioning snapshot/registrations together. Never infer that the
+failure belongs to this operation from `phase=status/negative-reply` alone.
 
 `recovery` reads a separate saved failure file. It is not cryptographically bound
 to the selected worker here and may describe an older attempt. `ambiguous` never
