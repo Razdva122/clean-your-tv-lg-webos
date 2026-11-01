@@ -71,3 +71,24 @@ The new test failed in all eleven translated locales, then passed after fixing
 both keys. Hindi now explicitly says press and release Home once briefly. All
 64 affected localization/actual-Qt/Android-bridge cases pass after this correction;
 no device behavior or observation default changed.
+
+## Integration
+
+[PR #234](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/234) merged into
+`release/next` as `252a8a88403a25915a9ecc97da5e38f88b9b382b` after final source
+`bfe83a9a9ea6df56b975c6ec7f5042e5fdfec1e0` passed the selected
+[Linux/macOS/ARM checks](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/41332068921),
+[frozen Windows/macOS Intel runtime](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/41332068891)
+and [integration policy](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/41332068897).
+Linux CI ran 614 installer cases (36 expected optional/platform skips), 25 Android
+and 220 setup cases. Actual Qt and Chrome were verified locally as recorded above.
+Browser/release-build/publication jobs were correctly skipped for focused CI.
+Merged product and test files match the verified source. A zero install exit code
+means setup work completed, not that skipped or owner-reported failing Home checks
+passed; those separate statuses remain in the local report.
+
+Candidate #210 inventory includes this partial improvement without selecting a
+version, frozen package or physical acceptance. Original #207 stays open/planned;
+its standard-remote mapping is unchanged and no extra owner test is requested.
+The source-integration comment, current label and candidate record are verified
+as part of integration. No physical result or shipping notice is claimed.

@@ -135,6 +135,13 @@
         216
       ],
       "summary": "Add separately confirmed installer recovery with existing guard revalidation and no implicit reinstall; original #201/#216 recovery remains unresolved"
+    },
+    {
+      "pr": 234,
+      "issues": [
+        207
+      ],
+      "summary": "Separate package/launch/startup and explicitly owner-reported Home with default skip and local reports; #207 IR routing remains unresolved"
     }
   ],
   "excluded": [],
