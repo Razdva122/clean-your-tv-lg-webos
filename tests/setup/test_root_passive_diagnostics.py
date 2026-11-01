@@ -78,6 +78,23 @@ process.stdout.write(JSON.stringify(output));
         self.assertEqual(got['recovery'], {'phase': 'stock-home', 'reason': 'negative-reply', 'luna_reason': 'service-missing'})
         self.assertEqual(got['operation'], 'one-root-deploy-failure')
 
+    def test_worker_child_is_a_fixed_category_not_an_inferred_recovery_binding(self):
+        prefix='subprocess.CalledProcessError: Command '
+        command="['/usr/bin/python3', '/var/lib/clean-your-tv-root/provision.py', 'finalize']"
+        self.write(self.worker,prefix+"'"+command+"'"+' returned non-zero exit status 1.\n')
+        got=self.collect()
+        self.assertEqual(got['worker'].get('child'),{'program':'provision','action':'finalize','exit_status':1})
+        self.assertEqual(got['recovery_binding'],'unverified')
+        for line in (
+            prefix+"'"+command.replace('finalize','secret-password')+"'"+' returned non-zero exit status 1.',
+            prefix+"'"+command+"'"+' returned non-zero exit status 999.',
+            prefix+"'"+command+"'"+' returned non-zero exit status 1. private-address',
+            (prefix+"'"+command+"'"+' returned non-zero exit status 1.\n')*2,
+        ):
+            with self.subTest(line=line):
+                self.write(self.worker,line)
+                self.assertEqual(self.collect()['worker']['child'],'unknown')
+
     def test_multiple_failed_operations_never_select_a_latest_worker(self):
         self.record('b' * 32)
         got = self.collect()

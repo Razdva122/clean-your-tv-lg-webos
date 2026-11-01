@@ -27,6 +27,7 @@ before using a low-level recovery or installation procedure.
 - [Home installation gates](HOME-INSTALL-GATES.md): unreleased control-file ownership and Root firmware preflight fixes, packaging requirements and retained-recovery limits.
 - [Companion entry points](../COMPANION-APPS.md), [Helper diagnostics](../HELPER-DIAGNOSTICS.md), [Home/settings diagnostics](../SETTINGS-DIAGNOSTICS.md).
 - [Root doctor](../../root-edition/DOCTOR.md), [current Root limits](../../root-edition/STATUS.md), [Root validation](../../root-edition/TESTING.md).
+- [Individual Root recovery handoffs](ROOT-RECOVERY-HANDOFFS.md): per-issue decisions, authentication blockers and pending-operation diagnostic boundaries.
 - [Read-only Root admission](ROOT-READONLY-ADMISSION.md): private owner handoff, isolated inspection and unsupported firmware boundaries.
 - [Passive Root worker diagnostics](ROOT-PASSIVE-DIAGNOSTICS.md): bounded saved-error categories without code staging, routing calls or cancellation admission.
 - [Interrupted Root installation](../ROOT-INSTALL-CANCELLATION.md), [private Python](../OPTIONAL-PYTHON.md), [native cache cleanup](../WAM-CLEANUP.md).

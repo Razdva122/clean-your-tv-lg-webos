@@ -5,9 +5,9 @@ continuation, a repair command or a release acceptance claim. It is currently
 limited to a failed product install at `root-deploy`, an independently saved
 genuine SDK install terminal, no migration and no Root Updater/System state.
 The cancellation baseline shipped in v1.5.0 and admits two exact Root journals.
-The isolated inspection entry and optional candidate lookup below are
-**unreleased source changes**; use their exact reviewed checkout, not an older
-installer or a patched retained worker:
+The isolated inspection entry and optional candidate lookup below were integrated
+before v1.5.4. They remain internal source procedures: use an exact reviewed
+checkout, not an older installer or a patched retained worker:
 
 - `install-observed`: provisioning never started (the failure reported in #101).
 - `provision-finalize-starting`: a saved finalize failure at `stock-home` or
