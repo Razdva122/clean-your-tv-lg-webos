@@ -4,6 +4,13 @@ const core=require('../../theme-receiver/core'),register=require('../../theme-re
 const body=JSON.stringify({schemaVersion:1,descriptor:'e30=',files:{'rules.json':'e30='}});
 function post(s,content=body,headers={}){return new Promise((resolve,reject)=>{const req=http.request({host:'127.0.0.1',port:s.port,path:'/v1/theme',method:'POST',headers:Object.assign({'Host':'127.0.0.1:'+s.port,'Content-Type':'application/json','X-CYTV-PIN':s.pin},headers)},res=>{res.resume();res.on('end',()=>resolve(res.statusCode));});req.on('error',reject);req.end(content);});}
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
+async function waitState(receiver,id,state){
+ const deadline=Date.now()+5000;
+ while(receiver.status(id).state!==state){
+  assert(Date.now()<deadline,`receiver did not reach ${state}`);
+  await delay(10);
+ }
+}
 async function test(){
  for(const f of ['core','register'])acorn.parse(fs.readFileSync(require.resolve('../../theme-receiver/'+f),'utf8'),{ecmaVersion:5});
  const r=core.create({port:0});let s=await r.start();
@@ -26,9 +33,9 @@ async function test(){
  const exp=core.create({port:0,ttlMs:35});s=await exp.start();await delay(60);assert.throws(()=>exp.status(s.sessionId));
  const wrong=core.create({port:0,maxWrongPins:2});s=await wrong.start();await post(s,body,{'X-CYTV-PIN':'bad'});await post(s,body,{'X-CYTV-PIN':'bad'});await delay(10);assert.throws(()=>wrong.status(s.sessionId));
  const small=core.create({port:0,maxBytes:50});s=await small.start();assert.equal(await post(s),413);assert.equal(await post(s,body,{'Transfer-Encoding':'chunked'}),413);await small.stop(s.sessionId);
- const aborted=core.create({port:0});s=await aborted.start();let req=http.request({host:'127.0.0.1',port:s.port,path:'/v1/theme',method:'POST',headers:{Host:'127.0.0.1:'+s.port,'Content-Type':'application/json','X-CYTV-PIN':s.pin,'Content-Length':500}});req.on('error',()=>{});req.write('{');await delay(20);assert.equal(aborted.status(s.sessionId).state,'receiving');req.destroy();await delay(20);assert.equal(aborted.status(s.sessionId).state,'waiting');await aborted.stop(s.sessionId);
- const timeout=core.create({port:0,requestTimeoutMs:35});s=await timeout.start();
- let sock=net.connect(s.port,'127.0.0.1');await new Promise(resolve=>sock.once('connect',resolve));sock.write('POST /v1/theme HTTP/1.1\r\nHost: 127.0.0.1:'+s.port+'\r\nContent-Type: application/json\r\nX-CYTV-PIN: '+s.pin+'\r\nContent-Length: 100\r\n\r\n{');await delay(10);assert.equal(timeout.status(s.sessionId).state,'receiving');assert.equal(await post(s),409);sock.resume();await delay(70);assert.equal(timeout.status(s.sessionId).state,'waiting');sock.destroy();await timeout.stop(s.sessionId);
+ const aborted=core.create({port:0});s=await aborted.start();let req=http.request({host:'127.0.0.1',port:s.port,path:'/v1/theme',method:'POST',headers:{Host:'127.0.0.1:'+s.port,'Content-Type':'application/json','X-CYTV-PIN':s.pin,'Content-Length':500}});req.on('error',()=>{});req.write('{');await waitState(aborted,s.sessionId,'receiving');req.destroy();await waitState(aborted,s.sessionId,'waiting');await aborted.stop(s.sessionId);
+ const timeout=core.create({port:0,requestTimeoutMs:500});s=await timeout.start();
+ let sock=net.connect(s.port,'127.0.0.1');await new Promise(resolve=>sock.once('connect',resolve));sock.write('POST /v1/theme HTTP/1.1\r\nHost: 127.0.0.1:'+s.port+'\r\nContent-Type: application/json\r\nX-CYTV-PIN: '+s.pin+'\r\nContent-Length: 100\r\n\r\n{');await waitState(timeout,s.sessionId,'receiving');assert.equal(await post(s),409);sock.resume();await waitState(timeout,s.sessionId,'waiting');sock.destroy();await timeout.stop(s.sessionId);
  const large=core.create({port:0});s=await large.start();const data=JSON.stringify({schemaVersion:1,descriptor:'e30=',files:{'big':Buffer.alloc(2*1024*1024,97).toString('base64')}});assert.equal(await post(s,data),202);chunk=large.read(s.sessionId,0);assert.equal(Buffer.from(chunk.data,'base64').length,49152);assert(!chunk.done);assert.throws(()=>large.read(s.sessionId,3));let rebuilt=Buffer.from(chunk.data,'base64');while(!chunk.done){chunk=large.read(s.sessionId,chunk.nextOffset);rebuilt=Buffer.concat([rebuilt,Buffer.from(chunk.data,'base64')]);}assert.equal(rebuilt.toString(),data);await large.stop(s.sessionId);
  const methods={};register({register:(name,fn)=>methods[name]=fn},{appId:'com.test',port:0});
  const call=(name,payload,id,raw=true)=>new Promise(resolve=>methods[name]({payload,ls2Message:raw?{applicationID:()=>id}:undefined,applicationID:()=>id,respond:resolve}));
