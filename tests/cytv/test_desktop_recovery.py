@@ -118,7 +118,7 @@ class DesktopRecoveryTests(unittest.TestCase):
             with self.subTest(command=command):
                 w = self.window()
                 self.check(w, command)
-                action = self.button(w, 'Recover and reinstall')
+                action = self.button(w, 'Review recovery options')
                 self.assertIsNotNone(action)
                 self.assertTrue(action.isDefault())
                 self.assertEqual(self.store.pending(self.profile)['stage'], 'pending')
@@ -128,7 +128,7 @@ class DesktopRecoveryTests(unittest.TestCase):
     def test_interrupted_install_uses_the_same_guarded_recovery_journey(self):
         self.store.finish(self.profile)
         self.store.begin(self.profile, 'install')
-        self.test_recovery_uses_same_tv_and_default_no_then_installs_after_verified_removal()
+        self.test_recovery_uses_same_tv_and_default_no_then_stops_after_verified_removal()
 
     def test_interrupted_install_recovery_checks_tv_idle_and_saves_failure_without_reinstall(self):
         self.store.finish(self.profile)
@@ -144,7 +144,7 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.test_declining_recovery_retains_receipt_and_does_not_offer_automatic_retry()
         self.assertEqual(self.store.pending(self.profile), original)
 
-    def test_recovery_uses_same_tv_and_default_no_then_installs_after_verified_removal(self):
+    def test_recovery_uses_same_tv_and_default_no_then_stops_after_verified_removal(self):
         self.remote.installed = [{'id': 'com.local.nativehome', 'version': '0.6.13'},
                                  {'id': 'com.gathin.tvhome', 'version': '1.2.2'}]
         original = self.remote.luna
@@ -155,22 +155,18 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.remote.luna = remove
         w = self.window()
         self.check(w)
-        self.button(w, 'Recover and reinstall').click()
-        self.assertEqual(w.rail_title.text(), 'Set up my TV')
+        self.button(w, 'Review recovery options').click()
+        self.assertEqual(w.rail_title.text(), 'Review recovery options')
         self.pump(lambda: w.pending is not None)
         w.submit('y')  # Connect to check this TV.
         self.pump(lambda: w.pending is not None)
-        self.assertIn('Finish removal', w.pending.label)
+        self.assertIn('Remove remaining', w.pending.label)
         self.assertEqual(w.pending.default, 'n')
-        self.assertIsNotNone(self.button(w, 'Recover and reinstall'))
+        self.assertIsNotNone(self.button(w, 'Continue'))
         self.assertFalse(any(c[0] == 'upload' for c in self.remote.calls))
         w.submit('y')
-        self.pump(lambda: w.pending is not None)
-        self.assertIsNone(self.store.pending(self.profile))
-        self.assertIn('Install these versions', w.pending.label)
-        w.submit('y')
         self.pump(lambda: not w.running)
-        self.assertEqual(w.title.text(), 'Finished', w.content.toPlainText() + (w.report.read_text() if w.report else ''))
+        self.assertEqual(w.title.text(), 'Review recovery options', w.content.toPlainText())
         self.assertIsNone(self.store.pending(self.profile))
         self.assertTrue(all(p == self.profile for p in self.connections))
         calls = [c for c in self.remote.calls if c[0] == 'luna']
@@ -178,9 +174,9 @@ class DesktopRecoveryTests(unittest.TestCase):
         removals = [(i,c[2]['id']) for i,c in enumerate(calls) if c[1].endswith('/dev/remove')]
         installs = [(i,c[2]['id']) for i,c in enumerate(calls) if c[1].endswith('/install')]
         self.assertEqual([app for _,app in removals], ['com.local.nativehome', 'com.gathin.tvhome'])
-        self.assertEqual([app for _,app in installs], ['com.local.nativehome', 'com.gathin.tvhome'])
+        self.assertEqual(installs, [])
         self.assertLess(restored, removals[0][0])
-        self.assertLess(removals[-1][0], installs[0][0])
+        self.assertFalse(any(c[0] == 'upload' for c in self.remote.calls))
 
     def test_failed_recovery_offers_original_failure_report_without_retry_or_install(self):
         w = self.window()
@@ -194,15 +190,14 @@ class DesktopRecoveryTests(unittest.TestCase):
                     'errorText': 'PRIVATE-DIAGNOSTICS'}, uri)
             return original(uri, payload, **kwargs)
         self.remote.luna = reject
-        self.button(w, 'Recover and reinstall').click()
-        for _ in range(2):
-            self.pump(lambda: w.pending is not None)
-            w.submit('y')
+        self.button(w, 'Review recovery options').click()
+        self.pump(lambda: w.pending is not None)
+        w.submit('y')
         self.pump(lambda: not w.running)
-        self.assertEqual(w.title.text(), 'Let’s resolve this')
+        self.assertEqual(w.title.text(), 'Review recovery options')
         self.assertNotEqual(w.report, doctor_report)
         report = json.loads(w.report.read_text())
-        self.assertEqual(report['phase'], 'uninstall')
+        self.assertEqual(report['phase'], 'recover')
         self.assertEqual(report['luna']['operation'], 'package-status')
         self.assertTrue(report['trace'])
         for private in ('PRIVATE-DIAGNOSTICS', 'PRIVATE-PAIRING-KEY', '192.0.2.10'):
@@ -213,7 +208,7 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.assertNotIn('cytv doctor', w.content.toPlainText())
         save = self.button(w, 'Save diagnostic report…')
         self.assertTrue(save.isDefault())
-        self.assertIsNone(self.button(w, 'Recover and reinstall'))
+        self.assertIsNone(self.button(w, 'Review recovery options'))
         destination = self.root / 'saved.json'
         with patch('cytv.gui.QFileDialog.getSaveFileName', return_value=(str(destination), 'JSON (*.json)')):
             save.click()
@@ -222,9 +217,7 @@ class DesktopRecoveryTests(unittest.TestCase):
     def test_declining_recovery_retains_receipt_and_does_not_offer_automatic_retry(self):
         w = self.window()
         self.check(w, 'status')
-        self.button(w, 'Recover and reinstall').click()
-        self.pump(lambda: w.pending is not None)
-        w.submit('y')
+        self.button(w, 'Review recovery options').click()
         self.pump(lambda: w.pending is not None)
         w.submit('n')
         self.pump(lambda: not w.running)
@@ -259,7 +252,7 @@ class DesktopRecoveryTests(unittest.TestCase):
                     self.store.begin(self.profile, action, stage=stage)
                 w = self.window()
                 self.check(w, 'status')
-                self.assertIsNone(self.button(w, 'Recover and reinstall'))
+                self.assertEqual(self.button(w, 'Review recovery options') is not None, action is not None)
                 self.assertFalse(any(c[0] == 'upload' for c in self.remote.calls))
                 w.close()
 
@@ -270,7 +263,7 @@ class DesktopRecoveryTests(unittest.TestCase):
         before = self.store.pending(self.profile)
         w = self.window()
         self.check(w, 'status')
-        self.assertIsNotNone(self.button(w, 'Recover and reinstall'))
+        self.assertIsNotNone(self.button(w, 'Review recovery options'))
         self.assertEqual(self.store.pending(self.profile), before)
         self.assertFalse(any(c[0] == 'upload' or c[1] in (
             'com.webos.appInstallService/dev/install', 'com.webos.appInstallService/dev/remove')
@@ -285,9 +278,7 @@ class DesktopRecoveryTests(unittest.TestCase):
             raise OSError('PRIVATE-FAILURE')
         self.connect = reject
         with patch('cytv.diagnostics.create_report', side_effect=OSError('PRIVATE-PATH')):
-            self.button(w, 'Recover and reinstall').click()
-            self.pump(lambda: w.pending is not None)
-            w.submit('y')
+            self.button(w, 'Review recovery options').click()
             self.pump(lambda: not w.running)
         self.assertTrue(previous_report.is_file())
         self.assertIsNone(w.report)

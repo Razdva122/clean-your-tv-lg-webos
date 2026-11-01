@@ -143,7 +143,7 @@ class CLITests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp, patch.object(state.Store, 'lock', lock), \
              patch('cytv.wam_cleanup.inspect') as inspect:
             code, output, calls = self.run_cli(['clean-wam-cache', '--host', '192.0.2.10',
-                '--edition', 'root', '--data-dir', tmp, '--yes'], ['y'], remote=MagicMock())
+                '--edition', 'root', '--data-dir', tmp, '--yes'], ['y', 'y'], remote=MagicMock())
             self.assertEqual(code, 2, output)
             inspect.assert_not_called()
             self.assertFalse(calls)
@@ -187,14 +187,16 @@ class CLITests(unittest.TestCase):
             profile = state.target('192.0.2.10', 'no-root')
             store.begin(profile, 'uninstall')
             inst = cls.return_value
+            inst.store, inst.profile = store, profile
+            inst.remote.luna.return_value = {'returnValue': True, 'status': {'apps': []}}
             inst.status.return_value = {'can_resume_root_setup': False}
             inst.uninstall.side_effect = UserError('Removal remains unconfirmed')
             code, output, _ = self.run_cli(['--host', profile['host'], '--edition', 'no-root',
-                '--data-dir', tmp, '--yes'], ['y'], remote=MagicMock())
+                '--data-dir', tmp, '--yes'], ['y', 'y'], remote=MagicMock())
             self.assertEqual(code, 2, output)
             self.assertIsNotNone(store.pending(profile))
             report = json.loads(next(Path(tmp).glob('reports/*.json')).read_text())
-            self.assertEqual(report['phase'], 'uninstall')
+            self.assertEqual(report['phase'], 'recover')
             inst.version_summary.assert_not_called()
             inst.install.assert_not_called()
             ssap.assert_not_called()
@@ -210,18 +212,20 @@ class CLITests(unittest.TestCase):
                 profile = state.target('192.0.2.10', 'no-root')
                 store.begin(profile, action)
                 inst = cls.return_value
+                inst.store, inst.profile = store, profile
+                inst.remote.luna.return_value = {'returnValue': True, 'status': {'apps': []}}
                 inst.status.return_value = {'can_resume_root_setup': False}
                 inst.uninstall.side_effect = lambda: store.finish(profile)
                 inst.version_summary.return_value = []
                 flags = ['--yes', '--non-interactive'] if choice == 'non-interactive' else [] if choice == 'y' else ['--yes']
                 code, output, _ = self.run_cli(['--host', profile['host'], '--edition', 'no-root',
                     '--data-dir', tmp] + flags,
-                    ['y', 'y', 'n'] if choice == 'y' else [] if choice == 'non-interactive' else [choice], remote=MagicMock())
+                    ['y', 'y', 'y'] if choice == 'y' else [] if choice == 'non-interactive' else [choice], remote=MagicMock())
                 self.assertEqual(inst.uninstall.call_count, int(choice == 'y'), output)
-                self.assertIn('Recover and reinstall' if action == 'install' else 'Unfinished removal', output)
+                self.assertIn('Review recovery options', output)
                 if choice == 'y':
                     self.assertIsNone(store.pending(profile))
-                    inst.version_summary.assert_called_once()
+                    inst.version_summary.assert_not_called()
                 else:
                     self.assertIsNotNone(store.pending(profile))
                     inst.version_summary.assert_not_called()
@@ -237,9 +241,10 @@ class CLITests(unittest.TestCase):
             store = state.Store(tmp)
             profile = state.target('192.0.2.10', 'root')
             store.begin(profile, 'install')
+            cls.return_value.store, cls.return_value.profile = store, profile
             cls.return_value.status.return_value = {'can_resume_root_setup': False}
             code, output, _ = self.run_cli(['--host', profile['host'], '--edition', 'root',
-                '--data-dir', tmp, '--yes'], [], remote=MagicMock())
+                '--data-dir', tmp, '--yes'], ['y'], remote=MagicMock())
             self.assertEqual(code, 2, output)
             self.assertEqual(store.pending(profile)['action'], 'install')
             cls.return_value.uninstall.assert_not_called()
@@ -324,7 +329,8 @@ class CLITests(unittest.TestCase):
             code, output, _ = self.run_cli(['uninstall', '--data-dir', tmp], ['y'], remote=MagicMock())
             self.assertEqual(code, 2, output)
             self.assertIn('Check TV and continue removal?', output)
-            self.assertIn('choose Remove again', output)
+            self.assertNotIn('choose Remove again', output)
+            self.assertIn('Do not repeat removal', output)
             self.assertTrue(store.pending(profile)['root_submitted'])
 
     def setUp(self):
@@ -387,6 +393,7 @@ class CLITests(unittest.TestCase):
                 store = state.Store(tmp); profile = state.target('192.0.2.10', 'root')
                 store.begin(profile, 'setup-root-updater', stage='verify', requires_updater=True)
                 inst = cls.return_value
+                inst.store, inst.profile = store, profile
                 def status():
                     if resolved: store.finish(profile)
                     return {'can_resume_root_setup': resume, 'deployment_stage':'installed-recovery-only', 'device':{'result':{'recovery':{'integrity_verified':True}}}}
@@ -395,7 +402,7 @@ class CLITests(unittest.TestCase):
                     from cytv.errors import ExistingRoot
                     inst.preflight.side_effect = ExistingRoot('existing')
                 inst.resume_root_setup.return_value = {'updates_ready':True}
-                code, output, _ = self.run_cli(['--host','192.0.2.10','--edition','root','--data-dir',tmp], ['', 'y' if accept else 'n'], remote=MagicMock())
+                code, output, _ = self.run_cli(['--host','192.0.2.10','--edition','root','--data-dir',tmp], ['', 'y', 'y' if accept else 'n'], remote=MagicMock())
                 self.assertEqual(code, 0 if resolved or resume else 2, output)
                 inst.status.assert_called()
                 self.assertEqual(inst.resume_root_setup.call_count, int(resume and accept))

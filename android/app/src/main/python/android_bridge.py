@@ -10,7 +10,7 @@ from cytv.terminal import Console
 
 def arguments(config, directory, identity=''):
     action = config.get('action', 'install')
-    if action not in ('install', 'status', 'doctor', 'home-diagnostics', 'restore'):
+    if action not in ('install', 'status', 'doctor', 'home-diagnostics', 'recover', 'restore'):
         raise ValueError('Unsupported Android operation')
     profile = state.target(config.get('host', ''), config.get('edition', ''), config.get('port'))
     language = config.get('language', 'ru')
@@ -51,7 +51,7 @@ class Callbacks:
         return str(answer)
 
     def ask(self, prompt):
-        return self.request(kind='question', text=prompt, context='\n'.join(self.context))
+        return self.request(kind='question', text=prompt, context='\n'.join(self.context), defaultNo='[y/N]' in prompt)
 
     def secret(self, prompt):
         # CLI prompts have already been translated. Send a stable semantic tag
@@ -81,6 +81,15 @@ class AndroidConsole(Console):
     def __init__(self, callbacks):
         super().__init__(callbacks.write, interactive=False)
         self.callbacks = callbacks
+
+    def recovery(self, profile):
+        self.recovery_plan({'state': 'review', 'summary': 'Review recovery options',
+                            'next_step': 'Recovery data kept. Installation has not restarted.'})
+
+    def recovery_plan(self, value):
+        super().recovery_plan(value)
+        self.callbacks.emit(kind='recovery-plan', state=value['state'],
+                            summary=i18n.translate(value['summary']), nextStep=i18n.translate(value['next_step']))
 
     def error(self, message, heading=False):
         # Input mistakes can be corrected; the CLI exit code decides the result.

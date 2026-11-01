@@ -240,6 +240,20 @@ class OperationTests(unittest.TestCase):
         self.installer(remote).install(self.inventory, 'secret')
         self.assertEqual(list(temp.iterdir()), [])
 
+    def test_false_idle_reply_cannot_authorize_pending_removal(self):
+        installer = self.installer(Remote())
+        self.store.begin(installer.profile, 'uninstall')
+        original = installer.remote.luna
+        def luna(uri, payload, **kwargs):
+            if uri == 'com.webos.appInstallService/status':
+                return {'returnValue': False, 'status': {'apps': []}}
+            return original(uri, payload, **kwargs)
+        installer.remote.luna = luna
+        with self.assertRaisesRegex(RuntimeError, 'not confirmed idle'):
+            installer.uninstall()
+        self.assertEqual(installer.remote.calls, [])
+        self.assertIsNotNone(self.store.pending(installer.profile))
+
     def test_pending_no_root_removal_resumes_after_restore_interruption(self):
         installer = self.installer(Remote())
         self.store.begin(installer.profile, 'uninstall')

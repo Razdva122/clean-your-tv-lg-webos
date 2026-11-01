@@ -17,6 +17,7 @@ from cytv.desktop import Channel
 from cytv.gui_style import STYLE, TVPreview, Select, EditionOption, BrandSignature
 
 MAINTENANCE_ACTIONS = (
+    ('Review recovery options', 'recover'),
     ('Check TV status', 'status'),
     ('Check connection and create a diagnostic report', 'doctor'),
     ('Return to LG Home', 'restore'),
@@ -42,6 +43,7 @@ class Wizard(QMainWindow):
         self.collect_preparation = False
         self.report = None
         self.recovery_profile = None
+        self.recovery_plan = None
         self.worker = None
         self.setWindowTitle('Clean Your TV')
         self.resize(1060, 820)
@@ -272,6 +274,7 @@ class Wizard(QMainWindow):
     def home(self):
         self.reset_checks()
         self.recovery_profile = None
+        self.recovery_plan = None
         self.preparation = []
         self.collect_preparation = False
         self.reset_details()
@@ -415,6 +418,7 @@ class Wizard(QMainWindow):
         self.language.setEnabled(False)
         self.report = None
         self.recovery_profile = None
+        self.recovery_plan = None
         self.pending = None
         self.preparation = []
         self.collect_preparation = False
@@ -498,6 +502,8 @@ class Wizard(QMainWindow):
             path = Path(value)
             if path.is_file():
                 self.report = path
+        elif kind == 'recovery-plan':
+            self.recovery_plan = dict(value)
         elif kind == 'recovery':
             self.recovery_profile = dict(value)
         elif kind == 'prompt':
@@ -520,13 +526,16 @@ class Wizard(QMainWindow):
                 self.update_steps(self.current_step, value)
             self.content.moveCursor(self.content.textCursor().MoveOperation.End)
             failed = value not in (0, 130)
-            recover = value == 0 and self.recovery_profile is not None
+            recover = value == 0 and self.recovery_profile is not None and self.recovery_plan is None
+            if self.recovery_plan:
+                self.title.setText(tr('Review recovery options'))
+                self.subtitle.setText(tr(self.recovery_plan['summary']))
             if recover:
                 profile = dict(self.recovery_profile)
-                self.title.setText(tr('Recovery available'))
+                self.title.setText(tr('Review recovery options'))
                 self.badge.setText(self.title.text())
-                self.subtitle.setText(tr('Restore LG Home, finish removal and reinstall. You will review each step before changes.'))
-                self.button('Recover and reinstall', lambda: self.start('install', profile), True)
+                self.subtitle.setText(tr('Checking recovery does not reinstall or remove packages. Root checks may run verified support code.'))
+                self.button('Review recovery options', lambda: self.start('recover', profile), True)
             if self.report:
                 self.button('Save diagnostic report…', self.save_report, failed)
                 if failed:
@@ -575,8 +584,7 @@ class Wizard(QMainWindow):
         self.form_layout.addWidget(label)
         if prompt.kind == 'confirm':
             trust_prompt = prompt.label.startswith('Connect and remember this TV?')
-            label = ('Recover and reinstall' if prompt.label.startswith('Finish removal before installing again?')
-                     else 'Connect and remember' if trust_prompt else 'Continue')
+            label = 'Connect and remember' if trust_prompt else 'Continue'
             yes = self.button(label, lambda: self.submit('y'), prompt.default == 'y')
             no = self.button('No, go back / cancel this operation', lambda: self.submit('n'), prompt.default == 'n')
             (yes if prompt.default == 'y' else no).setFocus()

@@ -115,7 +115,7 @@ Homebrew Channel verweigert diesem Installer den Zugriff. Unter webOS 11 benöti
 
 ## Hilfe und weitere Anleitungen
 
-Nach Fehlern oder Unterbrechungen Status prüfen und den Diagnosebericht dieses Versuchs speichern. Geführte Wiederherstellung fragt Entfernung und Neuinstallation getrennt ab. Bei unklarem Ergebnis aufhören und private Protokolle, Journale und Wiederherstellungsdateien behalten; niemals für einen neuen Versuch löschen. [Wiederherstellung (Englisch)](../RECOVERY.md). Für Hilfe Modell, Firmware, Edition, Installer-Version, fehlgeschlagenen Schritt und erwartetes/tatsächliches Verhalten angeben; Bericht vor dem Teilen prüfen und Geheimnisse entfernen.
+Unveröffentlichter Kandidat: Wählen Sie **Wiederherstellungsoptionen prüfen** für denselben gespeicherten TV oder führen Sie `cytv recover` aus. Prüfung und Änderungen erfordern getrennte Bestätigungen mit Nein als Vorgabe; `--yes` genehmigt sie nicht. Root fährt nur nach bestehenden Prüfungen fort. No-root bietet Entfernen nur an, wenn die bestehende Paketdienstprüfung es zulässt; Home-Einstellungen können verloren gehen. Eine neue Einrichtung startet nie automatisch. Bei unbekanntem Zustand oder verweigertem Zugriff Bericht speichern und stoppen. Journale behalten und Entfernen nicht wiederholen. Die fehlenden Abschlussnachweise in #201 und Gerätebestätigung in #216 bleiben offen. [Recovery](../RECOVERY.md). Für Hilfe Modell, Firmware, Edition, Installer-Version, fehlgeschlagenen Schritt und erwartetes/tatsächliches Verhalten angeben; Bericht vor dem Teilen prüfen und Geheimnisse entfernen.
 
 [Dokumentation](../README.md) · [Problem melden](../FEEDBACK.md)
 

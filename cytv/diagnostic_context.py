@@ -16,7 +16,7 @@ REASONS = ('unknown', 'user-error', 'ssh-command-failed', 'ssh-unreachable',
            'helper-running', 'helper-state-unverified', 'root-requirements',
            'pending-operation', 'root-operation-unconfirmed', 'version-mismatch',
            'inventory-unavailable', 'graphics-unverified')
-ACTIONS = ('install', 'uninstall', 'restore', 'status', 'doctor', 'home-diagnostics',
+ACTIONS = ('recover', 'install', 'uninstall', 'restore', 'status', 'doctor', 'home-diagnostics',
            'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access',
            'recover-system-rollback', 'replace-system-updater', 'clean-wam-cache')
 PHASES = ('select-tv', 'inspect-tv', 'select-edition', 'prepare-payload', 'ssh-connect',

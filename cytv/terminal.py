@@ -98,7 +98,11 @@ class Console:
             self.text(event['detail'])
 
     def recovery(self, profile):
-        self('Removal is unfinished. Choose Set up my TV to finish removal and reinstall.')
+        self('Review recovery options')
+
+    def recovery_plan(self, value):
+        self.heading(value['summary'])
+        self(value['next_step'])
 
 
 def console(write):

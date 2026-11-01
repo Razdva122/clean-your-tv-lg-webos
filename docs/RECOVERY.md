@@ -31,12 +31,28 @@ stopped. Physical No-root acceptance remains unverified for the exact Helper tra
 <a id="interrupted-setup-or-removal-in-110"></a>
 <a id="interrupted-no-root-installation-in-the-unpublished-140-candidate"></a>
 
-1. In cytv, select the **same saved TV connection** and choose **Check TV status**.
-2. For No-root, use **Recover and reinstall** if offered. Review the separate
-   removal confirmation; the default is No. Removal can reset Home preferences.
-3. For Root, use **Finish Root setup** only when offered for a verified installation.
-4. If recovery fails or the result is uncertain, choose **Save diagnostic report…**
-   and stop. Retain that attempt's report and recovery files.
+**Unreleased candidate:** in cytv (desktop or Android), select the **same saved
+TV connection** and choose **Review recovery options**. Console: `cytv recover`.
+If setup finds a retained operation, it enters this journey and stops before a
+fresh installation.
+
+1. Confirm **Check recovery options?** (default **No**). Inspection does not
+   reinstall/remove packages. Root inspection may stage and execute verified
+   support code; it is not a passive TV read.
+2. A verified Root installation can offer **Finish Root setup?** with a separate
+   default-No confirmation. Existing Root/updater checks run again before activation.
+3. No-root can offer **Remove remaining Clean Your TV packages?**, separately
+   confirmed with No by default. The existing package-service idle guard must
+   succeed before this offer and again before removal. Removal restores LG Home
+   and may reset Home preferences. **New installation never starts automatically.**
+4. Unknown, denied, busy, incomplete or conflicting state stops the journey and
+   offers a diagnostic report. Keep local/TV journals and the saved connection;
+   do not repeat removal, delete receipts or reset Developer Mode to force setup.
+
+`--yes` cannot approve recovery checks or changes; noninteractive recovery stops.
+A displayed plan is advice only, never authorization or a saved resume token.
+Legacy operations can remain blocked. This does not supply missing terminal
+installer evidence for #201 or certify recovery on #216's TV.
 
 **Unreleased diagnostic improvement:** retain the original failed-attempt report.
 New reports separate a saved first error from later checks and include a filtered
@@ -44,7 +60,7 @@ Doctor/status result. Successful setup/status/restore also offer an export. This
 does not add a recovery path or make missing historical evidence available.
 [Diagnostic fields and limits](development/INSTALLER-DIAGNOSTICS.md).
 
-Recovery checks installer state and removal results before offering installation.
+Recovery checks installer state before offering an allowed recovery action.
 An unknown package outcome is not automatically retried. Returning to LG Home
 alone does not finish removal. The removal confirmation cannot be bypassed with
 `--yes` or approved by noninteractive setup.
@@ -53,7 +69,7 @@ alone does not finish removal. The removal confirmation cannot be bypassed with
 
 **Check TV status** keeps the pending install/removal journal even if app versions
 and hashes match or manually removed apps are absent. Those observations do not
-prove installer completion. If **Recover and reinstall** fails at `package-status`
+prove installer completion. If **Review recovery options** fails at `package-status`
 or app-list verification, stop and retain diagnostics and recovery files. There
 is no supported file-only bypass; do not delete the receipt, reset Developer Mode
 or repeat removal to force installation. Restore/LG Home availability does not
@@ -77,8 +93,8 @@ needed. Use only an installer containing this correction; v1.5.4 does not have i
 Do not delete state files or repeat a failed removal. Actual EF950V recovery and
 Home/Back/emergency behavior require owner-supervised confirmation on new bytes.
 
-Console users: run `cytv status` with the same profile, then
-`cytv doctor --report`. [CLI recovery details](CLI.md#interrupted-operations).
+Console users: run `cytv recover` with the same profile. Save its report if
+blocked; `cytv doctor --report` remains available for connection diagnostics. [CLI recovery details](CLI.md#interrupted-operations).
 Status, restore and removal do not download Python; referenced recovery runtimes
 are retained. For Root routing recovery, use the
 [Root restore commands](../root-edition/ROLLOUT.md#controls-and-recovery).
