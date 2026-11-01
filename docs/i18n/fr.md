@@ -144,6 +144,9 @@ Pour tester un thème non publié, ouvrez d’abord **Paramètres → Thèmes �
 
 Pour un thème publié, ouvrez **Ajouter par ID** et saisissez son identifiant (par exemple `102300a209`), `da.gd/102300a209` ou le lien GitHub complet. Home affiche l’adresse da.gd avant le chargement et vérifie la destination GitHub et le paquet. L’auteur peut copier l’identifiant depuis les notes de version ou **TV link → Copy ID** dans l’aperçu.
 
+
+Version candidate non publiée : **Afficher le diagnostic** dans le panneau Home Helper affiche un petit instantané filtré de ses propres demandes d’état. L’affichage ne démarre pas Helper et ne change pas le contrôle de Home. Partagez uniquement ce JSON sur demande, après vérification ; [détails](../HELPER-DIAGNOSTICS.md#candidate-panel-caller-diagnostics-207).
+
 [Themes (English)](../THEMES.md) · [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
 
 1.5.4: **Classic**, **Alpine**, **Ribbon** — **Paramètres → Thèmes**. [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
