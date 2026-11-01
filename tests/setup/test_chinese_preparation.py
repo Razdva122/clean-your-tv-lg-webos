@@ -148,3 +148,7 @@ class PreparationTests(unittest.TestCase):
     def test_negated_and_shared_css_selectors_cannot_hide_chinese_content(self):
         chars=fonts.required_characters(files={'widget.css':b'html:not(:lang(en))::before{content:"\\3400 ";}.shared,html:lang(ko){content:"\\3401 ";}'})
         for script in fonts.SCRIPTS:self.assertTrue({0x3400,0x3401} <= chars[script])
+
+    def test_invalid_unicode_css_escape_uses_replacement_without_breaking_collection(self):
+        chars=fonts.required_characters(files={'widget.css':b'.label{content:"\\110000 \\d800 \\0 ";}'})
+        for script in fonts.SCRIPTS:self.assertNotIn(0x110000,chars[script])

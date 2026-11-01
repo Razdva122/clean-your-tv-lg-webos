@@ -53,7 +53,7 @@ function css(source,scope){postcss.parse(source).walkDecls(decl=>{
   const codes=[...new Set(tags.map(match=>language(match[1]||match[2])))];return codes.length===1?codes[0]:undefined;
  });
  const selected=scopes.every(code=>code===scopes[0])?scopes[0]:scope;
- emit(decl.value.replace(/\\([0-9a-fA-F]{1,6})(?:\r\n|[ \t\r\n\f])?/g,(_,code)=>String.fromCodePoint(parseInt(code,16)||0xfffd)),selected);
+ emit(decl.value.replace(/\\([0-9a-fA-F]{1,6})(?:\r\n|[ \t\r\n\f])?/g,(_,code)=>{const value=parseInt(code,16);return String.fromCodePoint(!value||value>0x10ffff||value>=0xd800&&value<=0xdfff?0xfffd:value);}),selected);
  });}
 function markup(node,scope){
  const attrs=Object.fromEntries((node.attrs||[]).map(a=>[a.name,a.value]));if(attrs.lang)scope=language(attrs.lang);
