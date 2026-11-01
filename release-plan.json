@@ -151,6 +151,11 @@
         217
       ],
       "summary": "Check existing Root Home interfaces before runtime/package preparation and show typed localized connection guidance; original #133/#216 recovery and #217 connection remain unresolved"
+    },
+    {
+      "pr": 236,
+      "issues": [],
+      "summary": "Align Android smoke checks with safe error navigation: no blind Status/Restore, no automatic request and preserved connection; product behavior unchanged"
     }
   ],
   "excluded": [],
