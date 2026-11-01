@@ -347,10 +347,13 @@ A private local receipt is synchronized before installation/removal, and
 recovery attempts have separate receipts. A failed command never means a package
 was not installed. **Do not delete journals or rerun installation blindly.**
 
-Run `cytv status` first. A No-root installation can be reconciled when expected
-installed asset/config hashes and versions match; this verifies files, not active
-input handling. Root reconciliation requires the terminal deployment stage and
-verified recovery integrity. Verified package absence can reconcile removal.
+Run `cytv status` first. In the unreleased #201 correction, No-root status
+keeps an interrupted install/removal receipt unchanged. Matching versions,
+installed files/hashes or absent apps do not prove that the original installer
+transaction terminated or that service registration completed. There is no
+supported file-only reconciliation for a denied/unknown installer outcome.
+Root reconciliation still requires its terminal deployment stage and verified
+recovery integrity. See [No-root authority limits](development/NO-ROOT-PACKAGE-AUTHORITY.md).
 
 An incomplete install may be explicitly removed only after the TV installer reports
 idle. An uncertain removal is not submitted again. `restore` remains available
