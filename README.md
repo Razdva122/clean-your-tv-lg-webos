@@ -21,7 +21,8 @@ LG screens or obtain root access.
 
 <a id="browser-preview"></a>
 
-[Try the browser demo](https://razdva122.github.io/clean-your-tv-lg-webos/) ·
+[Project website](https://razdva122.github.io/clean-your-tv-lg-webos/) ·
+[Try the browser demo](https://razdva122.github.io/clean-your-tv-lg-webos/demo/) ·
 [Installation guide](docs/INSTALL.md) · [Help and recovery](docs/RECOVERY.md)
 
 ![Classic menu with reference app icons](docs/launcher-classic.jpg)
@@ -37,7 +38,7 @@ Manage them in **Settings → Themes** on your TV.
 | --- | --- | --- |
 | <img src="docs/launcher-classic.jpg" alt="Classic menu browser preview" width="280"> | <img src="docs/launcher-alpine.jpg" alt="Alpine browser preview" width="280"> | <img src="docs/launcher-ribbon.jpg" alt="Ribbon browser preview" width="280"> |
 
-**[Try the themes in the main browser preview →](https://razdva122.github.io/clean-your-tv-lg-webos/)**
+**[Try the themes in the main browser preview →](https://razdva122.github.io/clean-your-tv-lg-webos/demo/)**
 
 Use the theme cards above the simulated TV to switch themes and compare layouts,
 then choose Root or No-root to preview either edition. No TV connection or

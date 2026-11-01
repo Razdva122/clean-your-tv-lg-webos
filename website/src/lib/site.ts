@@ -1,0 +1,29 @@
+import translations from "./locales.json";
+export const locales = Object.keys(
+  translations,
+) as (keyof typeof translations)[];
+export type Locale = (typeof locales)[number];
+export const copy = translations;
+export const sections = [
+  "",
+  "install",
+  "editions",
+  "compatibility",
+  "themes",
+] as const;
+export type Section = (typeof sections)[number];
+export const base = "/clean-your-tv-lg-webos/";
+export const origin = "https://razdva122.github.io";
+export const repo = "https://github.com/Razdva122/clean-your-tv-lg-webos";
+export const route = (lang: Locale, section: Section = "") =>
+  `${base}${lang}/${section ? section + "/" : ""}`;
+export function description(lang: Locale, section: Section) {
+  const t = copy[lang];
+  return {
+    "": t.summary,
+    install: t.installDescription,
+    editions: t.noRoot + " " + t.root,
+    compatibility: t.compatibility,
+    themes: t.themes,
+  }[section];
+}
