@@ -183,7 +183,8 @@ const CURVE = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
           setTimeout(() => { key(39, true); resolve({gliding, after: document.getElementById('homeSurface').classList.contains('ctv-scroll-glide')}); }, 30);
         }));
         assert.deepEqual(cut, {gliding: true, after: false}, 'a held sideways arrow ends the glide at once');
-        // Other layouts and themed Homes keep fully immediate remote focus.
+        // Other layouts keep fully immediate remote focus; the Classic layout keeps its
+        // motion under a theme too.
         assert.deepEqual(await page.evaluate(() => {
           const surface = document.getElementById('homeSurface'), card = document.querySelector('#tiles .card'), glass = document.getElementById('glass');
           const read = () => [getComputedStyle(card).transitionDuration, getComputedStyle(glass).transitionDuration];
@@ -195,8 +196,8 @@ const CURVE = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
           surface.classList.add('ctv-theme-active');
           const themed = read();
           surface.classList.remove('ctv-theme-active');
-          return {classic: classic[0] !== '0s', side, themed};
-        }), {classic: true, side: ['0s', '0s'], themed: ['0s', '0s']});
+          return {classic: classic[0] !== '0s', side, themed: themed[0] !== '0s' && themed[1] !== '0s'};
+        }), {classic: true, side: ['0s', '0s'], themed: true});
         // Reduced motion: no glide, no bump.
         await page.emulateMedia({reducedMotion: 'reduce'});
         for (let i = 0; i < rows; i++) await page.evaluate(() => key(38, true));

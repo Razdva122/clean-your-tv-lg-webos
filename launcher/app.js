@@ -70,7 +70,7 @@
     AMBIENT_SETTLE = 800,
     // style.css's 600 ms .ambient fade plus a few frames, before the glow is baked.
     AMBIENT_FADE = 650,
-    AMBIENT_BAKED = '#homeSurface:not(.ctv-theme-active) #ambientBase{',
+    AMBIENT_BAKED = '#ambientBase{',
     topButtons = [getElement("btnInputs"), getElement("btnWifi"), getElement("btnSettings")],
     inputsPanel = getElement("inputsPanel"),
     tiles = [],
@@ -269,9 +269,9 @@
       }
     }
   }, true);
-  // Glide and bump belong to unthemed Classic; other layouts and themes stay immediate.
-  function classicMotion(surface) {
-    return layoutPreset === 'dock-grid' && !surface.classList.contains('ctv-theme-active');
+  // Glide and bump belong to the Classic layout, themed or not; other layouts stay immediate.
+  function classicMotion() {
+    return layoutPreset === 'dock-grid';
   }
   // Remote scrolling: a tap glides to the new row; a held arrow (or a repeat during a
   // glide) jumps straight there, so the list never chases an unfinished scroll.
@@ -279,7 +279,7 @@
     var surface = getElement('homeSurface'), target = "translateY(" + -offset + "px)";
     if (stage.style.transform !== target && surface.classList.contains('ctv-remote-navigation')) {
       clearTimeout(scrollGlideTimer);
-      if (lastKeyRepeat || !classicMotion(surface)) surface.classList.remove('ctv-scroll-glide');
+      if (lastKeyRepeat || !classicMotion()) surface.classList.remove('ctv-scroll-glide');
       else {
         surface.classList.add('ctv-scroll-glide');
         scrollGlideTimer = setTimeout(function () { surface.classList.remove('ctv-scroll-glide'); }, 320);
@@ -290,7 +290,7 @@
   // A fresh press that cannot move nudges the grid or shelf toward that direction.
   function edgeBump(direction) {
     var surface = getElement('homeSurface');
-    if (lastKeyRepeat || moveState || !classicMotion(surface)) return;
+    if (lastKeyRepeat || moveState || !classicMotion()) return;
     clearTimeout(edgeBumpTimer);
     ['ctv-edge-bump', 'bump-down', 'bump-left', 'bump-right', 'bump-shelf-left', 'bump-shelf-right'].forEach(function (name) { surface.classList.remove(name); });
     surface.offsetWidth;
@@ -1045,9 +1045,10 @@
     }
   }
   // The glow follows once the focus rests, so its full-screen crossfade never competes
-  // with focus motion for a 4K TV's GPU. Classic then bakes the settled glow into a
-  // plain (uncomposited) #ambientBase beneath the layers and hides both layers; themes
-  // keep the two layers, and #homeSurface's background stays the theme wallpaper's.
+  // with focus motion for a 4K TV's GPU. Home then bakes the settled glow into a plain
+  // (uncomposited) #ambientBase beneath the layers and hides both layers. The base is
+  // also .ctv-ambient, so a theme's ambient rule (which outranks the trusted #ambientBase
+  // rule) styles it like the layers; #homeSurface's background stays the wallpaper's.
   function updateAmbient(rgb, settled) {
     clearTimeout(ambientTimer);
     if (!rgb) return;
@@ -1061,7 +1062,7 @@
     var current = ambientLayers[ambientIndex], nextLayer = ambientLayers[1 - ambientIndex];
     if (!getElement('ambientBase')) {
       var base = document.createElement('div');
-      base.id = 'ambientBase'; base.className = 'ambient-base';
+      base.id = 'ambientBase'; base.className = 'ambient-base ctv-ambient';
       current.parentNode.insertBefore(base, ambientLayers[0]);
     }
     var ambientSheet = getElement('ctv-ambient-style');

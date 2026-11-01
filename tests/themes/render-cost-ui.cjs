@@ -31,11 +31,18 @@ const {assert, chromium, stage, open} = require('./browser.cjs');
         assert.match(baked.page, /\b1190px at 32% 42%/, 'the settled glow is painted by the plain base element');
         assert.equal(baked.wallpaper, 'none', 'the Home background stays the theme wallpaper slot');
         assert.deepEqual(baked.layers.map(layer => layer.opacity), ['0', '0'], 'no glow layer is drawn at rest');
-        await page.evaluate(() => document.getElementById('homeSurface').classList.add('ctv-theme-active'));
+        // Themes bake too, and a theme's ambient rule styles the base like the layers.
+        await page.evaluate(() => {
+          document.getElementById('homeSurface').classList.add('ctv-theme-active');
+          const style = document.createElement('style');
+          style.id = 'theme-ambient';
+          style.textContent = '#homeSurface.ctv-home .ctv-ambient{background-image:linear-gradient(0deg, transparent 0%, transparent 100%)}';
+          document.head.appendChild(style);
+        });
         const themed = await glowState();
-        assert.equal(themed.page, 'none', 'themes never see the baked glow');
-        assert.deepEqual(themed.layers.filter(layer => layer.opacity === '1').map(layer => [layer.width, layer.height]), [[1920, 1080]], 'themes keep one full-size glow layer');
-        await page.evaluate(() => document.getElementById('homeSurface').classList.remove('ctv-theme-active'));
+        assert.match(themed.page, /^linear-gradient/, 'a theme ambient rule overrides the baked glow on the base');
+        assert.deepEqual(themed.layers.map(layer => layer.opacity), ['0', '0'], 'themes draw no glow layer at rest either');
+        await page.evaluate(() => { document.getElementById('theme-ambient').remove(); document.getElementById('homeSurface').classList.remove('ctv-theme-active'); });
         // open()'s `*` rule does not reach the edge fades' pseudo-elements; let them settle.
         await page.waitForTimeout(400);
 
@@ -44,8 +51,8 @@ const {assert, chromium, stage, open} = require('./browser.cjs');
         await page.evaluate(() => {
           const override = document.createElement('style');
           override.id = 'full-glow';
-          override.textContent = '#homeSurface:not(.ctv-theme-active) #ambientBase{background-image:none!important}' +
-            '#homeSurface:not(.ctv-theme-active) .ambient.baked{opacity:1!important}';
+          override.textContent = '#homeSurface #ambientBase{background-image:none!important}' +
+            '#homeSurface .ambient.baked{opacity:1!important}';
           document.head.appendChild(override);
         });
         const fullShot = await page.screenshot();
@@ -78,8 +85,9 @@ const {assert, chromium, stage, open} = require('./browser.cjs');
         }));
         assert(sweep.seen.every(value => value === sweep.start), 'focus motion never changes the glow');
         assert.notEqual(sweep.fading, sweep.start, 'the glow follows once the focus rests');
-        assert(!/#homeSurface:not/.test(sweep.fading), 'the crossfade runs on the layers');
-        assert(/#homeSurface:not/.test(sweep.settled) && sweep.settled !== sweep.start, 'the new glow is baked into the page');
+        const bakedRule = sheet => sheet.split('\n').filter(rule => rule.indexOf('#ambientBase{') === 0)[0] || '';
+        assert.equal(bakedRule(sweep.fading), '', 'the crossfade runs on the layers, with no baked rule');
+        assert(bakedRule(sweep.settled) && bakedRule(sweep.settled) !== bakedRule(sweep.start), 'the new glow is baked into the page');
 
         // Growing an input relayouts once per press, not on every frame of the motion.
         await page.evaluate(() => Array.from(document.querySelectorAll('style')).filter(style => /transition: none !important/.test(style.textContent)).forEach(style => style.remove()));

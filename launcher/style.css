@@ -65,8 +65,9 @@ html, body {
   transition: opacity 600ms ease;
   pointer-events: none;
 }
-/* Classic bakes the settled glow into #ambientBase (app.js), so the two full-screen
-   layers only exist while the colour crossfades. */
+/* Home bakes the settled glow into #ambientBase (app.js), so the two full-screen
+   layers only exist while the colour crossfades. #ambientBase is also .ctv-ambient,
+   so a theme's ambient appearance applies to it too. */
 .ambient-base {
   position: absolute;
   top: 0;
@@ -78,7 +79,7 @@ html, body {
 .ctv-theme-suspended .ambient-base {
   visibility: hidden;
 }
-#homeSurface:not(.ctv-theme-active) .ambient.baked {
+#homeSurface .ambient.baked {
   opacity: 0 !important;
   transition: none !important;
 }
@@ -838,8 +839,9 @@ body.editing #homeSurface[data-layout="scenic-grid"] .ctv-position { display: no
 #homeSurface.ctv-remote-navigation .item {
   transition: none !important;
 }
-/* Other layouts and themed Homes keep fully immediate remote focus. (Chrome 38 has no
-   attribute selectors inside :not(), so the other presets are listed.) */
+/* Other layouts keep fully immediate remote focus; the Classic layout keeps its motion
+   with or without a theme. (Chrome 38 has no attribute selectors inside :not(), so the
+   other presets are listed.) */
 #homeSurface.ctv-remote-navigation[data-layout="icon-grid"] #glass,
 #homeSurface.ctv-remote-navigation[data-layout="icon-grid"] .card,
 #homeSurface.ctv-remote-navigation[data-layout="icon-grid"] .name,
@@ -851,10 +853,7 @@ body.editing #homeSurface[data-layout="scenic-grid"] .ctv-position { display: no
 #homeSurface.ctv-remote-navigation[data-layout="channel-list"] .name,
 #homeSurface.ctv-remote-navigation[data-layout="scenic-grid"] #glass,
 #homeSurface.ctv-remote-navigation[data-layout="scenic-grid"] .card,
-#homeSurface.ctv-remote-navigation[data-layout="scenic-grid"] .name,
-#homeSurface.ctv-remote-navigation.ctv-theme-active #glass,
-#homeSurface.ctv-remote-navigation.ctv-theme-active .card,
-#homeSurface.ctv-remote-navigation.ctv-theme-active .name {
+#homeSurface.ctv-remote-navigation[data-layout="scenic-grid"] .name {
   transition: none !important;
 }
 /* A single tap glides to the next row; app.js removes this during held arrows. */
