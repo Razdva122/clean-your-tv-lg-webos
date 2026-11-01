@@ -75,6 +75,27 @@ directory privately to the installation computer if necessary. Do not share a
 data directory containing your normal SSH identities, pairing keys or profiles.
 Prepare a fresh directory dedicated to the cache when moving it between devices.
 
+### Unreleased: host cache failure categories (#200)
+
+Diagnostic reports include `python_cache.reason` when private Python acquisition
+fails: `network`, `tls`, `http`, `response-policy`, `size`, `sha256`, `deadline`,
+`cache-access`, `cache-replace`, `cache-invalid` or `unknown`. These distinguish
+connection/trust/HTTP failures, rejected response metadata, byte/hash/deadline
+validation and local cache access or atomic publication. Reports include no URL,
+private path, certificate contents or raw exception text. Existing translated
+error messages and the offline preparation command remain unchanged.
+
+CA verification, disabled proxies, redirect restrictions, size/deadline/SHA-256
+checks and cache ownership rules remain enforced. An invalid existing archive is
+not replaced automatically; failed downloads remove their temporary file when
+possible. A failure category is diagnostic evidence, not permission to weaken TLS
+or verification, reset a pending installation, or retry device recovery.
+
+The old generic download error cannot identify the cause on a particular Mac;
+success on a different host does not establish that cause either. This correction
+adds host diagnostics only. Frozen macOS CLI/GUI acceptance and a reporter result
+on new exact installer bytes remain separate; Root recovery is outside this change.
+
 ## Development validation
 
 Linux CI executes the pinned ARM32 interpreter under QEMU using

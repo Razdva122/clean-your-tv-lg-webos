@@ -801,25 +801,9 @@ print('CYTV_UPDATER_VERIFIED')
         else:
             result = {'apps': [{k: app.get(k) for k in ('id', 'version')} for app in self.installed_apps() if app.get('id') in (HOME, HELPER)],
                       'helper_state': self.helper_state()}
-            if pending and pending['action'] == 'install' and pending.get('expected'):
-                expected = pending['expected']
-                versions = pending.get('versions', {HOME: self.manifest.get('home_version'), HELPER: self.manifest.get('helper_version')})
-                actual = {app['id']: app.get('version') for app in result['apps']}
-                if actual == versions:
-                    try:
-                        raw = self.remote.run('sha256sum ' + ' '.join(shlex.quote(n) for n in sorted(expected)))
-                        hashes = {line.split(None, 1)[1]: line.split(None, 1)[0] for line in raw.splitlines()}
-                        if hashes == expected:
-                            self.save_eim(pending.get('eim_registered', 'unknown'))
-                            self.store.finish(self.profile)
-                            reconciled = 'installed-files-verified; helper launch requires TV check'
-                    except (RuntimeError, ValueError, IndexError):
-                        pass  # An incomplete readback retains the receipt.
-            elif pending and pending['action'] == 'uninstall' and pending.get('stage') == 'removing' and not result['apps']:
-                self.verify_absent(HOME)
-                self.verify_absent(HELPER)
-                self.store.finish(self.profile)
-                reconciled = 'removal-verified'
+            # App inventory and files describe a snapshot, not the outcome of an
+            # interrupted installer transaction. No supported terminal readback
+            # is established for these legacy receipts; retain them unchanged.
         return {'device': result, 'pending': self.store.pending(self.profile), 'reconciled': reconciled,
                 'can_resume_root_setup': can_resume,
                 **({'deployment_stage': stage} if self.profile['edition'] == 'root' else {})}

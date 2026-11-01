@@ -43,6 +43,21 @@ An unknown package outcome is not automatically retried. Returning to LG Home
 alone does not finish removal. The removal confirmation cannot be bypassed with
 `--yes` or approved by noninteractive setup.
 
+### Unreleased: uncertain No-root package operations (#201)
+
+**Check TV status** keeps the pending install/removal journal even if app versions
+and hashes match or manually removed apps are absent. Those observations do not
+prove installer completion. If **Recover and reinstall** fails at `package-status`
+or app-list verification, stop and retain diagnostics and recovery files. There
+is no supported file-only bypass; do not delete the receipt, reset Developer Mode
+or repeat removal to force installation. Restore/LG Home availability does not
+establish package completion. This restriction is a source correction, not a
+verified recovery fix for either reporter's TV.
+
+The installer calls `applicationManager/dev/listApps`; an SSH probe of
+`applicationManager/listApps` is a different method. Further recovery design
+requires the [exact endpoint and terminal-authority evidence](development/NO-ROOT-PACKAGE-AUTHORITY.md#remaining-evidence).
+
 ### Unreleased: No-root Helper service refusal (#152)
 
 The #152 source correction lets the existing Restore/removal flow request a

@@ -177,6 +177,87 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(str(raised.exception), runtime.DOWNLOAD_ERROR)
         self.assertFalse(list(self.cache.glob('.python-*')))
 
+    def test_download_and_cache_failures_have_distinct_safe_reasons(self):
+        import ssl
+        import urllib.error
+        import http.client
+        cases = [('network', OSError('PRIVATE-URL')),
+                 ('tls', urllib.error.URLError(ssl.SSLError('PRIVATE-CERT'))),
+                 ('http', urllib.error.HTTPError('https://PRIVATE-URL', 403, 'PRIVATE-RESPONSE', {}, None)),
+                 ('network', http.client.IncompleteRead(b'PRIVATE-DATA'))]
+        for reason, error in cases:
+            with self.subTest(reason=reason), patch.object(runtime.urllib.request, 'build_opener') as builder:
+                builder.return_value.open.side_effect = error
+                with self.assertRaises(UserError) as caught:
+                    runtime.prime_cache(self.cache, self.messages.append)
+                self.assertEqual(getattr(caught.exception, 'reason', None), reason)
+                self.assertNotIn('PRIVATE', str(caught.exception))
+                self.assertFalse(list(self.cache.glob('.python-*')))
+                if hasattr(error, 'close'): error.close()
+        for reason, target in [('cache-access', '_cache_directory'),
+                               ('cache-access', 'tempfile.mkstemp'),
+                               ('cache-access', 'os.fsync'),
+                               ('cache-replace', 'os.replace')]:
+            raw = archive(GOOD)
+            with self.subTest(target=target), self.pin_fixture(raw), \
+                 patch.object(runtime.urllib.request, 'build_opener') as builder, \
+                 patch('cytv.python_runtime.' + target, side_effect=PermissionError('PRIVATE-PATH')):
+                builder.return_value.open.return_value = Response(raw)
+                with self.assertRaises(UserError) as caught:
+                    runtime.prime_cache(self.cache, self.messages.append)
+                self.assertEqual(getattr(caught.exception, 'reason', None), reason)
+                self.assertNotIn('PRIVATE', str(caught.exception))
+                self.assertFalse((self.cache / (runtime.SHA256 + '.tar.gz')).exists())
+                self.assertFalse(list(self.cache.glob('.python-*')))
+
+    def test_size_hash_policy_and_deadline_failures_are_distinguishable(self):
+        raw = archive(GOOD)
+        for reason, body, headers, url in [
+                ('size', raw[:-1], {}, None), ('size', raw+b'x', {}, None),
+                ('sha256', b'x'*len(raw), {}, None),
+                ('size', raw, {'Content-Length': '1'}, None),
+                ('response-policy', raw, {'Content-Encoding': 'gzip'}, None),
+                ('response-policy', raw, {}, 'https://PRIVATE-URL')]:
+            with self.subTest(reason=reason, headers=headers), self.pin_fixture(raw), \
+                 patch.object(runtime.urllib.request, 'build_opener') as builder:
+                response = Response(body); response.headers = headers
+                if url: response.geturl = lambda: url
+                builder.return_value.open.return_value = response
+                with self.assertRaises(UserError) as caught:
+                    runtime.prime_cache(self.cache, self.messages.append)
+                self.assertEqual(getattr(caught.exception, 'reason', None), reason)
+                self.assertFalse((self.cache / (runtime.SHA256 + '.tar.gz')).exists())
+                self.assertFalse(list(self.cache.glob('.python-*')))
+        with self.pin_fixture(raw), patch.object(runtime.urllib.request, 'build_opener') as builder, \
+             patch.object(runtime.time, 'monotonic', side_effect=[0, 301]):
+            builder.return_value.open.return_value = Response(raw)
+            with self.assertRaises(UserError) as caught:
+                runtime.prime_cache(self.cache, self.messages.append)
+            self.assertEqual(getattr(caught.exception, 'reason', None), 'deadline')
+            self.assertFalse(list(self.cache.glob('.python-*')))
+
+    def test_cache_diagnostic_survives_provisioning_error_boundary(self):
+        from cytv import diagnostics, state
+        with patch.object(runtime.urllib.request, 'build_opener') as builder:
+            builder.return_value.open.side_effect = OSError('PRIVATE-URL')
+            with self.assertRaises(UserError) as caught:
+                runtime.select_python(Remote(False), self.cache, self.messages.append, True)
+        store = state.Store(Path(self.temp.name)/'reports-state')
+        report = json.loads(diagnostics.create_report(store, 'install', None, 'preflight', caught.exception).read_text())
+        self.assertEqual(report.get('python_cache'), {'reason': 'network'})
+        self.assertNotIn('PRIVATE', json.dumps(report))
+
+    def test_invalid_existing_cache_keeps_original_bytes_and_safe_reason(self):
+        raw = archive(GOOD)
+        with self.pin_fixture(raw), patch.object(runtime.urllib.request, 'build_opener', side_effect=AssertionError('network')):
+            self.cache.mkdir(mode=0o700)
+            path = self.cache / (runtime.SHA256 + '.tar.gz')
+            path.write_bytes(b'original-corrupt-bytes')
+            with self.assertRaises(UserError) as caught:
+                runtime.prime_cache(self.cache, self.messages.append)
+            self.assertEqual(getattr(caught.exception, 'reason', None), 'cache-invalid')
+            self.assertEqual(path.read_bytes(), b'original-corrupt-bytes')
+
     def test_uncertain_system_probe_failure_never_provisions(self):
         remote = Remote(False)
         remote.run = lambda *args, **kwargs: (_ for _ in ()).throw(OSError('private connection details'))
