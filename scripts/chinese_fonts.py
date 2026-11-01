@@ -12,6 +12,7 @@ import struct
 import subprocess
 import tempfile
 import urllib.request
+import unicodedata
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = {'SC': 'zh-Hans', 'TC': 'zh-Hant'}
@@ -77,7 +78,12 @@ def default_cache(root=ROOT):
     return Path(os.environ.get('CYTV_FONT_CACHE', str(Path(root)/'build/chinese-font-cache')))
 
 
-def required_characters(root=ROOT, files=None):
+def _cjk(code):
+    return (0x2e80 <= code <= 0x9fff or 0xf900 <= code <= 0xfaff
+            or 0xff00 <= code <= 0xffef or 0x20000 <= code <= 0x323af)
+
+
+def required_characters(root=ROOT, files=None, cache=None):
     """Read decoded per-locale literals from every first-party runtime catalog."""
     root = Path(root)
     kinds = ('.js', '.html', '.css', '.json')
@@ -87,7 +93,21 @@ def required_characters(root=ROOT, files=None):
                    if Path(name).suffix in kinds)
     python = root/'cytv/translations.py'
     python_text = python.read_text(encoding='utf-8') if python.is_file() else ''
-    return {script: set(codes) for script, codes in _characters(tuple(sources), python_text).items()}
+    required = {script: set(codes) for script, codes in _characters(tuple(sources), python_text).items()}
+    optional = {code for code in set.union(*required.values()) if not _cjk(code)}
+    ignored = {code for code in optional if unicodedata.category(chr(code)) in ('Sc', 'Cf')}
+    optional -= ignored
+    available = set()
+    for script in SCRIPTS:
+        retained = root/f'launcher/fonts/NotoSans{script}.ttf'
+        if retained.is_file():
+            available.update(coverage(retained.read_bytes()))
+    if optional-available:
+        font_cache = str((default_cache(root) if cache is None else Path(cache)).resolve())
+        available.update(set.union(*(_source_coverage(script, font_cache) for script in SCRIPTS)))
+    # Other faces handle optional non-CJK symbols; unsupported real CJK stays strict.
+    ignored.update(optional-available)
+    return {script: codes-ignored for script, codes in required.items()}
 
 
 @lru_cache(maxsize=8)
@@ -214,7 +234,7 @@ def _source_coverage(script, cache):
 def prepare_fonts(root=ROOT, cache=None, files=None):
     root = Path(root)
     cache = (default_cache(root) if cache is None else Path(cache)).resolve()
-    required = required_characters(root, files=files)
+    required = required_characters(root, files=files, cache=cache)
     retained = {script: (root/f'launcher/fonts/NotoSans{script}.ttf').read_bytes() for script in SCRIPTS}
     available = {script: coverage(raw) for script, raw in retained.items()}
     if not all(static_regular(retained[script]) and required[script] <= available[script] for script in SCRIPTS):

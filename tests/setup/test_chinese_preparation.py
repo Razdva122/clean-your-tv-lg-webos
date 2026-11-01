@@ -73,6 +73,8 @@ class PreparationTests(unittest.TestCase):
         required=fonts.required_characters();required['SC'].add(0x323AF)
         with patch.object(fonts,'required_characters',return_value=required),self.assertRaisesRegex(ValueError,'source font lacks.*U\\+323AF'):
             fonts.prepare_fonts()
+        with self.assertRaisesRegex(ValueError,'source font lacks.*U\\+323AF'):
+            fonts.prepare_fonts(files={'literal.js':('window.label='+json.dumps(chr(0x323AF))+';').encode()})
 
     def test_compiler_collects_new_locale_module_without_source_list_changes(self):
         from fontTools.ttLib import TTFont
@@ -152,3 +154,18 @@ class PreparationTests(unittest.TestCase):
     def test_invalid_unicode_css_escape_uses_replacement_without_breaking_collection(self):
         chars=fonts.required_characters(files={'widget.css':b'.label{content:"\\110000 \\d800 \\0 ";}'})
         for script in fonts.SCRIPTS:self.assertNotIn(0x110000,chars[script])
+
+    def test_currency_and_formatting_are_not_chinese_font_requirements(self):
+        baseline=fonts.prepare_fonts()
+        for source in (b'window.price="\\u20b910 \\u20b4 \\u20bd\\u200d";',
+                       b'HomeI18n.add({"zh-Hans":{"price":"\\u20b910"},"zh-Hant":{"price":"\\u20b4 \\u20bd"}});'):
+            with self.subTest(source=source):
+                chars=fonts.required_characters(files={'price.js':source})
+                for codes in chars.values():self.assertFalse({0x20B9,0x20B4,0x20BD,0x200D} & codes)
+                self.assertEqual(fonts.prepare_fonts(files={'price.js':source}),baseline)
+
+    def test_unsupported_optional_symbol_does_not_replace_cjk_validation(self):
+        chars=fonts.required_characters(files={'widget.js':b'window.symbol="\\u2800";'})
+        for codes in chars.values():self.assertNotIn(0x2800,codes)
+        self.assertIn(ord('✓'),set.union(*chars.values()))
+        self.assertIn(ord('›'),set.union(*chars.values()))

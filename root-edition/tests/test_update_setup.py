@@ -21,6 +21,7 @@ class SetupTests(unittest.TestCase):
         self.assertEqual(role['type'],'regular')
 
     def test_standalone_build_is_verified_and_private_files_excluded(self):
+        source_fonts={name:(ROOT.parent/'launcher/fonts'/name).read_bytes() for name in ('NotoSansSC.ttf','NotoSansTC.ttf')}
         spec=importlib.util.spec_from_file_location('updater_build',ROOT/'build_updater.py');module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
         with tempfile.TemporaryDirectory() as temp:
             out=Path(temp).resolve()/'bundle';module.build(out)
@@ -44,7 +45,19 @@ class SetupTests(unittest.TestCase):
             with tarfile.open(fileobj=io.BytesIO(data), mode='r:gz') as archive:
                 prefix = 'usr/palm/applications/com.cleanyourtv.root.updater/'
                 version = json.loads((ROOT.parent/'release-versions.json').read_text())['updater']
-                for name in ('NotoSansSC.ttf', 'NotoSansTC.ttf', 'NotoSansSC-OFL.txt', 'NotoSansTC-OFL.txt'):
+                from scripts.chinese_fonts import prepare_fonts
+                from fontTools.ttLib import TTFont
+                prepared=prepare_fonts()
+                for script,label in (('SC','简体中文'),('TC','繁體中文')):
+                    name='NotoSans'+script+'.ttf';raw=archive.extractfile(prefix+'fonts/'+name).read()
+                    self.assertEqual(raw,prepared['fonts/'+name])
+                    face=TTFont(io.BytesIO(raw))
+                    self.assertNotIn('fvar',face)
+                    self.assertEqual(face['OS/2'].usWeightClass,400)
+                    cmap=face.getBestCmap()
+                    self.assertTrue(all(code in cmap and face.getGlyphID(cmap[code])>0 for code in map(ord,label+'年月日星期週')))
+                    self.assertEqual((ROOT.parent/'launcher/fonts'/name).read_bytes(),source_fonts[name])
+                for name in ('NotoSansSC-OFL.txt','NotoSansTC-OFL.txt'):
                     self.assertEqual(archive.extractfile(prefix+'fonts/'+name).read(),
                                      (ROOT.parent/'launcher/fonts'/name).read_bytes())
                 import startup_hook
