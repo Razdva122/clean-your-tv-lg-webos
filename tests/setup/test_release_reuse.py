@@ -134,43 +134,36 @@ class CandidateReuse(unittest.TestCase):
             self.assertEqual(states, prior)
 
 
-    def test_editing_closed_pr_finishes_status_without_validating_candidate_code(self):
-        for merged in (True, False):
-            pr = {'number': 7, 'state': 'closed', 'merged': merged,
-                  'base': {'ref': 'release/next'}, 'head': {'sha': self.head}}
-            writes = []
-            def provider(path, **kwargs):
-                if path == 'pulls/7':
-                    return pr
-                if path.startswith('statuses/'):
-                    writes.append(kwargs['data'])
-                    return {}
-                raise AssertionError(path)
-            with self.subTest(merged=merged), patch.object(flow, 'api', side_effect=provider), \
-                 patch.object(flow, 'git') as git, patch.object(flow, 'check_pr') as check, \
-                 patch.dict(flow.os.environ, GITHUB_RUN_ID='99'):
-                flow.refresh_policy({'pull_request': pr})
-                git.assert_not_called()
-                check.assert_not_called()
-            self.assertEqual([(w['context'], w['state']) for w in writes], [('Integration policy', 'success')])
-            self.assertIn('closed', writes[0]['description'])
-            self.assertNotIn('verified', writes[0]['description'])
-
-    def test_pr_closed_during_validation_does_not_leave_active_gate(self):
-        pr = {'number': 7, 'state': 'open', 'base': {'ref': 'release/next'}, 'head': {'sha': self.head}}
-        writes = []
-        reads = iter([pr, {**pr, 'state': 'closed'}])
-        def provider(path, **kwargs):
-            if path == 'pulls/7':
-                return next(reads)
-            writes.append(kwargs['data'])
-            return {}
-        with patch.object(flow, 'api', side_effect=provider), patch.object(flow, 'git'), \
-             patch.object(flow, 'check_pr', side_effect=flow.PendingBuild('build running')), \
-             patch.dict(flow.os.environ, GITHUB_RUN_ID='99'):
+    def test_closed_pr_refresh_does_not_overwrite_shared_sha_gate(self):
+        # Commit contexts are shared with any open PR at this same SHA.
+        pr = {'number': 7, 'state': 'closed', 'base': {'ref': 'main'}, 'head': {'sha': self.head}}
+        with patch.object(flow, 'api', return_value=pr) as api, \
+             patch.object(flow, 'git') as git, patch.object(flow, 'check_pr') as check:
             flow.refresh_policy({'pull_request': pr})
-        self.assertEqual([w['state'] for w in writes], ['pending', 'success'])
-        self.assertIn('closed', writes[-1]['description'])
+        self.assertEqual(api.call_count, 1)
+        git.assert_not_called()
+        check.assert_not_called()
+
+    def test_workflow_preflight_blocks_only_open_prs(self):
+        # Execute the actual privileged preflight, including its closed-event guard.
+        import re
+        workflow = (ROOT / '.github/workflows/release-policy.yml').read_text()
+        script = re.search(r'          script: \|\n((?:            .*\n)+)', workflow)[1]
+        script = '\n'.join(line[12:] for line in script.splitlines())
+        harness = """
+const calls = [];
+const context = {repo:{owner:'owner',repo:'repo'},payload:{pull_request:{state:process.argv[1],head:{sha:'a'.repeat(40)},base:{ref:'release/next'}}},serverUrl:'https://github.com',runId:99};
+const github = {rest:{repos:{createCommitStatus:async p=>calls.push(p)}}};
+await (async()=>{ SCRIPT })();
+process.stdout.write(JSON.stringify(calls));
+""".replace('SCRIPT', script)
+        for state in ('open', 'closed'):
+            result = json.loads(subprocess.check_output(['node', '--input-type=module', '-e', harness, state]))
+            with self.subTest(state=state):
+                if state == 'closed':
+                    self.assertEqual(result, [], 'Closed edits must not overwrite an open PR sharing its SHA/context')
+                else:
+                    self.assertEqual([(v['context'], v['state']) for v in result], [('Integration policy', 'pending')])
 
     def test_jobs_api_pagination_extracts_jobs_from_object_pages(self):
         raw = json.dumps([{'total_count': 2, 'jobs': [{'name': 'first'}]},
