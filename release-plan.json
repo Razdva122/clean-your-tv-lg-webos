@@ -119,6 +119,14 @@
         229
       ],
       "summary": "Export allowlisted existing Helper preflight state and incorporate answered C2 dev/listApps evidence; original #229 device report and #201 recovery remain unresolved"
+    },
+    {
+      "pr": 232,
+      "issues": [
+        229,
+        230
+      ],
+      "summary": "Preserve operation-bound initiating failures and safe worker categories; export Doctor/status/check/version context across installers; original #229/#230 device reports remain unresolved"
     }
   ],
   "excluded": [],

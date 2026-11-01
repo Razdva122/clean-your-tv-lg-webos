@@ -76,3 +76,15 @@ and component-version review at freeze; do not reuse equal-version published
 packages or old candidate acceptance. Helper/native relay sources are unchanged.
 No public release, signing, new hardware compatibility or recovery fix is claimed.
 Original #229 and #230 remain open for their existing requested device evidence.
+
+## Integration and final CI
+
+[PR #232](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/232) merged
+into `release/next` as `bd664a07`. Its tree matches reviewed/tested `e82fb682`.
+[Final Tests](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/41318729994)
+passed Linux/macOS runtime and required summaries, browser, setup/packaging and ARM
+checks on the final source, including the private-log guard.
+[Frozen desktop runtime](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/41318729960)
+passed the actual Windows and macOS Intel entrypoints. Integration policy passed;
+the full-release job was correctly unselected for this implementation PR. The
+frozen complete candidate build and physical acceptance remain separate gates.
