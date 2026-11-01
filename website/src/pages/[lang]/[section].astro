@@ -1,6 +1,8 @@
 ---
 import { getEntry, render } from "astro:content";
 import Site from "../../layouts/Site.astro";
+import Comparison from "../../components/Comparison.astro";
+import { support, topics } from "../../lib/support";
 import {
   locales,
   sections,
@@ -18,7 +20,8 @@ export function getStaticPaths() {
 }
 const lang = Astro.params.lang as Locale,
   section = Astro.params.section as Section,
-  t = copy[lang];
+  t = copy[lang],
+  extra = support[lang];
 const entry =
   section === "install" ? await getEntry("guides", lang) : undefined;
 if (section === "install" && !entry)
@@ -59,6 +62,7 @@ const Content = rendered?.Content;
           {section === "editions" && (
             <>
               <p class="lead">{t.choose}</p>
+              <Comparison lang={lang} />
               <h2>No-root</h2>
               <p>{t.noRoot}</p>
               <h2>Root</h2>
@@ -73,10 +77,13 @@ const Content = rendered?.Content;
           {section === "compatibility" && (
             <>
               <p class="lead">{t.compatibility}</p>
-              <h2>No-root</h2>
-              <p>{t.noRoot}</p>
-              <h2>Root</h2>
-              <p>{t.root}</p>
+              <Comparison lang={lang} compact />
+              <h2>{extra.checksTitle}</h2>
+              <ul>
+                {extra.checks.map((check) => (
+                  <li>{check}</li>
+                ))}
+              </ul>
               <p>
                 <a
                   class="text-link"
@@ -86,13 +93,29 @@ const Content = rendered?.Content;
                 </a>
               </p>
               <p>
-                <a
-                  class="text-link"
-                  href={repo + "/blob/main/docs/RECOVERY.md"}
-                >
-                  {t.help}
+                <a class="text-link" href={route(lang, "help")}>
+                  {extra.helpTitle}
                 </a>
               </p>
+            </>
+          )}
+          {section === "help" && (
+            <>
+              <p class="lead">{extra.helpDescription}</p>
+              <nav class="topic-links" aria-label={extra.helpTitle}>
+                {topics.map((topic, index) => (
+                  <a href={"#" + topic.id}>{extra.help[index][0]}</a>
+                ))}
+              </nav>
+              {topics.map((topic, index) => (
+                <section id={topic.id}>
+                  <h2>{extra.help[index][0]}</h2>
+                  <p>{extra.help[index][1]}</p>
+                  <a href={repo + "/blob/main/" + topic.reference}>
+                    {extra.referenceLabel}
+                  </a>
+                </section>
+              ))}
             </>
           )}
           {section === "themes" && (

@@ -595,3 +595,78 @@ h1 {
   overflow-wrap: anywhere;
   hyphens: auto;
 }
+
+.comparison caption {
+  text-align: left;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.prose .comparison th {
+  min-width: 130px;
+}
+.prose .comparison td {
+  min-width: 190px;
+}
+.quick-steps {
+  max-width: 72ch;
+  padding-left: 1.5rem;
+  margin: 24px 0 30px;
+}
+.quick-steps li {
+  padding-left: 8px;
+  margin: 14px 0;
+  color: var(--muted);
+}
+.quick-steps a {
+  text-decoration: none;
+}
+.quick-steps a:hover {
+  text-decoration: underline;
+}
+.help-section {
+  padding-top: 36px;
+  padding-bottom: 60px;
+  border-top: 1px solid var(--line);
+}
+.help-section p {
+  color: var(--muted);
+  margin: 20px 0;
+}
+.topic-links {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+  background: var(--panel);
+  margin: 28px 0 36px;
+}
+@media (max-width: 760px) {
+  .help-section {
+    padding-top: 30px;
+    padding-bottom: 40px;
+  }
+}
+
+.comparison-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+  margin: 24px 0;
+}
+.comparison-scroll:focus-visible {
+  outline: 3px solid var(--text);
+  outline-offset: 4px;
+}
+.prose .comparison {
+  display: table;
+  overflow: visible;
+  margin: 0;
+}
+.table-hint {
+  display: none;
+}
+@media (max-width: 760px) {
+  .table-hint {
+    display: block;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+}

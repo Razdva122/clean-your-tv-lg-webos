@@ -107,7 +107,7 @@ const canonical = origin + route(lang, section);
       <p>{t.footer}</p>
       <div>
         <a href={repo}>{t.source}</a>
-        <a href={repo + "/blob/main/docs/RECOVERY.md"}>{t.help}</a>
+        <a href={route(lang, "help")}>{t.nav[5]}</a>
         <a href={repo + "/releases/latest"}>{t.download}</a>
       </div>
     </footer>

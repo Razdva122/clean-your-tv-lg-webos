@@ -1,4 +1,5 @@
 import translations from "./locales.json";
+import { support } from "./support";
 export const locales = Object.keys(
   translations,
 ) as (keyof typeof translations)[];
@@ -10,6 +11,7 @@ export const sections = [
   "editions",
   "compatibility",
   "themes",
+  "help",
 ] as const;
 export type Section = (typeof sections)[number];
 export const base = "/clean-your-tv-lg-webos/";
@@ -22,8 +24,9 @@ export function description(lang: Locale, section: Section) {
   return {
     "": t.summary,
     install: t.installDescription,
-    editions: t.noRoot + " " + t.root,
+    editions: support[lang].editionDescription,
     compatibility: t.compatibility,
     themes: t.themes,
+    help: support[lang].helpDescription,
   }[section];
 }

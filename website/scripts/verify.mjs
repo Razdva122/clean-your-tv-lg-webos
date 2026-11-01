@@ -18,7 +18,14 @@ const locales = [
   "zh-Hans",
   "zh-Hant",
 ];
-const pages = ["", "install/", "editions/", "compatibility/", "themes/"];
+const pages = [
+  "",
+  "install/",
+  "editions/",
+  "compatibility/",
+  "themes/",
+  "help/",
+];
 function nodes(node) {
   return [node, ...(node.childNodes || []).flatMap(nodes)];
 }
@@ -37,20 +44,53 @@ assert.deepEqual(
   [...locales].sort(),
   "locale registry",
 );
-for (const [lang, copy] of Object.entries(translations)) {
-  assert.deepEqual(
-    Object.keys(copy).sort(),
-    Object.keys(translations.en).sort(),
-    lang + " missing translation keys",
+const support = JSON.parse(
+  readFileSync(new URL("../src/lib/support.json", import.meta.url), "utf8"),
+);
+assert.deepEqual(
+  Object.keys(support).sort(),
+  [...locales].sort(),
+  "support locale registry",
+);
+function translated(value, reference, label) {
+  if (typeof reference === "string") {
+    assert(
+      typeof value === "string" && value.trim().length,
+      label + " empty translation",
+    );
+  } else if (Array.isArray(reference)) {
+    assert(Array.isArray(value), label + " must be an array");
+    assert.equal(
+      value.length,
+      reference.length,
+      label + " missing translated entries",
+    );
+    reference.forEach((item, index) =>
+      translated(value[index], item, label + "[" + index + "]"),
+    );
+  } else {
+    assert(
+      value && typeof value === "object" && !Array.isArray(value),
+      label + " must be an object",
+    );
+    assert.deepEqual(
+      Object.keys(value).sort(),
+      Object.keys(reference).sort(),
+      label + " missing translation keys",
+    );
+    for (const key of Object.keys(reference))
+      translated(value[key], reference[key], label + "." + key);
+  }
+}
+for (const lang of locales) {
+  translated(translations[lang], translations.en, lang);
+  translated(support[lang], support.en, lang + " support");
+  assert.equal(
+    translations[lang].nav.length,
+    pages.length,
+    lang + " navigation",
   );
-  for (const value of Object.values(copy))
-    for (const text of Array.isArray(value) ? value : [value])
-      assert(
-        typeof text === "string" && text.trim().length,
-        lang + " empty translation",
-      );
-  assert.equal(copy.nav.length, pages.length, lang + " navigation");
-  assert.equal(copy.features.length, 3, lang + " features");
+  assert.equal(translations[lang].features.length, 3, lang + " features");
 }
 const sitemap = readFileSync(root + "sitemap.xml", "utf8");
 for (const lang of locales)
@@ -118,10 +158,26 @@ for (const lang of locales)
       sitemap.includes("<loc>" + base + route + "</loc>"),
       route + " in sitemap",
     );
+    if (page === "help/") {
+      for (const n of all.filter((n) => n.tagName === "a")) {
+        const href = attr(n, "href");
+        const prefix =
+          "https://github.com/Razdva122/clean-your-tv-lg-webos/blob/main/";
+        if (href?.startsWith(prefix)) {
+          const source = href.slice(prefix.length).split("#")[0];
+          assert(
+            existsSync(
+              fileURLToPath(new URL("../../" + source, import.meta.url)),
+            ),
+            route + " missing source reference " + source,
+          );
+        }
+      }
+    }
     for (const n of all)
       for (const key of ["src", "href"]) {
         const value = attr(n, key);
-        if (!value || /^(data:|mailto:|#)/.test(value)) continue;
+        if (!value || /^(data:|mailto:)/.test(value)) continue;
         const url = new URL(value, base + route);
         if (!url.href.startsWith(base)) continue;
         let path = decodeURIComponent(
@@ -139,6 +195,28 @@ for (const lang of locales)
           );
         }
       }
+    if (page === "help/") {
+      for (const id of [
+        "connection",
+        "developer-mode",
+        "home-button",
+        "interrupted",
+        "update-remove",
+      ]) {
+        assert(
+          all.some((n) => n.tagName === "section" && attr(n, "id") === id),
+          route + " missing help topic " + id,
+        );
+      }
+    }
+    if (page === "editions/" || page === "compatibility/") {
+      const table = all.find((n) => n.tagName === "table");
+      assert(table, route + " needs a requirements/comparison table");
+      assert(
+        nodes(table).some((n) => n.tagName === "caption"),
+        route + " table caption",
+      );
+    }
     assert(!html.includes("__LIVE_RELOAD__"), route);
   }
 for (const file of [

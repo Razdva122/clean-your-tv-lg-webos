@@ -6,7 +6,8 @@
       "Installation",
       "Root or No-root",
       "Compatibility",
-      "Themes"
+      "Themes",
+      "Help and recovery"
     ],
     "headline": "Your TV. Your home screen.",
     "summary": "A personal home screen for LG webOS, with your apps, your order and a configurable dock. No sponsored rows inside this launcher.",
@@ -44,7 +45,8 @@
       "Installation",
       "Root oder No-root",
       "Kompatibilität",
-      "Themes"
+      "Themes",
+      "Hilfe und Wiederherstellung"
     ],
     "headline": "Dein Fernseher. Dein Startbildschirm.",
     "summary": "Ein persönlicher Startbildschirm für LG webOS: deine Apps, deine Reihenfolge und ein anpassbares Dock. Ohne gesponserte Reihen in diesem Launcher.",
@@ -82,7 +84,8 @@
       "Instalación",
       "Root o No-root",
       "Compatibilidad",
-      "Temas"
+      "Temas",
+      "Ayuda y recuperación"
     ],
     "headline": "Tu televisor. Tu pantalla de inicio.",
     "summary": "Una pantalla de inicio personal para LG webOS: tus apps, tu orden y un dock configurable. Sin filas patrocinadas dentro de este lanzador.",
@@ -120,7 +123,8 @@
       "Instalação",
       "Root ou No-root",
       "Compatibilidade",
-      "Temas"
+      "Temas",
+      "Ajuda e recuperação"
     ],
     "headline": "Sua TV. Sua tela inicial.",
     "summary": "Uma tela inicial pessoal para LG webOS, com seus apps, sua ordem e um dock configurável. Sem linhas patrocinadas dentro deste launcher.",
@@ -158,7 +162,8 @@
       "Installation",
       "Root ou No-root",
       "Compatibilité",
-      "Thèmes"
+      "Thèmes",
+      "Aide et récupération"
     ],
     "headline": "Votre téléviseur. Votre écran d’accueil.",
     "summary": "Un écran d’accueil personnel pour LG webOS : vos applications, votre ordre et un dock configurable. Sans rangées sponsorisées dans ce lanceur.",
@@ -191,7 +196,14 @@
   },
   "it": {
     "name": "Italiano",
-    "nav": ["Home", "Installazione", "Root o No-root", "Compatibilità", "Temi"],
+    "nav": [
+      "Home",
+      "Installazione",
+      "Root o No-root",
+      "Compatibilità",
+      "Temi",
+      "Aiuto e ripristino"
+    ],
     "headline": "La tua TV. La tua schermata Home.",
     "summary": "Una schermata iniziale personale per LG webOS: le tue app, il tuo ordine e un dock configurabile. Senza righe sponsorizzate in questo launcher.",
     "features": [
@@ -223,7 +235,7 @@
   },
   "ko": {
     "name": "한국어",
-    "nav": ["홈", "설치", "Root와 No-root", "호환성", "테마"],
+    "nav": ["홈", "설치", "Root와 No-root", "호환성", "테마", "도움말 및 복구"],
     "headline": "내 TV에 맞는 나만의 홈 화면.",
     "summary": "LG webOS에서 앱 순서와 독을 직접 설정하는 개인 홈 화면입니다. 이 런처 안에는 스폰서 행이 없습니다.",
     "features": [
@@ -255,7 +267,14 @@
   },
   "hi": {
     "name": "हिन्दी",
-    "nav": ["होम", "इंस्टॉल करें", "Root या No-root", "अनुकूलता", "थीम"],
+    "nav": [
+      "होम",
+      "इंस्टॉल करें",
+      "Root या No-root",
+      "अनुकूलता",
+      "थीम",
+      "मदद और रिकवरी"
+    ],
     "headline": "आपका टीवी। आपकी होम स्क्रीन।",
     "summary": "LG webOS के लिए निजी होम स्क्रीन: अपने ऐप, अपना क्रम और बदलने योग्य डॉक। इस लॉन्चर में प्रायोजित पंक्तियाँ नहीं हैं।",
     "features": [
@@ -287,7 +306,14 @@
   },
   "pl": {
     "name": "Polski",
-    "nav": ["Start", "Instalacja", "Root czy No-root", "Zgodność", "Motywy"],
+    "nav": [
+      "Start",
+      "Instalacja",
+      "Root czy No-root",
+      "Zgodność",
+      "Motywy",
+      "Pomoc i odzyskiwanie"
+    ],
     "headline": "Twój telewizor. Twój ekran główny.",
     "summary": "Osobisty ekran główny dla LG webOS: Twoje aplikacje, Twoja kolejność i konfigurowalny dock. Bez sponsorowanych rzędów w tym launcherze.",
     "features": [
@@ -324,7 +350,8 @@
       "Установка",
       "Root или No-root",
       "Совместимость",
-      "Темы"
+      "Темы",
+      "Помощь и восстановление"
     ],
     "headline": "Ваш телевизор. Ваш главный экран.",
     "summary": "Персональный главный экран для LG webOS: ваши приложения, ваш порядок и настраиваемый док. Без рекламных рядов внутри этого лаунчера.",
@@ -357,7 +384,7 @@
   },
   "zh-Hans": {
     "name": "简体中文",
-    "nav": ["首页", "安装", "Root 与 No-root", "兼容性", "主题"],
+    "nav": ["首页", "安装", "Root 与 No-root", "兼容性", "主题", "帮助与恢复"],
     "headline": "你的电视，你的主屏幕。",
     "summary": "为 LG webOS 打造个性化主屏幕：自己的应用、排列顺序和可配置的程序坞。此启动器内没有赞助推荐行。",
     "features": ["把常用应用放在前面", "选择喜欢的主题", "使用电视遥控器操作"],
@@ -385,7 +412,14 @@
   },
   "zh-Hant": {
     "name": "繁體中文",
-    "nav": ["首頁", "安裝", "Root 與 No-root", "相容性", "佈景主題"],
+    "nav": [
+      "首頁",
+      "安裝",
+      "Root 與 No-root",
+      "相容性",
+      "佈景主題",
+      "說明與復原"
+    ],
     "headline": "你的電視，你的主畫面。",
     "summary": "為 LG webOS 打造個人化主畫面：自己的應用程式、排列順序和可設定的 Dock。此啟動器內沒有贊助推薦列。",
     "features": [

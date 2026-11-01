@@ -38,10 +38,11 @@ npm run test:browser --prefix website
 npm run format --prefix website
 ```
 
-The static verifier runs automatically after each build. It checks all 60
+The static verifier runs automatically after each build. It checks all 72
 localized pages for one H1, descriptions, canonical URLs, reciprocal language
 alternates, page-preserving language links, sitemap inclusion and exported local
-links/anchors. Browser acceptance uses the root project's Playwright, verifies
+links/anchors, including same-page help links and existing source-reference files.
+The translation verifier recursively checks nested keys and array lengths. Browser acceptance uses the root project's Playwright, verifies
 all pages without JavaScript, keyboard language switching, selected mobile
 layouts and the offline Root/No-root demo. Use `BROWSER_CHANNEL=chromium` for
 Playwright's bundled browser or the default installed Chrome. Set
@@ -54,6 +55,12 @@ Playwright's bundled browser or the default installed Chrome. Set
   missing keys and empty strings. Keep technical names such as Developer Mode,
   Root and No-root recognizable. Do not infer installer/TV language support from
   the website's locale list.
+- `src/lib/support.json`: translated quick-start steps, edition comparison,
+  compatibility checks and five help topics. `support.ts` validates nonempty
+  fixed-size arrays/tuples using Astro's existing Zod export before generation.
+  Review these summaries against `docs/INSTALL.md`, `docs/EDITIONS.md`,
+  `docs/COMPATIBILITY.md`, `docs/RECOVERY.md` and `docs/MAINTENANCE.md` whenever
+  requirements or procedures change. Do not copy device reports into this file.
 - `src/lib/site.ts`: shared locale, section and URL definitions.
 - `src/layouts/Site.astro`: common navigation and social/search metadata.
 - `src/pages/[lang]/`: localized static routes and guide rendering.
@@ -75,14 +82,16 @@ page explains that distinction before its content. Public download actions use
 `releases/latest`. Do not present candidate features as already published or
 expand hardware compatibility beyond documented version-specific results. Newly
 written website translations have automated/browser checks, not native-speaker
-acceptance. The compact compatibility page links to the maintained detailed
-English device-test record rather than duplicating a table that could go stale.
+acceptance. The compatibility page includes localized access/runtime requirements and an owner
+checklist. Detailed device evidence remains linked to its maintained English
+record. No private diagnostics or other users’ installation reports are copied
+into the new website content.
 
 ## URLs and publication
 
 The configured public base is
-`https://razdva122.github.io/clean-your-tv-lg-webos/`. Each language has five pages:
-home, installation, edition comparison, compatibility and themes. The root URL
+`https://razdva122.github.io/clean-your-tv-lg-webos/`. Each language has six pages:
+home, installation, edition comparison, compatibility, themes and help. The root URL
 mirrors English and canonicalizes to `/en/`. Each page has its own canonical and
 reciprocal `hreflang` links; `x-default` points to the corresponding English page.
 Languages switch through ordinary links without forced locale redirects.
@@ -113,3 +122,20 @@ Submit sitemap directly through Search Console; do not add a misleading nested
 robots file. No analytics collector, consent cookie or external font service is
 added. For a future domain change, update base/site, canonical generation, sitemap,
 asset paths and their tests together.
+
+## Help content and scope
+
+Each `/{lang}/help/` page has stable fragments: `#connection`, `#developer-mode`,
+`#home-button`, `#interrupted` and `#update-remove`. Keep them stable for support
+links. The page and language navigation work without JavaScript. Help summarizes
+existing instructions and links the full English references; it does not promise
+that candidate recovery actions are available in every published installer.
+
+Quick-start steps link to edition selection and the existing installation guide.
+Edition comparison uses captioned tables with row/column headers. Requirements
+are prerequisites, not device certification. The reference Node/Python floors
+remain the documented released requirements; source prototypes do not lower them.
+
+This preparation adds no analytics collector, account connection or PR-preview
+hosting service. Publishing and Search Console configuration remain separate
+release/owner actions.

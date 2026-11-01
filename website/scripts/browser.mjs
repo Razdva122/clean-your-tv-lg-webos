@@ -75,6 +75,7 @@ try {
       "editions/",
       "compatibility/",
       "themes/",
+      "help/",
     ]) {
       const response = await staticPage.goto(
         host + base + lang + "/" + section,
@@ -89,6 +90,21 @@ try {
   await staticPage.keyboard.press("Enter");
   await staticPage.locator('.languages a[hreflang="de"]').click();
   assert.equal(new URL(staticPage.url()).pathname, base + "de/install/");
+  await staticPage.goto(host + base + "ru/help/");
+  for (const id of [
+    "connection",
+    "developer-mode",
+    "home-button",
+    "interrupted",
+    "update-remove",
+  ]) {
+    await staticPage.locator('.topic-links a[href="#' + id + '"]').click();
+    assert.equal(new URL(staticPage.url()).hash, "#" + id);
+    await staticPage.locator("#" + id + " h2").waitFor({ state: "visible" });
+  }
+  await staticPage.locator(".languages summary").click();
+  await staticPage.locator('.languages a[hreflang="de"]').click();
+  assert.equal(new URL(staticPage.url()).pathname, base + "de/help/");
   await staticPage.close();
   const page = await browser.newPage();
   page.on("pageerror", (e) => errors.push(e.message));
@@ -108,7 +124,13 @@ try {
     ["ko", 390],
   ]) {
     await page.setViewportSize({ width, height: 1000 });
-    for (const section of ["", "install/"]) {
+    for (const section of [
+      "",
+      "install/",
+      "editions/",
+      "compatibility/",
+      "help/",
+    ]) {
       await page.goto(host + base + lang + "/" + section);
       if (lang === "de")
         await page.addStyleTag({
@@ -121,6 +143,17 @@ try {
         ),
         `${lang}/${section} horizontal overflow at ${width}: ${JSON.stringify(await page.locator("body *").evaluateAll((nodes) => nodes.filter((n) => n.getBoundingClientRect().right > innerWidth + 1).map((n) => ({ tag: n.tagName, class: n.className, text: n.textContent?.slice(0, 80), width: n.getBoundingClientRect().width }))))}`,
       );
+      if (section === "editions/" || section === "compatibility/") {
+        const table = page.locator(".comparison-scroll");
+        if (await table.evaluate((n) => n.scrollWidth > n.clientWidth)) {
+          await table.focus();
+          await page.keyboard.press("ArrowRight");
+          await page.waitForFunction(
+            () => document.querySelector(".comparison-scroll").scrollLeft > 0,
+          );
+          await table.evaluate((n) => (n.scrollLeft = 0));
+        }
+      }
       // Load below-the-fold lazy images before judging resources or full-page QA.
       for (const img of await page.locator("img").all()) {
         await img.scrollIntoViewIfNeeded();
@@ -131,7 +164,7 @@ try {
         await page.screenshot({
           path: resolve(
             shots,
-            `${lang}-${section ? "install" : "home"}-${width}.png`,
+            `${lang}-${section ? section.replace("/", "") : "home"}-${width}.png`,
           ),
           fullPage: true,
         });
@@ -159,7 +192,7 @@ try {
   }
   assert.deepEqual(errors, []);
   console.log(
-    "PASS 60 pages without JavaScript; keyboard language switching; mobile layouts; legacy fragment routing; offline Root/No-root theme demo",
+    "PASS 72 pages without JavaScript; keyboard language switching; help deep links; mobile tables/layouts; legacy fragment routing; offline Root/No-root theme demo",
   );
 } finally {
   await browser?.close();
