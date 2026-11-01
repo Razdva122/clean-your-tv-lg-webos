@@ -57,9 +57,19 @@ policy except `.ctv-tile`, which remains an engine-reserved interaction hook.
 | `.ctv-library-row` | Available app row in the library; native button focus is mirrored |
 | `.ctv-inputs` | Inputs dropdown; anchoring, width and visibility are engine-owned |
 | `.ctv-input-row` | Selectable input/source row; selection action and navigation remain trusted |
+| `.ctv-input-shelf` | Classic (`dock-grid`) Inputs shelf and its caption between the header and the dock; placement, clipping, scrolling and visibility are engine-owned |
+| `.ctv-input-tile` | Selectable source tile in the shelf; position, size, launch action and navigation remain trusted |
+| `.ctv-input-status` | Device name or "Not connected" text inside a shelf tile |
+| `.ctv-input-preview` | Live picture frame inside the focused shelf tile; the TV draws the video on a hardware plane that follows transforms but ignores rounded clipping, masks and opacity. Starting, stopping, size and placement are engine-owned |
 
 `.is-focused` mirrors remote/pointer focus on tiles, their visual cards and labels,
-header shortcuts, library rows, the library close button and input rows. `.is-moving` mirrors reorder state on a
+header shortcuts, library rows, the library close button, input rows and shelf
+tiles. `.is-connected` and `.is-disconnected` mirror live TV input status on shelf
+tiles and input rows only when the TV reports it; neither is present when status
+is unknown, so do not style an absent state as disconnected. `.is-previewing` marks
+the shelf tile whose live picture is playing; it appears only once the picture
+plays and is removed as soon as it stops. Older Home versions
+reject rules that use these shelf parts or states. `.is-moving` mirrors reorder state on a
 tile and its card. `.is-selected` is a policy vocabulary token reserved for
 selection states; do not assume that every part receives it or that focus means
 selection. Existing `.focused` and `.moving` classes remain internal compatibility

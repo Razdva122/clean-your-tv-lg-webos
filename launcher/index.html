@@ -46,6 +46,11 @@
   <div id="viewport">
     <span id="ribbonPosition" class="ctv-position" aria-hidden="true"></span>
     <div id="stage">
+      <!-- Classic Inputs shelf: one press above the dock, live status when the TV reports it. -->
+      <section id="inputShelf" class="ctv-input-shelf" hidden>
+        <div id="inputShelfCaption" data-i18n="Inputs">Inputs</div>
+        <div id="inputShelfWindow"><div id="inputShelfTrack"></div></div>
+      </section>
       <div id="dockBand" class="ctv-dock"></div>
       <div id="tiles"></div>
       <div id="glass" class="ctv-focus"></div>
@@ -66,6 +71,8 @@
   <script src="catalogs.js"></script>
   <script src="apps.js"></script>
   <script src="app-library.js"></script>
+  <script src="input-sources.js"></script>
+  <script src="input-preview.js"></script>
   <script src="home-layout.js"></script>
   <script src="layout-panel.js"></script>
   <script src="theme-locales.js"></script>

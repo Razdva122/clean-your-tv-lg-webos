@@ -6,6 +6,54 @@
   preserve managed paths and LS2 grants, validate candidate infrastructure before
   offering installation, and authenticate current runtime separately from its
   original bootstrap. Hardware update/rollback acceptance is still pending.
+- Add a Classic Inputs shelf: TV inputs and Live TV as a one-press row above the
+  dock, with type icons and live connected/disconnected status from
+  `com.webos.service.eim/getAllInputStatus` when the TV allows it (the Inputs
+  dropdown shares it). Falls back to the captured inventory without status. New
+  `tvhome.inputs.shelf.v1` preference (Settings → Appearance → Show inputs on Home,
+  on by default) and theme parts `.ctv-input-shelf`, `.ctv-input-tile`,
+  `.ctv-input-status` with `connected`/`disconnected` states. Classic also breaks
+  the date after the weekday and fades the partly visible next row. The status
+  call is confirmed on one webOS 6 No-root TV; hot-plug updates and Root are
+  unverified. App-registered EIM inputs (`MVPD_*`, including Home's own entry)
+  are not listed as sources. Shelf tiles are 16:9 (288×162); the focused tile
+  grows to 404×236 and pushes later tiles right instead of scaling, so text stays
+  sharp on the 2×-upscaled graphics plane of UHD TVs.
+- Preview the focused shelf input live: after an 800 ms rest, a connected HDMI
+  tile plays its source muted through the webOS external-input video pipeline
+  (`<video>` with `service/webos-external`, `ext://hdmi:N`), one at a time. Moving
+  away, the header, dropdown or Settings, launching, blur or hiding Home release it;
+  errors or no picture within 4 s fall back to the static tile and skip that source
+  for 60 s. New `tvhome.inputs.preview.v1` preference (Settings → Appearance →
+  Preview inputs on focus, on by default), theme part `.ctv-input-preview` and
+  state `previewing`. The pipeline is undocumented; picture placement, ~0.2–0.3 s
+  start, release and no CEC wake were checked on one webOS 6 No-root TV. Live TV
+  previews are off until a tuned broadcast can be tested.
+- Smoother focus motion: app cards keep their 1.1× enlargement but grow and shrink
+  on one shared 240 ms ease-out without overshoot. Remote focus stays immediate
+  (no scroll retargeting): the glass lands on the new card at card size and grows
+  with it instead of springing behind it; pointer focus glides on the same curve.
+  Row scroll, header, shortcuts and input tiles use the same curve, and reduced
+  motion also covers the title, shortcuts and Inputs shelf.
+- OK briefly dips the focused tile or input tile (holding OK still edits); the app
+  title crossfades in step with focus; returning to Home after switching to an
+  input focuses that input's shelf tile until focus moves elsewhere; 12-hour
+  languages show the clock without a leading zero ("6:13 PM").
+- Rows glide over 300 ms on a single Up/Down press and stay instant while an arrow
+  is held (a repeat also cuts a running glide short), so held arrows never chase
+  an unfinished scroll; `startup-motion-ui` skips its exact stage/item position
+  check only during such a glide or an edge bump. Classic fades the top and bottom
+  screen edges while rows lie beyond them, and a fresh press that cannot move
+  (grid ends, Inputs shelf ends) gives a short 10 px bump. Reduced motion disables
+  both.
+- Lighter rendering on 4K TVs (Home draws at 3840x2160 there): the ambient glow
+  changes colour once the focus has rested for 800 ms, and Classic then bakes it into
+  a plain background element instead of keeping two full-screen layers (themes keep
+  the layers); every Classic tile, input tile and the grid stage is its own
+  compositor layer, so the focus zoom no longer repaints the grid; Inputs tiles grow
+  by snapping to their final size and animating a transform (one layout per press
+  instead of one per frame); and edge bumps move by transform. In on-device A/B runs
+  on an LG G1 (webOS 6), missed frames per press dropped from about 16 to about 7.5.
 
 
 ## v1.4.0

@@ -51,6 +51,16 @@
         if(['homeStatus','setHomeControl','openLGHome'].indexOf(homeMethod)>=0)result={returnValue:true,enabled:homeEnabled};
       } else if (uri === 'luna://com.local.nativehome.service/listApps' || uri === 'luna://com.cleanyourtv.root.preview.service/listApps') {
         result = {returnValue:true, apps:(window.TV_APPS.apps || []).concat(window.TV_APPS.referenceApps ? [] : [{id:'preview.gallery', title:'Photo & Video', icon:'../preview/icons/browser.svg'}])};
+      } else if (uri === 'luna://com.webos.service.eim/getAllInputStatus') {
+        // Simulated live ports: captured inputs are connected, two spare ports are not.
+        // window.PREVIEW_INPUT_STATUS overrides the device list; null simulates a denied call.
+        var names = ['PlayStation 5', 'Apple TV'], captured = window.TV_APPS.inputs || [];
+        var devices = captured.slice(0, 2).map(function (input, index) {
+          return {id: 'HDMI_' + (index + 1), appId: input.appId, label: 'HDMI ' + (index + 1), connected: true, deviceName: names[index]};
+        });
+        for (var port = devices.length + 1; port <= 4; port++) devices.push({id: 'HDMI_' + port, appId: 'preview.hdmi' + port, label: 'HDMI ' + port, connected: false});
+        if (window.PREVIEW_INPUT_STATUS !== undefined) devices = window.PREVIEW_INPUT_STATUS;
+        result = devices ? {returnValue: true, devices: devices} : {returnValue: false, errorText: 'Denied method call'};
       } else if (uri === 'luna://com.palm.connectionmanager/getStatus') {
         result = {returnValue: true, isInternetConnectionAvailable: true, wifi: {state: 'connected', ssid: 'Demo Wi-Fi'}};
       } else if (uri === 'luna://com.webos.service.bus/signal/registerServerStatus') {
@@ -99,5 +109,25 @@
       }
       if (bridge.onservicecallback) bridge.onservicecallback(JSON.stringify(result));
     }, 30);
+  };
+  // Browsers cannot play webOS external inputs: stand in with a moving gradient that
+  // "plays" shortly after it is mounted, like the TV's video pipeline.
+  window.PREVIEW_INPUT_MEDIA = window.PREVIEW_INPUT_MEDIA || function (uri) {
+    if (!document.getElementById('previewInputMediaStyle')) {
+      var style = document.createElement('style');
+      style.id = 'previewInputMediaStyle';
+      style.textContent = '@keyframes preview-input-pan{from{background-position:0 0}to{background-position:-200% 0}}' +
+        '.preview-input-media{background:linear-gradient(115deg,#1d3b8f,#7a2ca8,#d0452f,#1d3b8f);background-size:200% 100%;animation:preview-input-pan 6s linear infinite}' +
+        '.preview-input-media span{position:absolute;top:8px;right:10px;font-size:14px;letter-spacing:.08em;color:rgba(255,255,255,.8)}';
+      document.head.appendChild(style);
+    }
+    var media = document.createElement('div'), screen = document.createElement('div'), label = document.createElement('span');
+    screen.className = 'preview-input-media';
+    screen.style.cssText = 'position:absolute;top:0;right:0;bottom:0;left:0';
+    label.textContent = 'LIVE · ' + uri.replace('ext://', '').toUpperCase();
+    screen.appendChild(label);
+    media.appendChild(screen);
+    setTimeout(function () { screen.dispatchEvent(new Event('playing')); }, 300);
+    return media;
   };
 }());

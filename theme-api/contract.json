@@ -26,7 +26,11 @@
     "library-close",
     "library-row",
     "inputs",
-    "input-row"
+    "input-row",
+    "input-shelf",
+    "input-tile",
+    "input-status",
+    "input-preview"
   ],
   "states": [
     "focused",
@@ -37,7 +41,10 @@
     "dark",
     "mid",
     "bright",
-    "wide"
+    "wide",
+    "connected",
+    "disconnected",
+    "previewing"
   ],
   "properties": {
     "color": "color",

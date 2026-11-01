@@ -89,6 +89,8 @@ After interruption, run `status` before retrying; retain journals and recovery f
 
 1.5.4: in **Home settings → Appearance**, turn off **Show Add app tile** to hide the + tile. It is on by default. Use **Add app** in the same section to add or restore apps while + is hidden. Ordering and hiding remain available; the choice survives restart. If every app is hidden, the top controls and Settings remain available.
 
+Unreleased: Classic shows your TV inputs and Live TV as a row of tiles between the clock and the dock. Press Up from the dock to reach it and OK to switch source; Up again reaches the header buttons, and Down or Back returns to the dock. When the TV reports status, connected sources show a green dot and the device name, and empty ports are dimmed as **Not connected** but stay selectable. Turn it off with **Home settings → Appearance → Show inputs on Home**. Other themes keep the **Inputs** button. Live status is confirmed on one webOS 6 TV. Rest on a connected HDMI source for about a second to see its live picture, muted, in the tile; Live TV and empty ports keep the usual tile. Turn it off with **Home settings → Appearance → Preview inputs on focus**.
+
 In 1.5.4 theme previews with the optional sidebar layout, Up/Down selects a menu item, Right enters the apps, and Left from the first visible app column returns to the menu.
 
 No-root 1.5.0: Helper can recover a transient watchdog timeout after standby, with at most five attempts in ten minutes. Stop and triple Home still require an explicit Start Helper; repeated failures stay stopped. TV acceptance is pending. [Behavior and limits (English)](../HELPER-DIAGNOSTICS.md#watchdog-recovery-unpublished-candidate-155).

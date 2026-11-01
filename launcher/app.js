@@ -63,6 +63,14 @@
     ambientLayers = [getElement("ambientA"), getElement("ambientB")],
     ambientIndex = 0,
     ambientColor = null,
+    ambientTimer = null,
+    ambientBake = null,
+    // Focus rest before the glow changes: longer than a browsing cadence of presses, so
+    // the crossfade and bake never land on the next press (measured on an LG G1).
+    AMBIENT_SETTLE = 800,
+    // style.css's 600 ms .ambient fade plus a few frames, before the glow is baked.
+    AMBIENT_FADE = 650,
+    AMBIENT_BAKED = '#homeSurface:not(.ctv-theme-active) #ambientBase{',
     topButtons = [getElement("btnInputs"), getElement("btnWifi"), getElement("btnSettings")],
     inputsPanel = getElement("inputsPanel"),
     tiles = [],
@@ -77,6 +85,52 @@
     focusGlassVisible = false,
     moveState = null,
     activeBridges = [];
+  // Classic Inputs shelf: one row of TV sources between the header and the dock.
+  // Whole 1080p pixels throughout: UHD panels upscale the graphics plane exactly 2x.
+  var SHELF_TOP = 236,
+    SHELF_WINDOW_TOP = 28,
+    SHELF_TILE_WIDTH = 288,
+    SHELF_TILE_HEIGHT = 162,
+    // The focused tile grows instead of scaling, so its text stays sharp; its
+    // 10px-framed picture is exactly 384x216.
+    SHELF_FOCUS_WIDTH = 404,
+    SHELF_FOCUS_HEIGHT = 236,
+    SHELF_GAP = 24,
+    SHELF_INSET = 16,
+    // style.css's .input-tile transitions without transform; held while a FLIP is inverted.
+    SHELF_FADES = "background 160ms ease, color 160ms ease, opacity 200ms ease",
+    INPUT_ICONS = {
+      hdmi: "M18,7V4c0,-1.1 -0.9,-2 -2,-2H8C6.9,2 6,2.9 6,4v3H5v6l3,6v3h8v-3l3,-6V7H18zM8,4h8v3h-2V5h-1v2h-2V5h-1v2H8V4z",
+      tv: "M21,6h-7.59l3.29,-3.29L16,2l-4,4l-4,-4l-0.71,0.71L10.59,6H3c-1.1,0 -2,0.89 -2,2v12c0,1.1 0.9,2 2,2h18c1.1,0 2,-0.89 2,-2V8C23,6.89 22.1,6 21,6zM21,20H3V8h18V20zM9,10v8l7,-4L9,10z",
+      game: "M15,7.5V2H9v5.5l3,3 3,-3zM7.5,9H2v6h5.5l3,-3 -3,-3zM9,16.5V22h6v-5.5l-3,-3 -3,3zM16.5,9l-3,3 3,3H22V9h-5.5z",
+      stream: "M21,3H3c-1.1,0 -2,0.9 -2,2v3h2V5h18v14h-7v2h7c1.1,0 2,-0.9 2,-2V5c0,-1.1 -0.9,-2 -2,-2zM1,18v3h3c0,-1.66 -1.34,-3 -3,-3zM1,14v2c2.76,0 5,2.24 5,5h2c0,-3.87 -3.13,-7 -7,-7zM1,10v2c4.97,0 9,4.03 9,9h2c0,-6.08 -4.93,-11 -11,-11z",
+      pc: "M20,18c1.1,0 1.99,-0.9 1.99,-2L22,6c0,-1.1 -0.9,-2 -2,-2H4c-1.1,0 -2,0.9 -2,2v10c0,1.1 0.9,2 2,2H0v2h24v-2h-4zM4,6h16v10H4V6z"
+    },
+    inputSources = window.InputSources ? InputSources.create({inventory: function () { return window.TV_APPS && TV_APPS.inputs; }, call: callLuna}) : null,
+    shelf = getElement("inputShelf"),
+    shelfTrack = getElement("inputShelfTrack"),
+    shelfTiles = [],
+    focusedShelf = 0,
+    shelfOffset = 0,
+    shelfLayout = null,
+    // The input launched last from the shelf or dropdown, until focus moves elsewhere.
+    returnInput = null,
+    restoring = false,
+    // Live TV previews need a tuned broadcast, which the hardware check could not cover.
+    LIVE_TV_PREVIEW = false,
+    inputPreview = window.InputPreview ? InputPreview.create({
+      createMedia: function (uri) { return window.PREVIEW_INPUT_MEDIA ? window.PREVIEW_INPUT_MEDIA(uri) : InputPreview.createVideo(uri); },
+      enabled: function () { return layoutPreset === "dock-grid" && window.HomeInputShelf.previewEnabled(); },
+      mount: function (media, input) {
+        var tile = shelfTiles[focusedShelf];
+        if (!tile || tile.input.appId !== input.appId) return;
+        media.className = "input-preview ctv-input-preview";
+        tile.el.insertBefore(media, tile.el.firstChild);
+      },
+      onchange: function (input) {
+        shelfTiles.forEach(function (tile) { setPartState(tile.el, 'previewing', !!input && tile.input.appId === input.appId); });
+      }
+    }) : null;
   // Retain service bridges until their replies arrive; subscriptions stay alive.
   function callLuna(uri, params, callback, timeout) {
     var bridge, timer, done = false;
@@ -179,18 +233,55 @@
     undoButton,
     pointerTimer = null,
     pointerNavigation = true,
-    suppressClick = false;
+    suppressClick = false,
+    // Held arrows repeat; taps glide the rows, held runs stay immediate.
+    lastKeyRepeat = false,
+    scrollGlideTimer = null,
+    edgeBumpTimer = null;
   // A scrolling list can cross a stationary cursor and generate mouseover.
   // Remote input owns focus until the pointer actually moves or is clicked.
   function pointerInput() {
     pointerNavigation = true;
+    lastKeyRepeat = false;
     getElement('homeSurface').classList.remove('ctv-remote-navigation');
   }
   document.addEventListener('mousemove', pointerInput, true);
   document.addEventListener('keydown', function (event) {
     if ([13, 27, 37, 38, 39, 40, 461].indexOf(event.keyCode) >= 0) pointerNavigation = false;
-    if ([37, 38, 39, 40].indexOf(event.keyCode) >= 0) getElement('homeSurface').classList.add('ctv-remote-navigation');
+    if ([37, 38, 39, 40].indexOf(event.keyCode) >= 0) {
+      lastKeyRepeat = event.repeat === true;
+      getElement('homeSurface').classList.add('ctv-remote-navigation');
+    }
   }, true);
+  // Remote scrolling: a tap glides to the new row; a held arrow (or a repeat during a
+  // glide) jumps straight there, so the list never chases an unfinished scroll.
+  function setScroll(offset) {
+    var surface = getElement('homeSurface'), target = "translateY(" + -offset + "px)";
+    if (stage.style.transform !== target && surface.classList.contains('ctv-remote-navigation')) {
+      clearTimeout(scrollGlideTimer);
+      // Scenic and Channel List keep their own immediate scrolling.
+      if (lastKeyRepeat || layoutPreset === 'scenic-grid' || layoutPreset === 'channel-list') surface.classList.remove('ctv-scroll-glide');
+      else {
+        surface.classList.add('ctv-scroll-glide');
+        scrollGlideTimer = setTimeout(function () { surface.classList.remove('ctv-scroll-glide'); }, 320);
+      }
+    }
+    stage.style.webkitTransform = stage.style.transform = target;
+  }
+  // A fresh press that cannot move nudges the grid or shelf toward that direction.
+  function edgeBump(direction) {
+    var surface = getElement('homeSurface');
+    if (lastKeyRepeat || moveState || layoutPreset === 'scenic-grid' || layoutPreset === 'channel-list') return;
+    clearTimeout(edgeBumpTimer);
+    ['ctv-edge-bump', 'bump-down', 'bump-left', 'bump-right', 'bump-shelf-left', 'bump-shelf-right'].forEach(function (name) { surface.classList.remove(name); });
+    surface.offsetWidth;
+    surface.classList.add('ctv-edge-bump');
+    surface.classList.add('bump-' + direction);
+    edgeBumpTimer = setTimeout(function () {
+      surface.classList.remove('ctv-edge-bump');
+      surface.classList.remove('bump-' + direction);
+    }, 200);
+  }
   document.addEventListener('mousedown', pointerInput, true);
   function bindPointerFocus(element, action) {
     function hover() { if (pointerNavigation) action(); }
@@ -276,8 +367,10 @@
     clearTimeout(pointerTimer);
     pointerTimer = null;
     okPressed = false;
+    clearPressed();
   }
   function beginMoving(item) {
+    clearPressed();
     if (!item || item.add || moveState || pickerOpen || undoState) {
       return;
     }
@@ -307,6 +400,7 @@
         return;
       }
       focusTile(tiles.indexOf(item));
+      setPressed(item.el, true);
       clearTimeout(pointerTimer);
       suppressClick = false;
       pointerTimer = setTimeout(function () {
@@ -318,7 +412,17 @@
     item.el.addEventListener('mouseleave', function () {
       clearTimeout(pointerTimer);
       pointerTimer = null;
+      setPressed(item.el, false);
     });
+    item.el.addEventListener('mouseup', function () { setPressed(item.el, false); });
+  }
+  // Engine-only press feedback; not a theme state.
+  function setPressed(element, pressed) {
+    element && element.classList.toggle('pressed', pressed);
+  }
+  function clearPressed() {
+    var pressed = document.querySelectorAll('.pressed');
+    for (var index = 0; index < pressed.length; index++) pressed[index].classList.remove('pressed');
   }
   function tileClick(item) {
     if (suppressClick) {
@@ -766,7 +870,8 @@
     updateGeometry(state.columns, state.preset, state.ribbon);
     scrollOffset = 0;
     layoutTiles();
-    focusTile(focusedTile);
+    renderShelf();
+    "shelf" !== focusZone && focusTile(focusedTile);
     updateClock();
     var event = document.createEvent('Event'); event.initEvent('home-layout-change', false, false); document.dispatchEvent(event);
   };
@@ -853,17 +958,28 @@
         if (top - scrollOffset + CARD_HEIGHT + 70 > floor) scrollOffset = top + CARD_HEIGHT + 70 - floor;
         if (top - scrollOffset - 24 < ceiling) scrollOffset = Math.max(0, top - 24 - ceiling);
       }
-      stage.style.webkitTransform = stage.style.transform = "translateY(" + -scrollOffset + "px)";
+      setScroll(scrollOffset);
       var header = document.querySelector("header"),
         headerBottom = header.offsetTop + header.offsetHeight;
       document.body.classList.toggle("scrolled", layoutPreset === "dock-grid" && DOCK_TOP - scrollOffset < headerBottom + 24);
+      coverShelf(false);
       var glassWidth = FOCUS_SCALE * CARD_WIDTH + FOCUS_PADDING * 2,
         glassHeight = FOCUS_SCALE * CARD_HEIGHT + FOCUS_PADDING * 2,
         glassLeft = tileLeft(index) + CARD_WIDTH / 2 - glassWidth / 2,
         glassTop = top + CARD_HEIGHT / 2 - glassHeight / 2;
       focusGlass.style.width = glassWidth + "px";
       focusGlass.style.height = glassHeight + "px";
-      focusGlass.style.webkitTransform = focusGlass.style.transform = "translate(" + glassLeft + "px," + glassTop + "px)";
+      var glassAt = "translate(" + glassLeft + "px," + glassTop + "px)";
+      // Remote focus is immediate: the glass lands on the new card at card size, then
+      // grows with it, so it never trails the card. A pointer keeps the glide.
+      if (focusGlassVisible && glassAt !== focusGlass.glassAt && getElement('homeSurface').classList.contains('ctv-remote-navigation')) {
+        focusGlass.style.webkitTransition = focusGlass.style.transition = "none";
+        focusGlass.style.webkitTransform = focusGlass.style.transform = glassAt + " scale(" + (CARD_WIDTH + FOCUS_PADDING * 2) / glassWidth + "," + (CARD_HEIGHT + FOCUS_PADDING * 2) / glassHeight + ")";
+        focusGlass.offsetWidth;
+        focusGlass.style.webkitTransition = focusGlass.style.transition = "";
+      }
+      focusGlass.glassAt = glassAt;
+      focusGlass.style.webkitTransform = focusGlass.style.transform = glassAt + " scale(1,1)";
       focusGlassVisible || (focusGlass.style.webkitTransition = focusGlass.style.transition = "none", focusGlass.offsetWidth, focusGlass.style.webkitTransition = focusGlass.style.transition = "", focusGlass.style.opacity = "1", focusGlassVisible = true);
       if (layoutPreset === 'channel-list') {
         if (!channelArtwork) {
@@ -885,46 +1001,79 @@
         heroTitle.style.top = (layoutPreset === "channel-list" ? 548 : layoutPreset === "scenic-grid" ? TILE_BASE - 142 : TILE_BASE - HERO_OFFSET) + "px";
         if (layoutPreset === 'channel-list' || layoutPreset === 'scenic-grid') {
           clearTimeout(heroTitle.swap);
+          heroTitle.style.webkitTransition = heroTitle.style.transition = '';
           heroTitle.textContent = t;
           heroTitle.style.webkitTransform = heroTitle.style.transform = 'none';
           heroTitle.style.opacity = '1';
           heroVisible = true;
-        } else heroVisible ? heroTitle.textContent !== t && (heroTitle.style.opacity = "0", heroTitle.style.webkitTransform = heroTitle.style.transform = "translateX(-24px)", clearTimeout(heroTitle.swap), heroTitle.swap = setTimeout(function () {
+        } else heroVisible ? heroTitle.textContent !== t && (clearTimeout(heroTitle.swap),
+          // Quick fade out, then the new title glides in with the focus motion.
+          heroTitle.style.webkitTransition = heroTitle.style.transition = "opacity 100ms linear, transform 100ms linear",
+          heroTitle.style.opacity = "0", heroTitle.style.webkitTransform = heroTitle.style.transform = "translateX(-12px)",
+          heroTitle.swap = setTimeout(function () {
           heroTitle.textContent = t;
           heroTitle.style.webkitTransition = heroTitle.style.transition = "none";
-          heroTitle.style.webkitTransform = heroTitle.style.transform = "translateX(24px)";
+          heroTitle.style.webkitTransform = heroTitle.style.transform = "translateX(12px)";
           heroTitle.offsetWidth;
           heroTitle.style.webkitTransition = heroTitle.style.transition = "";
           heroTitle.style.webkitTransform = heroTitle.style.transform = "none";
           heroTitle.style.opacity = "1";
-        }, 120)) : (heroTitle.textContent = t, heroTitle.style.webkitTransform = heroTitle.style.transform = "none", heroTitle.style.opacity = "1", heroVisible = true);
+        }, 100)) : (heroTitle.style.webkitTransition = heroTitle.style.transition = "", heroTitle.textContent = t, heroTitle.style.webkitTransform = heroTitle.style.transform = "none", heroTitle.style.opacity = "1", heroVisible = true);
         updateAmbient(e.color);
       }(tiles[index]) : heroVisible && (heroVisible = false, heroTitle.style.opacity = "0");
       updateAmbient(tiles[index].color);
     }
   }
-  function updateAmbient(rgb) {
-    if (rgb) {
-      var color = rgb.join(",");
-      if (color !== ambientColor) {
-        ambientColor = color;
-        var nextLayer = ambientLayers[1 - ambientIndex];
-        var ambientSheet = getElement('ctv-ambient-style');
-        if (!ambientSheet) {
-          ambientSheet = document.createElement('style'); ambientSheet.id = 'ctv-ambient-style';
-          document.head.appendChild(ambientSheet);
-        }
-        // A scoped author rule can override this trusted default; inline CSS could not.
-        var previousAmbient = ambientSheet.textContent.split('\n').filter(function (rule) {
-          return rule.indexOf('#' + nextLayer.id + '{') !== 0;
-        });
-        previousAmbient.push('#' + nextLayer.id + '{background-image:radial-gradient(circle 1190px at 32% 42%, rgba(' + color + ',0.36) 0%, rgba(' + color + ',0.15) 50%, rgba(' + color + ',0) 100%);}');
-        ambientSheet.textContent = previousAmbient.join('\n');
-        nextLayer.style.opacity = "1";
-        ambientLayers[ambientIndex].style.opacity = "0";
-        ambientIndex = 1 - ambientIndex;
-      }
+  // The glow follows once the focus rests, so its full-screen crossfade never competes
+  // with focus motion for a 4K TV's GPU. Classic then bakes the settled glow into a
+  // plain (uncomposited) #ambientBase beneath the layers and hides both layers; themes
+  // keep the two layers, and #homeSurface's background stays the theme wallpaper's.
+  function updateAmbient(rgb, settled) {
+    clearTimeout(ambientTimer);
+    if (!rgb) return;
+    if (!settled) {
+      ambientTimer = setTimeout(function () { updateAmbient(rgb, true); }, AMBIENT_SETTLE);
+      return;
     }
+    var color = rgb.join(",");
+    if (color === ambientColor) return;
+    ambientColor = color;
+    var current = ambientLayers[ambientIndex], nextLayer = ambientLayers[1 - ambientIndex];
+    if (!getElement('ambientBase')) {
+      var base = document.createElement('div');
+      base.id = 'ambientBase'; base.className = 'ambient-base';
+      current.parentNode.insertBefore(base, ambientLayers[0]);
+    }
+    var ambientSheet = getElement('ctv-ambient-style');
+    if (!ambientSheet) {
+      ambientSheet = document.createElement('style'); ambientSheet.id = 'ctv-ambient-style';
+      document.head.appendChild(ambientSheet);
+    }
+    function glow(value) { return 'background-image:radial-gradient(circle 1190px at 32% 42%, rgba(' + value + ',0.36) 0%, rgba(' + value + ',0.15) 50%, rgba(' + value + ',0) 100%);}'; }
+    // A scoped author rule can override this trusted default; inline CSS could not.
+    // The baked page glow goes away in the same frame its layer reappears.
+    var rules = ambientSheet.textContent.split('\n').filter(function (rule) {
+      return rule && rule.indexOf('#' + nextLayer.id + '{') !== 0 && rule.indexOf(AMBIENT_BAKED) !== 0;
+    });
+    rules.push('#' + nextLayer.id + '{' + glow(color));
+    ambientSheet.textContent = rules.join('\n');
+    if (current.classList.contains('baked')) {
+      current.style.webkitTransition = current.style.transition = 'none';
+      current.classList.remove('baked');
+      getComputedStyle(current).opacity;
+      current.style.webkitTransition = current.style.transition = '';
+    }
+    nextLayer.classList.remove('baked');
+    nextLayer.style.opacity = "1";
+    current.style.opacity = "0";
+    ambientIndex = 1 - ambientIndex;
+    clearTimeout(ambientBake);
+    ambientBake = setTimeout(function () {
+      ambientSheet.textContent = ambientSheet.textContent.split('\n').filter(function (rule) {
+        return rule && rule.indexOf(AMBIENT_BAKED) !== 0;
+      }).concat(AMBIENT_BAKED + glow(color)).join('\n');
+      nextLayer.classList.add('baked');
+    }, AMBIENT_FADE);
   }
   function focusTopButton(index) {
     setFocusZone("top");
@@ -934,7 +1083,254 @@
     setPartState(topButtons[focusedTopButton], 'focused', true);
   }
   function setFocusZone(zone) {
+    // Some paths reset focusZone directly, so clear a shelf highlight and preview on every exit.
+    if ("shelf" !== zone) {
+      setPartState(shelfTiles[focusedShelf] && shelfTiles[focusedShelf].el, 'focused', false);
+      stopPreview();
+      if (!restoring) returnInput = null;
+    }
     focusZone !== zone && ("top" === focusZone && setPartState(topButtons[focusedTopButton], 'focused', false), "grid" === focusZone && (tiles[focusedTile] && setPartState(tiles[focusedTile].el, 'focused', false), focusGlassVisible = false, focusGlass.style.opacity = "0"), focusZone = zone);
+    if ("shelf" !== zone) layoutShelf();
+  }
+  function nearestTopButton(center) {
+    var nearest = 0, distance = 1 / 0;
+    topButtons.forEach(function (button, index) {
+      var rect = sceneRect(button), offset = Math.abs(rect.left + rect.width / 2 - center);
+      if (offset < distance) { distance = offset; nearest = index; }
+    });
+    return nearest;
+  }
+  function inputEntries() {
+    var entries = inputSources ? inputSources.list() : [];
+    if (CONFIG.liveTvApp) entries.push({appId: CONFIG.liveTvApp, label: tr("Live TV"), deviceName: null, connected: null, kind: "tv", source: LIVE_TV_PREVIEW ? "tv://" : null});
+    return entries;
+  }
+  function stopPreview() {
+    inputPreview && inputPreview.stop();
+  }
+  // Launching hands the input to its own app; release the preview first. Returning to
+  // Home lands back on this input's tile, so switching back is one press.
+  function launchInput(input, element) {
+    stopPreview();
+    if (element) {
+      setPressed(element, true);
+      setTimeout(function () { setPressed(element, false); }, 160);
+    }
+    launchApp(input.appId, input.label);
+    returnInput = input.appId;
+  }
+  function inputDetail(input) {
+    return input.connected === false ? tr("Not connected") : input.deviceName || "";
+  }
+  function shelfVisible() {
+    return !!shelf && !shelf.hidden;
+  }
+  // Grow and push: while the shelf has focus, the focused tile is wider and the
+  // tiles after it move right. Earlier tiles never move, so a pointer stays put.
+  function shelfTileLeft(index) {
+    return SHELF_INSET + index * (SHELF_TILE_WIDTH + SHELF_GAP) +
+      ("shelf" === focusZone && index > focusedShelf ? SHELF_FOCUS_WIDTH - SHELF_TILE_WIDTH : 0);
+  }
+  function shelfTileWidth(index) {
+    return "shelf" === focusZone && index === focusedShelf ? SHELF_FOCUS_WIDTH : SHELF_TILE_WIDTH;
+  }
+  function shelfCenter(index) {
+    return GRID_LEFT - SHELF_INSET + shelfTileLeft(index) - shelfOffset + shelfTileWidth(index) / 2;
+  }
+  function nearestShelf(center) {
+    var nearest = 0, distance = 1 / 0;
+    shelfTiles.forEach(function (tile, index) {
+      var offset = Math.abs(shelfCenter(index) - center);
+      if (offset < distance) { distance = offset; nearest = index; }
+    });
+    return nearest;
+  }
+  function nearestDockTile(center) {
+    var nearest = 0, distance = 1 / 0;
+    for (var index = 0; index < Math.min(columnCount, tiles.length); index++) {
+      var offset = Math.abs(tileLeft(index) + CARD_WIDTH / 2 - center);
+      if (offset < distance) { distance = offset; nearest = index; }
+    }
+    return nearest;
+  }
+  function createShelfTile(input, index) {
+    var element = document.createElement("div"), detail = inputDetail(input);
+    element.className = "input-tile ctv-input-tile";
+    element.setAttribute("role", "button");
+    element.setAttribute("aria-label", detail ? input.label + ", " + detail : input.label);
+    element.innerHTML = '<svg class="input-glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="' + (INPUT_ICONS[input.kind] || INPUT_ICONS.hdmi) + '"/></svg><span class="input-dot" aria-hidden="true"></span>';
+    var name = document.createElement("span");
+    name.className = "input-name";
+    name.textContent = input.label;
+    element.appendChild(name);
+    var status = document.createElement("span");
+    status.className = "input-detail ctv-input-status";
+    status.textContent = detail;
+    element.appendChild(status);
+    setPartState(element, 'connected', input.connected === true);
+    setPartState(element, 'disconnected', input.connected === false);
+    bindPointerFocus(element, function () {
+      if (!moveState && !pickerOpen && !undoState && "inputs" !== focusZone && ("shelf" !== focusZone || focusedShelf !== index)) focusShelf(index);
+    });
+    element.addEventListener("click", function () {
+      if (!moveState && !pickerOpen && !undoState) launchInput(input);
+    });
+    element.addEventListener("mousedown", function (event) { if (event.button === 0) setPressed(element, true); });
+    element.addEventListener("mouseup", function () { setPressed(element, false); });
+    element.addEventListener("mouseleave", function () { setPressed(element, false); });
+    return {el: element, input: input};
+  }
+  // Rebuilds in place; focus follows the same source, or its old position if it left.
+  // A running preview restarts on the rebuilt tile after the usual dwell.
+  function renderShelf() {
+    if (!shelf) return;
+    stopPreview();
+    var focusedId = shelfTiles[focusedShelf] && shelfTiles[focusedShelf].input.appId,
+      enabled = layoutPreset === "dock-grid" && !!window.InputSources && InputSources.shelfEnabled(localStorage),
+      entries = enabled ? inputEntries() : [],
+      next = Math.min(focusedShelf, Math.max(0, entries.length - 1));
+    shelfTrack.innerHTML = "";
+    shelfTiles = entries.map(createShelfTile);
+    shelfTiles.forEach(function (tile, index) {
+      shelfTrack.appendChild(tile.el);
+      if (tile.input.appId === focusedId) next = index;
+    });
+    shelf.hidden = !shelfTiles.length;
+    shelf.setAttribute("aria-label", tr("Inputs"));
+    shelf.style.left = GRID_LEFT - SHELF_INSET + "px";
+    shelf.style.top = SHELF_TOP + "px";
+    shelf.style.width = GRID_WIDTH + SHELF_INSET * 2 + "px";
+    focusedShelf = next;
+    shelfLayout = null;
+    if ("shelf" === focusZone) shelfTiles.length ? focusShelf(focusedShelf) : focusTile(rowFor(focusedTile) === 0 ? focusedTile : 0);
+    else layoutShelf();
+  }
+  // Applies the grow-and-push geometry; skipped when nothing changed since the last pass.
+  // Tiles snap to their final size (sharp text at rest) and a compositor-only transform
+  // animates from where they were on screen, so growing never relayouts per frame.
+  function layoutShelf() {
+    if (!shelf) return;
+    var key = ("shelf" === focusZone ? focusedShelf : -1) + ":" + shelfTiles.length;
+    if (key === shelfLayout) return;
+    var animate = shelfLayout !== null && !shelf.hidden;
+    shelfLayout = key;
+    // Measured against the track, so a shelf scroll in flight is not added twice.
+    function boxes() {
+      var origin = shelfTrack.getBoundingClientRect();
+      return shelfTiles.map(function (tile) {
+        var box = tile.el.getBoundingClientRect();
+        return { x: box.left - origin.left + box.width / 2, y: box.top - origin.top + box.height / 2, width: box.width, height: box.height };
+      });
+    }
+    var before = animate ? boxes() : null;
+    shelfTiles.forEach(function (tile, index) {
+      var grown = shelfTileWidth(index) === SHELF_FOCUS_WIDTH;
+      // Everything but transform keeps style.css's transitions, so the focus fill still fades.
+      tile.el.style.webkitTransition = tile.el.style.transition = SHELF_FADES;
+      tile.el.style.webkitTransform = tile.el.style.transform = "none";
+      tile.el.style.left = shelfTileLeft(index) + "px";
+      tile.el.style.width = shelfTileWidth(index) + "px";
+      tile.el.style.height = (grown ? SHELF_FOCUS_HEIGHT : SHELF_TILE_HEIGHT) + "px";
+    });
+    if (animate) {
+      var after = boxes(), scale = shelfTrack.offsetWidth ? shelfTrack.getBoundingClientRect().width / shelfTrack.offsetWidth : 1;
+      shelfTiles.forEach(function (tile, index) {
+        var from = before[index], to = after[index];
+        if (!to.width || !to.height || Math.abs(from.x - to.x) < 0.5 && Math.abs(from.y - to.y) < 0.5 && Math.abs(from.width - to.width) < 0.5 && Math.abs(from.height - to.height) < 0.5) return;
+        // Centre-based, so the default transform origin (also used by the press dip) works.
+        tile.el.style.webkitTransform = tile.el.style.transform = "translate(" + (from.x - to.x) / scale + "px," + (from.y - to.y) / scale + "px) scale(" + from.width / to.width + "," + from.height / to.height + ")";
+      });
+      shelfTrack.offsetWidth;
+    }
+    shelfTiles.forEach(function (tile) {
+      tile.el.style.webkitTransition = tile.el.style.transition = "";
+      tile.el.style.webkitTransform = tile.el.style.transform = "";
+    });
+    scrollShelf();
+  }
+  // Whole-tile scrolling over variable widths: keep the first visible tile unless the
+  // focused one would leave the window, and never scroll past the last tile.
+  function scrollShelf() {
+    var last = shelfTiles.length - 1,
+      first = Math.round(shelfOffset / (SHELF_TILE_WIDTH + SHELF_GAP));
+    function span(from, to) { return shelfTileLeft(to) + shelfTileWidth(to) - shelfTileLeft(from); }
+    first = Math.max(0, Math.min(first, focusedShelf, last));
+    while (first < focusedShelf && span(first, focusedShelf) > GRID_WIDTH) first++;
+    while (first > 0 && span(first - 1, last) <= GRID_WIDTH) first--;
+    shelfOffset = last < 0 ? 0 : shelfTileLeft(first) - SHELF_INSET;
+    shelfTrack.style.webkitTransform = shelfTrack.style.transform = "translateX(" + -shelfOffset + "px)";
+    shelf.classList.toggle("overflow-left", first > 0);
+    shelf.classList.toggle("overflow-right", last >= 0 && span(first, last) > GRID_WIDTH);
+  }
+  // Lower rows scroll the shelf beneath the header, and the translucent Inputs
+  // dropdown overlaps it; fade it in both cases rather than stack content.
+  function coverShelf(covered) {
+    if (!shelf) return;
+    var header = document.querySelector("header");
+    shelf.classList.toggle("covered", covered || SHELF_TOP + SHELF_WINDOW_TOP - scrollOffset < header.offsetTop + header.offsetHeight + 16);
+    // The video plane ignores the fade, so a covered shelf has no preview.
+    if (shelf.classList.contains("covered")) stopPreview();
+    // Classic fades the screen edges while more rows lie beyond them, so the grid reads
+    // as one continuous list rather than a cut-off page.
+    var viewport = getElement("viewport"), lastRow = tiles.length ? rowFor(tiles.length - 1) : 0;
+    viewport.classList.toggle("row-peek", layoutPreset === "dock-grid" && ("grid" === focusZone ? rowFor(focusedTile) < lastRow : scrollOffset === 0 && lastRow > 0));
+    viewport.classList.toggle("row-above", layoutPreset === "dock-grid" && scrollOffset > 0);
+  }
+  function focusShelf(index) {
+    if (!shelfTiles.length) return;
+    setFocusZone("shelf");
+    setPartState(shelfTiles[focusedShelf] && shelfTiles[focusedShelf].el, 'focused', false);
+    focusedShelf = Math.max(0, Math.min(index, shelfTiles.length - 1));
+    setPartState(shelfTiles[focusedShelf].el, 'focused', true);
+    layoutShelf();
+    scrollOffset = 0;
+    setScroll(0);
+    document.body.classList.remove("scrolled");
+    coverShelf(false);
+    clearTimeout(heroTitle.swap); heroVisible = false; heroTitle.style.opacity = "0";
+    inputPreview && inputPreview.focus(shelfTiles[focusedShelf].input);
+  }
+  window.HomeInputShelf = {
+    enabled: function () { return !!window.InputSources && InputSources.shelfEnabled(localStorage); },
+    previewEnabled: function () { return !!window.InputSources && InputSources.previewEnabled(localStorage); },
+    refresh: function () {
+      var button = getElement("homeShowInputs"), preview = getElement("homePreviewInputs");
+      if (button) button.setAttribute("aria-checked", String(window.HomeInputShelf.enabled()));
+      if (preview) preview.setAttribute("aria-checked", String(window.HomeInputShelf.previewEnabled()));
+    },
+    togglePreview: function () {
+      var error = getElement("homeAppsError");
+      try {
+        InputSources.setPreviewEnabled(localStorage, !window.HomeInputShelf.previewEnabled());
+        if (error) error.textContent = "";
+      } catch (_) { if (error) error.textContent = tr("Couldn't save changes. Please try again."); }
+      stopPreview();
+      if ("shelf" === focusZone && shelfTiles[focusedShelf]) inputPreview.focus(shelfTiles[focusedShelf].input);
+      window.HomeInputShelf.refresh();
+    },
+    toggle: function () {
+      var error = getElement("homeAppsError");
+      try {
+        InputSources.setShelfEnabled(localStorage, !window.HomeInputShelf.enabled());
+        if (error) error.textContent = "";
+      } catch (_) { if (error) error.textContent = tr("Couldn't save changes. Please try again."); }
+      renderShelf();
+      window.HomeInputShelf.refresh();
+    }
+  };
+  // Classic breaks the date after the weekday, keeping the locale's own order.
+  function classicDate(now) {
+    var full = HomeI18n.formatDate(now), weekday = HomeI18n.formatDate(now, {weekday: "long"}),
+      at = weekday && weekday !== full ? full.indexOf(weekday) : -1, rest;
+    if (at === 0) {
+      rest = full.slice(weekday.length).replace(/^[\s,，、]+/, "");
+      return rest ? weekday + "\n" + rest : full;
+    }
+    if (at > 0 && at + weekday.length === full.length) {
+      rest = full.slice(0, at).replace(/[\s,，、]+$/, "");
+      return rest ? rest + "\n" + weekday : full;
+    }
+    return full;
   }
   function updateClock() {
     var now = new Date(),
@@ -947,18 +1343,25 @@
       var time = HomeI18n.formatTime(now), period = layoutPreset === 'scenic-grid' ? time.match(/\s+(AM|PM)$/i) : null;
       getElement("clock").textContent = period ? time.slice(0, period.index) : time;
       getElement("ampm").textContent = period ? period[1] : "";
-      getElement("date").textContent = HomeI18n.formatDate(now);
+      getElement("date").textContent = layoutPreset === "dock-grid" ? classicDate(now) : HomeI18n.formatDate(now);
     } else {
       getElement("clock").textContent = (hour % 12 || 12) + ":" + ("0" + now.getMinutes()).slice(-2);
       getElement("ampm").textContent = hour < 12 ? "am" : "pm";
       getElement("date").textContent = weekdays[now.getDay()] + "  " + now.getDate() + " " + months[now.getMonth()];
     }
   }
+  function fillInputsPanel() {
+    inputsPanel.innerHTML = "";
+    inputRows = [];
+    inputEntries().forEach(function (input) {
+      if (input.kind === "tv" && inputRows.length) addInputSeparator();
+      addInputRow(INPUT_ICONS[input.kind] || INPUT_ICONS.hdmi, input.label, input.appId, input.connected);
+    });
+    return inputRows.length;
+  }
   function activateTopButton(index) {
     0 === index ? function () {
-      if (inputsPanel.innerHTML = "", inputRows = [], (window.TV_APPS && TV_APPS.inputs || []).forEach(function (e) {
-        addInputRow("M18,7V4c0,-1.1 -0.9,-2 -2,-2H8C6.9,2 6,2.9 6,4v3H5v6l3,6v3h8v-3l3,-6V7H18zM8,4h8v3h-2V5h-1v2h-2V5h-1v2H8V4z", e.label, e.appId);
-      }), CONFIG.liveTvApp && (inputRows.length && addInputSeparator(), addInputRow("M21,6h-7.59l3.29,-3.29L16,2l-4,4l-4,-4l-0.71,0.71L10.59,6H3c-1.1,0 -2,0.89 -2,2v12c0,1.1 0.9,2 2,2h18c1.1,0 2,-0.89 2,-2V8C23,6.89 22.1,6 21,6zM21,20H3V8h18V20zM9,10v8l7,-4L9,10z", tr("Live TV"), CONFIG.liveTvApp)), inputRows.length) {
+      if (fillInputsPanel()) {
         var e = sceneRect(topButtons[0]);
         inputsPanel.style.left = e.left + "px";
         inputsPanel.style.top = e.bottom + 20 + "px";
@@ -969,6 +1372,7 @@
           inputsPanel.style.top = Math.max(16, e.top - inputsPanel.offsetHeight - 20) + 'px';
         }
         inputsPanel.classList.remove("hidden");
+        coverShelf(true);
         setPartState(topButtons[focusedTopButton], 'focused', false);
         focusZone = "inputs";
         focusInput(0);
@@ -982,11 +1386,18 @@
     separator.className = "separator";
     inputsPanel.appendChild(separator);
   }
-  function addInputRow(iconPath, label, appId) {
+  function addInputRow(iconPath, label, appId, connected) {
     var element = document.createElement("div");
     element.className = "inputRow ctv-input-row";
     element.innerHTML = ht('<svg viewBox="0 0 24 24"><path d="') + iconPath + '"/></svg>';
     element.appendChild(document.createTextNode(label));
+    if (typeof connected === "boolean") {
+      var dot = document.createElement("span");
+      dot.className = "input-dot";
+      dot.setAttribute("aria-hidden", "true");
+      element.appendChild(dot);
+      setPartState(element, connected ? 'connected' : 'disconnected', true);
+    }
     var index = inputRows.length;
     bindPointerFocus(element, function () {
       if (focusedInput !== index) focusInput(index);
@@ -994,6 +1405,7 @@
     element.addEventListener("click", function () {
       closeInputs();
       launchApp(appId, label);
+      returnInput = appId;
     });
     element.appId = appId;
     element.label = label;
@@ -1012,6 +1424,7 @@
   }
   function closeInputs() {
     inputsPanel.classList.add("hidden");
+    coverShelf(false);
     focusZone = "none";
     focusTopButton(0);
   }
@@ -1049,7 +1462,12 @@
       setPartState(e, 'focused', false);
     });
     focusZone = "none";
-    focusTile(focusedTile);
+    var shelfIndex = -1;
+    shelfTiles.forEach(function (tile, index) { if (returnInput && tile.input.appId === returnInput) shelfIndex = index; });
+    restoring = true;
+    try {
+      shelfVisible() && shelfIndex >= 0 ? focusShelf(shelfIndex) : focusTile(focusedTile);
+    } finally { restoring = false; }
   }
   document.addEventListener("keyup", function (event) {
     if (window.RootLauncherRendered !== true) return;
@@ -1060,6 +1478,7 @@
     if (event.keyCode === KEY_OK && (okPressed = false, okHoldTimer)) {
       clearTimeout(okHoldTimer);
       okHoldTimer = null;
+      clearPressed();
       var tile = tiles[focusedTile];
       "grid" === focusZone && tile && !moveState && activateTile(tile);
     }
@@ -1108,11 +1527,28 @@
           var input = inputRows[focusedInput];
           closeInputs();
           launchApp(input.appId, input.label);
+          returnInput = input.appId;
         } else {
           if (key !== KEY_BACK && 27 !== key && 37 !== key && 39 !== key) {
             return;
           }
           closeInputs();
+        }
+      } else if ("shelf" === focusZone) {
+        if (37 === key) {
+          focusedShelf > 0 ? focusShelf(focusedShelf - 1) : edgeBump('shelf-left');
+        } else if (39 === key) {
+          focusedShelf < shelfTiles.length - 1 ? focusShelf(focusedShelf + 1) : edgeBump('shelf-right');
+        } else if (38 === key) {
+          focusTopButton(nearestTopButton(shelfCenter(focusedShelf)));
+        } else if (40 === key) {
+          focusTile(nearestDockTile(shelfCenter(focusedShelf)));
+        } else if (key === KEY_OK) {
+          launchInput(shelfTiles[focusedShelf].input, shelfTiles[focusedShelf].el);
+        } else if (key === KEY_BACK || 27 === key) {
+          focusTile(0 === rowFor(focusedTile) ? focusedTile : 0);
+        } else {
+          return;
         }
       } else if ("top" === focusZone) {
         if (layoutPreset === 'side-grid' && (38 === key || 40 === key)) {
@@ -1125,7 +1561,10 @@
           if (focusedTopButton === 2 && layoutGeometry.ribbon && layoutGeometry.ribbon.edgeNavigation === 'shortcuts') { focusTile(ribbonStart); }
           else focusTopButton(focusedTopButton + 1);
         } else if (40 === key) {
-          focusTile(0 === rowFor(focusedTile) ? focusedTile : 0);
+          if (shelfVisible()) {
+            var buttonRect = sceneRect(topButtons[focusedTopButton]);
+            focusShelf(nearestShelf(buttonRect.left + buttonRect.width / 2));
+          } else focusTile(0 === rowFor(focusedTile) ? focusedTile : 0);
         } else if (key === KEY_OK) {
           activateTopButton(focusedTopButton);
         } else if (key !== KEY_BACK) {
@@ -1138,18 +1577,19 @@
           if (layoutPreset === 'scenic-grid') stepRibbon(-1);
           else if (column > 0) focusTile(focusedTile - 1);
           else if (layoutPreset === 'side-grid') focusTopButton(focusedTopButton);
+          else edgeBump('left');
         } else if (39 === key) {
           if (layoutPreset === 'scenic-grid') stepRibbon(1);
-          else column < columnCount - 1 && focusedTile < lastIndex && focusTile(focusedTile + 1);
+          else if (column < columnCount - 1 && focusedTile < lastIndex) focusTile(focusedTile + 1);
+          else edgeBump('right');
         } else if (38 === key) {
-          0 === rowFor(focusedTile) ? focusTopButton((tileCenter = tileLeft(focusedTile) + CARD_WIDTH / 2, nearestButton = 0, nearestDistance = 1 / 0, topButtons.forEach(function (e, t) {
-            var n = sceneRect(e),
-              a = Math.abs(n.left + n.width / 2 - tileCenter);
-            a < nearestDistance && (nearestDistance = a, nearestButton = t);
-          }), nearestButton)) : focusTile(focusedTile - columnCount);
+          if (0 !== rowFor(focusedTile)) focusTile(focusedTile - columnCount);
+          else if (shelfVisible()) focusShelf(nearestShelf(tileLeft(focusedTile) + CARD_WIDTH / 2));
+          else focusTopButton(nearestTopButton(tileLeft(focusedTile) + CARD_WIDTH / 2));
         } else if (40 === key) {
-          rowFor(focusedTile) < rowFor(lastIndex) && focusTile(Math.min(focusedTile + columnCount, lastIndex));
+          rowFor(focusedTile) < rowFor(lastIndex) ? focusTile(Math.min(focusedTile + columnCount, lastIndex)) : edgeBump('down');
         } else if (key === KEY_OK) {
+          setPressed(tiles[focusedTile] && tiles[focusedTile].el, true);
           okHoldTimer = setTimeout(function () {
             okHoldTimer = null;
             beginMoving(tiles[focusedTile]);
@@ -1158,7 +1598,6 @@
           return;
         }
       }
-      var tileCenter, nearestButton, nearestDistance;
       event.preventDefault();
     }
   });
@@ -1190,10 +1629,26 @@
       // before delivering the next visible/relaunch event. Dialog owners stay separate.
       if (!document.hidden) ThemeRuntime.resume('visibility');
     }
-    document.hidden || restoreFocus();
+    document.hidden ? stopPreview() : restoreFocus();
+  });
+  // A system overlay can take window focus without hiding Home; resume the preview after it.
+  window.addEventListener("blur", stopPreview);
+  window.addEventListener("focus", function () {
+    if ("shelf" === focusZone && shelfTiles[focusedShelf] && inputPreview) inputPreview.focus(shelfTiles[focusedShelf].input);
   });
   initializeApps();
   layoutTiles();
+  renderShelf();
+  if (inputSources) {
+    inputSources.onchange(function () {
+      renderShelf();
+      if ("inputs" === focusZone) {
+        var focusedId = inputRows[focusedInput] && inputRows[focusedInput].appId, next = focusedInput;
+        fillInputsPanel() ? (inputRows.forEach(function (row, index) { if (row.appId === focusedId) next = index; }), focusInput(next)) : closeInputs();
+      }
+    });
+    inputSources.start();
+  }
   updateClock();
   setInterval(updateClock, 1e4);
   callLuna("luna://com.palm.connectionmanager/getStatus", {

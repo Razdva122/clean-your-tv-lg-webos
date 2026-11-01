@@ -23,9 +23,13 @@ const base=process.env.PREVIEW_URL||'http://127.0.0.1:8876';
    await page.evaluate(()=>{HomeLayoutState.setThemeLayout({preset:'dock-grid',columns:5,allowColumnOverride:true,spacingScale:1,textScale:1,focusScale:1.1});HomeLayoutState.setColumns(5);});
    await page.evaluate(()=>HomeLayoutState.setColumns(8));
    const target=page.locator('#tiles .item').nth(2).locator('.card');await target.hover();
-   const nearest=await target.evaluate(el=>{const r=el.getBoundingClientRect(),x=r.left+r.width/2;return Array.from(document.querySelectorAll('#topButtons .pill')).map(b=>{const p=b.getBoundingClientRect();return {id:b.id,d:Math.abs(p.left+p.width/2-x)};}).sort((a,b)=>a.d-b.d)[0].id;});
+   const nearestTo=(el,selector)=>el.evaluate((el,selector)=>{const r=el.getBoundingClientRect(),x=r.left+r.width/2;return Array.from(document.querySelectorAll(selector)).map((b,i)=>{const p=b.getBoundingClientRect();return {id:b.id||String(i),d:Math.abs(p.left+p.width/2-x)};}).sort((a,b)=>a.d-b.d)[0].id;},selector);
+   const nearestSource=await nearestTo(target,'.ctv-input-tile');
    const selected=await target.boundingBox(),glass=await page.locator('#glass').boundingBox();
    assert(glass&&Math.abs(selected.x+selected.width/2-glass.x-glass.width/2)<1&&Math.abs(selected.y+selected.height/2-glass.y-glass.height/2)<1,'scaled focus frame follows the selected card');
+   // Classic's Inputs shelf sits between the dock and the header shortcuts.
+   await page.keyboard.press('ArrowUp');assert.equal(await page.locator('.ctv-input-tile').evaluateAll(tiles=>String(tiles.findIndex(t=>t.classList.contains('is-focused')))),nearestSource,'upward navigation selects the visually nearest input');
+   const nearest=await nearestTo(page.locator('.ctv-input-tile.is-focused'),'#topButtons .pill');
    await page.keyboard.press('ArrowUp');assert.equal(await page.locator('#topButtons .focused').getAttribute('id'),nearest,'upward navigation selects the visually nearest shortcut');
    await page.locator('#btnInputs').click();const inputs=await page.locator('#inputsPanel').boundingBox(),button=await page.locator('#btnInputs').boundingBox();
    // Opening Inputs removes the shortcut's focus growth; allow that small visual inset.

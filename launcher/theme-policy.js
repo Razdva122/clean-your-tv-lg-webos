@@ -4,8 +4,8 @@
 })(this, function () {
   'use strict';
 
-  var parts = ['home', 'ambient', 'hero', 'header', 'greeting', 'clock', 'period', 'divider', 'date', 'shortcut', 'input-icon', 'network-icon', 'settings-icon', 'dock', 'position', 'focus', 'card', 'icon', 'label', 'library', 'library-panel', 'library-close', 'library-row', 'inputs', 'input-row'];
-  var states = ['focused', 'selected', 'moving', 'glyph', 'light', 'dark', 'mid', 'bright', 'wide'];
+  var parts = ['home', 'ambient', 'hero', 'header', 'greeting', 'clock', 'period', 'divider', 'date', 'shortcut', 'input-icon', 'network-icon', 'settings-icon', 'dock', 'position', 'focus', 'card', 'icon', 'label', 'library', 'library-panel', 'library-close', 'library-row', 'inputs', 'input-row', 'input-shelf', 'input-tile', 'input-status', 'input-preview'];
+  var states = ['focused', 'selected', 'moving', 'glyph', 'light', 'dark', 'mid', 'bright', 'wide', 'connected', 'disconnected', 'previewing'];
   var properties = {
     'color': 'color',
     'background-color': 'color',

@@ -65,6 +65,23 @@ html, body {
   transition: opacity 600ms ease;
   pointer-events: none;
 }
+/* Classic bakes the settled glow into #ambientBase (app.js), so the two full-screen
+   layers only exist while the colour crossfades. */
+.ambient-base {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  pointer-events: none;
+}
+.ctv-theme-suspended .ambient-base {
+  visibility: hidden;
+}
+#homeSurface:not(.ctv-theme-active) .ambient.baked {
+  opacity: 0 !important;
+  transition: none !important;
+}
 /* ---- top shelf ------------------------------------------------------------------------------- */
 #hero {
   position: absolute;
@@ -72,7 +89,7 @@ html, body {
   line-height: 1;
   white-space: nowrap;
   opacity: 0;
-  transition: opacity 260ms ease, transform 200ms ease;
+  transition: opacity 240ms cubic-bezier(0.2, 0.8, 0.2, 1), transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
   pointer-events: none;
 }
 /* ---- header ---------------------------------------------------------------------------------- */
@@ -85,7 +102,7 @@ header {
   justify-content: space-between;
   align-items: flex-end;
   z-index: 3;
-  transition: opacity 300ms ease, transform 360ms cubic-bezier(0.25, 0.8, 0.3, 1);
+  transition: opacity 300ms ease, transform 360ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 /* Below the dock: the header slides away so the grid gets the whole screen. */
 body.scrolled header {
@@ -128,7 +145,7 @@ body.scrolled header {
   padding: 0 40px 0 32px;
   border: 2px solid rgba(255, 255, 255, 0.22);
   white-space: nowrap;
-  transition: background 160ms ease, color 160ms ease, transform 200ms ease;
+  transition: background 160ms ease, color 160ms ease, transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .pill svg {
   background-size: contain;
@@ -156,7 +173,9 @@ body.scrolled header {
   right: 0;
   bottom: 0;
   left: 0;
-  transition: transform 420ms cubic-bezier(0.25, 0.8, 0.3, 1);
+  transition: transform 360ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* Its own layer: scrolling and focus changes recomposite instead of re-rastering tiles. */
+  will-change: transform;
 }
 /* The tvOS lighter band behind the dock row. */
 #dockBand {
@@ -173,6 +192,13 @@ body.scrolled header {
 .item.shown {
   opacity: 1;
   transform: none;
+}
+/* Classic tiles are their own layers: the focus zoom then repaints one tile instead of
+   4K tiles of the whole grid. These layers are unscaled at rest (the card zoom paints
+   inside them, and input tiles only scale during their FLIP), so text stays sharp. */
+#homeSurface[data-layout="dock-grid"] #tiles .item,
+#homeSurface[data-layout="dock-grid"] .input-tile {
+  will-change: transform;
 }
 .item.dock .name {
   display: none;
@@ -203,7 +229,8 @@ body.editing #glass {
   width: 100%;
   /* Height and item width come from the shared geometry in app.js. */
   overflow: hidden;
-  transition: transform 180ms ease;
+  /* One shared glide for growing and shrinking, in step with the glass frame. */
+  transition: transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 /* Faint rim so black tiles (Apple TV) still read against the black page. */
 .card::after {
@@ -216,7 +243,11 @@ body.editing #glass {
 }
 .item.focused .card {
   transform: scale(1.1);
-  transition: transform 260ms cubic-bezier(0.34, 1.6, 0.5, 1);
+}
+/* OK press: a short dip that never delays the launch. */
+.item.focused.pressed .card {
+  transform: scale(1.056);
+  transition-duration: 120ms;
 }
 .card img {
   position: absolute;
@@ -256,7 +287,8 @@ body.editing #glass {
   overflow: hidden;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 180ms ease, transform 520ms cubic-bezier(0.3, 1.35, 0.45, 1);
+  transition: opacity 180ms ease, transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: transform;
 }
 /* Bright top specular. */
 #glass::before {
@@ -296,6 +328,199 @@ body.editing #glass {
 .separator {
   height: 2px;
   margin: 12px 24px;
+}
+.inputRow .input-dot {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  margin-left: 24px;
+  border-radius: 50%;
+}
+/* ---- inputs shelf (Classic) ------------------------------------------------------------------ */
+/* app.js owns left/top/width and tile positions; tiles scale inside the clipped window. */
+#inputShelf {
+  position: absolute;
+  height: 296px;
+  transition: opacity 260ms ease;
+}
+#inputShelf[hidden] {
+  display: none;
+}
+#inputShelf.covered {
+  opacity: 0;
+  pointer-events: none;
+}
+#inputShelfCaption {
+  position: absolute;
+  left: 24px;
+  top: 0;
+  line-height: 28px;
+  white-space: nowrap;
+}
+#inputShelfWindow {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 28px;
+  /* 12px above the tiles and room below the focused tile for its shadow. */
+  height: 268px;
+  overflow: hidden;
+}
+/* Fades only the peeking next tile; whole-tile scrolling never clips the left edge. */
+/* Decorative: engines without -webkit-mask-image show the unfaded peeking tile. */
+/* doiuse-disable css-masks */
+#inputShelf.overflow-right #inputShelfWindow {
+  -webkit-mask-image: linear-gradient(90deg, #000 93%, transparent);
+}
+/* doiuse-enable css-masks */
+#inputShelfTrack {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transition: transform 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+/* app.js sets each tile's left, width and height: the focused tile grows (no scale
+   transform at rest, so its text stays sharp) and later tiles move right. The change
+   snaps, and app.js animates it with a transform from the old box (FLIP), so growing
+   never relayouts per frame. Contents anchor to the tile's edges so they fit both sizes.
+   app.js's SHELF_FADES mirrors these transitions minus transform. */
+.input-tile {
+  position: absolute;
+  top: 12px;
+  transition: transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1), background 160ms ease, color 160ms ease, opacity 200ms ease;
+}
+.input-tile.pressed {
+  transform: scale(0.96);
+  transition-duration: 120ms;
+}
+.input-glyph,
+.input-tile .input-dot,
+.input-name,
+.input-detail {
+  transition: color 160ms ease;
+}
+.input-glyph {
+  position: absolute;
+  left: 24px;
+  top: 22px;
+  width: 40px;
+  height: 40px;
+}
+.input-tile .input-dot {
+  position: absolute;
+  top: 34px;
+  right: 24px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+}
+.input-tile.focused .input-glyph {
+  left: 28px;
+  top: 26px;
+  width: 48px;
+  height: 48px;
+}
+.input-tile.focused .input-dot {
+  top: 40px;
+  right: 28px;
+}
+.input-dot {
+  display: none;
+}
+.connected .input-dot {
+  display: block;
+}
+.input-name,
+.input-detail {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.input-name {
+  bottom: 50px;
+  line-height: 36px;
+}
+.input-detail {
+  bottom: 20px;
+  line-height: 26px;
+}
+.input-tile.focused .input-name,
+.input-tile.focused .input-detail {
+  left: 28px;
+  right: 28px;
+}
+.input-tile.focused .input-name {
+  bottom: 62px;
+  line-height: 44px;
+}
+.input-tile.focused .input-detail {
+  bottom: 26px;
+  line-height: 30px;
+}
+/* Live preview of the focused input. webOS draws the picture on a hardware video plane that
+   follows transforms but ignores rounded clipping, masks and opacity, so the picture keeps
+   square corners inset from the tile's rounded edge, and covered shelves stop it instead. */
+.input-preview {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  bottom: 10px;
+  left: 10px;
+  overflow: hidden;
+}
+.input-preview video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* The focused tile's frame is exactly 16:9 (384x216), so filling never distorts
+     and the TV's video scaler never has to crop. */
+  object-fit: fill;
+}
+.input-tile.previewing .input-glyph,
+.input-tile.previewing .input-dot {
+  visibility: hidden;
+}
+/* Classic fades the partly visible next row so it reads as more content, not a cut-off edge. */
+#viewport::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 120px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.78));
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 300ms ease;
+}
+#homeSurface:not(.ctv-theme-active) #viewport.row-peek::after {
+  opacity: 1;
+}
+/* Rows scrolled above the screen edge fade out under it. */
+#viewport::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 1;
+  height: 96px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0));
+  opacity: 0;
+  transition: opacity 240ms ease;
+  pointer-events: none;
+}
+#homeSurface:not(.ctv-theme-active) #viewport.row-above::before {
+  opacity: 1;
+}
+/* Classic keeps the localized date on two lines: weekday, then month and day. */
+#homeSurface[data-layout="dock-grid"] #date {
+  white-space: pre-line;
 }
 /* ---- toast ----------------------------------------------------------------------------------- */
 #toast {
@@ -465,7 +690,8 @@ body.editing header {
 /* Old engines keep normal motion; this optional accessibility override is safe to ignore. */
 /* doiuse-disable prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
-  .item, .card, #glass, .name, #stage {
+  .item, .card, #glass, .name, #stage, #hero, .pill, #inputShelfTrack, .input-tile,
+  .input-glyph, .input-dot, .input-name, .input-detail, #viewport {
     transition: none !important;
     animation: none !important;
   }
@@ -604,11 +830,37 @@ body.editing #homeSurface[data-layout="scenic-grid"] .ctv-position { display: no
 #homeSurface[data-layout="scenic-grid"] .item.moving::after { content: none; }
 
 /* Remote focus follows every key immediately; pointer movement keeps its transitions.
-   In particular, repeated arrows must not continually retarget an unfinished scroll. */
-#homeSurface.ctv-remote-navigation #stage,
-#homeSurface.ctv-remote-navigation #glass,
-#homeSurface.ctv-remote-navigation .item,
-#homeSurface.ctv-remote-navigation .card,
-#homeSurface.ctv-remote-navigation .name {
+   In particular, repeated arrows must not continually retarget an unfinished scroll.
+   The focused card still grows in place; app.js lands the glass on it at card size so
+   the frame grows with the card instead of gliding behind it. */
+#homeSurface.ctv-remote-navigation:not(.ctv-scroll-glide) #stage,
+#homeSurface.ctv-remote-navigation .item {
   transition: none !important;
+}
+/* A single tap glides to the next row; app.js removes this during held arrows. */
+#homeSurface.ctv-scroll-glide #stage {
+  transition: transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+/* Edge bump: a press that cannot move nudges the grid or shelf and springs back.
+   It moves the untransformed wrappers, so the inline scroll and glass transforms stay
+   untouched and the bump runs on the compositor. */
+#homeSurface.ctv-edge-bump.bump-down #viewport {
+  animation: ctv-bump-down 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+#homeSurface.ctv-edge-bump.bump-left #viewport,
+#homeSurface.ctv-edge-bump.bump-shelf-left #inputShelfWindow {
+  animation: ctv-bump-left 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+#homeSurface.ctv-edge-bump.bump-right #viewport,
+#homeSurface.ctv-edge-bump.bump-shelf-right #inputShelfWindow {
+  animation: ctv-bump-right 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes ctv-bump-down {
+  40% { transform: translateY(10px); }
+}
+@keyframes ctv-bump-left {
+  40% { transform: translateX(-10px); }
+}
+@keyframes ctv-bump-right {
+  40% { transform: translateX(10px); }
 }

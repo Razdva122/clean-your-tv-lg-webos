@@ -2482,3 +2482,20 @@ if (window.HomeI18n) window.HomeI18n.add({
     "Invalid Add app visibility": "Neplatná viditelnost dlaždice Přidat aplikaci"
   }
 });
+
+// Root Settings switches for the shared Classic Inputs shelf and its live preview.
+if (window.HomeI18n) window.HomeI18n.add({
+  "en": {"Show inputs on Home": "Show inputs on Home", "Preview inputs on focus": "Preview inputs on focus"},
+  "cs": {"Show inputs on Home": "Zobrazit vstupy na Home", "Preview inputs on focus": "Náhled vybraného vstupu"},
+  "de": {"Show inputs on Home": "Eingänge auf Home anzeigen", "Preview inputs on focus": "Vorschau des ausgewählten Eingangs"},
+  "es": {"Show inputs on Home": "Mostrar entradas en Home", "Preview inputs on focus": "Vista previa de la entrada seleccionada"},
+  "pt-BR": {"Show inputs on Home": "Mostrar entradas no Home", "Preview inputs on focus": "Pré-visualizar a entrada selecionada"},
+  "fr": {"Show inputs on Home": "Afficher les entrées sur Home", "Preview inputs on focus": "Aperçu de l’entrée sélectionnée"},
+  "it": {"Show inputs on Home": "Mostra ingressi su Home", "Preview inputs on focus": "Anteprima dell’ingresso selezionato"},
+  "ko": {"Show inputs on Home": "Home에 입력 표시", "Preview inputs on focus": "선택한 입력 미리보기"},
+  "hi": {"Show inputs on Home": "Home पर इनपुट दिखाएँ", "Preview inputs on focus": "चुने गए इनपुट का पूर्वावलोकन"},
+  "pl": {"Show inputs on Home": "Pokaż wejścia na Home", "Preview inputs on focus": "Podgląd wybranego wejścia"},
+  "ru": {"Show inputs on Home": "Показывать входы на Home", "Preview inputs on focus": "Предпросмотр выбранного входа"},
+  "zh-Hans": {"Show inputs on Home": "在 Home 上显示输入源", "Preview inputs on focus": "预览所选输入源"},
+  "zh-Hant": {"Show inputs on Home": "在 Home 顯示輸入來源", "Preview inputs on focus": "預覽所選輸入來源"}
+});
