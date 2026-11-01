@@ -30,6 +30,16 @@ successful TV work into a failed command. `doctor --report` remains explicit.
 Review every report before sharing. The special Home-button recording retains
 its separately documented application-ID/timing scope.
 
+## Root admission and connection advice (unreleased)
+
+Optional `guidance` contains only an allowlisted advice code and a Boolean pending
+flag. Root `tv.root_capabilities` uses two fixed check keys and reasons: readable,
+rejected, invalid-reply, unconfirmed or not-checked. `root_capability_codes` retains
+only bounded numeric Luna error codes for these keys. Raw service replies and
+Home routes are excluded. Current and retained first-failure projections are
+revalidated; these fields cannot grant recovery authority or prove compatibility.
+See the [preflight and guidance contract](INSTALLER-PREFLIGHT-HELP.md).
+
 ## New Root worker evidence
 
 Newly built Root coordinator code retains only a fixed worker exception category

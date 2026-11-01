@@ -62,6 +62,23 @@ class BridgeTests(unittest.TestCase):
         callbacks.ask('Unrelated question [y/N]: ')
         self.assertNotIn('options', native.events[-1])
 
+    def test_failure_help_is_localized_semantic_advice_without_profile_data(self):
+        from cytv import i18n
+        from cytv.failure_help import for_error
+        self.addCleanup(i18n.set_language,'en');i18n.set_language('ru')
+        module=self.module()
+        class Native:
+            def __init__(self):self.events=[]
+            def emit(self,raw):self.events.append(json.loads(raw))
+        native=Native();console=module.AndroidConsole(module.Callbacks(native))
+        guide=for_error(TimeoutError('PRIVATE-PASSWORD'),'ssh-connect',{'edition':'root','host':'PRIVATE-HOST'}, {'action':'install'})
+        console.failure_help(guide)
+        event=native.events[-1]
+        self.assertEqual((event['kind'],event['code']),('failure-help','pending-operation'))
+        self.assertTrue(event['pending']);self.assertFalse(event['canEditConnection'])
+        self.assertNotEqual(event['title'],guide['title'])
+        self.assertNotIn('PRIVATE',json.dumps(native.events))
+
     def test_cli_errors_reach_android_as_error_events(self):
         module = self.module()
         class Native:

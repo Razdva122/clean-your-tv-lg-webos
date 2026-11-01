@@ -12,10 +12,10 @@ ROOT_REQUIREMENTS = ('root-user', 'python3', 'luna-send', 'apps-directory',
                      'luna-services-directory', 'python-json', 'python-fcntl', 'python-version', 'node-version')
 
 REASONS = ('unknown', 'user-error', 'ssh-command-failed', 'ssh-unreachable',
-           'ssh-authentication', 'ssh-identity-changed', 'host-runtime',
+           'ssh-authentication', 'ssh-identity-changed', 'ssh-trust-record', 'ssh-identity-unverified', 'host-runtime',
            'helper-running', 'helper-state-unverified', 'root-requirements',
            'pending-operation', 'root-operation-unconfirmed', 'version-mismatch',
-           'inventory-unavailable', 'graphics-unverified')
+           'inventory-unavailable', 'graphics-unverified', 'root-home-interfaces')
 ACTIONS = ('recover', 'install', 'uninstall', 'restore', 'status', 'doctor', 'home-diagnostics',
            'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access',
            'recover-system-rollback', 'replace-system-updater', 'clean-wam-cache')
@@ -79,8 +79,17 @@ def tv_summary(value):
         result['arm32_supported'] = value['arm32_supported']
     if 'root_requirements' in value:
         checks = mapping(value['root_requirements'])
+        from .root_capabilities import CALLS
         result['root_requirements'] = {key: choice(checks[key], ('pass', 'fail', 'unknown'))
-                                       for key in ROOT_REQUIREMENTS if key in checks}
+                                       for key in (*ROOT_REQUIREMENTS,*CALLS) if key in checks}
+    if 'root_capabilities' in value:
+        from .root_capabilities import CALLS, REASONS
+        result['root_capabilities'] = {key: choice(mapping(value['root_capabilities']).get(key), REASONS) for key in CALLS}
+    if 'root_capability_codes' in value:
+        from .root_capabilities import CALLS
+        codes = mapping(value['root_capability_codes'])
+        result['root_capability_codes'] = {key: codes[key] for key in CALLS
+            if type(codes.get(key)) is int and -(2**31)<=codes[key]<2**31}
     if 'components' in value:
         result['components'] = {key: item for key, item in mapping(value['components']).items()
                                  if key in COMPONENTS.values() and version(item)}
@@ -173,11 +182,14 @@ def failure_summary(value):
     result = {'action': choice(value.get('action'), ACTIONS),
               'phase': choice(value.get('phase'), PHASES),
               'reason_code': choice(value.get('reason_code'), REASONS)}
-    error_types = ('UserError', 'TVCommandError', 'TVRejected', 'PythonCacheError',
+    error_types = ('RootCapabilityError', 'UserError', 'TVCommandError', 'TVRejected', 'PythonCacheError',
                    'PythonPreflightError', 'DeveloperKeyError', 'TVConnectionError',
                    'AuthenticationException', 'BadHostKeyException', 'NoValidConnectionsError',
                    'OSError', 'RuntimeError', 'ValueError', 'TimeoutError', 'Exception')
     result['error_type'] = choice(value.get('error_type'), error_types, 'Exception')
+    if 'guidance' in value:
+        from .failure_help import report_summary
+        result['guidance'] = report_summary(value['guidance'])
     command = mapping(value.get('ssh_command'))
     if type(command.get('exit_status')) is int and -1 <= command['exit_status'] <= 255:
         result['ssh_command'] = {'exit_status': command['exit_status']}

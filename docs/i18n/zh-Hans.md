@@ -19,6 +19,8 @@ No-root 和 Root 是适用于不同电视配置的同等选项。使用 LG 开�
 
 Root 需要可用的 Settings Service 和 System Profile Home 接口（`com.webos.service.systemprofile`）；仅有 root 权限并不能证明兼容性。
 
+> 未发布的安装程序：Root 在准备专用 Python 或安装包之前检查必需的 Home 接口。检查失败会停止安装；通过检查并不能证明固件兼容或实体 Home 键正常。已知连接错误会显示针对性提示。请保留连接配置、信任记录和恢复数据；未完成的操作需要经过验证的恢复，不要盲目重试。保存并检查诊断报告。[详情](../development/INSTALLER-PREFLIGHT-HELP.md)。
+
 ## 安装之前
 
 安装期间保持电视开机，将电脑与电视连接到同一个可信本地网络。完成后无需电脑持续开机。兼容性取决于型号、固件和遥控器；Root 仍有待完成的实机检查。

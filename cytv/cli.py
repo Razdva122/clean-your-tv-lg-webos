@@ -63,6 +63,14 @@ def parser():
     return result
 
 
+def explain_failure(write, store, profile, phase, error):
+    from .failure_help import for_error
+    pending = store.diagnostic_pending if hasattr(store, 'diagnostic_pending') else store.pending(profile) if profile else None
+    help = for_error(error, phase, profile, pending)
+    if help:
+        write.failure_help(help)
+
+
 def choose_profile(args, store, ask, write, search, inspect):
     profiles = [p for p in store.profiles() if not args.edition or p['edition'] == args.edition]
     if not args.host and len(profiles) == 1 and (args.command != 'install' or args.non_interactive):
@@ -328,7 +336,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     installer.select_graphics()
                     phase = 'inspect-installation'
                     try:
-                        installer.preflight(install=True)
+                        installer.preflight(install=True, home_interfaces=True)
                     except ExistingRoot:
                         if args.migrate_home:
                             raise UserError('For Root reinstallation, omit --migrate-home. cytv will read a fresh TV inventory before replacing Root; the existing installation was left unchanged.')
@@ -484,7 +492,10 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 write('Cache cleanup request accepted. Recheck free space before retrying installation; no reboot or setup resume was requested.')
             elif args.command == 'doctor':
                 phase = 'doctor'
-                installer.preflight()
+                if profile['edition']=='root' and not store.pending(profile):
+                    installer.preflight(home_interfaces=True)
+                else:
+                    installer.preflight()
                 write('Connection and basic requirements passed. This does not certify hardware compatibility.')
                 result = installer.status()
                 write.raw(json.dumps(result, indent=2))
@@ -528,6 +539,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
         if args.command == 'uninstall' and phase == 'uninstall' and profile['edition'] == 'root' and store.pending(profile):
             from .recovery import plan, BLOCKED
             plan(write, 'blocked', BLOCKED)
+        explain_failure(write, store, profile, phase, exc)
         diagnostics.suggest_issue(write, store, args.command, profile, phase, exc, tv_info, checks=checks.results, status=tv_info.get('status'))
         return 2
     except Exception as exc:
@@ -540,10 +552,11 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             'ModuleNotFoundError': 'Source dependencies are missing. Install cytv/requirements.txt or use a built cytv executable.',
         }
         write.error('Could not read the TV applications. Keep the TV on and accept its pairing request. Installation has not started.'
-              if phase in ('pair-tv', 'read-inventory') and kind != 'ModuleNotFoundError' else hints.get(kind, 'Operation could not be confirmed. Check TV connectivity and run cytv status or cytv doctor. Retain local and TV recovery state; do not retry blindly.'))
+              if phase in ('pair-tv', 'read-inventory') and kind != 'ModuleNotFoundError' else hints.get(kind, 'Operation could not be confirmed. Save the diagnostic report and keep recovery data; do not retry blindly.'))
         if args.command == 'uninstall' and phase == 'uninstall' and profile['edition'] == 'root' and store.pending(profile):
             from .recovery import plan, BLOCKED
             plan(write, 'blocked', BLOCKED)
+        explain_failure(write, store, profile, phase, exc)
         diagnostics.suggest_issue(write, store, args.command, profile, phase, exc, tv_info, checks=checks.results, status=tv_info.get('status'))
         return 1
     finally:

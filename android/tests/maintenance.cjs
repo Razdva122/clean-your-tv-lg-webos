@@ -156,6 +156,61 @@ let browser;
     assert.equal(await page.locator('.tv-checks').count(),0);
     await page.close();
   }
+  const {execFileSync}=require('node:child_process');
+  const guides=JSON.parse(execFileSync(process.env.CYTV_PYTHON||'python3',['-c',`
+import json
+from cytv import i18n
+from cytv.failure_help import GUIDES
+result={}
+for language in i18n.LANGUAGES:
+ if language=='auto':continue
+ i18n.set_language(language);result[language]={}
+ for code,(title,detail,next_step,edit) in GUIDES.items():
+  result[language][code]={'kind':'failure-help','code':code,'title':i18n.translate(title),'detail':i18n.translate(detail),'nextStep':i18n.translate(next_step),'canEditConnection':edit,'pending':code=='pending-operation'}
+print(json.dumps(result))
+`],{cwd:path.resolve(__dirname,'../..'),encoding:'utf8'}));
+  for(const [locale,dictionary] of Object.entries(words)){
+    const page=await browser.newPage({locale,viewport:{width:320,height:740}});
+    await page.addInitScript(()=>{
+      window.requests=[];
+      window.CYTV={hasKey:()=>false,snapshot:()=> '[]',answer:()=>{},saveReport:()=>requests.push('save'),start:c=>requests.push(JSON.parse(c))};
+    });
+    await page.goto('file://'+path.join(ui,'index.html'));
+    for(const code of ['ssh-unreachable','ssh-identity','developer-key-unlock','root-home-interfaces','pending-operation']){
+      const guide=guides[locale][code];const edition=code.startsWith('developer-')?'no-root':'root';
+      await page.evaluate(({guide,edition})=>{
+        receiveNative({kind:'started',config:{host:'192.0.2.10',port:2222,edition,action:'install'}});
+        receiveNative({kind:'check',checkId:'ssh',status:'pass',label:'SSH',detail:'',statusText:'pass',title:'TV checks'});
+        if(guide.code==='root-home-interfaces')receiveNative({kind:'check',checkId:'home-profiles',status:'fail',label:'Home profiles',detail:'',statusText:'fail',title:'TV checks'});
+        receiveNative(guide);
+        receiveNative({kind:'report-ready',name:'diagnostic-123456abcdef.json'});
+        receiveNative({kind:'finished',code:2});
+      },{guide,edition});
+      assert.equal(await page.locator('h1').innerText(),guide.title);
+      assert.equal(await page.locator('[role=note]').innerText(),guide.nextStep);
+      assert.equal(await page.locator('[data-action=status]').count(),0);
+      assert.equal(await page.locator('[data-action=restore]').count(),0);
+      assert.equal(await page.locator('[data-action=to-connection]').count(),guide.canEditConnection?1:0);
+      assert.equal(await page.evaluate(()=>requests.length),0,'Advice must not invoke operations');
+      if(code==='root-home-interfaces')assert((await page.locator('.tv-checks li').first().innerText()).includes('Home profiles'));
+      for(const [width,height] of [[320,740],[740,375]]){
+        await page.setViewportSize({width,height});
+        assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),locale+'/'+code+' overflow');
+      }
+      await page.setViewportSize({width:320,height:740});
+      if(guide.canEditConnection){
+        await page.locator('[data-action=to-connection]').click();
+        assert.equal(await page.locator('#port').inputValue(),'2222');
+      }
+    }
+    await page.evaluate(()=>{
+      receiveNative({kind:'started',config:{host:'192.0.2.11',edition:'root',action:'status'}});
+      receiveNative({kind:'finished',code:0});
+    });
+    assert.equal(await page.locator('h1').innerText(),dictionary.statusDone);
+    assert.equal(await page.locator('[role=note]').count(),0);
+    await page.close();
+  }
   await browser.close();
   console.log('PASS Android maintenance: twelve locales, correct commands, connection flow, progress, replay, readable text and responsive widths');
 })().catch(async error=>{console.error(error);if(browser)await browser.close();process.exitCode=1});

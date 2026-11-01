@@ -44,6 +44,7 @@ class Wizard(QMainWindow):
         self.report = None
         self.recovery_profile = None
         self.recovery_plan = None
+        self.failure_help = None
         self.worker = None
         self.setWindowTitle('Clean Your TV')
         self.resize(1060, 820)
@@ -275,6 +276,7 @@ class Wizard(QMainWindow):
         self.reset_checks()
         self.recovery_profile = None
         self.recovery_plan = None
+        self.failure_help = None
         self.preparation = []
         self.collect_preparation = False
         self.reset_details()
@@ -419,6 +421,7 @@ class Wizard(QMainWindow):
         self.report = None
         self.recovery_profile = None
         self.recovery_plan = None
+        self.failure_help = None
         self.pending = None
         self.preparation = []
         self.collect_preparation = False
@@ -459,7 +462,7 @@ class Wizard(QMainWindow):
                       'running': '#eddbc2', 'pending': '#c0b5a5'}
             rows = []
             priority = {'packages':0, 'startup':1, 'home-button':2}
-            for result in sorted(self.check_results.values(), key=lambda item: priority.get(item['id'],3)):
+            for result in sorted(self.check_results.values(), key=lambda item: priority.get(item['id'],3 if item['status'] in ('fail','unknown') else 4)):
                 status = result['status']
                 label, detail = html.escape(tr(result['label'])), html.escape(tr(result['detail']))
                 marker = {'pass': '✓', 'fail': '!', 'unknown': '?', 'running': '…', 'pending': '·'}[status]
@@ -503,6 +506,8 @@ class Wizard(QMainWindow):
             path = Path(value)
             if path.is_file():
                 self.report = path
+        elif kind == 'failure-help':
+            self.failure_help = dict(value)
         elif kind == 'recovery-plan':
             self.recovery_plan = dict(value)
             self.steps.hide()
@@ -559,6 +564,13 @@ class Wizard(QMainWindow):
             failed_checks = [result for result in self.check_results.values() if result['status'] in ('fail', 'unknown')]
             if failed and failed_checks:
                 self.subtitle.setText(tr('Failed') + ': ' + ', '.join(tr(result['label']) for result in failed_checks) + '\n' + self.subtitle.text())
+            if failed and self.failure_help:
+                if not self.recovery_plan:
+                    self.title.setText(tr(self.failure_help['title']))
+                    self.badge.setText(self.title.text())
+                self.subtitle.setText(tr(self.failure_help['next_step']))
+                if not self.report:
+                    self.subtitle.setText(self.subtitle.text()+'\n'+tr('A diagnostic report could not be created. Include the visible error when opening an issue.'))
 
     def show_prompt(self, prompt):
         self.check_panel.hide()

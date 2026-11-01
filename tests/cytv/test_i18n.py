@@ -22,6 +22,17 @@ class LanguageTests(unittest.TestCase):
                 self.assertNotEqual(lang.translate(prompt).strip(), prompt.strip())
                 self.assertNotEqual(lang.translate(title), title)
 
+    def test_fixed_failure_guidance_translates_in_every_installer_locale(self):
+        from cytv.failure_help import GUIDES
+        from cytv.checks import LABELS
+        lang=self.language()
+        messages={text for guide in GUIDES.values() for text in guide[:3]}
+        messages.update(LABELS[key] for key in ('home-settings','home-profiles'))
+        for code in set(lang.LANGUAGES)-{'en','auto'}:
+            lang.set_language(code)
+            for message in messages:
+                with self.subTest(language=code,text=message):self.assertNotEqual(lang.translate(message),message)
+
     def test_locale_variants_and_unsupported_fallback(self):
         lang = self.language()
         for value, expected in [('pt_PT.UTF-8', 'pt-BR'), ('de_AT', 'de'), ('ru-RU', 'ru'), ('zh_CN', 'zh-Hans'), ('C', 'en')]:

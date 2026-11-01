@@ -60,6 +60,10 @@ class Remote:
 
     def luna(self, uri, payload, terminal=None, timeout=30, app_id=None):
         self.calls.append(('luna', uri, payload))
+        if uri == 'com.webos.settingsservice/getSystemSettings':
+            return {'returnValue':True,'settings':{'defaultApps':{}}}
+        if uri == 'com.webos.service.systemprofile/getProfiles':
+            return {'returnValue':True,'profiles':{'defaultApps':{'categories':{'home':'com.webos.app.home'}},'idleApp':{'appId':'com.webos.app.home','support':True}}}
         if uri == 'com.webos.service.tv.systemproperty/getSystemInfo':
             return {'returnValue': True, 'UHD': True}
         if uri == 'com.cleanyourtv.root.updater.service/status':
@@ -967,7 +971,7 @@ class OperationTests(unittest.TestCase):
         installer=self.installer(remote,'root')
         with self.assertRaisesRegex(RuntimeError, 'recovery could not be verified'):
             installer.install(self.inventory)
-        self.assertFalse(any((c[0]=='luna' and not c[1].endswith('/getSystemInfo')) or (c[0]=='run' and '/control.json' in c[1]) for c in remote.calls))
+        self.assertFalse(any((c[0]=='luna' and c[1] not in ('com.webos.service.tv.systemproperty/getSystemInfo','com.webos.settingsservice/getSystemSettings','com.webos.service.systemprofile/getProfiles')) or (c[0]=='run' and '/control.json' in c[1]) for c in remote.calls))
 
     def test_root_launch_disconnect_keeps_receipt_without_repeating_launch(self):
         self.root_bundle()

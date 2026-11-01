@@ -19,6 +19,8 @@ No-root e Root sono opzioni equivalenti per diverse configurazioni della TV. Sce
 
 Root richiede le interfacce Home funzionanti di Settings Service e System Profile (`com.webos.service.systemprofile`); il solo accesso root non garantisce la compatibilità.
 
+> Installatore non ancora pubblicato: Root verifica le interfacce Home necessarie prima di preparare Python privato o pacchetti. Un errore interrompe la configurazione; superare il controllo non dimostra compatibilità del firmware o funzionamento del tasto Home. Gli errori di connessione noti mostrano consigli specifici. Conserva profili, dati di fiducia e recupero; le operazioni in sospeso richiedono un recupero verificato, senza riprovare alla cieca. Salva e controlla il rapporto. [Dettagli](../development/INSTALLER-PREFLIGHT-HELP.md).
+
 ## Prerequisiti
 
 Accendi il televisore e collegalo alla stessa rete locale affidabile del computer. Dopo l’installazione il computer può restare spento. La compatibilità dipende da modello, firmware e telecomando; Root ha ancora verifiche hardware da completare.

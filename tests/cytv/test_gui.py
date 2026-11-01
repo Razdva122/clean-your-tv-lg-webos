@@ -128,6 +128,24 @@ class GuiTests(unittest.TestCase):
                 self.assertTrue(w.steps.isHidden())
                 w.close()
 
+    def test_failed_home_interface_is_visible_before_passed_prerequisites(self):
+        w=Wizard();self.addCleanup(w.close)
+        for key,label,status in [('ssh','SSH connection and sign-in','pass'),('home-profiles','Root Home profile interface','fail')]:
+            w.receive('check',{'id':key,'label':label,'status':status,'detail':''})
+        text=w.check_panel.toPlainText()
+        self.assertLess(text.index('Root Home profile interface'),text.index('SSH connection and sign-in'))
+
+    def test_failure_help_preserves_missing_report_warning_and_does_not_retry(self):
+        calls=[]
+        w=Wizard(run=lambda *a,**k:calls.append(a));self.addCleanup(w.close)
+        help={'code':'ssh-unreachable','title':'Check the TV connection','detail':'SSH was not verified.',
+              'next_step':'Review the selected TV address and SSH port.','pending':False,'can_edit_connection':True}
+        w.receive('failure-help',help);w.receive('done',1)
+        self.assertEqual(w.title.text(),'Check the TV connection')
+        self.assertIn('could not be created',w.subtitle.text())
+        self.assertEqual(calls,[])
+        w.home();self.assertIsNone(w.failure_help)
+
     def test_setup_result_requires_all_three_distinct_checks(self):
         w = Wizard(); self.addCleanup(w.close)
         w.command = 'install'

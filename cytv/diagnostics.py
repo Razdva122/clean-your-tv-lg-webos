@@ -35,6 +35,10 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
         'checks': context.checks_summary(checks),
         'privacy': 'No addresses, SSH identities, exception text, credentials, app inventory, environment or raw TV logs are collected.',
     }
+    from .failure_help import for_error, report_summary
+    help = for_error(error, phase, profile, pending)
+    if help:
+        report['guidance'] = report_summary(help)
     reason = getattr(error, 'reason_code', 'unknown')
     if isinstance(error, TVCommandError):
         reason = 'ssh-command-failed'

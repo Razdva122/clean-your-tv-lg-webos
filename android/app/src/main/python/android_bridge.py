@@ -93,6 +93,12 @@ class AndroidConsole(Console):
         self.callbacks.options.append({'value':str(key), 'label':i18n.translate(label),
                                        'detail':i18n.translate(detail)})
 
+    def failure_help(self, value):
+        super().failure_help(value)
+        self.callbacks.emit(kind='failure-help', code=value['code'], title=i18n.translate(value['title']),
+                            detail=i18n.translate(value['detail']), nextStep=i18n.translate(value['next_step']),
+                            pending=value['pending'], canEditConnection=value['can_edit_connection'])
+
     def recovery(self, profile):
         self.recovery_plan({'state': 'review', 'summary': 'Review recovery options',
                             'next_step': 'Recovery data kept. Installation has not restarted.'})

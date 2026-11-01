@@ -8,6 +8,8 @@ one model or artifact does not certify later releases or a different TV.
 
 ## Scoped feature checks
 
+- [Early Root admission and connection guidance, 2026-11-01](2026-11-01-installer-preflight-help.md): pre-mutation interface checks, typed localized advice and unchanged pending/trust guards; no physical acceptance.
+
 - [Separate installer outcomes, 2026-11-01](2026-11-01-installer-outcomes.md): distinct package/startup/owner-observed Home evidence, default skip and local reports; no physical compatibility claim.
 
 - [Installer recovery journey, 2026-11-01](2026-11-01-installer-recovery-journey.md): separately confirmed recovery, existing guards, no implicit reinstall and accurate blocked results; original #201/#216 recovery remains unresolved.

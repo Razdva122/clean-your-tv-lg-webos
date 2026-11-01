@@ -31,6 +31,21 @@ check does not justify deleting profiles, resetting pairing or re-rooting. Save
 the diagnostic report and identify the failed requirement first. These rows reuse
 the existing probes; they do not add TV changes or establish hardware acceptance.
 
+Unreleased: Root setup also reads the required Home Settings and Home Profiles
+interfaces before private Python/package preparation. Negative, malformed or
+unconfirmed replies stop setup; failed prerequisites remain first in view.
+An absent Settings Home override is allowed with readable effective profiles.
+Passing these reads does not establish firmware compatibility or physical Home
+operation. Root Doctor adds these reads only without pending state; normal
+maintenance/recovery admission remains unchanged.
+
+Console, desktop and Android show localized advice for known connection failures,
+distinguishing SSH access, Root credentials, Developer Mode Key Server and pairing.
+Pending operations and trust failures retain their safety boundaries. Advice does
+not retry, reset trust, delete profiles or authorize recovery. Unknown failures
+retain the original report path. Save the report before any separately verified
+recovery; see the [preflight and guidance contract](development/INSTALLER-PREFLIGHT-HELP.md).
+
 ## Package, startup and physical Home checks (unreleased)
 
 After new setup or separately confirmed Root setup completion, three result rows

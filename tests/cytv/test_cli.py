@@ -358,6 +358,11 @@ class CLITests(unittest.TestCase):
                 if 'deploy.py status' in command:
                     return '{"returnValue":true,"result":{"recovery":{"integrity_verified":true},"intent":null}}'
                 raise AssertionError('Unexpected remote command: '+command)
+            def luna(self,uri,payload,**kwargs):
+                from tests.cytv.test_root_capabilities import SETTINGS, PROFILES
+                if uri=='com.webos.settingsservice/getSystemSettings':return SETTINGS
+                if uri=='com.webos.service.systemprofile/getProfiles':return PROFILES
+                return {'returnValue':True}
             def close(self): pass
         with tempfile.TemporaryDirectory() as tmp, \
              patch('cytv.cli.package.verify_payload', return_value={}), \
