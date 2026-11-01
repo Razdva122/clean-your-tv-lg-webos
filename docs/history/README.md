@@ -8,6 +8,8 @@ one model or artifact does not certify later releases or a different TV.
 
 ## Scoped feature checks
 
+- [Automatic Chinese font preparation, 2026-11-01](2026-11-01-automatic-chinese-fonts.md): #228 compact generated subsets, pinned host-only sources, offline reuse and mixed SC/TC fallback; physical rendering remains unverified.
+
 - [Issue 207: automatic HD delivery, 2026-11-01](2026-11-01-issue207-automatic-hd-delivery.md): #226 shared installer/OTA selection, signed parallel feeds and exact rollback; independently provisioned updater migration and physical/IR acceptance remain separate.
 
 - [Issue 207: 720p and passive diagnostics, 2026-11-01](2026-11-01-issue207-720p-diagnostics.md): #225 adaptive graphics/manual HD builds, Helper status and passive IR preparation; original IR routing and normal-channel HD delivery remain unresolved.
