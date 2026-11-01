@@ -41,6 +41,9 @@ fresh reservation starts a new suspension cycle, including a later rollback of
 the same update. Successful No-root updates preserve their independent Helper
 state instead of using this Root runtime.
 
+For the retained rollback live-authority window, capture/staging order and unresolved
+old-CLI forward cancellation, see the [2026-11-01 investigation](../../docs/history/2026-11-01-root-home-settings-intent.md).
+
 A confirmed normal shutdown retains the Home override, generated profile and transaction binding so bootd can select Clean Your TV as its first app. Startup recovery still restores the old transaction before arming fresh health protection. Explicit exit, input failure without a shutdown signal, and failsafe recovery restore LG Home.
 
 The shutdown monitor accepts only fresh transaction/session-bound evidence.

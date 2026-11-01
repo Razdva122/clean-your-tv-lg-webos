@@ -13,7 +13,7 @@ class SystemRollbackAnchorTests(unittest.TestCase):
 from legacy_ota_fixture import LegacyOTA
 from pathlib import Path
 from unittest.mock import patch
-import importlib.util,json,os,shutil,subprocess
+import importlib.util,json,os,shutil,subprocess,sys
 
 def guard_for(f):
  spec=importlib.util.spec_from_file_location('tested_anchor_guard',f.root/'runtime/update_guard.py')
@@ -47,6 +47,55 @@ with LegacyOTA() as f:
  try:f.rollback()
  except (AssertionError,ValueError) as error:assert 'Conflicting Root publication' in str(error),str(error)
  else:raise AssertionError('Unmodified supervisor unexpectedly completed retained rollback')
+''')
+
+    def test_original_supervisor_retained_rollback_captures_active_intent_before_authority_changes(self):
+        self.scenario('''
+with LegacyOTA() as f:
+ f.complete_update()
+ # Device-only routing/input activation IO is adapted; the immutable manager,
+ # package byte authority, guard journal, staging and installer terminals run.
+ sys.path.insert(0,str(f.root/'runtime'))
+ spec=importlib.util.spec_from_file_location('candidate_live_identity',Path.cwd()/'root-edition/package_identity.py')
+ presence=importlib.util.module_from_spec(spec);spec.loader.exec_module(presence)
+ presence.STATES={presence.ROOT:f.root,presence.UPDATER:f.updater,presence.SYSTEM:f.state}
+ active=dict(version=1,generation=18,phase='active',enabled=True,boot='boot:fixture',token='owner-enable')
+ f.root_store.write('persistent-intent',active)
+ enabled=[];captured=[];runtime=f.device.runtime
+ def restored():
+  value=f.root_store.read('persistent-intent');value.update(phase='disabled',enabled=False)
+  f.root_store.write('persistent-intent',value);return 'restored'
+ def enable():
+  value=f.root_store.read('persistent-intent');value.update(phase='active',enabled=True,generation=value['generation']+1,token='resumed')
+  f.root_store.write('persistent-intent',value);enabled.append(True)
+  return dict(intent=value,persistent=True)
+ def observed_runtime(mode,transaction=None):
+  if mode not in ('suspend-update','finish-update','abort-update'):return runtime(mode,transaction)
+  g=guard_for(f)
+  g._intent=lambda:f.root_store.read('persistent-intent')
+  g._boot=lambda:'boot:fixture';g._failsafe=lambda:False;g._restore=restored;g._enable=enable
+  if mode=='suspend-update':
+   # Exact production selector, no home_present=True substitution.
+   if not captured:
+    assert presence.identity(presence.ROOT,purpose='live',installed=f.installed,uid=os.getuid())['version']=='1.1.0'
+   run=subprocess.run
+   def local_run(args,*a,**kw):
+    if isinstance(args,(list,tuple)) and args[0]=='/usr/bin/node':args=[shutil.which('node'),*args[1:]]
+    return run(args,*a,**kw)
+   with patch.object(subprocess,'run',side_effect=local_run):result=g.suspend(transaction,f.root,os.getuid())
+   captured.append(g.ticket(f.root,os.getuid()))
+   return result
+  return g.finish(transaction,f.root,os.getuid(),resume=mode=='finish-update')
+ f.device.runtime=observed_runtime
+ with f.product_operation():f.manager.rollback()
+ tx=f.run_until('verifying-rollback')
+ assert not enabled, 'Delayed launcher health cannot enable Home'
+ assert captured[0]['before']==active and captured[0]['desired'] is True
+ f.manager.healthy('root',tx['id'],'1.0.0');tx=f.run_until('rolled-back')
+ tx=f.finish_like_worker(tx)
+ assert tx['homeResume']=={'status':'restored'},tx
+ assert len(enabled)==1 and f.root_store.read('persistent-intent')['enabled'] is True
+ f.finish_like_worker(tx);assert len(enabled)==1,'restart must not replay activation'
 ''')
 
     def test_staging_is_idempotent_preserves_journal_and_keeps_candidate_selected(self):

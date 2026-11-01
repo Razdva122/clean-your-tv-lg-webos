@@ -116,6 +116,17 @@ def _journal(tx,system=False):
     return tx
 
 
+def _retained_rollback_pending(tx):
+    # The original supervisor declares rollback before suspending Home. Until
+    # suspension finishes, its fully committed candidate still owns live health.
+    # This never admits normal activation or any interrupted mutation.
+    return (tx['phase']=='rolling-back' and tx.get('resumeCycle')=='rollback'
+            and tx.get('homeResumePhase')=='complete' and not tx['rollbackAttempted']
+            and all(_evidence(c['installEvidence'],True)
+                    and c['rollbackEvidence']==dict(intent=False,submitted=None,terminal=None)
+                    for c in tx['components']))
+
+
 def _select(tx,prior,candidate,evidence,purpose,system=False):
     phase=tx['phase'];installed=_evidence(evidence['installEvidence'],system);rolled=_evidence(evidence['rollbackEvidence'],system)
     rollback=evidence['rollbackEvidence'];install=evidence['installEvidence']
@@ -130,6 +141,7 @@ def _select(tx,prior,candidate,evidence,purpose,system=False):
     if phase=='aborted':
         if install['submitted'] is not None or (system and install['intent']):raise ValueError('Aborted after submission')
         return prior
+    if purpose=='live' and system and _retained_rollback_pending(tx):return candidate
     if purpose in ('current','live'):
         # Existing active health may observe the unchanged committed prior until
         # the writer actually captures/suspends intent. This grants no rearm.
@@ -260,7 +272,7 @@ def inventory(owner,*,purpose='current',states=None,uid=0):
     sys_tx=_record(system,'transaction',uid)
     if sys_tx is not None:sys_tx=_journal(sys_tx,True)
     if sys_tx is not None and sys_tx['edition']=='root':
-        if purpose=='live' and sys_tx['phase'] not in FINISHED and any(c[leg]['intent'] for c in sys_tx['components'] for leg in ('installEvidence','rollbackEvidence')):
+        if purpose=='live' and sys_tx['phase'] not in FINISHED and not _retained_rollback_pending(sys_tx) and any(c[leg]['intent'] for c in sys_tx['components'] for leg in ('installEvidence','rollbackEvidence')):
             raise TransitionUnknown('System mutation inhibits live presence')
         name='root' if owner==ROOT else 'root-updater'
         index=('root','root-updater','root-infrastructure').index(name)
@@ -283,7 +295,7 @@ def inventory(owner,*,purpose='current',states=None,uid=0):
                         original=_package(owner,updater/'cache'/(current['sha256']+'.ipk'),current,uid)
                         baseline=_package(owner,system/'cache'/prior['sha256'],prior,uid)
                         if original!=baseline:raise ValueError('Conflicting Root publication')
-                    if (purpose=='current' or purpose=='live' and sys_tx['phase'] in FINISHED) and (not _same(current,selected) or current.get('writer')!={'owner':'system-update','id':sys_tx['id']}):
+                    if (purpose=='current' or purpose=='live' and (sys_tx['phase'] in FINISHED or _retained_rollback_pending(sys_tx))) and (not _same(current,selected) or current.get('writer')!={'owner':'system-update','id':sys_tx['id']}):
                         raise TransitionUnknown('System current publication pending')
                 return _package(owner,system/'cache'/selected['sha256'],selected,uid)
             if owner==UPDATER:return _package(owner,system/'cache'/selected['sha256'],selected,uid)
@@ -353,6 +365,12 @@ def worker_allowed(owner,*,states=None,uid=0):
 
 def identity(owner,*,purpose='current',states=None,installed=INSTALLED,uid=0,full=False):
     files=inventory(owner,purpose=purpose,states=states,uid=uid)
+    if purpose=='live':
+        active_states=STATES if states is None else states
+        tx=_record(Path(active_states[SYSTEM]),'transaction',uid)
+        # This short pre-suspension exception must verify the entire still
+        # committed candidate, including payload beyond the SDK metadata.
+        if tx is not None and tx.get('phase')=='rolling-back':full=True
     app='usr/palm/applications/'+owner+'/appinfo.json';pkg='usr/palm/packages/'+owner+'/packageinfo.json'
     try:
         raw={name:read_verified(Path(installed)/name,sha256=files[name],installed=installed,uid=uid,limit=32*1024*1024)

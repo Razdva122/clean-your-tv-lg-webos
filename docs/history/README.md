@@ -8,6 +8,8 @@ one model or artifact does not certify later releases or a different TV.
 
 ## Scoped feature checks
 
+- [Root Settings and update intent, 2026-11-01](2026-11-01-root-home-settings-intent.md): host regressions for #206 and partial #202 retained rollback; old forward-callback cancellation and physical acceptance remain unresolved.
+
 - [Root Node prototype integration, 2026-10-31](2026-10-31-root-node-prototype.md): host-only exact-runtime checks for #194; Node 8+ admission and unresolved #160/#164 device support remain unchanged.
 
 - [Passive Root diagnostic preparation, 2026-10-31](2026-10-31-root-passive-diagnostics.md): reviewed initial read-only procedure for #161; actual recovery remains blocked on owner evidence.

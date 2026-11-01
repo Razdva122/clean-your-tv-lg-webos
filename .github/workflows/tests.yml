@@ -203,6 +203,7 @@ jobs:
           trap 'kill "$settings_preview_pid"' EXIT
           BROWSER_CHANNEL=chromium node tests/settings-ui.cjs
           BROWSER_CHANNEL=chromium node tests/settings-update-badges.cjs
+          BROWSER_CHANNEL=chromium PREVIEW_URL=http://127.0.0.1:8876 node root-edition/ui/test-settings-browser.cjs
       - name: Check compiled development UI isolation and themes
         run: BROWSER_CHANNEL=chromium node tests/tv-dev-ui.cjs
       - name: Full theme browser regressions
