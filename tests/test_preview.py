@@ -85,6 +85,10 @@ class PreviewTest(unittest.TestCase):
                 for weight in (300, 400, 500, 700):
                     self.assertEqual((output / edition / ('fonts/outfit-%s.ttf' % weight)).read_bytes(),
                                      (ROOT / ('launcher/fonts/outfit-%s.ttf' % weight)).read_bytes())
+            from scripts.chinese_fonts import prepare_fonts
+            for name, raw in prepare_fonts().items():
+                for edition in ('launcher', 'root-launcher'):
+                    self.assertEqual((output / edition / name).read_bytes(), raw)
             self.assertTrue((output / 'root-launcher/root-settings.js').is_file())
             self.assertFalse((output / 'root-launcher/native-bootstrap.js').exists())
             self.assertFalse((output / 'root-launcher/renewal-panel.js').exists())
@@ -144,6 +148,11 @@ class PreviewTest(unittest.TestCase):
                     self.assertEqual(response.headers['Cache-Control'], 'no-store')
                     return response.read().decode()
 
+            from scripts.chinese_fonts import prepare_fonts
+            for name, raw in prepare_fonts().items():
+                for edition in ('launcher', 'root-launcher'):
+                    with urlopen(base + '/' + edition + '/' + name) as response:
+                        self.assertEqual(response.read(), raw)
             self.assertIn('launcher/index.html', get('/'))
             root = get('/root-launcher/index.html')
             self.assertIn('root-settings.js', root)

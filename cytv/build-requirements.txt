@@ -2,6 +2,7 @@
 # collide with the Python libssl copied by PyInstaller (issue #93).
 --only-binary=cryptography
 -r requirements.txt
+-r ../scripts/build-requirements.txt
 pyinstaller==6.22.3
 ziglang==0.14.1
 

@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import re
+import sys
 from pathlib import Path
 
 APP_ID = 'com.cleanyourtv.root.preview'
@@ -70,7 +71,9 @@ def prepare(version='0.0.1', resolution=None):
     files['apps.js'] = b'window.TV_APPS = {apps: [], inputs: []};\n'
     config = {'columns': 5, 'dockApps': [], 'hiddenApps': ['com.gathin.tvhome', 'com.local.nativehome', APP_ID]}
     files['config.js'] = ('window.CONFIG = ' + json.dumps(config) + ';\n').encode()
-    return files
+    sys.path.insert(0, str(SOURCE.parent))
+    from scripts.chinese_fonts import with_fonts
+    return with_fonts(files)
 
 
 def stage(output):

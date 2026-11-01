@@ -12,6 +12,7 @@ Source builds require Node.js **20.19+** (Node 22 is used in CI) and npm:
 
 ```sh
 npm ci --ignore-scripts --no-audit --no-fund
+python3 -m pip install -r scripts/build-requirements.txt
 npm run lint:compat
 npm run test:compat
 ```
@@ -175,17 +176,27 @@ also include them; Android uses its platform font fallback.
 
 The sources are [Google Fonts Noto Sans SC](https://github.com/google/fonts/tree/e7db6ca603fd4862010383ff17ffd6cc4ffac1c0/ofl/notosanssc)
 and [Noto Sans TC](https://github.com/google/fonts/tree/e7db6ca603fd4862010383ff17ffd6cc4ffac1c0/ofl/notosanstc),
-pinned at commit `e7db6ca603fd4862010383ff17ffd6cc4ffac1c0`. To regenerate,
-download each original `NotoSansSC[wght].ttf` / `NotoSansTC[wght].ttf` into a
-temporary directory as `NotoSansSC-variable.ttf` / `NotoSansTC-variable.ttf`,
-then run:
+pinned at commit `e7db6ca603fd4862010383ff17ffd6cc4ffac1c0`. The build-only
+`fonttools==4.60.1` dependency is installed from `scripts/build-requirements.txt`;
+it is never loaded by a TV or installed/frozen runtime.
 
-```sh
-/path/to/fonttools-4.60.1/bin/python scripts/subset-chinese-fonts.py /path/to/original-fonts
-```
+Packages, standalone installer fonts and live/static previews use the same
+`scripts/chinese_fonts.py` preparation path. It decodes Chinese locale literals
+(including Unicode escapes and static template text) from runtime catalogs,
+including themes, Root audio, installers and updater screens, plus calendar and
+language labels. Retained static faces are reused only when they cover all required
+characters. Otherwise the build automatically generates small static weight-400
+subsets; adding translations never requires editing tracked font binaries.
 
-This developer-only tool bakes weight 400 and retains the catalog character set
-plus Chinese date text. Regenerate after adding Chinese strings; package tests
-reject missing catalog glyphs or variable fonts. User app names outside this
-subset continue to use the TV's system fallback. These fonts do not establish
+On the first regeneration, verified TLS downloads retrieve only those two pinned
+sources. SHA-256 pins are SC
+`a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da`
+and TC `864727d210d54f2537bbe23b3a839436c3992af72de9322af5270897246bd44f`.
+Verified originals and deterministic subsets live in `build/chinese-font-cache`
+(or `CYTV_FONT_CACHE`). Reuse that directory for offline builds; CI can cache it.
+Corrupted cache entries fail with an integrity error rather than being trusted.
+An unavailable glyph in the complete pinned source also fails explicitly.
+`scripts/subset-chinese-fonts.py` optionally primes this same cache; it does not
+modify source assets. User app names outside the UI subset use system fallback.
+These fonts do not establish
 physical-TV rendering acceptance; verify both scripts on the candidate packages.

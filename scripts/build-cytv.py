@@ -188,6 +188,8 @@ def build_payload():
         app=dict(launcher);info=json.loads(app['appinfo.json']);info['resolution']=graphics
         app['appinfo.json']=(json.dumps(info,indent=2)+'\n').encode()
         (payload / paths['launcher']).write_bytes(pack_app(app, renewal))
+    from scripts.chinese_fonts import with_fonts
+    launcher = with_fonts(launcher)
     (payload / 'fonts').mkdir()
     for name, data in launcher.items():
         if name.startswith('fonts/Noto'):
