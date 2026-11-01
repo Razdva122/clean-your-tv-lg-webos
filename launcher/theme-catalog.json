@@ -68,6 +68,17 @@
       "preview": "theme-catalog/invrnt--tv-themes--minimal/42ba8d15fce491e2cb4474c42333ab8489c8fba5d35fd7a80513bce73351bf22/preview.png",
       "url": "https://raw.githubusercontent.com/invrnt/tv-themes/71ab7552df27b67c48100c9faf36e7e5b30ea8d8/distributions/minimal/1.0.1/cytv-theme.json",
       "digest": "42ba8d15fce491e2cb4474c42333ab8489c8fba5d35fd7a80513bce73351bf22"
+    },
+    {
+      "id": "github:xandymelo/clean-your-tv-lg-retro-theme:retro",
+      "title": "Retro",
+      "version": "1.0.0",
+      "author": "xandymelo",
+      "license": "MIT",
+      "description": "A neon pixel-inspired theme with square cards, hard shadows and a night-blue grid.",
+      "preview": "theme-catalog/xandymelo--clean-your-tv-lg-retro-theme--retro/e03a9455f59067d4c79da719e6b2113615f31b7790e66585d5fcea97db12f2c6/preview.png",
+      "url": "https://raw.githubusercontent.com/xandymelo/clean-your-tv-lg-retro-theme/bf6f647888dd305e317e7d594bf29bac70c0b7a7/distributions/retro/1.0.0/cytv-theme.json",
+      "digest": "e03a9455f59067d4c79da719e6b2113615f31b7790e66585d5fcea97db12f2c6"
     }
   ]
 }

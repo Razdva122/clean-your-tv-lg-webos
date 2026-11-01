@@ -9,7 +9,7 @@
   },
   "sourceRepository": "https://github.com/xandymelo/clean-your-tv-lg-retro-theme",
   "sourceCommit": "d7aa64515f867167de862c46a67fa7fa8bf39f82",
-  "descriptorUrl": "https://raw.githubusercontent.com/xandymelo/clean-your-tv-lg-retro-theme/bf6f6470d3df623eb5d73ef7d241c267bd5d212c/distributions/retro/1.0.0/cytv-theme.json",
+  "descriptorUrl": "https://raw.githubusercontent.com/xandymelo/clean-your-tv-lg-retro-theme/bf6f647888dd305e317e7d594bf29bac70c0b7a7/distributions/retro/1.0.0/cytv-theme.json",
   "descriptorSha256": "e03a9455f59067d4c79da719e6b2113615f31b7790e66585d5fcea97db12f2c6",
   "themeVersion": "1.0.0",
   "themeApiVersion": 1,
@@ -20,8 +20,12 @@
   ],
   "tags": [],
   "addedAt": "2026-10-31",
-  "reviewedAt": "2026-10-31",
+  "reviewedAt": "2026-11-01",
   "evidence": [
+    {
+      "kind": "browser",
+      "summary": "Maintainer review on current release/next plus PR #215 using Home 1.6.1: Retro applies in No-root and Root through the validated offline envelope. Dock/grid focus, reorder, Add app, app library, Inputs, standard Settings and confirmation were captured with synthetic reference apps and external HTTPS blocked; no page errors. The inline selector regression also preserves app order across theme and edition changes. Browser evidence only; physical-TV controls, sound, standby, cold boot, OTA and rollback are untested. The distribution URL commit typo was corrected without changing descriptor or package bytes."
+    },
     {
       "kind": "browser",
       "summary": "Browser renderer scenarios captured: Home, Inputs and Settings; no physical-TV validation performed."
