@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "themeApiVersion": 1,
+  "id": "builtin:liquid-glass",
+  "title": "Liquid Glass",
+  "description": "Clear frosted glass over an original aurora wallpaper, on the Classic dock with the Inputs shelf.",
+  "author": {
+    "name": "Clean Your TV contributors",
+    "url": "https://github.com/razdva122"
+  },
+  "themeVersion": "1.0.0",
+  "layout": {
+    "preset": "dock-grid",
+    "columns": 5,
+    "spacingScale": 1,
+    "textScale": 1,
+    "focusScale": 1.1,
+    "allowColumnOverride": true
+  },
+  "defaults": {
+    "wallpaperAssetId": "wallpaper",
+    "dim": 0,
+    "accent": "#eef3ff"
+  },
+  "assets": [
+    {
+      "id": "wallpaper",
+      "path": "assets/wallpaper-6d8aabd0a096e64fe87d89e65f529a467df450df385d1c346370d95db0688510.jpg",
+      "mediaType": "image/jpeg",
+      "width": 1920,
+      "height": 1080,
+      "size": 160409,
+      "sha256": "6d8aabd0a096e64fe87d89e65f529a467df450df385d1c346370d95db0688510"
+    },
+    {
+      "id": "preview",
+      "path": "assets/preview-f7a4f85ab7a950ae2cd2a7bcbb3d23449d7274271c0cc2013d17a38f02c84582.jpg",
+      "mediaType": "image/jpeg",
+      "width": 960,
+      "height": 540,
+      "size": 63515,
+      "sha256": "f7a4f85ab7a950ae2cd2a7bcbb3d23449d7274271c0cc2013d17a38f02c84582"
+    }
+  ],
+  "previewAssetId": "preview",
+  "license": {
+    "identifier": "MIT",
+    "textPath": "documents/0-f497a621e75e2ccabaac016c8ada95b415a7810fb9994798b282fa9f9d03920f.txt",
+    "creditsPath": "documents/1-49c0cc9c350acc25acf8f9d18440e53d6ce7f7abeaf4af95feabf4cf543f7304.txt"
+  },
+  "source": {
+    "repository": "https://github.com/razdva122/clean-your-tv-lg-webos",
+    "commit": "218668c8d55a8d735a976068b2c31c8a603db453"
+  },
+  "requires": {
+    "minimumHomeVersion": "1.6.1",
+    "capabilities": []
+  },
+  "rules": {
+    "path": "rules/7f4eb3e2a0d15e277dd3949457ae72eac0b41109b18d04d850dcd884dc3859b0.json",
+    "size": 11088,
+    "sha256": "7f4eb3e2a0d15e277dd3949457ae72eac0b41109b18d04d850dcd884dc3859b0"
+  },
+  "documents": [
+    {
+      "path": "documents/0-f497a621e75e2ccabaac016c8ada95b415a7810fb9994798b282fa9f9d03920f.txt",
+      "size": 546,
+      "sha256": "f497a621e75e2ccabaac016c8ada95b415a7810fb9994798b282fa9f9d03920f"
+    },
+    {
+      "path": "documents/1-49c0cc9c350acc25acf8f9d18440e53d6ce7f7abeaf4af95feabf4cf543f7304.txt",
+      "size": 670,
+      "sha256": "49c0cc9c350acc25acf8f9d18440e53d6ce7f7abeaf4af95feabf4cf543f7304"
+    }
+  ]
+}

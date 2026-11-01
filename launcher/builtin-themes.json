@@ -14,6 +14,13 @@
       "version": "1.0.0",
       "url": "themes/ribbon/cytv-theme.json",
       "digest": "5eb9cebf58cddafa8df59497880eaa134565465ba75dab60ec1903b956be4f5d"
+    },
+    {
+      "id": "builtin:liquid-glass",
+      "title": "Liquid Glass",
+      "version": "1.0.0",
+      "url": "themes/liquid-glass/cytv-theme.json",
+      "digest": "702c053de85adcb502b62792c9ce252beee4a86166ca10fb0c8dfc3348345fae"
     }
   ]
 }

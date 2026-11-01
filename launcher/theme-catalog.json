@@ -37,6 +37,20 @@
       "digest": "5eb9cebf58cddafa8df59497880eaa134565465ba75dab60ec1903b956be4f5d"
     },
     {
+      "id": "builtin:liquid-glass",
+      "title": "Liquid Glass",
+      "version": "1.0.0",
+      "builtin": true,
+      "description": "Clear frosted glass over an original aurora wallpaper, on the Classic dock with the Inputs shelf.",
+      "author": "Clean Your TV contributors",
+      "license": "MIT",
+      "preview": "themes/liquid-glass/assets/preview-f7a4f85ab7a950ae2cd2a7bcbb3d23449d7274271c0cc2013d17a38f02c84582.jpg",
+      "credits": "themes/liquid-glass/documents/1-49c0cc9c350acc25acf8f9d18440e53d6ce7f7abeaf4af95feabf4cf543f7304.txt",
+      "licenseFile": "themes/liquid-glass/documents/0-f497a621e75e2ccabaac016c8ada95b415a7810fb9994798b282fa9f9d03920f.txt",
+      "url": "themes/liquid-glass/cytv-theme.json",
+      "digest": "702c053de85adcb502b62792c9ce252beee4a86166ca10fb0c8dfc3348345fae"
+    },
+    {
       "id": "github:razdva122/clean-your-tv-lg-theme:itachi",
       "title": "Itachi · Sharingan",
       "version": "1.0.2",

@@ -41,22 +41,28 @@
   title crossfades in step with focus; returning to Home after switching to an
   input focuses that input's shelf tile until focus moves elsewhere; 12-hour
   languages show the clock without a leading zero ("6:13 PM").
-- In Classic without a theme, rows glide over 300 ms on a single Up/Down press and
+- On the Classic layout, themed or not, rows glide over 300 ms on a single Up/Down press and
   stay instant while an arrow is held (a key repeat, or the same arrow again within
   150 ms, also cuts a running glide short), so held arrows never chase
   an unfinished scroll; `startup-motion-ui` skips its exact stage/item position
   check only during such a glide or an edge bump. Classic fades the top and bottom
   screen edges while rows lie beyond them, and a fresh press that cannot move
   (grid ends, Inputs shelf ends) gives a short 10 px bump. Reduced motion disables
-  both.
+  both. Themes on the Classic layout keep this motion and the card zoom; other
+  layouts keep immediate remote focus, and themes keep their own screen edges.
 - Lighter rendering on 4K TVs (Home draws at 3840x2160 there): the ambient glow
-  changes colour once the focus has rested for 800 ms, and Classic then bakes it into
-  a plain background element instead of keeping two full-screen layers (themes keep
-  the layers); every Classic tile, input tile and the grid stage is its own
+  changes colour once the focus has rested for 800 ms, and the Classic layout then
+  bakes it into a plain background element instead of keeping two full-screen layers
+  (a theme's `.ctv-ambient` rule styles that element too); every Classic tile, input
+  tile and the grid stage is its own
   compositor layer, so the focus zoom no longer repaints the grid; Inputs tiles grow
   by snapping to their final size and animating a transform (one layout per press
   instead of one per frame); and edge bumps move by transform. In on-device A/B runs
   on an LG G1 (webOS 6), missed frames per press dropped from about 16 to about 7.5.
+- Add Liquid Glass, a packaged theme in Settings → Themes: clear frosted glass over
+  an original procedural aurora wallpaper, on the Classic layout with the Inputs
+  shelf and Classic motion. Theme API 1 has no blur, so the glass is translucent
+  gradients, bright rims and soft shadows; no Apple assets are included.
 
 
 ## v1.4.0

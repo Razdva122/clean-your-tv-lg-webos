@@ -172,7 +172,12 @@ color fallback. An ordinary author `background-color` declaration does not
 override that inline value; `!important` is forbidden. The ambient gradient is
 emitted into a trusted default stylesheet instead of inline CSS, so a scoped
 `.ctv-ambient` background image can override it, including a transparent gradient
-for a flat background. Crossfade timing and opacity remain engine-owned. Broken tile icons are hidden and replaced with the app initial;
+for a flat background. Crossfade timing and opacity remain engine-owned. On the
+`dock-grid` layout the settled glow is baked into a plain base element that also
+carries `.ctv-ambient`, so the same author rule styles it; the two glow layers are
+drawn only while the colour crossfades. A theme on `dock-grid` also keeps Classic's
+row glide, edge bump, card zoom and focus-frame motion; other layouts keep
+immediate remote focus. Broken tile icons are hidden and replaced with the app initial;
 broken library images are hidden without hiding their actionable row.
 
 Outfit weights 300/400/500/700 and packaged Noto Sans fallbacks provide offline
