@@ -83,9 +83,8 @@ node scripts/check-theme-submissions.cjs --remote
 node tests/showcase/registry.cjs
 node tests/showcase/submission-security.cjs
 node tests/showcase/remote.cjs
-node tests/showcase/site.cjs
-node tests/showcase/browser.cjs
-node scripts/build-showcase.cjs build/site/themes
+BROWSER_CHANNEL=chromium node tests/preview-themes-ui.cjs
+python3 scripts/preview.py --build build/theme-preview-review
 ```
 
 Local validation rejects metadata/source mismatches, duplicate identities, path
@@ -94,8 +93,8 @@ public file types. `--remote` additionally checks every pinned public source byt
 against the reviewed hashes, with redirects disabled, omitted credentials,
 15-second request limits and a 16 MiB total download budget per run. Larger
 catalogs will need reviewed job sharding rather than an unbounded fetch loop. It never runs author
-install scripts, commands, plugins or workflows. Only named manifest files are
-copied into the site; unrelated workspace content is excluded.
+install scripts, commands, plugins or workflows. Only validated theme data and
+allowlisted preview resources are exported; unrelated workspace content is excluded.
 
 `.github/workflows/theme-submissions.yml` runs untrusted submission checks in a
 read-only `pull_request` job without publishing secrets, retained checkout
@@ -131,10 +130,10 @@ For an update, keep the same ID and `addedAt`, submit a new digest directory,
 replace the record's version/source/preview metadata and obtain a new review.
 The former digest is not permission for new bytes. A source that disappears or
 fails pinned-byte verification must not keep an install CTA: maintainers set
-optional `availability: "unavailable"` through review. Its detail page explains
-the unavailable state without a copy/install control. For removal, set
-`availability: "removed"`: the record leaves the catalog/search and its stable
-page becomes a tombstone; image/distribution bytes are omitted from the site.
+optional `availability: "unavailable"` through review. Unavailable entries are not
+offered for installation in the on-TV catalogue.
+For removal, set `availability: "removed"`: the record leaves the catalogue
+and its image/distribution bytes are omitted from preview exports.
 Moderated records retain local review evidence but skip live remote checks. Do not fabricate compatibility or silently substitute a new source.
 
 ## Browser preview and local catalogue review
@@ -144,10 +143,10 @@ with inline theme cards. It does not publish a separate `/themes/` catalogue or
 theme detail pages. `scripts/preview.py --build OUTPUT` exports the main preview,
 both editions, theme data and the existing launcher/preview paths into fresh staging.
 
-`scripts/build-showcase.cjs` and its `buildShowcase(destination, {showcaseRoot})`
-export remain available for local author/reviewer inspection. Their HTML output
-is not included in the public Pages workflow. The on-TV Showcase uses reviewed
-registry/catalogue JSON and is unchanged by removing the separate web page.
+The standalone Showcase HTML builder, pages, filters and page-only assets have
+been removed. Local maintainer review and PR inspection artifacts use this same
+inline theme preview. The on-TV Showcase continues to use the reviewed registry
+and catalogue JSON.
 
 Publication follows registry PR → `release/next` → normal main release → existing
 Pages deployment with its current-main check. PR inspection artifacts must not
@@ -156,14 +155,13 @@ build does not publish it.
 
 ## Preview cards
 
-Catalog cards and the local author-tool picker share `src/theme-card.css`.
-A card uses an actual 16:9 Home capture and a visible theme name. The local
-picker adds an `aria-pressed` selection marker; the community catalog keeps its
-review metadata and links to the pinned theme detail. An empty registry still produces an honest empty state. Built-in Classic is shown separately using the
-synthetic renderer capture in `assets/classic-preview.png`, with credits and
-capture provenance alongside it. A built-in preview is not a reviewed installable
-community descriptor or a hardware acceptance claim.
-
+The local author-tool picker uses `src/theme-card.css`, exported through the
+theme runtime. This shared component is retained for author tooling; it does not
+build a standalone catalogue page. A card uses an actual 16:9 Home capture, a
+visible theme name and an `aria-pressed` selection marker. The main browser
+preview offers its inline theme switcher above Home. Classic reference captures
+and credits remain in `assets/classic-preview.png` and adjacent provenance files.
+Browser previews are not hardware acceptance evidence.
 
 ### Catalogue order
 

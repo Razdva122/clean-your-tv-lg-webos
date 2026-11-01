@@ -89,7 +89,7 @@ if has android; then
   python3 -m unittest discover -s android/tests
 fi
 if has preview; then
-  for test in tests/showcase/{registry,submission-security,site,remote}.cjs; do node "$test"; done
+  for test in tests/showcase/{registry,submission-security,remote}.cjs; do node "$test"; done
   node tests/preview-bridge.cjs
   node tests/preview-themes-ui.cjs
   python3 -m unittest discover -s tests -p test_preview.py

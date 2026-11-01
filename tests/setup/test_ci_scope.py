@@ -56,8 +56,8 @@ class CIScope(unittest.TestCase):
         spec = importlib.util.spec_from_file_location('ci_scope', ROOT/'scripts/ci-scope.py')
         scope = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(scope)
-        for name in ('showcase/registry/example.json', 'scripts/build-showcase.cjs',
-                     'scripts/check-theme-submissions.cjs', 'tests/showcase/site.cjs'):
+        for name in ('showcase/registry/example.json', 'showcase/order.json',
+                     'scripts/check-theme-submissions.cjs', 'tests/showcase/registry.cjs'):
             with self.subTest(name=name):
                 self.assertEqual(scope.components([name]), {'preview'})
 

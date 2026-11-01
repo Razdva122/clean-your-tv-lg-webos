@@ -8,7 +8,6 @@ on:
       - 'theme-api/**'
       - 'launcher/theme-policy.js'
       - 'scripts/check-theme-submissions.cjs'
-      - 'scripts/build-showcase.cjs'
       - 'scripts/compile-tv-web.cjs'
       - 'tests/showcase/**'
       - 'package.json'
@@ -21,7 +20,6 @@ on:
       - 'theme-api/**'
       - 'launcher/theme-policy.js'
       - 'scripts/check-theme-submissions.cjs'
-      - 'scripts/build-showcase.cjs'
       - 'scripts/compile-tv-web.cjs'
       - 'tests/showcase/**'
       - 'package.json'
@@ -56,25 +54,24 @@ jobs:
           node-version: 22
       - name: Install main-project tools without lifecycle scripts
         run: npm ci --ignore-scripts --no-audit --no-fund
-      - name: Test registry, data-only validation and static output
+      - name: Test registry and data-only validation
         run: |
           node tests/showcase/registry.cjs
           node tests/showcase/submission-security.cjs
           node tests/showcase/remote.cjs
-          node tests/showcase/site.cjs
           node scripts/check-theme-submissions.cjs
       - name: Verify bounded commit-pinned public source bytes
         if: github.event_name != 'workflow_dispatch' || inputs.verify_remote
         run: timeout 180 node scripts/check-theme-submissions.cjs --remote
       - name: Prepare isolated browser checks
         run: npx playwright install --with-deps chromium
-      - name: Test showcase with local synthetic fixtures and blocked external requests
-        run: node tests/showcase/browser.cjs
-      - name: Build reviewed static inspection artifact
-        run: node scripts/build-showcase.cjs build/showcase-review/themes
+      - name: Test inline theme preview with blocked external requests
+        run: BROWSER_CHANNEL=chromium node tests/preview-themes-ui.cjs
+      - name: Build inline theme preview inspection artifact
+        run: python3 scripts/preview.py --build build/theme-preview-review
       - uses: actions/upload-artifact@v4
         with:
-          name: theme-showcase-review
-          path: build/showcase-review
+          name: theme-preview-review
+          path: build/theme-preview-review
           retention-days: 7
           if-no-files-found: error
