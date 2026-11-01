@@ -390,6 +390,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     nonlocal phase
                     phase = {'Installing Home Helper…': 'install-helper', 'Installing Home…': 'install-home',
                              'Configuring Home Helper…': 'configure-helper',
+                             'Starting Home Helper…': 'launch-helper',
                              'Uploading Root and recovery runtime…': 'install-root',
                              'Installing Root Updater and preparing rollback…': 'install-root-updater',
                              'Checking Root Updater…': 'verify-root-updater',
@@ -412,9 +413,11 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     result = installer.resume_root_setup()
                 else:
                     result = installer.install(inventory, key, args.migrate_home, reinstall=reinstall) if reinstall else installer.install(inventory, key, args.migrate_home)
+                phase = 'verify-home-button'
+                installer.outcome.review_home(ask, write, args.non_interactive)
                 if profile['edition'] == 'root':
-                    write.heading('Root is ready')
-                    write('Home control is on and Clean Your TV Home was opened.')
+                    write.heading('Review TV checks')
+                    write('Root activation and the launch request completed. Check the separate startup and physical Home results.')
                     if result.get('updates_ready'):
                         write('Root Updater is ready. Install future compatible updates in Settings → Software updates on the TV.')
                     write('Home control stays on until you turn it off. The computer can now be switched off.')

@@ -62,6 +62,8 @@ chmod +x cytv
 
 Selecciona el televisor o introduce su IP, elige la edición y revisa el resumen. Confirma una nueva identidad SSH solo para tu televisor en una red de confianza; una clave guardada que haya cambiado bloquea el acceso. Root prepara la recuperación y activa Home inmediatamente, sin prueba temporal ni paso de conservación. Comprueba flechas, OK, Home, Atrás/Cancelar, volumen, suspensión y arranque en frío.
 
+Candidato sin publicar: se muestran por separado la verificación de paquetes, el inicio y tu observación del botón Home físico. Una confirmación de inicio o un proceso Helper no prueban la interceptación de Home. Abre otra app, pulsa Home una vez brevemente y elige lo observado; el valor predeterminado es **No probado / omitir**. `--yes` no responde por ti y el modo no interactivo deja la prueba pendiente. Un fallo de Home o una omisión no deshacen los paquetes ni reinstalan. Guarda el informe local para pedir ayuda; no se publica automáticamente. Otros controles, sonido, espera y arranque en frío se prueban aparte.
+
 ## Uso y recuperación
 
 Las flechas seleccionan y OK abre; mantén OK para reordenar. Una pulsación breve de Atrás conserva la navegación y confirmación de salida de cada aplicación. Home abre el lanzador mientras el control está activo. Mantén Atrás durante 1,2 segundos para abrir LG Home una vez. El interruptor de control de Home y tus ajustes no cambian.

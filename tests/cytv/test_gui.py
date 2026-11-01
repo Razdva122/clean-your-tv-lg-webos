@@ -128,6 +128,25 @@ class GuiTests(unittest.TestCase):
                 self.assertTrue(w.steps.isHidden())
                 w.close()
 
+    def test_setup_result_requires_all_three_distinct_checks(self):
+        w = Wizard(); self.addCleanup(w.close)
+        w.command = 'install'
+        w.receive('check', {'id':'ssh','label':'SSH connection and sign-in','status':'pass','detail':''})
+        for key, label, status in [('packages','Installed packages','pass'),
+                ('startup','Startup readback','pass'),
+                ('home-button','Home button — your observation','unknown')]:
+            w.receive('check', {'id':key,'label':label,'status':status,'detail':''})
+        w.receive('done',0)
+        self.assertEqual(w.title.text(), 'Review TV checks')
+        text = w.check_panel.toPlainText()
+        self.assertLess(text.index('Installed packages'), text.index('SSH connection and sign-in'))
+        w.receive('check', {'id':'home-button','label':'Home button — your observation','status':'fail','detail':''})
+        w.receive('done',0)
+        self.assertEqual(w.title.text(), 'Review TV checks')
+        w.receive('check', {'id':'home-button','label':'Home button — your observation','status':'pass','detail':''})
+        w.receive('done',0)
+        self.assertEqual(w.title.text(), 'Home button confirmed by you')
+
     def test_steps_follow_events_without_marking_failed_install_complete(self):
         w = Wizard()
         w.receive('step', (3, 'Prepare the TV connection', True))

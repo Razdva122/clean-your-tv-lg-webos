@@ -2,6 +2,8 @@
 STATUS = {'pending': 'Not checked', 'running': 'Checking…', 'pass': 'Passed',
           'fail': 'Failed', 'unknown': 'Could not verify'}
 LABELS = {
+    'packages': 'Installed packages', 'startup': 'Startup readback',
+    'home-button': 'Home button — your observation',
     'ssh': 'SSH connection and sign-in', 'root-user': 'Root privileges',
     'python3': 'TV Python executable', 'python-json': 'Python json module',
     'python-fcntl': 'Python fcntl module', 'python-version': 'TV Python 3.9+',

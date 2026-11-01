@@ -19,7 +19,7 @@ REASONS = ('unknown', 'user-error', 'ssh-command-failed', 'ssh-unreachable',
 ACTIONS = ('recover', 'install', 'uninstall', 'restore', 'status', 'doctor', 'home-diagnostics',
            'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access',
            'recover-system-rollback', 'replace-system-updater', 'clean-wam-cache')
-PHASES = ('select-tv', 'inspect-tv', 'select-edition', 'prepare-payload', 'ssh-connect',
+PHASES = ('launch-helper', 'verify-home-button', 'select-tv', 'inspect-tv', 'select-edition', 'prepare-payload', 'ssh-connect',
           'inspect-installation', 'pair-tv', 'read-inventory', 'install-packages',
           'install-helper', 'install-home', 'configure-helper', 'install-root',
           'install-root-updater', 'verify-root-updater', 'verify-root-recovery',
@@ -67,6 +67,9 @@ def metadata(value):
 def tv_summary(value):
     value = mapping(value)
     result = metadata(value)
+    if 'setup_outcome' in value:
+        from .outcomes import summary
+        result['setup_outcome'] = summary(value['setup_outcome'])
     for key, allowed in (('helper_state', HELPER_STATES), ('kernel_arch', KERNEL_ARCHES),
                          ('userland_abi', ('arm32', 'arm64', 'other', 'unknown')),
                          ('graphics_resolution', ('1280x720', '1920x1080'))):

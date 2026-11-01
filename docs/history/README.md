@@ -8,6 +8,8 @@ one model or artifact does not certify later releases or a different TV.
 
 ## Scoped feature checks
 
+- [Separate installer outcomes, 2026-11-01](2026-11-01-installer-outcomes.md): distinct package/startup/owner-observed Home evidence, default skip and local reports; no physical compatibility claim.
+
 - [Installer recovery journey, 2026-11-01](2026-11-01-installer-recovery-journey.md): separately confirmed recovery, existing guards, no implicit reinstall and accurate blocked results; original #201/#216 recovery remains unresolved.
 
 - [Automatic Chinese font preparation, 2026-11-01](2026-11-01-automatic-chinese-fonts.md): #228 compact generated subsets, pinned host-only sources, offline reuse and mixed SC/TC fallback; physical rendering remains unverified.

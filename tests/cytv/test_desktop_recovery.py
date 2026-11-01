@@ -224,6 +224,62 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.assertIsNotNone(self.store.pending(self.profile))
         self.assertFalse(any(c[0] == 'upload' or c[1] == 'com.webos.appInstallService/status' for c in self.remote.calls))
 
+    def test_install_collects_explicit_home_result_without_reinstalling(self):
+        self.store.finish(self.profile)
+        launched = False
+        original_luna, original_run = self.remote.luna, self.remote.run
+        def luna(uri, payload, **kwargs):
+            nonlocal launched
+            if uri.endswith('/launch') and payload['id'] == 'com.local.nativehome':
+                launched = True
+            return original_luna(uri, payload, **kwargs)
+        def run(command, **kwargs):
+            if launched and 'CYTV_HELPER_IDLE' in command:
+                return 'CYTV_HELPER_ACTIVE'
+            return original_run(command, **kwargs)
+        self.remote.luna, self.remote.run = luna, run
+        w = self.window()
+        w.start('install', self.profile)
+        for _ in range(2):
+            self.pump(lambda: w.pending is not None)
+            w.submit('y')
+        self.pump(lambda: w.pending is not None)
+        self.assertIn('Home button result', w.pending.label)
+        self.assertEqual(w.pending.default, '3')
+        self.assertEqual([key for key, _, _ in w.pending.options], ['1','2','3'])
+        self.assertEqual(w.check_results['packages']['status'], 'pass')
+        self.assertEqual(w.check_results['home-button']['status'], 'unknown')
+        w.submit('2')
+        self.pump(lambda: not w.running)
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertEqual(w.title.text(), 'Review TV checks')
+        self.assertTrue(self.button(w, 'Save diagnostic report…').isDefault())
+        report = json.loads(w.report.read_text())
+        self.assertIsNone(report['error_type'])
+        self.assertEqual(report['tv']['setup_outcome']['home_button'], 'not-working')
+        self.assertEqual(report['checks']['packages'], 'pass')
+        self.assertEqual(report['checks']['startup'], 'pass')
+        self.assertEqual(report['tv']['setup_outcome']['startup'], 'process-observed')
+        self.assertEqual(report['checks']['home-button'], 'fail')
+        installs = [c for c in self.remote.calls if c[0]=='luna' and c[1].endswith('/install')]
+        self.assertEqual(len(installs),2)
+        self.assertTrue(all(profile == self.profile for profile in self.connections))
+        self.assertNotIn('PRIVATE-PAIRING-KEY', w.report.read_text())
+
+    def test_skipped_home_check_is_saved_as_untested_after_successful_packages(self):
+        self.store.finish(self.profile)
+        w = self.window(); w.start('install', self.profile)
+        for _ in range(2):
+            self.pump(lambda: w.pending is not None); w.submit('y')
+        self.pump(lambda: w.pending is not None)
+        w.submit('')
+        self.pump(lambda: not w.running)
+        report = json.loads(w.report.read_text())
+        self.assertEqual(report['tv']['setup_outcome']['home_button'], 'not-tested')
+        self.assertEqual(w.check_results['home-button']['status'], 'unknown')
+        self.assertEqual(w.title.text(), 'Review TV checks')
+        self.assertIsNone(self.store.pending(self.profile))
+
     def test_delegated_recovery_hides_install_steps_and_names_actual_action(self):
         w = self.window()
         w.command = 'install'

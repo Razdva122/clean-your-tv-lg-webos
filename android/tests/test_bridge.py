@@ -44,6 +44,24 @@ class BridgeTests(unittest.TestCase):
         callbacks.ask('Remove remaining Clean Your TV packages? [y/N]: ')
         self.assertTrue(native.events[-1]['defaultNo'])
 
+    def test_home_observation_choices_are_semantic_and_default_to_skip(self):
+        module = self.module()
+        class Native:
+            def __init__(self): self.events = []
+            def emit(self, raw): self.events.append(json.loads(raw))
+            def request(self, raw): self.events.append(json.loads(raw)); return '3'
+        native = Native(); callbacks = module.Callbacks(native)
+        console = module.AndroidConsole(callbacks)
+        console.option(1, 'Clean Your TV Home opened')
+        console.option(2, 'LG Home opened or Home did not work')
+        console.option(3, 'Not tested / skip')
+        callbacks.ask('Home button result [3]: ')
+        question = native.events[-1]
+        self.assertEqual([x['value'] for x in question['options']], ['1','2','3'])
+        self.assertEqual(question['defaultChoice'], '3')
+        callbacks.ask('Unrelated question [y/N]: ')
+        self.assertNotIn('options', native.events[-1])
+
     def test_cli_errors_reach_android_as_error_events(self):
         module = self.module()
         class Native:
