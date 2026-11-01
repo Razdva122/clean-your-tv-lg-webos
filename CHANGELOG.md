@@ -48,8 +48,9 @@
   check only during such a glide or an edge bump. Classic fades the top and bottom
   screen edges while rows lie beyond them, and a fresh press that cannot move
   (grid ends, Inputs shelf ends) gives a short 10 px bump. Reduced motion disables
-  both. Themes on the Classic layout keep this motion and the card zoom; other
-  layouts keep immediate remote focus, and themes keep their own screen edges.
+  both. Themes on the Classic layout keep this motion, the card zoom and the edge
+  fades (slightly softer over a wallpaper); other layouts keep immediate remote
+  focus and no fades.
 - Lighter rendering on 4K TVs (Home draws at 3840x2160 there): the ambient glow
   changes colour once the focus has rested for 800 ms, and the Classic layout then
   bakes it into a plain background element instead of keeping two full-screen layers

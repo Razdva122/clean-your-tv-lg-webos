@@ -176,8 +176,12 @@ for a flat background. Crossfade timing and opacity remain engine-owned. On the
 `dock-grid` layout the settled glow is baked into a plain base element that also
 carries `.ctv-ambient`, so the same author rule styles it; the two glow layers are
 drawn only while the colour crossfades. A theme on `dock-grid` also keeps Classic's
-row glide, edge bump, card zoom and focus-frame motion; other layouts keep
-immediate remote focus. Broken tile icons are hidden and replaced with the app initial;
+row glide, edge bump, card zoom, focus-frame motion and top/bottom edge fades (slightly
+softer under a theme); other layouts keep immediate remote focus and no fades. A
+`transition` declared on `.ctv-shortcut` or `.ctv-input-tile` replaces the engine's
+press, grow and fade motion, so leave it unset to keep Classic motion. The engine
+fades `background` and `color`, but gradients cannot interpolate: change a
+`background-color` under a constant `background-image` for focus fills that fade. Broken tile icons are hidden and replaced with the app initial;
 broken library images are hidden without hiding their actionable row.
 
 Outfit weights 300/400/500/700 and packaged Noto Sans fallbacks provide offline

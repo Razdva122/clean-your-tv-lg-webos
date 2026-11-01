@@ -157,16 +157,20 @@ const CURVE = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
         assert(flip.transform !== 'none' && !/^matrix\(1, 0, 0, 1, 0, 0\)$/.test(flip.transform), 'a transform animates the growth: ' + flip.transform);
         await page.waitForTimeout(300);
         assert.deepEqual(await page.locator('.ctv-input-tile').evaluateAll(tiles => tiles.map(tile => getComputedStyle(tile).transform).filter(value => value !== 'none')), [], 'no input keeps a transform at rest');
-        // Themes keep their own edges: Classic's fades stay off under an active theme.
+        // Themes on the Classic layout keep the fades; other layouts have none.
         await page.evaluate(() => key(40, false));
         await page.waitForTimeout(400);
         await page.evaluate(() => key(40, false));
         await page.waitForTimeout(400);
-        assert.equal(await page.locator('#viewport').evaluate(el => getComputedStyle(el, '::before').opacity), '1');
+        const topFade = () => page.locator('#viewport').evaluate(el => getComputedStyle(el, '::before').opacity);
+        assert.equal(await topFade(), '1');
         await page.evaluate(() => document.getElementById('homeSurface').classList.add('ctv-theme-active'));
         await page.waitForTimeout(300);
-        assert.equal(await page.locator('#viewport').evaluate(el => getComputedStyle(el, '::before').opacity), '0', 'themes keep the top edge');
-        await page.evaluate(() => document.getElementById('homeSurface').classList.remove('ctv-theme-active'));
+        assert.equal(await topFade(), '1', 'a theme on the Classic layout keeps the top fade');
+        await page.evaluate(() => document.getElementById('homeSurface').setAttribute('data-layout', 'side-grid'));
+        await page.waitForTimeout(300);
+        assert.equal(await topFade(), '0', 'a theme on another layout has no fade');
+        await page.evaluate(() => { const surface = document.getElementById('homeSurface'); surface.setAttribute('data-layout', 'dock-grid'); surface.classList.remove('ctv-theme-active'); });
         // Remote paths that send a held key as separate presses (no `repeat`) stay
         // immediate, and a held arrow cuts a running glide short even without scrolling.
         for (let i = 0; i < rows; i++) await page.evaluate(() => key(38, true));

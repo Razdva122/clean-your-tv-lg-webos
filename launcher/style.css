@@ -519,6 +519,18 @@ body.editing #glass {
 #homeSurface:not(.ctv-theme-active) #viewport.row-above::before {
   opacity: 1;
 }
+/* Themes on the Classic layout keep both fades, softer so they read as a vignette
+   over a wallpaper. */
+#homeSurface.ctv-theme-active[data-layout="dock-grid"] #viewport::after {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.6));
+}
+#homeSurface.ctv-theme-active[data-layout="dock-grid"] #viewport::before {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0));
+}
+#homeSurface.ctv-theme-active[data-layout="dock-grid"] #viewport.row-peek::after,
+#homeSurface.ctv-theme-active[data-layout="dock-grid"] #viewport.row-above::before {
+  opacity: 1;
+}
 /* Classic keeps the localized date on two lines: weekday, then month and day. */
 #homeSurface[data-layout="dock-grid"] #date {
   white-space: pre-line;
