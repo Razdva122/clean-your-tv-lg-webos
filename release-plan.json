@@ -61,6 +61,14 @@
         200
       ],
       "summary": "Add allowlisted host Python download/cache failure reasons; #200 original macOS cause and pending Root recovery remain unresolved"
+    },
+    {
+      "pr": 222,
+      "issues": [
+        202,
+        206
+      ],
+      "summary": "Refresh Root Settings status before resumed actions and preserve retained-rollback Home capture; partial #202, old forward cancellation and exact-package device acceptance remain unresolved"
     }
   ],
   "excluded": [],
