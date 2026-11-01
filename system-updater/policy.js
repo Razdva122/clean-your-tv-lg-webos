@@ -2,7 +2,7 @@
 // Independently provisioned trust boundary. Signed fields are data only.
 var crypto=require('crypto'),https=require('https'),fs=require('fs'),URL=require('url').URL;
 // Keep aligned with build.VERSION and the packaged app/service metadata.
-var SUPERVISOR_VERSION='1.1.2';
+var SUPERVISOR_VERSION='1.2.0';
 var REPO='https://github.com/Razdva122/clean-your-tv-lg-webos/releases/';
 var IDENTITIES={home:'com.gathin.tvhome',helper:'com.local.nativehome',updater:'com.cleanyourtv.updater',root:'com.cleanyourtv.root.preview','root-updater':'com.cleanyourtv.root.updater','root-infrastructure':null};
 var SETS={'no-root':['home','helper','updater'],root:['root','root-updater','root-infrastructure']},MAX=64*1024*1024;

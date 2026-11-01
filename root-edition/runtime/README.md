@@ -1,8 +1,8 @@
 # Root runtime contract
 
-Published 1.5.2 contains Root 0.6.1; the unpublished 1.5.3 candidate selects
-Root 0.6.2. Historical tests retain their exact artifact scope; see the
-[current release and acceptance limits](../../docs/RELEASE-1.5.3.md).
+Published1.5.4 contains Root 0.6.2; frozen, unpublished 1.6.0 selects
+Root/infrastructure0.7.0. Historical tests retain their exact artifact scope;
+see [current candidate versions and acceptance limits](../../docs/RELEASE-1.6.0.md).
 
 Install these Python files under `/var/lib/clean-your-tv-root/runtime` as root-owned files without group/world write permission. Python 3.9+ and `/usr/bin/luna-send` are required; Root setup also requires TV Node.js 8+,
 Homebrew services and supported ARM32 input. With system Python, invoke

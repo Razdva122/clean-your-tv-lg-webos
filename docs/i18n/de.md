@@ -1,5 +1,7 @@
 # Clean Your TV — Benutzeranleitung
 
+> Der eingefrorene Kandidat 1.6.0 ist noch nicht veröffentlicht; stabil bleibt 1.5.4. Enthalten sind alle fünf Installer-Verbesserungen. Root-Einstellungen lesen beim erneuten Öffnen den tatsächlichen Status; ein fehlgeschlagener Test aktiviert Home nicht. System Updater 1.2.0 gilt für zulässige Neueinrichtung oder geprüften Ersatz von 1.1.0/1.1.1. Installiertes 1.1.2 behält seine alten Kanäle; eine allgemeine Migration gibt es nicht. Wiederherstellungsdaten behalten und keinen Ersatz erzwingen. [Versionen und Grenzen](../RELEASE-1.6.0.md).
+
 > v1.5.0: Designs, Galerie und PC-TV-Übertragung. Bekannte Root-Grenzen: Appearance kann um 110 px springen; Home startet nach Standby möglicherweise nicht automatisch. Die Geräteprüfung bleibt begrenzt. [1.5.0](../RELEASE-1.5.0.md).
 
 > **1.5.4:** Designs mit festem Layout behalten den Platz der ausgeblendeten Columns-Zeile, damit Apply die Scrollposition in Appearance erhält. Zeiger, Tastatur und Bedienungshilfen überspringen Columns.

@@ -363,9 +363,11 @@ Status, doctor, restore and uninstall never download a new interpreter.
 
 ## Root System Updater replacement
 
-Root installers since 1.5.0 contain System Updater 1.1.2. The explicit
-replacement command accepts an installed 1.1.0 or 1.1.1 after verifying its
+Published1.5.4 installers contain System 1.1.2; frozen1.6.0 selects System 1.2.0.
+The explicit replacement command still accepts only installed 1.1.0/1.1.1 after verifying its
 retained code, owner package, registration and finished recovery state.
+Installed1.1.2 remains pinned with its old channels; this candidate provides no
+general migration for it. Do not force replacement or remove recovery data.
 With the existing trusted Root connection:
 
 ```sh

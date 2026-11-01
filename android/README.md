@@ -1,14 +1,14 @@
 # Install Clean Your TV from Android
 
-> Unpublished 1.5.3 candidate: Android 0.5.1 / versionCode 16. See the [release scope and pending acceptance](../docs/RELEASE-1.5.3.md). Published stable is 1.5.2 (Android 0.5.0 / versionCode 15); historical acceptance below retains its original scope.
+> Frozen 1.6.0 candidate: Android 0.6.0 / versionCode 17, not published. Public stable is 1.5.4 (Android 0.5.1 / code 16). See [versions and pending acceptance](../docs/RELEASE-1.6.0.md); historical acceptance retains its original scope.
 
 Use your phone to install either **No-root** (Developer Mode) or **Root**
 (existing root SSH) on an LG webOS TV. No PC, Termux, phone Python installation
 or cloud service is needed. The APK includes the offline interface and TV packages;
 optional TV Python is a separate verified download.
 
-Published **1.5.2** includes **Android 0.5.0 / versionCode 15**. The unpublished
-**1.5.3** candidate selects **Android 0.5.1 / versionCode 16**.
+Published **1.5.4** includes **Android 0.5.1 / versionCode 16**. The frozen
+**1.6.0** candidate selects **Android 0.6.0 / versionCode 17**.
 [Download the signed APK](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest) ·
 [Full installation guide](../docs/INSTALL.md) · [Recovery](#recovery-and-private-data) ·
 [Report a problem](../docs/FEEDBACK.md)
@@ -26,8 +26,8 @@ launch, with English fallback. Tap the top-right language control to choose and
 save another language. Root and No-root are equal options for different TV access.
 
 <a id="release-140"></a>
-See the [published 1.5.2 release notes](../docs/RELEASE-1.5.2.md),
-[1.5.3 candidate scope](../docs/RELEASE-1.5.3.md) and
+See the [published 1.5.4 release notes](../docs/RELEASE-1.5.4.md),
+[1.6.0 candidate scope](../docs/RELEASE-1.6.0.md) and
 [Android acceptance boundaries](STABLE-READINESS.md).
 
 **Unreleased:** a [visible TV checklist](../docs/CLI.md#visible-tv-checks-unreleased) shows individual prerequisite results and keeps them on the error screen. Unrun checks remain unverified; `doctor` does not prepare Python or request control pairing.

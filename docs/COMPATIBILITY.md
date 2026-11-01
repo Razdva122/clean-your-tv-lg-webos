@@ -1,5 +1,7 @@
 # Requirements and known limits
 
+> Frozen1.6.0 candidate is not published. Public downloads remain v1.5.4. See [selected versions, installer changes and limits](RELEASE-1.6.0.md); final package/device acceptance is still pending.
+
 [Documentation](README.md) · [Choose an edition](EDITIONS.md) · [Install](INSTALL.md)
 
 Check the access method and runtime first. Meeting these requirements or installing

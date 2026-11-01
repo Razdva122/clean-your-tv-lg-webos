@@ -1,9 +1,10 @@
 # Android stable readiness
 
-Status: **Android 0.5.1 / versionCode 16 is selected for the unpublished 1.5.3
-candidate.** Published 1.5.2 contains Android 0.5.0 / versionCode 15. See the
-[1.5.3 release scope and acceptance limits](../docs/RELEASE-1.5.3.md). Final
-candidate package/signature and upgrade verification remain required below.
+Status: **Android 0.6.0 / versionCode 17 is selected for frozen, unpublished
+1.6.0.** Public stable 1.5.4 contains Android 0.5.1/code 16. See the
+[1.6.0 scope and limitations](../docs/RELEASE-1.6.0.md). The final protected-CI
+APK signer/payload and original-certificate in-place upgrade remain required.
+No browser or earlier emulator result accepts these new bytes.
 
 For the 1.4.0 release, on 2026-10-27 the maintainer explicitly accepted emulator
 verification as sufficient because no physical phone was available. That dated
@@ -29,7 +30,7 @@ Android success, infer Root acceptance, or close the original unfinished-removal
 report. Its `status:needs-info` remains appropriate for the outstanding original
 reporter response.
 
-No physical Android result for 1.5.3 is recorded here. Physical device checks
+No physical Android result for the 1.6.0 candidate is recorded here. Physical device checks
 remain follow-up; the dated maintainer decision above and the existing user
 success retain their original scope and do not accept new candidate bytes.
 
@@ -124,7 +125,7 @@ Separate Android installer results from TV runtime compatibility.
 | --- | --- | --- |
 | No-root installation from phone | v1.1.0 user success in #24 | Record device details and verify final candidate |
 | Root installation from phone | Not established by #24 | Physical install, status and recovery |
-| Published preview update without data loss | Original-signer code11-to-code12 file retention and native Store fixture below | Final candidate code16 original-signer APK; physical update |
+| Published preview update without data loss | Original-signer code 11-to-code 12 file retention and native Store fixture below | Final candidate code 17 original-signer APK; physical update |
 | Activity recreation and prompt replay | Emulator idle UI rotation/background return; native bounded replay and browser suites | Rotation/background return during a live phone-to-TV operation |
 | Phone lock and denied notification permission | Emulator idle UI checks; foreground service and bounded wake lock in code | Verify operation continuation / clear outcome on actual Android devices |
 | Network loss / TV unavailable | Existing negative connection fixtures and recovery UI | Interrupt real transfer; status/restore must reconcile before retry |
@@ -134,7 +135,7 @@ Separate Android installer results from TV runtime compatibility.
 | TV power / recovery | Not established by successful package installation | Standby/wake and cold boot separately; status/restore and rollback within supported scope |
 
 For release 1.4.0, the maintainer accepted the emulator-tested scope for suffix
-removal. That decision does not accept new 1.5.3 artifacts. The API 24 /
+removal. That decision does not accept new 1.6.0 artifacts. The API 24 /
 WebView 108 floor remains a declared minimum, not a tested device claim. Emulator
 checks, CI success and one successful setup do not establish universal phone/TV
 compatibility. Report failures with Android/WebView versions, phone and TV model,
@@ -192,8 +193,8 @@ No real TV profiles, private keys or TV connections were used.
   non-debuggable release target.
 
 These checks supported the maintainer's dated suffix decision, not physical-TV
-acceptance. For that release, the final 0.4.0/code13 protected-CI artifact required
+acceptance. For that release, the final 0.4.0/code 13 protected-CI artifact required
 separate signer, metadata, payload and original-signer upgrade verification; the
-code12 results alone could not satisfy those checks. These historical results
-also do not establish acceptance of the 1.5.3 / Android 0.5.1 / code16 artifact,
+code 12 results alone could not satisfy those checks. These historical results
+also do not establish acceptance of the 1.5.3 / Android 0.5.1 / code 16 artifact,
 which requires its own exact source, hash and verification record.

@@ -1,5 +1,7 @@
 # Čeština — rozhraní televizoru
 
+> Zmrazený kandidát 1.6.0 ještě není vydán; stabilní verze zůstává 1.5.4. Čeština je dostupná v rozhraní TV, instalátory nadále nabízejí dvanáct jazyků. Ověření na TV a kontrola rodilým mluvčím dosud neproběhly. [Verze a omezení](../RELEASE-1.6.0.md).
+
 [Dokumentace](../README.md) · [Jazyky](../LANGUAGES.md)
 
 **Připravované vydání:** čeština zatím není součástí zveřejněné stabilní verze.

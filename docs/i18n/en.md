@@ -1,5 +1,7 @@
 # Clean Your TV — user guide
 
+> Frozen 1.6.0 candidate, not published. Public stable remains 1.5.4. The candidate includes all five installer improvements and refreshes Root Settings from actual status after reopening; a failed check does not enable Home. System Updater 1.2.0 is for new eligible setup or verified replacement of 1.1.0/1.1.1. Existing 1.1.2 stays pinned with its old channels; no general migration is provided. Keep recovery data and do not force replacement. [Versions and limits](../RELEASE-1.6.0.md).
+
 > v1.5.0: themes, Showcase and PC-to-TV transfer. Known Root limits: Appearance can shift 110 px; automatic Home after standby can fail. Device-specific acceptance remains limited. [1.5.0](../RELEASE-1.5.0.md).
 
 > **1.5.4:** fixed-layout themes keep the empty Columns row to preserve Appearance scroll position during Apply. Hidden Columns is skipped by pointer, keyboard and accessibility navigation.

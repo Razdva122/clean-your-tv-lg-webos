@@ -87,12 +87,14 @@ are FHD; they do not reselect a preferred variant during recovery. Existing
 same-version, downgrade, signature, Helper and baseline restrictions stay intact.
 
 Existing independently provisioned Root/System updater code does not acquire the
-selector merely through application OTA. Use the supported computer setup or
-explicit verified supervisor replacement workflow after publication, preserving
-its recovery state and original rollback baseline. Do not edit retained code,
-receipts or keys. Old clients keep their old channel behavior until migrated;
-new installer builds provision the selector. See [System updates](../UPDATES.md)
-for setup and migration prerequisites. No migration or TV test was performed here.
+selector through application OTA. Fresh eligible 1.6.0 setup can provision
+System 1.2.0. The explicit replacement path admits only verified 1.1.0/1.1.1;
+installed 1.1.2 remains pinned and has no general replacement/migration path in
+this candidate. Those clients keep their old channel behavior. Do not delete
+state, edit retained code/keys or reinstall to force migration. Keep recovery
+and original rollback baselines; any future migration needs a separately
+reviewed implementation and exact-package acceptance. See [System updates](../UPDATES.md).
+No migration or TV test was performed here.
 
 Actual 720p graphics/package behavior on the reported LJ550T remains pending a
 separately agreed owner session. Browser geometry is implementation evidence,

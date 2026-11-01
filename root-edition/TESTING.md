@@ -3,10 +3,10 @@
 Historical result (2026-10-27): [corrected C3 acceptance and manual physical rollback](../docs/RELEASE-1.4.0-ACCEPTANCE.md) passed in the recorded scope. The maintainer accepted #90 and requested closure. Pending statements below describe earlier investigation checkpoints; other hardware remains unverified.
 
 For current setup use [installation](../docs/INSTALL.md), [update preparation](UPDATES.md)
-and [current release limits](../docs/RELEASE-1.5.3.md). The
+and [current candidate limits](../docs/RELEASE-1.6.0.md). The
 [1.4.0 acceptance](../docs/RELEASE-1.4.0-ACCEPTANCE.md) remains historical; the
 Root 0.6.1 standby failure in [#171](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/171)
-is unresolved, and candidate Root 0.6.2 adds diagnostics rather than a proven fix.
+is unresolved, and candidate Root0.7.0 retains diagnostics and has no proven fix for that failure.
 This is a developer test plan; bounded trials below are not a normal installer
 Keep/confirmation step. Dated checkpoints retain their original builds and do
 not override later issue evidence or accept new candidate artifacts.

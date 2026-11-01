@@ -8,6 +8,8 @@ one model or artifact does not certify later releases or a different TV.
 
 ## Scoped feature checks
 
+- [Release1.6.0 freeze/build, 2026-11-02](2026-11-02-release-1.6.0-freeze.md): selected versions, frozen scope, cross-platform build identities and remaining acceptance gates.
+
 - [Combined five-stage installer regression audit, 2026-11-02](2026-11-02-installer-five-stage-regression.md): diagnostic/recovery/outcome/admission/guidance interactions and the remaining frozen-build, Android and device release gates.
 
 - [Early Root admission and connection guidance, 2026-11-01](2026-11-01-installer-preflight-help.md): pre-mutation interface checks, typed localized advice and unchanged pending/trust guards; no physical acceptance.

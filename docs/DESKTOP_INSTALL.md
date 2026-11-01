@@ -1,5 +1,7 @@
 # Install cytv without a terminal
 
+> Frozen1.6.0 candidate is not published. Public downloads remain v1.5.4. See [selected versions, installer changes and limits](RELEASE-1.6.0.md); final package/device acceptance is still pending.
+
 Download the desktop package from the
 [published release](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest).
 The wizard includes its runtime and TV packages. No developer tools are needed.
