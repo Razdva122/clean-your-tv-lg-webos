@@ -42,7 +42,7 @@ const assert=require('node:assert/strict');
     assert.equal(await page.evaluate(()=>document.activeElement.id),'developerOpen');
     assert.equal(await nav.locator('[aria-selected=true]').getAttribute('data-category'),'developer');
    }
-   for(const locale of ['en','de','es','pt-BR','fr','it','ko','hi','pl','ru','zh-Hans','zh-Hant']){
+   for(const locale of ['en','cs','de','es','pt-BR','fr','it','ko','hi','pl','ru','zh-Hans','zh-Hant']){
     await page.evaluate(code=>localStorage.setItem('tvhome.language',code),locale);
     await page.reload();await page.locator('#tiles .item').first().waitFor();await page.locator('#btnSettings').click();
     for(const size of [{width:1920,height:1080},{width:1280,height:720}]){
@@ -70,6 +70,6 @@ const assert=require('node:assert/strict');
    assert.deepEqual(errors,[],edition+' browser errors');
    await page.close();
   }
-  console.log('PASS category switching, remote column navigation, theme return and 48 localized layouts');
+  console.log('PASS category switching, remote column navigation, theme return and 52 localized layouts');
  } finally {await browser.close();}
 })().catch(error=>{console.error(error);process.exit(1);});

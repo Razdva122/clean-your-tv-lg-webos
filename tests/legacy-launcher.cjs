@@ -183,8 +183,8 @@ const profiles = ['modern', 'no-inset', 'no-inset-or-es2015', 'prefixed-webkit']
         }), [0, 0, 1920, 1080]);
         await page.locator('[data-category=language]').click();
         await page.locator('#settingsLanguageChoices').waitFor({state: 'visible'});
-        assert.equal(await page.locator('#settingsLanguageChoices button').count(), 13,
-          'automatic and twelve languages must remain reachable without ES2015 APIs');
+        assert.equal(await page.locator('#settingsLanguageChoices button').count(), 14,
+          'automatic and thirteen languages must remain reachable without ES2015 APIs');
         await page.keyboard.press('ArrowRight');
         assert.equal(await page.evaluate(() => document.activeElement.dataset.language), 'auto');
         await page.keyboard.press('Escape');

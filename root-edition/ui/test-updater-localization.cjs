@@ -18,4 +18,4 @@ for(const locale of Object.keys(catalogs)){
  assert.equal(confirmation.options.message,tr('Restore the previous Home version and pre-update settings. Settings changed after the update will be lost. Keep the TV powered on.'));
  status='rolled-back';confirmation.accept();assert.equal(elements.status.textContent,tr('No recovery needed.'));
 }
-console.log('PASS independent updater startup, status, restore confirmation and diagnostic codes in twelve languages');
+console.log('PASS independent updater startup, status, restore confirmation and diagnostic codes in thirteen languages');

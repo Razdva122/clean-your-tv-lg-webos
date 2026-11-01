@@ -229,3 +229,26 @@ if (window.HomeI18n) window.HomeI18n.add({
     "This audio mode cannot be reconnected here. Use LG sound settings.": "此聲音模式無法在此重新連接。請使用 LG 聲音設定。"
   }
 });
+
+/* Czech TV interface (#211). */
+if (window.HomeI18n) window.HomeI18n.add({
+  "cs": {
+    "HDMI sound": "Zvuk HDMI",
+    "Reconnect eARC": "Znovu připojit eARC",
+    "Restore HDMI output": "Obnovit výstup HDMI",
+    "Restore saved eARC setting": "Obnovit uložené nastavení eARC",
+    "Recover after power-on": "Obnovovat po zapnutí",
+    "For delayed or missing HDMI sound. Reconnecting briefly interrupts audio.": "Pro opožděný nebo chybějící zvuk HDMI. Opětovné připojení krátce přeruší zvuk.",
+    "Experimental. Reconnects after power-on and standby wake, even when sound already works. Off by default.": "Experimentální. Znovu připojuje po zapnutí a probuzení z pohotovostního režimu, i když zvuk funguje. Ve výchozím stavu vypnuto.",
+    "An interrupted attempt may have left eARC off. Restore the saved setting only if you want eARC on.": "Přerušený pokus mohl ponechat eARC vypnuté. Uložené nastavení obnovte, pouze pokud chcete eARC zapnout.",
+    "Audio recovery is unavailable. Check LG sound settings, then retry.": "Obnovení zvuku není dostupné. Zkontrolujte nastavení zvuku LG a zkuste to znovu.",
+    "Reconnecting. You can go back while recovery finishes.": "Probíhá opětovné připojení. Během dokončování obnovení se můžete vrátit zpět.",
+    "Automatic recovery is saved but its power observer is unavailable. Check status.": "Automatické obnovení je uloženo, ale sledování napájení není dostupné. Zkontrolujte stav.",
+    "A previous attempt needs explicit setting restoration.": "Předchozí pokus vyžaduje výslovné obnovení nastavení.",
+    "eARC setting restored. Check the sound.": "Nastavení eARC bylo obnoveno. Zkontrolujte zvuk.",
+    "HDMI output restored. Check the sound.": "Výstup HDMI byl obnoven. Zkontrolujte zvuk.",
+    "Audio recovery was not confirmed. Check LG sound settings, then retry.": "Obnovení zvuku nebylo potvrzeno. Zkontrolujte nastavení zvuku LG a zkuste to znovu.",
+    "HDMI recovery is available.": "Obnovení HDMI je dostupné.",
+    "This audio mode cannot be reconnected here. Use LG sound settings.": "Tento zvukový režim zde nelze znovu připojit. Použijte nastavení zvuku LG."
+  }
+});

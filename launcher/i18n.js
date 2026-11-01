@@ -2,7 +2,7 @@
 (function(root){
  'use strict';
  var key='tvhome.language',catalogs={},active='en',dialog=null,previous=null,systemLanguage=null,pending=false,callbacks=[];
- var languages=[{code:'en',name:'English'},{code:'de',name:'Deutsch'},{code:'es',name:'Español'},{code:'pt-BR',name:'Português (Brasil)'},{code:'fr',name:'Français'},{code:'it',name:'Italiano'},{code:'ko',name:'한국어'},{code:'hi',name:'हिन्दी'},{code:'pl',name:'Polski'},{code:'ru',name:'Русский'},{code:'zh-Hans',name:'简体中文'},{code:'zh-Hant',name:'繁體中文'}];
+ var languages=[{code:'en',name:'English'},{code:'cs',name:'Čeština'},{code:'de',name:'Deutsch'},{code:'es',name:'Español'},{code:'pt-BR',name:'Português (Brasil)'},{code:'fr',name:'Français'},{code:'it',name:'Italiano'},{code:'ko',name:'한국어'},{code:'hi',name:'हिन्दी'},{code:'pl',name:'Polski'},{code:'ru',name:'Русский'},{code:'zh-Hans',name:'简体中文'},{code:'zh-Hant',name:'繁體中文'}];
  function normalize(value){
   var parts=String(value||'').split('.')[0].split('@')[0].replace(/_/g,'-').toLowerCase().split('-'),base=parts[0];
   if(base==='zh'){

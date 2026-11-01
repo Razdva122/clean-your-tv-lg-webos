@@ -9,8 +9,10 @@ class ProfileLanguageTests(unittest.TestCase):
     def test_language_is_validated_and_retained(self):
         profile = {'schema': 1, 'inventory': {'apps': [], 'inputs': []},
                    'config': {'columns': 5, 'dockApps': [], 'hiddenApps': []},
-                   'settings': {'tvhome.language': 'pt-BR'}}
-        self.assertEqual(validate(profile)['settings']['tvhome.language'], 'pt-BR')
+                   'settings': {'tvhome.language': 'cs'}}
+        for locale in ('pt-BR', 'cs'):
+            profile['settings']['tvhome.language'] = locale
+            self.assertEqual(validate(profile)['settings']['tvhome.language'], locale)
         profile['settings']['tvhome.language'] = 'auto'
         self.assertEqual(validate(profile)['settings']['tvhome.language'], 'auto')
         profile['settings']['tvhome.language'] = '<script>'
