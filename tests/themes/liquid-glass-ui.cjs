@@ -65,26 +65,58 @@ const types = {'.js': 'application/javascript', '.json': 'application/json', '.c
         const [radius, frame] = await style('.ctv-focus', 'borderTopLeftRadius', 'backgroundImage');
         assert.equal(radius, '32px');
         assert.match(frame, /^linear-gradient/, 'the focus frame is a glass gradient');
+        // The card rim is a ring, so Add app keeps its dashed outline and resting cards have no border.
+        assert.equal((await style('.add-app .card', 'borderTopStyle'))[0], 'dashed', 'Add app keeps its dashed outline');
+        assert.equal((await style('#tiles .item:not(.focused):not(.add-app) .card', 'borderTopWidth'))[0], '0px', 'resting app cards have no border');
         await page.keyboard.press('ArrowUp');
         assert.equal(await page.locator('.ctv-input-tile.is-focused').count(), 1, 'Up from the dock reaches the shelf');
-        const [tileImage, tileColor] = await style('.ctv-input-tile.is-focused', 'backgroundImage', 'color');
-        assert.match(tileImage, /rgba\(255, 255, 255, 0\.92\)/, 'the focused tile is near-opaque white glass');
+        const [tileFill, tileColor] = await style('.ctv-input-tile.is-focused', 'backgroundColor', 'color');
+        assert.equal(tileFill, 'rgba(255, 255, 255, 0.86)', 'the focused tile is near-opaque white glass');
         assert.equal(tileColor, 'rgb(11, 13, 24)', 'with dark text');
         await page.keyboard.press('ArrowRight');
         assert.equal(await page.locator('.ctv-input-tile.is-focused .input-name').textContent(), 'HDMI 2', 'the shelf is navigable');
+        // Labels over a live picture turn white, as in Classic.
+        const previewLabels = await page.locator('.ctv-input-tile.is-focused').evaluate(tile => {
+          tile.classList.add('previewing', 'is-previewing');
+          const colors = [tile.querySelector('.input-name'), tile.querySelector('.ctv-input-status')].map(el => getComputedStyle(el).color);
+          tile.classList.remove('previewing', 'is-previewing');
+          return colors;
+        });
+        assert.deepEqual(previewLabels, ['rgb(255, 255, 255)', 'rgba(255, 255, 255, 0.78)'], 'preview labels are white over the picture');
         await page.screenshot({path: path.resolve('build/liquid-glass-shelf-' + edition + '.png')});
         await page.keyboard.press('ArrowUp');
         assert.equal(await page.locator('.ctv-shortcut.is-focused').count(), 1, 'Up from the shelf reaches the shortcuts');
-        const [pillImage, pillColor] = await style('.ctv-shortcut.is-focused', 'backgroundImage', 'color');
-        assert.match(pillImage, /rgba\(255, 255, 255, 0\.92\)/);
+        const [pillFill, pillColor] = await style('.ctv-shortcut.is-focused', 'backgroundColor', 'color');
+        assert.equal(pillFill, 'rgba(255, 255, 255, 0.86)');
         assert.equal(pillColor, 'rgb(11, 13, 24)');
         await page.keyboard.press('ArrowDown');
         await page.keyboard.press('ArrowDown');
         assert.equal(await page.locator('#tiles .focused').count(), 1, 'back on the grid');
 
-        // Classic motion under the theme: a tap that scrolls glides, and card zoom keeps its transition.
+        // Classic motion under the theme: the engine's transitions survive, the focused input
+        // grows and its fill fades, a tap that scrolls glides, and card zoom keeps its transition.
         await still.evaluate(node => node.remove());
         await page.waitForTimeout(400);
+        assert.deepEqual([await style('.ctv-input-tile', 'transitionProperty'), await style('.pill', 'transitionProperty')],
+          [['transform, background, color, opacity'], ['background, color, transform']], 'the theme keeps the engine transitions');
+        assert.equal(await page.locator('#viewport').evaluate(el => getComputedStyle(el, '::after').opacity), '1', 'the next row fades at the bottom edge');
+        const press = code => page.evaluate(code => document.dispatchEvent(new KeyboardEvent('keydown', {keyCode: code, which: code, bubbles: true, cancelable: true})), code);
+        await press(38);
+        await page.waitForTimeout(400);
+        const grow = await page.evaluate(() => new Promise(resolve => {
+          document.dispatchEvent(new KeyboardEvent('keydown', {keyCode: 39, which: 39, bubbles: true, cancelable: true}));
+          setTimeout(() => {
+            const tile = getComputedStyle(document.querySelector('.ctv-input-tile.is-focused'));
+            resolve({transform: tile.transform, fill: tile.backgroundColor});
+          }, 60);
+        }));
+        assert.notEqual(grow.transform, 'none', 'the focused input grows from its old box');
+        const alpha = Number((/rgba\(255, 255, 255, ([\d.]+)\)/.exec(grow.fill) || [])[1]);
+        assert(alpha > 0.12 && alpha < 0.86, 'the focused fill fades in: ' + grow.fill);
+        await page.waitForTimeout(400);
+        await press(40);
+        await page.waitForTimeout(400);
+        assert.equal(await page.locator('#tiles .focused').count(), 1, 'back on the grid');
         const motion = await page.evaluate(() => new Promise(resolve => {
           const surface = document.getElementById('homeSurface'), press = () => document.dispatchEvent(new KeyboardEvent('keydown', {keyCode: 40, which: 40, bubbles: true, cancelable: true}));
           let glided = false, step = 0;
@@ -100,6 +132,8 @@ const types = {'.js': 'application/javascript', '.json': 'application/json', '.c
         }));
         assert.equal(motion.glided, true, 'a tap that scrolls rows glides under the theme');
         assert.notEqual(motion.card, '0s', 'card zoom keeps its transition under remote navigation');
+        await page.waitForTimeout(400);
+        assert.equal(await page.locator('#viewport').evaluate(el => getComputedStyle(el, '::before').opacity), '1', 'rows above fade under the top edge');
 
         // The glow bakes into the base element, which carries the theme's clear ambient rule.
         await page.waitForTimeout(1800);
@@ -113,6 +147,15 @@ const types = {'.js': 'application/javascript', '.json': 'application/json', '.c
         await page.keyboard.press('ArrowDown');
         await page.addStyleTag({content: '*{transition:none!important;animation:none!important;}'});
         await page.waitForTimeout(300);
+
+        // The focused library row's label is dark on the white fill.
+        await page.locator('.add-app').click();
+        await page.locator('#appPicker .app-choice').first().focus();
+        assert.deepEqual(await page.locator('#appPicker .app-choice.is-focused .ctv-label').evaluate(el => [getComputedStyle(el).color, getComputedStyle(el).textShadow]),
+          ['rgb(11, 13, 24)', 'rgba(0, 0, 0, 0) 0px 0px 0px'], 'the focused library row stays readable');
+        await page.keyboard.press('Escape');
+        await page.locator('#appPicker').waitFor({state: 'hidden'});
+        await page.mouse.move(0, 0);
 
         await page.reload();
         await page.locator('#tiles .focused').waitFor();
