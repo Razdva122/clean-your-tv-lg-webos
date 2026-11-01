@@ -18,14 +18,14 @@ def preview_themes():
     return subprocess.check_output(['node', str(ROOT / 'scripts/build-preview-themes.cjs')], cwd=ROOT)
 
 LAUNCHER_FILES = {
-    'index.html', 'style.css', 'theme-defaults.css', 'theme-policy.js', 'theme-runtime.js', 'home-layout.js', 'layout-panel.js', 'settings-categories.js', 'layout-panel.css', 'renewal-panel.css', 'app.js', 'app-library.js', 'config.js',
+    'index.html', 'viewport.js', 'style.css', 'theme-defaults.css', 'theme-policy.js', 'theme-runtime.js', 'home-layout.js', 'layout-panel.js', 'settings-categories.js', 'layout-panel.css', 'renewal-panel.css', 'app.js', 'app-library.js', 'config.js',
     'user-data.js', 'release-notes.js', 'system-updates.js', 'update-panel.js', 'renewal-panel.js', 'helper-control.js', 'profile-bootstrap.js',
     'native-bootstrap.js', 'i18n.js', 'catalogs.js', 'i18n.css', 'fonts/outfit-300.ttf', 'fonts/outfit-400.ttf', 'fonts/outfit-500.ttf', 'fonts/outfit-700.ttf', 'fonts/NotoSans.ttf', 'fonts/NotoSans-OFL.txt', 'fonts/NotoSansDevanagari.ttf', 'fonts/NotoSansDevanagari-OFL.txt', 'fonts/NotoSansKR.ttf', 'fonts/NotoSansKR-OFL.txt', 'fonts/NotoSansSC.ttf', 'fonts/NotoSansSC-OFL.txt', 'fonts/NotoSansTC.ttf', 'fonts/NotoSansTC-OFL.txt', 'fonts/OFL.txt',
 }
 THEME_FILES = ['theme-data.js', 'theme-store.js', 'theme-manager.js', 'theme-receiver.js', 'theme-panel.js', 'theme-panel.css', 'theme-locales.js', 'builtin-theme-files.json'] + json.loads((ROOT / 'launcher/builtin-theme-files.json').read_text())
 LAUNCHER_FILES.update(['appinfo.json'] + THEME_FILES)
 ROOT_LAUNCHER_FILES = {
-    'index.html', 'app.js', 'app-library.js', 'style.css', 'theme-defaults.css', 'theme-policy.js', 'theme-runtime.js', 'home-layout.js', 'layout-panel.js', 'settings-categories.js', 'layout-panel.css', 'config.js', 'apps.js',
+    'index.html', 'viewport.js', 'app.js', 'app-library.js', 'style.css', 'theme-defaults.css', 'theme-policy.js', 'theme-runtime.js', 'home-layout.js', 'layout-panel.js', 'settings-categories.js', 'layout-panel.css', 'config.js', 'apps.js',
     'fonts/outfit-300.ttf', 'fonts/outfit-400.ttf', 'fonts/outfit-500.ttf', 'fonts/outfit-700.ttf', 'fonts/NotoSans.ttf', 'fonts/NotoSans-OFL.txt', 'fonts/NotoSansDevanagari.ttf', 'fonts/NotoSansDevanagari-OFL.txt', 'fonts/NotoSansKR.ttf', 'fonts/NotoSansKR-OFL.txt', 'fonts/NotoSansSC.ttf', 'fonts/NotoSansSC-OFL.txt', 'fonts/NotoSansTC.ttf', 'fonts/NotoSansTC-OFL.txt', 'fonts/OFL.txt',
     'i18n.js', 'catalogs.js', 'i18n.css', 'root-locales.js', 'root-exit.js', 'root-firmware-control.js', 'root-firmware.js', 'root-audio.js', 'root-audio-locales.js', 'root-settings.js', 'root-settings.css',
     'root-profile-data.js', 'root-profile.js', 'release-notes.js', 'system-updates.js', 'root-updates.js',

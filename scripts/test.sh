@@ -9,6 +9,7 @@ done
 has() { [[ "$selected" == *" $1 "* ]]; }
 
 if has ui || has tv; then
+  node tests/home-viewport.cjs
   npm run test:compat
   npm run lint:compat
   npm run test:themes
@@ -20,6 +21,8 @@ fi
 
 if has tv; then
 node tests/helper-compat.cjs
+node tests/passive-remote-diagnostic.cjs
+node tests/helper-panel-diagnostics.cjs
 for test in tests/apps/*.cjs; do
   if [[ "$test" != *"/ui.cjs" ]]; then node "$test"; fi
 done

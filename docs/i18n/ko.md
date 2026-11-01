@@ -145,6 +145,9 @@ Homebrew Channel이 이 설치 프로그램의 접근을 거부했습니다. web
 
 게시된 테마는 **ID로 추가**에서 ID(예: `102300a209`), `da.gd/102300a209` 또는 전체 GitHub 링크를 입력하세요. Home은 로드 전에 da.gd 주소를 표시하고 GitHub 대상과 테마 패키지를 검증합니다. 작성자는 릴리스 노트 또는 컴퓨터 미리보기의 **TV link → Copy ID**에서 ID를 복사할 수 있습니다.
 
+
+아직 공개되지 않은 후보 버전: Home Helper 패널의 **진단 보기**는 패널 자체 상태 요청의 필터링된 결과를 보여 줍니다. 보기만으로 Helper가 시작되거나 Home 제어가 변경되지 않습니다. 요청을 받으면 검토한 JSON만 공유하세요. [자세한 내용](../HELPER-DIAGNOSTICS.md#candidate-panel-caller-diagnostics-207).
+
 [Themes (English)](../THEMES.md) · [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
 
 1.5.4: **Classic**, **Alpine**, **Ribbon** — **설정 → 테마**. [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).

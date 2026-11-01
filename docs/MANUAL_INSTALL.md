@@ -31,6 +31,8 @@ Mode. Use No-root if your TV is not rooted. Do not install Developer Mode over
 an existing root setup to follow the No-root commands. Obtaining root and
 establishing support for a particular firmware are outside this guide.
 
+Candidate HD graphics builds are described in [Home graphics resolution](development/HOME-GRAPHICS-RESOLUTION.md). This source-build option does not change the published package selection or authorize replacing equal-version/signed packages.
+
 ### macOS, Linux and Windows
 
 - **macOS/Linux:** enter the `bash` blocks below in Bash or a compatible terminal.

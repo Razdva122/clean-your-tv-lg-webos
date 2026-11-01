@@ -144,6 +144,9 @@ Homebrew Channel 拒绝此安装程序访问。在 webOS 11 上，Homebrew 0.7.3
 
 安装已发布主题时，打开**通过 ID 添加**，输入 ID（例如 `102300a209`）、`da.gd/102300a209` 或完整 GitHub 链接。Home 会在加载前显示补全的 da.gd 地址，然后验证 GitHub 目标和主题包。作者可从版本说明或电脑预览的 **TV link → Copy ID** 复制 ID。
 
+
+尚未发布的候选版本：Home Helper 面板中的**显示诊断信息**会显示其自身状态请求的简短过滤结果。查看不会启动 Helper，也不会更改 Home 控制。仅在被要求时分享已检查的 JSON；[详情](../HELPER-DIAGNOSTICS.md#candidate-panel-caller-diagnostics-207)。
+
 [Themes (English)](../THEMES.md) · [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
 
 1.5.4: **Classic**, **Alpine**, **Ribbon** — **设置 → 主题**. [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).

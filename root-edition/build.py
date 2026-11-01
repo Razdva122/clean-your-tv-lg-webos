@@ -37,11 +37,11 @@ def ar(parts):
     return buffer.getvalue()
 
 
-def build(output, version='0.0.1', legacy_node_prototype=False):
+def build(output, version='0.0.1', legacy_node_prototype=False, resolution=None):
     output = Path(output).absolute()
     if '..' in output.parts or any(path.is_symlink() for path in (output, *output.parents)):
         raise ValueError('Output must not traverse symlinks or parent segments')
-    files = compile_web(preview.prepare(version=version))
+    files = compile_web(preview.prepare(version=version, resolution=resolution))
     info = json.loads(files['appinfo.json'])
     app_id = info['id']
     version = info['version']
@@ -116,9 +116,10 @@ def main():
     parser.add_argument('--output', type=Path, required=True, help='New directory; parent must exist')
     parser.add_argument('--version', default='0.0.1', help='Root release version, X.Y.Z')
     parser.add_argument('--legacy-node-prototype', action='store_true', help='Host-only Node 0.12 prototype; admission remains Node 8+')
+    parser.add_argument('--resolution', choices=('1280x720', '1920x1080'), help='Explicit graphics resolution for this candidate package')
     args = parser.parse_args()
     try:
-        package = build(args.output, version=args.version, legacy_node_prototype=args.legacy_node_prototype)
+        package = build(args.output, version=args.version, legacy_node_prototype=args.legacy_node_prototype, resolution=args.resolution)
     except (ValueError, OSError) as exc:
         parser.exit(1, 'Candidate build failed: ' + str(exc) + '\n')
     print('Built ' + str(package) + '. Offline only; hardware validation pending.')

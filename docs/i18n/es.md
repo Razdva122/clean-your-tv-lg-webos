@@ -144,6 +144,9 @@ Para probar un tema no publicado, abre primero **Ajustes → Temas → Recibir d
 
 Para un tema publicado, abre **Añadir por ID** e introduce su ID (por ejemplo `102300a209`), `da.gd/102300a209` o el enlace completo de GitHub. Home muestra la dirección da.gd antes de cargar y verifica el destino GitHub y el paquete. El autor puede copiar el ID de las notas de versión o de **TV link → Copy ID** en la vista previa.
 
+
+Candidato aún no publicado: **Mostrar diagnóstico** en el panel Home Helper muestra un resumen filtrado de sus propias consultas de estado. Consultarlo no inicia Helper ni cambia el control de Home. Comparte solo ese JSON cuando se solicite, después de revisarlo; [detalles](../HELPER-DIAGNOSTICS.md#candidate-panel-caller-diagnostics-207).
+
 [Themes (English)](../THEMES.md) · [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
 
 1.5.4: **Classic**, **Alpine**, **Ribbon** — **Ajustes → Temas**. [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).

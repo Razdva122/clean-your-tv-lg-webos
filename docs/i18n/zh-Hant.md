@@ -144,6 +144,9 @@ Homebrew Channel 拒絕此安裝程式存取。在 webOS 11 上，Homebrew 0.7.3
 
 安裝已發佈主題時，開啟**透過 ID 新增**，輸入 ID（例如 `102300a209`）、`da.gd/102300a209` 或完整 GitHub 連結。Home 會在載入前顯示補全的 da.gd 位址，然後驗證 GitHub 目標與主題套件。作者可從版本說明或電腦預覽的 **TV link → Copy ID** 複製 ID。
 
+
+尚未發布的候選版本：Home Helper 面板中的**顯示診斷資訊**會顯示其本身狀態要求的簡短過濾結果。檢視不會啟動 Helper，也不會變更 Home 控制。僅在被要求時分享已檢查的 JSON；[詳情](../HELPER-DIAGNOSTICS.md#candidate-panel-caller-diagnostics-207)。
+
 [Themes (English)](../THEMES.md) · [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
 
 1.5.4: **Classic**, **Alpine**, **Ribbon** — **設定 → 主題**. [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).

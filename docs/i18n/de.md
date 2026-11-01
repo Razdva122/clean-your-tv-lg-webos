@@ -144,6 +144,9 @@ Für ein unveröffentlichtes Design zuerst am TV **Einstellungen → Themes → 
 
 Für ein veröffentlichtes Design unter **Weitere Optionen → Über URL hinzufügen** die ID (z. B. `102300a209`), `da.gd/102300a209` oder die vollständige GitHub-URL eingeben. Home zeigt vor dem Laden die ergänzte da.gd-Adresse und prüft danach GitHub-Ziel und Designpaket. Die ID steht in den Versionshinweisen oder unter **TV link → Copy ID** in der Computer-Vorschau.
 
+
+Noch unveröffentlichter Kandidat: **Diagnose anzeigen** im Home-Helper-Panel zeigt eine kleine, gefilterte Momentaufnahme seiner eigenen Statusabfragen. Das Anzeigen startet Helper nicht und ändert die Home-Steuerung nicht. Teilen Sie auf Anfrage nur die zuvor geprüfte JSON-Ausgabe; [Details](../HELPER-DIAGNOSTICS.md#candidate-panel-caller-diagnostics-207).
+
 [Themes (English)](../THEMES.md) · [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
 
 1.5.4: **Classic**, **Alpine**, **Ribbon** — **Einstellungen → Themes**. [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).

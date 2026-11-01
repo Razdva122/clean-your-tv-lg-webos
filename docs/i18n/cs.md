@@ -44,6 +44,8 @@ a při připojení televizoru k internetu stiskněte EXTEND. Automatické
 prodlužování je Beta, ve výchozím stavu vypnuté; kontrolujte oficiální časovač.
 Root vyžaduje již existující root přístup. Instalační program televizor nerootuje.
 
+V připravovaném vydání zobrazí **Zobrazit diagnostiku** v panelu Home Helper filtrovaný výsledek jeho vlastních dotazů na stav. Zobrazení nespustí Helper a nezmění ovládání Home. Na vyžádání sdílejte pouze zkontrolovaný JSON; [podrobnosti v angličtině](../HELPER-DIAGNOSTICS.md#candidate-panel-caller-diagnostics-207).
+
 Překlad byl ověřen automatickými kontrolami a v počítačovém prohlížeči.
 Ověření rodilým mluvčím a na fyzickém televizoru zatím neproběhlo.
 Kompatibilita závisí na konkrétním modelu, firmwaru a ovladači.

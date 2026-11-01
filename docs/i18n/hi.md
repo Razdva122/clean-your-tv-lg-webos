@@ -145,6 +145,9 @@ Homebrew Channel ने इस इंस्टॉलर की पहुँच �
 
 प्रकाशित थीम के लिए **ID से जोड़ें** खोलें और ID (जैसे `102300a209`), `da.gd/102300a209` या पूरा GitHub लिंक दर्ज करें। Home लोड करने से पहले da.gd पता दिखाता है और GitHub गंतव्य व थीम पैकेज की जाँच करता है। लेखक रिलीज़ नोट्स या कंप्यूटर पूर्वावलोकन में **TV link → Copy ID** से ID दे सकता है।
 
+
+अभी अप्रकाशित उम्मीदवार: Home Helper पैनल में **निदान दिखाएँ** उसके अपने स्थिति अनुरोधों का छोटा, फ़िल्टर किया गया परिणाम दिखाता है। इसे देखने से Helper शुरू नहीं होता और Home नियंत्रण नहीं बदलता। अनुरोध होने पर जाँचने के बाद केवल वही JSON साझा करें; [विवरण](../HELPER-DIAGNOSTICS.md#candidate-panel-caller-diagnostics-207)।
+
 [Themes (English)](../THEMES.md) · [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
 
 1.5.4: **Classic**, **Alpine**, **Ribbon** — **सेटिंग्स → थीम**. [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).

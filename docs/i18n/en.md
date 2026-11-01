@@ -144,6 +144,9 @@ To test an unpublished theme, first open **Settings → Themes → Receive from 
 
 For a published theme, open **Add by ID** and enter its ID (for example `102300a209`), `da.gd/102300a209`, or the full GitHub link. Home shows the expanded da.gd address before loading and then checks the GitHub destination and theme package. The author can provide the ID in the release notes or with **TV link → Copy ID** in the computer preview.
 
+
+Unreleased candidate: **Show diagnostics** in the Home Helper panel displays a small, filtered snapshot of its own status requests. Viewing it does not start Helper or change Home control. Share only that JSON when requested, after reviewing it; see [details](../HELPER-DIAGNOSTICS.md#candidate-panel-caller-diagnostics-207).
+
 [Themes (English)](../THEMES.md) · [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
 
 1.5.4: **Classic**, **Alpine**, **Ribbon** — **Settings → Themes**. [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).

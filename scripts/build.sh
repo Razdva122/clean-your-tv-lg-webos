@@ -3,6 +3,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 : "${ZIG:=zig}"
 : "${ARES_PACKAGE:=ares-package}"
+graphics_resolution="${CYTV_GRAPHICS_RESOLUTION:-1920x1080}"
+case "$graphics_resolution" in 1280x720|1920x1080) ;; *) echo 'Unsupported CYTV_GRAPHICS_RESOLUTION; use 1280x720 or 1920x1080.'; exit 1 ;; esac
 command -v "$ZIG" >/dev/null || { echo 'Install Zig 0.14.1 or set ZIG to its executable.'; exit 1; }
 python3 - <<'PYBUILD'
 from pathlib import Path
@@ -44,7 +46,7 @@ touch build/native-app/state/.keep build/native-service/state/.keep
 helper=$(python3 -c 'import json; a=json.load(open("build/native-app/appinfo.json")); print("dist/"+a["id"]+"_"+a["version"]+"_arm.ipk")')
 python3 scripts/fix-package-data.py "$helper"
 fi
-python3 scripts/tv_web_build.py --input launcher --output build/home-app
+python3 scripts/tv_web_build.py --input launcher --output build/home-app --resolution "$graphics_resolution"
 # Stage only public renewal sources, including the paired theme receiver.
 python3 - <<'PYRECEIVER'
 import runpy

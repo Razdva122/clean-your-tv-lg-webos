@@ -145,6 +145,9 @@ Aby przetestować nieopublikowany motyw, najpierw otwórz na TV **Ustawienia →
 
 Dla opublikowanego motywu otwórz **Dodaj przez ID** i wpisz ID (np. `102300a209`), `da.gd/102300a209` lub pełny link GitHub. Home pokaże adres da.gd przed wczytaniem, a następnie sprawdzi cel GitHub i pakiet motywu. Autor może skopiować ID z opisu wydania albo **TV link → Copy ID** w podglądzie na komputerze.
 
+
+Nieopublikowany kandydat: **Pokaż diagnostykę** w panelu Home Helper pokazuje niewielki, przefiltrowany wynik jego własnych zapytań o stan. Wyświetlenie nie uruchamia Helpera ani nie zmienia sterowania Home. Na prośbę udostępnij tylko sprawdzony JSON; [szczegóły](../HELPER-DIAGNOSTICS.md#candidate-panel-caller-diagnostics-207).
+
 [Themes (English)](../THEMES.md) · [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
 
 1.5.4: **Classic**, **Alpine**, **Ribbon** — **Ustawienia → Motywy**. [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
