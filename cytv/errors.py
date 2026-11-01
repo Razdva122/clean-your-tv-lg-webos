@@ -3,6 +3,10 @@ import re
 
 class UserError(RuntimeError):
     """An installer-owned message which contains no remote data or credentials."""
+    def __init__(self, message, *, reason_code='user-error'):
+        super().__init__(message)
+        self.reason_code = reason_code
+
 
 
 class PythonCacheError(UserError):

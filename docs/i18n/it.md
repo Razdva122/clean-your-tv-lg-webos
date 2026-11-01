@@ -174,3 +174,5 @@ Un punto giallo su Aggiornamenti software e sul pulsante interno indica un aggio
 I prossimi programmi di installazione per computer/Android e i client OTA migrati scelgono 720p o 1080p in base alle capacità della TV. Se non sono verificabili, l’operazione si interrompe. I vecchi aggiornatori installati separatamente richiedono la migrazione documentata dal computer; il ripristino mantiene i pacchetti originali.
 
 [HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).
+
+> Diagnostica dell’installer non ancora pubblicata: conservare il rapporto del primo tentativo fallito. I nuovi rapporti distinguono il primo errore registrato dai controlli successivi e includono un riepilogo filtrato di Doctor/stato. L’esportazione è disponibile anche dopo configurazione, controllo dello stato o ripristino riusciti. I dati storici mancanti restano sconosciuti; il rapporto non autorizza il recupero. [↗](../development/INSTALLER-DIAGNOSTICS.md).

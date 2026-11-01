@@ -135,7 +135,7 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
         if self.profile['edition'] != 'root' or not self.remote.root:
             raise UserError('Rollback readiness recovery requires an existing Root connection.')
         if self.store.pending(self.profile):
-            raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.')
+            raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
         from .system_rollback_recovery import program
         try:
             reply = json.loads(self.remote.run(
@@ -169,7 +169,7 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
         if self.profile['edition']!='root' or not self.remote.root:
             raise UserError('Homebrew API access requires an existing Root installation.')
         if self.store.pending(self.profile):
-            raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.')
+            raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
         from .firmware_access import program
         try:
             source=program(self.payload/'root',enabled,repair=True) if repair else program(self.payload/'root',enabled)
@@ -276,7 +276,8 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
             raise
         if (not isinstance(reply,dict) or reply.get('operation')!=operation
                 or reply.get('state') not in ('pending','complete','recovery_required','unknown','fresh','installed','unsupported','conflict','migration_required')):
-            raise UserError('Root operation was not confirmed. Run cytv status; retain recovery state.')
+            raise UserError('Root operation was not confirmed. Run cytv status; retain recovery state.', reason_code='root-operation-unconfirmed')
+        self.tv_info['status'] = {'device': {'product': diagnostics.context.product_summary(reply)}}
         return reply
 
     def await_product(self, action, operation, payload, migrate=False):
@@ -286,7 +287,7 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
             time.sleep(1)
             reply=self.product_action('status',operation)
         if reply['state']!='complete':
-            raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.')
+            raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
         return reply['result']
 
     def upload_product(self, root_bundle):
@@ -348,7 +349,7 @@ with os.fdopen(f,'rb') as stream:
             raise
         reply = json.loads(raw)
         if not isinstance(reply, dict) or reply.get('returnValue') is not True:
-            raise UserError('Root operation was not confirmed. Run cytv status; retain recovery state.')
+            raise UserError('Root operation was not confirmed. Run cytv status; retain recovery state.', reason_code='root-operation-unconfirmed')
         return reply
 
     def preflight(self, install=False):
@@ -389,7 +390,7 @@ with os.fdopen(f,'rb') as stream:
             failed = [name for name, result in checks.items() if result != 'pass']
             if failed:
                 raise UserError('Root requirements failed or could not be verified: {requirements}. Check the diagnostic report.'.format(
-                    requirements=', '.join(failed)))
+                    requirements=', '.join(failed)), reason_code='root-requirements')
             if install:
                 paths = [ROOT_STATE, BASE + '/applications/' + package.ROOT_APP,
                          BASE + '/services/' + package.ROOT_APP + '.service', BASE + '/packages/' + package.ROOT_APP]
@@ -445,9 +446,9 @@ with os.fdopen(f,'rb') as stream:
             self.tv_info['helper_state'] = helper
             self.checks.update('helper-idle', 'unknown' if helper == 'uncertain' else 'fail' if helper == 'running' else 'pass')
             if helper == 'running':
-                raise UserError('Home Helper is running. Installation has not started; installed versions are unchanged. Press Home three times within two seconds (older Helper: hold Home for two seconds) to stop it, then rerun installation.')
+                raise UserError('Home Helper is running. Installation has not started; installed versions are unchanged. Press Home three times within two seconds (older Helper: hold Home for two seconds) to stop it, then rerun installation.', reason_code='helper-running')
             if helper == 'uncertain':
-                raise UserError('Home Helper state could not be verified. Installation has not started; installed versions are unchanged. Run Check TV status and save a diagnostic report before retrying. Do not delete Helper state files.')
+                raise UserError('Home Helper state could not be verified. Installation has not started; installed versions are unchanged. Run Check TV status and save a diagnostic report before retrying. Do not delete Helper state files.', reason_code='helper-state-unverified')
             if helper == 'stale':
                 self.progress('A stale Helper PID file was found; no Helper process is running. Continuing installation without deleting state files.')
 
@@ -494,7 +495,7 @@ printf '%s' "$cytv_state"
         try:
             selected = graphics.resolution(self.remote.luna(graphics.URI, {'keys': ['UHD']}))
         except (OSError, RuntimeError, ValueError, TypeError):
-            raise UserError('TV graphics capability could not be verified. Installation has not started.') from None
+            raise UserError('TV graphics capability could not be verified. Installation has not started.', reason_code='graphics-unverified') from None
         variants = {'1920x1080': {'launcher': 'launcher.ipk', 'root': 'root'},
                     '1280x720': {'launcher': 'launcher-720p.ipk', 'root': 'root-720p'}}
         try:
@@ -532,7 +533,7 @@ printf '%s' "$cytv_state"
     def install(self, inventory, ssap_key=None, migrate=False, reinstall=None):
         # All local validation precedes the durable mutation receipt.
         if self.store.pending(self.profile):
-            raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.')
+            raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
         if reinstall and migrate:
             raise UserError('Reinstallation does not support --migrate-home. Omit it to read a fresh TV inventory before replacing Root.')
         if not migrate:
@@ -742,11 +743,13 @@ print('CYTV_UPDATER_VERIFIED')
         reply = self.remote.luna('com.webos.applicationManager/dev/listApps', {})
         apps = reply.get('apps')
         if not isinstance(apps, list):
-            raise UserError('Could not read installed applications.')
+            raise UserError('Could not read installed applications.', reason_code='inventory-unavailable')
         return apps
 
     def version_summary(self):
-        apps = {app['id']: app for app in self.installed_apps()}
+        observed = self.installed_apps()
+        self.tv_info['components'] = diagnostics.context.status_summary({'device': {'apps': observed}}).get('components', {})
+        apps = {app['id']: app for app in observed}
         if self.profile['edition'] == 'root':
             root = json.loads((self.payload / 'root/release.json').read_text())['version']
             files = package.data_files((self.payload / 'root-updater/root-updater.ipk').read_bytes())
@@ -771,10 +774,12 @@ print('CYTV_UPDATER_VERIFIED')
         return rows
 
     def verify_installed(self):
-        apps = {app['id']: app for app in self.installed_apps()}
+        observed = self.installed_apps()
+        self.tv_info['components'] = diagnostics.context.status_summary({'device': {'apps': observed}}).get('components', {})
+        apps = {app['id']: app for app in observed}
         for app, key in ((HOME, 'home_version'), (HELPER, 'helper_version')):
             if apps.get(app, {}).get('version') != self.manifest[key]:
-                raise UserError('Installed version did not match the package. Run cytv status; do not retry blindly.')
+                raise UserError('Installed version did not match the package. Run cytv status; do not retry blindly.', reason_code='version-mismatch')
 
     def status(self):
         pending = self.store.pending(self.profile)

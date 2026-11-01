@@ -207,13 +207,13 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
         profile = choose_profile(args, store, ask, write, search or discovery.find_tvs, inspect_connection)
         if args.command == 'replace-system-updater':
             if profile['edition'] != 'root': raise UserError('System Updater replacement requires an existing Root connection.')
-            if store.pending(profile): raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.')
+            if store.pending(profile): raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
         if args.command == 'recover-system-rollback':
             if profile['edition'] != 'root': raise UserError('Rollback readiness recovery requires an existing Root connection.')
-            if store.pending(profile): raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.')
+            if store.pending(profile): raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
         if args.command in ('enable-firmware-access','disable-firmware-access'):
             if profile['edition']!='root':raise UserError('Homebrew API access requires an existing Root installation.')
-            if store.pending(profile):raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.')
+            if store.pending(profile):raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
         if args.command == 'clean-wam-cache':
             if profile['edition'] != 'root':
                 raise UserError('WAM cleanup requires an existing Root SSH connection.')
@@ -293,10 +293,10 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             return secret(write.prompt(prompt))
 
         from .transport import SSH
-        with store.lock(profile):
+        with store.lock(profile), diagnostics.context.operation_context(store, profile):
             if args.command == 'replace-system-updater':
-                if store.pending(profile): raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.')
-            if args.command in ('enable-firmware-access','disable-firmware-access','recover-system-rollback') and store.pending(profile):raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.')
+                if store.pending(profile): raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
+            if args.command in ('enable-firmware-access','disable-firmware-access','recover-system-rollback') and store.pending(profile):raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
             if args.command == 'clean-wam-cache' and store.pending(profile):
                 raise UserError('Resolve the pending installation or removal before clearing WAM data. Keep recovery records.')
             phase = 'ssh-connect'
@@ -310,6 +310,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 remote = SSH.connect(profile, store.device_dir(profile), secret_with_help, trust,
                                      identity_prompt=None if args.non_interactive else lambda: prompts.root_credentials(ask, write))
             checks.update('ssh', 'pass')
+            if args.command in ('install', 'status', 'doctor'):
+                diagnostics.context.collect_metadata(remote, tv_info)
             store.save(profile)
             installer = Installer(remote, store, profile, payload, manifest, write, tv_info=tv_info, checks=checks)
             if args.command == 'install':
@@ -504,9 +506,10 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 phase = 'doctor'
                 installer.preflight()
                 write('Connection and basic requirements passed. This does not certify hardware compatibility.')
-                write.raw(json.dumps(installer.status(), indent=2))
+                result = installer.status()
+                write.raw(json.dumps(result, indent=2))
                 if args.report:
-                    write.report(diagnostics.create_report(store, args.command, profile, 'doctor-complete', tv_info=tv_info))
+                    diagnostics.save_result(write, store, args.command, profile, 'doctor-complete', tv_info, checks=checks.results, status=result)
             else:
                 phase = args.command
                 result = installer.uninstall(full_project=True) if args.command == 'uninstall' else getattr(installer, args.command)()
@@ -520,6 +523,12 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     write('Return to the start screen, choose Set up my TV and confirm reinstallation. In the console, run cytv install.')
                 else:
                     write.raw(json.dumps(result, indent=2))
+            if args.command in ('install', 'status', 'restore'):
+                diagnostics.save_result(write, store, args.command, profile,
+                    'install-complete' if args.command == 'install' else phase, tv_info,
+                    checks=checks.results, status=result if args.command != 'install' else tv_info.get('status'))
+            if args.command == 'install':
+                diagnostics.context.clear_previous_attempt(store, profile)
             if args.command in ('status', 'doctor', 'restore') and profile['edition'] == 'no-root':
                 pending = store.pending(profile)
                 if pending and (pending.get('action') == 'uninstall' or
@@ -539,7 +548,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             write('Installation has not started. No TV packages were changed by this attempt.')
         if args.command == 'uninstall' and phase == 'uninstall' and profile['edition'] == 'root' and store.pending(profile):
             write('Keep the TV on and choose Remove again. The app checks its state before continuing.')
-        diagnostics.suggest_issue(write, store, args.command, profile, phase, exc, tv_info)
+        diagnostics.suggest_issue(write, store, args.command, profile, phase, exc, tv_info, checks=checks.results, status=tv_info.get('status'))
         return 2
     except Exception as exc:
         checks.finish_running()
@@ -554,7 +563,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
               if phase in ('pair-tv', 'read-inventory') and kind != 'ModuleNotFoundError' else hints.get(kind, 'Operation could not be confirmed. Check TV connectivity and run cytv status or cytv doctor. Retain local and TV recovery state; do not retry blindly.'))
         if args.command == 'uninstall' and phase == 'uninstall' and profile['edition'] == 'root' and store.pending(profile):
             write('Keep the TV on and choose Remove again. The app checks its state before continuing.')
-        diagnostics.suggest_issue(write, store, args.command, profile, phase, exc, tv_info)
+        diagnostics.suggest_issue(write, store, args.command, profile, phase, exc, tv_info, checks=checks.results, status=tv_info.get('status'))
         return 1
     finally:
         if remote is not None:

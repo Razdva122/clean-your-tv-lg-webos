@@ -172,3 +172,5 @@ Homebrew Channel 拒絕此安裝程式存取。在 webOS 11 上，Homebrew 0.7.3
 即將發布的電腦/Android 安裝程式和已遷移的 OTA 用戶端會根據電視回報的能力選擇 720p 或 1080p。無法驗證時，操作會停止。獨立安裝的舊更新程式需要依文件透過電腦遷移；復原程序保留原始套件。
 
 [HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).
+
+> 尚未發布的安裝程式診斷：請保留最初失敗嘗試的報告。新報告會區分已記錄的首次錯誤與後續檢查，並提供經過篩選的 Doctor/狀態摘要。安裝、狀態檢查或還原成功後也可匯出報告。缺少的歷史證據仍標為未知；報告不授予復原操作權限。 [↗](../development/INSTALLER-DIAGNOSTICS.md).

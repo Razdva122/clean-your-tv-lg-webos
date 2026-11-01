@@ -172,3 +172,5 @@ Homebrew Channel 拒绝此安装程序访问。在 webOS 11 上，Homebrew 0.7.3
 即将发布的电脑/Android 安装程序和已迁移的 OTA 客户端会根据电视报告的能力选择 720p 或 1080p。无法验证时，操作会停止。独立安装的旧更新程序需要按文档通过电脑迁移；恢复过程保留原始软件包。
 
 [HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).
+
+> 尚未发布的安装程序诊断：请保留最初失败尝试的报告。新报告将已记录的首次错误与后续检查区分开，并提供经过筛选的 Doctor/状态摘要。安装、状态检查或恢复成功后也可导出报告。缺失的历史证据仍标为未知；报告不授予恢复操作权限。 [↗](../development/INSTALLER-DIAGNOSTICS.md).

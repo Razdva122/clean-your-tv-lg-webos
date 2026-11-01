@@ -172,3 +172,5 @@ Un punto amarillo en Actualizaciones de software y en el botón interior indica 
 Los próximos instaladores para ordenador/Android y clientes OTA migrados eligen 720p o 1080p según la capacidad del TV. Si no puede verificarse, la operación se detiene. Los actualizadores antiguos instalados por separado requieren la migración documentada desde el ordenador; la recuperación conserva sus paquetes originales.
 
 [HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).
+
+> Diagnóstico del instalador aún no publicado: guarde el informe del intento fallido original. Los nuevos informes separan el primer error registrado de las comprobaciones posteriores e incluyen un resumen filtrado de Doctor/estado. También permiten exportar tras configurar, consultar el estado o restaurar correctamente. Los datos antiguos ausentes siguen siendo desconocidos; el informe no autoriza la recuperación. [↗](../development/INSTALLER-DIAGNOSTICS.md).

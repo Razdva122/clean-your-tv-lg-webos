@@ -172,3 +172,5 @@ Ein gelber Punkt bei Software-Updates und der zugehörigen Schaltfläche zeigt e
 Die kommenden Computer-/Android-Installer und migrierten OTA-Clients wählen 720p oder 1080p anhand der TV-Fähigkeit. Ist sie nicht überprüfbar, stoppt der Vorgang. Ältere separat installierte Updater benötigen die dokumentierte Migration am Computer; die Wiederherstellung behält ihre ursprünglichen Pakete.
 
 [HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).
+
+> Unveröffentlichte Installationsdiagnose: Bewahren Sie den Bericht des ursprünglichen Fehlversuchs auf. Neue Berichte trennen den gespeicherten ersten Fehler von späteren Prüfungen und enthalten eine gefilterte Doctor-/Statusübersicht. Auch nach erfolgreicher Einrichtung, Statusprüfung oder Wiederherstellung lässt sich ein Bericht speichern. Fehlende ältere Nachweise bleiben unbekannt; der Bericht erlaubt keine Wiederherstellungsaktion. [↗](../development/INSTALLER-DIAGNOSTICS.md).

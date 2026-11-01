@@ -38,6 +38,12 @@ stopped. Physical No-root acceptance remains unverified for the exact Helper tra
 4. If recovery fails or the result is uncertain, choose **Save diagnostic report…**
    and stop. Retain that attempt's report and recovery files.
 
+**Unreleased diagnostic improvement:** retain the original failed-attempt report.
+New reports separate a saved first error from later checks and include a filtered
+Doctor/status result. Successful setup/status/restore also offer an export. This
+does not add a recovery path or make missing historical evidence available.
+[Diagnostic fields and limits](development/INSTALLER-DIAGNOSTICS.md).
+
 Recovery checks installer state and removal results before offering installation.
 An unknown package outcome is not automatically retried. Returning to LG Home
 alone does not finish removal. The removal confirmation cannot be bypassed with
