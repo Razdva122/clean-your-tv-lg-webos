@@ -75,3 +75,14 @@ This unfrozen candidate has no selected version/build or new physical acceptance
 TV model/firmware/remote for #229/#230 remain requested; their controls, sound,
 standby, cold boot, OTA, rollback and recovery are unverified. No public release,
 confirmed recovery or universal device support is claimed.
+
+## Integration
+
+[PR #231](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/231) merged
+into `release/next` as `d29c0598`. Its tree matches reviewed/tested `d7e6fbd0`.
+[Final affected CI](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/41314991548)
+passed on Linux/macOS, including setup/packaging, installer/Android runtime,
+ARM checks and required summaries; Integration policy also passed. Standalone
+browser/full-release jobs were correctly unselected for this bounded host change;
+existing Homebrew UI browser checks ran within the installer group. No frozen
+candidate build, physical TV test or public publication was performed.

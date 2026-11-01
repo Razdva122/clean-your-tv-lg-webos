@@ -111,6 +111,14 @@
       "pr": 228,
       "issues": [],
       "summary": "Generate compact Chinese subsets automatically from catalog/compiler inputs with pinned host-only sources, offline cache and SC/TC fallback; physical rendering remains unverified"
+    },
+    {
+      "pr": 231,
+      "issues": [
+        201,
+        229
+      ],
+      "summary": "Export allowlisted existing Helper preflight state and incorporate answered C2 dev/listApps evidence; original #229 device report and #201 recovery remain unresolved"
     }
   ],
   "excluded": [],
