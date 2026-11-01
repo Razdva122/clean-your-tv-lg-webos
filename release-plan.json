@@ -33,6 +33,20 @@
       "pr": 214,
       "issues": [],
       "summary": "Simplify theme suggestions and move review work to maintainers"
+    },
+    {
+      "pr": 218,
+      "issues": [
+        201
+      ],
+      "summary": "Preserve pending No-root journals when installer termination is unproven; #201 reconciliation remains unresolved"
+    },
+    {
+      "pr": 220,
+      "issues": [
+        200
+      ],
+      "summary": "Add allowlisted host Python download/cache failure reasons; #200 original macOS cause and pending Root recovery remain unresolved"
     }
   ],
   "excluded": [],

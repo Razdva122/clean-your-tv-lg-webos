@@ -8,6 +8,8 @@ one model or artifact does not certify later releases or a different TV.
 
 ## Scoped feature checks
 
+- [Installer journal/cache integration, 2026-11-01](2026-11-01-installer-journal-cache-integration.md): #218/#220 host checks and partial #201/#200 scope; no device recovery or publication claim.
+
 - [Root Node prototype integration, 2026-10-31](2026-10-31-root-node-prototype.md): host-only exact-runtime checks for #194; Node 8+ admission and unresolved #160/#164 device support remain unchanged.
 
 - [Passive Root diagnostic preparation, 2026-10-31](2026-10-31-root-passive-diagnostics.md): reviewed initial read-only procedure for #161; actual recovery remains blocked on owner evidence.
