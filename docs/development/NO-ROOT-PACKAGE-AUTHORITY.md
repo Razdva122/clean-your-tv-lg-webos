@@ -52,6 +52,17 @@ that attempt's existing recovery gate. Neither observation proves that the
 original install completed. Package hashes in `operation.json` bind expected
 content; they do not identify a live installer transaction or prove registration.
 
+## Source follow-up (2026-11-02)
+
+[The pinned source investigation and operation-bound handoff](NO-ROOT-TERMINAL-HANDOFF.md)
+checks the official CLI and OSE installer implementation. In the reviewed OSE
+implementation, status serializes the current task map and finished tasks are
+removed; it is not a retained terminal journal. Repeating install/remove starts
+another request. OSE source is supporting evidence, not a contract for retail TV
+firmware. No supported historical readback was established, so neither legacy
+pending action gains a reconciliation path. The handoff identifies the exact
+vendor contract needed before a device probe can be designed.
+
 ## Remaining evidence
 
 The next work belongs to maintainer research into terminal authority, rather

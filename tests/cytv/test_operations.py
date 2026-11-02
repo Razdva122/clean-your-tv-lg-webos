@@ -578,6 +578,55 @@ class OperationTests(unittest.TestCase):
                     # Clear only this synthetic test receipt between independent cases.
                     receipt.unlink()
 
+    def test_source_shaped_live_terminal_cannot_replace_original_operation_proof(self):
+        fixture = json.loads((Path(__file__).parent / 'fixtures/no-root-terminal-authority.json').read_text())
+        for case in fixture['cases']:
+            with self.subTest(action=case['action']):
+                remote = Remote()
+                installer = self.installer(remote)
+                receipt = self.store.device_dir(installer.profile) / 'operation.json'
+                state.private_write(receipt, json.dumps(case['journal']).encode())
+                original = receipt.read_bytes()
+                def luna(uri, payload, **kwargs):
+                    remote.calls.append(('luna', uri, payload))
+                    self.assertEqual(uri, 'com.webos.appInstallService/status')
+                    self.assertEqual(kwargs['timeout'], 10)
+                    return case['unbound_live_terminal']
+                remote.luna = luna
+                # Even the right package's live success is not an idle response
+                # or a receipt bound to this legacy host operation.
+                with self.assertRaisesRegex(RuntimeError, 'not confirmed idle'):
+                    installer.uninstall()
+                self.assertEqual(receipt.read_bytes(), original)
+                self.assertEqual(len(remote.calls), 1)
+                receipt.unlink()
+
+    def test_late_snapshot_does_not_replay_or_reconcile_legacy_operations(self):
+        fixture = json.loads((Path(__file__).parent / 'fixtures/no-root-terminal-authority.json').read_text())
+        for case in fixture['cases']:
+            with self.subTest(action=case['action']):
+                remote = Remote()
+                installer = self.installer(remote)
+                receipt = self.store.device_dir(installer.profile) / 'operation.json'
+                state.private_write(receipt, json.dumps(case['journal']).encode())
+                original = receipt.read_bytes()
+                from cytv.transport import terminal_reply
+                snapshot = case['late_status_snapshot']
+                self.assertTrue(terminal_reply(snapshot))  # Acknowledgment only.
+                terminal = 'installed' if case['action'] == 'install' else 'removed'
+                self.assertFalse(terminal_reply(snapshot, terminal=terminal))
+                luna = remote.luna
+                def read_only(uri, payload, **kwargs):
+                    self.assertEqual(uri, 'com.webos.applicationManager/dev/listApps')
+                    return luna(uri, payload, **kwargs)
+                remote.luna = read_only
+                result = installer.status()
+                self.assertEqual(receipt.read_bytes(), original)
+                self.assertIsNone(result['reconciled'])
+                self.assertEqual(result['pending'], case['journal'])
+                self.assertFalse(any(call[0] == 'upload' for call in remote.calls))
+                receipt.unlink()
+
     def test_denied_listapps_is_distinct_from_denied_dev_listapps(self):
         from cytv.errors import TVRejected
         for denied in ('com.webos.applicationManager/listApps',
