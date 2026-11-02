@@ -1,6 +1,6 @@
 # Clean Your TV — 使用者指南
 
-> 已凍結的 1.6.0 候選版本尚未發布，穩定版仍為 1.5.4。它包含安裝程式的五項改進。重新開啟 Root 設定時會讀取實際狀態，檢查失敗不會啟用 Home。System Updater 1.2.0 用於符合條件的新安裝，或經過驗證的 1.1.0/1.1.1 替換。已安裝的 1.1.2 保留原有通道，沒有通用遷移方案。請保留復原資料，勿強制替換。[版本與限制](../RELEASE-1.6.0.md)。
+> 本指南介紹 1.6.0。請從 [GitHub Releases 中已發布的版本](https://github.com/Razdva122/clean-your-tv-lg-webos/releases)下載可用套件。它包含安裝程式的五項改進。重新開啟 Root 設定時會讀取實際狀態，檢查失敗不會啟用 Home。System Updater 1.2.0 用於符合條件的新安裝，或經過驗證的 1.1.0/1.1.1 替換。已安裝的 1.1.2 保留原有通道，沒有通用遷移方案。請保留復原資料，勿強制替換。[版本與限制](../RELEASE-1.6.0.md)。
 
 > v1.5.0：主題、展示頁與電腦向電視傳輸。已知 Root 限制：Appearance 可能偏移 110 px；待機喚醒後 Home 可能不會自動開啟。裝置實機驗證範圍仍有限。 [1.5.0](../RELEASE-1.5.0.md).
 
@@ -8,7 +8,7 @@
 
 [文件導覽](../README.md) · [回報問題](../FEEDBACK.md)
 
-本指南適用於已發佈的 **[1.5.4](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.5.4)**。C3 驗收僅涵蓋已記錄的電源、Home、焦點、保持關閉狀態及手動回復版本測試。其他電視、eARC 音訊和實體 Android 裝置仍未驗證；安裝成功不代表相容。[測試範圍（英文）](../history/2026-10-31-release-1.5.3-signed-root-qa.md)。
+**1.5.4 歷史測試紀錄:** C3 驗收僅涵蓋已記錄的電源、Home、焦點、保持關閉狀態及手動回復版本測試。其他電視、eARC 音訊和實體 Android 裝置仍未驗證；安裝成功不代表相容。[測試範圍（英文）](../history/2026-10-31-release-1.5.3-signed-root-qa.md)。
 
 **1.5.4:**主控台、桌面與 Android 介面會分別顯示電視檢查狀態：未檢查、正在檢查、通過、未通過或無法驗證。出錯後仍保留結果。Node.js/Python 檢查針對電視的執行環境；`doctor` 不會準備 Python，也不會要求遙控配對。重試前請儲存報告。
 
@@ -21,7 +21,7 @@ No-root 和 Root 是適用於不同電視組態的同等選項。使用 LG 開�
 
 Root 需要可用的 Settings Service 和 System Profile Home 介面（`com.webos.service.systemprofile`）；僅有 root 權限並不能證明相容性。
 
-> 尚未發布的安裝程式：Root 在準備專用 Python 或安裝套件之前檢查必要的 Home 介面。檢查失敗會停止安裝；通過檢查並不能證明韌體相容或實體 Home 鍵正常。已知連線錯誤會顯示專屬提示。請保留連線設定、信任記錄和復原資料；未完成的操作需要經過驗證的復原，請勿盲目重試。儲存並檢查診斷報告。[詳情](../development/INSTALLER-PREFLIGHT-HELP.md)。
+> **1.6.0:** Root 在準備專用 Python 或安裝套件之前檢查必要的 Home 介面。檢查失敗會停止安裝；通過檢查並不能證明韌體相容或實體 Home 鍵正常。已知連線錯誤會顯示專屬提示。請保留連線設定、信任記錄和復原資料；未完成的操作需要經過驗證的復原，請勿盲目重試。儲存並檢查診斷報告。[詳情](../development/INSTALLER-PREFLIGHT-HELP.md)。
 
 ## 安裝之前
 
@@ -66,7 +66,7 @@ chmod +x cytv
 
 選擇電視（或輸入 IP）、版本，然後檢查摘要。僅在可信網路上為自己的電視接受首次 SSH 信任；儲存的密鑰發生改變時將阻止訪問。Root 憑據與開發者模式口令不同。Root 會安裝恢復功能並立即啟用 Home，無試用或 Keep 步驟。請在自己的電視上檢查方向鍵、OK、Home、返回/取消、音量、待機/喚醒和冷啟動。
 
-未發布候選版：安裝程式分別顯示套件驗證、啟動狀態及您對實體 Home 的觀察。啟動確認或 Helper 程序不能證明 Home 攔截功能。開啟其他電視應用程式，短按一次 Home，然後選擇觀察到的結果；預設為**未測試／略過**。`--yes` 不會代答，非互動安裝將保留未測試狀態。Home 失敗或略過不會撤銷已安裝的套件，也不會開始重新安裝。如需協助，請儲存本機報告；不會自動發布。其他控制、聲音、待機及冷啟動仍需分別測試。
+**1.6.0:** 安裝程式分別顯示套件驗證、啟動狀態及您對實體 Home 的觀察。啟動確認或 Helper 程序不能證明 Home 攔截功能。開啟其他電視應用程式，短按一次 Home，然後選擇觀察到的結果；預設為**未測試／略過**。`--yes` 不會代答，非互動安裝將保留未測試狀態。Home 失敗或略過不會撤銷已安裝的套件，也不會開始重新安裝。如需協助，請儲存本機報告；不會自動發布。其他控制、聲音、待機及冷啟動仍需分別測試。
 
 ## 日常使用與恢復
 
@@ -85,9 +85,9 @@ No-root: 要重新啟動 Home 控制，請開啟 Home Helper，選擇啟動 Help
 ./cytv --language zh-Hant uninstall
 ```
 
-> 尚未發布（#152）：如果 Helper 停用請求遭拒，No-root 復原/解除安裝流程可使用經過驗證的 SSH 停止方式。停止狀態會保留；結果不確定時保留操作記錄。請勿刪除狀態檔案。仍需在 EF950V 實機上確認。 [#152](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/152)
+> **1.6.0 (#152):** 如果 Helper 停用請求遭拒，No-root 復原/解除安裝流程可使用經過驗證的 SSH 停止方式。停止狀態會保留；結果不確定時保留操作記錄。請勿刪除狀態檔案。仍需在 EF950V 實機上確認。 [#152](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/152)
 
-> 尚未發布（#201）：No-root 狀態檢查會保留中斷的安裝或解除安裝記錄。檔案相符或應用程式不存在，不能證明操作已完成。如果驗證遭拒，請停止並保留診斷；沒有僅憑檔案繞過驗證的方法。 [#201](../RECOVERY.md#unreleased-uncertain-no-root-package-operations-201)
+> **1.6.0 (#201):** No-root 狀態檢查會保留中斷的安裝或解除安裝記錄。檔案相符或應用程式不存在，不能證明操作已完成。如果驗證遭拒，請停止並保留診斷；沒有僅憑檔案繞過驗證的方法。 [#201](../RECOVERY.md#unreleased-uncertain-no-root-package-operations-201)
 
 中斷後重試前先執行 `status`，保留日誌和恢復檔案。`restore` 返回 LG Home 而不移除應用；`uninstall` 先恢復再移除。Root 恢復狀態會特意保留，切勿刪除它來強行重新安裝。分享報告前請檢查內容，不要公開密鑰或組態資料夾。
 
@@ -117,11 +117,11 @@ Homebrew Channel 拒絕此安裝程式存取。在 webOS 11 上，Homebrew 0.7.3
 
 1.5.0+: `cytv recover-system-rollback --edition root` 僅用於已驗證的 Root 回復版本：所有套件安裝程式均已完成，但啟動器就緒等待逾時。必須由真正的啟動器傳送就緒訊號；安裝結果不明時拒絕恢復。保留套件、固定程式碼和金鑰、失敗證據及明確關閉的 Home 控制狀態，並以私人記錄保存有時限的嘗試。 一般重試不會延長時限。僅在先前的 120 秒到期、沒有已接受的就緒訊號且不存在不明安裝結果後，才可用 `--new-recovery-attempt` 按 UUID/雜湊封存完整舊記錄，並明確開始新嘗試。已完成的恢復不會重新開始，也不會自動連續重試。 [流程與限制（英文）](../RECOVERY.md#root-system-rollback-readiness-candidate)。
 
-1.5.0：替換套件包含 System Updater 1.1.2。電視 OTA 前，請明確執行 `cytv replace-system-updater --edition root` 替換 1.1.0 或 1.1.1。只替換 System Updater，保留 Root/Root Updater 應用程式、完整設定和 Home 選擇，並封存舊狀態。結果不明或尚未完成的操作會阻止替換。此要求不限制 No-root 更新來源。[替換流程（英文）](../RECOVERY.md#replace-the-root-system-updater-candidate)。
+1.6.0：System Updater 1.2.0 用於符合條件的新安裝，或透過 `cytv replace-system-updater --edition root` 對 1.1.0/1.1.1 進行經過驗證的替換。只替換 System Updater，保留 Root/Root Updater 應用程式、完整設定和 Home 選擇，並封存舊狀態。未知或未完成的操作會阻止替換。已安裝的 1.1.2 保持固定並使用舊通道；沒有通用遷移方案，請勿強制替換。這不會限制 No-root 更新來源。 [替換流程（英文）](../RECOVERY.md#replace-the-root-system-updater-candidate)
 
 ## 說明與詳細指引
 
-未發布候選版：為同一台已儲存的電視選擇**檢查復原選項**，或執行 `cytv recover`。檢查和變更需要分別確認，預設為「否」；`--yes` 不會批准。Root 僅在現有驗證通過後繼續。No-root 僅在現有套件服務檢查允許時提供移除選項；移除可能重設 Home 偏好設定。不會自動開始新的安裝。狀態不明或存取遭拒時，請儲存報告並停止；保留日誌，不要重複移除。#201 的完成證據以及 #216 的實際電視復原仍未確認。 [Recovery](../RECOVERY.md). 求助時請提供型號、韌體、版本類別、安裝程式版本、失敗步驟及預期/實際表現；分享前檢查報告並刪除機密資訊。
+**1.6.0:** 為同一台已儲存的電視選擇**檢查復原選項**，或執行 `cytv recover`。檢查和變更需要分別確認，預設為「否」；`--yes` 不會批准。Root 僅在現有驗證通過後繼續。No-root 僅在現有套件服務檢查允許時提供移除選項；移除可能重設 Home 偏好設定。不會自動開始新的安裝。狀態不明或存取遭拒時，請儲存報告並停止；保留日誌，不要重複移除。#201 的完成證據以及 #216 的實際電視復原仍未確認。 [Recovery](../RECOVERY.md). 求助時請提供型號、韌體、版本類別、安裝程式版本、失敗步驟及預期/實際表現；分享前檢查報告並刪除機密資訊。
 
 [文件導覽](../README.md) · [回報問題](../FEEDBACK.md)
 
@@ -151,13 +151,13 @@ Homebrew Channel 拒絕此安裝程式存取。在 webOS 11 上，Homebrew 0.7.3
 安裝已發佈主題時，開啟**透過 ID 新增**，輸入 ID（例如 `102300a209`）、`da.gd/102300a209` 或完整 GitHub 連結。Home 會在載入前顯示補全的 da.gd 位址，然後驗證 GitHub 目標與主題套件。作者可從版本說明或電腦預覽的 **TV link → Copy ID** 複製 ID。
 
 
-尚未發布的候選版本：Home Helper 面板中的**顯示診斷資訊**會顯示其本身狀態要求的簡短過濾結果。檢視不會啟動 Helper，也不會變更 Home 控制。僅在被要求時分享已檢查的 JSON；[詳情](../HELPER-DIAGNOSTICS.md#candidate-panel-caller-diagnostics-207)。
+**1.6.0:** Home Helper 面板中的**顯示診斷資訊**會顯示其本身狀態要求的簡短過濾結果。檢視不會啟動 Helper，也不會變更 Home 控制。僅在被要求時分享已檢查的 JSON；[詳情](../HELPER-DIAGNOSTICS.md#candidate-panel-caller-diagnostics-207)。
 
 [Themes (English)](../THEMES.md) · [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
 
 1.5.4: **Classic**, **Alpine**, **Ribbon** — **設定 → 主題**. [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
 
-尚未發佈的可設定應用程式列主題可將輸入、Wi-Fi 和設定放在左下角。啟用此導覽時，在第一個可見應用程式上按左鍵依序選取設定、Wi-Fi 和輸入；在設定上按右鍵返回同一可見應用程式。需要新 Home 功能的主題在不支援的版本上安裝會遭拒，現有外觀和選擇保持不變。請先更新 Home。之後降級可能在啟動時還原 Classic。
+1.5.4 中的可設定應用程式列主題可將輸入、Wi-Fi 和設定放在左下角。啟用此導覽時，在第一個可見應用程式上按左鍵依序選取設定、Wi-Fi 和輸入；在設定上按右鍵返回同一可見應用程式。需要新 Home 功能的主題在不支援的版本上安裝會遭拒，現有外觀和選擇保持不變。請先更新 Home。之後降級可能在啟動時還原 Classic。
 
 主題頁面顯示內建主題和您自行安裝的所有主題預覽，離線也可查看。獨立的展示按鈕開啟已發佈目錄；個人安裝不會發佈主題。
 
@@ -173,10 +173,12 @@ Homebrew Channel 拒絕此安裝程式存取。在 webOS 11 上，Homebrew 0.7.3
 
 軟體更新分類及內部按鈕上的黃色圓點表示有可用更新。成功檢查確認沒有更新後，兩處圓點同時消失；檢查失敗時保留上次確認的狀態。
 
-## 自動圖形解析度（候選版本）
+<a id="自動圖形解析度候選版本"></a>
 
-即將發布的電腦/Android 安裝程式和已遷移的 OTA 用戶端會根據電視回報的能力選擇 720p 或 1080p。無法驗證時，操作會停止。獨立安裝的舊更新程式需要依文件透過電腦遷移；復原程序保留原始套件。
+## 自動圖形解析度(1.6.0)
+
+1.6.0 的電腦/Android 安裝程式和已遷移的 OTA 用戶端會根據電視回報的能力選擇 720p 或 1080p。無法驗證時，操作會停止。獨立安裝的舊更新程式需要依文件透過電腦遷移；復原程序保留原始套件。
 
 [HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).
 
-> 尚未發布的安裝程式診斷：請保留最初失敗嘗試的報告。新報告會區分已記錄的首次錯誤與後續檢查，並提供經過篩選的 Doctor/狀態摘要。安裝、狀態檢查或還原成功後也可匯出報告。缺少的歷史證據仍標為未知；報告不授予復原操作權限。 [↗](../development/INSTALLER-DIAGNOSTICS.md).
+> **1.6.0:** 請保留最初失敗嘗試的報告。新報告會區分已記錄的首次錯誤與後續檢查，並提供經過篩選的 Doctor/狀態摘要。安裝、狀態檢查或還原成功後也可匯出報告。缺少的歷史證據仍標為未知；報告不授予復原操作權限。 [↗](../development/INSTALLER-DIAGNOSTICS.md).

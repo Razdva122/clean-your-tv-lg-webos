@@ -72,6 +72,8 @@ one model or artifact does not certify later releases or a different TV.
 
 ## Acceptance and validation
 
+- [1.6.0 final acceptance follow-up, 2026-11-02](2026-11-02-release-1.6.0-final-acceptance.md): accepted standby limitation, advanced controls, frozen-renderer/observer recovery, genuine failsafe and native Android/exact System fixtures; replacement-build binding is recorded separately.
+
 - [1.6.0 exact-package C3 and Android emulator QA, 2026-11-02](2026-11-02-release-1.6.0-hardware-qa.md): scoped Root controls/power/update/active rollback, original-signer Android retention and remaining first-screen/coverage limits; not full release acceptance.
 
 - [1.5.3 owner-supervised C3 matrix](2026-10-31-release-1.5.3-physical-qa.md): exact installed candidate, successful scoped checks and two unresolved Home failures; candidate not accepted.

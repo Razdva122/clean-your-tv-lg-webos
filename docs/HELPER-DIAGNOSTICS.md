@@ -112,9 +112,11 @@ confirm triple Home and manual resume, and record exact build hashes/versions.
 No new TV install or standby, cold boot, audio, OTA or rollback result is claimed.
 The different arrow-key symptom in #96 remains unresolved.
 
-## Candidate panel caller diagnostics (#207)
+<a id="candidate-panel-caller-diagnostics-207"></a>
 
-The candidate Home Helper panel offers **Show diagnostics / Hide diagnostics**.
+## Panel caller diagnostics (#207)
+
+In 1.6.0, the Home Helper panel offers **Show diagnostics / Hide diagnostics**.
 It displays a bounded snapshot of its actual existing Helper-status and, when
 already eligible, Home-status requests. Viewing the snapshot issues no RPC and
 starts no controller. Error text, identities, addresses and raw replies are not

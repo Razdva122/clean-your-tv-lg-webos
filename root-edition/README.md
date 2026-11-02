@@ -1,6 +1,6 @@
 # Root Edition
 
-> Frozen 1.6.0 candidate, not published: Root/infrastructure0.7.0 and Root Updater 0.4.0. Public stable is 1.5.4. See [scope, migration and pending acceptance](../docs/RELEASE-1.6.0.md); historical results retain their original scope.
+> Release 1.6.0 uses Root/infrastructure 0.7.0 and Root Updater 0.4.0. See [Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases) for published downloads, [release scope](../docs/RELEASE-1.6.0.md) and [artifact-bound acceptance](../docs/history/2026-11-02-release-1.6.0-final-acceptance.md).
 
 Use Clean Your TV as the system Home on an **already rooted LG webOS TV**.
 Short Home opens Clean; confirmed Back exit returns through native Home routing.
@@ -43,13 +43,16 @@ restore or remove packages; review the [recovery rules](../docs/RECOVERY.md).
 
 ## Current release and limits
 
-Published **1.5.4** uses **Root 0.6.2 / Root Updater 0.3.4 / System 1.1.2**.
-Frozen, unpublished **1.6.0** selects **Root/infrastructure0.7.0 / Root
-Updater 0.4.0 / System 1.2.0**. Existing System 1.1.2 stays pinned with its old
-channels and has no general replacement path in this candidate. Earlier standby
-failure [#171](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/171)
-and forward-update cancellation #202 remain unresolved. New packages require
-exact-package acceptance; source diagnostics do not establish a standby fix.
+Release **1.6.0** uses **Root/infrastructure 0.7.0 / Root Updater 0.4.0 /
+System 1.2.0**. Existing System 1.1.2 stays pinned with its old channels; no
+general replacement path is provided. [Exact-package C3 QA](../docs/history/2026-11-02-release-1.6.0-final-acceptance.md)
+covers signed update/active retained rollback, controls/audio, emergency and
+independent fault recovery, cold startup and genuine failsafe in its recorded
+scope. Physical fresh System 1.2.0 is untested. Earlier standby failure
+[#171](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/171) and
+forward-update cancellation #202 remain unresolved. The owner accepted the
+documented initial-Channels/delayed-Clean standby limitation for 1.6.0; no
+immediate-first-screen guarantee or universal compatibility is claimed.
 
 The historical **1.4.0 / Root 0.5.0 / Root Updater 0.3.1**
 [C3 acceptance record](../docs/RELEASE-1.4.0-ACCEPTANCE.md) covers corrected startup,
@@ -90,7 +93,7 @@ Historical acceptance is model-, build- and scenario-specific.
 The former setup-client notes are summarized under [Homebrew Installer](#homebrew-installer-unreleased).
 <a id="what-works-on-the-tested-setup"></a>
 See [historical C3 acceptance](../docs/RELEASE-1.4.0-ACCEPTANCE.md) and
-[current candidate limits](../docs/RELEASE-1.6.0.md).
+[current release limits](../docs/RELEASE-1.6.0.md).
 <a id="requirements-and-limits"></a>
 See [installation prerequisites](#install-and-activate) and [current limits](#current-release-and-limits).
 <a id="recovery-startup-diagnostics-130-issue-55"></a>

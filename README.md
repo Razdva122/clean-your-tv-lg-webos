@@ -49,10 +49,8 @@ and creating your own theme.
 
 ## Download and install
 
-> Root Home may not open automatically after standby (#171). The 1.5.4 candidate includes the Appearance scroll correction; see [changes and acceptance limits](docs/RELEASE-1.5.4.md).
-> On `release/next`, the versioned metadata below describes the prepared candidate until publication. The download buttons always follow the latest published release.
-
-> **Frozen 1.6.0 candidate, not published.** The download/version fields below are prepared for publication. The current public release remains [v1.5.4](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.5.4); use [published downloads](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest) until final acceptance and publication.
+> Root Home may open after an initial LG Channels screen following standby (#171). See [1.6.0 changes, migration and scoped acceptance](docs/RELEASE-1.6.0.md).
+> Download buttons follow the latest published release. On `release/next`, version metadata describes the selected candidate until publication.
 
 <!-- release:downloads -->
 Current stable release: **[v1.6.0](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.6.0)** — [release notes](docs/RELEASE-1.6.0.md).

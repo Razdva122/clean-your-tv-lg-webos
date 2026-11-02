@@ -1,6 +1,6 @@
 # Changelog
 
-## v1.6.0 — frozen candidate, not published
+## v1.6.0
 
 - Complete the five-stage installer diagnostics/recovery/outcome/admission/guidance work.
 - Add adaptive HD/FHD delivery, Czech TV localization, compact Chinese fonts and themes.

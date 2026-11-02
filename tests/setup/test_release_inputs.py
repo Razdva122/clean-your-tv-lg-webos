@@ -6,6 +6,12 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
+EXTERNAL_GUIDES = (
+    'android/README.md', 'android/STABLE-READINESS.md',
+    'root-edition/README.md', 'root-edition/STATUS.md',
+    'root-edition/TESTING.md', 'root-edition/UPDATES.md',
+    'root-edition/runtime/README.md',
+)
 
 
 class ReleaseInputs(unittest.TestCase):
@@ -54,6 +60,9 @@ class ReleaseInputs(unittest.TestCase):
                      '.github/workflows/cytv.yml', 'scripts/build-cytv.py',
                      'tests/setup/test_release_inputs.py', 'THIRD_PARTY_NOTICES.md',
                      'android/app/src/main/assets/ui/guide/README.md',
+                     'LICENSE', 'cytv/licenses/COPYING.md',
+                     'android/OTHER-GUIDE.md', 'root-edition/OTHER-GUIDE.md',
+                     'root-edition/runtime/OTHER-GUIDE.md',
                      'docs/tool.py', 'docs/source.json', 'unknown/file'):
             with self.subTest(name=name):
                 self.git('reset', '--hard', self.source)
@@ -62,6 +71,40 @@ class ReleaseInputs(unittest.TestCase):
                 self.commit('unbuilt input')
                 with self.assertRaisesRegex(ValueError, 'inputs'):
                     self.verify()
+
+    def test_external_guide_edits_preserve_build_and_test_identity(self):
+        for name in EXTERNAL_GUIDES:
+            self.write(name, 'original instructions')
+        self.source = self.commit('source with external guides')
+        key = self.inputs['test_key']
+        environment = {'python': '3.12', 'day': '2026-11-02'}
+        original = key(self.source, 'tv,installer', environment, self.root)
+        for name in EXTERNAL_GUIDES:
+            with self.subTest(name=name):
+                self.git('reset', '--hard', self.source)
+                self.write(name, 'final release instructions')
+                head = self.commit('external guide edit')
+                self.verify(head)
+                self.assertEqual(original, key(head, 'tv,installer', environment, self.root))
+                self.assertEqual(self.inputs['acceptance_scope']([name]), set())
+
+    def test_external_guide_executable_and_symlink_changes_invalidate_build(self):
+        for name in EXTERNAL_GUIDES:
+            self.write(name, 'original instructions')
+        self.source = self.commit('regular external guides')
+        for name in EXTERNAL_GUIDES:
+            for mode in ('executable', 'symlink'):
+                with self.subTest(name=name, mode=mode):
+                    self.git('reset', '--hard', self.source)
+                    path = self.root / name
+                    if mode == 'executable':
+                        path.chmod(0o755)
+                    else:
+                        path.unlink()
+                        path.symlink_to(self.root / 'launcher/app.js')
+                    self.commit('unsafe documentation mode')
+                    with self.assertRaisesRegex(ValueError, 'inputs'):
+                        self.verify()
 
     def test_executable_or_symlink_documentation_is_not_exempt(self):
         (self.root / 'README.md').chmod(0o755)
