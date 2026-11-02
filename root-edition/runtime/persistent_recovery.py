@@ -226,7 +226,7 @@ class Coordinator:
                 self._healthy(expected)
                 intent, effect = self.event(expected,'ready')
                 # Rearm protection without a foreground side effect here.
-                # The boot dispatcher separately checks startup and foreground.
+                # Native startup choices only prepare remembered input; no app launch.
                 return dict(intent=intent,effect=effect,trial=result,persistent=True)
             except Exception:
                 current = self.store.read()

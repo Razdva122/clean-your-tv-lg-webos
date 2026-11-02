@@ -1,6 +1,6 @@
 # Root cold-start identity and initial screen
 
-Current result (2026-10-27): [corrected C3 acceptance and manual physical rollback](../RELEASE-1.4.0-ACCEPTANCE.md) passed in the recorded scope. The maintainer accepted #90 and requested closure. Pending statements below describe earlier investigation checkpoints; other hardware remains unverified.
+Historical result (2026-10-27): [corrected C3 acceptance and manual physical rollback](../RELEASE-1.4.0-ACCEPTANCE.md) passed in the recorded scope. The maintainer accepted #90 and requested closure. Pending statements below describe earlier investigation checkpoints; other hardware remains unverified.
 
 This is unpublished source work for issue #104. It is separate from issue #90's
 intermittent standby input-readiness failure and PR #103's diagnostic reader.
@@ -55,18 +55,14 @@ that restores this private volatile store can replay the nonce; verify that
 path before claiming compatibility. Do not infer a new session solely from an
 absent guardian, and never clear session state while Root is running.
 
-After protected startup, one optional presentation request handles remaining
-Live TV/stock Home foreground. It requires the native Home auto-launch preference,
-normal active hardware startup, first-app launch evidence, fresh bound input
-health, unchanged active intent and no failsafe. Foreground is read after health
-validation. Other/unknown apps and an already visible Clean are preserved.
-Failures are optional and do not revoke healthy Root. Each optional RPC uses a
-0.5-second reply deadline plus at most 0.5 second for termination cleanup. No
-operation lock spans launch; explicit off can finish while a request is in
-flight. A changed intent returns `superseded`, and duplicate callbacks do not
-retry presentation. The platform exposes separate foreground-read and launch
-calls: an app switch after the final read can still race the single request.
-No repeating watcher or automatic emergency-stop reset is added.
+Earlier releases added one guarded foreground launch after protected startup.
+The current unpublished candidate removes those boot/wake launch paths entirely.
+It prepares the existing owned native input before the next startup according to
+[the selected source policy](ROOT-NATIVE-INPUT.md). Missing/unsupported native
+selection leaves normal manual Home routing; it never starts a late launch loop.
+Identity, restore-before-rearm, input-loss, shutdown and failsafe gates above
+remain authoritative. Historical launch behavior and outcomes in linked records
+are retained as evidence, not current candidate instructions.
 
 ## Exact 9194 candidate failure and shutdown ordering
 

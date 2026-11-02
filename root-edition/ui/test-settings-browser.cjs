@@ -13,9 +13,14 @@ const base=process.env.PREVIEW_URL||'http://127.0.0.1:8879';
    window.PalmServiceBridge=function(){
     const original=new Original();this.cancel=()=>original.cancel();
     this.call=(uri,raw)=>{
-     const b=settingsBackend,method=uri.split('/').pop();
+     const b=settingsBackend,method=uri.split('/').pop(),payload=JSON.parse(raw);
      if(!uri.startsWith('luna://com.cleanyourtv.root.preview.service/')||!['status','restore','enable'].includes(method)){
       original.onservicecallback=value=>this.onservicecallback(value);original.call(uri,raw);return;
+     }
+     if(payload.startup){
+      const send=result=>this.onservicecallback(JSON.stringify({returnValue:true,result:{returnValue:true,result}}));
+      if(payload.startup==='configure')b.sources=payload.sources;
+      send({sources:b.sources||{tv:true,youtube:false,hdmi:false},active:b.phase==='active'});return;
      }
      b.calls.push(method);
      const send=result=>this.onservicecallback(JSON.stringify({returnValue:true,result:{returnValue:true,result}}));
@@ -48,8 +53,17 @@ const base=process.env.PREVIEW_URL||'http://127.0.0.1:8879';
   await page.evaluate(()=>{settingsBackend.pending.pop()();settingsBackend.delay=false;});
   await page.waitForFunction(()=>!document.querySelector('.root-settings [role=switch]').disabled);
   assert.equal(await toggle.getAttribute('aria-checked'),'false');
+  const sources=page.locator('.startup-source-actions button');
+  assert.equal(await sources.count(),3);assert(await sources.nth(0).isDisabled());
+  assert.equal(await sources.nth(0).getAttribute('aria-checked'),'true');
+  const sourceLayout=await page.evaluate(()=>({hint:document.querySelector('#rootStartupHint').getBoundingClientRect().bottom,content:document.querySelector('.settings-content').getBoundingClientRect().bottom}));
+  assert(sourceLayout.hint<=sourceLayout.content,'all source controls and the Off explanation fit in the TV reading area');
+  await toggle.focus();await page.keyboard.press('ArrowDown');assert.equal(await page.evaluate(()=>document.activeElement.textContent),'Open LG Home');
   await toggle.click();await page.waitForFunction(()=>document.querySelector('.root-settings [role=switch]').getAttribute('aria-checked')==='true');
   assert.deepEqual(await page.evaluate(()=>settingsBackend.calls.filter(m=>m!=='status')),['enable']);
+  await sources.nth(1).click();await page.waitForFunction(()=>document.querySelectorAll('.startup-source-actions button')[1].getAttribute('aria-checked')==='true');
+  assert.deepEqual(await page.evaluate(()=>settingsBackend.sources),{tv:true,youtube:true,hdmi:false});
+  await page.waitForFunction(()=>!document.querySelector('.root-settings [role=switch]').disabled);
   await toggle.click();await page.waitForFunction(()=>document.querySelector('.root-settings [role=switch]').getAttribute('aria-checked')==='false');
   assert.deepEqual(await page.evaluate(()=>settingsBackend.calls.filter(m=>m!=='status')),['enable','restore']);
   // A late pre-emergency response cannot repaint the panel.

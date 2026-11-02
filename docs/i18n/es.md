@@ -1,5 +1,7 @@
 # Clean Your TV — guía de uso
 
+**Candidato sin publicar — fuentes de inicio Root:** En Ajustes → Tu pantalla Home, activa **Cambiar Home** para editar **Abrir Clean Your TV primero**. **LG Channels / TV en directo** está activado por defecto; **YouTube** y **HDMI** están desactivados. Al desactivar Cambiar Home, los interruptores siguen visibles pero bloqueados y conservan sus valores. Estas preferencias se guardan de forma privada en el televisor y no se incluyen en la exportación portátil del perfil. No confirma el inicio ni la reactivación del TV.
+
 > Esta guía describe 1.6.0. Descarga los paquetes disponibles desde las [publicaciones de GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases). Incluye las cinco mejoras del instalador. Al reabrirse, Ajustes de Root lee el estado real; una comprobación fallida no activa Home. System Updater 1.2.0 sirve para una instalación nueva admitida o la sustitución verificada de 1.1.0/1.1.1. El 1.1.2 instalado conserva sus canales anteriores; no hay migración general. Conserva los datos de recuperación y no fuerces la sustitución. [Versiones y límites](../RELEASE-1.6.0.md).
 
 > v1.5.0: temas, galería y envío del PC al TV. Límites conocidos de Root: Appearance puede desplazarse 110 px; Home puede no abrirse automáticamente tras el modo de espera. La validación por dispositivo sigue limitada. [1.5.0](../RELEASE-1.5.0.md).

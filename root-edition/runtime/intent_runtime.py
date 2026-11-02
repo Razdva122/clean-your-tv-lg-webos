@@ -78,7 +78,10 @@ def enable():
     from helper_bridge import require_idle
     verify(); require_idle()
     c = Coordinator(Store(d.STATE))
-    return c.enable(c.store.read(), boot_identity(), str(uuid.uuid4()))
+    result=c.enable(c.store.read(), boot_identity(), str(uuid.uuid4()))
+    from startup_policy import after_ready
+    after_ready(result)
+    return result
 
 
 def later_legacy_trial(c):
@@ -178,131 +181,11 @@ def _boot():
         if not ready:
             c.exit(result['intent'], reason='fault')
             return 'restored'
-        result = c.restart(result['intent'])
-        if isinstance(result,dict):
-            result['presentation'] = present_boot(c,result)
-            try: audit('boot-presentation',outcome=result['presentation'],boot=identity,
-                       context=result.get('presentation_context',{}))
-            except Exception: pass
+        result=c.restart(result['intent'])
+        from startup_policy import after_ready
+        after_ready(result)
         return result
     return 'restored'
-
-
-def present_boot(c, result):
-    """One optional hardware-start request; never retry a launch."""
-    return _present_home(c,result)
-
-
-def present_wake(transaction, boot, cancelled):
-    """Called only by a genuine ON/OFF/ON edge in one owned power stream.
-
-    Never recover/rearm here: stale or stopping contexts belong to recovery.
-    The caller revokes the edge on OFF, uncertainty, stream loss or teardown.
-    """
-    outcome = 'unavailable'
-    result = {'presentation_context':{'stage':'cancelled'}}
-    try:
-        if cancelled(): return outcome
-        result['presentation_context']['stage'] = 'session'
-        if boot_identity() != boot: return outcome
-        result['presentation_context']['stage'] = 'intent'
-        c = coordinator()
-        if c is None: return outcome
-        intent = c.store.read()
-        if (intent['phase'] != 'active' or intent['enabled'] is not True
-                or intent['boot'] != boot): return outcome
-        result['presentation_context']['stage'] = 'health-routing'
-        if c._healthy(intent) != transaction: return outcome
-        result.update(intent=intent,trial=dict(transaction=transaction))
-        outcome = _present_home(c,result,cancelled=cancelled,wake=True)
-        return outcome
-    except Exception:
-        return outcome  # Optional presentation never revokes healthy routing.
-    finally:
-        # Early refusals used to vanish, leaving no distinction between a lost
-        # edge and a wake rejected by current intent/health. Never log raw RPCs.
-        try:
-            from boot_gate import audit
-            audit('wake-presentation',outcome=outcome,boot=boot,
-                  context=result['presentation_context'])
-        except Exception: pass
-
-
-def _native_channel(sam, app):
-    """One observed partner TV surface; never classify arbitrary CP apps."""
-    if app != 'mgg4.5.channelplus': return False
-    info = sam.call('luna://com.webos.applicationManager/getAppInfo',{'id':app},timeout=.5).get('appInfo')
-    if not isinstance(info,dict): return False
-    store = '/media/cryptofs/apps/usr/palm/applications/'+app
-    expected = dict(id=app,type='web',vendor='LifeStream ltd.',
-                    folderPath=store,activeFolderPath=store)
-    return (all(info.get(key) == value for key,value in expected.items())
-            and info.get('CPApp') is True and info.get('internalInstallationOnly') is True)
-
-
-def _present_home(c, result, cancelled=lambda:False, wake=False):
-    """Shared final checks; foreground/launch are separate platform RPCs."""
-    try:
-        intent = result['intent']; tx = result['trial']['transaction']
-        if intent['phase'] != 'active' or intent['enabled'] is not True: return 'unavailable'
-        context = result.setdefault('presentation_context',{})
-        context['stage'] = 'startup-setting'
-        sam = d.sam_transport()
-        settings = sam.call('luna://com.webos.settingsservice/getSystemSettings',
-                            {'category':'general','keys':['homeAutoLaunch']},timeout=.5)
-        if settings.get('settings',{}).get('homeAutoLaunch') != 'on':
-            return 'preserved-startup-setting'
-        boot = {}
-        if not wake:
-            context['stage'] = 'boot-status'
-            boot = sam.call('luna://com.webos.bootManager/getBootStatus',{},timeout=.5)
-            if (boot.get('bootTarget') != 'hardware' or boot.get('powerStatus') != 'active'
-                    or boot.get('bootStatus') != 'normal' or boot.get('firstAppLaunched') is not True):
-                return 'preserved-startup-setting'
-        from persistent_health import require_fresh
-        context['stage'] = 'input-health'
-        require_fresh(tx)
-        context['stage'] = 'foreground'
-        foreground = sam.call('luna://com.webos.applicationManager/getForegroundAppInfo',{},timeout=.5)
-        app = foreground.get('appId')
-        # Diagnostics carry fixed classes, never private foreground IDs.
-        kinds = {'com.webos.app.home':'stock-home','com.webos.app.livetv':'live-tv',d.CANDIDATE:'root'}
-        first = boot.get('firstAppId')
-        result['presentation_context'] = dict(foreground_kind=kinds.get(app,'other-or-missing'),
-                                             first_app_matches=(first == app) if first else None)
-        if wake: result['presentation_context']['stage'] = 'foreground'
-        if app not in ('com.webos.app.livetv','com.webos.app.home'):
-            if wake: result['presentation_context']['stage'] = 'native-metadata'
-            if not _native_channel(sam,app): return 'preserved-foreground'
-            result['presentation_context']['foreground_kind'] = 'native-channel'
-            # Metadata is optional and can be slow. Keep an app selected while
-            # it was checked, including a manual Home or a third-party app.
-            if wake: result['presentation_context']['stage'] = 'foreground-recheck'
-            latest = sam.call('luna://com.webos.applicationManager/getForegroundAppInfo',{},timeout=.5)
-            if latest.get('appId') != app:
-                result['presentation_context'] = dict(
-                    foreground_kind=kinds.get(latest.get('appId'),'other-or-missing'),
-                    first_app_matches=(first == latest.get('appId')) if first else None)
-                if wake: result['presentation_context']['stage'] = 'foreground-recheck'
-                return 'preserved-foreground'
-        # Recheck after optional RPCs, which can outlive the two-second lease.
-        if wake: result['presentation_context']['stage'] = 'final-input-health'
-        require_fresh(tx)
-        if wake:
-            from persistent_health import require_guardian
-            result['presentation_context']['stage'] = 'final-guardian'
-            require_guardian(tx)
-            result['presentation_context']['stage'] = 'final-intent'
-        if cancelled() or c.store.read() != intent or d.FAILSAFE.exists(): return 'unavailable'
-        # Never hold the operation lock over optional RPC: an off request must win.
-        # Foreground observation and launch are separate platform calls; an app
-        # switch after this last observation can still race this single request.
-        if wake: result['presentation_context']['stage'] = 'launch'
-        sam.call('luna://com.webos.applicationManager/launch',{'id':d.CANDIDATE},timeout=.5)
-        return 'launch-requested' if c.store.read() == intent and not cancelled() else 'superseded'
-    except Exception:
-        # Missing/slow optional APIs must not disable otherwise healthy Home control.
-        return 'unavailable'
 
 
 def confirm(transaction=None):
