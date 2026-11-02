@@ -150,7 +150,7 @@
         216,
         217
       ],
-      "summary": "Check existing Root Home interfaces before runtime/package preparation and show typed localized connection guidance; original #133/#216 recovery and #217 connection remain unresolved"
+      "summary": "Check existing Root Home interfaces before runtime/package preparation and show typed localized connection guidance; original #133/#216 recovery remains unresolved; #217 reporter resolved connection by enabling Key Server, not by this release"
     },
     {
       "pr": 236,
@@ -173,5 +173,11 @@
     }
   ],
   "excluded": [],
-  "acceptance": ""
+  "acceptance": "Final scoped acceptance and artifact hashes: docs/history/2026-11-02-release-1.6.0-final-acceptance.md and docs/history/2026-11-02-release-1.6.0-final-artifacts.md. OLED55C3RLA, firmware43.21.71/webOS11.2.0, Magic Remote, macOS ARM64; Root0.6.1/System1.1.2 baseline. Exact Root0.7.0/updater0.4.0/infrastructure0.7.0 and scenario dependencies match original signed QA: update/profile, controls/audio, Off standby/cold, On cold, active retained rollback, advanced controls, renderer/reader fault recovery and genuine failsafe/normal exit passed. Final TV is Off/all three LG routes; original System1.1.2 and Homebrew flags retained, SSH restored and temporary telnet closed. Original On-standby failure retained; repeated LG Channels-to-Clean delay explicitly accepted for1.6.0, #171 open. Final original-signer APK fc9426b82616e021de4eaf3bf78f6ca8a170d94a942000bfbf8ec50d1ca79946 passed fresh code16-to17 upgrade, genuine Store/native, data-retention, no-replay and lifecycle on agreed Android15/API35 ARM64 userdebug emulator/WebView124. System1.2 identical 29-file host fixture carries as synthetic evidence only. No-root/HD/IR, physical fonts/phone/new System1.2, uninstall, real interruption and fresh-computer paths remain untested; original #202/#206/#207 scopes unresolved. No general1.1.2 migration, legacy HD feed or Homebrew promotion; Node0.12 prototype off. Public delivery/signature/feed/notices remain separate gates.",
+  "build": {
+    "run_id": 41463715304,
+    "attempt": 1,
+    "source": "0b271536c510b08014253bb485a817667940ad07"
+  },
+  "acceptance_build": "41463715304:1"
 }

@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [v1.6.0 final candidate artifacts and exact carry](2026-11-02-release-1.6.0-final-artifacts.md)
+
 [Current user documentation](../README.md) · [Developer references](../development/README.md)
 
 These are historical records, not current setup instructions. They retain their

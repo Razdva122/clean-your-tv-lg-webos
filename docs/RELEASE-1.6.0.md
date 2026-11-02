@@ -40,7 +40,7 @@ untested paths. No universal device compatibility is implied.
 | Independent No-root / Root Updaters | 0.3.4 | 0.4.0 | Graphics selection, fonts and copied recovery/support bytes |
 | System Updater | 1.1.2 | 1.2.0 | New selector/policy/support package identity; protocol1 retained |
 
-All affected packages/installers must be rebuilt together. Root and infrastructure
+All affected packages/installers were rebuilt together. Root and infrastructure
 share the Root version; the System supervisor is independently pinned. Component
 versions do not inherit the overall release number. No application ID, public
 signer, trust rule or recovery schema is changed by version selection.
@@ -64,8 +64,10 @@ signer, trust rule or recovery schema is changed by version selection.
   Preserve explicit Off/emergency cancellation. Control/data/audio loss or broken
   update/recovery blocks delivery.
 - Individual Root recoveries (#101/#133/#161/#200/#216), uncertain No-root package
-  termination (#201), and reporter requests (#217/#229/#230) remain open under
-  their actual statuses. Missing firmware interfaces have no Settings-only adapter.
+  termination (#201), and reporter requests (#229/#230) remain open under
+  their actual statuses. #217 was answered: the reporter enabled Key Server and
+  the connection worked; this configuration resolution is not a 1.6.0 fix.
+  Missing firmware interfaces have no Settings-only adapter.
 - No native-speaker Czech, physical Chinese rendering, physical phone-to-TV,
   additional model/remote, eARC or universal compatibility acceptance is claimed.
   Older evidence retains its exact artifact and firmware limits. Homebrew catalogue
@@ -75,7 +77,9 @@ signer, trust rule or recovery schema is changed by version selection.
 
 New feature PRs, including currently open site/theme work, are held for the next
 cycle. The 22 integrated changes below form the implementation scope; release
-preparation/verification is collected separately without expanding that scope.
+preparation/verification PRs [#238](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/238)
+and [#245](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/245) are also included
+in the frozen 24-PR inventory without adding a new product feature.
 Partial issue summaries remain partial; no automatic issue closure is requested.
 
 | PR | Included scope |
@@ -90,7 +94,7 @@ Partial issue summaries remain partial; no automatic issue closure is requested.
 | [#219](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/219) | Remove retired standalone web Showcase builder/assets/tests; retain inline theme preview, TV catalogue and author runtime cards |
 | [#220](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/220) | Add allowlisted host Python download/cache failure reasons; #200 original macOS cause and pending Root recovery remain unresolved |
 | [#221](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/221) | Prepare pinned individual Root recovery handoffs and fixed host command-boundary diagnostics; original #101/#133/#161/#216/#200 recovery remains unresolved |
-| [#222](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/222) | Refresh Root Settings status before resumed actions and preserve retained-rollback Home capture; partial #202, old forward cancellation and exact-package device acceptance remain unresolved |
+| [#222](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/222) | Refresh Root Settings status before resumed actions and preserve retained-rollback Home capture; exact-package C3 active rollback passed, original #202 forward cancellation and #206 exact resumed Settings case remain unresolved |
 | [#223](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/223) | Skip closed-PR policy preflight writes; preserve SHA-shared open gates; workflow prevention activates on normal main release |
 | [#224](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/224) | Add Czech TV Home/Root/settings/theme/audio/updater localization and preserve cs profiles; installer language scope unchanged |
 | [#225](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/225) | Add adaptive 720p Home and explicit HD source builds plus read-only IR/panel diagnostics; standard-remote routing and normal-channel HD delivery remain unresolved |
@@ -100,7 +104,7 @@ Partial issue summaries remain partial; no automatic issue closure is requested.
 | [#232](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/232) | Preserve operation-bound initiating failures and safe worker categories; export Doctor/status/check/version context across installers; original #229/#230 device reports remain unresolved |
 | [#233](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/233) | Add separately confirmed installer recovery with existing guard revalidation and no implicit reinstall; original #201/#216 recovery remains unresolved |
 | [#234](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/234) | Separate package/launch/startup and explicitly owner-reported Home with default skip and local reports; #207 IR routing remains unresolved |
-| [#235](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/235) | Check existing Root Home interfaces before runtime/package preparation and show typed localized connection guidance; original #133/#216 recovery and #217 connection remain unresolved |
+| [#235](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/235) | Check existing Root Home interfaces before runtime/package preparation and show typed localized connection guidance; original #133/#216 recovery remains unresolved; #217 reporter resolved connection by enabling Key Server, not by this release |
 | [#236](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/236) | Align Android smoke checks with safe error navigation: no blind Status/Restore, no automatic request and preserved connection; product behavior unchanged |
 
 ## Verification and remaining gates
@@ -116,10 +120,14 @@ adds advanced Magic controls, independent recovery with a frozen renderer and
 stalled input reader, genuine Homebrew failsafe, native Android Store checks and
 an exact System1.2.0 host fixture.
 
-Release documentation and the external-guide reuse guard require a replacement
-complete build. The original QA can carry only for byte-identical component
-packages and matching device/state preconditions; the final Android APK must be
-rechecked. This does not promote preliminary builds or source checks to physical
+The replacement full build [41463715304:1](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/41463715304)
+completed all 15 jobs at source `0b271536c510b08014253bb485a817667940ad07`.
+It introduces the external-guide reuse verifier and early full-build preflight.
+External documentation alone does not require another platform rebuild. Original
+QA carries only for byte-identical scenario packages and matching preconditions;
+the changed final Android APK received a fresh original-signer upgrade, native
+Store and idle-lifecycle emulator pass. Final package comparison and acceptance
+binding are linked from the final follow-up; preliminary builds are not physical
 acceptance.
 
 The owner explicitly accepted the documented LG Channels-to-Clean delay after
