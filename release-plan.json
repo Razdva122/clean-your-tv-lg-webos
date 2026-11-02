@@ -74,6 +74,13 @@
       "pr": 254,
       "issues": [],
       "summary": "Let themes choose header menu or shelf; bundle Liquid Glass and move Alpine to Showcase; synchronize rounded previews and connected labels; live preview defaults off with unresolved firmware audio/HDR behavior"
+    },
+    {
+      "pr": 256,
+      "issues": [
+        152
+      ],
+      "summary": "Resume a No-root removal stopped before package submission without global monitor access; preserve uncertain-operation guards; original EF950V recovery/control acceptance remains unresolved"
     }
   ],
   "excluded": [],
