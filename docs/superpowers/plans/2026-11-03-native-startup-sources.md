@@ -52,7 +52,7 @@ Files: `runtime/intent_runtime.py`, `runtime/shutdown_state.py`, old presentatio
 
 ## Task 3 — Durable policy, early native selection and service contract (coordinator)
 
-Files: new `runtime/startup_policy.py`, `runtime/startup_observer.py`, `device_adapter.py` native receipt validation, `shutdown_state.py` one monitor integration after Task2, `cli.py`, service handlers/service, new policy/observer/service tests.
+Files: native policy in `runtime/intent_runtime.py`, observer in `runtime/shutdown_state.py`, `device_adapter.py` native receipt validation, `cli.py`, service handlers/service and policy/observer/service tests. The immutable legacy supervisor pins infrastructure names, so no runtime filename is added. Real bundle import and legacy update/rollback regressions verify this boundary.
 
 - [x] Write failing defaults/strict-policy, native select/withdraw, disallowed YouTube/HDMI, uncertainty/readback, Off/emergency/cancellation and stream loss tests. Use real private files and existing native fake bus; assert actual remembered pair and unchanged foreground, not mock-only calls.
 - [x] Implement policy load/configure/status with mode0600 atomic writes and active-only configuration under the current operation lock.

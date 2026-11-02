@@ -3,7 +3,7 @@ import copy,json,sys,unittest
 from pathlib import Path
 from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'runtime'))
-try:import startup_policy as policy
+try:import intent_runtime as policy
 except ModuleNotFoundError:policy=None
 import device_adapter as d
 import persistent_health as health
@@ -29,23 +29,23 @@ class Tests(unittest.TestCase):
    return dict(returnValue=True,appInfo=info)
   if uri.endswith('/launch'):raise AssertionError('Startup must never launch an app')
   return native.NativeInputTests.call(self,uri,payload,timeout)
- def run_policy(self,**kw):return policy.reconcile('route-a',self.session,**kw)
+ def run_policy(self,**kw):return policy.startup_reconcile('route-a',self.session,**kw)
  def channels(self):
   self.foreground='mgg4.5.channelplus';self.last={'type':'MVPD_IP','appId':self.foreground};return dict(self.last)
  def test_defaults_status_are_read_only(self):
   before=len(self.calls)
-  self.assertEqual(policy.status(),{'sources':{'tv':True,'youtube':False,'hdmi':False},'active':True})
+  self.assertEqual(policy.startup_status(),{'sources':{'tv':True,'youtube':False,'hdmi':False},'active':True})
   self.assertEqual(len(self.calls),before);self.assertFalse((self.root/'startup-policy.json').exists())
  def test_exact_boolean_policy_persists_and_off_rejects_changes(self):
   wanted={'tv':False,'youtube':True,'hdmi':True}
-  self.assertEqual(policy.configure(wanted)['sources'],wanted)
+  self.assertEqual(policy.startup_configure(wanted)['sources'],wanted)
   raw=(self.root/'startup-policy.json').read_bytes();self.assertEqual((self.root/'startup-policy.json').stat().st_mode&0o777,0o600)
   for invalid in ({'tv':1,'youtube':False,'hdmi':False},{'tv':True},dict(wanted,other=True)):
-   with self.assertRaises(ValueError):policy.configure(invalid)
+   with self.assertRaises(ValueError):policy.startup_configure(invalid)
    self.assertEqual((self.root/'startup-policy.json').read_bytes(),raw)
   self.c.exit(self.store.read())
-  self.assertFalse(policy.status()['active'])
-  with self.assertRaises(ValueError):policy.configure({'tv':True,'youtube':False,'hdmi':False})
+  self.assertFalse(policy.startup_status()['active'])
+  with self.assertRaises(ValueError):policy.startup_configure({'tv':True,'youtube':False,'hdmi':False})
   self.assertEqual((self.root/'startup-policy.json').read_bytes(),raw)
  def test_channels_select_existing_root_without_changing_foreground(self):
   displaced=self.channels();devices=copy.deepcopy(self.devices)
@@ -66,7 +66,7 @@ class Tests(unittest.TestCase):
   self.foreground=expected['appId'];self.run_policy();self.assertEqual(self.last,expected)
  def test_youtube_and_hdmi_can_be_opted_in(self):
   self.foreground='youtube.leanback.v4';self.run_policy()
-  policy.configure({'tv':True,'youtube':True,'hdmi':True})
+  policy.startup_configure({'tv':True,'youtube':True,'hdmi':True})
   self.assertEqual(self.last['appId'],d.CANDIDATE)
   self.foreground='com.webos.app.hdmi2';self.last={'type':'HDMI_2','appId':self.foreground};displaced=dict(self.last)
   self.assertEqual(self.run_policy(event='input'),'selected')
@@ -79,7 +79,7 @@ class Tests(unittest.TestCase):
   displaced=self.channels();self.run_policy();self.foreground='org.example.player'
   self.assertEqual(self.run_policy(),'withdrawn');self.assertEqual(self.last,displaced)
  def test_input_event_cannot_use_stale_youtube_to_steal_hdmi(self):
-  policy.configure({'tv':True,'youtube':True,'hdmi':False})
+  policy.startup_configure({'tv':True,'youtube':True,'hdmi':False})
   self.foreground='youtube.leanback.v4';self.last={'type':'HDMI_1','appId':'com.webos.app.hdmi1'};expected=dict(self.last)
   self.assertEqual(self.run_policy(event='input'),'inconsistent-input');self.assertEqual(self.last,expected)
  def test_fault_contexts_and_cancellation_cannot_change_native_input(self):
@@ -93,7 +93,7 @@ class Tests(unittest.TestCase):
     if fault=='binding':
      v=self.c.read_binding();v['token']='stale';self.c.binding.write_text(json.dumps(v))
     if fault=='failsafe':d.FAILSAFE.touch()
-    if fault=='session':result=policy.reconcile('route-a','old-session')
+    if fault=='session':result=policy.startup_reconcile('route-a','old-session')
     else:result=self.run_policy(cancelled=lambda:fault=='cancel')
     self.assertEqual(self.last,displaced);self.assertIn(result,('unavailable','canceled'))
     self.c.binding.write_bytes(binding);inp.write_bytes(iraw);guard.write_bytes(graw)
@@ -134,7 +134,7 @@ class Tests(unittest.TestCase):
  def test_new_policy_withdraws_even_after_lost_selection_ack(self):
   displaced=self.lost_selection_ack()
   before=sum(method=='setLastInput' and payload.get('appId')==d.CANDIDATE for method,payload in self.calls)
-  policy.configure({'tv':False,'youtube':False,'hdmi':False})
+  policy.startup_configure({'tv':False,'youtube':False,'hdmi':False})
   self.assertEqual(self.last,displaced)
   self.assertEqual(sum(method=='setLastInput' and payload.get('appId')==d.CANDIDATE for method,payload in self.calls),before)
  def test_disconnect_withdraws_even_after_lost_selection_ack(self):
@@ -150,6 +150,6 @@ class Tests(unittest.TestCase):
  def test_post_ready_reconciliation_applies_protected_source(self):
   self.foreground='youtube.leanback.v4'
   result={'intent':self.intent,'transaction':'route-a'}
-  self.assertTrue(callable(getattr(policy,'after_ready',None)),'Post-ready native policy is missing')
-  self.assertEqual(policy.after_ready(result),'withdrawn')
+  self.assertTrue(callable(getattr(policy,'startup_after_ready',None)),'Post-ready native policy is missing')
+  self.assertEqual(policy.startup_after_ready(result),'withdrawn')
   self.assertEqual(self.last,{'type':'DTV','appId':'com.webos.app.livetv'})

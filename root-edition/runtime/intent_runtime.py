@@ -1,5 +1,6 @@
 """Intent-bound trial, explicit promotion and guarded boot recovery."""
 import os
+import re
 import fcntl
 import stat
 import json
@@ -79,8 +80,7 @@ def enable():
     verify(); require_idle()
     c = Coordinator(Store(d.STATE))
     result=c.enable(c.store.read(), boot_identity(), str(uuid.uuid4()))
-    from startup_policy import after_ready
-    after_ready(result)
+    startup_after_ready(result)
     return result
 
 
@@ -182,8 +182,7 @@ def _boot():
             c.exit(result['intent'], reason='fault')
             return 'restored'
         result=c.restart(result['intent'])
-        from startup_policy import after_ready
-        after_ready(result)
+        startup_after_ready(result)
         return result
     return 'restored'
 
@@ -193,3 +192,180 @@ def confirm(transaction=None):
     if c is None: raise ValueError('No intent-bound trial to confirm')
     if transaction != c.read_binding()['transaction']: raise ValueError('Stale confirmation transaction')
     return c.confirm(c.store.read())
+
+
+# Native startup policy stays in the pinned runtime inventory for old supervisors.
+startup_DEFAULTS = {'tv':True, 'youtube':False, 'hdmi':False}
+startup_ROOT_INPUT = {'type':'MVPD_IP', 'appId':d.CANDIDATE}
+startup_CHANNEL = 'mgg4.5.channelplus'
+startup_YOUTUBE = 'youtube.leanback.v4'
+
+
+def startup_validate(sources):
+    if (not isinstance(sources,dict) or set(sources)!=set(startup_DEFAULTS)
+            or any(type(value) is not bool for value in sources.values())):
+        raise ValueError('Invalid startup sources')
+    return dict(sources)
+
+
+def startup_load():
+    try: value=d.safe_json(d.STATE/'startup-policy.json')
+    except FileNotFoundError:return dict(startup_DEFAULTS)
+    if not isinstance(value,dict) or set(value)!={'version','sources'} or type(value['version']) is not int or value['version']!=1:
+        raise ValueError('Invalid startup policy')
+    return startup_validate(value['sources'])
+
+
+def startup_status():
+    sources=startup_load();c=coordinator();intent=c.store.read() if c is not None else None
+    return dict(sources=sources,active=bool(intent and intent['enabled'] and intent['phase']=='active'))
+
+
+def startup_configure(sources):
+    sources=startup_validate(sources);startup_load()  # Do not overwrite unreadable prior evidence.
+    c=coordinator()
+    if c is None:raise ValueError('Change Home is off')
+    intent=c.store.read()
+    with c.locked(intent):
+        if not intent['enabled'] or intent['phase']!='active':raise ValueError('Change Home is off')
+        d.trusted_dir(d.STATE)
+        fd,name=tempfile.mkstemp(dir=d.STATE,prefix='.startup-policy-')
+        try:
+            with os.fdopen(fd,'w') as out:
+                json.dump(dict(version=1,sources=sources),out);out.flush();os.fsync(out.fileno())
+            os.replace(name,d.STATE/'startup-policy.json');d.sync(d.STATE)
+        finally:
+            if os.path.lexists(name):os.unlink(name)
+    # An explicit setting change may withdraw a previous selection immediately.
+    binding=c.read_binding()
+    startup_reconcile(binding['transaction'],intent['boot'],event='policy')
+    return startup_status()
+
+
+def startup_call(uri,payload,deadline):
+    remaining=deadline-time.monotonic()
+    if remaining<=0:raise TimeoutError('Native startup deadline')
+    return d.sam_transport().call('luna://'+uri,payload,timeout=min(.5,remaining/2))
+
+
+def startup_source(app,deadline):
+    if not isinstance(app,str) or not app:return None
+    if app in (d.CANDIDATE,'com.webos.app.home'):return 'home'
+    if app=='com.webos.app.livetv':return 'tv'
+    if app==startup_YOUTUBE:return 'youtube'
+    if re.fullmatch(r'com\.webos\.app\.hdmi[1-4]',app):return 'hdmi'
+    if app=='com.webos.app.cpcover':return None
+    info=startup_call('com.webos.applicationManager/getAppInfo',{'id':app},deadline).get('appInfo')
+    if not isinstance(info,dict) or info.get('id')!=app:return None
+    if app==startup_CHANNEL:
+        store='/media/cryptofs/apps/usr/palm/applications/'+app
+        expected=dict(type='web',vendor='LifeStream ltd.',folderPath=store,activeFolderPath=store)
+        if (all(info.get(k)==v for k,v in expected.items())
+                and info.get('CPApp') is True and info.get('internalInstallationOnly') is True):return 'tv'
+    return 'protected' if info.get('visible') is True else None
+
+
+def startup_matching_input(app,pair):
+    if app==startup_CHANNEL:return pair=={'type':'MVPD_IP','appId':startup_CHANNEL}
+    if app=='com.webos.app.livetv':return pair=={'type':'DTV','appId':app}
+    if re.fullmatch(r'com\.webos\.app\.hdmi[1-4]',app):
+        return pair=={'type':'HDMI_'+app[-1],'appId':app}
+    return pair.get('appId')==app
+
+
+def startup_require(c,intent,transaction,boot):
+    from persistent_health import require_fresh,require_guardian
+    if (not intent['enabled'] or intent['phase']!='active' or intent['boot']!=boot
+            or boot_identity()!=boot or c.store.read()!=intent or d.FAILSAFE.exists()):
+        raise ValueError('Inactive startup context')
+    binding=c.read_binding()
+    if (binding['transaction']!=transaction or binding['restored']
+            or binding['generation']!=intent['generation'] or binding['token']!=intent['token']):
+        raise ValueError('Stale startup binding')
+    require_fresh(transaction);require_guardian(transaction)
+    if not d.active_guardian(c.route(transaction)):raise ValueError('Inactive guardian')
+
+
+def startup_active(receipt):
+    result=dict(receipt,phase='active');result.pop('pending',None);return result
+
+
+def startup_reconcile(transaction,boot,cancelled=lambda:False,event='foreground',withdraw=False):
+    """One fresh observation/effect; a subsequent event is never a blind retry."""
+    try:
+        if cancelled():return 'canceled'
+        c=coordinator()
+        if c is None:return 'unavailable'
+        intent=c.store.read()
+        with c.locked(intent):
+            startup_require(c,intent,transaction,boot)
+            saved=d._native_read()
+            if saved is None or saved['phase'] not in ('active','selecting'):return 'unavailable'
+            deadline=time.monotonic()+1.5
+            if not d._native_entry(deadline):return 'unavailable'
+            current=d._native_pair(startup_call('com.webos.service.eim/getLastInput',{},deadline))
+            reconciled=False
+            if saved['phase']=='selecting':
+                target=startup_ROOT_INPUT if saved['pending']=='select' else saved['baseline']
+                if current!=target:return 'pending'
+                saved=startup_active(saved);d._native_save(saved);reconciled=True
+            settings=startup_call('com.webos.settingsservice/getSystemSettings',
+                {'category':'general','keys':['homeAutoLaunch']},deadline)
+            withdraw=withdraw or settings.get('settings',{}).get('homeAutoLaunch')!='on'
+            app=None;source=None
+            if not withdraw:
+                app=startup_call('com.webos.applicationManager/getForegroundAppInfo',{},deadline).get('appId')
+                source=startup_source(app,deadline)
+                if source is None:return 'reconciled' if reconciled else 'unknown-foreground'
+            sources={} if withdraw else startup_load()
+            allowed=(not withdraw and settings.get('settings',{}).get('homeAutoLaunch')=='on'
+                     and (source=='home' or sources.get(source) is True))
+            if allowed:
+                if current==startup_ROOT_INPUT:return 'reconciled' if reconciled else 'already-selected'
+                if ((source in ('tv','hdmi') or event=='input') and not startup_matching_input(app,current)):
+                    return 'inconsistent-input'
+                target=startup_ROOT_INPUT;updated=dict(saved,baseline=current,phase='selecting',pending='select')
+                outcome='selected'
+            else:
+                if current!=startup_ROOT_INPUT:return 'reconciled' if reconciled else 'preserved-input'
+                target=saved['baseline'];updated=dict(saved,phase='selecting',pending='restore')
+                outcome='withdrawn'
+            # EIM and foreground are separate RPCs; reject observed changes.
+            if d._native_pair(startup_call('com.webos.service.eim/getLastInput',{},deadline))!=current:
+                return 'superseded'
+            if app is not None and startup_call('com.webos.applicationManager/getForegroundAppInfo',{},deadline).get('appId')!=app:
+                return 'superseded'
+            startup_require(c,intent,transaction,boot)
+            if cancelled():return 'canceled'
+            d._native_save(updated)  # Persist the inverse before any optional effect.
+            try:
+                startup_require(c,intent,transaction,boot)
+                if cancelled():
+                    d._native_save(saved);return 'canceled'  # No RPC was submitted.
+            except Exception:
+                d._native_save(saved);raise
+            d._native_set(target,deadline)
+            # Confirm a submitted effect even if a newer event canceled its work.
+            d._native_save(startup_active(updated))
+            return outcome
+    except Exception:
+        return 'unavailable'
+
+
+def startup_after_ready(result):
+    """Initial subscription frames may precede confirmation; apply once ready."""
+    try:
+        intent=result['intent']
+        transaction=result.get('transaction') or result['trial']['transaction']
+        return startup_reconcile(transaction,intent['boot'],event='activation')
+    except Exception:return 'unavailable'
+
+
+def startup_entry(args):
+    if args==['status']:return startup_status()
+    if args==['configure']:
+        import sys
+        raw=sys.stdin.buffer.read(2049)
+        if len(raw)>2048:raise ValueError('Oversized startup sources')
+        return startup_configure(json.loads(raw))
+    raise ValueError('Unknown startup operation')

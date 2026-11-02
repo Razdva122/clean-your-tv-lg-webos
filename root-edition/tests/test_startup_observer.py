@@ -3,7 +3,7 @@ import json,os,subprocess,sys,threading,time,unittest
 from pathlib import Path
 from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'runtime'))
-try:import startup_observer as observer
+try:import shutdown_state as observer
 except ModuleNotFoundError:observer=None
 
 class Tests(unittest.TestCase):
@@ -15,8 +15,8 @@ class Tests(unittest.TestCase):
   entered=threading.Event();release=threading.Event();seen=[]
   def reconcile(tx,boot,cancelled,**kw):
    seen.append(cancelled);entered.set();release.wait(1);return 'canceled' if cancelled() else 'selected'
-  o=observer.Observer('tx','boot',threading.Event())
-  with patch.object(observer.policy,'reconcile',side_effect=reconcile):
+  o=observer.StartupObserver('tx','boot',threading.Event())
+  with patch.object(observer.startup_policy,'startup_reconcile',side_effect=reconcile):
    try:
     self.ready(o);self.assertTrue(entered.wait(1))
     o.feed('foreground',{'returnValue':True,'subscribed':True,'appId':''})
@@ -26,8 +26,8 @@ class Tests(unittest.TestCase):
   self.assertEqual(len(seen),1)
  def test_invalid_or_lost_subscription_cancels_and_withdraws_owned_priority(self):
   for frame in ({'returnValue':False},{'returnValue':True,'subscribed':False,'appId':'mgg4.5.channelplus'}, {'returnValue':True,'subscribed':True,'appId':[]}):
-   o=observer.Observer('tx','boot',threading.Event())
-   with patch.object(observer.policy,'reconcile',return_value='withdrawn') as reconcile:
+   o=observer.StartupObserver('tx','boot',threading.Event())
+   with patch.object(observer.startup_policy,'startup_reconcile',return_value='withdrawn') as reconcile:
     with self.assertRaises(ValueError):o.feed('foreground',frame)
     o.close()
     self.assertTrue(o.closed)
@@ -36,8 +36,8 @@ class Tests(unittest.TestCase):
   entered=threading.Event();release=threading.Event();events=[]
   def reconcile(tx,boot,cancelled,**kw):
    events.append(kw.get('event'));entered.set();release.wait(1);return 'selected'
-  o=observer.Observer('tx','boot',threading.Event())
-  with patch.object(observer.policy,'reconcile',side_effect=reconcile):
+  o=observer.StartupObserver('tx','boot',threading.Event())
+  with patch.object(observer.startup_policy,'startup_reconcile',side_effect=reconcile):
    self.ready(o);self.assertTrue(entered.wait(1))
    o.feed('foreground',{'returnValue':True,'appId':'youtube.leanback.v4'})
    release.set()
@@ -53,8 +53,8 @@ class Tests(unittest.TestCase):
    value.update({'appId':'mgg4.5.channelplus'} if foreground else {'settings':{'lastInputApp':'mgg4.5.channelplus','homeAutoLaunch':'on'}})
    code='import sys;print('+repr(json.dumps(value))+',flush=True);sys.stdin.read()'
    p=real([sys.executable,'-c',code],**kw);children.append(p);return p
-  o=observer.Observer('tx','boot',stop)
-  with patch.object(observer.subprocess,'Popen',side_effect=launch),patch('intent_runtime.boot_identity',return_value='boot'),patch.object(observer.policy,'reconcile',side_effect=lambda *a,**k:entered.set()):
+  o=observer.StartupObserver('tx','boot',stop)
+  with patch.object(observer.subprocess,'Popen',side_effect=launch),patch('intent_runtime.boot_identity',return_value='boot'),patch.object(observer.startup_policy,'startup_reconcile',side_effect=lambda *a,**k:entered.set()):
    thread=threading.Thread(target=o.run);thread.start()
    try:self.assertTrue(entered.wait(2))
    finally:stop.set();thread.join(3)
@@ -64,8 +64,8 @@ class Tests(unittest.TestCase):
   entered=threading.Event();release=threading.Event();events=[]
   def reconcile(tx,boot,cancelled,**kw):
    events.append(kw.get('event'));entered.set();release.wait(1);return 'selected'
-  o=observer.Observer('tx','boot',threading.Event())
-  with patch.object(observer.policy,'reconcile',side_effect=reconcile):
+  o=observer.StartupObserver('tx','boot',threading.Event())
+  with patch.object(observer.startup_policy,'startup_reconcile',side_effect=reconcile):
    self.ready(o);self.assertTrue(entered.wait(1))
    o.feed('foreground',{'returnValue':True,'appId':'youtube.leanback.v4'})
    o.feed('input',{'returnValue':True,'settings':{'lastInputApp':'com.cleanyourtv.root.preview'}})
@@ -78,8 +78,8 @@ class Tests(unittest.TestCase):
   def reconcile(tx,boot,cancelled,**kw):
    events.append(kw.get('event'))
    if kw.get('event')=='policy':seen.set()
-  o=observer.Observer('tx','boot',threading.Event())
-  with patch.object(observer.policy,'reconcile',side_effect=reconcile):
+  o=observer.StartupObserver('tx','boot',threading.Event())
+  with patch.object(observer.startup_policy,'startup_reconcile',side_effect=reconcile):
    self.ready(o)
    o.feed('foreground',{'returnValue':True,'appId':''})
    o.feed('input',{'returnValue':True,'settings':{'homeAutoLaunch':'off'}})
@@ -88,8 +88,8 @@ class Tests(unittest.TestCase):
   entered=threading.Event();release=threading.Event();events=[]
   def reconcile(tx,boot,cancelled,**kw):
    events.append(kw.get('event'));entered.set();release.wait(1);return 'selected'
-  o=observer.Observer('tx','boot',threading.Event())
-  with patch.object(observer.policy,'reconcile',side_effect=reconcile):
+  o=observer.StartupObserver('tx','boot',threading.Event())
+  with patch.object(observer.startup_policy,'startup_reconcile',side_effect=reconcile):
    self.ready(o);self.assertTrue(entered.wait(1))
    o.feed('foreground',{'returnValue':True,'appId':''})
    o.feed('input',{'returnValue':True,'settings':{'homeAutoLaunch':'off'}})
@@ -102,9 +102,9 @@ class Tests(unittest.TestCase):
  def test_global_off_withdrawal_survives_another_blank_frame(self):
   self.assert_global_off_survives(('foreground',{'returnValue':True,'appId':''}))
  def test_initial_global_off_snapshot_precedes_blank_foreground(self):
-  entered=threading.Event();events=[];o=observer.Observer('tx','boot',threading.Event())
+  entered=threading.Event();events=[];o=observer.StartupObserver('tx','boot',threading.Event())
   def reconcile(*args,**kw):events.append(kw.get('event'));entered.set()
-  with patch.object(observer.policy,'reconcile',side_effect=reconcile):
+  with patch.object(observer.startup_policy,'startup_reconcile',side_effect=reconcile):
    o.feed('input',{'returnValue':True,'subscribed':True,'settings':{'lastInputApp':'com.cleanyourtv.root.preview','homeAutoLaunch':'off'}})
    o.feed('foreground',{'returnValue':True,'subscribed':True,'appId':''})
    self.assertTrue(entered.wait(1));o.close(withdraw=False)

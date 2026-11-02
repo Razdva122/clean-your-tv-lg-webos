@@ -719,7 +719,7 @@ if __name__ == '__main__':
         print(json.dumps(audio_entry(sys.argv[2:])), flush=True)
     elif len(sys.argv) > 1 and sys.argv[1] == 'startup':
         try:
-            from startup_policy import entry
+            from intent_runtime import startup_entry as entry
             print(json.dumps({'returnValue':True,'result':entry(sys.argv[2:])}),flush=True)
         except Exception:
             print(json.dumps({'returnValue':False,'error':'Startup choices unavailable'}),flush=True)
