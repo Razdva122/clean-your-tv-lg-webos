@@ -40,4 +40,7 @@ for (const theme of ["classic", "alpine", "ribbon"])
     root + "docs/launcher-" + theme + ".jpg",
     pub + "assets/" + theme + ".jpg",
   );
+for (const name of ["outfit-400.ttf", "outfit-700.ttf", "OFL.txt"]) {
+  copyFileSync(root + "launcher/fonts/" + name, pub + "assets/" + name);
+}
 writeFileSync(pub + ".nojekyll", "");

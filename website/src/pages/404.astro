@@ -11,7 +11,7 @@ import { locales, copy, route, base } from "../lib/site";
     <title>Page not found | Clean Your TV</title>
   </head>
   <body>
-    <main>
+    <main class="shell missing-page">
       <h1>Page not found</h1>
       <p>
         <a href={base}>Clean Your TV</a>
@@ -28,3 +28,7 @@ import { locales, copy, route, base } from "../lib/site";
     </main>
   </body>
 </html>
+
+<style is:global>
+  @import "../styles.css";
+</style>

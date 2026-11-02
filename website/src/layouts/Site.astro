@@ -11,7 +11,6 @@ import {
   type Locale,
   type Section,
 } from "../lib/site";
-import "../styles.css";
 interface Props {
   lang: Locale;
   section?: Section;
@@ -24,6 +23,20 @@ const title = section
   ? `${t.nav[index]} | Clean Your TV — LG webOS`
   : `Clean Your TV — LG webOS | ${t.headline}`;
 const canonical = origin + route(lang, section);
+const menuLabel = {
+  en: "Menu",
+  ru: "Меню",
+  de: "Menü",
+  es: "Menú",
+  "pt-BR": "Menu",
+  fr: "Menu",
+  it: "Menu",
+  ko: "메뉴",
+  hi: "मेन्यू",
+  pl: "Menu",
+  "zh-Hans": "菜单",
+  "zh-Hant": "選單",
+}[lang];
 ---
 
 <!doctype html>
@@ -72,7 +85,7 @@ const canonical = origin + route(lang, section);
           height="70"
         />
       </a>
-      <nav aria-label={t.readMore}>
+      <nav class="primary-nav" aria-label={t.readMore}>
         {sections.map((page, i) => (
           <a
             href={route(lang, page)}
@@ -82,7 +95,20 @@ const canonical = origin + route(lang, section);
           </a>
         ))}
       </nav>
-      <details class="languages">
+      <details class="mobile-menu" name="site-navigation">
+        <summary>{menuLabel}</summary>
+        <nav aria-label={t.readMore}>
+          {sections.map((page, i) => (
+            <a
+              href={route(lang, page)}
+              aria-current={section === page ? "page" : undefined}
+            >
+              {t.nav[i]}
+            </a>
+          ))}
+        </nav>
+      </details>
+      <details class="languages" name="site-navigation">
         <summary>
           {t.language}: <span>{t.name}</span>
         </summary>
@@ -104,6 +130,15 @@ const canonical = origin + route(lang, section);
       <slot />
     </main>
     <footer class="site-footer">
+      <a class="footer-mark" href={route(lang)} aria-label="Clean Your TV">
+        <img
+          src={base + "assets/logo-dark.svg"}
+          alt="Clean Your TV — for LG webOS"
+          width="250"
+          height="70"
+          loading="lazy"
+        />
+      </a>
       <p>{t.footer}</p>
       <div>
         <a href={repo}>{t.source}</a>
@@ -117,3 +152,7 @@ const canonical = origin + route(lang, section);
     </script>}
   </body>
 </html>
+
+<style is:global>
+  @import "../styles.css";
+</style>

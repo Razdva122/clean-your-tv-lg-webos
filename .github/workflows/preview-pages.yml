@@ -57,7 +57,9 @@ jobs:
       - name: Verify localized navigation, mobile layout and demo
         env:
           BROWSER_CHANNEL: chromium
-        run: npm run test:browser --prefix website
+        run: |
+          npm run test:browser --prefix website
+          npm run test:dev --prefix website
       - uses: actions/upload-pages-artifact@v4
         with:
           path: website/dist

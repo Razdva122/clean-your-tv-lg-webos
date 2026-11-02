@@ -102,11 +102,13 @@ const Content = rendered?.Content;
           {section === "help" && (
             <>
               <p class="lead">{extra.helpDescription}</p>
-              <nav class="topic-links" aria-label={extra.helpTitle}>
+              <ul class="topic-links" aria-label={extra.helpTitle}>
                 {topics.map((topic, index) => (
-                  <a href={"#" + topic.id}>{extra.help[index][0]}</a>
+                  <li>
+                    <a href={"#" + topic.id}>{extra.help[index][0]}</a>
+                  </li>
                 ))}
-              </nav>
+              </ul>
               {topics.map((topic, index) => (
                 <section id={topic.id}>
                   <h2>{extra.help[index][0]}</h2>
@@ -151,3 +153,7 @@ const Content = rendered?.Content;
     </article>
   </div>
 </Site>
+
+<style is:global>
+  @import "../../article.css";
+</style>

@@ -1,0 +1,48 @@
+[
+ {
+  "mode": "redesign",
+  "depth": "full",
+  "theme": "brand B1",
+  "shape": "Workbench home; Long Document guides",
+  "axes": [
+   "dark",
+   "rounded sans",
+   "orange signal"
+  ],
+  "hero": "Offer with large real launcher beside text",
+  "nav": "compact index; native mobile menu and languages",
+  "footer": "brand mast",
+  "imagery": "existing Classic, Alpine and Ribbon captures",
+  "photos": [],
+  "entry": "product demo",
+  "fingerprint": "asymmetric side-stage / narrow offer / real product / editorial rows / asymmetric theme gallery / brand mast",
+  "sections": [
+   "launcher offer",
+   "three product capabilities",
+   "Root and No-root prerequisites",
+   "theme gallery",
+   "installation sequence",
+   "help index",
+   "brand footer"
+  ],
+  "signature": "real launcher at first-screen scale",
+  "waived": [
+   "49b: full descriptive help questions wrap on phones",
+   "78:30px Long Document section hierarchy"
+  ],
+  "prompt": "Use Hallmark to redesign the existing multilingual Clean Your TV website; preserve all content and wiring.",
+  "heroReview": "1 finding resolved; confirming verdict ship",
+  "finishReview": "1 finding resolved; natural wrapping replaces truncation",
+  "checks": {
+   "fail": 0,
+   "openReflex": 0,
+   "warn": 3,
+   "waivedInstances": 6,
+   "answered": 3,
+   "keptLinks": "107/107",
+   "keptHeadings": "25/25",
+   "keptFigures": "12/12"
+  },
+  "date": "2026-11-02"
+ }
+]

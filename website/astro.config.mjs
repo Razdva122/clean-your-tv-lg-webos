@@ -46,5 +46,23 @@ export default defineConfig({
     ],
     routing: { prefixDefaultLocale: true },
   },
-  vite: { server: { fs: { allow: [".."] } } },
+  vite: {
+    server: { fs: { allow: [".."] } },
+    plugins: [
+      {
+        name: "demo-directory-index",
+        configureServer(server) {
+          // Astro serves public files verbatim, but does not resolve public directory indexes.
+          // GitHub Pages does; keep the existing clean demo URL identical in local preview.
+          server.middlewares.use((request, _response, next) => {
+            const pathname = request.url?.split("?")[0];
+            if (pathname === base + "demo/" || pathname === "/demo/") {
+              request.url = request.url.replace("/demo/", "/demo/index.html");
+            }
+            next();
+          });
+        },
+      },
+    ],
+  },
 });

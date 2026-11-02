@@ -35,6 +35,7 @@ Generated `public/`, `.astro/` and `dist/` contents are ignored.
 npm run check --prefix website
 npm run test --prefix website
 npm run test:browser --prefix website
+npm run test:dev --prefix website
 npm run format --prefix website
 ```
 
@@ -139,3 +140,16 @@ remain the documented released requirements; source prototypes do not lower them
 This preparation adds no analytics collector, account connection or PR-preview
 hosting service. Publishing and Search Console configuration remain separate
 release/owner actions.
+
+## Local demo routing regression
+
+Astro dev serves public files directly, but does not resolve a public directory
+index at `/demo/` the same way GitHub Pages does. The `demo-directory-index` Vite
+middleware rewrites that local request to the existing `/demo/index.html` file
+while preserving the public URL and fragment/relative resource behavior. It runs
+only in the development server; it is not a production server or redirect.
+
+`test:dev` starts an isolated real Astro dev server on a free loopback port,
+checks `/demo/` returns 200, exercises both launcher editions and inline themes,
+then stops the owned server. This complements the static export/browser test
+which resolves directory indexes itself.

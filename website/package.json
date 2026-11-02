@@ -8,7 +8,8 @@
     "check": "astro check",
     "test": "node scripts/verify.mjs",
     "test:browser": "node scripts/browser.mjs",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "test:dev": "node scripts/dev-smoke.mjs"
   },
   "dependencies": {
     "@astrojs/markdown-remark": "7.3.5",

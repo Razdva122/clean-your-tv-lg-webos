@@ -105,6 +105,15 @@ try {
   await staticPage.locator(".languages summary").click();
   await staticPage.locator('.languages a[hreflang="de"]').click();
   assert.equal(new URL(staticPage.url()).pathname, base + "de/help/");
+  // The compact header must keep every destination reachable without JavaScript.
+  await staticPage.setViewportSize({ width: 320, height: 812 });
+  await staticPage.goto(host + base + "ru/");
+  await staticPage.locator(".mobile-menu summary").focus();
+  await staticPage.keyboard.press("Enter");
+  await staticPage
+    .locator('.mobile-menu a[href="' + base + 'ru/help/"]')
+    .click();
+  assert.equal(new URL(staticPage.url()).pathname, base + "ru/help/");
   await staticPage.close();
   const page = await browser.newPage();
   page.on("pageerror", (e) => errors.push(e.message));
@@ -134,7 +143,8 @@ try {
       await page.goto(host + base + lang + "/" + section);
       if (lang === "de")
         await page.addStyleTag({
-          content: ":root { font-family: Verdana, sans-serif; }",
+          content:
+            ":root { font-family: Verdana, sans-serif; --font-body: Verdana, sans-serif; --font-display: Verdana, sans-serif; }",
         });
       await page.locator("img").first().waitFor({ state: "visible" });
       assert(
