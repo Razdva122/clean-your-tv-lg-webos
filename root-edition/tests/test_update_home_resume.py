@@ -111,6 +111,29 @@ class ResumeTests(unittest.TestCase):
                 self.assertEqual((self.root/'update-home-cancel.json').read_bytes(),cancellation)
                 self.assertEqual(self.finish(),{'status':'cancelled'});self.assertEqual(self.enables,0)
 
+    def test_legacy_boot_and_explicit_off_have_identical_cancellation_evidence(self):
+        # Characterize the evidence boundary, not the reported TV caller. A new
+        # guard cannot discard this legacy receipt without also discarding Off.
+        from types import SimpleNamespace
+        source=Path(__file__).with_name('fixtures')/'legacy-home-cli-v1.5.2.py.txt'
+        namespace=dict(os=os,d=SimpleNamespace(STATE=self.root,EXPECTED_UID=self.uid),inhibit=lambda root:None)
+        exec(compile(source.read_text(),str(source),'exec'),namespace)
+        self.boot_cli()
+        evidence=[]
+        for mode in ('boot','restore'):
+            with self.subTest(mode=mode):
+                guard.reserve(self.tx,self.root,self.uid)
+                self.intent.update(generation=3,phase='active',enabled=True,token='old')
+                with patch.object(guard.uuid,'uuid4',return_value=SimpleNamespace(hex='f'*32)):
+                    self.suspend()
+                before=(self.root/'update-home-resume.json').read_bytes()
+                self.assertEqual(namespace['main'](mode),'restored')
+                self.assertEqual((self.root/'update-home-resume.json').read_bytes(),before)
+                evidence.append((before,(self.root/'update-home-cancel.json').read_bytes(),dict(self.intent)))
+                self.assertEqual(self.finish(),{'status':'cancelled'})
+                self.assertEqual(self.enables,0)
+        self.assertEqual(evidence[0],evidence[1])
+
     def test_disabled_intent_is_not_enabled(self):
         self.intent.update(enabled=False,phase='disabled')
         self.suspend();self.assertEqual(self.finish(),{'status':'skipped'});self.assertEqual(self.enables,0)
