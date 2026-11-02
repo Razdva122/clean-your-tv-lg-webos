@@ -254,6 +254,15 @@
       "allowColumnOverride": false,
       "paired": true,
       "belowLabelsMinimumBottom": 64
+    },
+    "date-placement-v1": {
+      "layout": "datePlacement",
+      "preset": "dock-grid",
+      "values": [
+        "inline",
+        "below-clock"
+      ],
+      "paired": true
     }
   },
   "clockDateFontSize": [
