@@ -488,6 +488,23 @@ class OperationTests(unittest.TestCase):
         self.assertIsNone(result['pending'])
         self.assertEqual(result['reconciled'], 'root-installation-verified')
 
+    def test_submitted_root_status_never_stages_or_executes_retained_python(self):
+        installer=self.installer(Remote(),'root')
+        self.store.begin(installer.profile,'install',stage='coordinator-submitted',product_operation='a'*32)
+        original=self.store.pending(installer.profile)
+        installer.coordinator_code=lambda:self.fail('Status attempted coordinator staging')
+        def run(command,**kwargs):
+            self.assertEqual(command,'env -u NODE_OPTIONS -u NODE_PATH /usr/bin/node')
+            self.assertIn(b'clean-your-tv-installation',kwargs['data'])
+            return '{"schema":1,"status":"missing"}'
+        installer.remote.run=run
+        result=installer.status()
+        self.assertFalse(result['can_resume_root_setup'])
+        self.assertIsNone(result['reconciled'])
+        self.assertEqual(result['device']['product']['state'],'recovery_required')
+        self.assertEqual(self.store.pending(installer.profile),original)
+        self.assertFalse(any(c[0]=='upload' for c in installer.remote.calls))
+
     def test_root_old_installation_does_not_certify_new_bundle(self):
         installer = self.installer(Remote(), 'root')
         self.store.begin(installer.profile, 'install')

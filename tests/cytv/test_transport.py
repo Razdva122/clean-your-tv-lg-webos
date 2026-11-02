@@ -17,6 +17,18 @@ class RejectedAuthTransport:
 
 
 class TransportTests(unittest.TestCase):
+    def test_inspection_secret_refuses_echo_fallback_and_propagates_cancel(self):
+        import getpass
+        import warnings
+        from cytv.transport import inspection_secret
+        def echoed(_):
+            warnings.warn('Cannot hide input',getpass.GetPassWarning)
+            self.fail('Echoed secret input was reached')
+        with patch('getpass.getpass',side_effect=echoed),self.assertRaises(getpass.GetPassWarning):
+            inspection_secret('hidden: ')
+        for error in (EOFError,KeyboardInterrupt):
+            with patch('getpass.getpass',side_effect=error),self.assertRaises(error):inspection_secret('hidden: ')
+
     def test_developer_key_diagnostics_distinguish_response_from_unlock_failure(self):
         import paramiko
         from cytv.transport import developer_key
@@ -224,6 +236,21 @@ class TransportTests(unittest.TestCase):
                 root_auth(lambda _: self.fail('Password requested after network failure'),
                           identity_prompt=lambda: self.fail('Key requested after network failure')).authenticate(Transport(active))
             agent.assert_not_called()
+
+    def test_inspection_can_prompt_after_resolved_rejection_of_original_identity(self):
+        import paramiko
+        from cytv.transport import root_auth
+        profile={'identity':'/original/key'}
+        calls=[]
+        class Transport(RejectedAuthTransport):
+            def auth_publickey(self,username,key):
+                calls.append('key');raise paramiko.AuthenticationException()
+            def auth_password(self,username,password):
+                calls.append('password');return []
+        with patch('cytv.transport.load_identity',return_value='original-key'):
+            root_auth(lambda _: 'test-secret',profile=profile,password_fallback=True).authenticate(Transport())
+        self.assertEqual(calls,['key','password'])
+        self.assertEqual(profile,{'identity':str(Path('/original/key'))})
 
     @unittest.skipUnless(__import__('importlib.util').util.find_spec('paramiko'), 'Requires SSH build dependencies')
     def test_encrypted_root_identity_is_unlocked_with_hidden_passphrase(self):

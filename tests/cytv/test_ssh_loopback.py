@@ -204,6 +204,25 @@ class SSHLoopbackTests(unittest.TestCase):
             self.assertIn('publickey', auth_events)
             self.assertEqual(len(prompts), 1)
 
+            # Inspect-only auth must use the original local pin and leave its
+            # bytes/mode/inode unchanged even after password fallback succeeds.
+            pinned = Path(tmp)/'known_hosts'
+            before = (pinned.read_bytes(), pinned.stat().st_mode, pinned.stat().st_ino)
+            profile_before = dict(profile)
+            with patch.object(paramiko, 'Agent') as factory:
+                factory.return_value.get_keys.return_value = ()
+                client = SSH.connect(profile, Path(tmp), lambda _: 'loopback-test-password',
+                                     lambda *_: self.fail('Inspect asked for new trust'), persist=False)
+                self.assertEqual(client.run('printf CYTV_LOOPBACK_OK'), 'CYTV_LOOPBACK_OK')
+                client.close()
+            self.assertEqual(before, (pinned.read_bytes(), pinned.stat().st_mode, pinned.stat().st_ino))
+            self.assertEqual(profile, profile_before)
+            from cytv.errors import UserError
+            with self.assertRaisesRegex(UserError,'SSH host key was not verified'):
+                SSH.connect(profile, Path(tmp)/'missing-pin',
+                            lambda _: self.fail('Missing pin asked for a secret'),
+                            lambda *_: self.fail('Missing pin asked for trust'), persist=False)
+
             # A locked/confirmation-denied agent fails inside Paramiko's signing
             # thread. Offer a manual choice only after closing that connection.
             class RefusingKey:
@@ -228,8 +247,12 @@ class SSHLoopbackTests(unittest.TestCase):
                     client.close()
             factory.assert_called_once()
             self.assertEqual(choices, ['password'])
-            self.assertEqual(auth_events.count('password'), 1)
+            self.assertEqual(auth_events.count('password'), 2)
             self.assertEqual(len(prompts), 1)
+            from cytv.transport import AgentLoginFailed
+            with patch.object(paramiko,'Agent',return_value=RefusingAgent()),self.assertRaises(AgentLoginFailed):
+                SSH.connect(profile,Path(tmp),lambda _:self.fail('Interrupted agent asked for password'),trust,
+                            identity_prompt=lambda:self.fail('Inspect reconnected'),persist=False)
 
             # An explicitly configured key is loaded lazily after host trust.
             keyfile = Path(tmp) / 'test-root-key'
@@ -245,6 +268,8 @@ class SSHLoopbackTests(unittest.TestCase):
             auth_count = len(auth_events)
             with self.assertRaises(paramiko.BadHostKeyException):
                 SSH.connect(profile, Path(tmp), no_password, trust)
+            with self.assertRaises(paramiko.BadHostKeyException):
+                SSH.connect(profile, Path(tmp), no_password, trust, persist=False)
             self.assertEqual(len(auth_events), auth_count)
             self.assertEqual(len(prompts), 1)
             self.assertEqual((Path(tmp) / 'known_hosts').read_bytes(), pinned)

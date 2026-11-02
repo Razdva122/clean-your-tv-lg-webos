@@ -812,6 +812,16 @@ print('CYTV_UPDATER_VERIFIED')
         pending = self.store.pending(self.profile)
         reconciled = None
         can_resume = False
+        if (self.profile['edition']=='root' and pending and pending.get('action')=='install'
+                and pending.get('stage')=='coordinator-submitted'):
+            # A failed submission/status (including SSH 127) does not authorize
+            # staging a replacement driver or executing retained binding code.
+            from .root_passive import collect
+            passive=collect(self.remote,pending.get('product_operation'),pending)
+            event=dict(operation=pending['product_operation'],action='install',state='recovery_required',
+                       stage='blocked',code='operation_requires_recovery',can_resume=False,
+                       resume_reason='recovery_evidence_required',passive=passive)
+            return dict(device={'product':event},pending=pending,reconciled=None,can_resume_root_setup=False)
         if not pending and self.profile['edition']=='root':
             try:
                 inspected=self.product_action('inspect')
