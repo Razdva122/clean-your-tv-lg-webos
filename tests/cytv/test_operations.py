@@ -356,7 +356,7 @@ class OperationTests(unittest.TestCase):
             if uri.endswith('/disable'):
                 raise TVRejected('denied', {'returnValue': False, 'errorCode': -1}, uri)
             if uri == 'com.webos.appInstallService/status':
-                return {'returnValue': True, 'status': {'apps': []}}
+                raise TVRejected('denied', {'returnValue': False, 'errorCode': -1}, uri)
             if uri.endswith('/dev/remove'):
                 remote.calls.append(('luna', uri, payload))
                 remote.installed = [app for app in remote.installed if app['id'] != payload['id']]

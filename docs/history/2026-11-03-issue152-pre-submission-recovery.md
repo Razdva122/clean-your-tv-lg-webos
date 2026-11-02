@@ -50,7 +50,12 @@ a submitted operation.
 - Negative cases retain previous install (including null previous), unexpected
   fields, malformed removal entries, non-pending stages and submitted requests.
   Existing denied/busy/timeout/unknown monitor and uncertain-terminal tests remain.
-- Complete affected checks and independent review are recorded in the PR.
+- `scripts/test.sh installer setup android`: 662 cytv tests (2 optional skips),
+  222 setup and 26 Android tests passed, together with Homebrew checks. Final
+  focused checks also cover both the Helper-disable and monitor refusals in the
+  same resumed-removal scenario. These model TV IO; no device was accessed.
+- Independent read-only review found no actionable defects. CI status and exact
+  source identities are recorded in the PR.
 
 The English recovery/CLI/developer references and twelve localized installer
 user guides distinguish this unreleased correction from published 1.6.0. Czech
