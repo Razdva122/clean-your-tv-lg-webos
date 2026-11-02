@@ -168,3 +168,11 @@ describes the authenticated retained-rollback anchor receipt and offline limits.
 
 <!-- Anchors retained for links to earlier guide headings. -->
 <a id="root-candidate-runtime"></a>
+
+Native source selection requires an acknowledged, live guardian observer. Its
+root-private volatile `.startup` health record binds the transaction/session to
+the actual guardian PID and process-start ticks; it is not durable Home authority.
+Loss before activation completes makes post-ready handling withdraw the owned
+priority. Close invalidates eligibility first, waits at most two seconds for an
+in-flight operation lock, then attempts one fresh guarded withdrawal. No native
+RPC replay or late application launch is introduced.

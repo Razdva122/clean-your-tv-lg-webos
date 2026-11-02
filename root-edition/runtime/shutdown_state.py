@@ -296,7 +296,7 @@ class StartupObserver:
     def __init__(self,transaction,boot,stop):
         self.transaction=transaction;self.boot=boot;self.stop=stop
         self.lock=threading.Lock();self.revision=0;self.pending=None;self.worker=None
-        self.ready=set();self.closed=False;self.foreground=None;self.home_auto=None
+        self.ready=set();self.closed=False;self.foreground=None;self.home_auto=None;self.announced=False
 
     def cancel(self):
         with self.lock:self.revision+=1;self.pending=None
@@ -346,6 +346,9 @@ class StartupObserver:
             root_echo=settings.get('lastInputApp')==d.CANDIDATE and event!='policy'
         self.ready.add(name)
         if len(self.ready)!=len(STARTUP_SUBSCRIPTIONS):return
+        if not self.announced:
+            startup_policy.startup_observer_mark(self.transaction,self.boot,True)
+            self.announced=True
         if self.home_auto=='off':
             # A routing hint only: reconcile rereads the real setting. Keep a
             # withdrawal wake-up across blank frames and delayed own echoes.
@@ -361,11 +364,13 @@ class StartupObserver:
     def close(self,withdraw=True):
         with self.lock:
             self.closed=True;self.revision+=1;self.pending=None;worker=self.worker
+        try:startup_policy.startup_observer_mark(self.transaction,self.boot,False)
+        except (OSError,ValueError):pass
         if worker is not None and worker is not threading.current_thread():worker.join(timeout=2)
         # Losing eligibility while otherwise healthy must not strand a proactive
         # preference over a later protected app. Ordinary Home recovery owns stop.
         if withdraw and not self.stop.is_set():
-            startup_policy.startup_reconcile(self.transaction,self.boot,withdraw=True,event='disconnect')
+            startup_policy.startup_reconcile(self.transaction,self.boot,withdraw=True,event='disconnect',wait_lock=True)
 
     def run(self):
         children={};buffers={};opened=time.monotonic()

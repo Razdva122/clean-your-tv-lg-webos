@@ -7,7 +7,9 @@ try:import shutdown_state as observer
 except ModuleNotFoundError:observer=None
 
 class Tests(unittest.TestCase):
- def setUp(self):self.assertIsNotNone(observer,'Native input observer is missing')
+ def setUp(self):
+  self.assertIsNotNone(observer,'Native input observer is missing')
+  marker=patch.object(observer.startup_policy,'startup_observer_mark');marker.start();self.addCleanup(marker.stop)
  def ready(self,o):
   o.feed('foreground',{'returnValue':True,'subscribed':True,'appId':'mgg4.5.channelplus'})
   o.feed('input',{'returnValue':True,'subscribed':True,'settings':{'lastInputApp':'mgg4.5.channelplus','lastInputAppType':'MVPD_IP','homeAutoLaunch':'on'}})
@@ -109,3 +111,12 @@ class Tests(unittest.TestCase):
    o.feed('foreground',{'returnValue':True,'subscribed':True,'appId':''})
    self.assertTrue(entered.wait(1));o.close(withdraw=False)
   self.assertIn('policy',events)
+
+ def test_marker_only_after_both_acknowledgments_and_removed_on_close(self):
+  o=observer.StartupObserver('tx','boot',threading.Event())
+  with patch.object(observer.startup_policy,'startup_observer_mark') as mark,patch.object(observer.startup_policy,'startup_reconcile'):
+   o.feed('foreground',{'returnValue':True,'subscribed':True,'appId':'mgg4.5.channelplus'})
+   mark.assert_not_called()
+   o.feed('input',{'returnValue':True,'subscribed':True,'settings':{'homeAutoLaunch':'on'}})
+   mark.assert_called_once_with('tx','boot',True)
+   o.close();self.assertEqual(mark.call_args.args,('tx','boot',False))
