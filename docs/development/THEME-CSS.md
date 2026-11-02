@@ -172,15 +172,10 @@ color fallback. An ordinary author `background-color` declaration does not
 override that inline value; `!important` is forbidden. The ambient gradient is
 emitted into a trusted default stylesheet instead of inline CSS, so a scoped
 `.ctv-ambient` background image can override it, including a transparent gradient
-for a flat background. Crossfade timing and opacity remain engine-owned. On the
-`dock-grid` layout the settled glow is baked into a plain base element that also
-carries `.ctv-ambient`, so the same author rule styles it; the two glow layers are
-drawn only while the colour crossfades. A theme on `dock-grid` also keeps Classic's
-row glide, edge bump, card zoom, focus-frame motion and top/bottom edge fades (slightly
-softer under a theme); other layouts keep immediate remote focus and no fades. A
-`transition` declared on `.ctv-shortcut` or `.ctv-input-tile` replaces the engine's
-press, grow and fade motion, so leave it unset to keep Classic motion. The engine
-fades `background` and `color`, but gradients cannot interpolate: change a
+for a flat background. Crossfade timing and opacity remain engine-owned. Themes keep
+both glow layers and immediate remote focus unless they opt into
+[Classic motion](#classic-motion-opt-in-unreleased). The engine fades `background` and
+`color` on shortcuts and input tiles, but gradients cannot interpolate: change a
 `background-color` under a constant `background-image` for focus fills that fade. Broken tile icons are hidden and replaced with the app initial;
 broken library images are hidden without hiding their actionable row.
 
@@ -376,6 +371,39 @@ a theme replacement map; the CSS renderer does not rewrite the selected source.
 
 The `.ctv-position` part styles the decorative scenic-ribbon position indicator.
 A transparent `color` hides its count and arrows without changing navigation.
+
+
+## Classic motion opt-in (unreleased)
+
+By default a theme gets immediate remote focus on every layout: the card and the focus
+frame snap, rows jump, there are no edge bumps or edge fades, and the ambient glow keeps
+its two crossfading layers. A `dock-grid` theme can instead opt into the motion of
+unthemed Classic with `"motion": "classic"` in `layout`:
+
+```json
+{"preset": "dock-grid", "columns": 5, "spacingScale": 1, "textScale": 1, "focusScale": 1.1, "motion": "classic"}
+```
+
+- **What it turns on:** the row glide on a single Up/Down press, the 10 px edge bump,
+  the card zoom with the focus frame growing on the same 240 ms transform, the top and
+  bottom edge fades (slightly softer than Classic's, so they read as a vignette over a
+  wallpaper), and the baked glow.
+- **Baked glow:** once the colour settles, the glow moves to a plain base element and
+  both layers stop drawing. The base also carries `.ctv-ambient`, so the theme's ambient
+  rule styles it, but only while the glow is baked; during a crossfade the base is empty,
+  so a translucent ambient style never doubles.
+- **Engine-owned transitions:** under this opt-in a `transition` on `.ctv-card`,
+  `.ctv-focus`, `.ctv-label`, `.ctv-shortcut` or `.ctv-input-tile` is rejected, because
+  it would replace the engine's transform, grow and fade motion and let the card and
+  frame fall out of step.
+- **Capability:** the compiler emits `classic-motion-v1`, and descriptor policy requires
+  the field and the capability together, only on `dock-grid`. Older Home rejects the
+  capability before storing or applying the package, keeping its current theme.
+- **Cost:** keep shadows off parts that repaint on every press. On a 4K webOS TV a
+  blurred shadow on the dock band and a translucent border on input tiles each cost
+  about 2 missed frames per shelf press; a `0 0 0 1px` ring is cheap.
+
+Reduced motion still turns all of this off.
 
 
 ## Parameterized scenic ribbons (unreleased)

@@ -34,6 +34,7 @@
     var policy = root.ThemePolicy;
     if (!policy) fail('api-unsupported', 'ThemePolicy');
     var manifest = policy.validateManifest(input.manifest), rules = policy.validateRules(input.rules);
+    policy.validateMotion(manifest, rules);
     var modernIcons = manifest.requires.capabilities.indexOf('modern-icon-css-v1') >= 0;
     var hasIconEffects = rules.rules.some(function (rule) { return rule.declarations.some(function (d) { return d.property === 'filter' || d.property === 'mix-blend-mode' || d.property === 'isolation' || d.property === 'transform' || d.property === 'overflow'; }); });
     if (hasIconEffects && !modernIcons) fail('api-unsupported', 'icon CSS capability');
@@ -139,7 +140,10 @@
     Object.keys(handles).forEach(function (key) { ownedHandles[key] = handles[key]; });
     accepted = {themeId: manifest.id, themeVersion: manifest.themeVersion, handles: ownedHandles};
     var surface = root.document.getElementById('homeSurface');
-    if (surface) surface.classList.add('ctv-theme-active');
+    if (surface) {
+      surface.classList.add('ctv-theme-active');
+      surface.classList[manifest.layout.motion === 'classic' ? 'add' : 'remove']('ctv-classic-motion');
+    }
     release(previous && previous.handles, ownedHandles);
     return {themeId: manifest.id, themeVersion: manifest.themeVersion};
   }
@@ -150,7 +154,7 @@
     if (current && current.parentNode) current.parentNode.removeChild(current);
     accepted = null; heldSheet = null; wasEnabled = false; surfaceState(false);
     var surface = root.document.getElementById('homeSurface');
-    if (surface) surface.classList.remove('ctv-theme-active');
+    if (surface) { surface.classList.remove('ctv-theme-active'); surface.classList.remove('ctv-classic-motion'); }
     release(previous && previous.handles, null);
     return {themeId: 'builtin:classic', themeVersion: null};
   }

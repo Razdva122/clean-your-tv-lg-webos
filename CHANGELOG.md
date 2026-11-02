@@ -41,29 +41,33 @@
   title crossfades in step with focus; returning to Home after switching to an
   input focuses that input's shelf tile until focus moves elsewhere; 12-hour
   languages show the clock without a leading zero ("6:13 PM").
-- On the Classic layout, themed or not, rows glide over 300 ms on a single Up/Down press and
+- In Classic without a theme, rows glide over 300 ms on a single Up/Down press and
   stay instant while an arrow is held (a key repeat, or the same arrow again within
   150 ms, also cuts a running glide short), so held arrows never chase
   an unfinished scroll; `startup-motion-ui` skips its exact stage/item position
   check only during such a glide or an edge bump. Classic fades the top and bottom
   screen edges while rows lie beyond them, and a fresh press that cannot move
   (grid ends, Inputs shelf ends) gives a short 10 px bump. Reduced motion disables
-  both. Themes on the Classic layout keep this motion, the card zoom and the edge
-  fades (slightly softer over a wallpaper); other layouts keep immediate remote
-  focus and no fades.
+  both.
 - Lighter rendering on 4K TVs (Home draws at 3840x2160 there): the ambient glow
-  changes colour once the focus has rested for 800 ms, and the Classic layout then
-  bakes it into a plain background element instead of keeping two full-screen layers
-  (a theme's `.ctv-ambient` rule styles that element too); every Classic tile, input
-  tile and the grid stage is its own
+  changes colour once the focus has rested for 800 ms, and Classic then bakes it into
+  a plain background element instead of keeping two full-screen layers (themes keep
+  the layers); every Classic tile, input tile and the grid stage is its own
   compositor layer, so the focus zoom no longer repaints the grid; Inputs tiles grow
   by snapping to their final size and animating a transform (one layout per press
   instead of one per frame); and edge bumps move by transform. In on-device A/B runs
   on an LG G1 (webOS 6), missed frames per press dropped from about 16 to about 7.5.
+- Themes can opt into Classic motion with `layout.motion: "classic"` on `dock-grid`
+  (new capability `classic-motion-v1`, emitted by the compiler; older Home rejects it):
+  the row glide, edge bump, card zoom, focus-frame motion, softer edge fades and the
+  baked glow. An opted-in theme's ambient rule styles the baked base only while baked,
+  and a `transition` on the card, focus frame, label, shortcuts or input tiles is
+  rejected so the engine's motion stays in step. Themes without the opt-in are
+  unchanged: immediate remote focus, no fades, two glow layers.
 - Add Liquid Glass, a packaged theme in Settings → Themes: clear frosted glass over
   an original procedural aurora wallpaper, on the Classic layout with the Inputs
-  shelf and Classic motion. Theme API 1 has no blur, so the glass is translucent
-  gradients, bright rims and soft shadows; no Apple assets are included.
+  shelf, opting into Classic motion. Theme API 1 has no blur, so the glass is
+  translucent gradients, bright rims and soft shadows; no Apple assets are included.
 
 
 ## v1.4.0

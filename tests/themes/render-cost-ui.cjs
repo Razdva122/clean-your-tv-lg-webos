@@ -2,6 +2,7 @@
 // and only crossfades at rest, every Classic tile and the stage are their own layers,
 // and input tiles grow without per-frame layout.
 const {assert, chromium, stage, open} = require('./browser.cjs');
+const fixture = require('./fixtures/valid-manifest.json');
 
 (async () => {
   const site = stage(), browser = await chromium.launch({headless: true, channel: process.env.BROWSER_CHANNEL || 'chrome'});
@@ -31,18 +32,45 @@ const {assert, chromium, stage, open} = require('./browser.cjs');
         assert.match(baked.page, /\b1190px at 32% 42%/, 'the settled glow is painted by the plain base element');
         assert.equal(baked.wallpaper, 'none', 'the Home background stays the theme wallpaper slot');
         assert.deepEqual(baked.layers.map(layer => layer.opacity), ['0', '0'], 'no glow layer is drawn at rest');
-        // Themes bake too, and a theme's ambient rule styles the base like the layers.
-        await page.evaluate(() => {
-          document.getElementById('homeSurface').classList.add('ctv-theme-active');
-          const style = document.createElement('style');
-          style.id = 'theme-ambient';
-          style.textContent = '#homeSurface.ctv-home .ctv-ambient{background-image:linear-gradient(0deg, transparent 0%, transparent 100%)}';
-          document.head.appendChild(style);
-        });
-        const themed = await glowState();
-        assert.match(themed.page, /^linear-gradient/, 'a theme ambient rule overrides the baked glow on the base');
-        assert.deepEqual(themed.layers.map(layer => layer.opacity), ['0', '0'], 'themes draw no glow layer at rest either');
-        await page.evaluate(() => { document.getElementById('theme-ambient').remove(); document.getElementById('homeSurface').classList.remove('ctv-theme-active'); });
+        // Real compiled themes with a clear ambient rule: only a theme that opts into Classic
+        // motion bakes, and its ambient rule styles the base only while the glow is baked.
+        // Other themes keep the two layers on every layout, as before.
+        await page.evaluate(fixture => {
+          const clear = {type: 'gradient', angle: 0, stops: [{color: {type: 'color', rgba: [0, 0, 0, 0]}, position: 0}, {color: {type: 'color', rgba: [0, 0, 0, 0]}, position: 100}]};
+          window.applyTheme = (motion, preset) => {
+            const manifest = JSON.parse(JSON.stringify(fixture));
+            manifest.layout = {preset: preset || 'dock-grid', columns: 5, spacingScale: 1, textScale: 1, focusScale: 1.1};
+            if (motion) { manifest.layout.motion = 'classic'; manifest.requires.capabilities = ['classic-motion-v1']; }
+            ThemeRuntime.apply({manifest, rules: {schemaVersion: 1, rules: [{selector: [{part: 'ambient', states: []}], declarations: [{property: 'background-image', value: clear}]}]}, assetHandles: {}});
+          };
+        }, fixture);
+        await page.evaluate(() => applyTheme(true));
+        const opted = await glowState();
+        assert.match(opted.page, /^linear-gradient/, 'an opted-in theme ambient rule overrides the baked glow on the base');
+        assert.deepEqual(opted.layers.map(layer => layer.opacity), ['0', '0'], 'an opted-in theme draws no glow layer at rest');
+        for (const preset of ['dock-grid', 'side-grid', 'scenic-grid']) {
+          await page.evaluate(preset => applyTheme(false, preset), preset);
+          const plain = await glowState();
+          assert.equal(plain.page, 'none', preset + ': without the opt-in the base stays empty');
+          assert.deepEqual(plain.layers.map(layer => layer.opacity).sort(), ['0', '1'], preset + ': without the opt-in the glow stays on its layer');
+        }
+        // During a crossfade the opted-in base drops the theme's ambient style, so it never
+        // doubles the incoming layer's.
+        await page.evaluate(() => applyTheme(true));
+        await page.waitForTimeout(200);
+        const fade = await page.evaluate(() => new Promise(resolve => {
+          key(39, false);
+          setTimeout(() => {
+            const base = document.getElementById('ambientBase');
+            const during = {baked: base.classList.contains('baked'), image: getComputedStyle(base).backgroundImage};
+            setTimeout(() => resolve({during, after: {baked: base.classList.contains('baked'), image: getComputedStyle(base).backgroundImage}}), 900);
+          }, 1000);
+        }));
+        assert.deepEqual(fade.during, {baked: false, image: 'none'}, 'the base carries no theme ambient style mid-crossfade');
+        assert.equal(fade.after.baked, true);
+        assert.match(fade.after.image, /^linear-gradient/, 'and gets it back once baked');
+        await page.evaluate(() => { ThemeRuntime.reset(); key(37, false); });
+        await page.waitForTimeout(1800);
         // open()'s `*` rule does not reach the edge fades' pseudo-elements; let them settle.
         await page.waitForTimeout(400);
 
@@ -52,7 +80,7 @@ const {assert, chromium, stage, open} = require('./browser.cjs');
           const override = document.createElement('style');
           override.id = 'full-glow';
           override.textContent = '#homeSurface #ambientBase{background-image:none!important}' +
-            '#homeSurface .ambient.baked{opacity:1!important}';
+            '#homeSurface:not(.ctv-theme-active) .ambient.baked{opacity:1!important}';
           document.head.appendChild(override);
         });
         const fullShot = await page.screenshot();

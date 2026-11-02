@@ -1,6 +1,7 @@
 // Focus motion: one shared glide without overshoot, glass that never trails the card,
 // press feedback, the app title crossfade and the 12-hour clock.
 const {assert, chromium, stage, open} = require('./browser.cjs');
+const fixture = require('./fixtures/valid-manifest.json');
 const CURVE = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
 
 (async () => {
@@ -11,6 +12,17 @@ const CURVE = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
       try {
         // open() disables transitions for geometry tests; this test needs the real ones.
         await page.evaluate(() => Array.from(document.querySelectorAll('style')).filter(style => /transition: none !important/.test(style.textContent)).forEach(style => style.remove()));
+        // Real compiled themes on the Classic layout, with and without the Classic motion opt-in.
+        // The plain one declares a card transition, which the opt-in would reject.
+        await page.evaluate(fixture => {
+          window.applyTheme = motion => {
+            const manifest = JSON.parse(JSON.stringify(fixture));
+            manifest.layout = {preset: 'dock-grid', columns: 5, spacingScale: 1, textScale: 1, focusScale: 1.1};
+            if (motion) { manifest.layout.motion = 'classic'; manifest.requires.capabilities = ['classic-motion-v1']; }
+            const rules = motion ? [] : [{selector: [{part: 'card', states: []}], declarations: [{property: 'transition', value: {type: 'transition', property: 'box-shadow', duration: 200, easing: 'ease'}}]}];
+            ThemeRuntime.apply({manifest, rules: {schemaVersion: 1, rules}, assetHandles: {}});
+          };
+        }, fixture);
         await page.evaluate(() => {
           window.launches = [];
           const call = PalmServiceBridge.prototype.call;
@@ -157,20 +169,20 @@ const CURVE = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
         assert(flip.transform !== 'none' && !/^matrix\(1, 0, 0, 1, 0, 0\)$/.test(flip.transform), 'a transform animates the growth: ' + flip.transform);
         await page.waitForTimeout(300);
         assert.deepEqual(await page.locator('.ctv-input-tile').evaluateAll(tiles => tiles.map(tile => getComputedStyle(tile).transform).filter(value => value !== 'none')), [], 'no input keeps a transform at rest');
-        // Themes on the Classic layout keep the fades; other layouts have none.
+        // Only themes that opt into Classic motion keep the edge fades.
         await page.evaluate(() => key(40, false));
         await page.waitForTimeout(400);
         await page.evaluate(() => key(40, false));
         await page.waitForTimeout(400);
         const topFade = () => page.locator('#viewport').evaluate(el => getComputedStyle(el, '::before').opacity);
         assert.equal(await topFade(), '1');
-        await page.evaluate(() => document.getElementById('homeSurface').classList.add('ctv-theme-active'));
+        await page.evaluate(() => applyTheme(false));
         await page.waitForTimeout(300);
-        assert.equal(await topFade(), '1', 'a theme on the Classic layout keeps the top fade');
-        await page.evaluate(() => document.getElementById('homeSurface').setAttribute('data-layout', 'side-grid'));
+        assert.equal(await topFade(), '0', 'a theme without the opt-in keeps its own edges');
+        await page.evaluate(() => applyTheme(true));
         await page.waitForTimeout(300);
-        assert.equal(await topFade(), '0', 'a theme on another layout has no fade');
-        await page.evaluate(() => { const surface = document.getElementById('homeSurface'); surface.setAttribute('data-layout', 'dock-grid'); surface.classList.remove('ctv-theme-active'); });
+        assert.equal(await topFade(), '1', 'a theme that opts into Classic motion keeps the top fade');
+        await page.evaluate(() => ThemeRuntime.reset());
         // Remote paths that send a held key as separate presses (no `repeat`) stay
         // immediate, and a held arrow cuts a running glide short even without scrolling.
         for (let i = 0; i < rows; i++) await page.evaluate(() => key(38, true));
@@ -187,23 +199,41 @@ const CURVE = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
           setTimeout(() => { key(39, true); resolve({gliding, after: document.getElementById('homeSurface').classList.contains('ctv-scroll-glide')}); }, 30);
         }));
         assert.deepEqual(cut, {gliding: true, after: false}, 'a held sideways arrow ends the glide at once');
-        // Other layouts keep fully immediate remote focus; the Classic layout keeps its
-        // motion under a theme too.
-        assert.deepEqual(await page.evaluate(() => {
-          const surface = document.getElementById('homeSurface'), card = document.querySelector('#tiles .card'), glass = document.getElementById('glass');
-          const read = () => [getComputedStyle(card).transitionDuration, getComputedStyle(glass).transitionDuration];
+        // Other layouts and themes without the opt-in keep fully immediate remote focus (card
+        // and frame both snap, even with an author card transition); an opted-in theme keeps
+        // the card and frame on the same 240 ms transform, and so does a held key's glide.
+        const remote = await page.evaluate(() => {
+          const surface = document.getElementById('homeSurface');
+          const read = () => {
+            const card = getComputedStyle(document.querySelector('#tiles .card')), glass = getComputedStyle(document.getElementById('glass'));
+            const at = (style, name) => style.transitionDuration.split(', ')[style.transitionProperty.split(', ').indexOf(name)] || style.transitionDuration;
+            return [at(card, 'transform'), at(glass, 'transform')];
+          };
           surface.classList.add('ctv-remote-navigation');
           const classic = read();
           surface.setAttribute('data-layout', 'side-grid');
           const side = read();
           surface.setAttribute('data-layout', 'dock-grid');
-          surface.classList.add('ctv-theme-active');
-          const themed = read();
-          surface.classList.remove('ctv-theme-active');
-          return {classic: classic[0] !== '0s', side, themed: themed[0] !== '0s' && themed[1] !== '0s'};
-        }), {classic: true, side: ['0s', '0s'], themed: true});
-        // Reduced motion: no glide, no bump.
+          applyTheme(false);
+          const plain = read();
+          applyTheme(true);
+          const opted = read();
+          ThemeRuntime.reset();
+          return {classic, side, plain, opted};
+        });
+        assert.deepEqual(remote, {classic: ['0.24s', '0.24s'], side: ['0s', '0s'], plain: ['0s', '0s'], opted: ['0.24s', '0.24s']}, JSON.stringify(remote));
+        await page.evaluate(() => applyTheme(false));
+        for (let i = 0; i < rows; i++) await page.evaluate(() => key(38, true));
+        await page.waitForTimeout(400);
+        assert.equal(await page.evaluate(() => { key(40, false); return document.getElementById('homeSurface').classList.contains('ctv-scroll-glide'); }), false, 'a theme without the opt-in never glides');
+        await page.evaluate(() => ThemeRuntime.reset());
+        await page.waitForTimeout(400);
+        // Reduced motion: no glide, no bump, and an opted-in theme cannot bring motion back.
         await page.emulateMedia({reducedMotion: 'reduce'});
+        await page.evaluate(() => applyTheme(true));
+        assert.deepEqual(await page.evaluate(() => [getComputedStyle(document.querySelector('#tiles .card')).transitionDuration, getComputedStyle(document.getElementById('glass')).transitionDuration]),
+          ['0s', '0s'], 'reduced motion also covers an opted-in theme');
+        await page.evaluate(() => ThemeRuntime.reset());
         for (let i = 0; i < rows; i++) await page.evaluate(() => key(38, true));
         const calm = await page.evaluate(() => new Promise(resolve => { key(40, false); requestAnimationFrame(() => resolve(stageY())); }));
         assert(Math.abs(calm.now - calm.target) <= 1, 'reduced motion jumps straight to the row');

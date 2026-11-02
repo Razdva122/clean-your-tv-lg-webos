@@ -143,8 +143,8 @@
     if (m.id.indexOf('github:') === 0 && m.id.split(':')[1] !== m.source.repository.slice(19).toLowerCase()) fail('manifest-invalid', 'source.identity');
     object(m.requires, ['minimumHomeVersion', 'capabilities'], 'manifest-invalid', 'requires');
     version(m.requires.minimumHomeVersion);
-    list(m.requires.capabilities, 2, 'api-unsupported', 'capabilities').forEach(function (capability, index) { if (['modern-icon-css-v1', 'ribbon-layout-v1'].indexOf(capability) < 0 || m.requires.capabilities.indexOf(capability) !== index) fail('api-unsupported', 'capabilities'); });
-    object(m.layout, ['preset', 'columns', 'spacingScale', 'textScale', 'focusScale'], 'layout-invalid', 'layout', ['allowColumnOverride', 'ribbon']);
+    list(m.requires.capabilities, 2, 'api-unsupported', 'capabilities').forEach(function (capability, index) { if (['modern-icon-css-v1', 'ribbon-layout-v1', 'classic-motion-v1'].indexOf(capability) < 0 || m.requires.capabilities.indexOf(capability) !== index) fail('api-unsupported', 'capabilities'); });
+    object(m.layout, ['preset', 'columns', 'spacingScale', 'textScale', 'focusScale'], 'layout-invalid', 'layout', ['allowColumnOverride', 'ribbon', 'motion']);
     if (['dock-grid', 'icon-grid', 'side-grid', 'channel-list', 'scenic-grid'].indexOf(m.layout.preset) < 0) fail('layout-invalid', 'preset');
     if (Object.prototype.hasOwnProperty.call(m.layout, 'allowColumnOverride') && typeof m.layout.allowColumnOverride !== 'boolean') fail('layout-invalid', 'allowColumnOverride');
     number(m.layout.columns, 1, 8, 'layout-invalid', 'columns');
@@ -159,6 +159,11 @@
       normalizedRibbon = normalizeRibbon(m.layout.ribbon);
       ribbonWidth(normalizedRibbon, m.layout.columns);
     }
+    // Opt-in: only themes that declare it get the Classic layout's glide, bump, zoom,
+    // frame motion, edge fades and baked glow; other themes keep immediate remote focus.
+    var hasMotion = Object.prototype.hasOwnProperty.call(m.layout, 'motion');
+    if (hasMotion !== (m.requires.capabilities.indexOf('classic-motion-v1') >= 0)) fail('api-unsupported', 'classic-motion-v1');
+    if (hasMotion && (m.layout.motion !== 'classic' || m.layout.preset !== 'dock-grid')) fail('layout-invalid', 'motion');
     object(m.defaults, ['wallpaperAssetId', 'dim', 'accent'], 'manifest-invalid', 'defaults');
     number(m.defaults.dim, 0, .85, 'manifest-invalid', 'dim');
     if (typeof m.defaults.accent !== 'string' || !/^#[a-fA-F0-9]{6}$/.test(m.defaults.accent)) fail('manifest-invalid', 'accent');
@@ -296,6 +301,15 @@
     }
     fail('css-value', 'type');
   }
+  // Under Classic motion the engine owns these parts' transitions; an author transition
+  // would replace them and let the card, frame and label fall out of step.
+  function validateMotion(m, b) {
+    if (m.layout.motion !== 'classic') return;
+    b.rules.forEach(function (rule) {
+      var part = rule.selector[rule.selector.length - 1].part;
+      if (['card', 'focus', 'label', 'shortcut', 'input-tile'].indexOf(part) >= 0 && rule.declarations.some(function (d) { return d.property === 'transition'; })) fail('css-value', 'transition on ' + part + ' under classic motion');
+    });
+  }
   function validateRules(b) {
     object(b, ['schemaVersion', 'rules'], 'css-value', 'bundle');
     if (b.schemaVersion !== 1) fail('api-unsupported', 'rules.schemaVersion');
@@ -382,6 +396,7 @@
     normalizeRibbon: normalizeRibbon,
     validateManifest: validateManifest,
     validateRules: validateRules,
+    validateMotion: validateMotion,
     compileRules: compileRules,
     validateCollection: validateCollection,
     validateBundle: validateRules,

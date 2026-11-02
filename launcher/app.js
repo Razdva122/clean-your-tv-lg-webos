@@ -269,9 +269,11 @@
       }
     }
   }, true);
-  // Glide and bump belong to the Classic layout, themed or not; other layouts stay immediate.
+  // Glide and bump belong to the Classic layout, unthemed or with a theme that opts into
+  // Classic motion (layout.motion); other layouts and themes stay immediate.
   function classicMotion() {
-    return layoutPreset === 'dock-grid';
+    var surface = getElement('homeSurface');
+    return layoutPreset === 'dock-grid' && (!surface.classList.contains('ctv-theme-active') || surface.classList.contains('ctv-classic-motion'));
   }
   // Remote scrolling: a tap glides to the new row; a held arrow (or a repeat during a
   // glide) jumps straight there, so the list never chases an unfinished scroll.
@@ -1046,9 +1048,10 @@
   }
   // The glow follows once the focus rests, so its full-screen crossfade never competes
   // with focus motion for a 4K TV's GPU. Home then bakes the settled glow into a plain
-  // (uncomposited) #ambientBase beneath the layers and hides both layers. The base is
-  // also .ctv-ambient, so a theme's ambient rule (which outranks the trusted #ambientBase
-  // rule) styles it like the layers; #homeSurface's background stays the wallpaper's.
+  // (uncomposited) #ambientBase beneath the layers and hides both layers (style.css keeps
+  // the layers for themes without Classic motion). The base is also .ctv-ambient, so a
+  // theme's ambient rule (which outranks the trusted #ambientBase rule) styles it like the
+  // layers, but only while it carries .baked; #homeSurface's background stays the wallpaper's.
   function updateAmbient(rgb, settled) {
     clearTimeout(ambientTimer);
     if (!rgb) return;
@@ -1078,6 +1081,7 @@
     });
     rules.push('#' + nextLayer.id + '{' + glow(color));
     ambientSheet.textContent = rules.join('\n');
+    getElement('ambientBase').classList.remove('baked');
     if (current.classList.contains('baked')) {
       current.style.webkitTransition = current.style.transition = 'none';
       current.classList.remove('baked');
@@ -1094,6 +1098,7 @@
         return rule && rule.indexOf(AMBIENT_BAKED) !== 0;
       }).concat(AMBIENT_BAKED + glow(color)).join('\n');
       nextLayer.classList.add('baked');
+      getElement('ambientBase').classList.add('baked');
     }, AMBIENT_FADE);
   }
   function focusTopButton(index) {

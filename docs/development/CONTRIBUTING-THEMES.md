@@ -250,6 +250,8 @@ preference returns on switching to an adjustable theme. This does not unlock
 arbitrary card placement. In this candidate, use exactly `spacingScale: 1`,
 `textScale: 1` and `focusScale: 1.1`; other combinations are rejected.
 
+An unreleased `dock-grid` opt-in, `layout.motion: "classic"`, gives a theme unthemed Classic's glide, bump, zoom, edge fades and baked glow; see [Classic motion](THEME-CSS.md#classic-motion-opt-in-unreleased) for `classic-motion-v1` and the transitions it reserves for the engine.
+
 Unreleased parameterized scenic ribbons use optional `layout.ribbon` with fixed columns. See the [bounded ribbon parameters](THEME-CSS.md#parameterized-scenic-ribbons-unreleased) for geometry and `ribbon-layout-v1`. Use a matching explicit PR runtime; the reviewed toolkit pin does not gain capabilities automatically. Unsupported Home rejects the new theme before installation, retaining its selection.
 
 For wallpaper, declare a local PNG/JPEG/WebP asset with its real dimensions and

@@ -66,8 +66,9 @@ html, body {
   pointer-events: none;
 }
 /* Home bakes the settled glow into #ambientBase (app.js), so the two full-screen
-   layers only exist while the colour crossfades. #ambientBase is also .ctv-ambient,
-   so a theme's ambient appearance applies to it too. */
+   layers only exist while the colour crossfades. Themes keep the layers unless they opt
+   into Classic motion; #ambientBase is also .ctv-ambient, so such a theme's ambient
+   appearance applies to it, but only while baked, so it never doubles a layer. */
 .ambient-base {
   position: absolute;
   top: 0;
@@ -79,9 +80,16 @@ html, body {
 .ctv-theme-suspended .ambient-base {
   visibility: hidden;
 }
-#homeSurface .ambient.baked {
+#homeSurface:not(.ctv-theme-active) .ambient.baked,
+#homeSurface.ctv-classic-motion .ambient.baked {
   opacity: 0 !important;
   transition: none !important;
+}
+#homeSurface.ctv-theme-active:not(.ctv-classic-motion) #ambientBase,
+#homeSurface.ctv-theme-active #ambientBase:not(.baked) {
+  background: none !important;
+  border-style: none !important;
+  box-shadow: none !important;
 }
 /* ---- top shelf ------------------------------------------------------------------------------- */
 #hero {
@@ -519,16 +527,16 @@ body.editing #glass {
 #homeSurface:not(.ctv-theme-active) #viewport.row-above::before {
   opacity: 1;
 }
-/* Themes on the Classic layout keep both fades, softer so they read as a vignette
-   over a wallpaper. */
-#homeSurface.ctv-theme-active[data-layout="dock-grid"] #viewport::after {
+/* Themes that opt into Classic motion (dock-grid only) keep both fades, softer so they
+   read as a vignette over a wallpaper. */
+#homeSurface.ctv-classic-motion #viewport::after {
   background: linear-gradient(180deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.6));
 }
-#homeSurface.ctv-theme-active[data-layout="dock-grid"] #viewport::before {
+#homeSurface.ctv-classic-motion #viewport::before {
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0));
 }
-#homeSurface.ctv-theme-active[data-layout="dock-grid"] #viewport.row-peek::after,
-#homeSurface.ctv-theme-active[data-layout="dock-grid"] #viewport.row-above::before {
+#homeSurface.ctv-classic-motion #viewport.row-peek::after,
+#homeSurface.ctv-classic-motion #viewport.row-above::before {
   opacity: 1;
 }
 /* Classic keeps the localized date on two lines: weekday, then month and day. */
@@ -845,15 +853,19 @@ body.editing #homeSurface[data-layout="scenic-grid"] .ctv-position { display: no
 
 /* Remote focus follows every key immediately; pointer movement keeps its transitions.
    In particular, repeated arrows must not continually retarget an unfinished scroll.
-   In unthemed Classic the focused card still grows in place; app.js lands the glass on
-   it at card size so the frame grows with the card instead of gliding behind it. */
+   On the Classic layout (unthemed, or a theme that opts into Classic motion) the focused
+   card still grows in place; app.js lands the glass on it at card size so the frame
+   grows with the card instead of gliding behind it. */
 #homeSurface.ctv-remote-navigation:not(.ctv-scroll-glide) #stage,
 #homeSurface.ctv-remote-navigation .item {
   transition: none !important;
 }
-/* Other layouts keep fully immediate remote focus; the Classic layout keeps its motion
-   with or without a theme. (Chrome 38 has no attribute selectors inside :not(), so the
-   other presets are listed.) */
+/* Other layouts, and themes that don't opt into Classic motion, keep fully immediate
+   remote focus. (Chrome 38 has no attribute selectors inside :not(), so the other
+   presets are listed.) */
+#homeSurface.ctv-remote-navigation.ctv-theme-active:not(.ctv-classic-motion) #glass,
+#homeSurface.ctv-remote-navigation.ctv-theme-active:not(.ctv-classic-motion) .card,
+#homeSurface.ctv-remote-navigation.ctv-theme-active:not(.ctv-classic-motion) .name,
 #homeSurface.ctv-remote-navigation[data-layout="icon-grid"] #glass,
 #homeSurface.ctv-remote-navigation[data-layout="icon-grid"] .card,
 #homeSurface.ctv-remote-navigation[data-layout="icon-grid"] .name,

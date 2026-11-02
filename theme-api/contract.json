@@ -113,6 +113,14 @@
       "type": "boolean",
       "default": true
     },
+    "motion": {
+      "optional": true,
+      "preset": "dock-grid",
+      "values": [
+        "classic"
+      ],
+      "capability": "classic-motion-v1"
+    },
     "ribbon": {
       "optional": true,
       "preset": "scenic-grid",
@@ -261,6 +269,18 @@
       "allowColumnOverride": false,
       "paired": true,
       "belowLabelsMinimumBottom": 64
+    },
+    "classic-motion-v1": {
+      "layout": "motion",
+      "preset": "dock-grid",
+      "paired": true,
+      "engineMotionParts": [
+        "card",
+        "focus",
+        "label",
+        "shortcut",
+        "input-tile"
+      ]
     }
   },
   "clockDateFontSize": [
