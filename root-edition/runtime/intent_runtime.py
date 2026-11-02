@@ -360,10 +360,10 @@ def startup_reconcile(transaction,boot,cancelled=lambda:False,event='foreground'
                 target=startup_ROOT_INPUT if saved['pending']=='select' else saved['baseline']
                 if current!=target:return 'pending'
                 saved=startup_active(saved);d._native_save(saved);reconciled=True
-            settings=startup_call('com.webos.settingsservice/getSystemSettings',
+            withdraw=withdraw or not startup_observing(transaction,boot)
+            settings={} if withdraw else startup_call('com.webos.settingsservice/getSystemSettings',
                 {'category':'general','keys':['homeAutoLaunch']},deadline)
-            withdraw=(withdraw or not startup_observing(transaction,boot)
-                      or settings.get('settings',{}).get('homeAutoLaunch')!='on')
+            withdraw=withdraw or settings.get('settings',{}).get('homeAutoLaunch')!='on'
             app=None;source=None
             if not withdraw:
                 app=startup_call('com.webos.applicationManager/getForegroundAppInfo',{},deadline).get('appId')

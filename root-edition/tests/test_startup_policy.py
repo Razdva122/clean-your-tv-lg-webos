@@ -202,3 +202,11 @@ class Tests(unittest.TestCase):
    self.assertEqual(self.run_policy(),'selected')
    worker[0].join(2)
   self.assertFalse(worker[0].is_alive());self.assertEqual(self.last,displaced)
+
+ def test_dead_observer_withdrawal_does_not_require_settings_service(self):
+  policy.startup_observer_mark('route-a',self.session,False)
+  def fail_settings(method,payload):
+   if method=='getSystemSettings':raise TimeoutError('subscription service unavailable')
+  self.fault_hook=fail_settings
+  self.assertEqual(self.run_policy(),'withdrawn')
+  self.assertEqual(self.last,{'type':'DTV','appId':'com.webos.app.livetv'})
