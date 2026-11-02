@@ -8,6 +8,16 @@
       "summary": "Integrate 12-language static website source; publication remains deferred until the later main-release decision"
     },
     {
+      "pr": 239,
+      "issues": [],
+      "summary": "Add input shelf, preview controller and Classic motion/rendering; final theme-owned placement and default-off preview behavior are refined by #254"
+    },
+    {
+      "pr": 241,
+      "issues": [],
+      "summary": "Add original Liquid Glass assets and explicit classic-motion capability; final built-in lineup and input placement are refined by #254"
+    },
+    {
       "pr": 247,
       "issues": [
         196
@@ -44,6 +54,13 @@
       "summary": "Characterize indistinguishable old boot/Off cancellation receipts; original #202 forward-update caller remains unknown"
     },
     {
+      "pr": 252,
+      "issues": [
+        201
+      ],
+      "summary": "Pin No-root terminal-readback source research and synthetic guards; original #201 recovery remains unresolved"
+    },
+    {
       "pr": 253,
       "issues": [
         101,
@@ -52,6 +69,11 @@
         240
       ],
       "summary": "Add pinned inspect-only authentication and passive Root data collection without staging or execution; original #101/#200/#216/#240 recoveries remain unresolved"
+    },
+    {
+      "pr": 254,
+      "issues": [],
+      "summary": "Let themes choose header menu or shelf; bundle Liquid Glass and move Alpine to Showcase; synchronize rounded previews and connected labels; live preview defaults off with unresolved firmware audio/HDR behavior"
     }
   ],
   "excluded": [],
