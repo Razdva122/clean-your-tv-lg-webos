@@ -241,6 +241,7 @@ class TransportTests(unittest.TestCase):
         import paramiko
         from cytv.transport import root_auth
         profile={'identity':'/original/key'}
+        original=dict(profile)
         calls=[]
         class Transport(RejectedAuthTransport):
             def auth_publickey(self,username,key):
@@ -250,7 +251,7 @@ class TransportTests(unittest.TestCase):
         with patch('cytv.transport.load_identity',return_value='original-key'):
             root_auth(lambda _: 'test-secret',profile=profile,password_fallback=True).authenticate(Transport())
         self.assertEqual(calls,['key','password'])
-        self.assertEqual(profile,{'identity':str(Path('/original/key'))})
+        self.assertEqual(profile,original)
 
     @unittest.skipUnless(__import__('importlib.util').util.find_spec('paramiko'), 'Requires SSH build dependencies')
     def test_encrypted_root_identity_is_unlocked_with_hidden_passphrase(self):
