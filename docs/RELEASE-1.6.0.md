@@ -1,7 +1,8 @@
 # v1.6.0 — Installer recovery, diagnostics and adaptive Home
 
-**Frozen candidate, not published.** Public stable remains v1.5.4. Versions and
-scope are selected for a complete candidate build; device acceptance and normal
+**Frozen candidate, not published.** Public stable remains v1.5.4. The complete
+build is pinned. Scoped C3 Root update/controls/power/retained-rollback and Android
+emulator upgrade observations are recorded below; full acceptance and normal
 signed publication remain pending. No TV result is inferred from source checks.
 
 ## Changes
@@ -57,7 +58,7 @@ signer, trust rule or recovery schema is changed by version selection.
   is withheld until a genuine compatible published HD rollback exists. Root/System
   recovery continues to use the original authenticated baseline.
 - #202 forward-update Home cancellation and its actual caller remain unresolved;
-  retained-rollback source checks do not establish physical acceptance. #171's
+  active retained rollback now has scoped C3 evidence in the dated QA record. #171's
   earlier wake failure and #207's standard-remote Home interception remain separate.
   Preserve explicit Off/emergency cancellation. Control/data/audio loss or broken
   update/recovery blocks delivery.
@@ -110,9 +111,20 @@ source, run/attempt, artifact checks and remaining work as execution proceeds.
 
 The complete candidate run41343868494:2 passed and is pinned; see the
 [verified artifact hashes](history/2026-11-02-release-1.6.0-artifacts.md).
-The release gate requires all four desktop platforms,
-Android signer/provenance checks, full Linux/macOS/browser/ARM suites and artifact
-inventories. Pin successful source/run/attempt/hashes before physical acceptance.
-Then verify original-certificate Android in-place upgrade and exact-package TV
-controls, emergency Off, sound, standby, true cold boot, update/recovery/rollback.
-No physical result or publication is authorized or claimed by this build task.
+The [2026-11-02 hardware and emulator record](history/2026-11-02-release-1.6.0-hardware-qa.md)
+binds owner-supervised C3 observations to these exact packages and protected Root
+signing run41438353337:1. It records original-signer Android code16-to-code17
+emulator file retention, Root update with Off preserved, physical controls/audio,
+emergency release, separate power modes and active retained rollback. Supervisor
+1.1.2 remains installed; fresh1.2.0 provisioning was not tested.
+
+The first On-standby attempt lost intent; the owner reported another application's
+code interfered and requested a repeat. That is not a proved cause, and the first
+evidence is retained. The repeat reached Clean after an unmeasured LG Channels
+screen; true cold start from running Clean showed Clean first. These observations
+do not resolve #171 or accept immediate first-screen behavior for standby.
+
+Native Android pending-operation semantics, live phone-to-TV, No-root/HD/IR,
+fresh provisioning, interrupted installation and the other untested paths remain
+explicit in that record. Full hardware acceptance remains unset and #210 stays
+draft; no publication or new risk acceptance is inferred from these scoped passes.
