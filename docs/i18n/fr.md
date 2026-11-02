@@ -125,6 +125,8 @@ Homebrew Channel a refusé l’accès à cet installateur. Sur webOS 11, Homebre
 
 **1.6.0:** choisissez **Examiner les options de récupération** pour le même téléviseur enregistré ou lancez `cytv recover`. Vérification et modifications exigent des confirmations distinctes, avec Non par défaut ; `--yes` ne les autorise pas. Root continue uniquement après les vérifications existantes. No-root propose la suppression seulement si le contrôle du service de paquets le permet ; les préférences Home peuvent être réinitialisées. Aucune nouvelle installation ne démarre automatiquement. Si l’état est inconnu ou l’accès refusé, enregistrez le rapport et arrêtez. Conservez les journaux et ne répétez pas la suppression. Les preuves de fin de #201 et la récupération réelle de #216 restent à confirmer. [Recovery](../RECOVERY.md). Pour obtenir de l’aide, précisez modèle, micrologiciel, édition, version de l’installateur, étape en échec et résultat attendu/réel ; vérifiez et expurgez le rapport avant partage.
 
+Non publié : la récupération peut reprendre une suppression No-root arrêtée avant la première demande de paquet sans accès au statut global, si le journal original le prouve. Confirmez la suppression séparément, puis lancez une nouvelle installation après sa vérification. Les opérations inconnues ou déjà envoyées restent bloquées. Conservez la connexion et les journaux. Absent de 1.6.0. [Détails](../RECOVERY.md#no-root-removal-stopped-before-package-submission-unreleased).
+
 [Documentation](../README.md) · [Signaler un problème](../FEEDBACK.md)
 
 <!-- Anchors retained for links to earlier guide headings. -->

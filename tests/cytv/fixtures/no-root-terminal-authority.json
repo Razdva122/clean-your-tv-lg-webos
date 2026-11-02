@@ -35,7 +35,8 @@
       "action": "uninstall",
       "journal": {
         "action": "uninstall",
-        "stage": "pending",
+        "stage": "removing",
+        "removals": {"com.local.nativehome": "submitted"},
         "diagnostic_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
       },
       "late_status_snapshot": {

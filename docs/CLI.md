@@ -133,9 +133,12 @@ starts automatically, even after successful cleanup.
 The check itself and each offered change require separate default-No confirmation,
 including with `--yes`; noninteractive recovery stops. Root checks may run verified
 support code. Only verified Root/updater state permits separately confirmed Home
-activation. No-root removal requires the existing package-service idle guard
+activation. In 1.6.0, No-root removal requires the package-service idle guard
 before the offer and again at mutation; unknown removal outcomes or conflicts
-stop before cleanup. Removing packages may reset Home preferences.
+stop before cleanup. Unreleased installers can omit that global check only for
+an original No-root `uninstall / pending` journal proving no package request was
+submitted, without prior operations or unexpected fields. See the
+[pre-submission recovery boundary](RECOVERY.md#no-root-removal-stopped-before-package-submission-unreleased). Removing packages may reset Home preferences.
 
 Unknown/denied/busy/incomplete state retains all recovery records and offers the
 current attempt's report (`action`/`phase`: `recover`). It never recommends blindly

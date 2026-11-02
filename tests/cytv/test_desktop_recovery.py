@@ -178,7 +178,19 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.assertLess(restored, removals[0][0])
         self.assertFalse(any(c[0] == 'upload' for c in self.remote.calls))
 
+    def test_unstarted_removal_gui_recovers_without_monitor_permission(self):
+        original = self.remote.luna
+        def deny_monitor(uri, payload, **kwargs):
+            if uri == 'com.webos.appInstallService/status':
+                raise TVRejected('Denied', {'returnValue': False, 'errorCode': -1}, uri)
+            return original(uri, payload, **kwargs)
+        self.remote.luna = deny_monitor
+        self.test_recovery_uses_same_tv_and_default_no_then_stops_after_verified_removal()
+
     def test_failed_recovery_offers_original_failure_report_without_retry_or_install(self):
+        if self.store.pending(self.profile)['action'] == 'uninstall':
+            self.store.checkpoint(self.profile, stage='removing')
+        before = self.store.pending(self.profile)
         w = self.window()
         self.check(w)
         doctor_report = w.report
@@ -202,7 +214,7 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.assertTrue(report['trace'])
         for private in ('PRIVATE-DIAGNOSTICS', 'PRIVATE-PAIRING-KEY', '192.0.2.10'):
             self.assertNotIn(private, w.report.read_text())
-        self.assertEqual(self.store.pending(self.profile)['stage'], 'pending')
+        self.assertEqual(self.store.pending(self.profile), before)
         self.assertEqual(len([c for c in self.remote.calls if c[1] == 'com.webos.appInstallService/status']), 1)
         self.assertFalse(any(c[0] == 'upload' for c in self.remote.calls))
         self.assertNotIn('cytv doctor', w.content.toPlainText())

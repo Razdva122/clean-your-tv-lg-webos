@@ -125,6 +125,8 @@ Homebrew Channel ha negato l’accesso a questo programma di installazione. Su w
 
 **1.6.0:** scegli **Esamina le opzioni di ripristino** per la stessa TV salvata o esegui `cytv recover`. Verifica e modifiche richiedono conferme separate con No predefinito; `--yes` non le autorizza. Root continua solo dopo le verifiche esistenti. No-root propone la rimozione solo se il controllo del servizio pacchetti la consente; le preferenze Home possono essere azzerate. Una nuova installazione non parte automaticamente. Se lo stato è sconosciuto o l’accesso è negato, salva il rapporto e fermati. Conserva i registri e non ripetere la rimozione. Restano aperte le prove di conclusione di #201 e il ripristino reale di #216. [Recovery](../RECOVERY.md). Per assistenza indica modello, firmware, edizione, versione dell’installer, passaggio fallito e risultato atteso/effettivo; verifica e rimuovi i segreti dal rapporto prima di condividerlo.
 
+Non pubblicato: il recupero può riprendere una rimozione No-root interrotta prima della prima richiesta di pacchetto senza accesso allo stato globale, se il registro originale lo dimostra. Conferma la rimozione separatamente; dopo la verifica, avvia una nuova installazione a parte. Le operazioni sconosciute o già inviate restano bloccate. Conserva connessione e registri. Non incluso in 1.6.0. [Dettagli](../RECOVERY.md#no-root-removal-stopped-before-package-submission-unreleased).
+
 [Documentazione](../README.md) · [Segnalare un problema](../FEEDBACK.md)
 
 <!-- Anchors retained for links to earlier guide headings. -->

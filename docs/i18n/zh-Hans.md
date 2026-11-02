@@ -125,6 +125,8 @@ Homebrew Channel 拒绝此安装程序访问。在 webOS 11 上，Homebrew 0.7.3
 
 **1.6.0:** 为同一台已保存的电视选择**检查恢复选项**，或运行 `cytv recover`。检查和更改需要分别确认，默认为“否”；`--yes` 不会批准。Root 仅在现有验证通过后继续。No-root 仅在现有软件包服务检查允许时提供删除选项；删除可能重置 Home 偏好设置。不会自动开始新的安装。状态未知或访问被拒绝时，请保存报告并停止；保留日志，不要重复删除。#201 的完成证据以及 #216 的实际电视恢复仍未确认。 [Recovery](../RECOVERY.md). 求助时请提供型号、固件、版本类别、安装程序版本、失败步骤及预期/实际表现；分享前检查报告并删除秘密信息。
 
+未发布：如果原始日志能证明 No-root 删除在首次软件包请求前停止，恢复可在没有全局软件包状态权限的情况下继续。请单独确认删除，验证删除完成后再单独开始安装。结果未知或已发送的操作仍会阻止继续；保留已保存的连接和日志。1.6.0 不含此更改。[详情](../RECOVERY.md#no-root-removal-stopped-before-package-submission-unreleased)。
+
 [文档导航](../README.md) · [报告问题](../FEEDBACK.md)
 
 <!-- Anchors retained for links to earlier guide headings. -->
