@@ -15,6 +15,9 @@ Source integration and successful builds do not certify physical TV behavior.
 - Root keeps normal-start, shutdown proof, current session/binding, input and
   guardian health, explicit Off, emergency, key-up and watchdog guards. Native
   selection is event-driven, bounded and reversible under the existing lock.
+  An acknowledged observer is bound to the actual guardian transaction/session/PID;
+  loss withdraws owned priority across activation/operation-lock races without
+  depending on Settings availability or replaying native RPCs.
   A separate root-private source-policy file does not extend the installed System
   supervisor's legacy profile schema. It is local to the TV, not portable export.
 - Themes choose header menu or input shelf. Built-ins are Classic, Liquid Glass

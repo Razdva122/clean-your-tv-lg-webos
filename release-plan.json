@@ -88,6 +88,13 @@
         152
       ],
       "summary": "Resume a No-root removal stopped before package submission without global monitor access; preserve uncertain-operation guards; original EF950V recovery/control acceptance remains unresolved"
+    },
+    {
+      "pr": 257,
+      "issues": [
+        171
+      ],
+      "summary": "Bind native startup selection to the acknowledged live guardian observer; withdraw owned preference across activation/operation-lock races and settings-service loss; final #171 device acceptance remains pending"
     }
   ],
   "excluded": [],
