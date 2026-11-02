@@ -79,7 +79,7 @@
         202,
         206
       ],
-      "summary": "Refresh Root Settings status before resumed actions and preserve retained-rollback Home capture; partial #202, old forward cancellation and exact-package device acceptance remain unresolved"
+      "summary": "Refresh Root Settings status before resumed actions and preserve retained-rollback Home capture; exact-package C3 active rollback passed, original #202 forward cancellation and #206 exact resumed Settings case remain unresolved"
     },
     {
       "pr": 223,
@@ -161,6 +161,15 @@
       "pr": 238,
       "issues": [],
       "summary": "Freeze 1.6.0 component versions/documentation and fixed System1.2.0 target; preserve restricted replacement admission and repair receiver smoke timing"
+    },
+    {
+      "pr": 245,
+      "issues": [
+        171,
+        202,
+        207
+      ],
+      "summary": "Finalize guides and scoped C3/Android/System acceptance; reuse installer builds for audited external guides with early boundary checks; #171 standby limitation accepted for 1.6.0, original #171/#202/#207 scopes remain unresolved"
     }
   ],
   "excluded": [],
