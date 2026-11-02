@@ -1,7 +1,59 @@
 {
   "schema": 1,
   "version": null,
-  "changes": [],
+  "changes": [
+    {
+      "pr": 237,
+      "issues": [],
+      "summary": "Integrate 12-language static website source; publication remains deferred until the later main-release decision"
+    },
+    {
+      "pr": 247,
+      "issues": [
+        196
+      ],
+      "summary": "Allow Home broker settings after explicit cross-package Helper status refusal; original #196 device confirmation remains outstanding"
+    },
+    {
+      "pr": 248,
+      "issues": [
+        171
+      ],
+      "summary": "Add simulated cross-component Root wake/startup safety regressions and document missing evidence; original #171 remains unresolved"
+    },
+    {
+      "pr": 249,
+      "issues": [
+        160,
+        164
+      ],
+      "summary": "Document target vendor ABI/bootstrap and Home-contract prerequisites; original #160/#164 support remains unresolved"
+    },
+    {
+      "pr": 250,
+      "issues": [
+        69
+      ],
+      "summary": "Add optional date below clock for dock-grid themes; cursor/blink and stepped effects removed, Retro bytes unchanged and original #69 remains partial"
+    },
+    {
+      "pr": 251,
+      "issues": [
+        202
+      ],
+      "summary": "Characterize indistinguishable old boot/Off cancellation receipts; original #202 forward-update caller remains unknown"
+    },
+    {
+      "pr": 253,
+      "issues": [
+        101,
+        200,
+        216,
+        240
+      ],
+      "summary": "Add pinned inspect-only authentication and passive Root data collection without staging or execution; original #101/#200/#216/#240 recoveries remain unresolved"
+    }
+  ],
   "excluded": [],
   "acceptance": ""
 }
