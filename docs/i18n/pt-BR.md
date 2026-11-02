@@ -127,6 +127,8 @@ Homebrew Channel negou acesso a este instalador. No webOS 11, o Homebrew 0.7.3 p
 
 **1.6.0:** escolha **Revisar opções de recuperação** para a mesma TV salva ou execute `cytv recover`. Verificação e alterações exigem confirmações separadas, com Não como padrão; `--yes` não as autoriza. Root continua apenas após as verificações existentes. No-root oferece remoção apenas quando a verificação do serviço de pacotes permite; preferências do Home podem ser redefinidas. Uma nova instalação nunca começa automaticamente. Se o estado for desconhecido ou o acesso negado, salve o relatório e pare. Preserve os registros e não repita a remoção. Continuam pendentes a evidência de conclusão de #201 e a recuperação real de #216. [Recovery](../RECOVERY.md). Para pedir ajuda, informe modelo, firmware, edição, versão do instalador, etapa com falha e resultado esperado/real; revise e remova segredos do relatório antes de compartilhar.
 
+Não publicado: a recuperação pode retomar uma remoção No-root interrompida antes da primeira solicitação de pacote sem acesso ao estado global, se o registro original comprovar isso. Confirme a remoção separadamente; após verificá-la, inicie a instalação à parte. Operações desconhecidas ou já enviadas continuam bloqueadas. Preserve a conexão e os registros. Não incluído em 1.6.0. [Detalhes](../RECOVERY.md#no-root-removal-stopped-before-package-submission-unreleased).
+
 [Documentação](../README.md) · [Relatar um problema](../FEEDBACK.md)
 
 <!-- Anchors retained for links to earlier guide headings. -->

@@ -127,6 +127,8 @@ Homebrew Channel denied access to this installer. On webOS 11, Homebrew 0.7.3 ne
 
 **1.6.0:** choose **Review recovery options** for the same saved TV, or run `cytv recover`. Checking and changes require separate confirmation, with No selected by default; `--yes` cannot approve them. Root continues only after its existing verification. No-root offers removal only when the existing package-service guard permits it; removal may reset Home preferences. New setup never starts automatically. If state is unknown or access is denied, save the report and stop; retain journals and do not repeat removal. This does not resolve the missing terminal evidence in #201 or establish device recovery in #216. [Recovery](../RECOVERY.md). For help, include model, firmware, edition, installer version, failed step and expected/actual behavior; review and redact the report before sharing.
 
+Unreleased: recovery can resume a No-root removal stopped before its first package request without global package-status access, if the original journal proves that state. Confirm removal separately, then start setup separately after verified removal. Unknown/submitted operations still stop; keep the saved connection and journals. This is not in 1.6.0. [Details](../RECOVERY.md#no-root-removal-stopped-before-package-submission-unreleased).
+
 [Documentation](../README.md) · [Report a problem](../FEEDBACK.md)
 
 <!-- Anchors retained for links to earlier guide headings. -->

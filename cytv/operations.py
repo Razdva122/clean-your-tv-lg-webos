@@ -63,6 +63,22 @@ def root_updater_paths():
                                 ('client-permissions.d', '.service.json'), ('api-permissions.d', '.api.json'))]]
 
 
+def require_removal_idle(remote, profile, pending):
+    # A fresh uninstall reserves its journal before restore(), and only changes
+    # to "removing" before any package request. Resume that pre-submission state
+    # like a fresh uninstall: dev/remove has its own terminal reply stream.
+    # Never apply this to an inherited install or an uncertain package outcome.
+    if (profile['edition'] == 'no-root' and pending.get('action') == 'uninstall'
+            and pending.get('stage') == 'pending'
+            and set(pending) <= {'action', 'stage', 'diagnostic_id', 'eim_registered', 'removals'}
+            and pending.get('removals', {}) == {}):
+        return
+    idle = remote.luna('com.webos.appInstallService/status', {'subscribe': True}, timeout=10)
+    if (not isinstance(idle, dict) or idle.get('returnValue') is not True or
+            not isinstance(idle.get('status'), dict) or idle['status'].get('apps') != []):
+        raise UserError('TV installer is not confirmed idle. Keep the receipt and run cytv status before removal.', reason_code='pending-operation')
+
+
 class Installer:
     def __init__(self, remote, store, profile, payload, manifest, progress=print, tv_info=None, checks=None):
         self.remote, self.store, self.profile = remote, store, profile
@@ -1200,10 +1216,7 @@ print('CYTV_PROJECT_REMOVED')
             resuming_remove = pending['action'] == 'uninstall' and self.profile['edition'] == 'no-root'
             if pending['action'] != 'install' and not resuming_remove:
                 raise UserError('Previous operation is unresolved. Run cytv status and retain recovery evidence before removal.')
-            idle = self.remote.luna('com.webos.appInstallService/status', {'subscribe': True}, timeout=10)
-            if (not isinstance(idle, dict) or idle.get('returnValue') is not True or
-                    not isinstance(idle.get('status'), dict) or idle['status'].get('apps') != []):
-                raise UserError('TV installer is not confirmed idle. Keep the receipt and run cytv status before removal.')
+            require_removal_idle(self.remote, self.profile, pending)
             if not resuming_remove:
                 self.store.checkpoint(self.profile, previous=pending, action='uninstall', stage='pending')
         else:

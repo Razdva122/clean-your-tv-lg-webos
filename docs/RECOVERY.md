@@ -42,8 +42,9 @@ fresh installation.
 2. A verified Root installation can offer **Finish Root setup?** with a separate
    default-No confirmation. Existing Root/updater checks run again before activation.
 3. No-root can offer **Remove remaining Clean Your TV packages?**, separately
-   confirmed with No by default. The existing package-service idle guard must
-   succeed before this offer and again before removal. Removal restores LG Home
+   confirmed with No by default. In 1.6.0 the package-service idle guard must
+   succeed before this offer and again before removal. The unreleased exception
+   for an unstarted removal is described below. Removal restores LG Home
    and may reset Home preferences. **New installation never starts automatically.**
 4. Unknown, denied, busy, incomplete or conflicting state stops the journey and
    offers a diagnostic report. Keep local/TV journals and the saved connection;
@@ -79,6 +80,25 @@ verified recovery fix for either reporter's TV.
 The installer calls `applicationManager/dev/listApps`; an SSH probe of
 `applicationManager/listApps` is a different method. Further recovery design
 requires the [exact endpoint and terminal-authority evidence](development/NO-ROOT-PACKAGE-AUTHORITY.md#remaining-evidence).
+
+### No-root removal stopped before package submission (unreleased)
+
+With a matching future installer, choose **Review recovery options** for the
+same saved TV connection (`cytv recover` on the console). A No-root removal
+that stopped before its first package request can offer removal without the
+global package-status permission. The original local journal must still say
+`uninstall / pending`, with no removal entries, inherited operation or unexpected
+fields. The installer checks that journal again after the separate default-No
+removal confirmation. The diagnostic export alone cannot establish eligibility.
+
+Removal still stops Helper, restores LG Home, records each package request before
+sending it, waits for its terminal reply and verifies package/file absence.
+Only successful verified removal clears pending; start installation separately
+afterward. A failed removal keeps its receipt. Already submitted/uncertain
+requests, interrupted installs, nested prior operations and unknown journals
+retain the existing guards; no request is blindly repeated. Do not edit the
+journal or reset Developer Mode to qualify. This change is not in 1.6.0 and
+physical EF950V recovery remains unverified.
 
 ### No-root Helper service refusal (#152)
 
