@@ -56,6 +56,7 @@ const types = {'.js': 'application/javascript', '.json': 'application/json', '.c
 
         // Classic layout with the shelf, the clock and the column override.
         assert.equal(await page.locator('#homeSurface').getAttribute('data-layout'), 'dock-grid');
+        assert.equal(await page.locator('#homeSurface').evaluate(el => el.classList.contains('ctv-classic-motion')), true, 'the theme opts into Classic motion');
         assert.equal(await page.locator('#timeRow').isVisible(), true, 'the Classic header stays');
         assert.equal(await page.evaluate(() => HomeLayoutState.state().columns), 4, 'the theme allows the saved column override');
         assert.equal(await page.locator('.ctv-input-tile').count(), 5, 'the Inputs shelf shows four inputs and Live TV');
@@ -107,13 +108,18 @@ const types = {'.js': 'application/javascript', '.json': 'application/json', '.c
         const press = code => page.evaluate(code => document.dispatchEvent(new KeyboardEvent('keydown', {keyCode: code, which: code, bubbles: true, cancelable: true})), code);
         await press(38);
         await page.waitForTimeout(400);
+        // Freeze the focused tile's transitions 60 ms in, so a busy runner cannot skip past them.
         const grow = await page.evaluate(() => new Promise(resolve => {
           document.dispatchEvent(new KeyboardEvent('keydown', {keyCode: 39, which: 39, bubbles: true, cancelable: true}));
-          setTimeout(() => {
-            const tile = getComputedStyle(document.querySelector('.ctv-input-tile.is-focused'));
-            resolve({transform: tile.transform, fill: tile.backgroundColor});
-          }, 60);
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            const tile = document.querySelector('.ctv-input-tile.is-focused'), running = tile.getAnimations();
+            running.forEach(animation => { animation.pause(); animation.currentTime = 60; });
+            const style = getComputedStyle(tile), result = {properties: running.map(animation => animation.transitionProperty).sort(), transform: style.transform, fill: style.backgroundColor};
+            running.forEach(animation => animation.finish());
+            resolve(result);
+          }));
         }));
+        assert(grow.properties.indexOf('transform') >= 0 && grow.properties.indexOf('background-color') >= 0, 'the focused input grows and fades: ' + grow.properties);
         assert.notEqual(grow.transform, 'none', 'the focused input grows from its old box');
         const alpha = Number((/rgba\(255, 255, 255, ([\d.]+)\)/.exec(grow.fill) || [])[1]);
         assert(alpha > 0.12 && alpha < 0.86, 'the focused fill fades in: ' + grow.fill);
@@ -129,13 +135,14 @@ const types = {'.js': 'application/javascript', '.json': 'application/json', '.c
             glided = glided || surface.classList.contains('ctv-scroll-glide');
             if (!glided && step++ < 4) return setTimeout(next, 400);
             surface.classList.add('ctv-remote-navigation');
-            const card = getComputedStyle(document.querySelector('#tiles .card')).transitionDuration;
+            const card = getComputedStyle(document.querySelector('#tiles .card')), frame = getComputedStyle(document.getElementById('glass'));
+            const transform = style => style.transitionDuration.split(', ')[style.transitionProperty.split(', ').indexOf('transform')];
             surface.classList.remove('ctv-remote-navigation');
-            resolve({glided, card});
+            resolve({glided, card: transform(card), frame: transform(frame)});
           }());
         }));
         assert.equal(motion.glided, true, 'a tap that scrolls rows glides under the theme');
-        assert.notEqual(motion.card, '0s', 'card zoom keeps its transition under remote navigation');
+        assert.deepEqual([motion.card, motion.frame], ['0.24s', '0.24s'], 'card zoom and the frame keep one shared transform transition under remote navigation');
         await page.waitForTimeout(400);
         assert.equal(await page.locator('#viewport').evaluate(el => getComputedStyle(el, '::before').opacity), '1', 'rows above fade under the top edge');
 
@@ -145,7 +152,7 @@ const types = {'.js': 'application/javascript', '.json': 'application/json', '.c
           base: getComputedStyle(document.getElementById('ambientBase')).backgroundImage,
           layers: Array.from(document.querySelectorAll('.ambient')).map(el => getComputedStyle(el).opacity),
         }));
-        assert.match(glow.base, /^linear-gradient\(0deg, rgba\(0, 0, 0, 0\)/, 'the base shows the theme glow');
+        assert.match(glow.base, /^linear-gradient\(0deg, rgba\(0, 0, 0, 0\)/, "the baked base carries the theme's clear ambient gradient, not Classic's glow");
         assert.deepEqual(glow.layers, ['0', '0'], 'no glow layer is drawn at rest');
         for (let row = 0; row < 8; row++) await page.keyboard.press('ArrowUp');
         await page.keyboard.press('ArrowDown');
