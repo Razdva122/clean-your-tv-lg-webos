@@ -69,7 +69,7 @@ class FlowTests(unittest.TestCase):
     def make_bundle(self,path):
         import hashlib
         data={name:b'' for name in ['installation.py','package_identity.py','system_updater/core.py','system_updater/device.py','system_updater/support/store.py']}
-        data['setup-system-updater.py']=b'# trusted setup';data['system-updater.ipk']=json.dumps({'usr/palm/applications/'+self.ns['APP']+'/appinfo.json':json.dumps({'id':self.ns['APP'],'version':'1.1.2'})}).encode()
+        data['setup-system-updater.py']=b'# trusted setup';data['system-updater.ipk']=json.dumps({'usr/palm/applications/'+self.ns['APP']+'/appinfo.json':json.dumps({'id':self.ns['APP'],'version':'1.2.0'})}).encode()
         for name,raw in data.items():
             p=path/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(raw);p.chmod(0o600)
         meta={'schema':1,'supervisor':1,'health_lock_wait_seconds':10,'files':{n:hashlib.sha256(b).hexdigest() for n,b in data.items()}};(path/'bundle.json').write_text(json.dumps(meta));(path/'bundle.json').chmod(0o600);return meta
@@ -120,7 +120,7 @@ class FlowTests(unittest.TestCase):
         return {'completed':True,'event':{'details':{'packageId':app}}}
     def provision(self,bundle,baseline):
         self.calls.append('provision');self.make_system(self.system,bundle)
-        self.appdir.mkdir(parents=True,exist_ok=True);(self.appdir/'version').write_text('1.1.2')
+        self.appdir.mkdir(parents=True,exist_ok=True);(self.appdir/'version').write_text('1.2.0')
         if self.fault=='provision':raise KeyboardInterrupt('new bootstrap in progress')
         return {'installed':True}
     def resume(self,bundle):self.calls.append('resume');self.verify_bundle(bundle);return {'installed':True}
@@ -215,7 +215,7 @@ class Retained111FlowTests(FlowTests):
         self.assertEqual((archive/(profile+'.json')).read_bytes(),original_profile)
         self.assertEqual((archive/'transaction.json').read_bytes(),original_transaction)
         self.assertEqual(self.profile.read_bytes(),b'personal layout')
-        self.assertEqual((self.appdir/'version').read_text(),'1.1.2')
+        self.assertEqual((self.appdir/'version').read_text(),'1.2.0')
 
     def test_completed_transaction_profile_is_archived_unchanged(self):
         self.check_terminal_profile_archive('complete')
@@ -390,7 +390,7 @@ class BoundaryTests(unittest.TestCase):
                 remote.run.side_effect=RuntimeError('preflight rejected before changes')
                 with self.assertRaises(UserError):installer.replace_system_updater()
                 self.assertIsNone(store.pending(profile));python.assert_called_once_with(operations.ROOT_STATE)
-                remote.run.side_effect=None;remote.run.return_value=json.dumps({'installed':True,'version':'1.1.2','root_unchanged':True,'home_unchanged':True,'profile_storage_untouched':True})
+                remote.run.side_effect=None;remote.run.return_value=json.dumps({'installed':True,'version':'1.2.0','root_unchanged':True,'home_unchanged':True,'profile_storage_untouched':True})
                 self.assertTrue(installer.replace_system_updater()['installed']);self.assertIsNone(store.pending(profile))
             remote.upload.assert_not_called()
 

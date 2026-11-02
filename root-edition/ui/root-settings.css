@@ -9,7 +9,7 @@
   justify-content: center;
   background: rgba(7,10,14,.93);
   color: #f5f7fa;
-  font-family: Outfit,"CYTV NotoSans","CYTV NotoSansDevanagari","CYTV NotoSansKR",sans-serif;
+  font-family: Outfit,"CYTV NotoSans","CYTV NotoSansDevanagari","CYTV NotoSansSC","CYTV NotoSansTC","CYTV NotoSansKR",sans-serif;
 }
 
 #renewalPanel.hidden,#updatePanel.hidden,.root-settings[hidden] {

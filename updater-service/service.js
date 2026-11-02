@@ -3,7 +3,7 @@ var Service=require('webos-service'),fs=require('fs');
 var service=new Service('com.cleanyourtv.updater.service');
 var store=require('./storage')(__dirname+'/state'),policy=require('./policy'),data=require('./user-data');
 var key=fs.readFileSync(__dirname+'/release-public.pem','utf8');
-var channel='https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/update.json';
+var channel='https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/';
 function rpc(uri,args,install){return new Promise(function(resolve,reject){
  var request,done=false,timer=setTimeout(function(){finish(Error('timeout'));},install?180000:10000);
  function finish(e,r){if(done)return;done=true;clearTimeout(timer);if(request&&request.cancel)request.cancel();if(e)reject(e);else resolve(r);}
@@ -37,8 +37,12 @@ function register(name,fn){service.register(name,function(m){if(!authorized(m)){
  Promise.resolve().then(function(){return fn(m.payload||{});}).then(function(value){m.respond({returnValue:true,result:value});},function(){m.respond({returnValue:false,errorText:'update-operation-failed'});});
 });}
 async function readOffer(){
- var raw=JSON.parse(await require('./transport').get(channel));
- var candidate=policy.verify(raw,key),prior=raw.previous?policy.verify(raw.previous,key):null;
+ var info=await rpc('luna://com.webos.service.tv.systemproperty/getSystemInfo',{keys:['UHD']}),value=info.UHD,resolution;
+ if(info.returnValue===true&&(value===true||value==='true'))resolution='1920x1080';
+ else if(info.returnValue===true&&(value===false||value==='false'))resolution='1280x720';
+ else throw Error('graphics-capability-unavailable');
+ var raw=JSON.parse(await require('./transport').get(channel+(resolution==='1280x720'?'update-720p.json':'update.json')));
+ var candidate=policy.graphics(policy.verify(raw,key),resolution),prior=raw.previous?policy.verify(raw.previous,key):null;
  candidate.proof={payload:raw.payload,signature:raw.signature};if(prior)prior.proof={payload:raw.previous.payload,signature:raw.previous.signature};
  return {candidate:candidate,prior:prior};
 }

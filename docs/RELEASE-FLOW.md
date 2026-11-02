@@ -284,6 +284,28 @@ untested paths honestly. A product/build-input change invalidates the selected b
 acceptance. Documentation/evidence-only commits preserve a verified pin. Mark the PR ready only after all
 checks and acceptance are complete.
 
+## External guide edits and build reuse
+
+The audited external Android/Root guides listed in `scripts/release-inputs.py`
+are metadata, like `README.md` and regular Markdown under `docs/`. They are not
+consumed by desktop/Android payload or TV package builders. The final Root source
+archive is assembled from the publication commit, so updated guides and checksums
+are still delivered without rebuilding unchanged installers.
+
+This exemption applies only to regular non-executable Git blobs. Executable or
+symlink documents, arbitrary neighboring Markdown, embedded UI guides, licenses
+and notices remain build inputs. In particular,
+`android/app/src/main/assets/ui/guide/README.md` is embedded; it is not the external
+`android/README.md`. Audit packaging before extending the explicit allowlist.
+
+The full candidate workflow runs release-input boundary and README metadata
+checks in its `scope` job before dispatching expensive platform builds. Changing
+the verifier or workflow itself still requires a new complete build; the trusted
+policy on `main` cannot be bypassed by editing candidate-side verification code.
+Documentation may reuse a successful pinned build only when that trusted verifier
+confirms equivalent inputs. Artifact hashes and device preconditions still govern
+physical evidence reuse.
+
 ## Scoped physical acceptance and retry recovery
 
 Before testing, run:

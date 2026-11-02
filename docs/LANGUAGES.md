@@ -36,3 +36,19 @@ For Chinese, an explicit Hans/Hant script takes precedence over the region.
 Bare `zh`, CN and SG use Simplified; TW, HK and MO use Traditional. You can
 override the automatic result in the existing language picker. Chinese TV
 rendering remains subject to the recorded device-specific acceptance limits.
+
+## Czech TV interface (unreleased candidate)
+
+Issue [#211](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/211)
+adds **Čeština** (`cs`) to Home and Root Home, their Settings, themes,
+HDMI recovery and independent updater/recovery interfaces. On the TV choose
+**Settings → Language → Čeština**; automatic mode recognizes `cs` and `cs-CZ`.
+The preference is saved separately from the installer language and is preserved
+by the candidate's profile/update validators. Application names and technical
+identifiers stay unchanged.
+
+[Český průvodce rozhraním TV](i18n/cs.md) covers the candidate interface.
+Desktop, console, Android and Homebrew installers still offer the twelve
+published languages above; `--language cs` is not an installer option.
+Physical-TV and native-speaker review remain unverified; public delivery is
+pending the normal candidate build, acceptance and release.

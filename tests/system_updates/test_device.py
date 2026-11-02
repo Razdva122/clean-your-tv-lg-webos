@@ -35,6 +35,9 @@ class DeviceBase(unittest.TestCase):
         # These focused effects tests supply presence; real private owner/phase
         # authentication is exercised by test_package_identity and shared setup.
         self.device.require_components=lambda:None
+        # These cases isolate existing ownership/recovery boundaries; graphics has separate real-adapter fixtures.
+        self.device.graphics_resolution=lambda:'1920x1080'
+        self.device.require_graphics=lambda *args:None
         for app in ('com.cleanyourtv.system.updater','com.cleanyourtv.root.preview','com.cleanyourtv.root.updater'):
             path=self.root/('installed/usr/palm/applications/'+app+'/appinfo.json');path.parent.mkdir(parents=True,exist_ok=True);path.write_text(json.dumps({'id':app}))
     def tearDown(self):self.tmp.cleanup()

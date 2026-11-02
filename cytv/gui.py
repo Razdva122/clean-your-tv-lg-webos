@@ -17,6 +17,7 @@ from cytv.desktop import Channel
 from cytv.gui_style import STYLE, TVPreview, Select, EditionOption, BrandSignature
 
 MAINTENANCE_ACTIONS = (
+    ('Review recovery options', 'recover'),
     ('Check TV status', 'status'),
     ('Check connection and create a diagnostic report', 'doctor'),
     ('Return to LG Home', 'restore'),
@@ -42,6 +43,8 @@ class Wizard(QMainWindow):
         self.collect_preparation = False
         self.report = None
         self.recovery_profile = None
+        self.recovery_plan = None
+        self.failure_help = None
         self.worker = None
         self.setWindowTitle('Clean Your TV')
         self.resize(1060, 820)
@@ -272,6 +275,8 @@ class Wizard(QMainWindow):
     def home(self):
         self.reset_checks()
         self.recovery_profile = None
+        self.recovery_plan = None
+        self.failure_help = None
         self.preparation = []
         self.collect_preparation = False
         self.reset_details()
@@ -415,6 +420,8 @@ class Wizard(QMainWindow):
         self.language.setEnabled(False)
         self.report = None
         self.recovery_profile = None
+        self.recovery_plan = None
+        self.failure_help = None
         self.pending = None
         self.preparation = []
         self.collect_preparation = False
@@ -454,7 +461,8 @@ class Wizard(QMainWindow):
             colors = {'pass': '#90cfad', 'fail': '#ff8580', 'unknown': '#e8c17d',
                       'running': '#eddbc2', 'pending': '#c0b5a5'}
             rows = []
-            for result in self.check_results.values():
+            priority = {'packages':0, 'startup':1, 'home-button':2}
+            for result in sorted(self.check_results.values(), key=lambda item: priority.get(item['id'],3 if item['status'] in ('fail','unknown') else 4)):
                 status = result['status']
                 label, detail = html.escape(tr(result['label'])), html.escape(tr(result['detail']))
                 marker = {'pass': '✓', 'fail': '!', 'unknown': '?', 'running': '…', 'pending': '·'}[status]
@@ -498,6 +506,12 @@ class Wizard(QMainWindow):
             path = Path(value)
             if path.is_file():
                 self.report = path
+        elif kind == 'failure-help':
+            self.failure_help = dict(value)
+        elif kind == 'recovery-plan':
+            self.recovery_plan = dict(value)
+            self.steps.hide()
+            self.rail_title.setText(tr('Review recovery options'))
         elif kind == 'recovery':
             self.recovery_profile = dict(value)
         elif kind == 'prompt':
@@ -520,25 +534,43 @@ class Wizard(QMainWindow):
                 self.update_steps(self.current_step, value)
             self.content.moveCursor(self.content.textCursor().MoveOperation.End)
             failed = value not in (0, 130)
-            recover = value == 0 and self.recovery_profile is not None
+            recover = value == 0 and self.recovery_profile is not None and self.recovery_plan is None
+            if self.recovery_plan:
+                self.title.setText(tr('Review recovery options'))
+                self.subtitle.setText(tr(self.recovery_plan['summary']))
+            setup_review = False
+            if value == 0 and 'packages' in self.check_results:
+                confirmed = all(self.check_results.get(key, {}).get('status') == 'pass'
+                                for key in ('packages', 'startup', 'home-button'))
+                setup_review = not confirmed
+                self.title.setText(tr('Home button confirmed by you' if confirmed else 'Review TV checks'))
+                self.subtitle.setText(tr('Package verification, startup readback and your Home-button observation are separate results.'))
+                self.badge.setText(self.title.text())
             if recover:
                 profile = dict(self.recovery_profile)
-                self.title.setText(tr('Recovery available'))
+                self.title.setText(tr('Review recovery options'))
                 self.badge.setText(self.title.text())
-                self.subtitle.setText(tr('Restore LG Home, finish removal and reinstall. You will review each step before changes.'))
-                self.button('Recover and reinstall', lambda: self.start('install', profile), True)
+                self.subtitle.setText(tr('Checking recovery does not reinstall or remove packages. Root checks may run verified support code.'))
+                self.button('Review recovery options', lambda: self.start('recover', profile), True)
             if self.report:
-                self.button('Save diagnostic report…', self.save_report, failed)
+                self.button('Save diagnostic report…', self.save_report, failed or setup_review)
                 if failed:
                     self.subtitle.setText(tr('Save the report from this failed attempt and attach it to your issue. Recovery data has been kept.'))
             elif failed:
                 self.subtitle.setText(tr('A diagnostic report could not be created. Include the visible error when opening an issue.'))
-            if failed:
+            if failed or self.check_results.get('home-button', {}).get('status') == 'fail':
                 self.button('Open an issue', lambda: QDesktopServices.openUrl(QUrl(diagnostics.ISSUE_URL)))
-            self.button('Back to start', self.home, not recover and not (failed and self.report))
+            self.button('Back to start', self.home, not recover and not ((failed or setup_review) and self.report))
             failed_checks = [result for result in self.check_results.values() if result['status'] in ('fail', 'unknown')]
             if failed and failed_checks:
                 self.subtitle.setText(tr('Failed') + ': ' + ', '.join(tr(result['label']) for result in failed_checks) + '\n' + self.subtitle.text())
+            if failed and self.failure_help:
+                if not self.recovery_plan:
+                    self.title.setText(tr(self.failure_help['title']))
+                    self.badge.setText(self.title.text())
+                self.subtitle.setText(tr(self.failure_help['next_step']))
+                if not self.report:
+                    self.subtitle.setText(self.subtitle.text()+'\n'+tr('A diagnostic report could not be created. Include the visible error when opening an issue.'))
 
     def show_prompt(self, prompt):
         self.check_panel.hide()
@@ -575,8 +607,7 @@ class Wizard(QMainWindow):
         self.form_layout.addWidget(label)
         if prompt.kind == 'confirm':
             trust_prompt = prompt.label.startswith('Connect and remember this TV?')
-            label = ('Recover and reinstall' if prompt.label.startswith('Finish removal before installing again?')
-                     else 'Connect and remember' if trust_prompt else 'Continue')
+            label = 'Connect and remember' if trust_prompt else 'Continue'
             yes = self.button(label, lambda: self.submit('y'), prompt.default == 'y')
             no = self.button('No, go back / cancel this operation', lambda: self.submit('n'), prompt.default == 'n')
             (yes if prompt.default == 'y' else no).setFocus()

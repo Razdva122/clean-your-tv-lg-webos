@@ -413,7 +413,6 @@ def suspend(transaction,root=STATE,uid=0):
     root=Path(root)
     with locked(root,uid):
         reservation(transaction,root,uid)
-        stage_system_rollback_anchor(transaction,root,uid)
         path=root/'update-home-resume.json';t=ticket(root,uid)
         if t is not None and t['transaction']!=transaction:raise ValueError('Resume ticket owner mismatch')
         if t is None:
@@ -426,7 +425,12 @@ def suspend(transaction,root=STATE,uid=0):
         else:
             if 'outcome' in t:raise ValueError('Update Home suspension already finished')
             fresh=False
-        result=_restore();after=_intent()
+        result=_restore()
+        # Capture the owner's preference and restore routing before the retained
+        # rollback anchor changes package authority. Active health must not see
+        # an intentionally retargeted current descriptor before ticket capture.
+        stage_system_rollback_anchor(transaction,root,uid)
+        after=_intent()
         if not disabled(after):raise ValueError('Persistent intent was not disabled')
         # An interrupted suspension has no verified post-restore snapshot. Retrying
         # can recover stock Home but must not infer permission to enable again.

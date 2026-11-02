@@ -14,13 +14,15 @@ import posixpath
 import re
 import shlex
 import stat
+import ssl
 import tarfile
 import tempfile
 import time
 import urllib.parse
+import urllib.error
 import urllib.request
 
-from .errors import UserError, TVCommandError, PythonPreflightError
+from .errors import UserError, TVCommandError, PythonPreflightError, PythonCacheError
 
 SHA256 = '4a71641c8d5536175e404a961624e8656eba30e97b5026f6bd7dc31e4bbeaaea'
 SIZE = 26256859
@@ -31,8 +33,8 @@ MAX_UNPACKED = 160 * 1024 * 1024
 MAX_FILES = 12000
 _HOST_POSIX = os.name == 'posix'
 
-DOWNLOAD_ERROR = 'The private Python download could not be verified. Check the connection or prepare the Python cache again.'
-CACHE_ERROR = 'The private Python cache is unsafe or damaged. Remove its pinned archive and prepare the cache again.'
+DOWNLOAD_ERROR = PythonCacheError.DOWNLOAD_ERROR
+CACHE_ERROR = PythonCacheError.CACHE_ERROR
 ARCHIVE_ERROR = 'The private Python archive is unsafe or incompatible. No runtime was installed.'
 TARGET_ERROR = 'This TV cannot safely install private Python. Check its ARM ABI, available space and root-owned runtime directories.'
 INSTALL_ERROR = 'Private Python installation could not be verified. Run cytv doctor before retrying.'
@@ -78,7 +80,7 @@ class _ReleaseRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, request, fp, code, msg, headers, newurl):
         self.count += 1
         if self.count > 3 or not _asset_url(newurl):
-            raise UserError(DOWNLOAD_ERROR)
+            raise PythonCacheError('response-policy')
         return super().redirect_request(request, fp, code, msg, headers, newurl)
 
 
@@ -187,6 +189,7 @@ def _cache_directory(cache_dir):
 def prime_cache(cache_dir, progress):
     """Prepare/reuse only the pinned verified archive; never contact a TV."""
     temporary = None
+    failure = 'cache-access'
     try:
         cache = _cache_directory(cache_dir)
         path = cache/(SHA256 + '.tar.gz')
@@ -195,43 +198,62 @@ def prime_cache(cache_dir, progress):
             progress('Using the verified private Python cache…')
             return path
         progress('Downloading private Python for this TV (26 MB)…')
+        failure = 'network'
         opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), _ReleaseRedirect())
+        failure = 'cache-access'
         fd, temporary = tempfile.mkstemp(prefix='.python-', suffix='.tmp', dir=cache)
         with os.fdopen(fd, 'wb') as output:
+            failure = 'network'
             with opener.open(urllib.request.Request(URL, headers={'Accept-Encoding': 'identity'}), timeout=30) as response:
-                if response.status != 200 or (response.geturl() != URL and not _asset_url(response.geturl())):
-                    raise UserError(DOWNLOAD_ERROR)
+                if response.status != 200:
+                    raise PythonCacheError('http')
+                if response.geturl() != URL and not _asset_url(response.geturl()):
+                    raise PythonCacheError('response-policy')
                 length = response.headers.get('Content-Length')
                 if length is not None and length != str(SIZE):
-                    raise UserError(DOWNLOAD_ERROR)
+                    raise PythonCacheError('size')
                 if response.headers.get('Content-Encoding', 'identity') != 'identity':
-                    raise UserError(DOWNLOAD_ERROR)
+                    raise PythonCacheError('response-policy')
                 digest, total, announced = hashlib.sha256(), 0, 0
                 deadline = time.monotonic() + 300
                 while True:
-                    if time.monotonic() > deadline: raise UserError(DOWNLOAD_ERROR)
+                    if time.monotonic() > deadline: raise PythonCacheError('deadline')
                     chunk = response.read(min(256 * 1024, SIZE + 1 - total))
                     if not chunk: break
                     total += len(chunk)
-                    if total > SIZE: raise UserError(DOWNLOAD_ERROR)
-                    digest.update(chunk); output.write(chunk)
+                    if total > SIZE: raise PythonCacheError('size')
+                    digest.update(chunk)
+                    failure = 'cache-access'
+                    output.write(chunk)
+                    failure = 'network'
                     percent = total * 100 // SIZE
                     if percent >= announced + 10:
                         progress('Downloading private Python: {percent}%'.format(percent=percent))
                         announced = percent
-                if total != SIZE or digest.hexdigest() != SHA256:
-                    raise UserError(DOWNLOAD_ERROR)
+                if total != SIZE: raise PythonCacheError('size')
+                if digest.hexdigest() != SHA256: raise PythonCacheError('sha256')
+            failure = 'cache-access'
             output.flush(); os.fsync(output.fileno())
         # Only authenticated bytes replace this one immutable cache pathname.
         # replace is portable to Android filesystems that forbid hardlinks.
+        failure = 'cache-replace'
         os.replace(temporary, path); temporary = None
+        failure = 'cache-access'
         _verified_bytes(path)
         progress('Private Python download verified…')
         return path
-    except UserError:
+    except PythonCacheError:
         raise
+    except UserError:
+        raise PythonCacheError('cache-invalid') from None
+    except urllib.error.HTTPError:
+        raise PythonCacheError('http') from None
+    except urllib.error.URLError as error:
+        raise PythonCacheError('tls' if isinstance(error.reason, ssl.SSLError) else 'network') from None
+    except ssl.SSLError:
+        raise PythonCacheError('tls') from None
     except (OSError, ValueError, http.client.HTTPException):
-        raise UserError(DOWNLOAD_ERROR) from None
+        raise PythonCacheError(failure) from None
     finally:
         if temporary is not None:
             try: os.unlink(temporary)
@@ -555,7 +577,7 @@ def select_python(remote, cache_dir, progress, provision=False):
         progress('Private Python is ready…')
         return executable
     except UserError as error:
-        if isinstance(error, PythonPreflightError): raise
+        if isinstance(error, (PythonPreflightError, PythonCacheError)): raise
         if type(error) is UserError and str(error) in (DOWNLOAD_ERROR, CACHE_ERROR, ARCHIVE_ERROR, TARGET_ERROR, INSTALL_ERROR): raise
         raise UserError(INSTALL_ERROR) from None
     except Exception:

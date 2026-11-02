@@ -1,12 +1,14 @@
 # Clean Your TV — guide d’utilisation
 
+> Ce guide décrit la version 1.6.0. Utilisez les paquets disponibles dans les [versions publiées sur GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases). Il inclut les cinq améliorations de l’installateur. À leur réouverture, les réglages Root lisent l’état réel ; un contrôle échoué n’active pas Home. System Updater 1.2.0 concerne une nouvelle installation admissible ou le remplacement vérifié de 1.1.0/1.1.1. Le 1.1.2 installé conserve ses anciens canaux ; aucune migration générale n’est fournie. Conservez les données de récupération et ne forcez pas le remplacement. [Versions et limites](../RELEASE-1.6.0.md).
+
 > v1.5.0 : thèmes, galerie et transfert du PC au téléviseur. Limites Root connues : Appearance peut se décaler de 110 px ; Home peut ne pas s’ouvrir automatiquement après la veille. La validation par appareil reste limitée. [1.5.0](../RELEASE-1.5.0.md).
 
 > **1.5.4:** les thèmes à disposition fixe conservent l’espace de la ligne Columns masquée pour préserver le défilement d’Appearance lors de l’application. Le pointeur, le clavier et les outils d’accessibilité ignorent Columns.
 
 [Documentation](../README.md) · [Signaler un problème](../FEEDBACK.md)
 
-Ce guide décrit la version publiée **[1.5.4](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.5.4)**. La validation C3 couvre les essais consignés d’alimentation, Home, focus, maintien de la désactivation et retour manuel à la version précédente. Les autres TV, le son eARC et les appareils Android physiques restent non vérifiés ; une installation réussie ne prouve pas la compatibilité. [Périmètre testé (anglais)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
+**Résultats historiques de 1.5.4:** La validation C3 couvre les essais consignés d’alimentation, Home, focus, maintien de la désactivation et retour manuel à la version précédente. Les autres TV, le son eARC et les appareils Android physiques restent non vérifiés ; une installation réussie ne prouve pas la compatibilité. [Périmètre testé (anglais)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
 
 **1.5.4:** console, ordinateur et Android indiquent chaque vérification du TV : non effectuée, en cours, réussie, échouée ou invérifiable. Les résultats restent visibles après une erreur. Node.js/Python est vérifié sur le TV ; `doctor` ne prépare pas Python et ne demande pas d’association de contrôle. Enregistrez le rapport avant de réessayer.
 
@@ -18,6 +20,8 @@ No-root et Root sont des options équivalentes pour différentes configurations 
 - **Root :** un accès SSH root existant est nécessaire. L’installateur ne roote pas le téléviseur. N’activez pas Developer Mode sur une installation déjà rootée. Conservez l’accès root et les services de récupération.
 
 Root nécessite les interfaces Home fonctionnelles de Settings Service et System Profile (`com.webos.service.systemprofile`) ; un accès root seul ne garantit pas la compatibilité.
+
+> **1.6.0:** Root vérifie les interfaces Home requises avant de préparer Python privé ou les paquets. Un échec arrête l’installation ; une réussite ne prouve ni la compatibilité du micrologiciel ni le fonctionnement du bouton Home. Les erreurs de connexion connues affichent des conseils précis. Conservez profils, données de confiance et de récupération ; une opération en attente exige une récupération vérifiée, sans nouvel essai aveugle. Enregistrez et vérifiez le rapport. [Détails](../development/INSTALLER-PREFLIGHT-HELP.md).
 
 ## Prérequis
 
@@ -62,6 +66,8 @@ chmod +x cytv
 
 Choisissez le téléviseur ou son adresse IP, l’édition, puis vérifiez le récapitulatif. N’acceptez une nouvelle identité SSH que pour votre téléviseur sur un réseau fiable ; une clé enregistrée modifiée bloque la connexion. Root prépare la récupération et active Home immédiatement, sans essai temporaire ni étape de conservation. Testez flèches, OK, Home, Retour/Annuler, volume, veille et démarrage à froid.
 
+**1.6.0:** vérification des paquets, démarrage et votre observation du bouton Home physique sont séparés. Une confirmation de lancement ou un processus Helper ne prouve pas l’interception de Home. Ouvrez une autre application, appuyez brièvement une fois sur Home et indiquez le résultat ; le choix par défaut est **Non testé / ignorer**. `--yes` ne répond pas à votre place et le mode non interactif laisse ce test non effectué. Un échec Home ou un test ignoré ne désinstalle rien et ne lance pas de réinstallation. Enregistrez le rapport local pour demander de l’aide ; aucune publication automatique. Autres commandes, son, veille et démarrage à froid restent séparés.
+
 ## Utilisation et récupération
 
 Les flèches sélectionnent, OK ouvre ; maintenez OK pour réorganiser. Un appui bref sur Retour conserve la navigation et la confirmation de sortie de l’application. Home ouvre le lanceur si le contrôle est actif. Maintenez Retour pendant 1,2 seconde pour ouvrir LG Home une fois. L’interrupteur du contrôle de Home et vos paramètres restent inchangés.
@@ -78,6 +84,10 @@ No-root: Pour relancer le contrôle de Home, ouvrez Home Helper, choisissez Dém
 ./cytv --language fr restore
 ./cytv --language fr uninstall
 ```
+
+> **1.6.0 (#152):** si la désactivation de Helper est refusée, la restauration/suppression No-root pourra utiliser un arrêt vérifié par SSH. L’état d’arrêt est conservé ; un résultat incertain conserve le journal. Ne supprimez pas les fichiers d’état. La confirmation sur EF950V reste attendue. [#152](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/152)
+
+> **1.6.0 (#201):** le statut No-root conserve le journal d’une installation ou suppression interrompue. Des fichiers identiques ou des applications absentes ne prouvent pas la fin de l’opération. Si la vérification est refusée, arrêtez et conservez le diagnostic ; les fichiers seuls ne permettent pas de contourner ce contrôle. [#201](../RECOVERY.md#unreleased-uncertain-no-root-package-operations-201)
 
 Après interruption, lancez d’abord `status` et conservez les journaux. `restore` rétablit LG Home sans supprimer les applications ; `uninstall` le rétablit avant leur suppression. Les données de récupération Root sont conservées volontairement : ne les effacez pas pour forcer une réinstallation. Vérifiez les rapports avant partage ; ne publiez ni clés ni dossiers de profils.
 
@@ -107,11 +117,11 @@ Homebrew Channel a refusé l’accès à cet installateur. Sur webOS 11, Homebre
 
 1.5.0+: `cytv recover-system-rollback --edition root` traite un retour Root vérifié dont les installations de paquets sont terminées, mais dont le délai de disponibilité du lanceur a expiré. Le véritable lanceur doit confirmer son état ; les résultats d’installation inconnus sont refusés. Paquets, code et clés conservés, preuves d’échec et désactivation explicite de Home sont préservés. Une trace privée consigne cet essai limité. Une nouvelle exécution normale ne prolonge pas le délai. Après expiration des 120 secondes seulement, sans signal de disponibilité accepté ni résultat d’installation inconnu, `--new-recovery-attempt` archive la trace précédente complète sous son UUID/empreinte et ouvre explicitement un nouvel essai. Une récupération terminée reste idempotente ; aucun essai automatique. [Procédure et limites (anglais)](../RECOVERY.md#root-system-rollback-readiness-candidate).
 
-1.5.0 : le paquet de remplacement contient System Updater 1.1.2. Avant OTA, remplacez explicitement 1.1.0 ou 1.1.1 avec `cytv replace-system-updater --edition root`. Seul System Updater est remplacé ; les apps Root/Root Updater, le profil complet et le choix Home sont conservés, et l’ancien état est archivé. Les opérations inconnues ou inachevées bloquent le remplacement. Cette exigence ne bloque pas les flux No-root. [Procédure (anglais)](../RECOVERY.md#replace-the-root-system-updater-candidate).
+1.6.0 : System Updater 1.2.0 concerne une nouvelle installation admissible ou le remplacement vérifié de 1.1.0/1.1.1 avec `cytv replace-system-updater --edition root`. Seul System Updater est remplacé ; les apps Root/Root Updater, le profil complet et le choix Home sont conservés, et l’ancien état est archivé. Les opérations inconnues ou inachevées arrêtent le remplacement. Une installation 1.1.2 reste épinglée avec ses anciens canaux ; aucune migration générale n’est fournie. Ne forcez pas le remplacement. Cela ne conditionne pas les flux No-root. [Procédure (anglais)](../RECOVERY.md#replace-the-root-system-updater-candidate)
 
 ## Aide et autres instructions
 
-Après un échec ou une interruption, vérifiez l’état et enregistrez le rapport de diagnostic de cet essai. La récupération guidée confirme séparément suppression et réinstallation. Si le résultat est incertain, arrêtez et conservez journaux privés et fichiers de récupération ; ne les supprimez jamais pour forcer un nouvel essai. [Récupération (anglais)](../RECOVERY.md). Pour obtenir de l’aide, précisez modèle, micrologiciel, édition, version de l’installateur, étape en échec et résultat attendu/réel ; vérifiez et expurgez le rapport avant partage.
+**1.6.0:** choisissez **Examiner les options de récupération** pour le même téléviseur enregistré ou lancez `cytv recover`. Vérification et modifications exigent des confirmations distinctes, avec Non par défaut ; `--yes` ne les autorise pas. Root continue uniquement après les vérifications existantes. No-root propose la suppression seulement si le contrôle du service de paquets le permet ; les préférences Home peuvent être réinitialisées. Aucune nouvelle installation ne démarre automatiquement. Si l’état est inconnu ou l’accès refusé, enregistrez le rapport et arrêtez. Conservez les journaux et ne répétez pas la suppression. Les preuves de fin de #201 et la récupération réelle de #216 restent à confirmer. [Recovery](../RECOVERY.md). Pour obtenir de l’aide, précisez modèle, micrologiciel, édition, version de l’installateur, étape en échec et résultat attendu/réel ; vérifiez et expurgez le rapport avant partage.
 
 [Documentation](../README.md) · [Signaler un problème](../FEEDBACK.md)
 
@@ -140,6 +150,9 @@ Pour tester un thème non publié, ouvrez d’abord **Paramètres → Thèmes �
 
 Pour un thème publié, ouvrez **Ajouter par ID** et saisissez son identifiant (par exemple `102300a209`), `da.gd/102300a209` ou le lien GitHub complet. Home affiche l’adresse da.gd avant le chargement et vérifie la destination GitHub et le paquet. L’auteur peut copier l’identifiant depuis les notes de version ou **TV link → Copy ID** dans l’aperçu.
 
+
+**1.6.0:** **Afficher le diagnostic** dans le panneau Home Helper affiche un petit instantané filtré de ses propres demandes d’état. L’affichage ne démarre pas Helper et ne change pas le contrôle de Home. Partagez uniquement ce JSON sur demande, après vérification ; [détails](../HELPER-DIAGNOSTICS.md#candidate-panel-caller-diagnostics-207).
+
 [Themes (English)](../THEMES.md) · [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
 
 1.5.4: **Classic**, **Alpine**, **Ribbon** — **Paramètres → Thèmes**. [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
@@ -159,3 +172,13 @@ Dans l’aperçu du navigateur, Recevoir depuis un ordinateur explique les étap
 Dans les deux éditions, les catégories sont à gauche et leurs réglages à droite : écran d’accueil, Apparence, Thèmes, Langue, Mises à jour et Avancé. No-root ajoute Developer Mode ; Root place le firmware LG dans les mises à jour et le son HDMI dans Avancé. Haut/Bas parcourt une colonne, Droite entre dans les réglages et Gauche revient aux catégories. Retour revient aux catégories, puis ferme les paramètres. Tab permet aussi d’atteindre le bouton de retour à Home.
 
 Un point jaune sur Mises à jour et sur le bouton associé indique une mise à jour disponible. Les deux disparaissent lorsqu’une vérification réussie confirme son absence ; en cas d’échec, le dernier état confirmé reste affiché.
+
+<a id="résolution-graphique-automatique-candidat"></a>
+
+## Résolution graphique automatique (1.6.0)
+
+Les installateurs ordinateur/Android de 1.6.0 et clients OTA migrés choisissent 720p ou 1080p selon les capacités du téléviseur. Si elles ne peuvent être vérifiées, l’opération s’arrête. Les anciens outils de mise à jour installés séparément nécessitent la migration documentée depuis un ordinateur ; la récupération conserve ses paquets d’origine.
+
+[HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).
+
+> **1.6.0:** conservez le rapport de l’échec initial. Les nouveaux rapports séparent la première erreur enregistrée des vérifications suivantes et contiennent un résumé filtré de Doctor/état. Un export est aussi proposé après une installation, une vérification d’état ou une restauration réussie. Les anciennes données manquantes restent inconnues ; ce rapport n’autorise aucune récupération. [↗](../development/INSTALLER-DIAGNOSTICS.md).

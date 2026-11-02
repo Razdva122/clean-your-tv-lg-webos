@@ -2,13 +2,18 @@
 // Independently provisioned trust boundary. Signed fields are data only.
 var crypto=require('crypto'),https=require('https'),fs=require('fs'),URL=require('url').URL;
 // Keep aligned with build.VERSION and the packaged app/service metadata.
-var SUPERVISOR_VERSION='1.1.2';
+var SUPERVISOR_VERSION='1.2.0';
 var REPO='https://github.com/Razdva122/clean-your-tv-lg-webos/releases/';
 var IDENTITIES={home:'com.gathin.tvhome',helper:'com.local.nativehome',updater:'com.cleanyourtv.updater',root:'com.cleanyourtv.root.preview','root-updater':'com.cleanyourtv.root.updater','root-infrastructure':null};
 var SETS={'no-root':['home','helper','updater'],root:['root','root-updater','root-infrastructure']},MAX=64*1024*1024;
 function version(v){if(typeof v!=='string'||!/^(0|[1-9][0-9]{0,3})\.(0|[1-9][0-9]{0,3})\.(0|[1-9][0-9]{0,3})$/.test(v))throw Error('invalid-version');return v.split('.').map(Number);}
 function compare(a,b){a=version(a);b=version(b);for(var i=0;i<3;i++)if(a[i]!==b[i])return a[i]>b[i]?1:-1;return 0;}
 function fields(value,required){return value&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).length===required.length&&required.every(function(k){return Object.prototype.hasOwnProperty.call(value,k);});}
+function feedName(edition,resolution){if(!Object.prototype.hasOwnProperty.call(SETS,edition)||['1280x720','1920x1080'].indexOf(resolution)<0)throw Error('invalid-graphics-selection');return 'system-update-'+edition+(resolution==='1280x720'?'-720p':'')+'.json';}
+function graphics(m,resolution){
+ feedName(m.edition,resolution);var name=m.edition==='root'?'root':'home',c=m.components.filter(function(c){return c.name===name;})[0];
+ if(!c||c.url!==REPO+'download/'+m.release+'/'+IDENTITIES[name]+'_'+c.version+(resolution==='1280x720'?'_720p':'')+'_all.ipk')throw Error('signed-graphics-mismatch');return m;
+}
 function validate(m){
  var required=['schema','edition','release','supervisor','notes','components'];
  if(m&&m.edition==='root'&&Object.prototype.hasOwnProperty.call(m,'minimumSupervisorVersion'))required.push('minimumSupervisorVersion');
@@ -34,16 +39,17 @@ function get(url,limit,redirects){return new Promise(function(resolve,reject){
  var done=false,total=0,chunks=[],req,timer;
  function finish(error,value){if(done)return;done=true;clearTimeout(timer);if(error){if(req)req.destroy();reject(error);}else resolve(value);}
  function transport(error){var failure=Error('download-failed');failure.updateError='connection-error';finish(failure);}
- req=https.get(url,{rejectUnauthorized:true,ca:fs.readFileSync(__dirname+'/ca-bundle.crt','utf8'),headers:{'User-Agent':'CleanYourTV-System-Updater','Accept':'application/octet-stream'}},function(res){
+ var options=Object.assign(require('url').parse(url),{rejectUnauthorized:true,ca:fs.readFileSync(__dirname+'/ca-bundle.crt','utf8'),headers:{'User-Agent':'CleanYourTV-System-Updater','Accept':'application/octet-stream'}});
+ req=https.get(options,function(res){
   if([301,302,303,307,308].indexOf(res.statusCode)>=0){res.resume();try{var next=new URL(res.headers.location,url).href;get(next,limit,(redirects||0)+1).then(function(b){finish(null,b);},finish);}catch(e){finish(e);}return;}
   if(res.statusCode!==200){res.resume();var failure=Error('download-http');failure.updateError=res.statusCode===404?'feed-unavailable':'connection-error';finish(failure);return;}
   res.on('data',function(b){total+=b.length;if(total>limit){res.destroy();finish(Error('download-too-large'));}else chunks.push(b);});res.on('end',function(){finish(null,Buffer.concat(chunks));});res.on('error',transport);res.on('aborted',transport);
  });timer=setTimeout(transport,60000);req.on('error',transport);
 });}
-module.exports={supervisorVersion:SUPERVISOR_VERSION,validate:validate,verify:verify,get:get,allowed:allowed,compare:compare};
+module.exports={feedName:feedName,graphics:graphics,supervisorVersion:SUPERVISOR_VERSION,validate:validate,verify:verify,get:get,allowed:allowed,compare:compare};
 if(require.main===module){var input='',method=process.argv[2];process.stdin.setEncoding('utf8');process.stdin.on('data',function(s){input+=s;if(Buffer.byteLength(input)>131072)process.exit(2);});process.stdin.on('end',async function(){try{
  var p=JSON.parse(input||'{}'),key=fs.readFileSync(__dirname+'/release-public.pem'),result,m;
- if(method==='offer'){if(!SETS[p.edition])throw Error('invalid-edition');var envelope=JSON.parse((await get(REPO+'latest/download/system-update-'+p.edition+'.json',131072)).toString('utf8'));m=verify(envelope,key);if(m.edition!==p.edition)throw Error('edition-mismatch');result={candidate:Object.assign({},m,{proof:envelope})};}
+ if(method==='offer'){if(!SETS[p.edition])throw Error('invalid-edition');var envelope=JSON.parse((await get(REPO+'latest/download/'+feedName(p.edition,p.resolution),131072)).toString('utf8'));m=verify(envelope,key);if(m.edition!==p.edition)throw Error('edition-mismatch');graphics(m,p.resolution);result={candidate:Object.assign({},m,{proof:envelope})};}
  else if(method==='verify')result=verify(p.proof,key);
  else if(method==='package'){m=verify(p.proof,key);var component=m.components.filter(function(c){return c.name===p.name;})[0];if(!component)throw Error('unknown-component');var bytes=await get(component.url,component.size);if(bytes.length!==component.size||crypto.createHash('sha256').update(bytes).digest('hex')!==component.sha256)throw Error('package-hash-mismatch');process.stdout.write(bytes);return;}
  else throw Error('unknown-operation');process.stdout.write(JSON.stringify(result));

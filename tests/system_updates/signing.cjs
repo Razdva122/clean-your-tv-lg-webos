@@ -43,3 +43,45 @@ const oldProof=JSON.parse(JSON.stringify(system.root));delete oldProof.minimumSu
 const oldBytes=Buffer.from(JSON.stringify(oldProof)),oldFeed={payload:oldBytes.toString('base64'),signature:crypto.sign('RSA-SHA256',oldBytes,privateKey).toString('base64')};
 assert.equal(verifySystemRelease(oldFeed,build,assets,publicKey).release,'v1.0.3');
 console.log('PASS historical publication verification remains available');
+const hd=JSON.parse(JSON.stringify(manifests));
+for(const edition of ['root','no-root']){
+ hd.system[edition+'-720p']=JSON.parse(JSON.stringify(hd.system[edition]));
+ hd.system[edition+'-720p'].components.find(c=>c.name===(edition==='root'?'root':'home')).url=hd.system[edition+'-720p'].components.find(c=>c.name===(edition==='root'?'root':'home')).url.replace('_all.ipk','_720p_all.ipk');
+}
+const hdFeeds=signFeeds(hd,privateKey,publicKey);
+for(const edition of ['root','no-root']){
+ assert.ok(hdFeeds['system-update-'+edition+'-720p.json'],'Missing HD system feed');
+ assert.deepEqual(policy.verify(hdFeeds['system-update-'+edition+'-720p.json'],publicKey),hd.system[edition+'-720p']);
+}
+const incomplete=JSON.parse(JSON.stringify(hd));delete incomplete.system['root-720p'];
+assert.throws(()=>signFeeds(incomplete,privateKey,publicKey),/system-release-set/);
+console.log('PASS HD feeds preserve schema1 and exact signed descriptors; incomplete variant sets refused');
+assert.throws(()=>verifySystemRelease(exact['system-update-root.json'],build,assets,publicKey,'1280x720'),/graphics/);
+const switched=JSON.parse(JSON.stringify(hd));switched.system['root-720p']=switched.system.root;
+assert.throws(()=>signFeeds(switched,privateKey,publicKey),/graphics/);
+console.log('PASS signing and publication reject signed FHD envelopes in HD slots');
+const legacyHd={...hd,'root-720p':{...hd.root,url:hd.root.url.replace('_all.ipk','_720p_all.ipk')},'home-720p':{...hd.home,url:hd.home.url.replace('_all.ipk','_720p_all.ipk')},'previous-720p':{...hd.previous,url:hd.previous.url.replace('_all.ipk','_720p_all.ipk')}};
+const allFeeds=signFeeds(legacyHd,privateKey,publicKey);
+assert.ok(allFeeds['root-update-720p.json']);assert.ok(allFeeds['update-720p.json']);
+assert.deepEqual(allFeeds['update-720p.json'].previous,allFeeds['previous-update-720p.json']);
+assert.throws(()=>signFeeds({...legacyHd,'root-720p':legacyHd.root},privateKey,publicKey),/graphics/);
+console.log('PASS HD legacy feeds retain signed exact rollback and refuse FHD slot substitution');
+const {verifyRootRelease,verifyHomeRelease}=require('../../scripts/publish-release.cjs');
+assert.throws(()=>verifyRootRelease(allFeeds['root-update-720p.json'],build,Buffer.from('unused'),publicKey),/graphics/);
+assert.throws(()=>verifyHomeRelease(allFeeds['update-720p.json'],build,Buffer.from('unused'),publicKey),/graphics/);
+const {verifyGraphicsInventory}=require('../../scripts/publish-release.cjs');
+assert.equal(typeof verifyGraphicsInventory,'function','Publication needs explicit historical graphics admission');
+assert.equal(verifyGraphicsInventory({tag:'v1.5.4'}),false);
+assert.throws(()=>verifyGraphicsInventory({tag:'v2.0.0'}),/graphics/);
+const graphics={'1920x1080':{launcher:'launcher.ipk',root:'root'},'1280x720':{launcher:'launcher-720p.ipk',root:'root-720p'}};
+assert.equal(verifyGraphicsInventory({tag:'v2.0.0',graphics,no_root_ota_720p:null}),true);
+assert.throws(()=>verifyGraphicsInventory({tag:'v2.0.0',graphics}),/lineage/);
+const {verifyHdHomeInventory}=require('../../scripts/publish-release.cjs');
+assert.equal(typeof verifyHdHomeInventory,'function');
+const record={version:'2.0.0',helper:'1.0.0',sha256:'a'.repeat(64),previous_version:'1.2.0',previous_sha256:'b'.repeat(64),feed_sha256:'c'.repeat(64)};
+const declared={versions:{home:'2.0.0',helper:'1.0.0'},no_root_ota_720p:record};
+assert.throws(()=>verifyHdHomeInventory(declared,[]),/lineage/);
+const hdAssets=[{name:'update-720p.json'},{name:'previous-update-720p.json'}];
+assert.equal(verifyHdHomeInventory(declared,hdAssets),true);
+assert.equal(verifyHdHomeInventory({no_root_ota_720p:null},[]),false);
+assert.throws(()=>verifyHdHomeInventory({no_root_ota_720p:null},hdAssets),/lineage/);

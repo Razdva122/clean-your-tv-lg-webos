@@ -1,9 +1,15 @@
 # Android stable readiness
 
-Status: **Android 0.5.1 / versionCode 16 is selected for the unpublished 1.5.3
-candidate.** Published 1.5.2 contains Android 0.5.0 / versionCode 15. See the
-[1.5.3 release scope and acceptance limits](../docs/RELEASE-1.5.3.md). Final
-candidate package/signature and upgrade verification remain required below.
+Release **1.6.0** uses **Android 0.6.0 / versionCode 17**. See
+[Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases) for
+published downloads and [1.6.0 scope](../docs/RELEASE-1.6.0.md). The
+[artifact-bound acceptance record](../docs/history/2026-11-02-release-1.6.0-final-acceptance.md) records original-signer
+in-place upgrade, synthetic-data retention and real native Store checks on an
+API 35 ARM64 userdebug emulator. The owner accepted emulator-only verification
+for that session. Native instrumentation used supported adb-root after normal
+shell signature admission was refused; the production APK stayed unchanged and
+non-debuggable. New APK bytes still require exact signer/payload and upgrade
+verification; earlier results do not automatically accept a replacement build.
 
 For the 1.4.0 release, on 2026-10-27 the maintainer explicitly accepted emulator
 verification as sufficient because no physical phone was available. That dated
@@ -29,9 +35,11 @@ Android success, infer Root acceptance, or close the original unfinished-removal
 report. Its `status:needs-info` remains appropriate for the outstanding original
 reporter response.
 
-No physical Android result for 1.5.3 is recorded here. Physical device checks
-remain follow-up; the dated maintainer decision above and the existing user
-success retain their original scope and do not accept new candidate bytes.
+No physical Android result for 1.6.0 is recorded here. Physical device checks
+remain follow-up. The current emulator decision and historical user success
+retain their own exact artifact/environment scopes. Synthetic key markers do
+not test real SSH authentication; recovery-screen visibility and phone-to-TV
+operations remain untested by the native Store instrumentation.
 
 ## Production package and update identity
 
@@ -124,7 +132,7 @@ Separate Android installer results from TV runtime compatibility.
 | --- | --- | --- |
 | No-root installation from phone | v1.1.0 user success in #24 | Record device details and verify final candidate |
 | Root installation from phone | Not established by #24 | Physical install, status and recovery |
-| Published preview update without data loss | Original-signer code11-to-code12 file retention and native Store fixture below | Final candidate code16 original-signer APK; physical update |
+| Published preview update without data loss | Artifact-bound original-signer code 16-to-17 upgrade and native Store retention/refusal checks; see current acceptance record | Replacement APK verification; physical update |
 | Activity recreation and prompt replay | Emulator idle UI rotation/background return; native bounded replay and browser suites | Rotation/background return during a live phone-to-TV operation |
 | Phone lock and denied notification permission | Emulator idle UI checks; foreground service and bounded wake lock in code | Verify operation continuation / clear outcome on actual Android devices |
 | Network loss / TV unavailable | Existing negative connection fixtures and recovery UI | Interrupt real transfer; status/restore must reconcile before retry |
@@ -134,7 +142,8 @@ Separate Android installer results from TV runtime compatibility.
 | TV power / recovery | Not established by successful package installation | Standby/wake and cold boot separately; status/restore and rollback within supported scope |
 
 For release 1.4.0, the maintainer accepted the emulator-tested scope for suffix
-removal. That decision does not accept new 1.5.3 artifacts. The API 24 /
+removal. The separate 1.6.0 emulator decision is recorded with its exact tested
+artifacts; neither decision accepts changed APK bytes. The API 24 /
 WebView 108 floor remains a declared minimum, not a tested device claim. Emulator
 checks, CI success and one successful setup do not establish universal phone/TV
 compatibility. Report failures with Android/WebView versions, phone and TV model,
@@ -192,8 +201,8 @@ No real TV profiles, private keys or TV connections were used.
   non-debuggable release target.
 
 These checks supported the maintainer's dated suffix decision, not physical-TV
-acceptance. For that release, the final 0.4.0/code13 protected-CI artifact required
+acceptance. For that release, the final 0.4.0/code 13 protected-CI artifact required
 separate signer, metadata, payload and original-signer upgrade verification; the
-code12 results alone could not satisfy those checks. These historical results
-also do not establish acceptance of the 1.5.3 / Android 0.5.1 / code16 artifact,
+code 12 results alone could not satisfy those checks. These historical results
+also do not establish acceptance of the 1.5.3 / Android 0.5.1 / code 16 artifact,
 which requires its own exact source, hash and verification record.

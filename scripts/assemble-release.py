@@ -116,7 +116,7 @@ def resolve_build_source(commit, build_run=None):
     return run
 
 
-def verify_embedded(data, versions):
+def verify_embedded(data, versions, *, allow_legacy=False):
     manifest = json.loads(data('payload.json'))
     if not manifest['files']: raise ValueError('Empty installer payload')
     for name, digest in manifest['files'].items():
@@ -130,6 +130,19 @@ def verify_embedded(data, versions):
         info = json.loads(package.data_files(data(filename))['usr/palm/applications/' + app + '/appinfo.json'])
         if info['id'] != app or info['version'] != versions[key]:
             raise ValueError('Embedded application version mismatch: ' + app)
+    if not allow_legacy and 'graphics' not in manifest:raise ValueError('Embedded graphics inventory required')
+    if 'graphics' in manifest:
+        expected={'1920x1080':{'launcher':'launcher.ipk','root':'root'},'1280x720':{'launcher':'launcher-720p.ipk','root':'root-720p'}}
+        if manifest['graphics']!=expected:raise ValueError('Embedded graphics inventory mismatch')
+        for graphics,paths in expected.items():
+            for kind,app in [('launcher','com.gathin.tvhome'),('root',package.ROOT_APP)]:
+                name=paths[kind]
+                if kind=='root':
+                    if json.loads(data(name+'/release.json'))['version']!=versions['root']:raise ValueError('Embedded Root variant version mismatch')
+                    name+='/'+json.loads(data(name+'/bundle.json'))['package']
+                if name not in manifest['files']:raise ValueError('Unhashed embedded graphics package')
+                info=json.loads(package.data_files(data(name))['usr/palm/applications/'+app+'/appinfo.json'])
+                if info.get('id')!=app or info.get('version')!=versions['root' if kind=='root' else 'home'] or info.get('resolution')!=graphics:raise ValueError('Embedded graphics resolution/version mismatch')
     return len(manifest['files'])
 
 
@@ -144,7 +157,7 @@ def open_deb_tar(parts, prefix):
     return tarfile.open(fileobj=io.BytesIO(raw))
 
 
-def verify_windows_desktop(path, versions):
+def verify_windows_desktop(path, versions, *, allow_legacy=False):
     """Reject CLI executables, wrong versions and mismatched embedded TV files."""
     with zipfile.ZipFile(path) as archive:
         metadata = json.loads(archive.read('cytv-desktop/version.json'))
@@ -159,10 +172,10 @@ def verify_windows_desktop(path, versions):
                 or struct.unpack_from('<H', executable, pe + 24)[0] != 0x20b
                 or struct.unpack_from('<H', executable, pe + 92)[0] != 2):
             raise ValueError('Windows desktop executable must be an x64 GUI application')
-        return verify_embedded(lambda name: archive.read('cytv-desktop/_internal/payload/' + name), versions)
+        return verify_embedded(lambda name: archive.read('cytv-desktop/_internal/payload/' + name), versions, allow_legacy=allow_legacy)
 
 
-def verify_android_package(path, report, versions, commit):
+def verify_android_package(path, report, versions, commit, *, allow_legacy=False):
     """Require the APK checked by the trusted build job, including its signer."""
     metadata = json.loads(Path(report).read_text())
     expected = {'schema': 1, 'source_commit': commit, 'versions': versions,
@@ -176,7 +189,7 @@ def verify_android_package(path, report, versions, commit):
     with zipfile.ZipFile(path) as archive:
         if json.loads(archive.read('assets/cytv-build.json')) != {'schema': 1, 'source_commit': commit, 'versions': versions}:
             raise ValueError('Android embedded source provenance mismatch')
-        return verify_embedded(lambda name: archive.read('assets/payload/' + name), versions)
+        return verify_embedded(lambda name: archive.read('assets/payload/' + name), versions, allow_legacy=allow_legacy)
 
 
 def assemble_homebrew(artifacts, output, approval):
@@ -260,6 +273,7 @@ def assemble(artifacts, output, versions, commit, build_commit=None):
             {name:(output/name).read_bytes() for name in system_files})
         with zipfile.ZipFile(output / ('clean-your-tv-no-root-' + versions['home'] + '.zip'), 'w', zipfile.ZIP_DEFLATED) as archive:
             archive.write(payload / 'launcher.ipk', 'com.gathin.tvhome_' + versions['home'] + '_all.ipk')
+            archive.write(payload / 'launcher-720p.ipk', 'com.gathin.tvhome_' + versions['home'] + '_720p_all.ipk')
             archive.write(payload / 'helper.ipk', 'com.local.nativehome_' + versions['helper'] + '_arm.ipk')
             archive.writestr('com.cleanyourtv.updater_' + versions['updater'] + '_all.ipk', updater)
             for name in ('docs/MANUAL_INSTALL.md', 'docs/INSTALL.md', 'docs/CLI.md', note, 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'scripts/update-permissions.cjs', 'scripts/lib/update-permissions.cjs', 'updater-service/permissions.js'):
@@ -269,6 +283,7 @@ def assemble(artifacts, output, versions, commit, build_commit=None):
         with tarfile.open(fileobj=io.BytesIO(source)) as archive: archive.extractall(staging, filter='data')
         (staging / 'build').mkdir()
         shutil.copytree(payload / 'root', staging / 'build/root-candidate')
+        shutil.copytree(payload / 'root-720p', staging / 'build/root-candidate-720p')
         shutil.copytree(payload / 'root-updater', staging / 'build/root-updater')
         shutil.copytree(payload / 'system-updater', staging / 'build/system-updater')
         with zipfile.ZipFile(output / ('clean-your-tv-no-root-' + versions['home'] + '.zip'),'a',zipfile.ZIP_DEFLATED) as archive:
@@ -277,7 +292,7 @@ def assemble(artifacts, output, versions, commit, build_commit=None):
         with tarfile.open(output / (staging.name + '.tar.gz'), 'w:gz') as archive: archive.add(staging, arcname=staging.name)
     shutil.copyfile(ROOT / note, output / 'RELEASE-NOTES.md')
     build_run = os.environ.get('SOURCE_BUILD_RUN', os.environ.get('GITHUB_RUN_ID', ''))
-    info = {'tag': 'v' + versions['release'], 'source_commit': commit, 'build_source_commit': build_commit or commit, 'versions': versions,
+    info = {'graphics': builder['GRAPHICS'], 'tag': 'v' + versions['release'], 'source_commit': commit, 'build_source_commit': build_commit or commit, 'versions': versions,
             'release_date': datetime.now(timezone.utc).date().isoformat(),
             'ci_build_run': {'id': build_run, 'url': os.environ.get('GITHUB_SERVER_URL', 'https://github.com') + '/' + os.environ.get('GITHUB_REPOSITORY', 'Razdva122/clean-your-tv-lg-webos') + '/actions/runs/' + build_run, 'conclusion': 'success'},
             'ci_test_run': {'id': build_run, 'conclusion': 'success', 'workflow': 'cytv.yml / validation'},

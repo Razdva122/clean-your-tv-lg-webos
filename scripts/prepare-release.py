@@ -128,7 +128,7 @@ def verify_helper_transition(current, prior, packages, prior_packages, compatibi
             raise ValueError('Helper rollback compatibility runtime changed: ' + name)
 
 
-def prepare_manifests(tag, build, packages, prior_build, prior_packages, rollback=None, notes=None, compatibility=None):
+def prepare_manifests(tag, build, packages, prior_build, prior_packages, rollback=None, notes=None, compatibility=None, rollback_hd=None):
     if not re.fullmatch(r'v\d{1,4}\.\d{1,4}\.\d{1,4}', tag) or build['tag'] != tag:
         raise ValueError('Invalid release tag')
     current, prior = build['versions'], prior_build['versions']
@@ -169,15 +169,53 @@ def prepare_manifests(tag, build, packages, prior_build, prior_packages, rollbac
     name = APPS['root'] + '_' + current['root'] + '_all.ipk'
     raw = packages['root']; files[name] = raw
     root = {'schema': 1, 'edition': 'root', 'application': APPS['root'], 'release': tag, 'version': current['root'], 'runtime': 1, 'updater': 1, 'profile': 1, 'url': URL + tag + '/' + name, 'sha256': digest(raw), 'size': len(raw), 'notes': notes}
-    return {'root': root, 'home': home, 'previous': previous}, files
+    manifests={'root': root, 'home': home, 'previous': previous}
+    hd={kind:packages[kind+'-720p'] for kind in ('home','root') if kind+'-720p' in packages}
+    if hd:
+        if set(hd)!={'home','root'}:raise ValueError('Both HD package variants required')
+        for kind in ('home','root'):
+            info=json.loads(data_files(packages[kind])['usr/palm/applications/'+APPS[kind]+'/appinfo.json'])
+            if info.get('resolution')!='1920x1080':raise ValueError('FHD package resolution mismatch')
+        for kind,raw in hd.items():
+            package_version(raw,kind,current[kind])
+            info=json.loads(data_files(raw)['usr/palm/applications/'+APPS[kind]+'/appinfo.json'])
+            if info.get('resolution')!='1280x720':raise ValueError('HD package resolution mismatch')
+            old=prior_packages.get(kind+'-720p')
+            if old is not None:
+                package_version(old,kind,prior[kind])
+                old_info=json.loads(data_files(old)['usr/palm/applications/'+APPS[kind]+'/appinfo.json'])
+                if old_info.get('resolution')!='1280x720':raise ValueError('Prior HD package resolution mismatch')
+            if old is None and version(current[kind])<=version(prior[kind]):raise ValueError('First HD release requires new Home and Root component versions')
+            if old is not None and current[kind]==prior[kind] and raw!=old:raise ValueError(kind+' HD package changed without version bump')
+            name=APPS[kind]+'_'+current[kind]+'_720p_all.ipk';files[name]=raw
+        manifests['root-720p']={**root,'url':URL+tag+'/'+APPS['root']+'_'+current['root']+'_720p_all.ipk','sha256':digest(hd['root']),'size':len(hd['root'])}
+        # Preserve an established signed channel on Root/installer-only releases.
+        old=prior_packages.get('home-720p');old_version=prior['home']
+        if current['home']==prior['home']:
+            if rollback_hd is None:
+                if prior_build.get('no_root_ota_720p') is not None:raise ValueError('Existing signed HD Home rollback required')
+                old=None
+            else:
+                descriptor,old=rollback_hd;old_version=descriptor['home']
+                if descriptor['helper']!=current['helper'] or digest(old)!=descriptor['sha256']:raise ValueError('HD rollback helper/digest mismatch')
+        if old is not None and current['helper']==prior['helper']:
+            package_version(old,'home',old_version)
+            info=json.loads(data_files(old)['usr/palm/applications/'+APPS['home']+'/appinfo.json'])
+            if info.get('resolution')!='1280x720':raise ValueError('HD rollback resolution mismatch')
+            if not version('1.2.0')<=version(old_version)<version(current['home']):raise ValueError('HD rollback version incompatible')
+            name=APPS['home']+'_'+old_version+'_720p_all.ipk';files[name]=old
+            manifests['home-720p']={**home,'url':URL+tag+'/'+APPS['home']+'_'+current['home']+'_720p_all.ipk','sha256':digest(hd['home'])}
+            manifests['previous-720p']={**previous,'home':old_version,'url':URL+tag+'/'+name,'sha256':digest(old)}
+    return manifests, files
 
 
 def verify_system_assets(manifests,build,files):
     expected={'root':{'root','root-updater','root-infrastructure'},'no-root':{'home','helper','updater'}}
     apps={**APPS,'updater':'com.cleanyourtv.updater','root-updater':'com.cleanyourtv.root.updater'}
-    if set(manifests)!=set(expected):raise ValueError('Both system release sets required')
-    for edition,names in expected.items():
-        manifest=manifests[edition]
+    if set(manifests) not in (set(expected),set(expected)|{'root-720p','no-root-720p'}):raise ValueError('Both system release sets required')
+    for key,manifest in manifests.items():
+        edition=key.removesuffix('-720p');names=expected[edition]
+        graphics='1280x720' if key.endswith('-720p') else '1920x1080'
         if edition=='root' and manifest.get('minimumSupervisorVersion')!='1.1.1':raise ValueError('Root minimum supervisor 1.1.1 required')
         if edition=='no-root' and 'minimumSupervisorVersion' in manifest:raise ValueError('Unexpected No-root minimum supervisor')
         if manifest.get('edition')!=edition or manifest.get('release')!=build['tag'] or manifest.get('schema')!=1 or manifest.get('supervisor')!=1 or {c['name'] for c in manifest['components']}!=names or len(manifest['components'])!=len(names):raise ValueError('Invalid system release set')
@@ -193,6 +231,9 @@ def verify_system_assets(manifests,build,files):
                 if item.get('application')!=app or item.get('kind')!='ipk':raise ValueError('System component identity mismatch')
                 info=json.loads(data_files(raw)['usr/palm/applications/'+app+'/appinfo.json'])
                 if info.get('id')!=app or info.get('version')!=item['version']:raise ValueError('System package version mismatch')
+                if item['name'] in ('home','root'):
+                    suffix='_720p_all.ipk' if graphics=='1280x720' else '_all.ipk'
+                    if filename!=app+'_'+item['version']+suffix or info.get('resolution','1920x1080')!=graphics:raise ValueError('System package resolution mismatch')
             else:
                 if item.get('kind')!='infrastructure':raise ValueError('Invalid system infrastructure')
                 with tarfile.open(fileobj=io.BytesIO(raw),mode='r:gz') as archive:
@@ -255,6 +296,8 @@ def bundles(meta, folder):
     download(meta, home_name, folder)
     with zipfile.ZipFile(folder / home_name) as archive:
         home = archive.read(APPS['home'] + '_' + versions['home'] + '_all.ipk')
+        hd_name=APPS['home']+'_'+versions['home']+'_720p_all.ipk'
+        home_hd=archive.read(hd_name) if hd_name in archive.namelist() else None
         helper = archive.read(APPS['helper'] + '_' + versions['helper'] + '_arm.ipk')
     root_name = 'clean-your-tv-root-' + versions['root'] + '.tar.gz'
     download(meta, root_name, folder)
@@ -263,7 +306,41 @@ def bundles(meta, folder):
         members = [m for m in archive if m.name.endswith(suffix) and m.isfile() and m.size <= 32 * 1024 * 1024]
         if len(members) != 1: raise ValueError('Missing or ambiguous Root package')
         root = archive.extractfile(members[0]).read()
-    return build, {'home': home, 'helper': helper, 'root': root}
+        hd_suffix=suffix.replace('/root-candidate/','/root-candidate-720p/')
+        hd_members=[m for m in archive if m.name.endswith(hd_suffix) and m.isfile() and m.size<=32*1024*1024]
+        if len(hd_members)>1:raise ValueError('Ambiguous HD Root package')
+        root_hd=archive.extractfile(hd_members[0]).read() if hd_members else None
+    packages={'home':home,'helper':helper,'root':root}
+    if home_hd is not None:packages['home-720p']=home_hd
+    if root_hd is not None:packages['root-720p']=root_hd
+    return build,packages
+
+
+def verified_hd_home_rollback(meta, folder, versions, candidate_bytes):
+    folder=Path(folder);folder.mkdir(parents=True,exist_ok=False)
+    channel=download(meta,'update-720p.json',folder)
+    previous=download(meta,'previous-update-720p.json',folder)
+    envelope=json.loads(channel)
+    if envelope.get('previous')!=json.loads(previous):raise ValueError('HD rollback feed mismatch')
+    code="const fs=require('fs'),p=require('./updater-service/policy'),e=JSON.parse(fs.readFileSync(process.argv[1])),key=fs.readFileSync('updater-service/release-public.pem');process.stdout.write(JSON.stringify({candidate:p.verify(e,key),previous:p.verify(e.previous,key)}));"
+    checked=json.loads(subprocess.check_output(['node','-e',code,str(folder/'update-720p.json')],cwd=ROOT,stderr=subprocess.PIPE))
+    candidate,prior=checked['candidate'],checked['previous']
+    if candidate['home']!=versions['home'] or candidate['helper']!=versions['helper'] or digest(candidate_bytes)!=candidate['sha256']:raise ValueError('HD published candidate mismatch')
+    for item in (candidate,prior):
+        name=APPS['home']+'_'+item['home']+'_720p_all.ipk'
+        if item['url']!=URL+item['release']+'/'+name:raise ValueError('HD published package URL mismatch')
+        location=folder/item['home'];location.mkdir(exist_ok=True)
+        origin=release_metadata(item['release'])
+        if origin.get('draft') is not False or origin.get('prerelease') is not False:raise ValueError('HD rollback origin is not a published stable release')
+        raw=download(origin,name,location)
+        if digest(raw)!=item['sha256']:raise ValueError('HD published package digest mismatch')
+        package_version(raw,'home',item['home'])
+        info=json.loads(data_files(raw)['usr/palm/applications/'+APPS['home']+'/appinfo.json'])
+        if info.get('resolution')!='1280x720':raise ValueError('HD published package resolution mismatch')
+        if item is candidate and raw!=candidate_bytes:raise ValueError('HD published candidate bytes mismatch')
+        if item is prior:rollback=(prior,raw)
+    if prior['helper']!=candidate['helper'] or not version('1.2.0')<=version(prior['home'])<version(candidate['home']):raise ValueError('HD published rollback incompatible')
+    return rollback
 
 
 def prepare_homebrew(build, prior_build, current_download, prior_download):
@@ -307,6 +384,8 @@ def main():
     with tempfile.TemporaryDirectory(prefix='cytv-release-') as tmp:
         tmp = Path(tmp)
         build, packages = bundles(meta, tmp / 'current')
+        graphics={'1920x1080':{'launcher':'launcher.ipk','root':'root'},'1280x720':{'launcher':'launcher-720p.ipk','root':'root-720p'}}
+        if build.get('graphics')!=graphics or not {'home-720p','root-720p'}<=packages.keys():raise ValueError('Both graphics release bundles and metadata required')
         prior_build, prior_packages = bundles(prior_meta, tmp / 'previous')
         rollback = None
         if build['versions']['home'] == prior_build['versions']['home']:
@@ -319,9 +398,12 @@ def main():
             raw = download(rollback_meta, Path(prior['url']).name, rollback_dir)
             if digest(raw) != prior['sha256']: raise ValueError('Signed rollback digest mismatch')
             rollback = prior, raw
+        rollback_hd=None
+        if build['versions']['home']==prior_build['versions']['home'] and prior_build.get('no_root_ota_720p') is not None:
+            rollback_hd=verified_hd_home_rollback(prior_meta,tmp/'hd-rollback',prior_build['versions'],prior_packages['home-720p'])
         approval_path = ROOT / 'native/helper-rollback-compatibility.json'
         compatibility = json.loads(approval_path.read_text()) if approval_path.exists() else None
-        manifests, files = prepare_manifests(args.tag, build, packages, prior_build, prior_packages, rollback, meta.get('body'), compatibility)
+        manifests, files = prepare_manifests(args.tag, build, packages, prior_build, prior_packages, rollback, meta.get('body'), compatibility, rollback_hd=rollback_hd)
         system = json.loads(download(meta, 'system-manifests.json', tmp / 'current'))
         system_files = {}
         (tmp / 'system-assets').mkdir()
@@ -330,7 +412,13 @@ def main():
                 name = item['url'].rsplit('/', 1)[1]
                 if name not in system_files:
                     system_files[name] = download(meta, name, tmp / 'system-assets')
+        if 'home-720p' in packages and set(system)!={'root','no-root','root-720p','no-root-720p'}:raise ValueError('Both graphics system release sets required')
+        manifests['graphics']=graphics
         manifests['system'] = verify_system_assets(system, build, system_files)
+        for variant,manifest in system.items():
+            for item in manifest['components']:
+                kind=item['name']+('-720p' if variant.endswith('-720p') and item['name'] in ('home','root') else '')
+                if kind in packages and system_files[item['url'].rsplit('/',1)[1]]!=packages[kind]:raise ValueError('System release package differs from exact bundle: '+kind)
         files.update(system_files)
         files.update(prepare_homebrew(build, prior_build,
             lambda name: download(meta, name, tmp/'current'),
@@ -344,6 +432,10 @@ def main():
     build['system_ota'] = {edition: {'release': args.tag, 'components': manifest['components'], 'feed_sha256': digest((output / ('system-update-'+edition+'.json')).read_bytes())} for edition, manifest in manifests['system'].items()}
     build['root_ota'] = {'version': root['version'], 'release': args.tag, 'ipk': Path(root['url']).name, 'sha256': root['sha256'], 'feed_sha256': digest((output / 'root-update.json').read_bytes())}
     build['no_root_ota'] = {'version': home['home'], 'helper': home['helper'], 'sha256': home['sha256'], 'previous_version': prior['home'], 'previous_sha256': prior['sha256']}
+    build['no_root_ota_720p']=None
+    if 'home-720p' in manifests:
+        home_hd,prior_hd=manifests['home-720p'],manifests['previous-720p']
+        build['no_root_ota_720p']={'version':home_hd['home'],'helper':home_hd['helper'],'sha256':home_hd['sha256'],'previous_version':prior_hd['home'],'previous_sha256':prior_hd['sha256'],'feed_sha256':digest((output/'update-720p.json').read_bytes())}
     (output / 'BUILD-INFO.json').write_text(json.dumps(build, indent=2) + '\n')
     hashes = {}
     for asset in meta['assets']:

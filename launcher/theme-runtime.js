@@ -118,6 +118,14 @@
         ribbonRule('#topButtons .pill svg', 'width:32px;height:32px;margin:0;');
       }
     }
+    // Runtime rules do not pass through PostCSS. Old WebKit only understands
+    // prefixed forms; keep the normal declarations and charge both to the budget.
+    var style = root.document.documentElement && root.document.documentElement.style;
+    if (style && !('transform' in style) && 'webkitTransform' in style) {
+      css = css.replace(/(^|[;{])\s*(transform(?:-origin)?|transition|animation|justify-content):([^;}]+)/g,
+        '$1-webkit-$2:$3;$2:$3');
+      if (css.length > policy.limits.emittedCssBytes) fail('css-budget', 'emitted CSS bytes');
+    }
     /* All untrusted input is checked before either geometry or styles are changed. */
     if (root.HomeLayoutState && root.HomeLayoutState.setThemeLayout) root.HomeLayoutState.setThemeLayout(manifest.layout);
     else if (root.HomeLayoutState && root.HomeLayoutState.setThemeColumns) root.HomeLayoutState.setThemeColumns(manifest.layout.columns);

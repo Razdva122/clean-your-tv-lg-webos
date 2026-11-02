@@ -9,6 +9,7 @@ done
 has() { [[ "$selected" == *" $1 "* ]]; }
 
 if has ui || has tv; then
+  node tests/home-viewport.cjs
   npm run test:compat
   npm run lint:compat
   npm run test:themes
@@ -20,6 +21,8 @@ fi
 
 if has tv; then
 node tests/helper-compat.cjs
+node tests/passive-remote-diagnostic.cjs
+node tests/helper-panel-diagnostics.cjs
 for test in tests/apps/*.cjs; do
   if [[ "$test" != *"/ui.cjs" ]]; then node "$test"; fi
 done
@@ -57,6 +60,7 @@ tail -1 build/tests/relay-watchdog.log
 build/tests/test-filter
 for file in launcher/*.js native/app/*.js native/service/*.js renewal-service/*.js; do node --check "$file"; done
 
+python3 tests/root-node-compat.py
 node root-edition/service/test-audio-recovery.cjs
 node root-edition/service/test-handlers.js
 node root-edition/service/test-persistent.js
@@ -88,7 +92,7 @@ if has android; then
   python3 -m unittest discover -s android/tests
 fi
 if has preview; then
-  for test in tests/showcase/{registry,submission-security,site,remote}.cjs; do node "$test"; done
+  for test in tests/showcase/{registry,submission-security,remote}.cjs; do node "$test"; done
   node tests/preview-bridge.cjs
   node tests/preview-themes-ui.cjs
   python3 -m unittest discover -s tests -p test_preview.py

@@ -88,13 +88,13 @@ def trusted_host_keys(known, host, port, standard=None):
             if not fields or not any(matches(pattern) for pattern in fields[0].split(',')):
                 continue
             if marker:
-                raise UserError('This TV has a revoked or unsupported SSH trust record. Verify it through your existing trusted SSH setup before continuing.')
+                raise UserError('This TV has a revoked or unsupported SSH trust record. Verify it through your existing trusted SSH setup before continuing.', reason_code='ssh-trust-record')
             try:
                 entry = HostKeyEntry.from_line(' '.join(fields))
             except (paramiko.SSHException, paramiko.hostkeys.InvalidHostKey, ValueError):
-                raise UserError('The saved SSH key for this TV could not be read. Verify the entry through your existing trusted SSH setup before continuing.') from None
+                raise UserError('The saved SSH key for this TV could not be read. Verify the entry through your existing trusted SSH setup before continuing.', reason_code='ssh-trust-record') from None
             if entry is None:
-                raise UserError('The saved SSH key for this TV is unsupported. Verify it through your existing trusted SSH setup before continuing.')
+                raise UserError('The saved SSH key for this TV is unsupported. Verify it through your existing trusted SSH setup before continuing.', reason_code='ssh-trust-record')
             if not pinned:
                 keys.add(name, entry.key.get_name(), entry.key)
     return keys
@@ -227,7 +227,7 @@ class SSH:
         class PinnedPolicy(paramiko.MissingHostKeyPolicy):
             def missing_host_key(self, connection, hostname, key):
                 if not trust(fingerprint(key), profile['edition'] == 'root'):
-                    raise UserError('SSH host key was not verified. Connection cancelled.')
+                    raise UserError('SSH host key was not verified. Connection cancelled.', reason_code='ssh-identity-unverified')
                 connection.get_host_keys().add(hostname, key.get_name(), key)
                 save_host_keys(connection.get_host_keys(), known)
 

@@ -26,7 +26,9 @@ function javascript(code, filename) {
 }
 
 async function stylesheet(code, filename) {
-  const transformed = await postcss([presetEnv({browsers: targets, stage: 3, preserve: false,
+  // webOS 2 uses WebKit 538.2: emit its prefixed flex/transform/animation forms.
+  // Safari 8 supplies the prefix profile, not a claim of complete TV API support.
+  const transformed = await postcss([presetEnv({browsers: targets.concat('Safari 8'), stage: 3, preserve: false,
     features: {'logical-properties-and-values': true, 'hexadecimal-alpha-notation': true}})]).process(code, {from: filename, map: false});
   const unsupported = [];
   transformed.root.walkDecls(/^(overflow-wrap|word-wrap)$/, declaration => {

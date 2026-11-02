@@ -18,6 +18,24 @@ class HostCancellationTests(unittest.TestCase):
         self.store.begin(self.profile,'install',stage='coordinator-submitted',product_operation=self.identifier,product_payload='/tmp/fixture',requires_updater=True,migrate=False)
         self.original=self.store.pending(self.profile)
         self.disposition=dict(operation=self.identifier,state='cancelled-and-removed',lease_terminal=True,proof_sha256=self.proof,home_changed=False)
+    def test_password_required_inspection_stops_before_staging_and_preserves_original_state(self):
+        import sys
+        from unittest.mock import patch
+        self.store.save(self.profile)
+        known=self.store.device_dir(self.profile)/'known_hosts'
+        known.write_bytes(b'original trusted host pin')
+        def connect(profile,directory,secret,trust):
+            self.assertFalse(trust('untrusted-host-fingerprint',True))
+            secret('Root SSH password (hidden): ')
+            self.fail('Password-only inspection proceeded')
+        argv=['recovery','inspect','--code-bundle','/unused','--operation',self.identifier,'--code-sha256','c'*64]
+        with patch.object(sys,'argv',argv),patch.object(self.tool,'code_inventory',return_value=({}, {}, 'c'*64)), \
+             patch.object(self.tool.state,'Store',return_value=self.store),patch('cytv.transport.SSH.connect',side_effect=connect), \
+             self.assertRaisesRegex(RuntimeError,'saved_automatic_authentication_required'):
+            self.tool.main()
+        self.assertEqual(known.read_bytes(),b'original trusted host pin')
+        self.assertEqual(self.store.pending(self.profile),self.original)
+
     def test_verified_cancel_retains_host_history_before_finishing_pending(self):
         inspect=Mock(return_value=self.disposition)
         result=self.tool.reconcile(self.store,self.profile,self.identifier,'c'*64,self.proof,inspect)

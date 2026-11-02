@@ -13,7 +13,7 @@ async function offerFixture(status,body,error){
  const vm=require('vm'),fs=require('fs'),path=require('path'),EventEmitter=require('events');
  const callbacks={},output={stdout:'',stderr:'',exitCode:0},directory=path.resolve(__dirname,'../../system-updater');
  const request=new EventEmitter();request.destroy=()=>{};
- const fakeHttps={get(url,options,respond){queueMicrotask(()=>{
+ const fakeHttps={get(options,respond){queueMicrotask(()=>{
   if(error==='timeout')return;
   if(error){request.emit('error',Object.assign(Error('/private/internal network detail'),{code:error}));return;}
   const response=new EventEmitter();response.statusCode=status;response.headers={};response.resume=()=>{};response.destroy=()=>{};respond(response);
@@ -24,7 +24,7 @@ async function offerFixture(status,body,error){
  const fakeFs={readFileSync(file){if(file===directory+'/release-public.pem')return publicKey.export({type:'spki',format:'pem'});if(file===directory+'/ca-bundle.crt')return 'offline CA fixture';throw Error('unexpected fixture file');}};
  const main={exports:{}};const load=name=>name==='https'?fakeHttps:name==='fs'?fakeFs:require(name);load.main=main;
  vm.runInNewContext(fs.readFileSync(directory+'/policy.js','utf8'),{require:load,module:main,__dirname:directory,process:fakeProcess,Buffer,setTimeout:error==='timeout'?(fn=>{queueMicrotask(fn);return 1;}):setTimeout,clearTimeout});
- callbacks.data('{"edition":"root"}');await callbacks.end();return output;
+ callbacks.data('{"edition":"root","resolution":"1920x1080"}');await callbacks.end();return output;
 }
 (async()=>{
  for(const [status,body,error,expected] of [[404,'',null,'feed-unavailable'],[503,'',null,'connection-error'],[null,'','ECONNRESET','connection-error'],[null,'','timeout','connection-error'],[200,'broken',null,'verification-error'],[200,JSON.stringify(envelope),null,'verification-error']]){
@@ -37,7 +37,8 @@ async function offerFixture(status,body,error){
 const historical=manifest('root'),gated={...historical,minimumSupervisorVersion:'1.1.1'};
 assert.equal(policy.validate(gated).minimumSupervisorVersion,'1.1.1');
 assert.equal(policy.validate(historical).edition,'root');
-for(const value of ['1.1.3','2.0.0','bad',null,111])assert.throws(()=>policy.validate({...gated,minimumSupervisorVersion:value}));
+assert.equal(policy.validate({...gated,minimumSupervisorVersion:'1.2.0'}).minimumSupervisorVersion,'1.2.0');
+for(const value of ['1.2.1','2.0.0','bad',null,111])assert.throws(()=>policy.validate({...gated,minimumSupervisorVersion:value}));
 assert.throws(()=>policy.validate({...manifest(),minimumSupervisorVersion:'1.1.1'}));
 const originalSource=require('child_process').execFileSync('python3',['-c',"import tarfile;print(tarfile.open('tests/system_updates/fixtures/public-1.3.0-supervisor.tar.gz').extractfile('supervisor/system_updater/policy.js').read().decode(),end='')"],{cwd:require('path').resolve(__dirname,'../..'),encoding:'utf8'});
 const original={exports:{}};

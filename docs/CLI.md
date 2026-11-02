@@ -13,9 +13,11 @@ The optional TV ARMv7 Python archive is downloaded separately on demand. End use
 do not need Git, Node.js, Python, Bash, Zig or a separate SSH client.
 
 This is a new installer, not an expansion of the hardware compatibility claim.
-Hardware evidence remains scoped to the documented models. Source/automated checks cannot replace real TV acceptance.
+Hardware evidence remains scoped to the documented models. See the [1.6.0 acceptance scope](history/2026-11-02-release-1.6.0-final-acceptance.md) and available packages on [GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases). Source/automated checks cannot replace real TV acceptance.
 
-## Visible TV checks (unreleased)
+<a id="visible-tv-checks-unreleased"></a>
+
+## Visible TV checks
 
 Console, desktop and Android installers show the existing prerequisites one by
 one: SSH sign-in, edition-specific runtimes, webOS tools/directories, routing
@@ -30,6 +32,49 @@ Root setup can prepare private Python only when its other prerequisites pass;
 check does not justify deleting profiles, resetting pairing or re-rooting. Save
 the diagnostic report and identify the failed requirement first. These rows reuse
 the existing probes; they do not add TV changes or establish hardware acceptance.
+
+In 1.6.0, Root setup also reads the required Home Settings and Home Profiles
+interfaces before private Python/package preparation. Negative, malformed or
+unconfirmed replies stop setup; failed prerequisites remain first in view.
+An absent Settings Home override is allowed with readable effective profiles.
+Passing these reads does not establish firmware compatibility or physical Home
+operation. Root Doctor adds these reads only without pending state; normal
+maintenance/recovery admission remains unchanged.
+
+Console, desktop and Android show localized advice for known connection failures,
+distinguishing SSH access, Root credentials, Developer Mode Key Server and pairing.
+Pending operations and trust failures retain their safety boundaries. Advice does
+not retry, reset trust, delete profiles or authorize recovery. Unknown failures
+retain the original report path. Save the report before any separately verified
+recovery; see the [preflight and guidance contract](development/INSTALLER-PREFLIGHT-HELP.md).
+
+<a id="package-startup-and-physical-home-checks-unreleased"></a>
+
+## Package, startup and physical Home checks
+
+After new setup or separately confirmed Root setup completion, three result rows
+remain separate: **Installed packages**, **Startup readback**, and **Home button —
+your observation**. Package verification is not a launch result. A submitted
+launch with an unknown response is distinct from an accepted request.
+
+No-root makes one optional, read-only, five-second existing Helper process probe
+after successful setup. A process observation does not certify controller/relay
+health or physical Home interception. Missing processes or probe failure remain
+unverified and cannot undo installed packages. Root reuses its existing guardian
+and Home-route readback without an additional activation or status operation.
+
+Open another TV app and briefly press Home once, then report the observed result:
+CYTV Home opened, LG Home/no expected response, or **Not tested / skip** (default).
+`--yes` cannot supply this observation; noninteractive setup leaves it untested.
+EOF/Ctrl+C here skips this optional check after installation, without recovery or
+reinstallation. The response is local and explicitly owner-reported, not an
+automated physical test or permission to publish. Failed/skipped Home results
+preserve installed packages and prioritize report export. Other controls, audio,
+standby, cold boot, OTA and rollback remain separate untested scenarios.
+
+Reports revalidate only fixed `tv.setup_outcome` fields and check statuses.
+Follow-up Status/Doctor do not inherit an earlier owner's Home observation or
+use it as recovery/installation authority. [Evidence contract](development/INSTALLER-OUTCOMES.md).
 
 ## Run
 
@@ -80,25 +125,25 @@ real-TV acceptance; automated tests do not establish hardware compatibility.
 
 ## Installation wizard
 
-If a previous No-root removal is unfinished, installation offers to finish it
-before continuing. This is a separate, default-No confirmation, including with
-`--yes`. It restores LG Home and resumes the existing verified package-removal
-flow; it does not delete the operation journal to bypass recovery. Declining
-keeps recovery data. Non-interactive installation stops with instructions to
-use the interactive installer or `cytv uninstall` for the same saved TV/profile.
-If recovery fails, attach the new diagnostic report for the `uninstall` phase.
+In 1.6.0, `cytv recover` reviews an interrupted setup/removal for
+the same saved TV. Desktop and Android expose **Review recovery options**. A
+pending `install` enters this journey and then returns; no new installation
+starts automatically, even after successful cleanup.
 
-Desktop behavior in 1.3.0 (absent from earlier v1.2.0 installers): successful
-status, doctor or restore checks with an unfinished No-root removal offer
-**Recover and reinstall** for the same saved connection. This uses the existing
-interactive install/removal flow and preserves its separate default-No recovery
-confirmation. Desktop report delivery uses a dedicated report event rather than
-recognizing a filename in translated log text. Failure reports retain the failed
-action, phase, traceback locations and allowlisted error metadata; the window
-offers **Save diagnostic report…** without another doctor run. CLI and Android
-still receive the existing report path through their normal output adapters.
-No new TV endpoint, permission, persistent recovery state or automatic retry is
-introduced. Issue #65's original device failure remains under investigation.
+The check itself and each offered change require separate default-No confirmation,
+including with `--yes`; noninteractive recovery stops. Root checks may run verified
+support code. Only verified Root/updater state permits separately confirmed Home
+activation. No-root removal requires the existing package-service idle guard
+before the offer and again at mutation; unknown removal outcomes or conflicts
+stop before cleanup. Removing packages may reset Home preferences.
+
+Unknown/denied/busy/incomplete state retains all recovery records and offers the
+current attempt's report (`action`/`phase`: `recover`). It never recommends blindly
+repeating Remove, deletes a receipt, infers transaction completion from app lists
+or starts a new setup. Inspect reports before sharing. Report export remains
+optional and cannot invalidate successful TV work. No new endpoint, permission
+or persistent recovery-authority state is introduced. #201's missing package
+terminal evidence and #216's original device failure remain unresolved.
 
 Developer Mode key failures include a safe `connection` object in diagnostic
 JSON: `protocol: developer-key` and an allowlisted `reason_code`:
@@ -322,9 +367,11 @@ Status, doctor, restore and uninstall never download a new interpreter.
 
 ## Root System Updater replacement
 
-Root installers since 1.5.0 contain System Updater 1.1.2. The explicit
-replacement command accepts an installed 1.1.0 or 1.1.1 after verifying its
+Version 1.5.4 installers contain System 1.1.2; 1.6.0 selects System 1.2.0.
+The explicit replacement command still accepts only installed 1.1.0/1.1.1 after verifying its
 retained code, owner package, registration and finished recovery state.
+Installed 1.1.2 remains pinned with its old channels; 1.6.0 provides no
+general migration for it. Do not force replacement or remove recovery data.
 With the existing trusted Root connection:
 
 ```sh
@@ -347,10 +394,14 @@ A private local receipt is synchronized before installation/removal, and
 recovery attempts have separate receipts. A failed command never means a package
 was not installed. **Do not delete journals or rerun installation blindly.**
 
-Run `cytv status` first. A No-root installation can be reconciled when expected
-installed asset/config hashes and versions match; this verifies files, not active
-input handling. Root reconciliation requires the terminal deployment stage and
-verified recovery integrity. Verified package absence can reconcile removal.
+In 1.6.0, choose `cytv recover` to review allowed actions
+with separate confirmation. `cytv status` remains a state check. No-root status
+keeps an interrupted install/removal receipt unchanged. Matching versions,
+installed files/hashes or absent apps do not prove that the original installer
+transaction terminated or that service registration completed. There is no
+supported file-only reconciliation for a denied/unknown installer outcome.
+Root reconciliation still requires its terminal deployment stage and verified
+recovery integrity. See [No-root authority limits](development/NO-ROOT-PACKAGE-AUTHORITY.md).
 
 An incomplete install may be explicitly removed only after the TV installer reports
 idle. An uncertain removal is not submitted again. `restore` remains available
@@ -399,6 +450,9 @@ desktop OS/architecture, edition, action, failed phase, pending action/stage and
 stack **file/function/line locations**. It excludes exception text, source lines,
 locals, addresses, identity paths, credentials, app lists, environment and raw TV
 logs. No report is submitted automatically.
+
+In 1.6.0 (#200), host private-Python acquisition failures add only an allowlisted
+`python_cache.reason`. See [cache failure categories](OPTIONAL-PYTHON.md#unreleased-host-cache-failure-categories-200).
 
 Since 1.2.0 (#51): a definite Luna rejection adds a `luna` object with a fixed
 operation category (`package-install`, `package-remove`, `package-status` or

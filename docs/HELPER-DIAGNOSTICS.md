@@ -111,3 +111,20 @@ separate standby/wake from cold boot, check Home and arrows/OK/Back/volume/point
 confirm triple Home and manual resume, and record exact build hashes/versions.
 No new TV install or standby, cold boot, audio, OTA or rollback result is claimed.
 The different arrow-key symptom in #96 remains unresolved.
+
+<a id="candidate-panel-caller-diagnostics-207"></a>
+
+## Panel caller diagnostics (#207)
+
+In 1.6.0, the Home Helper panel offers **Show diagnostics / Hide diagnostics**.
+It displays a bounded snapshot of its actual existing Helper-status and, when
+already eligible, Home-status requests. Viewing the snapshot issues no RPC and
+starts no controller. Error text, identities, addresses and raw replies are not
+exported. Unknown/malformed/timeout states remain distinct; success does not prove
+physical Home interception. Share the small JSON only when requested, after
+reviewing it; a full screenshot or raw log is unnecessary.
+
+This is separate from the opt-in Home event recording that requires a running
+Helper. [Caller outcomes and 720p boundaries](development/HOME-GRAPHICS-RESOLUTION.md),
+[passive IR preparation](development/PASSIVE-REMOTE-DIAGNOSTICS.md). No new physical
+acceptance is claimed, and no extra owner-device operation is authorized here.

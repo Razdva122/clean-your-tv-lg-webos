@@ -4,12 +4,13 @@ const base=process.env.PREVIEW_URL||'http://127.0.0.1:8879';
 (async()=>{
  const browser=await chromium.launch({headless:true,channel:'chrome'});
  try{
-  for(const locale of ['en','de','es','pt-BR','fr','it','ko','hi','pl','ru','zh-Hans','zh-Hant'])for(const [width,height] of [[1920,1080],[1280,720]]){
+  for(const locale of ['en','cs','de','es','pt-BR','fr','it','ko','hi','pl','ru','zh-Hans','zh-Hant'])for(const [width,height] of [[1920,1080],[1280,720]]){
    const page=await browser.newPage({viewport:{width,height},locale}),errors=[];
    page.on('pageerror',e=>errors.push(e.message));
    await page.goto(base+'/root-launcher/index.html');await page.locator('#tiles .add-app').waitFor();
    await page.evaluate(()=>document.fonts.ready);
    await page.locator('#btnSettings').click();
+   await page.locator('[data-category=updates]').click();
    const entry=page.getByRole('button',{name:await page.evaluate(()=>HomeI18n.t('LG firmware updates')),exact:true});
    await entry.click();
    const toggle=page.getByRole('switch',{name:await page.evaluate(()=>HomeI18n.t('Block LG firmware updates')),exact:true});
@@ -23,11 +24,12 @@ const base=process.env.PREVIEW_URL||'http://127.0.0.1:8879';
    }
    if(['en','ru'].includes(locale))await page.screenshot({path:'/tmp/cytv-firmware-'+locale+'-'+height+'.png'});
    await page.keyboard.press('Escape');assert.equal(await entry.evaluate(e=>e===document.activeElement),true);
+   await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>document.activeElement.dataset.category),'updates');
    await page.keyboard.press('Escape');assert.equal(await page.locator('.root-settings:visible').count(),0);
    assert.deepEqual(errors,[]);await page.close();
   }
   const page=await browser.newPage();await page.goto(base+'/launcher/index.html');await page.locator('#tiles .add-app').waitFor();await page.locator('#btnSettings').click();
   assert.equal(await page.locator('.settings-firmware').count(),0);await page.close();
-  console.log('PASS firmware browser: 12 languages at 1080p/720p, on/off, visible remote focus, Back restoration and No-root isolation');
+  console.log('PASS firmware browser: 13 languages at 1080p/720p, on/off, visible remote focus, Back restoration and No-root isolation');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exit(1);});

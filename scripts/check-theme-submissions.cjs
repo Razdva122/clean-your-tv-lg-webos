@@ -146,6 +146,13 @@ function loadRegistry(root = path.resolve(__dirname, '../showcase')) {
     keys.add(keyFor(r.id));
     result.push(validateFiles(r, root));
   }
+  const orderPath = path.join(root, 'order.json');
+  if (fs.existsSync(orderPath)) {
+    const order = JSON.parse(readLocal(root, 'order.json', 16384).toString('utf8'));
+    check(Array.isArray(order) && new Set(order).size === order.length && order.every(id => seen.has(id)), 'Invalid catalogue order');
+    const rank = new Map(order.map((id, index) => [id, index]));
+    result.sort((a, b) => (rank.has(a.record.id) ? rank.get(a.record.id) : order.length) - (rank.has(b.record.id) ? rank.get(b.record.id) : order.length));
+  }
   return result;
 }
 async function verifyRemote(entries, fetcher = globalThis.fetch) {

@@ -21,7 +21,7 @@ function harness({restore=null,saved=null,tiles=['app.one'],version='0.0.1',pack
  vm.runInNewContext(fs.readFileSync(__dirname+'/root-profile.js','utf8'),ctx);return {window,calls,scripts,errors,memory};
 }
 (async()=>{
- for(const [before,after] of [['ru','ko'],['en','auto'],['auto','en']]){
+ for(const [before,after] of [['ru','ko'],['en','cs'],['cs','auto'],['en','auto'],['auto','en']]){
   const languageProfile=JSON.parse(JSON.stringify(profile));languageProfile.settings['tvhome.language']=after;
   const memory=new Map([['tvhome.language',before]]),restore={profile:languageProfile,transaction:'language-change',version:'0.0.1',phase:'verifying'};
   let changed=harness({restore,memory,i18n:true});await tick();

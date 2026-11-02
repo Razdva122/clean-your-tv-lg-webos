@@ -1,5 +1,7 @@
 # Install cytv without a terminal
 
+> See [1.6.0 versions, installer changes and limits](RELEASE-1.6.0.md) and the [dated acceptance scope](history/2026-11-02-release-1.6.0-final-acceptance.md). Obtain available packages from [GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases).
+
 Download the desktop package from the
 [published release](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest).
 The wizard includes its runtime and TV packages. No developer tools are needed.
@@ -8,7 +10,7 @@ Root setup may download a separate verified TV Python runtime when eligible.
 Prepare the TV using [the installation guide](INSTALL.md), then follow your
 computer's steps below. For Android, use the [Android guide](../android/README.md).
 
-**Unreleased:** a [visible TV checklist](CLI.md#visible-tv-checks-unreleased) shows individual prerequisite results and keeps them on the error screen. Unrun checks remain unverified; `doctor` does not prepare Python or request control pairing.
+In 1.6.0, a [visible TV checklist](CLI.md#visible-tv-checks-unreleased) shows individual prerequisite results and keeps them on the error screen. Unrun checks remain unverified; `doctor` does not prepare Python or request control pairing.
 
 ## macOS
 

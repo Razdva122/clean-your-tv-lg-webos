@@ -3,6 +3,21 @@ import re
 
 class UserError(RuntimeError):
     """An installer-owned message which contains no remote data or credentials."""
+    def __init__(self, message, *, reason_code='user-error'):
+        super().__init__(message)
+        self.reason_code = reason_code
+
+
+
+class PythonCacheError(UserError):
+    """Allowlisted host acquisition failure; never carry remote exception text."""
+    DOWNLOAD_ERROR = 'The private Python download could not be verified. Check the connection or prepare the Python cache again.'
+    CACHE_ERROR = 'The private Python cache is unsafe or damaged. Remove its pinned archive and prepare the cache again.'
+
+    def __init__(self, reason='unknown'):
+        self.reason = reason if reason in ('network', 'tls', 'http', 'response-policy',
+            'size', 'sha256', 'deadline', 'cache-access', 'cache-replace', 'cache-invalid') else 'unknown'
+        super().__init__(self.CACHE_ERROR if self.reason == 'cache-invalid' else self.DOWNLOAD_ERROR)
 
 
 class PythonPreflightError(UserError):
@@ -68,7 +83,7 @@ class ExistingRoot(UserError):
 class TVCommandError(UserError):
     """A failed SSH command with a numeric status, never remote output."""
     def __init__(self, exit_status):
-        super().__init__('TV command failed. Run cytv doctor; retain the operation journal.')
+        super().__init__('TV command failed. Save the diagnostic report and keep recovery data.')
         self.exit_status = exit_status if type(exit_status) is int and -1 <= exit_status <= 255 else None
 
 

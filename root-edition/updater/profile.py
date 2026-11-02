@@ -61,7 +61,7 @@ def validate(value):
     _ids(config['dockApps']); _ids(config['hiddenApps'])
     if 'liveTvApp' in config: _text(config['liveTvApp'], empty=True)
     _fields(value['settings'], (), ('tvhome.order', 'tvhome.language'))
-    if 'tvhome.language' in value['settings'] and value['settings']['tvhome.language'] not in ('auto', 'en', 'de', 'es', 'pt-BR', 'fr', 'it', 'ko', 'hi', 'pl', 'ru'):
+    if 'tvhome.language' in value['settings'] and value['settings']['tvhome.language'] not in ('auto', 'en', 'cs', 'de', 'es', 'pt-BR', 'fr', 'it', 'ko', 'hi', 'pl', 'ru'):
         raise ValueError('invalid language')
     if 'tvhome.order' in value['settings']:
         _text(value['settings']['tvhome.order'], MAX_BYTES, empty=True)

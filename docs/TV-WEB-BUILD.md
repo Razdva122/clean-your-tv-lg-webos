@@ -3,12 +3,16 @@
 The web frontend targets **Chromium 38**, the engine documented for webOS 3.x.
 The same compiled assets run on later Chromium-based webOS engines. This is a
 frontend build target, not a claim that Home Helper, input devices or firmware
-services work on every TV. webOS 1.x/2.x WebKit engines are outside this target.
+services work on every TV. An unreleased #152 correction also emits the prefixed
+layout/transform/animation forms required by webOS 2.x WebKit 538.2. Autoprefixer
+uses Safari 8 as its prefix profile; that is not a complete WebKit compatibility
+target or physical EF950V acceptance. The unsupported-feature gate remains intact.
 
 Source builds require Node.js **20.19+** (Node 22 is used in CI) and npm:
 
 ```sh
 npm ci --ignore-scripts --no-audit --no-fund
+python3 -m pip install -r scripts/build-requirements.txt
 npm run lint:compat
 npm run test:compat
 ```
@@ -17,7 +21,9 @@ All production TV web packages pass through `scripts/tv_web_build.py`:
 No-root Home, Root Home, Home Updater and Root Updater. Desktop and Android
 installers embed these compiled packages. Native executables, TV Node services
 and Python code retain their own runtimes. Helper JavaScript has a separate
-Node-targeted build described below; other TV Node services are not transformed.
+Node-targeted build described below; other TV Node services are not transformed in ordinary builds. The opt-in
+[Root Node prototype](development/ROOT-NODE-PROTOTYPE.md) separately compiles the
+Root runtime closure for host tests; Root admission remains Node 8+.
 The installed cytv apps do not require Node/npm on the user's computer.
 
 ## Processing and validation
@@ -27,9 +33,9 @@ The installed cytv apps do not require Node/npm on the user's computer.
 - A bundled core-js runtime loads before application scripts and supplies missing
   ECMAScript built-ins. It is packaged locally, with licenses, without a CDN.
   It does not supply platform-specific Luna APIs or every modern browser API.
-- PostCSS preset-env/Autoprefixer target the same Browserslist entry in
-  `package.json`. For example, `inset` becomes physical offsets and alpha hex
-  colors become compatible color notation. CSS files, `<style>` elements and
+- PostCSS preset-env/Autoprefixer use the Browserslist entry in `package.json`
+  plus the Safari 8 prefix profile. For example, `inset` becomes physical offsets
+  and alpha hex colors become compatible color notation. CSS files, `<style>` elements and
   `style` attributes all pass through this step.
 - doiuse checks the **transformed** CSS. Unsupported features left after PostCSS,
   including CSS Grid and flexbox gap, fail the build. Use compatible layouts and
@@ -97,6 +103,15 @@ launch/navigation and full-screen dialogs. This models the reported engine
 limitations in a current browser; it is not an emulator of an entire old TV.
 Hardware confirmation is still required on the original webOS 3.5 device.
 
+The `prefixed-webkit` profile additionally ignores unprefixed flex, transforms,
+transitions and animations, including runtime-injected theme styles and CSSOM
+writes. It checks horizontal shortcuts, focus-frame alignment, scrolling,
+dialogs and runtime Ribbon skew/bottom alignment. `launcher/app.js` writes both
+CSSOM transform/transition forms. Theme runtime prefixes its validated output
+only when the CSSOM exposes the legacy WebKit form, enforcing the emitted CSS
+budget before changing layout or styles. Browser API, firmware input and actual
+EF950V controls/recovery remain separate unverified device paths.
+
 The geometry regression renders one through eight columns and checks spacing
 between the focus frame and neighbouring cards, frame alignment, remote
 navigation, scrolling back to the dock and the separately constructed Add app
@@ -161,17 +176,34 @@ also include them; Android uses its platform font fallback.
 
 The sources are [Google Fonts Noto Sans SC](https://github.com/google/fonts/tree/e7db6ca603fd4862010383ff17ffd6cc4ffac1c0/ofl/notosanssc)
 and [Noto Sans TC](https://github.com/google/fonts/tree/e7db6ca603fd4862010383ff17ffd6cc4ffac1c0/ofl/notosanstc),
-pinned at commit `e7db6ca603fd4862010383ff17ffd6cc4ffac1c0`. To regenerate,
-download each original `NotoSansSC[wght].ttf` / `NotoSansTC[wght].ttf` into a
-temporary directory as `NotoSansSC-variable.ttf` / `NotoSansTC-variable.ttf`,
-then run:
+pinned at commit `e7db6ca603fd4862010383ff17ffd6cc4ffac1c0`. The build-only
+`fonttools==4.60.1` dependency is installed from `scripts/build-requirements.txt`;
+it is never loaded by a TV or installed/frozen runtime.
 
-```sh
-/path/to/fonttools-4.60.1/bin/python scripts/subset-chinese-fonts.py /path/to/original-fonts
-```
+Packages, standalone installer fonts and live/static previews use the same
+`scripts/chinese_fonts.py` preparation path. It decodes Chinese locale literals
+(including Unicode escapes and static template text) from runtime catalogs,
+including themes, Root audio, installers and updater screens, plus calendar and
+language labels. Compiler inputs also contribute unscoped JavaScript/template
+text, JSON strings, HTML text/entities/inline code and CSS content/escapes, so a
+new locale module or static label needs no central source-list edit. Foreign
+locale branches stay separate; initial HTML language does not hide shared code. Retained static faces are reused only when they cover all required
+characters. Otherwise the build automatically generates small static weight-400
+subsets; adding translations never requires editing tracked font binaries.
 
-This developer-only tool bakes weight 400 and retains the catalog character set
-plus Chinese date text. Regenerate after adding Chinese strings; package tests
-reject missing catalog glyphs or variable fonts. User app names outside this
-subset continue to use the TV's system fallback. These fonts do not establish
+On the first regeneration, verified TLS downloads retrieve only those two pinned
+sources. SHA-256 pins are SC
+`a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da`
+and TC `864727d210d54f2537bbe23b3a839436c3992af72de9322af5270897246bd44f`.
+Verified originals and deterministic subsets live in `build/chinese-font-cache`
+(or `CYTV_FONT_CACHE`). Reuse that directory for offline builds; CI can cache it.
+Corrupted cache entries fail with an integrity error rather than being trusted.
+Each UI locale prefers its own regional Chinese face, then the other packaged
+face. Shared theme names and quoted mixed-script brands use that cascade; each
+subset retains the required glyphs supported by its full pinned original. A
+glyph absent from both pinned originals fails explicitly. Nonregular cache
+entries are refused before reading.
+`scripts/subset-chinese-fonts.py` optionally primes this same cache; it does not
+modify source assets. User app names outside the UI subset use system fallback.
+These fonts do not establish
 physical-TV rendering acceptance; verify both scripts on the candidate packages.

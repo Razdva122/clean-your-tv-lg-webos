@@ -20,7 +20,9 @@ class ReceiptTests(unittest.TestCase):
             with patch('cytv.state.os.link', side_effect=PermissionError(errno.EPERM, 'denied')):
                 store.begin(profile, 'install', versions={'home': '1.0.0'})
             receipt = store.device_dir(profile) / 'operation.json'
-            self.assertEqual(json.loads(receipt.read_text()), {
+            value = json.loads(receipt.read_text())
+            self.assertRegex(value.pop('diagnostic_id'), r'^[a-f0-9]{32}$')
+            self.assertEqual(value, {
                 'action': 'install', 'stage': 'pending', 'versions': {'home': '1.0.0'}})
             if state.os.name != 'nt':
                 self.assertEqual(receipt.stat().st_mode & 0o777, 0o600)
@@ -56,7 +58,9 @@ class ReceiptTests(unittest.TestCase):
                 with ThreadPoolExecutor(max_workers=2) as executor:
                     winners = list(filter(None, executor.map(begin, ('install', 'uninstall'))))
             self.assertEqual(len(winners), 1)
-            self.assertEqual(state.Store(directory).pending(profile), {
+            value = state.Store(directory).pending(profile)
+            self.assertRegex(value.pop('diagnostic_id'), r'^[a-f0-9]{32}$')
+            self.assertEqual(value, {
                 'action': winners[0], 'stage': 'pending'})
 
     def test_failed_receipt_sync_retains_evidence_and_blocks_retry(self):

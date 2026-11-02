@@ -9,6 +9,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'runtime'))
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]))
 import package_identity as p
 from updater.store import Store
@@ -104,6 +105,51 @@ class IdentityTests(unittest.TestCase):
                     (self.states[p.SYSTEM]/'cache'/desc['sha256']).write_bytes(source.read_bytes())
             tx['components'].append(dict(name=name,version=candidate['version'],installEvidence={'intent':False,'submitted':None,'terminal':None},rollbackEvidence={'intent':False,'submitted':None,'terminal':None}))
         return tx
+    def completed_rollback(self):
+        tx=self.system_tx('rolling-back');tx.update(homeResumePhase='complete',resumeCycle='rollback')
+        for c in tx['components']:c['installEvidence']=dict(self.success(),intent=True)
+        self.stores[p.SYSTEM].write('transaction',tx)
+        self.stores[p.UPDATER].write('current',dict(self.candidate,writer={'owner':'system-update','id':tx['id']}))
+        self.install(p.ROOT,self.package(p.ROOT,'1.1.0'))
+        return tx
+
+    def test_retained_rollback_does_not_revoke_live_health_before_suspension(self):
+        # Real package selector -> device presence -> health context. A declared
+        # rollback has not changed any installed byte or captured Home intent.
+        import device_adapter as d, intent_runtime, persistent_health
+        from persistent_store import Store as IntentStore
+        from persistent_recovery import Coordinator
+        tx=self.completed_rollback();root=self.states[p.ROOT]
+        with patch.object(p,'STATES',self.states),patch.object(d,'STATE',root),patch.object(d,'EXPECTED_UID',self.uid),patch.object(d,'APPLICATIONS',self.installed/'usr/palm/applications'),patch.object(d,'FAILSAFE',self.base/'failsafe'),patch.object(intent_runtime,'boot_identity',return_value='boot:1'):
+            store=IntentStore(root);initial=store.read()
+            trial,_=store.apply(initial,dict(kind='enable',generation=0,boot='boot:1',token='attempt'))
+            active,_=store.apply(trial,dict(kind='confirmed',generation=1,token='attempt'))
+            Coordinator(store).write_binding(dict(version=1,generation=1,token='attempt',transaction='route',restored=False))
+            self.assertTrue(d.home_present(purpose='live'),'pre-ticket rollback cannot synthesize package removal')
+            self.assertTrue(persistent_health.authorized('route'),'real health authority must survive until updater captures intent')
+            self.assertEqual(store.read(),active)
+            with self.assertRaises(p.TransitionUnknown):self.identity(purpose='current')
+            # Once suspension completes, mutation still revokes live authority.
+            tx['rollbackAttempted']=True;self.stores[p.SYSTEM].write('transaction',tx)
+            self.assertFalse(persistent_health.authorized('route'))
+
+    def test_retained_rollback_live_exception_requires_committed_untouched_owner(self):
+        for damage in ('no-cycle','no-completion','attempted','failed-install','unknown-install',
+                       'rollback-intent','writer','sdk','cache'):
+            with self.subTest(damage=damage):
+                tx=self.completed_rollback()
+                if damage=='no-cycle':tx.pop('resumeCycle')
+                elif damage=='no-completion':tx.pop('homeResumePhase')
+                elif damage=='attempted':tx['rollbackAttempted']=True
+                elif damage=='failed-install':tx['components'][1]['installEvidence']['terminal']['success']=False
+                elif damage=='unknown-install':tx['components'][2]['installEvidence']['terminal']=None
+                elif damage=='rollback-intent':tx['rollbackAttempted']=True;tx['components'][0]['rollbackEvidence']['intent']=True
+                elif damage=='writer':self.stores[p.UPDATER].write('current',dict(self.candidate,writer={'owner':'system-update','id':'c'*32}))
+                elif damage=='sdk':(self.installed/'usr/palm/applications'/p.ROOT/'index.html').unlink()
+                else:(self.states[p.SYSTEM]/'cache'/self.candidate['sha256']).write_bytes(b'corrupt')
+                self.stores[p.SYSTEM].write('transaction',tx)
+                with self.assertRaises((ValueError,OSError)):self.identity(purpose='live')
+
     def test_system_per_component_phase_and_stale_baseline_cannot_override(self):
         tx=self.system_tx();tx['components'][0]['installEvidence']=dict(self.success(),intent=True)
         self.stores[p.SYSTEM].write('transaction',tx);self.install(p.ROOT,self.package(p.ROOT,'1.1.0'))

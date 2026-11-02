@@ -60,6 +60,12 @@ class Remote:
 
     def luna(self, uri, payload, terminal=None, timeout=30, app_id=None):
         self.calls.append(('luna', uri, payload))
+        if uri == 'com.webos.settingsservice/getSystemSettings':
+            return {'returnValue':True,'settings':{'defaultApps':{}}}
+        if uri == 'com.webos.service.systemprofile/getProfiles':
+            return {'returnValue':True,'profiles':{'defaultApps':{'categories':{'home':'com.webos.app.home'}},'idleApp':{'appId':'com.webos.app.home','support':True}}}
+        if uri == 'com.webos.service.tv.systemproperty/getSystemInfo':
+            return {'returnValue': True, 'UHD': True}
         if uri == 'com.cleanyourtv.root.updater.service/status':
             if self.fail == 'updater-service': raise RuntimeError('updater service unavailable')
             return {'returnValue': True, 'result': None}
@@ -113,6 +119,7 @@ class OperationTests(unittest.TestCase):
         remote.run.assert_not_called()
 
     def test_failed_python_provisioning_stops_before_the_root_install_receipt(self):
+        self.root_bundle()
         import subprocess, sys
         remote = Remote()
         original_run = remote.run
@@ -237,6 +244,20 @@ class OperationTests(unittest.TestCase):
         self.installer(remote).install(self.inventory, 'secret')
         self.assertEqual(list(temp.iterdir()), [])
 
+    def test_false_idle_reply_cannot_authorize_pending_removal(self):
+        installer = self.installer(Remote())
+        self.store.begin(installer.profile, 'uninstall')
+        original = installer.remote.luna
+        def luna(uri, payload, **kwargs):
+            if uri == 'com.webos.appInstallService/status':
+                return {'returnValue': False, 'status': {'apps': []}}
+            return original(uri, payload, **kwargs)
+        installer.remote.luna = luna
+        with self.assertRaisesRegex(RuntimeError, 'not confirmed idle'):
+            installer.uninstall()
+        self.assertEqual(installer.remote.calls, [])
+        self.assertIsNotNone(self.store.pending(installer.profile))
+
     def test_pending_no_root_removal_resumes_after_restore_interruption(self):
         installer = self.installer(Remote())
         self.store.begin(installer.profile, 'uninstall')
@@ -251,6 +272,36 @@ class OperationTests(unittest.TestCase):
         self.assertIsNone(self.store.pending(installer.profile))
         self.assertTrue(any(call[0] == 'luna' and call[1].endswith('/launch')
                             and call[2]['id'] == 'com.webos.app.home' for call in installer.remote.calls))
+
+    def test_denied_helper_disable_restores_then_resumes_pending_removal(self):
+        from cytv.errors import TVRejected
+        remote = Remote()
+        remote.installed = [{'id': operations.HELPER}, {'id': operations.HOME}]
+        original_luna, original_run = remote.luna, remote.run
+        def luna(uri, payload, **kwargs):
+            if uri.endswith('/disable'):
+                raise TVRejected('denied', {'returnValue': False, 'errorCode': -1}, uri)
+            if uri == 'com.webos.appInstallService/status':
+                return {'returnValue': True, 'status': {'apps': []}}
+            if uri.endswith('/dev/remove'):
+                remote.calls.append(('luna', uri, payload))
+                remote.installed = [app for app in remote.installed if app['id'] != payload['id']]
+                return {'returnValue': True, 'details': {'state': 'removed'}}
+            return original_luna(uri, payload, **kwargs)
+        def run(command, data=None, **kwargs):
+            if command == '/usr/bin/node':
+                self.assertIn(b'CYTV_HELPER_STOP_REQUESTED', data)
+                return 'CYTV_HELPER_STOP_REQUESTED'
+            return original_run(command, **kwargs)
+        remote.luna, remote.run = luna, run
+        installer = self.installer(remote)
+        self.store.begin(installer.profile, 'uninstall')
+        self.assertTrue(installer.restore()['restored'])
+        self.assertEqual(self.store.pending(installer.profile)['action'], 'uninstall')
+        installer.uninstall()
+        self.assertIsNone(self.store.pending(installer.profile))
+        removals = [c[2]['id'] for c in remote.calls if c[0] == 'luna' and c[1].endswith('/dev/remove')]
+        self.assertEqual(removals, [operations.HELPER, operations.HOME])
 
     def test_version_review_distinguishes_update_reinstall_downgrade_and_missing(self):
         for current, expected in [('1.2.1', '1.2.1 → 1.2.2 (Update)'),
@@ -289,6 +340,7 @@ class OperationTests(unittest.TestCase):
         self.installer(remote).preflight()
 
     def test_existing_root_is_refused_before_creating_new_receipt(self):
+        self.root_bundle()
         remote = Remote()
         run = remote.run
         remote.run = lambda command, **kwargs: 'CYTV_EXISTING_ROOT' if 'CYTV_EXISTING_ROOT' in command else run(command, **kwargs)
@@ -468,17 +520,105 @@ class OperationTests(unittest.TestCase):
         self.assertEqual(json.loads(attempts[0].read_text())['stage'], 'complete')
         self.assertEqual(self.store.pending(installer.profile)['action'], 'install')
 
-    def test_completed_no_root_install_can_be_reconciled_after_lost_acknowledgment(self):
+    def test_c2_pending_install_keeps_receipt_despite_matching_versions_and_hashes(self):
         remote = Remote()
         installer = self.installer(remote)
-        remote.installed = [{'id': operations.HOME, 'version': '1.2.2'}, {'id': operations.HELPER, 'version': '0.6.13'}]
+        remote.installed = [{'id': operations.HOME, 'version': '1.2.2'},
+                            {'id': operations.HELPER, 'version': '0.6.13'}]
         self.store.begin(installer.profile, 'install')
         files = {operations.BASE + '/applications/com.gathin.tvhome/apps.js': 'a' * 64}
         self.store.checkpoint(installer.profile, expected=files)
         remote.run = lambda *args, **kwargs: 'a' * 64 + '  ' + next(iter(files)) + '\n'
+        receipt = self.store.device_dir(installer.profile) / 'operation.json'
+        original = receipt.read_bytes()
         result = installer.status()
-        self.assertIsNone(self.store.pending(installer.profile))
-        self.assertEqual(result['reconciled'], 'installed-files-verified; helper launch requires TV check')
+        self.assertTrue(receipt.exists(), 'Status must retain an unresolved journal')
+        self.assertEqual(receipt.read_bytes(), original)
+        self.assertIsNone(result['reconciled'])
+        self.assertEqual(result['pending']['action'], 'install')
+        self.assertFalse((receipt.parent / 'installation.json').exists())
+
+    def test_uk6400_absent_packages_do_not_prove_pending_removal_terminated(self):
+        installer = self.installer(Remote())
+        self.store.begin(installer.profile, 'uninstall', previous={'action': 'install'})
+        self.store.checkpoint(installer.profile, stage='removing',
+                              removals={operations.HELPER: 'submitted'})
+        receipt = self.store.device_dir(installer.profile) / 'operation.json'
+        original = receipt.read_bytes()
+        result = installer.status()
+        self.assertTrue(receipt.exists(), 'Status must retain an unresolved journal')
+        self.assertEqual(receipt.read_bytes(), original)
+        self.assertIsNone(result['reconciled'])
+        self.assertEqual(result['pending']['action'], 'uninstall')
+
+    def test_both_issue201_actions_retain_journal_when_idle_is_unavailable(self):
+        from cytv.errors import TVRejected, UserError
+        for action in ('install', 'uninstall'):
+            for outcome in ('denied', 'timeout', 'active', 'unknown'):
+                with self.subTest(action=action, outcome=outcome):
+                    remote = Remote()
+                    installer = self.installer(remote)
+                    self.store.begin(installer.profile, action, previous={'action': 'install'})
+                    receipt = self.store.device_dir(installer.profile) / 'operation.json'
+                    original = receipt.read_bytes()
+                    def luna(uri, payload, **kwargs):
+                        remote.calls.append(('luna', uri, payload))
+                        self.assertEqual(uri, 'com.webos.appInstallService/status')
+                        self.assertEqual(payload, {'subscribe': True})
+                        if outcome == 'denied':
+                            raise TVRejected('Rejected', {'returnValue': False, 'errorCode': -1}, uri)
+                        if outcome == 'timeout':
+                            raise UserError('Timed out')
+                        return {'returnValue': True, 'status': {'apps': [{}]}} if outcome == 'active' else {'returnValue': True}
+                    remote.luna = luna
+                    with self.assertRaises(UserError):
+                        installer.uninstall()
+                    self.assertEqual(receipt.read_bytes(), original)
+                    self.assertEqual(len(remote.calls), 1)
+                    # Clear only this synthetic test receipt between independent cases.
+                    receipt.unlink()
+
+    def test_denied_listapps_is_distinct_from_denied_dev_listapps(self):
+        from cytv.errors import TVRejected
+        for denied in ('com.webos.applicationManager/listApps',
+                       'com.webos.applicationManager/dev/listApps'):
+            with self.subTest(denied=denied):
+                remote = Remote()
+                original = remote.luna
+                def luna(uri, payload, **kwargs):
+                    if uri == denied:
+                        raise TVRejected('Rejected', {'returnValue': False, 'errorCode': -1}, uri)
+                    return original(uri, payload, **kwargs)
+                remote.luna = luna
+                installer = self.installer(remote)
+                self.store.begin(installer.profile, 'install', expected={})
+                receipt = self.store.device_dir(installer.profile) / 'operation.json'
+                original_receipt = receipt.read_bytes()
+                if denied.endswith('/dev/listApps'):
+                    with self.assertRaises(TVRejected):
+                        installer.status()
+                else:
+                    self.assertEqual(installer.status()['device']['apps'], [])
+                self.assertEqual(receipt.read_bytes(), original_receipt)
+                receipt.unlink()
+
+    def test_partial_stale_and_corrupt_receipts_are_not_inferred_complete(self):
+        for record in (b'{',
+                       b'{"action":"install","stage":"pending","expected":{}}',
+                       b'{"action":"install","stage":"pending","versions":{"wrong":"9.9.9"},"expected":{"stale":"bad-hash"}}',
+                       b'{"action":"uninstall","stage":"removing","removals":{}}'):
+            with self.subTest(record=record):
+                remote = Remote()
+                remote.installed = [{'id': operations.HOME, 'version': '1.2.2'}]
+                installer = self.installer(remote)
+                receipt = self.store.device_dir(installer.profile) / 'operation.json'
+                state.private_write(receipt, record)
+                self.assertIsNone(installer.status()['reconciled'])
+                self.assertEqual(receipt.read_bytes(), record)
+                self.assertTrue(all(call[0] == 'luna' and call[1].endswith('/dev/listApps')
+                                    or call[0] == 'run' and 'CYTV_HELPER_' in call[1]
+                                    for call in remote.calls))
+                receipt.unlink()
 
     def test_partial_install_can_be_explicitly_removed_only_after_installer_is_idle(self):
         remote = Remote()
@@ -499,11 +639,148 @@ class OperationTests(unittest.TestCase):
         self.manifest = {'files': {}, 'launcher': 'launcher.ipk', 'helper': 'helper.ipk',
                          'home_version': '1.2.2', 'helper_version': '0.6.13'}
         for app, name, version in [(operations.HOME, 'launcher.ipk', '1.2.2'), (operations.HELPER, 'helper.ipk', '0.6.13')]:
-            (self.payload / name).write_bytes(package.ipk(app, version, {'usr/palm/applications/' + app + '/appinfo.json': json.dumps({'id': app, 'version': version}).encode()}))
+            (self.payload / name).write_bytes(package.ipk(app, version, {'usr/palm/applications/' + app + '/appinfo.json': json.dumps({'id': app, 'version': version, 'resolution': '1920x1080'}).encode()}))
+        self.manifest['graphics'] = {'1920x1080': {'launcher': 'launcher.ipk', 'root': 'root'},
+                                     '1280x720': {'launcher': 'launcher-720p.ipk', 'root': 'root-720p'}}
+        import hashlib
+        self.manifest['files'].update({p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in self.payload.iterdir()})
 
     def installer(self, remote, edition='no-root'):
         tv = state.target('192.0.2.10', edition)
         return operations.Installer(remote, self.store, tv, self.payload, self.manifest, lambda _: None)
+
+    def test_graphics_preselection_is_reused_by_install(self):
+        remote = Remote()
+        installer = self.installer(remote)
+        installer.select_graphics()
+        installer.install(self.inventory, 'secret')
+        probes = [c for c in remote.calls if c[0] == 'luna' and c[1].endswith('/getSystemInfo')]
+        self.assertEqual(len(probes), 1)
+
+    def test_hd_capability_selects_hd_bytes_before_personalization(self):
+        import hashlib
+        info = {'id': operations.HOME, 'version': '1.2.2', 'resolution': '1280x720'}
+        raw = package.ipk(operations.HOME, '1.2.2', {'usr/palm/applications/'+operations.HOME+'/appinfo.json': json.dumps(info).encode()})
+        (self.payload/'launcher-720p.ipk').write_bytes(raw)
+        self.manifest['files']['launcher-720p.ipk'] = hashlib.sha256(raw).hexdigest()
+        remote = Remote()
+        original = remote.luna
+        remote.luna = lambda uri, payload, **kw: {'returnValue': True, 'UHD': False} if uri.endswith('/getSystemInfo') else original(uri, payload, **kw)
+        self.installer(remote).install(self.inventory, 'secret')
+        installed = next(data for path, data in remote.uploads.items() if path.endswith('/launcher.ipk'))
+        files = package.data_files(installed)
+        self.assertEqual(json.loads(files['usr/palm/applications/'+operations.HOME+'/appinfo.json'])['resolution'], '1280x720')
+
+    def test_hd_root_selection_preserves_baseline_bytes_and_hashes(self):
+        import hashlib, shutil
+        source = self.root_bundle()
+        target = self.payload/'root-720p'
+        shutil.copytree(source, target)
+        manifest = json.loads((target/'bundle.json').read_text())
+        name = manifest['package']
+        files = package.data_files((target/name).read_bytes())
+        appinfo = 'usr/palm/applications/'+package.ROOT_APP+'/appinfo.json'
+        info = json.loads(files[appinfo]); info['resolution'] = '1280x720'
+        files[appinfo] = json.dumps(info).encode()
+        (target/name).write_bytes(package.ipk(package.ROOT_APP, '0.0.1', files))
+        manifest['files'] = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in target.iterdir() if p.name != 'bundle.json'}
+        (target/'bundle.json').write_text(json.dumps(manifest))
+        self.manifest['files'].update({p.relative_to(self.payload).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest() for p in target.iterdir()})
+        remote = Remote()
+        original = remote.luna
+        probes = []
+        def luna(uri, payload, **kwargs):
+            if uri.endswith('/getSystemInfo'):
+                probes.append((uri, payload))
+                return {'returnValue': True, 'UHD': 'false'}
+            return original(uri, payload, **kwargs)
+        remote.luna = luna
+        self.installer(remote, 'root').install(self.inventory)
+        uploaded = next(raw for path, raw in remote.uploads.items() if path.endswith('/root/'+name))
+        self.assertEqual(json.loads(package.data_files(uploaded)[appinfo])['resolution'], '1280x720')
+        self.assertEqual(probes, [('com.webos.service.tv.systemproperty/getSystemInfo', {'keys': ['UHD']})])
+        uploaded_release = json.loads(next(raw for path, raw in remote.uploads.items() if path.endswith('/root/release.json')))
+        self.assertEqual(uploaded_release['files']['usr/palm/applications/'+package.ROOT_APP+'/apps.js'], hashlib.sha256(package.inventory_script(self.inventory)).hexdigest())
+
+    def test_unknown_capability_stops_before_preflight_or_receipt(self):
+        remote = Remote()
+        remote.luna = lambda *args, **kwargs: {'returnValue': True}
+        installer = self.installer(remote, 'root')
+        with self.assertRaisesRegex(RuntimeError, 'graphics'):
+            installer.install(self.inventory)
+        self.assertEqual(remote.calls, [])
+        self.assertIsNone(self.store.pending(installer.profile))
+
+    def test_invalid_graphics_payload_stops_before_upload(self):
+        for problem in ('legacy', 'path', 'hash', 'resolution', 'version', 'identity'):
+            with self.subTest(problem=problem):
+                import copy
+                manifest = copy.deepcopy(self.manifest)
+                if problem == 'legacy': manifest.pop('graphics')
+                elif problem == 'path': manifest['graphics']['1920x1080']['launcher'] = '../launcher.ipk'
+                elif problem == 'hash': manifest['files']['launcher.ipk'] = '0'*64
+                else:
+                    import hashlib
+                    info = {'id': operations.HOME, 'version': '1.2.2', 'resolution': '1920x1080'}
+                    info[{'resolution': 'resolution', 'version': 'version', 'identity': 'id'}[problem]] = {'resolution': '1280x720', 'version': '9.0.0', 'identity': 'another.app'}[problem]
+                    raw = package.ipk(operations.HOME, '1.2.2', {'usr/palm/applications/'+operations.HOME+'/appinfo.json': json.dumps(info).encode()})
+                    (self.payload/'launcher.ipk').write_bytes(raw)
+                    manifest['files']['launcher.ipk'] = hashlib.sha256(raw).hexdigest()
+                remote = Remote()
+                installer = self.installer(remote)
+                installer.manifest = manifest
+                with self.assertRaisesRegex(RuntimeError, 'graphics'):
+                    installer.install(self.inventory, 'secret')
+                self.assertFalse(any(c[0] in ('run', 'upload') for c in remote.calls))
+                self.assertIsNone(self.store.pending(installer.profile))
+
+    def test_package_and_launch_success_do_not_certify_startup_or_home(self):
+        installer = self.installer(Remote())
+        installer.install(self.inventory, 'private-pairing')
+        outcome = installer.tv_info['setup_outcome']
+        self.assertEqual(outcome, {'packages':'verified','launch_request':'accepted',
+                                  'startup':'not-observed','home_button':'not-tested'})
+        self.assertIsNone(self.store.pending(installer.profile))
+
+    def test_launch_failure_preserves_verified_packages_and_pending_receipt(self):
+        remote = Remote(); original = remote.luna
+        def luna(uri, payload, **kwargs):
+            if uri.endswith('/launch'): raise RuntimeError('lost launch response')
+            return original(uri, payload, **kwargs)
+        remote.luna = luna
+        installer = self.installer(remote)
+        with self.assertRaises(RuntimeError): installer.install(self.inventory, 'private-pairing')
+        outcome = installer.tv_info['setup_outcome']
+        self.assertEqual(outcome['packages'], 'verified')
+        self.assertEqual(outcome['launch_request'], 'submitted-unconfirmed')
+        self.assertEqual(outcome['home_button'], 'not-tested')
+        self.assertIsNotNone(self.store.pending(installer.profile))
+
+    def test_optional_startup_probe_failure_cannot_undo_successful_install(self):
+        remote = Remote(); original, luna = remote.run, remote.luna
+        launched = False
+        def launch(uri, payload, **kwargs):
+            nonlocal launched
+            if uri.endswith('/launch'): launched = True
+            return luna(uri, payload, **kwargs)
+        def run(command, **kwargs):
+            if launched and 'CYTV_HELPER_IDLE' in command:
+                self.assertEqual(kwargs.get('timeout'), 5)
+                raise TimeoutError('private transport text')
+            return original(command, **kwargs)
+        remote.luna, remote.run = launch, run
+        installer = self.installer(remote)
+        installer.install(self.inventory, 'private-pairing')
+        self.assertEqual(installer.tv_info['setup_outcome']['startup'], 'unverified')
+        self.assertIsNone(self.store.pending(installer.profile))
+
+    def test_root_existing_runtime_readback_is_separate_from_home_observation(self):
+        self.root_bundle()
+        installer = self.installer(Remote(), 'root')
+        installer.install(self.inventory)
+        self.assertEqual(installer.tv_info['setup_outcome'],
+            {'packages':'verified','launch_request':'accepted',
+             'startup':'root-state-verified','home_button':'not-tested'})
 
     def test_no_root_installs_helper_then_home_and_verifies_before_launch(self):
         remote = Remote()
@@ -537,11 +814,13 @@ class OperationTests(unittest.TestCase):
         root = self.payload / 'root'
         root.mkdir()
         name = package.ROOT_APP + '_0.0.1_all.ipk'
-        (root / name).write_bytes(package.ipk(package.ROOT_APP, '0.0.1', {'usr/palm/applications/' + package.ROOT_APP + '/apps.js': b'empty'}))
-        (root / 'release.json').write_text(json.dumps({'application_id': package.ROOT_APP, 'files': {}}))
+        (root / name).write_bytes(package.ipk(package.ROOT_APP, '0.0.1', {'usr/palm/applications/' + package.ROOT_APP + '/apps.js': b'empty',
+            'usr/palm/applications/' + package.ROOT_APP + '/appinfo.json': json.dumps({'id': package.ROOT_APP, 'version': '0.0.1', 'resolution': '1920x1080'}).encode()}))
+        (root / 'release.json').write_text(json.dumps({'application_id': package.ROOT_APP, 'version': '0.0.1', 'files': {}}))
         (root / 'deploy.py').write_bytes(b'original device driver')
         (root / 'SHA256SUMS').write_text('old')
         (root / 'bundle.json').write_text(json.dumps({'package': name, 'files': {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in root.iterdir()}}))
+        self.manifest['files'].update({p.relative_to(self.payload).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest() for p in root.iterdir()})
         return root
 
     def test_root_installs_updater_with_same_baseline_before_activation(self):
@@ -594,6 +873,7 @@ class OperationTests(unittest.TestCase):
         # Migration retains the supplied package; secure own directories are valid,
         # so this fixture must contain genuinely unsafe writable directory modes.
         with self.assertRaisesRegex(ValueError, 'rollback'):
+            installer._graphics_paths = {'root': 'root'}
             installer.install_root(self.inventory, migrate=True, reinstall='installed')
         self.assertIsNone(self.store.pending(installer.profile))
         self.assertFalse(any(c[0] == 'upload' or ' uninstall' in c[1] for c in remote.calls))
@@ -691,7 +971,7 @@ class OperationTests(unittest.TestCase):
         installer=self.installer(remote,'root')
         with self.assertRaisesRegex(RuntimeError, 'recovery could not be verified'):
             installer.install(self.inventory)
-        self.assertFalse(any(c[0]=='luna' or (c[0]=='run' and '/control.json' in c[1]) for c in remote.calls))
+        self.assertFalse(any((c[0]=='luna' and c[1] not in ('com.webos.service.tv.systemproperty/getSystemInfo','com.webos.settingsservice/getSystemSettings','com.webos.service.systemprofile/getProfiles')) or (c[0]=='run' and '/control.json' in c[1]) for c in remote.calls))
 
     def test_root_launch_disconnect_keeps_receipt_without_repeating_launch(self):
         self.root_bundle()
@@ -788,7 +1068,7 @@ class OperationTests(unittest.TestCase):
         (root/'deploy.py').write_bytes(b'corrupt replacement driver')
         remote = Remote()
         installer = self.installer(remote, 'root')
-        with self.assertRaisesRegex(ValueError, 'integrity mismatch'):
+        with self.assertRaisesRegex(RuntimeError, 'graphics packages'):
             installer.install(self.inventory, reinstall='installed')
         self.assertFalse(any('uninstall' in call[1] or call[0]=='upload' for call in remote.calls))
         self.assertIsNone(self.store.pending(installer.profile))
@@ -828,7 +1108,8 @@ class OperationTests(unittest.TestCase):
         installer = self.installer(remote)
         installer.preflight(install=True)
         self.assertEqual(installer.tv_info, {
-            'kernel_arch': 'aarch64', 'userland_abi': 'arm32', 'arm32_supported': True})
+            'kernel_arch': 'aarch64', 'userland_abi': 'arm32', 'arm32_supported': True,
+            'helper_state': 'stopped'})
         self.assertFalse(any(c[0] == 'upload' for c in remote.calls))
 
     def test_no_root_requires_valid_little_endian_arm32_elf_before_mutation(self):
@@ -855,7 +1136,7 @@ class OperationTests(unittest.TestCase):
                     installer.install(self.inventory, 'key')
                 self.assertEqual(installer.tv_info['userland_abi'], abi)
                 self.assertFalse(installer.tv_info['arm32_supported'])
-                self.assertFalse(any(c[0] in ('upload', 'luna') for c in remote.calls))
+                self.assertFalse(any(c[0] == 'upload' or (c[0] == 'luna' and not c[1].endswith('/getSystemInfo')) for c in remote.calls))
                 self.assertIsNone(self.store.pending(installer.profile))
 
     def test_restore_does_not_clear_uncertain_install_receipt(self):

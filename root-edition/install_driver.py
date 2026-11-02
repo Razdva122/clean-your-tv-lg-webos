@@ -16,6 +16,27 @@ def operation_id(value):
     return value
 
 
+def failure_summary(error):
+    """Fixed worker categories only; command, output and message stay private."""
+    import subprocess
+    name=type(error).__name__
+    allowed=('CalledProcessError','TimeoutExpired','ValueError','RuntimeError','OSError',
+             'PermissionError','FileNotFoundError','TypeError','KeyError')
+    result={'exception_type':name if name in allowed else 'unknown'}
+    if isinstance(error,subprocess.CalledProcessError) and type(error.returncode) is int and -255<=error.returncode<=255:
+        result['exit_status']=error.returncode
+    if isinstance(error,OSError) and type(error.errno) is int and 0<=error.errno<=4095:
+        result['errno']=error.errno
+    return result
+
+
+def log_failure(device, error):
+    try:
+        if hasattr(device,'log'): device.log(error)
+    except Exception:
+        pass  # Private logging must never replace the initiating failure.
+
+
 class _Recorded(Exception):
     def __init__(self,record): self.record=record
 
@@ -76,8 +97,9 @@ class Coordinator:
                     self.store.write('request-'+identifier,record)
                     self.ownership.stage(lease,'complete',terminal=True)
                 except Exception as error:
-                    if hasattr(self.device,'log'): self.device.log(error)
-                    # Diagnostic detail belongs in worker stderr/private logs only.
+                    log_failure(self.device,error)
+                    # Raw details remain in private logs; retain only fixed failure categories.
+                    record.setdefault('failure',failure_summary(error))
                     record.update(state='recovery_required',code='installation_requires_recovery')
                     self.store.write('request-'+identifier,record)
                 return record
@@ -167,7 +189,7 @@ class Coordinator:
                     result=self.device.readback() if record['action']=='install' else record['result']
                     return dict(record,current=True,result=result)
                 except Exception as error:
-                    if hasattr(self.device,'log'):self.device.log(error)
+                    log_failure(self.device,error)
                     return dict(record,state='recovery_required',code='historical_completion_is_not_current',current=False)
             def checkpoint(stage):
                 record.update(stage=stage,state='pending',code='operation_pending')
@@ -181,8 +203,9 @@ class Coordinator:
                 self.store.write('request-'+identifier,record)
                 self.ownership.stage(lease,'complete',terminal=True)
             except Exception as error:
-                if hasattr(self.device,'log'):self.device.log(error)
+                log_failure(self.device,error)
                 self.ownership.stage(lease,record['stage'],terminal=False)
+                record.setdefault('failure',failure_summary(error))
                 record.update(state='recovery_required',code='continuation_requires_recovery')
                 self.store.write('request-'+identifier,record)
             return record

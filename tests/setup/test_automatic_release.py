@@ -100,7 +100,9 @@ class AutomaticRelease(unittest.TestCase):
                         'signer_sha256': (ROOT / 'android/preview-certificate.sha256').read_text().strip(),
                         'sha256': hashlib.sha256(apk.read_bytes()).hexdigest()}
             report.write_text(json.dumps(metadata))
-            self.assertGreater(release.verify_android_package(apk, report, versions, SHA), 0)
+            with self.assertRaisesRegex(ValueError,'graphics'):
+                release.verify_android_package(apk, report, versions, SHA)
+            self.assertGreater(release.verify_android_package(apk, report, versions, SHA, allow_legacy=True), 0)
             for key, value in [('source_commit', 'b'*40), ('sha256', '0'*64), ('signer_sha256', '0'*64), ('android_version_code', 3), ('abi', 'x86_64'), ('debuggable', True), ('debuggable', 0), ('debuggable', None)]:
                 report.write_text(json.dumps({**metadata, key: value}))
                 with self.subTest(key=key), self.assertRaises(ValueError):
@@ -127,7 +129,10 @@ class AutomaticRelease(unittest.TestCase):
                     archive.writestr('cytv-desktop/cytv-desktop.exe', pe)
                     archive.writestr('cytv-desktop/version.json', json.dumps({'cytv': version, 'platform': 'windows-x64', 'entrypoint': 'cytv-desktop.exe'}))
                     for name, data in files.items(): archive.writestr('cytv-desktop/_internal/payload/' + name, data)
-                if valid: self.assertEqual(release.verify_windows_desktop(target, VERSIONS), len(files)-1)
+                if valid:
+                    with self.assertRaisesRegex(ValueError,'graphics'):
+                        release.verify_windows_desktop(target, VERSIONS)
+                    self.assertEqual(release.verify_windows_desktop(target, VERSIONS, allow_legacy=True), len(files)-1)
                 else:
                     with self.assertRaises(ValueError): release.verify_windows_desktop(target, VERSIONS)
 
@@ -159,12 +164,12 @@ class AutomaticRelease(unittest.TestCase):
         files['root/bundle.json'] = json.dumps({'package': 'root.ipk'}).encode()
         files['root/release.json'] = json.dumps({'version': VERSIONS['root']}).encode()
         files['payload.json'] = json.dumps({'home_version': VERSIONS['home'], 'helper_version': VERSIONS['helper'], 'files': {n: hashlib.sha256(b).hexdigest() for n, b in files.items()}}).encode()
-        self.assertGreater(release.verify_embedded(files.__getitem__, VERSIONS), 0)
+        self.assertGreater(release.verify_embedded(files.__getitem__, VERSIONS, allow_legacy=True), 0)
         with self.assertRaisesRegex(ValueError, 'version'):
-            release.verify_embedded(files.__getitem__, {**VERSIONS, 'root': '0.1.10'})
+            release.verify_embedded(files.__getitem__, {**VERSIONS, 'root': '0.1.10'}, allow_legacy=True)
         files['launcher.ipk'] = b'corrupted'
         with self.assertRaisesRegex(ValueError, 'hash'):
-            release.verify_embedded(files.__getitem__, VERSIONS)
+            release.verify_embedded(files.__getitem__, VERSIONS, allow_legacy=True)
 
     def test_artifacts_require_successful_trusted_main_builds(self):
         run = {'conclusion': 'success', 'status': 'completed', 'head_sha': SHA, 'head_branch': 'main', 'event': 'push', 'path': '.github/workflows/cytv.yml', 'head_repository': {'full_name': 'Razdva122/clean-your-tv-lg-webos'}}

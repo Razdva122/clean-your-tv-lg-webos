@@ -46,6 +46,26 @@ class HelperPreflightTests(unittest.TestCase):
         self.messages = []
         return Installer(Remote(), None, {'edition': 'no-root'}, '.', {}, self.messages.append)
 
+    def test_report_preserves_helper_probe_category_without_process_details(self):
+        import json
+        from cytv import diagnostics, state
+        for pid, processes, expected in (
+            (None, {123: b'com.local.nativehome\0'}, 'running'),
+            ('../bad', {}, 'uncertain'),
+            ('123', {}, 'stale'),
+            (None, {}, 'stopped'),
+        ):
+            with self.subTest(expected=expected):
+                installer = self.probe(pid, processes)
+                try:
+                    installer.preflight(install=True)
+                except UserError:
+                    self.assertIn(expected, ('running', 'uncertain'))
+                path = diagnostics.create_report(state.Store(self.tmp.name), 'install', None,
+                                                 'install-packages', tv_info=installer.tv_info)
+                self.assertEqual(json.loads(path.read_text())['tv'].get('helper_state'), expected)
+                self.assertNotIn('com.local.nativehome', path.read_text())
+
     def test_dead_or_reused_pid_does_not_prevent_install(self):
         for processes in ({}, {123: b'unrelated\0'}):
             with self.subTest(processes=processes):

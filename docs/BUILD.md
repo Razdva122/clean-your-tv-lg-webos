@@ -7,9 +7,15 @@ Zig 0.14.1, and a C compiler for tests. CI uses Node 22. These are source-build
 requirements; installed cytv packages carry their host runtime.
 
 ```sh
+npm ci --ignore-scripts --no-audit --no-fund
+python3 -m pip install -r scripts/build-requirements.txt
 scripts/test.sh
 scripts/build.sh
 ```
+
+Chinese fonts are prepared automatically from verified pinned sources when a
+translation adds glyphs. Reuse `build/chinese-font-cache` for offline builds;
+see [font provenance and preparation](TV-WEB-BUILD.md#chinese-ui-fonts).
 
 The commands above run full verification and package builds. For an ordinary
 edit, start with the affected `scripts/test.sh ui`, `tv`, `installer`, `setup`,

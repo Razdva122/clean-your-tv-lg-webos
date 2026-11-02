@@ -8,24 +8,27 @@ import mimetypes
 import shutil
 import runpy
 import subprocess
+import sys
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 import webbrowser
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from scripts.chinese_fonts import prepare_fonts
 
 def preview_themes():
     return subprocess.check_output(['node', str(ROOT / 'scripts/build-preview-themes.cjs')], cwd=ROOT)
 
 LAUNCHER_FILES = {
-    'index.html', 'style.css', 'theme-defaults.css', 'theme-policy.js', 'theme-runtime.js', 'home-layout.js', 'layout-panel.js', 'settings-categories.js', 'layout-panel.css', 'renewal-panel.css', 'app.js', 'app-library.js', 'config.js',
+    'index.html', 'viewport.js', 'style.css', 'theme-defaults.css', 'theme-policy.js', 'theme-runtime.js', 'home-layout.js', 'layout-panel.js', 'settings-categories.js', 'layout-panel.css', 'renewal-panel.css', 'app.js', 'app-library.js', 'config.js',
     'user-data.js', 'release-notes.js', 'system-updates.js', 'update-panel.js', 'renewal-panel.js', 'helper-control.js', 'profile-bootstrap.js',
     'native-bootstrap.js', 'i18n.js', 'catalogs.js', 'i18n.css', 'fonts/outfit-300.ttf', 'fonts/outfit-400.ttf', 'fonts/outfit-500.ttf', 'fonts/outfit-700.ttf', 'fonts/NotoSans.ttf', 'fonts/NotoSans-OFL.txt', 'fonts/NotoSansDevanagari.ttf', 'fonts/NotoSansDevanagari-OFL.txt', 'fonts/NotoSansKR.ttf', 'fonts/NotoSansKR-OFL.txt', 'fonts/NotoSansSC.ttf', 'fonts/NotoSansSC-OFL.txt', 'fonts/NotoSansTC.ttf', 'fonts/NotoSansTC-OFL.txt', 'fonts/OFL.txt',
 }
 THEME_FILES = ['theme-data.js', 'theme-store.js', 'theme-manager.js', 'theme-receiver.js', 'theme-panel.js', 'theme-panel.css', 'theme-locales.js', 'builtin-theme-files.json'] + json.loads((ROOT / 'launcher/builtin-theme-files.json').read_text())
 LAUNCHER_FILES.update(['appinfo.json'] + THEME_FILES)
 ROOT_LAUNCHER_FILES = {
-    'index.html', 'app.js', 'app-library.js', 'style.css', 'theme-defaults.css', 'theme-policy.js', 'theme-runtime.js', 'home-layout.js', 'layout-panel.js', 'settings-categories.js', 'layout-panel.css', 'config.js', 'apps.js',
+    'index.html', 'viewport.js', 'app.js', 'app-library.js', 'style.css', 'theme-defaults.css', 'theme-policy.js', 'theme-runtime.js', 'home-layout.js', 'layout-panel.js', 'settings-categories.js', 'layout-panel.css', 'config.js', 'apps.js',
     'fonts/outfit-300.ttf', 'fonts/outfit-400.ttf', 'fonts/outfit-500.ttf', 'fonts/outfit-700.ttf', 'fonts/NotoSans.ttf', 'fonts/NotoSans-OFL.txt', 'fonts/NotoSansDevanagari.ttf', 'fonts/NotoSansDevanagari-OFL.txt', 'fonts/NotoSansKR.ttf', 'fonts/NotoSansKR-OFL.txt', 'fonts/NotoSansSC.ttf', 'fonts/NotoSansSC-OFL.txt', 'fonts/NotoSansTC.ttf', 'fonts/NotoSansTC-OFL.txt', 'fonts/OFL.txt',
     'i18n.js', 'catalogs.js', 'i18n.css', 'root-locales.js', 'root-exit.js', 'root-firmware-control.js', 'root-firmware.js', 'root-audio.js', 'root-audio-locales.js', 'root-settings.js', 'root-settings.css',
     'root-profile-data.js', 'root-profile.js', 'release-notes.js', 'system-updates.js', 'root-updates.js',
@@ -57,6 +60,7 @@ def revision():
     files += [ROOT / 'root-edition/ui' / name for name in ('root-locales.js', 'root-exit.js', 'root-firmware-control.js', 'root-firmware.js', 'root-audio.js', 'root-audio-locales.js', 'root-settings.js', 'root-settings.css', 'root-profile-data.js', 'root-profile.js', 'root-updates.js')]
     files += [ROOT / 'preview/index.html', ROOT / 'preview/bridge.js', ROOT / 'preview/live-reload.js', ROOT / 'preview/themes.js', ROOT / 'scripts/build-preview-themes.cjs']
     files += list((ROOT / 'showcase/registry').glob('*.json'))
+    files += [ROOT / 'showcase/order.json']
     files += [ROOT / 'preview/icons' / name for name in sorted(ICON_FILES)]
     files += [ROOT / 'preview' / name for name in sorted(REFERENCE_FILES)]
     stamps = []
@@ -96,10 +100,13 @@ def export_site(destination):
     if (destination / 'themes').exists() or (destination / 'themes').is_symlink():
         raise ValueError('Use a fresh preview export directory; retired themes output must not be published.')
     destination.mkdir(parents=True, exist_ok=True)
+    fonts = prepare_fonts()
     for name in sorted(LAUNCHER_FILES):
         target = destination / 'launcher' / name
         target.parent.mkdir(parents=True, exist_ok=True)
-        if name == 'index.html':
+        if name in fonts:
+            target.write_bytes(fonts[name])
+        elif name == 'index.html':
             target.write_text(launcher_html(), encoding='utf-8')
         elif name == 'config.js':
             target.write_bytes(preview_config((ROOT / 'launcher' / name).read_bytes()))
@@ -163,6 +170,8 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path == '/':
             body = preview_html().encode('utf-8')
+        if path.startswith('/launcher/fonts/NotoSans') and path.endswith('.ttf'):
+            body = prepare_fonts().get(path[len('/launcher/'):], body)
         if path == '/launcher/index.html':
             body = launcher_html().encode('utf-8')
         mime = mimetypes.guess_type(file.name)[0] or 'application/octet-stream'
@@ -183,6 +192,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def make_server(port):
+    prepare_fonts()
     return ThreadingHTTPServer(('127.0.0.1', port), Handler)
 
 

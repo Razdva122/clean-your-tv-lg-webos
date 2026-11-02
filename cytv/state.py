@@ -96,11 +96,14 @@ class Store:
 
     def begin(self, profile, action, **values):
         path = self.device_dir(profile) / 'operation.json'
-        data = json.dumps({'action': action, 'stage': 'pending', **values}).encode('utf-8')
+        diagnostic_id = uuid.uuid4().hex
+        data = json.dumps({'action': action, 'stage': 'pending', **values, 'diagnostic_id': diagnostic_id}).encode('utf-8')
         try:
             fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         except FileExistsError:
-            raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.') from None
+            raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation') from None
+        self.diagnostic_created = diagnostic_id
+        self.diagnostic_action = action
         # Android forbids hard links. Exclusive creation never replaces evidence;
         # interrupted writes remain as blocking receipts, even if empty/corrupt.
         # Callers must wait for both syncs before mutating the TV.
@@ -124,7 +127,7 @@ class Store:
         current = self.pending(profile)
         if current is None:
             raise UserError('No operation receipt exists')
-        current.update(values)
+        current.update({key: value for key, value in values.items() if key != 'diagnostic_id'})
         private_write(self.device_dir(profile) / 'operation.json', json.dumps(current).encode())
 
     @contextmanager

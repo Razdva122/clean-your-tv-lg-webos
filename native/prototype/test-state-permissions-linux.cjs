@@ -43,6 +43,17 @@ if(process.platform!=='linux'||process.getuid()!==0){
   run(6575,'var fs=require("fs");if(JSON.parse(fs.readFileSync('+JSON.stringify(request+'.json')+')).id!=="test")process.exit(5);var p='+JSON.stringify(response)+';fs.writeFileSync(p+".tmp",JSON.stringify({id:"test",enabled:true}),{mode:0o660});fs.chmodSync(p+".tmp",0o660);fs.renameSync(p+".tmp",p+".json");',6575);
   a.equal(fs.statSync(response+'.json').gid,5000,'controller reply inherits the same group');
   run(5367,'if(!JSON.parse(require("fs").readFileSync('+JSON.stringify(response+'.json')+')).enabled)process.exit(6);',5367);
+  // A rejected Helper service call uses trusted SSH stop code. The live
+  // controller must still be able to execute block() under another UID.
+  fs.chmodSync(state,0o770);
+  const stop=cp.execFileSync('python3',['-c','from cytv.helper_stop import PROGRAM; print(PROGRAM)'],{encoding:'utf8'})
+   .replaceAll('/media/developer/apps/usr/palm/applications/com.local.nativehome/state',state)
+   .replaceAll('/media/developer/apps/usr/palm/applications/com.local.nativehome',root);
+  run(5999,stop,5999);
+  const blocked=path.join(state,'blocked');
+  a.equal(fs.statSync(blocked).gid,5000,'SSH stop latch shares the controller group even with another primary gid');
+  run(6575,'var fs=require("fs");if(JSON.parse(fs.readFileSync('+JSON.stringify(control)+')).cmd!=="stop")process.exit(7);fs.writeFileSync('+JSON.stringify(blocked)+',"stopped");',6575);
+  a.equal(fs.readFileSync(blocked,'utf8'),'stopped','controller block() retains an orderly stop path');
   console.log('PASS: real installer/developer/helper/service UIDs, shared group, reconfiguration, denied replacement and setgid Home IPC');
  }finally{fs.rmSync(root,{recursive:true,force:true});}
 }

@@ -4,11 +4,15 @@ import json
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 
 
 def compile_web(files):
+    from scripts.chinese_fonts import with_fonts
+    files = with_fonts(files)
     web = {name: raw.decode('utf-8') for name, raw in files.items()
            if name.endswith(('.js', '.css', '.html'))}
     try:
@@ -24,7 +28,9 @@ def compile_web(files):
     return output
 
 
-def stage(source, output, compiler=compile_web):
+def stage(source, output, compiler=compile_web, resolution=None):
+    if resolution is not None and resolution not in ('1280x720', '1920x1080'):
+        raise ValueError('Unsupported app graphics resolution')
     source, output = Path(source), Path(output)
     if source.resolve() == output.resolve():
         raise ValueError('Compile into a separate staging directory, not the source.')
@@ -34,6 +40,12 @@ def stage(source, output, compiler=compile_web):
             raise ValueError('Indirect web source: ' + str(path))
         if path.is_file():
             files[path.relative_to(source).as_posix()] = path.read_bytes()
+    if resolution is not None:
+        if 'appinfo.json' not in files:
+            raise ValueError('Graphics resolution requires an app manifest')
+        info = json.loads(files['appinfo.json'])
+        info['resolution'] = resolution
+        files['appinfo.json'] = (json.dumps(info, indent=2) + '\n').encode()
     compiled = compiler(files)
     if output.exists():
         shutil.rmtree(output)
@@ -47,5 +59,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--input', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--resolution', choices=('1280x720', '1920x1080'), help='Explicit app graphics resolution; source manifest is unchanged')
     args = parser.parse_args()
-    stage(args.input, args.output)
+    stage(args.input, args.output, resolution=args.resolution)

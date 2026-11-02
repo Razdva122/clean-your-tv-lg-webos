@@ -4,6 +4,7 @@ These are source-checkout maintainer tools. Run from the source checkout with No
 
 ```sh
 npm ci --ignore-scripts --no-audit --no-fund
+python3 -m pip install -r scripts/build-requirements.txt
 python3 scripts/tv-dev.py --help
 ```
 
@@ -23,7 +24,9 @@ The output defaults to `build/tv-dev-ui`. A custom `--output DIRECTORY` must be
 separate from sources. The command refuses symlinks and existing directories it
 did not create. It compiles the current Root UI through the ordinary Chromium 38
 Babel/PostCSS/ES5/CSS gates, using the public preview inventory and mock bridge.
-It needs no network, webOS CLI or TV connection once npm dependencies are present.
+It needs no webOS CLI or TV connection. Offline staging requires npm/Python build
+dependencies and the verified Chinese font source cache from a prior preparation;
+see [automatic font preparation](../TV-WEB-BUILD.md#chinese-ui-fonts).
 Compilation failures preserve the previous successful output.
 
 The staged metadata uses `com.cleanyourtv.dev.ui`, without Home category or

@@ -804,3 +804,37 @@
 /* Keep the visibility switch inside its Appearance setting row. */
 .settings-layout .home-routing-switch { position: relative; padding-right: 128px; }
 #homeAppsError:empty { display: none; }
+
+/* Helper diagnostics stay inside the physical viewport, including 720p TVs. */
+.helper-panel .root-settings-card {
+  display: flex;
+  flex-direction: column;
+  max-height: 92vh;
+  overflow-y: auto;
+}
+.helper-panel .root-settings-card>h1,.helper-panel .root-settings-card>p,.helper-panel .renewal-actions {
+  flex-shrink: 0;
+}
+.helper-panel-diagnostics {
+  flex: 0 1 auto;
+  min-height: 100px;
+  max-height: 38vh;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  font-size: 20px;
+  line-height: 1.35;
+  margin: 8px 0 0;
+  padding: 12px;
+  border: 1px solid #626a76;
+  border-radius: 8px;
+}
+.helper-panel-diagnostics[hidden] { display: none; }
+.helper-panel-diagnostics:focus { outline: 3px solid #b8d3ff; outline-offset: -3px; }
+@media(max-height:800px) {
+  .helper-panel .root-settings-card { padding: 24px 32px; }
+  .helper-panel h1 { font-size: 32px; }
+  .helper-panel p,.helper-panel .settings-status { font-size: 21px; }
+  .helper-panel button { font-size: 22px; padding: 12px 18px; }
+  .helper-panel-diagnostics { font-size: 18px; }
+}

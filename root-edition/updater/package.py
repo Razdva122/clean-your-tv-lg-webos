@@ -66,6 +66,9 @@ def inspect_package(raw, manifest):
             or info.get('id') != APP or info.get('app') != APP or info.get('version') != manifest['version']
             or info.get('services') not in ([], [APP+'.service'])):
         raise ValueError('Root application identity mismatch')
+    if 'url' in manifest:
+        expected='1280x720' if manifest['url'].endswith('_720p_all.ipk') else '1920x1080'
+        if app.get('resolution','1920x1080')!=expected:raise ValueError('Root package graphics variant mismatch')
     return {name: hashlib.sha256(data).hexdigest() for name, data in files.items()}
 
 

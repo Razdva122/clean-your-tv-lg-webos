@@ -31,7 +31,7 @@
 /* Packaged fallbacks also keep Chinese text available offline. */
 
 html,body,button {
-  font-family: Outfit,"CYTV NotoSans","CYTV NotoSansDevanagari","CYTV NotoSansKR","Noto Sans","Noto Sans Devanagari","Noto Sans CJK KR","Malgun Gothic",sans-serif;
+  font-family: Outfit,"CYTV NotoSans","CYTV NotoSansDevanagari","CYTV NotoSansSC","CYTV NotoSansTC","CYTV NotoSansKR","Noto Sans","Noto Sans Devanagari","Noto Sans CJK KR","Malgun Gothic",sans-serif;
 }
 
 #languagePicker {
@@ -113,7 +113,7 @@ html[lang="hi"] #greeting,html[lang="ko"] #greeting {
 }
 
 #renewalPanel,html .root-settings,#updatePanel {
-  font-family: Outfit,"CYTV NotoSans","CYTV NotoSansDevanagari","CYTV NotoSansKR",sans-serif;
+  font-family: Outfit,"CYTV NotoSans","CYTV NotoSansDevanagari","CYTV NotoSansSC","CYTV NotoSansTC","CYTV NotoSansKR",sans-serif;
 }
 
 /* Long localized dates wrap within the header instead of pushing shortcuts off screen. */
@@ -245,19 +245,19 @@ html[lang="hi"] #greeting,html[lang="hi"] #date {
 }
 
 html[lang="zh-Hans"],html[lang="zh-Hans"] body,html[lang="zh-Hans"] button,html[lang="zh-Hans"] #renewalPanel,html[lang="zh-Hans"] .root-settings,html[lang="zh-Hans"] #updatePanel {
-  font-family: Outfit,"CYTV NotoSansSC","CYTV NotoSans",sans-serif;
+  font-family: Outfit,"CYTV NotoSansSC","CYTV NotoSansTC","CYTV NotoSans",sans-serif;
 }
 
 html[lang="zh-Hant"],html[lang="zh-Hant"] body,html[lang="zh-Hant"] button,html[lang="zh-Hant"] #renewalPanel,html[lang="zh-Hant"] .root-settings,html[lang="zh-Hant"] #updatePanel {
-  font-family: Outfit,"CYTV NotoSansTC","CYTV NotoSans",sans-serif;
+  font-family: Outfit,"CYTV NotoSansTC","CYTV NotoSansSC","CYTV NotoSans",sans-serif;
 }
 
 #languageChoices button[lang="zh-Hans"], #settingsLanguageChoices button[lang="zh-Hans"] {
-  font-family: "CYTV NotoSansSC",sans-serif;
+  font-family: "CYTV NotoSansSC","CYTV NotoSansTC",sans-serif;
 }
 
 #languageChoices button[lang="zh-Hant"], #settingsLanguageChoices button[lang="zh-Hant"] {
-  font-family: "CYTV NotoSansTC",sans-serif;
+  font-family: "CYTV NotoSansTC","CYTV NotoSansSC",sans-serif;
 }
 
 #settingsLanguageChoices button { width:calc(33.333% - 16px); }

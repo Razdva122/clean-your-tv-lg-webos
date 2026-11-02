@@ -1,31 +1,183 @@
 {
   "schema": 1,
-  "version": "1.5.4",
+  "version": "1.6.0",
   "changes": [
     {
-      "pr": 209,
+      "pr": 194,
       "issues": [
-        116,
-        133,
-        152,
         160,
-        164,
-        170,
-        171,
-        198,
-        202,
-        203,
-        204
+        164
       ],
-      "summary": "First publish inherited themes/receiver/native Root/SSH/diagnostic fixes from unpublished1.5.3 with exact Helper transition approval; #202/#171 and partial original reports remain unresolved"
+      "summary": "Add opt-in host-only Root Node 0.12.2 prototype and legacy HTTPS options correction; Node 8+ admission retained, #160/#164 installation paths remain unresolved"
+    },
+    {
+      "pr": 197,
+      "issues": [],
+      "summary": "Add Minimal 1.0.1 and preserve existing theme order; append new community themes, with maintainer browser acceptance only"
+    },
+    {
+      "pr": 212,
+      "issues": [
+        152
+      ],
+      "summary": "Guarded No-root Helper stop after service refusal and prefixed WebKit layouts; #152 actual device recovery/control acceptance remains pending"
+    },
+    {
+      "pr": 213,
+      "issues": [
+        161
+      ],
+      "summary": "Document passive bounded Root worker diagnostics before admission; #161 actual recovery remains unresolved pending owner evidence"
+    },
+    {
+      "pr": 214,
+      "issues": [],
+      "summary": "Simplify theme suggestions and move review work to maintainers"
+    },
+    {
+      "pr": 215,
+      "issues": [
+        69
+      ],
+      "summary": "Integrate Retro 1.0.0 API 1 with verified corrected distribution pin and offline catalogue; original font/effect/date requirements in #69 remain follow-up"
+    },
+    {
+      "pr": 218,
+      "issues": [
+        201
+      ],
+      "summary": "Preserve pending No-root journals when installer termination is unproven; #201 reconciliation remains unresolved"
+    },
+    {
+      "pr": 219,
+      "issues": [
+        69
+      ],
+      "summary": "Remove retired standalone web Showcase builder/assets/tests; retain inline theme preview, TV catalogue and author runtime cards"
+    },
+    {
+      "pr": 220,
+      "issues": [
+        200
+      ],
+      "summary": "Add allowlisted host Python download/cache failure reasons; #200 original macOS cause and pending Root recovery remain unresolved"
+    },
+    {
+      "pr": 221,
+      "issues": [
+        101,
+        133,
+        161,
+        200,
+        216
+      ],
+      "summary": "Prepare pinned individual Root recovery handoffs and fixed host command-boundary diagnostics; original #101/#133/#161/#216/#200 recovery remains unresolved"
+    },
+    {
+      "pr": 222,
+      "issues": [
+        202,
+        206
+      ],
+      "summary": "Refresh Root Settings status before resumed actions and preserve retained-rollback Home capture; exact-package C3 active rollback passed, original #202 forward cancellation and #206 exact resumed Settings case remain unresolved"
+    },
+    {
+      "pr": 223,
+      "issues": [],
+      "summary": "Skip closed-PR policy preflight writes; preserve SHA-shared open gates; workflow prevention activates on normal main release"
+    },
+    {
+      "pr": 224,
+      "issues": [
+        211
+      ],
+      "summary": "Add Czech TV Home/Root/settings/theme/audio/updater localization and preserve cs profiles; installer language scope unchanged"
+    },
+    {
+      "pr": 225,
+      "issues": [
+        207
+      ],
+      "summary": "Add adaptive 720p Home and explicit HD source builds plus read-only IR/panel diagnostics; standard-remote routing and normal-channel HD delivery remain unresolved"
+    },
+    {
+      "pr": 226,
+      "issues": [
+        207
+      ],
+      "summary": "Select verified HD/FHD packages across desktop/Android and signed OTA; preserve exact rollback, require updater migration and retain unresolved IR/physical acceptance"
+    },
+    {
+      "pr": 228,
+      "issues": [],
+      "summary": "Generate compact Chinese subsets automatically from catalog/compiler inputs with pinned host-only sources, offline cache and SC/TC fallback; physical rendering remains unverified"
+    },
+    {
+      "pr": 231,
+      "issues": [
+        201,
+        229
+      ],
+      "summary": "Export allowlisted existing Helper preflight state and incorporate answered C2 dev/listApps evidence; original #229 device report and #201 recovery remain unresolved"
+    },
+    {
+      "pr": 232,
+      "issues": [
+        229,
+        230
+      ],
+      "summary": "Preserve operation-bound initiating failures and safe worker categories; export Doctor/status/check/version context across installers; original #229/#230 device reports remain unresolved"
+    },
+    {
+      "pr": 233,
+      "issues": [
+        201,
+        216
+      ],
+      "summary": "Add separately confirmed installer recovery with existing guard revalidation and no implicit reinstall; original #201/#216 recovery remains unresolved"
+    },
+    {
+      "pr": 234,
+      "issues": [
+        207
+      ],
+      "summary": "Separate package/launch/startup and explicitly owner-reported Home with default skip and local reports; #207 IR routing remains unresolved"
+    },
+    {
+      "pr": 235,
+      "issues": [
+        133,
+        216,
+        217
+      ],
+      "summary": "Check existing Root Home interfaces before runtime/package preparation and show typed localized connection guidance; original #133/#216 recovery remains unresolved; #217 reporter resolved connection by enabling Key Server, not by this release"
+    },
+    {
+      "pr": 236,
+      "issues": [],
+      "summary": "Align Android smoke checks with safe error navigation: no blind Status/Restore, no automatic request and preserved connection; product behavior unchanged"
+    },
+    {
+      "pr": 238,
+      "issues": [],
+      "summary": "Freeze 1.6.0 component versions/documentation and fixed System1.2.0 target; preserve restricted replacement admission and repair receiver smoke timing"
+    },
+    {
+      "pr": 245,
+      "issues": [
+        171,
+        202,
+        207
+      ],
+      "summary": "Finalize guides and scoped C3/Android/System acceptance; reuse installer builds for audited external guides with early boundary checks; #171 standby limitation accepted for 1.6.0, original #171/#202/#207 scopes remain unresolved"
     }
   ],
   "excluded": [],
-  "acceptance": "Maintainer-owned OLED55C3RLA, firmware43.21.71/webOS SDK11.2.0, remote model unknown, macOS ARM64. Signed Root QA41178376979:1/signing41178920042:1 sourcef4bab0ea; final fullbuild41187137269:1 source5f60408c carries byte-identical Root32b0acf41f65b1620d1f0a2679058d5be5d1f5f6a49cf97105eae4c97b882469, updater375ffccfd5ac42dbc31d808fc27262c23bbfdf49d148cd909461a153f75844ad and infrastructure341de52d865a364a0b10db4c272b33237648b96d642114cb0d633dfd6cd16033. Controls/Home/arrows/OK/Back/volume/audible sound, native Off/tripleHome cleanup, same-session standby and true AC cold first-screen Clean, actual profile/theme/columns retention and all3component rollback/native baseline cleanup passed within recorded scope. Forward Home resume cancelled and active rollback resume skipped; maintainer explicitly deferred #202/#206 fixes/retests and accepted release with normal explicit-enable/Settings reopen workaround. #171 earlier different-session failure unresolved follow-up. Maintainer explicitly accepts untested physical Helper0.6.20->0.6.21 transition. Final Android0.5.1/code16 APK7aeba9cc8235b7871292adfeedf49497e31496f73cb7d33a908c2ad02dd67fed original-signer code15->16 emulator install-r/force-stop retained4syntheticfiles; physicalphone/nativeinstrumentation untested. Final APK all6TVIPKs and complete Root infrastructure match tested bytes; Helper raw/canonical pins match corrected exact approval209; final macOS CLI/GUI runtime checks passed. Complete trusted fullCI and platform packaging checks passed. NoRootwebOS5receiver published-package confirmation, uninstall/additionalinput/firmware combinations untested. See docs/history/2026-10-31-release-1.5.3-signed-root-qa.md; TV left stable0.6.1 with owner-confirmed controls/audio. No universalcompatibility claim. New complete1.5.4 candidate follows maintainer-authorized recovery after unpublished1.5.3 failed stale Helper approval before signedupload. Existing strict actual candidate/rollback verifier and10feed tests pass. No new physical1.5.4feed/update/rollback operation claimed. See docs/history/2026-10-31-release-1.5.4-publication-recovery.md.",
+  "acceptance": "Final scoped acceptance and artifact hashes: docs/history/2026-11-02-release-1.6.0-final-acceptance.md and docs/history/2026-11-02-release-1.6.0-final-artifacts.md. OLED55C3RLA, firmware43.21.71/webOS11.2.0, Magic Remote, macOS ARM64; Root0.6.1/System1.1.2 baseline. Exact Root0.7.0/updater0.4.0/infrastructure0.7.0 and scenario dependencies match original signed QA: update/profile, controls/audio, Off standby/cold, On cold, active retained rollback, advanced controls, renderer/reader fault recovery and genuine failsafe/normal exit passed. Final TV is Off/all three LG routes; original System1.1.2 and Homebrew flags retained, SSH restored and temporary telnet closed. Original On-standby failure retained; repeated LG Channels-to-Clean delay explicitly accepted for1.6.0, #171 open. Final original-signer APK fc9426b82616e021de4eaf3bf78f6ca8a170d94a942000bfbf8ec50d1ca79946 passed fresh code16-to17 upgrade, genuine Store/native, data-retention, no-replay and lifecycle on agreed Android15/API35 ARM64 userdebug emulator/WebView124. System1.2 identical 29-file host fixture carries as synthetic evidence only. No-root/HD/IR, physical fonts/phone/new System1.2, uninstall, real interruption and fresh-computer paths remain untested; original #202/#206/#207 scopes unresolved. No general1.1.2 migration, legacy HD feed or Homebrew promotion; Node0.12 prototype off. Public delivery/signature/feed/notices remain separate gates.",
   "build": {
-    "run_id": 41187137269,
+    "run_id": 41463715304,
     "attempt": 1,
-    "source": "5f60408c898d9e8a417092ed51141b83fd8ae159"
+    "source": "0b271536c510b08014253bb485a817667940ad07"
   },
-  "acceptance_build": "41187137269:1"
+  "acceptance_build": "41463715304:1"
 }

@@ -6,6 +6,9 @@
       return params && params[k] !== undefined ? params[k] : m;
     });
   }
+  function sceneRect(element) {
+    return window.HomeViewport ? HomeViewport.rect(element) : element.getBoundingClientRect();
+  }
   function ht(markup) {
     return window.HomeI18n ? HomeI18n.html(markup) : markup;
   }
@@ -742,7 +745,7 @@
       if (e.card && typeof e.brandBackground === 'string') e.card.style.background = layoutPreset === 'channel-list' ? '' : e.brandBackground;
       var slot = layoutPreset === 'scenic-grid' ? ribbonSlot(t) : null;
       var previousSlot = Number(e.el.getAttribute('data-ribbon-slot'));
-      e.el.style.transition = slot === null ? '' : e.el.hasAttribute('data-ribbon-slot') && Math.abs(previousSlot - slot) === 1 && previousSlot <= columnCount && slot <= columnCount ? 'left 160ms ease-out' : 'none';
+      e.el.style.webkitTransition = e.el.style.transition = slot === null ? '' : e.el.hasAttribute('data-ribbon-slot') && Math.abs(previousSlot - slot) === 1 && previousSlot <= columnCount && slot <= columnCount ? 'left 160ms ease-out' : 'none';
       e.el.style.pointerEvents = slot !== null && slot >= columnCount ? 'none' : '';
       e.el.style.visibility = slot !== null && slot >= columnCount ? 'hidden' : '';
       if (slot === null) e.el.removeAttribute('data-ribbon-slot'); else e.el.setAttribute('data-ribbon-slot', slot);
@@ -816,7 +819,7 @@
   function focusTile(index) {
     if (!tiles.length) {
       focusGlassVisible = false; focusGlass.style.opacity = '0';
-      scrollOffset = 0; stage.style.transform = 'translateY(0px)';
+      scrollOffset = 0; stage.style.webkitTransform = stage.style.transform = 'translateY(0px)';
       clearTimeout(heroTitle.swap); heroVisible = false; heroTitle.style.opacity = '0';
       if (channelArtwork) channelArtwork.style.visibility = 'hidden';
       getElement('viewport').removeAttribute('data-position');
@@ -850,7 +853,7 @@
         if (top - scrollOffset + CARD_HEIGHT + 70 > floor) scrollOffset = top + CARD_HEIGHT + 70 - floor;
         if (top - scrollOffset - 24 < ceiling) scrollOffset = Math.max(0, top - 24 - ceiling);
       }
-      stage.style.transform = "translateY(" + -scrollOffset + "px)";
+      stage.style.webkitTransform = stage.style.transform = "translateY(" + -scrollOffset + "px)";
       var header = document.querySelector("header"),
         headerBottom = header.offsetTop + header.offsetHeight;
       document.body.classList.toggle("scrolled", layoutPreset === "dock-grid" && DOCK_TOP - scrollOffset < headerBottom + 24);
@@ -860,8 +863,8 @@
         glassTop = top + CARD_HEIGHT / 2 - glassHeight / 2;
       focusGlass.style.width = glassWidth + "px";
       focusGlass.style.height = glassHeight + "px";
-      focusGlass.style.transform = "translate(" + glassLeft + "px," + glassTop + "px)";
-      focusGlassVisible || (focusGlass.style.transition = "none", focusGlass.offsetWidth, focusGlass.style.transition = "", focusGlass.style.opacity = "1", focusGlassVisible = true);
+      focusGlass.style.webkitTransform = focusGlass.style.transform = "translate(" + glassLeft + "px," + glassTop + "px)";
+      focusGlassVisible || (focusGlass.style.webkitTransition = focusGlass.style.transition = "none", focusGlass.offsetWidth, focusGlass.style.webkitTransition = focusGlass.style.transition = "", focusGlass.style.opacity = "1", focusGlassVisible = true);
       if (layoutPreset === 'channel-list') {
         if (!channelArtwork) {
           channelArtwork = document.createElement('img'); channelArtwork.id = 'channelArtwork';
@@ -883,18 +886,18 @@
         if (layoutPreset === 'channel-list' || layoutPreset === 'scenic-grid') {
           clearTimeout(heroTitle.swap);
           heroTitle.textContent = t;
-          heroTitle.style.transform = 'none';
+          heroTitle.style.webkitTransform = heroTitle.style.transform = 'none';
           heroTitle.style.opacity = '1';
           heroVisible = true;
-        } else heroVisible ? heroTitle.textContent !== t && (heroTitle.style.opacity = "0", heroTitle.style.transform = "translateX(-24px)", clearTimeout(heroTitle.swap), heroTitle.swap = setTimeout(function () {
+        } else heroVisible ? heroTitle.textContent !== t && (heroTitle.style.opacity = "0", heroTitle.style.webkitTransform = heroTitle.style.transform = "translateX(-24px)", clearTimeout(heroTitle.swap), heroTitle.swap = setTimeout(function () {
           heroTitle.textContent = t;
-          heroTitle.style.transition = "none";
-          heroTitle.style.transform = "translateX(24px)";
+          heroTitle.style.webkitTransition = heroTitle.style.transition = "none";
+          heroTitle.style.webkitTransform = heroTitle.style.transform = "translateX(24px)";
           heroTitle.offsetWidth;
-          heroTitle.style.transition = "";
-          heroTitle.style.transform = "none";
+          heroTitle.style.webkitTransition = heroTitle.style.transition = "";
+          heroTitle.style.webkitTransform = heroTitle.style.transform = "none";
           heroTitle.style.opacity = "1";
-        }, 120)) : (heroTitle.textContent = t, heroTitle.style.transform = "none", heroTitle.style.opacity = "1", heroVisible = true);
+        }, 120)) : (heroTitle.textContent = t, heroTitle.style.webkitTransform = heroTitle.style.transform = "none", heroTitle.style.opacity = "1", heroVisible = true);
         updateAmbient(e.color);
       }(tiles[index]) : heroVisible && (heroVisible = false, heroTitle.style.opacity = "0");
       updateAmbient(tiles[index].color);
@@ -956,7 +959,7 @@
       if (inputsPanel.innerHTML = "", inputRows = [], (window.TV_APPS && TV_APPS.inputs || []).forEach(function (e) {
         addInputRow("M18,7V4c0,-1.1 -0.9,-2 -2,-2H8C6.9,2 6,2.9 6,4v3H5v6l3,6v3h8v-3l3,-6V7H18zM8,4h8v3h-2V5h-1v2h-2V5h-1v2H8V4z", e.label, e.appId);
       }), CONFIG.liveTvApp && (inputRows.length && addInputSeparator(), addInputRow("M21,6h-7.59l3.29,-3.29L16,2l-4,4l-4,-4l-0.71,0.71L10.59,6H3c-1.1,0 -2,0.89 -2,2v12c0,1.1 0.9,2 2,2h18c1.1,0 2,-0.89 2,-2V8C23,6.89 22.1,6 21,6zM21,20H3V8h18V20zM9,10v8l7,-4L9,10z", tr("Live TV"), CONFIG.liveTvApp)), inputRows.length) {
-        var e = topButtons[0].getBoundingClientRect();
+        var e = sceneRect(topButtons[0]);
         inputsPanel.style.left = e.left + "px";
         inputsPanel.style.top = e.bottom + 20 + "px";
         inputsPanel.style.minWidth = Math.max(e.width, 300) + "px";
@@ -1140,7 +1143,7 @@
           else column < columnCount - 1 && focusedTile < lastIndex && focusTile(focusedTile + 1);
         } else if (38 === key) {
           0 === rowFor(focusedTile) ? focusTopButton((tileCenter = tileLeft(focusedTile) + CARD_WIDTH / 2, nearestButton = 0, nearestDistance = 1 / 0, topButtons.forEach(function (e, t) {
-            var n = e.getBoundingClientRect(),
+            var n = sceneRect(e),
               a = Math.abs(n.left + n.width / 2 - tileCenter);
             a < nearestDistance && (nearestDistance = a, nearestButton = t);
           }), nearestButton)) : focusTile(focusedTile - columnCount);

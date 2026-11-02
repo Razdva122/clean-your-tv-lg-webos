@@ -4,13 +4,14 @@ import argparse
 import hashlib
 import json
 import re
+import sys
 from pathlib import Path
 
 APP_ID = 'com.cleanyourtv.root.preview'
 SOURCE = Path(__file__).resolve().parents[1] / 'launcher'
 # Explicit public-source inventory: never recursively copy a developer workspace.
 FILES = (
-    'appinfo.json', 'release-notes.js', 'system-updates.js', 'index.html', 'app.js', 'app-library.js', 'i18n.js', 'catalogs.js', 'i18n.css', 'style.css', 'theme-defaults.css', 'theme-policy.js', 'theme-runtime.js', 'home-layout.js', 'layout-panel.js', 'settings-categories.js', 'layout-panel.css',
+    'appinfo.json', 'viewport.js', 'release-notes.js', 'system-updates.js', 'index.html', 'app.js', 'app-library.js', 'i18n.js', 'catalogs.js', 'i18n.css', 'style.css', 'theme-defaults.css', 'theme-policy.js', 'theme-runtime.js', 'home-layout.js', 'layout-panel.js', 'settings-categories.js', 'layout-panel.css',
     'brand-v2-icon.png', 'brand-v2-largeIcon.png', 'splash.png',
     'fonts/outfit-300.ttf', 'fonts/outfit-400.ttf', 'fonts/outfit-500.ttf', 'fonts/outfit-700.ttf', 'fonts/NotoSans.ttf', 'fonts/NotoSans-OFL.txt', 'fonts/NotoSansDevanagari.ttf', 'fonts/NotoSansDevanagari-OFL.txt', 'fonts/NotoSansKR.ttf', 'fonts/NotoSansKR-OFL.txt', 'fonts/NotoSansSC.ttf', 'fonts/NotoSansSC-OFL.txt', 'fonts/NotoSansTC.ttf', 'fonts/NotoSansTC-OFL.txt', 'fonts/OFL.txt',
 )
@@ -19,7 +20,9 @@ UI = Path(__file__).resolve().parent / 'ui'
 UI_FILES = ('root-audio-locales.js', 'root-audio.js', 'root-locales.js', 'root-exit.js', 'root-firmware-control.js', 'root-firmware.js', 'root-settings.js', 'root-settings.css', 'root-profile-data.js', 'root-profile.js', 'root-updates.js')
 
 
-def prepare(version='0.0.1'):
+def prepare(version='0.0.1', resolution=None):
+    if resolution is not None and resolution not in ('1280x720', '1920x1080'):
+        raise ValueError('Unsupported app graphics resolution')
     if not isinstance(version, str) or not re.fullmatch(r'(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)', version) or len(version) > 32:
         raise ValueError('Invalid Root release version')
     files = {}
@@ -31,6 +34,8 @@ def prepare(version='0.0.1'):
     info = json.loads(files['appinfo.json'])
     if (info.get('id'), info.get('type'), info.get('main')) != ('com.gathin.tvhome', 'web', 'index.html'):
         raise ValueError('Unexpected launcher manifest')
+    if resolution is not None:
+        info['resolution'] = resolution
     info['themeEngineVersion'] = info['version']
     info.update(id=APP_ID, title='Home Root', version=version, appCategory=['home'], icon='home-root-icon.png', largeIcon='home-root-largeIcon.png')
     for name in ('brand-v2-icon.png', 'brand-v2-largeIcon.png'):
@@ -66,7 +71,9 @@ def prepare(version='0.0.1'):
     files['apps.js'] = b'window.TV_APPS = {apps: [], inputs: []};\n'
     config = {'columns': 5, 'dockApps': [], 'hiddenApps': ['com.gathin.tvhome', 'com.local.nativehome', APP_ID]}
     files['config.js'] = ('window.CONFIG = ' + json.dumps(config) + ';\n').encode()
-    return files
+    sys.path.insert(0, str(SOURCE.parent))
+    from scripts.chinese_fonts import with_fonts
+    return with_fonts(files)
 
 
 def stage(output):

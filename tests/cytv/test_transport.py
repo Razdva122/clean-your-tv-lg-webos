@@ -248,6 +248,36 @@ class TransportTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             replies.feed(b'x' * 1048577)
 
+    def test_package_subscription_requires_terminal_event_and_closes_on_uncertainty(self):
+        import shlex
+        from cytv.errors import UserError
+        for action, terminal in (('install', 'installed'), ('remove', 'removed')):
+            for outcome in ('terminal', 'denied', 'interrupted', 'timeout'):
+                with self.subTest(action=action, outcome=outcome):
+                    commands, closed = [], []
+                    ssh = object.__new__(SSH)
+                    ssh.root = False
+                    ssh.channel = lambda cmd: commands.append(shlex.split(cmd)) or SimpleNamespace(close=lambda: closed.append(True))
+                    def chunks(channel, timeout):
+                        yield b'{"returnValue":true,"subscribed":true}'
+                        yield json.dumps({'details': {'state': 'installing' if action == 'install' else 'removing'}}).encode()
+                        if outcome == 'terminal':
+                            yield json.dumps({'returnValue': True, 'details': {'state': terminal}}).encode()
+                        elif outcome == 'denied':
+                            yield b'{"returnValue":false,"errorCode":-1}'
+                        elif outcome == 'timeout':
+                            raise UserError('Timed out')
+                    ssh.chunks = chunks
+                    uri = 'com.webos.appInstallService/dev/' + action
+                    if outcome == 'terminal':
+                        self.assertEqual(ssh.luna(uri, {'subscribe': True}, terminal=terminal)['details']['state'], terminal)
+                    else:
+                        with self.assertRaises(UserError):
+                            ssh.luna(uri, {'subscribe': True}, terminal=terminal)
+                    self.assertEqual(commands[0][:3], ['/usr/bin/luna-send-pub', '-i', 'luna://' + uri])
+                    self.assertEqual(json.loads(commands[0][3]), {'subscribe': True})
+                    self.assertEqual(closed, [True])
+
     def test_acceptance_is_not_terminal_and_failure_is_never_success(self):
         self.assertFalse(terminal_reply({'returnValue': True}, 'installed'))
         self.assertFalse(terminal_reply({'details': {'state': 'installing'}}, 'installed'))
