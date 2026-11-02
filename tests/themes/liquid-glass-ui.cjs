@@ -68,6 +68,10 @@ const types = {'.js': 'application/javascript', '.json': 'application/json', '.c
         // The card rim is a ring, so Add app keeps its dashed outline and resting cards have no border.
         assert.equal((await style('.add-app .card', 'borderTopStyle'))[0], 'dashed', 'Add app keeps its dashed outline');
         assert.equal((await style('#tiles .item:not(.focused):not(.add-app) .card', 'borderTopWidth'))[0], '0px', 'resting app cards have no border');
+        // Measured on a 4K webOS TV: a translucent border on the repainting input tiles and a wide
+        // blur on the dock band each cost about 2 missed frames per shelf press.
+        assert.equal((await style('.ctv-input-tile', 'borderTopWidth'))[0], '0px', 'input tiles draw their rim as a ring, not a border');
+        assert.equal((await style('.ctv-dock', 'boxShadow'))[0], 'none', 'the dock band has no blurred shadow');
         await page.keyboard.press('ArrowUp');
         assert.equal(await page.locator('.ctv-input-tile.is-focused').count(), 1, 'Up from the dock reaches the shelf');
         const [tileFill, tileColor] = await style('.ctv-input-tile.is-focused', 'backgroundColor', 'color');
