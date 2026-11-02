@@ -103,5 +103,10 @@
     }
   ],
   "excluded": [],
-  "acceptance": ""
+  "acceptance": "",
+  "build": {
+    "run_id": 41530199470,
+    "attempt": 1,
+    "source": "e20c8b8fff7f59285d7a0637ea5e34752117a56a"
+  }
 }

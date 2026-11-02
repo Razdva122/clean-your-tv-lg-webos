@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [v1.7.0 candidate build and signed Root artifacts, 2026-11-03](2026-11-03-release-1.7.0-candidate-build.md): selected full build, exact archive/component hashes and remaining physical acceptance; no TV operation.
+
 - [Inputs presentation and C3 browser probe, 2026-11-02](2026-11-02-input-preview-polish.md): exclusive menu/shelf, first-frame text/icon sync, source fingerprints and narrowly scoped native HDMI rounding observation; not full Home acceptance.
 
 - [Theme-owned Inputs and Alpine migration, 2026-11-02](2026-11-02-theme-input-placement.md): menu/shelf theme option, Liquid Glass built-in and exact Alpine 1.4.4 Showcase migration; source/browser checks only, held for maintainer review.
