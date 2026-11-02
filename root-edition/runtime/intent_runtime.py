@@ -1,5 +1,6 @@
 """Intent-bound trial, explicit promotion and guarded boot recovery."""
 import os
+from contextlib import contextmanager, ExitStack
 import re
 import fcntl
 import stat
@@ -290,14 +291,64 @@ def startup_active(receipt):
     result=dict(receipt,phase='active');result.pop('pending',None);return result
 
 
-def startup_reconcile(transaction,boot,cancelled=lambda:False,event='foreground',withdraw=False):
+def startup_observer_mark(transaction,boot,ready):
+    """Volatile eligibility belongs to the current guardian process, not intent."""
+    from persistent_health import ROOT,path
+    target=path(transaction).with_suffix('.startup')
+    ticks=d.process_start(os.getpid())
+    value=dict(transaction=transaction,boot=boot,pid=os.getpid(),start_ticks=ticks)
+    if not ready:
+        try:
+            if d.safe_json(target)==value:target.unlink()
+        except FileNotFoundError:pass
+        return
+    if boot_identity()!=boot:raise ValueError('Stale startup observer')
+    try:ROOT.mkdir(mode=0o700)
+    except FileExistsError:pass
+    d.trusted_dir(ROOT)
+    fd,name=tempfile.mkstemp(dir=ROOT,prefix='.startup-')
+    try:
+        with os.fdopen(fd,'w') as out:json.dump(value,out)
+        os.replace(name,target)
+    finally:
+        if os.path.lexists(name):os.unlink(name)
+
+
+def startup_observing(transaction,boot):
+    from persistent_health import ROOT,path
+    try:
+        d.trusted_dir(ROOT)
+        value=d.safe_json(path(transaction).with_suffix('.startup'))
+        guardian=d.safe_json(d.STATE/'profile-guardian-ready.json')
+        pid=guardian['pid'];ticks=guardian['start_ticks']
+        return (type(pid) is int and pid>0 and isinstance(ticks,str) and ticks.isdigit()
+                and guardian['transaction']==transaction
+                and value==dict(transaction=transaction,boot=boot,pid=pid,start_ticks=ticks)
+                and d.process_start(pid)==ticks)
+    except (OSError,ValueError,KeyError,TypeError):return False
+
+
+@contextmanager
+def startup_locked(c,wait):
+    deadline=time.monotonic()+2
+    while True:
+        intent=c.store.read();stack=ExitStack()
+        try:stack.enter_context(c.locked(intent))
+        except BlockingIOError:
+            stack.close()
+            if not wait or time.monotonic()>=deadline:raise
+            time.sleep(.01);continue
+        with stack:yield intent
+        return
+
+
+def startup_reconcile(transaction,boot,cancelled=lambda:False,event='foreground',withdraw=False,wait_lock=False):
     """One fresh observation/effect; a subsequent event is never a blind retry."""
     try:
         if cancelled():return 'canceled'
         c=coordinator()
         if c is None:return 'unavailable'
-        intent=c.store.read()
-        with c.locked(intent):
+        with startup_locked(c,wait_lock) as intent:
             startup_require(c,intent,transaction,boot)
             saved=d._native_read()
             if saved is None or saved['phase'] not in ('active','selecting'):return 'unavailable'
@@ -311,7 +362,8 @@ def startup_reconcile(transaction,boot,cancelled=lambda:False,event='foreground'
                 saved=startup_active(saved);d._native_save(saved);reconciled=True
             settings=startup_call('com.webos.settingsservice/getSystemSettings',
                 {'category':'general','keys':['homeAutoLaunch']},deadline)
-            withdraw=withdraw or settings.get('settings',{}).get('homeAutoLaunch')!='on'
+            withdraw=(withdraw or not startup_observing(transaction,boot)
+                      or settings.get('settings',{}).get('homeAutoLaunch')!='on')
             app=None;source=None
             if not withdraw:
                 app=startup_call('com.webos.applicationManager/getForegroundAppInfo',{},deadline).get('appId')
@@ -336,11 +388,11 @@ def startup_reconcile(transaction,boot,cancelled=lambda:False,event='foreground'
             if app is not None and startup_call('com.webos.applicationManager/getForegroundAppInfo',{},deadline).get('appId')!=app:
                 return 'superseded'
             startup_require(c,intent,transaction,boot)
-            if cancelled():return 'canceled'
+            if cancelled() or allowed and not startup_observing(transaction,boot):return 'canceled'
             d._native_save(updated)  # Persist the inverse before any optional effect.
             try:
                 startup_require(c,intent,transaction,boot)
-                if cancelled():
+                if cancelled() or allowed and not startup_observing(transaction,boot):
                     d._native_save(saved);return 'canceled'  # No RPC was submitted.
             except Exception:
                 d._native_save(saved);raise

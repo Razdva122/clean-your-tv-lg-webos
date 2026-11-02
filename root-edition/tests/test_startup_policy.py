@@ -1,5 +1,5 @@
 """Native startup choices: real journals/health, simulated firmware boundaries."""
-import copy,json,sys,unittest
+import copy,json,sys,unittest,threading,time,os
 from pathlib import Path
 from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'runtime'))
@@ -19,6 +19,10 @@ class Tests(unittest.TestCase):
   self.assertIsNotNone(policy,'Native source policy is missing')
   lifecycle.WakeLifecycleTests.setUp(self)
   p=patch.object(d,'active_guardian',return_value=True);p.start();self.addCleanup(p.stop)
+  process=patch.object(d,'process_start',return_value='123');process.start();self.addCleanup(process.stop)
+  (self.root/'profile-guardian-ready.json').write_text(json.dumps(dict(transaction='route-a',pid=os.getpid(),start_ticks='123')))
+  (self.root/'profile-guardian-ready.json').chmod(0o600)
+  policy.startup_observer_mark('route-a',self.session,True)
   self.metadata_override=None
  def call(self,uri,payload,timeout=5):
   if uri.endswith('/getForegroundAppInfo'):return dict(returnValue=True,appId=self.foreground)
@@ -153,3 +157,48 @@ class Tests(unittest.TestCase):
   self.assertTrue(callable(getattr(policy,'startup_after_ready',None)),'Post-ready native policy is missing')
   self.assertEqual(policy.startup_after_ready(result),'withdrawn')
   self.assertEqual(self.last,{'type':'DTV','appId':'com.webos.app.livetv'})
+
+ def test_observer_ends_before_activation_then_after_ready_withdraws_initial_selection(self):
+  import shutdown_state
+  saved=dict(self.intent);inactive=dict(saved,phase='trial')
+  self.store.path.write_text(json.dumps(inactive))
+  o=shutdown_state.StartupObserver('route-a',self.session,threading.Event());o.close()
+  self.assertTrue(o.closed)
+  self.store.path.write_text(json.dumps(saved))
+  self.foreground='mgg4.5.channelplus'
+  self.assertEqual(policy.startup_after_ready({'intent':saved,'transaction':'route-a'}),'withdrawn')
+  self.assertEqual(self.last,{'type':'DTV','appId':'com.webos.app.livetv'})
+ def test_observer_close_waits_for_enable_operation_then_withdraws(self):
+  import shutdown_state
+  o=shutdown_state.StartupObserver('route-a',self.session,threading.Event())
+  c=policy.coordinator()
+  with c.locked(self.intent):
+   worker=threading.Thread(target=o.close);worker.start();time.sleep(.05)
+   self.assertTrue(worker.is_alive(),'withdrawal waits for the existing operation')
+  worker.join(2)
+  self.assertFalse(worker.is_alive())
+  self.assertEqual(self.last,{'type':'DTV','appId':'com.webos.app.livetv'})
+
+ def test_replaced_guardian_cannot_reuse_observer_marker(self):
+  guardian=self.root/'profile-guardian-ready.json'
+  value=json.loads(guardian.read_text());value['pid']+=1;guardian.write_text(json.dumps(value))
+  self.assertEqual(self.run_policy(),'withdrawn')
+  self.assertEqual(self.last,{'type':'DTV','appId':'com.webos.app.livetv'})
+ def test_close_racing_submitted_selection_waits_then_withdraws(self):
+  import shutdown_state
+  displaced=self.channels();o=shutdown_state.StartupObserver('route-a',self.session,threading.Event())
+  worker=[];removed=threading.Event();mark=policy.startup_observer_mark
+  def marker(*args):
+   result=mark(*args)
+   if args[-1] is False:removed.set()
+   return result
+  def close_during_submit(method,payload):
+   if method=='setLastInput' and payload==policy.startup_ROOT_INPUT and not worker:
+    t=threading.Thread(target=o.close);worker.append(t);t.start()
+    self.assertTrue(removed.wait(1),'close removes eligibility before waiting for operation')
+    self.assertTrue(t.is_alive())
+  self.fault_hook=close_during_submit
+  with patch.object(policy,'startup_observer_mark',side_effect=marker):
+   self.assertEqual(self.run_policy(),'selected')
+   worker[0].join(2)
+  self.assertFalse(worker[0].is_alive());self.assertEqual(self.last,displaced)

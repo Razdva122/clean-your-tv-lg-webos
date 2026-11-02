@@ -36,6 +36,14 @@ and registration, and `general.homeAutoLaunch=on`. Source/native pair mismatch
 or observed supersession cancels selection. LG Channels retains exact metadata
 checks; unknown/invisible platform transitions cannot authorize selection.
 
+Proactive selection also requires the volatile health-directory `.startup` record
+published only after both native subscriptions acknowledge. It binds transaction,
+startup session, PID and process-start ticks to the actual guardian. A missing,
+closed or replaced observer cannot grant selection; post-ready reconciliation
+withdraws our existing preference instead. Close removes eligibility before
+cleanup and may wait up to two seconds for the existing operation lock, then
+performs one fresh withdrawal. It does not replay an uncertain native RPC.
+
 Native preference is prepared while an eligible app is selected. A later
 protected app withdraws only our exact Root selection to its displaced input;
 a different native input is preserved. HDMI and YouTube are opt-in. A global
