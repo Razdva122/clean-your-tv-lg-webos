@@ -16,7 +16,8 @@
     "textScale": 1,
     "focusScale": 1.1,
     "allowColumnOverride": true,
-    "motion": "classic"
+    "motion": "classic",
+    "inputs": "shelf"
   },
   "defaults": {
     "wallpaperAssetId": "wallpaper",
@@ -51,11 +52,12 @@
   },
   "source": {
     "repository": "https://github.com/razdva122/clean-your-tv-lg-webos",
-    "commit": "e8345efcc842e13eb0a30dc9a2451c626c3ca78b"
+    "commit": "4bcc0975a6951118c26b2cb7dff665d6d1c9ea5f"
   },
   "requires": {
-    "minimumHomeVersion": "1.6.1",
+    "minimumHomeVersion": "1.7.0",
     "capabilities": [
+      "input-placement-v1",
       "classic-motion-v1"
     ]
   },

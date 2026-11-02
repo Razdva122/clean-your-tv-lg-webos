@@ -1,5 +1,7 @@
 // Classic Inputs shelf: one-press remote path, live status, live preview, overflow, preferences and other layouts.
-const {assert, chromium, stage, open} = require('./browser.cjs');
+const {assert, chromium, stage, open: openBase} = require('./browser.cjs');
+const shelfLayout={preset:'dock-grid',columns:5,spacingScale:1,textScale:1,focusScale:1.1,inputs:'shelf'};
+async function open(...args) { const result=await openBase(...args); await result.page.evaluate(layout=>HomeLayoutState.setThemeLayout(layout),shelfLayout); return result; }
 
 // Records the live-status bridge so the test can push subscription updates.
 function recordStatusBridge() {
@@ -37,6 +39,7 @@ function recordStatusBridge() {
           await page.reload(); await page.locator('#tiles .focused').waitFor();
           await page.addStyleTag({content: '* { transition: none !important; animation: none !important; }'});
           await page.waitForTimeout(150);
+          await page.evaluate(layout=>HomeLayoutState.setThemeLayout(layout),shelfLayout);
         };
         const dock = await focused();
 
@@ -126,22 +129,11 @@ function recordStatusBridge() {
         await press('Escape');
         assert.equal(await page.locator('#inputShelf').evaluate(el => el.classList.contains('covered')), false);
 
-        // Settings switch hides the shelf, restores Up-to-header and survives restart.
-        await page.locator('#btnSettings').click();
-        await page.locator('[data-category=appearance]').click();
-        await page.locator('#homeShowInputs').focus();
-        assert.equal(await page.locator('#homeShowInputs').getAttribute('aria-checked'), 'true');
-        await page.keyboard.press('Enter');
-        assert.equal(await page.locator('#homeShowInputs').getAttribute('aria-checked'), 'false');
-        assert.equal(await page.locator('#inputShelf').isVisible(), false);
-        await press('Escape', 'Escape');
-        await page.mouse.move(0, 0);
-        await reload();
-        assert.equal(await page.locator('#inputShelf').isVisible(), false, 'choice survives startup');
-        assert.equal(await focused(), dock);
-        await press('ArrowUp');
-        assert.match(await focused(), /^top:/, 'without the shelf Up reaches the header as before');
-        await page.evaluate(() => InputSources.setShelfEnabled(localStorage, true));
+        // Placement belongs to the theme, not a saved user preference.
+        await page.evaluate(layout=>HomeLayoutState.setThemeLayout({...layout,inputs:'menu'}),shelfLayout);
+        assert.equal(await page.locator('#inputShelf').isVisible(),false);
+        await press('Escape','ArrowUp');
+        assert.match(await focused(), /^top:/, 'without the shelf Up reaches the header');
 
         // Live preview: resting on a connected source plays its picture inside the tile.
         await reload();
@@ -311,15 +303,15 @@ function recordStatusBridge() {
         const switches = async () => {
           await page.locator('#btnSettings').click();
           await page.locator('[data-category=appearance]').click();
-          const shown = await page.evaluate(() => ['homeShowInputs', 'homePreviewInputs'].map(id => document.getElementById(id).offsetHeight > 0));
+          const shown = await page.evaluate(() => ['homePreviewInputs'].map(id => document.getElementById(id).offsetHeight > 0));
           await press('Escape', 'Escape');
           await page.mouse.move(0, 0);
           return shown;
         };
-        assert.deepEqual(await switches(), [false, false], 'other layouts hide the shelf switches');
-        await page.evaluate(() => HomeLayoutState.setThemeLayout({preset: 'dock-grid', columns: 5, allowColumnOverride: true, spacingScale: 1, textScale: 1, focusScale: 1.1}));
+        assert.deepEqual(await switches(), [false], 'other layouts hide the shelf switches');
+        await page.evaluate(() => HomeLayoutState.setThemeLayout({preset: 'dock-grid', columns: 5, allowColumnOverride: true, spacingScale: 1, textScale: 1, focusScale: 1.1, inputs:'shelf'}));
         assert.equal(await page.locator('#inputShelf').isVisible(), true, 'returning to Classic restores the shelf');
-        assert.deepEqual(await switches(), [true, true], 'Classic shows the shelf switches');
+        assert.deepEqual(await switches(), [true], 'Classic shows the shelf switches');
         assert.deepEqual(errors, [], 'renderer errors');
         console.log('PASS Inputs shelf: ' + edition);
       } finally { await page.close(); }

@@ -9,18 +9,18 @@
       "credits": "theme-catalog/CLASSIC-CREDITS.txt"
     },
     {
-      "id": "builtin:alpine",
-      "title": "Alpine",
-      "version": "1.4.4",
+      "id": "builtin:liquid-glass",
+      "title": "Liquid Glass",
+      "version": "1.0.0",
       "builtin": true,
-      "description": "A quiet alpine panorama, large clock and one infinitely looping horizontal app ribbon.",
+      "description": "Clear frosted glass over an original aurora wallpaper, on the Classic dock with the Inputs shelf.",
       "author": "Clean Your TV contributors",
-      "license": "MIT AND CC-BY-SA-3.0",
-      "preview": "themes/alpine/assets/preview-b122290c433d2f3921259c4efbc12dff57e805a1fe0cbbb45f31aa338b9eb2dc.png",
-      "credits": "themes/alpine/documents/1-818ab3a39df2f0306896671bb68aa8f4fa53967c3c00e0344350e83e29f33603.txt",
-      "licenseFile": "themes/alpine/documents/0-c50810017f170c3682cfc6e2640a5e3be416755ab52143e6966627f69e24995b.txt",
-      "url": "themes/alpine/cytv-theme.json",
-      "digest": "3192d976cbd9fead9c0f22d3f7cb13aaaa3671e3a038c737c477c5bd6de110e6"
+      "license": "MIT",
+      "preview": "themes/liquid-glass/assets/preview-f8b9225ecb7834905b363ea923ee8c9af9952493c58e69746bb3b411c51a01f0.jpg",
+      "credits": "themes/liquid-glass/documents/1-49c0cc9c350acc25acf8f9d18440e53d6ce7f7abeaf4af95feabf4cf543f7304.txt",
+      "licenseFile": "themes/liquid-glass/documents/0-f497a621e75e2ccabaac016c8ada95b415a7810fb9994798b282fa9f9d03920f.txt",
+      "url": "themes/liquid-glass/cytv-theme.json",
+      "digest": "f71d277b503010df3e2850b0f57a0bc91bc37c13d97c02d644b23a724e40523f"
     },
     {
       "id": "builtin:ribbon",
@@ -37,18 +37,15 @@
       "digest": "5eb9cebf58cddafa8df59497880eaa134565465ba75dab60ec1903b956be4f5d"
     },
     {
-      "id": "builtin:liquid-glass",
-      "title": "Liquid Glass",
-      "version": "1.0.0",
-      "builtin": true,
-      "description": "Clear frosted glass over an original aurora wallpaper, on the Classic dock with the Inputs shelf.",
+      "id": "github:razdva122/clean-your-tv-lg-webos:alpine",
+      "title": "Alpine",
+      "version": "1.4.4",
       "author": "Clean Your TV contributors",
-      "license": "MIT",
-      "preview": "themes/liquid-glass/assets/preview-f8b9225ecb7834905b363ea923ee8c9af9952493c58e69746bb3b411c51a01f0.jpg",
-      "credits": "themes/liquid-glass/documents/1-49c0cc9c350acc25acf8f9d18440e53d6ce7f7abeaf4af95feabf4cf543f7304.txt",
-      "licenseFile": "themes/liquid-glass/documents/0-f497a621e75e2ccabaac016c8ada95b415a7810fb9994798b282fa9f9d03920f.txt",
-      "url": "themes/liquid-glass/cytv-theme.json",
-      "digest": "29774e8714b50501678641071496db88275fab0571bfbf58970daf7a122263f0"
+      "license": "MIT AND CC-BY-SA-3.0",
+      "description": "A quiet alpine panorama, large clock and one infinitely looping horizontal app ribbon.",
+      "preview": "theme-catalog/razdva122--clean-your-tv-lg-webos--alpine/2b5209e6ec36d9e8e8e15e9b765e9b0fcf6a49ac4a4c8d68d7394016359a905f/preview.png",
+      "url": "https://raw.githubusercontent.com/razdva122/clean-your-tv-lg-webos/323c7bb351d8396439878ab432d0ac2f39d2b2e3/distributions/alpine/1.4.4/cytv-theme.json",
+      "digest": "2b5209e6ec36d9e8e8e15e9b765e9b0fcf6a49ac4a4c8d68d7394016359a905f"
     },
     {
       "id": "github:razdva122/clean-your-tv-lg-theme:itachi",

@@ -57,7 +57,7 @@ policy except `.ctv-tile`, which remains an engine-reserved interaction hook.
 | `.ctv-library-row` | Available app row in the library; native button focus is mirrored |
 | `.ctv-inputs` | Inputs dropdown; anchoring, width and visibility are engine-owned |
 | `.ctv-input-row` | Selectable input/source row; selection action and navigation remain trusted |
-| `.ctv-input-shelf` | Classic (`dock-grid`) Inputs shelf and its caption between the header and the dock; placement, clipping, scrolling and visibility are engine-owned |
+| `.ctv-input-shelf` | Theme-selected Inputs shelf on `dock-grid`, including its caption; geometry, clipping, scrolling and visibility are engine-owned |
 | `.ctv-input-tile` | Selectable source tile in the shelf; position, size, launch action and navigation remain trusted |
 | `.ctv-input-status` | Device name or "Not connected" text inside a shelf tile |
 | `.ctv-input-preview` | Live picture frame inside the focused shelf tile; the TV draws the video on a hardware plane that follows transforms but ignores rounded clipping, masks and opacity. Starting, stopping, size and placement are engine-owned |
@@ -371,6 +371,63 @@ a theme replacement map; the CSS renderer does not rewrite the selected source.
 
 The `.ctv-position` part styles the decorative scenic-ribbon position indicator.
 A transparent `color` hides its count and arrows without changing navigation.
+
+
+## Theme-owned input placement (unreleased)
+
+The selected theme chooses the header Inputs menu or the Inputs shelf. Omitted
+`layout.inputs` means `"menu"`, including Classic and existing themes. There is
+no global placement preference or **Show inputs on Home** switch. Liquid Glass
+opts into `"shelf"`; the shelf is currently supported only on `dock-grid`.
+An explicit `"menu"` is valid on any preset.
+
+For example, this compiled descriptor excerpt pairs the field and capability
+(other required manifest fields are omitted):
+
+```json
+{
+  "layout": {
+    "preset": "dock-grid",
+    "columns": 5,
+    "spacingScale": 1,
+    "textScale": 1,
+    "focusScale": 1.1,
+    "inputs": "shelf"
+  },
+  "requires": {"capabilities": ["input-placement-v1"]}
+}
+```
+
+The source compiler emits `input-placement-v1` when `layout.inputs` is present,
+including explicit `"menu"`. Descriptor policy requires the field and capability
+together. Older Home rejects this capability before storing or applying the
+theme. Input placement and the [Classic motion opt-in](#classic-motion-opt-in-unreleased)
+are independent; selecting the shelf does not opt into Classic motion.
+
+Use the existing parts and states for appearance, without new CSS syntax:
+
+```css
+.ctv-input-shelf { color: #ffffff; }
+.ctv-input-tile { background-color: #202536; border-radius: 24px; }
+.ctv-input-tile.is-connected { box-shadow: 0 0 0 1px rgba(120, 220, 160, 0.6); }
+.ctv-input-tile.is-disconnected { color: rgba(255, 255, 255, 0.5); }
+.ctv-input-tile.is-focused { background-color: #eef3ff; color: #101420; }
+.ctv-input-status { color: rgba(255, 255, 255, 0.7); }
+.ctv-input-tile.is-focused .ctv-input-status { color: #30384a; }
+.ctv-input-preview { background-color: #000000; }
+.ctv-input-tile.is-previewing .ctv-input-status { color: #ffffff; }
+```
+
+The engine owns geometry, hitboxes, source launch, muted video and its lifecycle.
+On a shelf, Up from the dock reaches the shelf, Up again reaches the header,
+Down or Back returns to the dock, and OK launches the source. A connected HDMI
+source can preview after about 800 ms of focus; **Preview inputs on focus** only
+applies while the selected theme uses a shelf. Theme CSS cannot start media or
+change this preference. The hardware video plane ignores rounded clipping,
+masks and opacity; author styling cannot clip or fade its picture. The engine
+releases previews when focus leaves, Home hides or loses focus, or an owned
+dialog opens. Connection states appear only when the TV supplies them, and
+`previewing` appears only while a live picture is playing.
 
 
 ## Classic motion opt-in (unreleased)

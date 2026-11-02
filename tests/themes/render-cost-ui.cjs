@@ -10,6 +10,7 @@ const fixture = require('./fixtures/valid-manifest.json');
     for (const edition of ['launcher', 'root-launcher']) {
       const {page, errors} = await open(browser, site, edition);
       try {
+        await page.evaluate(()=>HomeLayoutState.setThemeLayout({preset:'dock-grid',columns:5,spacingScale:1,textScale:1,focusScale:1.1,inputs:'shelf'}));
         await page.evaluate(() => {
           window.key = (code, repeat) => {
             document.dispatchEvent(new KeyboardEvent('keydown', {keyCode: code, which: code, repeat: !!repeat, bubbles: true, cancelable: true}));
@@ -69,7 +70,7 @@ const fixture = require('./fixtures/valid-manifest.json');
         assert.deepEqual(fade.during, {baked: false, image: 'none'}, 'the base carries no theme ambient style mid-crossfade');
         assert.equal(fade.after.baked, true);
         assert.match(fade.after.image, /^linear-gradient/, 'and gets it back once baked');
-        await page.evaluate(() => { ThemeRuntime.reset(); key(37, false); });
+        await page.evaluate(() => { ThemeRuntime.reset(); HomeLayoutState.setThemeLayout({preset:'dock-grid',columns:5,spacingScale:1,textScale:1,focusScale:1.1,inputs:'shelf'}); key(37, false); });
         await page.waitForTimeout(1800);
         // open()'s `*` rule does not reach the edge fades' pseudo-elements; let them settle.
         await page.waitForTimeout(400);

@@ -95,7 +95,7 @@ After interruption, run `status` before retrying; retain journals and recovery f
 
 1.5.4: in **Home settings → Appearance**, turn off **Show Add app tile** to hide the + tile. It is on by default. Use **Add app** in the same section to add or restore apps while + is hidden. Ordering and hiding remain available; the choice survives restart. If every app is hidden, the top controls and Settings remain available.
 
-Unreleased: Classic shows your TV inputs and Live TV as a row of tiles between the clock and the dock. Press Up from the dock to reach it and OK to switch source; Up again reaches the header buttons, and Down or Back returns to the dock. When the TV reports status, connected sources show a green dot and the device name, and empty ports are dimmed as **Not connected** but stay selectable. Turn it off with **Home settings → Appearance → Show inputs on Home**. Other themes keep the **Inputs** button. Live status is confirmed on one webOS 6 TV. Rest on a connected HDMI source for about a second to see its live picture, muted, in the tile; Live TV and empty ports keep the usual tile. Turn it off with **Home settings → Appearance → Preview inputs on focus**.
+Unreleased: the selected theme chooses the header **Inputs** menu or an HDMI shelf; there is no global placement or **Show inputs on Home** switch. The shelf currently supports only `dock-grid`. Liquid Glass selects it; Classic and themes without this option keep the header menu. On the shelf, Up from the dock enters the shelf, Up again reaches the header, Down or Back returns to the dock, and OK launches the source. Connected sources show a green dot and device name when the TV reports status; empty ports remain selectable. After about 0.8 seconds on a connected HDMI source, its tile shows a muted live preview. Live TV and empty ports keep static tiles. **Home settings → Appearance → Preview inputs on focus** applies only while the selected theme has a shelf.
 
 In 1.5.4 theme previews with the optional sidebar layout, Up/Down selects a menu item, Right enters the apps, and Left from the first visible app column returns to the menu.
 
@@ -140,9 +140,11 @@ Homebrew Channel denied access to this installer. On webOS 11, Homebrew 0.7.3 ne
 
 1.5.4: **Settings → Themes**. **Classic**, **Alpine**, **Ribbon** are included and work without downloading a theme; Classic remains the default. **Channel** is an external showcase theme. In showcase trials: Choose a theme, then **Keep theme** within **20 seconds**. **Revert**, Back or timeout restores the previous appearance. If Home closes during an unconfirmed preview, the next launch returns to Classic. Built-in and downloaded themes chosen in the installed list apply and save immediately, without a confirmation timer. Themes received from a computer or installed by URL also use this list. Only Try theme inside Theme showcase starts a 20-second trial.
 
+Unreleased: **Classic**, **Liquid Glass** and **Ribbon** are built in. **Alpine 1.4.4** moves to the downloadable **Theme showcase**. A saved `builtin:alpine` selection falls back to Classic with the existing visible recovery notice; Home neither downloads Alpine automatically nor replaces it with Liquid Glass.
+
 Installed themes appear in one horizontally scrollable row. The active theme is always first and has a highlighted card. Use Left/Right to browse the row.
 
-Showcase lists only themes that are not installed on this TV. Classic, Alpine, Ribbon and downloaded themes are hidden, including when a newer catalogue version exists. After removing a downloaded theme it appears again. Update a theme through Add by ID or Receive from computer.
+Showcase lists only themes that are not installed on this TV. Classic, Liquid Glass, Ribbon and downloaded themes are hidden, including when a newer catalogue version exists. After removing a downloaded theme it appears again. Update a theme through Add by ID or Receive from computer.
 
 Theme cards are embedded directly in Themes beside the settings categories. Showcase, link installation and computer transfer open within that pane; only a showcase trial temporarily reveals Home.
 

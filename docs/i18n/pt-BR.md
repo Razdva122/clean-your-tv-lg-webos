@@ -95,7 +95,7 @@ Após uma interrupção, execute primeiro `status` e preserve os registros. `res
 
 1.5.4: em **Configurações do Home → Aparência**, desative **Mostrar bloco «Adicionar app»** para ocultar +. A opção vem ativada. Use **Adicionar app** na mesma seção para adicionar ou restaurar apps mesmo com + oculto. Continua sendo possível mover e ocultar apps; a escolha permanece após reiniciar. Se todos os apps estiverem ocultos, os controles superiores e as configurações continuam disponíveis.
 
-Não publicado: o Classic mostra as entradas da TV e a TV ao vivo como uma fileira de blocos entre o relógio e o dock. Pressione Para cima no dock para chegar a ela e OK para trocar de fonte; Para cima de novo chega aos botões superiores, e Para baixo ou Voltar retorna ao dock. Quando a TV informa o estado, as fontes conectadas mostram um ponto verde e o nome do aparelho, e as portas vazias ficam esmaecidas como **Não conectado**, mas continuam selecionáveis. Desative em **Configurações do Home → Aparência → Mostrar entradas no Home**. Os outros temas mantêm o botão **Entradas**. O estado ao vivo foi confirmado em uma TV com webOS 6. Pare cerca de um segundo em uma fonte HDMI conectada para ver a imagem ao vivo, sem som, no bloco; Live TV e portas vazias mantêm o bloco normal. Desative em **Configurações do Home → Aparência → Pré-visualizar a entrada selecionada**.
+Não publicado: o tema selecionado define o menu **Entradas** no cabeçalho ou uma faixa HDMI; não há ajuste global de posição nem o botão **Mostrar entradas no Home**. A faixa aceita apenas `dock-grid` por enquanto. Liquid Glass a escolhe; Classic e temas sem essa opção mantêm o menu superior. Cima no dock abre a faixa, Cima novamente chega ao cabeçalho, Baixo ou Voltar retorna ao dock e OK abre a fonte. Quando a TV informa o estado, fontes conectadas mostram um ponto verde e o nome do dispositivo; portas vazias continuam selecionáveis. Após cerca de 0,8 segundo sobre um HDMI conectado, o bloco mostra uma imagem ao vivo sem som. Live TV e portas vazias mantêm blocos estáticos. **Configurações do Home → Aparência → Pré-visualizar a entrada selecionada** só vale enquanto o tema selecionado tem a faixa.
 
 Nas prévias de temas da versão 1.5.4 com barra lateral opcional, Cima/Baixo seleciona um item do menu, Direita vai para os aplicativos e Esquerda na primeira coluna de aplicativos volta ao menu.
 
@@ -141,9 +141,11 @@ Homebrew Channel negou acesso a este instalador. No webOS 11, o Homebrew 0.7.3 p
 
 1.5.4: **Configurações → Temas**. **Classic**, **Alpine**, **Ribbon** são integrados e dispensam baixar o tema; Classic continua padrão. **Channel** é externo, do showcase. Nos testes da galeria: Escolha o tema e **Manter tema** em até **20 segundos**. **Reverter**, Back ou o fim do prazo restaura o anterior. Uma prévia interrompida faz Home iniciar com Classic. Temas integrados e baixados escolhidos na lista instalada são aplicados e salvos imediatamente, sem temporizador. Isso inclui temas recebidos do computador ou instalados por URL. Apenas Testar tema dentro da galeria inicia um teste de 20 segundos.
 
+Não publicado: **Classic**, **Liquid Glass** e **Ribbon** são integrados. **Alpine 1.4.4** passa a ser baixado na **galeria de temas**. Uma seleção salva de `builtin:alpine` volta ao Classic com o aviso de recuperação visível existente; Home não baixa Alpine automaticamente nem o substitui por Liquid Glass.
+
 Os temas instalados aparecem em uma única linha com rolagem horizontal. O tema ativo fica sempre em primeiro lugar e seu cartão é destacado. Use Esquerda/Direita para percorrer a linha.
 
-A galeria mostra apenas temas não instalados nesta TV. Classic, Alpine, Ribbon e os baixados ficam ocultos, mesmo com uma versão mais recente. Após remover um tema, ele reaparece. Atualize por URL ou transferência do computador.
+A galeria mostra apenas temas não instalados nesta TV. Classic, Liquid Glass, Ribbon e os baixados ficam ocultos, mesmo com uma versão mais recente. Após remover um tema, ele reaparece. Atualize por URL ou transferência do computador.
 
 Os cartões ficam diretamente em Temas, ao lado das categorias. A galeria, a instalação por link e a transferência do computador abrem nesse painel; só um teste da galeria mostra Home temporariamente.
 

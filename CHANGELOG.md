@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Let the selected theme choose the header Inputs menu or an HDMI shelf through
+  paired `layout.inputs` / `input-placement-v1`. Omission keeps the menu; the shelf
+  currently requires `dock-grid`. Remove the global Show inputs on Home switch.
+  Liquid Glass selects the shelf; Classic and existing themes keep the menu.
+- Bundle Liquid Glass in place of Alpine. Alpine 1.4.4 is downloadable from Theme
+  showcase. A saved `builtin:alpine` selection falls back to Classic with the
+  existing recovery notice, without automatic download or substitution.
+
 ## v1.6.0
 
 - Complete the five-stage installer diagnostics/recovery/outcome/admission/guidance work.
@@ -13,31 +23,15 @@
   preserve managed paths and LS2 grants, validate candidate infrastructure before
   offering installation, and authenticate current runtime separately from its
   original bootstrap. Hardware update/rollback acceptance is still pending.
-- Add a Classic Inputs shelf: TV inputs and Live TV as a one-press row above the
-  dock, with type icons and live connected/disconnected status from
-  `com.webos.service.eim/getAllInputStatus` when the TV allows it (the Inputs
-  dropdown shares it). Falls back to the captured inventory without status. New
-  `tvhome.inputs.shelf.v1` preference (Settings → Appearance → Show inputs on Home,
-  on by default) and theme parts `.ctv-input-shelf`, `.ctv-input-tile`,
-  `.ctv-input-status` with `connected`/`disconnected` states. Classic also breaks
-  the date after the weekday and fades the partly visible next row. The status
-  call is confirmed on one webOS 6 No-root TV; hot-plug updates and Root are
-  unverified. App-registered EIM inputs (`MVPD_*`, including Home's own entry)
-  are not listed as sources. Shelf tiles are 16:9 (288×162); the focused tile
-  grows to 404×236 and pushes later tiles right instead of scaling, so text stays
-  sharp on the 2×-upscaled graphics plane of UHD TVs.
-- Preview the focused shelf input live: after an 800 ms rest, a connected HDMI
-  tile plays its source muted through the webOS external-input video pipeline
-  (`<video>` with `service/webos-external`, `ext://hdmi:N`), one at a time. Moving
-  away, the header, dropdown or Settings, launching, blur or hiding Home release it,
-  and none starts while Home is hidden or unfocused; a live status update (such as a
-  CEC rename) keeps a running preview. Errors or no picture within 4 s fall back to
-  the static tile and skip that source for 60 s. New `tvhome.inputs.preview.v1`
-  preference (Settings → Appearance → Preview inputs on focus, on by default, shown
-  only in Classic like Show inputs on Home), theme part `.ctv-input-preview` and
-  state `previewing`. The pipeline is undocumented; picture placement, ~0.2–0.3 s
-  start, release and no CEC wake were checked on one webOS 6 No-root TV. Live TV
-  previews are off until a tuned broadcast can be tested.
+- Add theme-selected Inputs tiles with live TV connection status and captured
+  inventory fallback. Shelf navigation is Up from the dock, Up again to the header,
+  Down/Back to the dock and OK to launch. Geometry and launch remain engine-owned.
+- A connected HDMI shelf tile can show a muted preview after 800 ms of focus.
+  Settings → Appearance → Preview inputs on focus applies only with a shelf theme.
+  Moving away, launching, dialogs, blur and hiding Home release the media; status
+  updates preserve an eligible running preview. Startup failures fall back to a
+  static tile with a per-source cooldown. Physical compatibility remains limited
+  to the previously recorded single-TV observations.
 - Smoother focus motion: app cards keep their 1.1× enlargement but grow and shrink
   on one shared 240 ms ease-out without overshoot. Remote focus stays immediate
   (no scroll retargeting): the glass lands on the new card at card size and grows
@@ -54,7 +48,7 @@
   an unfinished scroll; `startup-motion-ui` skips its exact stage/item position
   check only during such a glide or an edge bump. Classic fades the top and bottom
   screen edges while rows lie beyond them, and a fresh press that cannot move
-  (grid ends, Inputs shelf ends) gives a short 10 px bump. Reduced motion disables
+  (grid ends) gives a short 10 px bump. Reduced motion disables
   both.
 - Lighter rendering on 4K TVs (Home draws at 3840x2160 there): the ambient glow
   changes colour once the focus has rested for 800 ms, and Classic then bakes it into
@@ -72,8 +66,8 @@
   rejected so the engine's motion stays in step. Themes without the opt-in are
   unchanged: immediate remote focus, no fades, two glow layers.
 - Add Liquid Glass, a packaged theme in Settings → Themes: clear frosted glass over
-  an original procedural aurora wallpaper, on the Classic layout with the Inputs
-  shelf, opting into Classic motion. Theme API 1 has no blur, so the glass is
+  an original procedural aurora wallpaper on `dock-grid`, opting into the Inputs
+  shelf and Classic motion. Theme API 1 has no blur, so the glass is
   translucent gradients, bright rims and soft shadows; no Apple assets are included.
 
 

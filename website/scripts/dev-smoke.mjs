@@ -27,11 +27,11 @@ try {
   for (const edition of ["Root Edition", "No-root Edition"]) {
     await page.getByRole("button", { name: edition, exact: true }).click();
     await page.locator('#previewThemes[aria-busy="false"]').waitFor();
-    await page.getByRole("button", { name: "Alpine", exact: true }).click();
+    await page.getByRole("button", { name: "Liquid Glass", exact: true }).click();
     await page.waitForFunction(
       () =>
         document.getElementById("screen").contentWindow.ThemeManager?.current()
-          .title === "Alpine",
+          .title === "Liquid Glass",
     );
   }
   console.log(

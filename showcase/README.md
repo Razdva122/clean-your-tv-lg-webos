@@ -1,9 +1,14 @@
 # Community theme showcase (candidate)
 
 The static showcase is part of the next theme candidate, after 1.4.1. URL installation and the Themes picker are implemented in the preparation branch;
-published packages may not contain them yet. Classic and Alpine are app-bundled choices. Channel is the initial external
+published packages may not contain them yet. Classic, Ribbon and Liquid Glass are app-bundled choices. Channel is the initial external
 listing, pinned to its separately committed toolkit distribution. Channel 1.3.3 is fixed by toolkit tag `v1.3.3`; Itachi 1.0.2 uses the existing toolkit tag `v1.0.2`. Descriptor URLs remain commit-pinned and hashes remain authoritative. The older main-repository Itachi identity is retained as a removed historical listing. The historical
-external Alpine record is archived; it is not an additional download.
+external Alpine 1.4.2 record is archived. Alpine 1.4.4 is maintained under
+`themes/alpine/` for the current Showcase distribution; its existing appearance,
+assets and license notices are preserved. An old `builtin:alpine` preference
+restores Classic with the normal recovery notice and does not download or select
+a replacement automatically. Reinstall Alpine explicitly from its reviewed
+Showcase listing when that source distribution is available.
 There are no votes, popularity counts or automatic built-in promotions.
 
 Use the simple author path below to suggest a theme. The [author walkthrough](../docs/development/CONTRIBUTING-THEMES.md) is optional for creating and packaging themes yourself. The rest of this page defines maintainer integration and review.

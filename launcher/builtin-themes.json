@@ -2,11 +2,11 @@
   "schemaVersion": 1,
   "themes": [
     {
-      "id": "builtin:alpine",
-      "title": "Alpine",
-      "version": "1.4.4",
-      "url": "themes/alpine/cytv-theme.json",
-      "digest": "3192d976cbd9fead9c0f22d3f7cb13aaaa3671e3a038c737c477c5bd6de110e6"
+      "id": "builtin:liquid-glass",
+      "title": "Liquid Glass",
+      "version": "1.0.0",
+      "url": "themes/liquid-glass/cytv-theme.json",
+      "digest": "f71d277b503010df3e2850b0f57a0bc91bc37c13d97c02d644b23a724e40523f"
     },
     {
       "id": "builtin:ribbon",
@@ -14,13 +14,6 @@
       "version": "1.0.0",
       "url": "themes/ribbon/cytv-theme.json",
       "digest": "5eb9cebf58cddafa8df59497880eaa134565465ba75dab60ec1903b956be4f5d"
-    },
-    {
-      "id": "builtin:liquid-glass",
-      "title": "Liquid Glass",
-      "version": "1.0.0",
-      "url": "themes/liquid-glass/cytv-theme.json",
-      "digest": "29774e8714b50501678641071496db88275fab0571bfbf58970daf7a122263f0"
     }
   ]
 }

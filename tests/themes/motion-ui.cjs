@@ -10,6 +10,7 @@ const CURVE = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
     for (const edition of ['launcher', 'root-launcher']) {
       const {page, errors} = await open(browser, site, edition);
       try {
+        await page.evaluate(()=>HomeLayoutState.setThemeLayout({preset:'dock-grid',columns:5,spacingScale:1,textScale:1,focusScale:1.1,inputs:'shelf'}));
         // open() disables transitions for geometry tests; this test needs the real ones.
         await page.evaluate(() => Array.from(document.querySelectorAll('style')).filter(style => /transition: none !important/.test(style.textContent)).forEach(style => style.remove()));
         // Real compiled themes on the Classic layout, with and without the Classic motion opt-in.
@@ -17,8 +18,9 @@ const CURVE = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
         await page.evaluate(fixture => {
           window.applyTheme = motion => {
             const manifest = JSON.parse(JSON.stringify(fixture));
-            manifest.layout = {preset: 'dock-grid', columns: 5, spacingScale: 1, textScale: 1, focusScale: 1.1};
-            if (motion) { manifest.layout.motion = 'classic'; manifest.requires.capabilities = ['classic-motion-v1']; }
+            manifest.layout = {preset: 'dock-grid', columns: 5, spacingScale: 1, textScale: 1, focusScale: 1.1, inputs:'shelf'};
+            manifest.requires.capabilities=['input-placement-v1'];
+            if (motion) { manifest.layout.motion = 'classic'; manifest.requires.capabilities.push('classic-motion-v1'); }
             const rules = motion ? [] : [{selector: [{part: 'card', states: []}], declarations: [{property: 'transition', value: {type: 'transition', property: 'box-shadow', duration: 200, easing: 'ease'}}]}];
             ThemeRuntime.apply({manifest, rules: {schemaVersion: 1, rules}, assetHandles: {}});
           };

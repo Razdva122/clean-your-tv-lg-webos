@@ -50,7 +50,7 @@ const selectedCase=process.env.CYTV_THEME_CASE||'all';
    await page.reload();await wait();
    await page.evaluate(()=>localStorage.setItem('tvhome.theme.trial.v1',JSON.stringify({kind:'trial',id:'builtin:alpine'})));
    await page.reload();await wait();assert.equal(await page.evaluate(()=>ThemeManager.current().id),'builtin:classic','interrupted preview presents trusted Classic');assert.equal(await page.evaluate(()=>localStorage.getItem(ThemeManager.trialKey)),null);
-   await page.evaluate(()=>localStorage.setItem('tvhome.theme.choice.v1',JSON.stringify({id:'builtin:alpine',title:'Alpine'})));
+   await page.evaluate(()=>localStorage.setItem('tvhome.theme.choice.v1',JSON.stringify({id:'builtin:ribbon',title:'Ribbon'})));
    await page.route('**/theme-data.js',route=>route.fulfill({contentType:'application/javascript',body:fs.readFileSync('launcher/theme-data.js','utf8')+`;window.auditPrepare=ThemeData.prepare;ThemeData.prepare=function(){var args=arguments;window.auditPreparing=true;return new Promise(function(resolve){window.auditRelease=function(){resolve(auditPrepare.apply(ThemeData,args));};});};`}));
    await page.reload();await page.waitForFunction(()=>window.auditPreparing);await wait();
    assert.equal(await page.evaluate(()=>ThemeManager.current().id),'builtin:classic','watchdog makes Home usable when preparation never completes');assert.match(await page.evaluate(()=>ThemeManager.current().notice),/timed out/i);
@@ -59,7 +59,7 @@ const selectedCase=process.env.CYTV_THEME_CASE||'all';
    results.push({edition,case:'fallback',frames:fallback});await page.unroute('**/theme-data.js');await page.reload();await wait();
   }
   if(selectedCase!=='startup'){
-   for(const theme of ['Classic','Alpine','Itachi','Channel']){
+   for(const theme of ['Classic','Liquid Glass','Itachi','Channel']){
     await page.evaluate(async title=>{const item=(await ThemeManager.list()).find(item=>item.title.indexOf(title)===0);await ThemeManager.selectInstalled(item);},theme);
     const originalIds=await page.locator('#tiles .item').evaluateAll(nodes=>nodes.map(n=>n.dataset.appId||'add'));
     // Park a real pointer before remote navigation; moving geometry must not steal focus.

@@ -48,19 +48,19 @@ const root = path.resolve(__dirname, '..');
     await page.waitForFunction(() => window.RootLauncherRendered === true);
     const result = await page.evaluate(async () => {
       const themes = await ThemeManager.list();
-      await ThemeManager.selectInstalled({id:'builtin:alpine',title:'Alpine'});
+      await ThemeManager.selectInstalled({id:'builtin:liquid-glass',title:'Liquid Glass'});
       const cached = await ThemeStore.list();
       const background = getComputedStyle(document.getElementById('homeSurface')).backgroundImage;
       const match = /url\("?(blob:[^")]+)"?\)/.exec(background);
-      if (!match) throw Error('Alpine wallpaper blob missing');
-      await new Promise((resolve, reject) => { const image=new Image(); image.onload=resolve; image.onerror=()=>reject(Error('Alpine wallpaper did not decode')); image.src=match[1]; });
+      if (!match) throw Error('Liquid Glass wallpaper blob missing');
+      await new Promise((resolve, reject) => { const image=new Image(); image.onload=resolve; image.onerror=()=>reject(Error('Liquid Glass wallpaper did not decode')); image.src=match[1]; });
       const databases = await indexedDB.databases();
       return {themes:themes.map(item => item.id), current:ThemeManager.current(), cached:cached.length,
         databases:databases.map(item => item.name), nativeCalls:window.nativeCalls,
         production:localStorage.getItem('tvhome.language'), tiles:document.querySelectorAll('#tiles .item').length};
     });
-    assert(result.themes.includes('builtin:alpine'));
-    assert.equal(result.current.id, 'builtin:alpine');
+    assert(result.themes.includes('builtin:liquid-glass'));
+    assert.equal(result.current.id, 'builtin:liquid-glass');
     assert(result.databases.includes('cytv.dev.ui.ctv-themes-v1'));
     assert(result.databases.includes('ctv-themes-v1'));
     assert.equal(result.nativeCalls, 0);
@@ -77,7 +77,7 @@ const root = path.resolve(__dirname, '..');
     assert.equal(await blocked.evaluate(() => typeof window.RootProfile), 'undefined');
     assert.equal(await blocked.locator('#tiles .item').count(), 0);
     await blocked.close();
-    console.log('Compiled development UI: rendered tiles, applied Alpine, isolated localStorage/IndexedDB, blocked native APIs and readonly-native startup.');
+    console.log('Compiled development UI: rendered tiles, applied Liquid Glass, isolated localStorage/IndexedDB, blocked native APIs and readonly-native startup.');
   } finally {
     if (browser) await browser.close();
     if (server) await new Promise(resolve => server.close(resolve));
