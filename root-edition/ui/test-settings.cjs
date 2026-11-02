@@ -8,6 +8,7 @@ const document={body:new Element('body'),activeElement:{focus(){selected='previo
 const context={window:{RootUpdates:{open(){}}},document,Promise,setTimeout,clearTimeout,
  createRootExit:(call,launch)=>async()=>{restores++;phase='disabled';await launch();},
  PalmServiceBridge:class{cancel(){}call(uri,raw){calls.push({uri,payload:JSON.parse(raw)});let r={returnValue:true};
+ if(JSON.parse(raw).startup){r.result={returnValue:true,result:{sources:{tv:true,youtube:false,hdmi:false},active:phase==='active'}};this.onservicecallback(JSON.stringify(r));return;}
  if(uri.endsWith('/status')){if(delayStatus){pending.push(this);return;}r.result={returnValue:true,result:{intent:{phase}}};}
  if(uri.endsWith('/enable')){phase='active';r.result={returnValue:true,result:{}};}
  if(uri.endsWith('/launch')&&delayLaunch){launches.push(this);return;}
@@ -18,10 +19,10 @@ vm.runInNewContext(fs.readFileSync(__dirname+'/root-settings.js','utf8'),context
 const panel=context.window.RenewalPanel,tick=()=>new Promise(r=>setImmediate(r));
 function key(keyCode){listeners.keydown({keyCode,preventDefault(){},stopImmediatePropagation(){}});}
 (async()=>{
- panel.open();await tick();retry=buttons.splice(buttons.findIndex(b=>b.textContent==='Check status'),1)[0];assert.equal(selected,buttons[0]);assert.equal(buttons[0].attrs['aria-checked'],'true');
+ panel.open();await tick();const sources=buttons.filter(b=>['LG Channels / Live TV','YouTube','HDMI'].includes(b.textContent));assert.equal(sources.length,3,'three startup switches');assert.equal(sources[0].attrs['aria-checked'],'true');assert.equal(sources[1].attrs['aria-checked'],'false');sources.forEach(b=>buttons.splice(buttons.indexOf(b),1));retry=buttons.splice(buttons.findIndex(b=>b.textContent==='Check status'),1)[0];assert.equal(selected,buttons[0]);assert.equal(buttons[0].attrs['aria-checked'],'true');
  key(39);assert.equal(selected,buttons[1]);key(13);key(13);await tick();
  assert.equal(calls.filter(c=>c.uri.endsWith('/launch')).length,1);assert.equal(restores,0);assert.equal(phase,'active');assert(!panel.isOpen());
- panel.open();await tick();buttons[0].onclick();await tick();assert.equal(restores,1);assert.equal(buttons[0].attrs['aria-checked'],'false');assert(panel.isOpen());
+ panel.open();await tick();buttons[0].onclick();await tick();assert.equal(restores,1);assert.equal(buttons[0].attrs['aria-checked'],'false');assert(panel.isOpen());assert(sources.every(b=>b.disabled),'Home Off disables sources');const writes=calls.filter(c=>c.payload.startup==='configure').length;sources[0].onclick();assert.equal(calls.filter(c=>c.payload.startup==='configure').length,writes);
  buttons[0].onclick();await tick();assert.equal(phase,'active');assert.equal(buttons[0].attrs['aria-checked'],'true');assert(!buttons[0].disabled);
  failLaunch=true;buttons[1].onclick();await tick();assert(panel.isOpen());assert.equal(phase,'active');assert(!buttons[1].disabled);key(461);assert(!panel.isOpen());
  // External emergency stop while the real Settings module remains open.

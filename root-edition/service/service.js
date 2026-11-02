@@ -30,7 +30,16 @@ var handlers = require('./handlers')(function (command, transaction) {
       try { resolve(JSON.parse(stdout)); } catch (_) { reject(new Error('Invalid runtime response')); }
     });
   });
-}, audio);
+}, audio, function (command, sources) {
+  return new Promise(function (resolve, reject) {
+    if (process.getuid() !== 0 || ['status','configure'].indexOf(command) < 0) return reject(Error('Root startup settings unavailable'));
+    var child = execFile(pythonCommand(), [runtime, 'startup', command], {timeout:10000,maxBuffer:16384}, function (error, stdout) {
+      if (error) return reject(Error('Root startup settings unavailable'));
+      try { resolve(JSON.parse(stdout)); } catch (_) { reject(Error('Invalid startup response')); }
+    });
+    child.stdin.end(command === 'configure' ? JSON.stringify(sources) : '');
+  });
+});
 Object.keys(handlers).forEach(function (method) {
   service.register(method, function (message) {
     handlers[method](message.payload).then(function (result) { result.root = process.getuid() === 0; message.respond(result); });

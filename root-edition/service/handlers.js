@@ -1,5 +1,5 @@
 'use strict';
-module.exports = function (execute, audio) {
+module.exports = function (execute, audio, startup) {
   var busy = false;
   function valid(payload, boot) {
     if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return false;
@@ -18,6 +18,21 @@ module.exports = function (execute, audio) {
             return audio.setAudioRecoveryEnabled({enabled:payload.enabled});
           if (payload.audio === 'recover' && keys.indexOf('operation') >= 0)
             return audio.recoverAudio({operation:payload.operation});
+        }
+      }
+      if (startup && payload && typeof payload === 'object' && !Array.isArray(payload)) {
+        var startupKeys = Object.keys(payload), operation = null;
+        if (command === 'status' && startupKeys.length === 1 && payload.startup === 'status') operation = 'status';
+        if (command === 'enable' && startupKeys.length === 2 && payload.startup === 'configure' &&
+            startupKeys.indexOf('sources') >= 0 && payload.sources && !Array.isArray(payload.sources) &&
+            typeof payload.sources === 'object' && Object.keys(payload.sources).sort().join(',') === 'hdmi,tv,youtube' &&
+            Object.keys(payload.sources).every(function (key) { return typeof payload.sources[key] === 'boolean'; })) operation = 'configure';
+        if (operation) {
+          if (busy) return {returnValue:false,errorText:'Recovery busy'};
+          busy = true;
+          try { return {returnValue:true,result:await startup(operation, payload.sources)}; }
+          catch (_) { return {returnValue:false,errorText:'Startup choices are unavailable. Check status before retrying.'}; }
+          finally { busy = false; }
         }
       }
       var confirmation = command === 'confirm';

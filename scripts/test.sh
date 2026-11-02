@@ -63,6 +63,7 @@ for file in launcher/*.js native/app/*.js native/service/*.js renewal-service/*.
 python3 tests/root-node-compat.py
 node root-edition/service/test-audio-recovery.cjs
 node root-edition/service/test-handlers.js
+node root-edition/service/test-startup.cjs
 node root-edition/service/test-persistent.js
 node root-edition/service/test-python-binding.js
 for test in root-edition/tests/test_update_*.cjs; do node "$test"; done

@@ -2,8 +2,24 @@
 
 This tracks the unresolved [Root standby report #171](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/171).
 Published v1.6.0 includes wake and shutdown-decision diagnostics, not a verified
-fix of the original failure. No TV operation was performed in the post-release
-source investigation below.
+fix of the original failure. The current unpublished candidate removes all late
+boot/wake launch requests and adds configurable native startup choices; see
+[the current native contract](ROOT-NATIVE-INPUT.md). Historical device outcomes
+below are retained with their original scope.
+
+## Captured firmware preparation stages (2026-11-03)
+
+The [new owner-supervised reproduction](../history/2026-11-03-root-standby-power-stages.md)
+records two failures with active retained intent and unchanged startup identity.
+A continuous firmware stream includes `Active/onOff=off` preparation before
+explicit `Active Standby`, then preparation before final `Active`. The old
+handler erased its observed ON baseline on the first preparation frame, so it
+never requested wake presentation. The focused source correction retains that
+baseline while cancelling pending wake/proof; only explicit standby creates
+shutdown evidence. Initial Off, unknown/lost streams and all presentation safety
+gates remain fail closed. Host replay passes; signed-package physical acceptance
+is still required. This does not accept the older no-proof observer-exit failure
+or guarantee immediate first-screen behavior.
 
 ## Established evidence and blocker
 
@@ -37,15 +53,12 @@ owned native input. A later normal startup must keep that Off authoritative.
 Neither ENODEV nor a subsequent successful power cycle supplies missing proof
 for the failed cycle.
 
-A continuous acknowledged Active → Active Standby/Power Off → Active edge in one
-session uses `present_wake` without rearming. A changed startup identity uses
-restore-first boot dispatch, the positive normal-start marker plus cleared
-failsafe, fresh input and guardian checks, then one optional foreground fallback.
-This is a later path than firmware's first-app selection; its success cannot
-promise Clean as the first screen. Native EIM is retained across enabled boot
-recovery, and an already active registration intentionally does not overwrite a
-subsequently selected input. Re-registering on wake, adding retries or extending
-the app predicate has no demonstrated causal basis here.
+Earlier published code used one optional late foreground request after an
+acknowledged wake or normal boot. The current candidate removes those requests
+and workers completely. A changed startup identity still uses restore-first boot
+dispatch, a positive normal-start marker and cleared failsafe, then fresh input
+and guardian checks. Native remembered-input choices are prepared separately;
+they do not grant control authority or launch an application after wake.
 
 `test_wake_lifecycle.py` exercises real intent, binding, profile restoration,
 volatile session identities, normal-start markers, input/guardian records and
@@ -54,7 +67,7 @@ are simulated. Separate cases cover same-session wake, new session with reused
 kernel ID, changed-kernel cold boot, no normal marker, failsafe, explicit Off,
 emergency, package loss and no-proof observer exit. Negative cases verify owned
 native cleanup and that a later normal session does not auto-enable Home.
-Existing power/parser, presentation and native-input suites cover malformed or
+Existing power/parser, startup-source and native-input suites cover malformed or
 lost streams, metadata/foreground rejection, lease expiry and bounded operations.
 These are host safety regressions, not a reproduction of firmware timing or a
 product fix for #171.
@@ -69,8 +82,10 @@ input-loss, shutdown, emergency or normal-start gates to turn this gap into a pa
 
 ## Private diagnostic records
 
-The existing root-owned `boot-decision.json` now records **every invoked** wake
-presenter, even an early refusal. `event=wake-presentation`, `outcome`, `boot`,
+The published pre-candidate runtime recorded invoked wake presenters, including
+early refusals, in root-owned `boot-decision.json`. The current candidate does
+not invoke those presenters; a retained wake record is historical, not proof of
+a current launch attempt. `event=wake-presentation`, `outcome`, `boot`,
 monotonic `uptime` and `context.stage` distinguish cancellation, session,
 intent, combined health/routing, startup setting, foreground/metadata, final
 input/guardian/intent checks and launch. A stage names the last check reached;
@@ -91,7 +106,7 @@ trusted volatile health directory. Its schema-1 fields are:
 | `event` | Fixed event such as observing, initial-state, active-observed, off-observed, wake-observed, processing, unknown-state, incomplete-frame, EOF, stopped, initial-timeout, child-exited, session-changed or invalid-or-unavailable-stream. |
 | `primed`, `on`, `asleep`, `revision` | Local power parser state, not input/guardian health or active Home routing. |
 | `off_count` | Distinct observed OFF transitions after ON; repeated OFF pushes do not add an edge. |
-| `wake_count` | Eligible complete power edges; does not establish that a worker launched or that Home appeared. |
+| `wake_count` | Complete observed power edges for diagnostics; the candidate has no wake-launch worker. |
 
 Duplicate Active snapshots do not write this diagnostic. Stream teardown keeps
 the final reason and counters while revoking authority exactly as before. The
@@ -119,8 +134,8 @@ Keep session/transaction values, raw device logs, addresses, credentials, privat
 paths and app inventories private. Existing diagnostics/report-consent rules
 still apply. This document requests no immediate TV action or background monitor.
 
-Future artifact-bound acceptance must separately observe standby automatic
-presentation without Home input, manual Home routing and controls/audio,
+Future artifact-bound acceptance must separately observe native first-screen
+selection without a later launch, source opt-outs/opt-ins, disabled Settings, manual Home routing and controls/audio,
 triple-Home emergency release, key-up/watchdog behavior, explicit-off persistence
 and cold boot where affected. CI/host fixtures cannot certify any of these
 physical results. Keep #171 open until its actual cause and affected acceptance

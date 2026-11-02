@@ -876,3 +876,27 @@
 /* Keep the visibility switch inside its Appearance setting row. */
 .settings-layout .home-routing-switch { position: relative; padding-right: 128px; }
 #homeAppsError:empty { display: none; }
+
+/* Source preferences remain visible when Home control is unavailable. */
+.startup-sources { margin-top: 24px; border-top: 1px solid #414650; padding-top: 20px; }
+.startup-sources h3 { font-size: 25px; margin: 0 0 12px; }
+.startup-source-actions { display: flex; align-items: stretch; }
+.startup-source-actions .home-routing-switch { position: relative; flex: 1; min-width: 0; min-height: 88px; margin: 0 12px 0 0; padding-right: 118px; text-align: left; }
+.startup-source-actions .home-routing-switch:last-child { margin-right: 0; }
+@media(max-width:700px) {
+ .startup-source-actions { display: block; }
+ .startup-source-actions .home-routing-switch { width: 100%; margin: 0 0 12px; }
+}
+.startup-sources[aria-disabled="true"] h3 { color: #aab3be; }
+.startup-sources[aria-disabled="true"] .home-routing-switch { opacity: .5; cursor: default; }
+@media(max-height:800px) and (min-width:701px) {
+ .root-settings .settings-home .home-routing-actions { display: flex; flex-wrap: wrap; }
+ .root-settings .settings-workspace .settings-home .home-routing-actions>button { flex: 1; width: auto; min-width: 0; margin: 0 0 0 12px; }
+ .root-settings .settings-workspace .settings-home .home-routing-actions>button:first-child { margin-left: 0; }
+ .startup-sources { margin-top: 16px; padding-top: 12px; }
+ .startup-sources h3 { font-size: 22px; margin-bottom: 8px; }
+ .startup-source-actions .home-routing-switch { min-height: 76px; font-size: 20px; padding: 12px 104px 12px 16px; }
+ .startup-source-actions .home-routing-switch:before { right: 16px; width: 64px; }
+ .startup-source-actions .home-routing-switch:after { right: 48px; }
+ .startup-source-actions .home-routing-switch[aria-checked="true"]:after { right: 24px; }
+}

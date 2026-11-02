@@ -2,6 +2,8 @@
 import json
 import shutil
 import sys
+import subprocess
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -60,11 +62,17 @@ class WakeLifecycleTests(unittest.TestCase):
         self.assertNotEqual(runtime.boot_identity(), self.session)
         boot_gate.mark()
 
-    def dispatch(self):
+    def dispatch(self, guardian=True, stale_binding=False):
         def start(before_publish):
             self.assertEqual(self.read(), self.baseline)  # Restore precedes rearm.
             self.create_route('route-b'); before_publish('route-b')
-            health.publish('route-b', 1); health.guardian_ping('route-b')
+            health.publish('route-b', 1)
+            if guardian:
+                health.guardian_ping('route-b')
+            if stale_binding:
+                binding = self.c.read_binding()
+                binding['token'] = 'stale-token'
+                self.c.binding.write_text(json.dumps(binding))
             return {'transaction': 'route-b'}
         # Only physical process/input startup and the firmware gate timing are
         # substituted. Store, binding, routing, health, EIM receipts and dispatcher
@@ -88,40 +96,72 @@ class WakeLifecycleTests(unittest.TestCase):
         self.assertEqual(self.launches, [])
         self.assertEqual(self.devices, [])
 
-    def test_same_session_power_edge_presents_without_rearming_or_retargeting_eim(self):
-        power = shutdown_state.PowerState('route-a', self.session)
-        power.event(dict(returnValue=True, subscribed=True, state='Active'))
-        power.event(dict(returnValue=True, state='Active Standby'))
-        token = power.event(dict(returnValue=True, state='Active'))
-        self.assertIsNotNone(token)
-        # A user-selected native input must not be overwritten to force first screen.
+    def test_same_session_power_cycle_never_launches_or_retargets_eim(self):
+        # Exercise actual monitor wiring and duplicate ON with an owned child.
         self.last = {'type': 'HDMI_1', 'appId': 'com.webos.app.hdmi1'}
-        with patch.object(d, 'active_guardian', return_value=True):
-            self.assertEqual(runtime.present_wake('route-a', self.session,
-                lambda: power.revision != token), 'launch-requested')
-        self.assertEqual(self.launches, [d.CANDIDATE])
+        frames = ''.join(json.dumps(dict(returnValue=True, state=state,
+            **({'subscribed': True} if index == 0 else {})))
+            for index, state in enumerate(('Active', 'Active Standby', 'Active', 'Active')))
+        real_popen = subprocess.Popen
+        def child(*args, **kwargs):
+            return real_popen([sys.executable, '-c',
+                'import sys;print('+repr(frames)+',flush=True);sys.stdin.read()'], **kwargs)
+        with patch.object(shutdown_state.subprocess, 'Popen', side_effect=child), \
+                patch.object(shutdown_state, 'query', return_value=False), \
+                patch.object(shutdown_state.PowerReason, 'poll', return_value=False), \
+                patch.object(d, 'active_guardian', return_value=True):
+            monitor = shutdown_state.monitor('route-a')
+            try:
+                deadline = time.monotonic()+2
+                while time.monotonic() < deadline:
+                    try:
+                        snapshot = json.loads(health.path('route-a').with_suffix('.wake').read_text())
+                    except (FileNotFoundError, ValueError):
+                        snapshot = {}
+                    if snapshot.get('wake_count') == 1:
+                        break
+                    time.sleep(.01)
+                self.assertEqual(snapshot.get('wake_count'), 1)
+            finally:
+                monitor.close()
+        self.assertEqual(self.launches, [])
         self.assertEqual(self.store.read(), self.intent)
         self.assertEqual(self.last['type'], 'HDMI_1')
         self.assertEqual(d._native_read()['phase'], 'active')
 
-    def assert_startup_fallback(self, cold):
+    def assert_guarded_startup(self, cold):
         self.new_startup(cold=cold)
         result = self.dispatch()
-        self.assertEqual(result['presentation'], 'launch-requested')
         self.assertEqual(result['intent']['phase'], 'active')
-        self.assertEqual(self.launches, [d.CANDIDATE])
+        self.assertEqual(self.launches, [])
         self.assertEqual(self.c.read_binding()['transaction'], 'route-b')
         self.assertEqual(d._native_read()['phase'], 'active')
         # Duplicate callbacks must not replay the fallback or native mutation.
         self.assertEqual(self.dispatch(), 'guarded-intent-trial')
-        self.assertEqual(self.launches, [d.CANDIDATE])
+        self.assertEqual(self.launches, [])
         self.assertEqual(sum(name == 'addDevice' for name, _ in self.calls), 1)
 
-    def test_new_session_with_reused_kernel_uses_guarded_startup_fallback(self):
-        self.assert_startup_fallback(cold=False)
+    def test_new_session_with_reused_kernel_rearms_without_launch(self):
+        self.assert_guarded_startup(cold=False)
 
-    def test_cold_boot_uses_guarded_startup_fallback(self):
-        self.assert_startup_fallback(cold=True)
+    def test_cold_boot_rearms_without_launch(self):
+        self.assert_guarded_startup(cold=True)
+
+    def test_boot_rearm_without_guardian_health_fails_without_launch(self):
+        self.new_startup()
+        with self.assertRaises(FileNotFoundError):
+            self.dispatch(guardian=False)
+        self.assertFalse(self.store.read()['enabled'])
+        self.assertEqual(self.store.read()['phase'], 'recovering')
+        self.assertEqual(self.launches, [])
+
+    def test_boot_rearm_with_stale_binding_fails_without_launch(self):
+        self.new_startup()
+        with self.assertRaises(ValueError):
+            self.dispatch(stale_binding=True)
+        self.assertFalse(self.store.read()['enabled'])
+        self.assertEqual(self.store.read()['phase'], 'recovering')
+        self.assertEqual(self.launches, [])
 
     def test_unproved_observer_exit_stays_off_after_new_startup(self):
         with patch.object(shutdown_state, 'query', return_value=False):
@@ -152,3 +192,11 @@ class WakeLifecycleTests(unittest.TestCase):
         with patch.object(d, 'home_present', return_value=False):
             self.assertTrue(bound_exit('route-a', reason='observer_exit'))
         self.assert_stays_off()
+
+    def test_guarded_boot_with_protected_source_withdraws_native_priority_without_launch(self):
+        self.foreground = 'youtube.leanback.v4'
+        self.new_startup()
+        result = self.dispatch()
+        self.assertEqual(result['intent']['phase'], 'active')
+        self.assertEqual(self.last, {'type':'DTV','appId':'com.webos.app.livetv'})
+        self.assertEqual(self.launches, [])

@@ -27,6 +27,16 @@ Home control off. After verified completion, stop Home Helper and enable
 **Home Root → Home settings → Change Home**. Never run both editions' input
 handling together.
 
+## Candidate native startup choices
+
+The unpublished candidate adds **Home settings → Open Clean Your TV first**.
+**LG Channels / Live TV** is on by default; **YouTube** and **HDMI** are off.
+Enable a source to prepare Clean as the native first screen after that source.
+Turning **Change Home** off visibly disables these controls and explains why;
+your choices are retained. The candidate removes late boot/wake app launches.
+Exact-package standby/cold-start, source selection and control acceptance remain
+pending; this does not change the published 1.6.0 evidence below.
+
 ## Exit or recover
 
 Press **Home three times within two seconds**, releasing between presses, to

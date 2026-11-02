@@ -110,16 +110,6 @@ class RuntimeTests(unittest.TestCase):
   with patch.object(r,'coordinator',return_value=c),patch.object(r,'boot_identity',side_effect=ValueError('unsafe session')):
    with self.assertRaises(ValueError):r.boot()
   c.exit.assert_called_once_with(intent,reason='fault');c.boot.assert_not_called();c.restart.assert_not_called()
- def test_boot_presentation_is_not_replayed_by_duplicate_callback(self):
-  c=Mock(binding=self.root/'missing-binding');c.store.read.return_value={'boot':'old','phase':'active'}
-  starting={'phase':'starting'};active={'boot':'new','phase':'active','enabled':True}
-  c.boot.return_value={'effect':'start_guarded','intent':starting}
-  c.restart.return_value={'intent':active,'trial':{'transaction':'route-new'}}
-  with patch.object(r,'coordinator',return_value=c),patch.object(r,'boot_identity',return_value='new'),patch('boot_gate.wait',return_value=True),patch.object(r.d.FAILSAFE.__class__,'exists',return_value=False),patch.object(r.d,'safe_json',return_value={}),patch.object(r.d,'active_guardian',return_value=True),patch.object(r,'present_boot',return_value='launch-requested') as present:
-   self.assertEqual(r.boot()['presentation'],'launch-requested')
-   c.store.read.return_value=active
-   self.assertEqual(r.boot(),'guarded-intent-trial')
-  present.assert_called_once();c.restart.assert_called_once_with(starting)
  def test_same_session_fault_recovery_does_not_depend_on_audit_writes(self):
   c=Mock(binding=self.root/'missing-binding');intent={'boot':'same','phase':'active','enabled':True,'generation':1};c.store.read.return_value=intent
   with patch.object(r,'coordinator',return_value=c),patch.object(r,'boot_identity',return_value='same'),patch.object(r.d.FAILSAFE.__class__,'exists',return_value=False),patch.object(r.d,'safe_json',return_value={}),patch.object(r.d,'active_guardian',return_value=False),patch('boot_gate.audit',side_effect=OSError('full')):
