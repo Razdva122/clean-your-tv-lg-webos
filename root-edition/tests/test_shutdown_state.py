@@ -284,3 +284,53 @@ class WakeDiagnosticTests(PowerTests):
   self.event(power,'Active Standby')
   with patch.object(s.tempfile,'mkstemp',side_effect=OSError('full')):
    self.assertIsNotNone(power.event(dict(returnValue=True,state='Active')))
+
+class FirmwarePowerStageTests(unittest.TestCase):
+ setUp=PowerTests.setUp
+ def off_stages(self,power):
+  for stage in ('Request Power Off','Request Active Standby','Prepare Active Standby'):
+   self.assertIsNone(power.event(dict(returnValue=True,state='Active',onOff='off',processing=stage)))
+   self.assertFalse(s.stopping('tx'))
+ def test_c3_remote_power_stages_preserve_one_observed_on_off_on_edge(self):
+  power=s.PowerState('tx','boot-a')
+  self.assertIsNone(power.event(dict(returnValue=True,subscribed=True,state='Active')))
+  self.off_stages(power)
+  self.assertIsNone(power.event(dict(returnValue=True,state='Active Standby')))
+  self.assertTrue(s.stopping('tx'))
+  for stage in ('Prepare Power On','LastInput Ready','Screen On'):
+   self.assertIsNone(power.event(dict(returnValue=True,state='Active Standby',onOff='on',processing=stage)))
+  self.assertIsNotNone(power.event(dict(returnValue=True,state='Active')))
+  self.assertEqual(power.off_count,1);self.assertEqual(power.wake_count,1)
+  self.assertFalse(s.stopping('tx'))
+  self.assertIsNone(power.event(dict(returnValue=True,state='Active')))
+ def test_off_request_without_explicit_standby_never_requests_wake(self):
+  power=s.PowerState('tx','boot-a')
+  power.event(dict(returnValue=True,subscribed=True,state='Active'))
+  self.off_stages(power)
+  self.assertIsNone(power.event(dict(returnValue=True,state='Active')))
+  self.assertEqual(power.wake_count,0);self.assertFalse(s.stopping('tx'))
+ def test_initial_off_and_lost_stream_cannot_invent_prior_on(self):
+  for prior in ('initial','unknown','closed'):
+   with self.subTest(prior=prior):
+    power=s.PowerState('tx','boot-a')
+    if prior=='initial':power.event(dict(returnValue=True,subscribed=True,state='Active',onOff='off'))
+    else:
+     power.event(dict(returnValue=True,subscribed=True,state='Active'))
+     if prior=='unknown':power.event(dict(returnValue=True,state='unknown'))
+     else:power.close()
+    self.off_stages(power)
+    power.event(dict(returnValue=True,state='Active Standby'))
+    self.assertFalse(s.stopping('tx'))
+    self.assertIsNone(power.event(dict(returnValue=True,state='Active')))
+ def test_off_preparation_revokes_pending_wake_and_old_standby(self):
+  power=s.PowerState('tx','boot-a')
+  power.event(dict(returnValue=True,subscribed=True,state='Active'))
+  power.event(dict(returnValue=True,state='Active Standby'))
+  token=power.event(dict(returnValue=True,state='Active'))
+  self.assertIsNotNone(token)
+  self.off_stages(power)
+  self.assertNotEqual(power.revision,token)
+  power.event(dict(returnValue=True,state='Active Standby'))
+  self.off_stages(power)
+  self.assertIsNone(power.event(dict(returnValue=True,state='Active')))
+  self.assertEqual(power.wake_count,1)

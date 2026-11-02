@@ -149,7 +149,12 @@ class PowerState:
         if state == 'Active':
             self.clear()
             if value.get('onOff') == 'off':
-                self.close('onoff-off'); diagnostic='onoff-off'
+                # Firmware sends Active/off preparation before explicit standby.
+                # Cancel any pending wake, retaining only this stream's prior ON;
+                # preparation alone grants neither shutdown proof nor a wake.
+                self.asleep = False
+                self.revision += 1
+                diagnostic = 'onoff-off'
             elif value.get('processing') is True:
                 # Keep a proven OFF pending, but revoke an in-flight request.
                 self.revision += 1
