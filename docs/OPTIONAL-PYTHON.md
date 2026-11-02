@@ -75,9 +75,11 @@ directory privately to the installation computer if necessary. Do not share a
 data directory containing your normal SSH identities, pairing keys or profiles.
 Prepare a fresh directory dedicated to the cache when moving it between devices.
 
-### Unreleased: host cache failure categories (#200)
+<a id="unreleased-host-cache-failure-categories-200"></a>
 
-Diagnostic reports include `python_cache.reason` when private Python acquisition
+### Host cache failure categories (#200)
+
+In 1.6.0, diagnostic reports include `python_cache.reason` when private Python acquisition
 fails: `network`, `tls`, `http`, `response-policy`, `size`, `sha256`, `deadline`,
 `cache-access`, `cache-replace`, `cache-invalid` or `unknown`. These distinguish
 connection/trust/HTTP failures, rejected response metadata, byte/hash/deadline

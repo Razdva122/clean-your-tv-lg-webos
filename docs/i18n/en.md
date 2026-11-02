@@ -1,6 +1,6 @@
 # Clean Your TV — user guide
 
-> Frozen 1.6.0 candidate, not published. Public stable remains 1.5.4. The candidate includes all five installer improvements and refreshes Root Settings from actual status after reopening; a failed check does not enable Home. System Updater 1.2.0 is for new eligible setup or verified replacement of 1.1.0/1.1.1. Existing 1.1.2 stays pinned with its old channels; no general migration is provided. Keep recovery data and do not force replacement. [Versions and limits](../RELEASE-1.6.0.md).
+> This guide describes 1.6.0. For available packages, use [published GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases). It includes all five installer improvements and refreshes Root Settings from actual status after reopening; a failed check does not enable Home. System Updater 1.2.0 is for new eligible setup or verified replacement of 1.1.0/1.1.1. Existing 1.1.2 stays pinned with its old channels; no general migration is provided. Keep recovery data and do not force replacement. [Versions and limits](../RELEASE-1.6.0.md).
 
 > v1.5.0: themes, Showcase and PC-to-TV transfer. Known Root limits: Appearance can shift 110 px; automatic Home after standby can fail. Device-specific acceptance remains limited. [1.5.0](../RELEASE-1.5.0.md).
 
@@ -8,7 +8,7 @@
 
 [Documentation](../README.md) · [Report a problem](../FEEDBACK.md)
 
-This guide covers published **[1.5.4](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.5.4)**. C3 acceptance covers the recorded power, Home, focus, off-state and manual rollback tests. Other TVs, eARC audio and physical Android devices remain unverified; installation alone does not prove compatibility. [Tested scope (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
+**Historical 1.5.4 evidence:** C3 acceptance covers the recorded power, Home, focus, off-state and manual rollback tests. Other TVs, eARC audio and physical Android devices remain unverified; installation alone does not prove compatibility. [Tested scope (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
 
 **1.5.4:** TV checks show each requirement as not checked, checking, passed, failed or unverifiable in the console, desktop and Android interfaces. Results remain visible after an error. A failed Node.js/Python check concerns the TV runtime; `doctor` does not prepare Python or request control pairing. Save the report before retrying.
 
@@ -21,7 +21,7 @@ No-root and Root are equal options for different TV setups. Choose No-root for L
 
 Root requires working Settings Service and System Profile Home interfaces (`com.webos.service.systemprofile`); existing root access alone does not establish compatibility.
 
-> Unreleased installer: Root setup checks the required Home interfaces before preparing private Python or packages. A failed check stops setup; passing it does not prove firmware compatibility or physical Home operation. Known connection errors now show specific advice. Keep saved profiles, trust and recovery data; unresolved operations require verified recovery, not a blind retry. Save and review the diagnostic report. [Details](../development/INSTALLER-PREFLIGHT-HELP.md).
+> **1.6.0:** Root setup checks the required Home interfaces before preparing private Python or packages. A failed check stops setup; passing it does not prove firmware compatibility or physical Home operation. Known connection errors now show specific advice. Keep saved profiles, trust and recovery data; unresolved operations require verified recovery, not a blind retry. Save and review the diagnostic report. [Details](../development/INSTALLER-PREFLIGHT-HELP.md).
 
 ## Before installation
 
@@ -66,7 +66,7 @@ chmod +x cytv
 
 Choose the TV (or enter its IP), choose the edition and review the summary. Approve first-use SSH trust only for your own TV on a trusted network; a changed saved key blocks access. Root credentials are distinct from the Developer Mode passphrase. Root installs recovery and activates Home immediately, without a trial or Keep step. Check arrows, OK, Home, Back/Cancel, volume, standby/wake and cold boot on your own TV.
 
-Unreleased candidate: setup shows package verification, startup readback and your physical Home observation separately. A launch acknowledgement or observed Helper process does not prove Home interception. Open another TV app, press Home once briefly, then choose what you saw; the default is **Not tested / skip**. `--yes` does not answer this check, and noninteractive setup leaves it untested. A failed or skipped Home check does not undo installed packages or start a reinstall. Save the local report for help; it is not published automatically. Other controls, sound, standby and cold boot remain separate checks.
+**1.6.0:** setup shows package verification, startup readback and your physical Home observation separately. A launch acknowledgement or observed Helper process does not prove Home interception. Open another TV app, press Home once briefly, then choose what you saw; the default is **Not tested / skip**. `--yes` does not answer this check, and noninteractive setup leaves it untested. A failed or skipped Home check does not undo installed packages or start a reinstall. Save the local report for help; it is not published automatically. Other controls, sound, standby and cold boot remain separate checks.
 
 ## Everyday use and recovery
 
@@ -85,9 +85,9 @@ No-root: To restart Home control, open Home Helper, choose Start Helper and conf
 ./cytv --language en uninstall
 ```
 
-> Unreleased (#152): the No-root Restore/removal flow can use a guarded SSH stop if Helper disable is rejected. Stop state is retained; uncertain recovery keeps the journal. Do not delete state files. EF950V device confirmation is pending. [#152](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/152)
+> **1.6.0 (#152):** the No-root Restore/removal flow can use a guarded SSH stop if Helper disable is rejected. Stop state is retained; uncertain recovery keeps the journal. Do not delete state files. EF950V device confirmation is pending. [#152](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/152)
 
-> Unreleased (#201): No-root status retains an interrupted install/removal journal. Matching files or absent apps do not prove installer completion. If verification is denied, stop and retain diagnostics; there is no file-only bypass. [#201](../RECOVERY.md#unreleased-uncertain-no-root-package-operations-201)
+> **1.6.0 (#201):** No-root status retains an interrupted install/removal journal. Matching files or absent apps do not prove installer completion. If verification is denied, stop and retain diagnostics; there is no file-only bypass. [#201](../RECOVERY.md#unreleased-uncertain-no-root-package-operations-201)
 
 After interruption, run `status` before retrying; retain journals and recovery files. `restore` returns LG Home without removing apps. `uninstall` restores before removal. Root recovery state is deliberately retained; never delete it to force reinstallation. Review diagnostic reports before sharing; do not publish keys or profile folders.
 
@@ -117,11 +117,11 @@ Homebrew Channel denied access to this installer. On webOS 11, Homebrew 0.7.3 ne
 
 1.5.0+: `cytv recover-system-rollback --edition root` handles a verified Root rollback whose package installers completed but launcher readiness timed out. It requires genuine launcher health, refuses unknown installer outcomes, and preserves packages, pinned code/keys, failure evidence and an explicit Home-off choice. A private audit records the bounded attempt. Ordinary retries never extend the same attempt. Only after its 120-second deadline expires, with no accepted health or unknown installer result, add `--new-recovery-attempt` to archive the full prior audit under its UUID/hash and explicitly open a fresh attempt. Completed recovery stays idempotent; there are no automatic repeated attempts. [Procedure and limits](../RECOVERY.md#root-system-rollback-readiness-candidate).
 
-1.5.0: The replacement bundle provides System Updater 1.1.2. Before TV OTA, explicitly replace 1.1.0 or 1.1.1 with `cytv replace-system-updater --edition root`. Only System Updater is replaced; Root/Root Updater apps, the full profile and Home choice are preserved, and old state is archived. Unknown or unfinished operations stop replacement. This requirement does not gate No-root feeds. [Replacement procedure](../RECOVERY.md#replace-the-root-system-updater-candidate).
+1.6.0: System Updater 1.2.0 is for eligible new setup or verified replacement of 1.1.0/1.1.1 using `cytv replace-system-updater --edition root`. Only System Updater is replaced; Root/Root Updater apps, the full profile and Home choice are preserved, and old state is archived. Unknown or unfinished operations stop replacement. Existing 1.1.2 stays pinned with its old channels; there is no general migration and replacement must not be forced. This does not gate No-root feeds. [Replacement procedure](../RECOVERY.md#replace-the-root-system-updater-candidate)
 
 ## Help and further reading
 
-Unreleased candidate: choose **Review recovery options** for the same saved TV, or run `cytv recover`. Checking and changes require separate confirmation, with No selected by default; `--yes` cannot approve them. Root continues only after its existing verification. No-root offers removal only when the existing package-service guard permits it; removal may reset Home preferences. New setup never starts automatically. If state is unknown or access is denied, save the report and stop; retain journals and do not repeat removal. This does not resolve the missing terminal evidence in #201 or establish device recovery in #216. [Recovery](../RECOVERY.md). For help, include model, firmware, edition, installer version, failed step and expected/actual behavior; review and redact the report before sharing.
+**1.6.0:** choose **Review recovery options** for the same saved TV, or run `cytv recover`. Checking and changes require separate confirmation, with No selected by default; `--yes` cannot approve them. Root continues only after its existing verification. No-root offers removal only when the existing package-service guard permits it; removal may reset Home preferences. New setup never starts automatically. If state is unknown or access is denied, save the report and stop; retain journals and do not repeat removal. This does not resolve the missing terminal evidence in #201 or establish device recovery in #216. [Recovery](../RECOVERY.md). For help, include model, firmware, edition, installer version, failed step and expected/actual behavior; review and redact the report before sharing.
 
 [Documentation](../README.md) · [Report a problem](../FEEDBACK.md)
 
@@ -151,7 +151,7 @@ To test an unpublished theme, first open **Settings → Themes → Receive from 
 For a published theme, open **Add by ID** and enter its ID (for example `102300a209`), `da.gd/102300a209`, or the full GitHub link. Home shows the expanded da.gd address before loading and then checks the GitHub destination and theme package. The author can provide the ID in the release notes or with **TV link → Copy ID** in the computer preview.
 
 
-Unreleased candidate: **Show diagnostics** in the Home Helper panel displays a small, filtered snapshot of its own status requests. Viewing it does not start Helper or change Home control. Share only that JSON when requested, after reviewing it; see [details](../HELPER-DIAGNOSTICS.md#candidate-panel-caller-diagnostics-207).
+**1.6.0:** **Show diagnostics** in the Home Helper panel displays a small, filtered snapshot of its own status requests. Viewing it does not start Helper or change Home control. Share only that JSON when requested, after reviewing it; see [details](../HELPER-DIAGNOSTICS.md#candidate-panel-caller-diagnostics-207).
 
 [Themes (English)](../THEMES.md) · [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
 
@@ -173,10 +173,12 @@ In both editions, Home settings has categories on the left and the selected sett
 
 A yellow dot on both Software updates and its update button means an update is available. Both indicators clear after a successful check confirms no update; a failed check retains the last confirmed state.
 
-## Automatic graphics resolution (candidate)
+<a id="automatic-graphics-resolution-candidate"></a>
 
-The upcoming computer/Android installers and migrated OTA clients select 720p or 1080p from the TV’s reported capability. If it cannot be verified, the operation stops. Older independently installed updaters need the documented computer migration; recovery keeps its original packages.
+## Automatic graphics resolution (1.6.0)
+
+The 1.6.0 computer/Android installers and migrated OTA clients select 720p or 1080p from the TV’s reported capability. If it cannot be verified, the operation stops. Older independently installed updaters need the documented computer migration; recovery keeps its original packages.
 
 [HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).
 
-> Unreleased installer diagnostics: save the original failed-attempt report. New reports separate a recorded first error from later checks and include a filtered Doctor/status summary; successful setup/status/restore also offer an export. Missing older evidence remains unknown; this does not authorize recovery. [↗](../development/INSTALLER-DIAGNOSTICS.md).
+> **1.6.0:** save the original failed-attempt report. New reports separate a recorded first error from later checks and include a filtered Doctor/status summary; successful setup/status/restore also offer an export. Missing older evidence remains unknown; this does not authorize recovery. [↗](../development/INSTALLER-DIAGNOSTICS.md).

@@ -1,6 +1,6 @@
 # Update Clean Your TV
 
-> Release 1.5.4 has [release scope and explicit acceptance limits](RELEASE-1.5.4.md). Historical [1.5.0 limitations and acceptance](RELEASE-1.5.0.md) retain their original scope.
+> See [1.6.0 scope and limits](RELEASE-1.6.0.md), [dated acceptance](history/2026-11-02-release-1.6.0-final-acceptance.md) and available packages on [GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases). Historical [1.5.4](RELEASE-1.5.4.md) and [1.5.0](RELEASE-1.5.0.md) evidence retains its original scope.
 
 **Existing Root installations:** published 1.4.0 is incompatible with the original
 1.3.0 System Updater destination inventory. Do not force that update or edit
@@ -156,6 +156,8 @@ Published 1.4.1 used System Updater 1.1.1; its historical acceptance does not ce
 later artifacts. The fixed readiness service retains its bounded ownership-lock
 wait without extending the launcher's health deadline.
 
-## Automatic graphics selection (candidate)
+<a id="automatic-graphics-selection-candidate"></a>
 
-Upcoming installer builds contain both HD/FHD packages. New or explicitly migrated updater clients choose the signed 720p channel for a verified non-UHD TV and the existing 1080p channel for a verified UHD TV. Unknown capability stops before installation. Fresh eligible 1.6.0 setup can provision System 1.2.0. The explicit replacement path admits only verified 1.1.0/1.1.1; installed 1.1.2 remains pinned with its previous channel behavior and has no general migration in this candidate. Ordinary component OTA does not replace it. Do not delete state or reinstall to force migration. Retained rollback packages and version/signature rules remain unchanged. The first legacy Home HD channel waits for an actual compatible published HD rollback baseline. [Selection, signed feeds and migration limits](development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).
+## Automatic graphics selection
+
+In 1.6.0, installer builds contain both HD/FHD packages. New or explicitly migrated updater clients choose the signed 720p channel for a verified non-UHD TV and the existing 1080p channel for a verified UHD TV. Unknown capability stops before installation. Fresh eligible 1.6.0 setup can provision System 1.2.0; exact-package host fixtures cover fresh provisioning, while physical provisioning remains untested. The explicit replacement path admits only verified 1.1.0/1.1.1; installed 1.1.2 remains pinned with its previous channel behavior and has no general migration in 1.6.0. Ordinary component OTA does not replace it. Do not delete state or reinstall to force migration. Retained rollback packages and version/signature rules remain unchanged. The first legacy Home HD channel waits for an actual compatible published HD rollback baseline. [Selection, signed feeds and migration limits](development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).

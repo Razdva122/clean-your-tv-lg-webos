@@ -1,6 +1,6 @@
 # Clean Your TV — guía de uso
 
-> El candidato 1.6.0 está congelado, aún sin publicar; la versión estable sigue siendo 1.5.4. Incluye las cinco mejoras del instalador. Al reabrirse, Ajustes de Root lee el estado real; una comprobación fallida no activa Home. System Updater 1.2.0 sirve para una instalación nueva admitida o la sustitución verificada de 1.1.0/1.1.1. El 1.1.2 instalado conserva sus canales anteriores; no hay migración general. Conserva los datos de recuperación y no fuerces la sustitución. [Versiones y límites](../RELEASE-1.6.0.md).
+> Esta guía describe 1.6.0. Descarga los paquetes disponibles desde las [publicaciones de GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases). Incluye las cinco mejoras del instalador. Al reabrirse, Ajustes de Root lee el estado real; una comprobación fallida no activa Home. System Updater 1.2.0 sirve para una instalación nueva admitida o la sustitución verificada de 1.1.0/1.1.1. El 1.1.2 instalado conserva sus canales anteriores; no hay migración general. Conserva los datos de recuperación y no fuerces la sustitución. [Versiones y límites](../RELEASE-1.6.0.md).
 
 > v1.5.0: temas, galería y envío del PC al TV. Límites conocidos de Root: Appearance puede desplazarse 110 px; Home puede no abrirse automáticamente tras el modo de espera. La validación por dispositivo sigue limitada. [1.5.0](../RELEASE-1.5.0.md).
 
@@ -8,7 +8,7 @@
 
 [Documentación](../README.md) · [Informar de un problema](../FEEDBACK.md)
 
-Esta guía describe la versión publicada **[1.5.4](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.5.4)**. La aceptación del C3 cubre las pruebas registradas de alimentación, Home, foco, estado desactivado y reversión manual. Otros televisores, audio eARC y dispositivos Android físicos siguen sin verificar; instalar correctamente no demuestra compatibilidad. [Alcance probado (inglés)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
+**Pruebas históricas de 1.5.4:** La aceptación del C3 cubre las pruebas registradas de alimentación, Home, foco, estado desactivado y reversión manual. Otros televisores, audio eARC y dispositivos Android físicos siguen sin verificar; instalar correctamente no demuestra compatibilidad. [Alcance probado (inglés)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
 
 **1.5.4:** consola, escritorio y Android muestran cada comprobación del TV como pendiente, en curso, correcta, fallida o no verificable. Los resultados permanecen tras un error. Node.js/Python se comprueba en el TV; `doctor` no prepara Python ni solicita emparejamiento de control. Guarda el informe antes de reintentar.
 
@@ -21,7 +21,7 @@ No-root y Root son opciones equivalentes para distintas configuraciones del tele
 
 Root necesita las interfaces de Home de Settings Service y System Profile (`com.webos.service.systemprofile`); tener acceso root no garantiza la compatibilidad.
 
-> Instalador aún no publicado: Root comprueba las interfaces Home necesarias antes de preparar Python privado o paquetes. Un fallo detiene la instalación; superar la prueba no demuestra compatibilidad del firmware ni el funcionamiento del botón Home. Los errores de conexión conocidos muestran consejos específicos. Conserva perfiles, datos de confianza y recuperación; las operaciones pendientes requieren recuperación verificada, no repetir a ciegas. Guarda y revisa el informe. [Detalles](../development/INSTALLER-PREFLIGHT-HELP.md).
+> **1.6.0:** Root comprueba las interfaces Home necesarias antes de preparar Python privado o paquetes. Un fallo detiene la instalación; superar la prueba no demuestra compatibilidad del firmware ni el funcionamiento del botón Home. Los errores de conexión conocidos muestran consejos específicos. Conserva perfiles, datos de confianza y recuperación; las operaciones pendientes requieren recuperación verificada, no repetir a ciegas. Guarda y revisa el informe. [Detalles](../development/INSTALLER-PREFLIGHT-HELP.md).
 
 ## Requisitos
 
@@ -66,7 +66,7 @@ chmod +x cytv
 
 Selecciona el televisor o introduce su IP, elige la edición y revisa el resumen. Confirma una nueva identidad SSH solo para tu televisor en una red de confianza; una clave guardada que haya cambiado bloquea el acceso. Root prepara la recuperación y activa Home inmediatamente, sin prueba temporal ni paso de conservación. Comprueba flechas, OK, Home, Atrás/Cancelar, volumen, suspensión y arranque en frío.
 
-Candidato sin publicar: se muestran por separado la verificación de paquetes, el inicio y tu observación del botón Home físico. Una confirmación de inicio o un proceso Helper no prueban la interceptación de Home. Abre otra app, pulsa Home una vez brevemente y elige lo observado; el valor predeterminado es **No probado / omitir**. `--yes` no responde por ti y el modo no interactivo deja la prueba pendiente. Un fallo de Home o una omisión no deshacen los paquetes ni reinstalan. Guarda el informe local para pedir ayuda; no se publica automáticamente. Otros controles, sonido, espera y arranque en frío se prueban aparte.
+**1.6.0:** se muestran por separado la verificación de paquetes, el inicio y tu observación del botón Home físico. Una confirmación de inicio o un proceso Helper no prueban la interceptación de Home. Abre otra app, pulsa Home una vez brevemente y elige lo observado; el valor predeterminado es **No probado / omitir**. `--yes` no responde por ti y el modo no interactivo deja la prueba pendiente. Un fallo de Home o una omisión no deshacen los paquetes ni reinstalan. Guarda el informe local para pedir ayuda; no se publica automáticamente. Otros controles, sonido, espera y arranque en frío se prueban aparte.
 
 ## Uso y recuperación
 
@@ -85,9 +85,9 @@ No-root: Para reiniciar el control de Home, abre Home Helper, elige Iniciar Help
 ./cytv --language es uninstall
 ```
 
-> Sin publicar (#152): si se rechaza desactivar Helper, la restauración/eliminación No-root podrá usar una detención verificada por SSH. Se conserva el estado de parada y, si el resultado es incierto, el registro. No borres archivos de estado. Falta la confirmación en el EF950V. [#152](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/152)
+> **1.6.0 (#152):** si se rechaza desactivar Helper, la restauración/eliminación No-root podrá usar una detención verificada por SSH. Se conserva el estado de parada y, si el resultado es incierto, el registro. No borres archivos de estado. Falta la confirmación en el EF950V. [#152](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/152)
 
-> Sin publicar (#201): el estado de No-root conserva el registro de una instalación o eliminación interrumpida. Los archivos coincidentes o las aplicaciones ausentes no demuestran que la operación haya terminado. Si se deniega la verificación, deténgase y conserve el diagnóstico; no hay un método basado solo en archivos para omitirla. [#201](../RECOVERY.md#unreleased-uncertain-no-root-package-operations-201)
+> **1.6.0 (#201):** el estado de No-root conserva el registro de una instalación o eliminación interrumpida. Los archivos coincidentes o las aplicaciones ausentes no demuestran que la operación haya terminado. Si se deniega la verificación, deténgase y conserve el diagnóstico; no hay un método basado solo en archivos para omitirla. [#201](../RECOVERY.md#unreleased-uncertain-no-root-package-operations-201)
 
 Tras una interrupción, ejecuta primero `status` y conserva los registros. `restore` recupera LG Home sin quitar aplicaciones; `uninstall` lo restaura antes de eliminarlas. Los datos de recuperación Root se conservan deliberadamente: no los borres para forzar otra instalación. Revisa los informes antes de compartirlos; no publiques claves ni carpetas de perfiles.
 
@@ -117,11 +117,11 @@ Homebrew Channel denegó el acceso a este instalador. En webOS 11, Homebrew 0.7.
 
 1.5.0+: `cytv recover-system-rollback --edition root` recupera una reversión Root verificada cuyos instaladores terminaron, pero venció el plazo de disponibilidad del lanzador. Exige la señal auténtica del lanzador y rechaza resultados de instalación desconocidos. Conserva paquetes, código y claves fijados, pruebas del fallo y la desactivación explícita de Home. Un registro privado conserva el intento limitado. Repetir normalmente no amplía el plazo. Solo tras vencer los 120 segundos, sin señal de disponibilidad aceptada ni resultado de instalación desconocido, `--new-recovery-attempt` archiva el registro anterior completo con su UUID/hash e inicia explícitamente otro intento. Una recuperación completada sigue siendo idempotente; no hay intentos automáticos. [Procedimiento y límites (inglés)](../RECOVERY.md#root-system-rollback-readiness-candidate).
 
-1.5.0: el paquete de sustitución incluye System Updater 1.1.2. Antes de OTA, sustituye explícitamente 1.1.0 o 1.1.1 con `cytv replace-system-updater --edition root`. Solo cambia System Updater; se conservan las apps Root/Root Updater, el perfil completo y Home, y se archiva el estado anterior. Las operaciones desconocidas o pendientes bloquean la sustitución. Este requisito no bloquea los feeds No-root. [Procedimiento (inglés)](../RECOVERY.md#replace-the-root-system-updater-candidate).
+1.6.0: System Updater 1.2.0 sirve para una instalación nueva admitida o la sustitución verificada de 1.1.0/1.1.1 con `cytv replace-system-updater --edition root`. Solo cambia System Updater; se conservan las apps Root/Root Updater, el perfil completo y la elección de Home, y se archiva el estado anterior. Las operaciones desconocidas o incompletas detienen el cambio. El 1.1.2 instalado sigue fijado con sus canales antiguos; no hay migración general y no debe forzarse la sustitución. Esto no condiciona los canales No-root. [Procedimiento (inglés)](../RECOVERY.md#replace-the-root-system-updater-candidate)
 
 ## Ayuda y más instrucciones
 
-Candidato sin publicar: elige **Revisar opciones de recuperación** para el mismo TV guardado o ejecuta `cytv recover`. La comprobación y los cambios requieren confirmaciones separadas con No predeterminado; `--yes` no los autoriza. Root continúa solo tras las verificaciones existentes. No-root ofrece eliminar solo si lo permite la comprobación del servicio de paquetes; se pueden restablecer las preferencias de Home. No se inicia otra instalación automáticamente. Ante estado desconocido o acceso denegado, guarda el informe y detente. Conserva los registros y no repitas la eliminación. Siguen pendientes las pruebas de finalización de #201 y la recuperación real de #216. [Recovery](../RECOVERY.md). Para pedir ayuda, indica modelo, firmware, edición, versión del instalador, paso fallido y resultado esperado/real; revisa y elimina secretos del informe antes de compartirlo.
+**1.6.0:** elige **Revisar opciones de recuperación** para el mismo TV guardado o ejecuta `cytv recover`. La comprobación y los cambios requieren confirmaciones separadas con No predeterminado; `--yes` no los autoriza. Root continúa solo tras las verificaciones existentes. No-root ofrece eliminar solo si lo permite la comprobación del servicio de paquetes; se pueden restablecer las preferencias de Home. No se inicia otra instalación automáticamente. Ante estado desconocido o acceso denegado, guarda el informe y detente. Conserva los registros y no repitas la eliminación. Siguen pendientes las pruebas de finalización de #201 y la recuperación real de #216. [Recovery](../RECOVERY.md). Para pedir ayuda, indica modelo, firmware, edición, versión del instalador, paso fallido y resultado esperado/real; revisa y elimina secretos del informe antes de compartirlo.
 
 [Documentación](../README.md) · [Informar de un problema](../FEEDBACK.md)
 
@@ -151,7 +151,7 @@ Para probar un tema no publicado, abre primero **Ajustes → Temas → Recibir d
 Para un tema publicado, abre **Añadir por ID** e introduce su ID (por ejemplo `102300a209`), `da.gd/102300a209` o el enlace completo de GitHub. Home muestra la dirección da.gd antes de cargar y verifica el destino GitHub y el paquete. El autor puede copiar el ID de las notas de versión o de **TV link → Copy ID** en la vista previa.
 
 
-Candidato aún no publicado: **Mostrar diagnóstico** en el panel Home Helper muestra un resumen filtrado de sus propias consultas de estado. Consultarlo no inicia Helper ni cambia el control de Home. Comparte solo ese JSON cuando se solicite, después de revisarlo; [detalles](../HELPER-DIAGNOSTICS.md#candidate-panel-caller-diagnostics-207).
+**1.6.0:** **Mostrar diagnóstico** en el panel Home Helper muestra un resumen filtrado de sus propias consultas de estado. Consultarlo no inicia Helper ni cambia el control de Home. Comparte solo ese JSON cuando se solicite, después de revisarlo; [detalles](../HELPER-DIAGNOSTICS.md#candidate-panel-caller-diagnostics-207).
 
 [Themes (English)](../THEMES.md) · [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
 
@@ -173,10 +173,12 @@ Ambas ediciones muestran categorías a la izquierda y ajustes a la derecha: pant
 
 Un punto amarillo en Actualizaciones de software y en el botón interior indica que hay una actualización. Ambos desaparecen cuando una comprobación correcta confirma que no hay actualizaciones; si falla, se conserva el último estado confirmado.
 
-## Resolución gráfica automática (candidato)
+<a id="resolución-gráfica-automática-candidato"></a>
 
-Los próximos instaladores para ordenador/Android y clientes OTA migrados eligen 720p o 1080p según la capacidad del TV. Si no puede verificarse, la operación se detiene. Los actualizadores antiguos instalados por separado requieren la migración documentada desde el ordenador; la recuperación conserva sus paquetes originales.
+## Resolución gráfica automática (1.6.0)
+
+Los instaladores 1.6.0 para ordenador/Android y clientes OTA migrados eligen 720p o 1080p según la capacidad del TV. Si no puede verificarse, la operación se detiene. Los actualizadores antiguos instalados por separado requieren la migración documentada desde el ordenador; la recuperación conserva sus paquetes originales.
 
 [HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).
 
-> Diagnóstico del instalador aún no publicado: guarde el informe del intento fallido original. Los nuevos informes separan el primer error registrado de las comprobaciones posteriores e incluyen un resumen filtrado de Doctor/estado. También permiten exportar tras configurar, consultar el estado o restaurar correctamente. Los datos antiguos ausentes siguen siendo desconocidos; el informe no autoriza la recuperación. [↗](../development/INSTALLER-DIAGNOSTICS.md).
+> **1.6.0:** guarde el informe del intento fallido original. Los nuevos informes separan el primer error registrado de las comprobaciones posteriores e incluyen un resumen filtrado de Doctor/estado. También permiten exportar tras configurar, consultar el estado o restaurar correctamente. Los datos antiguos ausentes siguen siendo desconocidos; el informe no autoriza la recuperación. [↗](../development/INSTALLER-DIAGNOSTICS.md).

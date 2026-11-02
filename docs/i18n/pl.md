@@ -1,6 +1,6 @@
 # Clean Your TV — instrukcja użytkownika
 
-> Zamrożony kandydat 1.6.0 nie jest jeszcze opublikowany; stabilna wersja to 1.5.4. Zawiera pięć ulepszeń instalatora. Po ponownym otwarciu ustawienia Root odczytują rzeczywisty stan; nieudana kontrola nie włącza Home. System Updater 1.2.0 służy do dozwolonej nowej instalacji lub zweryfikowanej wymiany 1.1.0/1.1.1. Zainstalowany 1.1.2 zachowuje stare kanały; brak ogólnej migracji. Zachowaj dane odzyskiwania i nie wymuszaj wymiany. [Wersje i ograniczenia](../RELEASE-1.6.0.md).
+> Poradnik opisuje wersję 1.6.0. Dostępne pakiety pobieraj z [opublikowanych wydań GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases). Zawiera pięć ulepszeń instalatora. Po ponownym otwarciu ustawienia Root odczytują rzeczywisty stan; nieudana kontrola nie włącza Home. System Updater 1.2.0 służy do dozwolonej nowej instalacji lub zweryfikowanej wymiany 1.1.0/1.1.1. Zainstalowany 1.1.2 zachowuje stare kanały; brak ogólnej migracji. Zachowaj dane odzyskiwania i nie wymuszaj wymiany. [Wersje i ograniczenia](../RELEASE-1.6.0.md).
 
 > v1.5.0: motywy, galeria i przesyłanie z komputera na TV. Znane ograniczenia Root: Appearance może przesunąć się o 110 px; Home może nie otworzyć się automatycznie po czuwaniu. Zakres testów urządzeń jest ograniczony. [1.5.0](../RELEASE-1.5.0.md).
 
@@ -8,7 +8,7 @@
 
 [Dokumentacja](../README.md) · [Zgłoś problem](../FEEDBACK.md)
 
-Poradnik opisuje opublikowaną wersję **[1.5.4](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.5.4)**. Akceptacja C3 obejmuje zapisane testy zasilania, Home, fokusu, zachowania stanu wyłączenia i ręcznego cofnięcia wersji. Inne telewizory, dźwięk eARC i fizyczne urządzenia Android pozostają niezweryfikowane; udana instalacja nie dowodzi zgodności. [Zakres testów (angielski)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
+**Historyczne wyniki 1.5.4:** Akceptacja C3 obejmuje zapisane testy zasilania, Home, fokusu, zachowania stanu wyłączenia i ręcznego cofnięcia wersji. Inne telewizory, dźwięk eARC i fizyczne urządzenia Android pozostają niezweryfikowane; udana instalacja nie dowodzi zgodności. [Zakres testów (angielski)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
 
 **1.5.4:** konsola, aplikacja desktopowa i Android pokazują stan każdej kontroli TV: niesprawdzona, w toku, zaliczona, niezaliczona lub niemożliwa do potwierdzenia. Wyniki pozostają po błędzie. Node.js/Python jest sprawdzany w telewizorze; `doctor` nie przygotowuje Pythona ani nie prosi o parowanie sterowania. Zapisz raport przed ponowną próbą.
 
@@ -21,7 +21,7 @@ No-root i Root to równorzędne opcje dla różnych konfiguracji telewizora. Wyb
 
 Root wymaga działających interfejsów Home usług Settings Service i System Profile (`com.webos.service.systemprofile`); sam dostęp root nie potwierdza zgodności.
 
-> Nieopublikowany instalator: Root sprawdza wymagane interfejsy Home przed przygotowaniem prywatnego Pythona lub pakietów. Błąd zatrzymuje instalację; powodzenie nie potwierdza zgodności oprogramowania ani działania przycisku Home. Znane błędy połączenia mają osobne wskazówki. Zachowaj profile, dane zaufania i odzyskiwania; niedokończone operacje wymagają zweryfikowanego odzyskiwania, bez ponawiania w ciemno. Zapisz i sprawdź raport. [Szczegóły](../development/INSTALLER-PREFLIGHT-HELP.md).
+> **1.6.0:** Root sprawdza wymagane interfejsy Home przed przygotowaniem prywatnego Pythona lub pakietów. Błąd zatrzymuje instalację; powodzenie nie potwierdza zgodności oprogramowania ani działania przycisku Home. Znane błędy połączenia mają osobne wskazówki. Zachowaj profile, dane zaufania i odzyskiwania; niedokończone operacje wymagają zweryfikowanego odzyskiwania, bez ponawiania w ciemno. Zapisz i sprawdź raport. [Szczegóły](../development/INSTALLER-PREFLIGHT-HELP.md).
 
 ## Wymagania
 
@@ -66,7 +66,7 @@ chmod +x cytv
 
 Wybierz telewizor lub podaj IP, wybierz edycję i sprawdź podsumowanie. Nową tożsamość SSH zatwierdzaj tylko dla własnego telewizora w zaufanej sieci; zmieniony zapisany klucz blokuje dostęp. Root przygotowuje odzyskiwanie i od razu aktywuje Home, bez okresu próbnego ani potwierdzenia zachowania ustawień. Sprawdź strzałki, OK, Home, Wstecz/Anuluj, głośność, czuwanie i uruchomienie po całkowitym odłączeniu zasilania.
 
-Nieopublikowany kandydat: weryfikacja pakietów, odczyt startu i Twoja obserwacja fizycznego Home są oddzielne. Potwierdzenie startu lub proces Helper nie dowodzą przechwytywania Home. Otwórz inną aplikację, krótko naciśnij Home raz i wybierz zaobserwowany wynik; domyślnie **Nie sprawdzono / pomiń**. `--yes` nie odpowiada za Ciebie, a tryb nieinteraktywny pozostawia test niewykonany. Błąd Home lub pominięcie nie usuwa pakietów i nie uruchamia ponownej instalacji. Zapisz lokalny raport, jeśli potrzebujesz pomocy; nie jest publikowany automatycznie. Inne przyciski, dźwięk, czuwanie i zimny start pozostają osobnymi testami.
+**1.6.0:** weryfikacja pakietów, odczyt startu i Twoja obserwacja fizycznego Home są oddzielne. Potwierdzenie startu lub proces Helper nie dowodzą przechwytywania Home. Otwórz inną aplikację, krótko naciśnij Home raz i wybierz zaobserwowany wynik; domyślnie **Nie sprawdzono / pomiń**. `--yes` nie odpowiada za Ciebie, a tryb nieinteraktywny pozostawia test niewykonany. Błąd Home lub pominięcie nie usuwa pakietów i nie uruchamia ponownej instalacji. Zapisz lokalny raport, jeśli potrzebujesz pomocy; nie jest publikowany automatycznie. Inne przyciski, dźwięk, czuwanie i zimny start pozostają osobnymi testami.
 
 ## Obsługa i odzyskiwanie
 
@@ -85,9 +85,9 @@ No-root: Aby wznowić sterowanie Home, otwórz Home Helper, wybierz Uruchom Help
 ./cytv --language pl uninstall
 ```
 
-> Jeszcze nieopublikowane (#152): po odmowie wyłączenia Helper przywracanie/usuwanie No-root będzie mogło użyć sprawdzonego zatrzymania przez SSH. Stan zatrzymania zostaje zachowany; niepewny wynik zachowuje dziennik. Nie usuwaj plików stanu. Potwierdzenie na EF950V nadal jest potrzebne. [#152](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/152)
+> **1.6.0 (#152):** po odmowie wyłączenia Helper przywracanie/usuwanie No-root będzie mogło użyć sprawdzonego zatrzymania przez SSH. Stan zatrzymania zostaje zachowany; niepewny wynik zachowuje dziennik. Nie usuwaj plików stanu. Potwierdzenie na EF950V nadal jest potrzebne. [#152](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/152)
 
-> Jeszcze niewydane (#201): status No-root zachowuje dziennik przerwanej instalacji lub usuwania. Zgodne pliki lub brak aplikacji nie dowodzą zakończenia operacji. Jeśli weryfikacja jest odrzucona, zatrzymaj się i zachowaj diagnostykę; same pliki nie pozwalają obejść kontroli. [#201](../RECOVERY.md#unreleased-uncertain-no-root-package-operations-201)
+> **1.6.0 (#201):** status No-root zachowuje dziennik przerwanej instalacji lub usuwania. Zgodne pliki lub brak aplikacji nie dowodzą zakończenia operacji. Jeśli weryfikacja jest odrzucona, zatrzymaj się i zachowaj diagnostykę; same pliki nie pozwalają obejść kontroli. [#201](../RECOVERY.md#unreleased-uncertain-no-root-package-operations-201)
 
 Po przerwaniu operacji najpierw uruchom `status` i zachowaj dzienniki. `restore` przywraca LG Home bez usuwania aplikacji; `uninstall` przywraca je przed usunięciem. Dane odzyskiwania Root pozostają celowo: nie kasuj ich, by wymusić ponowną instalację. Sprawdź raporty przed udostępnieniem; nie publikuj kluczy ani katalogów profili.
 
@@ -117,11 +117,11 @@ Homebrew Channel odmówił temu instalatorowi dostępu. W webOS 11 Homebrew 0.7.
 
 1.5.0+: `cytv recover-system-rollback --edition root` obsługuje zweryfikowane przywracanie Root, gdy wszystkie instalatory pakietów zakończyły pracę, ale upłynął czas gotowości launchera. Wymaga prawdziwego sygnału launchera i odrzuca nieznane wyniki instalacji. Zachowuje pakiety, przypięty kod i klucze, dowody błędu oraz jawnie wyłączone sterowanie Home. Prywatny zapis dokumentuje ograniczoną próbę. Zwykłe ponowienie nie wydłuża terminu. Dopiero po 120 sekundach, bez zaakceptowanego sygnału gotowości i nieznanych wyników instalacji, `--new-recovery-attempt` archiwizuje cały poprzedni zapis pod UUID/haszem i jawnie rozpoczyna nową próbę. Ukończone odzyskiwanie pozostaje idempotentne; brak automatycznych kolejnych prób. [Procedura i ograniczenia (angielski)](../RECOVERY.md#root-system-rollback-readiness-candidate).
 
-1.5.0: pakiet wymiany zawiera System Updater 1.1.2. Przed OTA jawnie zastąp 1.1.0 lub 1.1.1 poleceniem `cytv replace-system-updater --edition root`. Wymieniany jest tylko System Updater; aplikacje Root/Root Updater, pełny profil i wybór Home pozostają, a stary stan jest archiwizowany. Nieznane lub niedokończone operacje blokują wymianę. Wymóg nie blokuje kanałów No-root. [Procedura (angielski)](../RECOVERY.md#replace-the-root-system-updater-candidate).
+1.6.0: System Updater 1.2.0 służy do dozwolonej nowej instalacji lub zweryfikowanej wymiany 1.1.0/1.1.1 poleceniem `cytv replace-system-updater --edition root`. Wymieniany jest tylko System Updater; aplikacje Root/Root Updater, pełny profil i wybór Home zostają zachowane, a poprzedni stan jest archiwizowany. Nieznane lub niedokończone operacje blokują wymianę. Zainstalowany 1.1.2 pozostaje przypięty do starych kanałów; nie ma ogólnej migracji. Nie wymuszaj wymiany. Nie ogranicza to kanałów No-root. [Procedura (angielski)](../RECOVERY.md#replace-the-root-system-updater-candidate)
 
 ## Pomoc i dalsze instrukcje
 
-Nieopublikowany kandydat: wybierz **Sprawdź opcje odzyskiwania** dla tego samego zapisanego TV lub uruchom `cytv recover`. Kontrola i zmiany wymagają osobnych potwierdzeń z domyślnym Nie; `--yes` ich nie zatwierdza. Root kontynuuje tylko po istniejących weryfikacjach. No-root proponuje usuwanie wyłącznie za zgodą dotychczasowej kontroli usługi pakietów; ustawienia Home mogą zostać zresetowane. Nowa instalacja nie zaczyna się automatycznie. Przy nieznanym stanie lub odmowie dostępu zapisz raport i zatrzymaj się. Zachowaj dzienniki i nie powtarzaj usuwania. Nadal brakuje dowodów zakończenia dla #201 i potwierdzenia odzyskania TV dla #216. [Recovery](../RECOVERY.md). Prosząc o pomoc podaj model, firmware, edycję, wersję instalatora, nieudany krok oraz oczekiwane/rzeczywiste zachowanie; przed udostępnieniem przejrzyj raport i usuń sekrety.
+**1.6.0:** wybierz **Sprawdź opcje odzyskiwania** dla tego samego zapisanego TV lub uruchom `cytv recover`. Kontrola i zmiany wymagają osobnych potwierdzeń z domyślnym Nie; `--yes` ich nie zatwierdza. Root kontynuuje tylko po istniejących weryfikacjach. No-root proponuje usuwanie wyłącznie za zgodą dotychczasowej kontroli usługi pakietów; ustawienia Home mogą zostać zresetowane. Nowa instalacja nie zaczyna się automatycznie. Przy nieznanym stanie lub odmowie dostępu zapisz raport i zatrzymaj się. Zachowaj dzienniki i nie powtarzaj usuwania. Nadal brakuje dowodów zakończenia dla #201 i potwierdzenia odzyskania TV dla #216. [Recovery](../RECOVERY.md). Prosząc o pomoc podaj model, firmware, edycję, wersję instalatora, nieudany krok oraz oczekiwane/rzeczywiste zachowanie; przed udostępnieniem przejrzyj raport i usuń sekrety.
 
 [Dokumentacja](../README.md) · [Zgłoś problem](../FEEDBACK.md)
 
@@ -152,7 +152,7 @@ Aby przetestować nieopublikowany motyw, najpierw otwórz na TV **Ustawienia →
 Dla opublikowanego motywu otwórz **Dodaj przez ID** i wpisz ID (np. `102300a209`), `da.gd/102300a209` lub pełny link GitHub. Home pokaże adres da.gd przed wczytaniem, a następnie sprawdzi cel GitHub i pakiet motywu. Autor może skopiować ID z opisu wydania albo **TV link → Copy ID** w podglądzie na komputerze.
 
 
-Nieopublikowany kandydat: **Pokaż diagnostykę** w panelu Home Helper pokazuje niewielki, przefiltrowany wynik jego własnych zapytań o stan. Wyświetlenie nie uruchamia Helpera ani nie zmienia sterowania Home. Na prośbę udostępnij tylko sprawdzony JSON; [szczegóły](../HELPER-DIAGNOSTICS.md#candidate-panel-caller-diagnostics-207).
+**1.6.0:** **Pokaż diagnostykę** w panelu Home Helper pokazuje niewielki, przefiltrowany wynik jego własnych zapytań o stan. Wyświetlenie nie uruchamia Helpera ani nie zmienia sterowania Home. Na prośbę udostępnij tylko sprawdzony JSON; [szczegóły](../HELPER-DIAGNOSTICS.md#candidate-panel-caller-diagnostics-207).
 
 [Themes (English)](../THEMES.md) · [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
 
@@ -174,10 +174,12 @@ W obu edycjach kategorie są po lewej, a ustawienia po prawej: ekran główny, W
 
 Żółta kropka przy kategorii aktualizacji i jej przycisku oznacza dostępne uaktualnienie. Obie znikają, gdy udane sprawdzenie potwierdzi brak aktualizacji; przy błędzie pozostaje ostatni potwierdzony stan.
 
-## Automatyczna rozdzielczość grafiki (kandydat)
+<a id="automatyczna-rozdzielczość-grafiki-kandydat"></a>
 
-Nadchodzące instalatory komputerowe/Android i zmigrowane klienty OTA wybierają 720p lub 1080p na podstawie możliwości TV. Jeśli nie można ich potwierdzić, operacja zostaje zatrzymana. Starsze osobno instalowane aktualizatory wymagają opisanej migracji z komputera; odzyskiwanie zachowuje oryginalne pakiety.
+## Automatyczna rozdzielczość grafiki (1.6.0)
+
+Instalatory komputerowe/Android 1.6.0 i zmigrowane klienty OTA wybierają 720p lub 1080p na podstawie możliwości TV. Jeśli nie można ich potwierdzić, operacja zostaje zatrzymana. Starsze osobno instalowane aktualizatory wymagają opisanej migracji z komputera; odzyskiwanie zachowuje oryginalne pakiety.
 
 [HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).
 
-> Nieopublikowana diagnostyka instalatora: zachowaj raport z pierwotnej nieudanej próby. Nowe raporty oddzielają pierwszy zapisany błąd od kolejnych kontroli i zawierają filtrowane podsumowanie Doctor/stanu. Eksport jest dostępny także po udanej instalacji, kontroli stanu lub przywróceniu. Brakujące starsze dane pozostają nieznane; raport nie uprawnia do odzyskiwania. [↗](../development/INSTALLER-DIAGNOSTICS.md).
+> **1.6.0:** zachowaj raport z pierwotnej nieudanej próby. Nowe raporty oddzielają pierwszy zapisany błąd od kolejnych kontroli i zawierają filtrowane podsumowanie Doctor/stanu. Eksport jest dostępny także po udanej instalacji, kontroli stanu lub przywróceniu. Brakujące starsze dane pozostają nieznane; raport nie uprawnia do odzyskiwania. [↗](../development/INSTALLER-DIAGNOSTICS.md).

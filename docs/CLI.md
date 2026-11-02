@@ -13,9 +13,11 @@ The optional TV ARMv7 Python archive is downloaded separately on demand. End use
 do not need Git, Node.js, Python, Bash, Zig or a separate SSH client.
 
 This is a new installer, not an expansion of the hardware compatibility claim.
-Hardware evidence remains scoped to the documented models. Source/automated checks cannot replace real TV acceptance.
+Hardware evidence remains scoped to the documented models. See the [1.6.0 acceptance scope](history/2026-11-02-release-1.6.0-final-acceptance.md) and available packages on [GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases). Source/automated checks cannot replace real TV acceptance.
 
-## Visible TV checks (unreleased)
+<a id="visible-tv-checks-unreleased"></a>
+
+## Visible TV checks
 
 Console, desktop and Android installers show the existing prerequisites one by
 one: SSH sign-in, edition-specific runtimes, webOS tools/directories, routing
@@ -31,7 +33,7 @@ check does not justify deleting profiles, resetting pairing or re-rooting. Save
 the diagnostic report and identify the failed requirement first. These rows reuse
 the existing probes; they do not add TV changes or establish hardware acceptance.
 
-Unreleased: Root setup also reads the required Home Settings and Home Profiles
+In 1.6.0, Root setup also reads the required Home Settings and Home Profiles
 interfaces before private Python/package preparation. Negative, malformed or
 unconfirmed replies stop setup; failed prerequisites remain first in view.
 An absent Settings Home override is allowed with readable effective profiles.
@@ -46,7 +48,9 @@ not retry, reset trust, delete profiles or authorize recovery. Unknown failures
 retain the original report path. Save the report before any separately verified
 recovery; see the [preflight and guidance contract](development/INSTALLER-PREFLIGHT-HELP.md).
 
-## Package, startup and physical Home checks (unreleased)
+<a id="package-startup-and-physical-home-checks-unreleased"></a>
+
+## Package, startup and physical Home checks
 
 After new setup or separately confirmed Root setup completion, three result rows
 remain separate: **Installed packages**, **Startup readback**, and **Home button —
@@ -121,7 +125,7 @@ real-TV acceptance; automated tests do not establish hardware compatibility.
 
 ## Installation wizard
 
-**Unreleased candidate:** `cytv recover` reviews an interrupted setup/removal for
+In 1.6.0, `cytv recover` reviews an interrupted setup/removal for
 the same saved TV. Desktop and Android expose **Review recovery options**. A
 pending `install` enters this journey and then returns; no new installation
 starts automatically, even after successful cleanup.
@@ -363,10 +367,10 @@ Status, doctor, restore and uninstall never download a new interpreter.
 
 ## Root System Updater replacement
 
-Published1.5.4 installers contain System 1.1.2; frozen1.6.0 selects System 1.2.0.
+Version 1.5.4 installers contain System 1.1.2; 1.6.0 selects System 1.2.0.
 The explicit replacement command still accepts only installed 1.1.0/1.1.1 after verifying its
 retained code, owner package, registration and finished recovery state.
-Installed1.1.2 remains pinned with its old channels; this candidate provides no
+Installed 1.1.2 remains pinned with its old channels; 1.6.0 provides no
 general migration for it. Do not force replacement or remove recovery data.
 With the existing trusted Root connection:
 
@@ -390,7 +394,7 @@ A private local receipt is synchronized before installation/removal, and
 recovery attempts have separate receipts. A failed command never means a package
 was not installed. **Do not delete journals or rerun installation blindly.**
 
-In the unreleased candidate, choose `cytv recover` to review allowed actions
+In 1.6.0, choose `cytv recover` to review allowed actions
 with separate confirmation. `cytv status` remains a state check. No-root status
 keeps an interrupted install/removal receipt unchanged. Matching versions,
 installed files/hashes or absent apps do not prove that the original installer
@@ -447,7 +451,7 @@ stack **file/function/line locations**. It excludes exception text, source lines
 locals, addresses, identity paths, credentials, app lists, environment and raw TV
 logs. No report is submitted automatically.
 
-Unreleased (#200): host private-Python acquisition failures add only an allowlisted
+In 1.6.0 (#200), host private-Python acquisition failures add only an allowlisted
 `python_cache.reason`. See [cache failure categories](OPTIONAL-PYTHON.md#unreleased-host-cache-failure-categories-200).
 
 Since 1.2.0 (#51): a definite Luna rejection adds a `luna` object with a fixed

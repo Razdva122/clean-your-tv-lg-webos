@@ -1,14 +1,14 @@
 # Čeština — rozhraní televizoru
 
-> Zmrazený kandidát 1.6.0 ještě není vydán; stabilní verze zůstává 1.5.4. Čeština je dostupná v rozhraní TV, instalátory nadále nabízejí dvanáct jazyků. Ověření na TV a kontrola rodilým mluvčím dosud neproběhly. [Verze a omezení](../RELEASE-1.6.0.md).
+> Tento průvodce popisuje verzi 1.6.0. Dostupné balíčky stahujte z [publikovaných vydání GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases). Čeština je dostupná v rozhraní TV, instalátory nadále nabízejí dvanáct jazyků. Ověření na TV a kontrola rodilým mluvčím dosud neproběhly. [Verze a omezení](../RELEASE-1.6.0.md).
 
 [Dokumentace](../README.md) · [Jazyky](../LANGUAGES.md)
 
-**Připravované vydání:** čeština zatím není součástí zveřejněné stabilní verze.
-Tento průvodce popisuje rozhraní Home a Root Home v připravovaném vydání,
+Tento průvodce popisuje české rozhraní Home a Root Home ve verzi 1.6.0,
 nikoli český instalační program. Instalátory pro počítač, Android a Homebrew
 nadále používají dosavadních dvanáct jazyků. Pro instalaci použijte
 [anglický průvodce](en.md); nepoužívejte přepínač `--language cs`.
+Samostatný Homebrew CYTV Installer zůstává nevydaný.
 
 ## Jazyk a ovládání
 
@@ -46,7 +46,7 @@ a při připojení televizoru k internetu stiskněte EXTEND. Automatické
 prodlužování je Beta, ve výchozím stavu vypnuté; kontrolujte oficiální časovač.
 Root vyžaduje již existující root přístup. Instalační program televizor nerootuje.
 
-V připravovaném vydání zobrazí **Zobrazit diagnostiku** v panelu Home Helper filtrovaný výsledek jeho vlastních dotazů na stav. Zobrazení nespustí Helper a nezmění ovládání Home. Na vyžádání sdílejte pouze zkontrolovaný JSON; [podrobnosti v angličtině](../HELPER-DIAGNOSTICS.md#candidate-panel-caller-diagnostics-207).
+Ve verzi 1.6.0 zobrazí **Zobrazit diagnostiku** v panelu Home Helper filtrovaný výsledek jeho vlastních dotazů na stav. Zobrazení nespustí Helper a nezmění ovládání Home. Na vyžádání sdílejte pouze zkontrolovaný JSON; [podrobnosti v angličtině](../HELPER-DIAGNOSTICS.md#candidate-panel-caller-diagnostics-207).
 
 Překlad byl ověřen automatickými kontrolami a v počítačovém prohlížeči.
 Ověření rodilým mluvčím a na fyzickém televizoru zatím neproběhlo.
@@ -56,8 +56,10 @@ Kompatibilita závisí na konkrétním modelu, firmwaru a ovladači.
 [Zpětná vazba (anglicky)](../FEEDBACK.md) ·
 [Technické podklady (anglicky)](../development/README.md)
 
-## Automatické rozlišení grafiky (kandidát)
+<a id="automatické-rozlišení-grafiky-kandidát"></a>
 
-Připravované instalátory pro počítač/Android a migrovaní klienti OTA volí 720p nebo 1080p podle schopností TV. Pokud je nelze ověřit, operace se zastaví. Starší samostatně instalované aktualizátory vyžadují popsanou migraci z počítače; obnova zachová původní balíčky.
+## Automatické rozlišení grafiky (1.6.0)
+
+Instalátory 1.6.0 pro počítač/Android a migrovaní klienti OTA volí 720p nebo 1080p podle schopností TV. Pokud je nelze ověřit, operace se zastaví. Starší samostatně instalované aktualizátory vyžadují popsanou migraci z počítače; obnova zachová původní balíčky.
 
 [HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).

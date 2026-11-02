@@ -31,7 +31,7 @@ stopped. Physical No-root acceptance remains unverified for the exact Helper tra
 <a id="interrupted-setup-or-removal-in-110"></a>
 <a id="interrupted-no-root-installation-in-the-unpublished-140-candidate"></a>
 
-**Unreleased candidate:** in cytv (desktop or Android), select the **same saved
+In 1.6.0, use cytv (desktop or Android) to select the **same saved
 TV connection** and choose **Review recovery options**. Console: `cytv recover`.
 If setup finds a retained operation, it enters this journey and stops before a
 fresh installation.
@@ -54,7 +54,7 @@ A displayed plan is advice only, never authorization or a saved resume token.
 Legacy operations can remain blocked. This does not supply missing terminal
 installer evidence for #201 or certify recovery on #216's TV.
 
-**Unreleased diagnostic improvement:** retain the original failed-attempt report.
+In 1.6.0, retain the original failed-attempt report.
 New reports separate a saved first error from later checks and include a filtered
 Doctor/status result. Successful setup/status/restore also offer an export. This
 does not add a recovery path or make missing historical evidence available.
@@ -65,7 +65,7 @@ An unknown package outcome is not automatically retried. Returning to LG Home
 alone does not finish removal. The removal confirmation cannot be bypassed with
 `--yes` or approved by noninteractive setup.
 
-### Unreleased: uncertain No-root package operations (#201)
+### Uncertain No-root package operations (#201)
 
 **Check TV status** keeps the pending install/removal journal even if app versions
 and hashes match or manually removed apps are absent. Those observations do not
@@ -80,16 +80,16 @@ The installer calls `applicationManager/dev/listApps`; an SSH probe of
 `applicationManager/listApps` is a different method. Further recovery design
 requires the [exact endpoint and terminal-authority evidence](development/NO-ROOT-PACKAGE-AUTHORITY.md#remaining-evidence).
 
-### Unreleased: No-root Helper service refusal (#152)
+### No-root Helper service refusal (#152)
 
-The #152 source correction lets the existing Restore/removal flow request a
+In 1.6.0, the #152 correction lets the existing Restore/removal flow request a
 stop through Developer Mode SSH when `Helper disable` returns a definite `-1`
 rejection. It writes the existing persistent stop latch and stop command, then
 requires the controller and relay to be absent before proceeding. Saved Home
 preference and watchdog state are retained; this does not automatically restart
 Helper. Unknown connection outcomes, unsafe state and a live/orphaned relay
 still stop recovery and retain the journal. No new command or confirmation is
-needed. Use only an installer containing this correction; v1.5.4 does not have it.
+needed. Use a 1.6.0 installer containing this correction; v1.5.4 does not have it.
 Do not delete state files or repeat a failed removal. Actual EF950V recovery and
 Home/Back/emergency behavior require owner-supervised confirmation on new bytes.
 
@@ -139,10 +139,12 @@ repeatedly retry. The original completion path preserves
 an explicit Home-off choice. Successful readiness recovery does not prove
 controls, audio, standby or cold boot; check actual behavior separately. [Connection flags and CLI details](CLI.md#candidate-root-system-rollback-readiness).
 
-## Replace the Root System Updater (candidate)
+<a id="replace-the-root-system-updater-candidate"></a>
 
-**Frozen1.6.0 candidate, not published.** The replacement bundle targets
-System Updater 1.2.0; published 1.5.4 used1.1.2. The original 1.1.0 can reject a launcher's one-shot readiness
+## Replace the Root System Updater
+
+In 1.6.0, the replacement bundle targets System Updater 1.2.0;
+1.5.4 used 1.1.2. The original 1.1.0 can reject a launcher's one-shot readiness
 response while its worker holds the installation lock; this can cause an unnecessary rollback.
 Signed Root offers retain a minimum supervisor version of 1.1.1 and are rejected
 by the original 1.1.0; the new receiver/runtime path needs separate verification. Historical signed baselines remain valid for rollback.
@@ -155,7 +157,7 @@ force replacement. Physical acceptance of a particular transition remains
 separate from the command's source and fixture checks.
 
 After any current update or rollback has completed, use the same trusted Root
-connection and the complete matching installer after publication:
+connection and the complete matching installer from [GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases):
 
 ```sh
 cytv replace-system-updater --edition root

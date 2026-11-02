@@ -1,9 +1,10 @@
 # v1.6.0 — Installer recovery, diagnostics and adaptive Home
 
-**Frozen candidate, not published.** Public stable remains v1.5.4. The complete
-build is pinned. Scoped C3 Root update/controls/power/retained-rollback and Android
-emulator upgrade observations are recorded below; full acceptance and normal
-signed publication remain pending. No TV result is inferred from source checks.
+This document describes release **1.6.0**. Published availability is shown on
+[GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases).
+The [final acceptance follow-up](history/2026-11-02-release-1.6.0-final-acceptance.md)
+records the scoped C3 and Android evidence, accepted standby limitation and
+untested paths. No universal device compatibility is implied.
 
 ## Changes
 
@@ -29,7 +30,7 @@ signed publication remain pending. No TV result is inferred from source checks.
 
 ## Versions and package decisions
 
-| Component | Published v1.5.4 | Candidate v1.6.0 | Reason |
+| Component | Previous v1.5.4 | Release v1.6.0 | Reason |
 | --- | --- | --- | --- |
 | Home | 1.6.1 | 1.7.0 | HD/FHD, Czech, themes, compact Chinese fonts |
 | Home Helper | 0.6.21 | 0.6.21 | Production input/service sources unchanged; compare rebuilt package to published bytes |
@@ -109,22 +110,28 @@ records the earlier host/UI checks; it does not substitute for the frozen build.
 [Freeze/build record](history/2026-11-02-release-1.6.0-freeze.md) records the selected
 source, run/attempt, artifact checks and remaining work as execution proceeds.
 
-The complete candidate run41343868494:2 passed and is pinned; see the
-[verified artifact hashes](history/2026-11-02-release-1.6.0-artifacts.md).
-The [2026-11-02 hardware and emulator record](history/2026-11-02-release-1.6.0-hardware-qa.md)
-binds owner-supervised C3 observations to these exact packages and protected Root
-signing run41438353337:1. It records original-signer Android code16-to-code17
-emulator file retention, Root update with Off preserved, physical controls/audio,
-emergency release, separate power modes and active retained rollback. Supervisor
-1.1.2 remains installed; fresh1.2.0 provisioning was not tested.
+The completed full build41343868494:2 and its [artifact record](history/2026-11-02-release-1.6.0-artifacts.md)
+identify the original exact-package QA. The [final follow-up](history/2026-11-02-release-1.6.0-final-acceptance.md)
+adds advanced Magic controls, independent recovery with a frozen renderer and
+stalled input reader, genuine Homebrew failsafe, native Android Store checks and
+an exact System1.2.0 host fixture.
 
-The first On-standby attempt lost intent; the owner reported another application's
-code interfered and requested a repeat. That is not a proved cause, and the first
-evidence is retained. The repeat reached Clean after an unmeasured LG Channels
-screen; true cold start from running Clean showed Clean first. These observations
-do not resolve #171 or accept immediate first-screen behavior for standby.
+Release documentation and the external-guide reuse guard require a replacement
+complete build. The original QA can carry only for byte-identical component
+packages and matching device/state preconditions; the final Android APK must be
+rechecked. This does not promote preliminary builds or source checks to physical
+acceptance.
 
-Native Android pending-operation semantics, live phone-to-TV, No-root/HD/IR,
-fresh provisioning, interrupted installation and the other untested paths remain
-explicit in that record. Full hardware acceptance remains unset and #210 stays
-draft; no publication or new risk acceptance is inferred from these scoped passes.
+The owner explicitly accepted the documented LG Channels-to-Clean delay after
+standby for1.6.0; #171 stays open. Cold start from running Clean showed Clean first.
+The first standby telemetry failure and reported interference remain recorded;
+its cause is not proved. Active retained rollback passed on the C3, while #202's
+old-baseline forward-cancellation report remains unresolved. Original supervisor
+1.1.2 stayed installed; fresh1.2.0 provisioning has exact host-fixture evidence,
+not physical LS2/startup acceptance.
+
+No-root/HD/IR, physical language/font rendering, uninstall, real interrupted
+installation and other recorded untested paths are not claimed as passed. Android
+acceptance uses the explicitly agreed privileged userdebug-emulator environment,
+not a physical phone. Final build/acceptance binding and publication are recorded
+only after their corresponding checks succeed.

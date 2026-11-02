@@ -4,15 +4,17 @@ Start with [installation and controls](README.md), [updates](UPDATES.md), or
 [recovery](RECOVERY.md).
 
 <a id="current-release-140"></a>
-## Published 1.5.4 and frozen candidate 1.6.0
+## Release 1.6.0 and scoped acceptance
 
-Published **1.5.4** contains **Root 0.6.2 / Root Updater 0.3.4 / System 1.1.2**.
-Frozen **1.6.0**, not published, selects **Root/infrastructure0.7.0 / Root
-Updater 0.4.0 / System 1.2.0**. Existing supervisors stay pinned; installed 1.1.2
-has no general migration to1.2.0 in this candidate. Settings refresh and retained
-rollback have source improvements; forward-update cancellation #202, earlier
-standby failure #171 and individual recoveries remain unresolved. See the
-[release scope and acceptance gates](../docs/RELEASE-1.6.0.md).
+Release **1.6.0** uses **Root/infrastructure 0.7.0 / Root Updater 0.4.0 /
+System 1.2.0**. See [Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases)
+for published downloads and [artifact-bound QA](../docs/history/2026-11-02-release-1.6.0-final-acceptance.md) for tested bytes,
+C3 controls/audio, startup, emergency/fault/failsafe recovery and signed active
+retained rollback. Existing supervisors stay pinned; installed 1.1.2 has no
+general migration to 1.2.0. Fresh physical System 1.2.0 is untested. The documented
+standby presentation limitation was accepted for 1.6.0; earlier #171,
+forward-update cancellation #202 and individual recoveries remain unresolved.
+See [release scope and limitations](../docs/RELEASE-1.6.0.md).
 
 The historical **1.4.0 / Root 0.5.0 / Root Updater 0.3.1**
 [acceptance record](../docs/RELEASE-1.4.0-ACCEPTANCE.md) identifies exact
@@ -27,7 +29,7 @@ recovery boundaries](../docs/development/ROOT-OTA-13-COMPATIBILITY.md).
 
 Other models/firmwares, original C2/C5/NANO reports, audible eARC recovery and
 physical Android phone-to-TV recovery remain unverified. Homebrew Installer is
-unreleased. [Candidate release notes](../docs/RELEASE-1.6.0.md) describe the scope;
+unreleased. [Release notes](../docs/RELEASE-1.6.0.md) describe the scope;
 [Homebrew acceptance](../docs/development/HOMEBREW-INSTALL-ACCEPTANCE.md) is separate.
 
 ## Historical evidence

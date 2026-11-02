@@ -8,11 +8,21 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 ALL_SCENARIOS = {'ui-controls', 'controls', 'startup', 'update-recovery'}
+METADATA_FILES = frozenset((
+    'release-plan.json', 'README.md',
+    # External guides are not consumed by installer or TV payload builders.
+    # The publication-time source archive picks up their final contents, like docs/.
+    # Audit packaging before extending this list; embedded guides/notices stay inputs.
+    'android/README.md', 'android/STABLE-READINESS.md',
+    'root-edition/README.md', 'root-edition/STATUS.md',
+    'root-edition/TESTING.md', 'root-edition/UPDATES.md',
+    'root-edition/runtime/README.md',
+))
 
 
 def metadata_path(path):
     # Do not exempt arbitrary Markdown: notices and embedded guides are packaged.
-    return path in ('release-plan.json', 'README.md') or (path.startswith('docs/') and path.endswith('.md'))
+    return path in METADATA_FILES or (path.startswith('docs/') and path.endswith('.md'))
 
 
 def git(*args, root=ROOT):
