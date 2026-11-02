@@ -244,9 +244,83 @@ class OperationTests(unittest.TestCase):
         self.installer(remote).install(self.inventory, 'secret')
         self.assertEqual(list(temp.iterdir()), [])
 
+    def test_unstarted_no_root_removal_does_not_require_denied_monitor(self):
+        from cytv.errors import TVRejected
+        from cytv.recovery import recover
+        from cytv.terminal import Console
+        for journey in ('uninstall', 'recover'):
+            with self.subTest(journey=journey):
+                remote = Remote()
+                remote.installed = [{'id': operations.HELPER}, {'id': operations.HOME}]
+                installer = self.installer(remote)
+                self.store.finish(installer.profile)  # Independent synthetic journeys.
+                self.store.begin(installer.profile, 'uninstall', eim_registered=False)
+                original = remote.luna
+                def luna(uri, payload, **kwargs):
+                    if uri == 'com.webos.appInstallService/status':
+                        raise TVRejected('Denied', {'returnValue': False, 'errorCode': -1}, uri)
+                    if uri.endswith('/dev/remove'):
+                        # The write-ahead receipt must exist before the first mutation.
+                        self.assertEqual(self.store.pending(installer.profile)['removals'][payload['id']], 'submitted')
+                        self.assertEqual(kwargs['terminal'], 'removed')
+                        remote.installed = [a for a in remote.installed if a['id'] != payload['id']]
+                        original(uri, payload, **kwargs)
+                        return {'returnValue': True, 'details': {'state': 'removed'}}
+                    return original(uri, payload, **kwargs)
+                remote.luna = luna
+                if journey == 'recover':
+                    answers = iter(('y', 'y'))
+                    recover(installer, lambda _: next(answers), Console(lambda _: None))
+                else:
+                    installer.uninstall()
+                self.assertIsNone(self.store.pending(installer.profile))
+                calls = [c for c in remote.calls if c[0] == 'luna']
+                self.assertEqual([c[2]['id'] for c in calls if c[1].endswith('/dev/remove')], [operations.HELPER, operations.HOME])
+                launch = next(i for i,c in enumerate(calls) if c[1].endswith('/launch') and c[2]['id'] == 'com.webos.app.home')
+                self.assertLess(launch, next(i for i,c in enumerate(calls) if c[1].endswith('/dev/remove')))
+                self.assertFalse(any(c[1].endswith('/install') for c in calls))
+                # A subsequent, explicitly started setup is now possible.
+                installer.install(self.inventory, 'secret')
+                self.assertIsNone(self.store.pending(installer.profile))
+
+    def test_unstarted_removal_recovery_decline_keeps_receipt_without_monitor(self):
+        from cytv.recovery import recover
+        from cytv.terminal import Console
+        remote = Remote()
+        installer = self.installer(remote)
+        self.store.begin(installer.profile, 'uninstall')
+        path = self.store.device_dir(installer.profile) / 'operation.json'
+        before = path.read_bytes()
+        answers = iter(('y', 'n'))
+        recover(installer, lambda _: next(answers), Console(lambda _: None))
+        self.assertEqual(path.read_bytes(), before)
+        self.assertFalse(any(c[0] == 'luna' and c[1] != 'com.webos.applicationManager/dev/listApps' for c in remote.calls))
+
+    def test_uncertain_receipts_do_not_gain_unstarted_removal_exemption(self):
+        from cytv.errors import TVRejected
+        for fields in ({'previous': {'action': 'install'}}, {'previous': None},
+                       {'expected': {}}, {'stage': 'removing'}, {'stage': 'unknown'},
+                       {'removals': {operations.HELPER: 'submitted'}},
+                       {'removals': None}, {'product_operation': 'a' * 32}):
+            with self.subTest(fields=fields):
+                remote = Remote()
+                installer = self.installer(remote)
+                self.store.begin(installer.profile, 'uninstall', **fields)
+                receipt = self.store.device_dir(installer.profile) / 'operation.json'
+                before = receipt.read_bytes()
+                def deny(uri, payload, **kwargs):
+                    remote.calls.append(('luna', uri, payload))
+                    self.assertEqual(uri, 'com.webos.appInstallService/status')
+                    raise TVRejected('Denied', {'returnValue': False, 'errorCode': -1}, uri)
+                remote.luna = deny
+                with self.assertRaises(TVRejected): installer.uninstall()
+                self.assertEqual(receipt.read_bytes(), before)
+                self.assertEqual(len(remote.calls), 1)
+                receipt.unlink()  # Independent synthetic receipts only.
+
     def test_false_idle_reply_cannot_authorize_pending_removal(self):
         installer = self.installer(Remote())
-        self.store.begin(installer.profile, 'uninstall')
+        self.store.begin(installer.profile, 'uninstall', stage='removing')
         original = installer.remote.luna
         def luna(uri, payload, **kwargs):
             if uri == 'com.webos.appInstallService/status':

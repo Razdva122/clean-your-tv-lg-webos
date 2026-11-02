@@ -1,6 +1,7 @@
 """An explicit recovery journey; backend receipts remain the only authority."""
 from . import prompts
 from .errors import UserError
+from .operations import require_removal_idle
 
 REVIEW = 'Review recovery options'
 KEPT = 'Recovery data kept. Installation has not restarted.'
@@ -49,10 +50,7 @@ def recover(installer, ask, write, non_interactive=False):
                 (pending.get('action') == 'uninstall' and pending.get('stage') not in ('pending', 'removing')) or
                 (pending.get('action') == 'install' and pending.get('stage') != 'pending')):
             raise UserError(BLOCKED, reason_code='pending-operation')
-        idle = installer.remote.luna('com.webos.appInstallService/status', {'subscribe': True}, timeout=10)
-        if (not isinstance(idle, dict) or idle.get('returnValue') is not True or
-                not isinstance(idle.get('status'), dict) or idle['status'].get('apps') != []):
-            raise UserError('TV installer is not confirmed idle. Keep the receipt and run cytv status before removal.', reason_code='pending-operation')
+        require_removal_idle(installer.remote, installer.profile, pending)
         apps = {app['id'] for app in result.get('device', {}).get('apps', [])}
         removals = pending.get('removals', {})
         if not isinstance(removals, dict) or any(

@@ -17,13 +17,28 @@ receipt. Existing current/complete Root removal proof can reconcile its receipt;
 no new proof source or orphan adoption is introduced.
 
 No-root supports only existing pending install and pending/removing uninstall
-receipts. Before offering removal it requires a positive bounded ten-second
+receipts. Except for the pre-submission case below, offering removal requires a positive bounded ten-second
 `appInstallService/status` response with an empty apps list and rejects conflicting
 or unsupported removal records. The existing uninstall guard repeats that check
 at mutation. This remains the existing explicit-removal guard, not an alternative
 transaction-terminal authority. Matching files, app absence, diagnostic IDs and
 advisory plans never reconcile an uncertain install. See the
 [No-root authority limits](NO-ROOT-PACKAGE-AUTHORITY.md).
+
+Unreleased #152 correction: both the recovery offer and `uninstall()` use the
+same `require_removal_idle` gate. The global monitor is unnecessary only for a
+No-root journal with `action=uninstall`, `stage=pending`, no removal entries and
+only `action`, `stage`, `diagnostic_id`, `eim_registered`, `removals` keys. This
+is an unstarted package removal, not a completed transaction: published code
+writes `removing` before any removal submission, then persists `submitted`
+before each request. A retained `previous` install, unexpected fields, malformed
+removals or any other stage cannot use the exception. The original journal is
+re-read after confirmation. `status()` still does not clear it. The existing
+terminal wait, stop/restore and absence guards remain authoritative for the new
+removal requests; the original diagnostic export does not expose enough fields
+to authorize this exception. The correction does not establish why retail
+firmware refuses the global monitor, grant permissions or repair #201's lost
+terminal outcomes.
 
 Removal restores LG Home and follows existing verified package removal; it may
 reset Home preferences. It stops before fresh setup. Unknown/denied/busy state,
