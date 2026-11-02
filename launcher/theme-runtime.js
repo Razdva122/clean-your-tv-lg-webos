@@ -34,7 +34,6 @@
     var policy = root.ThemePolicy;
     if (!policy) fail('api-unsupported', 'ThemePolicy');
     var manifest = policy.validateManifest(input.manifest), rules = policy.validateRules(input.rules);
-    if (rules.rules.some(function (r) { return r.declarations.some(function (d) { return d.property === 'transition' && /^steps\(/.test(d.value.easing); }); }) && manifest.layout.steppedTransitions !== true) fail('api-unsupported', 'steppedTransitions');
     var modernIcons = manifest.requires.capabilities.indexOf('modern-icon-css-v1') >= 0;
     var hasIconEffects = rules.rules.some(function (rule) { return rule.declarations.some(function (d) { return d.property === 'filter' || d.property === 'mix-blend-mode' || d.property === 'isolation' || d.property === 'transform' || d.property === 'overflow'; }); });
     if (hasIconEffects && !modernIcons) fail('api-unsupported', 'icon CSS capability');
@@ -91,10 +90,6 @@
     });
     if (manifest.layout.datePlacement === 'below-clock') {
       appendCss('\n#homeSurface.ctv-home #timeRow{flex-wrap:wrap;}#homeSurface.ctv-home #timeRow .divider{display:none;}#homeSurface.ctv-home #date{width:100%;margin:16px 0 0;white-space:normal;line-height:1.4;}');
-    }
-    if (manifest.layout.heroCursor) {
-      // Only a decorative pseudo-element blinks. Focus and remote geometry stay immediate.
-      appendCss('\n@-webkit-keyframes ctv-retro-cursor{0%,49%{opacity:1;}50%,100%{opacity:0;}}@keyframes ctv-retro-cursor{0%,49%{opacity:1;}50%,100%{opacity:0;}}#homeSurface.ctv-home .ctv-hero::after{content:"_";animation:ctv-retro-cursor 1.2s step-end infinite;}@media (prefers-reduced-motion:reduce){#homeSurface.ctv-home .ctv-hero::after{animation:none;}}');
     }
     if (manifest.layout.ribbon) {
       var r = manifest.layout.ribbon, prefix = '#homeSurface.ctv-home[data-ribbon="true"] ';

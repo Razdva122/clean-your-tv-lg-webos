@@ -255,33 +255,14 @@
       "paired": true,
       "belowLabelsMinimumBottom": 64
     },
-    "retro-decoration-v1": {
-      "layout": [
-        "datePlacement",
-        "heroCursor",
-        "steppedTransitions"
-      ],
+    "date-placement-v1": {
+      "layout": "datePlacement",
       "preset": "dock-grid",
-      "datePlacement": [
+      "values": [
         "inline",
         "below-clock"
       ],
-      "heroCursor": "boolean",
-      "paired": true,
-      "steps": {
-        "range": [
-          1,
-          8
-        ],
-        "position": "end",
-        "properties": [
-          "color",
-          "background-color",
-          "border-color",
-          "box-shadow"
-        ],
-        "maxDurationMs": 500
-      }
+      "paired": true
     }
   },
   "clockDateFontSize": [

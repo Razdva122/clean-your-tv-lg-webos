@@ -408,30 +408,11 @@ Unknown keys and invalid combinations reject. Bottom-left shortcuts require `lef
 This is the value of `layout`, not a complete manifest. The separate toolkit needs an explicit exported runtime declaring `ribbon-layout-v1`. Its stable reviewed runtime pin is not silently replaced by a PR candidate. Arbitrary author `position`, `skew`, `translate`, selectors or JavaScript remain unsupported. Version and capability checks both apply. Optional icon effects still require `modern-icon-css-v1` separately.
 
 
-### Optional Retro decorations (unreleased)
+### Optional date placement (unreleased)
 
-`retro-decoration-v1` adds bounded decorations to `dock-grid`. Declare it in
-`requires.capabilities` when using any of these optional layout fields:
-
-- `datePlacement`: `inline` or `below-clock`. The latter wraps the date onto a
-  separate line and hides the divider; the clock and period remain together.
-- `heroCursor`: boolean. A trusted underscore after the hero title blinks every
-  1.2 seconds. Reduced motion makes it static. Suspending/resetting/replacing
-  the theme disables/removes it with the theme stylesheet.
-- `steppedTransitions`: boolean. When true, typed visual transitions may use
-  `steps(1,end)` through `steps(8,end)`, with no whitespace inside the function.
-  The existing color/background-color/border-color/box-shadow scope and 500 ms
-  limit remain. Geometry, input handling and remote navigation are unchanged.
-
-The compiler infers the capability from these fields and sets
-`steppedTransitions: true` for authored stepped transitions. Older engines reject
-this capability before applying the theme. Omitting the fields preserves API 1
-behavior. Authors still cannot supply at-rules, pseudo-elements or scripts.
-These fields are separate from PR #241's `classic-motion-v1`; integration must
-retain its reserved-transition rejection rather than allowing stepped overrides.
-
-This does not complete #69: local licensed Press Start 2P font transport,
-font-byte validation, loading/cancellation and Blob lifetime remain pending.
-Retro 1.0.0's existing source and distributed bytes are unchanged. No new assets,
-permissions, endpoints, configuration keys or third-party licenses are added.
-Browser checks are not physical TV, standby, cold boot, OTA or rollback acceptance.
+A `dock-grid` theme may set `layout.datePlacement` to `below-clock` to wrap the
+date beneath the clock and hide the divider, or `inline` to retain the standard
+header. Declare the paired `date-placement-v1` capability; the compiler infers
+it from the field. Engines without the capability reject the theme before apply.
+Omitting the field preserves current themes. Suspension, replacement and reset
+use the existing theme stylesheet lifecycle. No new controls or permissions.

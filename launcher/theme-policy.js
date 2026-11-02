@@ -143,8 +143,8 @@
     if (m.id.indexOf('github:') === 0 && m.id.split(':')[1] !== m.source.repository.slice(19).toLowerCase()) fail('manifest-invalid', 'source.identity');
     object(m.requires, ['minimumHomeVersion', 'capabilities'], 'manifest-invalid', 'requires');
     version(m.requires.minimumHomeVersion);
-    list(m.requires.capabilities, 3, 'api-unsupported', 'capabilities').forEach(function (capability, index) { if (['modern-icon-css-v1', 'ribbon-layout-v1', 'retro-decoration-v1'].indexOf(capability) < 0 || m.requires.capabilities.indexOf(capability) !== index) fail('api-unsupported', 'capabilities'); });
-    object(m.layout, ['preset', 'columns', 'spacingScale', 'textScale', 'focusScale'], 'layout-invalid', 'layout', ['allowColumnOverride', 'ribbon', 'datePlacement', 'heroCursor', 'steppedTransitions']);
+    list(m.requires.capabilities, 3, 'api-unsupported', 'capabilities').forEach(function (capability, index) { if (['modern-icon-css-v1', 'ribbon-layout-v1', 'date-placement-v1'].indexOf(capability) < 0 || m.requires.capabilities.indexOf(capability) !== index) fail('api-unsupported', 'capabilities'); });
+    object(m.layout, ['preset', 'columns', 'spacingScale', 'textScale', 'focusScale'], 'layout-invalid', 'layout', ['allowColumnOverride', 'ribbon', 'datePlacement']);
     if (['dock-grid', 'icon-grid', 'side-grid', 'channel-list', 'scenic-grid'].indexOf(m.layout.preset) < 0) fail('layout-invalid', 'preset');
     if (Object.prototype.hasOwnProperty.call(m.layout, 'allowColumnOverride') && typeof m.layout.allowColumnOverride !== 'boolean') fail('layout-invalid', 'allowColumnOverride');
     number(m.layout.columns, 1, 8, 'layout-invalid', 'columns');
@@ -152,14 +152,9 @@
     number(m.layout.spacingScale, .8, 1.2, 'layout-invalid', 'spacingScale');
     number(m.layout.textScale, .9, 1.25, 'layout-invalid', 'textScale');
     number(m.layout.focusScale, 1.05, 1.15, 'layout-invalid', 'focusScale');
-    var hasDecoration = Object.prototype.hasOwnProperty.call(m.layout, 'steppedTransitions') || Object.prototype.hasOwnProperty.call(m.layout, 'datePlacement') || Object.prototype.hasOwnProperty.call(m.layout, 'heroCursor');
-    if (hasDecoration !== (m.requires.capabilities.indexOf('retro-decoration-v1') >= 0)) fail('api-unsupported', 'retro-decoration-v1');
-    if (hasDecoration) {
-      if (Object.prototype.hasOwnProperty.call(m.layout, 'steppedTransitions') && typeof m.layout.steppedTransitions !== 'boolean') fail('layout-invalid', 'steppedTransitions');
-      if (m.layout.preset !== 'dock-grid') fail('layout-invalid', 'retro decoration preset');
-      if (Object.prototype.hasOwnProperty.call(m.layout, 'datePlacement') && ['inline', 'below-clock'].indexOf(m.layout.datePlacement) < 0) fail('layout-invalid', 'datePlacement');
-      if (Object.prototype.hasOwnProperty.call(m.layout, 'heroCursor') && typeof m.layout.heroCursor !== 'boolean') fail('layout-invalid', 'heroCursor');
-    }
+    var hasDatePlacement = Object.prototype.hasOwnProperty.call(m.layout, 'datePlacement');
+    if (hasDatePlacement !== (m.requires.capabilities.indexOf('date-placement-v1') >= 0)) fail('api-unsupported', 'date-placement-v1');
+    if (hasDatePlacement && (m.layout.preset !== 'dock-grid' || ['inline', 'below-clock'].indexOf(m.layout.datePlacement) < 0)) fail('layout-invalid', 'datePlacement');
     var hasRibbon = Object.prototype.hasOwnProperty.call(m.layout, 'ribbon'), normalizedRibbon;
     if (hasRibbon !== (m.requires.capabilities.indexOf('ribbon-layout-v1') >= 0)) fail('api-unsupported', 'ribbon-layout-v1');
     if (hasRibbon) {
@@ -283,7 +278,7 @@
     }
     if (family === 'transition' && v.type === 'transition') {
       object(v, ['type', 'property', 'duration', 'easing'], 'css-value', 'transition');
-      if (['color', 'background-color', 'border-color', 'box-shadow'].indexOf(v.property) < 0 || (['ease', 'linear', 'ease-in', 'ease-out', 'ease-in-out'].indexOf(v.easing) < 0 && !/^steps\([1-8],end\)$/.test(v.easing))) fail('css-value', 'transition');
+      if (['color', 'background-color', 'border-color', 'box-shadow'].indexOf(v.property) < 0 || ['ease', 'linear', 'ease-in', 'ease-out', 'ease-in-out'].indexOf(v.easing) < 0) fail('css-value', 'transition');
       return v.property + ' ' + decimal(number(v.duration, 0, 500, 'css-value', 'duration')) + 'ms ' + v.easing;
     }
     var keywords = {
