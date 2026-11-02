@@ -1,0 +1,51 @@
+---
+import { copy, type Locale } from "../lib/site";
+import { support } from "../lib/support";
+interface Props {
+  lang: Locale;
+  compact?: boolean;
+}
+const { lang, compact = false } = Astro.props,
+  t = copy[lang],
+  extra = support[lang];
+const rows = [
+  extra.access,
+  ["Node.js 0.10.25+", "Node.js 8+ / Python 3.9+"],
+  extra.keep,
+  extra.resume,
+  extra.updates,
+];
+---
+
+<p id="comparison-hint" class="table-hint">
+  {extra.tableHint}
+</p>
+<div
+  class="comparison-scroll"
+  role="region"
+  tabindex="0"
+  aria-labelledby="comparison-caption"
+  aria-describedby="comparison-hint"
+>
+  <table class="comparison">
+    <caption id="comparison-caption">
+      {compact ? t.requirements : t.nav[2]}
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">{extra.tableLabels[0]}</th>
+        <th scope="col">No-root</th>
+        <th scope="col">Root</th>
+      </tr>
+    </thead>
+    <tbody>
+      {rows.slice(0, compact ? 2 : rows.length).map((row, index) => (
+        <tr>
+          <th scope="row">{extra.tableLabels[index + 1]}</th>
+          <td>{row[0]}</td>
+          <td>{row[1]}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>

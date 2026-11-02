@@ -26,6 +26,59 @@ class BridgeTests(unittest.TestCase):
         self.assertNotEqual(event['label'], 'SSH connection and sign-in')
         self.assertNotEqual(event['statusText'], 'Passed')
 
+    def test_recovery_is_explicit_and_emits_safe_plan_and_default_no(self):
+        module = self.module()
+        args = module.arguments({'host':'192.0.2.10', 'edition':'no-root', 'action':'recover'}, '/private/profiles')
+        self.assertEqual(args[0], 'recover')
+        self.assertNotIn('--yes', args)
+        class Native:
+            def __init__(self): self.events = []
+            def emit(self, raw): self.events.append(json.loads(raw))
+            def request(self, raw):
+                self.events.append(json.loads(raw)); return 'n'
+        native = Native(); callbacks = module.Callbacks(native)
+        module.AndroidConsole(callbacks).recovery({'host':'PRIVATE-TARGET'})
+        event = native.events[-1]
+        self.assertEqual((event['kind'], event['state']), ('recovery-plan', 'review'))
+        self.assertNotIn('PRIVATE-TARGET', json.dumps(native.events))
+        callbacks.ask('Remove remaining Clean Your TV packages? [y/N]: ')
+        self.assertTrue(native.events[-1]['defaultNo'])
+
+    def test_home_observation_choices_are_semantic_and_default_to_skip(self):
+        module = self.module()
+        class Native:
+            def __init__(self): self.events = []
+            def emit(self, raw): self.events.append(json.loads(raw))
+            def request(self, raw): self.events.append(json.loads(raw)); return '3'
+        native = Native(); callbacks = module.Callbacks(native)
+        console = module.AndroidConsole(callbacks)
+        console.option(1, 'Clean Your TV Home opened')
+        console.option(2, 'LG Home opened or Home did not work')
+        console.option(3, 'Not tested / skip')
+        callbacks.ask('Home button result [3]: ')
+        question = native.events[-1]
+        self.assertEqual([x['value'] for x in question['options']], ['1','2','3'])
+        self.assertEqual(question['defaultChoice'], '3')
+        callbacks.ask('Unrelated question [y/N]: ')
+        self.assertNotIn('options', native.events[-1])
+
+    def test_failure_help_is_localized_semantic_advice_without_profile_data(self):
+        from cytv import i18n
+        from cytv.failure_help import for_error
+        self.addCleanup(i18n.set_language,'en');i18n.set_language('ru')
+        module=self.module()
+        class Native:
+            def __init__(self):self.events=[]
+            def emit(self,raw):self.events.append(json.loads(raw))
+        native=Native();console=module.AndroidConsole(module.Callbacks(native))
+        guide=for_error(TimeoutError('PRIVATE-PASSWORD'),'ssh-connect',{'edition':'root','host':'PRIVATE-HOST'}, {'action':'install'})
+        console.failure_help(guide)
+        event=native.events[-1]
+        self.assertEqual((event['kind'],event['code']),('failure-help','pending-operation'))
+        self.assertTrue(event['pending']);self.assertFalse(event['canEditConnection'])
+        self.assertNotEqual(event['title'],guide['title'])
+        self.assertNotIn('PRIVATE',json.dumps(native.events))
+
     def test_cli_errors_reach_android_as_error_events(self):
         module = self.module()
         class Native:

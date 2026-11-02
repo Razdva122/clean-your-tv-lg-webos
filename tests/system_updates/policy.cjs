@@ -37,7 +37,8 @@ async function offerFixture(status,body,error){
 const historical=manifest('root'),gated={...historical,minimumSupervisorVersion:'1.1.1'};
 assert.equal(policy.validate(gated).minimumSupervisorVersion,'1.1.1');
 assert.equal(policy.validate(historical).edition,'root');
-for(const value of ['1.1.3','2.0.0','bad',null,111])assert.throws(()=>policy.validate({...gated,minimumSupervisorVersion:value}));
+assert.equal(policy.validate({...gated,minimumSupervisorVersion:'1.2.0'}).minimumSupervisorVersion,'1.2.0');
+for(const value of ['1.2.1','2.0.0','bad',null,111])assert.throws(()=>policy.validate({...gated,minimumSupervisorVersion:value}));
 assert.throws(()=>policy.validate({...manifest(),minimumSupervisorVersion:'1.1.1'}));
 const originalSource=require('child_process').execFileSync('python3',['-c',"import tarfile;print(tarfile.open('tests/system_updates/fixtures/public-1.3.0-supervisor.tar.gz').extractfile('supervisor/system_updater/policy.js').read().decode(),end='')"],{cwd:require('path').resolve(__dirname,'../..'),encoding:'utf8'});
 const original={exports:{}};

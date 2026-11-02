@@ -8,6 +8,23 @@ from cytv import cli, diagnostics, state
 
 
 class DiagnosticTests(unittest.TestCase):
+    def test_passive_root_status_exports_fixed_categories_only(self):
+        value={'schema':1,'status':'read','operation':'consistent-not-admission',
+               'worker':'exception-recorded','python':'private-bytes-match-unexecuted','private':'PRIVATE-PASSWORD'}
+        result=diagnostics.context.product_summary({'state':'recovery_required','passive':value})
+        self.assertEqual(result['passive'],{k:v for k,v in value.items() if k!='private'})
+        value['python']={'secret':'PRIVATE-PATH'}
+        self.assertEqual(diagnostics.context.product_summary({'passive':value})['passive']['python'],'unknown')
+        self.assertNotIn('PRIVATE',json.dumps(diagnostics.context.product_summary({'passive':value})))
+
+    def test_helper_state_rejects_unknown_or_structured_remote_values(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            for value in ('PRIVATE-PROCESS', {'process': 'PRIVATE-PATH'}, None, True):
+                path = diagnostics.create_report(state.Store(tmp), 'install', None, 'preflight',
+                                                 tv_info={'helper_state': value})
+                self.assertEqual(json.loads(path.read_text())['tv'].get('helper_state'), 'unknown')
+                self.assertNotIn('PRIVATE-', path.read_text())
+
     def test_python_cache_reason_is_revalidated_before_export(self):
         from cytv.errors import PythonCacheError
         with tempfile.TemporaryDirectory() as tmp:

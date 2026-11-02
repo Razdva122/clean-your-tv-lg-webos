@@ -453,3 +453,13 @@ Unknown keys and invalid combinations reject. Bottom-left shortcuts require `lef
 ```
 
 This is the value of `layout`, not a complete manifest. The separate toolkit needs an explicit exported runtime declaring `ribbon-layout-v1`. Its stable reviewed runtime pin is not silently replaced by a PR candidate. Arbitrary author `position`, `skew`, `translate`, selectors or JavaScript remain unsupported. Version and capability checks both apply. Optional icon effects still require `modern-icon-css-v1` separately.
+
+
+### Optional date placement (unreleased)
+
+A `dock-grid` theme may set `layout.datePlacement` to `below-clock` to wrap the
+date beneath the clock and hide the divider, or `inline` to retain the standard
+header. Declare the paired `date-placement-v1` capability; the compiler infers
+it from the field. Engines without the capability reject the theme before apply.
+Omitting the field preserves current themes. Suspension, replacement and reset
+use the existing theme stylesheet lifecycle. No new controls or permissions.

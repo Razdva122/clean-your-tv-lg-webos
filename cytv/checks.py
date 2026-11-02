@@ -2,6 +2,9 @@
 STATUS = {'pending': 'Not checked', 'running': 'Checking…', 'pass': 'Passed',
           'fail': 'Failed', 'unknown': 'Could not verify'}
 LABELS = {
+    'home-settings':'Root Home settings interface', 'home-profiles':'Root Home profile interface',
+    'packages': 'Installed packages', 'startup': 'Startup readback',
+    'home-button': 'Home button — your observation',
     'ssh': 'SSH connection and sign-in', 'root-user': 'Root privileges',
     'python3': 'TV Python executable', 'python-json': 'Python json module',
     'python-fcntl': 'Python fcntl module', 'python-version': 'TV Python 3.9+',
@@ -26,6 +29,9 @@ class CheckList:
     def prepare(self, edition, action):
         from .diagnostics import ROOT_REQUIREMENTS
         names = ROOT_REQUIREMENTS if edition == 'root' else ('architecture', 'helper-node', 'root-conflict', 'helper-idle')
+        if edition=='root':
+            from .root_capabilities import CALLS
+            names = (*names, *CALLS)
         for name in ('ssh', *names, 'pairing', 'inventory'):
             detail = PYTHON_HINT if name == 'python3' else ''
             if action == 'doctor' and name in ('pairing', 'inventory'):

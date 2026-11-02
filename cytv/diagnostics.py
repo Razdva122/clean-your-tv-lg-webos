@@ -8,19 +8,18 @@ import time
 import re
 import uuid
 
-from . import __version__
+from . import __version__, diagnostic_context as context
 from .state import private_write
 from .terminal import console
 from .errors import TVConnectionError, DeveloperKeyError, UserError, TVCommandError, TVRejected, PythonPreflightError, PythonCacheError, root_recovery_details
 
 ISSUE_URL = 'https://github.com/Razdva122/clean-your-tv-lg-webos/issues/new'
-KERNEL_ARCHES = ('armv7l', 'armv7', 'armv8l', 'aarch64', 'arm64', 'x86_64', 'i686', 'unknown')
-ROOT_REQUIREMENTS = ('root-user', 'python3', 'luna-send', 'apps-directory',
-                     'luna-services-directory', 'python-json', 'python-fcntl', 'python-version', 'node-version')
+KERNEL_ARCHES = context.KERNEL_ARCHES
+ROOT_REQUIREMENTS = context.ROOT_REQUIREMENTS
 
 
-def create_report(store, action, profile, phase, error=None, tv_info=None):
-    pending = store.pending(profile) if profile else None
+def create_report(store, action, profile, phase, error=None, tv_info=None, *, checks=None, status=None):
+    pending = store.diagnostic_pending if hasattr(store, 'diagnostic_pending') else store.pending(profile) if profile else None
     report = {
         'schema': 1, 'cytv_version': __version__,
         'timestamp_utc': datetime.now(timezone.utc).isoformat(),
@@ -28,12 +27,27 @@ def create_report(store, action, profile, phase, error=None, tv_info=None):
         'action': action, 'edition': profile.get('edition') if profile else None,
         'phase': phase,
         'error_type': type(error).__name__ if error else None,
-        'pending': {k: pending.get(k) for k in ('action', 'stage')} if pending else None,
+        'pending': {'action': context.choice(pending.get('action'), (*context.ACTIONS, 'activate-root', 'setup-root-updater', 'archive-root-state')),
+                    'stage': context.choice(pending.get('stage'), (*context.STAGES, 'enable', 'setup', 'verify', 'upload', 'removing', 'stop-helper'))} if pending else None,
         'trace': [{'file': Path(frame.filename).name, 'function': frame.name, 'line': frame.lineno}
                   for frame in traceback.extract_tb(error.__traceback__)[-12:]] if error else [],
-        'tv': {k: tv_info[k] for k in ('modelName', 'firmwareVersion', 'sdkVersion') if tv_info and k in tv_info},
+        'tv': context.tv_summary(tv_info),
+        'checks': context.checks_summary(checks),
         'privacy': 'No addresses, SSH identities, exception text, credentials, app inventory, environment or raw TV logs are collected.',
     }
+    from .failure_help import for_error, report_summary
+    help = for_error(error, phase, profile, pending)
+    if help:
+        report['guidance'] = report_summary(help)
+    reason = getattr(error, 'reason_code', 'unknown')
+    if isinstance(error, TVCommandError):
+        reason = 'ssh-command-failed'
+    elif type(error).__name__ in ('NoValidConnectionsError', 'AuthenticationException', 'BadHostKeyException', 'ImportError'):
+        reason = {'NoValidConnectionsError': 'ssh-unreachable', 'AuthenticationException': 'ssh-authentication',
+                  'BadHostKeyException': 'ssh-identity-changed', 'ImportError': 'host-runtime'}[type(error).__name__]
+    report['reason_code'] = context.choice(reason, context.REASONS)
+    if status is not None:
+        report['status'] = context.status_summary(status)
     if isinstance(error, TVConnectionError):
         report['connection'] = {'protocol': 'ssap', 'close_code': error.close_code, 'reason_code': error.reason_code}
     if isinstance(error, DeveloperKeyError):
@@ -56,28 +70,35 @@ def create_report(store, action, profile, phase, error=None, tv_info=None):
         report['python_runtime'] = {'reason': safe.reason}
         report['python_runtime'].update({key: getattr(safe, key) for key in
             ('available_kib', 'required_kib', 'wam_session_kib') if getattr(safe, key) is not None})
-    if tv_info and isinstance(tv_info.get('root_requirements'), dict):
-        checks = tv_info['root_requirements']
-        report['tv']['root_requirements'] = {
-            name: checks[name] if checks[name] in ('pass', 'fail', 'unknown') else 'unknown'
-            for name in ROOT_REQUIREMENTS if name in checks}
-    for name, allowed in (('kernel_arch', KERNEL_ARCHES),
-                          ('userland_abi', ('arm32', 'arm64', 'other', 'unknown'))):
-        if tv_info and name in tv_info:
-            report['tv'][name] = tv_info[name] if tv_info[name] in allowed else 'unknown'
-    if tv_info and type(tv_info.get('arm32_supported')) is bool:
-        report['tv']['arm32_supported'] = tv_info['arm32_supported']
+    if error is not None:
+        safe_error = context.failure_summary(report)
+        for key in ('luna', 'connection', 'ssh_command', 'python_cache', 'python_runtime', 'root_recovery'):
+            if key in report:
+                report[key] = safe_error.get(key, {})
+    report.update(context.history(report, store, profile, error, pending))
     path = store.root / 'reports' / ('diagnostic-' + uuid.uuid4().hex[:12] + '.json')
     private_write(path, json.dumps(report, indent=2).encode())
     return path
 
 
-def suggest_issue(write, store, action, profile, phase, error, tv_info=None):
+def save_result(write, store, action, profile, phase, tv_info=None, *, checks=None, status=None):
+    """A failed optional export must not turn successful device work into failure."""
+    write = console(write)
+    try:
+        path = create_report(store, action, profile, phase, tv_info=tv_info, checks=checks, status=status)
+        write.report(path)
+        return path
+    except (OSError, ValueError, TypeError):
+        write.error('Could not save a diagnostic file. Include cytv ' + __version__ + ', your desktop OS, edition and failed step: ' + phase + '.')
+        return None
+
+
+def suggest_issue(write, store, action, profile, phase, error, tv_info=None, *, checks=None, status=None):
     write = console(write)
     write.heading('Need help? Open an issue')
     write(ISSUE_URL)
     try:
-        path = create_report(store, action, profile, phase, error, tv_info)
+        path = create_report(store, action, profile, phase, error, tv_info, checks=checks, status=status)
         write.heading('Attach this diagnostic report')
         write.report(path)
     except (OSError, ValueError):

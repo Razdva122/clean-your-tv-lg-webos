@@ -1,5 +1,7 @@
 # Requirements and known limits
 
+> See [1.6.0 versions, installer changes and limits](RELEASE-1.6.0.md) and the [dated acceptance scope](history/2026-11-02-release-1.6.0-final-acceptance.md). Obtain available packages from [GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases).
+
 [Documentation](README.md) · [Choose an edition](EDITIONS.md) · [Install](INSTALL.md)
 
 Check the access method and runtime first. Meeting these requirements or installing
@@ -35,11 +37,11 @@ separate OS/device acceptance; a successful computer build is not a TV test.
 
 | Configuration | Evidence and limits |
 | --- | --- |
-| OLED55C3RLA / firmware 43.21.71, Root | [Published 1.4.0 acceptance](RELEASE-1.4.0-ACCEPTANCE.md): corrected startup, controls, standby/cold-boot cases and manual whole-product rollback in the recorded scope. No guarantee of immediate first-screen startup or other models. |
+| OLED55C3RLA / firmware 43.21.71, Root | [1.6.0 scoped acceptance](history/2026-11-02-release-1.6.0-final-acceptance.md): controls, fault recovery and genuine Homebrew failsafe, with the documented standby presentation limitation. Earlier [published 1.4.0 acceptance](RELEASE-1.4.0-ACCEPTANCE.md): corrected startup, controls, standby/cold-boot cases and manual whole-product rollback in the recorded scope. No guarantee of immediate first-screen startup or other models. |
 | OLED55C46LA (C4), No-root | Earlier community Helper results have outstanding firmware/input and long-Back confirmation. [Original reports](history/COMPATIBILITY.md#historical-110-hardware-evidence). |
 | C5 / webOS 26; BX / webOS 5; UK6540PTD | Unresolved or unverified paths remain. Do not infer support from another model or an architecture check. |
 | Other models, firmware and remotes | Unverified until their actual controls and recovery paths are checked. |
-| Android | Scoped Android 15 ARM64 / WebView 124 emulator acceptance; physical phones, minimum-version devices and live phone-to-TV recovery remain unverified. [Details](../android/STABLE-READINESS.md). |
+| Android | Scoped Android 15 ARM64 / WebView 124 emulator acceptance, including native recovery fixtures; physical phones, minimum-version devices and live phone-to-TV recovery remain unverified. [1.6.0 evidence and limits](history/2026-11-02-release-1.6.0-final-acceptance.md); [readiness details](../android/STABLE-READINESS.md). |
 
 [Release/device evidence](history/README.md) keeps earlier versions and tests in
 their original scope. It is not a list of universally supported TVs.

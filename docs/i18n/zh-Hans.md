@@ -1,12 +1,14 @@
 # Clean Your TV — 用户指南
 
+> 本指南介绍 1.6.0。请从 [GitHub Releases 中已发布的版本](https://github.com/Razdva122/clean-your-tv-lg-webos/releases)下载可用软件包。它包含安装程序的五项改进。重新打开 Root 设置时会读取实际状态，检查失败不会启用 Home。System Updater 1.2.0 用于符合条件的新安装，或经过验证的 1.1.0/1.1.1 替换。已安装的 1.1.2 保留原有通道，没有通用迁移方案。请保留恢复数据，不要强行替换。[版本与限制](../RELEASE-1.6.0.md)。
+
 > v1.5.0：主题、展示页和电脑向电视传输。已知 Root 限制：Appearance 可能偏移 110 px；待机唤醒后 Home 可能不会自动打开。设备实机验证范围仍有限。 [1.5.0](../RELEASE-1.5.0.md).
 
 > **1.5.4:** 固定布局主题保留隐藏 Columns 行的空间，以便 Apply 时保持 Appearance 的滚动位置。指针、键盘和无障碍导航会跳过隐藏的 Columns。
 
 [文档导航](../README.md) · [报告问题](../FEEDBACK.md)
 
-本指南适用于已发布的 **[1.5.4](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.5.4)**。C3 验收仅涵盖已记录的电源、Home、焦点、保持关闭状态及手动回滚测试。其他电视、eARC 音频和实体 Android 设备仍未验证；安装成功并不证明兼容。[测试范围（英文）](../history/2026-10-31-release-1.5.3-signed-root-qa.md)。
+**1.5.4 历史测试记录:** C3 验收仅涵盖已记录的电源、Home、焦点、保持关闭状态及手动回滚测试。其他电视、eARC 音频和实体 Android 设备仍未验证；安装成功并不证明兼容。[测试范围（英文）](../history/2026-10-31-release-1.5.3-signed-root-qa.md)。
 
 **1.5.4:**控制台、桌面和 Android 界面会分别显示电视检查状态：未检查、正在检查、通过、未通过或无法验证。出错后仍保留结果。Node.js/Python 检查针对电视的运行环境；`doctor` 不会准备 Python，也不会请求遥控配对。重试前请保存报告。
 
@@ -18,6 +20,8 @@ No-root 和 Root 是适用于不同电视配置的同等选项。使用 LG 开�
 - **Root：**必须已有 root SSH 访问权限。安装程序不会为电视获取 root。已取得 root 的电视不要启用开发者模式。请保留 root 访问和恢复服务。
 
 Root 需要可用的 Settings Service 和 System Profile Home 接口（`com.webos.service.systemprofile`）；仅有 root 权限并不能证明兼容性。
+
+> **1.6.0:** Root 在准备专用 Python 或安装包之前检查必需的 Home 接口。检查失败会停止安装；通过检查并不能证明固件兼容或实体 Home 键正常。已知连接错误会显示针对性提示。请保留连接配置、信任记录和恢复数据；未完成的操作需要经过验证的恢复，不要盲目重试。保存并检查诊断报告。[详情](../development/INSTALLER-PREFLIGHT-HELP.md)。
 
 ## 安装之前
 
@@ -62,6 +66,8 @@ chmod +x cytv
 
 选择电视（或输入 IP）、版本，然后检查摘要。仅在可信网络上为自己的电视接受首次 SSH 信任；保存的密钥发生改变时将阻止访问。Root 凭据与开发者模式口令不同。Root 会安装恢复功能并立即激活 Home，无试用或 Keep 步骤。请在自己的电视上检查方向键、OK、Home、返回/取消、音量、待机/唤醒和冷启动。
 
+**1.6.0:** 安装程序分别显示软件包验证、启动状态及您对实体 Home 的观察。启动确认或 Helper 进程不能证明 Home 拦截功能。打开其他电视应用，短按一次 Home，然后选择观察到的结果；默认为**未测试／跳过**。`--yes` 不会代答，非交互安装将保留未测试状态。Home 失败或跳过不会撤销已安装的软件包，也不会开始重新安装。如需帮助，请保存本地报告；不会自动发布。其他控制、声音、待机及冷启动仍需分别测试。
+
 ## 日常使用与恢复
 
 方向键选择磁贴，OK 打开，按住 OK 调整顺序。短按返回保留应用本身的导航和退出确认。启用 Home 控制时，短按 Home 打开 Clean Your TV。按住返回 1.2 秒会临时打开 LG Home 一次，不改变 Home 控制开关和设置。
@@ -79,9 +85,9 @@ No-root: 要重新启动 Home 控制，请打开 Home Helper，选择启动 Help
 ./cytv --language zh-Hans uninstall
 ```
 
-> 尚未发布（#152）：如果 Helper 停用请求被拒绝，No-root 恢复/卸载流程可使用经过验证的 SSH 停止方式。停止状态会保留；结果不确定时保留操作日志。请勿删除状态文件。仍需在 EF950V 实机上确认。 [#152](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/152)
+> **1.6.0 (#152):** 如果 Helper 停用请求被拒绝，No-root 恢复/卸载流程可使用经过验证的 SSH 停止方式。停止状态会保留；结果不确定时保留操作日志。请勿删除状态文件。仍需在 EF950V 实机上确认。 [#152](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/152)
 
-> 尚未发布（#201）：No-root 状态检查会保留中断的安装或卸载记录。文件匹配或应用缺失不能证明操作已完成。如果验证被拒绝，请停止并保留诊断；没有仅凭文件绕过验证的方法。 [#201](../RECOVERY.md#unreleased-uncertain-no-root-package-operations-201)
+> **1.6.0 (#201):** No-root 状态检查会保留中断的安装或卸载记录。文件匹配或应用缺失不能证明操作已完成。如果验证被拒绝，请停止并保留诊断；没有仅凭文件绕过验证的方法。 [#201](../RECOVERY.md#unreleased-uncertain-no-root-package-operations-201)
 
 中断后重试前先运行 `status`，保留日志和恢复文件。`restore` 返回 LG Home 而不移除应用；`uninstall` 先恢复再移除。Root 恢复状态会特意保留，切勿删除它来强行重新安装。分享报告前请检查内容，不要公开密钥或配置文件夹。
 
@@ -113,11 +119,11 @@ Homebrew Channel 拒绝此安装程序访问。在 webOS 11 上，Homebrew 0.7.3
 
 1.5.0+: `cytv recover-system-rollback --edition root` 仅用于已验证的 Root 回滚：所有软件包安装程序均已完成，但启动器就绪等待超时。必须由真实启动器发送就绪信号；安装结果不明时拒绝恢复。保留软件包、固定代码和密钥、失败证据及明确关闭的 Home 控制状态，并以私有记录保存有时限的尝试。 普通重试不会延长时限。仅在之前的 120 秒到期、没有已接受的就绪信号且不存在不明安装结果后，才可用 `--new-recovery-attempt` 按 UUID/哈希归档完整旧记录，并明确开始新尝试。已完成的恢复不会重新开始，也不会自动连续重试。 [流程与限制（英文）](../RECOVERY.md#root-system-rollback-readiness-candidate)。
 
-1.5.0：替换包包含 System Updater 1.1.2。电视 OTA 前，请明确运行 `cytv replace-system-updater --edition root` 替换 1.1.0 或 1.1.1。只替换 System Updater，保留 Root/Root Updater 应用、完整配置和 Home 选择，并归档旧状态。结果不明或尚未完成的操作会阻止替换。此要求不限制 No-root 更新源。[替换流程（英文）](../RECOVERY.md#replace-the-root-system-updater-candidate)。
+1.6.0：System Updater 1.2.0 用于符合条件的新安装，或通过 `cytv replace-system-updater --edition root` 对 1.1.0/1.1.1 进行经过验证的替换。只替换 System Updater，保留 Root/Root Updater 应用、完整配置和 Home 选择，并归档旧状态。未知或未完成的操作会阻止替换。已安装的 1.1.2 保持固定并使用旧通道；没有通用迁移方案，请勿强行替换。这不会限制 No-root 更新源。 [替换流程（英文）](../RECOVERY.md#replace-the-root-system-updater-candidate)
 
 ## 帮助与详细说明
 
-操作失败或中断后，先检查状态并保存该次尝试的诊断报告。引导恢复会分别确认移除和重新安装。结果不确定时请停止，保留私有日志及恢复文件；切勿删除它们来强制重试。参阅[恢复（英文）](../RECOVERY.md)。求助时请提供型号、固件、版本类别、安装程序版本、失败步骤及预期/实际表现；分享前检查报告并删除秘密信息。
+**1.6.0:** 为同一台已保存的电视选择**检查恢复选项**，或运行 `cytv recover`。检查和更改需要分别确认，默认为“否”；`--yes` 不会批准。Root 仅在现有验证通过后继续。No-root 仅在现有软件包服务检查允许时提供删除选项；删除可能重置 Home 偏好设置。不会自动开始新的安装。状态未知或访问被拒绝时，请保存报告并停止；保留日志，不要重复删除。#201 的完成证据以及 #216 的实际电视恢复仍未确认。 [Recovery](../RECOVERY.md). 求助时请提供型号、固件、版本类别、安装程序版本、失败步骤及预期/实际表现；分享前检查报告并删除秘密信息。
 
 [文档导航](../README.md) · [报告问题](../FEEDBACK.md)
 
@@ -147,13 +153,13 @@ Homebrew Channel 拒绝此安装程序访问。在 webOS 11 上，Homebrew 0.7.3
 安装已发布主题时，打开**通过 ID 添加**，输入 ID（例如 `102300a209`）、`da.gd/102300a209` 或完整 GitHub 链接。Home 会在加载前显示补全的 da.gd 地址，然后验证 GitHub 目标和主题包。作者可从版本说明或电脑预览的 **TV link → Copy ID** 复制 ID。
 
 
-尚未发布的候选版本：Home Helper 面板中的**显示诊断信息**会显示其自身状态请求的简短过滤结果。查看不会启动 Helper，也不会更改 Home 控制。仅在被要求时分享已检查的 JSON；[详情](../HELPER-DIAGNOSTICS.md#candidate-panel-caller-diagnostics-207)。
+**1.6.0:** Home Helper 面板中的**显示诊断信息**会显示其自身状态请求的简短过滤结果。查看不会启动 Helper，也不会更改 Home 控制。仅在被要求时分享已检查的 JSON；[详情](../HELPER-DIAGNOSTICS.md#candidate-panel-caller-diagnostics-207)。
 
 [Themes (English)](../THEMES.md) · [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
 
 1.5.4: **Classic**, **Alpine**, **Ribbon** — **设置 → 主题**. [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
 
-尚未发布的可配置应用栏主题可将输入、Wi-Fi 和设置放在左下角。启用此导航时，在第一个可见应用上按左键依次选择设置、Wi-Fi 和输入；在设置上按右键返回同一可见应用。需要新 Home 功能的主题在不支持的版本上安装会被拒绝，当前外观和选择保持不变。请先更新 Home。之后降级可能在启动时恢复 Classic。
+1.5.4 中的可配置应用栏主题可将输入、Wi-Fi 和设置放在左下角。启用此导航时，在第一个可见应用上按左键依次选择设置、Wi-Fi 和输入；在设置上按右键返回同一可见应用。需要新 Home 功能的主题在不支持的版本上安装会被拒绝，当前外观和选择保持不变。请先更新 Home。之后降级可能在启动时恢复 Classic。
 
 主题页面显示内置主题和您自行安装的所有主题预览，离线也可查看。单独的展示按钮打开已发布目录；个人安装不会发布主题。
 
@@ -169,8 +175,12 @@ Homebrew Channel 拒绝此安装程序访问。在 webOS 11 上，Homebrew 0.7.3
 
 软件更新分类及内部按钮上的黄色圆点表示有可用更新。成功检查确认没有更新后，两处圆点同时消失；检查失败时保留上次确认的状态。
 
-## 自动图形分辨率（候选版本）
+<a id="自动图形分辨率候选版本"></a>
 
-即将发布的电脑/Android 安装程序和已迁移的 OTA 客户端会根据电视报告的能力选择 720p 或 1080p。无法验证时，操作会停止。独立安装的旧更新程序需要按文档通过电脑迁移；恢复过程保留原始软件包。
+## 自动图形分辨率(1.6.0)
+
+1.6.0 的电脑/Android 安装程序和已迁移的 OTA 客户端会根据电视报告的能力选择 720p 或 1080p。无法验证时，操作会停止。独立安装的旧更新程序需要按文档通过电脑迁移；恢复过程保留原始软件包。
 
 [HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).
+
+> **1.6.0:** 请保留最初失败尝试的报告。新报告将已记录的首次错误与后续检查区分开，并提供经过筛选的 Doctor/状态摘要。安装、状态检查或恢复成功后也可导出报告。缺失的历史证据仍标为未知；报告不授予恢复操作权限。 [↗](../development/INSTALLER-DIAGNOSTICS.md).

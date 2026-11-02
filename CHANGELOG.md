@@ -1,6 +1,13 @@
 # Changelog
 
-## Unreleased
+## v1.6.0
+
+- Complete the five-stage installer diagnostics/recovery/outcome/admission/guidance work.
+- Add adaptive HD/FHD delivery, Czech TV localization, compact Chinese fonts and themes.
+- Refresh Root Settings and retain conservative rollback/recovery authority; known device failures remain open.
+- See [selected versions, inventory, migration limits and release gates](docs/RELEASE-1.6.0.md).
+
+## Earlier unreleased preparation
 
 - Prepare Root OTA compatibility with the original 1.3.0 System Updater (#115):
   preserve managed paths and LS2 grants, validate candidate infrastructure before

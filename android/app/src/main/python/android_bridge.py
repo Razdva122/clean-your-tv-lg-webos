@@ -10,7 +10,7 @@ from cytv.terminal import Console
 
 def arguments(config, directory, identity=''):
     action = config.get('action', 'install')
-    if action not in ('install', 'status', 'doctor', 'home-diagnostics', 'restore'):
+    if action not in ('install', 'status', 'doctor', 'home-diagnostics', 'recover', 'restore'):
         raise ValueError('Unsupported Android operation')
     profile = state.target(config.get('host', ''), config.get('edition', ''), config.get('port'))
     language = config.get('language', 'ru')
@@ -30,6 +30,7 @@ class Callbacks:
         self.directory = Path(directory).resolve() if directory else None
         self.identity = identity
         self.context = []
+        self.options = []
 
     def emit(self, **event):
         self.native.emit(json.dumps(event, ensure_ascii=False))
@@ -51,7 +52,12 @@ class Callbacks:
         return str(answer)
 
     def ask(self, prompt):
-        return self.request(kind='question', text=prompt, context='\n'.join(self.context))
+        options, self.options = self.options, []
+        event = {'kind':'question', 'text':prompt, 'context':'\n'.join(self.context), 'defaultNo':'[y/N]' in prompt}
+        if options:
+            match = re.search(r'\[(\d+)\]', prompt)
+            event.update(options=options, defaultChoice=match.group(1) if match else '')
+        return self.request(**event)
 
     def secret(self, prompt):
         # CLI prompts have already been translated. Send a stable semantic tag
@@ -82,6 +88,26 @@ class AndroidConsole(Console):
         super().__init__(callbacks.write, interactive=False)
         self.callbacks = callbacks
 
+    def option(self, key, label, detail=''):
+        super().option(key, label, detail)
+        self.callbacks.options.append({'value':str(key), 'label':i18n.translate(label),
+                                       'detail':i18n.translate(detail)})
+
+    def failure_help(self, value):
+        super().failure_help(value)
+        self.callbacks.emit(kind='failure-help', code=value['code'], title=i18n.translate(value['title']),
+                            detail=i18n.translate(value['detail']), nextStep=i18n.translate(value['next_step']),
+                            pending=value['pending'], canEditConnection=value['can_edit_connection'])
+
+    def recovery(self, profile):
+        self.recovery_plan({'state': 'review', 'summary': 'Review recovery options',
+                            'next_step': 'Recovery data kept. Installation has not restarted.'})
+
+    def recovery_plan(self, value):
+        super().recovery_plan(value)
+        self.callbacks.emit(kind='recovery-plan', state=value['state'],
+                            summary=i18n.translate(value['summary']), nextStep=i18n.translate(value['next_step']))
+
     def error(self, message, heading=False):
         # Input mistakes can be corrected; the CLI exit code decides the result.
         self.callbacks.emit(kind='error', text=i18n.translate(message), heading=heading, fatal=False)
@@ -97,7 +123,7 @@ class AndroidConsole(Console):
                   'Uploading Root and recovery runtime…': 2,
                   'Installing Root Updater and preparing rollback…': 2,
                   'Configuring Home Helper…': 3, 'Turning on Root Home control…': 3,
-                  'Opening Clean Your TV Home…': 3}
+                  'Opening Clean Your TV Home…': 3, 'Starting Home Helper…': 3}
         stage = 1 if re.fullmatch(r'Read \d+ applications\.', str(message)) else stages.get(message)
         if stage is not None:
             self.callbacks.emit(kind='stage', stage=stage)

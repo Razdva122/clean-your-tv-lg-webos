@@ -60,6 +60,10 @@ class Remote:
 
     def luna(self, uri, payload, terminal=None, timeout=30, app_id=None):
         self.calls.append(('luna', uri, payload))
+        if uri == 'com.webos.settingsservice/getSystemSettings':
+            return {'returnValue':True,'settings':{'defaultApps':{}}}
+        if uri == 'com.webos.service.systemprofile/getProfiles':
+            return {'returnValue':True,'profiles':{'defaultApps':{'categories':{'home':'com.webos.app.home'}},'idleApp':{'appId':'com.webos.app.home','support':True}}}
         if uri == 'com.webos.service.tv.systemproperty/getSystemInfo':
             return {'returnValue': True, 'UHD': True}
         if uri == 'com.cleanyourtv.root.updater.service/status':
@@ -239,6 +243,20 @@ class OperationTests(unittest.TestCase):
         remote.luna = luna
         self.installer(remote).install(self.inventory, 'secret')
         self.assertEqual(list(temp.iterdir()), [])
+
+    def test_false_idle_reply_cannot_authorize_pending_removal(self):
+        installer = self.installer(Remote())
+        self.store.begin(installer.profile, 'uninstall')
+        original = installer.remote.luna
+        def luna(uri, payload, **kwargs):
+            if uri == 'com.webos.appInstallService/status':
+                return {'returnValue': False, 'status': {'apps': []}}
+            return original(uri, payload, **kwargs)
+        installer.remote.luna = luna
+        with self.assertRaisesRegex(RuntimeError, 'not confirmed idle'):
+            installer.uninstall()
+        self.assertEqual(installer.remote.calls, [])
+        self.assertIsNotNone(self.store.pending(installer.profile))
 
     def test_pending_no_root_removal_resumes_after_restore_interruption(self):
         installer = self.installer(Remote())
@@ -469,6 +487,23 @@ class OperationTests(unittest.TestCase):
         result = installer.status()
         self.assertIsNone(result['pending'])
         self.assertEqual(result['reconciled'], 'root-installation-verified')
+
+    def test_submitted_root_status_never_stages_or_executes_retained_python(self):
+        installer=self.installer(Remote(),'root')
+        self.store.begin(installer.profile,'install',stage='coordinator-submitted',product_operation='a'*32)
+        original=self.store.pending(installer.profile)
+        installer.coordinator_code=lambda:self.fail('Status attempted coordinator staging')
+        def run(command,**kwargs):
+            self.assertEqual(command,'env -u NODE_OPTIONS -u NODE_PATH /usr/bin/node')
+            self.assertIn(b'clean-your-tv-installation',kwargs['data'])
+            return '{"schema":1,"status":"missing"}'
+        installer.remote.run=run
+        result=installer.status()
+        self.assertFalse(result['can_resume_root_setup'])
+        self.assertIsNone(result['reconciled'])
+        self.assertEqual(result['device']['product']['state'],'recovery_required')
+        self.assertEqual(self.store.pending(installer.profile),original)
+        self.assertFalse(any(c[0]=='upload' for c in installer.remote.calls))
 
     def test_root_old_installation_does_not_certify_new_bundle(self):
         installer = self.installer(Remote(), 'root')
@@ -716,6 +751,54 @@ class OperationTests(unittest.TestCase):
                 self.assertFalse(any(c[0] in ('run', 'upload') for c in remote.calls))
                 self.assertIsNone(self.store.pending(installer.profile))
 
+    def test_package_and_launch_success_do_not_certify_startup_or_home(self):
+        installer = self.installer(Remote())
+        installer.install(self.inventory, 'private-pairing')
+        outcome = installer.tv_info['setup_outcome']
+        self.assertEqual(outcome, {'packages':'verified','launch_request':'accepted',
+                                  'startup':'not-observed','home_button':'not-tested'})
+        self.assertIsNone(self.store.pending(installer.profile))
+
+    def test_launch_failure_preserves_verified_packages_and_pending_receipt(self):
+        remote = Remote(); original = remote.luna
+        def luna(uri, payload, **kwargs):
+            if uri.endswith('/launch'): raise RuntimeError('lost launch response')
+            return original(uri, payload, **kwargs)
+        remote.luna = luna
+        installer = self.installer(remote)
+        with self.assertRaises(RuntimeError): installer.install(self.inventory, 'private-pairing')
+        outcome = installer.tv_info['setup_outcome']
+        self.assertEqual(outcome['packages'], 'verified')
+        self.assertEqual(outcome['launch_request'], 'submitted-unconfirmed')
+        self.assertEqual(outcome['home_button'], 'not-tested')
+        self.assertIsNotNone(self.store.pending(installer.profile))
+
+    def test_optional_startup_probe_failure_cannot_undo_successful_install(self):
+        remote = Remote(); original, luna = remote.run, remote.luna
+        launched = False
+        def launch(uri, payload, **kwargs):
+            nonlocal launched
+            if uri.endswith('/launch'): launched = True
+            return luna(uri, payload, **kwargs)
+        def run(command, **kwargs):
+            if launched and 'CYTV_HELPER_IDLE' in command:
+                self.assertEqual(kwargs.get('timeout'), 5)
+                raise TimeoutError('private transport text')
+            return original(command, **kwargs)
+        remote.luna, remote.run = launch, run
+        installer = self.installer(remote)
+        installer.install(self.inventory, 'private-pairing')
+        self.assertEqual(installer.tv_info['setup_outcome']['startup'], 'unverified')
+        self.assertIsNone(self.store.pending(installer.profile))
+
+    def test_root_existing_runtime_readback_is_separate_from_home_observation(self):
+        self.root_bundle()
+        installer = self.installer(Remote(), 'root')
+        installer.install(self.inventory)
+        self.assertEqual(installer.tv_info['setup_outcome'],
+            {'packages':'verified','launch_request':'accepted',
+             'startup':'root-state-verified','home_button':'not-tested'})
+
     def test_no_root_installs_helper_then_home_and_verifies_before_launch(self):
         remote = Remote()
         installer = self.installer(remote)
@@ -905,7 +988,7 @@ class OperationTests(unittest.TestCase):
         installer=self.installer(remote,'root')
         with self.assertRaisesRegex(RuntimeError, 'recovery could not be verified'):
             installer.install(self.inventory)
-        self.assertFalse(any((c[0]=='luna' and not c[1].endswith('/getSystemInfo')) or (c[0]=='run' and '/control.json' in c[1]) for c in remote.calls))
+        self.assertFalse(any((c[0]=='luna' and c[1] not in ('com.webos.service.tv.systemproperty/getSystemInfo','com.webos.settingsservice/getSystemSettings','com.webos.service.systemprofile/getProfiles')) or (c[0]=='run' and '/control.json' in c[1]) for c in remote.calls))
 
     def test_root_launch_disconnect_keeps_receipt_without_repeating_launch(self):
         self.root_bundle()
@@ -1042,7 +1125,8 @@ class OperationTests(unittest.TestCase):
         installer = self.installer(remote)
         installer.preflight(install=True)
         self.assertEqual(installer.tv_info, {
-            'kernel_arch': 'aarch64', 'userland_abi': 'arm32', 'arm32_supported': True})
+            'kernel_arch': 'aarch64', 'userland_abi': 'arm32', 'arm32_supported': True,
+            'helper_state': 'stopped'})
         self.assertFalse(any(c[0] == 'upload' for c in remote.calls))
 
     def test_no_root_requires_valid_little_endian_arm32_elf_before_mutation(self):

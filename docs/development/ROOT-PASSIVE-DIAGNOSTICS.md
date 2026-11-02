@@ -140,3 +140,70 @@ update, re-root or journal editing is requested by this diagnostic.
 The procedure is source documentation, not a new installer command or package.
 No TV has been contacted or recovered by its local fixture tests. Any later
 installation/recovery report still requires the owner's approved text/destination.
+
+## Original-operation bootstrap and path selection
+
+For #240, #216 and the Windows Root follow-up in #200, use the internal host
+entry only after agreeing a bounded read with that particular owner. This is
+review material, not permission to connect or to repeat installation:
+
+```sh
+python3 scripts/root-passive-inspection.py --operation ORIGINAL_UUID
+```
+
+Resolve `ORIGINAL_UUID` locally under the original installer account using the
+[local lookup](ROOT-READONLY-ADMISSION.md#prepare-locally-without-a-tv-connection).
+Exactly one saved Root install must match. Never post a profile, address, UUID or
+key. No `--host` override, replacement profile or latest-stage selection exists.
+The original local cytv host pin is mandatory. If separately agreed, add
+`--interactive-auth` for hidden local password/key-passphrase entry; echoed input,
+new host trust and automatic agent reconnect are refused. Nothing is staged
+before or after authentication. EOF, cancellation, timeout and partial SSH auth
+stop the invocation without changing pending/trust/profile bytes.
+
+The trusted host Node program reads only the exact UUID's request, submission,
+root/updater manifests, pinned worker driver bytes and bounded worker-log tail.
+It compares UUID/action, candidate and worker-manifest hashes; this is internal
+consistency, not authentication of every original package or an admission proof.
+It never scans other operations or `/tmp`. A blocked/non-root-deploy request
+cannot be converted into an eligible worker by this reader. Unknown additional
+supervisor candidate layouts refuse rather than relaxing the comparison.
+
+Python path selection reads binding/launcher/inventory/executable as data in the
+normal Root, Root Updater and System Updater order. Only exact archive paths
+retained in the matching original local pending record may extend that list.
+Symlinks, hardlinks, unsafe owners/modes, malformed/oversized/short/replaced files,
+incomplete bindings and digest mismatches refuse. Private launcher bytes, pinned
+archive identity, inventory digest and executable hash/mode must match. It does
+not execute Python, a shell launcher, retained code or a worker, call Luna,
+acquire a device lease, create files or change permissions. Reads may update
+access times. The snapshot does not prove process quiescence or rule out a live
+writer after the read.
+
+Only fixed JSON categories are exported:
+
+| Field | Meaning |
+| --- | --- |
+| `status: read` | Bounded exact-operation reads and internal comparisons completed |
+| `missing`, `unsafe`, `inconsistent`, `unavailable` | Stop; preserve all evidence and review privately |
+| `operation: consistent-not-admission` | Request/submission/snapshot identities agree; no cancellation authority |
+| `worker: exception-recorded` / `unclassified` | A complete allowlisted exception line was present / no such classification; no raw text |
+| `python: system-default-unverified` | No retained private binding was selected; system Python is neither executed nor verified |
+| `python: private-bytes-match-unexecuted` | Selected pinned private bytes agree; interpreter/ELF-loader execution remains untested |
+
+Current Root install status at host stage `coordinator-submitted` uses this same
+passive read and returns recovery-required with resume disabled. It does not
+stage another coordinator, execute retained binding helpers, finish the host
+pending record or repeat a worker after SSH exit 127. Successful normal installs
+continue through their original foreground path; this is no recovery shortcut.
+Other maintenance states keep existing guards. The report retains only the
+allowlisted `product.passive` categories. Do not ask owners to rerun status just
+to collect them.
+
+Any refusal stops. Do not chmod, patch journals, replace runtime, guess another
+path, replay status through an older installer or infer no Home effects. Neither
+this summary nor a successful manual Python invocation establishes the original
+deployment cause, supported routing, cancellation, preserved root or installation
+success. #133's separately pinned admission handoff and #161's foreign-Home
+refusal remain unchanged. A later executable probe or recovery needs a separate
+reviewed scope and owner agreement.

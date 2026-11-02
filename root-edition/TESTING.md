@@ -3,10 +3,15 @@
 Historical result (2026-10-27): [corrected C3 acceptance and manual physical rollback](../docs/RELEASE-1.4.0-ACCEPTANCE.md) passed in the recorded scope. The maintainer accepted #90 and requested closure. Pending statements below describe earlier investigation checkpoints; other hardware remains unverified.
 
 For current setup use [installation](../docs/INSTALL.md), [update preparation](UPDATES.md)
-and [current release limits](../docs/RELEASE-1.5.3.md). The
+and [current release limits](../docs/RELEASE-1.6.0.md). The
 [1.4.0 acceptance](../docs/RELEASE-1.4.0-ACCEPTANCE.md) remains historical; the
 Root 0.6.1 standby failure in [#171](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/171)
-is unresolved, and candidate Root 0.6.2 adds diagnostics rather than a proven fix.
+is unresolved. Root 0.7.0 has scoped signed-update, active retained-rollback,
+physical controls/audio, startup and emergency/fault/failsafe evidence in the
+[current artifact-bound acceptance record](../docs/history/2026-11-02-release-1.6.0-final-acceptance.md).
+The owner accepted the documented standby presentation limitation for 1.6.0;
+this does not establish a fix for #171. See
+[Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases) for published downloads.
 This is a developer test plan; bounded trials below are not a normal installer
 Keep/confirmation step. Dated checkpoints retain their original builds and do
 not override later issue evidence or accept new candidate artifacts.
@@ -71,8 +76,10 @@ SSH keys, private backups, firmware images or complete device logs.
 
 ## Integrated candidate acceptance record
 
-For the new package, record its `bundle.json` SHA-256 before starting. Earlier
-private tests do not count as acceptance of this build. Run these steps together:
+For each selected package, record its `bundle.json` SHA-256 before starting.
+Use the linked current acceptance record for completed exact-artifact scenarios;
+repeat only cases selected by changed bytes or preconditions. This checklist
+describes the required evidence, not a blanket statement that every case is pending:
 
 1. Inspect existing recovery/updater state before replacing anything; check the
    candidate payload and record its exact source/build. Do not bypass retained

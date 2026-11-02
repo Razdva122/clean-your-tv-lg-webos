@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [v1.6.0 final candidate artifacts and exact carry](2026-11-02-release-1.6.0-final-artifacts.md)
+
 [Current user documentation](../README.md) · [Developer references](../development/README.md)
 
 These are historical records, not current setup instructions. They retain their
@@ -7,6 +9,16 @@ original versions, dates, failed attempts and test limits. A recorded success on
 one model or artifact does not certify later releases or a different TV.
 
 ## Scoped feature checks
+
+- [Release1.6.0 freeze/build, 2026-11-02](2026-11-02-release-1.6.0-freeze.md): selected versions, frozen scope, cross-platform build identities and remaining acceptance gates.
+
+- [Combined five-stage installer regression audit, 2026-11-02](2026-11-02-installer-five-stage-regression.md): diagnostic/recovery/outcome/admission/guidance interactions and the remaining frozen-build, Android and device release gates.
+
+- [Early Root admission and connection guidance, 2026-11-01](2026-11-01-installer-preflight-help.md): pre-mutation interface checks, typed localized advice and unchanged pending/trust guards; no physical acceptance.
+
+- [Separate installer outcomes, 2026-11-01](2026-11-01-installer-outcomes.md): distinct package/startup/owner-observed Home evidence, default skip and local reports; no physical compatibility claim.
+
+- [Installer recovery journey, 2026-11-01](2026-11-01-installer-recovery-journey.md): separately confirmed recovery, existing guards, no implicit reinstall and accurate blocked results; original #201/#216 recovery remains unresolved.
 
 - [Automatic Chinese font preparation, 2026-11-01](2026-11-01-automatic-chinese-fonts.md): #228 compact generated subsets, pinned host-only sources, offline reuse and mixed SC/TC fallback; physical rendering remains unverified.
 
@@ -18,6 +30,7 @@ one model or artifact does not certify later releases or a different TV.
 
 - [Parallel Root integration review, 2026-11-01](2026-11-01-parallel-root-integration-review.md): independent #221/#222 review, combined Qt/browser/host checks and outstanding signed-package/device gates.
 
+- [Forward Home cancellation investigation, 2026-11-02](2026-11-02-root-forward-home-cancellation.md): original System/Root call chain, recovered evidence limit and indistinguishable old boot/Off receipts; #202 remains unresolved.
 - [Root Settings and update intent, 2026-11-01](2026-11-01-root-home-settings-intent.md): host regressions for #206 and partial #202 retained rollback; old forward-callback cancellation and physical acceptance remain unresolved.
 - [Retro API 1 integration, 2026-11-01](2026-11-01-retro-integration.md): pinned package/browser review for #215; original font/effect/date scope and physical-TV acceptance remain separate.
 
@@ -61,6 +74,10 @@ one model or artifact does not certify later releases or a different TV.
 - [0.9.0](../RELEASE-0.9.0.md)
 
 ## Acceptance and validation
+
+- [1.6.0 final acceptance follow-up, 2026-11-02](2026-11-02-release-1.6.0-final-acceptance.md): accepted standby limitation, advanced controls, frozen-renderer/observer recovery, genuine failsafe and native Android/exact System fixtures; replacement-build binding is recorded separately.
+
+- [1.6.0 exact-package C3 and Android emulator QA, 2026-11-02](2026-11-02-release-1.6.0-hardware-qa.md): scoped Root controls/power/update/active rollback, original-signer Android retention and remaining first-screen/coverage limits; not full release acceptance.
 
 - [1.5.3 owner-supervised C3 matrix](2026-10-31-release-1.5.3-physical-qa.md): exact installed candidate, successful scoped checks and two unresolved Home failures; candidate not accepted.
 

@@ -88,7 +88,9 @@ def main():
     parser.add_argument('--code-sha256')
     parser.add_argument('--proof-sha256')
     parser.add_argument('--confirm-lg-home',action='store_true',help='Confirm LG Home and normal remote controls work immediately before removal')
+    parser.add_argument('--interactive-auth',action='store_true',help='Inspect only: allow a hidden local SSH secret prompt; never change saved trust or credentials')
     args=parser.parse_args()
+    if args.interactive_auth and args.action!='inspect':parser.error('--interactive-auth is inspect only')
     if args.action=='remove' and not args.confirm_lg_home:parser.error('remove requires fresh LG Home/control confirmation with --confirm-lg-home')
     manifest,modules,pin=code_inventory(args.code_bundle)
     if args.action=='digest':print(pin);return
@@ -102,11 +104,12 @@ def main():
     store=state.Store();profiles=[p for p in store.profiles() if p['edition']=='root' and (store.pending(p) or {}).get('product_operation')==args.operation]
     if len(profiles)!=1:raise ValueError('exactly_one_matching_saved_root_profile_required')
     profile=profiles[0]
-    from cytv.transport import SSH
+    from cytv.transport import SSH, inspection_secret
     from cytv.operations import Installer
     def secret(_):raise RuntimeError('saved_automatic_authentication_required')
     with store.lock(profile):
-        remote=SSH.connect(profile,store.device_dir(profile),secret,lambda *_:False)
+        remote=SSH.connect(profile,store.device_dir(profile),inspection_secret if args.interactive_auth else secret,
+                           lambda *_:False,**({'persist':False} if args.action=='inspect' else {}))
         try:
             stage='/tmp/cytv-recovery-'+uuid.uuid4().hex
             remote.run('umask 077; mkdir '+shlex.quote(stage))

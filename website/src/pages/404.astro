@@ -1,0 +1,34 @@
+---
+import { locales, copy, route, base } from "../lib/site";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Page not found | Clean Your TV</title>
+  </head>
+  <body>
+    <main class="shell missing-page">
+      <h1>Page not found</h1>
+      <p>
+        <a href={base}>Clean Your TV</a>
+      </p>
+      <ul>
+        {locales.map((lang) => (
+          <li>
+            <a lang={lang} href={route(lang)}>
+              {copy[lang].name}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </main>
+  </body>
+</html>
+
+<style is:global>
+  @import "../styles.css";
+</style>

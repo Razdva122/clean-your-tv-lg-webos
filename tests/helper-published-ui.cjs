@@ -76,15 +76,24 @@ for (const reply of [publishedStatus(true), {returnValue: true, running: false, 
   assert.equal(ui.calls.filter(c => c.params.params && c.params.params.nativeHomeStart === true).length, 1);
 }
 assert.equal(panel({returnValue: true, running: true}).buttons[1].disabled, false, 'current protocol remains supported');
+// #196: an LS2 refusal is independent of the authenticated same-package broker.
+for (const enabled of [true, false]) {
+  const ui = panel({returnValue:false,errorCode:-1}, {returnValue:true,enabled});
+  assert.equal(ui.buttons[1].disabled, false, 'cross-package refusal must not hide responsive Home settings');
+  assert.equal(ui.buttons[2].hidden, true, 'responsive controller needs no restart');
+  assert.equal(ui.calls.length, 2);
+  assert.equal(ui.calls.some(c => c.uri.endsWith('/launch')), false);
+}
 for (const reply of [{returnValue: false, errorCode: -1, errorText: 'Denied method call "status" for category "/"'}, {returnValue: false}, {returnValue: true, running: null}, {returnValue: true, running: 'true'}, null, undefined]) {
-  const ui = panel(reply);
+  const ui = panel(reply, {returnValue:false});
   if (reply === undefined) for (const callback of [...ui.timers.values()]) callback();
   assert.equal(ui.buttons[1].disabled, true);
   assert.equal(ui.buttons[2].hidden, false, 'unknown status still permits a confirmed manual start');
   assert.match(ui.status.textContent, /status could not be checked/);
-  assert.equal(ui.calls.length, 1, 'unknown status never launches Helper automatically');
+  assert.equal(ui.calls.length, reply && reply.returnValue === false ? 2 : 1, 'only explicit service refusals probe the independent broker');
+  const beforeStart = ui.calls.length;
   ui.buttons[2].onclick();
-  assert.equal(ui.calls.length, 1, 'Start must wait for confirmation');
+  assert.equal(ui.calls.length, beforeStart, 'Start must wait for confirmation');
   ui.window.confirmStart();
   assert.equal(ui.calls.filter(c => c.params.params && c.params.params.nativeHomeStart === true).length, 1);
 }

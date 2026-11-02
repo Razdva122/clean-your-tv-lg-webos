@@ -1,0 +1,27 @@
+{
+  "scanned": "2026-11-02",
+  "findings": {
+    "fonts": "System website stack; approved brand uses Outfit (assets/brand/README.md:18). Local Outfit fonts available in launcher/fonts.",
+    "palette": "Approved B1 #241D19 #FF4C20 #FFF8EB (assets/brand/README.md:21-29)",
+    "motion": "No motion dependency; CSS only",
+    "spacing": "Existing 1320/1440 containers and ad hoc spacing (website/src/styles.css)",
+    "framework": "Astro7.4.4 static, TypeScript, Markdown (website/package.json)",
+    "material": "Three real product screenshots, existing logo, running demo; no fabricated metrics or testimonials"
+  },
+  "preserve": [
+    "brand identity",
+    "all12 locales and72 routes",
+    "every existing fact, link, test hook, guide and demo behavior"
+  ],
+  "introduce": [
+    "new home composition",
+    "single token system",
+    "readable responsive documentation shell",
+    "Hallmark audits and captures"
+  ],
+  "pages": {
+    "home": "website/src/components/Home.astro",
+    "documentation": "website/src/pages/[lang]/[section].astro",
+    "shared": "website/src/layouts/Site.astro"
+  }
+}

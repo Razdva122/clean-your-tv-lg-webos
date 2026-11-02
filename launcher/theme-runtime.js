@@ -89,6 +89,9 @@
         appendCss('\n' + background.replace(/;\}$/, '!important;}'));
       });
     });
+    if (manifest.layout.datePlacement === 'below-clock') {
+      appendCss('\n#homeSurface.ctv-home #timeRow{flex-wrap:wrap;}#homeSurface.ctv-home #timeRow .divider{display:none;}#homeSurface.ctv-home #date{width:100%;margin:16px 0 0;white-space:normal;line-height:1.4;}');
+    }
     if (manifest.layout.ribbon) {
       var r = manifest.layout.ribbon, prefix = '#homeSurface.ctv-home[data-ribbon="true"] ';
       function ribbonRule(selector, declarations) { appendCss('\n' + prefix + selector + '{' + declarations + '}'); }

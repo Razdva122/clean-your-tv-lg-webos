@@ -281,6 +281,15 @@
         "shortcut",
         "input-tile"
       ]
+    },
+    "date-placement-v1": {
+      "layout": "datePlacement",
+      "preset": "dock-grid",
+      "values": [
+        "inline",
+        "below-clock"
+      ],
+      "paired": true
     }
   },
   "clockDateFontSize": [

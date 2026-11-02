@@ -114,3 +114,13 @@ installation/removal, controls/emergency state, audio, standby, cold boot and
 signed update/rollback with an owner-authorized device session. Unknown target
 userland ABI remains unknown; `uname -m` alone is insufficient. Existing older
 routing work such as #107 is separate. No new device request is made here.
+
+
+## Next prerequisite: vendor bootstrap and firmware contract
+
+[2026-11-02 source/host investigation](../history/2026-11-02-legacy-root-prerequisites.md)
+rechecked the generated closure after v1.6.0. The next missing evidence is the
+**target firmware's bootstrap/module closure and Home interface readback**.
+More transpilation or lowering Doctor's version requirement cannot supply it.
+The record separates executable host evidence from target ABI, routing and
+owner-supervised acceptance; it does not introduce an installation procedure.

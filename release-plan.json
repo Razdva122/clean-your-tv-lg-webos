@@ -3,114 +3,55 @@
   "version": null,
   "changes": [
     {
-      "pr": 194,
+      "pr": 237,
+      "issues": [],
+      "summary": "Integrate 12-language static website source; publication remains deferred until the later main-release decision"
+    },
+    {
+      "pr": 247,
+      "issues": [
+        196
+      ],
+      "summary": "Allow Home broker settings after explicit cross-package Helper status refusal; original #196 device confirmation remains outstanding"
+    },
+    {
+      "pr": 248,
+      "issues": [
+        171
+      ],
+      "summary": "Add simulated cross-component Root wake/startup safety regressions and document missing evidence; original #171 remains unresolved"
+    },
+    {
+      "pr": 249,
       "issues": [
         160,
         164
       ],
-      "summary": "Add opt-in host-only Root Node 0.12.2 prototype and legacy HTTPS options correction; Node 8+ admission retained, #160/#164 installation paths remain unresolved"
+      "summary": "Document target vendor ABI/bootstrap and Home-contract prerequisites; original #160/#164 support remains unresolved"
     },
     {
-      "pr": 197,
-      "issues": [],
-      "summary": "Add Minimal 1.0.1 and preserve existing theme order; append new community themes, with maintainer browser acceptance only"
-    },
-    {
-      "pr": 212,
-      "issues": [
-        152
-      ],
-      "summary": "Guarded No-root Helper stop after service refusal and prefixed WebKit layouts; #152 actual device recovery/control acceptance remains pending"
-    },
-    {
-      "pr": 213,
-      "issues": [
-        161
-      ],
-      "summary": "Document passive bounded Root worker diagnostics before admission; #161 actual recovery remains unresolved pending owner evidence"
-    },
-    {
-      "pr": 214,
-      "issues": [],
-      "summary": "Simplify theme suggestions and move review work to maintainers"
-    },
-    {
-      "pr": 215,
+      "pr": 250,
       "issues": [
         69
       ],
-      "summary": "Integrate Retro 1.0.0 API 1 with verified corrected distribution pin and offline catalogue; original font/effect/date requirements in #69 remain follow-up"
+      "summary": "Add optional date below clock for dock-grid themes; cursor/blink and stepped effects removed, Retro bytes unchanged and original #69 remains partial"
     },
     {
-      "pr": 218,
+      "pr": 251,
       "issues": [
-        201
+        202
       ],
-      "summary": "Preserve pending No-root journals when installer termination is unproven; #201 reconciliation remains unresolved"
+      "summary": "Characterize indistinguishable old boot/Off cancellation receipts; original #202 forward-update caller remains unknown"
     },
     {
-      "pr": 219,
-      "issues": [
-        69
-      ],
-      "summary": "Remove retired standalone web Showcase builder/assets/tests; retain inline theme preview, TV catalogue and author runtime cards"
-    },
-    {
-      "pr": 220,
-      "issues": [
-        200
-      ],
-      "summary": "Add allowlisted host Python download/cache failure reasons; #200 original macOS cause and pending Root recovery remain unresolved"
-    },
-    {
-      "pr": 221,
+      "pr": 253,
       "issues": [
         101,
-        133,
-        161,
         200,
-        216
+        216,
+        240
       ],
-      "summary": "Prepare pinned individual Root recovery handoffs and fixed host command-boundary diagnostics; original #101/#133/#161/#216/#200 recovery remains unresolved"
-    },
-    {
-      "pr": 222,
-      "issues": [
-        202,
-        206
-      ],
-      "summary": "Refresh Root Settings status before resumed actions and preserve retained-rollback Home capture; partial #202, old forward cancellation and exact-package device acceptance remain unresolved"
-    },
-    {
-      "pr": 223,
-      "issues": [],
-      "summary": "Skip closed-PR policy preflight writes; preserve SHA-shared open gates; workflow prevention activates on normal main release"
-    },
-    {
-      "pr": 224,
-      "issues": [
-        211
-      ],
-      "summary": "Add Czech TV Home/Root/settings/theme/audio/updater localization and preserve cs profiles; installer language scope unchanged"
-    },
-    {
-      "pr": 225,
-      "issues": [
-        207
-      ],
-      "summary": "Add adaptive 720p Home and explicit HD source builds plus read-only IR/panel diagnostics; standard-remote routing and normal-channel HD delivery remain unresolved"
-    },
-    {
-      "pr": 226,
-      "issues": [
-        207
-      ],
-      "summary": "Select verified HD/FHD packages across desktop/Android and signed OTA; preserve exact rollback, require updater migration and retain unresolved IR/physical acceptance"
-    },
-    {
-      "pr": 228,
-      "issues": [],
-      "summary": "Generate compact Chinese subsets automatically from catalog/compiler inputs with pinned host-only sources, offline cache and SC/TC fallback; physical rendering remains unverified"
+      "summary": "Add pinned inspect-only authentication and passive Root data collection without staging or execution; original #101/#200/#216/#240 recoveries remain unresolved"
     }
   ],
   "excluded": [],

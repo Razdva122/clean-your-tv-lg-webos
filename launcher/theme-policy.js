@@ -143,8 +143,8 @@
     if (m.id.indexOf('github:') === 0 && m.id.split(':')[1] !== m.source.repository.slice(19).toLowerCase()) fail('manifest-invalid', 'source.identity');
     object(m.requires, ['minimumHomeVersion', 'capabilities'], 'manifest-invalid', 'requires');
     version(m.requires.minimumHomeVersion);
-    list(m.requires.capabilities, 2, 'api-unsupported', 'capabilities').forEach(function (capability, index) { if (['modern-icon-css-v1', 'ribbon-layout-v1', 'classic-motion-v1'].indexOf(capability) < 0 || m.requires.capabilities.indexOf(capability) !== index) fail('api-unsupported', 'capabilities'); });
-    object(m.layout, ['preset', 'columns', 'spacingScale', 'textScale', 'focusScale'], 'layout-invalid', 'layout', ['allowColumnOverride', 'ribbon', 'motion']);
+    list(m.requires.capabilities, 3, 'api-unsupported', 'capabilities').forEach(function (capability, index) { if (['modern-icon-css-v1', 'ribbon-layout-v1', 'classic-motion-v1', 'date-placement-v1'].indexOf(capability) < 0 || m.requires.capabilities.indexOf(capability) !== index) fail('api-unsupported', 'capabilities'); });
+    object(m.layout, ['preset', 'columns', 'spacingScale', 'textScale', 'focusScale'], 'layout-invalid', 'layout', ['allowColumnOverride', 'ribbon', 'motion', 'datePlacement']);
     if (['dock-grid', 'icon-grid', 'side-grid', 'channel-list', 'scenic-grid'].indexOf(m.layout.preset) < 0) fail('layout-invalid', 'preset');
     if (Object.prototype.hasOwnProperty.call(m.layout, 'allowColumnOverride') && typeof m.layout.allowColumnOverride !== 'boolean') fail('layout-invalid', 'allowColumnOverride');
     number(m.layout.columns, 1, 8, 'layout-invalid', 'columns');
@@ -152,6 +152,9 @@
     number(m.layout.spacingScale, .8, 1.2, 'layout-invalid', 'spacingScale');
     number(m.layout.textScale, .9, 1.25, 'layout-invalid', 'textScale');
     number(m.layout.focusScale, 1.05, 1.15, 'layout-invalid', 'focusScale');
+    var hasDatePlacement = Object.prototype.hasOwnProperty.call(m.layout, 'datePlacement');
+    if (hasDatePlacement !== (m.requires.capabilities.indexOf('date-placement-v1') >= 0)) fail('api-unsupported', 'date-placement-v1');
+    if (hasDatePlacement && (m.layout.preset !== 'dock-grid' || ['inline', 'below-clock'].indexOf(m.layout.datePlacement) < 0)) fail('layout-invalid', 'datePlacement');
     var hasRibbon = Object.prototype.hasOwnProperty.call(m.layout, 'ribbon'), normalizedRibbon;
     if (hasRibbon !== (m.requires.capabilities.indexOf('ribbon-layout-v1') >= 0)) fail('api-unsupported', 'ribbon-layout-v1');
     if (hasRibbon) {

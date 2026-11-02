@@ -1,8 +1,11 @@
 # Root runtime contract
 
-Published 1.5.2 contains Root 0.6.1; the unpublished 1.5.3 candidate selects
-Root 0.6.2. Historical tests retain their exact artifact scope; see the
-[current release and acceptance limits](../../docs/RELEASE-1.5.3.md).
+Release 1.6.0 uses Root/infrastructure 0.7.0. See
+[Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases) for published
+downloads, [release limits](../../docs/RELEASE-1.6.0.md) and
+[artifact-bound acceptance](../../docs/history/2026-11-02-release-1.6.0-final-acceptance.md).
+Existing System 1.1.2 remains pinned; fresh physical System 1.2.0 and general
+supervisor migration are not accepted by the recorded C3 tests.
 
 Install these Python files under `/var/lib/clean-your-tv-root/runtime` as root-owned files without group/world write permission. Python 3.9+ and `/usr/bin/luna-send` are required; Root setup also requires TV Node.js 8+,
 Homebrew services and supported ARM32 input. With system Python, invoke
@@ -115,9 +118,11 @@ verified native channel, or other/missing, and record whether a nonempty firmwar
 first-app ID matched. They do not persist private app IDs or inventories. The
 recorded `preserved-foreground` outcomes and empty `firstAppId` are historical
 old-candidate observations. Host regressions reproduce that native-TV rejection
-and verify the corrected metadata gate; installation/physical acceptance of the
-new code is still required separately for RC-START-05 and RC-START-08. Active
-intent and installation alone do not establish automatic foreground acceptance.
+and verify the corrected metadata gate. The current linked C3 record separately
+observes cold-start presentation and a delayed automatic standby start through a
+new-session boot fallback. It does not accept immediate standby first-screen
+presentation or resolve #171. Active intent and installation alone do not
+establish automatic foreground acceptance.
 
 For the unresolved Root 0.6.1 standby report [#171](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/171),
 the 1.5.3 candidate adds diagnostic coverage only. Every invoked wake presenter,
