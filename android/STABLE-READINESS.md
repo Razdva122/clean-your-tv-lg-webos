@@ -1,5 +1,7 @@
 # Android stable readiness
 
+> Candidate 1.7.0 selects Android 0.7.0 / versionCode 18. This is unpublished and has no new artifact-bound upgrade/retention acceptance; the 1.6.0 evidence below does not transfer to replacement APK bytes.
+
 Release **1.6.0** uses **Android 0.6.0 / versionCode 17**. See
 [Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases) for
 published downloads and [1.6.0 scope](../docs/RELEASE-1.6.0.md). The

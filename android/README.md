@@ -1,5 +1,7 @@
 # Install Clean Your TV from Android
 
+> Unpublished candidate 1.7.0 rebuilds Android 0.7.0 / versionCode 18 with shared installer and payload changes. Exact signer/payload and in-place upgrade acceptance are pending; the earlier acceptance below remains scoped to its original APK.
+
 > Release 1.6.0 uses Android 0.6.0 / versionCode 17. See [Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases) for published downloads and [artifact-bound acceptance and limits](../docs/history/2026-11-02-release-1.6.0-final-acceptance.md).
 
 Use your phone to install either **No-root** (Developer Mode) or **Root**

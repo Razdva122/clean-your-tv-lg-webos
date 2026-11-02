@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": null,
+  "version": "1.7.0",
   "changes": [
     {
       "pr": 237,
@@ -74,6 +74,13 @@
       "pr": 254,
       "issues": [],
       "summary": "Let themes choose header menu or shelf; bundle Liquid Glass and move Alpine to Showcase; synchronize rounded previews and connected labels; live preview defaults off with unresolved firmware audio/HDR behavior"
+    },
+    {
+      "pr": 255,
+      "issues": [
+        171
+      ],
+      "summary": "Prepare configurable native Root startup sources, visibly disable source controls with Home Off, and remove all late boot/wake app launches; original #171 awaits exact-package physical acceptance"
     },
     {
       "pr": 256,

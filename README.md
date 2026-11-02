@@ -50,11 +50,11 @@ and creating your own theme.
 
 ## Download and install
 
-> Root Home may open after an initial LG Channels screen following standby (#171). See [1.6.0 changes, migration and scoped acceptance](docs/RELEASE-1.6.0.md).
+> Published 1.6.0 retains the initial LG Channels/late Home standby limitation (#171). The unpublished [1.7.0 candidate](docs/RELEASE-1.7.0.md) replaces late launches with native startup choices; exact-package acceptance is pending.
 > Download buttons follow the latest published release. On `release/next`, version metadata describes the selected candidate until publication.
 
 <!-- release:downloads -->
-Current stable release: **[v1.6.0](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.6.0)** — [release notes](docs/RELEASE-1.6.0.md).
+Current stable release: **[v1.7.0](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.7.0)** — [release notes](docs/RELEASE-1.7.0.md).
 <!-- /release:downloads -->
 
 [![Download Windows x64 graphical installer — GUI ZIP](assets/brand/downloads/windows.svg)](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/cytv-windows-x64-desktop.zip)
@@ -134,16 +134,16 @@ For contributors: [build and technical references](docs/development/README.md),
 <!-- release:components -->
 | Component | Stable version |
 | --- | --- |
-| cytv installer | 0.7.0 |
-| Home | 1.7.0 |
+| cytv installer | 0.8.0 |
+| Home | 1.8.0 |
 | Home Helper | 0.6.21 |
-| Root edition | 0.7.0 |
-| Both edition Updaters | 0.4.0 |
-| Android installer / versionCode | 0.6.0 / 17 |
+| Root edition | 0.8.0 |
+| Both edition Updaters | 0.4.2 |
+| Android installer / versionCode | 0.7.0 / 18 |
 <!-- /release:components -->
 
 Candidate System Updater: 1.2.0 / protocol 1. Existing supervisors stay pinned; installed 1.1.2 has no general replacement path in this candidate.
-See the [candidate release notes](docs/RELEASE-1.6.0.md)
+See the [candidate release notes](docs/RELEASE-1.7.0.md)
 and [TV acceptance and limits](docs/RELEASE-1.5.0.md).
 
 </details>

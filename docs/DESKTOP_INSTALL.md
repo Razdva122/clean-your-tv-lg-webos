@@ -1,5 +1,7 @@
 # Install cytv without a terminal
 
+> Candidate 1.7.0 rebuilds cytv 0.8.0 with passive Root inspection and guarded pre-submission No-root removal recovery. Published 1.6.0 acceptance does not certify the new installer bytes.
+
 > See [1.6.0 versions, installer changes and limits](RELEASE-1.6.0.md) and the [dated acceptance scope](history/2026-11-02-release-1.6.0-final-acceptance.md). Obtain available packages from [GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases).
 
 Download the desktop package from the

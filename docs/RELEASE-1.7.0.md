@@ -1,0 +1,78 @@
+# v1.7.0 — Native Root startup choices and theme-owned inputs
+
+This is an **unpublished release candidate**, prepared for exact-package acceptance.
+Download links on `main` still describe the published release until publication.
+Source integration and successful builds do not certify physical TV behavior.
+
+## Changes
+
+- Root prepares Clean as the native startup input for selected prior sources.
+  In Home settings, **Open Clean Your TV first** defaults to **LG Channels / Live
+  TV** on, **YouTube** and **HDMI** off. With **Change Home** off, these controls
+  remain visible, muted and disabled with an explanation; saved choices remain.
+  All late boot/wake application-launch paths are removed. Unknown/native API
+  failures do not trigger a delayed redirect or automatic Home re-enable.
+- Root keeps normal-start, shutdown proof, current session/binding, input and
+  guardian health, explicit Off, emergency, key-up and watchdog guards. Native
+  selection is event-driven, bounded and reversible under the existing lock.
+  A separate root-private source-policy file does not extend the installed System
+  supervisor's legacy profile schema. It is local to the TV, not portable export.
+- Themes choose header menu or input shelf. Built-ins are Classic, Liquid Glass
+  and Ribbon; pinned Alpine remains available through Showcase. Preview layers
+  switch together, inherit rounding and label unnamed connected inputs. Live
+  preview defaults off and remains experimental: firmware audio/HDR behavior is
+  unresolved. Optional date appears below the clock; Retro bytes are unchanged.
+- Home broker settings retain access after an explicit cross-package Helper
+  status refusal. Original device acceptance for #196 is still outstanding.
+- Desktop/Android installers add pinned inspect-only Root collection and preserve
+  recovery for a No-root removal stopped before package submission. Uncertain
+  submitted operations still require terminal authority and confirmed LG Home.
+  Passive collection does not stage or execute device changes. Original device
+  recovery reports remain unresolved.
+- Legacy vendor/bootstrap prerequisites and Root wake/forward-cancellation
+  characterization improve diagnostics without granting unsupported hardware
+  compatibility. The multilingual website source is included; deployment follows
+  a later authorized main merge, not candidate preparation.
+
+## Versions and packaging
+
+| Component | Published 1.6.0 | Candidate 1.7.0 | Reason |
+| --- | --- | --- | --- |
+| Home | 1.7.0 | 1.8.0 | Theme/input panel, preview and date behavior |
+| Home Helper | 0.6.21 | 0.6.21 | Keep immutable published native package |
+| cytv | 0.7.0 | 0.8.0 | Inspection and recovery behavior; rebuilt payloads |
+| Android | 0.6.0 / code 17 | 0.7.0 / code 18 | Shared installer and embedded payload changes |
+| Root / infrastructure | 0.7.0 | 0.8.0 | Native source policy, Settings and removal of late launches |
+| Both independent Updaters | 0.4.0 | 0.4.2 | Rebuilt shared UI/locales and recovery support; distinct package bytes |
+| System target / protocol | 1.2.0 / 1 | 1.2.0 / 1 | Supervisor unchanged; retained 1.1.2 remains separate |
+
+Root, infrastructure, both edition Updaters, HD/FHD Home/Root and all installers
+must be rebuilt together. Updater 0.4.1 was not a public release; 0.4.2 avoids
+reusing preliminary package identities. The existing Helper is reused byte-for-byte.
+No application ID, signing identity, trust rule or public endpoint changes.
+
+## Acceptance and known limits
+
+- #171 stays open. Final candidate standby and true cold start must separately
+  establish the first screen, source defaults/opt-ins/opt-outs, retained intent,
+  Home/Back/other controls/audio, disabled Settings, explicit Off and triple-Home.
+  Host regressions or earlier manual experiments do not accept the new packages.
+  Historical ENODEV/no-proof observer-exit failures are not waived.
+- Existing System 1.1.2 remains pinned with its prior channel behavior. Ordinary
+  component OTA does not replace the supervisor; there is no general migration
+  from that installed version. Do not delete state, reinstall or force equal
+  versions. Existing signed rollback and admission requirements remain in force.
+- #202 old forward callback, #201 uncertain No-root termination, #152 original
+  EF950V recovery, #101/#200/#216/#240 recoveries and #160/#164 legacy support
+  remain unresolved. Partial diagnostics and source fixes do not close reports.
+- New Android APK bytes require original-signer and exact-payload verification
+  plus an in-place upgrade/retention check. Prior emulator evidence retains its
+  original scope; no new phone or TV compatibility is claimed.
+- Homebrew catalogue promotion stays disabled. Audio/HDR preview limitations,
+  additional models/remotes, physical phone-to-TV paths and universal compatibility
+  are not accepted by CI.
+
+The frozen implementation inventory lives in `release-plan.json` and candidate
+[#246](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/246). A full build,
+signed Root QA bundle, artifact hashes and remaining acceptance gates are recorded
+there. Publication and a merge to `main` are separate decisions after acceptance.
