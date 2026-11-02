@@ -95,6 +95,11 @@
         171
       ],
       "summary": "Bind native startup selection to the acknowledged live guardian observer; withdraw owned preference across activation/operation-lock races and settings-service loss; final #171 device acceptance remains pending"
+    },
+    {
+      "pr": 258,
+      "issues": [],
+      "summary": "Fix Windows-only normalization in a profile-preservation test; product authentication behavior is unchanged"
     }
   ],
   "excluded": [],
