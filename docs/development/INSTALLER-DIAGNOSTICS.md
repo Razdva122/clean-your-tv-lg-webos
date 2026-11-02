@@ -93,3 +93,14 @@ clears emergency stop or changes permissions.
 startup observation and owner-reported physical Home results. These are
 invocation-local evidence, not deployment authority. Unknown or extra persisted
 values are removed/reclassified at export. See the [outcome contract](INSTALLER-OUTCOMES.md).
+
+## Passive Root submission status (next cycle)
+
+Root install status at `coordinator-submitted` reads original-operation data
+through system Node without staging a coordinator or executing retained Python.
+The additive `status.product.passive` projection contains fixed status,
+operation-consistency, worker and Python-byte categories only. Recovery-required
+remains; it cannot finish a pending record or grant resume. Matching interpreter
+bytes are not execution proof and a later status cannot identify the original
+SSH-127 deployment cause. See [the passive contract](ROOT-PASSIVE-DIAGNOSTICS.md#original-operation-bootstrap-and-path-selection)
+and [dated checks/limits](../history/2026-11-02-root-pinned-passive-inspection.md).

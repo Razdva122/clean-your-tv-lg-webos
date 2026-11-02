@@ -167,6 +167,11 @@ failure remains separate. Original causes and individual recovery are unresolved
 
 ## Code identity and records
 
+The [2026-11-02 host source record](../history/2026-11-02-root-pinned-passive-inspection.md)
+pins the new inspect-auth/passive implementation and its untested handoff limits.
+Existing #133 cancellation source and bundle pins below remain historical and
+must not be silently replaced with a newer host script.
+
 Use the exact code commit and pin in the
 [dated preparation record](../history/2026-11-01-root-recovery-handoffs.md#exact-source-and-retained-code).
 Rebuild from that commit, then require the locally generated `digest` output to
