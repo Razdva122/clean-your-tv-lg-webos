@@ -30,6 +30,7 @@ one model or artifact does not certify later releases or a different TV.
 
 - [Parallel Root integration review, 2026-11-01](2026-11-01-parallel-root-integration-review.md): independent #221/#222 review, combined Qt/browser/host checks and outstanding signed-package/device gates.
 
+- [Forward Home cancellation investigation, 2026-11-02](2026-11-02-root-forward-home-cancellation.md): original System/Root call chain, recovered evidence limit and indistinguishable old boot/Off receipts; #202 remains unresolved.
 - [Root Settings and update intent, 2026-11-01](2026-11-01-root-home-settings-intent.md): host regressions for #206 and partial #202 retained rollback; old forward-callback cancellation and physical acceptance remain unresolved.
 - [Retro API 1 integration, 2026-11-01](2026-11-01-retro-integration.md): pinned package/browser review for #215; original font/effect/date scope and physical-TV acceptance remain separate.
 
