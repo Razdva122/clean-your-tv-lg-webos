@@ -341,6 +341,8 @@ async function compileSource(input) {
     textScale: 1,
     focusScale: 1.1
   }, source.layout);
+  if (compiled.bundle.rules.some(r => r.declarations.some(d => d.property === 'transition' && /^steps\(/.test(d.value.easing)))) source.layout.steppedTransitions = true;
+  if (Object.hasOwn(source.layout, 'steppedTransitions') || Object.hasOwn(source.layout, 'datePlacement') || Object.hasOwn(source.layout, 'heroCursor')) source.requires.capabilities.push('retro-decoration-v1');
   if (Object.hasOwn(source.layout, 'ribbon')) source.requires.capabilities.push('ribbon-layout-v1');
   if (compiled.bundle.rules.some(r => r.declarations.some(d => d.property === 'transform')) && (source.layout.preset !== 'scenic-grid' || source.layout.columns > 5 || source.layout.allowColumnOverride !== false)) error('layout-invalid', 'icon scale requires fixed scenic-grid with at most five columns');
   source.defaults = Object.assign({
