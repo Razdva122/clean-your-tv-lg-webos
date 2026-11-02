@@ -74,3 +74,9 @@ This previews fixed reviewed versions rather than unpublished toolkit edits.
 Browser simulations do not establish physical-TV compatibility.
 
 - [Root Node 0.12.2 prototype](ROOT-NODE-PROTOTYPE.md): opt-in host builds and generated-closure tests; Node 8+ gate retained.
+
+## Product website
+
+[Multilingual GitHub Pages development](../../website/README.md) covers Astro,
+shared Markdown installation guides, translations, SEO checks and the embedded
+launcher demo.

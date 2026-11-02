@@ -1,0 +1,782 @@
+{
+  "en": {
+    "helpTitle": "Help and recovery",
+    "helpDescription": "Troubleshoot TV discovery, Developer Mode expiry, the Home button and interrupted Clean Your TV installations. Find safe next steps for LG webOS.",
+    "editionDescription": "Compare Clean Your TV Root and No-root: access requirements, TV runtimes, Developer Mode, updates and resuming Home after an emergency stop.",
+    "quickTitle": "From preview to your TV",
+    "steps": [
+      "Check compatibility and choose No-root for Developer Mode, or Root for existing root access.",
+      "Read the installation guide, download the published installer for your device and keep the TV on during setup.",
+      "Before daily use, check the remote, emergency exit, sound, standby and cold boot separately."
+    ],
+    "tableLabels": [
+      "Requirement",
+      "Access",
+      "TV runtime",
+      "Keep it working",
+      "Resume after emergency exit",
+      "Updates"
+    ],
+    "access": [
+      "Active LG Developer Mode, Key Server and local pairing",
+      "Existing root SSH and compatible TV services/input"
+    ],
+    "keep": [
+      "Extend the official Developer Mode timer before expiry; keep Helper pairing and local networking available",
+      "Keep independent recovery services and the runtimes they reference"
+    ],
+    "resume": [
+      "Open Home Helper, choose Start Helper and confirm",
+      "Turn Change Home on in Home settings"
+    ],
+    "updates": [
+      "On an unrooted TV, use the computer installer",
+      "On-TV signed updates need separately prepared compatible updater services; otherwise use the computer installer"
+    ],
+    "checksTitle": "What to check on your own TV",
+    "checks": [
+      "Open another app and press Home once. Check actual remote buttons and sound; package checks cannot observe them.",
+      "Test triple Home emergency exit before relying on Home control. Older Helper through 0.6.13 uses a long Home hold instead.",
+      "Test standby/wake and a true cold boot separately. A result on one firmware does not verify another model or version."
+    ],
+    "referenceLabel": "Full reference (English)",
+    "help": [
+      [
+        "The installer cannot find my TV",
+        "Keep the TV on and connect it and your computer or phone to the same trusted local network. Guest-network isolation, VPNs and firewalls can block discovery. Allow Local Network access. If discovery fails, use the address shown on the TV. No-root also needs Key Server and a separate pairing confirmation on the TV; use its passphrase, not your LG account password."
+      ],
+      [
+        "Developer Mode expired or apps disappeared",
+        "Expiry can remove sideloaded apps. Open Developer Mode and check the official session status. Before expiry, press EXTEND while the TV is online. Automatic renewal is optional Beta and off by default; continue monitoring the official timer. If apps are already missing, check the existing installation state before reinstalling. Never enable Developer Mode over existing root."
+      ],
+      [
+        "Home still opens LG Home",
+        "First distinguish installation success from actual Home routing. After an intentional emergency exit, resume explicitly: No-root uses Home Helper → Start Helper and confirmation; Root uses Change Home in Home settings. Opening Home alone does not clear the stop. Open LG Home visits the original screen once without changing the saved Home choice. If control fails again, leave LG Home active and save diagnostics."
+      ],
+      [
+        "Setup or removal was interrupted",
+        "Use the same saved TV connection and check status first. Keep the original failed-attempt report, journals and recovery files. Do not delete receipts, reset Developer Mode or repeat removal to force a fresh installation. Uncertain or busy state is a reason to stop and retain diagnostics. Use only the recovery actions documented for your installed version; candidate-only actions are not part of every published installer."
+      ],
+      [
+        "How do I return to LG Home, update or uninstall?",
+        "For an emergency stop, press Home three times within two seconds, releasing between presses; Helper through 0.6.13 instead uses a roughly two-second hold. Stop state persists until explicitly resumed. For maintenance use cytv and the saved TV connection. Do not uninstall first merely to update: that can erase app settings. Removing cytv from the computer does not remove TV apps. Keep recovery evidence after removal."
+      ]
+    ],
+    "tableHint": "Scroll sideways to compare both editions."
+  },
+  "de": {
+    "helpTitle": "Hilfe und Wiederherstellung",
+    "helpDescription": "Hilfe bei TV-Suche, abgelaufenem Developer Mode, Home-Steuerung und unterbrochener Clean Your TV-Installation auf LG webOS.",
+    "editionDescription": "Root und No-root vergleichen: Zugriff, TV-Laufzeiten, Developer Mode, Updates und Fortsetzen der Home-Steuerung nach dem Notausstieg.",
+    "quickTitle": "Von der Demo auf deinen Fernseher",
+    "steps": [
+      "Kompatibilität prüfen: No-root verwendet Developer Mode, Root benötigt vorhandenen Root-Zugriff.",
+      "Anleitung lesen, den veröffentlichten Installer für dein Gerät laden und den TV während der Einrichtung eingeschaltet lassen.",
+      "Vor dem Alltag Fernbedienung, Notausstieg, Ton, Bereitschaft und Kaltstart getrennt prüfen."
+    ],
+    "tableLabels": [
+      "Voraussetzung",
+      "Zugriff",
+      "TV-Laufzeit",
+      "Dauerhafte Voraussetzungen",
+      "Nach dem Notausstieg fortsetzen",
+      "Updates"
+    ],
+    "access": [
+      "Aktiver LG Developer Mode, Key Server und lokale Kopplung",
+      "Vorhandener Root-SSH-Zugriff und kompatible TV-Dienste/Eingabegeräte"
+    ],
+    "keep": [
+      "Offiziellen Developer-Mode-Timer rechtzeitig verlängern; Helper-Kopplung und lokales Netzwerk verfügbar halten",
+      "Unabhängige Wiederherstellungsdienste und ihre Laufzeiten erhalten"
+    ],
+    "resume": [
+      "Home Helper öffnen, Start Helper wählen und bestätigen",
+      "Change Home in den Home-Einstellungen einschalten"
+    ],
+    "updates": [
+      "Ohne Root den Computer-Installer verwenden",
+      "Signierte TV-Updates benötigen separat vorbereitete kompatible Updater-Dienste; sonst den Computer verwenden"
+    ],
+    "checksTitle": "Was du auf deinem eigenen TV prüfen solltest",
+    "checks": [
+      "Eine andere App öffnen und Home einmal drücken. Echte Fernbedienungstasten und Ton prüfen; Paketprüfungen können das nicht beobachten.",
+      "Notausstieg mit dreimal Home vor dem Alltag testen. Helper bis einschließlich 0.6.13 verwendet stattdessen langes Home.",
+      "Bereitschaft/Aufwachen und echten Kaltstart getrennt prüfen. Ein Ergebnis gilt nicht automatisch für andere Modelle oder Firmware-Versionen."
+    ],
+    "referenceLabel": "Vollständige Anleitung (Englisch)",
+    "help": [
+      [
+        "Der Installer findet meinen Fernseher nicht",
+        "TV eingeschaltet lassen und mit Computer oder Telefon in dasselbe vertrauenswürdige lokale Netzwerk verbinden. Gastnetz-Isolierung, VPN und Firewall können die Suche blockieren. Zugriff auf das lokale Netzwerk erlauben. Wenn die Suche scheitert, die am TV angezeigte Adresse eingeben. No-root benötigt außerdem Key Server und eine separate Kopplungsbestätigung am TV. Die TV-Passphrase verwenden, nicht das Passwort des LG-Kontos."
+      ],
+      [
+        "Developer Mode ist abgelaufen oder Apps fehlen",
+        "Nach Ablauf können seitlich installierte Apps entfernt werden. Developer Mode öffnen und den offiziellen Sitzungsstatus prüfen. Vor Ablauf bei online verbundenem TV EXTEND drücken. Automatische Verlängerung ist optionale Beta und standardmäßig aus; den Timer weiterhin kontrollieren. Fehlen bereits Apps, vor einer Neuinstallation den vorhandenen Installationsstatus prüfen. Developer Mode nie über bestehendem Root aktivieren."
+      ],
+      [
+        "Home öffnet weiterhin LG Home",
+        "Erfolgreiche Installation und tatsächliche Home-Umleitung getrennt betrachten. Nach einem absichtlichen Notausstieg ausdrücklich fortsetzen: No-root über Home Helper → Start Helper mit Bestätigung; Root über Change Home in den Home-Einstellungen. Home allein hebt den Stopp nicht auf. Open LG Home öffnet den Originalbildschirm einmal, ohne die gespeicherte Wahl zu ändern. Bei erneutem Fehler LG Home aktiv lassen und Diagnose speichern."
+      ],
+      [
+        "Einrichtung oder Entfernung wurde unterbrochen",
+        "Dieselbe gespeicherte TV-Verbindung wählen und zuerst den Status prüfen. Ursprünglichen Fehlerbericht, Journale und Wiederherstellungsdateien behalten. Keine Belege löschen, Developer Mode zurücksetzen oder Entfernung wiederholen, um eine neue Installation zu erzwingen. Bei unklarem oder beschäftigtem Zustand stoppen und Diagnose behalten. Nur für die eigene Version dokumentierte Wiederherstellung verwenden; Kandidatenaktionen sind nicht in jedem veröffentlichten Installer enthalten."
+      ],
+      [
+        "Wie kann ich LG Home wiederherstellen, aktualisieren oder deinstallieren?",
+        "Für den Notausstieg Home innerhalb von zwei Sekunden dreimal drücken und dazwischen loslassen. Helper bis einschließlich 0.6.13 verwendet stattdessen etwa zwei Sekunden Halten. Der Stopp bleibt bis zum ausdrücklichen Fortsetzen bestehen. Wartung über cytv und die gespeicherte Verbindung durchführen. Nicht allein für ein Update zuerst deinstallieren: App-Einstellungen können verloren gehen. Entfernen von cytv am Computer entfernt keine TV-Apps. Wiederherstellungsnachweise auch nach Entfernung behalten."
+      ]
+    ],
+    "tableHint": "Seitlich scrollen, um beide Editionen zu vergleichen."
+  },
+  "es": {
+    "helpTitle": "Ayuda y recuperación",
+    "helpDescription": "Resuelve problemas de detección del TV, Developer Mode, botón Home e instalaciones interrumpidas de Clean Your TV en LG webOS.",
+    "editionDescription": "Compara Root y No-root: acceso, entornos del TV, Developer Mode, actualizaciones y cómo reanudar Home tras una salida de emergencia.",
+    "quickTitle": "De la demo a tu televisor",
+    "steps": [
+      "Comprueba la compatibilidad: No-root usa Developer Mode; Root requiere acceso root existente.",
+      "Lee la guía, descarga el instalador publicado para tu dispositivo y mantén el TV encendido durante la configuración.",
+      "Antes del uso diario, prueba por separado mando, salida de emergencia, sonido, suspensión y arranque en frío."
+    ],
+    "tableLabels": [
+      "Requisito",
+      "Acceso",
+      "Entorno del TV",
+      "Mantenimiento necesario",
+      "Reanudar tras la salida de emergencia",
+      "Actualizaciones"
+    ],
+    "access": [
+      "LG Developer Mode activo, Key Server y emparejamiento local",
+      "Acceso root SSH existente y servicios/entrada del TV compatibles"
+    ],
+    "keep": [
+      "Amplía el temporizador oficial antes de caducar; conserva el emparejamiento de Helper y la red local",
+      "Conserva los servicios de recuperación independientes y sus entornos"
+    ],
+    "resume": [
+      "Abre Home Helper, elige Start Helper y confirma",
+      "Activa Change Home en los ajustes de Home"
+    ],
+    "updates": [
+      "Sin root, utiliza el instalador del ordenador",
+      "Las actualizaciones firmadas desde el TV requieren servicios compatibles preparados por separado; de lo contrario, usa el ordenador"
+    ],
+    "checksTitle": "Qué comprobar en tu propio televisor",
+    "checks": [
+      "Abre otra app y pulsa Home una vez. Prueba los botones reales y el sonido: las comprobaciones de paquetes no los observan.",
+      "Prueba la salida con tres pulsaciones de Home antes del uso diario. Helper hasta 0.6.13 usa una pulsación larga en su lugar.",
+      "Prueba suspensión/despertar y arranque en frío por separado. Un resultado no verifica otros modelos ni versiones de firmware."
+    ],
+    "referenceLabel": "Referencia completa (inglés)",
+    "help": [
+      [
+        "El instalador no encuentra mi TV",
+        "Mantén el TV encendido y conéctalo junto con el ordenador o teléfono a la misma red local de confianza. El aislamiento de invitados, VPN y cortafuegos pueden bloquear la detección. Permite el acceso a la red local. Si falla la búsqueda, introduce la dirección mostrada en el TV. No-root también necesita Key Server y una confirmación de emparejamiento independiente en el TV. Usa su código, no la contraseña de tu cuenta LG."
+      ],
+      [
+        "Developer Mode caducó o desaparecieron apps",
+        "La caducidad puede eliminar apps instaladas fuera de la tienda. Abre Developer Mode y consulta el estado oficial de la sesión. Antes de caducar, pulsa EXTEND con el TV conectado a internet. La renovación automática es Beta opcional y está desactivada por defecto; sigue comprobando el temporizador. Si ya faltan apps, comprueba el estado de la instalación antes de reinstalar. Nunca actives Developer Mode sobre root existente."
+      ],
+      [
+        "Home sigue abriendo LG Home",
+        "Distingue instalación correcta de redirección real de Home. Tras una salida de emergencia intencionada, reanuda explícitamente: No-root con Home Helper → Start Helper y confirmación; Root con Change Home en los ajustes. Abrir Home por sí solo no elimina la parada. Open LG Home visita la pantalla original una vez sin cambiar la elección guardada. Si vuelve a fallar, deja LG Home activo y guarda el diagnóstico."
+      ],
+      [
+        "Se interrumpió la instalación o desinstalación",
+        "Usa la misma conexión guardada del TV y comprueba primero el estado. Conserva el informe original del fallo, registros y archivos de recuperación. No borres comprobantes, restablezcas Developer Mode ni repitas la eliminación para forzar una instalación nueva. Un estado incierto u ocupado requiere detenerse y conservar diagnósticos. Usa solo la recuperación documentada para tu versión: las acciones candidatas no están en todos los instaladores publicados."
+      ],
+      [
+        "¿Cómo vuelvo a LG Home, actualizo o desinstalo?",
+        "Para detener de emergencia, pulsa Home tres veces en dos segundos, soltando entre pulsaciones; Helper hasta 0.6.13 usa en cambio una pulsación de unos dos segundos. La parada persiste hasta reanudar explícitamente. Para mantenimiento usa cytv y la conexión guardada. No desinstales primero solo para actualizar: puedes perder ajustes. Quitar cytv del ordenador no elimina apps del TV. Conserva los datos de recuperación tras la eliminación."
+      ]
+    ],
+    "tableHint": "Desplázate horizontalmente para comparar ambas ediciones."
+  },
+  "pt-BR": {
+    "helpTitle": "Ajuda e recuperação",
+    "helpDescription": "Resolva problemas de descoberta da TV, Developer Mode, botão Home e instalações interrompidas do Clean Your TV no LG webOS.",
+    "editionDescription": "Compare Root e No-root: acesso, ambientes da TV, Developer Mode, atualizações e retomada do Home após uma saída de emergência.",
+    "quickTitle": "Da demonstração para sua TV",
+    "steps": [
+      "Verifique a compatibilidade: No-root usa Developer Mode; Root exige acesso root existente.",
+      "Leia o guia, baixe o instalador publicado para seu dispositivo e mantenha a TV ligada durante a configuração.",
+      "Antes do uso diário, teste controle, saída de emergência, som, espera e inicialização a frio separadamente."
+    ],
+    "tableLabels": [
+      "Requisito",
+      "Acesso",
+      "Ambiente da TV",
+      "Manter em funcionamento",
+      "Retomar após saída de emergência",
+      "Atualizações"
+    ],
+    "access": [
+      "LG Developer Mode ativo, Key Server e pareamento local",
+      "Acesso root SSH existente e serviços/entrada da TV compatíveis"
+    ],
+    "keep": [
+      "Estenda o timer oficial antes de expirar; mantenha o pareamento do Helper e a rede local",
+      "Preserve os serviços de recuperação independentes e seus ambientes"
+    ],
+    "resume": [
+      "Abra Home Helper, escolha Start Helper e confirme",
+      "Ative Change Home nas configurações de Home"
+    ],
+    "updates": [
+      "Sem root, use o instalador do computador",
+      "Atualizações assinadas na TV exigem serviços compatíveis preparados separadamente; caso contrário, use o computador"
+    ],
+    "checksTitle": "O que testar na sua própria TV",
+    "checks": [
+      "Abra outro app e pressione Home uma vez. Teste os botões reais e o som: verificações de pacotes não observam isso.",
+      "Teste a saída com três toques em Home antes do uso diário. O Helper até 0.6.13 usa um toque longo no lugar.",
+      "Teste espera/retorno e inicialização a frio separadamente. Um resultado não verifica outros modelos ou firmwares."
+    ],
+    "referenceLabel": "Referência completa (inglês)",
+    "help": [
+      [
+        "O instalador não encontra minha TV",
+        "Mantenha a TV ligada e conecte-a junto com o computador ou celular à mesma rede local confiável. Isolamento de convidados, VPN e firewall podem bloquear a descoberta. Permita o acesso à rede local. Se a busca falhar, informe o endereço mostrado na TV. No-root também precisa de Key Server e confirmação separada de pareamento na TV. Use o código dela, não a senha da conta LG."
+      ],
+      [
+        "Developer Mode expirou ou os apps sumiram",
+        "A expiração pode remover apps instalados fora da loja. Abra Developer Mode e confira o estado oficial da sessão. Antes de expirar, pressione EXTEND com a TV online. A renovação automática é Beta opcional e vem desativada; continue verificando o timer. Se já faltam apps, confira a instalação existente antes de reinstalar. Nunca ative Developer Mode sobre root existente."
+      ],
+      [
+        "Home ainda abre o LG Home",
+        "Instalação bem-sucedida e direcionamento real de Home são verificações diferentes. Após uma saída de emergência intencional, retome explicitamente: No-root com Home Helper → Start Helper e confirmação; Root com Change Home nas configurações. Abrir Home sozinho não remove a parada. Open LG Home visita a tela original uma vez, sem alterar a escolha salva. Se falhar de novo, deixe LG Home ativo e salve o diagnóstico."
+      ],
+      [
+        "A instalação ou remoção foi interrompida",
+        "Use a mesma conexão salva da TV e verifique o estado primeiro. Preserve o relatório original da falha, registros e arquivos de recuperação. Não apague comprovantes, redefina Developer Mode nem repita a remoção para forçar nova instalação. Estado incerto ou ocupado exige parar e manter os diagnósticos. Use apenas a recuperação documentada para sua versão: ações de candidato não estão em todos os instaladores publicados."
+      ],
+      [
+        "Como voltar ao LG Home, atualizar ou desinstalar?",
+        "Para parada de emergência, pressione Home três vezes em dois segundos, soltando entre os toques; o Helper até 0.6.13 usa uma pressão de cerca de dois segundos. A parada permanece até a retomada explícita. Use cytv e a conexão salva para manutenção. Não desinstale apenas para atualizar: isso pode apagar configurações. Remover cytv do computador não remove os apps da TV. Preserve as evidências de recuperação após a remoção."
+      ]
+    ],
+    "tableHint": "Role para os lados para comparar as duas edições."
+  },
+  "fr": {
+    "helpTitle": "Aide et récupération",
+    "helpDescription": "Résoudre les problèmes de détection TV, de Developer Mode, de bouton Home et d’installation interrompue de Clean Your TV sur LG webOS.",
+    "editionDescription": "Comparer Root et No-root : accès, environnements TV, Developer Mode, mises à jour et reprise de Home après une sortie d’urgence.",
+    "quickTitle": "De la démo à votre téléviseur",
+    "steps": [
+      "Vérifiez la compatibilité : No-root utilise Developer Mode ; Root exige un accès root existant.",
+      "Lisez le guide, téléchargez l’installateur publié pour votre appareil et gardez le TV allumé pendant la configuration.",
+      "Avant l’usage quotidien, testez séparément télécommande, sortie d’urgence, son, veille et démarrage à froid."
+    ],
+    "tableLabels": [
+      "Prérequis",
+      "Accès",
+      "Environnement TV",
+      "À maintenir",
+      "Reprise après une sortie d’urgence",
+      "Mises à jour"
+    ],
+    "access": [
+      "LG Developer Mode actif, Key Server et appairage local",
+      "Accès root SSH existant et services/entrées TV compatibles"
+    ],
+    "keep": [
+      "Prolongez le minuteur officiel avant expiration ; maintenez l’appairage Helper et le réseau local",
+      "Conservez les services de récupération indépendants et leurs environnements"
+    ],
+    "resume": [
+      "Ouvrez Home Helper, choisissez Start Helper et confirmez",
+      "Activez Change Home dans les paramètres Home"
+    ],
+    "updates": [
+      "Sans root, utilisez l’installateur sur ordinateur",
+      "Les mises à jour signées sur TV exigent des services compatibles préparés séparément ; sinon utilisez l’ordinateur"
+    ],
+    "checksTitle": "À vérifier sur votre propre téléviseur",
+    "checks": [
+      "Ouvrez une autre application puis appuyez une fois sur Home. Vérifiez les vrais boutons et le son : les contrôles de paquets ne les observent pas.",
+      "Testez la sortie avec trois pressions sur Home avant l’usage quotidien. Helper jusqu’à 0.6.13 utilise un appui long à la place.",
+      "Testez veille/réveil et véritable démarrage à froid séparément. Un résultat ne valide pas d’autres modèles ou firmwares."
+    ],
+    "referenceLabel": "Référence complète (anglais)",
+    "help": [
+      [
+        "L’installateur ne trouve pas mon téléviseur",
+        "Gardez le TV allumé et connectez-le avec l’ordinateur ou téléphone au même réseau local de confiance. L’isolation du réseau invité, les VPN et pare-feu peuvent bloquer la détection. Autorisez l’accès au réseau local. Si la recherche échoue, saisissez l’adresse affichée sur le TV. No-root nécessite aussi Key Server et une confirmation d’appairage distincte sur le TV. Utilisez son code, pas le mot de passe de votre compte LG."
+      ],
+      [
+        "Developer Mode a expiré ou des applications ont disparu",
+        "L’expiration peut supprimer les applications installées hors boutique. Ouvrez Developer Mode et vérifiez l’état officiel de la session. Avant expiration, appuyez sur EXTEND avec le TV en ligne. Le renouvellement automatique est une Beta facultative, désactivée par défaut ; surveillez toujours le minuteur. Si des apps manquent déjà, vérifiez l’installation existante avant de réinstaller. N’activez jamais Developer Mode sur un accès root existant."
+      ],
+      [
+        "Home ouvre toujours LG Home",
+        "Distinguez installation réussie et redirection réelle de Home. Après une sortie d’urgence volontaire, reprenez explicitement : No-root avec Home Helper → Start Helper et confirmation ; Root avec Change Home dans les paramètres. Ouvrir Home seul ne lève pas l’arrêt. Open LG Home visite l’écran d’origine une fois sans changer le choix enregistré. Si le contrôle échoue de nouveau, laissez LG Home actif et enregistrez le diagnostic."
+      ],
+      [
+        "L’installation ou la suppression a été interrompue",
+        "Utilisez la même connexion TV enregistrée et vérifiez d’abord l’état. Conservez le rapport d’échec initial, les journaux et fichiers de récupération. Ne supprimez pas de reçus, ne réinitialisez pas Developer Mode et ne répétez pas la suppression pour forcer une nouvelle installation. Un état incertain ou occupé impose l’arrêt et la conservation des diagnostics. Utilisez uniquement la récupération documentée pour votre version ; les actions candidates ne figurent pas dans chaque installateur publié."
+      ],
+      [
+        "Comment revenir à LG Home, mettre à jour ou désinstaller ?",
+        "Pour l’arrêt d’urgence, appuyez trois fois sur Home en deux secondes en relâchant entre chaque pression ; Helper jusqu’à 0.6.13 utilise plutôt un appui d’environ deux secondes. L’arrêt persiste jusqu’à une reprise explicite. Pour la maintenance, utilisez cytv et la connexion enregistrée. Ne désinstallez pas avant une simple mise à jour : les réglages peuvent être perdus. Retirer cytv de l’ordinateur ne supprime pas les apps TV. Conservez les preuves de récupération après suppression."
+      ]
+    ],
+    "tableHint": "Faites défiler horizontalement pour comparer les deux éditions."
+  },
+  "it": {
+    "helpTitle": "Aiuto e ripristino",
+    "helpDescription": "Risolvi problemi di rilevamento TV, Developer Mode, tasto Home e installazioni interrotte di Clean Your TV su LG webOS.",
+    "editionDescription": "Confronta Root e No-root: accesso, ambienti TV, Developer Mode, aggiornamenti e ripresa di Home dopo un’uscita di emergenza.",
+    "quickTitle": "Dalla demo al tuo televisore",
+    "steps": [
+      "Verifica la compatibilità: No-root usa Developer Mode; Root richiede accesso root esistente.",
+      "Leggi la guida, scarica l’installer pubblicato per il tuo dispositivo e lascia la TV accesa durante la configurazione.",
+      "Prima dell’uso quotidiano prova separatamente telecomando, uscita di emergenza, audio, standby e avvio a freddo."
+    ],
+    "tableLabels": [
+      "Requisito",
+      "Accesso",
+      "Ambiente TV",
+      "Da mantenere",
+      "Ripresa dopo uscita di emergenza",
+      "Aggiornamenti"
+    ],
+    "access": [
+      "LG Developer Mode attivo, Key Server e associazione locale",
+      "Accesso root SSH esistente e servizi/ingressi TV compatibili"
+    ],
+    "keep": [
+      "Estendi il timer ufficiale prima della scadenza; mantieni associazione Helper e rete locale",
+      "Conserva i servizi di ripristino indipendenti e i relativi ambienti"
+    ],
+    "resume": [
+      "Apri Home Helper, scegli Start Helper e conferma",
+      "Attiva Change Home nelle impostazioni Home"
+    ],
+    "updates": [
+      "Senza root usa l’installer sul computer",
+      "Gli aggiornamenti firmati dalla TV richiedono servizi compatibili preparati separatamente; altrimenti usa il computer"
+    ],
+    "checksTitle": "Cosa verificare sul tuo televisore",
+    "checks": [
+      "Apri un’altra app e premi Home una volta. Prova i tasti reali e l’audio: i controlli dei pacchetti non li osservano.",
+      "Prova l’uscita con tre pressioni di Home prima dell’uso quotidiano. Helper fino a 0.6.13 usa invece una pressione lunga.",
+      "Prova standby/risveglio e vero avvio a freddo separatamente. Un risultato non verifica altri modelli o firmware."
+    ],
+    "referenceLabel": "Riferimento completo (inglese)",
+    "help": [
+      [
+        "L’installer non trova la TV",
+        "Lascia la TV accesa e collegala insieme al computer o telefono alla stessa rete locale fidata. Isolamento ospiti, VPN e firewall possono impedire il rilevamento. Consenti l’accesso alla rete locale. Se la ricerca fallisce, inserisci l’indirizzo mostrato sulla TV. No-root richiede anche Key Server e una conferma di associazione separata sulla TV. Usa il codice della TV, non la password dell’account LG."
+      ],
+      [
+        "Developer Mode è scaduto o mancano app",
+        "La scadenza può rimuovere app installate fuori dallo store. Apri Developer Mode e controlla lo stato ufficiale della sessione. Prima della scadenza premi EXTEND con la TV online. Il rinnovo automatico è Beta opzionale e disattivato inizialmente; controlla comunque il timer. Se mancano già app, verifica lo stato dell’installazione prima di reinstallare. Non attivare mai Developer Mode sopra root esistente."
+      ],
+      [
+        "Home apre ancora LG Home",
+        "Distingui installazione riuscita e reindirizzamento effettivo di Home. Dopo un’uscita di emergenza intenzionale, riprendi esplicitamente: No-root con Home Helper → Start Helper e conferma; Root con Change Home nelle impostazioni. Aprire solo Home non annulla lo stop. Open LG Home visita una volta lo schermo originale senza cambiare la scelta salvata. Se il controllo fallisce ancora, lascia LG Home attivo e salva la diagnosi."
+      ],
+      [
+        "Installazione o rimozione interrotta",
+        "Usa la stessa connessione TV salvata e verifica prima lo stato. Conserva rapporto originale dell’errore, registri e file di ripristino. Non cancellare ricevute, ripristinare Developer Mode o ripetere la rimozione per forzare una nuova installazione. Uno stato incerto o occupato richiede di fermarsi e conservare la diagnosi. Usa solo il ripristino documentato per la tua versione: le azioni candidate non sono presenti in ogni installer pubblicato."
+      ],
+      [
+        "Come torno a LG Home, aggiorno o disinstallo?",
+        "Per lo stop di emergenza premi Home tre volte in due secondi, rilasciando tra le pressioni; Helper fino a 0.6.13 usa invece una pressione di circa due secondi. Lo stop resta fino alla ripresa esplicita. Per la manutenzione usa cytv e la connessione salvata. Non disinstallare prima di un semplice aggiornamento: puoi perdere impostazioni. Rimuovere cytv dal computer non elimina le app TV. Conserva le prove di ripristino dopo la rimozione."
+      ]
+    ],
+    "tableHint": "Scorri lateralmente per confrontare entrambe le edizioni."
+  },
+  "ko": {
+    "helpTitle": "도움말 및 복구",
+    "helpDescription": "LG webOS에서 TV 검색, Developer Mode 만료, Home 버튼 및 중단된 Clean Your TV 설치 문제의 다음 단계를 확인하세요.",
+    "editionDescription": "Root와 No-root의 접근 방식, TV 실행 환경, Developer Mode, 업데이트 및 비상 종료 후 Home 재개 방법을 비교하세요.",
+    "quickTitle": "데모에서 내 TV로",
+    "steps": [
+      "호환성을 확인하세요. No-root는 Developer Mode를, Root는 기존 root 권한을 사용합니다.",
+      "설치 안내서를 읽고 기기에 맞는 공개 설치 프로그램을 다운로드한 뒤 설정 중 TV를 켜 두세요.",
+      "일상적으로 사용하기 전에 리모컨, 비상 종료, 소리, 대기 복귀와 콜드 부팅을 각각 확인하세요."
+    ],
+    "tableLabels": [
+      "요구 사항",
+      "접근 방식",
+      "TV 실행 환경",
+      "유지해야 할 사항",
+      "비상 종료 후 재개",
+      "업데이트"
+    ],
+    "access": [
+      "활성 LG Developer Mode, Key Server 및 로컬 페어링",
+      "기존 root SSH와 호환되는 TV 서비스 및 입력 장치"
+    ],
+    "keep": [
+      "만료 전에 공식 Developer Mode 타이머를 연장하고 Helper 페어링과 로컬 네트워크를 유지하세요",
+      "독립 복구 서비스와 해당 서비스가 사용하는 실행 환경을 보존하세요"
+    ],
+    "resume": [
+      "Home Helper를 열고 Start Helper를 선택한 뒤 확인하세요",
+      "Home 설정에서 Change Home을 켜세요"
+    ],
+    "updates": [
+      "root 없는 TV에서는 컴퓨터 설치 프로그램을 사용하세요",
+      "TV에서 서명된 업데이트를 하려면 별도로 준비된 호환 업데이트 서비스가 필요합니다. 그렇지 않으면 컴퓨터를 사용하세요"
+    ],
+    "checksTitle": "내 TV에서 확인할 항목",
+    "checks": [
+      "다른 앱을 열고 Home을 한 번 누르세요. 실제 리모컨 버튼과 소리를 확인하세요. 패키지 검사는 이를 관찰하지 못합니다.",
+      "일상 사용 전에 Home 세 번 비상 종료를 시험하세요. Helper 0.6.13 이하에서는 대신 Home을 길게 누릅니다.",
+      "대기 복귀와 실제 콜드 부팅을 따로 시험하세요. 한 결과로 다른 모델이나 펌웨어가 검증되지는 않습니다."
+    ],
+    "referenceLabel": "전체 참고 문서 (영어)",
+    "help": [
+      [
+        "설치 프로그램이 TV를 찾지 못해요",
+        "TV를 켜 두고 컴퓨터나 휴대전화와 같은 신뢰할 수 있는 로컬 네트워크에 연결하세요. 게스트 네트워크 격리, VPN, 방화벽은 검색을 막을 수 있습니다. 로컬 네트워크 접근을 허용하세요. 검색에 실패하면 TV에 표시된 주소를 입력하세요. No-root는 Key Server와 TV에서 별도 페어링 확인도 필요합니다. LG 계정 암호가 아닌 TV의 코드를 사용하세요."
+      ],
+      [
+        "Developer Mode가 만료되었거나 앱이 사라졌어요",
+        "만료되면 직접 설치한 앱이 삭제될 수 있습니다. Developer Mode를 열어 공식 세션 상태를 확인하세요. 만료 전에 TV가 온라인일 때 EXTEND를 누르세요. 자동 갱신은 선택적인 Beta이고 기본적으로 꺼져 있으니 공식 타이머를 계속 확인하세요. 앱이 이미 없다면 재설치 전에 기존 설치 상태를 확인하세요. 기존 root 위에 Developer Mode를 켜지 마세요."
+      ],
+      [
+        "Home을 눌러도 LG Home이 열려요",
+        "설치 성공과 실제 Home 전환은 별개입니다. 의도적인 비상 종료 후에는 명시적으로 재개하세요. No-root는 Home Helper → Start Helper와 확인, Root는 Home 설정의 Change Home을 사용합니다. Home 앱을 여는 것만으로 정지가 해제되지 않습니다. Open LG Home은 저장된 선택을 바꾸지 않고 원래 화면을 한 번 엽니다. 다시 실패하면 LG Home을 활성 상태로 두고 진단을 저장하세요."
+      ],
+      [
+        "설치나 삭제가 중단되었어요",
+        "같은 저장된 TV 연결로 먼저 상태를 확인하세요. 원래 실패 보고서, 저널, 복구 파일을 보존하세요. 새 설치를 강제하려고 작업 기록을 지우거나 Developer Mode를 초기화하거나 삭제를 반복하지 마세요. 불확실하거나 사용 중인 상태이면 멈추고 진단을 보존하세요. 설치된 버전에 문서화된 복구만 사용하세요. 후보 버전의 작업은 모든 공개 설치 프로그램에 있는 것이 아닙니다."
+      ],
+      [
+        "LG Home으로 돌아가거나 업데이트·삭제하려면?",
+        "비상 정지는 2초 안에 Home을 세 번 누르되 매번 놓습니다. Helper 0.6.13 이하는 대신 약 2초간 누릅니다. 명시적으로 재개할 때까지 정지는 유지됩니다. 유지 관리는 cytv와 저장된 연결로 하세요. 단순 업데이트 전에 삭제하면 앱 설정이 지워질 수 있습니다. 컴퓨터에서 cytv를 지워도 TV 앱은 삭제되지 않습니다. 삭제 후에도 복구 증거를 보존하세요."
+      ]
+    ],
+    "tableHint": "옆으로 스크롤하여 두 에디션을 비교하세요."
+  },
+  "hi": {
+    "helpTitle": "मदद और रिकवरी",
+    "helpDescription": "LG webOS पर टीवी खोज, Developer Mode की समाप्ति, Home बटन और Clean Your TV की अधूरी इंस्टॉलेशन में अगला कदम जानें।",
+    "editionDescription": "Root और No-root की तुलना: पहुँच, टीवी रनटाइम, Developer Mode, अपडेट और आपातकालीन निकास के बाद Home फिर शुरू करना।",
+    "quickTitle": "डेमो से आपके टीवी तक",
+    "steps": [
+      "अनुकूलता जाँचें: No-root में Developer Mode और Root में पहले से root पहुँच चाहिए।",
+      "गाइड पढ़ें, अपने डिवाइस के लिए प्रकाशित इंस्टॉलर डाउनलोड करें और सेटअप के समय टीवी चालू रखें।",
+      "रोज़ इस्तेमाल से पहले रिमोट, आपातकालीन निकास, आवाज़, स्टैंडबाय और कोल्ड बूट अलग-अलग जाँचें।"
+    ],
+    "tableLabels": [
+      "ज़रूरत",
+      "पहुँच",
+      "टीवी रनटाइम",
+      "चालू रखने के लिए",
+      "आपातकालीन निकास के बाद शुरू करें",
+      "अपडेट"
+    ],
+    "access": [
+      "सक्रिय LG Developer Mode, Key Server और स्थानीय पेयरिंग",
+      "पहले से root SSH और अनुकूल टीवी सेवाएँ व इनपुट"
+    ],
+    "keep": [
+      "आधिकारिक Developer Mode टाइमर खत्म होने से पहले बढ़ाएँ; Helper पेयरिंग और स्थानीय नेटवर्क बनाए रखें",
+      "स्वतंत्र रिकवरी सेवाएँ और उनके इस्तेमाल के रनटाइम सुरक्षित रखें"
+    ],
+    "resume": [
+      "Home Helper खोलें, Start Helper चुनें और पुष्टि करें",
+      "Home सेटिंग में Change Home चालू करें"
+    ],
+    "updates": [
+      "बिना root वाले टीवी पर कंप्यूटर इंस्टॉलर इस्तेमाल करें",
+      "टीवी पर हस्ताक्षरित अपडेट के लिए अलग से तैयार अनुकूल अपडेट सेवाएँ चाहिए; वरना कंप्यूटर इस्तेमाल करें"
+    ],
+    "checksTitle": "अपने टीवी पर क्या जाँचें",
+    "checks": [
+      "दूसरा ऐप खोलकर Home एक बार दबाएँ। असली रिमोट बटन और आवाज़ जाँचें; पैकेज जाँच इन्हें देख नहीं सकती।",
+      "रोज़ इस्तेमाल से पहले तीन बार Home वाला आपातकालीन निकास जाँचें। Helper 0.6.13 तक इसके बदले Home देर तक दबाना होता है।",
+      "स्टैंडबाय से लौटना और असली कोल्ड बूट अलग जाँचें। एक नतीजा दूसरे मॉडल या फ़र्मवेयर को सत्यापित नहीं करता।"
+    ],
+    "referenceLabel": "पूरा संदर्भ (अंग्रेज़ी)",
+    "help": [
+      [
+        "इंस्टॉलर मेरा टीवी नहीं ढूँढ पाता",
+        "टीवी चालू रखें और उसे कंप्यूटर या फ़ोन के साथ उसी भरोसेमंद स्थानीय नेटवर्क से जोड़ें। गेस्ट नेटवर्क अलगाव, VPN और फ़ायरवॉल खोज रोक सकते हैं। स्थानीय नेटवर्क की अनुमति दें। खोज न चले तो टीवी पर दिखा पता दर्ज करें। No-root में Key Server और टीवी पर अलग पेयरिंग पुष्टि भी चाहिए। टीवी का कोड इस्तेमाल करें, LG खाते का पासवर्ड नहीं।"
+      ],
+      [
+        "Developer Mode खत्म हो गया या ऐप गायब हैं",
+        "सत्र खत्म होने पर बाहर से इंस्टॉल ऐप हट सकते हैं। Developer Mode खोलकर आधिकारिक सत्र स्थिति जाँचें। समाप्ति से पहले टीवी ऑनलाइन हो तो EXTEND दबाएँ। अपने आप नवीनीकरण वैकल्पिक Beta है और शुरू में बंद है; आधिकारिक टाइमर जाँचते रहें। ऐप पहले ही गायब हों तो दोबारा इंस्टॉल करने से पहले मौजूदा स्थिति जाँचें। पहले से root वाले टीवी पर Developer Mode चालू न करें।"
+      ],
+      [
+        "Home अभी भी LG Home खोलता है",
+        "सफल इंस्टॉलेशन और Home का असली रूटिंग अलग जाँच हैं। जानबूझकर आपातकालीन निकास के बाद स्पष्ट रूप से फिर शुरू करें: No-root में Home Helper → Start Helper और पुष्टि; Root में Home सेटिंग का Change Home। सिर्फ Home खोलने से रोक नहीं हटती। Open LG Home सेव किया विकल्प बदले बिना मूल स्क्रीन एक बार खोलता है। फिर खराबी हो तो LG Home चालू रखें और डायग्नोस्टिक्स सहेजें।"
+      ],
+      [
+        "इंस्टॉलेशन या हटाना बीच में रुक गया",
+        "वही सेव किया टीवी कनेक्शन चुनें और पहले स्थिति जाँचें। असफल प्रयास की मूल रिपोर्ट, जर्नल और रिकवरी फ़ाइलें रखें। नई इंस्टॉलेशन मजबूर करने के लिए रिकॉर्ड न मिटाएँ, Developer Mode रीसेट न करें और हटाना न दोहराएँ। स्थिति अनिश्चित या व्यस्त हो तो रुकें और डायग्नोस्टिक्स रखें। अपने संस्करण के लिए लिखी रिकवरी ही इस्तेमाल करें; उम्मीदवार वाली कार्रवाइयाँ हर प्रकाशित इंस्टॉलर में नहीं होतीं।"
+      ],
+      [
+        "LG Home पर कैसे लौटें, अपडेट करें या हटाएँ?",
+        "आपातकालीन रोक के लिए दो सेकंड में Home तीन बार दबाएँ और बीच में छोड़ें। Helper 0.6.13 तक इसके बदले लगभग दो सेकंड दबाए रखें। रोक स्पष्ट रूप से फिर शुरू करने तक बनी रहती है। रखरखाव के लिए cytv और सेव कनेक्शन लें। सिर्फ अपडेट के लिए पहले अनइंस्टॉल न करें: ऐप सेटिंग मिट सकती हैं। कंप्यूटर से cytv हटाने पर टीवी ऐप नहीं हटते। हटाने के बाद भी रिकवरी प्रमाण रखें।"
+      ]
+    ],
+    "tableHint": "दोनों संस्करणों की तुलना के लिए बगल में स्क्रॉल करें।"
+  },
+  "pl": {
+    "helpTitle": "Pomoc i odzyskiwanie",
+    "helpDescription": "Rozwiąż problemy z wykrywaniem TV, Developer Mode, przyciskiem Home i przerwaną instalacją Clean Your TV na LG webOS.",
+    "editionDescription": "Porównaj Root i No-root: dostęp, środowiska TV, Developer Mode, aktualizacje i wznowienie Home po wyjściu awaryjnym.",
+    "quickTitle": "Od demonstracji do Twojego telewizora",
+    "steps": [
+      "Sprawdź zgodność: No-root używa Developer Mode, Root wymaga istniejącego dostępu root.",
+      "Przeczytaj instrukcję, pobierz opublikowany instalator dla swojego urządzenia i pozostaw TV włączony podczas konfiguracji.",
+      "Przed codziennym użyciem osobno sprawdź pilota, wyjście awaryjne, dźwięk, czuwanie i zimny start."
+    ],
+    "tableLabels": [
+      "Wymaganie",
+      "Dostęp",
+      "Środowisko TV",
+      "Utrzymanie działania",
+      "Wznowienie po wyjściu awaryjnym",
+      "Aktualizacje"
+    ],
+    "access": [
+      "Aktywny LG Developer Mode, Key Server i lokalne parowanie",
+      "Istniejący root SSH oraz zgodne usługi i urządzenia wejścia TV"
+    ],
+    "keep": [
+      "Przedłużaj oficjalny licznik przed wygaśnięciem; zachowaj parowanie Helper i dostęp do sieci lokalnej",
+      "Zachowaj niezależne usługi odzyskiwania i używane przez nie środowiska"
+    ],
+    "resume": [
+      "Otwórz Home Helper, wybierz Start Helper i potwierdź",
+      "Włącz Change Home w ustawieniach Home"
+    ],
+    "updates": [
+      "Bez root używaj instalatora na komputerze",
+      "Podpisane aktualizacje na TV wymagają osobno przygotowanych zgodnych usług; w innym przypadku użyj komputera"
+    ],
+    "checksTitle": "Co sprawdzić na własnym telewizorze",
+    "checks": [
+      "Otwórz inną aplikację i naciśnij Home raz. Sprawdź rzeczywiste przyciski oraz dźwięk; kontrola pakietów ich nie obserwuje.",
+      "Przed codziennym użyciem sprawdź wyjście trzema naciśnięciami Home. Helper do 0.6.13 używa zamiast tego długiego przytrzymania.",
+      "Osobno sprawdź czuwanie/wybudzenie i prawdziwy zimny start. Wynik nie potwierdza innych modeli ani firmware."
+    ],
+    "referenceLabel": "Pełna dokumentacja (angielski)",
+    "help": [
+      [
+        "Instalator nie znajduje telewizora",
+        "Pozostaw TV włączony i połącz go z komputerem lub telefonem w tej samej zaufanej sieci lokalnej. Izolacja gości, VPN i zapora mogą blokować wykrywanie. Zezwól na dostęp do sieci lokalnej. Jeśli wyszukiwanie zawiedzie, wpisz adres z TV. No-root wymaga także Key Server i osobnego potwierdzenia parowania na telewizorze. Użyj jego kodu, nie hasła konta LG."
+      ],
+      [
+        "Developer Mode wygasł lub zniknęły aplikacje",
+        "Wygaśnięcie może usunąć aplikacje spoza sklepu. Otwórz Developer Mode i sprawdź oficjalny stan sesji. Przed wygaśnięciem naciśnij EXTEND przy TV podłączonym do internetu. Automatyczne odnawianie to opcjonalna Beta, domyślnie wyłączona; nadal kontroluj licznik. Jeśli aplikacji już brakuje, sprawdź istniejącą instalację przed ponowną instalacją. Nie włączaj Developer Mode na istniejącym root."
+      ],
+      [
+        "Home nadal otwiera LG Home",
+        "Udana instalacja i rzeczywiste przekierowanie Home to różne sprawdzenia. Po celowym wyjściu awaryjnym wznów jawnie: No-root przez Home Helper → Start Helper i potwierdzenie, Root przez Change Home w ustawieniach. Samo otwarcie Home nie usuwa zatrzymania. Open LG Home jednorazowo otwiera oryginalny ekran bez zmiany zapisanej opcji. Przy ponownym błędzie pozostaw LG Home aktywny i zapisz diagnostykę."
+      ],
+      [
+        "Instalacja lub usuwanie zostały przerwane",
+        "Użyj tego samego zapisanego połączenia TV i najpierw sprawdź stan. Zachowaj pierwotny raport błędu, dzienniki i pliki odzyskiwania. Nie usuwaj potwierdzeń operacji, nie resetuj Developer Mode i nie powtarzaj usuwania, aby wymusić nową instalację. Stan niepewny lub zajęty wymaga zatrzymania i zachowania diagnostyki. Stosuj tylko odzyskiwanie opisane dla swojej wersji; akcje kandydata nie występują w każdym opublikowanym instalatorze."
+      ],
+      [
+        "Jak wrócić do LG Home, zaktualizować lub odinstalować?",
+        "Aby awaryjnie zatrzymać, naciśnij Home trzy razy w dwie sekundy, puszczając pomiędzy naciśnięciami. Helper do 0.6.13 używa zamiast tego przytrzymania przez około dwie sekundy. Zatrzymanie trwa do jawnego wznowienia. Do konserwacji użyj cytv i zapisanego połączenia. Nie odinstalowuj przed zwykłą aktualizacją: ustawienia mogą zniknąć. Usunięcie cytv z komputera nie usuwa aplikacji TV. Zachowaj dowody odzyskiwania po usunięciu."
+      ]
+    ],
+    "tableHint": "Przewiń w bok, aby porównać obie edycje."
+  },
+  "ru": {
+    "helpTitle": "Помощь и восстановление",
+    "helpDescription": "Что делать, если установщик не видит LG webOS, истёк Developer Mode, не работает Home или прервалась установка Clean Your TV.",
+    "editionDescription": "Сравните Root и No-root: доступ к ТВ, требования среды, Developer Mode, обновления и возобновление Home после аварийного выхода.",
+    "quickTitle": "От демо до вашего телевизора",
+    "steps": [
+      "Проверьте совместимость: No-root использует Developer Mode, Root — уже имеющийся root-доступ.",
+      "Прочитайте руководство, скачайте опубликованный установщик для своего устройства и оставьте ТВ включённым на время настройки.",
+      "До повседневного использования отдельно проверьте пульт, аварийный выход, звук, ожидание и холодный старт."
+    ],
+    "tableLabels": [
+      "Требование",
+      "Доступ",
+      "Среда на ТВ",
+      "Для дальнейшей работы",
+      "Возобновление после аварийного выхода",
+      "Обновления"
+    ],
+    "access": [
+      "Активный LG Developer Mode, Key Server и локальное сопряжение",
+      "Существующий root SSH и совместимые службы и устройства ввода ТВ"
+    ],
+    "keep": [
+      "Продлевайте официальный таймер Developer Mode до истечения; сохраняйте сопряжение Helper и доступ по локальной сети",
+      "Сохраняйте независимые службы восстановления и используемые ими среды выполнения"
+    ],
+    "resume": [
+      "Откройте Home Helper, выберите Start Helper и подтвердите",
+      "Включите Change Home в настройках Home"
+    ],
+    "updates": [
+      "На ТВ без root используйте установщик с компьютера",
+      "Подписанные обновления с ТВ требуют отдельно подготовленных совместимых служб обновления; иначе используйте компьютер"
+    ],
+    "checksTitle": "Что проверить на своём телевизоре",
+    "checks": [
+      "Откройте другое приложение и нажмите Home один раз. Проверьте реальные кнопки пульта и звук: проверка пакетов их не подтверждает.",
+      "Перед ежедневным использованием проверьте аварийный выход тройным Home. Старый Helper до 0.6.13 включительно использует долгое удержание Home.",
+      "Проверьте выход из ожидания и настоящий холодный старт отдельно. Результат на одной прошивке не подтверждает другую модель или версию."
+    ],
+    "referenceLabel": "Подробное руководство (английский)",
+    "help": [
+      [
+        "Установщик не находит телевизор",
+        "Оставьте ТВ включённым и подключите его и компьютер или телефон к одной доверенной локальной сети. Изоляция гостевой сети, VPN и межсетевой экран могут мешать поиску. Разрешите доступ к локальной сети. Если поиск не сработал, введите адрес, показанный на ТВ. Для No-root также нужны Key Server и отдельное подтверждение сопряжения на телевизоре. Используйте код ТВ, а не пароль учётной записи LG."
+      ],
+      [
+        "Истёк Developer Mode или исчезли приложения",
+        "После истечения сессии установленные вне магазина приложения могут удалиться. Откройте Developer Mode и проверьте официальный статус сессии. До истечения нажимайте EXTEND при подключённом к интернету ТВ. Автопродление — необязательная Beta, по умолчанию выключено; продолжайте следить за таймером. Если приложения уже исчезли, перед переустановкой проверьте состояние текущей установки. Не включайте Developer Mode поверх существующего root."
+      ],
+      [
+        "Кнопка Home по-прежнему открывает LG Home",
+        "Успешная установка и фактическое перенаправление Home — разные проверки. После намеренного аварийного выхода возобновите управление явно: No-root — Home Helper → Start Helper с подтверждением; Root — Change Home в настройках Home. Само открытие Home не снимает остановку. Open LG Home открывает штатный экран один раз, не меняя сохранённый выбор. Если управление снова сбоит, оставьте LG Home активным и сохраните диагностику."
+      ],
+      [
+        "Установка или удаление прервались",
+        "Выберите то же сохранённое подключение к ТВ и сначала проверьте статус. Сохраните исходный отчёт о неудачной попытке, журналы и файлы восстановления. Не удаляйте квитанции операций, не сбрасывайте Developer Mode и не повторяйте удаление ради новой установки. Неопределённое или занятое состояние требует остановки и сохранения диагностики. Используйте только восстановление, описанное для вашей версии: кандидатные действия есть не во всех опубликованных установщиках."
+      ],
+      [
+        "Как вернуть LG Home, обновить или удалить продукт?",
+        "Для аварийной остановки нажмите Home трижды за две секунды, отпуская между нажатиями. Helper до 0.6.13 включительно вместо этого использует удержание примерно две секунды. Остановка сохраняется до явного возобновления. Для обслуживания используйте cytv и сохранённое подключение. Не удаляйте приложения перед обычным обновлением: настройки могут потеряться. Удаление cytv с компьютера не удаляет приложения ТВ. Сохраняйте материалы восстановления после удаления."
+      ]
+    ],
+    "tableHint": "Прокрутите таблицу в сторону, чтобы сравнить обе редакции."
+  },
+  "zh-Hans": {
+    "helpTitle": "帮助与恢复",
+    "helpDescription": "排查 LG webOS 的电视发现、Developer Mode 到期、Home 按钮以及 Clean Your TV 安装中断问题，了解下一步操作。",
+    "editionDescription": "比较 Root 与 No-root 的访问方式、电视运行环境、Developer Mode、更新要求以及紧急退出后恢复 Home 的方法。",
+    "quickTitle": "从演示到你的电视",
+    "steps": [
+      "先检查兼容性：No-root 使用 Developer Mode，Root 需要已有的 root 权限。",
+      "阅读安装指南，下载适合设备的已发布安装程序，并在设置过程中保持电视开启。",
+      "日常使用前，分别检查遥控器、紧急退出、声音、待机唤醒和冷启动。"
+    ],
+    "tableLabels": [
+      "要求",
+      "访问方式",
+      "电视运行环境",
+      "持续使用要求",
+      "紧急退出后恢复",
+      "更新"
+    ],
+    "access": [
+      "有效的 LG Developer Mode、Key Server 和本地配对",
+      "已有的 root SSH，以及兼容的电视服务和输入设备"
+    ],
+    "keep": [
+      "在官方 Developer Mode 计时器到期前续期；保留 Helper 配对和本地网络连接",
+      "保留独立恢复服务及其使用的运行环境"
+    ],
+    "resume": [
+      "打开 Home Helper，选择 Start Helper 并确认",
+      "在 Home 设置中开启 Change Home"
+    ],
+    "updates": [
+      "无 root 的电视使用电脑安装程序",
+      "电视端签名更新需要另行准备的兼容更新服务；否则使用电脑安装程序"
+    ],
+    "checksTitle": "在自己的电视上检查什么",
+    "checks": [
+      "打开另一个应用，再按一次 Home。检查真实遥控器按钮和声音；软件包检查无法观察这些行为。",
+      "日常使用前测试三次 Home 紧急退出。Helper 0.6.13 及更早版本改用长按 Home。",
+      "分别测试待机唤醒和真正的冷启动。一项结果不能验证其他型号或固件。"
+    ],
+    "referenceLabel": "完整参考文档（英语）",
+    "help": [
+      [
+        "安装程序找不到我的电视",
+        "保持电视开启，并让电视与电脑或手机连接到同一可信本地网络。访客网络隔离、VPN 和防火墙可能阻止发现。请允许本地网络访问。如果搜索失败，输入电视上显示的地址。No-root 还需要 Key Server，以及电视上的单独配对确认。使用电视显示的代码，而非 LG 账户密码。"
+      ],
+      [
+        "Developer Mode 到期或应用消失",
+        "到期可能删除侧载应用。打开 Developer Mode，查看官方会话状态。在到期前让电视联网并按 EXTEND。自动续期是可选的 Beta，默认关闭；仍需检查官方计时器。如果应用已经缺失，请先检查现有安装状态再考虑重新安装。不要在已有 root 的电视上开启 Developer Mode。"
+      ],
+      [
+        "Home 仍然打开 LG Home",
+        "安装成功与 Home 实际路由是不同的检查。主动紧急退出后，请明确恢复：No-root 使用 Home Helper → Start Helper 并确认；Root 在 Home 设置中开启 Change Home。仅打开 Home 不会清除停止状态。Open LG Home 只访问原始画面一次，不改变保存的选择。如果控制再次失败，请保持 LG Home 可用并保存诊断。"
+      ],
+      [
+        "设置或卸载被中断",
+        "使用同一个已保存的电视连接，先检查状态。保留首次失败报告、日志和恢复文件。不要删除操作凭据、重置 Developer Mode 或反复卸载来强行重新安装。状态不确定或忙碌时应停止并保存诊断。只使用适用于所装版本的恢复操作；候选版本操作并不包含在每个已发布安装程序中。"
+      ],
+      [
+        "如何返回 LG Home、更新或卸载？",
+        "紧急停止时，在两秒内按三次 Home，每次都松开。Helper 0.6.13 及更早版本改为按住约两秒。停止状态持续到明确恢复为止。维护请使用 cytv 和已保存的连接。不要为了普通更新先卸载，否则可能丢失应用设置。从电脑移除 cytv 不会删除电视应用。卸载后仍请保留恢复证据。"
+      ]
+    ],
+    "tableHint": "横向滚动以比较两个版本。"
+  },
+  "zh-Hant": {
+    "helpTitle": "說明與復原",
+    "helpDescription": "排查 LG webOS 的電視探索、Developer Mode 到期、Home 按鈕及 Clean Your TV 安裝中斷問題，瞭解下一步操作。",
+    "editionDescription": "比較 Root 與 No-root 的存取方式、電視執行環境、Developer Mode、更新需求及緊急退出後恢復 Home 的方法。",
+    "quickTitle": "從示範到你的電視",
+    "steps": [
+      "先檢查相容性：No-root 使用 Developer Mode，Root 需要既有的 root 權限。",
+      "閱讀安裝指南，下載適合裝置的已發佈安裝程式，並在設定期間保持電視開啟。",
+      "日常使用前，分別檢查遙控器、緊急退出、聲音、待機喚醒及冷啟動。"
+    ],
+    "tableLabels": [
+      "需求",
+      "存取方式",
+      "電視執行環境",
+      "持續使用需求",
+      "緊急退出後恢復",
+      "更新"
+    ],
+    "access": [
+      "有效的 LG Developer Mode、Key Server 與本機配對",
+      "既有的 root SSH，以及相容的電視服務和輸入裝置"
+    ],
+    "keep": [
+      "在官方 Developer Mode 計時器到期前續期；保留 Helper 配對和本機網路連線",
+      "保留獨立復原服務及其使用的執行環境"
+    ],
+    "resume": [
+      "開啟 Home Helper，選擇 Start Helper 並確認",
+      "在 Home 設定中開啟 Change Home"
+    ],
+    "updates": [
+      "沒有 root 的電視使用電腦安裝程式",
+      "電視端簽署更新需要另外準備的相容更新服務；否則使用電腦安裝程式"
+    ],
+    "checksTitle": "在自己的電視上檢查什麼",
+    "checks": [
+      "開啟另一個應用程式，再按一次 Home。檢查真實遙控器按鈕及聲音；套件檢查無法觀察這些行為。",
+      "日常使用前測試三次 Home 緊急退出。Helper 0.6.13 及更早版本改用長按 Home。",
+      "分別測試待機喚醒及真正的冷啟動。一項結果不能驗證其他型號或韌體。"
+    ],
+    "referenceLabel": "完整參考文件（英語）",
+    "help": [
+      [
+        "安裝程式找不到我的電視",
+        "保持電視開啟，並讓電視與電腦或手機連接至同一可信任的區域網路。訪客網路隔離、VPN 及防火牆可能阻止探索。請允許區域網路存取。如果搜尋失敗，輸入電視上顯示的位址。No-root 還需要 Key Server，以及電視上的獨立配對確認。使用電視顯示的代碼，而非 LG 帳號密碼。"
+      ],
+      [
+        "Developer Mode 到期或應用程式消失",
+        "到期可能刪除側載應用程式。開啟 Developer Mode，查看官方工作階段狀態。在到期前讓電視連網並按 EXTEND。自動續期是選用的 Beta，預設關閉；仍需檢查官方計時器。如果應用程式已經缺少，請先檢查現有安裝狀態再考慮重新安裝。不要在已有 root 的電視上開啟 Developer Mode。"
+      ],
+      [
+        "Home 仍然開啟 LG Home",
+        "安裝成功與 Home 實際路由是不同的檢查。主動緊急退出後，請明確恢復：No-root 使用 Home Helper → Start Helper 並確認；Root 在 Home 設定中開啟 Change Home。僅開啟 Home 不會清除停止狀態。Open LG Home 只造訪原始畫面一次，不改變儲存的選擇。如果控制再次失敗，請保持 LG Home 可用並儲存診斷。"
+      ],
+      [
+        "設定或解除安裝被中斷",
+        "使用同一個已儲存的電視連線，先檢查狀態。保留首次失敗報告、日誌及復原檔案。不要刪除操作憑據、重設 Developer Mode 或反覆解除安裝來強制重新安裝。狀態不明或忙碌時應停止並保留診斷。只使用適用於已裝版本的復原操作；候選版本操作並非包含於每個已發佈安裝程式。"
+      ],
+      [
+        "如何返回 LG Home、更新或解除安裝？",
+        "緊急停止時，在兩秒內按三次 Home，每次都放開。Helper 0.6.13 及更早版本改為按住約兩秒。停止狀態持續到明確恢復為止。維護請使用 cytv 和已儲存的連線。不要為了一般更新先解除安裝，否則可能遺失應用程式設定。從電腦移除 cytv 不會刪除電視應用程式。解除安裝後仍請保留復原證據。"
+      ]
+    ],
+    "tableHint": "橫向捲動以比較兩個版本。"
+  }
+}

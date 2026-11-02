@@ -1,0 +1,117 @@
+---
+import { support } from "../lib/support";
+import { copy, route, base, repo, type Locale } from "../lib/site";
+const { lang } = Astro.props as { lang: Locale };
+const t = copy[lang],
+  extra = support[lang];
+---
+
+<section class="hero shell">
+  <div class="intro-grid">
+    <h1>{t.headline}</h1>
+    <p class="lead">{t.summary}</p>
+    <div class="actions">
+      <a class="button" href={route(lang, "install")}>
+        {t.nav[1]}
+      </a>
+      <a class="button secondary" href={base + "demo/"}>
+        {t.tryDemo}
+      </a>
+    </div>
+  </div>
+  <figure class="tv" data-kind="product">
+    <a href={base + "demo/"} aria-label={t.tryDemo}>
+      <img
+        src={base + "assets/classic.jpg"}
+        alt={t.screenshot}
+        width="1920"
+        height="1080"
+        fetchpriority="high"
+      />
+    </a>
+    <figcaption>{t.screenshot}</figcaption>
+  </figure>
+</section>
+<section class="shell benefits" aria-label={t.readMore}>
+  <div class="benefit-grid">
+    {t.features.map((text) => (
+      <p>{text}</p>
+    ))}
+  </div>
+</section>
+<section class="shell overview">
+  <div>
+    <h2>{t.choose}</h2>
+    <p>{t.limits}</p>
+    <a class="text-link" href={route(lang, "compatibility")}>
+      {t.requirements}
+    </a>
+  </div>
+  <div class="editions">
+    <section>
+      <h3>No-root</h3>
+      <p>{t.noRoot}</p>
+    </section>
+    <section>
+      <h3>Root</h3>
+      <p>{t.root}</p>
+    </section>
+    <a class="text-link" href={route(lang, "editions")}>
+      {t.nav[2]}
+    </a>
+  </div>
+</section>
+<section class="shell theme-section">
+  <div class="section-heading">
+    <div>
+      <h2>{t.nav[4]}</h2>
+      <p>{t.themes}</p>
+    </div>
+    <a class="text-link" href={route(lang, "themes")}>
+      {t.nav[4]}
+    </a>
+  </div>
+  <div class="theme-grid">
+    {["Classic", "Alpine", "Ribbon"].map((theme) => (
+      <figure data-kind="product">
+        <a href={base + "demo/"}>
+          <img
+            src={base + "assets/" + theme.toLowerCase() + ".jpg"}
+            alt={`${t.themeImage}: ${theme}`}
+            width="1920"
+            height="1080"
+            loading="lazy"
+          />
+        </a>
+        <figcaption>{theme}</figcaption>
+      </figure>
+    ))}
+  </div>
+</section>
+<section class="shell getting-started">
+  <h2>{extra.quickTitle}</h2>
+  <ol class="quick-steps">
+    {extra.steps.map((step, index) => (
+      <li>
+        <p>{step}</p>
+        <a href={route(lang, index === 0 ? "editions" : "install")}>
+          {index === 0 ? t.nav[2] : t.details}
+        </a>
+      </li>
+    ))}
+  </ol>
+  <div class="actions">
+    <a class="button" href={route(lang, "install")}>
+      {t.details}
+    </a>
+    <a href={repo + "/releases/latest"}>{t.download}</a>
+  </div>
+</section>
+
+<section class="shell help-section">
+  <h2>{extra.helpTitle}</h2>
+  <p>{extra.helpDescription}</p>
+  <a class="text-link" href={route(lang, "help")}>
+    {extra.helpTitle}
+  </a>
+</section>
