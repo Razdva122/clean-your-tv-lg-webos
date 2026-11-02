@@ -103,10 +103,12 @@ const types = {'.js': 'application/javascript', '.json': 'application/json', '.c
         await still.evaluate(node => node.remove());
         await page.waitForTimeout(400);
         assert.deepEqual([await style('.ctv-input-tile', 'transitionProperty'), await style('.pill', 'transitionProperty')],
-          [['transform, background, color, opacity'], ['background, color, transform']], 'the theme keeps the engine transitions');
+          [['transform, background, opacity'], ['background, color, transform']], 'the theme keeps the engine transitions');
         assert.equal(await page.locator('#viewport').evaluate(el => getComputedStyle(el, '::after').opacity), '1', 'the next row fades at the bottom edge');
         const press = code => page.evaluate(code => document.dispatchEvent(new KeyboardEvent('keydown', {keyCode: code, which: code, bubbles: true, cancelable: true})), code);
         await press(38);
+        for (let i=0;i<6;i++) await press(37);
+        assert.equal(await page.locator('.ctv-input-tile.is-focused .input-name').textContent(),'HDMI 1','start with a source that has a right-hand neighbour');
         await page.waitForTimeout(400);
         // Freeze the focused tile's transitions 60 ms in, so a busy runner cannot skip past them.
         const grow = await page.evaluate(() => new Promise(resolve => {

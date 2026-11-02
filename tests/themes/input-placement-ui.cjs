@@ -7,6 +7,7 @@ const {compileThemeCss}=require('../../theme-api/compile.cjs');
  const site=stage(),browser=await chromium.launch({headless:true});
  try {for(const edition of ['launcher','root-launcher']){
   const {page,errors}=await open(browser,site,edition);
+  await page.evaluate(()=>InputSources.setPreviewEnabled(localStorage,true));
   const apply=async inputs=>page.evaluate(({fixture,inputs,rules})=>{
    const manifest={...fixture,layout:{...fixture.layout,inputs},requires:{...fixture.requires,capabilities:['input-placement-v1']}};
    ThemeRuntime.apply({manifest,rules});
@@ -15,6 +16,7 @@ const {compileThemeCss}=require('../../theme-api/compile.cjs');
   for(const width of [1280,1920]){
    await page.setViewportSize({width,height:width*9/16});
    await apply('shelf');assert.equal(await page.locator('#inputShelf').isVisible(),true);
+   assert.equal(await page.locator('#btnInputs').isVisible(),false,'shelf replaces header Inputs');
    await page.keyboard.press('ArrowUp');await page.waitForFunction(()=>document.querySelector('.ctv-input-tile.is-focused'));
    assert.equal(await page.locator('.ctv-input-tile.is-focused').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(18, 52, 86)');
    await page.waitForFunction(()=>document.querySelector('.ctv-input-preview'));

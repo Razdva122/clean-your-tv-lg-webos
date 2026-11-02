@@ -1,6 +1,6 @@
 // Input media must yield to every owned dialog, including relaunch-driven Helper.
 const {assert, chromium, stage, open: openBase} = require('./browser.cjs');
-async function open(...args) { const result = await openBase(...args); await result.page.evaluate(() => HomeLayoutState.setThemeLayout({preset:'dock-grid', columns:5, spacingScale:1, textScale:1, focusScale:1.1, inputs:'shelf'})); return result; }
+async function open(...args) { const result = await openBase(...args); await result.page.evaluate(() => {InputSources.setPreviewEnabled(localStorage,true);HomeLayoutState.setThemeLayout({preset:'dock-grid', columns:5, spacingScale:1, textScale:1, focusScale:1.1, inputs:'shelf'});}); return result; }
 (async () => {
   const site = stage(), browser = await chromium.launch({headless: true, channel: process.env.BROWSER_CHANNEL || 'chrome'});
   try {

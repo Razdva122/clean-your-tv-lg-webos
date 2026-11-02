@@ -2731,66 +2731,79 @@ HomeI18n.add({
   "en": {
     "Show inputs on Home": "Show inputs on Home",
     "Preview inputs on focus": "Preview inputs on focus",
-    "Not connected": "Not connected"
+    "Not connected": "Not connected",
+    "Connected": "Connected"
   },
   "cs": {
     "Show inputs on Home": "Zobrazit vstupy na Home",
     "Preview inputs on focus": "Náhled vybraného vstupu",
-    "Not connected": "Nepřipojeno"
+    "Not connected": "Nepřipojeno",
+    "Connected": "Připojeno"
   },
   "de": {
     "Show inputs on Home": "Eingänge auf Home anzeigen",
     "Preview inputs on focus": "Vorschau des ausgewählten Eingangs",
-    "Not connected": "Nicht verbunden"
+    "Not connected": "Nicht verbunden",
+    "Connected": "Verbunden"
   },
   "es": {
     "Show inputs on Home": "Mostrar entradas en Home",
     "Preview inputs on focus": "Vista previa de la entrada seleccionada",
-    "Not connected": "No conectado"
+    "Not connected": "No conectado",
+    "Connected": "Conectado"
   },
   "pt-BR": {
     "Show inputs on Home": "Mostrar entradas no Home",
     "Preview inputs on focus": "Pré-visualizar a entrada selecionada",
-    "Not connected": "Não conectado"
+    "Not connected": "Não conectado",
+    "Connected": "Conectado"
   },
   "fr": {
     "Show inputs on Home": "Afficher les entrées sur Home",
     "Preview inputs on focus": "Aperçu de l’entrée sélectionnée",
-    "Not connected": "Non connecté"
+    "Not connected": "Non connecté",
+    "Connected": "Connecté"
   },
   "it": {
     "Show inputs on Home": "Mostra ingressi su Home",
     "Preview inputs on focus": "Anteprima dell’ingresso selezionato",
-    "Not connected": "Non collegato"
+    "Not connected": "Non collegato",
+    "Connected": "Collegato"
   },
   "ko": {
     "Show inputs on Home": "Home에 입력 표시",
     "Preview inputs on focus": "선택한 입력 미리보기",
-    "Not connected": "연결되지 않음"
+    "Not connected": "연결되지 않음",
+    "Connected": "연결됨"
   },
   "hi": {
     "Show inputs on Home": "Home पर इनपुट दिखाएँ",
     "Preview inputs on focus": "चुने गए इनपुट का पूर्वावलोकन",
-    "Not connected": "कनेक्ट नहीं है"
+    "Not connected": "कनेक्ट नहीं है",
+    "Connected": "कनेक्ट है"
   },
   "pl": {
     "Show inputs on Home": "Pokaż wejścia na Home",
     "Preview inputs on focus": "Podgląd wybranego wejścia",
-    "Not connected": "Nie podłączono"
+    "Not connected": "Nie podłączono",
+    "Connected": "Podłączono"
   },
   "ru": {
     "Show inputs on Home": "Показывать входы на Home",
     "Preview inputs on focus": "Предпросмотр выбранного входа",
-    "Not connected": "Не подключено"
+    "Not connected": "Не подключено",
+    "Connected": "Подключено"
   },
   "zh-Hans": {
     "Show inputs on Home": "在 Home 上显示输入源",
     "Preview inputs on focus": "预览所选输入源",
-    "Not connected": "未连接"
+    "Not connected": "未连接",
+    "Connected": "已连接"
   },
   "zh-Hant": {
     "Show inputs on Home": "在 Home 顯示輸入來源",
     "Preview inputs on focus": "預覽所選輸入來源",
-    "Not connected": "未連接"
+    "Not connected": "未連接",
+    "Connected": "已連接"
   }
 });

@@ -5,8 +5,8 @@
 }(this, function () {
   'use strict';
   var PREVIEW_KEY = 'tvhome.inputs.preview.v1',
-    // Previews stay muted and did not wake sleeping devices on hardware; keep them on unless that changes.
-    PREVIEW_DEFAULT = true,
+    // Native external video may ignore element mute or switch HDR; require an explicit choice.
+    PREVIEW_DEFAULT = false,
     STATUS_URI = 'luna://com.webos.service.eim/getAllInputStatus',
     // The installer registers Home as an EIM input so the TV can return to it; it is not a source.
     HOME_APPS = ['com.gathin.tvhome', 'com.local.nativehome'],

@@ -60,7 +60,7 @@ policy except `.ctv-tile`, which remains an engine-reserved interaction hook.
 | `.ctv-input-shelf` | Theme-selected Inputs shelf on `dock-grid`, including its caption; geometry, clipping, scrolling and visibility are engine-owned |
 | `.ctv-input-tile` | Selectable source tile in the shelf; position, size, launch action and navigation remain trusted |
 | `.ctv-input-status` | Device name or "Not connected" text inside a shelf tile |
-| `.ctv-input-preview` | Live picture frame inside the focused shelf tile; the TV draws the video on a hardware plane that follows transforms but ignores rounded clipping, masks and opacity. Starting, stopping, size and placement are engine-owned |
+| `.ctv-input-preview` | Live picture frame inside the focused shelf tile; the frame inherits tile rounding, while native video clipping depends on renderer/firmware (earlier webOS 6 hardware ignored rounded clipping, masks and opacity). Starting, stopping, size and placement are engine-owned |
 
 `.is-focused` mirrors remote/pointer focus on tiles, their visual cards and labels,
 header shortcuts, library rows, the library close button, input rows and shelf
@@ -378,7 +378,9 @@ A transparent `color` hides its count and arrows without changing navigation.
 The selected theme chooses the header Inputs menu or the Inputs shelf. Omitted
 `layout.inputs` means `"menu"`, including Classic and existing themes. There is
 no global placement preference or **Show inputs on Home** switch. Liquid Glass
-opts into `"shelf"`; the shelf is currently supported only on `dock-grid`.
+opts into `"shelf"`; the shelf is currently supported only on `dock-grid`. A
+nonempty shelf replaces the header Inputs shortcut, and remote navigation skips
+that hidden shortcut. When no source tiles exist, the menu remains available.
 An explicit `"menu"` is valid on any preset.
 
 For example, this compiled descriptor excerpt pairs the field and capability
@@ -418,16 +420,29 @@ Use the existing parts and states for appearance, without new CSS syntax:
 .ctv-input-tile.is-previewing .ctv-input-status { color: #ffffff; }
 ```
 
-The engine owns geometry, hitboxes, source launch, muted video and its lifecycle.
+The engine owns geometry, hitboxes, source launch and video start/release. It
+requests muted playback, but the native external-input pipeline may ignore that
+request. Previews are off by default and require explicit user opt-in.
 On a shelf, Up from the dock reaches the shelf, Up again reaches the header,
 Down or Back returns to the dock, and OK launches the source. A connected HDMI
-source can preview after about 800 ms of focus; **Preview inputs on focus** only
-applies while the selected theme uses a shelf. Theme CSS cannot start media or
-change this preference. The hardware video plane ignores rounded clipping,
-masks and opacity; author styling cannot clip or fade its picture. The engine
-releases previews when focus leaves, Home hides or loses focus, or an owned
-dialog opens. Connection states appear only when the TV supplies them, and
-`previewing` appears only while a live picture is playing.
+source can preview after about 800 ms of focus after the user enables **Preview
+inputs on focus**; this preference only applies while the selected theme uses a
+shelf. HDMI previews may play sound or switch HDR on some TVs. Home does not
+automatically change global TV mute or HDR settings. Theme CSS cannot start
+media, enable previews or change those TV settings. Software rendering clips the
+frame to its inherited radius.
+Native video composition must be checked per renderer/firmware: earlier webOS 6
+observations ignored rounded clipping, masks and opacity. A 2026-11-02 standalone
+browser probe on an OLED55C3RLA (firmware 43.21.71, SDK 11.2.0) rounded real HDMI 3,
+but audio still played despite `video.muted = true`, and an HDR notification
+appeared. This does not verify packaged Home or other models; mute and HDR
+behavior remain unresolved. Do not rely on arbitrary masks/opacity for video
+release or navigation safety. The engine releases previews when focus leaves, Home hides or loses focus, or an owned
+dialog opens. Connection states appear only when the TV supplies them. Device
+names come from firmware-provided EIM metadata; otherwise a connected source
+shows the localized **Connected** status. Never invent a PlayStation name or
+guarantee CEC identification. `previewing` appears only while a live picture is
+playing.
 
 
 ## Classic motion opt-in (unreleased)

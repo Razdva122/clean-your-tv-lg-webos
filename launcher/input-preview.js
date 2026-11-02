@@ -1,4 +1,4 @@
-/* Live picture of the focused input: one muted webOS external-input video at a time, after a short dwell. */
+/* One focused external-input video after a dwell. Element mute is requested; firmware may ignore it. */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.InputPreview = factory();

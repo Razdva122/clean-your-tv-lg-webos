@@ -352,6 +352,7 @@ body.editing #glass {
   height: 296px;
   transition: opacity 260ms ease;
 }
+#btnInputs[hidden],
 #inputShelf[hidden] {
   display: none;
 }
@@ -398,17 +399,11 @@ body.editing #glass {
 .input-tile {
   position: absolute;
   top: 12px;
-  transition: transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1), background 160ms ease, color 160ms ease, opacity 200ms ease;
+  transition: transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1), background 160ms ease, opacity 200ms ease;
 }
 .input-tile.pressed {
   transform: scale(0.96);
   transition-duration: 120ms;
-}
-.input-glyph,
-.input-tile .input-dot,
-.input-name,
-.input-detail {
-  transition: color 160ms ease;
 }
 .input-glyph {
   position: absolute;
@@ -471,15 +466,16 @@ body.editing #glass {
   bottom: 26px;
   line-height: 30px;
 }
-/* Live preview of the focused input. webOS draws the picture on a hardware video plane that
-   follows transforms but ignores rounded clipping, masks and opacity, so the picture keeps
-   square corners inset from the tile's rounded edge, and covered shelves stop it instead. */
+/* The frame inherits theme rounding. Native video compositing varies by renderer/firmware:
+   earlier webOS 6 hardware ignored rounded clipping, masks and opacity. Keep the inset
+   and stop covered shelves rather than relying on clipping or fading the video plane. */
 .input-preview {
   position: absolute;
   top: 10px;
   right: 10px;
   bottom: 10px;
   left: 10px;
+  border-radius: inherit;
   overflow: hidden;
 }
 .input-preview video {
@@ -490,6 +486,7 @@ body.editing #glass {
      and the TV's video scaler never has to crop. */
   object-fit: fill;
 }
+/* Text colors switch with media readiness; transform/background motion stays unchanged. */
 .input-tile.previewing .input-glyph,
 .input-tile.previewing .input-dot {
   visibility: hidden;

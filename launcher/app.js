@@ -98,7 +98,7 @@
     SHELF_GAP = 24,
     SHELF_INSET = 16,
     // style.css's .input-tile transitions without transform; held while a FLIP is inverted.
-    SHELF_FADES = "background 160ms ease, color 160ms ease, opacity 200ms ease",
+    SHELF_FADES = "background 160ms ease, opacity 200ms ease",
     INPUT_ICONS = {
       hdmi: "M18,7V4c0,-1.1 -0.9,-2 -2,-2H8C6.9,2 6,2.9 6,4v3H5v6l3,6v3h8v-3l3,-6V7H18zM8,4h8v3h-2V5h-1v2h-2V5h-1v2H8V4z",
       tv: "M21,6h-7.59l3.29,-3.29L16,2l-4,4l-4,-4l-0.71,0.71L10.59,6H3c-1.1,0 -2,0.89 -2,2v12c0,1.1 0.9,2 2,2h18c1.1,0 2,-0.89 2,-2V8C23,6.89 22.1,6 21,6zM21,20H3V8h18V20zM9,10v8l7,-4L9,10z",
@@ -1105,7 +1105,7 @@
     setFocusZone("top");
     document.body.classList.remove("scrolled");
     setPartState(topButtons[focusedTopButton], 'focused', false);
-    focusedTopButton = Math.max(0, Math.min(index, topButtons.length - 1));
+    focusedTopButton = Math.max(topButtons[0].hidden ? 1 : 0, Math.min(index, topButtons.length - 1));
     setPartState(topButtons[focusedTopButton], 'focused', true);
   }
   function setFocusZone(zone) {
@@ -1121,6 +1121,7 @@
   function nearestTopButton(center) {
     var nearest = 0, distance = 1 / 0;
     topButtons.forEach(function (button, index) {
+      if (button.hidden) return;
       var rect = sceneRect(button), offset = Math.abs(rect.left + rect.width / 2 - center);
       if (offset < distance) { distance = offset; nearest = index; }
     });
@@ -1164,7 +1165,7 @@
     returnInput = input.appId;
   }
   function inputDetail(input) {
-    return input.connected === false ? tr("Not connected") : input.deviceName || "";
+    return input.connected === false ? tr("Not connected") : input.deviceName || (input.connected === true ? tr("Connected") : "");
   }
   function shelfVisible() {
     return !!shelf && !shelf.hidden;
@@ -1240,6 +1241,9 @@
       if (tile.input.appId === focusedId) next = index;
     });
     shelf.hidden = !shelfTiles.length;
+    topButtons[0].hidden = !shelf.hidden;
+    if (topButtons[0].hidden && focusZone === "inputs") closeInputs();
+    if (topButtons[0].hidden && focusZone === "top" && focusedTopButton === 0) focusTopButton(1);
     shelf.setAttribute("aria-label", tr("Inputs"));
     shelf.style.left = GRID_LEFT - SHELF_INSET + "px";
     shelf.style.top = SHELF_TOP + "px";

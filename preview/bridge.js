@@ -123,11 +123,12 @@
     }
     var media = document.createElement('div'), screen = document.createElement('div'), label = document.createElement('span');
     screen.className = 'preview-input-media';
+    screen.hidden = true;
     screen.style.cssText = 'position:absolute;top:0;right:0;bottom:0;left:0';
     label.textContent = 'LIVE · ' + uri.replace('ext://', '').toUpperCase();
     screen.appendChild(label);
     media.appendChild(screen);
-    setTimeout(function () { screen.dispatchEvent(new Event('playing')); }, 300);
+    setTimeout(function () { screen.dispatchEvent(new Event('playing')); screen.hidden = false; }, 300);
     return media;
   };
 }());

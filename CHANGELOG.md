@@ -6,6 +6,13 @@
   paired `layout.inputs` / `input-placement-v1`. Omission keeps the menu; the shelf
   currently requires `dock-grid`. Remove the global Show inputs on Home switch.
   Liquid Glass selects the shelf; Classic and existing themes keep the menu.
+  A nonempty shelf replaces the header Inputs shortcut. Device names depend on
+  firmware EIM metadata, with Connected as the fallback status.
+- Keep HDMI previews off by default, with explicit Preview inputs on focus opt-in
+  for shelf themes. Previews may play sound or switch HDR on some TVs; Home does
+  not automatically change global TV mute or HDR settings. A 2026-11-02 C3
+  standalone browser probe observed audio and an HDR notification despite a mute
+  request; packaged Home acceptance and a solution for mute/HDR remain unverified.
 - Bundle Liquid Glass in place of Alpine. Alpine 1.4.4 is downloadable from Theme
   showcase. A saved `builtin:alpine` selection falls back to Classic with the
   existing recovery notice, without automatic download or substitution.
@@ -26,8 +33,9 @@
 - Add theme-selected Inputs tiles with live TV connection status and captured
   inventory fallback. Shelf navigation is Up from the dock, Up again to the header,
   Down/Back to the dock and OK to launch. Geometry and launch remain engine-owned.
-- A connected HDMI shelf tile can show a muted preview after 800 ms of focus.
-  Settings → Appearance → Preview inputs on focus applies only with a shelf theme.
+- After explicit opt-in, a connected HDMI shelf tile can preview after 800 ms of
+  focus. Settings → Appearance → Preview inputs on focus applies only with a shelf
+  theme and defaults off; requesting mute does not guarantee silent native audio.
   Moving away, launching, dialogs, blur and hiding Home release the media; status
   updates preserve an eligible running preview. Startup failures fall back to a
   static tile with a per-source cooldown. Physical compatibility remains limited

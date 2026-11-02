@@ -1,7 +1,7 @@
 // Classic Inputs shelf: one-press remote path, live status, live preview, overflow, preferences and other layouts.
 const {assert, chromium, stage, open: openBase} = require('./browser.cjs');
 const shelfLayout={preset:'dock-grid',columns:5,spacingScale:1,textScale:1,focusScale:1.1,inputs:'shelf'};
-async function open(...args) { const result=await openBase(...args); await result.page.evaluate(layout=>HomeLayoutState.setThemeLayout(layout),shelfLayout); return result; }
+async function open(...args) { const result=await openBase(...args); await result.page.evaluate(layout=>{InputSources.setPreviewEnabled(localStorage,true);HomeLayoutState.setThemeLayout(layout);},shelfLayout); return result; }
 
 // Records the live-status bridge so the test can push subscription updates.
 function recordStatusBridge() {
@@ -118,14 +118,15 @@ function recordStatusBridge() {
         assert.match(await focused(), /^shelf:/);
         assert.equal(await page.locator('#inputShelf').evaluate(el => el.classList.contains('covered')), false);
 
-        // The dropdown shares live status and fades the shelf it would overlap.
+        // The menu variant shares live status; the shelf replaces its header button.
+        assert.equal(await page.locator('#btnInputs').isVisible(),false);
+        await page.evaluate(layout=>HomeLayoutState.setThemeLayout({...layout,inputs:"menu"}),shelfLayout);
         await press('ArrowUp');
         await page.locator('#btnInputs').click();
         assert.equal(await focused(), 'dropdown');
         assert.equal(await page.locator('.ctv-input-row').count(), 5);
         assert.equal(await page.locator('.ctv-input-row.is-connected').count(), 1);
         assert.equal(await page.locator('.ctv-input-row.is-disconnected').count(), 3);
-        assert.equal(await page.locator('#inputShelf').evaluate(el => el.classList.contains('covered')), true);
         await press('Escape');
         assert.equal(await page.locator('#inputShelf').evaluate(el => el.classList.contains('covered')), false);
 
@@ -156,14 +157,18 @@ function recordStatusBridge() {
         await press('ArrowUp');
         assert.deepEqual(await previews(), idle, 'the header stops the preview');
         await page.locator('.ctv-input-tile').first().hover(); await playing();
+        await page.evaluate(layout=>HomeLayoutState.setThemeLayout({...layout,inputs:'menu'}),shelfLayout);
+        assert.deepEqual(await previews(), idle, 'switching to the menu releases the preview');
         await page.locator('#btnInputs').click();
-        assert.deepEqual(await previews(), idle, 'the Inputs dropdown stops the preview');
+        assert.deepEqual(await previews(), idle, 'the menu variant never runs shelf media');
         await press('Escape');
+        await page.evaluate(layout=>HomeLayoutState.setThemeLayout(layout),shelfLayout);
         await page.locator('.ctv-input-tile').first().hover(); await playing();
         const visibility = hidden => page.evaluate(hidden => {
           Object.defineProperty(document, 'hidden', {configurable: true, get: () => hidden});
           document.dispatchEvent(new Event('visibilitychange'));
         }, hidden);
+        await page.mouse.move(0,0);
         await visibility(true);
         assert.deepEqual(await previews(), idle, 'hiding Home stops the preview');
         await visibility(false);

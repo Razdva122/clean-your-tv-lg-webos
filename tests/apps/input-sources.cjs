@@ -96,9 +96,9 @@ for (const [label, device, kind] of [
 
 const memory = new Map();
 const storage = {getItem: k => memory.has(k) ? memory.get(k) : null, setItem: (k, v) => memory.set(k, v)};
-// Previews default on, persist either way, and tolerate broken storage.
+// Previews default off until explicitly enabled, persist either way, and tolerate broken storage.
 memory.clear();
-assert.equal(sources.previewEnabled(storage), true, 'previews are on by default');
+assert.equal(sources.previewEnabled(storage), false, 'previews are off by default');
 sources.setPreviewEnabled(storage, false);
 assert.equal(memory.get(sources.previewKey), '{"version":1,"enabled":false}');
 assert.equal(sources.previewEnabled(storage), false);
@@ -106,8 +106,8 @@ sources.setPreviewEnabled(storage, true);
 assert.equal(sources.previewEnabled(storage), true);
 for (const raw of ['{bad', '{"version":2,"enabled":false}', '{"version":1,"enabled":"no"}', 'null']) {
   memory.set(sources.previewKey, raw);
-  assert.equal(sources.previewEnabled(storage), true, 'unknown preview preference keeps the default: ' + raw);
+  assert.equal(sources.previewEnabled(storage), false, 'unknown preview preference keeps the default: ' + raw);
 }
-assert.equal(sources.previewEnabled({getItem() { throw Error('denied'); }}), true);
+assert.equal(sources.previewEnabled({getItem() { throw Error('denied'); }}), false);
 assert.throws(() => sources.setPreviewEnabled(storage, 1), /invalid-input-preview-setting/);
 console.log('PASS input sources: live status overlay, inventory fallback, classifier, preview sources and preferences');
