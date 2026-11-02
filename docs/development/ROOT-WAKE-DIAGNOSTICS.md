@@ -5,6 +5,20 @@ Published v1.6.0 includes wake and shutdown-decision diagnostics, not a verified
 fix of the original failure. No TV operation was performed in the post-release
 source investigation below.
 
+## Captured firmware preparation stages (2026-11-03)
+
+The [new owner-supervised reproduction](../history/2026-11-03-root-standby-power-stages.md)
+records two failures with active retained intent and unchanged startup identity.
+A continuous firmware stream includes `Active/onOff=off` preparation before
+explicit `Active Standby`, then preparation before final `Active`. The old
+handler erased its observed ON baseline on the first preparation frame, so it
+never requested wake presentation. The focused source correction retains that
+baseline while cancelling pending wake/proof; only explicit standby creates
+shutdown evidence. Initial Off, unknown/lost streams and all presentation safety
+gates remain fail closed. Host replay passes; signed-package physical acceptance
+is still required. This does not accept the older no-proof observer-exit failure
+or guarantee immediate first-screen behavior.
+
 ## Established evidence and blocker
 
 The public issue and dated records contain the device, firmware, component,
