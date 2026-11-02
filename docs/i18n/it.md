@@ -95,6 +95,8 @@ Dopo un’interruzione, esegui prima `status` e conserva i registri. `restore` r
 
 1.5.4: in **Impostazioni Home → Aspetto**, disattiva **Mostra riquadro «Aggiungi app»** per nascondere +. È attivo per impostazione predefinita. Usa **Aggiungi app** nella stessa sezione per aggiungere o ripristinare app anche con + nascosto. Puoi continuare a spostare e nascondere le app; la scelta resta dopo il riavvio. Se tutte le app sono nascoste, i controlli in alto e le impostazioni restano accessibili.
 
+Non pubblicato: il tema scelto determina se **Ingressi** usa il menu in alto o una fila HDMI; non esistono un’impostazione globale della posizione né l’interruttore **Mostra ingressi su Home**. La fila supporta attualmente solo `dock-grid`. Liquid Glass la seleziona; Classic e i temi senza questa opzione mantengono il menu in alto. Su dal dock entra nella fila, ancora Su raggiunge l’intestazione, Giù o Indietro torna al dock e OK avvia la sorgente. Se sono presenti riquadri delle sorgenti, la fila sostituisce il menu Ingressi in alto. Il nome del dispositivo proviene dai metadati EIM solo se il firmware lo fornisce; altrimenti la sorgente collegata mostra **Collegato**. Home non inventa un nome PlayStation e non garantisce l’identificazione CEC. Le porte vuote restano selezionabili. Le anteprime sono **disattivate per impostazione predefinita**. Attiva esplicitamente **Impostazioni Home → Aspetto → Anteprima dell’ingresso selezionato** per vedere un HDMI collegato dopo circa 0,8 secondi di selezione, solo quando il tema usa la fila. Su alcuni TV le anteprime HDMI possono riprodurre audio o attivare HDR; il silenzio non è garantito. Home non modifica automaticamente il silenziamento globale o le impostazioni HDR del TV. Live TV e le porte vuote mantengono riquadri statici.
+
 Nelle anteprime dei temi di 1.5.4 con barra laterale opzionale, Su/Giù seleziona una voce del menu, Destra passa alle app e Sinistra dalla prima colonna delle app torna al menu.
 
 No-root 1.5.0: Helper può riprendersi da un timeout temporaneo del watchdog al risveglio, con un massimo di cinque tentativi in dieci minuti. Stop e tre pressioni di Home richiedono ancora un avvio esplicito di Helper; gli errori ripetuti lo lasciano fermo. La verifica sul TV è in attesa. [Comportamento e limiti (inglese)](../HELPER-DIAGNOSTICS.md#watchdog-recovery-unpublished-candidate-155).
@@ -140,9 +142,11 @@ Homebrew Channel ha negato l’accesso a questo programma di installazione. Su w
 
 1.5.4: **Impostazioni → Temi**. **Classic**, **Alpine**, **Ribbon** sono integrati e non richiedono il download del tema; Classic resta predefinito. **Channel** è esterno, dallo showcase. Durante una prova nella galleria: Scegli il tema e **Mantieni tema** entro **20 secondi**. **Ripristina**, Back o la scadenza ripristinano il precedente. Una prova interrotta avvia nuovamente Home con Classic. I temi integrati e scaricati scelti nell’elenco installato vengono applicati e salvati subito, senza timer. Vale anche per quelli ricevuti dal computer o installati tramite URL. Solo Prova tema nella galleria avvia una prova di 20 secondi.
 
+Non pubblicato: **Classic**, **Liquid Glass** e **Ribbon** sono integrati. **Alpine 1.4.4** passa alla **galleria dei temi** come download. Una selezione salvata di `builtin:alpine` torna a Classic con l’avviso di ripristino visibile esistente; Home non scarica Alpine automaticamente e non lo sostituisce con Liquid Glass.
+
 I temi installati appaiono in una sola riga a scorrimento orizzontale. Il tema attivo è sempre il primo e la sua scheda è evidenziata. Usa Sinistra/Destra per scorrere la riga.
 
-La galleria mostra solo temi non installati su questo TV. Classic, Alpine, Ribbon e i temi scaricati sono nascosti, anche se esiste una versione più recente. Dopo la rimozione il tema riappare. Aggiorna tramite URL o trasferimento dal computer.
+La galleria mostra solo temi non installati su questo TV. Classic, Liquid Glass, Ribbon e i temi scaricati sono nascosti, anche se esiste una versione più recente. Dopo la rimozione il tema riappare. Aggiorna tramite URL o trasferimento dal computer.
 
 Le schede sono integrate in Temi, accanto alle categorie. Galleria, installazione tramite link e trasferimento dal computer si aprono nello stesso pannello; solo una prova della galleria mostra temporaneamente Home.
 

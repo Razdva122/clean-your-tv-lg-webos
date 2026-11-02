@@ -1,5 +1,9 @@
 # Release history and device evidence
 
+- [Inputs presentation and C3 browser probe, 2026-11-02](2026-11-02-input-preview-polish.md): exclusive menu/shelf, first-frame text/icon sync, source fingerprints and narrowly scoped native HDMI rounding observation; not full Home acceptance.
+
+- [Theme-owned Inputs and Alpine migration, 2026-11-02](2026-11-02-theme-input-placement.md): menu/shelf theme option, Liquid Glass built-in and exact Alpine 1.4.4 Showcase migration; source/browser checks only, held for maintainer review.
+
 - [v1.6.0 final candidate artifacts and exact carry](2026-11-02-release-1.6.0-final-artifacts.md)
 
 [Current user documentation](../README.md) · [Developer references](../development/README.md)

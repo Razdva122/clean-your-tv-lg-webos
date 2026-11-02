@@ -104,7 +104,7 @@
       refreshMode().then(function () { message.textContent = t(error); });
     });
   }
-  var order = [3, 1, 12, 9, 8, 10, 11, 5, 4, 0, 7, 6, 2];
+  var order = [3, 1, 12, 9, 8, 10, 11, 14, 5, 4, 0, 7, 6, 2];
   function focus(index) {
     selected = index;
     if (!buttons[selected].disabled && !buttons[selected].hidden) buttons[selected].focus();
@@ -132,6 +132,7 @@
     if (index === 9) { if (window.HomeThemePanel) window.HomeThemePanel.open(); return; }
     if (index === 8) { if (window.HomeLayoutPanel) window.HomeLayoutPanel.open(); return; }
     if (index === 10) { if (window.HomeAppControls) HomeAppControls.toggle(); return; }
+    if (index === 14) { if (window.HomeInputShelf) HomeInputShelf.togglePreview(); return; }
     if (index === 11) { if (window.HomeAppControls) { close(); HomeAppControls.add(); } return; }
     if (index === 3) return changeMode();
     if (index === 7) {
@@ -185,13 +186,14 @@
     var footer = document.createElement('div'); footer.className = 'settings-footer'; card.appendChild(footer);
     var back = document.createElement('div'); back.className = 'renewal-actions'; footer.appendChild(back);
     buttons = [];
-    [3, 1, 9, 8, 10, 11, 5, 4, 0, 7, 6, 2, 12].forEach(function (i) {
-      var labels = ['TV settings','Open LG Home','Back to Home','Change Home','Software updates','Language','LG firmware updates','HDMI sound','Columns','Themes','Show Add app tile','Add app','Check status'];
+    [3, 1, 9, 8, 10, 11, 14, 5, 4, 0, 7, 6, 2, 12].forEach(function (i) {
+      var labels = ['TV settings','Open LG Home','Back to Home','Change Home','Software updates','Language','LG firmware updates','HDMI sound','Columns','Themes','Show Add app tile','Add app','Check status','Show inputs on Home','Preview inputs on focus'];
       var b = document.createElement('button'); b.textContent = t(labels[i]);
       if (i === 12) { b.hidden = true; b.disabled = true; }
       if (i === 3) { b.className = 'home-routing-switch'; b.setAttribute('role','switch'); b.setAttribute('aria-checked','false'); }
-      var target = i === 10 || i === 11 ? apps : i === 9 ? themes : i === 8 ? layout : i === 6 || i === 7 ? firmware : i === 3 || i === 12 || i === 1 ? homeActions : i === 4 || i === 0 || i === 5 ? links : back;
+      var target = i === 10 || i === 11 || i === 14 ? apps : i === 9 ? themes : i === 8 ? layout : i === 6 || i === 7 ? firmware : i === 3 || i === 12 || i === 1 ? homeActions : i === 4 || i === 0 || i === 5 ? links : back;
       if (i === 10) { b.id = 'homeShowAddApp'; b.className = 'home-routing-switch'; b.setAttribute('role','switch'); b.setAttribute('aria-checked','true'); }
+      if (i === 14) { b.id = 'homePreviewInputs'; b.className = 'home-routing-switch'; b.setAttribute('role','switch'); b.setAttribute('aria-checked','true'); }
       if (i === 11) b.id = 'homeAddApp';
       if (i === 9) { b.hidden=true; b.disabled=true; }
       if (i === 8) b.id = 'homeColumns';
@@ -235,6 +237,7 @@
       if (!panel) build();
       if (!panel.hidden) return;
       if (window.HomeAppControls) HomeAppControls.refresh();
+      if (window.HomeInputShelf) HomeInputShelf.refresh();
       if (window.HomeLayoutPanel) HomeLayoutPanel.refreshAvailability();
       if (window.ThemeRuntime) window.ThemeRuntime.suspend('settings');
       previous = document.activeElement;

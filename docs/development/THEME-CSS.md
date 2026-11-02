@@ -57,9 +57,19 @@ policy except `.ctv-tile`, which remains an engine-reserved interaction hook.
 | `.ctv-library-row` | Available app row in the library; native button focus is mirrored |
 | `.ctv-inputs` | Inputs dropdown; anchoring, width and visibility are engine-owned |
 | `.ctv-input-row` | Selectable input/source row; selection action and navigation remain trusted |
+| `.ctv-input-shelf` | Theme-selected Inputs shelf on `dock-grid`, including its caption; geometry, clipping, scrolling and visibility are engine-owned |
+| `.ctv-input-tile` | Selectable source tile in the shelf; position, size, launch action and navigation remain trusted |
+| `.ctv-input-status` | Device name or "Not connected" text inside a shelf tile |
+| `.ctv-input-preview` | Live picture frame inside the focused shelf tile; the frame inherits tile rounding, while native video clipping depends on renderer/firmware (earlier webOS 6 hardware ignored rounded clipping, masks and opacity). Starting, stopping, size and placement are engine-owned |
 
 `.is-focused` mirrors remote/pointer focus on tiles, their visual cards and labels,
-header shortcuts, library rows, the library close button and input rows. `.is-moving` mirrors reorder state on a
+header shortcuts, library rows, the library close button, input rows and shelf
+tiles. `.is-connected` and `.is-disconnected` mirror live TV input status on shelf
+tiles and input rows only when the TV reports it; neither is present when status
+is unknown, so do not style an absent state as disconnected. `.is-previewing` marks
+the shelf tile whose live picture is playing; it appears only once the picture
+plays and is removed as soon as it stops. Older Home versions
+reject rules that use these shelf parts or states. `.is-moving` mirrors reorder state on a
 tile and its card. `.is-selected` is a policy vocabulary token reserved for
 selection states; do not assume that every part receives it or that focus means
 selection. Existing `.focused` and `.moving` classes remain internal compatibility
@@ -162,7 +172,11 @@ color fallback. An ordinary author `background-color` declaration does not
 override that inline value; `!important` is forbidden. The ambient gradient is
 emitted into a trusted default stylesheet instead of inline CSS, so a scoped
 `.ctv-ambient` background image can override it, including a transparent gradient
-for a flat background. Crossfade timing and opacity remain engine-owned. Broken tile icons are hidden and replaced with the app initial;
+for a flat background. Crossfade timing and opacity remain engine-owned. Themes keep
+both glow layers and immediate remote focus unless they opt into
+[Classic motion](#classic-motion-opt-in-unreleased). The engine fades `background` and
+`color` on shortcuts and input tiles, but gradients cannot interpolate: change a
+`background-color` under a constant `background-image` for focus fills that fade. Broken tile icons are hidden and replaced with the app initial;
 broken library images are hidden without hiding their actionable row.
 
 Outfit weights 300/400/500/700 and packaged Noto Sans fallbacks provide offline
@@ -357,6 +371,111 @@ a theme replacement map; the CSS renderer does not rewrite the selected source.
 
 The `.ctv-position` part styles the decorative scenic-ribbon position indicator.
 A transparent `color` hides its count and arrows without changing navigation.
+
+
+## Theme-owned input placement (unreleased)
+
+The selected theme chooses the header Inputs menu or the Inputs shelf. Omitted
+`layout.inputs` means `"menu"`, including Classic and existing themes. There is
+no global placement preference or **Show inputs on Home** switch. Liquid Glass
+opts into `"shelf"`; the shelf is currently supported only on `dock-grid`. A
+nonempty shelf replaces the header Inputs shortcut, and remote navigation skips
+that hidden shortcut. When no source tiles exist, the menu remains available.
+An explicit `"menu"` is valid on any preset.
+
+For example, this compiled descriptor excerpt pairs the field and capability
+(other required manifest fields are omitted):
+
+```json
+{
+  "layout": {
+    "preset": "dock-grid",
+    "columns": 5,
+    "spacingScale": 1,
+    "textScale": 1,
+    "focusScale": 1.1,
+    "inputs": "shelf"
+  },
+  "requires": {"capabilities": ["input-placement-v1"]}
+}
+```
+
+The source compiler emits `input-placement-v1` when `layout.inputs` is present,
+including explicit `"menu"`. Descriptor policy requires the field and capability
+together. Older Home rejects this capability before storing or applying the
+theme. Input placement and the [Classic motion opt-in](#classic-motion-opt-in-unreleased)
+are independent; selecting the shelf does not opt into Classic motion.
+
+Use the existing parts and states for appearance, without new CSS syntax:
+
+```css
+.ctv-input-shelf { color: #ffffff; }
+.ctv-input-tile { background-color: #202536; border-radius: 24px; }
+.ctv-input-tile.is-connected { box-shadow: 0 0 0 1px rgba(120, 220, 160, 0.6); }
+.ctv-input-tile.is-disconnected { color: rgba(255, 255, 255, 0.5); }
+.ctv-input-tile.is-focused { background-color: #eef3ff; color: #101420; }
+.ctv-input-status { color: rgba(255, 255, 255, 0.7); }
+.ctv-input-tile.is-focused .ctv-input-status { color: #30384a; }
+.ctv-input-preview { background-color: #000000; }
+.ctv-input-tile.is-previewing .ctv-input-status { color: #ffffff; }
+```
+
+The engine owns geometry, hitboxes, source launch and video start/release. It
+requests muted playback, but the native external-input pipeline may ignore that
+request. Previews are off by default and require explicit user opt-in.
+On a shelf, Up from the dock reaches the shelf, Up again reaches the header,
+Down or Back returns to the dock, and OK launches the source. A connected HDMI
+source can preview after about 800 ms of focus after the user enables **Preview
+inputs on focus**; this preference only applies while the selected theme uses a
+shelf. HDMI previews may play sound or switch HDR on some TVs. Home does not
+automatically change global TV mute or HDR settings. Theme CSS cannot start
+media, enable previews or change those TV settings. Software rendering clips the
+frame to its inherited radius.
+Native video composition must be checked per renderer/firmware: earlier webOS 6
+observations ignored rounded clipping, masks and opacity. A 2026-11-02 standalone
+browser probe on an OLED55C3RLA (firmware 43.21.71, SDK 11.2.0) rounded real HDMI 3,
+but audio still played despite `video.muted = true`, and an HDR notification
+appeared. This does not verify packaged Home or other models; mute and HDR
+behavior remain unresolved. Do not rely on arbitrary masks/opacity for video
+release or navigation safety. The engine releases previews when focus leaves, Home hides or loses focus, or an owned
+dialog opens. Connection states appear only when the TV supplies them. Device
+names come from firmware-provided EIM metadata; otherwise a connected source
+shows the localized **Connected** status. Never invent a PlayStation name or
+guarantee CEC identification. `previewing` appears only while a live picture is
+playing.
+
+
+## Classic motion opt-in (unreleased)
+
+By default a theme gets immediate remote focus on every layout: the card and the focus
+frame snap, rows jump, there are no edge bumps or edge fades, and the ambient glow keeps
+its two crossfading layers. A `dock-grid` theme can instead opt into the motion of
+unthemed Classic with `"motion": "classic"` in `layout`:
+
+```json
+{"preset": "dock-grid", "columns": 5, "spacingScale": 1, "textScale": 1, "focusScale": 1.1, "motion": "classic"}
+```
+
+- **What it turns on:** the row glide on a single Up/Down press, the 10 px edge bump,
+  the card zoom with the focus frame growing on the same 240 ms transform, the top and
+  bottom edge fades (slightly softer than Classic's, so they read as a vignette over a
+  wallpaper), and the baked glow.
+- **Baked glow:** once the colour settles, the glow moves to a plain base element and
+  both layers stop drawing. The base also carries `.ctv-ambient`, so the theme's ambient
+  rule styles it, but only while the glow is baked; during a crossfade the base is empty,
+  so a translucent ambient style never doubles.
+- **Engine-owned transitions:** under this opt-in a `transition` on `.ctv-card`,
+  `.ctv-focus`, `.ctv-label`, `.ctv-shortcut` or `.ctv-input-tile` is rejected, because
+  it would replace the engine's transform, grow and fade motion and let the card and
+  frame fall out of step.
+- **Capability:** the compiler emits `classic-motion-v1`, and descriptor policy requires
+  the field and the capability together, only on `dock-grid`. Older Home rejects the
+  capability before storing or applying the package, keeping its current theme.
+- **Cost:** keep shadows off parts that repaint on every press. On a 4K webOS TV a
+  blurred shadow on the dock band and a translucent border on input tiles each cost
+  about 2 missed frames per shelf press; a `0 0 0 1px` ring is cheap.
+
+Reduced motion still turns all of this off.
 
 
 ## Parameterized scenic ribbons (unreleased)

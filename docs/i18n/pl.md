@@ -95,6 +95,8 @@ Po przerwaniu operacji najpierw uruchom `status` i zachowaj dzienniki. `restore`
 
 1.5.4: w **Ustawienia Home → Wygląd** wyłącz **Pokaż kafelek „Dodaj aplikację”**, aby ukryć +. Opcja jest domyślnie włączona. Użyj **Dodaj aplikację** w tej samej sekcji, aby dodawać lub przywracać aplikacje przy ukrytym +. Nadal można zmieniać kolejność i ukrywać aplikacje; wybór zostaje po ponownym uruchomieniu. Po ukryciu wszystkich aplikacji górne przyciski i ustawienia pozostają dostępne.
 
+Nieopublikowane: wybrany motyw określa menu **Wejścia** w nagłówku albo półkę HDMI; nie ma globalnego ustawienia położenia ani przełącznika **Pokaż wejścia na Home**. Półka obsługuje obecnie tylko `dock-grid`. Liquid Glass ją wybiera; Classic i motywy bez tej opcji zachowują menu w nagłówku. Góra z doku przechodzi do półki, ponownie Góra do nagłówka, Dół lub Wstecz wraca do doku, a OK uruchamia źródło. Jeśli są kafelki źródeł, półka zastępuje menu Wejścia w nagłówku. Nazwa urządzenia pochodzi z metadanych EIM tylko wtedy, gdy firmware ją udostępnia; w przeciwnym razie podłączone źródło pokazuje **Podłączono**. Home nie wymyśla nazwy PlayStation i nie gwarantuje identyfikacji CEC. Puste porty pozostają dostępne. Podglądy są **domyślnie wyłączone**. Włącz jawnie **Ustawienia Home → Wygląd → Podgląd wybranego wejścia**, aby wyświetlić podłączone HDMI po około 0,8 sekundy zaznaczenia, tylko gdy motyw ma półkę. Na niektórych TV podglądy HDMI mogą odtwarzać dźwięk lub włączać HDR; cisza nie jest gwarantowana. Home nie zmienia automatycznie globalnego wyciszenia ani ustawień HDR telewizora. Live TV i puste porty zachowują statyczne kafelki.
+
 W podglądach motywów wersji 1.5.4 z opcjonalnym panelem bocznym Góra/Dół wybiera pozycję menu, Prawo przechodzi do aplikacji, a Lewo z pierwszej kolumny aplikacji wraca do menu.
 
 No-root 1.5.0: Helper może wznowić działanie po przejściowym przekroczeniu czasu watchdog przy wybudzaniu, maksymalnie pięć razy w ciągu dziesięciu minut. Stop i trzykrotne Home nadal wymagają jawnego uruchomienia Helper; powtarzające się błędy pozostawiają go zatrzymanym. Weryfikacja na TV jest w toku. [Działanie i ograniczenia (angielski)](../HELPER-DIAGNOSTICS.md#watchdog-recovery-unpublished-candidate-155).
@@ -139,9 +141,11 @@ Homebrew Channel odmówił temu instalatorowi dostępu. W webOS 11 Homebrew 0.7.
 
 1.5.4: **Ustawienia → Motywy**. **Classic**, **Alpine**, **Ribbon** są wbudowane i nie wymagają pobierania motywu; domyślny pozostaje Classic. **Channel** jest zewnętrznym motywem ze showcase. Podczas próby w galerii: Wybierz motyw i **Zachowaj motyw** w ciągu **20 sekund**. **Przywróć**, Back lub upływ czasu przywraca poprzedni. Przerwana próba uruchomi Home z Classic. Motywy wbudowane i pobrane wybrane z listy zainstalowanych są stosowane i zapisywane od razu, bez odliczania. Dotyczy to również motywów z komputera lub URL. Tylko Wypróbuj motyw w galerii rozpoczyna próbę 20 sekund.
 
+Nieopublikowane: **Classic**, **Liquid Glass** i **Ribbon** są wbudowane. **Alpine 1.4.4** przechodzi do pobierania w **galerii motywów**. Zapisany wybór `builtin:alpine` wraca do Classic z istniejącym widocznym komunikatem odzyskiwania; Home nie pobiera Alpine automatycznie ani nie zastępuje go Liquid Glass.
+
 Zainstalowane motywy są w jednym przewijanym poziomo rzędzie. Aktywny motyw jest zawsze pierwszy, a jego karta jest wyróżniona. Do przeglądania użyj strzałek w lewo/prawo.
 
-Galeria pokazuje tylko motywy niezainstalowane na tym TV. Classic, Alpine, Ribbon i pobrane motywy są ukryte, także gdy istnieje nowsza wersja. Po usunięciu motyw pojawia się ponownie. Aktualizuj przez URL lub transfer z komputera.
+Galeria pokazuje tylko motywy niezainstalowane na tym TV. Classic, Liquid Glass, Ribbon i pobrane motywy są ukryte, także gdy istnieje nowsza wersja. Po usunięciu motyw pojawia się ponownie. Aktualizuj przez URL lub transfer z komputera.
 
 Karty motywów są osadzone bezpośrednio w Motywyzie obok kategorii. Galeria, instalacja z linku i przesyłanie z komputera otwierają się w tym panelu; tylko próba w galerii tymczasowo pokazuje Home.
 

@@ -95,6 +95,8 @@ After interruption, run `status` before retrying; retain journals and recovery f
 
 1.5.4: in **Home settings → Appearance**, turn off **Show Add app tile** to hide the + tile. It is on by default. Use **Add app** in the same section to add or restore apps while + is hidden. Ordering and hiding remain available; the choice survives restart. If every app is hidden, the top controls and Settings remain available.
 
+Unreleased: the selected theme chooses the header **Inputs** menu or an HDMI shelf; there is no global placement or **Show inputs on Home** switch. The shelf currently supports only `dock-grid`. Liquid Glass selects it; Classic and themes without this option keep the header menu. On the shelf, Up from the dock enters the shelf, Up again reaches the header, Down or Back returns to the dock, and OK launches the source. When source tiles exist, the shelf replaces the header Inputs menu. A device name comes from EIM metadata only if the firmware supplies it; otherwise a connected source shows **Connected**. Home does not invent a PlayStation name or guarantee CEC identification. Empty ports remain selectable. Previews are **off by default**. Explicitly enable **Home settings → Appearance → Preview inputs on focus** to preview a connected HDMI source after about 0.8 seconds of focus, only while the selected theme has a shelf. HDMI previews may play sound or switch HDR on some TVs; silence is not guaranteed. Home does not automatically change global TV mute or HDR settings. Live TV and empty ports keep static tiles.
+
 In 1.5.4 theme previews with the optional sidebar layout, Up/Down selects a menu item, Right enters the apps, and Left from the first visible app column returns to the menu.
 
 No-root 1.5.0: Helper can recover a transient watchdog timeout after standby, with at most five attempts in ten minutes. Stop and triple Home still require an explicit Start Helper; repeated failures stay stopped. TV acceptance is pending. [Behavior and limits (English)](../HELPER-DIAGNOSTICS.md#watchdog-recovery-unpublished-candidate-155).
@@ -138,9 +140,11 @@ Homebrew Channel denied access to this installer. On webOS 11, Homebrew 0.7.3 ne
 
 1.5.4: **Settings → Themes**. **Classic**, **Alpine**, **Ribbon** are included and work without downloading a theme; Classic remains the default. **Channel** is an external showcase theme. In showcase trials: Choose a theme, then **Keep theme** within **20 seconds**. **Revert**, Back or timeout restores the previous appearance. If Home closes during an unconfirmed preview, the next launch returns to Classic. Built-in and downloaded themes chosen in the installed list apply and save immediately, without a confirmation timer. Themes received from a computer or installed by URL also use this list. Only Try theme inside Theme showcase starts a 20-second trial.
 
+Unreleased: **Classic**, **Liquid Glass** and **Ribbon** are built in. **Alpine 1.4.4** moves to the downloadable **Theme showcase**. A saved `builtin:alpine` selection falls back to Classic with the existing visible recovery notice; Home neither downloads Alpine automatically nor replaces it with Liquid Glass.
+
 Installed themes appear in one horizontally scrollable row. The active theme is always first and has a highlighted card. Use Left/Right to browse the row.
 
-Showcase lists only themes that are not installed on this TV. Classic, Alpine, Ribbon and downloaded themes are hidden, including when a newer catalogue version exists. After removing a downloaded theme it appears again. Update a theme through Add by ID or Receive from computer.
+Showcase lists only themes that are not installed on this TV. Classic, Liquid Glass, Ribbon and downloaded themes are hidden, including when a newer catalogue version exists. After removing a downloaded theme it appears again. Update a theme through Add by ID or Receive from computer.
 
 Theme cards are embedded directly in Themes beside the settings categories. Showcase, link installation and computer transfer open within that pane; only a showcase trial temporarily reveals Home.
 

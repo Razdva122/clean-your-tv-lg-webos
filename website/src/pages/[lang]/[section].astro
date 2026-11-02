@@ -123,10 +123,10 @@ const Content = rendered?.Content;
           {section === "themes" && (
             <>
               <p class="lead">{t.themes}</p>
-              {["Classic", "Alpine", "Ribbon"].map((theme) => (
+              {["Classic", "Liquid Glass", "Ribbon"].map((theme) => (
                 <figure>
                   <img
-                    src={base + "assets/" + theme.toLowerCase() + ".jpg"}
+                    src={base + "assets/" + theme.toLowerCase().replace(/ /g, "-") + ".jpg"}
                     alt={`${t.themeImage}: ${theme}`}
                     width="1920"
                     height="1080"

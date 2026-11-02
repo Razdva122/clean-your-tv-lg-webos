@@ -24,7 +24,7 @@ def tracked_files(prefix):
     required = {'native/app': ['native/app/helper-entry.js', 'native/app/state-permissions.js', 'native/app/home-control.js', 'native/app/websocket.js'],
                 'renewal-service': ['renewal-service/home-control.js', 'renewal-service/diagnostics.js', 'renewal-service/ca-bundle.crt', 'renewal-service/ca-LICENSE.txt'],
                 'updater-service': ['updater-service/ca-bundle.crt', 'updater-service/ca-LICENSE.txt'],
-                'launcher': ['launcher/viewport.js', 'launcher/system-updates.js', 'launcher/helper-control.js', 'launcher/release-notes.js', 'launcher/app-library.js', 'launcher/i18n.js', 'launcher/catalogs.js', 'launcher/i18n.css', 'launcher/theme-defaults.css', 'launcher/theme-policy.js', 'launcher/theme-runtime.js', 'launcher/home-layout.js', 'launcher/layout-panel.js', 'launcher/settings-categories.js', 'launcher/layout-panel.css',
+                'launcher': ['launcher/viewport.js', 'launcher/system-updates.js', 'launcher/helper-control.js', 'launcher/release-notes.js', 'launcher/app-library.js', 'launcher/input-sources.js', 'launcher/input-preview.js','launcher/i18n.js', 'launcher/catalogs.js', 'launcher/i18n.css', 'launcher/theme-defaults.css', 'launcher/theme-policy.js', 'launcher/theme-runtime.js', 'launcher/home-layout.js', 'launcher/layout-panel.js', 'launcher/settings-categories.js', 'launcher/layout-panel.css',
                              'launcher/fonts/outfit-300.ttf', 'launcher/fonts/outfit-400.ttf',
                              'launcher/fonts/outfit-500.ttf', 'launcher/fonts/outfit-700.ttf',
                              'launcher/fonts/NotoSans.ttf', 'launcher/fonts/NotoSans-OFL.txt',

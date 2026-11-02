@@ -35,11 +35,12 @@ for (const page of [
 }
 for (const name of ["logo-dark.svg", "symbol-color.svg"])
   copyFileSync(root + "assets/brand/" + name, pub + "assets/" + name);
-for (const theme of ["classic", "alpine", "ribbon"])
+for (const theme of ["classic", "ribbon"])
   copyFileSync(
     root + "docs/launcher-" + theme + ".jpg",
     pub + "assets/" + theme + ".jpg",
   );
+copyFileSync(root + "themes/liquid-glass/assets/preview.jpg", pub + "assets/liquid-glass.jpg");
 for (const name of ["outfit-400.ttf", "outfit-700.ttf", "OFL.txt"]) {
   copyFileSync(root + "launcher/fonts/" + name, pub + "assets/" + name);
 }

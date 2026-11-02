@@ -4,8 +4,8 @@
 })(this, function () {
   'use strict';
 
-  var parts = ['home', 'ambient', 'hero', 'header', 'greeting', 'clock', 'period', 'divider', 'date', 'shortcut', 'input-icon', 'network-icon', 'settings-icon', 'dock', 'position', 'focus', 'card', 'icon', 'label', 'library', 'library-panel', 'library-close', 'library-row', 'inputs', 'input-row'];
-  var states = ['focused', 'selected', 'moving', 'glyph', 'light', 'dark', 'mid', 'bright', 'wide'];
+  var parts = ['home', 'ambient', 'hero', 'header', 'greeting', 'clock', 'period', 'divider', 'date', 'shortcut', 'input-icon', 'network-icon', 'settings-icon', 'dock', 'position', 'focus', 'card', 'icon', 'label', 'library', 'library-panel', 'library-close', 'library-row', 'inputs', 'input-row', 'input-shelf', 'input-tile', 'input-status', 'input-preview'];
+  var states = ['focused', 'selected', 'moving', 'glyph', 'light', 'dark', 'mid', 'bright', 'wide', 'connected', 'disconnected', 'previewing'];
   var properties = {
     'color': 'color',
     'background-color': 'color',
@@ -143,8 +143,8 @@
     if (m.id.indexOf('github:') === 0 && m.id.split(':')[1] !== m.source.repository.slice(19).toLowerCase()) fail('manifest-invalid', 'source.identity');
     object(m.requires, ['minimumHomeVersion', 'capabilities'], 'manifest-invalid', 'requires');
     version(m.requires.minimumHomeVersion);
-    list(m.requires.capabilities, 3, 'api-unsupported', 'capabilities').forEach(function (capability, index) { if (['modern-icon-css-v1', 'ribbon-layout-v1', 'date-placement-v1'].indexOf(capability) < 0 || m.requires.capabilities.indexOf(capability) !== index) fail('api-unsupported', 'capabilities'); });
-    object(m.layout, ['preset', 'columns', 'spacingScale', 'textScale', 'focusScale'], 'layout-invalid', 'layout', ['allowColumnOverride', 'ribbon', 'datePlacement']);
+    list(m.requires.capabilities, 4, 'api-unsupported', 'capabilities').forEach(function (capability, index) { if (['modern-icon-css-v1', 'ribbon-layout-v1', 'classic-motion-v1', 'date-placement-v1', 'input-placement-v1'].indexOf(capability) < 0 || m.requires.capabilities.indexOf(capability) !== index) fail('api-unsupported', 'capabilities'); });
+    object(m.layout, ['preset', 'columns', 'spacingScale', 'textScale', 'focusScale'], 'layout-invalid', 'layout', ['allowColumnOverride', 'ribbon', 'motion', 'datePlacement', 'inputs']);
     if (['dock-grid', 'icon-grid', 'side-grid', 'channel-list', 'scenic-grid'].indexOf(m.layout.preset) < 0) fail('layout-invalid', 'preset');
     if (Object.prototype.hasOwnProperty.call(m.layout, 'allowColumnOverride') && typeof m.layout.allowColumnOverride !== 'boolean') fail('layout-invalid', 'allowColumnOverride');
     number(m.layout.columns, 1, 8, 'layout-invalid', 'columns');
@@ -152,6 +152,9 @@
     number(m.layout.spacingScale, .8, 1.2, 'layout-invalid', 'spacingScale');
     number(m.layout.textScale, .9, 1.25, 'layout-invalid', 'textScale');
     number(m.layout.focusScale, 1.05, 1.15, 'layout-invalid', 'focusScale');
+    var hasInputs = Object.prototype.hasOwnProperty.call(m.layout, 'inputs');
+    if (hasInputs !== (m.requires.capabilities.indexOf('input-placement-v1') >= 0)) fail('api-unsupported', 'input-placement-v1');
+    if (hasInputs && (['menu', 'shelf'].indexOf(m.layout.inputs) < 0 || m.layout.inputs === 'shelf' && m.layout.preset !== 'dock-grid')) fail('layout-invalid', 'inputs');
     var hasDatePlacement = Object.prototype.hasOwnProperty.call(m.layout, 'datePlacement');
     if (hasDatePlacement !== (m.requires.capabilities.indexOf('date-placement-v1') >= 0)) fail('api-unsupported', 'date-placement-v1');
     if (hasDatePlacement && (m.layout.preset !== 'dock-grid' || ['inline', 'below-clock'].indexOf(m.layout.datePlacement) < 0)) fail('layout-invalid', 'datePlacement');
@@ -162,6 +165,11 @@
       normalizedRibbon = normalizeRibbon(m.layout.ribbon);
       ribbonWidth(normalizedRibbon, m.layout.columns);
     }
+    // Opt-in: only themes that declare it get the Classic layout's glide, bump, zoom,
+    // frame motion, edge fades and baked glow; other themes keep immediate remote focus.
+    var hasMotion = Object.prototype.hasOwnProperty.call(m.layout, 'motion');
+    if (hasMotion !== (m.requires.capabilities.indexOf('classic-motion-v1') >= 0)) fail('api-unsupported', 'classic-motion-v1');
+    if (hasMotion && (m.layout.motion !== 'classic' || m.layout.preset !== 'dock-grid')) fail('layout-invalid', 'motion');
     object(m.defaults, ['wallpaperAssetId', 'dim', 'accent'], 'manifest-invalid', 'defaults');
     number(m.defaults.dim, 0, .85, 'manifest-invalid', 'dim');
     if (typeof m.defaults.accent !== 'string' || !/^#[a-fA-F0-9]{6}$/.test(m.defaults.accent)) fail('manifest-invalid', 'accent');
@@ -299,6 +307,15 @@
     }
     fail('css-value', 'type');
   }
+  // Under Classic motion the engine owns these parts' transitions; an author transition
+  // would replace them and let the card, frame and label fall out of step.
+  function validateMotion(m, b) {
+    if (m.layout.motion !== 'classic') return;
+    b.rules.forEach(function (rule) {
+      var part = rule.selector[rule.selector.length - 1].part;
+      if (['card', 'focus', 'label', 'shortcut', 'input-tile'].indexOf(part) >= 0 && rule.declarations.some(function (d) { return d.property === 'transition'; })) fail('css-value', 'transition on ' + part + ' under classic motion');
+    });
+  }
   function validateRules(b) {
     object(b, ['schemaVersion', 'rules'], 'css-value', 'bundle');
     if (b.schemaVersion !== 1) fail('api-unsupported', 'rules.schemaVersion');
@@ -385,6 +402,7 @@
     normalizeRibbon: normalizeRibbon,
     validateManifest: validateManifest,
     validateRules: validateRules,
+    validateMotion: validateMotion,
     compileRules: compileRules,
     validateCollection: validateCollection,
     validateBundle: validateRules,

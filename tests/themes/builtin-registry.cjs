@@ -22,5 +22,14 @@ function fixture(saved,entries=registry){
  for(const record of [{...entry(),id:'builtin:classic'},{...entry(),id:'builtin:../bad'},{...entry(),url:'https://evil.example/x'},{...entry(),url:'themes/example/../cytv-theme.json'},{...entry(),title:''},{...entry(),version:'latest'},{...entry(),digest:'x'}])await assert.rejects(fixture(null,{schemaVersion:1,themes:[record]}).manager.list(),/Built-in theme catalog/);
  await assert.rejects(fixture(null,{schemaVersion:1,themes:[entry(),entry()]}).manager.list(),/Built-in theme catalog/);
  await assert.rejects(fixture(null,{schemaVersion:1,themes:Array.from({length:33},(_,index)=>entry('theme-'+index))}).manager.list(),/Built-in theme catalog/);
+ const shipped=JSON.parse(fs.readFileSync('launcher/builtin-themes.json','utf8'));
+ assert.equal(shipped.themes.some(item=>item.id==='builtin:alpine'),false,'Alpine is distributed through Showcase rather than bundled');
+ assert.equal(fs.existsSync('launcher/themes/alpine'),false,'retired Alpine bytes do not remain in TV packages');
+ f=fixture({id:'builtin:alpine',title:'Alpine'},{schemaVersion:1,themes:[entry()]});
+ f.values.set('tvhome.columns.v1','7');f.values.set('tvhome.apps.v1','preserved');
+ await f.manager.start();assert.equal(f.state.visual,'builtin:classic','missing old Alpine restores Classic, never Liquid Glass');
+ assert.equal(f.values.has(f.manager.choiceKey),false);assert.match(f.manager.current().notice,/Unknown built-in/,'retired theme has a visible recovery notice');
+ assert.equal(f.calls.every(call=>call.isLocal===true),true,'retired theme recovery never downloads or selects a catalogue theme');
+ assert.equal(f.values.get('tvhome.columns.v1'),'7');assert.equal(f.values.get('tvhome.apps.v1'),'preserved');
  console.log('PASS generic trusted bundled registry, offline boot, selection, reset and unknown recovery');
 })().catch(error=>{console.error(error);process.exitCode=1;});

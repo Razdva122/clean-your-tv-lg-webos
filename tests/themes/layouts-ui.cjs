@@ -11,6 +11,8 @@ const {assert,chromium,stage,open}=require('./browser.cjs');
       await page.evaluate(({preset,columns})=>{HomeLayoutState.setColumns(null);HomeLayoutState.setThemeLayout({preset,columns,spacingScale:1,textScale:1,focusScale:1.1});},{preset,columns});
       for(let i=0;i<15;i++)await page.keyboard.press('ArrowUp');
       await page.keyboard.press(preset==='side-grid'?'ArrowRight':'ArrowDown');
+      // Classic's Inputs shelf sits between the header and the dock.
+      if(preset==='dock-grid')await page.keyboard.press('ArrowDown');
       const check=async()=>{
        await page.waitForFunction(()=>{const r=document.querySelector('#tiles .focused .card').getBoundingClientRect();return r.top>=-1 && r.bottom<=1081;});
        const g=await page.evaluate(()=>{const card=document.querySelector('#tiles .focused .card').getBoundingClientRect(),glass=document.getElementById('glass').getBoundingClientRect();return{card:{x:card.x,y:card.y,w:card.width,h:card.height},glass:{x:glass.x,y:glass.y,w:glass.width,h:glass.height},selected:document.querySelector('#tiles .focused').dataset.appId};});

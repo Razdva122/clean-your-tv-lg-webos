@@ -11,7 +11,7 @@ APP_ID = 'com.cleanyourtv.root.preview'
 SOURCE = Path(__file__).resolve().parents[1] / 'launcher'
 # Explicit public-source inventory: never recursively copy a developer workspace.
 FILES = (
-    'appinfo.json', 'viewport.js', 'release-notes.js', 'system-updates.js', 'index.html', 'app.js', 'app-library.js', 'i18n.js', 'catalogs.js', 'i18n.css', 'style.css', 'theme-defaults.css', 'theme-policy.js', 'theme-runtime.js', 'home-layout.js', 'layout-panel.js', 'settings-categories.js', 'layout-panel.css',
+    'appinfo.json', 'viewport.js', 'release-notes.js', 'system-updates.js', 'index.html', 'app.js', 'app-library.js', 'input-sources.js', 'input-preview.js','i18n.js', 'catalogs.js', 'i18n.css', 'style.css', 'theme-defaults.css', 'theme-policy.js', 'theme-runtime.js', 'home-layout.js', 'layout-panel.js', 'settings-categories.js', 'layout-panel.css',
     'brand-v2-icon.png', 'brand-v2-largeIcon.png', 'splash.png',
     'fonts/outfit-300.ttf', 'fonts/outfit-400.ttf', 'fonts/outfit-500.ttf', 'fonts/outfit-700.ttf', 'fonts/NotoSans.ttf', 'fonts/NotoSans-OFL.txt', 'fonts/NotoSansDevanagari.ttf', 'fonts/NotoSansDevanagari-OFL.txt', 'fonts/NotoSansKR.ttf', 'fonts/NotoSansKR-OFL.txt', 'fonts/NotoSansSC.ttf', 'fonts/NotoSansSC-OFL.txt', 'fonts/NotoSansTC.ttf', 'fonts/NotoSansTC-OFL.txt', 'fonts/OFL.txt',
 )

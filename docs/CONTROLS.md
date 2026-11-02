@@ -15,6 +15,28 @@
 The Magic Remote pointer and wheel pass through. Wheel-to-tile navigation is not
 implemented. The launcher does not take over app-specific Back behavior.
 
+### Inputs shelf (Classic)
+
+Classic shows your TV inputs and Live TV as a row of tiles between the clock and
+the dock. Press **Up** from the dock to reach it, **Left/Right** to choose a
+source and **OK** to switch to it. **Up** again reaches the Inputs, Wi-Fi and
+Settings buttons; **Down** or **Back** returns to the dock. When the TV reports
+input status, connected sources show a green dot and the connected device's name,
+and empty ports are dimmed with "Not connected" but stay selectable. If the TV
+does not report status, the shelf lists the inputs captured during installation
+without status. Turn it off with **Settings → Appearance → Show inputs on Home**;
+Up from the dock then reaches the header buttons as before. Other layouts keep
+the header **Inputs** button only. Live status depends on the TV allowing Home
+to read it; it has been confirmed on one webOS 6 TV with the No-root Edition.
+
+Rest on a connected HDMI source for about a second and its tile shows the live
+picture, muted. Only the focused tile previews. Moving away, opening the header,
+the Inputs dropdown or Settings, launching an input or leaving Home stops it. Empty
+ports, other input types and Live TV show the usual tile. If a picture does not start
+within four seconds, that source shows the usual tile for a minute. Turn previews off with
+**Settings → Appearance → Preview inputs on focus**. After switching to an input,
+pressing **Home** returns focus to that input's tile, so switching back is one press.
+
 ## Return to LG Home
 
 **Press Home three times within two seconds.** Home interception stops and LG

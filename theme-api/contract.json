@@ -26,7 +26,11 @@
     "library-close",
     "library-row",
     "inputs",
-    "input-row"
+    "input-row",
+    "input-shelf",
+    "input-tile",
+    "input-status",
+    "input-preview"
   ],
   "states": [
     "focused",
@@ -37,7 +41,10 @@
     "dark",
     "mid",
     "bright",
-    "wide"
+    "wide",
+    "connected",
+    "disconnected",
+    "previewing"
   ],
   "properties": {
     "color": "color",
@@ -105,6 +112,14 @@
     "allowColumnOverride": {
       "type": "boolean",
       "default": true
+    },
+    "motion": {
+      "optional": true,
+      "preset": "dock-grid",
+      "values": [
+        "classic"
+      ],
+      "capability": "classic-motion-v1"
     },
     "ribbon": {
       "optional": true,
@@ -186,6 +201,14 @@
       "minimumCardWidth": 64,
       "unknownKeys": "reject",
       "belowLabelsMinimumBottom": 64
+    },
+    "inputs": {
+      "values": [
+        "menu",
+        "shelf"
+      ],
+      "default": "menu",
+      "shelfPreset": "dock-grid"
     }
   },
   "defaults": {
@@ -255,12 +278,32 @@
       "paired": true,
       "belowLabelsMinimumBottom": 64
     },
+    "classic-motion-v1": {
+      "layout": "motion",
+      "preset": "dock-grid",
+      "paired": true,
+      "engineMotionParts": [
+        "card",
+        "focus",
+        "label",
+        "shortcut",
+        "input-tile"
+      ]
+    },
     "date-placement-v1": {
       "layout": "datePlacement",
       "preset": "dock-grid",
       "values": [
         "inline",
         "below-clock"
+      ],
+      "paired": true
+    },
+    "input-placement-v1": {
+      "layout": "inputs",
+      "values": [
+        "menu",
+        "shelf"
       ],
       "paired": true
     }

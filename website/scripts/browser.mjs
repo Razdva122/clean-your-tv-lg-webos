@@ -193,11 +193,11 @@ try {
     await page.getByRole("button", { name: edition, exact: true }).click();
     await frame.locator("#tiles .focused").waitFor();
     await page.locator('#previewThemes[aria-busy="false"]').waitFor();
-    await page.getByRole("button", { name: "Alpine", exact: true }).click();
+    await page.getByRole("button", { name: "Liquid Glass", exact: true }).click();
     await page.waitForFunction(
       () =>
         document.getElementById("screen").contentWindow.ThemeManager?.current()
-          .title === "Alpine",
+          .title === "Liquid Glass",
     );
   }
   assert.deepEqual(errors, []);

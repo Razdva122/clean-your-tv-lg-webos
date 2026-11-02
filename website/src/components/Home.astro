@@ -72,11 +72,11 @@ const t = copy[lang],
     </a>
   </div>
   <div class="theme-grid">
-    {["Classic", "Alpine", "Ribbon"].map((theme) => (
+    {["Classic", "Liquid Glass", "Ribbon"].map((theme) => (
       <figure data-kind="product">
         <a href={base + "demo/"}>
           <img
-            src={base + "assets/" + theme.toLowerCase() + ".jpg"}
+            src={base + "assets/" + theme.toLowerCase().replace(/ /g, "-") + ".jpg"}
             alt={`${t.themeImage}: ${theme}`}
             width="1920"
             height="1080"

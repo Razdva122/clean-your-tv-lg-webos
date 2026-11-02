@@ -34,6 +34,7 @@
     var policy = root.ThemePolicy;
     if (!policy) fail('api-unsupported', 'ThemePolicy');
     var manifest = policy.validateManifest(input.manifest), rules = policy.validateRules(input.rules);
+    policy.validateMotion(manifest, rules);
     var modernIcons = manifest.requires.capabilities.indexOf('modern-icon-css-v1') >= 0;
     var hasIconEffects = rules.rules.some(function (rule) { return rule.declarations.some(function (d) { return d.property === 'filter' || d.property === 'mix-blend-mode' || d.property === 'isolation' || d.property === 'transform' || d.property === 'overflow'; }); });
     if (hasIconEffects && !modernIcons) fail('api-unsupported', 'icon CSS capability');
@@ -42,6 +43,7 @@
     /* Trusted layouts currently implement only the Classic scale values. */
     if (manifest.layout.spacingScale !== 1 || manifest.layout.textScale !== 1 || manifest.layout.focusScale !== 1.1) fail('layout-invalid', 'unsupported scale preset');
     if (manifest.layout.preset !== 'dock-grid' && (!root.HomeLayoutState || !root.HomeLayoutState.setThemeLayout)) fail('layout-invalid', 'unsupported renderer preset');
+    if (manifest.layout.inputs !== undefined && (!root.HomeLayoutState || root.HomeLayoutState.supportsInputPlacement !== true)) fail('layout-invalid', 'unsupported input placement');
     if (manifest.layout.ribbon && (!root.HomeLayoutState || root.HomeLayoutState.supportsRibbonOptions !== true)) fail('layout-invalid', 'unsupported ribbon options');
     if (manifest.layout.allowColumnOverride === false && (!root.HomeLayoutState || root.HomeLayoutState.supportsColumnPolicy !== true)) fail('layout-invalid', 'unsupported column policy');
     var handles = input.assetHandles || {}, overrides = input.overrides || {}, own = Object.prototype.hasOwnProperty;
@@ -142,7 +144,10 @@
     Object.keys(handles).forEach(function (key) { ownedHandles[key] = handles[key]; });
     accepted = {themeId: manifest.id, themeVersion: manifest.themeVersion, handles: ownedHandles};
     var surface = root.document.getElementById('homeSurface');
-    if (surface) surface.classList.add('ctv-theme-active');
+    if (surface) {
+      surface.classList.add('ctv-theme-active');
+      surface.classList[manifest.layout.motion === 'classic' ? 'add' : 'remove']('ctv-classic-motion');
+    }
     release(previous && previous.handles, ownedHandles);
     return {themeId: manifest.id, themeVersion: manifest.themeVersion};
   }
@@ -153,7 +158,7 @@
     if (current && current.parentNode) current.parentNode.removeChild(current);
     accepted = null; heldSheet = null; wasEnabled = false; surfaceState(false);
     var surface = root.document.getElementById('homeSurface');
-    if (surface) surface.classList.remove('ctv-theme-active');
+    if (surface) { surface.classList.remove('ctv-theme-active'); surface.classList.remove('ctv-classic-motion'); }
     release(previous && previous.handles, null);
     return {themeId: 'builtin:classic', themeVersion: null};
   }

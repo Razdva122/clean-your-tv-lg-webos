@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "themeApiVersion": 1,
+  "id": "github:razdva122/clean-your-tv-lg-webos:alpine",
+  "title": "Alpine",
+  "description": "A quiet alpine panorama, large clock and one infinitely looping horizontal app ribbon.",
+  "author": {
+    "name": "Clean Your TV contributors",
+    "url": "https://github.com/razdva122"
+  },
+  "themeVersion": "1.4.4",
+  "layout": {
+    "preset": "scenic-grid",
+    "columns": 8,
+    "spacingScale": 1,
+    "textScale": 1,
+    "focusScale": 1.1,
+    "allowColumnOverride": false
+  },
+  "defaults": {
+    "wallpaperAssetId": "landscape",
+    "dim": 0.36,
+    "accent": "#ece7df"
+  },
+  "assets": [
+    {
+      "id": "preview",
+      "path": "assets/preview-b122290c433d2f3921259c4efbc12dff57e805a1fe0cbbb45f31aa338b9eb2dc.png",
+      "mediaType": "image/png",
+      "width": 960,
+      "height": 540,
+      "size": 235838,
+      "sha256": "b122290c433d2f3921259c4efbc12dff57e805a1fe0cbbb45f31aa338b9eb2dc"
+    },
+    {
+      "id": "landscape",
+      "path": "assets/landscape-0d38c92bbb35dc31d0cf05a7f2ac9e724e9a046922e52673f32d498dd09d81ff.jpg",
+      "mediaType": "image/jpeg",
+      "width": 3840,
+      "height": 2160,
+      "size": 1637925,
+      "sha256": "0d38c92bbb35dc31d0cf05a7f2ac9e724e9a046922e52673f32d498dd09d81ff"
+    },
+    {
+      "id": "button-inputs",
+      "path": "assets/button-inputs-405276aebdf8cb29509cac5d4c63f535dc5f0af511f0cc2c547d5141bd051bc8.png",
+      "mediaType": "image/png",
+      "width": 96,
+      "height": 96,
+      "size": 828,
+      "sha256": "405276aebdf8cb29509cac5d4c63f535dc5f0af511f0cc2c547d5141bd051bc8"
+    },
+    {
+      "id": "button-network",
+      "path": "assets/button-network-76446ac510cf667386ffcf47b17d9f86ea72fec31d76d09dd9f5c5df5717ceae.png",
+      "mediaType": "image/png",
+      "width": 96,
+      "height": 96,
+      "size": 1033,
+      "sha256": "76446ac510cf667386ffcf47b17d9f86ea72fec31d76d09dd9f5c5df5717ceae"
+    },
+    {
+      "id": "button-settings",
+      "path": "assets/button-settings-d513637e5a3b7a93be26ec4bc4d4266a10ac00aac417cb844e325b3d2c232763.png",
+      "mediaType": "image/png",
+      "width": 96,
+      "height": 96,
+      "size": 618,
+      "sha256": "d513637e5a3b7a93be26ec4bc4d4266a10ac00aac417cb844e325b3d2c232763"
+    },
+    {
+      "id": "inputs-preview",
+      "path": "assets/inputs-preview-cb040b79dafc1eafbdc7a4daacd768509888b25012f2ff67eba964bcbd9ea563.png",
+      "mediaType": "image/png",
+      "width": 960,
+      "height": 540,
+      "size": 229173,
+      "sha256": "cb040b79dafc1eafbdc7a4daacd768509888b25012f2ff67eba964bcbd9ea563"
+    },
+    {
+      "id": "settings-preview",
+      "path": "assets/settings-preview-1b6f34b9a6c7e91b8d5702e79b284e12d8b3c51c8c09b2125cf088a2a12559da.png",
+      "mediaType": "image/png",
+      "width": 960,
+      "height": 540,
+      "size": 17090,
+      "sha256": "1b6f34b9a6c7e91b8d5702e79b284e12d8b3c51c8c09b2125cf088a2a12559da"
+    },
+    {
+      "id": "library-preview",
+      "path": "assets/library-preview-257f2e227508ea58cf125dd62fd87bd47230037617ad296a81f6bc077afea77e.png",
+      "mediaType": "image/png",
+      "width": 960,
+      "height": 540,
+      "size": 138040,
+      "sha256": "257f2e227508ea58cf125dd62fd87bd47230037617ad296a81f6bc077afea77e"
+    }
+  ],
+  "previewAssetId": "preview",
+  "license": {
+    "identifier": "MIT AND CC-BY-SA-3.0",
+    "textPath": "documents/0-c50810017f170c3682cfc6e2640a5e3be416755ab52143e6966627f69e24995b.txt",
+    "creditsPath": "documents/1-818ab3a39df2f0306896671bb68aa8f4fa53967c3c00e0344350e83e29f33603.txt"
+  },
+  "source": {
+    "repository": "https://github.com/razdva122/clean-your-tv-lg-webos",
+    "commit": "4bcc0975a6951118c26b2cb7dff665d6d1c9ea5f"
+  },
+  "requires": {
+    "minimumHomeVersion": "1.6.0",
+    "capabilities": []
+  },
+  "rules": {
+    "path": "rules/2f5b9b8339ad3ecf6b3ba193e595907b522b73138db7f5bd90f3b88c7474d2c0.json",
+    "size": 7398,
+    "sha256": "2f5b9b8339ad3ecf6b3ba193e595907b522b73138db7f5bd90f3b88c7474d2c0"
+  },
+  "documents": [
+    {
+      "path": "documents/0-c50810017f170c3682cfc6e2640a5e3be416755ab52143e6966627f69e24995b.txt",
+      "size": 1338,
+      "sha256": "c50810017f170c3682cfc6e2640a5e3be416755ab52143e6966627f69e24995b"
+    },
+    {
+      "path": "documents/1-818ab3a39df2f0306896671bb68aa8f4fa53967c3c00e0344350e83e29f33603.txt",
+      "size": 5415,
+      "sha256": "818ab3a39df2f0306896671bb68aa8f4fa53967c3c00e0344350e83e29f33603"
+    }
+  ]
+}
