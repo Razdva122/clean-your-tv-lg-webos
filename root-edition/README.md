@@ -45,7 +45,7 @@ restore LG Home and disable Root intent independently of the web interface.
 once while preserving the routing preference. Long Home can invoke LG features;
 it is not the Root emergency gesture.
 
-Candidate cytv 0.7.0 offers `cytv recover` with the same saved connection for an
+cytv offers `cytv recover` with the same saved connection for an
 interrupted operation. Inspection and changes have separate default-No prompts;
 Root inspection may stage verified support code and is not fully passive.
 Keep journals, backups and referenced Python slots. Do not blindly retry,

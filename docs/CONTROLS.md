@@ -15,27 +15,24 @@
 The Magic Remote pointer and wheel pass through. Wheel-to-tile navigation is not
 implemented. The launcher does not take over app-specific Back behavior.
 
-### Inputs shelf (Classic)
+### Inputs (unpublished 1.7.0 candidate)
 
-Classic shows your TV inputs and Live TV as a row of tiles between the clock and
-the dock. Press **Up** from the dock to reach it, **Left/Right** to choose a
-source and **OK** to switch to it. **Up** again reaches the Inputs, Wi-Fi and
-Settings buttons; **Down** or **Back** returns to the dock. When the TV reports
-input status, connected sources show a green dot and the connected device's name,
-and empty ports are dimmed with "Not connected" but stay selectable. If the TV
-does not report status, the shelf lists the inputs captured during installation
-without status. Turn it off with **Settings → Appearance → Show inputs on Home**;
-Up from the dock then reaches the header buttons as before. Other layouts keep
-the header **Inputs** button only. Live status depends on the TV allowing Home
-to read it; it has been confirmed on one webOS 6 TV with the No-root Edition.
+The selected theme chooses the header **Inputs** menu or an input shelf. Liquid
+Glass uses the shelf; Classic and themes without a shelf keep the header menu.
+There is no global **Show inputs on Home** or placement switch. On a shelf, press
+**Up** from the dock, **Left/Right** to choose and **OK** to launch. **Up** again
+reaches the header; **Down** or **Back** returns to the dock. The shelf replaces
+the header Inputs menu when tiles are present. Empty ports remain selectable.
+A supplied device name is shown when firmware provides it; otherwise a connected
+source says **Connected**. Home does not invent a console name or guarantee CEC
+identification. These candidate controls differ from published 1.6.0.
 
-Rest on a connected HDMI source for about a second and its tile shows the live
-picture, muted. Only the focused tile previews. Moving away, opening the header,
-the Inputs dropdown or Settings, launching an input or leaving Home stops it. Empty
-ports, other input types and Live TV show the usual tile. If a picture does not start
-within four seconds, that source shows the usual tile for a minute. Turn previews off with
-**Settings → Appearance → Preview inputs on focus**. After switching to an input,
-pressing **Home** returns focus to that input's tile, so switching back is one press.
+Live previews are **off by default**. **Settings → Appearance → Preview inputs on
+focus** is available for a shelf theme. When explicitly enabled, a connected HDMI
+source can preview after about 0.8 seconds of focus. Moving away, opening another
+surface or leaving Home stops it. Live TV and empty ports keep static tiles.
+Firmware can still play audio or switch HDR despite element mute; silence is not
+guaranteed. Home does not change global TV mute/HDR settings automatically.
 
 ## Return to LG Home
 
@@ -69,3 +66,9 @@ the other.
 
 Startup can initially show a black screen or LG Home. Standby/wake success does
 not prove cold-boot reliability or a fixed startup time. See [device limits](COMPATIBILITY.md).
+
+In the unpublished Root candidate, **Home settings → Open Clean Your TV first**
+chooses native startup sources: LG Channels / Live TV defaults on, YouTube and
+HDMI default off. With **Change Home** off these choices remain visible, muted
+and disabled with an explanation; saved values remain. Late boot/wake launches
+are removed. Exact-package first-screen and control acceptance is pending.
