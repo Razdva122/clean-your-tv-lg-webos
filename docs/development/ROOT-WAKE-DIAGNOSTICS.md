@@ -1,38 +1,71 @@
 # Root standby investigation (#171)
 
-This is preparation for the unresolved [Root 0.6.1 standby report](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/171),
-not a standby fix or a hardware acceptance record. No TV operation was performed
-for this change. Published v1.5.2 retains the unresolved standby limitation; candidate 1.5.3 adds diagnostics, not a verified standby fix.
+This tracks the unresolved [Root standby report #171](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/171).
+Published v1.6.0 includes wake and shutdown-decision diagnostics, not a verified
+fix of the original failure. No TV operation was performed in the post-release
+source investigation below.
 
 ## Established evidence and blocker
 
-The existing public issue records the exact device, firmware, component versions,
-installer platform, artifact and observation scope. With Home replacement
-previously enabled, ordinary remote-off/wake left LG Channels visible. The
-separate AC-off cold start showed Channels first and then Clean Your TV and
-passed in its scoped window. Neither cold boot nor package installation
-establishes standby acceptance. Device/build identifiers are not repeated here.
+The public issue and dated records contain the device, firmware, component,
+installer and exact-artifact scope. Keep these distinct observations:
 
-The current failure has no captured matching power
-stream, wake decision or post-wake intent/guardian/input-health state. Earlier
-Root 0.6.0 readbacks established retained routing in their own cycles, and the
-historical closed #90 concerned a different input-readiness failure. Neither
-proves the cause of this 0.6.1 observation. See the
-[original findings](../history/2026-10-30-supervised-candidate-findings.md).
+- The original remote-power cycle left LG Channels visible. The separate AC-off
+  cold start eventually reached Clean; it does not accept standby.
+- The [October 31 QA](../history/2026-10-31-release-1.5.3-signed-root-qa.md)
+  includes both an earlier different-session ENODEV/disabled-intent failure and
+  a later same-session standby pass. The later pass does not fix the earlier one.
+- The [November 2 QA](../history/2026-11-02-release-1.6.0-hardware-qa.md)
+  retains the first On-standby attempt as failed/unaccepted: a matching
+  `observer_exit` decision had active/enabled intent, the same startup session,
+  Home present, no failsafe, and no shutdown proof. Adjacent errno 19 was not
+  transaction-tagged; it does not prove ordering or why that observer exited.
+  Reported interference from another application remains an unproved explanation.
+- The separately authorized repeat reached Clean after an unmeasured initial
+  Channels screen through a new-session guarded startup fallback. Native Home
+  autolaunch, the owned EIM entry and remembered Root selection were present.
+  Immediate first-screen standby behavior remains unaccepted. The separate true
+  AC-off check from running Clean showed Clean first within its recorded scope.
 
-Source and host fixtures establish that the current implementation already
-handles a continuous acknowledged Active → Active Standby/Power Off → Active
-edge and uses the exact metadata-verified native Channels policy for boot and
-wake. It preserves unknown applications, explicit off, emergency/failsafe,
-uncertain input/health and native last-input preference. There is no evidence
-justifying a broader app predicate, retry, reactivation or safety bypass.
+### Post-v1.6.0 source trace (2026-11-02)
 
-Two source-level diagnostic gaps are reproducible: early `present_wake` refusals
-return before the old audit call, and the power reader previously retained no
-record distinguishing an unobserved edge from EOF, an initial timeout or an
-invalid stream. The draft corrects these diagnostic gaps while leaving launch,
-input, watchdog and recovery policy intact. The original standby cause remains
-unknown until matching observations are available.
+`emergency_reader` reports input read errors and exits; pipe EOF becomes
+`observer_exit` in `emergency_watchdog`. `bound_exit` preserves active intent only
+with its existing shutdown/session/package/failsafe checks. In the observed
+same-session, no-proof branch it disables intent, restores routing and cleans
+owned native input. A later normal startup must keep that Off authoritative.
+Neither ENODEV nor a subsequent successful power cycle supplies missing proof
+for the failed cycle.
+
+A continuous acknowledged Active → Active Standby/Power Off → Active edge in one
+session uses `present_wake` without rearming. A changed startup identity uses
+restore-first boot dispatch, the positive normal-start marker plus cleared
+failsafe, fresh input and guardian checks, then one optional foreground fallback.
+This is a later path than firmware's first-app selection; its success cannot
+promise Clean as the first screen. Native EIM is retained across enabled boot
+recovery, and an already active registration intentionally does not overwrite a
+subsequently selected input. Re-registering on wake, adding retries or extending
+the app predicate has no demonstrated causal basis here.
+
+`test_wake_lifecycle.py` exercises real intent, binding, profile restoration,
+volatile session identities, normal-start markers, input/guardian records and
+native EIM receipts together. Firmware RPCs and physical input/process startup
+are simulated. Separate cases cover same-session wake, new session with reused
+kernel ID, changed-kernel cold boot, no normal marker, failsafe, explicit Off,
+emergency, package loss and no-proof observer exit. Negative cases verify owned
+native cleanup and that a later normal session does not auto-enable Home.
+Existing power/parser, presentation and native-input suites cover malformed or
+lost streams, metadata/foreground rejection, lease expiry and bounded operations.
+These are host safety regressions, not a reproduction of firmware timing or a
+product fix for #171.
+
+The missing contract is the matching **pre-exit** cause and power-stream lifetime:
+whether a genuine shutdown edge/request was observed before the failed observer
+ended, and why no proof survived until that decision. For delayed presentation,
+matching native first-app selection and startup/gate timestamps are needed to
+separate firmware selection from the later fallback. Current post-wake EIM state
+and missing volatile files cannot establish those earlier events. Do not change
+input-loss, shutdown, emergency or normal-start gates to turn this gap into a pass.
 
 ## Private diagnostic records
 
@@ -71,7 +104,9 @@ snapshot termination may leave only the previous snapshot, without a final reaso
 
 ## Remaining evidence and acceptance
 
-A later, separately authorized maintainer QA run needs the same-cycle private
+The existing issue evidence request remains applicable; do not repeat it as a new
+request or start a TV session from this document. A later, separately authorized
+maintainer QA run needs the same-cycle private
 power snapshot and wake decision together with intent phase/enabled status,
 matching session/binding, effective Home routing, input freshness, guardian
 freshness/process identity, failsafe/package availability and native Home
