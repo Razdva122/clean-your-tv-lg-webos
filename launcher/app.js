@@ -121,7 +121,7 @@
     inputPreview = window.InputPreview ? InputPreview.create({
       createMedia: function (uri) { return window.PREVIEW_INPUT_MEDIA ? window.PREVIEW_INPUT_MEDIA(uri) : InputPreview.createVideo(uri); },
       // Only the foreground Home may claim the TV's video pipeline.
-      enabled: function () { return layoutPreset === "dock-grid" && !document.hidden && windowFocused && window.HomeInputShelf.previewEnabled(); },
+      enabled: function () { return layoutPreset === "dock-grid" && !document.hidden && windowFocused && !previewDialogOpen() && window.HomeInputShelf.enabled() && window.HomeInputShelf.previewEnabled(); },
       mount: function (media, input) {
         var tile = shelfTiles[focusedShelf];
         if (!tile || tile.input.appId !== input.appId) return false;
@@ -1134,6 +1134,24 @@
   function stopPreview() {
     inputPreview && inputPreview.stop();
   }
+  // Dialogs share ownership regardless of how they opened (including manual Helper
+  // relaunches and theme trials that deliberately resume ThemeRuntime). The hardware
+  // video plane cannot be covered by the normal dialog backdrop.
+  function previewDialogOpen() {
+    var dialogs = document.querySelectorAll('[role="dialog"], [role="alertdialog"]');
+    for (var index = 0; index < dialogs.length; index++) {
+      if (dialogs[index].getClientRects().length) return true;
+    }
+    return false;
+  }
+  var previewDialogVisible = previewDialogOpen();
+  new MutationObserver(function () {
+    var open = previewDialogOpen();
+    if (open === previewDialogVisible) return;
+    previewDialogVisible = open;
+    if (open) stopPreview();
+    else if ("shelf" === focusZone && shelfTiles[focusedShelf] && inputPreview) inputPreview.focus(shelfTiles[focusedShelf].input);
+  }).observe(document.body, {subtree: true, childList: true, attributes: true, attributeFilter: ['hidden', 'class', 'style', 'role']});
   // Launching hands the input to its own app; release the preview first. Returning to
   // Home lands back on this input's tile, so switching back is one press.
   function launchInput(input, element) {
@@ -1212,7 +1230,7 @@
   function renderShelf() {
     if (!shelf) return;
     var focusedId = shelfTiles[focusedShelf] && shelfTiles[focusedShelf].input.appId,
-      enabled = layoutPreset === "dock-grid" && !!window.InputSources && InputSources.shelfEnabled(localStorage),
+      enabled = window.HomeInputShelf && window.HomeInputShelf.enabled(),
       entries = enabled ? inputEntries() : [],
       next = Math.min(focusedShelf, Math.max(0, entries.length - 1));
     shelfTrack.innerHTML = "";
@@ -1321,14 +1339,12 @@
     inputPreview && inputPreview.focus(shelfTiles[focusedShelf].input);
   }
   window.HomeInputShelf = {
-    enabled: function () { return !!window.InputSources && InputSources.shelfEnabled(localStorage); },
+    enabled: function () { return !!layoutState && layoutState.state().inputs === "shelf"; },
     previewEnabled: function () { return !!window.InputSources && InputSources.previewEnabled(localStorage); },
-    // The shelf exists only in Classic; other layouts hide both switches (Settings
-    // navigation skips hidden buttons), as with the Columns entry.
+    // Only a theme with a shelf exposes the live-preview preference.
     refresh: function () {
-      var button = getElement("homeShowInputs"), preview = getElement("homePreviewInputs"), classic = layoutPreset === "dock-grid";
-      if (button) { button.setAttribute("aria-checked", String(window.HomeInputShelf.enabled())); button.hidden = !classic; }
-      if (preview) { preview.setAttribute("aria-checked", String(window.HomeInputShelf.previewEnabled())); preview.hidden = !classic; }
+      var preview = getElement("homePreviewInputs");
+      if (preview) { preview.setAttribute("aria-checked", String(window.HomeInputShelf.previewEnabled())); preview.hidden = !window.HomeInputShelf.enabled(); }
     },
     togglePreview: function () {
       var error = getElement("homeAppsError");
@@ -1338,15 +1354,6 @@
       } catch (_) { if (error) error.textContent = tr("Couldn't save changes. Please try again."); }
       stopPreview();
       if ("shelf" === focusZone && shelfTiles[focusedShelf] && inputPreview) inputPreview.focus(shelfTiles[focusedShelf].input);
-      window.HomeInputShelf.refresh();
-    },
-    toggle: function () {
-      var error = getElement("homeAppsError");
-      try {
-        InputSources.setShelfEnabled(localStorage, !window.HomeInputShelf.enabled());
-        if (error) error.textContent = "";
-      } catch (_) { if (error) error.textContent = tr("Couldn't save changes. Please try again."); }
-      renderShelf();
       window.HomeInputShelf.refresh();
     }
   };

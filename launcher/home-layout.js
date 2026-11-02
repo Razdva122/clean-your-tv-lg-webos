@@ -70,7 +70,7 @@
     return g;
   }
   function create(storage, config, profileData) {
-    var ribbon = null, preset = 'dock-grid', themeColumns = 5, allowColumnOverride = true, override = valid(config.columns) && config.columns !== 5 ? config.columns : null;
+    var inputs = 'menu', ribbon = null, preset = 'dock-grid', themeColumns = 5, allowColumnOverride = true, override = valid(config.columns) && config.columns !== 5 ? config.columns : null;
     try {
       var raw = storage.getItem(KEY), saved = JSON.parse(raw);
       // Persist genuine legacy preference before a later theme choice/profile capture.
@@ -78,7 +78,7 @@
       if (raw === null && override !== null) storage.setItem(KEY, JSON.stringify({version: 1, columns: override}));
       if (saved && saved.version === 1 && (saved.columns === null || valid(saved.columns))) override = saved.columns;
     } catch (_) {}
-    function state() { return {columns: !allowColumnOverride || override === null ? themeColumns : override, override: override, themeColumns: themeColumns, preset: preset, allowColumnOverride: allowColumnOverride, ribbon: ribbon === null ? null : normalizeRibbon(ribbon)}; }
+    function state() { return {columns: !allowColumnOverride || override === null ? themeColumns : override, override: override, themeColumns: themeColumns, preset: preset, inputs: inputs, allowColumnOverride: allowColumnOverride, ribbon: ribbon === null ? null : normalizeRibbon(ribbon)}; }
     // CONFIG is captured into profiles. Store preference, never theme-derived geometry.
     function changed() { config.columns = override === null ? 5 : override; if (model.onchange) model.onchange(state()); }
     function setColumns(value) {
@@ -103,16 +103,18 @@
       override = value;
       changed();
     }
-    var model = {supportsRibbonOptions: true, supportsColumnPolicy: true, state: state, setColumns: setColumns, setThemeLayout: function (layout) {
+    var model = {supportsInputPlacement: true, supportsRibbonOptions: true, supportsColumnPolicy: true, state: state, setColumns: setColumns, setThemeLayout: function (layout) {
       if (!layout || presets.indexOf(layout.preset) < 0 || !valid(layout.columns) ||
           (layout.allowColumnOverride !== undefined && typeof layout.allowColumnOverride !== 'boolean') ||
           layout.spacingScale !== 1 || layout.textScale !== 1 || layout.focusScale !== 1.1) throw Error('layout-invalid');
+      if (layout.inputs !== undefined && (['menu', 'shelf'].indexOf(layout.inputs) < 0 || layout.inputs === 'shelf' && layout.preset !== 'dock-grid')) throw Error('layout-invalid');
       var nextRibbon = null;
       if (layout.ribbon !== undefined) {
         if (layout.preset !== 'scenic-grid' || layout.allowColumnOverride !== false) throw Error('layout-invalid');
         nextRibbon = normalizeRibbon(layout.ribbon);
         geometry(layout.preset, layout.columns, nextRibbon);
       }
+      inputs = layout.inputs || 'menu';
       ribbon = nextRibbon;
       preset = layout.preset; themeColumns = layout.columns; allowColumnOverride = layout.allowColumnOverride !== false; changed();
     }, setThemeColumns: function (value) {

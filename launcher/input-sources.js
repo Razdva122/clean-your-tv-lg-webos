@@ -4,8 +4,7 @@
   else root.InputSources = factory();
 }(this, function () {
   'use strict';
-  var KEY = 'tvhome.inputs.shelf.v1',
-    PREVIEW_KEY = 'tvhome.inputs.preview.v1',
+  var PREVIEW_KEY = 'tvhome.inputs.preview.v1',
     // Previews stay muted and did not wake sleeping devices on hardware; keep them on unless that changes.
     PREVIEW_DEFAULT = true,
     STATUS_URI = 'luna://com.webos.service.eim/getAllInputStatus',
@@ -102,17 +101,6 @@
       onchange: function (listener) { if (typeof listener === 'function') listeners.push(listener); }
     };
   }
-  function shelfEnabled(storage) {
-    try {
-      var saved = JSON.parse(storage.getItem(KEY));
-      return !(saved && saved.version === 1 && saved.visible === false);
-    } catch (_) { return true; }
-  }
-  function setShelfEnabled(storage, visible) {
-    if (typeof visible !== 'boolean') throw Error('invalid-input-shelf-visibility');
-    storage.setItem(KEY, JSON.stringify({version: 1, visible: visible}));
-    return visible;
-  }
   function previewEnabled(storage) {
     try {
       var saved = JSON.parse(storage.getItem(PREVIEW_KEY));
@@ -124,7 +112,6 @@
     storage.setItem(PREVIEW_KEY, JSON.stringify({version: 1, enabled: enabled}));
     return enabled;
   }
-  return {key: KEY, previewKey: PREVIEW_KEY, statusUri: STATUS_URI, classify: classify, source: source, create: create,
-    shelfEnabled: shelfEnabled, setShelfEnabled: setShelfEnabled,
+  return {previewKey: PREVIEW_KEY, statusUri: STATUS_URI, classify: classify, source: source, create: create,
     previewEnabled: previewEnabled, setPreviewEnabled: setPreviewEnabled};
 }));

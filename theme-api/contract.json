@@ -201,6 +201,14 @@
       "minimumCardWidth": 64,
       "unknownKeys": "reject",
       "belowLabelsMinimumBottom": 64
+    },
+    "inputs": {
+      "values": [
+        "menu",
+        "shelf"
+      ],
+      "default": "menu",
+      "shelfPreset": "dock-grid"
     }
   },
   "defaults": {
@@ -288,6 +296,14 @@
       "values": [
         "inline",
         "below-clock"
+      ],
+      "paired": true
+    },
+    "input-placement-v1": {
+      "layout": "inputs",
+      "values": [
+        "menu",
+        "shelf"
       ],
       "paired": true
     }

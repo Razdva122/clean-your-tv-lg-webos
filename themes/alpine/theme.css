@@ -1,0 +1,28 @@
+/* Scenic Glasshouse-inspired composition. Positions belong to scenic-grid. */
+.ctv-home { background-color: #181c1e; color: #ece7df; }
+.ctv-ambient { background-image: linear-gradient(0deg, transparent, transparent); }
+.ctv-clock { color: #ece7df; }
+.ctv-date, .ctv-period { color: #ece7df; font-weight: 400; text-shadow: 0px 2px 8px rgba(0,0,0,0.8); }
+.ctv-shortcut { color: #ece7df; background-color: rgba(20,19,16,0.65); border-color: rgba(236,231,223,0.24); border-radius: 6px; }
+.ctv-shortcut.is-focused { color: #181715; background-color: #ece7df; border-color: #ece7df; }
+.ctv-card { color: #ece7df; border-radius: 14px; box-shadow: 0px 0px 0px 0px transparent; }
+.ctv-label { color: #ece7df; font-weight: 400; text-shadow: 0px 2px 8px rgba(0,0,0,0.8); letter-spacing: 0px; }
+.ctv-inputs { color: #ece7df; background-color: rgba(20,25,27,0.94); background-image: linear-gradient(0deg, transparent, transparent); border-color: rgba(236,231,223,0.24); border-radius: 8px; }
+.ctv-input-row { color: #ece7df; background-color: transparent; border-radius: 6px; }
+.ctv-input-row.is-focused { color: #ece7df; background-color: rgba(236,231,223,0.16); }
+.ctv-library-row, .ctv-library-close { color: #ece7df; background-color: #25231f; border-radius: 6px; border-color: #555149; }
+.ctv-library-row.is-focused, .ctv-library-close.is-focused { color: #181715; background-color: #ece7df; }
+.ctv-library-row.is-focused .ctv-label { color: #181715; text-shadow: 0px 0px 0px transparent; }
+
+/* One crisp border remains supplied by the trusted renderer. */
+.ctv-card.is-focused { box-shadow: 0px 0px 0px 3px rgba(0,0,0,0.65); }
+
+/* Replace the trusted SVG fill with a validated local image; keep button labels. */
+.ctv-input-icon { color: transparent; background-image: url(assets/button-inputs.png); }
+.ctv-network-icon { color: transparent; background-image: url(assets/button-network.png); }
+.ctv-settings-icon { color: transparent; background-image: url(assets/button-settings.png); }
+.ctv-shortcut.is-focused { background-color: #353c3a; color: #ece7df; }
+
+/* A light scrim keeps the panorama visible outside the readable library panel. */
+.ctv-library { color: #ece7df; background-color: rgba(8,14,18,0.3); background-image: linear-gradient(0deg, transparent, transparent); border-radius: 0px; }
+.ctv-library-panel { color: #ece7df; background-color: rgba(20,25,27,0.92); background-image: linear-gradient(0deg, transparent, transparent); border-color: rgba(236,231,223,0.24); border-radius: 8px; }

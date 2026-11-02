@@ -94,28 +94,14 @@ for (const [label, device, kind] of [
   ['HDMI 1', null, 'hdmi'], ['Machine room', null, 'hdmi'], ['Switchboard', null, 'hdmi'], ['Firewall', null, 'hdmi']
 ]) assert.equal(sources.classify(label, device), kind, label + ' / ' + device);
 
-// The shelf preference defaults on, persists off, and tolerates broken storage.
 const memory = new Map();
 const storage = {getItem: k => memory.has(k) ? memory.get(k) : null, setItem: (k, v) => memory.set(k, v)};
-assert.equal(sources.shelfEnabled(storage), true, 'shelf is on by default');
-sources.setShelfEnabled(storage, false);
-assert.equal(memory.get(sources.key), '{"version":1,"visible":false}');
-assert.equal(sources.shelfEnabled(storage), false);
-sources.setShelfEnabled(storage, true);
-assert.equal(sources.shelfEnabled(storage), true);
-for (const raw of ['{bad', '{"version":2,"visible":false}', '"off"', 'null']) {
-  memory.set(sources.key, raw);
-  assert.equal(sources.shelfEnabled(storage), true, 'unknown preference keeps the default: ' + raw);
-}
-assert.throws(() => sources.setShelfEnabled(storage, 'off'), /invalid-input-shelf-visibility/);
-assert.throws(() => sources.setShelfEnabled({getItem() { return null; }, setItem() { throw Error('full'); }}, false), /full/);
 // Previews default on, persist either way, and tolerate broken storage.
 memory.clear();
 assert.equal(sources.previewEnabled(storage), true, 'previews are on by default');
 sources.setPreviewEnabled(storage, false);
 assert.equal(memory.get(sources.previewKey), '{"version":1,"enabled":false}');
 assert.equal(sources.previewEnabled(storage), false);
-assert.equal(sources.shelfEnabled(storage), true, 'the preview switch does not hide the shelf');
 sources.setPreviewEnabled(storage, true);
 assert.equal(sources.previewEnabled(storage), true);
 for (const raw of ['{bad', '{"version":2,"enabled":false}', '{"version":1,"enabled":"no"}', 'null']) {

@@ -43,6 +43,7 @@
     /* Trusted layouts currently implement only the Classic scale values. */
     if (manifest.layout.spacingScale !== 1 || manifest.layout.textScale !== 1 || manifest.layout.focusScale !== 1.1) fail('layout-invalid', 'unsupported scale preset');
     if (manifest.layout.preset !== 'dock-grid' && (!root.HomeLayoutState || !root.HomeLayoutState.setThemeLayout)) fail('layout-invalid', 'unsupported renderer preset');
+    if (manifest.layout.inputs !== undefined && (!root.HomeLayoutState || root.HomeLayoutState.supportsInputPlacement !== true)) fail('layout-invalid', 'unsupported input placement');
     if (manifest.layout.ribbon && (!root.HomeLayoutState || root.HomeLayoutState.supportsRibbonOptions !== true)) fail('layout-invalid', 'unsupported ribbon options');
     if (manifest.layout.allowColumnOverride === false && (!root.HomeLayoutState || root.HomeLayoutState.supportsColumnPolicy !== true)) fail('layout-invalid', 'unsupported column policy');
     var handles = input.assetHandles || {}, overrides = input.overrides || {}, own = Object.prototype.hasOwnProperty;
