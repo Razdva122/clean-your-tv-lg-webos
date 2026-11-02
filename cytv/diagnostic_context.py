@@ -130,6 +130,12 @@ def product_summary(value):
               (('state', STATES), ('stage', STAGES), ('code', CODES)) if key in value}
     if 'failure' in value:
         result['failure'] = worker_summary(value['failure'])
+    if 'passive' in value:
+        passive=mapping(value['passive'])
+        result['passive']={'schema':1,**{key:choice(passive[key],allowed) for key,allowed in (
+            ('status',('read','missing','unsafe','inconsistent','unavailable')),
+            ('operation',('consistent-not-admission',)),('worker',('unclassified','exception-recorded')),
+            ('python',('system-default-unverified','private-bytes-match-unexecuted'))) if key in passive}}
     for key in ('home_changed', 'current', 'can_resume', 'verified'):
         if type(value.get(key)) is bool:
             result[key] = value[key]

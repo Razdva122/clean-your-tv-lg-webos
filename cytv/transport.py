@@ -20,6 +20,15 @@ class AgentLoginFailed(UserError):
     """An automatic agent attempt needs an explicit fresh manual connection."""
 
 
+def inspection_secret(prompt):
+    import getpass
+    import warnings
+    # Refuse getpass's echoed fallback, including in frozen console builds.
+    with warnings.catch_warnings():
+        warnings.simplefilter('error', getpass.GetPassWarning)
+        return getpass.getpass(prompt)
+
+
 class JsonReplies:
     def __init__(self):
         self.text = ''
@@ -146,7 +155,7 @@ def load_identity(path, secret):
         return paramiko.PKey.from_path(path, passphrase=secret('SSH key passphrase: ').encode())
 
 
-def root_auth(secret, profile=None, identity_prompt=None, automatic=True):
+def root_auth(secret, profile=None, identity_prompt=None, automatic=True, password_fallback=False):
     import paramiko
     from paramiko.auth_strategy import AuthResult, AuthStrategy, InMemoryPrivateKey, NoneAuth, OnDiskPrivateKey, Password, SourceResult
     if profile is None:
@@ -157,8 +166,9 @@ def root_auth(secret, profile=None, identity_prompt=None, automatic=True):
             if profile.get('identity'):
                 path = Path(profile['identity'])
                 yield OnDiskPrivateKey('root', 'python-config', path, load_identity(path, secret))
-                return
-            if automatic:
+                if not password_fallback:
+                    return
+            elif automatic:
                 yield NoneAuth(username='root')
                 try:
                     self.agent = paramiko.Agent()
@@ -214,10 +224,17 @@ class SSH:
         self.root = root
 
     @classmethod
-    def connect(cls, profile, directory, secret, trust, identity_prompt=None, automatic=True):
+    def connect(cls, profile, directory, secret, trust, identity_prompt=None, automatic=True, persist=True):
         import paramiko
         directory = Path(directory)
         known = directory / 'known_hosts'
+        if not persist:
+            # Internal inspection requires the original cytv pin, never TOFU or
+            # importing a replacement from the user's current OpenSSH config.
+            name = profile['host'] if profile['port'] == 22 else f"[{profile['host']}]:{profile['port']}"
+            if profile['edition'] != 'root' or not known.is_file() or not paramiko.HostKeys(str(known)).lookup(name):
+                raise UserError('SSH host key was not verified. Connection cancelled.', reason_code='ssh-identity-unverified')
+            profile = dict(profile)
         client = paramiko.SSHClient()
         keys = trusted_host_keys(known, profile['host'], profile['port'])
         for name, values in keys.items():
@@ -226,7 +243,7 @@ class SSH:
 
         class PinnedPolicy(paramiko.MissingHostKeyPolicy):
             def missing_host_key(self, connection, hostname, key):
-                if not trust(fingerprint(key), profile['edition'] == 'root'):
+                if not persist or not trust(fingerprint(key), profile['edition'] == 'root'):
                     raise UserError('SSH host key was not verified. Connection cancelled.', reason_code='ssh-identity-unverified')
                 connection.get_host_keys().add(hostname, key.get_name(), key)
                 save_host_keys(connection.get_host_keys(), known)
@@ -248,16 +265,17 @@ class SSH:
                 options['pkey'] = key
                 # Store only after a successful SSH authentication.
         else:
-            options['auth_strategy'] = root_auth(secret, profile, identity_prompt, automatic)
+            options['auth_strategy'] = root_auth(secret, profile, identity_prompt, automatic, password_fallback=not persist)
         try:
             client.connect(**options)
-            save_host_keys(client.get_host_keys(), known)
+            if persist:
+                save_host_keys(client.get_host_keys(), known)
             if profile['edition'] == 'no-root' and not keyfile.exists():
                 private_write(keyfile, raw)
             return cls(client, root=profile['edition'] == 'root')
         except AgentLoginFailed:
             client.close()
-            if not automatic or identity_prompt is None:
+            if not persist or not automatic or identity_prompt is None:
                 raise
             # Signing refusal can close Paramiko's transport. The user explicitly
             # chooses a manual retry; its new connection verifies the pin again.
