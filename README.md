@@ -137,7 +137,7 @@ For contributors: [build and technical references](docs/development/README.md),
 | cytv installer | 0.8.0 |
 | Home | 1.8.0 |
 | Home Helper | 0.6.21 |
-| Root edition | 0.8.2 |
+| Root edition | 0.8.3 |
 | Both edition Updaters | 0.4.2 |
 | Android installer / versionCode | 0.7.0 / 18 |
 <!-- /release:components -->

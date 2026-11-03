@@ -73,7 +73,7 @@
     {
       "pr": 254,
       "issues": [],
-      "summary": "Let themes choose header menu or shelf; bundle Liquid Glass and move Alpine to Showcase; synchronize rounded previews and connected labels; live preview defaults off with unresolved firmware audio/HDR behavior"
+      "summary": "Let themes choose header menu or shelf; bundle Liquid Glass and move Alpine to Showcase; synchronize rounded previews and connected labels; preview default and Root status path are refined by #266"
     },
     {
       "pr": 255,
@@ -129,13 +129,15 @@
         171
       ],
       "summary": "Serialize Root Settings visibility/relaunch refreshes, skip stale queued reads and replace README Alpine preview with actual Liquid Glass; exact-package acceptance remains pending"
+    },
+    {
+      "pr": 266,
+      "issues": [
+        171
+      ],
+      "summary": "Keep only native TV/YouTube startup controls, default preview on while preserving saved Off, and restore Root input status through the existing authenticated read endpoint; exact-package acceptance remains pending"
     }
   ],
   "excluded": [],
-  "acceptance": "",
-  "build": {
-    "run_id": 41618091166,
-    "attempt": 1,
-    "source": "4e593e6ca1001ad42c7809bbdeb654a15b8afa42"
-  }
+  "acceptance": ""
 }

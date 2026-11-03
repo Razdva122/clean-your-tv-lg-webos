@@ -65,15 +65,16 @@ Source integration and successful builds do not certify physical TV behavior.
 | Home Helper | 0.6.21 | 0.6.21 | Keep immutable published native package |
 | cytv | 0.7.0 | 0.8.0 | Inspection and recovery behavior; rebuilt payloads |
 | Android | 0.6.0 / code 17 | 0.7.0 / code 18 | Shared installer and embedded payload changes |
-| Root / infrastructure | 0.7.0 | 0.8.2 | Native source policy, Settings and removal of late launches |
+| Root / infrastructure | 0.7.0 | 0.8.3 | Two-source native policy, Root input status and serialized Settings |
 | Both independent Updaters | 0.4.0 | 0.4.2 | Rebuilt shared UI/locales and recovery support; distinct package bytes |
 | System target / protocol | 1.2.0 / 1 | 1.2.0 / 1 | Supervisor unchanged; retained 1.1.2 remains separate |
 
 Root, infrastructure, both edition Updaters, HD/FHD Home/Root and all installers
 must be rebuilt together. Updater 0.4.1 was not a public release; 0.4.2 avoids
 reusing preliminary package identities. The existing Helper is reused byte-for-byte.
-Root 0.8.2 includes both service-read and lifecycle-refresh serialization,
-distinguishing it from the earlier unpublished 0.8.0 and 0.8.1 QA packages.
+Root 0.8.3 retains service-read and lifecycle-refresh serialization and adds the
+final two-source policy and authenticated input-status snapshot. It distinguishes
+the final package from unpublished 0.8.0, 0.8.1 and 0.8.2 QA packages.
 The initial build pin is superseded; a new full candidate and signed Root set
 are required. No equal-version replacement is authorized.
 No application ID, signing identity, trust rule or public endpoint changes.
