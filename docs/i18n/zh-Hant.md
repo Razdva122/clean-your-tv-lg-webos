@@ -1,5 +1,7 @@
 # Clean Your TV — 使用者指南
 
+**尚未發布 — 在應用程式上方顯示 Ribbon：** Root 版可在目前應用程式上方開啟 Ribbon。按 Home 開啟面板，按返回或再次按 Home 關閉。開機時，或無法確認背景內容時，會顯示桌布；設定畫面保持不透明。電視上的 No-root 仍為全螢幕。瀏覽器示範僅模擬兩種狀態，最終安裝套件仍須實機驗收。[詳情](../THEMES.md#ribbon-over-applications-unreleased)。
+
 **未發布候選版本 — Root 啟動來源：** 在設定 → 您的 Home 畫面中開啟 **變更 Home**，即可設定 **優先開啟 Clean Your TV**。**LG Channels / 直播電視**預設開啟，**YouTube** 和 **HDMI** 預設關閉。關閉變更 Home 後，三個開關仍可見但無法操作，已儲存的值會保留。這些偏好私密儲存在本電視上，不包含在可攜設定檔匯出中。候選設定不代表已驗證電視開機或喚醒行為。
 
 > 本指南介紹 1.6.0。請從 [GitHub Releases 中已發布的版本](https://github.com/Razdva122/clean-your-tv-lg-webos/releases)下載可用套件。它包含安裝程式的五項改進。重新開啟 Root 設定時會讀取實際狀態，檢查失敗不會啟用 Home。System Updater 1.2.0 用於符合條件的新安裝，或經過驗證的 1.1.0/1.1.1 替換。已安裝的 1.1.2 保留原有通道，沒有通用遷移方案。請保留復原資料，勿強制替換。[版本與限制](../RELEASE-1.6.0.md)。

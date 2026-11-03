@@ -80,3 +80,5 @@ Browser simulations do not establish physical-TV compatibility.
 [Multilingual GitHub Pages development](../../website/README.md) covers Astro,
 shared Markdown installation guides, translations, SEO checks and the embedded
 launcher demo.
+
+- [Root Ribbon presentation](RIBBON-PRESENTATION.md): overlay lifecycle, theme opt-in and acceptance scope.

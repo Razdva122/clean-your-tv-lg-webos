@@ -1,5 +1,7 @@
 # Root Edition
 
+**Unreleased Ribbon mode:** Ribbon can use a transparent bottom bar over active content; power-on/unknown context and settings use an opaque fallback. Other themes remain visually fullscreen in the same Root overlay host, so underlying apps/audio may continue. No routing or emergency gesture changes. [Behavior and pending acceptance](../docs/THEMES.md#ribbon-over-applications-unreleased).
+
 > Release 1.6.0 uses Root/infrastructure 0.7.0 and Root Updater 0.4.0. See [Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases) for published downloads, [release scope](../docs/RELEASE-1.6.0.md) and [artifact-bound acceptance](../docs/history/2026-11-02-release-1.6.0-final-acceptance.md).
 
 Use Clean Your TV as the system Home on an **already rooted LG webOS TV**.

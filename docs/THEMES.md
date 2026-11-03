@@ -115,10 +115,37 @@ Open **http://127.0.0.1:8878/** to exercise Home/Settings and switch themes with
 
 ## Parameterized ribbons (unreleased)
 
-**Ribbon is bundled by this unreleased candidate** in both editions, alongside Classic and Alpine. Update Home, then select Ribbon in Settings → Appearance; no theme download or network connection is needed. Classic remains the default. Bundled Ribbon cannot be removed or replaced through downloaded-theme controls.
+**Ribbon is bundled by this unreleased candidate** in both editions, alongside Classic and Liquid Glass. Update Home, then select Ribbon in Settings → Appearance; no theme download or network connection is needed. Classic remains the default. Bundled Ribbon cannot be removed or replaced through downloaded-theme controls.
 
 Themes can optionally configure the existing scenic ribbon's card sizes, spacing, skew, focused-card lift, captions and clock visibility. The theme chooses whether compact Inputs, Wi-Fi and Settings shortcuts appear at bottom left. With shortcut edge navigation, Left from the first visible application selects Settings, then Wi-Fi and Inputs; Right from Settings returns to that same visible edge. Themes without these options retain their previous appearance and controls.
 
 These themes require the `ribbon-layout-v1` capability in Home. On a theme-enabled Home without this capability, both Add by ID and Receive from computer reject the new descriptor before saving/applying it: your current theme and saved selection stay unchanged. Exact error text depends on the installed version and may report an unsupported capability/API. Update Home and retry. A theme package does not upgrade Home. If you downgrade Home after already selecting an unsupported theme, startup recovery can restore Classic; that differs from a rejected new installation.
 
 This support is under review. Browser checks do not establish physical-TV compatibility or public availability. See the [author contract](development/THEME-CSS.md#parameterized-scenic-ribbons-unreleased).
+
+## Ribbon over applications (unreleased)
+
+In the proposed Root build, selecting Ribbon enables a bottom bar over positively
+identified active content. Home opens it; Back or another Home closes the bar
+without selecting a different app. A successful app/input launch also dismisses
+Home; a failed launch keeps it open. Settings, theme trials and recovery stay
+opaque. Power-on activation and absent, ambiguous or unavailable background
+information keep the wallpaper instead of exposing an empty screen.
+
+The neutral dark cards, focused outline/lift and bottom-local shade work against
+both the wallpaper and bright content. No-root on a TV retains its existing
+fullscreen window and receives the same visual refresh. In the browser demo,
+**Startup / wallpaper**, **Over application**, **Home** and **Back** exercise both
+states. No-root overlay previews are explicitly simulations of Root behavior.
+
+Root uses an overlay window for the whole application: other themes and settings
+cover the screen, but underlying apps may continue running or playing audio.
+This is different from the previous card lifecycle. The feature does not change
+Home routing, emergency gestures, startup-source preferences or app permissions.
+The existing startup observer ignores the primary app underneath a visible Root
+overlay when deciding whether to change remembered startup input.
+
+Browser/state/runtime checks are not final TV acceptance. Verify the exact signed
+Root package for app/HDMI playback, controls, input ownership, power-on without
+content, standby/wake, emergency recovery and updater/rollback health before
+release. See the [presentation design](development/RIBBON-PRESENTATION.md).

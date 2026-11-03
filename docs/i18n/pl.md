@@ -1,5 +1,7 @@
 # Clean Your TV — instrukcja użytkownika
 
+**Niewydane — Ribbon nad aplikacjami:** W Root pasek Ribbon może pojawiać się nad bieżącą aplikacją. Home otwiera pasek; Wstecz lub ponowne Home zamyka go. Przy włączaniu oraz przy braku pewnych danych o tle wyświetlana jest tapeta; ustawienia pozostają nieprzezroczyste. No-root na TV pozostaje pełnoekranowy. Demo symuluje oba stany; odbiór końcowego pakietu na urządzeniu jest nadal wymagany. [Szczegóły](../THEMES.md#ribbon-over-applications-unreleased).
+
 **Nieopublikowany kandydat — źródła startowe Root:** W Ustawienia → Twój ekran Home włącz **Zmień Home**, aby edytować **Otwórz Clean Your TV jako pierwsze**. **LG Channels / Telewizja na żywo** jest domyślnie włączone; **YouTube** i **HDMI** są wyłączone. Po wyłączeniu Zmień Home przełączniki pozostają widoczne, lecz niedostępne, a wartości są zachowane. Ustawienia są prywatnie zapisane na tym TV i nie obejmuje ich przenośny eksport profilu. Nie potwierdza to działania przy starcie ani wybudzeniu TV.
 
 > Poradnik opisuje wersję 1.6.0. Dostępne pakiety pobieraj z [opublikowanych wydań GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases). Zawiera pięć ulepszeń instalatora. Po ponownym otwarciu ustawienia Root odczytują rzeczywisty stan; nieudana kontrola nie włącza Home. System Updater 1.2.0 służy do dozwolonej nowej instalacji lub zweryfikowanej wymiany 1.1.0/1.1.1. Zainstalowany 1.1.2 zachowuje stare kanały; brak ogólnej migracji. Zachowaj dane odzyskiwania i nie wymuszaj wymiany. [Wersje i ograniczenia](../RELEASE-1.6.0.md).

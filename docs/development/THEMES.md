@@ -21,7 +21,7 @@ The complete design remains in the [theme ecosystem specification](../superpower
   unchanged. Legacy backups preserve the effective number, not the By theme mode;
   preserving that mode with installed theme state belongs to the storage gate below.
 - A data-only reviewed showcase registry, pinned per-theme detail pages, static
-  catalog, moderation states and read-only PR checks. Classic and Alpine are bundled; Channel is the first pinned external theme. The historical external Alpine listing is archived.
+  catalog, moderation states and read-only PR checks. Classic, Liquid Glass and Ribbon are bundled; Alpine and Channel are distributed through Showcase. The historical bundled Alpine choice recovers visibly to Classic.
 - A separate candidate author toolkit with templates, multi-theme repositories,
   actual-renderer browser preview, validation/build, screenshots and PR drafts.
   The main project exports its renderer/compiler with file hashes and provenance.

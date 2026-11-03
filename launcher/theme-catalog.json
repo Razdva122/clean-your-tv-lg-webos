@@ -25,16 +25,16 @@
     {
       "id": "builtin:ribbon",
       "title": "Ribbon",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "builtin": true,
-      "description": "Original galaxy wallpaper with a fixed eight-card skewed bottom ribbon, raised focus and bottom-left shortcuts.",
+      "description": "A quiet dark eight-card ribbon with native logos, raised white focus and a wallpaper fallback.",
       "author": "Clean Your TV contributors",
       "license": "MIT",
-      "preview": "themes/ribbon/assets/preview-dbf77986dfebeb26c646824e90cb53126420f3b985609bb3f575bdf2d9d0a81a.jpg",
+      "preview": "themes/ribbon/assets/preview-d3f32f974e463fccfa70a50d903cc395085bce7e457209d5e4291297ec532a92.jpg",
       "credits": "themes/ribbon/documents/1-6ef40776aa6fbb8d1c62bedf595c7baec036d4a1fea9bdfc1f24d071b77de56c.txt",
       "licenseFile": "themes/ribbon/documents/0-f497a621e75e2ccabaac016c8ada95b415a7810fb9994798b282fa9f9d03920f.txt",
       "url": "themes/ribbon/cytv-theme.json",
-      "digest": "5eb9cebf58cddafa8df59497880eaa134565465ba75dab60ec1903b956be4f5d"
+      "digest": "dd4078f9c9ba285756afe03771b778b5c5a08d3b30eff1895d3940d33b0d959b"
     },
     {
       "id": "github:razdva122/clean-your-tv-lg-webos:alpine",

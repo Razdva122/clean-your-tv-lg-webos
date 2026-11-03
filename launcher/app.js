@@ -1712,7 +1712,7 @@
       if (!document.hidden) ThemeRuntime.resume('visibility');
     }
     if (presentation && window.RootLauncherRendered === true) {
-      if (document.hidden) presentation.hide(); else presentation.show(launchParams());
+      presentation.visibility(!document.hidden, launchParams());
     }
     document.hidden ? stopPreview() : restoreFocus();
   });
