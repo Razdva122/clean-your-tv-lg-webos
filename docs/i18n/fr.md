@@ -131,6 +131,8 @@ Non publié : la récupération peut reprendre une suppression No-root arrêtée
 
 [Documentation](../README.md) · [Signaler un problème](../FEEDBACK.md)
 
+En développement : si aucune demande de suppression de paquet n’a été envoyée, un échec propose **Examiner les options de récupération** pour la même connexion TV enregistrée. La vérification et la suppression exigent des confirmations distinctes. Un refus de vérifier l’état des paquets arrête la récupération et propose un rapport. Son résumé `recovery` distingue une suppression non commencée, une opération héritée et des opérations sur les paquets interrompues sans publier le journal complet ; il n’autorise pas la récupération.
+
 <!-- Anchors retained for links to earlier guide headings. -->
 <a id="python-facultatif-pour-root-dans-v110"></a>
 <a id="blocage-du-micrologiciel-lg-dans-120"></a>

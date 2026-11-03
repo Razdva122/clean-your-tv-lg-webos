@@ -68,10 +68,8 @@ def require_removal_idle(remote, profile, pending):
     # to "removing" before any package request. Resume that pre-submission state
     # like a fresh uninstall: dev/remove has its own terminal reply stream.
     # Never apply this to an inherited install or an uncertain package outcome.
-    if (profile['edition'] == 'no-root' and pending.get('action') == 'uninstall'
-            and pending.get('stage') == 'pending'
-            and set(pending) <= {'action', 'stage', 'diagnostic_id', 'eim_registered', 'removals'}
-            and pending.get('removals', {}) == {}):
+    from .recovery_state import unsubmitted_removal
+    if unsubmitted_removal(profile, pending):
         return
     idle = remote.luna('com.webos.appInstallService/status', {'subscribe': True}, timeout=10)
     if (not isinstance(idle, dict) or idle.get('returnValue') is not True or

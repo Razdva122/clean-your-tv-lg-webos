@@ -131,6 +131,8 @@ Sin publicar: la recuperación puede continuar una eliminación No-root detenida
 
 [Documentación](../README.md) · [Informar de un problema](../FEEDBACK.md)
 
+En desarrollo: si no se envió ninguna solicitud de eliminación de paquetes, un fallo ofrece **Revisar opciones de recuperación** con la misma conexión guardada del TV. La comprobación y la eliminación requieren confirmaciones separadas. Si el TV rechaza la consulta de estado de paquetes, la recuperación se detiene y ofrece un informe. El resumen `recovery` distingue la eliminación no iniciada, una operación heredada y operaciones de paquetes interrumpidas sin publicar el registro completo; no autoriza la recuperación.
+
 <!-- Anchors retained for links to earlier guide headings. -->
 <a id="python-opcional-para-root-en-v110"></a>
 <a id="bloqueo-de-firmware-lg-en-120"></a>

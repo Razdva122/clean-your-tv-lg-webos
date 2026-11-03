@@ -2,6 +2,7 @@
 from . import prompts
 from .errors import UserError
 from .operations import require_removal_idle
+from .recovery_state import unsubmitted_removal
 
 REVIEW = 'Review recovery options'
 KEPT = 'Recovery data kept. Installation has not restarted.'
@@ -58,7 +59,10 @@ def recover(installer, ask, write, non_interactive=False):
                 value not in ('submitted', 'terminal', 'done') or app in apps
                 for app, value in removals.items()):
             raise UserError(BLOCKED, reason_code='pending-operation')
-        plan(write, 'ready', 'Finish removing Clean Your TV before installing again. LG Home will be restored and remaining Clean Your TV packages removed.')
+        summary = ('No package removal was submitted. Finish removal before installing again.'
+                   if unsubmitted_removal(installer.profile, pending) else
+                   'Finish removing Clean Your TV before installing again. LG Home will be restored and remaining Clean Your TV packages removed.')
+        plan(write, 'ready', summary)
         write('Removal may reset Home preferences. Reinstallation will not start automatically.')
         if not prompts.confirm('Remove remaining Clean Your TV packages?', ask, write):
             write(KEPT)
@@ -68,6 +72,11 @@ def recover(installer, ask, write, non_interactive=False):
         if installer.store.pending(installer.profile):
             raise UserError(BLOCKED, reason_code='pending-operation')
         plan(write, 'complete', 'Finished', SEPARATE)
-    except Exception:
-        plan(write, 'blocked', BLOCKED)
+    except Exception as error:
+        from .failure_help import for_error
+        help = for_error(error, 'recover', installer.profile, installer.store.pending(installer.profile))
+        if help and help['code'] == 'recovery-status-rejected':
+            plan(write, 'blocked', help['title'], help['next_step'])
+        else:
+            plan(write, 'blocked', BLOCKED)
         raise

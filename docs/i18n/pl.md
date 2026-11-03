@@ -131,6 +131,8 @@ Jeszcze niewydane: odzyskiwanie może wznowić usuwanie No-root zatrzymane przed
 
 [Dokumentacja](../README.md) · [Zgłoś problem](../FEEDBACK.md)
 
+W przygotowaniu: jeśli nie wysłano żądania usunięcia pakietów, po błędzie dostępne jest **Przejrzyj opcje odzyskiwania** dla tego samego zapisanego TV. Kontrola i usuwanie wymagają osobnych potwierdzeń. Odmowa sprawdzenia stanu pakietów zatrzymuje odzyskiwanie i udostępnia raport. Podsumowanie `recovery` rozróżnia nierozpoczęte usuwanie, odziedziczoną operację i przerwane operacje na pakietach bez publikowania całego dziennika; nie upoważnia do odzyskiwania.
+
 <!-- Anchors retained for links to earlier guide headings. -->
 <a id="opcjonalny-python-dla-root"></a>
 <a id="testy-sprzętowe-i-ograniczenia"></a>

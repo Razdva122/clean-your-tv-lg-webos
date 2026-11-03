@@ -131,6 +131,8 @@ Homebrew Channel 拒绝此安装程序访问。在 webOS 11 上，Homebrew 0.7.3
 
 [文档导航](../README.md) · [报告问题](../FEEDBACK.md)
 
+开发中：如果尚未发送软件包移除请求，移除失败后可为同一已保存的电视选择“查看恢复选项”。检查与移除仍需分别确认。如果电视拒绝软件包状态检查，恢复会停止并提供报告。`recovery` 摘要区分尚未开始的移除、继承的操作和中断的软件包操作，不公开完整日志，也不能作为恢复授权。
+
 <!-- Anchors retained for links to earlier guide headings. -->
 <a id="v110-起的可选-root-python"></a>
 <a id="120-的-lg-固件更新阻止功能"></a>

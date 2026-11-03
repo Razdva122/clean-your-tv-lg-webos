@@ -131,6 +131,8 @@ Non pubblicato: il recupero può riprendere una rimozione No-root interrotta pri
 
 [Documentazione](../README.md) · [Segnalare un problema](../FEEDBACK.md)
 
+In sviluppo: se non è stata inviata alcuna richiesta di rimozione dei pacchetti, dopo un errore è disponibile **Esamina le opzioni di ripristino** per la stessa TV salvata. Verifica e rimozione richiedono conferme separate. Se la TV rifiuta la verifica dello stato dei pacchetti, il ripristino si ferma e offre un rapporto. Il riepilogo `recovery` distingue rimozione non avviata, operazione ereditata e operazioni sui pacchetti interrotte senza pubblicare il registro completo; non autorizza il ripristino.
+
 <!-- Anchors retained for links to earlier guide headings. -->
 <a id="requisiti"></a>
 <a id="python-opzionale-per-root"></a>

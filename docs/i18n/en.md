@@ -131,6 +131,8 @@ Unreleased: recovery can resume a No-root removal stopped before its first packa
 
 [Documentation](../README.md) · [Report a problem](../FEEDBACK.md)
 
+Unreleased recovery guidance: if no package removal request was submitted, a failed removal offers **Review recovery options** for the same saved TV. Inspection and removal still need separate confirmation. A refused package-status check stops recovery and offers a report. Its `recovery` summary distinguishes an unstarted removal, inherited operation and interrupted package work without exposing the full journal; it cannot authorize recovery.
+
 <!-- Anchors retained for links to earlier guide headings. -->
 <a id="optional-python-for-root-in-v110"></a>
 <a id="lg-firmware-blocking-in-120"></a>

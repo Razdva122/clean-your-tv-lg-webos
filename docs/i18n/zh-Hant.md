@@ -131,6 +131,8 @@ Homebrew Channel 拒絕此安裝程式存取。在 webOS 11 上，Homebrew 0.7.3
 
 [文件導覽](../README.md) · [回報問題](../FEEDBACK.md)
 
+開發中：如果尚未傳送套件移除請求，移除失敗後可為同一已儲存的電視選擇「檢視復原選項」。檢查與移除仍需分別確認。如果電視拒絕套件狀態檢查，復原會停止並提供報告。`recovery` 摘要區分尚未開始的移除、繼承的操作和中斷的套件操作，不公開完整日誌，也不能作為復原授權。
+
 <!-- Anchors retained for links to earlier guide headings. -->
 <a id="v110-起的可選-root-python"></a>
 <a id="120-的-lg-固件更新阻止功能"></a>

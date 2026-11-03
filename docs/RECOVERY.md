@@ -100,6 +100,29 @@ retain the existing guards; no request is blindly repeated. Do not edit the
 journal or reset Developer Mode to qualify. This change is not in 1.6.0 and
 physical EF950V recovery remains unverified.
 
+### Recovery explanations and direct review (unreleased)
+
+After a failed **Remove**, an original No-root journal proving no package removal
+was submitted offers **Review recovery options** for the same saved TV. This
+opens inspection, with No by default; removal still needs a separate confirmation.
+It never retries the failed removal automatically. The #256 pre-submission gate
+above is shared by this explanation and actual removal, and is checked again
+before changes. Other failures retain their existing recovery/report flow.
+
+A definite refusal of `package-status` is shown as **TV refused the package status
+check**, rather than an unspecified recovery error. Save the report; repeating
+the rejected check or clearing records does not establish the package outcome.
+The error code alone does not establish an ACL cause or firmware incompatibility.
+
+The report's additive `recovery` section identifies `removal-not-submitted`,
+`inherited-operation`, `interrupted-install`, `removal-started` or `unknown-journal`.
+It includes only fixed next-action codes and Home/Helper removal receipt states.
+`review-recovery` means inspect the original saved connection, not permission to
+remove. `retain-evidence` means keep records for diagnosis, not a claim that no
+future guarded recovery is possible. Missing original failures remain missing.
+These explanations are not in published 1.6.0 and do not resolve #201's unknown
+historical package outcomes or confirm recovery on #259's TV.
+
 ### No-root Helper service refusal (#152)
 
 In 1.6.0, the #152 correction lets the existing Restore/removal flow request a
