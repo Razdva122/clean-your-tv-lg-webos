@@ -2,14 +2,26 @@
 (() => {
   const screen=document.getElementById('screen'),cards=document.getElementById('previewThemes'),status=document.getElementById('themeStatus');
   let data,desired=null,generation=0;
+  const packages=new Map();
   function selected(manager){for(const button of cards.querySelectorAll('button'))button.setAttribute('aria-pressed',String(button.dataset.theme===manager.current().id));}
   function busy(value){cards.setAttribute('aria-busy',String(value));for(const button of cards.querySelectorAll('button'))button.disabled=value;}
   async function apply(item,frame,view){
     const manager=frame.ThemeManager;
     let installed=(await manager.list()).find(t=>t.id===item.id&&(item.builtin||t.digest===item.digest));
-    if(!installed)installed=await manager.installEnvelope(data.packages[item.id]);
+    let envelope;
+    if(!installed){
+      envelope=packages.get(item.id);
+      if(!envelope){
+        const response=await fetch('preview/'+data.packages[item.id]);
+        if(!response.ok)throw Error('Theme download failed. Click the preview to retry.');
+        envelope=await response.json();
+      }
+      if(view!==generation)return;
+      installed=await manager.installEnvelope(envelope);
+    }
     if(view!==generation)return;
     if(installed.id!==item.id||!item.builtin&&installed.digest!==item.digest)throw Error('Reviewed theme identity does not match.');
+    if(envelope)packages.set(item.id,envelope);
     await manager.selectInstalled(installed);
     if(view!==generation)return;
     desired=item.id;selected(manager);status.textContent='';
