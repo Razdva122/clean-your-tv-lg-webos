@@ -53,7 +53,7 @@ if [[ -z "${ZIG:-}" ]]; then
 fi
 export ZIG
 [[ "$("$ZIG" version)" == 0.14.1 ]] || { echo 'ZIG must point to a working Zig 0.14.1 executable.' >&2; exit 1; }
-python3 -m pip install -r requirements.txt
+python3 -m pip install -r requirements.txt -r scripts/build-requirements.txt
 # Pin the official CLI locally instead of depending on a global CLI's version.
 npm install --prefix build/tools --no-audit --no-fund '@webos-tools/cli@3.2.6'
 export PATH="$PWD/build/tools/node_modules/.bin:$PATH"
