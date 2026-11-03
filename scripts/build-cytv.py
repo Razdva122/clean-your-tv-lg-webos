@@ -244,6 +244,7 @@ def main():
         return
     environment = dict(os.environ, PYINSTALLER_CONFIG_DIR=str(ROOT / 'build/cytv/pyinstaller-cache'))
     subprocess.run([sys.executable, '-m', 'PyInstaller', '--noconfirm', '--clean', '--onefile', '--console',
+                    '--exclude-module', 'imageio_ffmpeg',
                     '--name', 'cytv', *(['--icon', str(ROOT / 'assets/icons/installer.ico')] if os.name == 'nt' else []),
                     '--paths', str(ROOT), '--add-data', str(payload) + os.pathsep + 'payload',
                     '--workpath', str(ROOT / 'build/cytv/freeze'), '--specpath', str(ROOT / 'build/cytv'),

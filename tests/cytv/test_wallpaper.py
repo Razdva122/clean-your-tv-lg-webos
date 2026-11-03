@@ -113,13 +113,18 @@ class WallpaperTests(unittest.TestCase):
             def run():
                 try: w.run_ffmpeg(command,cancel)
                 except w.Cancelled: failures.append('cancelled')
+            processes=[]
+            original_popen=subprocess.Popen
+            def spawn(*args,**kwargs):
+                process=original_popen(*args,**kwargs); processes.append(process); return process
+            process_patch=patch.object(w.subprocess,'Popen',side_effect=spawn); process_patch.start(); self.addCleanup(process_patch.stop)
             thread=threading.Thread(target=run); thread.start()
             deadline=time.monotonic()+3
             while not pidfile.exists() and time.monotonic()<deadline: time.sleep(.01)
             self.assertTrue(pidfile.exists())
-            pid=int(pidfile.read_text()); cancel.set(); thread.join(3)
+            cancel.set(); thread.join(3)
             self.assertFalse(thread.is_alive()); self.assertEqual(failures,['cancelled'])
-            with self.assertRaises(ProcessLookupError): os.kill(pid,0)
+            self.assertEqual(len(processes),1); self.assertIsNotNone(processes[0].poll())
 
     def test_cancel_interrupts_real_waiting_http_response(self):
         arrived=threading.Event(); release=threading.Event(); cancel=threading.Event(); failures=[]

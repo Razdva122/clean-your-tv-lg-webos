@@ -57,6 +57,17 @@ It exposes no author-supplied URL or script. The edition's existing service adds
 `wallpaperCacheStart`, `Write`, `Commit`, `KeepAlive`, and `Stop` methods (all with
 the `wallpaperCache` prefix). Every call checks the exact owning application ID.
 
+Fresh Root packages advertise the explicit capability pair
+`["theme-receiver-v1", "wallpaper-media-v1"]`. Only that fresh provisioning
+contract grants the owning Home application the five cache APIs. Empty and
+receiver-only saved registrations retain their original permission bytes during
+repair, cancellation and updates, even if newer package metadata advertises the
+pair. Updating Home alone or replaying an old registration does not grant native
+media access; existing preserved registrations need supported fresh provisioning
+or reinstallation before that path is available. The separate legacy receiver
+permission attachment remains limited to its four APIs. No-root uses its paired
+app/service package ownership and the cache's exact application-ID checks.
+
 Upload uses at most 48 KiB byte chunks, ordered offsets, fixed quality names,
 bounded declared sizes and actual SHA-256 verification before exposure. At most
 two leases and 32 MiB temporary media are allowed. Service-private directories,

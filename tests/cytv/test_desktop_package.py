@@ -88,3 +88,14 @@ class DesktopPackageTests(unittest.TestCase):
             self.assertFalse((tree / 'DEBIAN/postinst').exists())
             self.assertEqual((tree / 'usr/share/icons/hicolor/256x256/apps/cytv.png').read_bytes(),
                              (root / 'assets/icons/installer-256.png').read_bytes())
+
+
+class ConsoleMediaExclusionTests(unittest.TestCase):
+    def test_console_freeze_excludes_unused_wallpaper_encoder_wheel(self):
+        root=Path(__file__).resolve().parents[2]
+        build=runpy.run_path(str(root/'scripts/build-cytv.py'))
+        with patch.dict(build['main'].__globals__,{'build_payload':lambda:root/'payload-fixture'}),patch('sys.argv',['build-cytv.py']),patch('subprocess.run') as invoke:
+            build['main']()
+        freeze=invoke.call_args_list[0].args[0]
+        self.assertIn('--exclude-module',freeze)
+        self.assertEqual(freeze[freeze.index('--exclude-module')+1],'imageio_ffmpeg')

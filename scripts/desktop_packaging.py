@@ -74,7 +74,8 @@ def ffmpeg_bundle_args(root):
                       'Bundled filename: ' + binaries[0].name + '\n'
                       'FFmpeg release source: https://ffmpeg.org/releases/ffmpeg-' + binaries[0].name.split('-v')[-1].removesuffix('.exe') + '.tar.xz\n', encoding='utf-8')
     return ['--add-binary', str(binary) + os.pathsep + 'ffmpeg',
-            '--add-data', str(notice) + os.pathsep + 'ffmpeg']
+            '--add-data', str(notice) + os.pathsep + 'ffmpeg',
+            '--exclude-module', 'imageio_ffmpeg']
 
 
 def build_desktop(root, payload, environment, version):
