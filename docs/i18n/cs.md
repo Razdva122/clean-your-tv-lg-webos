@@ -18,6 +18,8 @@ V náhledu příští verze zobrazuje **Nastavení Home → Tapety** tapetu akti
 
 Vlastní tapety v náhledu příští verze: v počítačovém CYTV otevřete Tapety, vyberte JPG/PNG, upravte výřez a zadejte místní adresu TV a přijímací PIN z nastavení Home. CYTV vytvoří video bez zvuku místně; 4K nabídne jen při dostatečném rozlišení výřezu. Na TV zvolte příjem z CYTV nebo nahrávání z telefonu a ve stejné Wi-Fi naskenujte QR kód. Telefon posílá běžný obrázek nejvýše 1920×1080 bez nativní 4K video vrstvy; ostrost omezuje rozlišení rozhraní TV. Před odesláním potvrďte upozornění, pak na TV zkontrolujte náhled a použijte tapetu. Vlastní tapeta zůstává při změně motivu; v Tapetách lze obnovit tapetu motivu nebo vlastní odstranit. Zrušení či odmítnutý soubor zachová dosavadní pozadí. Jsou nutná odpovídající připravovaná sestavení Home/služby a CYTV.
 
+Android CYTV: **Nastavit TV** · **Tapety** · **Údržba**. Na TV otevřete nastavení Home → Tapety → Nahrát z telefonu. Naskenujte QR fotoaparátem telefonu, vyberte JPG/PNG a použijte tapetu na TV. Telefon odesílá obrázek do 1920×1080 bez nativního 4K videa; pro skutečné 4K použijte CYTV na počítači.
+
 Na televizoru otevřete **Settings → Language → Čeština**. Po změně se Home
 znovu načte. Volba **Automaticky (jazyk systému)** používá jazyk televizoru;
 rozpozná i `cs-CZ`. Jazyk instalátoru a televizoru se ukládá samostatně.
