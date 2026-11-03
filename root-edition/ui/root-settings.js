@@ -4,12 +4,12 @@
   function t(source, params) { if (window.HomeI18n) return window.HomeI18n.t(source, params); return String(source).replace(/\{(\w+)\}/g, function (_, key) { return params && params[key] !== undefined ? params[key] : '{' + key + '}'; }); }
   var panel, message, buttons, selected = 0, busy = false, previous, rootStatus = null;
   var checkingUpdates = false, categories, statusGeneration = 0;
-  var sourceGroup, sourceHint, sourceStatus = null, sourceKeys = ['tv','youtube','hdmi'];
+  var sourceGroup, sourceHint, sourceStatus = null, sourceUnavailable = false, sourceKeys = ['tv','youtube','hdmi'];
   var sources = {tv:true,youtube:false,hdmi:false};
   function renderSources() {
     var enabled = !busy && !!sourceStatus && sourceStatus.active === true && !!rootStatus && rootStatus.intent && rootStatus.intent.phase === 'active';
     sourceGroup.setAttribute('aria-disabled', String(!enabled));
-    sourceHint.textContent = t(rootStatus && rootStatus.intent && rootStatus.intent.phase === 'disabled' ? 'Available when Change Home is on.' : !sourceStatus ? 'Checking startup sources…' : sourceStatus.active ? 'Choose which previous sources open Clean Your TV first.' : 'Available when Change Home is on.');
+    sourceHint.textContent = t(rootStatus && rootStatus.intent && rootStatus.intent.phase === 'disabled' ? 'Available when Change Home is on.' : sourceUnavailable ? 'Startup sources unavailable. Reopen Settings to check again.' : !sourceStatus ? 'Checking startup sources…' : sourceStatus.active ? 'Choose which previous sources open Clean Your TV first.' : 'Available when Change Home is on.');
     sourceKeys.forEach(function (key, index) {
       buttons[15 + index].disabled = !enabled;
       buttons[15 + index].setAttribute('aria-checked', String(sources[key]));
@@ -29,8 +29,7 @@
       if (selected >= 15 && buttons[selected].disabled && (!categories || document.activeElement === buttons[selected])) move(1);
     }).catch(function () {
       if (generation !== statusGeneration || panel.hidden || document.hidden) return;
-      sourceStatus = null; renderSources();
-      if (!rootStatus || !rootStatus.intent || rootStatus.intent.phase !== 'disabled') sourceHint.textContent = t('Startup sources unavailable. Reopen Settings to check again.');
+      sourceStatus = null; sourceUnavailable = true; renderSources();
     });
   }
   function changeSource(index) {
@@ -99,7 +98,7 @@
   }
   function invalidateMode() {
     statusGeneration++;
-    rootStatus = null; sourceStatus = null; renderSources(); buttons[3].disabled = true;
+    rootStatus = null; sourceStatus = null; sourceUnavailable = false; renderSources(); buttons[3].disabled = true;
     buttons[12].hidden = true; buttons[12].disabled = true;
   }
   function refreshMode() {
@@ -107,8 +106,10 @@
     var generation = statusGeneration;
 
     message.textContent = t('Checking Home control…');
-    refreshSources(generation);
-    return control('status').then(function (status) {
+    return refreshSources(generation).then(function () {
+      if (generation !== statusGeneration || panel.hidden || document.hidden) return;
+      return control('status');
+    }).then(function (status) {
       if (generation !== statusGeneration || panel.hidden || document.hidden) return;
       if (!status || typeof status !== 'object' || !('intent' in status) ||
           status.intent !== null && (!status.intent || typeof status.intent.phase !== 'string')) throw new Error('Invalid service response');
