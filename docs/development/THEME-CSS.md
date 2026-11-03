@@ -422,11 +422,12 @@ Use the existing parts and states for appearance, without new CSS syntax:
 
 The engine owns geometry, hitboxes, source launch and video start/release. It
 requests muted playback, but the native external-input pipeline may ignore that
-request. Previews are off by default and require explicit user opt-in.
+request. Previews are on by default; an explicitly saved Off stays off. The user
+can disable **Preview inputs on focus** in Appearance.
 On a shelf, Up from the dock reaches the shelf, Up again reaches the header,
 Down or Back returns to the dock, and OK launches the source. A connected HDMI
-source can preview after about 800 ms of focus after the user enables **Preview
-inputs on focus**; this preference only applies while the selected theme uses a
+source can preview after about 800 ms of focus while **Preview inputs on focus**
+is enabled; this preference only applies while the selected theme uses a
 shelf. HDMI previews may play sound or switch HDR on some TVs. Home does not
 automatically change global TV mute or HDR settings. Theme CSS cannot start
 media, enable previews or change those TV settings. Software rendering clips the
@@ -444,6 +445,16 @@ shows the localized **Connected** status. Never invent a PlayStation name or
 guarantee CEC identification. `previewing` appears only while a live picture is
 playing.
 
+In the 1.7.0 candidate, Root reads input metadata through the authenticated,
+same-package service `listApps` broker with the exact `{inputs:true}` selector
+because firmware can deny direct WebApp EIM access. The existing method and
+retained permission grant are reused; no new endpoint is registered.
+The broker performs a fixed, bounded, privileged read-only query; it adds no
+permissions or TV-setting writes. Root refreshes once when Home becomes visible,
+a different input receives focus or Settings opens. There is no polling or
+automatic retry, and failed/unavailable reads leave connection status unknown.
+This is not continuous hot-plug monitoring. No-root retains its existing direct
+EIM subscription; this change does not establish No-root device acceptance.
 
 ## Classic motion opt-in (unreleased)
 

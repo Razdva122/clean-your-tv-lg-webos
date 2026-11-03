@@ -30,12 +30,23 @@ handling together.
 ## Candidate native startup choices
 
 The unpublished candidate adds **Home settings → Open Clean Your TV first**.
-**LG Channels / Live TV** is on by default; **YouTube** and **HDMI** are off.
-Enable a source to prepare Clean as the native first screen after that source.
+**LG Channels / Live TV** is on by default; **YouTube** is off. These are the only
+two source choices; there is no HDMI startup switch. Enable a source to prepare
+Clean as the native first screen after that source. Switching a source off leaves
+the startup decision to TV firmware; it does not guarantee resuming that source.
 Turning **Change Home** off visibly disables these controls and explains why;
 your choices are retained. The candidate removes late boot/wake app launches.
 Exact-package standby/cold-start, source selection and control acceptance remain
 pending; this does not change the published 1.6.0 evidence below.
+
+Native startup preparation currently requires LG’s global **Home Auto Launch**
+setting to be on (called **Power On Screen → Home** on some versions). That
+global choice can open Home even after HDMI or a source disabled in CYTV; the
+source switches cannot override it. LG’s **Recent external input** mode is not
+supported by this candidate’s native startup guard. CYTV does not offer automatic
+management/restoration of that global mode as a source preference. Ordinary
+Home-button replacement remains separate from this startup limitation. See
+[LG’s startup-screen settings and model-specific limits](https://www.lg.com/us/support/help-library/lg-tv-how-to-set-the-default-input--20153711388714).
 
 ## Exit or recover
 

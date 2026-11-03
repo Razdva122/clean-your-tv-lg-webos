@@ -8,7 +8,14 @@ Source integration and successful builds do not certify physical TV behavior.
 
 - Root prepares Clean as the native startup input for selected prior sources.
   In Home settings, **Open Clean Your TV first** defaults to **LG Channels / Live
-  TV** on, **YouTube** and **HDMI** off. With **Change Home** off, these controls
+  TV** on and **YouTube** off. There is no HDMI startup setting, including for
+  legacy saved HDMI choices. A source switched off leaves startup to firmware,
+  rather than guaranteeing that source resumes. Native preparation still requires
+  LG Home Auto Launch on; its global behavior can open Home after HDMI or an
+  unselected source. Recent external input mode is not supported by the current
+  guard; ordinary Home-button replacement remains separate. See the
+  [startup-setting dependency](../root-edition/README.md#candidate-native-startup-choices).
+  With **Change Home** off, the two controls
   remain visible, muted and disabled with an explanation; saved choices remain.
   All late boot/wake application-launch paths are removed. Unknown/native API
   failures do not trigger a delayed redirect or automatic Home re-enable.
@@ -25,8 +32,16 @@ Source integration and successful builds do not certify physical TV behavior.
 - Themes choose header menu or input shelf. Built-ins are Classic, Liquid Glass
   and Ribbon; pinned Alpine remains available through Showcase. Preview layers
   switch together, inherit rounding and label unnamed connected inputs. Live
-  preview defaults off and remains experimental: firmware audio/HDR behavior is
-  unresolved. Optional date appears below the clock; Retro bytes are unchanged.
+  preview defaults on while preserving an explicitly saved Off. Users can disable
+  **Settings → Appearance → Preview inputs on focus**. It remains experimental:
+  firmware can play audio or switch HDR; silence is not guaranteed. Home does not
+  automatically change global TV mute or HDR settings. Optional date appears below the clock; Retro bytes are unchanged.
+- Root input labels use an authenticated read-only service broker where firmware
+  denies direct WebApp EIM access. The fixed, bounded query adds no permissions
+  or TV-setting writes. Home visibility, a newly focused input and Settings each
+  trigger one fresh read; failures leave status unknown. There is no polling,
+  automatic retry or continuous hot-plug guarantee. No-root keeps its direct EIM
+  subscription; No-root device acceptance is not established by this change.
 - Home broker settings retain access after an explicit cross-package Helper
   status refusal. Original device acceptance for #196 is still outstanding.
 - Desktop/Android installers add pinned inspect-only Root collection and preserve

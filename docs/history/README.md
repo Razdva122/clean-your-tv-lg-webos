@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [1.7.0 input refinement and C3 QA, 2026-11-03](2026-11-03-release-1.7.0-input-refinement.md): superseded0.8.2 observations, two-source scope, preview default and permission-data correction; final new-package acceptance pending.
+
 - [v1.7.0 candidate re-freeze, 2026-11-03](2026-11-03-release-1.7.0-refreeze.md): explicit #260 inclusion, Root Settings status correction, Root 0.8.1 and new-build requirement; host/source evidence only.
 
 - [v1.7.0 candidate build and signed Root artifacts, 2026-11-03](2026-11-03-release-1.7.0-candidate-build.md): selected full build, exact archive/component hashes and remaining physical acceptance; no TV operation.
