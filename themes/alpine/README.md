@@ -20,3 +20,5 @@ Theme API 1 distribution with that exact source identity, commit/push those
 distribution bytes and pin their immutable descriptor URL and SHA-256. Local
 source/preview work alone does not publish the theme or prove physical TV
 compatibility.
+
+Next-release source 1.5.0 replaces the panorama with Friedrich-Karl Mohr’s real 6000×4000 Bachalpsee photograph, cropped/downsampled without upscaling. It embeds a native UHD still-video loop, an FHD loop and a UHD JPEG fallback. The historical published 1.4.4 distribution stays unchanged. See CREDITS.txt, LICENSE.txt and wallpaper-preparation.json for rights and preparation.

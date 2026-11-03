@@ -1,0 +1,26 @@
+{
+  "sourceSha256": "99771479d4d83f439c95792b54069e7fd368f416c021346b1aa85058b3ca4d79",
+  "sourceSize": [
+    14575,
+    8441
+  ],
+  "cropSize": [
+    14560,
+    8190
+  ],
+  "motion": "periodic-camera-orbit",
+  "duration": 20,
+  "fps": 24,
+  "wallpaperVideo": {
+    "variants": [
+      {
+        "quality": "4k",
+        "path": "wallpaper-4k.mp4"
+      },
+      {
+        "quality": "1080p",
+        "path": "wallpaper-1080p.mp4"
+      }
+    ]
+  }
+}

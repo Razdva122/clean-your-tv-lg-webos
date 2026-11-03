@@ -148,3 +148,41 @@ retains the 12 MiB UHD/4 MiB FHD/16 MiB combined bounds. Base64, hashes, actual
 headers and decoded dimensions are independently checked before persistence.
 See the [approved personal wallpaper design](../superpowers/specs/2026-11-03-personal-wallpapers-design.md)
 for the full field contract and separate release acceptance requirements.
+
+## Authoring embedded media
+
+The main compiler accepts `wallpaperVideo.variants` in author theme.json with
+`quality` and safe local `path` fields. Pass the matching bytes in `input.videos`.
+It derives media type, dimensions, byte lengths and SHA-256 from actual silent
+H.264 MP4 files, validates the existing duration/budget rules, and emits the
+`video-wallpaper-v1` capability automatically. Supplied dimensions must agree
+with every compressed SPS; a 1080p stream cannot be labelled 4K. Ordinary
+image-only source themes produce the same manifest bytes as before.
+
+Prepare author media offline with the desktop encoder dependency:
+
+```sh
+python3 -m pip install imageio-ffmpeg==0.6.0
+python3 scripts/prepare-theme-wallpaper.py original.jpg build/my-wallpaper
+# Optional 20-second periodic editorial camera orbit:
+python3 scripts/prepare-theme-wallpaper.py cosmos.jpg build/my-cosmos --motion
+```
+
+Use a new output directory. Preparation rejects originals whose 16:9 crop
+cannot supply 3840×2160 actual pixels (4032×2268 for the moving margin).
+It writes a UHD JPEG poster, UHD/FHD silent MP4s, and preparation.json with the
+original hash/dimensions and crop/encoding settings. Existing output is never
+overwritten; incomplete encoding remains private temporary output. Copy the
+three media assets into the theme, retain the preparation record, add the two
+paths under wallpaperVideo, and retain the image as defaults.wallpaperAssetId.
+A declared pixel count cannot establish photographic detail or provenance;
+authors must retain the source link, credit, license and edit description.
+
+Use the matching toolkit branch/runtime for build, live preview, send and
+submission. All those paths retain the videos; local send is bounded at 33 MiB.
+New compiler exports include launcher/theme-data.js for shared MP4 validation.
+Existing published runtime snapshots do not gain the feature automatically.
+For a committed built-in source upgrade use
+`node scripts/build-builtin-theme.cjs themes/ribbon --update-source`, followed
+by the normal `--check`; the new bundle pins the source commit. This does not
+admit the feature to the frozen release candidate.

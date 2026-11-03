@@ -27,4 +27,5 @@ The Outfit typeface in launcher/fonts/outfit.ttf is copyright
 The Outfit Project Authors and licensed under the SIL Open Font License 1.1,
 see launcher/fonts/OFL.txt.
 
-Wallpaper: CC BY-SA 3.0, https://creativecommons.org/licenses/by-sa/3.0/
+Wallpaper image and video derivatives: CC BY-SA 3.0 Germany, https://creativecommons.org/licenses/by-sa/3.0/de/
+Copyright Friedrich-Karl Mohr. Attribution and modifications: CREDITS.txt.

@@ -16,7 +16,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_FILES = ('theme-api/compile.cjs', 'theme-api/contract.json',
-                'launcher/theme-policy.js', 'scripts/compile-tv-web.cjs',
+                'launcher/theme-policy.js', 'launcher/theme-data.js', 'scripts/compile-tv-web.cjs',
                 'package.json', 'package-lock.json', 'scripts/check-theme-submissions.cjs')
 
 
