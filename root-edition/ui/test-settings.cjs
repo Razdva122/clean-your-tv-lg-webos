@@ -39,15 +39,16 @@ function key(keyCode){listeners.keydown({keyCode,preventDefault(){},stopImmediat
  delayStatus=false;buttons[0].onclick();await tick();assert.equal(phase,'active');assert.equal(restores,before);
  // Each lifecycle refresh owns a generation, including failures and close/reopen.
  delayStatus=true;listeners.webOSRelaunch();const old=(await nextStatus());
- listeners.webOSRelaunch();const latest=(await nextStatus());
+ listeners.webOSRelaunch();await tick();assert.equal(pending.length,0,'a later refresh waits for the active read');
  const reply=(bridge,value)=>bridge.onservicecallback(JSON.stringify(value));
  const status=phase=>({returnValue:true,result:{returnValue:true,result:{intent:{phase}}}});
- reply(latest,status('disabled'));await tick();
- reply(old,status('active'));await tick();assert.equal(buttons[0].attrs['aria-checked'],'false');
+ reply(old,status('active'));await tick();assert(buttons[0].disabled,'stale completion cannot enable controls');
+ reply((await nextStatus()),status('disabled'));await tick();assert.equal(buttons[0].attrs['aria-checked'],'false');
  assert.equal(phase,'active','status refresh never mutates backend intent');
  listeners.webOSRelaunch();const staleFailure=(await nextStatus());
- listeners.webOSRelaunch();reply((await nextStatus()),status('disabled'));await tick();
- reply(staleFailure,{returnValue:false});await tick();assert(!buttons[0].disabled);assert(retry.hidden);
+ listeners.webOSRelaunch();await tick();assert.equal(pending.length,0);
+ reply(staleFailure,{returnValue:false});await tick();assert(buttons[0].disabled);
+ reply((await nextStatus()),status('disabled'));await tick();assert(!buttons[0].disabled);assert(retry.hidden);
  listeners.webOSRelaunch();reply((await nextStatus()),{returnValue:false});await tick();
  assert(buttons[0].disabled);assert(!retry.hidden);assert(!retry.disabled);
  retry.onclick();reply((await nextStatus()),{returnValue:true,result:{returnValue:true,result:{}}});await tick();
@@ -57,8 +58,8 @@ function key(keyCode){listeners.keydown({keyCode,preventDefault(){},stopImmediat
  retry.onclick();assert(retry.hidden);reply((await nextStatus()),status('disabled'));await tick();
  assert(!buttons[0].disabled);assert.equal(restores,before);
  listeners.webOSRelaunch();const closed=(await nextStatus());key(461);assert(!panel.isOpen());
- panel.open();const reopened=(await nextStatus());reply(closed,status('active'));await tick();assert(buttons[0].disabled);
- reply(reopened,status('disabled'));await tick();assert.equal(buttons[0].attrs['aria-checked'],'false');
+ panel.open();await tick();assert.equal(pending.length,0);reply(closed,status('active'));await tick();assert(buttons[0].disabled);
+ reply((await nextStatus()),status('disabled'));await tick();assert.equal(buttons[0].attrs['aria-checked'],'false');
  // Hiding invalidates an in-flight reply even before the visible event arrives.
  listeners.webOSRelaunch();const hidden=(await nextStatus());document.hidden=true;listeners.visibilitychange();
  reply(hidden,status('active'));await tick();assert(buttons[0].disabled);
