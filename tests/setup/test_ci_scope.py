@@ -236,6 +236,7 @@ class CIScope(unittest.TestCase):
             (['website/README.md'], {'preview'}),
             (['docs/i18n/de.md'], {'preview'}),
             (['docs/launcher-classic.jpg'], {'preview'}),
+            (['docs/launcher-liquid-glass.jpg'], {'preview'}),
             (['assets/brand/logo-dark.svg'], {'preview'}),
             (['preview/bridge.js'], {'preview'}),
             (['tests/preview-bridge.cjs'], {'preview'}),
