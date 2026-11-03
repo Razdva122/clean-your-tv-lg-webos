@@ -3,76 +3,65 @@
   "inventory": "tv-reference",
   "hardwareVerified": false,
   "locale": "en-US",
-  "clock": "2026-01-01T12:00:00Z",
-  "browser": "156.0.8078.74",
+  "clock": "2026-11-03T12:00:00Z",
+  "browser": "156.0.8078.80",
   "runtime": {
-    "status": "candidate",
+    "status": "development-capture",
     "source": {
       "repository": "https://github.com/Razdva122/clean-your-tv-lg-webos",
-      "commit": "b7c12db62b65eb0fc6b6e2a3728ba54d80395eb9",
-      "dirty": false
+      "commit": "e9fde64f03a0fbdbc66bcc687f65d73e6a17af37",
+      "dirty": true
     },
-    "manifestSha256": "caf57a5208c06f5cb535f45a997239dcd24ef7e5df8af31535b49930d8d04bad"
+    "manifestSha256": "099881b26d770e00157aa8156f0a651745e76b4f72e6254c0739d64a5fa80772",
+    "note": "Captured with committed source and its freshly generated bundle; only generated bundle and preview assets were uncommitted. Final thumbnail rebundle changes preview bytes, not appearance rules."
   },
   "themeApiVersion": 1,
-  "theme": "github:razdva122/clean-your-tv-lg-theme:ribbon",
-  "themeVersion": "1.0.0",
+  "theme": "builtin:ribbon",
+  "themeVersion": "1.1.0",
   "captures": [
     {
       "edition": "no-root",
       "file": "previews/no-root-home.png",
       "width": 1920,
       "height": 1080,
-      "sha256": "c5048c97ecfa91987968a139c604849d3944010de1ba6bb1bf700050ae33cfef",
-      "columns": {
-        "columns": 8,
-        "override": null,
-        "themeColumns": 8,
-        "preset": "scenic-grid",
-        "allowColumnOverride": false,
-        "ribbon": {
-          "left": 340,
-          "right": 84,
-          "bottom": 0,
-          "cardHeight": 180,
-          "gap": 0,
-          "skewDeg": -13,
-          "focusLift": 36,
-          "iconScale": 0.65,
-          "shortcuts": "bottom-left",
-          "edgeNavigation": "shortcuts",
-          "labels": "focused-above",
-          "showClock": false
-        }
-      }
+      "sha256": "8e6e11643453b08e0658bf9bb61a53d13cfed7c519dd7cf6bcb071eadb213494",
+      "presentation": "full",
+      "context": "empty",
+      "simulation": true,
+      "note": "Browser service simulation; no physical TV acceptance."
     },
     {
       "edition": "root",
       "file": "previews/root-home.png",
       "width": 1920,
       "height": 1080,
-      "sha256": "c5048c97ecfa91987968a139c604849d3944010de1ba6bb1bf700050ae33cfef",
-      "columns": {
-        "columns": 8,
-        "override": null,
-        "themeColumns": 8,
-        "preset": "scenic-grid",
-        "allowColumnOverride": false,
-        "ribbon": {
-          "left": 340,
-          "right": 84,
-          "bottom": 0,
-          "cardHeight": 180,
-          "gap": 0,
-          "skewDeg": -13,
-          "focusLift": 36,
-          "iconScale": 0.65,
-          "shortcuts": "bottom-left",
-          "edgeNavigation": "shortcuts",
-          "labels": "focused-above",
-          "showClock": false
-        }
-      }
+      "sha256": "8e6e11643453b08e0658bf9bb61a53d13cfed7c519dd7cf6bcb071eadb213494",
+      "presentation": "full",
+      "context": "empty",
+      "simulation": true,
+      "note": "Browser service simulation; no physical TV acceptance."
+    },
+    {
+      "edition": "no-root",
+      "file": "previews/no-root-overlay-simulation.png",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "0c2a6c7afcd0e849b2593e20f9fad3fe8f5c28cbc586d04eb0258a7756f77329",
+      "presentation": "overlay",
+      "context": "synthetic moving application",
+      "simulation": true,
+      "note": "No-root native TV behavior remains fullscreen."
+    },
+    {
+      "edition": "root",
+      "file": "previews/root-overlay.png",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "d22508e5ea7687d20b55b354dc33adf268437cfed1428b133a2a9662353b6d11",
+      "presentation": "overlay",
+      "context": "synthetic moving application",
+      "simulation": true,
+      "note": "Browser service simulation; no physical TV acceptance."
     }
   ],
   "thumbnail": {
@@ -80,6 +69,15 @@
     "file": "assets/preview.jpg",
     "width": 960,
     "height": 540,
+    "sha256": "d3f32f974e463fccfa70a50d903cc395085bce7e457209d5e4291297ec532a92",
     "conversion": "sips resample; JPEG quality 85"
+  },
+  "documentationPreview": {
+    "source": "previews/root-overlay.png",
+    "file": "docs/launcher-ribbon.jpg",
+    "width": 1920,
+    "height": 1080,
+    "sha256": "c5ab34fce2a445646c6a61376e486ac5b612a7eefe03e2afef6171e91fbd75a9",
+    "conversion": "sips JPEG quality 85"
   }
 }
