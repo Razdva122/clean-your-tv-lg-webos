@@ -22,6 +22,8 @@ one model or artifact does not certify later releases or a different TV.
 
 ## Scoped feature checks
 
+- [Embedded UHD wallpaper authoring, 2026-11-03](2026-11-03-embedded-uhd-wallpapers/README.md): real Alpine/Ribbon media, paired toolkit checks, large Base64 fix and browser-only decode evidence; outside the frozen release inventory.
+
 - [Root standby power stages, 2026-11-03](2026-11-03-root-standby-power-stages.md): two owner-observed failures, matching firmware sequence and source correction; signed-device acceptance pending.
 
 - [Release1.6.0 freeze/build, 2026-11-02](2026-11-02-release-1.6.0-freeze.md): selected versions, frozen scope, cross-platform build identities and remaining acceptance gates.
