@@ -6,5 +6,4 @@ Permission is hereby granted, free of charge, to any person obtaining a copy of 
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
 
-Wallpaper image and video derivatives: Creative Commons Attribution 4.0 International, https://creativecommons.org/licenses/by/4.0/ .
-Credit: NASA, ESA, CSA, and STScI. Source and modifications: CREDITS.txt.
+Original procedural wallpaper image and video: MIT, Clean Your TV contributors, 2026. See CREDITS.txt.

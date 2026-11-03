@@ -3,12 +3,12 @@
   "themeApiVersion": 1,
   "id": "builtin:ribbon",
   "title": "Ribbon",
-  "description": "Real Webb Cosmic Cliffs imagery with a subtle 20-second 4K camera orbit and a fixed eight-card skewed app ribbon.",
+  "description": "Original blue-violet nebula on black space with a subtle 20-second 4K drift and a fixed eight-card skewed app ribbon.",
   "author": {
     "name": "Clean Your TV contributors",
     "url": "https://github.com/razdva122"
   },
-  "themeVersion": "1.1.0",
+  "themeVersion": "1.2.0",
   "layout": {
     "preset": "scenic-grid",
     "columns": 8,
@@ -39,7 +39,7 @@
   "assets": [
     {
       "id": "wallpaper",
-      "path": "assets/cosmic-cliffs.jpg",
+      "path": "assets/blue-nebula.jpg",
       "mediaType": "image/jpeg",
       "width": 3840,
       "height": 2160
@@ -54,7 +54,7 @@
   ],
   "previewAssetId": "preview",
   "license": {
-    "identifier": "MIT AND CC-BY-4.0",
+    "identifier": "MIT",
     "textPath": "LICENSE.txt",
     "creditsPath": "CREDITS.txt"
   },

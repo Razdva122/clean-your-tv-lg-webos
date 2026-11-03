@@ -4,12 +4,12 @@
     "root",
     "no-root"
   ],
-  "sourceThemeVersion": "1.1.0",
+  "sourceThemeVersion": "1.2.0",
   "wallpaperDecode": [
     3840,
     2160
   ],
   "runtime": "local next-release candidate export; shared Home renderer",
   "physicalTVAcceptance": false,
-  "note": "Simulated services and reference app inventory; 4K explicitly selected because browser UHD capability is unknown. Community preview is the retained historical prototype, not this capture."
+  "note": "Original procedural4096x2304 artwork and silent20s camera drift. Simulated services/reference apps; UHD selected explicitly because browser capability is unknown. Community preview remains the historical prototype."
 }

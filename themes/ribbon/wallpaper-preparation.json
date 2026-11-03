@@ -1,12 +1,12 @@
 {
-  "sourceSha256": "99771479d4d83f439c95792b54069e7fd368f416c021346b1aa85058b3ca4d79",
+  "sourceSha256": "4862c70d73983c73868ec3e762fefa17e9b951e679ebee1f2c11c37b542deb79",
   "sourceSize": [
-    14575,
-    8441
+    4096,
+    2304
   ],
   "cropSize": [
-    14560,
-    8190
+    4096,
+    2304
   ],
   "motion": "periodic-camera-orbit",
   "duration": 20,
@@ -22,5 +22,8 @@
         "path": "wallpaper-1080p.mp4"
       }
     ]
-  }
+  },
+  "artwork": "original-procedural-nebula",
+  "renderer": "scripts/render-ribbon-nebula.cjs",
+  "conceptImagesUsedAsTextures": false
 }
