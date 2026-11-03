@@ -2,7 +2,7 @@
 
 - [2026-11-03 — Helper 0.6.22 rollback compatibility](2026-11-03-helper-0.6.22-compatibility.md)
 
-- [1.7.0 final packages and acceptance, 2026-11-03](2026-11-03-release-1.7.0-final-packages.md): superseded Root0.8.3 artifacts and C3 results; replacement0.8.4/Helper0.6.22 freeze and final-build gates.
+- [1.7.0 final packages and acceptance, 2026-11-03](2026-11-03-release-1.7.0-final-packages.md): selected0.8.4/Helper0.6.22 complete build, signatures and Android checks; Root device acceptance pending; superseded0.8.3 evidence retained.
 
 - [1.7.0 input refinement and C3 QA, 2026-11-03](2026-11-03-release-1.7.0-input-refinement.md): superseded0.8.2 observations, two-source scope, preview default and permission-data correction; final new-package acceptance pending.
 
