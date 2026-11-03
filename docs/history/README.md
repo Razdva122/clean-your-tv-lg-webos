@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [v1.7.0 candidate re-freeze, 2026-11-03](2026-11-03-release-1.7.0-refreeze.md): explicit #260 inclusion, Root Settings status correction, Root 0.8.1 and new-build requirement; host/source evidence only.
+
 - [v1.7.0 candidate build and signed Root artifacts, 2026-11-03](2026-11-03-release-1.7.0-candidate-build.md): selected full build, exact archive/component hashes and remaining physical acceptance; no TV operation.
 
 - [Inputs presentation and C3 browser probe, 2026-11-02](2026-11-02-input-preview-polish.md): exclusive menu/shelf, first-frame text/icon sync, source fingerprints and narrowly scoped native HDMI rounding observation; not full Home acceptance.

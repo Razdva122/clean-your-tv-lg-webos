@@ -12,6 +12,8 @@ Source integration and successful builds do not certify physical TV behavior.
   remain visible, muted and disabled with an explanation; saved choices remain.
   All late boot/wake application-launch paths are removed. Unknown/native API
   failures do not trigger a delayed redirect or automatic Home re-enable.
+  Settings reads startup and Home state serially, keeping controls unavailable
+  until the service has finished both checks and preserving read-failure advice.
 - Root keeps normal-start, shutdown proof, current session/binding, input and
   guardian health, explicit Off, emergency, key-up and watchdog guards. Native
   selection is event-driven, bounded and reversible under the existing lock.
@@ -31,7 +33,10 @@ Source integration and successful builds do not certify physical TV behavior.
   recovery for a No-root removal stopped before package submission. Uncertain
   submitted operations still require terminal authority and confirmed LG Home.
   Passive collection does not stage or execute device changes. Original device
-  recovery reports remain unresolved.
+  recovery reports remain unresolved. A pre-submission removal failure offers
+  **Review recovery options** for the same saved TV/port with separate default-No
+  confirmations. Fixed diagnostic categories distinguish package-status refusal
+  and unsubmitted removal without exporting private journals (#260).
 - Legacy vendor/bootstrap prerequisites and Root wake/forward-cancellation
   characterization improve diagnostics without granting unsupported hardware
   compatibility. The multilingual website source is included; deployment follows
@@ -45,13 +50,16 @@ Source integration and successful builds do not certify physical TV behavior.
 | Home Helper | 0.6.21 | 0.6.21 | Keep immutable published native package |
 | cytv | 0.7.0 | 0.8.0 | Inspection and recovery behavior; rebuilt payloads |
 | Android | 0.6.0 / code 17 | 0.7.0 / code 18 | Shared installer and embedded payload changes |
-| Root / infrastructure | 0.7.0 | 0.8.0 | Native source policy, Settings and removal of late launches |
+| Root / infrastructure | 0.7.0 | 0.8.1 | Native source policy, Settings and removal of late launches |
 | Both independent Updaters | 0.4.0 | 0.4.2 | Rebuilt shared UI/locales and recovery support; distinct package bytes |
 | System target / protocol | 1.2.0 / 1 | 1.2.0 / 1 | Supervisor unchanged; retained 1.1.2 remains separate |
 
 Root, infrastructure, both edition Updaters, HD/FHD Home/Root and all installers
 must be rebuilt together. Updater 0.4.1 was not a public release; 0.4.2 avoids
 reusing preliminary package identities. The existing Helper is reused byte-for-byte.
+Root 0.8.1 distinguishes the Settings correction from the earlier unpublished
+0.8.0 QA package. The initial build pin is superseded; a new full candidate and
+signed Root set are required. No equal-version replacement is authorized.
 No application ID, signing identity, trust rule or public endpoint changes.
 
 ## Acceptance and known limits
@@ -65,7 +73,8 @@ No application ID, signing identity, trust rule or public endpoint changes.
   component OTA does not replace the supervisor; there is no general migration
   from that installed version. Do not delete state, reinstall or force equal
   versions. Existing signed rollback and admission requirements remain in force.
-- #202 old forward callback, #201 uncertain No-root termination, #152 original
+- #202 old forward callback, #201 uncertain No-root termination, #259 original
+  removal/recovery report, #152 original
   EF950V recovery, #101/#200/#216/#240 recoveries and #160/#164 legacy support
   remain unresolved. Partial diagnostics and source fixes do not close reports.
 - New Android APK bytes require original-signer and exact-payload verification

@@ -100,13 +100,23 @@
       "pr": 258,
       "issues": [],
       "summary": "Fix Windows-only normalization in a profile-preservation test; product authentication behavior is unchanged"
+    },
+    {
+      "pr": 260,
+      "issues": [
+        201,
+        259
+      ],
+      "summary": "Offer separately confirmed recovery review after unsubmitted No-root removal failures and export allowlisted recovery categories; original #201/#259 reports remain unresolved"
+    },
+    {
+      "pr": 261,
+      "issues": [
+        171
+      ],
+      "summary": "Serialize Root Settings startup/Home reads against the single-flight service and retain source failure advice; exact-package acceptance remains pending"
     }
   ],
   "excluded": [],
-  "acceptance": "",
-  "build": {
-    "run_id": 41530199470,
-    "attempt": 1,
-    "source": "e20c8b8fff7f59285d7a0637ea5e34752117a56a"
-  }
+  "acceptance": ""
 }
