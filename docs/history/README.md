@@ -18,6 +18,8 @@ one model or artifact does not certify later releases or a different TV.
 
 ## Scoped feature checks
 
+- [Ribbon overlay development, 2026-11-03](2026-11-03-ribbon-overlay-development.md): Root presentation, shared visual/demo changes and host checks; signed-device acceptance pending.
+
 - [Root standby power stages, 2026-11-03](2026-11-03-root-standby-power-stages.md): two owner-observed failures, matching firmware sequence and source correction; signed-device acceptance pending.
 
 - [Release1.6.0 freeze/build, 2026-11-02](2026-11-02-release-1.6.0-freeze.md): selected versions, frozen scope, cross-platform build identities and remaining acceptance gates.
