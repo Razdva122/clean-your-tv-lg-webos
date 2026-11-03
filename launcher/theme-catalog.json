@@ -25,16 +25,16 @@
     {
       "id": "builtin:ribbon",
       "title": "Ribbon",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "builtin": true,
-      "description": "Real Webb Cosmic Cliffs imagery with a subtle 20-second 4K camera orbit and a fixed eight-card skewed app ribbon.",
+      "description": "Original blue-violet nebula on black space with a subtle 20-second 4K drift and a fixed eight-card skewed app ribbon.",
       "author": "Clean Your TV contributors",
-      "license": "MIT AND CC-BY-4.0",
-      "preview": "themes/ribbon/assets/preview-cf2bb4267b9fbd09f85a3f1e367aacc8599904b641e1c926959dc06ba2555daf.jpg",
-      "credits": "themes/ribbon/documents/1-5ff45c5b230fbcf7ad125ca97d47227a41d3e79d057c5e548b777bc7e7deba9c.txt",
-      "licenseFile": "themes/ribbon/documents/0-c1997742afacda8afe0a51f5ad169df9d7f77834a129b5c4df5d1cf629e7eae0.txt",
+      "license": "MIT",
+      "preview": "themes/ribbon/assets/preview-c6602e5a1b99a888515ca00ed98fc829064b6294b8274c31602742ceff0da819.jpg",
+      "credits": "themes/ribbon/documents/1-43b82ba0d37909a5d222c4d08e5b0b474f864063f8108e7b4e03543cfe02a862.txt",
+      "licenseFile": "themes/ribbon/documents/0-1f4fb6f3cfd1f24a36e9d045602191fe2513fc80fdc6ca5b33afdce306aaa40b.txt",
       "url": "themes/ribbon/cytv-theme.json",
-      "digest": "a8a28acb49570507b012ddce41d4dd5d8d43cfd2f8fc08a0988e57d9825e3db6"
+      "digest": "84b1058f924964a72a7a9c3d6034b15ef78930bc68375d9d6a2fb0261fc84159"
     },
     {
       "id": "github:razdva122/clean-your-tv-lg-webos:alpine",

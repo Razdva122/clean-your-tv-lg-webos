@@ -11,9 +11,9 @@
     {
       "id": "builtin:ribbon",
       "title": "Ribbon",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "url": "themes/ribbon/cytv-theme.json",
-      "digest": "a8a28acb49570507b012ddce41d4dd5d8d43cfd2f8fc08a0988e57d9825e3db6"
+      "digest": "84b1058f924964a72a7a9c3d6034b15ef78930bc68375d9d6a2fb0261fc84159"
     }
   ]
 }
