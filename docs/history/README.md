@@ -24,6 +24,7 @@ one model or artifact does not certify later releases or a different TV.
 
 ## Scoped feature checks
 
+- [Source installer build dependencies, 2026-11-03](2026-11-03-source-install-build-dependencies.md): clean-venv font preparation and pre-pairing failure guards for #272; host-only evidence.
 - [macOS graphics payload alias, 2026-11-03](2026-11-03-macos-graphics-payload-alias.md): published-package reproduction, minimal member-path correction and offline frozen-app checks; no TV operation or public delivery.
 
 - [Root standby power stages, 2026-11-03](2026-11-03-root-standby-power-stages.md): two owner-observed failures, matching firmware sequence and source correction; signed-device acceptance pending.
