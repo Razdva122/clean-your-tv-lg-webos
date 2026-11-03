@@ -3,12 +3,12 @@
   "themeApiVersion": 1,
   "id": "builtin:ribbon",
   "title": "Ribbon",
-  "description": "Original galaxy wallpaper with a fixed eight-card skewed bottom ribbon, raised focus and bottom-left shortcuts.",
+  "description": "A quiet dark eight-card ribbon with native logos, raised white focus and a wallpaper fallback.",
   "author": {
     "name": "Clean Your TV contributors",
     "url": "https://github.com/razdva122"
   },
-  "themeVersion": "1.0.0",
+  "themeVersion": "1.1.0",
   "layout": {
     "preset": "scenic-grid",
     "columns": 8,
@@ -29,11 +29,12 @@
       "edgeNavigation": "shortcuts",
       "labels": "focused-above",
       "showClock": false
-    }
+    },
+    "presentation": "overlay"
   },
   "defaults": {
     "wallpaperAssetId": "wallpaper",
-    "dim": 0,
+    "dim": 0.28,
     "accent": "#ffffff"
   },
   "assets": [
@@ -48,12 +49,12 @@
     },
     {
       "id": "preview",
-      "path": "assets/preview-dbf77986dfebeb26c646824e90cb53126420f3b985609bb3f575bdf2d9d0a81a.jpg",
+      "path": "assets/preview-d3f32f974e463fccfa70a50d903cc395085bce7e457209d5e4291297ec532a92.jpg",
       "mediaType": "image/jpeg",
       "width": 960,
       "height": 540,
-      "size": 56183,
-      "sha256": "dbf77986dfebeb26c646824e90cb53126420f3b985609bb3f575bdf2d9d0a81a"
+      "size": 54182,
+      "sha256": "d3f32f974e463fccfa70a50d903cc395085bce7e457209d5e4291297ec532a92"
     }
   ],
   "previewAssetId": "preview",
@@ -64,18 +65,19 @@
   },
   "source": {
     "repository": "https://github.com/razdva122/clean-your-tv-lg-webos",
-    "commit": "dbb22f897f6a044154466405c9a1236373ac2b6b"
+    "commit": "faa3f76955882954b021771617375e50c61413e2"
   },
   "requires": {
-    "minimumHomeVersion": "1.6.1",
+    "minimumHomeVersion": "1.8.0",
     "capabilities": [
-      "ribbon-layout-v1"
+      "ribbon-layout-v1",
+      "overlay-presentation-v1"
     ]
   },
   "rules": {
-    "path": "rules/0c202869f7e03965d2e6bec29d77e9d1783381498037b961ff868102c2c88b31.json",
-    "size": 4923,
-    "sha256": "0c202869f7e03965d2e6bec29d77e9d1783381498037b961ff868102c2c88b31"
+    "path": "rules/dadf4c17339bb2fbb7d6f035ad4c19ebedd2b20c2b041ac02f7c70673fa515d0.json",
+    "size": 5204,
+    "sha256": "dadf4c17339bb2fbb7d6f035ad4c19ebedd2b20c2b041ac02f7c70673fa515d0"
   },
   "documents": [
     {
