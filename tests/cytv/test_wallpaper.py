@@ -60,6 +60,7 @@ class WallpaperTests(unittest.TestCase):
         class Reply:
             def __init__(self,status,body): self.status=status; self.body=body
             def read(self,n): return self.body[:n]
+            def close(self): pass
         class Connection:
             replies=[]; requests=[]
             def __init__(self,*a,**kw): self.sock=None
@@ -206,6 +207,7 @@ class WallpaperTests(unittest.TestCase):
         class Response:
             status=200
             def read(self,n): offset[0]=19.9; return b'{"wallpaperProtocol":1}'
+            def close(self): pass
         class Connection:
             def __init__(self,*args,**kwargs): self.sock=None
             def request(self,*args,**kwargs): self.sock=self._create_connection(('192.168.1.2',8879),20,None)
@@ -217,3 +219,11 @@ class WallpaperTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'Transfer timed out'):
                 w.upload('192.168.1.2','123456',{})
         self.assertLess(real_monotonic()-start,.5); self.assertEqual(len(transports),2); self.assertTrue(transports[1].closed)
+
+    def test_receive_cancel_and_deadline_do_not_depend_on_cross_thread_shutdown(self):
+        # Windows does not reliably wake makefile recv when another thread closes
+        # or shuts down the shared socket. Reproduce that condition on every OS.
+        with patch.object(w.socket.socket,'shutdown',return_value=None):
+            self.check_partial_response_body(cancelled=True)
+            self.check_partial_response_body(cancelled=False)
+            self.test_cancel_interrupts_real_waiting_http_response()

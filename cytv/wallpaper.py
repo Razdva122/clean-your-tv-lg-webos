@@ -4,6 +4,7 @@ import base64
 import hashlib
 import http.client
 import ipaddress
+import io
 import json
 import math
 from pathlib import Path
@@ -13,7 +14,6 @@ import select
 import subprocess
 import sys
 import tempfile
-import threading
 import time
 
 from PySide6.QtCore import QByteArray, QBuffer, QIODevice, QRect, Qt
@@ -192,6 +192,73 @@ def connect_ipv4(address, deadline, cancel=None):
         raise
 
 
+def wait_socket(transport, deadline, cancel, writing=False):
+    """Poll on the I/O thread; cross-thread shutdown cannot wake recv on all OSes."""
+    while True:
+        check_cancel(cancel)
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise ValueError('Transfer timed out.')
+        readable, writable, _ = select.select([] if writing else [transport],
+                                              [transport] if writing else [], [], min(.05, remaining))
+        if readable or writable:
+            check_cancel(cancel)
+            if time.monotonic() >= deadline:
+                raise ValueError('Transfer timed out.')
+            return
+
+
+class ReceiverReader(io.RawIOBase):
+    def __init__(self, stream, transport, deadline, cancel):
+        super().__init__()
+        self.stream, self.transport, self.deadline, self.cancel = stream, transport, deadline, cancel
+
+    def readable(self):
+        return True
+
+    def readinto(self, buffer):
+        if not len(buffer):
+            return 0
+        while True:
+            wait_socket(self.transport, self.deadline, self.cancel)
+            result = self.stream.readinto(buffer)
+            if result is not None:
+                return result
+
+    def close(self):
+        try:
+            self.stream.close()
+        finally:
+            super().close()
+
+
+class ReceiverSocket:
+    def __init__(self, transport, deadline, cancel):
+        self.transport, self.deadline, self.cancel = transport, deadline, cancel
+        transport.setblocking(False)
+
+    def __getattr__(self, name):
+        return getattr(self.transport, name)
+
+    def makefile(self, mode):
+        # Keep native SocketIO's reference so HTTPConnection.close cannot detach
+        # the response's fd before its buffered reader finishes or is closed.
+        stream = self.transport.makefile(mode, buffering=0)
+        return io.BufferedReader(ReceiverReader(stream, self.transport, self.deadline, self.cancel))
+
+    def sendall(self, data):
+        remaining = memoryview(data)
+        while remaining:
+            wait_socket(self.transport, self.deadline, self.cancel, writing=True)
+            try:
+                count = self.transport.send(remaining)
+            except BlockingIOError:
+                continue
+            if not count:
+                raise OSError('Connection closed')
+            remaining = remaining[count:]
+
+
 def upload(host, pin, envelope, cancel=None, progress=lambda message: None):
     host = destination(host,pin)
     check_cancel(cancel)
@@ -199,27 +266,19 @@ def upload(host, pin, envelope, cancel=None, progress=lambda message: None):
     if len(body) > ENVELOPE_LIMIT:
         raise ValueError('Wallpaper exceeds the TV size limit.')
     connection = http.client.HTTPConnection(host,8879,timeout=20)
-    done = threading.Event()
     deadline = time.monotonic() + 20
-    # HTTPConnection calls this factory on both preflight and POST reconnect.
-    connection._create_connection = lambda address, timeout, source_address: connect_ipv4(address, deadline, cancel)
-    # HTTPResponse owns the makefile after Connection: close detaches conn.sock.
-    transport_socket = [None]
-    def watch():
-        while not done.wait(.05):
-            if (cancel is not None and cancel.is_set()) or time.monotonic() >= deadline:
-                current_socket = connection.sock or transport_socket[0]
-                if current_socket is not None:
-                    try: current_socket.shutdown(socket.SHUT_RDWR)
-                    except OSError: pass
-                connection.close()
-    monitor = threading.Thread(target=watch,daemon=True); monitor.start()
+    def create_transport(address, timeout, source_address):
+        return ReceiverSocket(connect_ipv4(address, deadline, cancel), deadline, cancel)
+    # The same bounded factory handles both initial connect and POST reconnect.
+    connection._create_connection = create_transport
     def request(method,path,data=None):
         check_cancel(cancel)
         connection.request(method,path,body=data,headers={'X-CYTV-PIN':pin,'Content-Type':'application/json','Connection':'close'})
-        transport_socket[0] = connection.sock
         response = connection.getresponse()
-        reply = response.read(65537)
+        try:
+            reply = response.read(65537)
+        finally:
+            response.close()
         check_cancel(cancel)
         if time.monotonic() >= deadline:
             raise ValueError('Transfer timed out.')
@@ -246,4 +305,4 @@ def upload(host, pin, envelope, cancel=None, progress=lambda message: None):
             raise ValueError('Transfer timed out.') from None
         raise ValueError('Could not transfer wallpaper. Check the TV receiving screen and your home network.') from None
     finally:
-        done.set(); connection.close(); monitor.join(timeout=1)
+        connection.close()

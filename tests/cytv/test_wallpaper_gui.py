@@ -74,7 +74,7 @@ class WallpaperGuiTests(unittest.TestCase):
         rows=Path(__file__).resolve().parents[2]/'cytv/wallpaper_gui.py'
         import ast
         keys={'Zoom','Horizontal position','Vertical position','4K + 1080p video','1080p video','Image only; source is below 1080p', 'Received by TV. Choose Apply on the TV to use this wallpaper.'}
-        for node in ast.walk(ast.parse(rows.read_text())):
+        for node in ast.walk(ast.parse(rows.read_text(encoding='utf-8'))):
             if isinstance(node,ast.Call) and isinstance(node.func,ast.Name) and node.func.id=='tr' and node.args and isinstance(node.args[0],ast.Constant): keys.add(node.args[0].value)
         for key in keys:
             for code in translations.LANGS:
@@ -95,3 +95,11 @@ class WallpaperGuiTests(unittest.TestCase):
             deadline=time.monotonic()+3
             while dialog.busy and time.monotonic()<deadline: self.app.processEvents(); time.sleep(.01)
             self.assertFalse(dialog.busy); self.assertFalse(dialog.isVisible())
+
+    def test_catalog_source_scan_uses_utf8_under_legacy_windows_text_default(self):
+        original_read=Path.read_text
+        def legacy_read(path,*args,**kwargs):
+            if not args and not kwargs.get('encoding'): kwargs['encoding']='cp1252'
+            return original_read(path,*args,**kwargs)
+        with patch.object(Path,'read_text',autospec=True,side_effect=legacy_read):
+            self.test_localized_wallpaper_strings_cover_all_desktop_locales()
