@@ -70,7 +70,7 @@ const vm=require('vm'),fs=require('fs'),f=JSON.parse(fs.readFileSync(0,'utf8'));
 let actualCalls=0,store={production:'secret'},databases=[];
 const storage={getItem:k=>Object.prototype.hasOwnProperty.call(store,k)?store[k]:null,setItem:(k,v)=>store[k]=String(v),removeItem:k=>delete store[k]};
 const window={TV_APPS:{apps:[]},indexedDB:{open:name=>databases.push(name)},localStorage:storage,PalmServiceBridge:function(){actualCalls++;},webOS:{service:{request:()=>actualCalls++}}};
-const context={window,document:{getElementById:()=>null},setTimeout:fn=>{fn();return 1;},clearTimeout:()=>{}};
+const context={window,document:{getElementById:()=>null,addEventListener:()=>{}},setTimeout:fn=>{fn();return 1;},clearTimeout:()=>{}};
 vm.createContext(context);vm.runInContext(f['dev-bridge.js'],context);vm.runInContext(f['bridge.js'],context);vm.runInContext(f['dev-lock.js'],context);
 window.CYTV_DEV_STORAGE.setItem('production','dev');
 window.CYTV_DEV_INDEXEDDB.open('ctv-themes-v1',1);

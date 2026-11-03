@@ -22,24 +22,23 @@ function content(response) {
       surface.windowType === '_WEBOS_WINDOW_TYPE_CARD' && excluded.indexOf(surface.appId) < 0;
   });
 }
-module.exports = function (service, uid) {
+// The service's LS2 role deliberately does not grant compositor access.
+// Use the existing Root broker pattern with a fixed command and bounded reply.
+module.exports = function (execFile, uid) {
   return function () {
     return new Promise(function (resolve) {
       if (uid() !== 0) { resolve({content:null}); return; }
-      var done = false, request;
-      function finish(value) {
-        if (done) return;
-        done = true;
-        clearTimeout(timer);
-        if (request && typeof request.cancel === 'function') { try { request.cancel(); } catch (_) {} }
-        resolve({content:value});
-      }
-      var timer = setTimeout(function () { finish(null); }, 2000);
       try {
-        request = service.call('luna://com.webos.surfacemanager/getForegroundAppInfo', {}, function (response) {
-          finish(content(response && response.payload));
-        });
-      } catch (_) { finish(null); }
+        execFile('/usr/bin/luna-send',
+          ['-n', '1', 'luna://com.webos.surfacemanager/getForegroundAppInfo', '{}'],
+          {timeout:1500, maxBuffer:65536}, function (error, stdout) {
+            if (error || typeof stdout !== 'string' || stdout.length > 65536) {
+              resolve({content:null}); return;
+            }
+            try { resolve({content:content(JSON.parse(stdout))}); }
+            catch (_) { resolve({content:null}); }
+          });
+      } catch (_) { resolve({content:null}); }
     });
   };
 };

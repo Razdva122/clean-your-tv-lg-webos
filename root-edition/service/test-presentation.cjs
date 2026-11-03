@@ -13,7 +13,7 @@ const createHandlers=require('./handlers');
  const card=appId=>({appId,windowType:'_WEBOS_WINDOW_TYPE_CARD'});
  const overlay={appId:'com.cleanyourtv.root.preview',windowType:'_WEBOS_WINDOW_TYPE_OVERLAY'};
  let response={returnValue:true,foregroundAppInfo:[overlay,card('youtube.leanback.v4')]},calls=0;
- const service={call(uri,payload,callback){calls++;assert.strictEqual(uri,'luna://com.webos.surfacemanager/getForegroundAppInfo');assert.deepStrictEqual(payload,{});callback({payload:response});return {cancel(){}};}};
+ const service=(file,args,options,callback)=>{calls++;assert.strictEqual(file,'/usr/bin/luna-send');assert.deepStrictEqual(args,['-n','1','luna://com.webos.surfacemanager/getForegroundAppInfo','{}']);assert.deepStrictEqual(options,{timeout:1500,maxBuffer:65536});callback(null,JSON.stringify(response));};
  const query=context(service,()=>0);
  for(const [surfaces,want] of [
   [[overlay,card('youtube.leanback.v4')],true],[[card('com.webos.app.hdmi1')],true],
@@ -28,13 +28,11 @@ const createHandlers=require('./handlers');
  ]) {response={returnValue:true,foregroundAppInfo:surfaces};assert.deepStrictEqual(await query(),{content:want});}
  response={returnValue:false,errorText:'private'};assert.deepStrictEqual(await query(),{content:null});
  let before=calls;assert.deepStrictEqual(await context(service,()=>1)(),{content:null});assert.strictEqual(calls,before);
- const timers=[];let callback,cancelled=false;
- const oldSet=global.setTimeout,oldClear=global.clearTimeout;
- try {
-  global.setTimeout=(fn,delay)=>{assert(delay<=2000);timers.push(fn);return 1;};global.clearTimeout=()=>{};
-  const pending=context({call(uri,payload,cb){callback=cb;return {cancel(){cancelled=true;}};}},()=>0)();
-  timers[0]();assert.deepStrictEqual(await pending,{content:null});assert(cancelled);
-  callback({payload:{returnValue:true,foregroundAppInfo:[card('youtube.leanback.v4')]}});
- } finally {global.setTimeout=oldSet;global.clearTimeout=oldClear;}
+ for(const run of [
+  (file,args,options,cb)=>cb(Error('timeout'),''),
+  (file,args,options,cb)=>cb(null,'invalid json'),
+  (file,args,options,cb)=>cb(null,' '.repeat(65537)),
+  ()=>{throw Error('spawn failed');}
+ ]) assert.deepStrictEqual(await context(run,()=>0)(),{content:null});
  console.log('presentation context tests passed');
 })().catch(e=>{console.error(e);process.exit(1);});
