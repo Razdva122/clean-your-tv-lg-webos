@@ -526,7 +526,9 @@ printf '%s' "$cytv_state"
             paths = variants[selected]
             def verified(name):
                 path = self.payload / package.safe_name(name)
-                if path.is_symlink() or any((self.payload / parent).is_symlink() for parent in PurePosixPath(name).parents):
+                # PyInstaller may alias the payload root in macOS bundles;
+                # only links within that root are untrusted package members.
+                if path.is_symlink() or any((self.payload / parent).is_symlink() for parent in PurePosixPath(name).parents if str(parent) != '.'):
                     raise ValueError('Indirect graphics payload')
                 raw = path.read_bytes()
                 if hashlib.sha256(raw).hexdigest() != self.manifest['files'][name]:
