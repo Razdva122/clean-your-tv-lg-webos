@@ -1,6 +1,6 @@
 # Root Edition
 
-> Release 1.6.0 uses Root/infrastructure 0.7.0 and Root Updater 0.4.0. See [Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases) for published downloads, [release scope](../docs/RELEASE-1.6.0.md) and [artifact-bound acceptance](../docs/history/2026-11-02-release-1.6.0-final-acceptance.md).
+> This guide describes 1.7.0 with Root/infrastructure 0.8.4 and Root Updater 0.4.2. Use [Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases) for the latest published downloads. Exact-artifact results and limits are maintained in the [1.7.0 package acceptance record](../docs/history/2026-11-03-release-1.7.0-final-packages.md).
 
 Use Clean Your TV as the system Home on an **already rooted LG webOS TV**.
 Short Home opens Clean; confirmed Back exit returns through native Home routing.
@@ -27,23 +27,25 @@ Home control off. After verified completion, stop Home Helper and enable
 **Home Root → Home settings → Change Home**. Never run both editions' input
 handling together.
 
-## Candidate native startup choices
+<a id="candidate-native-startup-choices"></a>
 
-The unpublished candidate adds **Home settings → Open Clean Your TV first**.
+## Native startup choices in 1.7.0
+
+Version 1.7.0 adds **Home settings → Open Clean Your TV first**.
 **LG Channels / Live TV** is on by default; **YouTube** is off. These are the only
 two source choices; there is no HDMI startup switch. Enable a source to prepare
 Clean as the native first screen after that source. Switching a source off leaves
 the startup decision to TV firmware; it does not guarantee resuming that source.
 Turning **Change Home** off visibly disables these controls and explains why;
-your choices are retained. The candidate removes late boot/wake app launches.
-Exact-package standby/cold-start, source selection and control acceptance remain
-pending; this does not change the published 1.6.0 evidence below.
+your choices are retained. Version 1.7.0 removes late boot/wake app launches.
+See the [1.7.0 package acceptance record](../docs/history/2026-11-03-release-1.7.0-final-packages.md)
+for exact-package results and remaining limits; the historical 1.6.0 evidence below retains its original scope.
 
 Native startup preparation currently requires LG’s global **Home Auto Launch**
 setting to be on (called **Power On Screen → Home** on some versions). That
 global choice can open Home even after HDMI or a source disabled in CYTV; the
 source switches cannot override it. LG’s **Recent external input** mode is not
-supported by this candidate’s native startup guard. CYTV does not offer automatic
+supported by the 1.7.0 native startup guard. CYTV does not offer automatic
 management/restoration of that global mode as a source preference. Ordinary
 Home-button replacement remains separate from this startup limitation. See
 [LG’s startup-screen settings and model-specific limits](https://www.lg.com/us/support/help-library/lg-tv-how-to-set-the-default-input--20153711388714).
@@ -62,16 +64,22 @@ Root inspection may stage verified support code and is not fully passive.
 Keep journals, backups and referenced Python slots. Do not blindly retry,
 restore or remove packages; review the [recovery rules](../docs/RECOVERY.md).
 
-## Current release and limits
+<a id="current-release-and-limits"></a>
 
-Release **1.6.0** uses **Root/infrastructure 0.7.0 / Root Updater 0.4.0 /
+## Version 1.7.0 scope and limits
+
+Version **1.7.0** uses **Root/infrastructure 0.8.4 / Root Updater 0.4.2 /
+System 1.2.0**. Read the [1.7.0 artifact-bound results and limits](../docs/history/2026-11-03-release-1.7.0-final-packages.md)
+before updating; these records do not establish universal compatibility.
+
+Historical release **1.6.0** uses **Root/infrastructure 0.7.0 / Root Updater 0.4.0 /
 System 1.2.0**. Existing System 1.1.2 stays pinned with its old channels; no
 general replacement path is provided. [Exact-package C3 QA](../docs/history/2026-11-02-release-1.6.0-final-acceptance.md)
 covers signed update/active retained rollback, controls/audio, emergency and
 independent fault recovery, cold startup and genuine failsafe in its recorded
 scope. Physical fresh System 1.2.0 is untested. Earlier standby failure
 [#171](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/171) and
-forward-update cancellation #202 remain unresolved. The owner accepted the
+forward-update cancellation #202 remained unresolved in that 1.6.0 record. The owner accepted the
 documented initial-Channels/delayed-Clean standby limitation for 1.6.0; no
 immediate-first-screen guarantee or universal compatibility is claimed.
 
@@ -114,7 +122,7 @@ Historical acceptance is model-, build- and scenario-specific.
 The former setup-client notes are summarized under [Homebrew Installer](#homebrew-installer-unreleased).
 <a id="what-works-on-the-tested-setup"></a>
 See [historical C3 acceptance](../docs/RELEASE-1.4.0-ACCEPTANCE.md) and
-[current release limits](../docs/RELEASE-1.6.0.md).
+[current release limits](../docs/RELEASE-1.7.0.md).
 <a id="requirements-and-limits"></a>
 See [installation prerequisites](#install-and-activate) and [current limits](#current-release-and-limits).
 <a id="recovery-startup-diagnostics-130-issue-55"></a>

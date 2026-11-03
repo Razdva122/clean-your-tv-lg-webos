@@ -135,16 +135,16 @@ For contributors: [build and technical references](docs/development/README.md),
 | Component | Stable version |
 | --- | --- |
 | cytv installer | 0.8.0 |
-| Home | 1.8.0 |
-| Home Helper | 0.6.21 |
-| Root edition | 0.8.3 |
+| Home | 1.8.1 |
+| Home Helper | 0.6.22 |
+| Root edition | 0.8.4 |
 | Both edition Updaters | 0.4.2 |
 | Android installer / versionCode | 0.7.0 / 18 |
 <!-- /release:components -->
 
-Candidate System Updater: 1.2.0 / protocol 1. Existing supervisors stay pinned; installed 1.1.2 has no general replacement path in this candidate.
-See the [candidate release notes](docs/RELEASE-1.7.0.md)
-and [TV acceptance and limits](docs/RELEASE-1.5.0.md).
+System Updater in 1.7.0: 1.2.0 / protocol 1. Existing supervisors stay pinned; installed 1.1.2 has no general replacement path in this release.
+See the [1.7.0 release notes](docs/RELEASE-1.7.0.md)
+and historical [1.5.0 TV acceptance and limits](docs/RELEASE-1.5.0.md).
 
 </details>
 

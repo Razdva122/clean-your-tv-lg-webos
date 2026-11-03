@@ -1,8 +1,9 @@
 # v1.7.0 — Native Root startup choices and theme-owned inputs
 
-This is an **unpublished release candidate**, prepared for exact-package acceptance.
-Download links on `main` still describe the published release until publication.
-Source integration and successful builds do not certify physical TV behavior.
+This is an **unpublished release candidate** with the two-source Root startup
+policy and theme-owned inputs. Downloads still follow the latest published release.
+Acceptance is limited to the exact artifacts and scenarios in the linked records;
+source integration, CI and package installation do not certify other devices.
 
 ## Changes
 
@@ -63,25 +64,28 @@ Source integration and successful builds do not certify physical TV behavior.
 
 ## Versions and packaging
 
-| Component | Published 1.6.0 | Candidate 1.7.0 | Reason |
+| Component | Version 1.6.0 | Version 1.7.0 | Reason |
 | --- | --- | --- | --- |
-| Home | 1.7.0 | 1.8.0 | Theme/input panel, preview and date behavior |
-| Home Helper | 0.6.21 | 0.6.21 | Keep immutable published native package |
+| Home | 1.7.0 | 1.8.1 | Theme/input panel, paired input-label fallback, preview and date behavior |
+| Home Helper | 0.6.21 | 0.6.22 | Bounded paired read-only input metadata fallback |
 | cytv | 0.7.0 | 0.8.0 | Inspection and recovery behavior; rebuilt payloads |
 | Android | 0.6.0 / code 17 | 0.7.0 / code 18 | Shared installer and embedded payload changes |
-| Root / infrastructure | 0.7.0 | 0.8.3 | Two-source native policy, Root input status and serialized Settings |
+| Root / infrastructure | 0.7.0 | 0.8.4 | Two-source native policy, Root input status and serialized Settings |
 | Both independent Updaters | 0.4.0 | 0.4.2 | Rebuilt shared UI/locales and recovery support; distinct package bytes |
 | System target / protocol | 1.2.0 / 1 | 1.2.0 / 1 | Supervisor unchanged; retained 1.1.2 remains separate |
 
 Root, infrastructure, both edition Updaters, HD/FHD Home/Root and all installers
 must be rebuilt together. Updater 0.4.1 was not a public release; 0.4.2 avoids
-reusing preliminary package identities. The existing Helper is reused byte-for-byte.
-Root 0.8.3 retains service-read and lifecycle-refresh serialization and adds the
-final two-source policy and authenticated input-status snapshot. It distinguishes
-the final package from unpublished 0.8.0, 0.8.1 and 0.8.2 QA packages.
+reusing preliminary package identities. Helper 0.6.22 includes the independent paired input-metadata read; earlier Helper acceptance does not establish acceptance of these new bytes.
+Root 0.8.4 retains service-read and lifecycle-refresh serialization, the
+two-source policy and authenticated input-status snapshot, and rebuilds the shared
+input-source frontend with the No-root fallback. It distinguishes
+the final package from unpublished 0.8.0, 0.8.1, 0.8.2 and 0.8.3 QA packages.
 The initial build pin is superseded; a new full candidate and signed Root set
 are required. No equal-version replacement is authorized.
-No application ID, signing identity, trust rule or public endpoint changes.
+No application ID, signing identity or trust rule changes. Home adds an
+authorized same-package `inputStatus` method to its existing service; no new
+privilege grant or service registration is required.
 
 ## Acceptance and known limits
 

@@ -1,8 +1,8 @@
 # Android stable readiness
 
-> Candidate 1.7.0 selects Android 0.7.0 / versionCode 18. This is unpublished and has no new artifact-bound upgrade/retention acceptance; the 1.6.0 evidence below does not transfer to replacement APK bytes.
+> This guide describes 1.7.0 with Android 0.7.0 / versionCode 18. Use [Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases) for the latest published downloads. Current artifact-bound signer, payload, upgrade and retention results and limits are maintained in the [1.7.0 package acceptance record](../docs/history/2026-11-03-release-1.7.0-final-packages.md). Historical 1.6.0 evidence below does not transfer to replacement APK bytes.
 
-Release **1.6.0** uses **Android 0.6.0 / versionCode 17**. See
+Historical release **1.6.0** uses **Android 0.6.0 / versionCode 17**. See
 [Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases) for
 published downloads and [1.6.0 scope](../docs/RELEASE-1.6.0.md). The
 [artifact-bound acceptance record](../docs/history/2026-11-02-release-1.6.0-final-acceptance.md) records original-signer
@@ -38,7 +38,7 @@ report. Its `status:needs-info` remains appropriate for the outstanding original
 reporter response.
 
 No physical Android result for 1.6.0 is recorded here. Physical device checks
-remain follow-up. The current emulator decision and historical user success
+remain follow-up. The historical emulator decision and user success
 retain their own exact artifact/environment scopes. Synthetic key markers do
 not test real SSH authentication; recovery-screen visibility and phone-to-TV
 operations remain untested by the native Store instrumentation.

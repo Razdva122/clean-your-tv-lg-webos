@@ -43,7 +43,7 @@ fresh installation.
    default-No confirmation. Existing Root/updater checks run again before activation.
 3. No-root can offer **Remove remaining Clean Your TV packages?**, separately
    confirmed with No by default. In 1.6.0 the package-service idle guard must
-   succeed before this offer and again before removal. The unreleased exception
+   succeed before this offer and again before removal. The 1.7.0 exception
    for an unstarted removal is described below. Removal restores LG Home
    and may reset Home preferences. **New installation never starts automatically.**
 4. Unknown, denied, busy, incomplete or conflicting state stops the journey and
@@ -81,9 +81,11 @@ The installer calls `applicationManager/dev/listApps`; an SSH probe of
 `applicationManager/listApps` is a different method. Further recovery design
 requires the [exact endpoint and terminal-authority evidence](development/NO-ROOT-PACKAGE-AUTHORITY.md#remaining-evidence).
 
-### No-root removal stopped before package submission (unreleased)
+<a id="no-root-removal-stopped-before-package-submission-unreleased"></a>
 
-With a matching future installer, choose **Review recovery options** for the
+### No-root removal stopped before package submission (1.7.0)
+
+With the 1.7.0 installer, choose **Review recovery options** for the
 same saved TV connection (`cytv recover` on the console). A No-root removal
 that stopped before its first package request can offer removal without the
 global package-status permission. The original local journal must still say
@@ -100,7 +102,9 @@ retain the existing guards; no request is blindly repeated. Do not edit the
 journal or reset Developer Mode to qualify. This change is not in 1.6.0 and
 physical EF950V recovery remains unverified.
 
-### Recovery explanations and direct review (unreleased)
+<a id="recovery-explanations-and-direct-review-unreleased"></a>
+
+### Recovery explanations and direct review (1.7.0)
 
 After a failed **Remove**, an original No-root journal proving no package removal
 was submitted offers **Review recovery options** for the same saved TV. This
@@ -120,7 +124,7 @@ It includes only fixed next-action codes and Home/Helper removal receipt states.
 `review-recovery` means inspect the original saved connection, not permission to
 remove. `retain-evidence` means keep records for diagnosis, not a claim that no
 future guarded recovery is possible. Missing original failures remain missing.
-These explanations are not in published 1.6.0 and do not resolve #201's unknown
+These 1.7.0 explanations were not in 1.6.0 and do not resolve #201's unknown
 historical package outcomes or confirm recovery on #259's TV.
 
 ### No-root Helper service refusal (#152)

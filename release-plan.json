@@ -136,13 +136,15 @@
         171
       ],
       "summary": "Keep only native TV/YouTube startup controls, default preview on while preserving saved Off, and restore Root input status through the existing authenticated read endpoint; exact-package acceptance remains pending"
+    },
+    {
+      "pr": 269,
+      "issues": [
+        268
+      ],
+      "summary": "Restore No-root HDMI status after denied EIM through a bounded paired Helper read and an independent Home service metadata exchange; final package acceptance pending"
     }
   ],
   "excluded": [],
-  "acceptance": "",
-  "build": {
-    "run_id": 41635564154,
-    "attempt": 1,
-    "source": "bc0ab0668b2d341a8b2fcf10a7eb22bded7a2fb5"
-  }
+  "acceptance": ""
 }

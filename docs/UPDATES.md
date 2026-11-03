@@ -1,8 +1,8 @@
 # Update Clean Your TV
 
-> Candidate 1.7.0 uses Root/infrastructure 0.8.3 and independent Updaters 0.4.2. Its two native startup source choices (LG Channels / Live TV on by default, YouTube off) replace delayed boot/wake launches. There is no HDMI startup switch; a source switched off leaves startup to firmware. Native startup preparation retains the [LG Home Auto Launch dependency](../root-edition/README.md#candidate-native-startup-choices); final package-bound acceptance and public delivery remain pending. The System supervisor target stays 1.2.0/protocol1, with the existing 1.1.2 migration limits below.
+> Version 1.7.0 uses Root/infrastructure 0.8.4 and independent Updaters 0.4.2. Its two native startup source choices (LG Channels / Live TV on by default, YouTube off) replace delayed boot/wake launches. There is no HDMI startup switch; a source switched off leaves startup to firmware. Native startup preparation retains the [LG Home Auto Launch dependency](../root-edition/README.md#candidate-native-startup-choices); see [1.7.0 acceptance and limits](RELEASE-1.7.0.md). The System supervisor target stays 1.2.0/protocol1, with the existing 1.1.2 migration limits below.
 
-> See [1.6.0 scope and limits](RELEASE-1.6.0.md), [dated acceptance](history/2026-11-02-release-1.6.0-final-acceptance.md) and available packages on [GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases). Historical [1.5.4](RELEASE-1.5.4.md) and [1.5.0](RELEASE-1.5.0.md) evidence retains its original scope.
+> Historical [1.6.0 scope and limits](RELEASE-1.6.0.md), [dated acceptance](history/2026-11-02-release-1.6.0-final-acceptance.md) and available packages on [GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases). Historical [1.5.4](RELEASE-1.5.4.md) and [1.5.0](RELEASE-1.5.0.md) evidence retains its original scope.
 
 **Existing Root installations:** published 1.4.0 is incompatible with the original
 1.3.0 System Updater destination inventory. Do not force that update or edit
