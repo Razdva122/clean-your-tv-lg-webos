@@ -17,7 +17,7 @@ from cytv.package import IPK_MTIME
 
 SERVICE_ID = 'com.cleanyourtv.root.preview.service'
 SERVICE_SOURCE = Path(__file__).resolve().parent / 'service'
-SERVICE_FILES = ('service.js','startup-diagnostics.js', 'app-inventory.js', 'handlers.js', 'services.json', 'package.json', 'boot-recover.sh', 'activity.json')
+SERVICE_FILES = ('service.js','startup-diagnostics.js', 'app-inventory.js', 'presentation-context.js', 'handlers.js', 'services.json', 'package.json', 'boot-recover.sh', 'activity.json')
 
 
 def tgz(files, executables=()):

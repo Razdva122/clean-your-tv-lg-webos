@@ -54,6 +54,27 @@ html, body {
   font-family: 'Outfit', sans-serif;
   cursor: default;
 }
+/* The Root window is an overlay; only positively observed content makes Home clear. */
+html[data-home-presentation="overlay"], html[data-home-presentation="closed"],
+body[data-home-presentation="overlay"], body[data-home-presentation="closed"] {
+  background: transparent !important;
+}
+body[data-home-presentation="overlay"] #homeSurface.ctv-home {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+body[data-home-presentation="overlay"] #homeSurface.ctv-home::before {
+  top: auto;
+  height: 400px;
+  background: linear-gradient(180deg, transparent, rgba(0,0,0,.8) 40%, rgba(0,0,0,.92)) !important;
+}
+body[data-home-presentation="overlay"] .ctv-ambient {
+  visibility: hidden !important;
+}
+body[data-home-presentation="closed"] #homeSurface,
+body[data-home-presentation="closed"] #toast {
+  visibility: hidden !important;
+}
 /* ---- ambient glow ---------------------------------------------------------------------------- */
 .ambient {
   position: absolute;

@@ -15,9 +15,11 @@
       surfaceState(wasEnabled);
     }
     owners[owner || 'manual'] = true;
+    if (root.HomePresentationController) root.HomePresentationController.suspend('theme:' + (owner || 'manual'));
   }
   function resume(owner) {
     delete owners[owner || 'manual'];
+    if (root.HomePresentationController) root.HomePresentationController.resume('theme:' + (owner || 'manual'));
     if (suspended()) return;
     if (heldSheet && wasEnabled) heldSheet.disabled = false;
     heldSheet = null; wasEnabled = false; surfaceState(false);
@@ -81,9 +83,9 @@
       if (hiddenHero) appendCss('\n#homeSurface.ctv-home .ctv-label.is-focused{color:#fff!important;opacity:1!important;text-shadow:0 1px 6px #000!important;}');
     }
     else appendCss('\n#homeSurface.ctv-home .ctv-card.is-focused{border-color:' + accent + '!important;border-style:solid!important;border-width:' + (manifest.layout.preset === 'scenic-grid' ? '3' : '2') + 'px!important;}');
-    if (modernIcons) rules.rules.forEach(function (rule) {
+    if (modernIcons || manifest.layout.ribbon) rules.rules.forEach(function (rule) {
       var part = rule.selector[rule.selector.length - 1].part;
-      if (part !== 'card' && part !== 'clock' && part !== 'date' && part !== 'icon') return;
+      if (part !== 'card' && (!modernIcons || part !== 'clock' && part !== 'date' && part !== 'icon')) return;
       rule.declarations.forEach(function (d) {
         if (!(part === 'card' && d.property === 'background-color') && !((part === 'clock' || part === 'date') && d.property === 'font-size') && !(part === 'icon' && d.property === 'transform')) return;
         var background = policy.compileRules({schemaVersion: 1, rules: [{selector: rule.selector, declarations: [d]}]}, handles);
@@ -149,6 +151,7 @@
       surface.classList[manifest.layout.motion === 'classic' ? 'add' : 'remove']('ctv-classic-motion');
     }
     release(previous && previous.handles, ownedHandles);
+    if (root.HomePresentationController) root.HomePresentationController.setTheme(manifest.layout);
     return {themeId: manifest.id, themeVersion: manifest.themeVersion};
   }
   function reset() {
@@ -160,6 +163,7 @@
     var surface = root.document.getElementById('homeSurface');
     if (surface) { surface.classList.remove('ctv-theme-active'); surface.classList.remove('ctv-classic-motion'); }
     release(previous && previous.handles, null);
+    if (root.HomePresentationController) root.HomePresentationController.setTheme(null);
     return {themeId: 'builtin:classic', themeVersion: null};
   }
   root.ThemeRuntime = {isSuspended: suspended, apply: apply, suspend: suspend, resume: resume, reset: reset};

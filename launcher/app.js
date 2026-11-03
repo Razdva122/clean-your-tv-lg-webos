@@ -170,11 +170,37 @@
       });
     }
   }
+  var presentation = window.HomePresentation ? HomePresentation.create({
+    supported: !!window.ROOT_VERSION || window.CYTV_BROWSER_PREVIEW === true,
+    query: function (done) {
+      callLuna('luna://com.cleanyourtv.root.preview.service/status', {presentation:'context'}, function (r) {
+        done(r && r.returnValue === true && r.result ? r.result.content : null);
+      }, 2000);
+    },
+    blocked: function () { return previewDialogOpen() || !!moveState || !!pickerOpen || !!undoState ||
+      !!(window.ThemeRuntime && ThemeRuntime.isSuspended()); },
+    render: function (state) {
+      document.documentElement.setAttribute('data-home-presentation', state.mode);
+      document.body.setAttribute('data-home-presentation', state.mode);
+    },
+    close: function () { stopPreview(); window.close(); }
+  }) : null;
+  window.HomePresentationController = presentation;
+  function launchParams(event) {
+    try {
+      var value = event && event.detail || (window.PalmSystem && PalmSystem.launchParams) || {};
+      if (typeof value === 'string') value = JSON.parse(value);
+      if (value && value.parameters) value = typeof value.parameters === 'string' ? JSON.parse(value.parameters) : value.parameters;
+      return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+    } catch (_) { return {}; }
+  }
   function launchApp(appId, title, params) {
+    var ticket = presentation && presentation.token();
     callLuna("luna://com.webos.applicationManager/launch", {
       id: appId,
       params: params || {}
     }, function (n) {
+      if (n.returnValue === true && presentation && !/^com\.(?:palm\.app\.settings|webos\.app\.(?:firstuse|quicksettings))/.test(appId)) presentation.launched(ticket);
       false === n.returnValue && showToast(tr("Can't open {app}", {
         app: title || appId
       }));
@@ -1147,6 +1173,7 @@
   }
   var previewDialogVisible = previewDialogOpen();
   new MutationObserver(function () {
+    if (presentation) presentation.sync();
     var open = previewDialogOpen();
     if (open === previewDialogVisible) return;
     previewDialogVisible = open;
@@ -1530,6 +1557,10 @@
     // Leave early Back/Home and key-up delivery to their native/recovery owners.
     if (window.RootLauncherRendered !== true) return;
     var key = event.keyCode;
+    if ((key === KEY_BACK || key === 27) && !moveState && !pickerOpen && !undoState && focusZone !== 'inputs' &&
+        presentation && presentation.dismiss()) {
+      event.preventDefault(); cancelHold(); return;
+    }
     if (key !== KEY_OK && okHoldTimer) {
       cancelHold();
     }
@@ -1665,12 +1696,23 @@
     getElement('homeSurface').classList.add('ctv-remote-navigation');
     stepRibbon(delta > 0 ? 1 : -1);
   }, false);
-  document.addEventListener("webOSRelaunch", restoreFocus);
+  document.addEventListener("webOSRelaunch", function (event) {
+    if (presentation && window.RootLauncherRendered === true) {
+      presentation.relaunch(launchParams(event), document.hidden);
+      if (!presentation.state().visible) return;
+      // handlesRelaunch keeps a hidden Root window in the background until it is ready.
+      if (window.ROOT_VERSION && window.PalmSystem && typeof PalmSystem.activate === 'function') PalmSystem.activate();
+    }
+    restoreFocus();
+  });
   document.addEventListener("visibilitychange", function () {
     if (window.ThemeRuntime) {
       // Retain validated styles/assets while hidden: the compositor may expose Home
       // before delivering the next visible/relaunch event. Dialog owners stay separate.
       if (!document.hidden) ThemeRuntime.resume('visibility');
+    }
+    if (presentation && window.RootLauncherRendered === true) {
+      if (document.hidden) presentation.hide(); else presentation.show(launchParams());
     }
     document.hidden ? stopPreview() : restoreFocus();
   });
@@ -1713,5 +1755,6 @@
   }
   window.HomeUIReady = (window.ThemeManager ? ThemeManager.start(presentHome) : Promise.resolve().then(presentHome)).then(function () {
     window.RootLauncherRendered = true;
+    if (presentation) presentation.show(launchParams());
   });
 }();

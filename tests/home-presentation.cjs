@@ -1,0 +1,39 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+assert(fs.existsSync('launcher/home-presentation.js'), 'presentation state controller is missing');
+const create = require('../launcher/home-presentation').create;
+function setup(supported = true) {
+  const queries = [], views = []; let closes = 0, blocked = false;
+  const c = create({supported, query:cb=>queries.push(cb), render:s=>views.push(s),
+    close:()=>closes++, blocked:()=>blocked});
+  c.setTheme({presentation:'overlay'});
+  return {c, queries, views, closes:()=>closes, block:value=>{blocked=value;c.sync();}};
+}
+const s = setup();
+s.c.show({}); assert.equal(s.c.state().mode,'full');
+s.queries.shift()(true); assert.equal(s.c.state().mode,'overlay');
+assert(s.c.dismiss()); assert.equal(s.c.state().mode,'closed'); assert.equal(s.closes(),1);
+assert(!s.c.dismiss()); assert.equal(s.closes(),1);
+s.c.relaunch({}); s.queries.shift()(true); assert.equal(s.c.state().mode,'overlay','hidden relaunch opens');
+s.c.relaunch({}); assert.equal(s.closes(),2,'visible relaunch closes');
+s.c.show({activateType:'powerOn'}); assert.equal(s.queries.length,0); assert.equal(s.c.state().mode,'full');
+for(const context of [false,null,undefined]) {
+  s.c.show({});s.queries.shift()(context);assert.equal(s.c.state().mode,'full','unknown/empty is opaque');
+}
+s.c.show({});const old=s.queries.shift();s.c.hide();s.c.show({});const latest=s.queries.shift();
+old(true);assert.equal(s.c.state().mode,'full','stale callback cannot make reopened Home transparent');
+latest(true);assert.equal(s.c.state().mode,'overlay');
+s.block(true);assert.equal(s.c.state().mode,'full');assert(!s.c.dismiss());
+s.block(false);s.queries.shift()(true);assert.equal(s.c.state().mode,'overlay');
+s.c.suspend('settings');assert.equal(s.c.state().mode,'full');assert(!s.c.dismiss());
+s.c.resume('settings');s.queries.shift()(true);assert.equal(s.c.state().mode,'overlay');
+let token=s.c.token();s.c.hide();s.c.show({});s.queries.shift()(true);
+assert(!s.c.launched(token),'late launch completion does not close reopened Home');
+token=s.c.token();assert(s.c.launched(token));assert.equal(s.closes(),3);
+s.c.show({});s.queries.shift()(true);s.c.setTheme({});assert.equal(s.c.state().mode,'full');assert(!s.c.dismiss());
+const n=setup(false);n.c.show({});assert.equal(n.queries.length,0);assert.equal(n.c.state().mode,'full');
+const p=setup();p.c.show({});p.queries.shift()(true);p.c.relaunch({},true);
+assert.equal(p.closes(),0,'relaunch observed while hidden must reopen rather than close');
+p.queries.shift()(true);assert.equal(p.c.state().mode,'overlay');
+require('acorn').parse(fs.readFileSync('launcher/home-presentation.js','utf8'),{ecmaVersion:5});
+console.log('PASS presentation: full fallback, context freshness, hidden/visible Home, modal ownership, launch generations, No-root and ES5');

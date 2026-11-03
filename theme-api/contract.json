@@ -209,6 +209,13 @@
       ],
       "default": "menu",
       "shelfPreset": "dock-grid"
+    },
+    "presentation": {
+      "values": [
+        "overlay"
+      ],
+      "capability": "overlay-presentation-v1",
+      "requires": "ribbon"
     }
   },
   "defaults": {
@@ -306,6 +313,16 @@
         "shelf"
       ],
       "paired": true
+    },
+    "overlay-presentation-v1": {
+      "layout": "presentation",
+      "values": [
+        "overlay"
+      ],
+      "paired": true,
+      "requires": "ribbon-layout-v1",
+      "nativeEdition": "root",
+      "unknownContext": "full"
     }
   },
   "clockDateFontSize": [

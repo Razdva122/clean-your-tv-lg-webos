@@ -3,12 +3,12 @@
   "themeApiVersion": 1,
   "id": "builtin:ribbon",
   "title": "Ribbon",
-  "description": "Original galaxy wallpaper with a fixed eight-card skewed bottom ribbon, raised focus and bottom-left shortcuts.",
+  "description": "A quiet dark eight-card ribbon with native logos, raised white focus and a wallpaper fallback.",
   "author": {
     "name": "Clean Your TV contributors",
     "url": "https://github.com/razdva122"
   },
-  "themeVersion": "1.0.0",
+  "themeVersion": "1.1.0",
   "layout": {
     "preset": "scenic-grid",
     "columns": 8,
@@ -29,11 +29,12 @@
       "labels": "focused-above",
       "showClock": false,
       "iconScale": 0.65
-    }
+    },
+    "presentation": "overlay"
   },
   "defaults": {
     "wallpaperAssetId": "wallpaper",
-    "dim": 0,
+    "dim": 0.28,
     "accent": "#ffffff"
   },
   "assets": [

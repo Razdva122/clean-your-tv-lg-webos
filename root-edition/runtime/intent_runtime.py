@@ -266,6 +266,21 @@ def startup_source(app,deadline):
     return 'protected' if info.get('visible') is True else None
 
 
+def startup_presentation(deadline,event):
+    """Fresh compositor guard; unknown context must never imply an input request."""
+    value=startup_call('com.webos.surfacemanager/getForegroundAppInfo',{},deadline)
+    surfaces=value.get('foregroundAppInfo')
+    if value.get('returnValue') is not True or not isinstance(surfaces,list) or len(surfaces)>128:
+        return 'unknown-presentation'
+    if any(not isinstance(s,dict) or not isinstance(s.get('appId'),str) or not s['appId']
+           or not isinstance(s.get('windowType'),str) for s in surfaces):return 'unknown-presentation'
+    primary=[s for s in surfaces if s.get('displayId',0)==0]
+    overlay=any(s['appId']==d.CANDIDATE and s['windowType']=='_WEBOS_WINDOW_TYPE_OVERLAY' for s in primary)
+    content=any(s['appId']!=d.CANDIDATE and s['windowType']=='_WEBOS_WINDOW_TYPE_CARD' for s in primary)
+    if overlay and (content or event!='activation'):return 'overlay-visible'
+    return None
+
+
 def startup_matching_input(app,pair):
     if app==startup_CHANNEL:return pair=={'type':'MVPD_IP','appId':startup_CHANNEL}
     if app=='com.webos.app.livetv':return pair=={'type':'DTV','appId':app}
@@ -353,6 +368,13 @@ def startup_reconcile(transaction,boot,cancelled=lambda:False,event='foreground'
             saved=d._native_read()
             if saved is None or saved['phase'] not in ('active','selecting'):return 'unavailable'
             deadline=time.monotonic()+1.5
+            withdraw=withdraw or not startup_observing(transaction,boot)
+            settings={} if withdraw else startup_call('com.webos.settingsservice/getSystemSettings',
+                {'category':'general','keys':['homeAutoLaunch']},deadline)
+            withdraw=withdraw or settings.get('settings',{}).get('homeAutoLaunch')!='on'
+            if not withdraw:
+                presentation=startup_presentation(deadline,event)
+                if presentation:return presentation
             if not d._native_entry(deadline):return 'unavailable'
             current=d._native_pair(startup_call('com.webos.service.eim/getLastInput',{},deadline))
             reconciled=False
@@ -360,10 +382,6 @@ def startup_reconcile(transaction,boot,cancelled=lambda:False,event='foreground'
                 target=startup_ROOT_INPUT if saved['pending']=='select' else saved['baseline']
                 if current!=target:return 'pending'
                 saved=startup_active(saved);d._native_save(saved);reconciled=True
-            withdraw=withdraw or not startup_observing(transaction,boot)
-            settings={} if withdraw else startup_call('com.webos.settingsservice/getSystemSettings',
-                {'category':'general','keys':['homeAutoLaunch']},deadline)
-            withdraw=withdraw or settings.get('settings',{}).get('homeAutoLaunch')!='on'
             app=None;source=None
             if not withdraw:
                 app=startup_call('com.webos.applicationManager/getForegroundAppInfo',{},deadline).get('appId')
@@ -389,6 +407,9 @@ def startup_reconcile(transaction,boot,cancelled=lambda:False,event='foreground'
                 return 'superseded'
             startup_require(c,intent,transaction,boot)
             if cancelled() or allowed and not startup_observing(transaction,boot):return 'canceled'
+            if not withdraw:
+                presentation=startup_presentation(deadline,event)
+                if presentation:return presentation
             d._native_save(updated)  # Persist the inverse before any optional effect.
             try:
                 startup_require(c,intent,transaction,boot)
