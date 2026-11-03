@@ -31,10 +31,10 @@ const key=keyCode=>listeners.keydown({keyCode,preventDefault(){},stopImmediatePr
  assert(elements.some(e=>e.textContent==='Available when Change Home is on.'&&!e.hidden));
  const count=writes().length;tv.onclick();key(13);assert.equal(writes().length,count,'disabled click and Enter cannot write');
  home.focus();key(39);assert.equal(document.activeElement,visit,'remote skips disabled sources');assert.equal(youtube.attrs['aria-checked'],'true','Off retains saved choices');
- phase='active';delay=true;listeners.webOSRelaunch();assert(tv.disabled);tv.onclick();assert.equal(writes().length,count);
+ phase='active';delay=true;listeners.webOSRelaunch();assert(tv.disabled);tv.onclick();assert.equal(writes().length,count);await tick();
  pending.shift()();await tick();assert(!tv.disabled);
- listeners.webOSRelaunch();const stale=pending.shift();active=false;listeners.webOSRelaunch();const fresh=pending.shift();
- fresh();await tick();active=true;stale();await tick();assert(tv.disabled,'stale source status cannot re-enable controls');
+ listeners.webOSRelaunch();await tick();const stale=pending.shift();active=false;listeners.webOSRelaunch();await tick();assert.equal(pending.length,0,'source reads are single-flight');
+ stale();await tick();assert(tv.disabled,'stale source status cannot re-enable controls');const fresh=pending.shift();fresh();await tick();active=true;assert(tv.disabled,'fresh inactive status stays disabled');
  delay=false;fail=true;listeners.webOSRelaunch();await tick();assert(tv.disabled);assert(!home.disabled,'source status failure does not break Home control');assert(elements.some(e=>e.textContent==='Startup sources unavailable. Reopen Settings to check again.'),'source error remains visible after Home status succeeds');
  fail=false;listeners.webOSRelaunch();await tick();assert(!tv.disabled);assert.equal(youtube.attrs['aria-checked'],'true');
  console.log('PASS startup source defaults, exact payload, readback, disabled controls, focus, stale status and failure isolation');

@@ -95,7 +95,7 @@ No-root: To restart Home control, open Home Helper, choose Start Helper and conf
 
 After interruption, run `status` before retrying; retain journals and recovery files. `restore` returns LG Home without removing apps. `uninstall` restores before removal. Root recovery state is deliberately retained; never delete it to force reinstallation. Review diagnostic reports before sharing; do not publish keys or profile folders.
 
-1.5.4: open **Home settings → Appearance → Columns** and choose 1–8 columns, or **By theme** to use the theme’s value (Classic defaults to 5). An explicit number takes priority over the theme. Themes with a fixed layout hide the Columns option and use the author’s value. Your saved choice returns when you switch to a theme that supports this setting. In the Alpine candidate preview, apps form one looping horizontal ribbon: Left/Right scrolls and wraps, Up opens shortcuts, and Down returns to the same app. In the Alpine preview, the mouse wheel or touchpad also scrolls the ribbon; it does not move Home behind an open dialog.
+Open **Home settings → Appearance → Columns** and choose 1–8 columns, or **By theme** to use the theme’s value (Classic defaults to 5). An explicit number takes priority over the theme. Themes with a fixed layout hide the Columns option and use the author’s value. Your saved choice returns when you switch to a theme that supports this setting. In downloaded Alpine, apps form one looping horizontal ribbon: Left/Right scrolls and wraps, Up opens shortcuts, and Down returns to the same app. In Alpine, the mouse wheel or touchpad also scrolls the ribbon; it does not move Home behind an open dialog.
 
 1.5.4: in **Home settings → Appearance**, turn off **Show Add app tile** to hide the + tile. It is on by default. Use **Add app** in the same section to add or restore apps while + is hidden. Ordering and hiding remain available; the choice survives restart. If every app is hidden, the top controls and Settings remain available.
 
@@ -143,12 +143,13 @@ Unreleased recovery guidance: if no package removal request was submitted, a fai
 <a id="unreleased-candidate-root-setup-through-homebrew"></a>
 <a id="unreleased-candidate-hdmi-sound-recovery-root"></a>
 
+<a id="themes-154"></a>
 
-## Themes (1.5.4)
+## Themes
 
-1.5.4: **Settings → Themes**. **Classic**, **Alpine**, **Ribbon** are included and work without downloading a theme; Classic remains the default. **Channel** is an external showcase theme. In showcase trials: Choose a theme, then **Keep theme** within **20 seconds**. **Revert**, Back or timeout restores the previous appearance. If Home closes during an unconfirmed preview, the next launch returns to Classic. Built-in and downloaded themes chosen in the installed list apply and save immediately, without a confirmation timer. Themes received from a computer or installed by URL also use this list. Only Try theme inside Theme showcase starts a 20-second trial.
+1.7.0 candidate: **Settings → Themes**. **Classic**, **Liquid Glass**, **Ribbon** are included and work without downloading a theme; Classic remains the default. **Channel** is an external showcase theme. In showcase trials: Choose a theme, then **Keep theme** within **20 seconds**. **Revert**, Back or timeout restores the previous appearance. If Home closes during an unconfirmed preview, the next launch returns to Classic. Built-in and downloaded themes chosen in the installed list apply and save immediately, without a confirmation timer. Themes received from a computer or installed by URL also use this list. Only Try theme inside Theme showcase starts a 20-second trial.
 
-Unreleased: **Classic**, **Liquid Glass** and **Ribbon** are built in. **Alpine 1.4.4** moves to the downloadable **Theme showcase**. A saved `builtin:alpine` selection falls back to Classic with the existing visible recovery notice; Home neither downloads Alpine automatically nor replaces it with Liquid Glass.
+1.7.0: **Classic**, **Liquid Glass** and **Ribbon** are built in. **Alpine 1.4.4** moves to the downloadable **Theme showcase**. A saved `builtin:alpine` selection falls back to Classic with the existing visible recovery notice; Home neither downloads Alpine automatically nor replaces it with Liquid Glass. Published 1.6.0 includes Classic, Alpine and Ribbon.
 
 Installed themes appear in one horizontally scrollable row. The active theme is always first and has a highlighted card. Use Left/Right to browse the row.
 
@@ -162,12 +163,9 @@ To test an unpublished theme, first open **Settings → Themes → Receive from 
 
 For a published theme, open **Add by ID** and enter its ID (for example `102300a209`), `da.gd/102300a209`, or the full GitHub link. Home shows the expanded da.gd address before loading and then checks the GitHub destination and theme package. The author can provide the ID in the release notes or with **TV link → Copy ID** in the computer preview.
 
-
 **1.6.0:** **Show diagnostics** in the Home Helper panel displays a small, filtered snapshot of its own status requests. Viewing it does not start Helper or change Home control. Share only that JSON when requested, after reviewing it; see [details](../HELPER-DIAGNOSTICS.md#candidate-panel-caller-diagnostics-207).
 
 [Themes (English)](../THEMES.md) · [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
-
-1.5.4: **Classic**, **Alpine**, **Ribbon** — **Settings → Themes**. [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
 
 Themes shows previews of built-in themes and every theme you installed yourself, including offline. A separate Theme showcase button opens the published catalogue; personal installation does not publish a theme.
 

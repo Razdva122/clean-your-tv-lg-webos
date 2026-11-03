@@ -122,13 +122,15 @@
         171
       ],
       "summary": "Keep six browser fixtures offline with HTTPS-prefix guards and stabilize catalogue identity/focus auditing; no product behavior change"
+    },
+    {
+      "pr": 263,
+      "issues": [
+        171
+      ],
+      "summary": "Serialize Root Settings visibility/relaunch refreshes, skip stale queued reads and replace README Alpine preview with actual Liquid Glass; exact-package acceptance remains pending"
     }
   ],
   "excluded": [],
-  "acceptance": "",
-  "build": {
-    "run_id": 41596658842,
-    "attempt": 1,
-    "source": "421559b41b2ded9db6ca0306cb34d17423627b48"
-  }
+  "acceptance": ""
 }

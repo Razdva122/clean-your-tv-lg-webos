@@ -95,7 +95,7 @@ No-root: Per riavviare il controllo Home, apri Home Helper, scegli Avvia Helper 
 
 Dopo un’interruzione, esegui prima `status` e conserva i registri. `restore` ripristina LG Home senza rimuovere app; `uninstall` lo ripristina prima della rimozione. I dati di ripristino Root restano intenzionalmente: non cancellarli per forzare una reinstallazione. Controlla i rapporti prima di condividerli; non pubblicare chiavi o cartelle dei profili.
 
-1.5.4: apri **Impostazioni di Home → Aspetto → Colonne** e scegli da 1 a 8 colonne, oppure **Secondo il tema** per usarne il valore (Classic: 5). Un numero esplicito ha la precedenza sul tema. I temi con disposizione fissa nascondono l’opzione Colonne e usano il valore dell’autore. La scelta salvata viene ripristinata passando a un tema che supporta questa impostazione. Nell’anteprima candidata Alpine, le app formano una sola fila orizzontale ciclica: Sinistra/Destra scorre, Su apre le scorciatoie e Giù torna alla stessa app. Nell’anteprima Alpine puoi scorrere anche con la rotella o il touchpad; Home non si muove dietro una finestra aperta.
+Apri **Impostazioni di Home → Aspetto → Colonne** e scegli da 1 a 8 colonne, oppure **Secondo il tema** per usarne il valore (Classic: 5). Un numero esplicito ha la precedenza sul tema. I temi con disposizione fissa nascondono l’opzione Colonne e usano il valore dell’autore. La scelta salvata viene ripristinata passando a un tema che supporta questa impostazione. Nel tema Alpine scaricato, le app formano una sola fila orizzontale ciclica: Sinistra/Destra scorre, Su apre le scorciatoie e Giù torna alla stessa app. In Alpine puoi scorrere anche con la rotella o il touchpad; Home non si muove dietro una finestra aperta.
 
 1.5.4: in **Impostazioni Home → Aspetto**, disattiva **Mostra riquadro «Aggiungi app»** per nascondere +. È attivo per impostazione predefinita. Usa **Aggiungi app** nella stessa sezione per aggiungere o ripristinare app anche con + nascosto. Puoi continuare a spostare e nascondere le app; la scelta resta dopo il riavvio. Se tutte le app sono nascoste, i controlli in alto e le impostazioni restano accessibili.
 
@@ -145,12 +145,13 @@ In sviluppo: se non è stata inviata alcuna richiesta di rimozione dei pacchetti
 <a id="candidato-non-pubblicato-installazione-root-tramite-homebrew"></a>
 <a id="candidato-non-pubblicato-ripristino-audio-hdmi-root"></a>
 
+<a id="temi-154"></a>
 
-## Temi (1.5.4)
+## Temi
 
-1.5.4: **Impostazioni → Temi**. **Classic**, **Alpine**, **Ribbon** sono integrati e non richiedono il download del tema; Classic resta predefinito. **Channel** è esterno, dallo showcase. Durante una prova nella galleria: Scegli il tema e **Mantieni tema** entro **20 secondi**. **Ripristina**, Back o la scadenza ripristinano il precedente. Una prova interrotta avvia nuovamente Home con Classic. I temi integrati e scaricati scelti nell’elenco installato vengono applicati e salvati subito, senza timer. Vale anche per quelli ricevuti dal computer o installati tramite URL. Solo Prova tema nella galleria avvia una prova di 20 secondi.
+Candidato 1.7.0: **Impostazioni → Temi**. **Classic**, **Liquid Glass**, **Ribbon** sono integrati e non richiedono il download del tema; Classic resta predefinito. **Channel** è esterno, dallo showcase. Durante una prova nella galleria: Scegli il tema e **Mantieni tema** entro **20 secondi**. **Ripristina**, Back o la scadenza ripristinano il precedente. Una prova interrotta avvia nuovamente Home con Classic. I temi integrati e scaricati scelti nell’elenco installato vengono applicati e salvati subito, senza timer. Vale anche per quelli ricevuti dal computer o installati tramite URL. Solo Prova tema nella galleria avvia una prova di 20 secondi.
 
-Non pubblicato: **Classic**, **Liquid Glass** e **Ribbon** sono integrati. **Alpine 1.4.4** passa alla **galleria dei temi** come download. Una selezione salvata di `builtin:alpine` torna a Classic con l’avviso di ripristino visibile esistente; Home non scarica Alpine automaticamente e non lo sostituisce con Liquid Glass.
+1.7.0: **Classic**, **Liquid Glass** e **Ribbon** sono integrati. **Alpine 1.4.4** passa alla **galleria dei temi** come download. Una selezione salvata di `builtin:alpine` torna a Classic con l’avviso di ripristino visibile esistente; Home non scarica Alpine automaticamente e non lo sostituisce con Liquid Glass. La versione pubblicata 1.6.0 include Classic, Alpine e Ribbon.
 
 I temi installati appaiono in una sola riga a scorrimento orizzontale. Il tema attivo è sempre il primo e la sua scheda è evidenziata. Usa Sinistra/Destra per scorrere la riga.
 
@@ -164,12 +165,9 @@ Per provare un tema non pubblicato, apri prima **Impostazioni → Temi → Ricev
 
 Per un tema pubblicato, apri **Aggiungi tramite ID** e inserisci l’ID (ad esempio `102300a209`), `da.gd/102300a209` o il link GitHub completo. Home mostra l’indirizzo da.gd prima del caricamento e verifica destinazione GitHub e pacchetto. L’autore può copiare l’ID dalle note di rilascio o da **TV link → Copy ID** nell’anteprima.
 
-
 **1.6.0:** **Mostra diagnostica** nel pannello Home Helper mostra un riepilogo filtrato delle proprie richieste di stato. La visualizzazione non avvia Helper e non modifica il controllo Home. Condividi solo il JSON quando richiesto, dopo averlo controllato; [dettagli](../HELPER-DIAGNOSTICS.md#candidate-panel-caller-diagnostics-207).
 
 [Themes (English)](../THEMES.md) · [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
-
-1.5.4: **Classic**, **Alpine**, **Ribbon** — **Impostazioni → Temi**. [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
 
 I temi con barra configurabile non ancora pubblicati possono collocare Ingressi, Wi-Fi e Impostazioni in basso a sinistra. Se abilitato, Sinistra dalla prima app visibile seleziona Impostazioni, poi Wi-Fi e Ingressi; Destra da Impostazioni torna alla stessa app visibile. L’installazione di un tema che richiede una nuova funzione Home viene rifiutata nelle versioni incompatibili, mantenendo aspetto e selezione attuali. Aggiorna prima Home. Un successivo downgrade può ripristinare Classic all’avvio.
 

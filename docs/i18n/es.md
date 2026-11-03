@@ -95,7 +95,7 @@ No-root: Para reiniciar el control de Home, abre Home Helper, elige Iniciar Help
 
 Tras una interrupción, ejecuta primero `status` y conserva los registros. `restore` recupera LG Home sin quitar aplicaciones; `uninstall` lo restaura antes de eliminarlas. Los datos de recuperación Root se conservan deliberadamente: no los borres para forzar otra instalación. Revisa los informes antes de compartirlos; no publiques claves ni carpetas de perfiles.
 
-1.5.4: abre **Ajustes de Home → Apariencia → Columnas** y elige de 1 a 8 columnas, o **Según el tema** para usar su valor (Classic: 5). Un número explícito tiene prioridad sobre el tema. Los temas con una distribución fija ocultan la opción Columnas y usan el valor del autor. Tu elección guardada se recupera al cambiar a un tema que admita este ajuste. En la vista previa candidata de Alpine, las apps forman una cinta horizontal circular: Izquierda/Derecha desplaza, Arriba abre los accesos y Abajo vuelve a la misma app. En la vista previa de Alpine también puedes desplazar la cinta con la rueda o el panel táctil; Home no se mueve detrás de un diálogo abierto.
+Abre **Ajustes de Home → Apariencia → Columnas** y elige de 1 a 8 columnas, o **Según el tema** para usar su valor (Classic: 5). Un número explícito tiene prioridad sobre el tema. Los temas con una distribución fija ocultan la opción Columnas y usan el valor del autor. Tu elección guardada se recupera al cambiar a un tema que admita este ajuste. En Alpine descargado, las apps forman una cinta horizontal circular: Izquierda/Derecha desplaza, Arriba abre los accesos y Abajo vuelve a la misma app. En Alpine también puedes desplazar la cinta con la rueda o el panel táctil; Home no se mueve detrás de un diálogo abierto.
 
 1.5.4: en **Ajustes de Home → Apariencia**, desactiva **Mostrar tarjeta «Añadir app»** para ocultar +. Está activada de forma predeterminada. Usa **Añadir app** en la misma sección para añadir o recuperar apps aunque + esté oculto. Puedes seguir ordenando y ocultando apps; la elección se conserva al reiniciar. Si ocultas todas las apps, los controles superiores y los ajustes siguen disponibles.
 
@@ -143,12 +143,13 @@ En desarrollo: si no se envió ninguna solicitud de eliminación de paquetes, un
 <a id="candidato-sin-publicar-instalar-root-mediante-homebrew"></a>
 <a id="candidato-sin-publicar-recuperación-de-sonido-hdmi-root"></a>
 
+<a id="temas-154"></a>
 
-## Temas (1.5.4)
+## Temas
 
-1.5.4: **Ajustes → Temas**. **Classic**, **Alpine**, **Ribbon** están integrados y no necesitan descargar el tema; Classic sigue como predeterminado. **Channel** es externo, desde showcase. En las pruebas de la galería: Elige el tema y **Conservar tema** antes de **20 segundos**. **Revertir**, Back o el tiempo agotado recuperan el anterior. Una prueba interrumpida inicia Home con Classic. Los temas integrados y descargados elegidos en la lista instalada se aplican y guardan al instante, sin temporizador. Esto incluye los recibidos del ordenador o instalados por URL. Solo Probar tema dentro de la galería inicia una prueba de 20 segundos.
+Candidato 1.7.0: **Ajustes → Temas**. **Classic**, **Liquid Glass**, **Ribbon** están integrados y no necesitan descargar el tema; Classic sigue como predeterminado. **Channel** es externo, desde showcase. En las pruebas de la galería: Elige el tema y **Conservar tema** antes de **20 segundos**. **Revertir**, Back o el tiempo agotado recuperan el anterior. Una prueba interrumpida inicia Home con Classic. Los temas integrados y descargados elegidos en la lista instalada se aplican y guardan al instante, sin temporizador. Esto incluye los recibidos del ordenador o instalados por URL. Solo Probar tema dentro de la galería inicia una prueba de 20 segundos.
 
-Sin publicar: **Classic**, **Liquid Glass** y **Ribbon** están integrados. **Alpine 1.4.4** pasa a la **galería de temas** como descarga. Una selección guardada de `builtin:alpine` vuelve a Classic con el aviso de recuperación visible existente; Home no descarga Alpine automáticamente ni lo sustituye por Liquid Glass.
+1.7.0: **Classic**, **Liquid Glass** y **Ribbon** están integrados. **Alpine 1.4.4** pasa a la **galería de temas** como descarga. Una selección guardada de `builtin:alpine` vuelve a Classic con el aviso de recuperación visible existente; Home no descarga Alpine automáticamente ni lo sustituye por Liquid Glass. La versión publicada 1.6.0 incluye Classic, Alpine y Ribbon.
 
 Los temas instalados aparecen en una sola fila con desplazamiento horizontal. El tema activo siempre está primero y su tarjeta está resaltada. Usa Izquierda/Derecha para recorrer la fila.
 
@@ -162,12 +163,9 @@ Para probar un tema no publicado, abre primero **Ajustes → Temas → Recibir d
 
 Para un tema publicado, abre **Añadir por ID** e introduce su ID (por ejemplo `102300a209`), `da.gd/102300a209` o el enlace completo de GitHub. Home muestra la dirección da.gd antes de cargar y verifica el destino GitHub y el paquete. El autor puede copiar el ID de las notas de versión o de **TV link → Copy ID** en la vista previa.
 
-
 **1.6.0:** **Mostrar diagnóstico** en el panel Home Helper muestra un resumen filtrado de sus propias consultas de estado. Consultarlo no inicia Helper ni cambia el control de Home. Comparte solo ese JSON cuando se solicite, después de revisarlo; [detalles](../HELPER-DIAGNOSTICS.md#candidate-panel-caller-diagnostics-207).
 
 [Themes (English)](../THEMES.md) · [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
-
-1.5.4: **Classic**, **Alpine**, **Ribbon** — **Ajustes → Temas**. [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
 
 Los temas de cinta configurable de 1.5.4 pueden colocar entradas, Wi-Fi y ajustes abajo a la izquierda. Si se activa, Izquierda desde la primera app visible selecciona ajustes, luego Wi-Fi y entradas; Derecha desde ajustes vuelve a la misma app visible. La instalación de un tema que exige una función nueva de Home se rechaza en versiones incompatibles, conservando el aspecto y la selección actuales. Actualiza Home primero. Un downgrade posterior puede restaurar Classic al iniciar.
 

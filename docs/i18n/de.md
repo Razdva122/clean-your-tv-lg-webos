@@ -95,7 +95,7 @@ No-root: Öffnen Sie zum Neustart der Home-Steuerung Home Helper, wählen Sie He
 
 Nach einer Unterbrechung zuerst `status` ausführen und Protokolle behalten. `restore` stellt LG Home ohne App-Entfernung wieder her; `uninstall` stellt es vor der Entfernung wieder her. Root-Wiederherstellungsdaten bleiben absichtlich erhalten; nicht zum Erzwingen einer Neuinstallation löschen. Diagnoseberichte vor Weitergabe prüfen; Schlüssel und Profilordner nicht veröffentlichen.
 
-1.5.4: Öffne **Home-Einstellungen → Darstellung → Spalten** und wähle 1–8 Spalten oder **Nach Theme**, um dessen Wert zu verwenden (Classic: 5). Eine feste Zahl hat Vorrang vor dem Theme. Themes mit festem Layout blenden die Spaltenoption aus und verwenden den Wert des Autors. Deine gespeicherte Auswahl gilt wieder, sobald du zu einem Theme wechselst, das diese Einstellung unterstützt. In der Alpine-Kandidatenvorschau liegen Apps in einem endlosen horizontalen Band: Links/Rechts blättert im Kreis, Oben öffnet die Schnellzugriffe und Unten kehrt zur selben App zurück. In der Alpine-Vorschau lässt sich das Band auch mit Mausrad oder Touchpad bewegen; bei geöffnetem Dialog bleibt Home stehen.
+Öffne **Home-Einstellungen → Darstellung → Spalten** und wähle 1–8 Spalten oder **Nach Theme**, um dessen Wert zu verwenden (Classic: 5). Eine feste Zahl hat Vorrang vor dem Theme. Themes mit festem Layout blenden die Spaltenoption aus und verwenden den Wert des Autors. Deine gespeicherte Auswahl gilt wieder, sobald du zu einem Theme wechselst, das diese Einstellung unterstützt. Im heruntergeladenen Alpine liegen Apps in einem endlosen horizontalen Band: Links/Rechts blättert im Kreis, Oben öffnet die Schnellzugriffe und Unten kehrt zur selben App zurück. In Alpine lässt sich das Band auch mit Mausrad oder Touchpad bewegen; bei geöffnetem Dialog bleibt Home stehen.
 
 1.5.4: Schalte unter **Home-Einstellungen → Darstellung** die Option **Kachel „App hinzufügen“ anzeigen** aus, um + auszublenden. Standardmäßig ist sie eingeschaltet. Über **App hinzufügen** im selben Bereich kannst du weiterhin Apps hinzufügen oder zurückholen. Verschieben und Ausblenden bleiben möglich; die Auswahl bleibt nach einem Neustart erhalten. Sind alle Apps ausgeblendet, bleiben die oberen Schaltflächen und Einstellungen erreichbar.
 
@@ -143,12 +143,13 @@ In Entwicklung: Wurde noch keine Paketentfernung angefordert, bietet eine fehlge
 <a id="unveröffentlichter-kandidat-root-über-homebrew-einrichten"></a>
 <a id="unveröffentlichter-kandidat-hdmi-ton-wiederherstellen-root"></a>
 
+<a id="designs-154"></a>
 
-## Designs (1.5.4)
+## Designs
 
-1.5.4: **Einstellungen → Themes**. **Classic**, **Alpine**, **Ribbon** sind integriert und benötigen keinen Design-Download; Classic bleibt Standard. **Channel** ist ein externes Showcase-Design. Beim Galerietest: Nach der Auswahl innerhalb von **20 Sekunden** **Design behalten** wählen. **Zurücksetzen**, Back oder Zeitablauf stellt das vorherige Design wieder her. Ein unterbrochener Versuch startet beim nächsten Home-Aufruf mit Classic. Integrierte und heruntergeladene Designs aus der installierten Liste werden sofort ohne Bestätigungstimer angewendet und gespeichert. Das gilt auch für vom Computer oder per URL installierte Designs. Nur Design testen in der Galerie startet einen 20-Sekunden-Test.
+1.7.0-Kandidat: **Einstellungen → Themes**. **Classic**, **Liquid Glass**, **Ribbon** sind integriert und benötigen keinen Design-Download; Classic bleibt Standard. **Channel** ist ein externes Showcase-Design. Beim Galerietest: Nach der Auswahl innerhalb von **20 Sekunden** **Design behalten** wählen. **Zurücksetzen**, Back oder Zeitablauf stellt das vorherige Design wieder her. Ein unterbrochener Versuch startet beim nächsten Home-Aufruf mit Classic. Integrierte und heruntergeladene Designs aus der installierten Liste werden sofort ohne Bestätigungstimer angewendet und gespeichert. Das gilt auch für vom Computer oder per URL installierte Designs. Nur Design testen in der Galerie startet einen 20-Sekunden-Test.
 
-Unveröffentlicht: **Classic**, **Liquid Glass** und **Ribbon** sind integriert. **Alpine 1.4.4** wird im **Theme-Showcase** zum Download angeboten. Eine gespeicherte Auswahl `builtin:alpine` fällt mit dem bestehenden sichtbaren Wiederherstellungshinweis auf Classic zurück. Home lädt Alpine weder automatisch herunter noch ersetzt es durch Liquid Glass.
+1.7.0: **Classic**, **Liquid Glass** und **Ribbon** sind integriert. **Alpine 1.4.4** wird im **Theme-Showcase** zum Download angeboten. Eine gespeicherte Auswahl `builtin:alpine` fällt mit dem bestehenden sichtbaren Wiederherstellungshinweis auf Classic zurück. Home lädt Alpine weder automatisch herunter noch ersetzt es durch Liquid Glass. Die veröffentlichte Version 1.6.0 enthält Classic, Alpine und Ribbon.
 
 Installierte Designs stehen in einer horizontal scrollbaren Reihe. Das aktive Design steht immer zuerst und seine Karte ist hervorgehoben. Mit Links/Rechts wechseln Sie zwischen den Karten.
 
@@ -162,12 +163,9 @@ Für ein unveröffentlichtes Design zuerst am TV **Einstellungen → Themes → 
 
 Für ein veröffentlichtes Design unter **Weitere Optionen → Über URL hinzufügen** die ID (z. B. `102300a209`), `da.gd/102300a209` oder die vollständige GitHub-URL eingeben. Home zeigt vor dem Laden die ergänzte da.gd-Adresse und prüft danach GitHub-Ziel und Designpaket. Die ID steht in den Versionshinweisen oder unter **TV link → Copy ID** in der Computer-Vorschau.
 
-
 **1.6.0:** **Diagnose anzeigen** im Home-Helper-Panel zeigt eine kleine, gefilterte Momentaufnahme seiner eigenen Statusabfragen. Das Anzeigen startet Helper nicht und ändert die Home-Steuerung nicht. Teilen Sie auf Anfrage nur die zuvor geprüfte JSON-Ausgabe; [Details](../HELPER-DIAGNOSTICS.md#candidate-panel-caller-diagnostics-207).
 
 [Themes (English)](../THEMES.md) · [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
-
-1.5.4: **Classic**, **Alpine**, **Ribbon** — **Einstellungen → Themes**. [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
 
 Anpassbare Leisten-Themen in 1.5.4 können Eingänge, WLAN und Einstellungen links unten platzieren. Wenn aktiviert, wählt Links bei der ersten sichtbaren App Einstellungen, dann WLAN und Eingänge; Rechts in den Einstellungen kehrt zur selben sichtbaren App zurück. Benötigt ein Thema eine neue Home-Funktion, wird seine Installation in einer nicht unterstützten Version abgelehnt; Aussehen und Auswahl bleiben erhalten. Aktualisieren Sie zuerst Home. Ein späteres Downgrade kann beim Start Classic wiederherstellen.
 

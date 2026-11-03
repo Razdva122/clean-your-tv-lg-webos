@@ -31,12 +31,12 @@ LG screens or obtain root access.
 
 ## Themes
 
-Choose built-in **Classic**, **Alpine** or **Ribbon**, or install community themes.
+Choose built-in **Classic**, **Liquid Glass** or **Ribbon**, or install community themes.
 Manage them in **Settings → Themes** on your TV.
 
-| Classic menu | Alpine | Ribbon |
+| Classic menu | Liquid Glass | Ribbon |
 | --- | --- | --- |
-| <img src="docs/launcher-classic.jpg" alt="Classic menu browser preview" width="280"> | <img src="docs/launcher-alpine.jpg" alt="Alpine browser preview" width="280"> | <img src="docs/launcher-ribbon.jpg" alt="Ribbon browser preview" width="280"> |
+| <img src="docs/launcher-classic.jpg" alt="Classic menu browser preview" width="280"> | <img src="docs/launcher-liquid-glass.jpg" alt="Liquid Glass browser preview" width="280"> | <img src="docs/launcher-ribbon.jpg" alt="Ribbon browser preview" width="280"> |
 
 The proposed Ribbon refresh also adds simulated startup and over-application states with Home/Back controls. Native overlay support targets Root; No-root on TV remains fullscreen.
 
@@ -139,7 +139,7 @@ For contributors: [build and technical references](docs/development/README.md),
 | cytv installer | 0.8.0 |
 | Home | 1.8.0 |
 | Home Helper | 0.6.21 |
-| Root edition | 0.8.1 |
+| Root edition | 0.8.2 |
 | Both edition Updaters | 0.4.2 |
 | Android installer / versionCode | 0.7.0 / 18 |
 <!-- /release:components -->

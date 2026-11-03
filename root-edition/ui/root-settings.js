@@ -3,7 +3,7 @@
   'use strict';
   function t(source, params) { if (window.HomeI18n) return window.HomeI18n.t(source, params); return String(source).replace(/\{(\w+)\}/g, function (_, key) { return params && params[key] !== undefined ? params[key] : '{' + key + '}'; }); }
   var panel, message, buttons, selected = 0, busy = false, previous, rootStatus = null;
-  var checkingUpdates = false, categories, statusGeneration = 0;
+  var checkingUpdates = false, categories, statusGeneration = 0, refreshTail = Promise.resolve();
   var sourceGroup, sourceHint, sourceStatus = null, sourceUnavailable = false, sourceKeys = ['tv','youtube','hdmi'];
   var sources = {tv:true,youtube:false,hdmi:false};
   function renderSources() {
@@ -106,26 +106,32 @@
     var generation = statusGeneration;
 
     message.textContent = t('Checking Home control…');
-    return refreshSources(generation).then(function () {
+    function read() {
       if (generation !== statusGeneration || panel.hidden || document.hidden) return;
-      return control('status');
-    }).then(function (status) {
-      if (generation !== statusGeneration || panel.hidden || document.hidden) return;
-      if (!status || typeof status !== 'object' || !('intent' in status) ||
-          status.intent !== null && (!status.intent || typeof status.intent.phase !== 'string')) throw new Error('Invalid service response');
-      rootStatus = status; renderSources();
-      var phase = status.intent && status.intent.phase, active = phase === 'active';
-      buttons[3].setAttribute('aria-checked', String(active));
-      buttons[3].disabled = !!phase && phase !== 'active' && phase !== 'disabled';
-      message.textContent = t(active ? 'Home and return from apps open Clean Your TV.' : buttons[3].disabled ? 'Changing Home control…' : 'Home and return from apps open LG Home.');
-      if (!panel.hidden && buttons[selected].disabled && (!categories || document.activeElement === buttons[selected])) move(1);
-    }).catch(function (e) {
-      if (generation !== statusGeneration || panel.hidden || document.hidden) return;
-      rootStatus = null; sourceStatus = null; renderSources(); buttons[3].disabled = true;
-      message.textContent = t(e.message);
-      buttons[12].hidden = false; buttons[12].disabled = false;
-      if (!categories || document.activeElement === buttons[selected]) focus(12);
-    });
+      return refreshSources(generation).then(function () {
+        if (generation !== statusGeneration || panel.hidden || document.hidden) return;
+        return control('status');
+      }).then(function (status) {
+        if (generation !== statusGeneration || panel.hidden || document.hidden) return;
+        if (!status || typeof status !== 'object' || !('intent' in status) ||
+            status.intent !== null && (!status.intent || typeof status.intent.phase !== 'string')) throw new Error('Invalid service response');
+        rootStatus = status; renderSources();
+        var phase = status.intent && status.intent.phase, active = phase === 'active';
+        buttons[3].setAttribute('aria-checked', String(active));
+        buttons[3].disabled = !!phase && phase !== 'active' && phase !== 'disabled';
+        message.textContent = t(active ? 'Home and return from apps open Clean Your TV.' : buttons[3].disabled ? 'Changing Home control…' : 'Home and return from apps open LG Home.');
+        if (!panel.hidden && buttons[selected].disabled && (!categories || document.activeElement === buttons[selected])) move(1);
+      }).catch(function (e) {
+        if (generation !== statusGeneration || panel.hidden || document.hidden) return;
+        rootStatus = null; sourceStatus = null; renderSources(); buttons[3].disabled = true;
+        message.textContent = t(e.message);
+        buttons[12].hidden = false; buttons[12].disabled = false;
+        if (!categories || document.activeElement === buttons[selected]) focus(12);
+      });
+    }
+    // Serialize lifecycle reads; queued stale generations do no service work.
+    refreshTail = refreshTail.then(read, read);
+    return refreshTail;
   }
   function resumeMode() {
     if (!panel) return;

@@ -64,8 +64,8 @@ follow [explicit user consent](../../AGENTS.md#installation-results-and-user-con
 ## Main Home browser preview
 
 After `npm ci`, run `python3 scripts/preview.py` and open `http://127.0.0.1:8765/`.
-The **Themes** row above Home contains Classic, Alpine and the active reviewed
-showcase versions. Selecting a card applies it in the same Home canvas, including
+The **Themes** row above Home contains candidate built-ins Classic, Liquid Glass
+and Ribbon, plus the active reviewed Showcase versions, including Alpine 1.4.4. Selecting a card applies it in the same Home canvas, including
 when switching Root/No-root editions. Community packages are generated from the
 hash-verified showcase snapshot and validated by the ordinary ThemeManager;
 no author scripts or theme-repository code is executed. Static exports include

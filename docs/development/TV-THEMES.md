@@ -1,6 +1,8 @@
-# Theme selection, storage and transport (candidate)
+<a id="theme-selection-storage-and-transport-candidate"></a>
 
-Classic and Alpine are packaged in both editions. Classic is the unchanged default until an explicit choice; Alpine uses `builtin:alpine`. Channel remains an external, independently versioned showcase distribution. The historical external Alpine listing is archived; its published immutable bytes are retained.
+# Theme selection, storage and transport
+
+The unpublished 1.7.0 candidate packages Classic, Liquid Glass and Ribbon in both editions. Classic remains the default until an explicit choice. Published 1.6.0 instead packages Classic, Alpine and Ribbon. In 1.7.0, Alpine 1.4.4 is an external Theme showcase distribution; the older toolkit Alpine listing remains archived with its immutable bytes retained. A saved `builtin:alpine` selection recovers to Classic with the visible recovery notice; Home does not automatically download Alpine or replace it with Liquid Glass. Channel remains an external, independently versioned Showcase theme.
 
 ## Trusted modules
 
@@ -9,7 +11,7 @@ Classic and Alpine are packaged in both editions. Classic is the unchanged defau
 - `theme-manager.js`: `tvhome.theme.choice.v1` accepted pointer plus `tvhome.theme.trial.v1` durable preview/startup marker. `selectInstalled(item)` verifies builtin/cache membership through `list()`, then applies and immediately persists without scheduling a timer. It keeps the durable marker before native preparation and CSS application, and restores the previous choice if preparation or persistence fails. Only showcase `begin(item)` schedules the 20-second trial: Keep commits the accepted pointer; Back/Revert/timeout restores the previously accepted appearance. LAN and URL installation choices use immediate installed selection. Incomplete trial/startup on relaunch falls back to Classic without erasing downloaded packages. Binary assets never enter localStorage.
 - `theme-panel.js/css`: standard on-TV Themes settings, remote focus/navigation, URL input, explicit collection choice, installation progress/error, version selection/removal and clear-cache recovery. The trial confirmation stays outside the themed surface and leaves the app ribbon visible. Parent Settings are hidden only during the trial and restored afterwards.
 - `theme-locales.js`: twelve-language settings labels. Validation/network diagnostics may use English technical messages.
-- `builtin-theme-files.json`: explicit Alpine file inventory, mirrored by packaging/preview allowlists. `builtin-themes.json` pins the bundled descriptor digest. Alpine bytes and notices come from the immutable toolkit source/distribution recorded in the initial catalog review; the trusted built-in descriptor has a separate identity.
+- `builtin-theme-files.json`: explicit Liquid Glass/Ribbon file inventory, mirrored by packaging/preview allowlists. `builtin-themes.json` pins their bundled descriptor digests; Classic is the host default. Alpine 1.4.4 now uses the pinned project Showcase distribution rather than a built-in identity; its source, hashes and license notices are recorded in the reviewed registry.
 
 The core theme renderer adds no root commands, repository scripts or external CSS execution. The optional PC → TV receiver adds four owner-scoped Luna methods to the existing edition service; see its provisioning requirements below. Existing emergency Home release, key-up delivery and Home routing remain independent.
 
@@ -54,7 +56,7 @@ Ordinary repository installs remain HTTPS-only. The old address/PIN download
 transport, computer-address preference and author-side sharing server are removed;
 previously installed themes and repository source metadata are unaffected.
 
-`node scripts/build-tv-theme-catalog.cjs` derives `launcher/theme-catalog.json` and local preview/notice files from the reviewed showcase registry. `--check` fails on drift, missing or orphaned assets; `npm run test:themes` includes that gate. Classic/Alpine are builtin cards; active Channel keeps its source URL, identity and digest. Removed/unavailable records are excluded. Packaging consumes the existing explicit inventory. Each explicit `ThemeManager.catalog(signal, onLocal)` call refreshes from `https://api.github.com/repos/Razdva122/clean-your-tv-lg-webos/git/ref/heads/main`, then requests `launcher/theme-catalog.json` at that exact commit on raw.githubusercontent.com. The optional callback receives validated bundled entries immediately before remote requests; callback failures reject. Only reviewed external entries are taken from that snapshot; running-version builtins remain local. Preview paths become pinned URLs within that project commit. Invalid, missing or unreachable remote data falls back to the bundled snapshot with an array `.notice`; cancellation rejects instead of falling back. Requests use existing status/redirect/size limits and nothing is persisted or installed by refresh. External IDs must match their commit-pinned source repository; installer verification still checks distribution hashes. New submissions require regenerating/reviewing catalogue assets and a normal merge into the main repository; an unmerged candidate may use fallback until those files are available there. Opening the separate showcase or Refresh invokes this without a Home update or page reload. Physical-TV network acceptance remains pending.
+`node scripts/build-tv-theme-catalog.cjs` derives `launcher/theme-catalog.json` and local preview/notice files from the reviewed showcase registry. `--check` fails on drift, missing or orphaned assets; `npm run test:themes` includes that gate. Classic/Liquid Glass/Ribbon are candidate built-in cards; external Alpine 1.4.4 and Channel keep their source URLs, identities and digests. Removed/unavailable records are excluded. Packaging consumes the existing explicit inventory. Each explicit `ThemeManager.catalog(signal, onLocal)` call refreshes from `https://api.github.com/repos/Razdva122/clean-your-tv-lg-webos/git/ref/heads/main`, then requests `launcher/theme-catalog.json` at that exact commit on raw.githubusercontent.com. The optional callback receives validated bundled entries immediately before remote requests; callback failures reject. Only reviewed external entries are taken from that snapshot; running-version builtins remain local. Preview paths become pinned URLs within that project commit. Invalid, missing or unreachable remote data falls back to the bundled snapshot with an array `.notice`; cancellation rejects instead of falling back. Requests use existing status/redirect/size limits and nothing is persisted or installed by refresh. External IDs must match their commit-pinned source repository; installer verification still checks distribution hashes. New submissions require regenerating/reviewing catalogue assets and a normal merge into the main repository; an unmerged candidate may use fallback until those files are available there. Opening the separate showcase or Refresh invokes this without a Home update or page reload. Physical-TV network acceptance remains pending.
 
 `tests/themes/envelope.cjs` covers byte integrity, envelope bounds and rejection
 of retired computer-hosted download requests before network access.
@@ -160,7 +162,9 @@ files with descriptor digest `da7da0848ac0ecd60ebbcd964cb65a68fdf4fab54f30eebd56
 This is browser evidence, not physical-TV or published-app acceptance. The unpublished is.gd experiment is replaced rather than retained as a second ID namespace; full GitHub sources and PC-to-TV delivery are unchanged.
 
 
-## Installed theme ribbon and Alpine inputs (next candidate)
+<a id="installed-theme-ribbon-and-alpine-inputs-next-candidate"></a>
+
+## Historical installed theme ribbon and Alpine inputs preparation
 
 Appearance keeps installed themes in one horizontal row, including on 720p screens.
 The active identity **and digest** moves first; other installed versions keep their
@@ -169,11 +173,11 @@ keyboard focus remains a separate outline. Focus entering a card or one of its
 actions scrolls the whole card into view without changing the active theme.
 Showcase retains its separate catalog layout.
 
-Alpine 1.4.4 uses a translucent scenic input sheet and a light-on-dark focus surface,
+At that preparation stage, bundled Alpine 1.4.4 used a translucent scenic input sheet and a light-on-dark focus surface,
 matching its shortcuts and library instead of the opaque Classic white selection.
-The built-in descriptor and rules are regenerated from toolkit source
+Its then-built-in descriptor and rules were regenerated from toolkit source
 `95f812e505e81b1d4b706bd203f0e96306b1b18c`; hashed assets and license notices are unchanged.
-The freshly exported candidate runtime requires Home/theme engine 1.6.0.
+That exported candidate runtime required Home/theme engine 1.6.0. Alpine 1.4.4 is an external Showcase theme in the current 1.7.0 candidate; this historical preparation does not describe its current packaging.
 
 Earlier is.gd short-ID testing on the C3 candidate exposed a network/TLS
 limitation: is.gd DNS agrees with the computer, IPv4 TCP connects but HTTPS does not

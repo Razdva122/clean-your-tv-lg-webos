@@ -95,7 +95,7 @@ No-root: Aby wznowić sterowanie Home, otwórz Home Helper, wybierz Uruchom Help
 
 Po przerwaniu operacji najpierw uruchom `status` i zachowaj dzienniki. `restore` przywraca LG Home bez usuwania aplikacji; `uninstall` przywraca je przed usunięciem. Dane odzyskiwania Root pozostają celowo: nie kasuj ich, by wymusić ponowną instalację. Sprawdź raporty przed udostępnieniem; nie publikuj kluczy ani katalogów profili.
 
-1.5.4: otwórz **Ustawienia Home → Wygląd → Kolumny** i wybierz od 1 do 8 kolumn lub **Według motywu**, aby użyć wartości motywu (Classic: 5). Wybrana liczba ma pierwszeństwo przed motywem. Motywy ze stałym układem ukrywają opcję kolumn i używają wartości autora. Zapisany wybór wraca po przełączeniu na motyw obsługujący to ustawienie. W podglądzie kandydata Alpine aplikacje tworzą jeden zapętlony poziomy pasek: Lewo/Prawo przewija, Góra otwiera skróty, a Dół wraca do tej samej aplikacji. W podglądzie Alpine pasek można też przewijać kółkiem myszy lub touchpadem; Home nie przesuwa się za otwartym oknem dialogowym.
+Otwórz **Ustawienia Home → Wygląd → Kolumny** i wybierz od 1 do 8 kolumn lub **Według motywu**, aby użyć wartości motywu (Classic: 5). Wybrana liczba ma pierwszeństwo przed motywem. Motywy ze stałym układem ukrywają opcję kolumn i używają wartości autora. Zapisany wybór wraca po przełączeniu na motyw obsługujący to ustawienie. W pobranym motywie Alpine aplikacje tworzą jeden zapętlony poziomy pasek: Lewo/Prawo przewija, Góra otwiera skróty, a Dół wraca do tej samej aplikacji. W Alpine pasek można też przewijać kółkiem myszy lub touchpadem; Home nie przesuwa się za otwartym oknem dialogowym.
 
 1.5.4: w **Ustawienia Home → Wygląd** wyłącz **Pokaż kafelek „Dodaj aplikację”**, aby ukryć +. Opcja jest domyślnie włączona. Użyj **Dodaj aplikację** w tej samej sekcji, aby dodawać lub przywracać aplikacje przy ukrytym +. Nadal można zmieniać kolejność i ukrywać aplikacje; wybór zostaje po ponownym uruchomieniu. Po ukryciu wszystkich aplikacji górne przyciski i ustawienia pozostają dostępne.
 
@@ -144,12 +144,11 @@ W przygotowaniu: jeśli nie wysłano żądania usunięcia pakietów, po błędzi
 <a id="nieopublikowany-kandydat-instalacja-root-przez-homebrew"></a>
 <a id="nieopublikowany-kandydat-odzyskiwanie-dźwięku-hdmi-root"></a>
 
-
 ## Motywy – kandydat rozwojowy
 
-1.5.4: **Ustawienia → Motywy**. **Classic**, **Alpine**, **Ribbon** są wbudowane i nie wymagają pobierania motywu; domyślny pozostaje Classic. **Channel** jest zewnętrznym motywem ze showcase. Podczas próby w galerii: Wybierz motyw i **Zachowaj motyw** w ciągu **20 sekund**. **Przywróć**, Back lub upływ czasu przywraca poprzedni. Przerwana próba uruchomi Home z Classic. Motywy wbudowane i pobrane wybrane z listy zainstalowanych są stosowane i zapisywane od razu, bez odliczania. Dotyczy to również motywów z komputera lub URL. Tylko Wypróbuj motyw w galerii rozpoczyna próbę 20 sekund.
+Kandydat 1.7.0: **Ustawienia → Motywy**. **Classic**, **Liquid Glass**, **Ribbon** są wbudowane i nie wymagają pobierania motywu; domyślny pozostaje Classic. **Channel** jest zewnętrznym motywem ze showcase. Podczas próby w galerii: Wybierz motyw i **Zachowaj motyw** w ciągu **20 sekund**. **Przywróć**, Back lub upływ czasu przywraca poprzedni. Przerwana próba uruchomi Home z Classic. Motywy wbudowane i pobrane wybrane z listy zainstalowanych są stosowane i zapisywane od razu, bez odliczania. Dotyczy to również motywów z komputera lub URL. Tylko Wypróbuj motyw w galerii rozpoczyna próbę 20 sekund.
 
-Nieopublikowane: **Classic**, **Liquid Glass** i **Ribbon** są wbudowane. **Alpine 1.4.4** przechodzi do pobierania w **galerii motywów**. Zapisany wybór `builtin:alpine` wraca do Classic z istniejącym widocznym komunikatem odzyskiwania; Home nie pobiera Alpine automatycznie ani nie zastępuje go Liquid Glass.
+1.7.0: **Classic**, **Liquid Glass** i **Ribbon** są wbudowane. **Alpine 1.4.4** przechodzi do pobierania w **galerii motywów**. Zapisany wybór `builtin:alpine` wraca do Classic z istniejącym widocznym komunikatem odzyskiwania; Home nie pobiera Alpine automatycznie ani nie zastępuje go Liquid Glass. Opublikowana wersja 1.6.0 zawiera Classic, Alpine i Ribbon.
 
 Zainstalowane motywy są w jednym przewijanym poziomo rzędzie. Aktywny motyw jest zawsze pierwszy, a jego karta jest wyróżniona. Do przeglądania użyj strzałek w lewo/prawo.
 
@@ -163,12 +162,9 @@ Aby przetestować nieopublikowany motyw, najpierw otwórz na TV **Ustawienia →
 
 Dla opublikowanego motywu otwórz **Dodaj przez ID** i wpisz ID (np. `102300a209`), `da.gd/102300a209` lub pełny link GitHub. Home pokaże adres da.gd przed wczytaniem, a następnie sprawdzi cel GitHub i pakiet motywu. Autor może skopiować ID z opisu wydania albo **TV link → Copy ID** w podglądzie na komputerze.
 
-
 **1.6.0:** **Pokaż diagnostykę** w panelu Home Helper pokazuje niewielki, przefiltrowany wynik jego własnych zapytań o stan. Wyświetlenie nie uruchamia Helpera ani nie zmienia sterowania Home. Na prośbę udostępnij tylko sprawdzony JSON; [szczegóły](../HELPER-DIAGNOSTICS.md#candidate-panel-caller-diagnostics-207).
 
 [Themes (English)](../THEMES.md) · [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
-
-1.5.4: **Classic**, **Alpine**, **Ribbon** — **Ustawienia → Motywy**. [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
 
 Motywy z konfigurowalną wstęgą w 1.5.4 mogą umieszczać wejścia, Wi-Fi i ustawienia w lewym dolnym rogu. Gdy opcja jest włączona, Lewo przy pierwszej widocznej aplikacji wybiera ustawienia, potem Wi-Fi i wejścia; Prawo w ustawieniach wraca do tej samej widocznej aplikacji. Instalacja motywu wymagającego nowej funkcji Home jest odrzucana w nieobsługiwanej wersji, zachowując wygląd i wybór. Najpierw zaktualizuj Home. Późniejsze obniżenie wersji może przywrócić Classic podczas startu.
 
