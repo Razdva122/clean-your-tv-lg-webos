@@ -41,3 +41,7 @@ Verified on macOS with real Chrome and simulated services/public reference apps:
 The original runtime permission/capability contracts are unchanged. No production
 release, native webOS decoder acceptance, sound/other-app contention, standby,
 cold boot, OTA or rollback is claimed for these new assets.
+
+The final paired toolkit was also rerun against a clean runtime exported from
+698bd74507e99429304d19807bcea49d5f46943b: 64/64 tests passed with real Chrome,
+zero skips. The toolkit example retains its separate external identity.
