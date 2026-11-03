@@ -6,7 +6,7 @@ const base=process.env.PREVIEW_URL||'http://127.0.0.1:8876';
  try{
   for(const edition of ['launcher','root-launcher'])for(const [width,height] of [[1280,720],[1920,1080]])for(const inputMode of ['menu','shelf']){
    const page=await browser.newPage({viewport:{width,height},locale:'en'}),errors=[];page.on('pageerror',e=>errors.push(e.message));
-   await page.route('https://**',route=>route.abort());
+   await page.route(/^https:\/\//,route=>route.abort());
    await page.goto(base+'/'+edition+'/index.html');await page.locator('#tiles .focused').waitFor();
    assert.equal(await page.locator('#inputShelf').isVisible(),false,'new Home defaults to the header Inputs menu');
    assert.equal(await page.locator('#btnInputs').isVisible(),true,'default menu keeps its visible header action');
