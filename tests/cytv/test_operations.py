@@ -1,5 +1,6 @@
 """Exercise real orchestration; only the remote SSH boundary is simulated."""
 import json
+import os
 import shlex
 from pathlib import Path
 import tempfile
@@ -788,6 +789,48 @@ class OperationTests(unittest.TestCase):
     def installer(self, remote, edition='no-root'):
         tv = state.target('192.0.2.10', edition)
         return operations.Installer(remote, self.store, tv, self.payload, self.manifest, lambda _: None)
+
+    @unittest.skipIf(os.name == 'nt', 'macOS bundle requires POSIX symlinks')
+    def test_macos_payload_alias_accepts_verified_packages(self):
+        self.root_bundle()
+        contents = self.root / 'cytv.app/Contents'
+        resources, frameworks = contents / 'Resources', contents / 'Frameworks'
+        resources.mkdir(parents=True)
+        frameworks.mkdir()
+        self.payload.rename(resources / 'payload')
+        self.payload = frameworks / 'payload'
+        self.payload.symlink_to('../Resources/payload', target_is_directory=True)
+        for edition in ('no-root', 'root'):
+            with self.subTest(edition=edition):
+                remote = Remote()
+                installer = self.installer(remote, edition)
+                installer.select_graphics()
+                self.assertEqual(installer.tv_info['graphics_resolution'], '1920x1080')
+                self.assertEqual(remote.calls, [('luna', 'com.webos.service.tv.systemproperty/getSystemInfo', {'keys': ['UHD']})])
+                self.assertIsNone(self.store.pending(installer.profile))
+
+    @unittest.skipIf(os.name == 'nt', 'macOS bundle requires POSIX symlinks')
+    def test_graphics_alias_still_rejects_linked_package_and_bundle_directory(self):
+        self.root_bundle()
+        alias = self.root / 'payload-alias'
+        alias.symlink_to(self.payload, target_is_directory=True)
+        for name, edition in [('launcher.ipk', 'no-root'), ('root', 'root')]:
+            with self.subTest(name=name):
+                original = self.payload / name
+                outside = self.root / name
+                original.rename(outside)
+                original.symlink_to(outside, target_is_directory=outside.is_dir())
+                try:
+                    remote = Remote()
+                    installer = self.installer(remote, edition)
+                    installer.payload = alias
+                    with self.assertRaisesRegex(RuntimeError, 'graphics packages'):
+                        installer.install(self.inventory, 'secret')
+                    self.assertFalse(any(c[0] in ('run', 'upload') for c in remote.calls))
+                    self.assertIsNone(self.store.pending(installer.profile))
+                finally:
+                    original.unlink()
+                    outside.rename(original)
 
     def test_graphics_preselection_is_reused_by_install(self):
         remote = Remote()
