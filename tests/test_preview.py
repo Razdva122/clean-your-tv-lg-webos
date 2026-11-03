@@ -100,7 +100,14 @@ class PreviewTest(unittest.TestCase):
             themes = json.loads((output / 'preview/themes.json').read_bytes())
             catalog = (ROOT / 'launcher/theme-catalog.json').read_bytes()
             self.assertEqual(themes['themes'], json.loads(catalog)['themes'])
-            self.assertTrue(themes['packages'], 'inline preview retains reviewed theme packages')
+            self.assertLess((output / 'preview/themes.json').stat().st_size, 32768,
+                            'initial catalogue must not embed theme assets')
+            self.assertTrue(themes['packages'])
+            for theme_id, url in themes['packages'].items():
+                package = json.loads((output / 'preview' / url).read_bytes())
+                self.assertEqual(package['schemaVersion'], 1)
+                import base64
+                self.assertEqual(json.loads(base64.b64decode(package['descriptor']))['id'], theme_id)
             for edition in ('launcher', 'root-launcher'):
                 self.assertEqual((output / edition / 'theme-catalog.json').read_bytes(), catalog)
 
@@ -170,6 +177,15 @@ class PreviewTest(unittest.TestCase):
             with urlopen(base + '/preview/reference-apps/icons/youtube.png') as response:
                 self.assertEqual(response.headers['Content-Type'], 'image/png')
                 self.assertEqual(response.read(), (ROOT / 'preview/reference-apps/icons/youtube.png').read_bytes())
+            catalog = json.loads(get('/preview/themes.json'))
+            self.assertLess(len(json.dumps(catalog)), 32768)
+            package_url = next(iter(catalog['packages'].values()))
+            self.assertEqual(json.loads(get('/preview/' + package_url))['schemaVersion'], 1)
+            for invalid in ('0' * 64 + '.json', '../themes.json', 'unknown.json'):
+                with self.assertRaises(HTTPError) as error:
+                    get('/preview/packages/' + invalid)
+                self.assertEqual(error.exception.code, 404)
+                error.exception.close()
             # A saved source must change the version; unchanged sources must not.
             with tempfile.TemporaryDirectory() as directory, patch.object(preview, 'ROOT', Path(directory)):
                 style = Path(directory) / 'launcher/style.css'
