@@ -39,13 +39,13 @@
     {
       "id": "github:razdva122/clean-your-tv-lg-webos:alpine",
       "title": "Alpine",
-      "version": "1.4.4",
+      "version": "1.5.0",
       "author": "Clean Your TV contributors",
-      "license": "MIT AND CC-BY-SA-3.0",
-      "description": "A quiet alpine panorama, large clock and one infinitely looping horizontal app ribbon.",
-      "preview": "theme-catalog/razdva122--clean-your-tv-lg-webos--alpine/2b5209e6ec36d9e8e8e15e9b765e9b0fcf6a49ac4a4c8d68d7394016359a905f/preview.png",
-      "url": "https://raw.githubusercontent.com/razdva122/clean-your-tv-lg-webos/323c7bb351d8396439878ab432d0ac2f39d2b2e3/distributions/alpine/1.4.4/cytv-theme.json",
-      "digest": "2b5209e6ec36d9e8e8e15e9b765e9b0fcf6a49ac4a4c8d68d7394016359a905f"
+      "license": "MIT AND CC-BY-SA-3.0-DE",
+      "description": "A real 4K Bachalpsee photograph, large clock and one infinitely looping horizontal app ribbon.",
+      "preview": "theme-catalog/razdva122--clean-your-tv-lg-webos--alpine/c182f0c8b6285cecdbc9f266f3ce95124bfcaa47635a7582514d7a01cdf74cd5/preview.jpg",
+      "url": "https://raw.githubusercontent.com/razdva122/clean-your-tv-lg-webos/8cc4cb919d7bc67783989e75974712e697d11158/distributions/alpine/1.5.0/cytv-theme.json",
+      "digest": "c182f0c8b6285cecdbc9f266f3ce95124bfcaa47635a7582514d7a01cdf74cd5"
     },
     {
       "id": "github:razdva122/clean-your-tv-lg-theme:itachi",
