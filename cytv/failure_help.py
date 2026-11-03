@@ -1,5 +1,6 @@
 """Fixed, phase-bound advice. It never connects, retries, repairs or grants trust."""
-from .errors import DeveloperKeyError, TVConnectionError
+from .errors import DeveloperKeyError, TVConnectionError, TVRejected
+from .recovery_state import unsubmitted_removal
 
 NETWORK = 'Keep the TV on and use the same home network. Review the selected TV address and SSH port, Local Network access and VPN isolation.'
 DEVELOPER = 'Leave Developer Mode open with Key Server on. Use the current TV passphrase exactly; do not turn Developer Mode off or delete the saved profile.'
@@ -22,6 +23,11 @@ GUIDES = {
         'Keep the TV awake and review its CYTV pairing request with the remote. Do not reset pairing or reinstall packages to solve a connection check.', True),
     'root-requirements': ('Root prerequisites are not ready', 'SSH access alone does not establish the required TV runtime or Home interfaces.', REPORT, False),
     'root-home-interfaces': ('Required Root Home interfaces are not verified', 'Root setup requires readable Home settings and Home profiles. The check could not establish that contract.', REPORT, False),
+    'recovery-status-rejected': ('TV refused the package status check',
+        'Recovery cannot verify the earlier package operation on this TV.', REPORT, False),
+    'removal-not-submitted': ('Removal stopped before package deletion',
+        'No package removal request was submitted.',
+        'Choose Review recovery options for the same saved TV connection. Removal requires a separate confirmation; setup starts separately.', False),
     'pending-operation': ('An earlier operation is unresolved', 'This failure does not prove that the earlier package operation finished.',
         'Save the report and keep the original saved connection and recovery data. Use only verified recovery; do not blindly retry setup, Restore or removal.', False),
 }
@@ -35,7 +41,12 @@ def for_error(error, phase, profile=None, pending=None):
     names = {cls.__name__ for cls in type(error).__mro__}
     reason = getattr(error, 'reason_code', None)
     code = None
-    if pending:
+    if (pending and edition == 'no-root' and phase in ('recover', 'uninstall')
+            and isinstance(error, TVRejected) and error.luna.get('operation') == 'package-status'):
+        code = 'recovery-status-rejected'
+    elif pending and phase == 'uninstall' and unsubmitted_removal(profile, pending):
+        code = 'removal-not-submitted'
+    elif pending:
         code = 'pending-operation'
     elif reason in ('root-home-interfaces','root-requirements') and edition=='root':
         code = reason

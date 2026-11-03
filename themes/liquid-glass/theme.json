@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "themeApiVersion": 1,
+  "id": "builtin:liquid-glass",
+  "title": "Liquid Glass",
+  "description": "Clear frosted glass over an original aurora wallpaper, on the Classic dock with the Inputs shelf.",
+  "author": {
+    "name": "Clean Your TV contributors",
+    "url": "https://github.com/razdva122"
+  },
+  "themeVersion": "1.0.0",
+  "layout": {
+    "preset": "dock-grid",
+    "columns": 5,
+    "spacingScale": 1,
+    "textScale": 1,
+    "focusScale": 1.1,
+    "allowColumnOverride": true,
+    "motion": "classic",
+    "inputs": "shelf"
+  },
+  "defaults": {
+    "wallpaperAssetId": "wallpaper",
+    "dim": 0,
+    "accent": "#eef3ff"
+  },
+  "assets": [
+    {
+      "id": "wallpaper",
+      "path": "assets/aurora.jpg",
+      "mediaType": "image/jpeg",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "id": "preview",
+      "path": "assets/preview.jpg",
+      "mediaType": "image/jpeg",
+      "width": 960,
+      "height": 540
+    }
+  ],
+  "previewAssetId": "preview",
+  "license": {
+    "identifier": "MIT",
+    "textPath": "LICENSE.txt",
+    "creditsPath": "CREDITS.txt"
+  }
+}

@@ -79,6 +79,36 @@ class BridgeTests(unittest.TestCase):
         self.assertNotEqual(event['title'],guide['title'])
         self.assertNotIn('PRIVATE',json.dumps(native.events))
 
+    def test_recovery_failure_advice_keeps_private_data_out_and_offers_only_inspection(self):
+        from cytv import cli, state, i18n
+        from cytv.errors import TVRejected, UserError
+        import tempfile
+        self.addCleanup(i18n.set_language, 'en'); i18n.set_language('es')
+        module = self.module()
+        class Native:
+            def __init__(self): self.events = []
+            def emit(self, raw): self.events.append(json.loads(raw))
+        with tempfile.TemporaryDirectory() as tmp:
+            profile = state.target('192.0.2.10', 'no-root', 9923)
+            store = state.Store(tmp); store.begin(profile, 'uninstall')
+            native = Native(); console = module.AndroidConsole(module.Callbacks(native))
+            cli.explain_failure(console, store, profile, 'uninstall', UserError('PRIVATE'))
+            guide = next(e for e in native.events if e['kind'] == 'failure-help')
+            self.assertEqual(guide['code'], 'removal-not-submitted')
+            self.assertEqual(native.events[-1]['state'], 'review')
+            self.assertNotIn('PRIVATE', json.dumps(native.events))
+            self.assertNotIn('192.0.2.10', json.dumps(native.events))
+            # Uncertain operations must expose the blocker, never another review action.
+            store.checkpoint(profile, stage='removing')
+            native.events.clear()
+            error = TVRejected('PRIVATE', {'returnValue': False, 'errorCode': -1}, 'com.webos.appInstallService/status')
+            cli.explain_failure(console, store, profile, 'recover', error)
+            guide = next(e for e in native.events if e['kind'] == 'failure-help')
+            self.assertEqual(guide['code'], 'recovery-status-rejected')
+            self.assertFalse(guide['canEditConnection'])
+            self.assertFalse(any(e['kind'] == 'recovery-plan' for e in native.events))
+            self.assertNotIn('PRIVATE', json.dumps(native.events))
+
     def test_cli_errors_reach_android_as_error_events(self):
         module = self.module()
         class Native:

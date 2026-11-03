@@ -4,9 +4,13 @@ Theme support is included in Home 1.6.0 / release 1.5.0. The separate Themes cat
 
 Authors: [suggest your theme](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/new?template=theme-submission.yml) with a public link and license information. Maintainers handle catalogue integration and review. The [author walkthrough](development/CONTRIBUTING-THEMES.md) is optional for building and packaging it yourself.
 
-## Included with Home
+<a id="included-with-the-unpublished-candidate"></a>
 
-**Classic**, **Alpine** and **Ribbon** are built into both No-root and Root editions. They work without downloading a theme. Classic remains the initial default. Alpine has a mountain panorama, a large clock and one looping horizontal app ribbon. Its fixed eight-slot composition hides the Columns setting while active. Your saved column preference returns when you switch to an adjustable theme.
+## Included with 1.7.0
+
+Version 1.7.0 includes **Classic**, **Liquid Glass** and **Ribbon** in both editions, available offline. Classic remains the initial default and uses the header Inputs menu. Liquid Glass uses an input shelf; placement belongs to the selected theme, with no global placement switch. Live previews default on; an explicitly saved Off remains off. Disable **Settings → Appearance → Preview inputs on focus** to turn them off. They apply only to connected HDMI tiles in a shelf theme. HDMI previews may play sound or switch HDR on some TVs; silence is not guaranteed. Home does not automatically change global TV mute or HDR settings.
+
+Version 1.6.0 instead includes Classic, Alpine and Ribbon. In 1.7.0, **Alpine 1.4.4** is available through Theme showcase. A saved `builtin:alpine` selection falls back to Classic with the visible recovery notice; it does not trigger a download or silently select Liquid Glass. Downloaded Alpine retains its mountain panorama, clock and fixed ribbon layout; its fixed layout hides Columns and preserves your adjustable-theme choice.
 
 1.5.4: when a fixed-layout theme hides Columns, its empty row keeps the same space so applying the theme does not shorten Appearance’s scroll range. The hidden control is skipped by pointer, keyboard and accessibility navigation. This correction has browser regression coverage; physical-TV acceptance is pending.
 
@@ -15,14 +19,14 @@ Authors: [suggest your theme](https://github.com/Razdva122/clean-your-tv-lg-webo
 ## Change to an included theme
 
 1. Open Home, select **Settings → Themes**. The Themes pane itself contains preview cards for built-in and all downloaded themes, alongside the settings categories. Personal themes use their saved package preview, including offline and without a showcase listing. The separate Theme showcase button opens the published catalogue.
-2. Choose **Classic**, **Alpine** or **Ribbon** in the installed list. The choice applies and saves immediately, without a confirmation timer. Downloaded themes in this list work the same way.
+2. In 1.7.0, choose **Classic**, **Liquid Glass** or **Ribbon** in the installed list. The choice applies and saves immediately, without a confirmation timer. Downloaded themes in this list work the same way.
 3. Return with **Back**, then **Back to Home**.
 
 The accepted choice is restored on the next launch. Only **Try theme** inside **Theme showcase** starts a 20-second trial, after downloading a new theme. If Home closes during an unconfirmed showcase trial, the next launch starts Classic. Changing appearance does not replace your app order, hidden apps, inputs or Home-button routing. Settings, confirmations and recovery keep their standard appearance.
 
 ## Browse themes on TV
 
-Open **Settings → Themes → Theme showcase**. Choose a miniature preview to see the theme's details. Only themes not installed on this TV appear here. Classic, Alpine and installed personal themes are hidden by identity, including when the catalogue has a newer version. Channel offers **Download theme**, then **Try theme**. After removal it returns to Showcase. Choose **Remove** on a downloaded theme and confirm. Removing the active theme restores Classic before deleting its files. Built-in themes cannot be removed. Use **Add by ID** or **Receive from computer** to update a hidden installed theme. Confirm **Keep theme** within 20 seconds. Downloading alone never changes Home.
+Open **Settings → Themes → Theme showcase**. Choose a miniature preview to see the theme's details. Only themes not installed on this TV appear here. The 1.7.0 built-ins Classic, Liquid Glass and Ribbon, and installed personal themes are hidden by identity, including when the catalogue has a newer version. Channel offers **Download theme**, then **Try theme**. After removal it returns to Showcase. Choose **Remove** on a downloaded theme and confirm. Removing the active theme restores Classic before deleting its files. Built-in themes cannot be removed. Use **Add by ID** or **Receive from computer** to update a hidden installed theme. Confirm **Keep theme** within 20 seconds. Downloading alone never changes Home.
 
 Opening Theme showcase or choosing Refresh checks the main project repository for reviewed catalogue updates without updating Home or reloading the page. After a normal merge, new entries become available; an unmerged candidate may still show the bundled fallback. Offline or failed requests use bundled previews and entries. Online catalogue data and previews come from one exact project commit resolved through GitHub; downloading an external theme needs Internet access. A downloaded exact version is reused instead of fetched again. Theme files come from the recorded, commit-pinned source repository. Refreshing never installs a theme or changes the current selection. The scoped device check is recorded in [theme push acceptance](history/2026-10-29-theme-push-acceptance.md); complete release-package acceptance remains separate.
 
@@ -108,15 +112,17 @@ python3 scripts/preview.py --build build/theme-site
 python3 -m http.server 8878 --bind 127.0.0.1 --directory build/theme-site
 ```
 
-Open **http://127.0.0.1:8878/** to exercise Home/Settings and switch themes with the cards above the simulated TV. Browser storage is separate from your TV. Developer details: [TV theme lifecycle](development/TV-THEMES.md), [CSS API](development/THEME-CSS.md), [candidate status](development/THEMES.md).
+Open **http://127.0.0.1:8878/** to exercise Home/Settings and switch themes with the cards above the simulated TV. Browser storage is separate from your TV. Developer details: [TV theme lifecycle](development/TV-THEMES.md), [CSS API](development/THEME-CSS.md), [development status](development/THEMES.md).
 
 
-## Parameterized ribbons (unreleased)
+<a id="parameterized-ribbons-unreleased"></a>
 
-**Ribbon is bundled by this unreleased candidate** in both editions, alongside Classic and Alpine. Update Home, then select Ribbon in Settings → Appearance; no theme download or network connection is needed. Classic remains the default. Bundled Ribbon cannot be removed or replaced through downloaded-theme controls.
+## Parameterized ribbons
+
+**Ribbon is bundled in 1.7.0** in both editions, alongside Classic and Liquid Glass. Update Home, then select Ribbon in **Settings → Themes**; no theme download or network connection is needed. Classic remains the default. Bundled Ribbon cannot be removed or replaced through downloaded-theme controls.
 
 Themes can optionally configure the existing scenic ribbon's card sizes, spacing, skew, focused-card lift, captions and clock visibility. The theme chooses whether compact Inputs, Wi-Fi and Settings shortcuts appear at bottom left. With shortcut edge navigation, Left from the first visible application selects Settings, then Wi-Fi and Inputs; Right from Settings returns to that same visible edge. Themes without these options retain their previous appearance and controls.
 
 These themes require the `ribbon-layout-v1` capability in Home. On a theme-enabled Home without this capability, both Add by ID and Receive from computer reject the new descriptor before saving/applying it: your current theme and saved selection stay unchanged. Exact error text depends on the installed version and may report an unsupported capability/API. Update Home and retry. A theme package does not upgrade Home. If you downgrade Home after already selecting an unsupported theme, startup recovery can restore Classic; that differs from a rejected new installation.
 
-This support is under review. Browser checks do not establish physical-TV compatibility or public availability. See the [author contract](development/THEME-CSS.md#parameterized-scenic-ribbons-unreleased).
+This support is included in 1.7.0. Browser checks do not establish physical-TV compatibility; see the [release acceptance and limits](RELEASE-1.7.0.md). See the [author contract](development/THEME-CSS.md#parameterized-scenic-ribbons-unreleased).

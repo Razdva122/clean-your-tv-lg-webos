@@ -1,5 +1,19 @@
 # Release history and device evidence
 
+- [2026-11-03 — Helper 0.6.22 rollback compatibility](2026-11-03-helper-0.6.22-compatibility.md)
+
+- [1.7.0 final packages and acceptance, 2026-11-03](2026-11-03-release-1.7.0-final-packages.md): selected0.8.4/Helper0.6.22 complete build, signatures and Android checks; Root device acceptance pending; superseded0.8.3 evidence retained.
+
+- [1.7.0 input refinement and C3 QA, 2026-11-03](2026-11-03-release-1.7.0-input-refinement.md): superseded0.8.2 observations, two-source scope, preview default and permission-data correction; final new-package acceptance pending.
+
+- [v1.7.0 candidate re-freeze, 2026-11-03](2026-11-03-release-1.7.0-refreeze.md): explicit #260 inclusion, Root Settings status correction, Root 0.8.1 and new-build requirement; host/source evidence only.
+
+- [v1.7.0 candidate build and signed Root artifacts, 2026-11-03](2026-11-03-release-1.7.0-candidate-build.md): selected full build, exact archive/component hashes and remaining physical acceptance; no TV operation.
+
+- [Inputs presentation and C3 browser probe, 2026-11-02](2026-11-02-input-preview-polish.md): exclusive menu/shelf, first-frame text/icon sync, source fingerprints and narrowly scoped native HDMI rounding observation; not full Home acceptance.
+
+- [Theme-owned Inputs and Alpine migration, 2026-11-02](2026-11-02-theme-input-placement.md): menu/shelf theme option, Liquid Glass built-in and exact Alpine 1.4.4 Showcase migration; source/browser checks only, held for maintainer review.
+
 - [v1.6.0 final candidate artifacts and exact carry](2026-11-02-release-1.6.0-final-artifacts.md)
 
 [Current user documentation](../README.md) · [Developer references](../development/README.md)
@@ -9,6 +23,8 @@ original versions, dates, failed attempts and test limits. A recorded success on
 one model or artifact does not certify later releases or a different TV.
 
 ## Scoped feature checks
+
+- [Root standby power stages, 2026-11-03](2026-11-03-root-standby-power-stages.md): two owner-observed failures, matching firmware sequence and source correction; signed-device acceptance pending.
 
 - [Release1.6.0 freeze/build, 2026-11-02](2026-11-02-release-1.6.0-freeze.md): selected versions, frozen scope, cross-platform build identities and remaining acceptance gates.
 
@@ -30,6 +46,7 @@ one model or artifact does not certify later releases or a different TV.
 
 - [Parallel Root integration review, 2026-11-01](2026-11-01-parallel-root-integration-review.md): independent #221/#222 review, combined Qt/browser/host checks and outstanding signed-package/device gates.
 
+- [Forward Home cancellation investigation, 2026-11-02](2026-11-02-root-forward-home-cancellation.md): original System/Root call chain, recovered evidence limit and indistinguishable old boot/Off receipts; #202 remains unresolved.
 - [Root Settings and update intent, 2026-11-01](2026-11-01-root-home-settings-intent.md): host regressions for #206 and partial #202 retained rollback; old forward-callback cancellation and physical acceptance remain unresolved.
 - [Retro API 1 integration, 2026-11-01](2026-11-01-retro-integration.md): pinned package/browser review for #215; original font/effect/date scope and physical-TV acceptance remain separate.
 

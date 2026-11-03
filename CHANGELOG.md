@@ -1,5 +1,30 @@
 # Changelog
 
+## Unreleased
+
+- Let the selected theme choose the header Inputs menu or an HDMI shelf through
+  paired `layout.inputs` / `input-placement-v1`. Omission keeps the menu; the shelf
+  currently requires `dock-grid`. Remove the global Show inputs on Home switch.
+  Liquid Glass selects the shelf; Classic and existing themes keep the menu.
+  A nonempty shelf replaces the header Inputs shortcut. Device names depend on
+  firmware EIM metadata, with Connected as the fallback status.
+- Enable HDMI previews by default for shelf themes while preserving an explicit
+  saved Off. Settings → Appearance → Preview inputs on focus can disable them.
+  Previews may play sound or switch HDR on some TVs; Home does not automatically
+  change global TV mute or HDR settings. Final package acceptance is pending;
+  silence and HDR suppression are not guaranteed.
+- Replace late Root boot/wake launches with native first-screen choices for
+  LG Channels/Live TV (on) and YouTube (off). Home Off visibly disables these
+  controls and retains their values. No HDMI startup control is included.
+- Restore Root input connection labels using a bounded authenticated read through
+  the existing service endpoint, without new permissions or polling. No-root
+  retains direct EIM where allowed and falls back after a definitive permission
+  refusal to a fixed paired Helper read through Home's own service. Metadata
+  uses an independent exchange so Home controls remain available.
+- Bundle Liquid Glass in place of Alpine. Alpine 1.4.4 is downloadable from Theme
+  showcase. A saved `builtin:alpine` selection falls back to Classic with the
+  existing recovery notice, without automatic download or substitution.
+
 ## v1.6.0
 
 - Complete the five-stage installer diagnostics/recovery/outcome/admission/guidance work.
@@ -13,6 +38,53 @@
   preserve managed paths and LS2 grants, validate candidate infrastructure before
   offering installation, and authenticate current runtime separately from its
   original bootstrap. Hardware update/rollback acceptance is still pending.
+- Add theme-selected Inputs tiles with live TV connection status and captured
+  inventory fallback. Shelf navigation is Up from the dock, Up again to the header,
+  Down/Back to the dock and OK to launch. Geometry and launch remain engine-owned.
+- After explicit opt-in, a connected HDMI shelf tile can preview after 800 ms of
+  focus. Settings → Appearance → Preview inputs on focus applies only with a shelf
+  theme and defaults off; requesting mute does not guarantee silent native audio.
+  Moving away, launching, dialogs, blur and hiding Home release the media; status
+  updates preserve an eligible running preview. Startup failures fall back to a
+  static tile with a per-source cooldown. Physical compatibility remains limited
+  to the previously recorded single-TV observations.
+- Smoother focus motion: app cards keep their 1.1× enlargement but grow and shrink
+  on one shared 240 ms ease-out without overshoot. Remote focus stays immediate
+  (no scroll retargeting): the glass lands on the new card at card size and grows
+  with it instead of springing behind it; pointer focus glides on the same curve.
+  Row scroll, header, shortcuts and input tiles use the same curve, and reduced
+  motion also covers the title, shortcuts and Inputs shelf.
+- OK briefly dips the focused tile or input tile (holding OK still edits); the app
+  title crossfades in step with focus; returning to Home after switching to an
+  input focuses that input's shelf tile until focus moves elsewhere; 12-hour
+  languages show the clock without a leading zero ("6:13 PM").
+- In Classic without a theme, rows glide over 300 ms on a single Up/Down press and
+  stay instant while an arrow is held (a key repeat, or the same arrow again within
+  150 ms, also cuts a running glide short), so held arrows never chase
+  an unfinished scroll; `startup-motion-ui` skips its exact stage/item position
+  check only during such a glide or an edge bump. Classic fades the top and bottom
+  screen edges while rows lie beyond them, and a fresh press that cannot move
+  (grid ends) gives a short 10 px bump. Reduced motion disables
+  both.
+- Lighter rendering on 4K TVs (Home draws at 3840x2160 there): the ambient glow
+  changes colour once the focus has rested for 800 ms, and Classic then bakes it into
+  a plain background element instead of keeping two full-screen layers (themes keep
+  the layers); every Classic tile, input tile and the grid stage is its own
+  compositor layer, so the focus zoom no longer repaints the grid; Inputs tiles grow
+  by snapping to their final size and animating a transform (one layout per press
+  instead of one per frame); and edge bumps move by transform. In on-device A/B runs
+  on an LG G1 (webOS 6), missed frames per press dropped from about 16 to about 7.5.
+- Themes can opt into Classic motion with `layout.motion: "classic"` on `dock-grid`
+  (new capability `classic-motion-v1`, emitted by the compiler; older Home rejects it):
+  the row glide, edge bump, card zoom, focus-frame motion, softer edge fades and the
+  baked glow. An opted-in theme's ambient rule styles the baked base only while baked,
+  and a `transition` on the card, focus frame, label, shortcuts or input tiles is
+  rejected so the engine's motion stays in step. Themes without the opt-in are
+  unchanged: immediate remote focus, no fades, two glow layers.
+- Add Liquid Glass, a packaged theme in Settings → Themes: clear frosted glass over
+  an original procedural aurora wallpaper on `dock-grid`, opting into the Inputs
+  shelf and Classic motion. Theme API 1 has no blur, so the glass is
+  translucent gradients, bright rims and soft shadows; no Apple assets are included.
 
 
 ## v1.4.0

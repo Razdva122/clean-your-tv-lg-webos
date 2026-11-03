@@ -717,6 +717,13 @@ def audio_entry(args):
 if __name__ == '__main__':
     if len(sys.argv) > 1 and sys.argv[1] == 'audio':
         print(json.dumps(audio_entry(sys.argv[2:])), flush=True)
+    elif len(sys.argv) > 1 and sys.argv[1] == 'startup':
+        try:
+            from intent_runtime import startup_entry as entry
+            print(json.dumps({'returnValue':True,'result':entry(sys.argv[2:])}),flush=True)
+        except Exception:
+            print(json.dumps({'returnValue':False,'error':'Startup choices unavailable'}),flush=True)
+            sys.exit(1)
     else:
         try:
             result = main(sys.argv[1] if len(sys.argv) in (2,3) else '', sys.argv[2] if len(sys.argv) == 3 else None)

@@ -1,55 +1,84 @@
 # Root native startup input
 
-Status: 1.5.4 behavior; device acceptance is limited to the recorded scope.
-Track implementation and affected acceptance in [#204](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/204).
+Published baseline: v1.6.0 includes the earlier owned EIM entry. The source-choice
+policy below is **candidate-only / unpublished** and has no final package-bound
+TV acceptance. Track the remaining report in [#171](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/171).
+Historical #204 acceptance remains limited to its original bytes and scenarios.
 
 ## Behavior
 
-After explicit **Change Home** activation has passed the existing input-health,
-independent guardian and routing checks, Root optionally registers its existing
-app as a native External Input Manager (EIM) input. It remembers that input through
-EIM's `setLastInput` API. Fresh registration requires the native
-`general.homeAutoLaunch` preference to be exactly `on`; off, unknown or unreadable
-settings preserve the ordinary guarded fallback. On the tested C3, bootd can choose this remembered MVPD
-app for Cover App before the later guarded Home handler runs. The entry uses the
-existing `supportGIP` and large icon; no firmware patch, new endpoint or LS2 grant
-is introduced.
+After healthy explicit **Change Home** activation, Root registers its existing
+app as an owned native External Input Manager (EIM) input. Firmware can select
+that remembered MVPD input before its visible application screen. Existing
+`supportGIP`, icon, authenticated runtime destination and native APIs are reused;
+no firmware patch or new LS2 endpoint/grant is introduced.
 
-Native presentation does not grant input control. Restore-first, failsafe, package
-integrity, fresh input/guardian requirements and explicit Off remain authoritative.
-A missing or unsupported EIM API leaves ordinary guarded Home available, provided
-any native operation already issued has been safely reversed. An existing unowned
-Root input is not adopted, overwritten or deleted. This is not a universal promise
-that Clean will be the first screen on every firmware.
+Root Settings adds three startup-source switches: **LG Channels / Live TV** on by
+default, **YouTube** off, **HDMI** off. They choose which prior sources should
+prepare Clean as the first app on the next power-on. Clean itself remains the
+selected Home. Sources outside the selected policy keep normal native behavior.
+When Change Home is off, all three switches remain visible and muted, genuinely
+disabled with an explanation, and skipped by remote focus. Their saved values
+remain available after explicit re-enable. Unconfirmed/busy/failed status also
+prevents stale source writes without disabling otherwise healthy Home controls.
 
-A private root-owned `native-input.json` receipt records the fixed app identity,
-previous remembered input and `adding`, `active`, `removing` or `disabled` phase.
-It contains local device state and must not be included in public diagnostics.
-The adapter lives in the existing authenticated `runtime/device_adapter.py`
-destination, preserving the installed System supervisor's infrastructure contract.
+`startup-policy.json` is root-owned mode0600: schema version1 and exact boolean
+`sources` keys `tv`, `youtube`, `hdmi`. It is separate from the legacy launcher and
+original installed System supervisor profile schema. Normal in-place operations
+retain this per-TV preference file; portable launcher-profile export does not
+include it. Corrupt/indirect records are retained and rejected.
+
+A guardian-owned event observer consumes foreground and native remembered-input
+settings. It uses one coalescing worker, not a timer or reconnect loop. Each
+operation rereads current foreground/input and requires unchanged active intent,
+session and binding, fresh input and independent guardian, owned native receipt
+and registration, and `general.homeAutoLaunch=on`. Source/native pair mismatch
+or observed supersession cancels selection. LG Channels retains exact metadata
+checks; unknown/invisible platform transitions cannot authorize selection.
+
+Proactive selection also requires the volatile health-directory `.startup` record
+published only after both native subscriptions acknowledge. It binds transaction,
+startup session, PID and process-start ticks to the actual guardian. A missing,
+closed or replaced observer cannot grant selection; post-ready reconciliation
+withdraws our existing preference instead. Close removes eligibility before
+cleanup and may wait up to two seconds for the existing operation lock, then
+performs one fresh withdrawal. It does not replay an uncertain native RPC.
+
+Native preference is prepared while an eligible app is selected. A later
+protected app withdraws only our exact Root selection to its displaced input;
+a different native input is preserved. HDMI and YouTube are opt-in. A global
+native Home-startup Off can withdraw our selection even under a blank/platform
+cover frame. The existing operation lock and 1.5-second optional RPC budget apply.
+
+The candidate has **no late boot/wake application launch fallback**. Boot recovery
+only restores/rearms control. Neither observer nor power-edge handling calls
+applicationManager `launch`. Unsupported/unknown native selection leaves ordinary
+manual Home routing; it does not schedule a later redirect. First-screen behavior
+still requires exact-package physical acceptance on each supported firmware.
 
 ## Off, emergency and recovery
 
-Turning **Change Home** off, triple-Home emergency release, an unclassified input
-fault, failed startup or failsafe recovery first restores ordinary Home routing.
-Cleanup then restores the saved remembered input only if it still points to Clean,
-and removes only the entry owned by the receipt. A different input chosen meanwhile
-is preserved. Cleanup never launches Live TV or another foreground application.
-Turning the TV off is distinct: a positively classified normal shutdown retains
-Home intent and its native input for the next boot.
+Turning Change Home off, triple-Home, input fault, failed startup or failsafe
+restores Home routes first, then restores a displaced remembered input only while
+it remains our Root selection and removes only the receipt-owned entry. Cleanup
+never launches another foreground app. A positively classified normal shutdown
+retains confirmed Home intent/native ownership for the next boot; it never grants
+authority from an unclassified input error.
 
-A timed-out operation remains pending. Readbacks, rather than acknowledgements or
-blind replays, establish removal and a safe remembered input. An unavailable EIM
-cannot prevent the initial emergency route restoration; cleanup errors retain the
-receipt for recovery. Each optional native operation has a 1.5-second RPC budget,
-including transport teardown, so it cannot monopolize the Home operation lock.
+`native-input.json` retains the fixed Root identity, displaced native pair and
+`adding`, `active`, `selecting`, `removing` or `disabled` phase. `selecting` requires
+fixed pending direction `select` or `restore`; no other phase accepts that field.
+The inverse is durable before retargeting. A lost response leaves that pending
+receipt; matching target readback reconciles it without resubmission. Current
+policy/withdrawal is then applied, so disabled sources and disconnect cannot
+strand a newly confirmed Root selection. Unknown readback remains pending;
+explicit recovery/Off retains the existing owned inverse. Fresh source events do
+not authorize blind replay of uncertain effects.
 
-System update suspension removes the owned native entry before replacement;
-normal verified Home resumption can register it again. Retained rollback and
-uninstall use that same supported restoration path before replacing/removing the
-runtime. Do not clear receipts, intent, failsafe or updater journals to force a
-successful result. After interrupted recovery, inspect status and finish the
-original operation before starting another install.
+System update, rollback and uninstall use the same route-first cleanup before
+replacing runtime code. Pending direction is removed before existing cleanup
+phases, preserving the older receipt form for rollback. Do not clear ownership,
+intent, failsafe or transaction records to force a passing result.
 
 ## Evidence and remaining acceptance
 

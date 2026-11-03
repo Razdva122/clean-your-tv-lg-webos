@@ -2482,3 +2482,183 @@ if (window.HomeI18n) window.HomeI18n.add({
     "Invalid Add app visibility": "Neplatná viditelnost dlaždice Přidat aplikaci"
   }
 });
+
+// Root Settings switches for the shared Classic Inputs shelf and its live preview.
+if (window.HomeI18n) window.HomeI18n.add({
+  "en": {"Show inputs on Home": "Show inputs on Home", "Preview inputs on focus": "Preview inputs on focus"},
+  "cs": {"Show inputs on Home": "Zobrazit vstupy na Home", "Preview inputs on focus": "Náhled vybraného vstupu"},
+  "de": {"Show inputs on Home": "Eingänge auf Home anzeigen", "Preview inputs on focus": "Vorschau des ausgewählten Eingangs"},
+  "es": {"Show inputs on Home": "Mostrar entradas en Home", "Preview inputs on focus": "Vista previa de la entrada seleccionada"},
+  "pt-BR": {"Show inputs on Home": "Mostrar entradas no Home", "Preview inputs on focus": "Pré-visualizar a entrada selecionada"},
+  "fr": {"Show inputs on Home": "Afficher les entrées sur Home", "Preview inputs on focus": "Aperçu de l’entrée sélectionnée"},
+  "it": {"Show inputs on Home": "Mostra ingressi su Home", "Preview inputs on focus": "Anteprima dell’ingresso selezionato"},
+  "ko": {"Show inputs on Home": "Home에 입력 표시", "Preview inputs on focus": "선택한 입력 미리보기"},
+  "hi": {"Show inputs on Home": "Home पर इनपुट दिखाएँ", "Preview inputs on focus": "चुने गए इनपुट का पूर्वावलोकन"},
+  "pl": {"Show inputs on Home": "Pokaż wejścia na Home", "Preview inputs on focus": "Podgląd wybranego wejścia"},
+  "ru": {"Show inputs on Home": "Показывать входы на Home", "Preview inputs on focus": "Предпросмотр выбранного входа"},
+  "zh-Hans": {"Show inputs on Home": "在 Home 上显示输入源", "Preview inputs on focus": "预览所选输入源"},
+  "zh-Hant": {"Show inputs on Home": "在 Home 顯示輸入來源", "Preview inputs on focus": "預覽所選輸入來源"}
+});
+
+// Native startup-source preferences use the existing Root Settings controls.
+if (window.HomeI18n) window.HomeI18n.add({
+  "en": {
+    "Open Clean Your TV first": "Open Clean Your TV first",
+    "LG Channels / Live TV": "LG Channels / Live TV",
+    "YouTube": "YouTube",
+    "HDMI": "HDMI",
+    "Available when Change Home is on.": "Available when Change Home is on.",
+    "Checking startup sources…": "Checking startup sources…",
+    "Choose which previous sources open Clean Your TV first.": "Choose which previous sources open Clean Your TV first."
+  },
+  "cs": {
+    "Open Clean Your TV first": "Otevřít Clean Your TV jako první",
+    "LG Channels / Live TV": "LG Channels / Živé TV",
+    "YouTube": "YouTube",
+    "HDMI": "HDMI",
+    "Available when Change Home is on.": "Dostupné, když je zapnutá změna Home.",
+    "Checking startup sources…": "Kontrola zdrojů při spuštění…",
+    "Choose which previous sources open Clean Your TV first.": "Vyberte předchozí zdroje, po kterých se jako první otevře Clean Your TV."
+  },
+  "de": {
+    "Open Clean Your TV first": "Clean Your TV zuerst öffnen",
+    "LG Channels / Live TV": "LG Channels / Live-TV",
+    "YouTube": "YouTube",
+    "HDMI": "HDMI",
+    "Available when Change Home is on.": "Verfügbar, wenn „Home ändern“ aktiviert ist.",
+    "Checking startup sources…": "Startquellen werden geprüft…",
+    "Choose which previous sources open Clean Your TV first.": "Wählen Sie, nach welchen Quellen Clean Your TV zuerst geöffnet wird."
+  },
+  "es": {
+    "Open Clean Your TV first": "Abrir Clean Your TV primero",
+    "LG Channels / Live TV": "LG Channels / TV en directo",
+    "YouTube": "YouTube",
+    "HDMI": "HDMI",
+    "Available when Change Home is on.": "Disponible cuando Cambiar Home está activado.",
+    "Checking startup sources…": "Comprobando fuentes de inicio…",
+    "Choose which previous sources open Clean Your TV first.": "Elige tras qué fuentes se abre primero Clean Your TV."
+  },
+  "pt-BR": {
+    "Open Clean Your TV first": "Abrir Clean Your TV primeiro",
+    "LG Channels / Live TV": "LG Channels / TV ao vivo",
+    "YouTube": "YouTube",
+    "HDMI": "HDMI",
+    "Available when Change Home is on.": "Disponível quando Alterar Home está ativado.",
+    "Checking startup sources…": "Verificando fontes de inicialização…",
+    "Choose which previous sources open Clean Your TV first.": "Escolha após quais fontes abrir Clean Your TV primeiro."
+  },
+  "fr": {
+    "Open Clean Your TV first": "Ouvrir Clean Your TV en premier",
+    "LG Channels / Live TV": "LG Channels / TV en direct",
+    "YouTube": "YouTube",
+    "HDMI": "HDMI",
+    "Available when Change Home is on.": "Disponible lorsque Modifier Home est activé.",
+    "Checking startup sources…": "Vérification des sources au démarrage…",
+    "Choose which previous sources open Clean Your TV first.": "Choisissez après quelles sources ouvrir Clean Your TV en premier."
+  },
+  "it": {
+    "Open Clean Your TV first": "Apri prima Clean Your TV",
+    "LG Channels / Live TV": "LG Channels / TV in diretta",
+    "YouTube": "YouTube",
+    "HDMI": "HDMI",
+    "Available when Change Home is on.": "Disponibile quando Cambia Home è attivo.",
+    "Checking startup sources…": "Verifica delle sorgenti di avvio…",
+    "Choose which previous sources open Clean Your TV first.": "Scegli dopo quali sorgenti aprire prima Clean Your TV."
+  },
+  "ko": {
+    "Open Clean Your TV first": "Clean Your TV 먼저 열기",
+    "LG Channels / Live TV": "LG Channels / 실시간 TV",
+    "YouTube": "YouTube",
+    "HDMI": "HDMI",
+    "Available when Change Home is on.": "Home 변경이 켜져 있을 때 사용할 수 있습니다.",
+    "Checking startup sources…": "시작 소스 확인 중…",
+    "Choose which previous sources open Clean Your TV first.": "어떤 이전 소스에서 Clean Your TV를 먼저 열지 선택하세요."
+  },
+  "hi": {
+    "Open Clean Your TV first": "पहले Clean Your TV खोलें",
+    "LG Channels / Live TV": "LG Channels / लाइव TV",
+    "YouTube": "YouTube",
+    "HDMI": "HDMI",
+    "Available when Change Home is on.": "Home बदलें चालू होने पर उपलब्ध है।",
+    "Checking startup sources…": "शुरुआती स्रोत जाँचे जा रहे हैं…",
+    "Choose which previous sources open Clean Your TV first.": "चुनें कि किन पिछले स्रोतों के बाद पहले Clean Your TV खुले।"
+  },
+  "pl": {
+    "Open Clean Your TV first": "Otwórz Clean Your TV jako pierwsze",
+    "LG Channels / Live TV": "LG Channels / Telewizja na żywo",
+    "YouTube": "YouTube",
+    "HDMI": "HDMI",
+    "Available when Change Home is on.": "Dostępne, gdy opcja Zmień Home jest włączona.",
+    "Checking startup sources…": "Sprawdzanie źródeł przy uruchamianiu…",
+    "Choose which previous sources open Clean Your TV first.": "Wybierz, po których źródłach najpierw otworzyć Clean Your TV."
+  },
+  "ru": {
+    "Open Clean Your TV first": "Сначала открывать Clean Your TV",
+    "LG Channels / Live TV": "LG Channels / Эфирное ТВ",
+    "YouTube": "YouTube",
+    "HDMI": "HDMI",
+    "Available when Change Home is on.": "Доступно, когда включена смена Home.",
+    "Checking startup sources…": "Проверка источников запуска…",
+    "Choose which previous sources open Clean Your TV first.": "Выберите, после каких источников сначала открывать Clean Your TV."
+  },
+  "zh-Hans": {
+    "Open Clean Your TV first": "优先打开 Clean Your TV",
+    "LG Channels / Live TV": "LG Channels / 直播电视",
+    "YouTube": "YouTube",
+    "HDMI": "HDMI",
+    "Available when Change Home is on.": "开启“更改 Home”后可用。",
+    "Checking startup sources…": "正在检查启动来源…",
+    "Choose which previous sources open Clean Your TV first.": "选择在哪些来源之后优先打开 Clean Your TV。"
+  },
+  "zh-Hant": {
+    "Open Clean Your TV first": "優先開啟 Clean Your TV",
+    "LG Channels / Live TV": "LG Channels / 直播電視",
+    "YouTube": "YouTube",
+    "HDMI": "HDMI",
+    "Available when Change Home is on.": "開啟「變更 Home」後可用。",
+    "Checking startup sources…": "正在檢查啟動來源…",
+    "Choose which previous sources open Clean Your TV first.": "選擇在哪些來源之後優先開啟 Clean Your TV。"
+  }
+});
+
+if (window.HomeI18n) window.HomeI18n.add({
+  "en": {
+    "Startup sources unavailable. Reopen Settings to check again.": "Startup sources unavailable. Reopen Settings to check again."
+  },
+  "cs": {
+    "Startup sources unavailable. Reopen Settings to check again.": "Zdroje při spuštění nejsou dostupné. Pro novou kontrolu znovu otevřete Nastavení."
+  },
+  "de": {
+    "Startup sources unavailable. Reopen Settings to check again.": "Startquellen nicht verfügbar. Öffnen Sie die Einstellungen erneut, um sie zu prüfen."
+  },
+  "es": {
+    "Startup sources unavailable. Reopen Settings to check again.": "Fuentes de inicio no disponibles. Vuelve a abrir Ajustes para comprobarlas."
+  },
+  "pt-BR": {
+    "Startup sources unavailable. Reopen Settings to check again.": "Fontes de inicialização indisponíveis. Reabra as Configurações para verificar."
+  },
+  "fr": {
+    "Startup sources unavailable. Reopen Settings to check again.": "Sources de démarrage indisponibles. Rouvrez les Paramètres pour vérifier."
+  },
+  "it": {
+    "Startup sources unavailable. Reopen Settings to check again.": "Sorgenti di avvio non disponibili. Riapri le Impostazioni per verificare."
+  },
+  "ko": {
+    "Startup sources unavailable. Reopen Settings to check again.": "시작 소스를 사용할 수 없습니다. 설정을 다시 열어 확인하세요."
+  },
+  "hi": {
+    "Startup sources unavailable. Reopen Settings to check again.": "शुरुआती स्रोत उपलब्ध नहीं हैं। फिर जाँचने के लिए सेटिंग्स दोबारा खोलें।"
+  },
+  "pl": {
+    "Startup sources unavailable. Reopen Settings to check again.": "Źródła startowe są niedostępne. Otwórz ponownie Ustawienia, aby sprawdzić."
+  },
+  "ru": {
+    "Startup sources unavailable. Reopen Settings to check again.": "Источники запуска недоступны. Откройте Настройки заново для проверки."
+  },
+  "zh-Hans": {
+    "Startup sources unavailable. Reopen Settings to check again.": "启动来源不可用。请重新打开设置以再次检查。"
+  },
+  "zh-Hant": {
+    "Startup sources unavailable. Reopen Settings to check again.": "啟動來源無法使用。請重新開啟設定以再次檢查。"
+  }
+});

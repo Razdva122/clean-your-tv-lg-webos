@@ -1,0 +1,61 @@
+{
+  "scope": "Synthetic source-derived shapes, not TV captures or a TV firmware contract.",
+  "sources": [
+    "https://github.com/webosose/appinstalld2/blob/938ffd716c0c250bdb860100e9a41d3bd5b0b452/src/service/AppInstallService.cpp",
+    "https://github.com/webosose/appinstalld2/blob/938ffd716c0c250bdb860100e9a41d3bd5b0b452/src/installer/AppInstaller.cpp",
+    "https://github.com/webosose/appinstalld2/blob/938ffd716c0c250bdb860100e9a41d3bd5b0b452/src/installer/Task.cpp"
+  ],
+  "cases": [
+    {
+      "action": "install",
+      "journal": {
+        "action": "install",
+        "stage": "pending",
+        "diagnostic_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "late_status_snapshot": {
+        "returnValue": true,
+        "subscribed": true,
+        "status": {
+          "apps": []
+        }
+      },
+      "unbound_live_terminal": {
+        "id": "com.local.nativehome",
+        "statusValue": 30,
+        "details": {
+          "packageId": "com.local.nativehome",
+          "client": "com.webos.lunasend-123",
+          "state": "installed",
+          "progress": 100
+        }
+      }
+    },
+    {
+      "action": "uninstall",
+      "journal": {
+        "action": "uninstall",
+        "stage": "removing",
+        "removals": {"com.local.nativehome": "submitted"},
+        "diagnostic_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "late_status_snapshot": {
+        "returnValue": true,
+        "subscribed": true,
+        "status": {
+          "apps": []
+        }
+      },
+      "unbound_live_terminal": {
+        "id": "com.local.nativehome",
+        "statusValue": 31,
+        "details": {
+          "packageId": "com.local.nativehome",
+          "client": "com.webos.lunasend-123",
+          "state": "removed",
+          "progress": 100
+        }
+      }
+    }
+  ]
+}

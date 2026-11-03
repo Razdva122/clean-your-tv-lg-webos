@@ -1,6 +1,6 @@
 # Individual interrupted Root recovery handoffs
 
-These are maintainer preparation decisions for #101, #133, #161, #216 and the
+These are maintainer preparation decisions for #101, #133, #161, #216, #240 and the
 pending Root operation in #200. They are not device results, owner consent,
 installation instructions or compatibility evidence. No device connection is
 part of preparing this document. Keep each owner's original host profile and
@@ -36,22 +36,24 @@ before preparing the private handoff. The saved-profile availability question
 is answered. The original `install-observed` path is supported only if all
 original-operation proof checks pass; the issue number is not a proof.
 
-**Decision: existing automatic-auth inspection is not admitted when a password
-is required.** `scripts/root-install-recovery.py` deliberately refuses secret
-prompts and new host trust. Ordinary installer password fallback does not mean
-that this internal tool supports it. Do not run ordinary status to establish
-password access: status may stage code and execute retained binding helpers.
-Do not install a key, reset known_hosts or edit the profile to get past this gate.
+**Decision: use the explicit inspect-only authentication option only after a
+separately agreed, exact-source handoff.** `scripts/root-install-recovery.py
+inspect --interactive-auth` allows hidden local password/key-passphrase entry
+through the existing SSH strategy. Without the flag it still refuses secret
+prompts. Both inspect modes require the original local cytv host pin, refuse
+new/changed trust, preserve the profile and known_hosts bytes, and never reconnect
+after an interrupted agent login. Do not install a key, reset known_hosts or edit
+the profile to get past a refusal.
 
-The concrete host-auth follow-up design is an explicit interactive **inspect
-only** option, off by default: use a hidden local password/key-passphrase prompt
+The implemented host-auth option is explicit and off by default: use a hidden local password/key-passphrase prompt
 through the existing SSH strategy only after resolved authentication rejection;
 keep the original host pin, deny missing/changed host keys, stop on EOF/timeout/
 partial authentication, persist no secret or identity change, and stage nothing
 until authentication succeeds. Password cancellation must leave original pending
-and trust bytes unchanged. This option is not implemented by this PR; neither
-a password in an argument/environment/file nor automatic reconnection is an
-acceptable substitute. It requires separate review and the owner's agreement.
+and trust bytes unchanged. The prompt refuses echoed-input fallback. A password in an argument,
+environment or file is unsupported. Actual frozen Windows prompt behavior
+remains untested; source/loopback tests are not device handoff acceptance.
+The option requires source review and that particular owner's agreement.
 
 Once supported authentication is agreed, use the same locally pinned bundle and
 `inspect`-only command as #133. Fresh Home/Back/control confirmation belongs to
@@ -64,8 +66,9 @@ and [maintainer acknowledgement](https://github.com/Razdva122/clean-your-tv-lg-w
 already settle local profile availability. Do not request another file check or
 upload. **Decision: prepared for a separately agreed, one-shot inspection; no
 connection is authorized yet.** Use the original Linux account and original
-saved profile, not a replacement connection. Automatic authentication failure
-stops the procedure, as for #101.
+saved profile, not a replacement connection. The original pinned automatic-auth procedure still stops on authentication
+failure; adding interactive authentication is a changed handoff scope and needs
+its own source review and owner agreement, as for #101.
 
 After agreement, the exact-source handoff is:
 
@@ -115,7 +118,7 @@ A third-party route remains a refusal under the existing contract. A procedure
 that preserves Home+ while recovering this state requires a separately reviewed
 routing/recovery contract; this PR does not invent one.
 
-## #216 and #200 Windows follow-up — distinguish status from original failure
+## #240, #216 and #200 Windows follow-up — distinguish status from original failure
 
 These are distinct original operations. Review [#216](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/216)
 and the [Windows follow-up in #200](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/200#issuecomment-6536029007)
@@ -124,10 +127,13 @@ undetermined; no retry/removal is admitted.** Exit 127 is a failed command's
 status, not proof that Python is absent, that provisioning failed for a particular
 Luna endpoint or that no Home effects occurred. `home_changed=false` is insufficient.
 
-The host chain is `product_action → coordinator_code → _python →
+The historical host chain is `product_action → coordinator_code → _python →
 _python_command → SSH.run`. Coordinator staging precedes interpreter selection
 when no payload is supplied. `_python` may inspect/execute retained binding code;
-normal status is not the passive diagnostic or isolated cancellation inspection.
+historical normal status is not the passive diagnostic or isolated cancellation inspection.
+Current source uses the operation-bound passive reader for Root install status
+at `coordinator-submitted`, returning recovery-required with no resume/finish
+authority. Other maintenance states retain their existing guarded behavior.
 A previous successful private Python provisioning does not establish which
 interpreter a later status selected. Do not upload replacement runtime/code,
 rerun status, change PATH or remove pending just to diagnose 127.
@@ -144,25 +150,27 @@ No additional TV command, command text, stderr, UUID or path is collected by
 this annotation. Existing reports cannot be retroactively assigned a boundary.
 Do not ask owners to rerun status solely to get these new fields.
 
-The concrete next passive-inspection design, before an executable owner command,
-is to match the local pending UUID to only that device request/submission and
-bounded worker tail using the existing system-Node read-safety checks. Read the
-retained binding/launcher and exact expected interpreter as **data**; classify
-absent, unsafe, inconsistent or expected bytes separately. Inspect an old stage
-only if its exact identity is retained in evidence; never choose the newest
-`/tmp/cytv-*` directory. File presence/executable mode alone cannot prove the
-interpreter, ELF loader or launcher executes. Do not run it to fill this gap.
-A blocked request or absent worker is an explicit unavailable result, not reason
-to patch records into `root-deploy` to satisfy the current reader.
+The operation-bound reader is now implemented in `cytv/root_passive.py`, with
+an internal `scripts/root-passive-inspection.py --operation ORIGINAL_UUID` entry.
+See [the bounded procedure and categories](ROOT-PASSIVE-DIAGNOSTICS.md#original-operation-bootstrap-and-path-selection).
+It uses only the original saved Root profile, requires its existing local host
+pin, and reads the exact request/submission/snapshot. An optional
+`--interactive-auth` permits hidden local entry without trust/profile changes.
+No code bundle is uploaded and no retained Python/launcher is executed. Blocked
+requests, absent worker and inconsistent evidence remain explicit refusals.
 
-Remaining prerequisite: owner agreement to that bounded read and an authenticated
-operation/path selection. The current passive reader does not implement this
-bootstrap/stage contract. Until reviewed, keep the operation unresolved. A later
-launcher/interpreter execution or stage upload needs a separate reviewed scope;
-never fall through from passive evidence to those actions. #200's macOS cache
-failure stays with its separate investigation regardless of Windows progress.
+Owner agreement to this bounded read remains outstanding. Do not rerun ordinary
+status just to collect new fields, substitute another profile, or infer recovery
+from matching private Python bytes. #240's successful manual interpreter checks
+do not prove which interpreter the failed driver selected. #200's macOS cache
+failure remains separate. Original causes and individual recovery are unresolved.
 
 ## Code identity and records
+
+The [2026-11-02 host source record](../history/2026-11-02-root-pinned-passive-inspection.md)
+pins the new inspect-auth/passive implementation and its untested handoff limits.
+Existing #133 cancellation source and bundle pins below remain historical and
+must not be silently replaced with a newer host script.
 
 Use the exact code commit and pin in the
 [dated preparation record](../history/2026-11-01-root-recovery-handoffs.md#exact-source-and-retained-code).

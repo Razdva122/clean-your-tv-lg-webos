@@ -1,6 +1,8 @@
 # Clean Your TV — guia de uso
 
-> Este guia descreve a versão 1.6.0. Use os pacotes disponíveis nas [versões publicadas no GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases). Inclui as cinco melhorias do instalador. Ao reabrir, as configurações Root leem o estado real; uma verificação com falha não ativa Home. System Updater 1.2.0 atende à nova instalação permitida ou à substituição verificada de 1.1.0/1.1.1. O 1.1.2 instalado mantém seus canais antigos; não há migração geral. Preserve os dados de recuperação e não force a substituição. [Versões e limites](../RELEASE-1.6.0.md).
+**1.7.0 — fontes de inicialização Root:** Em Configurações → Sua tela Home, ative **Alterar Home** para editar **Abrir Clean Your TV primeiro**. **LG Channels / TV ao vivo** vem ativado; **YouTube** vem desativado. Com Alterar Home desligado, os interruptores continuam visíveis, mas indisponíveis, e os valores são mantidos. As preferências ficam privadas nesta TV e não fazem parte da exportação portátil de perfil. Isso não comprova o funcionamento ao ligar ou despertar a TV. Uma fonte desativada deixa a decisão de inicialização para o firmware da TV; não garante o retorno àquela fonte. Não há interruptor de inicialização HDMI. [Limites da inicialização nativa (inglês)](../../root-edition/README.md#candidate-native-startup-choices).
+
+> Este guia descreve a versão 1.7.0. Use os pacotes disponíveis nas [versões publicadas no GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases). Inclui as cinco melhorias do instalador. Ao reabrir, as configurações Root leem o estado real; uma verificação com falha não ativa Home. System Updater 1.2.0 atende à nova instalação permitida ou à substituição verificada de 1.1.0/1.1.1. O 1.1.2 instalado mantém seus canais antigos; não há migração geral. Preserve os dados de recuperação e não force a substituição. [Versões e limites](../RELEASE-1.7.0.md).
 
 > v1.5.0: temas, galeria e envio do PC para a TV. Limites conhecidos de Root: Appearance pode se deslocar 110 px; Home pode não abrir automaticamente após o modo de espera. A validação por dispositivo continua limitada. [1.5.0](../RELEASE-1.5.0.md).
 
@@ -91,9 +93,11 @@ No-root: Para reiniciar o controle de Home, abra Home Helper, escolha Iniciar He
 
 Após uma interrupção, execute primeiro `status` e preserve os registros. `restore` restaura LG Home sem remover aplicativos; `uninstall` restaura antes de remover. Os dados de recuperação Root são mantidos de propósito: não os apague para forçar a reinstalação. Revise relatórios antes de compartilhar; não publique chaves nem pastas de perfis.
 
-1.5.4: abra **Configurações do Home → Aparência → Colunas** e escolha de 1 a 8 colunas, ou **Conforme o tema** para usar o valor do tema (Classic: 5). Um número explícito tem prioridade sobre o tema. Temas com disposição fixa ocultam a opção Colunas e usam o valor do autor. Sua escolha salva volta a valer ao mudar para um tema que ofereça esse ajuste. Na prévia candidata Alpine, os apps ficam em uma única faixa horizontal circular: Esquerda/Direita rola, Cima abre os atalhos e Baixo volta ao mesmo app. Na prévia Alpine, a roda do mouse ou o touchpad também rola a faixa; Home não se move atrás de uma caixa de diálogo aberta.
+Abra **Configurações do Home → Aparência → Colunas** e escolha de 1 a 8 colunas, ou **Conforme o tema** para usar o valor do tema (Classic: 5). Um número explícito tem prioridade sobre o tema. Temas com disposição fixa ocultam a opção Colunas e usam o valor do autor. Sua escolha salva volta a valer ao mudar para um tema que ofereça esse ajuste. No Alpine baixado, os apps ficam em uma única faixa horizontal circular: Esquerda/Direita rola, Cima abre os atalhos e Baixo volta ao mesmo app. No Alpine, a roda do mouse ou o touchpad também rola a faixa; Home não se move atrás de uma caixa de diálogo aberta.
 
 1.5.4: em **Configurações do Home → Aparência**, desative **Mostrar bloco «Adicionar app»** para ocultar +. A opção vem ativada. Use **Adicionar app** na mesma seção para adicionar ou restaurar apps mesmo com + oculto. Continua sendo possível mover e ocultar apps; a escolha permanece após reiniciar. Se todos os apps estiverem ocultos, os controles superiores e as configurações continuam disponíveis.
+
+1.7.0: o tema selecionado define o menu **Entradas** no cabeçalho ou uma faixa HDMI; não há ajuste global de posição nem o botão **Mostrar entradas no Home**. A faixa aceita apenas `dock-grid` por enquanto. Liquid Glass a escolhe; Classic e temas sem essa opção mantêm o menu superior. Cima no dock abre a faixa, Cima novamente chega ao cabeçalho, Baixo ou Voltar retorna ao dock e OK abre a fonte. Se houver blocos de fontes, a faixa substitui o menu Entradas do cabeçalho. O nome do dispositivo vem dos metadados de entradas apenas se o firmware o fornecer; caso contrário, a fonte conectada mostra **Conectado**. Home não inventa um nome de PlayStation nem garante identificação CEC. Portas vazias continuam selecionáveis. As prévias ficam **ativadas por padrão**; uma escolha Desativado salva explicitamente é preservada. Desative **Configurações do Home → Aparência → Pré-visualizar a entrada selecionada** para desligá-las. Enquanto estiverem ativadas e o tema tiver a faixa, um HDMI conectado pode mostrar a prévia após cerca de 0,8 segundo de foco. Em algumas TVs, as prévias HDMI podem reproduzir som ou ativar HDR; o silêncio não é garantido. Home não altera automaticamente o silenciamento global nem as configurações HDR da TV. Live TV e portas vazias mantêm blocos estáticos. Root lê o estado das entradas pelo próprio serviço. No-root mantém EIM direto quando permitido; uma recusa de permissão usa uma consulta somente de leitura pelo Helper já pareado. Falhas deixam o estado desconhecido; não há controle ou solicitação de pareamento novos.
 
 Nas prévias de temas da versão 1.5.4 com barra lateral opcional, Cima/Baixo seleciona um item do menu, Direita vai para os aplicativos e Esquerda na primeira coluna de aplicativos volta ao menu.
 
@@ -123,7 +127,11 @@ Homebrew Channel negou acesso a este instalador. No webOS 11, o Homebrew 0.7.3 p
 
 **1.6.0:** escolha **Revisar opções de recuperação** para a mesma TV salva ou execute `cytv recover`. Verificação e alterações exigem confirmações separadas, com Não como padrão; `--yes` não as autoriza. Root continua apenas após as verificações existentes. No-root oferece remoção apenas quando a verificação do serviço de pacotes permite; preferências do Home podem ser redefinidas. Uma nova instalação nunca começa automaticamente. Se o estado for desconhecido ou o acesso negado, salve o relatório e pare. Preserve os registros e não repita a remoção. Continuam pendentes a evidência de conclusão de #201 e a recuperação real de #216. [Recovery](../RECOVERY.md). Para pedir ajuda, informe modelo, firmware, edição, versão do instalador, etapa com falha e resultado esperado/real; revise e remova segredos do relatório antes de compartilhar.
 
+1.7.0: a recuperação pode retomar uma remoção No-root interrompida antes da primeira solicitação de pacote sem acesso ao estado global, se o registro original comprovar isso. Confirme a remoção separadamente; após verificá-la, inicie a instalação à parte. Operações desconhecidas ou já enviadas continuam bloqueadas. Preserve a conexão e os registros. Não incluído em 1.6.0. [Detalhes](../RECOVERY.md#no-root-removal-stopped-before-package-submission-unreleased).
+
 [Documentação](../README.md) · [Relatar um problema](../FEEDBACK.md)
+
+Em desenvolvimento: se nenhum pedido de remoção de pacotes foi enviado, uma falha oferece **Revisar opções de recuperação** na mesma conexão salva da TV. A verificação e a remoção exigem confirmações separadas. Se a TV recusar a consulta de estado dos pacotes, a recuperação para e oferece um relatório. O resumo `recovery` distingue remoção não iniciada, operação herdada e operações de pacotes interrompidas sem publicar o registro completo; ele não autoriza a recuperação.
 
 <!-- Anchors retained for links to earlier guide headings. -->
 <a id="python-opcional-para-root"></a>
@@ -134,14 +142,17 @@ Homebrew Channel negou acesso a este instalador. No webOS 11, o Homebrew 0.7.3 p
 <a id="candidato-não-publicado-instalar-root-pelo-homebrew"></a>
 <a id="candidato-não-publicado-recuperação-de-som-hdmi-root"></a>
 
+<a id="temas-154"></a>
 
-## Temas (1.5.4)
+## Temas
 
-1.5.4: **Configurações → Temas**. **Classic**, **Alpine**, **Ribbon** são integrados e dispensam baixar o tema; Classic continua padrão. **Channel** é externo, do showcase. Nos testes da galeria: Escolha o tema e **Manter tema** em até **20 segundos**. **Reverter**, Back ou o fim do prazo restaura o anterior. Uma prévia interrompida faz Home iniciar com Classic. Temas integrados e baixados escolhidos na lista instalada são aplicados e salvos imediatamente, sem temporizador. Isso inclui temas recebidos do computador ou instalados por URL. Apenas Testar tema dentro da galeria inicia um teste de 20 segundos.
+1.7.0: **Configurações → Temas**. **Classic**, **Liquid Glass**, **Ribbon** são integrados e dispensam baixar o tema; Classic continua padrão. **Channel** é externo, do showcase. Nos testes da galeria: Escolha o tema e **Manter tema** em até **20 segundos**. **Reverter**, Back ou o fim do prazo restaura o anterior. Uma prévia interrompida faz Home iniciar com Classic. Temas integrados e baixados escolhidos na lista instalada são aplicados e salvos imediatamente, sem temporizador. Isso inclui temas recebidos do computador ou instalados por URL. Apenas Testar tema dentro da galeria inicia um teste de 20 segundos.
+
+1.7.0: **Classic**, **Liquid Glass** e **Ribbon** são integrados. **Alpine 1.4.4** passa a ser baixado na **galeria de temas**. Uma seleção salva de `builtin:alpine` volta ao Classic com o aviso de recuperação visível existente; Home não baixa Alpine automaticamente nem o substitui por Liquid Glass. A versão 1.6.0 inclui Classic, Alpine e Ribbon.
 
 Os temas instalados aparecem em uma única linha com rolagem horizontal. O tema ativo fica sempre em primeiro lugar e seu cartão é destacado. Use Esquerda/Direita para percorrer a linha.
 
-A galeria mostra apenas temas não instalados nesta TV. Classic, Alpine, Ribbon e os baixados ficam ocultos, mesmo com uma versão mais recente. Após remover um tema, ele reaparece. Atualize por URL ou transferência do computador.
+A galeria mostra apenas temas não instalados nesta TV. Classic, Liquid Glass, Ribbon e os baixados ficam ocultos, mesmo com uma versão mais recente. Após remover um tema, ele reaparece. Atualize por URL ou transferência do computador.
 
 Os cartões ficam diretamente em Temas, ao lado das categorias. A galeria, a instalação por link e a transferência do computador abrem nesse painel; só um teste da galeria mostra Home temporariamente.
 
@@ -151,12 +162,9 @@ Para testar um tema não publicado, abra primeiro **Configurações → Temas �
 
 Para um tema publicado, abra **Adicionar por ID** e digite o ID (por exemplo `102300a209`), `da.gd/102300a209` ou o link completo do GitHub. Home mostra o endereço da.gd antes de carregar e verifica o destino GitHub e o pacote. O autor pode copiar o ID das notas da versão ou de **TV link → Copy ID** na prévia.
 
-
 **1.6.0:** **Mostrar diagnóstico** no painel Home Helper exibe um resumo filtrado das próprias consultas de status. A visualização não inicia o Helper nem altera o controle de Home. Compartilhe apenas esse JSON quando solicitado, após revisá-lo; [detalhes](../HELPER-DIAGNOSTICS.md#candidate-panel-caller-diagnostics-207).
 
 [Themes (English)](../THEMES.md) · [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
-
-1.5.4: **Classic**, **Alpine**, **Ribbon** — **Configurações → Temas**. [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
 
 Temas com faixa configurável de 1.5.4 podem colocar entradas, Wi-Fi e configurações no canto inferior esquerdo. Quando ativado, Esquerda no primeiro aplicativo visível seleciona configurações, depois Wi-Fi e entradas; Direita nas configurações retorna ao mesmo aplicativo visível. A instalação de um tema que exige um novo recurso do Home é recusada nas versões incompatíveis, mantendo aparência e seleção atuais. Atualize primeiro o Home. Um downgrade posterior pode restaurar Classic na inicialização.
 

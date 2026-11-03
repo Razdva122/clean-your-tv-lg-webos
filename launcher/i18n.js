@@ -38,7 +38,9 @@
  }
  function formatDate(value,options){try{return new Date(value).toLocaleDateString(active,options||{weekday:'long',day:'numeric',month:'long'});}catch(_){return new Date(value).toLocaleDateString();}}
  function formatDateTime(value){try{return new Date(value).toLocaleString(active);}catch(_){return new Date(value).toLocaleString();}}
- function formatTime(value){try{return new Date(value).toLocaleTimeString(active,{hour:'2-digit',minute:'2-digit'});}catch(_){var d=new Date(value);return d.getHours()+':'+('0'+d.getMinutes()).slice(-2);}}
+ // 12-hour languages read "6:13 PM"; 24-hour languages keep "06:13".
+ function twelveHour(){try{return new Intl.DateTimeFormat(active,{hour:'numeric'}).resolvedOptions().hour12===true;}catch(_){return false;}}
+ function formatTime(value){try{return new Date(value).toLocaleTimeString(active,{hour:twelveHour()?'numeric':'2-digit',minute:'2-digit'});}catch(_){var d=new Date(value);return d.getHours()+':'+('0'+d.getMinutes()).slice(-2);}}
  function closePicker(){if(dialog)dialog.hidden=true;if(root.ThemeRuntime)root.ThemeRuntime.resume('language');if(previous&&previous.focus)previous.focus();}
  function renderLanguageChoices(list,error){
   var doc=root.document,buttons=[],selected=0,choices=[{code:'auto',name:t('Automatic (system language)')}].concat(languages);

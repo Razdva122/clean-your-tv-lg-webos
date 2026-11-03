@@ -41,12 +41,13 @@ ui.key(461);assert.equal(ui.details.hidden, true);assert.equal(ui.document.activ
 assert.equal(ui.calls.length, 1);
 ui.respond(0, {returnValue: false, errorCode: -1, errorText: 'SECRET SSID key /private/path', appId: 'secret'});
 let snapshot = view(ui);
-assert.deepEqual(snapshot, {schema: 1, source: 'home-helper-panel', helper_status: {outcome: 'rejected', errorCode: -1, returnValue: false, running: null, blocked: null}, home_status: {outcome: null, errorCode: null, returnValue: null, enabled: null}});
-assert.equal(ui.calls.length, 1, 'refused status never probes Home status');
+assert.deepEqual(snapshot, {schema: 1, source: 'home-helper-panel', helper_status: {outcome: 'rejected', errorCode: -1, returnValue: false, running: null, blocked: null}, home_status: {outcome: 'pending', errorCode: null, returnValue: null, enabled: null}});
+assert.equal(ui.calls.length, 2, 'refused service status probes only the independent Home broker');
+ui.respond(1, {returnValue:false});
 assert.ok(!ui.details.textContent.includes('SECRET'));
-ui.buttons[2].click();assert.equal(ui.calls.length, 1);assert.equal(ui.confirms, 1, 'manual start still requires confirmation');
-ui.window.confirmStart();assert.equal(ui.calls.length, 2);assert.equal(ui.calls[1].params.params.nativeHomeStart, true);
-ui.buttons[4].click();assert.equal(ui.details.hidden, true);view(ui);assert.equal(ui.calls.length, 2, 'diagnostics stay read-only during manual start');
+ui.buttons[2].click();assert.equal(ui.calls.length, 2);assert.equal(ui.confirms, 1, 'manual start still requires confirmation');
+ui.window.confirmStart();assert.equal(ui.calls.length, 3);assert.equal(ui.calls[2].params.params.nativeHomeStart, true);
+ui.buttons[4].click();assert.equal(ui.details.hidden, true);view(ui);assert.equal(ui.calls.length, 3, 'diagnostics stay read-only during manual start');
 for (const [raw, expected] of [['{SECRET', 'invalid-json'], ['null', 'invalid-response'], ['[]', 'invalid-response'], ['"SECRET"', 'invalid-response'], ['{}', 'invalid-response'], ['{"returnValue":"true"}', 'invalid-response'], ['{"returnValue":null}', 'invalid-response']]) {
   ui = panel();ui.calls[0].reply(raw);snapshot = view(ui);assert.equal(snapshot.helper_status.outcome, expected);assert.equal(snapshot.helper_status.running, null);assert.equal(ui.calls.length, 1);
 }
@@ -58,7 +59,7 @@ ui = panel();ui.respond(0, {returnValue: true, running: 'SECRET', blocked: 'SECR
 ui = panel();ui.respond(0, {returnValue: true, running: false, blocked: false});assert.equal(ui.calls.length, 1);assert.equal(view(ui).helper_status.running, false);
 ui = panel();ui.respond(0, {returnValue: true, blocked: false});assert.equal(ui.calls.length, 2);ui.respond(1, {returnValue: false, errorCode: 403, enabled: 'SECRET', errorText: 'SECRET'});snapshot = view(ui);assert.equal(snapshot.home_status.outcome, 'rejected');assert.equal(snapshot.home_status.errorCode, 403);assert.equal(snapshot.home_status.enabled, null);assert.ok(!ui.details.textContent.includes('SECRET'));
 ui = panel();ui.respond(0, {returnValue: true, running: true});ui.respond(1, {returnValue: true, enabled: false});assert.equal(view(ui).home_status.enabled, false);assert.equal(ui.calls.length, 2);
-ui = panel();ui.buttons[3].click();ui.respond(1, {returnValue: false, errorCode: 2});ui.respond(0, {returnValue: true, running: true});assert.equal(view(ui).helper_status.errorCode, 2);assert.equal(ui.calls.length, 2, 'stale callback cannot trigger Home status');
+ui = panel();ui.buttons[3].click();ui.respond(1, {returnValue: false, errorCode: 2});ui.respond(0, {returnValue: true, running: true});assert.equal(view(ui).helper_status.errorCode, 2);assert.equal(ui.calls.length, 3, 'stale callback cannot trigger Home status');
 ui = panel();ui.buttons[0].click();ui.window.HomeHelper.open();ui.respond(1, {returnValue: false, errorCode: 3});ui.respond(0, {returnValue: false, errorCode: 4});assert.equal(view(ui).helper_status.errorCode, 3, 'closed generation cannot replace relaunch diagnostics');
 ui = panel(true);assert.equal(view(ui).helper_status.outcome, 'transport-error');assert.equal(ui.calls.length, 0);
 for (const failure of ['timeout', 'invalid-json', 'invalid-response']) {
@@ -105,7 +106,7 @@ if (process.argv.includes('--browser')) (async () => {
         for (const r of [geometry.card, geometry.pre, ...geometry.actions]) {
           assert(r.left >= 0 && r.top >= 0 && r.right <= width && r.bottom <= height, locale + ' ' + width + ': controls and diagnostics fit physical viewport');
         }
-        assert.equal(geometry.calls, 1);
+        assert.equal(geometry.calls, 2);
         if (geometry.scrollHeight > geometry.clientHeight) {
           await page.keyboard.press('ArrowDown');
           assert(await page.locator('#helperPanelDiagnostics').evaluate(e => e.scrollTop > 0), 'remote scrolls actual long pre');

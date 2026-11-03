@@ -242,10 +242,11 @@ def _native_read():
  path=STATE/'native-input.json'
  try:value=safe_json(path)
  except FileNotFoundError:return None
- if (not isinstance(value,dict) or set(value)!={'schema','appId','phase','baseline'}
+ if (not isinstance(value,dict) or set(value)!={'schema','appId','phase','baseline'} | ({'pending'} if value.get('phase')=='selecting' else set())
      or type(value['schema']) is not int or value['schema']!=1 or value['appId']!=CANDIDATE
-     or value['phase'] not in ('adding','active','removing','disabled')):
+     or value['phase'] not in ('adding','active','removing','disabled','selecting')):
   raise ValueError('Invalid native input receipt')
+ if value['phase']=='selecting' and value.get('pending') not in ('select','restore'):raise ValueError('Invalid pending native selection')
  _native_validate_pair(value['baseline'])
  if value['baseline']['appId']==CANDIDATE:raise ValueError('Native input baseline cannot be Root')
  return value
@@ -293,6 +294,8 @@ def native_input_disable():
  """Retarget only our remembered input, then remove only our owned entry."""
  deadline=time.monotonic()+1.5
  saved=_native_read()
+ if saved is not None:
+  saved=dict(saved);saved.pop('pending',None)
  if saved is None:return 'absent'
  if saved['phase']=='disabled':return 'disabled'
  _native_save(dict(saved,phase='removing'))

@@ -69,77 +69,41 @@ lifetime assumption requires verification on other snapshot firmware; kernel UUI
 reuse alone does not establish a new session. Corrupt/indirect session records
 are rejected, not silently reset.
 
-After a healthy guarded restart, the dispatcher makes one optional foreground
-request only for normal active hardware startup, LG `homeAutoLaunch=on`, and a
-final foreground read showing stock Home, Live TV, or the narrowly verified
-native Channels surface described below. An already visible user app
-or Clean is left alone. Missing/slow optional APIs do not disable healthy Root.
-These calls use a 0.5-second reply deadline (up to another 0.5 second for child
-termination cleanup); no operation lock is held over launch, so an explicit off
-can complete during an in-flight request. There is no retry after an unknown
-launch outcome or duplicate boot callback. Foreground read and launch are separate
-platform calls, so a user app switch after that last read can race the one request.
-The existing power subscription also recognizes a genuine same-stream ON → OFF →
-Active wake, independently of boot callbacks. Initial/reconnected OFF or Active,
-unknown/malformed states and duplicate Active snapshots do not request Home.
-A single optional worker keeps RPCs off the power reader and guardian heartbeat
-path; OFF, processing/uncertain power data, stream loss and teardown revoke its
-in-flight eligibility. It never queues stale wakes or retries a launch. This path
-requires the same startup session, current active/enabled intent, effective Home
-routing, fresh input health and independent guardian; stopping/unconfirmed intent
-is left to recovery and is never promoted by wake. Native last-input preference
-and unknown/user foreground are preserved. It does not add a new service,
-permission, endpoint, durable state or boot hook.
+## Native startup choices (unpublished candidate)
 
-The C3 firmware boot trace and the supervised no-input cold cycle identified
-`mgg4.5.channelplus` as the firmware Cover App's boot-launched partner TV surface. Its
-reported `systemApp` is false; it is not treated as a system app or as authority
-to classify other CP apps. The optional metadata read admits only that exact ID,
-`type=web`, `vendor=LifeStream ltd.`, boolean `CPApp=true` and
-`internalInstallationOnly=true`, with both `folderPath` and `activeFolderPath`
-exactly `/media/cryptofs/apps/usr/palm/applications/mgg4.5.channelplus`.
-A developer/alternate path, missing or changed identity fields, any other ID,
-and unknown apps remain preserved. Metadata failures never revoke healthy Home
-routing. After metadata verification the foreground is read again, preserving an
-app selected during that RPC; all input/intent/session/failsafe and native Home
-preference checks still apply. This classification is shared by the boot and
-proven genuine-wake paths and introduces no watcher or boot-hook change.
+Boot dispatch only restores/rearms guarded Home routing. It never launches the
+launcher over a foreground app. The former boot/wake presentation functions and
+worker are removed. The power subscription remains responsible for bounded
+shutdown evidence and diagnostic edge counts; a wake count grants no launch.
 
-As with the existing stock Live TV policy, manually selecting this native TV
-surface in the boot or genuine-wake window cannot be distinguished from firmware selection
-by the final snapshot; the native Home-on preference permits one boot/wake request
-in that case. Third-party/unknown foreground remains protected. Foreground read
-and launch remain separate platform calls, so the existing final-read/launch
-race is unchanged. This is the same policy boundary as Live TV, not a claim of
-complete user-input or launch provenance on arbitrary apps.
+The native source policy prepares the existing owned EIM input before a later
+startup. `startup-policy.json` stores schema 1 and exact boolean `tv`, `youtube`
+and `hdmi` preferences. TV groups LG Channels/Live TV and defaults on; YouTube
+and HDMI default off. The native-source controls are disabled with an explanation
+while Change Home is off. This per-TV state does not extend the legacy launcher
+or installed System supervisor profile schema.
 
-Presentation diagnostics classify foreground as Root, stock Home, Live TV,
-verified native channel, or other/missing, and record whether a nonempty firmware
-first-app ID matched. They do not persist private app IDs or inventories. The
-recorded `preserved-foreground` outcomes and empty `firstAppId` are historical
-old-candidate observations. Host regressions reproduce that native-TV rejection
-and verify the corrected metadata gate. The current linked C3 record separately
-observes cold-start presentation and a delayed automatic standby start through a
-new-session boot fallback. It does not accept immediate standby first-screen
-presentation or resolve #171. Active intent and installation alone do not
-establish automatic foreground acceptance.
+A guardian-owned observer consumes foreground and remembered-input settings
+subscriptions. It keeps one coalescing bounded worker, rereads real source/input
+state and requires matching active intent/session/binding, fresh input/guardian,
+owned native receipt/entry and startup preference. It only selects the fixed
+Root input, or withdraws that exact owned selection to the recorded displaced
+pair. No observer action launches, adds or adopts an app/input. Unknown/transient
+foreground cannot authorize selection; a later protected app withdraws our
+selection while a different native input remains untouched.
 
-For the unresolved Root 0.6.1 standby report [#171](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/171),
-the 1.5.3 candidate adds diagnostic coverage only. Every invoked wake presenter,
-including early cancellation/session/intent/health refusal, records its outcome
-and fixed last-check stage through the existing private `boot-decision.json`.
-The power reader also keeps one root-owned, atomic volatile snapshot per transaction
-at `/tmp/clean-your-tv-root-health/<transaction-sha256>.wake`. It records a fixed
-stream/transition event, session/transaction, monotonic uptime, revision, primed/on/
-asleep flags, observed OFF-edge count and eligible-wake-edge count. Duplicate Active
-snapshots do not rewrite it. It never stores firmware replies, arbitrary state
-strings, foreground IDs, error messages or app inventories. This file has no role
-in authorization or recovery; diagnostic I/O failures leave existing decisions
-unchanged. No new durable state, permission, endpoint or reconnect is introduced.
-See [standby investigation and record interpretation](../../docs/development/ROOT-WAKE-DIAGNOSTICS.md).
+The existing native receipt has a `selecting` phase with fixed `pending` direction
+`select` or `restore`. The inverse is durable before the effect. A lost response
+is reconciled by matching readback; it cannot authorize blind resubmission.
+Off/emergency/update/rollback cleanup retains route-first priority and handles
+this owned pending state. Each optional native sequence retains the 1.5-second
+budget. Foreground/native reads and the write remain separate platform RPCs;
+source changes are rechecked and observed supersession cancels pending work.
 
-Manual enable and short Home retain their existing behavior. See
-[cold-start investigation and acceptance](../../docs/development/ROOT-COLD-BOOT.md).
+See [native startup sources](../../docs/development/ROOT-NATIVE-INPUT.md) and
+[standby evidence interpretation](../../docs/development/ROOT-WAKE-DIAGNOSTICS.md).
+Published first-screen and delayed-presentation observations remain historical;
+CI and installed bytes alone do not accept the new policy on a TV.
 
 Runtime state is `/var/lib/clean-your-tv-root`; owned profile is `/var/webos-profile/override/clean-your-tv-root.json`. Both directories must be root-owned and not group/world writable, and must reside on the same filesystem for crash-safe hard-link publication. Runtime never edits app files, stock libraries, zoom behavior, or the existing no-root launcher.
 
@@ -204,3 +168,11 @@ describes the authenticated retained-rollback anchor receipt and offline limits.
 
 <!-- Anchors retained for links to earlier guide headings. -->
 <a id="root-candidate-runtime"></a>
+
+Native source selection requires an acknowledged, live guardian observer. Its
+root-private volatile `.startup` health record binds the transaction/session to
+the actual guardian PID and process-start ticks; it is not durable Home authority.
+Loss before activation completes makes post-ready handling withdraw the owned
+priority. Close invalidates eligibility first, waits at most two seconds for an
+in-flight operation lock, then attempts one fresh guarded withdrawal. No native
+RPC replay or late application launch is introduced.

@@ -1,9 +1,9 @@
 {
-  "from_helper": "0.6.20",
-  "to_helper": "0.6.21",
-  "rollback_home": "1.6.0",
-  "rollback_sha256": "9dc14c402c096491659f63c154953498c75638baa0ee71cc4293d82109bc476b",
-  "prior_helper_sha256": "8ed42c5ae12ce3312ae90be3152cfe7972dec433c03254443ffea251291438fe",
-  "candidate_archive_sha256": "996d950af7a5c47edb4076b0f4323a106510dc9a845f8dbdb1dcc85171bd3ab3",
-  "acceptance": "2026-10-31: maintainer explicitly accepted release without physical No-root Helper0.6.20 to0.6.21 transition testing for this candidate, retaining mandatory automated package/signature/control/rollback checks. Exact candidate IPK SHA256 98924c880118528993ebe388cddabbcdf392a58c999d8019ec80aa7eef54d84e; canonical archive pinned above. Baseline Home1.6.0 and Helper0.6.20 from published v1.5.2 authenticated against GitHub asset digests and SHA256SUMS. Full CI41185537404:1 sourcef4bab0ea passed; all nine installer payloads contain identical Helper. No physical No-root Helper/input/audio/standby/cold/OTA/rollback result is claimed; maintainer C3 Root tests do not accept No-root. Final recovery candidate must reproduce these exact candidate/canonical/baseline hashes. This records a limited-evidence risk decision, not a fabricated physical pass or universal compatibility. See docs/history/2026-10-31-helper-0.6.21-approval.md."
+  "from_helper": "0.6.21",
+  "to_helper": "0.6.22",
+  "rollback_home": "1.7.0",
+  "rollback_sha256": "fa079a3efdd89d5e0fbd10cf2509cca2c9785a92f8c02409957fd76fc3dbec44",
+  "prior_helper_sha256": "98924c880118528993ebe388cddabbcdf392a58c999d8019ec80aa7eef54d84e",
+  "candidate_archive_sha256": "6b74d7b040d09fcfcafc059805c0af8d6a14733407f5df46c61f2fb7b12ef88e",
+  "acceptance": "2026-11-03: preliminary maintainer-owned rooted C3 runtime compatibility probe of source62d0ad6a with matching0.6.22/1.8.1 manifests. Exact Helper IPK SHA2560e8477113fd8afc57b5f3bfc7271a3b7de99dcce2fb2516d7e386eff06ec00cf and canonical archive above. Published v1.6.0 Home1.7.0 and Helper0.6.21 authenticated against original signed system manifest. Native package transitions reached installed, all installed files and retained Helper state matched, published Home launched with new Helper (actual non-root controller UID5431), same-package homeStatus responded enabled, portable profile matched. Existing Home commands remain separate from the new expiring input channel; controller/Stop/watchdog and real TLS regressions pass. This pins the tested rollback archive and interface, not completed release acceptance. Final full-build byte equality and physical scenario outcomes/limits are maintained in docs/history/2026-11-03-helper-0.6.22-compatibility.md and docs/history/2026-11-03-release-1.7.0-final-packages.md. No unrooted Developer Mode installation, actual No-root OTA transaction, universal firmware compatibility or publication is certified by this pin."
 }

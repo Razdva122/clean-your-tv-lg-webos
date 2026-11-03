@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "themeApiVersion": 1,
-  "id": "builtin:alpine",
+  "id": "github:razdva122/clean-your-tv-lg-webos:alpine",
   "title": "Alpine",
   "description": "A quiet alpine panorama, large clock and one infinitely looping horizontal app ribbon.",
   "author": {
@@ -103,8 +103,8 @@
     "creditsPath": "documents/1-818ab3a39df2f0306896671bb68aa8f4fa53967c3c00e0344350e83e29f33603.txt"
   },
   "source": {
-    "repository": "https://github.com/razdva122/clean-your-tv-lg-theme",
-    "commit": "95f812e505e81b1d4b706bd203f0e96306b1b18c"
+    "repository": "https://github.com/razdva122/clean-your-tv-lg-webos",
+    "commit": "4bcc0975a6951118c26b2cb7dff665d6d1c9ea5f"
   },
   "requires": {
     "minimumHomeVersion": "1.6.0",

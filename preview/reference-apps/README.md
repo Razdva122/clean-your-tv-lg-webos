@@ -8,7 +8,9 @@ YouTube, Netflix, Apple TV, Twitch, Emby, Plex, Jellyfin, Apple Music, LG Channe
 
 These are static rendering fixtures. Launches and network status remain browser simulations. The inventory includes
 two generic simulated HDMI inputs (Console and Media player) for exploring the
-Inputs menu; these labels were not read from a personal TV. One-device resource provenance does not establish playback or universal TV compatibility. Device addresses, serial numbers, account/pairing keys, app data and full device inventories are excluded. Original app artwork keeps its publisher rights; see NOTICE.txt.
+Inputs menu; these labels were not read from a personal TV. `preview/bridge.js`
+simulates live input status separately: the captured inputs report as connected
+"PlayStation 5" and "Apple TV", and spare ports up to HDMI 4 as not connected. One-device resource provenance does not establish playback or universal TV compatibility. Device addresses, serial numbers, account/pairing keys, app data and full device inventories are excluded. Original app artwork keeps its publisher rights; see NOTICE.txt.
 
 The initial Home order starts with Netflix, YouTube, Apple TV, Apple Music and
 Twitch. This is a preview default; saved user rearrangements take precedence.

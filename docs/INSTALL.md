@@ -104,6 +104,12 @@ diagnostic report and keep recovery files. [Recovery](RECOVERY.md).
 **Change Home** selects persistent Home behavior. **Open LG Home** only visits
 LG Home once. Opening Home alone does not restart a stopped Helper. Helper
 through 0.6.13 uses a two-second Home hold instead of triple Home.
+The unpublished Root candidate adds native startup source choices under
+**Home settings → Open Clean Your TV first**: LG Channels / Live TV defaults on,
+YouTube and HDMI default off. With **Change Home** off these controls are visibly
+disabled with an explanation and retain their values. There is no late boot/wake
+launch fallback. Exact-package physical acceptance is pending.
+
 If a check fails, leave LG Home active and follow [recovery](RECOVERY.md).
 Installation checks cannot verify physical buttons.
 

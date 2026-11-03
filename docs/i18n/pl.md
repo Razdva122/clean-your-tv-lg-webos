@@ -1,6 +1,8 @@
 # Clean Your TV — instrukcja użytkownika
 
-> Poradnik opisuje wersję 1.6.0. Dostępne pakiety pobieraj z [opublikowanych wydań GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases). Zawiera pięć ulepszeń instalatora. Po ponownym otwarciu ustawienia Root odczytują rzeczywisty stan; nieudana kontrola nie włącza Home. System Updater 1.2.0 służy do dozwolonej nowej instalacji lub zweryfikowanej wymiany 1.1.0/1.1.1. Zainstalowany 1.1.2 zachowuje stare kanały; brak ogólnej migracji. Zachowaj dane odzyskiwania i nie wymuszaj wymiany. [Wersje i ograniczenia](../RELEASE-1.6.0.md).
+**1.7.0 — źródła startowe Root:** W Ustawienia → Twój ekran Home włącz **Zmień Home**, aby edytować **Otwórz Clean Your TV jako pierwsze**. **LG Channels / Telewizja na żywo** jest domyślnie włączone; **YouTube** jest wyłączone. Po wyłączeniu Zmień Home przełączniki pozostają widoczne, lecz niedostępne, a wartości są zachowane. Ustawienia są prywatnie zapisane na tym TV i nie obejmuje ich przenośny eksport profilu. Nie potwierdza to działania przy starcie ani wybudzeniu TV. Wyłączenie źródła pozostawia decyzję o uruchomieniu oprogramowaniu TV; nie gwarantuje wznowienia tego źródła. Nie ma przełącznika startowego HDMI. [Ograniczenia natywnego startu (angielski)](../../root-edition/README.md#candidate-native-startup-choices).
+
+> Poradnik opisuje wersję 1.7.0. Dostępne pakiety pobieraj z [opublikowanych wydań GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases). Zawiera pięć ulepszeń instalatora. Po ponownym otwarciu ustawienia Root odczytują rzeczywisty stan; nieudana kontrola nie włącza Home. System Updater 1.2.0 służy do dozwolonej nowej instalacji lub zweryfikowanej wymiany 1.1.0/1.1.1. Zainstalowany 1.1.2 zachowuje stare kanały; brak ogólnej migracji. Zachowaj dane odzyskiwania i nie wymuszaj wymiany. [Wersje i ograniczenia](../RELEASE-1.7.0.md).
 
 > v1.5.0: motywy, galeria i przesyłanie z komputera na TV. Znane ograniczenia Root: Appearance może przesunąć się o 110 px; Home może nie otworzyć się automatycznie po czuwaniu. Zakres testów urządzeń jest ograniczony. [1.5.0](../RELEASE-1.5.0.md).
 
@@ -91,9 +93,11 @@ No-root: Aby wznowić sterowanie Home, otwórz Home Helper, wybierz Uruchom Help
 
 Po przerwaniu operacji najpierw uruchom `status` i zachowaj dzienniki. `restore` przywraca LG Home bez usuwania aplikacji; `uninstall` przywraca je przed usunięciem. Dane odzyskiwania Root pozostają celowo: nie kasuj ich, by wymusić ponowną instalację. Sprawdź raporty przed udostępnieniem; nie publikuj kluczy ani katalogów profili.
 
-1.5.4: otwórz **Ustawienia Home → Wygląd → Kolumny** i wybierz od 1 do 8 kolumn lub **Według motywu**, aby użyć wartości motywu (Classic: 5). Wybrana liczba ma pierwszeństwo przed motywem. Motywy ze stałym układem ukrywają opcję kolumn i używają wartości autora. Zapisany wybór wraca po przełączeniu na motyw obsługujący to ustawienie. W podglądzie kandydata Alpine aplikacje tworzą jeden zapętlony poziomy pasek: Lewo/Prawo przewija, Góra otwiera skróty, a Dół wraca do tej samej aplikacji. W podglądzie Alpine pasek można też przewijać kółkiem myszy lub touchpadem; Home nie przesuwa się za otwartym oknem dialogowym.
+Otwórz **Ustawienia Home → Wygląd → Kolumny** i wybierz od 1 do 8 kolumn lub **Według motywu**, aby użyć wartości motywu (Classic: 5). Wybrana liczba ma pierwszeństwo przed motywem. Motywy ze stałym układem ukrywają opcję kolumn i używają wartości autora. Zapisany wybór wraca po przełączeniu na motyw obsługujący to ustawienie. W pobranym motywie Alpine aplikacje tworzą jeden zapętlony poziomy pasek: Lewo/Prawo przewija, Góra otwiera skróty, a Dół wraca do tej samej aplikacji. W Alpine pasek można też przewijać kółkiem myszy lub touchpadem; Home nie przesuwa się za otwartym oknem dialogowym.
 
 1.5.4: w **Ustawienia Home → Wygląd** wyłącz **Pokaż kafelek „Dodaj aplikację”**, aby ukryć +. Opcja jest domyślnie włączona. Użyj **Dodaj aplikację** w tej samej sekcji, aby dodawać lub przywracać aplikacje przy ukrytym +. Nadal można zmieniać kolejność i ukrywać aplikacje; wybór zostaje po ponownym uruchomieniu. Po ukryciu wszystkich aplikacji górne przyciski i ustawienia pozostają dostępne.
+
+1.7.0: wybrany motyw określa menu **Wejścia** w nagłówku albo półkę HDMI; nie ma globalnego ustawienia położenia ani przełącznika **Pokaż wejścia na Home**. Półka obsługuje obecnie tylko `dock-grid`. Liquid Glass ją wybiera; Classic i motywy bez tej opcji zachowują menu w nagłówku. Góra z doku przechodzi do półki, ponownie Góra do nagłówka, Dół lub Wstecz wraca do doku, a OK uruchamia źródło. Jeśli są kafelki źródeł, półka zastępuje menu Wejścia w nagłówku. Nazwa urządzenia pochodzi z metadanych wejść tylko wtedy, gdy firmware ją udostępnia; w przeciwnym razie podłączone źródło pokazuje **Podłączono**. Home nie wymyśla nazwy PlayStation i nie gwarantuje identyfikacji CEC. Puste porty pozostają dostępne. Podglądy są **domyślnie włączone**; jawnie zapisana opcja Wyłączone pozostaje wyłączona. Wyłącz **Ustawienia Home → Wygląd → Podgląd wybranego wejścia**, aby je zatrzymać. Gdy są włączone i motyw ma półkę, podłączone HDMI może wyświetlić podgląd po około 0,8 sekundy zaznaczenia. Na niektórych TV podglądy HDMI mogą odtwarzać dźwięk lub włączać HDR; cisza nie jest gwarantowana. Home nie zmienia automatycznie globalnego wyciszenia ani ustawień HDR telewizora. Live TV i puste porty zachowują statyczne kafelki. Root odczytuje stan wejść przez własną usługę. No-root zachowuje bezpośredni EIM, gdy jest dozwolony; odmowa uprawnień uruchamia odczyt przez już sparowany Helper. Błąd pozostawia stan nieznany; nie dodano nowego ustawienia ani prośby o parowanie.
 
 W podglądach motywów wersji 1.5.4 z opcjonalnym panelem bocznym Góra/Dół wybiera pozycję menu, Prawo przechodzi do aplikacji, a Lewo z pierwszej kolumny aplikacji wraca do menu.
 
@@ -123,7 +127,11 @@ Homebrew Channel odmówił temu instalatorowi dostępu. W webOS 11 Homebrew 0.7.
 
 **1.6.0:** wybierz **Sprawdź opcje odzyskiwania** dla tego samego zapisanego TV lub uruchom `cytv recover`. Kontrola i zmiany wymagają osobnych potwierdzeń z domyślnym Nie; `--yes` ich nie zatwierdza. Root kontynuuje tylko po istniejących weryfikacjach. No-root proponuje usuwanie wyłącznie za zgodą dotychczasowej kontroli usługi pakietów; ustawienia Home mogą zostać zresetowane. Nowa instalacja nie zaczyna się automatycznie. Przy nieznanym stanie lub odmowie dostępu zapisz raport i zatrzymaj się. Zachowaj dzienniki i nie powtarzaj usuwania. Nadal brakuje dowodów zakończenia dla #201 i potwierdzenia odzyskania TV dla #216. [Recovery](../RECOVERY.md). Prosząc o pomoc podaj model, firmware, edycję, wersję instalatora, nieudany krok oraz oczekiwane/rzeczywiste zachowanie; przed udostępnieniem przejrzyj raport i usuń sekrety.
 
+1.7.0: odzyskiwanie może wznowić usuwanie No-root zatrzymane przed pierwszym żądaniem pakietu bez dostępu do globalnego stanu, jeśli potwierdza to oryginalny dziennik. Potwierdź usuwanie osobno; po jego weryfikacji rozpocznij instalację oddzielnie. Nieznane lub już wysłane operacje nadal blokują kontynuację. Zachowaj połączenie i dzienniki. Brak w 1.6.0. [Szczegóły](../RECOVERY.md#no-root-removal-stopped-before-package-submission-unreleased).
+
 [Dokumentacja](../README.md) · [Zgłoś problem](../FEEDBACK.md)
+
+W przygotowaniu: jeśli nie wysłano żądania usunięcia pakietów, po błędzie dostępne jest **Przejrzyj opcje odzyskiwania** dla tego samego zapisanego TV. Kontrola i usuwanie wymagają osobnych potwierdzeń. Odmowa sprawdzenia stanu pakietów zatrzymuje odzyskiwanie i udostępnia raport. Podsumowanie `recovery` rozróżnia nierozpoczęte usuwanie, odziedziczoną operację i przerwane operacje na pakietach bez publikowania całego dziennika; nie upoważnia do odzyskiwania.
 
 <!-- Anchors retained for links to earlier guide headings. -->
 <a id="opcjonalny-python-dla-root"></a>
@@ -134,14 +142,17 @@ Homebrew Channel odmówił temu instalatorowi dostępu. W webOS 11 Homebrew 0.7.
 <a id="nieopublikowany-kandydat-instalacja-root-przez-homebrew"></a>
 <a id="nieopublikowany-kandydat-odzyskiwanie-dźwięku-hdmi-root"></a>
 
+<a id="motywy--kandydat-rozwojowy"></a>
 
-## Motywy – kandydat rozwojowy
+## Motywy
 
-1.5.4: **Ustawienia → Motywy**. **Classic**, **Alpine**, **Ribbon** są wbudowane i nie wymagają pobierania motywu; domyślny pozostaje Classic. **Channel** jest zewnętrznym motywem ze showcase. Podczas próby w galerii: Wybierz motyw i **Zachowaj motyw** w ciągu **20 sekund**. **Przywróć**, Back lub upływ czasu przywraca poprzedni. Przerwana próba uruchomi Home z Classic. Motywy wbudowane i pobrane wybrane z listy zainstalowanych są stosowane i zapisywane od razu, bez odliczania. Dotyczy to również motywów z komputera lub URL. Tylko Wypróbuj motyw w galerii rozpoczyna próbę 20 sekund.
+1.7.0: **Ustawienia → Motywy**. **Classic**, **Liquid Glass**, **Ribbon** są wbudowane i nie wymagają pobierania motywu; domyślny pozostaje Classic. **Channel** jest zewnętrznym motywem ze showcase. Podczas próby w galerii: Wybierz motyw i **Zachowaj motyw** w ciągu **20 sekund**. **Przywróć**, Back lub upływ czasu przywraca poprzedni. Przerwana próba uruchomi Home z Classic. Motywy wbudowane i pobrane wybrane z listy zainstalowanych są stosowane i zapisywane od razu, bez odliczania. Dotyczy to również motywów z komputera lub URL. Tylko Wypróbuj motyw w galerii rozpoczyna próbę 20 sekund.
+
+1.7.0: **Classic**, **Liquid Glass** i **Ribbon** są wbudowane. **Alpine 1.4.4** przechodzi do pobierania w **galerii motywów**. Zapisany wybór `builtin:alpine` wraca do Classic z istniejącym widocznym komunikatem odzyskiwania; Home nie pobiera Alpine automatycznie ani nie zastępuje go Liquid Glass. Wersja 1.6.0 zawiera Classic, Alpine i Ribbon.
 
 Zainstalowane motywy są w jednym przewijanym poziomo rzędzie. Aktywny motyw jest zawsze pierwszy, a jego karta jest wyróżniona. Do przeglądania użyj strzałek w lewo/prawo.
 
-Galeria pokazuje tylko motywy niezainstalowane na tym TV. Classic, Alpine, Ribbon i pobrane motywy są ukryte, także gdy istnieje nowsza wersja. Po usunięciu motyw pojawia się ponownie. Aktualizuj przez URL lub transfer z komputera.
+Galeria pokazuje tylko motywy niezainstalowane na tym TV. Classic, Liquid Glass, Ribbon i pobrane motywy są ukryte, także gdy istnieje nowsza wersja. Po usunięciu motyw pojawia się ponownie. Aktualizuj przez URL lub transfer z komputera.
 
 Karty motywów są osadzone bezpośrednio w Motywyzie obok kategorii. Galeria, instalacja z linku i przesyłanie z komputera otwierają się w tym panelu; tylko próba w galerii tymczasowo pokazuje Home.
 
@@ -151,12 +162,9 @@ Aby przetestować nieopublikowany motyw, najpierw otwórz na TV **Ustawienia →
 
 Dla opublikowanego motywu otwórz **Dodaj przez ID** i wpisz ID (np. `102300a209`), `da.gd/102300a209` lub pełny link GitHub. Home pokaże adres da.gd przed wczytaniem, a następnie sprawdzi cel GitHub i pakiet motywu. Autor może skopiować ID z opisu wydania albo **TV link → Copy ID** w podglądzie na komputerze.
 
-
 **1.6.0:** **Pokaż diagnostykę** w panelu Home Helper pokazuje niewielki, przefiltrowany wynik jego własnych zapytań o stan. Wyświetlenie nie uruchamia Helpera ani nie zmienia sterowania Home. Na prośbę udostępnij tylko sprawdzony JSON; [szczegóły](../HELPER-DIAGNOSTICS.md#candidate-panel-caller-diagnostics-207).
 
 [Themes (English)](../THEMES.md) · [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
-
-1.5.4: **Classic**, **Alpine**, **Ribbon** — **Ustawienia → Motywy**. [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
 
 Motywy z konfigurowalną wstęgą w 1.5.4 mogą umieszczać wejścia, Wi-Fi i ustawienia w lewym dolnym rogu. Gdy opcja jest włączona, Lewo przy pierwszej widocznej aplikacji wybiera ustawienia, potem Wi-Fi i wejścia; Prawo w ustawieniach wraca do tej samej widocznej aplikacji. Instalacja motywu wymagającego nowej funkcji Home jest odrzucana w nieobsługiwanej wersji, zachowując wygląd i wybór. Najpierw zaktualizuj Home. Późniejsze obniżenie wersji może przywrócić Classic podczas startu.
 

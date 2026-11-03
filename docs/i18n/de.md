@@ -1,6 +1,8 @@
 # Clean Your TV — Benutzeranleitung
 
-> Diese Anleitung beschreibt 1.6.0. Verfügbare Pakete finden Sie in den [veröffentlichten GitHub-Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases). Enthalten sind alle fünf Installer-Verbesserungen. Root-Einstellungen lesen beim erneuten Öffnen den tatsächlichen Status; ein fehlgeschlagener Test aktiviert Home nicht. System Updater 1.2.0 gilt für zulässige Neueinrichtung oder geprüften Ersatz von 1.1.0/1.1.1. Installiertes 1.1.2 behält seine alten Kanäle; eine allgemeine Migration gibt es nicht. Wiederherstellungsdaten behalten und keinen Ersatz erzwingen. [Versionen und Grenzen](../RELEASE-1.6.0.md).
+**1.7.0 — Root-Startquellen:** Unter Einstellungen → Ihr Home-Bildschirm aktivieren Sie **Home ändern**, um **Clean Your TV zuerst öffnen** einzustellen. **LG Channels / Live-TV** ist standardmäßig an; **YouTube** ist aus. Bei ausgeschalteter Home-Änderung bleiben die Schalter sichtbar, aber gesperrt; die Werte bleiben gespeichert. Die Einstellungen werden privat auf diesem TV gespeichert und sind nicht im portablen Profilexport enthalten. Dies bestätigt kein geprüftes Start- oder Aufwachverhalten. Ist eine Quelle ausgeschaltet, entscheidet die TV-Firmware über den Start; die Rückkehr zu dieser Quelle ist nicht garantiert. Es gibt keinen HDMI-Startschalter. [Grenzen des nativen Starts (Englisch)](../../root-edition/README.md#candidate-native-startup-choices).
+
+> Diese Anleitung beschreibt 1.7.0. Verfügbare Pakete finden Sie in den [veröffentlichten GitHub-Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases). Enthalten sind alle fünf Installer-Verbesserungen. Root-Einstellungen lesen beim erneuten Öffnen den tatsächlichen Status; ein fehlgeschlagener Test aktiviert Home nicht. System Updater 1.2.0 gilt für zulässige Neueinrichtung oder geprüften Ersatz von 1.1.0/1.1.1. Installiertes 1.1.2 behält seine alten Kanäle; eine allgemeine Migration gibt es nicht. Wiederherstellungsdaten behalten und keinen Ersatz erzwingen. [Versionen und Grenzen](../RELEASE-1.7.0.md).
 
 > v1.5.0: Designs, Galerie und PC-TV-Übertragung. Bekannte Root-Grenzen: Appearance kann um 110 px springen; Home startet nach Standby möglicherweise nicht automatisch. Die Geräteprüfung bleibt begrenzt. [1.5.0](../RELEASE-1.5.0.md).
 
@@ -91,9 +93,11 @@ No-root: Öffnen Sie zum Neustart der Home-Steuerung Home Helper, wählen Sie He
 
 Nach einer Unterbrechung zuerst `status` ausführen und Protokolle behalten. `restore` stellt LG Home ohne App-Entfernung wieder her; `uninstall` stellt es vor der Entfernung wieder her. Root-Wiederherstellungsdaten bleiben absichtlich erhalten; nicht zum Erzwingen einer Neuinstallation löschen. Diagnoseberichte vor Weitergabe prüfen; Schlüssel und Profilordner nicht veröffentlichen.
 
-1.5.4: Öffne **Home-Einstellungen → Darstellung → Spalten** und wähle 1–8 Spalten oder **Nach Theme**, um dessen Wert zu verwenden (Classic: 5). Eine feste Zahl hat Vorrang vor dem Theme. Themes mit festem Layout blenden die Spaltenoption aus und verwenden den Wert des Autors. Deine gespeicherte Auswahl gilt wieder, sobald du zu einem Theme wechselst, das diese Einstellung unterstützt. In der Alpine-Kandidatenvorschau liegen Apps in einem endlosen horizontalen Band: Links/Rechts blättert im Kreis, Oben öffnet die Schnellzugriffe und Unten kehrt zur selben App zurück. In der Alpine-Vorschau lässt sich das Band auch mit Mausrad oder Touchpad bewegen; bei geöffnetem Dialog bleibt Home stehen.
+Öffne **Home-Einstellungen → Darstellung → Spalten** und wähle 1–8 Spalten oder **Nach Theme**, um dessen Wert zu verwenden (Classic: 5). Eine feste Zahl hat Vorrang vor dem Theme. Themes mit festem Layout blenden die Spaltenoption aus und verwenden den Wert des Autors. Deine gespeicherte Auswahl gilt wieder, sobald du zu einem Theme wechselst, das diese Einstellung unterstützt. Im heruntergeladenen Alpine liegen Apps in einem endlosen horizontalen Band: Links/Rechts blättert im Kreis, Oben öffnet die Schnellzugriffe und Unten kehrt zur selben App zurück. In Alpine lässt sich das Band auch mit Mausrad oder Touchpad bewegen; bei geöffnetem Dialog bleibt Home stehen.
 
 1.5.4: Schalte unter **Home-Einstellungen → Darstellung** die Option **Kachel „App hinzufügen“ anzeigen** aus, um + auszublenden. Standardmäßig ist sie eingeschaltet. Über **App hinzufügen** im selben Bereich kannst du weiterhin Apps hinzufügen oder zurückholen. Verschieben und Ausblenden bleiben möglich; die Auswahl bleibt nach einem Neustart erhalten. Sind alle Apps ausgeblendet, bleiben die oberen Schaltflächen und Einstellungen erreichbar.
+
+1.7.0: Das gewählte Theme bestimmt, ob **Eingänge** als Menü in der Kopfzeile oder als HDMI-Leiste erscheinen. Es gibt keine globale Platzierungsoption und keinen Schalter **Eingänge auf Home anzeigen**. Die Leiste unterstützt derzeit nur `dock-grid`. Liquid Glass wählt sie; Classic und Themes ohne diese Option behalten das Kopfmenü. Oben vom Dock öffnet die Leiste, erneut Oben die Kopfzeile; Unten oder Zurück führt zum Dock, OK startet die Quelle. Sind Quellkacheln vorhanden, ersetzt die Leiste das Eingangsmenü in der Kopfzeile. Der Gerätename stammt nur dann aus Eingangsmetadaten, wenn die Firmware ihn liefert; andernfalls steht bei einer verbundenen Quelle **Verbunden**. Home erfindet keinen PlayStation-Namen und garantiert keine CEC-Erkennung. Leere Anschlüsse bleiben wählbar. Vorschauen sind **standardmäßig an**; eine ausdrücklich gespeicherte Aus-Einstellung bleibt aus. Deaktiviere **Home-Einstellungen → Darstellung → Vorschau des ausgewählten Eingangs**, um sie auszuschalten. Solange sie aktiviert sind und das Theme die Leiste nutzt, erscheint nach etwa 0,8 Sekunden Fokus auf einem verbundenen HDMI-Eingang eine Vorschau. HDMI-Vorschauen können auf manchen TVs Ton abspielen oder HDR einschalten; Stille ist nicht garantiert. Home ändert die globale Stummschaltung oder HDR-Einstellungen des TVs nicht automatisch. Live-TV und leere Anschlüsse behalten statische Kacheln. Root liest den Eingangsstatus über seinen eigenen Dienst. No-root nutzt EIM direkt, soweit erlaubt; bei verweigerter Berechtigung erfolgt eine schreibgeschützte Abfrage über den gekoppelten Helper. Fehlgeschlagene Abfragen lassen den Status unbekannt; es gibt keinen neuen Schalter oder Kopplungsdialog.
 
 In Theme-Vorschauen in 1.5.4 mit optionaler Seitenleiste wählst du mit Oben/Unten einen Menüpunkt, wechselst mit Rechts zu den Apps und kehrst mit Links aus der ersten App-Spalte zum Menü zurück.
 
@@ -123,7 +127,11 @@ Homebrew Channel verweigert diesem Installer den Zugriff. Unter webOS 11 benöti
 
 **1.6.0:** Wählen Sie **Wiederherstellungsoptionen prüfen** für denselben gespeicherten TV oder führen Sie `cytv recover` aus. Prüfung und Änderungen erfordern getrennte Bestätigungen mit Nein als Vorgabe; `--yes` genehmigt sie nicht. Root fährt nur nach bestehenden Prüfungen fort. No-root bietet Entfernen nur an, wenn die bestehende Paketdienstprüfung es zulässt; Home-Einstellungen können verloren gehen. Eine neue Einrichtung startet nie automatisch. Bei unbekanntem Zustand oder verweigertem Zugriff Bericht speichern und stoppen. Journale behalten und Entfernen nicht wiederholen. Die fehlenden Abschlussnachweise in #201 und Gerätebestätigung in #216 bleiben offen. [Recovery](../RECOVERY.md). Für Hilfe Modell, Firmware, Edition, Installer-Version, fehlgeschlagenen Schritt und erwartetes/tatsächliches Verhalten angeben; Bericht vor dem Teilen prüfen und Geheimnisse entfernen.
 
+1.7.0: Eine vor der ersten Paketanfrage gestoppte No-root-Entfernung kann ohne Zugriff auf den globalen Paketstatus fortgesetzt werden, wenn das ursprüngliche Journal dies belegt. Entfernung gesondert bestätigen; nach verifizierter Entfernung die Installation separat starten. Unbekannte oder bereits gesendete Vorgänge bleiben gesperrt. Verbindung und Journale behalten. Nicht in 1.6.0 enthalten. [Details](../RECOVERY.md#no-root-removal-stopped-before-package-submission-unreleased).
+
 [Dokumentation](../README.md) · [Problem melden](../FEEDBACK.md)
+
+In Entwicklung: Wurde noch keine Paketentfernung angefordert, bietet eine fehlgeschlagene Entfernung **Wiederherstellungsoptionen prüfen** für denselben gespeicherten TV an. Prüfung und Entfernung erfordern getrennte Bestätigungen. Eine abgelehnte Paketstatusprüfung stoppt die Wiederherstellung und bietet einen Bericht an. Dessen `recovery`-Zusammenfassung unterscheidet nicht begonnene Entfernung, übernommene Vorgänge und unterbrochene Paketvorgänge ohne das vollständige Journal offenzulegen; sie erlaubt keine Wiederherstellung.
 
 <!-- Anchors retained for links to earlier guide headings. -->
 <a id="optionales-python-für-root-in-v110"></a>
@@ -133,14 +141,17 @@ Homebrew Channel verweigert diesem Installer den Zugriff. Unter webOS 11 benöti
 <a id="unveröffentlichter-kandidat-root-über-homebrew-einrichten"></a>
 <a id="unveröffentlichter-kandidat-hdmi-ton-wiederherstellen-root"></a>
 
+<a id="designs-154"></a>
 
-## Designs (1.5.4)
+## Designs
 
-1.5.4: **Einstellungen → Themes**. **Classic**, **Alpine**, **Ribbon** sind integriert und benötigen keinen Design-Download; Classic bleibt Standard. **Channel** ist ein externes Showcase-Design. Beim Galerietest: Nach der Auswahl innerhalb von **20 Sekunden** **Design behalten** wählen. **Zurücksetzen**, Back oder Zeitablauf stellt das vorherige Design wieder her. Ein unterbrochener Versuch startet beim nächsten Home-Aufruf mit Classic. Integrierte und heruntergeladene Designs aus der installierten Liste werden sofort ohne Bestätigungstimer angewendet und gespeichert. Das gilt auch für vom Computer oder per URL installierte Designs. Nur Design testen in der Galerie startet einen 20-Sekunden-Test.
+1.7.0: **Einstellungen → Themes**. **Classic**, **Liquid Glass**, **Ribbon** sind integriert und benötigen keinen Design-Download; Classic bleibt Standard. **Channel** ist ein externes Showcase-Design. Beim Galerietest: Nach der Auswahl innerhalb von **20 Sekunden** **Design behalten** wählen. **Zurücksetzen**, Back oder Zeitablauf stellt das vorherige Design wieder her. Ein unterbrochener Versuch startet beim nächsten Home-Aufruf mit Classic. Integrierte und heruntergeladene Designs aus der installierten Liste werden sofort ohne Bestätigungstimer angewendet und gespeichert. Das gilt auch für vom Computer oder per URL installierte Designs. Nur Design testen in der Galerie startet einen 20-Sekunden-Test.
+
+1.7.0: **Classic**, **Liquid Glass** und **Ribbon** sind integriert. **Alpine 1.4.4** wird im **Theme-Showcase** zum Download angeboten. Eine gespeicherte Auswahl `builtin:alpine` fällt mit dem bestehenden sichtbaren Wiederherstellungshinweis auf Classic zurück. Home lädt Alpine weder automatisch herunter noch ersetzt es durch Liquid Glass. Version 1.6.0 enthält Classic, Alpine und Ribbon.
 
 Installierte Designs stehen in einer horizontal scrollbaren Reihe. Das aktive Design steht immer zuerst und seine Karte ist hervorgehoben. Mit Links/Rechts wechseln Sie zwischen den Karten.
 
-Die Galerie zeigt nur auf diesem TV nicht installierte Designs. Classic, Alpine, Ribbon und heruntergeladene Designs bleiben verborgen, auch bei einer neueren Katalogversion. Nach dem Entfernen erscheint das Design wieder. Updates erfolgen per URL oder Computerübertragung.
+Die Galerie zeigt nur auf diesem TV nicht installierte Designs. Classic, Liquid Glass, Ribbon und heruntergeladene Designs bleiben verborgen, auch bei einer neueren Katalogversion. Nach dem Entfernen erscheint das Design wieder. Updates erfolgen per URL oder Computerübertragung.
 
 Die Designkarten sind direkt in Themes neben den Einstellungskategorien eingebettet. Katalog, Linkinstallation und Computerübertragung öffnen sich dort; nur ein Galerietest zeigt vorübergehend Home.
 
@@ -150,12 +161,9 @@ Für ein unveröffentlichtes Design zuerst am TV **Einstellungen → Themes → 
 
 Für ein veröffentlichtes Design unter **Weitere Optionen → Über URL hinzufügen** die ID (z. B. `102300a209`), `da.gd/102300a209` oder die vollständige GitHub-URL eingeben. Home zeigt vor dem Laden die ergänzte da.gd-Adresse und prüft danach GitHub-Ziel und Designpaket. Die ID steht in den Versionshinweisen oder unter **TV link → Copy ID** in der Computer-Vorschau.
 
-
 **1.6.0:** **Diagnose anzeigen** im Home-Helper-Panel zeigt eine kleine, gefilterte Momentaufnahme seiner eigenen Statusabfragen. Das Anzeigen startet Helper nicht und ändert die Home-Steuerung nicht. Teilen Sie auf Anfrage nur die zuvor geprüfte JSON-Ausgabe; [Details](../HELPER-DIAGNOSTICS.md#candidate-panel-caller-diagnostics-207).
 
 [Themes (English)](../THEMES.md) · [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
-
-1.5.4: **Classic**, **Alpine**, **Ribbon** — **Einstellungen → Themes**. [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
 
 Anpassbare Leisten-Themen in 1.5.4 können Eingänge, WLAN und Einstellungen links unten platzieren. Wenn aktiviert, wählt Links bei der ersten sichtbaren App Einstellungen, dann WLAN und Eingänge; Rechts in den Einstellungen kehrt zur selben sichtbaren App zurück. Benötigt ein Thema eine neue Home-Funktion, wird seine Installation in einer nicht unterstützten Version abgelehnt; Aussehen und Auswahl bleiben erhalten. Aktualisieren Sie zuerst Home. Ein späteres Downgrade kann beim Start Classic wiederherstellen.
 

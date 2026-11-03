@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "themeApiVersion": 1,
+  "id": "builtin:liquid-glass",
+  "title": "Liquid Glass",
+  "description": "Clear frosted glass over an original aurora wallpaper, on the Classic dock with the Inputs shelf.",
+  "author": {
+    "name": "Clean Your TV contributors",
+    "url": "https://github.com/razdva122"
+  },
+  "themeVersion": "1.0.0",
+  "layout": {
+    "preset": "dock-grid",
+    "columns": 5,
+    "spacingScale": 1,
+    "textScale": 1,
+    "focusScale": 1.1,
+    "allowColumnOverride": true,
+    "motion": "classic",
+    "inputs": "shelf"
+  },
+  "defaults": {
+    "wallpaperAssetId": "wallpaper",
+    "dim": 0,
+    "accent": "#eef3ff"
+  },
+  "assets": [
+    {
+      "id": "wallpaper",
+      "path": "assets/wallpaper-6d8aabd0a096e64fe87d89e65f529a467df450df385d1c346370d95db0688510.jpg",
+      "mediaType": "image/jpeg",
+      "width": 1920,
+      "height": 1080,
+      "size": 160409,
+      "sha256": "6d8aabd0a096e64fe87d89e65f529a467df450df385d1c346370d95db0688510"
+    },
+    {
+      "id": "preview",
+      "path": "assets/preview-f8b9225ecb7834905b363ea923ee8c9af9952493c58e69746bb3b411c51a01f0.jpg",
+      "mediaType": "image/jpeg",
+      "width": 960,
+      "height": 540,
+      "size": 63563,
+      "sha256": "f8b9225ecb7834905b363ea923ee8c9af9952493c58e69746bb3b411c51a01f0"
+    }
+  ],
+  "previewAssetId": "preview",
+  "license": {
+    "identifier": "MIT",
+    "textPath": "documents/0-f497a621e75e2ccabaac016c8ada95b415a7810fb9994798b282fa9f9d03920f.txt",
+    "creditsPath": "documents/1-49c0cc9c350acc25acf8f9d18440e53d6ce7f7abeaf4af95feabf4cf543f7304.txt"
+  },
+  "source": {
+    "repository": "https://github.com/razdva122/clean-your-tv-lg-webos",
+    "commit": "4bcc0975a6951118c26b2cb7dff665d6d1c9ea5f"
+  },
+  "requires": {
+    "minimumHomeVersion": "1.7.0",
+    "capabilities": [
+      "input-placement-v1",
+      "classic-motion-v1"
+    ]
+  },
+  "rules": {
+    "path": "rules/7d0874e8bd86c38255d75d9b944b140ec53b47af0694cd2b4c3ad3a84e31c727.json",
+    "size": 9451,
+    "sha256": "7d0874e8bd86c38255d75d9b944b140ec53b47af0694cd2b4c3ad3a84e31c727"
+  },
+  "documents": [
+    {
+      "path": "documents/0-f497a621e75e2ccabaac016c8ada95b415a7810fb9994798b282fa9f9d03920f.txt",
+      "size": 546,
+      "sha256": "f497a621e75e2ccabaac016c8ada95b415a7810fb9994798b282fa9f9d03920f"
+    },
+    {
+      "path": "documents/1-49c0cc9c350acc25acf8f9d18440e53d6ce7f7abeaf4af95feabf4cf543f7304.txt",
+      "size": 670,
+      "sha256": "49c0cc9c350acc25acf8f9d18440e53d6ce7f7abeaf4af95feabf4cf543f7304"
+    }
+  ]
+}

@@ -24,7 +24,8 @@ class HostCancellationTests(unittest.TestCase):
         self.store.save(self.profile)
         known=self.store.device_dir(self.profile)/'known_hosts'
         known.write_bytes(b'original trusted host pin')
-        def connect(profile,directory,secret,trust):
+        def connect(profile,directory,secret,trust,**options):
+            self.assertFalse(options['persist'])
             self.assertFalse(trust('untrusted-host-fingerprint',True))
             secret('Root SSH password (hidden): ')
             self.fail('Password-only inspection proceeded')
@@ -45,6 +46,28 @@ class HostCancellationTests(unittest.TestCase):
         value=json.loads(history[0].read_text());self.assertEqual(value['previous'],self.original)
         self.assertEqual(value['disposition'],self.disposition)
         inspect.assert_called_once_with(self.identifier,'c'*64)
+
+    def test_interactive_auth_is_inspect_only_and_cancellation_stages_nothing(self):
+        import sys
+        from unittest.mock import patch
+        self.store.save(self.profile)
+        for action in ('inspect','remove','reconcile','digest'):
+            argv=['recovery',action,'--interactive-auth','--code-bundle','/unused',
+                  '--operation',self.identifier,'--candidate','d'*64,'--code-sha256','c'*64,
+                  '--proof-sha256',self.proof,'--confirm-lg-home']
+            def connect(profile,directory,secret,trust,**options):
+                self.assertFalse(options['persist'])
+                self.assertFalse(trust('foreign',True))
+                secret('Root SSH password (hidden): ')
+            with self.subTest(action=action),patch.object(sys,'argv',argv), \
+                 patch.object(self.tool,'code_inventory',return_value=({}, {}, 'c'*64)), \
+                 patch.object(self.tool.state,'Store',return_value=self.store), \
+                 patch('cytv.transport.SSH.connect',side_effect=connect) as connection, \
+                 patch('getpass.getpass',side_effect=EOFError) as prompt:
+                with self.assertRaises(EOFError if action=='inspect' else SystemExit):self.tool.main()
+                self.assertEqual(connection.call_count,1 if action=='inspect' else 0)
+                self.assertEqual(prompt.call_count,1 if action=='inspect' else 0)
+            self.assertEqual(self.store.pending(self.profile),self.original)
     def test_unknown_wrong_operation_or_proof_preserves_pending(self):
         for change in ({'lease_terminal':False},{'state':'remove-submitting'},{'operation':'d'*32},{'proof_sha256':'d'*64},{'home_changed':True}):
             with self.subTest(change=change),self.assertRaises(ValueError):

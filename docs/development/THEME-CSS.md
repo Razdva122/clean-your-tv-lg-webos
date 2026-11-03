@@ -1,8 +1,8 @@
 # Home CSS styling surface
 
-This is the source-development contract for the **unreleased theme foundation**.
-It does not make theme selection, built-in alternatives or installation by URL
-available on a TV. See the [design](../superpowers/specs/2026-10-28-theme-ecosystem-design.md)
+This is the source-development contract for the **1.7.0 theme engine**.
+TV theme controls require a compatible installed Home package; copying this
+reference or a theme URL does not upgrade the engine. See the [design](../superpowers/specs/2026-10-28-theme-ecosystem-design.md)
 and [runtime plan](../superpowers/plans/2026-10-28-themes-a-runtime.md) for the
 remaining work and device acceptance gates. Browser preview results are not TV
 compatibility evidence.
@@ -57,15 +57,25 @@ policy except `.ctv-tile`, which remains an engine-reserved interaction hook.
 | `.ctv-library-row` | Available app row in the library; native button focus is mirrored |
 | `.ctv-inputs` | Inputs dropdown; anchoring, width and visibility are engine-owned |
 | `.ctv-input-row` | Selectable input/source row; selection action and navigation remain trusted |
+| `.ctv-input-shelf` | Theme-selected Inputs shelf on `dock-grid`, including its caption; geometry, clipping, scrolling and visibility are engine-owned |
+| `.ctv-input-tile` | Selectable source tile in the shelf; position, size, launch action and navigation remain trusted |
+| `.ctv-input-status` | Device name or "Not connected" text inside a shelf tile |
+| `.ctv-input-preview` | Live picture frame inside the focused shelf tile; the frame inherits tile rounding, while native video clipping depends on renderer/firmware (earlier webOS 6 hardware ignored rounded clipping, masks and opacity). Starting, stopping, size and placement are engine-owned |
 
 `.is-focused` mirrors remote/pointer focus on tiles, their visual cards and labels,
-header shortcuts, library rows, the library close button and input rows. `.is-moving` mirrors reorder state on a
+header shortcuts, library rows, the library close button, input rows and shelf
+tiles. `.is-connected` and `.is-disconnected` mirror live TV input status on shelf
+tiles and input rows only when the TV reports it; neither is present when status
+is unknown, so do not style an absent state as disconnected. `.is-previewing` marks
+the shelf tile whose live picture is playing; it appears only once the picture
+plays and is removed as soon as it stops. Older Home versions
+reject rules that use these shelf parts or states. `.is-moving` mirrors reorder state on a
 tile and its card. `.is-selected` is a policy vocabulary token reserved for
 selection states; do not assume that every part receives it or that focus means
 selection. Existing `.focused` and `.moving` classes remain internal compatibility
 hooks. Theme authors must not add state classes or manipulate focus.
 
-The candidate also exposes the library's inner panel and close control so a theme
+The engine also exposes the library's inner panel and close control so a theme
 can make the whole app library visually consistent. These are appearance hooks
 inside Home, not access to standard Settings or recovery. They accept the same
 validated visual properties; hiding, positioning, sizing and modal behavior
@@ -125,7 +135,7 @@ visual geometry independently would make arrow navigation and pointer hit areas
 disagree with the rendered cards. New layout presets require engine changes and
 navigation checks; a stylesheet cannot introduce one.
 
-The candidate accepts five trusted `layout.preset` values: `dock-grid`,
+The engine accepts five trusted `layout.preset` values: `dock-grid`,
 `icon-grid`, `side-grid`, `channel-list`, and `scenic-grid`. These select renderer-owned
 compositions rather than injecting layout CSS. `dock-grid` remains the default
 for Classic and existing themes. Unknown values fail validation. A renderer
@@ -134,7 +144,7 @@ changing styles or column defaults; it never silently draws them as Classic.
 Spacing, text and focus scales still require the Classic values `1`, `1`, and
 `1.1`; wider schema bounds do not imply implemented scale combinations.
 
-| Candidate preset | Composition |
+| Preset | Composition |
 | --- | --- |
 | `dock-grid` | Classic wide app cards, dock band near the bottom and selected app title above it |
 | `icon-grid` | Compact square icon grid with labels and a smaller header |
@@ -144,10 +154,10 @@ Spacing, text and focus scales still require the Classic values `1`, `1`, and
 
 In `side-grid`, the sidebar menu uses Up/Down to select a shortcut, Right enters
 the apps, and Left from the first app column returns to the menu. Other grids
-retain the horizontal top-menu navigation. These controls are candidate-only
-preview behavior until theme activation is wired into a release.
+retain the horizontal top-menu navigation. These controls are available in
+theme-enabled Home versions; the selected theme determines the layout.
 
-The shared Columns control is available in the unreleased candidate through
+The shared Columns control is available in 1.7.0 through
 **Home settings → Appearance → Columns** in both editions. Values are integer 1–8 or **By
 theme**. Precedence is explicit saved user number, then accepted theme
 `layout.columns`, then Classic's 5. Selecting By theme clears the explicit
@@ -162,7 +172,11 @@ color fallback. An ordinary author `background-color` declaration does not
 override that inline value; `!important` is forbidden. The ambient gradient is
 emitted into a trusted default stylesheet instead of inline CSS, so a scoped
 `.ctv-ambient` background image can override it, including a transparent gradient
-for a flat background. Crossfade timing and opacity remain engine-owned. Broken tile icons are hidden and replaced with the app initial;
+for a flat background. Crossfade timing and opacity remain engine-owned. Themes keep
+both glow layers and immediate remote focus unless they opt into
+[Classic motion](#classic-motion-opt-in-unreleased). The engine fades `background` and
+`color` on shortcuts and input tiles, but gradients cannot interpolate: change a
+`background-color` under a constant `background-image` for focus fills that fade. Broken tile icons are hidden and replaced with the app initial;
 broken library images are hidden without hiding their actionable row.
 
 Outfit weights 300/400/500/700 and packaged Noto Sans fallbacks provide offline
@@ -310,7 +324,7 @@ stationary-pointer hover from repeatedly dragging the ribbon under the cursor.
 
 ## Optional CSS icon effects
 
-`modern-icon-css-v1` is a separately gated candidate capability, not a change to
+`modern-icon-css-v1` is a separately gated capability, not a change to
 the normal Chromium 38 floor. The compiler infers it from icon `filter` or
 `mix-blend-mode`; runtime requires browser support for both filter and screen
 blending and rejects an unsupported browser before mutation. Older Home rejects
@@ -359,9 +373,149 @@ The `.ctv-position` part styles the decorative scenic-ribbon position indicator.
 A transparent `color` hides its count and arrows without changing navigation.
 
 
-## Parameterized scenic ribbons (unreleased)
+<a id="theme-owned-input-placement-unreleased"></a>
 
-Use optional `layout.ribbon` with `preset: "scenic-grid"`, an explicit 1–8 column count and `allowColumnOverride: false`. The compiler automatically emits `ribbon-layout-v1`; descriptor policy requires options and capability together. Older Home rejects this capability before storing/applying a new package, retaining its current theme. No release version is selected yet. Existing layouts without `ribbon` remain unchanged.
+## Theme-owned input placement
+
+The selected theme chooses the header Inputs menu or the Inputs shelf. Omitted
+`layout.inputs` means `"menu"`, including Classic and existing themes. There is
+no global placement preference or **Show inputs on Home** switch. Liquid Glass
+opts into `"shelf"`; the shelf is currently supported only on `dock-grid`. A
+nonempty shelf replaces the header Inputs shortcut, and remote navigation skips
+that hidden shortcut. When no source tiles exist, the menu remains available.
+An explicit `"menu"` is valid on any preset.
+
+For example, this compiled descriptor excerpt pairs the field and capability
+(other required manifest fields are omitted):
+
+```json
+{
+  "layout": {
+    "preset": "dock-grid",
+    "columns": 5,
+    "spacingScale": 1,
+    "textScale": 1,
+    "focusScale": 1.1,
+    "inputs": "shelf"
+  },
+  "requires": {"capabilities": ["input-placement-v1"]}
+}
+```
+
+The source compiler emits `input-placement-v1` when `layout.inputs` is present,
+including explicit `"menu"`. Descriptor policy requires the field and capability
+together. Older Home rejects this capability before storing or applying the
+theme. Input placement and the [Classic motion opt-in](#classic-motion-opt-in-unreleased)
+are independent; selecting the shelf does not opt into Classic motion.
+
+Use the existing parts and states for appearance, without new CSS syntax:
+
+```css
+.ctv-input-shelf { color: #ffffff; }
+.ctv-input-tile { background-color: #202536; border-radius: 24px; }
+.ctv-input-tile.is-connected { box-shadow: 0 0 0 1px rgba(120, 220, 160, 0.6); }
+.ctv-input-tile.is-disconnected { color: rgba(255, 255, 255, 0.5); }
+.ctv-input-tile.is-focused { background-color: #eef3ff; color: #101420; }
+.ctv-input-status { color: rgba(255, 255, 255, 0.7); }
+.ctv-input-tile.is-focused .ctv-input-status { color: #30384a; }
+.ctv-input-preview { background-color: #000000; }
+.ctv-input-tile.is-previewing .ctv-input-status { color: #ffffff; }
+```
+
+The engine owns geometry, hitboxes, source launch and video start/release. It
+requests muted playback, but the native external-input pipeline may ignore that
+request. Previews are on by default; an explicitly saved Off stays off. The user
+can disable **Preview inputs on focus** in Appearance.
+On a shelf, Up from the dock reaches the shelf, Up again reaches the header,
+Down or Back returns to the dock, and OK launches the source. A connected HDMI
+source can preview after about 800 ms of focus while **Preview inputs on focus**
+is enabled; this preference only applies while the selected theme uses a
+shelf. HDMI previews may play sound or switch HDR on some TVs. Home does not
+automatically change global TV mute or HDR settings. Theme CSS cannot start
+media, enable previews or change those TV settings. Software rendering clips the
+frame to its inherited radius.
+Native video composition must be checked per renderer/firmware: earlier webOS 6
+observations ignored rounded clipping, masks and opacity. A 2026-11-02 standalone
+browser probe on an OLED55C3RLA (firmware 43.21.71, SDK 11.2.0) rounded real HDMI 3,
+but audio still played despite `video.muted = true`, and an HDR notification
+appeared. This does not verify packaged Home or other models; mute and HDR
+behavior remain unresolved. Do not rely on arbitrary masks/opacity for video
+release or navigation safety. The engine releases previews when focus leaves, Home hides or loses focus, or an owned
+dialog opens. Connection states appear only when the TV supplies them. Device
+names come from firmware-provided input metadata; otherwise a connected source
+shows the localized **Connected** status. Never invent a PlayStation name or
+guarantee CEC identification. `previewing` appears only while a live picture is
+playing.
+
+In 1.7.0, Root reads input metadata through the authenticated,
+same-package service `listApps` broker with the exact `{inputs:true}` selector
+because firmware can deny direct WebApp EIM access. The existing method and
+retained permission grant are reused; no new endpoint is registered.
+The broker performs a fixed, bounded, privileged read-only query; it adds no
+permissions or TV-setting writes. Root refreshes once when Home becomes visible,
+a different input receives focus or Settings opens. There is no polling or
+automatic retry, and failed/unavailable reads leave connection status unknown.
+This is not continuous hot-plug monitoring. No-root keeps its direct EIM
+subscription where available. A definitive permission refusal (`errorCode: -1`)
+switches that session to bounded snapshots through its own renewal service's
+`inputStatus` method. Only the Home application may call it with an empty payload.
+The native Helper uses the existing pairing and only the TV's own interface
+addresses to read `ssap://tv/getExternalInputList`; it never pairs or accepts a
+caller-selected address, URI or command. Keys stay inside Helper. Replies contain
+at most 100 devices, five bounded strings and boolean/unknown connection states.
+No-root snapshots refresh on the same explicit foreground interactions as Root;
+failure clears stale status and does not start a retry loop.
+
+The fallback reuses the provisioned service `state/home-control` directory and
+its shared-group permissions. Expiring correlated `input-request.json` and
+`input-response.json` messages (atomic `.tmp` writes, mode 0660) are separate from
+the existing Home-command files, so metadata cannot occupy Home settings or
+stock-Home control. The query has a three-second budget within the five-second
+broker deadline; concurrent controller reads share one query. Stop/emergency
+state suppresses late responses. No directory, privilege grant, boot activity or
+startup policy is added. Physical acceptance is specific to the selected build;
+simulated services do not certify unrooted Developer Mode installation.
+
+<a id="classic-motion-opt-in-unreleased"></a>
+
+## Classic motion opt-in
+
+By default a theme gets immediate remote focus on every layout: the card and the focus
+frame snap, rows jump, there are no edge bumps or edge fades, and the ambient glow keeps
+its two crossfading layers. A `dock-grid` theme can instead opt into the motion of
+unthemed Classic with `"motion": "classic"` in `layout`:
+
+```json
+{"preset": "dock-grid", "columns": 5, "spacingScale": 1, "textScale": 1, "focusScale": 1.1, "motion": "classic"}
+```
+
+- **What it turns on:** the row glide on a single Up/Down press, the 10 px edge bump,
+  the card zoom with the focus frame growing on the same 240 ms transform, the top and
+  bottom edge fades (slightly softer than Classic's, so they read as a vignette over a
+  wallpaper), and the baked glow.
+- **Baked glow:** once the colour settles, the glow moves to a plain base element and
+  both layers stop drawing. The base also carries `.ctv-ambient`, so the theme's ambient
+  rule styles it, but only while the glow is baked; during a crossfade the base is empty,
+  so a translucent ambient style never doubles.
+- **Engine-owned transitions:** under this opt-in a `transition` on `.ctv-card`,
+  `.ctv-focus`, `.ctv-label`, `.ctv-shortcut` or `.ctv-input-tile` is rejected, because
+  it would replace the engine's transform, grow and fade motion and let the card and
+  frame fall out of step.
+- **Capability:** the compiler emits `classic-motion-v1`, and descriptor policy requires
+  the field and the capability together, only on `dock-grid`. Older Home rejects the
+  capability before storing or applying the package, keeping its current theme.
+- **Cost:** keep shadows off parts that repaint on every press. On a 4K webOS TV a
+  blurred shadow on the dock band and a translucent border on input tiles each cost
+  about 2 missed frames per shelf press; a `0 0 0 1px` ring is cheap.
+
+Reduced motion still turns all of this off.
+
+
+<a id="parameterized-scenic-ribbons-unreleased"></a>
+
+## Parameterized scenic ribbons
+
+Use optional `layout.ribbon` with `preset: "scenic-grid"`, an explicit 1–8 column count and `allowColumnOverride: false`. The compiler automatically emits `ribbon-layout-v1`; descriptor policy requires options and capability together. Older Home rejects this capability before storing/applying a new package, retaining its current theme. This capability is included in Home 1.8.1 / release 1.7.0; the separate author toolkit still requires a matching exported runtime. Existing layouts without `ribbon` remain unchanged.
 
 | Field | Allowed value | Default |
 | --- | --- | --- |
@@ -406,3 +560,15 @@ Unknown keys and invalid combinations reject. Bottom-left shortcuts require `lef
 ```
 
 This is the value of `layout`, not a complete manifest. The separate toolkit needs an explicit exported runtime declaring `ribbon-layout-v1`. Its stable reviewed runtime pin is not silently replaced by a PR candidate. Arbitrary author `position`, `skew`, `translate`, selectors or JavaScript remain unsupported. Version and capability checks both apply. Optional icon effects still require `modern-icon-css-v1` separately.
+
+
+<a id="optional-date-placement-unreleased"></a>
+
+### Optional date placement
+
+A `dock-grid` theme may set `layout.datePlacement` to `below-clock` to wrap the
+date beneath the clock and hide the divider, or `inline` to retain the standard
+header. Declare the paired `date-placement-v1` capability; the compiler infers
+it from the field. Engines without the capability reject the theme before apply.
+Omitting the field preserves current themes. Suspension, replacement and reset
+use the existing theme stylesheet lifecycle. No new controls or permissions.

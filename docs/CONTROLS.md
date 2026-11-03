@@ -15,6 +15,31 @@
 The Magic Remote pointer and wheel pass through. Wheel-to-tile navigation is not
 implemented. The launcher does not take over app-specific Back behavior.
 
+<a id="inputs-unpublished-170-candidate"></a>
+
+### Inputs (1.7.0)
+
+The selected theme chooses the header **Inputs** menu or an input shelf. Liquid
+Glass uses the shelf; Classic and themes without a shelf keep the header menu.
+There is no global **Show inputs on Home** or placement switch. On a shelf, press
+**Up** from the dock, **Left/Right** to choose and **OK** to launch. **Up** again
+reaches the header; **Down** or **Back** returns to the dock. The shelf replaces
+the header Inputs menu when tiles are present. Empty ports remain selectable.
+A supplied device name is shown when firmware provides it; otherwise a connected
+source says **Connected**. Home does not invent a console name or guarantee CEC
+identification. Root uses its authenticated read-only service snapshot. No-root
+keeps direct EIM where allowed and uses the already paired Helper after a
+definitive permission refusal. Failed reads leave status unknown; no new setting
+or pairing prompt is added. These 1.7.0 controls differ from version 1.6.0.
+
+Live previews are **on by default**; an explicitly saved Off stays off. Disable
+**Settings → Appearance → Preview inputs on focus** to turn them off. While
+enabled for a shelf theme, a connected HDMI source can preview after about
+0.8 seconds of focus. Moving away, opening another
+surface or leaving Home stops it. Live TV and empty ports keep static tiles.
+Firmware can still play audio or switch HDR despite element mute; silence is not
+guaranteed. Home does not change global TV mute/HDR settings automatically.
+
 ## Return to LG Home
 
 **Press Home three times within two seconds.** Home interception stops and LG
@@ -47,3 +72,11 @@ the other.
 
 Startup can initially show a black screen or LG Home. Standby/wake success does
 not prove cold-boot reliability or a fixed startup time. See [device limits](COMPATIBILITY.md).
+
+In Root 1.7.0, **Home settings → Open Clean Your TV first**
+chooses two native startup sources: LG Channels / Live TV defaults on and
+YouTube defaults off. There is no HDMI startup switch; a source switched off
+leaves startup to firmware. See the [global startup-setting dependency](../root-edition/README.md#candidate-native-startup-choices). With **Change Home** off these choices remain visible, muted
+and disabled with an explanation; saved values remain. Late boot/wake launches
+are removed. See [1.7.0 acceptance and limits](RELEASE-1.7.0.md) for the
+recorded first-screen and control scope; no universal compatibility is implied.

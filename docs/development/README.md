@@ -64,8 +64,8 @@ follow [explicit user consent](../../AGENTS.md#installation-results-and-user-con
 ## Main Home browser preview
 
 After `npm ci`, run `python3 scripts/preview.py` and open `http://127.0.0.1:8765/`.
-The **Themes** row above Home contains Classic, Alpine and the active reviewed
-showcase versions. Selecting a card applies it in the same Home canvas, including
+The **Themes** row above Home contains the 1.7.0 built-ins Classic, Liquid Glass
+and Ribbon, plus the active reviewed Showcase versions, including Alpine 1.4.4. Selecting a card applies it in the same Home canvas, including
 when switching Root/No-root editions. Community packages are generated from the
 hash-verified showcase snapshot and validated by the ordinary ThemeManager;
 no author scripts or theme-repository code is executed. Static exports include
@@ -74,3 +74,9 @@ This previews fixed reviewed versions rather than unpublished toolkit edits.
 Browser simulations do not establish physical-TV compatibility.
 
 - [Root Node 0.12.2 prototype](ROOT-NODE-PROTOTYPE.md): opt-in host builds and generated-closure tests; Node 8+ gate retained.
+
+## Product website
+
+[Multilingual GitHub Pages development](../../website/README.md) covers Astro,
+shared Markdown installation guides, translations, SEO checks and the embedded
+launcher demo.

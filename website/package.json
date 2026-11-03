@@ -1,0 +1,27 @@
+{
+  "name": "clean-your-tv-website",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev --host 127.0.0.1",
+    "build": "node scripts/prepare.mjs && astro build && node scripts/verify.mjs",
+    "check": "astro check",
+    "test": "node scripts/verify.mjs",
+    "test:browser": "node scripts/browser.mjs",
+    "format": "prettier --write .",
+    "test:dev": "node scripts/dev-smoke.mjs"
+  },
+  "dependencies": {
+    "@astrojs/markdown-remark": "7.3.5",
+    "astro": "7.4.4"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.12",
+    "prettier": "3.9.10",
+    "prettier-plugin-astro": "1.1.2",
+    "typescript": "5.9.3"
+  },
+  "engines": {
+    "node": ">=22.23.4"
+  }
+}

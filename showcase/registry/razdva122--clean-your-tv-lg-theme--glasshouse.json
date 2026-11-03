@@ -36,7 +36,7 @@
     },
     {
       "kind": "browser",
-      "summary": "Promoted to app-bundled Alpine under builtin:alpine in this candidate; the historical external listing is archived. Classic and Alpine require no theme download."
+      "summary": "Historical external Alpine 1.4.2 was archived when Alpine became app-bundled. Current Alpine 1.4.4 is maintained separately as github:razdva122/clean-your-tv-lg-webos:alpine; this old listing remains removed and is not a downgrade path."
     }
   ],
   "availability": "removed"

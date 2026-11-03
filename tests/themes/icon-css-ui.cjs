@@ -11,7 +11,7 @@ const sourceRoot=path.resolve('themes/itachi'),source=JSON.parse(fs.readFileSync
  await new Promise(r=>server.listen(0,'127.0.0.1',r));const browser=await chromium.launch({headless:true,channel:process.env.BROWSER_CHANNEL||'chrome'});
  try{for(const edition of ['launcher','root-launcher']){
   const context=await browser.newContext({viewport:{width:1920,height:1080},locale:'ru-RU',timezoneId:'Asia/Yekaterinburg'}),page=await context.newPage(),errors=[];
-  await page.clock.setFixedTime(new Date('2026-10-29T16:42:00Z'));page.on('pageerror',e=>errors.push(e.message));await context.route('https://**',r=>r.abort());/* Read the real staged appinfo, including the independent Root package version. */
+  await page.clock.setFixedTime(new Date('2026-10-29T16:42:00Z'));page.on('pageerror',e=>errors.push(e.message));await context.route(/^https:\/\//,r=>r.abort());/* Read the real staged appinfo, including the independent Root package version. */
   await context.route('**/config.js',r=>r.fulfill({body:'window.CONFIG='+JSON.stringify({columns:5,dockApps:['youtube.leanback.v4','netflix','com.apple.appletv','com.apple.applemusic','com.webos.app.browser'],hiddenApps:[],liveTvApp:'preview.live'})+';'}));
   await page.goto('http://127.0.0.1:'+server.address().port+'/'+edition+'/index.html');await page.locator('#tiles .focused').waitFor();await page.waitForFunction(()=>['youtube.leanback.v4','netflix'].every(id=>{const i=document.querySelector('[data-app-id="'+id+'"] img');return i&&i.complete&&i.naturalWidth>0;}));
   const original=await page.locator('#tiles img').evaluateAll(images=>images.map(i=>({src:i.getAttribute('src'),width:i.naturalWidth,height:i.naturalHeight})));

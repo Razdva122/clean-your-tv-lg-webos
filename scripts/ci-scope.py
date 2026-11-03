@@ -12,6 +12,13 @@ COMPONENTS = ('ui', 'tv', 'installer', 'android', 'setup', 'preview')
 def components(paths):
     selected = set()
     for path in paths:
+        if (path.startswith(('website/', 'docs/i18n/'))
+                or path in ('docs/launcher-classic.jpg', 'docs/launcher-alpine.jpg',
+                            'docs/launcher-ribbon.jpg', 'docs/launcher-liquid-glass.jpg',
+                            'assets/brand/logo-dark.svg',
+                            'assets/brand/symbol-color.svg')):
+            selected.add('preview')
+            continue
         if path in ('README.md', 'release-plan.json'):
             selected.add('setup')
             continue

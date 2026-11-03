@@ -40,13 +40,16 @@ class BuildTests(unittest.TestCase):
             from deploy import verify_bundle
             manifest = verify_bundle(first)
             self.assertIn('runtime/cli.py', manifest['files'])
+            for name in ('intent_runtime.py', 'shutdown_state.py'):
+                self.assertEqual((first / 'runtime' / name).read_bytes(), (ROOT / 'runtime' / name).read_bytes())
             self.assertIn('setup.py', manifest['files'])
             self.assertIn('installation.py',manifest['files'])
             self.assertIn('updater/store.py',manifest['files'])
             import subprocess
             result = subprocess.run([sys.executable,'-I','-B','-c',
                 'import sys;sys.path.insert(0,sys.argv[1]);import deploy,installation,package_data,startup_guard;'
-                'assert installation.Store.__module__ == "updater.store"',str(first)],
+                'assert installation.Store.__module__ == "updater.store";'
+                'sys.path.insert(0,sys.argv[1]+"/runtime");import intent_runtime,shutdown_state;assert callable(intent_runtime.startup_reconcile);assert callable(shutdown_state.observe_startup)',str(first)],
                 cwd=Path(tmp),capture_output=True,text=True)
             self.assertEqual(result.returncode,0,result.stderr)
             ipk = next(first.glob('*.ipk'))

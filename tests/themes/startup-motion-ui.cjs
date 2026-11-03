@@ -50,7 +50,7 @@ const selectedCase=process.env.CYTV_THEME_CASE||'all';
    await page.reload();await wait();
    await page.evaluate(()=>localStorage.setItem('tvhome.theme.trial.v1',JSON.stringify({kind:'trial',id:'builtin:alpine'})));
    await page.reload();await wait();assert.equal(await page.evaluate(()=>ThemeManager.current().id),'builtin:classic','interrupted preview presents trusted Classic');assert.equal(await page.evaluate(()=>localStorage.getItem(ThemeManager.trialKey)),null);
-   await page.evaluate(()=>localStorage.setItem('tvhome.theme.choice.v1',JSON.stringify({id:'builtin:alpine',title:'Alpine'})));
+   await page.evaluate(()=>localStorage.setItem('tvhome.theme.choice.v1',JSON.stringify({id:'builtin:ribbon',title:'Ribbon'})));
    await page.route('**/theme-data.js',route=>route.fulfill({contentType:'application/javascript',body:fs.readFileSync('launcher/theme-data.js','utf8')+`;window.auditPrepare=ThemeData.prepare;ThemeData.prepare=function(){var args=arguments;window.auditPreparing=true;return new Promise(function(resolve){window.auditRelease=function(){resolve(auditPrepare.apply(ThemeData,args));};});};`}));
    await page.reload();await page.waitForFunction(()=>window.auditPreparing);await wait();
    assert.equal(await page.evaluate(()=>ThemeManager.current().id),'builtin:classic','watchdog makes Home usable when preparation never completes');assert.match(await page.evaluate(()=>ThemeManager.current().notice),/timed out/i);
@@ -59,7 +59,7 @@ const selectedCase=process.env.CYTV_THEME_CASE||'all';
    results.push({edition,case:'fallback',frames:fallback});await page.unroute('**/theme-data.js');await page.reload();await wait();
   }
   if(selectedCase!=='startup'){
-   for(const theme of ['Classic','Alpine','Itachi','Channel']){
+   for(const theme of ['Classic','Liquid Glass','Itachi','Channel']){
     await page.evaluate(async title=>{const item=(await ThemeManager.list()).find(item=>item.title.indexOf(title)===0);await ThemeManager.selectInstalled(item);},theme);
     const originalIds=await page.locator('#tiles .item').evaluateAll(nodes=>nodes.map(n=>n.dataset.appId||'add'));
     // Park a real pointer before remote navigation; moving geometry must not steal focus.
@@ -69,7 +69,10 @@ const selectedCase=process.env.CYTV_THEME_CASE||'all';
       var frames=[],failures=[],count=document.querySelectorAll('#tiles .item').length,state=HomeLayoutState.state(),scenic=state.preset==='scenic-grid';
       function selected(){return Array.prototype.indexOf.call(document.querySelectorAll('#tiles .item'),document.querySelector('#tiles .item.focused'));}
       var expected=selected(),running=true;
-      function sample(){var item=document.querySelector('#tiles .item.focused');if(item){var r=item.getBoundingClientRect(),card=item.querySelector('.card').getBoundingClientRect(),glass=document.getElementById('glass'),g=glass.getBoundingClientRect(),x=Math.abs(r.left-parseFloat(item.style.left)),stage=document.getElementById('stage'),transform=new WebKitCSSMatrix(getComputedStyle(stage).transform),target=new WebKitCSSMatrix(stage.style.transform),y=Math.abs(transform.m42-target.m42),glassLag=getComputedStyle(glass).display==='none'?0:Math.abs(g.left+g.width/2-card.left-card.width/2);var frame={index:selected(),expected,x,y,glassLag,left:card.left,right:card.right,top:card.top,bottom:card.bottom};frames.push(frame);if(frame.index!==expected||x>1||y>1||glassLag>1||card.left<0||card.right>1921)failures.push(frame);}if(running)requestAnimationFrame(sample);}
+      // A fresh tap may glide the rows or bump an edge; only those frames skip the exact
+      // stage/item position check. Held repeats, focus, glass and bounds stay strict.
+      function settling(){var c=document.getElementById('homeSurface').classList;return c.contains('ctv-scroll-glide')||c.contains('ctv-edge-bump');}
+      function sample(){var item=document.querySelector('#tiles .item.focused');if(item){var r=item.getBoundingClientRect(),card=item.querySelector('.card').getBoundingClientRect(),glass=document.getElementById('glass'),g=glass.getBoundingClientRect(),x=Math.abs(r.left-parseFloat(item.style.left)),stage=document.getElementById('stage'),transform=new WebKitCSSMatrix(getComputedStyle(stage).transform),target=new WebKitCSSMatrix(stage.style.transform),y=Math.abs(transform.m42-target.m42),glassLag=getComputedStyle(glass).display==='none'?0:Math.abs(g.left+g.width/2-card.left-card.width/2);var frame={index:selected(),expected,x,y,glassLag,left:card.left,right:card.right,top:card.top,bottom:card.bottom};frames.push(frame);if(frame.index!==expected||!settling()&&(x>1||y>1)||glassLag>1||card.left<0||card.right>1921)failures.push(frame);}if(running)requestAnimationFrame(sample);}
       requestAnimationFrame(sample);
       var directions=scenic?[39,37]:[40,38,39,37];
       for(var d=0;d<directions.length;d++){var key=directions[d];for(var step=0;step<(scenic?count*2+1:Math.max(state.columns+1,Math.ceil(count/state.columns)+1));step++){

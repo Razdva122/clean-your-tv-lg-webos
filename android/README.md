@@ -1,19 +1,21 @@
 # Install Clean Your TV from Android
 
-> Release 1.6.0 uses Android 0.6.0 / versionCode 17. See [Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases) for published downloads and [artifact-bound acceptance and limits](../docs/history/2026-11-02-release-1.6.0-final-acceptance.md).
+> This guide describes 1.7.0 with Android 0.7.0 / versionCode 18. Use [Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases) for the latest published downloads. Artifact-bound signer, payload and in-place upgrade results and limits are maintained in the [1.7.0 package acceptance record](../docs/history/2026-11-03-release-1.7.0-final-packages.md); the historical evidence below remains scoped to its original APK.
+
+> Historical release 1.6.0 uses Android 0.6.0 / versionCode 17. See [Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases) for published downloads and [artifact-bound acceptance and limits](../docs/history/2026-11-02-release-1.6.0-final-acceptance.md).
 
 Use your phone to install either **No-root** (Developer Mode) or **Root**
 (existing root SSH) on an LG webOS TV. No PC, Termux, phone Python installation
 or cloud service is needed. The APK includes the offline interface and TV packages;
 optional TV Python is a separate verified download.
 
-Release **1.6.0** uses **Android 0.6.0 / versionCode 17**.
+Version **1.7.0** uses **Android 0.7.0 / versionCode 18**.
 [Download the signed APK](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest) ·
 [Full installation guide](../docs/INSTALL.md) · [Recovery](#recovery-and-private-data) ·
 [Report a problem](../docs/FEEDBACK.md)
 
 Requires a **64-bit ARM phone, Android 7.0+ and WebView/Chrome 108+**.
-Artifact-bound emulator checks use Android 15 / API 35 ARM64 with WebView 124.
+Historical 1.6.0 artifact-bound emulator checks used Android 15 / API 35 ARM64 with WebView 124.
 Original-signer upgrade and native Store checks passed in the recorded scope;
 native instrumentation required supported adb-root on a userdebug emulator.
 The production APK was not re-signed or made debuggable. Exact tested bytes and
@@ -28,10 +30,10 @@ launch, with English fallback. Tap the top-right language control to choose and
 save another language. Root and No-root are equal options for different TV access.
 
 <a id="release-140"></a>
-See the [1.6.0 release scope](../docs/RELEASE-1.6.0.md) and
+See the [1.7.0 release scope](../docs/RELEASE-1.7.0.md) and
 [Android acceptance boundaries](STABLE-READINESS.md).
 
-**Unreleased:** a [visible TV checklist](../docs/CLI.md#visible-tv-checks-unreleased) shows individual prerequisite results and keeps them on the error screen. Unrun checks remain unverified; `doctor` does not prepare Python or request control pairing.
+The [visible TV checklist](../docs/CLI.md#visible-tv-checks-unreleased) shows individual prerequisite results and keeps them on the error screen. Unrun checks remain unverified; `doctor` does not prepare Python or request control pairing.
 
 ## Install and connect
 

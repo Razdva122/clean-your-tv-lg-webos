@@ -30,6 +30,28 @@ successful TV work into a failed command. `doctor --report` remains explicit.
 Review every report before sharing. The special Home-button recording retains
 its separately documented application-ID/timing scope.
 
+## Recovery journal summary (unreleased)
+
+Additive `recovery` is computed from the original local journal snapshot already
+used by the report, without another TV query or receipt rewrite:
+
+- `category`: `none`, `other-edition`, `removal-not-submitted`,
+  `inherited-operation`, `interrupted-install`, `removal-started`, `unknown-journal`.
+- `next_action`: `none`, `review-recovery` for an original pre-submission No-root
+  removal, otherwise `retain-evidence`. These are advisory codes, never capabilities.
+- `removals`: only `home`/`helper` keys with `submitted`, `terminal` or `done` values.
+  Unknown IDs, values, paths, receipt identifiers and nested operation data are omitted.
+
+The exact pre-submission predicate is shared with `require_removal_idle` (#256),
+so a nested prior operation, unexpected field or malformed removal map cannot be
+presented as the safe pre-submission case. Runtime mutation still re-reads its
+private journal; exporting or editing a report never grants recovery authority.
+A current `recovery-status-rejected` guidance code identifies a definite TV
+package-status refusal during No-root removal/recovery. `removal-not-submitted`
+guidance offers explicitly confirmed inspection after a failed original removal.
+Original error capture/history behavior is unchanged; these fields do not reconstruct
+legacy first failures or establish that a submitted package transaction terminated.
+
 ## Root admission and connection advice (unreleased)
 
 Optional `guidance` contains only an allowlisted advice code and a Boolean pending
@@ -93,3 +115,14 @@ clears emergency stop or changes permissions.
 startup observation and owner-reported physical Home results. These are
 invocation-local evidence, not deployment authority. Unknown or extra persisted
 values are removed/reclassified at export. See the [outcome contract](INSTALLER-OUTCOMES.md).
+
+## Passive Root submission status (next cycle)
+
+Root install status at `coordinator-submitted` reads original-operation data
+through system Node without staging a coordinator or executing retained Python.
+The additive `status.product.passive` projection contains fixed status,
+operation-consistency, worker and Python-byte categories only. Recovery-required
+remains; it cannot finish a pending record or grant resume. Matching interpreter
+bytes are not execution proof and a later status cannot identify the original
+SSH-127 deployment cause. See [the passive contract](ROOT-PASSIVE-DIAGNOSTICS.md#original-operation-bootstrap-and-path-selection)
+and [dated checks/limits](../history/2026-11-02-root-pinned-passive-inspection.md).

@@ -1,6 +1,8 @@
 # Clean Your TV — user guide
 
-> This guide describes 1.6.0. For available packages, use [published GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases). It includes all five installer improvements and refreshes Root Settings from actual status after reopening; a failed check does not enable Home. System Updater 1.2.0 is for new eligible setup or verified replacement of 1.1.0/1.1.1. Existing 1.1.2 stays pinned with its old channels; no general migration is provided. Keep recovery data and do not force replacement. [Versions and limits](../RELEASE-1.6.0.md).
+**1.7.0 — Root startup sources:** In Settings → Your Home screen, turn on **Change Home** to edit **Open Clean Your TV first**. **LG Channels / Live TV** is on by default; **YouTube** is off. When Change Home is off, the two switches remain visible but unavailable, and their saved values are retained. Preferences are stored privately on this TV; portable profile export does not include them. This control is not a claim of verified TV startup or wake behavior. A source switched off leaves the startup decision to the TV firmware; it does not guarantee resuming that source. There is no HDMI startup switch. [Native startup limits (English)](../../root-edition/README.md#candidate-native-startup-choices).
+
+> This guide describes 1.7.0. For available packages, use [published GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases). It includes all five installer improvements and refreshes Root Settings from actual status after reopening; a failed check does not enable Home. System Updater 1.2.0 is for new eligible setup or verified replacement of 1.1.0/1.1.1. Existing 1.1.2 stays pinned with its old channels; no general migration is provided. Keep recovery data and do not force replacement. [Versions and limits](../RELEASE-1.7.0.md).
 
 > v1.5.0: themes, Showcase and PC-to-TV transfer. Known Root limits: Appearance can shift 110 px; automatic Home after standby can fail. Device-specific acceptance remains limited. [1.5.0](../RELEASE-1.5.0.md).
 
@@ -91,9 +93,11 @@ No-root: To restart Home control, open Home Helper, choose Start Helper and conf
 
 After interruption, run `status` before retrying; retain journals and recovery files. `restore` returns LG Home without removing apps. `uninstall` restores before removal. Root recovery state is deliberately retained; never delete it to force reinstallation. Review diagnostic reports before sharing; do not publish keys or profile folders.
 
-1.5.4: open **Home settings → Appearance → Columns** and choose 1–8 columns, or **By theme** to use the theme’s value (Classic defaults to 5). An explicit number takes priority over the theme. Themes with a fixed layout hide the Columns option and use the author’s value. Your saved choice returns when you switch to a theme that supports this setting. In the Alpine candidate preview, apps form one looping horizontal ribbon: Left/Right scrolls and wraps, Up opens shortcuts, and Down returns to the same app. In the Alpine preview, the mouse wheel or touchpad also scrolls the ribbon; it does not move Home behind an open dialog.
+Open **Home settings → Appearance → Columns** and choose 1–8 columns, or **By theme** to use the theme’s value (Classic defaults to 5). An explicit number takes priority over the theme. Themes with a fixed layout hide the Columns option and use the author’s value. Your saved choice returns when you switch to a theme that supports this setting. In downloaded Alpine, apps form one looping horizontal ribbon: Left/Right scrolls and wraps, Up opens shortcuts, and Down returns to the same app. In Alpine, the mouse wheel or touchpad also scrolls the ribbon; it does not move Home behind an open dialog.
 
 1.5.4: in **Home settings → Appearance**, turn off **Show Add app tile** to hide the + tile. It is on by default. Use **Add app** in the same section to add or restore apps while + is hidden. Ordering and hiding remain available; the choice survives restart. If every app is hidden, the top controls and Settings remain available.
+
+1.7.0: the selected theme chooses the header **Inputs** menu or an HDMI shelf; there is no global placement or **Show inputs on Home** switch. The shelf currently supports only `dock-grid`. Liquid Glass selects it; Classic and themes without this option keep the header menu. On the shelf, Up from the dock enters the shelf, Up again reaches the header, Down or Back returns to the dock, and OK launches the source. When source tiles exist, the shelf replaces the header Inputs menu. A device name comes from firmware-provided input metadata only if the firmware supplies it; otherwise a connected source shows **Connected**. Home does not invent a PlayStation name or guarantee CEC identification. Empty ports remain selectable. Previews are **on by default**; an explicitly saved Off stays off. Turn off **Home settings → Appearance → Preview inputs on focus** to disable them. While enabled, a connected HDMI source can preview after about 0.8 seconds of focus, only while the selected theme has a shelf. HDMI previews may play sound or switch HDR on some TVs; silence is not guaranteed. Home does not automatically change global TV mute or HDR settings. Live TV and empty ports keep static tiles. Root reads input status through its own service. No-root keeps direct EIM where allowed; a permission refusal uses a read-only request through the paired Helper. Failed reads leave status unknown; no new control or pairing prompt is added.
 
 In 1.5.4 theme previews with the optional sidebar layout, Up/Down selects a menu item, Right enters the apps, and Left from the first visible app column returns to the menu.
 
@@ -123,7 +127,11 @@ Homebrew Channel denied access to this installer. On webOS 11, Homebrew 0.7.3 ne
 
 **1.6.0:** choose **Review recovery options** for the same saved TV, or run `cytv recover`. Checking and changes require separate confirmation, with No selected by default; `--yes` cannot approve them. Root continues only after its existing verification. No-root offers removal only when the existing package-service guard permits it; removal may reset Home preferences. New setup never starts automatically. If state is unknown or access is denied, save the report and stop; retain journals and do not repeat removal. This does not resolve the missing terminal evidence in #201 or establish device recovery in #216. [Recovery](../RECOVERY.md). For help, include model, firmware, edition, installer version, failed step and expected/actual behavior; review and redact the report before sharing.
 
+1.7.0: recovery can resume a No-root removal stopped before its first package request without global package-status access, if the original journal proves that state. Confirm removal separately, then start setup separately after verified removal. Unknown/submitted operations still stop; keep the saved connection and journals. This is not in 1.6.0. [Details](../RECOVERY.md#no-root-removal-stopped-before-package-submission-unreleased).
+
 [Documentation](../README.md) · [Report a problem](../FEEDBACK.md)
+
+1.7.0 recovery guidance: if no package removal request was submitted, a failed removal offers **Review recovery options** for the same saved TV. Inspection and removal still need separate confirmation. A refused package-status check stops recovery and offers a report. Its `recovery` summary distinguishes an unstarted removal, inherited operation and interrupted package work without exposing the full journal; it cannot authorize recovery.
 
 <!-- Anchors retained for links to earlier guide headings. -->
 <a id="optional-python-for-root-in-v110"></a>
@@ -133,14 +141,17 @@ Homebrew Channel denied access to this installer. On webOS 11, Homebrew 0.7.3 ne
 <a id="unreleased-candidate-root-setup-through-homebrew"></a>
 <a id="unreleased-candidate-hdmi-sound-recovery-root"></a>
 
+<a id="themes-154"></a>
 
-## Themes (1.5.4)
+## Themes
 
-1.5.4: **Settings → Themes**. **Classic**, **Alpine**, **Ribbon** are included and work without downloading a theme; Classic remains the default. **Channel** is an external showcase theme. In showcase trials: Choose a theme, then **Keep theme** within **20 seconds**. **Revert**, Back or timeout restores the previous appearance. If Home closes during an unconfirmed preview, the next launch returns to Classic. Built-in and downloaded themes chosen in the installed list apply and save immediately, without a confirmation timer. Themes received from a computer or installed by URL also use this list. Only Try theme inside Theme showcase starts a 20-second trial.
+1.7.0: **Settings → Themes**. **Classic**, **Liquid Glass**, **Ribbon** are included and work without downloading a theme; Classic remains the default. **Channel** is an external showcase theme. In showcase trials: Choose a theme, then **Keep theme** within **20 seconds**. **Revert**, Back or timeout restores the previous appearance. If Home closes during an unconfirmed preview, the next launch returns to Classic. Built-in and downloaded themes chosen in the installed list apply and save immediately, without a confirmation timer. Themes received from a computer or installed by URL also use this list. Only Try theme inside Theme showcase starts a 20-second trial.
+
+1.7.0: **Classic**, **Liquid Glass** and **Ribbon** are built in. **Alpine 1.4.4** moves to the downloadable **Theme showcase**. A saved `builtin:alpine` selection falls back to Classic with the existing visible recovery notice; Home neither downloads Alpine automatically nor replaces it with Liquid Glass. Version 1.6.0 includes Classic, Alpine and Ribbon.
 
 Installed themes appear in one horizontally scrollable row. The active theme is always first and has a highlighted card. Use Left/Right to browse the row.
 
-Showcase lists only themes that are not installed on this TV. Classic, Alpine, Ribbon and downloaded themes are hidden, including when a newer catalogue version exists. After removing a downloaded theme it appears again. Update a theme through Add by ID or Receive from computer.
+Showcase lists only themes that are not installed on this TV. Classic, Liquid Glass, Ribbon and downloaded themes are hidden, including when a newer catalogue version exists. After removing a downloaded theme it appears again. Update a theme through Add by ID or Receive from computer.
 
 Theme cards are embedded directly in Themes beside the settings categories. Showcase, link installation and computer transfer open within that pane; only a showcase trial temporarily reveals Home.
 
@@ -150,12 +161,9 @@ To test an unpublished theme, first open **Settings → Themes → Receive from 
 
 For a published theme, open **Add by ID** and enter its ID (for example `102300a209`), `da.gd/102300a209`, or the full GitHub link. Home shows the expanded da.gd address before loading and then checks the GitHub destination and theme package. The author can provide the ID in the release notes or with **TV link → Copy ID** in the computer preview.
 
-
 **1.6.0:** **Show diagnostics** in the Home Helper panel displays a small, filtered snapshot of its own status requests. Viewing it does not start Helper or change Home control. Share only that JSON when requested, after reviewing it; see [details](../HELPER-DIAGNOSTICS.md#candidate-panel-caller-diagnostics-207).
 
 [Themes (English)](../THEMES.md) · [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
-
-1.5.4: **Classic**, **Alpine**, **Ribbon** — **Settings → Themes**. [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
 
 Themes shows previews of built-in themes and every theme you installed yourself, including offline. A separate Theme showcase button opens the published catalogue; personal installation does not publish a theme.
 

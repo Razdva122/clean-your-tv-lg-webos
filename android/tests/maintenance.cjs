@@ -176,7 +176,7 @@ print(json.dumps(result))
       window.CYTV={hasKey:()=>false,snapshot:()=> '[]',answer:()=>{},saveReport:()=>requests.push('save'),start:c=>requests.push(JSON.parse(c))};
     });
     await page.goto('file://'+path.join(ui,'index.html'));
-    for(const code of ['ssh-unreachable','ssh-identity','developer-key-unlock','root-home-interfaces','pending-operation']){
+    for(const code of ['ssh-unreachable','ssh-identity','developer-key-unlock','root-home-interfaces','pending-operation','recovery-status-rejected','removal-not-submitted']){
       const guide=guides[locale][code];const edition=code.startsWith('developer-')?'no-root':'root';
       await page.evaluate(({guide,edition})=>{
         receiveNative({kind:'started',config:{host:'192.0.2.10',port:2222,edition,action:'install'}});

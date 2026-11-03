@@ -7,7 +7,7 @@ const assert=require('node:assert/strict');
   for(const edition of ['launcher','root-launcher']){
    const page=await browser.newPage({viewport:{width:1920,height:1080}}),errors=[];
    page.on('pageerror',error=>errors.push(error.message));
-   await page.route('https://**',route=>route.abort());
+   await page.route(/^https:\/\//,route=>route.abort());
    await page.goto((process.env.PREVIEW_URL||'http://127.0.0.1:8876')+'/'+edition+'/index.html');
    await page.locator('#tiles .item').first().waitFor();await page.locator('#btnSettings').click();
    const nav=page.locator('.settings-categories');

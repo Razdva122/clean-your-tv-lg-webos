@@ -1,12 +1,16 @@
-# Theme development status (unreleased)
+<a id="theme-development-status-unreleased"></a>
 
-The maintainer has authorized integrating this current implementation, including
-Themes, Columns and categorized settings, into the unfrozen `release/next`
-candidate. Published packages do not yet contain this work, and integration does
-not establish physical-TV acceptance.
+# Theme development status
+
+Themes, Columns and categorized settings are already available in published
+packages. Version 1.7.0 changes the built-in lineup to Classic, Liquid Glass
+and Ribbon; version 1.6.0 contains Classic, Alpine and Ribbon. Publication
+does not establish compatibility beyond the recorded physical-TV acceptance.
 The complete design remains in the [theme ecosystem specification](../superpowers/specs/2026-10-28-theme-ecosystem-design.md).
 
-## Implemented in this preparation branch
+<a id="implemented-in-this-preparation-branch"></a>
+
+## Current implementation
 
 - Public Home, library and Inputs styling parts, separated Classic appearance,
   and trusted Settings/language/confirmation/update suspension in both editions.
@@ -21,7 +25,7 @@ The complete design remains in the [theme ecosystem specification](../superpower
   unchanged. Legacy backups preserve the effective number, not the By theme mode;
   preserving that mode with installed theme state belongs to the storage gate below.
 - A data-only reviewed showcase registry, pinned per-theme detail pages, static
-  catalog, moderation states and read-only PR checks. Classic and Alpine are bundled; Channel is the first pinned external theme. The historical external Alpine listing is archived.
+  catalog, moderation states and read-only PR checks. Classic, Liquid Glass and Ribbon are bundled in 1.7.0. Alpine 1.4.4 and Channel are external Showcase themes; the old toolkit Alpine listing remains archived.
 - A separate candidate author toolkit with templates, multi-theme repositories,
   actual-renderer browser preview, validation/build, screenshots and PR drafts.
   The main project exports its renderer/compiler with file hashes and provenance.
@@ -34,7 +38,7 @@ uses an explicitly exported candidate, with dirty snapshots labelled as such.
 
 ## Release gates and remaining work
 
-- Implemented: built-in Classic/Alpine selection, external URL/collection install, app-origin IndexedDB, offline restore and durable 20-second trials. See [lifecycle/storage details](TV-THEMES.md).
+- Implemented: built-in Classic/Liquid Glass/Ribbon selection, external URL/collection install, app-origin IndexedDB, offline restore and durable 20-second trials. See [lifecycle/storage details](TV-THEMES.md).
 - Runtime accepts five trusted composition presets (`dock-grid`, `icon-grid`,
   `side-grid`, `channel-list`, `scenic-grid`) with a configurable column count. Spacing/text/focus
   scales still require the Classic values; other combinations are explicitly
@@ -43,7 +47,7 @@ uses an explicitly exported candidate, with dirty snapshots labelled as such.
 - Validate app-owned theme storage and service permissions on actual Root and
   No-root TVs, including quota, interruption, update and rollback preservation.
   IndexedDB is implemented and browser-tested; its TV-origin availability/quota remains a hardware gate.
-- The theme-enabled candidate implements transport/storage/trials; published Home packages may not include it yet. Confirm the Themes control is present before following the candidate guide.
+- Published Home packages include transport/storage/trials. The built-in lineup follows the installed Home version. A saved `builtin:alpine` selection in 1.7.0 recovers to Classic with the visible recovery notice; it neither downloads Alpine automatically nor selects Liquid Glass.
 - Generate complete real-renderer review scenarios and obtain separate device
   evidence before accepting the full community-theme release. Browser screenshots
   are not remote, standby, cold-boot, OTA or rollback acceptance.
@@ -76,7 +80,7 @@ Use fresh staging. An export containing the retired `/themes/` subtree is refuse
 before files are written, so old catalogue pages cannot survive a new deployment.
 The main preview retains both editions, theme switching and the TV catalogue JSON.
 
-The optional candidate `modern-icon-css-v1` capability supports bounded CSS-only
+The optional `modern-icon-css-v1` capability supports bounded CSS-only
 icon effects on browsers with filter/screen support. It never replaces original
 app images; older browsers reject it safely. See [the contract](THEME-CSS.md#optional-css-icon-effects)
 and [the local Itachi package source](../../themes/itachi/README.md).
