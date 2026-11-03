@@ -78,6 +78,14 @@ class BuildTests(unittest.TestCase):
                 self.assertGreaterEqual(archive.getmember('control').mtime, 1577836800)
             release = json.loads((first / 'release.json').read_text())
             self.assertFalse(release['hardware_validated'])
+            self.assertEqual(release['capabilities'],['theme-receiver-v1','wallpaper-media-v1'])
+            import provision
+            original={'service':'Exec=/usr/bin/run-js-service -n '+str(provision.SERVICE),'role':json.dumps({'appId':provision.NAME}),'client':'{}','api':'{}'}
+            api=json.loads(provision.plan(original,provision.snapshot_capabilities(release))['api'])
+            methods=api[provision.NAME+'.control']
+            for method in ('wallpaperCacheStart','wallpaperCacheWrite','wallpaperCacheCommit','wallpaperCacheKeepAlive','wallpaperCacheStop'):
+                self.assertIn(provision.NAME+'/'+method,methods)
+                self.assertIn(method.encode(),files[service_prefix+'service.js'])
             for name, digest in release['files'].items():
                 self.assertEqual(hashlib.sha256(files[name]).hexdigest(), digest)
             self.assertEqual((first / 'SHA256SUMS').read_text(), hashlib.sha256(ipk.read_bytes()).hexdigest() + '  ' + ipk.name + '\n')
