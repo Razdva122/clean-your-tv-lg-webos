@@ -2,10 +2,10 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
 function fixture(uhd){
  const nodes={},events={},storage={},videos=[],timers=new Map();let sequence=0;
  function node(tag){const classes=new Set(),listeners={};return {tagName:tag,style:{},classList:{add:x=>classes.add(x),remove:x=>classes.delete(x),contains:x=>classes.has(x)},appendChild(n){n.parentNode=this;nodes[n.id]=n;},removeChild(n){delete nodes[n.id];n.parentNode=null;},setAttribute(){},removeAttribute(k){delete this[k];},addEventListener(k,f){listeners[k]=f;},removeEventListener(k){delete listeners[k];},fire(k){if(listeners[k])listeners[k]();},pause(){this.paused=true;},load(){},play(){this.paused=false;return {then:(ok,bad)=>{this.reject=bad;}};}};}
- const doc={body:node('body'),documentElement:node('html'),hidden:false,getElementById:id=>nodes[id],createElement(tag){const n=node(tag);if(tag==='video')videos.push(n);return n;},addEventListener(k,f){events[k]=f;},dispatchEvent(){}};nodes.homeSurface=node('main');
+ const doc={body:node('body'),documentElement:node('html'),hidden:false,getElementById:id=>nodes[id],createElement(tag){const n=node(tag);if(tag==='video'){n.videoWidth=1920;n.videoHeight=1080;videos.push(n);}return n;},addEventListener(k,f){events[k]=f;},dispatchEvent(){}};nodes.homeSurface=node('main');
  const ctx={document:doc,localStorage:{getItem:k=>storage[k]||null,setItem:(k,v)=>storage[k]=v},CustomEvent:function(){},setTimeout:f=>{timers.set(++sequence,f);return sequence;},clearTimeout:id=>timers.delete(id),webOS:{deviceInfo:cb=>cb({uhd})}};
  vm.runInNewContext(fs.readFileSync('launcher/wallpaper.js','utf8'),ctx);
- const manifest={id:'test:theme',title:'Video',defaults:{wallpaperAssetId:'poster',dim:.3},assets:[{id:'poster',width:1920,height:1080}],wallpaperVideo:{variants:[{quality:'4k'},{quality:'1080p'}]}};
+ const manifest={id:'test:theme',title:'Video',defaults:{wallpaperAssetId:'poster',dim:.3},assets:[{id:'poster',width:1920,height:1080}],wallpaperVideo:{variants:[{quality:'4k',width:3840,height:2160},{quality:'1080p',width:1920,height:1080}]}};
  return {api:ctx.HomeWallpaper,doc,nodes,videos,input:{manifest,assetHandles:{poster:'blob:poster'},videoHandles:{'4k':'blob:4k','1080p':'blob:fhd'}},events,timers,storage};
 }
 let f=fixture(undefined);assert(f.api,'wallpaper lifecycle API exists');
@@ -25,8 +25,11 @@ console.log('PASS bounded no-play/stall cascade releases media');
  f.input.videoHandles={};f.input.videoLease={acquire(){acquisitions++;return new Promise(resolve=>{finish=resolve;});},release(){assert.equal(f.videos.at(-1)&&f.videos.at(-1).src,undefined,'decoder detaches before native cache release');releases++;}};
  f.api.configure(f.input);assert.equal(acquisitions,1,'native cache acquired only as wallpaper becomes active');assert.equal(f.api.state().actualQuality,'image');assert.equal(f.videos.length,0);
  f.api.suspend('settings');finish({'4k':'http://127.0.0.1/native-first'});await Promise.resolve();assert.equal(f.videos.length,0,'late acquisition cannot start media behind settings');assert.equal(releases,1);
- f.api.resume('settings');assert.equal(acquisitions,2);finish({'4k':'http://127.0.0.1/native-second'});await Promise.resolve();assert.equal(f.videos.at(-1).src,'http://127.0.0.1/native-second');f.videos.at(-1).fire('playing');f.api.setQuality('image');assert.equal(releases,2);assert.equal(f.videos.at(-1).src,undefined);
+ f.api.resume('settings');assert.equal(acquisitions,2);finish({'4k':'http://127.0.0.1/native-second'});await Promise.resolve();assert.equal(f.videos.at(-1).src,'http://127.0.0.1/native-second');f.videos.at(-1).videoWidth=3840;f.videos.at(-1).videoHeight=2160;f.videos.at(-1).fire('playing');f.api.setQuality('image');assert.equal(releases,2);assert.equal(f.videos.at(-1).src,undefined);
  console.log('PASS lazy native lease acquire, stale result and hidden/image release');
 })().catch(e=>{console.error(e);process.exitCode=1;});
 f=fixture(true);f.api.configure(f.input);let firstTimer=Array.from(f.timers.keys())[0];f.videos.at(-1).fire('waiting');assert(f.timers.has(firstTimer),'waiting without frame progress cannot postpone fallback indefinitely');
 f.api.setDim(.8);delete f.storage['tvhome.wallpaper.preferences.v1'];f.api.configure(f.input);assert.equal(f.api.state().dim,.3,'removed profile preferences do not survive in memory');
+
+f=fixture(true);f.api.configure(f.input);f.videos.at(-1).fire('playing');assert.equal(f.api.state().actualQuality,'image','mismatched decoded UHD dimensions never expose video');assert.equal(f.videos.at(-1).src,'blob:fhd','decoded mismatch descends to compatible FHD');assert.match(f.api.state().notice,/dimensions/);
+f=fixture(true);f.api.configure(f.input);f.api.suspend('settings');assert.equal(f.api.state().paused,true);f.api.setQuality('image');assert.equal(f.api.state().paused,false);f.api.configure({...f.input,manifest:{...f.input.manifest,wallpaperVideo:undefined},videoHandles:{}});assert.equal(f.api.state().paused,false);

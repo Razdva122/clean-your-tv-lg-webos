@@ -39,19 +39,20 @@ Root and No-root add a localized Wallpapers category. It previews the active
 theme's actual wallpaper image and provides Auto, 4K, 1080p, Image, dim adjustment
 and reset. Missing wallpapers and unavailable qualities are explicit. Hardware
 capability and current selected/playing mode are separate; unknown metadata stays
-unknown. Auto selects UHD only after affirmative TV capability data, otherwise
-FHD or the image. HDR is outside this feature.
+unknown. A video wallpaper suspended by settings is labeled "Paused while settings
+are open"; image-only themes retain Image, and Classic shows No wallpaper. Auto
+selects UHD only after affirmative TV capability data, otherwise FHD or the image. HDR is outside this feature.
 
 Settings use `tvhome.wallpaper.preferences.v1`, bounded per theme, in the existing
 app origin. They follow theme state rather than adding fields to legacy profile
-wire formats. Normal same-origin updates retain preferences; a legacy Root profile
-restore that resets theme selection also clears wallpaper preferences. System
-profile restore does not erase the existing same-origin theme state.
+wire formats. Normal same-origin updates retain preferences; legacy Root and
+No-root profile restores that reset theme selection also clear wallpaper
+preferences. System profile restore does not erase the existing same-origin theme state.
 
 ## Native cache and ownership
 
-A physical C3 probe rejected a valid H.264 Blob URL even though packaged-file
-playback worked. Native browser preparation therefore uses `WallpaperMediaCache`.
+Native browser preparation uses `WallpaperMediaCache` so that playback does not
+depend on native support for arbitrary Blob URLs.
 It exposes no author-supplied URL or script. The edition's existing service adds
 `wallpaperCacheStart`, `Write`, `Commit`, `KeepAlive`, and `Stop` methods (all with
 the `wallpaperCache` prefix). Every call checks the exact owning application ID.

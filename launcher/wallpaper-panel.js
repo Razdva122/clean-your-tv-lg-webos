@@ -2,7 +2,7 @@
 (function(root){
  'use strict';
  var panel,preview,title,capability,actual,notice,dimValue,qualityButtons=[],minus,plus,reset;
- function t(source){var language=root.HomeI18n&&root.HomeI18n.language(),strings=root.HomeWallpaperLocales&&root.HomeWallpaperLocales[language];return strings&&strings[source]|| (root.HomeI18n?root.HomeI18n.t(source):source);}
+ function t(source){var prefix='Video dimensions do not match the theme. ';if(source.indexOf(prefix)===0)return t('Video dimensions do not match the theme.')+' '+t(source.slice(prefix.length));var language=root.HomeI18n&&root.HomeI18n.language(),strings=root.HomeWallpaperLocales&&root.HomeWallpaperLocales[language];return strings&&strings[source]|| (root.HomeI18n?root.HomeI18n.t(source):source);}
  function node(tag,parent,id){var el=document.createElement(tag);if(id)el.id=id;parent.appendChild(el);return el;}
  function state(){return root.HomeWallpaper&&root.HomeWallpaper.state?root.HomeWallpaper.state():{};}
  function label(quality){return t(quality==='auto'?'Auto':quality==='image'?'Image':quality==='4k'?'4K':'1080p');}
@@ -14,7 +14,7 @@
   preview.hidden=!hasPoster;
   if(hasPoster){if(preview.getAttribute('src')!==value.posterURL)preview.src=value.posterURL;preview.alt=t('Current theme wallpaper');}else preview.removeAttribute('src');
   capability.textContent=t('TV capability')+': '+t(cap.uhd===true?'4K supported':cap.uhd===false?'4K not detected':'Unknown');
-  actual.textContent=t('Current mode')+': '+(hasPoster&&value.actualQuality?label(value.actualQuality):t('No wallpaper'));
+  actual.textContent=t('Current mode')+': '+(hasPoster?(value.paused?t('Paused while settings are open'):value.actualQuality?label(value.actualQuality):t('No wallpaper')):t('No wallpaper'));
   notice.textContent=!hasPoster?t('This theme has no wallpaper.'):available.indexOf('4k')<0&&available.indexOf('1080p')<0?t('This theme uses an image only.'):t('Auto uses detected TV support. Playback may fall back to an image.');
   if(value.notice)notice.textContent+=' '+t(value.notice);
   qualityButtons.forEach(function(button){var q=button.getAttribute('data-wallpaper-quality');button.textContent=label(q);button.disabled=!hasPoster||(q!=='auto'&&available.indexOf(q)<0)||(q==='4k'&&cap.uhd===false);button.setAttribute('aria-pressed',String((value.preferenceQuality||'auto')===q));});

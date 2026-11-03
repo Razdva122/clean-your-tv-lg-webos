@@ -18,6 +18,23 @@ async function run(){
  const expired=await start();await new Promise(r=>setTimeout(r,130));assert.throws(()=>c.keepAlive({sessionId:expired.sessionId}));assert.equal(holds,0);fs.rmdirSync(directory);
  const methods={};require('../../theme-receiver/register')({register:(name,fn)=>methods[name]=fn},{appId:'com.test'});
  for(const name of ['wallpaperCacheStart','wallpaperCacheWrite','wallpaperCacheCommit','wallpaperCacheKeepAlive','wallpaperCacheStop']){assert(methods[name]);let reply;methods[name]({payload:{},ls2Message:{applicationID:()=>'evil'},respond:r=>reply=r});assert.equal(reply.returnValue,false);}
+ const activityDirectory=fs.mkdtempSync(path.join(os.tmpdir(),'wallpaper-activity-test-')),activityMethods={},activeActivities=new Map(),completed=[];let activityId=0;
+ const manager={create(name,callback){assert(!activeActivities.has(name),'activity names must be distinct');const activity={name,activityId:++activityId};activeActivities.set(name,activity);callback(activity);},complete(activity,callback){assert.equal(activeActivities.get(activity.name),activity);activeActivities.delete(activity.name);completed.push(activity.name);callback();}};
+ require('../../theme-receiver/register')({register:(name,fn)=>activityMethods[name]=fn,activityManager:manager},{appId:'com.test',directory:activityDirectory,port:0,ttlMs:1000});
+ const call=(method,payload={})=>new Promise(resolve=>activityMethods[method]({payload,ls2Message:{applicationID:()=>'com.test'},respond:resolve}));
+ const receiver=await call('themeReceiverStart'),one=await call('wallpaperCacheStart',{variants:[variant]}),two=await call('wallpaperCacheStart',{variants:[variant]});
+ assert(receiver.returnValue&&one.returnValue&&two.returnValue);assert.equal(activeActivities.size,3,'receiver and both media leases each own an activity');assert(activeActivities.has('themeReceiver'));const mediaNames=[...activeActivities.keys()].filter(name=>name!=='themeReceiver');assert(mediaNames.every(name=>/^wallpaperMedia-\d+$/.test(name)));
+ await call('wallpaperCacheStop',{sessionId:one.sessionId});assert.equal(activeActivities.size,2);assert(activeActivities.has('themeReceiver'));assert(activeActivities.has(mediaNames[1]));
+ await call('themeReceiverStop',{sessionId:receiver.sessionId});assert.equal(activeActivities.size,1);assert(activeActivities.has(mediaNames[1]));await call('wallpaperCacheKeepAlive',{sessionId:two.sessionId});await call('wallpaperCacheStop',{sessionId:two.sessionId});assert.equal(activeActivities.size,0);assert.equal(completed.length,3);
+ let customHolds=0;const customMethods={};require('../../theme-receiver/register')({register:(name,fn)=>customMethods[name]=fn,activityManager:{create(){throw Error('custom hold must be honored');},complete(){}}},{appId:'com.test',directory:activityDirectory,port:0,hold(){customHolds++;return()=>customHolds--;}});
+ const custom=(method,payload={})=>new Promise(resolve=>customMethods[method]({payload,ls2Message:{applicationID:()=>'com.test'},respond:resolve}));const customReceiver=await custom('themeReceiverStart'),customCache=await custom('wallpaperCacheStart',{variants:[variant]});assert.equal(customHolds,2);await custom('themeReceiverStop',{sessionId:customReceiver.sessionId});assert.equal(customHolds,1);await custom('wallpaperCacheStop',{sessionId:customCache.sessionId});assert.equal(customHolds,0);fs.rmdirSync(activityDirectory);
+ // A private-looking directory must also belong to the service account.
+ if(typeof process.getuid==='function'){
+  const vm=require('vm'),foreignDirectory=fs.mkdtempSync(path.join(os.tmpdir(),'wallpaper-foreign-test-')),fakeFs=Object.create(fs);fakeFs.lstatSync=name=>{const stat=fs.lstatSync(name);if(name===foreignDirectory)stat.uid=process.getuid()+1;return stat;};
+  const module={exports:{}};vm.runInNewContext(fs.readFileSync(require.resolve('../../theme-receiver/wallpaper-cache'),'utf8'),{module,exports:module.exports,require:name=>name==='fs'?fakeFs:require(name),process,Buffer,Promise,setTimeout,clearTimeout});
+  await assert.rejects(module.exports.create({directory:foreignDirectory}).start({variants:[variant]}),/unsafe directory/);assert.equal(fs.readdirSync(foreignDirectory).length,0);fs.rmdirSync(foreignDirectory);
+ }
+ console.log('PASS receiver/media independent activity ownership, hold overrides and cache directory ownership');
  console.log('PASS native cache auth, offsets, hash, HTTP ranges, disposal, lease bounds and expiry');
 }
 run().catch(e=>{console.error(e);process.exitCode=1;});

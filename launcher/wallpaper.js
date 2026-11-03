@@ -20,7 +20,7 @@
   }
   function state() {
     var asset = poster(), m = input && input.manifest;
-    return {themeId: m ? m.id : 'builtin:classic', title: m ? m.title : 'Classic', posterURL: asset && input.assetHandles && input.assetHandles[asset.id] || '', posterWidth: asset && asset.width || 0, posterHeight: asset && asset.height || 0, available: available(), actualQuality: actual, preferenceQuality: quality, dim: dim, notice: notice, capabilities: {uhd: capabilities.uhd}};
+    return {themeId: m ? m.id : 'builtin:classic', title: m ? m.title : 'Classic', posterURL: asset && input.assetHandles && input.assetHandles[asset.id] || '', posterWidth: asset && asset.width || 0, posterHeight: asset && asset.height || 0, available: available(), paused: blocked() && available().length > 1 && quality !== 'image', actualQuality: actual, preferenceQuality: quality, dim: dim, notice: notice, capabilities: {uhd: capabilities.uhd}};
   }
   function classes(playing) {
     var surface = doc.getElementById('homeSurface'), method = playing ? 'add' : 'remove';
@@ -70,15 +70,21 @@
     current.id = 'ctvWallpaperVideo'; current.muted = true; current.defaultMuted = true; current.volume = 0; current.loop = true; current.autoplay = true;
     current.setAttribute('muted', ''); current.setAttribute('playsinline', ''); current.preload = 'auto';
     function valid() { return generation === token && video === current; }
-    function failed() {
+    function failed(reason) {
       if (!valid()) return;
       var next = q === '4k' && available().indexOf('1080p') >= 0 ? '1080p' : 'image';
       notice = q === '4k' ? '4K playback failed. Using ' + (next === 'image' ? 'the image.' : '1080p.') : 'Video playback failed. Using the image.';
+      if (reason === 'dimensions') notice = 'Video dimensions do not match the theme. ' + notice;
       play(next);
     }
     function watchdog() { if (timer !== null) root.clearTimeout(timer); timer = root.setTimeout(failed, 10000); }
     current._wallpaperListeners = {
-      playing: function () { if (!valid()) return; actual = q; classes(true); watchdog(); emit(); },
+      playing: function () {
+        if (!valid()) return;
+        var expected = input.manifest.wallpaperVideo.variants.filter(function (v) { return v.quality === q; })[0];
+        if (!expected || current.videoWidth <= 0 || current.videoHeight <= 0 || current.videoWidth !== expected.width || current.videoHeight !== expected.height) { failed('dimensions'); return; }
+        actual = q; classes(true); watchdog(); emit();
+      },
       error: failed,
       stalled: function () { if (valid() && timer === null) watchdog(); },
       waiting: function () { if (valid() && timer === null) watchdog(); },

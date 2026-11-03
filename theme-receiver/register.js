@@ -10,14 +10,14 @@ var texts = {
 // webos-service exits a standalone service five seconds after its last
 // activity ends. The HTTP listener is not an activity, so a session holds one;
 // otherwise the process exits while the TV still shows the PIN.
-function activityHold(service) {
-  var manager = service && service.activityManager;
+function activityHold(service, prefix) {
+  var manager = service && service.activityManager, sequence = 0;
   if (!manager || typeof manager.create !== 'function' || typeof manager.complete !== 'function') return null;
   return function () {
     var activity = null, released = false;
     function complete(a) { try { manager.complete(a, function () {}); } catch (_) {} }
     try {
-      manager.create('themeReceiver', function (a) {
+      manager.create(prefix ? prefix + '-' + (++sequence) : 'themeReceiver', function (a) {
         if (!a || !a.activityId) return;
         if (released) complete(a); else activity = a;
       });
@@ -53,7 +53,10 @@ function register(service, options) {
       }, function (e) { fail(texts[e.code] ? e.code : 'receiver-unavailable'); });
     });
   });
-  var cache = wallpaperCache.create(settings);
+  var cacheSettings = {};
+  Object.keys(settings).forEach(function(key){cacheSettings[key]=settings[key];});
+  if (typeof options.hold !== 'function') cacheSettings.hold = activityHold(service, 'wallpaperMedia');
+  var cache = wallpaperCache.create(cacheSettings);
   var cacheMethods = {wallpaperCacheStart:'start', wallpaperCacheWrite:'write', wallpaperCacheCommit:'commit', wallpaperCacheKeepAlive:'keepAlive', wallpaperCacheStop:'stop'};
   Object.keys(cacheMethods).forEach(function(method){
     service.register(method,function(message){

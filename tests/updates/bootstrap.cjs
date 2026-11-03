@@ -42,7 +42,7 @@ console.log('PASS No-root startup reports the installed app manifest version acr
 
 // A retained local profile must not bypass rollback restoration, or overwrite
 // subsequent edits again every time the old version starts.
-const rollbackMemory=new Map([[data.key,JSON.stringify({...profile,config:{...profile.config,columns:7}})],['tvhome.order','later'],['tvhome.layout','later-layout'],['tvhome.columns.v1','{"version":1,"columns":4}'],['tvhome.theme.choice.v1','{"id":"builtin:alpine","title":"Alpine"}'],['tvhome.theme.trial.v1','{"kind":"trial"}']]);
+const rollbackMemory=new Map([[data.key,JSON.stringify({...profile,config:{...profile.config,columns:7}})],['tvhome.order','later'],['tvhome.layout','later-layout'],['tvhome.columns.v1','{"version":1,"columns":4}'],['tvhome.theme.choice.v1','{"id":"builtin:alpine","title":"Alpine"}'],['tvhome.theme.trial.v1','{"kind":"trial"}'],['tvhome.wallpaper.preferences.v1','[{"id":"builtin:alpine","quality":"image","dim":0.4}]']]);
 const rollbackStorage={getItem:k=>rollbackMemory.has(k)?rollbackMemory.get(k):null,setItem:(k,v)=>rollbackMemory.set(k,v),removeItem:k=>rollbackMemory.delete(k)};
 function rollbackBoot(version='1.2.0',transaction='rollback-one'){
  let script;const run={...context,HomeI18n:null,TV_APPS:{apps:[],inputs:[]},CONFIG:{},localStorage:rollbackStorage,
@@ -52,7 +52,7 @@ function rollbackBoot(version='1.2.0',transaction='rollback-one'){
  run.window=run;vm.runInNewContext(fs.readFileSync('launcher/profile-bootstrap.js','utf8'),run);assert(script);return run;
 }
 let rollback=rollbackBoot();assert.equal(rollback.CONFIG.columns,5);assert.equal(rollbackMemory.get('tvhome.order'),'old');assert(!rollbackMemory.has('tvhome.layout'));
-for(const key of ['tvhome.columns.v1','tvhome.theme.choice.v1','tvhome.theme.trial.v1'])assert(!rollbackMemory.has(key),'legacy No-root rollback still resets appearance');
+for(const key of ['tvhome.columns.v1','tvhome.theme.choice.v1','tvhome.theme.trial.v1','tvhome.wallpaper.preferences.v1'])assert(!rollbackMemory.has(key),'legacy No-root rollback still resets appearance');
 rollbackMemory.set('tvhome.order','edited-after-rollback');rollback=rollbackBoot();assert.equal(rollbackMemory.get('tvhome.order'),'edited-after-rollback');
 rollback=rollbackBoot('1.3.0','stale-rollback');assert.equal(rollbackMemory.get('tvhome.order'),'edited-after-rollback');
 console.log('PASS rollback restores retained local settings once and rejects stale package versions');

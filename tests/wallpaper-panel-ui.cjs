@@ -17,6 +17,10 @@ const path=require('node:path');
   assert.equal(await page.locator('#wallpaperPreview').getAttribute('src'),await page.evaluate(()=>testState.posterURL));
   assert.match(await page.locator('#wallpaperCapability').innerText(),/unknown/i);
   assert.match(await page.locator('#wallpaperActual').innerText(),/1080p/);
+  await page.evaluate(()=>{testState.paused=true;testState.actualQuality='image';HomeWallpaperPanel.refresh();});
+  assert.match(await page.locator('#wallpaperActual').innerText(),/Paused while settings are open/,'suspension is distinct from image fallback');
+  await page.evaluate(()=>{testState.paused=false;HomeWallpaperPanel.refresh();});
+  assert.match(await page.locator('#wallpaperActual').innerText(),/Image/,'actual image mode remains visible when not paused');
   await page.locator('[data-wallpaper-quality="4k"]').click();
   assert.equal(await page.evaluate(()=>testState.preferenceQuality),'4k');
   await page.evaluate(()=>{testState.capabilities.uhd=false;HomeWallpaperPanel.refresh();});
@@ -59,6 +63,10 @@ const path=require('node:path');
   for(const locale of ['cs','de','es','pt-BR','fr','it','ko','hi','pl','ru','zh-Hans','zh-Hant']){
    await page.evaluate(locale=>{HomeI18n.language=()=>locale;HomeWallpaperPanel.refresh();},locale);
    assert.notEqual(await page.locator('#wallpaperReset').innerText(),'Reset to theme defaults',locale+' localized reset');
+   await page.evaluate(()=>{testState.paused=true;testState.actualQuality='image';testState.notice='Video dimensions do not match the theme. Video playback failed. Using the image.';HomeWallpaperPanel.refresh();});
+   assert(!(await page.locator('#wallpaperActual').innerText()).includes('Paused while settings are open'),locale+' localized paused state');
+   assert(!(await page.locator('#wallpaperNotice').innerText()).includes('Video dimensions do not match'),locale+' localized dimension notice');
+   assert(!(await page.locator('#wallpaperNotice').innerText()).includes('Video playback failed'),locale+' localized fallback suffix');
    assert(await page.locator('#homeWallpaperPanel').evaluate(el=>el.scrollWidth<=el.clientWidth+1),locale+' fits');
   }
   console.log('PASS wallpaper actual preview, quality availability, bounded dim, reset and focus retention');

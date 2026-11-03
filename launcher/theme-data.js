@@ -120,8 +120,30 @@
   if(v.getUint16(sample.start+24)!==width||v.getUint16(sample.start+26)!==height)invalid();
   var avcc=one(children(sample.start+78,sample.end),'avcC'),at=avcc.start,end=avcc.end;
   if(end-at<7||a[at]!==1||(a[at+4]&252)!==252||(a[at+4]&3)===2||(a[at+5]&224)!==224)invalid();
+  function spsDimensions(start,size){
+   function bad(){fail('Invalid H.264 SPS dimensions');}
+   if(size<5||size>4096||(a[start]&128)||!(a[start]&96))bad();
+   var rbsp=[],zeros=0,i,b;
+   for(i=start+1;i<start+size;i++){b=a[i];if(zeros>=2){if(b===3){if(i+1>=start+size||a[i+1]>3)bad();zeros=0;continue;}if(b<3)bad();}rbsp.push(b);zeros=b===0?zeros+1:0;}
+   var position=0;
+   function bits(count){if(position+count>rbsp.length*8)bad();var value=0;while(count--){value=value*2+((rbsp[position>>3]>>(7-(position&7)))&1);position++;}return value;}
+   function ue(max){var leading=0;while(!bits(1)){if(++leading>31)bad();}var value=Math.pow(2,leading)-1+bits(leading);if(value>max)bad();return value;}
+   function se(){var value=ue(4294967294);return value%2?(value+1)/2:-value/2;}
+   var profile=bits(8),constraints=bits(8),level=bits(8),chroma=1,separate=0;
+   if((constraints&3)||profile!==a[avcc.start+1]||constraints!==a[avcc.start+2]||level!==a[avcc.start+3])bad();
+   ue(31); // seq_parameter_set_id
+   if([100,110,122,244,44,83,86,118,128,138,139,134,135].indexOf(profile)>=0){
+    chroma=ue(3);if(chroma===3)separate=bits(1);ue(6);ue(6);bits(1);
+    if(bits(1))for(i=0;i<(chroma===3?12:8);i++){if(bits(1)){var last=8,next=8;for(var j=0;j<(i<6?16:64);j++){if(next){var delta=se();if(delta< -128||delta>127)bad();next=(last+delta+256)%256;}if(next)last=next;}}}
+   }else if([66,77,88].indexOf(profile)<0)bad();
+   ue(12);var order=ue(2);if(order===0)ue(12);else if(order===1){bits(1);se();se();var cycle=ue(255);while(cycle--)se();}
+   ue(16);bits(1);var columns=ue(239)+1,rows=ue(135)+1,frameOnly=bits(1);if(!frameOnly)bits(1);bits(1);
+   var left=0,right=0,top=0,bottom=0;if(bits(1)){left=ue(3840);right=ue(3840);top=ue(2160);bottom=ue(2160);}bits(1); // VUI follows the dimensions; native playback validates its decode support.
+   var arrayType=separate?0:chroma,cropX=arrayType===1||arrayType===2?2:1,cropY=(arrayType===1?2:1)*(2-frameOnly),codedWidth=columns*16,codedHeight=rows*16*(2-frameOnly);
+   if(codedWidth>Math.ceil(width/16)*16||codedHeight>Math.ceil(height/(16*(2-frameOnly)))*16*(2-frameOnly)||codedWidth-cropX*(left+right)!==width||codedHeight-cropY*(top+bottom)!==height)bad();
+  }
   var count=a[at+5]&31;at+=6;if(!count)invalid();
-  function nal(kind){if(at+2>end)invalid();var n=v.getUint16(at);at+=2;if(!n||at+n>end||(a[at]&31)!==kind)invalid();at+=n;}
+  function nal(kind){if(at+2>end)invalid();var n=v.getUint16(at);at+=2;if(!n||at+n>end||(a[at]&31)!==kind)invalid();if(kind===7)spsDimensions(at,n);at+=n;}
   while(count--)nal(7);if(at>=end)invalid();count=a[at++];if(!count)invalid();while(count--)nal(8);
   // High-profile avcC may include the standard chroma/bit-depth extension.
   if(at<end){if([100,110,122,144].indexOf(a[avcc.start+1])<0||end-at<4||(a[at]&252)!==252||(a[at+1]&248)!==248||(a[at+2]&248)!==248)invalid();count=a[at+3];at+=4;while(count--)nal(13);}

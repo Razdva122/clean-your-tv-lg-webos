@@ -16,6 +16,7 @@ before using a low-level recovery or installation procedure.
 - [Root bundle](../../root-edition/package/README.md), [Root development](../../root-edition/DEVELOPMENT.md), [Root runtime contract](../../root-edition/runtime/README.md).
 - [Contribute a theme](CONTRIBUTING-THEMES.md): PC preview, LAN testing, fixed distributions and Showcase PRs.
 - [Home CSS styling surface](THEME-CSS.md): unreleased visual hooks, engine geometry and trusted dialog boundaries.
+- [Video wallpapers and Wallpapers settings](WALLPAPERS.md): next-release media contract, automatic quality, local cache ownership and acceptance limits.
 - [Homebrew Installer](../../homebrew/README.md) is **unreleased**; [packaging and promotion gates](../../homebrew/DEVELOPMENT.md).
 
 ## Understand behavior and diagnose failures

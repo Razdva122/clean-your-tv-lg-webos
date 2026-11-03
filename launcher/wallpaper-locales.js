@@ -24,7 +24,9 @@ window.HomeWallpaperLocales = {
     "4K playback failed. Using the image.": "Не удалось воспроизвести 4K. Показано изображение.",
     "4K playback failed. Using 1080p.": "Не удалось воспроизвести 4K. Используется 1080p.",
     "Video playback failed. Using the image.": "Не удалось воспроизвести видео. Показано изображение.",
-    "Wallpaper preferences could not be saved.": "Не удалось сохранить настройки обоев."
+    "Wallpaper preferences could not be saved.": "Не удалось сохранить настройки обоев.",
+    "Paused while settings are open": "Приостановлены на время настройки",
+    "Video dimensions do not match the theme.": "Размеры видео не соответствуют теме."
   },
   "cs": {
     "Wallpapers": "Tapety",
@@ -50,7 +52,9 @@ window.HomeWallpaperLocales = {
     "4K playback failed. Using the image.": "Přehrávání 4K selhalo. Zobrazuje se obrázek.",
     "4K playback failed. Using 1080p.": "Přehrávání 4K selhalo. Používá se 1080p.",
     "Video playback failed. Using the image.": "Přehrávání videa selhalo. Zobrazuje se obrázek.",
-    "Wallpaper preferences could not be saved.": "Nastavení tapety se nepodařilo uložit."
+    "Wallpaper preferences could not be saved.": "Nastavení tapety se nepodařilo uložit.",
+    "Paused while settings are open": "Pozastaveno během otevřeného nastavení",
+    "Video dimensions do not match the theme.": "Rozměry videa neodpovídají motivu."
   },
   "de": {
     "Wallpapers": "Hintergrundbilder",
@@ -76,7 +80,9 @@ window.HomeWallpaperLocales = {
     "4K playback failed. Using the image.": "4K-Wiedergabe fehlgeschlagen. Ein Bild wird angezeigt.",
     "4K playback failed. Using 1080p.": "4K-Wiedergabe fehlgeschlagen. 1080p wird verwendet.",
     "Video playback failed. Using the image.": "Videowiedergabe fehlgeschlagen. Ein Bild wird angezeigt.",
-    "Wallpaper preferences could not be saved.": "Hintergrundeinstellungen konnten nicht gespeichert werden."
+    "Wallpaper preferences could not be saved.": "Hintergrundeinstellungen konnten nicht gespeichert werden.",
+    "Paused while settings are open": "Bei geöffneten Einstellungen pausiert",
+    "Video dimensions do not match the theme.": "Die Videoabmessungen stimmen nicht mit dem Design überein."
   },
   "es": {
     "Wallpapers": "Fondos de pantalla",
@@ -102,7 +108,9 @@ window.HomeWallpaperLocales = {
     "4K playback failed. Using the image.": "Falló la reproducción 4K. Se muestra una imagen.",
     "4K playback failed. Using 1080p.": "Falló la reproducción 4K. Se usa 1080p.",
     "Video playback failed. Using the image.": "Falló la reproducción de vídeo. Se muestra una imagen.",
-    "Wallpaper preferences could not be saved.": "No se pudo guardar la configuración del fondo."
+    "Wallpaper preferences could not be saved.": "No se pudo guardar la configuración del fondo.",
+    "Paused while settings are open": "En pausa mientras los ajustes están abiertos",
+    "Video dimensions do not match the theme.": "Las dimensiones del vídeo no coinciden con el tema."
   },
   "pt-BR": {
     "Wallpapers": "Papéis de parede",
@@ -128,7 +136,9 @@ window.HomeWallpaperLocales = {
     "4K playback failed. Using the image.": "Falha na reprodução 4K. Uma imagem é exibida.",
     "4K playback failed. Using 1080p.": "Falha na reprodução 4K. 1080p está em uso.",
     "Video playback failed. Using the image.": "Falha na reprodução do vídeo. Uma imagem é exibida.",
-    "Wallpaper preferences could not be saved.": "Não foi possível salvar as configurações do papel de parede."
+    "Wallpaper preferences could not be saved.": "Não foi possível salvar as configurações do papel de parede.",
+    "Paused while settings are open": "Pausado enquanto as configurações estão abertas",
+    "Video dimensions do not match the theme.": "As dimensões do vídeo não correspondem ao tema."
   },
   "fr": {
     "Wallpapers": "Fonds d’écran",
@@ -154,7 +164,9 @@ window.HomeWallpaperLocales = {
     "4K playback failed. Using the image.": "Échec de lecture 4K. Une image est affichée.",
     "4K playback failed. Using 1080p.": "Échec de lecture 4K. Le mode 1080p est utilisé.",
     "Video playback failed. Using the image.": "Échec de lecture vidéo. Une image est affichée.",
-    "Wallpaper preferences could not be saved.": "Impossible d’enregistrer les réglages du fond."
+    "Wallpaper preferences could not be saved.": "Impossible d’enregistrer les réglages du fond.",
+    "Paused while settings are open": "En pause pendant l’ouverture des paramètres",
+    "Video dimensions do not match the theme.": "Les dimensions de la vidéo ne correspondent pas au thème."
   },
   "it": {
     "Wallpapers": "Sfondi",
@@ -180,7 +192,9 @@ window.HomeWallpaperLocales = {
     "4K playback failed. Using the image.": "Riproduzione 4K non riuscita. Viene mostrata un’immagine.",
     "4K playback failed. Using 1080p.": "Riproduzione 4K non riuscita. Viene usato 1080p.",
     "Video playback failed. Using the image.": "Riproduzione video non riuscita. Viene mostrata un’immagine.",
-    "Wallpaper preferences could not be saved.": "Impossibile salvare le impostazioni dello sfondo."
+    "Wallpaper preferences could not be saved.": "Impossibile salvare le impostazioni dello sfondo.",
+    "Paused while settings are open": "In pausa mentre le impostazioni sono aperte",
+    "Video dimensions do not match the theme.": "Le dimensioni del video non corrispondono al tema."
   },
   "ko": {
     "Wallpapers": "배경화면",
@@ -206,7 +220,9 @@ window.HomeWallpaperLocales = {
     "4K playback failed. Using the image.": "4K 재생 실패. 이미지를 표시합니다.",
     "4K playback failed. Using 1080p.": "4K 재생 실패. 1080p를 사용합니다.",
     "Video playback failed. Using the image.": "동영상 재생 실패. 이미지를 표시합니다.",
-    "Wallpaper preferences could not be saved.": "배경화면 설정을 저장할 수 없습니다."
+    "Wallpaper preferences could not be saved.": "배경화면 설정을 저장할 수 없습니다.",
+    "Paused while settings are open": "설정이 열려 있는 동안 일시 중지됨",
+    "Video dimensions do not match the theme.": "동영상 크기가 테마와 일치하지 않습니다."
   },
   "hi": {
     "Wallpapers": "वॉलपेपर",
@@ -232,7 +248,9 @@ window.HomeWallpaperLocales = {
     "4K playback failed. Using the image.": "4K प्लेबैक विफल। चित्र दिखाया जा रहा है।",
     "4K playback failed. Using 1080p.": "4K प्लेबैक विफल। 1080p उपयोग हो रहा है।",
     "Video playback failed. Using the image.": "वीडियो प्लेबैक विफल। चित्र दिखाया जा रहा है।",
-    "Wallpaper preferences could not be saved.": "वॉलपेपर सेटिंग सहेजी नहीं जा सकी।"
+    "Wallpaper preferences could not be saved.": "वॉलपेपर सेटिंग सहेजी नहीं जा सकी।",
+    "Paused while settings are open": "सेटिंग खुली रहने तक रुका हुआ",
+    "Video dimensions do not match the theme.": "वीडियो के आयाम थीम से मेल नहीं खाते।"
   },
   "pl": {
     "Wallpapers": "Tapety",
@@ -258,7 +276,9 @@ window.HomeWallpaperLocales = {
     "4K playback failed. Using the image.": "Odtwarzanie 4K nie powiodło się. Wyświetlany jest obraz.",
     "4K playback failed. Using 1080p.": "Odtwarzanie 4K nie powiodło się. Używane jest 1080p.",
     "Video playback failed. Using the image.": "Odtwarzanie wideo nie powiodło się. Wyświetlany jest obraz.",
-    "Wallpaper preferences could not be saved.": "Nie udało się zapisać ustawień tapety."
+    "Wallpaper preferences could not be saved.": "Nie udało się zapisać ustawień tapety.",
+    "Paused while settings are open": "Wstrzymane podczas otwartych ustawień",
+    "Video dimensions do not match the theme.": "Wymiary wideo nie pasują do motywu."
   },
   "zh-Hans": {
     "Wallpapers": "壁纸",
@@ -284,7 +304,9 @@ window.HomeWallpaperLocales = {
     "4K playback failed. Using the image.": "4K 播放失败。正在显示图片。",
     "4K playback failed. Using 1080p.": "4K 播放失败。正在使用 1080p。",
     "Video playback failed. Using the image.": "视频播放失败。正在显示图片。",
-    "Wallpaper preferences could not be saved.": "无法保存壁纸设置。"
+    "Wallpaper preferences could not be saved.": "无法保存壁纸设置。",
+    "Paused while settings are open": "设置打开时暂停",
+    "Video dimensions do not match the theme.": "视频尺寸与主题不符。"
   },
   "zh-Hant": {
     "Wallpapers": "桌布",
@@ -310,6 +332,8 @@ window.HomeWallpaperLocales = {
     "4K playback failed. Using the image.": "4K 播放失敗。正在顯示圖片。",
     "4K playback failed. Using 1080p.": "4K 播放失敗。正在使用 1080p。",
     "Video playback failed. Using the image.": "影片播放失敗。正在顯示圖片。",
-    "Wallpaper preferences could not be saved.": "無法儲存桌布設定。"
+    "Wallpaper preferences could not be saved.": "無法儲存桌布設定。",
+    "Paused while settings are open": "設定開啟時暫停",
+    "Video dimensions do not match the theme.": "影片尺寸與主題不符。"
   }
 };

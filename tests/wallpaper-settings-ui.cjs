@@ -9,7 +9,7 @@ const assert=require('node:assert/strict');
   for(const edition of ['launcher','root-launcher']){
    const page=await browser.newPage({viewport:{width:1280,height:720},locale:'en-US'}),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.route(/^https:/,route=>route.abort());
    await page.goto('http://127.0.0.1:'+server.address().port+'/'+edition+'/index.html');await page.locator('#tiles .focused').waitFor();
-   await page.evaluate(async()=>{const item=(await ThemeManager.list()).find(i=>i.id==='builtin:alpine');await ThemeManager.selectInstalled(item);});
+   await page.evaluate(async()=>{const item=(await ThemeManager.list()).find(i=>i.id==='builtin:liquid-glass');await ThemeManager.selectInstalled(item);});
    const poster=await page.evaluate(()=>HomeWallpaper.state().posterURL);assert(poster,'real theme has wallpaper');
    await page.locator('#btnSettings').click();await page.locator('[data-category=wallpapers]').click();
    assert.equal(await page.locator('#wallpaperPreview').getAttribute('src'),poster,'suspension retains actual borrowed wallpaper');

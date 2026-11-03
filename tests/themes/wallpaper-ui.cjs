@@ -12,7 +12,7 @@ const {chromium}=require('playwright');
   await page.addScriptTag({path:'launcher/wallpaper.js'});
   await page.evaluate(bytes=>{
    const url=URL.createObjectURL(new Blob([Uint8Array.from(atob(bytes),c=>c.charCodeAt(0))],{type:'video/mp4'}));
-   window.testInput={manifest:{id:'test:movie',title:'Test video',defaults:{dim:.3,wallpaperAssetId:'poster'},assets:[{id:'poster',width:1920,height:1080}],wallpaperVideo:{variants:[{quality:'1080p'}]}},assetHandles:{poster:'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'},videoHandles:{'1080p':url}};
+   window.testInput={manifest:{id:'test:movie',title:'Test video',defaults:{dim:.3,wallpaperAssetId:'poster'},assets:[{id:'poster',width:1920,height:1080}],wallpaperVideo:{variants:[{quality:'1080p',width:1920,height:1080}]}},assetHandles:{poster:'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'},videoHandles:{'1080p':url}};
    HomeWallpaper.configure(testInput);
   },fs.readFileSync(fixture).toString('base64'));
   await page.waitForFunction(()=>HomeWallpaper.state().actualQuality==='1080p');
@@ -23,6 +23,15 @@ const {chromium}=require('playwright');
   await page.evaluate(()=>HomeWallpaper.resume('dialog'));await page.waitForFunction(()=>HomeWallpaper.state().actualQuality==='1080p');
   await page.evaluate(()=>HomeWallpaper.setQuality('image'));assert.equal(await page.locator('video').count(),0);assert.equal(await page.evaluate(()=>document.body.classList.contains('ctv-wallpaper-playing')),false);
   await page.evaluate(()=>{HomeWallpaper.configure(testInput);HomeWallpaper.reset();});await page.waitForTimeout(100);assert.equal(await page.locator('video').count(),0);assert.equal(await page.evaluate(()=>HomeWallpaper.state().themeId),'builtin:classic');
+  await page.evaluate(()=>{
+   testInput.manifest.wallpaperVideo.variants.unshift({quality:'4k',width:3840,height:2160});testInput.videoHandles['4k']=testInput.videoHandles['1080p'];
+   window.modes=[];document.addEventListener('home-wallpaper-change',()=>modes.push(HomeWallpaper.state().actualQuality));
+   HomeWallpaper.configure(testInput);HomeWallpaper.setQuality('4k');
+  });
+  await page.waitForFunction(()=>HomeWallpaper.state().actualQuality==='1080p');
+  assert.equal(await page.evaluate(()=>modes.includes('4k')),false,'decoded FHD cannot be promoted as UHD from manifest metadata');
+  assert.match(await page.evaluate(()=>HomeWallpaper.state().notice),/dimensions/);
+  await page.evaluate(()=>HomeWallpaper.reset());
   console.log('PASS real H264 decode, unscaled viewport, silent looping, decoder release and stale replacement');
  } finally {await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

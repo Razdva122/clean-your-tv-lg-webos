@@ -7,7 +7,7 @@ The unpublished 1.7.0 candidate packages Classic, Liquid Glass and Ribbon in bot
 ## Trusted modules
 
 - `theme-data.js`: public GitHub URL/collection resolution; commit pinning; bounded sequential XHR; SHA-256; typed manifest/rule validation; image signature/header/dimension checks and native image decode; Blob handle cleanup.
-- `theme-store.js`: app-origin IndexedDB `ctv-themes-v1`, object store `packages`, keyed by descriptor digest. Writes are complete transactions. It bounds installed payload bytes at 24 MiB and eight cached versions, additionally subject to the device's own quota. Download failures do not commit partial packages.
+- `theme-store.js`: app-origin IndexedDB `ctv-themes-v1`, object store `packages`, keyed by descriptor digest. Writes are complete transactions. The next-release video-wallpaper runtime bounds installed payload bytes at 64 MiB and eight cached versions, additionally subject to the device's own quota. Download failures do not commit partial packages.
 - `theme-manager.js`: `tvhome.theme.choice.v1` accepted pointer plus `tvhome.theme.trial.v1` durable preview/startup marker. `selectInstalled(item)` verifies builtin/cache membership through `list()`, then applies and immediately persists without scheduling a timer. It keeps the durable marker before native preparation and CSS application, and restores the previous choice if preparation or persistence fails. Only showcase `begin(item)` schedules the 20-second trial: Keep commits the accepted pointer; Back/Revert/timeout restores the previously accepted appearance. LAN and URL installation choices use immediate installed selection. Incomplete trial/startup on relaunch falls back to Classic without erasing downloaded packages. Binary assets never enter localStorage.
 - `theme-panel.js/css`: standard on-TV Themes settings, remote focus/navigation, URL input, explicit collection choice, installation progress/error, version selection/removal and clear-cache recovery. The trial confirmation stays outside the themed surface and leaves the app ribbon visible. Parent Settings are hidden only during the trial and restored afterwards.
 - `theme-locales.js`: twelve-language settings labels. Validation/network diagnostics may use English technical messages.
@@ -16,6 +16,11 @@ The unpublished 1.7.0 candidate packages Classic, Liquid Glass and Ribbon in bot
 The core theme renderer adds no root commands, repository scripts or external CSS execution. The optional PC → TV receiver adds four owner-scoped Luna methods to the existing edition service; see its provisioning requirements below. Existing emergency Home release, key-up delivery and Home routing remain independent.
 
 ## Source behavior
+
+Next-release video backgrounds add optional, capability-gated H.264 variants with
+a required static fallback. See [Video wallpapers](WALLPAPERS.md) for separate
+video/package limits, native loopback-cache ownership and physical acceptance.
+Existing image and CSS budgets below remain unchanged.
 
 Accept a public `https://github.com/OWNER/REPO` or an exact `https://raw.githubusercontent.com/OWNER/REPO/FULL_COMMIT/.../cytv-theme.json` (or `cytv-themes.json`). A repository URL resolves HEAD through the GitHub commits API, then probes the root collection; a genuine 404 falls back to a root single-theme descriptor. An invalid collection does not fall back. Collection selection is explicit and binds the entry ID/version/digest. Subsequent manifest-relative files stay under the same pinned distribution directory. Credentials, queries, arbitrary hosts, moving raw URLs and traversal are rejected. Redirects are rejected when the browser exposes the final response URL. GitHub rate limits and TLS/CORS failures surface as errors without changing the accepted theme.
 
