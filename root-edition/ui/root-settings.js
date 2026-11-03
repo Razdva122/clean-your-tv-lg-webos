@@ -107,8 +107,10 @@
     var generation = statusGeneration;
 
     message.textContent = t('Checking Home control…');
-    refreshSources(generation);
-    return control('status').then(function (status) {
+    return refreshSources(generation).then(function () {
+      if (generation !== statusGeneration || panel.hidden || document.hidden) return;
+      return control('status');
+    }).then(function (status) {
       if (generation !== statusGeneration || panel.hidden || document.hidden) return;
       if (!status || typeof status !== 'object' || !('intent' in status) ||
           status.intent !== null && (!status.intent || typeof status.intent.phase !== 'string')) throw new Error('Invalid service response');
