@@ -164,7 +164,10 @@ The local author-tool picker uses `src/theme-card.css`, exported through the
 theme runtime. This shared component is retained for author tooling; it does not
 build a standalone catalogue page. A card uses an actual 16:9 Home capture, a
 visible theme name and an `aria-pressed` selection marker. The main browser
-preview offers its inline theme switcher above Home. Classic reference captures
+preview offers its inline theme switcher above Home. Its initial JSON contains only
+catalogue metadata and package URLs; reviewed external theme envelopes are fetched
+on a preview click and reused for the rest of the page session, including edition
+switches. A failed download can be retried by clicking the preview again. Classic reference captures
 and credits remain in `assets/classic-preview.png` and adjacent provenance files.
 Browser previews are not hardware acceptance evidence.
 
