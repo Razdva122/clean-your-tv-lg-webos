@@ -35,7 +35,7 @@ const key=keyCode=>listeners.keydown({keyCode,preventDefault(){},stopImmediatePr
  pending.shift()();await tick();assert(!tv.disabled);
  listeners.webOSRelaunch();const stale=pending.shift();active=false;listeners.webOSRelaunch();const fresh=pending.shift();
  fresh();await tick();active=true;stale();await tick();assert(tv.disabled,'stale source status cannot re-enable controls');
- delay=false;fail=true;listeners.webOSRelaunch();await tick();assert(tv.disabled);assert(!home.disabled,'source status failure does not break Home control');
+ delay=false;fail=true;listeners.webOSRelaunch();await tick();assert(tv.disabled);assert(!home.disabled,'source status failure does not break Home control');assert(elements.some(e=>e.textContent==='Startup sources unavailable. Reopen Settings to check again.'),'source error remains visible after Home status succeeds');
  fail=false;listeners.webOSRelaunch();await tick();assert(!tv.disabled);assert.equal(youtube.attrs['aria-checked'],'true');
  console.log('PASS startup source defaults, exact payload, readback, disabled controls, focus, stale status and failure isolation');
 })().catch(error=>{console.error(error);process.exit(1);});
