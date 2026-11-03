@@ -41,8 +41,14 @@ QPushButton[primary="true"]:hover { background: #605447; border-color: #b49c7e; 
 QPushButton[primary="true"]:pressed { background: #443b32; }
 QPushButton[primary="true"]:focus { border-color: #fff8eb; }
 QPushButton:disabled { background: #272521; color: #a79a88; border-color: #51483e; }
-QPushButton#maintenanceToggle { background: transparent; border: none; color: #d6c5ae; text-align: left; padding: 6px 0; }
-QPushButton#maintenanceToggle:focus { border: 2px solid #d6c5ae; padding: 4px; }
+QPushButton#setupTV { background: #e0d4c4; color: #1d1c1a; border: 2px solid #e0d4c4; font-size: 18px; font-weight: 600; min-height: 32px; padding: 12px 16px; }
+QPushButton#setupTV:hover { background: #f3ede3; border-color: #f3ede3; }
+QPushButton#setupTV:pressed { background: #c9b89f; border-color: #c9b89f; }
+QPushButton#setupTV:focus { border-color: #796956; }
+QPushButton#setupTV:disabled { background: #272521; color: #a79a88; border-color: #51483e; }
+QWidget#homeSecondaryActions QPushButton { min-height: 30px; }
+QPushButton#maintenanceToggle:checked { background: #443b32; border-color: #d6c5ae; }
+QWidget#maintenanceActions { background: #211f1b; border: 1px solid #51483e; border-radius: 8px; }
 QPushButton#detailsToggle { background: transparent; border: none; text-align: left; padding: 4px 0; font-size: 14px; color: #d6c5ae; }
 QPushButton#detailsToggle:focus { border: 2px solid #d6c5ae; padding: 2px; }
 QPushButton#close { background: transparent; padding: 6px 16px; }
