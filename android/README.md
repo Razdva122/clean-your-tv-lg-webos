@@ -1,6 +1,6 @@
 # Install Clean Your TV from Android
 
-> This guide describes 1.7.0 with Android 0.7.0 / versionCode 18. Use [Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases) for the latest published downloads. Artifact-bound signer, payload and in-place upgrade results and limits are maintained in the [1.7.0 package acceptance record](../docs/history/2026-11-03-release-1.7.0-final-packages.md); the historical evidence below remains scoped to its original APK.
+> The 1.7.1 candidate uses Android 0.7.1 / versionCode 19 and embeds the shared installer correction; its exact APK checks are pending. This guide retains the same setup flow. Use [Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases) for the latest published downloads. Artifact-bound signer, payload and in-place upgrade results and limits are maintained in the [1.7.0 package acceptance record](../docs/history/2026-11-03-release-1.7.0-final-packages.md); the historical evidence below remains scoped to its original APK.
 
 > Historical release 1.6.0 uses Android 0.6.0 / versionCode 17. See [Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases) for published downloads and [artifact-bound acceptance and limits](../docs/history/2026-11-02-release-1.6.0-final-acceptance.md).
 
@@ -9,7 +9,7 @@ Use your phone to install either **No-root** (Developer Mode) or **Root**
 or cloud service is needed. The APK includes the offline interface and TV packages;
 optional TV Python is a separate verified download.
 
-Version **1.7.0** uses **Android 0.7.0 / versionCode 18**.
+The **1.7.1 candidate** uses **Android 0.7.1 / versionCode 19**; it is not yet published.
 [Download the signed APK](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest) ·
 [Full installation guide](../docs/INSTALL.md) · [Recovery](#recovery-and-private-data) ·
 [Report a problem](../docs/FEEDBACK.md)
