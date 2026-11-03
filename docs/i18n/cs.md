@@ -14,6 +14,8 @@ Samostatný Homebrew CYTV Installer zůstává nevydaný.
 
 ## Jazyk a ovládání
 
+V náhledu příští verze zobrazuje **Nastavení Home → Tapety** tapetu aktivního motivu, zjištěné možnosti TV a aktuální režim. Auto volí kompatibilní kvalitu; 4K, 1080p a obrázek jsou dostupné jen podle obsahu motivu. Při potížích se zobrazí obrázek. Ztmavení se mění po 5 %; obnovení vrátí nastavení motivu. Classic a motivy bez tapety zobrazí tento stav výslovně.
+
 Na televizoru otevřete **Settings → Language → Čeština**. Po změně se Home
 znovu načte. Volba **Automaticky (jazyk systému)** používá jazyk televizoru;
 rozpozná i `cs-CZ`. Jazyk instalátoru a televizoru se ukládá samostatně.

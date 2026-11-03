@@ -1,0 +1,32 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+function fixture(uhd){
+ const nodes={},events={},storage={},videos=[],timers=new Map();let sequence=0;
+ function node(tag){const classes=new Set(),listeners={};return {tagName:tag,style:{},classList:{add:x=>classes.add(x),remove:x=>classes.delete(x),contains:x=>classes.has(x)},appendChild(n){n.parentNode=this;nodes[n.id]=n;},removeChild(n){delete nodes[n.id];n.parentNode=null;},setAttribute(){},removeAttribute(k){delete this[k];},addEventListener(k,f){listeners[k]=f;},removeEventListener(k){delete listeners[k];},fire(k){if(listeners[k])listeners[k]();},pause(){this.paused=true;},load(){},play(){this.paused=false;return {then:(ok,bad)=>{this.reject=bad;}};}};}
+ const doc={body:node('body'),documentElement:node('html'),hidden:false,getElementById:id=>nodes[id],createElement(tag){const n=node(tag);if(tag==='video')videos.push(n);return n;},addEventListener(k,f){events[k]=f;},dispatchEvent(){}};nodes.homeSurface=node('main');
+ const ctx={document:doc,localStorage:{getItem:k=>storage[k]||null,setItem:(k,v)=>storage[k]=v},CustomEvent:function(){},setTimeout:f=>{timers.set(++sequence,f);return sequence;},clearTimeout:id=>timers.delete(id),webOS:{deviceInfo:cb=>cb({uhd})}};
+ vm.runInNewContext(fs.readFileSync('launcher/wallpaper.js','utf8'),ctx);
+ const manifest={id:'test:theme',title:'Video',defaults:{wallpaperAssetId:'poster',dim:.3},assets:[{id:'poster',width:1920,height:1080}],wallpaperVideo:{variants:[{quality:'4k'},{quality:'1080p'}]}};
+ return {api:ctx.HomeWallpaper,doc,nodes,videos,input:{manifest,assetHandles:{poster:'blob:poster'},videoHandles:{'4k':'blob:4k','1080p':'blob:fhd'}},events,timers,storage};
+}
+let f=fixture(undefined);assert(f.api,'wallpaper lifecycle API exists');
+f.api.configure(f.input);assert.equal(f.videos.at(-1).src,'blob:fhd');assert.equal(f.api.state().capabilities.uhd,null);assert.equal(f.api.state().actualQuality,'image');
+let old=f.videos.at(-1);old.fire('playing');assert.equal(f.api.state().actualQuality,'1080p');assert(f.nodes.homeSurface.classList.contains('ctv-wallpaper-playing'));
+old.fire('error');assert.equal(f.api.state().actualQuality,'image');assert.equal(old.src,undefined);assert.match(f.api.state().notice,/image/i);
+f=fixture(true);f.api.configure(f.input);old=f.videos.at(-1);assert.equal(old.src,'blob:4k');old.fire('error');let fallback=f.videos.at(-1);assert.equal(fallback.src,'blob:fhd');old.reject(Error('late'));assert.equal(f.videos.at(-1),fallback);fallback.fire('playing');f.api.suspend('settings');assert.equal(fallback.src,undefined);f.api.suspend('dialog');f.api.resume('settings');assert.equal(f.videos.at(-1),fallback);f.api.configure(f.input);assert.equal(f.videos.at(-1),fallback);f.api.resume('dialog');assert.notEqual(f.videos.at(-1),fallback);
+f.api.setQuality('image');assert.equal(f.api.state().actualQuality,'image');f.api.setDim(.7);assert.equal(f.api.state().dim,.7);assert.throws(()=>f.api.setDim(1));assert.throws(()=>f.api.setQuality('bogus'));f.api.configure(f.input);assert.equal(f.api.state().preferenceQuality,'image');assert.equal(f.api.state().dim,.7);f.api.resetPreferences();assert.equal(f.api.state().dim,.3);assert.equal(f.api.state().preferenceQuality,'auto');
+f.doc.hidden=true;f.events.visibilitychange();assert.equal(f.videos.at(-1).src,undefined);f.doc.hidden=false;f.events.visibilitychange();assert.equal(f.videos.at(-1).src,'blob:4k');f.api.reset();assert.equal(f.api.state().themeId,'builtin:classic');assert.equal(f.videos.at(-1).src,undefined);
+f=fixture(false);f.api.configure(f.input);f.api.setQuality('4k');assert.equal(f.videos.at(-1).src,'blob:fhd');assert.match(f.api.state().notice,/4K/);
+console.log('PASS wallpaper quality, static fallback, stale work, suspension, preferences and visibility');
+
+f=fixture(true);f.api.configure(f.input);let timeout=Array.from(f.timers.values())[0];timeout();assert.equal(f.videos.at(-1).src,'blob:fhd');timeout=Array.from(f.timers.values())[0];timeout();assert.equal(f.api.state().actualQuality,'image');assert.equal(f.videos.at(-1).src,undefined);
+console.log('PASS bounded no-play/stall cascade releases media');
+(async()=>{
+ const f=fixture(true);let finish,acquisitions=0,releases=0;
+ f.input.videoHandles={};f.input.videoLease={acquire(){acquisitions++;return new Promise(resolve=>{finish=resolve;});},release(){assert.equal(f.videos.at(-1)&&f.videos.at(-1).src,undefined,'decoder detaches before native cache release');releases++;}};
+ f.api.configure(f.input);assert.equal(acquisitions,1,'native cache acquired only as wallpaper becomes active');assert.equal(f.api.state().actualQuality,'image');assert.equal(f.videos.length,0);
+ f.api.suspend('settings');finish({'4k':'http://127.0.0.1/native-first'});await Promise.resolve();assert.equal(f.videos.length,0,'late acquisition cannot start media behind settings');assert.equal(releases,1);
+ f.api.resume('settings');assert.equal(acquisitions,2);finish({'4k':'http://127.0.0.1/native-second'});await Promise.resolve();assert.equal(f.videos.at(-1).src,'http://127.0.0.1/native-second');f.videos.at(-1).fire('playing');f.api.setQuality('image');assert.equal(releases,2);assert.equal(f.videos.at(-1).src,undefined);
+ console.log('PASS lazy native lease acquire, stale result and hidden/image release');
+})().catch(e=>{console.error(e);process.exitCode=1;});
+f=fixture(true);f.api.configure(f.input);let firstTimer=Array.from(f.timers.keys())[0];f.videos.at(-1).fire('waiting');assert(f.timers.has(firstTimer),'waiting without frame progress cannot postpone fallback indefinitely');
+f.api.setDim(.8);delete f.storage['tvhome.wallpaper.preferences.v1'];f.api.configure(f.input);assert.equal(f.api.state().dim,.3,'removed profile preferences do not survive in memory');

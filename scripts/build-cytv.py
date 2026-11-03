@@ -34,7 +34,7 @@ def tracked_files(prefix):
                              'launcher/fonts/NotoSansTC.ttf', 'launcher/fonts/NotoSansTC-OFL.txt'],
                 'native/service': ['native/service/app-inventory.js']}
     if prefix == 'launcher':
-        required[prefix] += ['launcher/' + name for name in ['theme-data.js', 'theme-store.js', 'theme-manager.js', 'theme-receiver.js', 'theme-panel.js', 'theme-panel.css', 'theme-locales.js', 'builtin-theme-files.json'] + json.loads((ROOT / 'launcher/builtin-theme-files.json').read_text())]
+        required[prefix] += ['launcher/' + name for name in ['wallpaper.js', 'wallpaper.css', 'wallpaper-panel.js', 'wallpaper-panel.css', 'wallpaper-locales.js', 'wallpaper-media-cache.js', 'theme-data.js', 'theme-store.js', 'theme-manager.js', 'theme-receiver.js', 'theme-panel.js', 'theme-panel.css', 'theme-locales.js', 'builtin-theme-files.json'] + json.loads((ROOT / 'launcher/builtin-theme-files.json').read_text())]
     if prefix == 'native/app':
         required[prefix] += [p.relative_to(ROOT).as_posix() for p in (ROOT/'native/app/vendor/ws-legacy').rglob('*') if p.is_file()]
     for name in sorted(set(result.stdout.splitlines()) | set(required.get(prefix, []))):

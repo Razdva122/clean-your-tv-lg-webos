@@ -144,6 +144,8 @@ W przygotowaniu: jeśli nie wysłano żądania usunięcia pakietów, po błędzi
 
 ## Motywy – kandydat rozwojowy
 
+W podglądzie następnej wersji **Ustawienia Home → Tapety** pokazuje tapetę aktywnego motywu, wykryte możliwości TV i bieżący tryb. Auto wybiera zgodną jakość; 4K, 1080p i Obraz są dostępne tylko wtedy, gdy zawiera je motyw. Przy błędzie wideo wyświetlany jest obraz. Przyciemnienie zmienia się co 5%; reset przywraca ustawienia motywu. Classic i motywy bez tapety wyraźnie pokazują ten stan.
+
 Kandydat 1.7.0: **Ustawienia → Motywy**. **Classic**, **Liquid Glass**, **Ribbon** są wbudowane i nie wymagają pobierania motywu; domyślny pozostaje Classic. **Channel** jest zewnętrznym motywem ze showcase. Podczas próby w galerii: Wybierz motyw i **Zachowaj motyw** w ciągu **20 sekund**. **Przywróć**, Back lub upływ czasu przywraca poprzedni. Przerwana próba uruchomi Home z Classic. Motywy wbudowane i pobrane wybrane z listy zainstalowanych są stosowane i zapisywane od razu, bez odliczania. Dotyczy to również motywów z komputera lub URL. Tylko Wypróbuj motyw w galerii rozpoczyna próbę 20 sekund.
 
 1.7.0: **Classic**, **Liquid Glass** i **Ribbon** są wbudowane. **Alpine 1.4.4** przechodzi do pobierania w **galerii motywów**. Zapisany wybór `builtin:alpine` wraca do Classic z istniejącym widocznym komunikatem odzyskiwania; Home nie pobiera Alpine automatycznie ani nie zastępuje go Liquid Glass. Opublikowana wersja 1.6.0 zawiera Classic, Alpine i Ribbon.

@@ -1,5 +1,6 @@
 'use strict';
 var core = require('./core');
+var wallpaperCache = require('./wallpaper-cache');
 var texts = {
   'caller-not-authorized':'Caller is not authorized', 'invalid-session':'Receiver session is unavailable',
   'session-expired':'Receiver session expired', 'receiver-busy':'Receiver is already active',
@@ -50,6 +51,15 @@ function register(service, options) {
         Object.keys(value || {}).forEach(function (key) { response[key] = value[key]; });
         message.respond(response);
       }, function (e) { fail(texts[e.code] ? e.code : 'receiver-unavailable'); });
+    });
+  });
+  var cache = wallpaperCache.create(settings);
+  var cacheMethods = {wallpaperCacheStart:'start', wallpaperCacheWrite:'write', wallpaperCacheCommit:'commit', wallpaperCacheKeepAlive:'keepAlive', wallpaperCacheStop:'stop'};
+  Object.keys(cacheMethods).forEach(function(method){
+    service.register(method,function(message){
+      var caller;try{caller=message.ls2Message.applicationID();}catch(_){}
+      if(typeof caller!=='string'||caller.split(' ')[0]!==options.appId){message.respond({returnValue:false,errorCode:'caller-not-authorized'});return;}
+      Promise.resolve().then(function(){return cache[cacheMethods[method]](message.payload||{});}).then(function(value){var response={returnValue:true};Object.keys(value||{}).forEach(function(key){response[key]=value[key];});message.respond(response);},function(){message.respond({returnValue:false,errorCode:'wallpaper-cache-unavailable'});});
     });
   });
   return receiver;

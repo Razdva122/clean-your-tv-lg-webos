@@ -42,7 +42,7 @@ exports.create = function (options) {
   var session = null, starting = false;
   var port = options.port === undefined ? 8879 : options.port;
   var ttl = options.ttlMs || 600000, deadline = options.requestTimeoutMs || 15000;
-  var maxBytes = options.maxBytes || 10 * 1024 * 1024, maxWrong = options.maxWrongPins || 20;
+  var maxBytes = options.maxBytes || 33 * 1024 * 1024, maxWrong = options.maxWrongPins || 20;
   function closeListener(s) {
     if (!s.listening) return;
     s.listening = false;

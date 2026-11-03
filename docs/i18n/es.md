@@ -145,6 +145,8 @@ En desarrollo: si no se envió ninguna solicitud de eliminación de paquetes, un
 
 ## Temas
 
+En la vista previa de la próxima versión, **Ajustes de Home → Fondos de pantalla** muestra el fondo del tema activo, la capacidad detectada del TV y el modo actual. Auto elige una calidad compatible; 4K, 1080p e Imagen solo están disponibles si el tema los incluye. Si falla el vídeo, se muestra una imagen. Ajusta el oscurecimiento en pasos del 5 % o restablece los valores del tema. Classic y los temas sin fondo lo indican claramente.
+
 Candidato 1.7.0: **Ajustes → Temas**. **Classic**, **Liquid Glass**, **Ribbon** están integrados y no necesitan descargar el tema; Classic sigue como predeterminado. **Channel** es externo, desde showcase. En las pruebas de la galería: Elige el tema y **Conservar tema** antes de **20 segundos**. **Revertir**, Back o el tiempo agotado recuperan el anterior. Una prueba interrumpida inicia Home con Classic. Los temas integrados y descargados elegidos en la lista instalada se aplican y guardan al instante, sin temporizador. Esto incluye los recibidos del ordenador o instalados por URL. Solo Probar tema dentro de la galería inicia una prueba de 20 segundos.
 
 1.7.0: **Classic**, **Liquid Glass** y **Ribbon** están integrados. **Alpine 1.4.4** pasa a la **galería de temas** como descarga. Una selección guardada de `builtin:alpine` vuelve a Classic con el aviso de recuperación visible existente; Home no descarga Alpine automáticamente ni lo sustituye por Liquid Glass. La versión publicada 1.6.0 incluye Classic, Alpine y Ribbon.

@@ -145,6 +145,8 @@ In Entwicklung: Wurde noch keine Paketentfernung angefordert, bietet eine fehlge
 
 ## Designs
 
+In der Vorschau der nächsten Version zeigt **Home-Einstellungen → Hintergrundbilder** das Bild des aktiven Designs, erkannte TV-Fähigkeiten und den aktuellen Modus. Auto wählt eine kompatible Qualität; 4K, 1080p und Bild sind nur verfügbar, wenn das Design sie enthält. Bei Wiedergabeproblemen wird ein Bild angezeigt. Die Abdunklung lässt sich in 5-%-Schritten ändern; Zurücksetzen stellt die Designvorgaben wieder her. Classic und Designs ohne Bild zeigen dies ausdrücklich an.
+
 1.7.0-Kandidat: **Einstellungen → Themes**. **Classic**, **Liquid Glass**, **Ribbon** sind integriert und benötigen keinen Design-Download; Classic bleibt Standard. **Channel** ist ein externes Showcase-Design. Beim Galerietest: Nach der Auswahl innerhalb von **20 Sekunden** **Design behalten** wählen. **Zurücksetzen**, Back oder Zeitablauf stellt das vorherige Design wieder her. Ein unterbrochener Versuch startet beim nächsten Home-Aufruf mit Classic. Integrierte und heruntergeladene Designs aus der installierten Liste werden sofort ohne Bestätigungstimer angewendet und gespeichert. Das gilt auch für vom Computer oder per URL installierte Designs. Nur Design testen in der Galerie startet einen 20-Sekunden-Test.
 
 1.7.0: **Classic**, **Liquid Glass** und **Ribbon** sind integriert. **Alpine 1.4.4** wird im **Theme-Showcase** zum Download angeboten. Eine gespeicherte Auswahl `builtin:alpine` fällt mit dem bestehenden sichtbaren Wiederherstellungshinweis auf Classic zurück. Home lädt Alpine weder automatisch herunter noch ersetzt es durch Liquid Glass. Die veröffentlichte Version 1.6.0 enthält Classic, Alpine und Ribbon.

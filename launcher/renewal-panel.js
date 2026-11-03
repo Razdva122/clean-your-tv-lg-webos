@@ -175,10 +175,12 @@
   if(document.activeElement===details&&k===13){focus(buttons.indexOf(document.getElementById('renewalDiagnostics')));return;}
   if(k===461||k===27){if(developerOpen)showDeveloper(false);else close();}else if(k===13){if(!e.repeat)buttons[index].click();}else focus(index+(k===37||k===38||(k===9&&e.shiftKey)?-1:1));
  },true);
+ var wallpapers=document.createElement('div');if(window.HomeWallpaperPanel)HomeWallpaperPanel.mount(wallpapers);
  if(window.SettingsCategories)categories=SettingsCategories.attach(panel,main,[
   {id:'home',label:'Your Home screen',elements:[main.querySelector('.settings-home')]},
   {id:'appearance',label:'Appearance',elements:[document.getElementById('homeColumns').parentNode,document.getElementById('homeAppSettings')]},
   {id:'themes',label:'Themes',elements:[document.getElementById('homeThemeHost').parentNode]},
+  {id:'wallpapers',label:'Wallpapers',elements:[wallpapers]},
   {id:'language',label:'Language',elements:[document.getElementById('homeLanguage')]},
   {id:'updates',label:'Software updates',elements:[document.getElementById('renewalUpdates')]},
   {id:'advanced',label:'Advanced',elements:[document.getElementById('renewalTV')]},

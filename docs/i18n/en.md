@@ -145,6 +145,8 @@ Unreleased recovery guidance: if no package removal request was submitted, a fai
 
 ## Themes
 
+In the next-release preview, **Home settings → Wallpapers** shows the active theme’s wallpaper, detected TV capability and current playback mode. Auto selects a compatible quality; 4K, 1080p and Image are available only when supplied by the theme. Playback can fall back to an image. Adjust dimming in 5% steps or reset this theme’s preferences. Classic and themes without wallpaper show an explicit empty state.
+
 1.7.0 candidate: **Settings → Themes**. **Classic**, **Liquid Glass**, **Ribbon** are included and work without downloading a theme; Classic remains the default. **Channel** is an external showcase theme. In showcase trials: Choose a theme, then **Keep theme** within **20 seconds**. **Revert**, Back or timeout restores the previous appearance. If Home closes during an unconfirmed preview, the next launch returns to Classic. Built-in and downloaded themes chosen in the installed list apply and save immediately, without a confirmation timer. Themes received from a computer or installed by URL also use this list. Only Try theme inside Theme showcase starts a 20-second trial.
 
 1.7.0: **Classic**, **Liquid Glass** and **Ribbon** are built in. **Alpine 1.4.4** moves to the downloadable **Theme showcase**. A saved `builtin:alpine` selection falls back to Classic with the existing visible recovery notice; Home neither downloads Alpine automatically nor replaces it with Liquid Glass. Published 1.6.0 includes Classic, Alpine and Ribbon.

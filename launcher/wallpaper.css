@@ -1,0 +1,6 @@
+/* Outside the scaled Home surface: the media plane always fills the real viewport. */
+#ctvWallpaper { position: fixed; top: 0; right: 0; bottom: 0; left: 0; overflow: hidden; pointer-events: none; display: none; z-index: 0; }
+#ctvWallpaperVideo { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+#ctvWallpaperDim { position: absolute; top: 0; right: 0; bottom: 0; left: 0; z-index: 1; }
+html.ctv-wallpaper-playing, body.ctv-wallpaper-playing { background: transparent !important; }
+#homeSurface.ctv-home.ctv-wallpaper-playing { background: transparent !important; z-index: 1; }

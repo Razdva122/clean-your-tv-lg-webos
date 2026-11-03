@@ -1,6 +1,6 @@
 /* Temporary edition-owned LS2 receiver. PINs exist only in the active view. */
 (function(root){
- 'use strict';var limit=10*1024*1024,chunkLimit=48*1024;
+ 'use strict';var limit=ThemePolicy.limits.envelopeBytes,chunkLimit=48*1024;
  function service(){return 'luna://'+(document.querySelector('script[src="root-settings.js"]')?'com.cleanyourtv.root.preview.service':'com.gathin.tvhome.renewal')+'/';}
  function rpc(method,payload,signal){return new Promise(function(resolve,reject){var bridge,done=false,timer=setTimeout(function(){finish(Error('Theme receiver unavailable. Update Home and its service, then try again.'));},method==='themeReceiverStart'?10000:5000);
   function finish(error,value){if(done)return;done=true;clearTimeout(timer);if(bridge&&!(error&&method==='themeReceiverStart'))try{bridge.cancel();}catch(_){}if(error)reject(error);else resolve(value);}
