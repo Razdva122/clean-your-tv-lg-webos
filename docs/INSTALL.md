@@ -1,6 +1,6 @@
 # Install Clean Your TV
 
-> The [1.7.1 maintenance candidate](RELEASE-1.7.1.md) changes the host installer and browser demo; TV component versions remain those of 1.7.0. See the [1.7.0 device observations and limits](history/2026-11-03-release-1.7.0-final-packages.md). Obtain available packages from [GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases).
+> The [1.7.1 maintenance release](RELEASE-1.7.1.md) changes the host installer and browser demo; TV component versions remain those of 1.7.0. See the [1.7.0 device observations and limits](history/2026-11-03-release-1.7.0-final-packages.md). Obtain available packages from [GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases).
 
 Use **cytv** to install No-root or Root. It includes the computer runtime and TV
 packages; no source build is needed. After setup, the computer can be switched off.

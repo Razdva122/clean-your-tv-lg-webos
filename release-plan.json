@@ -3,5 +3,11 @@
   "version": "1.7.1",
   "changes": [],
   "excluded": [],
-  "acceptance": ""
+  "acceptance": "Host/demo-only maintenance. All seven TV IPKs in all nine frozen CLI/desktop/APK payloads and Root infrastructure are byte-identical to published 1.7.0; all 209 Android payload entries, including Root/System provisioning/support, are unchanged. Retain only the original artifact/precondition-scoped C3 observations (OLED55C3RLA, firmware 43.21.71, SDK 11.2.0; remote model unknown) from docs/history/2026-11-03-release-1.7.0-final-packages.md and 2026-11-03-helper-0.6.22-compatibility.md; no new physical TV result is claimed. Exact ARM64 macOS app runtime/payload/offscreen smoke and both macOS aliases across Root/No-root, UHD true/false passed. Original-signer Android code18-to-code19 emulator update retained four synthetic files; native Store/refusal/no-replay and OperationChecks passed. Signed rollback and unchanged-version feed prerequisites passed. Fresh reporter installations, controls/audio/emergency, standby/cold boot, phone-to-TV, OTA and physical rollback remain untested for this host patch. Details/hashes/limits: docs/history/2026-11-03-release-1.7.1-host-checks.md.",
+  "build": {
+    "run_id": 41672562712,
+    "attempt": 1,
+    "source": "a5027c70f6c62d1eb0d26f24e042d2f083e430c8"
+  },
+  "acceptance_build": "41672562712:1"
 }
