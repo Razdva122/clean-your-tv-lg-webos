@@ -93,7 +93,7 @@ No-root: Para reiniciar o controle de Home, abra Home Helper, escolha Iniciar He
 
 Após uma interrupção, execute primeiro `status` e preserve os registros. `restore` restaura LG Home sem remover aplicativos; `uninstall` restaura antes de remover. Os dados de recuperação Root são mantidos de propósito: não os apague para forçar a reinstalação. Revise relatórios antes de compartilhar; não publique chaves nem pastas de perfis.
 
-1.5.4: abra **Configurações do Home → Aparência → Colunas** e escolha de 1 a 8 colunas, ou **Conforme o tema** para usar o valor do tema (Classic: 5). Um número explícito tem prioridade sobre o tema. Temas com disposição fixa ocultam a opção Colunas e usam o valor do autor. Sua escolha salva volta a valer ao mudar para um tema que ofereça esse ajuste. Na prévia candidata Alpine, os apps ficam em uma única faixa horizontal circular: Esquerda/Direita rola, Cima abre os atalhos e Baixo volta ao mesmo app. Na prévia Alpine, a roda do mouse ou o touchpad também rola a faixa; Home não se move atrás de uma caixa de diálogo aberta.
+Abra **Configurações do Home → Aparência → Colunas** e escolha de 1 a 8 colunas, ou **Conforme o tema** para usar o valor do tema (Classic: 5). Um número explícito tem prioridade sobre o tema. Temas com disposição fixa ocultam a opção Colunas e usam o valor do autor. Sua escolha salva volta a valer ao mudar para um tema que ofereça esse ajuste. No Alpine baixado, os apps ficam em uma única faixa horizontal circular: Esquerda/Direita rola, Cima abre os atalhos e Baixo volta ao mesmo app. No Alpine, a roda do mouse ou o touchpad também rola a faixa; Home não se move atrás de uma caixa de diálogo aberta.
 
 1.5.4: em **Configurações do Home → Aparência**, desative **Mostrar bloco «Adicionar app»** para ocultar +. A opção vem ativada. Use **Adicionar app** na mesma seção para adicionar ou restaurar apps mesmo com + oculto. Continua sendo possível mover e ocultar apps; a escolha permanece após reiniciar. Se todos os apps estiverem ocultos, os controles superiores e as configurações continuam disponíveis.
 
@@ -142,12 +142,13 @@ Em desenvolvimento: se nenhum pedido de remoção de pacotes foi enviado, uma fa
 <a id="candidato-não-publicado-instalar-root-pelo-homebrew"></a>
 <a id="candidato-não-publicado-recuperação-de-som-hdmi-root"></a>
 
+<a id="temas-154"></a>
 
-## Temas (1.5.4)
+## Temas
 
-1.5.4: **Configurações → Temas**. **Classic**, **Alpine**, **Ribbon** são integrados e dispensam baixar o tema; Classic continua padrão. **Channel** é externo, do showcase. Nos testes da galeria: Escolha o tema e **Manter tema** em até **20 segundos**. **Reverter**, Back ou o fim do prazo restaura o anterior. Uma prévia interrompida faz Home iniciar com Classic. Temas integrados e baixados escolhidos na lista instalada são aplicados e salvos imediatamente, sem temporizador. Isso inclui temas recebidos do computador ou instalados por URL. Apenas Testar tema dentro da galeria inicia um teste de 20 segundos.
+Candidato 1.7.0: **Configurações → Temas**. **Classic**, **Liquid Glass**, **Ribbon** são integrados e dispensam baixar o tema; Classic continua padrão. **Channel** é externo, do showcase. Nos testes da galeria: Escolha o tema e **Manter tema** em até **20 segundos**. **Reverter**, Back ou o fim do prazo restaura o anterior. Uma prévia interrompida faz Home iniciar com Classic. Temas integrados e baixados escolhidos na lista instalada são aplicados e salvos imediatamente, sem temporizador. Isso inclui temas recebidos do computador ou instalados por URL. Apenas Testar tema dentro da galeria inicia um teste de 20 segundos.
 
-Não publicado: **Classic**, **Liquid Glass** e **Ribbon** são integrados. **Alpine 1.4.4** passa a ser baixado na **galeria de temas**. Uma seleção salva de `builtin:alpine` volta ao Classic com o aviso de recuperação visível existente; Home não baixa Alpine automaticamente nem o substitui por Liquid Glass.
+1.7.0: **Classic**, **Liquid Glass** e **Ribbon** são integrados. **Alpine 1.4.4** passa a ser baixado na **galeria de temas**. Uma seleção salva de `builtin:alpine` volta ao Classic com o aviso de recuperação visível existente; Home não baixa Alpine automaticamente nem o substitui por Liquid Glass. A versão publicada 1.6.0 inclui Classic, Alpine e Ribbon.
 
 Os temas instalados aparecem em uma única linha com rolagem horizontal. O tema ativo fica sempre em primeiro lugar e seu cartão é destacado. Use Esquerda/Direita para percorrer a linha.
 
@@ -161,12 +162,9 @@ Para testar um tema não publicado, abra primeiro **Configurações → Temas �
 
 Para um tema publicado, abra **Adicionar por ID** e digite o ID (por exemplo `102300a209`), `da.gd/102300a209` ou o link completo do GitHub. Home mostra o endereço da.gd antes de carregar e verifica o destino GitHub e o pacote. O autor pode copiar o ID das notas da versão ou de **TV link → Copy ID** na prévia.
 
-
 **1.6.0:** **Mostrar diagnóstico** no painel Home Helper exibe um resumo filtrado das próprias consultas de status. A visualização não inicia o Helper nem altera o controle de Home. Compartilhe apenas esse JSON quando solicitado, após revisá-lo; [detalhes](../HELPER-DIAGNOSTICS.md#candidate-panel-caller-diagnostics-207).
 
 [Themes (English)](../THEMES.md) · [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
-
-1.5.4: **Classic**, **Alpine**, **Ribbon** — **Configurações → Temas**. [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
 
 Temas com faixa configurável de 1.5.4 podem colocar entradas, Wi-Fi e configurações no canto inferior esquerdo. Quando ativado, Esquerda no primeiro aplicativo visível seleciona configurações, depois Wi-Fi e entradas; Direita nas configurações retorna ao mesmo aplicativo visível. A instalação de um tema que exige um novo recurso do Home é recusada nas versões incompatíveis, mantendo aparência e seleção atuais. Atualize primeiro o Home. Um downgrade posterior pode restaurar Classic na inicialização.
 

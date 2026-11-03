@@ -93,7 +93,7 @@ No-root: Pour relancer le contrôle de Home, ouvrez Home Helper, choisissez Dém
 
 Après interruption, lancez d’abord `status` et conservez les journaux. `restore` rétablit LG Home sans supprimer les applications ; `uninstall` le rétablit avant leur suppression. Les données de récupération Root sont conservées volontairement : ne les effacez pas pour forcer une réinstallation. Vérifiez les rapports avant partage ; ne publiez ni clés ni dossiers de profils.
 
-1.5.4: ouvrez **Paramètres de Home → Apparence → Colonnes** et choisissez de 1 à 8 colonnes, ou **Selon le thème** pour utiliser sa valeur (Classic : 5). Un nombre explicite est prioritaire sur le thème. Les thèmes à disposition fixe masquent l’option Colonnes et utilisent la valeur de l’auteur. Votre choix enregistré est rétabli lorsque vous passez à un thème qui prend en charge ce réglage. Dans l’aperçu candidat Alpine, les applications forment un ruban horizontal en boucle : Gauche/Droite fait défiler, Haut ouvre les raccourcis et Bas revient à la même application. Dans l’aperçu Alpine, la molette ou le pavé tactile fait aussi défiler le ruban ; Home reste immobile derrière une boîte de dialogue ouverte.
+Ouvrez **Paramètres de Home → Apparence → Colonnes** et choisissez de 1 à 8 colonnes, ou **Selon le thème** pour utiliser sa valeur (Classic : 5). Un nombre explicite est prioritaire sur le thème. Les thèmes à disposition fixe masquent l’option Colonnes et utilisent la valeur de l’auteur. Votre choix enregistré est rétabli lorsque vous passez à un thème qui prend en charge ce réglage. Dans Alpine téléchargé, les applications forment un ruban horizontal en boucle : Gauche/Droite fait défiler, Haut ouvre les raccourcis et Bas revient à la même application. Dans Alpine, la molette ou le pavé tactile fait aussi défiler le ruban ; Home reste immobile derrière une boîte de dialogue ouverte.
 
 1.5.4: dans **Paramètres Home → Apparence**, désactivez **Afficher la tuile « Ajouter une app »** pour masquer +. Cette option est activée par défaut. Utilisez **Ajouter une app** dans la même section pour ajouter ou rétablir des apps lorsque + est masqué. Le déplacement et le masquage restent disponibles ; le choix est conservé au redémarrage. Si toutes les apps sont masquées, les commandes du haut et les paramètres restent accessibles.
 
@@ -141,12 +141,13 @@ En développement : si aucune demande de suppression de paquet n’a été envoy
 <a id="candidat-non-publié--installer-root-avec-homebrew"></a>
 <a id="candidat-non-publié--récupération-du-son-hdmi-root"></a>
 
+<a id="thèmes-154"></a>
 
-## Thèmes (1.5.4)
+## Thèmes
 
-1.5.4: **Paramètres → Thèmes**. **Classic**, **Alpine**, **Ribbon** sont intégrés, sans téléchargement du thème ; Classic reste le choix initial. **Channel** est un thème externe du showcase. Lors d’un essai dans la galerie : Choisissez le thème puis **Conserver le thème** sous **20 secondes**. **Rétablir**, Back ou le délai expiré restaure le précédent. Une prévisualisation interrompue relance Home avec Classic. Les thèmes intégrés et téléchargés choisis dans la liste installée sont appliqués et enregistrés immédiatement, sans minuterie. Cela inclut les thèmes reçus de l’ordinateur ou installés par URL. Seul Essayer le thème dans la galerie lance un essai de 20 secondes.
+Version candidate 1.7.0 : **Paramètres → Thèmes**. **Classic**, **Liquid Glass**, **Ribbon** sont intégrés, sans téléchargement du thème ; Classic reste le choix initial. **Channel** est un thème externe du showcase. Lors d’un essai dans la galerie : Choisissez le thème puis **Conserver le thème** sous **20 secondes**. **Rétablir**, Back ou le délai expiré restaure le précédent. Une prévisualisation interrompue relance Home avec Classic. Les thèmes intégrés et téléchargés choisis dans la liste installée sont appliqués et enregistrés immédiatement, sans minuterie. Cela inclut les thèmes reçus de l’ordinateur ou installés par URL. Seul Essayer le thème dans la galerie lance un essai de 20 secondes.
 
-Non publié : **Classic**, **Liquid Glass** et **Ribbon** sont intégrés. **Alpine 1.4.4** devient téléchargeable dans la **galerie de thèmes**. Un choix enregistré `builtin:alpine` revient à Classic avec l’avis de récupération visible existant ; Home ne télécharge pas automatiquement Alpine et ne le remplace pas par Liquid Glass.
+1.7.0: **Classic**, **Liquid Glass** et **Ribbon** sont intégrés. **Alpine 1.4.4** devient téléchargeable dans la **galerie de thèmes**. Un choix enregistré `builtin:alpine` revient à Classic avec l’avis de récupération visible existant ; Home ne télécharge pas automatiquement Alpine et ne le remplace pas par Liquid Glass. La version publiée 1.6.0 inclut Classic, Alpine et Ribbon.
 
 Les thèmes installés apparaissent sur une seule ligne à défilement horizontal. Le thème actif est toujours le premier et sa carte est mise en évidence. Utilisez Gauche/Droite pour parcourir la ligne.
 
@@ -160,12 +161,9 @@ Pour tester un thème non publié, ouvrez d’abord **Paramètres → Thèmes �
 
 Pour un thème publié, ouvrez **Ajouter par ID** et saisissez son identifiant (par exemple `102300a209`), `da.gd/102300a209` ou le lien GitHub complet. Home affiche l’adresse da.gd avant le chargement et vérifie la destination GitHub et le paquet. L’auteur peut copier l’identifiant depuis les notes de version ou **TV link → Copy ID** dans l’aperçu.
 
-
 **1.6.0:** **Afficher le diagnostic** dans le panneau Home Helper affiche un petit instantané filtré de ses propres demandes d’état. L’affichage ne démarre pas Helper et ne change pas le contrôle de Home. Partagez uniquement ce JSON sur demande, après vérification ; [détails](../HELPER-DIAGNOSTICS.md#candidate-panel-caller-diagnostics-207).
 
 [Themes (English)](../THEMES.md) · [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
-
-1.5.4: **Classic**, **Alpine**, **Ribbon** — **Paramètres → Thèmes**. [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
 
 Les thèmes à ruban configurable de 1.5.4 peuvent placer Entrées, Wi-Fi et Paramètres en bas à gauche. Si activée, la navigation Gauche depuis la première application visible sélectionne Paramètres, puis Wi-Fi et Entrées ; Droite depuis Paramètres revient à la même application visible. Un thème nécessitant une nouvelle fonction Home est refusé à l’installation sur une version incompatible ; l’apparence et la sélection restent inchangées. Mettez Home à jour d’abord. Une rétrogradation ultérieure peut restaurer Classic au démarrage.
 
