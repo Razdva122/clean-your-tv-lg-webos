@@ -24,6 +24,8 @@ one model or artifact does not certify later releases or a different TV.
 
 ## Scoped feature checks
 
+- [Source installer build dependencies, 2026-11-03](2026-11-03-source-install-build-dependencies.md): clean-venv font preparation and pre-pairing failure guards for #272; host-only evidence.
+
 - [Root standby power stages, 2026-11-03](2026-11-03-root-standby-power-stages.md): two owner-observed failures, matching firmware sequence and source correction; signed-device acceptance pending.
 
 - [Release1.6.0 freeze/build, 2026-11-02](2026-11-02-release-1.6.0-freeze.md): selected versions, frozen scope, cross-platform build identities and remaining acceptance gates.
