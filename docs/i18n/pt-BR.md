@@ -131,6 +131,8 @@ Não publicado: a recuperação pode retomar uma remoção No-root interrompida 
 
 [Documentação](../README.md) · [Relatar um problema](../FEEDBACK.md)
 
+Em desenvolvimento: se nenhum pedido de remoção de pacotes foi enviado, uma falha oferece **Revisar opções de recuperação** na mesma conexão salva da TV. A verificação e a remoção exigem confirmações separadas. Se a TV recusar a consulta de estado dos pacotes, a recuperação para e oferece um relatório. O resumo `recovery` distingue remoção não iniciada, operação herdada e operações de pacotes interrompidas sem publicar o registro completo; ele não autoriza a recuperação.
+
 <!-- Anchors retained for links to earlier guide headings. -->
 <a id="python-opcional-para-root"></a>
 <a id="testes-em-hardware-e-limites"></a>

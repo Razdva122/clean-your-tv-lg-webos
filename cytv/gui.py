@@ -534,7 +534,8 @@ class Wizard(QMainWindow):
                 self.update_steps(self.current_step, value)
             self.content.moveCursor(self.content.textCursor().MoveOperation.End)
             failed = value not in (0, 130)
-            recover = value == 0 and self.recovery_profile is not None and self.recovery_plan is None
+            recover = (self.recovery_profile is not None and self.recovery_plan is None and
+                       (value == 0 or (self.failure_help or {}).get('code') == 'removal-not-submitted'))
             if self.recovery_plan:
                 self.title.setText(tr('Review recovery options'))
                 self.subtitle.setText(tr(self.recovery_plan['summary']))
@@ -551,7 +552,7 @@ class Wizard(QMainWindow):
                 self.title.setText(tr('Review recovery options'))
                 self.badge.setText(self.title.text())
                 self.subtitle.setText(tr('Checking recovery does not reinstall or remove packages. Root checks may run verified support code.'))
-                self.button('Review recovery options', lambda: self.start('recover', profile), True)
+                self.button('Review recovery options', lambda: self.start('recover', profile), not failed)
             if self.report:
                 self.button('Save diagnostic report…', self.save_report, failed or setup_review)
                 if failed:

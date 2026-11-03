@@ -178,6 +178,38 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.assertLess(restored, removals[0][0])
         self.assertFalse(any(c[0] == 'upload' for c in self.remote.calls))
 
+    def test_failed_unstarted_removal_offers_guarded_recovery_on_the_same_tv(self):
+        # A fresh uninstall creates its receipt, then fails restoring LG Home.
+        self.store.finish(self.profile)
+        original = self.remote.luna
+        def reject_home(uri, payload, **kwargs):
+            if uri.endswith('/launch') and payload.get('id') == 'com.webos.app.home':
+                raise TVRejected('PRIVATE', {'returnValue': False, 'errorCode': -1}, uri)
+            return original(uri, payload, **kwargs)
+        self.remote.luna = reject_home
+        w = self.window()
+        w.start('uninstall')
+        self.pump(lambda: w.pending is not None)
+        w.submit('y')
+        self.pump(lambda: not w.running)
+        action = self.button(w, 'Review recovery options')
+        self.assertIsNotNone(action)
+        self.assertIsNotNone(self.button(w, 'Save diagnostic report…'))
+        self.assertEqual(w.failure_help['code'], 'removal-not-submitted')
+        report = json.loads(w.report.read_text())
+        self.assertEqual(report['recovery']['category'], 'removal-not-submitted')
+        before = self.store.pending(self.profile)
+        self.remote.luna = original
+        action.click()
+        self.pump(lambda: w.pending is not None)
+        self.assertEqual(w.pending.default, 'n')
+        self.assertIn('Check recovery', w.pending.label)
+        w.submit('n')
+        self.pump(lambda: not w.running)
+        self.assertEqual(self.store.pending(self.profile), before)
+        self.assertTrue(all(p == self.profile for p in self.connections))
+        self.assertFalse(any(c[0] == 'luna' and c[1].endswith('/dev/remove') for c in self.remote.calls))
+
     def test_unstarted_removal_gui_recovers_without_monitor_permission(self):
         original = self.remote.luna
         def deny_monitor(uri, payload, **kwargs):

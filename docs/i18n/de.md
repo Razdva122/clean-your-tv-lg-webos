@@ -131,6 +131,8 @@ Noch nicht veröffentlicht: Eine vor der ersten Paketanfrage gestoppte No-root-E
 
 [Dokumentation](../README.md) · [Problem melden](../FEEDBACK.md)
 
+In Entwicklung: Wurde noch keine Paketentfernung angefordert, bietet eine fehlgeschlagene Entfernung **Wiederherstellungsoptionen prüfen** für denselben gespeicherten TV an. Prüfung und Entfernung erfordern getrennte Bestätigungen. Eine abgelehnte Paketstatusprüfung stoppt die Wiederherstellung und bietet einen Bericht an. Dessen `recovery`-Zusammenfassung unterscheidet nicht begonnene Entfernung, übernommene Vorgänge und unterbrochene Paketvorgänge ohne das vollständige Journal offenzulegen; sie erlaubt keine Wiederherstellung.
+
 <!-- Anchors retained for links to earlier guide headings. -->
 <a id="optionales-python-für-root-in-v110"></a>
 <a id="lg-firmware-sperre-in-120"></a>

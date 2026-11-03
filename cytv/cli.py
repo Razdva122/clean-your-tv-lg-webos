@@ -69,6 +69,8 @@ def explain_failure(write, store, profile, phase, error):
     help = for_error(error, phase, profile, pending)
     if help:
         write.failure_help(help)
+        if help['code'] == 'removal-not-submitted':
+            write.recovery(profile)
 
 
 def choose_profile(args, store, ask, write, search, inspect):
