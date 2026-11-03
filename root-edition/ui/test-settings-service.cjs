@@ -25,6 +25,11 @@ async function settle(){for(let i=0;i<8;i++)await pause();}
  youtube.onclick();await settle();assert.equal(youtube.attrs['aria-checked'],'true');assert.equal(home.disabled,false);
  home.onclick();await settle();assert.equal(home.attrs['aria-checked'],'false');assert.equal(home.disabled,false);
  assert.equal(youtube.disabled,true);assert.equal(youtube.attrs['aria-checked'],'true','Off retains saved choices');
+ // LG Home -> the existing Root window delivers visibility and relaunch together.
+ document.hidden=true;listeners.visibilitychange();document.hidden=false;listeners.visibilitychange();listeners.webOSRelaunch();
+ await settle();assert.equal(home.disabled,false,'returning after Home Off must not collide with its own status refresh');
+ assert.equal(home.attrs['aria-checked'],'false');assert.equal(youtube.disabled,true);
+ assert(elements.some(e=>e.textContent==='Available when Change Home is on.'),'return keeps the Home-Off reason');
  home.onclick();await settle();assert.equal(youtube.disabled,false);assert.equal(youtube.attrs['aria-checked'],'true');
  console.log('PASS Settings reads and writes with actual single-flight service handler');
 })().catch(error=>{console.error(error);process.exit(1);});
