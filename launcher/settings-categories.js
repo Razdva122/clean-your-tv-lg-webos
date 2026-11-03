@@ -36,7 +36,7 @@
    current=index;
    tabs.forEach(function(tab,i){tab.setAttribute('aria-selected',String(i===index));tab.tabIndex=i===index?0:-1;panes[i].hidden=i!==index;});
    if(root.HomeThemePanel)HomeThemePanel.activate(groups[index].id==='themes');
-   if(groups[index].id==='wallpapers'&&root.HomeWallpaperPanel)HomeWallpaperPanel.refresh();
+   if(root.HomeWallpaperPanel)HomeWallpaperPanel.activate(groups[index].id==='wallpapers');
   }
   groups.forEach(function(group,i){
    var tab=document.createElement('button'),pane=document.createElement('section'),title=document.createElement('h3');

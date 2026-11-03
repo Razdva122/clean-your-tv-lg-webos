@@ -1,7 +1,7 @@
 /* Trusted wallpaper plane. ThemeRuntime owns URLs; detach before it revokes them. */
 (function (root) {
   'use strict';
-  var doc = root.document, key = 'tvhome.wallpaper.preferences.v1', preferences = [], input = null;
+  var doc = root.document, key = 'tvhome.wallpaper.preferences.v1', preferences = [], input = null, themeInput = null, personalInput = null, personalEnabled = false;
   var owners = Object.create(null), video = null, plane = null, shade = null, style = null;
   var generation = 0, timer = null, actual = 'image', quality = 'auto', dim = 0, notice = '';
   var capabilities = {uhd: null}, bridge = null;
@@ -20,7 +20,7 @@
   }
   function state() {
     var asset = poster(), m = input && input.manifest;
-    return {themeId: m ? m.id : 'builtin:classic', title: m ? m.title : 'Classic', posterURL: asset && input.assetHandles && input.assetHandles[asset.id] || '', posterWidth: asset && asset.width || 0, posterHeight: asset && asset.height || 0, available: available(), paused: blocked() && available().length > 1 && quality !== 'image', actualQuality: actual, preferenceQuality: quality, dim: dim, notice: notice, capabilities: {uhd: capabilities.uhd}};
+    return {source: personalEnabled && personalInput ? 'personal' : 'theme', origin: personalEnabled && personalInput ? personalInput.origin : null, themeId: m ? m.id : 'builtin:classic', title: m ? m.title : 'Classic', posterURL: asset && input.assetHandles && input.assetHandles[asset.id] || '', posterWidth: asset && asset.width || 0, posterHeight: asset && asset.height || 0, available: available(), paused: blocked() && available().length > 1 && quality !== 'image', actualQuality: actual, preferenceQuality: quality, dim: dim, notice: notice, capabilities: {uhd: capabilities.uhd}};
   }
   function classes(playing) {
     var surface = doc.getElementById('homeSurface'), method = playing ? 'add' : 'remove';
@@ -60,7 +60,7 @@
   function releaseLease() {
     if (input && input.videoLease && input.videoLease.release) {
       input.videoHandles = {};
-      try { var pending = input.videoLease.release(); if (pending && pending.then) pending.then(function () {}, function () {}); } catch (_) {}
+      try { var pending = input.videoLease.release(); input.wallpaperRelease = Promise.resolve(pending).catch(function () {}); } catch (_) {}
     }
   }
   function play(q) {
@@ -123,12 +123,17 @@
     preferences = preferences.slice(-32);
     try { root.localStorage.setItem(key, JSON.stringify(preferences)); } catch (_) { notice = 'Wallpaper preferences could not be saved.'; }
   }
-  function configure(next) {
-    detach(); releaseLease(); input = next; read(); quality = 'auto'; dim = input.manifest.defaults.dim;
-    preferences.forEach(function (p) { if (p.id === input.manifest.id) { quality = p.quality; dim = p.dim; } });
+  function activate(next) {
+    detach(); releaseLease(); input = next; read(); quality = 'auto'; dim = input ? input.manifest.defaults.dim : 0;
+    preferences.forEach(function (p) { if (input && p.id === input.manifest.id) { quality = p.quality; dim = p.dim; } });
     return restart();
   }
-  function reset() { detach(); releaseLease(); input = null; quality = 'auto'; dim = 0; notice = ''; if (style) style.textContent = ''; emit(); return state(); }
+  function configure(next) { themeInput = next; if (personalEnabled && personalInput) return state(); return activate(next); }
+  function reset() { themeInput = null; if (personalEnabled && personalInput) return state(); return activate(null); }
+  function setPersonal(next, enabled) {
+    personalInput = next; personalEnabled = !!enabled && !!next;
+    return activate(personalEnabled ? personalInput : themeInput);
+  }
   function suspend(owner) { owners[owner || 'manual'] = true; detach(); releaseLease(); paintDim(); emit(); }
   function resume(owner) { var held = owners[owner || 'manual']; delete owners[owner || 'manual']; if (held && !blocked()) restart(); }
   function metadata(result) {
@@ -136,7 +141,7 @@
     capabilities.uhd = value === true || value === 'true' ? true : value === false || value === 'false' ? false : null;
     if (input && quality === 'auto' && previous !== capabilities.uhd) restart(); else emit();
   }
-  root.HomeWallpaper = {configure: configure, reset: reset, suspend: suspend, resume: resume, state: state,
+  root.HomeWallpaper = {setPersonal: setPersonal, configure: configure, reset: reset, suspend: suspend, resume: resume, state: state,
     setQuality: function (q) { if (['auto', '4k', '1080p', 'image'].indexOf(q) < 0) throw Error('Invalid wallpaper quality'); quality = q; restart(); save(false); emit(); return state(); },
     setDim: function (value) { if (typeof value !== 'number' || !isFinite(value) || value < 0 || value > .85) throw Error('Invalid wallpaper dim'); dim = value; paintDim(); save(false); emit(); return state(); },
     resetPreferences: function () { save(true); quality = 'auto'; dim = input ? input.manifest.defaults.dim : 0; return restart(); }};

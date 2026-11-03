@@ -296,6 +296,7 @@ class Wizard(QMainWindow):
         self.subtitle.setText(tr('Install Root or No-root. We will help you choose.'))
         self.content.setHtml('<h3>' + html.escape(tr('Before you begin')) + '</h3><p>' + html.escape(tr('Turn on your LG webOS TV and connect it to the same home network as this computer.')) + '</p><p>' + html.escape(tr('cytv will look for your TV automatically. Keep the remote nearby to approve pairing on the TV.')) + '</p>')
         self.button('Set up my TV', lambda: self.start('install'), True)
+        self.wallpapers_button = self.button('Wallpapers', self.open_wallpapers)
         self.maintenance_toggle = self.button('Maintenance action', self.toggle_maintenance)
         self.maintenance_toggle.setObjectName('maintenanceToggle')
         self.maintenance_toggle.setCheckable(True)
@@ -318,6 +319,18 @@ class Wizard(QMainWindow):
         maintenance_layout.addWidget(execute)
         self.form_layout.addWidget(self.maintenance)
         self.maintenance.hide()
+
+    def open_wallpapers(self):
+        if self.running:
+            return
+        existing = getattr(self, 'wallpaper_dialog', None)
+        if existing is not None and existing.isVisible():
+            existing.raise_()
+            return
+        self._wallpaper_closing = False
+        from cytv.wallpaper_gui import WallpaperDialog
+        self.wallpaper_dialog = WallpaperDialog(self)
+        self.wallpaper_dialog.open()
 
     def toggle_maintenance(self):
         expanded = self.maintenance_toggle.isChecked()
@@ -404,6 +417,8 @@ class Wizard(QMainWindow):
         self.button('Continue', lambda: self.show_preparation(index + 1, prompt), True).setFocus()
 
     def start(self, command, profile=None):
+        if getattr(getattr(self, 'wallpaper_dialog', None), 'busy', False):
+            return
         if self.running:
             return
         self.running = True
@@ -699,6 +714,14 @@ class Wizard(QMainWindow):
                 self.error_dialog('Could not save report', 'Choose another folder and try again.')
 
     def closeEvent(self, event):
+        wallpaper_dialog = getattr(self, 'wallpaper_dialog', None)
+        if wallpaper_dialog is not None and wallpaper_dialog.busy:
+            event.ignore()
+            if not getattr(self, '_wallpaper_closing', False):
+                self._wallpaper_closing = True
+                wallpaper_dialog.events.finished.connect(lambda _: self.close())
+            wallpaper_dialog.close()
+            return
         if self.running:
             event.ignore()
             if self.pending:

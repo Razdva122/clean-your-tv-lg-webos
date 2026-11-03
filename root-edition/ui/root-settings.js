@@ -168,7 +168,7 @@
   }
   function close() {
     if (busy) return;
-    if(window.HomeThemePanel)HomeThemePanel.unmount();
+    if(window.HomeWallpaperPanel)HomeWallpaperPanel.unmount();if(window.HomeThemePanel)HomeThemePanel.unmount();
     invalidateMode();
     panel.hidden = true;
     if (window.ThemeRuntime) window.ThemeRuntime.resume('settings');

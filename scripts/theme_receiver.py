@@ -2,7 +2,7 @@
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-FILES = ('core.js', 'wallpaper-cache.js', 'register.js')
+FILES = ('wallpaper-phone.js', 'core.js', 'wallpaper-cache.js', 'register.js')
 
 
 def inject(files, standalone=False):
@@ -26,8 +26,14 @@ def inject(files, standalone=False):
         if register.count(b"var wallpaperCache = require('./wallpaper-cache');") != 1:
             raise ValueError('Expected one canonical wallpaper cache import')
         register = register.replace(b"var wallpaperCache = require('./wallpaper-cache');", b'var wallpaperCache = wallpaperCacheModule.exports;')
-        bundled = (b'(function(){var receiverCore={exports:{}};'
-                   b'(function(module,exports){\n' + modules['core.js'] + b'\n})(receiverCore,receiverCore.exports);'
+        phone_import = b"var phonePage = require('./wallpaper-phone');"
+        if modules['core.js'].count(phone_import) != 1:
+            raise ValueError('Expected one canonical phone page import')
+        core = modules['core.js'].replace(phone_import, b'var phonePage = phonePageModule.exports;')
+        bundled = (b'(function(){var phonePageModule={exports:{}};'
+                   b'(function(module,exports){\n' + modules['wallpaper-phone.js'] + b'\n})(phonePageModule,phonePageModule.exports);'
+                   b'var receiverCore={exports:{}};'
+                   b'(function(module,exports){\n' + core + b'\n})(receiverCore,receiverCore.exports);'
                    b'var wallpaperCacheModule={exports:{}};(function(module,exports){\n' + modules['wallpaper-cache.js'] +
                    b'\n})(wallpaperCacheModule,wallpaperCacheModule.exports);'
                    b'var receiverRegister={exports:{}};(function(module,exports){\n' + register +

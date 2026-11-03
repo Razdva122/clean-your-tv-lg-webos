@@ -86,3 +86,54 @@ settings focus and preview, hide/resume, switching to another media app and norm
 audio/control return. Record model, firmware/webOS, remote if known, exact build,
 expected/actual outcomes and untested cases under repository privacy/consent rules.
 Desktop decode and a native package install do not satisfy final release gates.
+
+## Personal wallpapers (next-release development)
+
+Personal media is one independent wallpaper slot, not an installed theme. Both
+editions offer a source switch between the current theme and My wallpaper.
+Changing themes updates layout and styling without replacing the selected
+personal background. Preview and Apply on the TV are separate from receipt;
+HTTP 202 confirms receipt only. A cancelled transfer, invalid image/video or
+failed storage transaction preserves the accepted wallpaper. Removing the
+personal wallpaper returns to the current theme. Personal image/video bytes are
+not included in legacy profile wire formats and are never added to the theme
+catalogue.
+
+Desktop CYTV adds Wallpapers on its start screen, separate from installation.
+It accepts JPG/PNG, shows the source and cropped resolution, provides a 16:9
+crop and runs local preparation/transfer outside the UI thread with cancellation.
+Only a crop with at least 3840×2160 source pixels produces a UHD variant;
+at least 1920×1080 is needed for FHD. Smaller sources use an ordinary image.
+Frozen desktop distributions include a pinned FFmpeg executable and its
+attribution/source notices; no Node runtime or runtime binary download is needed.
+The user opens receiving in TV Wallpapers and enters its private IPv4/PIN in
+CYTV. The TV validates the received bytes before offering Apply.
+
+Phone upload opens a temporary, self-contained page on the TV through its QR
+code or manual address. Both devices must be on the same reachable private
+network. The page accepts JPG/PNG, previews a 16:9 crop and creates a JPEG up to
+1920×1080/2 MiB locally. Sending requires acknowledging that this is an ordinary
+image, with sharpness limited by TV UI resolution, and not the native 4K video
+layer. The TV retains the phone-source warning and does not offer 4K for that
+image. The page, QR generation and photo preparation require no cloud service.
+Video and HEIC input are outside this first phone uploader.
+
+The four existing receiver Luna methods keep their owning-app authorization.
+`themeReceiverStart({kind:"wallpaper"})` opts into personal media; old theme
+sessions retain their original route and browser-Origin rejection. Personal
+sessions serve GET `/wallpaper`, authenticated GET `/v1/wallpaper-capabilities`
+and PIN-authenticated POST `/v1/wallpaper` on the existing temporary TCP 8879
+listener. Only exact same-origin browser POSTs to the personal route are allowed,
+and browser uploads must be phone images. No CORS wildcard is introduced. QR
+PIN data is in a URL fragment; foreign Host/Origin, expired sessions and invalid
+PINs are rejected. Closing the receiving view or hiding the app stops it.
+A matching next-release Home/service is required; an older theme-only receiver
+must not be represented as personal-media compatible.
+
+The wire payload is versioned `kind:"wallpaper"`, with `source`, one hashed
+image and zero to two hashed video variants. Image limits are 2 MiB and
+3840×2160 for CYTV, 1920×1080 for phone. Phone variants are forbidden; CYTV video
+retains the 12 MiB UHD/4 MiB FHD/16 MiB combined bounds. Base64, hashes, actual
+headers and decoded dimensions are independently checked before persistence.
+See the [approved personal wallpaper design](../superpowers/specs/2026-11-03-personal-wallpapers-design.md)
+for the full field contract and separate release acceptance requirements.

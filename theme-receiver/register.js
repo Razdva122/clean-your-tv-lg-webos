@@ -44,7 +44,7 @@ function register(service, options) {
       if (typeof id !== 'string' || id.split(' ')[0] !== options.appId) { fail('caller-not-authorized'); return; }
       var payload = message.payload || {}, operation = methods[method], result;
       if (operation !== 'start' && (typeof payload.sessionId !== 'string' || payload.sessionId.length > 128)) { fail('invalid-request'); return; }
-      try { result = receiver[operation](payload.sessionId, payload.offset); }
+      try { result = receiver[operation](operation === 'start' ? payload : payload.sessionId, payload.offset); }
       catch (e) { fail(texts[e.code] ? e.code : 'invalid-request'); return; }
       Promise.resolve(result).then(function (value) {
         var response = {returnValue:true};
