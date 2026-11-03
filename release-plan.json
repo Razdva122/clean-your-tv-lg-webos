@@ -115,6 +115,13 @@
         171
       ],
       "summary": "Serialize Root Settings startup/Home reads against the single-flight service and retain source failure advice; exact-package acceptance remains pending"
+    },
+    {
+      "pr": 262,
+      "issues": [
+        171
+      ],
+      "summary": "Keep six browser fixtures offline with HTTPS-prefix guards and stabilize catalogue identity/focus auditing; no product behavior change"
     }
   ],
   "excluded": [],
