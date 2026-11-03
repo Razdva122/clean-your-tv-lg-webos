@@ -1,7 +1,6 @@
 # v1.7.0 — Native Root startup choices and theme-owned inputs
 
-This is an **unpublished release candidate** with the two-source Root startup
-policy and theme-owned inputs. Downloads still follow the latest published release.
+This release adds two-source native Root startup choices and theme-owned inputs.
 Acceptance is limited to the exact artifacts and scenarios in the linked records;
 source integration, CI and package installation do not certify other devices.
 
@@ -45,8 +44,11 @@ source integration, CI and package installation do not certify other devices.
   subscription where allowed and uses Home's own service plus the paired Helper
   after a definitive access refusal. The fixed read keeps the pairing key in
   Helper and uses a separate metadata exchange, leaving Home commands available.
-  New-package No-root acceptance remains pending; the pre-fix C3 run established
-  preview and control behavior but reproduced missing connection labels (#268).
+  On the maintainer C3, exact Home 1.8.1 / Helper 0.6.22 restore all HDMI labels
+  and the owner confirmed the live preview. With the console asleep, the paired
+  API reports disconnected despite a plugged cable; the owner accepted this
+  No-root distinction. Status refreshes on explicit foreground/focus interactions;
+  waking an input does not promise continuous hot-plug updates.
 - Home broker settings retain access after an explicit cross-package Helper
   status refusal. Original device acceptance for #196 is still outstanding.
 - Desktop/Android installers add pinned inspect-only Root collection and preserve
@@ -60,7 +62,7 @@ source integration, CI and package installation do not certify other devices.
 - Legacy vendor/bootstrap prerequisites and Root wake/forward-cancellation
   characterization improve diagnostics without granting unsupported hardware
   compatibility. The multilingual website source is included; deployment follows
-  a later authorized main merge, not candidate preparation.
+  the authorized main-release merge.
 
 ## Versions and packaging
 
@@ -89,11 +91,14 @@ privilege grant or service registration is required.
 
 ## Acceptance and known limits
 
-- #171 stays open. Final candidate standby and true cold start must separately
-  establish the first screen, source defaults/opt-ins/opt-outs, retained intent,
-  Home/Back/other controls/audio, disabled Settings, explicit Off and triple-Home.
-  Host regressions or earlier manual experiments do not accept the new packages.
-  Historical ENODEV/no-proof observer-exit failures are not waived.
+- #171 stays open for exact-package startup confirmation. Earlier 0.8.3 C3
+  observations retain their own hashes: native Clean first from Channels, firmware
+  choice with YouTube off, Clean with YouTube on, explicit Home off and physical
+  emergency/audio were observed. Root 0.8.4 installed normally with retained
+  profile, all 222 signed files verified and native routing active. Its additional
+  physical startup/cold-boot/controls/audio/emergency and retained rollback were
+  not repeated at the maintainer's explicit request. Unchanged runtime sources
+  alone do not accept changed package hashes or waive past observer failures.
 - Existing System 1.1.2 remains pinned with its prior channel behavior. Ordinary
   component OTA does not replace the supervisor; there is no general migration
   from that installed version. Do not delete state, reinstall or force equal
@@ -102,14 +107,17 @@ privilege grant or service registration is required.
   removal/recovery report, #152 original
   EF950V recovery, #101/#200/#216/#240 recoveries and #160/#164 legacy support
   remain unresolved. Partial diagnostics and source fixes do not close reports.
-- New Android APK bytes require original-signer and exact-payload verification
-  plus an in-place upgrade/retention check. Prior emulator evidence retains its
-  original scope; no new phone or TV compatibility is claimed.
+- The exact signed Android APK passed original-signer/payload verification and
+  in-place code17-to-code18 upgrade with synthetic-data retention on the owned
+  API35 ARM64 userdebug emulator. No physical phone-to-TV pass is claimed.
 - Homebrew catalogue promotion stays disabled. Audio/HDR preview limitations,
   additional models/remotes, physical phone-to-TV paths and universal compatibility
   are not accepted by CI.
 
-The frozen implementation inventory lives in `release-plan.json` and candidate
-[#246](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/246). A full build,
-signed Root QA bundle, artifact hashes and remaining acceptance gates are recorded
-there. Publication and a merge to `main` are separate decisions after acceptance.
+The frozen inventory is in `release-plan.json` and release PR
+[#246](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/246). Full build
+41657841592:1, protected Root signing 41661307514:1, exact artifact hashes,
+actual observations and untested paths are in the
+[package acceptance record](history/2026-11-03-release-1.7.0-final-packages.md).
+The maintainer authorized publication with this bounded evidence and without
+repeating previously passed physical tests; unobserved paths remain unobserved.

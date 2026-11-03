@@ -146,10 +146,11 @@
     }
   ],
   "excluded": [],
-  "acceptance": "",
+  "acceptance": "Maintainer-owned OLED55C3RLA / firmware 43.21.71 / webOS SDK 11.2.0; remote model and macOS ARM64 OS version unknown. Selected full build 41657841592:1 and protected signing 41661307514:1. Root 0.8.4 c38283644c74529f85520249f03352979e009b8f3b5674b8608a1158b7a292ee installed through retained original System 1.1.2 after ordinary saved-baseline rollback; all component terminals installed, transaction complete, all 222 files verified, portable profile retained, native routing/integrity active, TV On / YouTube Off. Exact Home 1.8.1 and Helper 0.6.22 bytes match C3-tested packages; HDMI labels work and owner visually confirmed live HDMI preview. Owner approved disconnected status for sleeping console and requested publication without repeated physical cases. Earlier Root 0.8.3 power/audio/emergency results retain their original hashes; final 0.8.4 physical standby/cold boot/controls/audio/emergency and retained rollback remain unobserved, not inferred. Final Android original-signature/payload and code17-to18 synthetic-retention emulator checks passed; physical phone, unrooted Developer Mode/No-root OTA, fresh System 1.2.0/general migration, preview silence/HDR, other models and original recovery reports remain unverified. Exact hashes, device/preconditions, expected/actual outcomes, rollback scope and maintainer decision: docs/history/2026-11-03-release-1.7.0-final-packages.md and docs/history/2026-11-03-helper-0.6.22-compatibility.md.",
   "build": {
     "run_id": 41657841592,
     "attempt": 1,
     "source": "849cfcf22e446921205c2cb659961e9d3d160fca"
-  }
+  },
+  "acceptance_build": "41657841592:1"
 }

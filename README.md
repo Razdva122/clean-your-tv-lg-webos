@@ -50,8 +50,7 @@ and creating your own theme.
 
 ## Download and install
 
-> Published 1.6.0 retains the initial LG Channels/late Home standby limitation (#171). The unpublished [1.7.0 candidate](docs/RELEASE-1.7.0.md) replaces late launches with native startup choices; exact-package acceptance is pending.
-> Download buttons follow the latest published release. On `release/next`, version metadata describes the selected candidate until publication.
+> [1.7.0](docs/RELEASE-1.7.0.md) replaces late Root launches with native startup choices. Read the [device results and limits](docs/history/2026-11-03-release-1.7.0-final-packages.md); #171 remains open for exact-package startup confirmation. Download buttons follow the latest published release.
 
 <!-- release:downloads -->
 Current stable release: **[v1.7.0](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.7.0)** — [release notes](docs/RELEASE-1.7.0.md).
