@@ -133,3 +133,22 @@ for (const raw of ['{bad', '{"version":2,"enabled":false}', '{"version":1,"enabl
 assert.equal(sources.previewEnabled({getItem() { throw Error('denied'); }}), true);
 assert.throws(() => sources.setPreviewEnabled(storage, 1), /invalid-input-preview-setting/);
 console.log('PASS input sources: live status overlay, inventory fallback, classifier, preview sources and preferences');
+
+// A definitive No-root EIM permission refusal uses the same-package broker once.
+const noRootDenied=harness();noRootDenied.model.start();
+noRootDenied.calls[0].reply({returnValue:false,errorCode:-1});
+assert.equal(noRootDenied.calls.length,2,'denied No-root EIM must have a paired status fallback');
+assert.equal(noRootDenied.calls[1].uri,'luna://com.gathin.tvhome.renewal/inputStatus');
+assert.deepEqual(noRootDenied.calls[1].params,{});
+assert.equal(noRootDenied.calls[1].timeout,10000);
+noRootDenied.model.refresh();noRootDenied.calls[0].reply({returnValue:false,errorCode:-1});
+assert.equal(noRootDenied.calls.length,2,'repeated refusal and refresh coalesce the pending fallback');
+noRootDenied.calls[1].reply({returnValue:true,devices:[{appId:'com.webos.app.hdmi1',connected:true}]});
+assert.equal(noRootDenied.model.list()[0].connected,true);
+noRootDenied.calls[0].reply({returnValue:true,devices:[{appId:'com.webos.app.hdmi1',connected:false}]});
+assert.equal(noRootDenied.model.list()[0].connected,true,'late direct callbacks cannot replace broker state');
+noRootDenied.model.refresh();assert.equal(noRootDenied.calls.length,3);
+noRootDenied.calls[2].reply({returnValue:false});assert.equal(noRootDenied.model.live(),false);
+assert.equal(noRootDenied.calls.length,3,'failed broker does not retry or create another subscription');
+noRootDenied.model.refresh();assert.equal(noRootDenied.calls.length,4,'explicit interaction may read again');
+console.log('PASS denied No-root input status fallback, read coalescing and stale callback isolation');

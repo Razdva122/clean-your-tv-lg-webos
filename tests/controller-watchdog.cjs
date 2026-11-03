@@ -2,7 +2,7 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),E=require('node:events'),path=require('node:path');
 const source=path.resolve(process.env.HELPER_CONTROLLER_ROOT||'native/app');
 const dir='/media/developer/apps/usr/palm/applications/com.local.nativehome/state/';
-function controller({blocked=false,watchdog=false,automatic=true,deferStart=false}={}){
+function controller({blocked=false,watchdog=false,automatic=true,deferStart=false,inputQuery}={}){
  let now=1000,seq=0,watch,exit,stopReads=0;
  const timers=new Map(),files=new Map(),workers=[],cleanups=[],logs=[],launches=[];
  if(blocked)files.set(dir+'blocked','stopped');if(watchdog)files.set(dir+'watchdog','stopped');
@@ -11,7 +11,7 @@ function controller({blocked=false,watchdog=false,automatic=true,deferStart=fals
  const fakefs={existsSync:p=>files.has(p),writeFileSync:(p,s)=>files.set(p,s),unlinkSync:p=>files.delete(p),chmodSync(){},renameSync:(a,b)=>{files.set(b,files.get(a));files.delete(a);},appendFileSync:(p,s)=>logs.push(JSON.parse(s)),readFileSync(p){if(p===dir+'control.json')stopReads++;if(files.has(p))return files.get(p);throw Object.assign(Error('absent'),{code:'ENOENT'});}};
  function Service(){this.activityManager={create(){}};this.call=(uri,p,cb)=>{if(uri.endsWith('/launch'))launches.push(p.id);cb({payload:{returnValue:true,state:{enabled:true,schema:3}}});};}
  const cp={spawn(file,args){assert(file.endsWith('/relay'));const c=new E();c.stdout=new E();c.stderr=new E();c.stdin=new E();c.writes=[];c.kills=[];c.ack=true;c.stdin.write=b=>{c.writes.push(b);if(b==='P'&&c.ack)c.stdout.emit('data',Buffer.from('P\n'));};c.stdin.end=()=>{};c.kill=s=>{c.kills.push(s);return true;};(args.length?cleanups:workers).push(c);return c;}};
- const context={Buffer,console,Date:{now:()=>now},require(n){if(n==='fs')return fakefs;if(n==='child_process')return cp;if(n==='/usr/lib/node_modules/webos-service')return Service;if(n==='./state-permissions')return(d,l,init)=>{if(init)files.set(dir+'control.json','{}');return true;};if(n==='./screen-watch')return(d,l,fg,reset,power)=>{watch={fg,power};return{close:reset};};return require(path.join(source,n));},process:{argv:['node','native.js',JSON.stringify({nativeHomeAuto:automatic})],pid:1,getuid:()=>5431,hrtime:()=>[Math.floor(now/1000),now%1000*1e6],on(){},exit(c){exit=c;}},setTimeout:(f,ms)=>schedule(f,ms),clearTimeout:id=>timers.delete(id),setInterval:(f,ms)=>schedule(f,ms,ms),clearInterval:id=>timers.delete(id)};
+ const context={Buffer,console,Date:{now:()=>now},require(n){if(n==='fs')return fakefs;if(n==='child_process')return cp;if(n==='/usr/lib/node_modules/webos-service')return Service;if(n==='./state-permissions')return(d,l,init)=>{if(init)files.set(dir+'control.json','{}');return true;};if(n==='./app-inventory')return inputQuery||(()=>{throw Error('unexpected inventory query');});if(n==='./screen-watch')return(d,l,fg,reset,power)=>{watch={fg,power};return{close:reset};};return require(path.join(source,n));},process:{argv:['node','native.js',JSON.stringify({nativeHomeAuto:automatic})],pid:1,getuid:()=>5431,hrtime:()=>[Math.floor(now/1000),now%1000*1e6],on(){},exit(c){exit=c;}},setTimeout:(f,ms)=>schedule(f,ms),clearTimeout:id=>timers.delete(id),setInterval:(f,ms)=>schedule(f,ms,ms),clearInterval:id=>timers.delete(id)};
  vm.runInNewContext(fs.readFileSync(path.join(source,'native.js'),'utf8'),context);
  if(exit===undefined&&!deferStart){advance(automatic?0:1000);workers[0].stdout.emit('data',Buffer.from('READY\n'));}
  function close(code=20,signal=null,worker=workers.at(-1),reason=code){if(reason!==null)worker.stdout.emit('data',Buffer.from('EXIT '+reason+'\n'));if(code===20)files.set(dir+'watchdog','stopped');worker.emit('exit',code,signal);worker.emit('close',code,signal);}
@@ -57,4 +57,32 @@ test('exhausted retries still clean a killed replacement before READY',()=>{
  const c=controller();for(let i=0;i<5;i++){c.close();c.cleanup();c.advance(1500);if(i<4)c.workers.at(-1).stdout.emit('data',Buffer.from('READY\n'));}
  const w=c.workers.at(-1);w.ack=false;c.advance(3200);assert.deepEqual(w.kills,['SIGKILL']);c.close(null,'SIGKILL',w,null);
  assert.equal(c.cleanups.length,6);assert.equal(c.exit,undefined);c.cleanup();assert.equal(c.exit,20);assert(blocked(c));assert.equal(c.workers.length,6);
+});
+
+test('paired metadata channel coalesces reads, leaves Home independent and ignores replies after Stop',async()=>{
+ let resolve,reads=0;
+ const c=controller({inputQuery:options=>{reads++;assert.deepEqual(JSON.parse(JSON.stringify(options)),{inputs:true,timeout:3000});return new Promise(r=>resolve=r);}});
+ const own='/media/developer/apps/usr/palm/services/com.gathin.tvhome.renewal/state/home-control/';
+ const request=(id,method='inputStatus')=>c.files.set(own+'input-request.json',JSON.stringify({id:id.repeat(32),method,expires:6000}));
+ request('a');c.advance(400);await new Promise(r=>setImmediate(r));
+ request('b');c.advance(400);await new Promise(r=>setImmediate(r));assert.equal(reads,1,'concurrent read requests share one paired socket');
+ c.files.set(own+'home-request.json',JSON.stringify({id:'d'.repeat(32),method:'homeStatus',expires:6000}));c.advance(400);
+ assert.equal(JSON.parse(c.files.get(own+'home-response.json')).enabled,true,'Home settings must work while metadata is pending');
+ const n=c.launches.length;c.workers[0].stdout.emit('data',Buffer.from('HOME\n'));assert.equal(c.launches.length,n+1,'metadata cannot block physical Home');
+ resolve([{appId:'com.webos.app.hdmi3',connected:true}]);await new Promise(r=>setImmediate(r));
+ assert.equal(JSON.parse(c.files.get(own+'input-response.json')).devices[0].connected,true);
+ assert.equal(JSON.parse(c.files.get(own+'input-response.json')).id,'b'.repeat(32));
+ request('e','setHomeControl');c.advance(400);assert.equal(reads,1,'metadata channel cannot mutate Home');
+ request('c');c.advance(400);await new Promise(r=>setImmediate(r));assert.equal(reads,2,'responses are not cached');
+ const previous=c.files.get(own+'input-response.json');c.command('stop');c.advance(400);
+ assert(blocked(c));resolve([{appId:'com.webos.app.hdmi3',connected:false}]);await new Promise(r=>setImmediate(r));
+ assert.equal(c.files.get(own+'input-response.json'),previous,'late metadata cannot publish after Stop');assert(blocked(c));
+});
+test('input read rejection returns a generic failure and releases the read slot',async()=>{
+ let reads=0;const c=controller({inputQuery:()=>{reads++;return Promise.reject(Error('PRIVATE pairing path'));}});
+ for(const id of ['a','b']){
+  c.files.set('/media/developer/apps/usr/palm/services/com.gathin.tvhome.renewal/state/home-control/input-request.json',JSON.stringify({id:id.repeat(32),method:'inputStatus',expires:6000}));c.advance(400);await new Promise(r=>setImmediate(r));
+  const response=JSON.parse(c.files.get('/media/developer/apps/usr/palm/services/com.gathin.tvhome.renewal/state/home-control/input-response.json'));assert.equal(response.returnValue,false);assert(!JSON.stringify(response).includes('PRIVATE'));
+ }
+ assert.equal(reads,2);assert(!blocked(c));
 });

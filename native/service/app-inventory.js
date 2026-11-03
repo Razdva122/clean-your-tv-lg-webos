@@ -2,14 +2,25 @@
 // Uses the existing pairing key and only the TV's own LAN address. Never pairs.
 module.exports=function(options){
  options=options||{};
+ var inputs=options.inputs===true;
+ function inputDevices(devices){
+  return devices.slice(0,100).map(function(device){
+   if(!device||typeof device!=='object'||Array.isArray(device)||typeof device.appId!=='string'||!device.appId.trim())throw Error('invalid-input');
+   var result={};
+   ['appId','id','label','deviceName','spdProductDescription'].forEach(function(key){if(typeof device[key]==='string'&&device[key].trim())result[key]=device[key].trim().slice(0,256);});
+   result.connected=typeof device.connected==='boolean'?device.connected:null;
+   return result;
+  });
+ }
  return new Promise(function(resolve,reject){
   var socket,done=false,timer,attemptTimer;
-  function finish(error,apps){if(done)return;done=true;clearTimeout(timer);clearTimeout(attemptTimer);if(socket)socket.terminate();if(error)reject(Error(error));else resolve(apps);}
+  function finish(error,apps){if(done)return;done=true;clearTimeout(timer);clearTimeout(attemptTimer);if(socket)try{socket.terminate();}catch(_){}if(error)reject(Error(error));else resolve(apps);}
+  function send(message){try{socket.send(JSON.stringify(message));}catch(_){finish('inventory-unavailable');}}
   try{
    var base='/media/developer/apps/usr/palm/applications/com.local.nativehome';
    if(!options.readKey&&!require(base+'/state-permissions')(base+'/state')){finish('state-permissions');return;}
    var key=(options.readKey||function(){return JSON.parse(require('fs').readFileSync(base+'/state/ssap-key.json','utf8'));})();
-   if(!key||typeof key.key!=='string'||!key.key){finish('missing-pairing');return;}
+   if(!key||typeof key.key!=='string'||!key.key||(inputs&&key.key.length>1024)){finish('missing-pairing');return;}
    var interfaces=(options.interfaces||require('os').networkInterfaces)(),hosts=[];
    Object.keys(interfaces).forEach(function(name){interfaces[name].forEach(function(a){if(!a.internal&&(a.family==='IPv4'||a.family===4)&&a.address.indexOf('169.254.')!==0)hosts.push(a.address);});});
    if(!hosts.length){finish('network-unavailable');return;}
@@ -20,25 +31,27 @@ module.exports=function(options){
     if(done)return;
     if(index>=hosts.length){finish('network-unavailable');return;}
     var current;
-    try{current=new WebSocket('wss://'+hosts[index++]+':3001',{rejectUnauthorized:false,handshakeTimeout:2000,maxPayload:1024*1024,perMessageDeflate:false});}
+    try{current=new WebSocket('wss://'+hosts[index++]+':3001',{rejectUnauthorized:false,handshakeTimeout:2000,maxPayload:inputs?256*1024:1024*1024,perMessageDeflate:false});}
     catch(_){connect();return;}
     socket=current;
     function retry(){
      if(done||socket!==current)return;
-     clearTimeout(attemptTimer);socket=null;current.terminate();connect();
+     clearTimeout(attemptTimer);socket=null;try{current.terminate();}catch(_){}connect();
     }
     attemptTimer=setTimeout(retry,Math.max(500,Math.floor((options.timeout||8000)/hosts.length)));
 
-   current.on('open',function(){if(done||socket!==current)return;current.send(JSON.stringify({type:'register',id:'register',payload:{forcePairing:false,pairingType:'PROMPT','client-key':key.key,manifest:{manifestVersion:1,appVersion:'1.1',permissions:['READ_INSTALLED_APPS']}}}));});
+   current.on('open',function(){if(done||socket!==current)return;send({type:'register',id:'register',payload:{forcePairing:false,pairingType:'PROMPT','client-key':key.key,manifest:{manifestVersion:1,appVersion:'1.1',permissions:[inputs?'READ_INPUT_DEVICE_LIST':'READ_INSTALLED_APPS']}}});});
    current.on('message',function(raw){
     if(done||socket!==current)return;
     var message;try{message=JSON.parse(String(raw));}catch(_){finish('invalid-response');return;}
-    if(message.type==='registered')socket.send(JSON.stringify({type:'request',id:'apps',uri:'ssap://com.webos.applicationManager/listLaunchPoints',payload:{}}));
+    if(!message||typeof message!=='object'||Array.isArray(message)){finish('invalid-response');return;}
+    if(message.type==='registered')send({type:'request',id:inputs?'inputs':'apps',uri:inputs?'ssap://tv/getExternalInputList':'ssap://com.webos.applicationManager/listLaunchPoints',payload:{}});
     else if(message.payload&&message.payload.pairingType)finish('pairing-required');
     else if(message.type==='error')finish('inventory-denied');
-    else if(message.id==='apps'){
+    else if(message.id===(inputs?'inputs':'apps')){
      var result=message.payload;
-     if(!result||result.returnValue===false||!Array.isArray(result.launchPoints))finish('invalid-inventory');
+     if(!result||(inputs?result.returnValue!==true:result.returnValue===false)||!Array.isArray(result[inputs?'devices':'launchPoints']))finish('invalid-inventory');
+     else if(inputs){try{finish(null,inputDevices(result.devices));}catch(_){finish('invalid-inventory');}}
      else finish(null,result.launchPoints.slice(0,200));
     }
    });

@@ -18,7 +18,9 @@
   controls and retains their values. No HDMI startup control is included.
 - Restore Root input connection labels using a bounded authenticated read through
   the existing service endpoint, without new permissions or polling. No-root
-  keeps its existing direct query path.
+  retains direct EIM where allowed and falls back after a definitive permission
+  refusal to a fixed paired Helper read through Home's own service. Metadata
+  uses an independent exchange so Home controls remain available.
 - Bundle Liquid Glass in place of Alpine. Alpine 1.4.4 is downloadable from Theme
   showcase. A saved `builtin:alpine` selection falls back to Classic with the
   existing recovery notice, without automatic download or substitution.

@@ -178,6 +178,7 @@ def build_payload():
                             *sources, '-o', str(output)], cwd=ROOT, env=environment, check=True)
             app[name] = output.read_bytes()
         service = {n: b for n, b in tracked_files('native/service').items() if n.endswith(('.js', '.json')) and not n.startswith('state/')}
+        app['app-inventory.js'] = service['app-inventory.js']
         helper = pack_app(app, service, architecture='arm', helper=True)
     (payload / 'helper.ipk').write_bytes(helper)
     launcher = {n: b for n, b in tracked_files('launcher').items() if n != 'apps.js' and not n.startswith('icons/')}

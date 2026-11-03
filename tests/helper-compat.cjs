@@ -18,7 +18,7 @@ function sources(directory, prefix = '') {
 }
 const output = fs.mkdtempSync(path.join(os.tmpdir(), 'helper-compat-'));
 try {
-  const files = compile(sources('native/app'));
+  const files = compile({...sources('native/app'), 'app-inventory.js': fs.readFileSync('native/service/app-inventory.js', 'utf8')});
   const service = compile({...sources('native/service'), 'state-permissions.js': fs.readFileSync('native/app/state-permissions.js', 'utf8')});
   for (const [name, code] of Object.entries(service)) files['service/' + name] = code;
   for (const [name, code] of Object.entries(files)) {

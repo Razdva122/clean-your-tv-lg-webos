@@ -79,6 +79,7 @@
       started = false,
       pending = false,
       snapshot = options.root === true,
+      fallback = false,
       devices = null;
     // The inventory is read on demand: a profile restore can replace it after startup.
     function inventory() {
@@ -93,11 +94,23 @@
     }
     function read() {
       if (pending || typeof options.call !== 'function') return;
-      pending = snapshot;
-      function receive(result) { pending = false; reply(result); }
+      var oneShot = snapshot || fallback, completed = false;
+      pending = oneShot;
+      function receive(result) {
+        if (oneShot) {
+          if (completed) return;
+          completed = true; pending = false; reply(result);
+        } else if (!fallback) {
+          // A denied WebApp EIM call does not imply the paired Helper cannot read inputs.
+          if (result && result.returnValue === false && result.errorCode === -1) {
+            fallback = true; read();
+          } else reply(result);
+        }
+      }
       try {
-        options.call(snapshot ? 'luna://com.cleanyourtv.root.preview.service/listApps' : STATUS_URI,
-          snapshot ? {inputs:true} : {subscribe:true}, receive, snapshot ? 10000 : undefined);
+        options.call(snapshot ? 'luna://com.cleanyourtv.root.preview.service/listApps' :
+          fallback ? 'luna://com.gathin.tvhome.renewal/inputStatus' : STATUS_URI,
+          snapshot ? {inputs:true} : fallback ? {} : {subscribe:true}, receive, oneShot ? 10000 : undefined);
       } catch (_) { receive(null); }
     }
     return {
@@ -107,8 +120,8 @@
         started = true;
         read();
       },
-      // Root has one-shot status: refresh only for explicit foreground interactions.
-      refresh: function () { if (started && snapshot) read(); },
+      // Broker snapshots refresh only for explicit foreground interactions.
+      refresh: function () { if (started && (snapshot || fallback)) read(); },
       list: list,
       live: function () { return !!devices; },
       onchange: function (listener) { if (typeof listener === 'function') listeners.push(listener); }

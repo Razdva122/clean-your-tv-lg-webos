@@ -453,8 +453,26 @@ The broker performs a fixed, bounded, privileged read-only query; it adds no
 permissions or TV-setting writes. Root refreshes once when Home becomes visible,
 a different input receives focus or Settings opens. There is no polling or
 automatic retry, and failed/unavailable reads leave connection status unknown.
-This is not continuous hot-plug monitoring. No-root retains its existing direct
-EIM subscription; this change does not establish No-root device acceptance.
+This is not continuous hot-plug monitoring. No-root keeps its direct EIM
+subscription where available. A definitive permission refusal (`errorCode: -1`)
+switches that session to bounded snapshots through its own renewal service's
+`inputStatus` method. Only the Home application may call it with an empty payload.
+The native Helper uses the existing pairing and only the TV's own interface
+addresses to read `ssap://tv/getExternalInputList`; it never pairs or accepts a
+caller-selected address, URI or command. Keys stay inside Helper. Replies contain
+at most 100 devices, five bounded strings and boolean/unknown connection states.
+No-root snapshots refresh on the same explicit foreground interactions as Root;
+failure clears stale status and does not start a retry loop.
+
+The fallback reuses the provisioned service `state/home-control` directory and
+its shared-group permissions. Expiring correlated `input-request.json` and
+`input-response.json` messages (atomic `.tmp` writes, mode 0660) are separate from
+the existing Home-command files, so metadata cannot occupy Home settings or
+stock-Home control. The query has a three-second budget within the five-second
+broker deadline; concurrent controller reads share one query. Stop/emergency
+state suppresses late responses. No directory, privilege grant, boot activity or
+startup policy is added. Physical acceptance is specific to the selected build;
+simulated services do not certify unrooted Developer Mode installation.
 
 ## Classic motion opt-in (unreleased)
 
