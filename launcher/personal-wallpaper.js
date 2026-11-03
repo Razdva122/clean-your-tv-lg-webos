@@ -9,7 +9,7 @@
  function keys(value,names){if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).sort().join(',')!==names.split(' ').sort().join(','))fail();}
  function bytes(value,max){
   keys(value,'mediaType width height size sha256 data');
-  if(!Number.isInteger(value.size)||value.size<1||value.size>max||typeof value.data!=='string'||value.data.length!==4*Math.ceil(value.size/3)||! /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value.data)||! /^[a-f0-9]{64}$/.test(value.sha256))fail();
+  if(!Number.isInteger(value.size)||value.size<1||value.size>max||typeof value.data!=='string'||value.data.length!==4*Math.ceil(value.size/3)||value.data.length%4!==0||/[^A-Za-z0-9+/=]/.test(value.data)||/=[^=]|={3}/.test(value.data)||! /^[a-f0-9]{64}$/.test(value.sha256))fail();
   var raw=root.atob(value.data);if(raw.length!==value.size||root.btoa(raw)!==value.data)fail();var out=new Uint8Array(raw.length);for(var i=0;i<raw.length;i++)out[i]=raw.charCodeAt(i);if(root.ThemeData.hash(out)!==value.sha256)fail();return out.buffer;
  }
  function validate(envelope){

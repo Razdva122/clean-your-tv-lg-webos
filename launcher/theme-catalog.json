@@ -25,16 +25,16 @@
     {
       "id": "builtin:ribbon",
       "title": "Ribbon",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "builtin": true,
-      "description": "Original galaxy wallpaper with a fixed eight-card skewed bottom ribbon, raised focus and bottom-left shortcuts.",
+      "description": "Real Webb Cosmic Cliffs imagery with a subtle 20-second 4K camera orbit and a fixed eight-card skewed app ribbon.",
       "author": "Clean Your TV contributors",
-      "license": "MIT",
-      "preview": "themes/ribbon/assets/preview-dbf77986dfebeb26c646824e90cb53126420f3b985609bb3f575bdf2d9d0a81a.jpg",
-      "credits": "themes/ribbon/documents/1-6ef40776aa6fbb8d1c62bedf595c7baec036d4a1fea9bdfc1f24d071b77de56c.txt",
-      "licenseFile": "themes/ribbon/documents/0-f497a621e75e2ccabaac016c8ada95b415a7810fb9994798b282fa9f9d03920f.txt",
+      "license": "MIT AND CC-BY-4.0",
+      "preview": "themes/ribbon/assets/preview-cf2bb4267b9fbd09f85a3f1e367aacc8599904b641e1c926959dc06ba2555daf.jpg",
+      "credits": "themes/ribbon/documents/1-5ff45c5b230fbcf7ad125ca97d47227a41d3e79d057c5e548b777bc7e7deba9c.txt",
+      "licenseFile": "themes/ribbon/documents/0-c1997742afacda8afe0a51f5ad169df9d7f77834a129b5c4df5d1cf629e7eae0.txt",
       "url": "themes/ribbon/cytv-theme.json",
-      "digest": "5eb9cebf58cddafa8df59497880eaa134565465ba75dab60ec1903b956be4f5d"
+      "digest": "a8a28acb49570507b012ddce41d4dd5d8d43cfd2f8fc08a0988e57d9825e3db6"
     },
     {
       "id": "github:razdva122/clean-your-tv-lg-webos:alpine",

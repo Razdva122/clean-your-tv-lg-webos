@@ -3,12 +3,12 @@
   "themeApiVersion": 1,
   "id": "builtin:ribbon",
   "title": "Ribbon",
-  "description": "Original galaxy wallpaper with a fixed eight-card skewed bottom ribbon, raised focus and bottom-left shortcuts.",
+  "description": "Real Webb Cosmic Cliffs imagery with a subtle 20-second 4K camera orbit and a fixed eight-card skewed app ribbon.",
   "author": {
     "name": "Clean Your TV contributors",
     "url": "https://github.com/razdva122"
   },
-  "themeVersion": "1.0.0",
+  "themeVersion": "1.1.0",
   "layout": {
     "preset": "scenic-grid",
     "columns": 8,
@@ -39,36 +39,59 @@
   "assets": [
     {
       "id": "wallpaper",
-      "path": "assets/wallpaper-57510eb83e098765c978197826252ae563ed2e09344ea717611e47b0f668760c.png",
-      "mediaType": "image/png",
-      "width": 1920,
-      "height": 1080,
-      "size": 776305,
-      "sha256": "57510eb83e098765c978197826252ae563ed2e09344ea717611e47b0f668760c"
+      "path": "assets/wallpaper-c97f9f552250d3c28e26150bc4692f36278a927b268b1bb2e6d2f1f5d3fa9b07.jpg",
+      "mediaType": "image/jpeg",
+      "width": 3840,
+      "height": 2160,
+      "size": 1093346,
+      "sha256": "c97f9f552250d3c28e26150bc4692f36278a927b268b1bb2e6d2f1f5d3fa9b07"
     },
     {
       "id": "preview",
-      "path": "assets/preview-dbf77986dfebeb26c646824e90cb53126420f3b985609bb3f575bdf2d9d0a81a.jpg",
+      "path": "assets/preview-cf2bb4267b9fbd09f85a3f1e367aacc8599904b641e1c926959dc06ba2555daf.jpg",
       "mediaType": "image/jpeg",
       "width": 960,
       "height": 540,
-      "size": 56183,
-      "sha256": "dbf77986dfebeb26c646824e90cb53126420f3b985609bb3f575bdf2d9d0a81a"
+      "size": 132603,
+      "sha256": "cf2bb4267b9fbd09f85a3f1e367aacc8599904b641e1c926959dc06ba2555daf"
     }
   ],
   "previewAssetId": "preview",
   "license": {
-    "identifier": "MIT",
-    "textPath": "documents/0-f497a621e75e2ccabaac016c8ada95b415a7810fb9994798b282fa9f9d03920f.txt",
-    "creditsPath": "documents/1-6ef40776aa6fbb8d1c62bedf595c7baec036d4a1fea9bdfc1f24d071b77de56c.txt"
+    "identifier": "MIT AND CC-BY-4.0",
+    "textPath": "documents/0-c1997742afacda8afe0a51f5ad169df9d7f77834a129b5c4df5d1cf629e7eae0.txt",
+    "creditsPath": "documents/1-5ff45c5b230fbcf7ad125ca97d47227a41d3e79d057c5e548b777bc7e7deba9c.txt"
+  },
+  "wallpaperVideo": {
+    "variants": [
+      {
+        "quality": "4k",
+        "path": "videos/4k-4dfded2b4024dcaec78581f0a7aef14b097b6752c4f3f065db5e1d485c431b3e.mp4",
+        "mediaType": "video/mp4",
+        "width": 3840,
+        "height": 2160,
+        "size": 9517335,
+        "sha256": "4dfded2b4024dcaec78581f0a7aef14b097b6752c4f3f065db5e1d485c431b3e"
+      },
+      {
+        "quality": "1080p",
+        "path": "videos/1080p-c106903a808bb6af32f5c62c0bcdeaac503c1ca434fc1a0d73b93bf78366a2b0.mp4",
+        "mediaType": "video/mp4",
+        "width": 1920,
+        "height": 1080,
+        "size": 2683830,
+        "sha256": "c106903a808bb6af32f5c62c0bcdeaac503c1ca434fc1a0d73b93bf78366a2b0"
+      }
+    ]
   },
   "source": {
     "repository": "https://github.com/razdva122/clean-your-tv-lg-webos",
-    "commit": "dbb22f897f6a044154466405c9a1236373ac2b6b"
+    "commit": "c6504de0f988dae71c6f9f767de9a3f086208923"
   },
   "requires": {
     "minimumHomeVersion": "1.6.1",
     "capabilities": [
+      "video-wallpaper-v1",
       "ribbon-layout-v1"
     ]
   },
@@ -79,14 +102,14 @@
   },
   "documents": [
     {
-      "path": "documents/0-f497a621e75e2ccabaac016c8ada95b415a7810fb9994798b282fa9f9d03920f.txt",
-      "size": 546,
-      "sha256": "f497a621e75e2ccabaac016c8ada95b415a7810fb9994798b282fa9f9d03920f"
+      "path": "documents/0-c1997742afacda8afe0a51f5ad169df9d7f77834a129b5c4df5d1cf629e7eae0.txt",
+      "size": 755,
+      "sha256": "c1997742afacda8afe0a51f5ad169df9d7f77834a129b5c4df5d1cf629e7eae0"
     },
     {
-      "path": "documents/1-6ef40776aa6fbb8d1c62bedf595c7baec036d4a1fea9bdfc1f24d071b77de56c.txt",
-      "size": 787,
-      "sha256": "6ef40776aa6fbb8d1c62bedf595c7baec036d4a1fea9bdfc1f24d071b77de56c"
+      "path": "documents/1-5ff45c5b230fbcf7ad125ca97d47227a41d3e79d057c5e548b777bc7e7deba9c.txt",
+      "size": 1655,
+      "sha256": "5ff45c5b230fbcf7ad125ca97d47227a41d3e79d057c5e548b777bc7e7deba9c"
     }
   ]
 }

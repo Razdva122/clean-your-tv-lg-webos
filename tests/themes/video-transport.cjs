@@ -78,3 +78,15 @@ async function preparation(){
  console.log('PASS video prepare ownership, no native decoder, failure/cancellation cleanup');
 }
 preparation().catch(e=>{console.error(e);process.exitCode=1;});
+
+// Large real base64 payloads must reject malformed data without a regex stack overflow.
+const largeBytes=Buffer.alloc(9*1024*1024,1),largeManifest=manifest();
+largeManifest.id='github:owner/repo:large';largeManifest.source.repository='https://github.com/owner/repo';
+largeManifest.wallpaperVideo.variants[0].quality='4k';
+largeManifest.wallpaperVideo.variants[0].width=3840;largeManifest.wallpaperVideo.variants[0].height=2160;
+largeManifest.wallpaperVideo.variants[0].size=largeBytes.length;largeManifest.wallpaperVideo.variants[0].sha256=data.hash(largeBytes);
+const largeDescriptor=Buffer.from(JSON.stringify(largeManifest));
+const largeEnvelope={schemaVersion:1,descriptor:largeDescriptor.toString('base64'),files:{}};
+for(const f of [largeManifest.rules,...largeManifest.assets,...largeManifest.documents])largeEnvelope.files[f.path]=Buffer.alloc(f.size).toString('base64');
+largeEnvelope.files[largeManifest.wallpaperVideo.variants[0].path]=largeBytes.toString('base64');
+assert.throws(()=>data.unpackEnvelope(largeEnvelope,'99.0.0'),error=>!(error instanceof RangeError)&&/hash|MP4|signature/.test(error.message),'oversized regex repetition cannot exhaust stack before normal validation');

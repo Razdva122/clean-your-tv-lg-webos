@@ -48,7 +48,7 @@
   x.onerror=function(){finish(Error('Theme network error'));};x.ontimeout=function(){finish(Error('Theme download timed out'));};x.onabort=function(){finish(Error('Cancelled'));};x.send();
  });}
  function base64(value,limit){
-  if(typeof value!=='string'||value.length>4*Math.ceil(limit/3)||! /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value))fail('Invalid local theme data');
+  if(typeof value!=='string'||value.length>4*Math.ceil(limit/3)||value.length%4!==0||/[^A-Za-z0-9+/=]/.test(value)||/=[^=]|={3}/.test(value))fail('Invalid local theme data');
   var raw=atob(value);if(raw.length>limit)fail('Theme file exceeds its size limit');var bytes=new Uint8Array(raw.length);for(var i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);return bytes;
  }
  function unpackEnvelope(envelope,homeVersion){
