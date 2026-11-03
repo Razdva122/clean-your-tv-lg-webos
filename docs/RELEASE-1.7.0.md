@@ -41,7 +41,11 @@ Source integration and successful builds do not certify physical TV behavior.
   or TV-setting writes. Home visibility, a newly focused input and Settings each
   trigger one fresh read; failures leave status unknown. There is no polling,
   automatic retry or continuous hot-plug guarantee. No-root keeps its direct EIM
-  subscription; No-root device acceptance is not established by this change.
+  subscription where allowed and uses Home's own service plus the paired Helper
+  after a definitive access refusal. The fixed read keeps the pairing key in
+  Helper and uses a separate metadata exchange, leaving Home commands available.
+  New-package No-root acceptance remains pending; the pre-fix C3 run established
+  preview and control behavior but reproduced missing connection labels (#268).
 - Home broker settings retain access after an explicit cross-package Helper
   status refusal. Original device acceptance for #196 is still outstanding.
 - Desktop/Android installers add pinned inspect-only Root collection and preserve
