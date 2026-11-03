@@ -27,9 +27,10 @@ A supplied device name is shown when firmware provides it; otherwise a connected
 source says **Connected**. Home does not invent a console name or guarantee CEC
 identification. These candidate controls differ from published 1.6.0.
 
-Live previews are **off by default**. **Settings → Appearance → Preview inputs on
-focus** is available for a shelf theme. When explicitly enabled, a connected HDMI
-source can preview after about 0.8 seconds of focus. Moving away, opening another
+Live previews are **on by default**; an explicitly saved Off stays off. Disable
+**Settings → Appearance → Preview inputs on focus** to turn them off. While
+enabled for a shelf theme, a connected HDMI source can preview after about
+0.8 seconds of focus. Moving away, opening another
 surface or leaving Home stops it. Live TV and empty ports keep static tiles.
 Firmware can still play audio or switch HDR despite element mute; silence is not
 guaranteed. Home does not change global TV mute/HDR settings automatically.
@@ -68,7 +69,8 @@ Startup can initially show a black screen or LG Home. Standby/wake success does
 not prove cold-boot reliability or a fixed startup time. See [device limits](COMPATIBILITY.md).
 
 In the unpublished Root candidate, **Home settings → Open Clean Your TV first**
-chooses native startup sources: LG Channels / Live TV defaults on, YouTube and
-HDMI default off. With **Change Home** off these choices remain visible, muted
+chooses two native startup sources: LG Channels / Live TV defaults on and
+YouTube defaults off. There is no HDMI startup switch; a source switched off
+leaves startup to firmware. See the [global startup-setting dependency](../root-edition/README.md#candidate-native-startup-choices). With **Change Home** off these choices remain visible, muted
 and disabled with an explanation; saved values remain. Late boot/wake launches
 are removed. Exact-package first-screen and control acceptance is pending.

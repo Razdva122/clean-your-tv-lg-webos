@@ -6,7 +6,7 @@ Authors: [suggest your theme](https://github.com/Razdva122/clean-your-tv-lg-webo
 
 ## Included with the unpublished candidate
 
-Candidate 1.7.0 includes **Classic**, **Liquid Glass** and **Ribbon** in both editions, available offline. Classic remains the initial default and uses the header Inputs menu. Liquid Glass uses an input shelf; placement belongs to the selected theme, with no global placement switch. Live previews default off.
+Candidate 1.7.0 includes **Classic**, **Liquid Glass** and **Ribbon** in both editions, available offline. Classic remains the initial default and uses the header Inputs menu. Liquid Glass uses an input shelf; placement belongs to the selected theme, with no global placement switch. Live previews default on; an explicitly saved Off remains off. Disable **Settings → Appearance → Preview inputs on focus** to turn them off. They apply only to connected HDMI tiles in a shelf theme. HDMI previews may play sound or switch HDR on some TVs; silence is not guaranteed. Home does not automatically change global TV mute or HDR settings.
 
 Published 1.6.0 instead includes Classic, Alpine and Ribbon. In the candidate, **Alpine 1.4.4** is available through Theme showcase. A saved `builtin:alpine` selection falls back to Classic with the visible recovery notice; it does not trigger a download or silently select Liquid Glass. Downloaded Alpine retains its mountain panorama, clock and fixed ribbon layout; its fixed layout hides Columns and preserves your adjustable-theme choice.
 

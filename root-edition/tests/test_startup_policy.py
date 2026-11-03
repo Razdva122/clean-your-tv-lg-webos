@@ -38,18 +38,18 @@ class Tests(unittest.TestCase):
   self.foreground='mgg4.5.channelplus';self.last={'type':'MVPD_IP','appId':self.foreground};return dict(self.last)
  def test_defaults_status_are_read_only(self):
   before=len(self.calls)
-  self.assertEqual(policy.startup_status(),{'sources':{'tv':True,'youtube':False,'hdmi':False},'active':True})
+  self.assertEqual(policy.startup_status(),{'sources':{'tv':True,'youtube':False},'active':True})
   self.assertEqual(len(self.calls),before);self.assertFalse((self.root/'startup-policy.json').exists())
  def test_exact_boolean_policy_persists_and_off_rejects_changes(self):
-  wanted={'tv':False,'youtube':True,'hdmi':True}
+  wanted={'tv':False,'youtube':True}
   self.assertEqual(policy.startup_configure(wanted)['sources'],wanted)
-  raw=(self.root/'startup-policy.json').read_bytes();self.assertEqual((self.root/'startup-policy.json').stat().st_mode&0o777,0o600)
-  for invalid in ({'tv':1,'youtube':False,'hdmi':False},{'tv':True},dict(wanted,other=True)):
+  raw=(self.root/'startup-policy.json').read_bytes();self.assertEqual(json.loads(raw),{'version':2,'sources':wanted});self.assertEqual((self.root/'startup-policy.json').stat().st_mode&0o777,0o600)
+  for invalid in ({'tv':1,'youtube':False},{'tv':True},dict(wanted,hdmi=True),dict(wanted,hdmi=False),dict(wanted,other=True)):
    with self.assertRaises(ValueError):policy.startup_configure(invalid)
    self.assertEqual((self.root/'startup-policy.json').read_bytes(),raw)
   self.c.exit(self.store.read())
   self.assertFalse(policy.startup_status()['active'])
-  with self.assertRaises(ValueError):policy.startup_configure({'tv':True,'youtube':False,'hdmi':False})
+  with self.assertRaises(ValueError):policy.startup_configure({'tv':True,'youtube':False})
   self.assertEqual((self.root/'startup-policy.json').read_bytes(),raw)
  def test_channels_select_existing_root_without_changing_foreground(self):
   displaced=self.channels();devices=copy.deepcopy(self.devices)
@@ -68,13 +68,50 @@ class Tests(unittest.TestCase):
   self.assertEqual(self.run_policy(event='input'),'inconsistent-input')
   self.assertEqual(self.last,expected)
   self.foreground=expected['appId'];self.run_policy();self.assertEqual(self.last,expected)
- def test_youtube_and_hdmi_can_be_opted_in(self):
+ def test_youtube_can_be_opted_in_but_hdmi_remains_protected(self):
   self.foreground='youtube.leanback.v4';self.run_policy()
-  policy.startup_configure({'tv':True,'youtube':True,'hdmi':True})
+  policy.startup_configure({'tv':True,'youtube':True})
   self.assertEqual(self.last['appId'],d.CANDIDATE)
-  self.foreground='com.webos.app.hdmi2';self.last={'type':'HDMI_2','appId':self.foreground};displaced=dict(self.last)
-  self.assertEqual(self.run_policy(event='input'),'selected')
-  self.assertEqual(d._native_read()['baseline'],displaced)
+  self.foreground='com.webos.app.hdmi2'
+  self.assertEqual(self.run_policy(),'withdrawn')
+  self.last={'type':'HDMI_2','appId':self.foreground};displaced=dict(self.last)
+  self.assertEqual(self.run_policy(event='input'),'preserved-input')
+  self.assertEqual(self.last,displaced)
+ def test_legacy_hdmi_true_is_ignored_without_rewriting_saved_choices(self):
+  path=self.root/'startup-policy.json'
+  for hdmi in (False,True):
+   path.write_text(json.dumps({'version':1,'sources':{'tv':False,'youtube':True,'hdmi':hdmi}}))
+   before=path.read_bytes()
+   self.assertEqual(policy.startup_status()['sources'],{'tv':False,'youtube':True})
+   self.assertEqual(path.read_bytes(),before,'status never migrates the private receipt')
+   self.foreground='com.webos.app.hdmi2';self.last={'type':'HDMI_2','appId':self.foreground}
+   expected=dict(self.last)
+   self.assertEqual(self.run_policy(event='input'),'preserved-input')
+   self.assertEqual(self.last,expected,'legacy HDMI opt-in cannot select Root')
+   self.assertEqual(path.read_bytes(),before)
+  self.assertEqual(policy.startup_configure({'tv':True,'youtube':False})['sources'],{'tv':True,'youtube':False})
+  self.assertEqual(json.loads(path.read_text()),{'version':2,'sources':{'tv':True,'youtube':False}})
+ def test_malformed_saved_policies_are_not_silently_overwritten(self):
+  path=self.root/'startup-policy.json'
+  invalid=[
+   {'version':1,'sources':{'tv':True,'youtube':False}},
+   {'version':1,'sources':{'tv':True,'youtube':False,'hdmi':1}},
+   {'version':1,'sources':{'tv':True,'youtube':False,'hdmi':True,'extra':False}},
+   {'version':2,'sources':{'tv':True,'youtube':False,'hdmi':False}},
+   {'version':2,'sources':{'tv':True,'youtube':0}},
+   {'version':2,'sources':{'tv':True}},
+   {'version':True,'sources':{'tv':True,'youtube':False,'hdmi':False}},
+   {'version':3,'sources':{'tv':True,'youtube':False}},
+   {'version':2,'sources':[]},
+   {'version':2,'sources':{'tv':True,'youtube':False},'extra':True},
+   [],
+  ]
+  for value in invalid:
+   with self.subTest(value=value):
+    path.write_text(json.dumps(value));before=path.read_bytes()
+    with self.assertRaises(ValueError):policy.startup_status()
+    with self.assertRaises(ValueError):policy.startup_configure({'tv':True,'youtube':False})
+    self.assertEqual(path.read_bytes(),before)
  def test_missing_or_platform_cover_foreground_never_withdraws_selection(self):
   self.channels();self.run_policy();expected=dict(self.last)
   for app in ('','com.webos.app.cpcover'):
@@ -83,7 +120,7 @@ class Tests(unittest.TestCase):
   displaced=self.channels();self.run_policy();self.foreground='org.example.player'
   self.assertEqual(self.run_policy(),'withdrawn');self.assertEqual(self.last,displaced)
  def test_input_event_cannot_use_stale_youtube_to_steal_hdmi(self):
-  policy.startup_configure({'tv':True,'youtube':True,'hdmi':False})
+  policy.startup_configure({'tv':True,'youtube':True})
   self.foreground='youtube.leanback.v4';self.last={'type':'HDMI_1','appId':'com.webos.app.hdmi1'};expected=dict(self.last)
   self.assertEqual(self.run_policy(event='input'),'inconsistent-input');self.assertEqual(self.last,expected)
  def test_fault_contexts_and_cancellation_cannot_change_native_input(self):
@@ -138,7 +175,7 @@ class Tests(unittest.TestCase):
  def test_new_policy_withdraws_even_after_lost_selection_ack(self):
   displaced=self.lost_selection_ack()
   before=sum(method=='setLastInput' and payload.get('appId')==d.CANDIDATE for method,payload in self.calls)
-  policy.startup_configure({'tv':False,'youtube':False,'hdmi':False})
+  policy.startup_configure({'tv':False,'youtube':False})
   self.assertEqual(self.last,displaced)
   self.assertEqual(sum(method=='setLastInput' and payload.get('appId')==d.CANDIDATE for method,payload in self.calls),before)
  def test_disconnect_withdraws_even_after_lost_selection_ack(self):
