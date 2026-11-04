@@ -22,6 +22,9 @@ const {assert,fs,path,chromium,stage}=require('./browser.cjs'),http=require('nod
   const still=await page.locator('#tiles .item:not(.moving) .card').first().boundingBox();assert(Math.abs(still.y-base.y)<1,'editing keeps the rest of the ribbon at its baseline');
   assert.equal(await page.locator('#tiles .moving .name').isVisible(),false,'cross cannot overlap the app title');
   const card=await page.locator('#tiles .moving .card').boundingBox(),cross=await page.locator('#hideApp').boundingBox();
+  const crossStyle=await page.locator('#hideApp').evaluate(n=>({background:getComputedStyle(n).backgroundColor,radius:getComputedStyle(n).borderRadius}));assert.equal(crossStyle.background,'rgba(0, 0, 0, 0)');assert.equal(crossStyle.radius,'0px','plain cross has no circular container');
+  for(const arrow of await page.locator('.ribbon-edit-arrow svg').all()){const b=await arrow.boundingBox();assert(Math.abs(b.y+b.height/2-card.y)<2,'chevrons align with the raised top corners');}
+  assert.equal(await page.locator('.ribbon-edit-arrow svg').count(),2,'aligned vector chevrons replace font-dependent glyphs');
   assert(card.y<still.y,'only selected card is raised');assert(cross.y+cross.height<=card.y,'cross is above selected card');assert(cross.x>=0&&cross.x+cross.width<=1920&&cross.y>=0);
   await page.screenshot({path:path.resolve('build/ribbon-edit-'+edition+'.png'),animations:'disabled'});
   await page.setViewportSize({width:1280,height:720});

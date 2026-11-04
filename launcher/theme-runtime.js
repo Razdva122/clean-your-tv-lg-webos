@@ -127,13 +127,13 @@
         ribbonRule('#topButtons .pill', 'width:72px;height:72px;padding:0;margin:0 12px 0 0;justify-content:center;font-size:0;');
         ribbonRule('#topButtons .pill svg', 'width:32px;height:32px;margin:0;');
         if (manifest.layout.presentation === 'overlay') {
-          // The backing meets the first skewed card; controls remain in the left block.
-          var shortcutEdge = Math.abs(Math.tan(r.skewDeg * Math.PI / 180) * (r.cardHeight + r.focusLift));
-          ribbonRule('#topButtons', 'left:0;bottom:' + r.bottom + 'px;width:' + r.left + 'px;height:' + r.cardHeight + 'px;align-items:center;justify-content:center;');
-          ribbonRule('#topButtons::before', 'content:"";position:absolute;left:-' + shortcutEdge + 'px;top:0;bottom:0;width:' + (r.left + 2 * shortcutEdge) + 'px;background:#000;transform:skewX(' + r.skewDeg + 'deg);transform-origin:center bottom;pointer-events:none;');
-          ribbonRule('#topButtons .pill', 'position:relative;width:80px;height:80px;margin:0 4px;padding:0;background:transparent;border:3px solid transparent;transform:none;');
+          // A compact outlined block stays distinct from the bottom shade and app lane.
+          var shortcutHeight = Math.max(80, r.cardHeight - 48);
+          ribbonRule('#topButtons', 'left:' + (r.left - 260) + 'px;bottom:' + (r.bottom + 18) + 'px;width:244px;height:' + shortcutHeight + 'px;align-items:center;justify-content:center;');
+          ribbonRule('#topButtons::before', 'content:"";position:absolute;left:0;top:0;bottom:0;width:100%;box-sizing:border-box;border:1px solid #6b7078;background:#111318;transform:skewX(' + r.skewDeg + 'deg);transform-origin:center bottom;pointer-events:none;');
+          ribbonRule('#topButtons .pill', 'position:relative;width:60px;height:60px;margin:0 4px;padding:0;background:transparent;border:3px solid transparent;transform:none;');
           ribbonRule('#topButtons .pill.focused', 'background:#303238;border-color:#fff;');
-          ribbonRule('#topButtons .pill svg', 'width:36px;height:36px;');
+          ribbonRule('#topButtons .pill svg', 'width:30px;height:30px;');
         }
       }
     }
