@@ -18,7 +18,7 @@ STATE = Path('/var/lib/clean-your-tv-root')
 BASE = Path('/var/luna-service2-dev')
 PRIVATE_SERVICE = STATE/'service'
 RUNNER = STATE/'run-recovery-service'
-PRIVATE_FILES = ('service.js','startup-diagnostics.js','app-inventory.js','handlers.js','services.json','package.json','activity.json','boot-recover.sh')
+PRIVATE_FILES = ('service.js','startup-diagnostics.js','app-inventory.js','presentation-context.js','handlers.js','services.json','package.json','activity.json','boot-recover.sh')
 RECEIVER_CAPABILITIES = ['theme-receiver-v1']
 WALLPAPER_CAPABILITIES = RECEIVER_CAPABILITIES + ['wallpaper-media-v1']
 

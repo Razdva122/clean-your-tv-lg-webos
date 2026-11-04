@@ -89,6 +89,28 @@ class PrivateServiceTests(unittest.TestCase):
    for node in dict.fromkeys(['node']+([os.environ['NODE012']] if os.environ.get('NODE012') else [])):
     result=subprocess.run([node,'-e',js,str(state/'service/service.js'),str(Path('node_modules/core-js-bundle/minified.js').resolve())],capture_output=True,text=True,timeout=30)
     self.assertEqual(result.returncode,0,result.stderr)
+ def test_real_service_loads_from_its_copied_private_module_closure(self):
+  service_source=Path(__file__).resolve().parents[1]/'service'
+  with tempfile.TemporaryDirectory() as tmp:
+   root=Path(tmp).resolve();src=root/'installed';src.mkdir();state=root/'state';state.mkdir()
+   contents={path.name:path.read_bytes() for path in service_source.iterdir() if path.is_file()}
+   contents=inject(contents,standalone=True)
+   contents['package.json']=b'{"name":"private-service-fixture","type":"commonjs"}'
+   release={'files':{'usr/palm/services/'+p.NAME+'/'+name:p.sha(data) for name,data in contents.items()}}
+   for name,data in contents.items():(src/name).write_bytes(data)
+   (state/'release.json').write_text(json.dumps(release))
+   with patch.object(p,'STATE',state),patch.object(p,'SERVICE',src),patch.object(p,'PRIVATE_SERVICE',state/'service'),patch.object(p,'RUNNER',state/'run-service'),patch.object(p,'SYSTEM_FILES',()),patch.object(p,'secure',side_effect=lambda path:path.read_bytes()):
+    p.prepare_private_service()
+   # Firmware-provided webos-service is the sole external service dependency.
+   # Load actual installed source, rather than replacing service.js with a fixture.
+   js="var Module=require('module'),original=Module._load,registered={};Module._load=function(name,parent,main){if(name==='webos-service')return function(){this.register=function(n,f){registered[n]=f;};};return original.apply(this,arguments);};require(process.argv[1]);if(typeof registered.status!=='function'||typeof registered.enable!=='function')throw Error('Private recovery handlers unavailable');"
+   result=subprocess.run(['node','-e',js,str(state/'service/service.js')],cwd=root,capture_output=True,text=True,timeout=30)
+   self.assertEqual(result.returncode,0,result.stderr)
+   runtime=state/'runtime';runtime.mkdir();(runtime/'cli.py').write_text('# fixed runtime fixture')
+   with patch.object(p,'STATE',state),patch.object(p,'PRIVATE_SERVICE',state/'service'),patch.object(p,'RUNNER',state/'run-service'),patch.object(p,'RUNTIME',runtime),patch.object(p,'verify_binding'),patch.object(p,'secure',side_effect=lambda path:path.read_bytes()):
+    proof=p.manifest()
+   presentation=state/'service/presentation-context.js'
+   self.assertEqual(proof['files'][str(presentation)],p.sha(contents['presentation-context.js']))
  def test_exec_uses_private_bootstrap_not_homebrew(self):
   original={'service':'Exec=/usr/bin/run-js-service -n '+str(p.SERVICE),'role':json.dumps({'appId':p.NAME}),'client':'{}','api':'{}'}
   result=p.plan(original)['service'].decode()
