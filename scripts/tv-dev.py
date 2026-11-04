@@ -45,7 +45,8 @@ def ui_files():
     """Use the existing explicit Root UI inventory, never its production identity."""
     files = runpy.run_path(str(ROOT / 'root-edition/preview.py'))['prepare']()
     info = json.loads(files['appinfo.json'])
-    info.update(id=APP_ID, title='Home UI Development', requiredACG=[], version='0.0.1')
+    info.update(id=APP_ID, title='Home UI Development', requiredACG=[], version='0.0.1',
+                defaultWindowType='card', transparent=False, handlesRelaunch=False)
     info.pop('appCategory', None)
     files['appinfo.json'] = (json.dumps(info, indent=2) + '\n').encode()
     inventory = json.loads(read_file(ROOT / 'preview/reference-apps/inventory.json'))
@@ -101,6 +102,8 @@ def ui_files():
         source = re.fullmatch(r'\s+src="([A-Za-z0-9._/-]+)"\s*', attrs)
         if source:
             name = source[1]
+            # Match browser preview: local verified Blob media needs no native service.
+            if name == 'wallpaper-media-cache.js': return ''
             if name not in files: raise ValueError('Unpackaged preview script')
         elif not attrs.strip():
             name = 'dev-inline-' + str(len(scripts)) + '.js'
@@ -112,7 +115,8 @@ def ui_files():
     html = re.sub(r'<script\b([^>]*)>([\s\S]*?)</script\s*>', inert_script, files['index.html'].decode())
     # One script owns isolation and parser insertion. A readonly native global or
     # any failed guard stops this file before *any* product script is reachable.
-    files['dev-entry.js'] = (files['dev-bridge.js'] + files['bridge.js'] + files['dev-lock.js']
+    files['dev-media.js'] = read_file(ROOT / 'scripts/tv-dev-media.js')
+    files['dev-entry.js'] = (files['dev-bridge.js'] + files['bridge.js'] + files['dev-lock.js'] + files['dev-media.js']
                              + ('\ndocument.write(' + json.dumps(''.join(scripts)) + ');\n').encode())
     files['index.html'] = html.replace('</body>', '<script src="dev-entry.js"></script>\n</body>', 1).encode()
     return files
@@ -168,7 +172,7 @@ def hosted_command(output, device):
 
 def source_revision():
     paths = [ROOT / folder for folder in ('launcher', 'root-edition/ui', 'root-edition/assets', 'preview')]
-    paths += [ROOT / 'root-edition/preview.py', Path(__file__), ROOT / 'scripts/compile-tv-web.cjs', ROOT / 'scripts/tv_web_build.py', ROOT / 'scripts/check-tv-web.cjs', ROOT / 'package.json', ROOT / 'package-lock.json']
+    paths += [ROOT / 'root-edition/preview.py', ROOT / 'scripts/tv-dev-media.js', Path(__file__), ROOT / 'scripts/compile-tv-web.cjs', ROOT / 'scripts/tv_web_build.py', ROOT / 'scripts/check-tv-web.cjs', ROOT / 'package.json', ROOT / 'package-lock.json']
     stamps = []
     for path in paths:
         for item in sorted(path.rglob('*')) if path.is_dir() else [path]:

@@ -17,7 +17,7 @@
     "focusScale": 1.1,
     "allowColumnOverride": false,
     "ribbon": {
-      "left": 340,
+      "left": 256,
       "right": 84,
       "bottom": 0,
       "cardHeight": 180,
@@ -29,11 +29,12 @@
       "edgeNavigation": "shortcuts",
       "labels": "focused-above",
       "showClock": false
-    }
+    },
+    "presentation": "overlay"
   },
   "defaults": {
     "wallpaperAssetId": "wallpaper",
-    "dim": 0,
+    "dim": 0.28,
     "accent": "#ffffff"
   },
   "assets": [
@@ -48,12 +49,12 @@
     },
     {
       "id": "preview",
-      "path": "assets/preview-81a6c73bc14de1a317cc0d3b50ea9387bd9f8a03438ab23f6d80152ed208b39c.jpg",
+      "path": "assets/preview-d978ea2db9dfdc68e47a6c39edef576c9245d0cce8a3e90dccc968ef714b63a0.jpg",
       "mediaType": "image/jpeg",
       "width": 960,
       "height": 540,
-      "size": 74635,
-      "sha256": "81a6c73bc14de1a317cc0d3b50ea9387bd9f8a03438ab23f6d80152ed208b39c"
+      "size": 82581,
+      "sha256": "d978ea2db9dfdc68e47a6c39edef576c9245d0cce8a3e90dccc968ef714b63a0"
     }
   ],
   "previewAssetId": "preview",
@@ -86,19 +87,20 @@
   },
   "source": {
     "repository": "https://github.com/razdva122/clean-your-tv-lg-webos",
-    "commit": "e11c290d20f8ea801eb3fa0afb205dc870891888"
+    "commit": "a08e9043a7e49b5566cb9c9ca555e392655489ef"
   },
   "requires": {
     "minimumHomeVersion": "1.6.1",
     "capabilities": [
       "video-wallpaper-v1",
-      "ribbon-layout-v1"
+      "ribbon-layout-v1",
+      "overlay-presentation-v1"
     ]
   },
   "rules": {
-    "path": "rules/0c202869f7e03965d2e6bec29d77e9d1783381498037b961ff868102c2c88b31.json",
-    "size": 4923,
-    "sha256": "0c202869f7e03965d2e6bec29d77e9d1783381498037b961ff868102c2c88b31"
+    "path": "rules/eae765507a0c4c3bc0f30c2f0ed0c735af35c9037a03c4fa866f0a25489254e0.json",
+    "size": 5047,
+    "sha256": "eae765507a0c4c3bc0f30c2f0ed0c735af35c9037a03c4fa866f0a25489254e0"
   },
   "documents": [
     {

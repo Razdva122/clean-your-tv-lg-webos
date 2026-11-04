@@ -1,5 +1,5 @@
 'use strict';
-module.exports = function (execute, audio, startup) {
+module.exports = function (execute, audio, startup, presentation) {
   var busy = false;
   function valid(payload, boot) {
     if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return false;
@@ -9,6 +9,11 @@ module.exports = function (execute, audio, startup) {
   }
   function handler(command) {
     return async function (payload) {
+      if (presentation && command === 'status' && payload && typeof payload === 'object' &&
+          !Array.isArray(payload) && Object.keys(payload).length === 1 && payload.presentation === 'context') {
+        try { return {returnValue:true,result:await presentation()}; }
+        catch (_) { return {returnValue:true,result:{content:null}}; }
+      }
       if (audio && payload && typeof payload === 'object' && !Array.isArray(payload)) {
         var keys = Object.keys(payload);
         if (command === 'status' && keys.length === 1 && payload.audio === 'status')

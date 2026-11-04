@@ -111,8 +111,11 @@ function recordStatusBridge() {
         assert.equal(await focused(), 'shelf:HDMI 1');
         await page.keyboard.press('Enter');
         await page.waitForFunction(() => /preview\.hdmi1/.test(document.getElementById('toast').textContent));
+        // The Root overlay host yields after a successful launch; simulate Home return.
+        await page.evaluate(() => document.dispatchEvent(new Event('webOSRelaunch')));
         await page.locator('.ctv-input-tile').nth(4).click();
         await page.waitForFunction(() => /preview\.live/.test(document.getElementById('toast').textContent));
+        await page.evaluate(() => document.dispatchEvent(new Event('webOSRelaunch')));
 
         // Lower grid rows fade the shelf instead of scrolling it under the header.
         await press('ArrowDown', 'ArrowDown');

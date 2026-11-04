@@ -10,6 +10,8 @@ has() { [[ "$selected" == *" $1 "* ]]; }
 
 if has ui || has tv; then
   node tests/home-viewport.cjs
+  node tests/home-presentation.cjs
+  node tests/themes/presentation.cjs
   npm run test:compat
   npm run lint:compat
   npm run test:themes
@@ -65,6 +67,7 @@ node root-edition/service/test-audio-recovery.cjs
 node root-edition/service/test-handlers.js
 node root-edition/service/test-startup.cjs
 node root-edition/service/test-persistent.js
+node root-edition/service/test-presentation.cjs
 node root-edition/service/test-python-binding.js
 for test in root-edition/tests/test_update_*.cjs; do node "$test"; done
 for file in root-edition/updater/*.js; do node --check "$file"; done
@@ -93,6 +96,10 @@ if has android; then
   python3 -m unittest discover -s android/tests
 fi
 if has preview; then
+  node tests/home-presentation-ui.cjs
+  node tests/preview-presentation-ui.cjs
+  node tests/themes/ribbon-reference-ui.cjs
+  node tests/themes/ribbon-edit-ui.cjs
   for test in tests/showcase/{registry,submission-security,remote}.cjs; do node "$test"; done
   node tests/preview-bridge.cjs
   node tests/preview-themes-ui.cjs

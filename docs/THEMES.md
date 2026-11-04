@@ -126,3 +126,34 @@ Themes can optionally configure the existing scenic ribbon's card sizes, spacing
 These themes require the `ribbon-layout-v1` capability in Home. On a theme-enabled Home without this capability, both Add by ID and Receive from computer reject the new descriptor before saving/applying it: your current theme and saved selection stay unchanged. Exact error text depends on the installed version and may report an unsupported capability/API. Update Home and retry. A theme package does not upgrade Home. If you downgrade Home after already selecting an unsupported theme, startup recovery can restore Classic; that differs from a rejected new installation.
 
 This support is included in 1.7.0. Browser checks do not establish physical-TV compatibility; see the [release acceptance and limits](RELEASE-1.7.0.md). See the [author contract](development/THEME-CSS.md#parameterized-scenic-ribbons-unreleased).
+
+## Ribbon over applications (unreleased)
+
+In the proposed Root build, selecting Ribbon enables a bottom bar over positively
+identified active content. Home opens it; Back or another Home closes the bar
+without selecting a different app. A successful app/input launch also dismisses
+Home; a failed launch keeps it open. Settings, theme trials and recovery stay
+opaque. Power-on activation and absent, ambiguous or unavailable background
+information keep the wallpaper instead of exposing an empty screen.
+
+A single black block groups the three shortcuts. Native solid app colors fill
+the skewed cards, with a focused lift and bottom-local shade against wallpaper
+or bright content. Hold OK to edit one raised card; left/right moves it, Up
+selects its cross, Down returns to the card, OK confirms and Back cancels. The
+cross hides the app from Home and Undo restores it. Editing/hiding keeps the
+current background and shows no explanatory footer. No-root on a TV retains its existing
+fullscreen window and receives the same visual refresh. In the browser demo,
+**Startup / wallpaper**, **Over application**, **Home** and **Back** exercise both
+states. No-root overlay previews are explicitly simulations of Root behavior.
+
+Root uses an overlay window for the whole application: other themes and settings
+cover the screen, but underlying apps may continue running or playing audio.
+This is different from the previous card lifecycle. The feature does not change
+Home routing, emergency gestures, startup-source preferences or app permissions.
+The existing startup observer ignores the primary app underneath a visible Root
+overlay when deciding whether to change remembered startup input.
+
+Browser/state/runtime checks are not final TV acceptance. Verify the exact signed
+Root package for app/HDMI playback, controls, input ownership, power-on without
+content, standby/wake, emergency recovery and updater/rollback health before
+release. See the [presentation design](development/RIBBON-PRESENTATION.md).

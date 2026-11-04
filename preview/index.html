@@ -24,12 +24,15 @@
   #previewThemes strong,#previewThemes small { display:block;margin:7px 10px 0; }
   #previewThemes strong { font-size:13px; } #previewThemes small { color:#aaaab2;font-size:11px; }
   #themeStatus { margin:8px 0 0;color:#aaaab2;font-size:12px; } #themeStatus:empty { display:none; }
+  .presentation { display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:10px 24px;border-bottom:1px solid #303034; }
+  .presentation p { margin:0;color:#b9bac2;font-size:12px; }
   main { position: relative; flex: 1; min-height: 0; overflow: hidden; }
   iframe { position: absolute; border: 0; width: 1920px; height: 1080px; transform-origin: top left; background: black; }
   footer { padding: 12px 24px; color: #aaaab2; font-size: 12px; }
 </style>
 <header><strong>Home / Preview</strong><span>1920 × 1080 · original reference apps · live reload enabled</span><nav aria-label="Launcher edition"><button type="button" data-edition="no-root" aria-pressed="true">No-root Edition</button><button type="button" data-edition="root" aria-pressed="false">Root Edition</button></nav></header>
 <section class="themes" role="region" aria-label="Themes"><h2>Themes</h2><div id="previewThemes" aria-busy="true"></div><p id="themeStatus" role="status" aria-live="polite">Loading themes…</p></section>
+<section class="presentation" aria-label="Presentation simulation"><nav aria-label="Simulated content"><button type="button" data-context="empty" aria-pressed="true">Startup / wallpaper</button><button type="button" data-context="content" aria-pressed="false">Over application</button></nav><nav aria-label="Simulated remote"><button type="button" id="previewHome">Home</button><button type="button" id="previewBack">Back</button></nav><p id="presentationStatus" role="status">Browser simulation · No-root on TV remains fullscreen.</p></section>
 <main><iframe id="screen" title="LG webOS launcher" src="launcher/index.html"></iframe></main>
 <footer>Mouse or ↑ ↓ ← → · Enter — OK · Hold Enter — move tile · Esc — back. TV functions are simulated.</footer>
 <script>
@@ -61,5 +64,6 @@
   fit();
 </script>
 <script src="preview/themes.js"></script>
+<script src="preview/presentation.js"></script>
 __LIVE_RELOAD__
 </html>

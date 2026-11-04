@@ -17,7 +17,7 @@
     "focusScale": 1.1,
     "allowColumnOverride": false,
     "ribbon": {
-      "left": 340,
+      "left": 256,
       "right": 84,
       "bottom": 0,
       "cardHeight": 180,
@@ -29,11 +29,12 @@
       "labels": "focused-above",
       "showClock": false,
       "iconScale": 0.65
-    }
+    },
+    "presentation": "overlay"
   },
   "defaults": {
     "wallpaperAssetId": "wallpaper",
-    "dim": 0,
+    "dim": 0.28,
     "accent": "#ffffff"
   },
   "assets": [

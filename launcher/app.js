@@ -172,11 +172,39 @@
       });
     }
   }
+  var presentation = window.HomePresentation ? HomePresentation.create({
+    supported: !!window.ROOT_VERSION || window.CYTV_BROWSER_PREVIEW === true,
+    query: function (done) {
+      callLuna('luna://com.cleanyourtv.root.preview.service/status', {presentation:'context'}, function (r) {
+        done(r && r.returnValue === true && r.result ? r.result.content : null);
+      }, 2000);
+    },
+    blocked: function () { return previewDialogOpen() || !!moveState || !!pickerOpen || !!undoState ||
+      !!(window.ThemeRuntime && ThemeRuntime.isSuspended()); },
+    opaque: function () { return previewDialogOpen() || !!(window.ThemeRuntime && ThemeRuntime.isSuspended()); },
+    render: function (state) {
+      document.documentElement.setAttribute('data-home-presentation', state.mode);
+      document.body.setAttribute('data-home-presentation', state.mode);
+      if (window.HomeWallpaper) HomeWallpaper[state.mode === 'full' ? 'resume' : 'suspend']('presentation');
+    },
+    close: function () { stopPreview(); window.close(); }
+  }) : null;
+  window.HomePresentationController = presentation;
+  function launchParams(event) {
+    try {
+      var value = event && event.detail || (window.PalmSystem && PalmSystem.launchParams) || {};
+      if (typeof value === 'string') value = JSON.parse(value);
+      if (value && value.parameters) value = typeof value.parameters === 'string' ? JSON.parse(value.parameters) : value.parameters;
+      return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+    } catch (_) { return {}; }
+  }
   function launchApp(appId, title, params) {
+    var ticket = presentation && presentation.token();
     callLuna("luna://com.webos.applicationManager/launch", {
       id: appId,
       params: params || {}
     }, function (n) {
+      if (n.returnValue === true && presentation && !/^com\.(?:palm\.app\.settings|webos\.app\.(?:firstuse|quicksettings))/.test(appId)) presentation.launched(ticket);
       false === n.returnValue && showToast(tr("Can't open {app}", {
         app: title || appId
       }));
@@ -392,6 +420,37 @@
     okPressed = false;
     clearPressed();
   }
+  function clearRibbonEditor() {
+    if (moveState) {
+      var arrows = moveState.item.el.querySelectorAll('.ribbon-edit-arrow');
+      for (var i = 0; i < arrows.length; i++) arrows[i].parentNode.removeChild(arrows[i]);
+    }
+    document.body.classList.remove('ribbon-editing');
+    if (hideButton.parentNode !== document.body) document.body.appendChild(hideButton);
+    hideButton.style.left = ''; hideButton.style.top = ''; hideButton.style.webkitTransition = hideButton.style.transition = ''; editHint.style.top = '';
+  }
+  function positionRibbonEditor() {
+    if (!moveState || !layoutGeometry.ribbon) return;
+    var ribbon = layoutGeometry.ribbon, item = moveState.item, scene = getElement('homeSurface');
+    // Keep the control in logical scene coordinates at every graphics resolution.
+    if (hideButton.parentNode !== scene) scene.appendChild(hideButton);
+    if (!item.el.querySelector('.ribbon-edit-arrow')) {
+      ['left', 'right'].forEach(function (side) {
+        var arrow = document.createElement('span');
+        arrow.className = 'ribbon-edit-arrow ribbon-edit-' + side;
+        arrow.setAttribute('aria-hidden', 'true');
+        arrow.innerHTML = '<svg viewBox="0 0 24 40" aria-hidden="true"><path d="' + (side === 'left' ? 'M16 4L6 20l10 16' : 'M8 4l10 16L8 36') + '"/></svg>';
+        arrow.style.top = (-(ribbon.focusLift + 32) / 2 - 20) + 'px';
+        arrow.style.webkitTransform = arrow.style.transform = 'skewX(' + (-ribbon.skewDeg) + 'deg)';
+        item.el.appendChild(arrow);
+      });
+    }
+    hideButton.style.webkitTransition = hideButton.style.transition = item.el.style.transition;
+    var slant = -(ribbon.cardHeight + ribbon.focusLift + 32) * Math.tan(ribbon.skewDeg * Math.PI / 180);
+    hideButton.style.left = (tileLeft(focusedTile) + CARD_WIDTH / 2 + slant) + 'px';
+    hideButton.style.top = (TILE_BASE - ribbon.focusLift - 96) + 'px';
+    editHint.style.top = (TILE_BASE - ribbon.focusLift - 178) + 'px';
+  }
   function beginMoving(item) {
     clearPressed();
     if (!item || item.add || moveState || pickerOpen || undoState) {
@@ -403,8 +462,10 @@
     };
     setPartState(item.el, 'moving', true);
     document.body.classList.add('editing');
+    document.body.classList.toggle('ribbon-editing', !!layoutGeometry.ribbon);
+    if (!layoutGeometry.ribbon) editHint.textContent = tr('← ↑ ↓ → Move   ·   OK Place   ·   Back Cancel   ·   ↓ Below last row to hide');
     hideButton.hidden = false;
-    editHint.hidden = false;
+    editHint.hidden = !!layoutGeometry.ribbon;
     hideButton.classList.remove('focused');
     hideSelected = false;
     focusTile(tiles.indexOf(item));
@@ -485,6 +546,7 @@
       tiles = previous;
       return;
     }
+    clearRibbonEditor();
     moveState = null;
     hideSelected = false;
     setPartState(item.el, 'moving', false);
@@ -636,7 +698,7 @@
     hideButton = document.createElement('button');
     hideButton.id = 'hideApp';
     hideButton.hidden = true;
-    hideButton.innerHTML = ht('<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10 5.2c5.5-1 10 6.8 10 6.8a20 20 0 0 1-3 3M6 6C3.4 8 2 12 2 12s4 7 10 7c1.4 0 2.7-.4 4-1M9 9a4.2 4.2 0 0 0 6 6"/></svg><span>Hide from Home</span>');
+    hideButton.innerHTML = ht('<svg class="hide-standard-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10 5.2c5.5-1 10 6.8 10 6.8a20 20 0 0 1-3 3M6 6C3.4 8 2 12 2 12s4 7 10 7c1.4 0 2.7-.4 4-1M9 9a4.2 4.2 0 0 0 6 6"/></svg><svg class="ribbon-delete-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg><span>Hide from Home</span>');
     bindPointerFocus(hideButton, function () { if (!hideSelected) selectHide(); });
     hideButton.addEventListener('click', hideApp);
     document.body.appendChild(hideButton);
@@ -719,7 +781,7 @@
           hideApp();
         } else if (key === 27 || key === 461) {
           finishMoving(false);
-        } else if (key === 38) {
+        } else if (key === (layoutGeometry.ribbon ? 40 : 38)) {
           hideSelected = false;
           hideButton.classList.remove('focused');
           hideButton.blur();
@@ -874,7 +936,7 @@
       var previousSlot = Number(e.el.getAttribute('data-ribbon-slot'));
       e.el.style.webkitTransition = e.el.style.transition = slot === null ? '' : e.el.hasAttribute('data-ribbon-slot') && Math.abs(previousSlot - slot) === 1 && previousSlot <= columnCount && slot <= columnCount ? 'left 160ms ease-out' : 'none';
       e.el.style.pointerEvents = slot !== null && slot >= columnCount ? 'none' : '';
-      e.el.style.visibility = slot !== null && slot >= columnCount ? 'hidden' : '';
+      e.el.style.visibility = slot !== null && slot > columnCount ? 'hidden' : '';
       if (slot === null) e.el.removeAttribute('data-ribbon-slot'); else e.el.setAttribute('data-ribbon-slot', slot);
       e.el.style.left = tileLeft(t) + "px";
       e.el.style.top = tileTop(t) + "px";
@@ -976,7 +1038,7 @@
       }
       var ceiling = layoutGeometry.scrollTop;
       var floor = moveState ? 850 : layoutGeometry.scrollBottom;
-      if (layoutPreset === 'scenic-grid') scrollOffset = top - (moveState ? 640 : TILE_BASE);
+      if (layoutPreset === 'scenic-grid') scrollOffset = layoutGeometry.ribbon ? 0 : top - (moveState ? 640 : TILE_BASE);
       else if (row === 0 && !moveState) scrollOffset = 0;
       else {
         if (top - scrollOffset + CARD_HEIGHT + 70 > floor) scrollOffset = top + CARD_HEIGHT + 70 - floor;
@@ -1046,6 +1108,7 @@
         updateAmbient(e.color);
       }(tiles[index]) : heroVisible && (heroVisible = false, heroTitle.style.opacity = "0");
       updateAmbient(tiles[index].color);
+      positionRibbonEditor();
     }
   }
   // The glow follows once the focus rests, so its full-screen crossfade never competes
@@ -1149,6 +1212,7 @@
   }
   var previewDialogVisible = previewDialogOpen();
   new MutationObserver(function () {
+    if (presentation) presentation.sync();
     var open = previewDialogOpen();
     if (open === previewDialogVisible) return;
     previewDialogVisible = open;
@@ -1490,6 +1554,7 @@
     if (!commit) {
       tiles = moveState.snapshot;
     }
+    clearRibbonEditor();
     moveState = null;
     setPartState(item.el, 'moving', false);
     document.body.classList.remove("editing");
@@ -1539,6 +1604,10 @@
     // Leave early Back/Home and key-up delivery to their native/recovery owners.
     if (window.RootLauncherRendered !== true) return;
     var key = event.keyCode;
+    if ((key === KEY_BACK || key === 27) && !moveState && !pickerOpen && !undoState && focusZone !== 'inputs' &&
+        presentation && presentation.dismiss()) {
+      event.preventDefault(); cancelHold(); return;
+    }
     if (key !== KEY_OK && okHoldTimer) {
       cancelHold();
     }
@@ -1551,12 +1620,12 @@
         } else if (39 === key) {
           moveTile(layoutPreset === 'scenic-grid' ? (focusedTile + 1) % screenIds().length : focusedTile + 1);
         } else if (38 === key) {
-          if (layoutPreset !== 'scenic-grid') moveTile(focusedTile - columnCount);
+          if (layoutGeometry.ribbon) selectHide();
+          else if (layoutPreset !== 'scenic-grid') moveTile(focusedTile - columnCount);
         } else if (40 === key) {
-          if (rowFor(focusedTile) >= rowFor(screenIds().length - 1)) {
-            selectHide();
-          } else {
-            moveTile(Math.min(focusedTile + columnCount, screenIds().length - 1));
+          if (!layoutGeometry.ribbon) {
+            if (rowFor(focusedTile) >= rowFor(screenIds().length - 1)) selectHide();
+            else moveTile(Math.min(focusedTile + columnCount, screenIds().length - 1));
           }
         } else if (key === KEY_OK) {
           finishMoving(true);
@@ -1674,12 +1743,23 @@
     getElement('homeSurface').classList.add('ctv-remote-navigation');
     stepRibbon(delta > 0 ? 1 : -1);
   }, false);
-  document.addEventListener("webOSRelaunch", restoreFocus);
+  document.addEventListener("webOSRelaunch", function (event) {
+    if (presentation && window.RootLauncherRendered === true) {
+      presentation.relaunch(launchParams(event), document.hidden);
+      if (!presentation.state().visible) return;
+      // handlesRelaunch keeps a hidden Root window in the background until it is ready.
+      if (window.ROOT_VERSION && window.PalmSystem && typeof PalmSystem.activate === 'function') PalmSystem.activate();
+    }
+    restoreFocus();
+  });
   document.addEventListener("visibilitychange", function () {
     if (window.ThemeRuntime) {
       // Retain validated styles/assets while hidden: the compositor may expose Home
       // before delivering the next visible/relaunch event. Dialog owners stay separate.
       if (!document.hidden) ThemeRuntime.resume('visibility');
+    }
+    if (presentation && window.RootLauncherRendered === true) {
+      presentation.visibility(!document.hidden, launchParams());
     }
     document.hidden ? stopPreview() : restoreFocus();
   });
@@ -1722,6 +1802,7 @@
     getElement('homeSurface').classList.remove('ctv-starting');
   }
   window.HomeUIReady = (window.ThemeManager ? ThemeManager.start(presentHome) : Promise.resolve().then(presentHome)).then(function () {
-    return (window.PersonalWallpaper ? PersonalWallpaper.start().catch(function () {}) : Promise.resolve()).then(function () { window.RootLauncherRendered = true; });
+    return (window.PersonalWallpaper ? PersonalWallpaper.start().catch(function () {}) : Promise.resolve()).then(function () { window.RootLauncherRendered = true; if (presentation) presentation.show(launchParams()); });
+
   });
 }();
