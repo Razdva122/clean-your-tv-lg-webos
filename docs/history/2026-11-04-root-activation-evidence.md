@@ -71,3 +71,19 @@ rollback remain untested. Full frozen-candidate checks belong to the coordinator
 Reviewed documentation: this record and the installer diagnostic contract. Setup,
 recovery and control actions are unchanged; no new user-facing string is added,
 so the twelve localized user guides need no action or translation changes.
+
+## Integration into the next candidate
+
+[PR #287](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/287)
+merged into `release/next` as `6139c3c4a8361147b7b55a7030eba92f552b6249`.
+The exact reviewed implementation head is `0f6b6aba5869bba7fc0f335e2673ff8661fd371d`.
+[CI 41784534156](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/41784534156)
+passed Linux/macOS runtime/test summaries and ARM optional-Python checks; release
+PR policy and Integration policy also passed. Browser and full-release jobs were
+correctly unselected for this affected host-only change. No full candidate build
+or physical-device acceptance is claimed.
+
+The unfrozen [candidate #281](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/281)
+records this partial change and #282 without selecting a version or build.
+The original failure remains open for reporter evidence. Integration is not
+publication, a completed recovery or confirmation of C4 Home routing.
