@@ -54,6 +54,16 @@ installer760 tests passed (72 optional skips), as did both package-parent tests
 and the two history links. These host results were followed by successful
 new-head CI before PR312 merged; they do not constitute retail acceptance.
 
+After all seven focused merges, the combined product tree at593629e7 passed
+`node tests/home-presentation-ui.cjs` and
+`CYTV_THEME_CASE=startup node tests/themes/startup-motion-ui.cjs` locally.
+The actual compiled browser fixtures cover Root activation before foreground
+frames, async personal appearance, modal focus, visibility/relaunch ordering,
+launch failure/success/staleness, No-root fallback and first-frame/warm lifecycle
+in both editions. Services are simulated; no TV was contacted by these tests.
+This is additional combined-source evidence, not a full candidate build or
+physical timing, input, standby, boot, media or rollback acceptance.
+
 ## Still outside the inventory
 
 Cancelled hosted-runner
