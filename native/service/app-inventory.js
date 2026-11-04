@@ -13,8 +13,8 @@ module.exports=function(options){
   });
  }
  return new Promise(function(resolve,reject){
-  var socket,done=false,timer,attemptTimer;
-  function finish(error,apps){if(done)return;done=true;clearTimeout(timer);clearTimeout(attemptTimer);if(socket)try{socket.terminate();}catch(_){}if(error)reject(Error(error));else resolve(apps);}
+  var socket,done=false,timer,attemptTimer,launchPoints=null;
+  function finish(error,apps){if(done)return;if(error&&launchPoints){error=null;apps=launchPoints;}done=true;clearTimeout(timer);clearTimeout(attemptTimer);if(socket)try{socket.terminate();}catch(_){}if(error)reject(Error(error));else resolve(apps);}
   function send(message){try{socket.send(JSON.stringify(message));}catch(_){finish('inventory-unavailable');}}
   try{
    var base='/media/developer/apps/usr/palm/applications/com.local.nativehome';
@@ -36,6 +36,7 @@ module.exports=function(options){
     socket=current;
     function retry(){
      if(done||socket!==current)return;
+     if(launchPoints){finish(null,launchPoints);return;}
      clearTimeout(attemptTimer);socket=null;try{current.terminate();}catch(_){}connect();
     }
     attemptTimer=setTimeout(retry,Math.max(500,Math.floor((options.timeout||8000)/hosts.length)));
@@ -48,11 +49,25 @@ module.exports=function(options){
     if(message.type==='registered')send({type:'request',id:inputs?'inputs':'apps',uri:inputs?'ssap://tv/getExternalInputList':'ssap://com.webos.applicationManager/listLaunchPoints',payload:{}});
     else if(message.payload&&message.payload.pairingType)finish('pairing-required');
     else if(message.type==='error')finish('inventory-denied');
-    else if(message.id===(inputs?'inputs':'apps')){
+    else if(message.id==='tuner'&&launchPoints){
+     var installed=message.payload;
+     var tuner=installed&&installed.returnValue===true&&Array.isArray(installed.apps)?installed.apps.filter(function(a){return a&&a.id==='com.webos.app.livetv'&&typeof a.title==='string'&&a.title.length>0&&a.title.length<=256;})[0]:null;
+     if(tuner){
+      // LG can omit its installed tuner from launch points and mark it invisible.
+      // Only this discovered app is selectable; never synthesize a system ID.
+      var entry={};Object.keys(tuner).forEach(function(key){entry[key]=tuner[key];});entry.hidden=false;
+      finish(null,[entry].concat(launchPoints.filter(function(a){return !a||a.id!==entry.id;})));
+     }else finish(null,launchPoints);
+    }
+    else if(message.id===(inputs?'inputs':'apps')&&!launchPoints){
      var result=message.payload;
      if(!result||(inputs?result.returnValue!==true:result.returnValue===false)||!Array.isArray(result[inputs?'devices':'launchPoints']))finish('invalid-inventory');
      else if(inputs){try{finish(null,inputDevices(result.devices));}catch(_){finish('invalid-inventory');}}
-     else finish(null,result.launchPoints.slice(0,200));
+     else{
+      launchPoints=result.launchPoints.slice(0,200);
+      if(launchPoints.some(function(a){return a&&a.id==='com.webos.app.livetv'&&!a.hidden;}))finish(null,launchPoints);
+      else send({type:'request',id:'tuner',uri:'ssap://com.webos.applicationManager/listApps',payload:{}});
+     }
     }
    });
    current.on('error',retry);

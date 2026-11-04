@@ -25,7 +25,8 @@ module.exports=function(execFile,getuid){
        }
       }catch(_){}
      }
-     return {id:a.id,title:a.title,icon:icon,iconColor:a.iconColor||a.bgColor||'',hidden:a.visible===false||a.hidden===true};
+     // The installed tuner can be invisible to LG Home; keep other system apps hidden.
+     return {id:a.id,title:a.title,icon:icon,iconColor:a.iconColor||a.bgColor||'',hidden:a.id!=='com.webos.app.livetv'&&(a.visible===false||a.hidden===true)};
     });resolve(apps);
    }catch(_){reject(Error('invalid-inventory'));}
   });
