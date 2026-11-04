@@ -30,7 +30,7 @@ def real_ribbon():
             source.extractall(directory, filter='data')
         files = runpy.run_path(str(Path(directory) / 'scripts/tv-dev.py'))['ui_files']()
     manifest = json.loads((Path(__file__).parent / 'app/appinfo.json').read_text())
-    manifest.update(version='0.0.2', title='No-root Real Ribbon Lab', themeEngineVersion='1.8.1')
+    manifest.update(version='0.0.3', title='No-root Real Ribbon Lab', themeEngineVersion='1.8.1')
     files['appinfo.json'] = (json.dumps(manifest, indent=2) + '\n').encode()
     files['icon.png'] = (ROOT / 'launcher/brand-v2-icon.png').read_bytes()
     # The simulator must not draw synthetic content over real underlying video,

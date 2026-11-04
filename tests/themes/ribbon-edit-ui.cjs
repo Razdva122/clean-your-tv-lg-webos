@@ -12,6 +12,11 @@ const {assert,fs,path,chromium,stage}=require('./browser.cjs'),http=require('nod
   await page.goto('http://127.0.0.1:'+server.address().port+'/'+edition+'/index.html');await page.waitForFunction(()=>window.RootLauncherRendered===true);
   await page.evaluate(async()=>ThemeManager.selectInstalled({id:'builtin:ribbon'}));await page.locator('#tiles .focused').waitFor();
   await page.evaluate(()=>{PREVIEW_HOME_CONTEXT='content';HomePresentationController.show({});});await page.waitForFunction(()=>HomePresentationController.state().mode==='overlay');
+  const peek=page.locator('#tiles .item[data-ribbon-slot="8"]');assert(await peek.isVisible(),'next card is visible as the right-edge continuation');
+  const peekBox=await peek.boundingBox();assert(peekBox.x<1920&&peekBox.x+peekBox.width>1920,'viewport clips the next real card at the edge');assert.equal(await peek.evaluate(n=>getComputedStyle(n).pointerEvents),'none','clipped continuation cannot steal pointer focus');
+  const topMetrics=()=>page.evaluate(()=>{const item=document.querySelector('#tiles .focused'),card=item.querySelector('.card').getBoundingClientRect(),caption=item.querySelector('.name').getBoundingClientRect(),m=getComputedStyle(item).transform.match(/matrix\(([^)]+)\)/),skew=m?Number(m[1].split(',')[2]):0;const label=item.querySelector('.name'),style=getComputedStyle(label);return {expected:card.x+card.width/2-card.height*skew/2,caption:caption.x+caption.width/2,card:{x:card.x,y:card.y,width:card.width,height:card.height},label:{x:caption.x,y:caption.y,width:caption.width,height:caption.height},transform:style.transform,origin:style.transformOrigin,bottom:style.bottom,offsetTop:label.offsetTop,offsetHeight:label.offsetHeight,itemTop:item.offsetTop,itemWidth:item.offsetWidth};});
+  let anchorMetrics=await topMetrics();assert(Math.abs(anchorMetrics.expected-anchorMetrics.caption)<1,'caption is centered over the raised top edge: '+JSON.stringify(anchorMetrics));
+  const originalTitle=await page.locator('#tiles .focused .name').textContent();await page.locator('#tiles .focused .name').evaluate(n=>n.textContent='A long television application name across several lines');anchorMetrics=await topMetrics();assert(Math.abs(anchorMetrics.expected-anchorMetrics.caption)<1,'multiline caption keeps the same top-edge center');await page.locator('#tiles .focused .name').evaluate((n,title)=>n.textContent=title,originalTitle);
   const order=await page.locator('#tiles .item').evaluateAll(ns=>ns.map(n=>n.dataset.appId||'add'));
   const base=await page.locator('#tiles .item:not(.focused) .card').first().boundingBox();
   await page.keyboard.down('Enter');await page.waitForTimeout(700);await page.keyboard.up('Enter');
@@ -22,7 +27,11 @@ const {assert,fs,path,chromium,stage}=require('./browser.cjs'),http=require('nod
   const still=await page.locator('#tiles .item:not(.moving) .card').first().boundingBox();assert(Math.abs(still.y-base.y)<1,'editing keeps the rest of the ribbon at its baseline');
   assert.equal(await page.locator('#tiles .moving .name').isVisible(),false,'cross cannot overlap the app title');
   const card=await page.locator('#tiles .moving .card').boundingBox(),cross=await page.locator('#hideApp').boundingBox();
-  assert(card.y<still.y,'only selected card is raised');assert(cross.y+cross.height<=card.y,'cross is above selected card');assert(cross.x>=0&&cross.x+cross.width<=1920&&cross.y>=0);
+  const crossStyle=await page.locator('#hideApp').evaluate(n=>({background:getComputedStyle(n).backgroundColor,radius:getComputedStyle(n).borderRadius}));assert.equal(crossStyle.background,'rgba(0, 0, 0, 0)');assert.equal(crossStyle.radius,'0px','plain cross has no circular container');
+  for(const arrow of await page.locator('.ribbon-edit-arrow svg').all()){const b=await arrow.boundingBox();assert(Math.abs(b.y+b.height/2-(card.y+still.y)/2)<2,'chevrons center in the raised section above the lane');}
+  assert.equal(await page.locator('.ribbon-edit-arrow svg').count(),2,'aligned vector chevrons replace font-dependent glyphs');
+  const crossAnchor=await page.locator('#tiles .moving').evaluate(n=>{const b=n.querySelector('.card').getBoundingClientRect(),m=getComputedStyle(n).transform.match(/matrix\(([^)]+)\)/),c=m?Number(m[1].split(',')[2]):0;return b.x+b.width/2-b.height*c/2;});assert(Math.abs(cross.x+cross.width/2-crossAnchor)<1,'cross uses the same raised top-edge center');
+  assert(card.y<still.y,'only selected card is raised');assert(Math.abs(1080-card.y-card.height-32)<1,'editing card detaches from the bottom edge with a visible gap');assert(cross.y+cross.height<=card.y,'cross is above selected card');assert(cross.x>=0&&cross.x+cross.width<=1920&&cross.y>=0);
   await page.screenshot({path:path.resolve('build/ribbon-edit-'+edition+'.png'),animations:'disabled'});
   await page.setViewportSize({width:1280,height:720});
   await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));

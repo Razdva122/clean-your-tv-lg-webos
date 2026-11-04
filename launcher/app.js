@@ -425,7 +425,7 @@
     }
     document.body.classList.remove('ribbon-editing');
     if (hideButton.parentNode !== document.body) document.body.appendChild(hideButton);
-    hideButton.style.left = ''; hideButton.style.top = ''; editHint.style.top = '';
+    hideButton.style.left = ''; hideButton.style.top = ''; hideButton.style.webkitTransition = hideButton.style.transition = ''; editHint.style.top = '';
   }
   function positionRibbonEditor() {
     if (!moveState || !layoutGeometry.ribbon) return;
@@ -436,16 +436,18 @@
       ['left', 'right'].forEach(function (side) {
         var arrow = document.createElement('span');
         arrow.className = 'ribbon-edit-arrow ribbon-edit-' + side;
-        arrow.setAttribute('aria-hidden', 'true'); arrow.textContent = side === 'left' ? '‹' : '›';
-        arrow.style.top = (-ribbon.focusLift - 28) + 'px';
+        arrow.setAttribute('aria-hidden', 'true');
+        arrow.innerHTML = '<svg viewBox="0 0 24 40" aria-hidden="true"><path d="' + (side === 'left' ? 'M16 4L6 20l10 16' : 'M8 4l10 16L8 36') + '"/></svg>';
+        arrow.style.top = (-(ribbon.focusLift + 32) / 2 - 20) + 'px';
         arrow.style.webkitTransform = arrow.style.transform = 'skewX(' + (-ribbon.skewDeg) + 'deg)';
         item.el.appendChild(arrow);
       });
     }
-    var slant = -(ribbon.cardHeight + ribbon.focusLift) * Math.tan(ribbon.skewDeg * Math.PI / 180);
+    hideButton.style.webkitTransition = hideButton.style.transition = item.el.style.transition;
+    var slant = -(ribbon.cardHeight + ribbon.focusLift + 32) * Math.tan(ribbon.skewDeg * Math.PI / 180);
     hideButton.style.left = (tileLeft(focusedTile) + CARD_WIDTH / 2 + slant) + 'px';
-    hideButton.style.top = (TILE_BASE - ribbon.focusLift - 64) + 'px';
-    editHint.style.top = (TILE_BASE - ribbon.focusLift - 146) + 'px';
+    hideButton.style.top = (TILE_BASE - ribbon.focusLift - 96) + 'px';
+    editHint.style.top = (TILE_BASE - ribbon.focusLift - 178) + 'px';
   }
   function beginMoving(item) {
     clearPressed();
@@ -694,7 +696,7 @@
     hideButton = document.createElement('button');
     hideButton.id = 'hideApp';
     hideButton.hidden = true;
-    hideButton.innerHTML = ht('<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10 5.2c5.5-1 10 6.8 10 6.8a20 20 0 0 1-3 3M6 6C3.4 8 2 12 2 12s4 7 10 7c1.4 0 2.7-.4 4-1M9 9a4.2 4.2 0 0 0 6 6"/></svg><span>Hide from Home</span>');
+    hideButton.innerHTML = ht('<svg class="hide-standard-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10 5.2c5.5-1 10 6.8 10 6.8a20 20 0 0 1-3 3M6 6C3.4 8 2 12 2 12s4 7 10 7c1.4 0 2.7-.4 4-1M9 9a4.2 4.2 0 0 0 6 6"/></svg><svg class="ribbon-delete-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg><span>Hide from Home</span>');
     bindPointerFocus(hideButton, function () { if (!hideSelected) selectHide(); });
     hideButton.addEventListener('click', hideApp);
     document.body.appendChild(hideButton);
@@ -932,7 +934,7 @@
       var previousSlot = Number(e.el.getAttribute('data-ribbon-slot'));
       e.el.style.webkitTransition = e.el.style.transition = slot === null ? '' : e.el.hasAttribute('data-ribbon-slot') && Math.abs(previousSlot - slot) === 1 && previousSlot <= columnCount && slot <= columnCount ? 'left 160ms ease-out' : 'none';
       e.el.style.pointerEvents = slot !== null && slot >= columnCount ? 'none' : '';
-      e.el.style.visibility = slot !== null && slot >= columnCount ? 'hidden' : '';
+      e.el.style.visibility = slot !== null && slot > columnCount ? 'hidden' : '';
       if (slot === null) e.el.removeAttribute('data-ribbon-slot'); else e.el.setAttribute('data-ribbon-slot', slot);
       e.el.style.left = tileLeft(t) + "px";
       e.el.style.top = tileTop(t) + "px";

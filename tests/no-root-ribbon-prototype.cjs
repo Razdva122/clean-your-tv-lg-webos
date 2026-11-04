@@ -64,10 +64,11 @@ const {chromium} = require('playwright');
       assert.equal(await page.evaluate(() => probeCloses), 1, 'An explicit repeated launch dismisses');
     }, 'webOSSystem');
     await check('{}', async page => {
-      await page.clock.fastForward(59999);
+      await page.clock.fastForward(120000);
       assert.equal(await page.evaluate(() => probeCloses), 0);
-      await page.clock.fastForward(1);
-      assert.equal(await page.evaluate(() => probeCloses), 1, 'The absolute lifetime is bounded');
+      assert.equal(await page.locator('#ribbon').isVisible(), true, 'No automatic dismissal interrupts the session');
+      await page.keyboard.press('Escape');
+      assert.equal(await page.evaluate(() => probeCloses), 1);
     });
     await check('{}', async page => {
       await page.keyboard.press('Escape');

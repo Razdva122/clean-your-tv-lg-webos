@@ -4,7 +4,6 @@
   var system = window.webOSSystem || window.PalmSystem;
   var buttons = document.querySelectorAll('#ribbon button');
   var closed = false;
-  var timer;
 
   function mode(value) {
     document.body.setAttribute('data-mode', value === 'overlay' ? 'overlay' : 'full');
@@ -13,7 +12,6 @@
   function close() {
     if (closed) return;
     closed = true;
-    window.clearTimeout(timer);
     document.body.setAttribute('data-mode', 'closed');
     window.close();
   }
@@ -39,10 +37,9 @@
     buttons[(index + (key === 39 ? 1 : buttons.length - 1)) % buttons.length].focus();
     event.preventDefault();
   });
-  // Repeat launch is an explicit dismissal request; it never re-arms the lifetime.
+  // Repeat launch is an explicit dismissal request.
   document.addEventListener('webOSRelaunch', close);
   mode(initialMode());
   buttons[0].focus();
-  timer = window.setTimeout(close, 60000);
   if (system && typeof system.activate === 'function') system.activate();
 }());
