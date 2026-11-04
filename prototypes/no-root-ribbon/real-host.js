@@ -3,7 +3,7 @@
   'use strict';
   var native = window.webOSSystem || window.PalmSystem;
   var nativeClose = window.close.bind(window);
-  var mode = 'full', closed = false, timer, readyTimer;
+  var mode = 'full', closed = false, readyTimer;
   try {
     var params = native ? native.launchParams : {};
     if (typeof params === 'string') params = JSON.parse(params);
@@ -11,7 +11,7 @@
   } catch (_) { /* Missing or malformed context stays opaque. */ }
   function close() {
     if (closed) return;
-    closed = true; clearTimeout(timer); clearInterval(readyTimer);
+    closed = true; clearInterval(readyTimer);
     if (window.HomeWallpaper) HomeWallpaper.suspend('no-root-lab');
     if (window.HomePresentationController) HomePresentationController.hide();
     nativeClose();
@@ -19,7 +19,6 @@
   window.close = close;
   Object.defineProperty(window, 'RibbonLab', {value:Object.freeze({mode:mode}), writable:false, configurable:false});
   document.documentElement.setAttribute('data-lab-pending', 'true');
-  timer = setTimeout(close, 60000);
   var started = Date.now(), activated = false;
   readyTimer = setInterval(function () {
     var controller = window.HomePresentationController;
