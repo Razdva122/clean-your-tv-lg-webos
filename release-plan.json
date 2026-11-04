@@ -8,6 +8,11 @@
       "summary": "Add verified native video wallpaper layer and Wallpapers quality/dimming controls; final candidate media grants and device lifecycle acceptance remain required"
     },
     {
+      "pr": 265,
+      "issues": [],
+      "summary": "Add Root Ribbon over-application presentation with startup fallback, compact continuous native-fill styling, detached-card editing and refreshed README/Showcase/demo; No-root keeps fullscreen native Home and combined signed-TV acceptance is pending"
+    },
+    {
       "pr": 267,
       "issues": [],
       "summary": "Add desktop/phone personal wallpapers, embedded UHD authoring and reusable Xecutioner Black Hole with continuous playback; theme changes restore theme backgrounds; refresh Ribbon/README/demo"
