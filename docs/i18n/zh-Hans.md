@@ -4,6 +4,10 @@
 
 尚未发布（#290）：**+ / 添加应用**仅在检测到已安装的调谐器时，以电视提供的名称列出直播电视。其他隐藏的系统应用仍不显示。No-root 需要更新后的 Helper 和安装程序；Root 需要更新后的 Home 软件包。频道启动仍需在电视上验证。
 
+**未发布 — 在应用上方显示 Ribbon：** Root 版可在当前应用上方打开 Ribbon。按 Home 打开面板，按返回或再次按 Home 关闭。开机时，或无法确认背景内容时，会显示壁纸；设置界面保持不透明。电视上的 No-root 仍为全屏。浏览器演示仅模拟两种状态，最终安装包仍需真机验收。[详情](../THEMES.md#ribbon-over-applications-unreleased)。
+
+Ribbon：长按 OK 编辑；←/→ 移动卡片，↑ 选择 ×（从 Home 隐藏），↓ 返回卡片，OK 确认，Back 取消。编辑时保留当前背景。
+
 **1.7.0 — Root 启动来源：** 在设置 → 您的 Home 屏幕中开启 **更改 Home**，即可设置 **优先打开 Clean Your TV**。**LG Channels / 直播电视**默认开启，**YouTube** 默认关闭。关闭更改 Home 后，两个开关仍可见但不可操作，已保存的值会保留。这些偏好私密保存在本电视上，不包含在可移植配置导出中。这些设置不代表已验证电视开机或唤醒行为。 关闭某个来源后，启动画面由电视固件决定，并不保证恢复到该来源。没有 HDMI 启动开关。[原生启动限制（英文）](../../root-edition/README.md#candidate-native-startup-choices)。
 
 > 本指南介绍 1.7.0。请从 [GitHub Releases 中已发布的版本](https://github.com/Razdva122/clean-your-tv-lg-webos/releases)下载可用软件包。它包含安装程序的五项改进。重新打开 Root 设置时会读取实际状态，检查失败不会启用 Home。System Updater 1.2.0 用于符合条件的新安装，或经过验证的 1.1.0/1.1.1 替换。已安装的 1.1.2 保留原有通道，没有通用迁移方案。请保留恢复数据，不要强行替换。[版本与限制](../RELEASE-1.7.0.md)。

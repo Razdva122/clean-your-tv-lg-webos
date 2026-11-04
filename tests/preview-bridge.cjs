@@ -9,7 +9,7 @@ function advance(ms) {
     if (timer.at <= now) { timers.delete(id); timer.fn(); }
   }
 }
-const context = {window: {TV_APPS: {apps: []}}, document: {getElementById: () => null},
+const context = {window: {TV_APPS: {apps: []}}, document: {getElementById: () => null, addEventListener: () => {}},
   setTimeout: (fn, delay) => { const id = ++timerId; timers.set(id, {fn, at: now + delay}); return id; },
   clearTimeout: id => timers.delete(id)};
 vm.createContext(context);
@@ -23,6 +23,11 @@ function call(method, payload = {}, service = 'com.cleanyourtv.root.preview.serv
   });
 }
 (async () => {
+  assert.equal((await call('status',{presentation:'context'})).result.content,false);
+  context.window.PREVIEW_HOME_CONTEXT='content';
+  assert.equal((await call('status',{presentation:'context'})).result.content,true);
+  context.window.PREVIEW_HOME_CONTEXT='unknown';
+  assert.equal((await call('status',{presentation:'context'})).result.content,null);
   const supervisor='com.cleanyourtv.system.updater.service';
   assert.equal((await call('restoreProfile',{edition:'root'},supervisor)).result,null);
   assert.equal((await call('status',{},supervisor)).result,null);

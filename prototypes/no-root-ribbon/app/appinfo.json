@@ -1,0 +1,17 @@
+{
+  "id": "com.cleanyourtv.lab.norootribbon",
+  "version": "0.0.1",
+  "vendor": "Clean Your TV",
+  "type": "web",
+  "main": "index.html",
+  "title": "No-root Ribbon Lab",
+  "icon": "icon.png",
+  "resolution": "1920x1080",
+  "defaultWindowType": "overlay",
+  "transparent": true,
+  "handlesRelaunch": true,
+  "disableBackHistoryAPI": true,
+  "noSplashOnLaunch": true,
+  "spinnerOnLaunch": false,
+  "requiredACG": []
+}

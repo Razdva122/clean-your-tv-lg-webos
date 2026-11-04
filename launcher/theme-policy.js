@@ -67,7 +67,7 @@
       } else if ((key === 'shortcuts' ? ['header', 'bottom-left'] : key === 'edgeNavigation' ? ['wrap', 'shortcuts'] : ['below', 'focused-above']).indexOf(value) < 0) fail('layout-invalid', 'ribbon');
       defaults[key] = value;
     });
-    if (defaults.shortcuts === 'bottom-left' && defaults.left < 340) fail('layout-invalid', 'ribbon');
+    if (defaults.shortcuts === 'bottom-left' && defaults.left < 256) fail('layout-invalid', 'ribbon');
     if (defaults.labels === 'below' && defaults.bottom < 64) fail('layout-invalid', 'ribbon');
     return defaults;
   }
@@ -149,8 +149,9 @@
     if (m.id.indexOf('github:') === 0 && m.id.split(':')[1] !== m.source.repository.slice(19).toLowerCase()) fail('manifest-invalid', 'source.identity');
     object(m.requires, ['minimumHomeVersion', 'capabilities'], 'manifest-invalid', 'requires');
     version(m.requires.minimumHomeVersion);
-    list(m.requires.capabilities, 6, 'api-unsupported', 'capabilities').forEach(function (capability, index) { if (['modern-icon-css-v1', 'ribbon-layout-v1', 'classic-motion-v1', 'date-placement-v1', 'input-placement-v1', 'video-wallpaper-v1'].indexOf(capability) < 0 || m.requires.capabilities.indexOf(capability) !== index) fail('api-unsupported', 'capabilities'); });
-    object(m.layout, ['preset', 'columns', 'spacingScale', 'textScale', 'focusScale'], 'layout-invalid', 'layout', ['allowColumnOverride', 'ribbon', 'motion', 'datePlacement', 'inputs']);
+    list(m.requires.capabilities, 7, 'api-unsupported', 'capabilities').forEach(function (capability, index) { if (['modern-icon-css-v1', 'ribbon-layout-v1', 'classic-motion-v1', 'date-placement-v1', 'input-placement-v1', 'overlay-presentation-v1', 'video-wallpaper-v1'].indexOf(capability) < 0 || m.requires.capabilities.indexOf(capability) !== index) fail('api-unsupported', 'capabilities'); });
+    object(m.layout, ['preset', 'columns', 'spacingScale', 'textScale', 'focusScale'], 'layout-invalid', 'layout', ['allowColumnOverride', 'ribbon', 'motion', 'datePlacement', 'inputs', 'presentation']);
+
     if (['dock-grid', 'icon-grid', 'side-grid', 'channel-list', 'scenic-grid'].indexOf(m.layout.preset) < 0) fail('layout-invalid', 'preset');
     if (Object.prototype.hasOwnProperty.call(m.layout, 'allowColumnOverride') && typeof m.layout.allowColumnOverride !== 'boolean') fail('layout-invalid', 'allowColumnOverride');
     number(m.layout.columns, 1, 8, 'layout-invalid', 'columns');
@@ -171,6 +172,9 @@
       normalizedRibbon = normalizeRibbon(m.layout.ribbon);
       ribbonWidth(normalizedRibbon, m.layout.columns);
     }
+    var hasPresentation = Object.prototype.hasOwnProperty.call(m.layout, 'presentation');
+    if (hasPresentation !== (m.requires.capabilities.indexOf('overlay-presentation-v1') >= 0)) fail('api-unsupported', 'overlay-presentation-v1');
+    if (hasPresentation && (m.layout.presentation !== 'overlay' || !hasRibbon)) fail('layout-invalid', 'presentation');
     // Opt-in: only themes that declare it get the Classic layout's glide, bump, zoom,
     // frame motion, edge fades and baked glow; other themes keep immediate remote focus.
     var hasMotion = Object.prototype.hasOwnProperty.call(m.layout, 'motion');

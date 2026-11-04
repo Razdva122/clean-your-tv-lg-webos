@@ -2,6 +2,23 @@
 (function () {
   'use strict';
   window.CYTV_BROWSER_PREVIEW = true;
+  window.PREVIEW_HOME_CONTEXT = 'empty';
+  // Synthetic content lives inside the iframe, beneath the actual Home surface.
+  document.addEventListener('DOMContentLoaded', function () {
+    var style = document.createElement('style');
+    style.textContent = '@keyframes preview-content-pan{from{background-position:0% 50%}to{background-position:100% 50%}}' +
+      '#previewContent{position:absolute;inset:0;z-index:-1;background:linear-gradient(115deg,#eeeee6 0%,#bfd0cc 30%,#f9c984 58%,#558989 78%,#eeeee6 100%);background-size:200% 100%;animation:preview-content-pan 12s ease-in-out infinite alternate;color:#183638;pointer-events:none}' +
+      '#previewContent .preview-program{position:absolute;left:112px;top:108px;font:500 30px system-ui,sans-serif;letter-spacing:.08em}' +
+      '#previewContent .preview-program strong{display:block;font-size:76px;letter-spacing:-.04em;margin:22px 0}' +
+      '#previewContent .preview-program small{font-size:22px;letter-spacing:0}' +
+      '@media(prefers-reduced-motion:reduce){#previewContent{animation:none}}';
+    document.head.appendChild(style);
+    var content=document.createElement('div');content.id='previewContent';content.setAttribute('aria-hidden','true');
+    content.innerHTML='<div class="preview-program">APPLICATION SIMULATION<strong>Light in motion</strong><small>Synthetic moving content · no TV capture</small></div>';
+    document.body.insertBefore(content,document.body.firstChild);
+  });
+  // The real controller has already rendered closed state when it calls close.
+  window.close = function () {};
   var homeEnabled = true;
   var enabled = false, rootPhase = 'disabled';
   var firmwareBlocked = false, audioAutomatic = false, audioLast = null;
@@ -67,6 +84,11 @@
         result = {returnValue: true, connected: true};
       } else if (uri.indexOf('luna://com.cleanyourtv.root.preview.service/') === 0) {
         var rootMethod = uri.split('/').pop();
+        if (rootMethod === 'status' && payload.presentation === 'context') {
+          result = {returnValue:true,result:{content:window.PREVIEW_HOME_CONTEXT === 'content' ? true : window.PREVIEW_HOME_CONTEXT === 'empty' ? false : null}};
+          if (bridge.onservicecallback) bridge.onservicecallback(JSON.stringify(result));
+          return;
+        }
         if (rootMethod === 'audioRecoveryStatus' || rootMethod === 'setAudioRecoveryEnabled') {
           if (rootMethod === 'setAudioRecoveryEnabled' && typeof payload.enabled === 'boolean') audioAutomatic = payload.enabled;
           result = {returnValue:true,enabled:audioAutomatic,observer:audioAutomatic,autoSupported:true,canRestart:true,canRestoreRoute:false,canRestoreSetting:false,needsRestore:false,mode:'earc',last:audioLast};

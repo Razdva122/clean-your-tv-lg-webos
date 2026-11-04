@@ -41,7 +41,7 @@ var handlers = require('./handlers')(function (command, transaction) {
     });
     child.stdin.end(command === 'configure' ? JSON.stringify(sources) : '');
   });
-});
+}, require('./presentation-context')(execFile, function () { return process.getuid(); }));
 Object.keys(handlers).forEach(function (method) {
   service.register(method, function (message) {
     handlers[method](message.payload).then(function (result) { result.root = process.getuid() === 0; message.respond(result); });

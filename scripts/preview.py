@@ -22,14 +22,14 @@ def preview_themes(*args):
     return subprocess.check_output(['node', str(ROOT / 'scripts/build-preview-themes.cjs'), *args], cwd=ROOT)
 
 LAUNCHER_FILES = {
-    'index.html', 'viewport.js', 'style.css', 'theme-defaults.css', 'theme-policy.js', 'theme-runtime.js', 'home-layout.js', 'layout-panel.js', 'settings-categories.js', 'layout-panel.css', 'renewal-panel.css', 'app.js', 'app-library.js', 'input-sources.js', 'input-preview.js', 'config.js',
+    'index.html', 'home-presentation.js', 'viewport.js', 'style.css', 'theme-defaults.css', 'theme-policy.js', 'theme-runtime.js', 'home-layout.js', 'layout-panel.js', 'settings-categories.js', 'layout-panel.css', 'renewal-panel.css', 'app.js', 'app-library.js', 'input-sources.js', 'input-preview.js', 'config.js',
     'user-data.js', 'release-notes.js', 'system-updates.js', 'update-panel.js', 'renewal-panel.js', 'helper-control.js', 'profile-bootstrap.js',
     'native-bootstrap.js', 'i18n.js', 'catalogs.js', 'i18n.css', 'fonts/outfit-300.ttf', 'fonts/outfit-400.ttf', 'fonts/outfit-500.ttf', 'fonts/outfit-700.ttf', 'fonts/NotoSans.ttf', 'fonts/NotoSans-OFL.txt', 'fonts/NotoSansDevanagari.ttf', 'fonts/NotoSansDevanagari-OFL.txt', 'fonts/NotoSansKR.ttf', 'fonts/NotoSansKR-OFL.txt', 'fonts/NotoSansSC.ttf', 'fonts/NotoSansSC-OFL.txt', 'fonts/NotoSansTC.ttf', 'fonts/NotoSansTC-OFL.txt', 'fonts/OFL.txt',
 }
 THEME_FILES = ['wallpaper.js', 'wallpaper.css', 'wallpaper-panel.js', 'wallpaper-panel.css', 'wallpaper-locales.js', 'wallpaper-media-cache.js', 'personal-wallpaper.js', 'wallpaper-library.js', 'wallpaper-stream.js', 'wallpapers/black-hole-stream.mp4', 'wallpaper-qr.js', 'theme-data.js', 'theme-store.js', 'theme-manager.js', 'theme-receiver.js', 'theme-panel.js', 'theme-panel.css', 'theme-locales.js', 'builtin-theme-files.json'] + json.loads((ROOT / 'launcher/builtin-theme-files.json').read_text())
 LAUNCHER_FILES.update(['appinfo.json'] + THEME_FILES)
 ROOT_LAUNCHER_FILES = {
-    'index.html', 'viewport.js', 'app.js', 'app-library.js', 'input-sources.js', 'input-preview.js', 'style.css', 'theme-defaults.css', 'theme-policy.js', 'theme-runtime.js', 'home-layout.js', 'layout-panel.js', 'settings-categories.js', 'layout-panel.css', 'config.js', 'apps.js',
+    'index.html', 'home-presentation.js', 'viewport.js', 'app.js', 'app-library.js', 'input-sources.js', 'input-preview.js', 'style.css', 'theme-defaults.css', 'theme-policy.js', 'theme-runtime.js', 'home-layout.js', 'layout-panel.js', 'settings-categories.js', 'layout-panel.css', 'config.js', 'apps.js',
     'fonts/outfit-300.ttf', 'fonts/outfit-400.ttf', 'fonts/outfit-500.ttf', 'fonts/outfit-700.ttf', 'fonts/NotoSans.ttf', 'fonts/NotoSans-OFL.txt', 'fonts/NotoSansDevanagari.ttf', 'fonts/NotoSansDevanagari-OFL.txt', 'fonts/NotoSansKR.ttf', 'fonts/NotoSansKR-OFL.txt', 'fonts/NotoSansSC.ttf', 'fonts/NotoSansSC-OFL.txt', 'fonts/NotoSansTC.ttf', 'fonts/NotoSansTC-OFL.txt', 'fonts/OFL.txt',
     'i18n.js', 'catalogs.js', 'i18n.css', 'root-locales.js', 'root-exit.js', 'root-firmware-control.js', 'root-firmware.js', 'root-audio.js', 'root-audio-locales.js', 'root-settings.js', 'root-settings.css',
     'root-profile-data.js', 'root-profile.js', 'release-notes.js', 'system-updates.js', 'root-updates.js',
@@ -59,7 +59,7 @@ def revision():
     files = [ROOT / 'launcher' / name for name in sorted(LAUNCHER_FILES)]
     files += [ROOT / 'root-edition/preview.py']
     files += [ROOT / 'root-edition/ui' / name for name in ('root-locales.js', 'root-exit.js', 'root-firmware-control.js', 'root-firmware.js', 'root-audio.js', 'root-audio-locales.js', 'root-settings.js', 'root-settings.css', 'root-profile-data.js', 'root-profile.js', 'root-updates.js')]
-    files += [ROOT / 'preview/index.html', ROOT / 'preview/bridge.js', ROOT / 'preview/live-reload.js', ROOT / 'preview/themes.js', ROOT / 'scripts/build-preview-themes.cjs']
+    files += [ROOT / 'preview/index.html', ROOT / 'preview/bridge.js', ROOT / 'preview/live-reload.js', ROOT / 'preview/themes.js', ROOT / 'preview/presentation.js', ROOT / 'scripts/build-preview-themes.cjs']
     files += list((ROOT / 'showcase/registry').glob('*.json'))
     files += [ROOT / 'showcase/order.json']
     files += [ROOT / 'preview/icons' / name for name in sorted(ICON_FILES)]
@@ -118,7 +118,7 @@ def export_site(destination):
         else:
             shutil.copyfile(ROOT / 'launcher' / name, target)
     (destination / 'launcher/apps.js').write_text('window.TV_APPS = ' + json.dumps(inventory()) + ';\n', encoding='utf-8')
-    for name in ['bridge.js', 'themes.js', 'icons/SOURCES.txt', 'icons/LICENSE-LUCIDE.txt'] + ['icons/' + name for name in sorted(ICON_FILES)] + sorted(REFERENCE_FILES):
+    for name in ['bridge.js', 'themes.js', 'presentation.js', 'icons/SOURCES.txt', 'icons/LICENSE-LUCIDE.txt'] + ['icons/' + name for name in sorted(ICON_FILES)] + sorted(REFERENCE_FILES):
         target = destination / 'preview' / name
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT / 'preview' / name, target)
@@ -157,7 +157,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path == '/':
             file = ROOT / 'preview/index.html'
-        elif path in ('/preview/bridge.js', '/preview/themes.js', '/preview/live-reload.js', '/preview/settings.html', '/preview/update-overflow.html'):
+        elif path in ('/preview/bridge.js', '/preview/themes.js', '/preview/presentation.js', '/preview/live-reload.js', '/preview/settings.html', '/preview/update-overflow.html'):
             file = ROOT / path.lstrip('/')
         elif path.startswith('/preview/') and path[len('/preview/'):] in REFERENCE_FILES:
             file = ROOT / path.lstrip('/')

@@ -532,7 +532,7 @@ Use optional `layout.ribbon` with `preset: "scenic-grid"`, an explicit 1–8 col
 | `labels` | `below`, `focused-above` | `below` |
 | `showClock` | boolean | `true` |
 
-Unknown keys and invalid combinations reject. Bottom-left shortcuts require `left >= 340`; below captions require `bottom >= 64`. Geometry reserves maximum focused skew extent on both sides and rejects a computed card width below 64 px; width is capped at 360 px. Combined checks use the fixed column count. The selected card grows and raises by `focusLift`, preserving its bottom edge. Captions, icon counter-skew and matching hit targets are trusted geometry. `iconScale` shrinks the original app-image box inside its card; Add app retains its native SVG artwork. Author CSS retains appearance hooks, wallpaper and colors.
+Unknown keys and invalid combinations reject. Bottom-left shortcuts require `left >= 256` (three 68 px controls with 8 px spacing and a 28 px edge inset); below captions require `bottom >= 64`. Geometry reserves maximum focused skew extent on both sides and rejects a computed card width below 64 px; width is capped at 360 px. Combined checks use the fixed column count. The selected card grows and raises by `focusLift`, preserving its bottom edge. Captions, icon counter-skew and matching hit targets are trusted geometry. `iconScale` shrinks the original app-image box inside its card; Add app retains its native SVG artwork. Author CSS retains appearance hooks, wallpaper and colors.
 
 ```json
 {
@@ -572,3 +572,16 @@ header. Declare the paired `date-placement-v1` capability; the compiler infers
 it from the field. Engines without the capability reject the theme before apply.
 Omitting the field preserves current themes. Suspension, replacement and reset
 use the existing theme stylesheet lifecycle. No new controls or permissions.
+
+### Optional overlay presentation (unreleased)
+
+A theme with bounded `layout.ribbon` may set `layout.presentation` to `overlay`.
+The compiler adds the paired `overlay-presentation-v1` capability. Engines that
+do not know this capability reject the descriptor atomically, preserving the
+accepted theme. The field cannot select another window type or execute code.
+
+Presentation is host-owned: Root can expose active content only after a fresh
+normalized compositor check. No-root falls back to the full wallpaper. Theme
+suspension, settings/trial/recovery dialogs and unknown context force opacity;
+reset removes the request. The native host never changes routing or permissions
+because of a theme. See [Ribbon presentation](RIBBON-PRESENTATION.md).

@@ -65,7 +65,7 @@ class BuildTests(unittest.TestCase):
             self.assertEqual(json.loads(files[prefix + 'appinfo.json'])['themeEngineVersion'], json.loads((ROOT.parent/'launcher/appinfo.json').read_text())['version'])
             self.assertEqual(json.loads(files['usr/palm/packages/com.cleanyourtv.root.preview/packageinfo.json'])['services'], ['com.cleanyourtv.root.preview.service'])
             service_prefix = 'usr/palm/services/com.cleanyourtv.root.preview.service/'
-            self.assertEqual({n[len(service_prefix):] for n in files if n.startswith(service_prefix)}, {'service.js', 'startup-diagnostics.js', 'app-inventory.js', 'handlers.js', 'services.json', 'package.json', 'boot-recover.sh', 'activity.json'})
+            self.assertEqual({n[len(service_prefix):] for n in files if n.startswith(service_prefix)}, {'service.js', 'startup-diagnostics.js', 'app-inventory.js', 'presentation-context.js', 'handlers.js', 'services.json', 'package.json', 'boot-recover.sh', 'activity.json'})
             self.assertIn(b'themeReceiverStart',files[service_prefix+'service.js'])
             self.assertNotIn(b"require('./theme-receiver')",files[service_prefix+'service.js'])
             with tarfile.open(fileobj=io.BytesIO(parts['data.tar.gz'])) as archive:
