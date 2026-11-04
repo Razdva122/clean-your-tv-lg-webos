@@ -22,5 +22,10 @@ function fixture(){
  f.state.release();await turn();await f.paint();assert.equal(f.m.current().id,'builtin:classic','late successful preparation cannot replace timeout fallback');assert.deepEqual(f.state.presented,['builtin:classic']);
  f=fixture();const cancelled=f.m.start(f.present);await turn();await f.m.cancel();f.state.release();await turn();await f.paint();await cancelled;
  assert.equal(f.m.current().id,'builtin:classic');assert(!f.values.has(f.m.trialKey),'safe cancelled startup retires only its own boot marker after fallback presentation');assert(f.values.has(f.m.choiceKey),'no-op cancellation does not discard the accepted saved choice');
+ f=fixture();let presentRelease;ready=false;
+ const delayed=f.m.start(()=>new Promise(resolve=>{presentRelease=resolve;})).then(()=>ready=true);await turn();f.state.release();await turn();
+ await f.paint();assert.equal(ready,false,'theme readiness must wait for async appearance before counting painted frames');assert(f.values.has(f.m.trialKey),'boot marker survives pending async appearance');
+ presentRelease();await turn();assert.equal(ready,false,'resolved appearance still requires presentation frames');assert.equal(f.frames.length,1);await f.paint();await delayed;
+ f=fixture();const rejected=f.m.start(()=>Promise.reject(Error('presentation failed')));await turn();f.state.release();await assert.rejects(rejected,/presentation failed/);assert(f.values.has(f.m.trialKey),'failed presentation cannot retire boot recovery marker');
  console.log('PASS theme startup presentation, first-frame marker/readiness ordering, bounded fallback and stale completion');
 })().catch(error=>{console.error(error);process.exitCode=1;});
