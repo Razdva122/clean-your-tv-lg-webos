@@ -30,11 +30,11 @@
       "description": "Black Hole by Xecutioner, recorded at native 3840x2160, with a fixed eight-card skewed app ribbon.",
       "author": "CYTV contributors; video by Xecutioner",
       "license": "LicenseRef-Xecutioner-NonCommercial",
-      "preview": "themes/ribbon/assets/preview-81a6c73bc14de1a317cc0d3b50ea9387bd9f8a03438ab23f6d80152ed208b39c.jpg",
+      "preview": "themes/ribbon/assets/preview-12326c0aee812a0e108f413c7cce3995b9a4d1d95618132ad3f317e3f5e6f3fd.jpg",
       "credits": "themes/ribbon/documents/1-a111ee9dd92cf115657a4ad197a24b0ff15dee4da540b9cf5cdd95c0cff37b6d.txt",
       "licenseFile": "themes/ribbon/documents/0-ef2c9dee57bcc55339247c34ab6460d9632669a06c764df68b49e1363857964d.txt",
       "url": "themes/ribbon/cytv-theme.json",
-      "digest": "32b8a63597c4583b6efdb497def329594cd4a8d629a2465db59c142c45b1a99a"
+      "digest": "76754cb3f97f729df8aeab175f59ec15b501abc6d873edebe5ac3def5eefe2f8"
     },
     {
       "id": "github:razdva122/clean-your-tv-lg-webos:alpine",
