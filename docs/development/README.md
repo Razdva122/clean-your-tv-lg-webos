@@ -1,5 +1,7 @@
 # Development and technical references
 
+- [Focused CI checks](CI-CHECKS.md): routing boundaries, safety gates and measurements.
+
 [User documentation](../README.md) · [Contributing](../../CONTRIBUTING.md) ·
 [Historical records](../history/README.md)
 

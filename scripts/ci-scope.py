@@ -6,7 +6,7 @@ from pathlib import Path
 import re
 import subprocess
 
-COMPONENTS = ('ui', 'tv', 'installer', 'android', 'setup', 'preview')
+COMPONENTS = ('ui', 'tv', 'installer', 'android', 'setup', 'preview', 'tv-runtime')
 
 
 def components(paths):
@@ -28,6 +28,14 @@ def components(paths):
             continue
         if path.startswith(('launcher/', 'root-edition/ui/', 'updater-app/')) and Path(path).suffix in ('.css', '.svg', '.png', '.jpg', '.woff', '.woff2', '.ttf'):
             selected.update(('ui', 'preview'))
+        elif path == 'native/service/app-inventory.js':
+            # Transport-only leaf: keep every TV safety/packaging check. Browser
+            # suites consume fixed inventories, not this paired SSAP transport.
+            selected.update(('tv-runtime', 'installer', 'setup'))
+        elif path == 'sync-apps.py':
+            selected.update(('installer', 'setup'))
+        elif path == 'lgtv.py':
+            selected.update(('installer', 'android', 'setup'))
         elif path.startswith('homebrew/'):
             selected.update(('installer', 'tv', 'setup'))
         elif path.startswith('cytv/'):
@@ -137,10 +145,10 @@ def main():
             and event['pull_request']['head'].get('ref') == 'release/next'
             and os.environ.get('CI_FULL_SUITE') != 'true'):
         selected = {'setup'}  # Release policy requires full tests from the trusted build.
-    outputs = {name: name in selected for name in COMPONENTS}
+    outputs = {name.replace('-', '_'): name in selected for name in COMPONENTS}
     outputs.update(any=bool(selected), runtime=bool(selected - {'setup'}), candidate=candidate, installers=installers,
                    full=installers and full_candidate(event, kind, ref),
-                   macos=bool(selected & {'tv', 'installer'}))
+                   macos=bool(selected & {'tv', 'tv-runtime', 'installer'}))
     lines = ''.join(f'{name}={str(value).lower()}\n' for name, value in outputs.items())
     print(lines, end='')
     with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
