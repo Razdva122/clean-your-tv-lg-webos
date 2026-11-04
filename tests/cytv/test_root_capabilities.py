@@ -113,6 +113,66 @@ class CapabilityTests(unittest.TestCase):
             self.assertIsNone(store.pending(profile))
             self.assertFalse(any(c[0]=='upload' for c in remote.calls))
 
+    def test_common_beta_selects_only_confirmed_native_c1(self):
+        import struct
+        from cytv.root_capabilities import verify
+        from cytv.root_capabilities import RootCapabilityError
+        missing = {'returnValue':False, 'errorCode':-1, 'errorText':'Service does not exist: com.webos.service.systemprofile.'}
+        info = {'returnValue':True, 'modelName':'OLED65C14LB', 'firmwareVersion':'03.51.15', 'sdkVersion':'6.5.3-47'}
+        header = struct.pack('<16sHHIIIIIHHHHHH', b'\x7fELF\x01\x01\x01', 3, 40, 1, 64, 52, 0, 0, 52, 32, 2, 0, 0, 0)
+        dump = ' '.join(str(n) for n in header)
+        observed = '0 1 755 50684\n' + dump + '\nCYTV_HOME_ELF\n' + dump
+        remote = Mock()
+        for reply, device, observed_elf, accepted in (
+                (missing, info, observed, True), (missing, dict(info,modelName='55UP7000PUA'),observed,False),
+                (missing, dict(info,sdkVersion='7.0.0'),observed,False), (missing,info,observed.replace('127','128'),False),
+                (missing,info,observed.replace('0 1 755','0 1 777'),False),
+                (dict(missing,errorText='Access denied'),info,observed,False),
+                (dict(missing,errorText='Service does not exist: com.example.other.'),info,observed,False),
+                (TimeoutError(),info,observed,False)):
+            with self.subTest(reply=reply,device=device):
+                remote.reset_mock()
+                remote.luna.side_effect = [reply,device]
+                remote.run.return_value = observed_elf
+                summary = {'home_backend':'stale'}
+                if accepted:
+                    self.assertEqual(verify(remote,CheckList(),summary,allow_c1=True),'c1-native-gate')
+                    self.assertEqual(summary['root_capabilities']['home-profiles'],'service-absent')
+                    self.assertNotIn('home-profiles',summary['root_requirements'])
+                    self.assertEqual(summary['home_backend'],'c1-native-gate')
+                    self.assertFalse(any('getSystemSettings' in str(c) for c in remote.luna.call_args_list))
+                else:
+                    with self.assertRaises(RootCapabilityError):
+                        verify(remote,CheckList(),summary,allow_c1=True)
+                    self.assertNotIn('home_backend',summary)
+
+    def test_real_ssh_transport_preserves_only_the_exact_missing_profile_flag(self):
+        from cytv.errors import TVRejected
+        from cytv.transport import terminal_reply
+        from cytv.root_capabilities import verify
+        uri='com.webos.service.systemprofile/getProfiles'
+        reply={'returnValue':False,'errorCode':-1,'errorText':'Service does not exist: com.webos.service.systemprofile.'}
+        for target, value, expected in ((uri,reply,True),(uri,dict(reply,errorCode='-1'),False),
+                (uri,dict(reply,errorText='denied'),False),('com.example.service/query',reply,False)):
+            with self.subTest(target=target,value=value), self.assertRaises(TVRejected) as rejected:
+                terminal_reply(value, uri=target)
+            self.assertIs(rejected.exception.systemprofile_missing, expected)
+            self.assertNotIn('errorText',rejected.exception.luna)
+            if expected:
+                remote=Mock()
+                remote.luna.side_effect=rejected.exception
+                with patch('cytv.root_capabilities.c1_device', return_value=True):
+                    self.assertEqual(verify(remote,CheckList(),{},allow_c1=True),'c1-native-gate')
+
+    def test_detected_profile_prefers_normal_product_without_native_probe(self):
+        from cytv.root_capabilities import verify
+        remote=Mock()
+        remote.luna.side_effect=[PROFILES, SETTINGS]
+        info={}
+        self.assertEqual(verify(remote,CheckList(),info,allow_c1=True), 'system-profile')
+        remote.run.assert_not_called()
+        self.assertEqual(info['home_backend'],'system-profile')
+
     def test_default_maintenance_preflight_does_not_add_home_queries(self):
         from cytv.operations import Installer
         from tests.cytv.test_operations import Remote
