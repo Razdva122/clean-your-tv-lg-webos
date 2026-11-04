@@ -106,6 +106,14 @@
       "summary": "Preserve allowlisted install/remove failure status and reason in diagnostics; original #201/#307 installation/recovery remain unresolved"
     },
     {
+      "pr": 312,
+      "issues": [
+        201,
+        307
+      ],
+      "summary": "Include explicit SDK parent directories in No-root IPKs and retain them during personalization; real-opkg reproduction passed, retail coexistence/service registration and original #201/#307 recovery remain unresolved"
+    },
+    {
       "pr": 313,
       "issues": [],
       "summary": "Clarify in English and all twelve translations that the selected wallpaper has no video version; wallpaper/video capability logic is unchanged"

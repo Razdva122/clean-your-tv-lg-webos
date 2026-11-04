@@ -24,19 +24,25 @@ unchanged pending the next freeze. Unrelated showcase work remains deferred.
   rather than its theme, has no video version. English and all twelve translations
   changed; media logic did not. Focused Tests41882613032 attempt2 passed,
   including both platforms and browser, before integration.
+- PR312, source0d0d97a87bc945982fb3ca0d40f087c69e25c142 after the reviewed
+  history-index conflict resolution, merged as
+  c087bc8d14349add216365a4b2647065cc313e04: explicitly retain SDK parent entries
+  in No-root IPKs. Tests41893026455 and desktop runtime41893026570 passed,
+  including Linux, macOS ARM/Intel, Windows and browser. Retail coexistence,
+  service registration, Helper rollback and original recovery remain unverified.
 
 Independent final source reviews found no blocking defects. PR312 and PR309 had
 one history-index conflict. The proposed PR312 update0d0d97a87bc945982fb3ca0d40f087c69e25c142
 retains both investigation links; independent review verified all other blobs
 and merged product changes were preserved. On that combined tree, setup234 and
 installer760 tests passed (72 optional skips), as did both package-parent tests
-and the two history links. This prospective result does not itself merge PR312
-or replace its required CI.
+and the two history links. These host results were followed by successful
+new-head CI before PR312 merged; they do not constitute retail acceptance.
 
 ## Still outside the inventory
 
-At this checkpoint PR303 (Root activation), PR306 (passive IR diagnostics)
-and the updated PR312 are awaiting successful required CI. Cancelled hosted-runner
+At this checkpoint PR303 (Root activation) and PR306 (passive IR diagnostics)
+are awaiting successful required CI. Cancelled hosted-runner
 jobs were rerun once for each of303/306/313 during this integration task.
 PR313 subsequently passed and merged;303/306 were cancelled again on macOS and
 remain blocked. No failed check was bypassed.
