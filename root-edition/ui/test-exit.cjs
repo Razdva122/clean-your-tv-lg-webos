@@ -22,5 +22,15 @@ const wrap = result => ({returnValue:true,result:{returnValue:true,result}});
   const blocked=create(()=>{count++;return new Promise(r=>{release=r;});},async()=>{});
   const first=blocked(); await assert.rejects(blocked(),/already/);assert.strictEqual(count,1);
   release(wrap('conflict'));await assert.rejects(first);
+  const gateStock={backend:'c1-native-gate',state:'stopped',profiles:null,
+    mounted:false,healthy:false,stock_verified:true};
+  let gateLaunches=0;
+  await create(async m=>m==='restore'?wrap('restored'):wrap({effective:gateStock}),async()=>{gateLaunches++;})();
+  assert.strictEqual(gateLaunches,1);
+  for(const changes of [{mounted:true},{stock_verified:false},{profiles:{}},{healthy:true},{state:'armed'},
+    {...stock,mounted:true,stock_verified:false}]) {
+    await assert.rejects(create(async m=>m==='restore'?wrap('restored'):wrap({effective:{...gateStock,...changes}}),async()=>{gateLaunches++;})());
+  }
+  assert.strictEqual(gateLaunches,1);
   console.log('PASS Root exit readback, conflicts, malformed replies and duplicate requests');
 })().catch(e=>{console.error(e);process.exit(1);});

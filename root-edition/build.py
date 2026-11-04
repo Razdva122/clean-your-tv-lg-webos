@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 import tarfile
 import sys
+import struct
 
 import preview
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -18,6 +19,44 @@ from cytv.package import IPK_MTIME
 SERVICE_ID = 'com.cleanyourtv.root.preview.service'
 SERVICE_SOURCE = Path(__file__).resolve().parent / 'service'
 SERVICE_FILES = ('service.js','startup-diagnostics.js', 'app-inventory.js', 'presentation-context.js', 'handlers.js', 'services.json', 'package.json', 'boot-recover.sh', 'activity.json')
+
+
+def validate_native_gate(data):
+    """Admit a static ARM EABI5 executable, not an ELF-shaped placeholder."""
+    def reject():
+        raise ValueError('Experimental C1 gate requires a static ARM32 EABI5 executable')
+    if len(data) < 84 or len(data) > 4 * 1024 * 1024 or data[:7] != b'\x7fELF\x01\x01\x01':
+        reject()
+    h = struct.unpack_from('<16sHHIIIIIHHHHHH', data)
+    _, kind, machine, version, entry, phoff, _, flags, ehsize, phsize, count, _, _, _ = h
+    if (kind != 2 or machine != 40 or version != 1 or ehsize != 52 or phsize != 32
+            or not 1 <= count <= 128 or phoff < 52 or phoff + count * 32 > len(data)
+            or flags >> 24 != 5 or flags & 0x400):
+        reject()
+    executable = False
+    for offset in range(phoff, phoff + count * 32, 32):
+        ptype, start, address, _, size, memory, permissions, _ = struct.unpack_from('<IIIIIIII', data, offset)
+        if ptype in (2, 3):  # No dynamic loader or dynamic linking contract on the TV.
+            reject()
+        if ptype == 1:
+            if size > memory or start + size > len(data) or address + memory > 0x100000000:
+                reject()
+            executable |= bool(permissions & 1 and address <= entry < address + size)
+    if not executable:
+        reject()
+
+
+def bundle_presentation_context(files):
+    """Keep the immutable private-service inventory while shipping its closure."""
+    files = dict(files)
+    needle = b"require('./presentation-context')"
+    if files['service.js'].count(needle) != 1:
+        raise ValueError('Expected one Root presentation context factory')
+    source = files['presentation-context.js']
+    bundled = (b'(function(){var module={exports:{}};\n' + source
+               + b'\nreturn module.exports;}())')
+    files['service.js'] = files['service.js'].replace(needle, bundled)
+    return files
 
 
 def tgz(files, executables=()):
@@ -37,10 +76,18 @@ def ar(parts):
     return buffer.getvalue()
 
 
-def build(output, version='0.0.1', legacy_node_prototype=False, resolution=None):
+def build(output, version='0.0.1', legacy_node_prototype=False, resolution=None, experimental_c1_gate=None):
     output = Path(output).absolute()
     if '..' in output.parts or any(path.is_symlink() for path in (output, *output.parents)):
         raise ValueError('Output must not traverse symlinks or parent segments')
+    native_gate = None
+    if experimental_c1_gate is not None:
+        from deploy import checked_file
+        candidate = Path(experimental_c1_gate).absolute()
+        native_gate = checked_file(candidate.parent, candidate.name)
+        validate_native_gate(native_gate)
+        if legacy_node_prototype:
+            raise ValueError('Experimental C1 gate does not admit the legacy Node prototype')
     files = compile_web(preview.prepare(version=version, resolution=resolution))
     info = json.loads(files['appinfo.json'])
     app_id = info['id']
@@ -57,7 +104,8 @@ def build(output, version='0.0.1', legacy_node_prototype=False, resolution=None)
     from startup_hook import packaged_content
     payload['usr/palm/applications/'+app_id+'/startup.sh']=packaged_content(app_id)
     from scripts.theme_receiver import inject
-    private_service = inject({name[len(service_prefix):]: data for name, data in payload.items() if name.startswith(service_prefix)}, standalone=True)
+    private_service = bundle_presentation_context({name[len(service_prefix):]: data for name, data in payload.items() if name.startswith(service_prefix)})
+    private_service = inject(private_service, standalone=True)
     if legacy_node_prototype:
         from scripts.root_node_build import compile_root_node
         private_service = compile_root_node(private_service)
@@ -87,10 +135,16 @@ def build(output, version='0.0.1', legacy_node_prototype=False, resolution=None)
         'inventory': 'empty; configure locally for the later hardware test',
         'files': {name: hashlib.sha256(data).hexdigest() for name, data in sorted(payload.items())},
     }
+    if native_gate is not None:
+        release.update(home_backend='c1-native-gate', experimental=True,
+                       native_sha256=hashlib.sha256(native_gate).hexdigest())
     from deploy import SUPPORT_FILES, RUNTIME_FILES, checked_file
     source = Path(__file__).resolve().parent
     support = {name: checked_file(source, name) for name in SUPPORT_FILES}
     support.update({'runtime/' + name: checked_file(source, 'runtime/' + name) for name in RUNTIME_FILES})
+    if native_gate is not None:
+        support['runtime/c1-home-gate'] = native_gate
+        support['runtime/c1_gate.py'] = checked_file(source, 'runtime/c1_gate.py')
     if legacy_node_prototype:
         support = compile_root_node(support)
     output.mkdir(parents=False, exist_ok=False)
@@ -117,9 +171,12 @@ def main():
     parser.add_argument('--version', default='0.0.1', help='Root release version, X.Y.Z')
     parser.add_argument('--legacy-node-prototype', action='store_true', help='Host-only Node 0.12 prototype; admission remains Node 8+')
     parser.add_argument('--resolution', choices=('1280x720', '1920x1080'), help='Explicit graphics resolution for this candidate package')
+    parser.add_argument('--experimental-c1-gate', type=Path, metavar='ARM_BINARY',
+                        help='Explicit developer-only C1 backend; excluded from normal installer and OTA')
     args = parser.parse_args()
     try:
-        package = build(args.output, version=args.version, legacy_node_prototype=args.legacy_node_prototype, resolution=args.resolution)
+        package = build(args.output, version=args.version, legacy_node_prototype=args.legacy_node_prototype,
+                        resolution=args.resolution, experimental_c1_gate=args.experimental_c1_gate)
     except (ValueError, OSError) as exc:
         parser.exit(1, 'Candidate build failed: ' + str(exc) + '\n')
     print('Built ' + str(package) + '. Offline only; hardware validation pending.')

@@ -1,6 +1,9 @@
 """Bounded webOS Luna transport. No settings writes except the fixed Home pair."""
 import json, os, select, subprocess, time
-from profile_plan import CANDIDATE, STOCK
+try:
+ from .profile_plan import CANDIDATE, STOCK
+except ImportError:
+ from profile_plan import CANDIDATE, STOCK
 
 def call(uri,payload,timeout=5):
  # Keep stdin open until a reply. Closing it makes this TV's luna-send exit early.

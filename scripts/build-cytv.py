@@ -75,6 +75,22 @@ def pack_app(appfiles, servicefiles, architecture='all', helper=False):
 
 GRAPHICS = {'1920x1080': {'launcher': 'launcher.ipk', 'root': 'root'},
             '1280x720': {'launcher': 'launcher-720p.ipk', 'root': 'root-720p'}}
+C1_GRAPHICS = {'1920x1080': 'root-c1', '1280x720': 'root-c1-720p'}
+
+
+def stage_c1_root(payload, work, version, run=subprocess.run):
+    """Compile once with the existing pinned build-only Zig dependency."""
+    helper = Path(work) / 'c1-home-gate'
+    environment = dict(os.environ, ZIG_GLOBAL_CACHE_DIR=str(Path(work) / 'zig-global-cache'),
+                       ZIG_LOCAL_CACHE_DIR=str(Path(work) / 'zig-cache'))
+    run([sys.executable, '-m', 'ziglang', 'cc', '-target', 'arm-linux-musleabi',
+         '-Os', '-static', '-s', 'root-edition/gate/gate.c', '-o', str(helper)],
+        cwd=ROOT, env=environment, check=True)
+    for graphics, folder in C1_GRAPHICS.items():
+        run([sys.executable, 'root-edition/build.py', '--output', str(Path(payload) / folder),
+             '--version', version, '--resolution', graphics, '--experimental-c1-gate', str(helper)],
+            cwd=ROOT, check=True)
+
 
 
 def verify_release_versions(payload, versions):
@@ -201,6 +217,7 @@ def build_payload():
     stage_guide_assets(payload)
     for graphics, paths in GRAPHICS.items():
         subprocess.run([sys.executable, 'root-edition/build.py', '--output', str(payload / paths['root']), '--version', versions['root'], '--resolution', graphics], cwd=ROOT, check=True)
+    stage_c1_root(payload, work, versions['root'])
     subprocess.run([sys.executable, 'root-edition/build_updater.py', '--output', str(payload / 'root-updater')], cwd=ROOT, check=True)
     stage_updater(payload)
     subprocess.run([sys.executable,'system-updater/build.py','--output',str(payload/'system-updater')],cwd=ROOT,check=True)
@@ -226,6 +243,8 @@ def build_payload():
     manifest = {'schema': 1, 'launcher': 'launcher.ipk', 'helper': 'helper.ipk', 'graphics': GRAPHICS,
                 'home_version': json.loads(launcher['appinfo.json'])['version'],
                 'helper_version': versions['helper'],
+                'root_backends': {'c1-native-gate': {'experimental': True, 'hardware_validated': False,
+                                                     'graphics': C1_GRAPHICS}},
                 'files': {p.relative_to(payload).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
                           for p in sorted(payload.rglob('*')) if p.is_file()}}
     (payload / 'payload.json').write_text(json.dumps(manifest, indent=2), encoding='utf-8')

@@ -1,5 +1,7 @@
 # Čeština — rozhraní televizoru
 
+**Nevydaná C1 Beta (#298):** Ve společném instalačním programu pro počítač zvolte Root. Způsobilé TV C1 se rozpoznají automaticky; není potřeba samostatný instalátor ani přepínač. Tato cesta vyžaduje novou instalaci, nemá automatické aktualizace a dosud neprošla přejímkou na fyzickém C1. Otevřít LG Home, dlouhý Back nebo bezpečnostní/výpadková zastávka mohou ponechat ovládání Home vypnuté; v nastavení TV znovu zapněte Změnit Home. Běžná cesta Root se nemění. Pokud zůstávají další komponenty No-root, úplné odstranění C1 se zastaví před změnami. Nejdříve je odstraňte běžným postupem No-root; při nejasném stavu zachovejte data obnovy. [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md).
+
 Nevydáno (#290): **+ / Přidat aplikaci** nabídne živé TV pod názvem z televizoru pouze při zjištění nainstalovaného tuneru. Ostatní skryté systémové aplikace zůstávají vynechané. No-root potřebuje aktualizovaný Helper a instalátor; Root aktualizovaný balíček Home. Spuštění kanálů ještě vyžaduje ověření na TV.
 
 **Nevydáno — Ribbon nad aplikacemi:** V Root se může Ribbon zobrazit nad aktuální aplikací. Home otevře panel; Zpět nebo další Home jej zavře. Při zapnutí nebo bez potvrzeného obsahu na pozadí se zobrazí tapeta; nastavení zůstává neprůhledné. No-root na TV zůstává přes celou obrazovku. Demo simuluje oba stavy; ověření finálního balíčku na zařízení ještě čeká. [Podrobnosti](../THEMES.md#ribbon-over-applications-unreleased).

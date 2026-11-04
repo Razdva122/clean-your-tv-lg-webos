@@ -69,6 +69,8 @@ def atomic(path,raw,mode=0o600):
 
 def preflight(bundle,baseline):
     import sys
+    if any(os.path.lexists(ROOT_STATE/name) for name in ('home-backend.json','c1-gate','runtime/c1_gate.py','runtime/c1-home-gate')):
+        raise ValueError('Experimental C1 routing is excluded from normal Root Updater setup')
     if sys.version_info < (3, 9):raise RuntimeError('Root Updater requires TV Python 3.9+')
     if os.geteuid()!=0 or not Path('/usr/bin/luna-send').is_file():raise PermissionError('Explicit rooted webOS device required')
     from deploy import require_node

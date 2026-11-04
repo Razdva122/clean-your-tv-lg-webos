@@ -17,10 +17,14 @@
       if (result !== 'restored' && result !== 'absent') throw new Error('Recovery incomplete. Keep the recovery state and use host restore.');
       var status = unwrap(await call('status'));
       var e = status && status.effective;
-      if (!e || e.sam_home !== 'com.webos.app.home' || !e.profiles ||
-          !e.profiles.defaultApps || !e.profiles.defaultApps.categories ||
-          e.profiles.defaultApps.categories.home !== 'com.webos.app.home' ||
-          !e.profiles.idleApp || e.profiles.idleApp.appId !== 'com.webos.app.home')
+      var gateStock = e && e.backend === 'c1-native-gate' && e.profiles === null &&
+        e.stock_verified === true && e.mounted === false && e.healthy === false &&
+        (e.state === 'stock' || e.state === 'stopped');
+      var legacyStock = e && !e.backend && e.sam_home === 'com.webos.app.home' && e.profiles &&
+          e.profiles.defaultApps && e.profiles.defaultApps.categories &&
+          e.profiles.defaultApps.categories.home === 'com.webos.app.home' &&
+          e.profiles.idleApp && e.profiles.idleApp.appId === 'com.webos.app.home';
+      if (!(e && e.backend === 'c1-native-gate' ? gateStock : legacyStock))
         throw new Error('Original Home is not confirmed. Use host restore.');
       await launch();
     } finally { busy = false; }

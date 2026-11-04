@@ -333,18 +333,26 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
         """Shared descriptor/profile inspection is independent of installer origin."""
         return self.product_action('inspect')['installation']
 
-    def root_action(self, action, bundle=None, migrate=False):
+    def native_root_present(self):
+        script = "if " + ' || '.join('[ -e '+ROOT_STATE+'/'+name+' ] || [ -L '+ROOT_STATE+'/'+name+' ]'
+            for name in ('home-backend.json','c1-gate','runtime/c1-home-gate','runtime/c1_gate.py'))
+        return self.remote.run(script+'; then printf CYTV_C1_GATE; fi').strip() == 'CYTV_C1_GATE'
+
+    def root_action(self, action, bundle=None, migrate=False, experimental=False):
         driver = (bundle or ROOT_STATE) + '/deploy.py'
         args = [self._python(ROOT_STATE), driver, action]
         if bundle:
             args += ['--bundle', bundle]
         if migrate:
             args.append('--migrate-packaged-home')
+        if experimental:
+            if action != 'install': raise ValueError('Experimental admission applies only to a fresh install')
+            args.append('--experimental-c1-gate')
         attempt = uuid.uuid4().hex if action == 'install' else None
         command = self._python_command(args)
         if attempt: command = 'env CYTV_ROOT_INSTALL_ATTEMPT='+attempt+' '+command
         try:
-            raw = self.remote.run(command, timeout=1080 if action == 'uninstall' else 720 if action == 'restore' else 180)
+            raw = self.remote.run(command, timeout=1080 if action == 'uninstall' else 720 if action == 'restore' or experimental else 180)
         except TVCommandError as error:
             error.root_action = action
             error.root_boundary = 'driver'
@@ -401,7 +409,18 @@ with os.fdopen(f,'rb') as stream:
             if home_interfaces:
                 from .root_capabilities import verify, CALLS
                 if all(checks[name]=='pass' for name in checks if name not in python_names):
-                    verify(self.remote, self.checks, self.tv_info)
+                    if not install and self.native_root_present():
+                        device = self.root_action('status').get('result', {})
+                        if device.get('backend') != 'c1-native-gate' or not (self.root_active(device) or self.root_setup_inactive(device)):
+                            raise UserError('Root operation was not confirmed. Run cytv status; retain recovery state.', reason_code='root-operation-unconfirmed')
+                        self.tv_info['home_backend'] = 'c1-native-gate'
+                        for name in CALLS:
+                            checks.pop(name, None)
+                            self.checks.update(name, 'unknown')
+                    elif 'c1-native-gate' in self.manifest.get('root_backends', {}):
+                        verify(self.remote, self.checks, self.tv_info, allow_c1=True)
+                    else:
+                        verify(self.remote, self.checks, self.tv_info)
                 else:
                     checks.update(dict.fromkeys(CALLS, 'unknown'))
             if (install and any(checks[name] != 'pass' for name in python_names)
@@ -458,7 +477,13 @@ with os.fdopen(f,'rb') as stream:
             self.checks.update('root-conflict', 'running')
             root_state = self.remote.run(
                 'if [ -e /var/webos-profile/override/clean-your-tv-root.json ] || '
-                '[ -L /var/webos-profile/override/clean-your-tv-root.json ]; then printf CYTV_ROOT_STATE; fi')
+                '[ -L /var/webos-profile/override/clean-your-tv-root.json ] || '
+                '[ -e /var/lib/clean-your-tv-root/home-backend.json ] || '
+                '[ -L /var/lib/clean-your-tv-root/home-backend.json ] || '
+                '[ -e /var/lib/clean-your-tv-root/c1-gate ] || '
+                '[ -L /var/lib/clean-your-tv-root/c1-gate ] || '
+                '[ -e /var/lib/clean-your-tv-root/runtime/c1-home-gate ] || '
+                '[ -L /var/lib/clean-your-tv-root/runtime/c1-home-gate ]; then printf CYTV_ROOT_STATE; fi')
             self.checks.update('root-conflict', 'fail' if root_state.strip() else 'pass',
                                'Root Home routing is present. Restore it with cytv --edition root restore first.' if root_state.strip() else '')
             if root_state.strip():
@@ -634,6 +659,9 @@ printf '%s' "$cytv_state"
         return {'installed': 'no-root', 'launch_requested': True, 'hardware_verified': False}
 
     def install_root(self, inventory, migrate, reinstall=None):
+        if self.tv_info.get('home_backend') == 'c1-native-gate':
+            from .root_gate import install
+            return install(self, inventory, migrate, reinstall)
         updater = self.payload / 'root-updater'
         try:
             updater_manifest = json.loads((updater / 'bundle.json').read_text())
@@ -714,23 +742,27 @@ print('CYTV_UPDATER_VERIFIED')
 
     @staticmethod
     def root_active(result):
+        if result.get('backend') == 'c1-native-gate':
+            effective = result.get('effective', {})
+            intent = result.get('intent') or {}
+            return (result.get('recovery', {}).get('integrity_verified') is True
+                    and intent.get('enabled') is True and intent.get('phase') == 'active'
+                    and effective.get('backend') == 'c1-native-gate' and effective.get('profiles') is None
+                    and effective.get('state') == 'armed' and effective.get('mounted') is True
+                    and effective.get('healthy') is True and effective.get('stock_verified') is False
+                    and effective.get('stopped') is False
+                    and isinstance(effective.get('token'), str) and effective['token'] == intent.get('token')
+                    and re.fullmatch('[a-f0-9]{32}', effective['token']) is not None
+                    and type(effective.get('guardian_pid')) is int and effective['guardian_pid'] > 1)
         return (result.get('recovery', {}).get('integrity_verified') is True
                 and (result.get('intent') or {}).get('enabled') is True
                 and (result.get('intent') or {}).get('phase') == 'active'
                 and result.get('guardian_active') is True
                 and result.get('effective', {}).get('sam_home') == package.ROOT_APP
-                and result.get('effective', {}).get('profiles', {}).get('idleApp', {}).get('appId') == package.ROOT_APP
-                and result.get('effective', {}).get('profiles', {}).get('defaultApps', {}).get('categories', {}).get('home') == package.ROOT_APP)
+                and (result.get('effective', {}).get('profiles') or {}).get('idleApp', {}).get('appId') == package.ROOT_APP
+                and (result.get('effective', {}).get('profiles') or {}).get('defaultApps', {}).get('categories', {}).get('home') == package.ROOT_APP)
 
-    def activate_root(self):
-        pending=self.store.pending(self.profile) or {}
-        if pending.get('product_operation'):
-            current=self.product_action('status',pending['product_operation'],verify_current=True)
-            if current.get('current') is not True:
-                raise UserError('Root setup could not be verified for continuation. Recovery data was kept.')
-        self.progress('Checking Root recovery…')
-        if self.root_action('status').get('result', {}).get('recovery', {}).get('integrity_verified') is not True:
-            raise UserError('Root is installed, but recovery could not be verified. Run cytv status; activation has not started.')
+    def stop_root_helper_for_activation(self):
         self.progress('Stopping the old Home Helper…')
         while True:
             try:
@@ -742,6 +774,20 @@ print('CYTV_UPDATER_VERIFIED')
             except RuntimeError:
                 if not self.helper_retry():
                     raise UserError('Root is installed, but Home Helper has not stopped. Press Home three times within two seconds (older Helper: hold Home for two seconds), release all buttons, then use Home settings > Turn on Home control. Run cytv status or cytv restore before reinstalling.') from None
+
+    def activate_root(self):
+        pending=self.store.pending(self.profile) or {}
+        if pending.get('home_backend') == 'c1-native-gate':
+            from .root_activation import activate
+            return activate(self)
+        if pending.get('product_operation'):
+            current=self.product_action('status',pending['product_operation'],verify_current=True)
+            if current.get('current') is not True:
+                raise UserError('Root setup could not be verified for continuation. Recovery data was kept.')
+        self.progress('Checking Root recovery…')
+        if self.root_action('status').get('result', {}).get('recovery', {}).get('integrity_verified') is not True:
+            raise UserError('Root is installed, but recovery could not be verified. Run cytv status; activation has not started.')
+        self.stop_root_helper_for_activation()
         self.store.checkpoint(self.profile, stage='enable')
         self.progress('Turning on Root Home control…')
         try:
@@ -798,10 +844,15 @@ print('CYTV_UPDATER_VERIFIED')
         self.tv_info['components'] = diagnostics.context.status_summary({'device': {'apps': observed}}).get('components', {})
         apps = {app['id']: app for app in observed}
         if self.profile['edition'] == 'root':
-            root = json.loads((self.payload / 'root/release.json').read_text())['version']
-            files = package.data_files((self.payload / 'root-updater/root-updater.ipk').read_bytes())
-            updater = json.loads(files['usr/palm/applications/' + UPDATER_APP + '/appinfo.json'])['version']
-            targets = [(package.ROOT_APP, 'Root', root), (UPDATER_APP, 'Root Updater', updater)]
+            if self.tv_info.get('home_backend') == 'c1-native-gate':
+                variant = self.manifest['root_backends']['c1-native-gate']['graphics'][self.tv_info['graphics_resolution']]
+                root = json.loads((self.payload / package.safe_name(variant) / 'release.json').read_text())['version']
+                targets = [(package.ROOT_APP, 'Root (C1 Beta)', root)]
+            else:
+                root = json.loads((self.payload / 'root/release.json').read_text())['version']
+                files = package.data_files((self.payload / 'root-updater/root-updater.ipk').read_bytes())
+                updater = json.loads(files['usr/palm/applications/' + UPDATER_APP + '/appinfo.json'])['version']
+                targets = [(package.ROOT_APP, 'Root', root), (UPDATER_APP, 'Root Updater', updater)]
         else:
             targets = [(HOME, 'Home', self.manifest['home_version']),
                        (HELPER, 'Home Helper', self.manifest['helper_version'])]
@@ -817,7 +868,7 @@ print('CYTV_UPDATER_VERIFIED')
                   and re.fullmatch(r'\d+\.\d+\.\d+', target)):
                 action = 'Update' if tuple(map(int, current.split('.'))) < tuple(map(int, target.split('.'))) else 'Downgrade'
             current = current or i18n.translate('Unknown version' if app in apps else 'Not installed')
-            rows.append(f'{name}: {current} → {target} ({i18n.translate(action)})')
+            rows.append(f'{i18n.translate(name)}: {current} → {target} ({i18n.translate(action)})')
         return rows
 
     def verify_installed(self):
@@ -842,7 +893,7 @@ print('CYTV_UPDATER_VERIFIED')
                        stage='blocked',code='operation_requires_recovery',can_resume=False,
                        resume_reason='recovery_evidence_required',passive=passive)
             return dict(device={'product':event},pending=pending,reconciled=None,can_resume_root_setup=False)
-        if not pending and self.profile['edition']=='root':
+        if not pending and self.profile['edition']=='root' and not self.native_root_present():
             try:
                 inspected=self.product_action('inspect')
                 active=inspected.get('active_operation')
@@ -892,7 +943,10 @@ print('CYTV_UPDATER_VERIFIED')
             if stage == 'installed-recovery-only':
                 result = self.root_action('status')
                 if (pending and pending['action'] == 'activate-root'
-                        and self.root_active(result.get('result', {}))):
+                        and self.root_active(result.get('result', {}))
+                        and (pending.get('home_backend') != 'c1-native-gate' or
+                             result.get('result', {}).get('backend') == 'c1-native-gate'
+                             and result.get('result', {}).get('effective', {}).get('token') == pending.get('home_token'))):
                     self.store.finish(self.profile)
                     reconciled = ('root-activation-verified' if pending.get('launch_requested') is True
                                   else 'root-activation-verified; screen launch unconfirmed, press Home to open it')
@@ -901,6 +955,7 @@ print('CYTV_UPDATER_VERIFIED')
                     pending = None
                     reconciled = 'updater-not-started; recovery verified; reinstallation available'
                 if (pending and pending['action'] == 'install' and not pending.get('requires_updater')
+                        and pending.get('home_backend') != 'c1-native-gate'
                         and result.get('result', {}).get('recovery', {}).get('integrity_verified') is True
                         and self.root_files_match(pending)):
                     self.store.finish(self.profile)
@@ -910,7 +965,8 @@ print('CYTV_UPDATER_VERIFIED')
                 if pending and pending['action'] == 'uninstall' and not pending.get('full_project'):
                     self.store.finish(self.profile)
                     reconciled = 'root-removal-verified; TV evidence retained'
-            elif stage == 'absent' and pending and pending['action'] == 'install':
+            elif (stage == 'absent' and pending and pending['action'] == 'install'
+                  and (pending.get('home_backend') != 'c1-native-gate' or pending.get('stage') == 'upload')):
                 self.verify_absent(package.ROOT_APP)
                 self.store.finish(self.profile)
                 reconciled = 'no-root-installation-submitted'
@@ -928,6 +984,12 @@ print('CYTV_UPDATER_VERIFIED')
     def root_setup_inactive(device):
         try:
             effective = device.get('effective', {})
+            if device.get('backend') == 'c1-native-gate':
+                return (device.get('recovery', {}).get('integrity_verified') is True
+                        and effective.get('backend') == 'c1-native-gate' and effective.get('profiles') is None
+                        and effective.get('stock_verified') is True and effective.get('mounted') is False
+                        and effective.get('healthy') is False and effective.get('guardian_pid') == 0
+                        and (device.get('intent') or {}).get('enabled') is False)
             profiles = effective.get('profiles', {})
             never_activated = (device.get('journal_exists') is False
                                and 'guardian_active' not in device
@@ -946,6 +1008,11 @@ print('CYTV_UPDATER_VERIFIED')
             return False
 
     def can_resume_root_setup(self, pending, device):
+        if (self.profile['edition'] == 'root' and pending
+                and pending.get('home_backend') == 'c1-native-gate'):
+            return (pending.get('action') == 'install' and pending.get('stage') in ('setup', 'verify')
+                    and device.get('backend') == 'c1-native-gate'
+                    and self.root_setup_inactive(device) and self.root_files_match(pending))
         if (self.profile['edition'] != 'root' or not pending
                 or pending.get('action') != 'setup-root-updater'
                 or pending.get('stage') != 'verify' or pending.get('requires_updater') is not True
@@ -968,6 +1035,11 @@ print('CYTV_UPDATER_VERIFIED')
         if self.status().get('can_resume_root_setup') is not True:
             raise UserError('Root setup could not be verified for continuation. Recovery data was kept.')
         self.outcome.packages_verified()
+        if (self.store.pending(self.profile) or {}).get('home_backend') == 'c1-native-gate':
+            self.store.checkpoint(self.profile, action='activate-root', stage='stop-helper', updates_ready=False)
+            launched = self.activate_root()
+            return {'installed':package.ROOT_APP,'home_changed':True,'launch_requested':launched,
+                    'updates_ready':False,'backend':'c1-native-gate','beta':True}
         self.store.checkpoint(self.profile, action='activate-root', stage='stop-helper', updates_ready=True)
         self.activate_root()
         return {'installed': package.ROOT_APP, 'home_changed': True, 'launch_requested': True, 'updates_ready': True}
@@ -1151,7 +1223,7 @@ print('CYTV_ROOT_FILES_OK')
         if self.remote.run(self._python_command([self._python(), '-c', SCRIPT]), timeout=30).strip() != 'CYTV_APP_PERMISSIONS_REMOVED':
             raise UserError('Root Updater app permissions removal could not be verified. Recovery data was kept.')
 
-    def verify_project_removed(self):
+    def verify_project_startup_removed(self):
         script = """import os
 from pathlib import Path
 apps=('com.cleanyourtv.root.preview','com.cleanyourtv.root.updater','com.cleanyourtv.updater','com.gathin.tvhome','com.local.nativehome','com.cleanyourtv.system.updater')
@@ -1167,6 +1239,9 @@ print('CYTV_PROJECT_REMOVED')
 """
         if self.remote.run(self._python_command([self._python(), '-c', script])).strip() != 'CYTV_PROJECT_REMOVED':
             raise UserError('Project startup or service registrations remain. Removal is not complete.')
+
+    def verify_project_removed(self):
+        self.verify_project_startup_removed()
         settings = self.remote.luna('com.webos.settingsservice/getSystemSettings', {'category': 'general', 'keys': ['defaultApps']})
         reply = self.remote.luna('com.webos.service.systemprofile/getProfiles', {'names': ['defaultApps', 'idleApp'], 'subscribe': False})
         try:
@@ -1187,6 +1262,12 @@ print('CYTV_PROJECT_REMOVED')
         return reply
 
     def uninstall_project(self):
+        # Experimental Root has no updater/coordinator installation. Retained
+        # native evidence selects its restricted restore-before-remove driver,
+        # including when a damaged descriptor prevents a normal status reply.
+        if self.native_root_present():
+            from .root_gate import remove_project
+            return remove_project(self)
         pending=self.store.pending(self.profile)
         if pending:
             if pending.get('action')!='uninstall' or pending.get('full_project') is not True or not pending.get('product_operation'):

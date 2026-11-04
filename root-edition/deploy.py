@@ -55,21 +55,30 @@ def checked_file(root, name):
     return target.read_bytes()
 
 
-def verify_bundle(bundle):
+def verify_bundle(bundle, allow_experimental=False):
     bundle = Path(bundle).resolve()
     manifest = json.loads(checked_file(bundle, 'bundle.json'))
     release = json.loads(checked_file(bundle, 'release.json'))
+    experimental = release.get('home_backend') == 'c1-native-gate'
+    if 'home_backend' in release or 'experimental' in release or 'native_sha256' in release:
+        if (not experimental or release.get('experimental') is not True
+                or not allow_experimental):
+            raise ValueError('Experimental Home bundle requires the explicit C1 developer entry point')
     import re
     version = release.get('version')
     if not isinstance(version,str) or not re.fullmatch(r'\d{1,4}\.\d{1,4}\.\d{1,4}',version):
         raise ValueError('Invalid Root release version')
     package = APP + '_' + version + '_all.ipk'
     expected = set(SUPPORT_FILES) | {'runtime/' + n for n in RUNTIME_FILES} | {package, 'release.json', 'SHA256SUMS'}
+    if experimental:
+        expected.update(('runtime/c1-home-gate', 'runtime/c1_gate.py'))
     if manifest.get('package') != package or set(manifest.get('files', {})) != expected:
         raise ValueError('Unexpected bundle inventory')
     for name, digest in manifest['files'].items():
         if hashlib.sha256(checked_file(bundle, name)).hexdigest() != digest:
             raise ValueError('Bundle integrity mismatch: ' + name)
+    if experimental and release.get('native_sha256') != manifest['files']['runtime/c1-home-gate']:
+        raise ValueError('Experimental native recovery identity mismatch')
     if release.get('application_id') != APP:
         raise ValueError('Wrong candidate release')
     return manifest
@@ -183,14 +192,23 @@ def write_binding(path, data, mode=0o600):
         if os.path.lexists(temporary): temporary.unlink()
 
 
-def install(bundle, run=command, observe=observed_install, migrate=False):
+def install(bundle, run=command, observe=observed_install, migrate=False, experimental_c1_gate=False, _experimental_admission=None):
     if sys.version_info < (3, 9):
         raise RuntimeError('Root requires TV Python 3.9+')
     if STATE.exists() or STATE.is_symlink() or any(p.exists() or p.is_symlink() for p in installed_paths()):
         raise FileExistsError('Candidate or state already exists; inspect and recover, never retry blindly')
-    from provision import require_home_interfaces
-    require_home_interfaces()
-    manifest = verify_bundle(bundle)
+    admission = None
+    if experimental_c1_gate:
+        manifest = verify_bundle(bundle, allow_experimental=True)
+        release = json.loads(checked_file(Path(bundle).resolve(), 'release.json'))
+        if release.get('home_backend') != 'c1-native-gate' or migrate:
+            raise ValueError('Explicit C1 setup requires its experimental bundle and a fresh installation')
+        from runtime import c1_gate
+        admission = (_experimental_admission if _experimental_admission is not None else experimental_admission())
+    else:
+        from provision import require_home_interfaces
+        require_home_interfaces()
+        manifest = verify_bundle(bundle)
     # Validate and retain the exact migration bytes before any install mutation.
     prepared = migration_source() if migrate else None
     STATE.mkdir(mode=0o700, parents=False)
@@ -203,6 +221,15 @@ def install(bundle, run=command, observe=observed_install, migrate=False):
     for name in RUNTIME_FILES:
         target = STATE / 'runtime' / name
         target.write_bytes(checked_file(Path(bundle).resolve(), 'runtime/' + name)); target.chmod(0o600)
+    if experimental_c1_gate:
+        target = STATE / 'runtime/c1_gate.py'
+        target.write_bytes(checked_file(Path(bundle).resolve(), 'runtime/c1_gate.py')); target.chmod(0o600)
+        target = STATE / 'runtime/c1-home-gate'
+        target.write_bytes(checked_file(Path(bundle).resolve(), 'runtime/c1-home-gate')); target.chmod(0o700)
+        c1_gate.prepare(STATE, release['native_sha256'], admission)
+        check = c1_gate.native(['--selfcheck'], STATE)
+        if check.get('backend') != 'c1-native-gate' or check.get('selfcheck') is not True:
+            raise ValueError('Native C1 executable selfcheck failed before package submission')
     install_launcher(STATE, write_binding)
     package = str(Path(bundle).resolve() / manifest['package'])
     terminal = observe(APP, package, timeout=120,
@@ -298,16 +325,31 @@ def _remove_root(run, proof):
     return {'returnValue': True, 'removed': APP, 'state_retained': str(STATE)}
 
 
+def experimental_admission():
+    # Runs under the installation mutex, before its durable reservation.
+    from installation import classify, device_snapshot
+    if classify(device_snapshot())['state'] != 'fresh':
+        raise ValueError('Experimental C1 setup requires a completely fresh product installation')
+    from runtime import c1_gate
+    return c1_gate.probe()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('command', choices=('install', 'inspect', 'status', 'trial', 'emergency-trial', 'intent-trial', 'enable', 'confirm', 'restore', 'uninstall'))
     parser.add_argument('--transaction')
     parser.add_argument('--bundle', type=Path)
     parser.add_argument('--migrate-packaged-home', action='store_true', help='Copy fixed installed Home packaged preferences; excludes browser storage')
+    parser.add_argument('--experimental-c1-gate', action='store_true',
+                        help='Explicit developer-only C1 native gate setup/control')
     args = parser.parse_args()
     if args.migrate_packaged_home and args.command != 'install':
         parser.error('migration is only available with install')
     require_device()
+    if args.command != 'install' and args.experimental_c1_gate:
+        from runtime import c1_gate
+        if c1_gate.selection(STATE) is None:
+            raise ValueError('This device has no explicitly selected C1 experiment')
     from installation import classify, device_snapshot, device_operation
     from contextlib import nullcontext
     if args.command == 'inspect':
@@ -318,12 +360,22 @@ def main():
     if args.command == 'install':
         require_node()
         if args.bundle is None: parser.error('install requires --bundle')
-        verify_bundle(args.bundle)
-    guard = (device_operation('deploy', recovery=args.command == 'uninstall')
+        verify_bundle(args.bundle, allow_experimental=args.experimental_c1_gate)
+        if args.experimental_c1_gate:
+            release = json.loads(checked_file(Path(args.bundle).resolve(), 'release.json'))
+            if release.get('home_backend') != 'c1-native-gate' or args.migrate_packaged_home:
+                raise ValueError('Explicit C1 setup requires its experimental bundle and a fresh installation')
+    admission = []
+    def eligible():
+        if args.command == 'install' and args.experimental_c1_gate:
+            admission.append(experimental_admission())
+    guard = (device_operation('deploy', recovery=args.command == 'uninstall', check=eligible)
              if args.command in ('install','uninstall') else nullcontext())
     with guard:
         if args.command == 'install':
-            result = install(args.bundle, migrate=args.migrate_packaged_home)
+            result = install(args.bundle, migrate=args.migrate_packaged_home,
+                             experimental_c1_gate=args.experimental_c1_gate,
+                             _experimental_admission=admission[0] if admission else None)
         elif args.command == 'uninstall': result = uninstall()
         elif args.command == 'restore': result = restore()
         elif args.command == 'confirm':

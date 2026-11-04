@@ -53,6 +53,11 @@ class TVRejected(UserError):
     def __init__(self, message, reply=None, uri=None):
         super().__init__(message)
         reply = reply if isinstance(reply, dict) else {}
+        self.systemprofile_missing = (
+            uri == 'com.webos.service.systemprofile/getProfiles'
+            and reply.get('returnValue') is False
+            and type(reply.get('errorCode')) is int and reply['errorCode'] == -1
+            and reply.get('errorText') == 'Service does not exist: com.webos.service.systemprofile.')
         details = reply.get('details')
         details = details if isinstance(details, dict) else {}
         def number(value):

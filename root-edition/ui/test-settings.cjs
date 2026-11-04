@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict'),vm=require('vm'),fs=require('fs');
-const buttons=[],listeners={},calls=[];let retry;let selected,phase='active',restores=0,failLaunch=false,delayStatus=false,delayLaunch=false;const pending=[],launches=[];
+const buttons=[],listeners={},calls=[];let retry;let selected,phase='active',restores=0,failLaunch=false,delayStatus=false,delayLaunch=false,gateBackend=false;const pending=[],launches=[];
 class Element {
  constructor(tag){this.tag=tag;this.hidden=false;this.disabled=false;this.attrs={};if(tag==='button')buttons.push(this);}
  appendChild(){} setAttribute(k,v){this.attrs[k]=v;} focus(){selected=this;if(this.onfocus)this.onfocus();}
@@ -9,7 +9,7 @@ const context={window:{RootUpdates:{open(){}}},document,Promise,setTimeout,clear
  createRootExit:(call,launch)=>async()=>{restores++;phase='disabled';await launch();},
  PalmServiceBridge:class{cancel(){}call(uri,raw){calls.push({uri,payload:JSON.parse(raw)});let r={returnValue:true};
  if(JSON.parse(raw).startup){r.result={returnValue:true,result:{sources:{tv:true,youtube:false},active:phase==='active'}};this.onservicecallback(JSON.stringify(r));return;}
- if(uri.endsWith('/status')){if(delayStatus){pending.push(this);return;}r.result={returnValue:true,result:{intent:{phase}}};}
+ if(uri.endsWith('/status')){if(delayStatus){pending.push(this);return;}r.result={returnValue:true,result:{intent:{phase},effective:gateBackend?{backend:'c1-native-gate'}:{}}};}
  if(uri.endsWith('/enable')){phase='active';r.result={returnValue:true,result:{}};}
  if(uri.endsWith('/launch')&&delayLaunch){launches.push(this);return;}
  if(uri.endsWith('/launch')&&failLaunch)r.returnValue=false;
@@ -81,5 +81,9 @@ function key(keyCode){listeners.keydown({keyCode,preventDefault(){},stopImmediat
  assert(buttons[0].disabled,'failed visit after resume must refresh before re-enabling');
  assert.equal(pending.length,1);reply((await nextStatus()),status('disabled'));await tick();
  assert(!buttons[0].disabled);delayStatus=false;delayLaunch=false;
+ gateBackend=true;phase='active';listeners.webOSRelaunch();await tick();
+ const gateRestores=restores;buttons[1].onclick();await tick();
+ assert.equal(restores,gateRestores+1,'experimental LG Home releases routing before launch');
+ assert.equal(phase,'disabled','experimental visit does not silently rearm');
  console.log('PASS Root switch, one-time visit, failure recovery, duplicate suppression and remote focus');
 })().catch(e=>{console.error(e);process.exit(1);});
