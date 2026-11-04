@@ -46,14 +46,16 @@ def read_ar(data):
     return result
 
 
-def tgz(files, executable=(), helper_state=False, directories=True):
+def tgz(files, executable=(), helper_state=False, directories=True, shared_directories=False):
     raw = io.BytesIO()
     dirs = set()
     for name in files:
         safe_name(name)
-        dirs.update(str(p) for p in PurePosixPath(name).parents if str(p) != '.' and (p.parts[:2] != ('usr','palm') or len(p.parts) >= 4))
-    # Shared SDK ancestors are platform-owned; package archives only set own leaves.
-    dirs.difference_update(('usr',))
+        dirs.update(str(p) for p in PurePosixPath(name).parents if str(p) != '.' and
+                    (shared_directories or p.parts[:2] != ('usr','palm') or len(p.parts) >= 4))
+    # Root archives retain owned leaves only; No-root opts into SDK parents for opkg.
+    if not shared_directories:
+        dirs.discard('usr')
     with tarfile.open(fileobj=raw, mode='w', format=tarfile.USTAR_FORMAT) as archive:
         for name in sorted(dirs) if directories else ():
             entry = tarfile.TarInfo(name)
@@ -81,10 +83,10 @@ def tgz(files, executable=(), helper_state=False, directories=True):
     return compressed.getvalue()
 
 
-def ipk(app, version, files, executable=(), helper_state=False, architecture='all'):
+def ipk(app, version, files, executable=(), helper_state=False, architecture='all', shared_directories=False):
     control = f'Package: {app}\nVersion: {version}\nArchitecture: {architecture}\nMaintainer: Clean Your TV\nDescription: Clean Your TV\n'
     return ar({'debian-binary': b'2.0\n', 'control.tar.gz': tgz({'control': control.encode()}),
-               'data.tar.gz': tgz(files, executable, helper_state)})
+               'data.tar.gz': tgz(files, executable, helper_state, shared_directories=shared_directories)})
 
 
 def data_files(data):
@@ -140,7 +142,8 @@ def personalize(data, app, inventory):
     with tarfile.open(fileobj=io.BytesIO(parts['data.tar.gz']), mode='r:gz') as archive:
         executable = {member.name for member in archive if member.isfile() and member.mode & 0o111}
     files['usr/palm/applications/' + app + '/apps.js'] = inventory_script(inventory)
-    parts['data.tar.gz'] = tgz(files, executable=executable, directories=True)
+    parts['data.tar.gz'] = tgz(files, executable=executable, directories=True,
+                             shared_directories=app == 'com.gathin.tvhome')
     return ar(parts), files
 
 

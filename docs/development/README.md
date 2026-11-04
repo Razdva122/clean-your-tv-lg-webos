@@ -41,6 +41,7 @@ before using a low-level recovery or installation procedure.
 - [Read-only Root admission](ROOT-READONLY-ADMISSION.md): private owner handoff, isolated inspection and unsupported firmware boundaries.
 - [Passive Root worker diagnostics](ROOT-PASSIVE-DIAGNOSTICS.md): bounded saved-error categories without code staging, routing calls or cancellation admission.
 - [No-root package authority](NO-ROOT-PACKAGE-AUTHORITY.md): #201 endpoint distinctions, preserved pending receipts and unsupported reconciliation.
+- [No-root parent-directory packaging and real opkg lab](../history/2026-11-04-opkg-parent-reproduction.md): next-cycle extraction fix, isolated reproduction and retail acceptance limits.
 - [Interrupted Root installation](../ROOT-INSTALL-CANCELLATION.md), [private Python](../OPTIONAL-PYTHON.md), [native cache cleanup](../WAM-CLEANUP.md).
 - [Firmware update control](../LG-FIRMWARE-UPDATES.md), [experimental HDMI sound recovery](ROOT-AUDIO-RECOVERY.md), [Developer Mode renewal Beta](../DEVELOPER-MODE-BETA.md).
 - [TLS trust](../TLS-TRUST.md), [icons](../../assets/icons/README.md), [brand assets](../../assets/brand/README.md), [published Helper baseline](../../native/published/README.md).

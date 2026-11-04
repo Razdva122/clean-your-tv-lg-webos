@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [2026-11-04 — Real opkg parent-directory reproduction](2026-11-04-opkg-parent-reproduction.md): original Helper data loses the service subtree in real opkg; No-root archive correction, Root isolation and pending retail/recovery acceptance.
+
 - [1.8.0 candidate preparation, exact build and remaining gates](2026-11-04-release-1.8.0-candidate.md).
 
 - [2026-11-04 — Automatic C1 native Beta](2026-11-04-c1-native-gate.md): common installer selection, independent native recovery, host checks and pending physical acceptance.

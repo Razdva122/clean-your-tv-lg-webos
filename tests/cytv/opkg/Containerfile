@@ -1,0 +1,11 @@
+FROM docker.io/library/python@sha256:57d96f71de145a98e7ceca18ee4ade77bba4103a33a72dfaea026b23625c6bf0
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential pkg-config && rm -rf /var/lib/apt/lists/*
+COPY opkg-0.1.8.tar.gz /build/
+RUN echo 'ff94bf30bd662d49c4b5057e3a0818d062731adaa555d59abd677ec32a3c1c60  /build/opkg-0.1.8.tar.gz' | sha256sum -c - && tar -xzf /build/opkg-0.1.8.tar.gz -C /build
+RUN cd /build/opkg-0.1.8 && ./configure --prefix=/opt/opkg018 --disable-curl --disable-gpg --disable-openssl --disable-ssl-curl CFLAGS='-O2 -fcommon' && make -j2 && make install
+COPY extract.c /build/
+RUN cc -I/build/opkg-0.1.8 /build/extract.c -L/opt/opkg018/lib -Wl,-rpath,/opt/opkg018/lib -lopkg -o /usr/local/bin/opkg018-extract
+COPY package.py verify.py original.ipk /lab/
+WORKDIR /lab
+ENV PYTHONDONTWRITEBYTECODE=1
+CMD ["python", "verify.py"]
