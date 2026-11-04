@@ -67,7 +67,7 @@
       } else if ((key === 'shortcuts' ? ['header', 'bottom-left'] : key === 'edgeNavigation' ? ['wrap', 'shortcuts'] : ['below', 'focused-above']).indexOf(value) < 0) fail('layout-invalid', 'ribbon');
       defaults[key] = value;
     });
-    if (defaults.shortcuts === 'bottom-left' && defaults.left < 340) fail('layout-invalid', 'ribbon');
+    if (defaults.shortcuts === 'bottom-left' && defaults.left < 280) fail('layout-invalid', 'ribbon');
     if (defaults.labels === 'below' && defaults.bottom < 64) fail('layout-invalid', 'ribbon');
     return defaults;
   }
