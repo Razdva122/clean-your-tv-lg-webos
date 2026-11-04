@@ -33,6 +33,25 @@ Computer/phone requirements: [desktop](DESKTOP_INSTALL.md), [Android](../android
 or [source/manual tools](MANUAL_INSTALL.md). Desktop packages and Android have
 separate OS/device acceptance; a successful computer build is not a TV test.
 
+## webOS 1.x runtime floor (unreleased)
+
+LG documents [Node.js 0.10.15 for webOS TV 1.x](https://webostv.developer.lge.com/develop/guides/js-service-basics#supported-nodejs-version).
+The next candidate admits No-root Helper on 0.10.15+; published v1.7.1 installers
+still require 0.10.25+. Exact 0.10.15 host tests pass with compiled Helper and
+unchanged published Helper 0.6.22 JavaScript. Older/unknown runtimes still stop
+before installation. Root continues to require Node.js 8+.
+
+This does not establish compatibility on the reported 32LB650V-ZN or 49UB8500-UA.
+Their actual Node versions have not yet been measured in the reports. LG lists
+[WebKit 537.41 for packaged apps on webOS 1.x](https://webostv.developer.lge.com/develop/specifications/web-api-and-web-engine#web-engine),
+so UI/native-input/remote acceptance is separate from Node compatibility.
+Do not install a replacement system Node or bypass the existing runtime/input
+checks. A standalone Home IPK or historical Home-only update cannot provide
+Helper's Home-button interception; the current complete installer has no
+Helper-free first-install mode promising that behavior.
+
+[Exact hashes, runtime cases, packaging and limits](history/2026-11-04-webos1-node-floor.md).
+
 ## What has been tested
 
 | Configuration | Evidence and limits |

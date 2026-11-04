@@ -31,6 +31,8 @@ Włącz telewizor i połącz go z tą samą zaufaną siecią lokalną co kompute
 
 1.5.4 zawiera Home Helper **0.6.21** dla TV Node.js **0.10.25+**; Root nadal wymaga Node.js **8+**. [Compatibility](../COMPATIBILITY.md).
 
+**Nieopublikowana zmiana dla webOS 1.x:** następny instalator No-root akceptuje TV Node.js **0.10.15+** po testach Helpera na dokładnie tej wersji; opublikowany instalator 1.7.1 nadal wymaga **0.10.25+**. Nie potwierdza to zgodności starego WebKit, wejścia natywnego ani Home. Nie zastępuj środowiska TV i nie omijaj kontroli. Root nadal wymaga Node.js 8+. [Testy i ograniczenia](../COMPATIBILITY.md#webos-1x-runtime-floor-unreleased).
+
 No-root Helper wymaga Node.js **0.10.25+** na TV. Root wymaga Node.js **8+** i działającego Pythona **3.9+**. W razie potrzeby instalator pobierze zweryfikowanego prywatnego Pythona; początkowe przygotowanie wymaga **320 MiB** wolnego miejsca. Nie zastępuje Pythona systemowego. Zachowaj środowiska potrzebne do odzyskiwania. [Python (angielski)](../OPTIONAL-PYTHON.md). Odnawianie Developer Mode to **Beta, domyślnie wyłączona**; rzeczywiste odnawianie bez roota nie zostało potwierdzone. Nadal sprawdzaj oficjalny licznik.
 
 ### Konfiguracja Developer Mode (No-root)

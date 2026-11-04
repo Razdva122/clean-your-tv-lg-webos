@@ -31,6 +31,8 @@ Keep the TV on and the computer on the same trusted local network. No always-on 
 
 1.5.4 includes Home Helper **0.6.21** with TV Node.js **0.10.25+** support; Root still requires Node.js **8+**. [Compatibility](../COMPATIBILITY.md).
 
+**Unreleased webOS 1.x follow-up:** the next No-root installer accepts TV Node.js **0.10.15+** after exact-runtime Helper checks; published 1.7.1 installers still require **0.10.25+**. This does not establish old WebKit/native-input/Home compatibility. Do not replace the TV runtime or bypass its checks. Root still needs Node.js 8+. [Evidence and limits](../COMPATIBILITY.md#webos-1x-runtime-floor-unreleased).
+
 No-root Helper needs TV Node.js **0.10.25+**. Root needs Node.js **8+** and working Python **3.9+**. Setup can download a verified private Python if needed; initial staging needs **320 MiB** free. It does not replace system Python. Keep runtime slots used by recovery. [Optional Python (English)](../OPTIONAL-PYTHON.md). Developer Mode auto-renewal is **Beta, off by default**, and real renewal on unrooted TVs is not confirmed; keep checking the official timer.
 
 ### Developer Mode setup (No-root)

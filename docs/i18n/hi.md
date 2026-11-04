@@ -31,6 +31,8 @@ Root के लिए Settings Service और System Profile (`com.webos.service
 
 1.5.4 में TV Node.js **0.10.25+** समर्थित Home Helper **0.6.21** शामिल है; Root के लिए अभी भी Node.js **8+** चाहिए। [Compatibility](../COMPATIBILITY.md).
 
+**webOS 1.x के लिए अप्रकाशित बदलाव:** अगला No-root इंस्टॉलर सटीक संस्करण पर Helper जाँच के बाद TV Node.js **0.10.15+** स्वीकार करता है; प्रकाशित 1.7.1 इंस्टॉलर अभी **0.10.25+** मांगता है। इससे पुराने WebKit, मूल इनपुट या Home की संगतता सिद्ध नहीं होती। TV का runtime न बदलें और जाँच न छोड़ें। Root को अभी भी Node.js 8+ चाहिए। [जाँच और सीमाएँ](../COMPATIBILITY.md#webos-1x-runtime-floor-unreleased).
+
 No-root Helper को टीवी पर Node.js **0.10.25+** चाहिए। Root को Node.js **8+** और काम करता Python **3.9+** चाहिए। आवश्यकता होने पर इंस्टॉलर सत्यापित निजी Python डाउनलोड करता है; शुरुआती तैयारी के लिए **320 MiB** खाली जगह चाहिए। यह सिस्टम Python नहीं बदलता। पुनर्प्राप्ति के काम आने वाले रनटाइम सुरक्षित रखें। [Python (अंग्रेज़ी)](../OPTIONAL-PYTHON.md)। Developer Mode स्वतः नवीनीकरण **Beta है और डिफ़ॉल्ट रूप से बंद है**। बिना root टीवी पर वास्तविक नवीनीकरण की पुष्टि नहीं हुई है; आधिकारिक टाइमर देखते रहें।
 
 ### Developer Mode सेटअप (No-root)

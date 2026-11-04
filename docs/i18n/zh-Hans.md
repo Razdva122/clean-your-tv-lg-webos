@@ -31,6 +31,8 @@ Root 需要可用的 Settings Service 和 System Profile Home 接口（`com.webo
 
 1.5.4 包含支持电视 Node.js **0.10.25+** 的 Home Helper **0.6.21**；Root 仍要求 Node.js **8+**。 [Compatibility](../COMPATIBILITY.md).
 
+**未发布的 webOS 1.x 变更：**下个 No-root 安装程序在精确版本 Helper 测试后接受电视 Node.js **0.10.15+**；已发布的 1.7.1 安装程序仍要求 **0.10.25+**。这不代表旧版 WebKit、原生输入或 Home 兼容性已得到验证。请勿替换电视 runtime 或绕过检查。Root 仍要求 Node.js 8+。[测试与限制](../COMPATIBILITY.md#webos-1x-runtime-floor-unreleased)。
+
 No-root Helper 需要电视 Node.js **0.10.25+**。Root 需要 Node.js **8+** 及可用的 Python **3.9+**。如有需要，安装程序会下载经验证的专用 Python；首次准备需要 **320 MiB** 可用空间。它不会替换系统 Python。请保留恢复功能引用的运行环境。[Python 说明（英文）](../OPTIONAL-PYTHON.md)。Developer Mode 自动续期为 **Beta，默认关闭**；无 root 电视上的实际续期尚未确认，请继续检查官方计时器。
 
 ### 设置 Developer Mode（No-root）

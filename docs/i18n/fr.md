@@ -31,6 +31,8 @@ Allumez le téléviseur et reliez-le au même réseau local de confiance que l�
 
 1.5.4 inclut Home Helper **0.6.21** pour Node.js **0.10.25+** sur le TV ; Root exige toujours Node.js **8+**. [Compatibility](../COMPATIBILITY.md).
 
+**Modification non publiée pour webOS 1.x :** le prochain installateur No-root accepte Node.js **0.10.15+** du téléviseur après des tests Helper avec cette version exacte ; l’installateur publié 1.7.1 exige encore **0.10.25+**. Cela ne confirme pas la compatibilité avec l’ancien WebKit, les entrées natives ou Home. Ne remplacez pas le runtime du téléviseur et ne contournez pas les vérifications. Root exige toujours Node.js 8+. [Tests et limites](../COMPATIBILITY.md#webos-1x-runtime-floor-unreleased).
+
 No-root Helper nécessite Node.js **0.10.25+** sur la TV. Root nécessite Node.js **8+** et Python **3.9+** fonctionnel. Au besoin, l’installateur télécharge un Python privé vérifié ; la préparation initiale demande **320 MiB** libres. Il ne remplace pas Python système. Conservez les environnements utilisés par la récupération. [Python (anglais)](../OPTIONAL-PYTHON.md). Le renouvellement Developer Mode est **Beta, désactivé par défaut** ; son fonctionnement réel sans root n’est pas confirmé. Surveillez toujours le compteur officiel.
 
 ### Configurer Developer Mode (No-root)

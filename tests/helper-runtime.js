@@ -1,4 +1,4 @@
-// ES5: executed unchanged by Node 0.10.25, 0.12.2 and current Node.
+// ES5: executed unchanged by Node 0.10.15, 0.10.25, 0.12.2 and current Node.
 'use strict';
 var assert=require('assert'),path=require('path'),root=process.argv[2];
 require(path.join(root,'state-permissions'));

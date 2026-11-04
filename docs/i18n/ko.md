@@ -31,6 +31,8 @@ TV를 켜고 컴퓨터와 같은 신뢰할 수 있는 로컬 네트워크에 연
 
 1.5.4에는 TV Node.js **0.10.25+**를 지원하는 Home Helper **0.6.21**이 포함됩니다. Root는 계속 Node.js **8+**가 필요합니다. [Compatibility](../COMPATIBILITY.md).
 
+**미공개 webOS 1.x 변경:** 다음 No-root 설치 프로그램은 정확한 버전으로 Helper를 검사한 뒤 TV Node.js **0.10.15+**를 허용합니다. 공개된 1.7.1 설치 프로그램은 여전히 **0.10.25+**가 필요합니다. 오래된 WebKit, 네이티브 입력 또는 Home 호환성을 확인한 것은 아닙니다. TV 런타임을 교체하거나 검사를 우회하지 마세요. Root는 여전히 Node.js 8+가 필요합니다. [검사와 제한](../COMPATIBILITY.md#webos-1x-runtime-floor-unreleased).
+
 No-root Helper에는 TV Node.js **0.10.25+**가 필요합니다. Root에는 Node.js **8+**와 정상 작동하는 Python **3.9+**가 필요합니다. 필요하면 설치 프로그램이 검증된 전용 Python을 다운로드하며, 초기 준비에는 **320 MiB** 여유 공간이 필요합니다. 시스템 Python을 교체하지 않습니다. 복구에 쓰이는 런타임은 보관하세요. [Python 안내(영어)](../OPTIONAL-PYTHON.md). Developer Mode 자동 갱신은 **Beta이며 기본적으로 꺼져 있습니다**. root 없는 TV의 실제 갱신은 확인되지 않았으므로 공식 타이머를 계속 확인하세요.
 
 ### Developer Mode 설정 (No-root)
