@@ -127,6 +127,13 @@ def manifest():
     verify_binding(STATE)
     binding = [STATE/name for name in ('python_binding.py','python_boot.js','package_data.py','package_identity.py','startup_guard.py','updater/store.py','updater/package.py','python-launcher','python-runtime.json') if os.path.lexists(STATE/name)]
     paths = binding + [RUNNER] + [PRIVATE_SERVICE/name for name in PRIVATE_FILES] + sorted(RUNTIME.glob('*.py'))
+    if any(os.path.lexists(STATE/name) for name in ('home-backend.json', 'c1-gate', 'runtime/c1_gate.py', 'runtime/c1-home-gate')):
+        from runtime import c1_gate
+        selected = c1_gate.selection(STATE)
+        native = RUNTIME/'c1-home-gate'
+        if sha(secure(native)) != selected['native_sha256']:
+            raise ValueError('Experimental native recovery identity changed')
+        paths += [STATE/'home-backend.json', native]
     if RUNTIME/'cli.py' not in paths: raise ValueError('Missing runtime')
     return {'version':1,'mode':'recovery-only','boot_callback':str(callback),
             'files':{str(path):sha(secure(path)) for path in paths}}
@@ -313,6 +320,15 @@ def prepare_stock_home():
     A submitted write is reconciled by observation, never repeated. The explicit
     stock override remains after removal; it selects the same original LG Home.
     """
+    if any(os.path.lexists(STATE/name) for name in ('home-backend.json', 'c1-gate', 'runtime/c1_gate.py', 'runtime/c1-home-gate')):
+        from runtime import c1_gate
+        selected = c1_gate.selection(STATE)
+        if c1_gate.probe() != selected['admission']:
+            raise ValueError('C1 admission changed during provisioning')
+        proof = c1_gate.validate_native(c1_gate.native(['--status'], STATE))
+        if not proof['stock_verified'] or proof['mounted']:
+            raise ValueError('Original C1 Home is not verified')
+        return
     stock = 'com.webos.app.home'
     receipt = STATE/'stock-home-initialization.json'
     def settings():

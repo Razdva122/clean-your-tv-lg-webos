@@ -26,6 +26,7 @@ before using a low-level recovery or installation procedure.
 - [Early Root admission and connection guidance](INSTALLER-PREFLIGHT-HELP.md): existing Home-interface contract before runtime preparation, typed localized advice and unchanged recovery/trust authority; unreleased.
 
 - [Root native startup input](ROOT-NATIVE-INPUT.md): unpublished owned EIM lifecycle and acceptance limits.
+- [Experimental C1 native gate](C1-NATIVE-GATE.md): separate backend, independent native recovery and physical acceptance limits; unreleased.
 - [Theme development status](THEMES.md), [Home styling parts and CSS rules](THEME-CSS.md).
 
 - [Home settings transport](HOME-CONTROL-TRANSPORT.md): unreleased service-owned IPC, packaging and rollback requirements.

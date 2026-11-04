@@ -17,6 +17,19 @@ import device_adapter as d
 from transport import call as luna
 
 
+def gate_backend():
+    """Normal bundles do not ship the experimental adapter."""
+    evidence = any(os.path.lexists(d.STATE / name) for name in
+                   ('home-backend.json', 'c1-gate', 'runtime/c1-home-gate', 'runtime/c1_gate.py'))
+    if not evidence and not (Path(__file__).parent / 'c1_gate.py').is_file():
+        return None
+    import c1_gate
+    selected = c1_gate.selection(d.STATE, d.EXPECTED_UID)
+    if evidence and selected is None:
+        raise ValueError('Experimental Home recovery evidence requires its valid backend descriptor')
+    return c1_gate if selected is not None else None
+
+
 
 def repair_sdk_permissions(installed='/media/developer/apps',states=None,uid=0,version=None):
     """Explicit, lock-held hardening; private writer bytes select every own leaf."""
@@ -248,6 +261,9 @@ def reconcile_firmware_access():
 
 
 def _restore_home(cancel_resume):
+    gate = gate_backend()
+    if gate is not None:
+        return gate.restore(d.STATE, d.EXPECTED_UID)
     try:
         inhibit(d.STATE)
     except Exception: pass  # Optional audio state must never block Home recovery.
@@ -282,6 +298,9 @@ def main(mode, transaction=None):
 
 
 def execute(mode, transaction=None):
+    gate = gate_backend()
+    if gate is not None:
+        return gate.execute(mode, transaction, d.STATE, d.EXPECTED_UID)
     if mode in ('suspend-update','finish-update','abort-update'):
         from update_guard import suspend, finish, abort
         operation = {'suspend-update':suspend,'finish-update':finish,'abort-update':abort}[mode]
@@ -722,6 +741,8 @@ if __name__ == '__main__':
         print(json.dumps(audio_entry(sys.argv[2:])), flush=True)
     elif len(sys.argv) > 1 and sys.argv[1] == 'startup':
         try:
+            if gate_backend() is not None:
+                raise ValueError('Native startup source choices are not admitted for the C1 experiment')
             from intent_runtime import startup_entry as entry
             print(json.dumps({'returnValue':True,'result':entry(sys.argv[2:])}),flush=True)
         except Exception:

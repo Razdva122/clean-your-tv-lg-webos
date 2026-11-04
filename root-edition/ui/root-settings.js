@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   function t(source, params) { if (window.HomeI18n) return window.HomeI18n.t(source, params); return String(source).replace(/\{(\w+)\}/g, function (_, key) { return params && params[key] !== undefined ? params[key] : '{' + key + '}'; }); }
-  var panel, message, buttons, selected = 0, busy = false, previous, rootStatus = null;
+  var panel, message, buttons, visitHint, selected = 0, busy = false, previous, rootStatus = null;
   var checkingUpdates = false, categories, statusGeneration = 0, refreshTail = Promise.resolve();
   var sourceGroup, sourceHint, sourceStatus = null, sourceUnavailable = false, sourceKeys = ['tv','youtube'];
   var sources = {tv:true,youtube:false};
@@ -90,7 +90,8 @@
     return request('luna://com.cleanyourtv.root.preview.service/' + method, {}, method === 'restore' ? 620000 : 15000);
   }, function () { return Promise.resolve(); });
   function control(method, payload) {
-    return request('luna://com.cleanyourtv.root.preview.service/' + method, payload || {}, 30000).then(function (reply) {
+    var gateEnable = method === 'enable' && rootStatus && rootStatus.effective && rootStatus.effective.backend === 'c1-native-gate';
+    return request('luna://com.cleanyourtv.root.preview.service/' + method, payload || {}, gateEnable ? 100000 : 30000).then(function (reply) {
       if (!reply || reply.returnValue !== true || !reply.result || reply.result.returnValue !== true)
         throw new Error(reply && reply.errorText || 'Root control did not confirm success. Check status before retrying.');
       return reply.result.result;
@@ -116,6 +117,7 @@
         if (!status || typeof status !== 'object' || !('intent' in status) ||
             status.intent !== null && (!status.intent || typeof status.intent.phase !== 'string')) throw new Error('Invalid service response');
         rootStatus = status; renderSources();
+        visitHint.hidden = !!(status.effective && status.effective.backend === 'c1-native-gate');
         var phase = status.intent && status.intent.phase, active = phase === 'active';
         buttons[3].setAttribute('aria-checked', String(active));
         buttons[3].disabled = !!phase && phase !== 'active' && phase !== 'disabled';
@@ -206,7 +208,8 @@
     if (index === 0) { launch('com.palm.app.settings').catch(function (e) { message.textContent = t(e.message); }); return; }
     busy = true; buttons.forEach(function (b) { b.disabled = true; });
     message.textContent = t('Opening LG Home…');
-    launch('com.webos.app.home').then(function () { busy = false; close(); }).catch(function (e) {
+    var gateVisit = rootStatus && rootStatus.effective && rootStatus.effective.backend === 'c1-native-gate';
+    (gateVisit ? exit().then(function () { return launch('com.webos.app.home'); }) : launch('com.webos.app.home')).then(function () { busy = false; close(); }).catch(function (e) {
       busy = false; message.textContent = t(e.message);
     }).finally(function () {
       buttons.forEach(function (b) { b.disabled = false; });
@@ -228,7 +231,7 @@
     text(home, 'h2', 'Your Home screen');
     message = text(home, 'p', '', 'settings-status'); message.setAttribute('aria-live','polite');
     var homeActions = document.createElement('div'); homeActions.className = 'renewal-actions home-routing-actions'; home.appendChild(homeActions);
-    text(home, 'p', 'Open LG Home once, keeping your Home choice.', 'home-visit-hint').id = 'rootHomeVisitHint';
+    visitHint = text(home, 'p', 'Open LG Home once, keeping your Home choice.', 'home-visit-hint'); visitHint.id = 'rootHomeVisitHint';
     sourceGroup = document.createElement('section'); sourceGroup.className = 'startup-sources'; sourceGroup.setAttribute('aria-label', t('Open Clean Your TV first')); home.appendChild(sourceGroup);
     text(sourceGroup, 'h3', 'Open Clean Your TV first');
     var sourceActions = document.createElement('div'); sourceActions.className = 'renewal-actions startup-source-actions'; sourceGroup.appendChild(sourceActions);
