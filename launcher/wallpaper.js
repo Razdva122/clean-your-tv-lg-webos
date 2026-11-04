@@ -24,7 +24,7 @@
   }
   function classes(playing) {
     var surface = doc.getElementById('homeSurface'), method = playing ? 'add' : 'remove';
-    if (surface) surface.classList[method]('ctv-wallpaper-playing');
+    if (surface) { surface.classList.remove('ctv-wallpaper-preparing'); surface.classList[method]('ctv-wallpaper-playing'); }
     doc.documentElement.classList[method]('ctv-wallpaper-playing'); doc.body.classList[method]('ctv-wallpaper-playing');
     if (plane) plane.style.display = playing ? 'block' : 'none';
   }
@@ -34,6 +34,8 @@
     if (stream) { stream.dispose(); stream = null; }
     if (video) {
       var old = video; video = null;
+      if (old._wallpaperFrameCallback !== undefined && typeof old.cancelVideoFrameCallback === 'function') { try { old.cancelVideoFrameCallback(old._wallpaperFrameCallback); } catch (_) {} }
+      delete old._wallpaperFrameCallback;
       ['playing', 'error', 'stalled', 'waiting', 'timeupdate'].forEach(function (event) { old.removeEventListener(event, old._wallpaperListeners[event]); });
       try { old.pause(); old.removeAttribute('src'); old.load(); } catch (_) {}
       if (old.parentNode) old.parentNode.removeChild(old);
@@ -68,6 +70,7 @@
     detach(); paintDim();
     if (!input || blocked() || q === 'image') { releaseLease(); emit(); return; }
     var token = generation, current = doc.createElement('video'), lastTime = -1; video = current;
+    current.poster = state().posterURL;
     current.id = 'ctvWallpaperVideo'; current.muted = true; current.defaultMuted = true; current.volume = 0; current.loop = true; current.autoplay = true;
     current.setAttribute('muted', ''); current.setAttribute('playsinline', ''); current.preload = 'auto';
     function valid() { return generation === token && video === current; }
@@ -79,12 +82,21 @@
       play(next);
     }
     function watchdog() { if (timer !== null) root.clearTimeout(timer); timer = root.setTimeout(failed, 10000); }
+    function reveal() { if (!valid()) return; actual = q; classes(true); watchdog(); emit(); }
+    function present() { if (typeof root.requestAnimationFrame === 'function') root.requestAnimationFrame(reveal); else reveal(); }
     current._wallpaperListeners = {
       playing: function () {
         if (!valid()) return;
         var expected = input.manifest.wallpaperVideo.variants.filter(function (v) { return v.quality === q; })[0];
         if (!expected || current.videoWidth <= 0 || current.videoHeight <= 0 || current.videoWidth !== expected.width || current.videoHeight !== expected.height) { failed('dimensions'); return; }
-        actual = q; classes(true); watchdog(); emit();
+        var surface = doc.getElementById('homeSurface');
+        if (surface) surface.classList.add('ctv-wallpaper-preparing');
+        plane.style.display = 'block';
+        if (typeof current.requestVideoFrameCallback === 'function') {
+          if (current._wallpaperFrameCallback !== undefined) return;
+          try { current._wallpaperFrameCallback = current.requestVideoFrameCallback(function () { delete current._wallpaperFrameCallback; if (valid()) present(); }); return; } catch (_) { delete current._wallpaperFrameCallback; }
+        }
+        present();
       },
       error: failed,
       stalled: function () { if (valid() && timer === null) watchdog(); },
