@@ -6,6 +6,7 @@ import re
 import stat
 
 from .state import private_write, sync_directory
+from .errors import LUNA_STATES, PACKAGE_FAILURE_REASONS
 
 KERNEL_ARCHES = ('armv7l', 'armv7', 'armv8l', 'aarch64', 'arm64', 'x86_64', 'i686', 'unknown')
 ROOT_REQUIREMENTS = ('root-user', 'python3', 'luna-send', 'apps-directory',
@@ -218,7 +219,9 @@ def failure_summary(value):
     if luna:
         clean = {'operation': choice(luna.get('operation'), ('package-install', 'package-remove', 'package-status',
                   'helper-disable', 'eim-delete-device', 'application-launch', 'luna-call'), 'luna-call'),
-                 'state': choice(luna.get('state'), ('installing', 'installed', 'removing', 'removed', 'success', 'failed', 'error'))}
+                 'state': choice(luna.get('state'), LUNA_STATES)}
+        if 'reason' in luna:
+            clean['reason'] = choice(luna.get('reason'), PACKAGE_FAILURE_REASONS)
         for key in ('error_code', 'details_error_code', 'status_value'):
             item = luna.get(key)
             clean[key] = item if type(item) is int and -(2**31) <= item < 2**31 else None

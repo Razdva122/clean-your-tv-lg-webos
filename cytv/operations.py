@@ -832,8 +832,8 @@ print('CYTV_UPDATER_VERIFIED')
             'n=0; while [ -e ' + HELPER_STATE + '/controller.pid ]; do '
             'n=$((n+1)); [ "$n" -le 15 ] || exit 1; sleep 1; done; fi', timeout=25)
 
-    def installed_apps(self):
-        reply = self.remote.luna('com.webos.applicationManager/dev/listApps', {})
+    def installed_apps(self, timeout=30):
+        reply = self.remote.luna('com.webos.applicationManager/dev/listApps', {}, timeout=timeout)
         apps = reply.get('apps')
         if not isinstance(apps, list):
             raise UserError('Could not read installed applications.', reason_code='inventory-unavailable')
@@ -872,12 +872,25 @@ print('CYTV_UPDATER_VERIFIED')
         return rows
 
     def verify_installed(self):
-        observed = self.installed_apps()
-        self.tv_info['components'] = diagnostics.context.status_summary({'device': {'apps': observed}}).get('components', {})
-        apps = {app['id']: app for app in observed}
-        for app, key in ((HOME, 'home_version'), (HELPER, 'helper_version')):
-            if apps.get(app, {}).get('version') != self.manifest[key]:
-                raise UserError('Installed version did not match the package. Run cytv status; do not retry blindly.', reason_code='version-mismatch')
+        # Called only after both live install streams confirmed completion.
+        # SAM's catalog can lag that reply; retry reads, never package requests.
+        deadline = time.monotonic() + 10
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            observed = self.installed_apps(timeout=remaining)
+            self.tv_info['components'] = diagnostics.context.status_summary({'device': {'apps': observed}}).get('components', {})
+            apps = {app['id']: app for app in observed}
+            if time.monotonic() >= deadline:
+                break
+            if all(apps.get(app, {}).get('version') == self.manifest[key]
+                   for app, key in ((HOME, 'home_version'), (HELPER, 'helper_version'))):
+                return
+            remaining = deadline - time.monotonic()
+            if remaining > 0:
+                time.sleep(min(1, remaining))
+        raise UserError('Installed version did not match the package. Run cytv status; do not retry blindly.', reason_code='version-mismatch')
 
     def status(self):
         pending = self.store.pending(self.profile)

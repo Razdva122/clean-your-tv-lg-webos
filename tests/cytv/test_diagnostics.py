@@ -8,6 +8,45 @@ from cytv import cli, diagnostics, state
 
 
 class DiagnosticTests(unittest.TestCase):
+    def test_package_failure_states_and_fixed_reasons_survive_report_export(self):
+        from cytv.transport import terminal_reply
+        from cytv.errors import TVRejected
+        for method, terminal, remote_state in (
+            ('install', 'installed', 'install failed'),
+            ('remove', 'removed', 'remove failed'),
+        ):
+            for reason in ('FAILED_INTERNAL_ERROR', 'FAILED_CREATE_TMP',
+                           'FAILED_NOT_ENOUGH_TEMP_SPACE', 'FAILED_NOT_ENOUGH_INSTALL_SPACE',
+                           'FAILED_PACKAGEFILE_NOT_FOUND', 'FAILED_PACKAGEFILE_CORRUPT',
+                           'FAILED_VERIFY', 'FAILED_IPKG_INSTALL', 'FAILED_INSTALL'):
+                with self.subTest(method=method, reason=reason), tempfile.TemporaryDirectory() as tmp:
+                    with self.assertRaises(TVRejected) as caught:
+                        terminal_reply({'statusValue': 24, 'details': {
+                            'state': remote_state, 'errorCode': -1, 'reason': reason,
+                            'ipkFile': 'PRIVATE-PATH'}}, terminal,
+                            uri='com.webos.appInstallService/dev/' + method)
+                    path = diagnostics.create_report(state.Store(tmp), method, None,
+                                                     method + '-helper', caught.exception)
+                    luna = json.loads(path.read_text())['luna']
+                    self.assertEqual(luna['state'], remote_state)
+                    self.assertEqual(luna['reason'], reason)
+                    self.assertEqual(luna['details_error_code'], -1)
+                    self.assertNotIn('PRIVATE', path.read_text())
+
+    def test_package_reason_is_revalidated_before_export(self):
+        from cytv.errors import TVRejected
+        for reason in ('PRIVATE-KEY', 'FAILED_VERIFY PRIVATE-PATH',
+                       {'reason': 'PRIVATE-KEY'}, ['PRIVATE'], None, True):
+            with self.subTest(reason=reason), tempfile.TemporaryDirectory() as tmp:
+                error = TVRejected('PRIVATE-MESSAGE', {'details': {
+                    'state': 'install failed', 'reason': reason}})
+                self.assertEqual(error.luna.get('reason'), 'unknown')
+                error.luna['reason'] = reason
+                path = diagnostics.create_report(state.Store(tmp), 'install', None,
+                                                 'install-helper', error)
+                self.assertEqual(json.loads(path.read_text())['luna']['reason'], 'unknown')
+                self.assertNotIn('PRIVATE', path.read_text())
+
     def test_passive_root_status_exports_fixed_categories_only(self):
         value={'schema':1,'status':'read','operation':'consistent-not-admission',
                'worker':'exception-recorded','python':'private-bytes-match-unexecuted','private':'PRIVATE-PASSWORD'}

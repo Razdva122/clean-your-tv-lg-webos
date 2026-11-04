@@ -92,6 +92,8 @@ chmod +x cytv
 
 No-root: 要重新啟動 Home 控制，請開啟 Home Helper，選擇啟動 Helper 並確認。已儲存的主畫面選擇會保留。 Root：在 Home 設定中啟用 **Change Home** 恢復。**Open LG Home** 只打開 LG Home 一次，不更改路由。要持續使用 LG Home，請關閉 **Change Home** 或執行 `cytv restore`。不要同時執行兩種控制器。若故障重復出現，請保持 LG Home 啟用。
 
+尚未發布的 Root 修復：關閉 Home 控制或選擇 Open LG Home 後，LG Home 確認啟動時會關閉 Root 視窗。Home 控制關閉時，仍可手動開啟 Home Root 進入設定。
+
 > **1.5.4 — Root:** Root 狀態正常時，明確開啟 **變更 Home** 會建立 CYTV 自有的原生 **Clean** 輸入項目，並將記憶輸入設為 Clean。關閉 Home 控制、緊急停止、故障、為更新暫停或解除安裝時，會刪除 CYTV 自有項目；僅當目前記憶值仍是 CYTV 設定的值時，才還原先前的輸入。其他輸入與前景應用程式維持不變。不支援的電視或非 CYTV 所有的輸入項目會繼續使用既有的受保護 Home 控制。不保證 Clean 立即成為開機第一個畫面。紀錄中的 C3 首畫面、待機與斷電冷啟動檢查已通過，但不保證所有裝置相容。更新/回復版本後 Home 可能維持關閉（#202），設定可能顯示舊狀態（#206）：關閉並重新開啟設定，明確開啟「變更 Home」並等待 Clean 狀態。 [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md) · [Native input (English)](../development/ROOT-NATIVE-INPUT.md).
 
 ```sh
