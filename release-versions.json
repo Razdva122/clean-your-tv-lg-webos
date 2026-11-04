@@ -1,9 +1,9 @@
 {
-  "release": "1.7.1",
+  "release": "1.7.2",
   "cytv": "0.8.1",
   "home": "1.8.1",
   "helper": "0.6.22",
-  "root": "0.8.4",
+  "root": "0.8.5",
   "updater": "0.4.2",
   "android": "0.7.1",
   "android_version_code": 19

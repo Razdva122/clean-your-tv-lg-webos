@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": null,
+  "version": "1.7.2",
   "changes": [
     {
       "pr": 264,
@@ -48,6 +48,11 @@
         290
       ],
       "summary": "Discover the installed Live TV tuner omitted or hidden by LG inventory; rebuilt Helper/Root/installer delivery and device acceptance remain pending"
+    },
+    {
+      "pr": 265,
+      "issues": [],
+      "summary": "Isolated preliminary Root TV QA of Ribbon overlay; not a release scope decision or final acceptance"
     }
   ],
   "excluded": [],
