@@ -75,7 +75,7 @@ let actualCalls=0,store={production:'secret'},databases=[];
 const storage={getItem:k=>Object.prototype.hasOwnProperty.call(store,k)?store[k]:null,setItem:(k,v)=>store[k]=String(v),removeItem:k=>delete store[k]};
 const window={TV_APPS:{apps:[]},indexedDB:{open:name=>databases.push(name)},localStorage:storage,PalmServiceBridge:function(){actualCalls++;},webOS:{service:{request:()=>actualCalls++}}};
 const context={window,document:{getElementById:()=>null,addEventListener:()=>{}},setTimeout:fn=>{fn();return 1;},clearTimeout:()=>{}};
-vm.createContext(context);vm.runInContext(f['dev-bridge.js'],context);vm.runInContext(f['bridge.js'],context);vm.runInContext(f['dev-lock.js'],context);
+vm.createContext(context);vm.runInContext(f['dev-bridge.js'],context);vm.runInContext(f['bridge.js'],context);vm.runInContext(f['dev-lock.js'],context);vm.runInContext(f['dev-media.js'],context);
 window.CYTV_DEV_STORAGE.setItem('production','dev');
 window.CYTV_DEV_INDEXEDDB.open('ctv-themes-v1',1);
 if(databases.join()!=='cytv.dev.ui.ctv-themes-v1')throw Error('IDB escaped namespace');
@@ -85,8 +85,12 @@ window.webOS.service.request('luna://com.cleanyourtv.root.preview.service/enable
 try{window.PalmServiceBridge=function(){actualCalls++;};}catch(_){}
 new window.PalmServiceBridge().call('luna://com.webos.applicationManager/launch','{}');
 if(actualCalls!==0)throw Error('native service reached');
+window.WallpaperMediaCache.prepare({wallpaperVideo:{variants:[{quality:'1080p',path:'videos/verified.mp4',mediaType:'video/mp4'}]}},{url:'themes/ribbon/cytv-theme.json'}).then(async lease=>{
+ if((await lease.acquire())['1080p']!=='themes/ribbon/videos/verified.mp4')throw Error('Local video did not use the packaged verified file');
+ await lease.release();lease.dispose();if(actualCalls!==0)throw Error('media reached native service');
+}).catch(e=>{console.error(e);process.exitCode=1;});
 '''
-        subprocess.run(['node', '-e', program], input=json.dumps({k:v.decode() for k,v in files.items() if k in ('dev-bridge.js','bridge.js','dev-lock.js')}), text=True, check=True)
+        subprocess.run(['node', '-e', program], input=json.dumps({k:v.decode() for k,v in files.items() if k in ('dev-bridge.js','bridge.js','dev-lock.js','dev-media.js')}), text=True, check=True)
         self.assertIn(b"connect-src 'self'", files['index.html'])
         for name, raw in files.items():
             if name.endswith('.js') and name not in ('dev-bridge.js','dev-entry.js'): self.assertNotIn(b'localStorage', raw, name)

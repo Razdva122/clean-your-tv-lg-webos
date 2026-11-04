@@ -115,7 +115,8 @@ def ui_files():
     html = re.sub(r'<script\b([^>]*)>([\s\S]*?)</script\s*>', inert_script, files['index.html'].decode())
     # One script owns isolation and parser insertion. A readonly native global or
     # any failed guard stops this file before *any* product script is reachable.
-    files['dev-entry.js'] = (files['dev-bridge.js'] + files['bridge.js'] + files['dev-lock.js']
+    files['dev-media.js'] = read_file(ROOT / 'scripts/tv-dev-media.js')
+    files['dev-entry.js'] = (files['dev-bridge.js'] + files['bridge.js'] + files['dev-lock.js'] + files['dev-media.js']
                              + ('\ndocument.write(' + json.dumps(''.join(scripts)) + ');\n').encode())
     files['index.html'] = html.replace('</body>', '<script src="dev-entry.js"></script>\n</body>', 1).encode()
     return files
@@ -171,7 +172,7 @@ def hosted_command(output, device):
 
 def source_revision():
     paths = [ROOT / folder for folder in ('launcher', 'root-edition/ui', 'root-edition/assets', 'preview')]
-    paths += [ROOT / 'root-edition/preview.py', Path(__file__), ROOT / 'scripts/compile-tv-web.cjs', ROOT / 'scripts/tv_web_build.py', ROOT / 'scripts/check-tv-web.cjs', ROOT / 'package.json', ROOT / 'package-lock.json']
+    paths += [ROOT / 'root-edition/preview.py', ROOT / 'scripts/tv-dev-media.js', Path(__file__), ROOT / 'scripts/compile-tv-web.cjs', ROOT / 'scripts/tv_web_build.py', ROOT / 'scripts/check-tv-web.cjs', ROOT / 'package.json', ROOT / 'package-lock.json']
     stamps = []
     for path in paths:
         for item in sorted(path.rglob('*')) if path.is_dir() else [path]:

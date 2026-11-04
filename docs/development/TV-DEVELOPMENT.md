@@ -41,6 +41,9 @@ webOSSystem cannot reach native services. CSP permits same-origin bundled assets
 needed by the theme engine, permits validated blob images and blocks connections
 to external endpoints;
 settings, launches, Root activation, audio and firmware actions are simulated.
+Bundled video wallpapers use their verified local MP4 files in this UI-only
+package, rather than the disabled native media-cache service. External/personal
+media retains the browser Blob fallback and may depend on the TV decoder.
 No Root service, updater, startup hook or Home routing configuration is staged.
 
 `com.cleanyourtv.root.preview` is the **production Root app ID**, despite its
