@@ -56,7 +56,7 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
         report['connection'] = {'protocol': 'developer-key', 'reason_code': error.reason_code}
     if isinstance(error, TVCommandError):
         report['ssh_command'] = {'exit_status': error.exit_status}
-        for key, allowed in (('root_action', ('inspect','install','status','remove')),
+        for key, allowed in (('root_action', context.ROOT_ACTIONS),
                              ('root_boundary', ('coordinator-stage','python-select','driver'))):
             value = getattr(error, key, None)
             if isinstance(value, str) and value in allowed:
