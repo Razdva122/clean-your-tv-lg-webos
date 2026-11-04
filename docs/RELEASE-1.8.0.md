@@ -14,6 +14,14 @@ build and affected hardware gates pass. Published downloads remain on v1.7.1.
 - Root Ribbon can appear over positively identified active content, with Back and
   repeated Home dismissal; startup/unknown context uses wallpaper. No-root keeps
   fullscreen native Home. Updated compact Ribbon styling, editing and previews (#265).
+- Native Root activation now follows prepared appearance and precedes foreground
+  readiness frames; asynchronous appearance is awaited before updater health is
+  acknowledged (#303). Verified off/emergency recovery closes the restored overlay
+  and fences stale close replies (#305). Final packaged-TV timing and lifecycle
+  acceptance remain pending.
+- Wallpaper wording now distinguishes a selected wallpaper without a video version
+  from the capabilities of its theme, in English and all twelve translations (#313).
+  This changes no playback capability.
 - Installed Live TV tuner discovery includes the canonical hidden/missing launch
   point without exposing unrelated hidden apps (#293, #290).
 - Typed Root activation diagnostics (#287, #282/#288), original-profile passive
@@ -21,6 +29,14 @@ build and affected hardware gates pass. Published downloads remain on v1.7.1.
   (#297, #200). These improvements do not establish recovery of the original reports.
 - No-root installer admits host-tested Node 0.10.15 (#291, #283/#284). Actual old TV
   WebKit/native ABI and reporter firmware compatibility remain unverified.
+- After successful No-root installation, catalog readback waits for one matching
+  Home/Helper snapshot (#302). IPKs explicitly retain required SDK parent directories
+  through personalization (#312). These changes do not recover uncertain installs
+  or establish resolution of the original reports #295/#201/#307.
+- Passive IR diagnostics can run through their guarded stdin entrypoint over an
+  existing trusted SSH connection (#306); package failure diagnostics retain
+  allowlisted status/reason fields (#309). Original IR routing reports #207/#304
+  and installation/recovery reports #201/#307 remain unresolved.
 - Common installer automatically selects **C1 Beta** only after definite missing
   System Profile and verified C1/webOS 6/ARM32/stock ELF admission (#300, #298).
   Supported firmware retains profile routing; permission errors and timeouts never
@@ -62,12 +78,18 @@ keys or LS2 rules to force acceptance. Existing Root QA requires coherent signed
 System packages, preserved recovery, and no pending/ambiguous operation. Retain signed
 rollback packages. No-root Helper transition and rollback need separate exact-byte
 acceptance. The Homebrew Installer remains unreleased and is not promoted here.
+The proposed No-root overlay integration (#310) is incomplete and is not included.
+Helper runtime/startup and its exact rollback transition remain unaccepted; a
+successful package installation alone does not establish working Home control.
 
 ## Verification
 
 [Release PR #281](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/281)
 tracks the final build/run:attempt, hashes, documentation pass and device gates.
 Focused PR checks and isolated preview observations are historical evidence only.
+The [ready-fix integration record](history/2026-11-05-ready-fix-integration.md)
+lists the seven focused merges and combined-source checks. They do not select a
+new full candidate or replace affected device acceptance.
 Full frozen Linux/macOS/browser/ARM Python, Android and four desktop builds must
 pass before selection. Exact signed artifacts still need affected installation,
 controls/emergency, native media grants, sound/HDMI, standby, AC-off boot, supported
