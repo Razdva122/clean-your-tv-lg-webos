@@ -152,6 +152,14 @@ W przygotowaniu: jeśli nie wysłano żądania usunięcia pakietów, po błędzi
 
 ## Motywy
 
+W podglądzie następnej wersji **Ustawienia Home → Tapety** pokazuje tapetę aktywnego motywu, wykryte możliwości TV i bieżący tryb. Auto wybiera zgodną jakość; 4K, 1080p i Obraz są dostępne tylko wtedy, gdy zawiera je motyw. Przy błędzie wideo wyświetlany jest obraz. Przyciemnienie zmienia się co 5%; reset przywraca ustawienia motywu. Classic i motywy bez tapety wyraźnie pokazują ten stan.
+
+Własne tapety w podglądzie kolejnej wersji: otwórz Tapety w komputerowym CYTV, wybierz JPG/PNG, ustaw kadr i podaj prywatny adres TV oraz PIN odbioru z Home. CYTV lokalnie przygotowuje film bez dźwięku; 4K jest dostępne tylko przy odpowiedniej rozdzielczości kadru. Na TV wybierz odbiór z CYTV lub przesyłanie z telefonu i zeskanuj QR w tej samej sieci Wi-Fi. Telefon przesyła zwykły obraz do 1920×1080 bez natywnej warstwy wideo 4K; ostrość ogranicza rozdzielczość interfejsu TV. Potwierdź ostrzeżenie przed wysłaniem, potem sprawdź podgląd i zastosuj na TV. Własne obrazy pozostają zapisane i można je ponownie wybrać lub usunąć w Tapetach. Anulowanie lub odrzucenie pliku zachowuje poprzednie tło. Wymagane są zgodne kompilacje kolejnej wersji Home/usługi oraz CYTV.
+
+Wbudowane tapety następnej wersji: **Ustawienia Home → Tapety → Wbudowane tapety → Black Hole**. Autor filmu: **Xecutioner**, ze zgodą na użytek niekomercyjny z podaniem autora. Zatwierdzenie innego motywu włącza jego własną tapetę; Black Hole i własne obrazy nadal można wybrać. Ciągły strumień 4K eliminuje przewijanie przy każdym powtórzeniu, z kompatybilnym filmem/obrazem w razie problemów.
+
+Android CYTV: **Skonfiguruj TV** · **Tapety** · **Konserwacja**. Na TV otwórz ustawienia Home → Tapety → Prześlij z telefonu. Zeskanuj QR aparatem, wybierz JPG/PNG i zastosuj tapetę na TV. Z telefonu: obrazy do 1920×1080, bez natywnego wideo 4K. Aby uzyskać prawdziwe 4K, użyj CYTV na komputerze.
+
 1.7.0: **Ustawienia → Motywy**. **Classic**, **Liquid Glass**, **Ribbon** są wbudowane i nie wymagają pobierania motywu; domyślny pozostaje Classic. **Channel** jest zewnętrznym motywem ze showcase. Podczas próby w galerii: Wybierz motyw i **Zachowaj motyw** w ciągu **20 sekund**. **Przywróć**, Back lub upływ czasu przywraca poprzedni. Przerwana próba uruchomi Home z Classic. Motywy wbudowane i pobrane wybrane z listy zainstalowanych są stosowane i zapisywane od razu, bez odliczania. Dotyczy to również motywów z komputera lub URL. Tylko Wypróbuj motyw w galerii rozpoczyna próbę 20 sekund.
 
 1.7.0: **Classic**, **Liquid Glass** i **Ribbon** są wbudowane. **Alpine 1.4.4** przechodzi do pobierania w **galerii motywów**. Zapisany wybór `builtin:alpine` wraca do Classic z istniejącym widocznym komunikatem odzyskiwania; Home nie pobiera Alpine automatycznie ani nie zastępuje go Liquid Glass. Wersja 1.6.0 zawiera Classic, Alpine i Ribbon.

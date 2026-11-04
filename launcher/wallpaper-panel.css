@@ -1,0 +1,27 @@
+/* Shared wallpaper controls use the standard trusted settings palette. */
+#homeWallpaperPanel { width:100%; min-width:0; }
+#homeWallpaperPanel .wallpaper-summary { display:flex; align-items:center; margin-bottom:16px; }
+#homeWallpaperPanel #wallpaperPreview { display:block; width:45%; max-width:400px; max-height:225px; object-fit:contain; border:1px solid #526170; border-radius:8px; background:#111820; }
+#homeWallpaperPanel #wallpaperPreview[hidden] { display:none; }
+#homeWallpaperPanel .wallpaper-info { flex:1; min-width:0; margin-left:24px; }
+#homeWallpaperPanel h4 { font-size:28px; margin:0 0 12px; overflow-wrap:break-word; }
+#homeWallpaperPanel p { font-size:22px; line-height:1.4; color:#b9c4d2; margin:8px 0; overflow-wrap:break-word; }
+#homeWallpaperPanel .wallpaper-quality,#homeWallpaperPanel .wallpaper-dim { display:flex; flex-wrap:wrap; align-items:center; margin:12px 0; }
+#homeWallpaperPanel .wallpaper-dim p { width:100%; }
+#homeWallpaperPanel button { box-sizing:border-box; width:auto; min-height:56px; font:inherit; font-size:24px; padding:12px 18px; margin:6px 12px 6px 0; color:#f5f7fa; background:#343941; border:2px solid transparent; border-radius:8px; cursor:pointer; }
+#homeWallpaperPanel button[aria-pressed="true"] { border-color:#bcd8f6; background:#263e56; }
+#homeWallpaperPanel button:focus { outline:3px solid #dbe9ff; outline-offset:3px; background:#384b65; color:#fff; }
+#homeWallpaperPanel button:disabled { opacity:.5; cursor:default; }
+@media(max-width:1280px) { #homeWallpaperPanel #wallpaperPreview { max-height:160px; } #homeWallpaperPanel h4 { font-size:25px; } }
+
+#homeWallpaperPanel [hidden] { display:none!important; }
+#wallpaperConnection { border:1px solid #526170; padding:16px; margin:12px 0; }
+#wallpaperQR { display:block; width:210px; height:210px; background:white; }
+#wallpaperPIN { font-size:36px!important; letter-spacing:6px; color:#fff!important; }
+#wallpaperPhoneWarning { border-left:3px solid #bcd8f6; padding-left:12px; }
+#wallpaperPendingPreview { width:240px; height:135px; object-fit:contain; display:block; }
+#personalWallpaperControls { border-top:1px solid #526170; margin-top:16px; padding-top:12px; }
+
+#wallpaperBuiltins h5 { font-size:24px; margin:18px 0 6px; }
+#wallpaperBuiltins strong,#wallpaperBuiltins small { display:block; text-align:left; }
+#wallpaperBuiltins small { font-size:20px; margin-top:6px; color:#c5d0dd; }

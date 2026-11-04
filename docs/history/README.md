@@ -26,6 +26,10 @@ one model or artifact does not certify later releases or a different TV.
 
 ## Scoped feature checks
 
+- [Ribbon blue nebula, 2026-11-03](2026-11-03-ribbon-blue-nebula.md): original native-resolution artwork, gentle UHD loop and both-edition browser checks; no TV changes.
+
+- [Embedded UHD wallpaper authoring, 2026-11-03](2026-11-03-embedded-uhd-wallpapers/README.md): real Alpine/Ribbon media, paired toolkit checks, large Base64 fix and browser-only decode evidence; outside the frozen release inventory.
+
 - [Legacy Root offline vendor investigation, 2026-11-04](2026-11-04-legacy-root-offline-vendor.md): official B9 firmware input, pinned public bootstrap/native boundaries and next host-only extraction task; no runtime replacement or device support claim.
 
 - [webOS 1.x Node floor, 2026-11-04](2026-11-04-webos1-node-floor.md): exact 0.10.15 source/published-Helper JS checks and No-root admission correction for #283/#284; device compatibility unverified.
@@ -144,3 +148,5 @@ appended to these records. Private logs and device backups are not part of this
 public documentation.
 
 - [2026-10-31: coordinated native startup/recovery batch](2026-10-31-release-1.5.3-native-startup-batch.md).
+
+- [2026-11-04 Black Hole wallpaper integration and scoped preview evidence](2026-11-04-black-hole-wallpaper/README.md)

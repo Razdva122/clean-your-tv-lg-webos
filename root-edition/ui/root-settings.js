@@ -168,7 +168,7 @@
   }
   function close() {
     if (busy) return;
-    if(window.HomeThemePanel)HomeThemePanel.unmount();
+    if(window.HomeWallpaperPanel)HomeWallpaperPanel.unmount();if(window.HomeThemePanel)HomeThemePanel.unmount();
     invalidateMode();
     panel.hidden = true;
     if (window.ThemeRuntime) window.ThemeRuntime.resume('settings');
@@ -267,10 +267,12 @@
     });
     themes.id='homeThemeHost';if(window.HomeThemePanel)HomeThemePanel.mount(themes);
     var appsError = text(apps, 'p', ''); appsError.id = 'homeAppsError'; appsError.setAttribute('role','alert');
+    var wallpapers=document.createElement('div');if(window.HomeWallpaperPanel)HomeWallpaperPanel.mount(wallpapers);
     if(window.SettingsCategories) categories = SettingsCategories.attach(panel, card, [
       {id:'home',label:'Your Home screen',elements:[home]},
       {id:'appearance',label:'Appearance',elements:[layout,apps]},
       {id:'themes',label:'Themes',elements:[themes]},
+      {id:'wallpapers',label:'Wallpapers',elements:[wallpapers]},
       {id:'language',label:'Language',elements:[buttons[5]]},
       {id:'updates',label:'Software updates',elements:[buttons[4],buttons[6]]},
       {id:'advanced',label:'Advanced',elements:[buttons[0],buttons[7]]}

@@ -39,7 +39,7 @@ The [visible TV checklist](../docs/CLI.md#visible-tv-checks-unreleased) shows in
 
 1. Copy the signed APK to a **64-bit ARM phone running Android 7.0 or later with Android System WebView/Chrome 108+**. Allow the browser/file manager to install this APK when Android requests it.
 2. Keep the phone and LG webOS TV on the same local network. Turn the TV on; disconnect VPNs or guest-network isolation if the connection fails.
-3. Enter the TV IPv4 address and check the connection first. Then choose **No-root** for Developer Mode, or **Root** for a TV with existing root SSH access. Exactly one responding access mode is highlighted; with both or neither, choose manually. Default SSH ports are 9922 and 22 respectively; Root ports are editable.
+3. Enter the TV IPv4 address and tap **Set up TV** to check the connection first. Then choose **No-root** for Developer Mode, or **Root** for a TV with existing root SSH access. Exactly one responding access mode is highlighted; with both or neither, choose manually. Default SSH ports are 9922 and 22 respectively; Root ports are editable.
 4. No-root: follow the four preparation steps in CYTV: install Developer Mode, sign in with an LG Developer account, enable **Dev Mode Status** and reopen the app after reboot, then enable **Key Server**. Enter the six-character **Passphrase** from the TV, preserving letter case; this is separate from the LG account password. The steps and code prompt include offline LG reference screenshots; use the code on your own TV. See the [full setup guide](../docs/INSTALL.md#set-up-developer-mode-no-root). Root: use the existing SSH password or select a private key with Android's file picker. Encrypted keys prompt for their passphrase.
 5. Review the SSH fingerprint before trusting the TV. Review the actual installed/package versions before confirming installation. Accept the remote-control pairing prompt on the TV if shown.
 6. Keep the TV on. The foreground service continues while the Activity is in the background; keep Android's CYTV notification available. Do not force-stop the app or change networks during installation.
@@ -52,6 +52,8 @@ The [visible TV checklist](../docs/CLI.md#visible-tv-checks-unreleased) shows in
 Older 32-bit phones and x86 devices are not included in this APK. The UI includes install, status and restore; it does not expose uninstall or automatic discovery. The full TV app inventory is imported automatically. Compatible whole-edition TV updates require separate computer-assisted System
 Updater bootstrap with root/Homebrew services. Unrooted TVs use the installer.
 The APK does not expose that bootstrap action; see [updates](../root-edition/UPDATES.md).
+
+The start screen also has **Wallpapers**, which explains the TV-hosted QR upload flow. Open Home settings → Wallpapers → Upload from phone on a compatible preview TV build, then scan its QR with the phone camera. Phone uploads are images up to 1920×1080; native 4K video requires desktop CYTV. The Android app does not scan QR codes or encode 4K video itself.
 
 ## Interrupted Root installation inspection (unreleased)
 
@@ -82,7 +84,7 @@ See [the #240 investigation and exact-source limits](../docs/history/2026-11-04-
 
 ## Recovery and private data
 
-Open **Status and recovery** from the start screen. After an interruption,
+Open **Maintenance** from the start screen. After an interruption,
 check status before reinstalling. The app retains operation receipts and does
 not automatically repeat installation after process death. Keep the same TV,
 edition and SSH port; pending or unknown outcomes need inspection.

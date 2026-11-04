@@ -1720,6 +1720,6 @@
     getElement('homeSurface').classList.remove('ctv-starting');
   }
   window.HomeUIReady = (window.ThemeManager ? ThemeManager.start(presentHome) : Promise.resolve().then(presentHome)).then(function () {
-    window.RootLauncherRendered = true;
+    return (window.PersonalWallpaper ? PersonalWallpaper.start().catch(function () {}) : Promise.resolve()).then(function () { window.RootLauncherRendered = true; });
   });
 }();

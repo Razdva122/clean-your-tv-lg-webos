@@ -3,6 +3,7 @@ var http = require('http');
 var crypto = require('crypto');
 var os = require('os');
 var net = require('net');
+var phonePage = require('./wallpaper-phone');
 var CHUNK = 48 * 1024;
 function error(code) { var e = new Error(code); e.code = code; return e; }
 function ipv4(address) {
@@ -37,12 +38,57 @@ function envelope(buffer) {
       !v.files || typeof v.files !== 'object' || Array.isArray(v.files)) return false;
   return Object.keys(v.files).every(function (key) { return base64(v.files[key]); });
 }
+// Transport validation; native image decode and MP4/SPS verification run in the TV before Apply.
+function wallpaperEnvelope(buffer, browser) {
+  var v;
+  try { v = JSON.parse(buffer.toString('utf8')); } catch (_) { return false; }
+  if (!v || v.schemaVersion !== 1 || v.kind !== 'wallpaper' ||
+      ['phone','cytv'].indexOf(v.source) < 0 || (browser && v.source !== 'phone') || !Array.isArray(v.variants)) return false;
+  var phone = v.source === 'phone', total = 0, qualities = {};
+  function media(m, video) {
+    if (!m || typeof m !== 'object' || typeof m.width !== 'number' || typeof m.height !== 'number' ||
+        m.width % 1 || m.height % 1 || m.width <= 0 || m.height <= 0 || !base64(m.data) ||
+        typeof m.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(m.sha256)) return false;
+    var limit = 2 * 1024 * 1024, width = phone ? 1920 : 3840, height = phone ? 1080 : 2160;
+    if (video) {
+      if (phone || ['4k','1080p'].indexOf(m.quality) < 0 || qualities[m.quality] || m.mediaType !== 'video/mp4') return false;
+      qualities[m.quality] = true; width = m.quality === '4k' ? 3840 : 1920; height = m.quality === '4k' ? 2160 : 1080;
+      limit = (m.quality === '4k' ? 12 : 4) * 1024 * 1024;
+      if (m.width !== width || m.height !== height) return false;
+    } else if (['image/jpeg','image/png'].indexOf(m.mediaType) < 0) return false;
+    if (m.width > width || m.height > height || m.data.length > 4 * Math.ceil(limit / 3)) return false;
+    var bytes = Buffer.from(m.data, 'base64');
+    if (!bytes.length || bytes.length > limit || bytes.length !== m.size || bytes.toString('base64') !== m.data ||
+        crypto.createHash('sha256').update(bytes).digest('hex') !== m.sha256) return false;
+    if (video) { total += bytes.length; if (bytes.length < 12 || bytes.toString('ascii', 4, 8) !== 'ftyp') return false; }
+    else if (m.mediaType === 'image/png') {
+      if (bytes.length < 24 || bytes.slice(0,8).toString('hex') !== '89504e470d0a1a0a' ||
+          bytes.toString('ascii',12,16) !== 'IHDR' || bytes.readUInt32BE(16) !== m.width || bytes.readUInt32BE(20) !== m.height) return false;
+    } else {
+      if (bytes[0] !== 255 || bytes[1] !== 216) return false;
+      var at = 2, found = false;
+      while (at + 4 < bytes.length && bytes[at] === 255) {
+        var marker = bytes[at+1], length = bytes.readUInt16BE(at+2);
+        if (length < 2 || at + 2 + length > bytes.length) return false;
+        if ([192,193,194].indexOf(marker) >= 0) {
+          if (length < 8 || bytes.readUInt16BE(at+5) !== m.height || bytes.readUInt16BE(at+7) !== m.width) return false;
+          found = true; break;
+        }
+        at += length + 2;
+      }
+      if (!found) return false;
+    }
+    return true;
+  }
+  return v.variants.length <= 2 && (!phone || v.variants.length === 0) && media(v.image, false) &&
+    v.variants.every(function (m) { return media(m, true); }) && total <= 16 * 1024 * 1024;
+}
 exports.create = function (options) {
   options = options || {};
   var session = null, starting = false;
   var port = options.port === undefined ? 8879 : options.port;
   var ttl = options.ttlMs || 600000, deadline = options.requestTimeoutMs || 15000;
-  var maxBytes = options.maxBytes || 10 * 1024 * 1024, maxWrong = options.maxWrongPins || 20;
+  var maxBytes = options.maxBytes || 33 * 1024 * 1024, maxWrong = options.maxWrongPins || 20;
   function closeListener(s) {
     if (!s.listening) return;
     s.listening = false;
@@ -70,11 +116,11 @@ exports.create = function (options) {
     var socket = req.socket, local = ipv4(socket.localAddress);
     var chunks = [], size = 0, done = false, active = false, began = Date.now();
     function reset() { if (active && s.state === 'receiving') s.state = 'waiting'; active = false; chunks = []; }
-    function reply(code) {
+    function reply(code, payload, html) {
       if (done) return;
       done = true; clearTimeout(timer); reset();
-      res.writeHead(code, {'Content-Type':'application/json','Connection':'close','Cache-Control':'no-store'});
-      res.end(JSON.stringify({returnValue:code === 202}));
+      res.writeHead(code, {'Content-Type':html ? 'text/html; charset=utf-8' : 'application/json','Connection':'close','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Content-Security-Policy':"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src blob: data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"});
+      res.end(html || JSON.stringify(payload || {returnValue:code === 202}));
       req.resume();
     }
     var timer = setTimeout(function () { reply(408); socket.destroy(); }, deadline);
@@ -83,13 +129,19 @@ exports.create = function (options) {
     req.on('error', function () { clearTimeout(timer); done = true; reset(); });
     if (session !== s || Date.now() >= s.expiresAt) { reply(410); return; }
     if (!privateAddress(local) || !privateAddress(socket.remoteAddress) || (local.indexOf('127.') !== 0 && s.addresses.indexOf(local) < 0) ||
-        req.headers.host !== local + ':' + s.port || Object.prototype.hasOwnProperty.call(req.headers, 'origin')) { reply(403); return; }
-    if (req.method !== 'POST' || req.url !== '/v1/theme') { reply(404); return; }
+        req.headers.host !== local + ':' + s.port) { reply(403); return; }
+    var browser = Object.prototype.hasOwnProperty.call(req.headers, 'origin');
+    if (browser && !(s.kind === 'wallpaper' && req.method === 'POST' && req.url === '/v1/wallpaper' &&
+        req.headers.origin === 'http://' + req.headers.host)) { reply(403); return; }
+    if (s.kind === 'wallpaper' && req.method === 'GET' && req.url === '/wallpaper') { reply(200, null, phonePage.replace('CYTV_SESSION_EXPIRES', String(s.expiresAt))); return; }
+    var capabilities = s.kind === 'wallpaper' && req.method === 'GET' && req.url === '/v1/wallpaper-capabilities';
+    if (!capabilities && (req.method !== 'POST' || req.url !== (s.kind === 'wallpaper' ? '/v1/wallpaper' : '/v1/theme'))) { reply(404); return; }
     if (req.headers['x-cytv-pin'] !== s.pin) {
       s.wrong += 1;
       if (s.wrong >= maxWrong) res.on('finish', function () { dispose(s); });
       reply(403); return;
     }
+    if (capabilities) { reply(200, {wallpaperProtocol:1}); return; }
     if (s.state !== 'waiting') { reply(409); return; }
     if (req.headers['content-type'] !== 'application/json') { reply(415); return; }
     if (req.headers['content-encoding'] || (req.headers['content-length'] &&
@@ -104,7 +156,7 @@ exports.create = function (options) {
     req.on('end', function () {
       if (done) return;
       var buffer = Buffer.concat(chunks, size);
-      if (!envelope(buffer)) { reply(400); return; }
+      if (!(s.kind === 'wallpaper' ? wallpaperEnvelope(buffer, browser) : envelope(buffer))) { reply(400); return; }
       // Old TV CPUs can spend noticeable time parsing a large envelope.
       if (Date.now() - began >= deadline) { reply(408); return; }
       if (Date.now() >= s.expiresAt) { reply(410); dispose(s); return; }
@@ -117,12 +169,13 @@ exports.create = function (options) {
     });
   }
   return {
-    start: function () {
+    start: function (request) {
+      if (request && request.kind !== undefined && request.kind !== 'wallpaper' && request.kind !== 'theme') return Promise.reject(error('invalid-request'));
       if (session || starting) return Promise.reject(error('receiver-busy'));
       starting = true;
       return new Promise(function (resolve, reject) {
         var s = {id:crypto.randomBytes(24).toString('hex'), pin:('000000' + (crypto.randomBytes(4).readUInt32BE(0) % 1000000)).slice(-6),
-          addresses:addresses(), wrong:0, state:'waiting', buffer:null, sockets:[], listening:false,
+          kind:request && request.kind === 'wallpaper' ? 'wallpaper' : 'theme', addresses:addresses(), wrong:0, state:'waiting', buffer:null, sockets:[], listening:false,
           release:typeof options.hold === 'function' ? options.hold() : null};
         s.server = http.createServer(function (req, res) { handle(s, req, res); });
         s.server.on('connection', function (socket) {
@@ -140,7 +193,9 @@ exports.create = function (options) {
           starting = false; s.listening = true; s.port = s.server.address().port;
           s.expiresAt = Date.now() + ttl; session = s;
           s.timer = setTimeout(function () { dispose(s); }, ttl);
-          resolve({sessionId:s.id, pin:s.pin, addresses:s.addresses.slice(), expiresAt:s.expiresAt, port:s.port});
+          var response = {sessionId:s.id, pin:s.pin, addresses:s.addresses.slice(), expiresAt:s.expiresAt, port:s.port};
+          if (s.kind === 'wallpaper') { response.kind = 'wallpaper'; response.wallpaperProtocol = 1; }
+          resolve(response);
         });
       });
     },

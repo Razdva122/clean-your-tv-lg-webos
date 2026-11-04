@@ -3,12 +3,12 @@
   "themeApiVersion": 1,
   "id": "builtin:ribbon",
   "title": "Ribbon",
-  "description": "Original galaxy wallpaper with a fixed eight-card skewed bottom ribbon, raised focus and bottom-left shortcuts.",
+  "description": "Black Hole by Xecutioner, recorded at native 3840x2160, with a fixed eight-card skewed app ribbon.",
   "author": {
-    "name": "Clean Your TV contributors",
+    "name": "CYTV contributors; video by Xecutioner",
     "url": "https://github.com/razdva122"
   },
-  "themeVersion": "1.0.0",
+  "themeVersion": "1.3.0",
   "layout": {
     "preset": "scenic-grid",
     "columns": 8,
@@ -39,10 +39,10 @@
   "assets": [
     {
       "id": "wallpaper",
-      "path": "assets/galaxy.png",
-      "mediaType": "image/png",
-      "width": 1920,
-      "height": 1080
+      "path": "assets/wallpaper.jpg",
+      "mediaType": "image/jpeg",
+      "width": 3840,
+      "height": 2160
     },
     {
       "id": "preview",
@@ -54,8 +54,20 @@
   ],
   "previewAssetId": "preview",
   "license": {
-    "identifier": "MIT",
+    "identifier": "LicenseRef-Xecutioner-NonCommercial",
     "textPath": "LICENSE.txt",
     "creditsPath": "CREDITS.txt"
+  },
+  "wallpaperVideo": {
+    "variants": [
+      {
+        "quality": "4k",
+        "path": "assets/wallpaper-4k.mp4"
+      },
+      {
+        "quality": "1080p",
+        "path": "assets/wallpaper-1080p.mp4"
+      }
+    ]
   }
 }

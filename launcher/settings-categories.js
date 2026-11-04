@@ -7,6 +7,7 @@
   ko:['화면 꾸미기','고급'],hi:['दिखावट','उन्नत'],pl:['Wygląd','Zaawansowane'],ru:['Внешний вид','Дополнительно'],'zh-Hans':['外观','高级'],'zh-Hant':['外觀','進階']
  };
  function t(source){
+  if(source==='Wallpapers'&&root.HomeWallpaperPanel)return HomeWallpaperPanel.t(source);
   var language=root.HomeI18n&&HomeI18n.language(),pair=labels[language];
   if(pair&&source==='Appearance')return pair[0];
   if(pair&&source==='Advanced')return pair[1];
@@ -35,13 +36,14 @@
    current=index;
    tabs.forEach(function(tab,i){tab.setAttribute('aria-selected',String(i===index));tab.tabIndex=i===index?0:-1;panes[i].hidden=i!==index;});
    if(root.HomeThemePanel)HomeThemePanel.activate(groups[index].id==='themes');
+   if(root.HomeWallpaperPanel)HomeWallpaperPanel.activate(groups[index].id==='wallpapers');
   }
   groups.forEach(function(group,i){
    var tab=document.createElement('button'),pane=document.createElement('section'),title=document.createElement('h3');
    tab.type='button';tab.setAttribute('role','tab');tab.setAttribute('data-category',group.id);tab.id='settings-tab-'+group.id;
    tab.setAttribute('aria-controls','settings-pane-'+group.id);
    var svg=document.createElementNS('http://www.w3.org/2000/svg','svg'),path=document.createElementNS('http://www.w3.org/2000/svg','path');
-   svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('aria-hidden','true');path.setAttribute('d',paths[i]);svg.appendChild(path);tab.appendChild(svg);
+   svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('aria-hidden','true');path.setAttribute('d',group.id==='wallpapers'?'M3 3h18v18H3zM3 16l6-6 5 5 3-3 4 4M16 7h.01':paths[['home','appearance','themes','language','updates','advanced','developer'].indexOf(group.id)]);svg.appendChild(path);tab.appendChild(svg);
    var text=document.createElement('span');text.textContent=t(group.label);tab.appendChild(text);
    if(group.id==='updates'){
     updateTab=tab;var dot=document.createElement('span');dot.className='settings-update-dot';dot.setAttribute('aria-hidden','true');tab.appendChild(dot);
@@ -75,7 +77,7 @@
    }
    // Theme previews form a real grid. Match remote direction to visible geometry.
    var themes=document.getElementById('homeThemePanel');
-   if(!inNav&&themes&&themes.contains(active)&&[37,38,39,40].indexOf(key)>=0){
+   if(!inNav&&((themes&&themes.contains(active))||(root.HomeWallpaperPanel&&document.getElementById('homeWallpaperPanel')&&document.getElementById('homeWallpaperPanel').contains(active)))&&[37,38,39,40].indexOf(key)>=0){
     var rect=active.getBoundingClientRect(),best=null,distance=Infinity;
     list.forEach(function(el){if(el===active)return;var r=el.getBoundingClientRect(),vertical=key===38||key===40;
      var overlap=vertical?r.right>rect.left+4&&r.left<rect.right-4:r.bottom>rect.top+4&&r.top<rect.bottom-4;

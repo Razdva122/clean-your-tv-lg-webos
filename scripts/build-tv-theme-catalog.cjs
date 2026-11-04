@@ -27,7 +27,7 @@ function generateCatalog(options = {}) {
     const manifest = policy.validateManifest(JSON.parse(descriptor));
     if (manifest.id !== entry.id || manifest.title !== entry.title || manifest.themeVersion !== entry.version) throw new Error('Built-in registry/manifest mismatch: ' + entry.id);
     const base = entry.url.slice(0, entry.url.lastIndexOf('/') + 1);
-    for (const file of [manifest.rules, ...manifest.assets, ...manifest.documents]) {
+    for (const file of [manifest.rules, ...manifest.assets, ...manifest.documents, ...(manifest.wallpaperVideo ? manifest.wallpaperVideo.variants : [])]) {
       const bytes = readLocal(builtinRoot, base + file.path, file.size);
       if (bytes.length !== file.size || hash(bytes) !== file.sha256) throw new Error('Built-in byte/hash mismatch: ' + base + file.path);
     }

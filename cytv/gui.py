@@ -228,14 +228,14 @@ class Wizard(QMainWindow):
                 widget.setParent(None)
                 widget.deleteLater()
 
-    def button(self, label, callback, default=False):
+    def button(self, label, callback, default=False, layout=None):
         button = QPushButton(tr(label))
         button.setMinimumHeight(44)
         button.setCursor(Qt.CursorShape.PointingHandCursor)
         button.setDefault(default)
         button.setProperty('primary', default)
         button.clicked.connect(callback)
-        self.form_layout.addWidget(button)
+        (layout if layout is not None else self.form_layout).addWidget(button)
         return button
 
     def update_steps(self, number=0, result=None):
@@ -282,6 +282,7 @@ class Wizard(QMainWindow):
         self.reset_details()
         self.clear_form()
         self.preview.show()
+        self.content.show()
         self.subtitle.show()
         self.steps.show()
         self.progress.hide()
@@ -295,14 +296,24 @@ class Wizard(QMainWindow):
         self.title.setText(tr('Make your TV feel like yours'))
         self.subtitle.setText(tr('Install Root or No-root. We will help you choose.'))
         self.content.setHtml('<h3>' + html.escape(tr('Before you begin')) + '</h3><p>' + html.escape(tr('Turn on your LG webOS TV and connect it to the same home network as this computer.')) + '</p><p>' + html.escape(tr('cytv will look for your TV automatically. Keep the remote nearby to approve pairing on the TV.')) + '</p>')
-        self.button('Set up my TV', lambda: self.start('install'), True)
-        self.maintenance_toggle = self.button('Maintenance action', self.toggle_maintenance)
+        setup = self.button('Set up my TV', lambda: self.start('install'), True)
+        setup.setObjectName('setupTV')
+        self.form_layout.addSpacing(6)
+        secondary = QWidget()
+        secondary.setObjectName('homeSecondaryActions')
+        secondary_layout = QHBoxLayout(secondary)
+        secondary_layout.setContentsMargins(0, 0, 0, 0)
+        secondary_layout.setSpacing(12)
+        self.wallpapers_button = self.button('Wallpapers', self.open_wallpapers, layout=secondary_layout)
+        self.maintenance_toggle = self.button('Maintenance action', self.toggle_maintenance, layout=secondary_layout)
         self.maintenance_toggle.setObjectName('maintenanceToggle')
         self.maintenance_toggle.setCheckable(True)
         self.maintenance_toggle.setText(tr('Maintenance action') + '  ▸')
+        self.form_layout.addWidget(secondary)
         self.maintenance = QWidget()
+        self.maintenance.setObjectName('maintenanceActions')
         maintenance_layout = QVBoxLayout(self.maintenance)
-        maintenance_layout.setContentsMargins(0, 0, 0, 0)
+        maintenance_layout.setContentsMargins(16, 16, 16, 16)
         maintenance_layout.setSpacing(10)
         actions = Select()
         actions.setAccessibleName(tr('Maintenance action'))
@@ -319,8 +330,22 @@ class Wizard(QMainWindow):
         self.form_layout.addWidget(self.maintenance)
         self.maintenance.hide()
 
+    def open_wallpapers(self):
+        if self.running:
+            return
+        existing = getattr(self, 'wallpaper_dialog', None)
+        if existing is not None and existing.isVisible():
+            existing.raise_()
+            return
+        self._wallpaper_closing = False
+        from cytv.wallpaper_gui import WallpaperDialog
+        self.wallpaper_dialog = WallpaperDialog(self)
+        self.wallpaper_dialog.open()
+
     def toggle_maintenance(self):
         expanded = self.maintenance_toggle.isChecked()
+        self.preview.setVisible(not expanded)
+        self.content.setVisible(not expanded)
         self.maintenance.setVisible(expanded)
         self.maintenance_toggle.setText(tr('Maintenance action') + ('  ▾' if expanded else '  ▸'))
 
@@ -404,6 +429,8 @@ class Wizard(QMainWindow):
         self.button('Continue', lambda: self.show_preparation(index + 1, prompt), True).setFocus()
 
     def start(self, command, profile=None):
+        if getattr(getattr(self, 'wallpaper_dialog', None), 'busy', False):
+            return
         if self.running:
             return
         self.running = True
@@ -427,6 +454,7 @@ class Wizard(QMainWindow):
         self.collect_preparation = False
         self.reset_details()
         self.content.clear()
+        self.content.show()
         self.clear_form()
         self.title.setText(tr('Connecting to your TV' if command == 'install' else self.operation_title))
         self.subtitle.setText(tr('Keep your TV on and watch for a pairing request.'))
@@ -699,6 +727,14 @@ class Wizard(QMainWindow):
                 self.error_dialog('Could not save report', 'Choose another folder and try again.')
 
     def closeEvent(self, event):
+        wallpaper_dialog = getattr(self, 'wallpaper_dialog', None)
+        if wallpaper_dialog is not None and wallpaper_dialog.busy:
+            event.ignore()
+            if not getattr(self, '_wallpaper_closing', False):
+                self._wallpaper_closing = True
+                wallpaper_dialog.events.finished.connect(lambda _: self.close())
+            wallpaper_dialog.close()
+            return
         if self.running:
             event.ignore()
             if self.pending:

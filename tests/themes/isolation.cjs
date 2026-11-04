@@ -24,9 +24,9 @@ async function appearance(page, selector) {
         await page.keyboard.press('Escape');
         await page.keyboard.press('Escape');
         const classic = await appearance(page, '#clock');
-        await page.addStyleTag({content: '.ctv-home { background: rgb(20, 40, 60); color: rgb(0, 255, 0); }' +
+        const themeStyle = await page.addStyleTag({content: '.ctv-home { background: rgb(20, 40, 60); color: rgb(0, 255, 0); }' +
           '.ctv-home .ctv-clock { color: rgb(255, 0, 128); } .ctv-home .ctv-shortcut { background: rgb(60, 0, 80); }'});
-        await page.locator('style').last().evaluate(style => {style.id = 'ctv-theme-style';});
+        await themeStyle.evaluate(style => {style.id = 'ctv-theme-style';});
         assert.equal((await appearance(page, '#clock')).color, 'rgb(255, 0, 128)');
         await page.locator('#btnSettings').click();
         assert.deepEqual(await appearance(page, settings), standard, 'Settings stays standard');

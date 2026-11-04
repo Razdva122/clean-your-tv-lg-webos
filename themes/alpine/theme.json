@@ -3,12 +3,12 @@
   "themeApiVersion": 1,
   "id": "github:razdva122/clean-your-tv-lg-webos:alpine",
   "title": "Alpine",
-  "description": "A quiet alpine panorama, large clock and one infinitely looping horizontal app ribbon.",
+  "description": "A real 4K Bachalpsee photograph, large clock and one infinitely looping horizontal app ribbon.",
   "author": {
     "name": "Clean Your TV contributors",
     "url": "https://github.com/razdva122"
   },
-  "themeVersion": "1.4.4",
+  "themeVersion": "1.5.0",
   "layout": {
     "preset": "scenic-grid",
     "columns": 8,
@@ -25,14 +25,14 @@
   "assets": [
     {
       "id": "preview",
-      "path": "assets/preview.png",
-      "mediaType": "image/png",
+      "path": "assets/preview.jpg",
+      "mediaType": "image/jpeg",
       "width": 960,
       "height": 540
     },
     {
       "id": "landscape",
-      "path": "assets/fronalpstock.jpg",
+      "path": "assets/bachsee.jpg",
       "mediaType": "image/jpeg",
       "width": 3840,
       "height": 2160
@@ -82,8 +82,20 @@
   ],
   "previewAssetId": "preview",
   "license": {
-    "identifier": "MIT AND CC-BY-SA-3.0",
+    "identifier": "MIT AND CC-BY-SA-3.0-DE",
     "textPath": "LICENSE.txt",
     "creditsPath": "CREDITS.txt"
+  },
+  "wallpaperVideo": {
+    "variants": [
+      {
+        "quality": "4k",
+        "path": "assets/wallpaper-4k.mp4"
+      },
+      {
+        "quality": "1080p",
+        "path": "assets/wallpaper-1080p.mp4"
+      }
+    ]
   }
 }

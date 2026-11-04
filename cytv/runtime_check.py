@@ -24,3 +24,18 @@ def check_runtime():
         raise RuntimeError('SSH Ed25519 verification failed')
     bcrypt.kdf(password=message, salt=b'cytv offline salt', desired_key_bytes=32,
                rounds=4, ignore_few_rounds=True)
+
+
+def check_ffmpeg_runtime():
+    """Execute the frozen GUI's bundled encoder without Qt, a TV or downloads."""
+    from pathlib import Path
+    import subprocess
+    import sys
+
+    binary = Path(sys._MEIPASS) / 'ffmpeg' / ('ffmpeg.exe' if sys.platform == 'win32' else 'ffmpeg')
+    options = {'creationflags': subprocess.CREATE_NO_WINDOW} if sys.platform == 'win32' else {}
+    result = subprocess.run([str(binary), '-version'], stdin=subprocess.DEVNULL,
+                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                            check=True, timeout=10, text=True, **options)
+    if not result.stdout.startswith('ffmpeg version '):
+        raise RuntimeError('Bundled FFmpeg runtime verification failed')
