@@ -19,6 +19,11 @@ unchanged pending the next freeze. Unrelated showcase work remains deferred.
   e8f4f4de524d748e0a57088460188c0aac2e15df: retain allowlisted package failure
   categories/reasons in diagnostics. Focused Tests41872613335 passed. It does
   not recover the original issue201/307 pending operations.
+- PR313, sourceea2b6b1c3861453d10c0cf6c43928d844c09dbc5, merged as
+  cbe593898bd3e4cb4ec2d8f2586a977ce8787e4f: clarify that the selected wallpaper,
+  rather than its theme, has no video version. English and all twelve translations
+  changed; media logic did not. Focused Tests41882613032 attempt2 passed,
+  including both platforms and browser, before integration.
 
 Independent final source reviews found no blocking defects. PR312 and PR309 had
 one history-index conflict. The proposed PR312 update0d0d97a87bc945982fb3ca0d40f087c69e25c142
@@ -30,10 +35,11 @@ or replace its required CI.
 
 ## Still outside the inventory
 
-At this checkpoint PR303 (Root activation), PR306 (passive IR diagnostics),
-PR313 (wallpaper availability wording) and the updated PR312 are awaiting
-successful required CI. Cancelled hosted-runner jobs were rerun once for each
-of303/306/313 during this integration task. No failed check was bypassed.
+At this checkpoint PR303 (Root activation), PR306 (passive IR diagnostics)
+and the updated PR312 are awaiting successful required CI. Cancelled hosted-runner
+jobs were rerun once for each of303/306/313 during this integration task.
+PR313 subsequently passed and merged;303/306 were cancelled again on macOS and
+remain blocked. No failed check was bypassed.
 PR310 remains incomplete: trusted Helper storage/authorization and the actual
 No-root context broker are not implemented or admitted.
 

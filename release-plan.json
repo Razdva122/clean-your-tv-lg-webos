@@ -104,6 +104,11 @@
         307
       ],
       "summary": "Preserve allowlisted install/remove failure status and reason in diagnostics; original #201/#307 installation/recovery remain unresolved"
+    },
+    {
+      "pr": 313,
+      "issues": [],
+      "summary": "Clarify in English and all twelve translations that the selected wallpaper has no video version; wallpaper/video capability logic is unchanged"
     }
   ],
   "excluded": [],
