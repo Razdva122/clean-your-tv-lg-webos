@@ -120,11 +120,11 @@ def admit(info, elf, pointer_bits=None):
     return values
 
 
-def luna(uri, payload):
+def luna(uri, payload, timeout=5):
     # Share the existing bounded transport: this firmware needs stdin held open
     # until the first reply. A run(input=b'') would close it prematurely.
     from runtime.transport import call
-    return call(uri, payload, timeout=5)
+    return call(uri, payload, timeout=timeout)
 
 
 def probe():
@@ -246,18 +246,40 @@ def stock_running(target):
     return False
 
 
+def foreground(timeout=5):
+    reply = luna('luna://com.webos.applicationManager/getForegroundAppInfo', {}, timeout=timeout)
+    app = reply.get('appId') if isinstance(reply, dict) and reply.get('returnValue') is True else None
+    if not isinstance(app, str) or not re.fullmatch(r'[A-Za-z0-9._-]{0,255}', app):
+        raise ValueError('Cannot verify foreground during native Home activation')
+    return app
+
+
 def retire_stock(target):
     if not stock_running(target):
         return
-    # Ask SAM to close only the verified, already-running native stock Home.
-    reply = luna('luna://com.webos.applicationManager/closeByAppId', {'id': 'com.webos.app.home'})
+    stock = 'com.webos.app.home'
+    before = foreground()
+    # SAM acknowledges submission immediately. On C1 the old executable can
+    # remain alive another 9–10 seconds, independently of that acknowledgement.
+    reply = luna('luna://com.webos.applicationManager/closeByAppId', {'id': stock, 'forceMode': True})
     if not isinstance(reply, dict) or reply.get('returnValue') is not True:
         raise ValueError('Could not close running stock Home')
-    deadline = time.monotonic() + 2
+    submitted = time.monotonic()
     while stock_running(target):
-        if time.monotonic() >= deadline:
+        if time.monotonic() >= submitted + 18:
             raise ValueError('Running stock Home remained after SAM close')
-        time.sleep(.05)
+        time.sleep(.25)
+    if before not in ('', stock):
+        return  # A preloaded stock process need not displace another foreground app.
+    # SAM's idle relaunch invokes the mounted gate. An independent launch here
+    # could race that invocation and reopen Home over the user's next selection.
+    while True:
+        remaining = submitted + 23 - time.monotonic()
+        if remaining <= 0:
+            raise ValueError('SAM foreground did not settle after closing stock Home')
+        if foreground(timeout=min(5, remaining)) not in ('', stock):
+            return
+        time.sleep(min(.25, remaining))
 
 
 def native(args, root=STATE, uid=0):

@@ -172,14 +172,51 @@ class GateLifecycleTests(unittest.TestCase):
         else: self.fail('native guardian did not restore stock')
         self.assertEqual(after['reason'], 'escape')
 
+    def close_scenario(self, gone_at, foreground):
+        clock = [0.0]
+        self.stack.enter_context(patch.object(gate.time, 'monotonic', side_effect=lambda: clock[0]))
+        self.stack.enter_context(patch.object(gate.time, 'sleep', side_effect=lambda seconds: clock.__setitem__(0, clock[0]+seconds)))
+        self.mock('stock_running', side_effect=lambda target: clock[0] < gone_at)
+        requests = []
+        def call(uri, payload, timeout=5):
+            requests.append((uri.rsplit('/',1)[-1], payload))
+            if uri.endswith('/getForegroundAppInfo'):
+                return {'returnValue':True, 'appId':foreground(clock[0])}
+            if uri.endswith('/closeByAppId'):
+                return {'returnValue':True}
+            self.fail('unexpected RPC: '+uri)
+        self.mock('luna', side_effect=call)
+        return clock, requests
+
+    def test_delayed_close_waits_for_sam_idle_and_does_not_launch_again(self):
+        def fg(now):
+            return 'com.webos.app.home' if now < 10 else '' if now < 13 else gate.APP
+        clock, requests = self.close_scenario(10, fg)
+        gate.retire_stock({})
+        self.assertGreaterEqual(clock[0], 13)
+        self.assertEqual([request for request in requests if request[0]!='getForegroundAppInfo'],
+            [('closeByAppId', {'id':'com.webos.app.home','forceMode':True})])
+
     def test_existing_stock_process_requires_exact_close_readback(self):
-        self.mock('stock_running', return_value=True)
-        luna = self.mock('luna', return_value={'returnValue': True})
-        with patch.object(gate.time, 'monotonic', side_effect=[1, 10]):
-            with self.assertRaisesRegex(ValueError, 'stock Home'):
-                gate.retire_stock({})
-        luna.assert_called_once_with('luna://com.webos.applicationManager/closeByAppId',
-                                     {'id':'com.webos.app.home'})
+        clock, requests = self.close_scenario(3600, lambda now: 'com.webos.app.home')
+        with self.assertRaisesRegex(ValueError, 'stock Home'):
+            gate.retire_stock({})
+        self.assertGreaterEqual(clock[0], 15)
+        self.assertLess(clock[0], 20)
+
+    def test_preloaded_stock_close_keeps_live_tv_in_foreground(self):
+        clock, requests = self.close_scenario(10, lambda now: 'com.webos.app.livetv')
+        gate.retire_stock({})
+        self.assertEqual([method for method,_ in requests], ['getForegroundAppInfo','closeByAppId'])
+        self.assertLess(clock[0], 12)
+
+    def test_empty_foreground_after_close_times_out_without_duplicate_launch(self):
+        clock, requests = self.close_scenario(10, lambda now: '')
+        with self.assertRaisesRegex(ValueError, 'foreground'):
+            gate.retire_stock({})
+        self.assertGreaterEqual(clock[0], 20)
+        self.assertLess(clock[0], 25)
+        self.assertNotIn('launch', [method for method,_ in requests])
 
 
 if __name__ == '__main__':
