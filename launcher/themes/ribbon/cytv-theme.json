@@ -3,12 +3,12 @@
   "themeApiVersion": 1,
   "id": "builtin:ribbon",
   "title": "Ribbon",
-  "description": "Original blue-violet nebula on black space with a subtle 20-second 4K drift and a fixed eight-card skewed app ribbon.",
+  "description": "Black Hole by Xecutioner, recorded at native 3840x2160, with a fixed eight-card skewed app ribbon.",
   "author": {
-    "name": "Clean Your TV contributors",
+    "name": "CYTV contributors; video by Xecutioner",
     "url": "https://github.com/razdva122"
   },
-  "themeVersion": "1.2.0",
+  "themeVersion": "1.3.0",
   "layout": {
     "preset": "scenic-grid",
     "columns": 8,
@@ -39,54 +39,54 @@
   "assets": [
     {
       "id": "wallpaper",
-      "path": "assets/wallpaper-6765e9fee01d69c1cb1fe277552f422555f3ab30545183418067aea8cfd4310a.jpg",
+      "path": "assets/wallpaper-a619ba83b8c40dd776ced668829ff9af02f42084e025d1d96aba6605807b3df7.jpg",
       "mediaType": "image/jpeg",
       "width": 3840,
       "height": 2160,
-      "size": 287390,
-      "sha256": "6765e9fee01d69c1cb1fe277552f422555f3ab30545183418067aea8cfd4310a"
+      "size": 422270,
+      "sha256": "a619ba83b8c40dd776ced668829ff9af02f42084e025d1d96aba6605807b3df7"
     },
     {
       "id": "preview",
-      "path": "assets/preview-c6602e5a1b99a888515ca00ed98fc829064b6294b8274c31602742ceff0da819.jpg",
+      "path": "assets/preview-b2321b6cc4d6cb02510ad691e23353296d04b762c852fe1bcb1f8f5e557e827a.jpg",
       "mediaType": "image/jpeg",
       "width": 960,
       "height": 540,
-      "size": 59518,
-      "sha256": "c6602e5a1b99a888515ca00ed98fc829064b6294b8274c31602742ceff0da819"
+      "size": 76065,
+      "sha256": "b2321b6cc4d6cb02510ad691e23353296d04b762c852fe1bcb1f8f5e557e827a"
     }
   ],
   "previewAssetId": "preview",
   "license": {
-    "identifier": "MIT",
-    "textPath": "documents/0-1f4fb6f3cfd1f24a36e9d045602191fe2513fc80fdc6ca5b33afdce306aaa40b.txt",
-    "creditsPath": "documents/1-43b82ba0d37909a5d222c4d08e5b0b474f864063f8108e7b4e03543cfe02a862.txt"
+    "identifier": "LicenseRef-Xecutioner-NonCommercial",
+    "textPath": "documents/0-ef2c9dee57bcc55339247c34ab6460d9632669a06c764df68b49e1363857964d.txt",
+    "creditsPath": "documents/1-a111ee9dd92cf115657a4ad197a24b0ff15dee4da540b9cf5cdd95c0cff37b6d.txt"
   },
   "wallpaperVideo": {
     "variants": [
       {
         "quality": "4k",
-        "path": "videos/4k-b9ec868f73bb0dc1d03e21d6c218f031e19933a0c74f9a601f1bbd4f7c3cf194.mp4",
+        "path": "videos/4k-37a30030526f89a939ad09c852736a9d0b01722630e2aca01869da2a70f256fb.mp4",
         "mediaType": "video/mp4",
         "width": 3840,
         "height": 2160,
-        "size": 8433743,
-        "sha256": "b9ec868f73bb0dc1d03e21d6c218f031e19933a0c74f9a601f1bbd4f7c3cf194"
+        "size": 11206369,
+        "sha256": "37a30030526f89a939ad09c852736a9d0b01722630e2aca01869da2a70f256fb"
       },
       {
         "quality": "1080p",
-        "path": "videos/1080p-14370c8912d1a9a17d0b34aee02cebee8de52ca29e0bf14a4bc323d609fd2c44.mp4",
+        "path": "videos/1080p-f8d669b241905e0699b57d13fff111ef4bd3e916a9b3343639347ad7f9036244.mp4",
         "mediaType": "video/mp4",
         "width": 1920,
         "height": 1080,
-        "size": 2666464,
-        "sha256": "14370c8912d1a9a17d0b34aee02cebee8de52ca29e0bf14a4bc323d609fd2c44"
+        "size": 2636966,
+        "sha256": "f8d669b241905e0699b57d13fff111ef4bd3e916a9b3343639347ad7f9036244"
       }
     ]
   },
   "source": {
     "repository": "https://github.com/razdva122/clean-your-tv-lg-webos",
-    "commit": "b9ad87a73333b159d5c19dc77a18a66d31bc043a"
+    "commit": "aa5061301417b7709055c90c469f5398be05c4d9"
   },
   "requires": {
     "minimumHomeVersion": "1.6.1",
@@ -102,14 +102,14 @@
   },
   "documents": [
     {
-      "path": "documents/0-1f4fb6f3cfd1f24a36e9d045602191fe2513fc80fdc6ca5b33afdce306aaa40b.txt",
-      "size": 650,
-      "sha256": "1f4fb6f3cfd1f24a36e9d045602191fe2513fc80fdc6ca5b33afdce306aaa40b"
+      "path": "documents/0-ef2c9dee57bcc55339247c34ab6460d9632669a06c764df68b49e1363857964d.txt",
+      "size": 1167,
+      "sha256": "ef2c9dee57bcc55339247c34ab6460d9632669a06c764df68b49e1363857964d"
     },
     {
-      "path": "documents/1-43b82ba0d37909a5d222c4d08e5b0b474f864063f8108e7b4e03543cfe02a862.txt",
-      "size": 1752,
-      "sha256": "43b82ba0d37909a5d222c4d08e5b0b474f864063f8108e7b4e03543cfe02a862"
+      "path": "documents/1-a111ee9dd92cf115657a4ad197a24b0ff15dee4da540b9cf5cdd95c0cff37b6d.txt",
+      "size": 782,
+      "sha256": "a111ee9dd92cf115657a4ad197a24b0ff15dee4da540b9cf5cdd95c0cff37b6d"
     }
   ]
 }

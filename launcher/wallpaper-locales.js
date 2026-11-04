@@ -38,7 +38,10 @@ window.HomeWallpaperLocales = {
     "Apply": "Применить",
     "Cancel": "Отмена",
     "Uploaded from phone": "Загружено с телефона",
-    "Uploaded from CYTV": "Загружено из CYTV"
+    "Uploaded from CYTV": "Загружено из CYTV",
+    "Built-in wallpapers": "Встроенные обои",
+    "Video by": "Автор видео",
+    "Non-commercial use": "Некоммерческое использование"
   },
   "cs": {
     "Wallpapers": "Tapety",
@@ -78,7 +81,10 @@ window.HomeWallpaperLocales = {
     "Apply": "Použít",
     "Cancel": "Zrušit",
     "Uploaded from phone": "Nahráno z telefonu",
-    "Uploaded from CYTV": "Nahráno z CYTV"
+    "Uploaded from CYTV": "Nahráno z CYTV",
+    "Built-in wallpapers": "Vestavěné tapety",
+    "Video by": "Autor videa",
+    "Non-commercial use": "Nekomerční použití"
   },
   "de": {
     "Wallpapers": "Hintergrundbilder",
@@ -118,7 +124,10 @@ window.HomeWallpaperLocales = {
     "Apply": "Anwenden",
     "Cancel": "Abbrechen",
     "Uploaded from phone": "Vom Telefon hochgeladen",
-    "Uploaded from CYTV": "Von CYTV hochgeladen"
+    "Uploaded from CYTV": "Von CYTV hochgeladen",
+    "Built-in wallpapers": "Integrierte Hintergrundbilder",
+    "Video by": "Video von",
+    "Non-commercial use": "Nichtkommerzielle Nutzung"
   },
   "es": {
     "Wallpapers": "Fondos de pantalla",
@@ -158,7 +167,10 @@ window.HomeWallpaperLocales = {
     "Apply": "Aplicar",
     "Cancel": "Cancelar",
     "Uploaded from phone": "Subido desde el teléfono",
-    "Uploaded from CYTV": "Subido desde CYTV"
+    "Uploaded from CYTV": "Subido desde CYTV",
+    "Built-in wallpapers": "Fondos incluidos",
+    "Video by": "Vídeo de",
+    "Non-commercial use": "Uso no comercial"
   },
   "pt-BR": {
     "Wallpapers": "Papéis de parede",
@@ -198,7 +210,10 @@ window.HomeWallpaperLocales = {
     "Apply": "Aplicar",
     "Cancel": "Cancelar",
     "Uploaded from phone": "Enviado do celular",
-    "Uploaded from CYTV": "Enviado do CYTV"
+    "Uploaded from CYTV": "Enviado do CYTV",
+    "Built-in wallpapers": "Fundos incluídos",
+    "Video by": "Vídeo de",
+    "Non-commercial use": "Uso não comercial"
   },
   "fr": {
     "Wallpapers": "Fonds d’écran",
@@ -238,7 +253,10 @@ window.HomeWallpaperLocales = {
     "Apply": "Appliquer",
     "Cancel": "Annuler",
     "Uploaded from phone": "Envoyé depuis le téléphone",
-    "Uploaded from CYTV": "Envoyé depuis CYTV"
+    "Uploaded from CYTV": "Envoyé depuis CYTV",
+    "Built-in wallpapers": "Fonds d’écran intégrés",
+    "Video by": "Vidéo de",
+    "Non-commercial use": "Utilisation non commerciale"
   },
   "it": {
     "Wallpapers": "Sfondi",
@@ -278,7 +296,10 @@ window.HomeWallpaperLocales = {
     "Apply": "Applica",
     "Cancel": "Annulla",
     "Uploaded from phone": "Caricato dal telefono",
-    "Uploaded from CYTV": "Caricato da CYTV"
+    "Uploaded from CYTV": "Caricato da CYTV",
+    "Built-in wallpapers": "Sfondi inclusi",
+    "Video by": "Video di",
+    "Non-commercial use": "Uso non commerciale"
   },
   "ko": {
     "Wallpapers": "배경화면",
@@ -318,7 +339,10 @@ window.HomeWallpaperLocales = {
     "Apply": "적용",
     "Cancel": "취소",
     "Uploaded from phone": "휴대전화에서 업로드됨",
-    "Uploaded from CYTV": "CYTV에서 업로드됨"
+    "Uploaded from CYTV": "CYTV에서 업로드됨",
+    "Built-in wallpapers": "기본 배경화면",
+    "Video by": "동영상 제작",
+    "Non-commercial use": "비상업적 이용"
   },
   "hi": {
     "Wallpapers": "वॉलपेपर",
@@ -358,7 +382,10 @@ window.HomeWallpaperLocales = {
     "Apply": "लागू करें",
     "Cancel": "रद्द करें",
     "Uploaded from phone": "फ़ोन से अपलोड किया गया",
-    "Uploaded from CYTV": "CYTV से अपलोड किया गया"
+    "Uploaded from CYTV": "CYTV से अपलोड किया गया",
+    "Built-in wallpapers": "अंतर्निहित वॉलपेपर",
+    "Video by": "वीडियो निर्माता",
+    "Non-commercial use": "गैर-व्यावसायिक उपयोग"
   },
   "pl": {
     "Wallpapers": "Tapety",
@@ -398,7 +425,10 @@ window.HomeWallpaperLocales = {
     "Apply": "Zastosuj",
     "Cancel": "Anuluj",
     "Uploaded from phone": "Przesłano z telefonu",
-    "Uploaded from CYTV": "Przesłano z CYTV"
+    "Uploaded from CYTV": "Przesłano z CYTV",
+    "Built-in wallpapers": "Wbudowane tapety",
+    "Video by": "Autor filmu",
+    "Non-commercial use": "Użytek niekomercyjny"
   },
   "zh-Hans": {
     "Wallpapers": "壁纸",
@@ -438,7 +468,10 @@ window.HomeWallpaperLocales = {
     "Apply": "应用",
     "Cancel": "取消",
     "Uploaded from phone": "从手机上传",
-    "Uploaded from CYTV": "从 CYTV 上传"
+    "Uploaded from CYTV": "从 CYTV 上传",
+    "Built-in wallpapers": "内置壁纸",
+    "Video by": "视频作者",
+    "Non-commercial use": "仅限非商业使用"
   },
   "zh-Hant": {
     "Wallpapers": "桌布",
@@ -478,6 +511,9 @@ window.HomeWallpaperLocales = {
     "Apply": "套用",
     "Cancel": "取消",
     "Uploaded from phone": "從手機上傳",
-    "Uploaded from CYTV": "從 CYTV 上傳"
+    "Uploaded from CYTV": "從 CYTV 上傳",
+    "Built-in wallpapers": "內建桌布",
+    "Video by": "影片作者",
+    "Non-commercial use": "僅限非商業使用"
   }
 };

@@ -102,8 +102,9 @@ Desktop decode and a native package install do not satisfy final release gates.
 
 Personal media is one independent wallpaper slot, not an installed theme. Both
 editions offer a source switch between the current theme and My wallpaper.
-Changing themes updates layout and styling without replacing the selected
-personal background. Preview and Apply on the TV are separate from receipt;
+Confirming a different theme restores its wallpaper. Personal uploads and built-in
+choices remain available for explicit reselection. The selected wallpaper restores
+on app relaunch until the user accepts a different theme. Preview and Apply on the TV are separate from receipt;
 HTTP 202 confirms receipt only. A cancelled transfer, invalid image/video or
 failed storage transaction preserves the accepted wallpaper. Removing the
 personal wallpaper returns to the current theme. Personal image/video bytes are
@@ -186,3 +187,9 @@ For a committed built-in source upgrade use
 `node scripts/build-builtin-theme.cjs themes/ribbon --update-source`, followed
 by the normal `--check`; the new bundle pins the source commit. This does not
 admit the feature to the frozen release candidate.
+
+## Built-in Black Hole and continuous playback
+
+Video author: **Xecutioner**. Non-commercial use with explicit attribution is permitted as confirmed by the maintainer; see `themes/ribbon/LICENSE.txt` and `CREDITS.txt`. The artwork is not MIT. `wallpaper-library.js` reuses the verified bundled Ribbon media without applying its layout/CSS or duplicating its ordinary MP4s. `PersonalWallpaper` stores the selected built-in ID separately from the retained personal envelope in the same transactional slot. On a different accepted theme, selection returns to that theme; saved personal media remains intact.
+
+`wallpaper-stream.js` recognizes only the pinned Black Hole UHD digest, checks the packaged fragment bytes against their SHA256, and appends them in MSE sequence mode on an infinite timeline. It retains a complete previous cycle before removing old GOPs, buffers future cycles, and disposes requests, timers and object URLs before detach. Unsupported MSE uses the ordinary MP4; streaming/decode failure uses the existing FHD/image cascade. External themes cannot supply executable streaming code or a new streaming URL. Ordinary MP4 validation is unchanged.

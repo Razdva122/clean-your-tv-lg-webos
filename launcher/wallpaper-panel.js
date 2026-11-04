@@ -19,10 +19,14 @@
   if(!root.ThemeReceiver){error();return;}
   root.ThemeReceiver.start(signal,'wallpaper').then(function(session){if(!live()){root.ThemeReceiver.stop(session.sessionId);return;}receiver=session;connection.hidden=false;addressText.textContent=fromPhone?session.addresses.map(function(address){return 'http://'+address+':8879/wallpaper';}).join(' · '):session.addresses.join(' · ');pinText.textContent='PIN: '+session.pin;qr.hidden=!fromPhone;if(fromPhone&&root.WallpaperQR)root.WallpaperQR.render(qr,'http://'+session.addresses[0]+':8879/wallpaper#pin='+session.pin);poll();},error);
  }
+ var builtinButtons=[];
  function mountPersonal(){
+  if(!root.PersonalWallpaper)return;
   personalControls=node('div',panel,'personalWallpaperControls');
-  var sources=node('div',personalControls);sources.className='wallpaper-quality';
+  var sourceControls=node('div',panel,'wallpaperSources');var sources=node('div',sourceControls);sources.className='wallpaper-quality';
   themeSource=button(sources,'wallpaperSourceTheme',function(){invoke('select','theme');});mySource=button(sources,'wallpaperSourcePersonal',function(){invoke('select','personal');});
+  if(root.WallpaperLibrary){var library=node('div',sourceControls,'wallpaperBuiltins');var heading=node('h5',library);heading.textContent=t('Built-in wallpapers');root.WallpaperLibrary.list().forEach(function(item){var el=button(library,'wallpaperBuiltin-'+item.id.slice(8),function(){stopReceiver();invoke('select',item.id);});el.setAttribute('data-wallpaper-id',item.id);var name=node('strong',el);name.textContent=item.title;var credit=node('small',el);credit.textContent='4K · '+t('Video by')+' '+item.author;builtinButtons.push({button:el,credit:credit,item:item,heading:heading});});}
+  panel.insertBefore(sourceControls,notice);
   var uploads=node('div',personalControls);receiveCYTV=button(uploads,'wallpaperCYTV',function(){receive(false);});phone=button(uploads,'wallpaperPhone',function(){receive(true);});
   phoneWarning=node('p',personalControls,'wallpaperPhoneWarning');
   statusText=node('p',personalControls,'wallpaperStatus');statusText.setAttribute('aria-live','polite');
@@ -33,6 +37,7 @@
  }
  function refreshPersonal(){
   if(!personalControls)return;var value=personal();if(value.error){statusText.textContent=t(value.error);lastRestoreError=value.error;}else if(lastRestoreError){statusText.textContent='';lastRestoreError='';}themeSource.textContent=t('Theme');mySource.textContent=t('My wallpaper');themeSource.setAttribute('aria-pressed',String(value.source==='theme'));mySource.setAttribute('aria-pressed',String(value.source==='personal'));mySource.disabled=!value.installed;remove.disabled=!value.installed;remove.textContent=t('Remove personal wallpaper');receiveCYTV.textContent=t('Receive from CYTV');phone.textContent=t('Upload from phone');phoneWarning.textContent=t('Phone upload: ordinary image up to 1080p. Sharpness is limited by the TV interface. Use CYTV for native 4K video.');
+  builtinButtons.forEach(function(entry){entry.button.setAttribute('aria-pressed',String(value.source==='builtin'&&value.builtinId===entry.item.id));entry.heading.textContent=t('Built-in wallpapers');entry.credit.textContent='4K · '+t('Video by')+' '+entry.item.author;});
   receiverCancel.textContent=t('Cancel');applyButton.textContent=t('Apply');cancelButton.textContent=t('Cancel');pendingBox.hidden=!value.pending;if(value.pending){if(pendingImage.getAttribute('src')!==value.pending.posterURL)pendingImage.src=value.pending.posterURL;}else pendingImage.removeAttribute('src');
  }
  function refresh(){
@@ -41,7 +46,7 @@
   var focused=document.activeElement,wasInside=panel.contains(focused);
   var value=state(),available=value.available||[],hasPoster=!!value.posterURL,cap=value.capabilities||{},dim=typeof value.dim==='number'?value.dim:0;
   title.textContent=value.source==='personal'?t('My wallpaper'):value.title||'Classic';
-  sourceInfo.hidden=value.source!=='personal';sourceInfo.textContent=value.source==='personal'?t(value.origin==='phone'?'Uploaded from phone':'Uploaded from CYTV')+' · '+value.posterWidth+' × '+value.posterHeight:'';
+  sourceInfo.hidden=value.source!=='personal'&&!value.author;sourceInfo.textContent=value.author?t('Video by')+' '+value.author+' · '+t(value.license)+' · '+value.posterWidth+' × '+value.posterHeight:value.source==='personal'?t(value.origin==='phone'?'Uploaded from phone':'Uploaded from CYTV')+' · '+value.posterWidth+' × '+value.posterHeight:'';
   preview.hidden=!hasPoster;
   if(hasPoster){if(preview.getAttribute('src')!==value.posterURL)preview.src=value.posterURL;preview.alt=t('Current theme wallpaper');}else preview.removeAttribute('src');
   capability.textContent=t('TV capability')+': '+t(cap.uhd===true?'4K supported':cap.uhd===false?'4K not detected':'Unknown');

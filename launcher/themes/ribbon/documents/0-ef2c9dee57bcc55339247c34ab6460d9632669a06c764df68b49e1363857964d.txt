@@ -1,3 +1,8 @@
+Black Hole video and derived stills: Xecutioner.
+Permission for non-commercial use and inclusion in free CYTV distributions, with explicit attribution to Xecutioner, was confirmed by the project maintainer on 2026-11-04. This is an author-specific permission, not a Creative Commons license or an MIT grant for the artwork. Commercial use requires separate permission. Original source: https://steamcommunity.com/sharedfiles/filedetails/?id=2981249186
+
+Ribbon styling and CYTV code retain the following MIT license:
+
 MIT License
 
 Copyright (c) CYTV themes

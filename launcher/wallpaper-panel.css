@@ -21,3 +21,7 @@
 #wallpaperPhoneWarning { border-left:3px solid #bcd8f6; padding-left:12px; }
 #wallpaperPendingPreview { width:240px; height:135px; object-fit:contain; display:block; }
 #personalWallpaperControls { border-top:1px solid #526170; margin-top:16px; padding-top:12px; }
+
+#wallpaperBuiltins h5 { font-size:24px; margin:18px 0 6px; }
+#wallpaperBuiltins strong,#wallpaperBuiltins small { display:block; text-align:left; }
+#wallpaperBuiltins small { font-size:20px; margin-top:6px; color:#c5d0dd; }

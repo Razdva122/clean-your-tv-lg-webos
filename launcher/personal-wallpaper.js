@@ -1,10 +1,10 @@
 /* One independent, transactional personal media slot. No theme code or URLs are imported. */
 (function(root){
  'use strict';
- var database,started,current=null,pending=null,source='theme',restoreError='',generation=0,restoreGeneration=0,writing=null,applying=false,writeQueue=Promise.resolve();
+ var database,started,current=null,pending=null,builtin=null,source='theme',restoreError='',generation=0,restoreGeneration=0,writing=null,applying=false,writeQueue=Promise.resolve();
  function emit(){root.document.dispatchEvent(new root.CustomEvent('home-wallpaper-change'));}
  function summary(item){return item?{origin:item.envelope.source,posterURL:item.prepared.assetHandles.poster,width:item.envelope.image.width,height:item.envelope.image.height,qualities:item.envelope.variants.map(function(v){return v.quality;})}:null;}
- function state(){return {source:source,installed:!!current,pending:summary(pending),origin:current?current.envelope.source:null,error:restoreError};}
+ function state(){return {source:source.indexOf('builtin:')===0?'builtin':source,builtinId:source.indexOf('builtin:')===0?source:null,installed:!!current,pending:summary(pending),origin:current?current.envelope.source:null,error:restoreError};}
  function fail(){throw Error('Invalid personal wallpaper');}
  function keys(value,names){if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).sort().join(',')!==names.split(' ').sort().join(','))fail();}
  function bytes(value,max){
@@ -40,10 +40,30 @@
  });});}
  function cancel(){generation++;if(writing)try{writing.abort();}catch(_){}var old=pending;pending=null;dispose(old);emit();}
  function receive(envelope,cancelled){cancel();var token=generation;return Promise.resolve().then(function(){return prepare(envelope,function(){return token!==generation||cancelled&&cancelled();});}).then(function(item){if(token!==generation||cancelled&&cancelled())return dispose(item).then(function(){throw Error('Cancelled');});pending=item;emit();return summary(item);});}
+ function record(next){return {envelope:current?current.envelope:null,source:next};}
+ function render(){root.HomeWallpaper.setPersonal(source.indexOf('builtin:')===0?builtin&&builtin.prepared:current&&current.prepared,source!=='theme');}
  function serialized(action){var result=writeQueue.then(action);writeQueue=result.catch(function(){});return result;}
- function apply(){if(!pending||applying)return Promise.reject(Error('No pending wallpaper'));var item=pending,token=generation;applying=true;return serialized(function(){return transaction('readwrite',function(store){store.put({envelope:item.envelope,source:'personal'},'slot');},token).then(function(){if(token!==generation){return transaction('readwrite',function(store){if(current)store.put({envelope:current.envelope,source:source},'slot');else store.delete('slot');}).then(function(){throw Error('Cancelled');});}var old=current;current=item;pending=null;source='personal';restoreError='';root.HomeWallpaper.setPersonal(item.prepared,true);emit();return dispose(old);});}).then(function(value){applying=false;return value;},function(error){applying=false;throw error;});}
- function select(next){if(['theme','personal'].indexOf(next)<0)return Promise.reject(Error('Invalid wallpaper source'));var restoring=start();return serialized(function(){return restoring.catch(function(){}).then(function(){var item=current;if(next==='personal'&&!item)throw Error('No personal wallpaper');return transaction('readwrite',function(store){if(item)store.put({envelope:item.envelope,source:next},'slot');}).then(function(){source=next;root.HomeWallpaper.setPersonal(current&&current.prepared,next==='personal');emit();});});});}
- function remove(){restoreGeneration++;cancel();return serialized(function(){return transaction('readwrite',function(store){store.delete('slot');}).then(function(){var old=current;current=null;source='theme';restoreError='';root.HomeWallpaper.setPersonal(null,false);emit();return dispose(old);});});}
- function start(){if(started)return started;var token=restoreGeneration;started=serialized(function(){return transaction('readonly',function(store,set){var request=store.get('slot');request.onsuccess=function(){set(request.result);};}).then(function(saved){if(!saved||token!==restoreGeneration)return;return prepare(saved.envelope,function(){return token!==restoreGeneration;}).then(function(item){if(token!==restoreGeneration)return dispose(item);current=item;source=saved.source==='personal'?'personal':'theme';restoreError='';root.HomeWallpaper.setPersonal(item.prepared,source==='personal');emit();});}).catch(function(error){if(token!==restoreGeneration)return;restoreError='Could not change wallpaper settings.';emit();throw error;});});return started;}
+ function apply(){if(!pending||applying)return Promise.reject(Error('No pending wallpaper'));var item=pending,token=generation;applying=true;return serialized(function(){return transaction('readwrite',function(store){store.put({envelope:item.envelope,source:'personal'},'slot');},token).then(function(){if(token!==generation){return transaction('readwrite',function(store){store.put(record(source),'slot');}).then(function(){throw Error('Cancelled');});}var old=current,oldBuiltin=builtin;builtin=null;current=item;pending=null;source='personal';restoreError='';render();emit();return Promise.all([dispose(old),dispose(oldBuiltin)]);});}).then(function(value){applying=false;return value;},function(error){applying=false;throw error;});}
+ function select(next){
+  var isBuiltin=root.WallpaperLibrary&&root.WallpaperLibrary.has(next);
+  if(['theme','personal'].indexOf(next)<0&&!isBuiltin)return Promise.reject(Error('Invalid wallpaper source'));
+  var restoring=start();return serialized(function(){return restoring.catch(function(){}).then(function(){
+   if(next==='personal'&&!current)throw Error('No personal wallpaper');
+   if(next===source){render();return;}
+   return (isBuiltin?root.WallpaperLibrary.prepare(next):Promise.resolve(null)).then(function(item){
+    return transaction('readwrite',function(store){store.put(record(next),'slot');}).then(function(){var old=builtin;builtin=item;source=next;restoreError='';render();emit();return dispose(old);},function(error){return dispose(item).then(function(){throw error;});});
+   });
+  });});
+ }
+ function remove(){restoreGeneration++;cancel();return serialized(function(){return transaction('readwrite',function(store){if(source.indexOf('builtin:')===0)store.put({envelope:null,source:source},'slot');else store.delete('slot');}).then(function(){var old=current;current=null;if(source.indexOf('builtin:')!==0)source='theme';restoreError='';render();emit();return dispose(old);});});}
+ function start(){if(started)return started;var token=restoreGeneration;started=serialized(function(){return transaction('readonly',function(store,set){var request=store.get('slot');request.onsuccess=function(){set(request.result);};}).then(function(saved){
+  if(!saved||token!==restoreGeneration)return;
+  var cancelled=function(){return token!==restoreGeneration;};
+  return (saved.envelope?prepare(saved.envelope,cancelled):Promise.resolve(null)).then(function(item){
+   if(cancelled())return dispose(item);current=item;
+   source=saved.source==='personal'&&current?'personal':'theme';
+   if(root.WallpaperLibrary&&root.WallpaperLibrary.has(saved.source))return root.WallpaperLibrary.prepare(saved.source,cancelled).then(function(value){if(cancelled())return dispose(value);builtin=value;source=saved.source;});
+  }).then(function(){if(cancelled())return;restoreError='';render();emit();});
+ }).catch(function(error){if(token!==restoreGeneration)return;restoreError='Could not change wallpaper settings.';emit();throw error;});});return started;}
  root.PersonalWallpaper={start:start,receive:receive,apply:apply,cancel:cancel,select:select,remove:remove,state:state};
 }(this));

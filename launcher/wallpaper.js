@@ -2,7 +2,7 @@
 (function (root) {
   'use strict';
   var doc = root.document, key = 'tvhome.wallpaper.preferences.v1', preferences = [], input = null, themeInput = null, personalInput = null, personalEnabled = false;
-  var owners = Object.create(null), video = null, plane = null, shade = null, style = null;
+  var owners = Object.create(null), video = null, plane = null, shade = null, style = null, stream = null;
   var generation = 0, timer = null, actual = 'image', quality = 'auto', dim = 0, notice = '';
   var capabilities = {uhd: null}, bridge = null;
   function emit() { doc.dispatchEvent(new root.CustomEvent('home-wallpaper-change')); }
@@ -19,8 +19,8 @@
     return m && m.assets.filter(function (asset) { return asset.id === id; })[0];
   }
   function state() {
-    var asset = poster(), m = input && input.manifest;
-    return {source: personalEnabled && personalInput ? 'personal' : 'theme', origin: personalEnabled && personalInput ? personalInput.origin : null, themeId: m ? m.id : 'builtin:classic', title: m ? m.title : 'Classic', posterURL: asset && input.assetHandles && input.assetHandles[asset.id] || '', posterWidth: asset && asset.width || 0, posterHeight: asset && asset.height || 0, available: available(), paused: blocked() && available().length > 1 && quality !== 'image', actualQuality: actual, preferenceQuality: quality, dim: dim, notice: notice, capabilities: {uhd: capabilities.uhd}};
+    var asset = poster(), m = input && input.manifest, credit = root.WallpaperLibrary && root.WallpaperLibrary.creditFor(m);
+    return {source: personalEnabled && personalInput ? personalInput.origin === 'builtin' ? 'builtin' : 'personal' : 'theme', origin: personalEnabled && personalInput ? personalInput.origin : null, themeId: m ? m.id : 'builtin:classic', title: m ? m.title : 'Classic', author: input && input.wallpaperAuthor || credit && credit.author || '', license: input && input.wallpaperLicense || credit && credit.license || '', posterURL: asset && input.assetHandles && input.assetHandles[asset.id] || '', posterWidth: asset && asset.width || 0, posterHeight: asset && asset.height || 0, available: available(), paused: blocked() && available().length > 1 && quality !== 'image', actualQuality: actual, preferenceQuality: quality, dim: dim, notice: notice, capabilities: {uhd: capabilities.uhd}};
   }
   function classes(playing) {
     var surface = doc.getElementById('homeSurface'), method = playing ? 'add' : 'remove';
@@ -31,6 +31,7 @@
   function detach() {
     generation++; if (timer !== null) root.clearTimeout(timer); timer = null;
     classes(false); actual = 'image';
+    if (stream) { stream.dispose(); stream = null; }
     if (video) {
       var old = video; video = null;
       ['playing', 'error', 'stalled', 'waiting', 'timeupdate'].forEach(function (event) { old.removeEventListener(event, old._wallpaperListeners[event]); });
@@ -91,7 +92,10 @@
       timeupdate: function () { if (valid() && current.currentTime !== lastTime) { lastTime = current.currentTime; watchdog(); } }
     };
     Object.keys(current._wallpaperListeners).forEach(function (event) { current.addEventListener(event, current._wallpaperListeners[event]); });
-    plane.appendChild(current); current.src = input.videoHandles[q]; watchdog();
+    plane.appendChild(current);
+    var variant = input.manifest.wallpaperVideo.variants.filter(function (v) { return v.quality === q; })[0];
+    if (root.WallpaperStream) stream = root.WallpaperStream.create(current, variant, failed);
+    current.src = stream ? stream.url : input.videoHandles[q]; watchdog();
     try { var pending = current.play(); if (pending && pending.then) pending.then(function () {}, failed); } catch (_) { failed(); }
     emit();
   }

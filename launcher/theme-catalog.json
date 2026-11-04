@@ -25,16 +25,16 @@
     {
       "id": "builtin:ribbon",
       "title": "Ribbon",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "builtin": true,
-      "description": "Original blue-violet nebula on black space with a subtle 20-second 4K drift and a fixed eight-card skewed app ribbon.",
-      "author": "Clean Your TV contributors",
-      "license": "MIT",
-      "preview": "themes/ribbon/assets/preview-c6602e5a1b99a888515ca00ed98fc829064b6294b8274c31602742ceff0da819.jpg",
-      "credits": "themes/ribbon/documents/1-43b82ba0d37909a5d222c4d08e5b0b474f864063f8108e7b4e03543cfe02a862.txt",
-      "licenseFile": "themes/ribbon/documents/0-1f4fb6f3cfd1f24a36e9d045602191fe2513fc80fdc6ca5b33afdce306aaa40b.txt",
+      "description": "Black Hole by Xecutioner, recorded at native 3840x2160, with a fixed eight-card skewed app ribbon.",
+      "author": "CYTV contributors; video by Xecutioner",
+      "license": "LicenseRef-Xecutioner-NonCommercial",
+      "preview": "themes/ribbon/assets/preview-b2321b6cc4d6cb02510ad691e23353296d04b762c852fe1bcb1f8f5e557e827a.jpg",
+      "credits": "themes/ribbon/documents/1-a111ee9dd92cf115657a4ad197a24b0ff15dee4da540b9cf5cdd95c0cff37b6d.txt",
+      "licenseFile": "themes/ribbon/documents/0-ef2c9dee57bcc55339247c34ab6460d9632669a06c764df68b49e1363857964d.txt",
       "url": "themes/ribbon/cytv-theme.json",
-      "digest": "84b1058f924964a72a7a9c3d6034b15ef78930bc68375d9d6a2fb0261fc84159"
+      "digest": "118cc9bd1853137538735eb89c12cc9cfdc4ee5959403d06af68e3ed79fce2dc"
     },
     {
       "id": "github:razdva122/clean-your-tv-lg-webos:alpine",
