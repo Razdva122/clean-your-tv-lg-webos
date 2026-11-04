@@ -57,6 +57,8 @@ Gardez Developer Mode actif : avant la fin du compte à rebours, ouvrez-le et ap
 
 [Installateur Android (anglais)](../../android/README.md) : choisissez la langue en haut à droite. Mettez à jour sans désinstaller ni effacer les données. Android 7 / WebView 108 est le minimum, pas un téléphone validé ; la validation utilise un émulateur Android 15 ARM64 / WebView 124. Les téléphones physiques et la récupération reliée à une vraie TV restent non vérifiés.
 
+**Candidat Android non publié :** pour une opération Root d’origine `install / coordinator-submitted`, l’examen de récupération peut effectuer une inspection en lecture seule après confirmation explicite, avec le profil et la clé d’hôte SSH d’origine. Ne désinstallez pas, n’effacez pas les données, ne remplacez pas le profil et ne relancez pas l’installation. Utilisez uniquement l’APK recompilé et signé indiqué par le mainteneur ; l’APK public ne contient pas encore ce parcours. [Procédure et limites](../../android/README.md#interrupted-root-installation-inspection-unreleased).
+
 L’assistant utilise initialement la langue du système et mémorise votre choix explicite. Sur le téléviseur, ouvrez **Paramètres → Langue** et choisissez une langue ou l’option automatique du système. Les préférences du téléviseur et de l’installateur sont indépendantes. Les codes figurent dans l’[index des langues](../LANGUAGES.md).
 
 Pour la CLI téléchargée séparément sous macOS/Linux, depuis son dossier décompressé :

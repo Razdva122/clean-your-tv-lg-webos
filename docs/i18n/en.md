@@ -57,6 +57,8 @@ Keep Developer Mode active: open it before the timer runs out and press EXTEND w
 
 [Android installer (English)](../../android/README.md): choose the language at the top right. Update without uninstalling or clearing data. Android 7 / WebView 108 is the minimum, not a verified phone configuration; acceptance used Android 15 ARM64 / WebView 124 in an emulator. Physical phones and live phone-to-TV recovery remain unverified.
 
+**Unreleased Android candidate:** for an original Root `install / coordinator-submitted` operation, Review recovery options can perform an explicitly confirmed read-only inspection using the original saved profile and SSH pin. Do not uninstall/clear app data, replace the profile or repeat installation. Use only the signed rebuilt APK named in the maintainer handoff; the public APK does not include this path. [Procedure and limits](../../android/README.md#interrupted-root-installation-inspection-unreleased).
+
 The desktop wizard selects your system language automatically; its language selector saves an explicit choice. On the TV, open **Settings → Language** and select a language, or the system/automatic option to follow the TV language. Installer and TV preferences are separate. The supported codes are listed in the [language index](../LANGUAGES.md).
 
 For a separately downloaded CLI on macOS/Linux, open a terminal in its extracted directory:

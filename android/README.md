@@ -53,6 +53,33 @@ Older 32-bit phones and x86 devices are not included in this APK. The UI include
 Updater bootstrap with root/Homebrew services. Unrooted TVs use the installer.
 The APK does not expose that bootstrap action; see [updates](../root-edition/UPDATES.md).
 
+## Interrupted Root installation inspection (unreleased)
+
+Candidate source adds a bounded Android path for an original Root
+`install / coordinator-submitted` operation. This is not in the published
+Android 0.7.1 APK. Use only an exact, signed rebuilt APK identified in an agreed
+maintainer handoff; update the existing app in place without uninstalling it or
+clearing its data. Do not copy a desktop profile onto the phone.
+
+From **Status and recovery**, choose **Review recovery options** with the original
+TV, Root edition and SSH port. After the app explains that the inspection only
+reads the original Root state, confirm **Check recovery options?** (No by default).
+It uses the original saved identity, regardless of the current password/key form,
+and requires the original saved SSH host pin. Existing encrypted-key/password
+entry may be requested locally; nothing is saved or replaced. Missing or changed
+records, a missing/changed pin or ambiguous operation stop without creating a
+replacement connection. Cancelling a prompt does not retry authentication.
+
+The inspection runs the existing bounded Node reader, not retained Python or a
+new coordinator. It changes no TV files, packages, Home settings or recovery
+records. Save the resulting diagnostic report and review it before sharing.
+A blocked result is expected: reading evidence never resumes the worker, clears
+pending, completes recovery or establishes compatibility. Do not repeat
+installation, enable, Restore or removal to obtain another error. Other supported
+recovery states retain their existing separately confirmed flows.
+
+See [the #240 investigation and exact-source limits](../docs/history/2026-11-04-android-root240-inspection.md).
+
 ## Recovery and private data
 
 Open **Status and recovery** from the start screen. After an interruption,

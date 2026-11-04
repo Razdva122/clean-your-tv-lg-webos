@@ -156,7 +156,7 @@ class HostPassiveSelectionTests(unittest.TestCase):
             remote=Mock();remote.run.return_value='{"schema":1,"status":"missing"}'
             output=io.StringIO()
             with patch.object(sys,'argv',['passive','--operation','a'*32]),patch.object(tool.state,'Store',return_value=store), \
-                 patch.object(tool.SSH,'connect',return_value=remote) as connect,contextlib.redirect_stdout(output):
+                 patch('cytv.transport.SSH.connect',return_value=remote) as connect,contextlib.redirect_stdout(output):
                 tool.main()
             self.assertEqual(json.loads(output.getvalue()),{'schema':1,'status':'missing'})
             self.assertFalse(connect.call_args.kwargs['persist']);remote.close.assert_called_once()
@@ -164,7 +164,7 @@ class HostPassiveSelectionTests(unittest.TestCase):
             remote.run.assert_called_once()
             self.assertEqual(remote.run.call_args.args[0],'env -u NODE_OPTIONS -u NODE_PATH /usr/bin/node')
             with patch.object(sys,'argv',['passive','--operation','b'*32]),patch.object(tool.state,'Store',return_value=store), \
-                 patch.object(tool.SSH,'connect') as connect,self.assertRaisesRegex(ValueError,'exactly_one_matching'):
+                 patch('cytv.transport.SSH.connect') as connect,self.assertRaisesRegex(ValueError,'exactly_one_matching'):
                 tool.main()
             connect.assert_not_called()
 
