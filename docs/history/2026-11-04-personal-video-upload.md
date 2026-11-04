@@ -51,6 +51,24 @@ visibility and settings. Remote actions and emergency behavior are unchanged.
   affected Czech supplement. Existing CI exercises wallpaper tests and bundled
   FFmpeg in frozen Windows/macOS desktop builds.
 
+## Candidate integration
+
+[PR #299](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/299) merged
+into the unfrozen `release/next` as `e2ff546cf3ebc5b07ed13677786273f57abb8375`.
+The checked product source is `123bd928ba0b685b4b3a045fed434a0d582a5bed`.
+[CI 41817781319](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/41817781319)
+passed Linux/macOS runtime and aggregate tests, browser and optional Python;
+full-release was unselected. [Frozen desktop CI 41817781433](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/41817781433)
+passed the actual Windows and macOS Intel bundles, including wallpaper preparation,
+Qt actions and bundled encoder/runtime checks. Preview build and integration policy
+also passed. Final independent review had no blocking findings.
+
+The existing personal transfer regression also passed both editions through
+actual local HTTP receipt, chunked reading, service-private cache, explicit Apply,
+real decode, reload and theme-owned background restoration. Deferred restore/source
+ordering passed. These checks use synthetic media and do not contact a TV.
+No component versions, selected build or acceptance decision were changed.
+
 ## Remaining acceptance
 
 This is source/host/browser evidence. No TV was contacted or modified in this
