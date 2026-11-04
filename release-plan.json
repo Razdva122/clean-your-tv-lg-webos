@@ -77,6 +77,13 @@
         298
       ],
       "summary": "Automatically select C1 native Home Beta in the common installer with independent recovery; retain profile routing on supported firmware; C1 physical/power acceptance remains pending and normal OTA is unavailable"
+    },
+    {
+      "pr": 301,
+      "issues": [
+        298
+      ],
+      "summary": "Fix frozen candidate clipping, Windows fixtures and CLI QA admission"
     }
   ],
   "excluded": [],
