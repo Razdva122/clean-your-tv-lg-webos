@@ -47,6 +47,95 @@ class WallpaperTests(unittest.TestCase):
             cropped=w.prepare(source,crop=(0,0,1920,1080))
             self.assertEqual([v['quality'] for v in cropped['variants']],['1080p'])
 
+    def test_moving_video_preparation_is_silent_and_accepted_by_tv(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source=Path(tmp)/'moving.mp4'
+            subprocess.run([w.ffmpeg_executable(),'-nostdin','-y','-v','error',
+                            '-f','lavfi','-i','testsrc2=size=640x360:rate=25:duration=1.2',
+                            '-f','lavfi','-i','sine=frequency=440:duration=1.2',
+                            '-c:v','libx264','-pix_fmt','yuv420p','-c:a','aac','-shortest',str(source)],check=True)
+            result=w.prepare_video(source)
+            self.assertEqual([v['quality'] for v in result['variants']],['1080p'])
+            self.assertEqual((result['image']['width'],result['image']['height']),(640,360))
+            video=Path(tmp)/'prepared.mp4'; video.write_bytes(base64.b64decode(result['variants'][0]['data']))
+            info=json.loads(subprocess.check_output(['node','-e',"const d=require('./launcher/theme-data.js'); console.log(JSON.stringify(d.videoInfo(require('fs').readFileSync(process.argv[1]))))",str(video)],text=True))
+            self.assertEqual((info['width'],info['height']),(1920,1080))
+            self.assertAlmostEqual(info['duration'],1.2,places=1)
+            hashes=subprocess.check_output([w.ffmpeg_executable(),'-v','error','-i',str(video),'-f','framemd5','-'],text=True)
+            self.assertGreater(len({line.split(',')[-1].strip() for line in hashes.splitlines() if not line.startswith('#')}),1)
+            for asset in [result['image']]+result['variants']:
+                data=base64.b64decode(asset['data'],validate=True)
+                self.assertEqual(hashlib.sha256(data).hexdigest(),asset['sha256'])
+
+    def test_native_uhd_video_has_two_verified_qualities(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source=Path(tmp)/'native.MOV'
+            subprocess.run([w.ffmpeg_executable(),'-nostdin','-y','-v','error','-f','lavfi','-i',
+                            'color=size=3840x2160:rate=25:duration=1.2','-c:v','libx264','-threads','2',str(source)],check=True)
+            result=w.prepare_video(source)
+            self.assertEqual([v['quality'] for v in result['variants']],['4k','1080p'])
+            self.assertEqual((result['image']['width'],result['image']['height']),(3840,2160))
+            for asset in result['variants']:
+                video=Path(tmp)/'prepared.mp4'; video.write_bytes(base64.b64decode(asset['data']))
+                info=json.loads(subprocess.check_output(['node','-e',"const d=require('./launcher/theme-data.js'); console.log(JSON.stringify(d.videoInfo(require('fs').readFileSync(process.argv[1]))))",str(video)],text=True))
+                self.assertEqual((info['width'],info['height']),(asset['width'],asset['height']))
+                self.assertLessEqual(video.stat().st_size,w.UHD_LIMIT if asset['quality']=='4k' else w.FHD_LIMIT)
+
+    def test_video_rejects_above_uhd_and_shorter_than_one_second(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            for size,duration in [('4096x2160','1.2'),('640x360','0.5')]:
+                source=Path(tmp)/'source.mkv'
+                subprocess.run([w.ffmpeg_executable(),'-nostdin','-y','-v','error','-f','lavfi','-i',
+                                f'color=size={size}:rate=25:duration={duration}','-c:v','libx264','-threads','2',str(source)],check=True)
+                with self.assertRaises(ValueError): w.prepare_video(source)
+
+    def test_probe_ignores_filename_and_metadata_that_resemble_media_facts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source=Path(tmp)/('clip.mp4' if os.name=='nt' else 'Duration: 00:00:01.00 clip.mp4')
+            subprocess.run([w.ffmpeg_executable(),'-nostdin','-y','-v','error','-f','lavfi','-i',
+                            'color=size=32x18:rate=25:duration=2','-metadata','comment=Video: 9000x9000 ',
+                            '-c:v','libx264',str(source)],check=True)
+            result=w.prepare_video(source)
+            video=Path(tmp)/'prepared.mp4'; video.write_bytes(base64.b64decode(result['variants'][0]['data']))
+            info=json.loads(subprocess.check_output(['node','-e',"const d=require('./launcher/theme-data.js'); console.log(JSON.stringify(d.videoInfo(require('fs').readFileSync(process.argv[1]))))",str(video)],text=True))
+            self.assertAlmostEqual(info['duration'],2,places=1)
+
+    def test_anamorphic_video_uses_display_geometry_for_poster_and_video(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source=Path(tmp)/'anamorphic.mp4'
+            subprocess.run([w.ffmpeg_executable(),'-nostdin','-y','-v','error','-f','lavfi','-i',
+                            'color=blue:size=720x576:rate=25:duration=1.2,drawbox=x=0:y=0:w=iw:h=80:color=red:t=fill,drawbox=x=0:y=496:w=iw:h=80:color=green:t=fill,setsar=64/45',
+                            '-c:v','libx264',str(source)],check=True)
+            result=w.prepare_video(source)
+            self.assertEqual((result['image']['width'],result['image']['height']),(1024,576))
+            for name,encoded in [('poster',result['image']['data']),('video',result['variants'][0]['data'])]:
+                file=Path(tmp)/(name+('.jpg' if name=='poster' else '.mp4')); file.write_bytes(base64.b64decode(encoded))
+                if name=='video':
+                    frame=Path(tmp)/'frame.jpg'
+                    subprocess.run([w.ffmpeg_executable(),'-nostdin','-y','-v','error','-i',str(file),'-frames:v','1',str(frame)],check=True)
+                    file=frame
+                image=w.load_image(file)
+                self.assertGreater(image.pixelColor(image.width()//2,5).red(),180)
+                self.assertGreater(image.pixelColor(image.width()//2,image.height()-6).green(),80)
+
+    def test_video_rejects_invalid_long_and_oversized_input(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            for suffix in ['.m3u8','.mp4']:
+                source=Path(tmp)/('bad'+suffix); source.write_bytes(b'not a video')
+                with self.assertRaises(ValueError): w.prepare_video(source)
+            source=Path(tmp)/'long.mp4'
+            subprocess.run([w.ffmpeg_executable(),'-nostdin','-y','-v','error','-f','lavfi','-i',
+                            'color=size=32x18:rate=1:duration=61','-c:v','libx264',str(source)],check=True)
+            with self.assertRaises(ValueError): w.prepare_video(source)
+            with source.open('wb') as file: file.truncate(512*1024*1024+1)
+            with patch.object(w,'run_ffmpeg') as encode:
+                with self.assertRaises(ValueError): w.prepare_video(source)
+                encode.assert_not_called()
+
+    def test_cancel_video_before_reading_input(self):
+        event=threading.Event(); event.set()
+        with self.assertRaises(w.Cancelled): w.prepare_video('unused.mp4',cancel=event)
+
     def test_cancel_preparation(self):
         event=threading.Event(); event.set()
         with self.assertRaises(w.Cancelled): w.prepare('unused.png',cancel=event)

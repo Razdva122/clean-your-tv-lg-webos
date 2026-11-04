@@ -119,6 +119,8 @@
     // Cleared while a system overlay or another app holds window focus.
     windowFocused = true,
     inputPreview = window.InputPreview ? InputPreview.create({
+      onclaim: function () { if (window.HomeWallpaper) HomeWallpaper.suspend('input-preview'); },
+      onrelease: function () { if (window.HomeWallpaper) HomeWallpaper.resume('input-preview'); },
       createMedia: function (uri) { return window.PREVIEW_INPUT_MEDIA ? window.PREVIEW_INPUT_MEDIA(uri) : InputPreview.createVideo(uri); },
       // Only the foreground Home may claim the TV's video pipeline.
       enabled: function () { return layoutPreset === "dock-grid" && !document.hidden && windowFocused && !previewDialogOpen() && window.HomeInputShelf.enabled() && window.HomeInputShelf.previewEnabled(); },
