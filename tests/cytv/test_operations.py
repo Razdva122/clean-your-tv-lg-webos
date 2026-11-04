@@ -965,6 +965,116 @@ class OperationTests(unittest.TestCase):
             {'packages':'verified','launch_request':'accepted',
              'startup':'root-state-verified','home_button':'not-tested'})
 
+    def test_install_waits_for_catalog_without_resubmitting_packages(self):
+        from unittest.mock import patch
+        for delayed, version in ((operations.HOME, None), (operations.HOME, '1.0.0'),
+                                 (operations.HELPER, None), (operations.HELPER, '0.1.0')):
+            with self.subTest(delayed=delayed, version=version):
+                self.store.finish(self.installer(Remote()).profile)
+                remote = Remote()
+                original = remote.luna
+                snapshots = []
+                def luna(uri, payload, **kwargs):
+                    reply = original(uri, payload, **kwargs)
+                    if uri.endswith('/dev/listApps'):
+                        if not snapshots:
+                            reply['apps'] = [dict(a, version=version) if a['id'] == delayed else a
+                                             for a in reply['apps'] if a['id'] != delayed or version]
+                        snapshots.append(reply['apps'])
+                    return reply
+                remote.luna = luna
+                installer = self.installer(remote)
+                clock = [0.0]
+                with patch('cytv.operations.time.monotonic', side_effect=lambda: clock[0]), \
+                     patch('cytv.operations.time.sleep', side_effect=lambda seconds: clock.__setitem__(0, clock[0] + seconds)):
+                    installer.install(self.inventory, 'synthetic-key')
+                self.assertEqual(len(snapshots), 2)
+                self.assertIsNone(self.store.pending(installer.profile))
+                self.assertEqual(installer.tv_info['components'], {'home': '1.2.2', 'helper': '0.6.13'})
+                calls = [c for c in remote.calls if c[0] == 'luna']
+                self.assertEqual([c[2]['id'] for c in calls if c[1].endswith('/dev/install')],
+                                 [operations.HELPER, operations.HOME])
+                last_read = max(i for i, c in enumerate(remote.calls) if c[0] == 'luna' and c[1].endswith('/dev/listApps'))
+                config = next(i for i, c in enumerate(remote.calls) if c[0] == 'upload' and c[1].endswith('/ssap-key.json'))
+                self.assertLess(last_read, config)
+
+    def test_catalog_mismatch_uses_one_deadline_and_keeps_unconfigured_journal(self):
+        from unittest.mock import patch
+        from cytv.errors import UserError
+        remote = Remote()
+        installer = self.installer(remote)
+        original = remote.luna
+        clock, timeouts, receipt_before = [0.0], [], []
+        receipt = self.store.device_dir(installer.profile) / 'operation.json'
+        def luna(uri, payload, **kwargs):
+            reply = original(uri, payload, **kwargs)
+            if uri.endswith('/dev/listApps'):
+                receipt_before.append(receipt.read_bytes())
+                timeouts.append(kwargs.get('timeout', 30))
+                clock[0] += 0.25  # Include time spent reading, not just sleeps.
+                reply['apps'] = [a for a in reply['apps'] if a['id'] != operations.HOME]
+            return reply
+        remote.luna = luna
+        with patch('cytv.operations.time.monotonic', side_effect=lambda: clock[0]), \
+             patch('cytv.operations.time.sleep', side_effect=lambda seconds: clock.__setitem__(0, clock[0] + seconds)):
+            with self.assertRaises(UserError) as caught:
+                installer.install(self.inventory, 'synthetic-key')
+        self.assertEqual(caught.exception.reason_code, 'version-mismatch')
+        self.assertEqual(clock[0], 10.0)
+        self.assertGreater(len(timeouts), 1)
+        self.assertTrue(all(0 < timeout <= 10 for timeout in timeouts))
+        self.assertEqual(timeouts, sorted(timeouts, reverse=True))
+        self.assertEqual(receipt.read_bytes(), receipt_before[0])
+        self.assertEqual(installer.tv_info['components'], {'helper': '0.6.13'})
+        self.assertFalse(any(c[0] == 'upload' and c[1].endswith('/ssap-key.json') for c in remote.calls))
+        self.assertFalse(any(c[0] == 'luna' and (c[1].endswith('/launch') or c[1].endswith('/dev/remove')) for c in remote.calls))
+        self.assertEqual(installer.tv_info['setup_outcome']['packages'], 'not-verified')
+
+    def test_catalog_success_after_deadline_cannot_start_helper(self):
+        from unittest.mock import patch
+        from cytv.errors import UserError
+        remote = Remote()
+        original = remote.luna
+        clock = [0.0]
+        def luna(uri, payload, **kwargs):
+            reply = original(uri, payload, **kwargs)
+            if uri.endswith('/dev/listApps'):
+                clock[0] = 11.0  # Transport setup can consume the polling budget.
+            return reply
+        remote.luna = luna
+        installer = self.installer(remote)
+        with patch('cytv.operations.time.monotonic', side_effect=lambda: clock[0]), self.assertRaises(UserError):
+            installer.install(self.inventory, 'synthetic-key')
+        self.assertIsNotNone(self.store.pending(installer.profile))
+        self.assertFalse(any(c[0] == 'upload' and c[1].endswith('/ssap-key.json') for c in remote.calls))
+        self.assertFalse(any(c[0] == 'luna' and c[1].endswith('/launch') for c in remote.calls))
+
+    def test_catalog_errors_stop_without_polling_or_configuring(self):
+        from unittest.mock import patch
+        from cytv.errors import TVRejected, UserError
+        for failure in ('denied', 'malformed', 'timeout'):
+            with self.subTest(failure=failure):
+                self.store.finish(self.installer(Remote()).profile)
+                remote = Remote()
+                installer = self.installer(remote)
+                original = remote.luna
+                def luna(uri, payload, **kwargs):
+                    if uri.endswith('/dev/listApps'):
+                        remote.calls.append(('luna', uri, payload))
+                        if failure == 'denied':
+                            raise TVRejected('Synthetic denial', {'returnValue': False, 'errorCode': -1}, uri)
+                        if failure == 'timeout':
+                            raise TimeoutError('Synthetic timeout')
+                        return {'returnValue': True, 'apps': None}
+                    return original(uri, payload, **kwargs)
+                remote.luna = luna
+                with patch('cytv.operations.time.sleep') as sleep, self.assertRaises((UserError, TimeoutError)):
+                    installer.install(self.inventory, 'synthetic-key')
+                sleep.assert_not_called()
+                self.assertIsNotNone(self.store.pending(installer.profile))
+                self.assertEqual(len([c for c in remote.calls if c[0] == 'luna' and c[1].endswith('/dev/listApps')]), 1)
+                self.assertFalse(any(c[0] == 'upload' and c[1].endswith('/ssap-key.json') for c in remote.calls))
+
     def test_no_root_installs_helper_then_home_and_verifies_before_launch(self):
         remote = Remote()
         installer = self.installer(remote)
@@ -973,7 +1083,7 @@ class OperationTests(unittest.TestCase):
         installs = [c[2]['id'] for c in calls if c[1].endswith('/install')]
         self.assertEqual(installs, ['com.local.nativehome', 'com.gathin.tvhome'])
         self.assertEqual(calls[-1][1:], ('com.webos.applicationManager/launch', {'id': 'com.local.nativehome', 'params': {'nativeHomeStart': True}}))
-        self.assertTrue(any(c[1].endswith('/dev/listApps') for c in calls[:-1]))
+        self.assertEqual(len([c for c in calls if c[1].endswith('/dev/listApps')]), 1)
         self.assertTrue(any(c[0] == 'upload' and c[1].endswith('ssap-key.json') and c[2] == 0o640 for c in remote.calls))
         self.assertIsNone(self.store.pending(installer.profile))
 

@@ -27,7 +27,7 @@ class HelperStopTests(unittest.TestCase):
         outer = self
 
         class Remote:
-            def luna(self, uri, payload):
+            def luna(self, uri, payload, timeout=30):
                 outer.calls.append(uri)
                 if uri.endswith('/dev/listApps'):
                     return {'apps': [{'id': HELPER}]}
