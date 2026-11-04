@@ -37,6 +37,7 @@ class TVDevTests(unittest.TestCase):
             dev.stage_ui(output, compiler=compile_files)
             info = json.loads((output / 'appinfo.json').read_text())
             self.assertEqual(info['id'], 'com.cleanyourtv.dev.ui')
+            self.assertNotIn(b'wallpaper-media-cache.js', (output / 'dev-entry.js').read_bytes())
             self.assertNotIn('appCategory', info)
             self.assertEqual(info['defaultWindowType'], 'card')
             self.assertFalse(info['transparent'])

@@ -102,6 +102,8 @@ def ui_files():
         source = re.fullmatch(r'\s+src="([A-Za-z0-9._/-]+)"\s*', attrs)
         if source:
             name = source[1]
+            # Match browser preview: local verified Blob media needs no native service.
+            if name == 'wallpaper-media-cache.js': return ''
             if name not in files: raise ValueError('Unpackaged preview script')
         elif not attrs.strip():
             name = 'dev-inline-' + str(len(scripts)) + '.js'
