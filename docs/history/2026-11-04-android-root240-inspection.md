@@ -122,3 +122,23 @@ UI supplement is separate from Android installer localization and is unchanged.
 
 These host source hashes identify the reviewed reader path, not a signed APK,
 recovery admission, candidate selection or permission for a device mutation.
+
+## Candidate integration
+
+[PR #289](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/289)
+merged into `release/next` as `bb7d17cb6b1d0471ee401e0438c09838a496b47e` after exact-head
+[CI 41789221689](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/41789221689)
+passed Linux/macOS runtime/test summaries, browser and ARM optional-Python checks.
+Release PR policy, Integration policy and Preview Pages build also passed; deploy
+and full-release were correctly unselected. The reviewed implementation head is
+`66c78d34916999f069334ee1ffdafde8b01f653d`.
+
+The unfrozen [candidate #281](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/281)
+records this partial #240 work without selecting a version, build or acceptance.
+The next maintainer action is an exact signed-APK handoff, not a repeat answer to
+the superseded macOS question. Original #240 remains open at `status:planned`.
+
+The host checks establish current retained-record consistency and byte
+preservation during inspection. They cannot reconstruct record history or prove
+that data was unchanged throughout the original installation and prior attempts.
+No historical root cause, completed device recovery or public delivery is claimed.

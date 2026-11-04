@@ -8,6 +8,13 @@
         282
       ],
       "summary": "Preserve typed Root activation SSH/Luna failure evidence; original #282 C4 activation remains unresolved"
+    },
+    {
+      "pr": 289,
+      "issues": [
+        240
+      ],
+      "summary": "Add original-profile passive Android inspection for #240; original worker failure and recovery remain unresolved"
     }
   ],
   "excluded": [],
