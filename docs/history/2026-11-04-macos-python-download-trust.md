@@ -69,8 +69,8 @@ validation, cache ownership checks and atomic publication remain intact.
 - `PATH=<isolated-venv>/bin:$PATH bash scripts/test.sh installer setup android`
   exited 0: 232 setup tests, 705 installer tests (two existing platform skips),
   35 Android tests, 17 Homebrew Python tests and the selected Homebrew JS checks.
-  The same isolated environment included pinned installer requirements; no TV
-  profile or network endpoint was used by these device-boundary fixtures.
+  The same isolated environment included pinned installer requirements; no user
+  TV address or profile was used by these device-boundary fixtures.
 - `git diff --check` passed.
 
 ## Delivery and documentation limits
