@@ -2,6 +2,7 @@
 import fnmatch
 import os
 import re
+import shutil
 from pathlib import Path
 import subprocess
 import tempfile
@@ -30,6 +31,88 @@ class CIProfiles(unittest.TestCase):
             for unrelated in ('native/', 'root-edition/tests/', 'root-edition/service/',
                               'tests/cytv', 'test-python-runtime', 'python3 ', 'cc '):
                 self.assertNotIn(unrelated, commands)
+
+    def test_tv_runtime_keeps_all_device_checks_without_ui(self):
+        # Compare executed commands, not a second hand-maintained safety allowlist.
+        with tempfile.TemporaryDirectory() as directory:
+            temp = Path(directory)
+            for executable in ('npm', 'node', 'python3', 'cc'):
+                command = temp / executable
+                command.write_text('#!/bin/sh\nprintf "%s\\n" "$(basename "$0") $*" >> "$PROFILE_LOG"\n')
+                command.chmod(0o755)
+            compiler = temp / 'cc'
+            compiler.write_text(compiler.read_text() +
+                                'while [ "$#" -gt 0 ]; do\n'
+                                '  if [ "$1" = -o ]; then shift; printf "#!/bin/sh\\nexit 0\\n" > "$1"; chmod +x "$1"; fi\n'
+                                '  shift\ndone\n')
+            checkout = temp / 'checkout'
+            (checkout / 'scripts').mkdir(parents=True)
+            shutil.copy(ROOT / 'scripts/test.sh', checkout / 'scripts/test.sh')
+            for name in ('root-edition', 'native', 'launcher', 'renewal-service',
+                         'updater-service', 'updater-app', 'tests'):
+                (checkout / name).symlink_to(ROOT / name, target_is_directory=True)
+            traces = {}
+            for profile in ('ui', 'tv', 'tv-runtime', 'tv tv-runtime'):
+                log = temp / profile.replace(' ', '-')
+                subprocess.run(['bash', str(checkout / 'scripts/test.sh'), *profile.split()],
+                               cwd=ROOT, check=True, capture_output=True,
+                               env={**os.environ, 'PATH': str(temp) + os.pathsep + os.environ['PATH'],
+                                    'PROFILE_LOG': str(log)})
+                traces[profile] = log.read_text().splitlines()
+            self.assertEqual(traces['tv'], traces['ui'] + traces['tv-runtime'])
+            self.assertEqual(traces['tv'], traces['tv tv-runtime'])
+            self.assertNotIn('npm run test:themes', traces['tv-runtime'])
+            for required in ('node tests/helper-compat.cjs', 'node tests/home-control.cjs',
+                             'node --test tests/controller-resume-home.cjs tests/controller-watchdog.cjs',
+                             'python3 tests/root-node-compat.py',
+                             'python3 -m unittest discover -s root-edition/tests',
+                             'python3 -m unittest discover -s tests/system_updates'):
+                self.assertIn(required, traces['tv-runtime'])
+
+    def test_tv_runtime_workflow_keeps_ownership_old_nodes_and_cache_identity(self):
+        workflow = (ROOT / '.github/workflows/tests.yml').read_text()
+        self.assertIn('tv_runtime: ${{ steps.scope.outputs.tv_runtime }}', workflow)
+        self.assertIn('${{ needs.scope.outputs.tv_runtime }},', workflow)
+        for step_name in ('Prepare pinned Node', 'Verify real webOS-style file ownership'):
+            step = workflow[workflow.index('      - name: ' + step_name):].split('      - ', 1)[-1]
+            condition = step.split('\n')[1]
+            self.assertIn("needs.scope.outputs.tv_runtime == 'true'", condition)
+        step = workflow.split('      - name: Test affected runtime components', 1)[1].split('      - name:', 1)[0]
+        script = step.split('        run: |\n', 1)[1]
+        script = '\n'.join(line[10:] for line in script.splitlines())
+        with tempfile.TemporaryDirectory() as directory:
+            temp = Path(directory)
+            (temp / 'scripts').mkdir()
+            runner = temp / 'scripts/test.sh'
+            runner.write_text('#!/bin/sh\nprintf "%s" "$*" > selected\n')
+            runner.chmod(0o755)
+            env = {**os.environ, **dict.fromkeys(('UI', 'TV', 'INSTALLER', 'ANDROID', 'PREVIEW'), 'false'),
+                   'TV_RUNTIME': 'true'}
+            subprocess.run(['bash', '-e', '-c', script], cwd=temp, env=env, check=True)
+            self.assertEqual((temp / 'selected').read_text(), 'tv-runtime')
+        direct = (ROOT / '.github/workflows/tv-candidate.yml').read_text()
+        self.assertIn("TV_REQUIRED: ${{ steps.safety_scope.outputs.tv == 'true' || steps.safety_scope.outputs.tv_runtime == 'true' }}", direct)
+
+    def test_metadata_checks_run_once_with_or_without_setup(self):
+        workflow = (ROOT / '.github/workflows/tests.yml').read_text()
+        step = workflow.split('      - name: Validate current release metadata independently of runtime reuse', 1)[1].split('      - name:', 1)[0]
+        self.assertIn("RUN_SETUP: ${{ needs.scope.outputs.setup == 'true' && (runner.os == 'Linux' || needs.scope.outputs.macos == 'true') }}", step)
+        script = step.split('        run: |\n', 1)[1].split("          python - <<'PYTHON'", 1)[0]
+        script = '\n'.join(line[10:] for line in script.splitlines())
+        with tempfile.TemporaryDirectory() as directory:
+            temp = Path(directory)
+            executable = temp / 'python'
+            executable.write_text('#!/bin/sh\nprintf "%s" "$*" > "$METADATA_LOG"\n')
+            executable.chmod(0o755)
+            log = temp / 'commands'
+            for selected in ('true', 'false'):
+                log.unlink(missing_ok=True)
+                subprocess.run(['bash', '-e', '-c', script], check=True,
+                               env={**os.environ, 'PATH': str(temp) + os.pathsep + os.environ['PATH'],
+                                    'METADATA_LOG': str(log), 'RUN_SETUP': selected})
+                self.assertEqual(log.exists(), selected == 'false')
+        self.assertIn('validate_shape', step)
+        self.assertIn('run: scripts/test.sh setup', workflow)
 
     def test_required_statuses_include_parallel_browser_failures(self):
         workflow = (ROOT / '.github/workflows/tests.yml').read_text()

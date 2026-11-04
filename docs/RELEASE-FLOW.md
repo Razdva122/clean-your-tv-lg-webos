@@ -364,7 +364,10 @@ shipping is confirmed only after publication and verification of the packages
 and signed update feeds.
 
 Ordinary PRs run only affected checks: UI, TV/webOS, installer, Android, preview or
-packaging/release tools. Shared dependencies enable every affected group; unknown
+packaging/release tools. The inventory transport leaf uses `tv-runtime`, retaining
+all device safety checks without fixture-only UI/browser work; see
+[focused CI checks](development/CI-CHECKS.md) for routing and measurements.
+Shared dependencies enable every affected group; unknown
 paths conservatively enable all checks. Documentation-only changes skip application
 checks and Pages builds while keeping the required Linux/macOS status names green.
 Visual UI changes compile the affected web applications and run focused browser
