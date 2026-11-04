@@ -14,7 +14,8 @@ const {compileThemeCss}=require('../../theme-api/compile.cjs');
   try{
    await page.evaluate(({manifest,rules})=>ThemeRuntime.apply({manifest,rules,assetHandles:{}}),{manifest,rules});
    const group=await page.locator('#topButtons').evaluate(n=>{const s=getComputedStyle(n),b=n.getBoundingClientRect();return {x:b.x,y:b.y,width:b.width,height:b.height,background:s.backgroundColor,before:getComputedStyle(n,'::before').backgroundColor,transform:getComputedStyle(n,'::before').transform};});
-   assert.deepEqual({x:group.x,y:group.y,width:group.width,height:group.height},{x:0,y:900,width:340,height:180},'shortcuts occupy one bottom-aligned group');
+   assert.deepEqual({x:group.x,y:group.y,height:group.height},{x:0,y:900,height:180},'shortcuts occupy the full bottom lane');
+   const firstLeft=await page.locator('#tiles .item').first().evaluate(n=>n.offsetLeft);assert(Math.abs(group.width-firstLeft)<1,'utility block meets the first card including the renderer skew margin');
    assert.notEqual(group.transform,'none','utility group continues the app-card skew');
    assert.equal(group.before,'rgb(32, 36, 43)','outlined charcoal block remains distinct from the backdrop');
    const fills=await page.locator('#tiles .item[data-app-id] .card').evaluateAll(ns=>ns.map(n=>({actual:getComputedStyle(n).backgroundColor,native:n.style.background})));

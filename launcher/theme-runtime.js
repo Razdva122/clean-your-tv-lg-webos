@@ -128,8 +128,9 @@
         ribbonRule('#topButtons .pill svg', 'width:32px;height:32px;margin:0;');
         if (manifest.layout.presentation === 'overlay') {
           // Continue the same skewed lane to the left screen edge.
-          ribbonRule('#topButtons', 'left:0;bottom:' + r.bottom + 'px;width:' + r.left + 'px;height:' + r.cardHeight + 'px;align-items:center;justify-content:center;');
-          ribbonRule('#topButtons::before', 'content:"";position:absolute;left:-64px;top:0;bottom:0;width:' + (r.left + 64) + 'px;box-sizing:border-box;border:0;background:#20242b;transform:skewX(' + r.skewDeg + 'deg);transform-origin:center bottom;pointer-events:none;');
+          var shortcutWidth = r.left + Math.abs(Math.tan(r.skewDeg * Math.PI / 180) * (r.cardHeight + r.focusLift));
+          ribbonRule('#topButtons', 'left:0;bottom:' + r.bottom + 'px;width:' + shortcutWidth + 'px;height:' + r.cardHeight + 'px;align-items:center;justify-content:center;');
+          ribbonRule('#topButtons::before', 'content:"";position:absolute;left:-64px;top:0;bottom:0;width:' + (shortcutWidth + 64) + 'px;box-sizing:border-box;border:0;background:#20242b;transform:skewX(' + r.skewDeg + 'deg);transform-origin:center bottom;pointer-events:none;');
           ribbonRule('#topButtons .pill', 'position:relative;width:60px;height:60px;margin:0 4px;padding:0;background:transparent;border:3px solid transparent;transform:none;');
           ribbonRule('#topButtons .pill.focused', 'background:#303238;border-color:#fff;');
           ribbonRule('#topButtons .pill svg', 'width:30px;height:30px;');

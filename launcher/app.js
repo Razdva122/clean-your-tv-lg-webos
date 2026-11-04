@@ -438,7 +438,7 @@
         arrow.className = 'ribbon-edit-arrow ribbon-edit-' + side;
         arrow.setAttribute('aria-hidden', 'true');
         arrow.innerHTML = '<svg viewBox="0 0 24 40" aria-hidden="true"><path d="' + (side === 'left' ? 'M16 4L6 20l10 16' : 'M8 4l10 16L8 36') + '"/></svg>';
-        arrow.style.top = (-ribbon.focusLift - 36) + 'px';
+        arrow.style.top = (-(ribbon.focusLift + 32) / 2 - 20) + 'px';
         arrow.style.webkitTransform = arrow.style.transform = 'skewX(' + (-ribbon.skewDeg) + 'deg)';
         item.el.appendChild(arrow);
       });
