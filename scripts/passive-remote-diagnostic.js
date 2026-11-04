@@ -162,8 +162,12 @@ function run(complete) {
 }
 
 module.exports = {run: run};
-if (require.main === module) {
-    if (process.argv.length !== 2) {
+// Piped stdin has no require.main; bare `node` also works on legacy Node 0.12.
+// A required module always has a parent and must never start observation.
+var stdinMain = !module.parent && process.argv &&
+    (process.argv.length === 1 || process.argv[1] === '-');
+if (require.main === module || stdinMain) {
+    if (process.argv.length !== 2 && !(stdinMain && process.argv.length === 1)) {
         process.stdout.write(JSON.stringify({schema_version: 1, status: 'no_observation',
             reason: 'unsupported_arguments', home_mapping_verified: false, observations: []}) + '\n');
     } else {
