@@ -21,7 +21,7 @@
       } else if ((key === 'shortcuts' ? ['header', 'bottom-left'] : key === 'edgeNavigation' ? ['wrap', 'shortcuts'] : ['below', 'focused-above']).indexOf(value) < 0) throw Error('layout-invalid');
       defaults[key] = value;
     });
-    if (defaults.shortcuts === 'bottom-left' && defaults.left < 280) throw Error('layout-invalid');
+    if (defaults.shortcuts === 'bottom-left' && defaults.left < 256) throw Error('layout-invalid');
     if (defaults.labels === 'below' && defaults.bottom < 64) throw Error('layout-invalid');
     return defaults;
   }

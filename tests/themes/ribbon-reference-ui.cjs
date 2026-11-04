@@ -28,6 +28,7 @@ const {compileThemeCss}=require('../../theme-api/compile.cjs');
    const external=structuredClone(manifest);delete external.layout.presentation;external.requires.capabilities=external.requires.capabilities.filter(c=>c!=='overlay-presentation-v1');
    await page.evaluate(manifest=>ThemeRuntime.apply({manifest,rules:{schemaVersion:1,rules:[]},assetHandles:{}}),external);
    assert.equal(await page.locator('#topButtons').evaluate(n=>getComputedStyle(n,'::before').content),'none','external Ribbon themes keep their original shortcut geometry');
+   const lastControl=await page.locator('#btnSettings').boundingBox();assert(lastControl.x+lastControl.width<=256,'compact default shortcuts fit even at the minimum left inset without skew');
    assert.deepEqual(errors,[]);console.log('PASS reference Ribbon black shortcut group and native solid fills: '+edition);
   }finally{await page.close();}
  }}finally{await browser.close();}
