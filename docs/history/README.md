@@ -1,5 +1,6 @@
 # Release history and device evidence
 
+- [2026-11-04 — Real opkg parent-directory reproduction](2026-11-04-opkg-parent-reproduction.md): original Helper data loses the service subtree in real opkg; No-root archive correction, Root isolation and pending retail/recovery acceptance.
 - [2026-11-04 — Package installation diagnostics and LG CLI comparison](2026-11-04-package-install-diagnostics.md): offline Helper packaging differences, fixed failure categories and unresolved #307 installation/recovery.
 
 - [1.8.0 candidate preparation, exact build and remaining gates](2026-11-04-release-1.8.0-candidate.md).

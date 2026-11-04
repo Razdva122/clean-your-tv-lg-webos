@@ -70,7 +70,8 @@ def pack_app(appfiles, servicefiles, architecture='all', helper=False):
         executables = {'usr/palm/applications/' + app + '/' + n for n in ('detach', 'relay', 'resume')}
         files['usr/palm/applications/' + app + '/state/.keep'] = b''
         files['usr/palm/services/' + service + '/state/.keep'] = b''
-    return package.ipk(app, version, files, executables, helper_state=helper, architecture=architecture)
+    return package.ipk(app, version, files, executables, helper_state=helper,
+                       architecture=architecture, shared_directories=True)
 
 
 GRAPHICS = {'1920x1080': {'launcher': 'launcher.ipk', 'root': 'root'},
