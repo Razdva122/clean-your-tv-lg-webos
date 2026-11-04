@@ -153,7 +153,20 @@ def write_config(root, admission, token, uid=0):
     content = ('CYTV-C1-GATE-1\ntoken ' + token + '\nboot ' + boot_identity()
                + '\ndev ' + str(t['dev']) + '\nino ' + str(t['ino'])
                + '\nsize ' + str(t['size']) + '\nmtime_ns ' + str(t['mtime_ns']) + '\n').encode()
-    atomic(Path(root) / 'c1-gate/config', content, uid, raw=True)
+    # Serialize token publication with native journal/inverse writes. The Python
+    # lifecycle lock alone cannot exclude an independently running guardian.
+    directory = Path(root) / 'c1-gate'
+    trusted_directory(directory, uid)
+    fd = os.open(directory / 'lock', os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW | os.O_NONBLOCK, 0o600)
+    try:
+        info = os.fstat(fd)
+        if (not stat.S_ISREG(info.st_mode) or info.st_uid != uid
+                or info.st_nlink != 1 or info.st_mode & 0o077):
+            raise ValueError('Unsafe native configuration lock')
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        atomic(directory / 'config', content, uid, raw=True)
+    finally:
+        os.close(fd)
 
 
 def prepare(root, native_sha256, admission, uid=0):

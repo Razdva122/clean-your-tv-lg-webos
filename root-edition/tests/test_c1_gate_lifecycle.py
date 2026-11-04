@@ -1,6 +1,7 @@
 """Focused host tests for C1 activation/restore failure boundaries."""
 from contextlib import ExitStack
 import hashlib
+import fcntl
 import json
 import os
 from pathlib import Path
@@ -40,6 +41,17 @@ class GateLifecycleTests(unittest.TestCase):
     def test_orphaned_state_blocks_profile_fallback(self):
         with self.assertRaisesRegex(ValueError, 'selection'):
             gate.selection(self.root, self.uid)
+
+    def test_config_token_publication_excludes_native_mutations(self):
+        admission = {'target': dict(dev=1, ino=2, size=52, mtime_ns=3)}
+        with (self.root/'c1-gate/lock').open('w') as lock:
+            os.fchmod(lock.fileno(), 0o600)
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            with self.assertRaises(BlockingIOError):
+                gate.write_config(self.root, admission, self.token, self.uid)
+            self.assertFalse((self.root/'c1-gate/config').exists())
+        gate.write_config(self.root, admission, self.token, self.uid)
+        self.assertIn('token '+self.token, (self.root/'c1-gate/config').read_text())
 
     def test_off_uses_native_latch_with_malformed_or_unwritable_intent(self):
         path = self.root/'c1-gate/intent.json'
