@@ -200,4 +200,5 @@ def remove_project(installer):
     device = status.get('result', {}) if isinstance(status,dict) else {}
     if project_apps(installer) or not stock_proof(device):
         raise UserError('Original LG Home or package removal could not be verified. Keep recovery data; removal is incomplete.')
+    installer.verify_project_startup_removed()
     return dict(removed=True, applications_services_startup_removed=True, state_retained=ROOT_STATE)

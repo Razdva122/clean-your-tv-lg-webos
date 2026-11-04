@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 from cytv.operations import Installer
 from cytv import state
+from cytv.errors import UserError
 
 
 class NativeOperationsTests(unittest.TestCase):
@@ -84,3 +85,13 @@ class NativeOperationsTests(unittest.TestCase):
             installer.installed_apps=MagicMock(return_value=[])
             rows=installer.version_summary()
             self.assertEqual(len(rows),1);self.assertIn('C1 Beta',rows[0]);self.assertIn('0.9.0',rows[0])
+
+    def test_registration_readback_requires_hooks_and_ls2_absent_without_profile_calls(self):
+        remote=MagicMock();remote.run.return_value=''
+        installer=Installer(remote,None,{'edition':'root'},'.',{})
+        installer._selected_python='/usr/bin/python3'
+        with self.assertRaises(UserError):installer.verify_project_startup_removed()
+        command=remote.run.call_args.args[0]
+        self.assertIn('51-clean-your-tv-root-updater',command)
+        self.assertIn('client-permissions.d',command)
+        remote.luna.assert_not_called()

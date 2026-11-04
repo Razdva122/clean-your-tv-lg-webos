@@ -1223,7 +1223,7 @@ print('CYTV_ROOT_FILES_OK')
         if self.remote.run(self._python_command([self._python(), '-c', SCRIPT]), timeout=30).strip() != 'CYTV_APP_PERMISSIONS_REMOVED':
             raise UserError('Root Updater app permissions removal could not be verified. Recovery data was kept.')
 
-    def verify_project_removed(self):
+    def verify_project_startup_removed(self):
         script = """import os
 from pathlib import Path
 apps=('com.cleanyourtv.root.preview','com.cleanyourtv.root.updater','com.cleanyourtv.updater','com.gathin.tvhome','com.local.nativehome','com.cleanyourtv.system.updater')
@@ -1239,6 +1239,9 @@ print('CYTV_PROJECT_REMOVED')
 """
         if self.remote.run(self._python_command([self._python(), '-c', script])).strip() != 'CYTV_PROJECT_REMOVED':
             raise UserError('Project startup or service registrations remain. Removal is not complete.')
+
+    def verify_project_removed(self):
+        self.verify_project_startup_removed()
         settings = self.remote.luna('com.webos.settingsservice/getSystemSettings', {'category': 'general', 'keys': ['defaultApps']})
         reply = self.remote.luna('com.webos.service.systemprofile/getProfiles', {'names': ['defaultApps', 'idleApp'], 'subscribe': False})
         try:

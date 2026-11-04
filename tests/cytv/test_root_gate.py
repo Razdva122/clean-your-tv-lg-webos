@@ -125,6 +125,7 @@ class RootGateTests(unittest.TestCase):
         with self.assertRaises(UserError):root_gate.install(self.installer,self.inventory,False,None)
         self.assertEqual(self.remote.calls,[]);self.assertIsNone(self.store.pending(self.profile))
     def removal_fixture(self):
+        self.installer.verify_project_startup_removed=Mock()
         self.installer.installed_apps=Mock(return_value=[{'id':package.ROOT_APP}])
         self.installer.status=Mock(return_value={'deployment_stage':'uninstalled-state-retained'})
         def uninstall(full_project=False):
@@ -154,4 +155,10 @@ class RootGateTests(unittest.TestCase):
         self.removal_fixture();self.failure='stock-proof'
         with self.assertRaises(UserError):root_gate.remove_project(self.installer)
         self.installer.uninstall.assert_called_once()
+    def test_orphan_startup_hook_blocks_full_removal_success_with_empty_inventory(self):
+        self.removal_fixture()
+        self.installer.verify_project_startup_removed.side_effect=UserError('Project startup or service registrations remain. Removal is not complete.')
+        with self.assertRaises(UserError):root_gate.remove_project(self.installer)
+        self.assertEqual(self.installer.installed_apps.return_value,[])
+        self.installer.verify_project_startup_removed.assert_called_once()
 if __name__=='__main__':unittest.main()
