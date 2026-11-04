@@ -4,6 +4,8 @@ Nevydáno (#290): **+ / Přidat aplikaci** nabídne živé TV pod názvem z tele
 
 **Nevydáno — Ribbon nad aplikacemi:** V Root se může Ribbon zobrazit nad aktuální aplikací. Home otevře panel; Zpět nebo další Home jej zavře. Při zapnutí nebo bez potvrzeného obsahu na pozadí se zobrazí tapeta; nastavení zůstává neprůhledné. No-root na TV zůstává přes celou obrazovku. Demo simuluje oba stavy; ověření finálního balíčku na zařízení ještě čeká. [Podrobnosti](../THEMES.md#ribbon-over-applications-unreleased).
 
+Ribbon: podržte OK pro úpravy; ←/→ přesouvá kartu, ↑ vybere × (skrýt z Home), ↓ vrátí výběr na kartu, OK potvrdí a Back zruší. Aktuální pozadí zůstává.
+
 
 **Nevydaný kandidát — zdroje při spuštění Root:** V Nastavení → Vaše domovská obrazovka zapněte **Změnit Home** a upravte **Otevřít Clean Your TV jako první**. **LG Channels / Živé TV** je ve výchozím nastavení zapnuté; **YouTube** a **HDMI** vypnuté. Při vypnutí změny Home zůstanou přepínače viditelné, ale nedostupné, a volby se zachovají. Nastavení se ukládá soukromě v tomto televizoru a není součástí přenosného exportu profilu. Jde o kandidáta, ne o ověřené spuštění či probuzení TV.
 

@@ -929,7 +929,7 @@ body.editing #homeSurface[data-layout="scenic-grid"] .ctv-position { display: no
 /* Ribbon editing keeps the lane anchored and exposes controls at the moving card. */
 body.ribbon-editing #homeSurface[data-ribbon="true"] #viewport,
 body.ribbon-editing #homeSurface[data-ribbon="true"] #stage { top: 0; }
-body.ribbon-editing #homeSurface[data-ribbon="true"] .item .name { display: none !important; }
+body.ribbon-editing #homeSurface.ctv-home[data-ribbon="true"] .item .name { display: none !important; }
 body.ribbon-editing #homeSurface[data-ribbon="true"] .item.moving .card { outline: none; }
 .ribbon-edit-arrow { position: absolute; z-index: 6; width: 40px; height: 48px; font-size: 52px; line-height: 44px; text-align: center; color: #fff; text-shadow: 0 2px 6px #000; pointer-events: none; }
 .ribbon-edit-left { left: -36px; }

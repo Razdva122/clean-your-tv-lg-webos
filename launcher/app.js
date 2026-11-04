@@ -179,6 +179,7 @@
     },
     blocked: function () { return previewDialogOpen() || !!moveState || !!pickerOpen || !!undoState ||
       !!(window.ThemeRuntime && ThemeRuntime.isSuspended()); },
+    opaque: function () { return previewDialogOpen() || !!(window.ThemeRuntime && ThemeRuntime.isSuspended()); },
     render: function (state) {
       document.documentElement.setAttribute('data-home-presentation', state.mode);
       document.body.setAttribute('data-home-presentation', state.mode);
@@ -455,9 +456,9 @@
     setPartState(item.el, 'moving', true);
     document.body.classList.add('editing');
     document.body.classList.toggle('ribbon-editing', !!layoutGeometry.ribbon);
-    editHint.textContent = layoutGeometry.ribbon ? '← →   ·   OK ✓   ·   ' + tr('Back') + ' ↩   ·   ↑ ×' : tr('← ↑ ↓ → Move   ·   OK Place   ·   Back Cancel   ·   ↓ Below last row to hide');
+    if (!layoutGeometry.ribbon) editHint.textContent = tr('← ↑ ↓ → Move   ·   OK Place   ·   Back Cancel   ·   ↓ Below last row to hide');
     hideButton.hidden = false;
-    editHint.hidden = false;
+    editHint.hidden = !!layoutGeometry.ribbon;
     hideButton.classList.remove('focused');
     hideSelected = false;
     focusTile(tiles.indexOf(item));

@@ -136,8 +136,12 @@ Home; a failed launch keeps it open. Settings, theme trials and recovery stay
 opaque. Power-on activation and absent, ambiguous or unavailable background
 information keep the wallpaper instead of exposing an empty screen.
 
-The neutral dark cards, focused outline/lift and bottom-local shade work against
-both the wallpaper and bright content. No-root on a TV retains its existing
+A single black block groups the three shortcuts. Native solid app colors fill
+the skewed cards, with a focused lift and bottom-local shade against wallpaper
+or bright content. Hold OK to edit one raised card; left/right moves it, Up
+selects its cross, Down returns to the card, OK confirms and Back cancels. The
+cross hides the app from Home and Undo restores it. Editing/hiding keeps the
+current background and shows no explanatory footer. No-root on a TV retains its existing
 fullscreen window and receives the same visual refresh. In the browser demo,
 **Startup / wallpaper**, **Over application**, **Home** and **Back** exercise both
 states. No-root overlay previews are explicitly simulations of Root behavior.

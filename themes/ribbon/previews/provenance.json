@@ -1,16 +1,82 @@
 {
   "kind": "browser",
-  "editions": [
-    "root",
-    "no-root"
-  ],
+  "sourceCommit": "68fb76cc47951fad304d25b147efc9db2da41229",
+  "dirty": true,
   "sourceThemeVersion": "1.3.0",
-  "wallpaperDecode": [
-    3840,
-    2160
-  ],
-  "videoAuthor": "Xecutioner",
-  "runtime": "shared trusted Home; preview mock services with browser media URLs",
   "physicalTVAcceptance": false,
-  "note": "Original Black Hole scene, no timer overlays; screenshots show reference app fixtures. Native 4K selected explicitly because browser UHD metadata is unknown."
+  "note": "Reference app fixtures and synthetic overlay content; current renderer, clear edit controls and preserved overlay during edit/hide. Still Black Hole poster for deterministic images.",
+  "captures": [
+    {
+      "edition": "no-root",
+      "presentation": "home",
+      "file": "themes/ribbon/previews/no-root-home.png",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "539ce9c4ef176fba66904a9dc6003cd382d045906f34beb63acabbc181f066f7",
+      "synthetic": true
+    },
+    {
+      "edition": "no-root",
+      "presentation": "edit",
+      "file": "themes/ribbon/previews/no-root-edit.png",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "b9d0fd6d81481991e44e8150dae22ee22fb41ecd69b19b84733a04dd4d9dc4fe",
+      "synthetic": true
+    },
+    {
+      "edition": "no-root",
+      "presentation": "overlay",
+      "file": "themes/ribbon/previews/no-root-overlay.png",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "a70b73e85ed83d1e06c2d4f212736309b049a9835290d8a2dc6a627bdb5f7c3f",
+      "synthetic": true
+    },
+    {
+      "edition": "no-root",
+      "presentation": "overlay-edit",
+      "file": "themes/ribbon/previews/no-root-overlay-edit.png",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "e18be44b49ae30033692d8612f3080f92e57ee04356ff4744ef1767356bd17a0",
+      "synthetic": true
+    },
+    {
+      "edition": "root",
+      "presentation": "home",
+      "file": "themes/ribbon/previews/root-home.png",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "539ce9c4ef176fba66904a9dc6003cd382d045906f34beb63acabbc181f066f7",
+      "synthetic": true
+    },
+    {
+      "edition": "root",
+      "presentation": "edit",
+      "file": "themes/ribbon/previews/root-edit.png",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "b9d0fd6d81481991e44e8150dae22ee22fb41ecd69b19b84733a04dd4d9dc4fe",
+      "synthetic": true
+    },
+    {
+      "edition": "root",
+      "presentation": "overlay",
+      "file": "themes/ribbon/previews/root-overlay.png",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "a70b73e85ed83d1e06c2d4f212736309b049a9835290d8a2dc6a627bdb5f7c3f",
+      "synthetic": true
+    },
+    {
+      "edition": "root",
+      "presentation": "overlay-edit",
+      "file": "themes/ribbon/previews/root-overlay-edit.png",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "e18be44b49ae30033692d8612f3080f92e57ee04356ff4744ef1767356bd17a0",
+      "synthetic": true
+    }
+  ]
 }
