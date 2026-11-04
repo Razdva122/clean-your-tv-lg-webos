@@ -1,5 +1,7 @@
 # Install Clean Your TV
 
+> **Unpublished 1.8.0 candidate:** see [candidate versions, setup and recovery limits](RELEASE-1.8.0.md). Published downloads remain on 1.7.1. C1 Beta is fresh-install only, selected automatically in the common installer; normal OTA is unavailable and physical C1 acceptance is pending. Historical results below retain their original artifact scope.
+
 > The [1.7.1 maintenance release](RELEASE-1.7.1.md) changes the host installer and browser demo; TV component versions remain those of 1.7.0. See the [1.7.0 device observations and limits](history/2026-11-03-release-1.7.0-final-packages.md). Obtain available packages from [GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases).
 
 Use **cytv** to install No-root or Root. It includes the computer runtime and TV

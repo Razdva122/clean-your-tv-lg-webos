@@ -1,5 +1,7 @@
 # Clean Your TV — guide d’utilisation
 
+> **1.8.0 — Version candidate non publiée:** [1.8.0 / English](../RELEASE-1.8.0.md).
+
 **C1 Beta non publiée (#298) :** Choisissez Root dans l’installateur commun pour ordinateur. Les C1 admissibles sont détectés automatiquement ; aucun autre installateur ni option spéciale n’est nécessaire. Cette voie exige une installation neuve, ne propose pas de mises à jour automatiques et n’a pas encore été validée sur un C1 physique. Ouvrir LG Home, maintenir Back ou un arrêt de sécurité/d’alimentation peut laisser le contrôle de Home désactivé ; réactivez Changer Home dans les réglages du TV. La voie Root normale ne change pas. Si d’autres composants No-root subsistent, la suppression complète C1 s’arrête avant toute modification. Supprimez-les d’abord par la procédure No-root habituelle ; conservez les données de récupération si leur état est incertain. [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md).
 
 Non publié (#290) : **+ / Ajouter une app** propose la télévision en direct sous le nom fourni par le TV uniquement si le tuner est détecté comme installé. Les autres apps système masquées restent exclues. No-root nécessite Helper et installateur à jour ; Root nécessite le paquet Home à jour. Le lancement des chaînes reste à vérifier sur le TV.

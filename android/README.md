@@ -1,5 +1,7 @@
 # Install Clean Your TV from Android
 
+> **Unpublished 1.8.0 candidate:** see [candidate versions, setup and recovery limits](../docs/RELEASE-1.8.0.md). Published downloads remain on 1.7.1. C1 Beta is fresh-install only, selected automatically in the common installer; normal OTA is unavailable and physical C1 acceptance is pending. Historical results below retain their original artifact scope.
+
 > Release 1.7.1 uses Android 0.7.1 / versionCode 19 and embeds the shared installer correction; its exact signer, payload and emulator upgrade checks are in the [1.7.1 acceptance record](../docs/history/2026-11-03-release-1.7.1-host-checks.md). This guide retains the same setup flow. Use [Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases) for the latest published downloads. The historical evidence below remains scoped to its original APK.
 
 > Historical release 1.6.0 uses Android 0.6.0 / versionCode 17. See [Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases) for published downloads and [artifact-bound acceptance and limits](../docs/history/2026-11-02-release-1.6.0-final-acceptance.md).

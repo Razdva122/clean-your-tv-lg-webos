@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [1.8.0 candidate preparation, exact build and remaining gates](2026-11-04-release-1.8.0-candidate.md).
+
 - [2026-11-04 — Automatic C1 native Beta](2026-11-04-c1-native-gate.md): common installer selection, independent native recovery, host checks and pending physical acceptance.
 
 - [2026-11-04 — Live TV discovery (#290)](2026-11-04-live-tv-discovery.md): C3 read-only discovery omission, targeted inventory correction and remaining packaged-TV acceptance.
