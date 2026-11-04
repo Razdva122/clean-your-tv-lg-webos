@@ -13,9 +13,10 @@ const {compileThemeCss}=require('../../theme-api/compile.cjs');
   const {page,errors}=await open(browser,site,edition);
   try{
    await page.evaluate(({manifest,rules})=>ThemeRuntime.apply({manifest,rules,assetHandles:{}}),{manifest,rules});
-   const group=await page.locator('#topButtons').evaluate(n=>{const s=getComputedStyle(n),b=n.getBoundingClientRect();return {x:b.x,y:b.y,width:b.width,height:b.height,background:s.backgroundColor,before:getComputedStyle(n,'::before').backgroundColor};});
-   assert.deepEqual({x:group.x,y:group.y,width:group.width,height:group.height},{x:80,y:930,width:244,height:132},'shortcuts occupy one bottom-aligned group');
-   assert.equal(group.before,'rgb(17, 19, 24)','outlined charcoal block remains distinct from the backdrop');
+   const group=await page.locator('#topButtons').evaluate(n=>{const s=getComputedStyle(n),b=n.getBoundingClientRect();return {x:b.x,y:b.y,width:b.width,height:b.height,background:s.backgroundColor,before:getComputedStyle(n,'::before').backgroundColor,transform:getComputedStyle(n,'::before').transform};});
+   assert.deepEqual({x:group.x,y:group.y,width:group.width,height:group.height},{x:88,y:934,width:228,height:112},'shortcuts occupy one bottom-aligned group');
+   assert.equal(group.transform,'none','utility group has straight edges independent of app-card skew');
+   assert.equal(group.before,'rgb(32, 36, 43)','outlined charcoal block remains distinct from the backdrop');
    const fills=await page.locator('#tiles .item[data-app-id] .card').evaluateAll(ns=>ns.map(n=>({actual:getComputedStyle(n).backgroundColor,native:n.style.background})));
    assert(fills.every(f=>f.actual===f.native),'every app keeps its native solid fill across the card');
    assert(new Set(fills.map(f=>f.actual)).size>3,'native app fills remain distinct');

@@ -1,6 +1,6 @@
 {
   "kind": "browser",
-  "sourceCommit": "68fb76cc47951fad304d25b147efc9db2da41229",
+  "sourceCommit": "db59b0a8feea64aba25a400eaf19fb70fe26394e",
   "dirty": true,
   "sourceThemeVersion": "1.3.0",
   "physicalTVAcceptance": false,
@@ -12,7 +12,7 @@
       "file": "themes/ribbon/previews/no-root-home.png",
       "width": 1920,
       "height": 1080,
-      "sha256": "539ce9c4ef176fba66904a9dc6003cd382d045906f34beb63acabbc181f066f7",
+      "sha256": "65bcf810f7805cb71cf351af11e6db53a6e62332889815e79d02056fc184e12a",
       "synthetic": true
     },
     {
@@ -21,7 +21,7 @@
       "file": "themes/ribbon/previews/no-root-edit.png",
       "width": 1920,
       "height": 1080,
-      "sha256": "b9d0fd6d81481991e44e8150dae22ee22fb41ecd69b19b84733a04dd4d9dc4fe",
+      "sha256": "1a7025dc9203f763f389cd6f2768eec7683bd96bc117df4892a51c332d25206e",
       "synthetic": true
     },
     {
@@ -30,7 +30,7 @@
       "file": "themes/ribbon/previews/no-root-overlay.png",
       "width": 1920,
       "height": 1080,
-      "sha256": "a70b73e85ed83d1e06c2d4f212736309b049a9835290d8a2dc6a627bdb5f7c3f",
+      "sha256": "9aba6a6bf91ee2e3ecd769494ba39a36b3d841dad531645bb2d534a158f03f37",
       "synthetic": true
     },
     {
@@ -39,7 +39,7 @@
       "file": "themes/ribbon/previews/no-root-overlay-edit.png",
       "width": 1920,
       "height": 1080,
-      "sha256": "e18be44b49ae30033692d8612f3080f92e57ee04356ff4744ef1767356bd17a0",
+      "sha256": "388c4be9199616ebb94a375d37e3fdd90e941854e685797def659f9decf36445",
       "synthetic": true
     },
     {
@@ -48,7 +48,7 @@
       "file": "themes/ribbon/previews/root-home.png",
       "width": 1920,
       "height": 1080,
-      "sha256": "539ce9c4ef176fba66904a9dc6003cd382d045906f34beb63acabbc181f066f7",
+      "sha256": "65bcf810f7805cb71cf351af11e6db53a6e62332889815e79d02056fc184e12a",
       "synthetic": true
     },
     {
@@ -57,7 +57,7 @@
       "file": "themes/ribbon/previews/root-edit.png",
       "width": 1920,
       "height": 1080,
-      "sha256": "b9d0fd6d81481991e44e8150dae22ee22fb41ecd69b19b84733a04dd4d9dc4fe",
+      "sha256": "1a7025dc9203f763f389cd6f2768eec7683bd96bc117df4892a51c332d25206e",
       "synthetic": true
     },
     {
@@ -66,7 +66,7 @@
       "file": "themes/ribbon/previews/root-overlay.png",
       "width": 1920,
       "height": 1080,
-      "sha256": "a70b73e85ed83d1e06c2d4f212736309b049a9835290d8a2dc6a627bdb5f7c3f",
+      "sha256": "9aba6a6bf91ee2e3ecd769494ba39a36b3d841dad531645bb2d534a158f03f37",
       "synthetic": true
     },
     {
@@ -75,7 +75,7 @@
       "file": "themes/ribbon/previews/root-overlay-edit.png",
       "width": 1920,
       "height": 1080,
-      "sha256": "e18be44b49ae30033692d8612f3080f92e57ee04356ff4744ef1767356bd17a0",
+      "sha256": "388c4be9199616ebb94a375d37e3fdd90e941854e685797def659f9decf36445",
       "synthetic": true
     }
   ]

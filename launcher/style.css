@@ -944,3 +944,5 @@ body.ribbon-editing #hideApp span { position: absolute; width: 1px; height: 1px;
 body.ribbon-editing #hideApp.focused { background: transparent; color: #fff; }
 body.ribbon-editing #hideApp.focused .ribbon-delete-mark { width: 44px; height: 44px; stroke-width: 3.2; }
 body.ribbon-editing #editHint { bottom: auto; color: #fff; text-shadow: 0 2px 6px #000; }
+
+#homeSurface.ctv-remote-navigation #hideApp { transition: none !important; }

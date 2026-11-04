@@ -112,11 +112,11 @@
       ribbonRule('.item .card img', 'width:' + (r.iconScale * 100) + '%;height:' + (r.cardHeight * r.iconScale) + 'px;left:' + ((1 - r.iconScale) * 50) + '%;top:' + (r.cardHeight * (1 - r.iconScale) / 2) + 'px;');
       ribbonRule('.add-app svg', 'width:' + (64 * r.iconScale) + 'px;height:' + (64 * r.iconScale) + 'px;');
       ribbonRule('.item .ctv-icon', 'transform:skewX(' + (-r.skewDeg) + 'deg)!important;');
-      ribbonRule('.item .name', 'transform:skewX(' + (-r.skewDeg) + 'deg)!important;');
+      ribbonRule('.item .name', 'transform:skewX(' + (-r.skewDeg) + 'deg)!important;transition:none!important;');
       if (r.labels === 'focused-above') {
         ribbonRule('#hero', 'display:none!important;');
         ribbonRule('.item .name', 'display:none!important;');
-        ribbonRule('.item.focused .name', 'display:block!important;position:absolute;left:0;right:0;bottom:' + (r.cardHeight + r.focusLift + 20) + 'px;margin:0 -40px;height:auto;max-height:96px;line-height:32px;white-space:normal;overflow:hidden;opacity:1!important;color:#fff!important;text-shadow:0 2px 8px #000;');
+        ribbonRule('.item.focused .name', 'display:block!important;position:absolute;left:0;right:0;bottom:' + (r.cardHeight + r.focusLift + 20) + 'px;margin:0 -40px;height:auto;max-height:96px;line-height:32px;white-space:normal;overflow:hidden;opacity:1!important;color:#fff!important;text-shadow:0 2px 8px #000;transform-origin:center bottom;transform:translateX(' + (Math.tan(r.skewDeg * Math.PI / 180) * 20) + 'px) skewX(' + (-r.skewDeg) + 'deg)!important;');
       }
       else ribbonRule('.item .name', 'position:absolute;top:' + (r.cardHeight + 16) + 'px;left:0;right:0;margin:0 -32px;line-height:32px;height:32px;');
       if (!r.showClock) ribbonRule('#timeRow', 'display:none!important;');
@@ -128,9 +128,9 @@
         ribbonRule('#topButtons .pill svg', 'width:32px;height:32px;margin:0;');
         if (manifest.layout.presentation === 'overlay') {
           // A compact outlined block stays distinct from the bottom shade and app lane.
-          var shortcutHeight = Math.max(80, r.cardHeight - 48);
-          ribbonRule('#topButtons', 'left:' + (r.left - 260) + 'px;bottom:' + (r.bottom + 18) + 'px;width:244px;height:' + shortcutHeight + 'px;align-items:center;justify-content:center;');
-          ribbonRule('#topButtons::before', 'content:"";position:absolute;left:0;top:0;bottom:0;width:100%;box-sizing:border-box;border:1px solid #6b7078;background:#111318;transform:skewX(' + r.skewDeg + 'deg);transform-origin:center bottom;pointer-events:none;');
+          var shortcutHeight = Math.max(80, r.cardHeight - 68);
+          ribbonRule('#topButtons', 'left:' + (r.left - 252) + 'px;bottom:' + (r.bottom + (r.cardHeight - shortcutHeight) / 2) + 'px;width:228px;height:' + shortcutHeight + 'px;align-items:center;justify-content:center;');
+          ribbonRule('#topButtons::before', 'content:"";position:absolute;left:0;top:0;bottom:0;width:100%;box-sizing:border-box;border:1px solid #737985;background:#20242b;transform:none;pointer-events:none;');
           ribbonRule('#topButtons .pill', 'position:relative;width:60px;height:60px;margin:0 4px;padding:0;background:transparent;border:3px solid transparent;transform:none;');
           ribbonRule('#topButtons .pill.focused', 'background:#303238;border-color:#fff;');
           ribbonRule('#topButtons .pill svg', 'width:30px;height:30px;');

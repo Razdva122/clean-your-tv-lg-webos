@@ -425,7 +425,7 @@
     }
     document.body.classList.remove('ribbon-editing');
     if (hideButton.parentNode !== document.body) document.body.appendChild(hideButton);
-    hideButton.style.left = ''; hideButton.style.top = ''; editHint.style.top = '';
+    hideButton.style.left = ''; hideButton.style.top = ''; hideButton.style.webkitTransition = hideButton.style.transition = ''; editHint.style.top = '';
   }
   function positionRibbonEditor() {
     if (!moveState || !layoutGeometry.ribbon) return;
@@ -438,11 +438,12 @@
         arrow.className = 'ribbon-edit-arrow ribbon-edit-' + side;
         arrow.setAttribute('aria-hidden', 'true');
         arrow.innerHTML = '<svg viewBox="0 0 24 40" aria-hidden="true"><path d="' + (side === 'left' ? 'M16 4L6 20l10 16' : 'M8 4l10 16L8 36') + '"/></svg>';
-        arrow.style.top = (-ribbon.focusLift - 20) + 'px';
+        arrow.style.top = (-ribbon.focusLift - 4) + 'px';
         arrow.style.webkitTransform = arrow.style.transform = 'skewX(' + (-ribbon.skewDeg) + 'deg)';
         item.el.appendChild(arrow);
       });
     }
+    hideButton.style.webkitTransition = hideButton.style.transition = item.el.style.transition;
     var slant = -(ribbon.cardHeight + ribbon.focusLift) * Math.tan(ribbon.skewDeg * Math.PI / 180);
     hideButton.style.left = (tileLeft(focusedTile) + CARD_WIDTH / 2 + slant) + 'px';
     hideButton.style.top = (TILE_BASE - ribbon.focusLift - 64) + 'px';
@@ -933,7 +934,7 @@
       var previousSlot = Number(e.el.getAttribute('data-ribbon-slot'));
       e.el.style.webkitTransition = e.el.style.transition = slot === null ? '' : e.el.hasAttribute('data-ribbon-slot') && Math.abs(previousSlot - slot) === 1 && previousSlot <= columnCount && slot <= columnCount ? 'left 160ms ease-out' : 'none';
       e.el.style.pointerEvents = slot !== null && slot >= columnCount ? 'none' : '';
-      e.el.style.visibility = slot !== null && slot >= columnCount ? 'hidden' : '';
+      e.el.style.visibility = slot !== null && slot > columnCount ? 'hidden' : '';
       if (slot === null) e.el.removeAttribute('data-ribbon-slot'); else e.el.setAttribute('data-ribbon-slot', slot);
       e.el.style.left = tileLeft(t) + "px";
       e.el.style.top = tileTop(t) + "px";
