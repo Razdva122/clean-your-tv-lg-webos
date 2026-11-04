@@ -46,6 +46,19 @@ def validate_native_gate(data):
         reject()
 
 
+def bundle_presentation_context(files):
+    """Keep the immutable private-service inventory while shipping its closure."""
+    files = dict(files)
+    needle = b"require('./presentation-context')"
+    if files['service.js'].count(needle) != 1:
+        raise ValueError('Expected one Root presentation context factory')
+    source = files['presentation-context.js']
+    bundled = (b'(function(){var module={exports:{}};\n' + source
+               + b'\nreturn module.exports;}())')
+    files['service.js'] = files['service.js'].replace(needle, bundled)
+    return files
+
+
 def tgz(files, executables=()):
     """Secure owned package leaves, without chmod records for platform containers."""
     from cytv.package import tgz as package_tgz
@@ -91,7 +104,8 @@ def build(output, version='0.0.1', legacy_node_prototype=False, resolution=None,
     from startup_hook import packaged_content
     payload['usr/palm/applications/'+app_id+'/startup.sh']=packaged_content(app_id)
     from scripts.theme_receiver import inject
-    private_service = inject({name[len(service_prefix):]: data for name, data in payload.items() if name.startswith(service_prefix)}, standalone=True)
+    private_service = bundle_presentation_context({name[len(service_prefix):]: data for name, data in payload.items() if name.startswith(service_prefix)})
+    private_service = inject(private_service, standalone=True)
     if legacy_node_prototype:
         from scripts.root_node_build import compile_root_node
         private_service = compile_root_node(private_service)
