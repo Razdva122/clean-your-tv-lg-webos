@@ -197,7 +197,7 @@
       "showClock": {
         "type": "boolean"
       },
-      "bottomLeftMinimumLeft": 340,
+      "bottomLeftMinimumLeft": 280,
       "minimumCardWidth": 64,
       "unknownKeys": "reject",
       "belowLabelsMinimumBottom": 64

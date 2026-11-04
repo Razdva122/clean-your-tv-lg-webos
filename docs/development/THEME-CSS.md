@@ -532,7 +532,7 @@ Use optional `layout.ribbon` with `preset: "scenic-grid"`, an explicit 1–8 col
 | `labels` | `below`, `focused-above` | `below` |
 | `showClock` | boolean | `true` |
 
-Unknown keys and invalid combinations reject. Bottom-left shortcuts require `left >= 340`; below captions require `bottom >= 64`. Geometry reserves maximum focused skew extent on both sides and rejects a computed card width below 64 px; width is capped at 360 px. Combined checks use the fixed column count. The selected card grows and raises by `focusLift`, preserving its bottom edge. Captions, icon counter-skew and matching hit targets are trusted geometry. `iconScale` shrinks the original app-image box inside its card; Add app retains its native SVG artwork. Author CSS retains appearance hooks, wallpaper and colors.
+Unknown keys and invalid combinations reject. Bottom-left shortcuts require `left >= 280` (three 72 px controls plus spacing and a 28 px edge inset); below captions require `bottom >= 64`. Geometry reserves maximum focused skew extent on both sides and rejects a computed card width below 64 px; width is capped at 360 px. Combined checks use the fixed column count. The selected card grows and raises by `focusLift`, preserving its bottom edge. Captions, icon counter-skew and matching hit targets are trusted geometry. `iconScale` shrinks the original app-image box inside its card; Add app retains its native SVG artwork. Author CSS retains appearance hooks, wallpaper and colors.
 
 ```json
 {
