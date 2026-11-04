@@ -5,6 +5,45 @@ prepared for the investigation of issue #207. It does not use the Helper and doe
 not establish a Home mapping. No TV was accessed while preparing or testing it.
 Desktop fixtures exercise the parser and safeguards, not physical TV acceptance.
 
+## Delivery over the existing SSH connection (unreleased)
+
+The stdin entrypoint supports an agreed observation without putting a script file
+on the TV. Before the session, download the reviewed script to the computer from
+an immutable commit URL, verify the maintainer-provided SHA-256, and review this
+procedure and the script. Do not pipe an unverified network download into SSH.
+
+Keep the TV awake. Replace `YOUR_EXISTING_SSH_COMMAND` below with the existing
+working Developer Mode SSH command, preserving its target, port, key and host
+identity verification. It must run a remote command without a pseudo-terminal;
+omit `-t`/`-tt`. Do not publish that private connection command. If no trusted
+working Developer Mode connection exists, stop and tell the maintainer rather
+than creating a replacement profile, enabling root or changing permissions.
+
+```sh
+YOUR_EXISTING_SSH_COMMAND \
+  'unset NODE_OPTIONS NODE_PATH; exec /usr/bin/node' \
+  < ./passive-remote-diagnostic.js
+```
+
+The approved ten-second window starts as soon as Node receives the script.
+Press and release physical Home once on the agreed remote during that window,
+with no other buttons. Share only the single bounded JSON result, including an
+inconclusive fixed reason if applicable; do not share an SSH command, full logs,
+app inventory or credentials. Do not repeat the capture or repair permissions
+after a denied/inconclusive result without a new agreed window. Helper may remain
+running: this observer neither stops it nor competes for an exclusive grab.
+An existing exclusive reader can prevent observations on that source, so absence
+is not proof that a button was not pressed or that the input does not exist.
+
+Use bare `/usr/bin/node`, not `node -`: exact Node 0.12.2 rejects the `-` option.
+Both file execution and stdin emit one report; requiring the module does not
+start observation. The read-only parser, source allowlist, ten-second/read limits,
+cancellation and redaction rules below are identical for both entrypoints.
+This change enables evidence collection for #304/#207; it adds no IR mapping or
+production relay/controller change. Device compatibility remains unverified.
+
+## Observation contract
+
 Use only in a future, explicitly agreed owner-supervised window, delivered through
 an **already working Dev Mode SSH connection**. The owner must review the script
 and this procedure first. Do not enable Root, change firmware, force-enable SSH,

@@ -6,6 +6,24 @@ const filename = 'scripts/passive-remote-diagnostic.js';
 assert.ok(fs.existsSync(filename), 'passive diagnostic implementation must exist');
 const source = fs.readFileSync(filename, 'utf8');
 require('acorn').parse(source, {ecmaVersion: 5});
+const cp = require('child_process');
+// Exercise the real entrypoint used by SSH stdin, without opening TV devices.
+const unsupportedSource = 'Object.defineProperty(process,"platform",{value:"darwin"});\n' + source;
+for (const args of [[], ['-'], ['-', 'unexpected']]) {
+  const cli = cp.spawnSync(process.execPath, args, {input: unsupportedSource, encoding: 'utf8'});
+  assert.equal(cli.status, 0, cli.stderr);
+  assert.equal(cli.stderr, '');
+  assert.notEqual(cli.stdout.trim(), '', 'stdin execution must print one bounded report');
+  const report = JSON.parse(cli.stdout);
+  assert.equal(report.reason, args.length < 2 ? 'unsupported_runtime' : 'unsupported_arguments');
+  assert.equal(report.home_mapping_verified, false);
+  assert.deepEqual(report.observations, []);
+}
+const imported = cp.spawnSync(process.execPath, [], {
+  input: 'require("./scripts/passive-remote-diagnostic.js");', encoding: 'utf8'
+});
+assert.equal(imported.status, 0, imported.stderr);
+assert.equal(imported.stdout, '', 'importing the probe must never start observation');
 function event(code, value, type = 1) {
   const b = Buffer.alloc(16); b.writeUInt16LE(type, 8); b.writeUInt16LE(code, 10); b.writeInt32LE(value, 12); return b;
 }
@@ -104,11 +122,12 @@ function legacyRuntimeFixture() {
       if (name === 'constants') {return {O_RDONLY: 0, O_NONBLOCK: 0x800, O_NOFOLLOW: 0x20000};}
       throw new Error('forbidden');
     },
-    process: {platform: 'linux', arch: 'arm', hrtime: function () {return [0, 0];}, on: function () {}, removeListener: function () {}},
+    process: {platform: 'linux', arch: 'arm', argv: ['/usr/bin/node'],
+      stdout: {write: function (value) {assert.equal(report, undefined); report = JSON.parse(value);}},
+      hrtime: function () {return [0, 0];}, on: function () {}, removeListener: function () {}},
     setTimeout: function () {throw new Error('pair must complete immediately');}, clearTimeout: function () {}
   };
   vm.runInNewContext(source, context);
-  context.module.exports.run(function (value) {report = value;});
   assert.equal(report.status, 'observed_candidate');
   assert.equal(report.home_mapping_verified, false);
   assert.equal(report.observations.length, 1);
@@ -123,4 +142,12 @@ if (process.env.NODE012) {
   const cli = cp.spawnSync(process.env.NODE012, [filename], {encoding: 'utf8'});
   assert.equal(cli.status, 0, cli.stderr); assert.equal(cli.stderr, '');
   assert.equal(JSON.parse(cli.stdout).reason, 'unsupported_runtime');
+  const stdin = cp.spawnSync(process.env.NODE012, [], {input: unsupportedSource, encoding: 'utf8'});
+  assert.equal(stdin.status, 0, stdin.stderr); assert.equal(stdin.stderr, '');
+  assert.equal(JSON.parse(stdin.stdout).reason, 'unsupported_runtime');
+  const imported = cp.spawnSync(process.env.NODE012, [], {
+    input: 'require("./scripts/passive-remote-diagnostic.js");', encoding: 'utf8'
+  });
+  assert.equal(imported.status, 0, imported.stderr);
+  assert.equal(imported.stdout, '', 'legacy imports stay passive');
 }
