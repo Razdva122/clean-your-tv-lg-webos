@@ -129,3 +129,30 @@ def collect(remote, operation, pending=None):
                 and value['python'] in ('system-default-unverified','private-bytes-match-unexecuted')):return value
     except (TypeError,ValueError):pass
     return dict(schema=1,status='unsafe')
+
+
+def inspect_saved(store, profile, operation, secret):
+    """One original-profile inspection; never persist authentication or recovery."""
+    from .transport import SSH
+    program(operation)
+    with store.lock(profile):
+        matches = [p for p in store.profiles() if p['edition'] == 'root'
+                   and (store.pending(p) or {}).get('action') == 'install'
+                   and (store.pending(p) or {}).get('product_operation') == operation]
+        if len(matches) != 1 or matches[0] != profile or profile['edition'] != 'root':
+            raise ValueError('original_saved_root_profile_required')
+        pending = store.pending(profile)
+        if not pending or pending.get('stage') != 'coordinator-submitted':
+            raise ValueError('original_submitted_install_required')
+        program(operation, pending)  # Validate the exact local operation before SSH.
+        directory = store.device_dir(profile)
+        paths = [directory / name for name in ('profile.json', 'known_hosts', 'operation.json')]
+        before = [path.read_bytes() for path in paths]
+        remote = SSH.connect(profile, directory, secret, lambda *_: False, persist=False)
+        try:
+            result = collect(remote, operation, pending)
+            if store.pending(profile) != pending or [path.read_bytes() for path in paths] != before:
+                raise ValueError('original_host_records_changed')
+            return result
+        finally:
+            remote.close()

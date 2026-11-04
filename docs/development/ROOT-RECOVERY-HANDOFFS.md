@@ -159,9 +159,29 @@ pin, and reads the exact request/submission/snapshot. An optional
 No code bundle is uploaded and no retained Python/launcher is executed. Blocked
 requests, absent worker and inconsistent evidence remain explicit refusals.
 
-Owner agreement to this bounded read remains outstanding. Do not rerun ordinary
-status just to collect new fields, substitute another profile, or infer recovery
-from matching private Python bytes. #240's successful manual interpreter checks
+For #216 and #200, owner agreement to the bounded read remains outstanding.
+For #240, the [latest owner reply](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/240#issuecomment-6612048529)
+corrects the original installer platform to Android and agrees to an Android-supported
+read-only inspection once the exact procedure is supplied. The owner updated the
+app in place and retained the pending operation, but cannot confirm the original
+profile/pin bytes. Do not repeat the macOS-account question or assume a desktop
+profile belongs to that Android operation.
+
+Unreleased Android source now uses the shared original-profile inspection from
+**Review recovery options** for this exact pending stage. It requires one saved
+matching Root profile and operation, the existing local host pin, explicit
+(default-No) inspection confirmation and unchanged original records. It preserves
+the original identity regardless of the current Android auth form. No coordinator,
+retained Python, Luna call, trust update or worker replay is involved. The internal
+PC script uses the same host selector; it is not an Android installation step.
+The [bounded phone procedure](../../android/README.md#interrupted-root-installation-inspection-unreleased)
+remains review material until an exact signed rebuilt APK and its acceptance are
+identified. Source checks do not establish physical Android-to-TV acceptance or
+original recovery. Missing/ambiguous local records stop; do not copy replacement
+profiles or ask the owner to repeat failed recovery attempts.
+
+Do not rerun ordinary status just to collect new fields, substitute another profile,
+or infer recovery from matching private Python bytes. #240's successful manual interpreter checks
 do not prove which interpreter the failed driver selected. #200's macOS cache
 failure remains separate. Original causes and individual recovery are unresolved.
 

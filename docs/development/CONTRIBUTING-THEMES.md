@@ -19,9 +19,9 @@ optional self-service path for authors who want to build/package the theme or
 prepare a complete PR themselves. Its review and catalogue steps are maintainer
 responsibilities, not prerequisites for an initial suggestion.
 
-**Candidate status:** the author toolkit/runtime and theme-enabled TV controls
-are still development candidates. Do not assume a published Home package contains
-them. The current controls live in **Settings → Appearance**. No official
+**Toolkit status:** the author toolkit/runtime remains a development candidate.
+Version 1.7.0 includes the TV theme controls in **Settings → Themes**. Older
+Home versions support only the capabilities included with their own engine. No official
 prebuilt author-runtime download is pinned yet; runtime preparation below is an
 explicit source-development step. A theme PR does not update Home or publish a
 release by itself.
@@ -250,9 +250,9 @@ preference returns on switching to an adjustable theme. This does not unlock
 arbitrary card placement. In this candidate, use exactly `spacingScale: 1`,
 `textScale: 1` and `focusScale: 1.1`; other combinations are rejected.
 
-An unreleased `dock-grid` opt-in, `layout.motion: "classic"`, gives a theme unthemed Classic's glide, bump, zoom, edge fades and baked glow; see [Classic motion](THEME-CSS.md#classic-motion-opt-in-unreleased) for `classic-motion-v1` and the transitions it reserves for the engine.
+A `dock-grid` opt-in available in 1.7.0, `layout.motion: "classic"`, gives a theme unthemed Classic's glide, bump, zoom, edge fades and baked glow; see [Classic motion](THEME-CSS.md#classic-motion-opt-in-unreleased) for `classic-motion-v1` and the transitions it reserves for the engine.
 
-Unreleased parameterized scenic ribbons use optional `layout.ribbon` with fixed columns. See the [bounded ribbon parameters](THEME-CSS.md#parameterized-scenic-ribbons-unreleased) for geometry and `ribbon-layout-v1`. Use a matching explicit PR runtime; the reviewed toolkit pin does not gain capabilities automatically. Unsupported Home rejects the new theme before installation, retaining its selection.
+Parameterized scenic ribbons in 1.7.0 use optional `layout.ribbon` with fixed columns. See the [bounded ribbon parameters](THEME-CSS.md#parameterized-scenic-ribbons-unreleased) for geometry and `ribbon-layout-v1`. Use a matching explicit PR runtime; the reviewed toolkit pin does not gain capabilities automatically. Unsupported Home rejects the new theme before installation, retaining its selection.
 
 For embedded native 4K still/video authoring in the next-release candidate, see [wallpaper authoring](WALLPAPERS.md#authoring-embedded-media). The matching compiler/toolkit retains local UHD/FHD H.264 variants and a static image fallback. This is separate from published image-only runtime snapshots.
 
@@ -417,7 +417,7 @@ permission before publication; follow the main project's [report rules](../../AG
 
 No Showcase PR, public repository or clean source commit is required. The main author workflow is **outgoing PC → temporary TV receiver**, so it works without opening an incoming port on your Mac.
 
-1. On a matching theme-enabled TV candidate, open **Settings → Appearance → Receive from computer**. The TV shows its private IPv4 address, six-digit PIN and expiry time.
+1. On a compatible theme-enabled TV, open **Settings → Themes → Receive from computer**. The TV shows its private IPv4 address, six-digit PIN and expiry time.
 2. Start the toolkit's `preview` or `showcase`, choose your theme and press **Send to TV**.
 3. In the computer dialog, enter the address and PIN **shown by the TV**, then click **Send theme**. The local toolkit compiles a fixed snapshot and makes an outgoing HTTP request to TV TCP **8879**; the browser does not need a cross-origin network exception.
 4. The TV checks descriptor identity, rules, image/document hashes and native image decoding before saving a downloaded copy. Choose **Apply theme** on TV to save the selection immediately, without a timer. The computer's Sent status confirms delivery, not application.
@@ -712,8 +712,8 @@ announcing that others can install it through Showcase.
 
 Voting and automatic promotion into built-in themes are **not implemented**.
 Popularity is not approval, and a public listing does not bundle a theme with
-Home. Published 1.6.0 includes Classic, Alpine and Ribbon. The unpublished 1.7.0
-candidate includes Classic, Liquid Glass and Ribbon; Alpine 1.4.4 is an external
+Home. Version 1.6.0 includes Classic, Alpine and Ribbon. Version 1.7.0
+includes Classic, Liquid Glass and Ribbon; Alpine 1.4.4 is an external
 Showcase listing, alongside Channel. Saved `builtin:alpine` choices recover to
 Classic with the visible recovery notice, without an automatic download or
 replacement by Liquid Glass.
@@ -770,7 +770,7 @@ See the [maintainer Showcase guide](../../showcase/README.md).
 | Send to TV fails | TV receiver pane open, TV address/PIN entered on PC, same private network, TV TCP 8879 reachable, no guest isolation; update Home and its service together |
 | Saving on PC does not update TV | Reopen the TV receiver for a new PIN, send a fresh snapshot from PC and apply it again |
 | Remove is refused | Apply another installed/built-in theme before removing the active package |
-| Old TV Home has no Appearance theme cards | Install the supported theme-enabled candidate when released; a theme URL cannot upgrade the engine |
+| Old TV Home has no Appearance theme cards | Install a compatible theme-enabled Home release; a theme URL cannot upgrade the engine |
 
 For unresolved authoring problems, include the theme ID/version, toolkit/runtime
 revisions, exact command, redacted error and a minimal public source reproduction.

@@ -1,148 +1,31 @@
 {
   "schema": 1,
-  "version": "1.7.0",
+  "version": null,
   "changes": [
     {
-      "pr": 237,
-      "issues": [],
-      "summary": "Integrate 12-language static website source; publication remains deferred until the later main-release decision"
-    },
-    {
-      "pr": 239,
-      "issues": [],
-      "summary": "Add input shelf, preview controller and Classic motion/rendering; final theme-owned placement and default-off preview behavior are refined by #254"
-    },
-    {
-      "pr": 241,
-      "issues": [],
-      "summary": "Add original Liquid Glass assets and explicit classic-motion capability; final built-in lineup and input placement are refined by #254"
-    },
-    {
-      "pr": 247,
+      "pr": 287,
       "issues": [
-        196
+        282,
+        288
       ],
-      "summary": "Allow Home broker settings after explicit cross-package Helper status refusal; original #196 device confirmation remains outstanding"
+      "summary": "Preserve typed Root activation SSH/Luna failure evidence; original #282/#288 activation failures and recovery remain unresolved"
     },
     {
-      "pr": 248,
+      "pr": 289,
       "issues": [
-        171
-      ],
-      "summary": "Add simulated cross-component Root wake/startup safety regressions and document missing evidence; original #171 remains unresolved"
-    },
-    {
-      "pr": 249,
-      "issues": [
-        160,
-        164
-      ],
-      "summary": "Document target vendor ABI/bootstrap and Home-contract prerequisites; original #160/#164 support remains unresolved"
-    },
-    {
-      "pr": 250,
-      "issues": [
-        69
-      ],
-      "summary": "Add optional date below clock for dock-grid themes; cursor/blink and stepped effects removed, Retro bytes unchanged and original #69 remains partial"
-    },
-    {
-      "pr": 251,
-      "issues": [
-        202
-      ],
-      "summary": "Characterize indistinguishable old boot/Off cancellation receipts; original #202 forward-update caller remains unknown"
-    },
-    {
-      "pr": 252,
-      "issues": [
-        201
-      ],
-      "summary": "Pin No-root terminal-readback source research and synthetic guards; original #201 recovery remains unresolved"
-    },
-    {
-      "pr": 253,
-      "issues": [
-        101,
-        200,
-        216,
         240
       ],
-      "summary": "Add pinned inspect-only authentication and passive Root data collection without staging or execution; original #101/#200/#216/#240 recoveries remain unresolved"
+      "summary": "Add original-profile passive Android inspection for #240; original worker failure and recovery remain unresolved"
     },
     {
-      "pr": 254,
-      "issues": [],
-      "summary": "Let themes choose header menu or shelf; bundle Liquid Glass and move Alpine to Showcase; synchronize rounded previews and connected labels; preview default and Root status path are refined by #266"
-    },
-    {
-      "pr": 255,
+      "pr": 291,
       "issues": [
-        171
+        283,
+        284
       ],
-      "summary": "Prepare configurable native Root startup sources, visibly disable source controls with Home Off, and remove all late boot/wake app launches; original #171 awaits exact-package physical acceptance"
-    },
-    {
-      "pr": 256,
-      "issues": [
-        152
-      ],
-      "summary": "Resume a No-root removal stopped before package submission without global monitor access; preserve uncertain-operation guards; original EF950V recovery/control acceptance remains unresolved"
-    },
-    {
-      "pr": 257,
-      "issues": [
-        171
-      ],
-      "summary": "Bind native startup selection to the acknowledged live guardian observer; withdraw owned preference across activation/operation-lock races and settings-service loss; final #171 device acceptance remains pending"
-    },
-    {
-      "pr": 258,
-      "issues": [],
-      "summary": "Fix Windows-only normalization in a profile-preservation test; product authentication behavior is unchanged"
-    },
-    {
-      "pr": 260,
-      "issues": [
-        201,
-        259
-      ],
-      "summary": "Offer separately confirmed recovery review after unsubmitted No-root removal failures and export allowlisted recovery categories; original #201/#259 reports remain unresolved"
-    },
-    {
-      "pr": 261,
-      "issues": [
-        171
-      ],
-      "summary": "Serialize Root Settings startup/Home reads against the single-flight service and retain source failure advice; exact-package acceptance remains pending"
-    },
-    {
-      "pr": 262,
-      "issues": [
-        171
-      ],
-      "summary": "Keep six browser fixtures offline with HTTPS-prefix guards and stabilize catalogue identity/focus auditing; no product behavior change"
-    },
-    {
-      "pr": 263,
-      "issues": [
-        171
-      ],
-      "summary": "Serialize Root Settings visibility/relaunch refreshes, skip stale queued reads and replace README Alpine preview with actual Liquid Glass; exact-package acceptance remains pending"
-    },
-    {
-      "pr": 266,
-      "issues": [
-        171
-      ],
-      "summary": "Keep only native TV/YouTube startup controls, default preview on while preserving saved Off, and restore Root input status through the existing authenticated read endpoint; exact-package acceptance remains pending"
+      "summary": "Lower No-root installer floor to tested Node 0.10.15 for webOS 1.x; actual #283/#284 runtimes and device compatibility remain unverified"
     }
   ],
   "excluded": [],
-  "acceptance": "",
-  "build": {
-    "run_id": 41635564154,
-    "attempt": 1,
-    "source": "bc0ab0668b2d341a8b2fcf10a7eb22bded7a2fb5"
-  }
+  "acceptance": ""
 }

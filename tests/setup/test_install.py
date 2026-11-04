@@ -88,6 +88,9 @@ if [ "$1" = -m ] && [ "$2" = venv ]; then
 fi
 if [ "$1" = -m ] && [ "$2" = pip ]; then
  '{sys.executable}' -c 'import json,sys; open("calls.jsonl","a").write(json.dumps(["pip"]+sys.argv[1:])+"\\n")' "$@"
+ if [ "$FAULT" = build-dependencies ]; then
+  case "$*" in *scripts/build-requirements.txt*) exit 7 ;; esac
+ fi
  if [ -n "$TERMUX_VERSION" ]; then
   case "$*" in *ziglang*) exit 1 ;; esac
  fi
@@ -98,6 +101,7 @@ exec '{sys.executable}' "$@"
             zigpkg = root / 'ziglang'; zigpkg.mkdir(); (zigpkg / '__init__.py').touch()
             zig = zigpkg / 'zig'; zig.write_text('#!/bin/sh\necho 0.14.1\n'); zig.chmod(0o755)
             (root / 'requirements.txt').write_text('websockets>=13,<16\n')
+            shutil.copy(ROOT / 'scripts/build-requirements.txt', root / 'scripts')
             (root / 'sync-apps.py').write_text('''import json,os,pathlib,sys
 with open('calls.jsonl','a') as f: f.write(json.dumps(['sync',sys.argv[1]])+'\\n')
 icons=pathlib.Path('launcher/icons'); icons.mkdir()
@@ -119,7 +123,7 @@ printf '["configure"]\\n' >> calls.jsonl
                        PYTHONPATH=str(root), FAULT=fault, EXISTING='1' if existing else '0',
                        DEVICE='test-tv', PROFILE_HOST='192.0.2.99' if fault=='profile' else host,
                        TV_NODE_OUTPUT=tv_node_output if tv_node_output is not None else
-                           ('0.10.24\n' if fault=='tv-node' else '0.12.2\n'),
+                           ('0.10.14\n' if fault=='tv-node' else '0.12.2\n'),
                        TV_NODE_EXIT=str(tv_node_exit))
             env.pop('ZIG', None); env.pop('TV_HOST', None)
             env.pop('TERMUX_VERSION', None); env.pop('PREFIX', None)
@@ -147,14 +151,15 @@ printf '["configure"]\\n' >> calls.jsonl
         self.assertLess(calls.index(installs[-1]), calls.index(['configure']))
         self.assertEqual(calls[-1], ['ares-launch','-d','test-tv','-p','{"nativeHomeStart":true}','com.local.nativehome'])
 
-    def test_tv_node_below_01025_stops_before_inventory_and_package_install(self):
+    def test_tv_node_below_01015_stops_before_inventory_and_package_install(self):
         result, calls = self.run_installer(fault='tv-node')
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn('TV Node.js 0.10.25', result.stdout+result.stderr)
+        self.assertIn('TV Node.js 0.10.15', result.stdout+result.stderr)
         self.assertFalse(any(c[0] in ('sync', 'ares-install', 'configure', 'ares-launch') for c in calls))
 
     def test_supported_tv_node_with_cli_banners_reaches_install_and_launch(self):
         for output in (
+            '0.10.15\n',
             '0.10.25\n',
             '0.12.2\n',
             '[Info] Set target device : test-tv\n0.12.2\n',
@@ -172,8 +177,8 @@ printf '["configure"]\\n' >> calls.jsonl
         for output in (
             '',
             '[Info] Set target device : test-tv\n',
-            '[Info] Set target device : test-tv\n0.10.24\n',
-            '0.10.24\n',
+            '[Info] Set target device : test-tv\n0.10.14\n',
+            '0.10.14\n',
             '0.12\n',
             'Warning: command failed\n0.12.2\n',
             '0.12.2\n20.12.2\n',
@@ -181,7 +186,7 @@ printf '["configure"]\\n' >> calls.jsonl
             with self.subTest(output=output):
                 result, calls = self.run_installer(tv_node_output=output)
                 self.assertNotEqual(result.returncode, 0)
-                self.assertIn('TV Node.js 0.10.25', result.stdout+result.stderr)
+                self.assertIn('TV Node.js 0.10.15', result.stdout+result.stderr)
                 self.assertFalse(any(c[0] in ('sync', 'ares-install', 'configure', 'ares-launch') for c in calls))
 
     def test_failed_tv_node_probe_preserves_exit_status_and_stops_installation(self):
@@ -190,6 +195,21 @@ printf '["configure"]\\n' >> calls.jsonl
                 result, calls = self.run_installer(tv_node_output=output, tv_node_exit=7)
                 self.assertEqual(result.returncode, 7, result.stdout+result.stderr)
                 self.assertFalse(any(c[0] in ('sync', 'ares-install', 'configure', 'ares-launch') for c in calls))
+
+    def test_build_dependencies_are_installed_before_pairing(self):
+        result, calls = self.run_installer()
+        self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+        dependencies = next((c for c in calls if c[0] == 'pip'
+                             and 'scripts/build-requirements.txt' in c), None)
+        self.assertIsNotNone(dependencies, 'font preparation dependencies were not installed')
+        first_tv = next(c for c in calls if c[0].startswith('ares-'))
+        self.assertLess(calls.index(dependencies), calls.index(first_tv))
+
+    def test_failed_build_dependencies_stop_before_pairing(self):
+        result, calls = self.run_installer(fault='build-dependencies')
+        self.assertEqual(result.returncode, 7, result.stdout+result.stderr)
+        self.assertIn('preparing tools', result.stderr)
+        self.assertFalse(any(c[0].startswith('ares-') or c[0] == 'sync' for c in calls))
 
     def test_default_bootstrap_installs_pinned_zig_distribution(self):
         result, calls = self.run_installer()

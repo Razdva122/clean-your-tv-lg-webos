@@ -346,6 +346,8 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
         try:
             raw = self.remote.run(command, timeout=1080 if action == 'uninstall' else 720 if action == 'restore' else 180)
         except TVCommandError as error:
+            error.root_action = action
+            error.root_boundary = 'driver'
             if action == 'install':
                 # Read data only; never rerun the retained driver or installation.
                 code = """import os,stat,json
@@ -448,11 +450,11 @@ with os.fdopen(f,'rb') as stream:
                 raise UserError('The bundled Home Helper requires ARM32. A compatible TV runtime could not be confirmed.')
             if install:
                 self.checks.update('helper-node', 'running')
-                node = self.remote.run('if /usr/bin/node -e \'var v=process.versions.node.split(".").map(Number);process.exit(v[0]>0||v[1]>10||(v[1]===10&&v[2]>=25)?0:1)\'; then printf CYTV_NODE_READY; fi')
+                node = self.remote.run('if /usr/bin/node -e \'var v=process.versions.node.split(".").map(Number);process.exit(v[0]>0||v[1]>10||(v[1]===10&&v[2]>=15)?0:1)\'; then printf CYTV_NODE_READY; fi')
                 self.checks.update('helper-node', 'pass' if node.strip() == 'CYTV_NODE_READY' else 'fail',
-                                   '' if node.strip() == 'CYTV_NODE_READY' else 'Home Helper requires TV Node.js 0.10.25 or newer. Installation has not started.')
+                                   '' if node.strip() == 'CYTV_NODE_READY' else 'Home Helper requires TV Node.js 0.10.15 or newer. Installation has not started.')
                 if node.strip() != 'CYTV_NODE_READY':
-                    raise UserError('Home Helper requires TV Node.js 0.10.25 or newer. Installation has not started.')
+                    raise UserError('Home Helper requires TV Node.js 0.10.15 or newer. Installation has not started.')
             self.checks.update('root-conflict', 'running')
             root_state = self.remote.run(
                 'if [ -e /var/webos-profile/override/clean-your-tv-root.json ] || '
@@ -526,7 +528,9 @@ printf '%s' "$cytv_state"
             paths = variants[selected]
             def verified(name):
                 path = self.payload / package.safe_name(name)
-                if path.is_symlink() or any((self.payload / parent).is_symlink() for parent in PurePosixPath(name).parents):
+                # PyInstaller may alias the payload root in macOS bundles;
+                # only links within that root are untrusted package members.
+                if path.is_symlink() or any((self.payload / parent).is_symlink() for parent in PurePosixPath(name).parents if str(parent) != '.'):
                     raise ValueError('Indirect graphics payload')
                 raw = path.read_bytes()
                 if hashlib.sha256(raw).hexdigest() != self.manifest['files'][name]:
@@ -751,8 +755,10 @@ print('CYTV_UPDATER_VERIFIED')
             if not self.root_active(self.root_action('status').get('result', {})):
                 raise UserError('Root activation or recovery readback was not confirmed. Run cytv status or cytv restore. Recovery data was kept.')
             self.outcome.startup_observed('root-state-verified')
-        except (RuntimeError, ValueError):
+        except (RuntimeError, ValueError) as error:
             self.outcome.startup_observed('unverified')
+            if isinstance(error, UserError):
+                raise  # Preserve sanitized SSH/Luna evidence and the pending stage.
             raise UserError('Root is installed, but activation or opening Home could not be confirmed. Run cytv status to inspect it, or cytv restore to return to LG Home. Recovery data was kept; do not reinstall blindly.') from None
         self.store.finish(self.profile)
 

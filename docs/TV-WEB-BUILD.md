@@ -140,21 +140,25 @@ keep their handshake/payload limits. TV-provided webos-service remains external.
 Published historical Helper baselines retain their original bytes.
 
 Run `node tests/helper-compat.cjs` with current Node; set `NODE010` to Node
-0.10.25 and `NODE012` to Node 0.12.2 to test all three runtimes. The regression
+0.10.15, `NODE01025` to Node 0.10.25 and `NODE012` to Node 0.12.2 to test
+all four runtimes. The regression
 compiles the actual Helper sources, exercises real pairing-key replacement
 using bounded descriptor reads (Node 0.10 cannot use `readFileSync(fd)`),
 exercises controller startup/error handling with TV hardware/Luna substitutes,
 and service status/listApps, and performs a real local WSS register/subscribe,
 fragmented text, ping/pong and close exchange. Invalid UTF-8 and oversized
 payloads must be rejected. CI downloads a SHA-256-pinned official Linux x64
-Node 0.10.25 and 0.12.2 archives. Packaged service tests also use those runtimes
+Node 0.10.15, 0.10.25 and 0.12.2 archives. Packaged service tests also use those runtimes
 when available. The legacy WebSocket imports the named EventEmitter constructor
 and skips optional TLS write batching when unavailable on Node 0.10.
 This verifies Node compatibility, not access to a TV's evdev devices.
 
-Node 0.10.25 support is an unpublished source/test-build change for issue #152.
-The EF950V reporter confirmed the computer-to-TV connection in v1.5.0, but the
-published installer stopped before installation on that runtime. Launcher,
+Node 0.10.25 support shipped in v1.5.4 for #152; the next candidate lowers only
+No-root installer admission to 0.10.15 for #283/#284 after exact runtime checks,
+including unchanged published Helper 0.6.22 JavaScript. The published 1.7.1
+installer still requires 0.10.25. No Helper product byte or Root requirement is
+changed by this admission correction. The dated [webOS 1.x investigation](history/2026-11-04-webos1-node-floor.md)
+records runtime/archive hashes and untested hardware scope. Launcher WebKit,
 Home/Back, emergency release, standby, cold boot and recovery still require
 separate physical-device acceptance; do not bypass the published version gate.
 

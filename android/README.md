@@ -1,21 +1,21 @@
 # Install Clean Your TV from Android
 
-> Unpublished candidate 1.7.0 rebuilds Android 0.7.0 / versionCode 18 with shared installer and payload changes. Exact signer/payload and in-place upgrade acceptance are pending; the earlier acceptance below remains scoped to its original APK.
+> Release 1.7.1 uses Android 0.7.1 / versionCode 19 and embeds the shared installer correction; its exact signer, payload and emulator upgrade checks are in the [1.7.1 acceptance record](../docs/history/2026-11-03-release-1.7.1-host-checks.md). This guide retains the same setup flow. Use [Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases) for the latest published downloads. The historical evidence below remains scoped to its original APK.
 
-> Release 1.6.0 uses Android 0.6.0 / versionCode 17. See [Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases) for published downloads and [artifact-bound acceptance and limits](../docs/history/2026-11-02-release-1.6.0-final-acceptance.md).
+> Historical release 1.6.0 uses Android 0.6.0 / versionCode 17. See [Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases) for published downloads and [artifact-bound acceptance and limits](../docs/history/2026-11-02-release-1.6.0-final-acceptance.md).
 
 Use your phone to install either **No-root** (Developer Mode) or **Root**
 (existing root SSH) on an LG webOS TV. No PC, Termux, phone Python installation
 or cloud service is needed. The APK includes the offline interface and TV packages;
 optional TV Python is a separate verified download.
 
-Release **1.6.0** uses **Android 0.6.0 / versionCode 17**.
+Version **1.7.1** uses **Android 0.7.1 / versionCode 19**.
 [Download the signed APK](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest) ·
 [Full installation guide](../docs/INSTALL.md) · [Recovery](#recovery-and-private-data) ·
 [Report a problem](../docs/FEEDBACK.md)
 
 Requires a **64-bit ARM phone, Android 7.0+ and WebView/Chrome 108+**.
-Artifact-bound emulator checks use Android 15 / API 35 ARM64 with WebView 124.
+Historical 1.6.0 artifact-bound emulator checks used Android 15 / API 35 ARM64 with WebView 124.
 Original-signer upgrade and native Store checks passed in the recorded scope;
 native instrumentation required supported adb-root on a userdebug emulator.
 The production APK was not re-signed or made debuggable. Exact tested bytes and
@@ -30,10 +30,10 @@ launch, with English fallback. Tap the top-right language control to choose and
 save another language. Root and No-root are equal options for different TV access.
 
 <a id="release-140"></a>
-See the [1.6.0 release scope](../docs/RELEASE-1.6.0.md) and
+See the [1.7.1 release scope](../docs/RELEASE-1.7.1.md) and
 [Android acceptance boundaries](STABLE-READINESS.md).
 
-**Unreleased:** a [visible TV checklist](../docs/CLI.md#visible-tv-checks-unreleased) shows individual prerequisite results and keeps them on the error screen. Unrun checks remain unverified; `doctor` does not prepare Python or request control pairing.
+The [visible TV checklist](../docs/CLI.md#visible-tv-checks-unreleased) shows individual prerequisite results and keeps them on the error screen. Unrun checks remain unverified; `doctor` does not prepare Python or request control pairing.
 
 ## Install and connect
 
@@ -54,6 +54,33 @@ Updater bootstrap with root/Homebrew services. Unrooted TVs use the installer.
 The APK does not expose that bootstrap action; see [updates](../root-edition/UPDATES.md).
 
 The start screen also has **Wallpapers**, which explains the TV-hosted QR upload flow. Open Home settings → Wallpapers → Upload from phone on a compatible preview TV build, then scan its QR with the phone camera. Phone uploads are images up to 1920×1080; native 4K video requires desktop CYTV. The Android app does not scan QR codes or encode 4K video itself.
+
+## Interrupted Root installation inspection (unreleased)
+
+Candidate source adds a bounded Android path for an original Root
+`install / coordinator-submitted` operation. This is not in the published
+Android 0.7.1 APK. Use only an exact, signed rebuilt APK identified in an agreed
+maintainer handoff; update the existing app in place without uninstalling it or
+clearing its data. Do not copy a desktop profile onto the phone.
+
+From **Status and recovery**, choose **Review recovery options** with the original
+TV, Root edition and SSH port. After the app explains that the inspection only
+reads the original Root state, confirm **Check recovery options?** (No by default).
+It uses the original saved identity, regardless of the current password/key form,
+and requires the original saved SSH host pin. Existing encrypted-key/password
+entry may be requested locally; nothing is saved or replaced. Missing or changed
+records, a missing/changed pin or ambiguous operation stop without creating a
+replacement connection. Cancelling a prompt does not retry authentication.
+
+The inspection runs the existing bounded Node reader, not retained Python or a
+new coordinator. It changes no TV files, packages, Home settings or recovery
+records. Save the resulting diagnostic report and review it before sharing.
+A blocked result is expected: reading evidence never resumes the worker, clears
+pending, completes recovery or establishes compatibility. Do not repeat
+installation, enable, Restore or removal to obtain another error. Other supported
+recovery states retain their existing separately confirmed flows.
+
+See [the #240 investigation and exact-source limits](../docs/history/2026-11-04-android-root240-inspection.md).
 
 ## Recovery and private data
 

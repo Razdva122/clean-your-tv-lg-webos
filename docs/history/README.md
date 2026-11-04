@@ -1,6 +1,8 @@
 # Release history and device evidence
 
-- [1.7.0 final packages and acceptance, 2026-11-03](2026-11-03-release-1.7.0-final-packages.md): Root0.8.3 full build, protected signing, exact hashes and Android gate; final TV acceptance pending.
+- [2026-11-03 — Helper 0.6.22 rollback compatibility](2026-11-03-helper-0.6.22-compatibility.md)
+
+- [1.7.0 final packages and acceptance, 2026-11-03](2026-11-03-release-1.7.0-final-packages.md): selected0.8.4/Helper0.6.22 complete build, signatures and Android checks; Root device acceptance pending; superseded0.8.3 evidence retained.
 
 - [1.7.0 input refinement and C3 QA, 2026-11-03](2026-11-03-release-1.7.0-input-refinement.md): superseded0.8.2 observations, two-source scope, preview default and permission-data correction; final new-package acceptance pending.
 
@@ -25,6 +27,15 @@ one model or artifact does not certify later releases or a different TV.
 - [Ribbon blue nebula, 2026-11-03](2026-11-03-ribbon-blue-nebula.md): original native-resolution artwork, gentle UHD loop and both-edition browser checks; no TV changes.
 
 - [Embedded UHD wallpaper authoring, 2026-11-03](2026-11-03-embedded-uhd-wallpapers/README.md): real Alpine/Ribbon media, paired toolkit checks, large Base64 fix and browser-only decode evidence; outside the frozen release inventory.
+
+- [webOS 1.x Node floor, 2026-11-04](2026-11-04-webos1-node-floor.md): exact 0.10.15 source/published-Helper JS checks and No-root admission correction for #283/#284; device compatibility unverified.
+
+- [Android original Root inspection, 2026-11-04](2026-11-04-android-root240-inspection.md): original phone profile/pin preserved for bounded passive #240 inspection; original worker failure/recovery remains unresolved.
+
+- [Root activation evidence, 2026-11-04](2026-11-04-root-activation-evidence.md): typed SSH/Luna failures retained without replay; original #282 C4 activation remains unresolved.
+
+- [Source installer build dependencies, 2026-11-03](2026-11-03-source-install-build-dependencies.md): clean-venv font preparation and pre-pairing failure guards for #272; host-only evidence.
+- [macOS graphics payload alias, 2026-11-03](2026-11-03-macos-graphics-payload-alias.md): published-package reproduction, minimal member-path correction and offline frozen-app checks; no TV operation or public delivery.
 
 - [Root standby power stages, 2026-11-03](2026-11-03-root-standby-power-stages.md): two owner-observed failures, matching firmware sequence and source correction; signed-device acceptance pending.
 

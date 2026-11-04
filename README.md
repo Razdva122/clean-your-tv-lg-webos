@@ -52,11 +52,10 @@ and creating your own theme.
 
 ## Download and install
 
-> Published 1.6.0 retains the initial LG Channels/late Home standby limitation (#171). The unpublished [1.7.0 candidate](docs/RELEASE-1.7.0.md) replaces late launches with native startup choices; exact-package acceptance is pending.
-> Download buttons follow the latest published release. On `release/next`, version metadata describes the selected candidate until publication.
+> [1.7.1](docs/RELEASE-1.7.1.md) corrects macOS installer package validation, source-build font dependencies and browser demo theme loading. TV components retain the 1.7.0 versions; see the [device results and limits](docs/history/2026-11-03-release-1.7.0-final-packages.md). Download buttons follow the latest published release.
 
 <!-- release:downloads -->
-Current stable release: **[v1.7.0](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.7.0)** — [release notes](docs/RELEASE-1.7.0.md).
+Current stable release: **[v1.7.1](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.7.1)** — [release notes](docs/RELEASE-1.7.1.md).
 <!-- /release:downloads -->
 
 [![Download Windows x64 graphical installer — GUI ZIP](assets/brand/downloads/windows.svg)](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/cytv-windows-x64-desktop.zip)
@@ -136,17 +135,17 @@ For contributors: [build and technical references](docs/development/README.md),
 <!-- release:components -->
 | Component | Stable version |
 | --- | --- |
-| cytv installer | 0.8.0 |
-| Home | 1.8.0 |
-| Home Helper | 0.6.21 |
-| Root edition | 0.8.3 |
+| cytv installer | 0.8.1 |
+| Home | 1.8.1 |
+| Home Helper | 0.6.22 |
+| Root edition | 0.8.4 |
 | Both edition Updaters | 0.4.2 |
-| Android installer / versionCode | 0.7.0 / 18 |
+| Android installer / versionCode | 0.7.1 / 19 |
 <!-- /release:components -->
 
-Candidate System Updater: 1.2.0 / protocol 1. Existing supervisors stay pinned; installed 1.1.2 has no general replacement path in this candidate.
-See the [candidate release notes](docs/RELEASE-1.7.0.md)
-and [TV acceptance and limits](docs/RELEASE-1.5.0.md).
+System Updater in 1.7.0: 1.2.0 / protocol 1. Existing supervisors stay pinned; installed 1.1.2 has no general replacement path in this release.
+See the [1.7.0 release notes](docs/RELEASE-1.7.0.md)
+and historical [1.5.0 TV acceptance and limits](docs/RELEASE-1.5.0.md).
 
 </details>
 

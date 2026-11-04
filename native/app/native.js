@@ -75,22 +75,35 @@ var homeControl=require('./home-control')(fs,data,function(enabled){
 },visitLG);
 // Keep the legacy channel for older Home packages during upgrade/rollback.
 // New Home submits only through its own service directory, visible in its jail.
-var homeChannels=[{directory:data,last:''},{directory:'/media/developer/apps/usr/palm/services/com.gathin.tvhome.renewal/state/home-control',last:''}];
+var homeChannels=[{directory:data,last:''},{directory:'/media/developer/apps/usr/palm/services/com.gathin.tvhome.renewal/state/home-control',last:''},
+ {directory:'/media/developer/apps/usr/palm/services/com.gathin.tvhome.renewal/state/home-control',last:'',inputOnly:true}];
+var inputStatusPending=null;
+function readInputs(){
+ if(!inputStatusPending){
+  inputStatusPending=Promise.resolve().then(function(){return require('./app-inventory')({inputs:true,timeout:3000});});
+  inputStatusPending=inputStatusPending.then(function(devices){inputStatusPending=null;return devices;},function(){inputStatusPending=null;throw Error('Input status unavailable');});
+ }
+ return inputStatusPending;
+}
 function readHomeRequest(channel){
- var directory=channel.directory;
+ var directory=channel.directory,prefix=channel.inputOnly?'input':'home';
  var request;
- try{request=JSON.parse(fs.readFileSync(directory+'/home-request.json','utf8'));}catch(e){return;}
+ try{request=JSON.parse(fs.readFileSync(directory+'/'+prefix+'-request.json','utf8'));}catch(e){return;}
  if(!request||typeof request.id!=='string'||!/^[a-f0-9]{32}$/.test(request.id)||request.id===channel.last)return;
  channel.last=request.id;
  if(typeof request.expires!=='number'||request.expires<Date.now()||request.expires>Date.now()+6000)return;
+ if(channel.inputOnly&&request.method!=='inputStatus')return;
  function respond(result){
   result.id=request.id;
-  try{fs.writeFileSync(directory+'/home-response.tmp',JSON.stringify(result),{mode:432});fs.chmodSync(directory+'/home-response.tmp',432);fs.renameSync(directory+'/home-response.tmp',directory+'/home-response.json');}catch(e){log({event:'home-response-error',error:String(e)});}
+  try{fs.writeFileSync(directory+'/'+prefix+'-response.tmp',JSON.stringify(result),{mode:432});fs.chmodSync(directory+'/'+prefix+'-response.tmp',432);fs.renameSync(directory+'/'+prefix+'-response.tmp',directory+'/'+prefix+'-response.json');}catch(e){log({event:'home-response-error',error:String(e)});}
  }
  try{
   if(request.method==='homeStatus')respond({returnValue:true,enabled:homeControl.enabled()});
   else if(request.method==='setHomeControl'){homeControl.set(request.enabled);respond({returnValue:true,enabled:homeControl.enabled()});}
   else if(request.method==='openLGHome')visitLG(function(ok){respond({returnValue:ok});});
+  else if(channel.inputOnly&&request.method==='inputStatus')readInputs().then(function(devices){
+   if(!stopping&&!stopRequested&&!fs.existsSync(data+'/blocked')&&request.expires>Date.now())respond({returnValue:true,devices:devices});
+  },function(){if(!stopping&&!stopRequested&&!fs.existsSync(data+'/blocked')&&request.expires>Date.now())respond({returnValue:false,errorText:'Input status unavailable'});});
   else respond({returnValue:false,errorText:'Invalid Home request'});
  }catch(e){respond({returnValue:false,errorText:String(e)});}
 }

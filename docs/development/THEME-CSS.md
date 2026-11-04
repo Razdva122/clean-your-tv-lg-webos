@@ -1,8 +1,8 @@
 # Home CSS styling surface
 
-This is the source-development contract for the **unreleased theme foundation**.
-It does not make theme selection, built-in alternatives or installation by URL
-available on a TV. See the [design](../superpowers/specs/2026-10-28-theme-ecosystem-design.md)
+This is the source-development contract for the **1.7.0 theme engine**.
+TV theme controls require a compatible installed Home package; copying this
+reference or a theme URL does not upgrade the engine. See the [design](../superpowers/specs/2026-10-28-theme-ecosystem-design.md)
 and [runtime plan](../superpowers/plans/2026-10-28-themes-a-runtime.md) for the
 remaining work and device acceptance gates. Browser preview results are not TV
 compatibility evidence.
@@ -75,7 +75,7 @@ selection states; do not assume that every part receives it or that focus means
 selection. Existing `.focused` and `.moving` classes remain internal compatibility
 hooks. Theme authors must not add state classes or manipulate focus.
 
-The candidate also exposes the library's inner panel and close control so a theme
+The engine also exposes the library's inner panel and close control so a theme
 can make the whole app library visually consistent. These are appearance hooks
 inside Home, not access to standard Settings or recovery. They accept the same
 validated visual properties; hiding, positioning, sizing and modal behavior
@@ -135,7 +135,7 @@ visual geometry independently would make arrow navigation and pointer hit areas
 disagree with the rendered cards. New layout presets require engine changes and
 navigation checks; a stylesheet cannot introduce one.
 
-The candidate accepts five trusted `layout.preset` values: `dock-grid`,
+The engine accepts five trusted `layout.preset` values: `dock-grid`,
 `icon-grid`, `side-grid`, `channel-list`, and `scenic-grid`. These select renderer-owned
 compositions rather than injecting layout CSS. `dock-grid` remains the default
 for Classic and existing themes. Unknown values fail validation. A renderer
@@ -144,7 +144,7 @@ changing styles or column defaults; it never silently draws them as Classic.
 Spacing, text and focus scales still require the Classic values `1`, `1`, and
 `1.1`; wider schema bounds do not imply implemented scale combinations.
 
-| Candidate preset | Composition |
+| Preset | Composition |
 | --- | --- |
 | `dock-grid` | Classic wide app cards, dock band near the bottom and selected app title above it |
 | `icon-grid` | Compact square icon grid with labels and a smaller header |
@@ -154,10 +154,10 @@ Spacing, text and focus scales still require the Classic values `1`, `1`, and
 
 In `side-grid`, the sidebar menu uses Up/Down to select a shortcut, Right enters
 the apps, and Left from the first app column returns to the menu. Other grids
-retain the horizontal top-menu navigation. These controls are candidate-only
-preview behavior until theme activation is wired into a release.
+retain the horizontal top-menu navigation. These controls are available in
+theme-enabled Home versions; the selected theme determines the layout.
 
-The shared Columns control is available in the unreleased candidate through
+The shared Columns control is available in 1.7.0 through
 **Home settings → Appearance → Columns** in both editions. Values are integer 1–8 or **By
 theme**. Precedence is explicit saved user number, then accepted theme
 `layout.columns`, then Classic's 5. Selecting By theme clears the explicit
@@ -324,7 +324,7 @@ stationary-pointer hover from repeatedly dragging the ribbon under the cursor.
 
 ## Optional CSS icon effects
 
-`modern-icon-css-v1` is a separately gated candidate capability, not a change to
+`modern-icon-css-v1` is a separately gated capability, not a change to
 the normal Chromium 38 floor. The compiler infers it from icon `filter` or
 `mix-blend-mode`; runtime requires browser support for both filter and screen
 blending and rejects an unsupported browser before mutation. Older Home rejects
@@ -373,7 +373,9 @@ The `.ctv-position` part styles the decorative scenic-ribbon position indicator.
 A transparent `color` hides its count and arrows without changing navigation.
 
 
-## Theme-owned input placement (unreleased)
+<a id="theme-owned-input-placement-unreleased"></a>
+
+## Theme-owned input placement
 
 The selected theme chooses the header Inputs menu or the Inputs shelf. Omitted
 `layout.inputs` means `"menu"`, including Classic and existing themes. There is
@@ -440,12 +442,12 @@ appeared. This does not verify packaged Home or other models; mute and HDR
 behavior remain unresolved. Do not rely on arbitrary masks/opacity for video
 release or navigation safety. The engine releases previews when focus leaves, Home hides or loses focus, or an owned
 dialog opens. Connection states appear only when the TV supplies them. Device
-names come from firmware-provided EIM metadata; otherwise a connected source
+names come from firmware-provided input metadata; otherwise a connected source
 shows the localized **Connected** status. Never invent a PlayStation name or
 guarantee CEC identification. `previewing` appears only while a live picture is
 playing.
 
-In the 1.7.0 candidate, Root reads input metadata through the authenticated,
+In 1.7.0, Root reads input metadata through the authenticated,
 same-package service `listApps` broker with the exact `{inputs:true}` selector
 because firmware can deny direct WebApp EIM access. The existing method and
 retained permission grant are reused; no new endpoint is registered.
@@ -453,10 +455,30 @@ The broker performs a fixed, bounded, privileged read-only query; it adds no
 permissions or TV-setting writes. Root refreshes once when Home becomes visible,
 a different input receives focus or Settings opens. There is no polling or
 automatic retry, and failed/unavailable reads leave connection status unknown.
-This is not continuous hot-plug monitoring. No-root retains its existing direct
-EIM subscription; this change does not establish No-root device acceptance.
+This is not continuous hot-plug monitoring. No-root keeps its direct EIM
+subscription where available. A definitive permission refusal (`errorCode: -1`)
+switches that session to bounded snapshots through its own renewal service's
+`inputStatus` method. Only the Home application may call it with an empty payload.
+The native Helper uses the existing pairing and only the TV's own interface
+addresses to read `ssap://tv/getExternalInputList`; it never pairs or accepts a
+caller-selected address, URI or command. Keys stay inside Helper. Replies contain
+at most 100 devices, five bounded strings and boolean/unknown connection states.
+No-root snapshots refresh on the same explicit foreground interactions as Root;
+failure clears stale status and does not start a retry loop.
 
-## Classic motion opt-in (unreleased)
+The fallback reuses the provisioned service `state/home-control` directory and
+its shared-group permissions. Expiring correlated `input-request.json` and
+`input-response.json` messages (atomic `.tmp` writes, mode 0660) are separate from
+the existing Home-command files, so metadata cannot occupy Home settings or
+stock-Home control. The query has a three-second budget within the five-second
+broker deadline; concurrent controller reads share one query. Stop/emergency
+state suppresses late responses. No directory, privilege grant, boot activity or
+startup policy is added. Physical acceptance is specific to the selected build;
+simulated services do not certify unrooted Developer Mode installation.
+
+<a id="classic-motion-opt-in-unreleased"></a>
+
+## Classic motion opt-in
 
 By default a theme gets immediate remote focus on every layout: the card and the focus
 frame snap, rows jump, there are no edge bumps or edge fades, and the ambient glow keeps
@@ -489,9 +511,11 @@ unthemed Classic with `"motion": "classic"` in `layout`:
 Reduced motion still turns all of this off.
 
 
-## Parameterized scenic ribbons (unreleased)
+<a id="parameterized-scenic-ribbons-unreleased"></a>
 
-Use optional `layout.ribbon` with `preset: "scenic-grid"`, an explicit 1–8 column count and `allowColumnOverride: false`. The compiler automatically emits `ribbon-layout-v1`; descriptor policy requires options and capability together. Older Home rejects this capability before storing/applying a new package, retaining its current theme. No release version is selected yet. Existing layouts without `ribbon` remain unchanged.
+## Parameterized scenic ribbons
+
+Use optional `layout.ribbon` with `preset: "scenic-grid"`, an explicit 1–8 column count and `allowColumnOverride: false`. The compiler automatically emits `ribbon-layout-v1`; descriptor policy requires options and capability together. Older Home rejects this capability before storing/applying a new package, retaining its current theme. This capability is included in Home 1.8.1 / release 1.7.0; the separate author toolkit still requires a matching exported runtime. Existing layouts without `ribbon` remain unchanged.
 
 | Field | Allowed value | Default |
 | --- | --- | --- |
@@ -538,7 +562,9 @@ Unknown keys and invalid combinations reject. Bottom-left shortcuts require `lef
 This is the value of `layout`, not a complete manifest. The separate toolkit needs an explicit exported runtime declaring `ribbon-layout-v1`. Its stable reviewed runtime pin is not silently replaced by a PR candidate. Arbitrary author `position`, `skew`, `translate`, selectors or JavaScript remain unsupported. Version and capability checks both apply. Optional icon effects still require `modern-icon-css-v1` separately.
 
 
-### Optional date placement (unreleased)
+<a id="optional-date-placement-unreleased"></a>
+
+### Optional date placement
 
 A `dock-grid` theme may set `layout.datePlacement` to `below-clock` to wrap the
 date beneath the clock and hide the divider, or `inline` to retain the standard

@@ -1,4 +1,4 @@
-// ES5: executed unchanged by Node 0.10.25, 0.12.2 and current Node.
+// ES5: executed unchanged by Node 0.10.15, 0.10.25, 0.12.2 and current Node.
 'use strict';
 var assert=require('assert'),path=require('path'),root=process.argv[2];
 require(path.join(root,'state-permissions'));
@@ -84,6 +84,12 @@ function checkService(port,done){
  methods.status({respond:function(reply){assert.equal(reply.returnValue,true);assert.equal(reply.running,true);assert.equal(reply.blocked,false);}});
  methods.listApps({respond:function(reply){assert.equal(reply.returnValue,true);assert.equal(reply.apps[0].id,'com.example.video');done();}});
 }
+function checkInputs(port,done){
+ require(path.join(root,'app-inventory'))({inputs:true,timeout:3000,
+  readKey:function(){return{key:'test'};},interfaces:function(){return{lan:[{internal:false,family:'IPv4',address:'127.0.0.1'}]};},
+  WebSocket:function(url,options){assert.equal(url,'wss://127.0.0.1:3001');return new WebSocket('wss://127.0.0.1:'+port,options);}
+ }).then(function(devices){assert.equal(devices[0].connected,true);assert.equal(devices[1].connected,false);assert.equal(devices[0].serial,undefined);done();},function(error){throw error;});
+}
 var httpsServer=require('https').createServer({key:fs.readFileSync(path.join(root,'test-key.pem')),cert:fs.readFileSync(path.join(root,'test-cert.pem'))});
 var server=new WebSocket.Server({server:httpsServer,perMessageDeflate:false});
 var deadline=setTimeout(function(){throw Error('WebSocket exchange timed out');},10000);
@@ -97,13 +103,14 @@ server.on('listening',function(){
   else {assert.equal(message.payload.appId,'com.gathin.tvhome');client.ping('alive');}
  });
  client.on('pong',function(raw){assert.equal(String(raw),'alive');client.close();});
- client.on('close',function(){checkService(httpsServer.address().port,function(){server.close(function(){httpsServer.close(function(){assert.equal(rejected,2,'invalid UTF-8 and oversized frames must be rejected');clearTimeout(deadline);console.log('PASS Helper runtime '+process.version+': controller startup/error handling, service status/listApps, polyfills, WSS register/subscribe, fragmented UTF-8, ping/pong, close, invalid frame limits');});});});});
+ client.on('close',function(){checkService(httpsServer.address().port,function(){checkInputs(httpsServer.address().port,function(){server.close(function(){httpsServer.close(function(){assert.equal(rejected,2,'invalid UTF-8 and oversized frames must be rejected');clearTimeout(deadline);console.log('PASS Helper runtime '+process.version+': controller startup/error handling, service status/listApps, polyfills, WSS register/subscribe, fragmented UTF-8, ping/pong, close, invalid frame limits, paired sanitized input status');});});});});});
 });
 httpsServer.listen(0,'127.0.0.1');
 server.on('connection',function(socket){
  socket.on('message',function(raw){
   var message=JSON.parse(String(raw));
   if(message.type==='register')socket.send('{"type":"registered"}');
+  else if(message.id==='inputs')socket.send('{"id":"inputs","payload":{"returnValue":true,"devices":[{"appId":"com.webos.app.hdmi3","connected":true,"serial":"PRIVATE"},{"appId":"com.webos.app.hdmi1","connected":false}]}}');
   else if(message.id==='apps')socket.send('{"id":"apps","payload":{"launchPoints":[{"id":"com.example.video"}]}}');
   else {socket.send('{"payload":{"appId":"com.',{fin:false});socket.send('gathin.tvhome","label":"Привет"}}',{fin:true});}
  });

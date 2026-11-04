@@ -11,6 +11,8 @@ KERNEL_ARCHES = ('armv7l', 'armv7', 'armv8l', 'aarch64', 'arm64', 'x86_64', 'i68
 ROOT_REQUIREMENTS = ('root-user', 'python3', 'luna-send', 'apps-directory',
                      'luna-services-directory', 'python-json', 'python-fcntl', 'python-version', 'node-version')
 
+ROOT_ACTIONS = ('inspect', 'install', 'status', 'remove', 'enable', 'restore', 'uninstall')
+
 REASONS = ('unknown', 'user-error', 'ssh-command-failed', 'ssh-unreachable',
            'ssh-authentication', 'ssh-identity-changed', 'ssh-trust-record', 'ssh-identity-unverified', 'host-runtime',
            'helper-running', 'helper-state-unverified', 'root-requirements',
@@ -199,7 +201,7 @@ def failure_summary(value):
     command = mapping(value.get('ssh_command'))
     if type(command.get('exit_status')) is int and -1 <= command['exit_status'] <= 255:
         result['ssh_command'] = {'exit_status': command['exit_status']}
-    for key, allowed in (('root_action', ('inspect', 'install', 'status', 'remove')),
+    for key, allowed in (('root_action', ROOT_ACTIONS),
                          ('root_boundary', ('coordinator-stage', 'python-select', 'driver'))):
         if key in command and type(command[key]) is str and command[key] in allowed:
             result.setdefault('ssh_command', {})[key] = command[key]

@@ -5,6 +5,7 @@ import hashlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import mimetypes
+import re
 import shutil
 import runpy
 import subprocess
@@ -17,8 +18,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scripts.chinese_fonts import prepare_fonts
 
-def preview_themes():
-    return subprocess.check_output(['node', str(ROOT / 'scripts/build-preview-themes.cjs')], cwd=ROOT)
+def preview_themes(*args):
+    return subprocess.check_output(['node', str(ROOT / 'scripts/build-preview-themes.cjs'), *args], cwd=ROOT)
 
 LAUNCHER_FILES = {
     'index.html', 'viewport.js', 'style.css', 'theme-defaults.css', 'theme-policy.js', 'theme-runtime.js', 'home-layout.js', 'layout-panel.js', 'settings-categories.js', 'layout-panel.css', 'renewal-panel.css', 'app.js', 'app-library.js', 'input-sources.js', 'input-preview.js', 'config.js',
@@ -125,7 +126,7 @@ def export_site(destination):
         target = destination / 'root-launcher' / name
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(data)
-    (destination / 'preview/themes.json').write_bytes(preview_themes())
+    (destination / 'preview/themes.json').write_bytes(preview_themes('--output', str(destination / 'preview')))
     (destination / 'index.html').write_text(preview_html(live=False), encoding='utf-8')
     (destination / '.nojekyll').touch()
     for name in ['LICENSE', 'THIRD_PARTY_NOTICES.md']:
@@ -138,6 +139,14 @@ class Handler(BaseHTTPRequestHandler):
         file = None
         if path == '/preview/themes.json':
             self.respond(preview_themes(), 'application/json; charset=utf-8')
+            return
+        if path.startswith('/preview/packages/'):
+            match = re.fullmatch(r'/preview/packages/([a-f0-9]{64})\.json', path)
+            catalog = json.loads(preview_themes())
+            if not match or 'packages/' + match[1] + '.json' not in catalog['packages'].values():
+                self.send_error(404)
+                return
+            self.respond(preview_themes('--package', match[1]), 'application/json; charset=utf-8')
             return
         if path == '/preview/version':
             self.respond(revision().encode(), 'text/plain; charset=utf-8')
