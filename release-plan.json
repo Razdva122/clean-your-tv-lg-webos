@@ -53,6 +53,13 @@
       "pr": 294,
       "issues": [],
       "summary": "Narrow inventory transport PR checks while retaining every device safety test, explicit legacy dependencies and full frozen-candidate gates; no product behavior or version change"
+    },
+    {
+      "pr": 297,
+      "issues": [
+        200
+      ],
+      "summary": "Load macOS system CA roots for private Python HTTPS downloads; original #200 device confirmation and later Windows Root recovery remain unresolved"
     }
   ],
   "excluded": [],
