@@ -1,9 +1,10 @@
 # No-root Ribbon prototype
 
-Standalone, unreleased Developer Mode window experiment. This is not the Home
-launcher, the Ribbon theme renderer or a compatibility claim. It deliberately
-uses three presentation controls instead of real app tiles. No TV installation
-or device operation is part of its build or tests.
+Standalone, unreleased Developer Mode window experiment. The default build is
+the original three-control static probe. The optional real-Ribbon build below
+uses the project's actual shared Home renderer and Ribbon theme. Neither is a
+production Home integration or compatibility claim. Build and automated tests
+do not install or connect to a TV.
 
 ## Scope
 
@@ -79,6 +80,51 @@ classification are outside this prototype's host evidence.
 TV model, firmware/webOS, remote and installer platform: **not tested**.
 TV installation, video/audio, standby, cold boot, OTA and rollback: **not tested**.
 Browser/platform simulation does not establish pristine No-root compatibility.
+
+## Real Ribbon mode — 0.0.2
+
+```sh
+python3 prototypes/no-root-ribbon/build.py --real-ribbon
+node tests/no-root-ribbon-real.cjs
+```
+
+Use the project's build Python environment with
+`scripts/build-requirements.txt` installed (fonttools 4.60.1). Normal font
+preparation may download pinned, hash-verified sources on the build computer.
+It never installs dependencies on the TV.
+
+This reads committed project source revision
+`68fb76cc47951fad304d25b147efc9db2da41229` through a temporary Git archive,
+without checking out or editing the other feature branch. That commit must be
+available locally. The existing TV development staging adapter supplies the
+shared Home/Ribbon renderer, real bundled theme/assets, and public reference
+app cards. Its Root-specific service/settings UI remains simulated; there is
+no Root runtime, elevated service, or production profile in the lab package.
+Native window activation and self-close are captured by a small host before
+the product's service APIs are replaced and locked. The pinned source revision
+is included as `lab-source.json` in the package.
+
+The real build keeps the separate lab ID, sets version `0.0.2`, empty ACG, and
+overlay metadata. It uses its own `cytv.lab.norootribbon.` storage namespace.
+The simulated content background is removed. Wallpaper playback is suspended
+for the entire session, including settings/fallback; CSP also rejects media.
+Application launches, updates, Home control and system settings remain mocked.
+
+Unlike the static probe, actual Ribbon/controller semantics apply: Back first
+closes an open dialog or Settings, then dismisses unobstructed overlay navigation.
+Relaunch dismisses a visible unobstructed overlay; opaque fallback/modal/hidden
+activation may show it instead. Physical Home is still not hooked. The host's
+absolute 60-second lifetime remains the bounded exit; it is not an independent
+watchdog if the web engine stalls. Context is an explicit launch parameter,
+not a compositor or SSAP observation.
+
+Outputs are `build/no-root-ribbon-prototype/real/` and
+`dist/no-root-ribbon-prototype/com.cleanyourtv.lab.norootribbon_0.0.2_all.ipk`.
+The compiled-app browser regression verifies real cards/navigation, opaque
+settings, Back and unobstructed relaunch, the lifetime boundary, disabled native
+service calls, and absence of synthetic content/wallpaper video. A separately
+authorized physical session is recorded only in the local private task record;
+it is not automatically published or counted as release acceptance.
 
 ## Host verification — 2026-11-04
 
