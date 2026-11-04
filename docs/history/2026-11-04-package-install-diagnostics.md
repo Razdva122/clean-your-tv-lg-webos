@@ -56,6 +56,31 @@ retail webOS 3.9 installer. These differences remain candidates for device/vendo
 investigation; none is an established cause. No packaging change or additional
 owner installation is requested.
 
+### Later evidence and extractor boundary
+
+Read the reporter's new [PC-only model comment](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/307#issuecomment-6636498639)
+dated 2026-11-04 16:49 UTC before finalizing this PR. It supports investigating
+non-recursive extraction, not identifying the TV's installed extractor.
+
+Independent source inspection found a concrete matching mechanism in OpenWrt
+`opkg-lede` at `80503d94e356476250adaf1f669ee955ec26de76` (2025-11-05):
+[`unarchive.c`](https://github.com/openwrt/opkg-lede/blob/80503d94e356476250adaf1f669ee955ec26de76/libbb/unarchive.c#L140-L152)
+creates parents recursively only with `extract_create_leading_dirs`; directory
+entries otherwise use a single `mkdir`.
+[`pkg_extract_data_files_to_dir`](https://github.com/openwrt/opkg-lede/blob/80503d94e356476250adaf1f669ee955ec26de76/libopkg/pkg_extract.c#L57-L65)
+does not pass that flag. This validates the mechanism in that public code, not
+the reporter's exact test implementation or retail firmware behavior.
+
+LG OSE `applicationinstallerutility` at
+`eb1cddc222cf8c64bba52ef9ed597fc6f2c99d49` (2024-02-12)
+[selects opkg or legacy ipkg at build time](https://github.com/webosose/applicationinstallerutility/blob/eb1cddc222cf8c64bba52ef9ed597fc6f2c99d49/CMakeLists.txt#L25-L30)
+and [invokes the selected package manager](https://github.com/webosose/applicationinstallerutility/blob/eb1cddc222cf8c64bba52ef9ed597fc6f2c99d49/src/Main.cpp.in#L498-L533).
+It does not establish that the affected retail TV uses this OpenWrt revision,
+the same flags or even the same extraction library. A firmware-matched vendor
+source/binary identification or an authorized separate-device reproduction is
+still missing. Neither this source analogy nor a successful PC extraction
+admits a new installation over the unresolved transaction.
+
 ## Diagnostic loss and correction
 
 LG OSE `appinstalld2` at
