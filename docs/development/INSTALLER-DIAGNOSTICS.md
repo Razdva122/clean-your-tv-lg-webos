@@ -7,6 +7,16 @@ from a diagnostic report.
 
 ## Report contents
 
+New package rejection reports preserve the fixed `install failed` and
+`remove failed` Luna states. When the original reply includes `details.reason`,
+optional `luna.reason` retains only the nine fixed LG OSE IPK failure categories
+listed in the [packaging comparison/source record](../history/2026-11-04-package-install-diagnostics.md).
+Other strings, structured values and null become `unknown`; absent stays absent.
+Current errors and retained history are revalidated at export. This next-cycle
+change cannot recover details discarded by old reports; do not repeat an
+installation merely to obtain them. Payloads, permissions, transaction parsing
+and pending guards are unchanged; #307's installation/recovery remains unresolved.
+
 The existing schema-1 fields remain. Additive fields include fixed `reason_code`,
 checklist IDs/statuses, a filtered `status` projection, and `first_failure` with
 `failure_history`. Known model/firmware/SDK values and observed project component
