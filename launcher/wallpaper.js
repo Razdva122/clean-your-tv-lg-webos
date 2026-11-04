@@ -69,7 +69,7 @@
   function play(q) {
     detach(); paintDim();
     if (!input || blocked() || q === 'image') { releaseLease(); emit(); return; }
-    var token = generation, current = doc.createElement('video'), lastTime = -1; video = current;
+    var token = generation, current = doc.createElement('video'), lastTime = -1, decodedProgress = 0, validated = false, presenting = false; video = current;
     current.poster = state().posterURL;
     current.id = 'ctvWallpaperVideo'; current.muted = true; current.defaultMuted = true; current.volume = 0; current.loop = true; current.autoplay = true;
     current.setAttribute('muted', ''); current.setAttribute('playsinline', ''); current.preload = 'auto';
@@ -82,13 +82,16 @@
       play(next);
     }
     function watchdog() { if (timer !== null) root.clearTimeout(timer); timer = root.setTimeout(failed, 10000); }
-    function reveal() { if (!valid()) return; actual = q; classes(true); watchdog(); emit(); }
-    function present() { if (typeof root.requestAnimationFrame === 'function') root.requestAnimationFrame(reveal); else reveal(); }
+    function reveal() { if (!valid()) return;
+      if (current._wallpaperFrameCallback !== undefined && typeof current.cancelVideoFrameCallback === 'function') { try { current.cancelVideoFrameCallback(current._wallpaperFrameCallback); } catch (_) {} }
+      delete current._wallpaperFrameCallback; actual = q; classes(true); watchdog(); emit(); }
+    function present() { if (!valid() || presenting) return; presenting = true; if (typeof root.requestAnimationFrame === 'function') root.requestAnimationFrame(function () { if (valid()) root.requestAnimationFrame(reveal); }); else reveal(); }
     current._wallpaperListeners = {
       playing: function () {
         if (!valid()) return;
         var expected = input.manifest.wallpaperVideo.variants.filter(function (v) { return v.quality === q; })[0];
         if (!expected || current.videoWidth <= 0 || current.videoHeight <= 0 || current.videoWidth !== expected.width || current.videoHeight !== expected.height) { failed('dimensions'); return; }
+        validated = true;
         var surface = doc.getElementById('homeSurface');
         if (surface) surface.classList.add('ctv-wallpaper-preparing');
         plane.style.display = 'block';
@@ -101,7 +104,14 @@
       error: failed,
       stalled: function () { if (valid() && timer === null) watchdog(); },
       waiting: function () { if (valid() && timer === null) watchdog(); },
-      timeupdate: function () { if (valid() && current.currentTime !== lastTime) { lastTime = current.currentTime; watchdog(); } }
+      timeupdate: function () {
+        if (!valid() || current.currentTime === lastTime) return;
+        if (validated && current.readyState >= 2 && current.currentTime > 0 && lastTime >= 0 && current.currentTime > lastTime) decodedProgress++;
+        lastTime = current.currentTime;
+        // Some hardware compositors suppress presented-frame callbacks behind the opaque poster.
+        if (validated && decodedProgress >= 1) present();
+        if (actual === q) watchdog();
+      }
     };
     Object.keys(current._wallpaperListeners).forEach(function (event) { current.addEventListener(event, current._wallpaperListeners[event]); });
     plane.appendChild(current);
