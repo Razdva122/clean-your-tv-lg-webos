@@ -153,3 +153,16 @@ UI readiness. The corrected compiled TV bundle passes allfour legacy profiles
 and alleight column geometry cases. Independent review found no issues. This
 models browser return only, not physical TV behavior. Remote CI must rerun on the
 new head; no successful remote browser result is inferred from local checks.
+
+
+## Checkpoint — exit from opaque No-root fallback
+
+Native No-root enables full-window Back dismissal from app cards, so a manual or
+startup opaque host can close even when Helper is unavailable. Relaunch toggling
+still applies only to transparent overlay; Root defaults remain unchanged.
+Menus, Inputs, editing and Undo retain precedence. Review caught shelf Back being
+preempted; the failing actual UI regression was corrected so first Back returns
+to the dock and second closes Home. Pure/controller, actual native UI and ES5
+checks pass; allfour compiled legacy profiles also pass. Review of the correction
+found no further issues. CONTROLS, THEMES, source spec and all13 guides reflect
+the app-card/shelf distinction. Physical acceptance remains pending.

@@ -48,4 +48,11 @@ full.setTheme({presentation:'overlay'});contextReply({eligible:false,content:tru
 contextReply({eligible:true,content:true});assert.equal(full.state().mode,'full','a settled query cannot change mode twice');
 full.show({});contextReply({eligible:true,content:true});assert.equal(full.state().mode,'overlay');
 
+let exits=0,modal=false;
+const standalone=presentation.create({supported:true,dismissFull:true,query:done=>done(null),close:()=>exits++,blocked:()=>modal});
+standalone.show({reason:'startup'});assert.equal(standalone.state().mode,'full');
+assert(standalone.dismiss(),'native opaque Home must have a Back exit without Helper');assert.equal(exits,1);
+standalone.show({});standalone.relaunch({});assert.equal(exits,1,'Home relaunch does not toggle a non-overlay theme');assert.equal(standalone.state().mode,'full');
+modal=true;standalone.sync();assert(!standalone.dismiss(),'Back still belongs to modal/editor owners');
+
 console.log('PASS No-root native metadata, strict context/generation/age, decoder facts, current activation and ES5');

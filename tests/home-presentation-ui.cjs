@@ -166,6 +166,11 @@ const {assert,chromium,stage,fs,path}=require('./themes/browser.cjs'),http=requi
   assert.equal(await n.page.locator('.ctv-input-preview').count(),0,'context reset releases active hardware preview immediately');
   await n.page.waitForTimeout(900);
   assert.equal(await n.page.evaluate(()=>previewCreations),1,'unknown context cannot restart preview');
+  await n.page.keyboard.press('Escape');
+  assert.equal(await n.page.evaluate(()=>window.closeCalls),1,'shelf Back first returns focus to dock');
+  assert.equal(await n.page.locator('#tiles .item.focused').count(),1);
+  await n.page.keyboard.press('Escape');
+  assert.equal(await n.page.evaluate(()=>window.closeCalls),2,'opaque native fallback has a Back exit even with Helper unavailable');
   assert.deepEqual(n.errors,[]);
   await n.page.close();
   console.log('PASS native app adapters: modal focus, visibility/relaunch ordering, launch failure/success/staleness, native No-root overlay and strict fallback');

@@ -6,7 +6,7 @@
 
 Nevydáno (#290): **+ / Přidat aplikaci** nabídne živé TV pod názvem z televizoru pouze při zjištění nainstalovaného tuneru. Ostatní skryté systémové aplikace zůstávají vynechané. No-root potřebuje aktualizovaný Helper a instalátor; Root aktualizovaný balíček Home. Spuštění kanálů ještě vyžaduje ověření na TV.
 
-**Nevydáno — překryv Ribbon:** Root podporuje Ribbon nad aktuálním obsahem. Integrace do stejného Home a Helperu No-root probíhá. Home otevře lištu; Zpět nebo další Home ji zavře. Nastavení a ostatní motivy jsou neprůhledné, ale přehrávání pod nimi může pokračovat. Neznámý kontext používá statické neprůhledné pozadí. Úplný scénář No-root ještě vyžaduje test konečných balíčků na TV; simulace v prohlížeči nepotvrzuje kompatibilitu. [Ribbon](../THEMES.md#ribbon-over-applications-unreleased).
+**Nevydáno — překryv Ribbon:** Root podporuje Ribbon nad aktuálním obsahem. Integrace do stejného Home a Helperu No-root probíhá. Home otevře lištu; Zpět nebo další Home ji zavře. Nastavení a ostatní motivy jsou neprůhledné, ale přehrávání pod nimi může pokračovat. Neznámý kontext používá statické neprůhledné pozadí. Úplný scénář No-root ještě vyžaduje test konečných balíčků na TV; simulace v prohlížeči nepotvrzuje kompatibilitu. V No-root Zpět zavře i neprůhledný Home z karet aplikací po zavření nabídky a editoru. [Ribbon](../THEMES.md#ribbon-over-applications-unreleased).
 
 Ribbon: podržte OK pro úpravy; ←/→ přesouvá kartu, ↑ vybere × (skrýt z Home), ↓ vrátí výběr na kartu, OK potvrdí a Back zruší. Aktuální pozadí zůstává.
 

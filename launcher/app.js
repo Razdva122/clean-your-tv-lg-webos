@@ -184,6 +184,7 @@
   var presentation = window.HomePresentation ? HomePresentation.create({
     supported: true,
     queryFull: nativeNoRoot,
+    dismissFull: nativeNoRoot,
     toggle: function (params) { return !nativeNoRoot || homeActivation(params); },
     query: function (done, activation) {
       if (nativeNoRoot) {
@@ -1630,7 +1631,7 @@
     // Leave early Back/Home and key-up delivery to their native/recovery owners.
     if (window.RootLauncherRendered !== true) return;
     var key = event.keyCode;
-    if ((key === KEY_BACK || key === 27) && !moveState && !pickerOpen && !undoState && focusZone !== 'inputs' &&
+    if ((key === KEY_BACK || key === 27) && !moveState && !pickerOpen && !undoState && focusZone !== 'inputs' && focusZone !== 'shelf' &&
         presentation && presentation.dismiss()) {
       event.preventDefault(); cancelHold(); return;
     }

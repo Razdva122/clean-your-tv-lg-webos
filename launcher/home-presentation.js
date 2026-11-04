@@ -56,8 +56,8 @@
       visible = true; refresh();
     }
     function hide() { activationUntil = 0; generation++; launchGeneration++; visible = false; mode = 'closed'; render(); }
-    function dismiss() {
-      if (!visible || mode !== 'overlay' || isBlocked()) return false;
+    function dismiss(overlayOnly) {
+      if (!visible || (mode !== 'overlay' && (overlayOnly || !options.dismissFull)) || isBlocked()) return false;
       hide(); if (options.close) options.close(); return true;
     }
     return {
@@ -78,7 +78,7 @@
       relaunch:function (params, hidden) {
         var activating = hidden || now() < activationUntil;
         activationUntil = 0;
-        if (activating || (options.toggle && !options.toggle(params)) || !dismiss()) show(params);
+        if (activating || (options.toggle && !options.toggle(params)) || !dismiss(true)) show(params);
       },
       launched:function (token) {
         if (token !== launchGeneration || !options.supported || !visible || isBlocked()) return false;

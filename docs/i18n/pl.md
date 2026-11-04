@@ -6,7 +6,7 @@
 
 Jeszcze niewydane (#290): **+ / Dodaj aplikację** udostępnia telewizję na żywo pod nazwą z telewizora tylko wtedy, gdy tuner zostanie wykryty jako zainstalowany. Inne ukryte aplikacje systemowe pozostają pominięte. No-root wymaga zaktualizowanego Helpera i instalatora, a Root pakietu Home. Uruchamianie kanałów wymaga jeszcze sprawdzenia na TV.
 
-**Niewydane — nakładka Ribbon:** Root obsługuje Ribbon nad bieżącą treścią. Integracja z tym samym Home i Helperem No-root jest w toku. Home otwiera pasek; Wstecz lub ponowne Home go zamyka. Ustawienia i inne motywy są nieprzezroczyste, lecz odtwarzanie pod nimi może trwać. Nieznany kontekst oznacza statyczne, nieprzezroczyste tło. Pełny scenariusz No-root wymaga jeszcze testów końcowych pakietów na TV; symulacja w przeglądarce nie potwierdza zgodności. [Ribbon](../THEMES.md#ribbon-over-applications-unreleased).
+**Niewydane — nakładka Ribbon:** Root obsługuje Ribbon nad bieżącą treścią. Integracja z tym samym Home i Helperem No-root jest w toku. Home otwiera pasek; Wstecz lub ponowne Home go zamyka. Ustawienia i inne motywy są nieprzezroczyste, lecz odtwarzanie pod nimi może trwać. Nieznany kontekst oznacza statyczne, nieprzezroczyste tło. Pełny scenariusz No-root wymaga jeszcze testów końcowych pakietów na TV; symulacja w przeglądarce nie potwierdza zgodności. W No-root Wstecz zamyka też nieprzezroczysty Home z kart aplikacji po zamknięciu menu i edytora. [Ribbon](../THEMES.md#ribbon-over-applications-unreleased).
 
 Ribbon: przytrzymaj OK, aby edytować; ←/→ przesuwa kartę, ↑ wybiera × (ukryj z Home), ↓ wraca do karty, OK zatwierdza, a Back anuluje. Bieżące tło pozostaje.
 

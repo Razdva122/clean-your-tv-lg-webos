@@ -99,3 +99,12 @@ generations. A separate authorized presentationDismissed request with N may
 retire only that generation, never new activation or routing. Native inbound RPC
 registration and complete measured caller binding remain implementation gates;
 frontend tests simulate the seam and are not device acceptance.
+
+
+No-root Back also closes an unobstructed opaque host, including manual/startup
+fallback with no Helper. Menus, input panels, editing and Undo retain precedence.
+From the input shelf, the first Back returns focus to the app cards; the next
+Back closes Home. This prevents the native overlay host from trapping the user
+above stock Home.
+Repeated Home toggles only a transparent Ribbon; it does not dismiss a non-Ribbon
+opaque theme. Physical acceptance is required on the final product bytes.

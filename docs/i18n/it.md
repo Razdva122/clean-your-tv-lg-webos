@@ -6,7 +6,7 @@
 
 Non pubblicato (#290): **+ / Aggiungi app** propone la TV in diretta con il nome fornito dal televisore solo se il sintonizzatore risulta installato. Le altre app di sistema nascoste restano escluse. No-root richiede Helper e programma di installazione aggiornati; Root richiede il pacchetto Home aggiornato. L’avvio dei canali richiede ancora una verifica sul TV.
 
-**Non pubblicato — Ribbon in sovrapposizione:** Root supporta Ribbon sopra i contenuti correnti. È in corso l’integrazione nello stesso Home e Helper No-root. Home apre la barra; Indietro o un altro Home la chiude. Impostazioni e altri temi sono opachi, ma la riproduzione sottostante può continuare. Un contesto sconosciuto usa uno sfondo statico opaco. Lo scenario No-root completo richiede ancora la verifica dei pacchetti finali sulla TV; la simulazione nel browser non dimostra compatibilità. [Ribbon](../THEMES.md#ribbon-over-applications-unreleased).
+**Non pubblicato — Ribbon in sovrapposizione:** Root supporta Ribbon sopra i contenuti correnti. È in corso l’integrazione nello stesso Home e Helper No-root. Home apre la barra; Indietro o un altro Home la chiude. Impostazioni e altri temi sono opachi, ma la riproduzione sottostante può continuare. Un contesto sconosciuto usa uno sfondo statico opaco. Lo scenario No-root completo richiede ancora la verifica dei pacchetti finali sulla TV; la simulazione nel browser non dimostra compatibilità. In No-root, Indietro chiude anche Home opaco dalle schede delle app dopo aver chiuso menu ed editor. [Ribbon](../THEMES.md#ribbon-over-applications-unreleased).
 
 Ribbon: tieni premuto OK per modificare; ←/→ sposta la scheda, ↑ seleziona × (nascondi da Home), ↓ torna alla scheda, OK conferma e Back annulla. Lo sfondo attuale rimane.
 

@@ -6,7 +6,7 @@
 
 Sin publicar (#290): **+ / Añadir app** ofrece TV en directo con el nombre del televisor solo si detecta el sintonizador instalado. Las demás apps del sistema ocultas siguen excluidas. No-root necesita Helper e instalador actualizados; Root necesita el paquete Home actualizado. Falta verificar el inicio de canales en el TV.
 
-**Sin publicar — Ribbon superpuesto:** Root permite Ribbon sobre el contenido actual. La integración en el mismo Home y Helper de No-root está en desarrollo. Home abre la barra; Atrás u otro Home la cierra. Los ajustes y otros temas son opacos, pero la reproducción inferior puede continuar. Un contexto desconocido muestra un fondo estático opaco. El flujo completo No-root aún requiere validar los paquetes finales en el televisor; la simulación del navegador no demuestra compatibilidad. [Ribbon](../THEMES.md#ribbon-over-applications-unreleased).
+**Sin publicar — Ribbon superpuesto:** Root permite Ribbon sobre el contenido actual. La integración en el mismo Home y Helper de No-root está en desarrollo. Home abre la barra; Atrás u otro Home la cierra. Los ajustes y otros temas son opacos, pero la reproducción inferior puede continuar. Un contexto desconocido muestra un fondo estático opaco. El flujo completo No-root aún requiere validar los paquetes finales en el televisor; la simulación del navegador no demuestra compatibilidad. En No-root, Atrás también cierra Home opaco desde las tarjetas de aplicaciones si no hay menús ni editor abiertos. [Ribbon](../THEMES.md#ribbon-over-applications-unreleased).
 
 Ribbon: mantén OK para editar; ←/→ mueve la tarjeta, ↑ selecciona × (ocultar de Home), ↓ vuelve a la tarjeta, OK confirma y Back cancela. Se conserva el fondo actual.
 

@@ -144,7 +144,11 @@ cross hides the app from Home and Undo restores it. Editing/hiding keeps the
 current background and shows no explanatory footer. Integration into the same
 No-root Home/Helper is in progress: the existing app identity and profile remain,
 while a validated, fresh Helper context may enable Ribbon above content. Unknown
-context, manual launch and startup keep a static opaque fallback. Final packages,
+context, manual launch and startup keep a static opaque fallback. Back also
+closes opaque No-root Home from the app cards after its menus/editors are
+closed, even without a running Helper. From the input shelf, Back first returns
+focus to the app cards. Repeated Home still toggles only unobstructed Ribbon overlay.
+Final packages,
 Helper routing and physical acceptance are pending. In the browser demo,
 **Startup / wallpaper**, **Over application**, **Home** and **Back** exercise both
 states. No-root overlay previews are explicitly simulations of Root behavior.

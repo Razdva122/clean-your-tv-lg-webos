@@ -6,7 +6,7 @@
 
 尚未发布（#290）：**+ / 添加应用**仅在检测到已安装的调谐器时，以电视提供的名称列出直播电视。其他隐藏的系统应用仍不显示。No-root 需要更新后的 Helper 和安装程序；Root 需要更新后的 Home 软件包。频道启动仍需在电视上验证。
 
-**未发布 — Ribbon 叠加层：** Root 支持在当前内容上方显示 Ribbon。将其集成到同一个 No-root Home 和 Helper 的工作仍在进行。Home 打开面板，Back 或再次按 Home 关闭。设置和其他主题不透明，但下方内容可能继续播放。背景状态未知时使用静态不透明背景。完整 No-root 流程仍需用最终安装包在电视上验收；浏览器模拟不能证明兼容性。 [Ribbon](../THEMES.md#ribbon-over-applications-unreleased).
+**未发布 — Ribbon 叠加层：** Root 支持在当前内容上方显示 Ribbon。将其集成到同一个 No-root Home 和 Helper 的工作仍在进行。Home 打开面板，Back 或再次按 Home 关闭。设置和其他主题不透明，但下方内容可能继续播放。背景状态未知时使用静态不透明背景。完整 No-root 流程仍需用最终安装包在电视上验收；浏览器模拟不能证明兼容性。 在 No-root 中，关闭菜单和编辑器后，在应用卡片上按 Back 也会关闭不透明的 Home。 [Ribbon](../THEMES.md#ribbon-over-applications-unreleased).
 
 Ribbon：长按 OK 编辑；←/→ 移动卡片，↑ 选择 ×（从 Home 隐藏），↓ 返回卡片，OK 确认，Back 取消。编辑时保留当前背景。
 
