@@ -44,7 +44,7 @@ def fetch_icon(url):
 
 def include_tuner(launchpoints, installed):
     """Supplement launch points only with the tuner the TV reports installed."""
-    if not isinstance(launchpoints, list) or len(launchpoints) > 300 or not isinstance(installed, list):
+    if not isinstance(launchpoints, list) or len(launchpoints) > 300 or not isinstance(installed, list) or len(installed) > 300:
         return launchpoints
     for app in installed:
         if (isinstance(app, dict) and app.get('id') == 'com.webos.app.livetv'
@@ -188,8 +188,10 @@ class SSAP:
         # Unsupported optional discovery must not break the normal inventory.
         try:
             installed = self.call('ssap://com.webos.applicationManager/listApps')
-            if installed.get('returnValue') is not False:
-                points = include_tuner(points, installed.get('apps'))
-        except UserError:
-            pass
+        except (UserError, json.JSONDecodeError, AttributeError):
+            # The wire parser assumes an object; optional malformed JSON or a
+            # non-object reply must not discard the successful baseline reads.
+            installed = None
+        if isinstance(installed, dict) and installed.get('returnValue') is not False:
+            points = include_tuner(points, installed.get('apps'))
         return Inventory(self.host, fallback).build(points, inputs)

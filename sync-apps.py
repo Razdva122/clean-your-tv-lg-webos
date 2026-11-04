@@ -28,10 +28,10 @@ async def main(host, list_only):
         inputs = (await lgtv.call(ws, "ssap://tv/getExternalInputList")).get("devices", [])
         try:
             installed = await lgtv.call(ws, "ssap://com.webos.applicationManager/listApps")
-            if installed.get("returnValue") is not False:
-                points = include_tuner(points, installed.get("apps"))
-        except (OSError, TimeoutError, ConnectionClosed):
-            pass  # Optional on firmware without this inventory method.
+        except (OSError, TimeoutError, ConnectionClosed, json.JSONDecodeError, AttributeError):
+            installed = None  # Optional transport/parser failure retains baseline.
+        if isinstance(installed, dict) and installed.get("returnValue") is not False:
+            points = include_tuner(points, installed.get("apps"))
     finally:
         await ws.close()
 

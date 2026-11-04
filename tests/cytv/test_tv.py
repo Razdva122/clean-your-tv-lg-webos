@@ -23,6 +23,13 @@ class InventoryTests(unittest.TestCase):
         self.assertEqual(result['apps'][1]['icon'], 'data:image/png;base64,ZmFsbGJhY2stcG5n')
         self.assertEqual(result['inputs'], [{'appId': 'com.webos.app.hdmi1', 'label': 'HDMI_1'}])
 
+    def test_supplementary_inventory_size_is_bounded(self):
+        from cytv.tv import include_tuner
+        ordinary = {'id': 'video', 'title': 'Video'}
+        tv = {'id': 'com.webos.app.livetv', 'title': 'TV'}
+        self.assertEqual(include_tuner([ordinary], [tv] + [None] * 299)[0]['id'], tv['id'])
+        self.assertEqual(include_tuner([ordinary], [tv] + [None] * 300), [ordinary])
+
     def test_ssap_supplements_only_the_discovered_tuner(self):
         from cytv.errors import UserError
         tv = {'id': 'com.webos.app.livetv', 'title': 'Телетрансляция', 'visible': False, 'hidden': True}
@@ -44,6 +51,26 @@ class InventoryTests(unittest.TestCase):
                 self.assertEqual([a['id'] for a in apps], expected)
                 if tv['id'] in expected: self.assertEqual(apps[0]['title'], tv['title'])
                 self.assertIn('ssap://com.webos.applicationManager/listApps', calls)
+
+    def test_optional_malformed_wire_preserves_baseline_inventory(self):
+        cases = [('wire', '{broken'), ('wire', 'null'), ('wire', '[]'),
+                 ('payload', None), ('payload', [])]
+        for kind, value in cases:
+            with self.subTest(kind=kind, value=value):
+                class Socket:
+                    def send(self, raw): self.request = json.loads(raw)
+                    def recv(self, timeout):
+                        uri = self.request['uri']
+                        if uri.endswith('/listLaunchPoints'): payload = {'launchPoints': [{'id': 'video', 'title': 'Video'}]}
+                        elif uri.endswith('/getExternalInputList'): payload = {'devices': [{'appId': 'com.webos.app.hdmi1', 'id': 'HDMI_1'}]}
+                        elif kind == 'wire': return value
+                        else: payload = value
+                        return json.dumps({'id': self.request['id'], 'payload': payload})
+                session = object.__new__(SSAP)
+                session.host, session.counter, session.ws = '192.0.2.10', 0, Socket()
+                inventory = session.inventory(b'fallback')
+                self.assertEqual([a['id'] for a in inventory['apps']], ['video'])
+                self.assertEqual(inventory['inputs'], [{'appId': 'com.webos.app.hdmi1', 'label': 'HDMI_1'}])
 
     def test_ssap_rejects_error_instead_of_empty_success(self):
         session = object.__new__(SSAP)
@@ -113,6 +140,29 @@ class LegacySyncTunerTests(unittest.TestCase):
         with patch('lgtv.session', new=AsyncMock(return_value=AsyncMock())), patch('lgtv.call', new=call), contextlib.redirect_stdout(out):
             asyncio.run(module['main']('192.0.2.10', True))
         self.assertIn('Video', out.getvalue())
+
+    def test_optional_malformed_wire_preserves_baseline_listing(self):
+        import asyncio, contextlib, io, runpy
+        from unittest.mock import AsyncMock
+        module = runpy.run_path(str(Path(__file__).resolve().parents[2] / 'sync-apps.py'))
+        cases = [('wire', '{broken'), ('wire', 'null'), ('wire', '[]'),
+                 ('payload', None), ('payload', [])]
+        for kind, value in cases:
+            with self.subTest(kind=kind, value=value):
+                class Socket:
+                    async def send(self, raw): self.request = json.loads(raw)
+                    async def recv(self):
+                        uri = self.request['uri']
+                        if uri.endswith('/listLaunchPoints'): payload = {'launchPoints': [{'id': 'video', 'title': 'Video'}]}
+                        elif uri.endswith('/getExternalInputList'): payload = {'devices': []}
+                        elif kind == 'wire': return value
+                        else: payload = value
+                        return json.dumps({'id': self.request['id'], 'payload': payload})
+                    async def close(self): pass
+                out = io.StringIO()
+                with patch('lgtv.session', new=AsyncMock(return_value=Socket())), contextlib.redirect_stdout(out):
+                    asyncio.run(module['main']('192.0.2.10', True))
+                self.assertIn('Video', out.getvalue())
 
     def test_discovered_tuner_survives_unavailable_icon(self):
         import asyncio, contextlib, io, runpy
