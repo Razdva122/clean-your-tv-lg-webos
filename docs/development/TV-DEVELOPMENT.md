@@ -30,7 +30,9 @@ see [automatic font preparation](../TV-WEB-BUILD.md#chinese-ui-fonts).
 Compilation failures preserve the previous successful output.
 
 The staged metadata uses `com.cleanyourtv.dev.ui`, without Home category or
-privileged ACG permissions. LocalStorage and IndexedDB access use the
+privileged ACG permissions. Its ordinary opaque card window delegates activation
+and relaunch to webOS; it does not inherit the production Root overlay window
+flags because its isolated bridge cannot activate a native Root window. LocalStorage and IndexedDB access use the
 `cytv.dev.ui.` namespace, including when a hosted CLI reuses its own origin.
 The native bridge is disabled before loading the preview simulation, then the
 mock is locked against replacement. A single bootstrap loads product scripts only
