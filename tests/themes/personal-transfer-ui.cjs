@@ -127,9 +127,14 @@ function send(session, body) {
         const item = (await ThemeManager.list()).find(theme => theme.id === 'builtin:ribbon');
         await ThemeManager.selectInstalled(item);
       });
+      await page.waitForFunction(() => HomeWallpaper.state().source === 'theme');
+      assert.equal(await page.evaluate(() => PersonalWallpaper.state().installed), true, 'theme change retains upload for explicit reuse');
+      await page.evaluate(() => PersonalWallpaper.select('personal'));
       await page.waitForFunction(() => HomeWallpaper.state().source === 'personal' && HomeWallpaper.state().actualQuality === '1080p');
       await page.evaluate(() => PersonalWallpaper.remove());
       assert.equal(await page.evaluate(() => HomeWallpaper.state().source), 'theme');
+      assert.equal(await page.evaluate(() => PersonalWallpaper.state().installed), false);
+      await page.evaluate(() => HomeWallpaper.setQuality('image'));
       assert.equal(await page.locator('#ctvWallpaperVideo').count(), 0);
       assert.deepEqual(errors, []);
       await context.close();
