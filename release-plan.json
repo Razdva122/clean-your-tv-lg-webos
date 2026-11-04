@@ -84,14 +84,28 @@
         298
       ],
       "summary": "Fix frozen candidate clipping, Windows fixtures and CLI QA admission"
+    },
+    {
+      "pr": 302,
+      "issues": [
+        295
+      ],
+      "summary": "Wait for one matching No-root Home/Helper catalog snapshot after successful installs; preventive only, original #295 installation and pending recovery remain unresolved"
+    },
+    {
+      "pr": 305,
+      "issues": [],
+      "summary": "Close the restored Root overlay after verified off/emergency recovery while fencing stale lifecycle replies; new packaged-TV acceptance remains pending"
+    },
+    {
+      "pr": 309,
+      "issues": [
+        201,
+        307
+      ],
+      "summary": "Preserve allowlisted install/remove failure status and reason in diagnostics; original #201/#307 installation/recovery remain unresolved"
     }
   ],
   "excluded": [],
-  "acceptance": "PARTIAL / NOT RELEASE-READY. Maintainer OLED55C3RLA firmware43.21.71 SDK11.2.0; Magic Remote with pointer (exact model unknown); macOS ARM64. Exact signed Root0.9.0/Updater0.4.3/infrastructure0.9.0 completed normal coherent update, retained rollback with independent old-version/profile equality, and signed forward return; Root stayed off and recovery verified. Exact host payload/runtime and Android original-signer emulator upgrade checks passed. Dated details and hashes: docs/history/2026-11-04-release-1.8.0-candidate.md. PENDING physical Home/Back/emergency controls, sound/HDMI, standby/AC-off, final media/Ribbon acceptance; Helper0.7.0 runtime with published Home1.8.1/new rollback approval; C1 physical compatibility unverified. Draft only; no stable publication. FAILED owner-confirmed Helper Start: native non-root controller refuses retained UID5999/GID5000 mode0777 state directories (unsafe-directory-mode); owner sees unavailable status. No automatic latch reset/permission repair or reinstall. Helper rollback approval is blocked; see dated record. Owner physical Root: Change Home enabled with guardian/recovery verified; sound/volume PASS. Single Home reaches Root but presentation is delayed7.338s after release (navigation48ms, DOM992ms); control responsiveness gate FAILED/pending fix, not proven lost input. Back unconfirmed. Focused proposed fix4bec0b9f is not integrated/installed and needs new build/affected acceptance. Triple Home: owner saw LG Home then later Clean Home; BEFORE host restore intent was already disabled/guardian off/recovery verified. Do not claim gesture never fired or emergency PASS. Normal restore independently confirmed all stock routing and recovery, without reactivation; delayed/stale UI activation remains unresolved. After verified stock restore and normal Root overlay close, owner single Home stayed LG before/after20\u201330s remote standby (10s waits). Readback off/guardian inactive/recovery verified/Helper stopped and installer/System terminal complete. PASS only standby with routing disabled; enabled startup/AC-off separate. Owner AC30s off/on: previous HDMI source, single Home\u2192LGHome, sound/volumePASS; new uptime119s and off/guardian inactive/recovery verified/Helper stopped. PASS off persistence only. Black Hole built-in4k selection succeeded but owner saw static image, then Root CDP target absent; cause unknown, video/loop/4k acceptance FAILED/unproven. Exact QA appearance changes restored; no user media removed. Static Root Ribbon over HDMI/settings/edit-cancel/physical Back passed; Root hide+Undo unresolved (34\u219233 host comparison). Actual candidate No-root Home1.9 fullscreen Ribbon, arrows/pointer/settings/edit cancel and stepwise physical hide+Undo passed (exact37-card order). Short Back retains fullscreen as coded. Temporary UI transition restored authenticated Home1.8.1, all106 public files, original storage/theme/order; off/Helper-stopped/recovery verified. New maintainer-requested production No-root overlay scope is not implemented in this build; new full candidate and affected acceptance required.",
-  "build": {
-    "run_id": 41837911621,
-    "attempt": 1,
-    "source": "0fb222f9cb07f29e94fd9c1c1934cba8ba6ed66c"
-  },
-  "acceptance_build": "41837911621:1"
+  "acceptance": "NOT RELEASE-READY; integration reopened by maintainer on 2026-11-05 for ready fixes. Product changes invalidate the previous selected build: 41837911621:1/source0fb222f9cb07f29e94fd9c1c1934cba8ba6ed66c is historical evidence only (docs/history/2026-11-04-release-1.8.0-candidate.md). A new full candidate must be selected and affected scenarios accepted after scope stabilizes. Root off/overlay cleanup #305 has focused CI and independent review, but no new signed package/device acceptance. Helper retained-state0777 refusal remains unresolved; safe repair must retain protection, require fresh pairing where needed, and pass full kernel boot with verified protection and real Helper/Home, not standby alone. No-root overlay #310/broker is incomplete and not integrated. Media/static-video/receiver lifecycle and enabled-routing controls/power acceptance remain pending. Existing C3 observations, host/emulator checks and rollback evidence apply only to their original artifacts/preconditions. No main/stable merge or publication authorized. Details: docs/history/2026-11-05-ready-fix-integration.md."
 }
