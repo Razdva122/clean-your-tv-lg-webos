@@ -70,6 +70,13 @@
       "pr": 299,
       "issues": [],
       "summary": "Accept personal moving MP4/MOV/MKV/WebM wallpaper uploads from desktop CYTV, preserving display geometry and silent motion; coordinate input-preview decoder ownership; final packaged-TV acceptance remains pending"
+    },
+    {
+      "pr": 300,
+      "issues": [
+        298
+      ],
+      "summary": "Automatically select C1 native Home Beta in the common installer with independent recovery; retain profile routing on supported firmware; C1 physical/power acceptance remains pending and normal OTA is unavailable"
     }
   ],
   "excluded": [],

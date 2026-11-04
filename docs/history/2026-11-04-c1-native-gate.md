@@ -81,3 +81,29 @@ roles, real bind propagation/CRIU/jails, sound/media/HDMI, standby, AC-off boot,
 firmware changes, update rejection and removal still require exact-build C1
 acceptance. Neither successful cross-compilation nor a package install would
 establish those results.
+
+## Final integration evidence
+
+PR [#300](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/300) merged into
+`release/next` as `6b676981b752837522a47ff8ee3867369c60088b`. Its final tested
+source is `be64989e8baf21186955afeb071c40c6799afe98`.
+
+The combined-source follow-up caught two integration problems. Preview CI used
+cached Node 22.23.3 despite Astro's declared >=22.23.4 requirement; its job now
+uses the declared patch. A separate presentation module initially expanded the
+immutable supervisor's private inventory; it is now bundled into existing
+`service.js`, preserving all eight historical private paths. Neither legacy
+fixture nor protocol guard was weakened. The isolated actual-IPK/private-service
+checks (10), immutable-supervisor acceptance checks (7), final removal regressions
+and 79 normal operations checks passed. The complete final local Root suite
+passed **994 tests**. The corrected common payload also built and verified both
+normal and C1 graphics variants with 305 files.
+
+Final-source [Linux/macOS runtime, browser, ARM Python and required summaries](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/41828530872),
+[frozen Windows/macOS Intel installer checks](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/41828530992),
+[preview build and browser checks](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/41828530871)
+and [integration policy](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/41828525964)
+all passed. Stable Pages deployment and full-release jobs were intentionally
+unselected. These are implementation/combined-source checks, not a versioned,
+signed full-candidate build or physical C1 acceptance. Release preparation must
+select versions and run the complete frozen-candidate workflow separately.
