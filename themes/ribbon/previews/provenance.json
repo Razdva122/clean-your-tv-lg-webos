@@ -4,12 +4,13 @@
     "root",
     "no-root"
   ],
-  "sourceThemeVersion": "1.2.0",
+  "sourceThemeVersion": "1.3.0",
   "wallpaperDecode": [
     3840,
     2160
   ],
-  "runtime": "local next-release candidate export; shared Home renderer",
+  "videoAuthor": "Xecutioner",
+  "runtime": "shared trusted Home; preview mock services with browser media URLs",
   "physicalTVAcceptance": false,
-  "note": "Original procedural4096x2304 artwork and silent20s camera drift. Simulated services/reference apps; UHD selected explicitly because browser capability is unknown. Community preview remains the historical prototype."
+  "note": "Original Black Hole scene, no timer overlays; screenshots show reference app fixtures. Native 4K selected explicitly because browser UHD metadata is unknown."
 }

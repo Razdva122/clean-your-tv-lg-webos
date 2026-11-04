@@ -75,7 +75,9 @@ def revision():
 
 def launcher_html():
     return (ROOT / 'launcher/index.html').read_text().replace(
-        '<head>', '<head>\n  <script src="../preview/bridge.js"></script>', 1)
+        '<head>', '<head>\n  <script src="../preview/bridge.js"></script>', 1).replace(
+        '<script src="wallpaper-media-cache.js"></script>',
+        '<script>window.WallpaperMediaCache = undefined;</script>')
 
 
 def root_launcher():
@@ -85,7 +87,9 @@ def root_launcher():
     files['config.js'] = preview_config(files['config.js'])
     files['apps.js'] = ('window.TV_APPS = ' + json.dumps(inventory()) + ';\n').encode()
     files['index.html'] = files['index.html'].replace(
-        b'<head>', b'<head>\n  <script src="../preview/bridge.js"></script>', 1)
+        b'<head>', b'<head>\n  <script src="../preview/bridge.js"></script>', 1).replace(
+        b'<script src="wallpaper-media-cache.js"></script>',
+        b'<script>window.WallpaperMediaCache = undefined;</script>')
     return files
 
 

@@ -36,7 +36,9 @@ Manage them in **Settings → Themes** on your TV.
 
 | Classic menu | Liquid Glass | Ribbon |
 | --- | --- | --- |
-| <img src="docs/launcher-classic.jpg" alt="Classic menu browser preview" width="280"> | <img src="docs/launcher-liquid-glass.jpg" alt="Liquid Glass browser preview" width="280"> | <img src="docs/launcher-ribbon.jpg" alt="Ribbon browser preview" width="280"> |
+| <img src="docs/launcher-classic.jpg" alt="Classic menu browser preview" width="280"> | <img src="docs/launcher-liquid-glass.jpg" alt="Liquid Glass browser preview" width="280"> | <img src="docs/launcher-ribbon.jpg" alt="Ribbon with Black Hole video by Xecutioner — browser preview" width="280"> |
+
+Ribbon wallpaper video: **Xecutioner** · non-commercial use with attribution.
 
 **[Try the themes in the main browser preview →](https://razdva122.github.io/clean-your-tv-lg-webos/demo/)**
 
