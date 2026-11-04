@@ -24,6 +24,13 @@
         284
       ],
       "summary": "Lower No-root installer floor to tested Node 0.10.15 for webOS 1.x; actual #283/#284 runtimes and device compatibility remain unverified"
+    },
+    {
+      "pr": 292,
+      "issues": [
+        160
+      ],
+      "summary": "Document offline vendor bootstrap/native LS2 investigation for legacy Root; #160 support and target acceptance remain unimplemented"
     }
   ],
   "excluded": [],

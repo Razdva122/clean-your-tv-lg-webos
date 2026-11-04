@@ -28,6 +28,8 @@ one model or artifact does not certify later releases or a different TV.
 
 - [Embedded UHD wallpaper authoring, 2026-11-03](2026-11-03-embedded-uhd-wallpapers/README.md): real Alpine/Ribbon media, paired toolkit checks, large Base64 fix and browser-only decode evidence; outside the frozen release inventory.
 
+- [Legacy Root offline vendor investigation, 2026-11-04](2026-11-04-legacy-root-offline-vendor.md): official B9 firmware input, pinned public bootstrap/native boundaries and next host-only extraction task; no runtime replacement or device support claim.
+
 - [webOS 1.x Node floor, 2026-11-04](2026-11-04-webos1-node-floor.md): exact 0.10.15 source/published-Helper JS checks and No-root admission correction for #283/#284; device compatibility unverified.
 
 - [Android original Root inspection, 2026-11-04](2026-11-04-android-root240-inspection.md): original phone profile/pin preserved for bounded passive #240 inspection; original worker failure/recovery remains unresolved.

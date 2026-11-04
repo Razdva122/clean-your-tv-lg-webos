@@ -124,3 +124,9 @@ rechecked the generated closure after v1.6.0. The next missing evidence is the
 More transpilation or lowering Doctor's version requirement cannot supply it.
 The record separates executable host evidence from target ABI, routing and
 owner-supervised acceptance; it does not introduce an installation procedure.
+
+The [2026-11-04 offline vendor follow-up](../history/2026-11-04-legacy-root-offline-vendor.md)
+identifies an official B9 05.50.00 firmware input and the concrete next host-only
+extraction/review task. It records bootstrap/native identity dependencies and
+why current public OSE modules cannot substitute for the target firmware.
+No TV connection or supported installation path is introduced.
