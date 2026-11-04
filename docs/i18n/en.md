@@ -1,6 +1,6 @@
 # Clean Your TV — user guide
 
-**Unreleased C1 Beta (#298):** In the common computer installer, choose Root. Eligible C1 TVs are detected automatically; no separate installer or flag is needed. This path requires a fresh installation, has no automatic updates, and has not passed physical C1 acceptance. Open LG Home, long Back, or a safety/power stop can leave Home control off; turn Change Home on again in TV settings. The normal Root path is unchanged. [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md).
+**Unreleased C1 Beta (#298):** In the common computer installer, choose Root. Eligible C1 TVs are detected automatically; no separate installer or flag is needed. This path requires a fresh installation, has no automatic updates, and has not passed physical C1 acceptance. Open LG Home, long Back, or a safety/power stop can leave Home control off; turn Change Home on again in TV settings. The normal Root path is unchanged. If other No-root components remain, C1 full removal stops before making changes. Remove those components through their normal No-root removal flow first; retain recovery data if their state is unresolved. [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md).
 
 Unreleased (#290): **+ / Add app** offers Live TV under the TV’s own name only when the tuner is detected as installed. Other hidden system apps stay excluded. No-root needs the updated Helper and installer; Root needs the updated Home package. Tuner launch still needs TV verification.
 

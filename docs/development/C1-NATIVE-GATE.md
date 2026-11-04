@@ -47,6 +47,9 @@ paths. There are no new network endpoints. Both ordinary Root OTA and the system
 updater reject experimental or orphaned backend evidence, including alternate
 resume/baseline entry points. Use explicit restore/removal before returning to a
 normal installation. Do not delete state or volatile files to bypass a refusal.
+C1 full removal refuses before effects when other No-root components remain,
+because this native path cannot verify their removal. Remove those through the
+normal No-root flow first; retain unresolved recovery records and inspect them.
 
 ## Build and internal developer commands
 
