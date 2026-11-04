@@ -155,3 +155,12 @@ assert.equal(video.muted, true);
 assert.deepEqual(video.attrs, {autoplay: '', muted: ''});
 assert.deepEqual(source.attrs, {type: 'service/webos-external', src: 'ext://hdmi:3'});
 console.log('PASS input preview: dwell, single media, re-render remount, failure cooldown, release order and eligibility');
+
+// The foreground input owns the decoder before its media element is created.
+let ownership=[], releasedMedia;
+h=harness({onclaim:()=>ownership.push('claim'),onrelease:()=>{assert(!releasedMedia||releasedMedia.removed);ownership.push('release');},createMedia:uri=>{assert.equal(ownership.at(-1),'claim');releasedMedia=fakeMedia(uri);return releasedMedia;}});
+h.controller.focus(hdmi1);advance(799);assert.deepEqual(ownership,[]);
+advance(1);assert.deepEqual(ownership,['claim']);h.controller.stop();assert.deepEqual(ownership,['claim','release']);h.controller.stop();assert.equal(ownership.length,2);
+h=harness({onclaim:()=>ownership.push('claim'),onrelease:()=>ownership.push('release'),createMedia:()=>{throw Error('decoder unavailable');}});
+h.controller.focus(hdmi1);advance(800);assert.deepEqual(ownership.slice(-2),['claim','release'],'failed allocation restores background');
+console.log('PASS decoder ownership handed back after release or allocation failure');
