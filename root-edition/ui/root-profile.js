@@ -87,7 +87,7 @@
         save(profile);
         // System snapshots omit appearance; keep app-origin preferences for normal
         // startup validation. Legacy backup restores retain their Classic reset.
-        if (!systemRestore) { localStorage.removeItem('tvhome.columns.v1');localStorage.removeItem('tvhome.theme.choice.v1');localStorage.removeItem('tvhome.theme.trial.v1'); }
+        if (!systemRestore) { localStorage.removeItem('tvhome.columns.v1');localStorage.removeItem('tvhome.theme.choice.v1');localStorage.removeItem('tvhome.theme.trial.v1');localStorage.removeItem('tvhome.wallpaper.preferences.v1'); }
         if (profile.settings['tvhome.order'] === undefined) localStorage.removeItem('tvhome.order');
         else localStorage.setItem('tvhome.order', profile.settings['tvhome.order']);
         if (systemRestore) {

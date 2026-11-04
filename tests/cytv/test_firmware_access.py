@@ -315,6 +315,16 @@ class Tests(unittest.TestCase):
         self.assertFalse(receiver.exists())
         for path,raw in before.items():self.assertEqual(path.read_bytes(),raw)
 
+    def test_legacy_receiver_repair_does_not_infer_media_support_from_new_release(self):
+        # A new package on disk does not replace the protected old worker or its snapshot.
+        release=self.root/'release.json'
+        release.write_bytes(encode({'capabilities':['theme-receiver-v1','wallpaper-media-v1']}));release.chmod(0o600)
+        before={path:path.read_bytes() for path in [self.snapshot,self.proof,*self.paths.values()]}
+        self.receiver()
+        receiver=self.root/'permissions/theme-receiver.api.json'
+        self.assertEqual(json.loads(receiver.read_bytes()),{GROUP:[SERVICE+'/'+name for name in ('themeReceiverStart','themeReceiverStatus','themeReceiverRead','themeReceiverStop')]})
+        for path,raw in before.items():self.assertEqual(path.read_bytes(),raw)
+
     def test_receiver_and_firmware_reconcile_after_package_replacement(self):
         self.grant();old_receipt=json.loads(self.receipt.read_bytes());self.receiver()
         normal=dict(self.normal,version='0.6.0')

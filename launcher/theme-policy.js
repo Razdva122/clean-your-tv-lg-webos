@@ -42,7 +42,13 @@
     descriptorBytes: 65536,
     assets: 16,
     assetBytes: 2097152,
-    totalAssetBytes: 6291456
+    totalAssetBytes: 6291456,
+    videoUhdBytes: 12582912,
+    videoFhdBytes: 4194304,
+    totalVideoBytes: 16777216,
+    packageBytes: 25165824,
+    envelopeBytes: 34603008,
+    cacheBytes: 67108864
   };
   // Kept in sync across the standalone HomeLayout and ThemePolicy browser modules.
   function normalizeRibbon(input) {
@@ -125,7 +131,7 @@
     if (x.size % 1 || typeof x.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(x.sha256)) fail('asset-invalid', 'hash');
   }
   function validateManifest(m) {
-    object(m, ['schemaVersion', 'themeApiVersion', 'id', 'title', 'description', 'author', 'themeVersion', 'source', 'requires', 'layout', 'defaults', 'rules', 'assets', 'documents', 'previewAssetId', 'license'], 'manifest-invalid', 'manifest');
+    object(m, ['schemaVersion', 'themeApiVersion', 'id', 'title', 'description', 'author', 'themeVersion', 'source', 'requires', 'layout', 'defaults', 'rules', 'assets', 'documents', 'previewAssetId', 'license'], 'manifest-invalid', 'manifest', ['wallpaperVideo']);
     if (bytes(m) > limits.descriptorBytes) fail('manifest-invalid', 'size');
     if (m.schemaVersion !== 1) fail('manifest-invalid', 'schemaVersion');
     if (m.themeApiVersion !== 1) fail('api-unsupported', 'themeApiVersion');
@@ -143,7 +149,7 @@
     if (m.id.indexOf('github:') === 0 && m.id.split(':')[1] !== m.source.repository.slice(19).toLowerCase()) fail('manifest-invalid', 'source.identity');
     object(m.requires, ['minimumHomeVersion', 'capabilities'], 'manifest-invalid', 'requires');
     version(m.requires.minimumHomeVersion);
-    list(m.requires.capabilities, 4, 'api-unsupported', 'capabilities').forEach(function (capability, index) { if (['modern-icon-css-v1', 'ribbon-layout-v1', 'classic-motion-v1', 'date-placement-v1', 'input-placement-v1'].indexOf(capability) < 0 || m.requires.capabilities.indexOf(capability) !== index) fail('api-unsupported', 'capabilities'); });
+    list(m.requires.capabilities, 6, 'api-unsupported', 'capabilities').forEach(function (capability, index) { if (['modern-icon-css-v1', 'ribbon-layout-v1', 'classic-motion-v1', 'date-placement-v1', 'input-placement-v1', 'video-wallpaper-v1'].indexOf(capability) < 0 || m.requires.capabilities.indexOf(capability) !== index) fail('api-unsupported', 'capabilities'); });
     object(m.layout, ['preset', 'columns', 'spacingScale', 'textScale', 'focusScale'], 'layout-invalid', 'layout', ['allowColumnOverride', 'ribbon', 'motion', 'datePlacement', 'inputs']);
     if (['dock-grid', 'icon-grid', 'side-grid', 'channel-list', 'scenic-grid'].indexOf(m.layout.preset) < 0) fail('layout-invalid', 'preset');
     if (Object.prototype.hasOwnProperty.call(m.layout, 'allowColumnOverride') && typeof m.layout.allowColumnOverride !== 'boolean') fail('layout-invalid', 'allowColumnOverride');
@@ -201,6 +207,23 @@
     var preview = seen[m.previewAssetId];
     if (!preview || preview.width > 960 || preview.height > 540 || preview.size > 307200) fail('asset-invalid', 'previewAssetId');
     if (m.defaults.wallpaperAssetId !== null && !seen[m.defaults.wallpaperAssetId]) fail('asset-invalid', 'wallpaperAssetId');
+    var hasVideo = Object.prototype.hasOwnProperty.call(m, 'wallpaperVideo');
+    if (hasVideo !== (m.requires.capabilities.indexOf('video-wallpaper-v1') >= 0)) fail('api-unsupported', 'video-wallpaper-v1');
+    if (hasVideo) {
+      if (m.defaults.wallpaperAssetId === null) fail('asset-invalid', 'wallpaperAssetId');
+      object(m.wallpaperVideo, ['variants'], 'asset-invalid', 'wallpaperVideo');
+      var qualities = Object.create(null), videoTotal = 0;
+      list(m.wallpaperVideo.variants, 2, 'asset-invalid', 'video.variants').forEach(function (v) {
+        if (!v || ['4k', '1080p'].indexOf(v.quality) < 0 || qualities[v.quality]) fail('asset-invalid', 'video.quality');
+        qualities[v.quality] = true;
+        file(v, v.quality === '4k' ? limits.videoUhdBytes : limits.videoFhdBytes, ['quality', 'mediaType', 'width', 'height']);
+        if (v.mediaType !== 'video/mp4' || !/\.mp4$/i.test(v.path) || paths[v.path]) fail('asset-invalid', 'video.path');
+        if (v.width !== (v.quality === '4k' ? 3840 : 1920) || v.height !== (v.quality === '4k' ? 2160 : 1080)) fail('asset-invalid', 'video.dimensions');
+        paths[v.path] = true;
+        videoTotal += v.size;
+      });
+      if (!m.wallpaperVideo.variants.length || videoTotal > limits.totalVideoBytes) fail('asset-invalid', 'video.total');
+    }
     var docs = Object.create(null);
     list(m.documents, 2, 'asset-invalid', 'documents').forEach(function (d) {
       file(d, 32768);

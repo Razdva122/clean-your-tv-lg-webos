@@ -149,7 +149,7 @@
  }
  document.getElementById('developerOpen').onclick=function(){showDeveloper(true);};
  document.getElementById('developerBack').onclick=function(){showDeveloper(false);};
- function close(){if(window.HomeThemePanel)HomeThemePanel.unmount();panel.classList.add('hidden');if(window.ThemeRuntime)ThemeRuntime.resume('settings');if(previous&&previous.focus)previous.focus();}
+ function close(){if(window.HomeWallpaperPanel)HomeWallpaperPanel.unmount();if(window.HomeThemePanel)HomeThemePanel.unmount();panel.classList.add('hidden');if(window.ThemeRuntime)ThemeRuntime.resume('settings');if(previous&&previous.focus)previous.focus();}
  document.getElementById('renewalClose').onclick=close;
  document.getElementById('homeLanguage').onclick=function(){if(window.HomeI18n)HomeI18n.openLanguagePicker();};
  document.addEventListener('home-layout-change',function(event){if(openNow()&&buttons[index].hidden&&event.homeColumnsFocus===buttons[index])focus(index+1);});
@@ -175,10 +175,12 @@
   if(document.activeElement===details&&k===13){focus(buttons.indexOf(document.getElementById('renewalDiagnostics')));return;}
   if(k===461||k===27){if(developerOpen)showDeveloper(false);else close();}else if(k===13){if(!e.repeat)buttons[index].click();}else focus(index+(k===37||k===38||(k===9&&e.shiftKey)?-1:1));
  },true);
+ var wallpapers=document.createElement('div');if(window.HomeWallpaperPanel)HomeWallpaperPanel.mount(wallpapers);
  if(window.SettingsCategories)categories=SettingsCategories.attach(panel,main,[
   {id:'home',label:'Your Home screen',elements:[main.querySelector('.settings-home')]},
   {id:'appearance',label:'Appearance',elements:[document.getElementById('homeColumns').parentNode,document.getElementById('homeAppSettings')]},
   {id:'themes',label:'Themes',elements:[document.getElementById('homeThemeHost').parentNode]},
+  {id:'wallpapers',label:'Wallpapers',elements:[wallpapers]},
   {id:'language',label:'Language',elements:[document.getElementById('homeLanguage')]},
   {id:'updates',label:'Software updates',elements:[document.getElementById('renewalUpdates')]},
   {id:'advanced',label:'Advanced',elements:[document.getElementById('renewalTV')]},

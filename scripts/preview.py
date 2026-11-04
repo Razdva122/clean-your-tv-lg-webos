@@ -26,7 +26,7 @@ LAUNCHER_FILES = {
     'user-data.js', 'release-notes.js', 'system-updates.js', 'update-panel.js', 'renewal-panel.js', 'helper-control.js', 'profile-bootstrap.js',
     'native-bootstrap.js', 'i18n.js', 'catalogs.js', 'i18n.css', 'fonts/outfit-300.ttf', 'fonts/outfit-400.ttf', 'fonts/outfit-500.ttf', 'fonts/outfit-700.ttf', 'fonts/NotoSans.ttf', 'fonts/NotoSans-OFL.txt', 'fonts/NotoSansDevanagari.ttf', 'fonts/NotoSansDevanagari-OFL.txt', 'fonts/NotoSansKR.ttf', 'fonts/NotoSansKR-OFL.txt', 'fonts/NotoSansSC.ttf', 'fonts/NotoSansSC-OFL.txt', 'fonts/NotoSansTC.ttf', 'fonts/NotoSansTC-OFL.txt', 'fonts/OFL.txt',
 }
-THEME_FILES = ['theme-data.js', 'theme-store.js', 'theme-manager.js', 'theme-receiver.js', 'theme-panel.js', 'theme-panel.css', 'theme-locales.js', 'builtin-theme-files.json'] + json.loads((ROOT / 'launcher/builtin-theme-files.json').read_text())
+THEME_FILES = ['wallpaper.js', 'wallpaper.css', 'wallpaper-panel.js', 'wallpaper-panel.css', 'wallpaper-locales.js', 'wallpaper-media-cache.js', 'personal-wallpaper.js', 'wallpaper-library.js', 'wallpaper-stream.js', 'wallpapers/black-hole-stream.mp4', 'wallpaper-qr.js', 'theme-data.js', 'theme-store.js', 'theme-manager.js', 'theme-receiver.js', 'theme-panel.js', 'theme-panel.css', 'theme-locales.js', 'builtin-theme-files.json'] + json.loads((ROOT / 'launcher/builtin-theme-files.json').read_text())
 LAUNCHER_FILES.update(['appinfo.json'] + THEME_FILES)
 ROOT_LAUNCHER_FILES = {
     'index.html', 'viewport.js', 'app.js', 'app-library.js', 'input-sources.js', 'input-preview.js', 'style.css', 'theme-defaults.css', 'theme-policy.js', 'theme-runtime.js', 'home-layout.js', 'layout-panel.js', 'settings-categories.js', 'layout-panel.css', 'config.js', 'apps.js',
@@ -76,7 +76,9 @@ def revision():
 
 def launcher_html():
     return (ROOT / 'launcher/index.html').read_text().replace(
-        '<head>', '<head>\n  <script src="../preview/bridge.js"></script>', 1)
+        '<head>', '<head>\n  <script src="../preview/bridge.js"></script>', 1).replace(
+        '<script src="wallpaper-media-cache.js"></script>',
+        '<script>window.WallpaperMediaCache = undefined;</script>')
 
 
 def root_launcher():
@@ -86,7 +88,9 @@ def root_launcher():
     files['config.js'] = preview_config(files['config.js'])
     files['apps.js'] = ('window.TV_APPS = ' + json.dumps(inventory()) + ';\n').encode()
     files['index.html'] = files['index.html'].replace(
-        b'<head>', b'<head>\n  <script src="../preview/bridge.js"></script>', 1)
+        b'<head>', b'<head>\n  <script src="../preview/bridge.js"></script>', 1).replace(
+        b'<script src="wallpaper-media-cache.js"></script>',
+        b'<script>window.WallpaperMediaCache = undefined;</script>')
     return files
 
 

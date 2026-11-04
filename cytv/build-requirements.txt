@@ -8,3 +8,6 @@ ziglang==0.14.1
 
 # Windowed desktop application (kept out of the console executable).
 PySide6-Essentials==6.10.2
+
+# Static, platform-specific FFmpeg binary for offline personal wallpaper preparation.
+imageio-ffmpeg==0.6.0

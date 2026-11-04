@@ -1,0 +1,5 @@
+Video author: Xecutioner
+4K SCI-FI Black Hole: https://steamcommunity.com/sharedfiles/filedetails/?id=2981249186
+Used with author permission for non-commercial use, with attribution to Xecutioner. Permission was reported and confirmed by the maintainer on 2026-11-04; private correspondence is retained privately.
+Recorded from the original Wallpaper Engine scene at native 3840x2160 using OBS. No spatial upscaling. Silent 12-second loop with a one-second dissolve; native 1080p and still-image fallbacks. The fragmented streaming container preserves the same encoded H264 image data.
+Ribbon styling: CYTV contributors, MIT. Independent fan recreation inspired by LG webOS 5.0, not affiliated with LG. Preview shows the project reference app fixture, not a personal app inventory.

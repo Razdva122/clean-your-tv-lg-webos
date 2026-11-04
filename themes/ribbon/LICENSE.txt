@@ -1,3 +1,8 @@
+Black Hole video and derived stills: Xecutioner.
+Permission for non-commercial use and inclusion in free CYTV distributions, with explicit attribution to Xecutioner, was confirmed by the project maintainer on 2026-11-04. This is an author-specific permission, not a Creative Commons license or an MIT grant for the artwork. Commercial use requires separate permission. Original source: https://steamcommunity.com/sharedfiles/filedetails/?id=2981249186
+
+Ribbon styling and CYTV code retain the following MIT license:
+
 MIT License
 
 Copyright (c) CYTV themes
@@ -5,3 +10,5 @@ Copyright (c) CYTV themes
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files, to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to inclusion of this copyright and permission notice.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
+
+Original procedural wallpaper image and video: MIT, Clean Your TV contributors, 2026. See CREDITS.txt.

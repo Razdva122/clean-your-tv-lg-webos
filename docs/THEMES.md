@@ -82,7 +82,7 @@ After a successful install, files are stored in this Home application's IndexedD
 
 To update, install a new reviewed catalogue version, use a new version's link, or transfer a fresh development snapshot; select the installed version, or try and keep it through showcase. Updates are explicit: installed themes do not follow GitHub branches automatically. Several versions may be cached independently. Select **Remove** beside a downloaded version and confirm. Removing the active version restores Classic before its files are deleted; cancellation keeps the theme.
 
-The cache is bounded at eight downloaded versions and 24 MiB of payload data, subject to a lower device quota. Remove inactive versions if saving fails. Downloaded themes are removed individually with confirmation; removing the active theme restores Classic first. Built-ins cannot be removed.
+The published cache is bounded at eight downloaded versions and 24 MiB of payload data, subject to a lower device quota. The next-release video-wallpaper runtime raises the byte limit to 64 MiB while retaining the eight-version bound. Remove inactive versions if saving fails. Downloaded themes are removed individually with confirmation; removing the active theme restores Classic first. Built-ins cannot be removed.
 
 ## Recovery
 

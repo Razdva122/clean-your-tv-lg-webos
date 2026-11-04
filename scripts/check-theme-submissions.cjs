@@ -9,7 +9,7 @@ const policy = require('../launcher/theme-policy.js');
 const {
   imageInfo
 } = require('../theme-api/compile.cjs');
-const licenses = ['MIT', 'Apache-2.0', 'BSD-2-Clause', 'BSD-3-Clause', 'ISC', 'CC0-1.0', 'CC-BY-4.0', 'CC-BY-SA-4.0', 'MIT AND CC-BY-SA-3.0', 'LicenseRef-Personal-Fan-Theme'];
+const licenses = ['MIT', 'Apache-2.0', 'BSD-2-Clause', 'BSD-3-Clause', 'ISC', 'CC0-1.0', 'CC-BY-4.0', 'CC-BY-SA-4.0', 'MIT AND CC-BY-SA-3.0', 'MIT AND CC-BY-SA-3.0-DE', 'MIT AND CC-BY-SA-4.0', 'MIT AND CC-BY-4.0', 'LicenseRef-Personal-Fan-Theme'];
 const tags = ['dark', 'light', 'minimal', 'colorful', 'photographic', 'high-contrast'];
 const fields = ['schemaVersion', 'id', 'title', 'description', 'author', 'sourceRepository', 'sourceCommit', 'descriptorUrl', 'descriptorSha256', 'themeVersion', 'themeApiVersion', 'license', 'creditsFile', 'previewFiles', 'tags', 'addedAt', 'reviewedAt', 'evidence'];
 const hash = bytes => crypto.createHash('sha256').update(bytes).digest('hex');
@@ -104,7 +104,7 @@ function validateFiles(r, root) {
     'image/webp': /\.webp$/
   }[a.mediaType].test(a.path), 'Image extension/media type mismatch'));
   const verified = new Map();
-  for (const f of [m.rules, ...m.assets, ...m.documents]) {
+  for (const f of [m.rules, ...m.assets, ...m.documents, ...(m.wallpaperVideo ? m.wallpaperVideo.variants : [])]) {
     const bytes = readLocal(root, base + f.path, f.size);
     check(bytes.length === f.size && hash(bytes) === f.sha256, 'Byte/hash mismatch: ' + f.path);
     verified.set(f.path, bytes);
@@ -112,6 +112,11 @@ function validateFiles(r, root) {
   m.assets.forEach(a => {
     const info = imageInfo(verified.get(a.path), a.mediaType, a.id === m.defaults.wallpaperAssetId);
     check(info.width === a.width && info.height === a.height, 'Image dimensions differ from manifest');
+  });
+  if (m.wallpaperVideo) m.wallpaperVideo.variants.forEach(v => {
+    check(/\.mp4$/.test(v.path), 'Video extension mismatch');
+    const info = require('../launcher/theme-data.js').videoInfo(verified.get(v.path));
+    check(info.width === v.width && info.height === v.height, 'Video dimensions differ from manifest');
   });
   const rules = JSON.parse(verified.get(m.rules.path).toString('utf8'));
   policy.validateRules(rules);
@@ -128,7 +133,7 @@ function validateFiles(r, root) {
     record: r,
     manifest: m,
     base,
-    files: ['cytv-theme.json', m.rules.path, ...m.assets.map(a => a.path), ...m.documents.map(d => d.path)]
+    files: ['cytv-theme.json', m.rules.path, ...m.assets.map(a => a.path), ...m.documents.map(d => d.path), ...(m.wallpaperVideo ? m.wallpaperVideo.variants.map(v => v.path) : [])]
   };
 }
 function loadRegistry(root = path.resolve(__dirname, '../showcase')) {
@@ -158,7 +163,7 @@ function loadRegistry(root = path.resolve(__dirname, '../showcase')) {
 async function verifyRemote(entries, fetcher = globalThis.fetch) {
   // Source commit and distribution commit differ when generated files are committed later.
   // Both are fixed; the descriptor digest binds the exact reviewed distribution bytes.
-  // ponytail: 16 MiB per catalog check; shard review jobs when a larger catalog needs it.
+  // ponytail: 64 MiB per catalog check; shard review jobs when a larger catalog needs it.
   let total = 0;
   for (const entry of entries) {
     const r = validateRecord(entry.record);
@@ -167,8 +172,8 @@ async function verifyRemote(entries, fetcher = globalThis.fetch) {
     for (const name of entry.files) {
       relative(name);
       const url = name === 'cytv-theme.json' ? r.descriptorUrl : baseUrl + name;
-      const expected = name === 'cytv-theme.json' ? r.descriptorSha256 : [entry.manifest.rules, ...entry.manifest.assets, ...entry.manifest.documents].find(f => f.path === name).sha256;
-      const ceiling = name === 'cytv-theme.json' ? 65536 : [entry.manifest.rules, ...entry.manifest.assets, ...entry.manifest.documents].find(f => f.path === name).size;
+      const expected = name === 'cytv-theme.json' ? r.descriptorSha256 : [entry.manifest.rules, ...entry.manifest.assets, ...entry.manifest.documents, ...(entry.manifest.wallpaperVideo ? entry.manifest.wallpaperVideo.variants : [])].find(f => f.path === name).sha256;
+      const ceiling = name === 'cytv-theme.json' ? 65536 : [entry.manifest.rules, ...entry.manifest.assets, ...entry.manifest.documents, ...(entry.manifest.wallpaperVideo ? entry.manifest.wallpaperVideo.variants : [])].find(f => f.path === name).size;
       const response = await fetcher(url, {
         redirect: 'error',
         credentials: 'omit',
@@ -184,7 +189,7 @@ async function verifyRemote(entries, fetcher = globalThis.fetch) {
       for await (const chunk of response.body) {
         length += chunk.length;
         total += chunk.length;
-        check(length <= ceiling && total <= 16 * 1024 * 1024, 'Remote download budget exceeded');
+        check(length <= ceiling && total <= 64 * 1024 * 1024, 'Remote download budget exceeded');
         chunks.push(Buffer.from(chunk));
       }
       check(hash(Buffer.concat(chunks)) === expected, 'Pinned remote byte/hash mismatch');

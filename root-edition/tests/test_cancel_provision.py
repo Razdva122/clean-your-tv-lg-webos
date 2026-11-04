@@ -64,8 +64,14 @@ class PendingProvisionCancellationTests(unittest.TestCase):
 
     def inspect(self):return self.case.inspect()
 
-    def test_fresh_receiver_capability_cancellation_restores_original_registration(self):
-        self.saved['capabilities']=['theme-receiver-v1']
+    def test_receiver_capability_cancellation_restores_original_registration(self):
+        self.assert_receiver_capability_cancellation(['theme-receiver-v1'])
+
+    def test_wallpaper_capability_cancellation_restores_original_registration(self):
+        self.assert_receiver_capability_cancellation(['theme-receiver-v1','wallpaper-media-v1'])
+
+    def assert_receiver_capability_cancellation(self,capabilities):
+        self.saved['capabilities']=capabilities
         updated=self.p.plan(self.original,self.saved['capabilities'])
         for key,path in self.files.items():
             path.write_bytes(updated[key])

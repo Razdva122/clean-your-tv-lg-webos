@@ -25,27 +25,27 @@
     {
       "id": "builtin:ribbon",
       "title": "Ribbon",
-      "version": "1.0.0",
+      "version": "1.3.0",
       "builtin": true,
-      "description": "Original galaxy wallpaper with a fixed eight-card skewed bottom ribbon, raised focus and bottom-left shortcuts.",
-      "author": "Clean Your TV contributors",
-      "license": "MIT",
-      "preview": "themes/ribbon/assets/preview-dbf77986dfebeb26c646824e90cb53126420f3b985609bb3f575bdf2d9d0a81a.jpg",
-      "credits": "themes/ribbon/documents/1-6ef40776aa6fbb8d1c62bedf595c7baec036d4a1fea9bdfc1f24d071b77de56c.txt",
-      "licenseFile": "themes/ribbon/documents/0-f497a621e75e2ccabaac016c8ada95b415a7810fb9994798b282fa9f9d03920f.txt",
+      "description": "Black Hole by Xecutioner, recorded at native 3840x2160, with a fixed eight-card skewed app ribbon.",
+      "author": "CYTV contributors; video by Xecutioner",
+      "license": "LicenseRef-Xecutioner-NonCommercial",
+      "preview": "themes/ribbon/assets/preview-81a6c73bc14de1a317cc0d3b50ea9387bd9f8a03438ab23f6d80152ed208b39c.jpg",
+      "credits": "themes/ribbon/documents/1-a111ee9dd92cf115657a4ad197a24b0ff15dee4da540b9cf5cdd95c0cff37b6d.txt",
+      "licenseFile": "themes/ribbon/documents/0-ef2c9dee57bcc55339247c34ab6460d9632669a06c764df68b49e1363857964d.txt",
       "url": "themes/ribbon/cytv-theme.json",
-      "digest": "5eb9cebf58cddafa8df59497880eaa134565465ba75dab60ec1903b956be4f5d"
+      "digest": "56c3bdc8f50ad572d127cc99fa7d8a10192d5c087dc7b4c39694dc5391c4aefb"
     },
     {
       "id": "github:razdva122/clean-your-tv-lg-webos:alpine",
       "title": "Alpine",
-      "version": "1.4.4",
+      "version": "1.5.0",
       "author": "Clean Your TV contributors",
-      "license": "MIT AND CC-BY-SA-3.0",
-      "description": "A quiet alpine panorama, large clock and one infinitely looping horizontal app ribbon.",
-      "preview": "theme-catalog/razdva122--clean-your-tv-lg-webos--alpine/2b5209e6ec36d9e8e8e15e9b765e9b0fcf6a49ac4a4c8d68d7394016359a905f/preview.png",
-      "url": "https://raw.githubusercontent.com/razdva122/clean-your-tv-lg-webos/323c7bb351d8396439878ab432d0ac2f39d2b2e3/distributions/alpine/1.4.4/cytv-theme.json",
-      "digest": "2b5209e6ec36d9e8e8e15e9b765e9b0fcf6a49ac4a4c8d68d7394016359a905f"
+      "license": "MIT AND CC-BY-SA-3.0-DE",
+      "description": "A real 4K Bachalpsee photograph, large clock and one infinitely looping horizontal app ribbon.",
+      "preview": "theme-catalog/razdva122--clean-your-tv-lg-webos--alpine/c182f0c8b6285cecdbc9f266f3ce95124bfcaa47635a7582514d7a01cdf74cd5/preview.jpg",
+      "url": "https://raw.githubusercontent.com/razdva122/clean-your-tv-lg-webos/8cc4cb919d7bc67783989e75974712e697d11158/distributions/alpine/1.5.0/cytv-theme.json",
+      "digest": "c182f0c8b6285cecdbc9f266f3ce95124bfcaa47635a7582514d7a01cdf74cd5"
     },
     {
       "id": "github:razdva122/clean-your-tv-lg-theme:itachi",

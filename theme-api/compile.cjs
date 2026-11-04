@@ -4,6 +4,7 @@ const parseValue = require('postcss-value-parser');
 const crypto = require('node:crypto');
 const policy = require('../launcher/theme-policy.js');
 const compat = require('../scripts/compile-tv-web.cjs');
+const themeData = require('../launcher/theme-data.js');
 function error(code, field) {
   const e = new Error(code + ': theme.css ' + field);
   e.code = code;
@@ -314,6 +315,23 @@ async function compileSource(input) {
       sha256: hash(data)
     };
   });
+  const declaredVideos = source.wallpaperVideo && source.wallpaperVideo.variants;
+  const suppliedVideos = input.videos || [];
+  if (!Array.isArray(suppliedVideos) || suppliedVideos.length > 2 ||
+      (declaredVideos ? !Array.isArray(declaredVideos) || declaredVideos.length !== suppliedVideos.length : suppliedVideos.length)) error('video-invalid', 'video files');
+  const videos = (declaredVideos || []).map(v => {
+    const matches = suppliedVideos.filter(f => f.path === v.path && f.quality === v.quality);
+    if (matches.length !== 1) error('video-invalid', 'missing or duplicate video');
+    const data = Buffer.from(matches[0].data);
+    const limit = v.quality === '4k' ? 12 * 1024 * 1024 : 4 * 1024 * 1024;
+    if (data.length > limit) error('video-invalid', 'video budget');
+    const info = themeData.videoInfo(data);
+    const dimensions = v.quality === '4k' ? [3840, 2160] : [1920, 1080];
+    if (!['4k', '1080p'].includes(v.quality) || info.width !== dimensions[0] || info.height !== dimensions[1]) error('video-invalid', 'quality dimensions');
+    for (const key of ['width', 'height']) if (v[key] !== undefined && v[key] !== info[key]) error('video-invalid', 'video metadata');
+    return {quality:v.quality, path:v.path, mediaType:'video/mp4', width:info.width, height:info.height, size:data.length, sha256:hash(data), data};
+  });
+  if (declaredVideos) source.wallpaperVideo = {variants:videos.map(({data, ...v}) => v)};
   const documents = (input.documents || []).map(d => {
     const data = Buffer.from(d.data);
     return {
@@ -341,6 +359,7 @@ async function compileSource(input) {
     textScale: 1,
     focusScale: 1.1
   }, source.layout);
+  if (declaredVideos) source.requires.capabilities.push('video-wallpaper-v1');
   if (Object.hasOwn(source.layout, 'inputs')) source.requires.capabilities.push('input-placement-v1');
   if (Object.hasOwn(source.layout, 'datePlacement')) source.requires.capabilities.push('date-placement-v1');
   if (Object.hasOwn(source.layout, 'ribbon')) source.requires.capabilities.push('ribbon-layout-v1');
@@ -372,6 +391,7 @@ async function compileSource(input) {
     rules: compiled.bundle,
     assets,
     documents,
+    videos,
     report: {
       themeApiVersion: 1,
       ruleCount: compiled.bundle.rules.length,
