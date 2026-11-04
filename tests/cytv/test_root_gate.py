@@ -42,9 +42,9 @@ class RootGateTests(unittest.TestCase):
         self.installer.verify_root_updater=Mock(side_effect=AssertionError('normal updater used'))
         self.failure=None
     def refresh(self):
-        files={str(p.relative_to(self.folder)):hashlib.sha256(p.read_bytes()).hexdigest() for p in self.folder.rglob('*') if p.is_file() and p.name!='bundle.json'}
+        files={p.relative_to(self.folder).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in self.folder.rglob('*') if p.is_file() and p.name!='bundle.json'}
         (self.folder/'bundle.json').write_text(json.dumps({'package':self.ipk,'files':files}))
-        self.manifest={'root_backends':{BACKEND:{'experimental':True,'hardware_validated':False,'graphics':{'1920x1080':'root-c1','1280x720':'root-c1-720p'}}},'files':{self.variant+'/'+str(p.relative_to(self.folder)):hashlib.sha256(p.read_bytes()).hexdigest() for p in self.folder.rglob('*') if p.is_file()}}
+        self.manifest={'root_backends':{BACKEND:{'experimental':True,'hardware_validated':False,'graphics':{'1920x1080':'root-c1','1280x720':'root-c1-720p'}}},'files':{self.variant+'/'+p.relative_to(self.folder).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in self.folder.rglob('*') if p.is_file()}}
         if hasattr(self,'installer'):self.installer.manifest=self.manifest
     def action(self,action,**kwargs):
         self.actions.append((action,kwargs))

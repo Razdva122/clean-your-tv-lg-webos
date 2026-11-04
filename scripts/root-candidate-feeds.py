@@ -11,6 +11,8 @@ ROOT=Path(__file__).resolve().parents[1]
 REPO='Razdva122/clean-your-tv-lg-webos'
 BUILD_JOBS=runpy.run_path(str(ROOT/'scripts/release-flow.py'))['BUILD_JOBS']
 MAX_ARCHIVE=128*1024*1024
+# Common CLI carries both Home resolutions and normal/C1 Root variants.
+MAX_CLI_ARCHIVE=256*1024*1024
 MAX_TAR=96*1024*1024
 DIRECT_WORKFLOW='.github/workflows/tv-candidate.yml'
 DIRECT_JOB='build-root-tv'
@@ -62,7 +64,7 @@ def artifact_info(artifacts,run,*,direct_tv=False):
     if len(matches)!=1:raise ValueError('Exactly one selected candidate artifact is required')
     a=matches[0]
     if (a.get('expired') is not False or type(a.get('id')) is not int or a['id']<=0
-            or type(a.get('size_in_bytes')) is not int or not 0<a['size_in_bytes']<=MAX_ARCHIVE
+            or type(a.get('size_in_bytes')) is not int or not 0<a['size_in_bytes']<=(MAX_ARCHIVE if direct_tv else MAX_CLI_ARCHIVE)
             or not isinstance(a.get('digest'),str) or not re.fullmatch('sha256:[a-f0-9]{64}',a['digest'])
             or a.get('workflow_run',{}).get('id')!=run['id']
             or a['workflow_run'].get('head_sha')!=run['head_sha']):
@@ -71,10 +73,10 @@ def artifact_info(artifacts,run,*,direct_tv=False):
 
 def read_cli_archive(archive,expected,target):
     archive=Path(archive)
-    if archive.stat().st_size>MAX_ARCHIVE or digest(archive.read_bytes())!=expected:raise ValueError('Candidate archive digest mismatch')
+    if archive.stat().st_size>MAX_CLI_ARCHIVE or digest(archive.read_bytes())!=expected:raise ValueError('Candidate archive digest mismatch')
     with zipfile.ZipFile(archive) as z:
         entries=z.infolist()
-        if len(entries)!=1 or entries[0].filename!='cytv' or entries[0].is_dir() or stat.S_ISLNK(entries[0].external_attr>>16) or not 0<entries[0].file_size<=MAX_ARCHIVE:
+        if len(entries)!=1 or entries[0].filename!='cytv' or entries[0].is_dir() or stat.S_ISLNK(entries[0].external_attr>>16) or not 0<entries[0].file_size<=MAX_CLI_ARCHIVE:
             raise ValueError('Unexpected candidate CLI archive layout')
         Path(target).write_bytes(z.read(entries[0]))
 
