@@ -140,3 +140,16 @@ change. `tests/setup/test_noroot_overlay_package.py` passed against both actual
 compiled packages. The final browser adapter run also covers cold activation in
 both native editions, warm native activation, actual wallpaper video allocation
 fencing, and input preview cleanup. No further activation-review findings.
+
+
+## CI lifecycle harness correction
+
+PR310 initial browser job failed the legacy second-row visibility assertion.
+The fixture acknowledged a successful native app launch then navigated the now
+closed Home without simulating platform return. The corrected harness explicitly
+asserts window-close/presentation-closed, dispatches the real manual relaunch
+adapter, and retains every geometry/scroll assertion. It also waits for actual
+UI readiness. The corrected compiled TV bundle passes allfour legacy profiles
+and alleight column geometry cases. Independent review found no issues. This
+models browser return only, not physical TV behavior. Remote CI must rerun on the
+new head; no successful remote browser result is inferred from local checks.
