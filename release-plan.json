@@ -3,6 +3,16 @@
   "version": null,
   "changes": [
     {
+      "pr": 264,
+      "issues": [],
+      "summary": "Add verified native video wallpaper layer and Wallpapers quality/dimming controls; final candidate media grants and device lifecycle acceptance remain required"
+    },
+    {
+      "pr": 267,
+      "issues": [],
+      "summary": "Add desktop/phone personal wallpapers, embedded UHD authoring and reusable Xecutioner Black Hole with continuous playback; theme changes restore theme backgrounds; refresh Ribbon/README/demo"
+    },
+    {
       "pr": 287,
       "issues": [
         282,
@@ -31,6 +41,13 @@
         160
       ],
       "summary": "Document offline vendor bootstrap/native LS2 investigation for legacy Root; #160 support and target acceptance remain unimplemented"
+    },
+    {
+      "pr": 293,
+      "issues": [
+        290
+      ],
+      "summary": "fix(apps): discover installed Live TV outside LG launch points"
     }
   ],
   "excluded": [],
