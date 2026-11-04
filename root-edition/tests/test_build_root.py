@@ -79,7 +79,10 @@ class BuildTests(unittest.TestCase):
             release = json.loads((first / 'release.json').read_text())
             self.assertFalse(release['hardware_validated'])
             self.assertEqual(release['capabilities'],['theme-receiver-v1','wallpaper-media-v1'])
-            import provision
+            # Recovery and runtime provisioning have different contracts but share a filename.
+            spec = importlib.util.spec_from_file_location('root_build_recovery_provision', ROOT / 'provision.py')
+            provision = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(provision)
             original={'service':'Exec=/usr/bin/run-js-service -n '+str(provision.SERVICE),'role':json.dumps({'appId':provision.NAME}),'client':'{}','api':'{}'}
             api=json.loads(provision.plan(original,provision.snapshot_capabilities(release))['api'])
             methods=api[provision.NAME+'.control']
