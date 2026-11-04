@@ -256,7 +256,7 @@ class Tests(unittest.TestCase):
    for allowed in (False,True):
     with self.subTest(app=app,allowed=allowed):
      self.surfaces=[]
-     policy.startup_configure({'tv':allowed,'youtube':allowed,'hdmi':allowed})
+     policy.startup_configure({'tv':allowed,'youtube':allowed})
      self.foreground=app
      self.surfaces=[{'appId':d.CANDIDATE,'windowType':'_WEBOS_WINDOW_TYPE_OVERLAY'},
                     {'appId':app,'windowType':'_WEBOS_WINDOW_TYPE_CARD'}]
