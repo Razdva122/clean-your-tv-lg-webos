@@ -51,7 +51,7 @@
   if(hasPoster){if(preview.getAttribute('src')!==value.posterURL)preview.src=value.posterURL;preview.alt=t('Current theme wallpaper');}else preview.removeAttribute('src');
   capability.textContent=t('TV capability')+': '+t(cap.uhd===true?'4K supported':cap.uhd===false?'4K not detected':'Unknown');
   actual.textContent=t('Current mode')+': '+(hasPoster?(value.paused?t('Paused while settings are open'):value.actualQuality?label(value.actualQuality):t('No wallpaper')):t('No wallpaper'));
-  notice.textContent=!hasPoster?t('This theme has no wallpaper.'):available.indexOf('4k')<0&&available.indexOf('1080p')<0?t('This theme uses an image only.'):t('Auto uses detected TV support. Playback may fall back to an image.');
+  notice.textContent=!hasPoster?t('This theme has no wallpaper.'):available.indexOf('4k')<0&&available.indexOf('1080p')<0?t('This wallpaper has no video version.'):t('Auto uses detected TV support. Playback may fall back to an image.');
   if(value.notice)notice.textContent+=' '+t(value.notice);
   qualityButtons.forEach(function(button){var q=button.getAttribute('data-wallpaper-quality');button.textContent=label(q);button.disabled=!hasPoster||(q!=='auto'&&available.indexOf(q)<0)||(q==='4k'&&cap.uhd===false);button.setAttribute('aria-pressed',String((value.preferenceQuality||'auto')===q));});
   dimValue.textContent=t('Dimming')+': '+Math.round(dim*100)+'%';minus.textContent=t('Less dimming');plus.textContent=t('More dimming');reset.textContent=t('Reset to theme defaults');

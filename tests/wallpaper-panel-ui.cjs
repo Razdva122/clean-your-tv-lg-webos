@@ -32,7 +32,7 @@ const path=require('node:path');
   assert.equal(await page.evaluate(()=>document.activeElement.id),'wallpaperDimPlus','state updates preserve focus');
   await page.evaluate(()=>{testState.available=['image'];testState.actualQuality='image';HomeWallpaperPanel.refresh();});
   assert(await page.locator('[data-wallpaper-quality="4k"]').isDisabled());
-  assert.match(await page.locator('#wallpaperNotice').innerText(),/image/i);
+  assert.equal(await page.locator('#wallpaperNotice').innerText(),'This wallpaper has no video version.');
   await page.evaluate(()=>{testState.dim=.8;HomeWallpaperPanel.refresh();});
   await page.locator('#wallpaperDimPlus').click();
   assert.equal(await page.evaluate(()=>testState.dim),.85);
