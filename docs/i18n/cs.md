@@ -52,6 +52,8 @@ obnoví LG Home. U starších verzí Helper do 0.6.13 se používá dlouhé podr
 Home. Nouzové vypnutí se automaticky neruší; ovládání Home znovu zapněte
 pouze vlastním výslovným rozhodnutím.
 
+Dosud nevydaná oprava Root: vypnutí ovládání Home nebo volba Open LG Home zavře okno Root po potvrzení spuštění LG Home. Pro přístup k nastavení při vypnutém ovládání Home otevřete Home Root ručně.
+
 ## Aktualizace a obnovení
 
 Před potvrzením aktualizace si přečtěte zobrazené informace. Nechte televizor

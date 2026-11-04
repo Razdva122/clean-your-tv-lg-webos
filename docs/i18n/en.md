@@ -92,6 +92,8 @@ Arrows select tiles; OK opens them; hold OK to reorder. Short Back retains the a
 
 No-root: To restart Home control, open Home Helper, choose Start Helper and confirm. Your saved Home screen choice is kept. Root: turn **Change Home** on in Home settings to resume. **Open LG Home** opens LG Home once without changing routing. To restore LG Home as the persistent destination, turn **Change Home** off or run `cytv restore`. Do not run both controllers together. If a failure repeats, leave LG Home active.
 
+Unreleased Root fix: turning Home control off or choosing Open LG Home closes the Root window after LG Home accepts the launch. You can reopen Home Root manually to reach Settings while Home control stays off.
+
 > **1.5.4 — Root:** explicitly enabling **Change Home** while Root is healthy creates CYTV's native **Clean** input and sets the remembered input to Clean. Disabling Home control, emergency stop, a fault, update suspension or uninstall removes CYTV's entry and restores the previous remembered input only if CYTV's value is still current; unrelated inputs and foreground apps are preserved. Unsupported TVs or entries CYTV does not own use ordinary guarded Home routing. There is no immediate-first-screen guarantee. The recorded C3 first-screen, standby and AC-off cold-boot checks passed; this is not universal compatibility. Home can remain disabled after update/rollback (#202), and Settings can show stale status (#206): close/reopen Settings, then explicitly enable Change Home and wait for Clean status. [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md) · [Native input (English)](../development/ROOT-NATIVE-INPUT.md).
 
 ```sh

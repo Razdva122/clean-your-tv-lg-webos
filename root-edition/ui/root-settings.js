@@ -3,7 +3,7 @@
   'use strict';
   function t(source, params) { if (window.HomeI18n) return window.HomeI18n.t(source, params); return String(source).replace(/\{(\w+)\}/g, function (_, key) { return params && params[key] !== undefined ? params[key] : '{' + key + '}'; }); }
   var panel, message, buttons, visitHint, selected = 0, busy = false, previous, rootStatus = null;
-  var checkingUpdates = false, categories, statusGeneration = 0, refreshTail = Promise.resolve();
+  var checkingUpdates = false, categories, statusGeneration = 0, windowGeneration = 0, refreshTail = Promise.resolve();
   var sourceGroup, sourceHint, sourceStatus = null, sourceUnavailable = false, sourceKeys = ['tv','youtube'];
   var sources = {tv:true,youtube:false};
   function renderSources() {
@@ -86,9 +86,16 @@
       if (r.returnValue !== true) throw new Error('Could not open LG Home. Try again.');
     });
   }
+  function leaveHome() {
+    var ticket = windowGeneration;
+    return launch('com.webos.app.home').then(function () {
+      // A newer relaunch/window owner must not be closed by this old reply.
+      if (windowGeneration === ticket) window.close();
+    });
+  }
   var exit = createRootExit(function (method) {
     return request('luna://com.cleanyourtv.root.preview.service/' + method, {}, method === 'restore' ? 620000 : 15000);
-  }, function () { return Promise.resolve(); });
+  }, leaveHome);
   function control(method, payload) {
     var gateEnable = method === 'enable' && rootStatus && rootStatus.effective && rootStatus.effective.backend === 'c1-native-gate';
     return request('luna://com.cleanyourtv.root.preview.service/' + method, payload || {}, gateEnable ? 100000 : 30000).then(function (reply) {
@@ -140,8 +147,8 @@
     invalidateMode();
     if (!panel.hidden && !document.hidden && !busy) refreshMode();
   }
-  document.addEventListener('visibilitychange', resumeMode);
-  document.addEventListener('webOSRelaunch', resumeMode);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) windowGeneration++; resumeMode(); });
+  document.addEventListener('webOSRelaunch', function () { windowGeneration++; resumeMode(); });
   function changeMode() {
     if (!rootStatus || buttons[3].disabled || busy) return;
     var active = rootStatus.intent && rootStatus.intent.phase === 'active';
@@ -209,7 +216,7 @@
     busy = true; buttons.forEach(function (b) { b.disabled = true; });
     message.textContent = t('Opening LG Home…');
     var gateVisit = rootStatus && rootStatus.effective && rootStatus.effective.backend === 'c1-native-gate';
-    (gateVisit ? exit().then(function () { return launch('com.webos.app.home'); }) : launch('com.webos.app.home')).then(function () { busy = false; close(); }).catch(function (e) {
+    (gateVisit ? exit() : leaveHome()).then(function () { busy = false; close(); }).catch(function (e) {
       busy = false; message.textContent = t(e.message);
     }).finally(function () {
       buttons.forEach(function (b) { b.disabled = false; });

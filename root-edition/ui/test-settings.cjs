@@ -5,7 +5,7 @@ class Element {
  appendChild(){} setAttribute(k,v){this.attrs[k]=v;} focus(){selected=this;if(this.onfocus)this.onfocus();}
 }
 const document={body:new Element('body'),activeElement:{focus(){selected='previous';}},createElement:t=>new Element(t),addEventListener:(n,f)=>listeners[n]=f};
-const context={window:{RootUpdates:{open(){}}},document,Promise,setTimeout,clearTimeout,
+const context={window:{close(){},RootUpdates:{open(){}}},document,Promise,setTimeout,clearTimeout,
  createRootExit:(call,launch)=>async()=>{restores++;phase='disabled';await launch();},
  PalmServiceBridge:class{cancel(){}call(uri,raw){calls.push({uri,payload:JSON.parse(raw)});let r={returnValue:true};
  if(JSON.parse(raw).startup){r.result={returnValue:true,result:{sources:{tv:true,youtube:false},active:phase==='active'}};this.onservicecallback(JSON.stringify(r));return;}
