@@ -45,7 +45,8 @@ def ui_files():
     """Use the existing explicit Root UI inventory, never its production identity."""
     files = runpy.run_path(str(ROOT / 'root-edition/preview.py'))['prepare']()
     info = json.loads(files['appinfo.json'])
-    info.update(id=APP_ID, title='Home UI Development', requiredACG=[], version='0.0.1')
+    info.update(id=APP_ID, title='Home UI Development', requiredACG=[], version='0.0.1',
+                defaultWindowType='card', transparent=False, handlesRelaunch=False)
     info.pop('appCategory', None)
     files['appinfo.json'] = (json.dumps(info, indent=2) + '\n').encode()
     inventory = json.loads(read_file(ROOT / 'preview/reference-apps/inventory.json'))
