@@ -48,12 +48,12 @@
     },
     {
       "id": "preview",
-      "path": "assets/preview-b2321b6cc4d6cb02510ad691e23353296d04b762c852fe1bcb1f8f5e557e827a.jpg",
+      "path": "assets/preview-81a6c73bc14de1a317cc0d3b50ea9387bd9f8a03438ab23f6d80152ed208b39c.jpg",
       "mediaType": "image/jpeg",
       "width": 960,
       "height": 540,
-      "size": 76065,
-      "sha256": "b2321b6cc4d6cb02510ad691e23353296d04b762c852fe1bcb1f8f5e557e827a"
+      "size": 74635,
+      "sha256": "81a6c73bc14de1a317cc0d3b50ea9387bd9f8a03438ab23f6d80152ed208b39c"
     }
   ],
   "previewAssetId": "preview",
@@ -86,7 +86,7 @@
   },
   "source": {
     "repository": "https://github.com/razdva122/clean-your-tv-lg-webos",
-    "commit": "aa5061301417b7709055c90c469f5398be05c4d9"
+    "commit": "e11c290d20f8ea801eb3fa0afb205dc870891888"
   },
   "requires": {
     "minimumHomeVersion": "1.6.1",
