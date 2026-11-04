@@ -26,6 +26,10 @@ one model or artifact does not certify later releases or a different TV.
 
 ## Scoped feature checks
 
+- [Personal moving-video upload, 2026-11-04](2026-11-04-personal-video-upload.md): desktop video input, source limits, decoder ownership, host/browser evidence and pending TV acceptance.
+
+- [macOS Python download trust, 2026-11-04](2026-11-04-macos-python-download-trust.md): published ARM64 CLI TLS reproduction, native system-CA correction and local frozen/cache checks; no TV or recovery operation.
+
 - [Ribbon blue nebula, 2026-11-03](2026-11-03-ribbon-blue-nebula.md): original native-resolution artwork, gentle UHD loop and both-edition browser checks; no TV changes.
 
 - [Embedded UHD wallpaper authoring, 2026-11-03](2026-11-03-embedded-uhd-wallpapers/README.md): real Alpine/Ribbon media, paired toolkit checks, large Base64 fix and browser-only decode evidence; outside the frozen release inventory.

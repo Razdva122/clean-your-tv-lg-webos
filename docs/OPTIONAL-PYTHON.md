@@ -94,9 +94,18 @@ possible. A failure category is diagnostic evidence, not permission to weaken TL
 or verification, reset a pending installation, or retry device recovery.
 
 The old generic download error cannot identify the cause on a particular Mac;
-success on a different host does not establish that cause either. This correction
-adds host diagnostics only. Frozen macOS CLI/GUI acceptance and a reporter result
-on new exact installer bytes remain separate; Root recovery is outside this change.
+success on a different host does not establish that cause either. The 1.6.0 change
+adds host diagnostics only; Root recovery is outside that change.
+
+**Unreleased macOS correction:** the download context additionally loads macOS's
+system CA file. Published frozen Python builds can retain certificate paths from
+their build machine that do not exist on another Mac, causing a `tls` failure
+before archive validation. Certificate and hostname verification remain required;
+no Python installation or global certificate/environment change is needed for the
+corrected context. [Host reproduction and verification](history/2026-11-04-macos-python-download-trust.md)
+cover the published CLI failure and a local corrected frozen probe. Final rebuilt
+CLI/GUI acceptance and the reporter's original environment remain unverified;
+the separate pending Root operation is unchanged.
 
 ## Development validation
 

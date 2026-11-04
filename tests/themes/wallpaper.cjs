@@ -3,7 +3,7 @@ function fixture(uhd){
  const nodes={},events={},storage={},videos=[],timers=new Map();let sequence=0;
  function node(tag){const classes=new Set(),listeners={};return {tagName:tag,style:{},classList:{add:x=>classes.add(x),remove:x=>classes.delete(x),contains:x=>classes.has(x)},appendChild(n){n.parentNode=this;nodes[n.id]=n;},removeChild(n){delete nodes[n.id];n.parentNode=null;},setAttribute(){},removeAttribute(k){delete this[k];},addEventListener(k,f){listeners[k]=f;},removeEventListener(k){delete listeners[k];},fire(k){if(listeners[k])listeners[k]();},pause(){this.paused=true;},load(){},play(){this.paused=false;return {then:(ok,bad)=>{this.reject=bad;}};}};}
  const doc={body:node('body'),documentElement:node('html'),hidden:false,getElementById:id=>nodes[id],createElement(tag){const n=node(tag);if(tag==='video'){n.videoWidth=1920;n.videoHeight=1080;videos.push(n);}return n;},addEventListener(k,f){events[k]=f;},dispatchEvent(){}};nodes.homeSurface=node('main');
- const ctx={document:doc,localStorage:{getItem:k=>storage[k]||null,setItem:(k,v)=>storage[k]=v},CustomEvent:function(){},setTimeout:f=>{timers.set(++sequence,f);return sequence;},clearTimeout:id=>timers.delete(id),webOS:{deviceInfo:cb=>cb({uhd})}};
+ const ctx={addEventListener:(k,f)=>{events["window:"+k]=f;},document:doc,localStorage:{getItem:k=>storage[k]||null,setItem:(k,v)=>storage[k]=v},CustomEvent:function(){},setTimeout:f=>{timers.set(++sequence,f);return sequence;},clearTimeout:id=>timers.delete(id),webOS:{deviceInfo:cb=>cb({uhd})}};
  vm.runInNewContext(fs.readFileSync('launcher/wallpaper.js','utf8'),ctx);
  const manifest={id:'test:theme',title:'Video',defaults:{wallpaperAssetId:'poster',dim:.3},assets:[{id:'poster',width:1920,height:1080}],wallpaperVideo:{variants:[{quality:'4k',width:3840,height:2160},{quality:'1080p',width:1920,height:1080}]}};
  return {api:ctx.HomeWallpaper,doc,nodes,videos,input:{manifest,assetHandles:{poster:'blob:poster'},videoHandles:{'4k':'blob:4k','1080p':'blob:fhd'}},events,timers,storage};
@@ -33,3 +33,16 @@ f.api.setDim(.8);delete f.storage['tvhome.wallpaper.preferences.v1'];f.api.confi
 
 f=fixture(true);f.api.configure(f.input);f.videos.at(-1).fire('playing');assert.equal(f.api.state().actualQuality,'image','mismatched decoded UHD dimensions never expose video');assert.equal(f.videos.at(-1).src,'blob:fhd','decoded mismatch descends to compatible FHD');assert.match(f.api.state().notice,/dimensions/);
 f=fixture(true);f.api.configure(f.input);f.api.suspend('settings');assert.equal(f.api.state().paused,true);f.api.setQuality('image');assert.equal(f.api.state().paused,false);f.api.configure({...f.input,manifest:{...f.input.manifest,wallpaperVideo:undefined},videoHandles:{}});assert.equal(f.api.state().paused,false);
+
+f=fixture(true);f.api.configure(f.input);old=f.videos.at(-1);
+assert.equal(typeof f.events['window:blur'],'function','window overlays release the wallpaper decoder');
+f.events['window:blur']();assert.equal(old.src,undefined);
+f.api.suspend('settings');f.events['window:focus']();assert.equal(f.videos.at(-1),old,'focus cannot bypass settings');
+f.api.resume('settings');assert.notEqual(f.videos.at(-1),old);
+f.api.reset();console.log('PASS focus ownership composes with settings suspension');
+
+f=fixture(true);f.api.configure(f.input);f.api.suspend('input-preview');
+assert.match(f.nodes.ctvWallpaperImage.textContent,/blob:poster/,'input decoder suspension retains personal static wallpaper');
+f.api.suspend('settings');assert.equal(f.nodes.ctvWallpaperImage.textContent,'','settings keep their standard background');
+f.api.resume('settings');assert.match(f.nodes.ctvWallpaperImage.textContent,/blob:poster/);
+f.api.resume('input-preview');f.api.reset();

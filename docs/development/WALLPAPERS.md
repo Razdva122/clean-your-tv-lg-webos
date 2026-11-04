@@ -79,10 +79,13 @@ are distinct from the durable, verified IndexedDB theme package.
 
 The renderer shows the static fallback until video is actually playing. It uses
 one untransformed viewport video outside the logical Home surface. A failed or
-stalled UHD stream falls back to FHD, then to the image. Hidden documents,
+stalled UHD stream falls back to FHD, then to the image. Hidden documents, lost window focus,
 Settings/library suspension, Image mode, theme replacement and reset detach the
 decoder before releasing the lease/URLs. Reacquisition recreates the local stream
 from cached bytes. Late callbacks cannot take ownership after cancellation.
+Input previews suspend the wallpaper before allocating input media and resume it
+only after releasing that media (also on timeout/failure). Window-focus, settings
+and input ownership compose, so returning focus cannot bypass another suspension.
 
 ## Verification and release admission
 
@@ -112,10 +115,24 @@ not included in legacy profile wire formats and are never added to the theme
 catalogue.
 
 Desktop CYTV adds Wallpapers on its start screen, separate from installation.
-It accepts JPG/PNG, shows the source and cropped resolution, provides a 16:9
-crop and runs local preparation/transfer outside the UI thread with cancellation.
-Only a crop with at least 3840×2160 source pixels produces a UHD variant;
-at least 1920×1080 is needed for FHD. Smaller sources use an ordinary image.
+It accepts JPG/PNG and local MP4/MOV/MKV/WebM video. Photos retain their adjustable
+16:9 crop. Video uses a centered 16:9 crop after normalizing sample aspect ratio, preserves motion and duration, removes
+all audio/subtitle/data tracks and encodes silent H.264 MP4 at 25 fps. Videos must
+be 1–60 seconds, at most 512 MiB, with a declared source frame no larger than
+3840×2160. Invalid/unknown duration, unreadable media, network/playlist inputs and
+larger sources are rejected without replacing the accepted TV wallpaper.
+
+Video preparation and transfer run outside the UI thread and can be cancelled.
+The first decoded frame becomes the fallback/confirmation poster. A video crop
+with at least 3840×2160 source pixels produces UHD plus FHD; smaller video sources
+produce a compatible 1920×1080 variant (including upscaling, without added detail).
+Photos still require a crop of at least 1920×1080 for FHD and 3840×2160 for UHD;
+smaller photos stay image-only. Output retains the existing 12 MiB UHD/4 MiB FHD
+limits. The bitrate budget follows clip duration; complex/long clips can lose
+detail or be rejected if encoding exceeds a limit. Clips are not silently shortened.
+FFmpeg uses the bundled executable, forced local container demuxers and a file-only
+protocol whitelist. No FFprobe, download, new endpoint or wire-format change is needed.
+
 Frozen desktop distributions include a pinned FFmpeg executable and its
 attribution/source notices; no Node runtime or runtime binary download is needed.
 The user opens receiving in TV Wallpapers and enters its private IPv4/PIN in

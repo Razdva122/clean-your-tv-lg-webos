@@ -1,4 +1,4 @@
-"""Independent photo-to-wallpaper flow; no installer, SSH or pairing state."""
+"""Independent photo/video-to-wallpaper flow; no installer, SSH or pairing state."""
 import threading
 
 from PySide6.QtCore import QObject, Signal, QRect, Qt
@@ -29,18 +29,19 @@ class WallpaperDialog(QDialog):
         self.busy = False
         self.path = None
         self.image = None
+        self.is_video = False
         self.worker = None
         self.close_when_done = False
         self.events = WorkerEvents(self)
         self.events.progress.connect(lambda text: self.status.setText(tr(text)))
         self.events.finished.connect(self.finished_work)
         layout = QVBoxLayout(self)
-        title = QLabel(tr('Your photo on your TV')); title.setObjectName('title'); layout.addWidget(title)
+        title = QLabel(tr('Your photo or video on your TV')); title.setObjectName('title'); layout.addWidget(title)
         instructions = QLabel(tr('On your TV, open Settings → Wallpapers → Receive from CYTV. Keep that screen open, then enter its private IPv4 address and six-digit PIN below.'))
         instructions.setWordWrap(True); layout.addWidget(instructions)
-        self.choose = QPushButton(tr('Choose JPG or PNG')); self.choose.clicked.connect(self.choose_file); layout.addWidget(self.choose)
+        self.choose = QPushButton(tr('Choose photo or video')); self.choose.clicked.connect(self.choose_file); layout.addWidget(self.choose)
         self.preview = QLabel(); self.preview.setAlignment(Qt.AlignmentFlag.AlignCenter); self.preview.setFixedHeight(170); layout.addWidget(self.preview)
-        self.source_info = QLabel(tr('Choose an image to preview the 16:9 crop.')); self.source_info.setWordWrap(True); layout.addWidget(self.source_info)
+        self.source_info = QLabel(tr('Choose photo or video')); self.source_info.setWordWrap(True); layout.addWidget(self.source_info)
         form = QFormLayout(); layout.addLayout(form)
         self.zoom = QSlider(Qt.Orientation.Horizontal); self.zoom.setRange(100,400); self.zoom.setValue(100)
         self.horizontal = QSlider(Qt.Orientation.Horizontal); self.horizontal.setRange(0,100); self.horizontal.setValue(50)
@@ -57,14 +58,20 @@ class WallpaperDialog(QDialog):
         self.cancel_button = QPushButton(tr('Close')); self.cancel_button.clicked.connect(self.cancel_or_close); buttons.addWidget(self.cancel_button)
 
     def choose_file(self):
-        path,_ = QFileDialog.getOpenFileName(self,tr('Choose JPG or PNG'),'','Images (*.jpg *.jpeg *.png)')
+        path,_ = QFileDialog.getOpenFileName(self,tr('Choose photo or video'),'','Photos and videos (*.jpg *.jpeg *.png *.mp4 *.mov *.mkv *.webm)')
         if path:
             try: self.load_file(path)
             except (ValueError,OSError) as error: self.status.setText(tr(str(error)))
 
     def load_file(self,path):
-        image = wallpaper.load_image(path)
-        self.path,self.image = path,image
+        from pathlib import Path
+        is_video = Path(path).suffix.lower() in wallpaper.VIDEO_FORMATS
+        image = None if is_video else wallpaper.load_image(path)
+        self.path,self.image,self.is_video = path,image,is_video
+        if is_video:
+            self.preview.clear()
+            self.source_info.setText(Path(path).name + '\n' + tr('Video: 1–60 seconds, up to 4K. Sound is removed; lower resolutions use compatible 1080p output.'))
+        for widget in (self.zoom,self.horizontal,self.vertical): widget.setEnabled(not is_video)
         self.zoom.setValue(100); self.horizontal.setValue(50); self.vertical.setValue(50)
         self.update_preview(); self.send_button.setEnabled(True); self.status.clear()
 
@@ -83,25 +90,27 @@ class WallpaperDialog(QDialog):
         if self.busy or self.path is None: return
         try: wallpaper.destination(self.address.text().strip(),self.pin.text())
         except ValueError as error: self.status.setText(tr(str(error))); return
-        path,crop,host,pin = self.path,self.crop(),self.address.text().strip(),self.pin.text()
+        path,crop,host,pin = self.path,None if self.is_video else self.crop(),self.address.text().strip(),self.pin.text()
         self.cancel_event = threading.Event()
         self.busy = True
         self.close_when_done = False
         self.set_controls(False); self.progress.show(); self.cancel_button.setText(tr('Cancel'))
         self.status.setText(tr('Preparing wallpaper…'))
+        is_video = self.is_video
         def work():
             try:
-                envelope = wallpaper.prepare(path,crop=crop,cancel=self.cancel_event,progress=self.events.progress.emit)
+                envelope = wallpaper.prepare_video(path,cancel=self.cancel_event,progress=self.events.progress.emit) if is_video else wallpaper.prepare(path,crop=crop,cancel=self.cancel_event,progress=self.events.progress.emit)
                 wallpaper.upload(host,pin,envelope,cancel=self.cancel_event,progress=self.events.progress.emit)
                 message = 'Received by TV. Choose Apply on the TV to use this wallpaper.'
             except wallpaper.Cancelled: message = 'Cancelled. Your current TV wallpaper is unchanged.'
             except (ValueError,OSError) as error: message = str(error)
-            except Exception: message = 'Wallpaper preparation failed. Choose another image and try again.'
+            except Exception: message = 'Wallpaper preparation failed. Choose another photo or video.'
             self.events.finished.emit(message)
         self.worker = threading.Thread(target=work,daemon=True); self.worker.start()
 
     def set_controls(self,enabled):
-        for widget in (self.choose,self.zoom,self.horizontal,self.vertical,self.address,self.pin,self.send_button): widget.setEnabled(enabled)
+        for widget in (self.choose,self.address,self.pin,self.send_button): widget.setEnabled(enabled)
+        for widget in (self.zoom,self.horizontal,self.vertical): widget.setEnabled(enabled and not self.is_video)
 
     def finished_work(self,message):
         self.busy = False
