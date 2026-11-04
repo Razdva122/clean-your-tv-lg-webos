@@ -31,6 +31,13 @@
         160
       ],
       "summary": "Document offline vendor bootstrap/native LS2 investigation for legacy Root; #160 support and target acceptance remain unimplemented"
+    },
+    {
+      "pr": 293,
+      "issues": [
+        290
+      ],
+      "summary": "Discover the installed Live TV tuner omitted or hidden by LG inventory; rebuilt Helper/Root/installer delivery and device acceptance remain pending"
     }
   ],
   "excluded": [],
