@@ -87,3 +87,32 @@ The unfrozen [candidate #281](https://github.com/Razdva122/clean-your-tv-lg-webo
 records this partial change and #282 without selecting a version or build.
 The original failure remains open for reporter evidence. Integration is not
 publication, a completed recovery or confirmation of C4 Home routing.
+
+## Related report #288 — 2026-11-04
+
+[Issue #288](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/288)
+supplies three public installer reports after a reported No-root-to-Root change.
+They retain the same first failure on cytv 0.8.1: packages verified, pending
+`activate-root / enable`, no submitted Home launch. Subsequent recovery reads
+record disabled Home intent, inactive guardian and verified recovery integrity;
+full removal refuses the unresolved activation. This evidence does not establish
+an edition conflict, successful Home activation or recovery. It is not the
+`install / coordinator-submitted` worker failure from #240.
+
+The generic original error follows the same reproduced diagnostic-loss path
+corrected by #287. Its original command detail cannot be recovered from these
+reports. The reported TV-side Change Home crash has no captured TV-side failure
+in the attachments; do not infer its cause from the host recovery refusal.
+Current source still requires appropriate verified recovery and does not retry
+an unresolved activation merely because installed packages are complete.
+
+No new product patch is justified by these reports alone. Reused #287 rather
+than duplicating its change or weakening pending/emergency/removal guards.
+Installed locked JS dependencies and ran
+`PATH="$PWD/.venv/bin:$PATH" python3 -m unittest discover -s tests/cytv -p test_operations.py -k activation`:
+all seven existing real-orchestration activation regressions passed on
+`8c2a6b9c96e78062e563abdedbf03f748b8a8fcd` (no product changes).
+Requested only an existing on-screen error and already-known current Home
+behavior, without repeating status, activation, recovery, install or removal.
+Device acceptance and the original cause remain unresolved. No TV contacted;
+no new owner installation result or raw/private evidence is published here.
