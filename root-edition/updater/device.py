@@ -61,6 +61,8 @@ class Device:
 
     @staticmethod
     def require_home_resume_runtime(root_state):
+        if any(os.path.lexists(Path(root_state)/name) for name in ('home-backend.json','c1-gate','runtime/c1_gate.py','runtime/c1-home-gate')):
+            raise ValueError('Experimental C1 routing is excluded from normal Root Updater setup and OTA')
         # Called only after the root-owned recovery inventory has been verified.
         import ast
         tree=ast.parse((Path(root_state)/'runtime/update_guard.py').read_bytes())

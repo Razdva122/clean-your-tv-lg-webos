@@ -64,6 +64,10 @@ class Device:
         self.root_state=Path(root_state);self.root_updater=Path(root_updater);self.installed_root=Path(installed)
         self.legacy_states=[self.root_updater/'transaction.json',self.installed_root/'usr/palm/services/com.cleanyourtv.updater.service/state/transaction.json']
 
+    def require_normal_root(self):
+        if any(os.path.lexists(self.root_state/name) for name in ('home-backend.json','c1-gate','runtime/c1_gate.py','runtime/c1-home-gate')):
+            raise ValueError('Experimental C1 routing is excluded from normal System Updates')
+
     def owner_identity(self,owner,purpose='worker'):
         return identity(owner,purpose=purpose,installed=self.installed_root,uid=self.uid,
                         states={ROOT:self.root_state,UPDATER:self.root_updater,SYSTEM:self.state})
@@ -78,6 +82,7 @@ class Device:
         if not self.components_present():raise ValueError('CYTV component removed; retained recovery requires inspection')
 
     def integrity(self,*,enforce=True):
+        self.require_normal_root()
         if os.path.lexists(self.state/'cytv-removal.json'):raise ValueError('System updater removal is in progress. Continue removal from the computer.')
         receipt=self.store.read('infrastructure')
         if not isinstance(receipt,dict) or receipt.get('schema')!=1 or not isinstance(receipt.get('code'),dict) or not receipt['code']:raise ValueError('One-time System Updater setup required')
@@ -258,6 +263,7 @@ class Device:
         return {name:digest(value) for name,value in files.items()}
 
     def prepare(self,candidate,prior):
+        self.require_normal_root()
         self.require_graphics(candidate,self.graphics_resolution())
         self.require_components()
         self.integrity();self._verify_release(candidate,candidate['edition']);self._verify_release(prior,prior['edition'])
@@ -328,6 +334,7 @@ class Device:
         raise ValueError('Component outside reserved release')
 
     def install(self,c,on_submit,on_terminal,on_intent):
+        self.require_normal_root()
         tx=self.store.read('transaction')
         rollback=isinstance(tx,dict) and tx.get('phase')=='rolling-back' and tx.get('rollbackAttempted') is True
         if rollback:
@@ -411,6 +418,7 @@ class Device:
         module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module);return module
 
     def _root_integrity(self):
+        self.require_normal_root()
         from python_binding import verify_binding
         verify_binding(self.root_state);verify_binding(self.root_updater)
         proof_raw=safe_bytes(self.root_state/'recovery-provision.json',limit=1024*1024,uid=self.uid);proof=json.loads(proof_raw)
@@ -425,6 +433,7 @@ class Device:
             if p.is_absolute() or '..' in p.parts or str(p)!=name or digest(safe_bytes(self.root_updater/'code'/name,limit=4*1024*1024,uid=self.uid))!=expected:raise ValueError('Root updater integrity failed')
 
     def suspend(self,tx):
+        self.require_normal_root()
         self.check_legacy();self.snapshot_mutable()
         if tx['edition']=='root':
             self._root_integrity();self._guard().reserve(tx['id'],self.root_state,uid=self.uid)
@@ -572,6 +581,7 @@ class Device:
         self.enforce_legacy_lockdown()
 
     def finish(self,tx):
+        self.require_normal_root()
         self.require_components()
         if tx['phase'] not in ('complete','rolled-back','aborted'):raise ValueError('Update not finished')
         if tx['edition']=='root':

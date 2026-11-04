@@ -27,6 +27,11 @@ ROOT_UPDATER_TRANSACTION=Path('/var/lib/clean-your-tv-root-updater/transaction.j
 APPS={'home':'com.gathin.tvhome','helper':'com.local.nativehome','updater':'com.cleanyourtv.updater','root':'com.cleanyourtv.root.preview','root-updater':'com.cleanyourtv.root.updater'}
 CODE={'startup_hook.py','package_data.py','package_identity.py','startup_guard.py','installation.py','python_boot.js','python_binding.py','infrastructure-paths.json','system_updater/__init__.py','system_updater/support/__init__.py','system_updater/core.py','system_updater/device.py','system_updater/cli.py','system_updater/policy.js','system_updater/release-public.pem','system_updater/ca-bundle.crt','system_updater/ca-LICENSE.txt','system_updater/support/store.py','system_updater/support/package.py','system_updater/support/profile.py','system_updater/support/luna.py','observed_install.py','installer_status.py','service.js','run-system-updater.py','services.json','package.json'}
 
+def require_normal_root(root=Path('/var/lib/clean-your-tv-root')):
+    if any(os.path.lexists(Path(root)/name) for name in ('home-backend.json','c1-gate','runtime/c1_gate.py','runtime/c1-home-gate')):
+        raise ValueError('Experimental C1 routing is excluded from normal System Updater setup')
+
+
 def digest(raw):return hashlib.sha256(raw).hexdigest()
 
 def safe(path,uid=None):
@@ -159,6 +164,8 @@ def require_transition_home(installed,edition):
     if info.get('id')!=app or type(info.get('systemUpdateProtocol')) is not int or info['systemUpdateProtocol']!=1:raise ValueError('Install the transition Home from computer before enabling System Updates')
 
 def snapshot(bundle,edition,output,installed=INSTALLED,runtime=Path('/var/lib/clean-your-tv-root/runtime'),updater=Path('/var/lib/clean-your-tv-root-updater/code'),service=Path('/var/lib/clean-your-tv-root/service')):
+    require_normal_root()
+    if Path(runtime).parent != Path('/var/lib/clean-your-tv-root'):require_normal_root(Path(runtime).parent)
     verify_bundle(bundle)
     names=('root','root-updater') if edition=='root' else ('home','helper','updater')
     if edition not in ('root','no-root'):raise ValueError('Invalid edition')
@@ -316,6 +323,7 @@ def installed_data(path,expected,installed,edition):
 
 
 def preflight(bundle,baseline,state=STATE,installed=INSTALLED,base=BASE,hook=HOOK):
+    require_normal_root()
     state=Path(state)
     if os.path.lexists(state):raise FileExistsError('Supervisor setup exists; inspect retained state from computer before changing it')
     require_legacy_idle()
@@ -333,6 +341,7 @@ def preflight(bundle,baseline,state=STATE,installed=INSTALLED,base=BASE,hook=HOO
 
 
 def provision(bundle,baseline,state=STATE,installed=INSTALLED,base=BASE,hook=HOOK,install=None,refresh=None):
+    require_normal_root()
     manifest,current=preflight(bundle,baseline,state,installed,base,hook)
     state=Path(state);bundle=Path(bundle);baseline=Path(baseline)
     state.mkdir(mode=0o700);code=state/'code';code.mkdir(mode=0o700);(state/'cache').mkdir(mode=0o700)
@@ -361,6 +370,7 @@ def provision(bundle,baseline,state=STATE,installed=INSTALLED,base=BASE,hook=HOO
 
 
 def finish_registration(bundle,baseline,state=STATE,installed=INSTALLED,base=BASE,hook=HOOK,refresh=None):
+    require_normal_root()
     bundle=Path(bundle);baseline=Path(baseline);state=Path(state);code=state/'code'
     verify_bundle(bundle);current=verify_baseline(baseline,bundle)
     def record(name,value):atomic(state/(name+'.json'),json.dumps(value,sort_keys=True))
@@ -415,6 +425,7 @@ def finish_registration(bundle,baseline,state=STATE,installed=INSTALLED,base=BAS
 
 def resume(bundle,state=STATE,installed=INSTALLED,base=BASE,hook=HOOK,refresh=None):
     """Bounded explicit bootstrap continuation, using original cached baseline."""
+    require_normal_root()
     from installation import terminal_install
     from python_binding import verify_binding
     state=Path(state);bundle=Path(bundle);manifest=verify_bundle(bundle)
@@ -487,6 +498,7 @@ def main():
         with tempfile.TemporaryDirectory(prefix='system-baseline-') as tmp:
             selected=[args.baseline]
             def eligible():
+                require_normal_root()
                 if args.resume:
                     current=Ownership().status()
                     if not current or current['terminal'] or (current['owner'],current['journal'])!=('system-bootstrap','bootstrap.json') or read_journal(JOURNALS['system-bootstrap'][0]) is None:
