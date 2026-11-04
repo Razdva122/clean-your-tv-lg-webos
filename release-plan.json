@@ -93,9 +93,22 @@
       "summary": "Wait for one matching No-root Home/Helper catalog snapshot after successful installs; preventive only, original #295 installation and pending recovery remain unresolved"
     },
     {
+      "pr": 303,
+      "issues": [],
+      "summary": "Activate prepared native Root before foreground frames and await asynchronous appearance before readiness; final packaged-TV timing and lifecycle acceptance remain pending"
+    },
+    {
       "pr": 305,
       "issues": [],
       "summary": "Close the restored Root overlay after verified off/emergency recovery while fencing stale lifecycle replies; new packaged-TV acceptance remains pending"
+    },
+    {
+      "pr": 306,
+      "issues": [
+        207,
+        304
+      ],
+      "summary": "Enable passive IR source diagnostics over trusted SSH stdin; original issues207/304 routing and device acceptance remain unresolved"
     },
     {
       "pr": 309,

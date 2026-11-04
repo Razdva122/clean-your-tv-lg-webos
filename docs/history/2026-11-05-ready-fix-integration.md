@@ -30,6 +30,21 @@ unchanged pending the next freeze. Unrelated showcase work remains deferred.
   in No-root IPKs. Tests41893026455 and desktop runtime41893026570 passed,
   including Linux, macOS ARM/Intel, Windows and browser. Retail coexistence,
   service registration, Helper rollback and original recovery remain unverified.
+- PR306, source461d20709e7cfbbb3f244acdd6480518fa35bd4a, merged as
+  a01ab0403ed47f5ef8adb502199a589053790e23: enable the passive remote
+  diagnostic's guarded stdin entrypoint over an existing trusted SSH connection.
+  Tests41858806265 attempt3 passed Linux, macOS, browser, ARM Python and both
+  required summaries. The macOS retry obtained a hosted runner and executed the
+  tests; earlier capacity cancellations were not treated as passing evidence.
+  This is diagnostic preparation, not an IR mapping or a fix for issues304/207.
+- PR303, source6e8aebcf9352101c09405eb8edbb47f569b153a7, merged as
+  8903eb3e3d31003f678f5e0921b254ce981297c5: prepare personal appearance,
+  activate native Root, then await presentation frames and readiness. Async
+  presentation is awaited before retiring the boot marker or acknowledging
+  updater health. Tests41855169514 attempt5 passed Linux, macOS, browser,
+  ARM Python and both required summaries. Physical timing on these final
+  combined bytes remains unmeasured; the change is not accepted as a measured
+  speedup merely because CI passed.
 
 Independent final source reviews found no blocking defects. PR312 and PR309 had
 one history-index conflict. The proposed PR312 update0d0d97a87bc945982fb3ca0d40f087c69e25c142
@@ -41,11 +56,12 @@ new-head CI before PR312 merged; they do not constitute retail acceptance.
 
 ## Still outside the inventory
 
-At this checkpoint PR303 (Root activation) and PR306 (passive IR diagnostics)
-are awaiting successful required CI. Cancelled hosted-runner
+Cancelled hosted-runner
 jobs were rerun once for each of303/306/313 during this integration task.
-PR313 subsequently passed and merged;303/306 were cancelled again on macOS and
-remain blocked. No failed check was bypassed.
+PR313 subsequently passed and merged;303/306 were cancelled again on macOS.
+During the authorized overnight integration, only the cancelled macOS jobs were
+retried. PR303 and PR306 then passed their complete required matrices and merged.
+No failed check was bypassed.
 PR310 remains incomplete: trusted Helper storage/authorization and the actual
 No-root context broker are not implemented or admitted.
 
