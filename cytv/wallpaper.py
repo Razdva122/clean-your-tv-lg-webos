@@ -1,4 +1,4 @@
-"""Local photo preparation and the temporary, PIN-authenticated wallpaper receiver."""
+"""Local photo/video preparation and the temporary, PIN-authenticated wallpaper receiver."""
 import errno
 import base64
 import hashlib
@@ -23,6 +23,8 @@ IMAGE_LIMIT = 2 * 1024 * 1024
 UHD_LIMIT = 12 * 1024 * 1024
 FHD_LIMIT = 4 * 1024 * 1024
 ENVELOPE_LIMIT = 33 * 1024 * 1024
+VIDEO_INPUT_LIMIT = 512 * 1024 * 1024
+VIDEO_FORMATS = {'.mp4':'mov', '.mov':'mov', '.mkv':'matroska', '.webm':'matroska'}
 
 
 class Cancelled(Exception):
@@ -88,10 +90,10 @@ def asset(data, media_type, width, height):
                 sha256=hashlib.sha256(data).hexdigest(), data=base64.b64encode(data).decode('ascii'))
 
 
-def run_ffmpeg(command, cancel=None):
+def run_ffmpeg(command, cancel=None, stderr=None):
     check_cancel(cancel)
     options = {'creationflags': subprocess.CREATE_NO_WINDOW} if sys.platform == 'win32' else {}
-    with subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, **options) as process:
+    with subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=stderr if stderr is not None else subprocess.DEVNULL, **options) as process:
         try:
             deadline = time.monotonic() + 120
             while process.poll() is None:
@@ -155,6 +157,72 @@ def prepare(path, crop=None, cancel=None, progress=lambda message: None):
             result['variants'].append(item)
     check_cancel(cancel)
     return result
+
+
+def prepare_video(path, cancel=None, progress=lambda message: None):
+    """Reuse the bounded personal-media wire format; never send source audio."""
+    check_cancel(cancel)
+    path = Path(path).resolve()
+    demuxer = VIDEO_FORMATS.get(path.suffix.lower())
+    if any(c in str(path) for c in ('\r','\n')) or not demuxer or not path.is_file() or not 0 < path.stat().st_size <= VIDEO_INPUT_LIMIT:
+        raise ValueError('Choose MP4, MOV, MKV or WebM up to 512 MiB.')
+    progress('Preparing video wallpaper…')
+    # Force a container demuxer and local-file input: playlists and network URLs
+    # cannot make FFmpeg fetch other resources from an untrusted source file.
+    source = ['-protocol_whitelist','file','-f',demuxer,'-i',str(path)]
+    executable = ffmpeg_executable()
+    with tempfile.TemporaryDirectory(prefix='cytv-video-') as directory:
+        directory = Path(directory)
+        with (directory/'probe.txt').open('w+b') as diagnostic:
+            try:
+                run_ffmpeg([executable,'-nostdin','-hide_banner']+source+
+                           ['-map','0:v:0','-c:v','copy','-an','-t','0','-f','null','-'],cancel,stderr=diagnostic)
+            except ValueError:
+                raise ValueError('Choose a readable video from 1 to 60 seconds, up to 3840×2160.') from None
+            diagnostic.seek(0); info = diagnostic.read(65536).decode('utf-8',errors='replace')
+        duration = re.search(r'^  Duration: (\d+):(\d{2}):(\d{2}(?:\.\d+)?)',info,re.MULTILINE)
+        stream_info = re.search(r'^  Stream #0:\d+(?:\[[^\]\r\n]*\])?(?:\([^\)\r\n]*\))?: Video:[^\r\n]*',info,re.MULTILINE)
+        dimensions = re.search(r' (\d+)x(\d+)(?:[ ,\[])',stream_info[0] if stream_info else '')
+        sar = re.search(r'\[SAR (\d+):(\d+) DAR',stream_info[0] if stream_info else '')
+        ratio = int(sar[1])/int(sar[2]) if sar and int(sar[2]) else 1
+        seconds = int(duration[1])*3600+int(duration[2])*60+float(duration[3]) if duration else 0
+        if not dimensions or not 1 <= seconds <= 60 or not 16 <= int(dimensions[1]) <= 3840 or not 9 <= int(dimensions[2]) <= 2160 or not 16 <= int(dimensions[1])*ratio <= 3840:
+            raise ValueError('Choose a readable video from 1 to 60 seconds, up to 3840×2160.')
+        poster = directory/'poster.jpg'
+        run_ffmpeg([executable,'-nostdin','-y','-v','error']+source+
+                   ['-map','0:v:0','-frames:v','1','-an','-vf','scale=trunc(iw*sar/2)*2:ih,setsar=1','-q:v','2',str(poster)],cancel)
+        # The first decoded frame is the static fallback until video starts.
+        image = load_image(poster)
+        crop = crop_rect(image.width(),image.height())
+        image = image.copy(QRect(*crop))
+        for quality in (92,80,65,45,25):
+            data = QByteArray(); stream = QBuffer(data); stream.open(QIODevice.OpenModeFlag.WriteOnly)
+            if not image.save(stream,'JPEG',quality):
+                raise ValueError('Video preparation failed. Choose another video.')
+            stream.close()
+            if data.size() <= IMAGE_LIMIT:
+                break
+        else:
+            raise ValueError('Wallpaper exceeds the TV size limit.')
+        result = dict(schemaVersion=1,kind='wallpaper',source='cytv',
+                      image=asset(bytes(data),'image/jpeg',image.width(),image.height()),variants=[])
+        for quality,width,height,limit,ceiling in [('4k',3840,2160,UHD_LIMIT,8_000_000),('1080p',1920,1080,FHD_LIMIT,2_000_000)]:
+            if quality == '4k' and (crop[2] < width or crop[3] < height):
+                continue
+            progress('Preparing ' + quality + ' video…')
+            output = directory/(quality+'.mp4')
+            rate = str(min(ceiling,int(limit*8*.85/seconds)))
+            run_ffmpeg([executable,'-nostdin','-y','-v','error']+source+
+                       ['-map','0:v:0','-t',str(seconds),'-vf',f'scale=trunc(iw*sar/2)*2:ih,setsar=1,crop={crop[2]}:{crop[3]}:{crop[0]}:{crop[1]}:exact=1,scale={width}:{height},setsar=1',
+                        '-r','25','-an','-sn','-dn','-map_metadata','-1','-c:v','libx264','-preset','veryfast','-crf','23',
+                        '-maxrate',rate,'-bufsize',rate,'-pix_fmt','yuv420p','-profile:v','high','-level:v','5.1' if width==3840 else '4.1',
+                        '-threads','2','-movflags','+faststart',str(output)],cancel)
+            if not 0 < output.stat().st_size <= limit:
+                raise ValueError('Wallpaper exceeds the TV size limit.')
+            item = asset(output.read_bytes(),'video/mp4',width,height); item['quality'] = quality
+            result['variants'].append(item)
+        check_cancel(cancel)
+        return result
 
 
 def connect_ipv4(address, deadline, cancel=None):

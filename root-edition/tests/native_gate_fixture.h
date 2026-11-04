@@ -15,7 +15,7 @@ static int fixture_peers(void) {
 }
 static unsigned long long fixture_start(long pid) {
   char p[128];
-  snprintf(p, sizeof(p), "/bin/ps -p %ld -o lstart=", pid);
+  snprintf(p, sizeof(p), "/bin/ps -p %ld -o stat= -o lstart=", pid);
   FILE *f = popen(p, "r");
   if (!f)
     return 0;
@@ -24,8 +24,19 @@ static unsigned long long fixture_start(long pid) {
   pclose(f);
   if (!ok)
     return 0;
+  char *birth = b;
+  while (*birth == ' ' || *birth == '\t')
+    birth++;
+  if (*birth == 'Z' || *birth == 'X')
+    return 0;
+  while (*birth && *birth != ' ' && *birth != '\t')
+    birth++;
+  while (*birth == ' ' || *birth == '\t')
+    birth++;
+  if (!*birth)
+    return 0;
   unsigned long long h = 1;
-  for (char *q = b; *q; q++)
+  for (char *q = birth; *q; q++)
     h = h * 33 + (unsigned char)*q;
   return h;
 }

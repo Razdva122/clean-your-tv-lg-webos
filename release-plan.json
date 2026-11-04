@@ -60,6 +60,11 @@
         200
       ],
       "summary": "Load macOS system CA roots for private Python HTTPS downloads; original #200 device confirmation and later Windows Root recovery remain unresolved"
+    },
+    {
+      "pr": 299,
+      "issues": [],
+      "summary": "Accept personal moving MP4/MOV/MKV/WebM wallpaper uploads from desktop CYTV, preserving display geometry and silent motion; coordinate input-preview decoder ownership; final packaged-TV acceptance remains pending"
     }
   ],
   "excluded": [],

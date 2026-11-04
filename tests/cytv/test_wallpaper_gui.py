@@ -31,6 +31,24 @@ class WallpaperGuiTests(unittest.TestCase):
             wizard.running=True; wizard.open_wallpapers(); self.assertFalse(hasattr(wizard,'wallpaper_dialog'))
             wizard.running=False; wizard.open_wallpapers(); self.assertTrue(wizard.wallpaper_dialog.isVisible()); wizard.wallpaper_dialog.close()
 
+    def test_video_selection_uses_worker_and_disables_photo_crop(self):
+        dialog=WallpaperDialog(); self.addCleanup(dialog.close)
+        with tempfile.TemporaryDirectory() as tmp:
+            source=Path(tmp)/'clip.mp4'; source.write_bytes(b'video')
+            with patch('cytv.wallpaper_gui.wallpaper.load_image',side_effect=AssertionError('video must not enter photo decoder')):
+                dialog.load_file(str(source))
+            self.assertTrue(dialog.send_button.isEnabled())
+            self.assertFalse(dialog.zoom.isEnabled())
+            self.assertIn('clip.mp4',dialog.source_info.text())
+            dialog.address.setText('192.168.1.2'); dialog.pin.setText('123456')
+            with patch('cytv.wallpaper_gui.wallpaper.prepare_video',return_value={}) as prepare,patch('cytv.wallpaper_gui.wallpaper.upload',return_value='received'):
+                dialog.send(); end=time.monotonic()+3
+                while dialog.busy and time.monotonic()<end: self.app.processEvents(); time.sleep(.01)
+                self.assertFalse(dialog.busy); prepare.assert_called_once()
+                self.assertIn('Apply',dialog.status.text()); self.assertFalse(dialog.zoom.isEnabled())
+            image=QImage(640,360,QImage.Format.Format_RGB32); image.fill(QColor('blue')); photo=Path(tmp)/'photo.png'; image.save(str(photo))
+            dialog.load_file(str(photo)); self.assertTrue(dialog.zoom.isEnabled())
+
     def test_background_cancel_and_received_requires_tv_apply(self):
         started=threading.Event()
         def preparation(path,crop,cancel,progress):

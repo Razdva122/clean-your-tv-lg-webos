@@ -238,6 +238,21 @@ static int config_read(void) {
   boot_matches = !strcmp(boot, cfg.boot);
   return 1;
 }
+/* Called while holding the operation lock. A delayed old process cannot mutate
+ * a newer attempt after it dropped that lock for input, child work or
+ * retirement. */
+static int same_config(void) {
+  struct config expected = cfg;
+  int previous_boot = boot_matches;
+  int valid = config_read();
+  int same = valid && !strcmp(expected.token, cfg.token) &&
+             !strcmp(expected.boot, cfg.boot) && expected.dev == cfg.dev &&
+             expected.ino == cfg.ino && expected.size == cfg.size &&
+             expected.mtime == cfg.mtime;
+  cfg = expected;
+  boot_matches = previous_boot;
+  return same;
+}
 static int stock_identity(void) {
   struct stat s;
   return secure(HOME, 0) && !stat(HOME, &s) &&
@@ -684,6 +699,8 @@ static int peer_check(void) {
 #endif
 }
 static int journal_write(void) {
+  if (!same_config() || strcmp(active.token, cfg.token))
+    return 0;
   size_t cap = 1024 + (size_t)active.count * (2 * PATH_MAX + 256);
   char *b = calloc(1, cap);
   if (!b)
@@ -707,6 +724,11 @@ static int journal_write(void) {
   free(b);
   return ok;
 }
+static int journal_invalid(char *buffer) {
+  free(buffer);
+  memset(&active, 0, sizeof(active));
+  return -1;
+}
 static int journal_read(void) {
   size_t cap = 1024 + OWNMAX * (2 * PATH_MAX + 256);
   char *b = malloc(cap);
@@ -725,8 +747,7 @@ static int journal_read(void) {
              &active.count, &used) != 5 ||
       !hex32(active.token) || active.pid <= 1 || active.lease < 0 ||
       active.count < 0 || active.count > OWNMAX) {
-    free(b);
-    return -1;
+    return journal_invalid(b);
   }
   char *p = b + used;
   for (int x = 0; x < active.count; x++) {
@@ -738,18 +759,18 @@ static int journal_read(void) {
         !used || e->id < -1 || e->kind < 0 || e->kind > 2 ||
         (e->primary != 0 && e->primary != 1) || !e->ino || !e->oldino ||
         !path_text(e->root) || !path_text(e->path)) {
-      free(b);
-      return -1;
+      return journal_invalid(b);
     }
     for (int y = 0; y < x; y++)
       if (!strcmp(e->path, active.e[y].path)) {
-        free(b);
-        return -1;
+        return journal_invalid(b);
       }
     p += used;
   }
   int ok = p == b + n;
   free(b);
+  if (!ok)
+    memset(&active, 0, sizeof(active));
   return ok ? 1 : -1;
 }
 static unsigned long long parse_proc_start(const char *b) {
@@ -783,6 +804,8 @@ static unsigned long long process_start(long pid) {
 #endif
 }
 static int lease_write(void) {
+  if (!same_config() || strcmp(active.token, cfg.token))
+    return 0;
   char b[160], tmp[PATH_MAX];
   int n = snprintf(b, sizeof(b), "%s %ld %llu %lld\n", active.token, active.pid,
                    active.start, active.lease);
@@ -832,6 +855,8 @@ static int latch_read(char *reason) {
   return 1;
 }
 static int stop(const char *reason) {
+  if (!same_config())
+    return 0;
   char old[64], b[160];
   int latched = latch_read(old);
   if (latched < 0)
@@ -933,6 +958,8 @@ static int bind(const char *source, const char *target) {
 #endif
 }
 static int restore_owned(void) {
+  if (!same_config())
+    return 0;
   int mounted;
   if (!boot_matches) {
     if (!inspect_mode(&mounted, 1) || mounted)
@@ -1005,6 +1032,8 @@ static int add_plan(int kind, int primary, const char *path, const char *root,
   return 1;
 }
 static int prepare_mounts(void) {
+  if (!same_config())
+    return 0;
   int mounted;
   struct stat staging;
   char parent[PATH_MAX];
@@ -1156,7 +1185,9 @@ static int reply(int success, const char *reason) {
   if (stopped < 0)
     valid = 0;
   int health = valid && mounted && jr > 0 && healthy() && stopped == 0;
-  int stock = valid && !mounted && stock_identity();
+  int live = boot_matches && jr > 0 && active.start &&
+             process_start(active.pid) == active.start;
+  int stock = valid && !mounted && !live && stock_identity();
   const char *state = !valid || (mounted && (!health || stopped)) ? "blocked"
                       : health && mounted                         ? "armed"
                       : stopped > 0                               ? "stopped"
@@ -1449,6 +1480,13 @@ static int guard(const char *token, int input, int ready, int seconds) {
   }
   if (op < 0)
     return reply(0, "recovery_busy");
+  if (!same_config() || journal_read() != 1 || strcmp(active.token, token) ||
+      active.pid != (long)getpid() ||
+      active.start != process_start((long)getpid())) {
+    int rc = reply(0, "stale_attempt");
+    close(op);
+    return rc;
+  }
   int latched = stop(reason);
   int restored = restore_owned();
   if (restored) {
@@ -1465,6 +1503,16 @@ static int guard(const char *token, int input, int ready, int seconds) {
   return rc;
 }
 static int retire_guard(int lock) {
+  if (journal_read() < 0) {
+    close(lock);
+    errno = EINVAL;
+    return -1;
+  }
+  if (!same_config() || (active.token[0] && strcmp(active.token, cfg.token))) {
+    close(lock);
+    errno = EBUSY;
+    return -1;
+  }
   if (boot_matches && active.pid > 1 && active.pid != (long)getpid() &&
       active.start && process_start(active.pid) == active.start) {
     pid_t pid = (pid_t)active.pid;
@@ -1478,7 +1526,17 @@ static int retire_guard(int lock) {
     lock = lock_state();
     if (lock < 0)
       return -1;
-    journal_read();
+    if (process_start(pid) == start || !same_config()) {
+      close(lock);
+      errno = EBUSY;
+      return -1;
+    }
+    int jr = journal_read();
+    if (jr < 0 || (jr > 0 && strcmp(active.token, cfg.token))) {
+      close(lock);
+      errno = EBUSY;
+      return -1;
+    }
   }
   return lock;
 }

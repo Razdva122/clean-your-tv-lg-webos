@@ -107,3 +107,13 @@ refuses a busy lock before effects. Guardian lease publication waits at most
 500 ms for a concurrent status reader. ARMED uses a nonblocking atomic pipe write.
 After a Luna timeout the process group is killed; reaping has a further 250 ms
 bound, so even an uninterruptible child cannot hang the gate decision forever.
+
+Config publication must briefly acquire the native `c1-gate/lock` flock around
+its atomic rename, then release before invoking native commands. A Python-only
+operation lock is insufficient for that publication. Native mutations recheck
+the current config identity while holding the native lock. Guardian cleanup also
+reloads and proves its token/PID/start authority; delayed old attempts cannot
+write or inverse a new attempt. Off refuses a still-live guardian after its
+three-second retirement deadline, retains the journal/mounts and does not report
+stock proof. Even an unmounted starting guardian prevents stock_verified until
+its cleanup authority has been retired.

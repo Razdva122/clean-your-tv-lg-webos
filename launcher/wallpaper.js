@@ -50,7 +50,8 @@
   function paintDim() {
     ensure(); shade.style.backgroundColor = 'rgba(0,0,0,' + dim + ')';
     var url = state().posterURL;
-    style.textContent = !blocked() && url ? '#homeSurface.ctv-home{background-image:linear-gradient(rgba(0,0,0,' + dim + '),rgba(0,0,0,' + dim + ')),url("' + url.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/[\r\n]/g, '') + '")!important;}' : '';
+    var posterVisible = !doc.hidden && Object.keys(owners).every(function (owner) { return owner === 'input-preview'; });
+    style.textContent = posterVisible && url ? '#homeSurface.ctv-home{background-image:linear-gradient(rgba(0,0,0,' + dim + '),rgba(0,0,0,' + dim + ')),url("' + url.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/[\r\n]/g, '') + '")!important;}' : '';
   }
   function choose() {
     var choices = available();
@@ -161,7 +162,7 @@
     return activate(personalEnabled ? personalInput : themeInput);
   }
   function suspend(owner) { owners[owner || 'manual'] = true; detach(); releaseLease(); paintDim(); emit(); }
-  function resume(owner) { var held = owners[owner || 'manual']; delete owners[owner || 'manual']; if (held && !blocked()) restart(); }
+  function resume(owner) { var held = owners[owner || 'manual']; delete owners[owner || 'manual']; if (held) { if (!blocked()) restart(); else paintDim(); } }
   function metadata(result) {
     var value = result && (result.uhd === undefined ? result.UHD : result.uhd), previous = capabilities.uhd;
     capabilities.uhd = value === true || value === 'true' ? true : value === false || value === 'false' ? false : null;
@@ -172,6 +173,8 @@
     setDim: function (value) { if (typeof value !== 'number' || !isFinite(value) || value < 0 || value > .85) throw Error('Invalid wallpaper dim'); dim = value; paintDim(); save(false); emit(); return state(); },
     resetPreferences: function () { save(true); quality = 'auto'; dim = input ? input.manifest.defaults.dim : 0; return restart(); }};
   doc.addEventListener('visibilitychange', function () { if (doc.hidden) suspend('visibility'); else resume('visibility'); });
+  root.addEventListener && root.addEventListener('blur', function () { suspend('window-focus'); });
+  root.addEventListener && root.addEventListener('focus', function () { resume('window-focus'); });
   root.addEventListener && root.addEventListener('pagehide', function () { suspend('pagehide'); });
   root.addEventListener && root.addEventListener('pageshow', function () { resume('pagehide'); });
   try {

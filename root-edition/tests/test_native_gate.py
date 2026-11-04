@@ -61,15 +61,15 @@ class NativeGateTests(unittest.TestCase):
  def run_gate(self,*args,timeout=5):
   p=subprocess.run([str(self.binary),*args],capture_output=True,text=True,timeout=timeout)
   return json.loads(p.stdout),p.returncode
- def guard(self,seconds=0,ready=True):
+ def guard(self,seconds=0,ready=True,token=TOKEN):
   r,w=os.pipe();ar,aw=os.pipe()
-  p=subprocess.Popen([str(self.binary),'--guard',TOKEN,str(r),str(aw),str(seconds)],pass_fds=(r,aw),stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+  p=subprocess.Popen([str(self.binary),'--guard',token,str(r),str(aw),str(seconds)],pass_fds=(r,aw),stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
   os.close(r);os.close(aw);self.guards.append((p,w))
   if ready:os.write(w,b'READY\n')
   if ready:
    self.assertTrue(select.select([ar],[],[],3)[0], 'guardian readiness timed out')
    ack=os.read(ar,128)
-   self.assertEqual(ack,('ARMED '+TOKEN+'\n').encode(),p.communicate(timeout=4) if not ack else '')
+   self.assertEqual(ack,('ARMED '+token+'\n').encode(),p.communicate(timeout=4) if not ack else '')
   os.close(ar)
   return p,w
  def finish(self,p,w,line=b'ESCAPE\n'):
@@ -210,4 +210,28 @@ class NativeGateTests(unittest.TestCase):
    out,_=p.communicate(timeout=2);self.assertFalse(json.loads(out)['returnValue']);self.assertLess(time.monotonic()-start,1);self.assertFalse((self.root/'home.original').exists())
   finally:
    os.close(w);os.close(ar);fcntl.flock(fd,fcntl.LOCK_UN);os.close(fd)
+ def test_off_refuses_still_live_guard_and_retains_authority(self):
+  p,w=self.guard();p.send_signal(signal.SIGSTOP)
+  try:
+   start=time.monotonic();s,rc=self.run_gate('--restore',timeout=6)
+   self.assertNotEqual(rc,0);self.assertFalse(s['stock_verified']);self.assertEqual(s['guardian_pid'],p.pid);self.assertTrue((self.root/'state/active').exists());self.assertTrue((self.root/'home.original').exists());self.assertLess(time.monotonic()-start,5)
+  finally:p.send_signal(signal.SIGCONT)
+  p.communicate(timeout=4)
+ def test_delayed_old_guard_cannot_mutate_new_attempt(self):
+  p,w=self.guard();p.send_signal(signal.SIGSTOP)
+  # Simulate a privileged recovery that restored the old owned fixture bind but
+  # mistakenly left that stopped process alive. A new attempt now owns routing.
+  (self.root/'home').unlink();(self.root/'home.original').rename(self.root/'home')
+  (self.root/'mountinfo').write_text('1 0 0:1 / / rw - fixture fixture rw\n');(self.root/'state/active').unlink()
+  config=self.root/'state/config';config.write_text(config.read_text().replace(TOKEN,'b'*32))
+  newer,nw=self.guard(token='b'*32);journal=(self.root/'state/active').read_bytes()
+  (self.root/'state/stopped').write_text('b'*32+' test_newer\n');(self.root/'state/stopped').chmod(0o600)
+  p.send_signal(signal.SIGTERM);p.send_signal(signal.SIGCONT);out,_=p.communicate(timeout=4)
+  self.assertFalse(json.loads(out)['returnValue']);self.assertEqual((self.root/'state/active').read_bytes(),journal);self.assertEqual((self.root/'state/stopped').read_text(),'b'*32+' test_newer\n');self.assertTrue((self.root/'home.original').exists());self.assertIsNone(newer.poll())
+  self.finish(newer,nw)
+ def test_corrupt_active_count_refuses_without_parser_crash(self):
+  path=self.root/'state/active'
+  path.write_text('CYTV-ACTIVE-2\n'+TOKEN+'\n'+str(os.getpid())+' 1 1\n2147483647\n');path.chmod(0o600)
+  for command in ['--status','--restore']:
+   s,rc=self.run_gate(command);self.assertNotEqual(rc,0);self.assertEqual(s['state'],'blocked');self.assertFalse(s['stock_verified'])
 if __name__=='__main__':unittest.main()
