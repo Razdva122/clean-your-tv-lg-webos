@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [2026-11-04 — Live TV discovery (#290)](2026-11-04-live-tv-discovery.md): C3 read-only discovery omission, targeted inventory correction and remaining packaged-TV acceptance.
+
 - [2026-11-03 — Helper 0.6.22 rollback compatibility](2026-11-03-helper-0.6.22-compatibility.md)
 
 - [1.7.0 final packages and acceptance, 2026-11-03](2026-11-03-release-1.7.0-final-packages.md): selected0.8.4/Helper0.6.22 complete build, signatures and Android checks; Root device acceptance pending; superseded0.8.3 evidence retained.

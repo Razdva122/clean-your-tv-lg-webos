@@ -42,6 +42,18 @@ def fetch_icon(url):
     return data
 
 
+def include_tuner(launchpoints, installed):
+    """Supplement launch points only with the tuner the TV reports installed."""
+    if not isinstance(launchpoints, list) or len(launchpoints) > 300 or not isinstance(installed, list) or len(installed) > 300:
+        return launchpoints
+    for app in installed:
+        if (isinstance(app, dict) and app.get('id') == 'com.webos.app.livetv'
+                and isinstance(app.get('title'), str) and 0 < len(app['title']) <= 256):
+            return [dict(app, hidden=False)] + [a for a in launchpoints
+                                               if not isinstance(a, dict) or a.get('id') != app['id']][:299]
+    return launchpoints
+
+
 class Inventory:
     def __init__(self, host, fallback, fetch=fetch_icon):
         self.host, self.fallback, self.fetch = host, fallback, fetch
@@ -172,4 +184,14 @@ class SSAP:
     def inventory(self, fallback):
         points = self.call('ssap://com.webos.applicationManager/listLaunchPoints').get('launchPoints')
         inputs = self.call('ssap://tv/getExternalInputList').get('devices')
+        # listLaunchPoints can omit the installed broadcast tuner entirely.
+        # Unsupported optional discovery must not break the normal inventory.
+        try:
+            installed = self.call('ssap://com.webos.applicationManager/listApps')
+        except (UserError, json.JSONDecodeError, AttributeError):
+            # The wire parser assumes an object; optional malformed JSON or a
+            # non-object reply must not discard the successful baseline reads.
+            installed = None
+        if isinstance(installed, dict) and installed.get('returnValue') is not False:
+            points = include_tuner(points, installed.get('apps'))
         return Inventory(self.host, fallback).build(points, inputs)
