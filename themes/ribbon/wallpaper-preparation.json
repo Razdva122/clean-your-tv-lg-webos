@@ -1,29 +1,25 @@
 {
-  "sourceSha256": "4862c70d73983c73868ec3e762fefa17e9b951e679ebee1f2c11c37b542deb79",
-  "sourceSize": [
-    4096,
-    2304
-  ],
-  "cropSize": [
-    4096,
-    2304
-  ],
-  "motion": "periodic-camera-orbit",
-  "duration": 20,
-  "fps": 24,
-  "wallpaperVideo": {
-    "variants": [
-      {
-        "quality": "4k",
-        "path": "wallpaper-4k.mp4"
-      },
-      {
-        "quality": "1080p",
-        "path": "wallpaper-1080p.mp4"
-      }
-    ]
+  "source": "Steam Workshop Scene 2981249186",
+  "author": "Xecutioner",
+  "permission": "Non-commercial, explicit attribution; maintainer confirmed 2026-11-04",
+  "capture": {
+    "width": 3840,
+    "height": 2160,
+    "fps": 30,
+    "crop": false,
+    "spatialUpscaling": false
   },
-  "artwork": "original-procedural-nebula",
-  "renderer": "scripts/render-ribbon-nebula.cjs",
-  "conceptImagesUsedAsTextures": false
+  "masterSha256": "5eb06dabeba0a009337d0b42d243da61918c0ddefa149820ff25b88f6b5645ea",
+  "output": {
+    "seconds": 12,
+    "frames": 360,
+    "dissolveSeconds": 1,
+    "audio": false
+  },
+  "files": {
+    "wallpaper-4k.mp4": "37a30030526f89a939ad09c852736a9d0b01722630e2aca01869da2a70f256fb",
+    "wallpaper-1080p.mp4": "f8d669b241905e0699b57d13fff111ef4bd3e916a9b3343639347ad7f9036244",
+    "wallpaper.jpg": "a619ba83b8c40dd776ced668829ff9af02f42084e025d1d96aba6605807b3df7",
+    "preview.jpg": "b2321b6cc4d6cb02510ad691e23353296d04b762c852fe1bcb1f8f5e557e827a"
+  }
 }
