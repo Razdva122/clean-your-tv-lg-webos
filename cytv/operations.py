@@ -346,6 +346,8 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
         try:
             raw = self.remote.run(command, timeout=1080 if action == 'uninstall' else 720 if action == 'restore' else 180)
         except TVCommandError as error:
+            error.root_action = action
+            error.root_boundary = 'driver'
             if action == 'install':
                 # Read data only; never rerun the retained driver or installation.
                 code = """import os,stat,json
@@ -753,8 +755,10 @@ print('CYTV_UPDATER_VERIFIED')
             if not self.root_active(self.root_action('status').get('result', {})):
                 raise UserError('Root activation or recovery readback was not confirmed. Run cytv status or cytv restore. Recovery data was kept.')
             self.outcome.startup_observed('root-state-verified')
-        except (RuntimeError, ValueError):
+        except (RuntimeError, ValueError) as error:
             self.outcome.startup_observed('unverified')
+            if isinstance(error, UserError):
+                raise  # Preserve sanitized SSH/Luna evidence and the pending stage.
             raise UserError('Root is installed, but activation or opening Home could not be confirmed. Run cytv status to inspect it, or cytv restore to return to LG Home. Recovery data was kept; do not reinstall blindly.') from None
         self.store.finish(self.profile)
 

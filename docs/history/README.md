@@ -24,6 +24,8 @@ one model or artifact does not certify later releases or a different TV.
 
 ## Scoped feature checks
 
+- [Root activation evidence, 2026-11-04](2026-11-04-root-activation-evidence.md): typed SSH/Luna failures retained without replay; original #282 C4 activation remains unresolved.
+
 - [Source installer build dependencies, 2026-11-03](2026-11-03-source-install-build-dependencies.md): clean-venv font preparation and pre-pairing failure guards for #272; host-only evidence.
 - [macOS graphics payload alias, 2026-11-03](2026-11-03-macos-graphics-payload-alias.md): published-package reproduction, minimal member-path correction and offline frozen-app checks; no TV operation or public delivery.
 

@@ -1138,6 +1138,51 @@ class OperationTests(unittest.TestCase):
         self.assertEqual(sum(c[0]=='run' and c[1].endswith(' enable') for c in remote.calls), 1)
         self.assertFalse(any(c[0]=='luna' and c[1].endswith('/launch') for c in remote.calls))
 
+    def test_activation_failures_keep_typed_evidence_without_replaying(self):
+        from cytv.errors import TVCommandError, TVRejected
+        from cytv.diagnostics import create_report
+        self.root_bundle()
+        cases = (
+            ('enable', TVCommandError(1), 'ssh_command',
+             {'exit_status': 1, 'root_action': 'enable', 'root_boundary': 'driver'}),
+            ('launch', TVRejected('PRIVATE TV reply',
+                {'returnValue': False, 'errorCode': -1, 'errorText': 'PRIVATE'},
+                'com.webos.applicationManager/launch'), 'luna',
+             {'operation': 'application-launch', 'error_code': -1,
+              'details_error_code': None, 'status_value': None,
+              'state': 'unknown', 'return_value': False}),
+        )
+        for step, failure, field, expected in cases:
+            with self.subTest(step=step):
+                remote = Remote()
+                run, luna = remote.run, remote.luna
+                def fail_enable(command, **kwargs):
+                    if step == 'enable' and command.endswith(' enable'):
+                        remote.calls.append(('run', command))
+                        raise failure
+                    return run(command, **kwargs)
+                def fail_launch(uri, payload, **kwargs):
+                    if uri == 'com.webos.applicationManager/launch':
+                        remote.calls.append(('luna', uri, payload))
+                        raise failure
+                    return luna(uri, payload, **kwargs)
+                remote.run, remote.luna = fail_enable, fail_launch
+                installer = self.installer(remote, 'root')
+                with self.assertRaises(operations.UserError) as caught:
+                    installer.install(self.inventory)
+                pending = self.store.pending(installer.profile)
+                report = json.loads(create_report(self.store, 'install', installer.profile,
+                                                  'activate-root', caught.exception).read_text())
+                self.store.finish(installer.profile)  # Isolate the next failure scenario.
+                self.assertIs(caught.exception, failure)
+                self.assertEqual((pending['action'], pending['stage']), ('activate-root', step))
+                self.assertEqual(report[field], expected)
+                self.assertEqual(report['first_failure'][field], expected)
+                self.assertNotIn('PRIVATE', json.dumps(report))
+                self.assertEqual(sum(c[0] == 'run' and c[1].endswith(' enable') for c in remote.calls), 1)
+                self.assertEqual(sum(c[0] == 'luna' and c[1].endswith('/launch') for c in remote.calls),
+                                 0 if step == 'enable' else 1)
+
     def test_root_failed_readback_does_not_report_success(self):
         self.root_bundle()
         remote=Remote()
