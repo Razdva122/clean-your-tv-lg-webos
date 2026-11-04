@@ -17,7 +17,7 @@
     "focusScale": 1.1,
     "allowColumnOverride": false,
     "ribbon": {
-      "left": 280,
+      "left": 256,
       "right": 84,
       "bottom": 0,
       "cardHeight": 180,

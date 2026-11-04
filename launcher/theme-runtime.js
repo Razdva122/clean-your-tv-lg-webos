@@ -124,7 +124,7 @@
         ribbonRule('header', 'top:0;bottom:0;left:0;right:0;pointer-events:none;');
         ribbonRule('#timeRow', 'position:absolute;top:104px;left:112px;');
         ribbonRule('#topButtons', 'position:absolute;left:28px;right:auto;top:auto;bottom:28px;margin:0;pointer-events:auto;');
-        ribbonRule('#topButtons .pill', 'width:72px;height:72px;padding:0;margin:0 12px 0 0;justify-content:center;font-size:0;');
+        ribbonRule('#topButtons .pill', 'width:68px;height:68px;padding:0;margin:0 8px 0 0;justify-content:center;font-size:0;');
         ribbonRule('#topButtons .pill svg', 'width:32px;height:32px;margin:0;');
         if (manifest.layout.presentation === 'overlay') {
           // Continue the same skewed lane to the left screen edge.
