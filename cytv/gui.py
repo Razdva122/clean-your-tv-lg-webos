@@ -282,6 +282,7 @@ class Wizard(QMainWindow):
         self.reset_details()
         self.clear_form()
         self.preview.show()
+        self.content.show()
         self.subtitle.show()
         self.steps.show()
         self.progress.hide()
@@ -344,6 +345,7 @@ class Wizard(QMainWindow):
     def toggle_maintenance(self):
         expanded = self.maintenance_toggle.isChecked()
         self.preview.setVisible(not expanded)
+        self.content.setVisible(not expanded)
         self.maintenance.setVisible(expanded)
         self.maintenance_toggle.setText(tr('Maintenance action') + ('  ▾' if expanded else '  ▸'))
 
@@ -452,6 +454,7 @@ class Wizard(QMainWindow):
         self.collect_preparation = False
         self.reset_details()
         self.content.clear()
+        self.content.show()
         self.clear_form()
         self.title.setText(tr('Connecting to your TV' if command == 'install' else self.operation_title))
         self.subtitle.setText(tr('Keep your TV on and watch for a pairing request.'))

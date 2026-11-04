@@ -17,7 +17,7 @@ const selectedCase=process.env.CYTV_THEME_CASE||'all';
    const packs={};for(const title of ['Itachi','Channel']){const entry=loadRegistry().find(entry=>entry.record.title.indexOf(title)===0);assert(entry,'registry '+title);const base=path.resolve('showcase',entry.base),m=entry.manifest;packs[title]={descriptor:fs.readFileSync(path.join(base,'cytv-theme.json')).toString('base64'),files:{}};for(const file of [m.rules,...m.assets,...m.documents])packs[title].files[file.path]=fs.readFileSync(path.join(base,file.path)).toString('base64');}
    await page.evaluate(async packs=>{for(const title in packs){const e=packs[title],decode=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0)),descriptor=decode(e.descriptor),pack={descriptor,digest:ThemeData.hash(descriptor),files:{}};for(const file in e.files)pack.files[file]=decode(e.files[file]);const verified=ThemeData.verify(pack,'1.6.0');await ThemeStore.put(pack,verified.size);}},packs);
   if(selectedCase!=='motion'){
-   await page.addInitScript(()=>{window.auditFrames=[];function frame(){var home=document.getElementById('homeSurface');if(home){var css=getComputedStyle(home);auditFrames.push({visible:css.visibility==='visible'&&css.display!=='none',background:css.backgroundImage==='none'?'none':'image',theme:window.ThemeManager?ThemeManager.current().id:null,ready:window.RootLauncherRendered===true,marker:!!localStorage.getItem('tvhome.theme.trial.v1')});}if(auditFrames.length<1200)requestAnimationFrame(frame);}requestAnimationFrame(frame);});
+   await page.addInitScript(()=>{window.auditFrames=[];function frame(){var home=document.getElementById('homeSurface');if(home){var css=getComputedStyle(home);auditFrames.push({visible:css.visibility==='visible'&&css.display!=='none',background:css.backgroundImage==='none'?'none':'image',video:!!(window.HomeWallpaper&&HomeWallpaper.state().actualQuality!=='image'),theme:window.ThemeManager?ThemeManager.current().id:null,ready:window.RootLauncherRendered===true,marker:!!localStorage.getItem('tvhome.theme.trial.v1')});}if(auditFrames.length<1200)requestAnimationFrame(frame);}requestAnimationFrame(frame);});
    const savedChoices=(await page.evaluate(()=>ThemeManager.list())).filter(item=>item.id!=='builtin:classic');
    for(const choice of savedChoices){
    await page.evaluate(choice=>localStorage.setItem('tvhome.theme.choice.v1',JSON.stringify(choice)),choice);
@@ -29,11 +29,13 @@ const selectedCase=process.env.CYTV_THEME_CASE||'all';
    assert.equal(await page.evaluate(()=>!!(window.RenewalPanel&&RenewalPanel.isOpen())),false,'hidden pending Home must not open Settings from remote input');
    await page.evaluate(()=>auditRelease());await wait();await page.waitForTimeout(60);
    const frames=await page.evaluate(()=>auditFrames),shown=frames.filter(frame=>frame.visible);
-   assert(shown.length);assert(shown.every(frame=>frame.theme===choice.id&&frame.background===(choice.title==='Channel'?'none':'image')),'every exposed startup frame uses saved wallpaper/appearance');
+   assert(shown.length);assert(shown.every(frame=>frame.theme===choice.id&&(frame.background===(choice.title==='Channel'?'none':'image')||frame.video&&choice.id==='builtin:ribbon')),'every exposed startup frame uses saved wallpaper/appearance');
    assert(frames.filter(frame=>frame.ready).every(frame=>frame.visible&&!frame.marker),'ready only follows exposed presentation and completed boot marker');
    const before=await page.locator('#homeSurface').evaluate(el=>getComputedStyle(el).backgroundImage);
+   const videoActive=await page.evaluate(()=>HomeWallpaper.state().actualQuality!=='image');
    await page.evaluate(()=>{window.auditLoads=0;ThemeData.load=function(){auditLoads++;throw Error('warm return must not load');};Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));});
-   assert.equal(await page.locator('#homeSurface').evaluate(el=>getComputedStyle(el).backgroundImage),before,'background stays accepted even while hidden');
+   const hiddenBackground=await page.locator('#homeSurface').evaluate(el=>getComputedStyle(el).backgroundImage);
+   if(videoActive)assert.notEqual(hiddenBackground,'none','suspending video restores the accepted poster');else assert.equal(hiddenBackground,before,'image stays accepted even while hidden');
    await page.evaluate(()=>document.dispatchEvent(new Event('webOSRelaunch')));
    assert.equal(await page.locator('#ctv-theme-style').evaluate(el=>el.disabled),false,'relaunch-before-visible cannot expose a disabled sheet');
    await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:false});document.dispatchEvent(new Event('visibilitychange'));});
