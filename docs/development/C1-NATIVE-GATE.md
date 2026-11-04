@@ -1,17 +1,28 @@
 # Experimental C1 native gate
 
-This is an unpublished developer backend for issue [#298](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/298).
-It does not establish C1 compatibility. The normal Root profile backend remains
-the default for supported firmware. There is no automatic fallback after a
-profile-service failure and no stable-feed delivery of this experiment.
+This is an unpublished C1 Beta backend for issue [#298](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/298).
+The common computer installer selects it automatically within the ordinary Root
+flow. There is no separate beta installer, user flag or extra backend choice.
+This does not establish physical C1 compatibility. The existing profile backend
+and its normal bundles remain the path for supported firmware.
 
-## Architecture and recovery
+## Selection and recovery
 
-Admission requires an actual C1 model, webOS SDK 6, a 32-bit ARM runtime and a
-fingerprinted native `/usr/bin/com.webos.app.home`. Installation requires a fresh
-product state and an already available trusted Python runtime. It installs the
-existing private application ID and recovery plumbing, leaving routing disabled.
-The developer must separately request a bounded trial or enable operation.
+Automatic selection requires an actual C1 model, webOS SDK 6, observed ARM32
+userland and native Home, and an explicitly absent systemprofile service. A
+permission refusal, timeout, malformed reply or a different device does not
+select the experiment. Fresh installation is required; existing, partial or
+orphaned product/recovery state must be inspected and recovered first. The
+installer checks the device again before durable installation reservation and
+fingerprints `/usr/bin/com.webos.app.home` before preparing the native attempt.
+
+The common payload contains normal Root bundles and separate native C1 bundles
+for both 1080p and 720p. The common install flow chooses the matching bundle,
+installs the existing private application ID and recovery plumbing, then enables
+Home control. It identifies this path as C1 Beta before installation and in the
+completion result. No Root Updater or System Updater is installed for C1 Beta;
+automatic updates are unavailable. The experiment is excluded from stable OTA
+feeds. A package install or an enable reply is not physical device acceptance.
 
 Python owns admission and intent; a separately running static native guardian
 owns the temporary Home bind, checkpoint hiding, input lease and inverse journal.
@@ -37,11 +48,13 @@ updater reject experimental or orphaned backend evidence, including alternate
 resume/baseline entry points. Use explicit restore/removal before returning to a
 normal installation. Do not delete state or volatile files to bypass a refusal.
 
-## Build and developer entry point
+## Build and internal developer commands
 
-Build the helper as described in the [native protocol](../../root-edition/gate/README.md).
-The builder validates a static ARM EABI5 executable, including its load segments
-and absence of a dynamic interpreter:
+The common installer build compiles the helper once with the existing pinned
+Zig 0.14.1 dependency and embeds both C1 graphics variants. Its Root builder validates a static ARM EABI5 executable, including its load segments
+and absence of a dynamic interpreter. The following low-level commands are for
+internal development and deliberate recovery; users install through the common
+installer:
 
 ```sh
 python3 root-edition/build.py --output /absolute/new/bundle \
@@ -50,11 +63,12 @@ python3 root-edition/setup_gate.py install --ssh pinned-test-tv \
   --bundle /absolute/new/bundle
 ```
 
-The second command displays the operation only. `--apply` executes it on a
-separately authorized test device. The same developer entry supports `status`,
-`trial` (60 seconds), `enable`, `restore` and `uninstall`. Switching an active
-trial/persistent mode requires restoration first. The normal graphical installer
-and updater do not expose this backend.
+The second low-level command displays the operation only. `--apply` executes it
+on a separately authorized test device. This internal entry also supports
+`status`, `trial` (60 seconds), `enable`, `restore` and `uninstall`. Switching an
+active trial/persistent mode requires restoration first. The common graphical
+and console installers select the backend automatically; they expose no new
+backend selector.
 
 In experimental mode, Settings' Open LG Home and long Back release routing and
 leave it off. The normal backend retains its existing one-time visit behavior.

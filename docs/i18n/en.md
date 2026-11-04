@@ -1,5 +1,7 @@
 # Clean Your TV — user guide
 
+**Unreleased C1 Beta (#298):** In the common computer installer, choose Root. Eligible C1 TVs are detected automatically; no separate installer or flag is needed. This path requires a fresh installation, has no automatic updates, and has not passed physical C1 acceptance. Open LG Home, long Back, or a safety/power stop can leave Home control off; turn Change Home on again in TV settings. The normal Root path is unchanged. [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md).
+
 Unreleased (#290): **+ / Add app** offers Live TV under the TV’s own name only when the tuner is detected as installed. Other hidden system apps stay excluded. No-root needs the updated Helper and installer; Root needs the updated Home package. Tuner launch still needs TV verification.
 
 **1.7.0 — Root startup sources:** In Settings → Your Home screen, turn on **Change Home** to edit **Open Clean Your TV first**. **LG Channels / Live TV** is on by default; **YouTube** is off. When Change Home is off, the two switches remain visible but unavailable, and their saved values are retained. Preferences are stored privately on this TV; portable profile export does not include them. This control is not a claim of verified TV startup or wake behavior. A source switched off leaves the startup decision to the TV firmware; it does not guarantee resuming that source. There is no HDMI startup switch. [Native startup limits (English)](../../root-edition/README.md#candidate-native-startup-choices).

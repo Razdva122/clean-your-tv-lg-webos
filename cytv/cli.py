@@ -430,7 +430,10 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     write('Root activation and the launch request completed. Check the separate startup and physical Home results.')
                     if result.get('updates_ready'):
                         write('Root Updater is ready. Install future compatible updates in Settings → Software updates on the TV.')
-                    write('Home control stays on until you turn it off. The computer can now be switched off.')
+                    if result.get('backend') == 'c1-native-gate':
+                        write('C1 Beta is installed. Automatic updates are unavailable; after a stop, turn Home control on again in TV settings.')
+                    else:
+                        write('Home control stays on until you turn it off. The computer can now be switched off.')
                     write('To restore LG Home, use Return to LG Home in settings or run cytv restore.')
                     write('Root emergency exit: three short Home presses within two seconds.')
                 else:
