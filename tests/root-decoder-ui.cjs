@@ -54,6 +54,16 @@ const {pathToFileURL}=require('node:url'),{chromium}=require('playwright'),root=
   assert.equal(await p.locator('#ctvWallpaperVideo').evaluate(v=>v.videoWidth),3840);
   assert.equal(await p.evaluate(()=>WallpaperStream.state().mode),'mse');assert(count()>commits);
   assert.equal(await p.evaluate(()=>HomePresentationController.state().mode),'full');
+  // Preserve positive playback beyond the real 12-second MSE loop boundary.
+  // Frame progress here is Chrome evidence, not C3 decoder/lifecycle acceptance.
+  await p.waitForFunction(()=>{
+   const video=document.querySelector('#ctvWallpaperVideo');
+   const quality=video.getVideoPlaybackQuality(),frames=quality.totalVideoFrames-quality.droppedVideoFrames;
+   if(video.currentTime>12&&video.testBoundaryFrames===undefined)video.testBoundaryFrames=frames;
+   return video.currentTime>14&&frames>video.testBoundaryFrames;
+  });
+  assert.equal(await p.evaluate(()=>HomeWallpaper.state().actualQuality),'4k');
+  assert.equal(await p.evaluate(()=>WallpaperStream.state().mode),'mse');
   // Force the existing native fallback branch, exercising actual cache HTTP bytes.
   await p.evaluate(()=>{HomeWallpaper.setQuality('image');window.originalSupport=MediaSource.isTypeSupported;MediaSource.isTypeSupported=()=>false;HomeWallpaper.setQuality('4k');});
   await p.waitForFunction(()=>HomeWallpaper.state().actualQuality==='4k'&&document.querySelector('#ctvWallpaperVideo').currentTime>1);

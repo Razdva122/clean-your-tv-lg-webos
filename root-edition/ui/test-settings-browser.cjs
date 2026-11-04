@@ -10,7 +10,7 @@ const base=process.env.PREVIEW_URL||'http://127.0.0.1:8879';
   await page.evaluate(()=>{
    window.exitCloseCalls=0;window.close=function(){window.exitCloseCalls++;};
    const Original=window.PalmServiceBridge;
-   window.settingsBackend={phase:'active',calls:[],pending:[],delay:false,fail:false};
+   window.settingsBackend={phase:'active',calls:[],pending:[],contextCalls:0,delay:false,fail:false};
    window.PalmServiceBridge=function(){
     const original=new Original();this.cancel=()=>original.cancel();
     this.call=(uri,raw)=>{
@@ -20,6 +20,11 @@ const base=process.env.PREVIEW_URL||'http://127.0.0.1:8879';
      }
      if(!uri.startsWith('luna://com.cleanyourtv.root.preview.service/')||!['status','restore','enable'].includes(method)){
       original.onservicecallback=value=>this.onservicecallback(value);original.call(uri,raw);return;
+     }
+     // Presentation is a separate read-only status operation, not a routing
+     // refresh. Keep the routing single-flight/stale-response queue independent.
+     if(method==='status'&&Object.keys(payload).length===1&&payload.presentation==='context'){
+      b.contextCalls++;this.onservicecallback(JSON.stringify({returnValue:true,result:{content:false}}));return;
      }
      if(payload.startup){
       const send=result=>this.onservicecallback(JSON.stringify({returnValue:true,result:{returnValue:true,result}}));
@@ -51,6 +56,7 @@ const base=process.env.PREVIEW_URL||'http://127.0.0.1:8879';
    Object.defineProperty(document,'hidden',{configurable:true,value:false});document.dispatchEvent(new Event('visibilitychange'));
   });
   await page.waitForFunction(()=>settingsBackend.pending.length===1);
+  assert(await page.evaluate(()=>settingsBackend.contextCalls>0),'opaque Root context checks use their own typed reply');
   await page.evaluate(()=>document.dispatchEvent(new Event('webOSRelaunch')));
   assert.equal(await page.evaluate(()=>settingsBackend.pending.length),1,'relaunch waits for the active status request');
   assert(await toggle.isDisabled());
