@@ -1823,9 +1823,13 @@
   focusZone = "none";
   focusTile(0);
   function presentHome() {
-    // Do not reveal a staggered Classic grid beneath a saved theme's preparation.
-    tiles.forEach(function (tile) { tile.el.classList.add('shown'); });
-    getElement('homeSurface').classList.remove('ctv-starting');
+    // Restore personal appearance before exposing the validated theme. Native Root
+    // must activate before ThemeManager can wait for foreground animation frames.
+    return (window.PersonalWallpaper ? PersonalWallpaper.start().catch(function () {}) : Promise.resolve()).then(function () {
+      tiles.forEach(function (tile) { tile.el.classList.add('shown'); });
+      getElement('homeSurface').classList.remove('ctv-starting');
+      if (window.ROOT_VERSION && window.PalmSystem && typeof PalmSystem.activate === 'function') PalmSystem.activate();
+    });
   }
   window.HomeUIReady = (window.ThemeManager ? ThemeManager.start(presentHome) : Promise.resolve().then(presentHome)).then(function () {
     return (window.PersonalWallpaper ? PersonalWallpaper.start().catch(function () {}) : Promise.resolve()).then(function () { window.RootLauncherRendered = true; if (presentation) presentation.show(launchParams()); });

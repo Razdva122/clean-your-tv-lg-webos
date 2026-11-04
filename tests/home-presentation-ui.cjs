@@ -16,6 +16,28 @@ const {assert,chromium,stage,fs,path}=require('./themes/browser.cjs'),http=requi
   await page.waitForFunction(()=>window.RootLauncherRendered===true);return {page,errors};
  }
  try {
+  // Native handlesRelaunch windows receive no animation frames until activated.
+  // Startup must prepare saved appearance, activate, then acknowledge painted UI.
+  const cold=await browser.newPage({viewport:{width:1920,height:1080}});
+  await cold.addInitScript(()=>{
+   const frame=window.requestAnimationFrame.bind(window),queued=[];
+   window.activationCalls=0;
+   Object.defineProperty(document,'hidden',{configurable:true,get:()=>window.activationCalls===0});
+   window.requestAnimationFrame=callback=>window.activationCalls?frame(callback):(queued.push(callback),queued.length);
+   window.PalmSystem={activate(){window.activationCalls++;queued.splice(0).forEach(callback=>frame(callback));document.dispatchEvent(new Event('visibilitychange'));}};
+  });
+  await cold.route('**/app.js',route=>route.fulfill({body:
+   'var personalStart=PersonalWallpaper.start;PersonalWallpaper.start=function(){window.personalRequested=true;return window.personalGate||(window.personalGate=new Promise(function(resolve){window.releasePersonal=function(){resolve(personalStart());};}));};\n'+
+   fs.readFileSync(path.join(site,'root-launcher/app.js'),'utf8')}));
+  await cold.goto('http://127.0.0.1:'+server.address().port+'/root-launcher/index.html');
+  await cold.waitForFunction(()=>window.personalRequested===true,{},{polling:50,timeout:3000});
+  assert.equal(await cold.evaluate(()=>activationCalls),0,'saved personal appearance must settle before activation');
+  assert.equal(await cold.evaluate(()=>RootLauncherRendered),false);
+  await cold.evaluate(()=>releasePersonal());
+  await cold.waitForFunction(()=>window.RootLauncherRendered===true,{},{polling:50,timeout:3000});
+  assert.equal(await cold.evaluate(()=>activationCalls),1,'cold Root activates before waiting for foreground animation frames');
+  assert.equal(await cold.locator('#homeSurface').evaluate(el=>getComputedStyle(el).visibility),'visible');
+  await cold.close();
   const {page,errors}=await open('root-launcher');
   await page.evaluate(async()=>{
    window.closeCalls=0;window.close=()=>window.closeCalls++;
