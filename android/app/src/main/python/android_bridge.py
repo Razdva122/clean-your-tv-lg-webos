@@ -130,14 +130,59 @@ class AndroidConsole(Console):
         super().text(message, bold)
 
 
+def inspect_root_recovery(config, callbacks):
+    """Use original Android records for the submitted-install read, not a new CLI login."""
+    from cytv import diagnostics, prompts, root_passive
+    from cytv.errors import UserError
+    from cytv.recovery import plan, REVIEW, KEPT, BLOCKED
+    i18n.set_language(config.get('language', 'ru'))
+    store = state.Store(callbacks.directory)
+    profile = state.target(config.get('host', ''), 'root', config.get('port'))
+    write = AndroidConsole(callbacks)
+    try:
+        saved = [p for p in store.profiles() if all(p[k] == profile[k] for k in ('host', 'port', 'edition'))]
+        pending = store.pending(profile)
+        actions = ('install', 'uninstall', 'activate-root', 'setup-root-updater',
+                   'archive-root-state', 'enable-system-updates')
+        if len(saved) != 1 or not pending or pending.get('action') not in actions:
+            raise UserError('Original Android recovery records are missing or changed. Keep app data and stop.',
+                            reason_code='pending-operation')
+        profile = saved[0]  # Ignore the current form's key/password choice for this inspection.
+        if pending.get('action') != 'install' or pending.get('stage') != 'coordinator-submitted':
+            return None  # Other supported recovery states keep their existing explicit flow.
+        plan(write, 'review', REVIEW)
+        write('Read the original Root installation state only. No TV files, packages, Home settings or recovery records will be changed.')
+        if not prompts.confirm('Check recovery options?', write.reader(callbacks.ask), write):
+            write(KEPT)
+            return 130
+        passive = root_passive.inspect_saved(store, profile, pending.get('product_operation'), callbacks.secret)
+        event = dict(state='recovery_required', stage='blocked', code='operation_requires_recovery',
+                     can_resume=False, passive=passive)
+        result = dict(device={'product': event}, can_resume_root_setup=False)
+        plan(write, 'blocked', KEPT, 'Save diagnostic report…')
+        diagnostics.save_result(write, store, 'recover', profile, 'recover', status=result)
+        return 2  # Reading evidence never completes or unlocks the installation.
+    except (EOFError, KeyboardInterrupt):
+        write(KEPT)
+        return 130
+    except Exception as error:
+        plan(write, 'blocked', KEPT, 'Save diagnostic report…')
+        write.error(str(error) if isinstance(error, UserError) else BLOCKED)
+        diagnostics.suggest_issue(write, store, 'recover', profile, 'recover', error)
+        return 2
+
+
 def run(config_json, directory, payload, identity, native):
     callbacks = Callbacks(native, identity, directory)
     try:
         config = json.loads(config_json)
         args = arguments(config, directory, identity)
-        # All text and confirmations use the same desktop localization and policies.
-        code = cli.main(args, ask=callbacks.ask, write=AndroidConsole(callbacks),
-                        secret=callbacks.secret, connect=callbacks.connect, payload_root=payload)
+        code = (inspect_root_recovery(config, callbacks)
+                if config.get('action') == 'recover' and config.get('edition') == 'root' else None)
+        if code is None:
+            # Other operations retain the shared CLI and their explicit confirmations.
+            code = cli.main(args, ask=callbacks.ask, write=AndroidConsole(callbacks),
+                            secret=callbacks.secret, connect=callbacks.connect, payload_root=payload)
     except Exception as error:
         # Do not emit exception messages, which may contain credentials/paths.
         callbacks.emit(kind='error', text=type(error).__name__)

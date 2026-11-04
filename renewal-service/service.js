@@ -61,11 +61,12 @@ function fromUpdater(m){
 });
 
 var homeControl=require('./home-control')(fs,__dirname+'/state/home-control');
-['homeStatus','setHomeControl','openLGHome'].forEach(function(method){
+var inputControl=require('./home-control')(fs,__dirname+'/state/home-control',{inputs:true});
+['homeStatus','setHomeControl','openLGHome','inputStatus'].forEach(function(method){
  service.register(method,function(m){
   var raw=m.ls2Message,id=raw&&raw.applicationID&&raw.applicationID();
   if(typeof id!=='string'||id.split(' ')[0]!=='com.gathin.tvhome'){m.respond({returnValue:false,errorText:'caller-not-authorized',diagnostic:diagnostics.describe('home','authorize',{code:'CALLER_DENIED'})});return;}
-  homeControl(method,m.payload).then(function(r){m.respond(r);});
+  (method==='inputStatus'?inputControl:homeControl)(method,m.payload).then(function(r){m.respond(r);});
  });
 });
 

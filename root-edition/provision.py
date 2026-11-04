@@ -20,10 +20,11 @@ PRIVATE_SERVICE = STATE/'service'
 RUNNER = STATE/'run-recovery-service'
 PRIVATE_FILES = ('service.js','startup-diagnostics.js','app-inventory.js','handlers.js','services.json','package.json','activity.json','boot-recover.sh')
 RECEIVER_CAPABILITIES = ['theme-receiver-v1']
+WALLPAPER_CAPABILITIES = RECEIVER_CAPABILITIES + ['wallpaper-media-v1']
 
 def snapshot_capabilities(saved):
     capabilities = saved.get('capabilities', [])
-    if capabilities not in ([], RECEIVER_CAPABILITIES):
+    if capabilities not in ([], RECEIVER_CAPABILITIES, WALLPAPER_CAPABILITIES):
         raise ValueError('Unknown recovery capabilities')
     return capabilities
 SYSTEM_FILES = tuple(Path(x) for x in ('/usr/bin/node','/usr/palm/services/jsservicelauncher/bootstrap-node.js','/usr/palm/services/jsservicelauncher/bootstrap.js'))
@@ -111,8 +112,10 @@ def plan(original, capabilities=None):
         'inbound':['com.webos.lunasend-*','com.webos.service.activitymanager','com.cleanyourtv.root.preview','com.cleanyourtv.root.preview-*'],
         'outbound':['com.webos.service.activitymanager','com.palm.activitymanager']}]
     control = ['status','restore','enable','confirm','listApps']
-    if capabilities:
+    if 'theme-receiver-v1' in capabilities:
         control += ['themeReceiverStart','themeReceiverStatus','themeReceiverRead','themeReceiverStop']
+    if 'wallpaper-media-v1' in capabilities:
+        control += ['wallpaperCacheStart','wallpaperCacheWrite','wallpaperCacheCommit','wallpaperCacheKeepAlive','wallpaperCacheStop']
     return {'service': original['service'].replace(expected,'Exec='+str(RUNNER)).encode(),
             'role':encoded(role), 'client':encoded({NAME:['activity.operation'],'com.cleanyourtv.root.preview':[NAME+'.control'],'com.cleanyourtv.root.preview-*':[NAME+'.control']}),
             'api':encoded({NAME+'.control':[NAME+'/'+x for x in control],'activities.callbacks':[NAME+'/boot'],NAME+'.admin':[NAME+'/'+x for x in ('status','restore','register','unregister')]})}

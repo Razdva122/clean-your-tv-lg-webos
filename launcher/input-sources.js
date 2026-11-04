@@ -5,8 +5,8 @@
 }(this, function () {
   'use strict';
   var PREVIEW_KEY = 'tvhome.inputs.preview.v1',
-    // Native external video may ignore element mute or switch HDR; require an explicit choice.
-    PREVIEW_DEFAULT = false,
+    // Native external video may ignore element mute or switch HDR.
+    PREVIEW_DEFAULT = true,
     STATUS_URI = 'luna://com.webos.service.eim/getAllInputStatus',
     // The installer registers Home as an EIM input so the TV can return to it; it is not a source.
     HOME_APPS = ['com.gathin.tvhome', 'com.local.nativehome'],
@@ -77,6 +77,9 @@
     options = options || {};
     var listeners = [],
       started = false,
+      pending = false,
+      snapshot = options.root === true,
+      fallback = false,
       devices = null;
     // The inventory is read on demand: a profile restore can replace it after startup.
     function inventory() {
@@ -89,13 +92,36 @@
       var next = list();
       if (JSON.stringify(next) !== before) listeners.slice().forEach(function (listener) { listener(next.slice()); });
     }
+    function read() {
+      if (pending || typeof options.call !== 'function') return;
+      var oneShot = snapshot || fallback, completed = false;
+      pending = oneShot;
+      function receive(result) {
+        if (oneShot) {
+          if (completed) return;
+          completed = true; pending = false; reply(result);
+        } else if (!fallback) {
+          // A denied WebApp EIM call does not imply the paired Helper cannot read inputs.
+          if (result && result.returnValue === false && result.errorCode === -1) {
+            fallback = true; read();
+          } else reply(result);
+        }
+      }
+      try {
+        options.call(snapshot ? 'luna://com.cleanyourtv.root.preview.service/listApps' :
+          fallback ? 'luna://com.gathin.tvhome.renewal/inputStatus' : STATUS_URI,
+          snapshot ? {inputs:true} : fallback ? {} : {subscribe:true}, receive, oneShot ? 10000 : undefined);
+      } catch (_) { receive(null); }
+    }
     return {
-      // Subscribes once; until a valid reply arrives the inventory shows without status.
+      // Starts once; until a valid reply arrives the inventory shows without status.
       start: function () {
         if (started || typeof options.call !== 'function') return;
         started = true;
-        try { options.call(STATUS_URI, {subscribe: true}, reply); } catch (_) { reply(null); }
+        read();
       },
+      // Broker snapshots refresh only for explicit foreground interactions.
+      refresh: function () { if (started && (snapshot || fallback)) read(); },
       list: list,
       live: function () { return !!devices; },
       onchange: function (listener) { if (typeof listener === 'function') listeners.push(listener); }

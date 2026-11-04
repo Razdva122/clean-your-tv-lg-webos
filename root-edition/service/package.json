@@ -1,6 +1,6 @@
 {
   "name": "com.cleanyourtv.root.preview.service",
-  "version": "0.8.2",
+  "version": "0.8.4",
   "main": "service.js",
   "private": true
 }

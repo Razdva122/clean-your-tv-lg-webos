@@ -1,6 +1,6 @@
 # Install Clean Your TV
 
-> See [1.6.0 versions, installer changes and limits](RELEASE-1.6.0.md) and the [dated acceptance scope](history/2026-11-02-release-1.6.0-final-acceptance.md). Obtain available packages from [GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases).
+> The [1.7.1 maintenance release](RELEASE-1.7.1.md) changes the host installer and browser demo; TV component versions remain those of 1.7.0. See the [1.7.0 device observations and limits](history/2026-11-03-release-1.7.0-final-packages.md). Obtain available packages from [GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases).
 
 Use **cytv** to install No-root or Root. It includes the computer runtime and TV
 packages; no source build is needed. After setup, the computer can be switched off.
@@ -104,11 +104,11 @@ diagnostic report and keep recovery files. [Recovery](RECOVERY.md).
 **Change Home** selects persistent Home behavior. **Open LG Home** only visits
 LG Home once. Opening Home alone does not restart a stopped Helper. Helper
 through 0.6.13 uses a two-second Home hold instead of triple Home.
-The unpublished Root candidate adds native startup source choices under
+Root 1.7.0 adds native startup source choices under
 **Home settings → Open Clean Your TV first**: LG Channels / Live TV defaults on,
-YouTube and HDMI default off. With **Change Home** off these controls are visibly
+YouTube defaults off; there is no HDMI startup setting. With **Change Home** off these controls are visibly
 disabled with an explanation and retain their values. There is no late boot/wake
-launch fallback. Exact-package physical acceptance is pending.
+launch fallback. See the linked 1.7.0 acceptance record for exact-package physical limits.
 
 If a check fails, leave LG Home active and follow [recovery](RECOVERY.md).
 Installation checks cannot verify physical buttons.

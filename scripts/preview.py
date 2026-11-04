@@ -5,6 +5,7 @@ import hashlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import mimetypes
+import re
 import shutil
 import runpy
 import subprocess
@@ -17,15 +18,15 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scripts.chinese_fonts import prepare_fonts
 
-def preview_themes():
-    return subprocess.check_output(['node', str(ROOT / 'scripts/build-preview-themes.cjs')], cwd=ROOT)
+def preview_themes(*args):
+    return subprocess.check_output(['node', str(ROOT / 'scripts/build-preview-themes.cjs'), *args], cwd=ROOT)
 
 LAUNCHER_FILES = {
     'index.html', 'home-presentation.js', 'viewport.js', 'style.css', 'theme-defaults.css', 'theme-policy.js', 'theme-runtime.js', 'home-layout.js', 'layout-panel.js', 'settings-categories.js', 'layout-panel.css', 'renewal-panel.css', 'app.js', 'app-library.js', 'input-sources.js', 'input-preview.js', 'config.js',
     'user-data.js', 'release-notes.js', 'system-updates.js', 'update-panel.js', 'renewal-panel.js', 'helper-control.js', 'profile-bootstrap.js',
     'native-bootstrap.js', 'i18n.js', 'catalogs.js', 'i18n.css', 'fonts/outfit-300.ttf', 'fonts/outfit-400.ttf', 'fonts/outfit-500.ttf', 'fonts/outfit-700.ttf', 'fonts/NotoSans.ttf', 'fonts/NotoSans-OFL.txt', 'fonts/NotoSansDevanagari.ttf', 'fonts/NotoSansDevanagari-OFL.txt', 'fonts/NotoSansKR.ttf', 'fonts/NotoSansKR-OFL.txt', 'fonts/NotoSansSC.ttf', 'fonts/NotoSansSC-OFL.txt', 'fonts/NotoSansTC.ttf', 'fonts/NotoSansTC-OFL.txt', 'fonts/OFL.txt',
 }
-THEME_FILES = ['theme-data.js', 'theme-store.js', 'theme-manager.js', 'theme-receiver.js', 'theme-panel.js', 'theme-panel.css', 'theme-locales.js', 'builtin-theme-files.json'] + json.loads((ROOT / 'launcher/builtin-theme-files.json').read_text())
+THEME_FILES = ['wallpaper.js', 'wallpaper.css', 'wallpaper-panel.js', 'wallpaper-panel.css', 'wallpaper-locales.js', 'wallpaper-media-cache.js', 'personal-wallpaper.js', 'wallpaper-library.js', 'wallpaper-stream.js', 'wallpapers/black-hole-stream.mp4', 'wallpaper-qr.js', 'theme-data.js', 'theme-store.js', 'theme-manager.js', 'theme-receiver.js', 'theme-panel.js', 'theme-panel.css', 'theme-locales.js', 'builtin-theme-files.json'] + json.loads((ROOT / 'launcher/builtin-theme-files.json').read_text())
 LAUNCHER_FILES.update(['appinfo.json'] + THEME_FILES)
 ROOT_LAUNCHER_FILES = {
     'index.html', 'home-presentation.js', 'viewport.js', 'app.js', 'app-library.js', 'input-sources.js', 'input-preview.js', 'style.css', 'theme-defaults.css', 'theme-policy.js', 'theme-runtime.js', 'home-layout.js', 'layout-panel.js', 'settings-categories.js', 'layout-panel.css', 'config.js', 'apps.js',
@@ -75,7 +76,9 @@ def revision():
 
 def launcher_html():
     return (ROOT / 'launcher/index.html').read_text().replace(
-        '<head>', '<head>\n  <script src="../preview/bridge.js"></script>', 1)
+        '<head>', '<head>\n  <script src="../preview/bridge.js"></script>', 1).replace(
+        '<script src="wallpaper-media-cache.js"></script>',
+        '<script>window.WallpaperMediaCache = undefined;</script>')
 
 
 def root_launcher():
@@ -85,7 +88,9 @@ def root_launcher():
     files['config.js'] = preview_config(files['config.js'])
     files['apps.js'] = ('window.TV_APPS = ' + json.dumps(inventory()) + ';\n').encode()
     files['index.html'] = files['index.html'].replace(
-        b'<head>', b'<head>\n  <script src="../preview/bridge.js"></script>', 1)
+        b'<head>', b'<head>\n  <script src="../preview/bridge.js"></script>', 1).replace(
+        b'<script src="wallpaper-media-cache.js"></script>',
+        b'<script>window.WallpaperMediaCache = undefined;</script>')
     return files
 
 
@@ -121,7 +126,7 @@ def export_site(destination):
         target = destination / 'root-launcher' / name
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(data)
-    (destination / 'preview/themes.json').write_bytes(preview_themes())
+    (destination / 'preview/themes.json').write_bytes(preview_themes('--output', str(destination / 'preview')))
     (destination / 'index.html').write_text(preview_html(live=False), encoding='utf-8')
     (destination / '.nojekyll').touch()
     for name in ['LICENSE', 'THIRD_PARTY_NOTICES.md']:
@@ -134,6 +139,14 @@ class Handler(BaseHTTPRequestHandler):
         file = None
         if path == '/preview/themes.json':
             self.respond(preview_themes(), 'application/json; charset=utf-8')
+            return
+        if path.startswith('/preview/packages/'):
+            match = re.fullmatch(r'/preview/packages/([a-f0-9]{64})\.json', path)
+            catalog = json.loads(preview_themes())
+            if not match or 'packages/' + match[1] + '.json' not in catalog['packages'].values():
+                self.send_error(404)
+                return
+            self.respond(preview_themes('--package', match[1]), 'application/json; charset=utf-8')
             return
         if path == '/preview/version':
             self.respond(revision().encode(), 'text/plain; charset=utf-8')

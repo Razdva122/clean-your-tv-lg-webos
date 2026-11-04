@@ -1,6 +1,9 @@
 # Čeština — rozhraní televizoru
 
+Nevydáno (#290): **+ / Přidat aplikaci** nabídne živé TV pod názvem z televizoru pouze při zjištění nainstalovaného tuneru. Ostatní skryté systémové aplikace zůstávají vynechané. No-root potřebuje aktualizovaný Helper a instalátor; Root aktualizovaný balíček Home. Spuštění kanálů ještě vyžaduje ověření na TV.
+
 **Nevydáno — Ribbon nad aplikacemi:** V Root se může Ribbon zobrazit nad aktuální aplikací. Home otevře panel; Zpět nebo další Home jej zavře. Při zapnutí nebo bez potvrzeného obsahu na pozadí se zobrazí tapeta; nastavení zůstává neprůhledné. No-root na TV zůstává přes celou obrazovku. Demo simuluje oba stavy; ověření finálního balíčku na zařízení ještě čeká. [Podrobnosti](../THEMES.md#ribbon-over-applications-unreleased).
+
 
 **Nevydaný kandidát — zdroje při spuštění Root:** V Nastavení → Vaše domovská obrazovka zapněte **Změnit Home** a upravte **Otevřít Clean Your TV jako první**. **LG Channels / Živé TV** je ve výchozím nastavení zapnuté; **YouTube** a **HDMI** vypnuté. Při vypnutí změny Home zůstanou přepínače viditelné, ale nedostupné, a volby se zachovají. Nastavení se ukládá soukromě v tomto televizoru a není součástí přenosného exportu profilu. Jde o kandidáta, ne o ověřené spuštění či probuzení TV.
 
@@ -15,6 +18,14 @@ nadále používají dosavadních dvanáct jazyků. Pro instalaci použijte
 Samostatný Homebrew CYTV Installer zůstává nevydaný.
 
 ## Jazyk a ovládání
+
+V náhledu příští verze zobrazuje **Nastavení Home → Tapety** tapetu aktivního motivu, zjištěné možnosti TV a aktuální režim. Auto volí kompatibilní kvalitu; 4K, 1080p a obrázek jsou dostupné jen podle obsahu motivu. Při potížích se zobrazí obrázek. Ztmavení se mění po 5 %; obnovení vrátí nastavení motivu. Classic a motivy bez tapety zobrazí tento stav výslovně.
+
+Vlastní tapety v náhledu příští verze: v počítačovém CYTV otevřete Tapety, vyberte JPG/PNG, upravte výřez a zadejte místní adresu TV a přijímací PIN z nastavení Home. CYTV vytvoří video bez zvuku místně; 4K nabídne jen při dostatečném rozlišení výřezu. Na TV zvolte příjem z CYTV nebo nahrávání z telefonu a ve stejné Wi-Fi naskenujte QR kód. Telefon posílá běžný obrázek nejvýše 1920×1080 bez nativní 4K video vrstvy; ostrost omezuje rozlišení rozhraní TV. Před odesláním potvrďte upozornění, pak na TV zkontrolujte náhled a použijte tapetu. Vlastní obrázky zůstávají uložené a lze je znovu vybrat nebo odstranit v Tapetách. Zrušení či odmítnutý soubor zachová dosavadní pozadí. Jsou nutná odpovídající připravovaná sestavení Home/služby a CYTV.
+
+Připravované vestavěné tapety: **Nastavení Home → Tapety → Vestavěné tapety → Black Hole**. Autor videa: **Xecutioner**; povoleno nekomerční použití s uvedením autora. Potvrzení jiného motivu obnoví jeho vlastní tapetu. Black Hole i vlastní obrázky lze vybrat znovu. Souvislý 4K stream nepřetáčí video při každém opakování; k dispozici je kompatibilní video nebo obrázek.
+
+Android CYTV: **Nastavit TV** · **Tapety** · **Údržba**. Na TV otevřete nastavení Home → Tapety → Nahrát z telefonu. Naskenujte QR fotoaparátem telefonu, vyberte JPG/PNG a použijte tapetu na TV. Telefon odesílá obrázek do 1920×1080 bez nativního 4K videa; pro skutečné 4K použijte CYTV na počítači.
 
 Na televizoru otevřete **Settings → Language → Čeština**. Po změně se Home
 znovu načte. Volba **Automaticky (jazyk systému)** používá jazyk televizoru;

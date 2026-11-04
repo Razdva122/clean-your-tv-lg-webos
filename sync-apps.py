@@ -13,8 +13,10 @@ import json
 import os
 import sys
 import urllib.request
+from websockets.exceptions import ConnectionClosed
 
 import lgtv
+from cytv.tv import include_tuner
 
 APP_DIR = os.path.join(lgtv.HERE, "launcher")
 
@@ -24,6 +26,12 @@ async def main(host, list_only):
     try:
         points = (await lgtv.call(ws, "ssap://com.webos.applicationManager/listLaunchPoints")).get("launchPoints", [])
         inputs = (await lgtv.call(ws, "ssap://tv/getExternalInputList")).get("devices", [])
+        try:
+            installed = await lgtv.call(ws, "ssap://com.webos.applicationManager/listApps")
+        except (OSError, TimeoutError, ConnectionClosed, json.JSONDecodeError, AttributeError):
+            installed = None  # Optional transport/parser failure retains baseline.
+        if isinstance(installed, dict) and installed.get("returnValue") is not False:
+            points = include_tuner(points, installed.get("apps"))
     finally:
         await ws.close()
 
@@ -45,7 +53,10 @@ async def main(host, list_only):
             data = urllib.request.urlopen(url, context=ctx, timeout=10).read()
         except Exception as e:
             print(f"  no icon for {p['id']}: {e}")
-            continue
+            if p["id"] != "com.webos.app.livetv":
+                continue
+            with open(os.path.join(APP_DIR, "brand-v2-icon.png"), "rb") as fallback:
+                data = fallback.read()
         with open(os.path.join(icon_dir, name), "wb") as f:
             f.write(data)
         apps.append({

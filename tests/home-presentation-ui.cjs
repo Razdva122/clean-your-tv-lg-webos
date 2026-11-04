@@ -28,6 +28,8 @@ const {assert,chromium,stage,fs,path}=require('./themes/browser.cjs'),http=requi
   });
   const mode=value=>page.waitForFunction(v=>HomePresentationController.state().mode===v,value);
   await mode('overlay');
+  assert.equal(await page.evaluate(()=>HomeWallpaper.state().paused),true,'overlay releases Home video wallpaper');
+  assert.equal(await page.locator('#ctvWallpaper').evaluate(el=>getComputedStyle(el).display),'none','overlay hides wallpaper plane');
   // Dialog/relaunch must preserve modal focus and opacity.
   await page.locator('#btnSettings').click();
   await page.waitForFunction(()=>RenewalPanel.isOpen());await mode('full');

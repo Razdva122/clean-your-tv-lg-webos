@@ -1,10 +1,13 @@
 // Classic Inputs shelf: one-press remote path, live status, live preview, overflow, preferences and other layouts.
 const {assert, chromium, stage, open: openBase} = require('./browser.cjs');
 const shelfLayout={preset:'dock-grid',columns:5,spacingScale:1,textScale:1,focusScale:1.1,inputs:'shelf'};
-async function open(...args) { const result=await openBase(...args); await result.page.evaluate(layout=>{InputSources.setPreviewEnabled(localStorage,true);HomeLayoutState.setThemeLayout(layout);},shelfLayout); return result; }
+async function open(...args) { const result=await openBase(...args); await result.page.evaluate(layout=>{HomeLayoutState.setThemeLayout(layout);},shelfLayout); return result; }
 
 // Records the live-status bridge so the test can push subscription updates.
 function recordStatusBridge() {
+  window.statusBlurred=false;
+  window.addEventListener('blur',()=>window.statusBlurred=true);
+  window.addEventListener('focus',()=>window.statusBlurred=false);
   let ctor;
   Object.defineProperty(window, 'PalmServiceBridge', {configurable: true, set: value => { ctor = value; }, get: () => {
     if (ctor && !ctor.recorded && ctor.prototype.call) {
@@ -231,7 +234,13 @@ function recordStatusBridge() {
         await reload();
         await press('ArrowUp', 'ArrowRight');
         assert.equal(await focused(), 'shelf:HDMI 2');
-        const push = devices => page.evaluate(devices => window.statusBridge.onservicecallback(JSON.stringify({returnValue: true, devices})), devices);
+        const push = devices => page.evaluate(({devices,root}) => {
+          if (!root) { window.statusBridge.onservicecallback(JSON.stringify({returnValue:true,devices})); return; }
+          // Root has no subscription: an explicit foreground interaction reads the new snapshot.
+          window.PREVIEW_INPUT_STATUS=devices;
+          if(!window.statusBlurred)window.dispatchEvent(new Event('focus'));
+          return new Promise(resolve=>setTimeout(resolve,80));
+        }, {devices,root:edition==='root-launcher'});
         await push([{appId: 'preview.hdmi2', label: 'HDMI 2', connected: true, deviceName: 'Apple TV'}, {appId: 'preview.hdmi3', label: 'HDMI 3', connected: false}]);
         assert.equal(await focused(), 'shelf:HDMI 2', 'focus follows the same source to its new position');
         assert.equal(await page.locator('.ctv-input-tile.is-focused').evaluate(el => el.classList.contains('is-connected')), true);

@@ -87,6 +87,9 @@ def firmware_access(root='/var/lib/clean-your-tv-root', base='/var/luna-service2
     from pathlib import Path
     root,base,installed,installation=map(Path,(root,base,installed,installation))
     app='com.cleanyourtv.root.preview';service=app+'.service';group=service+'.control'
+    # The legacy receiver attachment intentionally grants only its four APIs.
+    # Media-cache APIs require fresh provisioning's wallpaper-media-v1 marker;
+    # an old protected worker/snapshot is not upgraded by this repair action.
     features={
         'firmware':('homebrew-configuration','firmware-permissions',['org.webosbrew.hbchannel.service/getConfiguration','org.webosbrew.hbchannel.service/setConfiguration']),
         'theme-receiver':('theme-receiver','theme-receiver-permissions',[service+'/'+name for name in ('themeReceiverStart','themeReceiverStatus','themeReceiverRead','themeReceiverStop')])}

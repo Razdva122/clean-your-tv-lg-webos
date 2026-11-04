@@ -1,6 +1,6 @@
 # Install cytv without a terminal
 
-> Candidate 1.7.0 rebuilds cytv 0.8.0 with passive Root inspection and guarded pre-submission No-root removal recovery. Published 1.6.0 acceptance does not certify the new installer bytes.
+> Release 1.7.1 rebuilds cytv 0.8.1 to correct macOS bundled-package validation. Use the published release link below for available downloads. [Patch scope and checks](RELEASE-1.7.1.md).
 
 > See [1.6.0 versions, installer changes and limits](RELEASE-1.6.0.md) and the [dated acceptance scope](history/2026-11-02-release-1.6.0-final-acceptance.md). Obtain available packages from [GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases).
 
@@ -41,6 +41,15 @@ These steps apply to the unverified-developer/notarization warning. If macOS
 reports actual malware or a damaged app, stop and report the exact message.
 Do not disable Gatekeeper or remove quarantine with terminal commands.
 See [Apple's first-launch guidance](https://support.apple.com/en-mo/102445).
+
+### If setup reports missing or invalid embedded graphics packages
+
+Affected macOS bundles can reject their normal package-folder alias even when the
+IPKs and manifest hashes are valid. Release 1.7.1 (cytv 0.8.1) corrects that validation; both rebuilt macOS bundles
+passed their package-selection checks. If this message persists with the complete
+published installer, save its diagnostic report for investigation. This error occurs
+before package installation. Keep its diagnostic report; do not edit the app bundle,
+substitute IPKs or bypass checks. This fix does not require a TV firmware update.
 
 ### If the app opens but cannot connect to the TV
 

@@ -60,3 +60,7 @@ Copyright LG Electronics; these third-party reference images are not covered by
 CYTV's MIT license. Original URLs and provenance are included with the images in
 `setup-guide/README.md` (Android: `ui/guide/README.md`). The screenshots show an
 example LG UI, not a tested CYTV device or the user's credentials.
+
+## Black Hole wallpaper video
+
+Video author: **Xecutioner**. Original: [4K SCI-FI Black Hole](https://steamcommunity.com/sharedfiles/filedetails/?id=2981249186). The maintainer confirmed permission on 2026-11-04 for non-commercial use and inclusion in free CYTV distributions with explicit author attribution. The video, streaming copy and derived stills are not covered by CYTV’s MIT license. See [the artwork terms](themes/ribbon/LICENSE.txt) and [credits](themes/ribbon/CREDITS.txt). Commercial use requires separate permission. Private correspondence is retained privately.

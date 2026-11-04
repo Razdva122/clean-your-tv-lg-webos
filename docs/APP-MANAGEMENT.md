@@ -26,6 +26,20 @@ settings section to add apps or restore hidden ones without showing + again.
 The choice survives restart and is included in the layout saved for system
 update/rollback recovery. A failed save leaves the previous choice active.
 
+## Live TV discovery (unreleased, #290)
+
+**+ / Add app** can offer the broadcast tuner under the TV's own localized name
+(for example, Live TV) when Application Manager reports it installed. Some
+firmware omits the tuner from launch points and marks its app invisible; the
+candidate includes this discovered tuner without exposing other hidden system
+apps. It does not invent an app on models where the tuner is not discovered.
+
+No-root needs the updated Home Helper for picker refresh and the updated installer
+for initial inventory. Root needs the updated Home package. An unsupported or
+failed supplementary query preserves the normal app list. These changes are not
+yet in published downloads. Discovery is verified separately from launching
+channels; tuner launch and firmware-specific compatibility still need TV acceptance.
+
 ## Inventory and persistence
 
 The launcher asks its edition's service for a fresh inventory whenever the app picker opens.

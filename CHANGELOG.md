@@ -8,11 +8,19 @@
   Liquid Glass selects the shelf; Classic and existing themes keep the menu.
   A nonempty shelf replaces the header Inputs shortcut. Device names depend on
   firmware EIM metadata, with Connected as the fallback status.
-- Keep HDMI previews off by default, with explicit Preview inputs on focus opt-in
-  for shelf themes. Previews may play sound or switch HDR on some TVs; Home does
-  not automatically change global TV mute or HDR settings. A 2026-11-02 C3
-  standalone browser probe observed audio and an HDR notification despite a mute
-  request; packaged Home acceptance and a solution for mute/HDR remain unverified.
+- Enable HDMI previews by default for shelf themes while preserving an explicit
+  saved Off. Settings → Appearance → Preview inputs on focus can disable them.
+  Previews may play sound or switch HDR on some TVs; Home does not automatically
+  change global TV mute or HDR settings. Final package acceptance is pending;
+  silence and HDR suppression are not guaranteed.
+- Replace late Root boot/wake launches with native first-screen choices for
+  LG Channels/Live TV (on) and YouTube (off). Home Off visibly disables these
+  controls and retains their values. No HDMI startup control is included.
+- Restore Root input connection labels using a bounded authenticated read through
+  the existing service endpoint, without new permissions or polling. No-root
+  retains direct EIM where allowed and falls back after a definitive permission
+  refusal to a fixed paired Helper read through Home's own service. Metadata
+  uses an independent exchange so Home controls remain available.
 - Bundle Liquid Glass in place of Alpine. Alpine 1.4.4 is downloadable from Theme
   showcase. A saved `builtin:alpine` selection falls back to Classic with the
   existing recovery notice, without automatic download or substitution.

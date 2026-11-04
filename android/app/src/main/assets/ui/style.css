@@ -22,3 +22,13 @@
 .tv-checks{margin:22px 0}.tv-checks h3{font-size:16px;font-weight:600;margin-bottom:12px}.tv-checks ul{list-style:none;margin:0;padding:0}.tv-checks li{display:flex;gap:12px;padding:12px 0;border-top:1px solid var(--line);overflow-wrap:anywhere}.tv-checks li>div{min-width:0}.tv-checks p{font-size:14px;color:var(--muted);margin:5px 0}.check-marker{flex:0 0 22px;text-align:center}.check-status{display:block;font-size:14px;margin-top:4px;color:var(--muted)}.tv-checks [data-status=pass] .check-marker,.tv-checks [data-status=pass] .check-status{color:var(--jade)}.tv-checks [data-status=fail] .check-marker,.tv-checks [data-status=fail] .check-status{color:var(--error)}.tv-checks [data-status=unknown] .check-marker,.tv-checks [data-status=unknown] .check-status{color:#e8c17d}
 
 .review-symbol{color:#e8c17d;background:#403a2d}
+
+/* Start actions share the desktop hierarchy, with full-width mobile targets. */
+.setup-tv{min-height:60px;background:var(--text);border-color:var(--text);color:var(--ink)}
+.setup-tv:active{background:var(--muted)}
+.home-actions{display:grid;gap:12px;margin-top:16px}
+.home-actions .secondary{margin:0;min-height:52px;border:1px solid var(--line)}
+.home-actions .maintenance-button{background:transparent;border-color:var(--muted)}
+.wallpaper-limit{display:flex;align-items:flex-start;gap:12px;border:1px solid var(--line);border-radius:18px;padding:18px;color:var(--muted)}
+.wallpaper-limit svg{color:var(--text)}
+.shell{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}

@@ -4,8 +4,8 @@
   function t(source, params) { if (window.HomeI18n) return window.HomeI18n.t(source, params); return String(source).replace(/\{(\w+)\}/g, function (_, key) { return params && params[key] !== undefined ? params[key] : '{' + key + '}'; }); }
   var panel, message, buttons, selected = 0, busy = false, previous, rootStatus = null;
   var checkingUpdates = false, categories, statusGeneration = 0, refreshTail = Promise.resolve();
-  var sourceGroup, sourceHint, sourceStatus = null, sourceUnavailable = false, sourceKeys = ['tv','youtube','hdmi'];
-  var sources = {tv:true,youtube:false,hdmi:false};
+  var sourceGroup, sourceHint, sourceStatus = null, sourceUnavailable = false, sourceKeys = ['tv','youtube'];
+  var sources = {tv:true,youtube:false};
   function renderSources() {
     var enabled = !busy && !!sourceStatus && sourceStatus.active === true && !!rootStatus && rootStatus.intent && rootStatus.intent.phase === 'active';
     sourceGroup.setAttribute('aria-disabled', String(!enabled));
@@ -18,7 +18,7 @@
   }
   function readSources(status) {
     if (!status || typeof status.active !== 'boolean' || !status.sources ||
-        Object.keys(status.sources).sort().join(',') !== 'hdmi,tv,youtube' ||
+        Object.keys(status.sources).sort().join(',') !== 'tv,youtube' ||
         sourceKeys.some(function (key) { return typeof status.sources[key] !== 'boolean'; })) throw new Error('Invalid service response');
     sourceStatus = status; sources = status.sources; renderSources();
   }
@@ -34,7 +34,7 @@
   }
   function changeSource(index) {
     if (!sourceStatus || buttons[index].disabled || busy) return;
-    var next = {tv:sources.tv,youtube:sources.youtube,hdmi:sources.hdmi};
+    var next = {tv:sources.tv,youtube:sources.youtube};
     next[sourceKeys[index - 15]] = !next[sourceKeys[index - 15]];
     busy = true; buttons.forEach(function (button) { button.disabled = true; }); renderSources();
     var generation = statusGeneration, error;
@@ -154,7 +154,7 @@
       refreshMode().then(function () { message.textContent = t(error); });
     });
   }
-  var order = [3, 1, 12, 15, 16, 17, 9, 8, 10, 11, 14, 5, 4, 0, 7, 6, 2];
+  var order = [3, 1, 12, 15, 16, 9, 8, 10, 11, 14, 5, 4, 0, 7, 6, 2];
   function focus(index) {
     selected = index;
     if (!buttons[selected].disabled && !buttons[selected].hidden) buttons[selected].focus();
@@ -168,7 +168,7 @@
   }
   function close() {
     if (busy) return;
-    if(window.HomeThemePanel)HomeThemePanel.unmount();
+    if(window.HomeWallpaperPanel)HomeWallpaperPanel.unmount();if(window.HomeThemePanel)HomeThemePanel.unmount();
     invalidateMode();
     panel.hidden = true;
     if (window.ThemeRuntime) window.ThemeRuntime.resume('settings');
@@ -185,7 +185,7 @@
     if (index === 14) { if (window.HomeInputShelf) HomeInputShelf.togglePreview(); return; }
     if (index === 11) { if (window.HomeAppControls) { close(); HomeAppControls.add(); } return; }
     if (index === 3) return changeMode();
-    if (index >= 15 && index <= 17) return changeSource(index);
+    if (index >= 15 && index <= 16) return changeSource(index);
     if (index === 7) {
       if (!window.RootAudio) return;
       panel.hidden = true;
@@ -242,8 +242,8 @@
     var footer = document.createElement('div'); footer.className = 'settings-footer'; card.appendChild(footer);
     var back = document.createElement('div'); back.className = 'renewal-actions'; footer.appendChild(back);
     buttons = [];
-    [3, 1, 9, 8, 10, 11, 14, 5, 4, 0, 7, 6, 2, 12, 15, 16, 17].forEach(function (i) {
-      var labels = ['TV settings','Open LG Home','Back to Home','Change Home','Software updates','Language','LG firmware updates','HDMI sound','Columns','Themes','Show Add app tile','Add app','Check status','Show inputs on Home','Preview inputs on focus','LG Channels / Live TV','YouTube','HDMI'];
+    [3, 1, 9, 8, 10, 11, 14, 5, 4, 0, 7, 6, 2, 12, 15, 16].forEach(function (i) {
+      var labels = ['TV settings','Open LG Home','Back to Home','Change Home','Software updates','Language','LG firmware updates','HDMI sound','Columns','Themes','Show Add app tile','Add app','Check status','Show inputs on Home','Preview inputs on focus','LG Channels / Live TV','YouTube'];
       var b = document.createElement('button'); b.textContent = t(labels[i]);
       if (i === 12) { b.hidden = true; b.disabled = true; }
       if (i === 3) { b.className = 'home-routing-switch'; b.setAttribute('role','switch'); b.setAttribute('aria-checked','false'); }
@@ -267,10 +267,12 @@
     });
     themes.id='homeThemeHost';if(window.HomeThemePanel)HomeThemePanel.mount(themes);
     var appsError = text(apps, 'p', ''); appsError.id = 'homeAppsError'; appsError.setAttribute('role','alert');
+    var wallpapers=document.createElement('div');if(window.HomeWallpaperPanel)HomeWallpaperPanel.mount(wallpapers);
     if(window.SettingsCategories) categories = SettingsCategories.attach(panel, card, [
       {id:'home',label:'Your Home screen',elements:[home]},
       {id:'appearance',label:'Appearance',elements:[layout,apps]},
       {id:'themes',label:'Themes',elements:[themes]},
+      {id:'wallpapers',label:'Wallpapers',elements:[wallpapers]},
       {id:'language',label:'Language',elements:[buttons[5]]},
       {id:'updates',label:'Software updates',elements:[buttons[4],buttons[6]]},
       {id:'advanced',label:'Advanced',elements:[buttons[0],buttons[7]]}

@@ -19,11 +19,13 @@ const {assert,chromium,stage,open}=require('./browser.cjs');
    assert.equal(await tile('HDMI 3').locator('.input-detail').textContent(),'Connected','unnamed connected source has an honest fallback');
    assert.equal(await tile('HDMI 2').locator('.input-detail').textContent(),'PlayStation 5','reported name is rendered');
    assert.equal(await tile('HDMI 4').locator('.input-detail').textContent(),'Not connected');
-   await page.keyboard.press('ArrowUp');await page.waitForTimeout(1200);
-   assert.equal(await page.locator('.ctv-input-preview').count(),0,'live preview stays off by default');
+   assert.equal(await page.evaluate(()=>localStorage.getItem(InputSources.previewKey)),null,'fresh profile has no saved preview choice');
+   await tile('HDMI 2').hover();
+   await page.waitForFunction(()=>document.querySelector('.ctv-input-tile.is-previewing .ctv-input-preview'));
+   assert.equal(await page.locator('.ctv-input-tile.is-previewing .input-name').textContent(),'HDMI 2','connected source previews by default');
    await page.locator('#btnSettings').click();await page.locator('[data-category=appearance]').click();
    assert.equal(await page.locator('#homePreviewInputs').isVisible(),true);
-   assert.equal(await page.locator('#homePreviewInputs').getAttribute('aria-checked'),'false');
+   assert.equal(await page.locator('#homePreviewInputs').getAttribute('aria-checked'),'true');
    assert.equal(await page.locator('#homeInputPreviewHint').count(),0,'one switch without extra explanation');
    await page.evaluate(layout=>HomeLayoutState.setThemeLayout({...layout,inputs:'menu'}),layout);
    assert.equal(await page.locator('#homePreviewInputs').isVisible(),false,'menu themes hide preview switch');
@@ -31,5 +33,5 @@ const {assert,chromium,stage,open}=require('./browser.cjs');
   }
   await context.close();
  }finally{await browser.close();}
- console.log('PASS reported device names, Connected fallback and shelf-only preview switch default off in both editions');
+ console.log('PASS reported device names, Connected fallback and shelf-only preview switch default on in both editions');
 })().catch(e=>{console.error(e);process.exitCode=1});

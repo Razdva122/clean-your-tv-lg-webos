@@ -20,7 +20,7 @@ const base=process.env.PREVIEW_URL||'http://127.0.0.1:8879';
      if(payload.startup){
       const send=result=>this.onservicecallback(JSON.stringify({returnValue:true,result:{returnValue:true,result}}));
       if(payload.startup==='configure')b.sources=payload.sources;
-      send({sources:b.sources||{tv:true,youtube:false,hdmi:false},active:b.phase==='active'});return;
+      send({sources:b.sources||{tv:true,youtube:false},active:b.phase==='active'});return;
      }
      b.calls.push(method);
      const send=result=>this.onservicecallback(JSON.stringify({returnValue:true,result:{returnValue:true,result}}));
@@ -59,7 +59,7 @@ const base=process.env.PREVIEW_URL||'http://127.0.0.1:8879';
   await page.waitForFunction(()=>!document.querySelector('.root-settings [role=switch]').disabled);
   assert.equal(await toggle.getAttribute('aria-checked'),'false');
   const sources=page.locator('.startup-source-actions button');
-  assert.equal(await sources.count(),3);assert(await sources.nth(0).isDisabled());
+  assert.equal(await sources.count(),2);assert.deepEqual(await sources.allTextContents(),['LG Channels / Live TV','YouTube']);assert(await sources.nth(0).isDisabled());
   assert.equal(await sources.nth(0).getAttribute('aria-checked'),'true');
   const sourceLayout=await page.evaluate(()=>({hint:document.querySelector('#rootStartupHint').getBoundingClientRect().bottom,content:document.querySelector('.settings-content').getBoundingClientRect().bottom}));
   assert(sourceLayout.hint<=sourceLayout.content,'all source controls and the Off explanation fit in the TV reading area');
@@ -67,7 +67,7 @@ const base=process.env.PREVIEW_URL||'http://127.0.0.1:8879';
   await toggle.click();await page.waitForFunction(()=>document.querySelector('.root-settings [role=switch]').getAttribute('aria-checked')==='true');
   assert.deepEqual(await page.evaluate(()=>settingsBackend.calls.filter(m=>m!=='status')),['enable']);
   await sources.nth(1).click();await page.waitForFunction(()=>document.querySelectorAll('.startup-source-actions button')[1].getAttribute('aria-checked')==='true');
-  assert.deepEqual(await page.evaluate(()=>settingsBackend.sources),{tv:true,youtube:true,hdmi:false});
+  assert.deepEqual(await page.evaluate(()=>settingsBackend.sources),{tv:true,youtube:true});
   await page.waitForFunction(()=>!document.querySelector('.root-settings [role=switch]').disabled);
   await toggle.click();await page.waitForFunction(()=>document.querySelector('.root-settings [role=switch]').getAttribute('aria-checked')==='false');
   assert.deepEqual(await page.evaluate(()=>settingsBackend.calls.filter(m=>m!=='status')),['enable','restore']);

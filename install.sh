@@ -53,7 +53,7 @@ if [[ -z "${ZIG:-}" ]]; then
 fi
 export ZIG
 [[ "$("$ZIG" version)" == 0.14.1 ]] || { echo 'ZIG must point to a working Zig 0.14.1 executable.' >&2; exit 1; }
-python3 -m pip install -r requirements.txt
+python3 -m pip install -r requirements.txt -r scripts/build-requirements.txt
 # Pin the official CLI locally instead of depending on a global CLI's version.
 npm install --prefix build/tools --no-audit --no-fund '@webos-tools/cli@3.2.6'
 export PATH="$PWD/build/tools/node_modules/.bin:$PATH"
@@ -83,8 +83,8 @@ python3 - "$tv_node" <<'PY'
 import re, sys
 # CLI 3.x writes informational banners to stdout alongside the remote result.
 version = '\n'.join(line for line in sys.argv[1].splitlines() if not line.startswith('[Info]')).strip()
-if not re.fullmatch(r'\d+\.\d+\.\d+', version) or tuple(map(int, version.split('.'))) < (0, 10, 25):
-    raise SystemExit('Home Helper requires TV Node.js 0.10.25 or newer. Installation has not started.')
+if not re.fullmatch(r'\d+\.\d+\.\d+', version) or tuple(map(int, version.split('.'))) < (0, 10, 15):
+    raise SystemExit('Home Helper requires TV Node.js 0.10.15 or newer. Installation has not started.')
 PY
 # Generated icons/directories and native executables must be readable/traversable
 # by the TV runtime after packaging. Pairing keys enforce their own private modes.

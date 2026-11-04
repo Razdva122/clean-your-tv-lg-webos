@@ -1,6 +1,6 @@
 // Catch overlapping Home/startup reads using the actual single-flight service handler.
 const assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs');
-const elements=[],listeners={};let phase='active',sources={tv:true,youtube:false,hdmi:false};
+const elements=[],listeners={};let phase='active',sources={tv:true,youtube:false};
 const pause=()=>new Promise(resolve=>setImmediate(resolve));
 const handlers=require('../service/handlers')(async command=>{await pause();if(command==='enable')phase='active';if(command==='restore')phase='disabled';return {intent:{phase}};},null,async(command,next)=>{await pause();if(command==='configure')sources=next;return {sources,active:phase==='active'};});
 class Element {
@@ -17,12 +17,13 @@ async function settle(){for(let i=0;i<8;i++)await pause();}
 (async()=>{
  context.window.RenewalPanel.open();
  const home=button('Change Home'),youtube=button('YouTube');
+ assert.deepEqual(elements.filter(e=>e.tag==='button'&&e.parent.className==='renewal-actions startup-source-actions').map(e=>e.textContent),['LG Channels / Live TV','YouTube']);
  await pause();assert.equal(home.disabled,true,'Home stays unavailable while the startup read holds the service lock');
  home.onclick();assert.equal(phase,'active','pending refresh cannot mutate Home');
  await settle();
  assert.equal(home.disabled,false,'opening Settings must allow Home control with the real service lock');
  assert.equal(home.attrs['aria-checked'],'true');assert.equal(youtube.disabled,false);
- youtube.onclick();await settle();assert.equal(youtube.attrs['aria-checked'],'true');assert.equal(home.disabled,false);
+ youtube.onclick();await settle();assert.deepEqual(sources,{tv:true,youtube:true});assert.equal(youtube.attrs['aria-checked'],'true');assert.equal(home.disabled,false);
  home.onclick();await settle();assert.equal(home.attrs['aria-checked'],'false');assert.equal(home.disabled,false);
  assert.equal(youtube.disabled,true);assert.equal(youtube.attrs['aria-checked'],'true','Off retains saved choices');
  // LG Home -> the existing Root window delivers visibility and relaunch together.

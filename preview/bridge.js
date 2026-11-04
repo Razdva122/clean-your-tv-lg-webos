@@ -66,9 +66,9 @@
         if(homeMethod==='setHomeControl')homeEnabled=payload.enabled;
         if(homeMethod==='openLGHome')message('LG Home · settings kept');
         if(['homeStatus','setHomeControl','openLGHome'].indexOf(homeMethod)>=0)result={returnValue:true,enabled:homeEnabled};
-      } else if (uri === 'luna://com.local.nativehome.service/listApps' || uri === 'luna://com.cleanyourtv.root.preview.service/listApps') {
+      } else if (uri === 'luna://com.local.nativehome.service/listApps' || uri === 'luna://com.cleanyourtv.root.preview.service/listApps' && payload.inputs !== true) {
         result = {returnValue:true, apps:(window.TV_APPS.apps || []).concat(window.TV_APPS.referenceApps ? [] : [{id:'preview.gallery', title:'Photo & Video', icon:'../preview/icons/browser.svg'}])};
-      } else if (uri === 'luna://com.webos.service.eim/getAllInputStatus') {
+      } else if (uri === 'luna://com.webos.service.eim/getAllInputStatus' || uri === 'luna://com.cleanyourtv.root.preview.service/listApps' && payload.inputs === true) {
         // Simulated live ports: captured inputs are connected, two spare ports are not.
         // window.PREVIEW_INPUT_STATUS overrides the device list; null simulates a denied call.
         var names = ['PlayStation 5', 'Apple TV'], captured = window.TV_APPS.inputs || [];

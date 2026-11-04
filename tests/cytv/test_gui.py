@@ -70,12 +70,30 @@ class GuiTests(unittest.TestCase):
 
     def test_maintenance_is_disclosed_and_resets_on_home(self):
         w = Wizard()
+        self.addCleanup(w.close)
         w.show()
+        self.app.processEvents()
+        setup = next(button for button in w.form.findChildren(QPushButton) if button.isDefault())
+        wallpaper = w.wallpapers_button
+        maintenance = w.maintenance_toggle
+        position = lambda button: button.mapTo(w.form, button.rect().topLeft())
+        self.assertLess(position(setup).y() + setup.height(), position(wallpaper).y())
+        self.assertEqual(position(wallpaper).y(), position(maintenance).y())
+        self.assertGreater(setup.width(), wallpaper.width())
+        self.assertGreaterEqual(maintenance.height(), 44)
         self.assertTrue(w.maintenance.isHidden())
         w.maintenance_toggle.click()
         self.assertFalse(w.maintenance.isHidden())
+        self.assertTrue(w.content.isHidden(), 'Expanded maintenance replaces setup instructions so controls have room')
+        w.resize(900, 680)
+        self.app.processEvents()
+        self.assertTrue(w.preview.isHidden())
+        for control in (*w.maintenance.findChildren(QComboBox), *w.maintenance.findChildren(QPushButton)):
+            self.assertTrue(w.maintenance.rect().contains(control.geometry()), 'Maintenance controls fit the smallest window')
         w.home()
         self.assertTrue(w.maintenance.isHidden())
+        self.assertFalse(w.preview.isHidden())
+        self.assertFalse(w.content.isHidden())
         self.assertFalse(w.maintenance_toggle.isChecked())
         w.close()
 
@@ -118,6 +136,7 @@ class GuiTests(unittest.TestCase):
                 w.maintenance.findChild(QComboBox).setCurrentIndex(index)
                 w.maintenance.findChild(QPushButton).click()
                 self.pump(lambda: w.pending is not None)
+                self.assertFalse(w.content.isHidden(), 'Operation instructions must be visible after expanded maintenance')
                 self.assertEqual(calls[0][0], command)
                 self.assertEqual('--report' in calls[0], command == 'doctor')
                 actual_title, actual_badge = w.title.text(), w.badge.text()

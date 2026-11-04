@@ -25,9 +25,51 @@ module.exports=function(execFile,getuid){
        }
       }catch(_){}
      }
-     return {id:a.id,title:a.title,icon:icon,iconColor:a.iconColor||a.bgColor||'',hidden:a.visible===false||a.hidden===true};
+     // The installed tuner can be invisible to LG Home; keep other system apps hidden.
+     return {id:a.id,title:a.title,icon:icon,iconColor:a.iconColor||a.bgColor||'',hidden:a.id!=='com.webos.app.livetv'&&(a.visible===false||a.hidden===true)};
     });resolve(apps);
    }catch(_){reject(Error('invalid-inventory'));}
   });
  });
+};
+
+// EIM denies the Root web/service identities on some firmware. Read once through
+// the existing root CLI boundary; never accept a caller's URI or arguments.
+module.exports.inputs=function(execFile,getuid){
+ return new Promise(function(resolve,reject){
+  if((getuid||process.getuid)()!==0){reject(Error('input-status-unavailable'));return;}
+  (execFile||require('child_process').execFile)('/usr/bin/luna-send',['-n','1','luna://com.webos.service.eim/getAllInputStatus','{}'],{timeout:8000,maxBuffer:256*1024},function(error,stdout){
+   if(error){reject(Error('input-status-unavailable'));return;}
+   try{
+    var result=JSON.parse(stdout);
+    if(!result||result.returnValue!==true||!Array.isArray(result.devices))throw Error('invalid-input-status');
+    var fields=['appId','id','label','deviceName','spdProductDescription'];
+    var devices=result.devices.slice(0,100).map(function(device){
+     if(!device||typeof device!=='object'||Array.isArray(device))throw Error('invalid-input-status');
+     var clean={};
+     fields.forEach(function(key){if(typeof device[key]==='string')clean[key]=device[key].slice(0,256);});
+     clean.connected=typeof device.connected==='boolean'?device.connected:null;
+     return clean;
+    });
+    resolve({returnValue:true,devices:devices});
+   }catch(_){reject(Error('input-status-unavailable'));}
+  });
+ });
+};
+
+module.exports.inputHandler=function(execFile,getuid){
+ var pending=null;
+ return function(message){
+  function fail(){message.respond({returnValue:false,errorText:'Input status unavailable'});}
+  try{
+   var caller=message.ls2Message.applicationID(),payload=message.payload;
+   if(typeof caller!=='string'||caller.split(' ')[0]!=='com.cleanyourtv.root.preview'||
+       !payload||typeof payload!=='object'||Array.isArray(payload)||
+       Object.keys(payload).join(',')!=='inputs'||payload.inputs!==true||
+       (getuid||process.getuid)()!==0){fail();return;}
+  }catch(_){fail();return;}
+  if(!pending)pending=module.exports.inputs(execFile,getuid);
+  var request=pending;
+  request.then(function(result){if(pending===request)pending=null;message.respond(result);},function(){if(pending===request)pending=null;fail();});
+ };
 };

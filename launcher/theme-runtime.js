@@ -16,10 +16,13 @@
     }
     owners[owner || 'manual'] = true;
     if (root.HomePresentationController) root.HomePresentationController.suspend('theme:' + (owner || 'manual'));
+    if (root.HomeWallpaper) root.HomeWallpaper.suspend(owner);
   }
   function resume(owner) {
     delete owners[owner || 'manual'];
     if (root.HomePresentationController) root.HomePresentationController.resume('theme:' + (owner || 'manual'));
+    if (root.HomeWallpaper) root.HomeWallpaper.resume(owner);
+
     if (suspended()) return;
     if (heldSheet && wasEnabled) heldSheet.disabled = false;
     heldSheet = null; wasEnabled = false; surfaceState(false);
@@ -144,7 +147,10 @@
     else surfaceState(false);
     var ownedHandles = Object.create(null);
     Object.keys(handles).forEach(function (key) { ownedHandles[key] = handles[key]; });
-    accepted = {themeId: manifest.id, themeVersion: manifest.themeVersion, handles: ownedHandles};
+    var videoHandles = Object.create(null);
+    Object.keys(input.videoHandles || {}).forEach(function (key) { videoHandles[key] = input.videoHandles[key]; });
+    if (root.HomeWallpaper) root.HomeWallpaper.configure({manifest: manifest, assetHandles: ownedHandles, videoHandles: videoHandles, videoLease: input.videoLease});
+    accepted = {themeId: manifest.id, themeVersion: manifest.themeVersion, handles: ownedHandles, videoHandles: videoHandles, videoLease: input.videoLease};
     var surface = root.document.getElementById('homeSurface');
     if (surface) {
       surface.classList.add('ctv-theme-active');
@@ -152,10 +158,14 @@
     }
     release(previous && previous.handles, ownedHandles);
     if (root.HomePresentationController) root.HomePresentationController.setTheme(manifest.layout);
+    release(previous && previous.videoHandles, videoHandles);
+    if (previous && previous.videoLease && previous.videoLease !== input.videoLease) previous.videoLease.dispose();
+
     return {themeId: manifest.id, themeVersion: manifest.themeVersion};
   }
   function reset() {
     var current = sheet(), previous = accepted;
+    if (root.HomeWallpaper) root.HomeWallpaper.reset();
     if (root.HomeLayoutState && root.HomeLayoutState.setThemeLayout) root.HomeLayoutState.setThemeLayout({preset: 'dock-grid', columns: 5, spacingScale: 1, textScale: 1, focusScale: 1.1});
     else if (root.HomeLayoutState && root.HomeLayoutState.setThemeColumns) root.HomeLayoutState.setThemeColumns(5);
     if (current && current.parentNode) current.parentNode.removeChild(current);
@@ -164,6 +174,9 @@
     if (surface) { surface.classList.remove('ctv-theme-active'); surface.classList.remove('ctv-classic-motion'); }
     release(previous && previous.handles, null);
     if (root.HomePresentationController) root.HomePresentationController.setTheme(null);
+    release(previous && previous.videoHandles, null);
+    if (previous && previous.videoLease) previous.videoLease.dispose();
+
     return {themeId: 'builtin:classic', themeVersion: null};
   }
   root.ThemeRuntime = {isSuspended: suspended, apply: apply, suspend: suspend, resume: resume, reset: reset};

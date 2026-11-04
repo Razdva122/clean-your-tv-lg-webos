@@ -1,5 +1,6 @@
 """Exercise real orchestration; only the remote SSH boundary is simulated."""
 import json
+import os
 import shlex
 from pathlib import Path
 import tempfile
@@ -158,7 +159,7 @@ class OperationTests(unittest.TestCase):
         self.assertTrue(all(selected in command and 'PYTHONDONTWRITEBYTECODE=1' in command for command in commands))
         self.assertIsNone(self.store.pending(installer.profile))
 
-    def test_no_root_rejects_node_below_01025_before_creating_a_receipt(self):
+    def test_no_root_rejects_node_below_01015_before_creating_a_receipt(self):
         import subprocess
         remote = Remote()
         original_run = remote.run
@@ -168,19 +169,19 @@ class OperationTests(unittest.TestCase):
                 args = shlex.split(command)
                 snippet = args[args.index('-e')+1]
                 result = subprocess.run(['node', '-e',
-                    "Object.defineProperty(process.versions,'node',{value:'0.10.24'});"+snippet], capture_output=True)
+                    "Object.defineProperty(process.versions,'node',{value:'0.10.14'});"+snippet], capture_output=True)
                 return 'CYTV_NODE_READY' if result.returncode == 0 else ''
             return original_run(command, **kwargs)
         remote.run = run
         installer = self.installer(remote)
-        with self.assertRaisesRegex(RuntimeError, 'Node.js 0.10.25'):
+        with self.assertRaisesRegex(RuntimeError, 'Node.js 0.10.15'):
             installer.install(self.inventory, 'secret')
         self.assertIsNone(self.store.pending(installer.profile))
         self.assertFalse(any(c[0] == 'upload' for c in remote.calls))
 
-    def test_helper_node_gate_accepts_01025_and_later(self):
+    def test_helper_node_gate_accepts_01015_and_later(self):
         import subprocess
-        for version, allowed in [('0.8.28', False), ('0.10.24', False), ('0.10.25', True),
+        for version, allowed in [('0.8.28', False), ('0.10.14', False), ('0.10.15', True), ('0.10.24', True), ('0.10.25', True),
                                  ('0.10.48', True), ('0.12.0', True), ('0.12.2', True),
                                  ('0.12.18', True), ('8.12.0', True), ('10.24.1', True)]:
             with self.subTest(version=version):
@@ -199,7 +200,7 @@ class OperationTests(unittest.TestCase):
                 if allowed:
                     installer.preflight(install=True)
                 else:
-                    with self.assertRaisesRegex(RuntimeError, 'Node.js 0.10.25'):
+                    with self.assertRaisesRegex(RuntimeError, 'Node.js 0.10.15'):
                         installer.preflight(install=True)
 
     @unittest.skipIf(__import__('os').name == 'nt', 'TV staging uses a POSIX shell')
@@ -789,6 +790,48 @@ class OperationTests(unittest.TestCase):
         tv = state.target('192.0.2.10', edition)
         return operations.Installer(remote, self.store, tv, self.payload, self.manifest, lambda _: None)
 
+    @unittest.skipIf(os.name == 'nt', 'macOS bundle requires POSIX symlinks')
+    def test_macos_payload_alias_accepts_verified_packages(self):
+        self.root_bundle()
+        contents = self.root / 'cytv.app/Contents'
+        resources, frameworks = contents / 'Resources', contents / 'Frameworks'
+        resources.mkdir(parents=True)
+        frameworks.mkdir()
+        self.payload.rename(resources / 'payload')
+        self.payload = frameworks / 'payload'
+        self.payload.symlink_to('../Resources/payload', target_is_directory=True)
+        for edition in ('no-root', 'root'):
+            with self.subTest(edition=edition):
+                remote = Remote()
+                installer = self.installer(remote, edition)
+                installer.select_graphics()
+                self.assertEqual(installer.tv_info['graphics_resolution'], '1920x1080')
+                self.assertEqual(remote.calls, [('luna', 'com.webos.service.tv.systemproperty/getSystemInfo', {'keys': ['UHD']})])
+                self.assertIsNone(self.store.pending(installer.profile))
+
+    @unittest.skipIf(os.name == 'nt', 'macOS bundle requires POSIX symlinks')
+    def test_graphics_alias_still_rejects_linked_package_and_bundle_directory(self):
+        self.root_bundle()
+        alias = self.root / 'payload-alias'
+        alias.symlink_to(self.payload, target_is_directory=True)
+        for name, edition in [('launcher.ipk', 'no-root'), ('root', 'root')]:
+            with self.subTest(name=name):
+                original = self.payload / name
+                outside = self.root / name
+                original.rename(outside)
+                original.symlink_to(outside, target_is_directory=outside.is_dir())
+                try:
+                    remote = Remote()
+                    installer = self.installer(remote, edition)
+                    installer.payload = alias
+                    with self.assertRaisesRegex(RuntimeError, 'graphics packages'):
+                        installer.install(self.inventory, 'secret')
+                    self.assertFalse(any(c[0] in ('run', 'upload') for c in remote.calls))
+                    self.assertIsNone(self.store.pending(installer.profile))
+                finally:
+                    original.unlink()
+                    outside.rename(original)
+
     def test_graphics_preselection_is_reused_by_install(self):
         remote = Remote()
         installer = self.installer(remote)
@@ -1094,6 +1137,51 @@ class OperationTests(unittest.TestCase):
         self.assertEqual(self.store.pending(installer.profile)['action'], 'activate-root')
         self.assertEqual(sum(c[0]=='run' and c[1].endswith(' enable') for c in remote.calls), 1)
         self.assertFalse(any(c[0]=='luna' and c[1].endswith('/launch') for c in remote.calls))
+
+    def test_activation_failures_keep_typed_evidence_without_replaying(self):
+        from cytv.errors import TVCommandError, TVRejected
+        from cytv.diagnostics import create_report
+        self.root_bundle()
+        cases = (
+            ('enable', TVCommandError(1), 'ssh_command',
+             {'exit_status': 1, 'root_action': 'enable', 'root_boundary': 'driver'}),
+            ('launch', TVRejected('PRIVATE TV reply',
+                {'returnValue': False, 'errorCode': -1, 'errorText': 'PRIVATE'},
+                'com.webos.applicationManager/launch'), 'luna',
+             {'operation': 'application-launch', 'error_code': -1,
+              'details_error_code': None, 'status_value': None,
+              'state': 'unknown', 'return_value': False}),
+        )
+        for step, failure, field, expected in cases:
+            with self.subTest(step=step):
+                remote = Remote()
+                run, luna = remote.run, remote.luna
+                def fail_enable(command, **kwargs):
+                    if step == 'enable' and command.endswith(' enable'):
+                        remote.calls.append(('run', command))
+                        raise failure
+                    return run(command, **kwargs)
+                def fail_launch(uri, payload, **kwargs):
+                    if uri == 'com.webos.applicationManager/launch':
+                        remote.calls.append(('luna', uri, payload))
+                        raise failure
+                    return luna(uri, payload, **kwargs)
+                remote.run, remote.luna = fail_enable, fail_launch
+                installer = self.installer(remote, 'root')
+                with self.assertRaises(operations.UserError) as caught:
+                    installer.install(self.inventory)
+                pending = self.store.pending(installer.profile)
+                report = json.loads(create_report(self.store, 'install', installer.profile,
+                                                  'activate-root', caught.exception).read_text())
+                self.store.finish(installer.profile)  # Isolate the next failure scenario.
+                self.assertIs(caught.exception, failure)
+                self.assertEqual((pending['action'], pending['stage']), ('activate-root', step))
+                self.assertEqual(report[field], expected)
+                self.assertEqual(report['first_failure'][field], expected)
+                self.assertNotIn('PRIVATE', json.dumps(report))
+                self.assertEqual(sum(c[0] == 'run' and c[1].endswith(' enable') for c in remote.calls), 1)
+                self.assertEqual(sum(c[0] == 'luna' and c[1].endswith('/launch') for c in remote.calls),
+                                 0 if step == 'enable' else 1)
 
     def test_root_failed_readback_does_not_report_success(self):
         self.root_bundle()

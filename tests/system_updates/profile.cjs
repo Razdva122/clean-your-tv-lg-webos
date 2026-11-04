@@ -45,6 +45,9 @@ async function startAppearance(h) {
     h.memory.set('tvhome.language','de');
     h=harness(edition,{storage:h.memory});await tick();
     assert.equal(h.memory.get('tvhome.language'),'de',edition+' must restore a transaction only once and preserve later user settings');
+    const wallpaperPrefs='[{"id":"builtin:liquid-glass","quality":"auto","dim":0.4}]';
+    h=harness(edition,{storage:new Map([['tvhome.wallpaper.preferences.v1',wallpaperPrefs]])});await tick();
+    assert.equal(h.memory.get('tvhome.wallpaper.preferences.v1'),wallpaperPrefs,edition+' system restore preserves existing app-origin wallpaper preferences');
     h=harness(edition,{storage:new Map([['tvhome.columns.v1','{"version":1,"columns":8}']])});await tick();
     assert.equal(h.memory.get('tvhome.columns.v1'),'{"version":1,"columns":8}',edition+' System snapshot does not encode or replace the live Columns preference');
     h.memory.set('tvhome.columns.v1','{"version":1,"columns":2}');

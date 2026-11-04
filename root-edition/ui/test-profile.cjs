@@ -38,9 +38,9 @@ function harness({restore=null,saved=null,tiles=['app.one'],version='0.0.1',pack
  assert.strictEqual(h.scripts.length,1);assert.deepStrictEqual(h.window.TV_APPS,profile.inventory);assert.strictEqual(h.memory.get('tvhome.order'),profile.settings['tvhome.order']);
  h.window.RootLauncherRendered=true;h.scripts[0].onload();await tick();assert.deepStrictEqual(h.calls.map(x=>x[0]),['restoreProfile','ready','confirm']);assert.strictEqual(h.calls[1][1].transaction,'tx');assert.strictEqual(h.calls[1][1].version,'0.0.1');
  const captured=await h.window.RootProfile.capture();assert.deepStrictEqual(JSON.parse(JSON.stringify(captured)),profile);assert.strictEqual(h.calls.length,3);
- const legacyAppearance=new Map([['tvhome.columns.v1','{"version":1,"columns":4}'],['tvhome.theme.choice.v1','{"id":"builtin:alpine","title":"Alpine"}'],['tvhome.theme.trial.v1','{"kind":"trial"}']]);
+ const legacyAppearance=new Map([['tvhome.columns.v1','{"version":1,"columns":4}'],['tvhome.theme.choice.v1','{"id":"builtin:alpine","title":"Alpine"}'],['tvhome.theme.trial.v1','{"kind":"trial"}'],['tvhome.wallpaper.preferences.v1','[{"id":"builtin:alpine","quality":"image","dim":0.4}]']]);
  harness({restore:{profile,transaction:'legacy-appearance',version:'0.0.1',phase:'verifying'},memory:legacyAppearance});await tick();
- for(const key of ['tvhome.columns.v1','tvhome.theme.choice.v1','tvhome.theme.trial.v1'])assert(!legacyAppearance.has(key),'legacy Root restore still resets appearance to Classic');
+ for(const key of ['tvhome.columns.v1','tvhome.theme.choice.v1','tvhome.theme.trial.v1','tvhome.wallpaper.preferences.v1'])assert(!legacyAppearance.has(key),'legacy Root restore still resets appearance to Classic');
  // Effective Alpine geometry must never be captured as an explicit legacy choice.
  const captureHost=harness({packaged:profile.inventory});await tick();
  captureHost.window.CONFIG=JSON.parse(JSON.stringify(profile.config));

@@ -3,9 +3,9 @@
 # Theme development status
 
 Themes, Columns and categorized settings are already available in published
-packages. The 1.7.0 candidate changes the built-in lineup to Classic, Liquid Glass
-and Ribbon; published 1.6.0 contains Classic, Alpine and Ribbon. Candidate
-integration does not establish physical-TV acceptance.
+packages. Version 1.7.0 changes the built-in lineup to Classic, Liquid Glass
+and Ribbon; version 1.6.0 contains Classic, Alpine and Ribbon. Publication
+does not establish compatibility beyond the recorded physical-TV acceptance.
 The complete design remains in the [theme ecosystem specification](../superpowers/specs/2026-10-28-theme-ecosystem-design.md).
 
 <a id="implemented-in-this-preparation-branch"></a>
@@ -25,7 +25,7 @@ The complete design remains in the [theme ecosystem specification](../superpower
   unchanged. Legacy backups preserve the effective number, not the By theme mode;
   preserving that mode with installed theme state belongs to the storage gate below.
 - A data-only reviewed showcase registry, pinned per-theme detail pages, static
-  catalog, moderation states and read-only PR checks. Classic, Liquid Glass and Ribbon are bundled in the 1.7.0 candidate. Alpine 1.4.4 and Channel are external Showcase themes; the old toolkit Alpine listing remains archived. The historical bundled Alpine choice recovers visibly to Classic.
+  catalog, moderation states and read-only PR checks. Classic, Liquid Glass and Ribbon are bundled in 1.7.0. Alpine 1.4.4 and Channel are external Showcase themes; the old toolkit Alpine listing remains archived.
 - A separate candidate author toolkit with templates, multi-theme repositories,
   actual-renderer browser preview, validation/build, screenshots and PR drafts.
   The main project exports its renderer/compiler with file hashes and provenance.
@@ -80,7 +80,7 @@ Use fresh staging. An export containing the retired `/themes/` subtree is refuse
 before files are written, so old catalogue pages cannot survive a new deployment.
 The main preview retains both editions, theme switching and the TV catalogue JSON.
 
-The optional candidate `modern-icon-css-v1` capability supports bounded CSS-only
+The optional `modern-icon-css-v1` capability supports bounded CSS-only
 icon effects on browsers with filter/screen support. It never replaces original
 app images; older browsers reject it safely. See [the contract](THEME-CSS.md#optional-css-icon-effects)
 and [the local Itachi package source](../../themes/itachi/README.md).

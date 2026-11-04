@@ -5,7 +5,7 @@ const inventory = [{appId:'com.webos.app.hdmi1',label:'HDMI 1'},{appId:'com.webo
 
 function harness(options = {}) {
   const calls = [];
-  const model = sources.create({inventory, ...options, call: (uri, params, reply) => calls.push({uri, params, reply})});
+  const model = sources.create({inventory, ...options, call: (uri, params, reply, timeout) => calls.push({uri, params, reply, timeout})});
   const changes = [];
   model.onchange(list => changes.push(list));
   return {model, calls, changes};
@@ -22,6 +22,26 @@ h.model.start(); h.model.start();
 assert.equal(h.calls.length, 1, 'one subscription per Home session');
 assert.equal(h.calls[0].uri, 'luna://com.webos.service.eim/getAllInputStatus');
 assert.deepEqual(h.calls[0].params, {subscribe:true});
+
+// Root reads a bounded broker snapshot; overlapping interaction refreshes share one call.
+const rootStatus = harness({root:true});
+rootStatus.model.start();rootStatus.model.start();
+assert.equal(rootStatus.calls[0].uri,'luna://com.cleanyourtv.root.preview.service/listApps');
+rootStatus.model.refresh();
+assert.equal(rootStatus.calls.length,1,'Root startup and refresh coalesce while pending');
+assert.equal(rootStatus.calls[0].timeout,10000,'Root snapshot has a bounded bridge lifetime');
+assert.deepEqual(rootStatus.calls[0].params,{inputs:true},'Root snapshots never request a subscription');
+rootStatus.calls[0].reply({returnValue:true,devices:[{appId:'com.webos.app.hdmi1',connected:true}]});
+assert.equal(rootStatus.model.list()[0].connected,true);
+rootStatus.model.refresh();rootStatus.model.refresh();
+assert.equal(rootStatus.calls.length,2,'a completed snapshot permits the next explicit refresh');
+rootStatus.calls[1].reply({returnValue:false});
+assert.equal(rootStatus.model.live(),false,'failed snapshot clears stale live state');
+assert.deepEqual(rootStatus.model.list(),captured);
+rootStatus.model.refresh();assert.equal(rootStatus.calls.length,3,'failure has no automatic retry');
+rootStatus.calls[2].reply({returnValue:true,devices:[{appId:'com.webos.app.hdmi1',connected:false}]});
+assert.equal(rootStatus.model.list()[0].connected,false);
+h.model.refresh();assert.equal(h.calls.length,1,'No-root keeps its existing subscription without snapshot reads');
 
 // Live status overlays the inventory: captured order stays, uncaptured ports follow in the TV's order.
 h.calls[0].reply({returnValue:true, devices:[
@@ -96,9 +116,10 @@ for (const [label, device, kind] of [
 
 const memory = new Map();
 const storage = {getItem: k => memory.has(k) ? memory.get(k) : null, setItem: (k, v) => memory.set(k, v)};
-// Previews default off until explicitly enabled, persist either way, and tolerate broken storage.
+// Preview defaults on; saved false still wins, and invalid storage falls back without writing.
 memory.clear();
-assert.equal(sources.previewEnabled(storage), false, 'previews are off by default');
+assert.equal(sources.previewEnabled(storage), true, 'fresh installs preview without a saved preference');
+assert.equal(memory.size, 0, 'reading the default does not write a preference');
 sources.setPreviewEnabled(storage, false);
 assert.equal(memory.get(sources.previewKey), '{"version":1,"enabled":false}');
 assert.equal(sources.previewEnabled(storage), false);
@@ -106,8 +127,28 @@ sources.setPreviewEnabled(storage, true);
 assert.equal(sources.previewEnabled(storage), true);
 for (const raw of ['{bad', '{"version":2,"enabled":false}', '{"version":1,"enabled":"no"}', 'null']) {
   memory.set(sources.previewKey, raw);
-  assert.equal(sources.previewEnabled(storage), false, 'unknown preview preference keeps the default: ' + raw);
+  assert.equal(sources.previewEnabled(storage), true, 'unknown preview preference keeps the default: ' + raw);
+  assert.equal(memory.get(sources.previewKey), raw, 'reading invalid storage does not overwrite it');
 }
-assert.equal(sources.previewEnabled({getItem() { throw Error('denied'); }}), false);
+assert.equal(sources.previewEnabled({getItem() { throw Error('denied'); }}), true);
 assert.throws(() => sources.setPreviewEnabled(storage, 1), /invalid-input-preview-setting/);
 console.log('PASS input sources: live status overlay, inventory fallback, classifier, preview sources and preferences');
+
+// A definitive No-root EIM permission refusal uses the same-package broker once.
+const noRootDenied=harness();noRootDenied.model.start();
+noRootDenied.calls[0].reply({returnValue:false,errorCode:-1});
+assert.equal(noRootDenied.calls.length,2,'denied No-root EIM must have a paired status fallback');
+assert.equal(noRootDenied.calls[1].uri,'luna://com.gathin.tvhome.renewal/inputStatus');
+assert.deepEqual(noRootDenied.calls[1].params,{});
+assert.equal(noRootDenied.calls[1].timeout,10000);
+noRootDenied.model.refresh();noRootDenied.calls[0].reply({returnValue:false,errorCode:-1});
+assert.equal(noRootDenied.calls.length,2,'repeated refusal and refresh coalesce the pending fallback');
+noRootDenied.calls[1].reply({returnValue:true,devices:[{appId:'com.webos.app.hdmi1',connected:true}]});
+assert.equal(noRootDenied.model.list()[0].connected,true);
+noRootDenied.calls[0].reply({returnValue:true,devices:[{appId:'com.webos.app.hdmi1',connected:false}]});
+assert.equal(noRootDenied.model.list()[0].connected,true,'late direct callbacks cannot replace broker state');
+noRootDenied.model.refresh();assert.equal(noRootDenied.calls.length,3);
+noRootDenied.calls[2].reply({returnValue:false});assert.equal(noRootDenied.model.live(),false);
+assert.equal(noRootDenied.calls.length,3,'failed broker does not retry or create another subscription');
+noRootDenied.model.refresh();assert.equal(noRootDenied.calls.length,4,'explicit interaction may read again');
+console.log('PASS denied No-root input status fallback, read coalescing and stale callback isolation');

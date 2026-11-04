@@ -83,7 +83,7 @@ def build(output, version='0.0.1', legacy_node_prototype=False, resolution=None)
         'hardware_validated': False, 'public_release_ready': False,
         'activates_system_home': False,
         'runtime_layout': 'inline-audio-v1',
-        'capabilities': ['theme-receiver-v1'],
+        'capabilities': ['theme-receiver-v1','wallpaper-media-v1'],
         'inventory': 'empty; configure locally for the later hardware test',
         'files': {name: hashlib.sha256(data).hexdigest() for name, data in sorted(payload.items())},
     }

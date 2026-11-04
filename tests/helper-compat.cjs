@@ -18,7 +18,7 @@ function sources(directory, prefix = '') {
 }
 const output = fs.mkdtempSync(path.join(os.tmpdir(), 'helper-compat-'));
 try {
-  const files = compile(sources('native/app'));
+  const files = compile({...sources('native/app'), 'app-inventory.js': fs.readFileSync('native/service/app-inventory.js', 'utf8')});
   const service = compile({...sources('native/service'), 'state-permissions.js': fs.readFileSync('native/app/state-permissions.js', 'utf8')});
   for (const [name, code] of Object.entries(service)) files['service/' + name] = code;
   for (const [name, code] of Object.entries(files)) {
@@ -29,7 +29,7 @@ try {
   cp.execFileSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '1',
     '-subj', '/CN=localhost', '-keyout', path.join(output, 'test-key.pem'),
     '-out', path.join(output, 'test-cert.pem')], {stdio: 'pipe'});
-  for (const runtime of new Set([process.execPath, process.env.NODE010, process.env.NODE012].filter(Boolean))) {
+  for (const runtime of new Set([process.execPath, process.env.NODE010, process.env.NODE01025, process.env.NODE012].filter(Boolean))) {
     const result = cp.spawnSync(runtime, [path.resolve('tests/helper-runtime.js'), output], {encoding: 'utf8', timeout: 30000});
     assert.equal(result.status, 0, runtime + '\n' + result.stdout + result.stderr);
     assert.match(result.stdout, /PASS Helper runtime/);

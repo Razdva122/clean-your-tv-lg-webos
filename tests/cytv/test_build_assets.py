@@ -105,7 +105,7 @@ class BuildAssetsTests(unittest.TestCase):
                 target = Path(directory) / name
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_bytes(raw)
-            for runtime in dict.fromkeys(filter(None, ['node', os.environ.get('NODE010'), os.environ.get('NODE012')])):
+            for runtime in dict.fromkeys(filter(None, ['node', os.environ.get('NODE010'), os.environ.get('NODE01025'), os.environ.get('NODE012')])):
                 result = subprocess.run([runtime, '-e',
                     'var secure=require(process.argv[1]);if(typeof secure!=="function"||typeof Object.assign!=="function"||typeof Promise!=="function")process.exit(1);',
                     str(Path(directory) / prefix / 'state-permissions.js')], capture_output=True)

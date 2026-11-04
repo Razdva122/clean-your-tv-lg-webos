@@ -30,7 +30,7 @@ module.exports = function (execute, audio, startup, presentation) {
         if (command === 'status' && startupKeys.length === 1 && payload.startup === 'status') operation = 'status';
         if (command === 'enable' && startupKeys.length === 2 && payload.startup === 'configure' &&
             startupKeys.indexOf('sources') >= 0 && payload.sources && !Array.isArray(payload.sources) &&
-            typeof payload.sources === 'object' && Object.keys(payload.sources).sort().join(',') === 'hdmi,tv,youtube' &&
+            typeof payload.sources === 'object' && Object.keys(payload.sources).sort().join(',') === 'tv,youtube' &&
             Object.keys(payload.sources).every(function (key) { return typeof payload.sources[key] === 'boolean'; })) operation = 'configure';
         if (operation) {
           if (busy) return {returnValue:false,errorText:'Recovery busy'};

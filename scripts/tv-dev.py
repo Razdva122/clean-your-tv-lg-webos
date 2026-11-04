@@ -90,7 +90,7 @@ def ui_files():
     html = files['index.html'].decode()
     if html.count('<head>') != 1:
         raise ValueError('Unexpected preview HTML')
-    policy = "default-src 'self' data:; img-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; object-src 'none'; frame-src 'none'; form-action 'none'; base-uri 'none'"
+    policy = "default-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: http://127.0.0.1:*; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; object-src 'none'; frame-src 'none'; form-action 'none'; base-uri 'none'"
     files['index.html'] = html.replace('<head>', '<head>\n<meta http-equiv="Content-Security-Policy" content="' + policy + '">', 1).encode()
     # Include the simulation's only relative icon fallback without directory escape.
     files['bridge.js'] = files['bridge.js'].replace(b'../preview/icons/browser.svg', b'preview/icons/browser.svg')

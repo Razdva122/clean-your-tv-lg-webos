@@ -77,6 +77,7 @@ Path('dist/com.gathin.tvhome_9.8.7_all.ipk').write_bytes(ipk('com.gathin.tvhome'
             (root/'renewal-service/state').mkdir()
             (root/'renewal-service/state/settings.json').write_text('PRIVATE')
             shutil.copy(ROOT/'native/app/state-permissions.js', root/'native/app/state-permissions.js')
+            shutil.copy(ROOT/'native/service/app-inventory.js', root/'native/service/app-inventory.js')
             (root/'native/app/vendor').mkdir()
             (root/'bin').mkdir()
             zig = root/'bin/zig'
@@ -92,6 +93,7 @@ helper = app['id'] == 'com.local.nativehome'
 files = {'usr/palm/applications/'+app['id']+'/state/.keep': b''}
 if helper:
     assert (Path(sys.argv[2])/'state-permissions.js').read_bytes() == (Path(sys.argv[1])/'state-permissions.js').read_bytes()
+    assert (Path(sys.argv[2])/'app-inventory.js').read_bytes() == (Path(sys.argv[1])/'app-inventory.js').read_bytes()
     files['usr/palm/services/com.local.nativehome.service/state/.keep'] = b''
 else:
     assert (Path(sys.argv[2])/'state/home-control/.keep').is_file()

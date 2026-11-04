@@ -196,7 +196,7 @@ def confirm(transaction=None):
 
 
 # Native startup policy stays in the pinned runtime inventory for old supervisors.
-startup_DEFAULTS = {'tv':True, 'youtube':False, 'hdmi':False}
+startup_DEFAULTS = {'tv':True, 'youtube':False}
 startup_ROOT_INPUT = {'type':'MVPD_IP', 'appId':d.CANDIDATE}
 startup_CHANNEL = 'mgg4.5.channelplus'
 startup_YOUTUBE = 'youtube.leanback.v4'
@@ -212,8 +212,16 @@ def startup_validate(sources):
 def startup_load():
     try: value=d.safe_json(d.STATE/'startup-policy.json')
     except FileNotFoundError:return dict(startup_DEFAULTS)
-    if not isinstance(value,dict) or set(value)!={'version','sources'} or type(value['version']) is not int or value['version']!=1:
+    if (not isinstance(value,dict) or set(value)!={'version','sources'}
+            or type(value['version']) is not int or value['version'] not in (1,2)):
         raise ValueError('Invalid startup policy')
+    if value['version']==1:
+        legacy=value['sources']
+        if (not isinstance(legacy,dict) or set(legacy)!={'tv','youtube','hdmi'}
+                or any(type(setting) is not bool for setting in legacy.values())):
+            raise ValueError('Invalid startup policy')
+        # Old HDMI preferences cannot authorize selection; status stays read-only.
+        return {key:legacy[key] for key in startup_DEFAULTS}
     return startup_validate(value['sources'])
 
 
@@ -233,7 +241,7 @@ def startup_configure(sources):
         fd,name=tempfile.mkstemp(dir=d.STATE,prefix='.startup-policy-')
         try:
             with os.fdopen(fd,'w') as out:
-                json.dump(dict(version=1,sources=sources),out);out.flush();os.fsync(out.fileno())
+                json.dump(dict(version=2,sources=sources),out);out.flush();os.fsync(out.fileno())
             os.replace(name,d.STATE/'startup-policy.json');d.sync(d.STATE)
         finally:
             if os.path.lexists(name):os.unlink(name)

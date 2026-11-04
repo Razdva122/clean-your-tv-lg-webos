@@ -106,7 +106,7 @@
       stream: "M21,3H3c-1.1,0 -2,0.9 -2,2v3h2V5h18v14h-7v2h7c1.1,0 2,-0.9 2,-2V5c0,-1.1 -0.9,-2 -2,-2zM1,18v3h3c0,-1.66 -1.34,-3 -3,-3zM1,14v2c2.76,0 5,2.24 5,5h2c0,-3.87 -3.13,-7 -7,-7zM1,10v2c4.97,0 9,4.03 9,9h2c0,-6.08 -4.93,-11 -11,-11z",
       pc: "M20,18c1.1,0 1.99,-0.9 1.99,-2L22,6c0,-1.1 -0.9,-2 -2,-2H4c-1.1,0 -2,0.9 -2,2v10c0,1.1 0.9,2 2,2H0v2h24v-2h-4zM4,6h16v10H4V6z"
     },
-    inputSources = window.InputSources ? InputSources.create({inventory: function () { return window.TV_APPS && TV_APPS.inputs; }, call: callLuna}) : null,
+    inputSources = window.InputSources ? InputSources.create({root: !!document.querySelector('script[src="root-settings.js"]'), inventory: function () { return window.TV_APPS && TV_APPS.inputs; }, call: callLuna}) : null,
     shelf = getElement("inputShelf"),
     shelfTrack = getElement("inputShelfTrack"),
     shelfTiles = [],
@@ -182,6 +182,7 @@
     render: function (state) {
       document.documentElement.setAttribute('data-home-presentation', state.mode);
       document.body.setAttribute('data-home-presentation', state.mode);
+      if (window.HomeWallpaper) HomeWallpaper[state.mode === 'full' ? 'resume' : 'suspend']('presentation');
     },
     close: function () { stopPreview(); window.close(); }
   }) : null;
@@ -1279,7 +1280,7 @@
     shelfLayout = null;
     if ("shelf" === focusZone && shelfTiles.length) {
       // Keeps a preview of the same eligible source (else stops it), then moves it in.
-      focusShelf(focusedShelf);
+      focusShelf(focusedShelf, true);
       inputPreview && inputPreview.remount();
     } else if ("shelf" === focusZone) { stopPreview(); focusTile(rowFor(focusedTile) === 0 ? focusedTile : 0); }
     else layoutShelf();
@@ -1355,8 +1356,12 @@
     viewport.classList.toggle("row-peek", layoutPreset === "dock-grid" && ("grid" === focusZone ? rowFor(focusedTile) < lastRow : scrollOffset === 0 && lastRow > 0));
     viewport.classList.toggle("row-above", layoutPreset === "dock-grid" && scrollOffset > 0);
   }
-  function focusShelf(index) {
+  function refreshInputStatus() {
+    if (inputSources && !document.hidden && windowFocused) inputSources.refresh();
+  }
+  function focusShelf(index, remount) {
     if (!shelfTiles.length) return;
+    var changed = !remount && (focusZone !== "shelf" || focusedShelf !== index);
     setFocusZone("shelf");
     setPartState(shelfTiles[focusedShelf] && shelfTiles[focusedShelf].el, 'focused', false);
     focusedShelf = Math.max(0, Math.min(index, shelfTiles.length - 1));
@@ -1368,12 +1373,14 @@
     coverShelf(false);
     clearTimeout(heroTitle.swap); heroVisible = false; heroTitle.style.opacity = "0";
     inputPreview && inputPreview.focus(shelfTiles[focusedShelf].input);
+    if (changed) refreshInputStatus();
   }
   window.HomeInputShelf = {
     enabled: function () { return !!layoutState && layoutState.state().inputs === "shelf"; },
     previewEnabled: function () { return !!window.InputSources && InputSources.previewEnabled(localStorage); },
     // Only a theme with a shelf exposes the live-preview preference.
     refresh: function () {
+      refreshInputStatus();
       var preview = getElement("homePreviewInputs");
       if (preview) { preview.setAttribute("aria-checked", String(window.HomeInputShelf.previewEnabled())); preview.hidden = !window.HomeInputShelf.enabled(); }
     },
@@ -1522,6 +1529,7 @@
   var okPressed = false,
     okHoldTimer = null;
   function restoreFocus() {
+    refreshInputStatus();
     cancelHold();
     closePicker();
     dismissUndo();
@@ -1720,6 +1728,7 @@
   window.addEventListener("blur", function () { windowFocused = false; stopPreview(); });
   window.addEventListener("focus", function () {
     windowFocused = true;
+    refreshInputStatus();
     if ("shelf" === focusZone && shelfTiles[focusedShelf] && inputPreview) inputPreview.focus(shelfTiles[focusedShelf].input);
   });
   initializeApps();
@@ -1754,7 +1763,7 @@
     getElement('homeSurface').classList.remove('ctv-starting');
   }
   window.HomeUIReady = (window.ThemeManager ? ThemeManager.start(presentHome) : Promise.resolve().then(presentHome)).then(function () {
-    window.RootLauncherRendered = true;
-    if (presentation) presentation.show(launchParams());
+    return (window.PersonalWallpaper ? PersonalWallpaper.start().catch(function () {}) : Promise.resolve()).then(function () { window.RootLauncherRendered = true; if (presentation) presentation.show(launchParams()); });
+
   });
 }();
