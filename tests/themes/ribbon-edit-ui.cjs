@@ -31,7 +31,7 @@ const {assert,fs,path,chromium,stage}=require('./browser.cjs'),http=require('nod
   for(const arrow of await page.locator('.ribbon-edit-arrow svg').all()){const b=await arrow.boundingBox();assert(Math.abs(b.y+b.height/2-card.y-16)<2,'chevrons sit just below the raised top corners');}
   assert.equal(await page.locator('.ribbon-edit-arrow svg').count(),2,'aligned vector chevrons replace font-dependent glyphs');
   const crossAnchor=await page.locator('#tiles .moving').evaluate(n=>{const b=n.querySelector('.card').getBoundingClientRect(),m=getComputedStyle(n).transform.match(/matrix\(([^)]+)\)/),c=m?Number(m[1].split(',')[2]):0;return b.x+b.width/2-b.height*c/2;});assert(Math.abs(cross.x+cross.width/2-crossAnchor)<1,'cross uses the same raised top-edge center');
-  assert(card.y<still.y,'only selected card is raised');assert(cross.y+cross.height<=card.y,'cross is above selected card');assert(cross.x>=0&&cross.x+cross.width<=1920&&cross.y>=0);
+  assert(card.y<still.y,'only selected card is raised');assert(Math.abs(1080-card.y-card.height-32)<1,'editing card detaches from the bottom edge with a visible gap');assert(cross.y+cross.height<=card.y,'cross is above selected card');assert(cross.x>=0&&cross.x+cross.width<=1920&&cross.y>=0);
   await page.screenshot({path:path.resolve('build/ribbon-edit-'+edition+'.png'),animations:'disabled'});
   await page.setViewportSize({width:1280,height:720});
   await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));

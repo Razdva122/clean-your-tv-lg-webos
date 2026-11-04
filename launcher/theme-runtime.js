@@ -108,7 +108,7 @@
       ribbonRule('.item', 'height:' + r.cardHeight + 'px;padding-bottom:0;border-radius:0;transform:skewX(' + r.skewDeg + 'deg)!important;transform-origin:center bottom;');
       ribbonRule('.item .card', 'transform:none!important;transition:none;');
       ribbonRule('.item.focused .card', 'height:' + (r.cardHeight + r.focusLift) + 'px!important;top:-' + r.focusLift + 'px;border:3px solid ' + accent + '!important;transform:none!important;');
-      ribbonRule('.item.moving .card', 'animation:none;');
+      ribbonRule('.item.moving .card', 'animation:none;top:-' + (r.focusLift + 32) + 'px;');
       ribbonRule('.item .card img', 'width:' + (r.iconScale * 100) + '%;height:' + (r.cardHeight * r.iconScale) + 'px;left:' + ((1 - r.iconScale) * 50) + '%;top:' + (r.cardHeight * (1 - r.iconScale) / 2) + 'px;');
       ribbonRule('.add-app svg', 'width:' + (64 * r.iconScale) + 'px;height:' + (64 * r.iconScale) + 'px;');
       ribbonRule('.item .ctv-icon', 'transform:skewX(' + (-r.skewDeg) + 'deg)!important;');
@@ -127,10 +127,9 @@
         ribbonRule('#topButtons .pill', 'width:72px;height:72px;padding:0;margin:0 12px 0 0;justify-content:center;font-size:0;');
         ribbonRule('#topButtons .pill svg', 'width:32px;height:32px;margin:0;');
         if (manifest.layout.presentation === 'overlay') {
-          // A compact outlined block stays distinct from the bottom shade and app lane.
-          var shortcutHeight = Math.max(80, r.cardHeight - 68);
-          ribbonRule('#topButtons', 'left:' + (r.left - 252) + 'px;bottom:' + (r.bottom + (r.cardHeight - shortcutHeight) / 2) + 'px;width:228px;height:' + shortcutHeight + 'px;align-items:center;justify-content:center;');
-          ribbonRule('#topButtons::before', 'content:"";position:absolute;left:0;top:0;bottom:0;width:100%;box-sizing:border-box;border:1px solid #737985;background:#20242b;transform:none;pointer-events:none;');
+          // Continue the same skewed lane to the left screen edge.
+          ribbonRule('#topButtons', 'left:0;bottom:' + r.bottom + 'px;width:' + r.left + 'px;height:' + r.cardHeight + 'px;align-items:center;justify-content:center;');
+          ribbonRule('#topButtons::before', 'content:"";position:absolute;left:-64px;top:0;bottom:0;width:' + (r.left + 64) + 'px;box-sizing:border-box;border:0;background:#20242b;transform:skewX(' + r.skewDeg + 'deg);transform-origin:center bottom;pointer-events:none;');
           ribbonRule('#topButtons .pill', 'position:relative;width:60px;height:60px;margin:0 4px;padding:0;background:transparent;border:3px solid transparent;transform:none;');
           ribbonRule('#topButtons .pill.focused', 'background:#303238;border-color:#fff;');
           ribbonRule('#topButtons .pill svg', 'width:30px;height:30px;');

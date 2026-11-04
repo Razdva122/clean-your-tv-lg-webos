@@ -438,16 +438,16 @@
         arrow.className = 'ribbon-edit-arrow ribbon-edit-' + side;
         arrow.setAttribute('aria-hidden', 'true');
         arrow.innerHTML = '<svg viewBox="0 0 24 40" aria-hidden="true"><path d="' + (side === 'left' ? 'M16 4L6 20l10 16' : 'M8 4l10 16L8 36') + '"/></svg>';
-        arrow.style.top = (-ribbon.focusLift - 4) + 'px';
+        arrow.style.top = (-ribbon.focusLift - 36) + 'px';
         arrow.style.webkitTransform = arrow.style.transform = 'skewX(' + (-ribbon.skewDeg) + 'deg)';
         item.el.appendChild(arrow);
       });
     }
     hideButton.style.webkitTransition = hideButton.style.transition = item.el.style.transition;
-    var slant = -(ribbon.cardHeight + ribbon.focusLift) * Math.tan(ribbon.skewDeg * Math.PI / 180);
+    var slant = -(ribbon.cardHeight + ribbon.focusLift + 32) * Math.tan(ribbon.skewDeg * Math.PI / 180);
     hideButton.style.left = (tileLeft(focusedTile) + CARD_WIDTH / 2 + slant) + 'px';
-    hideButton.style.top = (TILE_BASE - ribbon.focusLift - 64) + 'px';
-    editHint.style.top = (TILE_BASE - ribbon.focusLift - 146) + 'px';
+    hideButton.style.top = (TILE_BASE - ribbon.focusLift - 96) + 'px';
+    editHint.style.top = (TILE_BASE - ribbon.focusLift - 178) + 'px';
   }
   function beginMoving(item) {
     clearPressed();
