@@ -424,11 +424,14 @@
       for (var i = 0; i < arrows.length; i++) arrows[i].parentNode.removeChild(arrows[i]);
     }
     document.body.classList.remove('ribbon-editing');
+    if (hideButton.parentNode !== document.body) document.body.appendChild(hideButton);
     hideButton.style.left = ''; hideButton.style.top = ''; editHint.style.top = '';
   }
   function positionRibbonEditor() {
     if (!moveState || !layoutGeometry.ribbon) return;
-    var ribbon = layoutGeometry.ribbon, item = moveState.item;
+    var ribbon = layoutGeometry.ribbon, item = moveState.item, scene = getElement('homeSurface');
+    // Keep the control in logical scene coordinates at every graphics resolution.
+    if (hideButton.parentNode !== scene) scene.appendChild(hideButton);
     if (!item.el.querySelector('.ribbon-edit-arrow')) {
       ['left', 'right'].forEach(function (side) {
         var arrow = document.createElement('span');

@@ -24,6 +24,10 @@ const {assert,fs,path,chromium,stage}=require('./browser.cjs'),http=require('nod
   const card=await page.locator('#tiles .moving .card').boundingBox(),cross=await page.locator('#hideApp').boundingBox();
   assert(card.y<still.y,'only selected card is raised');assert(cross.y+cross.height<=card.y,'cross is above selected card');assert(cross.x>=0&&cross.x+cross.width<=1920&&cross.y>=0);
   await page.screenshot({path:path.resolve('build/ribbon-edit-'+edition+'.png'),animations:'disabled'});
+  await page.setViewportSize({width:1280,height:720});
+  await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+  const hdCard=await page.locator('#tiles .moving .card').boundingBox(),hdCross=await page.locator('#hideApp').boundingBox();
+  assert(hdCross.y+hdCross.height<=hdCard.y&&hdCross.y>=0&&hdCross.x>=0&&hdCross.x+hdCross.width<=1280,'cross remains anchored and onscreen after HD resize');
   await page.keyboard.press('ArrowDown');assert.notEqual(await page.evaluate(()=>document.activeElement.id),'hideApp','Down cannot select the cross above the card');
   await page.keyboard.press('ArrowUp');assert.equal(await page.evaluate(()=>document.activeElement.id),'hideApp');
   await page.keyboard.press('ArrowDown');assert.notEqual(await page.evaluate(()=>document.activeElement.id),'hideApp');
@@ -31,6 +35,8 @@ const {assert,fs,path,chromium,stage}=require('./browser.cjs'),http=require('nod
   await page.keyboard.down('Enter');await page.waitForTimeout(700);await page.keyboard.up('Enter');await page.keyboard.press('ArrowUp');await page.keyboard.press('Enter');
   assert.equal(await page.evaluate(()=>HomePresentationController.state().mode),'overlay','hide and undo stay over content');
   assert.equal(await page.locator('#tiles .item').count(),order.length-1,'cross hides app without uninstalling');await page.locator('#appUndo button').click();assert.equal(await page.locator('#tiles .item').count(),order.length,'undo restores app');
+  await page.evaluate(()=>ThemeManager.reset());await page.keyboard.down('Enter');await page.waitForTimeout(700);await page.keyboard.up('Enter');
+  const footer=await page.locator('#hideApp').boundingBox();assert(footer.x>=0&&footer.x+footer.width<=1280&&footer.y>=0&&footer.y+footer.height<=720,'Classic footer position is restored after Ribbon editing');await page.keyboard.press('Escape');
   assert.deepEqual(errors,[]);await page.close();console.log('PASS Ribbon editing: one lifted card, inline arrows, cross focus, cancel, hide and undo: '+edition);
  }}finally{await browser.close();await new Promise(r=>server.close(r));}
 })().catch(e=>{console.error(e);process.exitCode=1;});
