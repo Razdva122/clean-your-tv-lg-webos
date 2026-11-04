@@ -29,11 +29,12 @@
       "edgeNavigation": "shortcuts",
       "labels": "focused-above",
       "showClock": false
-    }
+    },
+    "presentation": "overlay"
   },
   "defaults": {
     "wallpaperAssetId": "wallpaper",
-    "dim": 0,
+    "dim": 0.28,
     "accent": "#ffffff"
   },
   "assets": [
@@ -86,19 +87,20 @@
   },
   "source": {
     "repository": "https://github.com/razdva122/clean-your-tv-lg-webos",
-    "commit": "e11c290d20f8ea801eb3fa0afb205dc870891888"
+    "commit": "37c6a543bd83e406efab5ec989b2509191b81b66"
   },
   "requires": {
     "minimumHomeVersion": "1.6.1",
     "capabilities": [
       "video-wallpaper-v1",
-      "ribbon-layout-v1"
+      "ribbon-layout-v1",
+      "overlay-presentation-v1"
     ]
   },
   "rules": {
-    "path": "rules/0c202869f7e03965d2e6bec29d77e9d1783381498037b961ff868102c2c88b31.json",
-    "size": 4923,
-    "sha256": "0c202869f7e03965d2e6bec29d77e9d1783381498037b961ff868102c2c88b31"
+    "path": "rules/dadf4c17339bb2fbb7d6f035ad4c19ebedd2b20c2b041ac02f7c70673fa515d0.json",
+    "size": 5204,
+    "sha256": "dadf4c17339bb2fbb7d6f035ad4c19ebedd2b20c2b041ac02f7c70673fa515d0"
   },
   "documents": [
     {
