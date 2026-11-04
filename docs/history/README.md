@@ -144,3 +144,5 @@ appended to these records. Private logs and device backups are not part of this
 public documentation.
 
 - [2026-10-31: coordinated native startup/recovery batch](2026-10-31-release-1.5.3-native-startup-batch.md).
+
+- [2026-11-04 Black Hole wallpaper integration and scoped preview evidence](2026-11-04-black-hole-wallpaper/README.md)
