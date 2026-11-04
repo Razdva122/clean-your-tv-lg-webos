@@ -57,6 +57,8 @@ Mantenha Developer Mode ativo: antes de o tempo acabar, abra o app e pressione E
 
 [Instalador Android (inglês)](../../android/README.md): escolha o idioma no canto superior direito. Atualize sem desinstalar nem apagar dados. Android 7 / WebView 108 é o mínimo, não um telefone verificado; a aceitação usou emulador Android 15 ARM64 / WebView 124. Telefones físicos e recuperação conectada a uma TV real continuam sem verificação.
 
+**Candidato Android não publicado:** para uma operação Root original `install / coordinator-submitted`, a revisão de recuperação pode fazer uma inspeção somente de leitura após confirmação explícita, usando o perfil e a chave de host SSH originais. Não desinstale, limpe dados, substitua o perfil ou repita a instalação. Use apenas o APK reconstruído e assinado indicado pelo mantenedor; o APK público ainda não inclui esse caminho. [Procedimento e limites](../../android/README.md#interrupted-root-installation-inspection-unreleased).
+
 O assistente usa inicialmente o idioma do sistema e salva sua escolha explícita. Na TV, abra **Configurações → Idioma** e escolha um idioma ou a opção automática do sistema. As preferências da TV e do instalador são independentes. Veja os códigos no [índice de idiomas](../LANGUAGES.md).
 
 Para a CLI baixada separadamente no macOS/Linux, na pasta extraída:

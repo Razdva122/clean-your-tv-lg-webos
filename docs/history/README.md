@@ -24,6 +24,8 @@ one model or artifact does not certify later releases or a different TV.
 
 ## Scoped feature checks
 
+- [Android original Root inspection, 2026-11-04](2026-11-04-android-root240-inspection.md): original phone profile/pin preserved for bounded passive #240 inspection; original worker failure/recovery remains unresolved.
+
 - [Root activation evidence, 2026-11-04](2026-11-04-root-activation-evidence.md): typed SSH/Luna failures retained without replay; original #282 C4 activation remains unresolved.
 
 - [Source installer build dependencies, 2026-11-03](2026-11-03-source-install-build-dependencies.md): clean-venv font preparation and pre-pairing failure guards for #272; host-only evidence.

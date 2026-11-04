@@ -57,6 +57,8 @@ Developer Mode 让 CYTV 可以在没有 root 的电视上安装应用。
 
 [Android 安装程序（英文）](../../android/README.md)：在右上角选择语言。更新时不要卸载或清除数据。Android 7 / WebView 108 是最低要求，并非已验证的手机配置；验收使用 Android 15 ARM64 / WebView 124 模拟器。实体手机及真实手机到电视的恢复流程仍未验证。
 
+**未发布的 Android 候选版本：**对于原始 Root 操作 `install / coordinator-submitted`，恢复选项审查可在明确确认后使用原始保存的配置和 SSH 主机密钥执行只读检查。请勿卸载应用、清除数据、替换配置或重复安装。仅使用维护者指定的已签名重建 APK；公开 APK 尚不包含此流程。[步骤与限制](../../android/README.md#interrupted-root-installation-inspection-unreleased)。
+
 桌面向导自动选择系统语言，也可手动选择并保存。电视端在**设置 → 语言**中选择，或使用系统/自动选项。安装程序与电视偏好独立。完整代码见[语言索引](../LANGUAGES.md)。
 
 单独下载的 macOS/Linux CLI，请在解压目录打开终端：
