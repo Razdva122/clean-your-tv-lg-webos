@@ -47,7 +47,7 @@
       "issues": [
         290
       ],
-      "summary": "fix(apps): discover installed Live TV outside LG launch points"
+      "summary": "Discover the installed Live TV tuner omitted or hidden by LG inventory; rebuilt Helper/Root/installer delivery and device acceptance remain pending"
     }
   ],
   "excluded": [],
