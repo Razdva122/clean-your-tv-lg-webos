@@ -112,3 +112,19 @@ An independent read-only review found one stale negative test fixture (0.10.24
 had become accepted). It was corrected to 0.10.14; the focused two Node tests and
 subsequent complete affected run passed. Re-review found no remaining findings.
 `git diff --check` passed. No public release or device acceptance is implied.
+
+## Integration
+
+[PR #291](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/291)
+source `f5f2b69c88bd12f20dbf3e2f89ed2cbc276741b7` merged into `release/next`
+as `f7274ae8104dd63442ab41181272f358aefd366c` on 2026-11-04.
+Exact-head [CI 41795256631](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/41795256631)
+passed expanded Linux/macOS runtime/test summaries, browser and ARM Python;
+[preview build](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/41795256633)
+and integration policy passed. Full-release was intentionally unselected: this
+is focused integration evidence, not a frozen complete build or publication.
+
+The inventory includes #283 and #284 without closing references. Candidate #281
+remains unfrozen, with version null, no selected build and empty acceptance.
+Both issues require actual TV runtime confirmation and physical acceptance;
+revised source admission is integrated but public delivery is still pending.
