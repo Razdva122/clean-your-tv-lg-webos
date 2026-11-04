@@ -24,6 +24,8 @@ one model or artifact does not certify later releases or a different TV.
 
 ## Scoped feature checks
 
+- [webOS 1.x Node floor, 2026-11-04](2026-11-04-webos1-node-floor.md): exact 0.10.15 source/published-Helper JS checks and No-root admission correction for #283/#284; device compatibility unverified.
+
 - [Android original Root inspection, 2026-11-04](2026-11-04-android-root240-inspection.md): original phone profile/pin preserved for bounded passive #240 inspection; original worker failure/recovery remains unresolved.
 
 - [Root activation evidence, 2026-11-04](2026-11-04-root-activation-evidence.md): typed SSH/Luna failures retained without replay; original #282 C4 activation remains unresolved.

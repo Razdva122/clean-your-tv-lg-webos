@@ -29,7 +29,7 @@ try {
   cp.execFileSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '1',
     '-subj', '/CN=localhost', '-keyout', path.join(output, 'test-key.pem'),
     '-out', path.join(output, 'test-cert.pem')], {stdio: 'pipe'});
-  for (const runtime of new Set([process.execPath, process.env.NODE010, process.env.NODE012].filter(Boolean))) {
+  for (const runtime of new Set([process.execPath, process.env.NODE010, process.env.NODE01025, process.env.NODE012].filter(Boolean))) {
     const result = cp.spawnSync(runtime, [path.resolve('tests/helper-runtime.js'), output], {encoding: 'utf8', timeout: 30000});
     assert.equal(result.status, 0, runtime + '\n' + result.stdout + result.stderr);
     assert.match(result.stdout, /PASS Helper runtime/);
