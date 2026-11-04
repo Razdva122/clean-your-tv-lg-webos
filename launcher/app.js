@@ -1616,10 +1616,9 @@
           if (layoutGeometry.ribbon) selectHide();
           else if (layoutPreset !== 'scenic-grid') moveTile(focusedTile - columnCount);
         } else if (40 === key) {
-          if (rowFor(focusedTile) >= rowFor(screenIds().length - 1)) {
-            selectHide();
-          } else {
-            moveTile(Math.min(focusedTile + columnCount, screenIds().length - 1));
+          if (!layoutGeometry.ribbon) {
+            if (rowFor(focusedTile) >= rowFor(screenIds().length - 1)) selectHide();
+            else moveTile(Math.min(focusedTile + columnCount, screenIds().length - 1));
           }
         } else if (key === KEY_OK) {
           finishMoving(true);

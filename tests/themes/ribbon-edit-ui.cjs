@@ -24,6 +24,7 @@ const {assert,fs,path,chromium,stage}=require('./browser.cjs'),http=require('nod
   const card=await page.locator('#tiles .moving .card').boundingBox(),cross=await page.locator('#hideApp').boundingBox();
   assert(card.y<still.y,'only selected card is raised');assert(cross.y+cross.height<=card.y,'cross is above selected card');assert(cross.x>=0&&cross.x+cross.width<=1920&&cross.y>=0);
   await page.screenshot({path:path.resolve('build/ribbon-edit-'+edition+'.png'),animations:'disabled'});
+  await page.keyboard.press('ArrowDown');assert.notEqual(await page.evaluate(()=>document.activeElement.id),'hideApp','Down cannot select the cross above the card');
   await page.keyboard.press('ArrowUp');assert.equal(await page.evaluate(()=>document.activeElement.id),'hideApp');
   await page.keyboard.press('ArrowDown');assert.notEqual(await page.evaluate(()=>document.activeElement.id),'hideApp');
   await page.keyboard.press('ArrowRight');await page.keyboard.press('Escape');assert.deepEqual(await page.locator('#tiles .item').evaluateAll(ns=>ns.map(n=>n.dataset.appId||'add')),order,'Back cancels reordering');assert.equal(await page.locator('.ribbon-edit-arrow').count(),0);
