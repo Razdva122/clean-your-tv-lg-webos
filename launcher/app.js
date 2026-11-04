@@ -13,6 +13,10 @@
     return window.HomeI18n ? HomeI18n.html(markup) : markup;
   }
   window.RootLauncherRendered = false;
+  var nativeNoRoot = !window.ROOT_VERSION && window.CYTV_BROWSER_PREVIEW !== true;
+  // An opaque overlay may still have a live player beneath it. Do not acquire
+  // its decoder before Helper has established a safe empty context.
+  if (nativeNoRoot && window.HomeWallpaper) HomeWallpaper.suspend('presentation');
   // Shared layout, focus and remote-control state.
   var layoutState = window.HomeLayout ? HomeLayout.create(localStorage, CONFIG, window.RootProfileData || window.HomeData) : null;
   window.HomeLayoutState = layoutState;
@@ -122,8 +126,8 @@
       onclaim: function () { if (window.HomeWallpaper) HomeWallpaper.suspend('input-preview'); },
       onrelease: function () { if (window.HomeWallpaper) HomeWallpaper.resume('input-preview'); },
       createMedia: function (uri) { return window.PREVIEW_INPUT_MEDIA ? window.PREVIEW_INPUT_MEDIA(uri) : InputPreview.createVideo(uri); },
-      // Only the foreground Home may claim the TV's video pipeline.
-      enabled: function () { return layoutPreset === "dock-grid" && !document.hidden && windowFocused && !previewDialogOpen() && window.HomeInputShelf.enabled() && window.HomeInputShelf.previewEnabled(); },
+      // A visible opaque overlay can still have a player beneath it.
+      enabled: function () { return (!nativeNoRoot || presentation && presentation.state().visible && presentation.state().content === false) && layoutPreset === "dock-grid" && !document.hidden && windowFocused && !previewDialogOpen() && window.HomeInputShelf.enabled() && window.HomeInputShelf.previewEnabled(); },
       mount: function (media, input) {
         var tile = shelfTiles[focusedShelf];
         if (!tile || tile.input.appId !== input.appId) return false;
@@ -172,9 +176,27 @@
       });
     }
   }
+  function homeActivation(params) {
+    return !!params && params.reason !== 'startup' && params.reason !== 'boot' &&
+      params.reason !== 'wake' && params.activateType !== 'powerOn' &&
+      !!params.cytvHome && params.cytvHome.reason === 'home';
+  }
   var presentation = window.HomePresentation ? HomePresentation.create({
-    supported: !!window.ROOT_VERSION || window.CYTV_BROWSER_PREVIEW === true,
-    query: function (done) {
+    supported: true,
+    queryFull: nativeNoRoot,
+    toggle: function (params) { return !nativeNoRoot || homeActivation(params); },
+    query: function (done, activation) {
+      if (nativeNoRoot) {
+        var hint = activation && activation.cytvHome;
+        if (!homeActivation(activation)) { done(null); return; }
+        var clock = window.performance && typeof window.performance.now === 'function' ?
+          function () { return window.performance.now(); } : Date.now;
+        var started = clock();
+        callLuna('luna://com.gathin.tvhome.renewal/presentationContext', {}, function (reply) {
+          done(HomePresentation.nativeContext(reply, hint.generation, clock() - started));
+        }, 2000);
+        return;
+      }
       callLuna('luna://com.cleanyourtv.root.preview.service/status', {presentation:'context'}, function (r) {
         done(r && r.returnValue === true && r.result ? r.result.content : null);
       }, 2000);
@@ -185,7 +207,11 @@
     render: function (state) {
       document.documentElement.setAttribute('data-home-presentation', state.mode);
       document.body.setAttribute('data-home-presentation', state.mode);
-      if (window.HomeWallpaper) HomeWallpaper[state.mode === 'full' ? 'resume' : 'suspend']('presentation');
+      if (window.HomeWallpaper) HomeWallpaper[state.mode === 'full' && (!nativeNoRoot || state.content === false) ? 'resume' : 'suspend']('presentation');
+      if (nativeNoRoot && inputPreview) {
+        if (state.visible && state.content === false && focusZone === 'shelf' && shelfTiles[focusedShelf]) inputPreview.focus(shelfTiles[focusedShelf].input);
+        else stopPreview();
+      }
     },
     close: function () { stopPreview(); window.close(); }
   }) : null;

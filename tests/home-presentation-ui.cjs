@@ -66,15 +66,77 @@ const {assert,chromium,stage,fs,path}=require('./themes/browser.cjs'),http=requi
   await page.evaluate(()=>pendingLaunches.shift().onservicecallback(JSON.stringify({returnValue:true})));
   await mode('closed');assert.equal(await page.evaluate(()=>window.closeCalls),2);
   assert.deepEqual(errors,[]);await page.close();
-  // No-root on TV does not gain overlay behavior from the shared theme request.
+  // Actual No-root edition, with browser simulation disabled. Only the
+  // measured native Helper seam supplies content, never Root preview context.
   const n=await open('launcher',true);
   await n.page.evaluate(async()=>{
+   window.closeCalls=0;window.close=()=>window.closeCalls++;
    window.PREVIEW_HOME_CONTEXT='content';
+   window.nativeRequests=0;
+   window.nativeReply={returnValue:true,eligible:true,content:true,generation:7,observedAgeMs:10};
+   const original=PalmServiceBridge.prototype.call;
+   PalmServiceBridge.prototype.call=function(uri,raw){
+    if(uri==='luna://com.gathin.tvhome.renewal/presentationContext'){
+     nativeRequests++;const bridge=this,reply=JSON.stringify(nativeReply);
+     setTimeout(()=>bridge.onservicecallback(reply),0);return;
+    }
+    original.call(this,uri,raw);
+   };
    await ThemeManager.selectInstalled((await ThemeManager.list()).find(t=>t.id==='builtin:ribbon'));
    HomePresentationController.show({});
   });
-  assert.equal(await n.page.evaluate(()=>HomePresentationController.state().mode),'full');assert.deepEqual(n.errors,[]);
+  assert.equal(await n.page.evaluate(()=>HomePresentationController.state().mode),'full','manual launch is opaque even with content preview');
+  assert.equal(await n.page.evaluate(()=>nativeRequests),0,'manual launch cannot query itself into overlay');
+  await n.page.evaluate(()=>HomePresentationController.show({cytvHome:{reason:'home',generation:7}}));
+  await n.page.waitForFunction(()=>HomePresentationController.state().mode==='overlay',null,{timeout:3000});
+  assert.equal(await n.page.evaluate(()=>nativeRequests),1);
+  await n.page.locator('#btnSettings').click();
+  await n.page.waitForFunction(()=>RenewalPanel.isOpen());
+  assert.equal(await n.page.evaluate(()=>HomePresentationController.state().mode),'full');
+  for(let i=0;i<3&&await n.page.evaluate(()=>RenewalPanel.isOpen());i++)await n.page.keyboard.press('Escape');
+  await n.page.waitForFunction(()=>HomePresentationController.state().mode==='overlay',null,{timeout:3000});
+  await n.page.keyboard.press('Escape');
+  assert.equal(await n.page.evaluate(()=>window.closeCalls),1,'physical Back adapter closes No-root overlay');
+  for(const reply of [null,{returnValue:false},{returnValue:true,eligible:true,content:true,generation:8,observedAgeMs:0},
+   {returnValue:true,eligible:true,content:true,generation:7,observedAgeMs:2001}]) {
+   await n.page.evaluate(reply=>{nativeReply=reply;HomePresentationController.show({cytvHome:{reason:'home',generation:7}});},reply);
+   await n.page.waitForTimeout(30);
+   assert.equal(await n.page.evaluate(()=>HomePresentationController.state().mode),'full','unknown/stale/cross-generation reply is opaque');
+  }
+  await n.page.evaluate(()=>{nativeReply={returnValue:true,eligible:true,content:true,generation:7,observedAgeMs:0};HomePresentationController.show({reason:'startup',cytvHome:{reason:'home',generation:7}});});
+  assert.equal(await n.page.evaluate(()=>HomePresentationController.state().mode),'full','startup cannot become overlay from a launch hint');
+  // Non-Home activations do not toggle an existing transparent Ribbon.
+  await n.page.evaluate(()=>{nativeReply={returnValue:true,eligible:true,content:true,generation:7,observedAgeMs:0};HomePresentationController.show({cytvHome:{reason:'home',generation:7}});});
+  await n.page.waitForFunction(()=>HomePresentationController.state().mode==='overlay',null,{timeout:3000});
+  await n.page.evaluate(()=>document.dispatchEvent(new CustomEvent('webOSRelaunch',{detail:{reason:'startup'}})));
+  assert.equal(await n.page.evaluate(()=>HomePresentationController.state().mode),'full','startup relaunch must show opaque rather than dismiss');
+  assert.equal(await n.page.evaluate(()=>window.closeCalls),1);
+  await n.page.evaluate(()=>document.dispatchEvent(new CustomEvent('webOSRelaunch',{detail:{cytvHome:{reason:'home',generation:7}}})));
+  await n.page.waitForFunction(()=>HomePresentationController.state().mode==='overlay',null,{timeout:3000});
+  await n.page.evaluate(()=>document.dispatchEvent(new CustomEvent('webOSRelaunch',{detail:{}})));
+  assert.equal(await n.page.evaluate(()=>HomePresentationController.state().mode),'full','manual relaunch is opaque');
+  assert.equal(await n.page.evaluate(()=>window.closeCalls),1);
+  // An opaque overlay can still sit above live video. Neither wallpaper nor
+  // input preview may acquire the hardware pipeline from visibility alone.
+  await n.page.evaluate(async()=>{
+   window.previewCreations=0;window.PREVIEW_INPUT_MEDIA=()=>{previewCreations++;return document.createElement('div');};
+   InputSources.setPreviewEnabled(localStorage,true);
+   TV_APPS.inputs=[{appId:'com.webos.app.hdmi1',label:'Synthetic HDMI'}];
+   await ThemeManager.selectInstalled((await ThemeManager.list()).find(t=>t.id==='builtin:liquid-glass'));
+   HomePresentationController.show({cytvHome:{reason:'home',generation:7}});
+  });
+  await n.page.waitForTimeout(50);
+  await n.page.mouse.move(0,0);await n.page.locator('.ctv-input-tile').first().hover();
+  await n.page.waitForTimeout(900);
+  assert.equal(await n.page.evaluate(()=>previewCreations),0,'known lower content blocks input preview');
+  await n.page.evaluate(()=>{nativeReply={returnValue:true,eligible:false,content:false,generation:7,observedAgeMs:0};HomePresentationController.show({cytvHome:{reason:'home',generation:7}});});
+  await n.page.waitForFunction(()=>previewCreations===1,null,{timeout:3000});
+  await n.page.evaluate(()=>{nativeReply=null;HomePresentationController.show({cytvHome:{reason:'home',generation:7}});});
+  assert.equal(await n.page.locator('.ctv-input-preview').count(),0,'context reset releases active hardware preview immediately');
+  await n.page.waitForTimeout(900);
+  assert.equal(await n.page.evaluate(()=>previewCreations),1,'unknown context cannot restart preview');
+  assert.deepEqual(n.errors,[]);
   await n.page.close();
-  console.log('PASS native app adapters: modal focus, visibility/relaunch ordering, launch failure/success/staleness, No-root fallback');
+  console.log('PASS native app adapters: modal focus, visibility/relaunch ordering, launch failure/success/staleness, native No-root overlay and strict fallback');
  }finally{await browser.close();await new Promise(r=>server.close(r));}
 })().catch(e=>{console.error(e);process.exitCode=1;});

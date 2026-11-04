@@ -11,6 +11,7 @@ has() { [[ "$selected" == *" $1 "* ]]; }
 if has ui || has tv; then
   node tests/home-viewport.cjs
   node tests/home-presentation.cjs
+  node tests/noroot-presentation-context.cjs
   node tests/themes/presentation.cjs
   npm run test:compat
   npm run lint:compat
