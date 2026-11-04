@@ -29,17 +29,17 @@ Consumes: normal launch/relaunch/visibility events and bounded callLuna callback
 Produces: actual No-root UI requesting native read-only presentationContext;
 validated replies can enable Ribbon overlay, failures remain opaque.
 
-- [ ] Add compiled native No-root regression, with CYTV_BROWSER_PREVIEW false:
+- [x] Add compiled native No-root regression, with CYTV_BROWSER_PREVIEW false:
   first missing Helper stays full; a trusted context response enables overlay;
   Back closes, relaunch toggles, settings/editing keep correct ownership.
-- [ ] Run node tests/home-presentation-ui.cjs and observe old-source failure.
-- [ ] Add a small edition-aware adapter using existing callLuna. Require exact
+- [x] Run node tests/home-presentation-ui.cjs and observe old-source failure.
+- [x] Add a small edition-aware adapter using existing callLuna. Require exact
   returnValue/eligible booleans, a bounded safe generation and finite nonnegative
   observedAgeMs<=2000. Timeout and exceptions return unknown. Do not accept
   PREVIEW_HOME_CONTEXT or launch JSON as native authority.
-- [ ] Add metadata from the measured lab to the existing Home, preserving IDs,
+- [x] Add metadata from the measured lab to the existing Home, preserving IDs,
   version, ACG and update protocol. Gate transparency on shared controller state.
-- [ ] Run pure state-machine, actual compiled UI, startup/first-frame and ES5 tests.
+- [x] Run pure state-machine, actual compiled UI, startup/first-frame and ES5 tests.
 
 ### Task 2: Native Helper activation/context/dismiss ownership
 
@@ -109,3 +109,34 @@ checks pass. This is not a complete integration: trusted native RPC registration
 renewal relay, dismissal/off cancellation, initial native activation and final
 packaged/device acceptance remain pending. No package from this branch has been
 installed. Current selected RC build/acceptance still refers to old bytes.
+
+
+## Checkpoint — prepared native activation and package metadata
+
+Local feature merge13b508e3 includes reviewed PR303 as a dependency, without
+merging it into release/next. Both native editions now activate only after
+personal appearance settles and before foreground readiness frames. Cold
+No-root withheld-frame regression failed on previous source and passed after
+the guard change; warm native activation also passed. Actual compiled UI now
+asserts no wallpaper video allocation above known content and no hardware input
+preview until separately confirmed empty content. Actual1080p/720p Home IPK
+inspection passed, preserving identity, service, ACG and update protocol.
+Independent activation review found no additional issues. All13 guides (English
+plus12 localizations), README, THEMES and release notes describe the integration
+as in progress, with no final package/device compatibility claim.
+
+Native named inbound RPC is not yet reachable under the tested identity. The
+coordinated Helper task is measuring a public LS2 command on the existing own
+Home service plus authenticated native-initiated subscription/replies. This is
+not an adopted production transport until sender, foreign forgery, sequence,
+restart and cleanup gates pass. No renewal handler or real Helper start has been
+introduced here. Content false remains a separate, unproven device fact; absent
+that proof the fail-closed UI holds video wallpapers and input previews. Restoring
+their intended behavior safely is an explicit final-release gate.
+
+
+Expanded local `scripts/test.sh ui` completed successfully after the activation
+change. `tests/setup/test_noroot_overlay_package.py` passed against both actual
+compiled packages. The final browser adapter run also covers cold activation in
+both native editions, warm native activation, actual wallpaper video allocation
+fencing, and input preview cleanup. No further activation-review findings.

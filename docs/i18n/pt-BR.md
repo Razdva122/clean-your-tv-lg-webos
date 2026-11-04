@@ -6,7 +6,7 @@
 
 Não publicado (#290): **+ / Adicionar app** oferece TV ao vivo com o nome fornecido pela TV somente quando o sintonizador é detectado como instalado. Outros apps de sistema ocultos continuam excluídos. No-root precisa do Helper e instalador atualizados; Root precisa do pacote Home atualizado. A abertura dos canais ainda precisa ser verificada na TV.
 
-**Não lançado — Ribbon sobre aplicativos:** No Root, Ribbon pode aparecer sobre o aplicativo atual. Home abre a barra; Voltar ou outro toque em Home a fecha. Ao ligar ou se o conteúdo de fundo não for confirmado, aparece o papel de parede; as configurações permanecem opacas. No-root continua em tela cheia na TV. A demonstração simula os dois estados; a validação do pacote final no aparelho ainda está pendente. [Detalhes](../THEMES.md#ribbon-over-applications-unreleased).
+**Não lançado — Ribbon sobre aplicativos:** Root permite Ribbon sobre o conteúdo atual. A integração no mesmo Home e Helper No-root está em desenvolvimento. Home abre a barra; Voltar ou outro Home a fecha. Configurações e outros temas são opacos, mas a reprodução por baixo pode continuar. Um contexto desconhecido usa fundo estático opaco. O fluxo No-root completo ainda exige validar os pacotes finais na TV; simulação no navegador não comprova compatibilidade. [Ribbon](../THEMES.md#ribbon-over-applications-unreleased).
 
 Ribbon: segure OK para editar; ←/→ move o cartão, ↑ seleciona × (ocultar da Home), ↓ volta ao cartão, OK confirma e Back cancela. O fundo atual é mantido.
 

@@ -1773,8 +1773,8 @@
     if (presentation && window.RootLauncherRendered === true) {
       presentation.relaunch(launchParams(event), document.hidden);
       if (!presentation.state().visible) return;
-      // handlesRelaunch keeps a hidden Root window in the background until it is ready.
-      if (window.ROOT_VERSION && window.PalmSystem && typeof PalmSystem.activate === 'function') PalmSystem.activate();
+      // Both native overlay editions own activation when handling a relaunch.
+      if ((window.ROOT_VERSION || nativeNoRoot) && window.PalmSystem && typeof PalmSystem.activate === 'function') PalmSystem.activate();
     }
     restoreFocus();
   });
@@ -1823,12 +1823,12 @@
   focusZone = "none";
   focusTile(0);
   function presentHome() {
-    // Restore personal appearance before exposing the validated theme. Native Root
+    // Restore personal appearance before exposing the validated theme. Native Home
     // must activate before ThemeManager can wait for foreground animation frames.
     return (window.PersonalWallpaper ? PersonalWallpaper.start().catch(function () {}) : Promise.resolve()).then(function () {
       tiles.forEach(function (tile) { tile.el.classList.add('shown'); });
       getElement('homeSurface').classList.remove('ctv-starting');
-      if (window.ROOT_VERSION && window.PalmSystem && typeof PalmSystem.activate === 'function') PalmSystem.activate();
+      if ((window.ROOT_VERSION || nativeNoRoot) && window.PalmSystem && typeof PalmSystem.activate === 'function') PalmSystem.activate();
     });
   }
   window.HomeUIReady = (window.ThemeManager ? ThemeManager.start(presentHome) : Promise.resolve().then(presentHome)).then(function () {

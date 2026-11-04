@@ -18,6 +18,7 @@ const {assert,chromium,stage,fs,path}=require('./themes/browser.cjs'),http=requi
  try {
   // Native handlesRelaunch windows receive no animation frames until activated.
   // Startup must prepare saved appearance, activate, then acknowledge painted UI.
+  for(const edition of ['root-launcher','launcher']) {
   const cold=await browser.newPage({viewport:{width:1920,height:1080}});
   await cold.addInitScript(()=>{
    const frame=window.requestAnimationFrame.bind(window),queued=[];
@@ -28,16 +29,18 @@ const {assert,chromium,stage,fs,path}=require('./themes/browser.cjs'),http=requi
   });
   await cold.route('**/app.js',route=>route.fulfill({body:
    'var personalStart=PersonalWallpaper.start;PersonalWallpaper.start=function(){window.personalRequested=true;return window.personalGate||(window.personalGate=new Promise(function(resolve){window.releasePersonal=function(){resolve(personalStart());};}));};\n'+
-   fs.readFileSync(path.join(site,'root-launcher/app.js'),'utf8')}));
-  await cold.goto('http://127.0.0.1:'+server.address().port+'/root-launcher/index.html');
+   fs.readFileSync(path.join(site,edition,'app.js'),'utf8')}));
+  if(edition==='launcher')await cold.route('**/preview/bridge.js',r=>r.fulfill({body:fs.readFileSync(path.join(site,'preview/bridge.js'),'utf8')+'\nwindow.CYTV_BROWSER_PREVIEW=false;'}));
+  await cold.goto('http://127.0.0.1:'+server.address().port+'/'+edition+'/index.html');
   await cold.waitForFunction(()=>window.personalRequested===true,{},{polling:50,timeout:3000});
   assert.equal(await cold.evaluate(()=>activationCalls),0,'saved personal appearance must settle before activation');
   assert.equal(await cold.evaluate(()=>RootLauncherRendered),false);
   await cold.evaluate(()=>releasePersonal());
   await cold.waitForFunction(()=>window.RootLauncherRendered===true,{},{polling:50,timeout:3000});
-  assert.equal(await cold.evaluate(()=>activationCalls),1,'cold Root activates before waiting for foreground animation frames');
+  assert.equal(await cold.evaluate(()=>activationCalls),1,'cold '+edition+' activates before waiting for foreground animation frames');
   assert.equal(await cold.locator('#homeSurface').evaluate(el=>getComputedStyle(el).visibility),'visible');
   await cold.close();
+  }
   const {page,errors}=await open('root-launcher');
   await page.evaluate(async()=>{
    window.closeCalls=0;window.close=()=>window.closeCalls++;
@@ -128,10 +131,12 @@ const {assert,chromium,stage,fs,path}=require('./themes/browser.cjs'),http=requi
   await n.page.evaluate(()=>{nativeReply={returnValue:true,eligible:true,content:true,generation:7,observedAgeMs:0};HomePresentationController.show({reason:'startup',cytvHome:{reason:'home',generation:7}});});
   assert.equal(await n.page.evaluate(()=>HomePresentationController.state().mode),'full','startup cannot become overlay from a launch hint');
   // Non-Home activations do not toggle an existing transparent Ribbon.
+  await n.page.evaluate(()=>{window.activationCalls=0;window.PalmSystem={activate(){activationCalls++;}};});
   await n.page.evaluate(()=>{nativeReply={returnValue:true,eligible:true,content:true,generation:7,observedAgeMs:0};HomePresentationController.show({cytvHome:{reason:'home',generation:7}});});
   await n.page.waitForFunction(()=>HomePresentationController.state().mode==='overlay',null,{timeout:3000});
   await n.page.evaluate(()=>document.dispatchEvent(new CustomEvent('webOSRelaunch',{detail:{reason:'startup'}})));
   assert.equal(await n.page.evaluate(()=>HomePresentationController.state().mode),'full','startup relaunch must show opaque rather than dismiss');
+  assert.equal(await n.page.evaluate(()=>activationCalls),1,'native No-root owns warm activation');
   assert.equal(await n.page.evaluate(()=>window.closeCalls),1);
   await n.page.evaluate(()=>document.dispatchEvent(new CustomEvent('webOSRelaunch',{detail:{cytvHome:{reason:'home',generation:7}}})));
   await n.page.waitForFunction(()=>HomePresentationController.state().mode==='overlay',null,{timeout:3000});
@@ -142,17 +147,21 @@ const {assert,chromium,stage,fs,path}=require('./themes/browser.cjs'),http=requi
   // input preview may acquire the hardware pipeline from visibility alone.
   await n.page.evaluate(async()=>{
    window.previewCreations=0;window.PREVIEW_INPUT_MEDIA=()=>{previewCreations++;return document.createElement('div');};
+   window.wallpaperCreations=0;const create=document.createElement.bind(document);document.createElement=function(tag){if(tag==='video')wallpaperCreations++;return create(tag);};
    InputSources.setPreviewEnabled(localStorage,true);
    TV_APPS.inputs=[{appId:'com.webos.app.hdmi1',label:'Synthetic HDMI'}];
    await ThemeManager.selectInstalled((await ThemeManager.list()).find(t=>t.id==='builtin:liquid-glass'));
    HomePresentationController.show({cytvHome:{reason:'home',generation:7}});
   });
   await n.page.waitForTimeout(50);
+  await n.page.evaluate(()=>HomeWallpaper.configure({manifest:{id:'test:decoder',title:'Synthetic',defaults:{wallpaperAssetId:'poster',dim:0},assets:[{id:'poster',width:1920,height:1080}],wallpaperVideo:{variants:[{quality:'1080p',width:1920,height:1080}]}},assetHandles:{poster:'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='},videoHandles:{'1080p':'/synthetic-unavailable.mp4'}}));
+  assert.equal(await n.page.evaluate(()=>wallpaperCreations),0,'known lower content blocks wallpaper decoder');
   await n.page.mouse.move(0,0);await n.page.locator('.ctv-input-tile').first().hover();
   await n.page.waitForTimeout(900);
   assert.equal(await n.page.evaluate(()=>previewCreations),0,'known lower content blocks input preview');
   await n.page.evaluate(()=>{nativeReply={returnValue:true,eligible:false,content:false,generation:7,observedAgeMs:0};HomePresentationController.show({cytvHome:{reason:'home',generation:7}});});
   await n.page.waitForFunction(()=>previewCreations===1,null,{timeout:3000});
+  assert(await n.page.evaluate(()=>wallpaperCreations>0),'only a confirmed empty context can acquire wallpaper video');
   await n.page.evaluate(()=>{nativeReply=null;HomePresentationController.show({cytvHome:{reason:'home',generation:7}});});
   assert.equal(await n.page.locator('.ctv-input-preview').count(),0,'context reset releases active hardware preview immediately');
   await n.page.waitForTimeout(900);

@@ -6,7 +6,7 @@
 
 Non publié (#290) : **+ / Ajouter une app** propose la télévision en direct sous le nom fourni par le TV uniquement si le tuner est détecté comme installé. Les autres apps système masquées restent exclues. No-root nécessite Helper et installateur à jour ; Root nécessite le paquet Home à jour. Le lancement des chaînes reste à vérifier sur le TV.
 
-**Non publié — Ribbon au-dessus des applications :** Dans Root, Ribbon peut apparaître sur l’application en cours. Home ouvre la barre ; Retour ou un nouvel appui sur Home la ferme. À l’allumage ou si le contenu derrière est absent ou inconnu, le fond d’écran reste affiché ; les réglages restent opaques. No-root reste en plein écran sur le téléviseur. La démo simule les deux états ; la validation du paquet final sur appareil reste à faire. [Détails](../THEMES.md#ribbon-over-applications-unreleased).
+**Non publié — Ribbon en superposition :** Root permet Ribbon au-dessus du contenu en cours. Son intégration au même Home et Helper No-root est en développement. Home ouvre la barre ; Retour ou un nouvel appui sur Home la ferme. Les réglages et autres thèmes sont opaques, mais la lecture sous-jacente peut continuer. Un contexte inconnu utilise un fond statique opaque. Le scénario No-root complet nécessite encore la validation des paquets finaux sur le téléviseur ; la simulation du navigateur ne prouve pas la compatibilité. [Ribbon](../THEMES.md#ribbon-over-applications-unreleased).
 
 Ribbon : maintenez OK pour modifier ; ←/→ déplace la carte, ↑ sélectionne × (masquer de Home), ↓ revient à la carte, OK confirme et Back annule. Le fond actuel est conservé.
 
