@@ -5,21 +5,22 @@
 }(this, function () {
   'use strict';
   function create(options) {
-    var generation = 0, visible = false, mode = 'closed', overlayTheme = false;
-    var owners = Object.create(null), startup = false, blocked = false, activationUntil = 0;
+    var generation = 0, launchGeneration = 0, visible = false, mode = 'closed', overlayTheme = false;
+    var owners = Object.create(null), startup = false, blocked = false, opaque = false, activationUntil = 0;
     var now = options.now || Date.now;
     function isBlocked() { return Object.keys(owners).length > 0 || !!(options.blocked && options.blocked()); }
+    function isOpaque() { return Object.keys(owners).length > 0 || !!(options.opaque ? options.opaque() : options.blocked && options.blocked()); }
     function state() { return {mode:mode, visible:visible}; }
     function render() { if (options.render) options.render(state()); }
     function refresh() {
-      var request = ++generation, settled = false;
-      mode = visible ? 'full' : 'closed'; blocked = isBlocked(); render();
-      if (!visible || !options.supported || !overlayTheme || startup || blocked) return;
+      var request = ++generation, settled = false; launchGeneration++;
+      mode = visible ? 'full' : 'closed'; blocked = isBlocked(); opaque = isOpaque(); render();
+      if (!visible || !options.supported || !overlayTheme || startup || opaque) return;
       try {
         options.query(function (content) {
           if (settled || generation !== request || !visible) return;
           settled = true;
-          mode = content === true && !isBlocked() ? 'overlay' : 'full'; render();
+          mode = content === true && !isOpaque() ? 'overlay' : 'full'; render();
         });
       } catch (_) { /* Unknown platform context retains the opaque Home. */ }
     }
@@ -29,14 +30,14 @@
       startup = params.activateType === 'powerOn' || params.reason === 'boot' || params.reason === 'startup';
       visible = true; refresh();
     }
-    function hide() { activationUntil = 0; generation++; visible = false; mode = 'closed'; render(); }
+    function hide() { activationUntil = 0; generation++; launchGeneration++; visible = false; mode = 'closed'; render(); }
     function dismiss() {
       if (!visible || mode !== 'overlay' || isBlocked()) return false;
       hide(); if (options.close) options.close(); return true;
     }
     return {
       state:state,
-      token:function () { return generation; },
+      token:function () { return launchGeneration; },
       show:show,
       hide:hide,
       dismiss:dismiss,
@@ -55,13 +56,16 @@
         if (activating || !dismiss()) show(params);
       },
       launched:function (token) {
-        if (token !== generation || !options.supported || !visible || isBlocked()) return false;
+        if (token !== launchGeneration || !options.supported || !visible || isBlocked()) return false;
         hide(); if (options.close) options.close(); return true;
       },
       setTheme:function (layout) { overlayTheme = !!layout && layout.presentation === 'overlay'; refresh(); },
       suspend:function (owner) { owners[owner] = true; refresh(); },
       resume:function (owner) { if (owners[owner]) { delete owners[owner]; refresh(); } },
-      sync:function () { if (blocked !== isBlocked()) refresh(); }
+      sync:function () {
+        if (opaque !== isOpaque()) refresh();
+        else if (blocked !== isBlocked()) { blocked = isBlocked(); launchGeneration++; }
+      }
     };
   }
   return {create:create};

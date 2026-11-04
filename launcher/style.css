@@ -925,3 +925,18 @@ body.editing #homeSurface[data-layout="scenic-grid"] .ctv-position { display: no
 @keyframes ctv-bump-right {
   40% { transform: translateX(10px); }
 }
+
+/* Ribbon editing keeps the lane anchored and exposes controls at the moving card. */
+body.ribbon-editing #homeSurface[data-ribbon="true"] #viewport,
+body.ribbon-editing #homeSurface[data-ribbon="true"] #stage { top: 0; }
+body.ribbon-editing #homeSurface.ctv-home[data-ribbon="true"] .item .name { display: none !important; }
+body.ribbon-editing #homeSurface[data-ribbon="true"] .item.moving .card { outline: none; }
+.ribbon-edit-arrow { position: absolute; z-index: 6; width: 40px; height: 48px; font-size: 52px; line-height: 44px; text-align: center; color: #fff; text-shadow: 0 2px 6px #000; pointer-events: none; }
+.ribbon-edit-left { left: -36px; }
+.ribbon-edit-right { right: -36px; }
+body.ribbon-editing #hideApp { bottom: auto; width: 52px; height: 52px; padding: 0; border-radius: 50%; background: rgba(0,0,0,.8); justify-content: center; }
+body.ribbon-editing #hideApp::before { content: '×'; font-size: 40px; line-height: 46px; }
+body.ribbon-editing #hideApp svg { display: none; }
+body.ribbon-editing #hideApp span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+body.ribbon-editing #hideApp.focused { background: #fff; color: #111; }
+body.ribbon-editing #editHint { bottom: auto; color: #fff; text-shadow: 0 2px 6px #000; }

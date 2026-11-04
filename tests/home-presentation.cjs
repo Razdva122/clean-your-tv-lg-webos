@@ -44,4 +44,18 @@ assert.equal(activatedCloses,0,'a delayed relaunch belongs to the recent visible
 now+=1;a.relaunch({});assert.equal(activatedCloses,1,'a subsequent Home still closes immediately');
 a.visibility(true,{});reply(true);now+=501;a.relaunch({});
 assert.equal(activatedCloses,2,'visibility-only return does not swallow a later Home');
+let editing=false, opaque=false;
+const editor=create({supported:true,query:cb=>cb(true),blocked:()=>editing,opaque:()=>opaque});
+editor.setTheme({presentation:'overlay'});editor.show({});
+const beforeEditing=editor.token();editing=true;editor.sync();assert.equal(editor.state().mode,'overlay','editing owns controls without replacing content');
+assert(!editor.dismiss(),'editing prevents whole-panel dismissal');
+opaque=true;editor.sync();assert.equal(editor.state().mode,'full','actual settings remain opaque');
+opaque=false;editor.sync();assert.equal(editor.state().mode,'overlay');
+editing=false;editor.sync();assert(!editor.launched(beforeEditing),'editing invalidates a pending launch without replacing the background');assert(editor.dismiss());
+let delayedContext, ownsEdit=false;
+const pendingEditor=create({supported:true,query:cb=>delayedContext=cb,blocked:()=>ownsEdit,opaque:()=>false});
+pendingEditor.setTheme({presentation:'overlay'});pendingEditor.show({});
+const pendingLaunch=pendingEditor.token();ownsEdit=true;pendingEditor.sync();delayedContext(true);
+assert.equal(pendingEditor.state().mode,'overlay','editing cannot invalidate a still-pending context response');
+ownsEdit=false;pendingEditor.sync();assert(!pendingEditor.launched(pendingLaunch),'the old launch still cannot close the edited panel');
 console.log('PASS presentation: full fallback, context freshness, hidden/visible Home, modal ownership, launch generations, No-root and ES5');

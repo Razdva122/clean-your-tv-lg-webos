@@ -98,6 +98,8 @@ fi
 if has preview; then
   node tests/home-presentation-ui.cjs
   node tests/preview-presentation-ui.cjs
+  node tests/themes/ribbon-reference-ui.cjs
+  node tests/themes/ribbon-edit-ui.cjs
   for test in tests/showcase/{registry,submission-security,remote}.cjs; do node "$test"; done
   node tests/preview-bridge.cjs
   node tests/preview-themes-ui.cjs

@@ -50,6 +50,11 @@
       "summary": "Discover the installed Live TV tuner omitted or hidden by LG inventory; rebuilt Helper/Root/installer delivery and device acceptance remain pending"
     },
     {
+      "pr": 294,
+      "issues": [],
+      "summary": "Narrow inventory transport PR checks while retaining every device safety test, explicit legacy dependencies and full frozen-candidate gates; no product behavior or version change"
+    },
+    {
       "pr": 265,
       "issues": [],
       "summary": "Isolated preliminary Root TV QA of Ribbon overlay; not a release scope decision or final acceptance"

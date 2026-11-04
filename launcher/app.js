@@ -179,6 +179,7 @@
     },
     blocked: function () { return previewDialogOpen() || !!moveState || !!pickerOpen || !!undoState ||
       !!(window.ThemeRuntime && ThemeRuntime.isSuspended()); },
+    opaque: function () { return previewDialogOpen() || !!(window.ThemeRuntime && ThemeRuntime.isSuspended()); },
     render: function (state) {
       document.documentElement.setAttribute('data-home-presentation', state.mode);
       document.body.setAttribute('data-home-presentation', state.mode);
@@ -417,6 +418,35 @@
     okPressed = false;
     clearPressed();
   }
+  function clearRibbonEditor() {
+    if (moveState) {
+      var arrows = moveState.item.el.querySelectorAll('.ribbon-edit-arrow');
+      for (var i = 0; i < arrows.length; i++) arrows[i].parentNode.removeChild(arrows[i]);
+    }
+    document.body.classList.remove('ribbon-editing');
+    if (hideButton.parentNode !== document.body) document.body.appendChild(hideButton);
+    hideButton.style.left = ''; hideButton.style.top = ''; editHint.style.top = '';
+  }
+  function positionRibbonEditor() {
+    if (!moveState || !layoutGeometry.ribbon) return;
+    var ribbon = layoutGeometry.ribbon, item = moveState.item, scene = getElement('homeSurface');
+    // Keep the control in logical scene coordinates at every graphics resolution.
+    if (hideButton.parentNode !== scene) scene.appendChild(hideButton);
+    if (!item.el.querySelector('.ribbon-edit-arrow')) {
+      ['left', 'right'].forEach(function (side) {
+        var arrow = document.createElement('span');
+        arrow.className = 'ribbon-edit-arrow ribbon-edit-' + side;
+        arrow.setAttribute('aria-hidden', 'true'); arrow.textContent = side === 'left' ? '‹' : '›';
+        arrow.style.top = (-ribbon.focusLift - 28) + 'px';
+        arrow.style.webkitTransform = arrow.style.transform = 'skewX(' + (-ribbon.skewDeg) + 'deg)';
+        item.el.appendChild(arrow);
+      });
+    }
+    var slant = -(ribbon.cardHeight + ribbon.focusLift) * Math.tan(ribbon.skewDeg * Math.PI / 180);
+    hideButton.style.left = (tileLeft(focusedTile) + CARD_WIDTH / 2 + slant) + 'px';
+    hideButton.style.top = (TILE_BASE - ribbon.focusLift - 64) + 'px';
+    editHint.style.top = (TILE_BASE - ribbon.focusLift - 146) + 'px';
+  }
   function beginMoving(item) {
     clearPressed();
     if (!item || item.add || moveState || pickerOpen || undoState) {
@@ -428,8 +458,10 @@
     };
     setPartState(item.el, 'moving', true);
     document.body.classList.add('editing');
+    document.body.classList.toggle('ribbon-editing', !!layoutGeometry.ribbon);
+    if (!layoutGeometry.ribbon) editHint.textContent = tr('← ↑ ↓ → Move   ·   OK Place   ·   Back Cancel   ·   ↓ Below last row to hide');
     hideButton.hidden = false;
-    editHint.hidden = false;
+    editHint.hidden = !!layoutGeometry.ribbon;
     hideButton.classList.remove('focused');
     hideSelected = false;
     focusTile(tiles.indexOf(item));
@@ -510,6 +542,7 @@
       tiles = previous;
       return;
     }
+    clearRibbonEditor();
     moveState = null;
     hideSelected = false;
     setPartState(item.el, 'moving', false);
@@ -744,7 +777,7 @@
           hideApp();
         } else if (key === 27 || key === 461) {
           finishMoving(false);
-        } else if (key === 38) {
+        } else if (key === (layoutGeometry.ribbon ? 40 : 38)) {
           hideSelected = false;
           hideButton.classList.remove('focused');
           hideButton.blur();
@@ -1001,7 +1034,7 @@
       }
       var ceiling = layoutGeometry.scrollTop;
       var floor = moveState ? 850 : layoutGeometry.scrollBottom;
-      if (layoutPreset === 'scenic-grid') scrollOffset = top - (moveState ? 640 : TILE_BASE);
+      if (layoutPreset === 'scenic-grid') scrollOffset = layoutGeometry.ribbon ? 0 : top - (moveState ? 640 : TILE_BASE);
       else if (row === 0 && !moveState) scrollOffset = 0;
       else {
         if (top - scrollOffset + CARD_HEIGHT + 70 > floor) scrollOffset = top + CARD_HEIGHT + 70 - floor;
@@ -1071,6 +1104,7 @@
         updateAmbient(e.color);
       }(tiles[index]) : heroVisible && (heroVisible = false, heroTitle.style.opacity = "0");
       updateAmbient(tiles[index].color);
+      positionRibbonEditor();
     }
   }
   // The glow follows once the focus rests, so its full-screen crossfade never competes
@@ -1516,6 +1550,7 @@
     if (!commit) {
       tiles = moveState.snapshot;
     }
+    clearRibbonEditor();
     moveState = null;
     setPartState(item.el, 'moving', false);
     document.body.classList.remove("editing");
@@ -1581,12 +1616,12 @@
         } else if (39 === key) {
           moveTile(layoutPreset === 'scenic-grid' ? (focusedTile + 1) % screenIds().length : focusedTile + 1);
         } else if (38 === key) {
-          if (layoutPreset !== 'scenic-grid') moveTile(focusedTile - columnCount);
+          if (layoutGeometry.ribbon) selectHide();
+          else if (layoutPreset !== 'scenic-grid') moveTile(focusedTile - columnCount);
         } else if (40 === key) {
-          if (rowFor(focusedTile) >= rowFor(screenIds().length - 1)) {
-            selectHide();
-          } else {
-            moveTile(Math.min(focusedTile + columnCount, screenIds().length - 1));
+          if (!layoutGeometry.ribbon) {
+            if (rowFor(focusedTile) >= rowFor(screenIds().length - 1)) selectHide();
+            else moveTile(Math.min(focusedTile + columnCount, screenIds().length - 1));
           }
         } else if (key === KEY_OK) {
           finishMoving(true);

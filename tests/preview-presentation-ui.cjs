@@ -19,8 +19,8 @@ const {assert,chromium,fs,path,stage}=require('./themes/browser.cjs'),http=requi
   const focus=await frame.locator('.item.focused').boundingBox();assert(focus.x>=0&&focus.y>=0&&focus.x+focus.width<=1440&&focus.y+focus.height<=1100,'focused skew remains inside the preview screen');
   assert.equal(await frame.locator('.item.focused .name').isVisible(),true,'the selected app has a readable label');
   await page.screenshot({path:path.resolve('build/ribbon-demo-'+(edition==='Root Edition'?'root':'no-root')+'.png'),animations:'disabled'});
-  const appearance=await frame.locator('.item.focused .card').evaluate(n=>{const c=getComputedStyle(n);return {background:c.backgroundColor,border:c.borderTopColor,width:c.borderTopWidth};});
-  assert.equal(appearance.border,'rgb(255, 255, 255)');assert.equal(appearance.width,'3px');assert.equal(appearance.background,'rgb(35, 38, 43)');
+  const appearance=await frame.locator('.item.focused .card').evaluate(n=>{const c=getComputedStyle(n);return {background:c.backgroundColor,native:n.style.backgroundColor,border:c.borderTopColor,width:c.borderTopWidth};});
+  assert.equal(appearance.border,'rgb(255, 255, 255)');assert.equal(appearance.width,'3px');assert.equal(appearance.background,appearance.native,'solid native card fill');
   await page.getByRole('button',{name:'Home',exact:true}).click();await page.waitForFunction(()=>!document.getElementById('screen').contentWindow.HomePresentationController.state().visible);
   await page.getByRole('button',{name:'Home',exact:true}).click();await page.waitForFunction(()=>document.getElementById('screen').contentWindow.HomePresentationController.state().mode==='overlay');
   await page.getByRole('button',{name:'Back',exact:true}).click();await page.waitForFunction(()=>!document.getElementById('screen').contentWindow.HomePresentationController.state().visible);
@@ -38,6 +38,6 @@ const {assert,chromium,fs,path,stage}=require('./themes/browser.cjs'),http=requi
    await capture.screenshot({path:path.resolve('build/ribbon-overlay-'+edition+'.png'),animations:'disabled'});await capture.close();
   }
  }
- assert.deepEqual(errors,[]);console.log('PASS actual-renderer presentation demo: both editions, full/overlay, neutral focus, Home/Back and theme reset');
+ assert.deepEqual(errors,[]);console.log('PASS actual-renderer presentation demo: both editions, full/overlay, native filled cards, Home/Back and theme reset');
  }finally{await browser.close();await new Promise(r=>server.close(r));}
 })().catch(e=>{console.error(e);process.exitCode=1;});

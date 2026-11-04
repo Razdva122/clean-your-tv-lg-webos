@@ -8,10 +8,13 @@ The application remains opaque by default. A theme can request overlay
 presentation only through the paired `overlay-presentation-v1` contract on a
 bounded scenic ribbon. No-root package metadata and Helper are unchanged.
 
-`launcher/home-presentation.js` owns full/overlay/closed state and a generation
-for async context/launch work. Only a fresh positive content observation enables
+`launcher/home-presentation.js` owns full/overlay/closed state, a context generation
+and a separate launch generation. Only a fresh positive content observation enables
 transparency. Power-on, unknown/empty context, suspended themes and actual visible
-dialogs stay opaque. Theme apply/reset/suspend/resume invalidate old work.
+dialogs stay opaque. Tile editing and hide/undo own their controls while retaining
+the active application background; they do not activate the Home wallpaper.
+Entering/leaving control ownership invalidates stale successful launches without
+invalidating a pending context query. Theme apply/reset/suspend/resume invalidate old work.
 Back is handled after dialog/input/reorder ownership. Reopening hidden Home
 refreshes context; ordinary relaunch of a visible transparent bar dismisses it.
 Visibility-first activation notifications are coalesced with their relaunch for
@@ -21,8 +24,8 @@ Successful content launches dismiss the Root host, including opaque themes,
 without claiming successful playback. Failed or superseded launches do not.
 
 The exact `status` payload `{"presentation":"context"}` uses the existing Root
-service boundary and a separate UID-checked, two-second read-only compositor
-request. It returns only `content: true|false|null`; app IDs, raw surfaces and
+service boundary and a separate UID-checked read-only compositor request,
+with a 1.5-second Root subprocess deadline and a two-second UI deadline. It returns only `content: true|false|null`; app IDs, raw surfaces and
 private inventories do not leave that operation. No recovery lock, route write,
 persistent preference, ACG or network listener is added. The native startup
 observer makes a fresh overlay check before remembered-input effects, retaining
