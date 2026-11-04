@@ -20,14 +20,14 @@ do not install or connect to a TV.
 - Left/Right wrap between Overlay, Fullscreen and Close panel; OK activates the
   focused native button. Pointer and Tab work too.
 - Back (461), Escape, Close panel and another `webOSRelaunch` request self-close.
-  The absolute 60-second lifetime is never extended by input or relaunch.
+  There is no automatic dismissal deadline.
   Physical Home is not intercepted: repeat **app launch** models a future
   Helper-driven toggle. Pressing the real Home key retains platform behavior.
 
 Fullscreen is an opaque drawing in the same overlay window, not a separate card
 app. Underlying lifecycle/audio may continue. The app uses no decoder even in
 fullscreen. A compositor that refuses overlay windows cannot be rescued by the
-opaque background. Self-close and the timer depend on the web app running;
+opaque background. Self-close depends on the web app running;
 neither replaces Helper's independent emergency/watchdog. A browser may refuse
 to close a tab opened by the user; the document hides its panel on that request.
 
@@ -44,7 +44,7 @@ node tests/no-root-ribbon-prototype.cjs
 The browser test uses installed Chrome by default; set `BROWSER_CHANNEL=chromium`
 to use an already installed Playwright Chromium. It loads the **compiled** app,
 simulates only the platform activation/close calls, and exercises navigation,
-opaque defaults, explicit overlay, dismissal and the lifetime boundary. These
+opaque defaults, explicit overlay, manual dismissal and remaining open after two minutes. These
 are host tests, not TV video/audio/focus acceptance.
 
 Build outputs:
@@ -72,7 +72,7 @@ should dismiss, not replace/restart the underlying content app.
 
 Check cold and warm launch separately over HDMI, Live TV and a native video app:
 moving picture, sound continuity, loading/black frames, navigation, Back,
-relaunch, 60-second expiry and underlying focus after close. A launch reply is
+relaunch and underlying focus after close. A launch reply is
 not proof of a visible window. Recovered playback is not uninterrupted playback.
 Activation/visibility event ordering, actual Home integration and content
 classification are outside this prototype's host evidence.
@@ -81,7 +81,7 @@ TV model, firmware/webOS, remote and installer platform: **not tested**.
 TV installation, video/audio, standby, cold boot, OTA and rollback: **not tested**.
 Browser/platform simulation does not establish pristine No-root compatibility.
 
-## Real Ribbon mode — 0.0.2
+## Real Ribbon mode — 0.0.3
 
 ```sh
 python3 prototypes/no-root-ribbon/build.py --real-ribbon
@@ -104,7 +104,7 @@ Native window activation and self-close are captured by a small host before
 the product's service APIs are replaced and locked. The pinned source revision
 is included as `lab-source.json` in the package.
 
-The real build keeps the separate lab ID, sets version `0.0.2`, empty ACG, and
+The real build keeps the separate lab ID, sets version `0.0.3`, empty ACG, and
 overlay metadata. It uses its own `cytv.lab.norootribbon.` storage namespace.
 The simulated content background is removed. Wallpaper playback is suspended
 for the entire session, including settings/fallback; CSP also rejects media.
@@ -113,15 +113,14 @@ Application launches, updates, Home control and system settings remain mocked.
 Unlike the static probe, actual Ribbon/controller semantics apply: Back first
 closes an open dialog or Settings, then dismisses unobstructed overlay navigation.
 Relaunch dismisses a visible unobstructed overlay; opaque fallback/modal/hidden
-activation may show it instead. Physical Home is still not hooked. The host's
-absolute 60-second lifetime remains the bounded exit; it is not an independent
+activation may show it instead. Physical Home is still not hooked. There is no automatic dismissal deadline. Self-close is not an independent
 watchdog if the web engine stalls. Context is an explicit launch parameter,
 not a compositor or SSAP observation.
 
 Outputs are `build/no-root-ribbon-prototype/real/` and
-`dist/no-root-ribbon-prototype/com.cleanyourtv.lab.norootribbon_0.0.2_all.ipk`.
+`dist/no-root-ribbon-prototype/com.cleanyourtv.lab.norootribbon_0.0.3_all.ipk`.
 The compiled-app browser regression verifies real cards/navigation, opaque
-settings, Back and unobstructed relaunch, the lifetime boundary, disabled native
+settings, Back and unobstructed relaunch, remaining open after two minutes, disabled native
 service calls, and absence of synthetic content/wallpaper video. A separately
 authorized physical session is recorded only in the local private task record;
 it is not automatically published or counted as release acceptance.
