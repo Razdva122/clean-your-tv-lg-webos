@@ -3,6 +3,16 @@
   "version": null,
   "changes": [
     {
+      "pr": 264,
+      "issues": [],
+      "summary": "Add automatic video wallpapers and Wallpapers settings"
+    },
+    {
+      "pr": 267,
+      "issues": [],
+      "summary": "Add personal wallpapers and embedded 4K theme authoring"
+    },
+    {
       "pr": 287,
       "issues": [
         282,

@@ -92,3 +92,8 @@ new inventory logic. Public delivery, installed-package picker/launch/audio,
 update/rollback and original-reporter device confirmation remain outstanding.
 The issue stays open; these source and discovery checks do not claim a completed
 installation or universal compatibility.
+
+While this metadata was being recorded, a separately authorized #267 integration
+(including #264 ancestry) advanced the candidate. It was preserved without
+changing its product files. This PR's CI above predates that integration and
+must not be presented as validation of the later combined/frozen candidate.
