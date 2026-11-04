@@ -936,7 +936,7 @@
       var previousSlot = Number(e.el.getAttribute('data-ribbon-slot'));
       e.el.style.webkitTransition = e.el.style.transition = slot === null ? '' : e.el.hasAttribute('data-ribbon-slot') && Math.abs(previousSlot - slot) === 1 && previousSlot <= columnCount && slot <= columnCount ? 'left 160ms ease-out' : 'none';
       e.el.style.pointerEvents = slot !== null && slot >= columnCount ? 'none' : '';
-      e.el.style.visibility = slot !== null && slot > columnCount ? 'hidden' : '';
+      e.el.style.visibility = slot !== null && slot >= columnCount + (layoutGeometry.ribbon ? 1 : 0) ? 'hidden' : '';
       if (slot === null) e.el.removeAttribute('data-ribbon-slot'); else e.el.setAttribute('data-ribbon-slot', slot);
       e.el.style.left = tileLeft(t) + "px";
       e.el.style.top = tileTop(t) + "px";

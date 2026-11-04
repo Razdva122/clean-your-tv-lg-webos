@@ -26,6 +26,12 @@ class AdmissionTests(unittest.TestCase):
   self.assertEqual(m.artifact_info([artifact],self.run)['id'],34)
   for entries in ([],[artifact,artifact],[dict(artifact,expired=True)],[dict(artifact,digest=None)],[dict(artifact,workflow_run={'id':999,'head_sha':'a'*40})]):
    with self.assertRaises(ValueError):m.artifact_info(entries,self.run)
+ def test_media_candidate_cli_keeps_bounded_digest_admission(self):
+  # Observed full-candidate41834327029 macOS CLI artifact after common C1/media packaging.
+  artifact={'id':34,'name':'cytv-macos-arm64','expired':False,'size_in_bytes':192317122,'digest':'sha256:'+'b'*64,'workflow_run':{'id':12,'head_sha':'a'*40}}
+  self.assertEqual(m.artifact_info([artifact],self.run)['size'],192317122)
+  with self.assertRaises(ValueError):m.artifact_info([dict(artifact,size_in_bytes=256*1024*1024+1)],self.run)
+  with self.assertRaises(ValueError):m.artifact_info([dict(artifact,name='root-tv-candidate',size_in_bytes=128*1024*1024+1)],self.run,direct_tv=True)
  def test_exact_archive_digest_and_single_regular_cli_are_required(self):
   with tempfile.TemporaryDirectory() as tmp:
    archive=Path(tmp)/'cli.zip';out=Path(tmp)/'cli'
