@@ -87,10 +87,11 @@
     }
   ],
   "excluded": [],
-  "acceptance": "",
+  "acceptance": "PARTIAL / NOT RELEASE-READY. Maintainer OLED55C3RLA firmware43.21.71 SDK11.2.0; remote unknown; macOS ARM64. Exact signed Root0.9.0/Updater0.4.3/infrastructure0.9.0 completed normal coherent update, retained rollback with independent old-version/profile equality, and signed forward return; Root stayed off and recovery verified. Exact host payload/runtime and Android original-signer emulator upgrade checks passed. Dated details and hashes: docs/history/2026-11-04-release-1.8.0-candidate.md. PENDING physical Home/Back/emergency controls, sound/HDMI, standby/AC-off, final media/Ribbon acceptance; Helper0.7.0 runtime with published Home1.8.1/new rollback approval; C1 physical compatibility unverified. Draft only; no stable publication.",
   "build": {
     "run_id": 41837911621,
     "attempt": 1,
     "source": "0fb222f9cb07f29e94fd9c1c1934cba8ba6ed66c"
-  }
+  },
+  "acceptance_build": "41837911621:1"
 }
