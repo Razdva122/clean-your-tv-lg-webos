@@ -203,3 +203,15 @@ controls/emergency, audio, standby, cold boot, OTA and rollback remain untested.
 The B9 remains unsupported by the normal Root path; #160 stays open with the
 remaining maintainer work queued. No repeat Doctor/version output or new reporter
 device action is requested.
+
+## Integration evidence
+
+[PR #292](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/292),
+source `5760a20c311551e3c3291c40a978796cf9967cdc`, merged into `release/next`
+as `06c5473e9417335c51aaedf878bfa2bab6485ab1` on 2026-11-04.
+Selected [CI 41801059748](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/41801059748)
+and integration policy passed; independent integration review found no
+findings. These selected documentation checks are distinct from the host
+prototype results above. No runtime gate, package version, selected complete
+candidate build or device acceptance changed. #160 remains planned for the
+unimplemented offline vendor work and supported target path.
