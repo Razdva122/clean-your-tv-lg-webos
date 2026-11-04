@@ -8,16 +8,18 @@
  function recover(error){generation++;if(trial)clearTimeout(trial.timer);trial=null;rollback=null;classic();try{localStorage.removeItem(choiceKey);localStorage.removeItem(trialKey);}catch(_){}notice=error||'Theme recovery: Classic restored';emit();}
  function selection(){var raw=localStorage.getItem(choiceKey);if(raw===null)return {id:'builtin:classic',title:'Classic'};var s=JSON.parse(raw);if(!s||typeof s.id!=='string'||typeof s.title!=='string'||s.title.length>100||!/^builtin:[a-z0-9][a-z0-9-]{0,63}$/.test(s.id)&&!/^github:/.test(s.id)||s.id.indexOf('github:')===0&&!/^[a-f0-9]{64}$/.test(s.digest))throw Error('Invalid saved theme selection');return s;}
  // The caller exposes Home only after validated appearance (or bounded Classic recovery).
- function start(present){if(ready)return ready;if(root.CYTV_THEME_AUTHOR_PREVIEW){ready=Promise.resolve().then(function(){if(present)present();});return ready;}
+ function start(present){if(ready)return ready;if(root.CYTV_THEME_AUTHOR_PREVIEW){ready=Promise.resolve().then(function(){if(present)return present();});return ready;}
   ready=new Promise(function(resolve,reject){
    var token=generation,marker=null,finished=false,timer=setTimeout(function(){finish(Error('Theme startup timed out. Classic restored'));},8000);
    function finish(error){
     if(finished)return;finished=true;clearTimeout(timer);
-    try{if(error&&token===generation)recover(error.message);if(present)present();}catch(e){reject(e);return;}
+    try{if(error&&token===generation)recover(error.message);}catch(e){reject(e);return;}
+    Promise.resolve().then(function(){if(present)return present();}).then(function(){
     requestAnimationFrame(function(){requestAnimationFrame(function(){
      if(marker)try{if(localStorage.getItem(trialKey)===marker)localStorage.removeItem(trialKey);}catch(_){}
      emit();resolve();
     });});
+    },reject);
    }
    Promise.resolve().then(function(){
     var saved;if(localStorage.getItem(trialKey)!==null){recover('An interrupted theme preview was reset to Classic');return;}
