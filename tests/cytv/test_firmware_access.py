@@ -232,7 +232,7 @@ class Tests(unittest.TestCase):
         calls=[]
         def failure(**kwargs):calls.append(kwargs);raise ValueError('permission conflict')
         d=types.SimpleNamespace(STATE=self.root,EXPECTED_UID=os.getuid(),main=lambda mode:{'home':'safe'})
-        ns={'d':d,'os':os,'firmware_access':failure}
+        ns={'d':d,'os':os,'firmware_access':failure,'gate_backend':lambda:None}
         for node in selected:exec(ast.get_source_segment(raw,node),ns)
         intent=types.SimpleNamespace(boot=lambda:None)
         updates=types.SimpleNamespace(finish=lambda *args:{'finished':True},suspend=lambda *args:None,abort=lambda *args:None)

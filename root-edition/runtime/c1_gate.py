@@ -4,7 +4,6 @@ Python owns admission and user intent. The separately running native guardian
 owns mounts, the input lease, stop latches and recovery without this interpreter.
 """
 from contextlib import contextmanager
-import fcntl
 import hashlib
 import json
 import os
@@ -149,6 +148,7 @@ def boot_identity():
 
 
 def write_config(root, admission, token, uid=0):
+    import fcntl
     t = admission['target']
     content = ('CYTV-C1-GATE-1\ntoken ' + token + '\nboot ' + boot_identity()
                + '\ndev ' + str(t['dev']) + '\nino ' + str(t['ino'])
@@ -345,6 +345,7 @@ def status(root=STATE, uid=0):
 
 @contextmanager
 def operation(root=STATE, uid=0):
+    import fcntl
     path = Path(root) / 'c1-gate/operation.lock'
     trusted_directory(path.parent, uid)
     fd = os.open(path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW | os.O_NONBLOCK, 0o600)
