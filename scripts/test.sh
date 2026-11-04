@@ -4,7 +4,7 @@ cd "$(dirname "$0")/.."
 # No arguments runs the full suite (local checks and release validation).
 selected=" ${*:-ui tv installer android setup preview} "
 for component in "$@"; do
-  case "$component" in ui|tv|installer|android|setup|preview) ;; *) echo "Unknown test component: $component" >&2; exit 2 ;; esac
+  case "$component" in ui|tv|tv-runtime|installer|android|setup|preview) ;; *) echo "Unknown test component: $component" >&2; exit 2 ;; esac
 done
 has() { [[ "$selected" == *" $1 "* ]]; }
 
@@ -19,7 +19,7 @@ if has ui || has tv; then
   for file in root-edition/ui/*.js; do node --check "$file"; done
 fi
 
-if has tv; then
+if has tv || has tv-runtime; then
 node tests/helper-compat.cjs
 node tests/passive-remote-diagnostic.cjs
 node tests/helper-panel-diagnostics.cjs
