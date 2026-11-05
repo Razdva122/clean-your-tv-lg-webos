@@ -65,7 +65,7 @@ class Device:
         self.legacy_states=[self.root_updater/'transaction.json',self.installed_root/'usr/palm/services/com.cleanyourtv.updater.service/state/transaction.json']
 
     def require_normal_root(self):
-        if any(os.path.lexists(self.root_state/name) for name in ('home-backend.json','c1-gate','runtime/c1_gate.py','runtime/c1-home-gate')):
+        if any(os.path.lexists(self.root_state/name) for name in ('home-backend.json','c1-gate','c1-keyfilter','runtime/c1_gate.py','runtime/c1_keyfilter.py','runtime/c1-home-gate','runtime/c1-keyfilter-guard')):
             raise ValueError('Experimental C1 routing is excluded from normal System Updates')
 
     def owner_identity(self,owner,purpose='worker'):

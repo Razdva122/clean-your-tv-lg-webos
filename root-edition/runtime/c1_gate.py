@@ -20,6 +20,8 @@ import uuid
 
 STATE = Path('/var/lib/clean-your-tv-root')
 TARGET = Path('/usr/bin/com.webos.app.home')
+CHECKPOINTS = (Path('/mnt/lg/cmn_data/checkpoint/com.webos.app.home'),
+               Path('/tmp/checkpoint/com.webos.app.home'))
 VOLATILE = Path('/tmp/clean-your-tv-root-gate/gate')
 BACKEND = 'c1-native-gate'
 APP = 'com.cleanyourtv.root.preview'
@@ -89,10 +91,16 @@ def admission_valid(value):
 def selection(root=STATE, uid=0):
     path = Path(root) / 'home-backend.json'
     if not os.path.lexists(path):
-        if any(os.path.lexists(Path(root) / name) for name in ('c1-gate', 'runtime/c1-home-gate', 'runtime/c1_gate.py')):
+        if any(os.path.lexists(Path(root) / name) for name in ('c1-gate', 'c1-keyfilter', 'runtime/c1-home-gate', 'runtime/c1-keyfilter-guard', 'runtime/c1_gate.py', 'runtime/c1_keyfilter.py')):
             raise ValueError('Missing experimental Home backend selection; retain recovery evidence')
         return None
     value = json.loads(secure(path, uid, 8192))
+    if isinstance(value, dict) and type(value.get('schema')) is int and value['schema'] == 2:
+        if __package__:
+            from . import c1_keyfilter
+        else:
+            import c1_keyfilter
+        return c1_keyfilter.selection(root, uid)
     if (not isinstance(value, dict)
             or set(value) != {'schema', 'backend', 'experimental', 'native_sha256', 'admission'}
             or type(value['schema']) is not int or value['schema'] != 1
@@ -126,9 +134,26 @@ def luna(uri, payload, timeout=5):
     return call(uri, payload, timeout=timeout)
 
 
+def checkpoint_preflight(uid=0):
+    """Mirror native path admission early; never authorize or repair a mount."""
+    for path in CHECKPOINTS:
+        try:
+            info = path.lstat()
+        except FileNotFoundError:
+            continue  # Native admission also skips absent optional checkpoints.
+        try:
+            if not stat.S_ISDIR(info.st_mode) or info.st_uid != uid or info.st_mode & 0o022:
+                raise ValueError('Unsafe checkpoint leaf')
+            trusted_directory(path, uid)
+        except (ValueError, OSError):
+            raise ValueError('Unsafe C1 checkpoint path; setup/activation stopped. '
+                             'Keep vendor permissions and recovery data unchanged.') from None
+
+
 def probe():
     if os.geteuid() != 0 or sys.platform != 'linux':
         raise ValueError('Experimental C1 admission requires an existing root TV session')
+    checkpoint_preflight()
     data = secure(TARGET, limit=4 * 1024 * 1024)
     before = TARGET.stat()
     info = luna('luna://com.webos.service.tv.systemproperty/getSystemInfo',
@@ -290,9 +315,33 @@ def retire_stock(target):
         remaining = submitted + 23 - time.monotonic()
         if remaining <= 0:
             raise ValueError('SAM foreground did not settle after closing stock Home')
-        if foreground(timeout=min(5, remaining)) not in ('', stock):
+        settled = foreground(timeout=min(5, remaining)) not in ('', stock)
+        remaining = submitted + 23 - time.monotonic()
+        if not settled and remaining > 0:
+            # Root is an overlay: SAM may keep reporting Home underneath it.
+            # The compositor lists visible surfaces; its API does not require
+            # a separate visible flag. Reject an explicit hidden surface.
+            reply = luna('luna://com.webos.surfacemanager/getForegroundAppInfo', {},
+                         timeout=min(5, remaining))
+            surfaces = reply.get('foregroundAppInfo') if isinstance(reply, dict) else None
+            if (isinstance(reply, dict) and reply.get('returnValue') is True
+                    and isinstance(surfaces, list) and len(surfaces) <= 128
+                    and all(isinstance(surface, dict)
+                        and isinstance(surface.get('appId'), str)
+                        and isinstance(surface.get('windowType'), str) for surface in surfaces)):
+                settled = any(isinstance(surface, dict)
+                    and surface.get('appId') == APP
+                    and surface.get('windowType') == '_WEBOS_WINDOW_TYPE_OVERLAY'
+                    and surface.get('visible', True) is True
+                    and type(surface.get('displayId', 0)) is int
+                    and surface.get('displayId', 0) == 0 for surface in surfaces)
+        # A restored CRIU executable must never be mistaken for a successful
+        # handoff, including when Root is already visible over that executable.
+        if stock_running(target):
+            raise ValueError('Running stock Home reappeared after SAM close')
+        if settled and time.monotonic() < submitted + 23:
             return
-        time.sleep(min(.25, remaining))
+        time.sleep(min(.25, max(0, submitted + 23 - time.monotonic())))
 
 
 def native(args, root=STATE, uid=0):
@@ -465,6 +514,15 @@ def enable_locked(root, uid, seconds, resume_token=None):
 
 
 def execute(mode, transaction=None, root=STATE, uid=0):
+    # Dispatch a selected schema 2 without changing schema 1 recovery ordering.
+    # Native/binary authority still rejects any missing or orphaned selection.
+    selected = selection(root, uid) if os.path.lexists(Path(root)/'home-backend.json') else None
+    if selected and selected.get('routing') == 'compositor-keyfilter-v1':
+        if __package__:
+            from . import c1_keyfilter
+        else:
+            import c1_keyfilter
+        return c1_keyfilter.execute(mode, transaction, root, uid)
     if mode == 'status': return status(root, uid)
     if mode == 'restore': return restore(root, uid)
     if mode == 'enable': return enable(root, uid)

@@ -34,6 +34,19 @@ async function run(){
   const module={exports:{}};vm.runInNewContext(fs.readFileSync(require.resolve('../../theme-receiver/wallpaper-cache'),'utf8'),{module,exports:module.exports,require:name=>name==='fs'?fakeFs:require(name),process,Buffer,Promise,setTimeout,clearTimeout});
   await assert.rejects(module.exports.create({directory:foreignDirectory}).start({variants:[variant]}),/unsafe directory/);assert.equal(fs.readdirSync(foreignDirectory).length,0);fs.rmdirSync(foreignDirectory);
  }
+ // Capacity reservations survive asynchronous df without exceeding lease limits.
+ const budgetDir=fs.mkdtempSync(path.join(os.tmpdir(),'wallpaper-budget-test-')),budgetCache=cache.create({directory:budgetDir}),originalSpace=cache.space;
+ let required=[];cache.space=async size=>{required.push(size);await new Promise(resolve=>setTimeout(resolve,5));return {required:size,available:100000000,shortfall:0};};
+ try{
+  const results=await Promise.allSettled([budgetCache.start({variants:[variant]}),budgetCache.start({variants:[variant]}),budgetCache.start({variants:[variant]})]);
+  assert.equal(results.filter(result=>result.status==='fulfilled').length,2,'only two concurrent leases admitted');
+  for(const result of results)if(result.status==='fulfilled')budgetCache.stop({sessionId:result.value.sessionId});
+  const first=await budgetCache.start({variants:[variant]});budgetCache.write({sessionId:first.sessionId,quality:'1080p',offset:0,data:bytes.toString('base64')});
+  const second=await budgetCache.start({variants:[variant]});assert.equal(required.at(-1),bytes.length+1048576,'df already excludes bytes written to current cache');budgetCache.stop({sessionId:first.sessionId});budgetCache.stop({sessionId:second.sessionId});
+  cache.space=async size=>({required:size,available:0,shortfall:size});
+  await assert.rejects(budgetCache.start({variants:[variant]}),error=>error.code==='wallpaper-cache-storage-full'&&error.storage.shortfall===bytes.length+1048576);
+  assert.equal(fs.readdirSync(budgetDir).length,0,'full disk does not create a partial session');
+ }finally{cache.space=originalSpace;fs.rmdirSync(budgetDir);}
  console.log('PASS receiver/media independent activity ownership, hold overrides and cache directory ownership');
  console.log('PASS native cache auth, offsets, hash, HTTP ranges, disposal, lease bounds and expiry');
 }

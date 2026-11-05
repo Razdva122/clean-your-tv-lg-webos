@@ -1,4 +1,18 @@
+import errno
 import re
+
+
+TV_STORAGE_FULL = 'The TV reported insufficient storage space. Free space on the affected TV partition; deleting apps may free a different partition.'
+COMPUTER_STORAGE_FULL = 'Not enough space on this computer. Free space on the system or temporary drive.'
+
+
+def is_storage_full(error):
+    return isinstance(error, OSError) and error.errno in (errno.ENOSPC, errno.EDQUOT)
+
+
+def reports_storage_full(data):
+    # Recognize fixed OS diagnostics only; never display remote paths or prose.
+    return b'No space left on device' in data or b'Disk quota exceeded' in data
 
 
 class UserError(RuntimeError):
@@ -37,6 +51,8 @@ class PythonPreflightError(UserError):
             message = 'Not enough space for private Python: {available} MiB free in /var/lib; {required} MiB required.'.format(
                 available=format((self.available_kib * 10 // 1024) / 10, '.1f').removesuffix('.0'),
                 required=format(((self.required_kib * 10 + 1023) // 1024) / 10, '.1f').removesuffix('.0'))
+            message += '\nStorage shortfall: {shortfall} MiB.'.format(
+                shortfall=format(((max(0, self.required_kib-self.available_kib)*10+1023)//1024)/10, '.1f'))
             if self.wam_session_kib:
                 message += '\nWAM Session Storage uses {size} MiB and may contribute to low space. Review the recovery guide before clearing app state.'.format(
                     size=format(self.wam_session_kib / 1024, '.1f').removesuffix('.0'))
@@ -92,6 +108,11 @@ class TVRejected(UserError):
             reason = details['reason']
             self.luna['reason'] = reason if isinstance(reason, str) and reason in PACKAGE_FAILURE_REASONS else 'unknown'
 
+        if (self.luna['operation'] == 'package-install' and self.luna.get('reason') in
+                ('FAILED_NOT_ENOUGH_TEMP_SPACE', 'FAILED_NOT_ENOUGH_INSTALL_SPACE')):
+            self.reason_code = 'tv-storage-full'
+            self.args = (TV_STORAGE_FULL,)
+
 
 class ExistingRoot(UserError):
     """A previous Root deployment needs an explicit reinstall decision."""
@@ -99,8 +120,10 @@ class ExistingRoot(UserError):
 
 class TVCommandError(UserError):
     """A failed SSH command with a numeric status, never remote output."""
-    def __init__(self, exit_status):
-        super().__init__('TV command failed. Save the diagnostic report and keep recovery data.')
+    def __init__(self, exit_status, *, storage_full=False):
+        super().__init__(TV_STORAGE_FULL if storage_full else
+                         'TV command failed. Save the diagnostic report and keep recovery data.',
+                         reason_code='tv-storage-full' if storage_full else 'user-error')
         self.exit_status = exit_status if type(exit_status) is int and -1 <= exit_status <= 255 else None
 
 

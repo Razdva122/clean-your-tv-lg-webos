@@ -141,7 +141,7 @@ exports.create = function (options) {
       if (s.wrong >= maxWrong) res.on('finish', function () { dispose(s); });
       reply(403); return;
     }
-    if (capabilities) { reply(200, {wallpaperProtocol:1}); return; }
+    if (capabilities) { require('./wallpaper-cache').space(0).then(function(storage){reply(200, {wallpaperProtocol:1,videoCacheStorage:storage});}); return; }
     if (s.state !== 'waiting') { reply(409); return; }
     if (req.headers['content-type'] !== 'application/json') { reply(415); return; }
     if (req.headers['content-encoding'] || (req.headers['content-length'] &&

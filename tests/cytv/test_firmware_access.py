@@ -54,6 +54,14 @@ class Tests(unittest.TestCase):
         self.api=self.root/'permissions/homebrew-configuration.api.json';self.receipt=self.root/'firmware-permissions.json';self.events=[]
     def grant(self,enable=True,lock_product=True):
         return self.function(self.root,self.bus,self.apps,self.install,enable=enable,lock_product=lock_product,refresh=lambda:self.events.append('scan'),uid=os.getuid())
+    def test_shared_compositor_activation_preserves_active_registration_proof(self):
+        path=self.paths['service'];raw=path.read_bytes().replace(('Name='+SERVICE).encode(),('Name='+SERVICE+';com.webos.cleanyourtv.root.lease').encode());path.write_bytes(raw)
+        saved=json.loads(self.snapshot.read_bytes());saved['capabilities']=['theme-receiver-v1','wallpaper-media-v1','c1-keyfilter-v1']
+        saved['files'][str(path)]['installed_sha256']=sha(raw);self.snapshot.write_bytes(encode(saved))
+        self.assertTrue(self.grant()['permissions_installed'])
+        path.write_bytes(b'changed')
+        with self.assertRaises(ValueError):self.grant()
+
     def test_explicit_repair_runs_only_after_protected_checks_then_strict_readback(self):
         info=self.apps/'applications'/APP/'appinfo.json';info.parent.chmod(0o777)
         before=self.manifest.read_bytes();calls=[]

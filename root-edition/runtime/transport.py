@@ -26,13 +26,22 @@ def call(uri,payload,timeout=5):
   try:p.communicate(timeout=min(1,timeout))
   except subprocess.TimeoutExpired:p.kill();p.communicate()
 
-def read():
+def read_defaults():
  r=call('luna://com.webos.settingsservice/getSystemSettings',{'category':'general','keys':['defaultApps']})
  d=r['settings']['defaultApps']
  if not isinstance(d,dict) or ('home' in d and (not isinstance(d['home'],str) or not d['home'])):raise ValueError('Invalid Home read')
- return d.get('home')
+ return d
+
+def read():
+ return read_defaults().get('home')
 
 def write(target):
  if target not in (CANDIDATE,STOCK):raise ValueError('Invalid target')
- return call('luna://com.webos.service.applicationmanager/setDefaultApp',{'category':'home','appId':target})
+ # Preserve a freshly read Settings map rather than relying on SAM's cached map.
+ # This readback verifies stored values, not consumer-cache application.
+ defaults=dict(read_defaults(),home=target)
+ result=call('luna://com.webos.settingsservice/setSystemSettings',
+             {'category':'general','settings':{'defaultApps':defaults}})
+ if read_defaults()!=defaults:raise RuntimeError('Default apps readback mismatch')
+ return result
 

@@ -54,8 +54,6 @@ and creating your own theme.
 
 ## Download and install
 
-> This branch prepares **1.8.2**, an unpublished candidate; the versioned sections below describe its intended publication. Download buttons still follow the latest published release. See [candidate changes and limits](docs/RELEASE-1.8.2.md) and [release PR #281](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/281).
-
 <!-- release:downloads -->
 Current stable release: **[v1.8.2](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.8.2)** — [release notes](docs/RELEASE-1.8.2.md).
 <!-- /release:downloads -->

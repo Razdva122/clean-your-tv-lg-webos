@@ -1,12 +1,12 @@
 # Clean Your TV — instrukcja użytkownika
 
-> **1.8.2 — Nieopublikowany kandydat:** [1.8.2 / English](../RELEASE-1.8.2.md).
+> **1.8.2:** [English](../RELEASE-1.8.2.md) · [LS2 Root #337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337).
 
-**Nieopublikowana C1 Beta (#298):** Wybierz Root we wspólnym instalatorze na komputer. Kwalifikujące się telewizory C1 są wykrywane automatycznie; osobny instalator ani flaga nie są potrzebne. Ta ścieżka wymaga nowej instalacji, nie oferuje automatycznych aktualizacji i nie przeszła jeszcze odbioru na fizycznym C1. Otwórz LG Home, przytrzymanie Back lub zatrzymanie związane z bezpieczeństwem/zasilaniem mogą pozostawić sterowanie Home wyłączone; ponownie włącz Zmień Home w ustawieniach TV. Zwykła ścieżka Root pozostaje bez zmian. Jeśli pozostały inne składniki No-root, pełne usuwanie C1 zatrzyma się przed wprowadzeniem zmian. Najpierw usuń je zwykłą procedurą No-root; jeśli ich stan jest niejasny, zachowaj dane odzyskiwania. [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md).
+**Nieopublikowana C1 Beta (#298):** Wybierz Root we wspólnym instalatorze na komputer. Kwalifikujące się telewizory C1 są wykrywane automatycznie; osobny instalator ani flaga nie są potrzebne. Ta ścieżka wymaga nowej instalacji, nie oferuje automatycznych aktualizacji i nie przeszła jeszcze odbioru na fizycznym C1. Otwórz LG Home, przytrzymanie Back lub zatrzymanie związane z bezpieczeństwem/zasilaniem mogą pozostawić sterowanie Home wyłączone; ponownie włącz Zmień Home w ustawieniach TV. Zwykła ścieżka Root pozostaje bez zmian. Jeśli pozostały inne składniki No-root, pełne usuwanie C1 zatrzyma się przed wprowadzeniem zmian. Najpierw usuń je zwykłą procedurą No-root; jeśli ich stan jest niejasny, zachowaj dane odzyskiwania. [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md). C1 Beta filtruje klawisz Home i wraca po zamknięciu aplikacji bez zmiany uprawnień CRIU/checkpoint. LG Home może pojawić się na chwilę. Trzykrotne Home również zatrzymuje przekierowanie; potem ponownie włącz zmianę Home.
 
-Jeszcze niewydane (#290): **+ / Dodaj aplikację** udostępnia telewizję na żywo pod nazwą z telewizora tylko wtedy, gdy tuner zostanie wykryty jako zainstalowany. Inne ukryte aplikacje systemowe pozostają pominięte. No-root wymaga zaktualizowanego Helpera i instalatora, a Root pakietu Home. Uruchamianie kanałów wymaga jeszcze sprawdzenia na TV.
+1.8.2 (#290): **+ / Dodaj aplikację** udostępnia telewizję na żywo pod nazwą z telewizora tylko wtedy, gdy tuner zostanie wykryty jako zainstalowany. Inne ukryte aplikacje systemowe pozostają pominięte. No-root wymaga zaktualizowanego Helpera i instalatora, a Root pakietu Home. Uruchamianie kanałów wymaga jeszcze sprawdzenia na TV.
 
-**Niewydane — Ribbon w Home:** Ribbon jest motywem jedynej pełnoekranowej aplikacji Home w obu edycjach, z własnym tłem. Za kartami nie jest wyświetlane wideo ani HDMI. Wybór aplikacji korzysta ze zwykłego przełączania aplikacji telewizora. Sterowanie awaryjne pozostaje bez zmian. Końcowe pakiety i odbiór na TV są jeszcze do wykonania. [Ribbon](../THEMES.md#ribbon-over-applications-unreleased).
+**Ribbon w Home:** Ribbon jest motywem jedynej pełnoekranowej aplikacji Home w obu edycjach, z własnym tłem. Za kartami nie jest wyświetlane wideo ani HDMI. Wybór aplikacji korzysta ze zwykłego przełączania aplikacji telewizora. Sterowanie awaryjne pozostaje bez zmian. Zakres testów i znane ograniczenia opisują informacje o wydaniu. [Ribbon](../THEMES.md#ribbon-over-applications-unreleased).
 
 Ribbon: przytrzymaj OK, aby edytować; ←/→ przesuwa kartę, ↑ wybiera × (ukryj z Home), ↓ wraca do karty, OK zatwierdza, a Back anuluje. Bieżące tło pozostaje.
 
@@ -217,3 +217,9 @@ Instalatory komputerowe/Android 1.6.0 i zmigrowane klienty OTA wybierają 720p l
 [HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).
 
 > **1.6.0:** zachowaj raport z pierwotnej nieudanej próby. Nowe raporty oddzielają pierwszy zapisany błąd od kolejnych kontroli i zawierają filtrowane podsumowanie Doctor/stanu. Eksport jest dostępny także po udanej instalacji, kontroli stanu lub przywróceniu. Brakujące starsze dane pozostają nieznane; raport nie uprawnia do odzyskiwania. [↗](../development/INSTALLER-DIAGNOSTICS.md).
+
+## Miejsce na dane
+
+Wersje kandydujące pokazują wymagane, wolne i brakujące miejsce w MiB dla instalacji, motywów i własnych tapet zdjęciowych/wideo. Uwzględniają kopie tymczasowe i rezerwę. Limit aplikacji, pamięć motywów 64 MiB i pamięć wideo są oddzielne. Nieznane wartości są oznaczone. Zwolnij wskazaną pamięć; brak automatycznego czyszczenia.
+
+Szacowane miejsce (TV): wymagane 128.0 MiB; wolne 96.0 MiB; brakuje 32.0 MiB.

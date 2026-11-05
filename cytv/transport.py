@@ -13,7 +13,7 @@ import time
 import urllib.request
 
 from .state import private_write
-from .errors import UserError, TVRejected, DeveloperKeyError, TVCommandError
+from .errors import reports_storage_full, UserError, TVRejected, DeveloperKeyError, TVCommandError
 
 
 class AgentLoginFailed(UserError):
@@ -304,6 +304,7 @@ class SSH:
 
     def chunks(self, channel, timeout):
         deadline, total = time.monotonic() + timeout, 0
+        stderr_tail, storage_full = b'', False
         while time.monotonic() < deadline:
             if channel.recv_ready():
                 data = channel.recv(65536)
@@ -312,13 +313,17 @@ class SSH:
                     raise UserError('TV response exceeded the size limit.')
                 yield data
             elif channel.recv_stderr_ready():
-                total += len(channel.recv_stderr(65536))
+                data = channel.recv_stderr(65536)
+                total += len(data)
+                stderr_tail = (stderr_tail + data)[-65536:]
+                storage_full = storage_full or reports_storage_full(stderr_tail)
+                stderr_tail = stderr_tail[-64:]
                 if total > 8 * 1024 * 1024:
                     raise UserError('TV response exceeded the size limit.')
             elif channel.exit_status_ready():
                 status = channel.recv_exit_status()
                 if status != 0:
-                    raise TVCommandError(status)
+                    raise TVCommandError(status, storage_full=storage_full)
                 return
             elif channel.closed:
                 raise UserError('TV connection interrupted. Run cytv status before retrying.')

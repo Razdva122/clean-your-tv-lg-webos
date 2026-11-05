@@ -72,12 +72,20 @@ def verify_bundle(bundle, allow_experimental=False):
     expected = set(SUPPORT_FILES) | {'runtime/' + n for n in RUNTIME_FILES} | {package, 'release.json', 'SHA256SUMS'}
     if experimental:
         expected.update(('runtime/c1-home-gate', 'runtime/c1_gate.py'))
+    routing = release.get('routing')
+    if routing not in (None, 'compositor-keyfilter-v1') or routing and not experimental:
+        raise ValueError('Unknown experimental Home routing')
+    if experimental and routing:
+        expected.remove('runtime/c1-home-gate')
+        expected.update(('runtime/c1-keyfilter-guard', 'runtime/c1_keyfilter.py', 'runtime/c1-home-filter.js'))
+        if release.get('capabilities') != ['theme-receiver-v1','wallpaper-media-v1','c1-keyfilter-v1']:
+            raise ValueError('Invalid compositor routing capabilities')
     if manifest.get('package') != package or set(manifest.get('files', {})) != expected:
         raise ValueError('Unexpected bundle inventory')
     for name, digest in manifest['files'].items():
         if hashlib.sha256(checked_file(bundle, name)).hexdigest() != digest:
             raise ValueError('Bundle integrity mismatch: ' + name)
-    if experimental and release.get('native_sha256') != manifest['files']['runtime/c1-home-gate']:
+    if experimental and release.get('native_sha256') != manifest['files']['runtime/c1-keyfilter-guard' if routing else 'runtime/c1-home-gate']:
         raise ValueError('Experimental native recovery identity mismatch')
     if release.get('application_id') != APP:
         raise ValueError('Wrong candidate release')
@@ -204,7 +212,7 @@ def install(bundle, run=command, observe=observed_install, migrate=False, experi
         if release.get('home_backend') != 'c1-native-gate' or migrate:
             raise ValueError('Explicit C1 setup requires its experimental bundle and a fresh installation')
         from runtime import c1_gate
-        admission = (_experimental_admission if _experimental_admission is not None else experimental_admission())
+        admission = (_experimental_admission if _experimental_admission is not None else experimental_admission(release.get('routing')))
     else:
         from provision import require_home_interfaces
         require_home_interfaces()
@@ -222,12 +230,20 @@ def install(bundle, run=command, observe=observed_install, migrate=False, experi
         target = STATE / 'runtime' / name
         target.write_bytes(checked_file(Path(bundle).resolve(), 'runtime/' + name)); target.chmod(0o600)
     if experimental_c1_gate:
-        target = STATE / 'runtime/c1_gate.py'
-        target.write_bytes(checked_file(Path(bundle).resolve(), 'runtime/c1_gate.py')); target.chmod(0o600)
-        target = STATE / 'runtime/c1-home-gate'
-        target.write_bytes(checked_file(Path(bundle).resolve(), 'runtime/c1-home-gate')); target.chmod(0o700)
-        c1_gate.prepare(STATE, release['native_sha256'], admission)
-        check = c1_gate.native(['--selfcheck'], STATE)
+        compositor = release.get('routing') == 'compositor-keyfilter-v1'
+        extras = ('c1_gate.py','c1_keyfilter.py','c1-home-filter.js') if compositor else ('c1_gate.py',)
+        for name in extras:
+            target = STATE / 'runtime' / name
+            target.write_bytes(checked_file(Path(bundle).resolve(), 'runtime/' + name)); target.chmod(0o600)
+        helper = 'c1-keyfilter-guard' if compositor else 'c1-home-gate'
+        target = STATE / 'runtime' / helper
+        target.write_bytes(checked_file(Path(bundle).resolve(), 'runtime/' + helper)); target.chmod(0o700)
+        if compositor:
+            from runtime import c1_keyfilter as backend
+        else:
+            backend = c1_gate
+        backend.prepare(STATE, release['native_sha256'], admission)
+        check = backend.native(['--selfcheck'], STATE)
         if check.get('backend') != 'c1-native-gate' or check.get('selfcheck') is not True:
             raise ValueError('Native C1 executable selfcheck failed before package submission')
     install_launcher(STATE, write_binding)
@@ -325,11 +341,16 @@ def _remove_root(run, proof):
     return {'returnValue': True, 'removed': APP, 'state_retained': str(STATE)}
 
 
-def experimental_admission():
+def experimental_admission(routing=None):
     # Runs under the installation mutex, before its durable reservation.
     from installation import classify, device_snapshot
     if classify(device_snapshot())['state'] != 'fresh':
         raise ValueError('Experimental C1 setup requires a completely fresh product installation')
+    if routing == 'compositor-keyfilter-v1':
+        from runtime import c1_keyfilter
+        return c1_keyfilter.probe()
+    if routing is not None:
+        raise ValueError('Unknown experimental routing admission')
     from runtime import c1_gate
     return c1_gate.probe()
 
@@ -368,7 +389,7 @@ def main():
     admission = []
     def eligible():
         if args.command == 'install' and args.experimental_c1_gate:
-            admission.append(experimental_admission())
+            admission.append(experimental_admission(release.get('routing')))
     guard = (device_operation('deploy', recovery=args.command == 'uninstall', check=eligible)
              if args.command in ('install','uninstall') else nullcontext())
     with guard:

@@ -1,9 +1,9 @@
 {
-  "from_helper": "0.6.21",
-  "to_helper": "0.6.22",
-  "rollback_home": "1.7.0",
-  "rollback_sha256": "fa079a3efdd89d5e0fbd10cf2509cca2c9785a92f8c02409957fd76fc3dbec44",
-  "prior_helper_sha256": "98924c880118528993ebe388cddabbcdf392a58c999d8019ec80aa7eef54d84e",
-  "candidate_archive_sha256": "6b74d7b040d09fcfcafc059805c0af8d6a14733407f5df46c61f2fb7b12ef88e",
-  "acceptance": "2026-11-03: preliminary maintainer-owned rooted C3 runtime compatibility probe of source62d0ad6a with matching0.6.22/1.8.1 manifests. Exact Helper IPK SHA2560e8477113fd8afc57b5f3bfc7271a3b7de99dcce2fb2516d7e386eff06ec00cf and canonical archive above. Published v1.6.0 Home1.7.0 and Helper0.6.21 authenticated against original signed system manifest. Native package transitions reached installed, all installed files and retained Helper state matched, published Home launched with new Helper (actual non-root controller UID5431), same-package homeStatus responded enabled, portable profile matched. Existing Home commands remain separate from the new expiring input channel; controller/Stop/watchdog and real TLS regressions pass. This pins the tested rollback archive and interface, not completed release acceptance. Final full-build byte equality and physical scenario outcomes/limits are maintained in docs/history/2026-11-03-helper-0.6.22-compatibility.md and docs/history/2026-11-03-release-1.7.0-final-packages.md. No unrooted Developer Mode installation, actual No-root OTA transaction, universal firmware compatibility or publication is certified by this pin."
+  "from_helper": "0.6.22",
+  "to_helper": "0.7.4",
+  "rollback_home": "1.8.1",
+  "rollback_sha256": "a86c1c51e23f258e699eb89e644dad32b60bad91693df44460f92ea10a866ea0",
+  "prior_helper_sha256": "0e8477113fd8afc57b5f3bfc7271a3b7de99dcce2fb2516d7e386eff06ec00cf",
+  "candidate_archive_sha256": "0535520363197485a50b1577e3bb6248c9e510d1c6fa26c8326750426f69407e",
+  "acceptance": "Maintainer-owned OLED55C3RLA, firmware43.21.71/SDK11.2.0/Magic Remote, macOS host: published v1.7.1 Home1.8.1 and prior Helper0.6.22 authenticated against the original signed System manifest. Exact final Helper0.7.4 raw IPK SHA2565c27a000b35ccbfeb0689dbd80ff8f2d0f4f70094794f64b101cadb91733501f from full build42081316264:3; all installed public Helper files matched. Normal same-app native install/readback verified published Home1.8.1 with retained new Helper. Actual old Home Start UI+confirmation launched the controller as UID5431 (real/effective, non-root); same-package renewal/homeStatus returned returnValue:true,enabled:true. Owner physical triple Home returned LG and stopped Helper. Exact final Home1.9.4 was restored with native terminal/readback; ordinary UI-captured inventory/config/settings and theme/personal source matched the original profile. Helper stopped, Root off; no key, role, receipt, raw storage or permission writes. This pins tested archive/interface compatibility, not an actual automatic No-root OTA/rollback transaction, fresh unrooted provisioning or universal compatibility. Root personal wallpaper receiver LS2 denial is separately deferred in #337. Details and limits: docs/history/2026-11-05-single-home-regressions.md."
 }
