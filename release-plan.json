@@ -71,6 +71,14 @@
       "pr": 335,
       "issues": [],
       "summary": "Reduce CI artifact retention and unnecessary runner work"
+    },
+    {
+      "pr": 336,
+      "issues": [
+        279,
+        333
+      ],
+      "summary": "Add static Cr\u0103ciun la Bra\u0219ov1.1.0 catalogue wallpaper, AI-generated and upscaled to3840x2160; no video/animation or physical compatibility claim."
     }
   ],
   "excluded": [],
