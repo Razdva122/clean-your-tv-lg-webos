@@ -16,6 +16,11 @@ const languages = {
 };
 const words = {
   "ru": {
+    "setupTV": "Настроить телевизор",
+    "wallpapers": "Обои",
+    "maintenance": "Обслуживание",
+    "wallpaperInstructions": "На телевизоре откройте настройки Home → Обои → Загрузить с телефона. Отсканируйте QR-код камерой телефона, выберите JPG/PNG и примените обои на ТВ.",
+    "wallpaperLimit": "С телефона: изображение до 1920×1080, без нативного видео 4K. Для настоящего 4K используйте CYTV на компьютере.",
     "detect": "Проверить подключение",
     "detecting": "Проверяем доступ…",
     "detectedRoot": "Обнаружен Root SSH. Права root проверим после входа.",
@@ -154,6 +159,11 @@ const words = {
     "tvChecksDesc": "Проверка пакетов, состояние запуска и ваше наблюдение за Home — разные результаты."
   },
   "en": {
+    "setupTV": "Set up TV",
+    "wallpapers": "Wallpapers",
+    "maintenance": "Maintenance",
+    "wallpaperInstructions": "On the TV, open Home settings → Wallpapers → Upload from phone. Scan the QR code with your phone camera, choose a JPG/PNG and apply it on the TV.",
+    "wallpaperLimit": "Phone uploads: images up to 1920×1080, without native 4K video. For true 4K, use CYTV on a computer.",
     "detect": "Check connection",
     "detecting": "Checking access…",
     "detectedRoot": "Root SSH detected. Root privileges will be verified after sign-in.",
@@ -292,6 +302,11 @@ const words = {
     "tvChecksDesc": "Package verification, startup readback and your Home-button observation are separate results."
   },
   "de": {
+    "setupTV": "TV einrichten",
+    "wallpapers": "Hintergrundbilder",
+    "maintenance": "Wartung",
+    "wallpaperInstructions": "Öffnen Sie am TV die Home-Einstellungen → Hintergrundbilder → Vom Telefon hochladen. Scannen Sie den QR-Code mit der Handykamera, wählen Sie JPG/PNG und übernehmen Sie das Bild am TV.",
+    "wallpaperLimit": "Vom Telefon: Bilder bis 1920×1080, ohne natives 4K-Video. Für echtes 4K verwenden Sie CYTV am Computer.",
     "detect": "Verbindung prüfen",
     "detecting": "Zugriff wird geprüft…",
     "detectedRoot": "Root-SSH erkannt. Die Root-Rechte werden nach der Anmeldung geprüft.",
@@ -430,6 +445,11 @@ const words = {
     "tvChecksDesc": "Paketprüfung, Startprüfung und Ihre Home-Beobachtung sind getrennte Ergebnisse."
   },
   "fr": {
+    "setupTV": "Configurer la TV",
+    "wallpapers": "Fonds d’écran",
+    "maintenance": "Maintenance",
+    "wallpaperInstructions": "Sur la TV, ouvrez les paramètres Home → Fonds d’écran → Importer depuis le téléphone. Scannez le QR avec la caméra, choisissez JPG/PNG et appliquez le fond sur la TV.",
+    "wallpaperLimit": "Depuis le téléphone : images jusqu’à 1920×1080, sans vidéo 4K native. Pour la vraie 4K, utilisez CYTV sur ordinateur.",
     "detect": "Vérifier la connexion",
     "detecting": "Vérification de l’accès…",
     "detectedRoot": "Accès SSH Root détecté. Les privilèges root seront vérifiés après connexion.",
@@ -568,6 +588,11 @@ const words = {
     "tvChecksDesc": "Vérification des paquets, démarrage et votre observation de Home sont des résultats distincts."
   },
   "it": {
+    "setupTV": "Configura TV",
+    "wallpapers": "Sfondi",
+    "maintenance": "Manutenzione",
+    "wallpaperInstructions": "Sulla TV, apri le impostazioni Home → Sfondi → Carica dal telefono. Scansiona il QR con la fotocamera, scegli JPG/PNG e applica lo sfondo sulla TV.",
+    "wallpaperLimit": "Dal telefono: immagini fino a 1920×1080, senza video 4K nativo. Per il vero 4K, usa CYTV sul computer.",
     "detect": "Verifica connessione",
     "detecting": "Verifica dell’accesso…",
     "detectedRoot": "Accesso SSH Root rilevato. I privilegi root saranno verificati dopo l’accesso.",
@@ -706,6 +731,11 @@ const words = {
     "tvChecksDesc": "Verifica pacchetti, avvio e tua osservazione di Home sono risultati separati."
   },
   "es": {
+    "setupTV": "Configurar TV",
+    "wallpapers": "Fondos de pantalla",
+    "maintenance": "Mantenimiento",
+    "wallpaperInstructions": "En el TV, abra los ajustes de Home → Fondos de pantalla → Subir desde el teléfono. Escanee el QR con la cámara, elija JPG/PNG y aplique el fondo en el TV.",
+    "wallpaperLimit": "Desde el teléfono: imágenes de hasta 1920×1080, sin vídeo 4K nativo. Para 4K real, use CYTV en un ordenador.",
     "detect": "Comprobar conexión",
     "detecting": "Comprobando acceso…",
     "detectedRoot": "Root SSH detectado. Los permisos root se comprobarán tras iniciar sesión.",
@@ -844,6 +874,11 @@ const words = {
     "tvChecksDesc": "La verificación de paquetes, el inicio y tu observación de Home son resultados separados."
   },
   "pt-BR": {
+    "setupTV": "Configurar TV",
+    "wallpapers": "Papéis de parede",
+    "maintenance": "Manutenção",
+    "wallpaperInstructions": "Na TV, abra as configurações do Home → Papéis de parede → Enviar do celular. Leia o QR com a câmera, escolha JPG/PNG e aplique na TV.",
+    "wallpaperLimit": "Pelo celular: imagens até 1920×1080, sem vídeo 4K nativo. Para 4K real, use CYTV no computador.",
     "detect": "Verificar conexão",
     "detecting": "Verificando acesso…",
     "detectedRoot": "Root SSH detectado. Os privilégios root serão verificados após o login.",
@@ -982,6 +1017,11 @@ const words = {
     "tvChecksDesc": "Verificação de pacotes, inicialização e sua observação de Home são resultados separados."
   },
   "pl": {
+    "setupTV": "Skonfiguruj TV",
+    "wallpapers": "Tapety",
+    "maintenance": "Konserwacja",
+    "wallpaperInstructions": "Na TV otwórz ustawienia Home → Tapety → Prześlij z telefonu. Zeskanuj QR aparatem, wybierz JPG/PNG i zastosuj tapetę na TV.",
+    "wallpaperLimit": "Z telefonu: obrazy do 1920×1080, bez natywnego wideo 4K. Aby uzyskać prawdziwe 4K, użyj CYTV na komputerze.",
     "detect": "Sprawdź połączenie",
     "detecting": "Sprawdzanie dostępu…",
     "detectedRoot": "Wykryto Root SSH. Uprawnienia root zostaną sprawdzone po zalogowaniu.",
@@ -1120,6 +1160,11 @@ const words = {
     "tvChecksDesc": "Weryfikacja pakietów, odczyt startu i Twoja obserwacja Home to osobne wyniki."
   },
   "ko": {
+    "setupTV": "TV 설정",
+    "wallpapers": "배경화면",
+    "maintenance": "유지 관리",
+    "wallpaperInstructions": "TV에서 Home 설정 → 배경화면 → 휴대전화에서 업로드를 여세요. 휴대전화 카메라로 QR 코드를 스캔하고 JPG/PNG를 선택한 후 TV에서 적용하세요.",
+    "wallpaperLimit": "휴대전화: 최대 1920×1080 이미지이며 네이티브 4K 동영상은 지원하지 않습니다. 실제 4K는 컴퓨터의 CYTV를 사용하세요.",
     "detect": "연결 확인",
     "detecting": "접근 가능 여부 확인 중…",
     "detectedRoot": "Root SSH가 감지되었습니다. 로그인 후 root 권한을 확인합니다.",
@@ -1258,6 +1303,11 @@ const words = {
     "tvChecksDesc": "패키지 검증, 시작 확인, Home 버튼 관찰은 별도의 결과입니다."
   },
   "hi": {
+    "setupTV": "टीवी सेट करें",
+    "wallpapers": "वॉलपेपर",
+    "maintenance": "रखरखाव",
+    "wallpaperInstructions": "टीवी पर Home सेटिंग → वॉलपेपर → फ़ोन से अपलोड खोलें। फ़ोन कैमरे से QR स्कैन करें, JPG/PNG चुनें और टीवी पर लागू करें।",
+    "wallpaperLimit": "फ़ोन से: 1920×1080 तक की तस्वीरें, नेटिव 4K वीडियो नहीं। असली 4K के लिए कंप्यूटर पर CYTV इस्तेमाल करें।",
     "detect": "कनेक्शन जाँचें",
     "detecting": "ऐक्सेस जाँचा जा रहा है…",
     "detectedRoot": "Root SSH मिला। साइन इन के बाद root अनुमतियाँ जाँची जाएँगी।",
@@ -1396,6 +1446,11 @@ const words = {
     "tvChecksDesc": "पैकेज सत्यापन, प्रारंभ जाँच और आपका Home अवलोकन अलग परिणाम हैं।"
   },
   "zh-Hans": {
+    "setupTV": "设置电视",
+    "wallpapers": "壁纸",
+    "maintenance": "维护",
+    "wallpaperInstructions": "在电视上打开 Home 设置 → 壁纸 → 从手机上传。用手机相机扫描二维码，选择 JPG/PNG，然后在电视上应用。",
+    "wallpaperLimit": "手机上传：最高 1920×1080 的图片，不支持原生 4K 视频。真正的 4K 请使用电脑版 CYTV。",
   "detect": "检查连接",
   "detecting": "正在检查访问方式…",
   "detectedRoot": "已检测到 Root SSH。登录后将验证 root 权限。",
@@ -1534,6 +1589,11 @@ const words = {
   "tvChecksDesc": "软件包验证、启动状态回读和您的 Home 按钮观察是不同结果。"
 },
   "zh-Hant": {
+    "setupTV": "設定電視",
+    "wallpapers": "桌布",
+    "maintenance": "維護",
+    "wallpaperInstructions": "在電視上開啟 Home 設定 → 桌布 → 從手機上傳。用手機相機掃描 QR 碼，選擇 JPG/PNG，然後在電視上套用。",
+    "wallpaperLimit": "手機上傳：最高 1920×1080 的圖片，不支援原生 4K 影片。真正的 4K 請使用電腦版 CYTV。",
   "detect": "檢查連線",
   "detecting": "正在檢查存取方式…",
   "detectedRoot": "已偵測到 Root SSH。登入後將驗證 root 權限。",

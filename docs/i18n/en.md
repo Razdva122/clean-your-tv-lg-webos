@@ -1,5 +1,15 @@
 # Clean Your TV — user guide
 
+> **1.8.2:** [English](../RELEASE-1.8.2.md) · [LS2 Root #337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337).
+
+**C1 Beta (#298):** In the common computer installer, choose Root. Eligible C1 TVs are detected automatically; no separate installer or flag is needed. This path requires a fresh installation, has no automatic updates, and has not passed physical C1 acceptance. Open LG Home, long Back, or a safety/power stop can leave Home control off; turn Change Home on again in TV settings. The normal Root path is unchanged. If other No-root components remain, C1 full removal stops before making changes. Remove those components through their normal No-root removal flow first; retain recovery data if their state is unresolved. [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md).
+
+1.8.2 (#290): **+ / Add app** offers Live TV under the TV’s own name only when the tuner is detected as installed. Other hidden system apps stay excluded. No-root needs the updated Helper and installer; Root needs the updated Home package. Tuner launch still needs TV verification.
+
+**Ribbon in Home:** Ribbon is a theme of the single full-screen Home app in both editions, with its own wallpaper. Video or HDMI is not shown behind the cards. Selecting an app uses normal TV app switching. Existing emergency controls are unchanged. See the release notes for tested scope and known limitations. [Ribbon](../THEMES.md#ribbon-over-applications-unreleased).
+
+Ribbon: hold OK to edit; ←/→ moves the card, ↑ selects × (hide from Home), ↓ returns to the card, OK confirms and Back cancels. Editing keeps the current background.
+
 **1.7.0 — Root startup sources:** In Settings → Your Home screen, turn on **Change Home** to edit **Open Clean Your TV first**. **LG Channels / Live TV** is on by default; **YouTube** is off. When Change Home is off, the two switches remain visible but unavailable, and their saved values are retained. Preferences are stored privately on this TV; portable profile export does not include them. This control is not a claim of verified TV startup or wake behavior. A source switched off leaves the startup decision to the TV firmware; it does not guarantee resuming that source. There is no HDMI startup switch. [Native startup limits (English)](../../root-edition/README.md#candidate-native-startup-choices).
 
 > This guide describes 1.7.0. For available packages, use [published GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases). It includes all five installer improvements and refreshes Root Settings from actual status after reopening; a failed check does not enable Home. System Updater 1.2.0 is for new eligible setup or verified replacement of 1.1.0/1.1.1. Existing 1.1.2 stays pinned with its old channels; no general migration is provided. Keep recovery data and do not force replacement. [Versions and limits](../RELEASE-1.7.0.md).
@@ -31,6 +41,8 @@ Keep the TV on and the computer on the same trusted local network. No always-on 
 
 1.5.4 includes Home Helper **0.6.21** with TV Node.js **0.10.25+** support; Root still requires Node.js **8+**. [Compatibility](../COMPATIBILITY.md).
 
+**Unreleased webOS 1.x follow-up:** the next No-root installer accepts TV Node.js **0.10.15+** after exact-runtime Helper checks; published 1.7.1 installers still require **0.10.25+**. This does not establish old WebKit/native-input/Home compatibility. Do not replace the TV runtime or bypass its checks. Root still needs Node.js 8+. [Evidence and limits](../COMPATIBILITY.md#webos-1x-runtime-floor-unreleased).
+
 No-root Helper needs TV Node.js **0.10.25+**. Root needs Node.js **8+** and working Python **3.9+**. Setup can download a verified private Python if needed; initial staging needs **320 MiB** free. It does not replace system Python. Keep runtime slots used by recovery. [Optional Python (English)](../OPTIONAL-PYTHON.md). Developer Mode auto-renewal is **Beta, off by default**, and real renewal on unrooted TVs is not confirmed; keep checking the official timer.
 
 ### Developer Mode setup (No-root)
@@ -57,6 +69,8 @@ Keep Developer Mode active: open it before the timer runs out and press EXTEND w
 
 [Android installer (English)](../../android/README.md): choose the language at the top right. Update without uninstalling or clearing data. Android 7 / WebView 108 is the minimum, not a verified phone configuration; acceptance used Android 15 ARM64 / WebView 124 in an emulator. Physical phones and live phone-to-TV recovery remain unverified.
 
+**Unreleased Android candidate:** for an original Root `install / coordinator-submitted` operation, Review recovery options can perform an explicitly confirmed read-only inspection using the original saved profile and SSH pin. Do not uninstall/clear app data, replace the profile or repeat installation. Use only the signed rebuilt APK named in the maintainer handoff; the public APK does not include this path. [Procedure and limits](../../android/README.md#interrupted-root-installation-inspection-unreleased).
+
 The desktop wizard selects your system language automatically; its language selector saves an explicit choice. On the TV, open **Settings → Language** and select a language, or the system/automatic option to follow the TV language. Installer and TV preferences are separate. The supported codes are listed in the [language index](../LANGUAGES.md).
 
 For a separately downloaded CLI on macOS/Linux, open a terminal in its extracted directory:
@@ -77,6 +91,8 @@ Arrows select tiles; OK opens them; hold OK to reorder. Short Back retains the a
 **Press Home three times within two seconds**, releasing between presses, to return to LG Home and stop Home control. This preserves preferences. Older No-root Helper versions through 0.6.13 instead use holding Home for about two seconds; holding Home is not the Root emergency gesture.
 
 No-root: To restart Home control, open Home Helper, choose Start Helper and confirm. Your saved Home screen choice is kept. Root: turn **Change Home** on in Home settings to resume. **Open LG Home** opens LG Home once without changing routing. To restore LG Home as the persistent destination, turn **Change Home** off or run `cytv restore`. Do not run both controllers together. If a failure repeats, leave LG Home active.
+
+Unreleased Root fix: turning Home control off or choosing Open LG Home closes the Root window after LG Home accepts the launch. You can reopen Home Root manually to reach Settings while Home control stays off.
 
 > **1.5.4 — Root:** explicitly enabling **Change Home** while Root is healthy creates CYTV's native **Clean** input and sets the remembered input to Clean. Disabling Home control, emergency stop, a fault, update suspension or uninstall removes CYTV's entry and restores the previous remembered input only if CYTV's value is still current; unrelated inputs and foreground apps are preserved. Unsupported TVs or entries CYTV does not own use ordinary guarded Home routing. There is no immediate-first-screen guarantee. The recorded C3 first-screen, standby and AC-off cold-boot checks passed; this is not universal compatibility. Home can remain disabled after update/rollback (#202), and Settings can show stale status (#206): close/reopen Settings, then explicitly enable Change Home and wait for Clean status. [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md) · [Native input (English)](../development/ROOT-NATIVE-INPUT.md).
 
@@ -144,6 +160,16 @@ Homebrew Channel denied access to this installer. On webOS 11, Homebrew 0.7.3 ne
 <a id="themes-154"></a>
 
 ## Themes
+
+In the next-release preview, **Home settings → Wallpapers** shows the active theme’s wallpaper, detected TV capability and current playback mode. Auto selects a compatible quality; 4K, 1080p and Image are available only when supplied by the theme. Playback can fall back to an image. Adjust dimming in 5% steps or reset this theme’s preferences. Classic and themes without wallpaper show an explicit empty state.
+
+Next-release personal wallpapers: open Wallpapers in desktop CYTV, choose a JPG/PNG, crop the preview and enter the private TV address and receiving PIN shown in Home settings. CYTV prepares silent video locally; 4K is offered only when the cropped source has enough pixels. On the TV, receive from CYTV or open phone upload and scan its QR code on the same Wi-Fi network. Phone upload sends an ordinary image up to 1920×1080, not the native 4K video layer; sharpness is limited by the TV interface resolution. Acknowledge this warning before sending. Preview and apply on the TV. Personal uploads stay saved separately and can be selected again or removed in Wallpapers. Cancellation or a rejected file preserves the current background. These paths require matching next-release Home/service and CYTV builds.
+
+Own moving video (next-release preview): in desktop CYTV → Wallpapers, choose MP4/MOV/MKV/WebM, 1–60 seconds, up to 512 MiB and 3840×2160. Sound is removed and a centered 16:9 crop is used. Smaller videos use compatible 1080p output; UHD is created only from a sufficient source crop. Send using the TV address/PIN, then preview and Apply on the TV. Phone upload remains JPG/PNG only. Final package and physical TV acceptance are pending.
+
+Next-release built-in wallpapers: **Home settings → Wallpapers → Built-in wallpapers → Black Hole**. Video author: **Xecutioner**, used with permission for non-commercial use and attribution. Accepting a different theme restores that theme’s own wallpaper; Black Hole and your uploads remain available to select again. Black Hole uses a continuous 4K stream to avoid seeking at each repeat, with compatible video/image fallback.
+
+Android CYTV: **Set up TV** · **Wallpapers** · **Maintenance**. On the TV, open Home settings → Wallpapers → Upload from phone. Scan the QR code with your phone camera, choose a JPG/PNG and apply it on the TV. Phone uploads: images up to 1920×1080, without native 4K video. For true 4K, use CYTV on a computer.
 
 1.7.0: **Settings → Themes**. **Classic**, **Liquid Glass**, **Ribbon** are included and work without downloading a theme; Classic remains the default. **Channel** is an external showcase theme. In showcase trials: Choose a theme, then **Keep theme** within **20 seconds**. **Revert**, Back or timeout restores the previous appearance. If Home closes during an unconfirmed preview, the next launch returns to Classic. Built-in and downloaded themes chosen in the installed list apply and save immediately, without a confirmation timer. Themes received from a computer or installed by URL also use this list. Only Try theme inside Theme showcase starts a 20-second trial.
 

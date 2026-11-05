@@ -60,6 +60,14 @@ remove stop files to force activation.
 
 ## Back, app exits and startup
 
+**Unreleased single-Home update:** Ribbon is an ordinary theme of the same
+full-screen Home in both editions, with its own background. Home opens or
+reactivates that window. Back closes menus/editing first; on the input shelf it
+returns focus to the app cards. It does not dismiss a transparent bar or reveal
+video/HDMI underneath. Selecting an app uses normal TV app switching, without
+Home forcing its own window to close. Final package/device acceptance is pending.
+
+
 **Hold Back for about 1.2 seconds** to visit LG Home once. This preserves the
 saved Home choice and does not stop Home control; a later short Home returns to
 Clean. Use triple Home when you want to stop interception. Short Back remains

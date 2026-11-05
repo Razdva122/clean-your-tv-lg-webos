@@ -47,6 +47,8 @@ const profiles = ['modern', 'no-inset', 'no-inset-or-es2015', 'prefixed-webkit']
             delete Object.assign;
           }
           window.launches = [];
+          window.closeRequests = 0;
+          window.close = function () { window.closeRequests++; };
           window.inventoryRequests = [];
           window.airplayMode = 'success';
           window.PalmServiceBridge = function () {
@@ -107,6 +109,14 @@ const profiles = ['modern', 'no-inset', 'no-inset-or-es2015', 'prefixed-webkit']
         }) + ';'}));
         await page.goto(pathToFileURL(path.join(appRoot, 'index.html')).href);
         await page.waitForFunction(() => document.querySelectorAll('#tiles .item').length === 8);
+        await page.waitForFunction(() => window.RootLauncherRendered === true);
+        async function returnHome() {
+          const mode = await page.evaluate(() => {
+            document.dispatchEvent(new CustomEvent('webOSRelaunch', {detail: {}}));
+            return CYTV_HOME_HOST;
+          });
+          assert.equal(mode, 'card', 'platform return restores the persistent CARD');
+        }
         // Issue #68: verify the real downloaded face, not just computed CSS weight.
         // SFNT tests separately ensure these are static outlines for old engines.
         const fontSession = await page.context().newCDPSession(page);
@@ -165,6 +175,9 @@ const profiles = ['modern', 'no-inset', 'no-inset-or-es2015', 'prefixed-webkit']
         await page.keyboard.press('ArrowRight');
         await page.keyboard.press('Enter');
         assert.deepEqual(await page.evaluate(() => window.launches), ['test.1']);
+        assert.equal(await page.evaluate(() => window.closeRequests), 0, 'successful app launch does not close canonical Home');
+        assert.equal(await page.evaluate(() => !!HomePresentationController), false);
+        await returnHome();
         await page.keyboard.press('ArrowDown');
         await page.waitForTimeout(500);
         assert(await page.locator('.missing-icon').evaluate(card => {
@@ -229,12 +242,14 @@ const profiles = ['modern', 'no-inset', 'no-inset-or-es2015', 'prefixed-webkit']
         await page.clock.runFor(1);
         await page.clock.fastForward(10000);
         assert.deepEqual(await page.evaluate(() => launches), ['airplay'], 'explicit AirPlay failure uses normal launch');
+        await returnHome();
         await page.evaluate(() => { window.launches = []; window.airplayMode = 'silent'; });
         await page.keyboard.press('Enter');
         await page.clock.fastForward(10000);
         assert.deepEqual(await page.evaluate(() => launches), ['airplay'], 'silent AirPlay service must fall back within ten seconds');
         await page.evaluate(() => airplayRequest.onservicecallback(JSON.stringify({returnValue:false})));
         assert.deepEqual(await page.evaluate(() => launches), ['airplay'], 'late AirPlay error must not launch twice');
+        await returnHome();
         const restored = await page.evaluate(() => {
           let removed = 0;
           const remove = DOMTokenList.prototype.remove;

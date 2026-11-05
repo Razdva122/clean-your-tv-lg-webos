@@ -2,6 +2,9 @@
 (function () {
   'use strict';
   window.CYTV_BROWSER_PREVIEW = true;
+  window.PREVIEW_HOME_CONTEXT = 'empty';
+  // The browser preview stays open when explicit recovery simulates leaving Home.
+  window.close = function () {};
   var homeEnabled = true;
   var enabled = false, rootPhase = 'disabled';
   var firmwareBlocked = false, audioAutomatic = false, audioLast = null;
@@ -67,6 +70,11 @@
         result = {returnValue: true, connected: true};
       } else if (uri.indexOf('luna://com.cleanyourtv.root.preview.service/') === 0) {
         var rootMethod = uri.split('/').pop();
+        if (rootMethod === 'status' && payload.presentation === 'context') {
+          result = {returnValue:true,result:{content:window.PREVIEW_HOME_CONTEXT === 'content' ? true : window.PREVIEW_HOME_CONTEXT === 'empty' ? false : null}};
+          if (bridge.onservicecallback) bridge.onservicecallback(JSON.stringify(result));
+          return;
+        }
         if (rootMethod === 'audioRecoveryStatus' || rootMethod === 'setAudioRecoveryEnabled') {
           if (rootMethod === 'setAudioRecoveryEnabled' && typeof payload.enabled === 'boolean') audioAutomatic = payload.enabled;
           result = {returnValue:true,enabled:audioAutomatic,observer:audioAutomatic,autoSupported:true,canRestart:true,canRestoreRoute:false,canRestoreSetting:false,needsRestore:false,mode:'earc',last:audioLast};

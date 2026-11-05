@@ -1,6 +1,6 @@
 # Documentation
 
-Published downloads are [1.6.0](RELEASE-1.6.0.md). The frozen [1.7.0 candidate](RELEASE-1.7.0.md) is unpublished and awaits exact-package acceptance.
+Current release: [1.8.2](RELEASE-1.8.2.md), including tested scope and known limitations. Previous release: [1.7.1](RELEASE-1.7.1.md).
 
 Start with a task. You do not need the developer reports to install or use Clean Your TV.
 

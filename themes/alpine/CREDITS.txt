@@ -1,6 +1,6 @@
 Visual reference: Glasshouse Home by rorygallagher2024, https://github.com/rorygallagher2024/glasshouse (MIT). Independent theme, no affiliation; no Glasshouse logo or application code copied.
 
-Wallpaper: Fronalpstock big.jpg by Hannes Röst, https://commons.wikimedia.org/wiki/File:Fronalpstock_big.jpg . CC BY-SA 3.0: https://creativecommons.org/licenses/by-sa/3.0/ . Cropped from the original 10109×4542 photograph and downsampled to 3840×2160 using Lanczos, JPEG quality 88. Displayed darkened by the renderer. The wallpaper remains CC BY-SA 3.0. Theme CSS and tools are MIT.
+Wallpaper: 2258-Bachsee.jpg by Friedrich-Karl Mohr (FkMohr), https://commons.wikimedia.org/wiki/File:2258-Bachsee.jpg . CC BY-SA 3.0 Germany: https://creativecommons.org/licenses/by-sa/3.0/de/ . Original photograph: 6000×4000, Sony SLT-A65V, 21 September 2017. Original SHA-256: 0fad0506de118b794c524e1f592e7d3189ca527bb18b0b75ec7267459b70099b. Centred 6000×3375 crop, Lanczos downsample to 3840×2160, JPEG fallback and silent two-second H.264 still loops in UHD/FHD. No AI enhancement or upscaling. These photo derivatives remain CC BY-SA 3.0 Germany. Theme CSS and tools are MIT. Prepared with scripts/prepare-theme-wallpaper.py; wallpaper-preparation.json records the source digest and settings.
 
 Preview application icons: see ../DEMO-ICON-CREDITS.txt and ../DEMO-ICON-LICENSE.txt in the example collection. Product names and marks identify simulated apps and do not imply endorsement.
 

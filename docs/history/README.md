@@ -1,5 +1,16 @@
 # Release history and device evidence
 
+- [2026-11-04 — Real opkg parent-directory reproduction](2026-11-04-opkg-parent-reproduction.md): original Helper data loses the service subtree in real opkg; No-root archive correction, Root isolation and pending retail/recovery acceptance.
+- [2026-11-04 — Package installation diagnostics and LG CLI comparison](2026-11-04-package-install-diagnostics.md): offline Helper packaging differences, fixed failure categories and unresolved #307 installation/recovery.
+
+- [1.8.0 candidate preparation, exact build and remaining gates](2026-11-04-release-1.8.0-candidate.md).
+- [2026-11-05 — Ready-fix integration and reopened candidate gates](2026-11-05-ready-fix-integration.md).
+- [2026-11-05 — C3 Home service input visibility](2026-11-05-home-service-input-visibility.md): ordinary service child execution works, but the installed Home service root lacks input devices; diagnostic only, Helper retained.
+
+- [2026-11-04 — Automatic C1 native Beta](2026-11-04-c1-native-gate.md): common installer selection, independent native recovery, host checks and pending physical acceptance.
+
+- [2026-11-04 — Live TV discovery (#290)](2026-11-04-live-tv-discovery.md): C3 read-only discovery omission, targeted inventory correction and remaining packaged-TV acceptance.
+
 - [2026-11-03 — Helper 0.6.22 rollback compatibility](2026-11-03-helper-0.6.22-compatibility.md)
 
 - [1.7.0 final packages and acceptance, 2026-11-03](2026-11-03-release-1.7.0-final-packages.md): selected0.8.4/Helper0.6.22 complete build, signatures and Android checks; Root device acceptance pending; superseded0.8.3 evidence retained.
@@ -24,8 +35,25 @@ one model or artifact does not certify later releases or a different TV.
 
 ## Scoped feature checks
 
+- [Personal moving-video upload, 2026-11-04](2026-11-04-personal-video-upload.md): desktop video input, source limits, decoder ownership, host/browser evidence and pending TV acceptance.
+
+- [macOS Python download trust, 2026-11-04](2026-11-04-macos-python-download-trust.md): published ARM64 CLI TLS reproduction, native system-CA correction and local frozen/cache checks; no TV or recovery operation.
+
+- [Ribbon blue nebula, 2026-11-03](2026-11-03-ribbon-blue-nebula.md): original native-resolution artwork, gentle UHD loop and both-edition browser checks; no TV changes.
+
+- [Embedded UHD wallpaper authoring, 2026-11-03](2026-11-03-embedded-uhd-wallpapers/README.md): real Alpine/Ribbon media, paired toolkit checks, large Base64 fix and browser-only decode evidence; outside the frozen release inventory.
+
+- [Legacy Root offline vendor investigation, 2026-11-04](2026-11-04-legacy-root-offline-vendor.md): official B9 firmware input, pinned public bootstrap/native boundaries and next host-only extraction task; no runtime replacement or device support claim.
+
+- [webOS 1.x Node floor, 2026-11-04](2026-11-04-webos1-node-floor.md): exact 0.10.15 source/published-Helper JS checks and No-root admission correction for #283/#284; device compatibility unverified.
+
+- [Android original Root inspection, 2026-11-04](2026-11-04-android-root240-inspection.md): original phone profile/pin preserved for bounded passive #240 inspection; original worker failure/recovery remains unresolved.
+
+- [Root activation evidence, 2026-11-04](2026-11-04-root-activation-evidence.md): typed SSH/Luna failures retained without replay; original #282 C4 activation remains unresolved.
+
 - [Source installer build dependencies, 2026-11-03](2026-11-03-source-install-build-dependencies.md): clean-venv font preparation and pre-pairing failure guards for #272; host-only evidence.
 - [macOS graphics payload alias, 2026-11-03](2026-11-03-macos-graphics-payload-alias.md): published-package reproduction, minimal member-path correction and offline frozen-app checks; no TV operation or public delivery.
+- [Ribbon overlay development, 2026-11-03](2026-11-03-ribbon-overlay-development.md): Root presentation, shared visual/demo changes and host checks; signed-device acceptance pending.
 
 - [Root standby power stages, 2026-11-03](2026-11-03-root-standby-power-stages.md): two owner-observed failures, matching firmware sequence and source correction; signed-device acceptance pending.
 
@@ -134,3 +162,5 @@ appended to these records. Private logs and device backups are not part of this
 public documentation.
 
 - [2026-10-31: coordinated native startup/recovery batch](2026-10-31-release-1.5.3-native-startup-batch.md).
+
+- [2026-11-04 Black Hole wallpaper integration and scoped preview evidence](2026-11-04-black-hole-wallpaper/README.md)

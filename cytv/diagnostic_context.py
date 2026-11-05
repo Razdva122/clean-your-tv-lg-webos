@@ -6,10 +6,13 @@ import re
 import stat
 
 from .state import private_write, sync_directory
+from .errors import LUNA_STATES, PACKAGE_FAILURE_REASONS
 
 KERNEL_ARCHES = ('armv7l', 'armv7', 'armv8l', 'aarch64', 'arm64', 'x86_64', 'i686', 'unknown')
 ROOT_REQUIREMENTS = ('root-user', 'python3', 'luna-send', 'apps-directory',
                      'luna-services-directory', 'python-json', 'python-fcntl', 'python-version', 'node-version')
+
+ROOT_ACTIONS = ('inspect', 'install', 'status', 'remove', 'enable', 'restore', 'uninstall')
 
 REASONS = ('unknown', 'user-error', 'ssh-command-failed', 'ssh-unreachable',
            'ssh-authentication', 'ssh-identity-changed', 'ssh-trust-record', 'ssh-identity-unverified', 'host-runtime',
@@ -77,6 +80,8 @@ def tv_summary(value):
             result[key] = choice(value[key], allowed)
     if type(value.get('arm32_supported')) is bool:
         result['arm32_supported'] = value['arm32_supported']
+    if value.get('home_backend') in ('system-profile', 'c1-native-gate'):
+        result['home_backend'] = value['home_backend']
     if 'root_requirements' in value:
         checks = mapping(value['root_requirements'])
         from .root_capabilities import CALLS
@@ -199,7 +204,7 @@ def failure_summary(value):
     command = mapping(value.get('ssh_command'))
     if type(command.get('exit_status')) is int and -1 <= command['exit_status'] <= 255:
         result['ssh_command'] = {'exit_status': command['exit_status']}
-    for key, allowed in (('root_action', ('inspect', 'install', 'status', 'remove')),
+    for key, allowed in (('root_action', ROOT_ACTIONS),
                          ('root_boundary', ('coordinator-stage', 'python-select', 'driver'))):
         if key in command and type(command[key]) is str and command[key] in allowed:
             result.setdefault('ssh_command', {})[key] = command[key]
@@ -214,7 +219,9 @@ def failure_summary(value):
     if luna:
         clean = {'operation': choice(luna.get('operation'), ('package-install', 'package-remove', 'package-status',
                   'helper-disable', 'eim-delete-device', 'application-launch', 'luna-call'), 'luna-call'),
-                 'state': choice(luna.get('state'), ('installing', 'installed', 'removing', 'removed', 'success', 'failed', 'error'))}
+                 'state': choice(luna.get('state'), LUNA_STATES)}
+        if 'reason' in luna:
+            clean['reason'] = choice(luna.get('reason'), PACKAGE_FAILURE_REASONS)
         for key in ('error_code', 'details_error_code', 'status_value'):
             item = luna.get(key)
             clean[key] = item if type(item) is int and -(2**31) <= item < 2**31 else None

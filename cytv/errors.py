@@ -48,11 +48,25 @@ class PythonPreflightError(UserError):
         super().__init__(message)
 
 
+LUNA_STATES = ('installing', 'installed', 'removing', 'removed', 'success', 'failed', 'error',
+               'install failed', 'remove failed')
+# Fixed LG OSE installer categories, not arbitrary details.reason text or a retail contract.
+PACKAGE_FAILURE_REASONS = ('FAILED_INTERNAL_ERROR', 'FAILED_CREATE_TMP',
+                          'FAILED_NOT_ENOUGH_TEMP_SPACE', 'FAILED_NOT_ENOUGH_INSTALL_SPACE',
+                          'FAILED_PACKAGEFILE_NOT_FOUND', 'FAILED_PACKAGEFILE_CORRUPT',
+                          'FAILED_VERIFY', 'FAILED_IPKG_INSTALL', 'FAILED_INSTALL')
+
+
 class TVRejected(UserError):
     """A definite negative TV reply, distinct from an unknown connection outcome."""
     def __init__(self, message, reply=None, uri=None):
         super().__init__(message)
         reply = reply if isinstance(reply, dict) else {}
+        self.systemprofile_missing = (
+            uri == 'com.webos.service.systemprofile/getProfiles'
+            and reply.get('returnValue') is False
+            and type(reply.get('errorCode')) is int and reply['errorCode'] == -1
+            and reply.get('errorText') == 'Service does not exist: com.webos.service.systemprofile.')
         details = reply.get('details')
         details = details if isinstance(details, dict) else {}
         def number(value):
@@ -71,9 +85,12 @@ class TVRejected(UserError):
             'error_code': number(reply.get('errorCode')),
             'details_error_code': number(details.get('errorCode')),
             'status_value': number(reply.get('statusValue')),
-            'state': status if status in ('installing','installed','removing','removed','success','failed','error') else 'unknown',
+            'state': status if status in LUNA_STATES else 'unknown',
             'return_value': reply.get('returnValue') if type(reply.get('returnValue')) is bool else None,
         }
+        if 'reason' in details:
+            reason = details['reason']
+            self.luna['reason'] = reason if isinstance(reason, str) and reason in PACKAGE_FAILURE_REASONS else 'unknown'
 
 
 class ExistingRoot(UserError):

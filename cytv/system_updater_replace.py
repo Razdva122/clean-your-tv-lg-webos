@@ -152,7 +152,7 @@ def replace(bundle,setup,cleanup,manager,store,ownership,remove,terminal_removal
     bundle_sha=digest(read(bundle/'bundle.json'))
     files=setup.package_files(setup.safe(bundle/'system-updater.ipk'))
     version=json.loads(files['usr/palm/applications/'+APP+'/appinfo.json'])
-    if version.get('id')!=APP or version.get('version')!='1.2.0':raise ValueError('This replacement requires the fixed System Updater 1.2.0 bundle')
+    if version.get('id')!=APP or version.get('version')!='1.2.1':raise ValueError('This replacement requires the fixed System Updater 1.2.1 bundle')
     job=store.read('system-replacement');lease=ownership.status();retired=None
     historical=job is not None and job.get('stage')=='complete' and job.get('bundle_sha256')!=bundle_sha
     if job is not None:
@@ -276,9 +276,9 @@ def replace(bundle,setup,cleanup,manager,store,ownership,remove,terminal_removal
         archive_proof(archive,job)
         if original_code(system)!={n:h for n,h in manifest['files'].items() if n not in ('system-updater.ipk','setup-system-updater.py')}:raise ValueError('Fixed supervisor code/pins mismatch')
         new=type(manager.io)(type(manager.store)(system,uid=manager.io.uid),code=system/'code');new.integrity(enforce=False);new.require_components();new._root_integrity()
-        if new.owner_identity(APP)['version']!='1.2.0':raise ValueError('Fixed System package readback mismatch')
+        if new.owner_identity(APP)['version']!='1.2.1':raise ValueError('Fixed System package readback mismatch')
         job['stage']='complete';store.write('system-replacement',job);ownership.stage(record,'complete',terminal=True)
-        return {'installed':True,'version':'1.2.0','root_unchanged':True,'home_unchanged':True,'saved_profile_unchanged':True,'profile_storage_untouched':True,'archive':job['archive']}
+        return {'installed':True,'version':'1.2.1','root_unchanged':True,'home_unchanged':True,'saved_profile_unchanged':True,'profile_storage_untouched':True,'archive':job['archive']}
 
 def entry():
     if os.geteuid()!=0:raise PermissionError('Root replacement required')

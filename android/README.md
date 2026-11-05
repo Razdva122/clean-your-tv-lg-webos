@@ -1,5 +1,7 @@
 # Install Clean Your TV from Android
 
+> **Unpublished 1.8.1 candidate:** see [candidate versions, setup and recovery limits](../docs/RELEASE-1.8.1.md). Published downloads remain on 1.7.1. C1 Beta is fresh-install only, selected automatically in the common installer; normal OTA is unavailable and physical C1 acceptance is pending. Historical results below retain their original artifact scope.
+
 > Release 1.7.1 uses Android 0.7.1 / versionCode 19 and embeds the shared installer correction; its exact signer, payload and emulator upgrade checks are in the [1.7.1 acceptance record](../docs/history/2026-11-03-release-1.7.1-host-checks.md). This guide retains the same setup flow. Use [Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases) for the latest published downloads. The historical evidence below remains scoped to its original APK.
 
 > Historical release 1.6.0 uses Android 0.6.0 / versionCode 17. See [Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases) for published downloads and [artifact-bound acceptance and limits](../docs/history/2026-11-02-release-1.6.0-final-acceptance.md).
@@ -39,7 +41,7 @@ The [visible TV checklist](../docs/CLI.md#visible-tv-checks-unreleased) shows in
 
 1. Copy the signed APK to a **64-bit ARM phone running Android 7.0 or later with Android System WebView/Chrome 108+**. Allow the browser/file manager to install this APK when Android requests it.
 2. Keep the phone and LG webOS TV on the same local network. Turn the TV on; disconnect VPNs or guest-network isolation if the connection fails.
-3. Enter the TV IPv4 address and check the connection first. Then choose **No-root** for Developer Mode, or **Root** for a TV with existing root SSH access. Exactly one responding access mode is highlighted; with both or neither, choose manually. Default SSH ports are 9922 and 22 respectively; Root ports are editable.
+3. Enter the TV IPv4 address and tap **Set up TV** to check the connection first. Then choose **No-root** for Developer Mode, or **Root** for a TV with existing root SSH access. Exactly one responding access mode is highlighted; with both or neither, choose manually. Default SSH ports are 9922 and 22 respectively; Root ports are editable.
 4. No-root: follow the four preparation steps in CYTV: install Developer Mode, sign in with an LG Developer account, enable **Dev Mode Status** and reopen the app after reboot, then enable **Key Server**. Enter the six-character **Passphrase** from the TV, preserving letter case; this is separate from the LG account password. The steps and code prompt include offline LG reference screenshots; use the code on your own TV. See the [full setup guide](../docs/INSTALL.md#set-up-developer-mode-no-root). Root: use the existing SSH password or select a private key with Android's file picker. Encrypted keys prompt for their passphrase.
 5. Review the SSH fingerprint before trusting the TV. Review the actual installed/package versions before confirming installation. Accept the remote-control pairing prompt on the TV if shown.
 6. Keep the TV on. The foreground service continues while the Activity is in the background; keep Android's CYTV notification available. Do not force-stop the app or change networks during installation.
@@ -53,9 +55,38 @@ Older 32-bit phones and x86 devices are not included in this APK. The UI include
 Updater bootstrap with root/Homebrew services. Unrooted TVs use the installer.
 The APK does not expose that bootstrap action; see [updates](../root-edition/UPDATES.md).
 
+The start screen also has **Wallpapers**, which explains the TV-hosted QR upload flow. Open Home settings → Wallpapers → Upload from phone on a compatible preview TV build, then scan its QR with the phone camera. Phone uploads are images up to 1920×1080; native 4K video requires desktop CYTV. The Android app does not scan QR codes or encode 4K video itself.
+
+## Interrupted Root installation inspection (unreleased)
+
+Candidate source adds a bounded Android path for an original Root
+`install / coordinator-submitted` operation. This is not in the published
+Android 0.7.1 APK. Use only an exact, signed rebuilt APK identified in an agreed
+maintainer handoff; update the existing app in place without uninstalling it or
+clearing its data. Do not copy a desktop profile onto the phone.
+
+From **Status and recovery**, choose **Review recovery options** with the original
+TV, Root edition and SSH port. After the app explains that the inspection only
+reads the original Root state, confirm **Check recovery options?** (No by default).
+It uses the original saved identity, regardless of the current password/key form,
+and requires the original saved SSH host pin. Existing encrypted-key/password
+entry may be requested locally; nothing is saved or replaced. Missing or changed
+records, a missing/changed pin or ambiguous operation stop without creating a
+replacement connection. Cancelling a prompt does not retry authentication.
+
+The inspection runs the existing bounded Node reader, not retained Python or a
+new coordinator. It changes no TV files, packages, Home settings or recovery
+records. Save the resulting diagnostic report and review it before sharing.
+A blocked result is expected: reading evidence never resumes the worker, clears
+pending, completes recovery or establishes compatibility. Do not repeat
+installation, enable, Restore or removal to obtain another error. Other supported
+recovery states retain their existing separately confirmed flows.
+
+See [the #240 investigation and exact-source limits](../docs/history/2026-11-04-android-root240-inspection.md).
+
 ## Recovery and private data
 
-Open **Status and recovery** from the start screen. After an interruption,
+Open **Maintenance** from the start screen. After an interruption,
 check status before reinstalling. The app retains operation receipts and does
 not automatically repeat installation after process death. Keep the same TV,
 edition and SSH port; pending or unknown outcomes need inspection.

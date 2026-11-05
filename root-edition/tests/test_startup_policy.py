@@ -24,7 +24,10 @@ class Tests(unittest.TestCase):
   (self.root/'profile-guardian-ready.json').chmod(0o600)
   policy.startup_observer_mark('route-a',self.session,True)
   self.metadata_override=None
+  self.surfaces=[]
  def call(self,uri,payload,timeout=5):
+  if uri=='luna://com.webos.surfacemanager/getForegroundAppInfo':
+   return dict(returnValue=True,foregroundAppInfo=self.surfaces)
   if uri.endswith('/getForegroundAppInfo'):return dict(returnValue=True,appId=self.foreground)
   if uri.endswith('/getAppInfo'):
    app=payload['id'];store='/media/cryptofs/apps/usr/palm/applications/'+app
@@ -247,3 +250,51 @@ class Tests(unittest.TestCase):
   self.fault_hook=fail_settings
   self.assertEqual(self.run_policy(),'withdrawn')
   self.assertEqual(self.last,{'type':'DTV','appId':'com.webos.app.livetv'})
+
+ def test_overlay_preserves_remembered_input_and_receipt_for_underlying_sources(self):
+  for app in ('youtube.leanback.v4','com.webos.app.hdmi2','com.webos.app.livetv'):
+   for allowed in (False,True):
+    with self.subTest(app=app,allowed=allowed):
+     self.surfaces=[]
+     policy.startup_configure({'tv':allowed,'youtube':allowed})
+     self.foreground=app
+     self.surfaces=[{'appId':d.CANDIDATE,'windowType':'_WEBOS_WINDOW_TYPE_OVERLAY'},
+                    {'appId':app,'windowType':'_WEBOS_WINDOW_TYPE_CARD'}]
+     before=copy.deepcopy(self.last);receipt=d._native_read()
+     self.assertEqual(self.run_policy(),'overlay-visible')
+     self.assertEqual(self.last,before);self.assertEqual(d._native_read(),receipt)
+ def test_unknown_surface_context_never_changes_remembered_input(self):
+  self.channels();self.surfaces=None;before=dict(self.last);receipt=d._native_read()
+  self.assertEqual(self.run_policy(),'unknown-presentation')
+  self.assertEqual(self.last,before);self.assertEqual(d._native_read(),receipt)
+ def test_startup_home_overlay_without_content_still_selects_root(self):
+  self.channels()
+  self.foreground=d.CANDIDATE
+  self.surfaces=[{'appId':d.CANDIDATE,'windowType':'_WEBOS_WINDOW_TYPE_OVERLAY'}]
+  self.assertEqual(self.run_policy(event='activation'),'selected')
+  self.assertEqual(self.last,{'type':'MVPD_IP','appId':d.CANDIDATE})
+
+ def test_canonical_card_remains_healthy_and_can_select_root_at_startup(self):
+  self.channels()
+  self.foreground=d.CANDIDATE
+  self.surfaces=[{'appId':d.CANDIDATE,'windowType':'_WEBOS_WINDOW_TYPE_CARD'}]
+  self.assertTrue(health.authorized('route-a'))
+  health.require_fresh('route-a')
+  self.assertEqual(self.run_policy(event='activation'),'selected')
+  self.assertEqual(self.last,{'type':'MVPD_IP','appId':d.CANDIDATE})
+  self.assertEqual(self.run_policy(event='input'),'already-selected')
+  self.assertTrue(health.authorized('route-a'))
+
+ def test_overlay_appearing_during_observation_cannot_change_input(self):
+  self.channels();before=dict(self.last);receipt=d._native_read();observations=[]
+  call=self.call
+  def changing(uri,payload,timeout=5):
+   if uri=='luna://com.webos.surfacemanager/getForegroundAppInfo':
+    observations.append(True)
+    surfaces=[] if len(observations)==1 else [{'appId':d.CANDIDATE,'windowType':'_WEBOS_WINDOW_TYPE_OVERLAY'},
+        {'appId':self.foreground,'windowType':'_WEBOS_WINDOW_TYPE_CARD'}]
+    return dict(returnValue=True,foregroundAppInfo=surfaces)
+   return call(uri,payload,timeout)
+  with patch.object(self,'call',side_effect=changing):
+   self.assertEqual(self.run_policy(),'overlay-visible')
+  self.assertEqual(self.last,before);self.assertEqual(d._native_read(),receipt)

@@ -1,6 +1,6 @@
 {
   "id": "com.gathin.tvhome",
-  "version": "1.8.1",
+  "version": "1.9.4",
   "vendor": "tv-vibehack",
   "type": "web",
   "main": "index.html",
@@ -11,6 +11,10 @@
   "iconColor": "#241d19",
   "resolution": "1920x1080",
   "disableBackHistoryAPI": true,
+  "defaultWindowType": "card",
+  "transparent": false,
+  "noSplashOnLaunch": true,
+  "spinnerOnLaunch": false,
   "requiredACG": [
     "application.launcher",
     "network.query"

@@ -35,11 +35,15 @@ instructions separate from published downloads and historical hardware evidence.
 Run `npm ci` first. TV web packages use Babel/core-js and PostCSS, with a strict
 compatibility check after conversion; see [TV web build](docs/TV-WEB-BUILD.md).
 Helper app/service JS uses a separate Babel/core-js/safe-buffer build for TV
-Node 0.10.25+. Set `NODE010` and `NODE012` to run its regression against exact
-Node 0.10.25 and 0.12.2 runtimes alongside current Node.
+Node 0.10.15+. Set `NODE010`, `NODE01025` and `NODE012` to run its regression
+against exact Node 0.10.15, 0.10.25 and 0.12.2 runtimes alongside current Node.
 Keep changes small and reproducible. During implementation run the tests for the
 changed behavior and its dependencies; `scripts/test.sh ui`, `tv`, `installer`, `setup`,
-`android` and `preview` select existing groups. Follow the affected PR checks and
+`android` and `preview` select existing groups. The `tv-runtime` profile retains
+all device runtime checks without the UI source/build suite. CI partitions the large
+Python suites across four isolated shards per OS; `scripts/test.sh --shard 2/4 tv`
+reproduces one partition, while omitting `--shard` runs the complete selected group. See
+[focused CI checks](docs/development/CI-CHECKS.md) for its narrow transport routing. Follow the affected PR checks and
 run a broader group for shared or unknown dependencies. The complete
 `scripts/test.sh` and browser suites remain required on the frozen release
 candidate; do not repeat an unchanged full local run merely to copy its result

@@ -340,11 +340,15 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     try:
                         installer.preflight(install=True, home_interfaces=True)
                     except ExistingRoot:
+                        if tv_info.get('home_backend') == 'c1-native-gate':
+                            raise UserError('Root is already installed or recovery state remains. Use cytv status or cytv restore; reinstallation has not started.')
                         if args.migrate_home:
                             raise UserError('For Root reinstallation, omit --migrate-home. cytv will read a fresh TV inventory before replacing Root; the existing installation was left unchanged.')
                         existing = installer.status()
                         stage = existing.get('deployment_stage')
                         device = existing.get('device', {}).get('result', {})
+                        if device.get('backend') == 'c1-native-gate':
+                            raise UserError('Root is already installed or recovery state remains. Use cytv status or cytv restore; reinstallation has not started.')
                         if stage == 'installed-recovery-only' and device.get('recovery', {}).get('integrity_verified') is True:
                             reinstall = 'installed'
                         elif stage == 'uninstalled-state-retained':
@@ -427,10 +431,14 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 installer.outcome.review_home(ask, write, args.non_interactive)
                 if profile['edition'] == 'root':
                     write.heading('Review TV checks')
-                    write('Root activation and the launch request completed. Check the separate startup and physical Home results.')
+                    if result.get('backend') != 'c1-native-gate':
+                        write('Root activation and the launch request completed. Check the separate startup and physical Home results.')
                     if result.get('updates_ready'):
                         write('Root Updater is ready. Install future compatible updates in Settings → Software updates on the TV.')
-                    write('Home control stays on until you turn it off. The computer can now be switched off.')
+                    if result.get('backend') == 'c1-native-gate':
+                        write('C1 Beta is installed. Automatic updates are unavailable; after a stop, turn Home control on again in TV settings.')
+                    else:
+                        write('Home control stays on until you turn it off. The computer can now be switched off.')
                     write('To restore LG Home, use Return to LG Home in settings or run cytv restore.')
                     write('Root emergency exit: three short Home presses within two seconds.')
                 else:

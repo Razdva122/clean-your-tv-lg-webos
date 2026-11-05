@@ -10,7 +10,10 @@ const jailed={readFileSync:p=>fs.readFileSync(local(p),'utf8'),existsSync:p=>fs.
  writeFileSync(p,b,o){writes.push(p);fs.writeFileSync(local(p),b,o);},chmodSync:(p,m)=>fs.chmodSync(local(p),m),
  renameSync(a,b){fs.renameSync(local(a),local(b));if(/\/(home|input)-request[.]json$/.test(b)){
   const request=JSON.parse(fs.readFileSync(local(b),'utf8'));
-  fs.writeFileSync(local(b.replace('-request','-response')),JSON.stringify(request.method==='inputStatus'?{id:request.id,returnValue:true,devices:[{appId:'com.webos.app.hdmi3',connected:true}]}:{id:request.id,returnValue:true,enabled:true}));
+  const response=request.method==='inputStatus'?{id:request.id,returnValue:true,devices:[{appId:'com.webos.app.hdmi3',connected:true}]}:
+   request.method==='presentationContext'?{id:request.id,returnValue:true,eligible:false,content:false,generation:7,observedAgeMs:0}:
+   request.method==='presentationDismissed'?{id:request.id,returnValue:true,dismissed:true,generation:request.generation}:{id:request.id,returnValue:true,enabled:true};
+  fs.writeFileSync(local(b.replace('-request','-response')),JSON.stringify(response));
  }}};
 function Service(){this.register=(n,f)=>{methods[n]=f;};this.call=()=>{throw Error('no network or launch expected');};}
 fs.mkdirSync(root+'/state/home-control',{recursive:true});
@@ -26,9 +29,21 @@ function call(app,method='homeStatus',payload={}){return new Promise(resolve=>me
  assert.equal(typeof methods.inputStatus,'function','same-package service must expose a fixed authorized input read');
  assert.equal((await call('other.app','inputStatus')).returnValue,false);assert.equal(writes.length,0);
  assert.equal((await call('com.gathin.tvhome','inputStatus',{uri:'PRIVATE'})).returnValue,false);assert.equal(writes.length,0);
+ for(const method of ['presentationContext','presentationDismissed']){
+  assert.equal(typeof methods[method],'function','presentation methods must be registered through the Home caller gate');
+  for(const app of ['other.app','com.gathin.tvhome.other','',null,undefined])assert.equal((await call(app,method,method==='presentationContext'?{}:{generation:7})).returnValue,false);
+ }
+ assert.equal(writes.length,0,'unauthorized presentation requests cannot touch either channel');
+ assert.equal((await call('com.gathin.tvhome','presentationContext',{extra:true})).returnValue,false);
+ assert.equal((await call('com.gathin.tvhome','presentationDismissed',{generation:1,extra:true})).returnValue,false);
+ assert.equal(writes.length,0,'malformed authorized presentation requests are denied before I/O');
  const reply=await call('com.gathin.tvhome');
  assert.equal(reply.returnValue,true,JSON.stringify(reply));assert.equal(reply.enabled,true);
  assert.deepEqual(writes,[own+'/state/home-control/home-request.tmp'],'service never needs the other app mount');
  const inputs=await call('com.gathin.tvhome','inputStatus');assert.equal(inputs.devices[0].connected,true);
+ const context=await call('com.gathin.tvhome','presentationContext',{});assert.equal(context.returnValue,true);assert.equal(context.content,false);assert.equal(context.generation,7);
+ const dismissed=await call('com.gathin.tvhome','presentationDismissed',{generation:7});assert.equal(dismissed.returnValue,true);assert.equal(dismissed.dismissed,true);assert.equal(dismissed.generation,7);
+ const request=JSON.parse(fs.readFileSync(root+'/state/home-control/home-request.json','utf8'));assert.equal(request.method,'presentationDismissed');assert.equal(request.generation,7);
+ assert(writes.slice(-2).every(p=>p===own+'/state/home-control/home-request.tmp'),'presentation uses only the existing HOME jail path');
  console.log('PASS actual service Home RPC in a service-only filesystem namespace');
 }finally{fs.rmSync(root,{recursive:true,force:true});}})().catch(e=>{console.error(e);process.exitCode=1;});

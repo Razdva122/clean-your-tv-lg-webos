@@ -45,6 +45,39 @@ Description: Clean Your TV graphical setup wizard
     return destination
 
 
+def ffmpeg_bundle_args(root):
+    """Stage the pinned wheel binary; never bundle a PATH/environment override."""
+    import importlib.metadata
+    import imageio_ffmpeg
+    if importlib.metadata.version('imageio-ffmpeg') != '0.6.0':
+        raise RuntimeError('Install imageio-ffmpeg==0.6.0 before building the desktop application.')
+    binaries = list((Path(imageio_ffmpeg.__file__).parent / 'binaries').glob('ffmpeg-*'))
+    binaries = [path for path in binaries if path.is_file()]
+    if len(binaries) != 1:
+        raise RuntimeError('Install the platform imageio-ffmpeg==0.6.0 binary wheel.')
+    directory = Path(root) / 'build/cytv/ffmpeg'
+    directory.mkdir(parents=True, exist_ok=True)
+    binary = directory / ('ffmpeg.exe' if sys.platform == 'win32' else 'ffmpeg')
+    shutil.copyfile(binaries[0], binary)
+    binary.chmod(0o755)
+    license_text = importlib.metadata.distribution('imageio-ffmpeg').read_text('LICENSE')
+    if not license_text:
+        raise RuntimeError('The imageio-ffmpeg license is missing.')
+    notice = directory / 'LICENSE.txt'
+    ffmpeg_license = subprocess.check_output([str(binary), '-L'], stderr=subprocess.STDOUT, text=True)
+    gpl = '\n\n'.join((Path(__file__).resolve().parents[1] / 'cytv/licenses' / name).read_text(encoding='utf-8') for name in ('ffmpeg-COPYING.GPLv2.txt', 'ffmpeg-COPYING.GPLv3.txt'))
+    notice.write_text(license_text + '\n\nBundled FFmpeg license/configuration:\n' + ffmpeg_license + gpl +
+                      '\nFFmpeg source: https://ffmpeg.org/download.html\n'
+                      'Wheel build sources: https://github.com/imageio/imageio-ffmpeg/tree/v0.6.0\n'
+                      'Wheel binary provenance: https://github.com/imageio/imageio-binaries/tree/master/ffmpeg\n'
+                      'Pinned wheel build script: https://github.com/imageio/imageio-ffmpeg/blob/v0.6.0/tasks.py\n'
+                      'Bundled filename: ' + binaries[0].name + '\n'
+                      'FFmpeg release source: https://ffmpeg.org/releases/ffmpeg-' + binaries[0].name.split('-v')[-1].removesuffix('.exe') + '.tar.xz\n', encoding='utf-8')
+    return ['--add-binary', str(binary) + os.pathsep + 'ffmpeg',
+            '--add-data', str(notice) + os.pathsep + 'ffmpeg',
+            '--exclude-module', 'imageio_ffmpeg']
+
+
 def build_desktop(root, payload, environment, version):
     if sys.platform not in ('darwin', 'linux', 'win32'):
         return
@@ -70,6 +103,7 @@ def build_desktop(root, payload, environment, version):
         command += ['--osx-bundle-identifier', 'org.cleanyourtv.cytv', '--icon', str(icon)]
     elif sys.platform == 'win32':
         command += ['--icon', str(root / 'assets/icons/installer.ico')]
+    command += ffmpeg_bundle_args(root)
     command += [str(root / 'cytv/desktop_entry.py')]
     subprocess.run(command, cwd=root, env=environment, check=True)
     if sys.platform == 'darwin':

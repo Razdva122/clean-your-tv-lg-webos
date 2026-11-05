@@ -2,24 +2,137 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),E=require('node:events'),path=require('node:path');
 const source=path.resolve(process.env.HELPER_CONTROLLER_ROOT||'native/app');
 const dir='/media/developer/apps/usr/palm/applications/com.local.nativehome/state/';
-function controller({blocked=false,watchdog=false,automatic=true,deferStart=false,inputQuery}={}){
+function controller({blocked=false,watchdog=false,automatic=true,deferStart=false,inputQuery,luna,foreground}={}){
  let now=1000,seq=0,watch,exit,stopReads=0;
  const timers=new Map(),files=new Map(),workers=[],cleanups=[],logs=[],launches=[];
  if(blocked)files.set(dir+'blocked','stopped');if(watchdog)files.set(dir+'watchdog','stopped');
  const schedule=(fn,ms,repeat=0)=>{const id=++seq;timers.set(id,{fn,at:now+ms,repeat});return id;};
  function advance(ms){const end=now+ms;while(true){let next;for(const x of timers)if(x[1].at<=end&&(!next||x[1].at<next[1].at))next=x;if(!next)break;const[id,t]=next;now=t.at;if(t.repeat)t.at+=t.repeat;else timers.delete(id);t.fn();}now=end;}
  const fakefs={existsSync:p=>files.has(p),writeFileSync:(p,s)=>files.set(p,s),unlinkSync:p=>files.delete(p),chmodSync(){},renameSync:(a,b)=>{files.set(b,files.get(a));files.delete(a);},appendFileSync:(p,s)=>logs.push(JSON.parse(s)),readFileSync(p){if(p===dir+'control.json')stopReads++;if(files.has(p))return files.get(p);throw Object.assign(Error('absent'),{code:'ENOENT'});}};
- function Service(){this.activityManager={create(){}};this.call=(uri,p,cb)=>{if(uri.endsWith('/launch'))launches.push(p.id);cb({payload:{returnValue:true,state:{enabled:true,schema:3}}});};}
+ function Service(){this.activityManager={create(){}};this.call=(uri,p,cb)=>{if(uri.endsWith('/launch'))launches.push(p.id);if(luna&&luna(uri,p,cb))return;cb({payload:{returnValue:true,state:{enabled:true,schema:3}}});};}
  const cp={spawn(file,args){assert(file.endsWith('/relay'));const c=new E();c.stdout=new E();c.stderr=new E();c.stdin=new E();c.writes=[];c.kills=[];c.ack=true;c.stdin.write=b=>{c.writes.push(b);if(b==='P'&&c.ack)c.stdout.emit('data',Buffer.from('P\n'));};c.stdin.end=()=>{};c.kill=s=>{c.kills.push(s);return true;};(args.length?cleanups:workers).push(c);return c;}};
- const context={Buffer,console,Date:{now:()=>now},require(n){if(n==='fs')return fakefs;if(n==='child_process')return cp;if(n==='/usr/lib/node_modules/webos-service')return Service;if(n==='./state-permissions')return(d,l,init)=>{if(init)files.set(dir+'control.json','{}');return true;};if(n==='./app-inventory')return inputQuery||(()=>{throw Error('unexpected inventory query');});if(n==='./screen-watch')return(d,l,fg,reset,power)=>{watch={fg,power};return{close:reset};};return require(path.join(source,n));},process:{argv:['node','native.js',JSON.stringify({nativeHomeAuto:automatic})],pid:1,getuid:()=>5431,hrtime:()=>[Math.floor(now/1000),now%1000*1e6],on(){},exit(c){exit=c;}},setTimeout:(f,ms)=>schedule(f,ms),clearTimeout:id=>timers.delete(id),setInterval:(f,ms)=>schedule(f,ms,ms),clearInterval:id=>timers.delete(id)};
+ const context={Buffer,console,Date:{now:()=>now},require(n){if(n==='fs')return fakefs;if(n==='child_process')return cp;if(n==='/usr/lib/node_modules/webos-service')return Service;if(n==='./state-permissions')return(d,l,init)=>{if(init)files.set(dir+'control.json','{}');return true;};if(n==='./app-inventory')return inputQuery||(()=>{throw Error('unexpected inventory query');});if(n==='./screen-watch')return(d,l,fg,reset,power)=>{watch={fg,reset,power};return{close:reset,foreground:foreground||function(done){done(null);}};};return require(path.join(source,n));},process:{argv:['node','native.js',JSON.stringify({nativeHomeAuto:automatic})],pid:1,getuid:()=>5431,hrtime:()=>[Math.floor(now/1000),now%1000*1e6],on(){},exit(c){exit=c;}},setTimeout:(f,ms)=>schedule(f,ms),clearTimeout:id=>timers.delete(id),setInterval:(f,ms)=>schedule(f,ms,ms),clearInterval:id=>timers.delete(id)};
  vm.runInNewContext(fs.readFileSync(path.join(source,'native.js'),'utf8'),context);
  if(exit===undefined&&!deferStart){advance(automatic?0:1000);workers[0].stdout.emit('data',Buffer.from('READY\n'));}
  function close(code=20,signal=null,worker=workers.at(-1),reason=code){if(reason!==null)worker.stdout.emit('data',Buffer.from('EXIT '+reason+'\n'));if(code===20)files.set(dir+'watchdog','stopped');worker.emit('exit',code,signal);worker.emit('close',code,signal);}
  function command(cmd){files.set(dir+'control.json',JSON.stringify({cmd}));}
  function cleanup(code=0,signal=null){const c=cleanups.at(-1);assert(c,'cleanup must precede recovery');c.emit('exit',code,signal);c.emit('close',code,signal);}
- return{advance,files,workers,cleanups,logs,launches,close,cleanup,command,power:p=>watch.power(p),get exit(){return exit;},get stopReads(){return stopReads;}};
+ return{advance,files,workers,cleanups,logs,launches,close,cleanup,command,foreground:id=>watch.fg(id),reset:()=>watch.reset(),power:p=>watch.power(p),get exit(){return exit;},get stopReads(){return stopReads;}};
 }
 const blocked=c=>c.files.has(dir+'blocked');
+test('single CARD emergency returns to LG after cleanup without requiring cross-app close',()=>{
+ let closes=0;const c=controller({luna:(uri,p,cb)=>{if(uri.endsWith('/closeByAppId')){closes++;cb({payload:{returnValue:false}});return true;}}});
+ c.close(27);assert(!c.launches.includes('com.webos.app.home'),'relay cleanup must precede LG');
+ c.cleanup();assert.equal(c.launches.at(-1),'com.webos.app.home','cross-app close permission is not required to background a CARD');
+ assert.equal(closes,0);assert(blocked(c));c.advance(300);assert.equal(c.exit,27);
+ assert(c.logs.some(x=>x.event==='terminal-ui-requested'&&x.homeClosed===false&&x.lgLaunchAccepted===true));
+});
+test('ordinary CARD Home does not wait for overlay foreground context',()=>{
+ let queries=0;const c=controller({foreground:()=>queries++}),before=c.launches.length;
+ c.workers[0].stdout.emit('data',Buffer.from('HOME\n'));
+ assert.equal(queries,0,'CARD presentation does not depend on SSAP underlay context');
+ assert.equal(c.launches.length,before+1);assert.equal(c.launches.at(-1),'com.gathin.tvhome');
+});
+test('ordinary CARD context changes and emergency background it without cross-app close',()=>{
+ let closes=0;const c=controller({luna:(uri)=>{if(uri.endsWith('/closeByAppId'))closes++;}});
+ c.foreground('com.gathin.tvhome');c.foreground('com.webos.app.hdmi3');c.reset();
+ c.power({onOff:'off',state:'Suspend'});
+ assert.equal(closes,0,'the platform owns CARD background/standby visibility');
+ c.close(27);c.cleanup();assert.equal(closes,0,'emergency normally activates LG without killing the CARD');c.advance(300);assert.equal(c.exit,27);
+});
+test('emergency waits for relay cleanup and LG acknowledgement before exiting',()=>{
+ let lg;const c=controller({luna:(uri,p,cb)=>{if(uri.endsWith('/launch')&&p.id==='com.webos.app.home'){lg=cb;return true;}}});
+ c.close(27);assert(!c.launches.includes('com.webos.app.home'),'LG must wait for input cleanup');
+ c.cleanup();assert(blocked(c));assert.equal(c.exit,undefined,'pending LG request must settle');
+ lg({payload:{returnValue:true}});assert.equal(c.launches.at(-1),'com.webos.app.home');
+ c.advance(300);assert.equal(c.exit,27);assert.equal(c.workers.length,1);
+});
+test('terminal EXIT fences buffered Home before worker close',()=>{
+ const c=controller(),w=c.workers[0],before=c.launches.length;
+ w.stdout.emit('data',Buffer.from('EXIT 27\nHOME\nREADY\n'));
+ w.stdout.emit('data',Buffer.from('HOME\n'));
+ assert.equal(c.launches.length,before,'terminal relay output cannot launch another owned Home');
+});
+test('terminal EXIT fences a legacy presentation RPC reply arriving before worker close',()=>{
+ let reply;const c=controller({foreground:done=>reply=done}),w=c.workers[0];
+ const channel='/media/developer/apps/usr/palm/services/com.gathin.tvhome.renewal/state/home-control/';
+ c.files.set(channel+'home-request.json',JSON.stringify({id:'a'.repeat(32),expires:6000,method:'presentationContext'}));c.advance(400);
+ const count=c.launches.length;
+ w.stdout.emit('data',Buffer.from('EXIT 27\n'));reply('com.webos.app.hdmi3');
+ assert.equal(c.launches.length,count,'a legacy context query cannot launch after terminal EXIT');
+ assert(!c.files.has(channel+'home-response.json'),'terminal context reply cannot escape');
+});
+test('late CARD launch acknowledgement after a foreground change does not close Home',()=>{
+ let held,hold=false,closes=0;const c=controller({luna:(uri,p,cb)=>{
+  if(hold&&uri.endsWith('/launch')&&p.id==='com.gathin.tvhome'){held=cb;return true;}
+  if(uri.endsWith('/closeByAppId'))closes++;
+ }});
+ hold=true;c.workers[0].stdout.emit('data',Buffer.from('HOME\n'));
+ c.foreground('com.gathin.tvhome');c.foreground('com.webos.app.hdmi3');held({payload:{returnValue:true}});
+ assert.equal(closes,0);assert.equal(c.exit,undefined);
+});
+test('emergency drains an in-flight Home launch before normally activating LG',()=>{
+ let held,hold=false;const calls=[];
+ const c=controller({luna:(uri,p,cb)=>{if(uri.endsWith('/launch'))calls.push(p.id);if(uri.endsWith('/closeByAppId'))calls.push('close');if(hold&&uri.endsWith('/launch')&&p.id==='com.gathin.tvhome'){held=cb;return true;}}});
+ hold=true;c.workers[0].stdout.emit('data',Buffer.from('HOME\n'));c.close(27);c.cleanup();
+ assert.equal(c.exit,undefined);assert(!c.launches.includes('com.webos.app.home'));
+ held({payload:{returnValue:true}});c.advance(50);
+ assert.equal(calls.at(-1),'com.webos.app.home');assert(!calls.includes('close'));c.advance(300);assert.equal(c.exit,27);
+});
+test('Stop drains an initial Home launch before any relay exists',()=>{
+ let held;const order=[];const c=controller({deferStart:true,luna:(uri,p,cb)=>{
+  if(uri.endsWith('/launch')&&p.id==='com.gathin.tvhome'){held=cb;return true;}
+  if(uri.endsWith('/closeByAppId'))order.push('close');
+  if(uri.endsWith('/launch')&&p.id==='com.webos.app.home')order.push('LG');
+ }});
+ c.advance(0);c.command('stop');c.advance(400);
+ assert.equal(c.exit,undefined);assert.deepEqual(order,[],'close/LG must not race initial launch');
+ held({payload:{returnValue:true}});c.advance(50);assert.deepEqual(order,['LG']);
+ c.advance(300);assert.equal(c.exit,0);assert.equal(c.workers.length,0);assert(blocked(c));
+});
+for(const reply of [false,null,'timeout'])test('CARD emergency never depends on cross-app close '+reply,()=>{
+ let closes=0;const c=controller({luna:(uri,p,cb)=>{if(uri.endsWith('/closeByAppId')){closes++;if(reply!=='timeout')cb({payload:reply===null?{}:{returnValue:reply}});return true;}}});
+ c.close(27);c.cleanup();c.advance(10000);
+ assert.equal(c.exit,27);assert(blocked(c));assert.equal(closes,0);
+ assert(!c.logs.some(x=>x.event==='terminal-ui-failed'));
+ assert(c.launches.includes('com.webos.app.home'));assert(c.logs.some(x=>x.event==='terminal-ui-requested'&&x.homeClosed===false));
+});
+test('timed-out Home launch cannot race a final LG launch or replay after a late reply',()=>{
+ let late,hold=false;const c=controller({luna:(uri,p,cb)=>{if(hold&&uri.endsWith('/launch')&&p.id==='com.gathin.tvhome'){late=cb;return true;}}});
+ hold=true;c.workers[0].stdout.emit('data',Buffer.from('HOME\n'));c.close(27);c.cleanup();c.advance(10000);
+ assert.equal(c.exit,27);assert(!c.launches.includes('com.webos.app.home'));
+ const count=c.launches.length;late({payload:{returnValue:true}});c.advance(1000);assert.equal(c.launches.length,count);
+ assert(c.logs.some(x=>x.event==='terminal-ui-failed'));assert(blocked(c));
+});
+test('a later accepted Home launch does not erase an older unresolved SAM request',()=>{
+ let hold=false,late;const c=controller({luna:(uri,p,cb)=>{if(hold&&uri.endsWith('/launch')&&p.id==='com.gathin.tvhome'){hold=false;late=cb;return true;}}});
+ hold=true;c.workers[0].stdout.emit('data',Buffer.from('HOME\n'));c.advance(3000);
+ c.workers[0].stdout.emit('data',Buffer.from('HOME\n'));c.close(27);c.cleanup();c.advance(10000);
+ assert.equal(c.exit,27);assert(!c.launches.includes('com.webos.app.home'),'an earlier unknown SAM outcome remains a terminal race');
+ const count=c.launches.length;late({payload:{returnValue:true}});assert.equal(c.launches.length,count);assert(blocked(c));
+});
+test('explicit Stop waits for LG acknowledgement with the latch retained',()=>{
+ let lg;const c=controller({luna:(uri,p,cb)=>{if(uri.endsWith('/launch')&&p.id==='com.webos.app.home'){lg=cb;return true;}}});
+ c.command('stop');c.advance(400);c.close(0);c.cleanup();assert.equal(c.exit,undefined);assert(blocked(c));
+ lg({payload:{returnValue:true}});c.advance(300);assert.equal(c.exit,0);assert.equal(c.launches.at(-1),'com.webos.app.home');
+});
+test('relay Stop code 22 cleans input then backgrounds CARD via normal LG activation',()=>{
+ let closes=0;const c=controller({luna:uri=>{if(uri.endsWith('/closeByAppId'))closes++;}});
+ c.close(22);assert(!c.launches.includes('com.webos.app.home'));c.cleanup();c.advance(300);
+ assert.equal(c.exit,0);assert(blocked(c));assert.equal(closes,0);assert.equal(c.launches.at(-1),'com.webos.app.home');
+});
+for(const reply of [false,null,'timeout'])test('terminal LG launch '+reply+' is bounded without claiming accepted restoration',()=>{
+ const c=controller({luna:(uri,p,cb)=>{if(uri.endsWith('/launch')&&p.id==='com.webos.app.home'){if(reply!=='timeout')cb({payload:reply===null?{}:{returnValue:reply}});return true;}}});
+ c.close(27);c.cleanup();c.advance(10000);assert.equal(c.exit,27);assert(blocked(c));
+ assert(c.logs.some(x=>x.event==='terminal-ui-failed'));assert(!c.logs.some(x=>x.event==='terminal-ui-requested'));
+});
+test('cleanup failure during emergency never restarts input and remains recorded',()=>{
+ const c=controller();c.close(27);c.cleanup(11);c.advance(10000);
+ assert.equal(c.exit,27);assert(blocked(c));assert.equal(c.workers.length,1);
+ assert(c.logs.some(x=>x.event==='cleanup'&&x.code===11));
+ assert(!c.launches.includes('com.webos.app.home'));assert(!c.logs.some(x=>x.event==='terminal-ui-requested'));
+ assert(c.logs.some(x=>x.event==='terminal-ui-failed'&&x.reason==='input-cleanup-failed'));
+});
 test('watchdog timeout cleans input, waits, restarts and routes Home without clearing an emergency latch',()=>{
  const c=controller(),old=c.workers[0];c.power({state:'Suspend'});c.close();
  assert.equal(c.exit,undefined);assert(!blocked(c));assert.equal(c.workers.length,1);
@@ -34,9 +147,34 @@ test('Stop before the initial launch cancels startup',()=>{const c=controller({a
 test('only five watchdog recoveries are allowed per ten minutes',()=>{const c=controller();for(let i=0;i<5;i++){c.close();c.cleanup();c.advance(1500);c.workers.at(-1).stdout.emit('data',Buffer.from('READY\n'));}c.close();if(c.cleanups.length>5)c.cleanup();c.advance(3000);assert.equal(c.workers.length,6);assert(blocked(c));assert.notEqual(c.exit,undefined);});
 test('old recoveries expire from the rolling window',()=>{const c=controller();for(let i=0;i<5;i++){c.close();c.cleanup();c.advance(1500);c.workers.at(-1).stdout.emit('data',Buffer.from('READY\n'));}c.advance(600000);c.close();c.cleanup();c.advance(1500);assert.equal(c.workers.length,7);assert(!blocked(c));});
 test('watchdog SIGKILL is retried only after the actual child closes',()=>{const c=controller(),w=c.workers[0];w.ack=false;c.advance(2800);assert.deepEqual(w.kills,['SIGKILL']);assert(c.files.has(dir+'watchdog'));w.emit('exit',null,'SIGKILL');c.advance(800);assert.equal(c.cleanups.length,0);w.emit('close',null,'SIGKILL');c.cleanup();c.advance(1500);assert.equal(c.workers.length,2);});
-for(const [code,signal] of [[0,null],[23,null],[24,null],[27,null],[28,null],[null,'SIGTERM'],[null,'SIGKILL']])test('non-watchdog exit '+code+'/'+signal+' remains blocked',()=>{const c=controller();c.close(code,signal);if(c.cleanups.length)c.cleanup();c.advance(3000);assert(blocked(c));assert.equal(c.workers.length,1);});
+for(const [code,signal] of [[0,null],[23,null],[24,null],[27,null],[28,null],[30,null],[31,null],[null,'SIGTERM'],[null,'SIGKILL']])test('non-watchdog exit '+code+'/'+signal+' remains blocked',()=>{const c=controller();c.close(code,signal);if(c.cleanups.length)c.cleanup();c.advance(3000);assert(blocked(c));assert.equal(c.workers.length,1);});
 test('triple Home wins a race with a watchdog kill',()=>{const c=controller();c.workers[0].ack=false;c.advance(2800);c.files.set(dir+'blocked','stopped');c.close(27);if(c.cleanups.length)c.cleanup();c.advance(3000);assert(blocked(c));assert.equal(c.workers.length,1);});
-test('a terminal EXIT 27 prevents watchdog kill even before close',()=>{const c=controller(),w=c.workers[0];w.ack=false;w.stdout.emit('data',Buffer.from('EXIT 27\n'));c.advance(2800);assert.deepEqual(w.kills,[]);c.close(null,'SIGKILL',w,null);if(c.cleanups.length)c.cleanup();c.advance(3000);assert.equal(c.workers.length,1);assert(blocked(c));});
+test('a terminal EXIT 27 survives signaled close and awaits cleanup, owned launch and LG',()=>{
+ let owned,lg,hold=false;const c=controller({luna:(uri,p,cb)=>{
+  if(hold&&uri.endsWith('/launch')&&p.id==='com.gathin.tvhome'){owned=cb;return true;}
+  if(uri.endsWith('/launch')&&p.id==='com.webos.app.home'){lg=cb;return true;}
+ }}),w=c.workers[0];
+ hold=true;w.stdout.emit('data',Buffer.from('HOME\n'));w.ack=false;w.stdout.emit('data',Buffer.from('EXIT 27\n'));c.advance(2800);assert.deepEqual(w.kills,[]);
+ c.close(null,'SIGKILL',w,null);assert.equal(c.cleanups.length,1,'signal still requires relay cleanup');
+ assert.equal(c.exit,undefined);c.cleanup();assert.equal(c.exit,undefined,'signaled exit cannot skip owned launch acknowledgement');
+ assert(!c.launches.includes('com.webos.app.home'));owned({payload:{returnValue:true}});c.advance(50);
+ assert.equal(c.launches.at(-1),'com.webos.app.home');assert.equal(c.exit,undefined,'LG request also must settle');
+ lg({payload:{returnValue:true}});c.advance(300);assert.equal(c.exit,27);
+ assert(c.logs.some(x=>x.event==='worker-exit'&&x.code===null&&x.signal==='SIGKILL'),'actual OS outcome remains diagnostic evidence');
+ assert.equal(c.workers.length,1);assert(blocked(c));
+});
+for(const cleanupCode of [0,11])test('reported emergency with signaled close and cleanup '+cleanupCode+' remains bounded on unknown owned launch',()=>{
+ let hold=false;const c=controller({luna:(uri,p)=>hold&&uri.endsWith('/launch')&&p.id==='com.gathin.tvhome'});
+ hold=true;c.workers[0].stdout.emit('data',Buffer.from('HOME\n'));
+ c.close(null,'SIGKILL',c.workers[0],27);c.cleanup(cleanupCode);
+ assert.equal(c.exit,undefined);c.advance(10000);assert.equal(c.exit,27);assert(blocked(c));assert.equal(c.workers.length,1);
+ assert(!c.launches.includes('com.webos.app.home'));assert(!c.logs.some(x=>x.event==='terminal-ui-requested'));
+ assert(c.logs.some(x=>x.event==='terminal-ui-failed'&&x.reason===(cleanupCode?'input-cleanup-failed':'home-launch-unknown')));
+});
+for(const exitCode of [0,20,25])test('reported emergency retains its latch when OS exit code becomes '+exitCode,()=>{
+ const c=controller();c.close(exitCode,null,c.workers[0],27);assert(blocked(c),'reported emergency must stay blocked independently of OS code');
+ c.cleanup();c.advance(10000);assert.equal(c.exit,27);assert.equal(c.workers.length,1);assert.equal(c.launches.at(-1),'com.webos.app.home');
+});
 test('Stop racing with watchdog exit cannot recover',()=>{const c=controller();c.command('stop');c.close();if(c.cleanups.length)c.cleanup();c.advance(3000);assert(blocked(c));assert.equal(c.workers.length,1);});
 test('emergency marker during recovery is never removed',()=>{const c=controller();c.close();c.cleanup();c.files.set(dir+'blocked','stopped');c.advance(1500);assert(blocked(c));assert.equal(c.workers.length,1);});
 for(const result of ['failure','error','timeout'])test('cleanup '+result+' stops and blocks instead of grabbing input again',()=>{const c=controller();c.close();assert(c.cleanups.length);if(result==='failure')c.cleanup(11);if(result==='error')c.cleanups[0].emit('error',Error('spawn'));c.advance(5000);assert(blocked(c));assert.equal(c.workers.length,1);assert.notEqual(c.exit,undefined);});
@@ -51,7 +189,7 @@ for(const phase of ['kill','exit'])test('buffered READY/Home after '+phase+' can
 });
 test('Stop after killing a relay before READY still releases its potentially held keys',()=>{
  const c=controller();c.close();c.cleanup();c.advance(1500);const w=c.workers.at(-1);w.ack=false;c.advance(3200);c.command('stop');c.close(null,'SIGKILL',w,null);
- assert.equal(c.cleanups.length,2,'forced exit always needs cleanup, even without READY');assert.equal(c.exit,undefined);c.cleanup();assert(blocked(c));assert.equal(c.workers.length,2);assert.notEqual(c.exit,undefined);
+ assert.equal(c.cleanups.length,2,'forced exit always needs cleanup, even without READY');assert.equal(c.exit,undefined);c.cleanup();assert(blocked(c));assert.equal(c.workers.length,2);assert.equal(c.launches.at(-1),'com.webos.app.home');assert.equal(c.exit,undefined,'accepted LG launch settles before exit');c.advance(300);assert.notEqual(c.exit,undefined);
 });
 test('exhausted retries still clean a killed replacement before READY',()=>{
  const c=controller();for(let i=0;i<5;i++){c.close();c.cleanup();c.advance(1500);if(i<4)c.workers.at(-1).stdout.emit('data',Buffer.from('READY\n'));}

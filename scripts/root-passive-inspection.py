@@ -8,7 +8,7 @@ import sys
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from cytv import root_passive, state
-from cytv.transport import SSH, inspection_secret
+from cytv.transport import inspection_secret
 
 
 def main():
@@ -24,15 +24,9 @@ def main():
     if len(profiles)!=1:raise ValueError('exactly_one_matching_saved_root_profile_required')
     profile=profiles[0]
     def secret(_):raise RuntimeError('saved_automatic_authentication_required')
-    with store.lock(profile):
-        pending=store.pending(profile)
-        remote=SSH.connect(profile,store.device_dir(profile),inspection_secret if args.interactive_auth else secret,
-                           lambda *_:False,persist=False)
-        try:
-            result=root_passive.collect(remote,args.operation,pending)
-            if store.pending(profile)!=pending:raise ValueError('original_host_pending_changed')
-            print(json.dumps(result,sort_keys=True))
-        finally:remote.close()
+    result = root_passive.inspect_saved(store, profile, args.operation,
+        inspection_secret if args.interactive_auth else secret)
+    print(json.dumps(result, sort_keys=True))
 
 
 if __name__=='__main__':main()

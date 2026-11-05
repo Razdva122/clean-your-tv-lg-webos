@@ -139,6 +139,43 @@ CI does not establish that documentation matches product behavior.
 One coordinator owns the frozen inventory, selected build and acceptance record.
 Select versions and write candidate notes before physical acceptance. Finish
 product changes before freeze; queue unrelated changes for the following cycle.
+
+### Mandatory pre-dispatch check for the release coordinator
+
+Before starting a full candidate, complete and commit every input consumed by
+assembly, signing and publication. A green application test run alone is not this
+check. The coordinator must verify all of the following against actual packages:
+
+1. Versions, component manifests, README metadata, release inventory and notes
+   agree. Identify the previous published release and authenticate its baselines.
+2. If Helper changes, finish the published-Home/new-Helper compatibility probe
+   **before** the full dispatch. Commit `native/helper-rollback-compatibility.json`
+   with the actual previous Home/Helper hashes, exact candidate canonical archive
+   hash and truthful device evidence. Run `verify_helper_transition` from
+   `scripts/prepare-release.py` against those real packages and that approval.
+   Preliminary package preparation and focused tests are sufficient to obtain
+   this evidence; do not start a full installer matrix merely to discover this gate.
+3. Audit any other selected signing/promotion approval, including a selected
+   Homebrew Installer record. Mandatory evidence must already exist; explicitly
+   deferred product limitations must be documented rather than marked passed.
+4. Confirm the intended frozen commit is clean and contains all required inputs.
+   Keep untracked private QA data out of Git. Record the preflight results in the
+   release PR, then dispatch one full candidate from that commit.
+
+Do not leave a required compatibility or approval record for after the successful
+full run. On 1.8.2, a late Helper compatibility record changed a guarded input and
+forced a second full matrix despite unchanged application code. This is a release
+coordination failure to prevent, not a normal validation step.
+
+Before any later full dispatch, compare the proposed source with the selected
+build using the existing `scripts/release-inputs.py` equivalence rules. Reuse the
+verified pin for accepted evidence-only changes, including documentation under
+`docs/` and the release plan. Do not rerun the full matrix merely for status text,
+release instructions, issue links or another copy of an unchanged result. If a
+late change is classified as an input, name the exact file and the gate requiring
+a rebuild; do not bypass it, fabricate evidence or silently weaken equivalence.
+Finish all such changes together before starting the replacement candidate.
+
 Then explicitly start the full candidate:
 
 ```sh
@@ -364,7 +401,10 @@ shipping is confirmed only after publication and verification of the packages
 and signed update feeds.
 
 Ordinary PRs run only affected checks: UI, TV/webOS, installer, Android, preview or
-packaging/release tools. Shared dependencies enable every affected group; unknown
+packaging/release tools. The inventory transport leaf uses `tv-runtime`, retaining
+all device safety checks without fixture-only UI/browser work; see
+[focused CI checks](development/CI-CHECKS.md) for routing and measurements.
+Shared dependencies enable every affected group; unknown
 paths conservatively enable all checks. Documentation-only changes skip application
 checks and Pages builds while keeping the required Linux/macOS status names green.
 Visual UI changes compile the affected web applications and run focused browser

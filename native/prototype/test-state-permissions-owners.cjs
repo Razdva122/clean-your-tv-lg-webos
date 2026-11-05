@@ -6,16 +6,18 @@ function fixture(options={}){
  fs.mkdirSync(state,0o775);fs.chmodSync(state,options.directoryMode||0o775);
  fs.writeFileSync(key,options.content||'{"key":"test-private-key"}');fs.chmodSync(key,options.keyMode||0o775);
  fs.writeFileSync(path.join(state,'apps.json'),'["test.app"]');fs.chmodSync(path.join(state,'apps.json'),0o775);
- const owners=new Map([[state,{uid:options.directoryOwner||5999,gid:5000}],[key,{uid:5580,gid:options.keyGroup||5000}],[path.join(state,'apps.json'),{uid:5580,gid:5000}]]),fds=new Map();
+ const owners=new Map([[state,{uid:options.directoryOwner||5999,gid:options.directoryGroup||5000}],[key,{uid:5580,gid:options.keyGroup||5000}],[path.join(state,'apps.json'),{uid:5580,gid:5000}]]),fds=new Map();
+ // macOS may clear setgid; retain the modeled webOS bits until chmod succeeds.
+ const specialBits=new Map([[state,(options.directoryMode||0)&0o7000]]);
  let actor=5367;const primaryGroup=options.primaryGroup||5000;
  const denied=()=>Object.assign(Error('denied'),{code:'EPERM'});
- function stat(p,s){return Object.assign(Object.create(s),owners.get(p)||{uid:actor,gid:primaryGroup});}
+ function stat(p,s){return Object.assign(Object.create(s),owners.get(p)||{uid:actor,gid:primaryGroup},{mode:s.mode|(specialBits.get(p)||0)});}
  const io=Object.assign({},fs,{
   openSync(p,...args){const fd=fs.openSync(p,...args);fds.set(fd,p);return fd;},
   closeSync(fd){fds.delete(fd);return fs.closeSync(fd);},
   fstatSync(fd){return stat(fds.get(fd),fs.fstatSync(fd));},
   lstatSync(p){return stat(p,fs.lstatSync(p));},
-  fchmodSync(fd,mode){if(io.fstatSync(fd).uid!==actor)throw denied();fs.fchmodSync(fd,mode);},
+  fchmodSync(fd,mode){if(io.fstatSync(fd).uid!==actor)throw denied();fs.fchmodSync(fd,mode);specialBits.delete(fds.get(fd));},
   fchownSync(fd,uid,gid){if(io.fstatSync(fd).uid!==actor||gid!==5000)throw denied();owners.set(fds.get(fd),{uid,gid});},
   writeSync(...args){if(options.writeFailure)throw denied();return fs.writeSync(...args);},
   readSync(fd,buffer,offset,length,position){
@@ -61,11 +63,20 @@ test('an observed concurrent pairing update survives failed replacement',{concur
  a.equal(f.run(),false);a.equal(fs.readFileSync(f.key,'utf8'),'{"key":"newer-key"}');a.equal(fs.readdirSync(f.state).length,2);
 });
 test('missing staging directory is a failure, not missing pairing',{renameFailure:true,renameCode:'ENOENT'},f=>a.equal(f.run(),false));
-test('world-writable foreign directory is rejected',{directoryMode:0o777},f=>a.equal(f.run(),false));
+test('boot-expanded directory permits startup with one internal warning',{directoryMode:0o777,keyMode:0o640},f=>{
+ a.equal(f.run(5367,true),true);a.equal(fs.statSync(f.state).mode&0o7777,0o777);
+ a.equal(f.logs.filter(x=>x.event==='state-permissions-warning'&&x.reason==='expanded-directory-mode').length,1);
+ a.equal(fs.readFileSync(path.join(f.state,'control.json'),'utf8'),'{}');
+ a.equal(JSON.stringify(f.logs).includes('test-private-key'),false);
+});
+for(const mode of [0o776,0o773,0o1777,0o2777,0o4777])test('other unsafe directory mode remains rejected at '+mode.toString(8),{directoryMode:mode},f=>a.equal(f.run(),false));
+test('boot-expanded directory still rejects untrusted owner',{directoryMode:0o777,directoryOwner:6000},f=>a.equal(f.run(),false));
+test('directory still requires a shared group',{directoryMode:0o777,directoryOwner:5367,directoryGroup:6000},f=>a.equal(f.run(),false));
 test('untrusted directory owner is rejected',{directoryOwner:6000},f=>a.equal(f.run(),false));
 test('replacement cannot silently change the shared group',{keyGroup:6000},f=>a.equal(f.run(),false));
 test('invalid key is never copied into a trusted replacement',{content:'invalid'},f=>a.equal(f.run(),false));
-test('recovered key enables foreground and power subscriptions with existing Back policy',{},f=>{
+for(const mode of [0o775,0o777])test('controller startup reaches SSAP and Back/power subscriptions at '+mode.toString(8),{directoryMode:mode},f=>{
+ a.equal(f.run(5367,true),true,'controller initialization must complete before screen-watch');
  const {EventEmitter}=require('events'),policy=require('../app/screen-policy')(['test.app']);
  let socket,returns=0,power=0,now=0;
  class WS extends EventEmitter{

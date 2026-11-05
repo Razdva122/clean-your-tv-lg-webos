@@ -1,5 +1,7 @@
 # Requirements and known limits
 
+> **Unpublished 1.8.1 candidate:** see [candidate versions, setup and recovery limits](RELEASE-1.8.1.md). Published downloads remain on 1.7.1. C1 Beta is fresh-install only, selected automatically in the common installer; normal OTA is unavailable and physical C1 acceptance is pending. Historical results below retain their original artifact scope.
+
 > See [1.6.0 versions, installer changes and limits](RELEASE-1.6.0.md) and the [dated acceptance scope](history/2026-11-02-release-1.6.0-final-acceptance.md). Obtain available packages from [GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases).
 
 [Documentation](README.md) · [Choose an edition](EDITIONS.md) · [Install](INSTALL.md)
@@ -32,6 +34,25 @@ Do not bypass failed input, ownership or runtime checks.
 Computer/phone requirements: [desktop](DESKTOP_INSTALL.md), [Android](../android/README.md),
 or [source/manual tools](MANUAL_INSTALL.md). Desktop packages and Android have
 separate OS/device acceptance; a successful computer build is not a TV test.
+
+## webOS 1.x runtime floor (unreleased)
+
+LG documents [Node.js 0.10.15 for webOS TV 1.x](https://webostv.developer.lge.com/develop/guides/js-service-basics#supported-nodejs-version).
+The next candidate admits No-root Helper on 0.10.15+; published v1.7.1 installers
+still require 0.10.25+. Exact 0.10.15 host tests pass with compiled Helper and
+unchanged published Helper 0.6.22 JavaScript. Older/unknown runtimes still stop
+before installation. Root continues to require Node.js 8+.
+
+This does not establish compatibility on the reported 32LB650V-ZN or 49UB8500-UA.
+Their actual Node versions have not yet been measured in the reports. LG lists
+[WebKit 537.41 for packaged apps on webOS 1.x](https://webostv.developer.lge.com/develop/specifications/web-api-and-web-engine#web-engine),
+so UI/native-input/remote acceptance is separate from Node compatibility.
+Do not install a replacement system Node or bypass the existing runtime/input
+checks. A standalone Home IPK or historical Home-only update cannot provide
+Helper's Home-button interception; the current complete installer has no
+Helper-free first-install mode promising that behavior.
+
+[Exact hashes, runtime cases, packaging and limits](history/2026-11-04-webos1-node-floor.md).
 
 ## What has been tested
 

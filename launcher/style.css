@@ -54,6 +54,27 @@ html, body {
   font-family: 'Outfit', sans-serif;
   cursor: default;
 }
+/* The Root window is an overlay; only positively observed content makes Home clear. */
+html[data-home-presentation="overlay"], html[data-home-presentation="closed"],
+body[data-home-presentation="overlay"], body[data-home-presentation="closed"] {
+  background: transparent !important;
+}
+body[data-home-presentation="overlay"] #homeSurface.ctv-home {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+body[data-home-presentation="overlay"] #homeSurface.ctv-home::before {
+  top: auto;
+  height: 400px;
+  background: linear-gradient(180deg, transparent, rgba(0,0,0,.8) 40%, rgba(0,0,0,.92)) !important;
+}
+body[data-home-presentation="overlay"] .ctv-ambient {
+  visibility: hidden !important;
+}
+body[data-home-presentation="closed"] #homeSurface,
+body[data-home-presentation="closed"] #toast {
+  visibility: hidden !important;
+}
 /* ---- ambient glow ---------------------------------------------------------------------------- */
 .ambient {
   position: absolute;
@@ -904,3 +925,24 @@ body.editing #homeSurface[data-layout="scenic-grid"] .ctv-position { display: no
 @keyframes ctv-bump-right {
   40% { transform: translateX(10px); }
 }
+
+/* Ribbon editing keeps the lane anchored and exposes controls at the moving card. */
+body.ribbon-editing #homeSurface[data-ribbon="true"] #viewport,
+body.ribbon-editing #homeSurface[data-ribbon="true"] #stage { top: 0; }
+body.ribbon-editing #homeSurface.ctv-home[data-ribbon="true"] .item .name { display: none !important; }
+body.ribbon-editing #homeSurface[data-ribbon="true"] .item.moving .card { outline: none; }
+.ribbon-edit-arrow { position: absolute; z-index: 6; width: 28px; height: 40px; display: flex; align-items: center; justify-content: center; color: #fff; pointer-events: none; }
+.ribbon-edit-arrow svg { width: 24px; height: 40px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.ribbon-edit-left { left: -30px; }
+.ribbon-edit-right { right: -30px; }
+.ribbon-delete-mark { display: none; }
+body.ribbon-editing #hideApp { bottom: auto; width: 52px; height: 52px; padding: 0; border: 0; border-radius: 0; background: transparent; color: #fff; justify-content: center; }
+body.ribbon-editing #hideApp::before { content: none; }
+body.ribbon-editing #hideApp .hide-standard-icon { display: none; }
+body.ribbon-editing #hideApp .ribbon-delete-mark { display: block; width: 36px; height: 36px; stroke-width: 2.8; }
+body.ribbon-editing #hideApp span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+body.ribbon-editing #hideApp.focused { background: transparent; color: #fff; }
+body.ribbon-editing #hideApp.focused .ribbon-delete-mark { width: 44px; height: 44px; stroke-width: 3.2; }
+body.ribbon-editing #editHint { bottom: auto; color: #fff; text-shadow: 0 2px 6px #000; }
+
+#homeSurface.ctv-remote-navigation #hideApp { transition: none !important; }

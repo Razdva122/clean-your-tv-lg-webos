@@ -13,10 +13,10 @@ for(const normalize of [home.normalizeRibbon,policy.normalizeRibbon]) {
   for(const value of [min,max])assert.equal(normalize({...(key==='bottom'?{labels:'focused-above'}:{}),[key]:value})[key],value);
   for(const value of [min-1,max+1,NaN,Infinity,'1',null,...(key==='skewDeg'||key==='iconScale'?[]:[min+.5])])assert.throws(()=>normalize({[key]:value}),/layout-invalid/,key+': '+value);
  }
- for(const bad of [{labels:'below',bottom:0},{labels:'below',bottom:63},null,[],true,{unknown:1},{shortcuts:'footer'},{edgeNavigation:'none'},{labels:'none'},{showClock:0},{shortcuts:'bottom-left',left:339}])assert.throws(()=>normalize(bad),/layout-invalid/);
+ for(const bad of [{labels:'below',bottom:0},{labels:'below',bottom:63},null,[],true,{unknown:1},{shortcuts:'footer'},{edgeNavigation:'none'},{labels:'none'},{showClock:0},{shortcuts:'bottom-left',left:255}])assert.throws(()=>normalize(bad),/layout-invalid/);
  assert.equal(normalize({labels:'below',bottom:64}).bottom,64);
  assert.equal(normalize({labels:'focused-above',bottom:0}).bottom,0);
- assert.equal(normalize({shortcuts:'bottom-left',left:340,skewDeg:1.5,labels:'focused-above',edgeNavigation:'shortcuts',showClock:false}).showClock,false);
+ assert.equal(normalize({shortcuts:'bottom-left',left:256,skewDeg:1.5,labels:'focused-above',edgeNavigation:'shortcuts',showClock:false}).showClock,false);
 }
 assert.deepEqual(home.geometry('scenic-grid',5),{preset:'scenic-grid',left:112,width:1696,maxWidth:128,maxHeight:128,dockTop:790,padding:0,rowGap:100,rowExtra:0,heroOffset:176,scrollTop:760,scrollBottom:1060,dock:false,columnWidth:339.2,cardWidth:128,cardHeight:128,top:790});
 assert.equal(home.geometry('dock-grid',5).top,708);

@@ -1,4 +1,4 @@
-// ES5: executed unchanged by Node 0.10.25, 0.12.2 and current Node.
+// ES5: executed unchanged by Node 0.10.15, 0.10.25, 0.12.2 and current Node.
 'use strict';
 var assert=require('assert'),path=require('path'),root=process.argv[2];
 require(path.join(root,'state-permissions'));
@@ -111,6 +111,7 @@ server.on('connection',function(socket){
   var message=JSON.parse(String(raw));
   if(message.type==='register')socket.send('{"type":"registered"}');
   else if(message.id==='inputs')socket.send('{"id":"inputs","payload":{"returnValue":true,"devices":[{"appId":"com.webos.app.hdmi3","connected":true,"serial":"PRIVATE"},{"appId":"com.webos.app.hdmi1","connected":false}]}}');
+  else if(message.id==='tuner')socket.send('{"id":"tuner","payload":{"returnValue":true,"apps":[]}}');
   else if(message.id==='apps')socket.send('{"id":"apps","payload":{"launchPoints":[{"id":"com.example.video"}]}}');
   else {socket.send('{"payload":{"appId":"com.',{fin:false});socket.send('gathin.tvhome","label":"Привет"}}',{fin:true});}
  });

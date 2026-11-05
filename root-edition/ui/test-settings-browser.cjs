@@ -8,14 +8,23 @@ const base=process.env.PREVIEW_URL||'http://127.0.0.1:8879';
   page.on('pageerror',e=>errors.push(e.message));
   await page.goto(base+'/root-launcher/index.html');await page.locator('#tiles .add-app').waitFor();
   await page.evaluate(()=>{
+   window.exitCloseCalls=0;window.close=function(){window.exitCloseCalls++;};
    const Original=window.PalmServiceBridge;
-   window.settingsBackend={phase:'active',calls:[],pending:[],delay:false,fail:false};
+   window.settingsBackend={phase:'active',calls:[],pending:[],contextCalls:0,delay:false,fail:false};
    window.PalmServiceBridge=function(){
     const original=new Original();this.cancel=()=>original.cancel();
     this.call=(uri,raw)=>{
      const b=settingsBackend,method=uri.split('/').pop(),payload=JSON.parse(raw);
+     if(uri==='luna://com.webos.applicationManager/launch'&&payload.id==='com.webos.app.home'&&b.delayLG){
+      b.launchPending=b.launchPending||[];b.launchPending.push(()=>this.onservicecallback(JSON.stringify({returnValue:true})));return;
+     }
      if(!uri.startsWith('luna://com.cleanyourtv.root.preview.service/')||!['status','restore','enable'].includes(method)){
       original.onservicecallback=value=>this.onservicecallback(value);original.call(uri,raw);return;
+     }
+     // Presentation is a separate read-only status operation, not a routing
+     // refresh. Keep the routing single-flight/stale-response queue independent.
+     if(method==='status'&&Object.keys(payload).length===1&&payload.presentation==='context'){
+      b.contextCalls++;this.onservicecallback(JSON.stringify({returnValue:true,result:{content:false}}));return;
      }
      if(payload.startup){
       const send=result=>this.onservicecallback(JSON.stringify({returnValue:true,result:{returnValue:true,result}}));
@@ -47,6 +56,7 @@ const base=process.env.PREVIEW_URL||'http://127.0.0.1:8879';
    Object.defineProperty(document,'hidden',{configurable:true,value:false});document.dispatchEvent(new Event('visibilitychange'));
   });
   await page.waitForFunction(()=>settingsBackend.pending.length===1);
+  assert.equal(await page.evaluate(()=>settingsBackend.contextCalls),0,'persistent CARD Home does not query transient overlay context');
   await page.evaluate(()=>document.dispatchEvent(new Event('webOSRelaunch')));
   assert.equal(await page.evaluate(()=>settingsBackend.pending.length),1,'relaunch waits for the active status request');
   assert(await toggle.isDisabled());
@@ -73,6 +83,20 @@ const base=process.env.PREVIEW_URL||'http://127.0.0.1:8879';
   assert.deepEqual(await page.evaluate(()=>settingsBackend.calls.filter(m=>m!=='status')),['enable','restore']);
   assert.equal(await page.evaluate(()=>settingsBackend.pending.length),0,'every serialized request completed');
   assert.equal(await toggle.getAttribute('aria-checked'),'false');
+  assert.equal(await page.evaluate(()=>exitCloseCalls),1,'explicit Off closes only its Root overlay after verified restore and accepted LG Home launch');
+  await toggle.click();await page.waitForFunction(()=>document.querySelector('.root-settings [role=switch]').getAttribute('aria-checked')==='true');
+  await page.evaluate(()=>settingsBackend.delayLG=true);
+  await page.getByRole('button',{name:'Open LG Home',exact:true}).click();
+  await page.waitForFunction(()=>settingsBackend.launchPending&&settingsBackend.launchPending.length===1);
+  await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));settingsBackend.launchPending.shift()();});
+  await page.waitForFunction(()=>exitCloseCalls===2);
+  assert.equal(await page.evaluate(()=>settingsBackend.phase),'active','temporary LG Home keeps routing preference');
+  await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:false});document.dispatchEvent(new Event('visibilitychange'));document.dispatchEvent(new Event('webOSRelaunch'));});
+  await page.locator('#btnSettings').click();await page.waitForFunction(()=>!document.querySelector('.root-settings [role=switch]').disabled);
+  await page.getByRole('button',{name:'Open LG Home',exact:true}).click();await page.waitForFunction(()=>settingsBackend.launchPending.length===1);
+  await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));Object.defineProperty(document,'hidden',{configurable:true,value:false});document.dispatchEvent(new Event('visibilitychange'));document.dispatchEvent(new Event('webOSRelaunch'));settingsBackend.launchPending.shift()();});
+  await page.waitForFunction(()=>document.querySelector('.root-settings').hidden);
+  assert.equal(await page.evaluate(()=>exitCloseCalls),2,'late LG reply cannot close a newly shown/relaunched Root window');
   assert.deepEqual(errors,[]);
   console.log('PASS actual Root launcher/Settings/exit: emergency resume, relaunch, delayed status, explicit enable and Off');
  }finally{await browser.close();}

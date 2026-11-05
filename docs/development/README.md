@@ -1,5 +1,7 @@
 # Development and technical references
 
+- [Focused CI checks](CI-CHECKS.md): routing boundaries, safety gates and measurements.
+
 [User documentation](../README.md) · [Contributing](../../CONTRIBUTING.md) ·
 [Historical records](../history/README.md)
 
@@ -16,6 +18,7 @@ before using a low-level recovery or installation procedure.
 - [Root bundle](../../root-edition/package/README.md), [Root development](../../root-edition/DEVELOPMENT.md), [Root runtime contract](../../root-edition/runtime/README.md).
 - [Contribute a theme](CONTRIBUTING-THEMES.md): PC preview, LAN testing, fixed distributions and Showcase PRs.
 - [Home CSS styling surface](THEME-CSS.md): unreleased visual hooks, engine geometry and trusted dialog boundaries.
+- [Video wallpapers and Wallpapers settings](WALLPAPERS.md): next-release media contract, automatic quality, local cache ownership and acceptance limits.
 - [Homebrew Installer](../../homebrew/README.md) is **unreleased**; [packaging and promotion gates](../../homebrew/DEVELOPMENT.md).
 
 ## Understand behavior and diagnose failures
@@ -23,9 +26,11 @@ before using a low-level recovery or installation procedure.
 - [Early Root admission and connection guidance](INSTALLER-PREFLIGHT-HELP.md): existing Home-interface contract before runtime preparation, typed localized advice and unchanged recovery/trust authority; unreleased.
 
 - [Root native startup input](ROOT-NATIVE-INPUT.md): unpublished owned EIM lifecycle and acceptance limits.
+- [Experimental C1 native gate](C1-NATIVE-GATE.md): separate backend, independent native recovery and physical acceptance limits; unreleased.
 - [Theme development status](THEMES.md), [Home styling parts and CSS rules](THEME-CSS.md).
 
 - [Home settings transport](HOME-CONTROL-TRANSPORT.md): unreleased service-owned IPC, packaging and rollback requirements.
+- [Helper relay cleanup outcomes](HELPER-RELAY-CLEANUP.md): unpublished failure reporting, blocked recovery and synthetic evdev verification.
 - [Home installation gates](HOME-INSTALL-GATES.md): unreleased control-file ownership and Root firmware preflight fixes, packaging requirements and retained-recovery limits.
 - [Home graphics resolution](HOME-GRAPHICS-RESOLUTION.md) and [passive remote diagnostic](PASSIVE-REMOTE-DIAGNOSTICS.md): candidate 720p layout/build support and read-only evidence; physical IR mapping remains unverified.
 - [Companion entry points](../COMPANION-APPS.md), [Helper diagnostics](../HELPER-DIAGNOSTICS.md), [Home/settings diagnostics](../SETTINGS-DIAGNOSTICS.md).
@@ -37,6 +42,7 @@ before using a low-level recovery or installation procedure.
 - [Read-only Root admission](ROOT-READONLY-ADMISSION.md): private owner handoff, isolated inspection and unsupported firmware boundaries.
 - [Passive Root worker diagnostics](ROOT-PASSIVE-DIAGNOSTICS.md): bounded saved-error categories without code staging, routing calls or cancellation admission.
 - [No-root package authority](NO-ROOT-PACKAGE-AUTHORITY.md): #201 endpoint distinctions, preserved pending receipts and unsupported reconciliation.
+- [No-root parent-directory packaging and real opkg lab](../history/2026-11-04-opkg-parent-reproduction.md): next-cycle extraction fix, isolated reproduction and retail acceptance limits.
 - [Interrupted Root installation](../ROOT-INSTALL-CANCELLATION.md), [private Python](../OPTIONAL-PYTHON.md), [native cache cleanup](../WAM-CLEANUP.md).
 - [Firmware update control](../LG-FIRMWARE-UPDATES.md), [experimental HDMI sound recovery](ROOT-AUDIO-RECOVERY.md), [Developer Mode renewal Beta](../DEVELOPER-MODE-BETA.md).
 - [TLS trust](../TLS-TRUST.md), [icons](../../assets/icons/README.md), [brand assets](../../assets/brand/README.md), [published Helper baseline](../../native/published/README.md).
@@ -80,3 +86,7 @@ Browser simulations do not establish physical-TV compatibility.
 [Multilingual GitHub Pages development](../../website/README.md) covers Astro,
 shared Markdown installation guides, translations, SEO checks and the embedded
 launcher demo.
+
+- [Ribbon presentation](RIBBON-PRESENTATION.md): the single full-screen Home lifecycle, own wallpaper and acceptance scope.
+
+- [Single Home C3 regression QA, 2026-11-05](../history/2026-11-05-single-home-regressions.md)

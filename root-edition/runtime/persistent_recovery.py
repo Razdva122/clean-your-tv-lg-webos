@@ -10,6 +10,7 @@ import fcntl
 import json
 import os
 import stat
+import sys
 import tempfile
 import device_adapter as d
 from persistent_lifecycle import identifier
@@ -95,7 +96,19 @@ class Coordinator:
                 from cli import inhibit
                 inhibit(d.STATE)
             except Exception: pass  # Audio state must never block emergency Home restoration.
-            if effect == 'recover': return self._recover(intent)
+            if effect == 'recover':
+                result = self._recover(intent)
+                if reason == 'fault' and result.get('restored_transaction') and not result['intent']['enabled']:
+                    # The operation lock still owns this restored generation. Close
+                    # before any later LG launch can wait while a new owner starts.
+                    try:
+                        d.sam_transport().call('luna://com.webos.applicationManager/closeByAppId', {'id':d.CANDIDATE})
+                        cleanup = 'accepted'
+                    except Exception:
+                        cleanup = 'failed'
+                    # Window cleanup cannot revoke independently verified recovery.
+                    print(json.dumps(dict(event='home-ui-cleanup',result=cleanup)),file=sys.stderr,flush=True)
+                return result
             d.native_input_disable()
             return dict(intent=intent,effect=effect)
 

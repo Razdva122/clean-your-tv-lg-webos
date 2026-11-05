@@ -159,7 +159,7 @@ class OperationTests(unittest.TestCase):
         self.assertTrue(all(selected in command and 'PYTHONDONTWRITEBYTECODE=1' in command for command in commands))
         self.assertIsNone(self.store.pending(installer.profile))
 
-    def test_no_root_rejects_node_below_01025_before_creating_a_receipt(self):
+    def test_no_root_rejects_node_below_01015_before_creating_a_receipt(self):
         import subprocess
         remote = Remote()
         original_run = remote.run
@@ -169,19 +169,19 @@ class OperationTests(unittest.TestCase):
                 args = shlex.split(command)
                 snippet = args[args.index('-e')+1]
                 result = subprocess.run(['node', '-e',
-                    "Object.defineProperty(process.versions,'node',{value:'0.10.24'});"+snippet], capture_output=True)
+                    "Object.defineProperty(process.versions,'node',{value:'0.10.14'});"+snippet], capture_output=True)
                 return 'CYTV_NODE_READY' if result.returncode == 0 else ''
             return original_run(command, **kwargs)
         remote.run = run
         installer = self.installer(remote)
-        with self.assertRaisesRegex(RuntimeError, 'Node.js 0.10.25'):
+        with self.assertRaisesRegex(RuntimeError, 'Node.js 0.10.15'):
             installer.install(self.inventory, 'secret')
         self.assertIsNone(self.store.pending(installer.profile))
         self.assertFalse(any(c[0] == 'upload' for c in remote.calls))
 
-    def test_helper_node_gate_accepts_01025_and_later(self):
+    def test_helper_node_gate_accepts_01015_and_later(self):
         import subprocess
-        for version, allowed in [('0.8.28', False), ('0.10.24', False), ('0.10.25', True),
+        for version, allowed in [('0.8.28', False), ('0.10.14', False), ('0.10.15', True), ('0.10.24', True), ('0.10.25', True),
                                  ('0.10.48', True), ('0.12.0', True), ('0.12.2', True),
                                  ('0.12.18', True), ('8.12.0', True), ('10.24.1', True)]:
             with self.subTest(version=version):
@@ -200,7 +200,7 @@ class OperationTests(unittest.TestCase):
                 if allowed:
                     installer.preflight(install=True)
                 else:
-                    with self.assertRaisesRegex(RuntimeError, 'Node.js 0.10.25'):
+                    with self.assertRaisesRegex(RuntimeError, 'Node.js 0.10.15'):
                         installer.preflight(install=True)
 
     @unittest.skipIf(__import__('os').name == 'nt', 'TV staging uses a POSIX shell')
@@ -965,6 +965,116 @@ class OperationTests(unittest.TestCase):
             {'packages':'verified','launch_request':'accepted',
              'startup':'root-state-verified','home_button':'not-tested'})
 
+    def test_install_waits_for_catalog_without_resubmitting_packages(self):
+        from unittest.mock import patch
+        for delayed, version in ((operations.HOME, None), (operations.HOME, '1.0.0'),
+                                 (operations.HELPER, None), (operations.HELPER, '0.1.0')):
+            with self.subTest(delayed=delayed, version=version):
+                self.store.finish(self.installer(Remote()).profile)
+                remote = Remote()
+                original = remote.luna
+                snapshots = []
+                def luna(uri, payload, **kwargs):
+                    reply = original(uri, payload, **kwargs)
+                    if uri.endswith('/dev/listApps'):
+                        if not snapshots:
+                            reply['apps'] = [dict(a, version=version) if a['id'] == delayed else a
+                                             for a in reply['apps'] if a['id'] != delayed or version]
+                        snapshots.append(reply['apps'])
+                    return reply
+                remote.luna = luna
+                installer = self.installer(remote)
+                clock = [0.0]
+                with patch('cytv.operations.time.monotonic', side_effect=lambda: clock[0]), \
+                     patch('cytv.operations.time.sleep', side_effect=lambda seconds: clock.__setitem__(0, clock[0] + seconds)):
+                    installer.install(self.inventory, 'synthetic-key')
+                self.assertEqual(len(snapshots), 2)
+                self.assertIsNone(self.store.pending(installer.profile))
+                self.assertEqual(installer.tv_info['components'], {'home': '1.2.2', 'helper': '0.6.13'})
+                calls = [c for c in remote.calls if c[0] == 'luna']
+                self.assertEqual([c[2]['id'] for c in calls if c[1].endswith('/dev/install')],
+                                 [operations.HELPER, operations.HOME])
+                last_read = max(i for i, c in enumerate(remote.calls) if c[0] == 'luna' and c[1].endswith('/dev/listApps'))
+                config = next(i for i, c in enumerate(remote.calls) if c[0] == 'upload' and c[1].endswith('/ssap-key.json'))
+                self.assertLess(last_read, config)
+
+    def test_catalog_mismatch_uses_one_deadline_and_keeps_unconfigured_journal(self):
+        from unittest.mock import patch
+        from cytv.errors import UserError
+        remote = Remote()
+        installer = self.installer(remote)
+        original = remote.luna
+        clock, timeouts, receipt_before = [0.0], [], []
+        receipt = self.store.device_dir(installer.profile) / 'operation.json'
+        def luna(uri, payload, **kwargs):
+            reply = original(uri, payload, **kwargs)
+            if uri.endswith('/dev/listApps'):
+                receipt_before.append(receipt.read_bytes())
+                timeouts.append(kwargs.get('timeout', 30))
+                clock[0] += 0.25  # Include time spent reading, not just sleeps.
+                reply['apps'] = [a for a in reply['apps'] if a['id'] != operations.HOME]
+            return reply
+        remote.luna = luna
+        with patch('cytv.operations.time.monotonic', side_effect=lambda: clock[0]), \
+             patch('cytv.operations.time.sleep', side_effect=lambda seconds: clock.__setitem__(0, clock[0] + seconds)):
+            with self.assertRaises(UserError) as caught:
+                installer.install(self.inventory, 'synthetic-key')
+        self.assertEqual(caught.exception.reason_code, 'version-mismatch')
+        self.assertEqual(clock[0], 10.0)
+        self.assertGreater(len(timeouts), 1)
+        self.assertTrue(all(0 < timeout <= 10 for timeout in timeouts))
+        self.assertEqual(timeouts, sorted(timeouts, reverse=True))
+        self.assertEqual(receipt.read_bytes(), receipt_before[0])
+        self.assertEqual(installer.tv_info['components'], {'helper': '0.6.13'})
+        self.assertFalse(any(c[0] == 'upload' and c[1].endswith('/ssap-key.json') for c in remote.calls))
+        self.assertFalse(any(c[0] == 'luna' and (c[1].endswith('/launch') or c[1].endswith('/dev/remove')) for c in remote.calls))
+        self.assertEqual(installer.tv_info['setup_outcome']['packages'], 'not-verified')
+
+    def test_catalog_success_after_deadline_cannot_start_helper(self):
+        from unittest.mock import patch
+        from cytv.errors import UserError
+        remote = Remote()
+        original = remote.luna
+        clock = [0.0]
+        def luna(uri, payload, **kwargs):
+            reply = original(uri, payload, **kwargs)
+            if uri.endswith('/dev/listApps'):
+                clock[0] = 11.0  # Transport setup can consume the polling budget.
+            return reply
+        remote.luna = luna
+        installer = self.installer(remote)
+        with patch('cytv.operations.time.monotonic', side_effect=lambda: clock[0]), self.assertRaises(UserError):
+            installer.install(self.inventory, 'synthetic-key')
+        self.assertIsNotNone(self.store.pending(installer.profile))
+        self.assertFalse(any(c[0] == 'upload' and c[1].endswith('/ssap-key.json') for c in remote.calls))
+        self.assertFalse(any(c[0] == 'luna' and c[1].endswith('/launch') for c in remote.calls))
+
+    def test_catalog_errors_stop_without_polling_or_configuring(self):
+        from unittest.mock import patch
+        from cytv.errors import TVRejected, UserError
+        for failure in ('denied', 'malformed', 'timeout'):
+            with self.subTest(failure=failure):
+                self.store.finish(self.installer(Remote()).profile)
+                remote = Remote()
+                installer = self.installer(remote)
+                original = remote.luna
+                def luna(uri, payload, **kwargs):
+                    if uri.endswith('/dev/listApps'):
+                        remote.calls.append(('luna', uri, payload))
+                        if failure == 'denied':
+                            raise TVRejected('Synthetic denial', {'returnValue': False, 'errorCode': -1}, uri)
+                        if failure == 'timeout':
+                            raise TimeoutError('Synthetic timeout')
+                        return {'returnValue': True, 'apps': None}
+                    return original(uri, payload, **kwargs)
+                remote.luna = luna
+                with patch('cytv.operations.time.sleep') as sleep, self.assertRaises((UserError, TimeoutError)):
+                    installer.install(self.inventory, 'synthetic-key')
+                sleep.assert_not_called()
+                self.assertIsNotNone(self.store.pending(installer.profile))
+                self.assertEqual(len([c for c in remote.calls if c[0] == 'luna' and c[1].endswith('/dev/listApps')]), 1)
+                self.assertFalse(any(c[0] == 'upload' and c[1].endswith('/ssap-key.json') for c in remote.calls))
+
     def test_no_root_installs_helper_then_home_and_verifies_before_launch(self):
         remote = Remote()
         installer = self.installer(remote)
@@ -973,7 +1083,7 @@ class OperationTests(unittest.TestCase):
         installs = [c[2]['id'] for c in calls if c[1].endswith('/install')]
         self.assertEqual(installs, ['com.local.nativehome', 'com.gathin.tvhome'])
         self.assertEqual(calls[-1][1:], ('com.webos.applicationManager/launch', {'id': 'com.local.nativehome', 'params': {'nativeHomeStart': True}}))
-        self.assertTrue(any(c[1].endswith('/dev/listApps') for c in calls[:-1]))
+        self.assertEqual(len([c for c in calls if c[1].endswith('/dev/listApps')]), 1)
         self.assertTrue(any(c[0] == 'upload' and c[1].endswith('ssap-key.json') and c[2] == 0o640 for c in remote.calls))
         self.assertIsNone(self.store.pending(installer.profile))
 
@@ -1137,6 +1247,51 @@ class OperationTests(unittest.TestCase):
         self.assertEqual(self.store.pending(installer.profile)['action'], 'activate-root')
         self.assertEqual(sum(c[0]=='run' and c[1].endswith(' enable') for c in remote.calls), 1)
         self.assertFalse(any(c[0]=='luna' and c[1].endswith('/launch') for c in remote.calls))
+
+    def test_activation_failures_keep_typed_evidence_without_replaying(self):
+        from cytv.errors import TVCommandError, TVRejected
+        from cytv.diagnostics import create_report
+        self.root_bundle()
+        cases = (
+            ('enable', TVCommandError(1), 'ssh_command',
+             {'exit_status': 1, 'root_action': 'enable', 'root_boundary': 'driver'}),
+            ('launch', TVRejected('PRIVATE TV reply',
+                {'returnValue': False, 'errorCode': -1, 'errorText': 'PRIVATE'},
+                'com.webos.applicationManager/launch'), 'luna',
+             {'operation': 'application-launch', 'error_code': -1,
+              'details_error_code': None, 'status_value': None,
+              'state': 'unknown', 'return_value': False}),
+        )
+        for step, failure, field, expected in cases:
+            with self.subTest(step=step):
+                remote = Remote()
+                run, luna = remote.run, remote.luna
+                def fail_enable(command, **kwargs):
+                    if step == 'enable' and command.endswith(' enable'):
+                        remote.calls.append(('run', command))
+                        raise failure
+                    return run(command, **kwargs)
+                def fail_launch(uri, payload, **kwargs):
+                    if uri == 'com.webos.applicationManager/launch':
+                        remote.calls.append(('luna', uri, payload))
+                        raise failure
+                    return luna(uri, payload, **kwargs)
+                remote.run, remote.luna = fail_enable, fail_launch
+                installer = self.installer(remote, 'root')
+                with self.assertRaises(operations.UserError) as caught:
+                    installer.install(self.inventory)
+                pending = self.store.pending(installer.profile)
+                report = json.loads(create_report(self.store, 'install', installer.profile,
+                                                  'activate-root', caught.exception).read_text())
+                self.store.finish(installer.profile)  # Isolate the next failure scenario.
+                self.assertIs(caught.exception, failure)
+                self.assertEqual((pending['action'], pending['stage']), ('activate-root', step))
+                self.assertEqual(report[field], expected)
+                self.assertEqual(report['first_failure'][field], expected)
+                self.assertNotIn('PRIVATE', json.dumps(report))
+                self.assertEqual(sum(c[0] == 'run' and c[1].endswith(' enable') for c in remote.calls), 1)
+                self.assertEqual(sum(c[0] == 'luna' and c[1].endswith('/launch') for c in remote.calls),
+                                 0 if step == 'enable' else 1)
 
     def test_root_failed_readback_does_not_report_success(self):
         self.root_bundle()

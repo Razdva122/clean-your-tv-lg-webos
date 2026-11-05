@@ -1,5 +1,7 @@
 # Recover TV controls or an interrupted installation
 
+> **Unpublished 1.8.1 candidate:** see [candidate versions, setup and recovery limits](RELEASE-1.8.1.md). Published downloads remain on 1.7.1. C1 Beta is fresh-install only, selected automatically in the common installer; normal OTA is unavailable and physical C1 acceptance is pending. Historical results below retain their original artifact scope.
+
 ## Return to LG Home
 
 Press Home **three times within two seconds**, releasing between presses. This
@@ -220,7 +222,8 @@ transaction or backup also blocks replacement, even if marked complete; preserve
 it for review rather than deleting it to force replacement. It does not patch
 retained pinned code in place or replay an uncertain remove/install request.
 
-A completed earlier replacement to 1.1.1 can start a new 1.2.0 operation only
+The unpublished 1.8.1 installer targets System Updater 1.2.1. A completed earlier
+replacement to 1.1.1 can start a new 1.2.1 operation only
 after the installer authenticates its saved bundle, baseline, original archive,
 terminal removal and current owner, and confirms that later recovery has finished.
 The original completed journal is durably archived with its existing evidence;

@@ -2,8 +2,8 @@
 (function () {
   'use strict';
   function t(source, params) { if (window.HomeI18n) return window.HomeI18n.t(source, params); return String(source).replace(/\{(\w+)\}/g, function (_, key) { return params && params[key] !== undefined ? params[key] : '{' + key + '}'; }); }
-  var panel, message, buttons, selected = 0, busy = false, previous, rootStatus = null;
-  var checkingUpdates = false, categories, statusGeneration = 0, refreshTail = Promise.resolve();
+  var panel, message, buttons, visitHint, selected = 0, busy = false, previous, rootStatus = null;
+  var checkingUpdates = false, categories, statusGeneration = 0, windowGeneration = 0, refreshTail = Promise.resolve();
   var sourceGroup, sourceHint, sourceStatus = null, sourceUnavailable = false, sourceKeys = ['tv','youtube'];
   var sources = {tv:true,youtube:false};
   function renderSources() {
@@ -86,11 +86,19 @@
       if (r.returnValue !== true) throw new Error('Could not open LG Home. Try again.');
     });
   }
+  function leaveHome() {
+    var ticket = windowGeneration;
+    return launch('com.webos.app.home').then(function () {
+      // A newer relaunch/window owner must not be closed by this old reply.
+      if (windowGeneration === ticket) window.close();
+    });
+  }
   var exit = createRootExit(function (method) {
     return request('luna://com.cleanyourtv.root.preview.service/' + method, {}, method === 'restore' ? 620000 : 15000);
-  }, function () { return Promise.resolve(); });
+  }, leaveHome);
   function control(method, payload) {
-    return request('luna://com.cleanyourtv.root.preview.service/' + method, payload || {}, 30000).then(function (reply) {
+    var gateEnable = method === 'enable' && rootStatus && rootStatus.effective && rootStatus.effective.backend === 'c1-native-gate';
+    return request('luna://com.cleanyourtv.root.preview.service/' + method, payload || {}, gateEnable ? 100000 : 30000).then(function (reply) {
       if (!reply || reply.returnValue !== true || !reply.result || reply.result.returnValue !== true)
         throw new Error(reply && reply.errorText || 'Root control did not confirm success. Check status before retrying.');
       return reply.result.result;
@@ -116,6 +124,7 @@
         if (!status || typeof status !== 'object' || !('intent' in status) ||
             status.intent !== null && (!status.intent || typeof status.intent.phase !== 'string')) throw new Error('Invalid service response');
         rootStatus = status; renderSources();
+        visitHint.hidden = !!(status.effective && status.effective.backend === 'c1-native-gate');
         var phase = status.intent && status.intent.phase, active = phase === 'active';
         buttons[3].setAttribute('aria-checked', String(active));
         buttons[3].disabled = !!phase && phase !== 'active' && phase !== 'disabled';
@@ -138,8 +147,8 @@
     invalidateMode();
     if (!panel.hidden && !document.hidden && !busy) refreshMode();
   }
-  document.addEventListener('visibilitychange', resumeMode);
-  document.addEventListener('webOSRelaunch', resumeMode);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) windowGeneration++; resumeMode(); });
+  document.addEventListener('webOSRelaunch', function () { windowGeneration++; resumeMode(); });
   function changeMode() {
     if (!rootStatus || buttons[3].disabled || busy) return;
     var active = rootStatus.intent && rootStatus.intent.phase === 'active';
@@ -168,7 +177,7 @@
   }
   function close() {
     if (busy) return;
-    if(window.HomeThemePanel)HomeThemePanel.unmount();
+    if(window.HomeWallpaperPanel)HomeWallpaperPanel.unmount();if(window.HomeThemePanel)HomeThemePanel.unmount();
     invalidateMode();
     panel.hidden = true;
     if (window.ThemeRuntime) window.ThemeRuntime.resume('settings');
@@ -206,7 +215,8 @@
     if (index === 0) { launch('com.palm.app.settings').catch(function (e) { message.textContent = t(e.message); }); return; }
     busy = true; buttons.forEach(function (b) { b.disabled = true; });
     message.textContent = t('Opening LG Home…');
-    launch('com.webos.app.home').then(function () { busy = false; close(); }).catch(function (e) {
+    var gateVisit = rootStatus && rootStatus.effective && rootStatus.effective.backend === 'c1-native-gate';
+    (gateVisit ? exit() : leaveHome()).then(function () { busy = false; close(); }).catch(function (e) {
       busy = false; message.textContent = t(e.message);
     }).finally(function () {
       buttons.forEach(function (b) { b.disabled = false; });
@@ -228,7 +238,7 @@
     text(home, 'h2', 'Your Home screen');
     message = text(home, 'p', '', 'settings-status'); message.setAttribute('aria-live','polite');
     var homeActions = document.createElement('div'); homeActions.className = 'renewal-actions home-routing-actions'; home.appendChild(homeActions);
-    text(home, 'p', 'Open LG Home once, keeping your Home choice.', 'home-visit-hint').id = 'rootHomeVisitHint';
+    visitHint = text(home, 'p', 'Open LG Home once, keeping your Home choice.', 'home-visit-hint'); visitHint.id = 'rootHomeVisitHint';
     sourceGroup = document.createElement('section'); sourceGroup.className = 'startup-sources'; sourceGroup.setAttribute('aria-label', t('Open Clean Your TV first')); home.appendChild(sourceGroup);
     text(sourceGroup, 'h3', 'Open Clean Your TV first');
     var sourceActions = document.createElement('div'); sourceActions.className = 'renewal-actions startup-source-actions'; sourceGroup.appendChild(sourceActions);
@@ -267,10 +277,12 @@
     });
     themes.id='homeThemeHost';if(window.HomeThemePanel)HomeThemePanel.mount(themes);
     var appsError = text(apps, 'p', ''); appsError.id = 'homeAppsError'; appsError.setAttribute('role','alert');
+    var wallpapers=document.createElement('div');if(window.HomeWallpaperPanel)HomeWallpaperPanel.mount(wallpapers);
     if(window.SettingsCategories) categories = SettingsCategories.attach(panel, card, [
       {id:'home',label:'Your Home screen',elements:[home]},
       {id:'appearance',label:'Appearance',elements:[layout,apps]},
       {id:'themes',label:'Themes',elements:[themes]},
+      {id:'wallpapers',label:'Wallpapers',elements:[wallpapers]},
       {id:'language',label:'Language',elements:[buttons[5]]},
       {id:'updates',label:'Software updates',elements:[buttons[4],buttons[6]]},
       {id:'advanced',label:'Advanced',elements:[buttons[0],buttons[7]]}

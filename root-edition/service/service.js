@@ -25,7 +25,9 @@ var handlers = require('./handlers')(function (command, transaction) {
     var executable = command === 'boot' ? '/bin/sh' : selected;
     var args = command === 'boot' ? [__dirname + '/boot-recover.sh'] : [runtime, command];
     if (command === 'confirm') args.push(transaction);
-    execFile(executable, args, {timeout:command === 'restore' ? 600000 : command === 'boot' ? 120000 : 30000,maxBuffer:65536}, function (error, stdout) {
+    // This selects a deadline only; Python authenticates the backend descriptor.
+    var gateEnable = command === 'enable' && require('fs').existsSync('/var/lib/clean-your-tv-root/home-backend.json');
+    execFile(executable, args, {timeout:command === 'restore' ? 600000 : command === 'boot' ? 120000 : gateEnable ? 90000 : 30000,maxBuffer:65536}, function (error, stdout) {
       if (error) return reject(new Error('Recovery operation failed; inspect runtime status'));
       try { resolve(JSON.parse(stdout)); } catch (_) { reject(new Error('Invalid runtime response')); }
     });
@@ -39,7 +41,7 @@ var handlers = require('./handlers')(function (command, transaction) {
     });
     child.stdin.end(command === 'configure' ? JSON.stringify(sources) : '');
   });
-});
+}, require('./presentation-context')(execFile, function () { return process.getuid(); }));
 Object.keys(handlers).forEach(function (method) {
   service.register(method, function (message) {
     handlers[method](message.payload).then(function (result) { result.root = process.getuid() === 0; message.respond(result); });

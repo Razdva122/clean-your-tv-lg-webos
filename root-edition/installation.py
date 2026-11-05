@@ -232,6 +232,11 @@ def device_snapshot(supported=True, read=read_journal, owned_operation=None):
             if any(os.path.lexists(p) for p in paths): result.update(present=True,retained=True)
             return result
         result['present'] = True
+        if name == 'root' and any(os.path.lexists(root/entry) for entry in ('home-backend.json','c1-gate','runtime/c1_gate.py','runtime/c1-home-gate')):
+            # Developer-only routing is not a complete normal product contract.
+            # Its own retained deploy driver supplies explicit status/removal.
+            result['retained'] = True
+            return result
         verify_binding(root)
         owner = {'root':'deploy','root-updater':'root-bootstrap','system-updater':'system-bootstrap'}[name]
         path, field, finished = JOURNALS[owner]

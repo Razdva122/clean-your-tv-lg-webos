@@ -7,8 +7,8 @@ const {execFileSync} = require('node:child_process');
 const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const root = path.resolve(__dirname, '../..');
 
-function stage() {
-  const site = path.join(root, 'build/tests/themes/site');
+function stage(name = process.env.THEME_STAGE || 'site') {
+  const site = path.join(root, 'build/tests/themes', name);
   execFileSync('python3', ['scripts/preview.py', '--build', site], {cwd: root});
   return site;
 }

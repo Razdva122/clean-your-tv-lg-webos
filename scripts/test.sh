@@ -1,15 +1,38 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
+# Shards run in separate CI checkouts; never export this selection to child tests.
+shard=""
+shard_index=1
+if [[ "${1:-}" == --shard ]]; then
+  shard="${2:-}"
+  if [[ ! "$shard" =~ ^[1-9][0-9]{0,2}/[1-9][0-9]{0,2}$ ]] || (( ${shard%/*} > ${shard#*/} )); then
+    echo "Invalid shard: $shard (expected INDEX/COUNT, 1 <= INDEX <= COUNT <= 999)" >&2
+    exit 2
+  fi
+  shard_index="${shard%/*}"
+  shift 2
+fi
+primary() { [[ "$shard_index" == 1 ]]; }
+python_suite() {
+  if [[ -n "$shard" ]]; then
+    python3 scripts/test-shard.py --shard "$shard" -s "$1"
+  else
+    python3 -m unittest discover -s "$1"
+  fi
+}
 # No arguments runs the full suite (local checks and release validation).
 selected=" ${*:-ui tv installer android setup preview} "
 for component in "$@"; do
-  case "$component" in ui|tv|installer|android|setup|preview) ;; *) echo "Unknown test component: $component" >&2; exit 2 ;; esac
+  case "$component" in ui|tv|tv-runtime|installer|android|setup|preview) ;; *) echo "Unknown test component: $component" >&2; exit 2 ;; esac
 done
 has() { [[ "$selected" == *" $1 "* ]]; }
 
-if has ui || has tv; then
+if primary && { has ui || has tv; }; then
   node tests/home-viewport.cjs
+  node tests/home-presentation.cjs
+  node tests/noroot-presentation-context.cjs
+  node tests/themes/presentation.cjs
   npm run test:compat
   npm run lint:compat
   npm run test:themes
@@ -19,7 +42,8 @@ if has ui || has tv; then
   for file in root-edition/ui/*.js; do node --check "$file"; done
 fi
 
-if has tv; then
+if has tv || has tv-runtime; then
+if primary; then
 node tests/helper-compat.cjs
 node tests/passive-remote-diagnostic.cjs
 node tests/helper-panel-diagnostics.cjs
@@ -47,6 +71,8 @@ node tests/controller-resume.cjs
 node --test tests/controller-resume-home.cjs tests/controller-watchdog.cjs
 node tests/controller-home.cjs
 for test in native/prototype/test-*.cjs; do node "$test"; done
+python3 -m unittest discover -s tests -p test_stop_fs.py
+python3 -m unittest discover -s tests -p 'test_private*.py'
 mkdir -p build/tests
 cc -std=c99 -Wall -Wextra -Werror native/prototype/filter.c native/prototype/test_filter.c -o build/tests/test-filter
 cc -std=c99 -Wall -Wextra -Werror native/prototype/test_startup.c -o build/tests/test-startup
@@ -65,10 +91,13 @@ node root-edition/service/test-audio-recovery.cjs
 node root-edition/service/test-handlers.js
 node root-edition/service/test-startup.cjs
 node root-edition/service/test-persistent.js
+node root-edition/service/test-presentation.cjs
 node root-edition/service/test-python-binding.js
 for test in root-edition/tests/test_update_*.cjs; do node "$test"; done
 for file in root-edition/updater/*.js; do node --check "$file"; done
-python3 -m unittest discover -s root-edition/tests
+fi
+python_suite root-edition/tests
+if primary; then
 
 for test in tests/updates/*.cjs; do node "$test"; done
 for test in tests/system_updates/*.cjs; do node "$test"; done
@@ -76,23 +105,31 @@ python3 -m unittest discover -s tests/system_updates
 for file in updater-service/*.js updater-app/*.js; do node --check "$file"; done
 cmp launcher/user-data.js updater-service/user-data.js
 fi
+fi
 
 if has setup; then
-  python3 -m unittest discover -s tests/setup
+  python_suite tests/setup
 fi
 if has installer; then
+  if primary; then
   python3 -m unittest discover -s homebrew/tests -p test_payload.py
   node homebrew/tests/runtime.cjs
   node homebrew/tests/bridge.cjs
   node homebrew/tests/ui.cjs
   python3 -m unittest discover -s homebrew/tests -p 'test_installer*.py'
   python3 -m unittest discover -s homebrew/tests -p test_continuation.py
-  python3 -m unittest discover -s tests/cytv
+  fi
+  python_suite tests/cytv
 fi
-if has android; then
+if primary && has android; then
   python3 -m unittest discover -s android/tests
 fi
-if has preview; then
+if primary && has preview; then
+  node tests/home-presentation-ui.cjs
+  node tests/root-decoder-ui.cjs
+  node tests/preview-presentation-ui.cjs
+  node tests/themes/ribbon-reference-ui.cjs
+  node tests/themes/ribbon-edit-ui.cjs
   for test in tests/showcase/{registry,submission-security,remote}.cjs; do node "$test"; done
   node tests/preview-bridge.cjs
   node tests/preview-themes-ui.cjs

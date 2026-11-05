@@ -10,6 +10,23 @@ from cytv.errors import UserError, TVCommandError
 
 
 class ContextTests(unittest.TestCase):
+    def test_package_failure_detail_survives_recovery_error_without_changing_pending(self):
+        from cytv.errors import TVRejected
+        self.store.begin(self.profile, 'install')
+        journal = self.store.device_dir(self.profile) / 'operation.json'
+        before = journal.read_bytes()
+        error = TVRejected('Install rejected', {'statusValue': 24, 'details': {
+            'state': 'install failed', 'errorCode': -1, 'reason': 'FAILED_IPKG_INSTALL'}},
+            'com.webos.appInstallService/dev/install')
+        self.report('install', 'install-helper', error)
+        self.store = state.Store(self.tmp.name)
+        later = self.report('uninstall', 'uninstall', TVRejected('Status rejected',
+            {'returnValue': False, 'errorCode': -1}, 'com.webos.appInstallService/status'))
+        self.assertEqual(later['luna']['operation'], 'package-status')
+        self.assertEqual(later['first_failure']['luna']['state'], 'install failed')
+        self.assertEqual(later['first_failure']['luna']['reason'], 'FAILED_IPKG_INSTALL')
+        self.assertEqual(journal.read_bytes(), before)
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)

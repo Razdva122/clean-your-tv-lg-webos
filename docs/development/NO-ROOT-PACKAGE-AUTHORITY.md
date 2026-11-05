@@ -63,6 +63,29 @@ firmware. No supported historical readback was established, so neither legacy
 pending action gains a reconciliation path. The handoff identifies the exact
 vendor contract needed before a device probe can be designed.
 
+## Normal-install catalog convergence (unreleased)
+
+After both live `dev/install` streams return terminal success, the No-root
+installer uses a ten-second polling budget for one `/dev/listApps` snapshot
+containing both expected component versions. Each response-read timeout is
+limited to the remaining monotonic budget, and mismatches are polled at intervals
+of up to one second. A response arriving after the deadline cannot authorize
+continuation. Existing SSH channel setup remains governed separately by the
+shared transport; this is not a hard end-to-end wall-clock timeout.
+This accommodates delayed SAM catalog visibility without repeating installation.
+A current matching snapshot proceeds immediately; denial, timeout or malformed
+inventory stops immediately. A persistent mismatch preserves the pending journal
+and the latest component snapshot, without configuring or starting Helper.
+
+This wait runs only inside the new installation's existing verification step.
+`status()` and recovery do not use it to reconcile a legacy operation, and the
+denied global-status guard is unchanged. It does not supply missing historical
+terminal evidence or repair already pending installations. Synthetic host tests
+cover the timing mechanism; the original #295 device cause and physical recovery
+remain unverified. There is no new endpoint, permission, state format or user
+confirmation. Shared console/desktop/Android packages need a normal future build;
+this focused change does not select or modify a frozen release candidate.
+
 ## Remaining evidence
 
 The next work belongs to maintainer research into terminal authority, rather

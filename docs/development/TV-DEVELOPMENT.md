@@ -30,7 +30,8 @@ see [automatic font preparation](../TV-WEB-BUILD.md#chinese-ui-fonts).
 Compilation failures preserve the previous successful output.
 
 The staged metadata uses `com.cleanyourtv.dev.ui`, without Home category or
-privileged ACG permissions. LocalStorage and IndexedDB access use the
+privileged ACG permissions. Its ordinary opaque CARD window delegates activation
+and relaunch to webOS, matching the current single-Home window contract. LocalStorage and IndexedDB access use the
 `cytv.dev.ui.` namespace, including when a hosted CLI reuses its own origin.
 The native bridge is disabled before loading the preview simulation, then the
 mock is locked against replacement. A single bootstrap loads product scripts only
@@ -39,6 +40,9 @@ webOSSystem cannot reach native services. CSP permits same-origin bundled assets
 needed by the theme engine, permits validated blob images and blocks connections
 to external endpoints;
 settings, launches, Root activation, audio and firmware actions are simulated.
+Bundled video wallpapers use their verified local MP4 files in this UI-only
+package, rather than the disabled native media-cache service. External/personal
+media retains the browser Blob fallback and may depend on the TV decoder.
 No Root service, updater, startup hook or Home routing configuration is staged.
 
 `com.cleanyourtv.root.preview` is the **production Root app ID**, despite its

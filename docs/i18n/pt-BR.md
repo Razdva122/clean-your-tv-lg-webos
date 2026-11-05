@@ -1,5 +1,15 @@
 # Clean Your TV — guia de uso
 
+> **1.8.2:** [English](../RELEASE-1.8.2.md) · [LS2 Root #337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337).
+
+**C1 Beta (#298):** Escolha Root no instalador comum para computador. TVs C1 compatíveis com os critérios são detectadas automaticamente; não é preciso outro instalador ou opção especial. Esse caminho exige uma instalação limpa, não oferece atualizações automáticas e ainda não foi validado em um C1 físico. Abrir LG Home, segurar Back ou uma parada de segurança/energia podem deixar o controle do Home desligado; ative Alterar Home novamente nas configurações da TV. O caminho Root normal não muda. Se restarem outros componentes No-root, a remoção completa do C1 para antes de fazer alterações. Remova esses componentes primeiro pelo fluxo normal de No-root; preserve os dados de recuperação se o estado estiver indefinido. [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md).
+
+1.8.2 (#290): **+ / Adicionar app** oferece TV ao vivo com o nome fornecido pela TV somente quando o sintonizador é detectado como instalado. Outros apps de sistema ocultos continuam excluídos. No-root precisa do Helper e instalador atualizados; Root precisa do pacote Home atualizado. A abertura dos canais ainda precisa ser verificada na TV.
+
+**Ribbon no Home:** Ribbon é um tema do único aplicativo Home em tela cheia nas duas edições, com seu próprio fundo. Vídeo ou HDMI não são exibidos atrás dos cartões. A seleção de um aplicativo usa a troca normal de aplicativos da TV. Os controles de emergência permanecem iguais. Consulte as notas da versão para o escopo dos testes e as limitações conhecidas. [Ribbon](../THEMES.md#ribbon-over-applications-unreleased).
+
+Ribbon: segure OK para editar; ←/→ move o cartão, ↑ seleciona × (ocultar da Home), ↓ volta ao cartão, OK confirma e Back cancela. O fundo atual é mantido.
+
 **1.7.0 — fontes de inicialização Root:** Em Configurações → Sua tela Home, ative **Alterar Home** para editar **Abrir Clean Your TV primeiro**. **LG Channels / TV ao vivo** vem ativado; **YouTube** vem desativado. Com Alterar Home desligado, os interruptores continuam visíveis, mas indisponíveis, e os valores são mantidos. As preferências ficam privadas nesta TV e não fazem parte da exportação portátil de perfil. Isso não comprova o funcionamento ao ligar ou despertar a TV. Uma fonte desativada deixa a decisão de inicialização para o firmware da TV; não garante o retorno àquela fonte. Não há interruptor de inicialização HDMI. [Limites da inicialização nativa (inglês)](../../root-edition/README.md#candidate-native-startup-choices).
 
 > Este guia descreve a versão 1.7.0. Use os pacotes disponíveis nas [versões publicadas no GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases). Inclui as cinco melhorias do instalador. Ao reabrir, as configurações Root leem o estado real; uma verificação com falha não ativa Home. System Updater 1.2.0 atende à nova instalação permitida ou à substituição verificada de 1.1.0/1.1.1. O 1.1.2 instalado mantém seus canais antigos; não há migração geral. Preserve os dados de recuperação e não force a substituição. [Versões e limites](../RELEASE-1.7.0.md).
@@ -31,6 +41,8 @@ Ligue a TV e conecte os dois dispositivos à mesma rede local confiável. Depois
 
 1.5.4 inclui Home Helper **0.6.21** para Node.js **0.10.25+** na TV; Root continua exigindo Node.js **8+**. [Compatibility](../COMPATIBILITY.md).
 
+**Alteração não publicada para webOS 1.x:** o próximo instalador No-root aceita Node.js **0.10.15+** da TV após testes do Helper nessa versão exata; o instalador publicado 1.7.1 ainda exige **0.10.25+**. Isso não confirma compatibilidade com WebKit antigo, entrada nativa ou Home. Não substitua o runtime da TV nem ignore verificações. Root ainda exige Node.js 8+. [Testes e limites](../COMPATIBILITY.md#webos-1x-runtime-floor-unreleased).
+
 No-root Helper precisa de Node.js **0.10.25+** na TV. Root precisa de Node.js **8+** e Python **3.9+** funcional. Se necessário, o instalador baixa um Python privado verificado; a preparação inicial precisa de **320 MiB** livres. Ele não substitui o Python do sistema. Preserve os ambientes usados na recuperação. [Python (inglês)](../OPTIONAL-PYTHON.md). A renovação do Developer Mode é **Beta, desativada por padrão**; a renovação real sem root não está confirmada. Continue conferindo o cronômetro oficial.
 
 ### Configurar Developer Mode (No-root)
@@ -57,6 +69,8 @@ Mantenha Developer Mode ativo: antes de o tempo acabar, abra o app e pressione E
 
 [Instalador Android (inglês)](../../android/README.md): escolha o idioma no canto superior direito. Atualize sem desinstalar nem apagar dados. Android 7 / WebView 108 é o mínimo, não um telefone verificado; a aceitação usou emulador Android 15 ARM64 / WebView 124. Telefones físicos e recuperação conectada a uma TV real continuam sem verificação.
 
+**Candidato Android não publicado:** para uma operação Root original `install / coordinator-submitted`, a revisão de recuperação pode fazer uma inspeção somente de leitura após confirmação explícita, usando o perfil e a chave de host SSH originais. Não desinstale, limpe dados, substitua o perfil ou repita a instalação. Use apenas o APK reconstruído e assinado indicado pelo mantenedor; o APK público ainda não inclui esse caminho. [Procedimento e limites](../../android/README.md#interrupted-root-installation-inspection-unreleased).
+
 O assistente usa inicialmente o idioma do sistema e salva sua escolha explícita. Na TV, abra **Configurações → Idioma** e escolha um idioma ou a opção automática do sistema. As preferências da TV e do instalador são independentes. Veja os códigos no [índice de idiomas](../LANGUAGES.md).
 
 Para a CLI baixada separadamente no macOS/Linux, na pasta extraída:
@@ -77,6 +91,8 @@ Setas selecionam; OK abre; segure OK para reorganizar. Um toque em Voltar manté
 **Pressione Home três vezes em dois segundos**, soltando entre os toques. Isso restaura LG Home e interrompe o controle sem apagar preferências. No No-root Helper até a versão 0.6.13, segure Home por cerca de dois segundos. Segurar Home não é o gesto de emergência do Root.
 
 No-root: Para reiniciar o controle de Home, abra Home Helper, escolha Iniciar Helper e confirme. Sua tela Home escolhida será mantida. Root: ative **Alterar Home** nas configurações do Home para retomar. **Abrir LG Home** abre LG Home uma vez sem mudar o destino de Home. Para restaurar LG Home como destino permanente, desative **Alterar Home** ou execute `cytv restore`. Nunca execute os dois controladores juntos. Se a falha voltar, mantenha LG Home ativo.
+
+Correção Root ainda não publicada: desativar o controle Home ou escolher Open LG Home fecha a janela Root após a confirmação de abertura do LG Home. Você pode abrir Home Root manualmente para acessar as configurações mantendo o controle Home desativado.
 
 > **1.5.4 — Root:** ativar explicitamente **Alterar Home** com o Root funcionando corretamente cria uma entrada nativa **Clean** do CYTV e salva Clean como entrada lembrada. Desativar o controle do Home, uma parada de emergência, falha, pausa para atualização ou desinstalação remove a entrada do CYTV e restaura a anterior somente se o valor atual ainda for o definido pelo CYTV; outras entradas e aplicativos em primeiro plano são preservados. TVs incompatíveis ou entradas que não pertencem ao CYTV usam o controle normal do Home com suas proteções. Não há garantia de Clean ser a primeira tela imediata. Os testes registrados de primeira tela, espera e partida após corte de energia no C3 passaram; não comprovam compatibilidade universal. Home pode ficar desativado após atualizar/reverter (#202), e Configurações pode mostrar estado antigo (#206): feche e reabra, ative Alterar Home explicitamente e aguarde o estado Clean. [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md) · [Native input (English)](../development/ROOT-NATIVE-INPUT.md).
 
@@ -145,6 +161,16 @@ Em desenvolvimento: se nenhum pedido de remoção de pacotes foi enviado, uma fa
 <a id="temas-154"></a>
 
 ## Temas
+
+Na prévia da próxima versão, **Configurações do Home → Papéis de parede** mostra o fundo do tema ativo, a capacidade detectada da TV e o modo atual. Auto escolhe uma qualidade compatível; 4K, 1080p e Imagem só ficam disponíveis se incluídos no tema. Se o vídeo falhar, uma imagem será exibida. Ajuste o escurecimento em passos de 5% ou restaure os padrões do tema. Classic e temas sem fundo indicam essa condição.
+
+Papéis de parede pessoais na prévia da próxima versão: abra Papéis de parede no CYTV para computador, escolha JPG/PNG, ajuste o recorte e informe o endereço privado da TV e o PIN de recebimento do Home. O CYTV prepara vídeo sem som localmente; 4K só é oferecido quando o recorte tem resolução suficiente. Na TV, escolha receber do CYTV ou enviar pelo celular e leia o QR na mesma rede Wi-Fi. O celular envia uma imagem comum de até 1920×1080, sem a camada de vídeo 4K nativa; a nitidez é limitada pela resolução da interface da TV. Confirme o aviso antes de enviar e depois confira a prévia e aplique na TV. Os envios pessoais ficam salvos e podem ser selecionados novamente ou removidos em Papéis de parede. Cancelamento ou arquivo rejeitado preserva o fundo anterior. São necessárias compilações compatíveis do próximo Home/serviço e CYTV.
+
+Vídeo próprio em movimento (prévia da próxima versão): no CYTV para computador → Papéis de parede, escolha MP4/MOV/MKV/WebM de 1–60 segundos, até 512 MiB e 3840×2160. O som é removido e o recorte é central em 16:9. Vídeos menores usam saída compatível em 1080p; UHD exige recorte de origem suficiente. Envie com endereço/PIN da TV, depois confira e aplique na TV. Pelo telefone, apenas JPG/PNG. A validação do pacote final e os testes físicos na TV estão pendentes.
+
+Fundos incluídos da próxima versão: **Configurações Home → Papéis de parede → Fundos incluídos → Black Hole**. Vídeo de **Xecutioner**, com permissão para uso não comercial e atribuição. Confirmar outro tema ativa o fundo dele; Black Hole e os envios pessoais continuam disponíveis. O fluxo 4K contínuo evita rebobinar a cada repetição, com vídeo/imagem compatível como alternativa.
+
+Android CYTV: **Configurar TV** · **Papéis de parede** · **Manutenção**. Na TV, abra as configurações do Home → Papéis de parede → Enviar do celular. Leia o QR com a câmera, escolha JPG/PNG e aplique na TV. Pelo celular: imagens até 1920×1080, sem vídeo 4K nativo. Para 4K real, use CYTV no computador.
 
 1.7.0: **Configurações → Temas**. **Classic**, **Liquid Glass**, **Ribbon** são integrados e dispensam baixar o tema; Classic continua padrão. **Channel** é externo, do showcase. Nos testes da galeria: Escolha o tema e **Manter tema** em até **20 segundos**. **Reverter**, Back ou o fim do prazo restaura o anterior. Uma prévia interrompida faz Home iniciar com Classic. Temas integrados e baixados escolhidos na lista instalada são aplicados e salvos imediatamente, sem temporizador. Isso inclui temas recebidos do computador ou instalados por URL. Apenas Testar tema dentro da galeria inicia um teste de 20 segundos.
 

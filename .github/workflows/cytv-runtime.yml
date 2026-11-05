@@ -8,11 +8,20 @@ on:
       - 'cytv/desktop*.py'
       - 'cytv/gui.py'
       - 'cytv/gui_style.py'
+      - 'cytv/wallpaper*.py'
+      - 'cytv/licenses/**'
+      - 'cytv/translations.py'
       - 'cytv/terminal.py'
       - 'cytv/runtime_check.py'
       - 'cytv/requirements.txt'
       - 'cytv/build-requirements.txt'
       - 'tests/cytv/test_console_encoding.py'
+      - 'tests/cytv/test_wallpaper*.py'
+      - 'tests/cytv/test_gui.py'
+      - 'tests/cytv/test_desktop_package.py'
+      - 'tests/cytv/test_runtime_check.py'
+      - 'launcher/theme-data.js'
+      - 'launcher/theme-policy.js'
       - 'scripts/build-cytv.py'
       - 'scripts/desktop_packaging.py'
       - '.github/workflows/cytv-runtime.yml'
@@ -35,7 +44,18 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - run: python -m pip install -r cytv/build-requirements.txt
+      - name: Exercise wallpaper preparation, transfer, Qt and binary staging
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python -m unittest discover -s tests/cytv -p 'test_wallpaper*.py' -v
+      - name: Check desktop actions and maintenance layout
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python -m unittest discover -s tests/cytv -p test_gui.py -v
       - name: Freeze and exercise both actual entrypoints without a TV payload
         shell: python
         run: |
@@ -43,14 +63,16 @@ jobs:
           import subprocess
           import sys
           root = Path.cwd()
+          sys.path.insert(0, str(root))
+          from scripts.desktop_packaging import ffmpeg_bundle_args
           for kind, entry, flags in (
-              ('console', '__main__.py', ['--onefile', '--console']),
+              ('console', '__main__.py', ['--onefile', '--console', '--exclude-module', 'imageio_ffmpeg']),
               ('gui', 'desktop_entry.py', ['--onedir', '--windowed']),
           ):
               name = 'cytv-runtime-' + kind
               output = root / 'dist' / kind
               subprocess.run([sys.executable, '-m', 'PyInstaller', '--noconfirm', '--clean',
-                  *flags, '--name', name, '--paths', str(root), '--distpath', str(output),
+                  *flags, *(ffmpeg_bundle_args(root) if kind == 'gui' else []), '--name', name, '--paths', str(root), '--distpath', str(output),
                   '--workpath', str(root / 'build' / kind), '--specpath', str(root / 'build' / kind),
                   str(root / 'cytv' / entry)], check=True)
               if sys.platform == 'win32':

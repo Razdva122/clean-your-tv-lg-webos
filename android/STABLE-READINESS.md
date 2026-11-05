@@ -1,5 +1,7 @@
 # Android stable readiness
 
+> **Unpublished 1.8.1 candidate:** see [candidate versions, setup and recovery limits](../docs/RELEASE-1.8.1.md). Published downloads remain on 1.7.1. C1 Beta is fresh-install only, selected automatically in the common installer; normal OTA is unavailable and physical C1 acceptance is pending. Historical results below retain their original artifact scope.
+
 > Release 1.7.1 uses Android 0.7.1 / versionCode 19. Exact source/signer/payload verification, original-signer code18-to-code19 emulator upgrade and native Store/operation checks are recorded in the [1.7.1 acceptance record](../docs/history/2026-11-03-release-1.7.1-host-checks.md). Physical phone-to-TV and minimum-device acceptance remain unverified. Historical evidence below stays scoped to its original APK.
 
 Historical release **1.6.0** uses **Android 0.6.0 / versionCode 17**. See

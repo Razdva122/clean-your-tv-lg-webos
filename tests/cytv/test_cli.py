@@ -290,7 +290,7 @@ class CLITests(unittest.TestCase):
 
     def test_connected_version_review_can_cancel_before_install_or_pairing(self):
         class Remote:
-            def luna(self, uri, payload):
+            def luna(self, uri, payload, timeout=30):
                 return {'apps': [{'id': 'com.gathin.tvhome', 'version': '1.2.1'}]}
             def close(self): pass
         with tempfile.TemporaryDirectory() as tmp, \
@@ -306,7 +306,7 @@ class CLITests(unittest.TestCase):
 
     def test_unreadable_versions_stop_even_with_yes_before_install(self):
         class Remote:
-            def luna(self, uri, payload): return {'returnValue': True}
+            def luna(self, uri, payload, timeout=30): return {'returnValue': True}
             def close(self): pass
         with tempfile.TemporaryDirectory() as tmp, \
              patch('cytv.cli.package.verify_payload', return_value={'home_version': '1.2.2', 'helper_version': '0.6.13'}), \
@@ -354,6 +354,7 @@ class CLITests(unittest.TestCase):
                 if 'CYTV_PYTHON_BOUND' in command:return ''
                 if 'CYTV_ROOT_READY' in command: return 'CYTV_ROOT_READY'
                 if 'CYTV_EXISTING_ROOT' in command: return 'CYTV_EXISTING_ROOT'
+                if 'CYTV_C1_GATE' in command: return ''
                 if 'deploy.json' in command: return '{"stage":"installed-recovery-only"}'
                 if 'deploy.py status' in command:
                     return '{"returnValue":true,"result":{"recovery":{"integrity_verified":true},"intent":null}}'

@@ -7,6 +7,16 @@ from a diagnostic report.
 
 ## Report contents
 
+New package rejection reports preserve the fixed `install failed` and
+`remove failed` Luna states. When the original reply includes `details.reason`,
+optional `luna.reason` retains only the nine fixed LG OSE IPK failure categories
+listed in the [packaging comparison/source record](../history/2026-11-04-package-install-diagnostics.md).
+Other strings, structured values and null become `unknown`; absent stays absent.
+Current errors and retained history are revalidated at export. This next-cycle
+change cannot recover details discarded by old reports; do not repeat an
+installation merely to obtain them. Payloads, permissions, transaction parsing
+and pending guards are unchanged; #307's installation/recovery remains unresolved.
+
 The existing schema-1 fields remain. Additive fields include fixed `reason_code`,
 checklist IDs/statuses, a filtered `status` projection, and `first_failure` with
 `failure_history`. Known model/firmware/SDK values and observed project component
@@ -61,6 +71,22 @@ only bounded numeric Luna error codes for these keys. Raw service replies and
 Home routes are excluded. Current and retained first-failure projections are
 revalidated; these fields cannot grant recovery authority or prove compatibility.
 See the [preflight and guidance contract](INSTALLER-PREFLIGHT-HELP.md).
+
+## Root activation evidence (unreleased)
+
+Root activation now preserves existing typed installer errors instead of replacing
+SSH command failures or definite TV launch rejections with a generic activation
+error. SSH failures retain only their numeric exit status and fixed Root action
+and execution boundary; launch rejections retain the existing allowlisted Luna
+metadata. Fresh reports and retained first failures use the same action allowlist,
+including `enable`, `restore` and `uninstall`. No remote output or exception text
+is exported, and existing reports cannot reconstruct evidence already discarded.
+
+Pending activation stages remain unchanged. An error does not retry activation,
+repeat a launch, clear the recovery journal or establish that Home is active.
+This installer-only correction does not fix or identify the original device
+failure in [#282](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/282).
+See the [investigation and verification record](../history/2026-11-04-root-activation-evidence.md).
 
 ## New Root worker evidence
 

@@ -15,6 +15,7 @@ import re
 import shlex
 import stat
 import ssl
+import sys
 import tarfile
 import tempfile
 import time
@@ -199,7 +200,12 @@ def prime_cache(cache_dir, progress):
             return path
         progress('Downloading private Python for this TV (26 MB)…')
         failure = 'network'
-        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), _ReleaseRedirect())
+        context = ssl.create_default_context()
+        if sys.platform == 'darwin':
+            # Frozen Python retains its build host's CA paths, absent on a clean Mac.
+            context.load_verify_locations(cafile='/etc/ssl/cert.pem')
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), _ReleaseRedirect(),
+                                            urllib.request.HTTPSHandler(context=context))
         failure = 'cache-access'
         fd, temporary = tempfile.mkstemp(prefix='.python-', suffix='.tmp', dir=cache)
         with os.fdopen(fd, 'wb') as output:

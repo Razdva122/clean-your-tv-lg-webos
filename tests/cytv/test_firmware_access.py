@@ -232,7 +232,7 @@ class Tests(unittest.TestCase):
         calls=[]
         def failure(**kwargs):calls.append(kwargs);raise ValueError('permission conflict')
         d=types.SimpleNamespace(STATE=self.root,EXPECTED_UID=os.getuid(),main=lambda mode:{'home':'safe'})
-        ns={'d':d,'os':os,'firmware_access':failure}
+        ns={'d':d,'os':os,'firmware_access':failure,'gate_backend':lambda:None}
         for node in selected:exec(ast.get_source_segment(raw,node),ns)
         intent=types.SimpleNamespace(boot=lambda:None)
         updates=types.SimpleNamespace(finish=lambda *args:{'finished':True},suspend=lambda *args:None,abort=lambda *args:None)
@@ -313,6 +313,16 @@ class Tests(unittest.TestCase):
         self.grant(False);self.assertIn(str(receiver),json.loads(self.manifest.read_bytes())['apiPermissionFiles'])
         self.receiver(False);self.assertEqual(json.loads(self.manifest.read_bytes()),self.normal)
         self.assertFalse(receiver.exists())
+        for path,raw in before.items():self.assertEqual(path.read_bytes(),raw)
+
+    def test_legacy_receiver_repair_does_not_infer_media_support_from_new_release(self):
+        # A new package on disk does not replace the protected old worker or its snapshot.
+        release=self.root/'release.json'
+        release.write_bytes(encode({'capabilities':['theme-receiver-v1','wallpaper-media-v1']}));release.chmod(0o600)
+        before={path:path.read_bytes() for path in [self.snapshot,self.proof,*self.paths.values()]}
+        self.receiver()
+        receiver=self.root/'permissions/theme-receiver.api.json'
+        self.assertEqual(json.loads(receiver.read_bytes()),{GROUP:[SERVICE+'/'+name for name in ('themeReceiverStart','themeReceiverStatus','themeReceiverRead','themeReceiverStop')]})
         for path,raw in before.items():self.assertEqual(path.read_bytes(),raw)
 
     def test_receiver_and_firmware_reconcile_after_package_replacement(self):

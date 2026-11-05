@@ -1,4 +1,6 @@
 import copy,json,os,sys,tempfile,unittest
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'runtime'))
@@ -51,6 +53,29 @@ class IntegrationTests(unittest.TestCase):
   self.assertEqual(seen,[False]);self.assertEqual(r['effect'],'none')
   self.assertEqual(self.read(),self.baseline);self.assertFalse(self.target.exists())
   self.assertEqual(self.store.read()['phase'],'disabled')
+ def test_fault_closes_only_owned_root_ui_after_stock_is_verified_under_lock(self):
+  calls=[]
+  def call(uri,payload):
+   if uri.endswith('/closeByAppId'):
+    self.assertEqual(self.store.read()['phase'],'disabled');self.assertEqual(self.read(),self.baseline)
+    with self.assertRaises(BlockingIOError):
+     with self.c.locked(self.store.read()):pass
+    calls.append((uri,payload))
+   return {'returnValue':True}
+  output=StringIO()
+  with patch.object(self,'call',side_effect=call),redirect_stdout(output):self.c.exit(self.intent,reason='fault')
+  self.assertEqual(output.getvalue(),'','UI cleanup diagnostics cannot corrupt CLI JSON stdout')
+  self.assertEqual(calls,[('luna://com.webos.applicationManager/closeByAppId',{'id':CANDIDATE})])
+ def test_ui_cleanup_failure_cannot_undo_verified_routing_recovery(self):
+  def call(uri,payload):
+   if uri.endswith('/closeByAppId'):raise TimeoutError('synthetic timeout')
+   return {'returnValue':True}
+  with patch.object(self,'call',side_effect=call):result=self.c.exit(self.intent,reason='fault')
+  self.assertEqual(result['restored_transaction'],'route-a');self.assertEqual(self.store.read()['phase'],'disabled');self.assertEqual(self.read(),self.baseline)
+ def test_explicit_exit_leaves_manual_settings_ui_for_its_confirmed_launch_callback(self):
+  calls=[]
+  with patch.object(self,'call',side_effect=lambda uri,payload:calls.append(uri) or {'returnValue':True}):self.c.exit(self.intent)
+  self.assertFalse(any(uri.endswith('/closeByAppId') for uri in calls))
  def test_package_loss_during_recovery_or_before_restart_never_leaves_enabled_intent(self):
   starting=self.c.boot(self.intent,'boot-b','attempt-b',False)['intent']
   with patch.object(d,'home_present',return_value=False):
@@ -104,6 +129,9 @@ class IntegrationTests(unittest.TestCase):
   new,_=self.store.apply(s,dict(kind='enable',generation=s['generation'],boot='boot-a',token='new'))
   self.create_route('route-new');self.c.bind(new,'route-new')
   with self.assertRaises(ValueError):self.c.exit(old)
+  with patch.object(d,'sam_transport') as bus:
+   with self.assertRaises(ValueError):self.c.exit(old,reason='fault')
+   bus.assert_not_called()
   self.assertEqual(self.store.read(),new);self.assertEqual(self.home,CANDIDATE)
  def test_foreign_routing_transaction_not_modified(self):
   j=d.safe_json(self.root/'profile-trial.json');j['transaction']='foreign';d.save(j)

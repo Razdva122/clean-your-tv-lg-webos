@@ -42,6 +42,8 @@
       mount = options.mount || function () {},
       enabled = options.enabled || function () { return true; },
       onchange = options.onchange || function () {},
+      onclaim = options.onclaim || function () {},
+      onrelease = options.onrelease || function () {},
       failed = Object.create(null),
       wanted = null,
       dwell = null,
@@ -57,6 +59,7 @@
       clearTimeout(preview.timer);
       release(preview.media);
       if (preview.playing) onchange(null);
+      onrelease();
     }
     function fail(preview) {
       if (active !== preview) return;
@@ -66,8 +69,11 @@
     function begin() {
       dwell = null;
       if (!eligible(wanted)) return;
-      var input = wanted, media = createMedia(input.source),
-        preview = {input: input, uri: input.source, media: media, playing: false};
+      var input = wanted, media;
+      onclaim();
+      try { media = createMedia(input.source); }
+      catch (_) { failed[input.source] = now(); onrelease(); return; }
+      var preview = {input: input, uri: input.source, media: media, playing: false};
       active = preview;
       // Media events do not bubble; capture sees them on any wrapper.
       media.addEventListener('playing', function () {

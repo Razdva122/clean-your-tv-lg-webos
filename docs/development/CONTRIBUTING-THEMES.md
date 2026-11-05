@@ -254,6 +254,8 @@ A `dock-grid` opt-in available in 1.7.0, `layout.motion: "classic"`, gives a the
 
 Parameterized scenic ribbons in 1.7.0 use optional `layout.ribbon` with fixed columns. See the [bounded ribbon parameters](THEME-CSS.md#parameterized-scenic-ribbons-unreleased) for geometry and `ribbon-layout-v1`. Use a matching explicit PR runtime; the reviewed toolkit pin does not gain capabilities automatically. Unsupported Home rejects the new theme before installation, retaining its selection.
 
+For embedded native 4K still/video authoring in the next-release candidate, see [wallpaper authoring](WALLPAPERS.md#authoring-embedded-media). The matching compiler/toolkit retains local UHD/FHD H.264 variants and a static image fallback. This is separate from published image-only runtime snapshots.
+
 For wallpaper, declare a local PNG/JPEG/WebP asset with its real dimensions and
 media type, then use its ID in `defaults.wallpaperAssetId`. `defaults.dim` accepts
 0–0.85. Check readability over both bright and dark parts of the image.

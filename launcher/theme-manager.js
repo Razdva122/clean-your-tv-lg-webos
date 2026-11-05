@@ -1,6 +1,6 @@
 /* Accepted appearance, offline cache and durable trial/boot recovery. */
 (function(root){
- 'use strict';var data=root.ThemeData,choiceKey='tvhome.theme.choice.v1',trialKey='tvhome.theme.trial.v1',active={id:'builtin:classic',title:'Classic'},trial=null,ready,homeVersion,notice='',builtin,generation=0,rollback=null;
+ 'use strict';var data=root.ThemeData,choiceKey='tvhome.theme.choice.v1',trialKey='tvhome.theme.trial.v1',active={id:'builtin:classic',title:'Classic'},trial=null,ready,homeVersion,notice='',builtin,generation=0,rollback=null,confirmationQueue=Promise.resolve();
  function emit(){document.dispatchEvent(new CustomEvent('home-theme-change'));}
  function current(){return {id:active.id,title:active.title,digest:active.digest||null,notice:notice,trial:!!trial};}
  function classic(){root.ThemeRuntime.reset();active={id:'builtin:classic',title:'Classic'};}
@@ -8,22 +8,24 @@
  function recover(error){generation++;if(trial)clearTimeout(trial.timer);trial=null;rollback=null;classic();try{localStorage.removeItem(choiceKey);localStorage.removeItem(trialKey);}catch(_){}notice=error||'Theme recovery: Classic restored';emit();}
  function selection(){var raw=localStorage.getItem(choiceKey);if(raw===null)return {id:'builtin:classic',title:'Classic'};var s=JSON.parse(raw);if(!s||typeof s.id!=='string'||typeof s.title!=='string'||s.title.length>100||!/^builtin:[a-z0-9][a-z0-9-]{0,63}$/.test(s.id)&&!/^github:/.test(s.id)||s.id.indexOf('github:')===0&&!/^[a-f0-9]{64}$/.test(s.digest))throw Error('Invalid saved theme selection');return s;}
  // The caller exposes Home only after validated appearance (or bounded Classic recovery).
- function start(present){if(ready)return ready;if(root.CYTV_THEME_AUTHOR_PREVIEW){ready=Promise.resolve().then(function(){if(present)present();});return ready;}
+ function start(present){if(ready)return ready;if(root.CYTV_THEME_AUTHOR_PREVIEW){ready=Promise.resolve().then(function(){if(present)return present();});return ready;}
   ready=new Promise(function(resolve,reject){
    var token=generation,marker=null,finished=false,timer=setTimeout(function(){finish(Error('Theme startup timed out. Classic restored'));},8000);
    function finish(error){
     if(finished)return;finished=true;clearTimeout(timer);
-    try{if(error&&token===generation)recover(error.message);if(present)present();}catch(e){reject(e);return;}
+    try{if(error&&token===generation)recover(error.message);}catch(e){reject(e);return;}
+    Promise.resolve().then(function(){if(present)return present();}).then(function(){
     requestAnimationFrame(function(){requestAnimationFrame(function(){
      if(marker)try{if(localStorage.getItem(trialKey)===marker)localStorage.removeItem(trialKey);}catch(_){}
      emit();resolve();
     });});
+    },reject);
    }
    Promise.resolve().then(function(){
     var saved;if(localStorage.getItem(trialKey)!==null){recover('An interrupted theme preview was reset to Classic');return;}
     saved=selection();if(saved.id==='builtin:classic')return;
     marker=JSON.stringify({kind:'boot',id:saved.id});localStorage.setItem(trialKey,marker);if(localStorage.getItem(trialKey)!==marker)throw Error('Could not save theme recovery marker');
-    return environment().then(function(){return payload(saved);}).then(function(pack){return apply(pack,saved,token);});
+    return environment().then(function(){return payload(saved,true);}).then(function(pack){return apply(pack,saved,token,true);});
    }).then(function(){finish();},finish);
   });return ready;
  }
@@ -37,8 +39,8 @@
   });builtin=catalog;
  });}
  function environment(){if(homeVersion&&builtin)return Promise.resolve();return data.request('appinfo.json',65536,true).then(function(a){var info=JSON.parse(data.decode(a)),engine=info.themeEngineVersion===undefined?info.version:info.themeEngineVersion;if(typeof engine!=='string'||engine.length>32||!/^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/.test(engine))throw Error('Home version unavailable');homeVersion=engine;return registry();});}
- function payload(s){if(s.id.indexOf('builtin:')===0){var entry=bundled(s.id);if(!entry)return Promise.reject(Error('Unknown built-in theme'));return data.load(entry,homeVersion,null,null,true);}return root.ThemeStore.get(s.digest).then(function(pack){if(!pack)throw Error('Saved theme files are missing');var parsed=data.verify(pack,homeVersion);if(parsed.manifest.id!==s.id)throw Error('Saved theme identity mismatch');return pack;});}
- function apply(pack,s,token){return data.prepare(pack,homeVersion,function(){return token!==undefined&&token!==generation;}).then(function(input){try{if(token!==undefined&&token!==generation)throw Error('Cancelled');root.ThemeRuntime.apply(input);active={id:s.id,title:input.manifest.title,digest:pack.digest};emit();}catch(e){data.dispose(input.assetHandles);throw e;}});}
+ function payload(s,appearanceOnly){if(s.id.indexOf('builtin:')===0){var entry=bundled(s.id);if(!entry)return Promise.reject(Error('Unknown built-in theme'));return data.load(entry,homeVersion,null,null,true,appearanceOnly);}return root.ThemeStore.get(s.digest).then(function(pack){if(!pack)throw Error('Saved theme files are missing');var parsed=data.verify(pack,homeVersion,appearanceOnly);if(parsed.manifest.id!==s.id)throw Error('Saved theme identity mismatch');return pack;});}
+ function apply(pack,s,token,appearanceOnly){return data.prepare(pack,homeVersion,function(){return token!==undefined&&token!==generation;},appearanceOnly).then(function(input){try{if(token!==undefined&&token!==generation)throw Error('Cancelled');root.ThemeRuntime.apply(input);active={id:s.id,title:input.manifest.title,digest:pack.digest};emit();}catch(e){data.dispose(input.assetHandles,input.videoHandles,input.videoLease);throw e;}});}
  function list(){return start().then(environment).then(function(){return root.ThemeStore.list().catch(function(e){notice=e.message;return [];});}).then(function(packages){var items=[{id:'builtin:classic',title:'Classic',builtin:true}];builtin.themes.forEach(function(entry){items.push({id:entry.id,title:entry.title,builtin:true,version:entry.version,digest:entry.digest});});packages.forEach(function(pack){try{var parsed=data.verify(pack,homeVersion);if(parsed.manifest.id.indexOf('github:')!==0)throw Error('Invalid external identity');items.push({id:parsed.manifest.id,title:parsed.manifest.title,digest:pack.digest,version:parsed.manifest.themeVersion,license:parsed.manifest.license.identifier,author:parsed.manifest.author.name});}catch(_){notice='An invalid cached theme was ignored';}});return items;});}
  function preview(item){
   if(!item||typeof item.id!=='string'||item.id.indexOf('github:')!==0||! /^[a-f0-9]{64}$/.test(item.digest))return Promise.reject(Error('Invalid installed preview'));
@@ -67,9 +69,29 @@
   return restore.catch(function(e){if(token===generation)recover(e.message);}).then(function(){if(rollback===state)rollback=null;if(token!==generation)return;try{localStorage.removeItem(trialKey);}catch(e){recover(e.message);}emit();});
  }
 
- function confirm(){if(!trial)return Promise.reject(Error('No theme preview to keep'));var state=trial;try{persist({id:active.id,title:active.title,digest:active.digest||null});localStorage.removeItem(trialKey);clearTimeout(state.timer);trial=null;rollback=null;notice='';emit();return Promise.resolve();}catch(e){try{persist(state.previous);}catch(_){recover(e.message);return Promise.reject(e);}return cancel().then(function(){throw e;});}}
+ function confirm(){
+  if(!trial)return Promise.reject(Error('No theme preview to keep'));if(trial.confirmation)return trial.confirmation;
+  var state=trial;
+  // Wallpaper persistence and its compensation must finish before a newer Keep can commit.
+  state.confirmation=confirmationQueue.then(function(){
+   if(trial!==state)throw Error('Cancelled');
+   var wallpaper=root.PersonalWallpaper,previousWallpaper=null,changed=false;
+   if(wallpaper){var value=wallpaper.state();previousWallpaper=value.source==='builtin'?value.builtinId:value.source;}
+   var switchWallpaper=wallpaper&&state.previous.id!==active.id?wallpaper.select('theme').then(function(){changed=true;}):Promise.resolve();
+   return switchWallpaper.then(function(){
+    if(trial!==state)throw Error('Cancelled');
+    persist({id:active.id,title:active.title,digest:active.digest||null});localStorage.removeItem(trialKey);clearTimeout(state.timer);trial=null;rollback=null;notice='';emit();
+   }).catch(function(error){
+    var restore=changed&&previousWallpaper?wallpaper.select(previousWallpaper):Promise.resolve();
+    return restore.catch(function(){}).then(function(){if(trial!==state)throw error;try{persist(state.previous);}catch(_){recover(error.message);throw error;}return cancel().then(function(){throw error;});});
+   });
+  });
+  confirmationQueue=state.confirmation.catch(function(){});
+  return state.confirmation;
+ }
 
- function savePackage(pack,signal){return data.prepare(pack,homeVersion,function(){return signal&&signal.cancelled;}).then(function(input){data.dispose(input.assetHandles);if(signal&&signal.cancelled)throw Error('Cancelled');var parsed=data.verify(pack,homeVersion);return root.ThemeStore.put(pack,parsed.size,signal).then(function(){emit();return {id:parsed.manifest.id,title:parsed.manifest.title,digest:pack.digest,version:parsed.manifest.themeVersion,author:parsed.manifest.author.name,license:parsed.manifest.license.identifier};});});}
+
+ function savePackage(pack,signal){return data.prepare(pack,homeVersion,function(){return signal&&signal.cancelled;}).then(function(input){data.dispose(input.assetHandles,input.videoHandles,input.videoLease);if(signal&&signal.cancelled)throw Error('Cancelled');var parsed=data.verify(pack,homeVersion);return root.ThemeStore.put(pack,parsed.size,signal).then(function(){emit();return {id:parsed.manifest.id,title:parsed.manifest.title,digest:pack.digest,version:parsed.manifest.themeVersion,author:parsed.manifest.author.name,license:parsed.manifest.license.identifier};});});}
  function install(entry,signal,progress){return start().then(environment).then(function(){return data.load(entry,homeVersion,signal,progress,false);}).then(function(pack){return savePackage(pack,signal);});}
 
  function installEnvelope(envelope,signal){return start().then(environment).then(function(){if(signal&&signal.cancelled)throw Error('Cancelled');return savePackage(data.unpackEnvelope(envelope,homeVersion),signal);});}

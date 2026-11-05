@@ -3,14 +3,14 @@ const assert=require('assert'),vm=require('vm'),fs=require('fs'),crypto=require(
 const state='/var/lib/clean-your-tv-root',pin='4a71641c8d5536175e404a961624e8656eba30e97b5026f6bd7dc31e4bbeaaea';
 const executable='/var/lib/clean-your-tv-python/'+pin+'/bin/python3.13',slot=path.dirname(path.dirname(executable));
 const digest=raw=>crypto.createHash('sha256').update(raw).digest('hex');
-let files={},metadata={},spawns=0,invoke;
+let files={},metadata={},spawns=0,invoke,allowSpawn=false,lastOptions;
 const fakeFs={lstatSync(name){
  if((name===state+'/python-launcher'||name===state+'/python-runtime.json')&&!files[name]){let e=Error();e.code='ENOENT';throw e;}
  const file=Object.prototype.hasOwnProperty.call(files,name),meta=metadata[name]||{};
  return {uid:meta.uid===undefined?0:meta.uid,mode:meta.mode===undefined?(file?0o100700:0o40755):meta.mode,nlink:1,size:file?Buffer.byteLength(files[name]):0,isSymbolicLink:()=>!!meta.link,isFile:()=>file,isDirectory:()=>!file};
-},readFileSync(name,encoding){return encoding?files[name]:Buffer.from(files[name]);}};
+},readFileSync(name,encoding){return encoding?files[name]:Buffer.from(files[name]);},existsSync(name){return Object.prototype.hasOwnProperty.call(files,name);}};
 const marker=path.join(fs.mkdtempSync(path.join(os.tmpdir(),'root-binding-')),'executed');
-const child={execFile(){spawns++;throw Error('unexpected service spawn');},spawnSync(command){
+const child={execFile(command,args,options,callback){spawns++;if(!allowSpawn)throw Error('unexpected service spawn');lastOptions=options;callback(null,'{"returnValue":true}');return {};},spawnSync(command){
  spawns++;
  if(files[command]&&files[command].indexOf('touch ')!==-1)require('child_process').execFileSync('/bin/sh',['-c',files[command]]);
  return {status:0};
@@ -24,6 +24,7 @@ vm.runInNewContext(fs.readFileSync(__dirname+'/service.js','utf8'),{require(name
  if(name==='webos-service')return function(){this.register=function(){};};
  if(name==='./handlers'){const handlers=fn=>{invoke=fn;return {};};handlers.audio=require('./handlers').audio;return handlers;}
  if(name==='child_process')return child;
+ if(name==='fs')return fakeFs;
  if(name===state+'/python_boot.js')return helper;
  return require(name);
 },__dirname,process:{getuid:()=>0}});
@@ -53,5 +54,10 @@ vm.runInNewContext(fs.readFileSync(__dirname+'/service.js','utf8'),{require(name
   assert.equal(spawns,0,'boot spawned before binding verification');
   assert.equal(fs.existsSync(marker),false,'altered launcher executed');
  }
+ restore();allowSpawn=true;
+ await invoke('enable');assert.equal(lastOptions.timeout,30000,'normal backend deadline remains unchanged');
+ files[state+'/home-backend.json']='experimental';
+ await invoke('enable');assert.equal(lastOptions.timeout,90000,'gate permits delayed stock close and idle handoff');
+ await invoke('status');assert.equal(lastOptions.timeout,30000,'descriptor does not extend other operations');
  console.log('Root service and boot reject invalid Python bindings before execution');
 })().catch(error=>{console.error(error);process.exitCode=1;});

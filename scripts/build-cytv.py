@@ -34,7 +34,7 @@ def tracked_files(prefix):
                              'launcher/fonts/NotoSansTC.ttf', 'launcher/fonts/NotoSansTC-OFL.txt'],
                 'native/service': ['native/service/app-inventory.js']}
     if prefix == 'launcher':
-        required[prefix] += ['launcher/' + name for name in ['theme-data.js', 'theme-store.js', 'theme-manager.js', 'theme-receiver.js', 'theme-panel.js', 'theme-panel.css', 'theme-locales.js', 'builtin-theme-files.json'] + json.loads((ROOT / 'launcher/builtin-theme-files.json').read_text())]
+        required[prefix] += ['launcher/' + name for name in ['wallpaper.js', 'wallpaper.css', 'wallpaper-panel.js', 'wallpaper-panel.css', 'wallpaper-locales.js', 'wallpaper-media-cache.js', 'personal-wallpaper.js', 'wallpaper-library.js', 'wallpaper-stream.js', 'wallpapers/black-hole-stream.mp4', 'wallpaper-qr.js', 'theme-data.js', 'theme-store.js', 'theme-manager.js', 'theme-receiver.js', 'theme-panel.js', 'theme-panel.css', 'theme-locales.js', 'builtin-theme-files.json'] + json.loads((ROOT / 'launcher/builtin-theme-files.json').read_text())]
     if prefix == 'native/app':
         required[prefix] += [p.relative_to(ROOT).as_posix() for p in (ROOT/'native/app/vendor/ws-legacy').rglob('*') if p.is_file()]
     for name in sorted(set(result.stdout.splitlines()) | set(required.get(prefix, []))):
@@ -70,11 +70,28 @@ def pack_app(appfiles, servicefiles, architecture='all', helper=False):
         executables = {'usr/palm/applications/' + app + '/' + n for n in ('detach', 'relay', 'resume')}
         files['usr/palm/applications/' + app + '/state/.keep'] = b''
         files['usr/palm/services/' + service + '/state/.keep'] = b''
-    return package.ipk(app, version, files, executables, helper_state=helper, architecture=architecture)
+    return package.ipk(app, version, files, executables, helper_state=helper,
+                       architecture=architecture, shared_directories=True)
 
 
 GRAPHICS = {'1920x1080': {'launcher': 'launcher.ipk', 'root': 'root'},
             '1280x720': {'launcher': 'launcher-720p.ipk', 'root': 'root-720p'}}
+C1_GRAPHICS = {'1920x1080': 'root-c1', '1280x720': 'root-c1-720p'}
+
+
+def stage_c1_root(payload, work, version, run=subprocess.run):
+    """Compile once with the existing pinned build-only Zig dependency."""
+    helper = Path(work) / 'c1-home-gate'
+    environment = dict(os.environ, ZIG_GLOBAL_CACHE_DIR=str(Path(work) / 'zig-global-cache'),
+                       ZIG_LOCAL_CACHE_DIR=str(Path(work) / 'zig-cache'))
+    run([sys.executable, '-m', 'ziglang', 'cc', '-target', 'arm-linux-musleabi',
+         '-Os', '-static', '-s', 'root-edition/gate/gate.c', '-o', str(helper)],
+        cwd=ROOT, env=environment, check=True)
+    for graphics, folder in C1_GRAPHICS.items():
+        run([sys.executable, 'root-edition/build.py', '--output', str(Path(payload) / folder),
+             '--version', version, '--resolution', graphics, '--experimental-c1-gate', str(helper)],
+            cwd=ROOT, check=True)
+
 
 
 def verify_release_versions(payload, versions):
@@ -201,6 +218,7 @@ def build_payload():
     stage_guide_assets(payload)
     for graphics, paths in GRAPHICS.items():
         subprocess.run([sys.executable, 'root-edition/build.py', '--output', str(payload / paths['root']), '--version', versions['root'], '--resolution', graphics], cwd=ROOT, check=True)
+    stage_c1_root(payload, work, versions['root'])
     subprocess.run([sys.executable, 'root-edition/build_updater.py', '--output', str(payload / 'root-updater')], cwd=ROOT, check=True)
     stage_updater(payload)
     subprocess.run([sys.executable,'system-updater/build.py','--output',str(payload/'system-updater')],cwd=ROOT,check=True)
@@ -226,6 +244,8 @@ def build_payload():
     manifest = {'schema': 1, 'launcher': 'launcher.ipk', 'helper': 'helper.ipk', 'graphics': GRAPHICS,
                 'home_version': json.loads(launcher['appinfo.json'])['version'],
                 'helper_version': versions['helper'],
+                'root_backends': {'c1-native-gate': {'experimental': True, 'hardware_validated': False,
+                                                     'graphics': C1_GRAPHICS}},
                 'files': {p.relative_to(payload).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
                           for p in sorted(payload.rglob('*')) if p.is_file()}}
     (payload / 'payload.json').write_text(json.dumps(manifest, indent=2), encoding='utf-8')
@@ -245,6 +265,7 @@ def main():
         return
     environment = dict(os.environ, PYINSTALLER_CONFIG_DIR=str(ROOT / 'build/cytv/pyinstaller-cache'))
     subprocess.run([sys.executable, '-m', 'PyInstaller', '--noconfirm', '--clean', '--onefile', '--console',
+                    '--exclude-module', 'imageio_ffmpeg',
                     '--name', 'cytv', *(['--icon', str(ROOT / 'assets/icons/installer.ico')] if os.name == 'nt' else []),
                     '--paths', str(ROOT), '--add-data', str(payload) + os.pathsep + 'payload',
                     '--workpath', str(ROOT / 'build/cytv/freeze'), '--specpath', str(ROOT / 'build/cytv'),

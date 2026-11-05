@@ -1,5 +1,6 @@
 import os
 import runpy
+import shutil
 import tempfile
 import unittest
 import zipfile
@@ -14,23 +15,38 @@ class WindowsDesktopPackageTests(unittest.TestCase):
         packaging = runpy.run_path(str(root / 'scripts/desktop_packaging.py'))
         with tempfile.TemporaryDirectory() as directory:
             project = Path(directory)
+            def ffmpeg_args(root):
+                directory = root / 'build/cytv/ffmpeg'
+                directory.mkdir(parents=True)
+                binary = directory / 'ffmpeg.exe'
+                binary.write_bytes(b'FFmpeg package fixture')
+                notice = directory / 'LICENSE.txt'
+                notice.write_text('GNU GENERAL PUBLIC LICENSE fixture')
+                return ['--add-binary', str(binary) + os.pathsep + 'ffmpeg', '--add-data', str(notice) + os.pathsep + 'ffmpeg']
             def run(command, **kwargs):
                 if 'PyInstaller' in command:
                     self.assertIn('--windowed', command)
                     self.assertIn('--onedir', command)
                     self.assertIn('--icon', command)
+                    self.assertIn('--add-binary', command)
                     frozen = project / 'dist/desktop/cytv-desktop'
                     (frozen / '_internal/payload').mkdir(parents=True)
                     (frozen / 'cytv-desktop.exe').write_bytes(b'MZ-test-GUI')
                     (frozen / '_internal/Qt6Widgets.dll').write_bytes(b'qt-runtime')
+                    ffmpeg = command[command.index('--add-binary') + 1].split(os.pathsep)[0]
+                    (frozen / '_internal/ffmpeg').mkdir()
+                    shutil.copyfile(ffmpeg, frozen / '_internal/ffmpeg/ffmpeg.exe')
+                    shutil.copyfile(Path(ffmpeg).with_name('LICENSE.txt'), frozen / '_internal/ffmpeg/LICENSE.txt')
                     (frozen / '_internal/payload/payload.json').write_text('{}')
-            with patch('sys.platform', 'win32'), patch('platform.machine', return_value='AMD64'), patch('subprocess.run', side_effect=run) as invoke:
+            with patch('sys.platform', 'win32'), patch('platform.machine', return_value='AMD64'), patch('subprocess.run', side_effect=run) as invoke, patch.dict(packaging['build_desktop'].__globals__, {'ffmpeg_bundle_args': ffmpeg_args}):
                 packaging['build_desktop'](project, project / 'payload', {}, '0.2.11')
             archive = project / 'dist/cytv-windows-x64-desktop.zip'
             self.assertTrue(archive.is_file(), 'Windows GUI packaging was skipped')
             with zipfile.ZipFile(archive) as bundle:
                 self.assertEqual(bundle.read('cytv-desktop/_internal/Qt6Widgets.dll'), b'qt-runtime')
                 self.assertIn('cytv-desktop/cytv-desktop.exe', bundle.namelist())
+                self.assertIn('cytv-desktop/_internal/ffmpeg/ffmpeg.exe', bundle.namelist())
+                self.assertIn(b'GNU GENERAL PUBLIC LICENSE', bundle.read('cytv-desktop/_internal/ffmpeg/LICENSE.txt'))
                 self.assertEqual(json.loads(bundle.read('cytv-desktop/version.json'))['cytv'], '0.2.11')
             self.assertTrue(any('--smoke-test' in c.args[0] for c in invoke.call_args_list))
 
@@ -72,3 +88,14 @@ class DesktopPackageTests(unittest.TestCase):
             self.assertFalse((tree / 'DEBIAN/postinst').exists())
             self.assertEqual((tree / 'usr/share/icons/hicolor/256x256/apps/cytv.png').read_bytes(),
                              (root / 'assets/icons/installer-256.png').read_bytes())
+
+
+class ConsoleMediaExclusionTests(unittest.TestCase):
+    def test_console_freeze_excludes_unused_wallpaper_encoder_wheel(self):
+        root=Path(__file__).resolve().parents[2]
+        build=runpy.run_path(str(root/'scripts/build-cytv.py'))
+        with patch.dict(build['main'].__globals__,{'build_payload':lambda:root/'payload-fixture'}),patch('sys.argv',['build-cytv.py']),patch('subprocess.run') as invoke:
+            build['main']()
+        freeze=invoke.call_args_list[0].args[0]
+        self.assertIn('--exclude-module',freeze)
+        self.assertEqual(freeze[freeze.index('--exclude-module')+1],'imageio_ffmpeg')

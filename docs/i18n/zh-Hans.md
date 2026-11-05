@@ -1,5 +1,15 @@
 # Clean Your TV — 用户指南
 
+> **1.8.2:** [English](../RELEASE-1.8.2.md) · [LS2 Root #337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337).
+
+**C1 Beta (#298):** 在通用电脑安装程序中选择 Root。符合条件的 C1 电视会自动识别，无需单独的安装程序或标志。此路径需要全新安装，不支持自动更新，且尚未通过实体 C1 验收。打开 LG Home、长按 Back 或安全/电源停止后，Home 控制可能保持关闭；请在电视设置中重新开启更改 Home。常规 Root 路径保持不变。 如果仍有其他 No-root 组件，C1 完全移除会在更改前停止。请先通过常规 No-root 移除流程删除这些组件；状态未明确时请保留恢复数据。 [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md).
+
+1.8.2 (#290): **+ / 添加应用**仅在检测到已安装的调谐器时，以电视提供的名称列出直播电视。其他隐藏的系统应用仍不显示。No-root 需要更新后的 Helper 和安装程序；Root 需要更新后的 Home 软件包。频道启动仍需在电视上验证。
+
+**Home 中的 Ribbon：** 两个版本中的 Ribbon 都是唯一的全屏 Home 应用内的主题，使用自己的壁纸。卡片后方不显示其他视频或 HDMI。选择应用时使用电视正常的应用切换方式。应急控制保持不变。 已测试范围和已知限制见发行说明。 [Ribbon](../THEMES.md#ribbon-over-applications-unreleased)。
+
+Ribbon：长按 OK 编辑；←/→ 移动卡片，↑ 选择 ×（从 Home 隐藏），↓ 返回卡片，OK 确认，Back 取消。编辑时保留当前背景。
+
 **1.7.0 — Root 启动来源：** 在设置 → 您的 Home 屏幕中开启 **更改 Home**，即可设置 **优先打开 Clean Your TV**。**LG Channels / 直播电视**默认开启，**YouTube** 默认关闭。关闭更改 Home 后，两个开关仍可见但不可操作，已保存的值会保留。这些偏好私密保存在本电视上，不包含在可移植配置导出中。这些设置不代表已验证电视开机或唤醒行为。 关闭某个来源后，启动画面由电视固件决定，并不保证恢复到该来源。没有 HDMI 启动开关。[原生启动限制（英文）](../../root-edition/README.md#candidate-native-startup-choices)。
 
 > 本指南介绍 1.7.0。请从 [GitHub Releases 中已发布的版本](https://github.com/Razdva122/clean-your-tv-lg-webos/releases)下载可用软件包。它包含安装程序的五项改进。重新打开 Root 设置时会读取实际状态，检查失败不会启用 Home。System Updater 1.2.0 用于符合条件的新安装，或经过验证的 1.1.0/1.1.1 替换。已安装的 1.1.2 保留原有通道，没有通用迁移方案。请保留恢复数据，不要强行替换。[版本与限制](../RELEASE-1.7.0.md)。
@@ -31,6 +41,8 @@ Root 需要可用的 Settings Service 和 System Profile Home 接口（`com.webo
 
 1.5.4 包含支持电视 Node.js **0.10.25+** 的 Home Helper **0.6.21**；Root 仍要求 Node.js **8+**。 [Compatibility](../COMPATIBILITY.md).
 
+**未发布的 webOS 1.x 变更：**下个 No-root 安装程序在精确版本 Helper 测试后接受电视 Node.js **0.10.15+**；已发布的 1.7.1 安装程序仍要求 **0.10.25+**。这不代表旧版 WebKit、原生输入或 Home 兼容性已得到验证。请勿替换电视 runtime 或绕过检查。Root 仍要求 Node.js 8+。[测试与限制](../COMPATIBILITY.md#webos-1x-runtime-floor-unreleased)。
+
 No-root Helper 需要电视 Node.js **0.10.25+**。Root 需要 Node.js **8+** 及可用的 Python **3.9+**。如有需要，安装程序会下载经验证的专用 Python；首次准备需要 **320 MiB** 可用空间。它不会替换系统 Python。请保留恢复功能引用的运行环境。[Python 说明（英文）](../OPTIONAL-PYTHON.md)。Developer Mode 自动续期为 **Beta，默认关闭**；无 root 电视上的实际续期尚未确认，请继续检查官方计时器。
 
 ### 设置 Developer Mode（No-root）
@@ -57,6 +69,8 @@ Developer Mode 让 CYTV 可以在没有 root 的电视上安装应用。
 
 [Android 安装程序（英文）](../../android/README.md)：在右上角选择语言。更新时不要卸载或清除数据。Android 7 / WebView 108 是最低要求，并非已验证的手机配置；验收使用 Android 15 ARM64 / WebView 124 模拟器。实体手机及真实手机到电视的恢复流程仍未验证。
 
+**未发布的 Android 候选版本：**对于原始 Root 操作 `install / coordinator-submitted`，恢复选项审查可在明确确认后使用原始保存的配置和 SSH 主机密钥执行只读检查。请勿卸载应用、清除数据、替换配置或重复安装。仅使用维护者指定的已签名重建 APK；公开 APK 尚不包含此流程。[步骤与限制](../../android/README.md#interrupted-root-installation-inspection-unreleased)。
+
 桌面向导自动选择系统语言，也可手动选择并保存。电视端在**设置 → 语言**中选择，或使用系统/自动选项。安装程序与电视偏好独立。完整代码见[语言索引](../LANGUAGES.md)。
 
 单独下载的 macOS/Linux CLI，请在解压目录打开终端：
@@ -77,6 +91,8 @@ chmod +x cytv
 **两秒内按 Home 三次，每次都松开**，即可返回 LG Home 并停止 Home 控制，偏好设置保留。No-root Helper 0.6.13 及更早版本改为按住 Home 约两秒；按住 Home 不是 Root 的紧急退出方式。
 
 No-root: 要重新启动 Home 控制，请打开 Home Helper，选择启动 Helper 并确认。已保存的主屏幕选择会保留。 Root：在 Home 设置中启用 **Change Home** 恢复。**Open LG Home** 只打开 LG Home 一次，不更改路由。要持续使用 LG Home，请关闭 **Change Home** 或运行 `cytv restore`。不要同时运行两种控制器。若故障重复出现，请保持 LG Home 启用。
+
+尚未发布的 Root 修复：关闭 Home 控制或选择 Open LG Home 后，LG Home 确认启动时会关闭 Root 窗口。Home 控制关闭时，仍可手动打开 Home Root 进入设置。
 
 > **1.5.4 — Root:** Root 状态正常时，明确开启 **更改 Home** 会创建 CYTV 自有的原生 **Clean** 输入项，并将记忆输入设为 Clean。关闭 Home 控制、紧急停止、故障、为更新暂停或卸载时，会删除 CYTV 自有项；仅当当前记忆值仍是 CYTV 设置的值时，才恢复原先的输入。其他输入和前台应用保持不变。不受支持的电视或非 CYTV 所有的输入项会继续使用现有的受保护 Home 控制。不保证 Clean 立即成为开机第一画面。记录中的 C3 首屏、待机和断电冷启动检查已通过，但不保证所有设备兼容。更新/回滚后 Home 可能保持关闭（#202），设置可能显示旧状态（#206）：关闭并重新打开设置，明确开启“更改 Home”并等待 Clean 状态。 [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md) · [Native input (English)](../development/ROOT-NATIVE-INPUT.md).
 
@@ -144,6 +160,16 @@ Homebrew Channel 拒绝此安装程序访问。在 webOS 11 上，Homebrew 0.7.3
 <a id="主题-154"></a>
 
 ## 主题
+
+在下一版本预览中，**Home 设置 → 壁纸**显示当前主题壁纸、检测到的电视能力和当前模式。自动模式选择兼容画质；仅当主题包含相应资源时才可选择 4K、1080p 或图片。视频播放失败时会回退到图片。调暗程度每次调整 5%，也可恢复主题默认设置。Classic 和无壁纸主题会明确显示无壁纸状态。
+
+下一版本预览的个人壁纸：在桌面 CYTV 中打开“壁纸”，选择 JPG/PNG、调整裁剪，并输入 Home 设置显示的电视局域网地址及接收 PIN。CYTV 在本地生成无声视频；只有裁剪后的原图分辨率足够时才提供 4K。在电视选择从 CYTV 接收或手机上传，并用同一 Wi-Fi 的手机扫描二维码。手机发送的是最高 1920×1080 的普通图片，不使用原生 4K 视频层；清晰度受电视界面分辨率限制。发送前确认提示，然后在电视预览并应用。个人上传会保留，可在壁纸设置中重新选择或删除。取消或文件被拒绝时会保留原背景。需要匹配的下一版本 Home/服务与 CYTV 构建。
+
+自选动态视频（下一版本预览）：在桌面 CYTV → 壁纸中选择 MP4/MOV/MKV/WebM，时长 1–60 秒，最大 512 MiB、3840×2160。声音会被移除，画面居中裁剪为 16:9。较小视频转换为兼容的 1080p 输出；只有原始裁剪尺寸足够时才生成 UHD。使用电视地址/PIN 发送，然后在电视上预览并应用。手机上传仍仅支持 JPG/PNG。最终软件包验证和实体电视测试尚未完成。
+
+下一版本的内置壁纸：**Home 设置 → 壁纸 → 内置壁纸 → Black Hole**。视频作者为 **Xecutioner**，获准在注明作者的前提下非商业使用。确认其他主题时会启用该主题自己的壁纸；Black Hole 和个人上传仍可重新选择。连续 4K 流避免每次循环回到文件开头，并提供兼容视频或图片作为后备。
+
+Android CYTV: **设置电视** · **壁纸** · **维护**. 在电视上打开 Home 设置 → 壁纸 → 从手机上传。用手机相机扫描二维码，选择 JPG/PNG，然后在电视上应用。 手机上传：最高 1920×1080 的图片，不支持原生 4K 视频。真正的 4K 请使用电脑版 CYTV。
 
 1.7.0: **设置 → 主题**。**Classic**, **Liquid Glass**, **Ribbon** 为内置主题，无需下载；默认仍为 Classic。**Channel** 是 showcase 中的外部主题。在主题展示试用时：选择后请在 **20 秒**内按 **保留主题**。选择 **还原**、按 Back 或等待超时会恢复之前的主题。未确认的试用被中断时，下次启动 Home 将恢复 Classic。 在已安装列表中选择内置或已下载主题会立即应用并保存，没有确认计时器。从电脑接收或通过 URL 安装的主题也如此。只有主题展示中的试用主题会启动 20 秒试用，已下载版本也一样。
 

@@ -1,4 +1,6 @@
 import importlib.util
+import contextlib
+import io
 from pathlib import Path
 import unittest
 import json
@@ -214,6 +216,57 @@ class CIScope(unittest.TestCase):
             result = route(git('rev-parse', 'HEAD'))
             self.assertEqual(result['android'], 'true')
             self.assertEqual(result['tv'], 'false')
+
+    def test_inventory_and_legacy_paths_keep_runtime_and_shared_safety(self):
+        import runpy
+        scope = runpy.run_path(str(ROOT / 'scripts/ci-scope.py'))
+        route = scope['components']
+        self.assertEqual(route(['native/service/app-inventory.js']),
+                         {'tv-runtime', 'installer', 'setup'})
+        self.assertEqual(route(['sync-apps.py']), {'installer', 'setup'})
+        self.assertEqual(route(['lgtv.py']), {'installer', 'android', 'setup'})
+        for path in ('native/service/service.js', 'native/app/native.js',
+                     'native/prototype/filter.c', 'root-edition/input/evdev.py',
+                     'root-edition/service/service.js', 'updater-service/service.js'):
+            with self.subTest(path=path):
+                self.assertIn('tv', route([path]))
+        for path in ('package.json', 'package-lock.json', 'scripts/test.sh',
+                     'scripts/ci-scope.py', '.github/workflows/tests.yml',
+                     'theme-api/runtime.js', 'unknown.py'):
+            self.assertEqual(route([path]), set(scope['COMPONENTS']))
+        self.assertIn('tv', route(['native/service/app-inventory.js', 'launcher/app.js']))
+        self.assertEqual(route(['docs/development/README.md']), set())
+        self.assertEqual(route(['release-plan.json']), {'setup'})
+
+    def test_runtime_outputs_cover_leaf_metadata_unknown_and_full(self):
+        import runpy
+        scope = runpy.run_path(str(ROOT / 'scripts/ci-scope.py'))
+        event = {'pull_request': {'base': {'sha': 'a' * 40, 'ref': 'release/next'},
+                                  'head': {'sha': 'b' * 40, 'ref': 'codex/fix'}}}
+        with tempfile.TemporaryDirectory() as directory:
+            event_path, output = Path(directory) / 'event.json', Path(directory) / 'output'
+            event_path.write_text(json.dumps(event))
+            env = dict(GITHUB_EVENT_PATH=str(event_path), GITHUB_OUTPUT=str(output),
+                       GITHUB_EVENT_NAME='pull_request', CI_QUICK_SUITE='false')
+            for path, full, enabled in (
+                ('native/service/app-inventory.js', 'false',
+                 {'any', 'runtime', 'macos', 'tv_runtime', 'installer', 'setup'}),
+                ('release-plan.json', 'false', {'any', 'setup'}),
+                ('docs/development/README.md', 'false', set()),
+                ('shared.json', 'false', {'any', 'runtime', 'macos', 'ui', 'tv',
+                                        'tv_runtime', 'installer', 'android', 'setup', 'preview'}),
+                ('native/service/app-inventory.js', 'true',
+                 {'any', 'runtime', 'macos', 'ui', 'tv', 'tv_runtime',
+                  'installer', 'android', 'setup', 'preview'}),
+            ):
+                output.write_text('')
+                with self.subTest(path=path, full=full), \
+                     patch.dict(os.environ, {**env, 'CI_FULL_SUITE': full}), \
+                     patch.dict(scope['main'].__globals__, git=lambda *args: (path + '\0').encode()):
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        scope['main']()
+                result = dict(line.split('=') for line in output.read_text().splitlines())
+                self.assertEqual({name for name, value in result.items() if value == 'true'}, enabled)
 
     def test_routes_changes_and_shared_dependencies(self):
         path = ROOT / 'scripts/ci-scope.py'

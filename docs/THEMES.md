@@ -82,7 +82,7 @@ After a successful install, files are stored in this Home application's IndexedD
 
 To update, install a new reviewed catalogue version, use a new version's link, or transfer a fresh development snapshot; select the installed version, or try and keep it through showcase. Updates are explicit: installed themes do not follow GitHub branches automatically. Several versions may be cached independently. Select **Remove** beside a downloaded version and confirm. Removing the active version restores Classic before its files are deleted; cancellation keeps the theme.
 
-The cache is bounded at eight downloaded versions and 24 MiB of payload data, subject to a lower device quota. Remove inactive versions if saving fails. Downloaded themes are removed individually with confirmation; removing the active theme restores Classic first. Built-ins cannot be removed.
+The published cache is bounded at eight downloaded versions and 24 MiB of payload data, subject to a lower device quota. The next-release video-wallpaper runtime raises the byte limit to 64 MiB while retaining the eight-version bound. Remove inactive versions if saving fails. Downloaded themes are removed individually with confirmation; removing the active theme restores Classic first. Built-ins cannot be removed.
 
 ## Recovery
 
@@ -126,3 +126,36 @@ Themes can optionally configure the existing scenic ribbon's card sizes, spacing
 These themes require the `ribbon-layout-v1` capability in Home. On a theme-enabled Home without this capability, both Add by ID and Receive from computer reject the new descriptor before saving/applying it: your current theme and saved selection stay unchanged. Exact error text depends on the installed version and may report an unsupported capability/API. Update Home and retry. A theme package does not upgrade Home. If you downgrade Home after already selecting an unsupported theme, startup recovery can restore Classic; that differs from a rejected new installation.
 
 This support is included in 1.7.0. Browser checks do not establish physical-TV compatibility; see the [release acceptance and limits](RELEASE-1.7.0.md). See the [author contract](development/THEME-CSS.md#parameterized-scenic-ribbons-unreleased).
+
+<a id="ribbon-over-applications-unreleased"></a>
+
+## Ribbon in full-screen Home (unreleased)
+
+Ribbon is a theme of the existing Home application in both editions. Home uses
+an ordinary full-screen card window, with its own wallpaper. There is no second
+application and no video or HDMI displayed beneath the cards. Selecting Ribbon
+does not change the native window type or Home routing.
+
+A single black block groups the three shortcuts. Native solid app colors fill
+the skewed cards, with a focused lift and bottom-local shade against the Home
+wallpaper. Hold OK to edit one raised card; left/right moves it, Up selects its
+cross, Down returns to the card, OK confirms and Back cancels. The cross hides
+the app from Home and Undo restores it. Editing/hiding retains the selected
+Home background and shows no explanatory footer.
+
+Home opens or reactivates the ordinary Home window. Menus, settings, input-shelf
+navigation and editors retain their normal Back handling; Home is not a
+transient bar dismissed by another Home press. Selecting an application uses
+normal TV app switching rather than forcing the Home window to close.
+
+Wallpaper video and connected-input previews belong to Home. Hidden or unfocused
+Home releases its media; unavailable playback retains the static poster. This
+is not playback of a different app or HDMI underneath Ribbon. Existing Helper
+emergency/watchdog, key-up handling, Root recovery and startup-source choices
+remain separate from theme selection.
+
+The previous overlay experiment is not the current candidate contract. Final
+package/device acceptance is still pending. Verify the exact versioned packages
+for launch latency, repeated Home, app switching, background playback, editing,
+standby/wake and emergency/update/rollback behavior before release. See the
+[presentation design](development/RIBBON-PRESENTATION.md).
