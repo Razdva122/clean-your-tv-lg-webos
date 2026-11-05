@@ -190,10 +190,22 @@ const {assert,chromium,stage,fs,path}=require('./themes/browser.cjs'),http=requi
   assert.equal(await n.page.locator('.ctv-input-preview').count(),0,'manual context reset immediately releases input preview');
   // Test wallpaper separately from the input preview's exclusive decoder hold.
   await n.page.evaluate(()=>HomeInputShelf.togglePreview());
+  for(const content of [false,null]) {
+   const before=await n.page.evaluate(()=>wallpaperCreations);
+   await n.page.evaluate(content=>{nativeReply={returnValue:true,eligible:true,content,generation:42,observedAgeMs:0};HomePresentationController.show({});},content);
+   await n.page.waitForTimeout(30);
+   assert.equal(await n.page.evaluate(()=>HomePresentationController.state().content),null,'inconsistent wire reply must stay unknown even decoder-only');
+   assert.equal(await n.page.evaluate(()=>HomePresentationController.state().mode),'full');
+   assert.equal(await n.page.evaluate(()=>wallpaperCreations),before,'inconsistent wire reply cannot acquire decoder');
+  }
+  await n.page.evaluate(()=>{nativeReply={returnValue:true,eligible:true,content:true,generation:42,observedAgeMs:0};HomePresentationController.show({});});
+  await n.page.waitForFunction(()=>HomePresentationController.state().content===true,null,{timeout:3000});
+  assert.equal(await n.page.evaluate(()=>HomePresentationController.state().mode),'full','valid eligible=true wire reply cannot authorize manual transparency');
+  assert.equal(await n.page.locator('#ctvWallpaperVideo').count(),0,'valid active content retains decoder hold');
   // Manual/startup/wake may use fresh decoder facts while remaining opaque.
   for(const activation of [{},{reason:'startup'},{reason:'wake'}]) {
    const before=await n.page.evaluate(()=>wallpaperCreations);
-   await n.page.evaluate(activation=>{nativeReply={returnValue:true,eligible:true,content:false,generation:42,observedAgeMs:0};HomePresentationController.show(activation);},activation);
+   await n.page.evaluate(activation=>{nativeReply={returnValue:true,eligible:false,content:false,generation:42,observedAgeMs:0};HomePresentationController.show(activation);},activation);
    await n.page.waitForFunction(()=>HomePresentationController.state().content===false,null,{timeout:3000});
    assert.equal(await n.page.evaluate(()=>HomePresentationController.state().mode),'full');
    assert(await n.page.evaluate(before=>wallpaperCreations>before,before),'fresh manual/startup decoder facts permit own video attachment');

@@ -18,7 +18,7 @@
         !reply || reply.returnValue !== true ||
         typeof reply.eligible !== 'boolean' || !generation(reply.generation) ||
         (reply.content !== null && typeof reply.content !== 'boolean') ||
-        (decoderOnly !== true && reply.eligible && reply.content !== true) ||
+        (reply.eligible && reply.content !== true) ||
         (decoderOnly !== true && reply.generation !== expected) || typeof reply.observedAgeMs !== 'number' ||
         !isFinite(reply.observedAgeMs) || reply.observedAgeMs < 0 || reply.observedAgeMs + elapsed > 2000) return null;
     return {eligible:decoderOnly === true ? false : reply.eligible, content:reply.content};
