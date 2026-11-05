@@ -18,6 +18,7 @@ static struct cytv_private_binding binding;
 static struct cytv_lease *lease;
 static struct cytv_private_tx *tx;
 static int lifecycle_hook;
+static int validate_hook, validate_hook_at;
 static const char *executable;
 static void byte(int fd, int sending) { char c='x'; ssize_t n; do { n=sending?write(fd,&c,1):read(fd,&c,1); } while(n<0&&errno==EINTR); CHECK(n==1); }
 static struct cytv_private_identity identity(const char *path) { struct stat s; CHECK(lstat(path,&s)==0); struct cytv_private_identity id={s.st_dev,s.st_ino}; return id; }
@@ -29,6 +30,13 @@ static int probe(void) { int fd=open(LOCK,O_RDWR); CHECK(fd>=0); int ok=flock(fd
 int cytv_stop_test_hook(enum cytv_stop_test_point p,int fd,int dir) { (void)p;(void)fd;(void)dir;return 0; }
 int cytv_private_test_hook(enum cytv_private_test_point p,int fd) {
  if(p==CYTV_PRIVATE_TEST_LEASE_CHECK) CHECK(fcntl(fd,F_GETFD)&FD_CLOEXEC);
+ if(p==CYTV_PRIVATE_TEST_LEASE_CHECK&&validate_hook&&!--validate_hook_at) {
+  int action=validate_hook;validate_hook=0;
+  CHECK(cytv_tx_validate(tx)==CYTV_PRIVATE_UNKNOWN);
+  CHECK(!probe());
+  if(action==2)CHECK(cytv_tx_end(&tx)==CYTV_PRIVATE_BUSY&&tx);
+  if(action==3)CHECK(cytv_lease_close(&lease)==CYTV_PRIVATE_BUSY&&lease);
+ }
  if(p==CYTV_PRIVATE_TEST_TX_ACTIVE&&lifecycle_hook) {
   lifecycle_hook=0;
   CHECK(cytv_tx_end(&tx)==CYTV_PRIVATE_BUSY&&tx);
@@ -85,6 +93,29 @@ static void shared_adopt(int additional_holder) {
  int third=open(LOCK,O_RDWR);CHECK(third>=0&&flock(third,LOCK_SH|LOCK_NB)==0);
  CHECK(close(third)==0&&close(fd)==0);CHECK(probe());
 }
+static void validate_change(const char *target,const char *change) {
+ const char *p=!strcmp(target,"lock")?LOCK:!strcmp(target,"journal")?JOURNAL:CYTV_PRIVATE_TEST_ROOT;
+ int directory=strcmp(target,"lock")!=0;
+ mode_t mode=directory?0700:0600;
+ char saved[sizeof(CYTV_PRIVATE_TEST_ROOT)+64];CHECK(snprintf(saved,sizeof(saved),"%s.saved",p)>0);
+ acquire();CHECK(cytv_tx_begin(lease,&tx)==CYTV_PRIVATE_OK);
+ CHECK(cytv_tx_validate(tx)==CYTV_PRIVATE_OK);
+ if(!strcmp(change,"mode"))CHECK(chmod(p,directory?0755:0644)==0);
+ else {
+  CHECK(rename(p,saved)==0);
+  if(!strcmp(change,"replace")) {
+   if(directory)CHECK(mkdir(p,mode)==0);
+   else {int fd=open(p,O_CREAT|O_EXCL|O_RDWR,mode);CHECK(fd>=0&&close(fd)==0);}
+  }
+ }
+ CHECK(cytv_tx_validate(tx)==CYTV_PRIVATE_UNKNOWN);
+ /* Unsafe/missing/replaced metadata cannot prevent actual cleanup. */
+ CHECK(cytv_tx_end(&tx)==CYTV_PRIVATE_OK&&!tx);
+ CHECK(cytv_lease_close(&lease)==CYTV_PRIVATE_OK&&!lease);
+ if(!strcmp(change,"mode"))CHECK(chmod(p,mode)==0);
+ else {if(!strcmp(change,"replace"))CHECK((directory?rmdir(p):unlink(p))==0);CHECK(rename(saved,p)==0);}
+ CHECK(probe());
+}
 int main(int argc,char **argv) {
  CHECK(argc>=2);alarm(10);executable=argv[0];const char *name=argv[1];
  if(!strcmp(name,"exec-adopt")||!strcmp(name,"exec-idle")) {
@@ -124,6 +155,12 @@ int main(int argc,char **argv) {
  else if(!strcmp(name,"root-replace")){acquire();CHECK(rename(CYTV_PRIVATE_TEST_ROOT,CYTV_PRIVATE_TEST_ROOT ".old")==0);CHECK(mkdir(CYTV_PRIVATE_TEST_ROOT,0700)==0);CHECK(cytv_tx_begin(lease,&tx)!=CYTV_PRIVATE_OK&&!tx);CHECK(cytv_lease_close(&lease)==CYTV_PRIVATE_OK&&!lease);}
  else if(!strcmp(name,"journal-replace")){acquire();CHECK(rename(JOURNAL,JOURNAL ".old")==0);CHECK(mkdir(JOURNAL,0700)==0);CHECK(cytv_tx_begin(lease,&tx)!=CYTV_PRIVATE_OK&&!tx);finish();}
  else if(!strcmp(name,"stop-independent"))independent_stop();
+ else if(!strcmp(name,"validate-live")){acquire();CHECK(cytv_tx_begin(lease,&tx)==CYTV_PRIVATE_OK);CHECK(cytv_tx_validate(tx)==CYTV_PRIVATE_OK);CHECK(cytv_tx_validate(tx)==CYTV_PRIVATE_OK);finish();CHECK(cytv_tx_validate(NULL)==CYTV_PRIVATE_UNKNOWN);}
+ else if(!strcmp(name,"validate-wrong-pid")){acquire();CHECK(cytv_tx_begin(lease,&tx)==CYTV_PRIVATE_OK);pid_t p=fork();CHECK(p>=0);if(!p){CHECK(cytv_tx_validate(tx)==CYTV_PRIVATE_UNKNOWN);CHECK(cytv_lease_child_discard(&lease)==CYTV_PRIVATE_OK);_exit(0);}waited(p);CHECK(cytv_tx_validate(tx)==CYTV_PRIVATE_OK);finish();}
+ else if(!strcmp(name,"validate-busy")||!strcmp(name,"validate-ending")||!strcmp(name,"validate-closing")){acquire();CHECK(cytv_tx_begin(lease,&tx)==CYTV_PRIVATE_OK);validate_hook=!strcmp(name,"validate-busy")?1:!strcmp(name,"validate-ending")?2:3;validate_hook_at=2;CHECK(cytv_tx_validate(tx)==(!strcmp(name,"validate-busy")?CYTV_PRIVATE_OK:CYTV_PRIVATE_UNKNOWN));CHECK(!validate_hook);if(strcmp(name,"validate-busy"))CHECK(cytv_tx_validate(tx)==CYTV_PRIVATE_UNKNOWN);finish();}
+ else if(!strncmp(name,"validate-lock-",14))validate_change("lock",name+14);
+ else if(!strncmp(name,"validate-journal-",17))validate_change("journal",name+17);
+ else if(!strncmp(name,"validate-root-",14))validate_change("root",name+14);
  else CHECK(0);
  puts("PASS");return 0;
 }

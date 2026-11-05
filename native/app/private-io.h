@@ -44,8 +44,14 @@ enum cytv_private_status cytv_lease_adopt(const struct cytv_private_binding *, i
  * Never LOCK_UN: other intentional fork duplicates share the open description. */
 enum cytv_private_status cytv_lease_close(struct cytv_lease **);
 enum cytv_private_status cytv_tx_begin(struct cytv_lease *, struct cytv_private_tx **);
+/* Revalidate the live opaque tx and actual pinned lease/lock on its serialized
+ * executor. OK is a current endpoint check, not future/atomic provenance or
+ * Home authority. Does not consume the tx, alter journal views or end resources.
+ * UNKNOWN includes invalid, busy, ending, closing or wrong-PID handles. */
+enum cytv_private_status cytv_tx_validate(struct cytv_private_tx *);
 /* End marks ending. BUSY retains handle/lease while IO is active; retry after
- * the operation returns. Successful end consumes/nulls the tx, not the lease. */
+ * the operation returns. Successful end consumes/nulls the tx, not the lease.
+ * Cleanup is independent of metadata validity; end is NOT a validation ACK. */
 enum cytv_private_status cytv_tx_end(struct cytv_private_tx **);
 /* Only in a designated post-fork child, no outstanding tx: detach all library
  * FDs and return one non-CLOEXEC lease FD. Immediately exec the trusted receiver

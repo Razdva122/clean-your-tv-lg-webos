@@ -181,6 +181,14 @@ int cytv_private_enter(struct cytv_private_tx *t)
 }
 void cytv_private_leave(struct cytv_private_tx *t) { t->busy = 0; }
 
+enum cytv_private_status cytv_tx_validate(struct cytv_private_tx *t)
+{
+    if (!cytv_private_enter(t)) return CYTV_PRIVATE_UNKNOWN;
+    int valid = cytv_private_check(t->lease) && !t->ending && !t->lease->closing;
+    cytv_private_leave(t);
+    return valid ? CYTV_PRIVATE_OK : CYTV_PRIVATE_UNKNOWN;
+}
+
 enum cytv_private_status cytv_tx_end(struct cytv_private_tx **ptr)
 {
     if (!ptr || !*ptr || (*ptr)->pid != getpid()) return CYTV_PRIVATE_UNKNOWN;
