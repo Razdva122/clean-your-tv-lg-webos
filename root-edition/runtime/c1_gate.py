@@ -20,6 +20,8 @@ import uuid
 
 STATE = Path('/var/lib/clean-your-tv-root')
 TARGET = Path('/usr/bin/com.webos.app.home')
+CHECKPOINTS = (Path('/mnt/lg/cmn_data/checkpoint/com.webos.app.home'),
+               Path('/tmp/checkpoint/com.webos.app.home'))
 VOLATILE = Path('/tmp/clean-your-tv-root-gate/gate')
 BACKEND = 'c1-native-gate'
 APP = 'com.cleanyourtv.root.preview'
@@ -126,9 +128,26 @@ def luna(uri, payload, timeout=5):
     return call(uri, payload, timeout=timeout)
 
 
+def checkpoint_preflight(uid=0):
+    """Mirror native path admission early; never authorize or repair a mount."""
+    for path in CHECKPOINTS:
+        try:
+            info = path.lstat()
+        except FileNotFoundError:
+            continue  # Native admission also skips absent optional checkpoints.
+        try:
+            if not stat.S_ISDIR(info.st_mode) or info.st_uid != uid or info.st_mode & 0o022:
+                raise ValueError('Unsafe checkpoint leaf')
+            trusted_directory(path, uid)
+        except (ValueError, OSError):
+            raise ValueError('Unsafe C1 checkpoint path; setup/activation stopped. '
+                             'Keep vendor permissions and recovery data unchanged.') from None
+
+
 def probe():
     if os.geteuid() != 0 or sys.platform != 'linux':
         raise ValueError('Experimental C1 admission requires an existing root TV session')
+    checkpoint_preflight()
     data = secure(TARGET, limit=4 * 1024 * 1024)
     before = TARGET.stat()
     info = luna('luna://com.webos.service.tv.systemproperty/getSystemInfo',

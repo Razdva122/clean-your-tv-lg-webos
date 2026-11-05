@@ -15,6 +15,18 @@ select the experiment. Fresh installation is required; existing, partial or
 orphaned product/recovery state must be inspected and recovered first. The
 installer checks the device again before durable installation reservation and
 fingerprints `/usr/bin/com.webos.app.home` before preparing the native attempt.
+Before reading that executable or making admission Luna calls, the shared probe
+checks each existing optional checkpoint directory and all of its ancestors.
+It mirrors native leaf ownership/write-bit and non-symlink parent rules, allowing
+a sticky writable ancestor but never a writable checkpoint leaf. A refusal stops
+fresh setup before its device-side durable installation reservation and package submission;
+it also stops activation before intent/guardian changes. Missing optional
+checkpoints are not created. Keep vendor permissions and recovery data unchanged.
+This read-only early check is not mount authority: the native guardian still
+rechecks identity, paths, topology and owned-journal recovery at the effect boundary.
+The computer may already have an upload/pending receipt; retain it for normal
+status/recovery rather than clearing it or retrying automatically. This check
+does not establish CRIU suppression or make an unsafe layout supported.
 
 The common payload contains normal Root bundles and separate native C1 bundles
 for both 1080p and 720p. The common install flow chooses the matching bundle,
