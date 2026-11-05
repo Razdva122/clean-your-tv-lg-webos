@@ -193,6 +193,25 @@ Local regression: `python3 -m unittest discover -s root-edition/tests -p 'test_e
 fallback and unchanged wire signals, plus gesture/recovery/watchdog tests. No new user setup/control flow is
 introduced; localized user guides retain the known standby limitation.
 
+### Health-context refusal diagnostics (unreleased, #334)
+
+`HealthContextError` retains ValueError recovery semantics and distinguishes
+`transaction-mismatch`, `binding-restored`, `generation-mismatch`, `token-mismatch`,
+`boot-mismatch`, `phase-inactive` and `failsafe-present`. The publisher supervisor
+appends `health-context-rejected` to its existing private emergency log before
+calling `recover(..., 'supervisor_error')`. It contains only the fixed reason,
+process ID and monotonic uptime. `emergency-recovery` includes the same process
+and time fields for correlation. Diagnostic write failure cannot skip recovery.
+READY/PING processing, heartbeat/deadline bounds and emergency controls are unchanged.
+
+The code names the first failing predicate in that observation, not necessarily
+the first failure across processes. A `binding-restored`/`phase-inactive` record
+may follow another process's recovery; correlate the original attempt's preceding
+observer, guardian and `bound-exit-decision` events. No token or boot identity is
+included in the new record. Raw logs still need private inspection and redaction.
+Host tests do not establish the original device cause. Rebuilt, verified runtime
+delivery is required; an app-only update does not change retained runtime files.
+
 2026-10-27 investigation: on the saved C3 test target, read-only CLI inspection
 verified recovery integrity and restored routing with intent disabled. After
 explicit user activation, active intent/guardian and released keys were verified.

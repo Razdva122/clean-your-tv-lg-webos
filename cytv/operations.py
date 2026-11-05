@@ -1040,6 +1040,10 @@ print('CYTV_UPDATER_VERIFIED')
 
     def can_resume_root_setup(self, pending, device):
         if (self.profile['edition'] == 'root' and pending
+                and pending.get('action') == 'activate-root'
+                and pending.get('home_backend') != 'c1-native-gate'):
+            return self.can_resume_root_activation(pending, device)
+        if (self.profile['edition'] == 'root' and pending
                 and pending.get('home_backend') == 'c1-native-gate'):
             return (pending.get('action') == 'install' and pending.get('stage') in ('setup', 'verify')
                     and device.get('backend') == 'c1-native-gate'
@@ -1060,11 +1064,41 @@ print('CYTV_UPDATER_VERIFIED')
         except (RuntimeError, ValueError, TypeError, KeyError):
             return False
 
+    def can_resume_root_activation(self, pending, device):
+        if (pending.get('stage') not in ('stop-helper', 'enable', 'launch')
+                or pending.get('requires_updater') is not True or pending.get('updates_ready') is not True
+                or not isinstance(pending.get('baseline_sha'), str)
+                or re.fullmatch('[a-f0-9]{64}', pending['baseline_sha']) is None
+                or not self.root_setup_inactive(device)
+                or not isinstance(device.get('journal'), dict)
+                or device['journal'].get('state') != 'restored'
+                or (device.get('intent') or {}).get('phase') != 'disabled'):
+            return False
+        try:
+            if not self.root_files_match(pending): return False
+            if pending.get('product_operation'):
+                event = self.product_action('status', pending['product_operation'], verify_current=True)
+                proof = event.get('result', {})
+                if (event.get('state') != 'complete' or event.get('current') is not True
+                        or proof.get('verified') is not True or proof.get('home_changed') is not False
+                        or proof.get('baseline_sha') != pending['baseline_sha']):
+                    return False
+            self.verify_root_updater(pending['baseline_sha'])
+            from .root_activation_recovery import SCRIPT
+            return self.remote.run(self._python_command([self._python(), '-c', SCRIPT])).strip() == 'CYTV_ACTIVATION_RECOVERABLE'
+        except (OSError, RuntimeError, ValueError, TypeError, KeyError, AttributeError):
+            return False
+
     def resume_root_setup(self):
         # Revalidate after the user's confirmation; never resubmit package setup.
         self.outcome.begin()
         if self.status().get('can_resume_root_setup') is not True:
             raise UserError('Root setup could not be verified for continuation. Recovery data was kept.')
+        previous = self.store.pending(self.profile)
+        if previous and previous.get('action') == 'activate-root':
+            from .state import private_write
+            receipt = self.store.recovery(self.profile, 'resume-root-activation')
+            private_write(receipt, json.dumps({'action': 'resume-root-activation', 'previous': previous}).encode())
         self.outcome.packages_verified()
         if (self.store.pending(self.profile) or {}).get('home_backend') == 'c1-native-gate':
             self.store.checkpoint(self.profile, action='activate-root', stage='stop-helper', updates_ready=False)
