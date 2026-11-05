@@ -1,5 +1,6 @@
 # Release history and device evidence
 
+- [Root AOD cross-project source review, 2026-11-05](2026-11-05-aod-cross-project-review.md): pinned peer implementations and LG sources support full-map preservation; target routing/cache and power acceptance remain untested.
 - [Root AOD preservation, 2026-11-05](2026-11-05-root-aod-preservation.md): full profile/Settings maps, strict readback and backward-compatible terminal recovery; host evidence only.
 - [Helper #307 recovery boundary, 2026-11-05](2026-11-05-helper307-recovery-boundary.md): asynchronous-cleanup evidence, retained journals and clearer refusal handling; original recovery remains unresolved.
 

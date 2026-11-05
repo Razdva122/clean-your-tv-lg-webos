@@ -70,3 +70,20 @@ Home/Back/other controls and sound. Test standby and true cold boot separately.
 No TV was contacted or changed for this source correction.
 
 [Investigation and checks](../history/2026-11-05-root-aod-preservation.md).
+
+## Cross-project source review
+
+The [pinned comparison](../history/2026-11-05-aod-cross-project-review.md)
+supports preserving the full category map: Home Chooser's firmware/VM study
+reports shallow category replacement on webOS 10.3.1, and its implementation
+also copies the existing categories before changing Home. Its normal setter
+preserves other Settings keys in the sampled firmware; a separate boot-time
+cached-map race is reported. Do not describe every `setDefaultApp` call as
+destructive or treat the original report as isolating that boundary.
+
+Settings notifications and third-party firmware research support the direct
+write mechanism, but our `sam_home` readback reads Settings, not an independent
+SAM consumer-cache query. Stored-value equality is not physical routing proof.
+Source/host review is available without target TVs; target Home/AOD, power and
+signed-update/rollback acceptance remains untested. The source review neither
+waives release gates nor changes the frozen candidate.

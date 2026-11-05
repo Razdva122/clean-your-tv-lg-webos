@@ -37,8 +37,8 @@ def read():
 
 def write(target):
  if target not in (CANDIDATE,STOCK):raise ValueError('Invalid target')
- # SAM setDefaultApp can replace the category map on some firmware.
- # Preserve all independent Settings destinations when changing Home.
+ # Preserve a freshly read Settings map rather than relying on SAM's cached map.
+ # This readback verifies stored values, not consumer-cache application.
  defaults=dict(read_defaults(),home=target)
  result=call('luna://com.webos.settingsservice/setSystemSettings',
              {'category':'general','settings':{'defaultApps':defaults}})
