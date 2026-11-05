@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Restore one persistent full-screen CARD Home in both editions. Ribbon uses its
+  own wallpaper. Remove transient overlay context, passive closing and launch
+  preflight delay. Preserve triple-Home emergency return to LG.
+- Restore theme and personal appearance concurrently, retaining both readiness
+  barriers. Prefer the hash-verified built-in Black Hole UHD stream before cache
+  acquisition; failed playback retains its poster.
+
 - Let the selected theme choose the header Inputs menu or an HDMI shelf through
   paired `layout.inputs` / `input-placement-v1`. Omission keeps the menu; the shelf
   currently requires `dock-grid`. Remove the global Show inputs on Home switch.

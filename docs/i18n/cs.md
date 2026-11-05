@@ -1,12 +1,12 @@
 # Čeština — rozhraní televizoru
 
-> **1.8.1 — Nevydaný kandidát:** [1.8.1 / English](../RELEASE-1.8.1.md).
+> **1.8.2 — Nevydaný kandidát:** [1.8.2 / English](../RELEASE-1.8.2.md).
 
 **Nevydaná C1 Beta (#298):** Ve společném instalačním programu pro počítač zvolte Root. Způsobilé TV C1 se rozpoznají automaticky; není potřeba samostatný instalátor ani přepínač. Tato cesta vyžaduje novou instalaci, nemá automatické aktualizace a dosud neprošla přejímkou na fyzickém C1. Otevřít LG Home, dlouhý Back nebo bezpečnostní/výpadková zastávka mohou ponechat ovládání Home vypnuté; v nastavení TV znovu zapněte Změnit Home. Běžná cesta Root se nemění. Pokud zůstávají další komponenty No-root, úplné odstranění C1 se zastaví před změnami. Nejdříve je odstraňte běžným postupem No-root; při nejasném stavu zachovejte data obnovy. [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md).
 
 Nevydáno (#290): **+ / Přidat aplikaci** nabídne živé TV pod názvem z televizoru pouze při zjištění nainstalovaného tuneru. Ostatní skryté systémové aplikace zůstávají vynechané. No-root potřebuje aktualizovaný Helper a instalátor; Root aktualizovaný balíček Home. Spuštění kanálů ještě vyžaduje ověření na TV.
 
-**Nevydáno — překryv Ribbon:** Root podporuje Ribbon nad aktuálním obsahem. Kandidát obsahuje propojení Ribbon ve stejném Home a Helperu No-root; zobrazení překryvu vyžaduje funkční a spuštěný Helper. Home otevře lištu; Zpět nebo další Home ji zavře. Nastavení a ostatní motivy jsou neprůhledné, ale přehrávání pod nimi může pokračovat. Neznámý kontext používá statické neprůhledné pozadí. Úplný scénář No-root ještě vyžaduje test konečných balíčků na TV; simulace v prohlížeči nepotvrzuje kompatibilitu. V No-root Zpět zavře i neprůhledný Home z karet aplikací po zavření nabídky a editoru. Při otevření nativního Root nebo obnovení jeho kontextu se video tapety a náhledy vstupů spustí až poté, co aktuální kontrola potvrdí, že pod Home není žádný obsah; jinak neprůhledný Home ponechá statický obrázek. [Ribbon](../THEMES.md#ribbon-over-applications-unreleased).
+**Nevydáno — Ribbon v Home:** Ribbon je motiv jediné celoobrazovkové aplikace Home v obou edicích s vlastním pozadím. Za kartami se nezobrazuje video ani HDMI. Výběr aplikace používá běžné přepínání aplikací televizoru. Nouzové ovládání zůstává beze změn. Konečné balíčky a ověření na TV ještě nejsou hotové. [Ribbon](../THEMES.md#ribbon-over-applications-unreleased).
 
 Ribbon: podržte OK pro úpravy; ←/→ přesouvá kartu, ↑ vybere × (skrýt z Home), ↓ vrátí výběr na kartu, OK potvrdí a Back zruší. Aktuální pozadí zůstává.
 

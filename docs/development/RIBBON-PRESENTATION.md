@@ -1,67 +1,53 @@
-# Root Ribbon presentation
+# Ribbon presentation in the single Home application
 
-This is an unreleased implementation, not a new compatibility or release claim.
+This is the current unpublished contract. Historical prototype and device
+observations retain their original scope in dated acceptance records.
 
-The Root application keeps its existing identity and service. Its manifest uses
-`defaultWindowType: overlay`, `transparent: true` and `handlesRelaunch: true`.
-The application remains opaque by default. A theme can request overlay
-presentation only through the paired `overlay-presentation-v1` contract on a
-bounded scenic ribbon. No-root package metadata and Helper are unchanged.
+## Native host
 
-`launcher/home-presentation.js` owns full/overlay/closed state, a context generation
-and a separate launch generation. Only a fresh positive content observation enables
-transparency. Power-on, unknown/empty context, suspended themes and actual visible
-dialogs stay opaque. Tile editing and hide/undo own their controls while retaining
-the active application background; they do not activate the Home wallpaper.
-Entering/leaving control ownership invalidates stale successful launches without
-invalidating a pending context query. Theme apply/reset/suspend/resume invalidate old work.
-Back is handled after dialog/input/reorder ownership. Reopening hidden Home
-refreshes context; ordinary relaunch of a visible transparent bar dismisses it.
-Visibility-first activation notifications are coalesced with their relaunch for
-500 ms; the next Home closes immediately after that activation is consumed.
-This event-timing assumption also needs device acceptance.
-Successful content launches dismiss the Root host, including opaque themes,
-without claiming successful playback. Failed or superseded launches do not.
+Both editions use their existing application identity and an ordinary persistent
+CARD window, as in v1.7.1. Ribbon changes layout and the Home wallpaper, not native
+window type. There is no companion application, extra component, cross-app
+profile transport or new installer protocol.
 
-The exact `status` payload `{"presentation":"context"}` uses the existing Root
-service boundary and a separate UID-checked read-only compositor request,
-with a 1.5-second Root subprocess deadline and a two-second UI deadline. It returns only `content: true|false|null`; app IDs, raw surfaces and
-private inventories do not leave that operation. No recovery lock, route write,
-persistent preference, ACG or network listener is added. The native startup
-observer makes a fresh overlay check before remembered-input effects, retaining
-its own ownership and explicit cleanup.
+The former global OVERLAY metadata and transient presentation ownership are
+removed from the canonical Home path. CSS full/overlay state cannot substitute
+for the native window contract. A normal launch/relaunch must not toggle or
+forcibly close Home. Launching another application uses platform app switching;
+Home does not request its own close merely because foreground changes.
 
-Root also queries this context for opaque themes and power-on. Wallpaper video
-and external-input previews require a current-generation literal `content:false`.
-Unknown context holds the decoder before saved appearance restoration can attach
-media. Refresh/hide revoke permission synchronously, and old asynchronous replies
-cannot reacquire it. A decoder-only hold retains the static poster; transparent
-presentation still hides it. Ordinary No-root CARD behavior is unchanged.
+Normal menus, settings and card-editing keep their existing navigation priority.
+Explicit Helper Stop/emergency, independent watchdog cleanup and Root recovery
+retain their own bounded control and key-release behavior. They are not theme
+presentation actions.
 
-This is a bounded opening/refresh snapshot, not continuous decoder ownership.
-There is no new polling, lease or background-change notification: content changes
-without an existing UI refresh event still need physical/lifecycle acceptance.
-This preventive fix does not establish the cause of the earlier C3 static-video
-or unexpected-window-exit observations.
+## Appearance and media
 
-An opaque non-Ribbon theme/settings page still lives in the Root overlay host, so
-underlying app/audio lifecycle may continue. Physical acceptance must cover that
-behavior as well as Ribbon itself. The current task's browser captures are
-synthetic, labeled and separate from any private device observations.
+Theme and personal-wallpaper restoration run concurrently. Presentation,
+activation where required and updater health still wait for both validated
+appearance barriers. Optional video preparation does not delay the first Home
+appearance. Theme recovery and saved-personal-wallpaper ownership remain intact.
 
-## Verification
+Ribbon always uses Home's own background. It does not expose an external player
+or HDMI surface. The Home decoder path therefore follows the ordinary foreground
+CARD lifecycle, not an underlay snapshot or a synthetic content:false response.
+Visibility and focus suspension still detach media and release its resources.
 
-Run the affected `scripts/test.sh ui tv preview` groups with installed build
-requirements, plus `npm run test:themes:browser`. Focused state tests cover
-context freshness, relaunch, modality and launch generations. The actual-renderer
-demo test covers wallpaper/bright-content states, neutral cards/focus, Home/Back
-and theme reset in both edition previews. `node tests/root-decoder-ui.cjs` compiles the actual Root renderer and exercises
-cold restoration, denied/stale acquisition, real cache/HTTP MSE and native fallback,
-and input preview release. Its LS2/activity transport and external-input media are
-host simulations; Chrome decoding is not TV evidence. Root tests cover normalized context,
-recovery-busy isolation, startup/input suppression and race guards.
+The known built-in Black Hole 4K stream can use the existing independently
+hash-verified packaged MSE route before an unrelated native cache acquisition.
+Other media retain normal validated transport. Unsupported or failed playback
+uses the existing supported fallback or a static poster; never an unchecked URL
+or an undefined media handle. Package/video hashes, decoded dimensions,
+first-frame handoff, cancellation and stale-callback fences remain required.
 
-Before publication, the release coordinator still needs exact signed-candidate
-acceptance for video/audio, app and HDMI switching, full fallback at power-on,
-standby/wake, emergency gestures and updater/profile/rollback health. A prototype,
-installation or successful browser check does not satisfy those gates.
+## Verification and acceptance
+
+Compare native manifests and launch/lifecycle behavior with v1.7.1. Exercise the
+actual compiled Root and No-root interfaces as CARD hosts. A browser clock does
+not verify the TV compositor's lifetime; device persistence and responsiveness
+must be observed on the exact versioned candidate. Cover settings/editing,
+Home/app transitions, retained profile, wallpaper/input ownership, Stop/emergency,
+standby and update/rollback. Host-only results never establish TV acceptance.
+
+The discarded two-host/four-component proposal requires no package, permission,
+provisioning or Supervisor change in this candidate.

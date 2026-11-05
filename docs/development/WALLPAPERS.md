@@ -52,6 +52,13 @@ preferences. System profile restore does not erase the existing same-origin them
 
 Native browser preparation uses `WallpaperMediaCache` so that playback does not
 depend on native support for arbitrary Blob URLs.
+The single full-screen Home can select the catalog-pinned built-in Black Hole
+4K MSE stream before requesting a native cache lease. That packaged stream
+independently verifies its full fragment hash and keeps a bounded buffer; it
+needs no native-cache capability. Unsupported MSE retains the normal validated
+cache route. Corrupt or failed packaged playback uses the static image rather
+than an unchecked alternate URL. Personal/other media keep the cache protocol.
+
 It exposes no author-supplied URL or script. The edition's existing service adds
 `wallpaperCacheStart`, `Write`, `Commit`, `KeepAlive`, and `Stop` methods (all with
 the `wallpaperCache` prefix). Every call checks the exact owning application ID.
