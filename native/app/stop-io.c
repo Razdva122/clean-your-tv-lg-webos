@@ -103,10 +103,12 @@ static enum cytv_private_status stop_status(enum cytv_stop_status status)
     if(status==CYTV_STOP_OVERFLOW)return CYTV_PRIVATE_OVERFLOW;
     return CYTV_PRIVATE_UNKNOWN;
 }
-static int scan_reply(const struct cytv_stop_binding *binding,uint32_t id)
+static int scan_reply(struct cytv_private_tx *tx,const struct cytv_stop_binding *binding,uint32_t id)
 {
+    if(cytv_tx_validate(tx)!=CYTV_PRIVATE_OK)return reply(SCAN,id,CYTV_PRIVATE_UNKNOWN,NULL,0);
     struct cytv_stop_snapshot view;
     enum cytv_stop_status s=cytv_stop_scan(binding,&view);
+    if(cytv_tx_validate(tx)!=CYTV_PRIVATE_OK)return reply(SCAN,id,CYTV_PRIVATE_UNKNOWN,NULL,0);
     if(s!=CYTV_STOP_OK&&s!=CYTV_STOP_FULL)return reply(SCAN,id,stop_status(s),NULL,0);
     unsigned char raw[4+32*CYTV_STOP_MAX_RECORDS];
     put32(raw,(uint32_t)view.count);
@@ -168,10 +170,13 @@ int main(int argc,char **argv)
         if(op==BEGIN) {
             s=cytv_tx_begin(lease,&tx);ok=reply(op,id,s,NULL,0);
         } else if(op==READ&&tx) ok=read_reply(tx,id);
-        else if(op==SCAN&&tx) ok=scan_reply(&stop,id);
+        else if(op==SCAN&&tx) ok=scan_reply(tx,&stop,id);
         else if(op==APPEND&&tx) ok=append_reply(tx,id,request,len);
         else if(op==END&&tx) {
-            s=cytv_tx_end(&tx);ok=reply(op,id,s,NULL,0);
+            s=cytv_tx_validate(tx);
+            enum cytv_private_status cleanup=cytv_tx_end(&tx);
+            if(s==CYTV_PRIVATE_OK)s=cleanup;
+            ok=reply(op,id,s,NULL,0);
         } else if(op==CLOSE&&!tx) {
             s=cytv_lease_close(&lease);
             result=reply(op,id,s,NULL,0)&&s==CYTV_PRIVATE_OK?0:2;

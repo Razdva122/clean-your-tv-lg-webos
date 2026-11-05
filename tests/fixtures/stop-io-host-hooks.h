@@ -13,7 +13,15 @@ int cytv_private_test_hook(enum cytv_private_test_point p,int fd){
  if(p==CYTV_PRIVATE_TEST_APPEND_VERIFIED&&host_fault("crash-append"))_exit(73);
  return 0;
 }
-int cytv_stop_test_hook(enum cytv_stop_test_point p,int fd,int dir){(void)p;(void)fd;(void)dir;return 0;}
+int cytv_stop_test_hook(enum cytv_stop_test_point p,int fd,int dir){
+ (void)fd;(void)dir;
+ if(p==CYTV_STOP_TEST_DIR_OPEN){
+  if(host_fault("scan-lock-mode"))return chmod(CYTV_STOP_IO_HOOK_ROOT "/private/controller.lock",0644);
+  if(host_fault("scan-journal-mode"))return chmod(CYTV_STOP_IO_HOOK_ROOT "/private/journal",0755);
+  if(host_fault("scan-root-mode"))return chmod(CYTV_STOP_IO_HOOK_ROOT "/private",0755);
+ }
+ return 0;
+}
 /* Returns 0 for ordinary write, 1 if emitted, -1 if emission failed. */
 int cytv_stop_io_test_reply(unsigned op,uint32_t id,unsigned char *header,const unsigned char *body,size_t len){
  (void)id;

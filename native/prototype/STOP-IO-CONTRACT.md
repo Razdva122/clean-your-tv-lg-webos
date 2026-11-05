@@ -32,6 +32,15 @@ callback Promise and all submitted native IO, then END_ACK before completion.
 Callback completion while its IO remains pending is rejected after drain/END;
 no late effect can become a successful callback result. Stale tx methods reject.
 The broker retains exclusion between transactions until CLOSE/process exit.
+SCAN revalidates the actual private tx/lease both before and after the shared
+Stop scan. Failed validation discards the snapshot and returns UNKNOWN. END
+revalidates immediately before cleanup and only acknowledges success if both
+validation and cleanup succeed. `cytv_tx_end` itself remains cleanup-only, so
+unsafe, missing or replaced metadata cannot prevent resource release. The added
+`cytv_tx_validate` operates on the opaque native handle with the existing
+enter/check/leave discipline, including PID, busy, ending and closing checks.
+These are current endpoint checks; they cannot guarantee atomic cross-directory
+state or prevent a later external mutation after the last check.
 
 Private READ preserves exact valid UTF-8/no-NUL bytes; JS JSON/schema/hash-chain
 validation remains separate. APPEND receipts must match immutable requested raw
@@ -59,9 +68,9 @@ the private status enum: OK 0, UNKNOWN 1, BUSY 2, FULL 3, OVERFLOW 4.
 | READY 0 | Unsolicited startup, ID 0 | Empty, after actual lease acquisition |
 | BEGIN 1 | Empty | Empty, after transaction begin |
 | READ 2 | Empty | Count, then `(sequence, byte length, exact raw)` per entry |
-| SCAN 3 | Empty | Count, then 32 ASCII hex bytes per Stop ID |
+| SCAN 3 | Empty | Count, then 32 ASCII hex bytes per Stop ID, after pre/post lease validation |
 | APPEND 4 | Sequence, then raw UTF-8 bytes | Sequence, byte length, verified raw |
-| END 5 | Empty | Empty, after transaction end |
+| END 5 | Empty | Empty, after checked lease validation and transaction cleanup |
 | CLOSE 6 | Empty, outside a transaction | Empty, after lease close |
 | PUBLISH 7 | Separate process mode and nonce argument; response ID 0 | Its 32 ASCII hex nonce bytes |
 
@@ -81,14 +90,23 @@ child-process cases. The harness compiles the fixed broker, frozen C primitives,
 and Node adapter; only the generated HOST artifact substitutes the executable
 literal. There is no production executable/path/provider option.
 
-The standalone suite has 41 cases. If `native/app/stop-journal.js` exists, or
-`CYTV_STOP_JOURNAL_FIXTURE` explicitly names its preserved HOST fixture, two more
+The standalone suite has 47 cases. If `native/app/stop-journal.js` exists, or
+`CYTV_STOP_JOURNAL_FIXTURE` explicitly names its preserved HOST fixture, 21 more
 cases exercise the unchanged ES5 protocol through the actual C broker. The frozen
 fixture used for stage 2 is commit `398630aa6b12a36325e25aad56753839e4917f11`,
 source SHA-256 `240187c4ed8515c52c72efea490ce47b9743cb778a956cefb6c04e8a8a7b6833`.
 It adopts an actual published Stop and turns an unacknowledged durable prepare
 into blocked without commit. Home authorization remains UNIMPLEMENTED and
 physical stop remains UNTESTED.
+
+The lease regressions include a valid committed control and 18 cases changing
+the mode, removing or replacing each private root/journal/lock immediately after
+READ or SCAN replies. Both reply boundaries originally reproduced an unsafe
+`blocked: false` decision and now return blocked. Six direct SCAN cases check
+that metadata changes before or during the native scan reject its snapshot,
+even if the caller restores its HOST fixture before END. Native API tests also
+check live/null/wrong-PID/busy/ending/closing handles and cleanup while each of
+the nine metadata faults remains present.
 
 The HOST-only hook pauses actual C APPEND work, injects fsync failure or process
 exit before ACK, and corrupts actual pipe responses. Cancellation tests prove
