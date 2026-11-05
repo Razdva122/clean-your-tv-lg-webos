@@ -4,6 +4,12 @@ var execFile = require('child_process').execFile;
 var service = new Service('com.cleanyourtv.root.preview.service');
 function pythonCommand(){return require('/var/lib/clean-your-tv-root/python_boot.js').command('/var/lib/clean-your-tv-root');}
 
+// Independent subscription lane: a serialized recovery operation cannot delay
+// lease revocation, and normal Root never spawns this C1-only helper.
+require('./c1-lease')(service, {createService:function (id, activityManager, options) {
+  return new Service(id, activityManager, options);
+}});
+
 var runtime = '/var/lib/clean-your-tv-root/runtime/cli.py';
 // Audio recovery has a separate process-wide transaction lock and never runs on service load.
 var audio = require('./handlers').audio(function () { return process.getuid(); }, function (command) {

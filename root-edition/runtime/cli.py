@@ -20,7 +20,7 @@ from transport import call as luna
 def gate_backend():
     """Normal bundles do not ship the experimental adapter."""
     evidence = any(os.path.lexists(d.STATE / name) for name in
-                   ('home-backend.json', 'c1-gate', 'runtime/c1-home-gate', 'runtime/c1_gate.py'))
+                   ('home-backend.json', 'c1-gate', 'c1-keyfilter', 'runtime/c1-home-gate', 'runtime/c1-keyfilter-guard', 'runtime/c1_gate.py', 'runtime/c1_keyfilter.py'))
     if not evidence and not (Path(__file__).parent / 'c1_gate.py').is_file():
         return None
     import c1_gate

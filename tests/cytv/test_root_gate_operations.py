@@ -13,7 +13,7 @@ class NativeOperationsTests(unittest.TestCase):
     def active(self):
         return dict(backend='c1-native-gate', recovery={'integrity_verified':True},
             intent={'phase':'active','enabled':True,'token':'a'*32},
-            effective=dict(backend='c1-native-gate',profiles=None,state='armed',mounted=True,
+            effective=dict(returnValue=True,backend='c1-native-gate',profiles=None,state='armed',mounted=True,
                            healthy=True,stock_verified=False,stopped=False,token='a'*32,guardian_pid=123))
 
     def test_active_requires_native_attempt_and_lease_proof(self):

@@ -32,7 +32,13 @@ def validate_bundle(data, resolution):
         if not isinstance(expected, str) or not re.fullmatch('[a-f0-9]{64}', expected) or digest(data[name]) != expected:
             raise ValueError('Invalid native bundle hash')
     release = json.loads(data['release.json'])
-    native = files['runtime/c1-home-gate']
+    routing = release.get('routing')
+    if routing not in (None, 'compositor-keyfilter-v1'):
+        raise ValueError('Unknown C1 routing payload')
+    helper = 'runtime/c1-keyfilter-guard' if routing else 'runtime/c1-home-gate'
+    if routing and not {'runtime/c1_keyfilter.py','runtime/c1-home-filter.js'}.issubset(files):
+        raise ValueError('Missing compositor routing payload')
+    native = files[helper]
     if (release.get('home_backend') != BACKEND or release.get('experimental') is not True
             or release.get('application_id') != package.ROOT_APP
             or release.get('native_sha256') != native or 'runtime/c1_gate.py' not in files
@@ -83,12 +89,21 @@ def native_proof(device):
     if not isinstance(device, dict) or device.get('backend') != BACKEND:
         return None
     value = device.get('effective')
+    keyfilter = isinstance(value, dict) and value.get('routing') == 'compositor-keyfilter-v1'
+    if isinstance(value, dict) and 'routing' in value and not keyfilter:
+        return None
     if (not isinstance(value, dict) or value.get('returnValue') is not True
             or value.get('backend') != BACKEND or value.get('profiles', {}) is not None
             or any(type(value.get(k)) is not bool for k in ('stock_verified','mounted','healthy'))
             or type(value.get('guardian_pid')) is not int or value['guardian_pid'] < 0
             or value['stock_verified'] and value['mounted']
-            or value['healthy'] and (not value['mounted'] or value['guardian_pid'] == 0)):
+            or value['healthy'] and (value['guardian_pid'] <= 1 or not keyfilter and not value['mounted'])):
+        return None
+    if keyfilter and (value['mounted'] is not False
+            or any(type(value.get(k)) is not bool for k in ('filter_installed', 'routing_active', 'stopped'))
+            or value['healthy'] and (not value['filter_installed'] or not value['routing_active'] or value['stopped'])
+            or value['routing_active'] and not value['healthy']
+            or value['stock_verified'] and (value['filter_installed'] or value['routing_active'] or value['guardian_pid'])):
         return None
     return value
 

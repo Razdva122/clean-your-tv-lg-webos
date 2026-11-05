@@ -81,15 +81,15 @@ C1_GRAPHICS = {'1920x1080': 'root-c1', '1280x720': 'root-c1-720p'}
 
 def stage_c1_root(payload, work, version, run=subprocess.run):
     """Compile once with the existing pinned build-only Zig dependency."""
-    helper = Path(work) / 'c1-home-gate'
+    helper = Path(work) / 'c1-keyfilter-guard'
     environment = dict(os.environ, ZIG_GLOBAL_CACHE_DIR=str(Path(work) / 'zig-global-cache'),
                        ZIG_LOCAL_CACHE_DIR=str(Path(work) / 'zig-cache'))
     run([sys.executable, '-m', 'ziglang', 'cc', '-target', 'arm-linux-musleabi',
-         '-Os', '-static', '-s', 'root-edition/gate/gate.c', '-o', str(helper)],
+         '-Os', '-static', '-s', 'root-edition/gate/keyfilter.c', '-o', str(helper)],
         cwd=ROOT, env=environment, check=True)
     for graphics, folder in C1_GRAPHICS.items():
         run([sys.executable, 'root-edition/build.py', '--output', str(Path(payload) / folder),
-             '--version', version, '--resolution', graphics, '--experimental-c1-gate', str(helper)],
+             '--version', version, '--resolution', graphics, '--experimental-c1-keyfilter', str(helper)],
             cwd=ROOT, check=True)
 
 
