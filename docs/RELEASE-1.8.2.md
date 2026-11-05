@@ -61,11 +61,11 @@ build and affected hardware gates pass. Published downloads remain on v1.7.1.
 
 | Component | Published 1.7.1 | Candidate 1.8.2 |
 | --- | --- | --- |
-| Home | 1.8.1 | 1.9.3 |
+| Home | 1.8.1 | 1.9.4 |
 | Home Helper | 0.6.22 | 0.7.4 |
 | cytv | 0.8.1 | 0.9.2 |
 | Android / versionCode | 0.7.1 / 19 | 0.8.2 / 22 |
-| Root / infrastructure | 0.8.4 | 0.9.2 |
+| Root / infrastructure | 0.8.4 | 0.9.3 |
 | Independent updaters | 0.4.2 | 0.4.4 |
 | System Updater / protocol | 1.2.0 / 1 | 1.2.1 / 1 |
 

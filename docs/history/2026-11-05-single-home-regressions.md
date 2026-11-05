@@ -86,3 +86,26 @@ installer (113,991,816 bytes), manifest generation and repeat manifest verificat
 passed locally. This development installer is not approved for publication or
 physical installation. A separate Homebrew CI verification follows; the active
 main candidate run is retained as evidence for its original source.
+
+## Ribbon geometry regression
+
+Run 42076103862 passed the full browser job and all platform builds, but the
+runtime preview section stopped in `ribbon-reference-ui.cjs`: the shortcut group
+was 68 pixels high at x=28/y=984 rather than the intended continuous 180-pixel lane
+at x=0/y=900. The trusted renderer gated this appearance on `layout.presentation`
+and lost it when the built-in theme correctly stopped requesting overlay mode.
+The renderer now preserves the continuous lane for the built-in Ribbon identity
+without changing CARD lifecycle. Existing external theme geometry remains scoped
+to its previous opt-in behavior; the browser fixture now uses an actual external
+identity for that check. Home advances to 1.9.4 and Root/infrastructure to 0.9.3;
+preliminary 1.9.3 observations above remain tied to their original packages.
+
+The separate Homebrew run 42077320700 completed successfully after the baseline
+cache correction. It is focused evidence, not the full frozen candidate.
+
+After the geometry correction, the complete `scripts/test.sh preview` group passed
+locally, including both CARD editions, compiled Root media routing, Ribbon geometry
+and editing, showcase, bridge and preview isolation checks. Theme runtime unit and
+README/version checks passed. Independent review found no actionable issues. A new
+full candidate is required for this changed Home/Root source; no failed earlier run
+is selected as release evidence.

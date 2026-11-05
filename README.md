@@ -138,9 +138,9 @@ For contributors: [build and technical references](docs/development/README.md),
 | Component | Stable version |
 | --- | --- |
 | cytv installer | 0.9.2 |
-| Home | 1.9.3 |
+| Home | 1.9.4 |
 | Home Helper | 0.7.4 |
-| Root edition | 0.9.2 |
+| Root edition | 0.9.3 |
 | Both edition Updaters | 0.4.4 |
 | Android installer / versionCode | 0.8.2 / 22 |
 <!-- /release:components -->

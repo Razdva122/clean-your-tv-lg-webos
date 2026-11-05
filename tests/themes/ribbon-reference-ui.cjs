@@ -25,7 +25,7 @@ const {compileThemeCss}=require('../../theme-api/compile.cjs');
    const focus=await page.locator('#btnSettings').evaluate(n=>{const s=getComputedStyle(n);return {border:s.borderTopColor,width:s.borderTopWidth,background:s.backgroundColor,icon:getComputedStyle(n.querySelector('svg')).width};});
    assert.equal(focus.border,'rgb(255, 255, 255)');assert.equal(focus.width,'3px');assert.equal(focus.icon,'30px');
    await page.screenshot({path:path.resolve('build/ribbon-reference-'+edition+'.png'),animations:'disabled'});
-   const external=structuredClone(manifest);delete external.layout.presentation;external.requires.capabilities=external.requires.capabilities.filter(c=>c!=='overlay-presentation-v1');
+   const external=structuredClone(manifest);external.id='github:razdva122/clean-your-tv-lg-webos:external-ribbon';delete external.layout.presentation;external.requires.capabilities=external.requires.capabilities.filter(c=>c!=='overlay-presentation-v1');
    await page.evaluate(manifest=>ThemeRuntime.apply({manifest,rules:{schemaVersion:1,rules:[]},assetHandles:{}}),external);
    assert.equal(await page.locator('#topButtons').evaluate(n=>getComputedStyle(n,'::before').content),'none','external Ribbon themes keep their original shortcut geometry');
    const lastControl=await page.locator('#btnSettings').boundingBox();assert(lastControl.x+lastControl.width<=256,'compact default shortcuts fit even at the minimum left inset without skew');
