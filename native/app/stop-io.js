@@ -135,7 +135,10 @@ function create(){
    c.closed.then(function(){if(c.fatal)done(null,c.fatal);});
    c.ready.then(function(){if(!s.open||c.fatal)throw c.fatal||error('STOP_IO_SCOPE_CLOSED');return c.command(BEGIN);}).then(function(){
     if(!s.open||c.fatal)throw c.fatal||error('STOP_IO_SCOPE_CLOSED');
-    return Promise.resolve().then(function(){return callback({readJournal:readJournal});}).then(function(value){finish(value,s.inflight?error('STOP_IO_EARLY_RETURN'):null);},function(e){finish(null,e);});
+    return Promise.resolve().then(function(){
+     if(!s.open||c.fatal)throw c.fatal||error('STOP_IO_SCOPE_CLOSED');
+     return callback({readJournal:readJournal});
+    }).then(function(value){finish(value,s.inflight?error('STOP_IO_EARLY_RETURN'):null);},function(e){finish(null,e);});
    }).then(null,abort);
   });
  }

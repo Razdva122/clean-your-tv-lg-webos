@@ -22,5 +22,21 @@ test('early callback completion drains then rejects',function(){var a=adapter(),
 test('maximum bounded read preserves all raw bytes',function(){var spaces=new Array(16385).join(' ');for(var i=0;i<64;i++)fs.writeFileSync(journal+'/entry.'+('0000'+i).slice(-4)+'.json',spaces,{mode:384});var a=adapter();return a.withControllerTransaction(function(tx){return tx.readJournal();}).then(function(v){assert.strictEqual(v.records.length,64);v.records.forEach(function(row,index){assert.strictEqual(row.name,'entry.'+('0000'+index).slice(-4)+'.json');assert.strictEqual(row.raw,spaces);});});});
 test('unknown filename is not an empty snapshot',function(){var a=adapter();fs.writeFileSync(journal+'/foreign','x',{mode:384});return a.withControllerTransaction(function(tx){return reject(tx.readJournal()).then(function(){fs.unlinkSync(journal+'/foreign');return tx.readJournal();});}).then(check);});
 
+
+test('cancel between BEGIN ACK and deferred callback prevents callback',function(){
+ var cp=require('child_process'),spawn=cp.spawn,a=adapter(),called=false,cancelled=false,cancellation=null;
+ cp.spawn=function(){
+  var child=spawn.apply(cp,arguments),buffer=Buffer.alloc(0),scheduled=false;
+  process.nextTick(function(){child.stdout.on('data',function(chunk){
+   if(scheduled)return;buffer=Buffer.concat([buffer,chunk]);
+   while(buffer.length>=16){var len=buffer.readUInt32BE(12);if(buffer.length<16+len)return;var op=buffer[4];buffer=buffer.slice(16+len);
+    if(op===1){scheduled=true;Promise.resolve().then(function(){}).then(function(){cancelled=true;cancellation=a.cancel();});return;}
+   }
+  });});return child;
+ };
+ var outer;try{outer=a.withControllerTransaction(function(){called=true;return 'must-not-run';});}finally{cp.spawn=spawn;}
+ return reject(outer).then(function(){assert.strictEqual(cancelled,true);assert.strictEqual(called,false);return cancellation;});
+});
+
 var chain=Promise.resolve();tests.forEach(function(item){chain=chain.then(function(){reset();return Promise.resolve().then(item[1]).then(function(){count++;return closeAll();},function(e){return closeAll().then(function(){throw Error(item[0]+': '+e.stack);});});});});
 chain.then(function(){console.log('PASS '+count+' actual child cases on '+process.version);},function(e){console.error(e.stack);process.exitCode=1;});
