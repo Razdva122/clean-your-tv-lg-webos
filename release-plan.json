@@ -183,5 +183,10 @@
     }
   ],
   "excluded": [],
-  "acceptance": "NOT RELEASE-READY. Scope frozen for 1.8.2: Ribbon is an ordinary theme of one persistent CARD Home with its own wallpaper; overlay and companion-app proposals are superseded. Direct integration of reviewed follow-up commits was authorized by the maintainer to avoid duplicate full CI. Preliminary C3 No-root Home 1.9.3 / Helper 0.7.4 passed immediate physical Home, moving packaged UHD wallpaper, persistence beyond 120 seconds, app-switch media suspension/resume and triple-Home emergency return to LG. These preliminary artifacts do not replace final selected candidate evidence. Full candidate build/run selection, exact Helper compatibility with published Home, coherent signed Root acceptance, sound, standby, cold boot, supported OTA and rollback remain pending. Details: docs/history/2026-11-05-single-home-regressions.md. No stable publication or main merge before mandatory candidate gates."
+  "acceptance": "NOT RELEASE-READY. Selected full build 42081316264:3 at 40f6f84ab9002cfdfe51dbf34e675e1adbdf7364 passed all mandatory jobs and Homebrew. Normal Root-only signing run 42088467852:1 succeeded; signed Root/infrastructure 0.9.3 and updater 0.4.4 were authenticated against the exact build, signature, artifact digest and component hashes. Maintainer-owned C3 final device acceptance is in progress. Preliminary Home 1.9.3 / Helper 0.7.4 observations remain tied to their earlier packages, not Home 1.9.4 / final Root 0.9.3 acceptance. Published-Home/new-Helper compatibility, affected final controls/media, sound, standby, cold boot, supported OTA and rollback remain pending. See docs/history/2026-11-05-single-home-regressions.md. No stable publication or main merge before remaining gates.",
+  "build": {
+    "run_id": 42081316264,
+    "attempt": 3,
+    "source": "40f6f84ab9002cfdfe51dbf34e675e1adbdf7364"
+  }
 }

@@ -119,3 +119,26 @@ Linux/macOS summaries still require the complete runtime matrix, and full candid
 retain browser, ARM Python and full-release gates without success-cache reuse.
 The prior unsharded candidate run 42080674432 is superseded; it is not the selected
 release build. Product scope and component versions are unchanged by sharding.
+
+## Selected full build and signed Root delivery
+
+Full build [42081316264, attempt 3](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42081316264)
+at `40f6f84ab9002cfdfe51dbf34e675e1adbdf7364` completed successfully, including
+all eight runtime shards, browser, ARM Python, platform builds, Homebrew and final
+summaries. Earlier attempts were cancelled while one macOS shard waited for a
+runner; only that shard and dependent checks were rerun. Completed artifacts were
+retained by GitHub and verified through the normal candidate admission.
+
+Normal Root-only signing [42088467852, attempt 1](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42088467852)
+completed without publishing a release. Signed artifact SHA-256:
+`576302bae9c2d7f7326162d989108c018ab5e0dfc3071db81c23f30c79b49bbc`.
+Local verification checked the trusted public key, signature, exact build/attempt,
+source provenance, three component identities, package sizes and hashes:
+
+- Root 0.9.3: `5b0a4cb494248db05b1543bedd59e22feaec53f7c311d38de0cd7c92ff88aa21`.
+- Root Updater 0.4.4: `21b58f0f6ba7b4ebef930ad93768575f5199af6120870523c2387cb5c26bfa11`.
+- Root infrastructure 0.9.3: `8f6352b33599d17938f1fd70a255301f5c1b19eb913e84083db707dbafcba9be`.
+
+C3 pre-install readback confirmed Helper stopped, Root and guardian off, recovery
+integrity verified, and stock LG SAM/default/idle destinations. Final package/device
+acceptance is in progress; no physical test result is implied by signing.
