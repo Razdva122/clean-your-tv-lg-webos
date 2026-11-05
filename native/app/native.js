@@ -200,17 +200,13 @@ function finish(code,signal,needsCleanup,relayReason){if(stopping)return;stoppin
  function cleaned(){if(!terminalUI){end();return;}
   if((launching||homeLaunchPending)&&monotonic()<finishDeadline){setTimeout(cleaned,50);return;}
   if(launching||homeLaunchPending){failed('home-launch-pending');return;}
-  // The final close follows any owned launch already submitted to SAM. Never
-  // replay an unknown close, or race LG against a timed-out owned launch.
-  closeOwnedHome();
-  afterHomeClose(function(){
-   if(!relayClean){failed('input-cleanup-failed');return;}
-   if(homeCloseState!=='closed'){failed('home-close-'+homeCloseState);return;}
-   if(homeLaunchUnknown){failed('home-launch-unknown');return;}
-   launch('com.webos.app.home',function(ok){
-    if(!ok){failed('lg-launch-unconfirmed');return;}
-    log({event:'terminal-ui-requested',homeClosed:true,lgLaunchAccepted:true});setTimeout(end,300);
-   });
+  // Normal LG activation backgrounds the single CARD. Cross-app close permission
+  // is unnecessary; unknown owned launches still must never race this request.
+  if(!relayClean){failed('input-cleanup-failed');return;}
+  if(homeLaunchUnknown){failed('home-launch-unknown');return;}
+  launch('com.webos.app.home',function(ok){
+   if(!ok){failed('lg-launch-unconfirmed');return;}
+   log({event:'terminal-ui-requested',homeClosed:false,lgLaunchAccepted:true});setTimeout(end,300);
   });
  }
  if(needsCleanup||ready)cleanupRelay(function(ok){relayClean=ok;if(!ok)block(!terminalUI);cleaned();});else cleaned();
