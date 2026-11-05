@@ -29,8 +29,7 @@
       "labels": "focused-above",
       "showClock": false,
       "iconScale": 0.65
-    },
-    "presentation": "overlay"
+    }
   },
   "defaults": {
     "wallpaperAssetId": "wallpaper",
