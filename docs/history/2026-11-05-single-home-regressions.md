@@ -74,3 +74,15 @@ retained an obsolete positive overlay-context request assertion; it now requires
 zero such requests. The entire browser scenario passed locally, retaining explicit
 Off/enable and delayed/stale LG-launch checks.
 The initial full run is failed evidence, not the selected final candidate.
+
+Homebrew run 42076103862 exposed a second large member: the same Root IPK in
+`payload/baseline/cache/<sha256>`. The first fix covered only the direct component.
+A complete local build reproduced the failure and enumerated all large members:
+normalized Python runtime (51,462,118 bytes), Root IPK (28,288,532 bytes), and its
+baseline cache copy (28,288,532 bytes). The bounded exception now also covers the
+exact baseline cache path with a 64-character lowercase hexadecimal name.
+Nineteen Homebrew Python tests and independent review passed. The complete offline
+installer (113,991,816 bytes), manifest generation and repeat manifest verification
+passed locally. This development installer is not approved for publication or
+physical installation. A separate Homebrew CI verification follows; the active
+main candidate run is retained as evidence for its original source.
