@@ -12,16 +12,23 @@ build and affected hardware gates pass. Published downloads remain on v1.7.1.
   saved personal uploads can be selected again. Input previews coordinate decoder use.
   Artwork has separate attribution/non-commercial terms; see THIRD_PARTY_NOTICES.md.
 - Root Ribbon can appear over positively identified active content, with Back and
-  repeated Home dismissal; startup/unknown context uses an opaque fallback. Integration
-  into the same No-root Home/Helper is in progress, with strict context/decoder
-  ownership and a static unknown-context fallback; final package/device acceptance
-  remains required. Opaque themes may preserve underlying playback. Updated
-  compact Ribbon styling, editing and previews (#265).
+  repeated Home dismissal; startup/unknown context uses an opaque fallback.
+  Published No-root Home keeps fullscreen presentation. Integration into the same
+  No-root Home/Helper is in progress, with strict context/decoder ownership and a
+  static unknown-context fallback; final package/device acceptance remains required.
+  Opaque themes may preserve underlying playback. Updated compact Ribbon styling,
+  editing and previews (#265).
 - Native Root activation now follows prepared appearance and precedes foreground
   readiness frames; asynchronous appearance is awaited before updater health is
   acknowledged (#303). Verified off/emergency recovery closes the restored overlay
   and fences stale close replies (#305). Final packaged-TV timing and lifecycle
   acceptance remain pending.
+- Root wallpaper video and input previews wait for a current context that explicitly
+  reports no underlying content, including opaque themes and startup (#316).
+  Refresh/hide invalidate the previous permission; unknown/active content retains
+  a static poster. This is an opening/refresh snapshot, not a continuous decoder
+  lease. The earlier C3 static-video/receiver-exit causes remain unestablished;
+  final packaged-TV media and lifecycle acceptance are still required.
 - Wallpaper wording now distinguishes a selected wallpaper without a video version
   from the capabilities of its theme, in English and all twelve translations (#313).
   This changes no playback capability.
@@ -91,7 +98,7 @@ successful package installation alone does not establish working Home control.
 tracks the final build/run:attempt, hashes, documentation pass and device gates.
 Focused PR checks and isolated preview observations are historical evidence only.
 The [ready-fix integration record](history/2026-11-05-ready-fix-integration.md)
-lists the seven focused merges and combined-source checks. They do not select a
+lists the eight focused merges and combined-source checks. They do not select a
 new full candidate or replace affected device acceptance.
 Full frozen Linux/macOS/browser/ARM Python, Android and four desktop builds must
 pass before selection. Exact signed artifacts still need affected installation,
