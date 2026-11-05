@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "github:spatariurares/clean-your-tv-themes:craciun",
+  "title": "Crăciun la Brașov",
+  "description": "Christmas evening by a crackling fireplace in a Romanian home, with snowy Brașov, the Tâmpa and the Black Church through the window, and a \"Crăciun fericit\" card on the mantel. Warm fire, walnut and cream, serif type.",
+  "author": {
+    "name": "Rares",
+    "sourceProfile": "https://github.com/spatariurares"
+  },
+  "sourceRepository": "https://github.com/spatariurares/clean-your-tv-themes",
+  "sourceCommit": "695122b2c16d05bbe7c6b6a8f754784dbbfa3963",
+  "descriptorUrl": "https://raw.githubusercontent.com/spatariurares/clean-your-tv-themes/55bead4a0aeeb45888e27d02854c345708d006a2/distributions/craciun/1.1.0/cytv-theme.json",
+  "descriptorSha256": "34557f284aa2ef4f4d990543d675edb34ed9cebe6226087de4ba51a8ab11e27e",
+  "themeVersion": "1.1.0",
+  "themeApiVersion": 1,
+  "license": "MIT",
+  "creditsFile": "assets/spatariurares--clean-your-tv-themes--craciun/34557f284aa2ef4f4d990543d675edb34ed9cebe6226087de4ba51a8ab11e27e/documents/1-36f8a05be5f9f435c3909b55811e8c7e86dea0ac1143e3241282a03edf11974a.txt",
+  "previewFiles": [
+    "assets/spatariurares--clean-your-tv-themes--craciun/34557f284aa2ef4f4d990543d675edb34ed9cebe6226087de4ba51a8ab11e27e/assets/preview-2a4618b650cdf96fd622a4a1cde7a4df60724693f1026db5ed7cc335fabeb200.jpg"
+  ],
+  "tags": [
+    "dark",
+    "colorful"
+  ],
+  "addedAt": "2026-11-06",
+  "reviewedAt": "2026-11-06",
+  "evidence": [
+    {
+      "kind": "browser",
+      "summary": "Crăciun la Brașov 1.1.0 pinned descriptor/resources verified locally and remotely. Chromium at 1920x1080 in Root and No-root with synthetic apps and external network blocked: UHD image decode, Home focus/navigation, reorder/cancel, library labels, Inputs and standard Settings isolation passed. Supplied preview visually compared with current Home. Real-ESRGAN upscale of an AI-generated 1672x941 render, not native 4K. MIT styling and CC BY 4.0 wallpaper notices retained. Physical TV not tested."
+    }
+  ]
+}

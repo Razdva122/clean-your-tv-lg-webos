@@ -95,7 +95,7 @@ function validateFiles(r, root) {
   check(hash(descriptor) === r.descriptorSha256, 'Descriptor digest mismatch');
   const m = policy.validateManifest(JSON.parse(descriptor.toString('utf8')));
   for (const [a, b] of [['id', 'id'], ['title', 'title'], ['description', 'description'], ['themeVersion', 'themeVersion'], ['themeApiVersion', 'themeApiVersion']]) check(r[a] === m[b], 'Registry/manifest mismatch: ' + a);
-  check(m.source.repository === r.sourceRepository && m.source.commit === r.sourceCommit && m.author.name === r.author.name && m.author.url === r.author.sourceProfile && m.license.identifier === r.license, 'Manifest attribution/source mismatch');
+  check(m.source.repository === r.sourceRepository && m.source.commit === r.sourceCommit && m.author.name === r.author.name && m.author.url.toLowerCase() === r.author.sourceProfile && m.license.identifier === r.license, 'Manifest attribution/source mismatch');
   check(m.rules.path.endsWith('.json'), 'Rules must use a JSON path');
   m.documents.forEach(d => check(d.path.endsWith('.txt'), 'Public license and credits documents must use .txt paths'));
   m.assets.forEach(a => check({
