@@ -1867,10 +1867,13 @@
   });
   focusZone = "none";
   focusTile(0);
+  // Independent appearance restoration can run while the theme is prepared.
+  // Presentation still waits for both, with decoder ownership already fenced.
+  var personalAppearance = window.PersonalWallpaper ? PersonalWallpaper.start().catch(function () {}) : Promise.resolve();
   function presentHome() {
     // Restore personal appearance before exposing the validated theme. Native Home
     // must activate before ThemeManager can wait for foreground animation frames.
-    return (window.PersonalWallpaper ? PersonalWallpaper.start().catch(function () {}) : Promise.resolve()).then(function () {
+    return personalAppearance.then(function () {
       tiles.forEach(function (tile) { tile.el.classList.add('shown'); });
       getElement('homeSurface').classList.remove('ctv-starting');
       if (presentation) presentation.show(launchParams());
