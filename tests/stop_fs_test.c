@@ -336,7 +336,8 @@ static void cut(enum cytv_stop_test_point at)
 static void bad_nonce(void)
 {
     struct cytv_stop_publication p;
-    CHECK(cytv_stop_publish(&binding, "abc", &p) == CYTV_STOP_UNKNOWN && !p.durable_published);
+    char short_nonce[CYTV_STOP_NONCE_LENGTH + 1u] = "abc";
+    CHECK(cytv_stop_publish(&binding, short_nonce, &p) == CYTV_STOP_UNKNOWN && !p.durable_published);
     memset(current_nonce, 'A', 32); current_nonce[32] = 0;
     CHECK(cytv_stop_publish(&binding, current_nonce, &p) == CYTV_STOP_UNKNOWN && !p.durable_published);
     empty();
