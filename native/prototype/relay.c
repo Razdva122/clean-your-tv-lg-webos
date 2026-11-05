@@ -75,10 +75,12 @@ static int startup_pump(void){
 }
 int main(int argc,char**argv){
  output_failed=0;signal(SIGPIPE,SIG_IGN);signal(SIGTERM,stopped);signal(SIGINT,stopped);
- if(prepare_output()<0)return 30;
+ int cleaning=argc>1&&!strcmp(argv[1],"cleanup");
+ /* Emergency cleanup must work even with closed or unusable stdout. */
+ if(prepare_output()<0){if(!cleaning)return 30;output_failed=1;}
  int lock=acquire_lock("/media/developer/apps/usr/palm/applications/com.local.nativehome/state/relay.lock");if(lock<0)return 18;
  int out=find_device("LGE M-RCU - Builtin [1]",O_RDWR);if(out<0)return 10;
- if(argc>1&&!strcmp(argv[1],"cleanup")){int r=release_keys(out);if(close(out)<0)r=-1;return r?11:0;}
+ if(cleaning){int r=release_keys(out);if(close(out)<0)r=-1;return r?11:0;}
  if(output_failed)return 30;
  int in=find_device("LGE M-RCU - Builtin [0]",O_RDONLY);if(output_failed)return 30;if(in<0||!compatible(in,out)){report("FAIL incompatible\n");return 12;}
  startup_in=in;startup_out=out;startup_ack=ms();

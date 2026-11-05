@@ -81,7 +81,22 @@ static void output_backpressure(int mode,int cleanup_fault){
  if(!done){kill(child,SIGKILL);waitpid(child,&status,0);fprintf(stderr,"FAIL: full controller stdout stranded relay beyond watchdog/cleanup bound\n");}
  if(mode!=2)controller_close(channel[0]);assert(done&&WIFEXITED(status)&&WEXITSTATUS(status)==0);
 }
+static void closed_output_cleanup(int cleanup_fault){
+ fflush(stdout);pid_t child=fork();assert(child>=0);
+ if(child==0){
+  reset();assert(controller_close(1)==0);
+  char*args[]={"relay","cleanup",NULL};int reason=relay_main(1,args);
+  assert(reason==30&&grabbed==0&&release_checks==0);
+  reset();fault=cleanup_fault;cleanup_mode=held=1;reason=relay_main(2,args);
+  assert(reason==(cleanup_fault?11:0));
+  assert(release_checks==1&&closed_output==1&&ungrabbed==0);
+  if(!cleanup_fault)assert(released==1&&held==0);_exit(0);
+ }
+ int status;assert(waitpid(child,&status,0)==child);
+ assert(WIFEXITED(status)&&WEXITSTATUS(status)==0);
+}
 int main(void){
+ closed_output_cleanup(0);closed_output_cleanup(2);closed_output_cleanup(5);
  for(int mode=0;mode<=6;mode++)output_backpressure(mode,0);output_backpressure(1,7);
  for(scenario=0;scenario<4;scenario++){
   reset();fault=0;
