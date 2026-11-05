@@ -220,3 +220,29 @@ stabilizes. No TV operation was performed for this integration task. In particul
 Helper repair must keep protection, avoid trusting the exposed legacy key, and
 pass a genuine new kernel boot with preserved store protection and actual
 Helper/Home behavior; standby is insufficient. C1 remains physically unverified.
+
+
+## Helper startup follow-up — 2026-11-05
+
+PR321, source89a118a8335f97cc16412feafe09573754f9e669, merged as
+4c13b86b027501f6f8c374487900b5f78b74868d. Source and merge trees are equal.
+Focused Tests42017755525 attempt1 passed Linux/macOS runtime and summaries,
+browser and optional ARM Python; integration policy passed. Linux job127212535707
+actually executed the root multi-UID ownership test successfully. Local affected
+checks passed; the initial broader run lacked declared fonttools, and the two
+affected build modules passed after installing scripts/build-requirements.txt.
+
+This handles Helper startup after a TV restart. It is not a repaired protected-state
+architecture or final-byte device acceptance. Associated maintainer device remains
+C3 OLED55C3RLA, firmware43.21.71/SDK11.2.0, Magic Remote with pointer (exact remote
+model and marketing webOS unknown); no new TV operation was performed for this
+source integration. Host validation used macOS ARM. Candidate component manifests
+remain provisional; fresh packages and actual Home/Start/Stop/emergency, sound,
+full boot and update/rollback tests remain pending.
+
+The maintainer requires No-root overlay PR310 in this candidate. Its production
+context/dismissal connection now has HOST and compiled-browser coverage at
+a4042ba8; current-head CI/review, integration and packaged-TV acceptance remain
+pending. Earlier frontend-only status above describes the earlier head. PR322
+separately removes three unwired research JS modules from production packaging;
+it remains pending its complete checks. Neither pending PR is counted as merged.
