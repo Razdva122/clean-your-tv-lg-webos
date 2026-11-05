@@ -15,10 +15,10 @@ try{
  const broker=path.join(temp,'broker'),denied=path.join(temp,'denied');
  run(process.env.CC||'cc',[...flags,'-DCYTV_STOP_IO_TEST_BUILD','-DCYTV_PRIVATE_TEST_BUILD','-DCYTV_STOP_TEST_BUILD','-DCYTV_STOP_IO_BINDING_HEADER='+JSON.stringify(header),'-DCYTV_PRIVATE_TEST_ROOT='+JSON.stringify(privateRoot),'-DCYTV_STOP_TEST_PATH='+JSON.stringify(stopRoot),...sources,'-o',broker]);
  run(process.env.CC||'cc',[...flags,...sources,'-o',denied]);
- const source=fs.readFileSync(path.join(root,'native/app/stop-io.js'),'utf8'),fixed='/media/developer/apps/usr/palm/applications/com.local.nativehome/stop-io';
+ const source=fs.readFileSync(path.join(root,'native/prototype/stop-io.js'),'utf8'),fixed='/media/developer/apps/usr/palm/applications/com.local.nativehome/stop-io';
  if(source.split(fixed).length!==2)throw Error('expected exactly one fixed executable literal');
  const files={'stop-io.js':source.replace(fixed,broker),'denied-io.js':source.replace(fixed,denied),'missing-io.js':source,'timeout-io.js':source.replace(fixed,broker).replace('TIMEOUT=10000','TIMEOUT=150'),'exhausted-io.js':source.replace(fixed,broker).replace('nextID=1','nextID=4294967296'),'runner.js':fs.readFileSync(path.join(root,'tests/fixtures/stop-io-runtime.js'),'utf8')};
- const protocol=process.env.CYTV_STOP_JOURNAL_FIXTURE||(fs.existsSync(path.join(root,'native/app/stop-journal.js'))?path.join(root,'native/app/stop-journal.js'):null);
+ const protocol=process.env.CYTV_STOP_JOURNAL_FIXTURE||(fs.existsSync(path.join(root,'native/prototype/stop-journal.js'))?path.join(root,'native/prototype/stop-journal.js'):null);
  if(protocol)files['stop-journal.js']=fs.readFileSync(protocol,'utf8');
  const compiled=require('../../scripts/compile-helper.cjs').compile(files);
  for(const [name,content] of Object.entries(compiled))fs.writeFileSync(path.join(out,name),content);

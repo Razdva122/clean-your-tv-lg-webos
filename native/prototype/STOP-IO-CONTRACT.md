@@ -97,7 +97,7 @@ tick; a one-byte high-water mark alone cannot force backpressure when modern
 Node drains synchronously. Node0.10 uses its legacy Writable path without cork.
 The fixture does not replace the write result or the native transport.
 
-The standalone suite has 47 cases. If `native/app/stop-journal.js` exists, or
+The standalone suite has 47 cases. If `native/prototype/stop-journal.js` exists, or
 `CYTV_STOP_JOURNAL_FIXTURE` explicitly names its preserved HOST fixture, 21 more
 cases exercise the unchanged ES5 protocol through the actual C broker. The frozen
 fixture used for stage 2 is commit `398630aa6b12a36325e25aad56753839e4917f11`,

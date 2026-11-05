@@ -1,7 +1,7 @@
 // HOST only: compile through the real Helper compatibility path, then execute
 // typed asynchronous I/O fixtures. No native lease, filesystem or TV admission.
 const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),cp=require('node:child_process');
-const file=path.resolve('native/app/stop-journal.js');
+const file=path.resolve('native/prototype/stop-journal.js');
 assert(fs.existsSync(file),'ES5 Stop journal module is required');
 const {compile}=require('../../scripts/compile-helper.cjs'),directory=fs.mkdtempSync(path.join(os.tmpdir(),'cytv-stop-journal-'));
 try{

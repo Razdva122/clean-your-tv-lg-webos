@@ -1,6 +1,6 @@
 # Private credential reader foundation
 
-`native/app/private-credential.js` is check-only and deliberately unwired. It
+`native/prototype/private-credential.js` is check-only and deliberately unwired. It
 reads only `/cytv-helper-state/ssap-key.json`, a UTF-8 JSON object with a nonempty
 string `key`. The record has a 64 KiB byte bound; no additional key format or
 length restriction is imposed. It never creates, repairs, pairs, imports shared
