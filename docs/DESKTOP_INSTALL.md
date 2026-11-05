@@ -200,3 +200,35 @@ Developer commands and offline screenshots: [desktop build reference](developmen
 
 <!-- Anchors retained for links to earlier guide headings. -->
 <a id="offline-interface-previews"></a>
+
+## Storage estimates in candidate builds
+
+CYTV desktop installation reports **required / available / shortfall** in MiB before
+submitting packages, separately for each target filesystem. Requirements sharing
+a filesystem are added together. The conservative budget uses unpacked IPK file
+sizes rounded to 4 KiB, staging/recovery copies and a 16 MiB reserve per filesystem.
+It retains existing files rather than subtracting space that might later be freed.
+This is an estimate: firmware installer scratch usage and existing device-specific
+backups can still require more. If capacity cannot be read, package submission
+stops with the required estimate and explicitly unknown available/shortfall values.
+
+Personal wallpapers show separate estimates for computer temporary storage, TV
+video cache and TV app storage. CYTV keeps these figures visible after transfer;
+**Received** still means that you must preview and Apply on the TV. Browser quota
+information is available only in Home, so CYTV marks that capacity unknown; Home
+checks it before saving. A prepared video cache includes a 1 MiB reserve. App
+storage estimates allow temporary copies plus a 1 MiB reserve. A positive estimate
+is not a reservation: concurrent writes may still exhaust space. On old firmware
+without a quota API the required size is shown, with available/shortfall unknown;
+normal storage errors remain failures and preserve the current wallpaper.
+
+Downloaded themes also have an independent **64 MiB / 8 themes** cache limit.
+A space rejection shows the new theme requirement, remaining cache allowance and
+shortfall; the count limit asks you to remove a downloaded theme. Removing apps
+may free a different partition or leave the Home app quota unchanged. Free the
+specified storage yourself; CYTV does not delete apps, themes or session data
+for you. Pending installations still require the normal status/recovery check.
+
+These changes require rebuilt candidate Home/services and desktop CYTV packages.
+They do not change published downloads. Host/browser tests are not physical-TV
+acceptance; model/firmware-specific storage and installer behavior remain untested.

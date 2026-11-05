@@ -16,6 +16,9 @@ import sys
 import tempfile
 import time
 
+from .errors import COMPUTER_STORAGE_FULL, reports_storage_full, UserError
+from . import storage
+
 from PySide6.QtCore import QByteArray, QBuffer, QIODevice, QRect, Qt
 from PySide6.QtGui import QImageReader
 
@@ -92,6 +95,11 @@ def asset(data, media_type, width, height):
 
 def run_ffmpeg(command, cancel=None, stderr=None):
     check_cancel(cancel)
+    with tempfile.TemporaryFile() as diagnostic:
+        return _run_ffmpeg(command, cancel, stderr if stderr is not None else diagnostic)
+
+
+def _run_ffmpeg(command, cancel, stderr):
     options = {'creationflags': subprocess.CREATE_NO_WINDOW} if sys.platform == 'win32' else {}
     with subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=stderr if stderr is not None else subprocess.DEVNULL, **options) as process:
         try:
@@ -103,6 +111,10 @@ def run_ffmpeg(command, cancel=None, stderr=None):
                 time.sleep(.05)
             check_cancel(cancel)
             if process.returncode:
+                stderr.seek(0, 2)
+                stderr.seek(max(0, stderr.tell() - 65536))
+                if reports_storage_full(stderr.read(65536)):
+                    raise ValueError(COMPUTER_STORAGE_FULL)
                 raise ValueError('Image preparation failed.')
         finally:
             if process.poll() is None:
@@ -136,6 +148,7 @@ def prepare(path, crop=None, cancel=None, progress=lambda message: None):
     else:
         raise ValueError('Wallpaper exceeds the TV size limit.')
     result = dict(schemaVersion=1, kind='wallpaper', source='cytv', image=asset(bytes(data),'image/jpeg',poster.width(),poster.height()),variants=[])
+    storage.local(width*height*4+2*(UHD_LIMIT+FHD_LIMIT)+1024*1024, progress)
     with tempfile.TemporaryDirectory(prefix='cytv-wallpaper-') as directory:
         source = Path(directory) / 'crop.png'
         if width >= 1920:
@@ -171,13 +184,16 @@ def prepare_video(path, cancel=None, progress=lambda message: None):
     # cannot make FFmpeg fetch other resources from an untrusted source file.
     source = ['-protocol_whitelist','file','-f',demuxer,'-i',str(path)]
     executable = ffmpeg_executable()
+    storage.local(3840*2160*4+2*(UHD_LIMIT+FHD_LIMIT)+1024*1024, progress)
     with tempfile.TemporaryDirectory(prefix='cytv-video-') as directory:
         directory = Path(directory)
         with (directory/'probe.txt').open('w+b') as diagnostic:
             try:
                 run_ffmpeg([executable,'-nostdin','-hide_banner']+source+
                            ['-map','0:v:0','-c:v','copy','-an','-t','0','-f','null','-'],cancel,stderr=diagnostic)
-            except ValueError:
+            except ValueError as error:
+                if str(error) == COMPUTER_STORAGE_FULL:
+                    raise
                 raise ValueError('Choose a readable video from 1 to 60 seconds, up to 3840×2160.') from None
             diagnostic.seek(0); info = diagnostic.read(65536).decode('utf-8',errors='replace')
         duration = re.search(r'^  Duration: (\d+):(\d{2}):(\d{2}(?:\.\d+)?)',info,re.MULTILINE)
@@ -362,6 +378,20 @@ def upload(host, pin, envelope, cancel=None, progress=lambda message: None):
         except (ValueError,UnicodeError): raise ValueError('Invalid TV response.') from None
         if not isinstance(capabilities,dict) or type(capabilities.get('wallpaperProtocol')) is not int or capabilities['wallpaperProtocol'] != 1:
             raise ValueError('Update Clean Your TV to receive personal wallpapers.')
+        required = sum(item['size'] for item in envelope.get('variants', [])) + 1024*1024
+        snapshot = capabilities.get('videoCacheStorage')
+        available = snapshot.get('available') if isinstance(snapshot, dict) else None
+        if type(available) is not int or not 0 <= available <= 2**53-1:
+            available = None
+        values = dict(location='Video cache', required=storage.mib(required))
+        message = (storage.UNKNOWN.format(**values) if available is None else
+                   storage.SUMMARY.format(**values, available=storage.mib(available, False),
+                                          shortfall=storage.mib(max(0,required-available))))
+        if envelope.get('variants'):
+            progress(message)
+            if available is not None and required > available:
+                raise ValueError(message)
+        progress(storage.UNKNOWN.format(location='TV app storage', required=storage.mib(len(body)*2+1024*1024)))
         progress('Sending wallpaper…')
         status,_ = request('POST','/v1/wallpaper',body)
         if status != 202:

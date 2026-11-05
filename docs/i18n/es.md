@@ -2,7 +2,7 @@
 
 > **1.8.2:** [English](../RELEASE-1.8.2.md) · [LS2 Root #337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337).
 
-**C1 Beta (#298):** Elige Root en el instalador común para ordenador. Los C1 aptos se detectan automáticamente; no hace falta otro instalador ni una opción especial. Esta vía exige una instalación limpia, no tiene actualizaciones automáticas y aún no ha superado la validación en un C1 físico. Abrir LG Home, mantener Back o una parada por seguridad o alimentación pueden dejar desactivado el control de Home; vuelve a activar Cambiar Home en los ajustes del TV. La vía Root normal no cambia. Si quedan otros componentes No-root, la eliminación completa de C1 se detiene antes de hacer cambios. Elimínalos primero mediante su flujo normal de No-root; conserva los datos de recuperación si su estado no está resuelto. [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md).
+**C1 Beta sin publicar (#298):** Elige Root en el instalador común para ordenador. Los C1 aptos se detectan automáticamente; no hace falta otro instalador ni una opción especial. Esta vía exige una instalación limpia, no tiene actualizaciones automáticas y aún no ha superado la validación en un C1 físico. Abrir LG Home, mantener Back o una parada por seguridad o alimentación pueden dejar desactivado el control de Home; vuelve a activar Cambiar Home en los ajustes del TV. La vía Root normal no cambia. Si quedan otros componentes No-root, la eliminación completa de C1 se detiene antes de hacer cambios. Elimínalos primero mediante su flujo normal de No-root; conserva los datos de recuperación si su estado no está resuelto. [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md). C1 Beta filtra la tecla Home y vuelve al cerrar una app, sin cambiar permisos de CRIU/checkpoint. LG Home puede aparecer brevemente. Pulsar Home tres veces también detiene la redirección; después vuelve a activar Cambiar Home.
 
 1.8.2 (#290): **+ / Añadir app** ofrece TV en directo con el nombre del televisor solo si detecta el sintonizador instalado. Las demás apps del sistema ocultas siguen excluidas. No-root necesita Helper e instalador actualizados; Root necesita el paquete Home actualizado. Falta verificar el inicio de canales en el TV.
 
@@ -216,3 +216,9 @@ Los instaladores 1.6.0 para ordenador/Android y clientes OTA migrados eligen 720
 [HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).
 
 > **1.6.0:** guarde el informe del intento fallido original. Los nuevos informes separan el primer error registrado de las comprobaciones posteriores e incluyen un resumen filtrado de Doctor/estado. También permiten exportar tras configurar, consultar el estado o restaurar correctamente. Los datos antiguos ausentes siguen siendo desconocidos; el informe no autoriza la recuperación. [↗](../development/INSTALLER-DIAGNOSTICS.md).
+
+## Espacio de almacenamiento
+
+Las compilaciones candidatas muestran espacio necesario, libre y faltante en MiB para instalar, añadir temas y fondos de foto/vídeo. Incluyen copias temporales y reserva. La cuota de la app, la caché de temas de 64 MiB y la de vídeo son límites distintos. Los valores desconocidos se indican. Libera el almacenamiento indicado; no hay limpieza automática.
+
+Espacio estimado (TV): necesario 128.0 MiB; libre 96.0 MiB; faltan 32.0 MiB.

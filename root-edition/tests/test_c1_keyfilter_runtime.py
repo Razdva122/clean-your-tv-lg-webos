@@ -1,0 +1,234 @@
+"""Host-only compositor routing and ownership tests; no TV acceptance."""
+import importlib
+import json
+import os
+from pathlib import Path
+import sys
+import tempfile
+import unittest
+from unittest.mock import patch
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path[:0] = [str(ROOT / 'runtime'), str(ROOT)]
+
+
+class RuntimeTests(unittest.TestCase):
+    def setUp(self):
+        try: self.k = importlib.import_module('c1_keyfilter')
+        except ModuleNotFoundError: self.fail('schema2 runtime missing')
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name).resolve()
+        self.uid = os.getuid()
+        boot=patch.object(self.k,'boot_identity',return_value='12345678-1234-1234-1234-123456789abc')
+        boot.start(); self.addCleanup(boot.stop)
+        self.admission = dict(model='OLED65C14LB', firmware='03.51.15', webos='6.5.0',
+                              target_sha256='b'*64, target=dict(dev=1, ino=2, size=52, mtime_ns=3))
+
+    def prepare(self):
+        return self.k.prepare(self.root, 'a'*64, self.admission, self.uid)
+
+    def proof(self, **kw):
+        return dict(returnValue=True, backend='c1-native-gate', routing='compositor-keyfilter-v1',
+                    state='stopped', mounted=False, healthy=False, stock_verified=True,
+                    stopped=True, token='1'*32, guardian_pid=0, reason='', profiles=None, **kw)
+
+    def test_prepare_exact_marker_and_seven_line_config(self):
+        self.prepare()
+        self.assertEqual(self.k.selection(self.root, self.uid)['schema'], 2)
+        lines = (self.root/'c1-keyfilter/config').read_text().splitlines()
+        self.assertEqual(len(lines), 7)
+        self.assertEqual(lines[0], 'CYTV-C1-KEYFILTER-1')
+        self.assertEqual((self.root/'c1-keyfilter').stat().st_mode & 0o777, 0o700)
+
+    def test_no_selection_has_no_effect_and_no_checkpoint_dependency(self):
+        with patch.object(self.k, 'luna', side_effect=AssertionError('effect')):
+            self.assertIsNone(self.k.selection(self.root, self.uid))
+        self.assertEqual(list(self.root.iterdir()), [])
+        # An unrelated world writable subtree must never be inspected.
+        other = self.root/'checkpoint'; other.mkdir(mode=0o777); other.chmod(0o777)
+        self.prepare()
+
+    def test_chain_preserves_foreign_entries_and_requires_exact_owned_identity(self):
+        foreign = [{'file':'/foreign', 'handler':'other', 'opaque':{'x':[1, True, None]}}]
+        own = self.k.filter_entry(self.root)
+        self.assertEqual(self.k.reconcile(foreign, self.root, True), [own]+foreign)
+        self.assertEqual(self.k.reconcile([own]+foreign, self.root, False), foreign)
+        for chain in ([dict(own, handler='changed')], [dict(own, extra=True)], [own, own]):
+            with self.assertRaises(ValueError): self.k.reconcile(chain, self.root, False)
+        for chain in (None, {}, ['opaque'], [{'file':1,'handler':'x'}]):
+            with self.assertRaises(ValueError): self.k.reconcile(chain, self.root, False)
+
+    def test_pending_durable_before_write_and_readback_failure_retains_evidence(self):
+        self.prepare(); chain=[]
+        def read(): return list(chain)
+        def write(value):
+            pending=json.loads((self.root/'c1-keyfilter/pending.json').read_text())
+            self.assertEqual(pending['before'], [])
+            self.assertEqual(pending['after'], value)
+            # Simulate configd acknowledging but not applying its write.
+        with patch.object(self.k,'read_chain',side_effect=read), patch.object(self.k,'write_chain',side_effect=write):
+            with self.assertRaises(ValueError): self.k.change_chain(self.root, True, self.uid)
+        self.assertTrue((self.root/'c1-keyfilter/pending.json').exists())
+
+    def test_stock_projection_requires_absent_filter(self):
+        self.prepare()
+        with patch.object(self.k,'native',return_value=self.proof()), patch.object(self.k,'verify_ready',return_value={'integrity_verified':True}):
+            with patch.object(self.k,'read_chain',return_value=[self.k.filter_entry(self.root)]):
+                self.assertFalse(self.k.status(self.root,self.uid)['effective']['stock_verified'])
+            with patch.object(self.k,'read_chain',return_value=[]):
+                self.assertTrue(self.k.status(self.root,self.uid)['effective']['stock_verified'])
+
+    def test_restore_stops_native_before_removing_filter(self):
+        self.prepare(); calls=[]; chain=[self.k.filter_entry(self.root)]
+        self.k.atomic(self.root/'c1-keyfilter/ownership.json',dict(schema=1,entry=chain[0],token='1'*32),self.uid)
+        def native(args,*a): calls.append(args[0]); return self.proof()
+        def write(value): calls.append('chain'); chain[:]=value
+        with patch.object(self.k,'native',side_effect=native), patch.object(self.k,'read_chain',side_effect=lambda:list(chain)), patch.object(self.k,'write_chain',side_effect=write):
+            self.assertEqual(self.k.execute('restore',root=self.root,uid=self.uid),'restored')
+        self.assertLess(calls.index('--restore'),calls.index('chain'))
+
+    def test_lifecycle_replay_cancel_and_unknown_visibility(self):
+        policy=self.k.ReturnPolicy('1'*32)
+        card=lambda app,event='foreground':dict(event=event,appId=app,windowType='_WEBOS_WINDOW_TYPE_CARD')
+        policy.event(card('content'),0)
+        policy.event(card('content','stop'),1)
+        self.assertFalse(policy.due(1.4))
+        self.assertTrue(policy.due(2))
+        policy.event(card('new-content'),2.1)
+        self.assertFalse(policy.due(3))
+        policy.event(card('com.webos.app.home'),3)
+        home={'returnValue':True,'foregroundAppInfo':[dict(appId='com.webos.app.home',windowType='_WEBOS_WINDOW_TYPE_CARD')]}
+        proof=self.proof(); proof.update(healthy=True,stopped=False,state='armed',guardian_pid=123,stock_verified=False)
+        self.assertTrue(self.k.can_return(home,{'returnValue':True,'state':'Active'},proof,'1'*32,{'returnValue':True,'appId':self.k.STOCK}))
+        home['foregroundAppInfo'].append(dict(appId=self.k.APP,windowType='_WEBOS_WINDOW_TYPE_OVERLAY'))
+        self.assertFalse(self.k.can_return(home,{'returnValue':True,'state':'Active'},proof,'1'*32))
+        for value in ({}, {'returnValue':True,'foregroundAppInfo':[]}, {'returnValue':True,'foregroundAppInfo':[{}]}):
+            self.assertFalse(self.k.can_return(value,{'returnValue':True,'state':'Active'},proof,'1'*32))
+        policy.event({'event':'unknown'},3.1)
+        self.assertFalse(policy.due(4))
+
+    def test_return_to_confirmed_empty_requires_both_views_and_active_intent(self):
+        proof=self.proof(); proof.update(healthy=True,stopped=False,state='armed',guardian_pid=123,stock_verified=False)
+        power={'returnValue':True,'state':'Active'}
+        empty={'returnValue':True,'foregroundAppInfo':[]}
+        self.assertTrue(self.k.can_return(empty,power,proof,'1'*32,{'returnValue':True,'appId':''}))
+        self.assertFalse(self.k.can_return(empty,power,proof,'1'*32,{'returnValue':True,'appId':'new-content'}))
+        self.assertFalse(self.k.can_return(empty,{},proof,'1'*32,{'returnValue':True,'appId':''}))
+        policy=self.k.ReturnPolicy('1'*32)
+        policy.event(dict(event='stop',appId='background',windowType='_WEBOS_WINDOW_TYPE_CARD'),1)
+        self.assertFalse(policy.due(2))
+
+    def test_modified_owned_entry_restore_retains_native_stop_and_evidence(self):
+        self.prepare()
+        changed=dict(self.k.filter_entry(self.root),handler='foreign')
+        with patch.object(self.k,'native',return_value=self.proof()) as native, patch.object(self.k,'read_chain',return_value=[changed]), patch.object(self.k,'write_chain') as write:
+            with self.assertRaises(ValueError): self.k.execute('restore',root=self.root,uid=self.uid)
+        self.assertEqual(native.call_args_list[0].args[0],['--restore'])
+        write.assert_not_called()
+
+    def test_unknown_exact_owned_entry_is_not_destructively_removed(self):
+        self.prepare()
+        with patch.object(self.k,'read_chain',return_value=[self.k.filter_entry(self.root)]), patch.object(self.k,'write_chain') as write:
+            with self.assertRaises(ValueError): self.k.change_chain(self.root,False,self.uid)
+        write.assert_not_called()
+
+    def test_probe_is_independent_of_legacy_checkpoint_probe(self):
+        target=self.root/'home'; target.write_bytes(b'ELF')
+        with patch.object(self.k.legacy,'TARGET',target), patch.object(self.k.os,'geteuid',return_value=0), patch.object(self.k.sys,'platform','linux'), patch.object(self.k.legacy,'probe',side_effect=AssertionError('legacy checkpoint probe')), patch.object(self.k.legacy,'secure',return_value=b'ELF'), patch.object(self.k.legacy,'admit',return_value={k:self.admission[k] for k in ('model','firmware','webos')}), patch.object(self.k,'luna',return_value={'returnValue':True}), patch.object(self.k,'read_chain',return_value=[]):
+            target.chmod(0o700)
+            observed=self.k.probe()
+        self.assertEqual(observed['target']['size'],3)
+        self.assertEqual(observed['model'],self.admission['model'])
+
+    def test_restore_clears_interrupted_prewrite_intent_after_absence_readback(self):
+        self.prepare()
+        own=self.k.filter_entry(self.root)
+        pending=self.root/'c1-keyfilter/pending.json'
+        self.k.atomic(pending,dict(schema=1,before=[],after=[own],entry=own),self.uid)
+        with patch.object(self.k,'read_chain',return_value=[]): self.k.change_chain(self.root,False,self.uid)
+        self.assertFalse(pending.exists())
+
+    def test_native_selfcheck_accepts_only_exact_success_shape(self):
+        from types import SimpleNamespace
+        value=dict(returnValue=True,backend=self.k.BACKEND,routing=self.k.ROUTING,selfcheck=True)
+        with patch.object(self.k,'binary',return_value=Path('/fake')), patch.object(self.k.subprocess,'run',return_value=SimpleNamespace(returncode=0,stdout=json.dumps(value).encode())):
+            self.assertEqual(self.k.native(['--selfcheck'],self.root,self.uid),value)
+        for bad in (dict(value,selfcheck=False),dict(value,extra=True),dict(value,routing='old')):
+            with patch.object(self.k,'binary',return_value=Path('/fake')), patch.object(self.k.subprocess,'run',return_value=SimpleNamespace(returncode=0,stdout=json.dumps(bad).encode())):
+                with self.assertRaises(ValueError): self.k.native(['--selfcheck'],self.root,self.uid)
+
+    def test_cold_package_import_without_runtime_search_path(self):
+        import subprocess
+        result=subprocess.run([sys.executable,'-c','from runtime import c1_keyfilter; assert c1_keyfilter.ROUTING == "compositor-keyfilter-v1"'],cwd=ROOT,env=dict(os.environ,PYTHONPATH=''),capture_output=True,text=True)
+        self.assertEqual(result.returncode,0,result.stderr)
+
+    def test_controller_retirement_never_signals_a_pid_after_identity_check(self):
+        self.prepare()
+        record=self.root/'c1-keyfilter/controller.json'
+        self.k.atomic(record,dict(pid=123,start=456,token='1'*32),self.uid)
+        with patch.object(self.k,'process_start',side_effect=[456,FileNotFoundError()]), patch.object(Path,'read_bytes',return_value=str(self.root/'runtime/c1_keyfilter.py').encode()+b'\0--watch\0'+b'1'*32+b'\0'), patch.object(self.k.os,'kill',side_effect=AssertionError('unsafe PID signal')):
+            self.k.stop_controller(self.root,self.uid)
+        self.assertFalse(record.exists())
+
+    def test_delayed_return_cancels_on_event_after_each_rpc(self):
+        self.prepare()
+        self.k.write_intent(self.root,True,'1'*32,'active',self.uid)
+        proof=self.proof(); proof.update(healthy=True,stopped=False,state='armed',guardian_pid=123,stock_verified=False)
+        replies=[{'returnValue':True,'state':'Active'},{'returnValue':True,'foregroundAppInfo':[]},{'returnValue':True,'appId':''}]
+        for stage in range(4):
+            with patch.object(self.k,'luna',side_effect=replies), patch.object(self.k,'native',return_value=proof):
+                changes=iter([False]*stage+[True])
+                self.assertFalse(self.k.return_ready(self.root,self.uid,'1'*32,lambda:next(changes)))
+
+    def test_return_dispatch_uses_only_fixed_native_home_barrier(self):
+        proof=self.proof(); proof.update(healthy=True,stopped=False,state='armed',guardian_pid=123,stock_verified=False)
+        with patch.object(self.k,'native',return_value=proof) as native, patch.object(self.k,'luna',side_effect=AssertionError('raw launch bypass')):
+            self.k.launch_return(self.root,self.uid,'1'*32)
+        native.assert_called_once_with(['--home','1'*32],self.root,self.uid,timeout=2.5)
+        stopped=self.proof()
+        for value in (stopped,dict(proof,token='2'*32)):
+            with patch.object(self.k,'native',return_value=value):
+                with self.assertRaises(ValueError): self.k.launch_return(self.root,self.uid,'1'*32)
+
+    def test_stock_surface_does_not_override_conflicting_or_unknown_sam(self):
+        proof=self.proof(); proof.update(healthy=True,stopped=False,state='armed',guardian_pid=123,stock_verified=False)
+        power={'returnValue':True,'state':'Active'}
+        stock={'returnValue':True,'foregroundAppInfo':[dict(appId=self.k.STOCK,windowType=self.k.CARD)]}
+        for foreground in ({'returnValue':True,'appId':'netflix'},None,{}, {'returnValue':True}, {'returnValue':False,'appId':self.k.STOCK}, {'returnValue':True,'appId':None}, {'returnValue':True,'appId':[]}):
+            with self.subTest(foreground=foreground):
+                self.assertFalse(self.k.can_return(stock,power,proof,'1'*32,foreground))
+        for app in ('',self.k.STOCK):
+            self.assertTrue(self.k.can_return(stock,power,proof,'1'*32,{'returnValue':True,'appId':app}))
+
+    def test_native_rejects_mount_or_inconsistent_lease(self):
+        proof=self.proof(); proof['opaque']=True
+        with self.assertRaises(ValueError): self.k.validate_native(proof)
+        proof=self.proof(); proof['mounted']=True
+        with self.assertRaises(ValueError): self.k.validate_native(proof)
+        proof=self.proof(); proof['healthy']=True
+        with self.assertRaises(ValueError): self.k.validate_native(proof)
+
+
+    def test_enable_chain_failure_restores_and_does_not_retry(self):
+        self.prepare()
+        (self.root/'runtime').mkdir()
+        (self.root/'runtime/c1-home-filter.js').write_text('filter')
+        (self.root/'runtime/c1-home-filter.js').chmod(0o600)
+        with patch.object(self.k,'verify_ready',return_value={'integrity_verified':True}), patch.object(self.k,'native',return_value=self.proof()), patch.object(self.k,'probe',return_value=self.admission), patch.object(self.k,'read_chain',return_value=[]), patch.object(self.k,'binary',return_value=Path('/fake')), patch('helper_bridge.require_idle'), patch.object(self.k,'change_chain',side_effect=RuntimeError('write')) as chain, patch.object(self.k,'restore_locked') as restore:
+            with self.assertRaises(RuntimeError): self.k.execute('enable',root=self.root,uid=self.uid)
+        self.assertEqual(chain.call_count,1)
+        restore.assert_called_once()
+
+
+    def test_enable_controller_failure_restores_without_native_guard_launch(self):
+        self.prepare()
+        (self.root/'runtime').mkdir()
+        script=self.root/'runtime/c1-home-filter.js'; script.write_text('filter'); script.chmod(0o600)
+        with patch.object(self.k,'verify_ready',return_value={'integrity_verified':True}), patch.object(self.k,'native',return_value=self.proof()), patch.object(self.k,'probe',return_value=self.admission), patch.object(self.k,'read_chain',return_value=[]), patch.object(self.k,'binary',return_value=Path('/fake')), patch('helper_bridge.require_idle'), patch.object(self.k,'change_chain'), patch.object(self.k,'start_controller',side_effect=RuntimeError('controller startup')), patch.object(self.k,'restore_locked') as restore, patch.object(self.k.subprocess,'Popen') as popen:
+            with self.assertRaises(RuntimeError): self.k.execute('enable',root=self.root,uid=self.uid)
+        restore.assert_called_once()
+        popen.assert_not_called()
+
+
+if __name__=='__main__': unittest.main()

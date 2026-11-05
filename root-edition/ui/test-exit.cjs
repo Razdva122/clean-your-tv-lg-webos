@@ -28,6 +28,8 @@ const wrap = result => ({returnValue:true,result:{returnValue:true,result}});
   await create(async m=>m==='restore'?wrap('restored'):wrap({effective:gateStock}),async()=>{gateLaunches++;})();
   assert.strictEqual(gateLaunches,1);
   for(const changes of [{mounted:true},{stock_verified:false},{profiles:{}},{healthy:true},{state:'armed'},
+    {routing:'compositor-keyfilter-v1',filter_installed:true,routing_active:false},
+    {routing:'unknown',filter_installed:false,routing_active:false},
     {...stock,mounted:true,stock_verified:false}]) {
     await assert.rejects(create(async m=>m==='restore'?wrap('restored'):wrap({effective:{...gateStock,...changes}}),async()=>{gateLaunches++;})());
   }

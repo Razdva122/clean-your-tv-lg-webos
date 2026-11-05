@@ -7,7 +7,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'runtime'))
 import device_adapter as d
 from persistent_store import Store
 from persistent_recovery import Coordinator
-from profile_recovery import prepare,PAYLOAD
+from profile_recovery import prepare,journal_payload
 from profile_plan import STOCK,CANDIDATE,snapshot
 from test_root_runtime_profile_plan import response
 
@@ -34,8 +34,9 @@ class IntegrationTests(unittest.TestCase):
   for p in reversed(self.patches):p.stop()
   self.tmp.cleanup()
  def create_route(self,tx):
-  self.target.write_bytes(PAYLOAD);self.target.chmod(0o600);self.home=CANDIDATE
-  info=self.target.stat();j=prepare(response(),STOCK)
+  j=prepare(response(),STOCK)
+  self.target.write_bytes(journal_payload(j));self.target.chmod(0o600);self.home=CANDIDATE
+  info=self.target.stat()
   j.update(transaction=tx,candidate_identity=dict(device=info.st_dev,inode=info.st_ino),deadline=100)
   d.save(j)
  def read(self):

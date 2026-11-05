@@ -2,7 +2,7 @@
 
 > **1.8.2:** [English](../RELEASE-1.8.2.md) · [LS2 Root #337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337).
 
-**C1 Beta (#298):** 在通用電腦安裝程式中選擇 Root。符合條件的 C1 電視會自動識別，無需獨立安裝程式或旗標。此路徑需要全新安裝，不支援自動更新，且尚未通過實體 C1 驗收。開啟 LG Home、長按 Back 或安全/電源停止後，Home 控制可能維持關閉；請在電視設定中重新開啟變更 Home。一般 Root 路徑維持不變。 如果仍有其他 No-root 元件，C1 完整移除會在變更前停止。請先透過一般 No-root 移除流程刪除這些元件；狀態未明確時請保留復原資料。 [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md).
+**尚未發佈的 C1 Beta（#298）：** 在通用電腦安裝程式中選擇 Root。符合條件的 C1 電視會自動識別，無需獨立安裝程式或旗標。此路徑需要全新安裝，不支援自動更新，且尚未通過實體 C1 驗收。開啟 LG Home、長按 Back 或安全/電源停止後，Home 控制可能維持關閉；請在電視設定中重新開啟變更 Home。一般 Root 路徑維持不變。 如果仍有其他 No-root 元件，C1 完整移除會在變更前停止。請先透過一般 No-root 移除流程刪除這些元件；狀態未明確時請保留復原資料。 [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md). C1 Beta 透過 Home 按鍵過濾並在應用程式關閉後返回，不修改 CRIU/checkpoint 權限。返回時可能短暫顯示 LG Home。連按三次 Home 也會停止路由；停止後請重新啟用變更 Home。
 
 1.8.2 (#290): **+ / 新增應用程式**僅在偵測到已安裝的調諧器時，以電視提供的名稱列出直播電視。其他隱藏的系統應用程式仍不顯示。No-root 需要更新後的 Helper 和安裝程式；Root 需要更新後的 Home 套件。頻道啟動仍需在電視上驗證。
 
@@ -216,3 +216,9 @@ Android CYTV: **設定電視** · **桌布** · **維護**. 在電視上開啟 H
 [HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).
 
 > **1.6.0:** 請保留最初失敗嘗試的報告。新報告會區分已記錄的首次錯誤與後續檢查，並提供經過篩選的 Doctor/狀態摘要。安裝、狀態檢查或還原成功後也可匯出報告。缺少的歷史證據仍標為未知；報告不授予復原操作權限。 [↗](../development/INSTALLER-DIAGNOSTICS.md).
+
+## 儲存空間
+
+候選組建會為安裝、主題和個人照片/影片桌布顯示所需、可用及不足的 MiB 空間，包括暫存副本和預留空間。應用程式配額、64 MiB 主題快取及暫存影片快取是不同限制。webOS 無法提供的資料會明確標為未知。請清理所指的儲存位置；不會自動清理。
+
+空間估算（TV）：需要 128.0 MiB；可用 96.0 MiB；還缺 32.0 MiB。

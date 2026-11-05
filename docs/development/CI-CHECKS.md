@@ -7,7 +7,7 @@ Linux/macOS summaries; an unexpected skip cannot grant a selected gate.
 
 ## Parallel test shards
 
-The runtime matrix runs **four shards per OS** on Linux and macOS, with
+The runtime matrix runs **four shards per selected OS**, with
 `fail-fast: false` so a failing shard does not cancel the other evidence.
 `scripts/test.sh --shard INDEX/COUNT [components...]` partitions the three large
 unittest discoveries (`root-edition/tests`, `tests/setup`, `tests/cytv`) by test
@@ -53,6 +53,51 @@ network operations. In [run 42049095791](https://github.com/Razdva122/clean-your
 ARM job package installation alone took 26m11s; test sharding does not address
 that independent delay. Record observed PR timings rather than promising a fixed
 fourfold end-to-end speedup.
+
+## Runner use, dependency caches and artifact retention
+
+The scope job emits `runtime_os` as JSON for the runtime matrix. Linux remains
+present, including for documentation-only changes, so the required summaries
+still receive a successful runtime dependency. macOS is allocated only when
+`tv`, `tv-runtime` or `installer` is selected. UI-only, Android-only and metadata
+changes do not allocate macOS runtime shards. Unknown/shared inputs and explicit
+full validation still select both platforms and all four shards. The two required
+Linux-hosted summary checks retain their existing names and failure semantics.
+
+The frozen desktop runtime workflow cancels superseded runs for the same PR.
+Manual dispatches use independent concurrency groups. Candidate builds, signed
+QA and release publication keep their existing non-cancelling behavior.
+
+Build, browser and runtime jobs cache npm downloads and pip downloads/wheels
+through the existing setup actions. Keys include the lockfile or the applicable
+requirements files; the setup actions also partition caches by platform/runtime.
+Clean `npm ci` and declared pip installs still run. The Android build uses the
+setup-java Gradle cache keyed by Android build scripts, Gradle properties and
+wrapper version. These are dependency caches, not cached acceptance evidence;
+the existing checked success markers remain the only test-reuse mechanism.
+No signing files, device data or workspace build outputs are added to caches.
+
+Retention applies to newly uploaded Actions artifacts:
+
+| Artifact purpose | Retention |
+| --- | --- |
+| Preliminary desktop/console installers, APK and Android test APK (`test_build`) | 14 days |
+| Full frozen candidate installers and Android test APK | 90 days |
+| Standalone Homebrew QA candidate (`homebrew_candidate`) | 90 days |
+| Homebrew package accompanying a preliminary `test_build` | 14 days |
+| Direct Root TV candidate and signed Root QA candidate | 90 days |
+| Assembled release archive | 90 days |
+| Theme review preview | 3 days |
+| Pages deployment artifact | 1 day (explicit existing action default) |
+
+Repository/organization retention policy can cap these requested durations.
+A selected build must remain downloadable through acceptance and publication.
+Coordinate long-running acceptance before expiry; expired/deleted artifacts
+require a new build and the affected acceptance under `docs/RELEASE-FLOW.md`.
+There is no age-based cleanup job: existing archives, selected build pins,
+acceptance hashes and release assets are not deleted or changed by this policy.
+Preliminary builds remain ineligible for final release acceptance. Public release
+assets remain the durable user download destination.
 
 ## TV transport boundary
 

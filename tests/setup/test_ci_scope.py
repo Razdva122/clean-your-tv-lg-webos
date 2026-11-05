@@ -252,6 +252,8 @@ class CIScope(unittest.TestCase):
                 ('native/service/app-inventory.js', 'false',
                  {'any', 'runtime', 'macos', 'tv_runtime', 'installer', 'setup'}),
                 ('release-plan.json', 'false', {'any', 'setup'}),
+                ('launcher/style.css', 'false', {'any', 'runtime', 'ui', 'preview'}),
+                ('android/app/build.gradle', 'false', {'any', 'runtime', 'android'}),
                 ('docs/development/README.md', 'false', set()),
                 ('shared.json', 'false', {'any', 'runtime', 'macos', 'ui', 'tv',
                                         'tv_runtime', 'installer', 'android', 'setup', 'preview'}),
@@ -267,6 +269,8 @@ class CIScope(unittest.TestCase):
                         scope['main']()
                 result = dict(line.split('=') for line in output.read_text().splitlines())
                 self.assertEqual({name for name, value in result.items() if value == 'true'}, enabled)
+                expected_os = ['ubuntu-latest', 'macos-latest'] if 'macos' in enabled else ['ubuntu-latest']
+                self.assertEqual(json.loads(result['runtime_os']), expected_os)
 
     def test_routes_changes_and_shared_dependencies(self):
         path = ROOT / 'scripts/ci-scope.py'

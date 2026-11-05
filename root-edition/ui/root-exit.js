@@ -19,6 +19,8 @@
       var e = status && status.effective;
       var gateStock = e && e.backend === 'c1-native-gate' && e.profiles === null &&
         e.stock_verified === true && e.mounted === false && e.healthy === false &&
+        (e.routing === undefined || (e.routing === 'compositor-keyfilter-v1' &&
+          e.filter_installed === false && e.routing_active === false)) &&
         (e.state === 'stock' || e.state === 'stopped');
       var legacyStock = e && !e.backend && e.sam_home === 'com.webos.app.home' && e.profiles &&
           e.profiles.defaultApps && e.profiles.defaultApps.categories &&

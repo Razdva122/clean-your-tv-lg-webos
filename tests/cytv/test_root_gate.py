@@ -16,7 +16,10 @@ NOTICE='C1 Beta: native Home control selected automatically. Power recovery and 
 
 class Remote:
     def __init__(self):self.calls=[];self.uploads={}
-    def run(self,command):self.calls.append(command)
+    def run(self,command):
+        self.calls.append(command)
+        if command.startswith('LC_ALL=C df -Pk '):
+            return 'Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/test 10000000 0 10000000 0% /shared'
     def upload(self,path,data,mode=0o600):self.calls.append(('upload',path,mode));self.uploads[path]=data
 
 class RootGateTests(unittest.TestCase):

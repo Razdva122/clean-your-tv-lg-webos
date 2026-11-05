@@ -2,7 +2,7 @@
 
 > **1.8.2:** [English](../RELEASE-1.8.2.md) · [LS2 Root #337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337).
 
-**C1 Beta (#298):** Ve společném instalačním programu pro počítač zvolte Root. Způsobilé TV C1 se rozpoznají automaticky; není potřeba samostatný instalátor ani přepínač. Tato cesta vyžaduje novou instalaci, nemá automatické aktualizace a dosud neprošla přejímkou na fyzickém C1. Otevřít LG Home, dlouhý Back nebo bezpečnostní/výpadková zastávka mohou ponechat ovládání Home vypnuté; v nastavení TV znovu zapněte Změnit Home. Běžná cesta Root se nemění. Pokud zůstávají další komponenty No-root, úplné odstranění C1 se zastaví před změnami. Nejdříve je odstraňte běžným postupem No-root; při nejasném stavu zachovejte data obnovy. [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md).
+**Nevydaná C1 Beta (#298):** Ve společném instalačním programu pro počítač zvolte Root. Způsobilé TV C1 se rozpoznají automaticky; není potřeba samostatný instalátor ani přepínač. Tato cesta vyžaduje novou instalaci, nemá automatické aktualizace a dosud neprošla přejímkou na fyzickém C1. Otevřít LG Home, dlouhý Back nebo bezpečnostní/výpadková zastávka mohou ponechat ovládání Home vypnuté; v nastavení TV znovu zapněte Změnit Home. Běžná cesta Root se nemění. Pokud zůstávají další komponenty No-root, úplné odstranění C1 se zastaví před změnami. Nejdříve je odstraňte běžným postupem No-root; při nejasném stavu zachovejte data obnovy. [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md). C1 Beta filtruje tlačítko Home a vrací se po zavření aplikace bez změn oprávnění CRIU/checkpoint. LG Home se může krátce zobrazit. Trojí Home také zastaví přesměrování; poté znovu zapněte Změnit Home.
 
 1.8.2 (#290): **+ / Přidat aplikaci** nabídne živé TV pod názvem z televizoru pouze při zjištění nainstalovaného tuneru. Ostatní skryté systémové aplikace zůstávají vynechané. No-root potřebuje aktualizovaný Helper a instalátor; Root aktualizovaný balíček Home. Spuštění kanálů ještě vyžaduje ověření na TV.
 
@@ -88,3 +88,9 @@ Kompatibilita závisí na konkrétním modelu, firmwaru a ovladači.
 Instalátory 1.6.0 pro počítač/Android a migrovaní klienti OTA volí 720p nebo 1080p podle schopností TV. Pokud je nelze ověřit, operace se zastaví. Starší samostatně instalované aktualizátory vyžadují popsanou migraci z počítače; obnova zachová původní balíčky.
 
 [HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).
+
+## Místo v úložišti
+
+Kandidátní sestavení zobrazují potřebné, volné a chybějící místo v MiB pro instalaci, motivy a vlastní fotografické/video tapety. Zahrnují dočasné kopie a rezervu. Kvóta aplikace, mezipaměť motivů 64 MiB a videa jsou samostatné limity. Neznámé hodnoty jsou označené. Uvolněte uvedené úložiště; automatické čištění se neprovádí.
+
+Storage estimate (TV): required 128.0 MiB; available 96.0 MiB; shortfall 32.0 MiB.

@@ -1,11 +1,13 @@
 """Fixed, phase-bound advice. It never connects, retries, repairs or grants trust."""
-from .errors import DeveloperKeyError, TVConnectionError, TVRejected
+from .errors import DeveloperKeyError, TVConnectionError, TVRejected, is_storage_full, TV_STORAGE_FULL, COMPUTER_STORAGE_FULL
 from .recovery_state import unsubmitted_removal
 
 NETWORK = 'Keep the TV on and use the same home network. Review the selected TV address and SSH port, Local Network access and VPN isolation.'
 DEVELOPER = 'Leave Developer Mode open with Key Server on. Use the current TV passphrase exactly; do not turn Developer Mode off or delete the saved profile.'
 REPORT = 'Save the diagnostic report and keep the saved connection and recovery data. Do not reset the TV or repeat setup to force progress.'
 GUIDES = {
+    'tv-storage-full': ('Not enough space on the TV', TV_STORAGE_FULL, REPORT, False),
+    'computer-storage-full': ('Not enough space on this computer', COMPUTER_STORAGE_FULL, REPORT, False),
     'ssh-unreachable': ('Check the TV connection', 'The selected SSH connection could not be reached or timed out.', NETWORK, True),
     'ssh-auth-root': ('SSH sign-in was not confirmed', 'Root sign-in needs your existing trusted SSH access.',
         'Use the existing root SSH password or supported private key. Its key passphrase unlocks the file; it is not the TV password.', True),
@@ -41,7 +43,11 @@ def for_error(error, phase, profile=None, pending=None):
     names = {cls.__name__ for cls in type(error).__mro__}
     reason = getattr(error, 'reason_code', None)
     code = None
-    if (pending and edition == 'no-root' and phase in ('recover', 'uninstall')
+    if reason == 'tv-storage-full':
+        code = 'tv-storage-full'
+    elif reason == 'computer-storage-full' or is_storage_full(error):
+        code = 'computer-storage-full'
+    elif (pending and edition == 'no-root' and phase in ('recover', 'uninstall')
             and isinstance(error, TVRejected) and error.luna.get('operation') == 'package-status'):
         code = 'recovery-status-rejected'
     elif pending and phase == 'uninstall' and unsubmitted_removal(profile, pending):

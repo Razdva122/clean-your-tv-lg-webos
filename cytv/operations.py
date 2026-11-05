@@ -9,7 +9,7 @@ import tempfile
 import time
 import uuid
 
-from . import package, i18n, diagnostics, graphics
+from . import package, i18n, diagnostics, graphics, storage
 from .errors import UserError, TVRejected, ExistingRoot, TVCommandError, root_recovery_details
 
 HOME = 'com.gathin.tvhome'
@@ -71,7 +71,15 @@ def require_removal_idle(remote, profile, pending):
     from .recovery_state import unsubmitted_removal
     if unsubmitted_removal(profile, pending):
         return
-    idle = remote.luna('com.webos.appInstallService/status', {'subscribe': True}, timeout=10)
+    try:
+        idle = remote.luna('com.webos.appInstallService/status', {'subscribe': True}, timeout=10)
+    except TVRejected as error:
+        if profile.get('edition') == 'no-root' and error.luna.get('operation') == 'package-status':
+            from .failure_help import GUIDES
+            # Keep the typed/numeric evidence, but do not suggest repeating
+            # Doctor as a way around an unavailable recovery capability.
+            error.args = ('\n'.join(GUIDES['recovery-status-rejected'][:3]),)
+        raise
     if (not isinstance(idle, dict) or idle.get('returnValue') is not True or
             not isinstance(idle.get('status'), dict) or idle['status'].get('apps') != []):
         raise UserError('TV installer is not confirmed idle. Keep the receipt and run cytv status before removal.', reason_code='pending-operation')
@@ -335,7 +343,7 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
 
     def native_root_present(self):
         script = "if " + ' || '.join('[ -e '+ROOT_STATE+'/'+name+' ] || [ -L '+ROOT_STATE+'/'+name+' ]'
-            for name in ('home-backend.json','c1-gate','runtime/c1-home-gate','runtime/c1_gate.py'))
+            for name in ('home-backend.json','c1-gate','c1-keyfilter','runtime/c1-home-gate','runtime/c1-keyfilter-guard','runtime/c1_gate.py','runtime/c1_keyfilter.py'))
         return self.remote.run(script+'; then printf CYTV_C1_GATE; fi').strip() == 'CYTV_C1_GATE'
 
     def root_action(self, action, bundle=None, migrate=False, experimental=False):
@@ -613,6 +621,7 @@ printf '%s' "$cytv_state"
         apps_data = json.dumps(ids).encode()
         expected[HELPER_STATE + '/ssap-key.json'] = hashlib.sha256(key_data).hexdigest()
         expected[HELPER_STATE + '/apps.json'] = hashlib.sha256(apps_data).hexdigest()
+        storage.install(self.remote, {'helper.ipk': helper, 'launcher.ipk': launcher}, self.progress)
         self.store.begin(self.profile, 'install', expected=expected,
                          versions={HOME: self.manifest['home_version'], HELPER: self.manifest['helper_version']})
         stage = '/media/developer/temp/cytv-' + uuid.uuid4().hex
@@ -690,6 +699,10 @@ printf '%s' "$cytv_state"
             package.verify_root_rollback_format((bundle / package.safe_name(manifest['package'])).read_bytes())
             release_sha = hashlib.sha256((bundle / 'release.json').read_bytes()).hexdigest()
             bundle_sha = hashlib.sha256((bundle / 'bundle.json').read_bytes()).hexdigest()
+            storage.install(self.remote, {str(path.relative_to(bundle)): path.read_bytes()
+                            for path in bundle.rglob('*') if path.is_file()} |
+                            {'updater/' + str(path.relative_to(updater)): path.read_bytes()
+                             for path in updater.rglob('*') if path.is_file()}, self.progress, root=True)
             if reinstall:
                 self.prepare_root_reinstall(already_removed=reinstall == 'removed')
                 self.preflight(install=True, home_interfaces=True)
@@ -743,12 +756,15 @@ print('CYTV_UPDATER_VERIFIED')
     @staticmethod
     def root_active(result):
         if result.get('backend') == 'c1-native-gate':
+            from .root_gate import native_proof
             effective = result.get('effective', {})
             intent = result.get('intent') or {}
             return (result.get('recovery', {}).get('integrity_verified') is True
                     and intent.get('enabled') is True and intent.get('phase') == 'active'
                     and effective.get('backend') == 'c1-native-gate' and effective.get('profiles') is None
-                    and effective.get('state') == 'armed' and effective.get('mounted') is True
+                    and native_proof(result) is not None
+                    and effective.get('state') == 'armed'
+                    and (effective.get('mounted') is True or effective.get('routing') == 'compositor-keyfilter-v1')
                     and effective.get('healthy') is True and effective.get('stock_verified') is False
                     and effective.get('stopped') is False
                     and isinstance(effective.get('token'), str) and effective['token'] == intent.get('token')
@@ -998,7 +1014,9 @@ print('CYTV_UPDATER_VERIFIED')
         try:
             effective = device.get('effective', {})
             if device.get('backend') == 'c1-native-gate':
+                from .root_gate import stock_proof
                 return (device.get('recovery', {}).get('integrity_verified') is True
+                        and stock_proof(device)
                         and effective.get('backend') == 'c1-native-gate' and effective.get('profiles') is None
                         and effective.get('stock_verified') is True and effective.get('mounted') is False
                         and effective.get('healthy') is False and effective.get('guardian_pid') == 0
