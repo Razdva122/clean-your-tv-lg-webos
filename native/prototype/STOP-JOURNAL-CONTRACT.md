@@ -22,8 +22,9 @@ private operations across instances/processes. There is no boolean lease option.
 
 - `io.withControllerTransaction(callback)` must invoke callback exactly once only
   under a checked native controller lease, retain it through the returned Promise,
-  and release afterward. Its tx methods must reject after lease loss. The port
-  also denies overlapping operations on one instance, missing/boolean tx,
+  and release afterward. Synchronous try/finally around callback is insufficient:
+  release must await Promise fulfillment/rejection. Its tx methods must reject
+  after lease loss. The port also denies overlapping operations on one instance, missing/boolean tx,
   premature completion, and callbacks arriving after completion. Private calls and
   their results are fenced against a closed logical scope, so a late prepare ACK
   cannot continue to commit after transaction loss. This is not OS lease proof.
@@ -32,12 +33,19 @@ private operations across instances/processes. There is no boolean lease option.
   At most64 exact consecutive entry names, each <=16KiB UTF-8, may be returned.
   Missing, staging, corrupt, unsafe, overflow or unconfirmed durability must fail;
   they may never be represented as a newly initialized or partial snapshot.
+  Private serialization follows frozen V2: JSON schema and the hash of the EXACT
+  raw bytes are checked, not raw===encode(parsed). Whitespace/key order and
+  duplicate-key last-value parsing are accepted by V2/Python and this reader.
+  Own writes use encode(). Canonical-only private reads would be a new stricter
+  format/scope; they must not be silently assumed from shared Stop validation.
 - `tx.scanStops()` returns `{status:"snapshot",ids:[...]}` only for a complete
   checked non-secret Stop set of <=16 distinct32-hex IDs. Native scan must stop
   at the17th name and report overflow before unbounded record reads. Pending,
   corrupt, unsafe or unavailable observations fail closed; no partial success.
   Raw metadata/canonical bytes and external producer UID/GID pins are the native
   adapter's responsibility, including V2's narrow0640/0777 Stop-only rule.
+  Shared Stop bytes MUST be canonical and match the filename ID; the private
+  serialization compatibility above does not relax this ingress check.
 - `tx.appendPrivate({seq,raw,sha256})` derives its fixed entry pathname internally;
   no path is supplied. It must exclusively create an owned0600 entry under the
   same checked private bindings, verify bytes/identity, fsync file then directory,
@@ -72,7 +80,7 @@ tests leave an operation unresolved and reopen the model. They are not actual
 C I/O, process-kill, disk fsync, cross-UID, reboot or TV tests. Native metadata and
 filesystem guards are not simulated away as production acceptance.
 
-Verification: npm ci passed;69 cases passed on each of the four runtimes. The
+Verification: npm ci passed;70 cases passed on each of the four runtimes. The
 initial missing-module test was RED. Added actual-flow tests then reproduced a
 late private commit after premature transaction completion; scoped I/O checks
 fixed it. A fixture expectation at capacity was corrected to match V2: a freshly
