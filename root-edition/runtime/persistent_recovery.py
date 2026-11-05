@@ -107,7 +107,8 @@ class Coordinator:
                     except Exception:
                         cleanup = 'failed'
                     # Window cleanup cannot revoke independently verified recovery.
-                    print(json.dumps(dict(event='home-ui-cleanup',result=cleanup)),file=sys.stderr,flush=True)
+                    try: print(json.dumps(dict(event='home-ui-cleanup',result=cleanup)),file=sys.stderr,flush=True)
+                    except Exception: pass
                 return result
             d.native_input_disable()
             return dict(intent=intent,effect=effect)
@@ -324,14 +325,17 @@ def bound_exit(transaction, reason=None):
     eligible = safe and current_boot == intent['boot'] and reason != 'escape' and intent['enabled']
     proof = stopping(transaction) if eligible and intent['phase'] == 'active' else None
     shutdown = eligible and (intent['phase'] == 'stopping' or (intent['phase'] == 'active' and proof))
-    print(json.dumps(dict(event='bound-exit-decision',transaction=transaction,reason=reason,
-                         phase=intent['phase'],enabled=intent['enabled'],shutdown=shutdown,
-                         home_present=home,failsafe_present=failsafe,
-                         current_session_known=current_boot is not None,
-                         same_session=current_boot == intent['boot'] if current_boot is not None else None,
-                         shutdown_proof=proof)),flush=True)
+    try:
+        print(json.dumps(dict(event='bound-exit-decision',transaction=transaction,reason=reason,
+                             phase=intent['phase'],enabled=intent['enabled'],shutdown=shutdown,
+                             home_present=home,failsafe_present=failsafe,
+                             current_session_known=current_boot is not None,
+                             same_session=current_boot == intent['boot'] if current_boot is not None else None,
+                             shutdown_proof=proof)),flush=True)
+    except Exception: pass  # A full shared log must not block routing recovery.
     if shutdown:
-        print('Confirmed system shutdown: retaining active intent for boot recovery', flush=True)
+        try: print('Confirmed system shutdown: retaining active intent for boot recovery', flush=True)
+        except Exception: pass
         return c.shutdown(intent)
     result = c.exit(intent, reason='fault')
     return result.get('restored_transaction') == transaction

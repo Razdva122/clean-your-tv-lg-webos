@@ -1385,6 +1385,42 @@ class OperationTests(unittest.TestCase):
         self.assertIsNone(self.store.pending(installer.profile))
         self.assertFalse(any(c[0]=='luna' or c[1].endswith(' enable') for c in remote.calls))
 
+    def test_failed_activation_recovers_only_after_explicit_confirmation_without_installing_again(self):
+        from cytv.recovery import recover
+        from cytv.terminal import Console
+        self.root_bundle();remote=Remote(fail='enable');installer=self.installer(remote,'root')
+        with self.assertRaises(RuntimeError):installer.install(self.inventory)
+        previous=self.store.pending(installer.profile)
+        remote.active={'recovery':{'integrity_verified':True},'guardian_active':False,
+            'intent':{'enabled':False,'phase':'disabled'},'journal':{'state':'restored'},
+            'effective':{'sam_home':'com.webos.app.home','profiles':{
+                'defaultApps':{'categories':{'home':'com.webos.app.home'}},'idleApp':{'appId':'com.webos.app.home'}}}}
+        original=remote.run
+        def run(command,**kwargs):
+            if 'deploy.json' in command:return '{"stage":"installed-recovery-only"}'
+            for marker in ('CYTV_ROOT_FILES_OK','CYTV_ACTIVATION_RECOVERABLE'):
+                if marker in command:
+                    remote.calls.append(('run',command));return marker
+            if command.endswith(' enable'):
+                remote.fail=None
+                remote.active={'recovery':{'integrity_verified':True},'guardian_active':True,
+                    'intent':{'enabled':True,'phase':'active'},'effective':{'sam_home':package.ROOT_APP,'profiles':{
+                        'defaultApps':{'categories':{'home':package.ROOT_APP}},'idleApp':{'appId':package.ROOT_APP}}}}
+            return original(command,**kwargs)
+        remote.run=run;checkpoint=len(remote.calls)
+        answers=iter(('y',''))
+        recover(installer,lambda _:next(answers),Console(lambda *_:None))
+        self.assertEqual(self.store.pending(installer.profile),previous)
+        self.assertFalse(any(c[0]=='run' and c[1].endswith(' enable') for c in remote.calls[checkpoint:]))
+        answers=iter(('y','y','3'))
+        recover(installer,lambda _:next(answers),Console(lambda *_:None))
+        self.assertIsNone(self.store.pending(installer.profile))
+        later=remote.calls[checkpoint:]
+        self.assertEqual(sum(c[0]=='run' and c[1].endswith(' enable') for c in later),1)
+        self.assertFalse(any(c[0]=='upload' or '/dev/install' in c[1] or '/dev/remove' in c[1] for c in later))
+        saved=list(self.store.device_dir(installer.profile).glob('recovery-*.json'))
+        self.assertEqual(len(saved),1);self.assertEqual(json.loads(saved[0].read_text())['previous'],previous)
+
     def test_incomplete_idle_routing_keeps_activation_receipt(self):
         remote=Remote()
         remote.active['effective']['profiles']['idleApp']['appId']='com.webos.app.home'

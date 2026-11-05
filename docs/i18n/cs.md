@@ -88,3 +88,5 @@ Kompatibilita závisí na konkrétním modelu, firmwaru a ovladači.
 Instalátory 1.6.0 pro počítač/Android a migrovaní klienti OTA volí 720p nebo 1080p podle schopností TV. Pokud je nelze ověřit, operace se zastaví. Starší samostatně instalované aktualizátory vyžadují popsanou migraci z počítače; obnova zachová původní balíčky.
 
 [HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).
+
+Nevydáno: po selhání aktivace Root použijte stejné uložené připojení a kontrolu obnovy (`cytv recover`). Pokračování vyžaduje ověřený návrat LG Home, vypnuté ovládání, integritu balíčků/updateru a samostatné potvrzení. Zachovejte záznamy; nepřeinstalovávejte ani nemažte failsafe. [Recovery](../RECOVERY.md#failed-root-activation-unreleased).

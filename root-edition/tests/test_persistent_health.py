@@ -25,6 +25,27 @@ class HealthTests(IntegrationTests):
   h.publish('route-a',1)
   with self.assertRaises(ValueError):h.publish('old',2)
   self.assertEqual(h.load('route-a')['sequence'],1)
+ def test_each_context_refusal_has_a_fixed_reason_without_private_identity(self):
+  import copy
+  original=self.store.read();binding=self.c.read_binding()
+  for field,value,reason in (('transaction','old','transaction-mismatch'),
+       ('restored',True,'binding-restored'),('generation',9,'generation-mismatch'),
+       ('token','private-other-token','token-mismatch'),('boot','other-boot','boot-mismatch'),
+       ('phase','disabled','phase-inactive'),('failsafe',True,'failsafe-present')):
+   with self.subTest(field=field),patch.object(d,'FAILSAFE',self.root/'failsafe'):
+    intent=copy.deepcopy(original);current=copy.deepcopy(binding)
+    if field in ('transaction','restored','generation','token'):current[field]=value
+    elif field=='failsafe':d.FAILSAFE.touch()
+    else:
+     intent[field]=value
+     if field=='phase':intent['enabled']=False
+    self.store.path.write_text(json.dumps(intent));self.c.write_binding(current)
+    with self.assertRaises(ValueError) as caught:h.publish('route-a',1)
+    self.assertEqual(getattr(caught.exception,'reason',None),reason)
+    self.assertNotIn('private-other-token',str(caught.exception))
+    self.assertNotIn('route-a',str(caught.exception))
+    self.store.path.write_text(json.dumps(original));self.c.write_binding(binding)
+    if d.FAILSAFE.exists():d.FAILSAFE.unlink()
  def test_expired_heartbeat_is_not_health(self):
   with patch.object(h.time,'monotonic',return_value=10):h.publish('route-a',1)
   with patch.object(h.time,'monotonic',return_value=13):

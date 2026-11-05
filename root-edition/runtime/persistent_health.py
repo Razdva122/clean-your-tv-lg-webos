@@ -12,6 +12,15 @@ from persistent_recovery import Coordinator
 ROOT = Path('/tmp/clean-your-tv-root-health')
 
 
+class HealthContextError(ValueError):
+    """Fixed refusal code; no attempt, boot identity or token in the error."""
+    def __init__(self, reason):
+        self.reason = reason if reason in ('transaction-mismatch','binding-restored',
+            'generation-mismatch','token-mismatch','boot-mismatch','phase-inactive',
+            'failsafe-present') else 'unknown'
+        super().__init__('Inactive or stale health context: '+self.reason)
+
+
 def path(transaction):
     return ROOT/(hashlib.sha256(transaction.encode()).hexdigest()+'.json')
 
@@ -20,12 +29,15 @@ def context(transaction):
     d.require_home(purpose='live')
     from intent_runtime import boot_identity
     c = Coordinator(Store(d.STATE)); intent = c.store.read(); binding = c.read_binding()
-    if (binding['transaction'] != transaction or binding['restored']
-            or (binding['generation'],binding['token']) != (intent['generation'],intent['token'])
-            or intent['boot'] != boot_identity()
-            or intent['phase'] not in ('trial','starting','active') or d.FAILSAFE.exists()):
-        raise ValueError('Inactive or stale health context')
-    return intent
+    if binding['transaction'] != transaction: reason = 'transaction-mismatch'
+    elif binding['restored']: reason = 'binding-restored'
+    elif binding['generation'] != intent['generation']: reason = 'generation-mismatch'
+    elif binding['token'] != intent['token']: reason = 'token-mismatch'
+    elif intent['boot'] != boot_identity(): reason = 'boot-mismatch'
+    elif intent['phase'] not in ('trial','starting','active'): reason = 'phase-inactive'
+    elif d.FAILSAFE.exists(): reason = 'failsafe-present'
+    else: return intent
+    raise HealthContextError(reason)
 
 
 def authorized(transaction):

@@ -143,6 +143,8 @@ Homebrew Channel 拒絕此安裝程式存取。在 webOS 11 上，Homebrew 0.7.3
 
 **1.6.0:** 為同一台已儲存的電視選擇**檢查復原選項**，或執行 `cytv recover`。檢查和變更需要分別確認，預設為「否」；`--yes` 不會批准。Root 僅在現有驗證通過後繼續。No-root 僅在現有套件服務檢查允許時提供移除選項；移除可能重設 Home 偏好設定。不會自動開始新的安裝。狀態不明或存取遭拒時，請儲存報告並停止；保留日誌，不要重複移除。#201 的完成證據以及 #216 的實際電視復原仍未確認。 [Recovery](../RECOVERY.md). 求助時請提供型號、韌體、版本類別、安裝程式版本、失敗步驟及預期/實際表現；分享前檢查報告並刪除機密資訊。
 
+尚未發布：Root 啟用失敗後，使用同一已儲存連線檢查復原（`cytv recover`）。繼續需要驗證 LG Home 已還原、控制已關閉、套件/updater 完整，並另行確認。保留日誌；不要重新安裝或刪除 failsafe 標記。 [Recovery](../RECOVERY.md#failed-root-activation-unreleased).
+
 1.7.0: 如果原始日誌能證明 No-root 移除在首次套件請求前停止，復原可在沒有全域套件狀態權限的情況下繼續。請單獨確認移除，驗證移除完成後再單獨開始安裝。結果不明或已傳送的操作仍會阻止繼續；保留已儲存的連線和日誌。1.6.0 不含此變更。[詳情](../RECOVERY.md#no-root-removal-stopped-before-package-submission-unreleased)。
 
 [文件導覽](../README.md) · [回報問題](../FEEDBACK.md)

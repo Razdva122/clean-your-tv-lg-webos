@@ -12,6 +12,11 @@ import bounded_profile_trial as bounded
 from emergency_watchdog import watch
 
 
+def record(value, error=False):
+    try: print(json.dumps(value),file=sys.stderr if error else sys.stdout,flush=True)
+    except Exception: pass  # Diagnostic storage never authorizes or blocks recovery.
+
+
 def save_ready(transaction, observer):
     value = {'transaction':transaction, 'pid':os.getpid(),
              'start_ticks':d.process_start(os.getpid()), 'observer_pid':observer.pid,
@@ -31,7 +36,8 @@ def completed(transaction):
 
 
 def recover(transaction, reason):
-    print(json.dumps({'event':'emergency-recovery','transaction':transaction,'reason':reason}), flush=True)
+    record({'event':'emergency-recovery','transaction':transaction,'reason':reason,
+            'pid':os.getpid(),'uptime':time.monotonic()})
     for _ in range(30):
         try:
             from persistent_recovery import bound_exit
@@ -47,7 +53,7 @@ def recover(transaction, reason):
             if d.read() != j['baseline']: return False
             # Routing is already restored even if this optional screen launch fails.
             try: d.sam_transport().call('luna://com.webos.applicationManager/launch', {'id':'com.webos.app.home'})
-            except Exception as exc: print(json.dumps({'screen_launch_error':str(exc)}), flush=True)
+            except Exception as exc: record({'screen_launch_error':str(exc)})
             return True
         if result == 'conflict': return False
         time.sleep(.2)
@@ -81,14 +87,22 @@ def supervise(transaction):
             if visit[0] is not None and visit[0].is_alive(): return
             def launch():
                 try: d.sam_transport().call('luna://com.webos.applicationManager/launch', {'id':'com.webos.app.home'})
-                except Exception as exc: print(json.dumps({'screen_launch_error':str(exc)}), flush=True)
+                except Exception as exc: record({'screen_launch_error':str(exc)})
             visit[0] = threading.Thread(target=launch, daemon=True)
             visit[0].start()
         reason = watch(r, lambda why:recover(transaction, why), timeout=2,
                        on_ready=lambda:save_ready(transaction, observer),
                        finished=lambda:completed(transaction), on_ping=ping, on_lg_home=open_lg_home)
-        print(json.dumps({'event':'emergency-monitor-ended','reason':reason,'transaction':transaction}), flush=True)
-    except Exception:
+        record({'event':'emergency-monitor-ended','reason':reason,'transaction':transaction})
+    except Exception as exc:
+        try:
+            from persistent_health import HealthContextError
+            # Record the observed refusal before recovery changes intent/binding.
+            # Logging failure must not prevent the independent recovery path.
+            if isinstance(exc, HealthContextError):
+                record(dict(event='health-context-rejected',reason=exc.reason,
+                            pid=os.getpid(),uptime=time.monotonic()),error=True)
+        except Exception: pass
         recover(transaction, 'supervisor_error')
         raise
     finally:
