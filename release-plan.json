@@ -1,20 +1,20 @@
 {
   "schema": 1,
-  "version": null,
+  "version": "1.9.0",
   "changes": [
     {
       "pr": 323,
       "issues": [
         282
       ],
-      "summary": "Preserve AOD and vendor destinations during Root activation"
+      "summary": "Preserve full AOD/vendor category maps during Root activation/restoration; original C4 cause and exact B4/C4 acceptance remain unconfirmed."
     },
     {
       "pr": 324,
       "issues": [
         307
       ],
-      "summary": "Explain blocked recovery after partial Helper installation"
+      "summary": "Clarify refused partial-Helper recovery without changing authority/journals; original #307 recovery remains unresolved."
     },
     {
       "pr": 325,
@@ -28,14 +28,14 @@
       "issues": [
         96
       ],
-      "summary": "Correct source installer emergency-stop and restart guidance"
+      "summary": "Correct source-installer emergency-stop/restart guidance only; original #96 controls/standby failures remain unresolved."
     },
     {
       "pr": 327,
       "issues": [
         298
       ],
-      "summary": "fix(root): verify C1 overlay handoff and reject restored stock Home"
+      "summary": "Retain legacy schema1 C1 stock-return/handoff safety checks; no current Home overlay or CRIU compatibility claim."
     },
     {
       "pr": 329,
@@ -47,14 +47,14 @@
       "issues": [
         298
       ],
-      "summary": "fix(root): check C1 checkpoint safety before package installation"
+      "summary": "Check legacy schema1 checkpoint safety before install/activation without permission changes; fresh schema2 does not use checkpoints."
     },
     {
       "pr": 331,
       "issues": [
         298
       ],
-      "summary": "Add mount-free C1 Home routing with leased recovery"
+      "summary": "Add fresh C1 compositor Home routing with independent leases and legacy recovery; no physical C1 acceptance or normal OTA."
     },
     {
       "pr": 333,
@@ -65,7 +65,12 @@
         307,
         314
       ],
-      "summary": "Stage nine implementation PRs for the next release cycle"
+      "summary": "Integrate reviewed source ancestries plus bundled Root receiver regression fix and observed-state Ribbon test synchronization; no additional compatibility claim."
+    },
+    {
+      "pr": 335,
+      "issues": [],
+      "summary": "Reduce CI artifact retention and unnecessary runner work"
     }
   ],
   "excluded": [],

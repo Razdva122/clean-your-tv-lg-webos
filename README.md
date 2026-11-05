@@ -1,3 +1,5 @@
+> **Unpublished 1.9.0 candidate:** versions below describe this preparation branch. Published downloads remain [v1.8.2](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.8.2). [Candidate scope and pending acceptance](docs/RELEASE-1.9.0.md).
+
 ![Clean Your TV — for LG webOS](assets/brand/readme-logo.png#gh-light-mode-only)
 ![Clean Your TV — for LG webOS](assets/brand/readme-logo-dark.png#gh-dark-mode-only)
 
@@ -55,7 +57,7 @@ and creating your own theme.
 ## Download and install
 
 <!-- release:downloads -->
-Current stable release: **[v1.8.2](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.8.2)** — [release notes](docs/RELEASE-1.8.2.md).
+Current stable release: **[v1.9.0](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.9.0)** — [release notes](docs/RELEASE-1.9.0.md).
 <!-- /release:downloads -->
 
 [![Download Windows x64 graphical installer — GUI ZIP](assets/brand/downloads/windows.svg)](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/cytv-windows-x64-desktop.zip)
@@ -135,12 +137,12 @@ For contributors: [build and technical references](docs/development/README.md),
 <!-- release:components -->
 | Component | Stable version |
 | --- | --- |
-| cytv installer | 0.9.2 |
-| Home | 1.9.4 |
+| cytv installer | 0.10.0 |
+| Home | 1.10.0 |
 | Home Helper | 0.7.4 |
-| Root edition | 0.9.3 |
-| Both edition Updaters | 0.4.4 |
-| Android installer / versionCode | 0.8.2 / 22 |
+| Root edition | 0.10.0 |
+| Both edition Updaters | 0.4.5 |
+| Android installer / versionCode | 0.9.0 / 23 |
 <!-- /release:components -->
 
 System Updater in 1.7.0: 1.2.0 / protocol 1. Existing supervisors stay pinned; installed 1.1.2 has no general replacement path in this release.

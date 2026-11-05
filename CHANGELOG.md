@@ -1,6 +1,15 @@
 # Changelog
 
-## Unreleased
+## 1.9.0 — unpublished candidate
+
+- Preserve complete Root profile/AOD destinations and add guarded recovery after a verified restored activation failure. Original device reports remain unresolved.
+- Add fresh-install C1 compositor Home routing with independent leases; retain legacy mount recovery and refuse ordinary updater use for experimental state. Physical C1 acceptance is pending.
+- Show required/available/missing storage for installation, themes and wallpapers without automatic cleanup.
+- Add Atmosphere 1.0.0 and image-only Crăciun la Brașov 1.1.0 to the catalogue.
+- Correct refused partial-Helper recovery guidance, standalone Root receiver packaging and Ribbon test synchronization; retain all emergency and release gates.
+- Bound CI artifact retention, cache dependencies and avoid unselected runner shards.
+
+### Earlier changes (published scope is recorded in 1.8.2 notes)
 
 - Restore one persistent full-screen CARD Home in both editions. Ribbon uses its
   own wallpaper. Remove transient overlay context, passive closing and launch

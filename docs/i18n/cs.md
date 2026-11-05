@@ -1,6 +1,6 @@
 # Čeština — rozhraní televizoru
 
-> **1.8.2:** [English](../RELEASE-1.8.2.md) · [LS2 Root #337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337).
+> **1.8.2:** [English](../RELEASE-1.8.2.md) · [LS2 Root #337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337) · [1.9.0 — nevydaný RC](../RELEASE-1.9.0.md).
 
 **Nevydaná C1 Beta (#298):** Ve společném instalačním programu pro počítač zvolte Root. Způsobilé TV C1 se rozpoznají automaticky; není potřeba samostatný instalátor ani přepínač. Tato cesta vyžaduje novou instalaci, nemá automatické aktualizace a dosud neprošla přejímkou na fyzickém C1. Otevřít LG Home, dlouhý Back nebo bezpečnostní/výpadková zastávka mohou ponechat ovládání Home vypnuté; v nastavení TV znovu zapněte Změnit Home. Běžná cesta Root se nemění. Pokud zůstávají další komponenty No-root, úplné odstranění C1 se zastaví před změnami. Nejdříve je odstraňte běžným postupem No-root; při nejasném stavu zachovejte data obnovy. [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md). C1 Beta filtruje tlačítko Home a vrací se po zavření aplikace bez změn oprávnění CRIU/checkpoint. LG Home se může krátce zobrazit. Trojí Home také zastaví přesměrování; poté znovu zapněte Změnit Home.
 
@@ -11,7 +11,7 @@
 Ribbon: podržte OK pro úpravy; ←/→ přesouvá kartu, ↑ vybere × (skrýt z Home), ↓ vrátí výběr na kartu, OK potvrdí a Back zruší. Aktuální pozadí zůstává.
 
 
-**Nevydaný kandidát — zdroje při spuštění Root:** V Nastavení → Vaše domovská obrazovka zapněte **Změnit Home** a upravte **Otevřít Clean Your TV jako první**. **LG Channels / Živé TV** je ve výchozím nastavení zapnuté; **YouTube** a **HDMI** vypnuté. Při vypnutí změny Home zůstanou přepínače viditelné, ale nedostupné, a volby se zachovají. Nastavení se ukládá soukromě v tomto televizoru a není součástí přenosného exportu profilu. Jde o kandidáta, ne o ověřené spuštění či probuzení TV.
+**Nevydaný kandidát — zdroje při spuštění Root:** V Nastavení → Vaše domovská obrazovka zapněte **Změnit Home** a upravte **Otevřít Clean Your TV jako první**. **LG Channels / Živé TV** je ve výchozím nastavení zapnuté; **YouTube** vypnuté. Přepínač pro HDMI není k dispozici. Při vypnutí změny Home zůstanou přepínače viditelné, ale nedostupné, a volby se zachovají. Nastavení se ukládá soukromě v tomto televizoru a není součástí přenosného exportu profilu. Jde o kandidáta, ne o ověřené spuštění či probuzení TV.
 
 > Tento průvodce popisuje verzi 1.6.0. Dostupné balíčky stahujte z [publikovaných vydání GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases). Čeština je dostupná v rozhraní TV, instalátory nadále nabízejí dvanáct jazyků. Ověření na TV a kontrola rodilým mluvčím dosud neproběhly. [Verze a omezení](../RELEASE-1.6.0.md).
 
@@ -25,13 +25,13 @@ Samostatný Homebrew CYTV Installer zůstává nevydaný.
 
 ## Jazyk a ovládání
 
-V náhledu příští verze zobrazuje **Nastavení Home → Tapety** tapetu aktivního motivu, zjištěné možnosti TV a aktuální režim. Auto volí kompatibilní kvalitu; 4K, 1080p a obrázek jsou dostupné jen podle obsahu motivu. Při potížích se zobrazí obrázek. Ztmavení se mění po 5 %; obnovení vrátí nastavení motivu. Classic a motivy bez tapety zobrazí tento stav výslovně.
+Ve verzi 1.8.2 zobrazuje **Nastavení Home → Tapety** tapetu aktivního motivu, zjištěné možnosti TV a aktuální režim. Auto volí kompatibilní kvalitu; 4K, 1080p a obrázek jsou dostupné jen podle obsahu motivu. Při potížích se zobrazí obrázek. Ztmavení se mění po 5 %; obnovení vrátí nastavení motivu. Classic a motivy bez tapety zobrazí tento stav výslovně.
 
-Vlastní tapety v náhledu příští verze: v počítačovém CYTV otevřete Tapety, vyberte JPG/PNG, upravte výřez a zadejte místní adresu TV a přijímací PIN z nastavení Home. CYTV vytvoří video bez zvuku místně; 4K nabídne jen při dostatečném rozlišení výřezu. Na TV zvolte příjem z CYTV nebo nahrávání z telefonu a ve stejné Wi-Fi naskenujte QR kód. Telefon posílá běžný obrázek nejvýše 1920×1080 bez nativní 4K video vrstvy; ostrost omezuje rozlišení rozhraní TV. Před odesláním potvrďte upozornění, pak na TV zkontrolujte náhled a použijte tapetu. Vlastní obrázky zůstávají uložené a lze je znovu vybrat nebo odstranit v Tapetách. Zrušení či odmítnutý soubor zachová dosavadní pozadí. Jsou nutná odpovídající připravovaná sestavení Home/služby a CYTV.
+Vlastní tapety ve verzi 1.8.2: v počítačovém CYTV otevřete Tapety, vyberte JPG/PNG, upravte výřez a zadejte místní adresu TV a přijímací PIN z nastavení Home. CYTV vytvoří video bez zvuku místně; 4K nabídne jen při dostatečném rozlišení výřezu. Na TV zvolte příjem z CYTV nebo nahrávání z telefonu a ve stejné Wi-Fi naskenujte QR kód. Telefon posílá běžný obrázek nejvýše 1920×1080 bez nativní 4K video vrstvy; ostrost omezuje rozlišení rozhraní TV. Před odesláním potvrďte upozornění, pak na TV zkontrolujte náhled a použijte tapetu. Vlastní obrázky zůstávají uložené a lze je znovu vybrat nebo odstranit v Tapetách. Zrušení či odmítnutý soubor zachová dosavadní pozadí. Jsou nutná odpovídající sestavení Home/služby a CYTV od verze 1.8.2.
 
-Vlastní pohyblivé video (náhled příští verze): v počítačovém CYTV → Tapety vyberte MP4/MOV/MKV/WebM, 1–60 sekund, do 512 MiB a 3840×2160. Zvuk se odstraní a obraz se ořízne uprostřed na 16:9. Menší videa používají kompatibilní výstup 1080p; UHD vyžaduje dostatečný zdrojový výřez. Odešlete přes adresu/PIN TV, potom zkontrolujte a použijte na TV. Z telefonu nadále jen JPG/PNG. Ověření finálního balíčku a fyzického TV zatím čeká.
+Vlastní pohyblivé video (1.8.2): v počítačovém CYTV → Tapety vyberte MP4/MOV/MKV/WebM, 1–60 sekund, do 512 MiB a 3840×2160. Zvuk se odstraní a obraz se ořízne uprostřed na 16:9. Menší videa používají kompatibilní výstup 1080p; UHD vyžaduje dostatečný zdrojový výřez. Odešlete přes adresu/PIN TV, potom zkontrolujte a použijte na TV. Z telefonu nadále jen JPG/PNG. Ověření na fyzickém TV zůstává omezené; viz [1.8.2](../RELEASE-1.8.2.md).
 
-Připravované vestavěné tapety: **Nastavení Home → Tapety → Vestavěné tapety → Black Hole**. Autor videa: **Xecutioner**; povoleno nekomerční použití s uvedením autora. Potvrzení jiného motivu obnoví jeho vlastní tapetu. Black Hole i vlastní obrázky lze vybrat znovu. Souvislý 4K stream nepřetáčí video při každém opakování; k dispozici je kompatibilní video nebo obrázek.
+Vestavěné tapety ve verzi 1.8.2: **Nastavení Home → Tapety → Vestavěné tapety → Black Hole**. Autor videa: **Xecutioner**; povoleno nekomerční použití s uvedením autora. Potvrzení jiného motivu obnoví jeho vlastní tapetu. Black Hole i vlastní obrázky lze vybrat znovu. Souvislý 4K stream nepřetáčí video při každém opakování; k dispozici je kompatibilní video nebo obrázek.
 
 Android CYTV: **Nastavit TV** · **Tapety** · **Údržba**. Na TV otevřete nastavení Home → Tapety → Nahrát z telefonu. Naskenujte QR fotoaparátem telefonu, vyberte JPG/PNG a použijte tapetu na TV. Telefon odesílá obrázek do 1920×1080 bez nativního 4K videa; pro skutečné 4K použijte CYTV na počítači.
 
@@ -93,4 +93,4 @@ Instalátory 1.6.0 pro počítač/Android a migrovaní klienti OTA volí 720p ne
 
 Kandidátní sestavení zobrazují potřebné, volné a chybějící místo v MiB pro instalaci, motivy a vlastní fotografické/video tapety. Zahrnují dočasné kopie a rezervu. Kvóta aplikace, mezipaměť motivů 64 MiB a videa jsou samostatné limity. Neznámé hodnoty jsou označené. Uvolněte uvedené úložiště; automatické čištění se neprovádí.
 
-Storage estimate (TV): required 128.0 MiB; available 96.0 MiB; shortfall 32.0 MiB.
+Odhad místa (TV): potřeba 128.0 MiB; volné 96.0 MiB; chybí 32.0 MiB.

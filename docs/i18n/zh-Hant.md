@@ -1,6 +1,6 @@
 # Clean Your TV — 使用者指南
 
-> **1.8.2:** [English](../RELEASE-1.8.2.md) · [LS2 Root #337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337).
+> **1.8.2:** [English](../RELEASE-1.8.2.md) · [LS2 Root #337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337) · [1.9.0 — 未發佈 RC](../RELEASE-1.9.0.md)
 
 **尚未發佈的 C1 Beta（#298）：** 在通用電腦安裝程式中選擇 Root。符合條件的 C1 電視會自動識別，無需獨立安裝程式或旗標。此路徑需要全新安裝，不支援自動更新，且尚未通過實體 C1 驗收。開啟 LG Home、長按 Back 或安全/電源停止後，Home 控制可能維持關閉；請在電視設定中重新開啟變更 Home。一般 Root 路徑維持不變。 如果仍有其他 No-root 元件，C1 完整移除會在變更前停止。請先透過一般 No-root 移除流程刪除這些元件；狀態未明確時請保留復原資料。 [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md). C1 Beta 透過 Home 按鍵過濾並在應用程式關閉後返回，不修改 CRIU/checkpoint 權限。返回時可能短暫顯示 LG Home。連按三次 Home 也會停止路由；停止後請重新啟用變更 Home。
 
@@ -31,7 +31,7 @@ No-root 和 Root 是適用於不同電視組態的同等選項。使用 LG 開�
 - **No-root：**啟用 LG Developer Mode 和 Key Server，輸入電視顯示的口令，並單獨接受電視配對請求。開發者模式必須保持有效；過期可能移除側載應用。即使啟用 Beta 自動續期，也要留意官方計時器。Helper 監控需要本地網路。
 - **Root：**必須已有 root SSH 訪問權限。安裝程式不會為電視獲取 root。已取得 root 的電視不要啟用開發者模式。請保留 root 訪問和恢復服務。
 
-Root 需要可用的 Settings Service 和 System Profile Home 介面（`com.webos.service.systemprofile`）；僅有 root 權限並不能證明相容性。
+Root (System Profile) 需要可用的 Settings Service 和 System Profile Home 介面（`com.webos.service.systemprofile`）；僅有 root 權限並不能證明相容性。
 
 > **1.6.0:** Root 在準備專用 Python 或安裝套件之前檢查必要的 Home 介面。檢查失敗會停止安裝；通過檢查並不能證明韌體相容或實體 Home 鍵正常。已知連線錯誤會顯示專屬提示。請保留連線設定、信任記錄和復原資料；未完成的操作需要經過驗證的復原，請勿盲目重試。儲存並檢查診斷報告。[詳情](../development/INSTALLER-PREFLIGHT-HELP.md)。
 
@@ -41,9 +41,9 @@ Root 需要可用的 Settings Service 和 System Profile Home 介面（`com.webo
 
 1.5.4 包含支援電視 Node.js **0.10.25+** 的 Home Helper **0.6.21**；Root 仍要求 Node.js **8+**。 [Compatibility](../COMPATIBILITY.md).
 
-**未發布的 webOS 1.x 變更：**下個 No-root 安裝程式在精確版本 Helper 測試後接受電視 Node.js **0.10.15+**；已發布的 1.7.1 安裝程式仍要求 **0.10.25+**。這不代表舊版 WebKit、原生輸入或 Home 相容性已獲驗證。請勿替換電視 runtime 或略過檢查。Root 仍要求 Node.js 8+。[測試與限制](../COMPATIBILITY.md#webos-1x-runtime-floor-unreleased)。
+**webOS 1.x — 1.8.2：**已發佈的 No-root 安裝程式包含 Helper 0.7.4，經精確執行版本檢查後支援電視 Node.js **0.10.15+**。這不代表舊版 WebKit、原生輸入或 Home 相容性已獲驗證。請勿替換電視 runtime 或略過檢查。Root 仍要求 Node.js 8+。[測試與限制](../COMPATIBILITY.md#webos-1x-runtime-floor-unreleased)。
 
-No-root Helper 需要電視 Node.js **0.10.25+**。Root 需要 Node.js **8+** 及可用的 Python **3.9+**。如有需要，安裝程式會下載經驗證的專用 Python；首次準備需要 **320 MiB** 可用空間。它不會取代系統 Python。請保留復原功能引用的執行環境。[Python 說明（英文）](../OPTIONAL-PYTHON.md)。Developer Mode 自動續期為 **Beta，預設關閉**；無 root 電視上的實際續期尚未確認，請繼續檢查官方計時器。
+No-root Helper 需要電視 Node.js **0.10.15+**。Root 需要 Node.js **8+** 及可用的 Python **3.9+**。如有需要，安裝程式會下載經驗證的專用 Python；首次準備需要 **320 MiB** 可用空間。它不會取代系統 Python。請保留復原功能引用的執行環境。[Python 說明（英文）](../OPTIONAL-PYTHON.md)。Developer Mode 自動續期為 **Beta，預設關閉**；無 root 電視上的實際續期尚未確認，請繼續檢查官方計時器。
 
 ### 設定 Developer Mode（No-root）
 
@@ -69,7 +69,7 @@ Developer Mode 讓 CYTV 可以在沒有 root 的電視上安裝應用程式。
 
 [Android 安裝程式（英文）](../../android/README.md)：在右上角選擇語言。更新時不要解除安裝或清除資料。Android 7 / WebView 108 是最低需求，並非已驗證的手機設定；驗收使用 Android 15 ARM64 / WebView 124 模擬器。實體手機及真實手機到電視的復原流程仍未驗證。
 
-**未發布的 Android 候選版本：**對於原始 Root 操作 `install / coordinator-submitted`，復原選項檢視可在明確確認後使用原始儲存的設定檔和 SSH 主機金鑰執行唯讀檢查。請勿解除安裝應用程式、清除資料、替換設定檔或重複安裝。僅使用維護者指定的已簽署重建 APK；公開 APK 尚未包含此流程。[步驟與限制](../../android/README.md#interrupted-root-installation-inspection-unreleased)。
+**Android 1.8.2：**復原選項檢視可在明確確認後，使用原始儲存的設定檔與 SSH 主機金鑰，唯讀檢查原始 Root 操作 `install / coordinator-submitted`。請保留應用程式、私人資料與紀錄，不要替換設定檔或重複安裝。檢查不會恢復執行操作。 [步驟與限制](../../android/README.md#interrupted-root-installation-inspection-unreleased)
 
 桌面精靈會自動選擇系統語言，也可手動選擇並儲存。電視端在**設定 → 語言**中選擇，或使用系統/自動選項。安裝程式與電視偏好各自獨立。完整代碼見[語言索引](../LANGUAGES.md)。
 
@@ -161,13 +161,13 @@ Homebrew Channel 拒絕此安裝程式存取。在 webOS 11 上，Homebrew 0.7.3
 
 ## 主題
 
-在下一版本預覽中，**Home 設定 → 桌布**顯示目前主題桌布、偵測到的電視能力和目前模式。自動模式選擇相容畫質；只有主題包含對應資源時才能選擇 4K、1080p 或圖片。影片播放失敗時會改用圖片。調暗程度每次調整 5%，也可恢復主題預設設定。Classic 和無桌布主題會明確顯示無桌布狀態。
+在 1.8.2 中，**Home 設定 → 桌布**顯示目前主題桌布、偵測到的電視能力和目前模式。自動模式選擇相容畫質；只有主題包含對應資源時才能選擇 4K、1080p 或圖片。影片播放失敗時會改用圖片。調暗程度每次調整 5%，也可恢復主題預設設定。Classic 和無桌布主題會明確顯示無桌布狀態。
 
-下一版本預覽的個人桌布：在桌面 CYTV 開啟「桌布」，選擇 JPG/PNG、調整裁切，並輸入 Home 設定顯示的電視區域網路位址及接收 PIN。CYTV 在本機產生無聲影片；只有裁切後原圖的解析度足夠時才提供 4K。在電視選擇從 CYTV 接收或手機上傳，並以同一 Wi-Fi 的手機掃描 QR 碼。手機傳送的是最高 1920×1080 的一般圖片，不使用原生 4K 影片層；清晰度受電視介面解析度限制。傳送前確認提示，再於電視預覽並套用。個人上傳會保留，可在桌布設定重新選擇或刪除。取消或檔案遭拒時會保留原背景。需要相符的下一版本 Home/服務與 CYTV 組建。
+1.8.2 的個人桌布：在桌面 CYTV 開啟「桌布」，選擇 JPG/PNG、調整裁切，並輸入 Home 設定顯示的電視區域網路位址及接收 PIN。CYTV 在本機產生無聲影片；只有裁切後原圖的解析度足夠時才提供 4K。在電視選擇從 CYTV 接收或手機上傳，並以同一 Wi-Fi 的手機掃描 QR 碼。手機傳送的是最高 1920×1080 的一般圖片，不使用原生 4K 影片層；清晰度受電視介面解析度限制。傳送前確認提示，再於電視預覽並套用。個人上傳會保留，可在桌布設定重新選擇或刪除。取消或檔案遭拒時會保留原背景。需要相符的 1.8.2 或更新版本 Home/服務與 CYTV 組建。
 
-自選動態影片（下一版本預覽）：在桌面 CYTV → 桌布中選擇 MP4/MOV/MKV/WebM，長度 1–60 秒，最大 512 MiB、3840×2160。聲音會被移除，畫面置中裁切為 16:9。較小影片轉換為相容的 1080p 輸出；只有原始裁切尺寸足夠時才產生 UHD。使用電視位址/PIN 傳送，然後在電視上預覽並套用。手機上傳仍僅支援 JPG/PNG。最終軟體套件驗證和實體電視測試尚未完成。
+自選動態影片（1.8.2）：在桌面 CYTV → 桌布中選擇 MP4/MOV/MKV/WebM，長度 1–60 秒，最大 512 MiB、3840×2160。聲音會被移除，畫面置中裁切為 16:9。較小影片轉換為相容的 1080p 輸出；只有原始裁切尺寸足夠時才產生 UHD。使用電視位址/PIN 傳送，然後在電視上預覽並套用。手機上傳仍僅支援 JPG/PNG。實體電視測試範圍仍然有限，請參閱 [1.8.2](../RELEASE-1.8.2.md)。
 
-下一版本的內建桌布：**Home 設定 → 桌布 → 內建桌布 → Black Hole**。影片作者為 **Xecutioner**，獲准在標示作者的前提下非商業使用。確認其他主題時會套用該主題自己的桌布；Black Hole 和個人上傳仍可重新選擇。連續 4K 串流避免每次循環回到檔案開頭，並提供相容影片或圖片作為備援。
+1.8.2 的內建桌布：**Home 設定 → 桌布 → 內建桌布 → Black Hole**。影片作者為 **Xecutioner**，獲准在標示作者的前提下非商業使用。確認其他主題時會套用該主題自己的桌布；Black Hole 和個人上傳仍可重新選擇。連續 4K 串流避免每次循環回到檔案開頭，並提供相容影片或圖片作為備援。
 
 Android CYTV: **設定電視** · **桌布** · **維護**. 在電視上開啟 Home 設定 → 桌布 → 從手機上傳。用手機相機掃描 QR 碼，選擇 JPG/PNG，然後在電視上套用。 手機上傳：最高 1920×1080 的圖片，不支援原生 4K 影片。真正的 4K 請使用電腦版 CYTV。
 
