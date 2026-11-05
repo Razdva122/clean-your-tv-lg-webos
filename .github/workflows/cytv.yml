@@ -69,14 +69,25 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            cytv/requirements.txt
+            scripts/build-requirements.txt
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
+          cache: gradle
+          cache-dependency-path: |
+            android/**/*.gradle*
+            android/gradle.properties
+            android/gradle/wrapper/gradle-wrapper.properties
       - uses: android-actions/setup-android@v3
         with:
           packages: platform-tools
@@ -117,6 +128,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           overwrite: true
+          retention-days: ${{ inputs.full_candidate && 90 || 14 }}
           name: cytv-android-arm64
           path: dist/android/cytv-android-arm64*
           if-no-files-found: error
@@ -124,6 +136,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           overwrite: true
+          retention-days: ${{ inputs.full_candidate && 90 || 14 }}
           name: cytv-android-native-tests
           path: android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
           if-no-files-found: error
@@ -155,10 +168,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            cytv/build-requirements.txt
+            cytv/requirements.txt
+            scripts/build-requirements.txt
       - name: Install Linux desktop libraries
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libegl1 libopengl0 libxcb-cursor0 libxkbcommon-x11-0 libxcb-icccm4 libxcb-keysyms1 libxcb-render-util0 xvfb xauth
@@ -196,12 +216,14 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           overwrite: true
+          retention-days: ${{ inputs.full_candidate && 90 || 14 }}
           name: ${{ matrix.asset }}
           path: ${{ matrix.binary }}
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
           overwrite: true
+          retention-days: ${{ inputs.full_candidate && 90 || 14 }}
           name: ${{ matrix.asset }}-desktop
           path: |
             dist/cytv-macos-*.zip
@@ -220,10 +242,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            scripts/build-requirements.txt
       - run: python -m pip install -r scripts/build-requirements.txt
       - name: Build offline candidate without publishing
         run: |
@@ -256,6 +283,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           overwrite: true
+          retention-days: ${{ (inputs.full_candidate || inputs.homebrew_candidate) && 90 || 14 }}
           name: homebrew-candidate
           path: dist/homebrew-candidate/
           if-no-files-found: error
