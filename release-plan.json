@@ -183,10 +183,5 @@
     }
   ],
   "excluded": [],
-  "acceptance": "NOT RELEASE-READY. Full build 42081316264:3 passed all mandatory jobs and Homebrew; normal Root signing 42088467852:1 and exact package/provenance verification passed. Maintainer-owned C3 signed Root 0.9.3 / infrastructure 0.9.3 / updater 0.4.4 installation completed with preserved UI-captured profile. Focused physical acceptance passed immediate Home from HDMI3, moving built-in UHD wallpaper, visible CARD beyond 120 seconds and explicit Off return to LG with recovery/routing baseline restored. BLOCKER: personal image/video receiver could not start; actual Root UI LS2 request themeReceiverStart was denied before transfer. No permission/receipt changes or unsupported workaround used. Uploaded media acceptance remains untested; sound, standby, cold boot, normal OTA/rollback and published-Home/new-Helper compatibility remain pending. Partial evidence and exact hashes: docs/history/2026-11-05-single-home-regressions.md. No stable publication or main merge before remaining gates.",
-  "build": {
-    "run_id": 42081316264,
-    "attempt": 3,
-    "source": "40f6f84ab9002cfdfe51dbf34e675e1adbdf7364"
-  }
+  "acceptance": "Maintainer authorized publication of 1.8.2 with the retained-Root wallpaper receiver denial explicitly deferred to open issue337 and with the disclosed short physical acceptance scope. Full prior build42081316264:3 and Root signing42088467852:1 passed; exact signed Root0.9.3 installation and physical Home/video/persistence/LG-exit checks passed on C3. Published Home1.8.1 with exact new Helper0.7.4 passed same-package homeStatus and non-root UID5431 compatibility; owner tripleHome stopped Helper; final Home1.9.4 restored with original profile/appearance. Registry native/helper-rollback-compatibility.json now binds that actual archive; final full build must be selected after this approval-input update. Carry device evidence only for verified identical component bytes. Known #337 and untested sound, standby, cold boot and normal OTA/rollback disclosed in docs/RELEASE-1.8.2.md and dated QA. No bypass of signature/provenance/input gates."
 }

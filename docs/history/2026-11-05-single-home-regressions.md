@@ -179,3 +179,27 @@ established by this run.
 Sound, standby, cold boot, actual normal OTA/rollback and published-Home/new-Helper
 compatibility were not tested in this short run. This record is partial acceptance,
 not approval to publish the candidate. Final TV state is LG Home with routing off.
+
+## Maintainer release decision and Helper compatibility
+
+The maintainer explicitly requested moving the Root wallpaper receiver LS2 denial
+to [issue #337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337) and
+shipping 1.8.2 with that known limitation. The issue remains open, bug / planned;
+publication does not resolve it. The limited physical QA scope and untested power,
+sound and normal OTA/rollback scenarios remain disclosed.
+
+The exact new Helper 0.7.4 archive was extracted from the authenticated CLI artifact
+of full build 42081316264:3. Its raw SHA-256 is unchanged from the physically tested
+Helper above; canonical archive SHA-256 is
+`0535520363197485a50b1577e3bb6248c9e510d1c6fa26c8326750426f69407e`.
+The actual installed public Helper files matched the archive. Published v1.7.1
+Home 1.8.1 and previous Helper 0.6.22 were authenticated by the original signed
+System manifest and package hashes. The ordinary native same-app install reached
+terminal success and all Home files matched. From actual published Home UI,
+Start Helper plus confirmation launched the retained 0.7.4 controller as real and
+effective UID 5431; same-package `renewal/homeStatus` returned success and enabled.
+The maintainer confirmed physical triple Home returned LG. Helper stopped before
+restoring the exact final Home 1.9.4 with native terminal/readback. The original
+portable inventory/config/settings, theme identity and personal wallpaper source
+matched after restoration. No raw storage, credentials, receipt or role changes
+were used. No actual automatic No-root OTA/rollback transaction is claimed.
