@@ -126,8 +126,8 @@
         ribbonRule('#topButtons', 'position:absolute;left:28px;right:auto;top:auto;bottom:28px;margin:0;pointer-events:auto;');
         ribbonRule('#topButtons .pill', 'width:68px;height:68px;padding:0;margin:0 8px 0 0;justify-content:center;font-size:0;');
         ribbonRule('#topButtons .pill svg', 'width:32px;height:32px;margin:0;');
-        if (manifest.layout.presentation === 'overlay') {
-          // Continue the same skewed lane to the left screen edge.
+        if (manifest.id === 'builtin:ribbon' || manifest.layout.presentation === 'overlay') {
+          // Built-in Ribbon keeps its continuous lane in the ordinary CARD Home.
           var shortcutWidth = r.left + Math.abs(Math.tan(r.skewDeg * Math.PI / 180) * (r.cardHeight + r.focusLift));
           ribbonRule('#topButtons', 'left:0;bottom:' + r.bottom + 'px;width:' + shortcutWidth + 'px;height:' + r.cardHeight + 'px;align-items:center;justify-content:center;');
           ribbonRule('#topButtons::before', 'content:"";position:absolute;left:-64px;top:0;bottom:0;width:' + (shortcutWidth + 64) + 'px;box-sizing:border-box;border:0;background:#20242b;transform:skewX(' + r.skewDeg + 'deg);transform-origin:center bottom;pointer-events:none;');

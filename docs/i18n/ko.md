@@ -1,12 +1,12 @@
 # Clean Your TV — 사용자 안내
 
-> **1.8.2 — 미출시 후보:** [1.8.2 / English](../RELEASE-1.8.2.md).
+> **1.8.2:** [English](../RELEASE-1.8.2.md) · [LS2 Root #337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337).
 
 **미출시 C1 Beta (#298):** 공통 컴퓨터 설치 프로그램에서 Root를 선택하세요. 조건에 맞는 C1 TV는 자동으로 감지되며 별도 설치 프로그램이나 옵션이 필요하지 않습니다. 새 설치가 필요하고 자동 업데이트는 지원하지 않으며 실제 C1 검증은 아직 완료되지 않았습니다. LG Home 열기, Back 길게 누르기 또는 안전/전원 중지 후에는 Home 제어가 꺼진 상태로 남을 수 있습니다. TV 설정에서 Home 변경을 다시 켜세요. 기존 Root 방식은 바뀌지 않습니다. 다른 No-root 구성 요소가 남아 있으면 C1 전체 제거는 변경 전에 중지됩니다. 먼저 일반 No-root 제거 절차로 해당 구성 요소를 제거하세요. 상태가 불확실하면 복구 데이터를 유지하세요. [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md). C1 Beta는 Home 키를 처리하고 앱 종료 후 돌아오며 CRIU/checkpoint 권한을 변경하지 않습니다. 복귀 중 LG Home이 잠시 보일 수 있습니다. Home을 세 번 눌러도 중지됩니다. 중지 후 Home 변경을 다시 켜세요.
 
-미출시 (#290): **+ / 앱 추가**는 튜너가 설치된 것으로 감지된 경우에만 TV가 제공한 이름으로 실시간 TV를 표시합니다. 다른 숨겨진 시스템 앱은 계속 제외됩니다. No-root에는 업데이트된 Helper와 설치 프로그램이, Root에는 업데이트된 Home 패키지가 필요합니다. 채널 실행은 TV에서 추가 검증이 필요합니다.
+1.8.2 (#290): **+ / 앱 추가**는 튜너가 설치된 것으로 감지된 경우에만 TV가 제공한 이름으로 실시간 TV를 표시합니다. 다른 숨겨진 시스템 앱은 계속 제외됩니다. No-root에는 업데이트된 Helper와 설치 프로그램이, Root에는 업데이트된 Home 패키지가 필요합니다. 채널 실행은 TV에서 추가 검증이 필요합니다.
 
-**미출시 — Home의 Ribbon:** 두 에디션에서 Ribbon은 자체 배경을 사용하는 하나의 전체 화면 Home 앱 테마입니다. 카드 뒤에 동영상이나 HDMI를 표시하지 않습니다. 앱을 선택하면 TV의 일반 앱 전환을 사용합니다. 비상 제어는 그대로 유지됩니다. 최종 패키지와 TV 검증은 아직 완료되지 않았습니다. [Ribbon](../THEMES.md#ribbon-over-applications-unreleased).
+**Home의 Ribbon:** 두 에디션에서 Ribbon은 자체 배경을 사용하는 하나의 전체 화면 Home 앱 테마입니다. 카드 뒤에 동영상이나 HDMI를 표시하지 않습니다. 앱을 선택하면 TV의 일반 앱 전환을 사용합니다. 비상 제어는 그대로 유지됩니다. 테스트 범위와 알려진 제한은 릴리스 노트를 확인하세요. [Ribbon](../THEMES.md#ribbon-over-applications-unreleased).
 
 Ribbon: OK를 길게 누르면 편집합니다. ←/→는 카드 이동, ↑는 × 선택(Home에서 숨기기), ↓는 카드로 복귀, OK는 확인, Back은 취소입니다. 현재 배경은 유지됩니다.
 

@@ -1,12 +1,12 @@
 # Clean Your TV — guida all’uso
 
-> **1.8.2 — Candidato non pubblicato:** [1.8.2 / English](../RELEASE-1.8.2.md).
+> **1.8.2:** [English](../RELEASE-1.8.2.md) · [LS2 Root #337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337).
 
 **C1 Beta non pubblicata (#298):** Scegli Root nel programma di installazione comune per computer. I C1 idonei vengono rilevati automaticamente; non servono un altro programma o un’opzione speciale. Questa modalità richiede un’installazione pulita, non offre aggiornamenti automatici e non è ancora stata validata su un C1 fisico. Aprire LG Home, tenere premuto Back o un arresto di sicurezza/alimentazione possono lasciare disattivato il controllo di Home; riattiva Cambia Home nelle impostazioni TV. La modalità Root normale resta invariata. Se restano altri componenti No-root, la rimozione completa C1 si arresta prima di apportare modifiche. Rimuovili prima con la normale procedura No-root; conserva i dati di ripristino se il loro stato è incerto. [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md). C1 Beta filtra il tasto Home e torna dopo la chiusura di un’app, senza modificare i permessi CRIU/checkpoint. LG Home può apparire brevemente. Anche tre pressioni su Home fermano il reindirizzamento; poi riattivare Cambia Home.
 
-Non pubblicato (#290): **+ / Aggiungi app** propone la TV in diretta con il nome fornito dal televisore solo se il sintonizzatore risulta installato. Le altre app di sistema nascoste restano escluse. No-root richiede Helper e programma di installazione aggiornati; Root richiede il pacchetto Home aggiornato. L’avvio dei canali richiede ancora una verifica sul TV.
+1.8.2 (#290): **+ / Aggiungi app** propone la TV in diretta con il nome fornito dal televisore solo se il sintonizzatore risulta installato. Le altre app di sistema nascoste restano escluse. No-root richiede Helper e programma di installazione aggiornati; Root richiede il pacchetto Home aggiornato. L’avvio dei canali richiede ancora una verifica sul TV.
 
-**Non pubblicato — Ribbon in Home:** Ribbon è un tema dell’unica app Home a schermo intero in entrambe le edizioni, con il proprio sfondo. Dietro le schede non vengono mostrati video o HDMI. La scelta di un’app usa il normale cambio di applicazione del televisore. I comandi di emergenza restano invariati. Pacchetti finali e verifica sul TV sono ancora da completare. [Ribbon](../THEMES.md#ribbon-over-applications-unreleased).
+**Ribbon in Home:** Ribbon è un tema dell’unica app Home a schermo intero in entrambe le edizioni, con il proprio sfondo. Dietro le schede non vengono mostrati video o HDMI. La scelta di un’app usa il normale cambio di applicazione del televisore. I comandi di emergenza restano invariati. Le note di rilascio indicano le verifiche eseguite e i limiti noti. [Ribbon](../THEMES.md#ribbon-over-applications-unreleased).
 
 Ribbon: tieni premuto OK per modificare; ←/→ sposta la scheda, ↑ seleziona × (nascondi da Home), ↓ torna alla scheda, OK conferma e Back annulla. Lo sfondo attuale rimane.
 
