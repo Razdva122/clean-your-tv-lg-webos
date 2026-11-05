@@ -67,7 +67,15 @@
       try { var pending = input.videoLease.release(); input.wallpaperRelease = Promise.resolve(pending).catch(function () {}); } catch (_) {}
     }
   }
-  function play(q) {
+  function rootPackagedStream(q) {
+    if (typeof root.ROOT_VERSION !== 'string' || !root.ROOT_VERSION || q !== '4k' || !input ||
+        !root.WallpaperLibrary || !input.manifest.wallpaperVideo) return false;
+    var id = input.manifest.id;
+    if (id !== 'builtin:ribbon' && !(input.origin === 'builtin' && id === 'builtin:black-hole')) return false;
+    var variant = input.manifest.wallpaperVideo.variants.filter(function (v) { return v.quality === q; })[0];
+    return !!root.WallpaperLibrary.streamFor(variant);
+  }
+  function play(q, packagedOnly) {
     detach(); paintDim();
     if (!input || blocked() || q === 'image') { releaseLease(); emit(); return; }
     var token = generation, current = doc.createElement('video'), lastTime = -1, decodedProgress = 0, validated = false, presenting = false; video = current;
@@ -77,7 +85,7 @@
     function valid() { return generation === token && video === current; }
     function failed(reason) {
       if (!valid()) return;
-      var next = q === '4k' && available().indexOf('1080p') >= 0 ? '1080p' : 'image';
+      var next = !packagedOnly && q === '4k' && available().indexOf('1080p') >= 0 ? '1080p' : 'image';
       notice = q === '4k' ? '4K playback failed. Using ' + (next === 'image' ? 'the image.' : '1080p.') : 'Video playback failed. Using the image.';
       if (reason === 'dimensions') notice = 'Video dimensions do not match the theme. ' + notice;
       play(next);
@@ -117,13 +125,20 @@
     Object.keys(current._wallpaperListeners).forEach(function (event) { current.addEventListener(event, current._wallpaperListeners[event]); });
     plane.appendChild(current);
     var variant = input.manifest.wallpaperVideo.variants.filter(function (v) { return v.quality === q; })[0];
-    if (root.WallpaperStream) stream = root.WallpaperStream.create(current, variant, failed);
+    try { if (root.WallpaperStream) stream = root.WallpaperStream.create(current, variant, failed); }
+    catch (error) { if (packagedOnly) { failed(); return; } throw error; }
+    if (packagedOnly && !stream) { failed(); return; }
     current.src = stream ? stream.url : input.videoHandles[q]; watchdog();
     try { var pending = current.play(); if (pending && pending.then) pending.then(function () {}, failed); } catch (_) { failed(); }
     emit();
   }
   function restart() {
     notice = ''; var q = choose();
+    // This pinned packaged stream already verifies its own bytes. Root must choose
+    // it before acquiring an unrelated native cache lease, including on legacy installs.
+    if (input && !blocked() && q !== 'image' && rootPackagedStream(q)) {
+      detach(); releaseLease(); play(q, true); return state();
+    }
     if (!input || !input.videoLease || blocked() || q === 'image') { play(q); return state(); }
     detach(); paintDim(); emit();
     var token = generation, active = input;
