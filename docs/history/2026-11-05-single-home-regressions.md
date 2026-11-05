@@ -142,3 +142,40 @@ source provenance, three component identities, package sizes and hashes:
 C3 pre-install readback confirmed Helper stopped, Root and guardian off, recovery
 integrity verified, and stock LG SAM/default/idle destinations. Final package/device
 acceptance is in progress; no physical test result is implied by signing.
+
+## Focused final Root device acceptance
+
+The maintainer requested a short run limited to physical Home latency, background
+playback/persistence, return to LG, and loading personal images/videos. Device and
+host remain the maintainer-owned C3 / firmware 43.21.71 / SDK 11.2.0 / Magic Remote
+and macOS recorded above. Exact signed packages from build 42081316264:3 were used.
+System Updater 1.1.2 was retained; no role, receipt, key or permission was replaced.
+
+The ordinary signed System worker completed Root 0.9.3, Root Updater 0.4.4 and
+infrastructure 0.9.3, with all three install results successful, complete Home
+resume and no recorded worker error. An initial UI profile export was attempted
+before readiness; export from the ready UI succeeded before installation began.
+Current UI-captured settings were preserved. A direct LS2 status request was
+rejected; protected transaction data was read without modifying it to confirm the
+worker outcome. Package installation is recorded separately from physical tests.
+
+| Focused check | Expected | Observed |
+| --- | --- | --- |
+| Physical Home from HDMI3/PS5 | Promptly open our Home | Maintainer: appeared immediately, with Root enabled through its normal Settings switch and Helper stopped |
+| Ribbon own video wallpaper | Visible moving background | Maintainer confirmed motion; native video advanced from 103.17 to 108.20 seconds at 3840×2160, unpaused and without an error |
+| Earlier 120-second disappearance | Home remains open | Same ready visible CARD observed at 176.6 seconds without disappearance |
+| Explicit Home Off / LG exit | Restore LG and routing baseline | Maintainer confirmed LG Home; Root and guardian off, recovery verified, stock SAM/default/idle LG destinations and Helper stopped |
+| Receive personal image and video | Start PIN receiver, receive and apply fixtures | **Failed before transfer:** receiver did not open; a real Root UI method call returned `errorCode: -1`, `Denied method call "themeReceiverStart" for category "/"` |
+
+The upload failure is a release blocker for claiming this retained Root setup can
+load personal wallpapers/videos. It does not establish a failure in decoding
+received media: no file transfer began. The transfer attempt used ordinary UI
+controls; no existing personal wallpaper was present or overwritten. Temporary
+receiver/pending controls were cancelled and the original theme source restored.
+No permissions were changed to force the test through. The LS2 denial needs a
+supported installation/update diagnosis; its exact role provenance is not yet
+established by this run.
+
+Sound, standby, cold boot, actual normal OTA/rollback and published-Home/new-Helper
+compatibility were not tested in this short run. This record is partial acceptance,
+not approval to publish the candidate. Final TV state is LG Home with routing off.
