@@ -21,6 +21,7 @@
 
 #define HEADER 16u
 #define RESPONSE_CAP (1048576u + 4096u)
+#define REQUEST_CAP (16384u + 64u)
 enum { READY=0, BEGIN=1, READ=2, SCAN=3, APPEND=4, END=5, CLOSE=6, PUBLISH=7 };
 
 static int trusted_bindings(struct cytv_private_binding *private, struct cytv_stop_binding *stop)
@@ -70,6 +71,10 @@ static int reply(unsigned op,uint32_t id,enum cytv_private_status status,const u
     unsigned char header[HEADER]={'C','Y','I','1',0,0,0,0,0,0,0,0,0,0,0,0};
     header[4]=(unsigned char)op;header[5]=(unsigned char)status;
     put32(header+8,id);put32(header+12,(uint32_t)len);
+#ifdef CYTV_STOP_IO_TEST_BUILD
+    int handled=cytv_stop_io_test_reply(op,id,header,body,len);
+    if(handled)return handled>0;
+#endif
     return write_exact(header,sizeof(header))&&write_exact(body,len);
 }
 static int read_reply(struct cytv_private_tx *tx,uint32_t id)
@@ -91,16 +96,55 @@ static int read_reply(struct cytv_private_tx *tx,uint32_t id)
     int ok=reply(READ,id,CYTV_PRIVATE_OK,raw,len);
     free(raw);return ok;
 }
+static enum cytv_private_status stop_status(enum cytv_stop_status status)
+{
+    if(status==CYTV_STOP_OK)return CYTV_PRIVATE_OK;
+    if(status==CYTV_STOP_FULL)return CYTV_PRIVATE_FULL;
+    if(status==CYTV_STOP_OVERFLOW)return CYTV_PRIVATE_OVERFLOW;
+    return CYTV_PRIVATE_UNKNOWN;
+}
+static int scan_reply(const struct cytv_stop_binding *binding,uint32_t id)
+{
+    struct cytv_stop_snapshot view;
+    enum cytv_stop_status s=cytv_stop_scan(binding,&view);
+    if(s!=CYTV_STOP_OK&&s!=CYTV_STOP_FULL)return reply(SCAN,id,stop_status(s),NULL,0);
+    unsigned char raw[4+32*CYTV_STOP_MAX_RECORDS];
+    put32(raw,(uint32_t)view.count);
+    for(size_t i=0;i<view.count;i++)memcpy(raw+4+32*i,view.nonces[i],32);
+    return reply(SCAN,id,stop_status(s),raw,4+32*view.count);
+}
+static int append_reply(struct cytv_private_tx *tx,uint32_t id,const unsigned char *request,size_t len)
+{
+    if(len<5||len>4+CYTV_PRIVATE_EVENT_BYTES)return 0;
+    struct cytv_append_receipt receipt;
+    enum cytv_private_status s=cytv_journal_append(tx,get32(request),request+4,len-4,&receipt);
+    if(s!=CYTV_PRIVATE_OK)return reply(APPEND,id,s,NULL,0);
+    if(!receipt.durable||receipt.event.len>CYTV_PRIVATE_EVENT_BYTES)return 0;
+    unsigned char *raw=malloc(8+receipt.event.len);
+    if(!raw)return reply(APPEND,id,CYTV_PRIVATE_UNKNOWN,NULL,0);
+    put32(raw,receipt.event.seq);put32(raw+4,(uint32_t)receipt.event.len);
+    memcpy(raw+8,receipt.event.raw,receipt.event.len);
+    int ok=reply(APPEND,id,CYTV_PRIVATE_OK,raw,8+receipt.event.len);
+    free(raw);return ok;
+}
 int main(int argc,char **argv)
 {
-    if(argc!=2||strcmp(argv[1],"controller"))return 2;
+    int publisher=argc==3&&!strcmp(argv[1],"publisher");
+    if(!publisher&&(argc!=2||strcmp(argv[1],"controller")))return 2;
     (void)signal(SIGPIPE,SIG_IGN);
     struct cytv_private_binding binding;
     struct cytv_stop_binding stop;
     struct cytv_lease *lease=NULL;
     struct cytv_private_tx *tx=NULL;
     if(!trusted_bindings(&binding,&stop)) {
-        (void)reply(READY,0,CYTV_PRIVATE_UNKNOWN,NULL,0);return 1;
+        (void)reply(publisher?PUBLISH:READY,0,CYTV_PRIVATE_UNKNOWN,NULL,0);return 1;
+    }
+    if(publisher){
+        struct cytv_stop_publication publication;
+        enum cytv_stop_status status=cytv_stop_publish(&stop,argv[2],&publication);
+        int durable=status==CYTV_STOP_OK&&publication.durable_published;
+        int ok=reply(PUBLISH,0,stop_status(status),durable?(const unsigned char*)argv[2]:NULL,durable?32:0);
+        return ok&&durable?0:1;
     }
     enum cytv_private_status s=cytv_lease_acquire(&binding,&lease);
     if(!reply(READY,0,s,NULL,0)||s!=CYTV_PRIVATE_OK) {
@@ -114,12 +158,18 @@ int main(int argc,char **argv)
         int received=read_exact(header,sizeof(header));
         if(!received)break;
         if(received<0||memcmp(header,"CYI1",4)||header[5]||header[6]||header[7]||
-           !expected||get32(header+8)!=expected||get32(header+12)!=0) {result=2;break;}
+           !expected||get32(header+8)!=expected||get32(header+12)>REQUEST_CAP) {result=2;break;}
         unsigned op=header[4];uint32_t id=expected++;
+        size_t len=get32(header+12);
+        unsigned char request[REQUEST_CAP];
+        if((op!=APPEND&&len)||(op==APPEND&&(len<5||len>4+CYTV_PRIVATE_EVENT_BYTES))||
+           (len&&read_exact(request,len)!=1)){result=2;break;}
         int ok=0;
         if(op==BEGIN) {
             s=cytv_tx_begin(lease,&tx);ok=reply(op,id,s,NULL,0);
         } else if(op==READ&&tx) ok=read_reply(tx,id);
+        else if(op==SCAN&&tx) ok=scan_reply(&stop,id);
+        else if(op==APPEND&&tx) ok=append_reply(tx,id,request,len);
         else if(op==END&&tx) {
             s=cytv_tx_end(&tx);ok=reply(op,id,s,NULL,0);
         } else if(op==CLOSE&&!tx) {

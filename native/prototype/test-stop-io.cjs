@@ -9,8 +9,7 @@ try{
  const header=path.join(temp,'binding.h');
  fs.writeFileSync(header,'static const struct cytv_private_binding host_private={1,'+process.getuid()+','+process.getgid()+','+id(privateRoot)+','+id(path.join(privateRoot,'journal'))+','+id(path.join(privateRoot,'controller.lock'))+'};\n'+
   'static const struct cytv_stop_binding host_stop={1,'+fs.lstatSync(stopRoot,{bigint:true}).dev+'ULL,'+fs.lstatSync(stopRoot,{bigint:true}).ino+'ULL,'+process.getuid()+','+process.getgid()+',1,{'+process.getuid()+'}};\n'+
-  'int cytv_private_test_hook(enum cytv_private_test_point p,int fd){(void)p;(void)fd;return 0;}\n'+
-  'int cytv_stop_test_hook(enum cytv_stop_test_point p,int fd,int dir){(void)p;(void)fd;(void)dir;return 0;}\n');
+  '#define CYTV_STOP_IO_HOOK_ROOT '+JSON.stringify(fixture)+'\n#include '+JSON.stringify(path.join(root,'tests/fixtures/stop-io-host-hooks.h'))+'\n');
  const sources=['native/app/stop-io.c','native/app/private-lease.c','native/app/private-io.c','native/app/stop-fs.c'];
  const flags=['-std=c11','-Wall','-Wextra','-Werror'];
  const broker=path.join(temp,'broker'),denied=path.join(temp,'denied');
@@ -18,9 +17,11 @@ try{
  run(process.env.CC||'cc',[...flags,...sources,'-o',denied]);
  const source=fs.readFileSync(path.join(root,'native/app/stop-io.js'),'utf8'),fixed='/media/developer/apps/usr/palm/applications/com.local.nativehome/stop-io';
  if(source.split(fixed).length!==2)throw Error('expected exactly one fixed executable literal');
- const files={'stop-io.js':source.replace(fixed,broker),'denied-io.js':source.replace(fixed,denied),'missing-io.js':source,'runner.js':fs.readFileSync(path.join(root,'tests/fixtures/stop-io-runtime.js'),'utf8')};
+ const files={'stop-io.js':source.replace(fixed,broker),'denied-io.js':source.replace(fixed,denied),'missing-io.js':source,'timeout-io.js':source.replace(fixed,broker).replace('TIMEOUT=10000','TIMEOUT=150'),'exhausted-io.js':source.replace(fixed,broker).replace('nextID=1','nextID=4294967296'),'runner.js':fs.readFileSync(path.join(root,'tests/fixtures/stop-io-runtime.js'),'utf8')};
+ const protocol=process.env.CYTV_STOP_JOURNAL_FIXTURE||(fs.existsSync(path.join(root,'native/app/stop-journal.js'))?path.join(root,'native/app/stop-journal.js'):null);
+ if(protocol)files['stop-journal.js']=fs.readFileSync(protocol,'utf8');
  const compiled=require('../../scripts/compile-helper.cjs').compile(files);
  for(const [name,content] of Object.entries(compiled))fs.writeFileSync(path.join(out,name),content);
  const runtimes=[process.execPath,process.env.NODE010,process.env.NODE01025,process.env.NODE012].filter(Boolean);
- for(const node of runtimes)process.stdout.write(run(node,[path.join(out,'runner.js'),fixture]));
+ for(const node of runtimes)process.stdout.write(run(node,[path.join(out,'runner.js'),fixture,broker,protocol?'protocol':'standalone']));
 }finally{fs.rmSync(temp,{recursive:true,force:true});}
