@@ -55,3 +55,22 @@ Root package/device acceptance, exact Helper compatibility with published Home,
 sound, standby, cold boot, normal OTA and rollback remain untested for this pair.
 A rooted QA transport does not establish a fresh unrooted installation. No public
 release delivery or original reporter issue resolution is claimed by this record.
+
+## Initial full candidate failures
+
+Full run 42074859425 at c4827c43 exposed a Homebrew-only packaging limit: the
+complete embedded Root IPK is approximately 28 MiB, above the ordinary 16 MiB
+member cap. Commit f46a7a30 permits up to 64 MiB only for the fixed Root payload
+path and versioned identity, retaining ordinary and aggregate limits. Eighteen
+Homebrew tests, a real nested Root IPK byte comparison and independent review
+passed. The Homebrew Installer remains unapproved and unpublished.
+
+The same run exposed stale No-root packaging assertions requiring the superseded
+OVERLAY contract; Root preview had the same stale assertions. These tests now
+verify opaque CARD metadata without transient relaunch handling, retain package
+identity/grant/protocol checks, and verify canonical Home no longer loads or
+requests the old overlay context. Focused real package and preview tests passed. Root Settings browser coverage also
+retained an obsolete positive overlay-context request assertion; it now requires
+zero such requests. The entire browser scenario passed locally, retaining explicit
+Off/enable and delayed/stale LG-launch checks.
+The initial full run is failed evidence, not the selected final candidate.
