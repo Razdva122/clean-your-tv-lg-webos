@@ -13,6 +13,22 @@ class InstallerPackageTests(unittest.TestCase):
         with self.assertRaises(ValueError):package.data_files(raw)
         self.assertEqual(build.installer_metadata(raw)['version'],'0.0.0')
         with self.assertRaises(ValueError):build.installer_metadata(self.raw({'usr/palm/applications/foreign/appinfo.json':b'{}'}))
+    def test_large_nested_root_package_has_a_scoped_limit(self):
+        prefix=build.APP_PREFIX+'payload/'
+        root=prefix+'root/com.cleanyourtv.root.preview_0.9.2_all.ipk'
+        payload=b'x'*(17*1024*1024)
+        raw=self.raw({root:payload})
+        self.assertEqual(build.installer_files(raw),{root:payload})
+        with self.assertRaises(ValueError):package.data_files(raw)
+        for name in (prefix+'root/foreign_0.9.2_all.ipk',
+                     prefix+'root/com.cleanyourtv.root.preview_invalid_all.ipk',
+                     prefix+'other/com.cleanyourtv.root.preview_0.9.2_all.ipk',
+                     prefix+'root/unexpected.bin'):
+            with self.subTest(name=name),self.assertRaises(ValueError):
+                build.installer_files(self.raw({name:payload}))
+        with self.assertRaises(ValueError):
+            build.installer_files(self.raw({root:b'x'*(64*1024*1024+1)}))
+
     def test_duplicate_and_link_entries_are_rejected(self):
         prefix='usr/palm/applications/com.cleanyourtv.installer/'
         for kind in ('duplicate','link','oversize'):
