@@ -45,6 +45,20 @@ unchanged pending the next freeze. Unrelated showcase work remains deferred.
   ARM Python and both required summaries. Physical timing on these final
   combined bytes remains unmeasured; the change is not accepted as a measured
   speedup merely because CI passed.
+- PR316, source71896190837eaca88f41c1eb019f6190e0f9bfda, merged as
+  3c356a2fe88b37b9be726559652fa561507b9f7a: gate Root wallpaper video and input
+  previews on a current-generation literal content:false, including opaque
+  themes and startup. Refresh/hide revoke permission; stale replies cannot grant
+  it. Unknown or active content keeps the static poster. This is an opening/
+  refresh snapshot, not a continuous ownership lease. Tests41938181353 attempt1
+  passed Linux, macOS, browser, ARM Python and both required summaries. The
+  compiled browser regression uses real cache/HTTP MSE playback beyond the
+  12-second loop and native playback, with fixture LS2/activity/input responses.
+  Earlier settings-fixture dispatch and detached native-fixture cleanup failures
+  were reproduced and corrected without changing product gate code or relaxing
+  assertions/timeouts. Independent reviews and all 33 native-gate host tests
+  passed. The earlier C3 static-video and receiver-exit causes remain unknown;
+  exact signed-package media/lifecycle acceptance remains required.
 
 Independent final source reviews found no blocking defects. PR312 and PR309 had
 one history-index conflict. The proposed PR312 update0d0d97a87bc945982fb3ca0d40f087c69e25c142
