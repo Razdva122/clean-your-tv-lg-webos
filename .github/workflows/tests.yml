@@ -24,6 +24,7 @@ jobs:
       any: ${{ steps.scope.outputs.any }}
       ui: ${{ steps.scope.outputs.ui }}
       macos: ${{ steps.scope.outputs.macos }}
+      runtime_os: ${{ steps.scope.outputs.runtime_os }}
       runtime: ${{ steps.scope.outputs.runtime }}
       tv: ${{ steps.scope.outputs.tv }}
       tv_runtime: ${{ steps.scope.outputs.tv_runtime }}
@@ -50,7 +51,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: ${{ fromJSON(needs.scope.outputs.runtime_os) }}
         shard: [1, 2, 3, 4]
     runs-on: ${{ matrix.os }}
     steps:
@@ -66,10 +67,16 @@ jobs:
         if: needs.scope.outputs.any == 'true' && (runner.os == 'Linux' || needs.scope.outputs.macos == 'true')
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
       - uses: actions/setup-python@v5
         if: needs.scope.outputs.any == 'true'
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            scripts/build-requirements.txt
+            cytv/requirements.txt
       - run: npm ci --ignore-scripts --no-audit --no-fund
         if: needs.scope.outputs.any == 'true' && (runner.os == 'Linux' || needs.scope.outputs.macos == 'true')
       - run: python -m pip install -r scripts/build-requirements.txt
@@ -201,9 +208,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            scripts/build-requirements.txt
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: python -m pip install -r scripts/build-requirements.txt
       - name: Check compiled Home with legacy browser limitations

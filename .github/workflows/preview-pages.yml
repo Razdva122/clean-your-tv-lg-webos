@@ -43,6 +43,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            scripts/build-requirements.txt
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: python -m pip install -r scripts/build-requirements.txt
       - run: npm ci --prefix website --ignore-scripts --no-audit --no-fund
@@ -63,6 +66,7 @@ jobs:
       - uses: actions/upload-pages-artifact@v4
         with:
           path: website/dist
+          retention-days: 1
   deploy:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     needs: build

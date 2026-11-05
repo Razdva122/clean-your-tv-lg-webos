@@ -52,11 +52,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
       - name: Install main-project tools without lifecycle scripts
         run: npm ci --ignore-scripts --no-audit --no-fund
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            scripts/build-requirements.txt
       - run: python -m pip install -r scripts/build-requirements.txt
       - name: Test registry and data-only validation
         run: |
@@ -77,5 +82,5 @@ jobs:
         with:
           name: theme-preview-review
           path: build/theme-preview-review
-          retention-days: 7
+          retention-days: 3
           if-no-files-found: error
