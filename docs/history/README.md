@@ -1,5 +1,6 @@
 # Release history and device evidence
 
+- [1.9.0 verified candidate and signed Root artifact fingerprints](2026-11-06-release-1.9.0-artifacts.md): full CI and signature/package provenance; physical acceptance pending.
 - [1.9.0 candidate preparation and remaining acceptance, 2026-11-06](2026-11-06-release-1.9.0-candidate.md): complete integration, signing-input preflight and unchanged Helper proof; no new device result.
 
 - [Root AOD cross-project source review, 2026-11-05](2026-11-05-aod-cross-project-review.md): pinned peer implementations and LG sources support full-map preservation; target routing/cache and power acceptance remain untested.
