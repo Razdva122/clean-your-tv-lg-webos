@@ -1,7 +1,73 @@
 {
   "schema": 1,
   "version": null,
-  "changes": [],
+  "changes": [
+    {
+      "pr": 323,
+      "issues": [
+        282
+      ],
+      "summary": "Preserve AOD and vendor destinations during Root activation"
+    },
+    {
+      "pr": 324,
+      "issues": [
+        307
+      ],
+      "summary": "Explain blocked recovery after partial Helper installation"
+    },
+    {
+      "pr": 325,
+      "issues": [
+        314
+      ],
+      "summary": "Add Atmosphere 1.0.0 to the community theme catalogue"
+    },
+    {
+      "pr": 326,
+      "issues": [
+        96
+      ],
+      "summary": "Correct source installer emergency-stop and restart guidance"
+    },
+    {
+      "pr": 327,
+      "issues": [
+        298
+      ],
+      "summary": "fix(root): verify C1 overlay handoff and reject restored stock Home"
+    },
+    {
+      "pr": 329,
+      "issues": [],
+      "summary": "Show required, available and missing storage for installation, themes and video"
+    },
+    {
+      "pr": 330,
+      "issues": [
+        298
+      ],
+      "summary": "fix(root): check C1 checkpoint safety before package installation"
+    },
+    {
+      "pr": 331,
+      "issues": [
+        298
+      ],
+      "summary": "Add mount-free C1 Home routing with leased recovery"
+    },
+    {
+      "pr": 333,
+      "issues": [
+        96,
+        282,
+        298,
+        307,
+        314
+      ],
+      "summary": "Stage nine implementation PRs for the next release cycle"
+    }
+  ],
   "excluded": [],
   "acceptance": ""
 }
