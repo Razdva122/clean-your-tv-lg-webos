@@ -55,3 +55,34 @@ Root package/device acceptance, exact Helper compatibility with published Home,
 sound, standby, cold boot, normal OTA and rollback remain untested for this pair.
 A rooted QA transport does not establish a fresh unrooted installation. No public
 release delivery or original reporter issue resolution is claimed by this record.
+
+## Initial full candidate failures
+
+Full run 42074859425 at c4827c43 exposed a Homebrew-only packaging limit: the
+complete embedded Root IPK is approximately 28 MiB, above the ordinary 16 MiB
+member cap. Commit f46a7a30 permits up to 64 MiB only for the fixed Root payload
+path and versioned identity, retaining ordinary and aggregate limits. Eighteen
+Homebrew tests, a real nested Root IPK byte comparison and independent review
+passed. The Homebrew Installer remains unapproved and unpublished.
+
+The same run exposed stale No-root packaging assertions requiring the superseded
+OVERLAY contract; Root preview had the same stale assertions. These tests now
+verify opaque CARD metadata without transient relaunch handling, retain package
+identity/grant/protocol checks, and verify canonical Home no longer loads or
+requests the old overlay context. Focused real package and preview tests passed. Root Settings browser coverage also
+retained an obsolete positive overlay-context request assertion; it now requires
+zero such requests. The entire browser scenario passed locally, retaining explicit
+Off/enable and delayed/stale LG-launch checks.
+The initial full run is failed evidence, not the selected final candidate.
+
+Homebrew run 42076103862 exposed a second large member: the same Root IPK in
+`payload/baseline/cache/<sha256>`. The first fix covered only the direct component.
+A complete local build reproduced the failure and enumerated all large members:
+normalized Python runtime (51,462,118 bytes), Root IPK (28,288,532 bytes), and its
+baseline cache copy (28,288,532 bytes). The bounded exception now also covers the
+exact baseline cache path with a 64-character lowercase hexadecimal name.
+Nineteen Homebrew Python tests and independent review passed. The complete offline
+installer (113,991,816 bytes), manifest generation and repeat manifest verification
+passed locally. This development installer is not approved for publication or
+physical installation. A separate Homebrew CI verification follows; the active
+main candidate run is retained as evidence for its original source.
