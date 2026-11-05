@@ -117,18 +117,21 @@ const {assert,chromium,stage,fs,path}=require('./themes/browser.cjs'),http=requi
    PalmServiceBridge.prototype.call=function(uri,raw){
     if(uri==='luna://com.gathin.tvhome.renewal/presentationContext'){
      nativeRequests++;const bridge=this,reply=JSON.stringify(nativeReply);
-     setTimeout(()=>bridge.onservicecallback(reply),0);return;
+     const deliver=()=>bridge.onservicecallback(reply);
+     if(window.deferNative)(window.nativePending||(window.nativePending=[])).push(deliver);else setTimeout(deliver,0);return;
     }
     original.call(this,uri,raw);
    };
    await ThemeManager.selectInstalled((await ThemeManager.list()).find(t=>t.id==='builtin:ribbon'));
-   HomePresentationController.show({});
+   nativeRequests=0;HomePresentationController.show({});
   });
   assert.equal(await n.page.evaluate(()=>HomePresentationController.state().mode),'full','manual launch is opaque even with content preview');
-  assert.equal(await n.page.evaluate(()=>nativeRequests),0,'manual launch cannot query itself into overlay');
+  await n.page.waitForFunction(()=>nativeRequests===1,null,{timeout:3000});
+  await n.page.waitForTimeout(30);
+  assert.equal(await n.page.evaluate(()=>HomePresentationController.state().mode),'full','manual facts cannot authorize transparency');
   await n.page.evaluate(()=>HomePresentationController.show({cytvHome:{reason:'home',generation:7}}));
   await n.page.waitForFunction(()=>HomePresentationController.state().mode==='overlay',null,{timeout:3000});
-  assert.equal(await n.page.evaluate(()=>nativeRequests),1);
+  assert.equal(await n.page.evaluate(()=>nativeRequests),2);
   await n.page.locator('#btnSettings').click();
   await n.page.waitForFunction(()=>RenewalPanel.isOpen());
   assert.equal(await n.page.evaluate(()=>HomePresentationController.state().mode),'full');
@@ -180,6 +183,43 @@ const {assert,chromium,stage,fs,path}=require('./themes/browser.cjs'),http=requi
   assert.equal(await n.page.locator('.ctv-input-preview').count(),0,'context reset releases active hardware preview immediately');
   await n.page.waitForTimeout(900);
   assert.equal(await n.page.evaluate(()=>previewCreations),1,'unknown context cannot restart preview');
+  await n.page.evaluate(()=>{nativeReply={returnValue:true,eligible:false,content:false,generation:42,observedAgeMs:0};HomePresentationController.show({});});
+  await n.page.waitForFunction(()=>previewCreations===2,null,{timeout:3000});
+  assert.equal(await n.page.evaluate(()=>HomePresentationController.state().mode),'full','manual empty facts resume input preview while opaque');
+  await n.page.evaluate(()=>{nativeReply=null;HomePresentationController.show({});});
+  assert.equal(await n.page.locator('.ctv-input-preview').count(),0,'manual context reset immediately releases input preview');
+  // Test wallpaper separately from the input preview's exclusive decoder hold.
+  await n.page.evaluate(()=>HomeInputShelf.togglePreview());
+  // Manual/startup/wake may use fresh decoder facts while remaining opaque.
+  for(const activation of [{},{reason:'startup'},{reason:'wake'}]) {
+   const before=await n.page.evaluate(()=>wallpaperCreations);
+   await n.page.evaluate(activation=>{nativeReply={returnValue:true,eligible:true,content:false,generation:42,observedAgeMs:0};HomePresentationController.show(activation);},activation);
+   await n.page.waitForFunction(()=>HomePresentationController.state().content===false,null,{timeout:3000});
+   assert.equal(await n.page.evaluate(()=>HomePresentationController.state().mode),'full');
+   assert(await n.page.evaluate(before=>wallpaperCreations>before,before),'fresh manual/startup decoder facts permit own video attachment');
+   await n.page.evaluate(()=>{nativeReply=null;HomePresentationController.show({});});await n.page.waitForTimeout(30);
+   assert.equal(await n.page.locator('#ctvWallpaperVideo').count(),0,'unknown manual context keeps poster');
+  }
+  for(const reply of [null,{returnValue:true,eligible:false,content:true,generation:42,observedAgeMs:0},
+   {returnValue:true,eligible:false,content:false,generation:42,observedAgeMs:2001},
+   {returnValue:true,eligible:false,content:'false',generation:42,observedAgeMs:0}]) {
+   await n.page.evaluate(reply=>{nativeReply=reply;HomePresentationController.show({reason:'startup'});},reply);await n.page.waitForTimeout(30);
+   assert.equal(await n.page.locator('#ctvWallpaperVideo').count(),0,'active/unknown/stale/malformed startup facts retain decoder hold');
+   assert.equal(await n.page.evaluate(()=>HomePresentationController.state().mode),'full');
+  }
+  await n.page.evaluate(()=>{
+   window.deferNative=true;window.nativePending=[];
+   nativeReply={returnValue:true,eligible:false,content:false,generation:42,observedAgeMs:0};HomePresentationController.show({});
+   nativeReply=null;HomePresentationController.show({reason:'startup'});
+   nativePending.shift()();
+  });
+  assert.equal(await n.page.evaluate(()=>HomePresentationController.state().content),null,'late manual decoder reply cannot release newer startup hold');
+  assert.equal(await n.page.locator('#ctvWallpaperVideo').count(),0);
+  await n.page.evaluate(()=>{nativePending.shift()();deferNative=false;});
+  for(const hint of [{reason:'home',generation:'7'},{reason:'home'},{reason:'other',generation:7}]) {
+   await n.page.evaluate(hint=>{nativeReply={returnValue:true,eligible:false,content:false,generation:42,observedAgeMs:0};HomePresentationController.show({cytvHome:hint});},hint);
+   await n.page.waitForTimeout(30);assert.equal(await n.page.evaluate(()=>HomePresentationController.state().content),null,'bad Home hint never falls through decoder-only');
+  }
   await n.page.keyboard.press('Escape');
   assert.equal(await n.page.evaluate(()=>window.closeCalls),1,'shelf Back first returns focus to dock');
   assert.equal(await n.page.locator('#tiles .item.focused').count(),1);

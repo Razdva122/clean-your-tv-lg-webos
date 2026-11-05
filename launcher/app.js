@@ -190,13 +190,14 @@
     toggle: function (params) { return !nativeNoRoot || homeActivation(params); },
     query: function (done, activation) {
       if (nativeNoRoot) {
-        var hint = activation && activation.cytvHome;
-        if (!homeActivation(activation)) { done(null); return; }
+        var hint = activation && activation.cytvHome, decoderOnly = !homeActivation(activation);
+        // Malformed/non-Home hints cannot fall through to the manual decoder path.
+        if (decoderOnly && hint !== undefined) { done(null); return; }
         var clock = window.performance && typeof window.performance.now === 'function' ?
           function () { return window.performance.now(); } : Date.now;
         var started = clock();
         callLuna('luna://com.gathin.tvhome.renewal/presentationContext', {}, function (reply) {
-          done(HomePresentation.nativeContext(reply, hint.generation, clock() - started));
+          done(HomePresentation.nativeContext(reply, decoderOnly ? null : hint.generation, clock() - started, decoderOnly));
         }, 2000);
         return;
       }

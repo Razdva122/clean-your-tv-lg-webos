@@ -15,6 +15,20 @@ for(const reply of [null,{}, {...valid,returnValue:false}, {...valid,eligible:1}
 assert.deepEqual(presentation.nativeContext({...valid,observedAgeMs:2000},7),{eligible:true,content:true});
 for(const generation of [undefined,null,'7',NaN,Infinity,-1,1.5,9007199254740992])
  assert.equal(presentation.nativeContext({...valid,generation},generation),null,'invalid expected generation cannot authorize overlay');
+// Decoder-only facts never grant transparency and require explicit mode/null expectation.
+assert.deepEqual(presentation.nativeContext({...valid,eligible:true,content:false},null,0,true),{eligible:false,content:false});
+assert.deepEqual(presentation.nativeContext(valid,null,0,true),{eligible:false,content:true});
+for(const reply of [null,{}, {...valid,content:'false'}, {...valid,generation:'7'}, {...valid,observedAgeMs:2001}])
+ assert.equal(presentation.nativeContext(reply,null,0,true),null);
+assert.equal(presentation.nativeContext(valid,7,0,true),null,'decoder-only mode cannot weaken a Home generation');
+assert.equal(presentation.nativeContext(valid,null,0,false),null);
+const pending=[];
+const startup=presentation.create({supported:true,queryFull:true,query:done=>pending.push(done)});
+startup.setTheme({presentation:'overlay'});startup.show({reason:'startup'});
+assert.equal(pending.length,1,'startup still queries current decoder facts');
+pending[0]({eligible:false,content:false});assert.deepEqual(startup.state(),{mode:'full',visible:true,content:false});
+startup.show({});const old=pending[1];startup.show({reason:'wake'});old({eligible:false,content:false});
+assert.equal(startup.state().content,null,'previous decoder-only callback cannot release a newer hold');
 let params;
 const c=presentation.create({supported:true,query:(done,activation)=>{params=activation;done(true);}});
 c.setTheme({presentation:'overlay'});

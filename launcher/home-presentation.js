@@ -5,21 +5,23 @@
 }(this, function () {
   'use strict';
   // A launch hint selects a request generation; only Helper's live reply can
-  // establish content. Missing, stale or cross-generation facts stay unknown.
-  function nativeContext(reply, expected, elapsed) {
+  // establish content. Explicit decoder-only requests have no activation generation
+  // and force opacity; missing, stale or cross-generation Home facts stay unknown.
+  function nativeContext(reply, expected, elapsed, decoderOnly) {
     function generation(value) {
       return typeof value === 'number' && isFinite(value) && value >= 0 &&
         Math.floor(value) === value && value <= 9007199254740991;
     }
     if (elapsed === undefined) elapsed = 0;
     if (typeof elapsed !== 'number' || !isFinite(elapsed) || elapsed < 0 ||
-        !generation(expected) || !reply || reply.returnValue !== true ||
+        (decoderOnly === true ? expected !== null : !generation(expected)) ||
+        !reply || reply.returnValue !== true ||
         typeof reply.eligible !== 'boolean' || !generation(reply.generation) ||
         (reply.content !== null && typeof reply.content !== 'boolean') ||
-        (reply.eligible && reply.content !== true) ||
-        reply.generation !== expected || typeof reply.observedAgeMs !== 'number' ||
+        (decoderOnly !== true && reply.eligible && reply.content !== true) ||
+        (decoderOnly !== true && reply.generation !== expected) || typeof reply.observedAgeMs !== 'number' ||
         !isFinite(reply.observedAgeMs) || reply.observedAgeMs < 0 || reply.observedAgeMs + elapsed > 2000) return null;
-    return {eligible:reply.eligible, content:reply.content};
+    return {eligible:decoderOnly === true ? false : reply.eligible, content:reply.content};
   }
   function create(options) {
     var generation = 0, launchGeneration = 0, visible = false, mode = 'closed', overlayTheme = false;
@@ -34,8 +36,8 @@
       content = null;
       mode = visible ? 'full' : 'closed'; blocked = isBlocked(); opaque = isOpaque(); render();
       // Root must query decoder context even while opaque or starting up.
-      // Native No-root still requires its ordinary typed Helper activation seam.
-      if (!visible || !options.supported || !options.decoderContext && ((!overlayTheme && !options.queryFull) || startup || opaque)) return;
+      // No-root also queries while opaque; only typed fresh facts release its decoder.
+      if (!visible || !options.supported || !options.decoderContext && !options.queryFull && (!overlayTheme || startup || opaque)) return;
       try {
         options.query(function (value) {
           if (settled || generation !== request || !visible) return;
