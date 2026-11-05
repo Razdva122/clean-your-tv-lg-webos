@@ -78,6 +78,34 @@ in both editions. Services are simulated; no TV was contacted by these tests.
 This is additional combined-source evidence, not a full candidate build or
 physical timing, input, standby, boot, media or rollback acceptance.
 
+## Helper foundations
+
+PR317, source53c8747d755d43e52e27889d9b7065144f0e5182, merged as
+a2fd765f57b343f33c2729ae9379267a760dd866 after Tests41959824989 attempt1
+passed Linux/macOS runtime, browser, ARM Python and both required summaries.
+It adds reviewed, unwired C Stop/private-journal/controller-lease primitives,
+an ES5 journal protocol and a read-only private credential guard. Defaults deny
+without trusted I/O, identity and provisioning. Existing consumers and package
+versions remain unchanged; this is not a ninth completed runtime bug fix.
+
+Focused host evidence includes 41 Stop cases, 71 private lease/journal cases,
+41 private-reader cases and 70 ES5 protocol cases. The JS cases and the compiled
+Helper/WSS/TLS/watchdog regressions ran on current Node and exact 0.10.15,
+0.10.25 and 0.12.2. Native suites also passed sanitizers. An undersized invalid-nonce
+fixture was corrected for GCC without relaxing validation. A macOS concurrency
+failure was reproduced as a legitimate fail-closed directory-change refusal;
+the test now schedules overlapping prechecks deterministically and separately
+tests rejection of an incomplete concurrent publication. Both schedules passed
+1,000 host executions. Independent source/integration reviews found no blocking
+defects. These results are host evidence, not target storage or input acceptance.
+
+The real C/Node pipe bridge is prepared separately and remains outside this
+inventory until its own PR checks and merge. PR318 reports relay cleanup failures
+and remains under CI. Home-origin authentication, ordinary protected provisioning,
+native/service identity and namespace lifetime, input-holder lifecycle, fresh
+pairing where required, and update/rollback/cold-boot acceptance remain open.
+No physical observation is carried to these new source bytes.
+
 ## Still outside the inventory
 
 Cancelled hosted-runner
