@@ -34,7 +34,9 @@ class RootC1PayloadTests(unittest.TestCase):
                 release=json.loads((bundle/'release.json').read_text())
                 self.assertEqual(release['home_backend'],'c1-native-gate')
                 self.assertTrue(release['experimental']);self.assertFalse(release['hardware_validated'])
-                self.assertIn('runtime/c1-home-gate',manifest['files'])
+                self.assertIn('runtime/c1-keyfilter-guard',manifest['files'])
+                self.assertIn('runtime/c1-home-filter.js',manifest['files'])
+                self.assertNotIn('runtime/c1-home-gate',manifest['files'])
                 self.assertIn('runtime/c1_gate.py',manifest['files'])
                 from cytv import package
                 files=package.data_files((bundle/manifest['package']).read_bytes())

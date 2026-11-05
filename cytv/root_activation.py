@@ -1,12 +1,14 @@
 """Verify one C1 gate attempt before opening Home from the common installer."""
+import json
 import re
+import shlex
 
 from . import package
 from .errors import UserError
 from .root_gate import BACKEND
 
 
-def proof(installer, command, active):
+def proof(installer, command, active, details=None):
     reply = installer.root_action(command)
     state = reply.get('result') if isinstance(reply,dict) and reply.get('returnValue') is True else None
     effective = state.get('effective') if isinstance(state,dict) else None
@@ -27,7 +29,27 @@ def proof(installer, command, active):
                  and effective.get('stopped') is (effective['state'] == 'stopped'))
     if not valid:
         raise UserError('C1 Home routing or recovery readback was not confirmed. Run cytv status or cytv restore.')
+    if details is not None: details['routing'] = effective.get('routing')
     return token
+
+
+def launch_keyfilter(installer, token):
+    # A status read followed by raw LS2 launch can cross an explicit Off. The
+    # fixed native operation serializes the initial installer launch too.
+    raw = installer.remote.run('/var/lib/clean-your-tv-root/runtime/c1-keyfilter-guard --home '+shlex.quote(token), timeout=5)
+    try:
+        value = json.loads(raw)
+        valid = (isinstance(value,dict)
+                 and value.get('returnValue') is True and value.get('backend') == BACKEND
+                 and value.get('routing') == 'compositor-keyfilter-v1' and value.get('token') == token
+                 and value.get('state') == 'armed' and value.get('healthy') is True
+                 and value.get('stopped') is False and value.get('mounted') is False
+                 and value.get('stock_verified') is False and value.get('profiles',{}) is None
+                 and type(value.get('guardian_pid')) is int and value['guardian_pid'] > 1)
+    except (ValueError,TypeError): valid=False
+    if not valid:
+        raise UserError('C1 Home launch was not confirmed. Run cytv status or cytv restore.')
+    return value
 
 
 def activate(installer):
@@ -41,7 +63,8 @@ def activate(installer):
     installer.store.checkpoint(installer.profile, stage='enable')
     installer.progress('Turning on Root Home control…')
     try:
-        token = proof(installer, 'enable', active=True)
+        details = {}
+        token = proof(installer, 'enable', active=True, details=details)
         if token == stock_token:
             raise UserError('C1 activation did not establish a new Home attempt. Run cytv status or cytv restore.')
         installer.store.checkpoint(installer.profile, stage='launch', home_token=token)
@@ -58,7 +81,8 @@ def activate(installer):
             installer.progress('Opening Clean Your TV Home…')
             installer.store.checkpoint(installer.profile, stage='launch-submitting')
             installer.outcome.launch_submitted()
-            launched = installer.remote.luna('com.webos.applicationManager/launch', {'id':package.ROOT_APP})
+            launched = (launch_keyfilter(installer, token) if details.get('routing') == 'compositor-keyfilter-v1'
+                        else installer.remote.luna('com.webos.applicationManager/launch', {'id':package.ROOT_APP}))
             if not isinstance(launched,dict) or launched.get('returnValue') is not True:
                 raise UserError('C1 Home launch was not confirmed. Run cytv status or cytv restore.')
             installer.outcome.launch_accepted()

@@ -89,10 +89,16 @@ def admission_valid(value):
 def selection(root=STATE, uid=0):
     path = Path(root) / 'home-backend.json'
     if not os.path.lexists(path):
-        if any(os.path.lexists(Path(root) / name) for name in ('c1-gate', 'runtime/c1-home-gate', 'runtime/c1_gate.py')):
+        if any(os.path.lexists(Path(root) / name) for name in ('c1-gate', 'c1-keyfilter', 'runtime/c1-home-gate', 'runtime/c1-keyfilter-guard', 'runtime/c1_gate.py', 'runtime/c1_keyfilter.py')):
             raise ValueError('Missing experimental Home backend selection; retain recovery evidence')
         return None
     value = json.loads(secure(path, uid, 8192))
+    if isinstance(value, dict) and type(value.get('schema')) is int and value['schema'] == 2:
+        if __package__:
+            from . import c1_keyfilter
+        else:
+            import c1_keyfilter
+        return c1_keyfilter.selection(root, uid)
     if (not isinstance(value, dict)
             or set(value) != {'schema', 'backend', 'experimental', 'native_sha256', 'admission'}
             or type(value['schema']) is not int or value['schema'] != 1
@@ -465,6 +471,15 @@ def enable_locked(root, uid, seconds, resume_token=None):
 
 
 def execute(mode, transaction=None, root=STATE, uid=0):
+    # Dispatch a selected schema 2 without changing schema 1 recovery ordering.
+    # Native/binary authority still rejects any missing or orphaned selection.
+    selected = selection(root, uid) if os.path.lexists(Path(root)/'home-backend.json') else None
+    if selected and selected.get('routing') == 'compositor-keyfilter-v1':
+        if __package__:
+            from . import c1_keyfilter
+        else:
+            import c1_keyfilter
+        return c1_keyfilter.execute(mode, transaction, root, uid)
     if mode == 'status': return status(root, uid)
     if mode == 'restore': return restore(root, uid)
     if mode == 'enable': return enable(root, uid)

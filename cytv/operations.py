@@ -335,7 +335,7 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
 
     def native_root_present(self):
         script = "if " + ' || '.join('[ -e '+ROOT_STATE+'/'+name+' ] || [ -L '+ROOT_STATE+'/'+name+' ]'
-            for name in ('home-backend.json','c1-gate','runtime/c1-home-gate','runtime/c1_gate.py'))
+            for name in ('home-backend.json','c1-gate','c1-keyfilter','runtime/c1-home-gate','runtime/c1-keyfilter-guard','runtime/c1_gate.py','runtime/c1_keyfilter.py'))
         return self.remote.run(script+'; then printf CYTV_C1_GATE; fi').strip() == 'CYTV_C1_GATE'
 
     def root_action(self, action, bundle=None, migrate=False, experimental=False):
@@ -743,12 +743,15 @@ print('CYTV_UPDATER_VERIFIED')
     @staticmethod
     def root_active(result):
         if result.get('backend') == 'c1-native-gate':
+            from .root_gate import native_proof
             effective = result.get('effective', {})
             intent = result.get('intent') or {}
             return (result.get('recovery', {}).get('integrity_verified') is True
                     and intent.get('enabled') is True and intent.get('phase') == 'active'
                     and effective.get('backend') == 'c1-native-gate' and effective.get('profiles') is None
-                    and effective.get('state') == 'armed' and effective.get('mounted') is True
+                    and native_proof(result) is not None
+                    and effective.get('state') == 'armed'
+                    and (effective.get('mounted') is True or effective.get('routing') == 'compositor-keyfilter-v1')
                     and effective.get('healthy') is True and effective.get('stock_verified') is False
                     and effective.get('stopped') is False
                     and isinstance(effective.get('token'), str) and effective['token'] == intent.get('token')
@@ -998,7 +1001,9 @@ print('CYTV_UPDATER_VERIFIED')
         try:
             effective = device.get('effective', {})
             if device.get('backend') == 'c1-native-gate':
+                from .root_gate import stock_proof
                 return (device.get('recovery', {}).get('integrity_verified') is True
+                        and stock_proof(device)
                         and effective.get('backend') == 'c1-native-gate' and effective.get('profiles') is None
                         and effective.get('stock_verified') is True and effective.get('mounted') is False
                         and effective.get('healthy') is False and effective.get('guardian_pid') == 0
