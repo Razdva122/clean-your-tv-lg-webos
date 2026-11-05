@@ -100,11 +100,35 @@ tests rejection of an incomplete concurrent publication. Both schedules passed
 defects. These results are host evidence, not target storage or input acceptance.
 
 The real C/Node pipe bridge is prepared separately and remains outside this
-inventory until its own PR checks and merge. PR318 reports relay cleanup failures
-and remains under CI. Home-origin authentication, ordinary protected provisioning,
+inventory until its own PR checks and merge. Relay cleanup PR318 is integrated
+separately below. Home-origin authentication, ordinary protected provisioning,
 native/service identity and namespace lifetime, input-holder lifecycle, fresh
 pairing where required, and update/rollback/cold-boot acceptance remain open.
 No physical observation is carried to these new source bytes.
+
+## Relay cleanup outcomes
+
+PR318, source1391d170ea44319711ab3722b1e3fc07abf0a010, merged as
+2b156210182546f0a019907e0cfc9fdb73e553f7 after Tests41961887838 attempt1
+passed Linux/macOS runtime, browser, ARM Python and both required summaries.
+The relay now attempts key-up, ungrab and both descriptor closes even if an
+operation fails, reports the failure mask and original cause, and returns 31
+rather than a reason eligible for watchdog retry. The existing controller
+blocks 31 and retains its separate cleanup after actual child close. The
+standalone cleanup command also fails when its output close fails. Healthy
+watchdog, emergency and source-removal behavior is preserved.
+
+The original native failure assertion reproduced before the change. All 38
+synthetic evdev scenarios passed normally and with ASan/UBSan, all 31 controller
+watchdog cases passed, and startup/filter/triple-Home/controller Home/runtime
+policy regressions and strict static ARM EABI5 linking passed. Independent
+narrow review found no blocking defects. These checks execute the actual relay
+against simulated devices; no physical remote was touched. This is truthful
+native I/O reporting, not proof that all physical keys or surviving input
+holders are released. It does not fix the unresolved Helper storage guard,
+Home authorization, provisioning or future broker/relay lease lifetime.
+The [developer contract](../development/HELPER-RELAY-CLEANUP.md) records the
+failure codes, existing best-effort latch behavior and remaining acceptance.
 
 ## Still outside the inventory
 
