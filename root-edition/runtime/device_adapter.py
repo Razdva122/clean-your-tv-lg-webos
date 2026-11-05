@@ -15,7 +15,7 @@ import python_binding
 from python_binding import current_executable
 import time
 from profile_plan import snapshot
-from profile_recovery import recover, validate, PAYLOAD, DIGEST, payload_for, REAL_HOME, CANDIDATE, STOCK
+from profile_recovery import recover, validate, PAYLOAD, journal_payload, REAL_HOME, CANDIDATE, STOCK
 
 STATE = Path('/var/lib/clean-your-tv-root')
 TARGET = Path('/var/webos-profile/override/clean-your-tv-root.json')
@@ -110,9 +110,7 @@ def sam_transport():
 
 def write_home(target):
     if target not in (STOCK, CANDIDATE, REAL_HOME): raise ValueError('Unsupported Home')
-    if target != REAL_HOME: return sam_transport().write(target)
-    return sam_transport().call('luna://com.webos.service.applicationmanager/setDefaultApp',
-                                {'category':'home','appId':target})
+    return sam_transport().write(target)
 
 
 def read():
@@ -122,7 +120,7 @@ def read():
     return snapshot(reply, sam.read())
 
 
-def remove_candidate(identity):
+def remove_candidate(identity, payload=PAYLOAD):
     trusted_dir(TARGET.parent)
     try: fd = os.open(TARGET, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     except FileNotFoundError: return 'absent'
@@ -130,15 +128,15 @@ def remove_candidate(identity):
     try:
         st = os.fstat(fd)
         if (not stat.S_ISREG(st.st_mode) or st.st_uid != EXPECTED_UID
-                or st.st_mode & 0o022 or st.st_nlink != 1 or st.st_size != len(PAYLOAD)
+                or st.st_mode & 0o022 or st.st_nlink != 1 or st.st_size != len(payload)
                 or (st.st_dev, st.st_ino) != (identity['device'], identity['inode'])):
             return 'conflict'
         data = b''
-        while len(data) < len(PAYLOAD):
-            chunk = os.read(fd, len(PAYLOAD)-len(data))
+        while len(data) < len(payload):
+            chunk = os.read(fd, len(payload)-len(data))
             if not chunk: return 'conflict'
             data += chunk
-        if hashlib.sha256(data).hexdigest() != DIGEST: return 'conflict'
+        if data != payload: return 'conflict'
         now = TARGET.lstat()
         attrs = lambda s: (s.st_dev,s.st_ino,s.st_size,s.st_mtime_ns,s.st_ctime_ns)
         if attrs(now) != attrs(st): return 'conflict'
@@ -169,8 +167,8 @@ def restore_once(expected_transaction=None):
         def remove_owned():
             if publication == 'staged-v1':
                 from staged_publication import remove
-                return remove(STATE/'profile-candidate.stage', TARGET, identity, EXPECTED_UID, payload=payload_for(j.get('candidate', CANDIDATE)))
-            return remove_candidate(identity)
+                return remove(STATE/'profile-candidate.stage', TARGET, identity, EXPECTED_UID, payload=journal_payload(j))
+            return remove_candidate(identity, journal_payload(j))
         return recover(j, remove_owned,
                        lambda: sam_transport().call('luna://com.webos.service.systemprofile/debug/rescan', {}),
                        read, lambda target: sam_transport().write(target), save)

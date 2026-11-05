@@ -1,12 +1,12 @@
 # Clean Your TV — user guide
 
-> **1.8.2 — Unpublished candidate:** [1.8.2 / English](../RELEASE-1.8.2.md).
+> **1.8.2:** [English](../RELEASE-1.8.2.md) · [LS2 Root #337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337).
 
-**Unreleased C1 Beta (#298):** In the common computer installer, choose Root. Eligible C1 TVs are detected automatically; no separate installer or flag is needed. This path requires a fresh installation, has no automatic updates, and has not passed physical C1 acceptance. Open LG Home, long Back, or a safety/power stop can leave Home control off; turn Change Home on again in TV settings. The normal Root path is unchanged. If other No-root components remain, C1 full removal stops before making changes. Remove those components through their normal No-root removal flow first; retain recovery data if their state is unresolved. [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md).
+**Unreleased C1 Beta (#298):** In the common computer installer, choose Root. Eligible C1 TVs are detected automatically; no separate installer or flag is needed. This path requires a fresh installation, has no automatic updates, and has not passed physical C1 acceptance. Open LG Home, long Back, or a safety/power stop can leave Home control off; turn Change Home on again in TV settings. The normal Root path is unchanged. If other No-root components remain, C1 full removal stops before making changes. Remove those components through their normal No-root removal flow first; retain recovery data if their state is unresolved. [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md). C1 Beta uses Home-key filtering and return after an app closes, without changing CRIU/checkpoint permissions. LG Home may briefly appear during return. Triple Home also stops routing; enable Change Home again after a stop.
 
-Unreleased (#290): **+ / Add app** offers Live TV under the TV’s own name only when the tuner is detected as installed. Other hidden system apps stay excluded. No-root needs the updated Helper and installer; Root needs the updated Home package. Tuner launch still needs TV verification.
+1.8.2 (#290): **+ / Add app** offers Live TV under the TV’s own name only when the tuner is detected as installed. Other hidden system apps stay excluded. No-root needs the updated Helper and installer; Root needs the updated Home package. Tuner launch still needs TV verification.
 
-**Unreleased — Ribbon in Home:** Ribbon is a theme of the single full-screen Home app in both editions, with its own wallpaper. Video or HDMI is not shown behind the cards. Selecting an app uses normal TV app switching. Existing emergency controls are unchanged. Final packages and TV acceptance are pending. [Ribbon](../THEMES.md#ribbon-over-applications-unreleased).
+**Ribbon in Home:** Ribbon is a theme of the single full-screen Home app in both editions, with its own wallpaper. Video or HDMI is not shown behind the cards. Selecting an app uses normal TV app switching. Existing emergency controls are unchanged. See the release notes for tested scope and known limitations. [Ribbon](../THEMES.md#ribbon-over-applications-unreleased).
 
 Ribbon: hold OK to edit; ←/→ moves the card, ↑ selects × (hide from Home), ↓ returns to the card, OK confirms and Back cancels. Editing keeps the current background.
 
@@ -218,3 +218,9 @@ The 1.6.0 computer/Android installers and migrated OTA clients select 720p or 10
 [HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).
 
 > **1.6.0:** save the original failed-attempt report. New reports separate a recorded first error from later checks and include a filtered Doctor/status summary; successful setup/status/restore also offer an export. Missing older evidence remains unknown; this does not authorize recovery. [↗](../development/INSTALLER-DIAGNOSTICS.md).
+
+## Storage space
+
+Candidate builds show a storage estimate for installation, downloaded themes and personal photo/video wallpapers: required, available and shortfall in MiB. Estimates include temporary copies and a reserve. TV app quota, the 64 MiB theme cache and temporary video storage are separate limits. If webOS cannot report capacity, the unknown values are stated explicitly. Free space only on the indicated storage; no automatic cleanup occurs.
+
+Storage estimate (TV): required 128.0 MiB; available 96.0 MiB; shortfall 32.0 MiB.

@@ -58,7 +58,7 @@ Home-button replacement remains separate from this startup limitation. See
 
 Press **Home three times within two seconds**, releasing between presses, to
 restore LG Home and disable Root intent independently of the web interface.
-**Unreleased window cleanup:** Settings Off and Open LG Home close the Root window after an accepted LG Home launch. Reopen Home Root manually for Settings while routing remains off. Emergency/fault cleanup on the profile backend closes Root after verified routing recovery; a window-cleanup failure is separate from routing recovery. Native C1 emergency cleanup is not covered by this fix.
+**Unreleased window cleanup:** Settings Off and Open LG Home close the Root window after an accepted LG Home launch. Reopen Home Root manually for Settings while routing remains off. Emergency/fault cleanup on the profile backend closes Root after verified routing recovery; a window-cleanup failure is separate from routing recovery. New C1 bundles use a separate native stop → owned Root close → LG Home launch sequence, with retained errors on uncertain cleanup. The [C1 contract](../docs/development/C1-NATIVE-GATE.md) describes its mount-free Home-key/return routing, brief LG Home visibility, explicit re-enable and legacy recovery limits.
 
 **Change Home off** also restores LG routing. **Open LG Home** visits LG Home
 once while preserving the routing preference. Long Home can invoke LG features;

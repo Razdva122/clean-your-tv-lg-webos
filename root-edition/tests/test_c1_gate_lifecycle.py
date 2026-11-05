@@ -183,8 +183,21 @@ class GateLifecycleTests(unittest.TestCase):
             time.sleep(.05)
         else: self.fail('native guardian did not restore stock')
         self.assertEqual(after['reason'], 'escape')
+        for child in children:
+            child.wait(timeout=5)
+        (runtime/'escape').unlink()
+        with patch.object(gate, 'retire_stock', side_effect=ValueError('Running stock Home reappeared after SAM close')):
+            with self.assertRaisesRegex(ValueError, 'reappeared'):
+                gate.enable(root, self.uid, seconds=15)
+        after = gate.status(root, self.uid)
+        self.assertFalse(after['effective']['mounted'])
+        self.assertTrue(after['effective']['stock_verified'])
+        self.assertTrue(after['effective']['stopped'])
+        self.assertFalse(after['intent']['enabled'])
+        self.assertEqual(after['intent']['phase'], 'disabled')
 
-    def close_scenario(self, gone_at, foreground):
+
+    def close_scenario(self, gone_at, foreground, surfaces=None):
         clock = [0.0]
         self.stack.enter_context(patch.object(gate.time, 'monotonic', side_effect=lambda: clock[0]))
         self.stack.enter_context(patch.object(gate.time, 'sleep', side_effect=lambda seconds: clock.__setitem__(0, clock[0]+seconds)))
@@ -192,6 +205,8 @@ class GateLifecycleTests(unittest.TestCase):
         requests = []
         def call(uri, payload, timeout=5):
             requests.append((uri.rsplit('/',1)[-1], payload))
+            if uri.startswith('luna://com.webos.surfacemanager/'):
+                return {'returnValue':True, 'foregroundAppInfo':surfaces(clock[0]) if surfaces else []}
             if uri.endswith('/getForegroundAppInfo'):
                 return {'returnValue':True, 'appId':foreground(clock[0])}
             if uri.endswith('/closeByAppId'):
@@ -208,6 +223,85 @@ class GateLifecycleTests(unittest.TestCase):
         self.assertGreaterEqual(clock[0], 13)
         self.assertEqual([request for request in requests if request[0]!='getForegroundAppInfo'],
             [('closeByAppId', {'id':'com.webos.app.home','forceMode':True})])
+
+    def test_visible_overlay_settles_while_sam_still_reports_stock(self):
+        surface = {'appId':gate.APP, 'windowType':'_WEBOS_WINDOW_TYPE_OVERLAY',
+                   'visible':True, 'displayId':0}
+        clock, requests = self.close_scenario(10, lambda now: 'com.webos.app.home',
+            lambda now: [surface] if now >= 13 else [])
+        gate.retire_stock({})
+        self.assertGreaterEqual(clock[0], 13)
+        self.assertLess(clock[0], 14)
+        self.assertNotIn('launch', [method for method,_ in requests])
+
+    def test_compositor_visible_list_does_not_require_event_only_visible_field(self):
+        clock, requests = self.close_scenario(10, lambda now: 'com.webos.app.home',
+            lambda now: [{'appId':gate.APP, 'windowType':'_WEBOS_WINDOW_TYPE_OVERLAY'}])
+        gate.retire_stock({})
+        self.assertEqual(clock[0], 10)
+
+    def test_unproven_overlay_never_settles_activation(self):
+        valid = {'appId':gate.APP, 'windowType':'_WEBOS_WINDOW_TYPE_OVERLAY',
+                 'visible':True, 'displayId':0}
+        for change in ({'visible':False}, {'visible':None}, {'visible':1}, {'displayId':1}, {'displayId':False},
+                       {'appId':'other.app'}, {'windowType':'_WEBOS_WINDOW_TYPE_CARD'}):
+            with self.subTest(change=change):
+                surface = dict(valid, **change)
+                clock, requests = self.close_scenario(10, lambda now: 'com.webos.app.home',
+                    lambda now: [surface])
+                with self.assertRaisesRegex(ValueError, 'foreground'):
+                    gate.retire_stock({})
+
+    def test_restored_stock_process_rejects_even_visible_root_overlay(self):
+        clock, requests = self.close_scenario(10, lambda now: 'com.webos.app.home',
+            lambda now: [{'appId':gate.APP, 'windowType':'_WEBOS_WINDOW_TYPE_OVERLAY',
+                          'visible':True, 'displayId':0}] if now >= 13 else [])
+        # CRIU can restore the original executable after close completed.
+        gate.stock_running.side_effect = lambda target: clock[0] < 10 or clock[0] >= 13
+        with self.assertRaisesRegex(ValueError, 'reappeared'):
+            gate.retire_stock({})
+
+    def test_compositor_failure_or_unknown_shape_does_not_prove_handoff(self):
+        overlay = {'appId':gate.APP, 'windowType':'_WEBOS_WINDOW_TYPE_OVERLAY',
+                   'displayId':0}
+        for reply in (None, [], {'returnValue':False, 'foregroundAppInfo':[overlay]},
+                      {'returnValue':True, 'foregroundAppInfo':{}},
+                      {'returnValue':True, 'foregroundAppInfo':[None, overlay]},
+                      {'returnValue':True, 'foregroundAppInfo':[overlay]*129}):
+            with self.subTest(reply_type=type(reply).__name__):
+                clock, requests = self.close_scenario(10, lambda now: 'com.webos.app.home')
+                original = gate.luna.side_effect
+                gate.luna.side_effect = lambda uri, payload, timeout=5: reply if 'surfacemanager/' in uri else original(uri, payload, timeout)
+                with self.assertRaisesRegex(ValueError, 'foreground'):
+                    gate.retire_stock({})
+                self.assertEqual(clock[0], 23)
+
+    def test_compositor_timeout_preserves_failure(self):
+        clock, requests = self.close_scenario(10, lambda now: 'com.webos.app.home')
+        original = gate.luna.side_effect
+        def call(uri, payload, timeout=5):
+            if 'surfacemanager/' in uri:
+                raise subprocess.TimeoutExpired('luna-send', timeout)
+            return original(uri, payload, timeout)
+        gate.luna.side_effect = call
+        with self.assertRaises(subprocess.TimeoutExpired):
+            gate.retire_stock({})
+
+    def test_compositor_cannot_extend_shared_settling_deadline(self):
+        clock, requests = self.close_scenario(10, lambda now: 'com.webos.app.home')
+        original = gate.luna.side_effect
+        timeouts = []
+        def call(uri, payload, timeout=5):
+            if 'surfacemanager/' in uri:
+                timeouts.append(timeout)
+                clock[0] += timeout
+                return {'returnValue':True, 'foregroundAppInfo':[]}
+            return original(uri, payload, timeout)
+        gate.luna.side_effect = call
+        with self.assertRaisesRegex(ValueError, 'foreground'):
+            gate.retire_stock({})
+        self.assertEqual(clock[0], 23)
+        self.assertLess(timeouts[-1], 5)
 
     def test_existing_stock_process_requires_exact_close_readback(self):
         clock, requests = self.close_scenario(3600, lambda now: 'com.webos.app.home')

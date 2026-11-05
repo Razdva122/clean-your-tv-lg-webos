@@ -138,3 +138,19 @@ read-only review found an unused fixture branch; it was corrected and re-reviewe
 with no remaining actionable findings. Local Markdown links, fixture JSON and
 `git diff --check` passed. Nine downloaded OSE source files were matched to their
 blob IDs in the pinned upstream Git tree. Ordinary PR CI remains a separate gate.
+
+## Helper install error and asynchronous cleanup (#307)
+
+The [2026-11-05 follow-up](../history/2026-11-05-helper307-recovery-boundary.md)
+checks the reported status 24 against the same pinned OSE source. ErrorInstall
+is not an idle receipt: `onFinishTask()` can asynchronously release the original
+task and schedule an internal removal of unpacked content. The original failure
+summary therefore cannot authorize a new mutation or reconstruct a legacy vendor
+transaction binding. Retail behavior remains unverified.
+
+The installer now presents the existing localized package-status capability
+blocker at the exception boundary instead of suggesting Doctor as a workaround.
+This preserves numeric diagnostic evidence and both original/inherited host
+journals. It changes no recovery authority and supplies no historical lookup.
+The vendor contract requested above is still missing; do not repeat owner probes
+or introduce an install/remove, file-only or bus-permission bypass.

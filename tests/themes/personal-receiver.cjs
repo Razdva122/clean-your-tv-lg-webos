@@ -18,7 +18,7 @@ async function run(){
  assert.equal(s.kind,'wallpaper');assert.equal(s.wallpaperProtocol,1);
  assert.equal((await request(s,'/wallpaper')).code,200);
  assert.match((await request(s,'/wallpaper')).body,/image\/jpeg/);
- assert.deepEqual(JSON.parse((await request(s,'/v1/wallpaper-capabilities')).body),{wallpaperProtocol:1});
+ const capabilities=JSON.parse((await request(s,'/v1/wallpaper-capabilities')).body);assert.equal(capabilities.wallpaperProtocol,1);assert.equal(capabilities.videoCacheStorage.required,0);assert(capabilities.videoCacheStorage.available===null||capabilities.videoCacheStorage.available>=0);
  assert.equal((await request(s,'/v1/wallpaper-capabilities','GET',undefined,{'X-CYTV-PIN':'bad'})).code,403);
  assert.equal((await request(s,'/v1/theme','POST',{})).code,404);
  const origin={Origin:'http://127.0.0.1:'+s.port};

@@ -119,3 +119,107 @@ Linux/macOS summaries still require the complete runtime matrix, and full candid
 retain browser, ARM Python and full-release gates without success-cache reuse.
 The prior unsharded candidate run 42080674432 is superseded; it is not the selected
 release build. Product scope and component versions are unchanged by sharding.
+
+## Selected full build and signed Root delivery
+
+Full build [42081316264, attempt 3](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42081316264)
+at `40f6f84ab9002cfdfe51dbf34e675e1adbdf7364` completed successfully, including
+all eight runtime shards, browser, ARM Python, platform builds, Homebrew and final
+summaries. Earlier attempts were cancelled while one macOS shard waited for a
+runner; only that shard and dependent checks were rerun. Completed artifacts were
+retained by GitHub and verified through the normal candidate admission.
+
+Normal Root-only signing [42088467852, attempt 1](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42088467852)
+completed without publishing a release. Signed artifact SHA-256:
+`576302bae9c2d7f7326162d989108c018ab5e0dfc3071db81c23f30c79b49bbc`.
+Local verification checked the trusted public key, signature, exact build/attempt,
+source provenance, three component identities, package sizes and hashes:
+
+- Root 0.9.3: `5b0a4cb494248db05b1543bedd59e22feaec53f7c311d38de0cd7c92ff88aa21`.
+- Root Updater 0.4.4: `21b58f0f6ba7b4ebef930ad93768575f5199af6120870523c2387cb5c26bfa11`.
+- Root infrastructure 0.9.3: `8f6352b33599d17938f1fd70a255301f5c1b19eb913e84083db707dbafcba9be`.
+
+C3 pre-install readback confirmed Helper stopped, Root and guardian off, recovery
+integrity verified, and stock LG SAM/default/idle destinations. Final package/device
+acceptance is in progress; no physical test result is implied by signing.
+
+## Focused final Root device acceptance
+
+The maintainer requested a short run limited to physical Home latency, background
+playback/persistence, return to LG, and loading personal images/videos. Device and
+host remain the maintainer-owned C3 / firmware 43.21.71 / SDK 11.2.0 / Magic Remote
+and macOS recorded above. Exact signed packages from build 42081316264:3 were used.
+System Updater 1.1.2 was retained; no role, receipt, key or permission was replaced.
+
+The ordinary signed System worker completed Root 0.9.3, Root Updater 0.4.4 and
+infrastructure 0.9.3, with all three install results successful, complete Home
+resume and no recorded worker error. An initial UI profile export was attempted
+before readiness; export from the ready UI succeeded before installation began.
+Current UI-captured settings were preserved. A direct LS2 status request was
+rejected; protected transaction data was read without modifying it to confirm the
+worker outcome. Package installation is recorded separately from physical tests.
+
+| Focused check | Expected | Observed |
+| --- | --- | --- |
+| Physical Home from HDMI3/PS5 | Promptly open our Home | Maintainer: appeared immediately, with Root enabled through its normal Settings switch and Helper stopped |
+| Ribbon own video wallpaper | Visible moving background | Maintainer confirmed motion; native video advanced from 103.17 to 108.20 seconds at 3840×2160, unpaused and without an error |
+| Earlier 120-second disappearance | Home remains open | Same ready visible CARD observed at 176.6 seconds without disappearance |
+| Explicit Home Off / LG exit | Restore LG and routing baseline | Maintainer confirmed LG Home; Root and guardian off, recovery verified, stock SAM/default/idle LG destinations and Helper stopped |
+| Receive personal image and video | Start PIN receiver, receive and apply fixtures | **Failed before transfer:** receiver did not open; a real Root UI method call returned `errorCode: -1`, `Denied method call "themeReceiverStart" for category "/"` |
+
+The upload failure is a release blocker for claiming this retained Root setup can
+load personal wallpapers/videos. It does not establish a failure in decoding
+received media: no file transfer began. The transfer attempt used ordinary UI
+controls; no existing personal wallpaper was present or overwritten. Temporary
+receiver/pending controls were cancelled and the original theme source restored.
+No permissions were changed to force the test through. The LS2 denial needs a
+supported installation/update diagnosis; its exact role provenance is not yet
+established by this run.
+
+Sound, standby, cold boot, actual normal OTA/rollback and published-Home/new-Helper
+compatibility were not tested in this short run. This record is partial acceptance,
+not approval to publish the candidate. Final TV state is LG Home with routing off.
+
+## Maintainer release decision and Helper compatibility
+
+The maintainer explicitly requested moving the Root wallpaper receiver LS2 denial
+to [issue #337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337) and
+shipping 1.8.2 with that known limitation. The issue remains open, bug / planned;
+publication does not resolve it. The limited physical QA scope and untested power,
+sound and normal OTA/rollback scenarios remain disclosed.
+
+The exact new Helper 0.7.4 archive was extracted from the authenticated CLI artifact
+of full build 42081316264:3. Its raw SHA-256 is unchanged from the physically tested
+Helper above; canonical archive SHA-256 is
+`0535520363197485a50b1577e3bb6248c9e510d1c6fa26c8326750426f69407e`.
+The actual installed public Helper files matched the archive. Published v1.7.1
+Home 1.8.1 and previous Helper 0.6.22 were authenticated by the original signed
+System manifest and package hashes. The ordinary native same-app install reached
+terminal success and all Home files matched. From actual published Home UI,
+Start Helper plus confirmation launched the retained 0.7.4 controller as real and
+effective UID 5431; same-package `renewal/homeStatus` returned success and enabled.
+The maintainer confirmed physical triple Home returned LG. Helper stopped before
+restoring the exact final Home 1.9.4 with native terminal/readback. The original
+portable inventory/config/settings, theme identity and personal wallpaper source
+matched after restoration. No raw storage, credentials, receipt or role changes
+were used. No actual automatic No-root OTA/rollback transaction is claimed.
+
+## Final publication candidate
+
+After committing the required Helper approval, full build
+[42092682892](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42092682892)
+at `4f223718cae2782be08cb3daaede1839584cfb1c` passed all mandatory checks.
+Attempt 1 had one Mac Ribbon-edit assertion failure (11 cards versus expected 10).
+The application and test source were unchanged from the preceding successful
+candidate. Both editions passed the focused test locally without modification;
+the targeted Mac shard and dependent summaries then passed on the same source.
+Other successful jobs and package artifacts were retained, not rebuilt.
+
+The final CLI artifact was authenticated by its GitHub digest and source binding.
+Before allowed per-device personalization, Home FHD/HD, Helper, Root and Root
+Updater packages were byte-identical to those already verified and tested above.
+All generated Root infrastructure installed files also matched the previously
+signed/tested set. This confirms evidence reuse without another TV installation;
+it does not broaden the recorded physical scope. The selected run/attempt is in
+`release-plan.json` and the release PR. The known LS2 issue remains deferred to
+#337 by the maintainer's explicit shipping decision.

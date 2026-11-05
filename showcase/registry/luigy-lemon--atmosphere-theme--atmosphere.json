@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "id": "github:luigy-lemon/atmosphere-theme:atmosphere",
+  "title": "Atmosphere",
+  "description": "Atmosphere's original landscape, cool white clock and quiet horizontal dock for Clean Your TV on LG webOS.",
+  "author": {
+    "name": "Luigy-Lemon",
+    "sourceProfile": "https://github.com/luigy-lemon"
+  },
+  "sourceRepository": "https://github.com/luigy-lemon/atmosphere-theme",
+  "sourceCommit": "9b876f11dc75bbb8393160bfc4b5444ae3ad7cf6",
+  "descriptorUrl": "https://raw.githubusercontent.com/luigy-lemon/atmosphere-theme/15135d75807e6e4fe595bb0975dd336ae826fdeb/releases/1.0.0/cytv-theme.json",
+  "descriptorSha256": "fc0909d347f09db0cb9bd55e834cacdd4be6b319ff2b67866933ceab5c38a5d1",
+  "themeVersion": "1.0.0",
+  "themeApiVersion": 1,
+  "license": "MIT",
+  "creditsFile": "assets/luigy-lemon--atmosphere-theme--atmosphere/fc0909d347f09db0cb9bd55e834cacdd4be6b319ff2b67866933ceab5c38a5d1/CREDITS.txt",
+  "previewFiles": [
+    "assets/luigy-lemon--atmosphere-theme--atmosphere/fc0909d347f09db0cb9bd55e834cacdd4be6b319ff2b67866933ceab5c38a5d1/assets/preview.jpg"
+  ],
+  "tags": [
+    "dark",
+    "minimal",
+    "photographic"
+  ],
+  "addedAt": "2026-11-05",
+  "reviewedAt": "2026-11-05",
+  "evidence": [
+    {
+      "kind": "browser",
+      "summary": "Atmosphere 1.0.0 pinned descriptor and every declared resource verified locally and remotely. Chromium at 1920x1080 in Root and No-root with synthetic apps and external network blocked: Home focus/navigation, reorder/cancel, app library labels, Inputs and standard Settings isolation passed. Supplied preview visually compared with current Home rendering. Physical TV not tested."
+    }
+  ]
+}

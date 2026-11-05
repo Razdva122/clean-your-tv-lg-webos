@@ -205,6 +205,33 @@ class NativeGateTests(unittest.TestCase):
    if name=='source':(self.root/'volatile').chmod(0o755)
    else:(self.root/'checkpoint1').symlink_to(self.root/'state')
    r,w=os.pipe();ar,aw=os.pipe();p=subprocess.Popen([str(self.binary),'--guard',TOKEN,str(r),str(aw),'0'],pass_fds=(r,aw),stdout=subprocess.PIPE,text=True);os.close(r);os.close(aw);os.write(w,b'READY\n');os.close(w);out,_=p.communicate(timeout=4);os.close(ar);self.assertFalse(json.loads(out)['returnValue']);self.assertFalse((self.root/'home.original').exists())
+ def test_c1_nonsticky_shared_checkpoint_ancestor_refuses_before_home_bind(self):
+  # Model the reported C1 ancestry, not a writable checkpoint leaf.
+  checkpoint=self.root/'cmn_data/checkpoint/com.webos.app.home'
+  checkpoint.mkdir(parents=True,mode=0o755)
+  checkpoint.parent.chmod(0o755)
+  (self.root/'cmn_data').chmod(0o777)
+  snapshot=checkpoint/'snapshot'
+  snapshot.write_bytes(b'original checkpoint')
+  header=FIXTURE.read_text().replace('#define CHECK1 FIXTURE_ROOT "/checkpoint1"',
+                                    '#define CHECK1 FIXTURE_ROOT "/cmn_data/checkpoint/com.webos.app.home"')
+  (self.root/FIXTURE.name).write_text(header)
+  subprocess.run(['cc','-std=c11','-Wall','-Wextra','-Werror','-DCYTV_GATE_FIXTURE',f'-DFIXTURE_ROOT="{self.root}"','-I',str(self.root),str(SOURCE),'-o',str(self.binary)],check=True,capture_output=True)
+  shutil.copy2(self.binary,self.root/'volatile/gate')
+  p,w=self.guard(ready=False)
+  os.write(w,b'READY\n')
+  out,err=p.communicate(timeout=5)
+  value=json.loads(out)
+  self.assertFalse(value['returnValue'])
+  self.assertEqual(value['reason'],'mount_refused')
+  self.assertFalse((self.root/'inverse').exists())
+  self.assertFalse(value['mounted'])
+  self.assertTrue(value['stock_verified'])
+  self.assertFalse((self.root/'home.original').exists())
+  self.assertEqual((self.root/'home').read_bytes(),b'original executable')
+  self.assertEqual(snapshot.read_bytes(),b'original checkpoint')
+  self.assertEqual((self.root/'cmn_data').stat().st_mode & 0o7777,0o777)
+
  def test_native_parser_under_address_and_undefined_sanitizers(self):
   harness=ROOT/'root-edition/tests/native_gate_parser_test.c';binary=self.root/'parser-check'
   subprocess.run(['cc','-std=c11','-Wall','-Wextra','-Werror','-fsanitize=address,undefined','-fno-sanitize-recover=all','-DCYTV_GATE_FIXTURE',f'-DFIXTURE_ROOT="{self.root}"','-I',str(FIXTURE.parent),str(harness),'-o',str(binary)],check=True,capture_output=True)

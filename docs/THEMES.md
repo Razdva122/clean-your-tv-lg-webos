@@ -159,3 +159,12 @@ package/device acceptance is still pending. Verify the exact versioned packages
 for launch latency, repeated Home, app switching, background playback, editing,
 standby/wake and emergency/update/rollback behavior before release. See the
 [presentation design](development/RIBBON-PRESENTATION.md).
+
+## Storage estimates in candidate builds
+
+Theme installation reports required, available and missing MiB for TV app
+storage and its independent **64 MiB** theme-cache allowance. The separate
+**8 themes** count limit asks you to remove a downloaded theme. Personal video
+wallpapers also need computer temporary space and TV video-cache space.
+See [storage estimates and recovery limits](DESKTOP_INSTALL.md#storage-estimates-in-candidate-builds)
+for calculation reserves, unavailable quota readings and pending-install recovery.

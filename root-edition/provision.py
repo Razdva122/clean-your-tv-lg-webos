@@ -13,6 +13,7 @@ import subprocess
 from python_binding import verify_binding
 
 NAME = 'com.cleanyourtv.root.preview.service'
+LEASE_NAME = 'com.webos.cleanyourtv.root.lease'
 SERVICE = Path('/media/developer/apps/usr/palm/services') / NAME
 STATE = Path('/var/lib/clean-your-tv-root')
 BASE = Path('/var/luna-service2-dev')
@@ -21,10 +22,11 @@ RUNNER = STATE/'run-recovery-service'
 PRIVATE_FILES = ('service.js','startup-diagnostics.js','app-inventory.js','handlers.js','services.json','package.json','activity.json','boot-recover.sh')
 RECEIVER_CAPABILITIES = ['theme-receiver-v1']
 WALLPAPER_CAPABILITIES = RECEIVER_CAPABILITIES + ['wallpaper-media-v1']
+COMPOSITOR_CAPABILITIES = WALLPAPER_CAPABILITIES + ['c1-keyfilter-v1']
 
 def snapshot_capabilities(saved):
     capabilities = saved.get('capabilities', [])
-    if capabilities not in ([], RECEIVER_CAPABILITIES, WALLPAPER_CAPABILITIES):
+    if capabilities not in ([], RECEIVER_CAPABILITIES, WALLPAPER_CAPABILITIES, COMPOSITOR_CAPABILITIES):
         raise ValueError('Unknown recovery capabilities')
     return capabilities
 SYSTEM_FILES = tuple(Path(x) for x in ('/usr/bin/node','/usr/palm/services/jsservicelauncher/bootstrap-node.js','/usr/palm/services/jsservicelauncher/bootstrap.js'))
@@ -116,9 +118,23 @@ def plan(original, capabilities=None):
         control += ['themeReceiverStart','themeReceiverStatus','themeReceiverRead','themeReceiverStop']
     if 'wallpaper-media-v1' in capabilities:
         control += ['wallpaperCacheStart','wallpaperCacheWrite','wallpaperCacheCommit','wallpaperCacheKeepAlive','wallpaperCacheStop']
-    return {'service': original['service'].replace(expected,'Exec='+str(RUNNER)).encode(),
-            'role':encoded(role), 'client':encoded({NAME:['activity.operation'],'com.cleanyourtv.root.preview':[NAME+'.control'],'com.cleanyourtv.root.preview-*':[NAME+'.control']}),
-            'api':encoded({NAME+'.control':[NAME+'/'+x for x in control],'activities.callbacks':[NAME+'/boot'],NAME+'.admin':[NAME+'/'+x for x in ('status','restore','register','unregister')]})}
+    clients = {NAME:['activity.operation'],'com.cleanyourtv.root.preview':[NAME+'.control'],'com.cleanyourtv.root.preview-*':[NAME+'.control']}
+    apis = {NAME+'.control':[NAME+'/'+x for x in control],'activities.callbacks':[NAME+'/boot'],NAME+'.admin':[NAME+'/'+x for x in ('status','restore','register','unregister')]}
+    if 'c1-keyfilter-v1' in capabilities:
+        names=[line for line in original['service'].splitlines() if line.startswith('Name=')]
+        if names not in (['Name='+NAME],['Name='+NAME+';']):
+            raise ValueError('Unexpected compositor activation names')
+        role['allowedNames'].append(LEASE_NAME)
+        role['permissions'].append({'service':LEASE_NAME, 'inbound':['com.webos.surfacemanager'], 'outbound':[]})
+        clients['com.webos.surfacemanager'] = [NAME+'.c1lease']
+        apis[NAME+'.c1lease'] = [LEASE_NAME+'/c1Lease', LEASE_NAME+'/c1Home']
+    result = {'service': original['service'].replace(expected,'Exec='+str(RUNNER)).encode(),
+            'role':encoded(role), 'client':encoded(clients), 'api':encoded(apis)}
+    if 'c1-keyfilter-v1' in capabilities:
+        # LS2 reads Name as a semicolon-delimited GLib string list. Keep the
+        # SDK manifest's existing service-file path and exact rollback shape.
+        result['service']=result['service'].replace(names[0].encode(),('Name='+NAME+';'+LEASE_NAME).encode())
+    return result
 
 def manifest():
     callback = PRIVATE_SERVICE/'boot-recover.sh'
@@ -127,10 +143,13 @@ def manifest():
     verify_binding(STATE)
     binding = [STATE/name for name in ('python_binding.py','python_boot.js','package_data.py','package_identity.py','startup_guard.py','updater/store.py','updater/package.py','python-launcher','python-runtime.json') if os.path.lexists(STATE/name)]
     paths = binding + [RUNNER] + [PRIVATE_SERVICE/name for name in PRIVATE_FILES] + sorted(RUNTIME.glob('*.py'))
-    if any(os.path.lexists(STATE/name) for name in ('home-backend.json', 'c1-gate', 'runtime/c1_gate.py', 'runtime/c1-home-gate')):
+    if any(os.path.lexists(STATE/name) for name in ('home-backend.json', 'c1-gate', 'c1-keyfilter', 'runtime/c1_gate.py', 'runtime/c1_keyfilter.py', 'runtime/c1-home-gate', 'runtime/c1-keyfilter-guard')):
         from runtime import c1_gate
         selected = c1_gate.selection(STATE)
-        native = RUNTIME/'c1-home-gate'
+        compositor = selected.get('routing') == 'compositor-keyfilter-v1'
+        native = RUNTIME/('c1-keyfilter-guard' if compositor else 'c1-home-gate')
+        if compositor:
+            paths.append(RUNTIME/'c1-home-filter.js')
         if sha(secure(native)) != selected['native_sha256']:
             raise ValueError('Experimental native recovery identity changed')
         paths += [STATE/'home-backend.json', native]
@@ -320,12 +339,16 @@ def prepare_stock_home():
     A submitted write is reconciled by observation, never repeated. The explicit
     stock override remains after removal; it selects the same original LG Home.
     """
-    if any(os.path.lexists(STATE/name) for name in ('home-backend.json', 'c1-gate', 'runtime/c1_gate.py', 'runtime/c1-home-gate')):
+    if any(os.path.lexists(STATE/name) for name in ('home-backend.json', 'c1-gate', 'c1-keyfilter', 'runtime/c1_gate.py', 'runtime/c1_keyfilter.py', 'runtime/c1-home-gate', 'runtime/c1-keyfilter-guard')):
         from runtime import c1_gate
         selected = c1_gate.selection(STATE)
-        if c1_gate.probe() != selected['admission']:
+        if selected.get('routing') == 'compositor-keyfilter-v1':
+            from runtime import c1_keyfilter as backend
+        else:
+            backend = c1_gate
+        if backend.probe() != selected['admission']:
             raise ValueError('C1 admission changed during provisioning')
-        proof = c1_gate.validate_native(c1_gate.native(['--status'], STATE))
+        proof = backend.validate_native(backend.native(['--status'], STATE))
         if not proof['stock_verified'] or proof['mounted']:
             raise ValueError('Original C1 Home is not verified')
         return

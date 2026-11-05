@@ -5,6 +5,7 @@ from PySide6.QtCore import QObject, Signal, QRect, Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (QDialog, QFileDialog, QFormLayout, QHBoxLayout, QLabel,
                               QLineEdit, QProgressBar, QPushButton, QSlider, QVBoxLayout)
+from cytv.errors import is_storage_full, COMPUTER_STORAGE_FULL, UserError
 from cytv import wallpaper
 from cytv.i18n import translate as tr
 from cytv.gui_style import STYLE
@@ -33,7 +34,7 @@ class WallpaperDialog(QDialog):
         self.worker = None
         self.close_when_done = False
         self.events = WorkerEvents(self)
-        self.events.progress.connect(lambda text: self.status.setText(tr(text)))
+        self.events.progress.connect(self.show_progress)
         self.events.finished.connect(self.finished_work)
         layout = QVBoxLayout(self)
         title = QLabel(tr('Your photo or video on your TV')); title.setObjectName('title'); layout.addWidget(title)
@@ -51,6 +52,8 @@ class WallpaperDialog(QDialog):
         self.address = QLineEdit(); self.address.setPlaceholderText('192.168.1.2'); self.address.setMaxLength(15)
         self.pin = QLineEdit(); self.pin.setMaxLength(6); self.pin.setEchoMode(QLineEdit.EchoMode.Password)
         form.addRow(tr('TV private IPv4 address'),self.address); form.addRow(tr('TV receiving PIN'),self.pin)
+        self.storage_lines = {}
+        self.storage_info = QLabel(); self.storage_info.setWordWrap(True); layout.addWidget(self.storage_info)
         self.status = QLabel(); self.status.setWordWrap(True); layout.addWidget(self.status)
         self.progress = QProgressBar(); self.progress.setRange(0,0); self.progress.setTextVisible(False); self.progress.hide(); layout.addWidget(self.progress)
         buttons = QHBoxLayout(); layout.addLayout(buttons)
@@ -61,7 +64,7 @@ class WallpaperDialog(QDialog):
         path,_ = QFileDialog.getOpenFileName(self,tr('Choose photo or video'),'','Photos and videos (*.jpg *.jpeg *.png *.mp4 *.mov *.mkv *.webm)')
         if path:
             try: self.load_file(path)
-            except (ValueError,OSError) as error: self.status.setText(tr(str(error)))
+            except (ValueError,OSError,UserError) as error: self.status.setText(tr(str(error)))
 
     def load_file(self,path):
         from pathlib import Path
@@ -92,6 +95,7 @@ class WallpaperDialog(QDialog):
         except ValueError as error: self.status.setText(tr(str(error))); return
         path,crop,host,pin = self.path,None if self.is_video else self.crop(),self.address.text().strip(),self.pin.text()
         self.cancel_event = threading.Event()
+        self.storage_lines.clear(); self.storage_info.clear()
         self.busy = True
         self.close_when_done = False
         self.set_controls(False); self.progress.show(); self.cancel_button.setText(tr('Cancel'))
@@ -103,10 +107,18 @@ class WallpaperDialog(QDialog):
                 wallpaper.upload(host,pin,envelope,cancel=self.cancel_event,progress=self.events.progress.emit)
                 message = 'Received by TV. Choose Apply on the TV to use this wallpaper.'
             except wallpaper.Cancelled: message = 'Cancelled. Your current TV wallpaper is unchanged.'
-            except (ValueError,OSError) as error: message = str(error)
+            except (ValueError,OSError,UserError) as error:
+                message = COMPUTER_STORAGE_FULL if is_storage_full(error) else str(error)
             except Exception: message = 'Wallpaper preparation failed. Choose another photo or video.'
             self.events.finished.emit(message)
         self.worker = threading.Thread(target=work,daemon=True); self.worker.start()
+
+    def show_progress(self, text):
+        if text.startswith('Storage estimate ('):
+            self.storage_lines[text.split('):', 1)[0]] = tr(text)
+            self.storage_info.setText('\n'.join(self.storage_lines.values()))
+        else:
+            self.status.setText(tr(text))
 
     def set_controls(self,enabled):
         for widget in (self.choose,self.address,self.pin,self.send_button): widget.setEnabled(enabled)

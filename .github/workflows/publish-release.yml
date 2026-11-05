@@ -183,5 +183,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: signed-root-candidate-${{ inputs.candidate_build_run }}-${{ steps.candidate.outputs.attempt }}
+          retention-days: 90
           path: ${{ runner.temp }}/signed-root-candidate/
           if-no-files-found: error

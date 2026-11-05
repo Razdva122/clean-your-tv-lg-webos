@@ -1,5 +1,6 @@
 """Native Home activation records real launches and one verified attempt only."""
 import copy
+import json
 import unittest
 from unittest.mock import Mock
 from cytv import package, root_activation
@@ -56,6 +57,30 @@ class NativeActivationTests(unittest.TestCase):
         self.tv.outcome.launch_submitted.assert_called_once()
         self.tv.outcome.launch_accepted.assert_called_once()
         self.tv.store.finish.assert_called_once()
+
+    def test_keyfilter_initial_launch_uses_native_token_barrier(self):
+        for report in (self.stock,self.active):
+            effective=report['result']['effective']
+            effective.update(routing='compositor-keyfilter-v1',mounted=False,
+                             filter_installed=effective['healthy'],routing_active=effective['healthy'])
+        native=dict(self.active['result']['effective']);native.pop('filter_installed');native.pop('routing_active');native['reason']='none'
+        self.tv.remote.run.return_value=json.dumps(native)
+        self.tv.remote.luna.return_value={'returnValue':True,'appId':'com.webos.app.livetv'}
+        self.assertTrue(root_activation.activate(self.tv))
+        self.tv.remote.luna.assert_called_once_with('com.webos.applicationManager/getForegroundAppInfo',{},timeout=5)
+        self.tv.remote.run.assert_called_once_with('/var/lib/clean-your-tv-root/runtime/c1-keyfilter-guard --home '+'a'*32,timeout=5)
+        self.tv.outcome.launch_accepted.assert_called_once()
+
+    def test_keyfilter_stopped_at_initial_launch_retains_receipt_without_raw_launch(self):
+        for report in (self.stock,self.active):
+            effective=report['result']['effective']
+            effective.update(routing='compositor-keyfilter-v1',mounted=False,
+                             filter_installed=effective['healthy'],routing_active=effective['healthy'])
+        self.tv.remote.run.return_value='{"returnValue":false,"stopped":true}'
+        self.tv.remote.luna.return_value={'returnValue':True,'appId':'com.webos.app.livetv'}
+        with self.assertRaises(UserError):root_activation.activate(self.tv)
+        self.tv.remote.luna.assert_called_once_with('com.webos.applicationManager/getForegroundAppInfo',{},timeout=5)
+        self.tv.outcome.launch_accepted.assert_not_called();self.tv.store.finish.assert_not_called()
 
     def test_wrong_or_missing_backend_prevents_foreground_calls(self):
         for initial in (True, False):

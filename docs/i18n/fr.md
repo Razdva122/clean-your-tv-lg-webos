@@ -1,12 +1,12 @@
 # Clean Your TV — guide d’utilisation
 
-> **1.8.2 — Version candidate non publiée:** [1.8.2 / English](../RELEASE-1.8.2.md).
+> **1.8.2:** [English](../RELEASE-1.8.2.md) · [LS2 Root #337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337).
 
-**C1 Beta non publiée (#298) :** Choisissez Root dans l’installateur commun pour ordinateur. Les C1 admissibles sont détectés automatiquement ; aucun autre installateur ni option spéciale n’est nécessaire. Cette voie exige une installation neuve, ne propose pas de mises à jour automatiques et n’a pas encore été validée sur un C1 physique. Ouvrir LG Home, maintenir Back ou un arrêt de sécurité/d’alimentation peut laisser le contrôle de Home désactivé ; réactivez Changer Home dans les réglages du TV. La voie Root normale ne change pas. Si d’autres composants No-root subsistent, la suppression complète C1 s’arrête avant toute modification. Supprimez-les d’abord par la procédure No-root habituelle ; conservez les données de récupération si leur état est incertain. [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md).
+**C1 Beta non publiée (#298) :** Choisissez Root dans l’installateur commun pour ordinateur. Les C1 admissibles sont détectés automatiquement ; aucun autre installateur ni option spéciale n’est nécessaire. Cette voie exige une installation neuve, ne propose pas de mises à jour automatiques et n’a pas encore été validée sur un C1 physique. Ouvrir LG Home, maintenir Back ou un arrêt de sécurité/d’alimentation peut laisser le contrôle de Home désactivé ; réactivez Changer Home dans les réglages du TV. La voie Root normale ne change pas. Si d’autres composants No-root subsistent, la suppression complète C1 s’arrête avant toute modification. Supprimez-les d’abord par la procédure No-root habituelle ; conservez les données de récupération si leur état est incertain. [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md). C1 Beta filtre la touche Home et revient après la fermeture d’une app, sans modifier les droits CRIU/checkpoint. LG Home peut apparaître brièvement. Trois pressions sur Home arrêtent aussi la redirection ; réactivez ensuite Changer Home.
 
-Non publié (#290) : **+ / Ajouter une app** propose la télévision en direct sous le nom fourni par le TV uniquement si le tuner est détecté comme installé. Les autres apps système masquées restent exclues. No-root nécessite Helper et installateur à jour ; Root nécessite le paquet Home à jour. Le lancement des chaînes reste à vérifier sur le TV.
+1.8.2 (#290): **+ / Ajouter une app** propose la télévision en direct sous le nom fourni par le TV uniquement si le tuner est détecté comme installé. Les autres apps système masquées restent exclues. No-root nécessite Helper et installateur à jour ; Root nécessite le paquet Home à jour. Le lancement des chaînes reste à vérifier sur le TV.
 
-**Non publié — Ribbon dans Home :** Ribbon est un thème de l’unique application Home en plein écran, avec son propre fond, dans les deux éditions. Aucune vidéo ni entrée HDMI ne s’affiche derrière les cartes. Le choix d’une application utilise le changement d’application normal du téléviseur. Les commandes d’urgence restent inchangées. Les paquets définitifs et la validation sur TV restent à faire. [Ribbon](../THEMES.md#ribbon-over-applications-unreleased).
+**Ribbon dans Home :** Ribbon est un thème de l’unique application Home en plein écran, avec son propre fond, dans les deux éditions. Aucune vidéo ni entrée HDMI ne s’affiche derrière les cartes. Le choix d’une application utilise le changement d’application normal du téléviseur. Les commandes d’urgence restent inchangées. Les notes de version précisent les tests réalisés et les limites connues. [Ribbon](../THEMES.md#ribbon-over-applications-unreleased).
 
 Ribbon : maintenez OK pour modifier ; ←/→ déplace la carte, ↑ sélectionne × (masquer de Home), ↓ revient à la carte, OK confirme et Back annule. Le fond actuel est conservé.
 
@@ -218,3 +218,9 @@ Les installateurs ordinateur/Android de 1.6.0 et clients OTA migrés choisissent
 [HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).
 
 > **1.6.0:** conservez le rapport de l’échec initial. Les nouveaux rapports séparent la première erreur enregistrée des vérifications suivantes et contiennent un résumé filtré de Doctor/état. Un export est aussi proposé après une installation, une vérification d’état ou une restauration réussie. Les anciennes données manquantes restent inconnues ; ce rapport n’autorise aucune récupération. [↗](../development/INSTALLER-DIAGNOSTICS.md).
+
+## Espace de stockage
+
+Les versions candidates affichent l’espace requis, libre et manquant en Mio pour l’installation, les thèmes et les fonds photo/vidéo. Les copies temporaires et une réserve sont incluses. Quota de l’app, cache des thèmes de 64 Mio et cache vidéo sont distincts. Les valeurs inconnues sont signalées. Libérez le stockage indiqué ; aucun nettoyage automatique.
+
+Espace estimé (TV) : requis 128.0 Mio ; libre 96.0 Mio ; manque 32.0 Mio.

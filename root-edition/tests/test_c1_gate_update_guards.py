@@ -15,7 +15,7 @@ class UpdateGuardTests(unittest.TestCase):
         from updater.device import Device
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
-            for evidence in ('home-backend.json', 'c1-gate', 'runtime/c1_gate.py', 'runtime/c1-home-gate'):
+            for evidence in ('home-backend.json', 'c1-gate', 'c1-keyfilter', 'runtime/c1_gate.py', 'runtime/c1_keyfilter.py', 'runtime/c1-home-gate', 'runtime/c1-keyfilter-guard'):
                 path=root/evidence;path.parent.mkdir(exist_ok=True);path.touch()
                 with self.subTest(evidence=evidence), self.assertRaisesRegex(ValueError, '[Ee]xperimental'):
                     Device.require_home_resume_runtime(root)
@@ -31,6 +31,17 @@ class UpdateGuardTests(unittest.TestCase):
             with self.subTest(entry=name), patch.object(setup,'require_normal_root',side_effect=ValueError('Experimental C1')) as guard:
                 with self.assertRaisesRegex(ValueError,'Experimental C1'):getattr(setup,name)(*args)
                 guard.assert_called_once()
+
+    def test_system_setup_refuses_each_orphaned_keyfilter_artifact(self):
+        spec=importlib.util.spec_from_file_location('c1_system_setup_orphans', ROOT.parent/'system-updater/setup.py')
+        setup=importlib.util.module_from_spec(spec);spec.loader.exec_module(setup)
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder)
+            for evidence in ('c1-keyfilter','runtime/c1_keyfilter.py','runtime/c1-keyfilter-guard'):
+                path=root/evidence;path.parent.mkdir(exist_ok=True);path.touch()
+                with self.subTest(evidence=evidence),self.assertRaisesRegex(ValueError,'Experimental'):
+                    setup.require_normal_root(root)
+                path.unlink()
 
     def test_failed_c1_admission_does_not_reserve_installation(self):
         from unittest.mock import patch

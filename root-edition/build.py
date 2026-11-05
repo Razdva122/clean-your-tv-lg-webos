@@ -18,7 +18,7 @@ from cytv.package import IPK_MTIME
 
 SERVICE_ID = 'com.cleanyourtv.root.preview.service'
 SERVICE_SOURCE = Path(__file__).resolve().parent / 'service'
-SERVICE_FILES = ('service.js','startup-diagnostics.js', 'app-inventory.js', 'presentation-context.js', 'handlers.js', 'services.json', 'package.json', 'boot-recover.sh', 'activity.json')
+SERVICE_FILES = ('service.js','c1-lease.js','startup-diagnostics.js', 'app-inventory.js', 'presentation-context.js', 'handlers.js', 'services.json', 'package.json', 'boot-recover.sh', 'activity.json')
 
 
 def validate_native_gate(data):
@@ -59,6 +59,17 @@ def bundle_presentation_context(files):
     return files
 
 
+def bundle_c1_lease(files):
+    """Inline the optional broker without expanding legacy private inventories."""
+    files=dict(files)
+    needle=b"require('./c1-lease')"
+    if files['service.js'].count(needle)!=1:raise ValueError('Expected one C1 lease factory')
+    source=files.pop('c1-lease.js')
+    bundled=b'(function(){var module={exports:{}};\n'+source+b'\nreturn module.exports;}())'
+    files['service.js']=files['service.js'].replace(needle,bundled)
+    return files
+
+
 def tgz(files, executables=()):
     """Secure owned package leaves, without chmod records for platform containers."""
     from cytv.package import tgz as package_tgz
@@ -76,14 +87,18 @@ def ar(parts):
     return buffer.getvalue()
 
 
-def build(output, version='0.0.1', legacy_node_prototype=False, resolution=None, experimental_c1_gate=None):
+def build(output, version='0.0.1', legacy_node_prototype=False, resolution=None, experimental_c1_gate=None, experimental_c1_keyfilter=None):
     output = Path(output).absolute()
     if '..' in output.parts or any(path.is_symlink() for path in (output, *output.parents)):
         raise ValueError('Output must not traverse symlinks or parent segments')
     native_gate = None
-    if experimental_c1_gate is not None:
+    keyfilter = experimental_c1_keyfilter is not None
+    if keyfilter and experimental_c1_gate is not None:
+        raise ValueError('Select exactly one experimental C1 routing helper')
+    experimental_helper = experimental_c1_keyfilter if keyfilter else experimental_c1_gate
+    if experimental_helper is not None:
         from deploy import checked_file
-        candidate = Path(experimental_c1_gate).absolute()
+        candidate = Path(experimental_helper).absolute()
         native_gate = checked_file(candidate.parent, candidate.name)
         validate_native_gate(native_gate)
         if legacy_node_prototype:
@@ -105,7 +120,9 @@ def build(output, version='0.0.1', legacy_node_prototype=False, resolution=None,
     payload['usr/palm/applications/'+app_id+'/startup.sh']=packaged_content(app_id)
     from scripts.theme_receiver import inject
     private_service = bundle_presentation_context({name[len(service_prefix):]: data for name, data in payload.items() if name.startswith(service_prefix)})
+    private_service = bundle_c1_lease(private_service)
     private_service = inject(private_service, standalone=True)
+    payload.pop(service_prefix+'c1-lease.js')
     if legacy_node_prototype:
         from scripts.root_node_build import compile_root_node
         private_service = compile_root_node(private_service)
@@ -138,13 +155,20 @@ def build(output, version='0.0.1', legacy_node_prototype=False, resolution=None,
     if native_gate is not None:
         release.update(home_backend='c1-native-gate', experimental=True,
                        native_sha256=hashlib.sha256(native_gate).hexdigest())
+        if keyfilter:
+            release['routing'] = 'compositor-keyfilter-v1'
+            release['capabilities'].append('c1-keyfilter-v1')
     from deploy import SUPPORT_FILES, RUNTIME_FILES, checked_file
     source = Path(__file__).resolve().parent
     support = {name: checked_file(source, name) for name in SUPPORT_FILES}
     support.update({'runtime/' + name: checked_file(source, 'runtime/' + name) for name in RUNTIME_FILES})
     if native_gate is not None:
-        support['runtime/c1-home-gate'] = native_gate
+        helper_name = 'c1-keyfilter-guard' if keyfilter else 'c1-home-gate'
+        support['runtime/' + helper_name] = native_gate
         support['runtime/c1_gate.py'] = checked_file(source, 'runtime/c1_gate.py')
+        if keyfilter:
+            for extra in ('c1_keyfilter.py', 'c1-home-filter.js'):
+                support['runtime/' + extra] = checked_file(source, 'runtime/' + extra)
     if legacy_node_prototype:
         support = compile_root_node(support)
     output.mkdir(parents=False, exist_ok=False)
@@ -173,10 +197,12 @@ def main():
     parser.add_argument('--resolution', choices=('1280x720', '1920x1080'), help='Explicit graphics resolution for this candidate package')
     parser.add_argument('--experimental-c1-gate', type=Path, metavar='ARM_BINARY',
                         help='Explicit developer-only C1 backend; excluded from normal installer and OTA')
+    parser.add_argument('--experimental-c1-keyfilter', type=Path, metavar='ARM_BINARY',
+                        help='Explicit mount-free C1 compositor routing guardian')
     args = parser.parse_args()
     try:
         package = build(args.output, version=args.version, legacy_node_prototype=args.legacy_node_prototype,
-                        resolution=args.resolution, experimental_c1_gate=args.experimental_c1_gate)
+                        resolution=args.resolution, experimental_c1_gate=args.experimental_c1_gate, experimental_c1_keyfilter=args.experimental_c1_keyfilter)
     except (ValueError, OSError) as exc:
         parser.exit(1, 'Candidate build failed: ' + str(exc) + '\n')
     print('Built ' + str(package) + '. Offline only; hardware validation pending.')
