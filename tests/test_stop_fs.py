@@ -13,7 +13,7 @@ CASES = (
     'invalid-symlink', 'invalid-fifo', 'invalid-hardlink', 'invalid-unknown',
     'invalid-mode', 'invalid-special', 'invalid-oversize', 'invalid-partial', 'invalid-start', 'invalid-id',
     'fifo-race', 'remove-race', 'record-race', 'directory-race', 'collision',
-    'full', 'overflow', 'concurrent', 'retained-fd', 'file-sync-fail', 'dir-sync-fail',
+    'full', 'overflow', 'concurrent', 'concurrent-partial', 'retained-fd', 'file-sync-fail', 'dir-sync-fail',
     'publish-replace', 'publish-corrupt', 'publish-mode', 'cut-create', 'cut-write',
     'cut-file-sync', 'cut-dir-sync', 'bad-nonce',
 )

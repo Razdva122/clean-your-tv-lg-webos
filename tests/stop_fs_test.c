@@ -292,15 +292,49 @@ static void concurrent(void)
             action = BARRIER; target = CYTV_STOP_TEST_PRECHECK; nonce(100 + i, current_nonce);
             struct cytv_stop_publication p;
             CHECK(cytv_stop_publish(&binding, current_nonce, &p) == CYTV_STOP_OK && p.durable_published);
-            unchanged_publication(&p); close(ready_fd); close(go_fd); _exit(0);
+            unchanged_publication(&p); single_byte(ready_fd, 1);
+            close(ready_fd); close(go_fd); _exit(0);
         }
     }
     close(ready[1]); close(go[0]);
     single_byte(ready[0], 0); single_byte(ready[0], 0);
-    single_byte(go[1], 1); single_byte(go[1], 1); close(ready[0]); close(go[1]);
+    /* Both prechecks observed 15. Serialize their writes: overlapping directory
+     * observations may correctly return UNKNOWN, so neither ACK is promised
+     * when creations overlap. This schedule proves the capacity race itself. */
+    single_byte(go[1], 1); single_byte(ready[0], 0);
+    single_byte(go[1], 1); single_byte(ready[0], 0);
+    close(ready[0]); close(go[1]);
     for (unsigned i = 0; i < 2; i++) { int status; CHECK(waitpid(children[i], &status, 0) == children[i]); CHECK(WIFEXITED(status) && WEXITSTATUS(status) == 0); }
     struct cytv_stop_snapshot s;
     CHECK(cytv_stop_scan(&binding, &s) == CYTV_STOP_OVERFLOW && s.observed_entries == 17);
+}
+
+static void concurrent_partial(void)
+{
+    for (unsigned i = 1; i <= 15; i++) fixture_record(i, 0640);
+    int ready[2], go[2]; CHECK(pipe(ready) == 0 && pipe(go) == 0);
+    pid_t child = fork(); CHECK(child >= 0);
+    if (child == 0) {
+        alarm(8); close(ready[0]); close(go[1]); ready_fd = ready[1]; go_fd = go[0];
+        action = BARRIER; target = CYTV_STOP_TEST_CREATED; nonce(100, current_nonce);
+        struct cytv_stop_publication p;
+        CHECK(cytv_stop_publish(&binding, current_nonce, &p) == CYTV_STOP_OK && p.durable_published);
+        unchanged_publication(&p); close(ready_fd); close(go_fd); _exit(0);
+    }
+    close(ready[1]); close(go[0]); single_byte(ready[0], 0);
+    /* A real publisher is paused with its newly created, incomplete record.
+     * A second publisher must reject the channel without adding its own file. */
+    nonce(101, current_nonce); struct cytv_stop_publication p;
+    CHECK(cytv_stop_publish(&binding, current_nonce, &p) == CYTV_STOP_UNKNOWN);
+    CHECK(p.precheck_status == CYTV_STOP_UNKNOWN && !p.durable_published);
+    unchanged_publication(&p);
+    char path[1024]; record_path(current_nonce, path);
+    CHECK(access(path, F_OK) < 0 && errno == ENOENT);
+    single_byte(go[1], 1); close(ready[0]); close(go[1]);
+    int status; CHECK(waitpid(child, &status, 0) == child);
+    CHECK(WIFEXITED(status) && WEXITSTATUS(status) == 0);
+    struct cytv_stop_snapshot s;
+    CHECK(cytv_stop_scan(&binding, &s) == CYTV_STOP_FULL && s.count == 16);
 }
 
 static void retained_fd(void)
@@ -363,6 +397,7 @@ int main(int argc, char **argv)
     else if (!strcmp(name, "full")) capacity(0);
     else if (!strcmp(name, "overflow")) capacity(1);
     else if (!strcmp(name, "concurrent")) concurrent();
+    else if (!strcmp(name, "concurrent-partial")) concurrent_partial();
     else if (!strcmp(name, "retained-fd")) retained_fd();
     else if (!strcmp(name, "file-sync-fail")) publication_fault(FAIL_IO, CYTV_STOP_TEST_BEFORE_FILE_SYNC);
     else if (!strcmp(name, "dir-sync-fail")) publication_fault(FAIL_IO, CYTV_STOP_TEST_BEFORE_DIR_SYNC);
