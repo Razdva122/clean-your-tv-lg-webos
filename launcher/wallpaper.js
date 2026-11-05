@@ -127,7 +127,7 @@
     if (!input || !input.videoLease || blocked() || q === 'image') { play(q); return state(); }
     detach(); paintDim(); emit();
     var token = generation, active = input;
-    function failed() { if (token !== generation || active !== input) return; notice = 'Video cache is unavailable. Using the image.'; play('image'); }
+    function failed(error) { if (token !== generation || active !== input) return; notice = error&&(error.code==='storage-full'||error.code==='video-storage-full')?error.message:'Video cache is unavailable. Using the image.'; play('image'); }
     try {
       input.videoLease.acquire().then(function (handles) {
         if (token !== generation || active !== input || blocked()) return;

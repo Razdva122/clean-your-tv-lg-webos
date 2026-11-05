@@ -18,6 +18,14 @@ if HAS_QT:
 class WallpaperGuiTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls): cls.app=QApplication.instance() or QApplication([])
+    def test_storage_estimates_remain_visible_after_transfer_status_changes(self):
+        dialog=WallpaperDialog(); self.addCleanup(dialog.close)
+        message='Storage estimate (Video cache): required 12.0 MiB; available 8.0 MiB; shortfall 4.0 MiB.'
+        dialog.show_progress(message)
+        dialog.show_progress('Sending wallpaper…')
+        self.assertIn('shortfall 4.0 MiB',dialog.storage_info.text())
+        self.assertEqual(dialog.status.text(),'Sending wallpaper…')
+
     def test_crop_quality_and_independent_home_entry(self):
         with tempfile.TemporaryDirectory() as tmp:
             file=Path(tmp)/'source.png'; image=QImage(3840,2160,QImage.Format.Format_RGB32); image.fill(QColor('blue')); image.save(str(file))

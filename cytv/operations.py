@@ -9,7 +9,7 @@ import tempfile
 import time
 import uuid
 
-from . import package, i18n, diagnostics, graphics
+from . import package, i18n, diagnostics, graphics, storage
 from .errors import UserError, TVRejected, ExistingRoot, TVCommandError, root_recovery_details
 
 HOME = 'com.gathin.tvhome'
@@ -613,6 +613,7 @@ printf '%s' "$cytv_state"
         apps_data = json.dumps(ids).encode()
         expected[HELPER_STATE + '/ssap-key.json'] = hashlib.sha256(key_data).hexdigest()
         expected[HELPER_STATE + '/apps.json'] = hashlib.sha256(apps_data).hexdigest()
+        storage.install(self.remote, {'helper.ipk': helper, 'launcher.ipk': launcher}, self.progress)
         self.store.begin(self.profile, 'install', expected=expected,
                          versions={HOME: self.manifest['home_version'], HELPER: self.manifest['helper_version']})
         stage = '/media/developer/temp/cytv-' + uuid.uuid4().hex
@@ -690,6 +691,10 @@ printf '%s' "$cytv_state"
             package.verify_root_rollback_format((bundle / package.safe_name(manifest['package'])).read_bytes())
             release_sha = hashlib.sha256((bundle / 'release.json').read_bytes()).hexdigest()
             bundle_sha = hashlib.sha256((bundle / 'bundle.json').read_bytes()).hexdigest()
+            storage.install(self.remote, {str(path.relative_to(bundle)): path.read_bytes()
+                            for path in bundle.rglob('*') if path.is_file()} |
+                            {'updater/' + str(path.relative_to(updater)): path.read_bytes()
+                             for path in updater.rglob('*') if path.is_file()}, self.progress, root=True)
             if reinstall:
                 self.prepare_root_reinstall(already_removed=reinstall == 'removed')
                 self.preflight(install=True, home_interfaces=True)

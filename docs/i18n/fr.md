@@ -216,3 +216,9 @@ Les installateurs ordinateur/Android de 1.6.0 et clients OTA migrés choisissent
 [HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).
 
 > **1.6.0:** conservez le rapport de l’échec initial. Les nouveaux rapports séparent la première erreur enregistrée des vérifications suivantes et contiennent un résumé filtré de Doctor/état. Un export est aussi proposé après une installation, une vérification d’état ou une restauration réussie. Les anciennes données manquantes restent inconnues ; ce rapport n’autorise aucune récupération. [↗](../development/INSTALLER-DIAGNOSTICS.md).
+
+## Espace de stockage
+
+Les versions candidates affichent l’espace requis, libre et manquant en Mio pour l’installation, les thèmes et les fonds photo/vidéo. Les copies temporaires et une réserve sont incluses. Quota de l’app, cache des thèmes de 64 Mio et cache vidéo sont distincts. Les valeurs inconnues sont signalées. Libérez le stockage indiqué ; aucun nettoyage automatique.
+
+Espace estimé (TV) : requis 128.0 Mio ; libre 96.0 Mio ; manque 32.0 Mio.

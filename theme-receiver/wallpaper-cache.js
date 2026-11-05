@@ -1,21 +1,32 @@
 'use strict';
 var fs=require('fs'),path=require('path'),os=require('os'),crypto=require('crypto'),http=require('http');
 function error(message){return new Error('Wallpaper cache '+message);}
+// df is supported on legacy TV Node runtimes; statfs is not.
+exports.space=function(required,directory){return new Promise(function(resolve){
+ require('child_process').execFile('df',['-Pk',directory||os.tmpdir()],{timeout:3000,maxBuffer:65536,env:{PATH:'/usr/bin:/bin',LC_ALL:'C'}},function(error,stdout){
+  var lines=String(stdout||'').trim().split(/\n/),fields=lines[lines.length-1].trim().split(/\s+/),available=null;
+  if(!error&&fields.length===6&&/^[0-9]{1,12}$/.test(fields[3]))available=Number(fields[3])*1024;
+  resolve({required:required,available:available,shortfall:available===null?null:Math.max(0,required-available)});
+ });
+});};
 exports.create=function(options){
- options=options||{};var sessions={},ttl=options.ttlMs||90000,base=options.directory||path.join(os.tmpdir(),'cytv-wallpaper-'+crypto.createHash('sha256').update(options.appId||'home').digest('hex').slice(0,16));
+ options=options||{};var sessions={},starting=0,reserved=0,ttl=options.ttlMs||90000,base=options.directory||path.join(os.tmpdir(),'cytv-wallpaper-'+crypto.createHash('sha256').update(options.appId||'home').digest('hex').slice(0,16));
  function remove(s){if(!s||s.dead)return;s.dead=true;clearTimeout(s.timer);delete sessions[s.id];if(s.server)try{s.server.close();}catch(_){}s.sockets.forEach(function(socket){socket.destroy();});Object.keys(s.files).forEach(function(q){try{fs.unlinkSync(path.join(s.dir,q+'.mp4'));}catch(_){}});try{fs.rmdirSync(s.dir);}catch(_){}if(s.release)try{s.release();}catch(_){}}
  function touch(s){try{var now=new Date();fs.utimesSync(s.dir,now,now);}catch(_){}clearTimeout(s.timer);s.expires=Date.now()+ttl;s.timer=setTimeout(function(){remove(s);},ttl);}
  function current(p){var s=p&&sessions[p.sessionId];if(!s||s.dead)throw error('unavailable');if(Date.now()>=s.expires){remove(s);throw error('expired');}return s;}
  function start(p){return Promise.resolve().then(function(){
-  if(Object.keys(sessions).length>=2)throw error('busy');if(!p||!Array.isArray(p.variants)||!p.variants.length||p.variants.length>2)throw error('invalid variants');
+  if(Object.keys(sessions).length+starting>=2)throw error('busy');if(!p||!Array.isArray(p.variants)||!p.variants.length||p.variants.length>2)throw error('invalid variants');
   var files={},total=0;p.variants.forEach(function(v){if(!v||['4k','1080p'].indexOf(v.quality)<0||files[v.quality]||typeof v.size!=='number'||v.size%1||v.size<1||v.size>(v.quality==='4k'?12582912:4194304)||typeof v.sha256!=='string'||! /^[a-f0-9]{64}$/.test(v.sha256))throw error('invalid variant');files[v.quality]={size:v.size,sha256:v.sha256,offset:0};total+=v.size;});if(total>16777216)throw error('too large');
-  var ownSize=total;Object.keys(sessions).forEach(function(id){total+=sessions[id].size;});if(total>33554432)throw error('busy');
+  var ownSize=total,needed=total+reserved;total+=reserved;Object.keys(sessions).forEach(function(id){var session=sessions[id];total+=session.size;Object.keys(session.files).forEach(function(q){needed+=session.files[q].size-session.files[q].offset;});});if(total>33554432)throw error('busy');
+  starting++;reserved+=ownSize;
+  return exports.space(needed+1048576,fs.existsSync(base)?base:path.dirname(base)).then(function(storage){starting--;reserved-=ownSize;if(storage.shortfall>0){var full=error('storage full');full.code='wallpaper-cache-storage-full';full.storage=storage;throw full;}
   try{fs.mkdirSync(base,448);}catch(e){if(e.code!=='EEXIST')throw e;}var stat=fs.lstatSync(base);if(!stat.isDirectory()||stat.isSymbolicLink()||(stat.mode&63)||typeof process.getuid==='function'&&stat.uid!==process.getuid())throw error('unsafe directory');
   // Recover bounded private leftovers after an interrupted service process.
   fs.readdirSync(base).forEach(function(id){if(!/^[a-f0-9]{48}$/.test(id)||sessions[id])return;var dir=path.join(base,id),entry=fs.lstatSync(dir);if(!entry.isDirectory()||entry.isSymbolicLink())throw error('unsafe directory');var stale=Date.now()-entry.mtime.getTime()>=ttl;['4k','1080p'].forEach(function(q){var name=path.join(dir,q+'.mp4'),file;try{file=fs.lstatSync(name);}catch(e){if(e.code==='ENOENT')return;throw e;}if(!file.isFile()||file.isSymbolicLink())throw error('unsafe file');if(stale)fs.unlinkSync(name);else total+=file.size;});if(stale)try{fs.rmdirSync(dir);}catch(_){} });if(total>33554432)throw error('busy');
 
   var id=crypto.randomBytes(24).toString('hex'),s={id:id,files:files,size:ownSize,dir:path.join(base,id),sockets:[],dead:false,server:null,release:null};
-  fs.mkdirSync(s.dir,448);try{Object.keys(files).forEach(function(q){var fd=fs.openSync(path.join(s.dir,q+'.mp4'),'wx',384);fs.closeSync(fd);});if(typeof options.hold==='function')s.release=options.hold();sessions[id]=s;touch(s);return {sessionId:id};}catch(e){remove(s);throw e;}
+  fs.mkdirSync(s.dir,448);try{Object.keys(files).forEach(function(q){var fd=fs.openSync(path.join(s.dir,q+'.mp4'),'wx',384);fs.closeSync(fd);});if(typeof options.hold==='function')s.release=options.hold();sessions[id]=s;touch(s);return {sessionId:id,storage:storage};}catch(e){remove(s);throw e;}
+  },function(e){starting--;reserved-=ownSize;throw e;});
  });}
  function write(p){var s=current(p),f=s.files[p.quality];if(s.server||!f||p.offset!==f.offset||typeof p.data!=='string'||!p.data.length||p.data.length>65536||p.data.length%4!==0||/[^A-Za-z0-9+/=]/.test(p.data)||/=[^=]|={3}/.test(p.data))throw error('invalid chunk');var bytes=Buffer.from(p.data,'base64');if(!bytes.length||bytes.length>49152||bytes.length>f.size-f.offset)throw error('invalid chunk');fs.appendFileSync(path.join(s.dir,p.quality+'.mp4'),bytes);f.offset+=bytes.length;touch(s);return {nextOffset:f.offset};}
  function commit(p){return Promise.resolve().then(function(){var s=current(p);if(s.server)throw error('already committed');try{Object.keys(s.files).forEach(function(q){var f=s.files[q];if(f.offset!==f.size||crypto.createHash('sha256').update(fs.readFileSync(path.join(s.dir,q+'.mp4'))).digest('hex')!==f.sha256)throw error('hash mismatch');});}catch(e){remove(s);throw e;}

@@ -217,3 +217,9 @@ Instalatory komputerowe/Android 1.6.0 i zmigrowane klienty OTA wybierają 720p l
 [HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).
 
 > **1.6.0:** zachowaj raport z pierwotnej nieudanej próby. Nowe raporty oddzielają pierwszy zapisany błąd od kolejnych kontroli i zawierają filtrowane podsumowanie Doctor/stanu. Eksport jest dostępny także po udanej instalacji, kontroli stanu lub przywróceniu. Brakujące starsze dane pozostają nieznane; raport nie uprawnia do odzyskiwania. [↗](../development/INSTALLER-DIAGNOSTICS.md).
+
+## Miejsce na dane
+
+Wersje kandydujące pokazują wymagane, wolne i brakujące miejsce w MiB dla instalacji, motywów i własnych tapet zdjęciowych/wideo. Uwzględniają kopie tymczasowe i rezerwę. Limit aplikacji, pamięć motywów 64 MiB i pamięć wideo są oddzielne. Nieznane wartości są oznaczone. Zwolnij wskazaną pamięć; brak automatycznego czyszczenia.
+
+Szacowane miejsce (TV): wymagane 128.0 MiB; wolne 96.0 MiB; brakuje 32.0 MiB.

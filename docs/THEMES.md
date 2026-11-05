@@ -171,3 +171,12 @@ Browser/state/runtime checks are not final TV acceptance. Verify the exact signe
 Root package for app/HDMI playback, controls, input ownership, power-on without
 content, standby/wake, emergency recovery and updater/rollback health before
 release. See the [presentation design](development/RIBBON-PRESENTATION.md).
+
+## Storage estimates in candidate builds
+
+Theme installation reports required, available and missing MiB for TV app
+storage and its independent **64 MiB** theme-cache allowance. The separate
+**8 themes** count limit asks you to remove a downloaded theme. Personal video
+wallpapers also need computer temporary space and TV video-cache space.
+See [storage estimates and recovery limits](DESKTOP_INSTALL.md#storage-estimates-in-candidate-builds)
+for calculation reserves, unavailable quota readings and pending-install recovery.

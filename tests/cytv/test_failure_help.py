@@ -9,6 +9,24 @@ class FailureHelpTests(unittest.TestCase):
         from cytv.failure_help import for_error
         return for_error(error,phase,{'edition':edition,'host':'PRIVATE-ADDRESS','identity':'PRIVATE-PATH'},pending)
 
+    def test_package_space_reason_is_explained_even_with_pending_operation(self):
+        from cytv.errors import TVRejected
+        for reason in ('FAILED_NOT_ENOUGH_TEMP_SPACE', 'FAILED_NOT_ENOUGH_INSTALL_SPACE'):
+            error = TVRejected('Package installation failed.', {'details': {'reason': reason}},
+                               'com.webos.appInstallService/dev/install')
+            self.assertIn('space', str(error))
+            guide = self.guide(error, phase='install-helper', pending={'action': 'install'})
+            self.assertEqual(guide['code'], 'tv-storage-full')
+            self.assertFalse(guide['can_edit_connection'])
+            self.assertIn('recovery', guide['next_step'])
+
+    def test_local_full_disk_does_not_blame_tv_or_reveal_paths(self):
+        for number in (errno.ENOSPC, errno.EDQUOT):
+            guide = self.guide(OSError(number, 'PRIVATE', '/PRIVATE'), phase='prepare-payload')
+            self.assertEqual(guide['code'], 'computer-storage-full')
+            self.assertNotIn('PRIVATE', str(guide))
+        self.assertIsNone(self.guide(OSError(errno.EIO, 'PRIVATE'), phase='prepare-payload'))
+
     def test_known_ssh_categories_do_not_copy_exception_text(self):
         cases=[('NoValidConnectionsError','ssh-unreachable'),('AuthenticationException','ssh-auth-root'),
                ('BadHostKeyException','ssh-identity'),('SSHException','ssh-protocol')]

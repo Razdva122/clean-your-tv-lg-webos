@@ -62,7 +62,7 @@ function register(service, options) {
     service.register(method,function(message){
       var caller;try{caller=message.ls2Message.applicationID();}catch(_){}
       if(typeof caller!=='string'||caller.split(' ')[0]!==options.appId){message.respond({returnValue:false,errorCode:'caller-not-authorized'});return;}
-      Promise.resolve().then(function(){return cache[cacheMethods[method]](message.payload||{});}).then(function(value){var response={returnValue:true};Object.keys(value||{}).forEach(function(key){response[key]=value[key];});message.respond(response);},function(){message.respond({returnValue:false,errorCode:'wallpaper-cache-unavailable'});});
+      Promise.resolve().then(function(){return cache[cacheMethods[method]](message.payload||{});}).then(function(value){var response={returnValue:true};Object.keys(value||{}).forEach(function(key){response[key]=value[key];});message.respond(response);},function(error){var response={returnValue:false,errorCode:'wallpaper-cache-unavailable'};if(error&&error.code==='wallpaper-cache-storage-full'){response.errorCode=error.code;response.storage=error.storage;}else if(error&&(error.code==='ENOSPC'||error.code==='EDQUOT'))response.errorCode='wallpaper-cache-storage-full';message.respond(response);});
     });
   });
   return receiver;

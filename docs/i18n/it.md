@@ -218,3 +218,9 @@ I programmi di installazione 1.6.0 per computer/Android e i client OTA migrati s
 [HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).
 
 > **1.6.0:** conservare il rapporto del primo tentativo fallito. I nuovi rapporti distinguono il primo errore registrato dai controlli successivi e includono un riepilogo filtrato di Doctor/stato. L’esportazione è disponibile anche dopo configurazione, controllo dello stato o ripristino riusciti. I dati storici mancanti restano sconosciuti; il rapporto non autorizza il recupero. [↗](../development/INSTALLER-DIAGNOSTICS.md).
+
+## Spazio di archiviazione
+
+Le build candidate mostrano spazio richiesto, libero e mancante in MiB per installazione, temi e sfondi foto/video. Includono copie temporanee e riserva. Quota app, cache temi da 64 MiB e cache video sono limiti separati. I valori sconosciuti sono indicati. Libera lo spazio indicato; nessuna pulizia automatica.
+
+Spazio stimato (TV): richiesti 128.0 MiB; liberi 96.0 MiB; mancanti 32.0 MiB.
