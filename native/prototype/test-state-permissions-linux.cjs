@@ -20,6 +20,9 @@ if(process.platform!=='linux'||process.getuid()!==0){
   run(5367,check);
   a.equal(fs.statSync(key).uid,5367);a.equal(fs.statSync(key).gid,5000);a.equal(fs.statSync(key).mode&0o777,0o640);
   run(5380,check+'if(JSON.parse(require("fs").readFileSync('+JSON.stringify(key)+')).key!=="test-key")process.exit(2);');
+  fs.chmodSync(state,0o777);
+  run(5367,check+'if(JSON.parse(require("fs").readFileSync('+JSON.stringify(key)+')).key!=="test-key")process.exit(2);');
+  a.equal(fs.statSync(state).mode&0o7777,0o777);
   const control=path.join(state,'control.json');
   for(const mode of [0o640,0o660]){
    fs.writeFileSync(control,'{"cmd":"stop"}');fs.chownSync(control,5999,5000);fs.chmodSync(control,mode);
