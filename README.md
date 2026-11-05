@@ -40,7 +40,7 @@ Manage them in **Settings → Themes** on your TV.
 
 Ribbon wallpaper video: **Xecutioner** · non-commercial use with attribution.
 
-The proposed Ribbon refresh also adds simulated startup and over-application states with Home/Back controls. Native overlay support targets Root; No-root on TV remains fullscreen.
+The proposed Ribbon refresh also adds simulated startup and over-application states with Home/Back controls. Root provides native overlay. Integration into the same No-root Home/Helper is in progress and still requires final package/device acceptance.
 
 **[Try the themes in the main browser preview →](https://razdva122.github.io/clean-your-tv-lg-webos/demo/)**
 

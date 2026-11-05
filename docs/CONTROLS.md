@@ -60,6 +60,13 @@ remove stop files to force activation.
 
 ## Back, app exits and startup
 
+**Unreleased No-root overlay integration:** Back closes menus/editing first;
+on the input shelf it returns focus to the dock. From the app cards, Back then
+closes Home even when its fallback is opaque or Helper is unavailable. Ordinary
+Home toggles a transparent Ribbon; manual/startup activation shows opaque Home.
+The complete Home/Helper path still requires final package/device acceptance.
+
+
 **Hold Back for about 1.2 seconds** to visit LG Home once. This preserves the
 saved Home choice and does not stop Home control; a later short Home returns to
 Clean. Use triple Home when you want to stop interception. Short Back remains
