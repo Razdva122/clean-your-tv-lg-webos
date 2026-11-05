@@ -85,6 +85,11 @@
         334
       ],
       "summary": "Offer guarded default-No activation retry only after verified restored Root state, preserve original receipts and add nonblocking health-refusal diagnostics; original #334 cause/recovery unconfirmed."
+    },
+    {
+      "pr": 340,
+      "issues": [],
+      "summary": "Align exact System1.2.2 replacement admission/readback/result and current supervisor policy; preserve strict owner eligibility and original-source interrupted recovery."
     }
   ],
   "excluded": [],
