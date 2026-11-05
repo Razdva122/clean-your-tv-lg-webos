@@ -21,6 +21,27 @@ if HAS_BUILD_DEPS:
 
 @unittest.skipUnless(HAS_BUILD_DEPS, 'Optional desktop build dependencies are not installed')
 class WallpaperTests(unittest.TestCase):
+    def test_ffmpeg_full_disk_is_reported_as_computer_storage_not_bad_video(self):
+        with self.assertRaisesRegex(ValueError, 'computer'):
+            w.run_ffmpeg([sys.executable, '-c',
+                          "import sys; sys.stderr.write('PRIVATE: No space left on device'); sys.exit(1)"])
+        with self.assertRaisesRegex(ValueError, '^Image preparation failed'):
+            w.run_ffmpeg([sys.executable, '-c',
+                          "import sys; sys.stderr.write('PRIVATE invalid data'); sys.exit(1)"])
+
+    def test_tv_video_shortfall_stops_before_post(self):
+        from unittest.mock import Mock
+        connection=Mock()
+        response=Mock();response.status=200
+        response.read.return_value=json.dumps({'wallpaperProtocol':1,'videoCacheStorage':{'available':0}}).encode()
+        connection.getresponse.return_value=response
+        with patch.object(w.http.client,'HTTPConnection',return_value=connection):
+            with self.assertRaisesRegex(ValueError,'shortfall'):
+                w.upload('192.168.1.2','123456',{'variants':[{'size':4*1024*1024}]})
+        self.assertEqual(connection.request.call_count,1)
+        self.assertEqual(connection.request.call_args.args[0],'GET')
+        connection.close.assert_called_once()
+
     def test_destination_and_pin_rejected_before_network(self):
         for host in ['localhost','127.0.0.1','169.254.1.2','100.64.0.1','8.8.8.8','192.168.1.1/path','::1',3232235778]:
             with self.subTest(host=host), self.assertRaises(ValueError): w.destination(host,'123456')

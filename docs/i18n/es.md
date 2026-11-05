@@ -216,3 +216,9 @@ Los instaladores 1.6.0 para ordenador/Android y clientes OTA migrados eligen 720
 [HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).
 
 > **1.6.0:** guarde el informe del intento fallido original. Los nuevos informes separan el primer error registrado de las comprobaciones posteriores e incluyen un resumen filtrado de Doctor/estado. También permiten exportar tras configurar, consultar el estado o restaurar correctamente. Los datos antiguos ausentes siguen siendo desconocidos; el informe no autoriza la recuperación. [↗](../development/INSTALLER-DIAGNOSTICS.md).
+
+## Espacio de almacenamiento
+
+Las compilaciones candidatas muestran espacio necesario, libre y faltante en MiB para instalar, añadir temas y fondos de foto/vídeo. Incluyen copias temporales y reserva. La cuota de la app, la caché de temas de 64 MiB y la de vídeo son límites distintos. Los valores desconocidos se indican. Libera el almacenamiento indicado; no hay limpieza automática.
+
+Espacio estimado (TV): necesario 128.0 MiB; libre 96.0 MiB; faltan 32.0 MiB.

@@ -216,3 +216,9 @@ The 1.6.0 computer/Android installers and migrated OTA clients select 720p or 10
 [HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).
 
 > **1.6.0:** save the original failed-attempt report. New reports separate a recorded first error from later checks and include a filtered Doctor/status summary; successful setup/status/restore also offer an export. Missing older evidence remains unknown; this does not authorize recovery. [↗](../development/INSTALLER-DIAGNOSTICS.md).
+
+## Storage space
+
+Candidate builds show a storage estimate for installation, downloaded themes and personal photo/video wallpapers: required, available and shortfall in MiB. Estimates include temporary copies and a reserve. TV app quota, the 64 MiB theme cache and temporary video storage are separate limits. If webOS cannot report capacity, the unknown values are stated explicitly. Free space only on the indicated storage; no automatic cleanup occurs.
+
+Storage estimate (TV): required 128.0 MiB; available 96.0 MiB; shortfall 32.0 MiB.

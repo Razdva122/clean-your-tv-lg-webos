@@ -216,3 +216,9 @@ Android CYTV: **设置电视** · **壁纸** · **维护**. 在电视上打开 H
 [HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).
 
 > **1.6.0:** 请保留最初失败尝试的报告。新报告将已记录的首次错误与后续检查区分开，并提供经过筛选的 Doctor/状态摘要。安装、状态检查或恢复成功后也可导出报告。缺失的历史证据仍标为未知；报告不授予恢复操作权限。 [↗](../development/INSTALLER-DIAGNOSTICS.md).
+
+## 存储空间
+
+候选构建为安装、主题和个人照片/视频壁纸显示所需、可用及缺少的 MiB 空间，包括临时副本和预留空间。应用配额、64 MiB 主题缓存和临时视频缓存是不同限制。webOS 无法提供的数据会明确标为未知。请清理所指的存储位置；不会自动清理。
+
+空间估算（TV）：需要 128.0 MiB；可用 96.0 MiB；还缺 32.0 MiB。

@@ -216,3 +216,9 @@ Die Computer-/Android-Installer von 1.6.0 und migrierten OTA-Clients wählen 720
 [HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).
 
 > **1.6.0:** Bewahren Sie den Bericht des ursprünglichen Fehlversuchs auf. Neue Berichte trennen den gespeicherten ersten Fehler von späteren Prüfungen und enthalten eine gefilterte Doctor-/Statusübersicht. Auch nach erfolgreicher Einrichtung, Statusprüfung oder Wiederherstellung lässt sich ein Bericht speichern. Fehlende ältere Nachweise bleiben unbekannt; der Bericht erlaubt keine Wiederherstellungsaktion. [↗](../development/INSTALLER-DIAGNOSTICS.md).
+
+## Speicherplatz
+
+Kandidaten zeigen für Installation, Themes und persönliche Foto-/Videohintergründe den geschätzten Bedarf, freien und fehlenden Platz in MiB. Temporäre Kopien und Reserve sind enthalten. App-Quote, 64-MiB-Theme-Cache und Video-Cache sind getrennte Grenzen. Unbekannte Werte werden ausdrücklich genannt. Nur den angegebenen Speicher freigeben; keine automatische Bereinigung.
+
+Speicherbedarf (TV): benötigt 128.0 MiB; frei 96.0 MiB; fehlen 32.0 MiB.

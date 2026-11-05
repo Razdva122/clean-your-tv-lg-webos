@@ -29,6 +29,7 @@ done
 has() { [[ "$selected" == *" $1 "* ]]; }
 
 if primary && { has ui || has tv; }; then
+  node tests/themes/storage-budget.cjs
   node tests/home-viewport.cjs
   node tests/home-presentation.cjs
   node tests/noroot-presentation-context.cjs

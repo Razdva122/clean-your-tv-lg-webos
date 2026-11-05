@@ -121,6 +121,8 @@ def install(installer, inventory, migrate=False, reinstall=None):
             validate_bundle(prepared, installer.tv_info['graphics_resolution'])
     except (OSError, ValueError, KeyError, TypeError, AttributeError, EOFError, tarfile.TarError) as error:
         raise UserError('C1 native Home packages are missing or invalid. Use a complete installer build. Installation has not started.') from error
+    from . import storage
+    storage.install(installer.remote, prepared, installer.progress, root=True)
     installer.progress(NOTICE)
     installer.store.begin(installer.profile, 'install', release_sha=digest(prepared['release.json']),
                           bundle_sha=digest(prepared['bundle.json']), migrate=False, requires_updater=False,

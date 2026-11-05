@@ -18,6 +18,8 @@ class Remote:
 
     def run(self, command, data=None, timeout=30):
         self.calls.append(('run', command))
+        if command.startswith('LC_ALL=C df -Pk '):
+            return 'Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/test 10000000 0 10000000 0% /shared'
         if 'CYTV_NODE_READY' in command: return 'CYTV_NODE_READY'
         if 'CYTV_HELPER_IDLE' in command: return 'CYTV_HELPER_IDLE'
         if command == 'uname -m':
