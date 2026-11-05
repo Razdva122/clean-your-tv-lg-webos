@@ -90,6 +90,13 @@ child-process cases. The harness compiles the fixed broker, frozen C primitives,
 and Node adapter; only the generated HOST artifact substitutes the executable
 literal. There is no production executable/path/provider option.
 
+The APPEND backpressure case uses the actual child stdin stream and verifies a
+false APPEND write result, a real drain event and the C-verified receipt. Where
+available, Writable cork/uncork keeps the test write buffered until the next
+tick; a one-byte high-water mark alone cannot force backpressure when modern
+Node drains synchronously. Node0.10 uses its legacy Writable path without cork.
+The fixture does not replace the write result or the native transport.
+
 The standalone suite has 47 cases. If `native/app/stop-journal.js` exists, or
 `CYTV_STOP_JOURNAL_FIXTURE` explicitly names its preserved HOST fixture, 21 more
 cases exercise the unchanged ES5 protocol through the actual C broker. The frozen

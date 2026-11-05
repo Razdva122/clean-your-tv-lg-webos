@@ -56,7 +56,31 @@ test('independent publisher bypasses held private transaction',function(){var a=
  });});});
 test('full Stop snapshot is explicit and publisher refuses full',function(){for(var i=0;i<16;i++){var id=('00000000000000000000000000000000'+i.toString(16)).slice(-32);fs.writeFileSync(root+'/stop/Stop.'+id,'{"id":"'+id+'","op":"stop","v":1}\n',{mode:416});}var a=adapter();return a.withControllerTransaction(function(tx){return tx.scanStops().then(function(v){assert.strictEqual(v.ids.length,16);return reject(a.publishStop());});});});
 test('full journal read cannot append',function(){for(var i=1;i<64;i++)fs.writeFileSync(journal+'/entry.'+('0000'+i).slice(-4)+'.json','{}\n',{mode:384});var a=adapter();return a.withControllerTransaction(function(tx){return tx.readJournal().then(function(v){assert.strictEqual(v.records.length,64);return reject(tx.appendPrivate({seq:63,raw:'{}',sha256:hash('{}')})).then(function(e){assert.strictEqual(e.code,'STOP_IO_NATIVE');assert.strictEqual(e.status,3);return tx.readJournal();}).then(function(v){assert.strictEqual(v.records.length,64);});});});});
-test('actual stdin backpressure drains before append receipt',function(){var a=adapter(),spawn=cp.spawn,backpressure=0;cp.spawn=function(){var child=spawn.apply(cp,arguments),write=child.stdin.write;child.stdin._writableState.highWaterMark=1;child.stdin.write=function(){var ok=write.apply(child.stdin,arguments);if(!ok)backpressure++;return ok;};return child;};var body=new Array(16385).join(' '),p;try{p=a.withControllerTransaction(function(tx){return tx.readJournal().then(function(){return append(tx,body);});});}finally{cp.spawn=spawn;}return p.then(function(r){assert.strictEqual(r.sha256,hash(body));assert(backpressure>0);});});
+test('actual stdin backpressure drains before append receipt',function(){
+ var a=adapter(),spawn=cp.spawn,appendPressure=false,appendDrained=false;
+ cp.spawn=function(){
+  var child=spawn.apply(cp,arguments),write=child.stdin.write;
+  child.stdin._writableState.highWaterMark=1;
+  child.stdin.on('drain',function(){if(appendPressure)appendDrained=true;});
+  child.stdin.write=function(){
+   var isAppend=Buffer.isBuffer(arguments[0])&&arguments[0][4]===4;
+   // Modern Writable can synchronously drain even a one-byte high-water mark.
+   // Cork the actual stream, not its return value. Node0.10 has no cork API;
+   // its legacy Writable returns false for this bounded oversized write.
+   var corked=isAppend&&typeof child.stdin.cork==='function';
+   if(corked)child.stdin.cork();
+   var ok;try{ok=write.apply(child.stdin,arguments);}finally{
+    if(corked)process.nextTick(function(){child.stdin.uncork();});
+   }
+   if(isAppend&&!ok)appendPressure=true;
+   return ok;
+  };
+  return child;
+ };
+ var body=new Array(16385).join(' '),p;
+ try{p=a.withControllerTransaction(function(tx){return tx.readJournal().then(function(){return append(tx,body);});});}finally{cp.spawn=spawn;}
+ return p.then(function(r){assert.strictEqual(r.sha256,hash(body));assert.strictEqual(appendPressure,true);assert.strictEqual(appendDrained,true);});
+});
 test('split response chunks preserve exact read',function(){fault('split');var a=adapter();return a.withControllerTransaction(function(tx){return tx.readJournal();}).then(check);});
 ['bad-magic','old-id','oversize','partial','bad-utf8','nul','trailing','duplicate','stdout-eof','stderr-eof','stderr-overflow'].forEach(function(name){test('transport fault '+name+' closes scope without recovery',function(){var a=timed.create(),old;adapters.push(a);fault(name);return reject(a.withControllerTransaction(function(tx){old=tx;return tx.readJournal().then(function(){return tx.readJournal();});})).then(function(){return reject(old.readJournal());}).then(function(){if(fs.existsSync(root+'/fault'))fs.unlinkSync(root+'/fault');return reject(a.withControllerTransaction(function(){throw Error('must not restart');}));});});});
 test('wrong append receipt never mints durability',function(){var a=adapter(),body=event(1,'blocked',raw);return reject(a.withControllerTransaction(function(tx){return tx.readJournal().then(function(){fault('wrong-receipt');return append(tx,body);});})).then(function(){assert.strictEqual(fs.readFileSync(journal+'/entry.0001.json','utf8'),body);});});
