@@ -28,6 +28,11 @@ struct cytv_private_tx {
     struct cytv_lease *lease;
     pid_t pid;
     int busy, ending;
+    int loaded;
+    size_t count;
+    unsigned char *arena;
+    size_t lengths[CYTV_PRIVATE_MAX_EVENTS];
+    struct stat stamps[CYTV_PRIVATE_MAX_EVENTS];
 };
 int cytv_private_check(struct cytv_lease *);
 int cytv_private_enter(struct cytv_private_tx *);

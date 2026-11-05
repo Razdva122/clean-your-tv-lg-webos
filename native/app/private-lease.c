@@ -76,6 +76,7 @@ static int dispose(struct cytv_lease *l)
     if (l->lock_fd >= 0 && close(l->lock_fd) < 0) ok = 0;
     if (l->journal_fd >= 0 && close(l->journal_fd) < 0) ok = 0;
     if (l->root_fd >= 0 && close(l->root_fd) < 0) ok = 0;
+    if (l->active) free(l->active->arena);
     free(l->active);
     free(l);
     return ok;
@@ -187,6 +188,7 @@ enum cytv_private_status cytv_tx_end(struct cytv_private_tx **ptr)
     t->ending = 1;
     if (t->busy) return CYTV_PRIVATE_BUSY;
     t->lease->active = NULL;
+    free(t->arena);
     free(t);
     *ptr = NULL;
     return CYTV_PRIVATE_OK;
