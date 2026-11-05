@@ -114,6 +114,7 @@ stage='starting Home Helper'
 ares-launch -d "$DEVICE" -p '{"nativeHomeStart":true}' com.local.nativehome
 printf '\nPackages installed and helper launch requested. Check the TV now:\n'
 printf '  Open an app, then press Home to return to your launcher.\n'
-printf '  Hold Home for about 2 seconds to stop the helper and return to LG Home.\n'
+printf '  Press Home three times within two seconds, releasing between presses, to stop the helper and return to LG Home.\n'
+printf '  The helper stays stopped. To resume, open Home Helper, choose Start Helper and confirm.\n'
 printf '  Test arrows, OK, volume, standby/wake and cold boot.\n'
 printf 'Keep Developer Mode active. Your computer can be switched off during everyday use.\n'

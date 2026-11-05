@@ -47,8 +47,9 @@ class InstallTests(unittest.TestCase):
             shutil.copy(installer, root)
             (root / 'scripts').mkdir()
             (root / 'launcher').mkdir()
+            helper_version = json.loads((ROOT/'native/app/appinfo.json').read_text())['version']
             for name, appid, version in [('launcher', 'com.gathin.tvhome', '1.1.0'),
-                                         ('native/app', 'com.local.nativehome', '0.6.13')]:
+                                         ('native/app', 'com.local.nativehome', helper_version)]:
                 (root / name).mkdir(parents=True, exist_ok=True)
                 (root / name / 'appinfo.json').write_text(json.dumps({'id': appid, 'version': version}))
             # External CLI calls are recorded; failure must stop subsequent TV mutations.
@@ -109,11 +110,11 @@ with open('calls.jsonl','a') as f: f.write(json.dumps(['icons-traversable', bool
 apps=[] if os.environ['FAULT']=='empty' else [{'id':'example.app'}]
 pathlib.Path('launcher/apps.js').write_text('window.TV_APPS = '+json.dumps({'apps':apps})+';')
 ''')
-            (root / 'scripts/build.sh').write_text('''#!/bin/sh
+            (root / 'scripts/build.sh').write_text(f'''#!/bin/sh
 [ "$FAULT" != build ] || exit 1
 mkdir -p dist
 printf 'package' > dist/com.gathin.tvhome_1.1.0_all.ipk
-printf 'package' > dist/com.local.nativehome_0.6.13_arm.ipk
+printf 'package' > dist/com.local.nativehome_{helper_version}_arm.ipk
 ''')
             (root / 'scripts/configure-tv.sh').write_text('''#!/bin/sh
 printf '["configure"]\\n' >> calls.jsonl
@@ -150,6 +151,18 @@ printf '["configure"]\\n' >> calls.jsonl
         self.assertTrue(all(c[1:3]==['-d','test-tv'] for c in installs))
         self.assertLess(calls.index(installs[-1]), calls.index(['configure']))
         self.assertEqual(calls[-1], ['ares-launch','-d','test-tv','-p','{"nativeHomeStart":true}','com.local.nativehome'])
+
+    def test_success_explains_current_emergency_stop_and_explicit_restart(self):
+        result, calls = self.run_installer()
+        self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+        self.assertEqual(calls[-1][0], 'ares-launch')
+        self.assertIn('three times within two seconds', result.stdout)
+        self.assertIn('releasing between presses', result.stdout)
+        self.assertIn('stays stopped', result.stdout)
+        self.assertIn('Home Helper', result.stdout)
+        self.assertIn('Start Helper', result.stdout)
+        self.assertIn('confirm', result.stdout)
+        self.assertNotIn('Hold Home for about 2 seconds', result.stdout)
 
     def test_tv_node_below_01015_stops_before_inventory_and_package_install(self):
         result, calls = self.run_installer(fault='tv-node')
