@@ -1,4 +1,5 @@
 """Exercise the selected shell profile and the release-only workflow boundary."""
+from collections import Counter
 import fnmatch
 import os
 import re
@@ -52,13 +53,28 @@ class CIProfiles(unittest.TestCase):
                          'updater-service', 'updater-app', 'tests'):
                 (checkout / name).symlink_to(ROOT / name, target_is_directory=True)
             traces = {}
-            for profile in ('ui', 'tv', 'tv-runtime', 'tv tv-runtime'):
-                log = temp / profile.replace(' ', '-')
+            for profile in ('ui', 'tv', 'tv-runtime', 'tv tv-runtime', '',
+                            '--shard 1/4', '--shard 2/4', '--shard 3/4', '--shard 4/4'):
+                log = temp / (profile.replace(' ', '-').replace('/', '-') or 'full')
                 subprocess.run(['bash', str(checkout / 'scripts/test.sh'), *profile.split()],
                                cwd=ROOT, check=True, capture_output=True,
                                env={**os.environ, 'PATH': str(temp) + os.pathsep + os.environ['PATH'],
                                     'PROFILE_LOG': str(log)})
                 traces[profile] = log.read_text().splitlines()
+            # Union of shard commands equals the original full profile. Only the
+            # three large Python discoveries become partitioned runner calls.
+            large_suites = ('root-edition/tests', 'tests/setup', 'tests/cytv')
+            sharded = Counter()
+            for index in range(1, 5):
+                commands = traces[f'--shard {index}/4']
+                for directory in large_suites:
+                    command = f'python3 scripts/test-shard.py --shard {index}/4 -s {directory}'
+                    self.assertEqual(commands.count(command), 1)
+                sharded.update(command for command in commands if 'scripts/test-shard.py' not in command)
+            original = Counter(traces[''])
+            for directory in large_suites:
+                self.assertEqual(original.pop(f'python3 -m unittest discover -s {directory}'), 1)
+            self.assertEqual(sharded, original)
             self.assertEqual(traces['tv'], traces['ui'] + traces['tv-runtime'])
             self.assertEqual(traces['tv'], traces['tv tv-runtime'])
             self.assertNotIn('npm run test:themes', traces['tv-runtime'])
@@ -87,9 +103,9 @@ class CIProfiles(unittest.TestCase):
             runner.write_text('#!/bin/sh\nprintf "%s" "$*" > selected\n')
             runner.chmod(0o755)
             env = {**os.environ, **dict.fromkeys(('UI', 'TV', 'INSTALLER', 'ANDROID', 'PREVIEW'), 'false'),
-                   'TV_RUNTIME': 'true'}
+                   'TV_RUNTIME': 'true', 'SHARD': '2/4'}
             subprocess.run(['bash', '-e', '-c', script], cwd=temp, env=env, check=True)
-            self.assertEqual((temp / 'selected').read_text(), 'tv-runtime')
+            self.assertEqual((temp / 'selected').read_text(), '--shard 2/4 tv-runtime')
         direct = (ROOT / '.github/workflows/tv-candidate.yml').read_text()
         self.assertIn("TV_REQUIRED: ${{ steps.safety_scope.outputs.tv == 'true' || steps.safety_scope.outputs.tv_runtime == 'true' }}", direct)
 
@@ -109,10 +125,10 @@ class CIProfiles(unittest.TestCase):
                 log.unlink(missing_ok=True)
                 subprocess.run(['bash', '-e', '-c', script], check=True,
                                env={**os.environ, 'PATH': str(temp) + os.pathsep + os.environ['PATH'],
-                                    'METADATA_LOG': str(log), 'RUN_SETUP': selected})
+                                    'METADATA_LOG': str(log), 'RUN_SETUP': selected, 'SHARD_INDEX': '1'})
                 self.assertEqual(log.exists(), selected == 'false')
         self.assertIn('validate_shape', step)
-        self.assertIn('run: scripts/test.sh setup', workflow)
+        self.assertIn('run: scripts/test.sh --shard ${{ matrix.shard }}/4 setup', workflow)
 
     def test_required_statuses_include_parallel_browser_failures(self):
         workflow = (ROOT / '.github/workflows/tests.yml').read_text()

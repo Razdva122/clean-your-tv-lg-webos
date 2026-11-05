@@ -40,7 +40,9 @@ against exact Node 0.10.15, 0.10.25 and 0.12.2 runtimes alongside current Node.
 Keep changes small and reproducible. During implementation run the tests for the
 changed behavior and its dependencies; `scripts/test.sh ui`, `tv`, `installer`, `setup`,
 `android` and `preview` select existing groups. The `tv-runtime` profile retains
-all device runtime checks without the UI source/build suite; see
+all device runtime checks without the UI source/build suite. CI partitions the large
+Python suites across four isolated shards per OS; `scripts/test.sh --shard 2/4 tv`
+reproduces one partition, while omitting `--shard` runs the complete selected group. See
 [focused CI checks](docs/development/CI-CHECKS.md) for its narrow transport routing. Follow the affected PR checks and
 run a broader group for shared or unknown dependencies. The complete
 `scripts/test.sh` and browser suites remain required on the frozen release
