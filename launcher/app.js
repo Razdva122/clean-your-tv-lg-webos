@@ -13,6 +13,11 @@
     return window.HomeI18n ? HomeI18n.html(markup) : markup;
   }
   window.RootLauncherRendered = false;
+  var nativeNoRoot = !window.ROOT_VERSION && window.CYTV_BROWSER_PREVIEW !== true;
+  var nativeOverlay = !!window.ROOT_VERSION || nativeNoRoot;
+  // An opaque overlay may still have a live player beneath it. Do not acquire
+  // its decoder before a current context check establishes safe empty content.
+  if (nativeOverlay && window.HomeWallpaper) HomeWallpaper.suspend('decoder-context');
   // Shared layout, focus and remote-control state.
   var layoutState = window.HomeLayout ? HomeLayout.create(localStorage, CONFIG, window.RootProfileData || window.HomeData) : null;
   window.HomeLayoutState = layoutState;
@@ -122,8 +127,8 @@
       onclaim: function () { if (window.HomeWallpaper) HomeWallpaper.suspend('input-preview'); },
       onrelease: function () { if (window.HomeWallpaper) HomeWallpaper.resume('input-preview'); },
       createMedia: function (uri) { return window.PREVIEW_INPUT_MEDIA ? window.PREVIEW_INPUT_MEDIA(uri) : InputPreview.createVideo(uri); },
-      // Only the foreground Home may claim the TV's video pipeline.
-      enabled: function () { return (!window.ROOT_VERSION || presentation && presentation.state().visible && presentation.state().content === false) && layoutPreset === "dock-grid" && !document.hidden && windowFocused && !previewDialogOpen() && window.HomeInputShelf.enabled() && window.HomeInputShelf.previewEnabled(); },
+      // A visible opaque overlay can still have a player beneath it.
+      enabled: function () { return (!nativeOverlay || presentation && presentation.state().visible && presentation.state().content === false) && layoutPreset === "dock-grid" && !document.hidden && windowFocused && !previewDialogOpen() && window.HomeInputShelf.enabled() && window.HomeInputShelf.previewEnabled(); },
       mount: function (media, input) {
         var tile = shelfTiles[focusedShelf];
         if (!tile || tile.input.appId !== input.appId) return false;
@@ -172,10 +177,29 @@
       });
     }
   }
+  function homeActivation(params) {
+    return !!params && params.reason !== 'startup' && params.reason !== 'boot' &&
+      params.reason !== 'wake' && params.activateType !== 'powerOn' &&
+      !!params.cytvHome && params.cytvHome.reason === 'home';
+  }
   var presentation = window.HomePresentation ? HomePresentation.create({
-    supported: !!window.ROOT_VERSION || window.CYTV_BROWSER_PREVIEW === true,
+    supported: true,
     decoderContext: !!window.ROOT_VERSION,
-    query: function (done) {
+    queryFull: nativeNoRoot,
+    dismissFull: nativeNoRoot,
+    toggle: function (params) { return !nativeNoRoot || homeActivation(params); },
+    query: function (done, activation) {
+      if (nativeNoRoot) {
+        var hint = activation && activation.cytvHome;
+        if (!homeActivation(activation)) { done(null); return; }
+        var clock = window.performance && typeof window.performance.now === 'function' ?
+          function () { return window.performance.now(); } : Date.now;
+        var started = clock();
+        callLuna('luna://com.gathin.tvhome.renewal/presentationContext', {}, function (reply) {
+          done(HomePresentation.nativeContext(reply, hint.generation, clock() - started));
+        }, 2000);
+        return;
+      }
       callLuna('luna://com.cleanyourtv.root.preview.service/status', {presentation:'context'}, function (r) {
         done(r && r.returnValue === true && r.result ? r.result.content : null);
       }, 2000);
@@ -186,13 +210,13 @@
     render: function (state) {
       document.documentElement.setAttribute('data-home-presentation', state.mode);
       document.body.setAttribute('data-home-presentation', state.mode);
-      var decoderSafe = !window.ROOT_VERSION || state.visible && state.content === false;
+      var decoderSafe = !nativeOverlay || state.visible && state.content === false;
       // Fence wallpaper before releasing input ownership: onrelease may resume it.
       if (window.HomeWallpaper) {
-        if (window.ROOT_VERSION) HomeWallpaper[decoderSafe ? 'resume' : 'suspend']('decoder-context');
+        if (nativeOverlay) HomeWallpaper[decoderSafe ? 'resume' : 'suspend']('decoder-context');
         HomeWallpaper[state.mode === 'full' ? 'resume' : 'suspend']('presentation');
       }
-      if (window.ROOT_VERSION) {
+      if (nativeOverlay) {
         if (!decoderSafe) stopPreview();
         else if ("shelf" === focusZone && shelfTiles[focusedShelf] && inputPreview) inputPreview.focus(shelfTiles[focusedShelf].input);
       }
@@ -200,8 +224,6 @@
     close: function () { stopPreview(); window.close(); }
   }) : null;
   window.HomePresentationController = presentation;
-  // Personal/theme restoration can configure video before the first show().
-  if (window.ROOT_VERSION && window.HomeWallpaper) HomeWallpaper.suspend('decoder-context');
   function launchParams(event) {
     try {
       var value = event && event.detail || (window.PalmSystem && PalmSystem.launchParams) || {};
@@ -1616,7 +1638,7 @@
     // Leave early Back/Home and key-up delivery to their native/recovery owners.
     if (window.RootLauncherRendered !== true) return;
     var key = event.keyCode;
-    if ((key === KEY_BACK || key === 27) && !moveState && !pickerOpen && !undoState && focusZone !== 'inputs' &&
+    if ((key === KEY_BACK || key === 27) && !moveState && !pickerOpen && !undoState && focusZone !== 'inputs' && focusZone !== 'shelf' &&
         presentation && presentation.dismiss()) {
       event.preventDefault(); cancelHold(); return;
     }
@@ -1759,8 +1781,8 @@
     if (presentation && window.RootLauncherRendered === true) {
       presentation.relaunch(launchParams(event), document.hidden);
       if (!presentation.state().visible) return;
-      // handlesRelaunch keeps a hidden Root window in the background until it is ready.
-      if (window.ROOT_VERSION && window.PalmSystem && typeof PalmSystem.activate === 'function') PalmSystem.activate();
+      // Both native overlay editions own activation when handling a relaunch.
+      if ((window.ROOT_VERSION || nativeNoRoot) && window.PalmSystem && typeof PalmSystem.activate === 'function') PalmSystem.activate();
     }
     restoreFocus();
   });
@@ -1809,12 +1831,12 @@
   focusZone = "none";
   focusTile(0);
   function presentHome() {
-    // Restore personal appearance before exposing the validated theme. Native Root
+    // Restore personal appearance before exposing the validated theme. Native Home
     // must activate before ThemeManager can wait for foreground animation frames.
     return (window.PersonalWallpaper ? PersonalWallpaper.start().catch(function () {}) : Promise.resolve()).then(function () {
       tiles.forEach(function (tile) { tile.el.classList.add('shown'); });
       getElement('homeSurface').classList.remove('ctv-starting');
-      if (window.ROOT_VERSION && window.PalmSystem && typeof PalmSystem.activate === 'function') PalmSystem.activate();
+      if ((window.ROOT_VERSION || nativeNoRoot) && window.PalmSystem && typeof PalmSystem.activate === 'function') PalmSystem.activate();
     });
   }
   window.HomeUIReady = (window.ThemeManager ? ThemeManager.start(presentHome) : Promise.resolve().then(presentHome)).then(function () {

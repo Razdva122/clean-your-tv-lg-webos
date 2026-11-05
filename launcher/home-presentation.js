@@ -4,10 +4,27 @@
   else root.HomePresentation = factory();
 }(this, function () {
   'use strict';
+  // A launch hint selects a request generation; only Helper's live reply can
+  // establish content. Missing, stale or cross-generation facts stay unknown.
+  function nativeContext(reply, expected, elapsed) {
+    function generation(value) {
+      return typeof value === 'number' && isFinite(value) && value >= 0 &&
+        Math.floor(value) === value && value <= 9007199254740991;
+    }
+    if (elapsed === undefined) elapsed = 0;
+    if (typeof elapsed !== 'number' || !isFinite(elapsed) || elapsed < 0 ||
+        !generation(expected) || !reply || reply.returnValue !== true ||
+        typeof reply.eligible !== 'boolean' || !generation(reply.generation) ||
+        (reply.content !== null && typeof reply.content !== 'boolean') ||
+        (reply.eligible && reply.content !== true) ||
+        reply.generation !== expected || typeof reply.observedAgeMs !== 'number' ||
+        !isFinite(reply.observedAgeMs) || reply.observedAgeMs < 0 || reply.observedAgeMs + elapsed > 2000) return null;
+    return {eligible:reply.eligible, content:reply.content};
+  }
   function create(options) {
-    var generation = 0, launchGeneration = 0, visible = false, mode = 'closed', overlayTheme = false, content = null;
-    var owners = Object.create(null), startup = false, blocked = false, opaque = false, activationUntil = 0;
-    var now = options.now || Date.now;
+    var generation = 0, launchGeneration = 0, visible = false, mode = 'closed', overlayTheme = false;
+    var owners = Object.create(null), startup = false, blocked = false, opaque = false, activationUntil = 0, content = null;
+    var now = options.now || Date.now, activation = {};
     function isBlocked() { return Object.keys(owners).length > 0 || !!(options.blocked && options.blocked()); }
     function isOpaque() { return Object.keys(owners).length > 0 || !!(options.opaque ? options.opaque() : options.blocked && options.blocked()); }
     function state() { return {mode:mode, visible:visible, content:content}; }
@@ -16,27 +33,33 @@
       var request = ++generation, settled = false; launchGeneration++;
       content = null;
       mode = visible ? 'full' : 'closed'; blocked = isBlocked(); opaque = isOpaque(); render();
-      // Root remains an overlay host under opaque themes. Its decoder snapshot
-      // is independent of whether this activation may become transparent.
-      if (!visible || !options.supported || !options.decoderContext && (!overlayTheme || startup || opaque)) return;
+      // Root must query decoder context even while opaque or starting up.
+      // Native No-root still requires its ordinary typed Helper activation seam.
+      if (!visible || !options.supported || !options.decoderContext && ((!overlayTheme && !options.queryFull) || startup || opaque)) return;
       try {
         options.query(function (value) {
           if (settled || generation !== request || !visible) return;
           settled = true;
-          content = value === true || value === false ? value : null;
-          mode = overlayTheme && !startup && content === true && !isOpaque() ? 'overlay' : 'full'; render();
-        });
+          var eligible = value === true;
+          content = typeof value === 'boolean' ? value : null;
+          if (options.queryFull && value && typeof value === 'object') {
+            content = typeof value.content === 'boolean' ? value.content : null;
+            eligible = value.eligible === true && content === true;
+          }
+          mode = eligible && overlayTheme && !startup && !isOpaque() ? 'overlay' : 'full'; render();
+        }, activation);
       } catch (_) { /* Unknown platform context retains the opaque Home. */ }
     }
     function show(params) {
       activationUntil = 0;
       params = params || {};
+      activation = params;
       startup = params.activateType === 'powerOn' || params.reason === 'boot' || params.reason === 'startup';
       visible = true; refresh();
     }
     function hide() { activationUntil = 0; generation++; launchGeneration++; visible = false; content = null; mode = 'closed'; render(); }
-    function dismiss() {
-      if (!visible || mode !== 'overlay' || isBlocked()) return false;
+    function dismiss(overlayOnly) {
+      if (!visible || (mode !== 'overlay' && (overlayOnly || !options.dismissFull)) || isBlocked()) return false;
       hide(); if (options.close) options.close(); return true;
     }
     return {
@@ -57,7 +80,7 @@
       relaunch:function (params, hidden) {
         var activating = hidden || now() < activationUntil;
         activationUntil = 0;
-        if (activating || !dismiss()) show(params);
+        if (activating || (options.toggle && !options.toggle(params)) || !dismiss(true)) show(params);
       },
       launched:function (token) {
         if (token !== launchGeneration || !options.supported || !visible || isBlocked()) return false;
@@ -72,5 +95,5 @@
       }
     };
   }
-  return {create:create};
+  return {create:create, nativeContext:nativeContext};
 }));

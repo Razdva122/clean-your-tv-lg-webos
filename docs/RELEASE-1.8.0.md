@@ -12,8 +12,11 @@ build and affected hardware gates pass. Published downloads remain on v1.7.1.
   saved personal uploads can be selected again. Input previews coordinate decoder use.
   Artwork has separate attribution/non-commercial terms; see THIRD_PARTY_NOTICES.md.
 - Root Ribbon can appear over positively identified active content, with Back and
-  repeated Home dismissal; startup/unknown context uses wallpaper. No-root keeps
-  fullscreen native Home. Updated compact Ribbon styling, editing and previews (#265).
+  repeated Home dismissal; startup/unknown context uses an opaque fallback. Integration
+  into the same No-root Home/Helper is in progress, with strict context/decoder
+  ownership and a static unknown-context fallback; final package/device acceptance
+  remains required. Opaque themes may preserve underlying playback. Updated
+  compact Ribbon styling, editing and previews (#265).
 - Native Root activation now follows prepared appearance and precedes foreground
   readiness frames; asynchronous appearance is awaited before updater health is
   acknowledged (#303). Verified off/emergency recovery closes the restored overlay
