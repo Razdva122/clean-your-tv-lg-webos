@@ -1,6 +1,6 @@
 # Video wallpapers and settings (next-release development)
 
-This feature is included in the unpublished 1.8.0 candidate (#281). Existing published image-only themes continue to use their ordinary
+This feature is included in the unpublished 1.8.1 candidate (#281). Existing published image-only themes continue to use their ordinary
 fallback. Do not interpret this source document or desktop playback as shipping
 or universal hardware acceptance.
 

@@ -264,3 +264,35 @@ and prototype41/70/68 checks passed. Independent review found no production
 consumer. This is source/build-scope evidence, not a newly built package hash or
 a device result. No TV operation, selected build or component-version change
 was performed here. PR310 remains mandatory and under current-head CI.
+
+
+## No-root production connection and next test versions — 2026-11-05
+
+PR310, sourcea4042ba83c38148ea967d21667e4868bb380c6a9, merged as
+778842babf5a9348b81f45cc8fb564e77378dbd4 after complete focused
+Tests42022053384 attempt1 and policy checks passed. Linux/macOS runtime and
+summaries, compiled-browser checks and ARM Python all passed. Independent
+reviews covered generation/freshness, registered-service caller/payload checks,
+Stop/relay independence and close races. Source and merge product inputs match;
+only the release plan and this dated record differ.
+
+The existing No-root Home now obtains typed context/dismissal through its own
+renewal service and existing bridge. Physical Home uses fresh registered SSAP
+facts and a daemon-scoped generation; repeated Home retains that opening.
+Startup/wake/unknown stay opaque; unknown never proves the decoder free.
+Dismissal cancels return bookkeeping before close. Delayed close, newer opening,
+closed-state refresh and busy/unknown outcome regressions were reproduced and
+corrected. HOST and production-compiled tests passed; no new device operation or
+pristine No-root compatibility is claimed.
+
+The next test candidate is1.8.1: Home1.9.1, Helper0.7.1, Root/infrastructure0.9.1,
+updaters0.4.4, cytv0.9.1 and Android0.8.1/code21. These advance the already-used
+preliminary identities. System1.2.1 currently reproduces the previous authenticated
+IPK byte-for-byte (SHA25678b6dcd9a9e46890e4f4c66fa1896ad4530330e3db0fc4b06281bdc000fe5e3b)
+and all29 bundle-file hashes match; compare final artifacts again. Existing
+installed supervisors remain immutable. Current guides and all13 localized
+candidate paragraphs were reviewed/updated; historical1.8.0 evidence is preserved.
+
+Final Helper archive compatibility approval, coherent full build/signing and
+actual package install/controls/audio/power/update/rollback gates remain pending.
+No selected final build, main merge or stable publication is claimed.

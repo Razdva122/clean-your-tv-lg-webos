@@ -1,6 +1,6 @@
 # Root Edition
 
-> **Unpublished 1.8.0 candidate:** see [candidate versions, setup and recovery limits](../docs/RELEASE-1.8.0.md). Published downloads remain on 1.7.1. C1 Beta is fresh-install only, selected automatically in the common installer; normal OTA is unavailable and physical C1 acceptance is pending. Historical results below retain their original artifact scope.
+> **Unpublished 1.8.1 candidate:** see [candidate versions, setup and recovery limits](../docs/RELEASE-1.8.1.md). Published downloads remain on 1.7.1. C1 Beta is fresh-install only, selected automatically in the common installer; normal OTA is unavailable and physical C1 acceptance is pending. Historical results below retain their original artifact scope.
 
 **Unreleased Ribbon mode:** Ribbon can use a transparent bottom bar over active content; power-on/unknown context and settings use an opaque fallback. Other themes remain visually fullscreen in the same Root overlay host, so underlying apps/audio may continue. No routing or emergency gesture changes. [Behavior and pending acceptance](../docs/THEMES.md#ribbon-over-applications-unreleased).
 

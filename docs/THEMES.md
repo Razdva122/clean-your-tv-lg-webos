@@ -129,7 +129,7 @@ This support is included in 1.7.0. Browser checks do not establish physical-TV c
 
 ## Ribbon over applications (unreleased)
 
-In the proposed Root build, selecting Ribbon enables a bottom bar over positively
+In the candidate Root build, selecting Ribbon enables a bottom bar over positively
 identified active content. Home opens it; Back or another Home closes the bar
 without selecting a different app. A successful app/input launch also dismisses
 Home; a failed launch keeps it open. Settings, theme trials and recovery stay
@@ -141,19 +141,18 @@ the skewed cards, with a focused lift and bottom-local shade against wallpaper
 or bright content. Hold OK to edit one raised card; left/right moves it, Up
 selects its cross, Down returns to the card, OK confirms and Back cancels. The
 cross hides the app from Home and Undo restores it. Editing/hiding keeps the
-current background and shows no explanatory footer. Integration into the same
-No-root Home/Helper is in progress: the existing app identity and profile remain,
-while a validated, fresh Helper context may enable Ribbon above content. Unknown
+current background and shows no explanatory footer. The candidate also connects Ribbon to the running Helper in the same
+No-root Home: the existing app identity and profile remain, and a validated,
+fresh Helper context may enable Ribbon above content. Unknown
 context, manual launch and startup keep a static opaque fallback. Back also
 closes opaque No-root Home from the app cards after its menus/editors are
 closed, even without a running Helper. From the input shelf, Back first returns
 focus to the app cards. Repeated Home still toggles only unobstructed Ribbon overlay.
 Final packages, Helper routing and physical acceptance are pending. In the browser demo,
 **Startup / wallpaper**, **Over application**, **Home** and **Back** exercise both
-states. No-root overlay previews are explicitly simulations of Root behavior.
+states. No-root overlay previews simulate platform replies and do not establish device compatibility.
 
-Root uses an overlay window for the whole application; the proposed No-root
-integration adopts the same window lifecycle. Other themes and settings
+Both candidate editions use an overlay window for the whole application. Other themes and settings
 cover the screen, but underlying apps may continue running or playing audio.
 On opening native Root or refreshing its context, wallpaper video and input
 previews start only after a current check reports no content underneath;
@@ -162,8 +161,8 @@ and power-on as well as Ribbon.
 
 This is different from the previous card lifecycle. The feature does not change
 Home routing, emergency gestures, startup-source preferences or app permissions.
-The No-root integration must retain independent Helper emergency/watchdog and
-key-up handling, with no new permissions. It is not an accepted change to the
+No-root retains independent Helper emergency/watchdog and key-up handling,
+with no new permissions; final physical acceptance remains pending. It is not an accepted change to the
 currently published packages.
 The existing startup observer ignores the primary app underneath a visible Root
 overlay when deciding whether to change remembered startup input.

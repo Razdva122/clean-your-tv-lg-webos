@@ -1,5 +1,8 @@
 # v1.8.0 — Wallpapers, Ribbon and installer improvements
 
+This unpublished candidate is superseded by [1.8.1](RELEASE-1.8.1.md). Its
+recorded build and device observations retain their original artifact scope.
+
 Unpublished release candidate. The release PR remains draft until the exact frozen
 build and affected hardware gates pass. Published downloads remain on v1.7.1.
 

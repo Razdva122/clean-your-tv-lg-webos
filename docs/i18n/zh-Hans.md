@@ -1,12 +1,12 @@
 # Clean Your TV — 用户指南
 
-> **1.8.0 — 未发布候选版本:** [1.8.0 / English](../RELEASE-1.8.0.md).
+> **1.8.1 — 未发布候选版本:** [1.8.1 / English](../RELEASE-1.8.1.md).
 
 **尚未发布的 C1 Beta（#298）：** 在通用电脑安装程序中选择 Root。符合条件的 C1 电视会自动识别，无需单独的安装程序或标志。此路径需要全新安装，不支持自动更新，且尚未通过实体 C1 验收。打开 LG Home、长按 Back 或安全/电源停止后，Home 控制可能保持关闭；请在电视设置中重新开启更改 Home。常规 Root 路径保持不变。 如果仍有其他 No-root 组件，C1 完全移除会在更改前停止。请先通过常规 No-root 移除流程删除这些组件；状态未明确时请保留恢复数据。 [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md).
 
 尚未发布（#290）：**+ / 添加应用**仅在检测到已安装的调谐器时，以电视提供的名称列出直播电视。其他隐藏的系统应用仍不显示。No-root 需要更新后的 Helper 和安装程序；Root 需要更新后的 Home 软件包。频道启动仍需在电视上验证。
 
-**未发布 — Ribbon 叠加层：** Root 支持在当前内容上方显示 Ribbon。将其集成到同一个 No-root Home 和 Helper 的工作仍在进行。Home 打开面板，Back 或再次按 Home 关闭。设置和其他主题不透明，但下方内容可能继续播放。背景状态未知时使用静态不透明背景。完整 No-root 流程仍需用最终安装包在电视上验收；浏览器模拟不能证明兼容性。 在 No-root 中，关闭菜单和编辑器后，在应用卡片上按 Back 也会关闭不透明的 Home。  打开原生 Root 或刷新其上下文时，只有当前检查确认下方没有内容后，才会启动视频壁纸和输入预览；否则，不透明的 Home 会保留静态图像。 [Ribbon](../THEMES.md#ribbon-over-applications-unreleased).
+**未发布 — Ribbon 叠加层：** Root 支持在当前内容上方显示 Ribbon。候选版本已包含同一个 No-root Home 和 Helper 之间的 Ribbon 连接；显示叠加层需要正常运行的 Helper。Home 打开面板，Back 或再次按 Home 关闭。设置和其他主题不透明，但下方内容可能继续播放。背景状态未知时使用静态不透明背景。完整 No-root 流程仍需用最终安装包在电视上验收；浏览器模拟不能证明兼容性。 在 No-root 中，关闭菜单和编辑器后，在应用卡片上按 Back 也会关闭不透明的 Home。  打开原生 Root 或刷新其上下文时，只有当前检查确认下方没有内容后，才会启动视频壁纸和输入预览；否则，不透明的 Home 会保留静态图像。 [Ribbon](../THEMES.md#ribbon-over-applications-unreleased).
 
 Ribbon：长按 OK 编辑；←/→ 移动卡片，↑ 选择 ×（从 Home 隐藏），↓ 返回卡片，OK 确认，Back 取消。编辑时保留当前背景。
 
