@@ -19,7 +19,7 @@ const {assert,fs,path,chromium,stage}=require('./browser.cjs'),http=require('nod
   const originalTitle=await page.locator('#tiles .focused .name').textContent();await page.locator('#tiles .focused .name').evaluate(n=>n.textContent='A long television application name across several lines');anchorMetrics=await topMetrics();assert(Math.abs(anchorMetrics.expected-anchorMetrics.caption)<1,'multiline caption keeps the same top-edge center');await page.locator('#tiles .focused .name').evaluate((n,title)=>n.textContent=title,originalTitle);
   const order=await page.locator('#tiles .item').evaluateAll(ns=>ns.map(n=>n.dataset.appId||'add'));
   const base=await page.locator('#tiles .item:not(.focused) .card').first().boundingBox();
-  await page.keyboard.down('Enter');await page.waitForTimeout(700);await page.keyboard.up('Enter');
+  await page.keyboard.down('Enter');await page.locator('#tiles .moving').waitFor({timeout:5000});await page.keyboard.up('Enter');
   assert.equal(await page.locator('#tiles .moving').count(),1);
   await page.waitForTimeout(100);assert.equal(await page.evaluate(()=>!!HomePresentationController),false,'editing stays inside the canonical CARD');
   assert.equal(await page.locator('#editHint').isVisible(),false,'editing has no explanation text');
@@ -41,10 +41,10 @@ const {assert,fs,path,chromium,stage}=require('./browser.cjs'),http=require('nod
   await page.keyboard.press('ArrowUp');assert.equal(await page.evaluate(()=>document.activeElement.id),'hideApp');
   await page.keyboard.press('ArrowDown');assert.notEqual(await page.evaluate(()=>document.activeElement.id),'hideApp');
   await page.keyboard.press('ArrowRight');await page.keyboard.press('Escape');assert.deepEqual(await page.locator('#tiles .item').evaluateAll(ns=>ns.map(n=>n.dataset.appId||'add')),order,'Back cancels reordering');assert.equal(await page.locator('.ribbon-edit-arrow').count(),0);
-  await page.keyboard.down('Enter');await page.waitForTimeout(700);await page.keyboard.up('Enter');await page.keyboard.press('ArrowUp');await page.keyboard.press('Enter');
+  await page.keyboard.down('Enter');await page.locator('#tiles .moving').waitFor({timeout:5000});await page.keyboard.up('Enter');await page.keyboard.press('ArrowUp');await page.keyboard.press('Enter');
   assert.equal(await page.evaluate(()=>CYTV_HOME_HOST),'card','hide and undo stay inside the same Home CARD');
   assert.equal(await page.locator('#tiles .item').count(),order.length-1,'cross hides app without uninstalling');await page.locator('#appUndo button').click();assert.equal(await page.locator('#tiles .item').count(),order.length,'undo restores app');
-  await page.evaluate(()=>ThemeManager.reset());await page.keyboard.down('Enter');await page.waitForTimeout(700);await page.keyboard.up('Enter');
+  await page.evaluate(()=>ThemeManager.reset());await page.keyboard.down('Enter');await page.locator('#tiles .moving').waitFor({timeout:5000});await page.keyboard.up('Enter');
   const footer=await page.locator('#hideApp').boundingBox();assert(footer.x>=0&&footer.x+footer.width<=1280&&footer.y>=0&&footer.y+footer.height<=720,'Classic footer position is restored after Ribbon editing');await page.keyboard.press('Escape');
   assert.deepEqual(errors,[]);await page.close();console.log('PASS Ribbon editing: one lifted card, inline arrows, cross focus, cancel, hide and undo: '+edition);
  }}finally{await browser.close();await new Promise(r=>server.close(r));}
