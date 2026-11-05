@@ -10,7 +10,7 @@
     {
       "pr": 265,
       "issues": [],
-      "summary": "Add Root Ribbon over-application presentation with startup fallback, compact continuous native-fill styling, detached-card editing and refreshed README/Showcase/demo; No-root keeps fullscreen native Home and combined signed-TV acceptance is pending; transient overlay behavior superseded by the single persistent CARD Home follow-up recorded in docs/history/2026-11-05-single-home-regressions.md"
+      "summary": "Refresh Ribbon styling and editing; the final release uses one persistent full-screen CARD Home with its own wallpaper in both editions"
     },
     {
       "pr": 267,
@@ -100,7 +100,7 @@
     {
       "pr": 305,
       "issues": [],
-      "summary": "Close the restored Root overlay after verified off/emergency recovery while fencing stale lifecycle replies; new packaged-TV acceptance remains pending; transient overlay behavior superseded by the single persistent CARD Home follow-up recorded in docs/history/2026-11-05-single-home-regressions.md"
+      "summary": "Preserve bounded Root Off/emergency recovery and stale-response fencing; the final CARD Home is not closed on passive foreground changes"
     },
     {
       "pr": 306,
@@ -121,7 +121,7 @@
     {
       "pr": 310,
       "issues": [],
-      "summary": "Connect Ribbon overlay in the same No-root Home to fresh Helper context, current activation generations and bounded dismissal; final packaged-TV acceptance pending; transient overlay behavior superseded by the single persistent CARD Home follow-up recorded in docs/history/2026-11-05-single-home-regressions.md"
+      "summary": "Integrate No-root Ribbon and Helper lifecycle work; the final single CARD Home uses its own background without underlay queries or transient-bar dismissal"
     },
     {
       "pr": 312,
@@ -139,7 +139,7 @@
     {
       "pr": 316,
       "issues": [],
-      "summary": "Hold Root wallpaper/input decoder acquisition through cold restoration until a current no-content reply; revoke stale context on refresh/hide, retain static fallback, and keep final signed-TV media/lifecycle acceptance pending"
+      "summary": "Preserve Root media/input-preview ownership; final CARD playback prefers the verified packaged built-in stream and releases resources on blur or hide"
     },
     {
       "pr": 317,
@@ -183,5 +183,11 @@
     }
   ],
   "excluded": [],
-  "acceptance": "Maintainer authorized publication of 1.8.2 with the retained-Root wallpaper receiver denial explicitly deferred to open issue337 and with the disclosed short physical acceptance scope. Full prior build42081316264:3 and Root signing42088467852:1 passed; exact signed Root0.9.3 installation and physical Home/video/persistence/LG-exit checks passed on C3. Published Home1.8.1 with exact new Helper0.7.4 passed same-package homeStatus and non-root UID5431 compatibility; owner tripleHome stopped Helper; final Home1.9.4 restored with original profile/appearance. Registry native/helper-rollback-compatibility.json now binds that actual archive; final full build must be selected after this approval-input update. Carry device evidence only for verified identical component bytes. Known #337 and untested sound, standby, cold boot and normal OTA/rollback disclosed in docs/RELEASE-1.8.2.md and dated QA. No bypass of signature/provenance/input gates."
+  "acceptance": "Maintainer explicitly approved release1.8.2 with retained-Root personal wallpaper receiver LS2 denial deferred to open issue337 and with disclosed short hardware scope. Selected full build 42092682892:2 passed all mandatory Linux/macOS shards, browser, ARM Python, Android/desktop builds and final summaries; Homebrew also passed. One Mac editing assertion failed in attempt1, then passed unchanged in targeted rerun; no assertions weakened or package builds repeated. Authenticated final CLI confirms exact Home FHD/HD, Helper, Root and Root Updater bytes match the tested packages; all infrastructure installed files match. Maintainer-owned C3 signed Root0.9.3 update/profile preservation, immediate physical Home from HDMI3, moving UHD wallpaper, visible CARD beyond120s and HomeOff LG return passed. PublishedHome1.8.1/newHelper0.7.4 same-package enabled broker and non-rootUID5431 compatibility passed, physical tripleHome stoppedHelper; finalHome1.9.4/profile/appearance restored. Sound,standby,coldboot,normal automatic OTA/rollback,freshunrooted compatibility remain untested and are not claimed. FinalTVstateLGHome,Rootoff,Helperstopped,recoveryverified. Evidence/hashes:docs/history/2026-11-05-single-home-regressions.md.",
+  "build": {
+    "run_id": 42092682892,
+    "attempt": 2,
+    "source": "4f223718cae2782be08cb3daaede1839584cfb1c"
+  },
+  "acceptance_build": "42092682892:2"
 }

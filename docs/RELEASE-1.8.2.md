@@ -3,6 +3,10 @@
 Release 1.8.2 ships with the maintainer-approved scope and known limitations
 recorded below. See the dated QA record for exact package evidence.
 
+**Known Root limitation:** on the retained C3 registration, loading personal
+images/videos is denied by LS2 before transfer. Built-in video wallpaper works.
+This is deferred to [#337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337).
+
 ## Changes
 
 - Alpine 1.5.0 is available through the theme catalog with a true 3840×2160
@@ -112,10 +116,12 @@ Focused PR checks and isolated preview observations are historical evidence only
 The [ready-fix integration record](history/2026-11-05-ready-fix-integration.md)
 lists focused merges and their source checks. They do not select a
 new full candidate or replace affected device acceptance.
-Full frozen Linux/macOS/browser/ARM Python, Android and four desktop builds must
-pass before selection. Exact signed artifacts still need affected installation,
-controls/emergency, native media grants, sound/HDMI, standby, AC-off boot, supported
-update and rollback checks. SSH/SAM launch does not verify physical Home or power.
+The selected full Linux/macOS/browser/ARM Python, Android and four desktop build
+results are linked in the release record. Focused signed Root installation,
+physical Home, video persistence, LG return and exact Helper compatibility were
+checked as recorded below. Sound, standby, AC-off boot and normal automatic OTA/
+rollback remain untested in the maintainer-selected short run. SSH/SAM launch
+alone is not physical Home or power acceptance.
 Original reporter confirmation remains outstanding where recorded; no issue is
 closed or public delivery announced by candidate preparation.
 

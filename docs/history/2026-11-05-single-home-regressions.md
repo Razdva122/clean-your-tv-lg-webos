@@ -203,3 +203,23 @@ restoring the exact final Home 1.9.4 with native terminal/readback. The original
 portable inventory/config/settings, theme identity and personal wallpaper source
 matched after restoration. No raw storage, credentials, receipt or role changes
 were used. No actual automatic No-root OTA/rollback transaction is claimed.
+
+## Final publication candidate
+
+After committing the required Helper approval, full build
+[42092682892](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42092682892)
+at `4f223718cae2782be08cb3daaede1839584cfb1c` passed all mandatory checks.
+Attempt 1 had one Mac Ribbon-edit assertion failure (11 cards versus expected 10).
+The application and test source were unchanged from the preceding successful
+candidate. Both editions passed the focused test locally without modification;
+the targeted Mac shard and dependent summaries then passed on the same source.
+Other successful jobs and package artifacts were retained, not rebuilt.
+
+The final CLI artifact was authenticated by its GitHub digest and source binding.
+Before allowed per-device personalization, Home FHD/HD, Helper, Root and Root
+Updater packages were byte-identical to those already verified and tested above.
+All generated Root infrastructure installed files also matched the previously
+signed/tested set. This confirms evidence reuse without another TV installation;
+it does not broaden the recorded physical scope. The selected run/attempt is in
+`release-plan.json` and the release PR. The known LS2 issue remains deferred to
+#337 by the maintainer's explicit shipping decision.
