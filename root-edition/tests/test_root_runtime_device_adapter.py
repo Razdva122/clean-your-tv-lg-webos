@@ -10,7 +10,7 @@ import unittest
 from unittest.mock import patch
 import device_adapter as d
 from profile_recovery import PAYLOAD
-from profile_recovery import prepare
+from profile_recovery import prepare, journal_payload
 from profile_plan import STOCK, snapshot
 from test_root_runtime_profile_plan import response
 
@@ -104,8 +104,9 @@ class DeviceAdapterTests(unittest.TestCase):
     def test_recovers_interrupted_two_link_publication(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp); stage=root/'profile-candidate.stage'; target=root/'candidate.json'
-            stage.write_bytes(PAYLOAD); stage.chmod(0o600); os.link(stage,target)
-            st=stage.stat(); journal=prepare(response(), STOCK)
+            journal=prepare(response(), STOCK)
+            stage.write_bytes(journal_payload(journal)); stage.chmod(0o600); os.link(stage,target)
+            st=stage.stat()
             journal.update(publication='staged-v1', candidate_identity={'device':st.st_dev,'inode':st.st_ino})
             with patch.object(d,'STATE',root), patch.object(d,'TARGET',target), \
                     patch.object(d,'sam_transport'), patch.object(d,'read',return_value=snapshot(response(),STOCK)):
