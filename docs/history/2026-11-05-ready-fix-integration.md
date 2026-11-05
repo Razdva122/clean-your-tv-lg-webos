@@ -165,6 +165,32 @@ Home commands, consumer/relay lifetime, fresh pairing where required and final
 update/rollback/full-boot/media/controls acceptance remain unresolved. Existing
 source/default-denial and host fixtures cannot replace those requirements.
 
+## Relay output backpressure safety
+
+PR #320, source d3806bbd322a9df95602d91d178f484deea2d515, merged as
+86f93d2938306755567502c6a820d19dcd524384 after Tests 41981116020 attempt 1
+passed Linux/macOS runtime, browser, ARM Python and both required summaries.
+Release policy 41981112959 also passed. Independent source reviews found no
+blocking defects. This is focused source verification, not final candidate or
+TV input acceptance.
+
+An actual C harness with synthetic evdev reproduced a full controller stdout
+pipe stranding the original relay beyond a three-second host bound. The fix
+makes pipe/socket output nonblocking and requires complete bounded records.
+Output failure cleans up and exits 30 without automatic recovery; cleanup failure
+still takes precedence as 31. Standalone cleanup remains independent of stdout
+and returns 0 or 11 for its actual cleanup outcome. TTY/regular-file flags and
+healthy protocol records are preserved.
+
+Real-pipe backpressure, EPIPE/closed stdout, watchdog/emergency cleanup, startup,
+controller policy and static ARM compilation passed. The first Linux CI caught
+three GCC misleading-indentation errors in the test harness; braces/newlines
+fixed those test-only statements, then the complete focused CI matrix passed.
+No failed check was bypassed. No TV operation, pairing, version change or public
+release was performed for this fix. Rebuilt packages, physical key release,
+normal Start/Stop, independent emergency exit and full-boot acceptance remain
+required; this does not repair the protected Helper provisioning blocker.
+
 ## Still outside the inventory
 
 Cancelled hosted-runner

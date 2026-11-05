@@ -150,6 +150,11 @@
       "pr": 319,
       "issues": [],
       "summary": "Add unwired C/Node Stop-journal pipe bridge with bounded verified receipts, real lease validation and independent Stop publication; production bindings, Home authority, consumer/input integration and target acceptance remain absent"
+    },
+    {
+      "pr": 320,
+      "issues": [],
+      "summary": "Bound relay pipe/socket output so a stalled reader cannot strand watchdog/emergency cleanup; output failure exits 30, cleanup failure remains 31; rebuilt package and physical acceptance pending"
     }
   ],
   "excluded": [],
