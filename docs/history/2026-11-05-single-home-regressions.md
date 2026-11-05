@@ -109,3 +109,13 @@ and editing, showcase, bridge and preview isolation checks. Theme runtime unit a
 README/version checks passed. Independent review found no actionable issues. A new
 full candidate is required for this changed Home/Root source; no failed earlier run
 is selected as release evidence.
+
+## Sharded candidate validation
+
+At the maintainer's explicit request, CI-only PR #332 was integrated at 230ef888f.
+The runtime matrix partitions the large Root, setup and installer Python suites
+into four isolated shards per OS; other runtime checks execute on shard 1. Required
+Linux/macOS summaries still require the complete runtime matrix, and full candidates
+retain browser, ARM Python and full-release gates without success-cache reuse.
+The prior unsharded candidate run 42080674432 is superseded; it is not the selected
+release build. Product scope and component versions are unchanged by sharding.

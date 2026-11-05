@@ -175,6 +175,11 @@
       "pr": 328,
       "issues": [],
       "summary": "Fix No-root Home startup and emergency UI teardown"
+    },
+    {
+      "pr": 332,
+      "issues": [],
+      "summary": "Parallelize slow CI suites into four shards per OS"
     }
   ],
   "excluded": [],
