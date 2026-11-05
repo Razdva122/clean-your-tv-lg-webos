@@ -48,8 +48,10 @@ jobs:
   runtime:
     needs: scope
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
+        shard: [1, 2, 3, 4]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Explain selected platform checks
@@ -78,7 +80,7 @@ jobs:
         id: fingerprint
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && inputs.source_sha == '' && needs.scope.outputs.runtime == 'true' && (runner.os == 'Linux' || needs.scope.outputs.macos == 'true')
         env:
-          TEST_SELECTION: ${{ needs.scope.outputs.ui }},${{ needs.scope.outputs.tv }},${{ needs.scope.outputs.tv_runtime }},${{ needs.scope.outputs.installer }},${{ needs.scope.outputs.android }},${{ needs.scope.outputs.preview }}
+          TEST_SELECTION: shard=${{ matrix.shard }}/4,${{ needs.scope.outputs.ui }},${{ needs.scope.outputs.tv }},${{ needs.scope.outputs.tv_runtime }},${{ needs.scope.outputs.installer }},${{ needs.scope.outputs.android }},${{ needs.scope.outputs.preview }}
         run: python scripts/release-inputs.py --test-key
       - uses: actions/cache/restore@v4
         continue-on-error: true
@@ -86,7 +88,7 @@ jobs:
         if: steps.fingerprint.outputs.key != '' && github.run_attempt == 1
         with:
           path: ${{ runner.temp }}/cytv-test-success
-          key: cytv-tests-${{ github.event.pull_request.number }}-${{ matrix.os }}-${{ steps.fingerprint.outputs.key }}
+          key: cytv-tests-${{ github.event.pull_request.number }}-${{ matrix.os }}-shard-${{ matrix.shard }}-of-4-${{ steps.fingerprint.outputs.key }}
       - name: Verify cached success is still the latest passing evidence
         id: reuse
         if: steps.cached.outputs.cache-hit == 'true'
@@ -96,9 +98,10 @@ jobs:
       - name: Validate current release metadata independently of runtime reuse
         if: needs.scope.outputs.any == 'true'
         env:
+          SHARD_INDEX: ${{ matrix.shard }}
           RUN_SETUP: ${{ needs.scope.outputs.setup == 'true' && (runner.os == 'Linux' || needs.scope.outputs.macos == 'true') }}
         run: |
-          if [ "$RUN_SETUP" != true ]; then
+          if [ "$RUN_SETUP" != true ] && [ "$SHARD_INDEX" = 1 ]; then
             python -m unittest discover -s tests/setup -p test_readme_release.py
           fi
           python - <<'PYTHON'
@@ -108,7 +111,7 @@ jobs:
           PYTHON
       - name: Check affected setup and packaging
         if: needs.scope.outputs.setup == 'true' && (runner.os == 'Linux' || needs.scope.outputs.macos == 'true')
-        run: scripts/test.sh setup
+        run: scripts/test.sh --shard ${{ matrix.shard }}/4 setup
       - name: Prepare pinned Node 0.10.15, 0.10.25 and 0.12.2 for Helper regression
         if: steps.reuse.outputs.hit != 'true' && runner.os == 'Linux' && (needs.scope.outputs.tv == 'true' || needs.scope.outputs.tv_runtime == 'true' || needs.scope.outputs.installer == 'true')
         shell: bash
@@ -129,6 +132,7 @@ jobs:
       - name: Test affected runtime components
         if: needs.scope.outputs.runtime == 'true' && steps.reuse.outputs.hit != 'true' && (runner.os == 'Linux' || needs.scope.outputs.macos == 'true')
         env:
+          SHARD: ${{ matrix.shard }}/4
           UI: ${{ needs.scope.outputs.ui }}
           TV: ${{ needs.scope.outputs.tv }}
           TV_RUNTIME: ${{ needs.scope.outputs.tv_runtime }}
@@ -144,9 +148,9 @@ jobs:
           [ "$INSTALLER" != true ] || components+=(installer)
           [ "$ANDROID" != true ] || components+=(android)
           [ "$PREVIEW" != true ] || components+=(preview)
-          scripts/test.sh "${components[@]}"
+          scripts/test.sh --shard "$SHARD" "${components[@]}"
       - name: Verify real webOS-style file ownership
-        if: steps.reuse.outputs.hit != 'true' && runner.os == 'Linux' && (needs.scope.outputs.tv == 'true' || needs.scope.outputs.tv_runtime == 'true')
+        if: matrix.shard == 1 && steps.reuse.outputs.hit != 'true' && runner.os == 'Linux' && (needs.scope.outputs.tv == 'true' || needs.scope.outputs.tv_runtime == 'true')
         run: sudo "$(command -v node)" native/prototype/test-state-permissions-linux.cjs
       - name: Record reusable success after every selected check passes
         if: steps.fingerprint.outputs.key != '' && steps.reuse.outputs.hit != 'true'
@@ -159,7 +163,7 @@ jobs:
         if: steps.fingerprint.outputs.key != '' && steps.reuse.outputs.hit != 'true'
         with:
           path: ${{ runner.temp }}/cytv-test-success
-          key: cytv-tests-${{ github.event.pull_request.number }}-${{ matrix.os }}-${{ steps.fingerprint.outputs.key }}
+          key: cytv-tests-${{ github.event.pull_request.number }}-${{ matrix.os }}-shard-${{ matrix.shard }}-of-4-${{ steps.fingerprint.outputs.key }}
   optional-python:
     needs: scope
     if: needs.scope.outputs.installer == 'true'
