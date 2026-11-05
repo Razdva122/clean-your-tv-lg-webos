@@ -12,7 +12,10 @@ CASES = ('acquire', 'contention', 'missing-lock', 'missing-journal', 'root-mode'
          'owner', 'group', 'inode', 'unbound', 'adopt-unlocked', 'adopt-other',
          'adopt-readonly', 'adopt-cloexec', 'adopt-shared', 'adopt-shared-other', 'wrong-fd', 'lifecycle', 'nested',
          'wrong-pid', 'replacement', 'exec-inherit', 'exec-unrelated', 'stop-independent',
-         'fork-discard', 'root-replace', 'journal-replace')
+         'fork-discard', 'root-replace', 'journal-replace',
+         'validate-live', 'validate-wrong-pid', 'validate-busy', 'validate-ending', 'validate-closing',
+         *(f'validate-{target}-{change}' for target in ('lock', 'journal', 'root')
+           for change in ('mode', 'missing', 'replace')))
 
 class PrivateIoTests(unittest.TestCase):
     @classmethod
