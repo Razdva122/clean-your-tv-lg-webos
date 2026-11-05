@@ -55,8 +55,18 @@
     function show(params) {
       activationUntil = 0;
       params = params || {};
-      activation = params;
-      startup = params.activateType === 'powerOn' || params.reason === 'boot' || params.reason === 'startup';
+      // Retain only activation primitives; caller mutation is not a new show.
+      activation = {};
+      if (typeof params.reason === 'string') activation.reason = params.reason;
+      if (typeof params.activateType === 'string') activation.activateType = params.activateType;
+      var hint = params.cytvHome;
+      if (hint !== undefined || Object.prototype.hasOwnProperty.call(params, 'cytvHome')) {
+        activation.cytvHome = hint && typeof hint === 'object' ? {
+          reason: typeof hint.reason === 'string' ? hint.reason : null,
+          generation: typeof hint.generation === 'number' ? hint.generation : null
+        } : null;
+      }
+      startup = activation.activateType === 'powerOn' || activation.reason === 'boot' || activation.reason === 'startup';
       visible = true; refresh();
     }
     function hide() { activationUntil = 0; generation++; launchGeneration++; visible = false; content = null; mode = 'closed'; render(); }

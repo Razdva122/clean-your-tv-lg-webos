@@ -160,6 +160,42 @@ const {assert,chromium,stage,fs,path}=require('./themes/browser.cjs'),http=requi
   await n.page.evaluate(()=>document.dispatchEvent(new CustomEvent('webOSRelaunch',{detail:{}})));
   assert.equal(await n.page.evaluate(()=>HomePresentationController.state().mode),'full','manual relaunch is opaque');
   assert.equal(await n.page.evaluate(()=>window.closeCalls),1);
+  // An explicit manual reason cannot inherit authority from an attached Home hint.
+  const beforeManual=await n.page.evaluate(()=>nativeRequests);
+  await n.page.evaluate(()=>HomePresentationController.show({reason:'manual',cytvHome:{reason:'home',generation:7}}));
+  await n.page.waitForTimeout(30);
+  assert.equal(await n.page.evaluate(()=>HomePresentationController.state().mode),'full','explicit manual+hint show must remain opaque');
+  assert.equal(await n.page.evaluate(()=>HomePresentationController.state().content),null,'explicit manual+hint cannot release decoder hold');
+  assert.equal(await n.page.evaluate(()=>nativeRequests),beforeManual,'manual hint cannot fall through to decoder-only query');
+  await n.page.evaluate(()=>HomePresentationController.show({cytvHome:{reason:'home',generation:7}}));
+  await n.page.waitForFunction(()=>HomePresentationController.state().mode==='overlay',null,{timeout:3000});
+  await n.page.evaluate(()=>document.dispatchEvent(new CustomEvent('webOSRelaunch',{detail:{reason:'manual',cytvHome:{reason:'home',generation:7}}})));
+  await n.page.waitForTimeout(30);
+  assert.equal(await n.page.evaluate(()=>HomePresentationController.state().mode),'full','explicit manual+hint relaunch must show opaque rather than dismiss');
+  assert.equal(await n.page.evaluate(()=>HomePresentationController.state().content),null);
+  assert.equal(await n.page.evaluate(()=>window.closeCalls),1,'explicit manual+hint relaunch must not close the existing overlay');
+  // Mutation of the caller's object cannot retarget an in-flight RPC or refresh.
+  await n.page.evaluate(()=>{
+   window.deferNative=true;window.nativePending=[];
+   window.mutableActivation={cytvHome:{reason:'home',generation:7}};
+   nativeReply={returnValue:true,eligible:true,content:true,generation:8,observedAgeMs:0};
+   HomePresentationController.show(mutableActivation);mutableActivation.cytvHome.generation=8;nativePending.shift()();
+  });
+  assert.equal(await n.page.evaluate(()=>HomePresentationController.state().content),null,'mutation7to8 cannot accept reply8 for original request7');
+  assert.equal(await n.page.evaluate(()=>HomePresentationController.state().mode),'full');
+  await n.page.evaluate(()=>{
+   mutableActivation={cytvHome:{reason:'home',generation:7}};
+   nativeReply={returnValue:true,eligible:true,content:true,generation:7,observedAgeMs:0};
+   HomePresentationController.show(mutableActivation);mutableActivation.cytvHome.generation=8;mutableActivation.reason='manual';nativePending.shift()();
+  });
+  assert.equal(await n.page.evaluate(()=>HomePresentationController.state().mode),'overlay','original reply7 remains valid for the request7 snapshot');
+  await n.page.evaluate(()=>{HomePresentationController.setTheme({presentation:'overlay'});nativePending.shift()();});
+  assert.equal(await n.page.evaluate(()=>HomePresentationController.state().mode),'overlay','refresh cannot rebind snapshot to mutated reason/generation');
+  await n.page.evaluate(()=>{
+   nativeReply={returnValue:true,eligible:true,content:true,generation:8,observedAgeMs:0};
+   HomePresentationController.show({cytvHome:{reason:'home',generation:8}});nativePending.shift()();deferNative=false;
+  });
+  assert.equal(await n.page.evaluate(()=>HomePresentationController.state().mode),'overlay','a new show may establish its own generation8 normally');
   // An opaque overlay can still sit above live video. Neither wallpaper nor
   // input preview may acquire the hardware pipeline from visibility alone.
   await n.page.evaluate(async()=>{
@@ -203,7 +239,7 @@ const {assert,chromium,stage,fs,path}=require('./themes/browser.cjs'),http=requi
   assert.equal(await n.page.evaluate(()=>HomePresentationController.state().mode),'full','valid eligible=true wire reply cannot authorize manual transparency');
   assert.equal(await n.page.locator('#ctvWallpaperVideo').count(),0,'valid active content retains decoder hold');
   // Manual/startup/wake may use fresh decoder facts while remaining opaque.
-  for(const activation of [{},{reason:'startup'},{reason:'wake'}]) {
+  for(const activation of [{},{reason:'manual'},{reason:'startup'},{reason:'wake'}]) {
    const before=await n.page.evaluate(()=>wallpaperCreations);
    await n.page.evaluate(activation=>{nativeReply={returnValue:true,eligible:false,content:false,generation:42,observedAgeMs:0};HomePresentationController.show(activation);},activation);
    await n.page.waitForFunction(()=>HomePresentationController.state().content===false,null,{timeout:3000});
@@ -228,7 +264,7 @@ const {assert,chromium,stage,fs,path}=require('./themes/browser.cjs'),http=requi
   assert.equal(await n.page.evaluate(()=>HomePresentationController.state().content),null,'late manual decoder reply cannot release newer startup hold');
   assert.equal(await n.page.locator('#ctvWallpaperVideo').count(),0);
   await n.page.evaluate(()=>{nativePending.shift()();deferNative=false;});
-  for(const hint of [{reason:'home',generation:'7'},{reason:'home'},{reason:'other',generation:7}]) {
+  for(const hint of [undefined,null,'home',{reason:'home',generation:'7'},{reason:'home'},{reason:'other',generation:7}]) {
    await n.page.evaluate(hint=>{nativeReply={returnValue:true,eligible:false,content:false,generation:42,observedAgeMs:0};HomePresentationController.show({cytvHome:hint});},hint);
    await n.page.waitForTimeout(30);assert.equal(await n.page.evaluate(()=>HomePresentationController.state().content),null,'bad Home hint never falls through decoder-only');
   }

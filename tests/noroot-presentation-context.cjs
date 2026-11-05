@@ -36,7 +36,9 @@ const c=presentation.create({supported:true,query:(done,activation)=>{params=act
 c.setTheme({presentation:'overlay'});
 const activation={cytvHome:{reason:'home',generation:7}};
 c.show(activation);assert.deepEqual(params,activation,'query receives current activation, not a stale global launch value');
-c.suspend('settings');c.resume('settings');assert.deepEqual(params,activation,'modal return retains the current activation generation');
+activation.cytvHome.generation=8;activation.reason='manual';
+assert.deepEqual(params,{cytvHome:{reason:'home',generation:7}},'show snapshots hint and reason before caller mutation');
+c.suspend('settings');c.resume('settings');assert.deepEqual(params,{cytvHome:{reason:'home',generation:7}},'refresh retains the original primitive snapshot until new show');
 c.show({reason:'startup'});assert.equal(c.state().mode,'full');
 require('acorn').parse(fs.readFileSync('launcher/home-presentation.js','utf8'),{ecmaVersion:5});
 const info=JSON.parse(fs.readFileSync('launcher/appinfo.json','utf8'));

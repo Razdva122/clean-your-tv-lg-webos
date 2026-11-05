@@ -179,7 +179,7 @@
   }
   function homeActivation(params) {
     return !!params && params.reason !== 'startup' && params.reason !== 'boot' &&
-      params.reason !== 'wake' && params.activateType !== 'powerOn' &&
+      params.reason !== 'wake' && params.reason !== 'manual' && params.activateType !== 'powerOn' &&
       !!params.cytvHome && params.cytvHome.reason === 'home';
   }
   var presentation = window.HomePresentation ? HomePresentation.create({
@@ -193,11 +193,15 @@
         var hint = activation && activation.cytvHome, decoderOnly = !homeActivation(activation);
         // Malformed/non-Home hints cannot fall through to the manual decoder path.
         if (decoderOnly && hint !== undefined) { done(null); return; }
+        var expectedGeneration = decoderOnly ? null : hint.generation;
+        if (!decoderOnly && (typeof expectedGeneration !== 'number' || !isFinite(expectedGeneration) ||
+            expectedGeneration < 0 || Math.floor(expectedGeneration) !== expectedGeneration ||
+            expectedGeneration > 9007199254740991)) { done(null); return; }
         var clock = window.performance && typeof window.performance.now === 'function' ?
           function () { return window.performance.now(); } : Date.now;
         var started = clock();
         callLuna('luna://com.gathin.tvhome.renewal/presentationContext', {}, function (reply) {
-          done(HomePresentation.nativeContext(reply, decoderOnly ? null : hint.generation, clock() - started, decoderOnly));
+          done(HomePresentation.nativeContext(reply, expectedGeneration, clock() - started, decoderOnly));
         }, 2000);
         return;
       }
