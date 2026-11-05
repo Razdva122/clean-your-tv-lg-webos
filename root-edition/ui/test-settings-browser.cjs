@@ -56,7 +56,7 @@ const base=process.env.PREVIEW_URL||'http://127.0.0.1:8879';
    Object.defineProperty(document,'hidden',{configurable:true,value:false});document.dispatchEvent(new Event('visibilitychange'));
   });
   await page.waitForFunction(()=>settingsBackend.pending.length===1);
-  assert(await page.evaluate(()=>settingsBackend.contextCalls>0),'opaque Root context checks use their own typed reply');
+  assert.equal(await page.evaluate(()=>settingsBackend.contextCalls),0,'persistent CARD Home does not query transient overlay context');
   await page.evaluate(()=>document.dispatchEvent(new Event('webOSRelaunch')));
   assert.equal(await page.evaluate(()=>settingsBackend.pending.length),1,'relaunch waits for the active status request');
   assert(await toggle.isDisabled());

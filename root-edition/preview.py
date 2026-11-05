@@ -38,9 +38,10 @@ def prepare(version='0.0.1', resolution=None):
         info['resolution'] = resolution
     info['themeEngineVersion'] = info['version']
     info.update(id=APP_ID, title='Home Root', version=version, appCategory=['home'], icon='home-root-icon.png', largeIcon='home-root-largeIcon.png')
-    info.update(defaultWindowType='overlay', transparent=True, handlesRelaunch=True,
+    info.update(defaultWindowType='card', transparent=False,
                 noSplashOnLaunch=True, spinnerOnLaunch=False)
     info.pop('splashBackground', None)
+    info.pop('handlesRelaunch', None)
     for name in ('brand-v2-icon.png', 'brand-v2-largeIcon.png'):
         path = UI.parent / 'assets' / ('home.png' if name == 'brand-v2-icon.png' else 'home-large.png')
         if path.is_symlink() or not path.is_file() or not path.resolve().is_relative_to(UI.parent.resolve()):

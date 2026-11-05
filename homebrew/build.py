@@ -97,7 +97,10 @@ def installer_files(raw):
             if entry.isdir():
                 if not (APP_PREFIX.startswith(name+'/') or name.startswith(APP_PREFIX) or PACKAGE_INFO.startswith(name+'/')):raise ValueError('Foreign installer directory')
                 continue
-            limit=64*1024*1024 if name==APP_PREFIX+'payload/runtime.tar.gz' else 16*1024*1024
+            # Root media exceeds ordinary limits in both the component and rollback cache.
+            root_ipk=re.fullmatch(re.escape(APP_PREFIX+'payload/root/'+IDENTITIES['root'])+r'_(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)_all\.ipk',name)
+            baseline_cache=re.fullmatch(re.escape(APP_PREFIX+'payload/baseline/cache/')+r'[0-9a-f]{64}',name)
+            limit=64*1024*1024 if name==APP_PREFIX+'payload/runtime.tar.gz' or root_ipk or baseline_cache else 16*1024*1024
             if not entry.isfile() or entry.size<0 or entry.size>limit or not (name.startswith(APP_PREFIX) or name==PACKAGE_INFO):raise ValueError('Unsupported installer member')
             total+=entry.size
             if total>256*1024*1024:raise ValueError('Installer content is too large')

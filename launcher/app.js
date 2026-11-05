@@ -13,11 +13,6 @@
     return window.HomeI18n ? HomeI18n.html(markup) : markup;
   }
   window.RootLauncherRendered = false;
-  var nativeNoRoot = !window.ROOT_VERSION && window.CYTV_BROWSER_PREVIEW !== true;
-  var nativeOverlay = !!window.ROOT_VERSION || nativeNoRoot;
-  // An opaque overlay may still have a live player beneath it. Do not acquire
-  // its decoder before a current context check establishes safe empty content.
-  if (nativeOverlay && window.HomeWallpaper) HomeWallpaper.suspend('decoder-context');
   // Shared layout, focus and remote-control state.
   var layoutState = window.HomeLayout ? HomeLayout.create(localStorage, CONFIG, window.RootProfileData || window.HomeData) : null;
   window.HomeLayoutState = layoutState;
@@ -127,8 +122,8 @@
       onclaim: function () { if (window.HomeWallpaper) HomeWallpaper.suspend('input-preview'); },
       onrelease: function () { if (window.HomeWallpaper) HomeWallpaper.resume('input-preview'); },
       createMedia: function (uri) { return window.PREVIEW_INPUT_MEDIA ? window.PREVIEW_INPUT_MEDIA(uri) : InputPreview.createVideo(uri); },
-      // A visible opaque overlay can still have a player beneath it.
-      enabled: function () { return (!nativeOverlay || presentation && presentation.state().visible && presentation.state().content === false) && layoutPreset === "dock-grid" && !document.hidden && windowFocused && !previewDialogOpen() && window.HomeInputShelf.enabled() && window.HomeInputShelf.previewEnabled(); },
+      // The CARD owns the screen; preview still respects visibility and modal ownership.
+      enabled: function () { return layoutPreset === "dock-grid" && !document.hidden && windowFocused && !previewDialogOpen() && window.HomeInputShelf.enabled() && window.HomeInputShelf.previewEnabled(); },
       mount: function (media, input) {
         var tile = shelfTiles[focusedShelf];
         if (!tile || tile.input.appId !== input.appId) return false;
@@ -177,105 +172,13 @@
       });
     }
   }
-  function homeActivation(params) {
-    var hint = params && params.cytvHome, generation = hint && hint.generation;
-    return !!params && params.reason !== 'startup' && params.reason !== 'boot' &&
-      params.reason !== 'wake' && params.reason !== 'manual' && params.activateType !== 'powerOn' &&
-      !!hint && hint.reason === 'home' && typeof generation === 'number' && isFinite(generation) &&
-      generation >= 0 && Math.floor(generation) === generation && generation <= 9007199254740991;
-  }
-  var nativePresentationGeneration = null;
-  var presentation = window.HomePresentation ? HomePresentation.create({
-    supported: true,
-    decoderContext: !!window.ROOT_VERSION,
-    queryFull: nativeNoRoot,
-    dismissFull: nativeNoRoot,
-    toggle: function (params) { return !nativeNoRoot || homeActivation(params) && params.cytvHome.generation === nativePresentationGeneration; },
-    query: function (done, activation) {
-      if (nativeNoRoot) {
-        var hint = activation && activation.cytvHome, decoderOnly = !homeActivation(activation);
-        // Malformed/non-Home hints cannot fall through to the manual decoder path.
-        if (decoderOnly && hint !== undefined) { done(null); return; }
-        var expectedGeneration = decoderOnly ? null : hint.generation;
-        if (!decoderOnly && (typeof expectedGeneration !== 'number' || !isFinite(expectedGeneration) ||
-            expectedGeneration < 0 || Math.floor(expectedGeneration) !== expectedGeneration ||
-            expectedGeneration > 9007199254740991)) { done(null); return; }
-        var clock = window.performance && typeof window.performance.now === 'function' ?
-          function () { return window.performance.now(); } : Date.now;
-        var started = clock();
-        var ticket = presentation && presentation.token();
-        callLuna('luna://com.gathin.tvhome.renewal/presentationContext', {}, function (reply) {
-          var context = HomePresentation.nativeContext(reply, expectedGeneration, clock() - started, decoderOnly);
-          if (context && presentation && presentation.token() === ticket && presentation.state().visible) nativePresentationGeneration = reply.generation;
-          done(context);
-        }, 2000);
-        return;
-      }
-      callLuna('luna://com.cleanyourtv.root.preview.service/status', {presentation:'context'}, function (r) {
-        done(r && r.returnValue === true && r.result ? r.result.content : null);
-      }, 2000);
-    },
-    blocked: function () { return previewDialogOpen() || !!moveState || !!pickerOpen || !!undoState ||
-      !!(window.ThemeRuntime && ThemeRuntime.isSuspended()); },
-    opaque: function () { return previewDialogOpen() || !!(window.ThemeRuntime && ThemeRuntime.isSuspended()); },
-    render: function (state) {
-      document.documentElement.setAttribute('data-home-presentation', state.mode);
-      document.body.setAttribute('data-home-presentation', state.mode);
-      var decoderSafe = !nativeOverlay || state.visible && state.content === false;
-      // Fence wallpaper before releasing input ownership: onrelease may resume it.
-      if (window.HomeWallpaper) {
-        if (nativeOverlay) HomeWallpaper[decoderSafe ? 'resume' : 'suspend']('decoder-context');
-        HomeWallpaper[state.mode === 'full' ? 'resume' : 'suspend']('presentation');
-      }
-      if (nativeOverlay) {
-        if (!decoderSafe) stopPreview();
-        else if ("shelf" === focusZone && shelfTiles[focusedShelf] && inputPreview) inputPreview.focus(shelfTiles[focusedShelf].input);
-      }
-    },
-    close: function () {
-      stopPreview();
-      if (!nativeNoRoot || nativePresentationGeneration === null) { window.close(); return; }
-      var ticket = presentation.activationToken(), generation = nativePresentationGeneration;
-      var deadline = Date.now() + 2000, settled = false, retry, timer;
-      function current() { return presentation.activationToken() === ticket && !presentation.state().visible; }
-      function finish() {
-        if (settled) return;
-        settled = true; clearTimeout(timer); clearTimeout(retry);
-        if (current()) window.close();
-      }
-      function dismiss() {
-        if (settled) return;
-        if (!current()) { finish(); return; }
-        var left = deadline - Date.now();
-        if (left <= 0) { finish(); return; }
-        callLuna('luna://com.gathin.tvhome.renewal/presentationDismissed', {generation:generation}, function (reply) {
-          if (settled) return;
-          if (current() && reply && reply.returnValue === false && reply.errorText === 'Home control busy' && Date.now() < deadline) {
-            // BUSY explicitly means not submitted; unknown outcomes are never retried.
-            retry = setTimeout(dismiss, Math.min(100, Math.max(0, deadline - Date.now())));
-          } else finish();
-        }, Math.min(1500, left));
-      }
-      timer = setTimeout(finish, 2000);
-      dismiss();
-    }
-  }) : null;
-  window.HomePresentationController = presentation;
-  function launchParams(event) {
-    try {
-      var value = event && event.detail || (window.PalmSystem && PalmSystem.launchParams) || {};
-      if (typeof value === 'string') value = JSON.parse(value);
-      if (value && value.parameters) value = typeof value.parameters === 'string' ? JSON.parse(value.parameters) : value.parameters;
-      return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-    } catch (_) { return {}; }
-  }
+  // Canonical Home owns one persistent CARD and has no transient controller.
+  window.HomePresentationController = null;
   function launchApp(appId, title, params) {
-    var ticket = presentation && presentation.token();
     callLuna("luna://com.webos.applicationManager/launch", {
       id: appId,
       params: params || {}
     }, function (n) {
-      if (n.returnValue === true && presentation && !/^com\.(?:palm\.app\.settings|webos\.app\.(?:firstuse|quicksettings))/.test(appId)) presentation.launched(ticket);
       false === n.returnValue && showToast(tr("Can't open {app}", {
         app: title || appId
       }));
@@ -1283,7 +1186,6 @@
   }
   var previewDialogVisible = previewDialogOpen();
   new MutationObserver(function () {
-    if (presentation) presentation.sync();
     var open = previewDialogOpen();
     if (open === previewDialogVisible) return;
     previewDialogVisible = open;
@@ -1675,10 +1577,6 @@
     // Leave early Back/Home and key-up delivery to their native/recovery owners.
     if (window.RootLauncherRendered !== true) return;
     var key = event.keyCode;
-    if ((key === KEY_BACK || key === 27) && !moveState && !pickerOpen && !undoState && focusZone !== 'inputs' && focusZone !== 'shelf' &&
-        presentation && presentation.dismiss()) {
-      event.preventDefault(); cancelHold(); return;
-    }
     if (key !== KEY_OK && okHoldTimer) {
       cancelHold();
     }
@@ -1814,23 +1712,12 @@
     getElement('homeSurface').classList.add('ctv-remote-navigation');
     stepRibbon(delta > 0 ? 1 : -1);
   }, false);
-  document.addEventListener("webOSRelaunch", function (event) {
-    if (presentation && window.RootLauncherRendered === true) {
-      presentation.relaunch(launchParams(event), document.hidden);
-      if (!presentation.state().visible) return;
-      // Both native overlay editions own activation when handling a relaunch.
-      if ((window.ROOT_VERSION || nativeNoRoot) && window.PalmSystem && typeof PalmSystem.activate === 'function') PalmSystem.activate();
-    }
-    restoreFocus();
-  });
+  document.addEventListener("webOSRelaunch", restoreFocus);
   document.addEventListener("visibilitychange", function () {
     if (window.ThemeRuntime) {
       // Retain validated styles/assets while hidden: the compositor may expose Home
       // before delivering the next visible/relaunch event. Dialog owners stay separate.
       if (!document.hidden) ThemeRuntime.resume('visibility');
-    }
-    if (presentation && window.RootLauncherRendered === true) {
-      presentation.visibility(!document.hidden, launchParams());
     }
     document.hidden ? stopPreview() : restoreFocus();
   });
@@ -1867,14 +1754,14 @@
   });
   focusZone = "none";
   focusTile(0);
+  // Independent appearance restoration can run while the theme is prepared.
+  // Presentation still waits for both, with decoder ownership already fenced.
+  var personalAppearance = window.PersonalWallpaper ? PersonalWallpaper.start().catch(function () {}) : Promise.resolve();
   function presentHome() {
-    // Restore personal appearance before exposing the validated theme. Native Home
-    // must activate before ThemeManager can wait for foreground animation frames.
-    return (window.PersonalWallpaper ? PersonalWallpaper.start().catch(function () {}) : Promise.resolve()).then(function () {
+    // The platform owns CARD foreground activation; expose only restored appearance.
+    return personalAppearance.then(function () {
       tiles.forEach(function (tile) { tile.el.classList.add('shown'); });
       getElement('homeSurface').classList.remove('ctv-starting');
-      if (presentation) presentation.show(launchParams());
-      if ((window.ROOT_VERSION || nativeNoRoot) && window.PalmSystem && typeof PalmSystem.activate === 'function') PalmSystem.activate();
     });
   }
   window.HomeUIReady = (window.ThemeManager ? ThemeManager.start(presentHome) : Promise.resolve().then(presentHome)).then(function () {

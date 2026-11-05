@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "1.8.1",
+  "version": "1.8.2",
   "changes": [
     {
       "pr": 264,
@@ -10,7 +10,7 @@
     {
       "pr": 265,
       "issues": [],
-      "summary": "Add Root Ribbon over-application presentation with startup fallback, compact continuous native-fill styling, detached-card editing and refreshed README/Showcase/demo; No-root keeps fullscreen native Home and combined signed-TV acceptance is pending"
+      "summary": "Add Root Ribbon over-application presentation with startup fallback, compact continuous native-fill styling, detached-card editing and refreshed README/Showcase/demo; No-root keeps fullscreen native Home and combined signed-TV acceptance is pending; transient overlay behavior superseded by the single persistent CARD Home follow-up recorded in docs/history/2026-11-05-single-home-regressions.md"
     },
     {
       "pr": 267,
@@ -100,7 +100,7 @@
     {
       "pr": 305,
       "issues": [],
-      "summary": "Close the restored Root overlay after verified off/emergency recovery while fencing stale lifecycle replies; new packaged-TV acceptance remains pending"
+      "summary": "Close the restored Root overlay after verified off/emergency recovery while fencing stale lifecycle replies; new packaged-TV acceptance remains pending; transient overlay behavior superseded by the single persistent CARD Home follow-up recorded in docs/history/2026-11-05-single-home-regressions.md"
     },
     {
       "pr": 306,
@@ -121,7 +121,7 @@
     {
       "pr": 310,
       "issues": [],
-      "summary": "Connect Ribbon overlay in the same No-root Home to fresh Helper context, current activation generations and bounded dismissal; final packaged-TV acceptance pending"
+      "summary": "Connect Ribbon overlay in the same No-root Home to fresh Helper context, current activation generations and bounded dismissal; final packaged-TV acceptance pending; transient overlay behavior superseded by the single persistent CARD Home follow-up recorded in docs/history/2026-11-05-single-home-regressions.md"
     },
     {
       "pr": 312,
@@ -170,8 +170,13 @@
       "pr": 322,
       "issues": [],
       "summary": "Keep unwired Helper prototypes out of production packages"
+    },
+    {
+      "pr": 328,
+      "issues": [],
+      "summary": "Fix No-root Home startup and emergency UI teardown"
     }
   ],
   "excluded": [],
-  "acceptance": "NOT RELEASE-READY; integration reopened by maintainer on 2026-11-05 for ready fixes. Product changes invalidate the previous selected build: 41837911621:1/source0fb222f9cb07f29e94fd9c1c1934cba8ba6ed66c is historical evidence only (docs/history/2026-11-04-release-1.8.0-candidate.md). A new full candidate must be selected and affected scenarios accepted after scope stabilizes. Root off/overlay cleanup #305 has focused CI and independent review, but no new signed package/device acceptance. Root decoder ownership #316 is integrated with current-head Linux/macOS/browser/ARM Python checks and independent review; it is an opening/refresh snapshot, not proof of the earlier C3 media failure cause or final device acceptance. Helper startup correction #321 is integrated after exact-head focused CI; rebuilt-package pairing, Home/Start/Stop/emergency, rollback and real full-kernel-boot acceptance remain pending. Separate protected-state research is not completed by this startup correction. Helper foundations #317 are integrated with exact-head Linux/macOS/browser/ARM Python CI and independent review; they remain unwired and do not repair the running Helper. Relay cleanup #318 is integrated with exact-head Linux/macOS/browser/ARM Python CI and independent review; native error reporting is not physical key-release acceptance. The C/Node Stop-journal bridge #319 is integrated after exact-head Linux/macOS/browser/ARM Python CI, five-runtime host checks and independent review. It remains unwired with production bindings absent; it does not supply Home authority, private provisioning, live input lifetime or target acceptance. No-root overlay #310 is integrated at a4042ba8/merge778842ba after exact-head focused CI and independent reviews; it is included in this candidate, with final packaged-TV acceptance still pending. Media/static-video/receiver lifecycle and enabled-routing controls/power acceptance remain pending. Existing C3 observations, host/emulator checks and rollback evidence apply only to their original artifacts/preconditions. No main/stable merge or publication authorized. Details: docs/history/2026-11-05-ready-fix-integration.md. PR322 moves the three unused research JS modules outside production Helper packaging; its complete focused CI and independent review passed. Research source remains available, with no runtime consumer activated."
+  "acceptance": "NOT RELEASE-READY. Scope frozen for 1.8.2: Ribbon is an ordinary theme of one persistent CARD Home with its own wallpaper; overlay and companion-app proposals are superseded. Direct integration of reviewed follow-up commits was authorized by the maintainer to avoid duplicate full CI. Preliminary C3 No-root Home 1.9.3 / Helper 0.7.4 passed immediate physical Home, moving packaged UHD wallpaper, persistence beyond 120 seconds, app-switch media suspension/resume and triple-Home emergency return to LG. These preliminary artifacts do not replace final selected candidate evidence. Full candidate build/run selection, exact Helper compatibility with published Home, coherent signed Root acceptance, sound, standby, cold boot, supported OTA and rollback remain pending. Details: docs/history/2026-11-05-single-home-regressions.md. No stable publication or main merge before mandatory candidate gates."
 }

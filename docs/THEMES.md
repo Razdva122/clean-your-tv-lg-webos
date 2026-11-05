@@ -127,47 +127,35 @@ These themes require the `ribbon-layout-v1` capability in Home. On a theme-enabl
 
 This support is included in 1.7.0. Browser checks do not establish physical-TV compatibility; see the [release acceptance and limits](RELEASE-1.7.0.md). See the [author contract](development/THEME-CSS.md#parameterized-scenic-ribbons-unreleased).
 
-## Ribbon over applications (unreleased)
+<a id="ribbon-over-applications-unreleased"></a>
 
-In the candidate Root build, selecting Ribbon enables a bottom bar over positively
-identified active content. Home opens it; Back or another Home closes the bar
-without selecting a different app. A successful app/input launch also dismisses
-Home; a failed launch keeps it open. Settings, theme trials and recovery stay
-opaque. Power-on activation and absent, ambiguous or unavailable background
-information keep the wallpaper instead of exposing an empty screen.
+## Ribbon in full-screen Home (unreleased)
+
+Ribbon is a theme of the existing Home application in both editions. Home uses
+an ordinary full-screen card window, with its own wallpaper. There is no second
+application and no video or HDMI displayed beneath the cards. Selecting Ribbon
+does not change the native window type or Home routing.
 
 A single black block groups the three shortcuts. Native solid app colors fill
-the skewed cards, with a focused lift and bottom-local shade against wallpaper
-or bright content. Hold OK to edit one raised card; left/right moves it, Up
-selects its cross, Down returns to the card, OK confirms and Back cancels. The
-cross hides the app from Home and Undo restores it. Editing/hiding keeps the
-current background and shows no explanatory footer. The candidate also connects Ribbon to the running Helper in the same
-No-root Home: the existing app identity and profile remain, and a validated,
-fresh Helper context may enable Ribbon above content. Unknown
-context, manual launch and startup keep a static opaque fallback. Back also
-closes opaque No-root Home from the app cards after its menus/editors are
-closed, even without a running Helper. From the input shelf, Back first returns
-focus to the app cards. Repeated Home still toggles only unobstructed Ribbon overlay.
-Final packages, Helper routing and physical acceptance are pending. In the browser demo,
-**Startup / wallpaper**, **Over application**, **Home** and **Back** exercise both
-states. No-root overlay previews simulate platform replies and do not establish device compatibility.
+the skewed cards, with a focused lift and bottom-local shade against the Home
+wallpaper. Hold OK to edit one raised card; left/right moves it, Up selects its
+cross, Down returns to the card, OK confirms and Back cancels. The cross hides
+the app from Home and Undo restores it. Editing/hiding retains the selected
+Home background and shows no explanatory footer.
 
-Both candidate editions use an overlay window for the whole application. Other themes and settings
-cover the screen, but underlying apps may continue running or playing audio.
-On opening native Root or refreshing its context, wallpaper video and input
-previews start only after a current check reports no content underneath;
-otherwise opaque Home keeps its static image. This applies to opaque themes
-and power-on as well as Ribbon.
+Home opens or reactivates the ordinary Home window. Menus, settings, input-shelf
+navigation and editors retain their normal Back handling; Home is not a
+transient bar dismissed by another Home press. Selecting an application uses
+normal TV app switching rather than forcing the Home window to close.
 
-This is different from the previous card lifecycle. The feature does not change
-Home routing, emergency gestures, startup-source preferences or app permissions.
-No-root retains independent Helper emergency/watchdog and key-up handling,
-with no new permissions; final physical acceptance remains pending. It is not an accepted change to the
-currently published packages.
-The existing startup observer ignores the primary app underneath a visible Root
-overlay when deciding whether to change remembered startup input.
+Wallpaper video and connected-input previews belong to Home. Hidden or unfocused
+Home releases its media; unavailable playback retains the static poster. This
+is not playback of a different app or HDMI underneath Ribbon. Existing Helper
+emergency/watchdog, key-up handling, Root recovery and startup-source choices
+remain separate from theme selection.
 
-Browser/state/runtime checks are not final TV acceptance. Verify the exact signed
-Root package for app/HDMI playback, controls, input ownership, power-on without
-content, standby/wake, emergency recovery and updater/rollback health before
-release. See the [presentation design](development/RIBBON-PRESENTATION.md).
+The previous overlay experiment is not the current candidate contract. Final
+package/device acceptance is still pending. Verify the exact versioned packages
+for launch latency, repeated Home, app switching, background playback, editing,
+standby/wake and emergency/update/rollback behavior before release. See the
+[presentation design](development/RIBBON-PRESENTATION.md).

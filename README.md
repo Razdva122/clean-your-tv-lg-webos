@@ -40,7 +40,7 @@ Manage them in **Settings → Themes** on your TV.
 
 Ribbon wallpaper video: **Xecutioner** · non-commercial use with attribution.
 
-The candidate Ribbon refresh includes native overlay in Root and connects the same No-root Home to its running Helper. Startup and over-application states have Home/Back controls; final package/device acceptance remains pending.
+The candidate keeps Ribbon inside the single full-screen Home app, with its own wallpaper in both editions. It does not show another app or HDMI behind the cards. Final package/device acceptance remains pending.
 
 **[Try the themes in the main browser preview →](https://razdva122.github.io/clean-your-tv-lg-webos/demo/)**
 
@@ -54,10 +54,10 @@ and creating your own theme.
 
 ## Download and install
 
-> This branch prepares **1.8.1**, an unpublished candidate; the versioned sections below describe its intended publication. Download buttons still follow the latest published release. See [candidate changes and limits](docs/RELEASE-1.8.1.md) and [release PR #281](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/281).
+> This branch prepares **1.8.2**, an unpublished candidate; the versioned sections below describe its intended publication. Download buttons still follow the latest published release. See [candidate changes and limits](docs/RELEASE-1.8.2.md) and [release PR #281](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/281).
 
 <!-- release:downloads -->
-Current stable release: **[v1.8.1](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.8.1)** — [release notes](docs/RELEASE-1.8.1.md).
+Current stable release: **[v1.8.2](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.8.2)** — [release notes](docs/RELEASE-1.8.2.md).
 <!-- /release:downloads -->
 
 [![Download Windows x64 graphical installer — GUI ZIP](assets/brand/downloads/windows.svg)](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/cytv-windows-x64-desktop.zip)
@@ -137,12 +137,12 @@ For contributors: [build and technical references](docs/development/README.md),
 <!-- release:components -->
 | Component | Stable version |
 | --- | --- |
-| cytv installer | 0.9.1 |
-| Home | 1.9.1 |
-| Home Helper | 0.7.1 |
-| Root edition | 0.9.1 |
+| cytv installer | 0.9.2 |
+| Home | 1.9.3 |
+| Home Helper | 0.7.4 |
+| Root edition | 0.9.2 |
 | Both edition Updaters | 0.4.4 |
-| Android installer / versionCode | 0.8.1 / 21 |
+| Android installer / versionCode | 0.8.2 / 22 |
 <!-- /release:components -->
 
 System Updater in 1.7.0: 1.2.0 / protocol 1. Existing supervisors stay pinned; installed 1.1.2 has no general replacement path in this release.

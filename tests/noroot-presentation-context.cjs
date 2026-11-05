@@ -2,18 +2,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const presentation=require('../launcher/home-presentation');
 assert.equal(typeof presentation.nativeContext,'function','native context validator is required');
-// Exercise the production adapter classifier before it can authorize toggle.
-const app=fs.readFileSync('launcher/app.js','utf8');
-const classify=require('vm').runInNewContext('('+app.match(/function homeActivation\(params\) \{[\s\S]*?\n  \}/)[0]+')');
-for(const generation of ['invalid',undefined,NaN,Infinity,-1,1.5,9007199254740992]) {
- const hint={reason:'home'};if(generation!==undefined)hint.generation=generation;
- assert.equal(classify({cytvHome:hint}),false,'malformed generation cannot authorize a toggle');
- let closed=0;
- const controller=presentation.create({supported:true,toggle:classify,close:()=>closed++,query:(done,a)=>done(classify(a)?true:null)});
- controller.setTheme({presentation:'overlay'});controller.show({cytvHome:{reason:'home',generation:7}});
- controller.relaunch({cytvHome:hint});assert.equal(closed,0);assert.equal(controller.state().mode,'full');
-}
-for(const generation of [0,7,9007199254740991])assert.equal(classify({cytvHome:{reason:'home',generation}}),true);
+// Legacy transient wire validator remains isolated from canonical CARD hosts.
 const valid={returnValue:true,eligible:true,content:true,generation:7,observedAgeMs:20};
 assert.deepEqual(presentation.nativeContext(valid,7),{eligible:true,content:true});
 assert.deepEqual(presentation.nativeContext({...valid,eligible:false,content:null},7),{eligible:false,content:null});
@@ -55,8 +44,8 @@ c.show({reason:'startup'});assert.equal(c.state().mode,'full');
 require('acorn').parse(fs.readFileSync('launcher/home-presentation.js','utf8'),{ecmaVersion:5});
 const info=JSON.parse(fs.readFileSync('launcher/appinfo.json','utf8'));
 assert.equal(info.id,'com.gathin.tvhome');
-assert.equal(info.defaultWindowType,'overlay','production Home needs a native overlay window, not transparent CSS in a card');
-assert.equal(info.transparent,true);assert.equal(info.handlesRelaunch,true);
+assert.equal(info.defaultWindowType,'card');
+assert.equal(info.transparent,false);assert.notEqual(info.handlesRelaunch,true);
 assert.equal(info.noSplashOnLaunch,true);assert.equal(info.spinnerOnLaunch,false);
 assert.deepEqual(info.requiredACG,['application.launcher','network.query'],'overlay adds no permissions');
 assert.equal(info.systemUpdateProtocol,1);
