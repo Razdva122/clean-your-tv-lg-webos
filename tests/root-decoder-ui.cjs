@@ -34,26 +34,19 @@ const {pathToFileURL}=require('node:url'),{chromium}=require('playwright'),root=
    }());`,contentType:'application/javascript'}));
   const url=pathToFileURL(path.join(site,'root-launcher/index.html')).href;
   await p.goto(url);await p.waitForFunction(()=>window.RootLauncherRendered===true);
-  // Persist real source/quality, then exercise the cold restoration before show().
+  // A normal CARD restores its own media without querying a suspended underlay.
   await p.evaluate(async()=>{await ThemeManager.selectInstalled({id:'builtin:liquid-glass'});await PersonalWallpaper.select('builtin:black-hole');HomeWallpaper.setQuality('4k');});
   const beforeCold=calls.length;await p.reload();await p.waitForFunction(()=>window.RootLauncherRendered===true);await p.waitForTimeout(100);
-  assert.equal(calls.slice(beforeCold).filter(m=>m==='wallpaperCacheStart').length,0,'cold unknown context must not acquire a media lease');
+  assert.equal(calls.slice(beforeCold).filter(m=>m==='wallpaperCacheStart').length,0,'packaged MSE needs no native cache');
   assert.equal(await p.evaluate(()=>PersonalWallpaper.state().builtinId),'builtin:black-hole');
-  assert.equal(await p.evaluate(()=>videoCreates),0,'cold restoration must not attach media before a positive context');
-  assert.equal(await p.locator('#ctvWallpaperVideo').count(),0);
-  assert(await p.locator('#ctvWallpaperImage').textContent(),'unknown opaque Home retains the static poster');
-  const reply=value=>p.evaluate(value=>{const latest=pendingContext.pop();pendingContext=[];if(!latest)throw Error('missing Root context query');latest.onservicecallback(JSON.stringify({returnValue:true,result:{content:value}}));},value);
+  assert.equal(await p.evaluate(()=>CYTV_HOME_HOST),'card');
+  assert.equal(await p.evaluate(()=>HomePresentationController),null);
+  assert.equal(await p.evaluate(()=>pendingContext.length),0,'CARD does not request overlay decoder context');
   const count=()=>calls.filter(m=>m==='wallpaperCacheCommit').length;
-  const commits=count();await reply(true);await p.waitForTimeout(100);
-  assert.equal(count(),commits,'active content cannot acquire a cache lease');
-  assert(await p.locator('#ctvWallpaperImage').textContent(),'opaque fallback retains the static poster');
-  await p.evaluate(()=>HomePresentationController.show({reason:'startup'}));await reply(null);
-  assert.equal(await p.evaluate(()=>videoCreates),0,'unknown startup context cannot attach video');
-  await p.evaluate(()=>HomePresentationController.show({reason:'startup'}));await reply(false);
+  const commits=count();
   await p.waitForFunction(()=>HomeWallpaper.state().actualQuality==='4k');
   assert.equal(await p.locator('#ctvWallpaperVideo').evaluate(v=>v.videoWidth),3840);
-  assert.equal(await p.evaluate(()=>WallpaperStream.state().mode),'mse');assert(count()>commits);
-  assert.equal(await p.evaluate(()=>HomePresentationController.state().mode),'full');
+  assert.equal(await p.evaluate(()=>WallpaperStream.state().mode),'mse');assert.equal(count(),commits);
   // Preserve positive playback beyond the real 12-second MSE loop boundary.
   // Frame progress here is Chrome evidence, not C3 decoder/lifecycle acceptance.
   await p.waitForFunction(()=>{
@@ -68,24 +61,21 @@ const {pathToFileURL}=require('node:url'),{chromium}=require('playwright'),root=
   await p.evaluate(()=>{HomeWallpaper.setQuality('image');window.originalSupport=MediaSource.isTypeSupported;MediaSource.isTypeSupported=()=>false;HomeWallpaper.setQuality('4k');});
   await p.waitForFunction(()=>HomeWallpaper.state().actualQuality==='4k'&&document.querySelector('#ctvWallpaperVideo').currentTime>1);
   assert.equal(await p.evaluate(()=>WallpaperStream.state().mode),'native');
-  await p.evaluate(()=>HomePresentationController.show({}));
-  assert.equal(await p.locator('#ctvWallpaperVideo').count(),0,'refresh synchronously releases active media');
-  await p.evaluate(()=>{window.obsoleteContext=pendingContext.pop();HomePresentationController.show({});});await reply(true);
-  const deniedCreates=await p.evaluate(()=>videoCreates),deniedCommits=count();
-  await p.evaluate(()=>obsoleteContext.onservicecallback(JSON.stringify({returnValue:true,result:{content:false}})));
-  await p.waitForTimeout(100);assert.equal(await p.evaluate(()=>videoCreates),deniedCreates);assert.equal(count(),deniedCommits,'stale false cannot reacquire');
-  // The real shelf dwell must obey the same snapshot, including re-arm/release.
-  await p.evaluate(()=>{HomeWallpaper.setQuality('image');InputSources.setPreviewEnabled(localStorage,true);HomeLayoutState.setThemeLayout({preset:'dock-grid',columns:5,spacingScale:1,textScale:1,focusScale:1.1,inputs:'shelf'});HomePresentationController.show({});});
-  await reply(true);await p.keyboard.press('ArrowUp');await p.waitForTimeout(1100);
-  assert.equal(await p.evaluate(()=>inputCreates),0,'active content blocks external input acquisition');
-  await p.evaluate(()=>HomePresentationController.show({}));await reply(null);await p.waitForTimeout(900);assert.equal(await p.evaluate(()=>inputCreates),0);
-  await p.evaluate(()=>HomePresentationController.show({}));await reply(false);await p.waitForFunction(()=>inputCreates===1);
+  assert(count()>commits,'unsupported MSE must use the real verified cache/HTTP route');
+  await p.evaluate(()=>window.dispatchEvent(new Event('blur')));
+  assert.equal(await p.locator('#ctvWallpaperVideo').count(),0,'blur synchronously releases active media');
+  const hiddenCommits=count();await p.evaluate(()=>HomeWallpaper.setQuality('4k'));
+  assert.equal(count(),hiddenCommits,'blurred CARD cannot reacquire media');
+  await p.evaluate(()=>window.dispatchEvent(new Event('focus')));
+  await p.waitForFunction(()=>HomeWallpaper.state().actualQuality==='4k');
+  // Input preview still composes its own ownership with CARD focus.
+  await p.evaluate(()=>{HomeWallpaper.setQuality('image');InputSources.setPreviewEnabled(localStorage,true);HomeLayoutState.setThemeLayout({preset:'dock-grid',columns:5,spacingScale:1,textScale:1,focusScale:1.1,inputs:'shelf'});});
+  await p.keyboard.press('ArrowUp');await p.waitForFunction(()=>inputCreates===1);
   assert.equal(await p.locator('.ctv-input-preview').count(),1);
-  await p.evaluate(()=>HomePresentationController.show({}));assert.equal(await p.locator('.ctv-input-preview').count(),0,'unknown refresh releases input immediately');
-  await reply(true);await p.waitForTimeout(1100);assert.equal(await p.evaluate(()=>inputCreates),1);
-  await p.evaluate(()=>{HomePresentationController.show({});window.hiddenReply=pendingContext.pop();HomePresentationController.hide();hiddenReply.onservicecallback(JSON.stringify({returnValue:true,result:{content:false}}));});
+  await p.evaluate(()=>window.dispatchEvent(new Event('blur')));assert.equal(await p.locator('.ctv-input-preview').count(),0,'blur releases input immediately');
+  await p.waitForTimeout(1100);assert.equal(await p.evaluate(()=>inputCreates),1);
   assert.equal(await p.locator('#ctvWallpaperVideo,.ctv-input-preview').count(),0);
   assert.deepEqual(errors,[]);
-  console.log('PASS compiled Root decoder snapshot gate: cold attachment, true/unknown/startup, real cache MSE/native, stale release, input shelf; no TV claim');
+  console.log('PASS compiled Root CARD: cold packaged MSE, no overlay query, loop progress, real native-cache fallback, blur ownership and input shelf; no TV claim');
  }finally{await browser.close();for(const sessionId of sessions)await call('wallpaperCacheStop',{sessionId});fs.rmSync(directory,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -68,12 +68,12 @@
     }
   }
   function rootPackagedStream(q) {
-    if (typeof root.ROOT_VERSION !== 'string' || !root.ROOT_VERSION || q !== '4k' || !input ||
+    if (!(root.CYTV_HOME_HOST === 'card' || typeof root.ROOT_VERSION === 'string' && root.ROOT_VERSION) || q !== '4k' || !input ||
         !root.WallpaperLibrary || !input.manifest.wallpaperVideo) return false;
     var id = input.manifest.id;
     if (id !== 'builtin:ribbon' && !(input.origin === 'builtin' && id === 'builtin:black-hole')) return false;
     var variant = input.manifest.wallpaperVideo.variants.filter(function (v) { return v.quality === q; })[0];
-    return !!root.WallpaperLibrary.streamFor(variant);
+    return root.WallpaperLibrary.streamFor(variant);
   }
   function play(q, packagedOnly) {
     detach(); paintDim();
@@ -134,10 +134,18 @@
   }
   function restart() {
     notice = ''; var q = choose();
-    // This pinned packaged stream already verifies its own bytes. Root must choose
-    // it before acquiring an unrelated native cache lease, including on legacy installs.
-    if (input && !blocked() && q !== 'image' && rootPackagedStream(q)) {
-      detach(); releaseLease(); play(q, true); return state();
+    // A pinned packaged stream verifies its own bytes and does not need a cache
+    // lease. Unsupported MSE still uses the normal validated native-cache path.
+    var packaged = input && !blocked() && q !== 'image' && rootPackagedStream(q);
+    if (packaged) {
+      try {
+        if (root.MediaSource && root.MediaSource.isTypeSupported(packaged.mime)) {
+          detach(); releaseLease(); play(q, true); return state();
+        }
+      } catch (_) { notice = '4K playback failed. Using the image.'; play('image'); return state(); }
+      if (!input.videoLease && (!input.videoHandles || typeof input.videoHandles[q] !== 'string')) {
+        notice = 'Video cache is unavailable. Using the image.'; play('image'); return state();
+      }
     }
     if (!input || !input.videoLease || blocked() || q === 'image') { play(q); return state(); }
     detach(); paintDim(); emit();

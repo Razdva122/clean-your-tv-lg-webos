@@ -11,15 +11,28 @@ function controller({blocked=false,watchdog=false,automatic=true,deferStart=fals
  const fakefs={existsSync:p=>files.has(p),writeFileSync:(p,s)=>files.set(p,s),unlinkSync:p=>files.delete(p),chmodSync(){},renameSync:(a,b)=>{files.set(b,files.get(a));files.delete(a);},appendFileSync:(p,s)=>logs.push(JSON.parse(s)),readFileSync(p){if(p===dir+'control.json')stopReads++;if(files.has(p))return files.get(p);throw Object.assign(Error('absent'),{code:'ENOENT'});}};
  function Service(){this.activityManager={create(){}};this.call=(uri,p,cb)=>{if(uri.endsWith('/launch'))launches.push(p.id);if(luna&&luna(uri,p,cb))return;cb({payload:{returnValue:true,state:{enabled:true,schema:3}}});};}
  const cp={spawn(file,args){assert(file.endsWith('/relay'));const c=new E();c.stdout=new E();c.stderr=new E();c.stdin=new E();c.writes=[];c.kills=[];c.ack=true;c.stdin.write=b=>{c.writes.push(b);if(b==='P'&&c.ack)c.stdout.emit('data',Buffer.from('P\n'));};c.stdin.end=()=>{};c.kill=s=>{c.kills.push(s);return true;};(args.length?cleanups:workers).push(c);return c;}};
- const context={Buffer,console,Date:{now:()=>now},require(n){if(n==='fs')return fakefs;if(n==='child_process')return cp;if(n==='/usr/lib/node_modules/webos-service')return Service;if(n==='./state-permissions')return(d,l,init)=>{if(init)files.set(dir+'control.json','{}');return true;};if(n==='./app-inventory')return inputQuery||(()=>{throw Error('unexpected inventory query');});if(n==='./screen-watch')return(d,l,fg,reset,power)=>{watch={fg,power};return{close:reset,foreground:foreground||function(done){done(null);}};};return require(path.join(source,n));},process:{argv:['node','native.js',JSON.stringify({nativeHomeAuto:automatic})],pid:1,getuid:()=>5431,hrtime:()=>[Math.floor(now/1000),now%1000*1e6],on(){},exit(c){exit=c;}},setTimeout:(f,ms)=>schedule(f,ms),clearTimeout:id=>timers.delete(id),setInterval:(f,ms)=>schedule(f,ms,ms),clearInterval:id=>timers.delete(id)};
+ const context={Buffer,console,Date:{now:()=>now},require(n){if(n==='fs')return fakefs;if(n==='child_process')return cp;if(n==='/usr/lib/node_modules/webos-service')return Service;if(n==='./state-permissions')return(d,l,init)=>{if(init)files.set(dir+'control.json','{}');return true;};if(n==='./app-inventory')return inputQuery||(()=>{throw Error('unexpected inventory query');});if(n==='./screen-watch')return(d,l,fg,reset,power)=>{watch={fg,reset,power};return{close:reset,foreground:foreground||function(done){done(null);}};};return require(path.join(source,n));},process:{argv:['node','native.js',JSON.stringify({nativeHomeAuto:automatic})],pid:1,getuid:()=>5431,hrtime:()=>[Math.floor(now/1000),now%1000*1e6],on(){},exit(c){exit=c;}},setTimeout:(f,ms)=>schedule(f,ms),clearTimeout:id=>timers.delete(id),setInterval:(f,ms)=>schedule(f,ms,ms),clearInterval:id=>timers.delete(id)};
  vm.runInNewContext(fs.readFileSync(path.join(source,'native.js'),'utf8'),context);
  if(exit===undefined&&!deferStart){advance(automatic?0:1000);workers[0].stdout.emit('data',Buffer.from('READY\n'));}
  function close(code=20,signal=null,worker=workers.at(-1),reason=code){if(reason!==null)worker.stdout.emit('data',Buffer.from('EXIT '+reason+'\n'));if(code===20)files.set(dir+'watchdog','stopped');worker.emit('exit',code,signal);worker.emit('close',code,signal);}
  function command(cmd){files.set(dir+'control.json',JSON.stringify({cmd}));}
  function cleanup(code=0,signal=null){const c=cleanups.at(-1);assert(c,'cleanup must precede recovery');c.emit('exit',code,signal);c.emit('close',code,signal);}
- return{advance,files,workers,cleanups,logs,launches,close,cleanup,command,power:p=>watch.power(p),get exit(){return exit;},get stopReads(){return stopReads;}};
+ return{advance,files,workers,cleanups,logs,launches,close,cleanup,command,foreground:id=>watch.fg(id),reset:()=>watch.reset(),power:p=>watch.power(p),get exit(){return exit;},get stopReads(){return stopReads;}};
 }
 const blocked=c=>c.files.has(dir+'blocked');
+test('ordinary CARD Home does not wait for overlay foreground context',()=>{
+ let queries=0;const c=controller({foreground:()=>queries++}),before=c.launches.length;
+ c.workers[0].stdout.emit('data',Buffer.from('HOME\n'));
+ assert.equal(queries,0,'CARD presentation does not depend on SSAP underlay context');
+ assert.equal(c.launches.length,before+1);assert.equal(c.launches.at(-1),'com.gathin.tvhome');
+});
+test('ordinary CARD foreground and power context changes never close its window; emergency still closes it',()=>{
+ let closes=0;const c=controller({luna:(uri)=>{if(uri.endsWith('/closeByAppId'))closes++;}});
+ c.foreground('com.gathin.tvhome');c.foreground('com.webos.app.hdmi3');c.reset();
+ c.power({onOff:'off',state:'Suspend'});
+ assert.equal(closes,0,'the platform owns CARD background/standby visibility');
+ c.close(27);c.cleanup();assert.equal(closes,1,'emergency retains bounded owned-window teardown');c.advance(300);assert.equal(c.exit,27);
+});
 test('emergency waits for owned Home closure after input cleanup before opening LG and exiting',()=>{
  let close;const c=controller({luna:(uri,p,cb)=>{if(uri.endsWith('/closeByAppId')){close=cb;return true;}}});
  c.close(27);c.cleanup();assert(blocked(c));assert.equal(c.exit,undefined,'pending UI close must survive relay cleanup');
@@ -33,11 +46,23 @@ test('terminal EXIT fences buffered Home before worker close',()=>{
  w.stdout.emit('data',Buffer.from('HOME\n'));
  assert.equal(c.launches.length,before,'terminal relay output cannot launch another owned Home');
 });
-test('terminal EXIT fences a foreground reply arriving before worker close',()=>{
+test('terminal EXIT fences a legacy presentation RPC reply arriving before worker close',()=>{
  let reply;const c=controller({foreground:done=>reply=done}),w=c.workers[0];
- w.stdout.emit('data',Buffer.from('HOME\n'));const count=c.launches.length;
+ const channel='/media/developer/apps/usr/palm/services/com.gathin.tvhome.renewal/state/home-control/';
+ c.files.set(channel+'home-request.json',JSON.stringify({id:'a'.repeat(32),expires:6000,method:'presentationContext'}));c.advance(400);
+ const count=c.launches.length;
  w.stdout.emit('data',Buffer.from('EXIT 27\n'));reply('com.webos.app.hdmi3');
- assert.equal(c.launches.length,count,'a prelaunch query cannot launch after terminal EXIT');
+ assert.equal(c.launches.length,count,'a legacy context query cannot launch after terminal EXIT');
+ assert(!c.files.has(channel+'home-response.json'),'terminal context reply cannot escape');
+});
+test('late CARD launch acknowledgement after a foreground change does not close Home',()=>{
+ let held,hold=false,closes=0;const c=controller({luna:(uri,p,cb)=>{
+  if(hold&&uri.endsWith('/launch')&&p.id==='com.gathin.tvhome'){held=cb;return true;}
+  if(uri.endsWith('/closeByAppId'))closes++;
+ }});
+ hold=true;c.workers[0].stdout.emit('data',Buffer.from('HOME\n'));
+ c.foreground('com.gathin.tvhome');c.foreground('com.webos.app.hdmi3');held({payload:{returnValue:true}});
+ assert.equal(closes,0);assert.equal(c.exit,undefined);
 });
 test('emergency drains an in-flight Home launch then closes its resulting window before LG',()=>{
  let held,hold=false;const calls=[];

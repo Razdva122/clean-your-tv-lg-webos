@@ -29,8 +29,7 @@
       "edgeNavigation": "shortcuts",
       "labels": "focused-above",
       "showClock": false
-    },
-    "presentation": "overlay"
+    }
   },
   "defaults": {
     "wallpaperAssetId": "wallpaper",
@@ -87,14 +86,13 @@
   },
   "source": {
     "repository": "https://github.com/razdva122/clean-your-tv-lg-webos",
-    "commit": "a08e9043a7e49b5566cb9c9ca555e392655489ef"
+    "commit": "819731796da539df51129dba054e928e1838a5f4"
   },
   "requires": {
     "minimumHomeVersion": "1.6.1",
     "capabilities": [
       "video-wallpaper-v1",
-      "ribbon-layout-v1",
-      "overlay-presentation-v1"
+      "ribbon-layout-v1"
     ]
   },
   "rules": {

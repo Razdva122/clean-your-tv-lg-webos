@@ -31,25 +31,21 @@ const {assert,fs,path,chromium,stage}=require('./browser.cjs'),http=require('nod
   assert.equal(await page.evaluate(()=>WallpaperStream.state().mode),'mse');
   assert.deepEqual(await page.evaluate(()=>cacheCalls),[]);
   await page.waitForFunction(()=>document.querySelector('video').currentTime>1);
-  for(const context of ['content','unknown']){
-   await page.evaluate(value=>{PREVIEW_HOME_CONTEXT=value;HomePresentationController.show({reason:'manual'});},context);
-   await page.waitForFunction(value=>HomePresentationController.state().content===(value==='content'?true:null),context);
-   assert.equal(await page.locator('video').count(),0,'live or unknown underlying content retains the decoder fence');
-  }
-  await page.evaluate(()=>{PREVIEW_HOME_CONTEXT='empty';HomePresentationController.show({reason:'manual'});});
-  await page.waitForFunction(()=>HomeWallpaper.state().actualQuality==='4k');
+  assert.equal(await page.evaluate(()=>CYTV_HOME_HOST),'card');
+  assert.equal(await page.evaluate(()=>HomePresentationController),null,'ordinary CARD does not infer overlay context');
   await page.evaluate(()=>{window.oldVideo=document.querySelector('video');HomeWallpaper.suspend('decoder-context');});
   assert.equal(await page.locator('video').count(),0);
   assert.equal(await page.evaluate(()=>WallpaperStream.state().mode),'closed');
   assert.equal(await page.evaluate(()=>oldVideo.paused&&!oldVideo.hasAttribute('src')),true);
   await page.evaluate(()=>HomeWallpaper.resume('decoder-context'));
   await page.waitForFunction(()=>HomeWallpaper.state().actualQuality==='4k');
-  // Unsupported MSE must not try the absent cache, a Blob, or the FHD variant.
+  // Unsupported MSE retains the normal cache path; its explicit rejection stays image.
   await page.evaluate(()=>{HomeWallpaper.setQuality('image');window.support=MediaSource.isTypeSupported;MediaSource.isTypeSupported=()=>false;HomeWallpaper.setQuality('4k');});
+  await page.waitForFunction(()=>HomeWallpaper.state().notice.includes('cache'));
   assert.equal(await page.locator('video').count(),0);
   assert.equal(await page.evaluate(()=>HomeWallpaper.state().actualQuality),'image');
-  assert.deepEqual(await page.evaluate(()=>cacheCalls),[]);
-  await page.evaluate(()=>{MediaSource.isTypeSupported=support;});
+  assert.deepEqual(await page.evaluate(()=>cacheCalls),['wallpaperCacheStart']);
+  await page.evaluate(()=>{MediaSource.isTypeSupported=support;cacheCalls=[];});
   const corrupt=Buffer.from(fs.readFileSync('launcher/wallpapers/black-hole-stream.mp4'));corrupt[100]^=1;
   await page.route('**/wallpapers/black-hole-stream.mp4',r=>r.fulfill({body:corrupt,contentType:'video/mp4'}));
   await page.evaluate(()=>HomeWallpaper.setQuality('4k'));
@@ -58,6 +54,18 @@ const {assert,fs,path,chromium,stage}=require('./browser.cjs'),http=require('nod
   assert.equal(await page.evaluate(()=>HomeWallpaper.state().actualQuality),'image');
   assert.deepEqual(await page.evaluate(()=>cacheCalls),[]);
   assert.deepEqual(errors,[]);
-  console.log('PASS Root packaged MSE before rejecting real cache; decode, decoder suspension, disposal, unsupported MSE and corrupt stream');
+  await page.close();
+  const noRoot=await browser.newPage();noRoot.on('pageerror',e=>errors.push(e.message));
+  await noRoot.addInitScript(()=>{window.webOS={deviceInfo:callback=>callback({uhd:true})};});
+  await noRoot.route(/^https:/,r=>r.abort());
+  await noRoot.goto('http://127.0.0.1:'+server.address().port+'/launcher/index.html');
+  await noRoot.locator('#tiles .focused').waitFor();await noRoot.evaluate(()=>HomeUIReady);
+  await noRoot.evaluate(async()=>{if(!WallpaperMediaCache)throw Error('Missing real No-root cache adapter');await PersonalWallpaper.select('builtin:black-hole');HomeWallpaper.setQuality('4k');});
+  await noRoot.waitForFunction(()=>HomeWallpaper.state().actualQuality==='4k');
+  assert.equal(await noRoot.evaluate(()=>WallpaperStream.state().mode),'mse');
+  assert.deepEqual(await noRoot.evaluate(()=>cacheCalls),[]);
+  await noRoot.evaluate(()=>HomeWallpaper.setQuality('image'));
+  assert.equal(await noRoot.locator('video').count(),0);assert.deepEqual(errors,[]);
+  console.log('PASS Root and No-root CARD packaged MSE before rejecting real cache; decode, suspension, disposal, unsupported-MSE cache fallback and corrupt stream');
  }finally{await browser.close();await new Promise(r=>server.close(r));}
 })().catch(e=>{console.error(e);process.exitCode=1;});

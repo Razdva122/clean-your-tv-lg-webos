@@ -1,8 +1,7 @@
-// Real producer TTL + launcher bootstrap; slow optional video must not gate Home.
+// Persistent CARD bootstrap; optional media must not gate accepted appearance.
 'use strict';
 const {assert, chromium, fs, path, stage} = require('./browser.cjs');
 const http = require('node:http');
-const producer = require('../../native/app/presentation-context.js');
 const {execFileSync}=require('node:child_process');
 const {compile}=require('../../scripts/compile-tv-web.cjs');
 
@@ -21,17 +20,16 @@ const {compile}=require('../../scripts/compile-tv-web.cjs');
   const browser = await chromium.launch({headless:true, channel:process.env.BROWSER_CHANNEL || 'chrome'});
   async function check(savedBuiltin,edition) {
   const page = await browser.newPage({viewport:{width:1920,height:1080}}), errors = [];
-  const context = producer({seed:7, content:() => true});
   let queries = 0, mediaRequests = 0, releaseMedia;
   const mediaGate = new Promise(resolve => { releaseMedia = resolve; });
   page.on('pageerror', error => errors.push(error.message));
-  await page.exposeFunction('producerContext', () => { queries++; return context.context(); });
-  await page.addInitScript(({savedBuiltin,rootEdition}) => {
+  await page.exposeFunction('producerContext', () => { queries++; return {}; });
+  await page.addInitScript(({savedBuiltin,rootEdition,handlesRelaunch}) => {
     localStorage.setItem('tvhome.theme.choice.v1', JSON.stringify({id:'builtin:ribbon',title:'Ribbon'}));
     window.PalmSystem = {launchParams:{cytvHome:{reason:'home',generation:8}},activate(){}};
     window.rootAudit=[];
     if(rootEdition){
-      const frame=requestAnimationFrame.bind(window),queued=[];let active=false;
+      const frame=requestAnimationFrame.bind(window),queued=[];let active=!handlesRelaunch;
       Object.defineProperty(document,'hidden',{configurable:true,get:()=>!active});
       window.requestAnimationFrame=callback=>active?frame(time=>{rootAudit.push('frame');callback(time);}):(queued.push(callback),queued.length);
       PalmSystem.activate=()=>{rootAudit.push('activate');active=true;queued.splice(0).forEach(callback=>requestAnimationFrame(callback));document.dispatchEvent(new Event('visibilitychange'));};
@@ -41,7 +39,7 @@ const {compile}=require('../../scripts/compile-tv-web.cjs');
       request.onupgradeneeded=()=>request.result.createObjectStore('wallpaper');
       request.onerror=reject;request.onsuccess=()=>{const db=request.result,tx=db.transaction('wallpaper','readwrite');tx.objectStore('wallpaper').put({envelope:null,source:'builtin:black-hole'},'slot');tx.oncomplete=()=>{db.close();resolve();};tx.onerror=reject;};
     }):Promise.resolve();
-  }, {savedBuiltin,rootEdition:edition==='root-launcher'});
+  }, {savedBuiltin,rootEdition:edition==='root-launcher',handlesRelaunch:JSON.parse(fs.readFileSync(path.join(site,edition,'appinfo.json'))).handlesRelaunch===true});
   await page.route('**/personal-wallpaper.js', route => route.fulfill({body:
     source(edition,'personal-wallpaper.js') + `
       const restoreWallpaper=PersonalWallpaper.start;
@@ -74,54 +72,38 @@ const {compile}=require('../../scripts/compile-tv-web.cjs');
         }
         original.call(this,uri,raw);
       };` }));
-  await page.route('**/themes/ribbon/videos/**', async route => {
+  await page.route(/(?:themes\/ribbon\/videos\/|wallpapers\/black-hole-stream)/, async route => {
     mediaRequests++;
     await mediaGate;
     await route.continue();
   });
   try {
-    const generation = context.begin('home');
-    context.observe(generation, 'content.test');
-    assert.equal(generation,8);
     await page.goto('http://127.0.0.1:' + server.address().port + '/'+edition+'/index.html');
-    // Hold optional media beyond the actual production producer's 2000 ms TTL.
+    // Optional media remains pending beyond two seconds without blocking appearance.
     await page.waitForTimeout(2300);
-    const before = await page.evaluate(() => ({ready:window.RootLauncherRendered === true, theme:ThemeManager.current().id, presentation:HomePresentationController.state()}));
-    console.log(JSON.stringify({edition,savedBuiltin,before,queries,mediaRequests,producer:context.context()}));
+    const before = await page.evaluate(() => ({ready:window.RootLauncherRendered === true, theme:ThemeManager.current().id, host:window.CYTV_HOME_HOST,transient:!!window.HomePresentationController}));
+    console.log(JSON.stringify({edition,savedBuiltin,before,queries,mediaRequests,host:'card'}));
     assert.equal(before.ready,true,'verified poster/layout must become ready without optional video bytes');
     assert.equal(before.theme,'builtin:ribbon');
     if(savedBuiltin)assert.equal(await page.evaluate(()=>PersonalWallpaper.state().builtinId),'builtin:black-hole');
-    assert.equal(before.presentation.mode,'overlay','real producer fact must reach launcher while fresh');
-    assert.equal(before.presentation.content,true);
-    assert.equal(mediaRequests,0,'content overlay must not fetch wallpaper video');
+    assert.equal(before.host,'card');
+    assert.equal(before.transient,false);
+    assert.equal(queries,0,'CARD readiness does not query borrowed content');
     if(edition==='root-launcher'){
       const root=await page.evaluate(()=>({version:ROOT_VERSION,health:rootHealth,audit:rootAudit,profile:localStorage.getItem(RootProfileData.key)}));
       assert(root.version&&root.profile,'actual Root version branch and profile restore adapter ran');
       assert.equal(root.health.rendered,true);assert.equal(root.health.theme,'builtin:ribbon');assert.equal(root.health.marker,null);
       assert.equal(root.health.payload.edition,'root');
-      assert(root.audit.indexOf('restore')<root.audit.indexOf('activate'));
-      assert(root.audit.indexOf('activate')<root.audit.indexOf('frame'),'Root activates before any presentation frame');
+      assert.equal(root.audit.includes('activate'),false,'platform owns CARD activation');
+      assert(root.audit.indexOf('restore')<root.audit.indexOf('healthy'));
       assert(root.audit.slice(0,root.audit.indexOf('healthy')).filter(event=>event==='frame').length>=2,'profile health follows painted readiness frames');
-      assert.equal(await page.evaluate(()=>HomeWallpaper.state().paused),true,'Root content context retains the decoder guard');
     }
-    // Exercise slow verified media preparation independently of the decoder guard:
-    // no video element is created and the synthetic lease uses browser blob URLs.
-    await page.evaluate(() => {
-      window.WallpaperMediaCache=null;
-      window.lazyMediaSettled=false;
-      window.lazyMedia=preparedAppearance.videoLease.acquire().then(handles=>{window.lazyMediaSettled=true;return handles;});
-    });
-    await page.waitForFunction(() => !!window.lazyMedia);
-    await page.waitForTimeout(2300);
-    assert.equal(await page.evaluate(() => lazyMediaSettled),false,'media preparation remains pending beyond the producer TTL');
-    const beforeMediaQueries=queries;
     releaseMedia();
-    await page.evaluate(() => lazyMedia);
-    assert.equal(queries,beforeMediaQueries,'media completion never reapplies presentation');
-    assert.equal(await page.evaluate(() => HomePresentationController.state().mode),'overlay','late media work must not reapply the theme and erase fresh activation');
-    assert.equal(await page.locator('video').count(),0,'lease preparation does not instantiate a decoder');
+    await page.waitForTimeout(100);
+    assert.equal(queries,0,'media completion cannot introduce an underlay query');
+    assert.equal(await page.evaluate(()=>RootLauncherRendered),true);
     assert.deepEqual(errors,[]);
-    console.log('PASS '+edition+' '+(savedBuiltin?'saved builtin wallpaper':'saved theme')+' poster-first readiness before slow media; presentation/profile/frame ordering preserved');
+    console.log('PASS '+edition+' '+(savedBuiltin?'saved builtin wallpaper':'saved theme')+' CARD appearance ready before optional media; profile/frame ordering preserved');
   } finally {
     releaseMedia();
     await page.close();
@@ -164,10 +146,9 @@ const {compile}=require('../../scripts/compile-tv-web.cjs');
       const expected=scenario==='theme-failure'||scenario==='cancel'?'builtin:classic':'builtin:ribbon';
       assert.equal(await page.evaluate(()=>ThemeManager.current().id),expected);
       assert.equal(await page.evaluate(()=>PersonalWallpaper.state().builtinId),scenario==='personal-failure'?null:'builtin:black-hole','late theme application/recovery preserves the independently restored wallpaper');
-      assert.equal(await page.evaluate(()=>activationCalls),1);
-      assert.equal(await page.locator('video').count(),0,'overlap cannot bypass native decoder ownership');
+      assert.equal(await page.evaluate(()=>activationCalls),0,'platform owns CARD foreground');
       assert.deepEqual(errors,[]);
-      console.log('PASS compiled '+edition+' concurrent startup '+scenario+'; both appearance barriers and activation ordering retained');
+      console.log('PASS compiled '+edition+' concurrent startup '+scenario+'; both appearance barriers and platform foreground contract retained');
     } finally {await page.close();}
   }
   try {

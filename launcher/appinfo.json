@@ -11,9 +11,8 @@
   "iconColor": "#241d19",
   "resolution": "1920x1080",
   "disableBackHistoryAPI": true,
-  "defaultWindowType": "overlay",
-  "transparent": true,
-  "handlesRelaunch": true,
+  "defaultWindowType": "card",
+  "transparent": false,
   "noSplashOnLaunch": true,
   "spinnerOnLaunch": false,
   "requiredACG": [
