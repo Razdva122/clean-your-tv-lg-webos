@@ -290,9 +290,33 @@ def retire_stock(target):
         remaining = submitted + 23 - time.monotonic()
         if remaining <= 0:
             raise ValueError('SAM foreground did not settle after closing stock Home')
-        if foreground(timeout=min(5, remaining)) not in ('', stock):
+        settled = foreground(timeout=min(5, remaining)) not in ('', stock)
+        remaining = submitted + 23 - time.monotonic()
+        if not settled and remaining > 0:
+            # Root is an overlay: SAM may keep reporting Home underneath it.
+            # The compositor lists visible surfaces; its API does not require
+            # a separate visible flag. Reject an explicit hidden surface.
+            reply = luna('luna://com.webos.surfacemanager/getForegroundAppInfo', {},
+                         timeout=min(5, remaining))
+            surfaces = reply.get('foregroundAppInfo') if isinstance(reply, dict) else None
+            if (isinstance(reply, dict) and reply.get('returnValue') is True
+                    and isinstance(surfaces, list) and len(surfaces) <= 128
+                    and all(isinstance(surface, dict)
+                        and isinstance(surface.get('appId'), str)
+                        and isinstance(surface.get('windowType'), str) for surface in surfaces)):
+                settled = any(isinstance(surface, dict)
+                    and surface.get('appId') == APP
+                    and surface.get('windowType') == '_WEBOS_WINDOW_TYPE_OVERLAY'
+                    and surface.get('visible', True) is True
+                    and type(surface.get('displayId', 0)) is int
+                    and surface.get('displayId', 0) == 0 for surface in surfaces)
+        # A restored CRIU executable must never be mistaken for a successful
+        # handoff, including when Root is already visible over that executable.
+        if stock_running(target):
+            raise ValueError('Running stock Home reappeared after SAM close')
+        if settled and time.monotonic() < submitted + 23:
             return
-        time.sleep(min(.25, remaining))
+        time.sleep(min(.25, max(0, submitted + 23 - time.monotonic())))
 
 
 def native(args, root=STATE, uid=0):

@@ -87,6 +87,24 @@ If Python is unavailable, the fixed native recovery command is:
 Do not remove the helper, its journal or the volatile source until native status
 confirms `stock_verified:true`, `mounted:false` and `healthy:false`.
 
+## Known activation blockers
+
+The [November 4 candidate result](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/298#issuecomment-6636248556)
+is a failed activation, not acceptance. The reported nonsticky `0777`
+`/mnt/lg/cmn_data` still fails native parent checks: a root-owned checkpoint child
+does not prevent its writable parent from renaming it. Do not whitelist that
+ancestor or change its vendor permissions. The package DATA reader's allowance
+for shared writable directories does not authorize durable mount recovery there.
+
+The two checkpoint-directory binds also did not prevent the observed CRIU zygote
+restore. The exact cached descriptor/path or namespace mechanism is not established;
+this change neither flushes CRIU nor restarts SAM/WAM/zygote. Actual activation
+remains blocked until both mount anchoring/recovery and the CRIU execution path
+have a verified safe design. The presentation fix addresses only the independent
+SAM foreground/Root overlay mismatch. Its compositor response contract still
+needs acceptance on the exact C1 firmware; missing or unsupported evidence fails
+closed through normal restoration. No new TV run was performed for this change.
+
 ## Verification boundary
 
 The [reporter's November 4 probe update](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/298#issuecomment-6629123987)
@@ -94,9 +112,19 @@ and [updated handoff](https://gist.github.com/metaljay/8a1e63060c7fe7cc1d90fe34f
 were reviewed during implementation. Their observed `preload:"full"` is handled.
 Their immediate close reply with a 9–10 second process exit requires at least a
 15-second close/readback window. The adapter allows 18 seconds for process exit
-and a shared 23-second window for foreground handoff. SAM can idle-relaunch Home
+and a shared 23-second window for presentation handoff. SAM can idle-relaunch Home
 after that close; the adapter observes it without a competing explicit launch.
-It preserves another foreground app and restores on a stalled handoff.
+It preserves another foreground app and restores on a stalled handoff. If SAM
+continues reporting Home or an empty foreground, a fresh
+[`surfacemanager/getForegroundAppInfo`](https://www.webosose.org/docs/reference/ls2-api/com-webos-surfacemanager/)
+visible-surface list may instead prove the private Root overlay. Its application ID
+and overlay window type must match; an explicit hidden flag or non-primary display
+is rejected. The documented single-display response omits `visible` and
+`displayId`; visibility follows list membership and omitted display follows the
+existing runtime's primary-display convention. Malformed, denied, empty and
+oversized responses cannot prove the handoff. Both queries share the original
+deadline. Reappearance of the admitted stock executable after close is an error,
+even with Root visible, and follows the existing native restore/stop path.
 Those are reporter-observed
 temporary probes, not acceptance of this native implementation. This backend
 deliberately uses a native guardian rather than the proposed shell/Node wrapper
