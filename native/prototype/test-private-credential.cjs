@@ -2,7 +2,7 @@
 // explicit HOST fixtures. No real credential, cross-UID or TV acceptance claim.
 'use strict';
 var assert=require('assert'),fs=require('fs'),os=require('os'),path=require('path'),crypto=require('crypto');
-var modulePath=path.resolve(__dirname,'../app/private-credential.js');
+var modulePath=path.resolve(__dirname,'private-credential.js');
 assert(fs.existsSync(modulePath),'private credential check-only module required');
 var guard=require(modulePath),constants=fs.constants||require('constants'),tests=0;
 function remove(p){var s;try{s=fs.lstatSync(p);}catch(e){if(e.code==='ENOENT')return;throw e;}if(s.isDirectory()&&!s.isSymbolicLink()){fs.readdirSync(p).forEach(function(n){remove(path.join(p,n));});fs.rmdirSync(p);}else fs.unlinkSync(p);}

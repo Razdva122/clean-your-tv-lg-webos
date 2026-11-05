@@ -6,8 +6,8 @@ model SHA256 `a98124b183bea25188d00afa9115638b47468c649845289999ddeb99c07b9517`.
 No Python runtime, raw filesystem fallback, process spawning, permissions,
 provisioning, migration or consumers are added. The credential guard is unchanged.
 
-`native/app/stop-journal.js` exports Promise-based poll, input-gate,
-requestHomeStart and independent publishStop operations. The shipped default
+`native/prototype/stop-journal.js` exports Promise-based poll, input-gate,
+requestHomeStart and independent publishStop operations. The unwired default
 has no I/O or Home authority and denies. `requestHomeStart` never interprets
 `authorized`, nativeHomeStart, auto or tile flags. Only the internal HOST fixture
 factory supplies a trusted authority callback returning a fresh replay intent;
