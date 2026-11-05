@@ -59,3 +59,22 @@ const pendingLaunch=pendingEditor.token();ownsEdit=true;pendingEditor.sync();del
 assert.equal(pendingEditor.state().mode,'overlay','editing cannot invalidate a still-pending context response');
 ownsEdit=false;pendingEditor.sync();assert(!pendingEditor.launched(pendingLaunch),'the old launch still cannot close the edited panel');
 console.log('PASS presentation: full fallback, context freshness, hidden/visible Home, modal ownership, launch generations, No-root and ES5');
+// Root's overlay host needs a separate decoder decision even for opaque/startup Home.
+const decoderReplies=[];
+const decoder=create({supported:true,decoderContext:true,query:cb=>decoderReplies.push(cb)});
+decoder.setTheme({});decoder.show({reason:'startup'});
+assert.equal(decoder.state().content,null,'Root starts without decoder permission');
+assert.equal(decoderReplies.length,1,'opaque startup Home still queries decoder context');
+decoderReplies.shift()(false);assert.equal(decoder.state().content,false);
+assert.equal(decoder.state().mode,'full','safe startup does not change transparency');
+for(const reply of [true,null,undefined,'false',0]) {
+ decoder.show({});assert.equal(decoder.state().content,null,'refresh revokes previous decoder permission');
+ decoderReplies.shift()(reply);assert.equal(decoder.state().content,reply===true?true:null,'only typed context is retained');
+}
+decoder.show({});const obsolete=decoderReplies.shift();decoder.hide();decoder.show({});
+const current=decoderReplies.shift();obsolete(false);assert.equal(decoder.state().content,null,'old false cannot reacquire after hide/reopen');
+current(false);assert.equal(decoder.state().content,false);decoder.setTheme({presentation:'overlay'});
+assert.equal(decoder.state().content,null,'theme refresh revokes permission before its reply');
+const hiddenReply=decoderReplies.shift();decoder.hide();hiddenReply(false);
+assert.equal(decoder.state().content,null,'hidden callback cannot grant decoder permission');
+console.log('PASS Root snapshot decoder permission: opaque/startup, typed context, refresh and hidden generation fences');

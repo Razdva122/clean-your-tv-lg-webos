@@ -6,7 +6,7 @@
 
 Noch nicht veröffentlicht (#290): **+ / App hinzufügen** bietet Live TV unter dem Namen des Fernsehers nur an, wenn der Tuner als installiert erkannt wird. Andere ausgeblendete System-Apps bleiben ausgeschlossen. No-root benötigt den aktualisierten Helper und Installer, Root das aktualisierte Home-Paket. Der Senderstart muss noch am TV geprüft werden.
 
-**Noch nicht veröffentlicht — Ribbon über Apps:** In Root kann Ribbon über der aktuellen App erscheinen. Home öffnet die Leiste; Zurück oder erneut Home schließt sie. Beim Einschalten sowie ohne sicheren Hintergrund werden die Hintergrundbilder gezeigt; Einstellungen bleiben undurchsichtig. No-root bleibt auf dem TV im Vollbild. Die Browser-Demo simuliert beide Zustände; die Geräteabnahme des fertigen Pakets steht aus. [Details](../THEMES.md#ribbon-over-applications-unreleased).
+**Noch nicht veröffentlicht — Ribbon über Apps:** In Root kann Ribbon über der aktuellen App erscheinen. Home öffnet die Leiste; Zurück oder erneut Home schließt sie. Beim Einschalten sowie ohne sicheren Hintergrund werden die Hintergrundbilder gezeigt; Einstellungen bleiben undurchsichtig. No-root bleibt auf dem TV im Vollbild. Die Browser-Demo simuliert beide Zustände; die Geräteabnahme des fertigen Pakets steht aus. Beim Öffnen von nativem Root oder erneuten Prüfen seines Kontexts starten Hintergrundvideo und Eingangsvorschauen erst, wenn die aktuelle Prüfung keinen Inhalt darunter meldet; andernfalls behält die undurchsichtige Home-Oberfläche ihr Standbild. [Details](../THEMES.md#ribbon-over-applications-unreleased).
 
 Ribbon: OK zum Bearbeiten gedrückt halten; ←/→ verschiebt die Karte, ↑ wählt × (von Home ausblenden), ↓ kehrt zur Karte zurück, OK bestätigt und Back bricht ab. Der aktuelle Hintergrund bleibt erhalten.
 

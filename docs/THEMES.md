@@ -148,6 +148,11 @@ states. No-root overlay previews are explicitly simulations of Root behavior.
 
 Root uses an overlay window for the whole application: other themes and settings
 cover the screen, but underlying apps may continue running or playing audio.
+On opening native Root or refreshing its context, wallpaper video and input
+previews start only after a current check reports no content underneath;
+otherwise opaque Home keeps its static image. This applies to opaque themes
+and power-on as well as Ribbon.
+
 This is different from the previous card lifecycle. The feature does not change
 Home routing, emergency gestures, startup-source preferences or app permissions.
 The existing startup observer ignores the primary app underneath a visible Root

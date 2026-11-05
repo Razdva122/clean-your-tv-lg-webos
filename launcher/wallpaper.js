@@ -50,7 +50,7 @@
   function paintDim() {
     ensure(); shade.style.backgroundColor = 'rgba(0,0,0,' + dim + ')';
     var url = state().posterURL;
-    var posterVisible = !doc.hidden && Object.keys(owners).every(function (owner) { return owner === 'input-preview'; });
+    var posterVisible = !doc.hidden && Object.keys(owners).every(function (owner) { return owner === 'input-preview' || owner === 'decoder-context'; });
     style.textContent = posterVisible && url ? '#homeSurface.ctv-home{background-image:linear-gradient(rgba(0,0,0,' + dim + '),rgba(0,0,0,' + dim + ')),url("' + url.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/[\r\n]/g, '') + '")!important;}' : '';
   }
   function choose() {

@@ -14,11 +14,25 @@ import subprocess
 import tempfile
 import time
 import unittest
+from unittest import mock
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / 'root-edition/gate/gate.c'
 FIXTURE = ROOT / 'root-edition/tests/native_gate_fixture.h'
 TOKEN='a'*32
 BOOT='01234567-89ab-cdef-0123-456789abcdef'
+
+def cleanup_fixture(tmp,root):
+ # stock_launch deliberately outlives its guardian. Retire the compile-time
+ # pathname atomically before deleting: a late luna fixture can no longer
+ # recreate calls under a directory that rmtree has already enumerated.
+ if root.exists():
+  retired=Path(tempfile.mkdtemp(prefix=root.name+'-retired-',dir=root.parent))
+  try:root.replace(retired)
+  except BaseException:
+   retired.rmdir()
+   raise
+  shutil.rmtree(retired)
+ tmp.cleanup()
 
 @unittest.skipUnless(os.name == 'posix' and shutil.which('cc'), 'POSIX C compiler required')
 class NativeGateTests(unittest.TestCase):
@@ -51,8 +65,8 @@ class NativeGateTests(unittest.TestCase):
    try:p.communicate(timeout=5)
    except subprocess.TimeoutExpired:p.kill();p.communicate()
   self.guards=[]
-  # Detached stock requests are bounded; distinct compile-time roots isolate them.
-  self.tmp.cleanup()
+  # Retire the distinct compile-time path before deleting its fixture files.
+  cleanup_fixture(self.tmp,self.root)
  def config(self,extra=''):
   s=(self.root/'home').stat()
   p=self.root/'state/config'
@@ -234,4 +248,25 @@ class NativeGateTests(unittest.TestCase):
   path.write_text('CYTV-ACTIVE-2\n'+TOKEN+'\n'+str(os.getpid())+' 1 1\n2147483647\n');path.chmod(0o600)
   for command in ['--status','--restore']:
    s,rc=self.run_gate(command);self.assertNotEqual(rc,0);self.assertEqual(s['state'],'blocked');self.assertFalse(s['stock_verified'])
+@unittest.skipUnless(os.name == 'posix', 'POSIX fixture cleanup required')
+class NativeGateCleanupTests(unittest.TestCase):
+ def test_late_detached_request_cannot_recreate_fixture_files_during_cleanup(self):
+  tmp=tempfile.TemporaryDirectory(prefix='cytv-native-cleanup-')
+  root=Path(tmp.name).resolve()
+  (root/'existing').write_text('fixture')
+  remove=os.rmdir;attempts=[]
+  def late_remove(path,*args,**kwargs):
+   # Force the detached stock request's pathname write after rmtree has listed
+   # and removed the existing files, immediately before its final rmdir.
+   if not attempts and Path(path).name.startswith(root.name):
+    try:(root/'calls').write_text('late stock request')
+    except FileNotFoundError:attempts.append('original path retired')
+    else:attempts.append('late file recreated')
+   return remove(path,*args,**kwargs)
+  try:
+   with mock.patch('os.rmdir',side_effect=late_remove):cleanup_fixture(tmp,root)
+   self.assertEqual(attempts,['original path retired'])
+   self.assertFalse(root.exists())
+   cleanup_fixture(tmp,root) # tearDown can be repeated by the existing subtests.
+  finally:tmp.cleanup()
 if __name__=='__main__':unittest.main()
