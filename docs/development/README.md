@@ -30,6 +30,7 @@ before using a low-level recovery or installation procedure.
 - [Theme development status](THEMES.md), [Home styling parts and CSS rules](THEME-CSS.md).
 
 - [Home settings transport](HOME-CONTROL-TRANSPORT.md): unreleased service-owned IPC, packaging and rollback requirements.
+- [Helper relay cleanup outcomes](HELPER-RELAY-CLEANUP.md): unpublished failure reporting, blocked recovery and synthetic evdev verification.
 - [Home installation gates](HOME-INSTALL-GATES.md): unreleased control-file ownership and Root firmware preflight fixes, packaging requirements and retained-recovery limits.
 - [Home graphics resolution](HOME-GRAPHICS-RESOLUTION.md) and [passive remote diagnostic](PASSIVE-REMOTE-DIAGNOSTICS.md): candidate 720p layout/build support and read-only evidence; physical IR mapping remains unverified.
 - [Companion entry points](../COMPANION-APPS.md), [Helper diagnostics](../HELPER-DIAGNOSTICS.md), [Home/settings diagnostics](../SETTINGS-DIAGNOSTICS.md).
