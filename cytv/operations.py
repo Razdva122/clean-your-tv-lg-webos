@@ -71,7 +71,15 @@ def require_removal_idle(remote, profile, pending):
     from .recovery_state import unsubmitted_removal
     if unsubmitted_removal(profile, pending):
         return
-    idle = remote.luna('com.webos.appInstallService/status', {'subscribe': True}, timeout=10)
+    try:
+        idle = remote.luna('com.webos.appInstallService/status', {'subscribe': True}, timeout=10)
+    except TVRejected as error:
+        if profile.get('edition') == 'no-root' and error.luna.get('operation') == 'package-status':
+            from .failure_help import GUIDES
+            # Keep the typed/numeric evidence, but do not suggest repeating
+            # Doctor as a way around an unavailable recovery capability.
+            error.args = ('\n'.join(GUIDES['recovery-status-rejected'][:3]),)
+        raise
     if (not isinstance(idle, dict) or idle.get('returnValue') is not True or
             not isinstance(idle.get('status'), dict) or idle['status'].get('apps') != []):
         raise UserError('TV installer is not confirmed idle. Keep the receipt and run cytv status before removal.', reason_code='pending-operation')
