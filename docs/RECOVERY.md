@@ -68,7 +68,7 @@ files and verified Root Updater recovery. A linked product installation must als
 be complete and current. Unknown, busy or conflicting evidence keeps setup blocked.
 The original activation receipt is archived locally before the explicit attempt;
 packages are not reinstalled and no recovery journal or failsafe flag is deleted.
-C1 Beta recovery is unchanged. Published 1.7.1 does not include this installer path.
+C1 Beta recovery is unchanged. Published 1.8.2 does not include this installer path.
 
 This improves recovery and diagnosis; it does not establish the original cause or
 successful recovery of [issue #334](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/334).

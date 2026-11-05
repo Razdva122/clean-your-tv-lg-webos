@@ -75,10 +75,16 @@
     {
       "pr": 336,
       "issues": [
-        279,
-        333
+        279
       ],
       "summary": "Add static Cr\u0103ciun la Bra\u0219ov1.1.0 catalogue wallpaper, AI-generated and upscaled to3840x2160; no video/animation or physical compatibility claim."
+    },
+    {
+      "pr": 338,
+      "issues": [
+        334
+      ],
+      "summary": "Offer guarded default-No activation retry only after verified restored Root state, preserve original receipts and add nonblocking health-refusal diagnostics; original #334 cause/recovery unconfirmed."
     }
   ],
   "excluded": [],

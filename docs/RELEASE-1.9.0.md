@@ -4,6 +4,8 @@
 This cycle is preparing artifacts for owner-supervised acceptance. No new TV
 installation, controls, audio, power or rollback result is claimed.
 
+[Build, preflight evidence and remaining acceptance](history/2026-11-06-release-1.9.0-candidate.md).
+
 ## Changes
 
 - Root activation and restoration preserve the complete AOD/vendor category map,
