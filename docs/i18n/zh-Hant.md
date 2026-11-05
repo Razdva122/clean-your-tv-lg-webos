@@ -1,12 +1,12 @@
 # Clean Your TV — 使用者指南
 
-> **1.8.2 — 未發佈候選版本:** [1.8.2 / English](../RELEASE-1.8.2.md).
+> **1.8.2:** [English](../RELEASE-1.8.2.md) · [LS2 Root #337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337).
 
 **尚未發佈的 C1 Beta（#298）：** 在通用電腦安裝程式中選擇 Root。符合條件的 C1 電視會自動識別，無需獨立安裝程式或旗標。此路徑需要全新安裝，不支援自動更新，且尚未通過實體 C1 驗收。開啟 LG Home、長按 Back 或安全/電源停止後，Home 控制可能維持關閉；請在電視設定中重新開啟變更 Home。一般 Root 路徑維持不變。 如果仍有其他 No-root 元件，C1 完整移除會在變更前停止。請先透過一般 No-root 移除流程刪除這些元件；狀態未明確時請保留復原資料。 [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md). C1 Beta 透過 Home 按鍵過濾並在應用程式關閉後返回，不修改 CRIU/checkpoint 權限。返回時可能短暫顯示 LG Home。連按三次 Home 也會停止路由；停止後請重新啟用變更 Home。
 
-尚未發布（#290）：**+ / 新增應用程式**僅在偵測到已安裝的調諧器時，以電視提供的名稱列出直播電視。其他隱藏的系統應用程式仍不顯示。No-root 需要更新後的 Helper 和安裝程式；Root 需要更新後的 Home 套件。頻道啟動仍需在電視上驗證。
+1.8.2 (#290): **+ / 新增應用程式**僅在偵測到已安裝的調諧器時，以電視提供的名稱列出直播電視。其他隱藏的系統應用程式仍不顯示。No-root 需要更新後的 Helper 和安裝程式；Root 需要更新後的 Home 套件。頻道啟動仍需在電視上驗證。
 
-**尚未發布 — Home 中的 Ribbon：** 兩個版本中的 Ribbon 都是唯一的全螢幕 Home 應用程式內的主題，使用自己的桌布。卡片後方不顯示其他影片或 HDMI。選擇應用程式時使用電視正常的應用程式切換方式。緊急控制維持不變。最終安裝套件和電視驗收尚未完成。[Ribbon](../THEMES.md#ribbon-over-applications-unreleased)。
+**Home 中的 Ribbon：** 兩個版本中的 Ribbon 都是唯一的全螢幕 Home 應用程式內的主題，使用自己的桌布。卡片後方不顯示其他影片或 HDMI。選擇應用程式時使用電視正常的應用程式切換方式。緊急控制維持不變。 已測試範圍與已知限制請參閱版本說明。 [Ribbon](../THEMES.md#ribbon-over-applications-unreleased)。
 
 Ribbon：長按 OK 編輯；←/→ 移動卡片，↑ 選取 ×（從 Home 隱藏），↓ 返回卡片，OK 確認，Back 取消。編輯時保留目前背景。
 

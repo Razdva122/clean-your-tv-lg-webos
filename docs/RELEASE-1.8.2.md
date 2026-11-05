@@ -1,9 +1,16 @@
 # v1.8.2 — Wallpapers, Ribbon and installer improvements
 
-Unpublished release candidate. The release PR remains draft until the exact frozen
-build and affected hardware gates pass. Published downloads remain on v1.7.1.
+Release 1.8.2 ships with the maintainer-approved scope and known limitations
+recorded below. See the dated QA record for exact package evidence.
+
+**Known Root limitation:** on the retained C3 registration, loading personal
+images/videos is denied by LS2 before transfer. Built-in video wallpaper works.
+This is deferred to [#337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337).
 
 ## Changes
+
+- Alpine 1.5.0 is available through the theme catalog with a true 3840×2160
+  Bachalpsee photograph and 4K/1080p video variants. Liquid Glass remains built in.
 
 - Native video wallpapers, quality/dimming controls, personal desktop video/image
   transfer, phone image upload and reusable Black Hole by Xecutioner (#264/#267/#299).
@@ -25,7 +32,7 @@ build and affected hardware gates pass. Published downloads remain on v1.7.1.
   failed playback keeps the static image. Other media retain normal transport.
   Wallpaper and input previews belong to foreground Home and release resources
   when hidden or unfocused; they do not display an external app beneath Ribbon.
-  Final packaged-TV latency, media and lifecycle acceptance remain pending.
+  Focused C3 results and untested scenarios are recorded below.
 - Wallpaper wording now distinguishes a selected wallpaper without a video version
   from the capabilities of its theme, in English and all twelve translations (#313).
   This changes no playback capability.
@@ -59,13 +66,13 @@ build and affected hardware gates pass. Published downloads remain on v1.7.1.
 
 ## Versions and packaging
 
-| Component | Published 1.7.1 | Candidate 1.8.2 |
+| Component | Published 1.7.1 | 1.8.2 |
 | --- | --- | --- |
-| Home | 1.8.1 | 1.9.3 |
+| Home | 1.8.1 | 1.9.4 |
 | Home Helper | 0.6.22 | 0.7.4 |
 | cytv | 0.8.1 | 0.9.2 |
 | Android / versionCode | 0.7.1 / 19 | 0.8.2 / 22 |
-| Root / infrastructure | 0.8.4 | 0.9.2 |
+| Root / infrastructure | 0.8.4 | 0.9.3 |
 | Independent updaters | 0.4.2 | 0.4.4 |
 | System Updater / protocol | 1.2.0 / 1 | 1.2.1 / 1 |
 
@@ -76,7 +83,7 @@ source, including media APIs/grants and tuner discovery; the old published Helpe
 cannot deliver them. Updater changes exclude C1 from ordinary setup/OTA. Existing
 supervisors remain immutable; no general supervisor replacement path is introduced.
 Helper rollback compatibility must be verified against the new exact archive;
-previous approval for 0.6.22 does not approve 0.7.4.
+the exact new 0.7.4 archive passed published-Home compatibility as recorded below.
 
 ## Installation, recovery and limits
 
@@ -96,10 +103,10 @@ acceptance. The Homebrew Installer remains unreleased and is not promoted here.
 No-root uses the same full-screen Home with its running Helper. Ribbon does not
 expose another app or HDMI behind its cards, and repeated Home is not a transient
 bar toggle. Menus/editors retain normal Back priority. No companion, extra
-component or new installer protocol is required. Final hardware acceptance is
-pending.
-Helper runtime/startup and its exact rollback transition remain unaccepted; a
-successful package installation alone does not establish working Home control.
+component or new installer protocol is required. Focused hardware results and remaining limitations are recorded below.
+Focused Helper startup, old-Home compatibility and physical emergency release
+passed on the recorded C3. A real automatic OTA/rollback transaction remains
+untested; successful package installation alone is not broader acceptance.
 
 ## Verification
 
@@ -109,12 +116,31 @@ Focused PR checks and isolated preview observations are historical evidence only
 The [ready-fix integration record](history/2026-11-05-ready-fix-integration.md)
 lists focused merges and their source checks. They do not select a
 new full candidate or replace affected device acceptance.
-Full frozen Linux/macOS/browser/ARM Python, Android and four desktop builds must
-pass before selection. Exact signed artifacts still need affected installation,
-controls/emergency, native media grants, sound/HDMI, standby, AC-off boot, supported
-update and rollback checks. SSH/SAM launch does not verify physical Home or power.
+The selected full Linux/macOS/browser/ARM Python, Android and four desktop build
+results are linked in the release record. Focused signed Root installation,
+physical Home, video persistence, LG return and exact Helper compatibility were
+checked as recorded below. Sound, standby, AC-off boot and normal automatic OTA/
+rollback remain untested in the maintainer-selected short run. SSH/SAM launch
+alone is not physical Home or power acceptance.
 Original reporter confirmation remains outstanding where recorded; no issue is
 closed or public delivery announced by candidate preparation.
 
 Preliminary single-Home observations and remaining gates are recorded in
 [the dated C3 QA report](history/2026-11-05-single-home-regressions.md).
+
+## Known issue accepted for this release
+
+On the retained maintainer C3 Root registration, personal wallpaper image/video
+receiving is denied by LS2 before transfer (`themeReceiverStart`). Built-in Ribbon
+video wallpaper works. The maintainer explicitly moved the receiver failure to
+[follow-up #337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337) and
+authorized shipping with this limitation. No role/receipt/key replacement or forced
+permission workaround is offered. Fresh Root provisioning and other firmware
+behavior are unverified by that observation.
+
+Focused final Root Home invocation, moving UHD background, persistence beyond
+120 seconds and return to LG passed. Published Home 1.8.1 with the exact new Helper
+0.7.4 passed its same-package broker/non-root-controller compatibility probe;
+final Home 1.9.4 and the original portable profile/appearance were restored.
+Sound, standby, cold boot and a real normal OTA/rollback transaction were outside
+the maintainer-selected short run. These are untested limits, not passing claims.

@@ -1,4 +1,7 @@
 import unittest
+import subprocess
+import tempfile
+from pathlib import Path
 from scripts.theme_receiver import inject
 
 
@@ -23,6 +26,35 @@ class ThemeReceiverPackageTest(unittest.TestCase):
         self.assertNotIn(b"require('./wallpaper-phone')", result['service.js'])
         with self.assertRaises(ValueError):
             inject({'service.js': b'no receiver registration'}, standalone=True)
+
+
+    def test_standalone_root_wallpaper_capabilities_resolve_bundled_cache(self):
+        bundle = inject({'service.js': b"module.exports = require('./theme-receiver');"}, standalone=True)
+        with tempfile.TemporaryDirectory() as directory:
+            script = Path(directory) / 'service.js'
+            script.write_bytes(bundle['service.js'])
+            result = subprocess.run(['node', '-e', """
+const assert = require('assert/strict');
+const register = require(process.argv[1]);
+const {request} = require('./tests/themes/personal-receiver.cjs');
+const methods = {};
+register({register:(name, fn) => methods[name] = fn}, {appId:'com.test', port:0});
+const call = (name, payload) => new Promise(resolve => methods[name]({
+  payload, ls2Message:{applicationID:() => 'com.test'}, respond:resolve
+}));
+(async () => {
+  const session = await call('themeReceiverStart', {kind:'wallpaper'});
+  try {
+    const response = await request(session, '/v1/wallpaper-capabilities');
+    assert.equal(response.code, 200);
+    const capabilities = JSON.parse(response.body);
+    assert.equal(capabilities.wallpaperProtocol, 1);
+    assert.equal(capabilities.videoCacheStorage.required, 0);
+    assert(capabilities.videoCacheStorage.available === null || capabilities.videoCacheStorage.available >= 0);
+  } finally { await call('themeReceiverStop', {sessionId:session.sessionId}); }
+})().catch(error => { console.error(error); process.exit(1); });
+""", str(script)], capture_output=True, text=True, timeout=15)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
 
 if __name__ == '__main__':

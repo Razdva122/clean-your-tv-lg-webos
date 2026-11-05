@@ -1,12 +1,12 @@
 # Clean Your TV — Benutzeranleitung
 
-> **1.8.2 — Unveröffentlichter Kandidat:** [1.8.2 / English](../RELEASE-1.8.2.md).
+> **1.8.2:** [English](../RELEASE-1.8.2.md) · [LS2 Root #337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337).
 
 **Unveröffentlichte C1 Beta (#298):** Wählen Sie im gemeinsamen Computer-Installationsprogramm Root. Geeignete C1-TVs werden automatisch erkannt; ein separates Installationsprogramm oder Flag ist nicht nötig. Dieser Weg erfordert eine Neuinstallation, bietet keine automatischen Updates und ist noch nicht auf einem physischen C1 abgenommen. LG Home öffnen, langes Back oder ein Sicherheits-/Stromstopp kann die Home-Steuerung ausgeschaltet lassen; aktivieren Sie Home ändern erneut in den TV-Einstellungen. Der normale Root-Weg bleibt unverändert. Wenn andere No-root-Komponenten vorhanden sind, stoppt die vollständige C1-Entfernung vor Änderungen. Entfernen Sie diese zuerst über den normalen No-root-Ablauf; behalten Sie bei ungeklärtem Zustand die Wiederherstellungsdaten. [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md). C1 Beta nutzt einen Home-Tastenfilter und kehrt nach dem Schließen einer App zurück, ohne CRIU-/Checkpoint-Rechte zu ändern. LG Home kann dabei kurz erscheinen. Dreimal Home stoppt die Umleitung ebenfalls; danach Home ändern erneut aktivieren.
 
-Noch nicht veröffentlicht (#290): **+ / App hinzufügen** bietet Live TV unter dem Namen des Fernsehers nur an, wenn der Tuner als installiert erkannt wird. Andere ausgeblendete System-Apps bleiben ausgeschlossen. No-root benötigt den aktualisierten Helper und Installer, Root das aktualisierte Home-Paket. Der Senderstart muss noch am TV geprüft werden.
+1.8.2 (#290): **+ / App hinzufügen** bietet Live TV unter dem Namen des Fernsehers nur an, wenn der Tuner als installiert erkannt wird. Andere ausgeblendete System-Apps bleiben ausgeschlossen. No-root benötigt den aktualisierten Helper und Installer, Root das aktualisierte Home-Paket. Der Senderstart muss noch am TV geprüft werden.
 
-**Unveröffentlicht — Ribbon in Home:** Ribbon ist in beiden Editionen ein Design der einzigen Vollbild-Home-App mit eigenem Hintergrund. Hinter den Karten werden weder Videos noch HDMI angezeigt. Die App-Auswahl nutzt den normalen App-Wechsel des Fernsehers. Die Notfallsteuerung bleibt unverändert. Endgültige Pakete und TV-Abnahme stehen noch aus. [Ribbon](../THEMES.md#ribbon-over-applications-unreleased).
+**Ribbon in Home:** Ribbon ist in beiden Editionen ein Design der einzigen Vollbild-Home-App mit eigenem Hintergrund. Hinter den Karten werden weder Videos noch HDMI angezeigt. Die App-Auswahl nutzt den normalen App-Wechsel des Fernsehers. Die Notfallsteuerung bleibt unverändert. Prüfumfang und bekannte Einschränkungen stehen in den Versionshinweisen. [Ribbon](../THEMES.md#ribbon-over-applications-unreleased).
 
 Ribbon: OK zum Bearbeiten gedrückt halten; ←/→ verschiebt die Karte, ↑ wählt × (von Home ausblenden), ↓ kehrt zur Karte zurück, OK bestätigt und Back bricht ab. Der aktuelle Hintergrund bleibt erhalten.
 
