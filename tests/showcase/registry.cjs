@@ -4,6 +4,23 @@ const {validateRecord,loadRegistry,validateFiles}=require('../../scripts/check-t
 const fixture=require('./fixture.cjs'),root=fs.mkdtempSync(path.join(os.tmpdir(),'cytv-registry-'));
 try {
  const {record:r,base}=fixture(root); fixture(root,'day');
+ const cased=fixture(root,'cased');
+ cased.manifest.author.url='https://github.com/Owner';
+ const rewriteAuthor=()=>{
+  const descriptor=Buffer.from(JSON.stringify(cased.manifest));
+  cased.record.descriptorSha256=require('../../scripts/check-theme-submissions.cjs').hash(descriptor);
+  const next=require('../../scripts/check-theme-submissions.cjs').assetBase(cased.record);
+  if(next!==cased.base){fs.renameSync(path.join(root,cased.base),path.join(root,next));cased.base=next;}
+  cased.record.creditsFile=next+'CREDITS.txt';cased.record.previewFiles=[next+'preview.png'];
+  fs.writeFileSync(path.join(root,next,'cytv-theme.json'),descriptor);
+ };
+ rewriteAuthor();
+ assert.doesNotThrow(()=>validateFiles(cased.record,root),'GitHub owner casing preserves source identity');
+ cased.manifest.author.url='https://github.com/Attacker';rewriteAuthor();
+ assert.throws(()=>validateFiles(cased.record,root),/attribution\/source/,'a different author remains rejected');
+ fs.rmSync(path.join(root,'registry','owner--collection--cased.json'));
+ fs.rmSync(path.join(root,cased.base),{recursive:true});
+
  validateRecord({...r,license:'MIT AND CC-BY-SA-3.0'});
  validateRecord({...r,license:'LicenseRef-Personal-Fan-Theme'});
  assert.throws(()=>validateRecord({...r,license:'MIT OR unknown'}),/license/);
