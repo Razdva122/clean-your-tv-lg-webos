@@ -4,7 +4,7 @@ function monotonic(){var t=process.hrtime();return t[0]*1000+t[1]/1e6;}
 var root='/media/developer/apps/usr/palm/applications/com.local.nativehome';
 var data=root+'/state';
 var launchParams=JSON.parse(process.argv[2]||'{}'),automatic=launchParams.nativeHomeAuto===true;
-function block(){fs.writeFileSync(data+'/blocked','stopped',{mode:420});invalidatePresentation(true);}
+function block(close){fs.writeFileSync(data+'/blocked','stopped',{mode:420});invalidatePresentation(close!==false);}
 if(automatic&&(fs.existsSync(data+'/blocked')||fs.existsSync(data+'/watchdog')))process.exit(0);
 if(!require('./state-permissions')(data,function(x){console.error(JSON.stringify(x));},true))throw Error('Helper control initialization failed');
 var logPath=data+'/controller.log', pidPath=data+'/controller.pid';
@@ -27,7 +27,7 @@ if(!automatic){['blocked','watchdog'].forEach(function(name){try{fs.unlinkSync(d
 var lastForeground=null,lastForegroundAt=null,monitor='starting',monitorReason=null,shouldResumeLaunch=require('./resume-policy');
 var child,ready=false,stopping=false,lastAck=monotonic(),buffer='',lastCommand='',launching=false,resumePendingUntil=0;
 var restarts=[],restartTimer=null,cleaning=false,stopRequested=false;
-var homeCloseState='idle',homeCloseWaiters=[];
+var homeCloseState='idle',homeCloseWaiters=[],terminalUI=false,homeLaunchPending=false,homeLaunchUnknown=false;
 var presentation=require('./presentation-context')({now:monotonic,content:function(id){
  return id!=='com.gathin.tvhome'&&id!=='com.webos.app.home'&&id!=='com.webos.app.cpcover'&&
   ((watchedApps||[]).indexOf(id)!==-1||/^com\.webos\.app\.hdmi[1-4]$/.test(id));
@@ -60,15 +60,18 @@ function launchHome(reason,done){
  var generation=presentation.begin(reason,retained);
  retained=retained&&generation===previous;
  function open(current){
-  if(!current||stopping||stopRequested||visitingLG||generation!==presentation.generation()){if(done)done(true);return;}
+  if(!current||stopping||stopRequested||child&&child.reason!==undefined||visitingLG||generation!==presentation.generation()){if(done)done(true);return;}
   afterHomeClose(function(known){
-   if(stopping||stopRequested||visitingLG||generation!==presentation.generation()){if(done)done(true);return;}
+   if(stopping||stopRequested||child&&child.reason!==undefined||visitingLG||generation!==presentation.generation()){if(done)done(true);return;}
    if(!known){if(done)done(false);return;}
    homeCloseState='idle';
    var params=reason==='home'?{cytvHome:{reason:'home',generation:generation}}:{reason:reason};
-   launch('com.gathin.tvhome',function(ok){
+   homeLaunchPending=true;
+   launch('com.gathin.tvhome',function(ok,known){
+    // A later accepted launch cannot settle an older timed-out SAM request.
+    homeLaunchPending=false;homeLaunchUnknown=homeLaunchUnknown||!known;
     if(stopping||stopRequested||visitingLG||generation!==presentation.generation()&&!presentation.active()){
-     if(homeCloseState==='closed')homeCloseState='idle';invalidatePresentation(true);
+     if(homeCloseState==='closed')homeCloseState='idle';invalidatePresentation(!terminalUI);
     }
     if(done)done(ok);
    },params);
@@ -104,7 +107,7 @@ function screenLog(x){
 }
 function cancelResume(){resumePendingUntil=0;resumeGuardUntil=0;lgHomeSince=null;}
 log({event:'start',pid:process.pid,uid:process.getuid(),automatic:automatic,diagnosticsSchema:1});
-function launch(id,done,params){var request=++launchSequence;diagnostic('launch-request',{launchSequence:request,id:id});var settled=false;var deadline=setTimeout(function(){if(settled)return;settled=true;lastLaunchSettledAt=monotonic();log({event:'launch-timeout',id:id});diagnostic('launch-timeout',{launchSequence:request,id:id});if(done)done(false);},3000);service.call('luna://com.webos.applicationManager/launch',params?{id:id,params:params}:{id:id},function(m){if(settled)return;settled=true;lastLaunchSettledAt=monotonic();clearTimeout(deadline);log({event:'launch',id:id,result:m.payload});diagnostic('launch-result',{launchSequence:request,id:id,returnValue:!!(m.payload&&m.payload.returnValue===true)});if(done)done(m.payload&&m.payload.returnValue===true);});}
+function launch(id,done,params){var request=++launchSequence;diagnostic('launch-request',{launchSequence:request,id:id});var settled=false;var deadline=setTimeout(function(){if(settled)return;settled=true;lastLaunchSettledAt=monotonic();log({event:'launch-timeout',id:id});diagnostic('launch-timeout',{launchSequence:request,id:id});if(done)done(false,false);},3000);service.call('luna://com.webos.applicationManager/launch',params?{id:id,params:params}:{id:id},function(m){if(settled)return;settled=true;lastLaunchSettledAt=monotonic();clearTimeout(deadline);log({event:'launch',id:id,result:m.payload});diagnostic('launch-result',{launchSequence:request,id:id,returnValue:!!(m.payload&&m.payload.returnValue===true)});if(done)done(m.payload&&m.payload.returnValue===true,!!(m.payload&&typeof m.payload.returnValue==='boolean'));});}
 var visitingLG=false,suppressReturnUntil=0;
 function visitLG(done){
  if(visitingLG){if(done)done(false);return;}
@@ -174,7 +177,7 @@ function readHomeRequest(channel){
 function watchdogLatch(){fs.writeFileSync(data+'/watchdog','stopped',{mode:420});}
 function readStop(){
  try{if(JSON.parse(fs.readFileSync(data+'/control.json','utf8')).cmd==='stop'){
-  stopRequested=true;block();cancelResume();
+  stopRequested=true;block(false);cancelResume();
  }}catch(e){if(e.code&&e.code!=='ENOENT')throw e;}
  return stopRequested;
 }
@@ -187,22 +190,37 @@ function cleanupRelay(done){
   c.on('close',function(code,signal){log({event:'cleanup',code:code,signal:signal});complete(code===0&&!signal);});
  }catch(e){complete(false);}
 }
-function finish(code,signal,needsCleanup){if(stopping)return;stopping=true;invalidatePresentation(true);clearTimeout(restartTimer);cancelResume();if(screenWatch)screenWatch.close();clearInterval(timer);log({event:'worker-exit',code:code,signal:signal});if(policy.shouldBlock(code,signal))block();
- function end(){try{fs.unlinkSync(pidPath);}catch(e){}process.exit(code===22?0:(code||0));}
+function finish(code,signal,needsCleanup,relayReason){if(stopping)return;stopping=true;terminalUI=code===22||code===27||relayReason===27||stopRequested;invalidatePresentation(!terminalUI);clearTimeout(restartTimer);cancelResume();if(screenWatch)screenWatch.close();clearInterval(timer);log({event:'worker-exit',code:code,signal:signal});if(relayReason===27||policy.shouldBlock(code,signal))block(!terminalUI);
+ // A signal can replace the OS exit code after the relay reported emergency.
+ // Keep the real code/signal above for cleanup policy and diagnostics.
+ function end(){try{fs.unlinkSync(pidPath);}catch(e){}process.exit(relayReason===27?27:code===22?0:(code||0));}
  // Let an already-issued custom-Home request settle before the final LG launch.
- var finishDeadline=monotonic()+3200;
- function cleaned(){if(code!==22){end();return;}
-  if(launching&&monotonic()<finishDeadline){setTimeout(cleaned,50);return;}
-  launch('com.webos.app.home',function(){setTimeout(end,300);});
+ var finishDeadline=monotonic()+3200,relayClean=true;
+ function failed(reason){log({event:'terminal-ui-failed',reason:reason});end();}
+ function cleaned(){if(!terminalUI){end();return;}
+  if((launching||homeLaunchPending)&&monotonic()<finishDeadline){setTimeout(cleaned,50);return;}
+  if(launching||homeLaunchPending){failed('home-launch-pending');return;}
+  // The final close follows any owned launch already submitted to SAM. Never
+  // replay an unknown close, or race LG against a timed-out owned launch.
+  closeOwnedHome();
+  afterHomeClose(function(){
+   if(!relayClean){failed('input-cleanup-failed');return;}
+   if(homeCloseState!=='closed'){failed('home-close-'+homeCloseState);return;}
+   if(homeLaunchUnknown){failed('home-launch-unknown');return;}
+   launch('com.webos.app.home',function(ok){
+    if(!ok){failed('lg-launch-unconfirmed');return;}
+    log({event:'terminal-ui-requested',homeClosed:true,lgLaunchAccepted:true});setTimeout(end,300);
+   });
+  });
  }
- if(needsCleanup||ready)cleanupRelay(function(ok){if(!ok)block();cleaned();});else cleaned();
+ if(needsCleanup||ready)cleanupRelay(function(ok){relayClean=ok;if(!ok)block(!terminalUI);cleaned();});else cleaned();
 }
 function workerClosed(worker,code,signal){
  if(child!==worker||stopping)return;
  var needsCleanup=ready||!!signal;child=null;ready=false;buffer='';
  readStop();
- var retry=(code===20&&!signal)||(worker.watchdogKill&&signal==='SIGKILL'&&worker.reason===undefined);
- if(!retry||stopRequested||fs.existsSync(data+'/blocked')){finish(code,signal,needsCleanup);return;}
+ var retry=(worker.reason===undefined||worker.reason===20)&&((code===20&&!signal)||(worker.watchdogKill&&signal==='SIGKILL'&&worker.reason===undefined));
+ if(!retry||stopRequested||fs.existsSync(data+'/blocked')){finish(code,signal,needsCleanup,worker.reason);return;}
  var now=monotonic();restarts=restarts.filter(function(t){return now-t<600000;});
  if(restarts.length>=5){log({event:'worker-restart-limit'});finish(20,null,needsCleanup);return;}
  restarts.push(now);watchdogLatch();
@@ -236,7 +254,7 @@ function start(recovering){
    if(line==='P'){lastAck=monotonic();continue;}
    log({event:'worker',message:line});
    if(/^EXIT [0-9]+$/.test(line))worker.reason=Number(line.slice(5));
-   if(worker.watchdogKill||worker.exited)continue;
+   if(worker.reason!==undefined||worker.watchdogKill||worker.exited)continue;
    if(line==='BACK_DOWN'){cancelResume();screenPolicy.back(true,monotonic());}
    if(line==='BACK_UP')screenPolicy.back(false,monotonic());
    if(line==='HOME'){screenPolicy.clearBack();homeSequence++;lastHomeAt=monotonic();diagnostic('home');}
