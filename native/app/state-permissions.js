@@ -1,7 +1,7 @@
 'use strict';
 // Keep the shared paths: the controller and inventory service have different UIDs.
 module.exports=function(directory,log,initializeControl){
- var fs=require('fs'),c=fs.constants||require('constants'),directoryFd,directoryStat;
+ var fs=require('fs'),c=fs.constants||require('constants'),directoryFd,directoryStat,directoryModeWarned=false;
  var uid=process.getuid(),groups=process.getgroups();
  if(groups.indexOf(process.getgid())===-1)groups.push(process.getgid());
  function report(target,e,warning){
@@ -20,7 +20,11 @@ module.exports=function(directory,log,initializeControl){
   // Packaged state is prisoner:jailer (5999:5000); own directories support tests.
   if(s.uid!==uid&&!(s.uid===5999&&s.gid===5000))throw Error('untrusted-directory-owner');
   if(groups.indexOf(s.gid)===-1)throw Error('unshared-directory-group');
-  if((s.mode&0o7000)||(s.mode&0o002))throw Error('unsafe-directory-mode');
+  var mode=s.mode&0o7777;
+  if((mode&0o7000)||((mode&0o002)&&mode!==0o777))throw Error('unsafe-directory-mode');
+  if(mode===0o777&&!directoryModeWarned){
+   directoryModeWarned=true;report('directory',Error('expanded-directory-mode'),true);
+  }
   return s;
  }
  function replaceKey(path,fd,before){
