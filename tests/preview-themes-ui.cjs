@@ -14,11 +14,11 @@ const http=require('node:http');
   for(const edition of ['No-root Edition','Root Edition']){
    await page.getByRole('button',{name:edition,exact:true}).click();await page.waitForFunction(root=>document.getElementById('screen').getAttribute('src')===(root?'root-launcher/index.html':'launcher/index.html'),edition==='Root Edition');await page.locator('#previewThemes[aria-busy="false"]').waitFor();await frame.locator('#tiles .focused').waitFor();
    if(edition==='Root Edition')assert.equal(await frame.locator('body').evaluate(()=>ThemeManager.current().title),'Itachi · Sharingan','selected theme survives edition switch');
-   for(const title of ['Retro','Channel','Alpine','Classic','Minimal','Itachi · Sharingan']){
+   for(const title of ['Retro','Channel','Alpine','Classic','Minimal','Atmosphere','Itachi · Sharingan']){
     await page.getByRole('button',{name:title,exact:true}).click();await page.waitForFunction(title=>{const w=document.getElementById('screen').contentWindow;return w.ThemeManager&&w.ThemeManager.current().title===title;},title);
     assert.equal(await page.getByRole('button',{name:title,exact:true}).getAttribute('aria-pressed'),'true');assert.deepEqual(await frame.locator('#tiles .item[data-app-id]').evaluateAll(items=>items.map(i=>i.dataset.appId)),order);
    }
   }
-  assert.equal(packages.length,6,'failed package is retried; successful packages are reused across edition switches');assert.equal(new Set(packages).size,5);assert.deepEqual(errors,[]);await browser.close();console.log('PASS inline published Themes in Root/No-root, offline validated packages and original app order');
+  assert.equal(packages.length,7,'failed package is retried; successful packages are reused across edition switches');assert.equal(new Set(packages).size,6);assert.deepEqual(errors,[]);await browser.close();console.log('PASS inline published Themes in Root/No-root, offline validated packages and original app order');
  }catch(e){console.error(await page.locator('#themeStatus').innerText());throw e;}finally{await browser.close();await new Promise(r=>server.close(r));}
 })().catch(e=>{console.error(e);process.exitCode=1;});
