@@ -90,6 +90,17 @@
       "preview": "theme-catalog/xandymelo--clean-your-tv-lg-retro-theme--retro/e03a9455f59067d4c79da719e6b2113615f31b7790e66585d5fcea97db12f2c6/preview.png",
       "url": "https://raw.githubusercontent.com/xandymelo/clean-your-tv-lg-retro-theme/bf6f647888dd305e317e7d594bf29bac70c0b7a7/distributions/retro/1.0.0/cytv-theme.json",
       "digest": "e03a9455f59067d4c79da719e6b2113615f31b7790e66585d5fcea97db12f2c6"
+    },
+    {
+      "id": "github:luigy-lemon/atmosphere-theme:atmosphere",
+      "title": "Atmosphere",
+      "version": "1.0.0",
+      "author": "Luigy-Lemon",
+      "license": "MIT",
+      "description": "Atmosphere's original landscape, cool white clock and quiet horizontal dock for Clean Your TV on LG webOS.",
+      "preview": "theme-catalog/luigy-lemon--atmosphere-theme--atmosphere/fc0909d347f09db0cb9bd55e834cacdd4be6b319ff2b67866933ceab5c38a5d1/preview.jpg",
+      "url": "https://raw.githubusercontent.com/luigy-lemon/atmosphere-theme/15135d75807e6e4fe595bb0975dd336ae826fdeb/releases/1.0.0/cytv-theme.json",
+      "digest": "fc0909d347f09db0cb9bd55e834cacdd4be6b319ff2b67866933ceab5c38a5d1"
     }
   ]
 }
