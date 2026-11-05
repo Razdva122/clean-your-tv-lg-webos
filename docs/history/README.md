@@ -5,6 +5,7 @@
 
 - [1.8.0 candidate preparation, exact build and remaining gates](2026-11-04-release-1.8.0-candidate.md).
 - [2026-11-05 — Ready-fix integration and reopened candidate gates](2026-11-05-ready-fix-integration.md).
+- [2026-11-05 — C3 Home service input visibility](2026-11-05-home-service-input-visibility.md): ordinary service child execution works, but the installed Home service root lacks input devices; diagnostic only, Helper retained.
 
 - [2026-11-04 — Automatic C1 native Beta](2026-11-04-c1-native-gate.md): common installer selection, independent native recovery, host checks and pending physical acceptance.
 
