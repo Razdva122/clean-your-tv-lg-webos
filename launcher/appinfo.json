@@ -11,6 +11,11 @@
   "iconColor": "#241d19",
   "resolution": "1920x1080",
   "disableBackHistoryAPI": true,
+  "defaultWindowType": "overlay",
+  "transparent": true,
+  "handlesRelaunch": true,
+  "noSplashOnLaunch": true,
+  "spinnerOnLaunch": false,
   "requiredACG": [
     "application.launcher",
     "network.query"

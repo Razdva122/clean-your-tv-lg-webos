@@ -67,7 +67,7 @@ assert.equal(decoder.state().content,null,'Root starts without decoder permissio
 assert.equal(decoderReplies.length,1,'opaque startup Home still queries decoder context');
 decoderReplies.shift()(false);assert.equal(decoder.state().content,false);
 assert.equal(decoder.state().mode,'full','safe startup does not change transparency');
-for(const reply of [true,null,undefined,'false',0]) {
+for(const reply of [true,null,undefined,'false',0,{content:false},{eligible:false,content:false}]) {
  decoder.show({});assert.equal(decoder.state().content,null,'refresh revokes previous decoder permission');
  decoderReplies.shift()(reply);assert.equal(decoder.state().content,reply===true?true:null,'only typed context is retained');
 }
