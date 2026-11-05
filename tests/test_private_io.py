@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CASES = ('acquire', 'contention', 'missing-lock', 'missing-journal', 'root-mode',
          'journal-mode', 'lock-mode', 'lock-link', 'lock-fifo', 'lock-hardlink',
          'owner', 'group', 'inode', 'unbound', 'adopt-unlocked', 'adopt-other',
-         'adopt-readonly', 'adopt-cloexec', 'wrong-fd', 'lifecycle', 'nested',
+         'adopt-readonly', 'adopt-cloexec', 'adopt-shared', 'adopt-shared-other', 'wrong-fd', 'lifecycle', 'nested',
          'wrong-pid', 'replacement', 'exec-inherit', 'exec-unrelated', 'stop-independent',
          'fork-discard', 'root-replace', 'journal-replace')
 

@@ -74,6 +74,17 @@ static void fork_discard(void) {
  CHECK(cytv_lease_close(&lease)==CYTV_PRIVATE_OK&&!lease);CHECK(probe());
  byte(go[1],1);waited(p);close(ready[0]);close(go[1]);
 }
+static void shared_adopt(int additional_holder) {
+ int fd=open(LOCK,O_RDWR);CHECK(fd>=0&&flock(fd,LOCK_SH|LOCK_NB)==0);
+ int second=-1;
+ if(additional_holder){second=open(LOCK,O_RDWR);CHECK(second>=0&&flock(second,LOCK_SH|LOCK_NB)==0);}
+ CHECK(cytv_lease_adopt(&binding,fd,&lease)==CYTV_PRIVATE_UNKNOWN&&!lease);
+ CHECK(fcntl(fd,F_GETFD)>=0);
+ if(second>=0)CHECK(close(second)==0);
+ CHECK(!probe()); /* The borrowed FD must still hold its shared lock. */
+ int third=open(LOCK,O_RDWR);CHECK(third>=0&&flock(third,LOCK_SH|LOCK_NB)==0);
+ CHECK(close(third)==0&&close(fd)==0);CHECK(probe());
+}
 int main(int argc,char **argv) {
  CHECK(argc>=2);alarm(10);executable=argv[0];const char *name=argv[1];
  if(!strcmp(name,"exec-adopt")||!strcmp(name,"exec-idle")) {
@@ -99,6 +110,8 @@ int main(int argc,char **argv) {
  else if(!strcmp(name,"adopt-unlocked")){int fd=open(LOCK,O_RDWR);CHECK(fd>=0);CHECK(cytv_lease_adopt(&binding,fd,&lease)!=CYTV_PRIVATE_OK&&!lease);CHECK(fcntl(fd,F_GETFD)>=0&&close(fd)==0);CHECK(probe());}
  else if(!strcmp(name,"adopt-other")){acquire();int fd=open(LOCK,O_RDWR);CHECK(fd>=0);struct cytv_lease *other=NULL;CHECK(cytv_lease_adopt(&binding,fd,&other)!=CYTV_PRIVATE_OK&&!other);CHECK(fcntl(fd,F_GETFD)>=0&&close(fd)==0);CHECK(!probe());finish();}
  else if(!strcmp(name,"adopt-readonly")){int fd=open(LOCK,O_RDONLY);CHECK(fd>=0&&flock(fd,LOCK_EX|LOCK_NB)==0);CHECK(cytv_lease_adopt(&binding,fd,&lease)!=CYTV_PRIVATE_OK&&!lease);CHECK(close(fd)==0);}
+ else if(!strcmp(name,"adopt-shared"))shared_adopt(0);
+ else if(!strcmp(name,"adopt-shared-other"))shared_adopt(1);
  else if(!strcmp(name,"adopt-cloexec")){int fd=open(LOCK,O_RDWR);CHECK(fd>=0&&flock(fd,LOCK_EX|LOCK_NB)==0);CHECK(cytv_lease_adopt(&binding,fd,&lease)==CYTV_PRIVATE_OK&&lease);CHECK(fcntl(fd,F_GETFD)>=0&&close(fd)==0);CHECK(!probe());finish();}
  else if(!strcmp(name,"wrong-fd")){CHECK(cytv_lease_adopt(&binding,-1,&lease)!=CYTV_PRIVATE_OK&&!lease);int fd=open(JOURNAL,O_RDONLY);CHECK(fd>=0);CHECK(cytv_lease_adopt(&binding,fd,&lease)!=CYTV_PRIVATE_OK&&!lease);CHECK(close(fd)==0);}
  else if(!strcmp(name,"lifecycle")){acquire();lifecycle_hook=1;CHECK(cytv_tx_begin(lease,&tx)==CYTV_PRIVATE_OK&&tx);CHECK(!probe());finish();CHECK(cytv_tx_end(&tx)==CYTV_PRIVATE_UNKNOWN);CHECK(cytv_lease_close(&lease)==CYTV_PRIVATE_UNKNOWN);}

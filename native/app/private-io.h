@@ -33,7 +33,8 @@ struct cytv_private_tx;
  * Handles are PID-bound. A lease lasts across transactions until explicit close.
  * No creation/repair, no arbitrary paths, no credential or authorization API. */
 enum cytv_private_status cytv_lease_acquire(const struct cytv_private_binding *, struct cytv_lease **);
-/* Trusted bootstrap only. Contention probe FIRST, inherited flock SECOND.
+/* Trusted bootstrap only. Fresh LOCK_SH contention probe FIRST (rejects shared
+ * locks without upgrading them), inherited LOCK_EX check SECOND.
  * Confirms current exclusion, not historical FD provenance. Borrows inherited
  * FD on both success and failure; stores a CLOEXEC duplicate on success. Caller
  * MUST close its original/extra duplicates after successful adopt. */

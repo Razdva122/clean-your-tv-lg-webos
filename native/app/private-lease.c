@@ -44,8 +44,10 @@ static int lock_valid(struct cytv_lease *l)
         pinned(&path, &l->binding.lock, &l->binding, 0);
 }
 
-/* A fresh open is a different open-file description. Closing it never unlocks
- * the inherited/owned description. Only EWOULDBLOCK/EAGAIN proves contention. */
+/* A fresh open is a different open-file description. A SH probe must contend:
+ * an EX probe would also contend against SH and could admit/upgrade a borrowed
+ * shared lock. Closing the probe never unlocks the inherited/owned description.
+ * Only EWOULDBLOCK/EAGAIN proves exclusive contention. */
 static int contended(struct cytv_lease *l)
 {
     int fd = openat(l->root_fd, "controller.lock", O_RDWR | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC);
@@ -53,7 +55,7 @@ static int contended(struct cytv_lease *l)
     struct stat s;
     int ok = fstat(fd, &s) == 0 && pinned(&s, &l->binding.lock, &l->binding, 0);
     if (ok) {
-        int rc = flock(fd, LOCK_EX | LOCK_NB);
+        int rc = flock(fd, LOCK_SH | LOCK_NB);
         ok = rc < 0 && (errno == EWOULDBLOCK || errno == EAGAIN);
     }
     if (close(fd) < 0) ok = 0;
