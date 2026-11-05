@@ -1,7 +1,7 @@
 # v1.8.2 — Wallpapers, Ribbon and installer improvements
 
-Unpublished release candidate. The release PR remains draft until the exact frozen
-build and affected hardware gates pass. Published downloads remain on v1.7.1.
+Release 1.8.2 ships with the maintainer-approved scope and known limitations
+recorded below. See the dated QA record for exact package evidence.
 
 ## Changes
 
@@ -28,7 +28,7 @@ build and affected hardware gates pass. Published downloads remain on v1.7.1.
   failed playback keeps the static image. Other media retain normal transport.
   Wallpaper and input previews belong to foreground Home and release resources
   when hidden or unfocused; they do not display an external app beneath Ribbon.
-  Final packaged-TV latency, media and lifecycle acceptance remain pending.
+  Focused C3 results and untested scenarios are recorded below.
 - Wallpaper wording now distinguishes a selected wallpaper without a video version
   from the capabilities of its theme, in English and all twelve translations (#313).
   This changes no playback capability.
@@ -62,7 +62,7 @@ build and affected hardware gates pass. Published downloads remain on v1.7.1.
 
 ## Versions and packaging
 
-| Component | Published 1.7.1 | Candidate 1.8.2 |
+| Component | Published 1.7.1 | 1.8.2 |
 | --- | --- | --- |
 | Home | 1.8.1 | 1.9.4 |
 | Home Helper | 0.6.22 | 0.7.4 |
@@ -79,7 +79,7 @@ source, including media APIs/grants and tuner discovery; the old published Helpe
 cannot deliver them. Updater changes exclude C1 from ordinary setup/OTA. Existing
 supervisors remain immutable; no general supervisor replacement path is introduced.
 Helper rollback compatibility must be verified against the new exact archive;
-previous approval for 0.6.22 does not approve 0.7.4.
+the exact new 0.7.4 archive passed published-Home compatibility as recorded below.
 
 ## Installation, recovery and limits
 
@@ -99,8 +99,7 @@ acceptance. The Homebrew Installer remains unreleased and is not promoted here.
 No-root uses the same full-screen Home with its running Helper. Ribbon does not
 expose another app or HDMI behind its cards, and repeated Home is not a transient
 bar toggle. Menus/editors retain normal Back priority. No companion, extra
-component or new installer protocol is required. Final hardware acceptance is
-pending.
+component or new installer protocol is required. Focused hardware results and remaining limitations are recorded below.
 Focused Helper startup, old-Home compatibility and physical emergency release
 passed on the recorded C3. A real automatic OTA/rollback transaction remains
 untested; successful package installation alone is not broader acceptance.

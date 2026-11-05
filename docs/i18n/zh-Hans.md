@@ -1,12 +1,12 @@
 # Clean Your TV — 用户指南
 
-> **1.8.2 — 未发布候选版本:** [1.8.2 / English](../RELEASE-1.8.2.md).
+> **1.8.2:** [English](../RELEASE-1.8.2.md) · [LS2 Root #337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337).
 
-**尚未发布的 C1 Beta（#298）：** 在通用电脑安装程序中选择 Root。符合条件的 C1 电视会自动识别，无需单独的安装程序或标志。此路径需要全新安装，不支持自动更新，且尚未通过实体 C1 验收。打开 LG Home、长按 Back 或安全/电源停止后，Home 控制可能保持关闭；请在电视设置中重新开启更改 Home。常规 Root 路径保持不变。 如果仍有其他 No-root 组件，C1 完全移除会在更改前停止。请先通过常规 No-root 移除流程删除这些组件；状态未明确时请保留恢复数据。 [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md).
+**C1 Beta (#298):** 在通用电脑安装程序中选择 Root。符合条件的 C1 电视会自动识别，无需单独的安装程序或标志。此路径需要全新安装，不支持自动更新，且尚未通过实体 C1 验收。打开 LG Home、长按 Back 或安全/电源停止后，Home 控制可能保持关闭；请在电视设置中重新开启更改 Home。常规 Root 路径保持不变。 如果仍有其他 No-root 组件，C1 完全移除会在更改前停止。请先通过常规 No-root 移除流程删除这些组件；状态未明确时请保留恢复数据。 [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md).
 
-尚未发布（#290）：**+ / 添加应用**仅在检测到已安装的调谐器时，以电视提供的名称列出直播电视。其他隐藏的系统应用仍不显示。No-root 需要更新后的 Helper 和安装程序；Root 需要更新后的 Home 软件包。频道启动仍需在电视上验证。
+1.8.2 (#290): **+ / 添加应用**仅在检测到已安装的调谐器时，以电视提供的名称列出直播电视。其他隐藏的系统应用仍不显示。No-root 需要更新后的 Helper 和安装程序；Root 需要更新后的 Home 软件包。频道启动仍需在电视上验证。
 
-**未发布 — Home 中的 Ribbon：** 两个版本中的 Ribbon 都是唯一的全屏 Home 应用内的主题，使用自己的壁纸。卡片后方不显示其他视频或 HDMI。选择应用时使用电视正常的应用切换方式。应急控制保持不变。最终安装包和电视验收尚未完成。[Ribbon](../THEMES.md#ribbon-over-applications-unreleased)。
+**Home 中的 Ribbon：** 两个版本中的 Ribbon 都是唯一的全屏 Home 应用内的主题，使用自己的壁纸。卡片后方不显示其他视频或 HDMI。选择应用时使用电视正常的应用切换方式。应急控制保持不变。 已测试范围和已知限制见发行说明。 [Ribbon](../THEMES.md#ribbon-over-applications-unreleased)。
 
 Ribbon：长按 OK 编辑；←/→ 移动卡片，↑ 选择 ×（从 Home 隐藏），↓ 返回卡片，OK 确认，Back 取消。编辑时保留当前背景。
 
