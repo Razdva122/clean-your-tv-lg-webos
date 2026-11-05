@@ -8,7 +8,11 @@ module.exports=function(fs,dir,options){
  var inputs=options.inputs===true,prefix=inputs?'input':'home';
  var nonce=options.nonce||function(){return require('crypto').randomBytes(16).toString('hex');};
  return function(method,payload){
-  if((inputs?['inputStatus']:['homeStatus','setHomeControl','openLGHome']).indexOf(method)<0||
+  var object=payload&&typeof payload==='object'&&!Array.isArray(payload);
+  var generation=method==='presentationDismissed'&&object?payload.generation:null;
+  if((inputs?['inputStatus']:['homeStatus','setHomeControl','openLGHome','presentationContext','presentationDismissed']).indexOf(method)<0||
+     (method==='presentationContext'&&(!object||Object.keys(payload).length!==0))||
+     (method==='presentationDismissed'&&(!object||Object.keys(payload).length!==1||Object.keys(payload)[0]!=='generation'||typeof generation!=='number'||!isFinite(generation)||Math.floor(generation)!==generation||generation<0||generation>9007199254740991))||
      (method==='inputStatus'&&(!payload||typeof payload!=='object'||Array.isArray(payload)||Object.keys(payload).length!==0))||
      (method==='setHomeControl'&&(!payload||typeof payload.enabled!=='boolean')))
    return Promise.resolve({returnValue:false,errorText:'Invalid Home request'});
@@ -20,6 +24,7 @@ module.exports=function(fs,dir,options){
    try{
     var request={id:id,method:method,expires:deadline};
     if(method==='setHomeControl')request.enabled=payload.enabled;
+    if(method==='presentationDismissed')request.generation=generation;
     fs.writeFileSync(dir+'/'+prefix+'-request.tmp',JSON.stringify(request),{mode:432});
     operation='chmod';
     fs.chmodSync(dir+'/'+prefix+'-request.tmp',432);

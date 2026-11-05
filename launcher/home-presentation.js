@@ -24,7 +24,7 @@
     return {eligible:decoderOnly === true ? false : reply.eligible, content:reply.content};
   }
   function create(options) {
-    var generation = 0, launchGeneration = 0, visible = false, mode = 'closed', overlayTheme = false;
+    var generation = 0, launchGeneration = 0, activationGeneration = 0, visible = false, mode = 'closed', overlayTheme = false;
     var owners = Object.create(null), startup = false, blocked = false, opaque = false, activationUntil = 0, content = null;
     var now = options.now || Date.now, activation = {};
     function isBlocked() { return Object.keys(owners).length > 0 || !!(options.blocked && options.blocked()); }
@@ -53,6 +53,7 @@
       } catch (_) { /* Unknown platform context retains the opaque Home. */ }
     }
     function show(params) {
+      activationGeneration++;
       activationUntil = 0;
       params = params || {};
       // Retain only activation primitives; caller mutation is not a new show.
@@ -77,6 +78,7 @@
     return {
       state:state,
       token:function () { return launchGeneration; },
+      activationToken:function () { return activationGeneration; },
       show:show,
       hide:hide,
       dismiss:dismiss,

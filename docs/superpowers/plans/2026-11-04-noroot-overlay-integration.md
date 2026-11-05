@@ -4,7 +4,7 @@
 
 **Goal:** Make actual No-root Home/Helper open and dismiss Ribbon above content.
 
-**Architecture:** One existing Home identity hosts overlay. Shared presentation controller queries native Helper via an authenticated, read-only LS2 seam; unavailable/stale context stays opaque. Secure Helper storage/authentication is implemented in the coordinated Helper task, not duplicated here.
+**Architecture:** One existing Home identity hosts overlay. Shared presentation controller queries the running Helper through its own renewal service and the existing bounded Home bridge; unavailable/stale context stays opaque. Preserve the existing caller checks and keep independent storage research outside this feature.
 
 **Tech Stack:** Existing ES5-compatible JS/Babel, Node 0.10.15+, Python IPK packaging, Playwright compiled UI tests.
 
@@ -166,3 +166,20 @@ to the dock and second closes Home. Pure/controller, actual native UI and ES5
 checks pass; allfour compiled legacy profiles also pass. Review of the correction
 found no further issues. CONTROLS, THEMES, source spec and all13 guides reflect
 the app-card/shelf distinction. Physical acceptance remains pending.
+
+
+## Production seam implementation update — 2026-11-05
+
+The existing renewal Home caller gate now covers presentationContext{} and
+presentationDismissed{generation}. The controller owns daemon-scoped generations,
+fresh bounded SSAP observations, explicit activation reasons, dismissal suppression
+and Stop/off invalidation. It adds no credential API, native inbound LS2 service or
+new persistent path. Research private-state/Stop/pipe modules are not runtime
+dependencies. The three dormant JS modules have been moved to prototypes in#322.
+
+Controller, broker, SSAP, compiled UI and legacy syntax checks cover fresh/stale
+facts, same-generation repeated Home, old replies, BUSY/unknown outcomes and close
+races. Review findings were reproduced before correction. Final focused CI, new
+versioned coherent packages and real Home/Back/audio/standby/full-boot/update/rollback
+acceptance remain pending. Earlier prototype observations retain their original
+artifact limits; no new TV success is claimed here.

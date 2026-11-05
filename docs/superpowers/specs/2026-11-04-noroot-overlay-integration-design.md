@@ -25,8 +25,9 @@ compositor proxy or caller-supplied permission. Derive content eligibility from
 the existing authenticated local SSAP observation, never from the panel itself.
 Invalidate it on disconnect, power changes, unrelated launches and stale/out-of-
 order observations. Read-only fresh-context request should reuse the existing
-Home/Helper authenticated bridge after secure storage migration, rather than
-adding a network listener or another shared writable file. Launch parameters
+Home-owned renewal service and its existing bounded request/response bridge,
+rather than adding a network listener or another shared writable file. The existing
+Home caller check is retained; this integration does not establish new protected storage. Launch parameters
 only identify the activation reason/generation; they cannot grant authority or
 start Helper. If a trustworthy current observation cannot be established, render
 opaque. Manual and startup launches default opaque even if cached content exists.
@@ -44,7 +45,7 @@ policy after the mode is settled; unknown context initially uses a static image
 to avoid stealing the underlying decoder. Preserve personal media and profile.
 Emergency/off, stop, watchdog and explicit LG Home invalidate pending activation,
 release interception and normally close the owned overlay before/with LG Home.
-Never clear blocked/watchdog latches automatically or trust legacy 0777 keys.
+Never clear blocked/watchdog latches automatically or reuse exposed credentials.
 
 ## Alternatives
 
@@ -70,7 +71,7 @@ service permissions, signed updater/rollback contracts coherent. Update all
 Use a separate focused branch/PR to release/next, review before integration, then
 select a new successful full candidate and matching signing output. Version
 admission must use the normal supported transition, never equal-version force.
-Coordinate the secure Helper fix, then test physical Home/Back/repeated Home,
+Coordinate Helper startup and final packages, then test physical Home/Back/repeated Home,
 Magic Remote focus, HDMI and video/audio, fullscreen fallback/settings/edit/Undo,
 app launch/return, emergency/off/watchdog, standby, real AC boot, upgrade and
 rollback. Test pristine No-root separately; rooted-C3 evidence cannot certify it.
@@ -84,21 +85,24 @@ The maintainer approved the same-Home integration on 2026-11-04, including
 underlying playback continuing beneath opaque themes. Production retains one
 app identity and existing profile/update paths.
 
-Frontend calls its own renewal service presentationContext; that service relays
-only after measured Home caller authorization to
-luna://com.local.nativehome/presentationContext. The normalized response is
+Frontend calls its own renewal service presentationContext; that service retains
+the existing Home applicationID check and relays through its provisioned Home
+request/response channel to the running controller. No native inbound RPC is added. The normalized response is
 {returnValue:true, eligible:boolean, content:true|false|null, generation:N,
 observedAgeMs:number}. N is a safe nonnegative integer seeded independently per
-native daemon lifetime; age including frontend transport must not exceed2000ms.
+native daemon lifetime; one owned opening retains N across repeated Home; age including frontend transport must not exceed2000ms.
 Eligible true requires content true; false eligibility never grants decoder
 ownership. Content false requires separately established absence of underlying
 content, not an inference from LG Home. Unknown keeps the static poster.
 Physical activation carries only cytvHome:{reason:'home',generation:N}; the native
 reply must independently match. Stop, power, off, dismissal and restart invalidate
 generations. A separate authorized presentationDismissed request with N may
-retire only that generation, never new activation or routing. Native inbound RPC
-registration and complete measured caller binding remain implementation gates;
-frontend tests simulate the seam and are not device acceptance.
+retire only that generation, never new activation or routing. Service caller validation, bridge correlation and native generation checks have
+HOST coverage; actual packaged transport/caller behavior remains a device gate.
+No current source proves absence of lower content: unknown, LG Home and transition
+gaps never produce content:false. Fresh host foreground preserves an already-fresh
+prelaunch observation without renewing its timestamp. Frontend fixtures that
+exercise content:false are contract tests, not device evidence.
 
 
 No-root Back also closes an unobstructed opaque host, including manual/startup
@@ -108,3 +112,16 @@ Back closes Home. This prevents the native overlay host from trapping the user
 above stock Home.
 Repeated Home toggles only a transparent Ribbon; it does not dismiss a non-Ribbon
 opaque theme. Physical acceptance is required on the final product bytes.
+
+
+## Current implementation limits (2026-11-05)
+
+Fresh foreground requests use the existing registered SSAP connection with an800ms
+timeout. Physical activation obtains a fresh observation before SAM launch; startup,
+wake and automatic returns remain opaque. Context refreshes never renew a cached
+underlay from host foreground alone. Dismissal acknowledges native resume suppression
+before closing; only explicit not-submitted BUSY replies retry within two seconds.
+A show-specific token fences old acknowledgements while allowing closed-state theme
+refreshes. Native new openings wait for an outstanding close response; unknown
+close outcomes refuse replay/new openings and release input independently. These
+paths have HOST/compiled-browser tests, not final-package TV acceptance.

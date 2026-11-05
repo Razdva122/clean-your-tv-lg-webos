@@ -184,12 +184,13 @@
       !!hint && hint.reason === 'home' && typeof generation === 'number' && isFinite(generation) &&
       generation >= 0 && Math.floor(generation) === generation && generation <= 9007199254740991;
   }
+  var nativePresentationGeneration = null;
   var presentation = window.HomePresentation ? HomePresentation.create({
     supported: true,
     decoderContext: !!window.ROOT_VERSION,
     queryFull: nativeNoRoot,
     dismissFull: nativeNoRoot,
-    toggle: function (params) { return !nativeNoRoot || homeActivation(params); },
+    toggle: function (params) { return !nativeNoRoot || homeActivation(params) && params.cytvHome.generation === nativePresentationGeneration; },
     query: function (done, activation) {
       if (nativeNoRoot) {
         var hint = activation && activation.cytvHome, decoderOnly = !homeActivation(activation);
@@ -202,8 +203,11 @@
         var clock = window.performance && typeof window.performance.now === 'function' ?
           function () { return window.performance.now(); } : Date.now;
         var started = clock();
+        var ticket = presentation && presentation.token();
         callLuna('luna://com.gathin.tvhome.renewal/presentationContext', {}, function (reply) {
-          done(HomePresentation.nativeContext(reply, expectedGeneration, clock() - started, decoderOnly));
+          var context = HomePresentation.nativeContext(reply, expectedGeneration, clock() - started, decoderOnly);
+          if (context && presentation && presentation.token() === ticket && presentation.state().visible) nativePresentationGeneration = reply.generation;
+          done(context);
         }, 2000);
         return;
       }
@@ -228,7 +232,33 @@
         else if ("shelf" === focusZone && shelfTiles[focusedShelf] && inputPreview) inputPreview.focus(shelfTiles[focusedShelf].input);
       }
     },
-    close: function () { stopPreview(); window.close(); }
+    close: function () {
+      stopPreview();
+      if (!nativeNoRoot || nativePresentationGeneration === null) { window.close(); return; }
+      var ticket = presentation.activationToken(), generation = nativePresentationGeneration;
+      var deadline = Date.now() + 2000, settled = false, retry, timer;
+      function current() { return presentation.activationToken() === ticket && !presentation.state().visible; }
+      function finish() {
+        if (settled) return;
+        settled = true; clearTimeout(timer); clearTimeout(retry);
+        if (current()) window.close();
+      }
+      function dismiss() {
+        if (settled) return;
+        if (!current()) { finish(); return; }
+        var left = deadline - Date.now();
+        if (left <= 0) { finish(); return; }
+        callLuna('luna://com.gathin.tvhome.renewal/presentationDismissed', {generation:generation}, function (reply) {
+          if (settled) return;
+          if (current() && reply && reply.returnValue === false && reply.errorText === 'Home control busy' && Date.now() < deadline) {
+            // BUSY explicitly means not submitted; unknown outcomes are never retried.
+            retry = setTimeout(dismiss, Math.min(100, Math.max(0, deadline - Date.now())));
+          } else finish();
+        }, Math.min(1500, left));
+      }
+      timer = setTimeout(finish, 2000);
+      dismiss();
+    }
   }) : null;
   window.HomePresentationController = presentation;
   function launchParams(event) {

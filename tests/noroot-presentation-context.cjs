@@ -85,4 +85,10 @@ assert(standalone.dismiss(),'native opaque Home must have a Back exit without He
 standalone.show({});standalone.relaunch({});assert.equal(exits,1,'Home relaunch does not toggle a non-overlay theme');assert.equal(standalone.state().mode,'full');
 modal=true;standalone.sync();assert(!standalone.dismiss(),'Back still belongs to modal/editor owners');
 
+
+const closeEpoch=presentation.create({supported:true,queryFull:true,query:done=>done(null)});
+closeEpoch.show({});const shownEpoch=closeEpoch.activationToken();closeEpoch.hide();
+closeEpoch.setTheme({presentation:'overlay'});closeEpoch.suspend('settings');closeEpoch.resume('settings');
+assert.equal(closeEpoch.activationToken(),shownEpoch,'closed refresh preserves the activation owning a pending close');
+closeEpoch.show({});assert.notEqual(closeEpoch.activationToken(),shownEpoch,'a real show invalidates the previous close acknowledgement');
 console.log('PASS No-root native metadata, strict context/generation/age, decoder facts, current activation and ES5');

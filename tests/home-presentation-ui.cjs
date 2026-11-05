@@ -111,10 +111,19 @@ const {assert,chromium,stage,fs,path}=require('./themes/browser.cjs'),http=requi
   await n.page.evaluate(async()=>{
    window.closeCalls=0;window.close=()=>window.closeCalls++;
    window.PREVIEW_HOME_CONTEXT='content';
-   window.nativeRequests=0;
+   window.nativeRequests=0;window.dismissals=[];
    window.nativeReply={returnValue:true,eligible:true,content:true,generation:7,observedAgeMs:10};
    const original=PalmServiceBridge.prototype.call;
    PalmServiceBridge.prototype.call=function(uri,raw){
+    if(uri==='luna://com.gathin.tvhome.renewal/presentationDismissed'){
+     const payload=JSON.parse(raw),bridge=this;dismissals.push(payload);
+     if(window.dismissMode==='timeout')return;
+     if(window.dismissMode==='error'){bridge.onservicecallback(JSON.stringify({returnValue:false,errorText:'Home Helper data unavailable'}));return;}
+     if(window.dismissMode==='malformed-busy'){bridge.onservicecallback(JSON.stringify({returnValue:'false',errorText:'Home control busy'}));return;}
+     if(window.dismissBusy>0){dismissBusy--;bridge.onservicecallback(JSON.stringify({returnValue:false,errorText:'Home control busy'}));return;}
+     const deliver=()=>bridge.onservicecallback(JSON.stringify({returnValue:true,dismissed:true,generation:payload.generation}));
+     if(window.deferDismiss)(window.dismissPending||(window.dismissPending=[])).push(deliver);else deliver();return;
+    }
     if(uri==='luna://com.gathin.tvhome.renewal/presentationContext'){
      nativeRequests++;const bridge=this,reply=JSON.stringify(nativeReply);
      const deliver=()=>bridge.onservicecallback(reply);
@@ -149,7 +158,57 @@ const {assert,chromium,stage,fs,path}=require('./themes/browser.cjs'),http=requi
   await n.page.evaluate(()=>HomePresentationController.show({cytvHome:{reason:'home',generation:7}}));
   await n.page.waitForFunction(()=>HomePresentationController.state().mode==='overlay',null,{timeout:3000});
   await n.page.evaluate(()=>document.dispatchEvent(new CustomEvent('webOSRelaunch',{detail:{cytvHome:{reason:'home',generation:8}}})));
-  assert.equal(await n.page.evaluate(()=>window.closeCalls),1,'valid numeric ordinary Home still toggles under the draft contract');
+  assert.equal(await n.page.evaluate(()=>window.closeCalls),0,'another generation cannot dismiss the active Home');
+  await n.page.evaluate(()=>HomePresentationController.show({cytvHome:{reason:'home',generation:7}}));
+  await n.page.waitForFunction(()=>HomePresentationController.state().mode==='overlay',null,{timeout:3000});
+  // Theme/settings refresh while closed must not strand the actual native window.
+  await n.page.evaluate(()=>{
+   deferDismiss=true;HomePresentationController.dismiss();
+   HomePresentationController.setTheme({presentation:'overlay'});
+   HomePresentationController.suspend('closed-refresh');HomePresentationController.resume('closed-refresh');
+   dismissPending.shift()();deferDismiss=false;
+  });
+  assert.equal(await n.page.evaluate(()=>window.closeCalls),1,'closed-only refresh must still close after acknowledgement');
+  await n.page.evaluate(()=>{closeCalls=0;HomePresentationController.show({cytvHome:{reason:'home',generation:7}});});
+  await n.page.waitForFunction(()=>HomePresentationController.state().mode==='overlay',null,{timeout:3000});
+  await n.page.evaluate(()=>{deferDismiss=true;dismissBusy=1;document.dispatchEvent(new CustomEvent('webOSRelaunch',{detail:{cytvHome:{reason:'home',generation:7}}}));});
+  assert.equal(await n.page.evaluate(()=>window.closeCalls),0,'close waits for the native suppression acknowledgement');
+  assert.equal(await n.page.evaluate(()=>dismissals.at(-1).generation),7);
+  await n.page.waitForFunction(()=>window.dismissPending&&dismissPending.length===1,null,{timeout:1500});
+  await n.page.evaluate(()=>dismissPending.shift()());
+  assert.equal(await n.page.evaluate(()=>window.closeCalls),1,'matching ordinary Home retires its native generation before close');
+  // A late close acknowledgement must not close a reopened host.
+  await n.page.evaluate(()=>HomePresentationController.show({cytvHome:{reason:'home',generation:7}}));
+  await n.page.waitForFunction(()=>HomePresentationController.state().mode==='overlay',null,{timeout:3000});
+  await n.page.evaluate(()=>{document.dispatchEvent(new CustomEvent('webOSRelaunch',{detail:{cytvHome:{reason:'home',generation:7}}}));HomePresentationController.show({cytvHome:{reason:'home',generation:7}});dismissPending.shift()();deferDismiss=false;});
+  assert.equal(await n.page.evaluate(()=>window.closeCalls),1,'late native acknowledgement cannot close a new activation');
+  // Only a typed not-submitted BUSY can retry; failures and silence still exit.
+  for(const failure of ['error','malformed-busy','timeout']) {
+   await n.page.evaluate(()=>{closeCalls=0;HomePresentationController.show({cytvHome:{reason:'home',generation:7}});});
+   await n.page.waitForFunction(()=>HomePresentationController.state().mode==='overlay',null,{timeout:3000});
+   const before=await n.page.evaluate(()=>dismissals.length);
+   await n.page.evaluate(failure=>{dismissMode=failure;HomePresentationController.dismiss();},failure);
+   await n.page.waitForFunction(()=>closeCalls===1,null,{timeout:3000});
+   assert.equal(await n.page.evaluate(()=>dismissals.length),before+1,'unknown or malformed outcomes must never retry');
+   await n.page.evaluate(()=>{dismissMode=null;});
+  }
+  await n.page.evaluate(()=>{closeCalls=0;HomePresentationController.show({cytvHome:{reason:'home',generation:7}});});
+  await n.page.waitForFunction(()=>HomePresentationController.state().mode==='overlay',null,{timeout:3000});
+  const beforeReopen=await n.page.evaluate(()=>dismissals.length);
+  await n.page.evaluate(()=>{dismissBusy=1;HomePresentationController.dismiss();HomePresentationController.show({cytvHome:{reason:'home',generation:7}});});
+  await n.page.waitForTimeout(250);
+  assert.equal(await n.page.evaluate(()=>dismissals.length),beforeReopen+1,'queued BUSY retry cannot submit for a reopened activation');
+  assert.equal(await n.page.evaluate(()=>closeCalls),0);
+  await n.page.evaluate(()=>{closeCalls=0;HomePresentationController.show({cytvHome:{reason:'home',generation:7}});});
+  await n.page.waitForFunction(()=>HomePresentationController.state().mode==='overlay',null,{timeout:3000});
+  const beforeBound=await n.page.evaluate(()=>dismissals.length);
+  await n.page.evaluate(()=>{dismissBusy=1000;HomePresentationController.dismiss();});
+  await n.page.waitForFunction(()=>closeCalls===1,null,{timeout:3000});
+  const afterBound=await n.page.evaluate(()=>dismissals.length);
+  assert(afterBound>beforeBound+1,'typed BUSY retries until the bounded fallback');
+  await n.page.waitForTimeout(200);
+  assert.equal(await n.page.evaluate(()=>dismissals.length),afterBound,'close deadline cancels further BUSY retries');
+  await n.page.evaluate(()=>{dismissBusy=0;});
   await n.page.evaluate(()=>{closeCalls=0;HomePresentationController.show({cytvHome:{reason:'home',generation:7}});});
   await n.page.waitForFunction(()=>HomePresentationController.state().mode==='overlay',null,{timeout:3000});
   await n.page.locator('#btnSettings').click();
