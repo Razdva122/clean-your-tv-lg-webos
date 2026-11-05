@@ -246,3 +246,21 @@ a4042ba8; current-head CI/review, integration and packaged-TV acceptance remain
 pending. Earlier frontend-only status above describes the earlier head. PR322
 separately removes three unwired research JS modules from production packaging;
 it remains pending its complete checks. Neither pending PR is counted as merged.
+
+
+## Shipping-scope cleanup — 2026-11-05
+
+PR322, source369e04b04c115cf7b06370112f2c3d798186e1f3, merged as
+8857c9bc7ee348eebb72a303b37172461b71e6ff after complete focused
+Tests42019540901 attempt1 and policy checks passed. Source/merge product inputs
+match; only release-plan.json and this dated record differ from the source head.
+Three unused JS research modules now live under native/prototype, outside both
+production Helper builders. Their bytes and standalone checks are preserved.
+The C research files remain source-only; active relay/startup fixes do not depend
+on these modules. No new permissions or runtime endpoint is activated.
+
+The packaging regression failed before the move, then compiled Helper/WSS/watchdog
+and prototype41/70/68 checks passed. Independent review found no production
+consumer. This is source/build-scope evidence, not a newly built package hash or
+a device result. No TV operation, selected build or component-version change
+was performed here. PR310 remains mandatory and under current-head CI.
