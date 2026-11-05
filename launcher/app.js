@@ -178,9 +178,11 @@
     }
   }
   function homeActivation(params) {
+    var hint = params && params.cytvHome, generation = hint && hint.generation;
     return !!params && params.reason !== 'startup' && params.reason !== 'boot' &&
       params.reason !== 'wake' && params.reason !== 'manual' && params.activateType !== 'powerOn' &&
-      !!params.cytvHome && params.cytvHome.reason === 'home';
+      !!hint && hint.reason === 'home' && typeof generation === 'number' && isFinite(generation) &&
+      generation >= 0 && Math.floor(generation) === generation && generation <= 9007199254740991;
   }
   var presentation = window.HomePresentation ? HomePresentation.create({
     supported: true,

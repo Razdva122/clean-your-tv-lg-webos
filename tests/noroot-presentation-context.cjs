@@ -2,6 +2,18 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const presentation=require('../launcher/home-presentation');
 assert.equal(typeof presentation.nativeContext,'function','native context validator is required');
+// Exercise the production adapter classifier before it can authorize toggle.
+const app=fs.readFileSync('launcher/app.js','utf8');
+const classify=require('vm').runInNewContext('('+app.match(/function homeActivation\(params\) \{[\s\S]*?\n  \}/)[0]+')');
+for(const generation of ['invalid',undefined,NaN,Infinity,-1,1.5,9007199254740992]) {
+ const hint={reason:'home'};if(generation!==undefined)hint.generation=generation;
+ assert.equal(classify({cytvHome:hint}),false,'malformed generation cannot authorize a toggle');
+ let closed=0;
+ const controller=presentation.create({supported:true,toggle:classify,close:()=>closed++,query:(done,a)=>done(classify(a)?true:null)});
+ controller.setTheme({presentation:'overlay'});controller.show({cytvHome:{reason:'home',generation:7}});
+ controller.relaunch({cytvHome:hint});assert.equal(closed,0);assert.equal(controller.state().mode,'full');
+}
+for(const generation of [0,7,9007199254740991])assert.equal(classify({cytvHome:{reason:'home',generation}}),true);
 const valid={returnValue:true,eligible:true,content:true,generation:7,observedAgeMs:20};
 assert.deepEqual(presentation.nativeContext(valid,7),{eligible:true,content:true});
 assert.deepEqual(presentation.nativeContext({...valid,eligible:false,content:null},7),{eligible:false,content:null});

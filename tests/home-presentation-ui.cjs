@@ -132,6 +132,26 @@ const {assert,chromium,stage,fs,path}=require('./themes/browser.cjs'),http=requi
   await n.page.evaluate(()=>HomePresentationController.show({cytvHome:{reason:'home',generation:7}}));
   await n.page.waitForFunction(()=>HomePresentationController.state().mode==='overlay',null,{timeout:3000});
   assert.equal(await n.page.evaluate(()=>nativeRequests),2);
+  for(const generation of ['invalid',undefined,NaN,Infinity,-1,1.5,9007199254740992]) {
+   await n.page.evaluate(()=>HomePresentationController.show({cytvHome:{reason:'home',generation:7}}));
+   await n.page.waitForFunction(()=>HomePresentationController.state().mode==='overlay',null,{timeout:3000});
+   const requests=await n.page.evaluate(()=>nativeRequests);
+   await n.page.evaluate(generation=>{
+    const hint={reason:'home'};if(generation!==undefined)hint.generation=generation;
+    document.dispatchEvent(new CustomEvent('webOSRelaunch',{detail:{cytvHome:hint}}));
+   },generation);
+   await n.page.waitForTimeout(30);
+   assert.equal(await n.page.evaluate(()=>window.closeCalls),0,'malformed generation relaunch cannot close active overlay');
+   assert.equal(await n.page.evaluate(()=>HomePresentationController.state().mode),'full');
+   assert.equal(await n.page.evaluate(()=>HomePresentationController.state().content),null);
+   assert.equal(await n.page.evaluate(()=>nativeRequests),requests,'malformed hint cannot query or fall through decoder-only');
+  }
+  await n.page.evaluate(()=>HomePresentationController.show({cytvHome:{reason:'home',generation:7}}));
+  await n.page.waitForFunction(()=>HomePresentationController.state().mode==='overlay',null,{timeout:3000});
+  await n.page.evaluate(()=>document.dispatchEvent(new CustomEvent('webOSRelaunch',{detail:{cytvHome:{reason:'home',generation:8}}})));
+  assert.equal(await n.page.evaluate(()=>window.closeCalls),1,'valid numeric ordinary Home still toggles under the draft contract');
+  await n.page.evaluate(()=>{closeCalls=0;HomePresentationController.show({cytvHome:{reason:'home',generation:7}});});
+  await n.page.waitForFunction(()=>HomePresentationController.state().mode==='overlay',null,{timeout:3000});
   await n.page.locator('#btnSettings').click();
   await n.page.waitForFunction(()=>RenewalPanel.isOpen());
   assert.equal(await n.page.evaluate(()=>HomePresentationController.state().mode),'full');
