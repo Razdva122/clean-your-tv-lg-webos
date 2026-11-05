@@ -123,7 +123,7 @@
       onrelease: function () { if (window.HomeWallpaper) HomeWallpaper.resume('input-preview'); },
       createMedia: function (uri) { return window.PREVIEW_INPUT_MEDIA ? window.PREVIEW_INPUT_MEDIA(uri) : InputPreview.createVideo(uri); },
       // Only the foreground Home may claim the TV's video pipeline.
-      enabled: function () { return layoutPreset === "dock-grid" && !document.hidden && windowFocused && !previewDialogOpen() && window.HomeInputShelf.enabled() && window.HomeInputShelf.previewEnabled(); },
+      enabled: function () { return (!window.ROOT_VERSION || presentation && presentation.state().visible && presentation.state().content === false) && layoutPreset === "dock-grid" && !document.hidden && windowFocused && !previewDialogOpen() && window.HomeInputShelf.enabled() && window.HomeInputShelf.previewEnabled(); },
       mount: function (media, input) {
         var tile = shelfTiles[focusedShelf];
         if (!tile || tile.input.appId !== input.appId) return false;
@@ -174,6 +174,7 @@
   }
   var presentation = window.HomePresentation ? HomePresentation.create({
     supported: !!window.ROOT_VERSION || window.CYTV_BROWSER_PREVIEW === true,
+    decoderContext: !!window.ROOT_VERSION,
     query: function (done) {
       callLuna('luna://com.cleanyourtv.root.preview.service/status', {presentation:'context'}, function (r) {
         done(r && r.returnValue === true && r.result ? r.result.content : null);
@@ -185,11 +186,22 @@
     render: function (state) {
       document.documentElement.setAttribute('data-home-presentation', state.mode);
       document.body.setAttribute('data-home-presentation', state.mode);
-      if (window.HomeWallpaper) HomeWallpaper[state.mode === 'full' ? 'resume' : 'suspend']('presentation');
+      var decoderSafe = !window.ROOT_VERSION || state.visible && state.content === false;
+      // Fence wallpaper before releasing input ownership: onrelease may resume it.
+      if (window.HomeWallpaper) {
+        if (window.ROOT_VERSION) HomeWallpaper[decoderSafe ? 'resume' : 'suspend']('decoder-context');
+        HomeWallpaper[state.mode === 'full' ? 'resume' : 'suspend']('presentation');
+      }
+      if (window.ROOT_VERSION) {
+        if (!decoderSafe) stopPreview();
+        else if ("shelf" === focusZone && shelfTiles[focusedShelf] && inputPreview) inputPreview.focus(shelfTiles[focusedShelf].input);
+      }
     },
     close: function () { stopPreview(); window.close(); }
   }) : null;
   window.HomePresentationController = presentation;
+  // Personal/theme restoration can configure video before the first show().
+  if (window.ROOT_VERSION && window.HomeWallpaper) HomeWallpaper.suspend('decoder-context');
   function launchParams(event) {
     try {
       var value = event && event.detail || (window.PalmSystem && PalmSystem.launchParams) || {};

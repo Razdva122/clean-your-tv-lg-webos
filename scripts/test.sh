@@ -97,6 +97,7 @@ if has android; then
 fi
 if has preview; then
   node tests/home-presentation-ui.cjs
+  node tests/root-decoder-ui.cjs
   node tests/preview-presentation-ui.cjs
   node tests/themes/ribbon-reference-ui.cjs
   node tests/themes/ribbon-edit-ui.cjs

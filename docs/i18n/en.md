@@ -6,7 +6,7 @@
 
 Unreleased (#290): **+ / Add app** offers Live TV under the TV’s own name only when the tuner is detected as installed. Other hidden system apps stay excluded. No-root needs the updated Helper and installer; Root needs the updated Home package. Tuner launch still needs TV verification.
 
-**Unreleased — Ribbon presentation:** In Root, Ribbon can open over the current application. Home opens the bar; Back or another Home closes it. Power-on and missing or unknown background content use the wallpaper; settings remain opaque. No-root on TV stays fullscreen. The browser demo simulates both states; final package/device acceptance is still pending. [Details](../THEMES.md#ribbon-over-applications-unreleased).
+**Unreleased — Ribbon presentation:** In Root, Ribbon can open over the current application. Home opens the bar; Back or another Home closes it. Power-on and missing or unknown background content use the wallpaper; settings remain opaque. No-root on TV stays fullscreen. The browser demo simulates both states; final package/device acceptance is still pending. On opening native Root or refreshing its context, wallpaper video and input previews start only after a current check reports no content underneath; otherwise opaque Home keeps its static image. [Details](../THEMES.md#ribbon-over-applications-unreleased).
 
 Ribbon: hold OK to edit; ←/→ moves the card, ↑ selects × (hide from Home), ↓ returns to the card, OK confirms and Back cancels. Editing keeps the current background.
 

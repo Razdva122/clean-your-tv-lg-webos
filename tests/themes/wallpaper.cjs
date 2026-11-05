@@ -46,3 +46,9 @@ assert.match(f.nodes.ctvWallpaperImage.textContent,/blob:poster/,'input decoder 
 f.api.suspend('settings');assert.equal(f.nodes.ctvWallpaperImage.textContent,'','settings keep their standard background');
 f.api.resume('settings');assert.match(f.nodes.ctvWallpaperImage.textContent,/blob:poster/);
 f.api.resume('input-preview');f.api.reset();
+f=fixture(true);f.api.suspend('decoder-context');f.api.configure(f.input);
+assert.equal(f.videos.length,0,'unknown Root decoder snapshot prevents initial attachment');
+assert.match(f.nodes.ctvWallpaperImage.textContent,/blob:poster/,'decoder-only suspension retains the static poster');
+f.api.suspend('presentation');assert.equal(f.nodes.ctvWallpaperImage.textContent,'','transparent Home still hides the poster');
+f.api.resume('presentation');assert.match(f.nodes.ctvWallpaperImage.textContent,/blob:poster/);
+f.api.resume('decoder-context');assert.equal(f.videos.length,1,'positive context can release the decoder-only hold');f.api.reset();

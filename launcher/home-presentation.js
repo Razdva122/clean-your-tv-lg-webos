@@ -5,22 +5,26 @@
 }(this, function () {
   'use strict';
   function create(options) {
-    var generation = 0, launchGeneration = 0, visible = false, mode = 'closed', overlayTheme = false;
+    var generation = 0, launchGeneration = 0, visible = false, mode = 'closed', overlayTheme = false, content = null;
     var owners = Object.create(null), startup = false, blocked = false, opaque = false, activationUntil = 0;
     var now = options.now || Date.now;
     function isBlocked() { return Object.keys(owners).length > 0 || !!(options.blocked && options.blocked()); }
     function isOpaque() { return Object.keys(owners).length > 0 || !!(options.opaque ? options.opaque() : options.blocked && options.blocked()); }
-    function state() { return {mode:mode, visible:visible}; }
+    function state() { return {mode:mode, visible:visible, content:content}; }
     function render() { if (options.render) options.render(state()); }
     function refresh() {
       var request = ++generation, settled = false; launchGeneration++;
+      content = null;
       mode = visible ? 'full' : 'closed'; blocked = isBlocked(); opaque = isOpaque(); render();
-      if (!visible || !options.supported || !overlayTheme || startup || opaque) return;
+      // Root remains an overlay host under opaque themes. Its decoder snapshot
+      // is independent of whether this activation may become transparent.
+      if (!visible || !options.supported || !options.decoderContext && (!overlayTheme || startup || opaque)) return;
       try {
-        options.query(function (content) {
+        options.query(function (value) {
           if (settled || generation !== request || !visible) return;
           settled = true;
-          mode = content === true && !isOpaque() ? 'overlay' : 'full'; render();
+          content = value === true || value === false ? value : null;
+          mode = overlayTheme && !startup && content === true && !isOpaque() ? 'overlay' : 'full'; render();
         });
       } catch (_) { /* Unknown platform context retains the opaque Home. */ }
     }
@@ -30,7 +34,7 @@
       startup = params.activateType === 'powerOn' || params.reason === 'boot' || params.reason === 'startup';
       visible = true; refresh();
     }
-    function hide() { activationUntil = 0; generation++; launchGeneration++; visible = false; mode = 'closed'; render(); }
+    function hide() { activationUntil = 0; generation++; launchGeneration++; visible = false; content = null; mode = 'closed'; render(); }
     function dismiss() {
       if (!visible || mode !== 'overlay' || isBlocked()) return false;
       hide(); if (options.close) options.close(); return true;
