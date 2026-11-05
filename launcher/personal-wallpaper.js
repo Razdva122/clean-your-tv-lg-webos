@@ -62,7 +62,7 @@
   return (saved.envelope?prepare(saved.envelope,cancelled):Promise.resolve(null)).then(function(item){
    if(cancelled())return dispose(item);current=item;
    source=saved.source==='personal'&&current?'personal':'theme';
-   if(root.WallpaperLibrary&&root.WallpaperLibrary.has(saved.source))return root.WallpaperLibrary.prepare(saved.source,cancelled).then(function(value){if(cancelled())return dispose(value);builtin=value;source=saved.source;});
+   if(root.WallpaperLibrary&&root.WallpaperLibrary.has(saved.source))return root.WallpaperLibrary.prepare(saved.source,cancelled,true).then(function(value){if(cancelled())return dispose(value);builtin=value;source=saved.source;});
   }).then(function(){if(cancelled())return;restoreError='';render();emit();});
  }).catch(function(error){if(token!==restoreGeneration)return;restoreError='Could not change wallpaper settings.';emit();throw error;});});return started;}
  root.PersonalWallpaper={start:start,receive:receive,apply:apply,cancel:cancel,select:select,remove:remove,state:state};
