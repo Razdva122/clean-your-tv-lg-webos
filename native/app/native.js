@@ -56,9 +56,7 @@ function refreshPresentation(generation,done){
 }
 function launchHome(reason,done){
  var retained=reason==='home'&&lastForeground==='com.gathin.tvhome'&&presentation.active();
- var previous=presentation.generation();
  var generation=presentation.begin(reason,retained);
- retained=retained&&generation===previous;
  function open(current){
   if(!current||stopping||stopRequested||child&&child.reason!==undefined||visitingLG||generation!==presentation.generation()){if(done)done(true);return;}
   afterHomeClose(function(known){
@@ -70,14 +68,16 @@ function launchHome(reason,done){
    launch('com.gathin.tvhome',function(ok,known){
     // A later accepted launch cannot settle an older timed-out SAM request.
     homeLaunchPending=false;homeLaunchUnknown=homeLaunchUnknown||!known;
-    if(stopping||stopRequested||visitingLG||generation!==presentation.generation()&&!presentation.active()){
+    if(stopping||stopRequested||visitingLG){
      if(homeCloseState==='closed')homeCloseState='idle';invalidatePresentation(!terminalUI);
     }
     if(done)done(ok);
    },params);
   });
  }
- if(reason==='home'&&!retained)refreshPresentation(generation,open);else open(true);
+ // The canonical Home is a CARD. Its activation must not wait for an overlay
+ // underlay observation; retained legacy context RPCs remain independently fenced.
+ open(true);
 }
 var resumeGuardUntil=0,resumeRetries=0,lgHomeSince=null,lastLaunchSettledAt=0;
 // Opt-in, bounded observation only; never changes routing or starts another watcher.
@@ -154,7 +154,7 @@ function readHomeRequest(channel){
   if(!channel.inputOnly&&directory!==data&&request.method==='presentationContext'){
    var generation=presentation.generation();
    refreshPresentation(generation,function(current){
-    if(!current||stopping||stopRequested||request.expires<=Date.now())return;
+    if(!current||stopping||stopRequested||child&&child.reason!==undefined||request.expires<=Date.now())return;
     respond(presentation.context());
    });
   }
@@ -200,17 +200,13 @@ function finish(code,signal,needsCleanup,relayReason){if(stopping)return;stoppin
  function cleaned(){if(!terminalUI){end();return;}
   if((launching||homeLaunchPending)&&monotonic()<finishDeadline){setTimeout(cleaned,50);return;}
   if(launching||homeLaunchPending){failed('home-launch-pending');return;}
-  // The final close follows any owned launch already submitted to SAM. Never
-  // replay an unknown close, or race LG against a timed-out owned launch.
-  closeOwnedHome();
-  afterHomeClose(function(){
-   if(!relayClean){failed('input-cleanup-failed');return;}
-   if(homeCloseState!=='closed'){failed('home-close-'+homeCloseState);return;}
-   if(homeLaunchUnknown){failed('home-launch-unknown');return;}
-   launch('com.webos.app.home',function(ok){
-    if(!ok){failed('lg-launch-unconfirmed');return;}
-    log({event:'terminal-ui-requested',homeClosed:true,lgLaunchAccepted:true});setTimeout(end,300);
-   });
+  // Normal LG activation backgrounds the single CARD. Cross-app close permission
+  // is unnecessary; unknown owned launches still must never race this request.
+  if(!relayClean){failed('input-cleanup-failed');return;}
+  if(homeLaunchUnknown){failed('home-launch-unknown');return;}
+  launch('com.webos.app.home',function(ok){
+   if(!ok){failed('lg-launch-unconfirmed');return;}
+   log({event:'terminal-ui-requested',homeClosed:false,lgLaunchAccepted:true});setTimeout(end,300);
   });
  }
  if(needsCleanup||ready)cleanupRelay(function(ok){relayClean=ok;if(!ok)block(!terminalUI);cleaned();});else cleaned();
@@ -310,7 +306,7 @@ var screenPolicy=require('./screen-policy')(watchedApps);
 var screenWatch=require('./screen-watch')(data,screenLog,function(id){
  if(id==='com.webos.app.home'){if(lgHomeSince===null)lgHomeSince=monotonic();}
  else {lgHomeSince=null;if(id&&id!=='com.webos.app.cpcover'&&id!=='com.gathin.tvhome')cancelResume();}
- if(lastForeground!==null&&id!=='com.gathin.tvhome'&&id!==lastForeground)invalidatePresentation(presentation.active());
+ if(lastForeground!==null&&id!=='com.gathin.tvhome'&&id!==lastForeground)invalidatePresentation(false);
  lastForeground=id;lastForegroundAt=monotonic();log({event:'foreground',id:id});diagnostic('foreground');
  var exited=screenPolicy.next(id,monotonic());
  if(exited&&homeControl.enabled()&&!visitingLG&&monotonic()>suppressReturnUntil&&ready&&!stopping&&!launching){
@@ -318,9 +314,9 @@ var screenWatch=require('./screen-watch')(data,screenLog,function(id){
   launching=true;log({event:'return-after-exit'});
   launchHome('return',function(ok){launching=false;if(!ok)log({event:'return-after-exit-failed'});});
  }
-},function(){invalidatePresentation(presentation.active());lastForeground=null;lastForegroundAt=null;monitor='reset';monitorReason=null;lgHomeSince=null;screenPolicy.reset();diagnostic('monitor-reset');},function(p){
+},function(){invalidatePresentation(false);lastForeground=null;lastForegroundAt=null;monitor='reset';monitorReason=null;lgHomeSince=null;screenPolicy.reset();diagnostic('monitor-reset');},function(p){
  log({event:'power',state:p.state,processing:p.processing,onOff:p.onOff});
- if(p.onOff==='off'||p.state==='Active Standby'||p.state==='Suspend'){invalidatePresentation(true);cancelResume();}
+ if(p.onOff==='off'||p.state==='Active Standby'||p.state==='Suspend'){invalidatePresentation(false);cancelResume();}
  if(powerPolicy.next(p)&&homeControl.enabled()&&!visitingLG&&!stopping){
   var now=monotonic();resumePendingUntil=now+10000;resumeGuardUntil=now+30000;resumeRetries=0;
   lgHomeSince=lastForeground==='com.webos.app.home'?now:null;

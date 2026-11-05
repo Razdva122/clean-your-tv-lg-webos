@@ -113,9 +113,9 @@ const profiles = ['modern', 'no-inset', 'no-inset-or-es2015', 'prefixed-webkit']
         async function returnHome() {
           const mode = await page.evaluate(() => {
             document.dispatchEvent(new CustomEvent('webOSRelaunch', {detail: {}}));
-            return HomePresentationController.state().mode;
+            return CYTV_HOME_HOST;
           });
-          assert.equal(mode, 'full', 'platform return reopens opaque native Home');
+          assert.equal(mode, 'card', 'platform return restores the persistent CARD');
         }
         // Issue #68: verify the real downloaded face, not just computed CSS weight.
         // SFNT tests separately ensure these are static outlines for old engines.
@@ -175,8 +175,8 @@ const profiles = ['modern', 'no-inset', 'no-inset-or-es2015', 'prefixed-webkit']
         await page.keyboard.press('ArrowRight');
         await page.keyboard.press('Enter');
         assert.deepEqual(await page.evaluate(() => window.launches), ['test.1']);
-        await page.waitForFunction(() => window.closeRequests === 1);
-        assert.equal(await page.evaluate(() => HomePresentationController.state().mode), 'closed', 'successful native app launch dismisses Home');
+        assert.equal(await page.evaluate(() => window.closeRequests), 0, 'successful app launch does not close canonical Home');
+        assert.equal(await page.evaluate(() => !!HomePresentationController), false);
         await returnHome();
         await page.keyboard.press('ArrowDown');
         await page.waitForTimeout(500);

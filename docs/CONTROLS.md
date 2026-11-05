@@ -60,11 +60,12 @@ remove stop files to force activation.
 
 ## Back, app exits and startup
 
-**Unreleased No-root overlay integration:** Back closes menus/editing first;
-on the input shelf it returns focus to the dock. From the app cards, Back then
-closes Home even when its fallback is opaque or Helper is unavailable. Ordinary
-Home toggles a transparent Ribbon; manual/startup activation shows opaque Home.
-The complete Home/Helper path still requires final package/device acceptance.
+**Unreleased single-Home update:** Ribbon is an ordinary theme of the same
+full-screen Home in both editions, with its own background. Home opens or
+reactivates that window. Back closes menus/editing first; on the input shelf it
+returns focus to the app cards. It does not dismiss a transparent bar or reveal
+video/HDMI underneath. Selecting an app uses normal TV app switching, without
+Home forcing its own window to close. Final package/device acceptance is pending.
 
 
 **Hold Back for about 1.2 seconds** to visit LG Home once. This preserves the

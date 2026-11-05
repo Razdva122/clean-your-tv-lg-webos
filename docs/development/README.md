@@ -87,4 +87,6 @@ Browser simulations do not establish physical-TV compatibility.
 shared Markdown installation guides, translations, SEO checks and the embedded
 launcher demo.
 
-- [Root Ribbon presentation](RIBBON-PRESENTATION.md): overlay lifecycle, theme opt-in and acceptance scope.
+- [Ribbon presentation](RIBBON-PRESENTATION.md): the single full-screen Home lifecycle, own wallpaper and acceptance scope.
+
+- [Single Home C3 regression QA, 2026-11-05](../history/2026-11-05-single-home-regressions.md)

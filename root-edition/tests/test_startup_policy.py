@@ -274,6 +274,17 @@ class Tests(unittest.TestCase):
   self.assertEqual(self.run_policy(event='activation'),'selected')
   self.assertEqual(self.last,{'type':'MVPD_IP','appId':d.CANDIDATE})
 
+ def test_canonical_card_remains_healthy_and_can_select_root_at_startup(self):
+  self.channels()
+  self.foreground=d.CANDIDATE
+  self.surfaces=[{'appId':d.CANDIDATE,'windowType':'_WEBOS_WINDOW_TYPE_CARD'}]
+  self.assertTrue(health.authorized('route-a'))
+  health.require_fresh('route-a')
+  self.assertEqual(self.run_policy(event='activation'),'selected')
+  self.assertEqual(self.last,{'type':'MVPD_IP','appId':d.CANDIDATE})
+  self.assertEqual(self.run_policy(event='input'),'already-selected')
+  self.assertTrue(health.authorized('route-a'))
+
  def test_overlay_appearing_during_observation_cannot_change_input(self):
   self.channels();before=dict(self.last);receipt=d._native_read();observations=[]
   call=self.call
