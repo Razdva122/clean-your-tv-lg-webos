@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [Helper #307 recovery boundary, 2026-11-05](2026-11-05-helper307-recovery-boundary.md): asynchronous-cleanup evidence, retained journals and clearer refusal handling; original recovery remains unresolved.
+
 - [2026-11-04 — Real opkg parent-directory reproduction](2026-11-04-opkg-parent-reproduction.md): original Helper data loses the service subtree in real opkg; No-root archive correction, Root isolation and pending retail/recovery acceptance.
 - [2026-11-04 — Package installation diagnostics and LG CLI comparison](2026-11-04-package-install-diagnostics.md): offline Helper packaging differences, fixed failure categories and unresolved #307 installation/recovery.
 
