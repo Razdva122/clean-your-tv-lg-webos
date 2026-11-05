@@ -99,9 +99,8 @@ tests rejection of an incomplete concurrent publication. Both schedules passed
 1,000 host executions. Independent source/integration reviews found no blocking
 defects. These results are host evidence, not target storage or input acceptance.
 
-The real C/Node pipe bridge is prepared separately and remains outside this
-inventory until its own PR checks and merge. Relay cleanup PR318 is integrated
-separately below. Home-origin authentication, ordinary protected provisioning,
+The C/Node Stop-journal pipe bridge and relay cleanup are integrated separately
+below. They do not activate the protected Helper migration. Home-origin authentication, ordinary protected provisioning,
 native/service identity and namespace lifetime, input-holder lifecycle, fresh
 pairing where required, and update/rollback/cold-boot acceptance remain open.
 No physical observation is carried to these new source bytes.
@@ -129,6 +128,42 @@ holders are released. It does not fix the unresolved Helper storage guard,
 Home authorization, provisioning or future broker/relay lease lifetime.
 The [developer contract](../development/HELPER-RELAY-CLEANUP.md) records the
 failure codes, existing best-effort latch behavior and remaining acceptance.
+
+## Native Stop-journal pipe bridge
+
+PR319, source d160eed45fa6a41910bc99c1e4a3ffb01f723c54, merged as
+727ca918de8d12ce25cc0ccd98f47a14c3f57b97 after Tests41964254235 attempt1
+passed Linux/macOS runtime, browser, ARM Python and both required summaries.
+The actual GitHub merge tree matched the locally checked expected tree
+0fec1c90e4032bf08a44d664119d774362876879, preserving the relay cleanup fix,
+reviewed native bridge/lease files, existing entry points and versions.
+
+The bridge connects compiled legacy-compatible Node to a real C child over
+bounded pipes. The C process owns the actual controller lease; a separate Stop
+publisher bypasses that lease. Receipts require verified readback bytes. Native
+SCAN checks the lease before and after observation, and END acknowledges success
+only after validation and cleanup. Cancellation closes admission and waits for
+actual native completion and process close; a timer cannot prove lock release.
+These endpoint checks do not establish atomic cross-directory state or Home
+origin. Production bindings remain absent, no consumers or native package build
+are wired, and no input authority is added.
+
+The first macOS CI run exposed a backpressure test assumption. The failure was
+reproduced on exact official Node22.23.4: a one-byte high-water mark did not force
+a false write when the stream drained synchronously. The test now uses the
+actual Writable cork/uncork API where available, preserving Node0.10 behavior,
+and requires a false APPEND write, a real drain event and a C-verified receipt.
+Production transport code did not change. All 68 actual-child cases passed on
+Node22.23.4, current23.11.0, 0.10.15, 0.10.25 and0.12.2 (340 executions), with 85
+native private cases normally/under sanitizers, 41 Stop cases and combined
+compiled Helper/WSS/TLS/watchdog checks retained at their recorded sources.
+Independent integration and fixture reviews found no blocking defects.
+
+This is integrated infrastructure, not a working protected Helper. Ordinary
+provisioning and native/service identity/namespace qualification, authenticated
+Home commands, consumer/relay lifetime, fresh pairing where required and final
+update/rollback/full-boot/media/controls acceptance remain unresolved. Existing
+source/default-denial and host fixtures cannot replace those requirements.
 
 ## Still outside the inventory
 
