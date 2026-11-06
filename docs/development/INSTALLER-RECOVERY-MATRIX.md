@@ -36,11 +36,13 @@ claimed, and another installation is not required to populate this matrix.
 
 Focused provider/UI integration and independent scoped reviews are recorded in the
 [practical removal source checkpoint](../history/2026-11-06-practical-clean-removal.md).
-The initial broader installer/Android run failed a Homebrew continuation fixture
-and final cleanup-result propagation. The producer fix has 49 focused passing
-tests at `a827d1df`. The continuation fixture has a focused correction; the broader
-installer run still has failures under diagnosis and final review remains pending.
-Still pending: final combined review, current boot/readback contracts on supported
+The initial broader run exposed old fixtures and missing translations; all five
+failed cytv modules passed their 74-case affected rerun at `aad6b110`. The producer
+fix passed 49 focused cases at `a827d1df`; Homebrew continuation passed six cases
+with real authenticated snapshots. Independent integration and correction reviews
+approved these changes. The full Android Python suite passed 43 cases. Complete
+Root/PR checks remain pending at this source checkpoint.
+Still pending: current boot/readback contracts on supported
 firmware, complete candidate suites/builds, and physical
 Home, normal keys, sound, standby, cold boot, OTA and rollback acceptance. Keep
 stable downloads distinct from candidate source instructions. Do not publish

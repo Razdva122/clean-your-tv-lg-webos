@@ -33,7 +33,7 @@ their own validation.
 | No-root `e79dfae5` | 29 practical-removal and 5 carrier tests passed; 8 affected tests passed separately on Node 0.10.15, 0.10.25, 0.12.2 and 8.12.0 | Permission cases exercise production emitted JS and real temporary POSIX permissions. Normal package removal, or one inert same-ID carrier when SAM is missing, retires exact owned No-root data; Root-edition markers still require Root access. Privileged package-manager replies and filesystem retirement are modeled. Legacy Helper state mode 0777 is handled with no-follow inode checks. |
 | UI `28530a18` | 31 targeted Python tests and 12 Chrome result presentations passed after reproducing the failures | Semantic restart signals override stale completion flags; malformed removal data stays neutral; Home-off completion remains separate. This does not prove backend deletion or Android APK acceptance. |
 | Combined host `c419a3a8` | 72 tests passed in 2.709 seconds | Real CLI/Store/Qt orchestration and Android bridge with modeled SSH/device replies. Includes the previously failing same-goal retry/second-confirmation regression. |
-| Recovery result producer `a827d1df` | 49 focused tests passed in 2.413 seconds | Proven removal completion now carries both required success flags through recovery continuation. Independent review was still running at this documentation checkpoint. |
+| Recovery result producer `a827d1df` | 49 focused tests passed in 2.413 seconds | Proven removal completion now carries both required success flags through recovery continuation. Independent scoped review approved the producer contract and its negative cases. |
 
 Root's initial combined test invocation exposed a test-order limitation:
 `test_python_binding` leaves a runtime import path in-process, causing later
@@ -55,12 +55,22 @@ node android/tests/restart-result.cjs
 ```
 
 The 72-case command above is its recorded combined subset, not the full installer
-suite. The initial broader installer/Android execution failed a Homebrew continuation
-fixture and final cleanup-result propagation. The producer fix has the focused
-result above; the corrected continuation fixture has a separate focused check.
-The broader installer run still has failures under diagnosis. Do not
-describe the full suite, the final candidate or all user flows as
-passing from these focused results. [Maintained matrix](../development/INSTALLER-RECOVERY-MATRIX.md).
+suite. The initial 966-case cytv run completed with 102 failed subcases, four
+errors and two skips. Ninety-six subcases were missing translations for three
+No-root messages. The remaining failures were old removal fixtures and macOS
+path-alias comparison. The corrected five modules passed all 74 tests at
+`aad6b110`; production guards were retained. The Homebrew continuation fixture
+separately passed six tests with authenticated original snapshots. Independent
+reviews approved those corrections. No unchanged successful tests were relabeled
+as fresh executions.
+
+The complete Android Python suite passed 43 tests; Chrome simple removal covered
+all 13 locales and both editions, and 12 restart/malformed-result presentations
+passed. Three new first-handoff regressions also passed on actual Linux ARM64/
+Node 8 in a disposable read-only, network-disabled container, with input hashes
+unchanged. The complete Root run and actual PR checks were still pending at this
+checkpoint; these focused results do not establish their success.
+[Maintained matrix](../development/INSTALLER-RECOVERY-MATRIX.md).
 
 ## Documentation and remaining acceptance
 
