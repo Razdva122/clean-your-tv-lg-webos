@@ -14,8 +14,9 @@ After declining activation, a separate default-No confirmation can finish only
 an eligible profile-backend activation with disabled intent and restored stock
 routing. Existing file, binding, completed/current product and Root Updater
 baseline checks run again. The exact prior receipt data is archived privately
-before resolving the local activation receipt. No TV file, package or Home state
-is changed by this completion. A changed/unknown state keeps the operation pending.
+before resolving the local activation receipt. Completion preserves packages,
+Home control, runtime and TV recovery journals. Existing eligibility/status checks
+may stage verified support code; they are not advertised as wholly passive. A changed/unknown state keeps the operation pending.
 C1 is excluded. Noninteractive execution and `--yes` do not approve it.
 
 The operator can then separately use existing System Updater preparation (if it
@@ -94,3 +95,10 @@ Linux PR CI found immediate inode reuse after file recreation. A same-size rewri
 regression reproduced the ambiguous cursor scope locally; unchanged size now also
 requires unchanged mtime/ctime before selecting `since-enable`. Eight final snapshot
 cases and the affected diagnostics/recovery/bootstrap cases pass after correction.
+
+Final code PR CI at `4fba9eb6` passed all eight Linux/macOS runtime shards and
+ARM Python ([42196322609](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42196322609)),
+Windows/Intel runtime ([42196322530](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42196322530)),
+preview build and integration policy. Browser validation was not selected for
+these nonvisual changes; preview deployment was skipped on the PR. Subsequent
+changes clarify this source record only; product/build inputs remain unchanged.
