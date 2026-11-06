@@ -15,6 +15,7 @@ from cytv import package
 
 
 class RootHelperFence(unittest.TestCase):
+    @unittest.skipIf(os.name == 'nt', 'POSIX kernel locks and file ownership')
     def test_prepared_owner_blocks_new_install_until_explicit_verified_finish(self):
         self.assertTrue(hasattr(gate,'fence_root_helper'),'Root lifecycle adapter is missing')
         with tempfile.TemporaryDirectory() as directory:
