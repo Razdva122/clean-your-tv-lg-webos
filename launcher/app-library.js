@@ -11,7 +11,11 @@
   function clean(apps) {
     var seen = Object.create(null);
     return apps.filter(function(a) {
-      if (!a || typeof a.id !== 'string' || !a.id || typeof a.title !== 'string' || a.hidden || internal.indexOf(a.id) >= 0 || seen[a.id]) return false;
+      // Apply the same visibility rule to raw, service-normalized and saved catalogs.
+      // LG may mark its installed tuner hidden; never synthesize a missing tuner.
+      if (!a || typeof a.id !== 'string' || !a.id || typeof a.title !== 'string' ||
+          (a.id !== 'com.webos.app.livetv' && (a.hidden || a.visible === false)) ||
+          internal.indexOf(a.id) >= 0 || seen[a.id]) return false;
       seen[a.id] = true; return true;
     }).slice(0,200).map(function(a) {
       return {id:a.id, title:a.title.slice(0,256), icon:typeof a.icon === 'string' ? a.icon : '', iconColor:a.iconColor || a.bgColor || ''};

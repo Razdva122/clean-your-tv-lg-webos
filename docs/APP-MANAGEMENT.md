@@ -55,6 +55,10 @@ In both editions, **+ / Add app** excludes Ares Hosted App
 including entries in a saved catalog. Existing Home tiles for these utilities
 are preserved. This picker filter does not uninstall or disable either utility.
 These changes require rebuilt Home/Root packages and are not yet published.
+The shared Home catalog applies the same visibility and duplicate-ID rules to
+raw inventory, service replies and saved catalogs. Only an actually discovered
+Live TV app bypasses the platform's hidden/invisible flags; a missing tuner is
+never synthesized. User-hidden Home apps remain restorable through the picker.
 
 The launcher asks its edition's service for a fresh inventory whenever the app picker opens.
 No-root uses the helper's existing SSAP pairing key and the TV's local network
