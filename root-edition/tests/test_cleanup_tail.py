@@ -17,6 +17,9 @@ SOURCE=Path(__file__).resolve().parents[1]/'cleanup_tail.js'
 RUNTIME='/var/lib/clean-your-tv-python/4a71641c8d5536175e404a961624e8656eba30e97b5026f6bd7dc31e4bbeaaea'
 STATE='/var/lib/clean-your-tv-installation'
 ID='a'*32
+APPS=('com.cleanyourtv.root.preview','com.cleanyourtv.root.updater','com.cleanyourtv.system.updater','com.cleanyourtv.updater','com.local.nativehome','com.gathin.tvhome')
+def packages():
+    return {app:{'state':'terminal','terminal':{'completed':True,'event':{'id':app,'details':{'packageId':app,'state':'removed'}}}} for app in APPS}
 HARNESS=r'''
 var real=require('fs'),vm=require('vm'),base=process.argv[2],source=process.argv[3],paths={},calls=[];
 function path(p){
@@ -46,7 +49,7 @@ fs.renameSync=function(a,b){return real.renameSync(path(a),path(b));};
 var lock=process.env.OWNERSHIP_FD?Number(process.env.OWNERSHIP_FD):fs.openSync('/var/lib/clean-your-tv-installation/ownership.lock','r+');
 var promotion=process.env.PROMOTION_FD?Number(process.env.PROMOTION_FD):fs.openSync('/var/lib/clean-your-tv-python/.install.lock','r+');
 var worker=process.env.WORKER_FD?Number(process.env.WORKER_FD):fs.openSync('/var/lib/clean-your-tv-installation/worker.lock','r+');
-var fake={getuid:process.getuid,pid:999999,ppid:999998,argv:['node','-',process.env.MODE||'finish','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',process.env.TAIL_STAGE||'-',String(lock),String(promotion),String(worker),process.env.GATE_SHA||'-'],stdout:process.stdout};
+var fake={getuid:process.getuid,pid:999999,ppid:999998,argv:['node','-',process.env.MODE||'finish','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',process.env.TAIL_STAGE||'-',String(lock),String(promotion),String(worker),process.env.GATE_SHA||'-',process.env.REMOVAL||'dddddddddddddddddddddddddddddddd'],stdout:process.stdout};
 var cp={spawnSync:function(command,args,options){
  if(command==='/proc/self/fd/3')return require('child_process').spawnSync(command,args,options);
  var method=args[2],value={returnValue:true};
@@ -76,7 +79,7 @@ class CleanupTail(unittest.TestCase):
             p=self.runtime/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text('owned '+name)
         files={str(p.relative_to(self.runtime)):hashlib.sha256(p.read_bytes()).hexdigest() for p in self.runtime.rglob('*') if p.is_file()}
         self.record=dict(schema=1,protocol='clean-removal-v1',operation=ID,removal='d'*32,lease='b'*32,stage='private-cleanup',
-            state='recovery_required',routes=['third.party.home']*3,support_stages=[],
+            state='recovery_required',routes=['third.party.home']*3,support_stages=[],packages=packages(),
             done=['original-writers-fenced','controls-restored','package-removal','private-cleanup'],
             runtime_cleanup=dict(root=RUNTIME,files=files),result=dict(removed=True,applications_services_startup_removed=True,private_cleanup_verified=False))
         self.write('clean-removal-'+ID+'.json',self.record)
@@ -105,6 +108,38 @@ class CleanupTail(unittest.TestCase):
         result,reply=self.run_tail()
         self.assertEqual(result.returncode,0,result.stderr)
         self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+
+    def test_other_valid_host_removal_intent_cannot_retire_runtime(self):
+        result,reply=self.run_tail(REMOVAL='e'*32)
+        self.assertNotEqual(result.returncode,0)
+        self.assertTrue(self.runtime.exists())
+        self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+
+    def test_package_progress_flags_never_replace_exact_removal_receipts(self):
+        for invalid in ({}, {'state':'submitted'}, {'state':'absent-before-submission'},
+                        {'state':'terminal','terminal':{'completed':True,'event':{'id':'foreign','details':{'state':'removed'}}}},
+                        {'state':'terminal','terminal':{'completed':True,'event':{'details':{'state':'removed','errorCode':0}}}}):
+            with self.subTest(invalid=invalid):
+                self.record['packages']=packages();self.record['packages'][APPS[0]]=invalid
+                self.write('clean-removal-'+ID+'.json',self.record)
+                result,reply=self.run_tail();self.assertNotEqual(result.returncode,0)
+                self.assertTrue(self.runtime.exists())
+                self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+        for inventory in (None, {}, {**packages(),'foreign':{'state':'submitted'}}):
+            self.record['packages']=inventory;self.write('clean-removal-'+ID+'.json',self.record)
+            result,reply=self.run_tail();self.assertNotEqual(result.returncode,0)
+            self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+
+    def test_absence_requires_retained_original_before_submission_evidence(self):
+        self.record['packages'][APPS[0]]={'state':'absent-before-submission'}
+        self.record['original']={'request':{'stage':'root-deploy'},'components':{'deploy':{'stage':'install-submitting'}}}
+        self.write('clean-removal-'+ID+'.json',self.record)
+        result,reply=self.run_tail();self.assertNotEqual(result.returncode,0)
+        self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+        self.record['original']['components']['deploy']={'stage':'prepared'}
+        self.write('clean-removal-'+ID+'.json',self.record)
+        result,reply=self.run_tail();self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(reply['removal'],'d'*32)
 
     def test_interruption_preserves_pending_and_resume_deletes_remaining_only(self):
         result,reply=self.run_tail(FAIL_MEMBER='secret.py')

@@ -623,25 +623,12 @@ class LocalDevice:
                 record['done'].append('controls-restored');save('controls-restored')
             if 'package-removal' not in record['done']:
                 save('package-removal')
-                def absent_safe(app):
-                    # A fresh/never-submitted operation may already be absent.
-                    # Unknown old submissions without SAM are not a vendor drain.
-                    original=record.get('fenced_components',record['original']['components'])
-                    key={APP:'deploy','com.cleanyourtv.root.updater':'root-bootstrap',
-                         'com.cleanyourtv.system.updater':'system-bootstrap'}.get(app)
-                    journal=original.get(key) if key else None
-                    if journal is None:
-                        request=record['original'].get('request')
-                        if request is None or key is None:return True
-                        before={'deploy':('reserved','blocked'),
-                                'root-bootstrap':('reserved','blocked','root-deploy'),
-                                'system-bootstrap':('reserved','blocked','root-deploy','root-updater')}
-                        return request.get('stage') in before[key]
-                    phase=journal.get('stage',journal.get('phase'))
-                    return phase in ('prepared','installing-updater','installing-supervisor')
-                remove_packages(self,record,save,absent_safe)
+                from clean_removal import original_absence_safe
+                remove_packages(self,record,save,lambda app:original_absence_safe(record,app))
                 self.cleanup('app_permissions')
                 record['done'].append('package-removal');save('package-removal')
+            from clean_removal import validate_package_receipts
+            validate_package_receipts(record)
             save('private-cleanup')
             self.clean_quiescent(record,all_processes=True)
             self.retire_clean_private(record)
@@ -962,17 +949,19 @@ class LocalDevice:
             self.cleanup_tail_started=True
             descriptors=(self.ownership.fd,promotion if promotion is not None else -1,self.ownership.store.lock_fd)
             gate_hash=record.get('helper_lifecycle',{}).get('gate_sha256','-')
-            result=subprocess.run(['/usr/bin/node','-','finish',record['operation'],'-',*map(str,descriptors),gate_hash],input=source,
+            result=subprocess.run(['/usr/bin/node','-','finish',record['operation'],'-',*map(str,descriptors),gate_hash,record['removal']],input=source,
                 stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=180,pass_fds=tuple(fd for fd in descriptors if fd>=0),
                 env={key:value for key,value in os.environ.items() if key not in ('NODE_OPTIONS','NODE_PATH')})
             reply=json.loads(result.stdout)
-            if reply.get('operation')!=record['operation']:raise ValueError('cleanup_tail_unconfirmed')
+            if reply.get('operation')!=record['operation'] or reply.get('removal')!=record['removal']:raise ValueError('cleanup_tail_unconfirmed')
             return reply
         finally:
             if promotion is not None:os.close(promotion)
             if directory is not None:os.close(directory)
 
     def verify_clean(self, record):
+        from clean_removal import validate_package_receipts
+        validate_package_receipts(record)
         from clean_removal import APPS, routes
         if self.apps().intersection(APPS):raise ValueError('project_apps_remain')
         for app in APPS:self.absent(app)

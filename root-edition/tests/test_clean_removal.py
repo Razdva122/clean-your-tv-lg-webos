@@ -309,6 +309,19 @@ class PartialDeviceRemoval(unittest.TestCase):
         self.assertTrue((root/'state/ssap.json').exists())
         self.assertFalse(any(name.startswith('remove-') for name in calls))
 
+    def test_completed_package_phase_cannot_skip_unknown_receipt_on_resume(self):
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        from unittest.mock import patch
+        with patch.object(driver.device,'retire_clean_private',side_effect=OSError('interrupted')):
+            first=driver.clean_remove(identifier)
+        self.assertIn('package-removal',first['done'])
+        first['packages']['com.cleanyourtv.root.preview']={'state':'submitted'}
+        driver.store.write('clean-removal-'+identifier,first)
+        result=driver.clean_remove(identifier)
+        self.assertEqual(result['state'],'recovery_required')
+        self.assertTrue((root/'state/ssap.json').exists())
+        self.assertEqual(calls.count('remove-com.cleanyourtv.root.preview'),1)
+
     def test_live_owner_inverse_records_preserved_without_product_secrets(self):
         driver,identifier,root,updater,payload,calls,present=self.fixture()
         (root/'system-permissions.json').write_text('{"original":"foreign permission"}')

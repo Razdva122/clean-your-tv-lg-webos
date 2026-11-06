@@ -176,6 +176,35 @@ def restore_registrations(state, app, base, uid=0):
         if safe_bytes(path,uid=uid)!=entry['original'].encode():raise ValueError('registration_restore_unverified')
 
 
+def original_absence_safe(record, app):
+    """An absent slot needs original writer evidence, not a progress flag."""
+    original=record.get('original')
+    if not isinstance(original,dict) or 'request' not in original or not isinstance(original.get('components'),dict):return False
+    components=record.get('fenced_components',original['components'])
+    if not isinstance(components,dict):return False
+    key={APPS[0]:'deploy',APPS[1]:'root-bootstrap',APPS[2]:'system-bootstrap'}.get(app)
+    if key and key not in components:return False
+    journal=components.get(key) if key else None
+    if journal is None:
+        request=original.get('request')
+        if request is None or key is None:return True
+        before={'deploy':('reserved','blocked'),
+                'root-bootstrap':('reserved','blocked','root-deploy'),
+                'system-bootstrap':('reserved','blocked','root-deploy','root-updater')}
+        return isinstance(request,dict) and request.get('stage') in before[key]
+    return isinstance(journal,dict) and journal.get('stage',journal.get('phase')) in ('prepared','installing-updater','installing-supervisor')
+
+
+def validate_package_receipts(record):
+    packages=record.get('packages')
+    if not isinstance(packages,dict) or set(packages)!=set(APPS):raise ValueError('incomplete_removal_receipts')
+    for app,item in packages.items():
+        if not isinstance(item,dict):raise ValueError('unknown_removal_receipt')
+        if item.get('state')=='terminal' and terminal_removal(item.get('terminal'),app):continue
+        if item.get('state')=='absent-before-submission' and original_absence_safe(record,app):continue
+        raise ValueError('removal_terminal_unknown')
+
+
 def remove_packages(device, record, save, absent_safe):
     """Each NEW removal needs its own terminal; unknown submissions never replay."""
     from observed_install import remove
@@ -187,7 +216,9 @@ def remove_packages(device, record, save, absent_safe):
             if previous.get('state')=='terminal':
                 if not terminal_removal(previous.get('terminal'),app):raise ValueError('removal_terminal_unknown')
                 device.absent(app,previous['terminal'])
-            elif previous.get('state')=='absent-before-submission':device.absent(app)
+            elif previous.get('state')=='absent-before-submission':
+                if not absent_safe(app):raise ValueError('absent_without_writer_drain')
+                device.absent(app)
             else:raise ValueError('unknown_removal_receipt')
             if app in current:raise ValueError('removed_package_reappeared')
             continue
@@ -212,7 +243,7 @@ def compact_audit(record, store):
     """
     import re
     def digest(value):return hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':')).encode()).hexdigest()
-    phases=set(PRE_ACTIVATION)|{'unknown','pending','prepared','reserved','blocked','root-deploy','root-updater','supervisor',
+    phases=set(PRE_ACTIVATION)|{'unknown','pending','prepared','installing-updater','installing-supervisor','reserved','blocked','root-deploy','root-updater','supervisor',
         'readback','complete','submitted','preparing','provisioning','installed-recovery-only','cancellation-admitted',
         'uninstalled-state-retained','remove-submitting','remove-observed','clean-removal-requested','recovery-required',
         'backed-up','installing','awaiting-launch','verifying','rolling-back','rolled-back','aborted','disabled'}

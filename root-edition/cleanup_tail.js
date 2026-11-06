@@ -2,7 +2,7 @@
 // Current verified Node 8 support; runs under the ORIGINAL Ownership flock.
 // Python must never rewrite completion after this process starts retirement.
 var fs=require('fs'), crypto=require('crypto'), cp=require('child_process');
-var C=fs.constants, uid=process.getuid(), mode=process.argv[2], id=process.argv[3];
+var C=fs.constants, uid=process.getuid(), mode=process.argv[2], id=process.argv[3], removal=process.argv[9];
 var state='/var/lib/clean-your-tv-installation';
 var runtime='/var/lib/clean-your-tv-python/4a71641c8d5536175e404a961624e8656eba30e97b5026f6bd7dc31e4bbeaaea';
 var apps=['com.cleanyourtv.root.preview','com.cleanyourtv.root.updater','com.cleanyourtv.system.updater','com.cleanyourtv.updater','com.local.nativehome','com.gathin.tvhome'];
@@ -35,6 +35,36 @@ function inheritedLock(value,path){
   var fd=Number(value);if(!Number.isInteger(fd)||fd<3)throw Error('original-lock-required');
   var info=fs.fstatSync(fd);owned(info,false);
   if(!identity(info,fs.lstatSync(path)))throw Error('original-lock-changed');
+}
+function object(value){return value!==null && typeof value==='object' && !Array.isArray(value);}
+function originalAbsenceSafe(app){
+  var original=record.original;
+  if(!object(original)||!Object.prototype.hasOwnProperty.call(original,'request')||!object(original.components))return false;
+  var components=record.fenced_components===undefined?original.components:record.fenced_components;
+  if(!object(components))return false;
+  var keys={};keys[apps[0]]='deploy';keys[apps[1]]='root-bootstrap';keys[apps[2]]='system-bootstrap';
+  var key=keys[app],journal=key?components[key]:null;
+  if(key&&!Object.prototype.hasOwnProperty.call(components,key))return false;
+  if(journal===undefined||journal===null){
+    var request=original.request;
+    if(request===undefined||request===null||!key)return true;
+    var before={'deploy':['reserved','blocked'],'root-bootstrap':['reserved','blocked','root-deploy'],'system-bootstrap':['reserved','blocked','root-deploy','root-updater']};
+    return object(request)&&before[key].indexOf(request.stage)!==-1;
+  }
+  return object(journal)&&['prepared','installing-updater','installing-supervisor'].indexOf(journal.stage===undefined?journal.phase:journal.stage)!==-1;
+}
+function packageReceipts(){
+  if(!object(record.packages)||Object.keys(record.packages).sort().join(',')!==apps.slice().sort().join(','))throw Error('incomplete-removal-receipts');
+  apps.forEach(function(app){
+    var item=record.packages[app];if(!object(item))throw Error('unknown-removal-receipt');
+    if(item.state==='absent-before-submission'&&originalAbsenceSafe(app))return;
+    var proof=item.terminal,event=object(proof)?proof.event:null,details=object(event)?event.details:null;
+    if(item.state==='terminal'&&proof.completed===true&&object(event)&&object(details)
+       &&event.returnValue!==false&&!Object.prototype.hasOwnProperty.call(event,'errorCode')&&!Object.prototype.hasOwnProperty.call(details,'errorCode')
+       &&(!Object.prototype.hasOwnProperty.call(event,'id')||event.id===app)&&(!Object.prototype.hasOwnProperty.call(details,'packageId')||details.packageId===app)
+       &&typeof details.state==='string'&&['removed','success'].indexOf(details.state.toLowerCase())!==-1)return;
+    throw Error('removal-terminal-unknown');
+  });
 }
 function rpc(method,payload){
   var result=cp.spawnSync('/usr/bin/luna-send',['-n','1','luna://'+method,JSON.stringify(payload)],{timeout:15000,maxBuffer:2097152});
@@ -132,8 +162,9 @@ try{
   if(!/^[a-f0-9]{32}$/.test(id))throw Error('invalid-cleanup-selector');
   directory=openDir(state);
   try{record=json(directory,'clean-removal-'+id+'.json');}catch(e){if(e.code!=='ENOENT')throw e;}
+  if(typeof removal!=='string'||!/^[a-f0-9]{32}$/.test(removal)||record && record.removal!==removal)throw Error('different-removal-intent');
   if(mode==='inspect'){
-    process.stdout.write(JSON.stringify({operation:id,state:record && record.runtime_cleanup?'tail-ready':'not-ready'}));
+    process.stdout.write(JSON.stringify({operation:id,removal:removal,state:record && record.runtime_cleanup?'tail-ready':'not-ready'}));
   }else{
     var lock=Number(process.argv[5]);
     if(!Number.isInteger(lock) || lock<3)throw Error('original-lock-required');
@@ -154,6 +185,7 @@ try{
        || !Array.isArray(record.done) || ['original-writers-fenced','controls-restored','package-removal','private-cleanup'].some(function(stage){return record.done.indexOf(stage)===-1;})
        || !record.result || record.result.removed!==true || record.result.applications_services_startup_removed!==true
        || typeof record.result.private_cleanup_verified!=='boolean')throw Error('original-removal-required');
+    packageReceipts();
     var cleanup=record.runtime_cleanup;
     if(!cleanup || cleanup.root!==runtime || !cleanup.files || typeof cleanup.files!=='object' || Array.isArray(cleanup.files))throw Error('runtime-cleanup-proof-required');
     Object.keys(cleanup.files).forEach(function(name){if(!/^(?:[a-zA-Z0-9_.+-]+\/)*[a-zA-Z0-9_.+-]+$/.test(name) || name.split('/').some(function(p){return p==='.'||p==='..';}) || !/^[a-f0-9]{64}$/.test(cleanup.files[name]))throw Error('invalid-runtime-inventory');});
@@ -206,9 +238,9 @@ try{
     cleanup.files={};delete cleanup.parent_pid;
     write(directory,'clean-removal-'+id+'.json',record);
     lease.stage='verified-clean';write(directory,'operation.json',lease);
-    process.stdout.write(JSON.stringify({operation:id,state:'complete',stage:'verified-clean',current:true,reason:'removal-verified',result:record.result}));
+    process.stdout.write(JSON.stringify({operation:id,removal:removal,state:'complete',stage:'verified-clean',current:true,reason:'removal-verified',result:record.result}));
   }
 }catch(error){
-  if(mode==='inspect' && error.code==='ENOENT')process.stdout.write(JSON.stringify({operation:id,state:'not-ready'}));
-  else {process.stdout.write(JSON.stringify({operation:id,state:'recovery_required',stage:'private-cleanup',current:false,reason:'private-cleanup-incomplete'}));process.exitCode=1;}
+  if(mode==='inspect' && error.code==='ENOENT')process.stdout.write(JSON.stringify({operation:id,removal:removal,state:'not-ready'}));
+  else {process.stdout.write(JSON.stringify({operation:id,removal:removal,state:'recovery_required',stage:'private-cleanup',current:false,reason:'private-cleanup-incomplete'}));process.exitCode=1;}
 }finally{opened.reverse().forEach(function(fd){try{fs.closeSync(fd);}catch(e){}});}
