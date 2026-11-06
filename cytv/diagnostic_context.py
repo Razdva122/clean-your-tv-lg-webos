@@ -41,6 +41,11 @@ COMPONENTS = {'com.gathin.tvhome': 'home', 'com.local.nativehome': 'helper',
               'com.cleanyourtv.root.preview': 'root', 'com.cleanyourtv.root.updater': 'root_updater',
               'com.cleanyourtv.system.updater': 'system_updater'}
 HELPER_STATES = ('running', 'stopped', 'stale', 'uncertain', 'unknown')
+RECOVERY_REASONS = ('original_final_readback_verified','recovery_evidence_required',
+                    'original-request-unverified','original-snapshot-unverified','worker-not-quiescent',
+                    'package-terminal-unverified','current-package-files-unverified','updater-baseline-unverified',
+                    'stock-routing-unverified','intent-guardian-unverified','recovery-code-incompatible',
+                    'recovery-evidence-unverified')
 
 
 def choice(value, allowed, default='unknown'):
@@ -155,6 +160,10 @@ def product_summary(value):
               (('state', STATES), ('stage', STAGES), ('code', CODES)) if key in value}
     if 'failure' in value:
         result['failure'] = worker_summary(value['failure'])
+    if 'resume_reason' in value:
+        result['resume_reason']=choice(value['resume_reason'],RECOVERY_REASONS)
+    if 'setup_reason' in value:
+        result['setup_reason']=choice(value['setup_reason'],RECOVERY_REASONS)
     if 'passive' in value:
         passive=mapping(value['passive'])
         result['passive']={'schema':1,**{key:choice(passive[key],allowed) for key,allowed in (
@@ -171,6 +180,11 @@ def status_summary(value):
     value = mapping(value)
     device = mapping(value.get('device', value))
     result = {}
+    if 'cancellation' in value:
+        cancellation=mapping(value['cancellation'])
+        result['cancellation']={'state':choice(cancellation.get('state'),('blocked','admissible','admitted',
+            'remove-observed','cancellation-terminal-pending','cancelled-and-removed')),
+            'reason':choice(cancellation.get('reason'),RECOVERY_REASONS)}
     if 'assessment' in value:
         from .recovery_state import assessment_summary
         result['assessment'] = assessment_summary(value['assessment'])

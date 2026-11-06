@@ -186,7 +186,9 @@ class CapabilityTests(unittest.TestCase):
         for pending in (False,True):
             with self.subTest(pending=pending),tempfile.TemporaryDirectory() as tmp,patch('cytv.cli.Installer') as cls:
                 profile=state.target('192.0.2.10','root');store=state.Store(tmp)
-                if pending:store.begin(profile,'install')
+                if pending:
+                    store.begin(profile,'install');store.save(profile)
+                    (store.device_dir(profile)/'known_hosts').write_bytes(b'original pin')
                 cls.return_value.status.return_value={}
                 code=cli.main(['doctor','--host',profile['host'],'--edition','root','--data-dir',tmp],
                               connect=lambda *a:Mock(),write=lambda _:None)

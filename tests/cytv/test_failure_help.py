@@ -142,6 +142,7 @@ class FailureHelpTests(unittest.TestCase):
         from cytv.desktop import DesktopConsole
         with tempfile.TemporaryDirectory() as tmp:
             profile=state.target('192.0.2.10','root');store=state.Store(tmp);store.save(profile)
+            (store.device_dir(profile)/'known_hosts').write_bytes(b'original pin')
             store.begin(profile,'install',stage='coordinator-submitted')
             path=store.device_dir(profile)/'operation.json';before=path.read_bytes();events=[]
             def connect(*args):raise TimeoutError('PRIVATE')

@@ -10,6 +10,8 @@ class CurrentInstallation:
         self.base=Path(self.temp).resolve();project=Path(__file__).resolve().parents[2]
         sys.path.insert(0,str(project/'root-edition'))
         import installation,install_device,python_binding,deploy,package_data,package_identity
+        processes=self.base/'continuation-proc';processes.mkdir()
+        self.stack.enter_context(patch.object(install_device,'PROC',processes))
         from updater import device as updater_device,package as updater_package
         from updater.store import Store,encode
         from cytv import package

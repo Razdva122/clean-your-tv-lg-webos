@@ -11,6 +11,7 @@ UPDATER_FILES=('core.py','store.py','profile.py','device.py','package.py','cli.p
 SUPPORT=('installation.py','observed_install.py','installer_status.py','provision.py','deploy.py','setup.py','system_permissions.py','activity.py','startup_hook.py','package_data.py','package_identity.py','startup_guard.py','python_binding.py','python_boot.js')
 COORDINATOR_FILES=('coordinator_inventory.py', 'install_driver.py', 'install_device.py', 'system_setup.py', 'root_package.py', 'app-inventory.js', 'cleanup_root_updater.py', 'cleanup_system_updater.py', 'cleanup_legacy_permissions.py', 'cleanup_app_permissions.py', 'cleanup_root_archive.py', 'system_updater/__init__.py', 'system_updater/core.py', 'system_updater/device.py', 'system_updater/support/__init__.py', 'system_updater/support/package.py', 'system_updater/support/store.py', 'system_updater/support/profile.py', 'system_updater/support/luna.py')
 APP='com.cleanyourtv.root.updater'
+COORDINATOR_FILES += ('cancel_install.py', 'cancel_provision.py')
 
 
 def source(path):
@@ -26,7 +27,7 @@ def build(output, legacy_node_prototype=False):
     builder=importlib.util.module_from_spec(spec);spec.loader.exec_module(builder)
     code={'updater/'+name:source(ROOT/'updater'/name) for name in UPDATER_FILES}
     code.update({name:source(ROOT/name) for name in SUPPORT})
-    for name in ('coordinator_inventory.py','install_driver.py','install_device.py'):
+    for name in ('coordinator_inventory.py','install_driver.py','install_device.py','cancel_install.py','cancel_provision.py'):
         code[name]=source(ROOT/name)
     code['system_setup.py']=source(ROOT.parent/'system-updater/setup.py')
     code['root_package.py']=source(ROOT.parent/'cytv/package.py')

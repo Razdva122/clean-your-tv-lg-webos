@@ -401,6 +401,144 @@ class RealHandoffTests(unittest.TestCase):
             fixture.assert_preserved(self)
 
 class ExplicitRecoveryTests(unittest.TestCase):
+    def test_host_orchestration_reaches_original_filesystem_coordinator_without_package_replay(self):
+        import json,shlex
+        from install_fixture import CurrentInstallation
+        from install_device import LocalDevice
+        from unittest.mock import patch
+        from cytv import operations,state
+        from cytv.root_install_recovery import RECOVERY_ENTRY
+        with CurrentInstallation() as fixture:
+            device=LocalDevice();driver=install_driver.Coordinator(device,fixture.owner)
+            with redirect_stderr(io.StringIO()),patch.object(device,'readback',side_effect=ValueError('interruption')):
+                failed=driver.install('a'*32,fixture.payload)
+            snapshot=fixture.snapshot('a'*32);self.bind_candidate(fixture,'a'*32,snapshot)
+            host=state.Store(fixture.base/'host');profile=state.target('fixture.local','root')
+            host.begin(profile,'install',stage='coordinator-submitted',requires_updater=True,
+                       product_operation='a'*32,recovery_protocol='root-final-readback-v1')
+            original=host.pending(profile);calls=[];uploads={};test=self
+            class Remote:
+                def upload(self,path,data,mode=0o600):uploads[path]=data
+                def luna(self,uri,payload,**kwargs):
+                    test.assertEqual(uri,operations.UPDATER_APP+'.service/status')
+                    return {'returnValue':True,'result':None}
+                def run(self,command,**kwargs):
+                    calls.append(command);words=shlex.split(command)
+                    if '/usr/bin/node' in words:return '/usr/bin/python3'
+                    if command.startswith(('umask ','mkdir ')):return ''
+                    if RECOVERY_ENTRY in words:
+                        test.assertIn('-I',words)
+                        action=words[words.index(RECOVERY_ENTRY)+3]
+                        if action=='status':
+                            event=driver.status('a'*32)
+                            return json.dumps(dict(event,**install_driver.continuation_status('a'*32,fixture.owner.store,device),
+                                current=device.validate_completion('install',event.get('lease')) if event['state']=='complete' else False))
+                        test.assertEqual(action,'install');test.assertIn('--final-readback-only',words)
+                        test.assertNotIn('--payload',words)
+                        return json.dumps(driver.resume('a'*32,snapshot,final_readback_only=True))
+                    if 'CYTV_UPDATER_VERIFIED' in command:
+                        test.assertEqual(words[-1],device.readback()['baseline_sha'])
+                        return 'CYTV_UPDATER_VERIFIED'
+                    if '/var/lib/clean-your-tv-root/deploy.py status' in command:
+                        return json.dumps({'returnValue':True,'result':{'recovery':{'integrity_verified':True},'guardian_active':False,
+                            'intent':{'enabled':False,'phase':'disabled'},'effective':{'sam_home':'com.webos.app.home',
+                            'profiles':{'defaultApps':{'categories':{'home':'com.webos.app.home'}},'idleApp':{'appId':'com.webos.app.home'}}}}})
+                    raise AssertionError(command)
+            installer=operations.Installer(Remote(),host,profile,fixture.payload,{})
+            reviewed=installer.observe_recovery()
+            self.assertIn('continue-product',reviewed['assessment']['actions'])
+            self.assertEqual(host.pending(profile),original)
+            with patch.object(device,'resume_install',side_effect=AssertionError('general replay path')):
+                result=installer.continue_root_product(original)
+            self.assertTrue(result['can_resume_root_setup'])
+            self.assertEqual(host.pending(profile)['baseline_sha'],device.readback()['baseline_sha'])
+            self.assertEqual(driver.status('a'*32)['lease'],failed['lease'])
+            self.assertTrue(fixture.owner.status()['terminal']);fixture.assert_preserved(self)
+            self.assertEqual(sum('--resume' in call for call in calls),1)
+            self.assertTrue(any(path.endswith('/install_driver.py') for path in uploads))
+
+    def test_terminal_record_with_unfinished_lease_spawns_only_current_trusted_worker(self):
+        from install_fixture import CurrentInstallation
+        from install_device import LocalDevice
+        from unittest.mock import patch
+        with CurrentInstallation() as fixture:
+            device=LocalDevice();driver=install_driver.Coordinator(device,fixture.owner)
+            driver.install('a'*32,fixture.payload);snapshot=fixture.snapshot('a'*32)
+            fixture.retain('a'*32,'complete');self.bind_candidate(fixture,'a'*32,snapshot)
+            record=fixture.owner.store.read('request-'+'a'*32);record['state']='complete'
+            fixture.owner.store.write('request-'+'a'*32,record)
+            with patch('subprocess.Popen') as spawn:
+                result=install_driver.resume_submit('a'*32,fixture.owner,action='install',final_readback_only=True)
+            self.assertEqual(result['state'],'pending')
+            self.assertEqual(spawn.call_count,1)
+            args=spawn.call_args.args[0]
+            self.assertEqual(args[2],str(Path(install_driver.__file__).resolve()))
+            self.assertIn('--final-readback-only',args)
+            self.assertEqual(args[args.index('--payload')+1],str(snapshot))
+
+    def bind_candidate(self,fixture,identifier,snapshot):
+        submission=fixture.owner.store.read('submission-'+identifier)
+        candidate=install_driver.candidate_digest(snapshot,install_driver._verified_payload(snapshot,False))
+        submission['candidate_sha256']=candidate;fixture.owner.store.write('submission-'+identifier,submission)
+        record=fixture.owner.store.read('request-'+identifier);record['candidate_sha256']=candidate
+        fixture.owner.store.write('request-'+identifier,record)
+
+    def test_host_final_readback_continuation_is_rechecked_under_original_lease(self):
+        from install_fixture import CurrentInstallation
+        from install_device import LocalDevice
+        from unittest.mock import patch
+        with CurrentInstallation() as fixture:
+            device=LocalDevice();driver=install_driver.Coordinator(device,fixture.owner)
+            with redirect_stderr(io.StringIO()),patch.object(device,'readback',side_effect=ValueError('interruption')):
+                failed=driver.install('a'*32,fixture.payload)
+            snapshot=fixture.snapshot('a'*32)
+            self.bind_candidate(fixture,'a'*32,snapshot)
+            proof=install_driver.continuation_status('a'*32,fixture.owner.store,device)
+            self.assertTrue(proof['can_resume'])
+            with patch.object(device,'resume_install',side_effect=AssertionError('general replay path')):
+                completed=driver.resume('a'*32,snapshot,final_readback_only=True)
+            self.assertEqual(completed['lease'],failed['lease'])
+            self.assertEqual(completed['result']['baseline_sha'],device.readback()['baseline_sha'])
+            fixture.assert_preserved(self)
+
+    def test_final_readback_refusal_reports_snapshot_and_stage_without_writes(self):
+        from install_fixture import CurrentInstallation
+        from install_device import LocalDevice
+        from unittest.mock import patch
+        with CurrentInstallation() as fixture:
+            device=LocalDevice();driver=install_driver.Coordinator(device,fixture.owner)
+            with redirect_stderr(io.StringIO()),patch.object(device,'readback',side_effect=ValueError('interruption')):
+                driver.install('a'*32,fixture.payload)
+            snapshot=fixture.snapshot('a'*32)
+            self.bind_candidate(fixture,'a'*32,snapshot)
+            record=fixture.owner.store.read('request-'+'a'*32)
+            record['stage']='root-deploy';fixture.owner.store.write('request-'+'a'*32,record)
+            before=(fixture.state/('request-'+'a'*32+'.json')).read_bytes()
+            self.assertEqual(install_driver.continuation_status('a'*32,fixture.owner.store,device)['resume_reason'],'package-terminal-unverified')
+            with self.assertRaises(ValueError):driver.resume('a'*32,snapshot,final_readback_only=True)
+            self.assertEqual((fixture.state/('request-'+'a'*32+'.json')).read_bytes(),before)
+            (snapshot/'root-updater/install_driver.py').write_bytes(b'changed')
+            self.assertEqual(install_driver.continuation_status('a'*32,fixture.owner.store,device)['resume_reason'],'original-snapshot-unverified')
+
+    def test_final_readback_rejects_candidate_drift_and_live_child(self):
+        from install_fixture import CurrentInstallation
+        from install_device import LocalDevice
+        from unittest.mock import patch
+        import install_device
+        with CurrentInstallation() as fixture:
+            device=LocalDevice();driver=install_driver.Coordinator(device,fixture.owner)
+            with redirect_stderr(io.StringIO()),patch.object(device,'readback',side_effect=ValueError('interruption')):
+                driver.install('a'*32,fixture.payload)
+            snapshot=fixture.snapshot('a'*32);self.bind_candidate(fixture,'a'*32,snapshot)
+            processes=fixture.base/'processes';(processes/'999999').mkdir(parents=True)
+            (processes/'999999'/'cmdline').write_bytes(str(snapshot/'root/provision.py').encode()+b'\0finalize\0')
+            with patch.object(install_device,'PROC',processes):
+                self.assertEqual(install_driver.continuation_status('a'*32,fixture.owner.store,device)['resume_reason'],'worker-not-quiescent')
+                with self.assertRaises(ValueError):driver.resume('a'*32,snapshot,final_readback_only=True)
+            record=fixture.owner.store.read('request-'+'a'*32);record['candidate_sha256']='f'*64
+            fixture.owner.store.write('request-'+'a'*32,record)
+            self.assertEqual(install_driver.continuation_status('a'*32,fixture.owner.store,device)['resume_reason'],'original-snapshot-unverified')
+
     def test_terminal_then_readback_failure_resumes_original_request_without_submission(self):
         from install_fixture import CurrentInstallation
         from install_device import LocalDevice

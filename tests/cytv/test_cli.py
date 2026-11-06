@@ -186,6 +186,7 @@ class CLITests(unittest.TestCase):
             store = state.Store(tmp)
             profile = state.target('192.0.2.10', 'no-root')
             store.begin(profile, 'uninstall')
+            store.save(profile);(store.device_dir(profile)/'known_hosts').write_bytes(b'original pin')
             inst = cls.return_value
             inst.store, inst.profile = store, profile
             inst.remote.luna.return_value = {'returnValue': True, 'status': {'apps': []}}
@@ -211,6 +212,7 @@ class CLITests(unittest.TestCase):
                 store = state.Store(tmp)
                 profile = state.target('192.0.2.10', 'no-root')
                 store.begin(profile, action)
+                store.save(profile);(store.device_dir(profile)/'known_hosts').write_bytes(b'original pin')
                 inst = cls.return_value
                 inst.store, inst.profile = store, profile
                 inst.remote.luna.return_value = {'returnValue': True, 'status': {'apps': []}}
@@ -324,6 +326,7 @@ class CLITests(unittest.TestCase):
             profile = state.target('192.0.2.10', 'root')
             store = state.Store(tmp)
             store.save(profile)
+            (store.device_dir(profile)/'known_hosts').write_bytes(b'original pin')
             store.begin(profile, 'uninstall', full_project=True, root_submitted=True)
             installer.return_value.uninstall.side_effect = UserError('connection lost')
             code, output, _ = self.run_cli(['uninstall', '--data-dir', tmp], ['y'], remote=MagicMock())
@@ -398,6 +401,7 @@ class CLITests(unittest.TestCase):
                  patch('cytv.cli.Installer') as cls, patch('cytv.tv.SSAP') as ssap:
                 store = state.Store(tmp); profile = state.target('192.0.2.10', 'root')
                 store.begin(profile, 'setup-root-updater', stage='verify', requires_updater=True)
+                store.save(profile);(store.device_dir(profile)/'known_hosts').write_bytes(b'original pin')
                 inst = cls.return_value
                 inst.store, inst.profile = store, profile
                 def status():

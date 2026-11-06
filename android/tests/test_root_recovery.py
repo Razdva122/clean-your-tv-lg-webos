@@ -52,7 +52,9 @@ class AndroidRootRecoveryTests(unittest.TestCase):
             def __init__(self): self.events = []
             def emit(self, raw): self.events.append(json.loads(raw))
             def request(self, raw):
-                self.events.append(json.loads(raw)); return self.answer
+                event=json.loads(raw);self.events.append(event)
+                if 'verified support code' in event.get('text',''):return 'n'
+                return self.answer
         self.native = Native()
 
     def records(self):
@@ -107,7 +109,9 @@ class AndroidRootRecoveryTests(unittest.TestCase):
         before = self.records()
         def request(raw):
             event = json.loads(raw); self.native.events.append(event)
-            return 'PRIVATE-TEST-SECRET' if event['kind'] == 'secret' else 'y'
+            if event['kind']=='secret':return 'PRIVATE-TEST-SECRET'
+            if i18n.translate('Check the original Root operation using verified support code?') in event.get('text',''):return 'n'
+            return 'y'
         self.native.request = request
         remote = Mock()
         remote.run.return_value = json.dumps({'schema': 1, 'status': 'missing'})

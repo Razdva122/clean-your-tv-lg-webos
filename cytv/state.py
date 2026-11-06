@@ -75,6 +75,31 @@ class Store:
     def save(self, profile):
         private_write(self.device_dir(profile) / 'profile.json', json.dumps(target(**profile)).encode())
 
+    def connection_profile(self, selected):
+        """Resolve pending work to its original saved identity, before connecting."""
+        if self.pending(selected) is None:
+            return selected, False
+        directory = self.device_dir(selected)
+        try:
+            path = directory / 'profile.json'
+            known = directory / 'known_hosts'
+            if path.is_symlink() or known.is_symlink() or not known.read_bytes():
+                raise ValueError('missing trust')
+            original = target(**json.loads(path.read_text()))
+            if any(original[k] != selected[k] for k in ('host', 'edition', 'port')):
+                raise ValueError('foreign profile')
+            profiles=self.profiles()
+            matches = [p for p in profiles if all(p[k] == original[k] for k in ('host','edition','port'))]
+            if matches != [original]:
+                raise ValueError('ambiguous profile')
+            operation=(self.pending(original) or {}).get('product_operation')
+            if operation and [p for p in profiles if (self.pending(p) or {}).get('product_operation')==operation] != [original]:
+                raise ValueError('ambiguous operation')
+            return original, True
+        except (OSError, ValueError, TypeError, KeyError):
+            raise UserError('The original saved TV connection and host key are required for recovery. Recovery data was kept.',
+                            reason_code='ssh-identity-unverified') from None
+
     def profiles(self):
         result = []
         if self.root.exists():

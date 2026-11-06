@@ -34,6 +34,7 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.store = state.Store(self.root)
         self.profile = state.target('192.0.2.10', 'no-root', 9923)
         self.store.save(self.profile)
+        (self.store.device_dir(self.profile)/'known_hosts').write_bytes(b'original pin')
         self.store.save(state.target('192.0.2.11', 'no-root'))
         self.store.begin(self.profile, 'uninstall', eim_registered=False)
         self.payload = self.root / 'payload'
@@ -118,6 +119,7 @@ class DesktopRecoveryTests(unittest.TestCase):
     def prepare_root_recovery(self, action='activate-root'):
         self.profile = state.target('192.0.2.10', 'root')
         self.store.save(self.profile)
+        (self.store.device_dir(self.profile)/'known_hosts').write_bytes(b'original pin')
         self.store.begin(self.profile, action, stage='enable' if action == 'activate-root' else 'removing',
                          requires_updater=True, updates_ready=True, baseline_sha='a'*64,
                          release_sha='b'*64, bundle_sha='c'*64, product_operation='d'*32)

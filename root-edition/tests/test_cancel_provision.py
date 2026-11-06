@@ -184,7 +184,7 @@ class PendingProvisionCancellationTests(unittest.TestCase):
             self.assertEqual(remove.call_count,1)
         self.assertFalse(self.f.owner.status()['terminal'])
 
-    def test_host_device_digest_pins_both_separately_staged_modules(self):
+    def test_host_device_digest_pins_both_packaged_recovery_modules(self):
         import importlib.util
         import cancel_install
         from updater.package import safe_bytes
@@ -197,7 +197,8 @@ class PendingProvisionCancellationTests(unittest.TestCase):
         with patch.object(cancel_install,'safe_bytes',side_effect=lambda path,**kw:safe_bytes(path,uid=os.getuid())):
             self.assertEqual(cancel_install.trusted_code_digest(bundle),pin)
             (bundle/'cancel_provision.py').write_bytes(b'changed')
-            self.assertNotEqual(cancel_install.trusted_code_digest(bundle),pin)
+            with self.assertRaisesRegex(ValueError,'bundle hash mismatch'):
+                cancel_install.trusted_code_digest(bundle)
 
 
 if __name__=='__main__':unittest.main()

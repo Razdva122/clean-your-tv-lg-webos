@@ -11,6 +11,15 @@ from cytv.recovery import recover
 
 
 class RecoveryStateTests(unittest.TestCase):
+    def test_cancellation_advice_requires_matching_raw_operation_and_never_exports_proof(self):
+        from cytv.recovery_state import assess
+        pending={'action':'install','product_operation':'a'*32}
+        observed={'device':{},'cancellation':{'operation':'a'*32,'state':'admissible','home_changed':False,
+            'candidate_sha256':'b'*64,'proof_sha256':'c'*64,'code_sha256':'d'*64}}
+        value=assess({'edition':'root'},pending,observed)
+        self.assertEqual(value['actions'],['cancel-install','retain-evidence'])
+        observed['cancellation']['operation']='e'*32
+        self.assertNotIn('cancel-install',assess({'edition':'root'},pending,observed)['actions'])
     def test_assessment_is_conservative_and_never_exports_receipts(self):
         from cytv.recovery_state import assess
         root = {'edition': 'root'}

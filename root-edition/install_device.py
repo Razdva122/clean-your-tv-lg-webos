@@ -127,6 +127,9 @@ def require_product_abi():
         raise RuntimeError('unsupported_product_abi')
 
 
+PROC=Path('/proc')
+
+
 class LocalDevice:
     def __init__(self):
         self.payload=None
@@ -228,6 +231,17 @@ class LocalDevice:
         self.verify_removed()
         if os.path.lexists(ROOT) and self.cleanup('root_archive','inspect').get('busy') is not False:return False
         return True
+
+    def continuation_quiescent(self, snapshot):
+        """No surviving original mutator may race the final readback."""
+        prefixes=tuple(str(p).encode()+b'/' for p in (ROOT,UPDATER,SUPERVISOR,Path(snapshot)))
+        mutators=(b'deploy.py',b'provision.py',b'install_driver.py',b'setup-updater.py',b'system_setup.py')
+        for process in PROC.iterdir():
+            if not process.name.isdigit() or int(process.name)==os.getpid():continue
+            try:args=(process/'cmdline').read_bytes().split(b'\0')
+            except FileNotFoundError:continue
+            if any(arg.startswith(prefixes) and arg.rsplit(b'/',1)[-1] in mutators for arg in args):
+                raise ValueError('live_original_worker')
 
     def resume_install(self, payload, options, stage, checkpoint):
         import deploy

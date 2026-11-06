@@ -77,14 +77,14 @@ class Callbacks:
     def trust(self, value, root):
         return self.request(kind='trust', fingerprint=value, root=root) == 'yes'
 
-    def connect(self, profile, directory, secret, trust):
-        if profile['edition'] == 'root' and not self.identity:
+    def connect(self, profile, directory, secret, trust, persist=True):
+        if persist and profile['edition'] == 'root' and not self.identity:
             profile.pop('identity', None)
         def approve(fingerprint, root):
             if not self.trust(fingerprint, root):
                 raise EOFError
             return True
-        return SSH.connect(profile, directory, secret, approve)
+        return SSH.connect(profile, directory, secret, approve if persist else lambda *_:False, persist=persist)
 
 
 class AndroidConsole(Console):
@@ -135,7 +135,7 @@ class AndroidConsole(Console):
         super().text(message, bold)
 
 
-def inspect_root_recovery(config, callbacks):
+def inspect_root_recovery(config, callbacks, payload=None):
     """Use original Android records for the submitted-install read, not a new CLI login."""
     from cytv import diagnostics, prompts, root_passive
     from cytv.errors import UserError
@@ -160,15 +160,20 @@ def inspect_root_recovery(config, callbacks):
         if not prompts.confirm('Check recovery options?', write.reader(callbacks.ask), write):
             write(KEPT)
             return 130
-        passive = root_passive.inspect_saved(store, profile, pending.get('product_operation'), callbacks.secret)
-        event = dict(operation=pending['product_operation'], state='recovery_required', stage='blocked', code='operation_requires_recovery',
-                     can_resume=False, passive=passive)
-        result = dict(device={'product': event}, can_resume_root_setup=False)
-        from cytv.recovery_state import assess
-        result['assessment'] = assess(profile, pending, result)
-        plan(write, 'blocked', KEPT, 'Save diagnostic report…')
-        diagnostics.save_result(write, store, 'recover', profile, 'recover', status=result)
-        return 2  # Reading evidence never completes or unlocks the installation.
+        def review(remote,passive):
+            from cytv.operations import Installer
+            from cytv.recovery import recover
+            from cytv.recovery_state import assess
+            event=dict(operation=pending['product_operation'],state='recovery_required',stage='blocked',
+                       code='operation_requires_recovery',can_resume=False,passive=passive)
+            result=dict(device={'product':event},can_resume_root_setup=False)
+            result['assessment']=assess(profile,pending,result)
+            installer=Installer(remote,store,profile,payload or '/unavailable-recovery-payload',{},write)
+            recover(installer,write.reader(callbacks.ask),write,initial_observation=result)
+            diagnostics.save_result(write,store,'recover',profile,'recover',installer.tv_info,
+                                    status=installer.tv_info.get('status',result))
+            return 2 if store.pending(profile) else 0
+        return root_passive.inspect_saved(store,profile,pending.get('product_operation'),callbacks.secret,after_observe=review)
     except (EOFError, KeyboardInterrupt):
         write(KEPT)
         return 130
@@ -193,7 +198,7 @@ def run(config_json, directory, payload, identity, native):
     try:
         config = json.loads(config_json)
         args = arguments(config, directory, identity)
-        code = (inspect_root_recovery(config, callbacks)
+        code = (inspect_root_recovery(config, callbacks, payload)
                 if config.get('action') == 'recover' and config.get('edition') == 'root' else None)
         if code is None:
             # Other operations retain the shared CLI and their explicit confirmations.

@@ -242,7 +242,7 @@ class SSH:
             # Internal inspection requires the original cytv pin, never TOFU or
             # importing a replacement from the user's current OpenSSH config.
             name = profile['host'] if profile['port'] == 22 else f"[{profile['host']}]:{profile['port']}"
-            if profile['edition'] != 'root' or not known.is_file() or not paramiko.HostKeys(str(known)).lookup(name):
+            if not known.is_file() or not paramiko.HostKeys(str(known)).lookup(name):
                 raise UserError('SSH host key was not verified. Connection cancelled.', reason_code='ssh-identity-unverified')
             profile = dict(profile)
         client = paramiko.SSHClient()
@@ -270,6 +270,9 @@ class SSH:
             keyfile = directory / 'developer-key.pem'
             if keyfile.exists():
                 options['pkey'] = paramiko.RSAKey.from_private_key_file(str(keyfile))
+            elif not persist:
+                client.close()
+                raise UserError('The saved Developer Mode key is required for recovery. Recovery data was kept.', reason_code='ssh-identity-unverified')
             else:
                 key, raw = developer_key(profile['host'], secret(CredentialPrompt('Developer Mode passphrase: ', 'developer')))
                 options['pkey'] = key
@@ -280,7 +283,7 @@ class SSH:
             client.connect(**options)
             if persist:
                 save_host_keys(client.get_host_keys(), known)
-            if profile['edition'] == 'no-root' and not keyfile.exists():
+            if persist and profile['edition'] == 'no-root' and not keyfile.exists():
                 private_write(keyfile, raw)
             return cls(client, root=profile['edition'] == 'root')
         except AgentLoginFailed:

@@ -31,7 +31,7 @@ def permission_plan():
 def digest(raw):return hashlib.sha256(raw).hexdigest()
 
 
-def verify_bundle(bundle,reader=None):
+def verify_bundle(bundle,reader=None,allow_legacy_recovery=False):
     bundle=Path(bundle);reader=safe_bytes if reader is None else reader
     manifest=json.loads(reader(bundle/'bundle.json',limit=65536))
     if manifest.get('schema')!=1 or not isinstance(manifest.get('files'),dict):raise ValueError('Invalid updater bundle')
@@ -42,7 +42,8 @@ def verify_bundle(bundle,reader=None):
               'installation.py','observed_install.py','installer_status.py','provision.py','deploy.py','setup.py','system_permissions.py','activity.py','startup_hook.py','package_data.py','package_identity.py','startup_guard.py','python_binding.py','python_boot.js'}
     from coordinator_inventory import BUNDLED_FILES
     required.update(BUNDLED_FILES)
-    if set(manifest['files'])!=required:raise ValueError('Unexpected updater bundle inventory')
+    inventories=(required,required-{'cancel_install.py','cancel_provision.py'}) if allow_legacy_recovery else (required,)
+    if set(manifest['files']) not in inventories:raise ValueError('Unexpected updater bundle inventory')
     for name,sha in manifest['files'].items():
         if digest(reader(bundle/name))!=sha:raise ValueError('Updater bundle hash mismatch: '+name)
     return manifest

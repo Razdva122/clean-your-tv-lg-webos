@@ -14,20 +14,53 @@ def plan(write, state, summary, next_step=KEPT):
     write.recovery_plan({'state': state, 'summary': summary, 'next_step': next_step})
 
 
-def recover(installer, ask, write, non_interactive=False):
+def recover(installer, ask, write, non_interactive=False, initial_observation=None):
     """Review first; never implicitly reinstall, erase receipts or retry a mutation."""
     plan(write, 'review', REVIEW)
     if non_interactive:
         raise UserError('Recovery requires interactive confirmation. --yes does not approve recovery.')
-    write('Checking recovery does not reinstall or remove packages. Root checks may run verified support code.')
-    if not prompts.confirm('Check recovery options?', ask, write):
-        write(KEPT)
-        return
+    if initial_observation is None:
+        write('Checking recovery does not reinstall or remove packages. Root checks may run verified support code.')
+        if not prompts.confirm('Check recovery options?', ask, write):
+            write(KEPT)
+            return
     try:
-        result = installer.observe_recovery()
+        result = installer.observe_recovery() if initial_observation is None else initial_observation
         installer.tv_info.update(status=result)
         pending = installer.store.pending(installer.profile)
         assessment = assess(installer.profile, pending, result)
+        if 'inspect-support' in assessment['actions']:
+            write('The original operation is retained. Verified support code can check continuation or cancellation without changing packages or Home control.')
+            if not prompts.confirm('Check the original Root operation using verified support code?', ask, write):
+                write(KEPT)
+                return
+            result=installer.inspect_root_product(pending)
+            assessment=assess(installer.profile,pending,result)
+        if 'continue-product' in assessment['actions']:
+            plan(write,'ready','The original package operation can finish its verified final readback. Home control will stay off until you choose it separately.')
+            if not prompts.confirm('Continue the original Root operation?',ask,write):
+                write(KEPT)
+                return
+            result=installer.continue_root_product(pending)
+            pending=installer.store.pending(installer.profile)
+            assessment=assess(installer.profile,pending,result)
+        if (installer.profile['edition']=='root' and pending and pending.get('action')=='install'
+                and pending.get('product_operation') and result.get('can_resume_root_setup') is not True
+                and assessment['state']=='blocked'
+                and 'passive' not in result.get('device',{}).get('product',{})):
+            # This is reached only after the separately approved trusted check.
+            proof=installer.inspect_root_cancellation(pending)
+            if proof.get('state') not in ('admissible','admitted','remove-observed','cancellation-terminal-pending','cancelled-and-removed'):
+                raise UserError(BLOCKED,reason_code='pending-operation')
+            plan(write,'ready','The original failed Root installation can be cancelled using verified evidence. A new installation will not start.')
+            if proof.get('state')!='cancelled-and-removed' and not prompts.confirm('Are LG Home and the normal remote controls working now?',ask,write):
+                write(KEPT)
+                return
+            if prompts.confirm('Cancel the original Root installation and finish verified removal?',ask,write):
+                installer.cancel_root_product(pending,proof)
+                plan(write,'complete','The original Root installation was cancelled and removal was verified.',SEPARATE)
+            else:write(KEPT)
+            return
         if assessment['actions'] == ['retain-evidence']:
             raise UserError(BLOCKED, reason_code='pending-operation')
         if result.get('active_operation') is not None:
@@ -44,7 +77,7 @@ def recover(installer, ask, write, non_interactive=False):
             plan(write, 'ready', 'Root and Root Updater are installed and verified. Continue to stop the old Helper, turn on Home control and open Clean Your TV Home.')
             write.option(0, 'Keep recovery data and exit')
             write.option(1, 'Continue setup and turn on Home control')
-            home_off = (pending and pending.get('action') == 'activate-root'
+            home_off = (pending and pending.get('action') in ('activate-root','install')
                         and pending.get('home_backend') != 'c1-native-gate')
             if home_off:
                 write.option(2, 'Finish setup with LG Home and Home control off')

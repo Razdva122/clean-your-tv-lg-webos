@@ -1,10 +1,10 @@
 """Local journal classification. Exported summaries are advice, never authority."""
 
-STATES = ('idle', 'pre-submission', 'waiting', 'setup-ready', 'terminal-verified', 'blocked')
+STATES = ('idle', 'pre-submission', 'waiting', 'setup-ready', 'product-ready', 'cancellation-ready', 'terminal-verified', 'blocked')
 REASONS = ('no-pending-operation', 'removal-not-submitted', 'terminal-evidence-missing',
            'inherited-operation', 'unsupported-receipt', 'foreign-operation', 'operation-live',
-           'packages-verified', 'observation-unverified', 'removal-verified', 'activation-verified')
-ACTIONS = ('check', 'continue-setup', 'finish-home-off', 'reconcile', 'retain-evidence')
+           'packages-verified', 'observation-unverified', 'removal-verified', 'activation-verified', 'final-readback-verified', 'cancellation-verified')
+ACTIONS = ('check', 'inspect-support', 'continue-product', 'cancel-install', 'continue-setup', 'finish-home-off', 'reconcile', 'retain-evidence')
 
 
 def assessment_summary(value):
@@ -40,18 +40,29 @@ def assess(profile, pending, observation=None):
         return result('blocked', 'unsupported-receipt', 'retain-evidence')
     if 'previous' in pending:
         return result('blocked', 'inherited-operation', 'retain-evidence')
+    cancellation=observation.get('cancellation')
+    if (profile.get('edition')=='root' and pending.get('action')=='install' and pending.get('product_operation')
+            and type(cancellation) is dict and cancellation.get('operation')==pending['product_operation']
+            and cancellation.get('home_changed') is False
+            and cancellation.get('state') in ('admissible','admitted','remove-observed','cancellation-terminal-pending','cancelled-and-removed')):
+        return result('cancellation-ready','cancellation-verified','cancel-install','retain-evidence')
     if pending.get('product_operation') and product:
         if product.get('operation') != pending['product_operation']:
             return result('blocked', 'foreign-operation', 'check', 'retain-evidence')
         if product.get('state') == 'pending':
             return result('waiting', 'operation-live', 'check', 'retain-evidence')
     if profile.get('edition') == 'root' and device:
+        if product.get('can_resume') is True and product.get('resume_reason')=='original_final_readback_verified':
+            return result('product-ready','final-readback-verified','continue-product','retain-evidence')
+        if (pending.get('action')=='install' and pending.get('stage')=='coordinator-submitted'
+                and 'passive' in product):
+            return result('blocked','observation-unverified','inspect-support','retain-evidence')
         if observation.get('reconciliation') in ('product-removal-verified', 'root-activation-verified'):
             reason = 'removal-verified' if pending['action'] == 'uninstall' else 'activation-verified'
             return result('terminal-verified', reason, 'reconcile', 'retain-evidence')
         if observation.get('can_resume_root_setup') is True:
             actions = ['continue-setup']
-            if pending['action'] == 'activate-root' and pending.get('home_backend') != 'c1-native-gate':
+            if pending['action'] in ('install','activate-root') and pending.get('home_backend') != 'c1-native-gate':
                 actions.append('finish-home-off')
             return result('setup-ready', 'packages-verified', *actions, 'retain-evidence')
     if unsubmitted_removal(profile, pending):

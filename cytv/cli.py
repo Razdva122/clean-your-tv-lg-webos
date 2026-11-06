@@ -307,6 +307,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
 
         from .transport import SSH, CredentialPrompt
         with store.lock(profile), diagnostics.context.operation_context(store, profile):
+            profile, recovering = store.connection_profile(profile)
             if args.command == 'replace-system-updater':
                 if store.pending(profile): raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
             if args.command in ('enable-firmware-access','disable-firmware-access','recover-system-rollback') and store.pending(profile):raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
@@ -318,14 +319,26 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             checks.update('ssh', 'running')
             write('Connecting to the TV…')
             if connect:
-                remote = connect(profile, store.device_dir(profile), secret_with_help, trust)
+                # Older embedders accept exactly four positional arguments.
+                import inspect as signature_inspect
+                options = {}
+                if recovering:
+                    try:
+                        signature_inspect.signature(connect).bind(profile, store.device_dir(profile), secret_with_help, trust, persist=False)
+                        options['persist'] = False
+                    except TypeError:
+                        pass
+                remote = connect(profile, store.device_dir(profile), secret_with_help,
+                                 (lambda *_: False) if recovering else trust, **options)
             else:
                 remote = SSH.connect(profile, store.device_dir(profile), secret_with_help, trust,
-                                     identity_prompt=None if args.non_interactive else lambda: prompts.root_credentials(ask, write))
+                                     identity_prompt=None if recovering or args.non_interactive else lambda: prompts.root_credentials(ask, write),
+                                     persist=not recovering)
             checks.update('ssh', 'pass')
-            if args.command in ('install', 'status', 'doctor', 'recover'):
+            if not recovering and args.command in ('install', 'status', 'doctor', 'recover'):
                 diagnostics.context.collect_metadata(remote, tv_info)
-            store.save(profile)
+            if not recovering:
+                store.save(profile)
             installer = Installer(remote, store, profile, payload, manifest, write, tv_info=tv_info, checks=checks)
             if args.command == 'install':
                 reinstall = None

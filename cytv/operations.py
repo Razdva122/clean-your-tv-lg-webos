@@ -251,9 +251,10 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
         self.store.finish(self.profile)
         return reply
 
-    def coordinator_code(self):
+    def coordinator_code(self, recovery=False):
         """Stage trusted host code for read-only handoff/status, never retained code."""
-        existing=getattr(self,'_coordinator_code',None)
+        cache='_recovery_code' if recovery else '_coordinator_code'
+        existing=getattr(self,cache,None)
         if existing: return existing
         bundle=self.payload/'root-updater'
         manifest=json.loads((bundle/'bundle.json').read_text())
@@ -266,15 +267,15 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
                 raise UserError('Root Updater bundle is missing or invalid. Use a complete installer build.')
         stage='/tmp/cytv-coordinator-'+uuid.uuid4().hex
         self.remote.run('umask 077; mkdir '+stage)
-        for name in files:
-            if name.endswith('.ipk'): continue
+        for name in (*files,'bundle.json') if recovery else files:
+            if name.endswith('.ipk') and not recovery: continue
             target=stage+'/'+package.safe_name(name)
             self.remote.run('mkdir -p '+shlex.quote(str(PurePosixPath(target).parent)))
             self.remote.upload(target,(bundle/name).read_bytes(),mode=0o600)
-        self._coordinator_code=stage
+        setattr(self,cache,stage)
         return stage
 
-    def product_action(self, action, operation=None, payload=None, migrate=False, verify_current=False):
+    def product_action(self, action, operation=None, payload=None, migrate=False, verify_current=False, resume=False, trusted_recovery=False):
         if action not in ('inspect','install','status','remove'): raise ValueError('Unsupported product action')
         if action!='inspect' and (not isinstance(operation,str) or not re.fullmatch('[a-f0-9]{32}',operation)):
             raise ValueError('Invalid product operation')
@@ -284,7 +285,7 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
         try:
             driver=(payload+'/root-updater' if payload else self.coordinator_code())+'/install_driver.py'
             boundary='python-select'
-            args=[self._python(),driver,action]
+            args=[action] if trusted_recovery or resume else [self._python(),driver,action]
             if operation: args+=['--operation',operation]
             if payload:
                 args+=['--payload',payload]
@@ -292,8 +293,16 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
                 if candidate: args+=['--candidate',candidate]
             if migrate: args.append('--migrate-packaged-home')
             if verify_current:args.append('--verify-current')
+            if resume:
+                if action != 'install' or payload is not None:
+                    raise ValueError('Original installation continuation required')
+                args += ['--resume', '--final-readback-only']
             boundary='driver'
-            reply=json.loads(self.remote.run(self._python_command(args),timeout=90))
+            if trusted_recovery or resume:
+                from .root_install_recovery import run
+                raw=run(self,driver.rsplit('/',1)[0],'install_driver.py',args,timeout=90)
+            else:raw=self.remote.run(self._python_command(args),timeout=90)
+            reply=json.loads(raw)
         except TVCommandError as error:
             error.root_action=action
             error.root_boundary=boundary
@@ -725,7 +734,8 @@ printf '%s' "$cytv_state"
                 self.preflight(install=True, home_interfaces=True)
             operation=uuid.uuid4().hex
             self.store.begin(self.profile,'install',release_sha=release_sha,bundle_sha=bundle_sha,migrate=migrate,
-                             requires_updater=True,product_operation=operation,stage='coordinator-upload')
+                             requires_updater=True,product_operation=operation,stage='coordinator-upload',
+                             recovery_protocol='root-final-readback-v1')
             self.progress('Uploading Root and recovery runtime…')
             stage=self.upload_product(bundle)
             self.store.checkpoint(self.profile,stage='coordinator-submitted',product_payload=stage)
@@ -944,10 +954,90 @@ print('CYTV_UPDATER_VERIFIED')
         initial = assess(self.profile, pending)
         result = ({'device': {}, 'pending': pending, 'can_resume_root_setup': False}
                   if initial['reason'] in ('unsupported-receipt', 'inherited-operation')
-                  else self._status(reconcile=False))
+                  else self._status(reconcile=False, trusted_recovery=pending is not None and
+                                    pending.get('recovery_protocol') == 'root-final-readback-v1'))
         result['assessment'] = assess(self.profile, self.store.pending(self.profile), result)
         self.tv_info['status'] = result
         return result
+
+    def inspect_root_product(self, expected_pending):
+        """Explicit trusted support-code inspection of one original installation."""
+        pending=self.store.pending(self.profile)
+        if (pending != expected_pending or not pending or 'previous' in pending
+                or self.profile['edition']!='root' or pending.get('action')!='install'
+                or not re.fullmatch('[a-f0-9]{32}',pending.get('product_operation',''))):
+            raise UserError('Recovery evidence changed. Check recovery again; recovery data was kept.', reason_code='pending-operation')
+        result=self._status(reconcile=False, trusted_recovery=True)
+        if self.store.pending(self.profile)!=pending:
+            raise UserError('Recovery evidence changed. Check recovery again; recovery data was kept.', reason_code='pending-operation')
+        from .recovery_state import assess
+        result['assessment']=assess(self.profile,pending,result)
+        self.tv_info['status']=result
+        return result
+
+    def _save_product_baseline(self, pending, observation):
+        event=observation.get('device',{}).get('product',{})
+        proof=event.get('result',{})
+        if (self.store.pending(self.profile)!=pending or event.get('operation')!=pending.get('product_operation')
+                or event.get('state')!='complete' or event.get('current') is not True
+                or observation.get('can_resume_root_setup') is not True
+                or not re.fullmatch('[a-f0-9]{64}',proof.get('baseline_sha',''))):
+            raise UserError('Root setup could not be verified for continuation. Recovery data was kept.')
+        from .state import private_write
+        history=self.store.recovery(self.profile,'continue-root-product')
+        private_write(history,json.dumps({'action':'continue-root-product','previous':pending}).encode())
+        self.store.checkpoint(self.profile,stage='verify',baseline_sha=proof['baseline_sha'],requires_updater=True)
+
+    def continue_root_product(self, expected_pending):
+        result=self.inspect_root_product(expected_pending)
+        event=result['device']['product']
+        if event.get('can_resume') is not True or event.get('resume_reason')!='original_final_readback_verified':
+            raise UserError('Root continuation could not be verified. Recovery data was kept.', reason_code='pending-operation')
+        operation=expected_pending['product_operation']
+        reply=self.product_action('install',operation,resume=True)
+        deadline=time.monotonic()+120
+        while reply['state']=='pending' and time.monotonic()<deadline:
+            time.sleep(1)
+            reply=self.product_action('status',operation,verify_current=True,trusted_recovery=True)
+        result=self.inspect_root_product(expected_pending)
+        self._save_product_baseline(expected_pending,result)
+        return result
+
+    def inspect_root_cancellation(self, expected_pending):
+        from .root_install_recovery import invoke
+        if (self.profile['edition']!='root' or not isinstance(expected_pending,dict)
+                or expected_pending.get('action')!='install'
+                or self.store.pending(self.profile)!=expected_pending or 'previous' in expected_pending):
+            raise UserError('Recovery evidence changed. Check recovery again; recovery data was kept.', reason_code='pending-operation')
+        proof=invoke(self,'inspect',expected_pending)
+        if self.store.pending(self.profile)!=expected_pending:
+            raise UserError('Recovery evidence changed. Check recovery again; recovery data was kept.', reason_code='pending-operation')
+        from .recovery_state import assess
+        status=self.tv_info.setdefault('status',{})
+        status['cancellation']=proof
+        status['assessment']=assess(self.profile,expected_pending,status)
+        return proof
+
+    def cancel_root_product(self, expected_pending, expected_proof):
+        from .root_install_recovery import invoke
+        proof=self.inspect_root_cancellation(expected_pending)
+        if (proof!=expected_proof or proof.get('state') not in
+                ('admissible','admitted','remove-observed','cancellation-terminal-pending','cancelled-and-removed')):
+            raise UserError('Root cancellation could not be verified. Recovery data was kept.', reason_code='pending-operation')
+        if proof['state']!='cancelled-and-removed':
+            invoke(self,'remove',expected_pending,proof)
+        disposition=self.inspect_root_cancellation(expected_pending)
+        if (disposition.get('state')!='cancelled-and-removed' or disposition.get('lease_terminal') is not True
+                or disposition.get('proof_sha256')!=proof.get('proof_sha256')
+                or disposition.get('candidate_sha256')!=proof.get('candidate_sha256')
+                or disposition.get('home_changed') is not False):
+            raise UserError('Root cancellation could not be verified. Recovery data was kept.', reason_code='pending-operation')
+        from .state import private_write
+        history=self.store.recovery(self.profile,'cancelled-root-install')
+        private_write(history,json.dumps({'action':'cancelled-root-install','stage':'verified',
+                                        'previous':expected_pending,'disposition':disposition}).encode())
+        self.store.finish(self.profile)
+        return disposition
 
     def reconcile_recovery(self, expected_pending):
         """Explicit local completion; fresh backend evidence remains authority."""
@@ -966,13 +1056,13 @@ print('CYTV_UPDATER_VERIFIED')
         self.store.finish(self.profile)
         return {'reconciled': reason}
 
-    def _status(self, reconcile=True):
+    def _status(self, reconcile=True, trusted_recovery=False):
         pending = self.store.pending(self.profile)
         reconciled = None
         reconciliation = None
         can_resume = False
         if (self.profile['edition']=='root' and pending and pending.get('action')=='install'
-                and pending.get('stage')=='coordinator-submitted'):
+                and pending.get('stage')=='coordinator-submitted' and not trusted_recovery):
             # A failed submission/status (including SSH 127) does not authorize
             # staging a replacement driver or executing retained binding code.
             from .root_passive import collect
@@ -989,15 +1079,29 @@ print('CYTV_UPDATER_VERIFIED')
                     return {'device':{'product':active},'pending':None,'reconciled':None,'can_resume_root_setup':False,'active_operation':active.get('operation')}
             except (OSError,RuntimeError,ValueError,KeyError):pass
         if pending and pending.get('product_operation') and pending.get('action') in ('install','uninstall'):
-            event=self.product_action('status',pending['product_operation'],verify_current=True)
+            event=self.product_action('status',pending['product_operation'],verify_current=True,
+                                      **({'trusted_recovery':True} if trusted_recovery else {}))
             complete=event['state']=='complete' and event.get('current') is True
             can_resume=False
             if complete and pending['action']=='install':
+                event=dict(event)
+                reason='current-package-files-unverified'
                 try:
+                    proof=event['result']
+                    if (proof.get('installed')!=package.ROOT_APP or proof.get('home_changed') is not False
+                            or proof.get('verified') is not True or not re.fullmatch('[a-f0-9]{64}',proof.get('baseline_sha',''))):
+                        raise ValueError('current_product_proof_required')
                     device=self.root_action('status').get('result',{})
+                    reason='stock-routing-unverified'
                     if self.root_setup_inactive(device):
+                        reason='updater-baseline-unverified'
                         self.verify_root_updater(event['result']['baseline_sha']);can_resume=True
+                    elif (device.get('effective',{}).get('sam_home')=='com.webos.app.home'
+                          and device.get('effective',{}).get('profiles',{}).get('defaultApps',{}).get('categories',{}).get('home')=='com.webos.app.home'
+                          and device.get('effective',{}).get('profiles',{}).get('idleApp',{}).get('appId')=='com.webos.app.home'):
+                        reason='intent-guardian-unverified'
                 except (RuntimeError,ValueError,KeyError,TypeError):pass
+                if not can_resume:event['setup_reason']=reason
             if complete and pending['action']=='uninstall':
                 reconciliation='product-removal-verified'
                 if reconcile:
@@ -1158,17 +1262,19 @@ print('CYTV_UPDATER_VERIFIED')
         previous=self.store.pending(self.profile)
         if expected_pending is not None and previous != expected_pending:
             raise UserError('Recovery evidence changed. Check recovery again; recovery data was kept.', reason_code='pending-operation')
-        result=self.observe_recovery()
+        product=bool(previous and previous.get('action')=='install' and previous.get('product_operation'))
+        result=self.inspect_root_product(previous) if product else self.observe_recovery()
         if (self.profile['edition']!='root' or not previous
                 or self.store.pending(self.profile) != previous
-                or previous.get('action')!='activate-root'
+                or (previous.get('action')!='activate-root' and not product)
                 or previous.get('home_backend')=='c1-native-gate'
                 or result.get('can_resume_root_setup') is not True):
             raise UserError('Root setup could not be verified for continuation. Recovery data was kept.')
         from .state import private_write
         receipt=self.store.recovery(self.profile,'finish-root-setup-disabled')
         private_write(receipt,json.dumps({'action':'finish-root-setup-disabled','stage':'verified',
-            'home_changed':False,'previous':previous}).encode())
+            'home_changed':False,'previous':previous,
+            'baseline_sha':result['device']['product']['result']['baseline_sha'] if product else previous['baseline_sha']}).encode())
         self.store.finish(self.profile)
         self.outcome.packages_verified()
         return {'home_changed':False,'updates_ready':True,'home_control':'disabled'}
@@ -1179,9 +1285,13 @@ print('CYTV_UPDATER_VERIFIED')
         if expected_pending is not None and previous != expected_pending:
             raise UserError('Recovery evidence changed. Check recovery again; recovery data was kept.', reason_code='pending-operation')
         self.outcome.begin()
-        if (self.observe_recovery().get('can_resume_root_setup') is not True
+        observation=(self.inspect_root_product(previous) if previous and previous.get('action')=='install'
+                     and previous.get('product_operation') else self.observe_recovery())
+        if (observation.get('can_resume_root_setup') is not True
                 or self.store.pending(self.profile) != previous):
             raise UserError('Root setup could not be verified for continuation. Recovery data was kept.')
+        if previous.get('action')=='install' and previous.get('product_operation'):
+            self._save_product_baseline(previous,observation)
         previous = self.store.pending(self.profile)
         if previous and previous.get('action') == 'activate-root':
             from .state import private_write

@@ -177,13 +177,20 @@ class Coordinator:
         return self._run(identifier,'remove',perform)
 
 
-    def resume(self, identifier, payload):
+    def resume(self, identifier, payload, final_readback_only=False):
         """Explicit continuation: same request/lease, verified snapshot, no replay."""
         identifier=operation_id(identifier)
         submission=_optional_record(self.store,'submission-'+identifier)
         if submission is None: raise ValueError('verified_worker_snapshot_required')
         options=self.device.verify_resume(payload,submission)
         previous=self.status(identifier)
+        if final_readback_only and (previous.get('action')!='install' or not previous.get('lease')
+                                   or previous.get('stage') not in ('readback','complete')):
+            raise ValueError('package-terminal-unverified')
+        if final_readback_only:
+            if (previous.get('candidate_sha256')!=submission.get('candidate_sha256')
+                    or candidate_digest(payload,_verified_payload(payload,options['prepare_supervisor']))!=submission.get('candidate_sha256')):
+                raise ValueError('original_candidate_changed')
         if previous['state']=='unknown' or (not previous.get('lease') and previous.get('stage')=='blocked'):
             current=self.ownership.status()
             journal='product-'+identifier+'.json'
@@ -217,6 +224,12 @@ class Coordinator:
         with self.ownership.operation('product','product-'+identifier+'.json',resume=previous['lease'],check=check) as lease:
             record=self.status(identifier)
             self.device.operation=lease;self.device.ownership=self.ownership
+            if final_readback_only:
+                self.device.continuation_quiescent(payload)
+                if record.get('candidate_sha256')!=previous.get('candidate_sha256'):
+                    raise ValueError('original_candidate_changed')
+            if final_readback_only and not self.device.continuation_ready(record,submission,self.store):
+                raise ValueError('current-package-files-unverified')
             if lease['terminal']:
                 # Historical completion is not remaining work. Revalidate only;
                 # external drift must not retroactively create a mutation lease.
@@ -231,7 +244,9 @@ class Coordinator:
                 record.update(stage=stage,state='pending',code='operation_pending')
                 self.store.write('request-'+identifier,record);self.ownership.stage(lease,stage)
             try:
-                if record['action']=='install':
+                if final_readback_only:
+                    result=self.device.readback()
+                elif record['action']=='install':
                     result=self.device.resume_install(payload,options,record['stage'],checkpoint)
                 else:
                     result=self.device.remove(checkpoint,resume=True)
@@ -366,14 +381,16 @@ def submit(identifier, payload, migrate=False, prepare_supervisor=False, action=
         return receipt
 
 
-def resume_submit(identifier, ownership=None, action=None):
+def resume_submit(identifier, ownership=None, action=None, final_readback_only=False):
     import os,subprocess,sys
     from pathlib import Path
     from install_device import LocalDevice
     identifier=operation_id(identifier)
     ownership=ownership if ownership is not None else Ownership()
+    if final_readback_only and continuation_status(identifier,ownership.store).get('can_resume') is not True:
+        raise ValueError('final_readback_proof_required')
     completed=request_status(identifier,ownership.store)
-    if completed.get('state')=='complete' and completed.get('stage')=='complete':
+    if not final_readback_only and completed.get('state')=='complete' and completed.get('stage')=='complete':
         if action is not None and completed.get('action')!=action:raise ValueError('operation_action_conflict')
         return completed
     submission=_optional_record(ownership.store,'submission-'+identifier)
@@ -381,7 +398,11 @@ def resume_submit(identifier, ownership=None, action=None):
     if action is not None and submission.get('action')!=action:raise ValueError('operation_action_conflict')
     root=Path(ownership.store.root)/('request-'+identifier)
     LocalDevice().verify_resume(root,submission)
-    args=[sys.executable,'-B',str(root/'root-updater/install_driver.py'),submission['action'],'--operation',identifier,'--payload',str(root),'--worker','--resume']
+    # Product recovery executes the current trusted coordinator; the retained
+    # snapshot remains data and the original candidate, lease and ID are reused.
+    worker=Path(__file__).resolve() if final_readback_only else root/'root-updater/install_driver.py'
+    args=[sys.executable,'-B',str(worker),submission['action'],'--operation',identifier,'--payload',str(root),'--worker','--resume']
+    if final_readback_only:args.append('--final-readback-only')
     with (root/'worker.log').open('ab') as output:
         subprocess.Popen(args,stdin=subprocess.DEVNULL,stdout=output,stderr=output,start_new_session=True,close_fds=True,
           env={**{k:v for k,v in os.environ.items() if k not in ('PYTHONPATH','PYTHONHOME')},'PYTHONDONTWRITEBYTECODE':'1','PYTHONNOUSERSITE':'1'})
@@ -402,7 +423,7 @@ def continuation_status(identifier, store, device=None):
     import fcntl, os
     from pathlib import Path
     from install_device import LocalDevice
-    result=dict(can_resume=False,resume_reason='recovery_evidence_required')
+    result=dict(can_resume=False,resume_reason='original-request-unverified')
     directory=fd=None
     try:
         identifier=operation_id(identifier)
@@ -411,7 +432,9 @@ def continuation_status(identifier, store, device=None):
         directory=store._directory()
         fd=os.open('ownership.lock',os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK,dir_fd=directory)
         store._check(os.fstat(fd))
+        result['resume_reason']='worker-not-quiescent'
         fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        result['resume_reason']='original-request-unverified'
         record=Coordinator(device,owner).status(identifier)
         lease=owner.status()
         if (lease is None or lease['terminal'] or lease['owner']!='product'
@@ -420,8 +443,17 @@ def continuation_status(identifier, store, device=None):
         if (not isinstance(submission,dict) or submission.get('operation')!=identifier
                 or submission.get('action')!=record.get('action')):return result
         device=device if device is not None else LocalDevice()
-        device.verify_resume(Path(store.root)/('request-'+identifier),submission)
+        result['resume_reason']='original-snapshot-unverified'
+        snapshot=Path(store.root)/('request-'+identifier)
+        options=device.verify_resume(snapshot,submission)
+        if (record.get('candidate_sha256')!=submission.get('candidate_sha256')
+                or candidate_digest(snapshot,_verified_payload(snapshot,options['prepare_supervisor']))!=submission.get('candidate_sha256')):return result
         device.operation=lease;device.ownership=owner
+        result['resume_reason']='worker-not-quiescent'
+        device.continuation_quiescent(snapshot)
+        result['resume_reason']='package-terminal-unverified'
+        if record.get('action')=='install' and record.get('stage') not in ('readback','complete'):return result
+        result['resume_reason']='current-package-files-unverified'
         if device.continuation_ready(record,submission,store) and owner.status()==lease:
             return dict(can_resume=True,resume_reason='original_final_readback_verified')
     except (OSError,ValueError,RuntimeError,KeyError,TypeError):pass
@@ -446,8 +478,11 @@ def main():
     parser.add_argument('--prepare-supervisor',action='store_true')
     parser.add_argument('--verify-current',action='store_true',help='Read current completion proof without replay')
     parser.add_argument('--resume',action='store_true',help='Explicitly continue the original verified request; never replay unknown submissions')
+    parser.add_argument('--final-readback-only',action='store_true',help='Revalidate the final readback under the original lease; no package replay')
     parser.add_argument('--worker',action='store_true',help=argparse.SUPPRESS)
     args=parser.parse_args()
+    if args.final_readback_only and (not args.resume or args.action!='install'):
+        parser.error('--final-readback-only requires install --resume')
     if args.action in ('install','remove','status'): operation_id(args.operation)
     if args.action not in ('install','inspect') and (args.migrate_packaged_home or args.prepare_supervisor): parser.error('install options require install')
     device=LocalDevice()
@@ -458,8 +493,8 @@ def main():
     try:
         if args.resume:
             if args.action not in ('install','remove'):parser.error('--resume requires install or remove')
-            if args.worker:result=coordinator.resume(args.operation,args.payload)
-            else:result=resume_submit(args.operation,ownership,action=args.action)
+            if args.worker:result=coordinator.resume(args.operation,args.payload,final_readback_only=args.final_readback_only)
+            else:result=resume_submit(args.operation,ownership,action=args.action,final_readback_only=args.final_readback_only)
         elif args.action=='install':
             if args.payload is None: parser.error('install requires a verified local payload')
             if args.worker:

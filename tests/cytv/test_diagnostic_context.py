@@ -10,6 +10,15 @@ from cytv.errors import UserError, TVCommandError
 
 
 class ContextTests(unittest.TestCase):
+    def test_recovery_proof_categories_are_fixed_and_do_not_export_admission_material(self):
+        from cytv.diagnostic_context import status_summary
+        value=status_summary({'device':{'product':{'resume_reason':'original-snapshot-unverified','operation':'PRIVATE'}},
+            'cancellation':{'state':'blocked','reason':'stock-routing-unverified','proof_sha256':'PRIVATE','candidate_sha256':'PRIVATE'}})
+        self.assertEqual(value['product']['resume_reason'],'original-snapshot-unverified')
+        self.assertEqual(value['cancellation'],{'state':'blocked','reason':'stock-routing-unverified'})
+        self.assertNotIn('PRIVATE',json.dumps(value))
+        self.assertEqual(status_summary({'cancellation':{'state':'PRIVATE','reason':'PRIVATE'}})['cancellation'],
+                         {'state':'unknown','reason':'unknown'})
     def test_recovery_observation_failure_is_separate_from_original_failure(self):
         from paramiko import AuthenticationException
         self.store.begin(self.profile, 'install')
@@ -272,6 +281,8 @@ class ContextTests(unittest.TestCase):
         self.assertEqual(code, 2)
         def fail_status(*args):
             raise TVCommandError(1)
+        root_profile=state.target('192.0.2.55','root')
+        (self.store.device_dir(root_profile)/'known_hosts').write_bytes(b'original pin')
         code = cli.main(['status', '--host', '192.0.2.55', '--edition', 'root',
                          '--data-dir', self.tmp.name], write=lambda _: None, connect=fail_status)
         self.assertEqual(code, 2)
