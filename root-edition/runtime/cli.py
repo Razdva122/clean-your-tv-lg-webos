@@ -100,17 +100,15 @@ def firmware_access(root='/var/lib/clean-your-tv-root', base='/var/luna-service2
     from pathlib import Path
     root,base,installed,installation=map(Path,(root,base,installed,installation))
     app='com.cleanyourtv.root.preview';service=app+'.service';group=service+'.control'
-    # The legacy receiver attachment intentionally grants only its four APIs.
-    # Media-cache APIs require fresh provisioning's wallpaper-media-v1 marker;
-    # an old protected worker/snapshot is not upgraded by this repair action.
+    # Keep historical receiver receipts byte-compatible. Media is a separate
+    # attachment, admitted only by the independently protected private worker.
     features={
         'firmware':('homebrew-configuration','firmware-permissions',['org.webosbrew.hbchannel.service/getConfiguration','org.webosbrew.hbchannel.service/setConfiguration']),
-        'theme-receiver':('theme-receiver','theme-receiver-permissions',[service+'/'+name for name in ('themeReceiverStart','themeReceiverStatus','themeReceiverRead','themeReceiverStop')])}
+        'theme-receiver':('theme-receiver','theme-receiver-permissions',[service+'/'+name for name in ('themeReceiverStart','themeReceiverStatus','themeReceiverRead','themeReceiverStop')]),
+        'wallpaper-media':('wallpaper-media','wallpaper-media-permissions',[service+'/'+name for name in ('wallpaperCacheStart','wallpaperCacheWrite','wallpaperCacheCommit','wallpaperCacheKeepAlive','wallpaperCacheStop')])}
     if feature not in features or repair is not None and feature!='firmware':raise ValueError('Invalid permission feature')
     filename,receipt_name,methods=features[feature]
     api=root/'permissions'/(filename+'.api.json');receipt=root/(receipt_name+'.json')
-    other=features['theme-receiver' if feature=='firmware' else 'firmware']
-    other_api=root/'permissions'/(other[0]+'.api.json')
     manifest=base/'manifests.d'/(app+'.json')
     def digest(raw):return hashlib.sha256(raw).hexdigest()
     def encoded(value):return (json.dumps(value,sort_keys=True,indent=2)+'\n').encode()
@@ -174,6 +172,11 @@ def firmware_access(root='/var/lib/clean-your-tv-root', base='/var/luna-service2
         for name,expected in proof['files'].items():
             path=Path(name)
             if not path.is_absolute() or '..' in path.parts or root not in path.parents or not isinstance(expected,str) or not re.fullmatch('[a-f0-9]{64}',expected) or digest(secure(path))!=expected:raise ValueError('Root recovery code changed')
+        if enable and feature=='wallpaper-media':
+            package=root/'service/package.json'
+            if not {str(package),str(root/'service/service.js')}.issubset(proof['files']):raise ValueError('Protected wallpaper worker required')
+            capability=read(package)
+            if capability.get('name')!=service or type(capability.get('wallpaperMediaProtocol')) is not int or capability['wallpaperMediaProtocol']!=1:raise ValueError('Protected wallpaper media capability required')
         snapshot=read(root/'ls2-provision-snapshot.json')
         paths={key:base/folder/(service+suffix) for key,folder,suffix in (('service','services.d','.service'),('role','roles.d','.service.json'),('client','client-permissions.d','.service.json'),('api','api-permissions.d','.api.json'))}
         if not isinstance(snapshot,dict) or snapshot.get('version')!=1 or snapshot.get('service')!=service or snapshot.get('phase') is not None or set(snapshot.get('files',{}))!={str(p) for p in paths.values()}:raise ValueError('Root provisioning is not active')
@@ -199,11 +202,14 @@ def firmware_access(root='/var/lib/clean-your-tv-root', base='/var/luna-service2
             if not isinstance(prior,dict) or prior.get('version')!=saved['version'] or dict(prior,version=version)!=baseline:raise ValueError('Firmware manifest provenance changed')
         # One writer coordinates both attachments. A sibling grant is retained
         # only with exact private bytes and its own resumable receipt.
-        if str(other_api) in value.get('apiPermissionFiles',[]):
-            other_content=encoded({group:other[2]})
-            other_saved=read(root/(other[1]+'.json'));valid_receipt(other_saved,other_content)
-            if other_saved['phase']=='disabled' or secure(other_api)!=other_content:raise ValueError('Sibling permission drift')
-            normal=dict(baseline,apiPermissionFiles=[str(paths['api']),str(other_api)])
+        for other_feature,other in features.items():
+            if other_feature==feature:continue
+            other_api=root/'permissions'/(other[0]+'.api.json')
+            if str(other_api) in value.get('apiPermissionFiles',[]):
+                other_content=encoded({group:other[2]})
+                other_saved=read(root/(other[1]+'.json'));valid_receipt(other_saved,other_content)
+                if other_saved['phase']=='disabled' or secure(other_api)!=other_content:raise ValueError('Sibling permission drift')
+                normal=dict(normal,apiPermissionFiles=normal['apiPermissionFiles']+[str(other_api)])
         granted=dict(normal,apiPermissionFiles=[str(paths['api'])]+[str(root/'permissions'/(spec[0]+'.api.json')) for spec in features.values() if spec[0]==filename or str(root/'permissions'/(spec[0]+'.api.json')) in normal['apiPermissionFiles']])
         if value not in (normal,granted):raise ValueError('Unknown SDK manifest')
         saved=read(receipt) if os.path.lexists(receipt) else None
@@ -298,6 +304,14 @@ def main(mode, transaction=None):
 
 
 def execute(mode, transaction=None):
+    if mode == 'provision-wallpaper-access':
+        ready=True
+        for feature in ('theme-receiver','wallpaper-media'):
+            try:
+                result=firmware_access(lock_product=False,automatic=True,feature=feature)
+                ready=ready and result.get('permissions_installed') is True
+            except Exception:ready=False
+        return {'returnValue':True,'permissions_installed':ready}
     gate = gate_backend()
     if gate is not None:
         return gate.execute(mode, transaction, d.STATE, d.EXPECTED_UID)
