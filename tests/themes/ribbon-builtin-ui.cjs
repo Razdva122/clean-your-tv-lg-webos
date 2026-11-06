@@ -9,7 +9,11 @@ const {assert,fs,path,chromium,stage}=require('./browser.cjs'),http=require('nod
   await page.evaluate(()=>HomeLayoutState.setColumns(4));await settings();
   const ribbon=page.locator('.theme-option').filter({has:page.locator('[data-theme-id="builtin:ribbon"]')});
   assert.equal(await ribbon.locator('.theme-remove').count(),0,'packaged Ribbon has no remove action');
-  assert.equal(await ribbon.locator('small').first().textContent(),'Built-in');
+  const metadata=JSON.parse(fs.readFileSync(path.join(site,edition,'theme-catalog.json'))).themes.find(item=>item.id==='builtin:ribbon');
+  assert.equal(metadata.builtin,true,'the packaged catalog identifies Ribbon as built-in');
+  assert.equal(await ribbon.evaluate(row=>row.themeItem.builtin),true,'the installed choice retains built-in identity');
+  assert(Number.isInteger(metadata.packageSize)&&metadata.packageSize>0,'the packaged catalog supplies the theme size');
+  assert.equal(await ribbon.locator(':scope > small').textContent(),(metadata.packageSize/1000000).toFixed(1)+' MB','installed metadata shows the packaged theme size');
   await ribbon.locator('.theme-choice').focus();const choice=await ribbon.locator('.theme-choice').boundingBox();assert(choice.x>=0&&choice.x+choice.width<=1920,'remote focus reveals the packaged Ribbon choice in the installed lane');
   await ribbon.locator('img').waitFor();await ribbon.locator('img').evaluate(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.onload=resolve;img.onerror=resolve;}));assert(await ribbon.locator('img').evaluate(img=>img.naturalWidth>0),'built-in preview loads from packaged registry catalog path');
   await ribbon.locator('.theme-choice').click();await page.waitForFunction(()=>ThemeManager.current().id==='builtin:ribbon'&&!ThemeManager.current().trial);
