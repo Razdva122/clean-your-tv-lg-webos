@@ -33,17 +33,37 @@ class CancellationTests(unittest.TestCase):
         self.assertEqual(self.calls,[]);self.assert_original()
     def test_host_cancellation_uses_real_device_proofs_and_archives_original_receipt(self):
         from cytv import state,operations
-        from unittest.mock import Mock
+        from cytv.root_install_recovery import RECOVERY_ENTRY
+        import shlex
         host=state.Store(self.f.base/'host');profile=state.target('fixture.local','root')
         host.begin(profile,'install',stage='coordinator-submitted',product_operation=self.identifier)
         original=host.pending(profile)
-        installer=operations.Installer(Mock(),host,profile,self.f.payload,{})
-        calls=[]
-        def invoke(installer,action,pending,proof=None):
-            self.assertEqual(pending,original);calls.append(action)
-            if action=='inspect':return self.inspect()
-            return self.recovery.remove(self.identifier,self.candidate,proof['proof_sha256'])
-        with patch('cytv.root_install_recovery.invoke',side_effect=invoke),patch('observed_install.remove',side_effect=self.remove):
+        bundle=self.f.payload/'root-updater'
+        manifest=json.loads((bundle/'bundle.json').read_text())
+        pin=self.module.digest(dict(bundle=manifest,recovery={name:hashlib.sha256((bundle/name).read_bytes()).hexdigest()
+            for name in self.module.RECOVERY_FILES}))
+        self.recovery.code_sha256=pin
+        calls=[];uploads={};test=self
+        class Remote:
+            def upload(self,path,data,mode=0o600):uploads[path]=data
+            def run(self,command,**kwargs):
+                words=shlex.split(command)
+                if '/usr/bin/node' in words:return '/usr/bin/python3'
+                if command.startswith(('umask ','mkdir ')):return ''
+                test.assertIn(RECOVERY_ENTRY,words);test.assertIn('-I',words)
+                test.assertEqual(host.pending(profile),original)
+                action=words[words.index(RECOVERY_ENTRY)+3];calls.append(action)
+                test.assertEqual(words[words.index('--operation')+1],test.identifier)
+                test.assertEqual(words[words.index('--code-sha256')+1],pin)
+                if action=='inspect':return json.dumps(test.inspect())
+                test.assertEqual(action,'remove')
+                candidate=words[words.index('--candidate')+1]
+                proof=words[words.index('--proof-sha256')+1]
+                # Preserve the real device reply exactly across the JSON/SSH
+                # boundary: no host-side enrichment of missing binding fields.
+                return json.dumps(test.recovery.remove(test.identifier,candidate,proof))
+        installer=operations.Installer(Remote(),host,profile,self.f.payload,{})
+        with patch('observed_install.remove',side_effect=self.remove):
             reviewed=installer.inspect_root_cancellation(original)
             installer.cancel_root_product(original,reviewed)
         self.assertEqual(calls,['inspect','inspect','remove','inspect'])
@@ -52,6 +72,8 @@ class CancellationTests(unittest.TestCase):
         archive=json.loads(next(host.device_dir(profile).glob('recovery-*.json')).read_text())
         self.assertEqual(archive['previous'],original)
         self.assertEqual(archive['disposition']['state'],'cancelled-and-removed')
+        self.assertEqual(archive['disposition']['code_sha256'],pin)
+        self.assertTrue(any(path.endswith('/bundle.json') for path in uploads))
 
     def test_refusal_categories_distinguish_missing_terminal_and_foreign_routing(self):
         (self.f.root/'install-terminal.json').unlink()

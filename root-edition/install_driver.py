@@ -225,6 +225,12 @@ class Coordinator:
             record=self.status(identifier)
             self.device.operation=lease;self.device.ownership=self.ownership
             if final_readback_only:
+                if (record.get('operation')!=identifier or submission.get('operation')!=identifier
+                        or record.get('action')!='install' or record.get('action')!=submission.get('action')
+                        or record.get('lease')!=lease['id'] or lease['id']!=previous.get('lease')
+                        or lease.get('owner')!='product' or lease.get('journal')!='product-'+identifier+'.json'
+                        or record.get('candidate_sha256')!=submission.get('candidate_sha256')):
+                    raise ValueError('original_product_binding_changed')
                 if _optional_record(self.store,'submission-'+identifier)!=submission:
                     raise ValueError('original_candidate_changed')
                 options=self.device.verify_resume(payload,submission)

@@ -292,7 +292,8 @@ class Recovery:
             # This must precede archival. Old workers now take only their
             # terminal readback branch, even when the live Root tree is absent.
             if not lease['terminal']:self.owner.stage(lease,'cancelled-and-removed',terminal=True)
-            return dict(operation=identifier,state='cancelled-and-removed',lease_terminal=True,proof_sha256=proof_sha256,home_changed=False)
+            return dict(operation=identifier,candidate_sha256=candidate,code_sha256=self.code_sha256,
+                        state='cancelled-and-removed',lease_terminal=True,proof_sha256=proof_sha256,home_changed=False)
 
 
 def trusted_code_digest(code):

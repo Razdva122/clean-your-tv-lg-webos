@@ -401,6 +401,38 @@ class RealHandoffTests(unittest.TestCase):
             fixture.assert_preserved(self)
 
 class ExplicitRecoveryTests(unittest.TestCase):
+    def test_final_worker_rechecks_request_binding_after_acquiring_original_lease(self):
+        from contextlib import contextmanager
+        from install_fixture import CurrentInstallation
+        from install_device import LocalDevice
+        from unittest.mock import patch
+        with CurrentInstallation() as fixture:
+            device=LocalDevice();driver=install_driver.Coordinator(device,fixture.owner)
+            with redirect_stderr(io.StringIO()),patch.object(device,'readback',side_effect=ValueError('interruption')):
+                driver.install('a'*32,fixture.payload)
+            snapshot=fixture.snapshot('a'*32);self.bind_candidate(fixture,'a'*32,snapshot)
+            name='request-'+'a'*32
+            original_record=fixture.owner.store.read(name)
+            original_lease=fixture.owner.status()
+            original=fixture.owner.operation
+            for key,value in (('lease','e'*32),('operation','e'*32),('action','remove'),('candidate_sha256','e'*64)):
+                with self.subTest(field=key):
+                    fixture.owner.store.write('operation',original_lease)
+                    fixture.owner.store.write(name,original_record)
+                    changed_record={**original_record,key:value}
+                    @contextmanager
+                    def changed(*args,**kwargs):
+                        with original(*args,**kwargs) as lease:
+                            fixture.owner.store.write(name,changed_record)
+                            yield lease
+                    with patch.object(fixture.owner,'operation',side_effect=changed), \
+                         patch.object(device,'readback',wraps=device.readback) as readback:
+                        with self.assertRaises(ValueError):driver.resume('a'*32,snapshot,final_readback_only=True)
+                        readback.assert_not_called()
+                    self.assertEqual(fixture.owner.store.read(name),changed_record)
+                    self.assertEqual(fixture.owner.status(),original_lease)
+                    self.assertFalse(fixture.owner.status()['terminal'])
+
     def test_final_worker_rechecks_snapshot_after_acquiring_original_lease(self):
         from contextlib import contextmanager
         from install_fixture import CurrentInstallation
