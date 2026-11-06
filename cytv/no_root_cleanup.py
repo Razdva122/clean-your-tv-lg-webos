@@ -23,12 +23,14 @@ if(['inventory','sweep','stop'].indexOf(input.action)<0)throw Error('invalid-cle
 var base='/media/developer/apps/usr/palm',publicRoot='/media/developer/temp';
 var apps=['com.local.nativehome','com.gathin.tvhome','com.cleanyourtv.updater'];
 var services=['com.local.nativehome.service','com.gathin.tvhome.renewal','com.cleanyourtv.updater.service'];
-var reply={schema:1,boot_id:fs.readFileSync('/proc/sys/kernel/random/boot_id','utf8').trim(),present:[],blocked:[],root_present:[],external_update_hint:null,resident_installer:false};
+var reply={schema:1,boot_id:fs.readFileSync('/proc/sys/kernel/random/boot_id','utf8').trim(),present:[],blocked:[],root_present:[],external_update_hint:null,resident_installer:false,staging_ids:input.staging_ids||[]};
+if(!Array.isArray(reply.staging_ids)||reply.staging_ids.length>128||reply.staging_ids.some(function(id){return typeof id!=='string'||!/^[a-f0-9]{32}$/.test(id);}))throw Error('invalid-staging-scope');
 if(!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(reply.boot_id))throw Error('invalid-boot-identity');
 function exists(p){try{return fs.lstatSync(p);}catch(e){if(e.code==='ENOENT')return null;throw e;}}
 function same(a,b){return a.dev===b.dev&&a.ino===b.ino;}
 function fail(){throw Error('unsafe-path');}
-function ancestry(p){for(;;){var s=fs.lstatSync(p);if(!s.isDirectory()||s.isSymbolicLink()||[0,uid,5999].indexOf(s.uid)<0||((s.mode&2)&&!(s.uid===0&&(s.mode&512))))fail();if(path.dirname(p)===p)break;p=path.dirname(p);}}
+function ancestry(p){for(;;){var s=fs.lstatSync(p),shared=(p===base+'/packages'||p===base+'/services')&&[1001,501].indexOf(s.uid)>=0;
+ if(!s.isDirectory()||s.isSymbolicLink()||(!shared&&[0,uid,5999].indexOf(s.uid)<0)||((s.mode&2)&&!shared&&!(s.uid===0&&(s.mode&512))))fail();if(path.dirname(p)===p)break;p=path.dirname(p);}}
 function at(p,expected,fn){
  var before=fs.lstatSync(p),fd=fs.openSync(p,c.O_RDONLY|c.O_DIRECTORY|c.O_NOFOLLOW),prior=process.cwd(),priorStat=fs.statSync('.');
  try{if(!before.isDirectory()||!same(before,fs.fstatSync(fd))||!same(before,expected))fail();process.chdir(p);if(!same(before,fs.statSync('.')))fail();return fn(fd);}
@@ -36,7 +38,7 @@ function at(p,expected,fn){
 }
 function remove(p,expected){
  ancestry(path.dirname(p));var s=fs.lstatSync(p);if(!same(s,expected))fail();
- if(!s.isDirectory()){if(!s.isFile()&&!s.isSymbolicLink())fail();fs.unlinkSync(p);return;}
+ if(!s.isDirectory()){if(!s.isFile()&&!s.isSymbolicLink())fail();at(path.dirname(p),fs.lstatSync(path.dirname(p)),function(fd){if(!same(s,fs.lstatSync(path.basename(p))))fail();fs.unlinkSync(path.basename(p));fs.fsyncSync(fd);});return;}
  var count=0;
  function walk(name,pin,depth){if(depth>32)fail();at(name,pin,function(fd){fs.readdirSync('.').forEach(function(child){
   if(++count>65536)fail();var item=fs.lstatSync(child);
@@ -61,7 +63,7 @@ try{
   try{var transaction=JSON.parse(bytes.toString());if(transaction.schema===1&&['installing','rolling-back','recovery-required'].indexOf(transaction.status)>=0)reply.external_update_hint=transaction.status;}catch(ignored){}
  }
 }catch(ignored){}
-try{var operations='/media/developer/.cytv-installer/operations';if(exists(operations)){ancestry(operations);reply.resident_installer=fs.readdirSync(operations).length>0;}}catch(e){blocked('installer-private',e);}
+try{var operations='/media/developer/.cytv-installer/operations';if(exists(operations)){ancestry(operations);var ids=fs.readdirSync(operations);reply.resident_installer=ids.length>0;ids.forEach(function(id){if(/^[a-f0-9]{32}$/.test(id)&&reply.staging_ids.indexOf(id)<0)reply.staging_ids.push(id);});if(reply.staging_ids.length>128)fail();}}catch(e){blocked('installer-private',e);}
 if(input.action==='stop'){
  var state=base+'/applications/'+apps[0]+'/state',s=exists(state);
  if(s)try{ancestry(state);at(state,s,function(fd){
@@ -100,13 +102,12 @@ function controlIdentity(file,done){var fd,stat,raw;
  }catch(e){finish(e);}});unzip.end(raw);
 }
 var stages=[];try{if(exists(publicRoot)){ancestry(publicRoot);stages=fs.readdirSync(publicRoot).filter(function(name){return /^cytv-[a-f0-9]{32}$/.test(name);});}}catch(e){blocked('installer-staging',e);}
-function next(){if(!stages.length){process.stdout.write(JSON.stringify(reply));return;}var dir=publicRoot+'/'+stages.shift(),pin,files;
- try{pin=fs.lstatSync(dir);if(!pin.isDirectory()||pin.isSymbolicLink())fail();files=fs.readdirSync(dir);}catch(e){blocked('installer-staging',e);next();return;}
- function file(){if(!files.length){try{if(input.action==='sweep'&&same(pin,fs.lstatSync(dir))&&!fs.readdirSync(dir).length)fs.rmdirSync(dir);}catch(e){blocked('installer-staging',e);}next();return;}
-  var name=files.shift(),index=['helper.ipk','launcher.ipk','updater.ipk'].indexOf(name);if(index<0){file();return;}
-  controlIdentity(dir+'/'+name,function(error,app,expected){if(error){blocked('installer-staging',error);file();return;}if(app===apps[index]){
-   try{if(!same(pin,fs.lstatSync(dir)))fail();if(input.action==='sweep')remove(dir+'/'+name,expected);if(exists(dir+'/'+name))reply.present.push('installer-staging '+name);}catch(e){blocked('installer-staging',e);}
-  }file();});
+function next(){if(!stages.length){process.stdout.write(JSON.stringify(reply));return;}var stage=stages.shift(),dir=publicRoot+'/'+stage,known=reply.staging_ids.indexOf(stage.slice(5))>=0,pin,files,owned=false;
+ try{pin=fs.lstatSync(dir);if(!pin.isDirectory()||pin.isSymbolicLink()){if(known)visit(dir,'installer-staging');next();return;}files=fs.readdirSync(dir);}catch(e){if(known)blocked('installer-staging',e);next();return;}
+ function retire(name,expected){if(!expected)return;owned=true;try{if(!same(pin,fs.lstatSync(dir)))fail();if(input.action==='sweep')remove(dir+'/'+name,expected);if(exists(dir+'/'+name))reply.present.push('installer-staging '+name);}catch(e){blocked('installer-staging',e);}}
+ function file(){if(!files.length){try{if(input.action==='sweep'&&(known||owned)&&same(pin,fs.lstatSync(dir))&&!fs.readdirSync(dir).length)fs.rmdirSync(dir);}catch(e){blocked('installer-staging',e);}next();return;}
+  var name=files.shift(),index=['helper.ipk','launcher.ipk','updater.ipk'].indexOf(name);if(index<0){if(known)retire(name,exists(dir+'/'+name));file();return;}
+  controlIdentity(dir+'/'+name,function(error,app,expected){if(error){if(known)retire(name,exists(dir+'/'+name));file();return;}if(app===apps[index])retire(name,expected);file();});
  }file();
 }next();
 }());
@@ -114,8 +115,9 @@ function next(){if(!stages.length){process.stdout.write(JSON.stringify(reply));r
 
 
 def _device(installer, action):
+    pending = installer.store.pending(installer.profile) or {}
     raw = installer.remote.run('/usr/bin/node -e ' + shlex.quote(PRIVATE_CLEANUP_PROGRAM) + ' ' +
-                               shlex.quote(json.dumps({'action': action})), timeout=90)
+                               shlex.quote(json.dumps({'action': action, 'staging_ids': pending.get('cleanup_staging_ids', [])})), timeout=90)
     value = json.loads(raw)
     if (not isinstance(value, dict) or value.get('schema') != 1 or
             not all(isinstance(value.get(k), list) for k in ('present', 'blocked', 'root_present'))):
@@ -136,6 +138,7 @@ def continue_removal(installer, expected_pending):
         raise UserError('Removal evidence changed. Recovery data was kept.', reason_code='pending-operation')
     current = _device(installer, 'inventory')
     _check_access(current)
+    installer.store.checkpoint(installer.profile, cleanup_staging_ids=current['staging_ids'])
     apps = {app['id'] for app in installer.installed_apps()}
     if any(app in apps for app in ('com.cleanyourtv.root.preview', 'com.cleanyourtv.root.updater', 'com.cleanyourtv.system.updater')):
         raise UserError(ROOT_MESSAGE, reason_code='root-access-required')
