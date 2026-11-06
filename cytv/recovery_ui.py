@@ -27,6 +27,15 @@ REMOVAL_BLOCKERS = {
 }
 
 
+def removal_restart_required(plan):
+    """Recognize only fixed semantic restart signals, never presentation prose."""
+    if type(plan) is not dict:
+        return False
+    removal = plan.get('removal') if type(plan.get('removal')) is dict else {}
+    return (plan.get('restart_required') is True or plan.get('reason') == 'restart-required'
+            or removal.get('stage') == 'restart-required' or removal.get('reason') == 'restart-required')
+
+
 def removal_details(plan, failure=None):
     if plan.get('disposition') != 'clean-removal':
         return {}
@@ -37,7 +46,7 @@ def removal_details(plan, failure=None):
         reason = plan['reason']
     if (failure or {}).get('code') in ('ssh-unreachable','ssh-protocol'):
         reason = 'connection-interrupted'
-    if plan.get('restart_required') is True or stage == 'restart-required':
+    if removal_restart_required(plan):
         stage = reason = 'restart-required'
     return {'stage_text':REMOVAL_STAGES.get(stage, 'Verifying removal…'),
             'blocker_text':REMOVAL_BLOCKERS.get(reason,

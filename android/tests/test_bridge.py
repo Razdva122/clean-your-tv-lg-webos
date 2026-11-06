@@ -50,6 +50,19 @@ class BridgeTests(unittest.TestCase):
         self.assertEqual(event['actions'], ['continue-removal'])
         self.assertNotIn('PRIVATE', json.dumps(event))
 
+    def test_restart_semantics_are_forwarded_without_relying_on_translated_stage(self):
+        module = self.module()
+        class Native:
+            def __init__(self): self.events = []
+            def emit(self, raw): self.events.append(json.loads(raw))
+        native = Native()
+        console = module.AndroidConsole(module.Callbacks(native))
+        for value in ({'removal':{'stage':'restart-required'}}, {'restart_required':False,'reason':'restart-required'}):
+            console.recovery_plan({'state':'complete','disposition':'clean-removal',
+                'removed':True,'verified_clean':True,'summary':'Clean Your TV removal is verified.',
+                'next_step':'Try again',**value})
+            self.assertIs(native.events[-1].get('restart_required'), True)
+
     def test_check_events_translate_text_but_preserve_ids_and_status(self):
         from cytv import i18n
         self.addCleanup(i18n.set_language, 'en')
