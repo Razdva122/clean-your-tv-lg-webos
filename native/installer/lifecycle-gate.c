@@ -22,7 +22,7 @@ static void refuse(void) { fputs("lifecycle-gate-unverified\n", stderr); exit(74
 static uid_t fence_uid;
 static gid_t fence_gid;
 static int equal(struct stat a, struct stat b) { return a.st_dev == b.st_dev && a.st_ino == b.st_ino; }
-static void directory(int fd, int mode) {
+static void directory(int fd, mode_t mode) {
     struct stat s;
     if (fstat(fd, &s) || !S_ISDIR(s.st_mode) || (s.st_uid != 0 && s.st_uid != getuid() &&
         !(getuid()==0 && s.st_uid==5999 && s.st_gid==5000))) refuse();
@@ -30,7 +30,7 @@ static void directory(int fd, int mode) {
     if (mode && ((s.st_uid != getuid() && !(mode==0750 && getuid()==0 && s.st_uid==5999)) ||
         (mode==0750 && s.st_gid != getgid() && !(getuid()==0 && s.st_gid==5000)) || (s.st_mode & 07777) != mode)) refuse();
 }
-static int open_root(const char *path,int mode) {
+static int open_root(const char *path,mode_t mode) {
     char *copy, *part, *save = NULL;
     int fd, next;
     if (path[0] != '/' || strstr(path, "//") || path[strlen(path)-1] == '/') refuse();
@@ -76,7 +76,8 @@ static int removal_owner(int root,const char *generation,int create) {
         regular(fd);close(fd);return 1;
     }
     if(fd<0 && errno==ENOENT)return 0;
-    if(fd<0)refuse();regular(fd);
+    if(fd<0)refuse();
+    regular(fd);
     if(fstat(fd,&s) || s.st_size!=32 || read(fd,value,32)!=32)refuse();
     value[32]='\0';close(fd);if(!identifier(value))refuse();
     return !strcmp(value,generation)?1:-1;
@@ -152,7 +153,8 @@ int main(int argc, char **argv) {
         snprintf(revoked,sizeof(revoked),"completed-%s",argv[2]);
         if(owner!=1) {if(marker(root,revoked,0))return 0;refuse();}
         marker(root,revoked,1);
-        if(unlinkat(root,"removal-owner",0) || fsync(root))refuse();return 0;
+        if(unlinkat(root,"removal-owner",0) || fsync(root))refuse();
+        return 0;
     }
     if(!strcmp(argv[3],"remove")||!strcmp(argv[3],"prepare-removal")) {
         if(!strcmp(argv[2],argv[4]))refuse();
