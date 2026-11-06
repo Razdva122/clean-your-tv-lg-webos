@@ -225,6 +225,86 @@ class PackageRemoval(unittest.TestCase):
 
 
 class PartialDeviceRemoval(unittest.TestCase):
+    def test_known_completed_root_and_system_receipts_are_retired_with_inverse_preserved(self):
+        import install_device
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        driver.device.ownership=driver.ownership
+        system=install_device.SUPERVISOR;system.mkdir(mode=0o700)
+        names=[root/'completed-profile-12345678-1234-4abc-8def-123456789abc.json',
+               root/('system-rollback-anchor-'+'a'*32+'.json'),
+               system/'current-root.json',system/'installer-accepted.json']
+        for path in names:path.write_text('{"fixture":"owned receipt"}')
+        original='{"fixture":"original Home inverse"}'
+        (root/'profile-trial.json').write_text(original)
+        record={'operation':identifier,'staging_hashes':[]}
+        driver.device.preserve_routing_inverse(record)
+        driver.device.retire_clean_private(record)
+        self.assertTrue(all(not path.exists() for path in names))
+        self.assertEqual(driver.ownership.store.read('routing-backup-'+identifier),{'profile-trial.json':original})
+
+    def test_receipt_name_near_matches_and_wrong_component_are_not_retired(self):
+        uuid='12345678-1234-4abc-8def-123456789abc'
+        for component,name in [('root','completed-profile-'+'a'*32+'.json'),
+                               ('root','completed-profile-'+uuid+'.json.bak'),
+                               ('root','system-rollback-anchor-'+'a'*31+'.json'),
+                               ('root','system-rollback-anchor-'+'A'*32+'.json'),
+                               ('root','current-root.json'),('updater','installer-accepted.json'),
+                               ('updater','completed-profile-'+uuid+'.json')]:
+            with self.subTest(component=component,name=name):
+                driver,identifier,root,updater,payload,calls,present=self.fixture()
+                driver.device.ownership=driver.ownership
+                path=(root if component=='root' else updater)/name;path.write_text('preserve')
+                with self.assertRaisesRegex(ValueError,'unclassified_private_member'):
+                    driver.device.retire_clean_private({'operation':identifier,'staging_hashes':[]})
+                self.assertEqual(path.read_text(),'preserve')
+
+    def test_known_receipts_in_authenticated_archives_use_same_classification(self):
+        import install_device
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        driver.device.ownership=driver.ownership
+        archives=[]
+        for index,component in enumerate((root,updater,install_device.SUPERVISOR)):
+            archive=component.parent/(component.name+'.archive-'+'a'*32)
+            store=Store(archive,uid=os.getuid());archives.append(archive)
+            if index==0:
+                store.write('deploy',{'app':install_device.APP,'stage':'install-submitting'})
+                store.write('profile-trial',{'fixture':'original archive inverse'})
+                names=['completed-profile-12345678-1234-4abc-8def-123456789abc.json',
+                       'system-rollback-anchor-'+'a'*32+'.json']
+            else:
+                store.write('cytv-removal',{'archive':str(archive),'phase':'disabling'})
+                names=['current-root.json','current-no-root.json','installer-accepted.json'] if index==2 else []
+            names.append('profile-'+'b'*32+'.json')
+            for name in names:(archive/name).write_text('{"fixture":"owned receipt"}')
+        driver.device.retire_clean_private({'operation':identifier,'staging_hashes':[]})
+        self.assertTrue(all(not archive.exists() for archive in archives))
+        self.assertEqual(driver.store.read('archive-backup-'+identifier+'-0'),
+                         {'profile-trial':{'fixture':'original archive inverse'}})
+
+    def test_known_receipt_with_foreign_owner_is_not_retired(self):
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        driver.device.ownership=driver.ownership
+        path=root/'completed-profile-12345678-1234-4abc-8def-123456789abc.json';path.write_text('preserve')
+        actual=os.stat
+        def foreign(name,*args,**kwargs):
+            info=actual(name,*args,**kwargs)
+            if name==path.name and 'dir_fd' in kwargs:
+                fields=list(info);fields[4]=os.getuid()+1;return os.stat_result(fields)
+            return info
+        with patch('clean_removal.os.stat',side_effect=foreign):
+            with self.assertRaisesRegex(ValueError,'unsafe_private_member'):
+                driver.device.retire_clean_private({'operation':identifier,'staging_hashes':[]})
+        self.assertEqual(path.read_text(),'preserve')
+
+    def test_known_completed_receipt_hardlink_is_still_refused(self):
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        driver.device.ownership=driver.ownership
+        path=root/'completed-profile-12345678-1234-4abc-8def-123456789abc.json';path.write_text('preserve')
+        other=root.parent/'foreign-copy';os.link(path,other)
+        with self.assertRaisesRegex(ValueError,'unsafe_private_member'):
+            driver.device.retire_clean_private({'operation':identifier,'staging_hashes':[]})
+        self.assertEqual(path.read_text(),'preserve');self.assertEqual(other.read_text(),'preserve')
+
     def fixture(self, unknown=False, missing_profiles=False):
         import install_device, clean_removal, deploy, startup_hook
         from contextlib import ExitStack
@@ -311,6 +391,90 @@ class PartialDeviceRemoval(unittest.TestCase):
         driver.device.payload=None
         self.assertEqual(driver.clean_remove(identifier)['stage'],'verified-clean')
         self.assertEqual(calls.count('remove-com.cleanyourtv.root.preview'),1)
+
+    def optional_startup_restart(self, app, service, outcome, interrupted=False):
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        present.add(app)
+        rpc=driver.device.rpc;disabled=[];remaining={'owned':True}
+        foreign={'name':'foreign.job','activityId':9,'callback':{'method':'luna://org.foreign/tick'}}
+        own={'name':'com.local.nativehome.boot','activityId':7,
+             'callback':{'method':'luna://com.local.nativehome.service/tick'}}
+        def actual(method,data):
+            if method==service+'/disable':
+                disabled.append(method)
+                if isinstance(outcome,Exception):raise outcome
+                return outcome
+            if method=='com.palm.activitymanager/list':
+                return {'returnValue':True,'activities':[foreign]+([own] if remaining['owned'] else [])}
+            if method=='com.palm.activitymanager/cancel':
+                self.assertEqual(data,{'activityId':7});remaining['owned']=False
+                return {'returnValue':True}
+            return rpc(method,data)
+        driver.device.rpc=actual
+        shared=driver.device.shared_cleanup;actions=[]
+        def cleanup(action,record,**kwargs):
+            actions.append(action);return shared(action,record,**kwargs)
+        driver.device.shared_cleanup=cleanup
+        if interrupted:
+            with patch.object(driver.device,'remove_owned_registrations',side_effect=OSError('interrupted readback')):
+                paused=driver.clean_remove(identifier)
+            self.assertIn('controls-restored',paused['done'])
+            self.assertFalse(any(name.startswith('remove-') for name in calls))
+        first=driver.clean_remove(identifier)
+        self.assertEqual(first['stage'],'restart-required',first)
+        self.assertEqual(first['cleanup_startup_unavailable'],[service])
+        self.assertIs(first['result']['removed'],False)
+        self.assertIs(first['result']['verified_clean'],False)
+        self.assertFalse(any(name.startswith('remove-') for name in calls))
+        self.assertTrue((root/'state/ssap.json').exists())
+        self.assertFalse(remaining['owned']);self.assertIn('stop',actions)
+        self.assertEqual(driver.clean_remove(identifier)['stage'],'restart-required')
+        driver.device.current_boot='22222222-2222-2222-2222-222222222222'
+        final=driver.clean_remove(identifier)
+        self.assertEqual(final['stage'],'verified-clean',final)
+        self.assertIs(final['result']['verified_clean'],True)
+        self.assertEqual(disabled,[service+'/disable'])
+        self.assertFalse((root/'state/ssap.json').exists())
+        self.assertEqual(actual('com.palm.activitymanager/list',{})['activities'],[foreign])
+
+    def test_unconfirmed_legacy_startup_moves_boot_before_package_and_file_cleanup(self):
+        for app,service,reply in (
+                ('com.gathin.tvhome','com.gathin.tvhome.renewal',
+                 {'returnValue':True,'state':{'enabled':False,'error':'cancel-unconfirmed'}}),
+                ('com.local.nativehome','com.local.nativehome.service',
+                 {'returnValue':True,'cancel':{'returnValue':False}})):
+            with self.subTest(service=service):self.optional_startup_restart(app,service,reply)
+
+    def test_unavailable_optional_startup_moves_boot_before_package_and_file_cleanup(self):
+        for error in (RuntimeError('Bus operation rejected'),TimeoutError('Bus response timed out')):
+            with self.subTest(error=error):
+                self.optional_startup_restart('com.gathin.tvhome','com.gathin.tvhome.renewal',error)
+
+    def test_optional_startup_boot_checkpoint_survives_interrupted_registration_readback(self):
+        self.optional_startup_restart('com.gathin.tvhome','com.gathin.tvhome.renewal',
+            {'returnValue':True,'state':{'enabled':False,'error':'cancel-unconfirmed'}},interrupted=True)
+
+    def test_optional_fallback_does_not_hide_other_errors_or_owned_activity_refusal(self):
+        for activity_refusal in (False,True):
+            with self.subTest(activity_refusal=activity_refusal):
+                driver,identifier,root,updater,payload,calls,present=self.fixture()
+                present.add('com.gathin.tvhome');rpc=driver.device.rpc
+                def actual(method,data):
+                    if method=='com.gathin.tvhome.renewal/disable':
+                        if not activity_refusal:raise RuntimeError('unrelated current failure')
+                        return {'returnValue':True,'state':{'enabled':False,'error':'cancel-unconfirmed'}}
+                    if activity_refusal and method=='com.palm.activitymanager/list':
+                        return {'returnValue':True,'activities':[{'name':'com.gathin.tvhome.renewal.hourly',
+                            'activityId':7,'callback':{'method':'luna://com.gathin.tvhome.renewal/tick'}}]}
+                    if method=='com.palm.activitymanager/cancel':raise RuntimeError('Bus operation rejected')
+                    return rpc(method,data)
+                driver.device.rpc=actual
+                result=driver.clean_remove(identifier)
+                self.assertEqual(result['state'],'recovery_required',result)
+                self.assertNotEqual(result['stage'],'restart-required')
+                self.assertNotEqual(result['stage'],'verified-clean')
+                self.assertFalse(any(name.startswith('remove-') for name in calls))
+                self.assertTrue((root/'state/ssap.json').exists())
 
     def test_unknown_old_outcome_does_not_prevent_owned_file_cleanup(self):
         driver,identifier,root,updater,payload,calls,present=self.fixture(unknown=True)

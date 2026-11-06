@@ -10,6 +10,15 @@ from cytv.errors import UserError, TVCommandError
 
 
 class ContextTests(unittest.TestCase):
+    def test_removal_reports_keep_fixed_failure_codes_without_private_messages(self):
+        for reason in ('root-worker-busy', 'root-access-required', 'removal-failed',
+                       'cleanup-check-failed', 'connection-interrupted'):
+            with self.subTest(reason=reason):
+                report = self.report('uninstall', 'uninstall',
+                                     UserError('PRIVATE-MESSAGE', reason_code=reason))
+                self.assertEqual(report['reason_code'], reason)
+                self.assertNotIn('PRIVATE-MESSAGE', json.dumps(report))
+
     def test_clean_removal_keeps_original_failure_after_success_and_exports_current_proof(self):
         self.store.begin(self.profile,'install')
         first=self.report('install','install-helper',TVCommandError(127))

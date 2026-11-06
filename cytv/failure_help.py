@@ -74,6 +74,8 @@ def for_error(error, phase, profile=None, pending=None):
             code = 'ssh-protocol'
         elif isinstance(error,(OSError,TimeoutError)) or 'NoValidConnectionsError' in names:
             code = 'ssh-unreachable'
+    if code is None and isinstance(pending, dict) and pending.get('recovery_protocol') == 'clean-removal-v1':
+        return None  # The existing removal plan already explains the safe retry.
     if code is None and pending:
         code = ('no-root-recovery' if edition=='no-root' and pending.get('recovery_protocol')=='no-root-original-stream-v1'
                 else 'removal-not-submitted' if phase == 'uninstall' and unsubmitted_removal(profile, pending)

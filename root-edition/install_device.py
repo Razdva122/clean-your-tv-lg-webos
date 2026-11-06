@@ -598,6 +598,7 @@ class LocalDevice:
                         store.write('deploy',{'version':1,'app':APP,'stage':'cancellation-admitted'})
                     else:store.write('bootstrap',{'phase':'cancellation-admitted'})
                 record['done'].append('original-writers-fenced');save('original-writers-fenced')
+            startup_failed=bool(record.get('cleanup_startup_unavailable')) and not restarted
             if 'controls-restored' not in record['done']:
                 save('original-writers-fenced')
                 self.preserve_routing_inverse(record)
@@ -629,15 +630,30 @@ class LocalDevice:
                     if not os.path.lexists(state):continue
                     restore_registrations(state,app,BUS,uid)
                     startup_hook.remove_link(provision.secure,state,INIT/hookname,app,startup_hook.owned_legacy(app,state))
-                if 'com.local.nativehome' in self.apps():
-                    disabled=self.rpc('com.local.nativehome.service/disable',{})
-                    if disabled.get('returnValue') is not True:raise ValueError('helper_stop_unverified')
-                    cancel=disabled.get('cancel',{})
-                    if cancel.get('returnValue') is not True and cancel.get('errorCode')!=2:raise ValueError('helper_startup_remains')
-                if 'com.gathin.tvhome' in self.apps():
-                    renewal=self.rpc('com.gathin.tvhome.renewal/disable',{})
-                    if renewal.get('returnValue') is not True or renewal.get('state',{}).get('enabled') is not False or renewal.get('state',{}).get('error'):
-                        raise ValueError('home_startup_remains')
+                unavailable=set(record.get('cleanup_startup_unavailable',[]))
+                for app,service in (('com.local.nativehome','com.local.nativehome.service'),
+                                    ('com.gathin.tvhome','com.gathin.tvhome.renewal')):
+                    if app not in self.apps() or restarted and service in unavailable:continue
+                    try:
+                        disabled=self.rpc(service+'/disable',{})
+                    except (RuntimeError,TimeoutError) as error:
+                        if str(error) not in ('Bus operation rejected','Bus response timed out'):raise
+                        disabled={}
+                    if service=='com.local.nativehome.service':
+                        cancel=disabled.get('cancel',{})
+                        confirmed=disabled.get('returnValue') is True and (cancel.get('returnValue') is True or cancel.get('errorCode')==2)
+                    else:
+                        state=disabled.get('state',{})
+                        confirmed=disabled.get('returnValue') is True and state.get('enabled') is False and not state.get('error')
+                    if not confirmed:
+                        # Broken optional old services cannot gate known-owned
+                        # cleanup forever. Cancel fixed jobs below, then boot first.
+                        unavailable.add(service);startup_failed=True
+                        if restarted:
+                            record['cleanup_boot_id']=current_boot
+                            restarted=False
+                        record['cleanup_startup_unavailable']=sorted(unavailable)
+                        save('original-writers-fenced')
                 # Existing precise legacy permission remover restores its own
                 # original bytes. No blanket routing setter is used.
                 self.cleanup('legacy_permissions')
@@ -645,10 +661,10 @@ class LocalDevice:
                 record['done'].append('controls-restored');save('controls-restored')
             self.remove_owned_registrations()
             stopped=self.shared_cleanup('stop',record)
-            if stopped.get('controller_running') and restarted:
+            if (stopped.get('controller_running') or startup_failed) and restarted:
                 record['cleanup_boot_id']=current_boot
                 restarted=False
-            if stopped.get('controller_running') or restart_first and not restarted:
+            if stopped.get('controller_running') or startup_failed or restart_first and not restarted:
                 save('restart-required')
                 return {'removed':False,'verified_clean':False,'restart_required':True}
             save('package-removal')
@@ -739,15 +755,20 @@ class LocalDevice:
             'installed-package.json','installed-terminal.json','registration.json','startup-hook.json',
             'startup-hook.previous.json','transaction.json','legacy-lockdown.json','bootstrap.pid',
             'worker.log','daemon.log','removed-registration','cytv-removal.json'}
+        def classified(root,index):
+            allowed=root_allowed if index==0 else updater_allowed
+            if index==2:allowed=allowed|{'current-root.json','current-no-root.json','installer-accepted.json'}
+            pattern=r'(?:profile|healthy|healthy-rollback|mutable|helper-resume|renewal-pause)-[a-f0-9]{32}(?:-rollback)?\.json'
+            if index==0:
+                pattern+=r'|(?:completed-profile-[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}|system-rollback-anchor-[a-f0-9]{32})\.json'
+            return allowed|{p.name for p in root.iterdir() if re.fullmatch(pattern,p.name)}
         roots=(ROOT,UPDATER,SUPERVISOR)
         for index,root in enumerate(roots):
             if not os.path.lexists(root):continue
             keep={'deploy.json','provision.lock'} if index==0 else {'bootstrap.json','daemon.lock','worker.lock'}
-            allowed=root_allowed if index==0 else updater_allowed
             # Per-transaction data in this private namespace is product-owned;
             # no arbitrary prefix outside it can select a deletion target.
-            allowed=allowed|{p.name for p in root.iterdir() if re.fullmatch(r'(?:profile|healthy|healthy-rollback|mutable|helper-resume|renewal-pause)-[a-f0-9]{32}(?:-rollback)?\.json',p.name)}
-            retire_tree(root,allowed,keep,uid)
+            retire_tree(root,classified(root,index),keep,uid)
         for stage in Path(self.ownership.store.root).iterdir():
             if not re.fullmatch(r'request-[a-f0-9]{32}',stage.name):continue
             identifier=stage.name[8:]
@@ -815,7 +836,7 @@ class LocalDevice:
             if previous is None:self.ownership.store.write(key,backup)
             # After an interrupted delete, the backup remains the original.
             elif any(previous.get(k)!=v for k,v in backup.items()):raise ValueError('owner_backup_changed')
-            allowed=(root_allowed if index==0 else updater_allowed)|{'provision.lock','daemon.lock','worker.lock'}
+            allowed=classified(path,index)|{'provision.lock','daemon.lock','worker.lock'}
             retire_tree(path,allowed,uid=uid)
             path.rmdir()
             parent=os.open(path.parent,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)

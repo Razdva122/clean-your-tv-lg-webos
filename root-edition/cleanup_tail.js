@@ -1,7 +1,7 @@
 'use strict';
 // Current verified Node 8 support; runs under the ORIGINAL Ownership flock.
 // Python must never rewrite completion after this process starts retirement.
-var fs=require('fs'), crypto=require('crypto'), cp=require('child_process');
+var fs=require('fs'), nodeCrypto=require('crypto'), cp=require('child_process');
 var C=fs.constants, uid=process.getuid(), mode=process.argv[2], id=process.argv[3], removal=process.argv[9];
 var state='/var/lib/clean-your-tv-installation';
 var runtime='/var/lib/clean-your-tv-python/4a71641c8d5536175e404a961624e8656eba30e97b5026f6bd7dc31e4bbeaaea';
@@ -28,7 +28,7 @@ function read(fd,name){
 }
 function json(fd,name){return JSON.parse(read(fd,name).toString());}
 function write(fd,name,value){
-  var temp='.clean-tail-'+crypto.randomBytes(16).toString('hex'), file=fs.openSync(at(fd,temp),C.O_WRONLY|C.O_CREAT|C.O_EXCL|C.O_NOFOLLOW,384);
+  var temp='.clean-tail-'+nodeCrypto.randomBytes(16).toString('hex'), file=fs.openSync(at(fd,temp),C.O_WRONLY|C.O_CREAT|C.O_EXCL|C.O_NOFOLLOW,384);
   try {fs.writeFileSync(file,JSON.stringify(value));fs.fsyncSync(file);}finally{fs.closeSync(file);}
   fs.renameSync(at(fd,temp),at(fd,name));fs.fsyncSync(fd);
 }
