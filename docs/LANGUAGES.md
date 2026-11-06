@@ -1,14 +1,14 @@
 # 中文 / Languages / Sprachen / Idiomas / Langues / Lingue / 언어 / भाषाएँ / Języki / Языки
 
-Choose a complete user guide for installation, everyday controls, recovery,
-updates and removal. Technical/developer references remain in English and are
-linked at the end of each guide.
+Choose your language to download an installer and follow the setup steps.
+Each guide also explains the remote controls, emergency exit and where to get help.
+Detailed technical references remain in English.
 
 [Documentation](README.md) · [Requirements and known limits](COMPATIBILITY.md)
 
-The published installer and TV interface offer these twelve languages. Technical
-references remain in English. Localized guides describe the current user flow;
-unpublished paths are identified separately.
+Guides are available in the languages below. The installer and TV language
+preferences are independent; choose a language in each app. Downloads in the
+guides always point to the latest published release.
 
 | Language | Code | User guide |
 | --- | --- | --- |
@@ -21,6 +21,7 @@ unpublished paths are identified separately.
 | 한국어 | `ko` | [한국어](i18n/ko.md) |
 | हिन्दी | `hi` | [हिन्दी](i18n/hi.md) |
 | Polski | `pl` | [Polski](i18n/pl.md) |
+| Čeština | `cs` | [Čeština](i18n/cs.md) |
 | Русский | `ru` | [Русский](i18n/ru.md) |
 | 简体中文 | `zh-Hans` | [简体中文](i18n/zh-Hans.md) |
 | 繁體中文 | `zh-Hant` | [繁體中文](i18n/zh-Hant.md) |
@@ -37,18 +38,18 @@ Bare `zh`, CN and SG use Simplified; TW, HK and MO use Traditional. You can
 override the automatic result in the existing language picker. Chinese TV
 rendering remains subject to the recorded device-specific acceptance limits.
 
-## Czech TV interface (unreleased candidate)
+<a id="czech-tv-interface-unreleased-candidate"></a>
 
-Issue [#211](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/211)
-adds **Čeština** (`cs`) to Home and Root Home, their Settings, themes,
-HDMI recovery and independent updater/recovery interfaces. On the TV choose
-**Settings → Language → Čeština**; automatic mode recognizes `cs` and `cs-CZ`.
-The preference is saved separately from the installer language and is preserved
-by the candidate's profile/update validators. Application names and technical
-identifiers stay unchanged.
+## Czech support and published downloads
 
-[Český průvodce rozhraním TV](i18n/cs.md) covers the candidate interface.
-Desktop, console, Android and Homebrew installers still offer the twelve
-published languages above; `--language cs` is not an installer option.
-Physical-TV and native-speaker review remain unverified; public delivery is
-pending the normal candidate build, acceptance and release.
+The source now includes **Čeština** (`cs`) throughout the desktop/console,
+Android and Homebrew installers, as well as the TV interface. Automatic language
+selection recognizes `cs` and `cs-CZ`; an explicit choice is saved. The console
+accepts `--language cs`.
+
+This addition needs a new published build; it does not change previously published
+installers. If your downloaded installer does not list Čeština, use English and
+follow the [Czech installation guide](i18n/cs.md). Homebrew installer availability
+is tracked separately in its [technical guide](../homebrew/README.md).
+Browser/catalog checks are not physical TV or phone acceptance; native-speaker
+review remains outstanding.

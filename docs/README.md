@@ -1,7 +1,5 @@
 # Documentation
 
-Published release: [1.8.2](RELEASE-1.8.2.md), including tested scope and known limitations. [1.9.0 is an unpublished candidate](RELEASE-1.9.0.md); it has no new physical acceptance. Previous release: [1.7.1](RELEASE-1.7.1.md).
-
 Start with a task. You do not need the developer reports to install or use Clean Your TV.
 
 | I want to… | Read |
@@ -24,7 +22,7 @@ Start with a task. You do not need the developer reports to install or use Clean
 [English](i18n/en.md) · [Deutsch](i18n/de.md) · [Español](i18n/es.md) ·
 [Português (Brasil)](i18n/pt-BR.md) · [Français](i18n/fr.md) · [Italiano](i18n/it.md) ·
 [한국어](i18n/ko.md) · [हिन्दी](i18n/hi.md) · [Polski](i18n/pl.md) ·
-[Čeština — TV interface](i18n/cs.md) · [Русский](i18n/ru.md) · [简体中文](i18n/zh-Hans.md) · [繁體中文](i18n/zh-Hant.md).
+[Čeština](i18n/cs.md) · [Русский](i18n/ru.md) · [简体中文](i18n/zh-Hans.md) · [繁體中文](i18n/zh-Hant.md).
 
 ## Specific features
 

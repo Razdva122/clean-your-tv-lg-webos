@@ -12,11 +12,18 @@ function documentationLinks() {
           "https://github.com/Razdva122/clean-your-tv-lg-webos/blob/main/docs/i18n/",
         );
         const match = target.pathname.match(
-          /\/docs\/i18n\/(en|de|es|pt-BR|fr|it|ko|hi|pl|ru|zh-Hans|zh-Hant)\.md$/,
+          /\/docs\/i18n\/(en|de|es|pt-BR|fr|it|ko|hi|pl|ru|cs|zh-Hans|zh-Hant)\.md$/,
         );
-        node.url = match
-          ? base + match[1] + "/install/" + target.hash
-          : target.href;
+        const downloadImage =
+          node.type === "image" &&
+          target.pathname.match(
+            /\/assets\/brand\/downloads\/(windows|macos-arm64|macos-x64|linux|android)\.svg$/,
+          );
+        node.url = downloadImage
+          ? base + "assets/downloads/" + downloadImage[1] + ".svg"
+          : match
+            ? base + match[1] + "/install/" + target.hash
+            : target.href;
       }
     }
     node.children?.forEach(walk);
@@ -41,6 +48,7 @@ export default defineConfig({
       "hi",
       "pl",
       "ru",
+      "cs",
       "zh-Hans",
       "zh-Hant",
     ],

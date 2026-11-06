@@ -26,7 +26,7 @@ before switching branches. Contributors with their own clone can use its normal
 checkout path. Temporary worktrees follow the same contribution and release rules
 as the maintained checkout.
 
-Write technical and developer documentation in English. Maintain the twelve localized
+Write technical and developer documentation in English. Maintain the localized
 user guides under `docs/i18n/` when changing user-facing setup or controls.
 For every release candidate, complete the affected parts of the [documentation pass](docs/RELEASE-FLOW.md#update-documentation-for-every-candidate),
 record reviewed guides and verification in the release PR, and keep candidate

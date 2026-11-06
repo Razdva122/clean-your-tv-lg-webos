@@ -15,6 +15,7 @@ const locales = [
   "hi",
   "pl",
   "ru",
+  "cs",
   "zh-Hans",
   "zh-Hant",
 ];
@@ -32,10 +33,6 @@ function nodes(node) {
 function attr(node, key) {
   return node.attrs?.find((a) => a.name === key)?.value;
 }
-assert(
-  existsSync(root + "sitemap.xml"),
-  "multilingual site must export a sitemap",
-);
 const translations = JSON.parse(
   readFileSync(new URL("../src/lib/locales.json", import.meta.url), "utf8"),
 );
@@ -92,6 +89,10 @@ for (const lang of locales) {
   );
   assert.equal(translations[lang].features.length, 3, lang + " features");
 }
+assert(
+  existsSync(root + "sitemap.xml"),
+  "multilingual site must export a sitemap",
+);
 const sitemap = readFileSync(root + "sitemap.xml", "utf8");
 for (const lang of locales)
   for (const page of pages) {
@@ -158,6 +159,33 @@ for (const lang of locales)
       sitemap.includes("<loc>" + base + route + "</loc>"),
       route + " in sitemap",
     );
+    if (page === "install/") {
+      assert(
+        !all.some((n) => attr(n, "class")?.split(" ").includes("notice")),
+        route + " starts with the installation guide",
+      );
+      for (const name of [
+        "windows",
+        "macos-arm64",
+        "macos-x64",
+        "linux",
+        "android",
+      ]) {
+        const expected = new URL("assets/downloads/" + name + ".svg", base)
+          .pathname;
+        assert(
+          all.some((n) => n.tagName === "img" && attr(n, "src") === expected),
+          route + " local download button " + name,
+        );
+        assert(
+          readFileSync(
+            root + "assets/downloads/" + name + ".svg",
+            "utf8",
+          ).includes("<svg"),
+          route + " SVG download asset " + name,
+        );
+      }
+    }
     if (page === "help/") {
       for (const n of all.filter((n) => n.tagName === "a")) {
         const href = attr(n, "href");
