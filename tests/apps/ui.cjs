@@ -12,7 +12,7 @@ const base=process.env.PREVIEW_URL||'http://127.0.0.1:8876';
   window.PalmServiceBridge=function(){this.cancel=()=>{};this.call=(uri,raw)=>{calls.push({uri,p:JSON.parse(raw)});setTimeout(()=>{
    let r={returnValue:false};
    if(uri==='luna://com.cleanyourtv.system.updater.service/restoreProfile')r={returnValue:true,result:null};
-   if(uri.endsWith('/listApps')&&!window.offline)r={returnValue:true,apps:[{id:'a',title:'Alpha'},{id:'b',title:'Beta'},{id:'c',title:'Gamma'}]};
+   if(uri.endsWith('/listApps')&&!window.offline)r={returnValue:true,apps:[{id:'a',title:'Alpha'},{id:'b',title:'Beta'},{id:'c',title:'Gamma'},{id:'com.sdk.ares.hostedapp',title:'Ares Hosted App'},{id:'com.cleanyourtv.root.updater',title:'Root Updater'}]};
    if(uri.endsWith('/listApps')&&window.inventoryOverride)r={returnValue:true,apps:window.inventoryOverride};
    if(uri.endsWith('/launch'))r={returnValue:true};
    this.onservicecallback(JSON.stringify(r));
@@ -43,6 +43,7 @@ const base=process.env.PREVIEW_URL||'http://127.0.0.1:8876';
  await page.locator('.add-app').click();
  await page.locator('#appPicker [data-app-id="c"]').waitFor();
  assert.equal(await page.locator('#appPicker [data-app-id="a"]').count(),0);
+ assert.equal(await page.locator('#appPicker [data-app-id="com.sdk.ares.hostedapp"], #appPicker [data-app-id="com.cleanyourtv.root.updater"]').count(),0,'development and updater utilities stay out of Add app');
  await page.screenshot({path:'/tmp/home-app-picker.png'});
  await page.locator('#appPicker [data-app-id="c"]').click();assert.deepEqual(await ids(),['b','a','c','+']);
  await page.reload();await page.locator('.add-app').waitFor();assert.deepEqual(await ids(),['b','a','c','+']);

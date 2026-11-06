@@ -29,4 +29,13 @@ const bad = create({getItem:()=>'{bad',setItem(){throw Error('full')}}, inventor
 assert.deepEqual(bad.visible().map(a=>a.id), ['b','a']);
 assert.throws(()=>bad.save([], ['a','b','c']));
 assert.deepEqual(bad.visible().map(a=>a.id), ['b','a'], 'failed writes must not change layout');
+const utilities = [{id:'com.sdk.ares.hostedapp',title:'Ares Hosted App',icon:''},
+ {id:'com.cleanyourtv.root.updater',title:'Root Updater',icon:''}];
+const saved = {version:1,ids:['a'],hidden:[],catalog:utilities};
+const picker = create({getItem:()=>JSON.stringify(saved),setItem(){}}, inventory, config);
+assert.deepEqual(picker.available().map(a=>a.id), ['b','c'], 'saved development/updater utilities must not appear in Add app');
+picker.refresh(utilities.concat({id:'d',title:'D',icon:''}));
+assert.deepEqual(picker.available().map(a=>a.id), ['b','c','d'], 'fresh inventory keeps ordinary apps selectable and hides only the two utilities');
+const existing = create({getItem:()=>JSON.stringify({...saved,ids:utilities.map(a=>a.id)})}, utilities, config);
+assert.deepEqual(existing.visible().map(a=>a.id), utilities.map(a=>a.id), 'picker exclusions must preserve existing Home tiles');
 console.log('PASS app layout, migration, refresh, restart, empty screen and storage errors');
