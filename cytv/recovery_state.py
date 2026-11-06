@@ -5,7 +5,25 @@ REASONS = ('no-pending-operation', 'removal-not-submitted', 'terminal-evidence-m
            'inherited-operation', 'unsupported-receipt', 'foreign-operation', 'operation-live',
            'packages-verified', 'observation-unverified', 'removal-verified', 'activation-verified', 'final-readback-verified', 'cancellation-verified',
            'original-work-remaining', 'original-vendor-failure', 'original-terminal-unknown', 'original-readback-unverified', 'original-reservation-unverified', 'original-configuration-unknown')
-ACTIONS = ('check', 'inspect-support', 'continue-product', 'continue-no-root', 'cancel-install', 'continue-setup', 'finish-home-off', 'reconcile', 'retain-evidence')
+ACTIONS = ('check', 'inspect-support', 'continue-product', 'continue-no-root', 'cancel-install', 'continue-setup', 'finish-home-off', 'reconcile', 'retain-evidence', 'continue-removal')
+REMOVAL_STAGES = ('requested', 'original-writers-fenced', 'controls-restored', 'package-removal', 'private-cleanup', 'verified-clean')
+REMOVAL_REASONS = ('removal-requested', 'original-writer-active', 'ownership-conflict', 'controls-unverified',
+                   'removal-terminal-unknown', 'private-cleanup-incomplete', 'removal-verified')
+STATES += ('cleanup-in-progress', 'verified-clean')
+REASONS += REMOVAL_REASONS
+
+
+def removal_summary(pending):
+    """Fixed safe projection; neither old success nor this advice grants effects."""
+    pending = pending if type(pending) is dict else {}
+    stage = pending.get('stage')
+    stage = stage if stage in REMOVAL_STAGES else 'requested'
+    reason = pending.get('removal_reason')
+    previous = pending.get('previous', {})
+    outcome = previous.get('state') if type(previous) is dict else None
+    return {'state':'verified-clean' if stage == 'verified-clean' else 'cleanup-in-progress',
+            'stage':stage, 'reason':reason if reason in REMOVAL_REASONS else 'removal-requested',
+            'original_outcome':outcome if outcome in ('complete', 'recovery_required') else 'unknown'}
 
 
 def assessment_summary(value):
@@ -32,6 +50,9 @@ def assess(profile, pending, observation=None):
     product = product if type(product) is dict else {}
     def result(state, reason, *actions):
         return {'state': state, 'reason': reason, 'actions': list(actions)}
+    if type(pending) is dict and pending.get('recovery_protocol') == 'clean-removal-v1':
+        removal = removal_summary(pending)
+        return result(removal['state'], removal['reason'], 'continue-removal', 'retain-evidence')
     if observation.get('active_operation') is not None:
         return result('blocked', 'foreign-operation', 'check', 'retain-evidence')
     if pending is None:

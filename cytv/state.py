@@ -217,6 +217,46 @@ class Store:
         path.unlink(missing_ok=True)
         sync_directory(path.parent)
 
+    def request_clean_removal(self, profile):
+        """Record desired absence under the host lock, without TV authority."""
+        previous = self.pending(profile)
+        if previous and previous.get('recovery_protocol') == 'clean-removal-v1':
+            return previous
+        directory = self.device_dir(profile)
+        completed = directory / 'clean-removal.json'
+        if previous is None and completed.exists():
+            value = json.loads(completed.read_text())
+            if value.get('recovery_protocol') != 'clean-removal-v1' or value.get('stage') != 'verified-clean':
+                raise UserError('Removal evidence changed. Recovery data was kept.')
+            private_write(directory / 'operation.json', json.dumps(value).encode())
+            return value
+        identifier = uuid.uuid4().hex
+        value = {'action':'uninstall', 'full_project':True,
+                 'recovery_protocol':'clean-removal-v1', 'removal_operation':identifier,
+                 'product_operation':identifier, 'diagnostic_id':uuid.uuid4().hex,
+                 'stage':'requested', 'removal_reason':'removal-requested'}
+        if previous is not None:
+            original = 'removal-original-' + identifier + '.json'
+            private_write(directory / original, (directory / 'operation.json').read_bytes())
+            value.update(previous=previous, original_receipt=original)
+            # Original selector/lease; the new ID identifies intent, not a lock bypass.
+            current = previous
+            while isinstance(current, dict):
+                operation = current.get('product_operation')
+                if isinstance(operation, str) and re.fullmatch('[a-f0-9]{32}', operation):
+                    value['product_operation'] = operation
+                    break
+                current = current.get('previous')
+        private_write(directory / 'operation.json', json.dumps(value).encode())
+        return value
+
+    def finish_clean_removal(self, profile):
+        value = self.pending(profile)
+        if not value or value.get('recovery_protocol') != 'clean-removal-v1' or value.get('stage') != 'verified-clean':
+            raise UserError('Removal is not verified. Recovery data was kept.')
+        private_write(self.device_dir(profile) / 'clean-removal.json', json.dumps(value).encode())
+        self.finish(profile)
+
     def recovery(self, profile, action):
         path = self.device_dir(profile) / ('recovery-' + uuid.uuid4().hex + '.json')
         private_write(path, json.dumps({'action': action, 'stage': 'pending'}).encode())
