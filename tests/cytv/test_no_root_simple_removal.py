@@ -138,6 +138,12 @@ class SimpleRemoval(unittest.TestCase):
         self.assertTrue(self.remove()['restart_required'])
         self.assertEqual(sum(uri.endswith('/disable') for uri,_ in self.remote.calls),2)
 
+    def test_legacy_writable_own_service_directory_does_not_block_removal(self):
+        service=self.own_file('apps/usr/palm/services/com.local.nativehome.service/service.js','source')
+        service.parent.chmod(0o777)
+        self.assertTrue(self.remove()['restart_required']);self.assertFalse(service.exists())
+        self.reboot();self.assertTrue(self.remove()['verified_clean'])
+
     def test_broken_service_requires_restart_then_can_be_deleted_without_starting_it(self):
         for registered in (True,False):
             with self.subTest(registered=registered):

@@ -71,7 +71,7 @@ if(input.action==='root-package'){
 }
 ['clean-your-tv-root','clean-your-tv-installation','clean-your-tv-python','clean-your-tv-root-updater','clean-your-tv-system-updater'].forEach(function(name){rootHint('/var/lib/'+name,name);});
 rootHint('/var/webos-profile/override/clean-your-tv-root.json','root-profile');
-services.slice(0,2).forEach(function(service){try{var file=base+'/services/'+service+'/service.js',s=exists(file);if(s){ancestry(path.dirname(file));if(!s.isFile()||s.isSymbolicLink())fail();reply.startup_services.push(service);}}catch(e){blocked('startup-service '+service,e);}});
+services.slice(0,2).forEach(function(service){try{var dir=base+'/services/'+service,s=exists(dir);if(s&&s.isDirectory()){ancestry(path.dirname(dir));at(dir,s,function(){var source=exists('service.js');if(source&&source.isFile())reply.startup_services.push(service);});}}catch(e){blocked('startup-service '+service,e);}});
 try{
  var journal=base+'/services/'+services[2]+'/state/transaction.json',transactionStat=exists(journal);
  if(transactionStat){ancestry(path.dirname(journal));if(!transactionStat.isFile()||transactionStat.nlink!==1||transactionStat.size>5242880)fail();
