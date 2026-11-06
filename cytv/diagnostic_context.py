@@ -389,24 +389,27 @@ def history(report, store, profile, error, pending):
                         original=read_record(store.device_dir(profile)/expected)
                     return original
                 original=previous(pending)
-                seen=set()
+                records={}
                 for _ in range(16):
                     if type(original) is not dict:break
-                    if result['first_failure'] is not None:
-                        result.setdefault('intermediate_failures',[]).append(result['first_failure'])
                     # Only this oldest visited operation can supply its cause.
                     # Missing older history must never inherit a wrapper error.
                     result.update(first_failure=None,failure_history='not-recorded')
                     prior=original.get('diagnostic_id')
-                    if type(prior) is str and re.fullmatch('[a-f0-9]{32}',prior) and prior not in seen:
-                        seen.add(prior)
-                        saved=directory/(prior+'.json')
-                        if saved.exists() or saved.is_symlink():
-                            result['first_failure']=failure_summary(read_record(saved))
+                    if type(prior) is str and re.fullmatch('[a-f0-9]{32}',prior):
+                        if prior not in records:
+                            saved=directory/(prior+'.json')
+                            records[prior]=failure_summary(read_record(saved)) if saved.exists() or saved.is_symlink() else None
+                        if records[prior] is not None:
+                            result['first_failure']=records[prior]
                             result['failure_history']='recorded'
                     original=previous(original)
                 if type(original) is dict:
                     result.update(first_failure=None,failure_history='unavailable')
+                elif records and type(prior) is str:
+                    records.pop(prior,None)  # The original is not an intermediate failure.
+                intermediate=[value for value in records.values() if value is not None]
+                if intermediate:result['intermediate_failures']=intermediate
         elif not pending:
             path = directory / 'previous-attempt.json'
             if error is not None and report['action'] == 'install':

@@ -72,6 +72,19 @@ class ContextTests(unittest.TestCase):
         self.assertEqual(later['reason_code'],'ssh-authentication')
         self.assertNotIn('PRIVATE',json.dumps(later))
 
+    def test_repeated_original_diagnostic_id_keeps_known_original_cause(self):
+        from paramiko import AuthenticationException
+        self.store.begin(self.profile,'install')
+        first=self.report('install','install-helper',TVCommandError(127))
+        original=self.store.pending(self.profile)
+        self.store.checkpoint(self.profile,action='uninstall',previous=original)
+        self.assertEqual(self.store.pending(self.profile)['diagnostic_id'],original['diagnostic_id'])
+        self.store.request_clean_removal(self.profile)
+        later=self.report('uninstall','ssh-connect',AuthenticationException('PRIVATE CURRENT'))
+        self.assertEqual(later['first_failure'],first['first_failure'])
+        self.assertEqual(later['failure_history'],'recorded')
+        self.assertFalse(later.get('intermediate_failures'))
+
     def test_recovery_proof_categories_are_fixed_and_do_not_export_admission_material(self):
         from cytv.diagnostic_context import status_summary
         value=status_summary({'device':{'product':{'resume_reason':'original-snapshot-unverified','operation':'PRIVATE'}},
