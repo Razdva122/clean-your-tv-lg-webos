@@ -107,6 +107,61 @@ class SimpleRemoval(unittest.TestCase):
 
     def reboot(self):self.remote.boot='22222222-2222-2222-2222-222222222222'
 
+    def model_owners(self, owners):
+        # Keep actual POSIX modes/inodes and Node filesystem operations; adapt
+        # only ownership that an unprivileged host cannot reproduce with chown.
+        prefix=('var reportedOwners='+json.dumps({str(p):ids for p,ids in owners.items()})+';'
+                'var actualLstat=fs.lstatSync;fs.lstatSync=function(p){var s=actualLstat(p),owner=reportedOwners[path.resolve(p)];'
+                'if(owner){s.uid=owner[0];s.gid=owner[1];}return s;};')
+        self.remote.transform=lambda code:code.replace('var base=',prefix+'var base=')
+
+    def test_reported_sdk_shared_ancestry_allows_inventory_stop_and_clean_retry(self):
+        developer=self.root/'developer';base=developer/'apps/usr/palm'
+        parents=[developer,developer/'apps',developer/'apps/usr',base,
+                 base/'applications',base/'packages',base/'services',developer/'temp']
+        owners={p:(0,0) for p in parents}
+        for kind in ('packages','services'):owners[base/kind]=(501,20)
+        for app,service in [('com.local.nativehome','com.local.nativehome.service'),('com.gathin.tvhome','com.gathin.tvhome.renewal')]:
+            for directory in (base/'applications'/app,base/'services'/service):
+                directory.mkdir(parents=True,exist_ok=True);directory.chmod(0o777);owners[directory]=(0,0)
+                state=directory/'state';state.mkdir();state.chmod(0o777);owners[state]=(5999,5000)
+                (state/'private.json').write_text('remove own fixture data')
+            (base/'services'/service/'service.js').write_text('published fixture source')
+        foreign=self.own_file('apps/usr/palm/services/org.foreign/keep.json','preserve')
+        stage=developer/'temp'/('cytv-'+'a'*32);stage.mkdir(parents=True)
+        (stage/'helper.ipk').write_bytes(package.ipk('com.local.nativehome','0.7.4',{},architecture='arm'))
+        for directory in parents:directory.mkdir(parents=True,exist_ok=True);directory.chmod(0o777)
+        self.model_owners(owners)
+        inventory=self.cleanup._device(self.installer,'inventory')
+        self.assertEqual(inventory['blocked'],[])
+        self.assertEqual(set(inventory['startup_services']),{'com.local.nativehome.service','com.gathin.tvhome.renewal'})
+        self.assertTrue(self.remove()['restart_required'])
+        self.assertFalse((base/'applications/com.local.nativehome').exists())
+        self.assertFalse(stage.exists())
+        self.reboot();self.assertTrue(self.remove()['verified_clean'])
+        self.assertEqual(foreign.read_text(),'preserve')
+
+    def test_shared_sdk_services_symlink_does_not_admit_foreign_tree(self):
+        foreign=self.root/'foreign';service=foreign/'com.local.nativehome.service'
+        service.mkdir(parents=True);keep=service/'service.js';keep.write_text('preserve')
+        base=self.root/'developer/apps/usr/palm';base.mkdir(parents=True)
+        shared=base/'services';shared.symlink_to(foreign,target_is_directory=True)
+        self.model_owners({shared:(0,0)})
+        with self.assertRaises(UserError):self.remove()
+        self.assertEqual(keep.read_text(),'preserve')
+        self.assertFalse(any(uri.endswith('/dev/remove') for uri,_ in self.remote.calls))
+
+    def test_shared_sdk_ancestry_exception_does_not_admit_writable_uuid_stage(self):
+        identifier='a'*32
+        own=self.own_file('temp/cytv-'+identifier+'/helper.ipk','partial upload')
+        stage=own.parent;stage.chmod(0o777);stage.parent.chmod(0o777)
+        self.model_owners({stage:(0,0),stage.parent:(0,0)})
+        self.store.request_clean_removal(self.profile)
+        self.store.checkpoint(self.profile,cleanup_staging_ids=[identifier])
+        result=self.cleanup._device(self.installer,'sweep')
+        self.assertIn({'scope':'installer-staging','reason':'unsafe-path'},result['blocked'])
+        self.assertEqual(own.read_text(),'partial upload')
+
     def carrier_payload(self):
         app='com.local.nativehome';service=app+'.service';version='0.7.4'
         files={'usr/palm/applications/'+app+'/appinfo.json':json.dumps({'id':app,'version':version,'main':'detach'}).encode(),
@@ -261,9 +316,10 @@ class SimpleRemoval(unittest.TestCase):
         self.remove();self.reboot();self.assertTrue(self.remove()['verified_clean'])
         self.assertEqual(foreign.read_text(),'preserve')
 
-    def test_shared_container_exception_does_not_cover_applications_parent(self):
+    def test_shared_container_exception_does_not_cover_foreign_applications_owner(self):
         own=self.own_file('apps/usr/palm/applications/com.local.nativehome/keep.json')
         own.parent.parent.chmod(0o777)
+        self.model_owners({own.parent.parent:(4242,4242)})
         try:
             with self.assertRaises(UserError):self.remove()
             self.assertTrue(own.exists())

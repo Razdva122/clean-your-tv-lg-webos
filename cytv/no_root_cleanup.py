@@ -30,7 +30,11 @@ if(!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(reply.boot_id))throw Er
 function exists(p){try{return fs.lstatSync(p);}catch(e){if(e.code==='ENOENT')return null;throw e;}}
 function same(a,b){return a.dev===b.dev&&a.ino===b.ino;}
 function fail(){throw Error('unsafe-path');}
-function ancestry(p){for(;;){var s=fs.lstatSync(p),shared=(p===base+'/packages'||p===base+'/services')&&[1001,501].indexOf(s.uid)>=0;
+function ancestry(p){for(;;){var s=fs.lstatSync(p),sdk=[publicRoot,'/media/developer','/media/developer/apps','/media/developer/apps/usr',base,base+'/applications',base+'/packages',base+'/services'].indexOf(p)>=0;
+ // SDK creates these fixed containers and project app/service roots as0777.
+ // This does not admit arbitrary writable ancestry or UUID staging directories.
+ sdk=sdk||apps.some(function(app){return p===base+'/applications/'+app;})||services.some(function(service){return p===base+'/services/'+service;});
+ var shared=(sdk&&s.uid===0&&(s.mode&4095)===511)||((p===base+'/packages'||p===base+'/services')&&[1001,501].indexOf(s.uid)>=0);
  if(!s.isDirectory()||s.isSymbolicLink()||(!shared&&[0,uid,5999].indexOf(s.uid)<0)||((s.mode&2)&&!shared&&!(s.uid===0&&(s.mode&512))))fail();if(path.dirname(p)===p)break;p=path.dirname(p);}}
 function at(p,expected,fn){
  var before=fs.lstatSync(p),fd=fs.openSync(p,c.O_RDONLY|c.O_DIRECTORY|c.O_NOFOLLOW),prior=process.cwd(),priorStat=fs.statSync('.');
