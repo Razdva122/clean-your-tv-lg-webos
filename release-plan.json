@@ -51,6 +51,11 @@
       "pr": 360,
       "issues": [],
       "summary": "Show readable theme media badges and add Craciun UHD still video"
+    },
+    {
+      "pr": 361,
+      "issues": [],
+      "summary": "Fix Root app discovery and unify Home catalog filtering"
     }
   ],
   "excluded": [],
