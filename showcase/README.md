@@ -171,6 +171,29 @@ switches. A failed download can be retried by clicking the preview again. Classi
 and credits remain in `assets/classic-preview.png` and adjacent provenance files.
 Browser previews are not hardware acceptance evidence.
 
+### Preview metadata (next candidate)
+
+Cards show the complete declared package size in decimal MB, including the
+manifest, rules, images, notices and both video variants. Classic is app-native
+and retains its Built-in label instead of an invented standalone package size.
+A 4K badge means the package has a 3840×2160 video variant for UHD output; a UHD
+JPEG alone is insufficient. It does not promise native source detail or that
+any particular television has accepted UHD playback.
+
+The film icon means a moving background. `moving-wallpapers.json` lists the
+SHA-256 hashes of reviewed moving video bytes, not theme names or mutable URLs.
+Alpine and Crăciun use still MP4 loops and do not receive it. Unknown motion is
+not advertised. Installed cards reuse reviewed motion metadata only when their
+exact descriptor digest matches the catalogue; arbitrary installed packages
+remain usable. Metadata adds no remote focus targets and has accessible labels.
+
+Crăciun 1.2.0 is maintained in `themes/craciun/` under the main-project identity,
+with the original author's styling, appearance and attribution retained. The
+historical author listing is removed from new catalogue offers, not rewritten.
+Existing cached author installations keep their identity and selection. The
+new package adds silent UHD/FHD still loops and keeps the original JPEG
+fallback. Its source image remains an AI-generated Real-ESRGAN upscale.
+
 ### Catalogue order
 
 Built-in themes stay first. `showcase/order.json` preserves the existing order

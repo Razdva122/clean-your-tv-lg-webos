@@ -6,11 +6,16 @@
   'use strict';
   var KEY = 'tvhome.layout';
   var internal = ['com.gathin.tvhome','com.local.nativehome','com.cleanyourtv.root.preview','com.cleanyourtv.updater'];
+  var pickerExcluded = ['com.sdk.ares.hostedapp','com.cleanyourtv.root.updater'];
   function unique(ids) { return ids.filter(function(id,i) { return typeof id === 'string' && ids.indexOf(id) === i && internal.indexOf(id) < 0; }); }
   function clean(apps) {
     var seen = Object.create(null);
     return apps.filter(function(a) {
-      if (!a || typeof a.id !== 'string' || !a.id || typeof a.title !== 'string' || a.hidden || internal.indexOf(a.id) >= 0 || seen[a.id]) return false;
+      // Apply the same visibility rule to raw, service-normalized and saved catalogs.
+      // LG may mark its installed tuner hidden; never synthesize a missing tuner.
+      if (!a || typeof a.id !== 'string' || !a.id || typeof a.title !== 'string' ||
+          (a.id !== 'com.webos.app.livetv' && (a.hidden || a.visible === false)) ||
+          internal.indexOf(a.id) >= 0 || seen[a.id]) return false;
       seen[a.id] = true; return true;
     }).slice(0,200).map(function(a) {
       return {id:a.id, title:a.title.slice(0,256), icon:typeof a.icon === 'string' ? a.icon : '', iconColor:a.iconColor || a.bgColor || ''};
@@ -43,7 +48,7 @@
       showAddApp:function() { return showAddApp; },
       setShowAddApp:function(value) { if (typeof value !== 'boolean') throw Error('invalid-add-app-visibility'); save(ids, hidden, value); },
       hidden:function() { return hidden.slice(); },
-      available:function() { var shown = visible().map(function(a) { return a.id; }); return catalog.filter(function(a) { return shown.indexOf(a.id) < 0; }).sort(function(a,b) { return a.title.localeCompare(b.title); }); },
+      available:function() { var shown = visible().map(function(a) { return a.id; }); return catalog.filter(function(a) { return shown.indexOf(a.id) < 0 && pickerExcluded.indexOf(a.id) < 0; }).sort(function(a,b) { return a.title.localeCompare(b.title); }); },
       save:save,
       add:function(id) { if (!find(id)) throw Error('app-unavailable'); save(visible().map(function(a) { return a.id; }).concat(id), hidden.filter(function(h) { return h !== id; })); },
       refresh:function(apps) {

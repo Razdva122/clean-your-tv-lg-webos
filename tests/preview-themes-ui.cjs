@@ -9,6 +9,15 @@ const http=require('node:http');
   const frame=page.frameLocator('#screen');await page.getByRole('region',{name:'Themes',exact:true}).waitFor();
   await frame.locator('#tiles .focused').waitFor();const order=await frame.locator('#tiles .item[data-app-id]').evaluateAll(items=>items.map(i=>i.dataset.appId));
   await page.locator('#previewThemes[aria-busy="false"]').waitFor();assert.equal(packages.length,0,'no theme packages requested before a preview click');assert.ok(fs.statSync(path.join(site,'preview/themes.json')).size<32768,'initial catalogue excludes package bytes');
+  assert.ok(await page.locator('.theme-media-badges').first().evaluate(el=>parseFloat(getComputedStyle(el).fontSize)>=18),'metadata badges remain readable');
+  const catalog=JSON.parse(fs.readFileSync(path.resolve('launcher/theme-catalog.json'))).themes;
+  for(const entry of catalog){
+   const card=page.locator('#previewThemes button[data-theme="'+entry.id+'"]');
+   assert.equal(await card.locator('.theme-video-badge').count(),entry.hasVideo?1:0);
+   assert.equal(await card.locator('.theme-media-badge').filter({hasText:'4K'}).count(),entry.has4k?1:0);
+   if(entry.packageSize!==undefined)assert.ok((await card.locator('small').innerText()).includes(Math.max(0.1,entry.packageSize/1000000).toFixed(1)+' MB'));
+   assert.equal(await card.locator('button,[tabindex]').count(),0,'metadata adds no focus targets');
+  }
   await page.route('**/preview/packages/*.json',async route=>{await page.unroute('**/preview/packages/*.json');await route.fulfill({json:{schemaVersion:1}});});
   await page.getByRole('button',{name:'Retro',exact:true}).click();await page.locator('#previewThemes[aria-busy="false"]').waitFor();assert.match(await page.locator('#themeStatus').innerText(),/Could not apply theme/);assert.notEqual(await frame.locator('body').evaluate(()=>ThemeManager.current().title),'Retro');
   for(const edition of ['No-root Edition','Root Edition']){
@@ -21,6 +30,13 @@ const http=require('node:http');
     if(wallpaper.available.length>1){
      assert.equal(wallpaper.paused,false,'theme selector must not leave video wallpaper paused after '+title);
      await page.waitForFunction(()=>{const w=document.getElementById('screen').contentWindow,v=w.document.getElementById('ctvWallpaperVideo');return w.HomeWallpaper.state().actualQuality!=='image'&&v&&!v.paused&&v.currentTime>0;});
+    }
+    if(title==='Crăciun la Brașov'){
+     await frame.locator('body').evaluate(()=>HomeWallpaper.setQuality('4k'));
+     await page.waitForFunction(()=>{const w=document.getElementById('screen').contentWindow,v=w.document.getElementById('ctvWallpaperVideo');return w.HomeWallpaper.state().actualQuality==='4k'&&v&&v.videoWidth===3840&&v.videoHeight===2160&&v.currentTime>0;});
+     assert.equal(await page.getByRole('button',{name:title,exact:true}).locator('.theme-video-badge').count(),0,'a still-video wallpaper has no motion badge');
+     for(const image of await page.locator('#previewThemes img').all())assert.equal(await image.evaluate(image=>image.complete&&image.naturalWidth>0),true,'all preview images load');
+     if(process.env.THEME_SCREENSHOTS){fs.mkdirSync(process.env.THEME_SCREENSHOTS,{recursive:true});await page.screenshot({path:path.join(process.env.THEME_SCREENSHOTS,edition==='Root Edition'?'root-demo.png':'noroot-demo.png')});}
     }
     assert.equal(await page.getByRole('button',{name:title,exact:true}).getAttribute('aria-pressed'),'true');assert.deepEqual(await frame.locator('#tiles .item[data-app-id]').evaluateAll(items=>items.map(i=>i.dataset.appId)),order);
    }
