@@ -11,6 +11,38 @@ class LanguageTests(unittest.TestCase):
         self.addCleanup(i18n.set_language, 'en')
         return i18n
 
+    def test_czech_selection_locale_detection_and_persistence(self):
+        lang = self.language()
+        self.assertEqual(lang.LANGUAGES.get('cs'), 'Čeština')
+        for tag in ('cs', 'cs-CZ', 'cs_CZ.UTF-8'):
+            self.assertEqual(lang.resolve_language(tag), 'cs')
+        self.assertEqual(lang.resolve_language('auto', ['xx', 'cs-CZ']), 'cs')
+        with tempfile.TemporaryDirectory() as directory:
+            self.assertEqual(lang.configure('cs', directory), 'cs')
+            self.assertEqual(lang.configure(None, directory), 'cs')
+            self.assertEqual(json.loads((Path(directory) / 'settings.json').read_text())['language'], 'cs')
+
+    def test_czech_catalog_renders_values_and_preserves_default_no(self):
+        lang = self.language()
+        self.assertTrue(all('cs' in values for values in lang.MESSAGES.values()))
+        lang.set_language('cs')
+        self.assertEqual(lang.translate('Connect to your TV'), 'Připojení k televizoru')
+        self.assertEqual(lang.translate('Read 17 applications.'), 'Načteno 17 aplikací.')
+        self.assertEqual(lang.translate('Run cytv status.'), 'Spusťte cytv status.')
+        self.assertIn('Enter / n = ne', lang.translate('y = yes   /   Enter / n = no   /   q = quit'))
+        from cytv.desktop import Channel
+        events = []
+        channel = Channel(lambda *event: events.append(event))
+        channel.answer('n')
+        self.assertEqual(channel.ask('Install this edition? [y/N]: '), 'n')
+        self.assertEqual((events[-1][1].kind, events[-1][1].default), ('confirm', 'n'))
+        from cytv.cli import main
+        with tempfile.TemporaryDirectory() as directory:
+            lines = []
+            self.assertEqual(main(['--language', 'cs', '--data-dir', directory, '--no-discovery'],
+                                  ask=lambda _: 'q', write=lines.append), 130)
+            self.assertIn('Zrušeno', '\n'.join(lines))
+
     def test_home_observation_prompt_and_desktop_title_translate_in_all_locales(self):
         from cytv.desktop import Prompt
         lang = self.language()

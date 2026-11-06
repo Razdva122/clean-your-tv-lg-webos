@@ -17,7 +17,7 @@ LG screens or obtain root access.
 [English](docs/i18n/en.md) · [Deutsch](docs/i18n/de.md) · [Español](docs/i18n/es.md) ·
 [Português (Brasil)](docs/i18n/pt-BR.md) · [Français](docs/i18n/fr.md) · [Italiano](docs/i18n/it.md) ·
 [한국어](docs/i18n/ko.md) · [हिन्दी](docs/i18n/hi.md) · [Polski](docs/i18n/pl.md) ·
-[Русский](docs/i18n/ru.md) · [简体中文](docs/i18n/zh-Hans.md) · [繁體中文](docs/i18n/zh-Hant.md).
+[Čeština](docs/i18n/cs.md) · [Русский](docs/i18n/ru.md) · [简体中文](docs/i18n/zh-Hans.md) · [繁體中文](docs/i18n/zh-Hant.md).
 
 <a id="browser-preview"></a>
 
@@ -114,7 +114,7 @@ remote: [check requirements and known limits](docs/COMPATIBILITY.md) first.
 
 ## Guides and help
 
-[All documentation](docs/README.md) · [Guides in 12 languages](docs/LANGUAGES.md) ·
+[All documentation](docs/README.md) · [Guides in your language](docs/LANGUAGES.md) ·
 [Report a problem or a successful installation](docs/FEEDBACK.md)
 
 If an AI agent helps with installation, it should prepare a short, redacted result

@@ -127,12 +127,12 @@ context.HomeWallpaper={configure:input=>wallpaperCalls.push(['configure',input.v
 context.ThemeRuntime.suspend('settings');
 const media={'1080p':'blob:video-first'};
 context.ThemeRuntime.apply({manifest,rules,assetHandles:{},videoHandles:media});
-assert.deepEqual(JSON.parse(JSON.stringify(wallpaperCalls.slice(0,2))),[['suspend','settings'],['configure',media]]);
-context.ThemeRuntime.resume('settings');assert.deepEqual(wallpaperCalls.at(-1),['resume','settings']);
+assert.deepEqual(JSON.parse(JSON.stringify(wallpaperCalls)),[['configure',media]]);
+context.ThemeRuntime.resume('settings');assert.equal(wallpaperCalls.length,1,'closing settings leaves wallpaper playback alone');
 context.ThemeRuntime.apply({manifest,rules,assetHandles:{},videoHandles:{'1080p':'blob:video-next'}});
 assert(revoked.includes('blob:video-first'),'replaced media handles are released after configure');
 context.ThemeRuntime.reset();assert.deepEqual(wallpaperCalls.at(-1),['reset']);assert(revoked.includes('blob:video-next'));
-console.log('PASS wallpaper lifecycle forwarding and media ownership');
+console.log('PASS independent wallpaper lifecycle and media ownership');
 
 let disposedLease=0;
 const lease={dispose:()=>{assert.deepEqual(wallpaperCalls.at(-1),['reset']);disposedLease++;}};

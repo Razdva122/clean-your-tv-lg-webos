@@ -1,5 +1,6 @@
 # Release history and device evidence
 
+- [Wallpaper UI source verification, 2026-11-06](2026-11-06-wallpaper-ui-source-verification.md): settings continuity, theme trials, UHD preview notice and colour consistency; final package acceptance pending.
 - [C3 wake input refusal and bounded candidate release wait, 2026-11-06](2026-11-06-root-wake-key-release.md): stable 1.8.2 failure, host regressions and pending corrected-package acceptance.
 - [1.9.0 verified candidate and signed Root artifact fingerprints](2026-11-06-release-1.9.0-artifacts.md): full CI and signature/package provenance; physical acceptance pending.
 - [1.9.0 candidate preparation and remaining acceptance, 2026-11-06](2026-11-06-release-1.9.0-candidate.md): complete integration, signing-input preflight and unchanged Helper proof; no new device result.

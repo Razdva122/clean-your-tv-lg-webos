@@ -13,7 +13,7 @@ import sys
 from . import state
 from .translations import MESSAGES
 
-LANGUAGES = {'auto': 'Auto', 'en': 'English', 'de': 'Deutsch', 'es': 'Español',
+LANGUAGES = {'auto': 'Auto', 'en': 'English', 'cs': 'Čeština', 'de': 'Deutsch', 'es': 'Español',
              'pt-BR': 'Português (Brasil)', 'fr': 'Français', 'it': 'Italiano',
              'ko': '한국어', 'hi': 'हिन्दी', 'pl': 'Polski', 'ru': 'Русский',
              'zh-Hans': '简体中文', 'zh-Hant': '繁體中文'}

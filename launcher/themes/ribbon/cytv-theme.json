@@ -8,7 +8,7 @@
     "name": "CYTV contributors; video by Xecutioner",
     "url": "https://github.com/razdva122"
   },
-  "themeVersion": "1.3.0",
+  "themeVersion": "1.3.1",
   "layout": {
     "preset": "scenic-grid",
     "columns": 8,
@@ -39,12 +39,12 @@
   "assets": [
     {
       "id": "wallpaper",
-      "path": "assets/wallpaper-a619ba83b8c40dd776ced668829ff9af02f42084e025d1d96aba6605807b3df7.jpg",
+      "path": "assets/wallpaper-09a813e920f3a56fb81194b89c12069cdf2d8d09e33b5b235da40c53fb39e0a3.jpg",
       "mediaType": "image/jpeg",
       "width": 3840,
       "height": 2160,
-      "size": 422270,
-      "sha256": "a619ba83b8c40dd776ced668829ff9af02f42084e025d1d96aba6605807b3df7"
+      "size": 566940,
+      "sha256": "09a813e920f3a56fb81194b89c12069cdf2d8d09e33b5b235da40c53fb39e0a3"
     },
     {
       "id": "preview",
@@ -86,7 +86,7 @@
   },
   "source": {
     "repository": "https://github.com/razdva122/clean-your-tv-lg-webos",
-    "commit": "819731796da539df51129dba054e928e1838a5f4"
+    "commit": "bf006d9d576c31a6e0eb52bcb18258095dcab2b5"
   },
   "requires": {
     "minimumHomeVersion": "1.6.1",

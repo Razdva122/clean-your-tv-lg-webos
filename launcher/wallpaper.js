@@ -2,11 +2,12 @@
 (function (root) {
   'use strict';
   var doc = root.document, key = 'tvhome.wallpaper.preferences.v1', preferences = [], input = null, themeInput = null, personalInput = null, personalEnabled = false;
-  var owners = Object.create(null), video = null, plane = null, shade = null, style = null, stream = null;
+  var owners = Object.create(null), video = null, plane = null, shade = null, style = null, stream = null, themePreview = false;
   var generation = 0, timer = null, actual = 'image', quality = 'auto', dim = 0, notice = '';
   var capabilities = {uhd: null}, bridge = null;
   function emit() { doc.dispatchEvent(new root.CustomEvent('home-wallpaper-change')); }
   function blocked() { return !!doc.hidden || Object.keys(owners).length > 0; }
+  function usesPersonal() { return !themePreview && personalEnabled && !!personalInput; }
   function available() {
     var result = [], handles = input && input.videoHandles || {};
     ['4k', '1080p'].forEach(function (q) {
@@ -20,7 +21,7 @@
   }
   function state() {
     var asset = poster(), m = input && input.manifest, credit = root.WallpaperLibrary && root.WallpaperLibrary.creditFor(m);
-    return {source: personalEnabled && personalInput ? personalInput.origin === 'builtin' ? 'builtin' : 'personal' : 'theme', origin: personalEnabled && personalInput ? personalInput.origin : null, themeId: m ? m.id : 'builtin:classic', title: m ? m.title : 'Classic', author: input && input.wallpaperAuthor || credit && credit.author || '', license: input && input.wallpaperLicense || credit && credit.license || '', posterURL: asset && input.assetHandles && input.assetHandles[asset.id] || '', posterWidth: asset && asset.width || 0, posterHeight: asset && asset.height || 0, available: available(), paused: blocked() && available().length > 1 && quality !== 'image', actualQuality: actual, preferenceQuality: quality, dim: dim, notice: notice, capabilities: {uhd: capabilities.uhd}};
+    return {source: usesPersonal() ? personalInput.origin === 'builtin' ? 'builtin' : 'personal' : 'theme', origin: usesPersonal() ? personalInput.origin : null, themeId: m ? m.id : 'builtin:classic', title: m ? m.title : 'Classic', author: input && input.wallpaperAuthor || credit && credit.author || '', license: input && input.wallpaperLicense || credit && credit.license || '', posterURL: asset && input.assetHandles && input.assetHandles[asset.id] || '', posterWidth: asset && asset.width || 0, posterHeight: asset && asset.height || 0, available: available(), paused: blocked() && available().length > 1 && quality !== 'image', actualQuality: actual, preferenceQuality: quality, dim: dim, notice: notice, capabilities: {uhd: capabilities.uhd}};
   }
   function classes(playing) {
     var surface = doc.getElementById('homeSurface'), method = playing ? 'add' : 'remove';
@@ -50,6 +51,8 @@
   function paintDim() {
     ensure(); shade.style.backgroundColor = 'rgba(0,0,0,' + dim + ')';
     var url = state().posterURL;
+    var surface = doc.getElementById('homeSurface');
+    if (surface) surface.classList[url ? 'add' : 'remove']('ctv-wallpaper-active');
     var posterVisible = !doc.hidden && Object.keys(owners).every(function (owner) { return owner === 'input-preview' || owner === 'decoder-context'; });
     style.textContent = posterVisible && url ? '#homeSurface.ctv-home{background-image:linear-gradient(rgba(0,0,0,' + dim + '),rgba(0,0,0,' + dim + ')),url("' + url.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/[\r\n]/g, '') + '")!important;}' : '';
   }
@@ -178,11 +181,16 @@
     preferences.forEach(function (p) { if (input && p.id === input.manifest.id) { quality = p.quality; dim = p.dim; } });
     return restart();
   }
-  function configure(next) { themeInput = next; if (personalEnabled && personalInput) return state(); return activate(next); }
-  function reset() { themeInput = null; if (personalEnabled && personalInput) return state(); return activate(null); }
+  function configure(next) { themeInput = next; if (usesPersonal()) return state(); return activate(next); }
+  function reset() { themeInput = null; if (usesPersonal()) return state(); return activate(null); }
   function setPersonal(next, enabled) {
     personalInput = next; personalEnabled = !!enabled && !!next;
-    return activate(personalEnabled ? personalInput : themeInput);
+    return activate(usesPersonal() ? personalInput : themeInput);
+  }
+  // A trial borrows the candidate's wallpaper without changing the saved source.
+  function setThemePreview(enabled) {
+    var previous = usesPersonal(); themePreview = !!enabled;
+    return previous === usesPersonal() ? state() : activate(usesPersonal() ? personalInput : themeInput);
   }
   function suspend(owner) { owners[owner || 'manual'] = true; detach(); releaseLease(); paintDim(); emit(); }
   function resume(owner) { var held = owners[owner || 'manual']; delete owners[owner || 'manual']; if (held) { if (!blocked()) restart(); else paintDim(); } }
@@ -191,7 +199,7 @@
     capabilities.uhd = value === true || value === 'true' ? true : value === false || value === 'false' ? false : null;
     if (input && quality === 'auto' && previous !== capabilities.uhd) restart(); else emit();
   }
-  root.HomeWallpaper = {setPersonal: setPersonal, configure: configure, reset: reset, suspend: suspend, resume: resume, state: state,
+  root.HomeWallpaper = {setThemePreview: setThemePreview, setPersonal: setPersonal, configure: configure, reset: reset, suspend: suspend, resume: resume, state: state,
     setQuality: function (q) { if (['auto', '4k', '1080p', 'image'].indexOf(q) < 0) throw Error('Invalid wallpaper quality'); quality = q; restart(); save(false); emit(); return state(); },
     setDim: function (value) { if (typeof value !== 'number' || !isFinite(value) || value < 0 || value > .85) throw Error('Invalid wallpaper dim'); dim = value; paintDim(); save(false); emit(); return state(); },
     resetPreferences: function () { save(true); quality = 'auto'; dim = input ? input.manifest.defaults.dim : 0; return restart(); }};
