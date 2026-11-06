@@ -8,6 +8,11 @@ installation, controls, audio, power or rollback result is claimed.
 
 ## Changes
 
+- Root startup allows a bounded 750 ms interval for an initially held key to be
+  released before enabling the emergency observer (#90). Pre-readiness events
+  are discarded; persistent-held/error cases still restore LG Home under the
+  unchanged watchdog. This addresses the transient held-key branch, not a proven
+  device-wide standby fix. Exact signed-package wake acceptance remains pending.
 - Root activation and restoration preserve the complete AOD/vendor category map,
   changing only Home (#323, #282). This is a host-tested preservation correction;
   original C4 recovery and exact-package B4/C4 Settings/SAM/cache acceptance remain

@@ -62,16 +62,24 @@ def observe(fd, health, keys_released):
     def lost(phase, reason):
         report(phase, reason)
         send(b'LOST')
-    # Drain historical events before checking keys; never count a held startup key.
-    for _ in range(64):
-        try: data = os.read(fd, EVENT.size * 64)
-        except BlockingIOError: break
-        except OSError as exc:
-            report('startup', 'read_error', exc)
-            raise
-        if not data: lost('startup', 'eof'); return
-    else: lost('startup', 'drain_limit'); return
-    if not keys_released(): lost('startup', 'keys_held'); return
+    # Wake may start the observer before a wake key is released. Stay unready
+    # within the supervisor's existing two-second deadline; never renew it here.
+    release_deadline = time.monotonic() + .75
+    while True:
+        # Discard events throughout the wait so a wake gesture cannot become an
+        # emergency gesture after READY. ABI/channel and queue limits still apply.
+        for _ in range(64):
+            try: data = os.read(fd, EVENT.size * 64)
+            except BlockingIOError: break
+            except OSError as exc:
+                report('startup', 'read_error', exc)
+                raise
+            if not data: lost('startup', 'eof'); return
+        else: lost('startup', 'drain_limit'); return
+        if keys_released(): break
+        remaining = release_deadline - time.monotonic()
+        if remaining <= 0: lost('startup', 'keys_held'); return
+        time.sleep(min(.02, remaining))
     policy = TripleHome(); back = LongBack(); send(b'READY')
     while True:
         select.select([fd], [], [], .1)
