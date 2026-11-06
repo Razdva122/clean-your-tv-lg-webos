@@ -569,6 +569,7 @@ class Wizard(QMainWindow):
                        (value == 0 or (self.failure_help or {}).get('code') in ('removal-not-submitted','no-root-recovery')))
             if self.recovery_plan:
                 completed = (value == 0 and self.recovery_plan['state'] == 'complete' and
+                             (self.command != 'uninstall' or self.recovery_plan.get('disposition') == 'clean-removal') and
                              (self.recovery_plan.get('disposition') != 'clean-removal' or
                               self.recovery_plan.get('verified_clean') is True))
                 self.title.setText(tr('Cancelled' if value == 130 else self.recovery_plan['summary'] if completed else 'Review recovery options'))

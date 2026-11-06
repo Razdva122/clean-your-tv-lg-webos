@@ -218,6 +218,12 @@ class LanguageTests(unittest.TestCase):
                     self.assertTrue(value.strip())
                     self.assertEqual({name for _, name, _, _ in Formatter().parse(value) if name}, fields)
 
+    def test_catalog_rows_have_unique_canonical_messages(self):
+        from collections import Counter
+        from cytv.translations import ROWS
+        keys = Counter(row.split('|')[0] for row in ROWS.splitlines() if row.strip())
+        self.assertEqual([key for key, count in keys.items() if count > 1], [])
+
     def test_short_desktop_password_titles_are_translated_without_changing_identifiers(self):
         lang = self.language()
         from cytv.desktop import Prompt

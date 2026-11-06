@@ -56,3 +56,28 @@ filesystem/vendor persistence, physical Home/sound/standby/cold boot, OTA,
 rollback or universal legacy cleanup result is claimed. Old Helper writer
 drainage and temporary carrier replacement require their own final implementation
 tests and matching-device acceptance; UI proof handling does not establish them.
+
+## UI review correction: explicit removal proof
+
+Review of `9f361b00` found that an explicit Uninstall result with a completed plan
+could bypass cleanup proof if its disposition was missing or set to another goal.
+The Qt worker/widget regression reproduced six incorrect combinations; the
+Android browser regression reproduced the missing-disposition case. Explicit
+Uninstall now requires both `disposition: clean-removal` and Boolean
+`verified_clean: true` before either UI presents completion. Other recovery goals
+retain their existing rules. Tests exercise nine disposition/proof combinations in
+Qt and eighteen edition/disposition/proof combinations in Chrome.
+
+The same review found two duplicate canonical catalog rows. Their effective
+translations were moved to the original rows and the duplicate definitions were
+removed. Exact equality of all effective catalog mappings against `9f361b00` was
+verified; a uniqueness regression prevents silent replacement by future rows.
+
+Focused verification: `python -m unittest tests.cytv.test_desktop_recovery
+tests.cytv.test_i18n` — **45 tests passed, 2.352 s**. Python 3.9 grammar,
+Android UI/regression JavaScript syntax and `git diff --check` passed.
+Chrome `removal-result.cjs`, `maintenance.cjs` and `recovery-journey.cjs` all
+passed: the explicit proof regression, valid cleanup completion, retained results,
+LG Home goal and actual original-operation continuation remain covered.
+These are UI/source checks; full provider integration and physical acceptance
+remain pending as above.

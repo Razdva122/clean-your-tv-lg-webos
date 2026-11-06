@@ -233,6 +233,26 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.assertEqual(w.title.text(), 'Cancelled')
         self.assertEqual(w.badge.text(), 'Cancelled')
 
+    def test_explicit_uninstall_requires_clean_disposition_and_true_proof(self):
+        for disposition in (None, 'home-off', 'clean-removal'):
+            for proof in (None, False, True):
+                with self.subTest(disposition=disposition, verified_clean=proof):
+                    def runner(argv, **kwargs):
+                        plan = {'state':'complete', 'summary':'Completion received',
+                                'next_step':'Read the result below before continuing.'}
+                        if disposition is not None: plan['disposition'] = disposition
+                        if proof is not None: plan['verified_clean'] = proof
+                        kwargs['write'].recovery_plan(plan)
+                        return 0
+                    w = self.window()
+                    w.run = runner
+                    w.start('uninstall', self.profile)
+                    self.pump(lambda: not w.running)
+                    complete = disposition == 'clean-removal' and proof is True
+                    self.assertEqual(w.title.text(), 'Completion received' if complete else 'Review recovery options')
+                    self.assertEqual(w.badge.text(), w.title.text())
+                    w.close()
+
     def test_root_home_off_is_directly_selectable_and_declining_keeps_receipt(self):
         receipt = self.prepare_root_recovery()
         before = receipt.read_bytes()
