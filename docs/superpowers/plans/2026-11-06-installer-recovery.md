@@ -33,21 +33,21 @@ the earlier expanded Helper/service lifecycle architecture is deferred. Spec:
 
 Own Root/backend/state/CLI, separate from No-root and frontend files.
 
-- [ ] Reuse the existing clean-removal intent and original Root/component locks;
+- [x] Reuse the existing clean-removal intent and original Root/component locks;
   distinguish a genuinely active worker from a stale pending record.
-- [ ] Restore owned controls and disable startup/jobs without requiring successful
+- [x] Restore owned controls and disable startup/jobs without requiring successful
   activation/setup. Preserve foreign Home and genuine inverse records.
-- [ ] Remove registered project packages using the existing ordinary package API;
+- [x] Remove registered project packages using the existing ordinary package API;
   skip absent objects, report actual busy/denied errors with retry/access guidance.
-- [ ] Replace mandatory Helper/global lifecycle proofs with a saved full-boot
+- [x] Replace mandatory Helper/global lifecycle proofs with a saved full-boot
   checkpoint. Keep only the Root-private lock/Node utility genuinely needed to
   retire managed Python. Do not ship the deferred c205 removal-observer framework.
-- [ ] Sweep known Root and No-root residues after the boot boundary. Reuse the
+- [x] Sweep known Root and No-root residues after the boot boundary. Reuse the
   No-root owner's small inventory/sweep export rather than duplicate its logic.
   Old source/terminal/success is not an eligibility gate for known owned files.
-- [ ] Verify current absence before final success/Store.finish. Keep exact
+- [x] Verify current absence before final success/Store.finish. Keep exact
   operation binding and truthful diagnostics, including unknown original causes.
-- [ ] Add focused real filesystem/CLI orchestration tests for partial setup,
+- [x] Add focused real filesystem/CLI orchestration tests for partial setup,
   missing files, retry, reboot, repeat removal and foreign preservation; commit,
   report and obtain independent review.
 
@@ -56,21 +56,21 @@ Own Root/backend/state/CLI, separate from No-root and frontend files.
 Own new `cytv/no_root_cleanup.py`, shared inventory/sweep runtime and dedicated tests.
 Use the common `continue_removal(installer, expected_pending)` entry point.
 
-- [ ] Bypass the old require_removal_idle/global status path for explicit removal.
+- [x] Bypass the old require_removal_idle/global status path for explicit removal.
   Read current registered project packages and known file paths.
-- [ ] Stop owned control/startup through existing supported interfaces. Route all
+- [x] Stop owned control/startup through existing supported interfaces. Route all
   explicit Remove UI/CLI requests through this one full-clean path.
-- [ ] Use ordinary package removal and direct owned-residue cleanup; absent is skip.
+- [x] Use ordinary package removal and direct owned-residue cleanup; absent is skip.
   Expose real busy/denied/connection errors. Request Root access for protected Root
   residue. Add a single inert registration carrier only where actually necessary.
-- [ ] Persist actual boot ID/restart-required; after a full boot, re-inspect, sweep
+- [x] Persist actual boot ID/restart-required; after a full boot, re-inspect, sweep
   and verify. Finish only with removed and verified_clean both true. Current
   presence is rechecked even when an old completed receipt exists.
-- [ ] Retry reconnects and continues this same goal from actual presence. Preserve
+- [x] Retry reconnects and continues this same goal from actual presence. Preserve
   original history without reconstructing or requiring original install success.
-- [ ] Provide a small concrete inventory/sweep JS export for the Root owner. Leave
+- [x] Provide a small concrete inventory/sweep JS export for the Root owner. Leave
   Helper, renewal/updater lifecycle source and new global native architecture out.
-- [ ] Test missing/partial package and data,359's denied-global-status shape,
+- [x] Test missing/partial package and data,359's denied-global-status shape,
   disconnect/retry, boot gate, Root permission handoff, repeat cleanup, foreign
   preservation and current-source old Node compatibility. Commit/report/review.
 
@@ -79,16 +79,16 @@ Use the common `continue_removal(installer, expected_pending)` entry point.
 Own Qt/GUI, Android bridge/UI, recovery wording, locales, guides and related tests.
 Start from reviewed6416; backend providers work in their own branches.
 
-- [ ] Connection interruption has clear wording and Try again. For already
+- [x] Connection interruption has clear wording and Try again. For already
   confirmed clean removal, retry the same target/goal without an extra recovery
   wizard; backend rechecks and skips completed work.
-- [ ] Show restart-required instructions for a full power restart, then Try again.
+- [x] Show restart-required instructions for a full power restart, then Try again.
   Pass exact removed/verified_clean/restart_required fields safely.
-- [ ] Green uninstall requires clean-removal disposition and both success Booleans.
+- [x] Green uninstall requires clean-removal disposition and both success Booleans.
   Keep safe bounded reasons, original/current failures and semantic credentials.
-- [ ] Update all13 locales/guides for the practical flow, preserve historical
+- [x] Update all13 locales/guides for the practical flow, preserve historical
   evidence and remove active instructions describing deferred lifecycle work.
-- [ ] Test actual CLI/Store/Qt and Android bridge/browser partial/retry/restart/final
+- [x] Test actual CLI/Store/Qt and Android bridge/browser partial/retry/restart/final
   journeys. Integrate both providers and obtain independent review.
 
 ## Task6 — integration and versioned release candidate

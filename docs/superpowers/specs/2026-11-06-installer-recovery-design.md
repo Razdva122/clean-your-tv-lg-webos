@@ -96,6 +96,12 @@ supply proof. Preserve semantic credential types, the original known/unknown
 failure, separately attributed intermediate failures and the current connection
 error. Standard uninstall diagnostics remain exportable and redacted.
 
+The five new cleanup/cancel helpers are installer-only: authenticate them in the
+current staged payload, but preserve the published persistent Root Updater and
+System OTA destination set. Bootstrap apply/resume must use the same persistent
+code projection while retaining the complete original bundle proof. This avoids
+requiring a supervisor migration for ordinary updates and rollback.
+
 ## Verification and release
 
 Test successful and partial setup; missing packages/files/SAM; current busy and

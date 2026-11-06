@@ -90,3 +90,32 @@ merge the reviewed implementation into `release/next`, collect scope and finaliz
 versions/documentation, then build and pin the complete versioned candidate.
 Affected exact-artifact and physical acceptance remain separate. A successful
 package build or source test cannot establish a clean TV or universal compatibility.
+
+## Combined Root and OTA delivery correction
+
+The full Root run completed 1,219 tests with 24 failures, one setup error and three
+skips before the final corrections. Sixteen failures came from the test loader
+binding the runtime `provision` module where a coordinator fixture needed its own
+module. After collecting all 1,222 tests, the isolated fixture rerun passed 61
+cases with one Linux-only skip; the prior module identity was restored. The lab
+setup error used an undeclared child Python without fontTools; with the declared
+build environment, all three lab cases passed. Neither correction weakened a
+runtime check.
+
+The other failures exposed a real packaging regression: five new cleanup/cancel
+files extended the fixed infrastructure paths accepted by installed supervisors.
+At `849ac605`, these files remain hash-authenticated in the current installer
+bundle/staging, while persistent Root Updater code, receipts and the System OTA
+archive retain the exact published path set. Apply/resume share that precise
+projection and preserve the complete original staged bundle proof. Ordinary TV
+OTA/rollback does not require the five helpers. No supervisor migration, new
+loader or change to the immutable published-supervisor fixture was introduced.
+
+Fresh checks passed: the unchanged legacy archive contract (2), actual bootstrap
+and metadata resume (3), immutable rollback anchors (7), legacy update/rollback
+lifecycle (3), packaging (5), and actual packaged Node compatibility on 0.12.2,
+8.12.0 and current Node. Independent scoped review approved the delivery correction.
+The original CI failure and its correction belong to
+[implementation PR #363](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/363);
+only its final successful revision can authorize integration. These are host/source
+checks, not physical OTA or removal acceptance.
