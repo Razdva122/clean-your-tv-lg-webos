@@ -125,9 +125,9 @@ int main(int argc, char **argv) {
     if(argc>=3 && !strcmp(argv[1],"root-lock")){root_lock(argv+2);return 74;}
     if(argc>=3 && !strcmp(argv[1],"root-clean-lock")){root_clean_lock(argv+2);return 74;}
     if (argc < 4 || !identifier(argv[2]) || (strcmp(argv[3], "run") && strcmp(argv[3], "run-shared") && strcmp(argv[3], "revoke") &&
-        strcmp(argv[3],"remove") && strcmp(argv[3],"finish-removal"))) refuse();
+        strcmp(argv[3],"remove") && strcmp(argv[3],"prepare-removal") && strcmp(argv[3],"finish-removal"))) refuse();
     if (((!strcmp(argv[3],"run")||!strcmp(argv[3],"run-shared")) && argc < 5) || (!strcmp(argv[3],"revoke") && argc != 4) ||
-        (!strcmp(argv[3],"remove") && (argc<6 || !identifier(argv[4]))) ||
+        ((!strcmp(argv[3],"remove")||!strcmp(argv[3],"prepare-removal")) && (argc<6 || !identifier(argv[4]))) ||
         (!strcmp(argv[3],"finish-removal") && argc!=4)) refuse();
     umask(0027); root = open_root(argv[1],0750); if (fstat(root, &original)) refuse();
     fence_uid=original.st_uid;fence_gid=original.st_gid;
@@ -139,7 +139,7 @@ int main(int argc, char **argv) {
     }
     if (lock < 0) refuse();
     regular(lock);
-    while (flock(lock, initialized && !strcmp(argv[3],"run-shared")?LOCK_SH:LOCK_EX)) { if (errno != EINTR) refuse(); }
+    while (flock(lock, initialized && (!strcmp(argv[3],"run-shared")||!strcmp(argv[3],"prepare-removal"))?LOCK_SH:LOCK_EX)) { if (errno != EINTR) refuse(); }
     regular(lock);
     if (fstat(lock, &opened) || fstatat(root, "lifecycle.lock", &named, AT_SYMLINK_NOFOLLOW) || !equal(opened,named)) refuse();
     if (fsync(lock) || fsync(root)) refuse();
@@ -154,7 +154,7 @@ int main(int argc, char **argv) {
         marker(root,revoked,1);
         if(unlinkat(root,"removal-owner",0) || fsync(root))refuse();return 0;
     }
-    if(!strcmp(argv[3],"remove")) {
+    if(!strcmp(argv[3],"remove")||!strcmp(argv[3],"prepare-removal")) {
         if(!strcmp(argv[2],argv[4]))refuse();
         removal_owner(root,argv[2],1);
         snprintf(revoked,sizeof(revoked),"revoked-%s",argv[4]);marker(root,revoked,1);

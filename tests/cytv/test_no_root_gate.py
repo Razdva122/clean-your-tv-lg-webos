@@ -170,6 +170,18 @@ class LifecycleGate(unittest.TestCase):
         result = subprocess.run([str(binary), 'root-lock', shutil.which('true')], capture_output=True, timeout=5)
         self.assertNotEqual(result.returncode, 0); self.assertFalse(mutex.exists())
 
+    def test_removal_revokes_before_waiting_for_running_helper_to_drain(self):
+        import fcntl
+        old=self.generation
+        self.assertEqual(self.call('run',shutil.which('true')).returncode,0)
+        with (self.root/'lifecycle.lock').open('rb') as runtime:
+            fcntl.flock(runtime,fcntl.LOCK_SH)
+            self.generation='b'*32
+            result=self.call('prepare-removal',old,shutil.which('true'))
+            self.assertEqual(result.returncode,0,result.stderr)
+            self.assertTrue((self.root/('revoked-'+old)).exists())
+        self.assertEqual(self.call('remove',old,shutil.which('true')).returncode,0)
+
     def test_root_cleanup_holds_the_original_python_promotion_lock(self):
         import fcntl
         owned=self.directory/'ownership';owned.mkdir(mode=0o700)
