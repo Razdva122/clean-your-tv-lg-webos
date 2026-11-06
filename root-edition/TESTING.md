@@ -3,7 +3,7 @@
 Historical result (2026-10-27): [corrected C3 acceptance and manual physical rollback](../docs/RELEASE-1.4.0-ACCEPTANCE.md) passed in the recorded scope. The maintainer accepted #90 and requested closure. Pending statements below describe earlier investigation checkpoints; other hardware remains unverified.
 
 For current setup use [installation](../docs/INSTALL.md), [update preparation](UPDATES.md)
-and [current candidate and pending acceptance](../docs/RELEASE-1.9.0.md). The
+and [current release scope and acceptance](../docs/RELEASE-1.9.0.md). The
 [1.4.0 acceptance](../docs/RELEASE-1.4.0-ACCEPTANCE.md) remains historical; the
 Root 0.6.1 standby failure in [#171](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/171)
 is unresolved. Root 0.7.0 has scoped signed-update, active retained-rollback,
@@ -15,6 +15,8 @@ this does not establish a fix for #171. See
 This is a developer test plan; bounded trials below are not a normal installer
 Keep/confirmation step. Dated checkpoints retain their original builds and do
 not override later issue evidence or accept new candidate artifacts.
+
+Current1.9.0 C3 update, controls/audio, standby, cold-start and retained rollback results are in the [artifact-bound record](../docs/history/2026-11-06-root-wake-key-release.md#final-cold-start-retained-rollback-and-android-upgrade). Settings status #347 remains a deferred failure; other-model claims remain unverified.
 
 ## When to repeat this matrix
 

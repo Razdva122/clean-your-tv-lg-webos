@@ -117,7 +117,7 @@
       "reason": "Metadata-only inventory/build-pin record; no additional product change."
     }
   ],
-  "acceptance": "",
+  "acceptance": "Maintainer-owned OLED55C3RLA fw43.21.71 SDK11.2.0, Root: supported signed1.8.2->1.9.0 update; all component terminals/ordinary Home health and actual bytes verified; Home/video/audio/volume, standby routing, physical AC-off cold start, triple-Home emergency Off, retained rollback to exact1.8.2 and post-rollback controls/audio/settings preservation passed. Settings stale status FAIL explicitly deferred #347 (Back/reopen workaround); storage accumulation #348 deferred. Exact original-signer Android code22->23 upgrade on isolated API35 ARM64 userdebug emulator retained four synthetic files, native Store/OperationChecks passed. Other models/C1/AOD, personal receiver/media #337, broader No-root and physical phone/network acceptance untested. Maintainer requested publication after cold boot/rollback; no compatibility claim beyond this scope. Exact hashes and observations: docs/history/2026-11-06-root-wake-key-release.md#signed-candidate-c3-observations and #final-cold-start-retained-rollback-and-android-upgrade.",
   "build": {
     "run_id": 42176689817,
     "attempt": 1,

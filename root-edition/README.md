@@ -1,6 +1,6 @@
 # Root Edition
 
-> **Unpublished 1.9.0 candidate:** see [candidate versions, setup and recovery limits](../docs/RELEASE-1.9.0.md). Published downloads remain on 1.8.2. C1 Beta is fresh-install only, selected automatically in the common installer; normal OTA is unavailable and physical C1 acceptance is pending. Historical results below retain their original artifact scope.
+> **Release 1.9.0:** see [versions, tested scope and recovery limits](../docs/RELEASE-1.9.0.md). C1 Beta is fresh-install only, selected automatically in the common installer; normal OTA is unavailable and physical C1 acceptance is pending. Historical results below retain their original artifact scope.
 
 **Ribbon in Home:** Ribbon is a theme of the single persistent full-screen CARD Home, with its own wallpaper. It does not show another application or HDMI beneath the cards. Theme selection does not change the window type, Home routing or emergency controls. [Behavior and acceptance limits](../docs/THEMES.md#ribbon-over-applications-unreleased).
 

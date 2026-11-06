@@ -1,5 +1,3 @@
-> **Unpublished 1.9.0 candidate:** versions below describe this preparation branch. Published downloads remain [v1.8.2](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.8.2). [Candidate scope and pending acceptance](docs/RELEASE-1.9.0.md).
-
 ![Clean Your TV — for LG webOS](assets/brand/readme-logo.png#gh-light-mode-only)
 ![Clean Your TV — for LG webOS](assets/brand/readme-logo-dark.png#gh-dark-mode-only)
 

@@ -1,6 +1,6 @@
 # Clean Your TV — उपयोगकर्ता मार्गदर्शिका
 
-> **1.8.2:** [English](../RELEASE-1.8.2.md) · [LS2 Root #337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337) · [1.9.0 — अप्रकाशित RC](../RELEASE-1.9.0.md)
+> **1.9.0:** [English](../RELEASE-1.9.0.md) · [Root #337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337) · [#347](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/347) · [#348](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/348) · [1.8.2](../RELEASE-1.8.2.md)
 
 **अप्रकाशित C1 Beta (#298):** कंप्यूटर के साझा इंस्टॉलर में Root चुनें। पात्र C1 TV अपने आप पहचाने जाते हैं; अलग इंस्टॉलर या फ़्लैग की ज़रूरत नहीं है। इस मार्ग के लिए नई स्थापना ज़रूरी है, स्वचालित अपडेट उपलब्ध नहीं हैं और वास्तविक C1 पर स्वीकृति परीक्षण अभी पूरा नहीं हुआ है। LG Home खोलने, Back को दबाए रखने या सुरक्षा/बिजली संबंधी रुकावट के बाद Home नियंत्रण बंद रह सकता है; TV सेटिंग में Home बदलें फिर चालू करें। सामान्य Root मार्ग नहीं बदलता। यदि अन्य No-root घटक बचे हैं, तो C1 का पूर्ण निष्कासन कोई बदलाव करने से पहले रुक जाता है। पहले उन्हें सामान्य No-root निष्कासन प्रक्रिया से हटाएँ; उनकी स्थिति अनिश्चित हो तो रिकवरी डेटा सुरक्षित रखें। [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md). C1 Beta Home बटन को फ़िल्टर करता है और ऐप बंद होने पर लौटता है; CRIU/checkpoint की अनुमतियाँ नहीं बदलता। लौटते समय LG Home थोड़ी देर दिख सकता है। Home को तीन बार दबाने से भी रूटिंग रुकती है; रुकने के बाद Change Home फिर चालू करें।
 

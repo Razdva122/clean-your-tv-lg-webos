@@ -1,6 +1,6 @@
 # Clean Your TV — instrukcja użytkownika
 
-> **1.8.2:** [English](../RELEASE-1.8.2.md) · [LS2 Root #337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337) · [1.9.0 — nieopublikowany RC](../RELEASE-1.9.0.md)
+> **1.9.0:** [English](../RELEASE-1.9.0.md) · [Root #337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337) · [#347](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/347) · [#348](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/348) · [1.8.2](../RELEASE-1.8.2.md)
 
 **Nieopublikowana C1 Beta (#298):** Wybierz Root we wspólnym instalatorze na komputer. Kwalifikujące się telewizory C1 są wykrywane automatycznie; osobny instalator ani flaga nie są potrzebne. Ta ścieżka wymaga nowej instalacji, nie oferuje automatycznych aktualizacji i nie przeszła jeszcze odbioru na fizycznym C1. Otwórz LG Home, przytrzymanie Back lub zatrzymanie związane z bezpieczeństwem/zasilaniem mogą pozostawić sterowanie Home wyłączone; ponownie włącz Zmień Home w ustawieniach TV. Zwykła ścieżka Root pozostaje bez zmian. Jeśli pozostały inne składniki No-root, pełne usuwanie C1 zatrzyma się przed wprowadzeniem zmian. Najpierw usuń je zwykłą procedurą No-root; jeśli ich stan jest niejasny, zachowaj dane odzyskiwania. [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md). C1 Beta filtruje klawisz Home i wraca po zamknięciu aplikacji bez zmiany uprawnień CRIU/checkpoint. LG Home może pojawić się na chwilę. Trzykrotne Home również zatrzymuje przekierowanie; potem ponownie włącz zmianę Home.
 

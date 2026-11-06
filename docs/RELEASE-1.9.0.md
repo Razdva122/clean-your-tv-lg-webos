@@ -1,19 +1,20 @@
 # v1.9.0 — C1 routing, recovery and storage feedback
 
-**Unpublished candidate.** Stable downloads remain on [v1.8.2](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.8.2).
-This cycle is preparing artifacts for owner-supervised acceptance. No new TV
-installation, controls, audio, power or rollback result is claimed.
+[Release downloads](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.9.0) · [Exact package hashes and acceptance](history/2026-11-06-root-wake-key-release.md#signed-candidate-c3-observations).
 
-[Build, preflight evidence and remaining acceptance](history/2026-11-06-release-1.9.0-candidate.md) · [Exact verified artifact fingerprints](history/2026-11-06-release-1.9.0-artifacts.md).
+The maintainer accepted the scoped C3 and original-signer Android emulator results
+below. Historical evidence retains its original model/version/artifact scope.
 
 ## Changes
+
+- Root personal receiver/media APIs are prepared before LS2 registration, with a protected private-worker grant for five media-cache methods (#341/#337). Source/host checks pass; retained-device image/video transfer acceptance remains unverified. Browser demo video resumes after theme selection restores iframe focus (#345).
 
 - Root startup allows a bounded 750 ms interval for an initially held key to be
   released before enabling the emergency observer (#90). Initial historical events
   are discarded; fresh Home input cancels pending activation. Held/error cases
   still restore LG Home under the
   unchanged watchdog. This addresses the transient held-key branch, not a proven
-  device-wide standby fix. Exact signed-package wake acceptance remains pending.
+  device-wide standby fix. Scoped signed-package C3 standby/cold-start and retained rollback checks passed; see the acceptance record below.
 - Root activation and restoration preserve the complete AOD/vendor category map,
   changing only Home (#323, #282). This is a host-tested preservation correction;
   original C4 recovery and exact-package B4/C4 Settings/SAM/cache acceptance remain
@@ -56,7 +57,7 @@ and 4K/1080p videos remain in the published catalogue; Liquid Glass remains buil
 
 ## Versions and packaging
 
-| Component | Published1.8.2 | Candidate1.9.0 |
+| Component | Published1.8.2 | Release1.9.0 |
 | --- | --- | --- |
 | Home (FHD/HD) | 1.9.4 | 1.10.0 |
 | Home Helper | 0.7.4 | 0.7.4 |
@@ -66,44 +67,30 @@ and 4K/1080p videos remain in the published catalogue; Liquid Glass remains buil
 | Both edition Updaters | 0.4.4 | 0.4.5 |
 | System Updater target / protocol | 1.2.1 /1 | 1.2.2 /1 |
 
-Home/receiver/catalogue, Root/runtime/infrastructure, updaters and shared
-computer/Android payloads need rebuilding. Helper has no source change; exact
-package equivalence must be verified before full dispatch. Its already accepted
-compatibility scenario is reusable only for identical bytes and preconditions.
+All platform installers, signed Android and TV payloads were rebuilt and verified
+in selected full build42176689817:1. Helper0.7.4 raw/canonical bytes match the
+authenticated1.8.2 baseline, retaining its existing compatibility approval.
 System1.2.2 adds experimental-state exclusions; retained installed1.1.2 remains
-pinned. This candidate adds no general supervisor replacement path. Homebrew
-Installer promotion remains disabled without its independent hardware/human record.
+pinned. This release adds no general supervisor replacement path. Homebrew
+Installer promotion remains disabled without independent hardware/human evidence.
 
-## Known limits and acceptance
+## Tested scope and known limitations
 
-The owner admitted [#341](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/341)
-to address retained Root receiver permissions and missing personal-video cache
-access (#337). It prepares the fixed APIs before LS2 registration and requires a
-protected private-worker capability for the five media-cache methods. Legacy
-snapshots and receiver receipts remain unchanged. A new complete candidate and
-signed-package acceptance are required; the earlier selected build predates this
-change. [Source checks and remaining acceptance](history/2026-11-06-root-wallpaper-ls2.md).
-Built-in video and personal transfer remain separate paths.
-Original #96/#282/#298/#307/#334 reports remain open according to their unresolved
-work; host tests and package installation are not compatibility evidence.
+On OLED55C3RLA / firmware43.21.71 / SDK11.2.0, the supported signed update from
+1.8.2, actual component versions/runtime hashes, ordinary Home health, Home/video/
+audio/volume, standby routing, physical AC-off cold start, triple-Home emergency Off
+and exact retained rollback passed. After rollback, the owner confirmed Home,
+audio/volume and preserved settings; final state is LG Home on1.8.2 with Root off.
+Android0.9.0/code23 passed exact original-certificate upgrade from published code22
+on an isolated API35 ARM64 emulator, four-file synthetic retention, real Store
+refusal/no-replay and native OperationChecks. This is not physical phone-to-TV or
+universal TV compatibility evidence.
 
-After complete CI, select the exact successful run/attempt and verify ordinary
-signed Root QA provenance and package hashes. The bounded morning session needs:
+- [#347](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/347): Settings can remain at Changing Home control with a disabled switch after wake even while Home routing is active. Close and reopen Settings to refresh it. Deferred to next release.
+- [#348](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/348): old updater packages and installer staging can accumulate. This release does not automatically prune them. Preserve current/rollback/pending records; the observed low-space update aborted safely before component changes and succeeded after owner-authorized stale-package cleanup. The future retention MR is not included.
+- [#337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337): receiver/media source fixes are included, but retained Root image/video receive, Apply, playback and reload remain unverified. Built-in media is a separate path.
+- C1 Beta remains fresh-install only and experimental, with no ordinary OTA or in-place schema1 migration. C1 physical lease/emergency/startup/audio and B4/C4 Home/AOD/Settings/SAM/cache acceptance remain unverified.
+- Original #96/#282/#298/#307/#334 reports remain open according to unresolved outcomes. Guidance, guard/diagnostic improvements and package delivery do not prove those devices recovered.
+- Physical Android phones, the oldest Android/WebView floor, real phone-to-TV interruption/recovery and broader No-root device acceptance remain untested. No automatic uninstall, ownership change or journal cleanup is authorized by a recovery message.
 
-1. Supported signed System worker update on the existing Root installation,
-   preserved state and retained rollback, with Home/controls/audio after transition.
-2. Short/repeated Home, Back cancel/exit, arrows/OK/pointer/wheel/volume, explicit
-   Root Off and physical emergency return with Helper stopped.
-3. Ribbon editing/hide/undo and theme/storage feedback; distinguish built-in media
-   from personal receiver/image/video acceptance for #337. Do not modify TV storage to fill
-   a report or manufacture a low-space condition.
-4. Standby and cold boot recorded separately, including actual routing and audio.
-5. Suitable B4/C4 Home/AOD/Settings/SAM/cache and update/rollback checks, plus separate
-   physical C1 lease/control/recovery acceptance where that hardware is available.
-6. Exact signed Android upgrade and synthetic-data retention checks; physical
-   phone-to-TV paths stay untested until actually exercised.
-
-Run `python3 scripts/release-flow.py acceptance-report` and add scenarios selected
-by the complete diff. Existing C3 observations cannot certify C1/C4, and changed
-artifacts cannot inherit prior physical passes. The release PR stays draft until
-its actual acceptance is recorded. No publication is authorized by this preparation.
+[Full dated observations, attempted resolutions and limits](history/2026-11-06-root-wake-key-release.md#final-cold-start-retained-rollback-and-android-upgrade) · [Wallpaper source checks](history/2026-11-06-root-wallpaper-ls2.md).

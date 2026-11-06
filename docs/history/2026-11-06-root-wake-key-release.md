@@ -177,3 +177,62 @@ retention remain untested here. Do not copy the earlier baseline's manual result
 onto different candidate bytes. These scoped results are not complete release
 acceptance, universal compatibility, public-feed/anonymous-download acceptance,
 or authorization to merge main/publish stable.
+
+## Final cold-start, retained rollback and Android upgrade
+
+The maintainer subsequently requested cold boot, retained rollback and publication
+of this version. On the same candidate, the owner enabled Change Home, confirmed
+short Home, switched the TV off and disconnected AC for a requested 30 seconds.
+After reconnecting, Home, video, audio and volume worked. Readback found active
+intent/guardian and verified integrity. Uptime reset from 815.49 to 86.83 seconds;
+the reported boot UUID did not change. Therefore the UUID is not used as the sole
+restart proof. Physical power removal is owner-confirmed; its duration was not
+independently measured. No cause is assigned to the retained UUID.
+
+The ordinary installed Root restore service confirmed recovery/Off before the
+ordinary System rollback call. The original worker restored all three retained
+1.8.2 components with successful rollback submission/terminal evidence and normal
+launcher health. System phase and Home resume were rolled-back. Actual Root0.9.3,
+Root Updater0.4.4 and retained System1.1.2 were read back. Runtime reader SHA-256
+`c395e0661ea2ab128ac99d91a1a107242d119eabd03082d66d6e4a79d96c34f4`
+matched authenticated prior infrastructure
+`8f6352b33599d17938f1fd70a255301f5c1b19eb913e84083db707dbafcba9be`.
+The owner confirmed enabled Home, application/video/audio/volume, preserved
+appearance/settings and explicit Off returning to LG after rollback. The saved
+transaction profile remains bound to its original digest and normal restore/
+health completed; no fresh post-rollback whole-profile identity is claimed because
+the UI was already closed during the final read-only capture attempt. It was not
+reopened merely to fill a report. Final TV state is restored1.8.2, LG Home,
+Root/guardian off, stopped Helper and verified integrity. No unsupported forced
+install, key/receipt replacement or journal deletion was used.
+
+The final protected-CI Android APK was separately authenticated by Actions archive
+size/digest/source/attempt, then checked against a clean exact build-source checkout
+using android/verify_release.py. Embedded provenance/payload/versions, ARM64 ABI,
+SDK declarations, non-debuggable release mode and the original public signer match.
+APK SHA-256: `90922be5e6ca69e8c18ccbe65b8032d19969f971512d4be294014ce227ae19d1`.
+Signer SHA-256: `5434c3eb169a59a1a5ae1f60c443b927601d0c508fd4f41919b0dd2947d14f94`.
+CI native runner SHA-256:
+`e534e6a4a13481ee404cd0982aabadeecdd2cad5393d86091b01962a5d09c388`.
+
+On a newly created isolated API35 ARM64 userdebug emulator, the original signed
+published1.8.2 Android0.8.2/code22 was installed and seeded by the real native
+Store fixture. Its API asset digest/size and original certificate were verified.
+Force-stop followed by install-r of the unchanged final Android0.9.0/code23 APK
+succeeded without uninstalling. Four synthetic files (profile, dummy key,
+preferences, pending operation) retained their hashes across upgrade, idle launch,
+background/return, rotation, lock/wake and process death. No automatic installer
+service replay or fatal exception was observed. Native Store verify confirmed the
+retained pending operation blocks another begin; full native OperationChecks passed
+both edition contexts, bounded replay, pending prompts and stale-answer rejection.
+Only this owned userdebug emulator used supported adb-root for instrumentation;
+the APK was not re-signed or made debuggable. No real TV profile/key or phone-to-TV
+operation was involved. Physical phones, oldest supported Android/WebView and
+interrupted live network operations remain untested.
+
+The maintainer's release instruction follows these scoped results. Known #347
+Settings presentation and #348 storage retention are deferred to the next release;
+future PRs #346/#349 are excluded from these bytes. Personal receiver/media #337,
+C1/B4/C4 target hardware and broader No-root/phone acceptance remain documented
+limitations, not passed cases. These observations support shipping within this
+scope; they do not establish universal compatibility or resolve partial reports.

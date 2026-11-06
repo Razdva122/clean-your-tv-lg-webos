@@ -3,8 +3,12 @@
 Start with [installation and controls](README.md), [updates](UPDATES.md), or
 [recovery](RECOVERY.md).
 
+## Release 1.9.0
+
+Root/infrastructure0.10.0 and Root Updater0.4.5 have scoped C3 signed-update, Home/audio, standby/cold-start, emergency Off and retained rollback evidence. System1.1.2 remains pinned; Helper0.7.4 is unchanged. See [exact artifacts and limits](../docs/history/2026-11-06-root-wake-key-release.md#final-cold-start-retained-rollback-and-android-upgrade) and [release notes](../docs/RELEASE-1.9.0.md). Settings status #347 and storage retention #348 are deferred; other-model and personal receiver/media acceptance remain unverified.
+
 <a id="current-release-140"></a>
-## Release 1.6.0 and scoped acceptance
+## Historical release 1.6.0 and scoped acceptance
 
 Release **1.6.0** uses **Root/infrastructure 0.7.0 / Root Updater 0.4.0 /
 System 1.2.0**. See [Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases)
