@@ -224,3 +224,6 @@ Les installateurs ordinateur/Android de 1.6.0 et clients OTA migrés choisissent
 Les versions candidates affichent l’espace requis, libre et manquant en Mio pour l’installation, les thèmes et les fonds photo/vidéo. Les copies temporaires et une réserve sont incluses. Quota de l’app, cache des thèmes de 64 Mio et cache vidéo sont distincts. Les valeurs inconnues sont signalées. Libérez le stockage indiqué ; aucun nettoyage automatique.
 
 Espace estimé (TV) : requis 128.0 Mio ; libre 96.0 Mio ; manque 32.0 Mio.
+
+
+Candidat : après avoir refusé l’activation Root, une confirmation distincte permet de terminer la configuration vérifiée avec LG Home et le contrôle de Home désactivé, en conservant les paquets et les données de récupération. Préparez séparément les mises à jour complètes ; la mise à jour du lanceur seul ne met pas à jour le runtime. [↗](../RECOVERY.md#candidate-finish-verified-root-setup-with-home-control-off).

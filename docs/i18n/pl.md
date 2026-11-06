@@ -225,3 +225,6 @@ Instalatory komputerowe/Android 1.6.0 i zmigrowane klienty OTA wybierają 720p l
 Wersje kandydujące pokazują wymagane, wolne i brakujące miejsce w MiB dla instalacji, motywów i własnych tapet zdjęciowych/wideo. Uwzględniają kopie tymczasowe i rezerwę. Limit aplikacji, pamięć motywów 64 MiB i pamięć wideo są oddzielne. Nieznane wartości są oznaczone. Zwolnij wskazaną pamięć; brak automatycznego czyszczenia.
 
 Szacowane miejsce (TV): wymagane 128.0 MiB; wolne 96.0 MiB; brakuje 32.0 MiB.
+
+
+Kandydat: po odrzuceniu aktywacji Root osobne potwierdzenie pozwala zakończyć zweryfikowaną konfigurację z LG Home i wyłączonym sterowaniem Home, zachowując pakiety i dane odzyskiwania. Pełne aktualizacje systemu przygotuj osobno; aktualizacja samego launchera nie aktualizuje środowiska wykonawczego. [↗](../RECOVERY.md#candidate-finish-verified-root-setup-with-home-control-off).

@@ -78,7 +78,7 @@ class ActivationRecoveryTests(unittest.TestCase):
         run.side_effect = lambda cmd, **kw: ('{"stage":"installed-recovery-only"}' if 'deploy.json' in cmd
                                             else 'CYTV_ACTIVATION_RECOVERABLE')
         original = self.store.pending(self.profile)
-        answers = iter(('y', ''))
+        answers = iter(('y', '', ''))
         recover(self.installer, lambda _: next(answers), Console(lambda *_: None))
         self.assertEqual(self.store.pending(self.profile), original)
         self.installer.root_action.assert_called_with('status')
@@ -112,3 +112,25 @@ class ActivationRecoveryTests(unittest.TestCase):
         self.assertEqual(self.store.pending(self.profile), before)
         self.assertEqual(list(self.store.device_dir(self.profile).glob('recovery-*.json')), [])
         self.assertFalse(any(call.args[0].endswith(' enable') for call in self.remote.run.call_args_list))
+
+    def test_decline_activation_then_finish_disabled_preserves_receipt_without_tv_changes(self):
+        self.installer.root_action = MagicMock(return_value={'returnValue': True, 'result': self.device})
+        self.remote.run.side_effect = lambda cmd, **kw: ('{"stage":"installed-recovery-only"}' if 'deploy.json' in cmd
+                                            else 'CYTV_ACTIVATION_RECOVERABLE')
+        before=self.store.pending(self.profile)
+        answers=iter(('y','','y'))
+        recover(self.installer,lambda _:next(answers),Console(lambda *_:None))
+        self.assertIsNone(self.store.pending(self.profile))
+        saved=[json.loads(p.read_text()) for p in self.store.device_dir(self.profile).glob('recovery-*.json')]
+        self.assertEqual(len(saved),1)
+        self.assertEqual(saved[0]['action'],'finish-root-setup-disabled')
+        self.assertEqual(saved[0]['previous'],before)
+        self.assertFalse(any(call.args[0]=='enable' for call in self.installer.root_action.call_args_list))
+        self.remote.upload.assert_not_called()
+
+    def test_disabled_completion_rechecks_before_archiving_or_resolving(self):
+        self.installer.status=MagicMock(return_value={'can_resume_root_setup':False})
+        before=self.store.pending(self.profile)
+        with self.assertRaises(RuntimeError):self.installer.finish_root_setup_disabled()
+        self.assertEqual(self.store.pending(self.profile),before)
+        self.assertEqual(list(self.store.device_dir(self.profile).glob('recovery-*.json')),[])

@@ -224,3 +224,6 @@ The 1.6.0 computer/Android installers and migrated OTA clients select 720p or 10
 Candidate builds show a storage estimate for installation, downloaded themes and personal photo/video wallpapers: required, available and shortfall in MiB. Estimates include temporary copies and a reserve. TV app quota, the 64 MiB theme cache and temporary video storage are separate limits. If webOS cannot report capacity, the unknown values are stated explicitly. Free space only on the indicated storage; no automatic cleanup occurs.
 
 Storage estimate (TV): required 128.0 MiB; available 96.0 MiB; shortfall 32.0 MiB.
+
+
+Candidate: after declining Root activation, a separate confirmation can finish verified setup with LG Home and Home control off, preserving packages and recovery data. Prepare complete system updates separately; a launcher-only update does not update the runtime. [↗](../RECOVERY.md#candidate-finish-verified-root-setup-with-home-control-off).
