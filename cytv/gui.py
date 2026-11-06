@@ -540,6 +540,11 @@ class Wizard(QMainWindow):
             self.recovery_plan = dict(value)
             self.steps.hide()
             self.rail_title.setText(tr('Review recovery options'))
+            from .recovery_ui import removal_details
+            detail = removal_details(self.recovery_plan)
+            if detail:
+                self.subtitle.setText('\n'.join(tr(text) for text in detail.values() if text))
+                self.subtitle.show()
         elif kind == 'recovery':
             self.recovery_profile = dict(value)
         elif kind == 'prompt':
@@ -565,8 +570,12 @@ class Wizard(QMainWindow):
                 self.update_steps(self.current_step, value)
             self.content.moveCursor(self.content.textCursor().MoveOperation.End)
             failed = value not in (0, 130)
-            recover = (self.recovery_profile is not None and self.recovery_plan is None and
-                       (value == 0 or (self.failure_help or {}).get('code') in ('removal-not-submitted','no-root-recovery')))
+            recover = (self.recovery_profile is not None and
+                       ((self.recovery_plan is None and
+                         (value == 0 or (self.failure_help or {}).get('code') in ('removal-not-submitted','no-root-recovery'))) or
+                        (self.recovery_plan is not None and self.recovery_plan.get('state') != 'complete' and
+                         type(self.recovery_plan.get('actions')) is list and
+                         'continue-removal' in self.recovery_plan.get('actions', []))))
             if self.recovery_plan:
                 completed = (value == 0 and self.recovery_plan['state'] == 'complete' and
                              (self.command != 'uninstall' or self.recovery_plan.get('disposition') == 'clean-removal') and
@@ -608,6 +617,12 @@ class Wizard(QMainWindow):
                 self.subtitle.setText(tr(self.failure_help['next_step']))
                 if not self.report:
                     self.subtitle.setText(self.subtitle.text()+'\n'+tr('A diagnostic report could not be created. Include the visible error when opening an issue.'))
+            if self.recovery_plan:
+                from .recovery_ui import removal_details
+                detail = removal_details(self.recovery_plan)
+                if detail and not (value == 0 and self.recovery_plan.get('state') == 'complete'
+                                   and self.recovery_plan.get('verified_clean') is True):
+                    self.subtitle.setText(self.subtitle.text()+'\n'+'\n'.join(tr(text) for text in detail.values() if text))
 
     def show_prompt(self, prompt):
         self.check_panel.hide()

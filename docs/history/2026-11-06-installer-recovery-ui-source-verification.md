@@ -81,3 +81,33 @@ passed: the explicit proof regression, valid cleanup completion, retained result
 LG Home goal and actual original-operation continuation remain covered.
 These are UI/source checks; full provider integration and physical acceptance
 remain pending as above.
+
+## Root-provider UI checkpoint
+
+Merged coordinator provider/docs `6608d3e8` (Root provider `99a558e6`) into the UI
+branch. Added a shared, presentation-only stage/blocker dictionary for Qt and
+Android. It renders only bounded human messages, treats unknown/structured codes
+as unverified, and never treats a persisted verified-clean stage as fresh proof.
+Continuation controls use the supplied assessment and preserve the bound TV;
+retain-only plans do not offer a repeat action. Ten additional canonical strings
+have all 12 non-English translations; two are reserved for the incoming No-root
+observer/cold-restart contract and do not establish that contract's acceptance.
+
+Focused checks passed **103 tests, 4.120 s**, across desktop recovery, GUI, i18n,
+bounded presentation and Android adapters. Exactly the two provider-wire tests
+below were excluded, explicitly rather than counted as passing. Chrome
+`removal-result.cjs` passed 18 proof combinations plus all 13 localized bridge
+phase/blocker events, live rendering and same-TV assessed actions;
+`recovery-journey.cjs` passed the existing actual CLI/original-observer journeys.
+Python 3.9 grammar, JavaScript syntax and `git diff --check` passed.
+
+Two new real CLI/Store/Installer/Qt tests remain RED on this provider baseline:
+`test_root_clean_removal_cli_completes_only_after_device_proof` and
+`test_root_partial_cleanup_shows_current_phase_and_retains_original_failure`.
+They simulate only SSH replies, exposing missing trusted support-manifest loading
+before the device operation. They also require the subsequent fresh phase/target,
+successful removal diagnostic export and original first-failure lineage. The
+provider owner has these integration requirements; no UI stub supplies success.
+No-root full-removal provider, final Root proof follow-ups, complete candidate
+suites and physical acceptance remain outstanding. This is a review checkpoint,
+not Task 5 completion or a clean-removal/device result.

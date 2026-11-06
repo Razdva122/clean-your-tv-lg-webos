@@ -112,9 +112,19 @@ class AndroidConsole(Console):
 
     def recovery_plan(self, value):
         super().recovery_plan(value)
+        from cytv.recovery_ui import removal_details
+        from cytv.recovery_state import ACTIONS, REASONS
+        optional = {key:value[key] for key in ('disposition','verified_clean') if key in value}
+        if type(value.get('actions')) is list:
+            optional['actions'] = [item for item in value['actions'] if type(item) is str and item in ACTIONS]
+        if type(value.get('reason')) is str and value['reason'] in REASONS:
+            optional['reason'] = value['reason']
+        detail = removal_details(value)
+        if detail:
+            optional.update(stageText=i18n.translate(detail['stage_text']), blockerText=i18n.translate(detail['blocker_text']))
         self.callbacks.emit(kind='recovery-plan', state=value['state'],
                             summary=i18n.translate(value['summary']), nextStep=i18n.translate(value['next_step']),
-                            **{key:value[key] for key in ('disposition','verified_clean','actions','reason') if key in value})
+                            **optional)
 
     def error(self, message, heading=False):
         # Input mistakes can be corrected; the CLI exit code decides the result.

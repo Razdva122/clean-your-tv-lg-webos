@@ -224,6 +224,17 @@ class LanguageTests(unittest.TestCase):
         keys = Counter(row.split('|')[0] for row in ROWS.splitlines() if row.strip())
         self.assertEqual([key for key, count in keys.items() if count > 1], [])
 
+    def test_bounded_cleanup_details_translate_in_every_locale(self):
+        from cytv.recovery_ui import REMOVAL_STAGES, REMOVAL_BLOCKERS
+        lang = self.language()
+        messages = set(REMOVAL_STAGES.values()) | set(REMOVAL_BLOCKERS.values())
+        for code in set(lang.LANGUAGES) - {'en','auto'}:
+            lang.set_language(code)
+            for message in messages - {''}:
+                with self.subTest(language=code, message=message):
+                    self.assertIn(message, lang.MESSAGES)
+                    self.assertNotEqual(lang.translate(message), message)
+
     def test_short_desktop_password_titles_are_translated_without_changing_identifiers(self):
         lang = self.language()
         from cytv.desktop import Prompt

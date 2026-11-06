@@ -30,6 +30,26 @@ class BridgeTests(unittest.TestCase):
         self.assertTrue(native.events[-1]['verified_clean'])
         self.assertNotIn('PRIVATE', json.dumps(native.events))
 
+    def test_cleanup_details_are_localized_and_never_forward_unknown_codes(self):
+        from cytv import i18n
+        self.addCleanup(i18n.set_language, 'en')
+        i18n.set_language('en')
+        module = self.module()
+        class Native:
+            def __init__(self): self.events = []
+            def emit(self, raw): self.events.append(json.loads(raw))
+        native = Native()
+        console = module.AndroidConsole(module.Callbacks(native))
+        console.recovery_plan({'state':'blocked','disposition':'clean-removal',
+            'summary':'Removal is still in progress.','next_step':'Continue the remaining cleanup for this TV.',
+            'actions':['continue-removal','PRIVATE'], 'reason':'PRIVATE',
+            'removal':{'stage':'private-cleanup','reason':'private-cleanup-incomplete','private':'PRIVATE'}})
+        event = native.events[-1]
+        self.assertEqual(event['stageText'], 'Removing private setup data…')
+        self.assertEqual(event['blockerText'], 'Private setup data cleanup is incomplete. Keep recovery data.')
+        self.assertEqual(event['actions'], ['continue-removal'])
+        self.assertNotIn('PRIVATE', json.dumps(event))
+
     def test_check_events_translate_text_but_preserve_ids_and_status(self):
         from cytv import i18n
         self.addCleanup(i18n.set_language, 'en')

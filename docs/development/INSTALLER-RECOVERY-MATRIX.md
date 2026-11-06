@@ -20,6 +20,9 @@ other. [User flow and limits](../RECOVERY.md).
 | Sender loss, durability failure, competing host | Permanent operation claims prevent replay; unknown remains explicit | `tests.cytv.test_no_root_observer.ObserverProcesses.test_killed_bootstrap_and_worker_loss_never_duplicate_original_request`; `test_claim_and_terminal_durability_failures_never_replay`; `test_distinct_operations_exclude_and_stale_releaser_cannot_delete_new_owner` |
 | Emergency stop arrives during launch | New recovery launch cannot clear or bypass the stop | `tests.cytv.test_no_root_integration.OriginalOperationIntegration.test_native_entry_preserves_stop_arriving_after_host_guard`; `test_emergency_marker_prevents_recovery_launch` |
 | Exit 0 with review/ready/waiting/blocked/removal incomplete | Neutral review; no green success or automatic force/retry; explicit uninstall requires both clean-removal disposition and true cleanup proof, including when the payload omits or changes disposition | `android/tests/maintenance.cjs`; `android/tests/removal-result.cjs`; `android.tests.test_bridge.BridgeTests.test_recovery_result_preserves_fixed_disposition_and_verified_cleanup`; `tests.cytv.test_desktop_recovery.DesktopRecoveryTests.test_explicit_uninstall_requires_clean_disposition_and_true_proof` |
+| Clean-removal stage/reason unknown or structured | Fixed human guidance, no raw service/protocol/private text; historical verified stage remains a current check | `tests.cytv.test_recovery_ui`; `android.tests.test_bridge.BridgeTests.test_cleanup_details_are_localized_and_never_forward_unknown_codes`; 13-locale bridge/browser cases in `android/tests/removal-result.cjs` |
+| No-root connection lost after explicit removal confirmation | Desired-absence intent persists before device work; original failure file is unchanged; connection blocker remains separate | `tests.cytv.test_desktop_recovery.DesktopRecoveryTests.test_no_root_uninstall_connection_loss_keeps_intent_before_device_work` — adapter is not invoked |
+| Continue action or retain-only assessment | Only assessed continuation is offered, on the bound saved target; next recovery still confirms and revalidates | `tests.cytv.test_desktop_recovery.DesktopRecoveryTests.test_bounded_cleanup_plan_offers_only_assessed_action_for_bound_tv`; `android/tests/removal-result.cjs` |
 
 Full clean-removal adapters and native writer fences have their own focused
 integration tests in the candidate. Their final method names and acceptance
@@ -28,6 +31,14 @@ does not validate those adapters. Original legacy reports #201/#307/#359 remain
 outside the future observer's terminal evidence. In #359, the initial generic
 install failure is unknown and the later package-status rejection is distinct.
 Do not request another install to fill this matrix.
+
+The Root-provider UI checkpoint on `6608d3e8` additionally has two intentionally
+failing real CLI/Store/Installer/Qt wiring tests: `test_root_clean_removal_cli_completes_only_after_device_proof`
+and `test_root_partial_cleanup_shows_current_phase_and_retains_original_failure`
+in `tests.cytv.test_desktop_recovery.DesktopRecoveryTests`. SSH replies are simulated;
+no Installer result or Store method is stubbed. They expose trusted-manifest
+loading, fresh phase/target and diagnostic-export integration that must be fixed
+and rerun before candidate acceptance. This checkpoint is not release-ready.
 
 Still unverified by these source tests: Linux-specific session/cgroup behavior,
 retail SSH persistence, real private-filesystem permission/rename semantics,

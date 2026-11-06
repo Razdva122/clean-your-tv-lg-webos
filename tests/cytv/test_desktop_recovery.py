@@ -270,6 +270,27 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.assertIsNotNone(w.report)
         self.assertEqual(json.loads(w.report.read_bytes())['frontend'], 'desktop')
 
+    def test_bounded_cleanup_plan_offers_only_assessed_action_for_bound_tv(self):
+        def runner(argv, **kwargs):
+            write = kwargs['write']
+            write.recovery(self.profile)
+            write.recovery_plan({'state':'blocked','disposition':'clean-removal',
+                'summary':'Removal is still in progress.','next_step':'Continue the remaining cleanup for this TV.',
+                'actions':['continue-removal','retain-evidence'],
+                'removal':{'stage':'private-cleanup','reason':'private-cleanup-incomplete'}})
+            return 2
+        w = self.window()
+        w.run = runner
+        w.start('uninstall', self.profile)
+        self.pump(lambda: not w.running)
+        self.assertEqual(w.title.text(), 'Review recovery options')
+        self.assertIn('Removing private setup data…', w.subtitle.text())
+        self.assertIn('Private setup data cleanup is incomplete.', w.subtitle.text())
+        self.assertIsNotNone(self.button(w, 'Review recovery options'))
+        w.recovery_plan['actions'] = ['retain-evidence']
+        w.receive('done', 2)
+        self.assertIsNone(self.button(w, 'Review recovery options'))
+
     def test_root_partial_cleanup_shows_current_phase_and_retains_original_failure(self):
         from tests.cytv.clean_removal_fixture import prepare
         original = prepare(self, 'partial')
@@ -432,37 +453,35 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.assertLess(restored, removals[0][0])
         self.assertFalse(any(c[0] == 'upload' for c in self.remote.calls))
 
-    def test_failed_unstarted_removal_offers_guarded_recovery_on_the_same_tv(self):
-        # A fresh uninstall creates its receipt, then fails restoring LG Home.
+    def test_no_root_uninstall_connection_loss_keeps_intent_before_device_work(self):
+        from cytv import diagnostics
         self.store.finish(self.profile)
-        original = self.remote.luna
-        def reject_home(uri, payload, **kwargs):
-            if uri.endswith('/launch') and payload.get('id') == 'com.webos.app.home':
-                raise TVRejected('PRIVATE', {'returnValue': False, 'errorCode': -1}, uri)
-            return original(uri, payload, **kwargs)
-        self.remote.luna = reject_home
+        self.store.begin(self.profile, 'install', stage='pending', components={})
+        original = self.store.pending(self.profile)
+        first_report = diagnostics.create_report(self.store, 'install', self.profile, 'install-packages', Exception('PRIVATE FIRST FAILURE'))
+        first = json.loads(first_report.read_bytes())['first_failure']
+        def disconnected(profile, *args, **kwargs):
+            self.connections.append(profile)
+            raise TimeoutError('PRIVATE CONNECTION')
+        self.connect = disconnected
         w = self.window()
         w.start('uninstall')
         self.pump(lambda: w.pending is not None)
         w.submit('y')
         self.pump(lambda: not w.running)
-        action = self.button(w, 'Review recovery options')
-        self.assertIsNotNone(action)
+        self.assertEqual(w.title.text(), 'Review recovery options')
         self.assertIsNotNone(self.button(w, 'Save diagnostic report…'))
-        self.assertEqual(w.failure_help['code'], 'no-root-recovery')
-        report = json.loads(w.report.read_text())
-        self.assertEqual(report['recovery']['category'], 'no-root-original-stream')
-        before = self.store.pending(self.profile)
-        self.remote.luna = original
-        action.click()
-        self.pump(lambda: w.pending is not None)
-        self.assertEqual(w.pending.default, 'n')
-        self.assertIn('Check recovery', w.pending.label)
-        w.submit('n')
-        self.pump(lambda: not w.running)
-        self.assertEqual(self.store.pending(self.profile), before)
-        self.assertTrue(all(p == self.profile for p in self.connections))
-        self.assertFalse(any(c[0] == 'luna' and c[1].endswith('/dev/remove') for c in self.remote.calls))
+        pending = self.store.pending(self.profile)
+        self.assertEqual(pending['recovery_protocol'], 'clean-removal-v1')
+        self.assertEqual(pending['stage'], 'requested')
+        self.assertEqual(pending['previous'], original)
+        self.assertEqual(self.remote.calls, [])
+        report = json.loads(w.report.read_bytes())
+        self.assertEqual(report['frontend'], 'desktop')
+        original_failure = self.store.device_dir(self.profile)/'diagnostic-failures'/(original['diagnostic_id']+'.json')
+        self.assertEqual(json.loads(original_failure.read_bytes()), first)
+        self.assertEqual(report['guidance']['code'], 'ssh-unreachable')
+        self.assertNotIn('PRIVATE', w.report.read_text())
 
     def test_unstarted_removal_gui_recovers_without_monitor_permission(self):
         original = self.remote.luna
