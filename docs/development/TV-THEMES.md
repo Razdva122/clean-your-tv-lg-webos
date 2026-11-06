@@ -128,6 +128,22 @@ Root packaging embeds the canonical receiver closure into the existing `service.
 
 Updating the Home IPK alone does not add receiver support to an existing preserved private service or widen its LS2 permissions. Old registrations keep the receiver unavailable until supported explicit provisioning. This feature does not silently migrate a retained worker or registration. Validate the computer-assisted recovery/reinstallation and matching preparation on actual versioned artifacts before release; repeatedly replacing the UI package does not resolve a receiver-unavailable screen.
 
+The #337 follow-up prepares receiver permissions before the private Root service
+connects to LS2: method groups are captured at category registration, so scanning
+new permission files after that connection is insufficient for a live worker.
+Personal video additionally needs the five fixed `wallpaperCache*` methods.
+These use a separate `permissions/wallpaper-media.api.json` attachment and
+`wallpaper-media-permissions.json` transition receipt, preserving the original
+snapshot and four-method receiver receipt. Admission requires both private
+`service.js` and `package.json` in the verified recovery inventory, with
+`wallpaperMediaProtocol: 1` in that protected package metadata. UI metadata and
+`release.json` alone cannot authorize it. No wildcard, new client, external
+endpoint or recovery operation is granted. Permission failure keeps recovery
+available. Delivery requires a coherent signed System update of Root and its
+private infrastructure; a Home-only update cannot replace the private worker.
+This is not included in the frozen 1.9.0 candidate. No-root uses its existing
+same-application service permissions.
+
 Opening Receive from computer creates one 10-minute session, a random service session ID and a six-digit PIN. Only private IPv4 addresses are advertised. HTTP POST `/v1/theme` on TV TCP 8879 requires `X-CYTV-PIN`, application/json, private/loopback local/peer addresses and exact local Host; browser Origin headers are rejected. Body cap is 10 MiB, request deadline 15 seconds, wrong-PIN cap 20; concurrent, malformed, oversized and expired uploads fail. Receipt returns 202 and closes the HTTP listener. That response confirms transport only, not validation/application.
 
 The UI polls authenticated LS2 status and reads at most 48 KiB per base64 chunk, avoiding oversized bus replies. `ThemeManager.installEnvelope` uses the existing envelope, descriptor/rule/document/image hash and native decoding checks before writing IndexedDB. No author code executes. The optional store cancellation signal aborts an in-flight IndexedDB transaction; close, expiry, category change, app hiding and late start replies stop/invalidate sessions. The accepted active theme remains unchanged until explicit Apply, with no timer for this installed selection. Buffers/PINs are memory-only and bounded; stop or expiry releases them.
