@@ -42,7 +42,13 @@
         const image=document.createElement('img');image.src='launcher/'+item.preview;image.alt='';image.width=160;image.height=90;
         const title=document.createElement('strong');title.textContent=item.title;
         const version=document.createElement('small');version.textContent=item.builtin?'Built-in':'v'+item.version;
-        button.append(image,title,version);cards.append(button);
+        const previewFrame=document.createElement('div');previewFrame.className='theme-preview-frame';previewFrame.append(image);
+        const badges=document.createElement('span');badges.className='theme-media-badges';
+        if(item.has4k){const badge=document.createElement('span');badge.className='theme-media-badge';badge.textContent='4K';badges.append(badge);}
+        if(item.hasVideo){const badge=document.createElement('span');badge.className='theme-media-badge theme-video-badge';badge.setAttribute('role','img');badge.setAttribute('aria-label','Video wallpaper');badges.append(badge);}
+        previewFrame.append(badges);
+        if(item.packageSize!==undefined)version.textContent+=' · '+Math.max(0.1,item.packageSize/1000000).toFixed(1)+' MB';
+        button.append(previewFrame,title,version);cards.append(button);
         button.onclick=async()=>{const current=++generation;busy(true);status.textContent='Applying '+item.title+'…';try{await apply(item,frame,current);}catch(error){if(current===generation)status.textContent='Could not apply theme: '+error.message;}finally{if(current===generation){selected(frame.ThemeManager);busy(false);}}};
       }
       frame.document.addEventListener('home-theme-change',()=>{if(view===generation||frame===screen.contentWindow)selected(frame.ThemeManager);});

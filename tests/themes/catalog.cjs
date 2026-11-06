@@ -20,6 +20,22 @@ try {
   const external = catalog.themes.find(entry=>entry.id===active.record.id);
   assert.equal(external.url, active.record.descriptorUrl);
   assert.equal(external.digest, active.record.descriptorSha256);
+  assert.equal(external.packageSize, Buffer.byteLength(JSON.stringify(active.manifest)) + Object.values(active.bytes).reduce((sum, bytes) => sum + bytes.length, 0));
+  assert.equal(external.has4k, false);
+  assert.equal(external.hasVideo, false);
+  const metadata = require('../../launcher/theme-data.js').metadata;
+  const scenic = {rules:{size:10}, assets:[{id:'wall',size:20,width:3840,height:2160},{id:'preview',size:30,width:960,height:540}], documents:[], defaults:{wallpaperAssetId:'wall'}, wallpaperVideo:{variants:[{size:40,width:1920,height:1080}]}};
+  assert.deepEqual(metadata(scenic, 100), {packageSize:200,has4k:false,hasVideo:false}, 'a UHD image and an unreviewed video do not promise UHD output or motion');
+  assert.equal(metadata(scenic,100,true).hasVideo,true,'reviewed moving video gets the film badge');
+  scenic.defaults.wallpaperAssetId = 'preview';
+  assert.equal(metadata(scenic, 100).has4k, false, 'only UHD video enables the 4K output badge');
+  scenic.wallpaperVideo.variants.push({size:50,width:3840,height:2160});
+  assert.equal(metadata(scenic, 100).has4k, true, '4K video counts even with an HD image fallback');
+  const actual=JSON.parse(generateCatalog().get('theme-catalog.json')).themes;
+  assert.equal(actual.find(t=>t.title==='Alpine').hasVideo,false,'still MP4 is not a moving background');
+  assert.equal(actual.find(t=>t.title==='Ribbon').hasVideo,true);
+  assert.equal(actual.find(t=>t.title==='Crăciun la Brașov').has4k,true,'maintained package has a UHD video variant');
+  assert.equal(actual.find(t=>t.title==='Crăciun la Brașov').hasVideo,false,'its UHD MP4 is still');
   for(const entry of builtins){const local=catalog.themes.find(theme=>theme.id===entry.id),manifest=JSON.parse(fs.readFileSync(path.resolve('launcher',entry.url))),base=entry.url.slice(0,entry.url.lastIndexOf('/')+1);assert.equal(local.preview,base+manifest.assets.find(asset=>asset.id===manifest.previewAssetId).path);assert.equal(local.credits,base+manifest.license.creditsPath);assert.equal(local.licenseFile,base+manifest.license.textPath);}
   for (const t of catalog.themes) assert.match(t.preview, /^(?:theme-catalog|themes)\/[a-zA-Z0-9/._-]+$/);
   const builtinRoot=path.join(root,'builtins');fs.mkdirSync(builtinRoot);fs.copyFileSync(path.resolve('launcher/builtin-themes.json'),path.join(builtinRoot,'builtin-themes.json'));fs.cpSync(path.resolve('launcher/themes'),path.join(builtinRoot,'themes'),{recursive:true});

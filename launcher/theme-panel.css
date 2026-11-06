@@ -97,3 +97,11 @@
 /* Downloaded previews decode asynchronously; reserve their frame before Apply. */
 #homeThemePanel .theme-preview-slot { position:relative; padding-top:56.25%; margin-bottom:12px; }
 #homeThemePanel .theme-choice .theme-preview-slot img { position:absolute; top:0; left:0; width:100%; height:100%; max-height:none; object-fit:contain; margin:0; }
+
+/* Informational badges share the preview frame; they are never remote stops. */
+.theme-preview-frame { position:relative; }
+#homeThemePanel .theme-detail-preview .theme-preview-frame { width:480px; max-width:100%; }
+.theme-media-badges { position:absolute; top:6px; right:6px; display:flex; pointer-events:none; font:600 18px/1 Arial,sans-serif; }
+.theme-media-badge { display:inline-block; padding:6px 8px; margin-left:5px; border-radius:5px; background:rgba(9,13,19,.86); color:#fff; }
+.theme-video-badge::before { content:''; display:block; width:1.2em; height:1em; background:center/contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 20' fill='none' stroke='white' stroke-width='1.7'%3E%3Crect x='1' y='1' width='22' height='18' rx='2'/%3E%3Cpath d='M6 1v18M18 1v18M1 6h5M1 10h5M1 14h5M18 6h5M18 10h5M18 14h5'/%3E%3C/svg%3E"); }
+#homeThemePanel .theme-media-badges { top:8px; right:8px; font-size:26px; }

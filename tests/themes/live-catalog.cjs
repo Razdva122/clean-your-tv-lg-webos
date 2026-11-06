@@ -23,9 +23,10 @@ vm.runInNewContext(fs.readFileSync('launcher/theme-manager.js','utf8'),context);
  externalIn(remote.themes).title='Reviewed update';remote.themes.filter(item=>item.builtin===true).forEach(item=>item.title='Wrong built-in');
  items=await context.ThemeManager.catalog();assert.equal(externalIn(items).title,'Reviewed update');
  for(const builtin of local.themes.filter(item=>item.builtin===true))assert.equal(items.find(item=>item.id===builtin.id).title,builtin.title,'live metadata cannot override bundled '+builtin.id);
- for(const edit of [r=>externalIn(r.themes).digest='x',r=>externalIn(r.themes).preview='../escape',r=>externalIn(r.themes).url=externalIn(r.themes).url.replace('raw.githubusercontent.com','evil.example'),r=>externalIn(r.themes).id='github:other/repo:bad',r=>r.schemaVersion=9]){
+ for(const edit of [r=>externalIn(r.themes).digest='x',r=>externalIn(r.themes).preview='../escape',r=>externalIn(r.themes).url=externalIn(r.themes).url.replace('raw.githubusercontent.com','evil.example'),r=>externalIn(r.themes).id='github:other/repo:bad',r=>r.schemaVersion=9,r=>externalIn(r.themes).packageSize=-1,r=>externalIn(r.themes).hasVideo='yes',r=>externalIn(r.themes).has4k=1]){
   remote=structuredClone(local);edit(remote);items=await context.ThemeManager.catalog();assert.equal(externalIn(items).title,external.title);assert.ok(items.notice);
  }
+ remote=structuredClone(local);delete externalIn(remote.themes).hasVideo;delete externalIn(remote.themes).has4k;delete externalIn(remote.themes).packageSize;items=await context.ThemeManager.catalog();assert.equal(externalIn(items).has4k,external.has4k,'matching older live record retains local reviewed badges');
  mode='offline';items=await context.ThemeManager.catalog();assert.ok(items.notice);assert.equal(externalIn(items).preview,external.preview);
  mode='cancel';await assert.rejects(context.ThemeManager.catalog({cancelled:false}),/Cancelled/);
  console.log('Live catalogue: pinned refresh, validation, local fallback and cancellation passed');

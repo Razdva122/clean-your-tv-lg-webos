@@ -29,5 +29,6 @@
       "kind": "browser",
       "summary": "Crăciun la Brașov 1.1.0 pinned descriptor/resources verified locally and remotely. Chromium at 1920x1080 in Root and No-root with synthetic apps and external network blocked: UHD image decode, Home focus/navigation, reorder/cancel, library labels, Inputs and standard Settings isolation passed. Supplied preview visually compared with current Home. Real-ESRGAN upscale of an AI-generated 1672x941 render, not native 4K. MIT styling and CC BY 4.0 wallpaper notices retained. Physical TV not tested."
     }
-  ]
+  ],
+  "availability": "removed"
 }

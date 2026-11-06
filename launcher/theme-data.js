@@ -150,6 +150,10 @@
   if(at!==end)invalid();
   return {width:width,height:height,duration:seconds};
  }
+ function metadata(m,descriptorSize,moving){
+  var videos=m.wallpaperVideo?m.wallpaperVideo.variants:[];
+  return {packageSize:filesFor(m).reduce(function(total,file){return total+file.size;},descriptorSize),has4k:videos.some(function(file){return file.width>=3840&&file.height>=2160;}),hasVideo:videos.length>0&&moving===true};
+ }
  function verify(pack,homeVersion,appearanceOnly){
   if(!pack||!(pack.descriptor instanceof Uint8Array||pack.descriptor instanceof ArrayBuffer))fail('Invalid cached theme');
   var descriptor=new Uint8Array(pack.descriptor);if(descriptor.length>65536||hash(descriptor)!==pack.digest)fail('Descriptor hash mismatch');
@@ -161,7 +165,7 @@
   if(total>policy.limits.packageBytes)fail('Theme package exceeds limits');
   m.assets.forEach(function(f){var info=imageInfo(pack.files[f.path],f.mediaType,f.id===m.defaults.wallpaperAssetId);if(info.width!==f.width||info.height!==f.height)fail('Image dimensions do not match descriptor');});
   if(m.wallpaperVideo&&appearanceOnly!==true)m.wallpaperVideo.variants.forEach(function(f){var info=videoInfo(pack.files[f.path]);if(info.width!==f.width||info.height!==f.height)fail('Video dimensions do not match descriptor');});
-  var rules=policy.validateRules(JSON.parse(decode(pack.files[m.rules.path])));return {manifest:m,rules:rules,size:total};
+  var rules=policy.validateRules(JSON.parse(decode(pack.files[m.rules.path])));return {manifest:m,rules:rules,size:total,has4k:metadata(m,descriptor.length).has4k};
  }
  function load(entry,homeVersion,signal,progress,local,appearanceOnly){
   var started=Date.now(),origin=local===true?null:source(entry.url,true);return request(entry.url,65536,local,signal,started+60000).then(function(a){if(entry.digest&&hash(a)!==entry.digest)fail('Descriptor hash mismatch');var m=policy.validateManifest(JSON.parse(decode(a)));if(entry.id&&m.id!==entry.id||entry.version&&m.themeVersion!==entry.version||entry.title&&entry.title!==m.title)fail('Theme identity/version mismatch');if(local!==true&&(m.id.indexOf('github:')!==0||m.source.repository.toLowerCase()!==origin.repository))fail('Theme repository mismatch');if(!versionAtLeast(homeVersion,m.requires.minimumHomeVersion))fail('Update Home before installing this theme');
@@ -206,5 +210,5 @@
  }
  function dispose(handles,videos,lease){[handles,videos].forEach(function(map){Object.keys(map||{}).forEach(function(k){if(!lease||map===handles)URL.revokeObjectURL(map[k]);});});if(lease&&typeof lease.dispose==='function')lease.dispose();}
 
- return {shortLink:shortLink,unpackEnvelope:unpackEnvelope,encode:encode,decode:decode,hash:hash,path:path,source:source,resolve:resolve,request:request,load:load,verify:verify,prepare:prepare,dispose:dispose,imageInfo:imageInfo,videoInfo:videoInfo,versionAtLeast:versionAtLeast};
+ return {metadata:metadata,shortLink:shortLink,unpackEnvelope:unpackEnvelope,encode:encode,decode:decode,hash:hash,path:path,source:source,resolve:resolve,request:request,load:load,verify:verify,prepare:prepare,dispose:dispose,imageInfo:imageInfo,videoInfo:videoInfo,versionAtLeast:versionAtLeast};
 }));
