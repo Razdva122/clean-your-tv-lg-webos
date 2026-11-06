@@ -270,6 +270,28 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.assertIsNotNone(w.report)
         self.assertEqual(json.loads(w.report.read_bytes())['frontend'], 'desktop')
 
+    def test_recover_clean_removal_publishes_proof_accepted_by_strict_ui(self):
+        from tests.cytv.clean_removal_fixture import prepare
+        original=prepare(self)
+        self.store.request_clean_removal(self.profile)
+        w=self.window()
+        w.start('recover',self.profile)
+        self.pump(lambda:w.pending is not None)
+        self.assertIn('Check recovery options?',w.pending.label)
+        w.submit('y')
+        self.pump(lambda:w.pending is not None and 'Continue removing' in w.pending.label)
+        w.submit('y')
+        self.pump(lambda:not w.running)
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertEqual(self.device_removals,['d'*32])
+        receipt=json.loads((self.store.device_dir(self.profile)/'clean-removal.json').read_bytes())
+        self.assertEqual(receipt['previous'],json.loads(original))
+        self.assertEqual(w.title.text(),'Clean Your TV removal is verified.',w.content.toPlainText())
+        self.assertIs(w.recovery_plan.get('removed'),True)
+        self.assertIs(w.recovery_plan.get('verified_clean'),True)
+        self.assertIsNot(w.recovery_plan.get('restart_required'),True)
+        self.assertIsNone(self.button(w,'Try again'))
+
     def test_cleanup_retry_rechecks_same_goal_even_with_old_advisory_actions(self):
         def runner(argv, **kwargs):
             write = kwargs['write']

@@ -23,6 +23,28 @@ class RecoveryTests(unittest.TestCase):
         values = iter(answers)
         return recover(self.installer, lambda _: next(values), Console(self.output.append), non_interactive)
 
+    def test_continue_removal_cannot_publish_completion_without_both_proofs_or_during_restart(self):
+        self.store.request_clean_removal(self.profile)
+        for result in ({'verified_clean':True}, {'verified_clean':True,'removed':False},
+                       {'verified_clean':True,'removed':1}, {'verified_clean':1,'removed':True},
+                       {'verified_clean':True,'removed':True,'restart_required':True}):
+            with self.subTest(result=result):
+                restart=result.get('restart_required') is True
+                self.store.checkpoint(self.profile,stage='restart-required' if restart else 'private-cleanup',
+                                      removal_reason='restart-required' if restart else 'private-cleanup-incomplete')
+                self.installer.continue_clean_removal.return_value=result
+                plans=[]
+                write=Console(self.output.append)
+                write.recovery_plan=plans.append
+                from cytv.recovery import recover
+                answers=iter(['y','y'])
+                with self.assertRaises(UserError):recover(self.installer,lambda _:next(answers),write)
+                self.assertIsNotNone(self.store.pending(self.profile))
+                self.assertIs(plans[-1]['removed'],False)
+                self.assertIs(plans[-1]['verified_clean'],False)
+                self.assertEqual(plans[-1]['restart_required'],restart)
+                self.assertNotEqual(plans[-1]['state'],'complete')
+
     def test_default_no_never_inspects_or_mutates(self):
         before = self.store.pending(self.profile)
         self.run_recovery([''])

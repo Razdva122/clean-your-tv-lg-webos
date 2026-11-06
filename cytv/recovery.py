@@ -57,9 +57,11 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
                 'next_step':'Continue the remaining cleanup for this TV.','removal':summary,'actions':assessment['actions']})
             if prompts.confirm('Continue removing Clean Your TV?',ask,write):
                 completed=installer.continue_clean_removal(pending)
-                if completed.get('verified_clean') is not True:
+                if (completed.get('verified_clean') is not True or completed.get('removed') is not True
+                        or completed.get('restart_required') is True):
                     raise UserError('Removal is still in progress. Recovery data and the remaining cleanup step were kept.',reason_code='pending-operation')
-                write.recovery_plan({'state':'complete','disposition':'clean-removal','verified_clean':True,
+                write.recovery_plan({'state':'complete','disposition':'clean-removal',
+                                     'removed':completed['removed'],'verified_clean':completed['verified_clean'],'restart_required':False,
                                      'summary':'Clean Your TV removal is verified.','next_step':SEPARATE})
             else:write(KEPT)
             return
