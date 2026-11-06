@@ -18,16 +18,16 @@ const {compile}=require('../../scripts/compile-tv-web.cjs');
   });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const browser = await chromium.launch({headless:true, channel:process.env.BROWSER_CHANNEL || 'chrome'});
-  async function check(savedBuiltin,edition) {
+  async function check(savedBuiltin,edition,earlyRoot=false) {
   const page = await browser.newPage({viewport:{width:1920,height:1080}}), errors = [];
   let queries = 0, mediaRequests = 0, releaseMedia;
   const mediaGate = new Promise(resolve => { releaseMedia = resolve; });
   page.on('pageerror', error => errors.push(error.message));
   await page.exposeFunction('producerContext', () => { queries++; return {}; });
-  await page.addInitScript(({savedBuiltin,rootEdition,handlesRelaunch}) => {
+  await page.addInitScript(({savedBuiltin,rootEdition,handlesRelaunch,earlyRoot}) => {
     localStorage.setItem('tvhome.theme.choice.v1', JSON.stringify({id:'builtin:ribbon',title:'Ribbon'}));
     window.PalmSystem = {launchParams:{cytvHome:{reason:'home',generation:8}},activate(){}};
-    window.rootAudit=[];
+    window.rootAudit=[];window.earlyRoot=earlyRoot;window.rootRestoreReads=0;
     if(rootEdition){
       const frame=requestAnimationFrame.bind(window),queued=[];let active=!handlesRelaunch;
       Object.defineProperty(document,'hidden',{configurable:true,get:()=>!active});
@@ -39,7 +39,7 @@ const {compile}=require('../../scripts/compile-tv-web.cjs');
       request.onupgradeneeded=()=>request.result.createObjectStore('wallpaper');
       request.onerror=reject;request.onsuccess=()=>{const db=request.result,tx=db.transaction('wallpaper','readwrite');tx.objectStore('wallpaper').put({envelope:null,source:'builtin:black-hole'},'slot');tx.oncomplete=()=>{db.close();resolve();};tx.onerror=reject;};
     }):Promise.resolve();
-  }, {savedBuiltin,rootEdition:edition==='root-launcher',handlesRelaunch:JSON.parse(fs.readFileSync(path.join(site,edition,'appinfo.json'))).handlesRelaunch===true});
+  }, {savedBuiltin,earlyRoot,rootEdition:edition==='root-launcher',handlesRelaunch:JSON.parse(fs.readFileSync(path.join(site,edition,'appinfo.json'))).handlesRelaunch===true});
   await page.route('**/personal-wallpaper.js', route => route.fulfill({body:
     source(edition,'personal-wallpaper.js') + `
       const restoreWallpaper=PersonalWallpaper.start;
@@ -56,9 +56,16 @@ const {compile}=require('../../scripts/compile-tv-web.cjs');
       window.PalmServiceBridge.prototype.call=function(uri,raw){
         if(window.ROOT_VERSION&&uri==='luna://com.cleanyourtv.system.updater.service/restoreProfile'){
           rootAudit.push('restore');
+          if(window.earlyRoot&&rootRestoreReads++===0){
+            this.onservicecallback(JSON.stringify({returnValue:true,result:null}));return;
+          }
           const icon='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aE1sAAAAASUVORK5CYII=';
           const profile={schema:1,inventory:{apps:[{id:'readiness.app',title:'Readiness fixture',icon}],inputs:[]},config:{columns:5,dockApps:['readiness.app'],hiddenApps:[]},settings:{}};
           this.onservicecallback(JSON.stringify({returnValue:true,result:{profile,transaction:'readiness-root',version:ROOT_VERSION,phase:'verifying'}}));return;
+        }
+        if(window.ROOT_VERSION&&uri==='luna://com.cleanyourtv.system.updater.service/status'&&window.earlyRoot){
+          rootAudit.push('pending');
+          this.onservicecallback(JSON.stringify({returnValue:true,result:{id:'readiness-root',edition:'root',phase:'installing'}}));return;
         }
         if(window.ROOT_VERSION&&uri==='luna://com.cleanyourtv.system.updater.service/healthy'){
           rootAudit.push('healthy');window.rootHealth={payload:JSON.parse(raw),rendered:RootLauncherRendered,marker:localStorage.getItem('tvhome.theme.trial.v1'),theme:ThemeManager.current().id};
@@ -96,6 +103,7 @@ const {compile}=require('../../scripts/compile-tv-web.cjs');
       assert.equal(root.health.payload.edition,'root');
       assert.equal(root.audit.includes('activate'),false,'platform owns CARD activation');
       assert(root.audit.indexOf('restore')<root.audit.indexOf('healthy'));
+      if(earlyRoot){assert.equal(root.audit.filter(event=>event==='restore').length,2);assert(root.audit.indexOf('pending')<root.audit.indexOf('healthy'),'early CARD startup waits for the transaction without a relaunch event');}
       assert(root.audit.slice(0,root.audit.indexOf('healthy')).filter(event=>event==='frame').length>=2,'profile health follows painted readiness frames');
     }
     releaseMedia();
@@ -154,6 +162,7 @@ const {compile}=require('../../scripts/compile-tv-web.cjs');
   try {
     const editions=process.env.CYTV_READINESS_EDITION?[process.env.CYTV_READINESS_EDITION]:['launcher','root-launcher'],overlapOnly=process.env.CYTV_READINESS_OVERLAP_ONLY==='1';
     if(!overlapOnly)for(const edition of editions)for(const savedBuiltin of [false,true])await check(savedBuiltin,edition);
+    if(!historical&&!overlapOnly&&editions.includes('root-launcher'))await check(false,'root-launcher',true);
     if(!historical||overlapOnly)for(const edition of editions)for(const scenario of ['personal-first','theme-first','theme-failure','personal-failure','cancel'])await checkOverlap(edition,scenario);
   } finally {
     await browser.close();
