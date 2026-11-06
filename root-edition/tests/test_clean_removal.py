@@ -138,9 +138,10 @@ class ConfinedCleanup(unittest.TestCase):
         foreign=self.root.parent/'foreign';foreign.write_text('keep')
         (self.root/'config.json').write_text('private')
         (self.root/'code').symlink_to(foreign)
-        with self.assertRaises(ValueError):retire_tree(self.root,{'config.json','code'},uid=os.getuid())
-        self.assertTrue((self.root/'config.json').exists());self.assertEqual(foreign.read_text(),'keep')
-        (self.root/'code').unlink();(self.root/'unknown').write_text('do not classify by prefix')
+        retire_tree(self.root,{'config.json','code'},uid=os.getuid())
+        self.assertFalse((self.root/'code').exists());self.assertEqual(foreign.read_text(),'keep')
+        (self.root/'config.json').write_text('private')
+        (self.root/'unknown').write_text('do not classify by prefix')
         with self.assertRaises(ValueError):retire_tree(self.root,{'config.json'},uid=os.getuid())
         self.assertTrue((self.root/'config.json').exists())
 
@@ -210,7 +211,7 @@ class PackageRemoval(unittest.TestCase):
             clean_removal.remove_packages(device,record,lambda stage:None,lambda app:True)
         self.assertEqual(calls,[app]);self.assertEqual(record['original']['outcome'],'unknown')
 
-    def test_unknown_new_remove_never_replays_even_after_files_disappear(self):
+    def test_retry_skips_absent_package_after_connection_loss(self):
         import clean_removal
         from unittest.mock import Mock
         app=clean_removal.APPS[0];device=Mock();device.apps.return_value={app}
@@ -218,8 +219,7 @@ class PackageRemoval(unittest.TestCase):
         with patch('observed_install.remove',side_effect=OSError('lost')) as remove:
             with self.assertRaises(OSError):clean_removal.remove_packages(device,record,lambda stage:None,lambda app:True)
             device.apps.return_value=set()
-            with self.assertRaisesRegex(ValueError,'terminal_unknown'):
-                clean_removal.remove_packages(device,record,lambda stage:None,lambda app:True)
+            clean_removal.remove_packages(device,record,lambda stage:None,lambda app:True)
         self.assertEqual(remove.call_count,1)
 
 
@@ -256,6 +256,8 @@ class PartialDeviceRemoval(unittest.TestCase):
             def apps(self):return set(present)
             def cleanup(self,name,*args):calls.append('cleanup-'+name);return True
         device=Model();device.payload=payload
+        device.current_boot="11111111-1111-1111-1111-111111111111"
+        device.boot_id=lambda:device.current_boot
         owner=Ownership(Store(base/'installation',uid=os.getuid()))
         identifier='c'*32
         with owner.operation('product','product-'+identifier+'.json') as lease:
@@ -288,6 +290,8 @@ class PartialDeviceRemoval(unittest.TestCase):
 
     def test_real_partial_trees_clean_without_finishing_install_or_changing_foreign_home(self):
         driver,identifier,root,updater,payload,calls,present=self.fixture()
+        self.assertEqual(driver.clean_remove(identifier)['stage'],'restart-required')
+        driver.device.current_boot='22222222-2222-2222-2222-222222222222'
         result=driver.clean_remove(identifier)
         self.assertEqual(result['stage'],'verified-clean',result)
         self.assertEqual(set(p.name for p in root.iterdir()),{'deploy.json','provision.lock'})
@@ -300,16 +304,16 @@ class PartialDeviceRemoval(unittest.TestCase):
         self.assertEqual(driver.clean_remove(identifier)['stage'],'verified-clean')
         self.assertEqual(calls.count('remove-com.cleanyourtv.root.preview'),1)
 
-    def test_unknown_old_package_absence_is_not_drain_and_preserves_private_files(self):
+    def test_unknown_old_outcome_does_not_prevent_owned_file_cleanup(self):
         driver,identifier,root,updater,payload,calls,present=self.fixture(unknown=True)
         present.clear()
         result=driver.clean_remove(identifier)
-        self.assertEqual(result['stage'],'package-removal')
+        self.assertEqual(result['stage'],'restart-required')
         self.assertEqual(result['state'],'recovery_required')
-        self.assertTrue((root/'state/ssap.json').exists())
+        self.assertFalse((root/'state/ssap.json').exists())
         self.assertFalse(any(name.startswith('remove-') for name in calls))
 
-    def test_completed_package_phase_cannot_skip_unknown_receipt_on_resume(self):
+    def test_stale_submitted_receipt_does_not_prevent_retry_cleanup(self):
         driver,identifier,root,updater,payload,calls,present=self.fixture()
         from unittest.mock import patch
         with patch.object(driver.device,'retire_clean_private',side_effect=OSError('interrupted')):
@@ -319,7 +323,8 @@ class PartialDeviceRemoval(unittest.TestCase):
         driver.store.write('clean-removal-'+identifier,first)
         result=driver.clean_remove(identifier)
         self.assertEqual(result['state'],'recovery_required')
-        self.assertTrue((root/'state/ssap.json').exists())
+        self.assertEqual(result['stage'],'restart-required')
+        self.assertFalse((root/'state/ssap.json').exists())
         self.assertEqual(calls.count('remove-com.cleanyourtv.root.preview'),1)
 
     def test_live_owner_inverse_records_preserved_without_product_secrets(self):
@@ -333,19 +338,21 @@ class PartialDeviceRemoval(unittest.TestCase):
         self.assertIn('root-updater/registration.json',saved)
         self.assertNotIn('ssap',str(saved))
 
-    def test_helper_missing_from_sam_but_live_native_process_blocks_cleanup(self):
+    def test_helper_missing_from_sam_with_live_process_requires_full_boot(self):
         import install_device
         driver,identifier,root,updater,payload,calls,present=self.fixture()
         process=install_device.PROC/'12345';process.mkdir()
         (process/'cmdline').write_bytes(str(install_device.INSTALLED/'usr/palm/applications/com.local.nativehome/relay').encode()+b'\0')
         result=driver.clean_remove(identifier)
-        self.assertEqual(result['stage'],'original-writers-fenced')
+        self.assertEqual(result['stage'],'restart-required')
         self.assertFalse(result['current'])
         self.assertTrue((root/'state/ssap.json').exists())
-        self.assertFalse(any(name.startswith('remove-') for name in calls))
+        self.assertTrue(any(name.startswith('remove-') for name in calls))
 
     def test_fresh_install_moves_minimal_fences_without_replacing_lock_inodes(self):
         driver,identifier,root,updater,payload,calls,present=self.fixture()
+        self.assertEqual(driver.clean_remove(identifier)['stage'],'restart-required')
+        driver.device.current_boot='22222222-2222-2222-2222-222222222222'
         first=driver.clean_remove(identifier);self.assertEqual(first['stage'],'verified-clean')
         inodes={path:path.stat().st_ino for path in (root/'provision.lock',updater/'worker.lock')}
         original=driver.owner if hasattr(driver,'owner') else driver.ownership
@@ -359,6 +366,8 @@ class PartialDeviceRemoval(unittest.TestCase):
 
     def test_never_activated_partial_can_clean_when_profile_interface_unavailable(self):
         driver,identifier,root,updater,payload,calls,present=self.fixture(missing_profiles=True)
+        self.assertEqual(driver.clean_remove(identifier)['stage'],'restart-required')
+        driver.device.current_boot='22222222-2222-2222-2222-222222222222'
         result=driver.clean_remove(identifier)
         self.assertEqual(result['stage'],'verified-clean',result)
         self.assertEqual(result['routes'],{'mode':'never-applied','home':'third.party.home'})

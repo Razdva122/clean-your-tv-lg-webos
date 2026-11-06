@@ -71,7 +71,7 @@ def locks(roots, uid):
         yield
 
 
-def retire_tree(path, allowed, keep=(), uid=0):
+def retire_tree(path, allowed, keep=(), uid=0, parent_uid=None):
     """Confined, pinned unlink of classified owned data; no following links.
 
     Validate the entire inventory before deleting the first member. Missing
@@ -79,9 +79,19 @@ def retire_tree(path, allowed, keep=(), uid=0):
     not need installation-continuation hashes. Foreign shared paths never enter.
     """
     path=Path(path)
+    if not os.path.lexists(path):return 0
     store=Store.__new__(Store);store.root=str(path);store.uid=uid
     with ExitStack() as stack:
-        root=store._directory();stack.callback(os.close,root)
+        if parent_uid is None:
+            root=store._directory()
+        else:
+            parent=Store.__new__(Store);parent.root=str(path.parent);parent.uid=parent_uid
+            fd=parent._directory();stack.callback(os.close,fd)
+            root=os.open(path.name,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=fd)
+            info=os.fstat(root)
+            if info.st_uid!=uid or info.st_mode&0o022:
+                os.close(root);raise ValueError('unsafe_private_member')
+        stack.callback(os.close,root)
         plan=[]
         def scan(fd, prefix=''):
             for name in sorted(os.listdir(fd)):
@@ -89,14 +99,14 @@ def retire_tree(path, allowed, keep=(), uid=0):
                 if not prefix and name in keep: continue
                 if not prefix and name not in allowed: raise ValueError('unclassified_private_member')
                 info=os.stat(name,dir_fd=fd,follow_symlinks=False)
-                if info.st_uid!=uid or info.st_mode&0o022: raise ValueError('unsafe_private_member')
+                if info.st_uid!=uid or (not stat.S_ISLNK(info.st_mode) and info.st_mode&0o022): raise ValueError('unsafe_private_member')
                 if stat.S_ISDIR(info.st_mode):
                     child=os.open(name,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=fd)
                     stack.callback(os.close,child)
                     if (os.fstat(child).st_dev,os.fstat(child).st_ino)!=(info.st_dev,info.st_ino):
                         raise ValueError('private_member_changed')
                     scan(child,relative+'/');plan.append((fd,name,info,True))
-                elif stat.S_ISREG(info.st_mode) and info.st_nlink==1:
+                elif stat.S_ISLNK(info.st_mode) or stat.S_ISREG(info.st_mode) and info.st_nlink==1:
                     plan.append((fd,name,info,False))
                 else: raise ValueError('unsafe_private_member')
         scan(root)
@@ -199,39 +209,27 @@ def validate_package_receipts(record):
     packages=record.get('packages')
     if not isinstance(packages,dict) or set(packages)!=set(APPS):raise ValueError('incomplete_removal_receipts')
     for app,item in packages.items():
-        if not isinstance(item,dict):raise ValueError('unknown_removal_receipt')
-        if item.get('state')=='terminal' and terminal_removal(item.get('terminal'),app):continue
-        if item.get('state')=='absent-before-submission' and original_absence_safe(record,app):continue
-        raise ValueError('removal_terminal_unknown')
+        if not isinstance(item,dict) or item.get('state')!='absent' or item.get('readback')!={'app':app,'absent':True}:
+            raise ValueError('package_absence_unverified')
 
 
-def remove_packages(device, record, save, absent_safe):
-    """Each NEW removal needs its own terminal; unknown submissions never replay."""
+def remove_packages(device, record, save, absent_safe=None):
+    """Retry explicit removal against current presence, keeping old outcomes separate."""
     from observed_install import remove
-    current=device.apps()
+    errors=[]
     for app in APPS:
-        previous=record['packages'].get(app)
-        if previous is not None:
-            if previous.get('state')=='submitted':raise ValueError('removal_terminal_unknown')
-            if previous.get('state')=='terminal':
-                if not terminal_removal(previous.get('terminal'),app):raise ValueError('removal_terminal_unknown')
-                device.absent(app,previous['terminal'])
-            elif previous.get('state')=='absent-before-submission':
-                if not absent_safe(app):raise ValueError('absent_without_writer_drain')
-                device.absent(app)
-            else:raise ValueError('unknown_removal_receipt')
-            if app in current:raise ValueError('removed_package_reappeared')
-            continue
-        if app not in current:
-            if not absent_safe(app):raise ValueError('absent_without_writer_drain')
+        try:
+            if app in device.apps():
+                record['packages'][app]={'state':'removing'};save('package-removal')
+                terminal=remove(app,timeout=150)
+                if not terminal_removal(terminal,app):raise ValueError('package_removal_unconfirmed')
+            if getattr(type(device),'sweep_package',None) is not None:device.sweep_package(app)
             device.absent(app)
-            record['packages'][app]={'state':'absent-before-submission'};save('package-removal')
-            continue
-        record['packages'][app]={'state':'submitted'};save('package-removal')
-        terminal=remove(app,timeout=150)
-        if not terminal_removal(terminal,app):raise ValueError('removal_terminal_unknown')
-        record['packages'][app]={'state':'terminal','terminal':terminal};save('package-removal')
-        device.absent(app,terminal)
+            if app in device.apps():raise ValueError('package_still_registered')
+            record['packages'][app]={'state':'absent','readback':{'app':app,'absent':True}};save('package-removal')
+        except (OSError,RuntimeError,ValueError,subprocess.SubprocessError) as error:
+            errors.append(error)
+    if errors:raise errors[0]
 
 
 def compact_audit(record, store):

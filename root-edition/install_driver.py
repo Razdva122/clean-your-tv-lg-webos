@@ -37,6 +37,13 @@ def log_failure(device, error):
         pass  # Private logging must never replace the initiating failure.
 
 
+def cleanup_failure(error):
+    if isinstance(error,PermissionError):return 'root-access-required'
+    if isinstance(error,(Busy,BlockingIOError)) or str(error)=='live_original_worker':return 'root-worker-busy'
+    if type(error).__name__=='OutcomeUnknown':return 'removal-failed'
+    return 'cleanup-check-failed'
+
+
 def retire_staging(store, identifier, ownership):
     """Only the completed request's matching terminal product lease may retire it.
 
@@ -191,12 +198,20 @@ class Coordinator:
             return self.device.remove(checkpoint)
         return self._run(identifier,'remove',perform)
 
-    def clean_remove(self, identifier, intent=None):
+    def removal_target(self, identifier):
+        """Read current TV ownership without changing the retained host history."""
+        identifier=operation_id(identifier)
+        lease=self.ownership.status()
+        match=re.fullmatch(r'product-([a-f0-9]{32})\.json',lease['journal']) if lease and lease['owner'] in ('product','clean-removal') else None
+        return dict(operation=identifier,state='fresh',target_operation=match.group(1) if match else identifier,
+                    target_lease=lease['id'] if lease else None)
+
+    def clean_remove(self, identifier, intent=None, expected_lease=None):
         """Explicit desired absence, distinct from an old unknown installation."""
         identifier = operation_id(identifier)
         intent=operation_id(intent if intent is not None else identifier)
         name = 'clean-removal-'+identifier
-        with self.store.lock(), self.ownership.removal(identifier) as (lease, original_lease):
+        with self.store.lock(blocking=False), self.ownership.removal(identifier,expected=expected_lease) as (lease, original_lease):
             record = _optional_record(self.store, name)
             if record is None:
                 if lease['owner'] == 'clean-removal':
@@ -217,16 +232,6 @@ class Coordinator:
                                         'submission':_optional_record(self.store,'submission-'+original_id),
                                         'removal':_optional_record(self.store,'removal-'+lease['id']),
                                         'components':{key:self.read(path) for key,(path,_,_) in JOURNALS.items()}})
-                old_removal=record['original']['removal']
-                if old_removal is not None:
-                    if not isinstance(old_removal,dict) or old_removal.get('schema')!=1 or not isinstance(old_removal.get('removals'),dict):
-                        raise ValueError('unknown_original_removal')
-                    for app,item in old_removal['removals'].items():
-                        record['packages'][app]={'state':item.get('state'),'terminal':item.get('evidence')}
-                root_journal=record['original']['components'].get('deploy') or {}
-                if root_journal.get('stage')=='remove-submitting':record['packages']['com.cleanyourtv.root.preview']={'state':'submitted'}
-                elif root_journal.get('stage') in ('remove-observed','uninstalled-state-retained'):
-                    record['packages']['com.cleanyourtv.root.preview']={'state':'terminal','terminal':root_journal.get('evidence')}
                 self.store.write(name, record)
             if (record.get('protocol') != 'clean-removal-v1' or record.get('operation') != identifier
                     or record.get('lease') != lease['id'] or record.get('removal')!=intent): raise Busy()
@@ -256,9 +261,13 @@ class Coordinator:
                 self.store.write(name,record)
                 self.ownership.stage(lease,stage)
             try:
-                if hasattr(self.device,'admit_helper_fence'):self.device.admit_helper_fence(record)
-                if record['stage'] != 'verified-clean':
-                    record['result'] = self.device.clean_remove(record, save)
+                record.pop('cleanup_error',None)
+                if record['stage']=='verified-clean':record.pop('runtime_cleanup',None)
+                record['result'] = self.device.clean_remove(record, save)
+                if record['result'].get('restart_required'):
+                    record.update(stage='restart-required',reason='restart-required',current=False)
+                    self.store.write(name,record)
+                    return record
                 if self.device.verify_clean(record) is not True: raise ValueError('clean_readback_unverified')
                 from clean_removal import compact_audit
                 compact_audit(record,self.store)
@@ -277,9 +286,10 @@ class Coordinator:
                     # retirement starts. Parent errors cannot overwrite its proof.
                     return dict(record,state='recovery_required',current=False,reason='private-cleanup-incomplete')
                 record.setdefault('failure',failure_summary(error))
+                record.setdefault('cleanup_error',cleanup_failure(error))
                 reasons={'requested':'original-writer-active','original-writers-fenced':'controls-unverified',
                          'controls-restored':'controls-unverified','package-removal':'removal-terminal-unknown',
-                         'private-cleanup':'private-cleanup-incomplete','verified-clean':'ownership-conflict'}
+                         'private-cleanup':'private-cleanup-incomplete','verified-clean':'ownership-conflict','restart-required':'restart-required'}
                 record.update(state='recovery_required',current=False,reason=reasons[record['stage']])
                 self.store.write(name,record)
             return record
@@ -593,12 +603,13 @@ def main():
     from install_device import LocalDevice, checked_store
     from installation import STATE
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action',choices=('inspect','install','status','restore','remove','activate','clean-remove','clean-status'))
+    parser.add_argument('action',choices=('inspect','install','status','restore','remove','activate','clean-remove','clean-status','clean-target'))
     parser.add_argument('--operation')
     parser.add_argument('--payload',type=Path)
     parser.add_argument('--retire-stage',action='append',default=[])
     parser.add_argument('--helper-fence',help=argparse.SUPPRESS)
     parser.add_argument('--removal-intent',help=argparse.SUPPRESS)
+    parser.add_argument('--removal-lease',help=argparse.SUPPRESS)
     parser.add_argument('--candidate',help='SHA-256 of the reviewed component bundle manifests')
     parser.add_argument('--migrate-packaged-home',action='store_true')
     parser.add_argument('--prepare-supervisor',action='store_true')
@@ -609,22 +620,24 @@ def main():
     args=parser.parse_args()
     if args.final_readback_only and (not args.resume or args.action!='install'):
         parser.error('--final-readback-only requires install --resume')
-    if args.action in ('install','remove','status','clean-remove','clean-status'): operation_id(args.operation)
+    if args.action in ('install','remove','status','clean-remove','clean-status','clean-target'): operation_id(args.operation)
     if args.action not in ('install','inspect') and (args.migrate_packaged_home or args.prepare_supervisor): parser.error('install options require install')
     device=LocalDevice()
-    if args.action in ('inspect','status','restore','activate','clean-status'):
+    if args.action in ('inspect','status','restore','activate','clean-status','clean-target'):
         ownership=Ownership.__new__(Ownership);ownership.store=checked_store(STATE)
     else: ownership=Ownership()
     coordinator=Coordinator(device,ownership)
     try:
-        if args.action=='clean-remove':
+        if args.action=='clean-target':
+            result=coordinator.removal_target(args.operation)
+        elif args.action=='clean-remove':
             if args.payload is None:parser.error('clean-remove requires current verified support')
             if any(not re.fullmatch(r'/tmp/cytv-product-[a-f0-9]{32}',path) for path in args.retire_stage):
                 raise ValueError('invalid_cleanup_support_stage')
             device.previous_stages=args.retire_stage
             device.helper_fence=json.loads(args.helper_fence) if args.helper_fence is not None else None
             device.preflight(args.payload,dict(migrate=False,prepare_supervisor=False),product=False)
-            result=coordinator.clean_remove(args.operation,args.removal_intent)
+            result=coordinator.clean_remove(args.operation,args.removal_intent,args.removal_lease)
         elif args.action=='clean-status':
             result=_optional_record(ownership.store,'clean-removal-'+args.operation)
             if result is None:result=dict(operation=args.operation,state='unknown',stage='requested')
@@ -671,6 +684,7 @@ def main():
     except Exception as error:
         device.log(error)
         result=dict(operation=args.operation,stage='blocked',state='recovery_required',code='operation_requires_recovery',home_changed=False)
+        if args.action=='clean-remove':result['cleanup_error']=cleanup_failure(error)
         if args.action in ('install','remove') and not isinstance(error,Busy):
             result['action']=args.action
             if _optional_record(ownership.store,'request-'+args.operation) is None:

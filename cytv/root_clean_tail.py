@@ -5,7 +5,7 @@ import re
 import shlex
 import uuid
 
-from .errors import UserError
+from .errors import UserError, TVCommandError
 
 
 def gate_bytes(installer):
@@ -24,7 +24,7 @@ def resume(installer, pending):
     source=path.read_bytes()
     if any(p.is_symlink() for p in (path,*path.parents)) or hashlib.sha256(source).hexdigest()!=manifest['cleanup_tail.js']:
         raise UserError('Recovery support code is missing or changed. Use a complete installer build.',reason_code='pending-operation')
-    operation=pending['product_operation']
+    operation=pending.get('removal_target_operation',pending['product_operation'])
     if not re.fullmatch('[a-f0-9]{32}',operation):raise ValueError('Invalid cleanup operation')
     removal=pending['removal_operation']
     if not isinstance(removal,str) or not re.fullmatch('[a-f0-9]{32}',removal):raise ValueError('Invalid cleanup removal intent')
@@ -47,6 +47,12 @@ def resume(installer, pending):
              'finish',operation,','.join(stages),'3','4','5',digest,removal]
     # Native gate opens only the existing Root ownership inode; a fresh UUID
     # identifies this disposable support directory, never an operation lease.
-    reply=json.loads(installer.remote.run(shlex.join(command),data=source,timeout=180))
+    try:reply=json.loads(installer.remote.run(shlex.join(command),data=source,timeout=180))
+    except TVCommandError:
+        if pending.get('stage')=='verified-clean':return None
+        raise
     if reply.get('operation')!=operation or reply.get('removal')!=removal:raise UserError('Removal evidence changed. Recovery data was kept.')
+    # A completed receipt is only a fast current readback. Reappeared owned
+    # files use the ordinary current-support sweep on explicit Remove/Retry.
+    if pending.get('stage')=='verified-clean' and reply.get('state')!='complete':return None
     return reply

@@ -73,6 +73,16 @@ def explain_failure(write, store, profile, phase, error):
             write.recovery(profile)
 
 
+def removal_connection_message(store, profile, phase, error):
+    if not profile or (store.pending(profile) or {}).get('recovery_protocol')!='clean-removal-v1':return None
+    disconnected=(isinstance(error,ConnectionError) or getattr(error,'reason_code',None)=='connection-interrupted'
+                  or type(error).__name__ in ('SSHException','NoValidConnectionsError')
+                  or phase=='ssh-connect' and isinstance(error,TimeoutError))
+    if not disconnected:return None
+    store.checkpoint(profile,removal_reason='connection-interrupted')
+    return 'Connection to the TV was interrupted. Check the connection and try again.'
+
+
 def choose_profile(args, store, ask, write, search, inspect):
     profiles = [p for p in store.profiles() if not args.edition or p['edition'] == args.edition]
     if not args.host and len(profiles) == 1 and (args.command != 'install' or args.non_interactive):
@@ -258,7 +268,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             if profile['edition'] == 'root':
                 write('Root will stop the old Home Helper, turn on Home control and open Clean Your TV Home.')
             write('Check controls on the TV after installation.')
-        if args.command in ('install', 'uninstall', 'restore', 'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access', 'recover-system-rollback', 'replace-system-updater') and not args.yes:
+        retry_removal=(args.command=='uninstall' and (store.pending(profile) or {}).get('recovery_protocol')=='clean-removal-v1')
+        if args.command in ('install', 'uninstall', 'restore', 'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access', 'recover-system-rollback', 'replace-system-updater') and not args.yes and not retry_removal:
             if args.command == 'uninstall' and profile['edition'] == 'root':
                 write('This removes Root, Root Updater, their services and startup hooks, plus any installed No-root Home, Helper and Updater.')
                 write('Recovery records are retained for diagnostics. Other TV apps stay installed.')
@@ -545,12 +556,15 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             else:
                 phase = args.command
                 result = installer.uninstall(full_project=True) if args.command == 'uninstall' else getattr(installer, args.command)()
-                if result.get('verified_clean') is True:
-                    write.recovery_plan({'state':'complete','disposition':'clean-removal','verified_clean':True,
+                if result.get('verified_clean') is True and result.get('removed') is True:
+                    write.recovery_plan({'state':'complete','disposition':'clean-removal','verified_clean':True,'removed':True,
                                          'summary':'Clean Your TV removal is verified.','next_step':'Other TV apps stay installed.'})
                     write.heading('Clean Your TV removed')
-                    write('Project apps, services, startup control and private files were removed. The verified original Home routing is restored.')
+                    write('Clean Your TV removed. Its apps, startup and Home-button control were removed.')
                     write('Only ownership backups and minimal removal records were kept.')
+                elif result.get('restart_required') is True:
+                    from .recovery import removal_plan
+                    removal_plan(write,store,profile,state='waiting')
                 elif (result.get('reconciled') or '').startswith('updater-not-started'):
                     write.heading('Ready to reinstall Root')
                     write('The previous attempt stopped before Root Updater setup. Recovery and installed files are verified; the previous operation report was saved.')
@@ -576,7 +590,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
     except UserError as exc:
         checks.finish_running()
         write.error('Could not complete this step', heading=True)
-        write.error(str(exc))
+        write.error(removal_connection_message(store,profile,phase,exc) or str(exc))
         if phase in ('pair-tv', 'read-inventory'):
             write('Installation has not started. No TV packages were changed by this attempt.')
         from .recovery import removal_plan
@@ -593,8 +607,11 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             'AuthenticationException': 'SSH authentication failed. Check your key/password; for No-root check Developer Mode and Key Server.',
             'ModuleNotFoundError': 'Source dependencies are missing. Install cytv/requirements.txt or use a built cytv executable.',
         }
-        write.error('Could not read the TV applications. Keep the TV on and accept its pairing request. Installation has not started.'
-              if phase in ('pair-tv', 'read-inventory') and kind != 'ModuleNotFoundError' else hints.get(kind, 'Operation could not be confirmed. Save the diagnostic report and keep recovery data; do not retry blindly.'))
+        message=removal_connection_message(store,profile,phase,exc)
+        write.error(message or ('Could not read the TV applications. Keep the TV on and accept its pairing request. Installation has not started.'
+              if phase in ('pair-tv', 'read-inventory') and kind != 'ModuleNotFoundError' else hints.get(kind,
+              'Some Clean Your TV files or settings remain. Choose Try again.' if args.command=='uninstall'
+              else 'Operation could not be confirmed. Save the diagnostic report and keep recovery data; do not retry blindly.')))
         from .recovery import removal_plan
         removal_plan(write,store,profile)
         explain_failure(write, store, profile, phase, exc)

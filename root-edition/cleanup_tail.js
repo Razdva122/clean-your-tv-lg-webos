@@ -37,34 +37,14 @@ function inheritedLock(value,path){
   if(!identity(info,fs.lstatSync(path)))throw Error('original-lock-changed');
 }
 function object(value){return value!==null && typeof value==='object' && !Array.isArray(value);}
-function originalAbsenceSafe(app){
-  var original=record.original;
-  if(!object(original)||!Object.prototype.hasOwnProperty.call(original,'request')||!object(original.components))return false;
-  var components=record.fenced_components===undefined?original.components:record.fenced_components;
-  if(!object(components))return false;
-  var keys={};keys[apps[0]]='deploy';keys[apps[1]]='root-bootstrap';keys[apps[2]]='system-bootstrap';
-  var key=keys[app],journal=key?components[key]:null;
-  if(key&&!Object.prototype.hasOwnProperty.call(components,key))return false;
-  if(journal===undefined||journal===null){
-    var request=original.request;
-    if(request===undefined||request===null||!key)return true;
-    var before={'deploy':['reserved','blocked'],'root-bootstrap':['reserved','blocked','root-deploy'],'system-bootstrap':['reserved','blocked','root-deploy','root-updater']};
-    return object(request)&&before[key].indexOf(request.stage)!==-1;
-  }
-  return object(journal)&&['prepared','installing-updater','installing-supervisor'].indexOf(journal.stage===undefined?journal.phase:journal.stage)!==-1;
-}
 function packageReceipts(){
   if(!object(record.packages)||Object.keys(record.packages).sort().join(',')!==apps.slice().sort().join(','))throw Error('incomplete-removal-receipts');
   apps.forEach(function(app){
-    var item=record.packages[app];if(!object(item))throw Error('unknown-removal-receipt');
-    if(item.state==='absent-before-submission'&&originalAbsenceSafe(app))return;
-    var proof=item.terminal,event=object(proof)?proof.event:null,details=object(event)?event.details:null;
-    if(item.state==='terminal'&&proof.completed===true&&object(event)&&object(details)
-       &&event.returnValue!==false&&!Object.prototype.hasOwnProperty.call(event,'errorCode')&&!Object.prototype.hasOwnProperty.call(details,'errorCode')
-       &&(!Object.prototype.hasOwnProperty.call(event,'id')||event.id===app)&&(!Object.prototype.hasOwnProperty.call(details,'packageId')||details.packageId===app)
-       &&typeof details.state==='string'&&['removed','success'].indexOf(details.state.toLowerCase())!==-1)return;
-    throw Error('removal-terminal-unknown');
+    var item=record.packages[app];
+    if(!object(item)||item.state!=='absent'||!object(item.readback)||item.readback.app!==app||item.readback.absent!==true)throw Error('package-absence-unverified');
   });
+  var boot=fs.readFileSync('/proc/sys/kernel/random/boot_id').toString('utf8').trim();
+  if(typeof record.cleanup_boot_id!=='string'||!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(record.cleanup_boot_id)||boot===record.cleanup_boot_id)throw Error('restart-required');
 }
 function rpc(method,payload){
   var result=cp.spawnSync('/usr/bin/luna-send',['-n','1','luna://'+method,JSON.stringify(payload)],{timeout:15000,maxBuffer:2097152});
@@ -190,16 +170,6 @@ try{
     if(!cleanup || cleanup.root!==runtime || !cleanup.files || typeof cleanup.files!=='object' || Array.isArray(cleanup.files))throw Error('runtime-cleanup-proof-required');
     Object.keys(cleanup.files).forEach(function(name){if(!/^(?:[a-zA-Z0-9_.+-]+\/)*[a-zA-Z0-9_.+-]+$/.test(name) || name.split('/').some(function(p){return p==='.'||p==='..';}) || !/^[a-f0-9]{64}$/.test(cleanup.files[name]))throw Error('invalid-runtime-inventory');});
     if(cleanup.promotion_required===true&&!exists('/var/lib/clean-your-tv-python/.install.lock'))throw Error('original-promotion-lock-missing');
-    var helper=record.helper_lifecycle,helperfd;
-    if(helper){
-      if(helper.service_drained!==true||helper.native_drained!==true||helper.removal!==record.removal||!/^([a-f0-9]{32})$/.test(helper.generation)||!/^([a-f0-9]{64})$/.test(process.argv[8]))throw Error('helper-drain-required');
-      var helpergate=process.argv[4]==='-'?record.helper_gate_path:process.argv[4].split(',').pop()+'/gate';
-      if(typeof helpergate!=='string'||!/^\/tmp\/(?:cytv-product-[a-f0-9]{32}\/root-updater\/lifecycle-gate|cytv-root-tail-[a-f0-9]{32}\/gate)$/.test(helpergate))throw Error('invalid-helper-gate');
-      var parent=openDir(helpergate.slice(0,helpergate.lastIndexOf('/')));
-      helperfd=fs.openSync(at(parent,helpergate.slice(helpergate.lastIndexOf('/')+1)),C.O_RDONLY|C.O_NOFOLLOW|C.O_NONBLOCK);opened.push(helperfd);
-      var gateinfo=fs.fstatSync(helperfd);owned(gateinfo,false);
-      if(!(gateinfo.mode&64)||crypto.createHash('sha256').update(fs.readFileSync(helperfd)).digest('hex')!==process.argv[8])throw Error('helper-gate-changed');
-    }
     var gates=record.tail_stages||[];
     if(!Array.isArray(gates))throw Error('invalid-tail-stages');
     (process.argv[4]==='-'?[]:process.argv[4].split(',')).forEach(function(path){
@@ -224,17 +194,8 @@ try{
       if(names.length){var executable=fs.lstatSync(at(gatefd,'gate'));owned(executable,false);fs.unlinkSync(at(gatefd,'gate'));fs.fsyncSync(gatefd);}
     });
     absent(true);
-    if(helper){
-      // Static current gate remains executable through this pinned inode after
-      // its staged pathname is retired. No executable has to be restaged after
-      // clean proof, and the persistent owner is released only at this barrier.
-      var finish=cp.spawnSync('/proc/self/fd/3',['/media/developer/.cytv-lifecycle',helper.removal,'finish-removal'],
-        {timeout:30000,maxBuffer:65536,stdio:['ignore','pipe','pipe',helperfd]});
-      if(finish.error||finish.status!==0)throw Error('helper-fence-release-unverified');
-      record.result.helper_lifecycle_released=true;
-    }
     record.stage='verified-clean';record.state='complete';record.current=true;record.reason='removal-verified';
-    record.result.private_cleanup_verified=true;
+    record.result.private_cleanup_verified=true;record.result.verified_clean=true;
     cleanup.files={};delete cleanup.parent_pid;
     write(directory,'clean-removal-'+id+'.json',record);
     lease.stage='verified-clean';write(directory,'operation.json',lease);

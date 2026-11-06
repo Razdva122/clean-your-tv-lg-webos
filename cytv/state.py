@@ -267,7 +267,9 @@ class Store:
 
     def finish_clean_removal(self, profile):
         value = self.pending(profile)
-        if not value or value.get('recovery_protocol') != 'clean-removal-v1' or value.get('stage') != 'verified-clean':
+        if (not value or value.get('recovery_protocol') != 'clean-removal-v1' or value.get('stage') != 'verified-clean'
+                or value.get('result',{}).get('removed') is not True or value.get('result',{}).get('verified_clean') is not True
+                or value.get('result',{}).get('restart_required') is True):
             raise UserError('Removal is not verified. Recovery data was kept.')
         private_write(self.device_dir(profile) / 'clean-removal.json', json.dumps(value).encode())
         self.finish(profile)

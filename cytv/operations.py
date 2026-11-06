@@ -277,8 +277,8 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
         setattr(self,cache,stage)
         return stage
 
-    def product_action(self, action, operation=None, payload=None, migrate=False, verify_current=False, resume=False, trusted_recovery=False, retire_stages=(), helper_fence=None, removal_intent=None):
-        if action not in ('inspect','install','status','remove','clean-remove','clean-status'): raise ValueError('Unsupported product action')
+    def product_action(self, action, operation=None, payload=None, migrate=False, verify_current=False, resume=False, trusted_recovery=False, retire_stages=(), helper_fence=None, removal_intent=None, removal_lease=None):
+        if action not in ('inspect','install','status','remove','clean-remove','clean-status','clean-target'): raise ValueError('Unsupported product action')
         if action!='inspect' and (not isinstance(operation,str) or not re.fullmatch('[a-f0-9]{32}',operation)):
             raise ValueError('Invalid product operation')
         # Keep execution-boundary evidence without exporting commands, paths or
@@ -287,7 +287,7 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
         try:
             driver=(payload+'/root-updater' if payload else self.coordinator_code())+'/install_driver.py'
             boundary='python-select'
-            if action=='clean-remove':
+            if action in ('clean-remove','clean-target'):
                 # Fresh support imports and a host-verified interpreter; no
                 # retained launcher/binding module executes during full cleanup.
                 python=self._select_python(provision=True)
@@ -308,6 +308,10 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
             if helper_fence is not None:
                 if action!='clean-remove':raise ValueError('Helper fence requires clean removal')
                 args+=['--helper-fence',json.dumps(helper_fence,sort_keys=True,separators=(',',':'))]
+            if removal_lease is not None:
+                if action!='clean-remove' or (removal_lease!='-' and not re.fullmatch('[a-f0-9]{32}',removal_lease)):
+                    raise ValueError('Invalid current removal lease')
+                args+=['--removal-lease',removal_lease]
             for retired in retire_stages:
                 if action!='clean-remove' or not isinstance(retired,str) or not re.fullmatch(r'/tmp/cytv-product-[a-f0-9]{32}',retired):
                     raise ValueError('Invalid cleanup support stage')
@@ -1539,10 +1543,6 @@ print('CYTV_PROJECT_REMOVED')
         if self.profile['edition']=='no-root':
             from .no_root_cleanup import continue_removal
             return continue_removal(self,pending)
-        previous=pending.get('previous') or {}
-        if previous.get('action')=='uninstall' and not previous.get('product_operation'):
-            self.store.checkpoint(self.profile,removal_reason='removal-terminal-unknown')
-            raise UserError('Removal is still in progress. Recovery data and the remaining cleanup step were kept.',reason_code='pending-operation')
         operation=pending['product_operation']
         self.progress('Removing Clean Your TV; earlier installation results will be kept.')
         from .root_clean_tail import resume as resume_tail
@@ -1561,39 +1561,39 @@ print('CYTV_PROJECT_REMOVED')
                 if isinstance(retained,str) and re.fullmatch(r'/tmp/cytv-product-[a-f0-9]{32}',retained):retire_stages.append(retained)
                 old=old.get('previous')
             self.store.checkpoint(self.profile,product_payload=stage)
-            helper=self.prepare_root_helper_removal(stage)
-            reply=self.product_action('clean-remove',operation,stage,retire_stages=tuple(dict.fromkeys(retire_stages)),helper_fence=helper,removal_intent=pending['removal_operation'])
+            target=self.product_action('clean-target',operation,stage)
+            selected=target.get('target_operation');lease=target.get('target_lease')
+            if (not isinstance(selected,str) or not re.fullmatch('[a-f0-9]{32}',selected)
+                    or lease is not None and (not isinstance(lease,str) or not re.fullmatch('[a-f0-9]{32}',lease))):
+                raise UserError('Removal evidence changed. Recovery data was kept.')
+            self.store.checkpoint(self.profile,removal_target_operation=selected,removal_target_lease=lease)
+            reply=self.product_action('clean-remove',selected,stage,retire_stages=tuple(dict.fromkeys(retire_stages)),
+                                      removal_intent=pending['removal_operation'],removal_lease=lease or '-')
         from .recovery_state import REMOVAL_STAGES, REMOVAL_REASONS
         phase=reply.get('stage')
         if phase in REMOVAL_STAGES:
             self.store.checkpoint(self.profile,stage=phase,removal_reason=reply.get('reason') if reply.get('reason') in REMOVAL_REASONS else 'ownership-conflict')
         result=reply.get('result',{})
+        if result.get('restart_required') is True:
+            self.store.checkpoint(self.profile,stage='restart-required',removal_reason='restart-required',cleanup_boot_id=reply.get('cleanup_boot_id'))
+            return dict(result,removed=False,verified_clean=False,restart_required=True)
+        failure=reply.get('cleanup_error')
+        messages={
+            'root-worker-busy':'Another Clean Your TV operation is still running. Wait for it to finish, then choose Try again.',
+            'root-access-required':'Root access is required to remove the remaining files. Restore Root SSH access, then choose Try again.',
+            'removal-failed':'The TV could not finish removing a package. Choose Try again.',
+            'cleanup-check-failed':'Some Clean Your TV files or settings remain. Choose Try again.'}
+        if failure in messages:
+            self.store.checkpoint(self.profile,removal_reason=failure)
+            raise UserError(messages[failure],reason_code=failure)
         if (reply.get('state')!='complete' or phase!='verified-clean'
                 or result.get('removed') is not True or result.get('private_cleanup_verified') is not True
-                or reply.get('current') is not True
-                or ((self.store.pending(self.profile) or {}).get('helper_lifecycle',{}).get('mode')=='managed'
-                    and result.get('helper_lifecycle_released') is not True)):
-            raise UserError('Removal is still in progress. Recovery data and the remaining cleanup step were kept.',reason_code='pending-operation')
+                or reply.get('current') is not True):
+            raise UserError(messages['cleanup-check-failed'],reason_code='cleanup-check-failed')
+        result=dict(result,verified_clean=True)
         self.store.checkpoint(self.profile,stage='verified-clean',removal_reason='removal-verified',result=result)
         self.store.finish_clean_removal(self.profile)
         return dict(result,verified_clean=True)
-
-    def prepare_root_helper_removal(self, stage):
-        from .root_clean_tail import gate_bytes
-        from .no_root_gate import prepare_root_helper_fence
-        raw,digest=gate_bytes(self);gate_path=stage+'/root-updater/lifecycle-gate'
-        self.remote.upload(gate_path,raw,mode=0o755)
-        pending=self.store.pending(self.profile)
-        prior=pending.get('helper_lifecycle')
-        if prior and prior.get('mode')=='managed':
-            proof=dict(prior,gate_path=gate_path,gate_sha256=digest)
-        else:proof=prepare_root_helper_fence(self,pending,gate_path)
-        if proof.get('mode')=='unmanaged':
-            self.store.checkpoint(self.profile,removal_reason='original-writer-active')
-            raise UserError('Removal is still in progress. Recovery data and the remaining cleanup step were kept.',reason_code='pending-operation')
-        proof.update(gate_path=gate_path,gate_sha256=digest)
-        self.store.checkpoint(self.profile,helper_lifecycle=proof)
-        return proof
 
     def uninstall(self, full_project=False):
         if full_project:

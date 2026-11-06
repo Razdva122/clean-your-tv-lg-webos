@@ -526,6 +526,26 @@ class LocalDevice:
 
     def root_journal(self):return read_journal(ROOT/'deploy.json')
 
+    def boot_id(self):
+        value=Path('/proc/sys/kernel/random/boot_id').read_text().strip()
+        if not re.fullmatch(r'[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}',value):raise ValueError('boot_id_unavailable')
+        return value
+
+    def sweep_package(self, app):
+        from clean_removal import APPS, retire_tree
+        if app not in APPS:raise ValueError('foreign_package')
+        for path in self.package_paths(app):
+            if not os.path.lexists(path):continue
+            parent_uid=path.parent.lstat().st_uid
+            if parent_uid not in (0,self.ownership.store.uid,5999):raise ValueError('foreign_package_owner')
+            os.close(checked_store(path.parent,parent_uid)._directory())
+            info=path.lstat()
+            if info.st_uid not in (0,self.ownership.store.uid,5999):raise ValueError('foreign_package_owner')
+            if path.is_symlink():path.unlink();continue
+            if not path.is_dir():raise ValueError('unsafe_package_remainder')
+            retire_tree(path,set(os.listdir(path)),uid=info.st_uid,parent_uid=parent_uid)
+            path.rmdir()
+
     def clean_remove(self, record, save):
         """Full removal using current support, old snapshots and original locks."""
         from clean_removal import locks, routes, remove_packages, restore_registrations
@@ -533,12 +553,13 @@ class LocalDevice:
         roots=(ROOT,UPDATER,SUPERVISOR)
         uid=self.ownership.store.uid
         with locks(roots,uid):
+            current_boot=self.boot_id()
+            if 'cleanup_boot_id' not in record:
+                record['cleanup_boot_id']=current_boot;save(record['stage'])
+            restarted=current_boot!=record['cleanup_boot_id']
+            if record['stage']=='restart-required' and not restarted:
+                return {'removed':False,'verified_clean':False,'restart_required':True}
             self.clean_quiescent(record)
-            # A component CLI not using product ownership must finish first.
-            # The original coordinator lease blocks future cooperative entries.
-            idle=self.rpc('com.webos.appInstallService/status',{'subscribe':True})
-            if idle.get('returnValue') is not True or idle.get('status',{}).get('apps')!=[]:
-                raise ValueError('installer_not_idle')
             if 'original-writers-fenced' not in record['done']:
                 # A component that held its own lock before our first attempt
                 # may have advanced since the initial snapshot. Preserve both
@@ -554,10 +575,6 @@ class LocalDevice:
                 record['routing_never_applied']=(latest.get('stage') in PRE_ACTIVATION and not any(
                     os.path.lexists(ROOT/name) for name in ('profile-trial.json','persistent-intent.json','persistent-binding.json',
                         'home-backend.json','c1-gate','c1-keyfilter')))
-                if latest.get('stage') in ('remove-observed','uninstalled-state-retained'):
-                    from installation import terminal_removal
-                    if terminal_removal(latest.get('evidence'),APP):
-                        record['packages'][APP]={'state':'terminal','terminal':latest['evidence']}
                 self.ownership.store.write('clean-removal-'+record['operation'],record)
                 # Original journals remain immutable in the coordinator receipt.
                 # These are recognized blocking phases for old entry points.
@@ -602,15 +619,6 @@ class LocalDevice:
                 if 'com.local.nativehome' in self.apps():
                     disabled=self.rpc('com.local.nativehome.service/disable',{})
                     if disabled.get('returnValue') is not True:raise ValueError('helper_stop_unverified')
-                if record.get('helper_lifecycle'):
-                    proof=record['helper_lifecycle']
-                    gate=self.payload/'root-updater/lifecycle-gate'
-                    if sha(safe_bytes(gate,uid=uid))!=proof['gate_sha256']:raise ValueError('helper_gate_changed')
-                    subprocess.run([str(gate),'/media/developer/.cytv-lifecycle',proof['removal'],'remove',proof['generation'],'/bin/true'],
-                                   check=True,timeout=30,stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-                    proof['native_drained']=True
-                    save('original-writers-fenced')
-                self.clean_quiescent(record,helpers_only=True)
                 if 'com.gathin.tvhome' in self.apps():
                     self.rpc('com.webos.service.eim/deleteDevice',{'appId':'com.gathin.tvhome'})
                     devices=self.rpc('com.webos.service.eim/getAllInputStatus',{}).get('devices')
@@ -621,20 +629,32 @@ class LocalDevice:
                 self.cleanup('legacy_permissions')
                 record['routes']=routes(self,record)
                 record['done'].append('controls-restored');save('controls-restored')
-            if 'package-removal' not in record['done']:
-                save('package-removal')
-                from clean_removal import original_absence_safe
-                remove_packages(self,record,save,lambda app:original_absence_safe(record,app))
+            save('package-removal')
+            package_error=None
+            try:
+                remove_packages(self,record,save)
                 self.cleanup('app_permissions')
-                record['done'].append('package-removal');save('package-removal')
-            from clean_removal import validate_package_receipts
-            validate_package_receipts(record)
+            except (OSError,RuntimeError,ValueError,subprocess.SubprocessError) as error:
+                package_error=error
+            if not package_error and 'package-removal' not in record['done']:record['done'].append('package-removal')
             save('private-cleanup')
-            self.clean_quiescent(record,all_processes=True)
-            self.retire_clean_private(record)
-            record['done'].append('private-cleanup') if 'private-cleanup' not in record['done'] else None
+            try:
+                self.clean_quiescent(record,all_processes=True)
+                self.retire_clean_private(record)
+            except ValueError as error:
+                if restarted or str(error)!='live_original_worker':raise
+                # Published Helper may still have a loaded process. Full boot
+                # ends it; the final sweep runs afterwards without changing it.
+            if package_error:
+                record['cleanup_error']='removal-failed'
+                raise package_error
+            if not restarted:
+                save('restart-required')
+                return {'removed':False,'verified_clean':False,'restart_required':True}
+            record['cleanup_verified_boot_id']=current_boot
+            if 'private-cleanup' not in record['done']:record['done'].append('private-cleanup')
             save('private-cleanup')
-        return {'removed':True,'applications_services_startup_removed':True,'private_cleanup_verified':True}
+        return {'removed':True,'verified_clean':True,'applications_services_startup_removed':True,'private_cleanup_verified':True}
 
     def retire_clean_private(self, record):
         from clean_removal import retire_tree
@@ -844,24 +864,6 @@ class LocalDevice:
             if (info.st_dev,info.st_ino)!=(item['dev'],item['ino']):raise ValueError('support_stage_changed')
             retire_tree(path,set(item['allowed']),uid=uid)
 
-    def admit_helper_fence(self, record):
-        proof=getattr(self,'helper_fence',None)
-        if proof is None or proof.get('mode')=='absent':
-            if self.apps().intersection({'com.local.nativehome','com.gathin.tvhome','com.cleanyourtv.updater'}):
-                raise ValueError('helper_fence_unverified')
-            if 'helper_lifecycle' in record:raise ValueError('helper_fence_changed')
-            return
-        if (proof.get('mode')!='managed' or proof.get('service_drained') is not True
-                or proof.get('removal')!=record.get('removal')
-                or any(not isinstance(proof.get(key),str) or not re.fullmatch('[a-f0-9]{32}',proof[key]) for key in ('generation','removal'))
-                or not isinstance(proof.get('gate_sha256'),str) or not re.fullmatch('[a-f0-9]{64}',proof['gate_sha256'])
-                or proof.get('gate_path')!=str(self.payload/'root-updater/lifecycle-gate')):
-            raise ValueError('helper_fence_unverified')
-        previous=record.get('helper_lifecycle')
-        if previous and any(previous.get(key)!=proof[key] for key in ('generation','removal')):raise ValueError('helper_fence_changed')
-        record['helper_lifecycle']={key:proof[key] for key in ('generation','removal','gate_sha256','service_drained')}
-        record['helper_lifecycle']['native_drained']=bool(previous and previous.get('native_drained') is True)
-        record['helper_gate_path']=proof['gate_path']
 
     def preserve_routing_inverse(self, record):
         # Exact finite data-only inverse records, captured before restore can
@@ -916,7 +918,7 @@ class LocalDevice:
         import python_binding, fcntl
         from clean_removal import retire_tree
         runtime=python_binding.MANAGED_ROOT/python_binding.ARCHIVE_SHA256
-        if not os.path.lexists(python_binding.MANAGED_ROOT) and not record.get('runtime_cleanup') and not record.get('helper_lifecycle'):return None
+        if not os.path.lexists(python_binding.MANAGED_ROOT) and not record.get('runtime_cleanup'):return None
         directory=checked_store(python_binding.MANAGED_ROOT,self.ownership.store.uid)._directory() if os.path.lexists(python_binding.MANAGED_ROOT) else None
         promotion=None
         try:
@@ -948,7 +950,7 @@ class LocalDevice:
             source=safe_bytes(self.payload/'root-updater/cleanup_tail.js',uid=self.ownership.store.uid)
             self.cleanup_tail_started=True
             descriptors=(self.ownership.fd,promotion if promotion is not None else -1,self.ownership.store.lock_fd)
-            gate_hash=record.get('helper_lifecycle',{}).get('gate_sha256','-')
+            gate_hash='-'
             result=subprocess.run(['/usr/bin/node','-','finish',record['operation'],'-',*map(str,descriptors),gate_hash,record['removal']],input=source,
                 stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=180,pass_fds=tuple(fd for fd in descriptors if fd>=0),
                 env={key:value for key,value in os.environ.items() if key not in ('NODE_OPTIONS','NODE_PATH')})
@@ -960,6 +962,9 @@ class LocalDevice:
             if directory is not None:os.close(directory)
 
     def verify_clean(self, record):
+        boot=self.boot_id()
+        if boot==record.get('cleanup_boot_id') or not record.get('cleanup_boot_id'):
+            raise ValueError('restart_required')
         from clean_removal import validate_package_receipts
         validate_package_receipts(record)
         from clean_removal import APPS, routes

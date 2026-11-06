@@ -19,7 +19,7 @@ STATE='/var/lib/clean-your-tv-installation'
 ID='a'*32
 APPS=('com.cleanyourtv.root.preview','com.cleanyourtv.root.updater','com.cleanyourtv.system.updater','com.cleanyourtv.updater','com.local.nativehome','com.gathin.tvhome')
 def packages():
-    return {app:{'state':'terminal','terminal':{'completed':True,'event':{'id':app,'details':{'packageId':app,'state':'removed'}}}} for app in APPS}
+    return {app:{'state':'absent','readback':{'app':app,'absent':True}} for app in APPS}
 HARNESS=r'''
 var real=require('fs'),vm=require('vm'),base=process.argv[2],source=process.argv[3],paths={},calls=[];
 function path(p){
@@ -73,13 +73,14 @@ class CleanupTail(unittest.TestCase):
         self.base=Path(self.tmp.name).resolve()
         self.runtime=self.base/RUNTIME.lstrip('/');self.runtime.mkdir(parents=True,mode=0o700)
         self.state=self.base/STATE.lstrip('/');self.state.mkdir(parents=True,mode=0o700)
-        (self.base/'proc').mkdir()
+        (self.base/'proc/sys/kernel/random').mkdir(parents=True)
+        (self.base/'proc/sys/kernel/random/boot_id').write_text('22222222-2222-2222-2222-222222222222')
         (self.base/'tmp').mkdir()
         for name in ('bin/python3.13','lib/secret.py'):
             p=self.runtime/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text('owned '+name)
         files={str(p.relative_to(self.runtime)):hashlib.sha256(p.read_bytes()).hexdigest() for p in self.runtime.rglob('*') if p.is_file()}
         self.record=dict(schema=1,protocol='clean-removal-v1',operation=ID,removal='d'*32,lease='b'*32,stage='private-cleanup',
-            state='recovery_required',routes=['third.party.home']*3,support_stages=[],packages=packages(),
+            state='recovery_required',cleanup_boot_id='11111111-1111-1111-1111-111111111111',routes=['third.party.home']*3,support_stages=[],packages=packages(),
             done=['original-writers-fenced','controls-restored','package-removal','private-cleanup'],
             runtime_cleanup=dict(root=RUNTIME,files=files),result=dict(removed=True,applications_services_startup_removed=True,private_cleanup_verified=False))
         self.write('clean-removal-'+ID+'.json',self.record)
@@ -130,16 +131,11 @@ class CleanupTail(unittest.TestCase):
             result,reply=self.run_tail();self.assertNotEqual(result.returncode,0)
             self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
 
-    def test_absence_requires_retained_original_before_submission_evidence(self):
-        self.record['packages'][APPS[0]]={'state':'absent-before-submission'}
-        self.record['original']={'request':{'stage':'root-deploy'},'components':{'deploy':{'stage':'install-submitting'}}}
+    def test_same_boot_cannot_finish_even_with_current_absence(self):
+        self.record['cleanup_boot_id']='22222222-2222-2222-2222-222222222222'
         self.write('clean-removal-'+ID+'.json',self.record)
         result,reply=self.run_tail();self.assertNotEqual(result.returncode,0)
         self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
-        self.record['original']['components']['deploy']={'stage':'prepared'}
-        self.write('clean-removal-'+ID+'.json',self.record)
-        result,reply=self.run_tail();self.assertEqual(result.returncode,0,result.stderr)
-        self.assertEqual(reply['removal'],'d'*32)
 
     def test_interruption_preserves_pending_and_resume_deletes_remaining_only(self):
         result,reply=self.run_tail(FAIL_MEMBER='secret.py')

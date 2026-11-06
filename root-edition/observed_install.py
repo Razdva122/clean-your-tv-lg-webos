@@ -99,7 +99,7 @@ def _install(app,path,disconnect_at=None,timeout=15,on_accepted=None,on_ready=No
 def remove(app, timeout=120):
  """Observe the request's terminal removal reply; caller also verifies absence."""
  client=subprocess.Popen(['/usr/bin/luna-send','-i','luna://com.webos.appInstallService/dev/remove',
-                          json.dumps({'id':app,'subscribe':True})],stdin=subprocess.DEVNULL,
+                          json.dumps({'id':app,'subscribe':True})],stdin=subprocess.PIPE,
                          stdout=subprocess.PIPE,stderr=subprocess.PIPE)
  began=time.monotonic();buffer='';utf8=codecs.getincrementaldecoder('utf-8')();decoder=json.JSONDecoder()
  try:

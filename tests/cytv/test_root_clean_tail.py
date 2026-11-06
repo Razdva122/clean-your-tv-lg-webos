@@ -41,3 +41,14 @@ class RootTailWire(unittest.TestCase):
         with self.assertRaises(UserError):resume(self.installer,self.pending)
         self.installer.remote.upload.assert_not_called()
         self.installer.store.checkpoint.assert_not_called()
+
+    def test_completed_readback_failure_returns_to_current_support_sweep(self):
+        from cytv.errors import TVCommandError
+        self.pending['stage']='verified-clean'
+        def run(command,**kwargs):
+            if 'inspect' in shlex.split(command):
+                return json.dumps({'operation':'a'*32,'removal':'d'*32,'state':'tail-ready'})
+            if 'finish' in shlex.split(command):raise TVCommandError(1)
+            return ''
+        self.installer.remote.run.side_effect=run
+        self.assertIsNone(resume(self.installer,self.pending))

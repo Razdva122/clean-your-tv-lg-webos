@@ -151,7 +151,7 @@ class Ownership:
         self.store.write('operation', record)
 
     @contextmanager
-    def removal(self, identifier):
+    def removal(self, identifier, expected=None):
         """Transfer the existing lease under its original mutex, never bypass it.
 
         The permanent nonterminal exclusion is deliberate: historical workers
@@ -159,9 +159,15 @@ class Ownership:
         verified. Clean completion is recorded separately, not install success.
         """
         current = self.status()
+        if expected is not None and expected!='-' and not re.fullmatch('[a-f0-9]{32}',expected):
+            raise ValueError('invalid_expected_lease')
+        def check():
+            if expected is None:return
+            actual=self.status()
+            if (actual['id'] if actual else '-')!=expected:raise Busy()
         owner = current['owner'] if current else 'clean-removal'
         journal = current['journal'] if current else 'product-'+identifier+'.json'
-        with self.operation(owner, journal, resume=current['id'] if current else None) as lease:
+        with self.operation(owner, journal, resume=current['id'] if current else None,check=check) as lease:
             saved = dict(lease)
             yield lease, saved
 

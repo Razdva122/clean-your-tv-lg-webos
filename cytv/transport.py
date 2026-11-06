@@ -309,7 +309,7 @@ class SSH:
     def channel(self, command):
         transport = self.client.get_transport()
         if transport is None or not transport.is_active():
-            raise UserError('TV SSH connection closed. Run cytv status before retrying.')
+            raise UserError('TV SSH connection closed. Run cytv status before retrying.',reason_code='connection-interrupted')
         channel = transport.open_session(timeout=10)
         channel.settimeout(30)
         channel.exec_command(command)
@@ -339,7 +339,7 @@ class SSH:
                     raise TVCommandError(status, storage_full=storage_full)
                 return
             elif channel.closed:
-                raise UserError('TV connection interrupted. Run cytv status before retrying.')
+                raise UserError('TV connection interrupted. Run cytv status before retrying.',reason_code='connection-interrupted')
             else:
                 time.sleep(0.02)
         raise UserError('TV operation timed out. Run cytv status before retrying.')

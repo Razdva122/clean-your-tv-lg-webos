@@ -141,7 +141,7 @@ class Store:
         return value
 
     @contextmanager
-    def lock(self):
+    def lock(self, blocking=True):
         directory = self._directory()
         fd = None
         try:
@@ -151,7 +151,7 @@ class Store:
                 self._check(os.fstat(fd))
             except OSError as error:
                 raise ValueError('unsafe worker lock') from error
-            fcntl.flock(fd, fcntl.LOCK_EX)
+            fcntl.flock(fd, fcntl.LOCK_EX | (0 if blocking else fcntl.LOCK_NB))
             self.lock_fd=fd
             yield
         finally:

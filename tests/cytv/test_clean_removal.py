@@ -41,7 +41,7 @@ class RemovalIntentTests(unittest.TestCase):
 
     def test_completed_request_is_reused_for_readback_without_new_generation(self):
         intent = self.store.request_clean_removal(self.profile)
-        self.store.checkpoint(self.profile, stage='verified-clean', result={'removed': True})
+        self.store.checkpoint(self.profile, stage='verified-clean', result={'removed': True,'verified_clean':True})
         self.store.finish_clean_removal(self.profile)
         self.assertIsNone(self.store.pending(self.profile))
         again = self.store.request_clean_removal(self.profile)
@@ -57,13 +57,19 @@ class RemovalIntentTests(unittest.TestCase):
 
     def test_new_install_has_new_removal_generation_after_old_clean_result(self):
         first=self.store.request_clean_removal(self.profile)
-        self.store.checkpoint(self.profile,stage='verified-clean')
+        self.store.checkpoint(self.profile,stage='verified-clean',result={'removed':True,'verified_clean':True})
         self.store.finish_clean_removal(self.profile)
         self.store.begin(self.profile,'install')
         self.store.finish(self.profile)
         second=self.store.request_clean_removal(self.profile)
         self.assertNotEqual(first['removal_operation'],second['removal_operation'])
         self.assertEqual(second['stage'],'requested')
+
+    def test_progress_stage_alone_cannot_finish_removal(self):
+        from cytv.errors import UserError
+        self.store.request_clean_removal(self.profile)
+        self.store.checkpoint(self.profile,stage='verified-clean',result={'removed':True,'verified_clean':False})
+        with self.assertRaises(UserError):self.store.finish_clean_removal(self.profile)
 
 
 if __name__ == '__main__':

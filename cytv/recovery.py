@@ -25,9 +25,11 @@ def removal_plan(write, store, profile, state='blocked', connecting=False):
     summary=removal_summary(pending)
     assessment=assess(profile,pending,None)
     write.recovery(profile)
-    write.recovery_plan({'state':state,'disposition':'clean-removal',
-        'summary':'Removal has been requested. Continue the remaining cleanup for this TV.',
-        'next_step':'Connect to the TV to continue cleanup.' if connecting else 'Continue the remaining cleanup for this TV.',
+    restart=summary['reason']=='restart-required' or summary['stage']=='restart-required'
+    write.recovery_plan({'state':state,'disposition':'clean-removal','removed':False,'verified_clean':False,'restart_required':restart,
+        'summary':'Restart the TV to finish removal' if restart else 'Removal has been requested. Continue the remaining cleanup for this TV.',
+        'next_step':('Restart the TV completely: disconnect it from power, reconnect it, then choose Try again. Standby is not a full restart.' if restart
+                     else 'Connect to the TV to continue cleanup.' if connecting else 'Continue the remaining cleanup for this TV.'),
         'removal':summary,'actions':assessment['actions'],'reason':summary['reason']})
     return True
 
