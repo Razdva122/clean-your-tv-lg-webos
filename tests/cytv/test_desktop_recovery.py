@@ -253,6 +253,43 @@ class DesktopRecoveryTests(unittest.TestCase):
                     self.assertEqual(w.badge.text(), w.title.text())
                     w.close()
 
+    def test_root_clean_removal_cli_completes_only_after_device_proof(self):
+        from tests.cytv.clean_removal_fixture import prepare
+        original = prepare(self)
+        w = self.window()
+        w.start('uninstall')
+        self.pump(lambda: w.pending is not None)
+        w.submit('y')
+        self.pump(lambda: not w.running)
+        self.assertEqual(w.title.text(), 'Clean Your TV removal is verified.', w.content.toPlainText())
+        self.assertTrue(w.recovery_plan['verified_clean'])
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertEqual(self.device_removals, ['d'*32])
+        receipt = json.loads((self.store.device_dir(self.profile)/'clean-removal.json').read_bytes())
+        self.assertEqual(receipt['previous'], json.loads(original))
+        self.assertIsNotNone(w.report)
+        self.assertEqual(json.loads(w.report.read_bytes())['frontend'], 'desktop')
+
+    def test_root_partial_cleanup_shows_current_phase_and_retains_original_failure(self):
+        from tests.cytv.clean_removal_fixture import prepare
+        original = prepare(self, 'partial')
+        w = self.window()
+        w.start('uninstall')
+        self.pump(lambda: w.pending is not None)
+        w.submit('y')
+        self.pump(lambda: not w.running)
+        self.assertEqual(w.title.text(), 'Review recovery options')
+        self.assertEqual(self.store.pending(self.profile)['stage'], 'private-cleanup')
+        self.assertEqual(self.store.pending(self.profile)['previous'], json.loads(original))
+        self.assertIn('Removing private setup data…', w.subtitle.text())
+        self.assertIn('Private setup data cleanup is incomplete.', w.subtitle.text())
+        self.assertEqual(w.recovery_profile, self.profile)
+        report = json.loads(w.report.read_bytes())
+        self.assertEqual(report['frontend'], 'desktop')
+        self.assertEqual(report['first_failure']['phase'], 'install-packages')
+        self.assertEqual(report['first_failure']['reason_code'], 'unknown')
+        self.assertNotIn('PRIVATE ORIGINAL ERROR', w.report.read_text())
+
     def test_root_home_off_is_directly_selectable_and_declining_keeps_receipt(self):
         receipt = self.prepare_root_recovery()
         before = receipt.read_bytes()
