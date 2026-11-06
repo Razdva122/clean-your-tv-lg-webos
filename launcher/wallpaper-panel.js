@@ -1,7 +1,7 @@
 /* Trusted settings: poster URLs are borrowed from HomeWallpaper, never revoked here. */
 (function(root){
  'use strict';
- var panel,preview,title,sourceInfo,capability,actual,notice,dimValue,qualityButtons=[],minus,plus,reset;
+ var panel,preview,title,sourceInfo,capability,actual,notice,inputWarning,inputWarningText,disableInputPreview,dimValue,qualityButtons=[],minus,plus,reset;
  function t(source){var prefix='Video dimensions do not match the theme. ';if(source.indexOf(prefix)===0)return t('Video dimensions do not match the theme.')+' '+t(source.slice(prefix.length));var language=root.HomeI18n&&root.HomeI18n.language(),strings=root.HomeWallpaperLocales&&root.HomeWallpaperLocales[language];return strings&&strings[source]|| (root.HomeI18n?root.HomeI18n.t(source):source);}
  function node(tag,parent,id){var el=document.createElement(tag);if(id)el.id=id;parent.appendChild(el);return el;}
  function state(){return root.HomeWallpaper&&root.HomeWallpaper.state?root.HomeWallpaper.state():{};}
@@ -54,9 +54,13 @@
   notice.textContent=!hasPoster?t('This theme has no wallpaper.'):available.indexOf('4k')<0&&available.indexOf('1080p')<0?t('This wallpaper has no video version.'):t('Auto uses detected TV support. Playback may fall back to an image.');
   if(value.notice)notice.textContent+=' '+t(value.notice);
   qualityButtons.forEach(function(button){var q=button.getAttribute('data-wallpaper-quality');button.textContent=label(q);button.disabled=!hasPoster||(q!=='auto'&&available.indexOf(q)<0)||(q==='4k'&&cap.uhd===false);button.setAttribute('aria-pressed',String((value.preferenceQuality||'auto')===q));});
+  var shelf=root.HomeInputShelf;
+  inputWarning.hidden=!(hasPoster&&available.indexOf('4k')>=0&&(value.preferenceQuality==='4k'||value.actualQuality==='4k')&&shelf&&shelf.enabled()&&shelf.previewEnabled());
+  inputWarningText.textContent=t('During HDMI previews, the 4K video wallpaper temporarily switches to a static 1080p image. Disable input previews to keep the wallpaper in 4K.');
+  disableInputPreview.textContent=t('Disable HDMI previews');
   dimValue.textContent=t('Dimming')+': '+Math.round(dim*100)+'%';minus.textContent=t('Less dimming');plus.textContent=t('More dimming');reset.textContent=t('Reset to theme defaults');
   minus.disabled=!hasPoster||dim<=0;plus.disabled=!hasPoster||dim>=.85;reset.disabled=!hasPoster;
-  if(wasInside&&focused.disabled){var target=hasPoster?(focused===plus?minus:focused===minus?plus:qualityButtons[0]):document.getElementById('settings-tab-wallpapers');if(target&&!target.disabled)target.focus();}
+  if(wasInside&&(focused.disabled||focused===disableInputPreview&&inputWarning.hidden)){var target=hasPoster?(focused===plus?minus:focused===minus?plus:qualityButtons[0]):document.getElementById('settings-tab-wallpapers');if(target&&!target.disabled)target.focus();}
  }
  function change(method,value){
   if(!root.HomeWallpaper||!root.HomeWallpaper[method])return;
@@ -73,12 +77,22 @@
   notice=node('p',panel,'wallpaperNotice');notice.setAttribute('aria-live','polite');
   var qualities=node('div',panel);qualities.className='wallpaper-quality';qualities.setAttribute('role','group');qualities.setAttribute('aria-label',t('Wallpaper quality'));
   ['auto','4k','1080p','image'].forEach(function(q){var el=button(qualities,null,function(){change('setQuality',q);});el.setAttribute('data-wallpaper-quality',q);qualityButtons.push(el);});
+  inputWarning=node('div',panel,'wallpaperInputPreviewWarning');inputWarning.hidden=true;
+  inputWarningText=node('p',inputWarning,'wallpaperInputPreviewWarningText');inputWarningText.setAttribute('aria-live','polite');
+  disableInputPreview=button(inputWarning,'wallpaperDisableInputPreview',function(){
+   if(!root.HomeInputShelf||!root.HomeInputShelf.previewEnabled())return;
+   root.HomeInputShelf.togglePreview();refresh();
+   if(root.HomeInputShelf.previewEnabled())notice.textContent=t('Could not change wallpaper settings.');
+   else qualityButtons[1].focus();
+  });
+  disableInputPreview.setAttribute('aria-describedby','wallpaperInputPreviewWarningText');
   var dim=node('div',panel);dim.className='wallpaper-dim';dimValue=node('p',dim,'wallpaperDimValue');
   minus=button(dim,'wallpaperDimMinus',function(){change('setDim',Math.max(0,Math.round(((state().dim||0)-.05)*100)/100));});
   plus=button(dim,'wallpaperDimPlus',function(){change('setDim',Math.min(.85,Math.round(((state().dim||0)+.05)*100)/100));});
   reset=button(panel,'wallpaperReset',function(){change('resetPreferences');});mountPersonal();refresh();
  }
  document.addEventListener('home-wallpaper-change',refresh);
+ document.addEventListener('home-layout-change',refresh);
  function deactivate(){active=false;stopReceiver();if(statusText)statusText.textContent='';}
  document.addEventListener('visibilitychange',function(){if(document.hidden){stopReceiver();if(statusText)statusText.textContent='';}});
  root.addEventListener('pagehide',function(){stopReceiver();});

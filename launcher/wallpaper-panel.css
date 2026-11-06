@@ -19,6 +19,7 @@
 #wallpaperQR { display:block; width:210px; height:210px; background:white; }
 #wallpaperPIN { font-size:36px!important; letter-spacing:6px; color:#fff!important; }
 #wallpaperPhoneWarning { border-left:3px solid #bcd8f6; padding-left:12px; }
+#wallpaperInputPreviewWarning { border-left:3px solid #bcd8f6; padding-left:12px; margin:12px 0; }
 #wallpaperPendingPreview { width:240px; height:135px; object-fit:contain; display:block; }
 #personalWallpaperControls { border-top:1px solid #526170; margin-top:16px; padding-top:12px; }
 
