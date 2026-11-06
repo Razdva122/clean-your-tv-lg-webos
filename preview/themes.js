@@ -25,6 +25,8 @@
     await manager.selectInstalled(installed);
     if(view!==generation)return;
     desired=item.id;selected(manager);status.textContent='';
+    // Selecting a theme blurs Home; return focus to resume its wallpaper video.
+    frame.focus();
   }
   async function load(){
     const view=++generation,frame=screen.contentWindow;busy(true);status.textContent='Loading themes…';
