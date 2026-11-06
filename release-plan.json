@@ -41,6 +41,11 @@
         334
       ],
       "summary": "Validate Root health before announcing startup readiness"
+    },
+    {
+      "pr": 358,
+      "issues": [],
+      "summary": "Fix video wallpaper continuity, theme trials and colour consistency"
     }
   ],
   "excluded": [],
