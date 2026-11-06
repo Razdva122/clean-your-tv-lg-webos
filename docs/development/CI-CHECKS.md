@@ -35,13 +35,12 @@ errors fail every shard before selection; zero discovered tests fail, while an
 empty partition of a nonempty suite is valid. Invalid shard arguments fail before
 any test command starts.
 
-Success-cache fingerprints and keys include the shard index and count. A result
-from another shard or the previous unsharded workflow cannot satisfy a partition.
-Setup always runs fresh. The existing required `tests (ubuntu-latest)` and
-`tests (macos-latest)` summaries require the entire runtime matrix to succeed;
-failed, cancelled or unexpectedly skipped runtime work blocks them. Full candidate
-validation uses this same matrix without success-cache reuse and retains its
-browser, ARM Python and `full-release` gates. Branch protection is unchanged.
+Authenticated test-unit receipts include the shard index and count. Another shard
+or an old unsharded result cannot satisfy a partition. The existing required
+`tests (ubuntu-latest)` and `tests (macos-latest)` summaries still require the
+entire runtime matrix to succeed. Frozen-candidate jobs run missing units and may
+reuse matching successes, retaining browser, ARM Python and `full-release` gates.
+Branch protection is unchanged. See [reuse and metadata](#reuse-and-metadata).
 
 Baseline: [Tests run 42029209178](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42029209178)
 on 2026-11-05 took about 32 minutes. Its macOS setup step took 8m19s, followed by
@@ -74,7 +73,7 @@ requirements files; the setup actions also partition caches by platform/runtime.
 Clean `npm ci` and declared pip installs still run. The Android build uses the
 setup-java Gradle cache keyed by Android build scripts, Gradle properties and
 wrapper version. These are dependency caches, not cached acceptance evidence;
-the existing checked success markers remain the only test-reuse mechanism.
+small authenticated success receipts provide test reuse separately.
 No signing files, device data or workspace build outputs are added to caches.
 
 Retention applies to newly uploaded Actions artifacts:
@@ -87,6 +86,7 @@ Retention applies to newly uploaded Actions artifacts:
 | Homebrew package accompanying a preliminary `test_build` | 14 days |
 | Direct Root TV candidate and signed Root QA candidate | 90 days |
 | Assembled release archive | 90 days |
+| Test-unit evidence receipts | 2 days (same UTC-day identity still required) |
 | Theme review preview | 3 days |
 | Pages deployment artifact | 1 day (explicit existing action default) |
 
@@ -127,18 +127,59 @@ Selecting both `tv` and `tv-runtime` executes their common body once. No-argumen
 
 ## Reuse and metadata
 
-The existing `scripts/release-inputs.py` success marker remains the only runtime
-reuse mechanism. Its selection fingerprint now includes `tv_runtime`, preventing
-reuse across different profile selections. Merged tree, PR/day, OS/image,
-Node/Python/dependencies, prior passing run, fork/rerun restrictions and fail-open
-to fresh execution on cache/API errors are unchanged. Setup always runs fresh.
-README release tests execute once per OS: inside sharded setup, or separately on shard 1
-when that OS does not run setup. Release plan shape is always checked.
+`scripts/ci-test-evidence.py` replaces PR-only success markers with small Actions
+artifact receipts. Runtime work uses existing component boundaries: `tv` expands
+to `ui` plus `tv-runtime`; UI, Android and preview run only on shard 1. Setup,
+installer and device runtime retain all four shards. The workflow invokes
+`test.sh` once with **only missing units**, and never with an empty argument list
+(which would run everything). Linux ownership verification is part of the primary
+`tv-runtime` unit. Pinned legacy Node downloads are needed only for fresh units.
 
-Full frozen-candidate validation still selects every component and the complete
-browser/optional Python gates without PR success reuse. Trusted workflow/policy
-changes take effect through normal integration into `main`; this PR cannot change
-already-running trusted policy. Hardware acceptance remains a separate gate.
+Browser core (legacy build, geometry, settings and development UI) is separate
+from full-only theme regressions. The complete candidate runs missing theme work;
+it does not rerun matching browser core. Optional ARM Python, including privileged
+provisioning checks, is another indivisible unit. Dependencies, actual Chromium/
+Playwright and QEMU/sysroot versions are identified before evidence lookup.
+
+A unit key binds the complete nonmetadata source snapshot from `release-inputs.py`,
+unit/shard/OS, exact Python/Node/dependencies/compiler, runner image and UTC day.
+Setup additionally binds the full Git tree, because it tests README, release-plan
+and guide content. No new metadata exemption is introduced. Current release-plan
+shape is checked fresh outside reuse. README sanity runs within fresh setup or
+separately when setup is reused/unselected, avoiding a second identical local
+invocation. Package assembly, signing,
+artifact validation and physical acceptance are not replaced by test evidence.
+
+Only a same-repository, nonfork, successful first-attempt PR `Tests` run may produce
+a receipt, after its freshly executed checks pass. One JSON artifact per existing
+runtime/browser/ARM job lists only those fresh units, never reused units. Lookup
+verifies successful latest branch evidence, current run attempt and exact successful
+originating job, artifact digest/size/head binding, and the tested checkout via
+GitHub commit/tree data. A PR merge must contain the run head as its second parent;
+claimed fingerprints alone are insufficient. The complete authenticated source
+snapshot is recomputed. Fork consumers and explicit reruns execute fresh tests.
+
+Receipts are bounded data: one flat `receipt.json`, at most 128 KiB compressed /
+64 KiB uncompressed, strict schema/JSON and no extraction, links or code execution.
+Missing, stale, failed, in-flight, altered or unverifiable evidence executes tests.
+Discovery checks at most 100 matching repository artifacts with a 60-second
+lookup budget and 20-second API deadlines; exceeding a bound is a miss, not a
+weaker proof. Each job logs executed units and
+links reused units to their originating jobs, also in its step summary. Evidence
+upload/API outages cannot grant success or block otherwise passing checks.
+
+[PR cache isolation](https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching)
+prevents release-branch jobs from restoring `refs/pull/N/merge` caches, so receipts
+are downloaded through the read-only
+[Actions artifacts API](https://docs.github.com/en/rest/actions/artifacts).
+No new secret, write permission, workflow, matrix or background service is needed.
+
+Bootstrap requires a genuinely successful producer on the new guarded source.
+Old PR cache markers cannot become receipts retroactively. Workflow/helper/test
+changes remain build inputs and invalidate old evidence; after integration, an
+identical combined source/environment can consume the PR's actual successes.
+Trusted publication gates and required job names remain unchanged. Hardware
+acceptance remains a separate gate.
 
 ## Measurements (2026-11-04)
 
@@ -165,7 +206,7 @@ select the full matrix. Measure future focused runs after normal integration.
 
 Regression checks compare executable command traces (`tv = ui + tv-runtime`),
 verify no duplicate common body, scope outputs, unknown/shared unions, full suite,
-legacy dependencies, old Node/ownership wiring, metadata deduplication and required
+legacy dependencies, old Node/ownership wiring, fresh metadata checks and required
 aggregate failure semantics. Run `python3 -m unittest discover -s tests/setup -p
 'test_ci_*.py'` (including shard coverage/failure checks) and the existing
 `test_release_inputs.py` suite when changing routing.
