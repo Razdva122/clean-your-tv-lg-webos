@@ -189,7 +189,7 @@ class CLITests(unittest.TestCase):
             inst = cls.return_value
             inst.store, inst.profile = store, profile
             inst.remote.luna.return_value = {'returnValue': True, 'status': {'apps': []}}
-            inst.status.return_value = {'can_resume_root_setup': False}
+            inst.observe_recovery.return_value = {'can_resume_root_setup': False}
             inst.uninstall.side_effect = UserError('Removal remains unconfirmed')
             code, output, _ = self.run_cli(['--host', profile['host'], '--edition', 'no-root',
                 '--data-dir', tmp, '--yes'], ['y', 'y'], remote=MagicMock())
@@ -214,7 +214,7 @@ class CLITests(unittest.TestCase):
                 inst = cls.return_value
                 inst.store, inst.profile = store, profile
                 inst.remote.luna.return_value = {'returnValue': True, 'status': {'apps': []}}
-                inst.status.return_value = {'can_resume_root_setup': False}
+                inst.observe_recovery.return_value = {'can_resume_root_setup': False}
                 inst.uninstall.side_effect = lambda: store.finish(profile)
                 inst.version_summary.return_value = []
                 flags = ['--yes', '--non-interactive'] if choice == 'non-interactive' else [] if choice == 'y' else ['--yes']
@@ -242,7 +242,7 @@ class CLITests(unittest.TestCase):
             profile = state.target('192.0.2.10', 'root')
             store.begin(profile, 'install')
             cls.return_value.store, cls.return_value.profile = store, profile
-            cls.return_value.status.return_value = {'can_resume_root_setup': False}
+            cls.return_value.observe_recovery.return_value = {'can_resume_root_setup': False}
             code, output, _ = self.run_cli(['--host', profile['host'], '--edition', 'root',
                 '--data-dir', tmp, '--yes'], ['y'], remote=MagicMock())
             self.assertEqual(code, 2, output)
@@ -403,14 +403,14 @@ class CLITests(unittest.TestCase):
                 def status():
                     if resolved: store.finish(profile)
                     return {'can_resume_root_setup': resume, 'deployment_stage':'installed-recovery-only', 'device':{'result':{'recovery':{'integrity_verified':True}}}}
-                inst.status.side_effect = status
+                inst.observe_recovery.side_effect = status
                 if resolved:
                     from cytv.errors import ExistingRoot
                     inst.preflight.side_effect = ExistingRoot('existing')
                 inst.resume_root_setup.return_value = {'updates_ready':True}
-                code, output, _ = self.run_cli(['--host','192.0.2.10','--edition','root','--data-dir',tmp], ['', 'y', 'y' if accept else 'n'], remote=MagicMock())
+                code, output, _ = self.run_cli(['--host','192.0.2.10','--edition','root','--data-dir',tmp], ['', 'y'] + (['1', 'y'] if accept else ['']), remote=MagicMock())
                 self.assertEqual(code, 0 if resolved or resume else 2, output)
-                inst.status.assert_called()
+                inst.observe_recovery.assert_called()
                 self.assertEqual(inst.resume_root_setup.call_count, int(resume and accept))
                 if resume: inst.select_graphics.assert_not_called()
                 inst.install.assert_not_called()

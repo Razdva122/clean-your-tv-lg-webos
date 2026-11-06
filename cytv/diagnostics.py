@@ -35,8 +35,8 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
         'checks': context.checks_summary(checks),
         'privacy': 'No addresses, SSH identities, exception text, credentials, app inventory, environment or raw TV logs are collected.',
     }
-    from .recovery_state import summary
-    report['recovery'] = summary(profile or {}, pending)
+    from .recovery_state import assess, summary
+    report['recovery'] = {**summary(profile or {}, pending), **assess(profile, pending, status)}
     from .failure_help import for_error, report_summary
     help = for_error(error, phase, profile, pending)
     if help:
@@ -78,6 +78,8 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
             if key in report:
                 report[key] = safe_error.get(key, {})
     report.update(context.history(report, store, profile, error, pending))
+    if error is not None and action in ('recover', 'status', 'doctor'):
+        report['observation_failure'] = context.failure_summary(report)
     path = store.root / 'reports' / ('diagnostic-' + uuid.uuid4().hex[:12] + '.json')
     private_write(path, json.dumps(report, indent=2).encode())
     return path

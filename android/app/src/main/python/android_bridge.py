@@ -161,9 +161,11 @@ def inspect_root_recovery(config, callbacks):
             write(KEPT)
             return 130
         passive = root_passive.inspect_saved(store, profile, pending.get('product_operation'), callbacks.secret)
-        event = dict(state='recovery_required', stage='blocked', code='operation_requires_recovery',
+        event = dict(operation=pending['product_operation'], state='recovery_required', stage='blocked', code='operation_requires_recovery',
                      can_resume=False, passive=passive)
         result = dict(device={'product': event}, can_resume_root_setup=False)
+        from cytv.recovery_state import assess
+        result['assessment'] = assess(profile, pending, result)
         plan(write, 'blocked', KEPT, 'Save diagnostic report…')
         diagnostics.save_result(write, store, 'recover', profile, 'recover', status=result)
         return 2  # Reading evidence never completes or unlocks the installation.
@@ -171,9 +173,18 @@ def inspect_root_recovery(config, callbacks):
         write(KEPT)
         return 130
     except Exception as error:
-        plan(write, 'blocked', KEPT, 'Save diagnostic report…')
-        write.error(str(error) if isinstance(error, UserError) else BLOCKED)
-        diagnostics.suggest_issue(write, store, 'recover', profile, 'recover', error)
+        from cytv.failure_help import for_error
+        # Authentication is performed inside inspect_saved. Classify that current
+        # blocker without replacing the operation's original recorded failure.
+        phase = 'ssh-connect' if getattr(error, 'observation_phase', None) == 'ssh-connect' else 'recover'
+        help = for_error(error, phase, profile, store.pending(profile))
+        if help:
+            write.failure_help(help)
+        plan(write, 'blocked', help['title'] if help else KEPT,
+             help['next_step'] if help else 'Save diagnostic report…')
+        write.error(help['title'] if help and help['code'] != 'pending-operation'
+                    else str(error) if isinstance(error, UserError) else BLOCKED)
+        diagnostics.suggest_issue(write, store, 'recover', profile, phase, error)
         return 2
 
 

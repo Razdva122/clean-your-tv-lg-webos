@@ -12,6 +12,24 @@ SOURCE = Path(__file__).resolve().parents[1] / 'app/src/main/python/android_brid
 
 
 class AndroidRootRecoveryTests(unittest.TestCase):
+    def test_failed_passive_authentication_exports_current_blocker_without_replacing_first_failure(self):
+        from paramiko import AuthenticationException
+        from cytv import diagnostics
+        from cytv.errors import TVCommandError
+        diagnostics.create_report(self.store, 'install', self.profile, 'install-root', TVCommandError(127))
+        before = self.records()
+        with patch.object(self.bridge.SSH, 'connect', side_effect=AuthenticationException('PRIVATE')):
+            self.assertEqual(self.run_bridge(), 2)
+        report = next(json.loads(p.read_text()) for p in (self.store.root / 'reports').glob('*.json')
+                      if json.loads(p.read_text())['action'] == 'recover')
+        self.assertEqual(report['observation_failure']['guidance']['code'], 'ssh-auth-root')
+        self.assertEqual(report['first_failure']['ssh_command']['exit_status'], 127)
+        self.assertEqual(self.records(), before)
+        help_event = next(e for e in self.native.events if e['kind'] == 'failure-help')
+        self.assertEqual(help_event['code'], 'ssh-auth-root')
+        self.assertFalse(help_event['canEditConnection'])
+        self.assertNotIn('PRIVATE', json.dumps(self.native.events))
+
     def setUp(self):
         self.addCleanup(i18n.set_language, 'en')
         self.tmp = tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
@@ -70,6 +88,7 @@ class AndroidRootRecoveryTests(unittest.TestCase):
         self.assertEqual(report['status']['product']['passive']['worker'], 'exception-recorded')
         self.assertEqual(report['status']['product']['state'], 'recovery_required')
         self.assertFalse(report['status']['can_resume_root_setup'])
+        self.assertEqual(report['recovery']['reason'], 'observation-unverified')
         for private in ('192.0.2.10', self.operation, str(self.key), 'PRIVATE KEY'):
             self.assertNotIn(private, reports[0].read_text())
         self.assertTrue(any(e['kind'] == 'report-ready' for e in self.native.events))

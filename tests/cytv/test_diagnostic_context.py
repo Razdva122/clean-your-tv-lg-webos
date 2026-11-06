@@ -10,6 +10,20 @@ from cytv.errors import UserError, TVCommandError
 
 
 class ContextTests(unittest.TestCase):
+    def test_recovery_observation_failure_is_separate_from_original_failure(self):
+        from paramiko import AuthenticationException
+        self.store.begin(self.profile, 'install')
+        first = self.report('install', 'install-helper', TVCommandError(127))
+        self.store = state.Store(self.tmp.name)
+        later = self.report('recover', 'ssh-connect', AuthenticationException('PRIVATE'), status={
+            'assessment': {'state': 'PRIVATE', 'reason': 'PRIVATE', 'actions': ['PRIVATE', 'check']}})
+        self.assertEqual(later['first_failure'], first['first_failure'])
+        self.assertEqual(later['observation_failure']['guidance']['code'], 'ssh-auth-no-root')
+        self.assertEqual(later['recovery']['reason'], 'terminal-evidence-missing')
+        self.assertEqual(later['status']['assessment'], {
+            'state': 'blocked', 'reason': 'observation-unverified', 'actions': ['check']})
+        self.assertNotIn('PRIVATE', json.dumps(later))
+
     def test_package_failure_detail_survives_recovery_error_without_changing_pending(self):
         from cytv.errors import TVRejected
         self.store.begin(self.profile, 'install')

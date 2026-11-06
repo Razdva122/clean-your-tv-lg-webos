@@ -933,9 +933,43 @@ print('CYTV_UPDATER_VERIFIED')
             self.collect_root_diagnostics()
         return result
 
-    def _status(self):
+    def observe_recovery(self):
+        """Read current proofs without clearing or archiving the host receipt.
+
+        Root checks can stage verified support code, as explained by the UI;
+        they never submit packages or activate Home here.
+        """
+        from .recovery_state import assess
+        pending = self.store.pending(self.profile)
+        initial = assess(self.profile, pending)
+        result = ({'device': {}, 'pending': pending, 'can_resume_root_setup': False}
+                  if initial['reason'] in ('unsupported-receipt', 'inherited-operation')
+                  else self._status(reconcile=False))
+        result['assessment'] = assess(self.profile, self.store.pending(self.profile), result)
+        self.tv_info['status'] = result
+        return result
+
+    def reconcile_recovery(self, expected_pending):
+        """Explicit local completion; fresh backend evidence remains authority."""
+        previous = self.store.pending(self.profile)
+        if not previous or previous != expected_pending:
+            raise UserError('Recovery evidence changed. Check recovery again; recovery data was kept.', reason_code='pending-operation')
+        result = self.observe_recovery()
+        reason = result.get('reconciliation')
+        if (reason not in ('product-removal-verified', 'root-activation-verified')
+                or self.store.pending(self.profile) != previous):
+            raise UserError('Recovery could not be verified. Recovery data was kept.', reason_code='pending-operation')
+        from .state import private_write
+        receipt = self.store.recovery(self.profile, 'reconcile-recovery')
+        private_write(receipt, json.dumps({'action': 'reconcile-recovery', 'stage': 'verified',
+            'reason': reason, 'previous': previous}).encode())
+        self.store.finish(self.profile)
+        return {'reconciled': reason}
+
+    def _status(self, reconcile=True):
         pending = self.store.pending(self.profile)
         reconciled = None
+        reconciliation = None
         can_resume = False
         if (self.profile['edition']=='root' and pending and pending.get('action')=='install'
                 and pending.get('stage')=='coordinator-submitted'):
@@ -965,18 +999,20 @@ print('CYTV_UPDATER_VERIFIED')
                         self.verify_root_updater(event['result']['baseline_sha']);can_resume=True
                 except (RuntimeError,ValueError,KeyError,TypeError):pass
             if complete and pending['action']=='uninstall':
-                self.store.finish(self.profile)
-                reconciled='product-removal-verified'
+                reconciliation='product-removal-verified'
+                if reconcile:
+                    self.store.finish(self.profile)
+                    reconciled=reconciliation
             return {'device':{'product':event},'pending':self.store.pending(self.profile),'reconciled':reconciled,
-                    'can_resume_root_setup':can_resume}
+                    'reconciliation':reconciliation, 'can_resume_root_setup':can_resume}
         if pending and pending.get('action') == 'enable-system-updates':
             report = self.system_updater_cleanup('status')
-            if report.get('present') is False:
+            if reconcile and report.get('present') is False:
                 # The root helper also proves no owned bootstrap process can
                 # still create state or submit an installer operation.
                 self.store.finish(self.profile)
                 reconciled = 'system-updater-not-started'
-            elif report.get('present') is True and report.get('bootstrap_complete') is True and report.get('disabled') is False:
+            elif reconcile and report.get('present') is True and report.get('bootstrap_complete') is True and report.get('disabled') is False:
                 self.store.finish(self.profile)
                 reconciled = 'system-updater-bootstrap-verified'
             return {'device': {'system_updater': report}, 'pending': self.store.pending(self.profile),
@@ -988,7 +1024,7 @@ print('CYTV_UPDATER_VERIFIED')
             journal = json.loads(raw)
             stage = journal.get('stage')
             result = {'deployment_stage': stage}
-            if pending and pending['action'] == 'archive-root-state':
+            if reconcile and pending and pending['action'] == 'archive-root-state':
                 readback = self.root_archive('reconcile', pending.get('archive'), pending.get('identity'))
                 if readback.get('state') in ('archived', 'not-archived'):
                     self.store.finish(self.profile)
@@ -998,17 +1034,20 @@ print('CYTV_UPDATER_VERIFIED')
                 result = self.root_action('status')
                 if (pending and pending['action'] == 'activate-root'
                         and self.root_active(result.get('result', {}))
+                        and (reconcile or self.root_files_match(pending))
                         and (pending.get('home_backend') != 'c1-native-gate' or
                              result.get('result', {}).get('backend') == 'c1-native-gate'
                              and result.get('result', {}).get('effective', {}).get('token') == pending.get('home_token'))):
-                    self.store.finish(self.profile)
-                    reconciled = ('root-activation-verified' if pending.get('launch_requested') is True
-                                  else 'root-activation-verified; screen launch unconfirmed, press Home to open it')
+                    reconciliation = 'root-activation-verified'
+                    if reconcile:
+                        self.store.finish(self.profile)
+                        reconciled = ('root-activation-verified' if pending.get('launch_requested') is True
+                                      else 'root-activation-verified; screen launch unconfirmed, press Home to open it')
                 can_resume = self.can_resume_root_setup(pending, result.get('result', {}))
-                if self.recover_unstarted_root_updater(pending, result.get('result', {})):
+                if reconcile and self.recover_unstarted_root_updater(pending, result.get('result', {})):
                     pending = None
                     reconciled = 'updater-not-started; recovery verified; reinstallation available'
-                if (pending and pending['action'] == 'install' and not pending.get('requires_updater')
+                if (reconcile and pending and pending['action'] == 'install' and not pending.get('requires_updater')
                         and pending.get('home_backend') != 'c1-native-gate'
                         and result.get('result', {}).get('recovery', {}).get('integrity_verified') is True
                         and self.root_files_match(pending)):
@@ -1016,10 +1055,10 @@ print('CYTV_UPDATER_VERIFIED')
                     reconciled = 'root-installation-verified'
             elif stage == 'uninstalled-state-retained':
                 self.verify_absent(package.ROOT_APP)
-                if pending and pending['action'] == 'uninstall' and not pending.get('full_project'):
+                if reconcile and pending and pending['action'] == 'uninstall' and not pending.get('full_project'):
                     self.store.finish(self.profile)
                     reconciled = 'root-removal-verified; TV evidence retained'
-            elif (stage == 'absent' and pending and pending['action'] == 'install'
+            elif (reconcile and stage == 'absent' and pending and pending['action'] == 'install'
                   and (pending.get('home_backend') != 'c1-native-gate' or pending.get('stage') == 'upload')):
                 self.verify_absent(package.ROOT_APP)
                 self.store.finish(self.profile)
@@ -1031,7 +1070,7 @@ print('CYTV_UPDATER_VERIFIED')
             # interrupted installer transaction. No supported terminal readback
             # is established for these legacy receipts; retain them unchanged.
         return {'device': result, 'pending': self.store.pending(self.profile), 'reconciled': reconciled,
-                'can_resume_root_setup': can_resume,
+                'can_resume_root_setup': can_resume, 'reconciliation': reconciliation,
                 **({'deployment_stage': stage} if self.profile['edition'] == 'root' else {})}
 
     @staticmethod
@@ -1114,11 +1153,14 @@ print('CYTV_UPDATER_VERIFIED')
         except (OSError, RuntimeError, ValueError, TypeError, KeyError, AttributeError):
             return False
 
-    def finish_root_setup_disabled(self):
+    def finish_root_setup_disabled(self, expected_pending=None):
         """Explicitly cancel only verified restored activation, preserving its receipt."""
-        result=self.status()
         previous=self.store.pending(self.profile)
+        if expected_pending is not None and previous != expected_pending:
+            raise UserError('Recovery evidence changed. Check recovery again; recovery data was kept.', reason_code='pending-operation')
+        result=self.observe_recovery()
         if (self.profile['edition']!='root' or not previous
+                or self.store.pending(self.profile) != previous
                 or previous.get('action')!='activate-root'
                 or previous.get('home_backend')=='c1-native-gate'
                 or result.get('can_resume_root_setup') is not True):
@@ -1131,10 +1173,14 @@ print('CYTV_UPDATER_VERIFIED')
         self.outcome.packages_verified()
         return {'home_changed':False,'updates_ready':True,'home_control':'disabled'}
 
-    def resume_root_setup(self):
+    def resume_root_setup(self, expected_pending=None):
         # Revalidate after the user's confirmation; never resubmit package setup.
+        previous = self.store.pending(self.profile)
+        if expected_pending is not None and previous != expected_pending:
+            raise UserError('Recovery evidence changed. Check recovery again; recovery data was kept.', reason_code='pending-operation')
         self.outcome.begin()
-        if self.status().get('can_resume_root_setup') is not True:
+        if (self.observe_recovery().get('can_resume_root_setup') is not True
+                or self.store.pending(self.profile) != previous):
             raise UserError('Root setup could not be verified for continuation. Recovery data was kept.')
         previous = self.store.pending(self.profile)
         if previous and previous.get('action') == 'activate-root':

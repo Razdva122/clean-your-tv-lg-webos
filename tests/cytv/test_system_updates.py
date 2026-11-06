@@ -68,7 +68,7 @@ class SystemBootstrapTests(unittest.TestCase):
         with self.assertRaisesRegex(UserError,'unresolved'):inst.enable_system_updates()
         self.assertEqual(remote.calls,[])
         # Eligibility itself is exercised with real journals/locks in Root proof tests.
-        inst.status=MagicMock(return_value={'can_resume_root_setup':True})
+        inst.observe_recovery=MagicMock(return_value={'can_resume_root_setup':True})
         self.assertEqual(inst.finish_root_setup_disabled()['home_control'],'disabled')
         self.assertEqual(remote.calls,[])
         archived=list(self.store.device_dir(self.profile).glob('recovery-*.json'))

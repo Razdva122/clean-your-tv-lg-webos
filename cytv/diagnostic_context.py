@@ -171,6 +171,9 @@ def status_summary(value):
     value = mapping(value)
     device = mapping(value.get('device', value))
     result = {}
+    if 'assessment' in value:
+        from .recovery_state import assessment_summary
+        result['assessment'] = assessment_summary(value['assessment'])
     components = {key: item for key, item in mapping(value.get('components')).items()
                   if key in COMPONENTS.values() and version(item)}
     if 'components' in value:

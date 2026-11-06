@@ -287,24 +287,28 @@ class OperationTests(unittest.TestCase):
                 retained = {p.name: p.read_bytes() for p in directory.iterdir()}
                 remote.calls.clear()
                 events = []
-                with self.assertRaises(TVRejected) as failure:
+                with self.assertRaises(operations.UserError if inherited else TVRejected) as failure:
                     recover(installer, lambda _: 'y', DesktopConsole(lambda k,v: events.append((k,v))))
                 report = diagnostics.create_report(self.store, 'recover', installer.profile, 'recover', failure.exception)
                 current = json.loads(report.read_text())
-                self.assertIs(failure.exception, rejected)
-                self.assertEqual(failure.exception.luna['operation'], 'package-status')
-                self.assertEqual(failure.exception.luna['error_code'], -1)
+                if inherited:
+                    self.assertEqual(failure.exception.reason_code, 'pending-operation')
+                else:
+                    self.assertIs(failure.exception, rejected)
+                    self.assertEqual(failure.exception.luna['operation'], 'package-status')
+                    self.assertEqual(failure.exception.luna['error_code'], -1)
                 self.assertEqual(current['first_failure'], first_report['first_failure'])
                 self.assertEqual(receipt.read_bytes(), before)
                 self.assertEqual({p.name:p.read_bytes() for p in directory.iterdir()}, retained)
                 self.assertFalse(any(c[0]=='upload' for c in remote.calls))
                 self.assertEqual([c[1] for c in remote.calls if c[0]=='luna'],
-                    ['com.webos.applicationManager/dev/listApps', 'com.webos.appInstallService/status'])
+                    [] if inherited else ['com.webos.applicationManager/dev/listApps', 'com.webos.appInstallService/status'])
                 self.assertTrue(any(k=='recovery-plan' and v['state']=='blocked' for k,v in events))
                 self.assertNotIn('PRIVATE', report.read_text())
                 self.assertNotIn('PRIVATE', str(failure.exception))
                 self.assertNotIn('cytv doctor', str(failure.exception))
-                self.assertIn('Recovery cannot verify the earlier package operation', str(failure.exception))
+                if not inherited:
+                    self.assertIn('Recovery cannot verify the earlier package operation', str(failure.exception))
 
     def test_unstarted_no_root_removal_does_not_require_denied_monitor(self):
         from cytv.errors import TVRejected
@@ -1469,11 +1473,11 @@ class OperationTests(unittest.TestCase):
                         'defaultApps':{'categories':{'home':package.ROOT_APP}},'idleApp':{'appId':package.ROOT_APP}}}}
             return original(command,**kwargs)
         remote.run=run;checkpoint=len(remote.calls)
-        answers=iter(('y','',''))
+        answers=iter(('y',''))
         recover(installer,lambda _:next(answers),Console(lambda *_:None))
         self.assertEqual(self.store.pending(installer.profile),previous)
         self.assertFalse(any(c[0]=='run' and c[1].endswith(' enable') for c in remote.calls[checkpoint:]))
-        answers=iter(('y','y','3'))
+        answers=iter(('y','1','y','3'))
         recover(installer,lambda _:next(answers),Console(lambda *_:None))
         self.assertIsNone(self.store.pending(installer.profile))
         later=remote.calls[checkpoint:]

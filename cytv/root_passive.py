@@ -148,7 +148,11 @@ def inspect_saved(store, profile, operation, secret):
         directory = store.device_dir(profile)
         paths = [directory / name for name in ('profile.json', 'known_hosts', 'operation.json')]
         before = [path.read_bytes() for path in paths]
-        remote = SSH.connect(profile, directory, secret, lambda *_: False, persist=False)
+        try:
+            remote = SSH.connect(profile, directory, secret, lambda *_: False, persist=False)
+        except Exception as error:
+            error.observation_phase = 'ssh-connect'
+            raise
         try:
             result = collect(remote, operation, pending)
             if store.pending(profile) != pending or [path.read_bytes() for path in paths] != before:
