@@ -5,6 +5,7 @@ the user's project keys or files after the user has requested their removal.
 """
 import json
 import shlex
+import hashlib
 
 from .errors import TVRejected, UserError
 
@@ -19,11 +20,11 @@ PRIVATE_CLEANUP_PROGRAM = r'''
 'use strict';
 var fs=require('fs'),path=require('path'),c=require('constants'),zlib=require('zlib'),crypto=require('crypto');
 var input=JSON.parse(process.argv[process.argv.length-1]),uid=process.getuid();
-if(['inventory','sweep','stop','root-package'].indexOf(input.action)<0)throw Error('invalid-cleanup-action');
+if(['inventory','sweep','stop','root-package','stage-carrier'].indexOf(input.action)<0)throw Error('invalid-cleanup-action');
 var base='/media/developer/apps/usr/palm',publicRoot='/media/developer/temp';
 var apps=['com.local.nativehome','com.gathin.tvhome','com.cleanyourtv.updater'];
 var services=['com.local.nativehome.service','com.gathin.tvhome.renewal','com.cleanyourtv.updater.service'];
-var reply={schema:1,boot_id:fs.readFileSync('/proc/sys/kernel/random/boot_id','utf8').trim(),present:[],blocked:[],root_present:[],external_update_hint:null,resident_installer:false,staging_ids:input.staging_ids||[]};
+var reply={schema:1,boot_id:fs.readFileSync('/proc/sys/kernel/random/boot_id','utf8').trim(),present:[],blocked:[],root_present:[],startup_services:[],external_update_hint:null,resident_installer:false,staging_ids:input.staging_ids||[]};
 if(!Array.isArray(reply.staging_ids)||reply.staging_ids.length>128||reply.staging_ids.some(function(id){return typeof id!=='string'||!/^[a-f0-9]{32}$/.test(id);}))throw Error('invalid-staging-scope');
 if(!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(reply.boot_id))throw Error('invalid-boot-identity');
 function exists(p){try{return fs.lstatSync(p);}catch(e){if(e.code==='ENOENT')return null;throw e;}}
@@ -50,6 +51,18 @@ function remove(p,expected){
 function blocked(scope,error){reply.blocked.push({scope:scope,reason:error.code==='EACCES'||error.code==='EPERM'?'permission-denied':'unsafe-path'});}
 function visit(p,scope){try{var s=exists(p);if(!s)return;if(input.action==='sweep'||input.action==='root-package')remove(p,s);if(exists(p))reply.present.push(scope);}catch(e){blocked(scope,e);}}
 function rootHint(p,scope){try{if(exists(p))reply.root_present.push(scope);}catch(e){if(e.code==='EACCES')reply.root_present.push(scope);else blocked(scope,e);}}
+if(input.action==='stage-carrier'){
+ var index=apps.indexOf(input.app);if(index<0||!/^[a-f0-9]{32}$/.test(input.removal)||!/^[a-f0-9]{64}$/.test(input.sha256)||!(input.size>0&&input.size<1048576))fail();
+ ancestry(path.dirname(publicRoot));if(!exists(publicRoot))fs.mkdirSync(publicRoot,448);ancestry(publicRoot);
+ var stage=publicRoot+'/cytv-'+input.removal,filename=['helper.ipk','launcher.ipk','updater.ipk'][index];
+ if(!exists(stage))fs.mkdirSync(stage,448);ancestry(stage);var pin=fs.lstatSync(stage),parts=[],size=0;if(pin.uid!==uid||(pin.mode&511)!==448)fail();
+ process.stdin.on('data',function(b){size+=b.length;if(size>input.size)fail();parts.push(b);});
+ process.stdin.on('end',function(){var raw=Buffer.concat(parts,size);if(size!==input.size||crypto.createHash('sha256').update(raw).digest('hex')!==input.sha256)fail();
+  at(stage,pin,function(fd){var old=exists(filename);if(old){if(!old.isFile()||old.nlink!==1||old.size!==input.size)fail();var oldFd=fs.openSync(filename,c.O_RDONLY|c.O_NOFOLLOW);try{if(!same(old,fs.fstatSync(oldFd)))fail();var bytes=new Buffer(old.size),offset=0;while(offset<bytes.length){var n=fs.readSync(oldFd,bytes,offset,bytes.length-offset,offset);if(n<=0)fail();offset+=n;}if(!same(old,fs.lstatSync(filename))||crypto.createHash('sha256').update(bytes).digest('hex')!==input.sha256)fail();}finally{fs.closeSync(oldFd);}}
+   else{var tmp='.carrier-'+crypto.randomBytes(12).toString('hex'),out=fs.openSync(tmp,c.O_WRONLY|c.O_CREAT|c.O_EXCL|c.O_NOFOLLOW,384);try{var offset=0;while(offset<raw.length)offset+=fs.writeSync(out,raw,offset,raw.length-offset,offset);fs.fsyncSync(out);}finally{fs.closeSync(out);}if(exists(filename))fail();fs.renameSync(tmp,filename);fs.fsyncSync(fd);}
+  });process.stdout.write(JSON.stringify(reply));
+ });process.stdin.resume();return;
+}
 if(input.action==='root-package'){
  if(uid!==0||apps.concat(['com.cleanyourtv.root.preview','com.cleanyourtv.root.updater','com.cleanyourtv.system.updater']).indexOf(input.app)<0)throw Error('invalid-root-package');
  var service=input.app==='com.gathin.tvhome'?'com.gathin.tvhome.renewal':input.app+'.service';
@@ -58,6 +71,7 @@ if(input.action==='root-package'){
 }
 ['clean-your-tv-root','clean-your-tv-installation','clean-your-tv-python','clean-your-tv-root-updater','clean-your-tv-system-updater'].forEach(function(name){rootHint('/var/lib/'+name,name);});
 rootHint('/var/webos-profile/override/clean-your-tv-root.json','root-profile');
+services.slice(0,2).forEach(function(service){try{var file=base+'/services/'+service+'/service.js',s=exists(file);if(s){ancestry(path.dirname(file));if(!s.isFile()||s.isSymbolicLink())fail();reply.startup_services.push(service);}}catch(e){blocked('startup-service '+service,e);}});
 try{
  var journal=base+'/services/'+services[2]+'/state/transaction.json',transactionStat=exists(journal);
  if(transactionStat){ancestry(path.dirname(journal));if(!transactionStat.isFile()||transactionStat.nlink!==1||transactionStat.size>5242880)fail();
@@ -79,7 +93,13 @@ if(input.action==='stop'){
   try{var b=new Buffer('{"cmd":"stop"}');fs.writeSync(control,b,0,b.length,0);fs.fsyncSync(control);}finally{fs.closeSync(control);}
   fs.renameSync(name,'control.json');fs.fsyncSync(fd);
  });}catch(e){blocked('helper-control',e);}
- process.stdout.write(JSON.stringify(reply));return;
+ var deadline=Date.now()+8000;
+ var stopped=function(){var running=false;
+  try{var pidFile=state+'/controller.pid',pidStat=exists(pidFile);if(pidStat){ancestry(state);if(!pidStat.isFile()||pidStat.nlink!==1||pidStat.size>32)fail();var text=fs.readFileSync(pidFile,'utf8').trim();if(/^[1-9][0-9]{0,8}$/.test(text)){try{var args=fs.readFileSync('/proc/'+text+'/cmdline','utf8').split('\0');if(args[0]===apps[0]||args.indexOf(base+'/applications/'+apps[0]+'/native.js')>=0){process.kill(Number(text),0);running=true;}}catch(e){if(e.code!=='ENOENT'&&e.code!=='ESRCH')throw e;}}}}
+  catch(e){blocked('helper-control',e);}
+  if(running&&Date.now()<deadline){setTimeout(stopped,100);return;}
+  reply.controller_running=running;process.stdout.write(JSON.stringify(reply));
+ };stopped();return;
 }
 apps.forEach(function(app,index){visit(base+'/applications/'+app,app+' app');visit(base+'/packages/'+app,app+' package');visit(base+'/services/'+services[index],app+' service');});
 visit('/media/developer/.cytv-installer','installer-private');
@@ -138,6 +158,56 @@ def _check_access(value):
         raise UserError('Some project paths changed. Close other installers and try again.')
 
 
+def _remove_package(installer, app):
+    try:
+        installer.remote.luna('com.webos.appInstallService/dev/remove', {'id': app, 'subscribe': True}, terminal='removed', timeout=150)
+    except TVRejected as error:
+        error.args = ('The TV rejected removal. Check the error details and try again.',)
+        raise
+
+
+def _repair_registration(installer, value):
+    """One ordinary same-ID repair per current Retry, only for protected roles."""
+    from . import no_root_carrier, package
+    candidates = set()
+    for row in value['blocked']:
+        if row.get('reason') == 'permission-denied' and row.get('scope', '').startswith('registration '):
+            name = row['scope'].split(' ', 1)[1]
+            candidates.update(app for app in APPS if name.startswith(app + '.'))
+    if not candidates or not hasattr(installer, 'payload'):
+        return value
+    registered = {app['id'] for app in installer.installed_apps()}
+    for app in sorted(candidates - registered):
+        def authenticated(name):
+            raw = (installer.payload / package.safe_name(name)).read_bytes()
+            if hashlib.sha256(raw).hexdigest() != installer.manifest['files'].get(name):
+                raise ValueError('Cleanup payload changed')
+            return raw
+        try:
+            source = authenticated(installer.manifest.get({'com.local.nativehome':'helper', 'com.gathin.tvhome':'launcher', 'com.cleanyourtv.updater':'updater'}[app],
+                                                        ('helper.ipk', 'launcher.ipk', 'updater.ipk')[APPS.index(app)]))
+            carrier = no_root_carrier.build(app, [source], noop=authenticated('installer-support/cleanup-noop'),
+                                           architecture='arm' if app == APPS[0] else 'all')
+        except (OSError, ValueError, KeyError):
+            raise UserError(ROOT_MESSAGE, reason_code='root-access-required') from None
+        pending = installer.store.pending(installer.profile)
+        identifier = pending['removal_operation']
+        stages = list(pending.get('cleanup_staging_ids', []))
+        if identifier not in stages:
+            stages.append(identifier)
+            installer.store.checkpoint(installer.profile, cleanup_staging_ids=stages)
+        request = {'action':'stage-carrier', 'app':app, 'removal':identifier, 'size':len(carrier),
+                   'sha256':hashlib.sha256(carrier).hexdigest()}
+        installer.remote.run('/usr/bin/node -e ' + shlex.quote(PRIVATE_CLEANUP_PROGRAM) + ' ' + shlex.quote(json.dumps(request)), data=carrier, timeout=90)
+        filename = ('helper.ipk', 'launcher.ipk', 'updater.ipk')[APPS.index(app)]
+        installer.remote.luna('com.webos.appInstallService/dev/install',
+                              {'id':app, 'ipkUrl':'/media/developer/temp/cytv-' + identifier + '/' + filename, 'subscribe':True}, terminal='installed', timeout=150)
+        if app not in {row['id'] for row in installer.installed_apps()}:
+            raise UserError('Removal could not be checked. Reconnect and try again.')
+        _remove_package(installer, app)
+    return _device(installer, 'sweep')
+
+
 def continue_removal(installer, expected_pending):
     pending = installer.store.pending(installer.profile)
     if pending != expected_pending or not pending or pending.get('recovery_protocol') != 'clean-removal-v1':
@@ -145,7 +215,9 @@ def continue_removal(installer, expected_pending):
     current = _device(installer, 'inventory')
     _check_access(current)
     installer.store.checkpoint(installer.profile, cleanup_staging_ids=current['staging_ids'])
-    apps = {app['id'] for app in installer.installed_apps()}
+    app_info = installer.installed_apps()
+    apps = {app['id'] for app in app_info}
+    carriers = {app['id'] for app in app_info if app.get('title') == 'Clean Your TV cleanup' and app.get('visible') is False}
     if any(app in apps for app in ('com.cleanyourtv.root.preview', 'com.cleanyourtv.root.updater', 'com.cleanyourtv.system.updater')):
         raise UserError(ROOT_MESSAGE, reason_code='root-access-required')
     if pending.get('stage') == 'verified-clean' and not current['present'] and not apps.intersection(APPS):
@@ -157,17 +229,31 @@ def continue_removal(installer, expected_pending):
         installer.store.checkpoint(installer.profile, cleanup_boot_id=baseline, stage='requested')
     restarted = current['boot_id'] != baseline
     installer.progress('Restoring TV controls…')
-    _check_access(_device(installer, 'stop'))
-    if APPS[0] in apps:
-        reply = installer.remote.luna('com.local.nativehome.service/disable', {})
-        cancel = reply.get('cancel', {})
-        if cancel.get('returnValue') is not True and cancel.get('errorCode') != 2:
-            raise UserError('TV startup could not be disabled. Try again.')
-    if APPS[1] in apps:
-        reply = installer.remote.luna('com.gathin.tvhome.renewal/disable', {})
-        state = reply.get('state', {})
-        if state.get('enabled') is not False or state.get('error'):
-            raise UserError('TV startup could not be disabled. Try again.')
+    stopped = _device(installer, 'stop')
+    _check_access(stopped)
+    unavailable = set(pending.get('cleanup_startup_unavailable', []))
+    startup_failed = False
+    for app, service in zip(APPS, ('com.local.nativehome.service', 'com.gathin.tvhome.renewal')):
+        if service not in current['startup_services'] or app in carriers or (restarted and service in unavailable):
+            continue
+        try:
+            reply = installer.remote.luna(service + '/disable', {}, timeout=10)
+            if service == 'com.local.nativehome.service':
+                cancel = reply.get('cancel', {})
+                disabled = cancel.get('returnValue') is True or cancel.get('errorCode') == 2
+            else:
+                state = reply.get('state', {})
+                disabled = state.get('enabled') is False and not state.get('error')
+            if not disabled:
+                raise UserError('TV startup could not be disabled. Try again.')
+        except UserError:
+            # A failed optional service cannot make its own broken files
+            # undeletable. Check the SSH connection, then move restart earlier.
+            _device(installer, 'inventory')
+            unavailable.add(service)
+            startup_failed = True
+    if unavailable:
+        installer.store.checkpoint(installer.profile, cleanup_startup_unavailable=sorted(unavailable))
     devices = installer.remote.luna('com.webos.service.eim/getAllInputStatus', {}).get('devices')
     if not isinstance(devices, list):
         raise UserError('TV input shortcuts could not be checked. Try again.')
@@ -182,7 +268,9 @@ def continue_removal(installer, expected_pending):
     while isinstance(previous, dict):
         resident |= previous.get('recovery_protocol') == 'no-root-original-stream-v1'
         previous = previous.get('previous')
-    if resident and not restarted:
+    if stopped.get('controller_running') or startup_failed or (resident and not restarted):
+        if (stopped.get('controller_running') or startup_failed) and restarted:
+            installer.store.checkpoint(installer.profile, cleanup_boot_id=current['boot_id'])
         installer.store.checkpoint(installer.profile, stage='restart-required', removal_reason='restart-required', cleanup_restart_first=True)
         installer.progress(RESTART_MESSAGE)
         return {'removed': False, 'verified_clean': False, 'restart_required': True}
@@ -191,14 +279,10 @@ def continue_removal(installer, expected_pending):
             continue
         installer.progress(message)
         installer.store.checkpoint(installer.profile, stage='package-removal')
-        try:
-            installer.remote.luna('com.webos.appInstallService/dev/remove', {'id': app, 'subscribe': True}, terminal='removed', timeout=150)
-        except TVRejected as error:
-            error.args = ('The TV rejected removal. Check the error details and try again.',)
-            raise
+        _remove_package(installer, app)
     installer.progress('Removing private recovery data…')
     installer.store.checkpoint(installer.profile, stage='private-cleanup')
-    _check_access(_device(installer, 'sweep'))
+    _check_access(_repair_registration(installer, _device(installer, 'sweep')))
     if not restarted:
         installer.store.checkpoint(installer.profile, stage='restart-required', removal_reason='restart-required')
         installer.progress(RESTART_MESSAGE)
