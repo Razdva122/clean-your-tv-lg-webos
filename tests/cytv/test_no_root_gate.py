@@ -169,3 +169,30 @@ class LifecycleGate(unittest.TestCase):
         mutex.unlink()
         result = subprocess.run([str(binary), 'root-lock', shutil.which('true')], capture_output=True, timeout=5)
         self.assertNotEqual(result.returncode, 0); self.assertFalse(mutex.exists())
+
+    def test_root_cleanup_holds_the_original_python_promotion_lock(self):
+        import fcntl
+        owned=self.directory/'ownership';owned.mkdir(mode=0o700)
+        mutex=owned/'ownership.lock';mutex.write_bytes(b'');mutex.chmod(0o600)
+        worker=owned/'worker.lock';worker.write_bytes(b'');worker.chmod(0o600)
+        runtime=self.directory/'python';runtime.mkdir(mode=0o755)
+        promotion=runtime/'.install.lock';promotion.write_bytes(b'');promotion.chmod(0o600)
+        binary=self.directory/'root-clean-gate'
+        subprocess.run(['cc','-std=c99','-Wall','-Wextra','-Werror',
+                        '-DCYTV_ROOT_LOCK_DIRECTORY="'+str(owned)+'"',
+                        '-DCYTV_RUNTIME_LOCK_DIRECTORY="'+str(runtime)+'"',
+                        str(REPO/'native/installer/lifecycle-gate.c'),'-o',str(binary)],check=True)
+        process=subprocess.Popen([str(binary),'root-clean-lock',sys.executable,'-c',
+                                  'import os,sys;os.fstat(3);os.fstat(4);os.fstat(5);print("ready",flush=True);sys.stdin.read()'],
+                                 stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+        self.children.append(process)
+        self.assertEqual(process.stdout.readline(),b'ready\n')
+        for path in (mutex,promotion,worker):
+            with path.open('rb') as stream:
+                with self.assertRaises(BlockingIOError):fcntl.flock(stream,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        busy=subprocess.run([str(binary),'root-clean-lock',shutil.which('true')],capture_output=True,timeout=5)
+        self.assertEqual(busy.returncode,75)
+        process.communicate(b'',timeout=5)
+        promotion.unlink()
+        result=subprocess.run([str(binary),'root-clean-lock',shutil.which('true')],capture_output=True,timeout=5)
+        self.assertNotEqual(result.returncode,0);self.assertFalse(promotion.exists())
