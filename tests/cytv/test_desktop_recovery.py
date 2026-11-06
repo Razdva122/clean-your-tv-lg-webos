@@ -2,6 +2,7 @@
 import json
 import hashlib
 import os
+import shlex
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 from pathlib import Path
 import tempfile
@@ -13,7 +14,7 @@ from cytv import cli, package, state, i18n
 from cytv.errors import TVRejected
 from tests.cytv.test_operations import Remote
 try:
-    from PySide6.QtWidgets import QApplication, QPushButton
+    from PySide6.QtWidgets import QApplication, QComboBox, QPushButton
     from cytv.gui import Wizard
     HAS_QT = True
 except ImportError:
@@ -89,7 +90,8 @@ class DesktopRecoveryTests(unittest.TestCase):
     def window(self):
         def runner(argv, **kwargs):
             if argv[0] != 'install':
-                argv += ['--host', self.profile['host'], '--edition', 'no-root', '--port', '9923']
+                argv += ['--host', self.profile['host'], '--edition', self.profile['edition'],
+                         '--port', str(self.profile['port'])]
             return cli.main(argv + ['--data-dir', str(self.root)],
                             payload_root=self.payload, connect=self.connect, **kwargs)
         w = Wizard(run=runner)
@@ -112,6 +114,162 @@ class DesktopRecoveryTests(unittest.TestCase):
             self.pump(lambda: w.pending is not None)
             w.submit('y')
         self.pump(lambda: not w.running)
+
+    def prepare_root_recovery(self, action='activate-root'):
+        self.profile = state.target('192.0.2.10', 'root')
+        self.store.save(self.profile)
+        self.store.begin(self.profile, action, stage='enable' if action == 'activate-root' else 'removing',
+                         requires_updater=True, updates_ready=True, baseline_sha='a'*64,
+                         release_sha='b'*64, bundle_sha='c'*64, product_operation='d'*32)
+        self.remote.active = {'recovery': {'integrity_verified': True}, 'journal_exists': True,
+            'journal': {'state': 'restored'}, 'intent': {'enabled': False, 'phase': 'disabled'},
+            'guardian_active': False, 'effective': {'sam_home': 'com.webos.app.home', 'profiles': {
+                'defaultApps': {'categories': {'home': 'com.webos.app.home'}},
+                'idleApp': {'appId': 'com.webos.app.home'}}}}
+        original_run = self.remote.run
+        def run(command, **kwargs):
+            if 'deploy.json' in command:
+                reply = '{"stage":"installed-recovery-only"}'
+            elif 'install_driver.py' in command:
+                args = shlex.split(command)
+                self.assertIn('status', args)
+                self.assertIn('--verify-current', args)
+                self.assertEqual(args[args.index('--operation') + 1], 'd'*32)
+                reply = json.dumps({'operation': 'd'*32, 'state': 'complete', 'current': True,
+                    'result': {'baseline_sha': 'a'*64, 'home_changed': False, 'verified': True}})
+            elif 'CYTV_ROOT_FILES_OK' in command:
+                reply = 'CYTV_ROOT_FILES_OK'
+            elif 'CYTV_ACTIVATION_RECOVERABLE' in command:
+                reply = 'CYTV_ACTIVATION_RECOVERABLE'
+            else:
+                return original_run(command, **kwargs)
+            self.remote.calls.append(('run', command))
+            return reply
+        self.remote.run = run
+        # Runtime/proof code delivery is covered separately; keep the actual
+        # proof readers, CLI, Store, recovery orchestration and Qt bridge here.
+        for name, value in (('_python', '/usr/bin/python3'),
+                            ('coordinator_code', '/verified/root-updater')):
+            fixture = patch.object(cli.Installer, name, return_value=value)
+            fixture.start(); self.addCleanup(fixture.stop)
+        return self.store.device_dir(self.profile) / 'operation.json'
+
+    def open_root_review(self):
+        w = self.window()
+        w.start('recover')
+        self.pump(lambda: w.pending is not None)
+        self.assertEqual(w.pending.default, 'n')
+        self.assertTrue(self.button(w, 'No, go back / cancel this operation').isDefault())
+        self.button(w, 'Continue').click()
+        self.pump(lambda: w.pending is not None)
+        return w
+
+    def root_choice(self, w):
+        self.assertEqual(w.pending.kind, 'choice')
+        self.assertEqual(w.pending.default, '0')
+        choices = w.form.findChild(QComboBox)
+        self.assertIsNotNone(choices)
+        self.assertEqual(choices.currentData(), '0')
+        self.assertEqual([choices.itemData(i) for i in range(choices.count())], ['0', '1', '2'])
+        self.assertEqual(choices.itemText(choices.findData('2')),
+                         'Finish setup with LG Home and Home control off')
+        return choices
+
+    def assert_no_root_mutation(self):
+        self.assertTrue(self.connections)
+        self.assertTrue(all(profile == self.profile for profile in self.connections))
+        for call in self.remote.calls:
+            self.assertNotEqual(call[0], 'upload')
+            if call[0] == 'run':
+                self.assertFalse(call[1].endswith((' enable', ' restore', ' uninstall')))
+            if call[0] == 'luna':
+                self.assertFalse(call[1].endswith(('/install', '/remove', '/launch', '/disable')))
+
+    def test_root_menu_defaults_to_retaining_receipt_without_activation(self):
+        receipt = self.prepare_root_recovery()
+        before = receipt.read_bytes()
+        w = self.open_root_review()
+        self.root_choice(w)
+        self.button(w, 'Continue').click()  # Actual combo-box default is retain.
+        self.pump(lambda: not w.running)
+        self.assertEqual(receipt.read_bytes(), before)
+        self.assertEqual(list(receipt.parent.glob('recovery-*.json')), [])
+        self.assert_no_root_mutation()
+
+    def test_root_home_off_is_directly_selectable_and_declining_keeps_receipt(self):
+        receipt = self.prepare_root_recovery()
+        before = receipt.read_bytes()
+        w = self.open_root_review()
+        choices = self.root_choice(w)
+        choices.setCurrentIndex(choices.findData('2'))
+        self.button(w, 'Continue').click()
+        self.pump(lambda: w.pending is not None)
+        self.assertIn('Home control off?', w.pending.label)
+        self.assertEqual(w.pending.default, 'n')
+        no = self.button(w, 'No, go back / cancel this operation')
+        self.assertTrue(no.isDefault())
+        self.assertFalse(self.button(w, 'Continue').isDefault())
+        no.click()
+        self.pump(lambda: not w.running)
+        self.assertEqual(receipt.read_bytes(), before)
+        self.assertEqual(list(receipt.parent.glob('recovery-*.json')), [])
+        self.assert_no_root_mutation()
+
+    def test_root_home_off_confirmation_archives_original_and_completes(self):
+        receipt = self.prepare_root_recovery()
+        original = json.loads(receipt.read_bytes())
+        w = self.open_root_review()
+        choices = self.root_choice(w)
+        choices.setCurrentIndex(choices.findData('2'))
+        self.button(w, 'Continue').click()
+        self.pump(lambda: w.pending is not None)
+        self.assertIn('Home control off?', w.pending.label)
+        self.assertEqual(w.pending.default, 'n')
+        self.button(w, 'Continue').click()
+        self.pump(lambda: not w.running)
+        saved = [json.loads(path.read_bytes()) for path in receipt.parent.glob('recovery-*.json')]
+        self.assertEqual(len(saved), 1)
+        self.assertEqual(saved[0]['action'], 'finish-root-setup-disabled')
+        self.assertEqual(saved[0]['previous'], original)
+        self.assertFalse(receipt.exists())
+        self.assertIn('Root setup finished with LG Home', w.content.toPlainText())
+        self.assert_no_root_mutation()
+
+    def test_root_reconciliation_defaults_no_then_archives_before_explicit_clear(self):
+        receipt = self.prepare_root_recovery('uninstall')
+        before = receipt.read_bytes()
+        w = self.open_root_review()
+        self.assertIn('Finish the verified recovery record?', w.pending.label)
+        self.assertEqual(w.pending.kind, 'confirm')
+        self.assertEqual(w.pending.default, 'n')
+        self.assertEqual(receipt.read_bytes(), before)
+        self.assertEqual(list(receipt.parent.glob('recovery-*.json')), [])
+        no = self.button(w, 'No, go back / cancel this operation')
+        self.assertTrue(no.isDefault())
+        no.click()
+        self.pump(lambda: not w.running)
+        self.assertEqual(receipt.read_bytes(), before)
+        self.assertEqual(list(receipt.parent.glob('recovery-*.json')), [])
+
+        w = self.open_root_review()
+        original_finish = state.Store.finish
+        finishes = []
+        def finish(store, profile):
+            self.assertEqual(receipt.read_bytes(), before)
+            saved = [json.loads(path.read_bytes()) for path in receipt.parent.glob('recovery-*.json')]
+            self.assertEqual(len(saved), 1)
+            self.assertEqual(saved[0]['action'], 'reconcile-recovery')
+            self.assertEqual(saved[0]['reason'], 'product-removal-verified')
+            self.assertEqual(saved[0]['previous'], json.loads(before))
+            finishes.append(profile)
+            return original_finish(store, profile)
+        with patch.object(state.Store, 'finish', finish):
+            self.button(w, 'Continue').click()
+            self.pump(lambda: not w.running)
+        self.assertEqual(finishes, [self.profile])
+        self.assertFalse(receipt.exists())
+        self.assertIn('Original evidence was archived', w.content.toPlainText())
+        self.assert_no_root_mutation()
 
     def test_status_doctor_and_restore_offer_recovery_without_mutating_the_receipt(self):
         for command in ('status', 'doctor', 'restore'):
