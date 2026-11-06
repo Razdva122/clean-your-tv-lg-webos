@@ -140,6 +140,10 @@ from full-only theme regressions. The complete candidate runs missing theme work
 it does not rerun matching browser core. Optional ARM Python, including privileged
 provisioning checks, is another indivisible unit. Dependencies, actual Chromium/
 Playwright and QEMU/sysroot versions are identified before evidence lookup.
+Primary runtime fingerprints also probe the actual system Chrome channel used by
+preview and installer UI tests. A missing/unavailable browser fingerprint forces
+fresh checks and cannot produce a reusable receipt; an unknown value never
+matches another unknown value.
 
 A unit key binds the complete nonmetadata source snapshot from `release-inputs.py`,
 unit/shard/OS, exact Python/Node/dependencies/compiler, runner image and UTC day.

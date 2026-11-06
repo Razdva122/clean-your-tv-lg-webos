@@ -217,6 +217,39 @@ class EvidenceTests(unittest.TestCase):
                 self.artifact.update(size_in_bytes=len(raw), digest='sha256:' + hashlib.sha256(raw).hexdigest())
                 self.assertEqual(self.missing(), ['installer', 'setup', 'tv-runtime', 'ui'])
 
+    def test_primary_runtime_binds_actual_system_chrome_and_unknown_is_not_evidence(self):
+        version = ['130.0.0.0']
+        unavailable = [False]
+        def process(*args):
+            if args[:2] == ('node', '-e') and 'chromium.launch' in args[2]:
+                if unavailable[0]:
+                    raise subprocess.CalledProcessError(1, args)
+                return version[0]
+            return 'fixture'
+        with patch.dict(self.m['environment'].__globals__, {'command': process}), patch.dict('os.environ', {'BROWSER_CHANNEL': 'chrome'}):
+            before = self.m['environment']('runtime')
+            self.assertEqual(before.get('browser'), '130.0.0.0')
+            self.assertEqual(before['browser_channel'], 'chrome')
+            self.ctx = self.context('installer preview', environment=before)
+            self.raw = self.archive(self.m['make_receipt'](self.ctx, 'owner/repo', 10, 1, 100))
+            self.artifact.update(name=self.ctx['artifact'], size_in_bytes=len(self.raw), digest='sha256:' + hashlib.sha256(self.raw).hexdigest())
+            self.assertEqual(self.missing(), [])
+            version[0] = '131.0.0.0'
+            after = self.m['environment']('runtime')
+            self.assertEqual(self.missing(self.context('installer preview', environment=after)), ['installer', 'preview'])
+            version[0] = '130.0.0.0'
+            with patch.dict('os.environ', {'BROWSER_CHANNEL': 'chrome-beta'}):
+                other_channel = self.m['environment']('runtime')
+            self.assertEqual(self.missing(self.context('installer preview', environment=other_channel)), ['installer', 'preview'])
+            self.assertNotIn('browser', self.m['environment']('runtime', '2/4'))
+            unavailable[0] = True
+            unknown = self.m['environment']('runtime')
+            self.assertIsNone(unknown['browser'])
+            ctx = self.context('installer preview', environment=unknown)
+            self.assertEqual(self.missing(ctx), ['installer', 'preview'])
+            with self.assertRaisesRegex(ValueError, 'browser'):
+                self.m['make_receipt'](ctx, 'owner/repo', 20, 1, 200)
+
     def test_api_process_rejects_oversized_download_and_failure(self):
         executable = self.root / 'gh'
         executable.write_text('#!/usr/bin/env python3\nimport sys\nsys.stdout.buffer.write(b"x" * 131073)\n')
@@ -242,7 +275,7 @@ class EvidenceTests(unittest.TestCase):
         globals_ = self.m['main'].__globals__
         with redirect_stdout(io.StringIO()), patch.dict('os.environ', env), patch.dict(globals_, {
                 'github_api': lambda _repo: self.api,
-                'environment': lambda _kind: {'day': '2026-11-06', 'python': '3.12'},
+                'environment': lambda *_args: {'day': '2026-11-06', 'python': '3.12'},
                 'context': lambda *args: real_context(*args, root=self.root)}):
             argv = ['ci-test-evidence.py', 'plan', '--directory', str(directory), '--kind', 'runtime',
                     '--os', 'ubuntu-latest', '--units', 'tv setup installer preview']

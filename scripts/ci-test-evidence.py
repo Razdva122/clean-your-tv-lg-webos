@@ -159,6 +159,8 @@ def validate_receipt(ctx, receipt, artifact, repo, current, api):
 
 
 def select_missing(ctx, repo, current, api):
+    if ctx['environment'].get('browser', '') is None:
+        return {'missing': ctx['units'], 'reused': {}}
     reused = {}
     deadline = time.monotonic() + 60
     def bounded_api(*args, **kwargs):
@@ -194,6 +196,8 @@ def select_missing(ctx, repo, current, api):
 
 
 def make_receipt(ctx, repo, run, attempt, job):
+    if ctx['environment'].get('browser', '') is None:
+        raise ValueError('Cannot attest an unavailable browser fingerprint')
     return dict(schema=1, repository=repo, run=run, attempt=attempt, job=job,
                 checkout=ctx['checkout'], tree=ctx['tree'], kind=ctx['kind'], os=ctx['os'],
                 shard=ctx['shard'], keys={unit: ctx['keys'][unit] for unit in ctx['units']})
@@ -203,7 +207,7 @@ def command(*args):
     return subprocess.check_output(args, text=True, stderr=subprocess.DEVNULL, timeout=60).strip()
 
 
-def environment(kind):
+def environment(kind, shard='1/4'):
     result = {name: os.environ.get(name, '') for name in ('RUNNER_OS', 'RUNNER_ARCH', 'ImageOS', 'ImageVersion')}
     result.update(python=sys.version, node=command('node', '--version'),
                   dependencies=command(sys.executable, '-m', 'pip', 'freeze'),
@@ -212,10 +216,28 @@ def environment(kind):
     if kind != 'optional':
         # npm ci is source pinned; retain actual installed dependency identity too.
         result['npm'] = hashlib.sha256(command('npm', 'ls', '--all', '--json').encode()).hexdigest()
-    if kind == 'browser':
-        executable = command('node', '-e', "process.stdout.write(require('playwright').chromium.executablePath())")
-        result['browser'] = command(executable, '--version')
-        result['playwright'] = command('node', '-e', "process.stdout.write(require('playwright/package.json').version)")
+    if kind == 'browser' or (kind == 'runtime' and shard == '1/4'):
+        # Primary runtime preview/Homebrew checks use system Chrome, independently
+        # of the separate Chromium browser job. Unknown versions never grant reuse.
+        result['browser'] = None
+        try:
+            result['playwright'] = command('node', '-e', "process.stdout.write(require('playwright/package.json').version)")
+            if kind == 'browser':
+                executable = command('node', '-e', "process.stdout.write(require('playwright').chromium.executablePath())")
+                result['browser'] = command(executable, '--version')
+            else:
+                result['browser_channel'] = os.environ.get('BROWSER_CHANNEL') or 'chrome'
+                result['browser'] = command('node', '-e', """
+const {chromium}=require('playwright');
+(async()=>{
+  const browser=await chromium.launch({headless:true,channel:process.env.BROWSER_CHANNEL||'chrome'});
+  try { process.stdout.write(browser.version()); } finally { await browser.close(); }
+})().catch(()=>process.exit(1));
+""")
+            if not result['browser']:
+                result['browser'] = None
+        except (OSError, subprocess.SubprocessError):
+            result['browser'] = None
     if kind == 'optional':
         result['arm'] = command('dpkg-query', '-W', '-f=${Package}=${Version}\n', 'qemu-user', 'libc6-armel-cross', 'libgcc-s1-armel-cross')
     return result
@@ -271,7 +293,7 @@ def main():
         event = strict_json(Path(os.environ['GITHUB_EVENT_PATH']).read_bytes())
         same_repo = (os.environ['GITHUB_EVENT_NAME'] != 'pull_request' or
                      event.get('pull_request', {}).get('head', {}).get('repo', {}).get('full_name') == repo)
-        ctx = context(args.kind, args.os, args.shard, args.units, environment(args.kind))
+        ctx = context(args.kind, args.os, args.shard, args.units, environment(args.kind, args.shard))
         selected = select_missing(ctx, repo, current, api) if attempt == 1 and same_repo else {'missing': ctx['units'], 'reused': {}}
         ctx['units'] = selected['missing']  # Receipts never attest transitively reused units.
         (args.directory / 'plan.json').write_text(json.dumps(ctx))
