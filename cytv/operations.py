@@ -64,6 +64,8 @@ def root_updater_paths():
 
 
 def require_removal_idle(remote, profile, pending):
+    if pending and pending.get('recovery_protocol') == 'no-root-original-stream-v1':
+        raise UserError('The original No-root operation cannot safely continue. Recovery data was kept.', reason_code='pending-operation')
     # A fresh uninstall reserves its journal before restore(), and only changes
     # to "removing" before any package request. Resume that pre-submission state
     # like a fresh uninstall: dev/remove has its own terminal reply stream.
@@ -641,57 +643,22 @@ printf '%s' "$cytv_state"
         for data in (helper, launcher):
             for name, content in package.data_files(data).items():
                 if '/state/' not in name:
-                    expected['/media/developer/apps/' + name] = hashlib.sha256(content).hexdigest()
+                    expected[BASE.removesuffix('/usr/palm') + '/' + name] = hashlib.sha256(content).hexdigest()
         key_data = json.dumps({'key': ssap_key}).encode()
         ids = [app['id'] for app in inventory['apps'] if app['id'] not in (HOME, HELPER, 'com.webos.app.home', package.ROOT_APP)]
         apps_data = json.dumps(ids).encode()
         expected[HELPER_STATE + '/ssap-key.json'] = hashlib.sha256(key_data).hexdigest()
         expected[HELPER_STATE + '/apps.json'] = hashlib.sha256(apps_data).hexdigest()
         storage.install(self.remote, {'helper.ipk': helper, 'launcher.ipk': launcher}, self.progress)
-        self.store.begin(self.profile, 'install', expected=expected,
-                         versions={HOME: self.manifest['home_version'], HELPER: self.manifest['helper_version']})
-        stage = '/media/developer/temp/cytv-' + uuid.uuid4().hex
-        # appinstalld may run as another UID. Allow traversal/read, never foreign writes.
-        self.remote.run('umask 022; mkdir -p /media/developer/temp && '
-                        'case "$(LC_ALL=C ls -ld /media/developer/temp | cut -c10)" in '
-                        'x|t) ;; *) chmod o+x /media/developer/temp || exit 1;; esac && '
-                        'mkdir -m 755 ' + stage)
-        for app, data, name in ((HELPER, helper, 'helper.ipk'), (HOME, launcher, 'launcher.ipk')):
-            self.progress('Installing ' + ('Home Helper' if app == HELPER else 'Home') + '…')
-            path = stage + '/' + name
-            self.remote.upload(path, data, mode=0o644)
-            self.remote.luna('com.webos.appInstallService/dev/install', {'id': app, 'ipkUrl': path, 'subscribe': True}, terminal='installed', timeout=150)
-        self.verify_installed()
-        self.outcome.packages_verified()
-        self.progress('Configuring Home Helper…')
-        self.remote.upload(HELPER_STATE + '/ssap-key.json', key_data, mode=0o640)
-        self.remote.upload(HELPER_STATE + '/apps.json', apps_data, mode=0o644)
-        self.save_eim('unknown')  # Persist uncertainty before submitting registration.
-        try:
-            self.remote.luna('com.webos.service.eim/addDevice', {'appId': HOME, 'pigImage': '', 'mvpdIcon': ''})
-            self.save_eim(True)
-        except TVRejected:
-            self.save_eim(self.read_eim())
-            self.progress('Warning: early input restoration is unavailable; startup will use the guarded fallback.')
-        except RuntimeError:
-            self.store.checkpoint(self.profile, eim_registered='unknown')
-            self.progress('Warning: early input restoration was not confirmed; startup will use the guarded fallback.')
-        self.progress('Starting Home Helper…')
-        self.outcome.launch_submitted()
-        self.remote.luna('com.webos.applicationManager/launch', {'id': HELPER, 'params': {'nativeHomeStart': True}})
-        self.outcome.launch_accepted()
-        from .state import private_write
-        private_write(self.store.device_dir(self.profile) / 'installation.json',
-                      json.dumps({'eim_registered': self.store.pending(self.profile).get('eim_registered', 'unknown')}).encode())
-        self.store.finish(self.profile)
-        self.remote.run('rm -f ' + stage + '/helper.ipk ' + stage + '/launcher.ipk; rmdir ' + stage)
-        try:
-            observed = self.helper_state(timeout=5)
-            self.outcome.startup_observed('process-observed' if observed == 'running' else
-                                          'not-observed' if observed in ('stopped', 'stale') else 'unverified')
-        except Exception:
-            self.outcome.startup_observed('unverified')
-        return {'installed': 'no-root', 'launch_requested': True, 'hardware_verified': False}
+        from . import no_root_observer
+        pending = no_root_observer.begin(self, 'install', {'helper.ipk': helper, 'launcher.ipk': launcher},
+            {HOME: self.manifest['home_version'], HELPER: self.manifest['helper_version']}, expected,
+            {'ssap-key.json': key_data, 'apps.json': apps_data})
+        return self.continue_no_root(pending)
+
+    def continue_no_root(self, expected_pending):
+        from .no_root_observer import continue_operation
+        return continue_operation(self, expected_pending)
 
     def install_root(self, inventory, migrate, reinstall=None):
         if self.tv_info.get('home_backend') == 'c1-native-gate':
@@ -1058,6 +1025,9 @@ print('CYTV_UPDATER_VERIFIED')
 
     def _status(self, reconcile=True, trusted_recovery=False):
         pending = self.store.pending(self.profile)
+        if pending and pending.get('recovery_protocol') == 'no-root-original-stream-v1':
+            from .no_root_observer import observe
+            return observe(self, pending)
         reconciled = None
         reconciliation = None
         can_resume = False
@@ -1559,6 +1529,13 @@ print('CYTV_PROJECT_REMOVED')
         if full_project and self.profile['edition'] == 'root':
             return self.uninstall_project()
         pending = self.store.pending(self.profile)
+        if self.profile['edition']=='no-root' and (not pending or pending.get('recovery_protocol')=='no-root-original-stream-v1'):
+            from . import no_root_observer
+            if pending and pending.get('action')!='uninstall':
+                no_root_observer.refuse()
+            if not pending:
+                pending=no_root_observer.begin(self,'remove',{}, {}, {}, {})
+            return self.continue_no_root(pending)
         if pending:
             # Repeated remove requests are just as uncertain as repeated installs.
             resuming_remove = pending['action'] == 'uninstall' and self.profile['edition'] == 'no-root'

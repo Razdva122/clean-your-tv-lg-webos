@@ -3,8 +3,9 @@
 STATES = ('idle', 'pre-submission', 'waiting', 'setup-ready', 'product-ready', 'cancellation-ready', 'terminal-verified', 'blocked')
 REASONS = ('no-pending-operation', 'removal-not-submitted', 'terminal-evidence-missing',
            'inherited-operation', 'unsupported-receipt', 'foreign-operation', 'operation-live',
-           'packages-verified', 'observation-unverified', 'removal-verified', 'activation-verified', 'final-readback-verified', 'cancellation-verified')
-ACTIONS = ('check', 'inspect-support', 'continue-product', 'cancel-install', 'continue-setup', 'finish-home-off', 'reconcile', 'retain-evidence')
+           'packages-verified', 'observation-unverified', 'removal-verified', 'activation-verified', 'final-readback-verified', 'cancellation-verified',
+           'original-work-remaining', 'original-vendor-failure', 'original-terminal-unknown', 'original-readback-unverified', 'original-reservation-unverified', 'original-configuration-unknown')
+ACTIONS = ('check', 'inspect-support', 'continue-product', 'continue-no-root', 'cancel-install', 'continue-setup', 'finish-home-off', 'reconcile', 'retain-evidence')
 
 
 def assessment_summary(value):
@@ -40,6 +41,14 @@ def assess(profile, pending, observation=None):
         return result('blocked', 'unsupported-receipt', 'retain-evidence')
     if 'previous' in pending:
         return result('blocked', 'inherited-operation', 'retain-evidence')
+    if pending.get('recovery_protocol')=='no-root-original-stream-v1':
+        observer=device.get('observer',{})
+        if not isinstance(observer,dict) or observer.get('operation')!=pending.get('observer_operation'):
+            return result('blocked','observation-unverified','check','retain-evidence')
+        if observation.get('no_root_ready') is True:
+            return result('product-ready','original-work-remaining','continue-no-root','retain-evidence')
+        reason=observation.get('no_root_reason')
+        return result('blocked',reason if reason in REASONS else 'observation-unverified','check','retain-evidence')
     if pending.get('product_operation') and product:
         if product.get('operation') != pending['product_operation']:
             return result('blocked', 'foreign-operation', 'check', 'retain-evidence')
@@ -97,6 +106,8 @@ def summary(profile, pending):
             pass
         elif 'previous' in pending:
             category = 'inherited-operation'
+        elif pending.get('recovery_protocol')=='no-root-original-stream-v1':
+            category = 'no-root-original-stream'
         elif unsubmitted_removal(profile, pending):
             category = 'removal-not-submitted'
         elif pending.get('action') == 'install' and pending.get('stage') == 'pending':
@@ -106,7 +117,7 @@ def summary(profile, pending):
             category = 'removal-started'
     return {'category': category,
             'next_action': ('none' if category == 'none' else 'review-recovery'
-                            if category in ('removal-not-submitted', 'root-activation-pending') else 'retain-evidence'),
+                            if category in ('removal-not-submitted', 'root-activation-pending','no-root-original-stream') else 'retain-evidence'),
             'removals': {known[key]: value for key, value in removals.items()
                          if key in known and value in ('submitted', 'terminal', 'done')}
                         if type(removals) is dict else {}}

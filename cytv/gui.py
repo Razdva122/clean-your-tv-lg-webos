@@ -563,7 +563,7 @@ class Wizard(QMainWindow):
             self.content.moveCursor(self.content.textCursor().MoveOperation.End)
             failed = value not in (0, 130)
             recover = (self.recovery_profile is not None and self.recovery_plan is None and
-                       (value == 0 or (self.failure_help or {}).get('code') == 'removal-not-submitted'))
+                       (value == 0 or (self.failure_help or {}).get('code') in ('removal-not-submitted','no-root-recovery')))
             if self.recovery_plan:
                 self.title.setText(tr('Review recovery options'))
                 self.subtitle.setText(tr(self.recovery_plan['summary']))

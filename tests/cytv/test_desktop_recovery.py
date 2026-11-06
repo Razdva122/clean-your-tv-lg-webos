@@ -355,9 +355,9 @@ class DesktopRecoveryTests(unittest.TestCase):
         action = self.button(w, 'Review recovery options')
         self.assertIsNotNone(action)
         self.assertIsNotNone(self.button(w, 'Save diagnostic report…'))
-        self.assertEqual(w.failure_help['code'], 'removal-not-submitted')
+        self.assertEqual(w.failure_help['code'], 'no-root-recovery')
         report = json.loads(w.report.read_text())
-        self.assertEqual(report['recovery']['category'], 'removal-not-submitted')
+        self.assertEqual(report['recovery']['category'], 'no-root-original-stream')
         before = self.store.pending(self.profile)
         self.remote.luna = original
         action.click()

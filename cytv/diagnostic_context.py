@@ -180,6 +180,18 @@ def status_summary(value):
     value = mapping(value)
     device = mapping(value.get('device', value))
     result = {}
+    if 'observer' in device:
+        observer=mapping(device['observer'])
+        slots=observer.get('slots') if type(observer.get('slots')) is list else []
+        result['observer']={'reservation':choice(observer.get('reservation'),('active','prepared','busy','closed','unknown')),
+            'configuration':{step:choice(state,('prepared','unknown','complete')) for step,state in mapping(observer.get('configuration')).items()
+                             if step in ('files','eim','launch','restore')},
+            'slots':[{'submission':choice(mapping(slot).get('submission'),('prepared','claimed-possibly-submitted','sealed')),
+                      'terminal':choice(mapping(slot).get('terminal'),('none','success','failure')),
+                      'readback':choice(mapping(slot).get('readback'),('not-checked','matches')),
+                      'reason':choice(mapping(slot).get('reason'),('malformed-reply','malformed-utf8','oversized-stream',
+                          'oversized-reply','too-many-replies','oversized-stderr','observation-timeout','sender-unavailable',
+                          'sender-stdin-lost','stream-ended','terminal-persistence-unverified'))} for slot in slots[:2]]}
     if 'cancellation' in value:
         cancellation=mapping(value['cancellation'])
         result['cancellation']={'state':choice(cancellation.get('state'),('blocked','admissible','admitted',

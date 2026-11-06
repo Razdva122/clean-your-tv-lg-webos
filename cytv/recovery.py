@@ -29,6 +29,15 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
         installer.tv_info.update(status=result)
         pending = installer.store.pending(installer.profile)
         assessment = assess(installer.profile, pending, result)
+        if pending and pending.get('recovery_protocol')=='no-root-original-stream-v1':
+            if 'continue-no-root' not in assessment['actions']:
+                raise UserError(BLOCKED,reason_code='pending-operation')
+            plan(write,'ready','The original No-root operation can continue its verified remaining work. Unknown package requests will not be repeated.')
+            if prompts.confirm('Continue the original No-root operation?',ask,write):
+                installer.continue_no_root(pending)
+                plan(write,'complete','Recovery record finished. Original evidence was archived.',SEPARATE)
+            else:write(KEPT)
+            return
         if 'inspect-support' in assessment['actions']:
             write('The original operation is retained. Verified support code can check continuation or cancellation without changing packages or Home control.')
             if not prompts.confirm('Check the original Root operation using verified support code?', ask, write):

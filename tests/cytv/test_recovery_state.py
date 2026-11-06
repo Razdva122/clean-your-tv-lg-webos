@@ -11,6 +11,15 @@ from cytv.recovery import recover
 
 
 class RecoveryStateTests(unittest.TestCase):
+    def test_observer_diagnostics_export_only_fixed_facts(self):
+        from cytv.diagnostic_context import status_summary
+        result=status_summary({'device':{'observer':{'operation':'PRIVATE','plan_sha256':'PRIVATE','reservation':'active',
+            'slots':[{'submission':'claimed-possibly-submitted','terminal':'failure','readback':'not-checked','reason':None,
+                      'reply':{'errorText':'PRIVATE'},'path':'PRIVATE'},
+                     {'submission':'PRIVATE','terminal':'PRIVATE','readback':'PRIVATE','reason':'PRIVATE'}]}}})
+        self.assertEqual(result.get('observer',{}).get('reservation'),'active')
+        self.assertEqual(result['observer']['slots'][0]['terminal'],'failure')
+        self.assertNotIn('PRIVATE',json.dumps(result))
     def test_cancellation_advice_requires_matching_raw_operation_and_never_exports_proof(self):
         from cytv.recovery_state import assess
         pending={'action':'install','product_operation':'a'*32}

@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import re
+import stat
 import tempfile
 import uuid
 from .errors import UserError
@@ -63,7 +64,9 @@ def private_write(path, data):
 
 class Store:
     def __init__(self, root=None):
-        self.root = Path(root) if root else default_dir()
+        # Canonicalize the caller-selected root once (including macOS /var).
+        # Capsule members and subsequently introduced links are still rejected.
+        self.root = (Path(root) if root else default_dir()).resolve()
 
     def device_dir(self, profile):
         normalized = target(**profile)
@@ -74,6 +77,77 @@ class Store:
 
     def save(self, profile):
         private_write(self.device_dir(profile) / 'profile.json', json.dumps(target(**profile)).encode())
+
+    def _capsule_path(self, profile, operation):
+        if not isinstance(operation, str) or not re.fullmatch('[a-f0-9]{32}', operation):
+            raise UserError('The original private recovery capsule is missing or changed. Recovery data was kept.')
+        directory = self.device_dir(profile)
+        # Reuse the existing Chaquopy context proof for Android's system-owned
+        # /data ancestors; desktop roots retain the full ancestry check.
+        from .python_runtime import _android_cache_anchor
+        try:
+            android_anchor=_android_cache_anchor(directory)
+        except UserError:
+            raise UserError('The original private recovery capsule is missing or changed. Recovery data was kept.') from None
+        parents=(directory,*directory.parents)
+        if android_anchor:
+            directory,anchor=android_anchor
+            parents=[];parent=directory
+            while parent!=anchor:
+                parents.append(parent);parent=parent.parent
+        for parent in parents:
+            info = parent.lstat()
+            if not stat.S_ISDIR(info.st_mode):
+                raise UserError('The original private recovery capsule is missing or changed. Recovery data was kept.')
+            if os.name != 'nt' and (info.st_uid not in (0, os.getuid()) or
+                    info.st_mode & 0o022 and not (info.st_uid == 0 and info.st_mode & stat.S_ISVTX)):
+                raise UserError('The original private recovery capsule is missing or changed. Recovery data was kept.')
+        if os.name != 'nt' and directory.lstat().st_mode & 0o077:
+            raise UserError('The original private recovery capsule is missing or changed. Recovery data was kept.')
+        return directory / ('capsule-' + operation + '.json')
+
+    def save_capsule(self, profile, operation, value):
+        """Exclusive original bytes, durable before any remote effect."""
+        path = self._capsule_path(profile, operation)
+        raw = json.dumps(value, sort_keys=True, separators=(',', ':')).encode()
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, 'O_NOFOLLOW', 0), 0o600)
+        with os.fdopen(fd, 'wb') as stream:
+            stream.write(raw)
+            stream.flush()
+            os.fsync(stream.fileno())
+        sync_directory(path.parent)
+        return hashlib.sha256(raw).hexdigest()
+
+    def read_capsule(self, profile, operation, digest):
+        try:
+            path = self._capsule_path(profile, operation)
+            before = path.lstat()
+            if (not stat.S_ISREG(before.st_mode) or before.st_nlink != 1 or before.st_size > 192*1024*1024 or
+                    os.name != 'nt' and (before.st_uid != os.getuid() or before.st_mode & 0o777 != 0o600)):
+                raise ValueError('unsafe capsule')
+            fd = os.open(path, os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0) | getattr(os, 'O_NONBLOCK', 0))
+            with os.fdopen(fd, 'rb') as stream:
+                opened = os.fstat(stream.fileno())
+                if (before.st_dev, before.st_ino) != (opened.st_dev, opened.st_ino):
+                    raise ValueError('changed capsule')
+                raw = stream.read(192*1024*1024+1)
+            if len(raw) > 192*1024*1024 or hashlib.sha256(raw).hexdigest() != digest:
+                raise ValueError('changed capsule')
+            return json.loads(raw)
+        except (OSError, ValueError, TypeError):
+            raise UserError('The original private recovery capsule is missing or changed. Recovery data was kept.',
+                            reason_code='pending-operation') from None
+
+    def retire_capsule(self, profile, operation, digest):
+        """Retire only exact original bytes after the caller archived completion."""
+        path=self._capsule_path(profile,operation)
+        before=path.lstat()
+        self.read_capsule(profile,operation,digest)
+        after=path.lstat()
+        if (before.st_dev,before.st_ino)!=(after.st_dev,after.st_ino):
+            raise UserError('The original private recovery capsule is missing or changed. Recovery data was kept.')
+        path.unlink()
+        sync_directory(path.parent)
 
     def connection_profile(self, selected):
         """Resolve pending work to its original saved identity, before connecting."""
