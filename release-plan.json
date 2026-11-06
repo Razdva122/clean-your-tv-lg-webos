@@ -117,5 +117,10 @@
       "reason": "Metadata-only inventory/build-pin record; no additional product change."
     }
   ],
-  "acceptance": ""
+  "acceptance": "",
+  "build": {
+    "run_id": 42176689817,
+    "attempt": 1,
+    "source": "6659cd9ed1dd16d19f452d1d2a958c51c092b0a4"
+  }
 }
