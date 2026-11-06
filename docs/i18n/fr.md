@@ -85,6 +85,12 @@ Indiquez modèle de TV, micrologiciel, No-root ou Root, appareil d’installatio
 
 Dans les prochaines versions, l’avertissement et le bouton « Désactiver l’aperçu HDMI » apparaissent lorsque la 4K est sélectionnée ou active, uniquement pour les thèmes dont l’aperçu des entrées est activé. Pendant l’aperçu HDMI, le fond vidéo 4K est temporairement remplacé par une image fixe en 1080p. Désactivez l’aperçu des entrées pour conserver le fond en 4K.
 
+### Candidat : récupération et suppression complète
+
+Les boutons ci-dessus téléchargent toujours la version publiée. Le prochain candidat ajoute la poursuite de l’opération d’origine et **Désinstaller Clean Your TV** sur ordinateur et Android. Utilisez la même connexion enregistrée ; confirmez séparément l’inspection et chaque modification. Une configuration Root admissible peut se terminer avec LG Home et le contrôle Home désactivé. Cet objectif est atteint ; bouton Home, son, veille et démarrage à froid restent des vérifications distinctes.
+
+La suppression conserve le résultat précédent et n’annonce un succès qu’après vérification du retrait des applications, services, démarrage automatique et données privées propres. Travail en cours, résultats fournisseur inconnus, conflits de propriété ou contrôles indisponibles peuvent la bloquer ; elle n’est pas garantie après tout échec. Gardez le rapport existant et les données de récupération. Ne réinstallez pas, n’effacez pas les données de l’application, ne réinitialisez pas Developer Mode et ne forcez pas la suppression. Un futur observateur ne reconstitue pas les anciens résultats. Les commandes d’urgence restent valables ; le partage des rapports exige votre accord.
+
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="python-facultatif-pour-root-dans-v110"></a>
 <a id="blocage-du-micrologiciel-lg-dans-120"></a>

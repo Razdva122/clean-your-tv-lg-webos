@@ -198,6 +198,41 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.assertEqual(list(receipt.parent.glob('recovery-*.json')), [])
         self.assert_no_root_mutation()
 
+    def test_cancelled_recovery_auth_keeps_original_records_and_shows_cancelled(self):
+        from cytv.transport import CredentialPrompt
+        receipt = self.prepare_root_recovery()
+        directory = receipt.parent
+        before = {name:(directory/name).read_bytes() for name in ('operation.json','profile.json','known_hosts')}
+        def connect(profile, directory, secret, trust, **kwargs):
+            secret(CredentialPrompt('Root SSH password (hidden): ', 'root'))
+            raise AssertionError('Cancelled authentication must stop before connection')
+        self.connect = connect
+        w = self.window()
+        w.start('recover')
+        self.pump(lambda: w.pending is not None)
+        self.assertEqual(w.pending.credential_type, 'root')
+        self.assertEqual(w.title.text(), 'Root SSH password (hidden)')
+        w.channel.answer(None)
+        self.pump(lambda: not w.running)
+        self.assertEqual(w.title.text(), 'Cancelled')
+        self.assertFalse(any(row.property('state') == 'complete' for row in w.step_rows))
+        self.assertEqual(before, {name:(directory/name).read_bytes() for name in before})
+        self.assertEqual(self.remote.calls, [])
+
+    def test_uninstall_zero_exit_without_verified_cleanup_is_review(self):
+        w = self.window()
+        w.command = 'uninstall'
+        w.receive('done', 0)
+        self.assertEqual(w.title.text(), 'Review recovery options')
+        self.assertEqual(w.badge.text(), w.title.text())
+        self.assertIn('Removal is not verified.', w.subtitle.text())
+        w.receive('recovery-plan', {'state':'waiting','disposition':'clean-removal',
+                                  'summary':'Removal has been requested.',
+                                  'next_step':'Connect to the TV to continue cleanup.'})
+        w.receive('done', 130)
+        self.assertEqual(w.title.text(), 'Cancelled')
+        self.assertEqual(w.badge.text(), 'Cancelled')
+
     def test_root_home_off_is_directly_selectable_and_declining_keeps_receipt(self):
         receipt = self.prepare_root_recovery()
         before = receipt.read_bytes()
@@ -235,6 +270,8 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.assertEqual(saved[0]['previous'], original)
         self.assertFalse(receipt.exists())
         self.assertIn('Root setup finished with LG Home', w.content.toPlainText())
+        self.assertEqual(w.title.text(), 'Root setup finished with LG Home and Home control off.')
+        self.assertEqual(w.badge.text(), w.title.text())
         self.assert_no_root_mutation()
 
     def test_root_reconciliation_defaults_no_then_archives_before_explicit_clear(self):
@@ -326,7 +363,7 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.assertFalse(any(c[0] == 'upload' for c in self.remote.calls))
         w.submit('y')
         self.pump(lambda: not w.running)
-        self.assertEqual(w.title.text(), 'Review recovery options', w.content.toPlainText())
+        self.assertEqual(w.title.text(), w.recovery_plan['summary'], w.content.toPlainText())
         self.assertIsNone(self.store.pending(self.profile))
         self.assertTrue(all(p == self.profile for p in self.connections))
         calls = [c for c in self.remote.calls if c[0] == 'luna']
@@ -426,6 +463,8 @@ class DesktopRecoveryTests(unittest.TestCase):
         w.submit('n')
         self.pump(lambda: not w.running)
         self.assertIsNotNone(self.store.pending(self.profile))
+        self.assertEqual(w.badge.text(), 'Review recovery options')
+        self.assertFalse(any(row.property('state') == 'complete' for row in w.step_rows))
         self.assertFalse(any(c[0] == 'upload' or c[1] == 'com.webos.appInstallService/status' for c in self.remote.calls))
 
     def test_install_collects_explicit_home_result_without_reinstalling(self):

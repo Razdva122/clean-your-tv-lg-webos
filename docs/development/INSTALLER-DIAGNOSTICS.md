@@ -7,6 +7,18 @@ from a diagnostic report.
 
 ## Report contents
 
+The next recovery candidate adds a fixed semantic `frontend` field:
+`console`, `desktop` or `android`. It is separate from the existing Python
+runtime/operating-system fields; an Android installer must not be inferred from
+the Python platform name. Original installation failure, current inspection or
+authentication failure, source package versions, observed installed components
+and physical outcomes remain separate. Unknown old failure causes stay unknown.
+Do not repeat installation, doctor or status merely to populate these fields.
+The safe clean-removal summary contains only fixed state, stage, reason and
+original-outcome categories. It does not export the original receipt, private
+recovery data, operation IDs, tokens, paths or raw replies, and grants no mutation
+authority. [Failure-injection matrix](INSTALLER-RECOVERY-MATRIX.md).
+
 New package rejection reports preserve the fixed `install failed` and
 `remove failed` Luna states. When the original reply includes `details.reason`,
 optional `luna.reason` retains only the nine fixed LG OSE IPK failure categories

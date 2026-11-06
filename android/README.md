@@ -64,6 +64,16 @@ The start screen also has **Wallpapers**, which explains the TV-hosted QR upload
 
 ## Interrupted Root installation inspection (1.8.2)
 
+The next unpublished candidate also adds **Uninstall Clean Your TV** to
+Maintenance and shared original-operation recovery choices. Inspection and changes
+are confirmed separately. Pending work, retained evidence and cancelled sign-in
+remain review outcomes. A completed LG Home/Home-control-off choice is shown as
+that achieved goal, with physical checks still marked separately. Removal is
+successful only after owned package/service/startup/private-data cleanup is
+verified; missing proof can still block it. Keep Android app data and the existing
+report. Do not reinstall or reset Developer Mode to fill a report or bypass a
+refusal. This candidate scope is separate from the published inspection below.
+
 Published 1.8.2 (Android 0.8.2 / versionCode 22) includes a bounded inspection
 path for an original Root `install / coordinator-submitted` operation. It reads
 evidence without resuming the failed installation. Update the existing app in
@@ -97,8 +107,9 @@ check status before reinstalling. The app retains operation receipts and does
 not automatically repeat installation after process death. Keep the same TV,
 edition and SSH port; pending or unknown outcomes need inspection.
 
-Android exposes install, status and restore. For removal, use desktop/CLI with
-the retained connection and evidence. An interrupted No-root removal needs its
+Published Android exposes install, status, inspection and restore. The next
+candidate adds explicit removal in Maintenance; use its retained connection and
+evidence. An interrupted No-root removal needs its
 verified continuation and separate confirmation; an unknown removal outcome stays
 blocked. Status and restore do not download Python. Keep runtime slots needed
 for recovery.

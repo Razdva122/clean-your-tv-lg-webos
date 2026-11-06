@@ -85,6 +85,12 @@ Indica modello TV, firmware, No-root o Root, dispositivo di installazione, passa
 
 Nelle prossime build, l’avviso e il pulsante «Disattiva anteprima HDMI» compaiono con 4K selezionato o attivo solo nei temi con l’anteprima degli ingressi abilitata. Durante l’anteprima HDMI, lo sfondo video 4K viene temporaneamente sostituito da un’immagine statica a 1080p. Disattiva l’anteprima degli ingressi per mantenere lo sfondo in 4K.
 
+### Candidato: ripristino e rimozione completa
+
+I pulsanti sopra scaricano ancora la versione pubblicata. Il prossimo candidato aggiunge la continuazione dell’operazione originale e **Disinstalla Clean Your TV** su computer e Android. Usa la stessa connessione salvata; conferma separatamente l’ispezione e ogni modifica. Una configurazione Root idonea può terminare con LG Home e controllo Home disattivato. L’obiettivo scelto è raggiunto; tasto Home, audio, standby e avvio a freddo restano controlli distinti.
+
+La rimozione conserva l’esito precedente e indica successo solo dopo aver verificato la rimozione di app, servizi, avvio automatico e dati privati propri. Attività pendenti, esiti del fornitore sconosciuti, conflitti di proprietà o controlli non disponibili possono bloccarla; non è garantita dopo qualsiasi errore. Conserva il rapporto esistente e i dati di ripristino. Non reinstallare, cancellare i dati dell’app, ripristinare Developer Mode o forzare l’eliminazione. Un osservatore futuro non ricostruisce esiti precedenti. Restano validi i comandi di emergenza; condividere rapporti richiede il tuo consenso.
+
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="requisiti"></a>
 <a id="python-opzionale-per-root"></a>

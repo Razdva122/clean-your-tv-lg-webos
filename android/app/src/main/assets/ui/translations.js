@@ -17,6 +17,9 @@ const languages = {
 };
 const words = {
   "cs": {
+    "uninstall": "Odinstalovat Clean Your TV",
+    "uninstallDesc": "Odebere aplikace a jejich data nastavení. Vyžaduje samostatné potvrzení.",
+
     "setupTV": "Nastavit televizor",
     "wallpapers": "Tapety",
     "maintenance": "Údržba",
@@ -160,6 +163,9 @@ const words = {
     "tvChecksDesc": "Ověření balíčků, zpětná kontrola spuštění a vaše pozorování tlačítka Home jsou samostatné výsledky."
   },
   "ru": {
+    "uninstall": "Удалить Clean Your TV",
+    "uninstallDesc": "Удаление приложений и их данных настройки. Нужно отдельное подтверждение.",
+
     "setupTV": "Настроить телевизор",
     "wallpapers": "Обои",
     "maintenance": "Обслуживание",
@@ -303,6 +309,9 @@ const words = {
     "tvChecksDesc": "Проверка пакетов, состояние запуска и ваше наблюдение за Home — разные результаты."
   },
   "en": {
+    "uninstall": "Uninstall Clean Your TV",
+    "uninstallDesc": "Remove the apps and owned setup data. A separate confirmation is required.",
+
     "setupTV": "Set up TV",
     "wallpapers": "Wallpapers",
     "maintenance": "Maintenance",
@@ -446,6 +455,9 @@ const words = {
     "tvChecksDesc": "Package verification, startup readback and your Home-button observation are separate results."
   },
   "de": {
+    "uninstall": "Clean Your TV deinstallieren",
+    "uninstallDesc": "Apps und eigene Einrichtungsdaten entfernen. Separate Bestätigung erforderlich.",
+
     "setupTV": "TV einrichten",
     "wallpapers": "Hintergrundbilder",
     "maintenance": "Wartung",
@@ -589,6 +601,9 @@ const words = {
     "tvChecksDesc": "Paketprüfung, Startprüfung und Ihre Home-Beobachtung sind getrennte Ergebnisse."
   },
   "fr": {
+    "uninstall": "Désinstaller Clean Your TV",
+    "uninstallDesc": "Supprime les applications et leurs données de configuration. Confirmation séparée requise.",
+
     "setupTV": "Configurer la TV",
     "wallpapers": "Fonds d’écran",
     "maintenance": "Maintenance",
@@ -732,6 +747,9 @@ const words = {
     "tvChecksDesc": "Vérification des paquets, démarrage et votre observation de Home sont des résultats distincts."
   },
   "it": {
+    "uninstall": "Disinstalla Clean Your TV",
+    "uninstallDesc": "Rimuovi le app e i relativi dati di configurazione. Serve una conferma separata.",
+
     "setupTV": "Configura TV",
     "wallpapers": "Sfondi",
     "maintenance": "Manutenzione",
@@ -875,6 +893,9 @@ const words = {
     "tvChecksDesc": "Verifica pacchetti, avvio e tua osservazione di Home sono risultati separati."
   },
   "es": {
+    "uninstall": "Desinstalar Clean Your TV",
+    "uninstallDesc": "Elimina las apps y sus datos de configuración. Requiere confirmación aparte.",
+
     "setupTV": "Configurar TV",
     "wallpapers": "Fondos de pantalla",
     "maintenance": "Mantenimiento",
@@ -1018,6 +1039,9 @@ const words = {
     "tvChecksDesc": "La verificación de paquetes, el inicio y tu observación de Home son resultados separados."
   },
   "pt-BR": {
+    "uninstall": "Desinstalar Clean Your TV",
+    "uninstallDesc": "Remove os apps e seus dados de configuração. Exige confirmação separada.",
+
     "setupTV": "Configurar TV",
     "wallpapers": "Papéis de parede",
     "maintenance": "Manutenção",
@@ -1161,6 +1185,9 @@ const words = {
     "tvChecksDesc": "Verificação de pacotes, inicialização e sua observação de Home são resultados separados."
   },
   "pl": {
+    "uninstall": "Odinstaluj Clean Your TV",
+    "uninstallDesc": "Usuń aplikacje i ich dane konfiguracji. Wymaga osobnego potwierdzenia.",
+
     "setupTV": "Skonfiguruj TV",
     "wallpapers": "Tapety",
     "maintenance": "Konserwacja",
@@ -1304,6 +1331,9 @@ const words = {
     "tvChecksDesc": "Weryfikacja pakietów, odczyt startu i Twoja obserwacja Home to osobne wyniki."
   },
   "ko": {
+    "uninstall": "Clean Your TV 제거",
+    "uninstallDesc": "앱과 해당 설정 데이터를 제거합니다. 별도 확인이 필요합니다.",
+
     "setupTV": "TV 설정",
     "wallpapers": "배경화면",
     "maintenance": "유지 관리",
@@ -1447,6 +1477,9 @@ const words = {
     "tvChecksDesc": "패키지 검증, 시작 확인, Home 버튼 관찰은 별도의 결과입니다."
   },
   "hi": {
+    "uninstall": "Clean Your TV हटाएं",
+    "uninstallDesc": "ऐप और उनका सेटअप डेटा हटाएँ। अलग पुष्टि आवश्यक है।",
+
     "setupTV": "टीवी सेट करें",
     "wallpapers": "वॉलपेपर",
     "maintenance": "रखरखाव",
@@ -1590,6 +1623,9 @@ const words = {
     "tvChecksDesc": "पैकेज सत्यापन, प्रारंभ जाँच और आपका Home अवलोकन अलग परिणाम हैं।"
   },
   "zh-Hans": {
+    "uninstall": "卸载 Clean Your TV",
+    "uninstallDesc": "移除应用及其设置数据。需要另行确认。",
+
     "setupTV": "设置电视",
     "wallpapers": "壁纸",
     "maintenance": "维护",
@@ -1733,6 +1769,9 @@ const words = {
   "tvChecksDesc": "软件包验证、启动状态回读和您的 Home 按钮观察是不同结果。"
 },
   "zh-Hant": {
+    "uninstall": "解除安裝 Clean Your TV",
+    "uninstallDesc": "移除應用程式及其設定資料。需要另行確認。",
+
     "setupTV": "設定電視",
     "wallpapers": "桌布",
     "maintenance": "維護",

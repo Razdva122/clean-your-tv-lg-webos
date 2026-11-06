@@ -85,6 +85,12 @@ Informe modelo, firmware, No-root ou Root, dispositivo de instalação, etapa e 
 
 Nas próximas versões, o aviso e o botão “Desativar prévia HDMI” aparecem com 4K selecionado ou ativo somente em temas com a prévia de entradas ativada. Durante a prévia HDMI, o vídeo de fundo em 4K é temporariamente substituído por uma imagem estática em 1080p. Desative a prévia de entradas para manter o fundo em 4K.
 
+### Candidato: recuperação e remoção completa
+
+Os botões acima continuam baixando a versão publicada. O próximo candidato adiciona continuação da operação original e **Desinstalar Clean Your TV** no computador e Android. Use a mesma conexão salva; confirme a inspeção e cada alteração separadamente. Uma configuração Root elegível pode terminar com LG Home e controle Home desligado. Esse objetivo fica concluído; botão Home, som, espera e inicialização a frio continuam verificações separadas.
+
+A remoção preserva o resultado anterior e só informa sucesso após verificar a retirada dos apps, serviços, inicialização automática e dados privados próprios. Trabalho pendente, resultados desconhecidos do fornecedor, conflitos de propriedade ou verificações indisponíveis podem bloqueá-la; não há garantia após qualquer falha. Preserve o relatório existente e os dados de recuperação. Não reinstale, apague dados do app, redefina Developer Mode nem force a exclusão. Um observador futuro não reconstrói resultados antigos. Os controles de emergência acima continuam válidos; compartilhar relatórios exige sua autorização.
+
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="python-opcional-para-root"></a>
 <a id="testes-em-hardware-e-limites"></a>

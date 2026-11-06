@@ -45,6 +45,7 @@ bash scripts/test.sh
 node android/tests/ui.cjs
 node android/tests/localization.cjs
 node android/tests/maintenance.cjs
+node android/tests/recovery-journey.cjs
 node android/tests/screenshots.cjs
 ```
 

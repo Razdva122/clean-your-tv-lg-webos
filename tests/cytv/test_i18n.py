@@ -54,6 +54,21 @@ class LanguageTests(unittest.TestCase):
                 self.assertNotEqual(lang.translate(prompt).strip(), prompt.strip())
                 self.assertNotEqual(lang.translate(title), title)
 
+    def test_desktop_typed_credentials_survive_all_localized_labels(self):
+        from cytv.desktop import Channel
+        from cytv.transport import CredentialPrompt
+        lang = self.language()
+        for code in set(lang.LANGUAGES) - {'auto'}:
+            lang.set_language(code)
+            for kind, label in [('key','SSH key passphrase: '), ('root','Root SSH password (hidden): '),
+                                ('developer','Developer Mode passphrase: ')]:
+                events = []
+                channel = Channel(lambda *event: events.append(event))
+                channel.answer('private fixture')
+                channel.secret(CredentialPrompt(lang.translate(label), kind))
+                with self.subTest(language=code, credential=kind):
+                    self.assertEqual(events[-1][1].credential_type, kind)
+
     def test_fixed_failure_guidance_translates_in_every_installer_locale(self):
         from cytv.failure_help import GUIDES
         from cytv.checks import LABELS
@@ -64,6 +79,25 @@ class LanguageTests(unittest.TestCase):
             lang.set_language(code)
             for message in messages:
                 with self.subTest(language=code,text=message):self.assertNotEqual(lang.translate(message),message)
+
+    def test_recovery_choices_plans_and_pending_auth_advice_translate_completely(self):
+        import ast
+        import re
+        lang = self.language()
+        source = Path(__file__).resolve().parents[2] / 'cytv/recovery.py'
+        messages = set()
+        for node in ast.walk(ast.parse(source.read_text())):
+            if not isinstance(node, ast.Call): continue
+            name = node.func.id if isinstance(node.func, ast.Name) else getattr(node.func, 'attr', '')
+            values = node.args[2:4] if name == 'plan' else node.args[1:2] if name == 'option' else []
+            messages.update(value.value for value in values if isinstance(value, ast.Constant) and isinstance(value.value, str))
+        messages.update(('Recovery action [0]: ', 'Recovery action', 'Keep the original saved TV connection and recovery data; do not replace or edit the connection to bypass recovery.'))
+        for code in set(lang.LANGUAGES) - {'en', 'auto'}:
+            lang.set_language(code)
+            for message in messages:
+                for sentence in ([message.strip()] if message.strip() in lang.MESSAGES else re.split(r'(?<=[.!?]) +', message.strip())):
+                    with self.subTest(language=code, text=sentence):
+                        self.assertNotEqual(lang.translate(sentence), sentence)
 
     def test_locale_variants_and_unsupported_fallback(self):
         lang = self.language()

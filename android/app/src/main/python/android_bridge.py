@@ -10,7 +10,7 @@ from cytv.terminal import Console
 
 def arguments(config, directory, identity=''):
     action = config.get('action', 'install')
-    if action not in ('install', 'status', 'doctor', 'home-diagnostics', 'recover', 'restore'):
+    if action not in ('install', 'status', 'doctor', 'home-diagnostics', 'recover', 'restore', 'uninstall'):
         raise ValueError('Unsupported Android operation')
     profile = state.target(config.get('host', ''), config.get('edition', ''), config.get('port'))
     language = config.get('language', 'ru')
@@ -89,6 +89,8 @@ class Callbacks:
 
 class AndroidConsole(Console):
     """Emit progress from canonical CLI messages before Console translates them."""
+    frontend = 'android'
+
     def __init__(self, callbacks):
         super().__init__(callbacks.write, interactive=False)
         self.callbacks = callbacks
@@ -111,7 +113,8 @@ class AndroidConsole(Console):
     def recovery_plan(self, value):
         super().recovery_plan(value)
         self.callbacks.emit(kind='recovery-plan', state=value['state'],
-                            summary=i18n.translate(value['summary']), nextStep=i18n.translate(value['next_step']))
+                            summary=i18n.translate(value['summary']), nextStep=i18n.translate(value['next_step']),
+                            **{key:value[key] for key in ('disposition','verified_clean','actions','reason') if key in value})
 
     def error(self, message, heading=False):
         # Input mistakes can be corrected; the CLI exit code decides the result.
