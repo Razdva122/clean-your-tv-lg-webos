@@ -531,20 +531,29 @@ class LocalDevice:
         if not re.fullmatch(r'[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}',value):raise ValueError('boot_id_unavailable')
         return value
 
-    def sweep_package(self, app):
-        from clean_removal import APPS, retire_tree
+    def shared_cleanup(self, action, record, app=None):
+        """Current bundled NoRoot namespace cleaner; retained source is never run."""
+        name='cleanup_no_root_private.js'
+        raw=safe_bytes(self.payload/'root-updater'/name,uid=self.ownership.store.uid)
+        manifest=json.loads(safe_bytes(self.payload/'root-updater/bundle.json',uid=self.ownership.store.uid))
+        if sha(raw)!=manifest['files'].get(name):raise ValueError('current_cleanup_support_changed')
+        result=subprocess.run(['/usr/bin/node','-e',raw.decode(),json.dumps({'action':action,'app':app,'staging_ids':record.get('cleanup_staging_ids',[])})],
+            stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=90,
+            env={key:value for key,value in os.environ.items() if key not in ('NODE_OPTIONS','NODE_PATH')})
+        if result.returncode:raise ValueError('private_cleanup_unconfirmed')
+        value=json.loads(result.stdout)
+        if value.get('schema')!=1 or not all(isinstance(value.get(k),list) for k in ('present','blocked','root_present')):
+            raise ValueError('private_cleanup_unconfirmed')
+        if value['blocked']:
+            if any(item.get('reason')=='permission-denied' for item in value['blocked']):raise PermissionError('private_cleanup_denied')
+            raise ValueError('private_cleanup_unsafe_path')
+        return value
+
+    def sweep_package(self, app, record):
+        from clean_removal import APPS
         if app not in APPS:raise ValueError('foreign_package')
-        for path in self.package_paths(app):
-            if not os.path.lexists(path):continue
-            parent_uid=path.parent.lstat().st_uid
-            if parent_uid not in (0,self.ownership.store.uid,5999):raise ValueError('foreign_package_owner')
-            os.close(checked_store(path.parent,parent_uid)._directory())
-            info=path.lstat()
-            if info.st_uid not in (0,self.ownership.store.uid,5999):raise ValueError('foreign_package_owner')
-            if path.is_symlink():path.unlink();continue
-            if not path.is_dir():raise ValueError('unsafe_package_remainder')
-            retire_tree(path,set(os.listdir(path)),uid=info.st_uid,parent_uid=parent_uid)
-            path.rmdir()
+        result=self.shared_cleanup('root-package',record,app=app)
+        if result['present']:raise ValueError('package_remains')
 
     def clean_remove(self, record, save):
         """Full removal using current support, old snapshots and original locks."""
@@ -560,6 +569,10 @@ class LocalDevice:
             if record['stage']=='restart-required' and not restarted:
                 return {'removed':False,'verified_clean':False,'restart_required':True}
             self.clean_quiescent(record)
+            private=self.shared_cleanup('inventory',record)
+            record['cleanup_staging_ids']=private.get('staging_ids',[])
+            if private.get('external_update_hint'):record['previous_update_status']=private['external_update_hint']
+            restart_first=private.get('resident_installer') or private.get('external_update_hint')
             if 'original-writers-fenced' not in record['done']:
                 # A component that held its own lock before our first attempt
                 # may have advanced since the initial snapshot. Preserve both
@@ -619,16 +632,25 @@ class LocalDevice:
                 if 'com.local.nativehome' in self.apps():
                     disabled=self.rpc('com.local.nativehome.service/disable',{})
                     if disabled.get('returnValue') is not True:raise ValueError('helper_stop_unverified')
+                    cancel=disabled.get('cancel',{})
+                    if cancel.get('returnValue') is not True and cancel.get('errorCode')!=2:raise ValueError('helper_startup_remains')
                 if 'com.gathin.tvhome' in self.apps():
-                    self.rpc('com.webos.service.eim/deleteDevice',{'appId':'com.gathin.tvhome'})
-                    devices=self.rpc('com.webos.service.eim/getAllInputStatus',{}).get('devices')
-                    if not isinstance(devices,list) or any(d.get('id')=='com.gathin.tvhome' or d.get('appId')=='com.gathin.tvhome' for d in devices):
-                        raise ValueError('owned_input_registration_remains')
+                    renewal=self.rpc('com.gathin.tvhome.renewal/disable',{})
+                    if renewal.get('returnValue') is not True or renewal.get('state',{}).get('enabled') is not False or renewal.get('state',{}).get('error'):
+                        raise ValueError('home_startup_remains')
                 # Existing precise legacy permission remover restores its own
                 # original bytes. No blanket routing setter is used.
                 self.cleanup('legacy_permissions')
                 record['routes']=routes(self,record)
                 record['done'].append('controls-restored');save('controls-restored')
+            self.remove_owned_registrations()
+            stopped=self.shared_cleanup('stop',record)
+            if stopped.get('controller_running') and restarted:
+                record['cleanup_boot_id']=current_boot
+                restarted=False
+            if stopped.get('controller_running') or restart_first and not restarted:
+                save('restart-required')
+                return {'removed':False,'verified_clean':False,'restart_required':True}
             save('package-removal')
             package_error=None
             try:
@@ -638,6 +660,7 @@ class LocalDevice:
                 package_error=error
             if not package_error and 'package-removal' not in record['done']:record['done'].append('package-removal')
             save('private-cleanup')
+            self.shared_cleanup('sweep',record)
             try:
                 self.clean_quiescent(record,all_processes=True)
                 self.retire_clean_private(record)
@@ -655,6 +678,24 @@ class LocalDevice:
             if 'private-cleanup' not in record['done']:record['done'].append('private-cleanup')
             save('private-cleanup')
         return {'removed':True,'verified_clean':True,'applications_services_startup_removed':True,'private_cleanup_verified':True}
+
+    def remove_owned_registrations(self):
+        devices=self.rpc('com.webos.service.eim/getAllInputStatus',{}).get('devices')
+        if not isinstance(devices,list):raise ValueError('input_readback_unverified')
+        if any(item.get('id')=='com.gathin.tvhome' or item.get('appId')=='com.gathin.tvhome' for item in devices):
+            if self.rpc('com.webos.service.eim/deleteDevice',{'appId':'com.gathin.tvhome'}).get('returnValue') is not True:
+                raise ValueError('owned_input_registration_remains')
+        activities=self.rpc('com.palm.activitymanager/list',{'details':True,'subscribers':True,'current':False,'internal':False}).get('activities')
+        if not isinstance(activities,list):raise ValueError('activity_readback_unverified')
+        own={'com.local.nativehome.boot':'luna://com.local.nativehome.service/tick',
+             'com.gathin.tvhome.renewal.hourly':'luna://com.gathin.tvhome.renewal/tick',
+             'com.cleanyourtv.root.preview.service.recovery':'luna://com.cleanyourtv.root.preview.service/boot'}
+        for item in activities:
+            if own.get(item.get('name'))!=item.get('callback',{}).get('method') or item.get('name') not in own:continue
+            identifier=item.get('activityId')
+            if type(identifier) is not int or identifier<0:raise ValueError('owned_activity_unverified')
+            result=self.rpc('com.palm.activitymanager/cancel',{'activityId':identifier})
+            if result.get('returnValue') is not True and result.get('errorCode')!=2:raise ValueError('owned_activity_remains')
 
     def retire_clean_private(self, record):
         from clean_removal import retire_tree
@@ -735,8 +776,8 @@ class LocalDevice:
                 if names!={'package.ipk'} or sha(safe_bytes(stage/'package.ipk',limit=32*1024*1024,uid=uid)) not in record['staging_hashes']:
                     raise ValueError('unclassified_package_staging')
                 retire_tree(stage,{'package.ipk'},uid=uid)
-        # Classify a historical archive by its own exact completed-removal
-        # receipt. A matching filename alone is never ownership evidence.
+        # Classify by known app/path ownership, never by old success. A matching
+        # filename alone is not enough to delete an unknown archive.
         archives=record.get('archives')
         discovered=[]
         for index,root in enumerate(roots):
@@ -750,11 +791,11 @@ class LocalDevice:
                 store=checked_store(path,uid)
                 if index==0:
                     proof=_optional_record(store,'deploy')
-                    if not isinstance(proof,dict) or proof.get('app')!=APP or proof.get('stage')!='uninstalled-state-retained':
+                    if not isinstance(proof,dict) or proof.get('app')!=APP:
                         raise ValueError('unclassified_private_archive')
                 else:
                     proof=_optional_record(store,'cytv-removal')
-                    if not isinstance(proof,dict) or proof.get('phase')!='disabled' or proof.get('archive')!=str(path):
+                    if not isinstance(proof,dict) or proof.get('archive')!=str(path):
                         raise ValueError('unclassified_private_archive')
                 info=path.lstat()
                 discovered.append({'component':index,'path':str(path),'dev':info.st_dev,'ino':info.st_ino})
@@ -976,12 +1017,8 @@ class LocalDevice:
         for name in ('/var/luna-service2/manifests.d/com.cleanyourtv.root.preview.recovery.json',
                      '/var/webos-profile/override/clean-your-tv-root.json'):
             if os.path.lexists(name):raise ValueError('owned_registration_remains')
-        # Task8 owns UID5999 observer/carrier retirement. Until its typed bridge
-        # proves that scope, Root must not bless residual private NoRoot state.
-        if os.path.lexists('/media/developer/.cytv-installer'):raise ValueError('no_root_private_cleanup_required')
-        no_root_temp=Path('/media/developer/temp')
-        if os.path.lexists(no_root_temp) and any(re.fullmatch(r'cytv-[a-f0-9]{32}',path.name) and any(path.iterdir()) for path in no_root_temp.iterdir()):
-            raise ValueError('no_root_private_cleanup_required')
+        private=self.shared_cleanup('inventory',record)
+        if private['present']:raise ValueError('no_root_private_cleanup_required')
         for path in TEMP.iterdir():
             if SUPPORT_STAGE.fullmatch(path.name) and path!=self.payload:
                 fd=checked_store(path,self.ownership.store.uid)._directory()
@@ -1002,7 +1039,7 @@ class LocalDevice:
         activities=self.rpc('com.palm.activitymanager/list',{'details':True,'subscribers':True,'current':False,'internal':False}).get('activities')
         if (not isinstance(activities,list) or any(not isinstance(item,dict)
                 or item.get('name')=='com.cleanyourtv.root.preview.service.recovery'
-                or str(item.get('callback',{}).get('method','')).startswith('luna://com.cleanyourtv.') for item in activities)):
+                or str(item.get('callback',{}).get('method','')).startswith(('luna://com.cleanyourtv.','luna://com.local.nativehome.service/','luna://com.gathin.tvhome.renewal/')) for item in activities)):
             raise ValueError('owned_activity_remains')
         devices=self.rpc('com.webos.service.eim/getAllInputStatus',{}).get('devices')
         if not isinstance(devices,list) or any(d.get('id')=='com.gathin.tvhome' or d.get('appId')=='com.gathin.tvhome' for d in devices):

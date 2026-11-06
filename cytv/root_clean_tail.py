@@ -26,7 +26,7 @@ def resume(installer, pending):
         raise UserError('Recovery support code is missing or changed. Use a complete installer build.',reason_code='pending-operation')
     operation=pending.get('removal_target_operation',pending['product_operation'])
     if not re.fullmatch('[a-f0-9]{32}',operation):raise ValueError('Invalid cleanup operation')
-    removal=pending['removal_operation']
+    removal=pending.get('removal_target_intent',pending['removal_operation'])
     if not isinstance(removal,str) or not re.fullmatch('[a-f0-9]{32}',removal):raise ValueError('Invalid cleanup removal intent')
     node=['env','-u','NODE_OPTIONS','-u','NODE_PATH','/usr/bin/node','-']
     observation=json.loads(installer.remote.run(shlex.join([*node,'inspect',operation,'-','0','-1','-1','-',removal]),data=source,timeout=30))

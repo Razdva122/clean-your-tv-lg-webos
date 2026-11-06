@@ -7,6 +7,8 @@ var state='/var/lib/clean-your-tv-installation';
 var runtime='/var/lib/clean-your-tv-python/4a71641c8d5536175e404a961624e8656eba30e97b5026f6bd7dc31e4bbeaaea';
 var apps=['com.cleanyourtv.root.preview','com.cleanyourtv.root.updater','com.cleanyourtv.system.updater','com.cleanyourtv.updater','com.local.nativehome','com.gathin.tvhome'];
 var opened=[], directory, record, lease;
+// Filled with the current shared cleaner by build_updater; no retained code.
+var privateCleanupSource=null;
 function at(fd,name){return '/proc/self/fd/'+fd+(name?'/'+name:'');}
 function identity(a,b){return a.dev===b.dev && a.ino===b.ino;}
 function owned(info,dir){if(info.uid!==uid || (info.mode&18) || (dir?!info.isDirectory():!info.isFile() || info.nlink!==1))throw Error('unsafe-cleanup-member');}
@@ -59,9 +61,12 @@ function absent(final){
   });});
   ['50-clean-your-tv-root','51-clean-your-tv-root-updater','52-clean-your-tv-system-updater'].forEach(function(name){if(exists('/var/lib/webosbrew/init.d/'+name))throw Error('startup-remains');});
   ['/var/luna-service2/manifests.d/com.cleanyourtv.root.preview.recovery.json','/var/webos-profile/override/clean-your-tv-root.json','/media/developer/.cytv-installer'].forEach(function(path){if(exists(path))throw Error('owned-private-registration-remains');});
-  if(exists('/media/developer/temp'))fs.readdirSync('/media/developer/temp').forEach(function(name){
-    if(/^cytv-[a-f0-9]{32}$/.test(name)&&fs.readdirSync('/media/developer/temp/'+name).length)throw Error('no-root-private-cleanup-required');
-  });
+  if(privateCleanupSource){
+    var inspected=cp.spawnSync('/usr/bin/node',['-e',privateCleanupSource,JSON.stringify({action:'inventory',staging_ids:record.cleanup_staging_ids||[]})],{timeout:90000,maxBuffer:2097152});
+    if(inspected.error||inspected.status!==0)throw Error('no-root-private-readback-unavailable');
+    var privateState=JSON.parse(inspected.stdout.toString());
+    if(privateState.schema!==1||!Array.isArray(privateState.present)||!Array.isArray(privateState.blocked)||privateState.present.length||privateState.blocked.length)throw Error('no-root-private-cleanup-required');
+  }
   if(final)fs.readdirSync('/tmp').forEach(function(name){
     if(/^cytv-(?:product|coordinator|system-updater|c1-root|root-tail)-[a-f0-9]{32}$/.test(name)){
       var fd=openDir('/tmp/'+name);if(fs.readdirSync(at(fd)).length)throw Error('support-stage-remains');
@@ -89,7 +94,7 @@ function absent(final){
     if(fs.readdirSync(at(fd)).some(function(name){return keep.indexOf(name)===-1;}))throw Error('private-member-remains');
   });
   var activities=rpc('com.palm.activitymanager/list',{details:true,subscribers:true,current:false,internal:false}).activities;
-  if(!Array.isArray(activities) || activities.some(function(item){return !item || item.name==='com.cleanyourtv.root.preview.service.recovery' || String((item.callback||{}).method||'').indexOf('luna://com.cleanyourtv.')===0;}))throw Error('owned-activity-remains');
+  if(!Array.isArray(activities) || activities.some(function(item){return !item || item.name==='com.cleanyourtv.root.preview.service.recovery' || ['luna://com.cleanyourtv.','luna://com.local.nativehome.service/','luna://com.gathin.tvhome.renewal/'].some(function(prefix){return String((item.callback||{}).method||'').indexOf(prefix)===0;});}))throw Error('owned-activity-remains');
   var inputs=rpc('com.webos.service.eim/getAllInputStatus',{}).devices;
   if(!Array.isArray(inputs) || inputs.some(function(item){return item.id==='com.gathin.tvhome'||item.appId==='com.gathin.tvhome';}))throw Error('owned-input-remains');
   fs.readdirSync('/proc').filter(function(n){return /^[0-9]+$/.test(n) && Number(n)!==process.pid && !(process.argv[4]==='-' && record.runtime_cleanup.parent_pid===process.ppid && Number(n)===process.ppid);}).forEach(function(pid){
@@ -107,7 +112,12 @@ function retire(path,inventory,pin,removeRoot){
   if(pin && (info.dev!==pin.dev || info.ino!==pin.ino))throw Error('cleanup-root-changed');
   function scan(fd,prefix){
     fs.readdirSync(at(fd)).sort().forEach(function(name){
-      var relative=prefix+name, full=at(fd,name), info=fs.lstatSync(full);owned(info,info.isDirectory());
+      var relative=prefix+name, full=at(fd,name), info=fs.lstatSync(full);
+      if(info.isSymbolicLink()){
+        if(info.uid!==uid||!inventory||!Object.prototype.hasOwnProperty.call(inventory,relative))throw Error('unsafe-cleanup-member');
+        plan.push({fd:fd,name:name,info:info,dir:false});return;
+      }
+      owned(info,info.isDirectory());
       if(info.isDirectory()){
         if(inventory && !Object.keys(inventory).some(function(n){return n.indexOf(relative+'/')===0;}))throw Error('unknown-runtime-directory');
         if(!inventory && !prefix && ['root','root-updater'].indexOf(name)===-1)throw Error('unknown-support-directory');
@@ -119,7 +129,7 @@ function retire(path,inventory,pin,removeRoot){
         if(inventory){
           if(!Object.prototype.hasOwnProperty.call(inventory,relative))throw Error('unknown-runtime-member');
           var file=fs.openSync(full,C.O_RDONLY|C.O_NOFOLLOW|C.O_NONBLOCK);
-          try{if(!identity(info,fs.fstatSync(file)) || crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')!==inventory[relative])throw Error('runtime-member-changed');}
+          try{if(!identity(info,fs.fstatSync(file)))throw Error('runtime-member-changed');}
           finally{fs.closeSync(file);}
         }
         plan.push({fd:fd,name:name,info:info,dir:false});

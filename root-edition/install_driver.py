@@ -203,8 +203,16 @@ class Coordinator:
         identifier=operation_id(identifier)
         lease=self.ownership.status()
         match=re.fullmatch(r'product-([a-f0-9]{32})\.json',lease['journal']) if lease and lease['owner'] in ('product','clean-removal') else None
-        return dict(operation=identifier,state='fresh',target_operation=match.group(1) if match else identifier,
-                    target_lease=lease['id'] if lease else None)
+        selected=match.group(1) if match else identifier
+        goal=None
+        if lease and lease['owner']=='clean-removal':
+            record=_optional_record(self.store,'clean-removal-'+selected)
+            if record is not None:
+                if (record.get('schema')!=1 or record.get('protocol')!='clean-removal-v1'
+                        or record.get('operation')!=selected or record.get('lease')!=lease['id']):raise Busy()
+                goal=operation_id(record.get('removal'))
+        return dict(operation=identifier,state='fresh',target_operation=selected,
+                    target_lease=lease['id'] if lease else None,target_removal=goal)
 
     def clean_remove(self, identifier, intent=None, expected_lease=None):
         """Explicit desired absence, distinct from an old unknown installation."""

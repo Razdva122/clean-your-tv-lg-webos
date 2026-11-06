@@ -223,7 +223,7 @@ def remove_packages(device, record, save, absent_safe=None):
                 record['packages'][app]={'state':'removing'};save('package-removal')
                 terminal=remove(app,timeout=150)
                 if not terminal_removal(terminal,app):raise ValueError('package_removal_unconfirmed')
-            if getattr(type(device),'sweep_package',None) is not None:device.sweep_package(app)
+            if getattr(type(device),'sweep_package',None) is not None:device.sweep_package(app,record)
             device.absent(app)
             if app in device.apps():raise ValueError('package_still_registered')
             record['packages'][app]={'state':'absent','readback':{'app':app,'absent':True}};save('package-removal')

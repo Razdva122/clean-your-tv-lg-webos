@@ -1563,12 +1563,14 @@ print('CYTV_PROJECT_REMOVED')
             self.store.checkpoint(self.profile,product_payload=stage)
             target=self.product_action('clean-target',operation,stage)
             selected=target.get('target_operation');lease=target.get('target_lease')
+            goal=target.get('target_removal') or pending['removal_operation']
             if (not isinstance(selected,str) or not re.fullmatch('[a-f0-9]{32}',selected)
+                    or not isinstance(goal,str) or not re.fullmatch('[a-f0-9]{32}',goal)
                     or lease is not None and (not isinstance(lease,str) or not re.fullmatch('[a-f0-9]{32}',lease))):
                 raise UserError('Removal evidence changed. Recovery data was kept.')
-            self.store.checkpoint(self.profile,removal_target_operation=selected,removal_target_lease=lease)
+            self.store.checkpoint(self.profile,removal_target_operation=selected,removal_target_lease=lease,removal_target_intent=goal)
             reply=self.product_action('clean-remove',selected,stage,retire_stages=tuple(dict.fromkeys(retire_stages)),
-                                      removal_intent=pending['removal_operation'],removal_lease=lease or '-')
+                                      removal_intent=goal,removal_lease=lease or '-')
         from .recovery_state import REMOVAL_STAGES, REMOVAL_REASONS
         phase=reply.get('stage')
         if phase in REMOVAL_STAGES:

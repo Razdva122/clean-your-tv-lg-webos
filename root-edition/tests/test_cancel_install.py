@@ -91,7 +91,7 @@ class CancellationTests(unittest.TestCase):
         bundle=self.snapshot/'root-updater'
         manifest=json.loads((bundle/'bundle.json').read_text())
         self.assertTrue({'cancel_install.py','cancel_provision.py'} <= manifest['files'].keys())
-        for name in ('cancel_install.py','cancel_provision.py','clean_removal.py','cleanup_tail.js'):
+        for name in ('cancel_install.py','cancel_provision.py','clean_removal.py','cleanup_tail.js','cleanup_no_root_private.js'):
             del manifest['files'][name];(bundle/name).unlink()
         (bundle/'bundle.json').write_text(json.dumps(manifest))
         with self.assertRaises(ValueError):verify_bundle(bundle)

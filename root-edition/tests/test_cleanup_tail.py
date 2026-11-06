@@ -137,6 +137,30 @@ class CleanupTail(unittest.TestCase):
         result,reply=self.run_tail();self.assertNotEqual(result.returncode,0)
         self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
 
+    def test_changed_owned_runtime_bytes_are_removed_without_execution(self):
+        (self.runtime/'lib/secret.py').write_text('changed old bytes; never execute')
+        result,reply=self.run_tail()
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertFalse(self.runtime.exists())
+
+    def test_shared_inventory_preserves_foreign_public_stage_at_final_tail(self):
+        from cytv.no_root_cleanup import PRIVATE_CLEANUP_PROGRAM
+        from cytv.package import ipk
+        foreign=self.base/'media/developer/temp'/('cytv-'+'f'*32);foreign.mkdir(parents=True)
+        package=foreign/'helper.ipk';package.write_bytes(ipk('org.foreign.app','1.0.0',{},architecture='arm'))
+        shared=PRIVATE_CLEANUP_PROGRAM.replace('/media/developer',str(self.base/'media/developer')).replace('/var/luna-service2-dev',str(self.base/'var/luna-service2-dev'))
+        shared=shared.replace('/var/lib',str(self.base/'var/lib')).replace('/var/webos-profile',str(self.base/'var/webos-profile')).replace('/proc/sys/kernel/random/boot_id',str(self.base/'proc/sys/kernel/random/boot_id'))
+        source=self.base/'current-tail.js';source.write_text(SOURCE.read_text().replace('var privateCleanupSource=null;','var privateCleanupSource='+json.dumps(shared)+';'))
+        harness=self.harness.read_text()
+        # Only the shared current Node program executes normally; TV RPC stays simulated.
+        marker='spawnSync:function(command,args,options){'
+        self.assertIn(marker,harness)
+        harness=harness.replace(marker,marker+'if(command==="/usr/bin/node")return require("child_process").spawnSync(process.execPath,args,options);',1)
+        self.harness.write_text(harness)
+        result=subprocess.run([os.environ.get('NODE8','node'),str(self.harness),str(self.base),str(source)],capture_output=True,text=True,timeout=15)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertTrue(package.exists());self.assertFalse(self.runtime.exists())
+
     def test_interruption_preserves_pending_and_resume_deletes_remaining_only(self):
         result,reply=self.run_tail(FAIL_MEMBER='secret.py')
         self.assertNotEqual(result.returncode,0)
@@ -147,14 +171,12 @@ class CleanupTail(unittest.TestCase):
         calls=json.loads((self.base/'mutations.json').read_text())
         self.assertEqual([p for kind,p in calls if kind=='unlinkSync'],[str(self.runtime/'lib/secret.py')])
 
-    def test_changed_owned_runtime_source_and_symlink_refuse_before_delete(self):
-        for change in ('bytes','symlink'):
-            with self.subTest(change=change):
-                target=self.runtime/'lib/secret.py'
-                if change=='bytes':target.write_text('different executable')
-                else:target.unlink();target.symlink_to(self.runtime/'bin/python3.13')
-                result,reply=self.run_tail();self.assertNotEqual(result.returncode,0)
-                self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+    def test_owned_runtime_symlink_is_unlinked_without_following_foreign_target(self):
+        foreign=self.base/'foreign';foreign.write_text('keep foreign bytes')
+        target=self.runtime/'lib/secret.py';target.unlink();target.symlink_to(foreign)
+        result,reply=self.run_tail();self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(foreign.read_text(),'keep foreign bytes')
+        self.assertFalse(self.runtime.exists())
 
     def test_changed_foreign_route_refuses_before_delete(self):
         result,reply=self.run_tail(FOREIGN_ROUTE='1')

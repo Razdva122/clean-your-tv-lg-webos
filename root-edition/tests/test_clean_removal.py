@@ -256,6 +256,7 @@ class PartialDeviceRemoval(unittest.TestCase):
             def apps(self):return set(present)
             def cleanup(self,name,*args):calls.append('cleanup-'+name);return True
         device=Model();device.payload=payload
+        device.shared_cleanup=lambda action,record,**kwargs:{'schema':1,'present':[],'blocked':[],'root_present':[]}
         device.current_boot="11111111-1111-1111-1111-111111111111"
         device.boot_id=lambda:device.current_boot
         owner=Ownership(Store(base/'installation',uid=os.getuid()))
