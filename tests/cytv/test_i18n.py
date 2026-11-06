@@ -86,7 +86,7 @@ class LanguageTests(unittest.TestCase):
         lang = self.language()
         source = Path(__file__).resolve().parents[2] / 'cytv/recovery.py'
         messages = set()
-        for node in ast.walk(ast.parse(source.read_text())):
+        for node in ast.walk(ast.parse(source.read_text(encoding='utf-8'))):
             if not isinstance(node, ast.Call): continue
             name = node.func.id if isinstance(node.func, ast.Name) else getattr(node.func, 'attr', '')
             values = node.args[2:4] if name == 'plan' else node.args[1:2] if name == 'option' else []

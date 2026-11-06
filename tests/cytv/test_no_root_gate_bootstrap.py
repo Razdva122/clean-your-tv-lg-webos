@@ -5,7 +5,6 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
-import sys
 import tempfile
 import unittest
 
@@ -26,13 +25,14 @@ class GateBootstrap(unittest.TestCase):
                 self.assertEqual(archive.extractfile(entry).read(),b'a'*32)
         with self.assertRaises(ValueError):gate.bind_artifacts({'helper.ipk':bound},'b'*32)
 
+    @unittest.skipIf(os.name == 'nt', 'POSIX TV filesystem bootstrap permissions and nofollow')
     def test_bootstrap_keeps_shared_fence_nonsecret_and_never_replaces_code(self):
         source = Path(__file__).resolve().parents[2] / 'cytv/no_root_gate.py'
         self.assertTrue(source.exists(), 'native gate bootstrap is not implemented')
         spec=importlib.util.spec_from_file_location('cytv.no_root_gate',source)
         module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
-        with tempfile.TemporaryDirectory(dir='/private/tmp' if sys.platform=='darwin' else '/tmp') as directory:
-            root=Path(directory); private=root/'private'; fence=root/'fence'
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory).resolve(); private=root/'private'; fence=root/'fence'
             import base64,hashlib
             raw=b'\x7fELFfixture';digest=hashlib.sha256(raw).hexdigest()
             args={'private':str(private),'fence':str(fence),'sha256':digest,'binary':base64.b64encode(raw).decode()}
@@ -47,14 +47,15 @@ class GateBootstrap(unittest.TestCase):
             binary.write_bytes(b'changed')
             self.assertNotEqual(run().returncode,0);self.assertEqual(binary.read_bytes(),b'changed')
 
+    @unittest.skipIf(os.name == 'nt', 'POSIX TV filesystem bootstrap permissions and nofollow')
     def test_bootstrap_does_not_follow_substituted_directory(self):
         source = Path(__file__).resolve().parents[2] / 'cytv/no_root_gate.py'
         self.assertTrue(source.exists(), 'native gate bootstrap is not implemented')
         spec=importlib.util.spec_from_file_location('cytv.no_root_gate',source)
         module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
-        with tempfile.TemporaryDirectory(dir='/private/tmp' if sys.platform=='darwin' else '/tmp') as directory:
+        with tempfile.TemporaryDirectory() as directory:
             import base64,hashlib
-            root=Path(directory); foreign=root/'foreign';foreign.mkdir();(root/'private').symlink_to(foreign)
+            root=Path(directory).resolve(); foreign=root/'foreign';foreign.mkdir();(root/'private').symlink_to(foreign)
             raw=b'\x7fELFfixture'
             args={'private':str(root/'private'),'fence':str(root/'fence'),'sha256':hashlib.sha256(raw).hexdigest(),'binary':base64.b64encode(raw).decode()}
             result=subprocess.run([shutil.which('node'),'-e',module.BOOTSTRAP,json.dumps(args)],capture_output=True)
