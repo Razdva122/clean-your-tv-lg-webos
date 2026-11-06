@@ -5,6 +5,15 @@ from cytv.errors import DeveloperKeyError, TVConnectionError
 
 
 class FailureHelpTests(unittest.TestCase):
+    def test_clean_removal_plan_is_not_contradicted_by_generic_install_warning(self):
+        from cytv.errors import UserError
+        pending = {'action': 'uninstall', 'recovery_protocol': 'clean-removal-v1'}
+        for edition in ('root', 'no-root'):
+            self.assertIsNone(self.guide(UserError('PRIVATE', reason_code='cleanup-check-failed'),
+                                         edition, 'uninstall', pending))
+        error = type('BadHostKeyException', (Exception,), {})('PRIVATE')
+        self.assertEqual(self.guide(error, pending=pending)['code'], 'ssh-identity')
+
     def guide(self,error,edition='root',phase='ssh-connect',pending=None):
         from cytv.failure_help import for_error
         return for_error(error,phase,{'edition':edition,'host':'PRIVATE-ADDRESS','identity':'PRIVATE-PATH'},pending)
