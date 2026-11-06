@@ -226,3 +226,6 @@ Los instaladores 1.6.0 para ordenador/Android y clientes OTA migrados eligen 720
 Las compilaciones candidatas muestran espacio necesario, libre y faltante en MiB para instalar, añadir temas y fondos de foto/vídeo. Incluyen copias temporales y reserva. La cuota de la app, la caché de temas de 64 MiB y la de vídeo son límites distintos. Los valores desconocidos se indican. Libera el almacenamiento indicado; no hay limpieza automática.
 
 Espacio estimado (TV): necesario 128.0 MiB; libre 96.0 MiB; faltan 32.0 MiB.
+
+
+Candidato: tras rechazar la activación Root, una confirmación independiente permite finalizar la configuración verificada con LG Home y el control de Home desactivado, conservando paquetes y datos de recuperación. Prepara por separado las actualizaciones completas; actualizar solo el lanzador no actualiza el runtime. [↗](../RECOVERY.md#candidate-finish-verified-root-setup-with-home-control-off).

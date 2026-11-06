@@ -16,6 +16,10 @@ def summary(profile, pending):
         key in known and value in ('submitted', 'terminal', 'done') for key, value in removals.items()))
     if not pending:
         category = 'none'
+    elif (profile.get('edition') == 'root' and isinstance(pending, dict)
+          and pending.get('action') == 'activate-root'
+          and pending.get('stage') in ('stop-helper', 'enable', 'launch')):
+        category = 'root-activation-pending'
     elif profile.get('edition') != 'no-root':
         category = 'other-edition'
     elif isinstance(pending, dict):
@@ -32,7 +36,7 @@ def summary(profile, pending):
             category = 'removal-started'
     return {'category': category,
             'next_action': ('none' if category == 'none' else 'review-recovery'
-                            if category == 'removal-not-submitted' else 'retain-evidence'),
+                            if category in ('removal-not-submitted', 'root-activation-pending') else 'retain-evidence'),
             'removals': {known[key]: value for key, value in removals.items()
                          if key in known and value in ('submitted', 'terminal', 'done')}
                         if type(removals) is dict else {}}

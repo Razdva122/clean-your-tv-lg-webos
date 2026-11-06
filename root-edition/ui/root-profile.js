@@ -65,13 +65,33 @@
   }
   var saved = null, localError = null;
   try { var raw = localStorage.getItem(data.key); if (raw !== null) saved = data.validate(JSON.parse(raw)); } catch (error) { localError = error; }
+  var pendingTransaction = null, pendingAttempts = 0;
+  function systemProfile() {
+    return window.SystemUpdates.rpc('restoreProfile', {edition:'root'}).then(function (value) {
+      if (value) {
+        if (pendingTransaction && value.transaction !== pendingTransaction) throw Error('System update transaction changed during startup');
+        return value;
+      }
+      // CARDs can start before the worker enters verification. Do not consume
+      // startup with a generic/legacy profile while this System update owns it.
+      return window.SystemUpdates.rpc('status', {}).then(function (state) {
+        if (pendingTransaction && (!state || state.edition !== 'root' || state.id !== pendingTransaction)) throw Error('System update transaction changed during startup');
+        if (!state || state.edition !== 'root' || state.phase === 'aborted') return null;
+        if (state.phase === 'recovery-required') throw Error('System update requires recovery');
+        if (['preparing', 'downloading', 'backed-up', 'suspending', 'installing', 'verifying', 'rolling-back', 'verifying-rollback', 'complete', 'rolled-back'].indexOf(state.phase) < 0) return null;
+        if (pendingAttempts++ >= 120) throw Error('System update profile readiness timed out');
+        pendingTransaction = state.id;
+        return new Promise(function (resolve) { setTimeout(resolve, 1000); }).then(systemProfile);
+      });
+    });
+  }
   function restore() {
     if (!window.SystemUpdates) return window.RootUpdates.rpc('restoreProfile', {});
-    return window.SystemUpdates.rpc('restoreProfile', {edition:'root'}).then(function (value) {
+    return systemProfile().then(function (value) {
       if (value) { systemRestore = true; return value; }
       return window.RootUpdates.rpc('restoreProfile', {});
     }, function (error) {
-      if (error.unavailable === true) return window.RootUpdates.rpc('restoreProfile', {});
+      if (!pendingTransaction && error.unavailable === true) return window.RootUpdates.rpc('restoreProfile', {});
       throw error;
     });
   }
@@ -114,7 +134,7 @@
   }).catch(function (error) {
     // Existing personalized packages remain usable before one-time updater provisioning.
     // An empty generic package cannot establish that a missing backup is harmless.
-    if (!localError && !booted && error.unavailable === true && (saved || (window.TV_APPS && window.TV_APPS.apps.length))) {
+    if (!pendingTransaction && !localError && !booted && error.unavailable === true && (saved || (window.TV_APPS && window.TV_APPS.apps.length))) {
       if (saved) { window.TV_APPS = saved.inventory; window.CONFIG = saved.config; }
       boot(null);
     } else recovery(error);

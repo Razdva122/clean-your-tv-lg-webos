@@ -228,3 +228,6 @@ I programmi di installazione 1.6.0 per computer/Android e i client OTA migrati s
 Le build candidate mostrano spazio richiesto, libero e mancante in MiB per installazione, temi e sfondi foto/video. Includono copie temporanee e riserva. Quota app, cache temi da 64 MiB e cache video sono limiti separati. I valori sconosciuti sono indicati. Libera lo spazio indicato; nessuna pulizia automatica.
 
 Spazio stimato (TV): richiesti 128.0 MiB; liberi 96.0 MiB; mancanti 32.0 MiB.
+
+
+Candidato: dopo aver rifiutato l’attivazione Root, una conferma separata consente di completare la configurazione verificata con LG Home e controllo di Home disattivato, conservando pacchetti e dati di ripristino. Prepara separatamente gli aggiornamenti completi; il solo launcher non aggiorna il runtime. [↗](../RECOVERY.md#candidate-finish-verified-root-setup-with-home-control-off).

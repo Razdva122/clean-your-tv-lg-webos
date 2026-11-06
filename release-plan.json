@@ -13,6 +13,20 @@
         348
       ],
       "summary": "Bound updater cache and completed installer staging retention"
+    },
+    {
+      "pr": 352,
+      "issues": [
+        351
+      ],
+      "summary": "Fix Root OTA readiness after an early launcher start"
+    },
+    {
+      "pr": 354,
+      "issues": [
+        334
+      ],
+      "summary": "Offer guarded Home-off completion and retained-runtime diagnostics; original #334 cause and device recovery remain unconfirmed"
     }
   ],
   "excluded": [],

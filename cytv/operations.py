@@ -301,7 +301,8 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
         if (not isinstance(reply,dict) or reply.get('operation')!=operation
                 or reply.get('state') not in ('pending','complete','recovery_required','unknown','fresh','installed','unsupported','conflict','migration_required')):
             raise UserError('Root operation was not confirmed. Run cytv status; retain recovery state.', reason_code='root-operation-unconfirmed')
-        self.tv_info['status'] = {'device': {'product': diagnostics.context.product_summary(reply)}}
+        status = self.tv_info.setdefault('status', {})
+        status.setdefault('device', {})['product'] = diagnostics.context.product_summary(reply)
         return reply
 
     def await_product(self, action, operation, payload, migrate=False):
@@ -346,6 +347,17 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
             for name in ('home-backend.json','c1-gate','c1-keyfilter','runtime/c1-home-gate','runtime/c1-keyfilter-guard','runtime/c1_gate.py','runtime/c1_keyfilter.py'))
         return self.remote.run(script+'; then printf CYTV_C1_GATE; fi').strip() == 'CYTV_C1_GATE'
 
+    def collect_root_diagnostics(self, cursor=None):
+        try:
+            from .root_activation_diagnostics import collect
+            value=collect(self.remote,self._python(ROOT_STATE),cursor)
+            self.tv_info['root_diagnostics']=diagnostics.context.root_diagnostics_summary(value)
+            return value.get('cursor')
+        except Exception:
+            # Optional evidence must not change recovery or hide the primary error.
+            self.tv_info['root_diagnostics']={'health_log':{'status':'unavailable'}}
+            return None
+
     def root_action(self, action, bundle=None, migrate=False, experimental=False):
         driver = (bundle or ROOT_STATE) + '/deploy.py'
         args = [self._python(ROOT_STATE), driver, action]
@@ -359,9 +371,13 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
         attempt = uuid.uuid4().hex if action == 'install' else None
         command = self._python_command(args)
         if attempt: command = 'env CYTV_ROOT_INSTALL_ATTEMPT='+attempt+' '+command
+        if action == 'enable' and isinstance(self.tv_info.get('status'), dict):
+            self.tv_info['status']['observation_phase']='before-enable'
+        cursor = self.collect_root_diagnostics() if action == 'enable' else None
         try:
             raw = self.remote.run(command, timeout=1080 if action == 'uninstall' else 720 if action == 'restore' or experimental else 180)
         except TVCommandError as error:
+            if action == 'enable': self.collect_root_diagnostics(cursor)
             error.root_action = action
             error.root_boundary = 'driver'
             if action == 'install':
@@ -381,6 +397,7 @@ with os.fdopen(f,'rb') as stream:
                 except Exception:
                     pass  # Preserve the original failure, even when diagnostics are unavailable.
             raise
+        if action == 'enable': self.collect_root_diagnostics(cursor)
         reply = json.loads(raw)
         if not isinstance(reply, dict) or reply.get('returnValue') is not True:
             raise UserError('Root operation was not confirmed. Run cytv status; retain recovery state.', reason_code='root-operation-unconfirmed')
@@ -909,6 +926,14 @@ print('CYTV_UPDATER_VERIFIED')
         raise UserError('Installed version did not match the package. Run cytv status; do not retry blindly.', reason_code='version-mismatch')
 
     def status(self):
+        result=self._status()
+        self.tv_info['status']=result
+        if (self.profile['edition']=='root'
+                and result.get('deployment_stage')=='installed-recovery-only'):
+            self.collect_root_diagnostics()
+        return result
+
+    def _status(self):
         pending = self.store.pending(self.profile)
         reconciled = None
         can_resume = False
@@ -1088,6 +1113,23 @@ print('CYTV_UPDATER_VERIFIED')
             return self.remote.run(self._python_command([self._python(), '-c', SCRIPT])).strip() == 'CYTV_ACTIVATION_RECOVERABLE'
         except (OSError, RuntimeError, ValueError, TypeError, KeyError, AttributeError):
             return False
+
+    def finish_root_setup_disabled(self):
+        """Explicitly cancel only verified restored activation, preserving its receipt."""
+        result=self.status()
+        previous=self.store.pending(self.profile)
+        if (self.profile['edition']!='root' or not previous
+                or previous.get('action')!='activate-root'
+                or previous.get('home_backend')=='c1-native-gate'
+                or result.get('can_resume_root_setup') is not True):
+            raise UserError('Root setup could not be verified for continuation. Recovery data was kept.')
+        from .state import private_write
+        receipt=self.store.recovery(self.profile,'finish-root-setup-disabled')
+        private_write(receipt,json.dumps({'action':'finish-root-setup-disabled','stage':'verified',
+            'home_changed':False,'previous':previous}).encode())
+        self.store.finish(self.profile)
+        self.outcome.packages_verified()
+        return {'home_changed':False,'updates_ready':True,'home_control':'disabled'}
 
     def resume_root_setup(self):
         # Revalidate after the user's confirmation; never resubmit package setup.
