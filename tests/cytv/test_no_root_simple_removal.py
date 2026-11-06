@@ -19,6 +19,7 @@ from cytv.state import Store, target
 class Remote:
     def __init__(self, root):
         self.root=root;self.apps=set();self.calls=[];self.cut=None;self.cut_install=False;self.reject_install=False;self.broken_service=False;self.reject=None;self.transform=lambda code:code
+        self.os_cleanup=False
         self.boot='11111111-1111-1111-1111-111111111111'
 
     def run(self, command, data=None, timeout=30):
@@ -42,7 +43,9 @@ class Remote:
             result=[]
             for app in sorted(self.apps):
                 file=self.root/'developer/apps/usr/palm/applications'/app/'appinfo.json'
-                result.append(json.loads(file.read_text()) if file.exists() else {'id':app})
+                try:info=json.loads(file.read_text())
+                except (FileNotFoundError,PermissionError):info={'id':app}
+                result.append(info)
             return {'returnValue':True,'apps':result}
         if uri.endswith('/getAllInputStatus'):return {'returnValue':True,'devices':[]}
         if uri.endswith('/dev/remove'):
@@ -50,6 +53,15 @@ class Remote:
             if self.reject:
                 reason=self.reject;self.reject=None;raise TVRejected('TV rejected removal.',reason,uri)
             self.apps.discard(app)
+            if self.os_cleanup:
+                service='com.gathin.tvhome.renewal' if app=='com.gathin.tvhome' else app+'.service'
+                for kind,name in [('applications',app),('packages',app),('services',service)]:
+                    directory=self.root/'developer/apps/usr/palm'/kind/name
+                    if directory.exists():
+                        directory.chmod(0o755)
+                        for parent,dirs,files in os.walk(directory):
+                            for name in dirs:(Path(parent)/name).chmod(0o755)
+                        shutil.rmtree(directory)
             roles=self.root/'bus/roles.d'
             if roles.exists():
                 # Model package-manager privilege; SDK sweep itself cannot chmod.
@@ -61,6 +73,11 @@ class Remote:
             if self.reject_install:
                 self.reject_install=False;raise TVRejected('Package manager busy.',{'returnValue':False,'errorCode':-7},uri)
             source=Path(payload['ipkUrl'].replace('/media/developer',str(self.root/'developer')))
+            if self.os_cleanup:
+                app=payload['id'];service='com.gathin.tvhome.renewal' if app=='com.gathin.tvhome' else app+'.service'
+                for kind,name in [('applications',app),('packages',app),('services',service)]:
+                    directory=self.root/'developer/apps/usr/palm'/kind/name
+                    if directory.exists():directory.chmod(0o755)
             for name,raw in package.data_files(source.read_bytes()).items():
                 destination=self.root/'developer/apps'/name;destination.parent.mkdir(parents=True,exist_ok=True);destination.write_bytes(raw)
             self.apps.add(payload['id'])
@@ -323,3 +340,43 @@ class SimpleRemoval(unittest.TestCase):
         proc=self.root/'proc'/str(os.getpid());proc.mkdir(parents=True);(proc/'cmdline').write_text('/usr/bin/foreign\0')
         self.assertTrue(self.remove()['restart_required']);self.assertFalse(pid.exists())
         self.reboot();self.assertTrue(self.remove()['verified_clean'])
+
+    def test_legacy_writable_helper_state_is_stopped_and_removed(self):
+        key=self.own_file('apps/usr/palm/applications/com.local.nativehome/state/ssap-key.json','private')
+        key.parent.chmod(0o777)
+        self.assertTrue(self.remove()['restart_required'])
+        self.assertFalse(key.exists())
+        self.reboot();self.assertTrue(self.remove()['verified_clean'])
+
+    @unittest.skipIf(getattr(os,'getuid',lambda:-1)()==0,'unprivileged SDK permission model')
+    def test_protected_no_root_namespaces_use_os_removal_or_one_carrier(self):
+        self.carrier_payload();self.remote.os_cleanup=True
+        for registered in (False,True):
+            for kind,name,mode in [('applications','com.local.nativehome',0o555),
+                                   ('applications','com.local.nativehome',0o000),
+                                   ('applications','com.local.nativehome/state',0o555),
+                                   ('services','com.local.nativehome.service',0o000),
+                                   ('packages','com.local.nativehome',0o555)]:
+                with self.subTest(registered=registered,kind=kind):
+                    self.store.begin(self.profile,'install');self.store.finish(self.profile)
+                    own=self.own_file('apps/usr/palm/'+kind+'/'+name+'/private.json','partial NoRoot data')
+                    directory=own.parent;directory.chmod(mode)
+                    self.addCleanup(lambda p=directory:p.chmod(0o755) if p.exists() else None)
+                    foreign=self.own_file('apps/usr/palm/'+kind+'/org.foreign/keep.json','preserve')
+                    self.remote.apps={'com.local.nativehome'} if registered else set()
+                    start=len(self.remote.calls)
+                    first=self.remove();self.assertTrue(first['restart_required']);self.assertFalse(first['verified_clean'])
+                    self.remote.boot=('33333333-3333-3333-3333-333333333333' if self.remote.boot!=
+                                      '33333333-3333-3333-3333-333333333333' else '44444444-4444-4444-4444-444444444444')
+                    self.assertTrue(self.remove()['verified_clean'])
+                    self.assertFalse(directory.exists());self.assertEqual(foreign.read_text(),'preserve')
+                    calls=self.remote.calls[start:]
+                    self.assertEqual(sum(uri.endswith('/dev/install') for uri,_ in calls),0 if registered else 1)
+                    self.assertEqual(sum(uri.endswith('/dev/remove') for uri,_ in calls),1)
+
+    def test_legacy_state_symlink_does_not_write_into_foreign_directory(self):
+        foreign=self.root/'foreign';foreign.mkdir();(foreign/'keep').write_text('preserve')
+        app=self.root/'developer/apps/usr/palm/applications/com.local.nativehome';app.mkdir(parents=True)
+        (app/'state').symlink_to(foreign,target_is_directory=True)
+        with self.assertRaises(UserError):self.remove()
+        self.assertEqual(sorted(p.name for p in foreign.iterdir()),['keep'])
