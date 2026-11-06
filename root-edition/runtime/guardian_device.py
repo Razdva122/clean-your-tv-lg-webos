@@ -44,8 +44,10 @@ def run(transaction):
         if not os.path.lexists(c.binding): return None
         if c.read_binding()['transaction'] != transaction: return None
         from persistent_health import authorized, run, guardian_ping
+        live=authorized(transaction)
+        # First cold identity validation must finish before claiming a pulse.
         guardian_ping(transaction)
-        if authorized(transaction): return run(transaction, restore)
+        if live: return run(transaction, restore)
         return None
     from shutdown_state import monitor
     shutdown = monitor(transaction)
