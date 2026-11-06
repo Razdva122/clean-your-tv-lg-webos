@@ -44,9 +44,10 @@ all device runtime checks without the UI source/build suite. CI partitions the l
 Python suites across four isolated shards per OS; `scripts/test.sh --shard 2/4 tv`
 reproduces one partition, while omitting `--shard` runs the complete selected group. See
 [focused CI checks](docs/development/CI-CHECKS.md) for its narrow transport routing. Follow the affected PR checks and
-run a broader group for shared or unknown dependencies. The complete
-`scripts/test.sh` and browser suites remain required on the frozen release
-candidate; do not repeat an unchanged full local run merely to copy its result
+run a broader group for shared or unknown dependencies. Complete `scripts/test.sh`
+and browser coverage remains required on the frozen release candidate, using
+fresh execution or authenticated matching test-unit successes as documented in
+the CI checks; do not repeat an unchanged full local run merely to copy its result
 into another record. New code, failures or changed test preconditions justify a
 new affected run. Describe the test model, firmware, expected behavior and actual
 behavior. Separate standby tests from cold

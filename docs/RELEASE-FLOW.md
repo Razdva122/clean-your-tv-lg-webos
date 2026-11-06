@@ -413,19 +413,25 @@ recovery and update checks. The complete theme browser matrix and frozen desktop
 runtime matrix run at candidate freeze; native runtime changes also select their
 PR checks. Required status summaries fail if any selected check fails or is
 unexpectedly skipped.
-Feature branches run affected tests on PR events. Successful runtime results may
-be reused within the same PR/day when the checked-out merge tree (including base
-changes), selected groups, OS/image, exact Python/Node and installed Python
-dependencies match. Only a small run-ID marker is restored; no cached code executes. Its source run
-and the latest prior Tests run on that branch must still be successful; newer
-failed/running evidence or an API error forces fresh tests. Fork PRs do not use
-these markers.
-Current README/plan metadata always runs, and affected setup/packaging checks
-remain fresh. Cache outages fall back to tests; explicit rerun attempts bypass
-hits. Full candidate validation never uses these PR success markers.
+Feature branches run affected checks on PR events. Small authenticated Actions
+receipts let candidate jobs consume already successful units with identical
+nonmetadata source, selection unit, shard, OS/image, exact runtime/dependencies
+and UTC day. Setup also binds the full Git tree. Each unit runs once for matching
+inputs; missing or invalid evidence executes it. Browser core and full themes
+remain separate, and ARM Python retains its privileged checks. Full candidate
+coverage and required job names are unchanged. Current README/plan sanity checks
+and all assembly/signing/package checks remain independent.
 
-Feature branches run affected tests on PR events. The prepared candidate build
-runs the full suite once. Release PR checks retain the required Linux/macOS status
+Only same-repository first-attempt PR runs may produce receipts, after fresh checks
+pass. Consumers verify artifact digest/size, completed successful run and originating
+job, current attempt/latest branch evidence and the actual tested merge tree through
+GitHub data. Fork PRs and explicit reruns execute fresh. API/artifact failures fall
+back to tests; no reused unit is re-attested. Old cache markers cannot supply the
+new receipts, and changing the workflow/helper remains a guarded source change.
+See [CI evidence trust, bootstrap and limits](development/CI-CHECKS.md#reuse-and-metadata).
+
+The prepared candidate build completes full coverage once, executing missing
+units and consuming authenticated matching successes. Release PR checks retain the required Linux/macOS status
 names and run metadata/setup checks; the trusted Release policy enforces the full
 candidate suite. Standalone push suites and the full publication suite are removed.
 Pinned-equivalent documentation/evidence changes do not rebuild installers. Preview
