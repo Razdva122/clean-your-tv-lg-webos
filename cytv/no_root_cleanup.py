@@ -246,7 +246,12 @@ def continue_removal(installer, expected_pending):
                 disabled = state.get('enabled') is False and not state.get('error')
             if not disabled:
                 raise UserError('TV startup could not be disabled. Try again.')
-        except UserError:
+        except UserError as error:
+            if not isinstance(error, TVRejected) and str(error) not in (
+                    'TV startup could not be disabled. Try again.',
+                    'TV operation timed out. Run cytv status before retrying.',
+                    'TV command ended without a confirmed result. Run cytv status.'):
+                raise
             # A failed optional service cannot make its own broken files
             # undeletable. Check the SSH connection, then move restart earlier.
             _device(installer, 'inventory')

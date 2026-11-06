@@ -36,6 +36,7 @@ class Remote:
 
     def luna(self, uri, payload, **kwargs):
         self.calls.append((uri,payload))
+        if uri.endswith('/disable') and isinstance(self.broken_service,UserError):raise self.broken_service
         if uri.endswith('/disable') and self.broken_service:raise TVRejected('Service failed to start.',{'returnValue':False,'errorCode':-1},uri)
         if uri.endswith('/dev/listApps'):
             result=[]
@@ -146,6 +147,13 @@ class SimpleRemoval(unittest.TestCase):
                 self.assertTrue(self.remove()['restart_required']);self.assertTrue(broken.exists())
                 self.remote.boot='33333333-3333-3333-3333-333333333333' if registered else '44444444-4444-4444-4444-444444444444'
                 self.assertTrue(self.remove()['verified_clean']);self.assertFalse(broken.exists())
+
+    def test_optional_service_disconnect_is_reported_without_turning_into_restart_hint(self):
+        self.remote.apps={'com.local.nativehome'}
+        self.own_file('apps/usr/palm/services/com.local.nativehome.service/service.js','source')
+        self.remote.broken_service=UserError('TV connection interrupted. Run cytv status before retrying.')
+        with self.assertRaisesRegex(UserError,'connection interrupted'):self.remove()
+        self.assertNotIn('cleanup_startup_unavailable',self.store.pending(self.profile))
 
     def test_foreign_app_and_symlink_target_are_preserved(self):
         foreign=self.root/'foreign';foreign.write_text('preserve')
