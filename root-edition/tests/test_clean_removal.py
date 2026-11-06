@@ -1,4 +1,5 @@
 import os
+import importlib.util
 from pathlib import Path
 import sys
 import tempfile
@@ -225,7 +226,7 @@ class PackageRemoval(unittest.TestCase):
 
 class PartialDeviceRemoval(unittest.TestCase):
     def fixture(self, unknown=False, missing_profiles=False):
-        import install_device, clean_removal, deploy, provision, startup_hook
+        import install_device, clean_removal, deploy, startup_hook
         from contextlib import ExitStack
         tmp=tempfile.TemporaryDirectory();self.addCleanup(tmp.cleanup)
         base=Path(tmp.name).resolve();root=base/'root';root.mkdir(mode=0o700)
@@ -265,6 +266,12 @@ class PartialDeviceRemoval(unittest.TestCase):
             original={'operation':identifier,'action':'install','stage':'root-deploy','state':'recovery_required','lease':lease['id']}
             owner.store.write('request-'+identifier,original)
         stack=ExitStack();self.addCleanup(stack.close)
+        # Discovery also loads runtime/provision.py under the same short name.
+        # Production runs coordinator support in its own interpreter; bind that
+        # actual source only for this fixture, restoring the runtime module after.
+        spec=importlib.util.spec_from_file_location('coordinator_provision_fixture',Path(__file__).resolve().parents[1]/'provision.py')
+        provision=importlib.util.module_from_spec(spec);spec.loader.exec_module(provision)
+        stack.enter_context(patch.dict(sys.modules,{'provision':provision}))
         temporary=base/'tmp';temporary.mkdir()
         for key,value in {'ROOT':root,'UPDATER':updater,'SUPERVISOR':supervisor,'INSTALLED':installed,'BUS':bus,'INIT':init,'PROC':proc,'TEMP':temporary}.items():stack.enter_context(patch.object(install_device,key,value))
         from installation import _optional_record
