@@ -755,15 +755,20 @@ class LocalDevice:
             'installed-package.json','installed-terminal.json','registration.json','startup-hook.json',
             'startup-hook.previous.json','transaction.json','legacy-lockdown.json','bootstrap.pid',
             'worker.log','daemon.log','removed-registration','cytv-removal.json'}
+        def classified(root,index):
+            allowed=root_allowed if index==0 else updater_allowed
+            if index==2:allowed=allowed|{'current-root.json','current-no-root.json','installer-accepted.json'}
+            pattern=r'(?:profile|healthy|healthy-rollback|mutable|helper-resume|renewal-pause)-[a-f0-9]{32}(?:-rollback)?\.json'
+            if index==0:
+                pattern+=r'|(?:completed-profile-[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}|system-rollback-anchor-[a-f0-9]{32})\.json'
+            return allowed|{p.name for p in root.iterdir() if re.fullmatch(pattern,p.name)}
         roots=(ROOT,UPDATER,SUPERVISOR)
         for index,root in enumerate(roots):
             if not os.path.lexists(root):continue
             keep={'deploy.json','provision.lock'} if index==0 else {'bootstrap.json','daemon.lock','worker.lock'}
-            allowed=root_allowed if index==0 else updater_allowed
             # Per-transaction data in this private namespace is product-owned;
             # no arbitrary prefix outside it can select a deletion target.
-            allowed=allowed|{p.name for p in root.iterdir() if re.fullmatch(r'(?:profile|healthy|healthy-rollback|mutable|helper-resume|renewal-pause)-[a-f0-9]{32}(?:-rollback)?\.json',p.name)}
-            retire_tree(root,allowed,keep,uid)
+            retire_tree(root,classified(root,index),keep,uid)
         for stage in Path(self.ownership.store.root).iterdir():
             if not re.fullmatch(r'request-[a-f0-9]{32}',stage.name):continue
             identifier=stage.name[8:]
@@ -831,7 +836,7 @@ class LocalDevice:
             if previous is None:self.ownership.store.write(key,backup)
             # After an interrupted delete, the backup remains the original.
             elif any(previous.get(k)!=v for k,v in backup.items()):raise ValueError('owner_backup_changed')
-            allowed=(root_allowed if index==0 else updater_allowed)|{'provision.lock','daemon.lock','worker.lock'}
+            allowed=classified(path,index)|{'provision.lock','daemon.lock','worker.lock'}
             retire_tree(path,allowed,uid=uid)
             path.rmdir()
             parent=os.open(path.parent,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)

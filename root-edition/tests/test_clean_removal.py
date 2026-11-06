@@ -225,6 +225,86 @@ class PackageRemoval(unittest.TestCase):
 
 
 class PartialDeviceRemoval(unittest.TestCase):
+    def test_known_completed_root_and_system_receipts_are_retired_with_inverse_preserved(self):
+        import install_device
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        driver.device.ownership=driver.ownership
+        system=install_device.SUPERVISOR;system.mkdir(mode=0o700)
+        names=[root/'completed-profile-12345678-1234-4abc-8def-123456789abc.json',
+               root/('system-rollback-anchor-'+'a'*32+'.json'),
+               system/'current-root.json',system/'installer-accepted.json']
+        for path in names:path.write_text('{"fixture":"owned receipt"}')
+        original='{"fixture":"original Home inverse"}'
+        (root/'profile-trial.json').write_text(original)
+        record={'operation':identifier,'staging_hashes':[]}
+        driver.device.preserve_routing_inverse(record)
+        driver.device.retire_clean_private(record)
+        self.assertTrue(all(not path.exists() for path in names))
+        self.assertEqual(driver.ownership.store.read('routing-backup-'+identifier),{'profile-trial.json':original})
+
+    def test_receipt_name_near_matches_and_wrong_component_are_not_retired(self):
+        uuid='12345678-1234-4abc-8def-123456789abc'
+        for component,name in [('root','completed-profile-'+'a'*32+'.json'),
+                               ('root','completed-profile-'+uuid+'.json.bak'),
+                               ('root','system-rollback-anchor-'+'a'*31+'.json'),
+                               ('root','system-rollback-anchor-'+'A'*32+'.json'),
+                               ('root','current-root.json'),('updater','installer-accepted.json'),
+                               ('updater','completed-profile-'+uuid+'.json')]:
+            with self.subTest(component=component,name=name):
+                driver,identifier,root,updater,payload,calls,present=self.fixture()
+                driver.device.ownership=driver.ownership
+                path=(root if component=='root' else updater)/name;path.write_text('preserve')
+                with self.assertRaisesRegex(ValueError,'unclassified_private_member'):
+                    driver.device.retire_clean_private({'operation':identifier,'staging_hashes':[]})
+                self.assertEqual(path.read_text(),'preserve')
+
+    def test_known_receipts_in_authenticated_archives_use_same_classification(self):
+        import install_device
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        driver.device.ownership=driver.ownership
+        archives=[]
+        for index,component in enumerate((root,updater,install_device.SUPERVISOR)):
+            archive=component.parent/(component.name+'.archive-'+'a'*32)
+            store=Store(archive,uid=os.getuid());archives.append(archive)
+            if index==0:
+                store.write('deploy',{'app':install_device.APP,'stage':'install-submitting'})
+                store.write('profile-trial',{'fixture':'original archive inverse'})
+                names=['completed-profile-12345678-1234-4abc-8def-123456789abc.json',
+                       'system-rollback-anchor-'+'a'*32+'.json']
+            else:
+                store.write('cytv-removal',{'archive':str(archive),'phase':'disabling'})
+                names=['current-root.json','current-no-root.json','installer-accepted.json'] if index==2 else []
+            names.append('profile-'+'b'*32+'.json')
+            for name in names:(archive/name).write_text('{"fixture":"owned receipt"}')
+        driver.device.retire_clean_private({'operation':identifier,'staging_hashes':[]})
+        self.assertTrue(all(not archive.exists() for archive in archives))
+        self.assertEqual(driver.store.read('archive-backup-'+identifier+'-0'),
+                         {'profile-trial':{'fixture':'original archive inverse'}})
+
+    def test_known_receipt_with_foreign_owner_is_not_retired(self):
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        driver.device.ownership=driver.ownership
+        path=root/'completed-profile-12345678-1234-4abc-8def-123456789abc.json';path.write_text('preserve')
+        actual=os.stat
+        def foreign(name,*args,**kwargs):
+            info=actual(name,*args,**kwargs)
+            if name==path.name and 'dir_fd' in kwargs:
+                fields=list(info);fields[4]=os.getuid()+1;return os.stat_result(fields)
+            return info
+        with patch('clean_removal.os.stat',side_effect=foreign):
+            with self.assertRaisesRegex(ValueError,'unsafe_private_member'):
+                driver.device.retire_clean_private({'operation':identifier,'staging_hashes':[]})
+        self.assertEqual(path.read_text(),'preserve')
+
+    def test_known_completed_receipt_hardlink_is_still_refused(self):
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        driver.device.ownership=driver.ownership
+        path=root/'completed-profile-12345678-1234-4abc-8def-123456789abc.json';path.write_text('preserve')
+        other=root.parent/'foreign-copy';os.link(path,other)
+        with self.assertRaisesRegex(ValueError,'unsafe_private_member'):
+            driver.device.retire_clean_private({'operation':identifier,'staging_hashes':[]})
+        self.assertEqual(path.read_text(),'preserve');self.assertEqual(other.read_text(),'preserve')
+
     def fixture(self, unknown=False, missing_profiles=False):
         import install_device, clean_removal, deploy, startup_hook
         from contextlib import ExitStack
