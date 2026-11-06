@@ -148,8 +148,10 @@ Root 0.6.1 standby failure in #171. Preserve explicit off in every retest.
 ## Candidate wake-key release settling (2026-11-06)
 
 The candidate reader waits up to 750 ms for an initially held key state to clear.
-It repeatedly drains pre-readiness events and creates gesture recognizers only
-after all keys are released. No READY or PING is sent during this interval; the
+It discards the initial historical queue once. Fresh Home down/repeat while
+waiting cancels pending activation (`startup / home_activity`); key-up permits
+settling, and fresh malformed input fails closed. Normal gesture recognizers are
+created only after all keys are released. No READY or PING is sent during this interval; the
 existing independent two-second supervisor deadline is not extended. A persistent
 held flag, input error, invalid channel or exhausted drain still fails closed.
 Emergency/off state is never automatically re-enabled.

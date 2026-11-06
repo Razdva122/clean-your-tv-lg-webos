@@ -22,21 +22,68 @@ class ReaderTests(unittest.TestCase):
   self.assertEqual(self.run_input(data,release_delay=.15),'escape')
  def test_key_that_stays_held_never_becomes_ready(self):
   self.assertEqual(self.run_input(b'',release_delay=10),'input_lost')
- def test_gestures_queued_while_waiting_for_release_are_discarded(self):
+ def test_only_initial_historical_gestures_are_discarded(self):
   import contextlib,io
   import emergency_reader as reader
-  from unittest.mock import Mock,patch
+  from unittest.mock import patch
   taps=b''.join(struct.pack('<IIHHi',1,t*1000,1,773,v) for t,v in [(0,1),(100,0),(300,1),(400,0),(600,1),(700,0)])
   dropped=struct.pack('<IIHHi',2,0,0,3,0)
   hr,hw=os.pipe()
   try:
-   with patch.object(reader.os,'set_blocking'),patch.object(reader.os,'read',side_effect=[BlockingIOError(),taps,BlockingIOError(),dropped]),patch.object(reader.select,'select',return_value=([42],[],[])),contextlib.redirect_stderr(io.StringIO()):
+   with patch.object(reader.os,'set_blocking'),patch.object(reader.os,'read',side_effect=[taps,BlockingIOError(),dropped]),patch.object(reader.select,'select',return_value=([42],[],[])),contextlib.redirect_stderr(io.StringIO()):
+    reader.observe(42,hw,lambda:True)
+   os.close(hw);hw=None
+   self.assertEqual(os.read(hr,256),b'READY\nLOST\n')
+  finally:
+   os.close(hr)
+   if hw is not None:os.close(hw)
+ def test_fresh_home_during_release_wait_cancels_activation(self):
+  import contextlib,io,json
+  import emergency_reader as reader
+  from unittest.mock import Mock,patch
+  for value in (1,2):
+   with self.subTest(value=value):
+    home=struct.pack('<IIHHi',1,0,1,773,value);hr,hw=os.pipe();log=io.StringIO()
+    try:
+     with patch.object(reader.os,'set_blocking'),patch.object(reader.os,'read',side_effect=[BlockingIOError(),home,BlockingIOError(),b'']),patch.object(reader.select,'select',return_value=([42],[],[])),contextlib.redirect_stderr(log):
+      reader.observe(42,hw,Mock(side_effect=[False,True]))
+     os.close(hw);hw=None
+     self.assertEqual(os.read(hr,256),b'LOST\n','Fresh Home must prevent READY and pending activation')
+     self.assertEqual(json.loads(log.getvalue()),{'event':'input-observer-fault','phase':'startup','reason':'home_activity'})
+    finally:
+     os.close(hr)
+     if hw is not None:os.close(hw)
+ def test_release_wait_accepts_key_up_without_counting_it_as_a_gesture(self):
+  import contextlib,io
+  import emergency_reader as reader
+  from unittest.mock import Mock,patch
+  up=struct.pack('<IIHHi',1,0,1,773,0);dropped=struct.pack('<IIHHi',2,0,0,3,0)
+  hr,hw=os.pipe()
+  try:
+   with patch.object(reader.os,'set_blocking'),patch.object(reader.os,'read',side_effect=[BlockingIOError(),up,BlockingIOError(),dropped]),patch.object(reader.select,'select',return_value=([42],[],[])),contextlib.redirect_stderr(io.StringIO()):
     reader.observe(42,hw,Mock(side_effect=[False,True]))
    os.close(hw);hw=None
    self.assertEqual(os.read(hr,256),b'READY\nLOST\n')
   finally:
    os.close(hr)
    if hw is not None:os.close(hw)
+ def test_release_wait_still_refuses_input_faults_before_ready(self):
+  import contextlib,io,json
+  import emergency_reader as reader
+  from unittest.mock import Mock,patch
+  cases=[(b'','eof'),(b'bad','partial_event'),(struct.pack('<IIHHi',1,1000000,1,116,0),'invalid_timestamp'),(struct.pack('<IIHHi',1,0,0,3,0),'events_dropped'),(struct.pack('<IIHHi',1,0,1,773,3),'invalid_key_value')]
+  for data,reason in cases:
+   with self.subTest(reason=reason):
+    hr,hw=os.pipe();log=io.StringIO()
+    try:
+     with patch.object(reader.os,'set_blocking'),patch.object(reader.os,'read',side_effect=[BlockingIOError(),data]),contextlib.redirect_stderr(log):
+      reader.observe(42,hw,Mock(side_effect=[False,True]))
+     os.close(hw);hw=None
+     self.assertEqual(os.read(hr,256),b'LOST\n')
+     self.assertEqual(json.loads(log.getvalue()),{'event':'input-observer-fault','phase':'startup','reason':reason})
+    finally:
+     os.close(hr)
+     if hw is not None:os.close(hw)
  def test_input_loss_recovers(self):
   self.assertEqual(self.run_input(struct.pack('<IIHHi',1,0,0,3,0)),'input_lost')
  def test_partial_event_recovers(self):

@@ -62,24 +62,36 @@ def observe(fd, health, keys_released):
     def lost(phase, reason):
         report(phase, reason)
         send(b'LOST')
-    # Wake may start the observer before a wake key is released. Stay unready
-    # within the supervisor's existing two-second deadline; never renew it here.
-    release_deadline = time.monotonic() + .75
-    while True:
-        # Discard events throughout the wait so a wake gesture cannot become an
-        # emergency gesture after READY. ABI/channel and queue limits still apply.
+    def drain(history):
         for _ in range(64):
             try: data = os.read(fd, EVENT.size * 64)
-            except BlockingIOError: break
+            except BlockingIOError: return True
             except OSError as exc:
                 report('startup', 'read_error', exc)
                 raise
-            if not data: lost('startup', 'eof'); return
-        else: lost('startup', 'drain_limit'); return
-        if keys_released(): break
+            if not data: lost('startup', 'eof'); return False
+            if history: continue
+            if len(data) % EVENT.size: lost('startup', 'partial_event'); return False
+            for offset in range(0, len(data), EVENT.size):
+                sec, usec, kind, code, value = EVENT.unpack_from(data, offset)
+                if usec >= 1000000: lost('startup', 'invalid_timestamp'); return False
+                if kind == 0 and code == 3: lost('startup', 'events_dropped'); return False
+                if kind == 1 and code == 773:
+                    if value not in (0, 1, 2): lost('startup', 'invalid_key_value'); return False
+                    # New Home input must cancel pending activation, including a
+                    # gesture that could finish just after readiness is published.
+                    if value: lost('startup', 'home_activity'); return False
+        lost('startup', 'drain_limit'); return False
+    # Only the initial queue is historical. Input arriving while waiting is new.
+    if not drain(True): return
+    # Wake may start the observer before a wake key is released. Stay unready
+    # within the supervisor's existing two-second deadline; never renew it here.
+    release_deadline = time.monotonic() + .75
+    while not keys_released():
         remaining = release_deadline - time.monotonic()
         if remaining <= 0: lost('startup', 'keys_held'); return
         time.sleep(min(.02, remaining))
+        if not drain(False): return
     policy = TripleHome(); back = LongBack(); send(b'READY')
     while True:
         select.select([fd], [], [], .1)

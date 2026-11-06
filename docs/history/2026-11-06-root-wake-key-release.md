@@ -49,8 +49,10 @@ its timing is not independently traced.
 ## Candidate source change and host verification
 
 The existing read-only input observer now allows up to 750 ms for all keys to be
-released. It drains historical events on every check and constructs triple-Home
-and long-Back state only after release. It sends no READY/PING while waiting and
+released. It discards the initial historical queue once. A fresh Home press or repeat
+during settling cancels pending activation without sending READY; key-up can
+complete settling, and fresh malformed input fails closed. Triple-Home and
+long-Back state for normal operation are constructed only after release. It sends no READY/PING while waiting and
 does not extend the existing two-second supervisor deadline. Permanently held
 flags, EOF, input errors, invalid ABI/channel, malformed active events and queue
 limits retain fail-closed behavior. There is no input grab, reinjection, new
@@ -58,9 +60,10 @@ permission, persistent state or automatic retry/re-enable.
 
 The actual reader subprocess/private-pipe/watchdog delayed-release regression
 failed on the old code (`input_lost` instead of the fresh emergency gesture).
-A separate queued-gesture regression also failed before the patch. All ten
+Review identified that fresh Home during the added wait must cancel activation;
+its regression failed until that safety gap was corrected. All thirteen
 reader cases pass after the change, including permanently held keys under the
-real startup watchdog. The related 459 executed startup, intent, guardian,
+real startup watchdog. The related 462 executed startup, intent, guardian,
 shutdown, emergency and persistent recovery cases passed. Independent read-only
 code review found no actionable defects; its startup-deadline test limitation
 was corrected and re-reviewed.
@@ -68,7 +71,7 @@ was corrected and re-reviewed.
 The actual focused Root 0.10.0 package builds successfully. Its staged reader,
 bundle inventory and generated signed-update infrastructure all contain the exact
 source bytes (reader SHA-256
-`c605d0e1d230b7e707381dbef1702d247a639c78039c8c2c0f10938e4b58bf8d`).
+`d032b473c2eca741ae1f2d80a740e72673e8a402e498ed8c81e6c91d9904862e`).
 This local package proof is not a selected full build or a signed TV artifact.
 
 This is a bounded mitigation for transient startup flags, not proof that a
