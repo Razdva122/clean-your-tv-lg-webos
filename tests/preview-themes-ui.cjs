@@ -16,6 +16,12 @@ const http=require('node:http');
    if(edition==='Root Edition')assert.equal(await frame.locator('body').evaluate(()=>ThemeManager.current().title),'Itachi · Sharingan','selected theme survives edition switch');
    for(const title of ['Retro','Channel','Alpine','Classic','Minimal','Atmosphere','Crăciun la Brașov','Itachi · Sharingan']){
     await page.getByRole('button',{name:title,exact:true}).click();await page.waitForFunction(title=>{const w=document.getElementById('screen').contentWindow;return w.ThemeManager&&w.ThemeManager.current().title===title;},title);
+    await page.locator('#previewThemes[aria-busy="false"]').waitFor();
+    const wallpaper=await frame.locator('body').evaluate(()=>HomeWallpaper.state());
+    if(wallpaper.available.length>1){
+     assert.equal(wallpaper.paused,false,'theme selector must not leave video wallpaper paused after '+title);
+     await page.waitForFunction(()=>{const w=document.getElementById('screen').contentWindow,v=w.document.getElementById('ctvWallpaperVideo');return w.HomeWallpaper.state().actualQuality!=='image'&&v&&!v.paused&&v.currentTime>0;});
+    }
     assert.equal(await page.getByRole('button',{name:title,exact:true}).getAttribute('aria-pressed'),'true');assert.deepEqual(await frame.locator('#tiles .item[data-app-id]').evaluateAll(items=>items.map(i=>i.dataset.appId)),order);
    }
   }

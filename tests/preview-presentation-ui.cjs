@@ -19,7 +19,7 @@ const {assert,chromium,fs,path,stage}=require('./themes/browser.cjs'),http=requi
    const frame=page.frameLocator('#screen');
    const state=await page.evaluate(()=>{const w=document.getElementById('screen').contentWindow;w.previewCloseCalls=0;w.close=()=>w.previewCloseCalls++;return {host:w.CYTV_HOME_HOST,ready:w.RootLauncherRendered,presentation:w.document.documentElement.getAttribute('data-home-presentation'),theme:w.ThemeManager.current().id,underlay:w.document.querySelector('#previewContent')!==null,background:w.getComputedStyle(w.document.getElementById('homeSurface')).backgroundImage};});
    assert.equal(state.host,'card');assert.equal(state.ready,true);assert.equal(state.theme,'builtin:ribbon');
-   assert.notEqual(state.presentation,'overlay');assert.equal(state.underlay,false);assert.notEqual(state.background,'none','Ribbon must retain its own Home background');
+   assert.notEqual(state.presentation,'overlay');assert.equal(state.underlay,false);await page.waitForFunction(()=>{const w=document.getElementById('screen').contentWindow,v=w.document.getElementById('ctvWallpaperVideo');return w.getComputedStyle(w.document.getElementById('homeSurface')).backgroundImage!=='none'||w.HomeWallpaper.state().actualQuality!=='image'&&v&&!v.paused&&v.readyState>=2;});
    assert.equal(await frame.locator('.item.focused .name').isVisible(),true);
    const focus=await frame.locator('.item.focused').boundingBox();assert(focus.x>=0&&focus.y>=0&&focus.x+focus.width<=1440&&focus.y+focus.height<=1100,'focused Ribbon card stays inside the preview');
    await page.getByRole('button',{name:'Home',exact:true}).click();await page.getByRole('button',{name:'Home',exact:true}).click();
