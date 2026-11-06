@@ -70,14 +70,17 @@ class BridgeTests(unittest.TestCase):
         class Native:
             def __init__(self):self.events=[]
             def emit(self,raw):self.events.append(json.loads(raw))
-        native=Native();console=module.AndroidConsole(module.Callbacks(native))
-        guide=for_error(TimeoutError('PRIVATE-PASSWORD'),'ssh-connect',{'edition':'root','host':'PRIVATE-HOST'}, {'action':'install'})
-        console.failure_help(guide)
-        event=native.events[-1]
-        self.assertEqual((event['kind'],event['code']),('failure-help','pending-operation'))
-        self.assertTrue(event['pending']);self.assertFalse(event['canEditConnection'])
-        self.assertNotEqual(event['title'],guide['title'])
-        self.assertNotIn('PRIVATE',json.dumps(native.events))
+        for edition in ('root', 'no-root'):
+            with self.subTest(edition=edition):
+                native=Native();console=module.AndroidConsole(module.Callbacks(native))
+                guide=for_error(TimeoutError('PRIVATE-PASSWORD'),'ssh-connect',
+                                {'edition':edition,'host':'PRIVATE-HOST'}, {'action':'install'})
+                console.failure_help(guide)
+                event=native.events[-1]
+                self.assertEqual((event['kind'],event['code']),('failure-help','ssh-unreachable'))
+                self.assertTrue(event['pending']);self.assertFalse(event['canEditConnection'])
+                self.assertNotEqual(event['title'],guide['title'])
+                self.assertNotIn('PRIVATE',json.dumps(native.events))
 
     def test_recovery_failure_advice_keeps_private_data_out_and_offers_only_inspection(self):
         from cytv import cli, state, i18n
