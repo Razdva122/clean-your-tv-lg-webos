@@ -2662,3 +2662,72 @@ if (window.HomeI18n) window.HomeI18n.add({
     "Startup sources unavailable. Reopen Settings to check again.": "啟動來源無法使用。請重新開啟設定以再次檢查。"
   }
 });
+
+// Root startup waits for the active System update profile.
+if (window.HomeI18n) window.HomeI18n.add({
+  "en": {
+    "System update transaction changed during startup": "System update transaction changed during startup",
+    "System update requires recovery": "System update requires recovery",
+    "System update profile readiness timed out": "System update profile readiness timed out"
+  },
+  "cs": {
+    "System update transaction changed during startup": "Transakce aktualizace systému se během spouštění změnila",
+    "System update requires recovery": "Aktualizace systému vyžaduje obnovení",
+    "System update profile readiness timed out": "Vypršel časový limit čekání na profil aktualizace systému"
+  },
+  "de": {
+    "System update transaction changed during startup": "Die Systemaktualisierung hat sich während des Starts geändert",
+    "System update requires recovery": "Die Systemaktualisierung erfordert eine Wiederherstellung",
+    "System update profile readiness timed out": "Zeitüberschreitung beim Warten auf das Profil der Systemaktualisierung"
+  },
+  "es": {
+    "System update transaction changed during startup": "La transacción de actualización del sistema cambió durante el inicio",
+    "System update requires recovery": "La actualización del sistema requiere recuperación",
+    "System update profile readiness timed out": "Se agotó el tiempo de espera del perfil de actualización del sistema"
+  },
+  "pt-BR": {
+    "System update transaction changed during startup": "A transação de atualização do sistema mudou durante a inicialização",
+    "System update requires recovery": "A atualização do sistema requer recuperação",
+    "System update profile readiness timed out": "O tempo de espera pelo perfil de atualização do sistema esgotou"
+  },
+  "fr": {
+    "System update transaction changed during startup": "La transaction de mise à jour du système a changé pendant le démarrage",
+    "System update requires recovery": "La mise à jour du système nécessite une récupération",
+    "System update profile readiness timed out": "Le délai d’attente du profil de mise à jour du système a expiré"
+  },
+  "it": {
+    "System update transaction changed during startup": "La transazione di aggiornamento del sistema è cambiata durante l’avvio",
+    "System update requires recovery": "L’aggiornamento del sistema richiede il ripristino",
+    "System update profile readiness timed out": "Tempo di attesa del profilo di aggiornamento del sistema scaduto"
+  },
+  "ko": {
+    "System update transaction changed during startup": "시작 중 시스템 업데이트 트랜잭션이 변경되었습니다",
+    "System update requires recovery": "시스템 업데이트 복구가 필요합니다",
+    "System update profile readiness timed out": "시스템 업데이트 프로필 대기 시간이 초과되었습니다"
+  },
+  "hi": {
+    "System update transaction changed during startup": "शुरू होते समय सिस्टम अपडेट का लेन-देन बदल गया",
+    "System update requires recovery": "सिस्टम अपडेट के लिए रिकवरी ज़रूरी है",
+    "System update profile readiness timed out": "सिस्टम अपडेट प्रोफ़ाइल की प्रतीक्षा का समय समाप्त हो गया"
+  },
+  "pl": {
+    "System update transaction changed during startup": "Transakcja aktualizacji systemu zmieniła się podczas uruchamiania",
+    "System update requires recovery": "Aktualizacja systemu wymaga odzyskiwania",
+    "System update profile readiness timed out": "Upłynął limit czasu oczekiwania na profil aktualizacji systemu"
+  },
+  "ru": {
+    "System update transaction changed during startup": "Транзакция обновления системы изменилась во время запуска",
+    "System update requires recovery": "Обновление системы требует восстановления",
+    "System update profile readiness timed out": "Время ожидания профиля обновления системы истекло"
+  },
+  "zh-Hans": {
+    "System update transaction changed during startup": "启动期间系统更新事务已更改",
+    "System update requires recovery": "系统更新需要恢复",
+    "System update profile readiness timed out": "等待系统更新配置超时"
+  },
+  "zh-Hant": {
+    "System update transaction changed during startup": "啟動期間系統更新交易已變更",
+    "System update requires recovery": "系統更新需要復原",
+    "System update profile readiness timed out": "等待系統更新設定檔逾時"
+  }
+});
