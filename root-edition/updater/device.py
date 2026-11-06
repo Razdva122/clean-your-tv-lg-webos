@@ -210,6 +210,8 @@ class Device:
                 result={'status':'failed','error':str(error)[:512]}
             current['homeResume']=result
             self.store.write('transaction',current)
+            from updater.store import prune_peer_caches
+            prune_peer_caches(self.store, self.state.parent/'clean-your-tv-system-updater')
             return result
 
     def install(self, manifest, on_submit, on_terminal):

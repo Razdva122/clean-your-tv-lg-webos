@@ -37,6 +37,41 @@ def log_failure(device, error):
         pass  # Private logging must never replace the initiating failure.
 
 
+def retire_staging(store, identifier, ownership):
+    """Only the completed request's matching terminal product lease may retire it.
+
+    Historical requests without a sealed staging inventory remain inspect-only.
+    The caller holds Ownership.operation, excluding other cooperative writers.
+    """
+    from updater.store import Store, retire_verified_files, prune_update_caches
+    try:
+        identifier=operation_id(identifier)
+        request=store.read('request-'+identifier);submission=store.read('submission-'+identifier)
+        lease=ownership.status()
+        if (not isinstance(request,dict) or not isinstance(submission,dict) or not isinstance(lease,dict)
+                or request.get('operation')!=identifier or submission.get('operation')!=identifier
+                or request.get('stage')!='complete' or request.get('state')!='complete' or request.get('code')!='verified'
+                or request.get('action') not in ('install','remove') or request['action']!=submission.get('action')
+                or submission.get('stage')!='submitted' or lease.get('terminal') is not True or lease.get('stage')!='complete'
+                or lease.get('owner')!='product' or lease.get('journal')!='product-'+identifier+'.json'
+                or request.get('lease')!=lease.get('id')): return 0
+        result=request.get('result')
+        if not isinstance(result,dict) or result.get('verified' if request['action']=='install' else 'removed') is not True:return 0
+        files=submission.get('staging')
+        if not isinstance(files,dict) or any(not isinstance(name,str) or name.split('/')[0] not in ('root','root-updater','supervisor') for name in files): return 0
+        stable=lambda: (store.read('request-'+identifier)==request and store.read('submission-'+identifier)==submission and ownership.status()==lease)
+        removed=retire_verified_files(store,'request-'+identifier,files,stable)
+        # Product maintenance can seed newer baselines without an OTA journal.
+        # Its exact final readback and terminal lease above authorize this boundary.
+        import os
+        from install_device import UPDATER, SUPERVISOR
+        peers=[Store(path,uid=store.uid) for path in (UPDATER,SUPERVISOR) if os.path.lexists(path)]
+        if peers and stable():prune_update_caches(peers,product_complete=True)
+        return removed
+    except (OSError,ValueError,TypeError,KeyError):
+        return 0
+
+
 class _Recorded(Exception):
     def __init__(self,record): self.record=record
 
@@ -96,6 +131,7 @@ class Coordinator:
                     record.update(stage='complete',state='complete',code='verified',result=result)
                     self.store.write('request-'+identifier,record)
                     self.ownership.stage(lease,'complete',terminal=True)
+                    retire_staging(self.store,identifier,self.ownership)
                 except Exception as error:
                     log_failure(self.device,error)
                     # Raw details remain in private logs; retain only fixed failure categories.
@@ -202,6 +238,7 @@ class Coordinator:
                 record.update(stage='complete',state='complete',code='verified',result=result)
                 self.store.write('request-'+identifier,record)
                 self.ownership.stage(lease,'complete',terminal=True)
+                retire_staging(self.store,identifier,self.ownership)
             except Exception as error:
                 log_failure(self.device,error)
                 self.ownership.stage(lease,record['stage'],terminal=False)
@@ -290,6 +327,7 @@ def submit(identifier, payload, migrate=False, prepare_supervisor=False, action=
         receipt=dict(operation=identifier,stage='preparing',state='pending',code='operation_pending',action=action,home_changed=False,candidate_sha256=actual_candidate,options=dict(migrate=migrate,prepare_supervisor=prepare_supervisor),worker_sha256=hashlib.sha256((__import__('pathlib').Path(payload)/'root-updater/bundle.json').read_bytes()).hexdigest(),root_binding=root_review_binding(payload,inventories),root_static={n:d for n,d in inventories['root']['files'].items() if n not in (inventories['root'].get('package'),'release.json','SHA256SUMS')})
         store.write('submission-'+identifier,receipt)
         try:
+            staging={}
             root=Path(store.root)/('request-'+identifier)
             root.mkdir(mode=0o700)
             # Clone checked bytes, not a directory tree whose extra/link entries might
@@ -302,6 +340,7 @@ def submit(identifier, payload, migrate=False, prepare_supervisor=False, action=
                         raw=checked_file(Path(payload)/component,name)
                         if name!='bundle.json' and hashlib.sha256(raw).hexdigest()!=manifest['files'][name]:
                             raise ValueError('worker_source_changed')
+                        staging[component+'/'+name]=hashlib.sha256(raw).hexdigest()
                         output.write(raw);output.flush();os.fsync(output.fileno())
                     target.chmod(0o600)
             if candidate_digest(root,inventories)!=actual_candidate: raise ValueError('worker_source_changed')
@@ -309,6 +348,7 @@ def submit(identifier, payload, migrate=False, prepare_supervisor=False, action=
             receipt.update(state='recovery_required',code='worker_snapshot_unavailable')
             store.write('submission-'+identifier,receipt)
             return receipt
+        receipt['staging']=staging
         receipt['stage']='submitted'
         store.write('submission-'+identifier,receipt)
         args=[sys.executable,'-B',str(root/'root-updater/install_driver.py'),action,'--operation',identifier,'--payload',str(root),'--worker']
@@ -332,6 +372,10 @@ def resume_submit(identifier, ownership=None, action=None):
     from install_device import LocalDevice
     identifier=operation_id(identifier)
     ownership=ownership if ownership is not None else Ownership()
+    completed=request_status(identifier,ownership.store)
+    if completed.get('state')=='complete' and completed.get('stage')=='complete':
+        if action is not None and completed.get('action')!=action:raise ValueError('operation_action_conflict')
+        return completed
     submission=_optional_record(ownership.store,'submission-'+identifier)
     if submission is None:raise ValueError('verified_worker_snapshot_required')
     if action is not None and submission.get('action')!=action:raise ValueError('operation_action_conflict')
