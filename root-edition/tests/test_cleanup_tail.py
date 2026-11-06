@@ -102,6 +102,20 @@ class CleanupTail(unittest.TestCase):
         self.assertTrue(result.stdout,result.stderr)
         return result,json.loads(result.stdout)
 
+    def test_actual_stdin_entry_reaches_selector_guard_with_readonly_global_crypto(self):
+        # Node 20+ exposes getter-only global WebCrypto for stdin scripts. Model
+        # that binding on Node 8 too; the VM harness has a separate global scope.
+        source = ("'use strict';\nObject.defineProperty(global,'crypto',"
+                  "{configurable:true,get:function(){return {};}});\n" + SOURCE.read_text())
+        result = subprocess.run([os.environ.get('NODE8','node'), '-', 'inspect', '../foreign',
+                                 '-', '0', '-1', '-1', '-', 'd'*32],
+                                input=source, capture_output=True, text=True, timeout=15)
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertEqual(result.stderr, '')
+        self.assertEqual(json.loads(result.stdout), {
+            'operation':'../foreign', 'removal':'d'*32, 'state':'recovery_required',
+            'stage':'private-cleanup', 'current':False, 'reason':'private-cleanup-incomplete'})
+
     def first_handoff(self, managed_executor=False, executable_symlink=False):
         import fcntl
         import install_device
