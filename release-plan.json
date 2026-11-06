@@ -13,6 +13,13 @@
         348
       ],
       "summary": "Bound updater cache and completed installer staging retention"
+    },
+    {
+      "pr": 352,
+      "issues": [
+        351
+      ],
+      "summary": "Fix Root OTA readiness after an early launcher start"
     }
   ],
   "excluded": [],
