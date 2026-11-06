@@ -6,6 +6,7 @@ const base=process.env.PREVIEW_URL||'http://127.0.0.1:8876';
  const browser=await chromium.launch({headless:true,channel:'chrome'});
  try {
  const page=await browser.newPage({viewport:{width:1920,height:1080},locale:'en'}), errors=[];
+ const ready=()=>page.waitForFunction(()=>window.RootLauncherRendered===true);
  page.on('pageerror',e=>errors.push(e.message));
  await page.addInitScript(()=>{
   window.calls=[]; window.offline=false;
@@ -24,6 +25,7 @@ const base=process.env.PREVIEW_URL||'http://127.0.0.1:8876';
  // Home Helper polling has its own tests; isolate app editing from its startup RPCs.
  await page.goto(base+'/launcher/index.html');
  await page.locator('#tiles .item').first().waitFor();
+ await ready();
  assert.equal(await page.locator('#tiles .add-app').count(),1,'last tile adds apps');
  const ids=()=>page.locator('#tiles .item').evaluateAll(els=>els.map(e=>e.dataset.appId||'+'));
  assert.deepEqual(await ids(),['a','b','+']);
@@ -32,7 +34,7 @@ const base=process.env.PREVIEW_URL||'http://127.0.0.1:8876';
  assert.equal(await page.evaluate(()=>calls.filter(c=>c.uri.endsWith('/launch')&&['a','b','c'].includes(c.p.id)).length),0,'hold must not launch');
  await page.keyboard.press('ArrowRight');await page.keyboard.press('Enter');
  assert.deepEqual(await ids(),['b','a','+']);
- await page.reload();await page.locator('#tiles .add-app').waitFor();assert.deepEqual(await ids(),['b','a','+']);
+ await page.reload();await ready();await page.locator('#tiles .add-app').waitFor();assert.deepEqual(await ids(),['b','a','+']);
  await page.keyboard.down('Enter');await page.waitForTimeout(680);await page.keyboard.up('Enter');
  await page.keyboard.press('ArrowRight');await page.keyboard.press('Escape');assert.deepEqual(await ids(),['b','a','+']);
  await page.keyboard.down('Enter');await page.waitForTimeout(680);await page.keyboard.up('Enter');
@@ -46,7 +48,7 @@ const base=process.env.PREVIEW_URL||'http://127.0.0.1:8876';
  assert.equal(await page.locator('#appPicker [data-app-id="com.sdk.ares.hostedapp"], #appPicker [data-app-id="com.cleanyourtv.root.updater"]').count(),0,'development and updater utilities stay out of Add app');
  await page.screenshot({path:'/tmp/home-app-picker.png'});
  await page.locator('#appPicker [data-app-id="c"]').click();assert.deepEqual(await ids(),['b','a','c','+']);
- await page.reload();await page.locator('.add-app').waitFor();assert.deepEqual(await ids(),['b','a','c','+']);
+ await page.reload();await ready();await page.locator('.add-app').waitFor();assert.deepEqual(await ids(),['b','a','c','+']);
  // Releasing a pointer hold over another tile must not swallow the next placement click.
  await page.locator('[data-app-id="b"]').hover();await page.mouse.down();await page.waitForTimeout(680);
  // One pointer move reorders immediately; locator.hover would chase the displaced tile.
@@ -55,7 +57,7 @@ const base=process.env.PREVIEW_URL||'http://127.0.0.1:8876';
  await page.locator('.moving').click();assert.equal(await page.locator('.moving').count(),0);
  // Restore the test order with a fresh persisted layout before the remaining scenarios.
  await page.evaluate(()=>{let state=JSON.parse(localStorage.getItem('tvhome.layout'));state.ids=['b','a','c'];localStorage.setItem('tvhome.layout',JSON.stringify(state));});
- await page.reload();await page.locator('.add-app').waitFor();
+ await page.reload();await ready();await page.locator('.add-app').waitFor();
  // Pointer hold and hide; then restore through +.
  await page.locator('[data-app-id="b"]').hover();await page.mouse.down();await page.waitForTimeout(680);await page.mouse.up();
  assert.equal(await page.locator('.moving').count(),1,'pointer hold stays in edit mode');
@@ -74,7 +76,7 @@ const base=process.env.PREVIEW_URL||'http://127.0.0.1:8876';
   await page.keyboard.press('ArrowDown');await page.keyboard.press('Enter');await page.keyboard.press('Escape');
  }
  assert.deepEqual(await ids(),['+']);
- await page.reload();await page.locator('.add-app').waitFor();assert.deepEqual(await ids(),['+']);
+ await page.reload();await ready();await page.locator('.add-app').waitFor();assert.deepEqual(await ids(),['+']);
  await page.keyboard.press('Enter');await page.locator('#appPicker [data-app-id="a"]').waitFor();
  await page.keyboard.press('Enter');assert.deepEqual(await ids(),['a','+']);
  // Releasing OK after the page loses focus must not launch or start editing.
@@ -85,7 +87,7 @@ const base=process.env.PREVIEW_URL||'http://127.0.0.1:8876';
   let state=JSON.parse(localStorage.getItem('tvhome.layout'));
   state.ids=['a','b','c'];state.hidden=[];localStorage.setItem('tvhome.layout',JSON.stringify(state));
  });
- await page.reload();await page.locator('.add-app').waitFor();
+ await page.reload();await ready();await page.locator('.add-app').waitFor();
  await page.evaluate(()=>{window.inventoryOverride=[{id:'a',title:'Alpha'}];});
  await page.locator('.add-app').click();
  await page.locator('#appPickerStatus').filter({hasText:'All installed'}).waitFor();
@@ -102,11 +104,11 @@ const base=process.env.PREVIEW_URL||'http://127.0.0.1:8876';
  await page.locator('.add-app').click();
  await page.locator('#appPicker [data-app-id="a"]').click();
  assert.deepEqual(await ids(),['b','c','a','+'],'plus restores hidden app without dropping other tiles');
- await page.reload();await page.locator('.add-app').waitFor();
+ await page.reload();await ready();await page.locator('.add-app').waitFor();
  assert.deepEqual(await ids(),['b','c','a','+'],'restored layout persists');
  await page.unroute('**/apps.js');
  await page.route('**/apps.js',r=>r.fulfill({body:'window.TV_APPS='+JSON.stringify({apps:Array.from({length:7},(_,i)=>({id:'row'+i,title:'App '+i,icon:'brand-v2-icon.png'})),inputs:[]})+';'}));
- await page.evaluate(()=>localStorage.clear());await page.reload();await page.locator('.add-app').waitFor();
+ await page.evaluate(()=>localStorage.clear());await page.reload();await ready();await page.locator('.add-app').waitFor();
  await page.keyboard.down('Enter');await page.waitForTimeout(650);await page.keyboard.up('Enter');
  await page.keyboard.press('ArrowDown');
  assert.equal(await page.locator('#hideApp').evaluate(e=>e.classList.contains('focused')),false,'first down moves into second row');
