@@ -163,3 +163,36 @@ These are source/pre-dispatch checks. The full candidate must be explicitly
 built and pinned before exact-artifact/device acceptance; none is implied here.
 The collected inventory includes #363 with the original reports still qualified.
 Further features are held for the next cycle until this candidate ships.
+
+## Full-candidate validation corrections
+
+The first complete 1.10.0 candidate, frozen source `708d6f9a`, failed
+[run 42272017830](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42272017830).
+The broader theme suite reached stale `Built-in` assertions after intended size
+badges, and Windows exposed a default-encoding source read and three POSIX-only
+TV filesystem/kernel fixtures. Android, Linux and Intel desktop builds and all
+runtime shards passed; ARM macOS was cancelled by matrix failure. This run was
+not pinned and is not a valid candidate.
+
+[PR #365](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/365) changes
+only six existing tests: packaged catalog size assertions retain built-in identity,
+no-remove, offline, geometry and persistence guards; an input fixture waits for
+the observable completion of the layout-triggered response before testing another
+held request; source reads explicitly use UTF-8; Windows skips only the three
+POSIX fixtures while retaining portable package/rebinding coverage. Production
+code, timeouts and runtime safety guards are unchanged. Independent review found
+no actionable issue.
+
+The full 43-script browser collector ran every entry sequentially: 40 passed and
+three identified failures were corrected and passed targeted reruns. This is
+combined applicable evidence, not a fresh aggregate 43/43 run. Installer/fence/i18n
+checks passed all 37 cases on Linux and all 37 on macOS without skips. A CP1252
+simulation reproduced exactly 12 i18n failures and passed after explicit UTF-8
+reading; it does not replace actual Windows CI.
+
+`release-inputs.py` correctly requires a replacement candidate for these files:
+`tests/cytv/test_i18n.py`, `tests/cytv/test_no_root_gate_bootstrap.py`,
+`tests/cytv/test_root_helper_fence.py`, `tests/themes/input-noroot-status-ui.cjs`,
+`tests/themes/liquid-glass-ui.cjs` and `tests/themes/ribbon-builtin-ui.cjs`.
+All known corrections are grouped before one replacement full dispatch. No TV
+operation or original reporter recovery is established by these checks.

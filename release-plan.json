@@ -76,6 +76,11 @@
         359
       ],
       "summary": "Add practical verified removal and same-goal retry, typed authentication and retained recovery evidence; original installation causes and reporter device recoveries remain unconfirmed"
+    },
+    {
+      "pr": 365,
+      "issues": [],
+      "summary": "Fix full-candidate browser and Windows test assumptions"
     }
   ],
   "excluded": [],
