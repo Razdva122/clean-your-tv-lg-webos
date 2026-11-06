@@ -181,3 +181,11 @@ class SimpleRemoval(unittest.TestCase):
             with self.assertRaises(UserError):self.remove()
             self.assertTrue(own.exists())
         finally:own.parent.parent.chmod(0o755)
+
+    @unittest.skipIf(getattr(os,'getuid',lambda:-1)()==0,'tests unprivileged rejection')
+    def test_root_package_action_rejects_unprivileged_call_and_arbitrary_id(self):
+        own=self.own_file('apps/usr/palm/applications/com.cleanyourtv.root.preview/appinfo.json')
+        for app in ('com.cleanyourtv.root.preview','org.foreign.app','../../foreign'):
+            command='/usr/bin/node -e '+shlex.quote(self.cleanup.PRIVATE_CLEANUP_PROGRAM)+' '+shlex.quote(json.dumps({'action':'root-package','app':app}))
+            with self.subTest(app=app),self.assertRaises(RuntimeError):self.remote.run(command)
+        self.assertTrue(own.exists())
