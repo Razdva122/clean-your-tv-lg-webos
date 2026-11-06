@@ -88,3 +88,50 @@ build, so a replacement full candidate is required: `cytv/diagnostic_context.py`
 `tests/cytv/test_failure_help.py` and `tests/cytv/test_no_root_simple_removal.py`.
 The following freeze commit changes only exempt release metadata and documents.
 Physical acceptance remains deferred; the source/build gate does not complete it.
+
+## Selected corrected candidate
+
+[Full build 42287736073:1](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42287736073)
+completed successfully from `a8015ac2cd42d070cd4e12c6d8349e60eda21dcf`. All four
+desktop platforms, Android and all 21 workflow jobs passed. This is the
+selected build in `release-plan.json`; physical acceptance remains empty.
+
+The actual Windows job ran 832 installer tests in 184.038 seconds: no errors or
+failures, 163 expected platform skips. Frozen console cp1252, payload/runtime and
+all three extracted desktop checks passed. The fresh browser-theme profile
+executed all 43 commands successfully. Browser-core used authenticated matching
+PR evidence; its receipt ZIP digest and run/job binding were independently checked.
+
+Independent Android artifact verification matched GitHub archive digest
+`66cd3ac9f8fdbc7d86318eb3a11486bc985c20059f0ad316032ea180459fb619`.
+APK SHA256 is `f81eda4df2be10e23e02e7043647aeb33ff3f6229778f1acb36b2cda1ac51e7d`.
+Embedded source/version provenance and all 316 payload hashes matched the
+checked focused build, including all four corrected support files/manifests.
+All TV IPKs, Helper and native utility remain byte-identical to the preceding
+candidate. The exact new payload is retained privately for subsequent acceptance.
+No phone/TV operation is implied by this artifact inspection.
+
+Reviewed all 13 localized removal instructions: they request a restart when
+needed without prescribing its position relative to package removal. The same
+translated Retry/maintenance flow remains correct; no new text or action was added.
+The installer does not restart a TV automatically. No further device change or
+reboot was performed after the maintainer deferred physical testing until morning.
+
+### Artifact inventory
+
+These are retained Actions ZIP digests, not published feed hashes or device
+acceptance. All expected platform/test artifacts were present and unexpired.
+
+| Artifact | ID | SHA256 |
+| --- | --- | --- |
+| cytv-android-arm64 | 13538466837 | `66cd3ac9f8fdbc7d86318eb3a11486bc985c20059f0ad316032ea180459fb619` |
+| cytv-android-native-tests | 13538401922 | `0100290168ea33c13529c6e216902d102ebfaa09536a5d18a39e2d37459b3c97` |
+| cytv-linux-x64 | 13538717542 | `cb82bbdc01025e53a4ce64d56dc232b94689d3f05537a525b7888587dc75980c` |
+| cytv-linux-x64-desktop | 13538348213 | `3eb3c0a0d11c7891930b30610d70746b3f52cc205a29b99d8b086faff298f11a` |
+| cytv-macos-arm64 | 13539380186 | `dd82d51a8011f03ec0084f4b3702487e0ae25ff62a29c7266adf379ceec83fa3` |
+| cytv-macos-arm64-desktop | 13538472722 | `d0efc32cfffc4ce619f66bc47e950a172f5485deb28e8f498a40aeb0f8bba4bd` |
+| cytv-macos-x64 | 13539271058 | `5cb16d2b04988df5ac876327df666958ec5d7af6e538d5b5215d1981a007523d` |
+| cytv-macos-x64-desktop | 13539321111 | `b73554a2eb8592539f76705b7c9fd1d3d43ca5f39f85fdac3ee70023fcc17715` |
+| cytv-windows-x64 | 13539530205 | `5c4853c1be580fd042443aeab87c965443928e136d11f4f2c976063b08fdc622` |
+| cytv-windows-x64-desktop | 13539515154 | `6863838460cd3132244fd899269512de0ef2cec4bc861b332ea359f7a424a2a6` |
+| homebrew-candidate | 13538177434 | `cc26c101103cd13866c31f8a9b02c18a0a7702355bd1a64d6a99032c23222dd7` |
