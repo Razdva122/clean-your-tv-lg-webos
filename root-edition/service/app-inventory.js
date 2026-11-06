@@ -3,7 +3,7 @@
 module.exports=function(execFile,getuid){
  return new Promise(function(resolve,reject){
   if((getuid||process.getuid)()!==0){reject(Error('Root service required'));return;}
-  (execFile||require('child_process').execFile)('/usr/bin/luna-send',['-n','1','luna://com.webos.applicationManager/dev/listApps','{}'],{timeout:8000,maxBuffer:1024*1024},function(error,stdout){
+  (execFile||require('child_process').execFile)('/usr/bin/luna-send',['-n','1','luna://com.webos.applicationManager/listApps','{}'],{timeout:8000,maxBuffer:1024*1024},function(error,stdout){
    if(error){reject(Error('inventory-unavailable'));return;}
    try{
     var result=JSON.parse(stdout);
