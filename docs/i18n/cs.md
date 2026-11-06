@@ -72,11 +72,11 @@ Uveďte model TV, firmware, No-root nebo Root, instalační zařízení, krok a 
 
 V připravovaných sestaveních se při zvoleném nebo aktivním 4K zobrazí upozornění a tlačítko „Vypnout náhledy HDMI“ pouze u motivů se zapnutými náhledy vstupů. Během náhledu HDMI se 4K video na pozadí dočasně nahradí statickým obrázkem v 1080p. Vypněte náhledy vstupů, aby pozadí zůstalo ve 4K.
 
-### Kandidát: obnova a úplné odebrání
+### Kandidát: jednoduché odebrání
 
-Tlačítka výše stále stahují vydanou verzi. Příští kandidát přidává pokračování původní operace a **Odinstalovat Clean Your TV** na počítači a Androidu. Použijte stejné uložené připojení; kontrolu a každou změnu potvrďte zvlášť. Vyhovující nastavení Root lze dokončit s LG Home a vypnutým ovládáním Home. Tím je zvolený cíl splněn; fyzické tlačítko Home, zvuk, pohotovost a studený start zůstávají samostatnými kontrolami.
+Tlačítka výše stále nabízejí vydanou verzi. V příštím kandidátu vyberte v Údržbě **Odinstalovat Clean Your TV** se stejným uloženým připojením TV. Potvrďte jednou. Přítomné známé aplikace a soubory projektu se odeberou, chybějící se přeskočí, i po částečné instalaci.
 
-Odebrání zachová předchozí výsledek instalace a oznámí úspěch teprve po ověření odstranění vlastních aplikací, služeb, automatického spouštění a soukromých dat nastavení. Nedokončená práce, neznámý výsledek dodavatele, konflikt vlastnictví nebo nedostupná kontrola je mohou zablokovat; po každé chybě není zaručeno. Zachovejte existující zprávu a data obnovy. Neobcházejte blokaci novou instalací, smazáním dat aplikace, resetem Developer Mode ani vynuceným mazáním. Budoucí sledování nedokáže rekonstruovat staré výsledky. Výše popsané nouzové ovládání platí dál; sdílení zpráv vyžaduje váš souhlas.
+Na výzvu odpojte TV od napájení, znovu připojte, počkejte na síť a vyberte **Zkusit znovu**. Pohotovost nebo Quick Start není úplný restart; CYTV TV automaticky nerestartuje. Při ztrátě spojení je zkontrolujte a opakujte stejný cíl odebrání bez dalšího průvodce obnovou. Při odmítnutí přístupu použijte požadované připojení Root; pokud je TV zaneprázdněn, počkejte a zkuste znovu. Úspěch se zobrazí až po ověření závěrečného úklidu. Zachovejte klíče a původní zprávy. Nouzové ovládání a souhlas se sdílením výše platí dál.
 
 <!-- Legacy anchors retained for existing links. -->
 <a id="automatické-rozlišení-grafiky-kandidát"></a>

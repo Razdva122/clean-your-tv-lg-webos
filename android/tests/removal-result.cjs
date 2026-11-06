@@ -31,7 +31,7 @@ let browser;
       for (const edition of ['root','no-root']) {
         await page.evaluate(({disposition,proof,edition})=>{
           receiveNative({kind:'started',config:{host:'192.0.2.10',edition,action:'uninstall'}});
-          const plan={kind:'recovery-plan',state:'complete',summary:'Completion received',nextStep:'Keep the existing report.'};
+          const plan={kind:'recovery-plan',state:'complete',removed:true,summary:'Completion received',nextStep:'Keep the existing report.'};
           if(disposition!==null)plan.disposition=disposition;
           if(proof!==null)plan.verified_clean=proof;
           receiveNative(plan);
@@ -39,7 +39,7 @@ let browser;
         },{disposition,proof,edition});
         const complete=disposition==='clean-removal'&&proof===true;
         assert.equal(await page.locator('.review-symbol').count(),complete?0:1,`${edition}/${disposition}/${proof}`);
-        assert.equal(await page.locator('h1').innerText(),complete?'Completion received':'Review recovery options');
+        assert.equal(await page.locator('h1').innerText(),complete?'Completion received':'Removal is not finished yet.');
       }
     }
   }
@@ -54,13 +54,11 @@ let browser;
     await page.evaluate(()=>receiveNative({kind:'finished',code:2}));
     assert.equal(await page.locator('.review-symbol').count(),1);
     assert((await page.locator('.recovery-info').innerText()).includes(event.blockerText));
-    assert.equal(await page.locator('[data-action=recover]').count(),1);
+    assert.equal(await page.locator('[data-action=retry-removal]').count(),1);
     await page.evaluate(event=>{receiveNative({...event,actions:['retain-evidence']});receiveNative({kind:'finished',code:2});},event);
-    assert.equal(await page.locator('[data-action=recover]').count(),0,language+' retain-only');
+    assert.equal(await page.locator('[data-action=retry-removal]').count(),1,language+' retry rechecks same goal');
     await page.evaluate(event=>{receiveNative(event);receiveNative({kind:'finished',code:2});},event);
-    await page.locator('[data-action=recover]').click();
-    assert.equal(await page.locator('#host').inputValue(),'192.0.2.10');
-    assert.equal(await page.locator('#port').inputValue(),'2222');
+    assert.equal(await page.locator('[data-action=recover]').count(),0);
     assert(!(await page.locator('body').innerText()).includes('PRIVATE'));
   }
   await page.close();

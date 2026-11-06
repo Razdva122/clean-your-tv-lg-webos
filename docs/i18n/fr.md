@@ -85,11 +85,11 @@ Indiquez modèle de TV, micrologiciel, No-root ou Root, appareil d’installatio
 
 Dans les prochaines versions, l’avertissement et le bouton « Désactiver l’aperçu HDMI » apparaissent lorsque la 4K est sélectionnée ou active, uniquement pour les thèmes dont l’aperçu des entrées est activé. Pendant l’aperçu HDMI, le fond vidéo 4K est temporairement remplacé par une image fixe en 1080p. Désactivez l’aperçu des entrées pour conserver le fond en 4K.
 
-### Candidat : récupération et suppression complète
+### Candidat : suppression simple
 
-Les boutons ci-dessus téléchargent toujours la version publiée. Le prochain candidat ajoute la poursuite de l’opération d’origine et **Désinstaller Clean Your TV** sur ordinateur et Android. Utilisez la même connexion enregistrée ; confirmez séparément l’inspection et chaque modification. Une configuration Root admissible peut se terminer avec LG Home et le contrôle Home désactivé. Cet objectif est atteint ; bouton Home, son, veille et démarrage à froid restent des vérifications distinctes.
+Les boutons ci-dessus proposent toujours la version publiée. Dans le prochain candidat, choisissez **Désinstaller Clean Your TV** dans Maintenance avec la même connexion enregistrée. Confirmez une fois. Les applications et fichiers connus du projet présents sont supprimés ; les éléments absents sont ignorés, même après une installation partielle.
 
-La suppression conserve le résultat précédent et n’annonce un succès qu’après vérification du retrait des applications, services, démarrage automatique et données privées propres. Travail en cours, résultats fournisseur inconnus, conflits de propriété ou contrôles indisponibles peuvent la bloquer ; elle n’est pas garantie après tout échec. Gardez le rapport existant et les données de récupération. Ne réinstallez pas, n’effacez pas les données de l’application, ne réinitialisez pas Developer Mode et ne forcez pas la suppression. Un futur observateur ne reconstitue pas les anciens résultats. Les commandes d’urgence restent valables ; le partage des rapports exige votre accord.
+Quand demandé, débranchez l’alimentation TV, rebranchez-la, attendez le réseau et choisissez **Réessayer**. Veille ou Quick Start n’est pas un redémarrage complet ; CYTV ne redémarre pas le téléviseur automatiquement. En cas de déconnexion, vérifiez la connexion et réessayez la même suppression sans autre assistant de récupération. Si l’accès est refusé, utilisez la connexion Root demandée ; si le téléviseur est occupé, patientez et réessayez. Le succès apparaît seulement après vérification du nettoyage final. Gardez les clés et rapports d’origine. Les commandes d’urgence et le consentement au partage restent applicables.
 
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="python-facultatif-pour-root-dans-v110"></a>

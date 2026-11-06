@@ -223,9 +223,9 @@ class DesktopRecoveryTests(unittest.TestCase):
         w = self.window()
         w.command = 'uninstall'
         w.receive('done', 0)
-        self.assertEqual(w.title.text(), 'Review recovery options')
+        self.assertEqual(w.title.text(), 'Removal is not finished yet.')
         self.assertEqual(w.badge.text(), w.title.text())
-        self.assertIn('Removal is not verified.', w.subtitle.text())
+        self.assertIn('Removal could not be confirmed.', w.subtitle.text())
         w.receive('recovery-plan', {'state':'waiting','disposition':'clean-removal',
                                   'summary':'Removal has been requested.',
                                   'next_step':'Connect to the TV to continue cleanup.'})
@@ -238,7 +238,7 @@ class DesktopRecoveryTests(unittest.TestCase):
             for proof in (None, False, True):
                 with self.subTest(disposition=disposition, verified_clean=proof):
                     def runner(argv, **kwargs):
-                        plan = {'state':'complete', 'summary':'Completion received',
+                        plan = {'state':'complete', 'removed':True, 'summary':'Completion received',
                                 'next_step':'Read the result below before continuing.'}
                         if disposition is not None: plan['disposition'] = disposition
                         if proof is not None: plan['verified_clean'] = proof
@@ -249,7 +249,7 @@ class DesktopRecoveryTests(unittest.TestCase):
                     w.start('uninstall', self.profile)
                     self.pump(lambda: not w.running)
                     complete = disposition == 'clean-removal' and proof is True
-                    self.assertEqual(w.title.text(), 'Completion received' if complete else 'Review recovery options')
+                    self.assertEqual(w.title.text(), 'Completion received' if complete else 'Removal is not finished yet.')
                     self.assertEqual(w.badge.text(), w.title.text())
                     w.close()
 
@@ -270,7 +270,7 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.assertIsNotNone(w.report)
         self.assertEqual(json.loads(w.report.read_bytes())['frontend'], 'desktop')
 
-    def test_bounded_cleanup_plan_offers_only_assessed_action_for_bound_tv(self):
+    def test_cleanup_retry_rechecks_same_goal_even_with_old_advisory_actions(self):
         def runner(argv, **kwargs):
             write = kwargs['write']
             write.recovery(self.profile)
@@ -283,13 +283,13 @@ class DesktopRecoveryTests(unittest.TestCase):
         w.run = runner
         w.start('uninstall', self.profile)
         self.pump(lambda: not w.running)
-        self.assertEqual(w.title.text(), 'Review recovery options')
+        self.assertEqual(w.title.text(), 'Removal is not finished yet.')
         self.assertIn('Removing private setup data…', w.subtitle.text())
-        self.assertIn('Private setup data cleanup is incomplete.', w.subtitle.text())
-        self.assertIsNotNone(self.button(w, 'Review recovery options'))
+        self.assertIn('Some project files remain.', w.subtitle.text())
+        self.assertIsNotNone(self.button(w, 'Try again'))
         w.recovery_plan['actions'] = ['retain-evidence']
         w.receive('done', 2)
-        self.assertIsNone(self.button(w, 'Review recovery options'))
+        self.assertIsNotNone(self.button(w, 'Try again'))
 
     def test_root_partial_cleanup_shows_current_phase_and_retains_original_failure(self):
         from tests.cytv.clean_removal_fixture import prepare
@@ -299,11 +299,11 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.pump(lambda: w.pending is not None)
         w.submit('y')
         self.pump(lambda: not w.running)
-        self.assertEqual(w.title.text(), 'Review recovery options')
+        self.assertEqual(w.title.text(), 'Removal is not finished yet.')
         self.assertEqual(self.store.pending(self.profile)['stage'], 'private-cleanup')
         self.assertEqual(self.store.pending(self.profile)['previous'], json.loads(original))
         self.assertIn('Removing private setup data…', w.subtitle.text())
-        self.assertIn('Private setup data cleanup is incomplete.', w.subtitle.text())
+        self.assertIn('Some project files remain.', w.subtitle.text())
         self.assertEqual(w.recovery_profile, self.profile)
         report = json.loads(w.report.read_bytes())
         self.assertEqual(report['frontend'], 'desktop')
@@ -469,7 +469,7 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.pump(lambda: w.pending is not None)
         w.submit('y')
         self.pump(lambda: not w.running)
-        self.assertEqual(w.title.text(), 'Review recovery options')
+        self.assertEqual(w.title.text(), 'Removal is not finished yet.')
         self.assertIsNotNone(self.button(w, 'Save diagnostic report…'))
         pending = self.store.pending(self.profile)
         self.assertEqual(pending['recovery_protocol'], 'clean-removal-v1')

@@ -1,57 +1,41 @@
-# Installer recovery failure-injection matrix
+# Installer recovery and simple removal matrix
 
-This is maintained source coverage for the next unpublished candidate. Simulated
-TV replies and local processes establish only the stated software contract, not
-device compatibility, vendor persistence or owner recovery. Keep historical
-device acceptance with its exact release artifacts. The original failure and a
-later inspection failure are separate evidence; neither should overwrite the
-other. [User flow and limits](../RECOVERY.md).
+The current unpublished removal candidate follows stop/delete → full restart →
+final sweep. It removes known project items that exist and skips absent items,
+including after partial installation. Earlier install success is not a removal
+prerequisite. A lost connection offers Try again on the same approved goal and
+saved target. Actual OS access denial and busy work get their own instructions.
+No automatic TV reboot or hidden retry runs. [User instructions](../RECOVERY.md).
 
-| Injected boundary | Expected result | Runnable evidence |
+This matrix describes source/UI coverage. Simulated SSH replies, local processes
+and browser events are not physical TV or vendor acceptance. Final success needs
+`removed: true` and `verified_clean: true` from the backend; a restart-required
+or missing/false proof result must stay neutral.
+
+| Boundary or observation | Expected user behavior | Runnable evidence / current limit |
 | --- | --- | --- |
-| Default retain / decline inspection | Original receipt preserved; review, no installation success | `tests.cytv.test_desktop_recovery.DesktopRecoveryTests.test_root_menu_defaults_to_retaining_receipt_without_activation`; `test_declining_recovery_retains_receipt_and_does_not_offer_automatic_retry`; `android/tests/recovery-journey.cjs` |
-| Cancel root authentication | Original profile, host pin and receipt preserved; cancelled; no TV mutation | `tests.cytv.test_desktop_recovery.DesktopRecoveryTests.test_cancelled_recovery_auth_keeps_original_records_and_shows_cancelled`; Android journey `cancelled-auth` |
-| Localized hidden credentials | Credential type survives presentation in all 13 languages; no password guessing from prose | `tests.cytv.test_i18n.LanguageTests.test_desktop_typed_credentials_survive_all_localized_labels`; `android.tests.test_root_recovery.AndroidRootRecoveryTests.test_passive_authentication_keeps_key_and_root_types_in_every_locale` |
-| Eligible Root Home-off completion | Actual chosen LG Home goal wins generic Clean Home checklist; untested physical observations stay visible | `tests.cytv.test_desktop_recovery.DesktopRecoveryTests.test_root_home_off_confirmation_archives_original_and_completes`; Android journeys and `android/tests/maintenance.cjs` |
-| Running Root worker / unsupported legacy package status | Retain evidence, precise blocker, no replay or green completion | Android journeys `running-worker` / `legacy-unknown`; `tests.cytv.test_desktop_recovery.DesktopRecoveryTests.test_failed_recovery_offers_original_failure_report_without_retry_or_install` |
-| Host lost after original Helper terminal | Continue original Home/configuration bytes, never resubmit Helper or adopt new versions | `tests.cytv.test_no_root_integration.OriginalOperationIntegration.test_host_loss_resumes_only_original_home_and_configuration_after_upgrade`; actual detached-process continuation in Android journey |
-| Lost config or restore acknowledgement | Unknown remains blocked, even if current inventory looks desired | `tests.cytv.test_no_root_integration.OriginalOperationIntegration.test_copied_capsule_cannot_duplicate_delayed_configuration`; `test_removal_transport_loss_cannot_be_sealed_by_empty_eim_inventory` |
-| Changed capsule, source or configuration | No continuation; no private-byte disclosure | `tests.cytv.test_no_root_integration.OriginalOperationIntegration.test_changed_capsule_or_current_files_never_submit_home`; `test_changed_trusted_reader_refuses_original_source_without_remote_effects`; `tests.cytv.test_no_root_observer.ObserverProcesses.test_pinned_stream_uploads_on_every_configured_runtime` |
-| Sender loss, durability failure, competing host | Permanent operation claims prevent replay; unknown remains explicit | `tests.cytv.test_no_root_observer.ObserverProcesses.test_killed_bootstrap_and_worker_loss_never_duplicate_original_request`; `test_claim_and_terminal_durability_failures_never_replay`; `test_distinct_operations_exclude_and_stale_releaser_cannot_delete_new_owner` |
-| Emergency stop arrives during launch | New recovery launch cannot clear or bypass the stop | `tests.cytv.test_no_root_integration.OriginalOperationIntegration.test_native_entry_preserves_stop_arriving_after_host_guard`; `test_emergency_marker_prevents_recovery_launch` |
-| Exit 0 with review/ready/waiting/blocked/removal incomplete | Neutral review; no green success or automatic force/retry; explicit uninstall requires both clean-removal disposition and true cleanup proof, including when the payload omits or changes disposition | `android/tests/maintenance.cjs`; `android/tests/removal-result.cjs`; `android.tests.test_bridge.BridgeTests.test_recovery_result_preserves_fixed_disposition_and_verified_cleanup`; `tests.cytv.test_desktop_recovery.DesktopRecoveryTests.test_explicit_uninstall_requires_clean_disposition_and_true_proof` |
-| Clean-removal stage/reason unknown or structured | Fixed human guidance, no raw service/protocol/private text; historical verified stage remains a current check | `tests.cytv.test_recovery_ui`; `android.tests.test_bridge.BridgeTests.test_cleanup_details_are_localized_and_never_forward_unknown_codes`; 13-locale bridge/browser cases in `android/tests/removal-result.cjs` |
-| No-root connection lost after explicit removal confirmation | Desired-absence intent persists before device work; original failure file is unchanged; connection blocker remains separate | `tests.cytv.test_desktop_recovery.DesktopRecoveryTests.test_no_root_uninstall_connection_loss_keeps_intent_before_device_work` — adapter is not invoked |
-| Continue action or retain-only assessment | Only assessed continuation is offered, on the bound saved target; next recovery still confirms and revalidates | `tests.cytv.test_desktop_recovery.DesktopRecoveryTests.test_bounded_cleanup_plan_offers_only_assessed_action_for_bound_tv`; `android/tests/removal-result.cjs` |
+| Connection lost during removal | Clear connection error and Try again, same uninstall/TV/port | `tests.cytv.test_simple_removal_ui.SimpleRemovalUITests.test_connection_loss_try_again_runs_same_uninstall_target`; `android/tests/simple-removal.cjs` |
+| Retry after the original approval | Same durable goal, no recovery wizard, no second initial confirmation | `test_actual_cli_retry_reuses_approved_goal_without_second_confirmation` in the same Qt class; RED on baseline `6416c005` until the simple CLI provider lands |
+| Partial setup or missing app/files | Delete present known items, skip absent items; old pending does not force installation | Root/No-root simple provider filesystem tests and combined UI orchestration are required before candidate freeze; UI mocks do not prove deletion |
+| Full restart requested | Explain power disconnect/reconnect and wait for the network, then Try again | `test_restart_required_is_neutral_and_explains_full_power_restart`; Android simple-removal cases in all 13 languages and both editions |
+| Standby, Quick Start or same boot | Still pending; only a real boot change permits final sweep | Backend boot-ID tests are required. UI only tests the neutral pending/result contract |
+| Final result flags | Only both true flags with clean-removal disposition can show completion | `test_explicit_remove_needs_removed_and_verified_clean`; `test_explicit_uninstall_requires_clean_disposition_and_true_proof` in `tests.cytv.test_desktop_recovery`; `android/tests/removal-result.cjs` and `simple-removal.cjs` |
+| Actual busy/access-denied/package failure | Wait and retry, restore required Root access, or inspect error and retry | Bounded shared copy in `cytv/recovery_ui.py`; Android bridge/browser cases in all 13 locales. Actual denial classification belongs the providers |
+| Unknown or structured service code | Fixed human text, raw/private values excluded from main UI | `tests.cytv.test_recovery_ui`; `android.tests.test_bridge.BridgeTests.test_cleanup_details_are_localized_and_never_forward_unknown_codes` |
+| Typed password/key/Developer Mode prompt | Existing sign-in and saved keys preserved in every language | `tests.cytv.test_i18n.LanguageTests.test_desktop_typed_credentials_survive_all_localized_labels`; `android.tests.test_root_recovery.AndroidRootRecoveryTests.test_passive_authentication_keeps_key_and_root_types_in_every_locale` |
+| Original failure and later connection/removal error | Original unknown cause stays unknown; current blocker is separate | `tests.cytv.test_desktop_recovery.DesktopRecoveryTests.test_no_root_uninstall_connection_loss_keeps_intent_before_device_work`; existing diagnostic-lineage tests |
+| Root Home-off setup and other recovery goals | Preserve achieved LG Home/off goal and separate physical observations | `test_root_home_off_confirmation_archives_original_and_completes`; `android/tests/recovery-journey.cjs` and `maintenance.cjs` |
 
-Full clean-removal adapters and native writer fences have their own focused
-integration tests in the candidate. Their final method names and acceptance
-results must be added here after integration; the frontend result contract alone
-does not validate those adapters. Original legacy reports #201/#307/#359 remain
-outside the future observer's terminal evidence. In #359, the initial generic
-install failure is unknown and the later package-status rejection is distinct.
-Do not request another install to fill this matrix.
+The prior dated [UI source record](../history/2026-11-06-installer-recovery-ui-source-verification.md)
+retains the earlier design/review evidence. Advanced lifecycle helpers/global
+coordination from later experimental branches are outside this simple candidate.
+Ordinary install-observer tests remain useful for their own installation flow;
+they do not establish removal prerequisites or retroactively recover a reporter's
+original cause. No removal result on #201/#307/#359 or any other reporter's TV is
+claimed, and another installation is not required to populate this matrix.
 
-The Root-provider UI checkpoint on `6608d3e8` additionally has two intentionally
-failing real CLI/Store/Installer/Qt wiring tests: `test_root_clean_removal_cli_completes_only_after_device_proof`
-and `test_root_partial_cleanup_shows_current_phase_and_retains_original_failure`
-in `tests.cytv.test_desktop_recovery.DesktopRecoveryTests`. SSH replies are simulated;
-no Installer result or Store method is stubbed. They expose trusted-manifest
-loading, fresh phase/target and diagnostic-export integration that must be fixed
-and rerun before candidate acceptance. This checkpoint is not release-ready.
-
-Follow-up `3b4f9a5c` made both wiring tests pass and verified 146 focused
-backend/CLI/Qt tests. Trusted payload loading, current bound cleanup plans and
-standard diagnostic export are now connected. A subsequent focused lineage
-regression also preserves an unknown original install cause when an intermediate
-removal has a recorded failure; that later failure is attributed separately.
-These source results do not establish complete cross-edition removal or physical
-acceptance; the remaining adapter and device requirements still apply.
-
-Still unverified by these source tests: Linux-specific session/cgroup behavior,
-retail SSH persistence, real private-filesystem permission/rename semantics,
-vendor terminal delivery after disconnect/reboot, old Helper writer drainage,
-carrier replacement on historical firmware, and actual clean removal on each
-edition/model. Physical Home, unrelated buttons, sound, standby/wake, cold boot,
-OTA and rollback require matching frozen artifacts and separate observations.
-Native-speaking translation review is also not claimed.
+Still pending: combined Root/No-root provider integration, current boot/readback
+contracts on supported firmware, complete candidate suites/builds, and physical
+Home, normal keys, sound, standby, cold boot, OTA and rollback acceptance. Keep
+stable downloads distinct from candidate source instructions. Do not publish
+another user's results or diagnostics without the required approval.

@@ -45,6 +45,9 @@ def prepare(fixture, outcome='complete'):
             fixture.remote.calls.append(('run', command))
             action = words[next(i for i, word in enumerate(words) if word.endswith('/install_driver.py'))+1]
             operation = words[words.index('--operation')+1]
+            if action == 'clean-target':
+                return json.dumps({'operation':operation,'state':'fresh',
+                                   'target_operation':operation,'target_lease':None})
             if action == 'clean-remove':
                 pending = fixture.store.pending(fixture.profile)
                 assert words[words.index('--removal-intent')+1] == pending['removal_operation']

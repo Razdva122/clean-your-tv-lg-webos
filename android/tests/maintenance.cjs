@@ -129,12 +129,12 @@ let browser;
     await page.goto('file://'+path.join(ui,'index.html'));
     await page.evaluate(verifiedClean=>{
       receiveNative({kind:'started',config:{host:'192.0.2.10',edition:'root',action:'uninstall'}});
-      receiveNative({kind:'recovery-plan',state:'complete',disposition:'clean-removal',verified_clean:verifiedClean,
+      receiveNative({kind:'recovery-plan',state:'complete',disposition:'clean-removal',removed:true,verified_clean:verifiedClean,
         summary:'Clean Your TV removal is verified.',nextStep:'Other TV apps stay installed.'});
       receiveNative({kind:'finished',code:0});
     },verifiedClean);
     assert.equal(await page.locator('.review-symbol').count(),verifiedClean===true?0:1);
-    assert.equal(await page.locator('h1').innerText(),verifiedClean===true?'Clean Your TV removal is verified.':'Review recovery options');
+    assert.equal(await page.locator('h1').innerText(),verifiedClean===true?'Clean Your TV removal is verified.':'Removal is not finished yet.');
     await page.close();
   }
   // An intentionally completed LG Home goal outranks physical Clean Home checks.

@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [Simple removal UI checkpoint, 2026-11-06](2026-11-06-simple-removal-ui.md): direct same-goal Try again, full power restart, strict final proof and all 13 guides; provider integration and physical acceptance pending.
+
 - [Installer recovery UI source verification, 2026-11-06](2026-11-06-installer-recovery-ui-source-verification.md): neutral unresolved results, explicit Android removal, all 13 guides/catalogs and focused Qt/browser tests; full adapter/candidate and physical acceptance pending.
 
 - [Wallpaper UI source verification, 2026-11-06](2026-11-06-wallpaper-ui-source-verification.md): settings continuity, theme trials, UHD preview notice and colour consistency; final package acceptance pending.
