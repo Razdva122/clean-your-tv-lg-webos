@@ -152,8 +152,10 @@ class Store:
             except OSError as error:
                 raise ValueError('unsafe worker lock') from error
             fcntl.flock(fd, fcntl.LOCK_EX)
+            self.lock_fd=fd
             yield
         finally:
+            self.lock_fd=None
             if fd is not None:
                 fcntl.flock(fd, fcntl.LOCK_UN)
                 os.close(fd)

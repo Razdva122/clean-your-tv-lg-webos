@@ -277,8 +277,8 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
         setattr(self,cache,stage)
         return stage
 
-    def product_action(self, action, operation=None, payload=None, migrate=False, verify_current=False, resume=False, trusted_recovery=False):
-        if action not in ('inspect','install','status','remove'): raise ValueError('Unsupported product action')
+    def product_action(self, action, operation=None, payload=None, migrate=False, verify_current=False, resume=False, trusted_recovery=False, retire_stages=(), helper_fence=None, removal_intent=None):
+        if action not in ('inspect','install','status','remove','clean-remove','clean-status'): raise ValueError('Unsupported product action')
         if action!='inspect' and (not isinstance(operation,str) or not re.fullmatch('[a-f0-9]{32}',operation)):
             raise ValueError('Invalid product operation')
         # Keep execution-boundary evidence without exporting commands, paths or
@@ -287,7 +287,14 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
         try:
             driver=(payload+'/root-updater' if payload else self.coordinator_code())+'/install_driver.py'
             boundary='python-select'
-            args=[action] if trusted_recovery or resume else [self._python(),driver,action]
+            if action=='clean-remove':
+                # Fresh support imports and a host-verified interpreter; no
+                # retained launcher/binding module executes during full cleanup.
+                python=self._select_python(provision=True)
+                self._selected_python=python
+                entry='import runpy,sys;sys.path.insert(0,sys.argv.pop(1));sys.argv.pop(0);runpy.run_path(sys.argv[0],run_name="__main__")'
+                args=[python,'-I','-B','-c',entry,driver.rsplit('/',1)[0],driver,action]
+            else:args=[action] if trusted_recovery or resume else [self._python(),driver,action]
             if operation: args+=['--operation',operation]
             if payload:
                 args+=['--payload',payload]
@@ -295,6 +302,16 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
                 if candidate: args+=['--candidate',candidate]
             if migrate: args.append('--migrate-packaged-home')
             if verify_current:args.append('--verify-current')
+            if removal_intent is not None:
+                if action!='clean-remove' or not re.fullmatch('[a-f0-9]{32}',removal_intent):raise ValueError('Invalid removal intent')
+                args+=['--removal-intent',removal_intent]
+            if helper_fence is not None:
+                if action!='clean-remove':raise ValueError('Helper fence requires clean removal')
+                args+=['--helper-fence',json.dumps(helper_fence,sort_keys=True,separators=(',',':'))]
+            for retired in retire_stages:
+                if action!='clean-remove' or not isinstance(retired,str) or not re.fullmatch(r'/tmp/cytv-product-[a-f0-9]{32}',retired):
+                    raise ValueError('Invalid cleanup support stage')
+                args+=['--retire-stage',retired]
             if resume:
                 if action != 'install' or payload is not None:
                     raise ValueError('Original installation continuation required')
@@ -303,7 +320,7 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
             if trusted_recovery or resume:
                 from .root_install_recovery import run
                 raw=run(self,driver.rsplit('/',1)[0],'install_driver.py',args,timeout=90)
-            else:raw=self.remote.run(self._python_command(args),timeout=90)
+            else:raw=self.remote.run(self._python_command(args),timeout=1080 if action=='clean-remove' else 90)
             reply=json.loads(raw)
         except TVCommandError as error:
             error.root_action=action
@@ -326,7 +343,7 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
             raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
         return reply['result']
 
-    def upload_product(self, root_bundle):
+    def upload_product(self, root_bundle, clean_removal=False):
         bundles=(('root',root_bundle),('root-updater',self.payload/'root-updater'))
         manifests={};candidate={}
         for component,bundle in bundles:
@@ -339,6 +356,13 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
             candidate[component]=hashlib.sha256(raw).hexdigest()
         digest=hashlib.sha256(json.dumps(candidate,sort_keys=True,separators=(',',':')).encode()).hexdigest()
         stage='/tmp/cytv-product-'+uuid.uuid4().hex
+        if clean_removal:
+            pending=self.store.pending(self.profile)
+            if not pending or pending.get('recovery_protocol')!='clean-removal-v1':raise ValueError('Clean removal intent required')
+            stages=list(pending.get('cleanup_stages',[]))
+            if any(not isinstance(path,str) or not re.fullmatch(r'/tmp/cytv-product-[a-f0-9]{32}',path) for path in stages):
+                raise ValueError('Invalid cleanup support stage')
+            self.store.checkpoint(self.profile,cleanup_stages=stages+[stage])
         self.remote.run('umask 077; mkdir '+stage)
         for component,bundle in bundles:
             for name in (*manifests[component]['files'],'bundle.json'):
@@ -903,6 +927,9 @@ print('CYTV_UPDATER_VERIFIED')
         raise UserError('Installed version did not match the package. Run cytv status; do not retry blindly.', reason_code='version-mismatch')
 
     def status(self):
+        pending=self.store.pending(self.profile)
+        if pending and pending.get('recovery_protocol')=='clean-removal-v1':
+            return self.observe_recovery()
         result=self._status()
         self.tv_info['status']=result
         if (self.profile['edition']=='root'
@@ -918,6 +945,12 @@ print('CYTV_UPDATER_VERIFIED')
         """
         from .recovery_state import assess
         pending = self.store.pending(self.profile)
+        if pending and pending.get('recovery_protocol')=='clean-removal-v1':
+            from .recovery_state import removal_summary
+            result={'device':{},'pending':pending,'assessment':assess(self.profile,pending),
+                    'removal':removal_summary(pending),'can_resume_root_setup':False}
+            self.tv_info['status']=result
+            return result
         initial = assess(self.profile, pending)
         result = ({'device': {}, 'pending': pending, 'can_resume_root_setup': False}
                   if initial['reason'] in ('unsupported-receipt', 'inherited-operation')
@@ -1495,39 +1528,77 @@ print('CYTV_PROJECT_REMOVED')
         return reply
 
     def uninstall_project(self):
-        # Experimental Root has no updater/coordinator installation. Retained
-        # native evidence selects its restricted restore-before-remove driver,
-        # including when a damaged descriptor prevents a normal status reply.
-        if self.native_root_present():
-            from .root_gate import remove_project
-            return remove_project(self)
+        pending=self.store.request_clean_removal(self.profile)
+        return self.continue_clean_removal(pending)
+
+    def continue_clean_removal(self, expected_pending):
+        """Explicit adapter dispatch; advisory summaries are never credentials."""
         pending=self.store.pending(self.profile)
-        if pending:
-            if pending.get('action')!='uninstall' or pending.get('full_project') is not True or not pending.get('product_operation'):
-                raise UserError('An earlier operation needs recovery before full removal. Recovery data was kept.')
-            event=self.product_action('status',pending['product_operation'],verify_current=True)
-            if event['state']!='complete' or event.get('current') is not True:
-                raise UserError('Previous package removal outcome is unknown or the app reappeared; it was not submitted again.')
-            result=event['result']
-        else:
-            # Validate/stage the current trusted code before reserving host intent.
-            self.coordinator_code()
-            operation=uuid.uuid4().hex
-            self.store.begin(self.profile,'uninstall',full_project=True,product_operation=operation,stage='coordinator-upload')
-            stage=self.upload_product(self.payload/'root')
-            self.store.checkpoint(self.profile,stage='coordinator-submitted',product_payload=stage)
-            result=self.await_product('remove',operation,stage)
-        proof=self.product_action('status',(self.store.pending(self.profile) or {})['product_operation'],verify_current=True)
-        if proof.get('current') is not True:
-            raise UserError('Project startup or service registrations remain. Removal is not complete.')
-        if result.get('removed') is not True or result.get('applications_services_startup_removed') is not True:
-            raise UserError('Project startup or service registrations remain. Removal is not complete.')
-        self.store.finish(self.profile)
-        return result
+        if pending!=expected_pending or not pending or pending.get('recovery_protocol')!='clean-removal-v1':
+            raise UserError('Removal evidence changed. Recovery data was kept.',reason_code='pending-operation')
+        if self.profile['edition']=='no-root':
+            from .no_root_cleanup import continue_removal
+            return continue_removal(self,pending)
+        previous=pending.get('previous') or {}
+        if previous.get('action')=='uninstall' and not previous.get('product_operation'):
+            self.store.checkpoint(self.profile,removal_reason='removal-terminal-unknown')
+            raise UserError('Removal is still in progress. Recovery data and the remaining cleanup step were kept.',reason_code='pending-operation')
+        operation=pending['product_operation']
+        self.progress('Removing Clean Your TV; earlier installation results will be kept.')
+        from .root_clean_tail import resume as resume_tail
+        reply=resume_tail(self,pending)
+        if reply is None:
+            root_bundle=self.payload/'root'
+            if self.native_root_present():
+                root_bundle=self.payload/'root-c1'
+                if not root_bundle.is_dir():
+                    raise UserError('Native C1 recovery could not be verified. Removal has not started.')
+            stage=self.upload_product(root_bundle,clean_removal=True)
+            retire_stages=list(pending.get('cleanup_stages',[]))
+            old=pending
+            while isinstance(old,dict):
+                retained=old.get('product_payload')
+                if isinstance(retained,str) and re.fullmatch(r'/tmp/cytv-product-[a-f0-9]{32}',retained):retire_stages.append(retained)
+                old=old.get('previous')
+            self.store.checkpoint(self.profile,product_payload=stage)
+            helper=self.prepare_root_helper_removal(stage)
+            reply=self.product_action('clean-remove',operation,stage,retire_stages=tuple(dict.fromkeys(retire_stages)),helper_fence=helper,removal_intent=pending['removal_operation'])
+        from .recovery_state import REMOVAL_STAGES, REMOVAL_REASONS
+        phase=reply.get('stage')
+        if phase in REMOVAL_STAGES:
+            self.store.checkpoint(self.profile,stage=phase,removal_reason=reply.get('reason') if reply.get('reason') in REMOVAL_REASONS else 'ownership-conflict')
+        result=reply.get('result',{})
+        if (reply.get('state')!='complete' or phase!='verified-clean'
+                or result.get('removed') is not True or result.get('private_cleanup_verified') is not True
+                or reply.get('current') is not True
+                or ((self.store.pending(self.profile) or {}).get('helper_lifecycle',{}).get('mode')=='managed'
+                    and result.get('helper_lifecycle_released') is not True)):
+            raise UserError('Removal is still in progress. Recovery data and the remaining cleanup step were kept.',reason_code='pending-operation')
+        self.store.checkpoint(self.profile,stage='verified-clean',removal_reason='removal-verified',result=result)
+        self.store.finish_clean_removal(self.profile)
+        return dict(result,verified_clean=True)
+
+    def prepare_root_helper_removal(self, stage):
+        from .root_clean_tail import gate_bytes
+        from .no_root_gate import prepare_root_helper_fence
+        raw,digest=gate_bytes(self);gate_path=stage+'/root-updater/lifecycle-gate'
+        self.remote.upload(gate_path,raw,mode=0o755)
+        pending=self.store.pending(self.profile)
+        prior=pending.get('helper_lifecycle')
+        if prior and prior.get('mode')=='managed':
+            proof=dict(prior,gate_path=gate_path,gate_sha256=digest)
+        else:proof=prepare_root_helper_fence(self,pending,gate_path)
+        if proof.get('mode')=='unmanaged':
+            self.store.checkpoint(self.profile,removal_reason='original-writer-active')
+            raise UserError('Removal is still in progress. Recovery data and the remaining cleanup step were kept.',reason_code='pending-operation')
+        proof.update(gate_path=gate_path,gate_sha256=digest)
+        self.store.checkpoint(self.profile,helper_lifecycle=proof)
+        return proof
 
     def uninstall(self, full_project=False):
-        if full_project and self.profile['edition'] == 'root':
-            return self.uninstall_project()
+        if full_project:
+            pending=self.store.request_clean_removal(self.profile)
+            return self.continue_clean_removal(pending)
         pending = self.store.pending(self.profile)
         if self.profile['edition']=='no-root' and (not pending or pending.get('recovery_protocol')=='no-root-original-stream-v1'):
             from . import no_root_observer

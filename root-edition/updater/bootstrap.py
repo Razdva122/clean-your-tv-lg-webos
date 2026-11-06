@@ -42,7 +42,8 @@ def verify_bundle(bundle,reader=None,allow_legacy_recovery=False):
               'installation.py','observed_install.py','installer_status.py','provision.py','deploy.py','setup.py','system_permissions.py','activity.py','startup_hook.py','package_data.py','package_identity.py','startup_guard.py','python_binding.py','python_boot.js'}
     from coordinator_inventory import BUNDLED_FILES
     required.update(BUNDLED_FILES)
-    inventories=(required,required-{'cancel_install.py','cancel_provision.py'}) if allow_legacy_recovery else (required,)
+    cleanup={'clean_removal.py','cleanup_tail.js'}
+    inventories=(required,required-cleanup,required-cleanup-{'cancel_install.py','cancel_provision.py'}) if allow_legacy_recovery else (required,)
     if set(manifest['files']) not in inventories:raise ValueError('Unexpected updater bundle inventory')
     for name,sha in manifest['files'].items():
         if digest(reader(bundle/name))!=sha:raise ValueError('Updater bundle hash mismatch: '+name)
@@ -177,12 +178,33 @@ def finish_registration(bundle):
     updated={'service':original['service'].decode().replace(expected,'Exec='+str(runner)).encode(),
              'role':json.dumps(role).encode(),'client':json.dumps(plan['client.json']).encode(),'api':json.dumps(plan['api.json']).encode()}
     expected={'files':{str(paths[k]):{'original':v.decode(),'installed':updated[k].decode()} for k,v in original.items()}}
+    for key,path in paths.items():
+        # Older receipts have byte evidence only; do not manufacture historical
+        # metadata on resume. New receipts capture it before any replacement.
+        entry=saved['files'][str(path)] if saved is not None else None
+        if entry is None:
+            info=path.lstat()
+            expected['files'][str(path)].update(mode=stat.S_IMODE(info.st_mode),uid=info.st_uid,gid=info.st_gid)
+        elif set(entry)=={'original','installed','mode','uid','gid'}:
+            expected['files'][str(path)].update({name:entry[name] for name in ('mode','uid','gid')})
     if saved is not None and saved!=expected:raise ValueError('Updater registration receipt mismatch')
     for key,path in paths.items():
         if safe_bytes(path,uid=0) not in (original[key],updated[key]):raise ValueError('Updater registration changed')
+        entry=expected['files'][str(path)]
+        if 'mode' in entry:
+            info=path.lstat()
+            if (any(type(entry[k]) is not int or entry[k]<0 for k in ('mode','uid','gid'))
+                    or entry['uid']!=store.uid or entry['mode']>0o777 or entry['mode']&0o022
+                    or (entry['mode'],entry['uid'],entry['gid'])!=(stat.S_IMODE(info.st_mode),info.st_uid,info.st_gid)):
+                raise ValueError('Updater registration metadata changed')
     store.write('registration',expected)
     for key,path in paths.items():
-        mode=stat.S_IMODE(path.stat().st_mode);atomic(path,updated[key],mode)
+        entry=expected['files'][str(path)]
+        if 'mode' in entry:
+            from cancel_provision import write_registration
+            write_registration(path,dict(entry,original=updated[key].decode()))
+        else:
+            mode=stat.S_IMODE(path.stat().st_mode);atomic(path,updated[key],mode)
     import startup_hook
     startup_hook.install_link(safe_bytes,atomic,STATE,HOOK,'com.cleanyourtv.root.updater',sha256=digest(payload['usr/palm/applications/com.cleanyourtv.root.updater/appinfo.json']))
     import provision

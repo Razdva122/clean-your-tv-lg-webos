@@ -175,7 +175,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
     checks = CheckList(write.check)
     ask = write.reader(ask)
     remote = None
-    store, profile, phase, tv_info = state.Store(args.data_dir), None, 'select-tv', {}
+    store, profile, phase, tv_info = state.Store(args.data_dir), None, 'select-tv', {'frontend':getattr(write,'frontend','console')}
     try:
         if args.new_recovery_attempt and (args.command != 'recover-system-rollback' or args.edition == 'no-root'):
             raise UserError('--new-recovery-attempt applies only to Root rollback recovery.')
@@ -308,6 +308,12 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
         from .transport import SSH, CredentialPrompt
         with store.lock(profile), diagnostics.context.operation_context(store, profile):
             profile, recovering = store.connection_profile(profile)
+            if args.command=='uninstall':
+                if not recovering:store.save(profile)
+                intent=store.request_clean_removal(profile)
+                write.recovery_plan({'state':'waiting','disposition':'clean-removal',
+                    'summary':'Removal has been requested. Continue the remaining cleanup for this TV.',
+                    'next_step':'Connect to the TV to continue cleanup.'})
             if args.command == 'replace-system-updater':
                 if store.pending(profile): raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
             if args.command in ('enable-firmware-access','disable-firmware-access','recover-system-rollback') and store.pending(profile):raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
@@ -339,6 +345,9 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 diagnostics.context.collect_metadata(remote, tv_info)
             if not recovering:
                 store.save(profile)
+                pending=store.pending(profile)
+                if pending and pending.get('recovery_protocol')=='clean-removal-v1' and pending.get('connection_pending') is True:
+                    store.checkpoint(profile,connection_pending=False)
             installer = Installer(remote, store, profile, payload, manifest, write, tv_info=tv_info, checks=checks)
             if args.command == 'install':
                 reinstall = None
@@ -530,10 +539,12 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             else:
                 phase = args.command
                 result = installer.uninstall(full_project=True) if args.command == 'uninstall' else getattr(installer, args.command)()
-                if result.get('applications_services_startup_removed'):
+                if result.get('verified_clean') is True:
+                    write.recovery_plan({'state':'complete','disposition':'clean-removal','verified_clean':True,
+                                         'summary':'Clean Your TV removal is verified.','next_step':'Other TV apps stay installed.'})
                     write.heading('Clean Your TV removed')
-                    write('Project apps, Root Updater service and startup registration were removed. LG Home is restored.')
-                    write('Recovery records were retained for diagnostics; they do not start automatically.')
+                    write('Project apps, services, startup control and private files were removed. The verified original Home routing is restored.')
+                    write('Only ownership backups and minimal removal records were kept.')
                 elif (result.get('reconciled') or '').startswith('updater-not-started'):
                     write.heading('Ready to reinstall Root')
                     write('The previous attempt stopped before Root Updater setup. Recovery and installed files are verified; the previous operation report was saved.')

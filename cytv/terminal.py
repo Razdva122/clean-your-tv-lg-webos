@@ -25,6 +25,7 @@ def supports_ansi(stream=None):
 
 
 class Console:
+    frontend = 'console'
     def __init__(self, write=print, width=None, interactive=None, color=None):
         self.raw = write
         self.width = max(24, min(76, width or shutil.get_terminal_size((80, 24)).columns))

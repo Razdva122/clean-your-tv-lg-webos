@@ -80,7 +80,7 @@ class Store:
 
     def _capsule_path(self, profile, operation):
         if not isinstance(operation, str) or not re.fullmatch('[a-f0-9]{32}', operation):
-            raise UserError('The original private recovery capsule is missing or changed. Recovery data was kept.')
+            raise UserError('The original private recovery data is missing or changed. Recovery data was kept.')
         directory = self.device_dir(profile)
         # Reuse the existing Chaquopy context proof for Android's system-owned
         # /data ancestors; desktop roots retain the full ancestry check.
@@ -88,7 +88,7 @@ class Store:
         try:
             android_anchor=_android_cache_anchor(directory)
         except UserError:
-            raise UserError('The original private recovery capsule is missing or changed. Recovery data was kept.') from None
+            raise UserError('The original private recovery data is missing or changed. Recovery data was kept.') from None
         parents=(directory,*directory.parents)
         if android_anchor:
             directory,anchor=android_anchor
@@ -98,12 +98,12 @@ class Store:
         for parent in parents:
             info = parent.lstat()
             if not stat.S_ISDIR(info.st_mode):
-                raise UserError('The original private recovery capsule is missing or changed. Recovery data was kept.')
+                raise UserError('The original private recovery data is missing or changed. Recovery data was kept.')
             if os.name != 'nt' and (info.st_uid not in (0, os.getuid()) or
                     info.st_mode & 0o022 and not (info.st_uid == 0 and info.st_mode & stat.S_ISVTX)):
-                raise UserError('The original private recovery capsule is missing or changed. Recovery data was kept.')
+                raise UserError('The original private recovery data is missing or changed. Recovery data was kept.')
         if os.name != 'nt' and directory.lstat().st_mode & 0o077:
-            raise UserError('The original private recovery capsule is missing or changed. Recovery data was kept.')
+            raise UserError('The original private recovery data is missing or changed. Recovery data was kept.')
         return directory / ('capsule-' + operation + '.json')
 
     def save_capsule(self, profile, operation, value):
@@ -135,7 +135,7 @@ class Store:
                 raise ValueError('changed capsule')
             return json.loads(raw)
         except (OSError, ValueError, TypeError):
-            raise UserError('The original private recovery capsule is missing or changed. Recovery data was kept.',
+            raise UserError('The original private recovery data is missing or changed. Recovery data was kept.',
                             reason_code='pending-operation') from None
 
     def retire_capsule(self, profile, operation, digest):
@@ -145,7 +145,7 @@ class Store:
         self.read_capsule(profile,operation,digest)
         after=path.lstat()
         if (before.st_dev,before.st_ino)!=(after.st_dev,after.st_ino):
-            raise UserError('The original private recovery capsule is missing or changed. Recovery data was kept.')
+            raise UserError('The original private recovery data is missing or changed. Recovery data was kept.')
         path.unlink()
         sync_directory(path.parent)
 
@@ -157,6 +157,12 @@ class Store:
         try:
             path = directory / 'profile.json'
             known = directory / 'known_hosts'
+            pending=self.pending(selected) or {}
+            if (pending.get('recovery_protocol')=='clean-removal-v1' and pending.get('connection_pending') is True
+                    and 'previous' not in pending and not path.is_symlink() and not known.is_symlink() and not known.exists()):
+                original=target(**json.loads(path.read_text()))
+                if any(original[k]!=selected[k] for k in ('host','edition','port')):raise ValueError('foreign profile')
+                return original,False  # First connection still requires explicit normal host-key trust.
             if path.is_symlink() or known.is_symlink() or not known.read_bytes():
                 raise ValueError('missing trust')
             original = target(**json.loads(path.read_text()))
@@ -211,6 +217,12 @@ class Store:
             stream.flush()
             os.fsync(stream.fileno())
         sync_directory(path.parent)
+        if action == 'install':
+            completed = path.parent / 'clean-removal.json'
+            if completed.exists():
+                private_write(path.parent / ('clean-removal-history-'+diagnostic_id+'.json'), completed.read_bytes())
+                completed.unlink()
+                sync_directory(path.parent)
 
     def finish(self, profile):
         path = self.device_dir(profile) / 'operation.json'
@@ -235,6 +247,7 @@ class Store:
                  'recovery_protocol':'clean-removal-v1', 'removal_operation':identifier,
                  'product_operation':identifier, 'diagnostic_id':uuid.uuid4().hex,
                  'stage':'requested', 'removal_reason':'removal-requested'}
+        if previous is None and not (directory/'known_hosts').exists():value['connection_pending']=True
         if previous is not None:
             original = 'removal-original-' + identifier + '.json'
             private_write(directory / original, (directory / 'operation.json').read_bytes())

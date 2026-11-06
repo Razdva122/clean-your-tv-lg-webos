@@ -12,7 +12,7 @@ KERNEL_ARCHES = ('armv7l', 'armv7', 'armv8l', 'aarch64', 'arm64', 'x86_64', 'i68
 ROOT_REQUIREMENTS = ('root-user', 'python3', 'luna-send', 'apps-directory',
                      'luna-services-directory', 'python-json', 'python-fcntl', 'python-version', 'node-version')
 
-ROOT_ACTIONS = ('inspect', 'install', 'status', 'remove', 'enable', 'restore', 'uninstall')
+ROOT_ACTIONS = ('inspect', 'install', 'status', 'remove', 'enable', 'restore', 'uninstall', 'clean-remove', 'clean-status')
 
 REASONS = ('unknown', 'user-error', 'ssh-command-failed', 'ssh-unreachable',
            'ssh-authentication', 'ssh-identity-changed', 'ssh-trust-record', 'ssh-identity-unverified', 'host-runtime',
@@ -34,6 +34,7 @@ STATES = ('pending', 'complete', 'recovery_required', 'unknown', 'fresh', 'insta
 STAGES = ('unknown', 'blocked', 'reserved', 'root-deploy', 'root-updater', 'supervisor',
           'readback', 'complete', 'absent', 'incomplete-state', 'installed-recovery-only',
           'uninstalled-state-retained', 'pending', 'coordinator-upload', 'coordinator-submitted')
+STAGES += ('requested','original-writers-fenced','controls-restored','package-removal','private-cleanup','verified-clean')
 CODES = ('unknown_operation', 'operation_pending', 'verified', 'installation_requires_recovery',
          'operation_requires_recovery', 'recovery_evidence_required', 'continuation_requires_recovery',
          'historical_completion_is_not_current')
@@ -160,6 +161,9 @@ def product_summary(value):
               (('state', STATES), ('stage', STAGES), ('code', CODES)) if key in value}
     if 'failure' in value:
         result['failure'] = worker_summary(value['failure'])
+    if value.get('protocol')=='clean-removal-v1':
+        from .recovery_state import REMOVAL_REASONS
+        result['removal_reason']=choice(value.get('reason'),REMOVAL_REASONS)
     if 'resume_reason' in value:
         result['resume_reason']=choice(value['resume_reason'],RECOVERY_REASONS)
     if 'setup_reason' in value:
@@ -180,6 +184,13 @@ def status_summary(value):
     value = mapping(value)
     device = mapping(value.get('device', value))
     result = {}
+    if 'removal' in value:
+        from .recovery_state import REMOVAL_STAGES, REMOVAL_REASONS
+        removal=mapping(value['removal'])
+        result['removal']={'state':choice(removal.get('state'),('cleanup-in-progress','verified-clean')),
+                           'stage':choice(removal.get('stage'),REMOVAL_STAGES),
+                           'reason':choice(removal.get('reason'),REMOVAL_REASONS),
+                           'original_outcome':choice(removal.get('original_outcome'),('unknown','complete','recovery_required'))}
     if 'observer' in device:
         observer=mapping(device['observer'])
         slots=observer.get('slots') if type(observer.get('slots')) is list else []
