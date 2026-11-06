@@ -1,4 +1,4 @@
-// Uses both real edition bootstraps and a prepared built-in wallpaper, including settings suspension.
+// Both real edition bootstraps keep the wallpaper playing beneath settings.
 const {chromium,stage,fs,path}=require('./themes/browser.cjs');
 const assert=require('node:assert/strict');
 (async()=>{
@@ -26,12 +26,30 @@ const assert=require('node:assert/strict');
    await page.screenshot({path:'build/tests/wallpapers-active-'+edition+'.png'});
    await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>document.activeElement.getAttribute('data-category')),'wallpapers');
    await page.keyboard.press('Escape');assert(!(await page.locator('#homeWallpaperPanel').isVisible()),'Back closes settings');
+   await page.evaluate(bytes=>{
+    const url=URL.createObjectURL(new Blob([Uint8Array.from(atob(bytes),c=>c.charCodeAt(0))],{type:'video/mp4'}));
+    HomeWallpaper.configure({manifest:{id:'test:settings-video',title:'Settings video',defaults:{dim:.3,wallpaperAssetId:'poster'},assets:[{id:'poster',width:1920,height:1080}],wallpaperVideo:{variants:[{quality:'1080p',width:1920,height:1080}]}},assetHandles:{poster:HomeWallpaper.state().posterURL},videoHandles:{'1080p':url}});
+   },fs.readFileSync('tests/themes/fixtures/wallpaper-blue.mp4').toString('base64'));
+   await page.waitForFunction(()=>HomeWallpaper.state().actualQuality==='1080p');
+   await page.evaluate(()=>{window.settingsVideo=document.getElementById('ctvWallpaperVideo');window.settingsVideoTime=settingsVideo.currentTime;});
+   await page.locator('#btnSettings').click();
+   assert(await page.evaluate(()=>document.getElementById('ctvWallpaperVideo')===settingsVideo&&!settingsVideo.paused),edition+': opening settings retains the playing wallpaper');
+   await page.locator('[data-category=wallpapers]').click();
+   await page.waitForFunction(()=>settingsVideo.currentTime>settingsVideoTime+.2);
+   assert.equal(await page.evaluate(()=>HomeWallpaper.state().paused),false,'wallpaper is playing beneath settings');
+   // The nested theme browser must not tear down the wallpaper either.
+   await page.locator('[data-category=themes]').click();
+   assert(await page.evaluate(()=>document.getElementById('ctvWallpaperVideo')===settingsVideo&&!settingsVideo.paused),'theme settings retain the same decoder');
+   await page.locator('[data-category=wallpapers]').click();
+   await page.keyboard.press('Escape');await page.keyboard.press('Escape');
+   assert(await page.evaluate(()=>document.getElementById('ctvWallpaperVideo')===settingsVideo&&!settingsVideo.paused),edition+': closing settings does not restart the video');
+   await page.evaluate(()=>{const url=settingsVideo.src;HomeWallpaper.reset();URL.revokeObjectURL(url);});
    await page.evaluate(()=>ThemeManager.reset());
    await page.locator('#btnSettings').click();await page.locator('[data-category=wallpapers]').click();
    assert(await page.locator('#wallpaperPreview').isHidden(),'Classic empty state');
    await page.screenshot({path:'build/tests/wallpapers-'+edition+'.png'});
    assert.deepEqual(errors,[],edition+' browser errors');await page.close();
   }
-  console.log('PASS both editions wallpaper preview during suspension, controls, remote navigation, reset and Classic');
+  console.log('PASS both editions continuous settings video, nested themes, poster preview, controls, remote navigation, reset and Classic');
  } finally {await browser.close();await new Promise(resolve=>server.close(resolve));}
 })().catch(error=>{console.error(error);process.exit(1);});
