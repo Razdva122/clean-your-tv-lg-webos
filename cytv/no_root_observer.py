@@ -112,6 +112,74 @@ function publicStage(){
  ancestry(publicRoot,true);var s=directory(stage,false),identity=bound(json(opdir+'/public-stage.json'));
  if(s.uid!==uid||(s.mode&511)!==493||s.dev!==identity.dev||s.ino!==identity.ino)fail('changed-public-stage');
 }
+function stateDirectory(name){
+ function owner(s){return s.uid===uid||s.uid===5999&&s.gid===5000;}
+ for(var current=name;;current=path.dirname(current)){
+  var s=fs.lstatSync(current);if(!s.isDirectory()||s.isSymbolicLink())fail('unsafe-state-parent');
+  if(current===name&&(!owner(s)||(s.mode&2)))fail('unsafe-state-owner');
+  if(current===path.dirname(current))break;
+ }
+ ['ssap-key.json','apps.json'].forEach(function(child){
+  var file=name+'/'+child;if(!exists(file))return;var s=fs.lstatSync(file);
+  if(!s.isFile()||s.nlink!==1||!owner(s)||(s.mode&2)||(child==='ssap-key.json'&&(s.mode&7)))fail('unsafe-config-file');
+ });
+ return fs.lstatSync(name);
+}
+function upload(){
+ attached();var proof=input.proof||{},isArtifact=input.command==='upload-artifact',destination,name,digest,mode,pinned;
+ if(isArtifact){
+  var index=slotIndex();if(plan.action!=='install')fail('invalid-upload');
+  publicStage();destination=stage;name=index===0?'helper.ipk':'launcher.ipk';
+  digest=plan.slots[index].artifact_sha256;mode=420;pinned=fs.lstatSync(destination);
+ }else{
+  var claim=evidence('files','config-claim');
+  if(plan.action!=='install'||!claim||claim.nonce!==proof.nonce||configState('files')!=='unknown'||
+     !proof.hashes||Object.keys(proof.hashes).sort().join(',')!=='apps.json,ssap-key.json'||
+     hash(canonical(proof.hashes))!==plan.configuration_sha256||
+     ['apps.json','ssap-key.json'].indexOf(proof.name)<0||typeof proof.directory!=='string'||
+     proof.directory!==path.resolve(proof.directory))fail('invalid-configuration-upload');
+  destination=proof.directory;name=proof.name;digest=proof.hashes[name];mode=name==='ssap-key.json'?416:420;
+  pinned=stateDirectory(destination);
+ }
+ // Cwd pins the verified directory inode. All writes below are relative: a
+ // rename/symlink substitution of its old path cannot redirect private bytes.
+ process.chdir(destination);if(!same(pinned,fs.statSync('.')))fail('changed-upload-directory');
+ var tmp='.cytv-'+crypto.randomBytes(16).toString('hex'),fd=fs.openSync(tmp,c.O_WRONLY|c.O_CREAT|c.O_EXCL|c.O_NOFOLLOW,384);
+ var size=0,digestStream=crypto.createHash('sha256'),finished=false;
+ function cleanup(){if(fd!==null){fs.closeSync(fd);fd=null;}if(exists(tmp))fs.unlinkSync(tmp);}
+ function abort(error){if(finished)return;finished=true;clearTimeout(timer);cleanup();throw error;}
+ var timer=setTimeout(function(){abort(Error('upload-timeout'));},90000);
+ process.stdin.on('data',function(chunk){
+  try{
+   size+=chunk.length;if(size>(isArtifact?128*1024*1024:4*1024*1024))fail('upload-too-large');digestStream.update(chunk);
+   for(var offset=0;offset<chunk.length;){var n=fs.writeSync(fd,chunk,offset,chunk.length-offset);if(n<=0)fail('short-write');offset+=n;}
+  }catch(e){abort(e);}
+ });
+ process.stdin.on('error',abort);
+ process.stdin.on('end',function(){
+  try{
+   if(digestStream.digest('hex')!==digest)fail('changed-upload');
+   fs.fchmodSync(fd,mode);fs.fsyncSync(fd);fs.closeSync(fd);fd=null;
+   attached();
+   if(isArtifact){
+    publicStage();if(!same(pinned,fs.lstatSync(destination)))fail('changed-upload-directory');
+    if(!exists(name)){
+     if(exists(claimName(index)))fail('claimed-artifact-missing');
+     try{fs.linkSync(tmp,name);}catch(e){if(e.code!=='EEXIST')throw e;}
+    }
+    // A delayed host can verify an already published archive, never replace it.
+    fs.unlinkSync(tmp);
+    if(hash(read(destination+'/'+name,128*1024*1024,true))!==digest)fail('changed-artifact');
+   }else{
+    if(!same(pinned,stateDirectory(destination)))fail('changed-upload-directory');
+    stateDirectory('.');fs.renameSync(tmp,name);
+   }
+   sync('.');finished=true;clearTimeout(timer);process.stdout.write(JSON.stringify({operation:op}));
+  }catch(e){abort(e);}
+ });
+ // Give legacy libuv a loop turn to register the pipe before waiting for I/O.
+ setImmediate(function(){process.stdin.resume();});
+}
 function attached(){
  var identity=checked(), s=directory(active,true), owner=bound(json(active+'/'+marker));
  if(s.dev!==identity.dev||s.ino!==identity.ino||owner.nonce!==identity.nonce||fs.readdirSync(active).join(',')!==marker)fail('foreign-reservation');
@@ -309,6 +377,7 @@ switch(input.command){
 case 'prepare':result=prepare();break;
 case 'status':result=status();break;
 case 'attach':attached();sync(active);sync(root);result={operation:op};break;
+case 'upload-artifact':case 'upload-configuration':upload();return;
 case 'artifacts':
  attached();publicStage();var missing=[];
  plan.slots.forEach(function(s,i){if(!exists(claimName(i))){var name=JSON.parse(s.request).ipkUrl;if(!exists(name))missing.push(i);else if(hash(read(name,128*1024*1024,true))!==s.artifact_sha256)fail('changed-artifact');}});
@@ -398,14 +467,14 @@ def make_plan(operation, diagnostic_id, action, artifacts, versions, public_root
                 configuration_sha256=configuration_sha256 or hashlib.sha256(b'{}').hexdigest())
 
 
-def invoke(remote, plan, command, slot=None, source=None, proof=None):
+def invoke(remote, plan, command, slot=None, source=None, proof=None, data=None):
     request = dict(root=ROOT, public_root=PUBLIC_ROOT, plan=plan, command=command, slot=slot)
     if command == 'prepare':
         request['source'] = PROGRAM if source is None else source
     if proof is not None:request['proof']=proof
     try:
         reply = json.loads(remote.run('env -u NODE_OPTIONS -u NODE_PATH /usr/bin/node -e ' +
-                                     shlex.quote(PROGRAM) + ' ' + shlex.quote(canonical(request)), timeout=30))
+                                     shlex.quote(PROGRAM) + ' ' + shlex.quote(canonical(request)), data=data, timeout=100 if data is not None else 30))
         if not isinstance(reply, dict) or reply.get('operation') != plan['operation']:
             raise ValueError('foreign-observer')
         return reply
@@ -433,10 +502,7 @@ def begin(installer, action, artifacts, versions, expected, configuration):
     digest = installer.store.save_capsule(installer.profile, operation, capsule)
     installer.store.checkpoint(installer.profile, capsule_sha256=digest)
     invoke(installer.remote, plan, 'prepare')
-    for slot in plan['slots']:
-        if action == 'install':
-            name = ('helper.ipk', 'launcher.ipk')[slot['index']]
-            installer.remote.upload(json.loads(slot['request'])['ipkUrl'], artifacts[name], mode=0o644)
+    stage_remaining(installer,capsule)
     return installer.store.pending(installer.profile)
 
 
@@ -449,7 +515,7 @@ def stage_remaining(installer, value):
     for index in missing:
         name=('helper.ipk','launcher.ipk')[index]
         raw=base64.b64decode(value['artifacts'][name],validate=True)
-        installer.remote.upload(json.loads(plan['slots'][index]['request'])['ipkUrl'],raw,mode=0o644)
+        invoke(installer.remote,plan,'upload-artifact',index,data=raw)
     if invoke(installer.remote,plan,'artifacts').get('missing')!=[]:refuse()
 
 
@@ -463,7 +529,7 @@ def capsule(installer, pending):
         if (value['schema'] != 1 or value['profile'] != installer.profile or plan['operation'] != pending['observer_operation'] or
                 plan['diagnostic_id'] != pending['diagnostic_id'] or plan['protocol'] != PROTOCOL or
                 plan['action'] != ('install' if pending['action'] == 'install' else 'remove') or
-                hashlib.sha256(value['source'].encode()).hexdigest() != plan['source_sha256'] or
+                hashlib.sha256(value['source'].encode()).hexdigest() != plan['source_sha256'] or value['source'] != PROGRAM or
                 value['expected'] != pending['expected']):
             refuse()
         artifacts = {name: base64.b64decode(raw, validate=True) for name, raw in value['artifacts'].items()}
@@ -621,6 +687,9 @@ def observe(installer, pending):
         if slot['terminal']=='success' or slot['submission']=='sealed':
             try:readback(installer,value,index,allow_empty=slot['terminal']=='success')
             except (RuntimeError,ValueError,KeyError):ready=False;reason='original-readback-unverified';break
+    if ready and plan_is_configured(value,result):
+        try:configuration_readback(installer,value)
+        except (RuntimeError,ValueError,KeyError):ready=False;reason='original-readback-unverified'
     return dict(device={'observer':result},pending=pending,reconciled=None,can_resume_root_setup=False,
                 no_root_ready=ready,no_root_reason=reason)
 
@@ -644,6 +713,29 @@ def finish_step(installer,plan,step,token,result='verified'):
     invoke(installer.remote,plan,'config-result',step,proof={'nonce':token,'result':result})
 
 
+def plan_is_configured(value,result):
+    return value['plan']['action']=='install' and result.get('configuration',{}).get('files')=='complete'
+
+
+def configuration_readback(installer,value):
+    from .operations import HELPER_STATE
+    if installer.remote.run('/usr/bin/node -e '+shlex.quote(STATE_CHECK)+' '+shlex.quote(HELPER_STATE)).strip()!='CYTV_CONFIGURATION_PRIVATE':refuse()
+    files_match(installer,{HELPER_STATE+'/'+name:value['expected'][HELPER_STATE+'/'+name] for name in value['configuration']})
+
+
+def restore_original(installer):
+    """A lost original delete reply stays unknown, regardless of current EIM."""
+    from .operations import HOME
+    installer.stop_helper()
+    receipt=installer.store.device_dir(installer.profile)/'installation.json'
+    installation=json.loads(receipt.read_text()) if receipt.exists() else {}
+    pending=installer.store.pending(installer.profile) or {}
+    if pending.get('eim_registered',installation.get('eim_registered','unknown')) is not False:
+        installer.remote.luna('com.webos.service.eim/deleteDevice',{'appId':HOME})
+        installer.save_eim(False)
+    installer.remote.luna('com.webos.applicationManager/launch',{'id':'com.webos.app.home'})
+
+
 def configure(installer,value):
     from .operations import HELPER_STATE, HOME, HELPER
     from .errors import TVRejected
@@ -654,7 +746,9 @@ def configure(installer,value):
     if token:
         if installer.helper_state() not in ('stopped','stale'):refuse()
         for name,raw in value['configuration'].items():
-            installer.remote.upload(HELPER_STATE+'/'+name,raw.encode(),mode=0o640 if name=='ssap-key.json' else 0o644)
+            proof={'nonce':token,'directory':HELPER_STATE,'name':name,
+                   'hashes':{key:hashlib.sha256(text.encode()).hexdigest() for key,text in value['configuration'].items()}}
+            invoke(installer.remote,plan,'upload-configuration',proof=proof,data=raw.encode())
         files_match(installer,expected)
         finish_step(installer,plan,'files',token)
     else:files_match(installer,expected)
@@ -702,7 +796,7 @@ def continue_operation(installer, expected_pending):
         if plan['action']=='remove':
             token=claim_step(installer,plan,'restore')
             if token:
-                installer.restore()
+                restore_original(installer)
                 finish_step(installer,plan,'restore',token)
             installer.store.checkpoint(installer.profile,restored_before_removal=True)
         for index in range(2):
@@ -743,6 +837,7 @@ def continue_operation(installer, expected_pending):
         invoke(installer.remote,plan,'configured')
     else:
         for index in range(2):readback(installer,value,index)
+        if plan['action']=='install':configuration_readback(installer,value)
     result=invoke(installer.remote,plan,'release')
     try:
         invoke(installer.remote,plan,'retire')

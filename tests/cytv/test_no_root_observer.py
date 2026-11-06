@@ -91,6 +91,39 @@ sys.stdin.read()
 
 @unittest.skipIf(os.name=='nt','The TV observer uses POSIX process and filesystem primitives')
 class ObserverProcesses(unittest.TestCase):
+    def test_pinned_stream_uploads_on_every_configured_runtime(self):
+        runtimes=[shutil.which('node')]+[os.environ[name] for name in ('NODE010','NODE01025','NODE012') if os.environ.get(name)]
+        for runtime in runtimes:
+            for substitute in (False,True):
+                with self.subTest(runtime=runtime,substitute=substitute),tempfile.TemporaryDirectory(dir=PROCESS_TMP) as root:
+                    h=Harness(root,runtime=runtime)
+                    hashes={'ssap-key.json':hashlib.sha256(b'private-original').hexdigest(),'apps.json':hashlib.sha256(b'[]').hexdigest()}
+                    h.plan['configuration_sha256']=hashlib.sha256(observer.canonical(hashes).encode()).hexdigest()
+                    h.call('prepare')
+                    for index,raw in enumerate((b'helper',b'home')):
+                        request=h.command('upload-artifact',index)
+                        result=subprocess.run([runtime,'-e',h.source,json.dumps(request)],input=raw,capture_output=True,timeout=5)
+                        self.assertEqual(result.returncode,0,result.stderr.decode())
+                        h.call('start',index);self.assertEqual(h.wait(index)['terminal'],'success');h.call('readback',index)
+                    claim=h.call('config-claim','files')
+                    state=h.root/'state';state.mkdir(mode=0o700);foreign=h.root/'foreign';foreign.mkdir()
+                    request=dict(h.command('upload-configuration'),proof={'nonce':claim['nonce'],'directory':str(state),'name':'ssap-key.json','hashes':hashes})
+                    prefix=''
+                    if substitute:
+                        # Runs AFTER chdir/identity validation, at the actual
+                        # exclusive temp-file open immediately before bytes.
+                        prefix="var fs=require('fs'),original=fs.openSync,swapped=false;fs.openSync=function(name){if(!swapped&&String(name).indexOf('.cytv-')===0){swapped=true;fs.renameSync(STATE,STATE+'-old');fs.symlinkSync(FOREIGN,STATE);}return original.apply(fs,arguments);};".replace('STATE',json.dumps(str(state))).replace('FOREIGN',json.dumps(str(foreign)))
+                    result=subprocess.run([runtime,'-e',prefix+h.source,json.dumps(request)],input=b'private-original',capture_output=True,timeout=5)
+                    self.assertEqual(list(foreign.iterdir()),[])
+                    if substitute:
+                        self.assertNotEqual(result.returncode,0)
+                        self.assertEqual(list(state.with_name('state-old').iterdir()),[])
+                        self.assertEqual(h.call('status')['configuration']['files'],'unknown')
+                    else:
+                        self.assertEqual(result.returncode,0,result.stderr.decode())
+                        self.assertEqual((state/'ssap-key.json').read_bytes(),b'private-original')
+                        self.assertEqual((state/'ssap-key.json').stat().st_mode&0o777,0o640)
+
     def test_target_readback_scripts_run_on_every_configured_runtime(self):
         runtimes=[shutil.which('node')]+[os.environ[name] for name in ('NODE010','NODE01025','NODE012') if os.environ.get(name)]
         for runtime in runtimes:

@@ -1,5 +1,6 @@
 """Installer -> trusted adapter -> real detached Node -> simulated vendor process."""
 import json
+import hashlib
 import os
 from pathlib import Path
 import shlex
@@ -62,7 +63,7 @@ sys.stdin.read()
                 request['timeout']=3000
                 argument=json.dumps(request)
                 self.calls.append(('observer',request['command'],request.get('slot')))
-            result=subprocess.run([shutil.which('node'),'-e',code,argument],capture_output=True,timeout=timeout)
+            result=subprocess.run([shutil.which('node'),'-e',code,argument],input=data,capture_output=True,timeout=timeout)
             if result.returncode: raise RuntimeError(result.stderr.decode())
             reply=result.stdout.decode()
             if code==observer.PROGRAM and self.cut and request['command']=='status':
@@ -80,7 +81,14 @@ sys.stdin.read()
         super().upload(path,data,mode)
         if not str(path).startswith(str(self.root_path)+'/'):
             raise RuntimeError('new bound observer staging required')
-        target=Path(path); target.parent.mkdir(parents=True,exist_ok=True); target.write_bytes(data);target.chmod(mode)
+        from cytv.transport import SSH
+        command=SSH._upload_command(path,hashlib.sha256(data).hexdigest(),mode)
+        self.run_upload(command,data)
+
+    def run_upload(self,command,data):
+        result=subprocess.run(['sh','-c',command],input=data,capture_output=True,timeout=10)
+        if result.returncode:raise RuntimeError(result.stderr.decode())
+        return result.stdout.decode()
 
     def luna(self,uri,payload,**kwargs):
         if uri.endswith('/dev/listApps'):
@@ -110,6 +118,98 @@ class OriginalOperationIntegration(unittest.TestCase):
             patcher=patch.object(operations,name,value);patcher.start();self.addCleanup(patcher.stop)
         self.installer=operations.Installer(self.remote,self.store,self.profile,fixture.payload,fixture.manifest,lambda *_:None)
         self.inventory=fixture.inventory
+
+    def test_removal_transport_loss_cannot_be_sealed_by_empty_eim_inventory(self):
+        self.installer.install(self.inventory,'original-secret')
+        (self.root/'requests').write_text('')
+        original=self.remote.luna;deletions=[]
+        def luna(uri,payload,**kwargs):
+            if uri.endswith('/deleteDevice'):
+                deletions.append(payload)
+                raise RuntimeError('transport timeout after possible delete submission')
+            if uri.endswith('/getAllInputStatus'):return {'returnValue':True,'devices':[]}
+            return original(uri,payload,**kwargs)
+        self.remote.luna=luna
+        with self.assertRaises(RuntimeError):self.installer.uninstall()
+        pending=self.store.pending(self.profile)
+        self.assertIsNotNone(pending)
+        with self.assertRaises(RuntimeError):self.installer.continue_no_root(pending)
+        self.assertEqual(len(deletions),1)
+        self.assertEqual((self.root/'requests').read_text(),'')
+        observed=self.installer.observe_recovery()
+        self.assertNotIn('continue-no-root',observed['assessment']['actions'])
+
+    def test_closed_retry_requires_original_configuration_readback(self):
+        original=self.remote.run
+        def cut(command,data=None,timeout=30):
+            if '-e' in shlex.split(command):
+                words=shlex.split(command)
+                if words[words.index('-e')+1]==observer.PROGRAM and json.loads(words[-1])['command']=='retire':
+                    raise RuntimeError('lost retire acknowledgement')
+            return original(command,data,timeout)
+        self.remote.run=cut
+        with self.assertRaises(RuntimeError):self.installer.install(self.inventory,'original-secret')
+        self.remote.run=original
+        pending=self.store.pending(self.profile)
+        self.assertTrue((self.root/'private/operations'/pending['observer_operation']/'closed.json').exists())
+        before=len(self.remote.calls)
+        for name in ('ssap-key.json','apps.json'):
+            with self.subTest(name=name):
+                path=Path(operations.HELPER_STATE)/name;raw=path.read_bytes();path.write_bytes(b'changed')
+                self.assertNotIn('continue-no-root',self.installer.observe_recovery()['assessment']['actions'])
+                with self.assertRaises(RuntimeError):self.installer.continue_no_root(pending)
+                self.assertEqual(self.store.pending(self.profile),pending)
+                path.write_bytes(raw)
+        self.assertFalse(any(call[0]=='luna' and not call[1].endswith('/listApps') for call in self.remote.calls[before:]))
+        self.installer.continue_no_root(pending)
+        self.assertIsNone(self.store.pending(self.profile))
+
+    def test_state_substitution_at_actual_upload_cannot_disclose_key(self):
+        original_run=self.remote.run;original_upload=self.remote.run_upload
+        destination=self.root/'foreign-state';destination.mkdir();swapped=[]
+        def substitute(command,data):
+            if data and b'original-secret' in data and not data.startswith(b'!<arch>') and 'ssap-key.json' in command and not swapped:
+                target=Path(operations.HELPER_STATE);target.rename(target.with_name('original-state'))
+                target.symlink_to(destination,target_is_directory=True);swapped.append(True)
+        def run(command,data=None,timeout=30):
+            substitute(command,data);return original_run(command,data,timeout)
+        def upload(command,data):
+            substitute(command,data);return original_upload(command,data)
+        self.remote.run=run;self.remote.run_upload=upload
+        with self.assertRaises(RuntimeError):self.installer.install(self.inventory,'original-secret')
+        self.assertEqual(swapped,[True])
+        self.assertEqual(list(destination.iterdir()),[])
+        self.assertIsNotNone(self.store.pending(self.profile))
+
+    def test_delayed_archive_upload_never_replaces_claimed_payload(self):
+        original_run=self.remote.run;original_upload=self.remote.run_upload
+        def interrupt(command,data=None,timeout=30):
+            if data and data.startswith(b'!<arch>'):raise RuntimeError('interrupted before staging')
+            return original_run(command,data,timeout)
+        def interrupt_upload(command,data):raise RuntimeError('interrupted before staging')
+        self.remote.run=interrupt;self.remote.run_upload=interrupt_upload
+        with self.assertRaises(RuntimeError):self.installer.install(self.inventory,'original-secret')
+        self.remote.run=original_run;self.remote.run_upload=original_upload
+        pending=self.store.pending(self.profile);saved=observer.capsule(self.installer,pending)
+        destination=Path(json.loads(saved['plan']['slots'][0]['request'])['ipkUrl']);before=[]
+        def competing_host(command,data):
+            if data and data.startswith(b'!<arch>') and not before:
+                before.append(None)
+                observer.stage_remaining(self.installer,saved)
+                observer.invoke(self.remote,saved['plan'],'start',0)
+                import time
+                deadline=time.monotonic()+5
+                while observer.snapshot(self.installer,saved)['slots'][0]['terminal']=='none' and time.monotonic()<deadline:time.sleep(.02)
+                self.assertTrue((self.root/'private/operations'/pending['observer_operation']/'claim-0.json').exists())
+                before[0]=(destination.stat().st_ino,destination.read_bytes())
+        def run(command,data=None,timeout=30):
+            competing_host(command,data);return original_run(command,data,timeout)
+        def upload(command,data):
+            competing_host(command,data);return original_upload(command,data)
+        self.remote.run=run;self.remote.run_upload=upload
+        observer.stage_remaining(self.installer,saved)
+        self.assertEqual((destination.stat().st_ino,destination.read_bytes()),before[0])
+        self.assertEqual((self.root/'requests').read_text().splitlines(),[operations.HELPER])
 
     def test_host_loss_resumes_only_original_home_and_configuration_after_upgrade(self):
         self.remote.cut=True
@@ -163,6 +263,16 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.assertEqual((self.root/'requests').read_text().splitlines(),[operations.HELPER])
         self.assertEqual(self.store.pending(self.profile),pending)
 
+    def test_changed_trusted_reader_refuses_original_source_without_remote_effects(self):
+        self.remote.cut=True
+        with self.assertRaises(RuntimeError):self.installer.install(self.inventory,'original-secret')
+        pending=self.store.pending(self.profile);before=len(self.remote.calls)
+        with patch.object(observer,'PROGRAM',observer.PROGRAM+'\n// changed reader'):
+            with self.assertRaises(RuntimeError):self.installer.continue_no_root(pending)
+        self.assertEqual(len(self.remote.calls),before)
+        self.assertEqual(self.store.pending(self.profile),pending)
+        self.assertEqual((self.root/'requests').read_text().splitlines(),[operations.HELPER])
+
     def test_emergency_marker_prevents_recovery_launch(self):
         self.remote.cut=True
         with self.assertRaises(RuntimeError):self.installer.install(self.inventory,'original-secret')
@@ -185,15 +295,15 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.assertFalse(any(call[0] in ('upload','luna') for call in self.remote.calls[before:]),self.remote.calls[before:])
 
     def test_original_capsule_completes_interrupted_staging_before_any_request(self):
-        upload=self.remote.upload
-        def interrupted(path,raw,mode=0o600):
-            if path.endswith('helper.ipk'):raise RuntimeError('upload interrupted')
-            return upload(path,raw,mode)
-        self.remote.upload=interrupted
+        run=self.remote.run
+        def interrupted(command,data=None,timeout=30):
+            if data and data.startswith(b'!<arch>'):raise RuntimeError('upload interrupted')
+            return run(command,data,timeout)
+        self.remote.run=interrupted
         with self.assertRaises(RuntimeError):self.installer.install(self.inventory,'original-secret')
         pending=self.store.pending(self.profile)
         self.assertFalse((self.root/'requests').exists())
-        self.remote.upload=upload
+        self.remote.run=run
         saved=observer.capsule(self.installer,pending)
         observer.stage_remaining(self.installer,saved)
         self.installer.continue_no_root(pending)

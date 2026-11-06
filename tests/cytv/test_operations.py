@@ -32,6 +32,11 @@ class Remote:
                          'reservation':'active','closed':None,'configuration':{step:'prepared' for step in (('files','eim','launch') if plan['action']=='install' else ('restore',))},
                          'slots':[{'submission':'prepared','terminal':'none','readback':'not-checked','reason':None} for _ in range(2)]})
                 result=self.observers[operation]
+                if action=='upload-artifact':
+                    self.upload(json.loads(plan['slots'][index]['request'])['ipkUrl'],data,mode=0o644)
+                if action=='upload-configuration':
+                    proof=request['proof']
+                    self.upload(proof['directory']+'/'+proof['name'],data,mode=0o640 if proof['name']=='ssap-key.json' else 0o644)
                 if action=='config-claim':
                     won=result['configuration'][index]=='prepared'
                     if won:result['configuration'][index]='unknown'
