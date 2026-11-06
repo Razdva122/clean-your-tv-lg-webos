@@ -71,7 +71,7 @@ if(input.action==='root-package'){
 }
 ['clean-your-tv-root','clean-your-tv-installation','clean-your-tv-python','clean-your-tv-root-updater','clean-your-tv-system-updater'].forEach(function(name){rootHint('/var/lib/'+name,name);});
 rootHint('/var/webos-profile/override/clean-your-tv-root.json','root-profile');
-services.slice(0,2).forEach(function(service){try{var file=base+'/services/'+service+'/service.js',s=exists(file);if(s){ancestry(path.dirname(file));if(!s.isFile()||s.isSymbolicLink())fail();reply.startup_services.push(service);}}catch(e){blocked('startup-service '+service,e);}});
+services.slice(0,2).forEach(function(service){try{var dir=base+'/services/'+service,s=exists(dir);if(s&&s.isDirectory()){ancestry(path.dirname(dir));at(dir,s,function(){var source=exists('service.js');if(source&&source.isFile())reply.startup_services.push(service);});}}catch(e){blocked('startup-service '+service,e);}});
 try{
  var journal=base+'/services/'+services[2]+'/state/transaction.json',transactionStat=exists(journal);
  if(transactionStat){ancestry(path.dirname(journal));if(!transactionStat.isFile()||transactionStat.nlink!==1||transactionStat.size>5242880)fail();
@@ -84,9 +84,17 @@ try{
  }
 }catch(ignored){}
 try{var operations='/media/developer/.cytv-installer/operations';if(exists(operations)){ancestry(operations);var ids=fs.readdirSync(operations);reply.resident_installer=ids.length>0;ids.forEach(function(id){if(/^[a-f0-9]{32}$/.test(id)&&reply.staging_ids.indexOf(id)<0)reply.staging_ids.push(id);});if(reply.staging_ids.length>128)fail();}}catch(e){blocked('installer-private',e);}
+function helperState(state){
+ ancestry(path.dirname(state));var s=fs.lstatSync(state);
+ // Published Helper accepts legacy shared state0777 when chmod is unavailable.
+ // Only this exact directory is relaxed; at() pins it without following links.
+ if(!s.isDirectory()||s.isSymbolicLink()||[0,uid,5999].indexOf(s.uid)<0||((s.mode&2)&&(s.mode&4095)!==511))fail();
+ return s;
+}
 if(input.action==='stop'){
- var state=base+'/applications/'+apps[0]+'/state',s=exists(state);
- if(s)try{ancestry(state);at(state,s,function(fd){
+ var state=base+'/applications/'+apps[0]+'/state',s=null;
+ try{s=exists(state);}catch(e){blocked('helper-control',e);}
+ if(s)try{helperState(state);at(state,s,function(fd){
   ['blocked','control.json'].forEach(function(name){var old=exists(name);if(old&&(!old.isFile()||old.nlink!==1))fail();});
   if(!exists('blocked')){var marker=fs.openSync('blocked',c.O_WRONLY|c.O_CREAT|c.O_EXCL|c.O_NOFOLLOW,436);try{fs.writeSync(marker,new Buffer('stopped'),0,7,0);fs.fsyncSync(marker);}finally{fs.closeSync(marker);}}
   var name='.cytv-stop-'+crypto.randomBytes(12).toString('hex'),control=fs.openSync(name,c.O_WRONLY|c.O_CREAT|c.O_EXCL|c.O_NOFOLLOW,420);
@@ -95,7 +103,7 @@ if(input.action==='stop'){
  });}catch(e){blocked('helper-control',e);}
  var deadline=Date.now()+8000;
  var stopped=function(){var running=false;
-  try{var pidFile=state+'/controller.pid',pidStat=exists(pidFile);if(pidStat){ancestry(state);if(!pidStat.isFile()||pidStat.nlink!==1||pidStat.size>32)fail();var text=fs.readFileSync(pidFile,'utf8').trim();if(/^[1-9][0-9]{0,8}$/.test(text)){try{var args=fs.readFileSync('/proc/'+text+'/cmdline','utf8').split('\0');if(args[0]===apps[0]||args.indexOf(base+'/applications/'+apps[0]+'/native.js')>=0){process.kill(Number(text),0);running=true;}}catch(e){if(e.code!=='ENOENT'&&e.code!=='ESRCH')throw e;}}}}
+  try{var pidFile=state+'/controller.pid',pidStat=exists(pidFile);if(pidStat){helperState(state);if(!pidStat.isFile()||pidStat.nlink!==1||pidStat.size>32)fail();var text=fs.readFileSync(pidFile,'utf8').trim();if(/^[1-9][0-9]{0,8}$/.test(text)){try{var args=fs.readFileSync('/proc/'+text+'/cmdline','utf8').split('\0');if(args[0]===apps[0]||args.indexOf(base+'/applications/'+apps[0]+'/native.js')>=0){process.kill(Number(text),0);running=true;}}catch(e){if(e.code!=='ENOENT'&&e.code!=='ESRCH')throw e;}}}}
   catch(e){blocked('helper-control',e);}
   if(running&&Date.now()<deadline){setTimeout(stopped,100);return;}
   reply.controller_running=running;process.stdout.write(JSON.stringify(reply));
@@ -151,10 +159,26 @@ def _device(installer, action):
     return value
 
 
-def _check_access(value):
-    if value['root_present'] or any(row.get('reason') == 'permission-denied' for row in value['blocked']):
+def _protected_package(row):
+    """Only permission failures in fixed No-root OS-owned namespaces qualify."""
+    if row.get('reason') != 'permission-denied':
+        return None
+    scope = row.get('scope', '')
+    for app, service in zip(APPS, ('com.local.nativehome.service', 'com.gathin.tvhome.renewal', 'com.cleanyourtv.updater.service')):
+        if scope in (app + ' app', app + ' package', app + ' service', 'startup-service ' + service):
+            return app
+        if scope == 'helper-control':
+            return APPS[0]
+        if scope.startswith('registration ') and scope[13:].startswith((app + '.', service + '.')):
+            return app
+    return None
+
+
+def _check_access(value, defer_packages=False):
+    blocked = [row for row in value['blocked'] if not (defer_packages and _protected_package(row))]
+    if value['root_present'] or any(row.get('reason') == 'permission-denied' for row in blocked):
         raise UserError(ROOT_MESSAGE, reason_code='root-access-required')
-    if value['blocked']:
+    if blocked:
         raise UserError('Some project paths changed. Close other installers and try again.')
 
 
@@ -167,13 +191,9 @@ def _remove_package(installer, app):
 
 
 def _repair_registration(installer, value):
-    """One ordinary same-ID repair per current Retry, only for protected roles."""
+    """One ordinary same-ID repair per current Retry for protected No-root data."""
     from . import no_root_carrier, package
-    candidates = set()
-    for row in value['blocked']:
-        if row.get('reason') == 'permission-denied' and row.get('scope', '').startswith('registration '):
-            name = row['scope'].split(' ', 1)[1]
-            candidates.update(app for app in APPS if name.startswith(app + '.'))
+    candidates = {app for row in value['blocked'] if (app := _protected_package(row))}
     if not candidates or not hasattr(installer, 'payload'):
         return value
     registered = {app['id'] for app in installer.installed_apps()}
@@ -213,14 +233,14 @@ def continue_removal(installer, expected_pending):
     if pending != expected_pending or not pending or pending.get('recovery_protocol') != 'clean-removal-v1':
         raise UserError('Removal evidence changed. Recovery data was kept.', reason_code='pending-operation')
     current = _device(installer, 'inventory')
-    _check_access(current)
+    _check_access(current, defer_packages=True)
     installer.store.checkpoint(installer.profile, cleanup_staging_ids=current['staging_ids'])
     app_info = installer.installed_apps()
     apps = {app['id'] for app in app_info}
     carriers = {app['id'] for app in app_info if app.get('title') == 'Clean Your TV cleanup' and app.get('visible') is False}
     if any(app in apps for app in ('com.cleanyourtv.root.preview', 'com.cleanyourtv.root.updater', 'com.cleanyourtv.system.updater')):
         raise UserError(ROOT_MESSAGE, reason_code='root-access-required')
-    if pending.get('stage') == 'verified-clean' and not current['present'] and not apps.intersection(APPS):
+    if pending.get('stage') == 'verified-clean' and not current['blocked'] and not current['present'] and not apps.intersection(APPS):
         installer.store.finish_clean_removal(installer.profile)
         return {'removed': True, 'verified_clean': True}
     baseline = pending.get('cleanup_boot_id')
@@ -230,9 +250,9 @@ def continue_removal(installer, expected_pending):
     restarted = current['boot_id'] != baseline
     installer.progress('Restoring TV controls…')
     stopped = _device(installer, 'stop')
-    _check_access(stopped)
+    _check_access(stopped, defer_packages=True)
     unavailable = set(pending.get('cleanup_startup_unavailable', []))
-    startup_failed = False
+    startup_failed = not restarted and any(_protected_package(row) for row in current['blocked'] + stopped['blocked'])
     for app, service in zip(APPS, ('com.local.nativehome.service', 'com.gathin.tvhome.renewal')):
         if service not in current['startup_services'] or app in carriers or (restarted and service in unavailable):
             continue
@@ -246,7 +266,12 @@ def continue_removal(installer, expected_pending):
                 disabled = state.get('enabled') is False and not state.get('error')
             if not disabled:
                 raise UserError('TV startup could not be disabled. Try again.')
-        except UserError:
+        except UserError as error:
+            if not isinstance(error, TVRejected) and str(error) not in (
+                    'TV startup could not be disabled. Try again.',
+                    'TV operation timed out. Run cytv status before retrying.',
+                    'TV command ended without a confirmed result. Run cytv status.'):
+                raise
             # A failed optional service cannot make its own broken files
             # undeletable. Check the SSH connection, then move restart earlier.
             _device(installer, 'inventory')
