@@ -11,6 +11,8 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from types import SimpleNamespace
+from unittest.mock import patch
 
 
 SOURCE=Path(__file__).resolve().parents[1]/'cleanup_tail.js'
@@ -99,6 +101,78 @@ class CleanupTail(unittest.TestCase):
             env={**os.environ,**environment},timeout=15)
         self.assertTrue(result.stdout,result.stderr)
         return result,json.loads(result.stdout)
+
+    def first_handoff(self, managed_executor=False, executable_symlink=False):
+        import fcntl
+        import install_device
+        import python_binding
+        from updater.store import Store
+        self.record.pop('runtime_cleanup')
+        self.write('clean-removal-'+ID+'.json',self.record)
+        files={str(p.relative_to(self.runtime)):hashlib.sha256(p.read_bytes()).hexdigest()
+               for p in self.runtime.rglob('*') if p.is_file()}
+        inventory={'schema':1,'archive_sha256':python_binding.ARCHIVE_SHA256,'files':files}
+        (self.runtime/'.cytv-runtime.json').write_text(json.dumps(inventory))
+        executable=self.runtime/'bin/python3.13';executable.chmod(0o700)
+        (self.runtime/'lib/secret.py').write_text('changed owned library bytes')
+        if executable_symlink:
+            import sys
+            executable.unlink();executable.symlink_to(sys.executable)
+        payload=self.base/'payload';(payload/'root-updater').mkdir(parents=True)
+        (payload/'root-updater/cleanup_tail.js').write_bytes(SOURCE.read_bytes())
+        store=Store(self.state,uid=os.getuid())
+        ownership=os.open(self.state/'ownership.lock',os.O_RDWR)
+        self.addCleanup(os.close,ownership);fcntl.flock(ownership,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        device=install_device.LocalDevice.__new__(install_device.LocalDevice)
+        device.ownership=SimpleNamespace(store=store,fd=ownership)
+        device.payload=payload;device.clean_quiescent=lambda *args,**kwargs:None
+        run=subprocess.run;calls=[]
+        def node(args,**kwargs):
+            calls.append(args)
+            self.assertEqual(args[:3],['/usr/bin/node','-','finish'])
+            source=kwargs['input'].decode()
+            # Fixed TV paths and RPCs use the existing real-file Node harness.
+            # Python's first inventory/lock/handoff production path is unchanged.
+            source=source.replace('/var/',str(self.base/'var')+'/').replace('/media/',str(self.base/'media')+'/')
+            source=source.replace("fs.readdirSync('/tmp')",'fs.readdirSync('+repr(str(self.base/'tmp'))+')')
+            source=source.replace("fs.readdirSync('/proc')",'fs.readdirSync('+repr(str(self.base/'proc'))+')')
+            source=source.replace('/proc/sys/kernel/random/boot_id',str(self.base/'proc/sys/kernel/random/boot_id'))
+            target=self.base/'first-tail.js';target.write_text(source)
+            harness=self.base/'first-harness.js'
+            harness.write_text(HARNESS.replace('/var/',str(self.base/'var')+'/'))
+            env={**kwargs['env'],'OWNERSHIP_FD':args[5],'PROMOTION_FD':args[6],'WORKER_FD':args[7],
+                 'MUTATION_LOG':str(self.base/'first-mutations.json')}
+            result=run([os.environ.get('NODE8','node'),str(harness),'/',str(target)],
+                       stdout=subprocess.PIPE,stderr=subprocess.PIPE,env=env,pass_fds=kwargs['pass_fds'],timeout=15)
+            self.assertEqual(result.returncode,0,result.stderr.decode())
+            return result
+        directory=python_binding._directory
+        with patch.object(python_binding,'MANAGED_ROOT',self.runtime.parent), \
+             patch.object(python_binding,'EXPECTED_UID',os.getuid()), \
+             patch.object(python_binding,'_directory',side_effect=lambda p:directory(p) if self.base in (p,*p.parents) else None), \
+             patch('install_device.subprocess.run',side_effect=node),store.lock():
+            if managed_executor:
+                with patch('install_device.sys.executable',str(executable)):
+                    with self.assertRaisesRegex(ValueError,'digest mismatch|Unsafe Python file'):
+                        device.finish_clean_tail(self.record)
+                self.assertNotIn('runtime_cleanup',self.record)
+                self.assertEqual(calls,[])
+                self.assertTrue((self.runtime/'lib/secret.py').exists())
+            else:
+                reply=device.finish_clean_tail(self.record)
+                self.assertEqual(reply['stage'],'verified-clean',reply)
+                self.assertTrue(reply['result']['verified_clean'])
+                self.assertEqual(len(calls),1)
+                self.assertFalse(self.runtime.exists())
+
+    def test_first_handoff_external_executor_retires_changed_unused_runtime(self):
+        self.first_handoff()
+
+    def test_first_handoff_damaged_managed_executor_is_refused_before_node(self):
+        self.first_handoff(managed_executor=True)
+
+    def test_first_handoff_managed_executor_symlink_is_not_an_external_executor(self):
+        self.first_handoff(managed_executor=True,executable_symlink=True)
 
     def test_exact_runtime_retired_and_repeat_has_zero_deletions(self):
         result,reply=self.run_tail()

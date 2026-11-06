@@ -976,12 +976,14 @@ class LocalDevice:
                 stage=python_binding.MANAGED_ROOT/name
                 retire_tree(stage,{'tree','runtime.tar.gz'},uid=self.ownership.store.uid)
                 stage.rmdir();os.fsync(directory)
+            # Authenticate the interpreter actually in use. An unused managed
+            # tree is owned data to retire, not code we are about to execute.
+            if runtime in Path(sys.executable).parents or runtime.resolve() in Path(sys.executable).resolve().parents:
+                python_binding._runtime(str(runtime/'bin/python3.13'))
             if 'runtime_cleanup' not in record:
                 files={};digest=None
                 if os.path.lexists(runtime):
-                    python_binding._runtime(str(runtime/'bin/python3.13'))
-                    raw=safe_bytes(runtime/'.cytv-runtime.json',uid=self.ownership.store.uid)
-                    inventory=json.loads(raw)
+                    raw,inventory=python_binding._runtime_inventory(str(runtime/'bin/python3.13'))
                     files=dict(inventory['files']);files['.cytv-runtime.json']=sha(raw);digest=sha(raw)
                 record['runtime_cleanup']={'root':str(runtime),'files':files,'inventory_sha256':digest,'promotion_required':promotion is not None}
             record['runtime_cleanup']['parent_pid']=os.getpid()

@@ -52,7 +52,8 @@ def _read(path, limit=1048576):
         return raw
 
 
-def _runtime(executable, full=True):
+def _runtime_inventory(executable):
+    """Read bounded owned inventory as data, without authorizing execution."""
     if not _managed(executable): raise ValueError('Unapproved managed Python')
     slot = Path(executable).parents[1]
     raw = _read(slot/'.cytv-runtime.json', 4*1024*1024)
@@ -68,6 +69,13 @@ def _runtime(executable, full=True):
                 or '\\' in name or '\x00' in name or name == '.cytv-runtime.json'
                 or not isinstance(digest,str) or not re.fullmatch('[0-9a-f]{64}',digest)):
             raise ValueError('Unsafe Python inventory entry')
+    return raw, inventory
+
+
+def _runtime(executable, full=True):
+    raw, inventory = _runtime_inventory(executable)
+    files = inventory['files']
+    slot = Path(executable).parents[1]
     # Cheap launch checks still prove the executable and inventory identity.
     selected = files if full else ('bin/python3.13',)
     for name in selected:
