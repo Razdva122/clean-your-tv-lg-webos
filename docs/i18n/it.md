@@ -85,11 +85,11 @@ Indica modello TV, firmware, No-root o Root, dispositivo di installazione, passa
 
 Nelle prossime build, l’avviso e il pulsante «Disattiva anteprima HDMI» compaiono con 4K selezionato o attivo solo nei temi con l’anteprima degli ingressi abilitata. Durante l’anteprima HDMI, lo sfondo video 4K viene temporaneamente sostituito da un’immagine statica a 1080p. Disattiva l’anteprima degli ingressi per mantenere lo sfondo in 4K.
 
-### Candidato: ripristino e rimozione completa
+### Candidato: rimozione semplice
 
-I pulsanti sopra scaricano ancora la versione pubblicata. Il prossimo candidato aggiunge la continuazione dell’operazione originale e **Disinstalla Clean Your TV** su computer e Android. Usa la stessa connessione salvata; conferma separatamente l’ispezione e ogni modifica. Una configurazione Root idonea può terminare con LG Home e controllo Home disattivato. L’obiettivo scelto è raggiunto; tasto Home, audio, standby e avvio a freddo restano controlli distinti.
+I pulsanti sopra offrono ancora la versione pubblicata. Nel prossimo candidato, scegli **Disinstalla Clean Your TV** in Manutenzione con la stessa connessione salvata. Conferma una volta. Le app e i file noti del progetto presenti vengono eliminati; gli elementi assenti vengono saltati, anche dopo un’installazione parziale.
 
-La rimozione conserva l’esito precedente e indica successo solo dopo aver verificato la rimozione di app, servizi, avvio automatico e dati privati propri. Attività pendenti, esiti del fornitore sconosciuti, conflitti di proprietà o controlli non disponibili possono bloccarla; non è garantita dopo qualsiasi errore. Conserva il rapporto esistente e i dati di ripristino. Non reinstallare, cancellare i dati dell’app, ripristinare Developer Mode o forzare l’eliminazione. Un osservatore futuro non ricostruisce esiti precedenti. Restano validi i comandi di emergenza; condividere rapporti richiede il tuo consenso.
+Quando richiesto, scollega l’alimentazione della TV, ricollegala, attendi la rete e scegli **Riprova**. Standby o Quick Start non è un riavvio completo; CYTV non riavvia automaticamente la TV. Se la connessione si interrompe, controllala e riprova la stessa rimozione senza un altro assistente di ripristino. Se l’accesso è negato, usa la connessione Root richiesta; se la TV è occupata, attendi e riprova. Il successo appare solo dopo la verifica della pulizia finale. Conserva chiavi e rapporti originali. Restano validi i comandi di emergenza e il consenso alla condivisione.
 
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="requisiti"></a>

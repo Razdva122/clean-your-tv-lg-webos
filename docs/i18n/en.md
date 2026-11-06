@@ -85,11 +85,11 @@ For help, include TV model, firmware, No-root or Root, installer device, failed 
 
 In upcoming builds, the warning and **Disable HDMI previews** action appear only for themes with input previews enabled when 4K is selected or active. During HDMI previews, the 4K video wallpaper temporarily switches to a static 1080p image. Disable input previews to keep the wallpaper in 4K.
 
-### Candidate: recovery and full removal
+### Candidate: straightforward removal
 
-The download buttons above remain the published release. The next candidate adds guided original-operation continuation and **Uninstall Clean Your TV** on desktop and Android. Use the same saved TV connection; approve inspection and each change separately. You may finish eligible Root setup with LG Home and Home control off. That achieves the selected goal; physical Home, sound, standby and cold boot remain separate checks.
+The download buttons above still provide the published release. In the next candidate, choose **Uninstall Clean Your TV** in Maintenance with the same saved TV connection. Confirm once. Removal deletes known project apps and files that are present and skips absent items, including after a partial installation.
 
-Removal keeps the earlier installation result and reports success only after checking that owned apps, services, startup and private setup data are removed. Pending work, unknown vendor results, ownership conflicts or unavailable checks can block it; removal is not guaranteed on every failed setup. Keep the existing report and recovery data. Do not reinstall, clear app data, reset Developer Mode or force deletion to bypass a blocker. A future observer cannot reconstruct legacy results. Emergency controls above still apply; reports require your approval before sharing.
+When asked, disconnect the TV from power, reconnect it, wait for the network and choose **Try again**. Standby or Quick Start is not a full restart; CYTV does not restart the TV automatically. A connection loss needs a connection check and Try again on the same goal, without another recovery wizard. If access is denied, use the requested Root connection; if the TV is busy, wait and retry. Success appears only after final cleanup is verified. Keep your keys and original reports. The emergency controls and sharing consent above still apply.
 
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="optional-python-for-root-in-v110"></a>

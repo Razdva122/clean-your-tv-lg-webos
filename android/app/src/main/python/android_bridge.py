@@ -114,7 +114,8 @@ class AndroidConsole(Console):
         super().recovery_plan(value)
         from cytv.recovery_ui import removal_details
         from cytv.recovery_state import ACTIONS, REASONS
-        optional = {key:value[key] for key in ('disposition','verified_clean') if key in value}
+        optional = {key:value[key] for key in ('disposition',) if key in value}
+        optional.update({key:value[key] for key in ('removed','verified_clean','restart_required') if type(value.get(key)) is bool})
         if type(value.get('actions')) is list:
             optional['actions'] = [item for item in value['actions'] if type(item) is str and item in ACTIONS]
         if type(value.get('reason')) is str and value['reason'] in REASONS:

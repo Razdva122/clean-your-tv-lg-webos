@@ -17,6 +17,13 @@ const languages = {
 };
 const words = {
   "cs": {
+    "tryAgain": "Zkusit znovu",
+    "removalPending": "Odebrání ještě není dokončeno.",
+    "restartRemoval": "Restartujte TV pro dokončení odebrání",
+    "fullRestart": "Úplně restartujte TV: odpojte napájení, znovu je připojte a zvolte Zkusit znovu. Pohotovostní režim není úplný restart.",
+    "connectionInterrupted": "Spojení s TV bylo přerušeno. Zkontrolujte připojení a zkuste to znovu.",
+    "removalUnconfirmed": "Odebrání se nepodařilo potvrdit. Zkontrolujte připojení a zkuste to znovu.",
+
     "uninstall": "Odinstalovat Clean Your TV",
     "uninstallDesc": "Odebere aplikace a jejich data nastavení. Vyžaduje samostatné potvrzení.",
 
@@ -163,6 +170,13 @@ const words = {
     "tvChecksDesc": "Ověření balíčků, zpětná kontrola spuštění a vaše pozorování tlačítka Home jsou samostatné výsledky."
   },
   "ru": {
+    "tryAgain": "Попробовать снова",
+    "removalPending": "Удаление ещё не завершено.",
+    "restartRemoval": "Перезапустите ТВ для завершения удаления",
+    "fullRestart": "Полностью перезапустите ТВ: отключите питание, подключите снова и выберите «Попробовать снова». Режим ожидания не является полным перезапуском.",
+    "connectionInterrupted": "Соединение с ТВ прервано. Проверьте подключение и попробуйте снова.",
+    "removalUnconfirmed": "Не удалось подтвердить удаление. Проверьте подключение и попробуйте снова.",
+
     "uninstall": "Удалить Clean Your TV",
     "uninstallDesc": "Удаление приложений и их данных настройки. Нужно отдельное подтверждение.",
 
@@ -309,6 +323,13 @@ const words = {
     "tvChecksDesc": "Проверка пакетов, состояние запуска и ваше наблюдение за Home — разные результаты."
   },
   "en": {
+    "tryAgain": "Try again",
+    "removalPending": "Removal is not finished yet.",
+    "restartRemoval": "Restart the TV to finish removal",
+    "fullRestart": "Restart the TV completely: disconnect it from power, reconnect it, then choose Try again. Standby is not a full restart.",
+    "connectionInterrupted": "Connection to the TV was interrupted. Check the connection and try again.",
+    "removalUnconfirmed": "Removal could not be confirmed. Check the connection and try again.",
+
     "uninstall": "Uninstall Clean Your TV",
     "uninstallDesc": "Remove the apps and owned setup data. A separate confirmation is required.",
 
@@ -455,6 +476,13 @@ const words = {
     "tvChecksDesc": "Package verification, startup readback and your Home-button observation are separate results."
   },
   "de": {
+    "tryAgain": "Erneut versuchen",
+    "removalPending": "Die Entfernung ist noch nicht abgeschlossen.",
+    "restartRemoval": "TV neu starten, um die Entfernung abzuschließen",
+    "fullRestart": "TV vollständig neu starten: vom Strom trennen, wieder anschließen und Erneut versuchen wählen. Standby ist kein vollständiger Neustart.",
+    "connectionInterrupted": "Die Verbindung zum TV wurde unterbrochen. Verbindung prüfen und erneut versuchen.",
+    "removalUnconfirmed": "Entfernung konnte nicht bestätigt werden. Verbindung prüfen und erneut versuchen.",
+
     "uninstall": "Clean Your TV deinstallieren",
     "uninstallDesc": "Apps und eigene Einrichtungsdaten entfernen. Separate Bestätigung erforderlich.",
 
@@ -601,6 +629,13 @@ const words = {
     "tvChecksDesc": "Paketprüfung, Startprüfung und Ihre Home-Beobachtung sind getrennte Ergebnisse."
   },
   "fr": {
+    "tryAgain": "Réessayer",
+    "removalPending": "La suppression n’est pas encore terminée.",
+    "restartRemoval": "Redémarrez le téléviseur pour terminer la suppression",
+    "fullRestart": "Redémarrez complètement le téléviseur : débranchez l’alimentation, rebranchez-la, puis choisissez Réessayer. La veille n’est pas un redémarrage complet.",
+    "connectionInterrupted": "La connexion au téléviseur a été interrompue. Vérifiez la connexion et réessayez.",
+    "removalUnconfirmed": "La suppression n’a pas pu être confirmée. Vérifiez la connexion et réessayez.",
+
     "uninstall": "Désinstaller Clean Your TV",
     "uninstallDesc": "Supprime les applications et leurs données de configuration. Confirmation séparée requise.",
 
@@ -747,6 +782,13 @@ const words = {
     "tvChecksDesc": "Vérification des paquets, démarrage et votre observation de Home sont des résultats distincts."
   },
   "it": {
+    "tryAgain": "Riprova",
+    "removalPending": "La rimozione non è ancora terminata.",
+    "restartRemoval": "Riavvia la TV per completare la rimozione",
+    "fullRestart": "Riavvia completamente la TV: scollega l’alimentazione, ricollegala, poi scegli Riprova. Lo standby non è un riavvio completo.",
+    "connectionInterrupted": "La connessione alla TV si è interrotta. Controlla la connessione e riprova.",
+    "removalUnconfirmed": "Impossibile confermare la rimozione. Controlla la connessione e riprova.",
+
     "uninstall": "Disinstalla Clean Your TV",
     "uninstallDesc": "Rimuovi le app e i relativi dati di configurazione. Serve una conferma separata.",
 
@@ -893,6 +935,13 @@ const words = {
     "tvChecksDesc": "Verifica pacchetti, avvio e tua osservazione di Home sono risultati separati."
   },
   "es": {
+    "tryAgain": "Intentar de nuevo",
+    "removalPending": "La eliminación aún no ha terminado.",
+    "restartRemoval": "Reinicia el TV para terminar la eliminación",
+    "fullRestart": "Reinicia el TV por completo: desconéctalo de la corriente, vuelve a conectarlo y elige Intentar de nuevo. El modo de espera no es un reinicio completo.",
+    "connectionInterrupted": "Se interrumpió la conexión con el TV. Comprueba la conexión e inténtalo de nuevo.",
+    "removalUnconfirmed": "No se pudo confirmar la eliminación. Comprueba la conexión e inténtalo de nuevo.",
+
     "uninstall": "Desinstalar Clean Your TV",
     "uninstallDesc": "Elimina las apps y sus datos de configuración. Requiere confirmación aparte.",
 
@@ -1039,6 +1088,13 @@ const words = {
     "tvChecksDesc": "La verificación de paquetes, el inicio y tu observación de Home son resultados separados."
   },
   "pt-BR": {
+    "tryAgain": "Tentar novamente",
+    "removalPending": "A remoção ainda não terminou.",
+    "restartRemoval": "Reinicie a TV para concluir a remoção",
+    "fullRestart": "Reinicie a TV por completo: desconecte da tomada, conecte novamente e escolha Tentar novamente. O modo de espera não é uma reinicialização completa.",
+    "connectionInterrupted": "A conexão com a TV foi interrompida. Verifique a conexão e tente novamente.",
+    "removalUnconfirmed": "Não foi possível confirmar a remoção. Verifique a conexão e tente novamente.",
+
     "uninstall": "Desinstalar Clean Your TV",
     "uninstallDesc": "Remove os apps e seus dados de configuração. Exige confirmação separada.",
 
@@ -1185,6 +1241,13 @@ const words = {
     "tvChecksDesc": "Verificação de pacotes, inicialização e sua observação de Home são resultados separados."
   },
   "pl": {
+    "tryAgain": "Spróbuj ponownie",
+    "removalPending": "Usuwanie nie zostało jeszcze zakończone.",
+    "restartRemoval": "Uruchom TV ponownie, aby zakończyć usuwanie",
+    "fullRestart": "Uruchom TV całkowicie ponownie: odłącz zasilanie, podłącz je ponownie i wybierz Spróbuj ponownie. Czuwanie nie jest pełnym restartem.",
+    "connectionInterrupted": "Połączenie z TV zostało przerwane. Sprawdź połączenie i spróbuj ponownie.",
+    "removalUnconfirmed": "Nie można potwierdzić usunięcia. Sprawdź połączenie i spróbuj ponownie.",
+
     "uninstall": "Odinstaluj Clean Your TV",
     "uninstallDesc": "Usuń aplikacje i ich dane konfiguracji. Wymaga osobnego potwierdzenia.",
 
@@ -1331,6 +1394,13 @@ const words = {
     "tvChecksDesc": "Weryfikacja pakietów, odczyt startu i Twoja obserwacja Home to osobne wyniki."
   },
   "ko": {
+    "tryAgain": "다시 시도",
+    "removalPending": "제거가 아직 완료되지 않았습니다.",
+    "restartRemoval": "제거를 완료하려면 TV를 다시 시작하세요",
+    "fullRestart": "TV를 완전히 다시 시작하세요. 전원을 분리했다가 다시 연결한 후 다시 시도를 선택하세요. 대기 모드는 완전한 재시작이 아닙니다.",
+    "connectionInterrupted": "TV 연결이 끊겼습니다. 연결을 확인하고 다시 시도하세요.",
+    "removalUnconfirmed": "제거를 확인할 수 없습니다. 연결을 확인하고 다시 시도하세요.",
+
     "uninstall": "Clean Your TV 제거",
     "uninstallDesc": "앱과 해당 설정 데이터를 제거합니다. 별도 확인이 필요합니다.",
 
@@ -1477,6 +1547,13 @@ const words = {
     "tvChecksDesc": "패키지 검증, 시작 확인, Home 버튼 관찰은 별도의 결과입니다."
   },
   "hi": {
+    "tryAgain": "फिर कोशिश करें",
+    "removalPending": "हटाना अभी पूरा नहीं हुआ है।",
+    "restartRemoval": "हटाना पूरा करने के लिए TV पुनः शुरू करें",
+    "fullRestart": "TV पूरी तरह पुनः शुरू करें: बिजली से अलग करें, फिर जोड़ें और फिर कोशिश करें चुनें। स्टैंडबाय पूर्ण पुनः आरंभ नहीं है।",
+    "connectionInterrupted": "TV से कनेक्शन टूट गया। कनेक्शन जाँचें और फिर कोशिश करें।",
+    "removalUnconfirmed": "हटाने की पुष्टि नहीं हुई। कनेक्शन जाँचें और फिर कोशिश करें।",
+
     "uninstall": "Clean Your TV हटाएं",
     "uninstallDesc": "ऐप और उनका सेटअप डेटा हटाएँ। अलग पुष्टि आवश्यक है।",
 
@@ -1623,6 +1700,13 @@ const words = {
     "tvChecksDesc": "पैकेज सत्यापन, प्रारंभ जाँच और आपका Home अवलोकन अलग परिणाम हैं।"
   },
   "zh-Hans": {
+    "tryAgain": "重试",
+    "removalPending": "移除尚未完成。",
+    "restartRemoval": "重启电视以完成移除",
+    "fullRestart": "请完全重启电视：断开电源，重新连接，然后选择“重试”。待机不等于完全重启。",
+    "connectionInterrupted": "与电视的连接已中断。请检查连接并重试。",
+    "removalUnconfirmed": "无法确认移除。请检查连接并重试。",
+
     "uninstall": "卸载 Clean Your TV",
     "uninstallDesc": "移除应用及其设置数据。需要另行确认。",
 
@@ -1769,6 +1853,13 @@ const words = {
   "tvChecksDesc": "软件包验证、启动状态回读和您的 Home 按钮观察是不同结果。"
 },
   "zh-Hant": {
+    "tryAgain": "重試",
+    "removalPending": "移除尚未完成。",
+    "restartRemoval": "重新啟動電視以完成移除",
+    "fullRestart": "請完全重新啟動電視：斷開電源，重新連接，然後選擇「重試」。待機不等於完全重新啟動。",
+    "connectionInterrupted": "與電視的連線已中斷。請檢查連線並重試。",
+    "removalUnconfirmed": "無法確認移除。請檢查連線並重試。",
+
     "uninstall": "解除安裝 Clean Your TV",
     "uninstallDesc": "移除應用程式及其設定資料。需要另行確認。",
 

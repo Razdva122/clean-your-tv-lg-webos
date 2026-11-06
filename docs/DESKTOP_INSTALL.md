@@ -153,16 +153,17 @@ default. Recovery never starts a new installation automatically. **Set up my TV*
 also enters recovery when it finds a retained operation. Returning to LG Home
 alone does not complete removal. Unknown package/setup outcomes keep their data.
 
-The next candidate can continue verified remaining work of the original operation
-or finish eligible Root setup with LG Home and Home control off. Completion names
-the chosen goal; physical Home/sound/standby/cold-boot checks stay separate.
-Retaining evidence or cancelling sign-in is a review/cancelled outcome, never a
-green installation success. **Uninstall Clean Your TV** records a separate removal
-goal even after interrupted setup. It reports success only after owned package,
-service, startup and private-data cleanup checks pass. Old runtime writers,
-unknown vendor results or ownership/readback conflicts can still block it; do not
-force removal or erase the original saved connection. See the
-[candidate scope and limits](RECOVERY.md#next-candidate-original-operation-recovery-and-full-removal).
+For the next candidate, **Uninstall Clean Your TV** uses a simple removal flow:
+confirm once, stop/remove known present project items, fully restart the TV when
+asked, then choose **Try again** for the final sweep. Disconnect and reconnect
+power; standby and Quick Start are not enough. CYTV never restarts the TV
+itself. Missing items are skipped, including after a partial setup. Connection
+loss needs a connection check and Try again on the same saved TV, without another
+recovery wizard. An actual access denial asks for Root; an actual busy operation
+asks you to wait and try again. Completion needs both removed and verified-clean
+proof. Eligible Root setup may still finish separately with LG Home/Home control
+off. Physical checks remain separate. See the
+[candidate removal flow](RECOVERY.md#next-candidate-original-operation-recovery-and-full-removal).
 
 If any step fails, **Save diagnostic report…** is the primary action. Save that
 attempt's report with the normal file dialog and attach it to your issue; no

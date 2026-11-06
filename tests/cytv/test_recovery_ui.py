@@ -8,14 +8,14 @@ class RecoveryPresentationTests(unittest.TestCase):
         self.assertEqual(removal_details({'disposition':'clean-removal','removal':{
             'stage':'private-cleanup','reason':'removal-terminal-unknown'}}), {
                 'stage_text':'Removing private setup data…',
-                'blocker_text':'A package removal result is unknown. It will not be repeated.'})
+                'blocker_text':'Removal could not be confirmed. Check the connection and try again.'})
 
     def test_unknown_codes_do_not_become_private_main_ui_text_or_completion(self):
         from cytv.recovery_ui import removal_details
         details = removal_details({'disposition':'clean-removal','removal':{
             'stage':'PRIVATE-PATH','reason':'PRIVATE-ERROR','original_outcome':'PRIVATE'}})
         self.assertEqual(details, {'stage_text':'Verifying removal…',
-                                 'blocker_text':'Removal is not verified. Recovery data was kept.'})
+                                 'blocker_text':'Removal could not be confirmed. Check the connection and try again.'})
         self.assertNotIn('PRIVATE', str(details))
         self.assertEqual(removal_details({'disposition':'clean-removal','removal':{
             'stage':['PRIVATE'], 'reason':{'PRIVATE':True}}}), details)

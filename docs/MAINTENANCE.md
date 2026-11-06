@@ -48,14 +48,17 @@ uninstall the applications. First press Home three times within two seconds to s
 
 ## Uninstall
 
-For the next unpublished installer candidate, prefer **Uninstall Clean Your TV**
-on desktop or Android (`cytv uninstall`) with the original saved connection.
-This records removal separately from any earlier failed installation and checks
-owned apps, services, startup control and private setup data before reporting
-success. Pending/unknown work or unavailable proof remains a visible blocker;
-keeping recovery data is not successful removal. A return to LG Home alone is
-also separate. Do not use the source commands below to bypass a candidate refusal.
-See [candidate recovery and limits](RECOVERY.md#next-candidate-original-operation-recovery-and-full-removal).
+For the next unpublished candidate, select **Uninstall Clean Your TV** on desktop
+or Android (`cytv uninstall`) with the saved connection and confirm once. It
+removes known present apps/files and skips missing ones, even after partial setup.
+When asked, disconnect/reconnect TV power, wait for the network and choose
+**Try again** for the final sweep. Standby/Quick Start is not a full restart; CYTV
+never reboots the TV automatically. Connection loss also offers Try again on the
+same approved goal. Actual permission denial asks for Root access; an actual busy
+operation asks you to wait. Success appears only after final cleanup is verified.
+Keep keys and reports; do not reinstall or clear app data just to retry removal.
+Returning to LG Home remains a separate action.
+See [candidate removal](RECOVERY.md#next-candidate-original-operation-recovery-and-full-removal).
 
 The following manual steps are for the source installations described above.
 

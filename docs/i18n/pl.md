@@ -85,11 +85,11 @@ Podaj model TV, firmware, No-root lub Root, urządzenie instalujące, krok i kom
 
 W nadchodzących kompilacjach ostrzeżenie i przycisk „Wyłącz podgląd HDMI” pojawią się przy wybranym lub aktywnym 4K tylko w motywach z włączonym podglądem wejść. Podczas podglądu HDMI tapeta wideo 4K jest tymczasowo zastępowana statycznym obrazem 1080p. Wyłącz podgląd wejść, aby zachować tapetę w 4K.
 
-### Kandydat: odzyskiwanie i pełne usuwanie
+### Kandydat: proste usuwanie
 
-Przyciski powyżej nadal pobierają opublikowaną wersję. Następny kandydat dodaje kontynuację oryginalnej operacji i **Odinstaluj Clean Your TV** na komputerze i Androidzie. Użyj tego samego zapisanego połączenia; osobno potwierdź kontrolę i każdą zmianę. Kwalifikującą się konfigurację Root można zakończyć z LG Home i wyłączonym sterowaniem Home. Wybrany cel jest osiągnięty; fizyczny Home, dźwięk, czuwanie i zimny start pozostają osobnymi kontrolami.
+Przyciski powyżej nadal oferują opublikowaną wersję. W następnym kandydacie wybierz **Odinstaluj Clean Your TV** w Konserwacji dla tego samego zapisanego połączenia. Potwierdź raz. Znane aplikacje i pliki projektu, które istnieją, zostaną usunięte; brakujące zostaną pominięte, także po częściowej instalacji.
 
-Usuwanie zachowuje wcześniejszy wynik i zgłasza sukces dopiero po sprawdzeniu usunięcia własnych aplikacji, usług, autostartu i prywatnych danych konfiguracji. Oczekujące zadania, nieznany wynik dostawcy, konflikt własności lub brak kontroli mogą je zablokować; nie jest gwarantowane po każdej awarii. Zachowaj istniejący raport i dane odzyskiwania. Nie instaluj ponownie, nie kasuj danych aplikacji, nie resetuj Developer Mode i nie wymuszaj usuwania. Przyszła obserwacja nie odtworzy dawnych wyników. Powyższe sterowanie awaryjne pozostaje dostępne; udostępnienie raportu wymaga Twojej zgody.
+Gdy pojawi się prośba, odłącz zasilanie TV, podłącz ponownie, poczekaj na sieć i wybierz **Spróbuj ponownie**. Czuwanie lub Quick Start nie jest pełnym restartem; CYTV nie uruchamia TV ponownie automatycznie. Po utracie połączenia sprawdź je i ponów to samo usuwanie bez kolejnego kreatora odzyskiwania. Przy odmowie dostępu użyj żądanego połączenia Root; gdy TV jest zajęty, poczekaj i ponów. Sukces pojawi się dopiero po weryfikacji końcowego czyszczenia. Zachowaj klucze i oryginalne raporty. Sterowanie awaryjne i zgoda na udostępnianie nadal obowiązują.
 
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="opcjonalny-python-dla-root"></a>

@@ -64,15 +64,18 @@ The start screen also has **Wallpapers**, which explains the TV-hosted QR upload
 
 ## Interrupted Root installation inspection (1.8.2)
 
-The next unpublished candidate also adds **Uninstall Clean Your TV** to
-Maintenance and shared original-operation recovery choices. Inspection and changes
-are confirmed separately. Pending work, retained evidence and cancelled sign-in
-remain review outcomes. A completed LG Home/Home-control-off choice is shown as
-that achieved goal, with physical checks still marked separately. Removal is
-successful only after owned package/service/startup/private-data cleanup is
-verified; missing proof can still block it. Keep Android app data and the existing
-report. Do not reinstall or reset Developer Mode to fill a report or bypass a
-refusal. This candidate scope is separate from the published inspection below.
+The next unpublished candidate adds **Uninstall Clean Your TV** in Maintenance.
+Use the same saved TV and confirm removal once. Present known project apps/files
+are removed; missing ones are skipped, including after a partial installation.
+When prompted, disconnect/reconnect TV power, wait for the network, then choose
+**Try again** to perform the final sweep. Standby/Quick Start is not a full
+restart; CYTV does not reboot the TV itself. A lost connection offers the same
+Try again action without another recovery wizard or initial removal confirmation.
+Actual access denial asks for Root access, and actual busy work asks you to wait.
+Success requires both removed and verified-clean results. Keep app data, keys and
+original reports. Eligible Root Home-off setup remains a separate completed goal;
+physical Home, sound, standby and cold boot remain separate observations. This
+candidate flow is separate from the published inspection below.
 
 Published 1.8.2 (Android 0.8.2 / versionCode 22) includes a bounded inspection
 path for an original Root `install / coordinator-submitted` operation. It reads

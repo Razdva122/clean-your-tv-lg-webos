@@ -85,11 +85,11 @@ Indica modelo, firmware, No-root o Root, dispositivo de instalación, paso y men
 
 En las próximas compilaciones, el aviso y el botón «Desactivar vista previa HDMI» solo aparecen con 4K seleccionado o activo en temas con la vista previa de entradas activada. Durante la vista previa HDMI, el fondo de vídeo 4K se sustituye temporalmente por una imagen estática de 1080p. Desactiva la vista previa de entradas para mantener el fondo en 4K.
 
-### Candidato: recuperación y eliminación completa
+### Candidato: eliminación sencilla
 
-Los botones anteriores siguen descargando la versión publicada. El próximo candidato añade la continuación de la operación original y **Desinstalar Clean Your TV** en escritorio y Android. Usa la misma conexión guardada; confirma la inspección y cada cambio por separado. Una configuración Root compatible puede finalizar con LG Home y el control Home apagado. Ese objetivo queda cumplido; Home físico, sonido, espera y arranque en frío siguen siendo comprobaciones separadas.
+Los botones anteriores siguen ofreciendo la versión publicada. En el próximo candidato, elige **Desinstalar Clean Your TV** en Mantenimiento con la misma conexión guardada. Confirma una vez. Se eliminan las apps y archivos conocidos del proyecto que estén presentes y se omiten los ausentes, incluso después de una instalación parcial.
 
-La eliminación conserva el resultado anterior y solo indica éxito tras verificar que se retiraron las apps, servicios, inicio automático y datos privados propios. Trabajo pendiente, resultados desconocidos del proveedor, conflictos de propiedad o comprobaciones no disponibles pueden bloquearla; no se garantiza tras cualquier fallo. Conserva el informe existente y los datos de recuperación. No reinstales, borres datos de la app, restablezcas Developer Mode ni fuerces la eliminación. Un observador futuro no reconstruye resultados antiguos. Los controles de emergencia anteriores siguen vigentes; compartir informes requiere tu permiso.
+Cuando se indique, desconecta la alimentación del TV, vuelve a conectarla, espera la red y elige **Intentar de nuevo**. Espera o Quick Start no es un reinicio completo; CYTV no reinicia el TV automáticamente. Si se pierde la conexión, compruébala y reintenta la misma eliminación sin otro asistente de recuperación. Si se deniega el acceso, usa la conexión Root solicitada; si el TV está ocupado, espera y reintenta. Solo se muestra éxito tras verificar la limpieza final. Conserva las claves y los informes originales. Siguen vigentes los controles de emergencia y el consentimiento para compartir.
 
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="python-opcional-para-root-en-v110"></a>

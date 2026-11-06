@@ -32,43 +32,39 @@ stopped. Physical No-root acceptance remains unverified for the exact Helper tra
 
 ### Next candidate: original-operation recovery and full removal
 
-The following additions are source/candidate work; published downloads above keep
-their existing release scope. Use **Review recovery options** on the same saved
-TV connection (`cytv recover`). Inspection and every change require separate
-confirmation; retaining data or cancelling authentication leaves the operation
-unresolved. Desktop and Android show this as review/waiting, even when the command
-exits normally. Save the existing diagnostic report rather than repeating setup.
+These are next-candidate instructions; the download buttons still provide the
+published release. For removal, select **Uninstall Clean Your TV** on desktop or
+Android (`cytv uninstall`) using the saved TV connection. Confirm the removal
+once. A failed or partial installation does not need to complete first: remove
+known project apps/files that are present and skip items that are absent.
 
-For supported evidence, the installer can continue only verified remaining work
-of the original operation. Unknown package requests, unknown configuration or
-restore results, active workers, mismatched ownership and unsupported legacy
-records do not grant retry permission. Root support checks may execute verified
-support code after confirmation. Original connection and host pin remain required;
-password cancellation does not replace them or clear recovery data.
+1. CYTV stops project controls and removes present project packages and files.
+2. When asked, disconnect the TV from power, reconnect it and wait for the TV and
+   network to return. Standby and Quick Start are not a full restart. CYTV does
+   not restart the TV automatically.
+3. Select **Try again**. This repeats the same approved removal goal on the same
+   saved connection, without a recovery wizard or another initial confirmation.
+   The installer checks the actual boot change and remaining files, then performs
+   the final sweep. Success requires both removed and verified-clean results.
 
-**Uninstall Clean Your TV** (`cytv uninstall`) is an explicit removal goal on
-desktop and Android, including after interrupted setup. It retains the earlier
-installation outcome and records the remaining cleanup separately: stop earlier
-writers, restore controls, remove project packages, clean owned private setup data
-and verify absence. Only verified completion reports removal success. Missing
-proof, unknown vendor results, foreign state, unavailable checks or an old runtime
-whose writers cannot be proven stopped can still block removal. It is not a
-promise that every historical failed installation can be erased. Do not clear app
-data, reset Developer Mode, delete receipts or force removal around a refusal.
-Minimal removal records and ownership backups may remain intentionally; ordinary
-TV apps stay installed. Returning to LG Home alone is not full removal.
+If the connection is interrupted, check it and select **Try again**. Existing
+installation history remains available; an old generic failure is not assigned
+an invented cause. If the OS denies access, use the requested Root connection.
+If another operation is actually running, wait for it to finish and try again.
+A failed check stays visible; it is never converted to green completion. Keep
+keys and original reports, and do not reinstall or clear Android app data to
+retry removal. Missing files are skipped; absence is not itself an error.
 
-Eligible Root setup also offers **Finish setup with LG Home and Home control off**
-directly in the recovery choices. Its completion is the selected goal; it does not
-require activating Clean Home. Physical Home, audio, standby and cold boot remain
-separate observed/untested results. Recovery does not clear emergency or watchdog
-stops; use the existing on-TV controls described above.
+Returning to LG Home alone remains separate from removal. Emergency controls
+above stay available. For setup recovery, eligible Root can still finish with
+LG Home and Home control off; that goal does not require activating Clean Home.
+Physical Home, sound, standby and cold boot are separate observations. A restart
+used by removal does not certify any of those checks. Candidate source tests do
+not establish compatibility or successful recovery on a reporter's TV. See the
+[maintained failure-injection matrix](development/INSTALLER-RECOVERY-MATRIX.md).
 
-The future No-root observer cannot reconstruct the terminal outcome of legacy
-operations such as #201, #307 or #359. In #359 the first install failure is unknown;
-the later rejected package-status check is a separate observation, not its proven
-cause. Keep both records without another installation. See the maintained
-[failure-injection matrix](development/INSTALLER-RECOVERY-MATRIX.md).
+The version-specific recovery sections below describe their published scope.
+The candidate Remove action is available even when earlier setup is incomplete.
 
 <a id="interrupted-setup-or-removal-in-110"></a>
 <a id="interrupted-no-root-installation-in-the-unpublished-140-candidate"></a>
