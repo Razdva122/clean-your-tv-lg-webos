@@ -778,5 +778,70 @@
       ]
     ],
     "tableHint": "橫向捲動以比較兩個版本。"
+  },
+  "cs": {
+    "helpTitle": "Pomoc a obnova",
+    "helpDescription": "Řešte vyhledání televizoru, vypršení Developer Mode, tlačítko Home a přerušenou instalaci Clean Your TV. Najděte bezpečný další postup pro LG webOS.",
+    "editionDescription": "Porovnejte Clean Your TV Root a No-root: požadavky na přístup, běhová prostředí televizoru, Developer Mode, aktualizace a obnovení Home po nouzovém vypnutí.",
+    "quickTitle": "Od ukázky k vašemu televizoru",
+    "steps": [
+      "Zkontrolujte kompatibilitu a zvolte No-root pro Developer Mode nebo Root pro stávající přístup root.",
+      "Přečtěte si instalační návod, stáhněte vydaný instalátor pro své zařízení a během instalace nechte televizor zapnutý.",
+      "Před běžným používáním samostatně ověřte ovladač, nouzové ukončení, zvuk, pohotovostní režim a studený start."
+    ],
+    "tableLabels": [
+      "Požadavek",
+      "Přístup",
+      "Běhové prostředí televizoru",
+      "Udržování provozu",
+      "Obnovení po nouzovém ukončení",
+      "Aktualizace"
+    ],
+    "access": [
+      "Aktivní LG Developer Mode, Key Server a místní spárování",
+      "Stávající přístup root přes SSH a kompatibilní služby a vstupní rozhraní televizoru"
+    ],
+    "keep": [
+      "Prodlužujte oficiální časovač Developer Mode před vypršením; udržujte spárování Helperu a dostupnou místní síť",
+      "Zachovejte nezávislé služby obnovy a běhová prostředí, která používají"
+    ],
+    "resume": [
+      "Otevřete Home Helper, zvolte Start Helper a potvrďte",
+      "Zapněte Change Home v nastavení Home"
+    ],
+    "updates": [
+      "Na televizoru bez rootu použijte instalátor pro počítač",
+      "Podepsané aktualizace přímo v televizoru vyžadují samostatně připravené kompatibilní aktualizační služby; jinak použijte instalátor pro počítač"
+    ],
+    "checksTitle": "Co ověřit na vlastním televizoru",
+    "checks": [
+      "Otevřete jinou aplikaci a jednou stiskněte Home. Ověřte skutečná tlačítka ovladače a zvuk; kontroly balíčků je nemohou posoudit.",
+      "Než se spolehnete na ovládání Home, vyzkoušejte nouzové ukončení trojím stiskem Home. Starší Helper do verze 0.6.13 místo toho používá dlouhé podržení Home.",
+      "Samostatně vyzkoušejte pohotovostní režim a probuzení i skutečný studený start. Výsledek na jednom firmwaru neověřuje jiný model ani verzi."
+    ],
+    "referenceLabel": "Úplná příručka (anglicky)",
+    "help": [
+      [
+        "Instalátor nemůže najít televizor",
+        "Nechte televizor zapnutý a připojte jej i počítač nebo telefon ke stejné důvěryhodné místní síti. Izolace sítě pro hosty, VPN a firewally mohou blokovat vyhledání. Povolte přístup k místní síti. Pokud vyhledání selže, použijte adresu zobrazenou na televizoru. No-root potřebuje také Key Server a samostatné potvrzení spárování na televizoru; použijte jeho přístupovou frázi, nikoli heslo k účtu LG."
+      ],
+      [
+        "Developer Mode vypršel nebo zmizely aplikace",
+        "Po vypršení mohou být odebrány ručně nainstalované aplikace. Otevřete Developer Mode a zkontrolujte oficiální stav relace. Před vypršením stiskněte EXTEND, když je televizor online. Automatické prodlužování je volitelná funkce Beta a ve výchozím stavu je vypnuté; nadále sledujte oficiální časovač. Pokud aplikace již chybí, před novou instalací zkontrolujte stávající stav. Nikdy nezapínejte Developer Mode na televizoru se stávajícím rootem."
+      ],
+      [
+        "Home stále otevírá LG Home",
+        "Nejprve rozlište úspěšnou instalaci od skutečného přesměrování Home. Po úmyslném nouzovém ukončení provoz výslovně obnovte: No-root používá Home Helper → Start Helper a potvrzení; Root používá Change Home v nastavení Home. Samotné otevření Home stav zastavení nezruší. Open LG Home jednorázově otevře původní obrazovku bez změny uložené volby Home. Pokud ovládání znovu selže, ponechte aktivní LG Home a uložte diagnostiku."
+      ],
+      [
+        "Instalace nebo odebrání byly přerušeny",
+        "Použijte stejné uložené připojení k televizoru a nejprve zkontrolujte stav. Uchovejte původní zprávu o neúspěšném pokusu, protokoly a soubory obnovy. Nemažte záznamy instalace, neresetujte Developer Mode a neopakujte odebrání ve snaze vynutit novou instalaci. Nejasný stav nebo probíhající operace jsou důvodem zastavit a uchovat diagnostiku. Používejte jen postupy obnovy popsané pro nainstalovanou verzi; akce dostupné pouze v kandidátní verzi nejsou součástí každého vydaného instalátoru."
+      ],
+      [
+        "Jak se vrátit k LG Home, aktualizovat nebo odinstalovat?",
+        "Pro nouzové ukončení stiskněte Home třikrát během dvou sekund a mezi stisky tlačítko uvolněte; Helper do verze 0.6.13 místo toho používá přibližně dvousekundové podržení. Stav zastavení trvá až do výslovného obnovení. Pro údržbu použijte cytv a uložené připojení k televizoru. Před aktualizací produkt neodinstalovávejte jen kvůli aktualizaci: můžete tím smazat nastavení aplikací. Odebrání cytv z počítače neodebere aplikace z televizoru. Po odebrání uchovejte záznamy pro obnovu."
+      ]
+    ],
+    "tableHint": "Posunutím do strany porovnáte obě edice."
   }
 }

@@ -20,7 +20,7 @@ let socketForCleanup;
  const out=path.resolve(__dirname,'../screenshots');
  const adb=process.env.CYTV_ADB||'adb';
  const capture=async name=>{await evaluate('document.activeElement.blur();scrollTo(0,0)');await new Promise(r=>setTimeout(r,800));fs.writeFileSync(path.join(out,name+'.png'),execFileSync(adb,['exec-out','screencap','-p']))};
- const expected=['en','de','es','pt-BR','fr','it','ko','hi','pl','ru','zh-Hans','zh-Hant'];
+ const expected=['cs','en','de','es','pt-BR','fr','it','ko','hi','pl','ru','zh-Hans','zh-Hant'];
  for(const code of expected){
   await click('.language');
   assert.equal(await evaluate('document.querySelectorAll("#language-picker [role=radio]").length'),expected.length);
@@ -33,6 +33,6 @@ let socketForCleanup;
  await click('.language');await capture('android-language-picker');await click('[data-action="close-language"]');
  await call('Page.reload',{});await wait('!!document.querySelector(".language")');
  assert.equal(await evaluate('document.documentElement.lang'),expected.at(-1));
- console.log('Native APK: twelve languages, current header, complete picker, persistence and screenshots passed.');
+ console.log('Native APK: thirteen languages, current header, complete picker, persistence and screenshots passed.');
  socket.close();
 })().catch(e=>{console.error(e);if(socketForCleanup)socketForCleanup.close();process.exitCode=1});

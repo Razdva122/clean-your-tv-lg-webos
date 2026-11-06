@@ -39,7 +39,7 @@ npm run test:dev --prefix website
 npm run format --prefix website
 ```
 
-The static verifier runs automatically after each build. It checks all 72
+The static verifier runs automatically after each build. It checks all 78
 localized pages for one H1, descriptions, canonical URLs, reciprocal language
 alternates, page-preserving language links, sitemap inclusion and exported local
 links/anchors, including same-page help links and existing source-reference files.
@@ -51,7 +51,7 @@ Playwright's bundled browser or the default installed Chrome. Set
 
 ## Content and translations
 
-- `src/lib/locales.json`: all product text and navigation in the twelve complete
+- `src/lib/locales.json`: all product text and navigation in the thirteen complete
   installation-guide languages. Keep all keys translated; the build rejects
   missing keys and empty strings. Keep technical names such as Developer Mode,
   Root and No-root recognizable. Do not infer installer/TV language support from
@@ -72,14 +72,16 @@ Playwright's bundled browser or the default installed Chrome. Set
   references point to the public repository's `main` documentation. Original
   Markdown files are unchanged.
 
-The Czech source document currently describes candidate TV localization and
-points to the English installation guide; it is intentionally excluded from the
-twelve complete installation translations. When a complete guide is available,
-add translated product copy, register it in the Astro locale configuration and
-update the acceptance locale registry before publishing its routes.
+Czech is a complete installation-guide and website locale. Register new locales
+in both catalogs, Astro configuration and the static/browser acceptance registries.
+The five source-guide download buttons are copied from `assets/brand/downloads/`
+to generated `assets/downloads/`; Markdown images use those local website URLs,
+while their download links continue to target published release assets.
 
-Source guides retain explicit candidate/unreleased notices, and every installation
-page explains that distinction before its content. Public download actions use
+Installation pages render the source guide directly, without a candidate notice
+or release-version preamble. Keep setup guides focused on installation; technical
+release documentation records publication boundaries and candidate evidence.
+Public download actions use
 `releases/latest`. Do not present candidate features as already published or
 expand hardware compatibility beyond documented version-specific results. Newly
 written website translations have automated/browser checks, not native-speaker
