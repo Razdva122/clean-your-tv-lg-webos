@@ -1,193 +1,127 @@
 {
   "schema": 1,
-  "version": "1.8.2",
+  "version": "1.9.0",
   "changes": [
     {
-      "pr": 264,
-      "issues": [],
-      "summary": "Add verified native video wallpaper layer and Wallpapers quality/dimming controls; final candidate media grants and device lifecycle acceptance remain required"
-    },
-    {
-      "pr": 265,
-      "issues": [],
-      "summary": "Refresh Ribbon styling and editing; the final release uses one persistent full-screen CARD Home with its own wallpaper in both editions"
-    },
-    {
-      "pr": 267,
-      "issues": [],
-      "summary": "Add desktop/phone personal wallpapers, embedded UHD authoring and reusable Xecutioner Black Hole with continuous playback; theme changes restore theme backgrounds; refresh Ribbon/README/demo"
-    },
-    {
-      "pr": 287,
+      "pr": 323,
       "issues": [
+        282
+      ],
+      "summary": "Preserve full AOD/vendor category maps during Root activation/restoration; original C4 cause and exact B4/C4 acceptance remain unconfirmed."
+    },
+    {
+      "pr": 324,
+      "issues": [
+        307
+      ],
+      "summary": "Clarify refused partial-Helper recovery without changing authority/journals; original #307 recovery remains unresolved."
+    },
+    {
+      "pr": 325,
+      "issues": [
+        314
+      ],
+      "summary": "Add Atmosphere 1.0.0 to the community theme catalogue"
+    },
+    {
+      "pr": 326,
+      "issues": [
+        96
+      ],
+      "summary": "Correct source-installer emergency-stop/restart guidance only; original #96 controls/standby failures remain unresolved."
+    },
+    {
+      "pr": 327,
+      "issues": [
+        298
+      ],
+      "summary": "Retain legacy schema1 C1 stock-return/handoff safety checks; no current Home overlay or CRIU compatibility claim."
+    },
+    {
+      "pr": 329,
+      "issues": [],
+      "summary": "Show required, available and missing storage for installation, themes and video"
+    },
+    {
+      "pr": 330,
+      "issues": [
+        298
+      ],
+      "summary": "Check legacy schema1 checkpoint safety before install/activation without permission changes; fresh schema2 does not use checkpoints."
+    },
+    {
+      "pr": 331,
+      "issues": [
+        298
+      ],
+      "summary": "Add fresh C1 compositor Home routing with independent leases and legacy recovery; no physical C1 acceptance or normal OTA."
+    },
+    {
+      "pr": 333,
+      "issues": [
+        96,
         282,
-        288
+        298,
+        307,
+        314
       ],
-      "summary": "Preserve typed Root activation SSH/Luna failure evidence; original #282/#288 activation failures and recovery remain unresolved"
+      "summary": "Integrate reviewed source ancestries plus bundled Root receiver regression fix and observed-state Ribbon test synchronization; no additional compatibility claim."
     },
     {
-      "pr": 289,
+      "pr": 335,
+      "issues": [],
+      "summary": "Reduce CI artifact retention and unnecessary runner work"
+    },
+    {
+      "pr": 336,
       "issues": [
-        240
+        279
       ],
-      "summary": "Add original-profile passive Android inspection for #240; original worker failure and recovery remain unresolved"
+      "summary": "Add static Cr\u0103ciun la Bra\u0219ov1.1.0 catalogue wallpaper, AI-generated and upscaled to3840x2160; no video/animation or physical compatibility claim."
     },
     {
-      "pr": 291,
+      "pr": 338,
       "issues": [
-        283,
-        284
+        334
       ],
-      "summary": "Lower No-root installer floor to tested Node 0.10.15 for webOS 1.x; actual #283/#284 runtimes and device compatibility remain unverified"
+      "summary": "Offer guarded default-No activation retry only after verified restored Root state, preserve original receipts and add nonblocking health-refusal diagnostics; original #334 cause/recovery unconfirmed."
     },
     {
-      "pr": 292,
+      "pr": 340,
+      "issues": [],
+      "summary": "Align exact System1.2.2 replacement admission/readback/result and current supervisor policy; preserve strict owner eligibility and original-source interrupted recovery."
+    },
+    {
+      "pr": 341,
       "issues": [
-        160
+        337
       ],
-      "summary": "Document offline vendor bootstrap/native LS2 investigation for legacy Root; #160 support and target acceptance remain unimplemented"
+      "summary": "Prepare retained Root receiver/media-cache APIs before LS2 registration using protected private-worker capability; preserve legacy snapshots/receipts; retained-device image/video acceptance remains unverified."
     },
     {
-      "pr": 293,
+      "pr": 344,
       "issues": [
-        290
+        90
       ],
-      "summary": "Discover the installed Live TV tuner omitted or hidden by LG inventory; rebuilt Helper/Root/installer delivery and device acceptance remain pending"
+      "summary": "Bound wake-key readiness before Root activation; fresh Home cancels pending activation and persistent held keys remain fail-closed."
     },
     {
-      "pr": 294,
+      "pr": 345,
       "issues": [],
-      "summary": "Narrow inventory transport PR checks while retaining every device safety test, explicit legacy dependencies and full frozen-candidate gates; no product behavior or version change"
-    },
-    {
-      "pr": 297,
-      "issues": [
-        200
-      ],
-      "summary": "Load macOS system CA roots for private Python HTTPS downloads; original #200 device confirmation and later Windows Root recovery remain unresolved"
-    },
-    {
-      "pr": 299,
-      "issues": [],
-      "summary": "Accept personal moving MP4/MOV/MKV/WebM wallpaper uploads from desktop CYTV, preserving display geometry and silent motion; coordinate input-preview decoder ownership; final packaged-TV acceptance remains pending"
-    },
-    {
-      "pr": 300,
-      "issues": [
-        298
-      ],
-      "summary": "Automatically select C1 native Home Beta in the common installer with independent recovery; retain profile routing on supported firmware; C1 physical/power acceptance remains pending and normal OTA is unavailable"
-    },
-    {
-      "pr": 301,
-      "issues": [
-        298
-      ],
-      "summary": "Fix frozen candidate clipping, Windows fixtures and CLI QA admission"
-    },
-    {
-      "pr": 302,
-      "issues": [
-        295
-      ],
-      "summary": "Wait for one matching No-root Home/Helper catalog snapshot after successful installs; preventive only, original #295 installation and pending recovery remain unresolved"
-    },
-    {
-      "pr": 303,
-      "issues": [],
-      "summary": "Activate prepared native Root before foreground frames and await asynchronous appearance before readiness; final packaged-TV timing and lifecycle acceptance remain pending"
-    },
-    {
-      "pr": 305,
-      "issues": [],
-      "summary": "Preserve bounded Root Off/emergency recovery and stale-response fencing; the final CARD Home is not closed on passive foreground changes"
-    },
-    {
-      "pr": 306,
-      "issues": [
-        207,
-        304
-      ],
-      "summary": "Enable passive IR source diagnostics over trusted SSH stdin; original issues207/304 routing and device acceptance remain unresolved"
-    },
-    {
-      "pr": 309,
-      "issues": [
-        201,
-        307
-      ],
-      "summary": "Preserve allowlisted install/remove failure status and reason in diagnostics; original #201/#307 installation/recovery remain unresolved"
-    },
-    {
-      "pr": 310,
-      "issues": [],
-      "summary": "Integrate No-root Ribbon and Helper lifecycle work; the final single CARD Home uses its own background without underlay queries or transient-bar dismissal"
-    },
-    {
-      "pr": 312,
-      "issues": [
-        201,
-        307
-      ],
-      "summary": "Include explicit SDK parent directories in No-root IPKs and retain them during personalization; real-opkg reproduction passed, retail coexistence/service registration and original #201/#307 recovery remain unresolved"
-    },
-    {
-      "pr": 313,
-      "issues": [],
-      "summary": "Clarify in English and all twelve translations that the selected wallpaper has no video version; wallpaper/video capability logic is unchanged"
-    },
-    {
-      "pr": 316,
-      "issues": [],
-      "summary": "Preserve Root media/input-preview ownership; final CARD playback prefers the verified packaged built-in stream and releases resources on blur or hide"
-    },
-    {
-      "pr": 317,
-      "issues": [],
-      "summary": "Add unwired checked C Stop/private journal/controller-lease primitives, ES5 journal protocol and read-only private credential guard; production authentication, provisioning, consumer migration and device/update/rollback acceptance remain unimplemented"
-    },
-    {
-      "pr": 318,
-      "issues": [],
-      "summary": "Report failed relay key-up/ungrab/descriptor cleanup with a non-retryable exit while attempting every release step; retain blocked recovery and require rebuilt Helper plus final packaged-TV controls/audio acceptance"
-    },
-    {
-      "pr": 319,
-      "issues": [],
-      "summary": "Add unwired C/Node Stop-journal pipe bridge with bounded verified receipts, real lease validation and independent Stop publication; production bindings, Home authority, consumer/input integration and target acceptance remain absent"
-    },
-    {
-      "pr": 320,
-      "issues": [],
-      "summary": "Bound relay pipe/socket output so a stalled reader cannot strand watchdog/emergency cleanup; output failure exits 30, cleanup failure remains 31; rebuilt package and physical acceptance pending"
-    },
-    {
-      "pr": 321,
-      "issues": [],
-      "summary": "Handle Helper startup after TV restart"
-    },
-    {
-      "pr": 322,
-      "issues": [],
-      "summary": "Keep unwired Helper prototypes out of production packages"
-    },
-    {
-      "pr": 328,
-      "issues": [],
-      "summary": "Fix No-root Home startup and emergency UI teardown"
-    },
-    {
-      "pr": 332,
-      "issues": [],
-      "summary": "Parallelize slow CI suites into four shards per OS"
+      "summary": "Fix demo video playback after switching themes"
     }
   ],
-  "excluded": [],
-  "acceptance": "Maintainer explicitly approved release1.8.2 with retained-Root personal wallpaper receiver LS2 denial deferred to open issue337 and with disclosed short hardware scope. Selected full build 42092682892:2 passed all mandatory Linux/macOS shards, browser, ARM Python, Android/desktop builds and final summaries; Homebrew also passed. One Mac editing assertion failed in attempt1, then passed unchanged in targeted rerun; no assertions weakened or package builds repeated. Authenticated final CLI confirms exact Home FHD/HD, Helper, Root and Root Updater bytes match the tested packages; all infrastructure installed files match. Maintainer-owned C3 signed Root0.9.3 update/profile preservation, immediate physical Home from HDMI3, moving UHD wallpaper, visible CARD beyond120s and HomeOff LG return passed. PublishedHome1.8.1/newHelper0.7.4 same-package enabled broker and non-rootUID5431 compatibility passed, physical tripleHome stoppedHelper; finalHome1.9.4/profile/appearance restored. Sound,standby,coldboot,normal automatic OTA/rollback,freshunrooted compatibility remain untested and are not claimed. FinalTVstateLGHome,Rootoff,Helperstopped,recoveryverified. Evidence/hashes:docs/history/2026-11-05-single-home-regressions.md.",
+  "excluded": [
+    {
+      "pr": 343,
+      "reason": "Metadata-only inventory/build-pin record; no additional product change."
+    }
+  ],
+  "acceptance": "Maintainer-owned OLED55C3RLA fw43.21.71 SDK11.2.0, Root: supported signed1.8.2->1.9.0 update; all component terminals/ordinary Home health and actual bytes verified; Home/video/audio/volume, standby routing, physical AC-off cold start, triple-Home emergency Off, retained rollback to exact1.8.2 and post-rollback controls/audio/settings preservation passed. Settings stale status FAIL explicitly deferred #347 (Back/reopen workaround); storage accumulation #348 deferred. Exact original-signer Android code22->23 upgrade on isolated API35 ARM64 userdebug emulator retained four synthetic files, native Store/OperationChecks passed. Other models/C1/AOD, personal receiver/media #337, broader No-root and physical phone/network acceptance untested. Maintainer requested publication after cold boot/rollback; no compatibility claim beyond this scope. Exact hashes and observations: docs/history/2026-11-06-root-wake-key-release.md#signed-candidate-c3-observations and #final-cold-start-retained-rollback-and-android-upgrade.",
   "build": {
-    "run_id": 42092682892,
-    "attempt": 2,
-    "source": "4f223718cae2782be08cb3daaede1839584cfb1c"
+    "run_id": 42176689817,
+    "attempt": 1,
+    "source": "6659cd9ed1dd16d19f452d1d2a958c51c092b0a4"
   },
-  "acceptance_build": "42092682892:2"
+  "acceptance_build": "42176689817:1"
 }

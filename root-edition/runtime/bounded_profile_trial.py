@@ -9,7 +9,7 @@ import time
 import uuid
 import device_adapter as d
 from profile_plan import CANDIDATE
-from profile_recovery import prepare, validate, payload_for, REAL_HOME
+from profile_recovery import prepare, validate, journal_payload
 from staged_publication import publish
 
 
@@ -18,7 +18,6 @@ def begin(spawn, candidate=CANDIDATE, before_publish=None):
     verify()
     from helper_bridge import require_idle
     require_idle()
-    payload=payload_for(candidate)
     d.trusted_dir(d.STATE)
     fd=os.open(d.STATE/'profile-trial.lock',os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW,0o600)
     armed=False
@@ -31,6 +30,7 @@ def begin(spawn, candidate=CANDIDATE, before_publish=None):
         d.require_home()
         before=d.read()
         journal=prepare({'returnValue':True,'profiles':before['profiles']},before['sam_home'], candidate)
+        payload = journal_payload(journal)
         # Fail closed if an old transaction is unresolved.
         oldpath=d.STATE/'profile-trial.json'
         if oldpath.exists():

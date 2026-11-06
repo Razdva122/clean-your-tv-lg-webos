@@ -1,6 +1,6 @@
 # Requirements and known limits
 
-> **Unpublished 1.8.1 candidate:** see [candidate versions, setup and recovery limits](RELEASE-1.8.1.md). Published downloads remain on 1.7.1. C1 Beta is fresh-install only, selected automatically in the common installer; normal OTA is unavailable and physical C1 acceptance is pending. Historical results below retain their original artifact scope.
+> **Release 1.9.0:** see [versions, tested scope and recovery limits](RELEASE-1.9.0.md). C1 Beta is fresh-install only, selected automatically in the common installer; normal OTA is unavailable and physical C1 acceptance is pending. Historical results below retain their original artifact scope.
 
 > See [1.6.0 versions, installer changes and limits](RELEASE-1.6.0.md) and the [dated acceptance scope](history/2026-11-02-release-1.6.0-final-acceptance.md). Obtain available packages from [GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases).
 
@@ -22,7 +22,7 @@ Do not bypass a failed runtime gate.
 | | No-root | Root |
 | --- | --- | --- |
 | Access | Active LG Developer Mode, Key Server and local networking | Existing root, trusted root SSH and compatible Homebrew services |
-| TV runtime | Node.js 0.10.25+ for the compiled Helper | Node.js 8+ and Python 3.9+ with the required modules |
+| TV runtime | Node.js 0.10.15+ for the compiled Helper 0.7.4 in published 1.8.2 | Node.js 8+ and Python 3.9+ with the required modules |
 | Input | Compatible remote devices and native input access | Supported ARM32 userspace and compatible Magic Remote input |
 | Ongoing requirement | Keep Developer Mode active and Helper pairing/networking available | Keep independent recovery services and their referenced runtime intact |
 
@@ -35,12 +35,14 @@ Computer/phone requirements: [desktop](DESKTOP_INSTALL.md), [Android](../android
 or [source/manual tools](MANUAL_INSTALL.md). Desktop packages and Android have
 separate OS/device acceptance; a successful computer build is not a TV test.
 
-## webOS 1.x runtime floor (unreleased)
+<a id="webos-1x-runtime-floor-unreleased"></a>
+
+## webOS 1.x runtime floor (1.8.2)
 
 LG documents [Node.js 0.10.15 for webOS TV 1.x](https://webostv.developer.lge.com/develop/guides/js-service-basics#supported-nodejs-version).
-The next candidate admits No-root Helper on 0.10.15+; published v1.7.1 installers
-still require 0.10.25+. Exact 0.10.15 host tests pass with compiled Helper and
-unchanged published Helper 0.6.22 JavaScript. Older/unknown runtimes still stop
+Published 1.8.2 admits No-root Helper 0.7.4 on Node.js 0.10.15+. Earlier v1.7.1
+installers required 0.10.25+. Exact 0.10.15 host checks cover the compiled Helper;
+see the dated evidence for the original baseline and actual tested cases. Older/unknown runtimes still stop
 before installation. Root continues to require Node.js 8+.
 
 This does not establish compatibility on the reported 32LB650V-ZN or 49UB8500-UA.

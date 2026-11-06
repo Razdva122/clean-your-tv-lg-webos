@@ -83,6 +83,9 @@ class PendingProvisionCancellationTests(unittest.TestCase):
         self.assertEqual(result['state'],'cancelled-and-removed')
         self.assertEqual(self.f.root_store.read('ls2-provision-snapshot'),self.saved)
 
+    def test_compositor_alias_cancellation_restores_original_registration(self):
+        self.assert_receiver_capability_cancellation(self.p.COMPOSITOR_CAPABILITIES)
+
     def test_unknown_receiver_capability_is_not_admitted(self):
         self.saved['capabilities']=['unknown']
         self.f.root_store.write('ls2-provision-snapshot',self.saved)

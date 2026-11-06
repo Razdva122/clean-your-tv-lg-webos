@@ -1,6 +1,6 @@
 # Recover TV controls or an interrupted installation
 
-> **Unpublished 1.8.1 candidate:** see [candidate versions, setup and recovery limits](RELEASE-1.8.1.md). Published downloads remain on 1.7.1. C1 Beta is fresh-install only, selected automatically in the common installer; normal OTA is unavailable and physical C1 acceptance is pending. Historical results below retain their original artifact scope.
+> **Release 1.9.0:** see [versions, tested scope and recovery limits](RELEASE-1.9.0.md). C1 Beta is fresh-install only, selected automatically in the common installer; normal OTA is unavailable and physical C1 acceptance is pending. Historical results below retain their original artifact scope.
 
 ## Return to LG Home
 
@@ -57,6 +57,25 @@ A displayed plan is advice only, never authorization or a saved resume token.
 Legacy operations can remain blocked. This does not supply missing terminal
 installer evidence for #201 or certify recovery on #216's TV.
 
+### Failed Root activation (unreleased)
+
+An updated installer can offer **Finish Root setup?** for a retained profile-backend
+activation after LG Home has been restored. Use the same saved connection and
+**Review recovery options** (`cytv recover`). The separate default-No confirmation
+still applies. Before offering or continuing, checks must prove disabled intent,
+restored routing/binding, stock LG Home, no failsafe/update block, matching installed
+files and verified Root Updater recovery. A linked product installation must also
+be complete and current. Unknown, busy or conflicting evidence keeps setup blocked.
+The original activation receipt is archived locally before the explicit attempt;
+packages are not reinstalled and no recovery journal or failsafe flag is deleted.
+C1 Beta recovery is unchanged. Published 1.8.2 does not include this installer path.
+
+This improves recovery and diagnosis; it does not establish the original cause or
+successful recovery of [issue #334](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/334).
+The updated Root runtime records a fixed health-context refusal before supervisor
+recovery. Existing runtime logs cannot be upgraded retroactively: retain the
+original evidence and do not edit installed runtime files or integrity receipts.
+
 In 1.6.0, retain the original failed-attempt report.
 New reports separate a saved first error from later checks and include a filtered
 Doctor/status result. Successful setup/status/restore also offer an export. This
@@ -67,6 +86,8 @@ Recovery checks installer state before offering an allowed recovery action.
 An unknown package outcome is not automatically retried. Returning to LG Home
 alone does not finish removal. The removal confirmation cannot be bypassed with
 `--yes` or approved by noninteractive setup.
+
+<a id="unreleased-uncertain-no-root-package-operations-201"></a>
 
 ### Uncertain No-root package operations (#201)
 
@@ -222,8 +243,8 @@ transaction or backup also blocks replacement, even if marked complete; preserve
 it for review rather than deleting it to force replacement. It does not patch
 retained pinned code in place or replay an uncertain remove/install request.
 
-The unpublished 1.8.1 installer targets System Updater 1.2.1. A completed earlier
-replacement to 1.1.1 can start a new 1.2.1 operation only
+The 1.9.0 installer targets System Updater 1.2.2. A completed earlier
+replacement to 1.1.1 can start a new 1.2.2 operation only
 after the installer authenticates its saved bundle, baseline, original archive,
 terminal removal and current owner, and confirms that later recovery has finished.
 The original completed journal is durably archived with its existing evidence;

@@ -1,6 +1,6 @@
 # Install Clean Your TV from Android
 
-> **Unpublished 1.8.1 candidate:** see [candidate versions, setup and recovery limits](../docs/RELEASE-1.8.1.md). Published downloads remain on 1.7.1. C1 Beta is fresh-install only, selected automatically in the common installer; normal OTA is unavailable and physical C1 acceptance is pending. Historical results below retain their original artifact scope.
+> **Release 1.9.0:** see [versions, tested scope and recovery limits](../docs/RELEASE-1.9.0.md). C1 Beta is fresh-install only, selected automatically in the common installer; normal OTA is unavailable and physical C1 acceptance is pending. Historical results below retain their original artifact scope.
 
 > Release 1.7.1 uses Android 0.7.1 / versionCode 19 and embeds the shared installer correction; its exact signer, payload and emulator upgrade checks are in the [1.7.1 acceptance record](../docs/history/2026-11-03-release-1.7.1-host-checks.md). This guide retains the same setup flow. Use [Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases) for the latest published downloads. The historical evidence below remains scoped to its original APK.
 
@@ -11,7 +11,9 @@ Use your phone to install either **No-root** (Developer Mode) or **Root**
 or cloud service is needed. The APK includes the offline interface and TV packages;
 optional TV Python is a separate verified download.
 
-Version **1.7.1** uses **Android 0.7.1 / versionCode 19**.
+Published **1.8.2** uses **Android 0.8.2 / versionCode 22**. The unpublished
+1.9.0 candidate uses Android 0.9.0 / versionCode 23; use only its identified
+signed artifact for candidate testing. New APK acceptance remains pending.
 [Download the signed APK](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest) ·
 [Full installation guide](../docs/INSTALL.md) · [Recovery](#recovery-and-private-data) ·
 [Report a problem](../docs/FEEDBACK.md)
@@ -55,15 +57,18 @@ Older 32-bit phones and x86 devices are not included in this APK. The UI include
 Updater bootstrap with root/Homebrew services. Unrooted TVs use the installer.
 The APK does not expose that bootstrap action; see [updates](../root-edition/UPDATES.md).
 
-The start screen also has **Wallpapers**, which explains the TV-hosted QR upload flow. Open Home settings → Wallpapers → Upload from phone on a compatible preview TV build, then scan its QR with the phone camera. Phone uploads are images up to 1920×1080; native 4K video requires desktop CYTV. The Android app does not scan QR codes or encode 4K video itself.
+The start screen also has **Wallpapers**, which explains the TV-hosted QR upload flow. Open Home settings → Wallpapers → Upload from phone on a matching compatible Home/service build, then scan its QR with the phone camera. Phone uploads are images up to 1920×1080; native 4K video requires desktop CYTV. The Android app does not scan QR codes or encode 4K video itself.
 
-## Interrupted Root installation inspection (unreleased)
+<a id="interrupted-root-installation-inspection-unreleased"></a>
 
-Candidate source adds a bounded Android path for an original Root
-`install / coordinator-submitted` operation. This is not in the published
-Android 0.7.1 APK. Use only an exact, signed rebuilt APK identified in an agreed
-maintainer handoff; update the existing app in place without uninstalling it or
-clearing its data. Do not copy a desktop profile onto the phone.
+## Interrupted Root installation inspection (1.8.2)
+
+Published 1.8.2 (Android 0.8.2 / versionCode 22) includes a bounded inspection
+path for an original Root `install / coordinator-submitted` operation. It reads
+evidence without resuming the failed installation. Update the existing app in
+place without uninstalling it or clearing its data. Do not copy a desktop profile
+onto the phone. Candidate testing requires its exact identified signed APK;
+published-version evidence does not accept new bytes.
 
 From **Status and recovery**, choose **Review recovery options** with the original
 TV, Root edition and SSH port. After the app explains that the inspection only

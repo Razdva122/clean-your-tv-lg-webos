@@ -1,8 +1,8 @@
 # Clean Your TV — instrukcja użytkownika
 
-> **1.8.2:** [English](../RELEASE-1.8.2.md) · [LS2 Root #337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337).
+> **1.9.0:** [English](../RELEASE-1.9.0.md) · [Root #337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337) · [#347](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/347) · [#348](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/348) · [1.8.2](../RELEASE-1.8.2.md)
 
-**C1 Beta (#298):** Wybierz Root we wspólnym instalatorze na komputer. Kwalifikujące się telewizory C1 są wykrywane automatycznie; osobny instalator ani flaga nie są potrzebne. Ta ścieżka wymaga nowej instalacji, nie oferuje automatycznych aktualizacji i nie przeszła jeszcze odbioru na fizycznym C1. Otwórz LG Home, przytrzymanie Back lub zatrzymanie związane z bezpieczeństwem/zasilaniem mogą pozostawić sterowanie Home wyłączone; ponownie włącz Zmień Home w ustawieniach TV. Zwykła ścieżka Root pozostaje bez zmian. Jeśli pozostały inne składniki No-root, pełne usuwanie C1 zatrzyma się przed wprowadzeniem zmian. Najpierw usuń je zwykłą procedurą No-root; jeśli ich stan jest niejasny, zachowaj dane odzyskiwania. [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md).
+**Nieopublikowana C1 Beta (#298):** Wybierz Root we wspólnym instalatorze na komputer. Kwalifikujące się telewizory C1 są wykrywane automatycznie; osobny instalator ani flaga nie są potrzebne. Ta ścieżka wymaga nowej instalacji, nie oferuje automatycznych aktualizacji i nie przeszła jeszcze odbioru na fizycznym C1. Otwórz LG Home, przytrzymanie Back lub zatrzymanie związane z bezpieczeństwem/zasilaniem mogą pozostawić sterowanie Home wyłączone; ponownie włącz Zmień Home w ustawieniach TV. Zwykła ścieżka Root pozostaje bez zmian. Jeśli pozostały inne składniki No-root, pełne usuwanie C1 zatrzyma się przed wprowadzeniem zmian. Najpierw usuń je zwykłą procedurą No-root; jeśli ich stan jest niejasny, zachowaj dane odzyskiwania. [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md). C1 Beta filtruje klawisz Home i wraca po zamknięciu aplikacji bez zmiany uprawnień CRIU/checkpoint. LG Home może pojawić się na chwilę. Trzykrotne Home również zatrzymuje przekierowanie; potem ponownie włącz zmianę Home.
 
 1.8.2 (#290): **+ / Dodaj aplikację** udostępnia telewizję na żywo pod nazwą z telewizora tylko wtedy, gdy tuner zostanie wykryty jako zainstalowany. Inne ukryte aplikacje systemowe pozostają pominięte. No-root wymaga zaktualizowanego Helpera i instalatora, a Root pakietu Home. Uruchamianie kanałów wymaga jeszcze sprawdzenia na TV.
 
@@ -31,7 +31,7 @@ No-root i Root to równorzędne opcje dla różnych konfiguracji telewizora. Wyb
 - **No-root:** włącz LG Developer Mode i Key Server. Wpisz hasło wyświetlane na telewizorze i zaakceptuj na nim osobne żądanie parowania. Developer Mode musi pozostać aktywny: wygaśnięcie sesji może usunąć tak zainstalowane aplikacje. Sprawdzaj oficjalny licznik także przy włączonym odnawianiu Beta. Monitorowanie Helper wymaga sieci lokalnej.
 - **Root:** potrzebny jest istniejący dostęp root przez SSH. Instalator nie uzyskuje uprawnień root. Nie włączaj Developer Mode na telewizorze z istniejącym rootem. Zachowaj dostęp root i usługi odzyskiwania.
 
-Root wymaga działających interfejsów Home usług Settings Service i System Profile (`com.webos.service.systemprofile`); sam dostęp root nie potwierdza zgodności.
+Root (System Profile) wymaga działających interfejsów Home usług Settings Service i System Profile (`com.webos.service.systemprofile`); sam dostęp root nie potwierdza zgodności.
 
 > **1.6.0:** Root sprawdza wymagane interfejsy Home przed przygotowaniem prywatnego Pythona lub pakietów. Błąd zatrzymuje instalację; powodzenie nie potwierdza zgodności oprogramowania ani działania przycisku Home. Znane błędy połączenia mają osobne wskazówki. Zachowaj profile, dane zaufania i odzyskiwania; niedokończone operacje wymagają zweryfikowanego odzyskiwania, bez ponawiania w ciemno. Zapisz i sprawdź raport. [Szczegóły](../development/INSTALLER-PREFLIGHT-HELP.md).
 
@@ -41,9 +41,9 @@ Włącz telewizor i połącz go z tą samą zaufaną siecią lokalną co kompute
 
 1.5.4 zawiera Home Helper **0.6.21** dla TV Node.js **0.10.25+**; Root nadal wymaga Node.js **8+**. [Compatibility](../COMPATIBILITY.md).
 
-**Nieopublikowana zmiana dla webOS 1.x:** następny instalator No-root akceptuje TV Node.js **0.10.15+** po testach Helpera na dokładnie tej wersji; opublikowany instalator 1.7.1 nadal wymaga **0.10.25+**. Nie potwierdza to zgodności starego WebKit, wejścia natywnego ani Home. Nie zastępuj środowiska TV i nie omijaj kontroli. Root nadal wymaga Node.js 8+. [Testy i ograniczenia](../COMPATIBILITY.md#webos-1x-runtime-floor-unreleased).
+**webOS 1.x — 1.8.2:** opublikowany instalator No-root zawiera Helper 0.7.4 i akceptuje TV Node.js **0.10.15+** po testach na dokładnie tej wersji. Nie potwierdza to zgodności starego WebKit, wejścia natywnego ani Home. Nie zastępuj środowiska TV i nie omijaj kontroli. Root nadal wymaga Node.js 8+. [Testy i ograniczenia](../COMPATIBILITY.md#webos-1x-runtime-floor-unreleased).
 
-No-root Helper wymaga Node.js **0.10.25+** na TV. Root wymaga Node.js **8+** i działającego Pythona **3.9+**. W razie potrzeby instalator pobierze zweryfikowanego prywatnego Pythona; początkowe przygotowanie wymaga **320 MiB** wolnego miejsca. Nie zastępuje Pythona systemowego. Zachowaj środowiska potrzebne do odzyskiwania. [Python (angielski)](../OPTIONAL-PYTHON.md). Odnawianie Developer Mode to **Beta, domyślnie wyłączona**; rzeczywiste odnawianie bez roota nie zostało potwierdzone. Nadal sprawdzaj oficjalny licznik.
+No-root Helper wymaga Node.js **0.10.15+** na TV. Root wymaga Node.js **8+** i działającego Pythona **3.9+**. W razie potrzeby instalator pobierze zweryfikowanego prywatnego Pythona; początkowe przygotowanie wymaga **320 MiB** wolnego miejsca. Nie zastępuje Pythona systemowego. Zachowaj środowiska potrzebne do odzyskiwania. [Python (angielski)](../OPTIONAL-PYTHON.md). Odnawianie Developer Mode to **Beta, domyślnie wyłączona**; rzeczywiste odnawianie bez roota nie zostało potwierdzone. Nadal sprawdzaj oficjalny licznik.
 
 ### Konfiguracja Developer Mode (No-root)
 
@@ -69,7 +69,7 @@ Utrzymuj Developer Mode aktywny: przed końcem odliczania otwórz aplikację i n
 
 [Instalator Android (angielski)](../../android/README.md): wybierz język w prawym górnym rogu. Aktualizuj bez odinstalowania i czyszczenia danych. Android 7 / WebView 108 to minimum, a nie sprawdzony telefon; testy akceptacyjne używały emulatora Android 15 ARM64 / WebView 124. Fizyczne telefony i odzyskiwanie z połączeniem do prawdziwego TV pozostają niezweryfikowane.
 
-**Nieopublikowany kandydat Android:** dla pierwotnej operacji Root `install / coordinator-submitted` przegląd odzyskiwania może po wyraźnym potwierdzeniu wykonać kontrolę tylko do odczytu z pierwotnym profilem i kluczem hosta SSH. Nie odinstalowuj aplikacji, nie czyść danych, nie zastępuj profilu i nie ponawiaj instalacji. Używaj tylko podpisanego, ponownie zbudowanego APK wskazanego przez opiekuna; publiczny APK nie zawiera jeszcze tej ścieżki. [Procedura i ograniczenia](../../android/README.md#interrupted-root-installation-inspection-unreleased).
+**Android 1.8.2:** przegląd odzyskiwania może po wyraźnym potwierdzeniu sprawdzić pierwotną operację Root `install / coordinator-submitted` tylko do odczytu, z pierwotnym profilem i kluczem hosta SSH. Zachowaj aplikację, prywatne dane i dzienniki; nie zastępuj profilu ani nie ponawiaj instalacji. Kontrola nie wznawia odzyskiwania. [Procedura i ograniczenia](../../android/README.md#interrupted-root-installation-inspection-unreleased)
 
 Kreator początkowo używa języka systemu i zapamiętuje wybrany język. Na telewizorze otwórz **Ustawienia → Język** i wybierz język lub automatyczny wybór według systemu. Preferencje instalatora i telewizora są niezależne. Kody zawiera [spis języków](../LANGUAGES.md).
 
@@ -143,6 +143,8 @@ Homebrew Channel odmówił temu instalatorowi dostępu. W webOS 11 Homebrew 0.7.
 
 **1.6.0:** wybierz **Sprawdź opcje odzyskiwania** dla tego samego zapisanego TV lub uruchom `cytv recover`. Kontrola i zmiany wymagają osobnych potwierdzeń z domyślnym Nie; `--yes` ich nie zatwierdza. Root kontynuuje tylko po istniejących weryfikacjach. No-root proponuje usuwanie wyłącznie za zgodą dotychczasowej kontroli usługi pakietów; ustawienia Home mogą zostać zresetowane. Nowa instalacja nie zaczyna się automatycznie. Przy nieznanym stanie lub odmowie dostępu zapisz raport i zatrzymaj się. Zachowaj dzienniki i nie powtarzaj usuwania. Nadal brakuje dowodów zakończenia dla #201 i potwierdzenia odzyskania TV dla #216. [Recovery](../RECOVERY.md). Prosząc o pomoc podaj model, firmware, edycję, wersję instalatora, nieudany krok oraz oczekiwane/rzeczywiste zachowanie; przed udostępnieniem przejrzyj raport i usuń sekrety.
 
+Nieopublikowane: po błędzie aktywacji Root użyj tego samego zapisanego połączenia i sprawdź odzyskiwanie (`cytv recover`). Kontynuacja wymaga przywróconego LG Home, wyłączonego sterowania, sprawdzonych pakietów/updatera i osobnego potwierdzenia. Zachowaj dzienniki; nie instaluj ponownie i nie usuwaj failsafe. [Recovery](../RECOVERY.md#failed-root-activation-unreleased).
+
 1.7.0: odzyskiwanie może wznowić usuwanie No-root zatrzymane przed pierwszym żądaniem pakietu bez dostępu do globalnego stanu, jeśli potwierdza to oryginalny dziennik. Potwierdź usuwanie osobno; po jego weryfikacji rozpocznij instalację oddzielnie. Nieznane lub już wysłane operacje nadal blokują kontynuację. Zachowaj połączenie i dzienniki. Brak w 1.6.0. [Szczegóły](../RECOVERY.md#no-root-removal-stopped-before-package-submission-unreleased).
 
 [Dokumentacja](../README.md) · [Zgłoś problem](../FEEDBACK.md)
@@ -162,13 +164,13 @@ W przygotowaniu: jeśli nie wysłano żądania usunięcia pakietów, po błędzi
 
 ## Motywy
 
-W podglądzie następnej wersji **Ustawienia Home → Tapety** pokazuje tapetę aktywnego motywu, wykryte możliwości TV i bieżący tryb. Auto wybiera zgodną jakość; 4K, 1080p i Obraz są dostępne tylko wtedy, gdy zawiera je motyw. Przy błędzie wideo wyświetlany jest obraz. Przyciemnienie zmienia się co 5%; reset przywraca ustawienia motywu. Classic i motywy bez tapety wyraźnie pokazują ten stan.
+W wersji 1.8.2 **Ustawienia Home → Tapety** pokazuje tapetę aktywnego motywu, wykryte możliwości TV i bieżący tryb. Auto wybiera zgodną jakość; 4K, 1080p i Obraz są dostępne tylko wtedy, gdy zawiera je motyw. Przy błędzie wideo wyświetlany jest obraz. Przyciemnienie zmienia się co 5%; reset przywraca ustawienia motywu. Classic i motywy bez tapety wyraźnie pokazują ten stan.
 
-Własne tapety w podglądzie kolejnej wersji: otwórz Tapety w komputerowym CYTV, wybierz JPG/PNG, ustaw kadr i podaj prywatny adres TV oraz PIN odbioru z Home. CYTV lokalnie przygotowuje film bez dźwięku; 4K jest dostępne tylko przy odpowiedniej rozdzielczości kadru. Na TV wybierz odbiór z CYTV lub przesyłanie z telefonu i zeskanuj QR w tej samej sieci Wi-Fi. Telefon przesyła zwykły obraz do 1920×1080 bez natywnej warstwy wideo 4K; ostrość ogranicza rozdzielczość interfejsu TV. Potwierdź ostrzeżenie przed wysłaniem, potem sprawdź podgląd i zastosuj na TV. Własne obrazy pozostają zapisane i można je ponownie wybrać lub usunąć w Tapetach. Anulowanie lub odrzucenie pliku zachowuje poprzednie tło. Wymagane są zgodne kompilacje kolejnej wersji Home/usługi oraz CYTV.
+Własne tapety w wersji 1.8.2: otwórz Tapety w komputerowym CYTV, wybierz JPG/PNG, ustaw kadr i podaj prywatny adres TV oraz PIN odbioru z Home. CYTV lokalnie przygotowuje film bez dźwięku; 4K jest dostępne tylko przy odpowiedniej rozdzielczości kadru. Na TV wybierz odbiór z CYTV lub przesyłanie z telefonu i zeskanuj QR w tej samej sieci Wi-Fi. Telefon przesyła zwykły obraz do 1920×1080 bez natywnej warstwy wideo 4K; ostrość ogranicza rozdzielczość interfejsu TV. Potwierdź ostrzeżenie przed wysłaniem, potem sprawdź podgląd i zastosuj na TV. Własne obrazy pozostają zapisane i można je ponownie wybrać lub usunąć w Tapetach. Anulowanie lub odrzucenie pliku zachowuje poprzednie tło. Wymagane są zgodne kompilacje Home/usługi oraz CYTV od wersji 1.8.2.
 
-Własne ruchome wideo (podgląd następnej wersji): w komputerowym CYTV → Tapety wybierz MP4/MOV/MKV/WebM, 1–60 sekund, do 512 MiB i 3840×2160. Dźwięk jest usuwany, a kadr przycinany centralnie do 16:9. Mniejsze wideo korzysta ze zgodnego wyjścia 1080p; UHD wymaga odpowiednio dużego kadru źródłowego. Wyślij przez adres/PIN TV, a następnie obejrzyj i zastosuj na TV. Z telefonu nadal tylko JPG/PNG. Weryfikacja końcowego pakietu i testy na fizycznym TV pozostają do wykonania.
+Własne ruchome wideo (1.8.2): w komputerowym CYTV → Tapety wybierz MP4/MOV/MKV/WebM, 1–60 sekund, do 512 MiB i 3840×2160. Dźwięk jest usuwany, a kadr przycinany centralnie do 16:9. Mniejsze wideo korzysta ze zgodnego wyjścia 1080p; UHD wymaga odpowiednio dużego kadru źródłowego. Wyślij przez adres/PIN TV, a następnie obejrzyj i zastosuj na TV. Z telefonu nadal tylko JPG/PNG. Testy na fizycznym TV pozostają ograniczone; zobacz [1.8.2](../RELEASE-1.8.2.md).
 
-Wbudowane tapety następnej wersji: **Ustawienia Home → Tapety → Wbudowane tapety → Black Hole**. Autor filmu: **Xecutioner**, ze zgodą na użytek niekomercyjny z podaniem autora. Zatwierdzenie innego motywu włącza jego własną tapetę; Black Hole i własne obrazy nadal można wybrać. Ciągły strumień 4K eliminuje przewijanie przy każdym powtórzeniu, z kompatybilnym filmem/obrazem w razie problemów.
+Wbudowane tapety w wersji 1.8.2: **Ustawienia Home → Tapety → Wbudowane tapety → Black Hole**. Autor filmu: **Xecutioner**, ze zgodą na użytek niekomercyjny z podaniem autora. Zatwierdzenie innego motywu włącza jego własną tapetę; Black Hole i własne obrazy nadal można wybrać. Ciągły strumień 4K eliminuje przewijanie przy każdym powtórzeniu, z kompatybilnym filmem/obrazem w razie problemów.
 
 Android CYTV: **Skonfiguruj TV** · **Tapety** · **Konserwacja**. Na TV otwórz ustawienia Home → Tapety → Prześlij z telefonu. Zeskanuj QR aparatem, wybierz JPG/PNG i zastosuj tapetę na TV. Z telefonu: obrazy do 1920×1080, bez natywnego wideo 4K. Aby uzyskać prawdziwe 4K, użyj CYTV na komputerze.
 
@@ -217,3 +219,9 @@ Instalatory komputerowe/Android 1.6.0 i zmigrowane klienty OTA wybierają 720p l
 [HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).
 
 > **1.6.0:** zachowaj raport z pierwotnej nieudanej próby. Nowe raporty oddzielają pierwszy zapisany błąd od kolejnych kontroli i zawierają filtrowane podsumowanie Doctor/stanu. Eksport jest dostępny także po udanej instalacji, kontroli stanu lub przywróceniu. Brakujące starsze dane pozostają nieznane; raport nie uprawnia do odzyskiwania. [↗](../development/INSTALLER-DIAGNOSTICS.md).
+
+## Miejsce na dane
+
+Wersje kandydujące pokazują wymagane, wolne i brakujące miejsce w MiB dla instalacji, motywów i własnych tapet zdjęciowych/wideo. Uwzględniają kopie tymczasowe i rezerwę. Limit aplikacji, pamięć motywów 64 MiB i pamięć wideo są oddzielne. Nieznane wartości są oznaczone. Zwolnij wskazaną pamięć; brak automatycznego czyszczenia.
+
+Szacowane miejsce (TV): wymagane 128.0 MiB; wolne 96.0 MiB; brakuje 32.0 MiB.

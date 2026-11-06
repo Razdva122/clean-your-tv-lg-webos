@@ -1,3 +1,9 @@
+# C1 guardians
+
+New fresh C1 builds use `keyfilter.c`, a mount-free native lease guardian for compositor Home routing. It checks independent emergency-input, controller and broker leases, serializes fixed Root launches against durable stop, and restores through owned Root close followed by LG Home launch. It does not access CRIU/checkpoints or change their permissions. See the [current C1 contract](../../docs/development/C1-NATIVE-GATE.md) for marker schema 2, private state, recovery and verification limits.
+
+The following legacy implementation remains for schema 1 recovery; it is not included in new keyfilter bundles.
+
 # Experimental C1 native Home gate
 
 Source/host experiment only; physical C1 acceptance is not established.

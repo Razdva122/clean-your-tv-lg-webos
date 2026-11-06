@@ -1,8 +1,8 @@
 # Clean Your TV — user guide
 
-> **1.8.2:** [English](../RELEASE-1.8.2.md) · [LS2 Root #337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337).
+> **1.9.0:** [English](../RELEASE-1.9.0.md) · [Root #337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337) · [#347](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/347) · [#348](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/348) · [1.8.2](../RELEASE-1.8.2.md)
 
-**C1 Beta (#298):** In the common computer installer, choose Root. Eligible C1 TVs are detected automatically; no separate installer or flag is needed. This path requires a fresh installation, has no automatic updates, and has not passed physical C1 acceptance. Open LG Home, long Back, or a safety/power stop can leave Home control off; turn Change Home on again in TV settings. The normal Root path is unchanged. If other No-root components remain, C1 full removal stops before making changes. Remove those components through their normal No-root removal flow first; retain recovery data if their state is unresolved. [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md).
+**Unreleased C1 Beta (#298):** In the common computer installer, choose Root. Eligible C1 TVs are detected automatically; no separate installer or flag is needed. This path requires a fresh installation, has no automatic updates, and has not passed physical C1 acceptance. Open LG Home, long Back, or a safety/power stop can leave Home control off; turn Change Home on again in TV settings. The normal Root path is unchanged. If other No-root components remain, C1 full removal stops before making changes. Remove those components through their normal No-root removal flow first; retain recovery data if their state is unresolved. [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md). C1 Beta uses Home-key filtering and return after an app closes, without changing CRIU/checkpoint permissions. LG Home may briefly appear during return. Triple Home also stops routing; enable Change Home again after a stop.
 
 1.8.2 (#290): **+ / Add app** offers Live TV under the TV’s own name only when the tuner is detected as installed. Other hidden system apps stay excluded. No-root needs the updated Helper and installer; Root needs the updated Home package. Tuner launch still needs TV verification.
 
@@ -31,7 +31,7 @@ No-root and Root are equal options for different TV setups. Choose No-root for L
 - **No-root:** enable LG Developer Mode and Key Server. Enter the passphrase displayed on the TV and accept the separate TV pairing request. Developer Mode must remain active; expiry can remove sideloaded apps. Monitor its official timer even with Beta renewal enabled. Helper monitoring needs local networking.
 - **Root:** existing root SSH access is required. The installer does not root the TV. Do not enable Developer Mode on an existing rooted setup. Keep root access and recovery services available.
 
-Root requires working Settings Service and System Profile Home interfaces (`com.webos.service.systemprofile`); existing root access alone does not establish compatibility.
+Root (System Profile) requires working Settings Service and System Profile Home interfaces (`com.webos.service.systemprofile`); existing root access alone does not establish compatibility.
 
 > **1.6.0:** Root setup checks the required Home interfaces before preparing private Python or packages. A failed check stops setup; passing it does not prove firmware compatibility or physical Home operation. Known connection errors now show specific advice. Keep saved profiles, trust and recovery data; unresolved operations require verified recovery, not a blind retry. Save and review the diagnostic report. [Details](../development/INSTALLER-PREFLIGHT-HELP.md).
 
@@ -41,9 +41,9 @@ Keep the TV on and the computer on the same trusted local network. No always-on 
 
 1.5.4 includes Home Helper **0.6.21** with TV Node.js **0.10.25+** support; Root still requires Node.js **8+**. [Compatibility](../COMPATIBILITY.md).
 
-**Unreleased webOS 1.x follow-up:** the next No-root installer accepts TV Node.js **0.10.15+** after exact-runtime Helper checks; published 1.7.1 installers still require **0.10.25+**. This does not establish old WebKit/native-input/Home compatibility. Do not replace the TV runtime or bypass its checks. Root still needs Node.js 8+. [Evidence and limits](../COMPATIBILITY.md#webos-1x-runtime-floor-unreleased).
+**webOS 1.x — 1.8.2:** the published No-root installer includes Helper 0.7.4 and accepts TV Node.js **0.10.15+** after exact-runtime checks. This does not establish old WebKit/native-input/Home compatibility. Do not replace the TV runtime or bypass its checks. Root still needs Node.js 8+. [Evidence and limits](../COMPATIBILITY.md#webos-1x-runtime-floor-unreleased).
 
-No-root Helper needs TV Node.js **0.10.25+**. Root needs Node.js **8+** and working Python **3.9+**. Setup can download a verified private Python if needed; initial staging needs **320 MiB** free. It does not replace system Python. Keep runtime slots used by recovery. [Optional Python (English)](../OPTIONAL-PYTHON.md). Developer Mode auto-renewal is **Beta, off by default**, and real renewal on unrooted TVs is not confirmed; keep checking the official timer.
+No-root Helper needs TV Node.js **0.10.15+**. Root needs Node.js **8+** and working Python **3.9+**. Setup can download a verified private Python if needed; initial staging needs **320 MiB** free. It does not replace system Python. Keep runtime slots used by recovery. [Optional Python (English)](../OPTIONAL-PYTHON.md). Developer Mode auto-renewal is **Beta, off by default**, and real renewal on unrooted TVs is not confirmed; keep checking the official timer.
 
 ### Developer Mode setup (No-root)
 
@@ -69,7 +69,7 @@ Keep Developer Mode active: open it before the timer runs out and press EXTEND w
 
 [Android installer (English)](../../android/README.md): choose the language at the top right. Update without uninstalling or clearing data. Android 7 / WebView 108 is the minimum, not a verified phone configuration; acceptance used Android 15 ARM64 / WebView 124 in an emulator. Physical phones and live phone-to-TV recovery remain unverified.
 
-**Unreleased Android candidate:** for an original Root `install / coordinator-submitted` operation, Review recovery options can perform an explicitly confirmed read-only inspection using the original saved profile and SSH pin. Do not uninstall/clear app data, replace the profile or repeat installation. Use only the signed rebuilt APK named in the maintainer handoff; the public APK does not include this path. [Procedure and limits](../../android/README.md#interrupted-root-installation-inspection-unreleased).
+**Android 1.8.2:** Review recovery options can inspect an original Root `install / coordinator-submitted` operation read-only after explicit confirmation, using the original saved profile and SSH pin. Keep the app, private data and receipts; do not replace the profile or repeat installation. Inspection does not resume recovery. [Procedure and limits](../../android/README.md#interrupted-root-installation-inspection-unreleased)
 
 The desktop wizard selects your system language automatically; its language selector saves an explicit choice. On the TV, open **Settings → Language** and select a language, or the system/automatic option to follow the TV language. Installer and TV preferences are separate. The supported codes are listed in the [language index](../LANGUAGES.md).
 
@@ -143,6 +143,8 @@ Homebrew Channel denied access to this installer. On webOS 11, Homebrew 0.7.3 ne
 
 **1.6.0:** choose **Review recovery options** for the same saved TV, or run `cytv recover`. Checking and changes require separate confirmation, with No selected by default; `--yes` cannot approve them. Root continues only after its existing verification. No-root offers removal only when the existing package-service guard permits it; removal may reset Home preferences. New setup never starts automatically. If state is unknown or access is denied, save the report and stop; retain journals and do not repeat removal. This does not resolve the missing terminal evidence in #201 or establish device recovery in #216. [Recovery](../RECOVERY.md). For help, include model, firmware, edition, installer version, failed step and expected/actual behavior; review and redact the report before sharing.
 
+Unreleased: after failed Root activation, use the same saved connection and Review recovery options (`cytv recover`). Continuation requires verified LG Home restoration, disabled control, package/updater integrity and separate confirmation. Keep journals; do not reinstall or clear failsafe flags. [Recovery](../RECOVERY.md#failed-root-activation-unreleased).
+
 1.7.0: recovery can resume a No-root removal stopped before its first package request without global package-status access, if the original journal proves that state. Confirm removal separately, then start setup separately after verified removal. Unknown/submitted operations still stop; keep the saved connection and journals. This is not in 1.6.0. [Details](../RECOVERY.md#no-root-removal-stopped-before-package-submission-unreleased).
 
 [Documentation](../README.md) · [Report a problem](../FEEDBACK.md)
@@ -161,13 +163,13 @@ Homebrew Channel denied access to this installer. On webOS 11, Homebrew 0.7.3 ne
 
 ## Themes
 
-In the next-release preview, **Home settings → Wallpapers** shows the active theme’s wallpaper, detected TV capability and current playback mode. Auto selects a compatible quality; 4K, 1080p and Image are available only when supplied by the theme. Playback can fall back to an image. Adjust dimming in 5% steps or reset this theme’s preferences. Classic and themes without wallpaper show an explicit empty state.
+In 1.8.2, **Home settings → Wallpapers** shows the active theme’s wallpaper, detected TV capability and current playback mode. Auto selects a compatible quality; 4K, 1080p and Image are available only when supplied by the theme. Playback can fall back to an image. Adjust dimming in 5% steps or reset this theme’s preferences. Classic and themes without wallpaper show an explicit empty state.
 
-Next-release personal wallpapers: open Wallpapers in desktop CYTV, choose a JPG/PNG, crop the preview and enter the private TV address and receiving PIN shown in Home settings. CYTV prepares silent video locally; 4K is offered only when the cropped source has enough pixels. On the TV, receive from CYTV or open phone upload and scan its QR code on the same Wi-Fi network. Phone upload sends an ordinary image up to 1920×1080, not the native 4K video layer; sharpness is limited by the TV interface resolution. Acknowledge this warning before sending. Preview and apply on the TV. Personal uploads stay saved separately and can be selected again or removed in Wallpapers. Cancellation or a rejected file preserves the current background. These paths require matching next-release Home/service and CYTV builds.
+Personal wallpapers in 1.8.2: open Wallpapers in desktop CYTV, choose a JPG/PNG, crop the preview and enter the private TV address and receiving PIN shown in Home settings. CYTV prepares silent video locally; 4K is offered only when the cropped source has enough pixels. On the TV, receive from CYTV or open phone upload and scan its QR code on the same Wi-Fi network. Phone upload sends an ordinary image up to 1920×1080, not the native 4K video layer; sharpness is limited by the TV interface resolution. Acknowledge this warning before sending. Preview and apply on the TV. Personal uploads stay saved separately and can be selected again or removed in Wallpapers. Cancellation or a rejected file preserves the current background. These paths require matching Home/service and CYTV builds from 1.8.2 or later.
 
-Own moving video (next-release preview): in desktop CYTV → Wallpapers, choose MP4/MOV/MKV/WebM, 1–60 seconds, up to 512 MiB and 3840×2160. Sound is removed and a centered 16:9 crop is used. Smaller videos use compatible 1080p output; UHD is created only from a sufficient source crop. Send using the TV address/PIN, then preview and Apply on the TV. Phone upload remains JPG/PNG only. Final package and physical TV acceptance are pending.
+Own moving video (1.8.2): in desktop CYTV → Wallpapers, choose MP4/MOV/MKV/WebM, 1–60 seconds, up to 512 MiB and 3840×2160. Sound is removed and a centered 16:9 crop is used. Smaller videos use compatible 1080p output; UHD is created only from a sufficient source crop. Send using the TV address/PIN, then preview and Apply on the TV. Phone upload remains JPG/PNG only. Physical TV acceptance remains limited; see [1.8.2 scope and known limits](../RELEASE-1.8.2.md).
 
-Next-release built-in wallpapers: **Home settings → Wallpapers → Built-in wallpapers → Black Hole**. Video author: **Xecutioner**, used with permission for non-commercial use and attribution. Accepting a different theme restores that theme’s own wallpaper; Black Hole and your uploads remain available to select again. Black Hole uses a continuous 4K stream to avoid seeking at each repeat, with compatible video/image fallback.
+Built-in wallpapers in 1.8.2: **Home settings → Wallpapers → Built-in wallpapers → Black Hole**. Video author: **Xecutioner**, used with permission for non-commercial use and attribution. Accepting a different theme restores that theme’s own wallpaper; Black Hole and your uploads remain available to select again. Black Hole uses a continuous 4K stream to avoid seeking at each repeat, with compatible video/image fallback.
 
 Android CYTV: **Set up TV** · **Wallpapers** · **Maintenance**. On the TV, open Home settings → Wallpapers → Upload from phone. Scan the QR code with your phone camera, choose a JPG/PNG and apply it on the TV. Phone uploads: images up to 1920×1080, without native 4K video. For true 4K, use CYTV on a computer.
 
@@ -216,3 +218,9 @@ The 1.6.0 computer/Android installers and migrated OTA clients select 720p or 10
 [HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).
 
 > **1.6.0:** save the original failed-attempt report. New reports separate a recorded first error from later checks and include a filtered Doctor/status summary; successful setup/status/restore also offer an export. Missing older evidence remains unknown; this does not authorize recovery. [↗](../development/INSTALLER-DIAGNOSTICS.md).
+
+## Storage space
+
+Candidate builds show a storage estimate for installation, downloaded themes and personal photo/video wallpapers: required, available and shortfall in MiB. Estimates include temporary copies and a reserve. TV app quota, the 64 MiB theme cache and temporary video storage are separate limits. If webOS cannot report capacity, the unknown values are stated explicitly. Free space only on the indicated storage; no automatic cleanup occurs.
+
+Storage estimate (TV): required 128.0 MiB; available 96.0 MiB; shortfall 32.0 MiB.

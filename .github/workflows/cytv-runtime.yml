@@ -28,6 +28,10 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+# Cancel superseded PR checks; explicit QA dispatches remain independent.
+concurrency:
+  group: cytv-runtime-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   runtime:
     strategy:
@@ -44,6 +48,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            cytv/build-requirements.txt
+            cytv/requirements.txt
+            scripts/build-requirements.txt
       - uses: actions/setup-node@v4
         with:
           node-version: '22'

@@ -19,8 +19,8 @@ class ProfilePlanTests(unittest.TestCase):
         p = plan(raw, STOCK)
         self.assertEqual(raw, before)
         self.assertEqual(p['candidate_profile'], {
-            'defaultApps': {'categories': {'home': CANDIDATE}},
-            'idleApp': {'appId': CANDIDATE}})
+            'defaultApps': {'categories': {'home': CANDIDATE, 'aod': 'aod.original'}},
+            'idleApp': {'appId': CANDIDATE, 'support': True}})
         self.assertFalse(p['ready_to_deploy'])
 
     def test_sam_restore_alone_is_not_complete(self):

@@ -32,7 +32,7 @@ Opening Theme showcase or choosing Refresh checks the main project repository fo
 
 ## Transfer a theme from your computer
 
-Use matching Home and service packages from release 1.5.0. On an existing Root installation, updating the Home UI alone does not update its preserved private service; see the [provisioning requirements](development/TV-THEMES.md#pc--tv-push-primary-author-transfer). No Showcase submission, public repository or source commit is required for a local development test. The primary direction is **PC → TV**: the TV temporarily accepts the compiled theme; the computer makes an outgoing connection.
+Use matching Home and service packages from a complete supported release (1.8.2 or later for the current wallpaper flow). On an existing Root installation, updating the Home UI alone does not update its preserved private service; see the [provisioning requirements](development/TV-THEMES.md#pc--tv-push-primary-author-transfer). No Showcase submission, public repository or source commit is required for a local development test. The primary direction is **PC → TV**: the TV temporarily accepts the compiled theme; the computer makes an outgoing connection.
 
 1. On TV open **Settings → Themes → Receive from computer**. Keep the pane open; it shows the **TV address**, six-digit PIN and expiry time.
 2. On the computer run your theme in the author toolkit's **preview** or **showcase**, select it and press **Send to TV**.
@@ -50,7 +50,7 @@ CLI alternative from the toolkit (use the values currently shown on TV):
 npm run theme -- send ./my-theme --runtime .runtime/candidate --tv TV_PRIVATE_IPV4 --pin SIX_DIGIT_PIN
 ```
 
-PC → TV is the only computer transfer direction. If the receiver is unavailable, update the matching Home and service set on TV and retry; the computer does not host a download server.
+PC → TV is the only computer transfer direction; the computer does not host a download server. Published 1.8.2 has a known Root receiver LS2 refusal ([#337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337)), deferred from this candidate. If the receiver is refused, retain diagnostics; do not treat a matching UI update or repeated transfer as a fix. Other version mismatches require a supported complete Home/service update.
 
 ## Install a published theme by ID or link
 
@@ -82,7 +82,7 @@ After a successful install, files are stored in this Home application's IndexedD
 
 To update, install a new reviewed catalogue version, use a new version's link, or transfer a fresh development snapshot; select the installed version, or try and keep it through showcase. Updates are explicit: installed themes do not follow GitHub branches automatically. Several versions may be cached independently. Select **Remove** beside a downloaded version and confirm. Removing the active version restores Classic before its files are deleted; cancellation keeps the theme.
 
-The published cache is bounded at eight downloaded versions and 24 MiB of payload data, subject to a lower device quota. The next-release video-wallpaper runtime raises the byte limit to 64 MiB while retaining the eight-version bound. Remove inactive versions if saving fails. Downloaded themes are removed individually with confirmation; removing the active theme restores Classic first. Built-ins cannot be removed.
+The published 1.8.2 cache is bounded at eight downloaded versions and 64 MiB of payload data, subject to a lower device quota. Remove inactive versions if saving fails. Downloaded themes are removed individually with confirmation; removing the active theme restores Classic first. Built-ins cannot be removed.
 
 ## Recovery
 
@@ -129,7 +129,7 @@ This support is included in 1.7.0. Browser checks do not establish physical-TV c
 
 <a id="ribbon-over-applications-unreleased"></a>
 
-## Ribbon in full-screen Home (unreleased)
+## Ribbon in full-screen Home (1.8.2)
 
 Ribbon is a theme of the existing Home application in both editions. Home uses
 an ordinary full-screen card window, with its own wallpaper. There is no second
@@ -154,8 +154,18 @@ is not playback of a different app or HDMI underneath Ribbon. Existing Helper
 emergency/watchdog, key-up handling, Root recovery and startup-source choices
 remain separate from theme selection.
 
-The previous overlay experiment is not the current candidate contract. Final
-package/device acceptance is still pending. Verify the exact versioned packages
+The previous overlay experiment is not the current Home contract. Published
+1.8.2 has [limited exact-package observations](RELEASE-1.8.2.md); these do not accept
+new candidate artifacts or other TVs. Verify the exact versioned packages
 for launch latency, repeated Home, app switching, background playback, editing,
 standby/wake and emergency/update/rollback behavior before release. See the
 [presentation design](development/RIBBON-PRESENTATION.md).
+
+## Storage estimates in candidate builds
+
+Theme installation reports required, available and missing MiB for TV app
+storage and its independent **64 MiB** theme-cache allowance. The separate
+**8 themes** count limit asks you to remove a downloaded theme. Personal video
+wallpapers also need computer temporary space and TV video-cache space.
+See [storage estimates and recovery limits](DESKTOP_INSTALL.md#storage-estimates-in-candidate-builds)
+for calculation reserves, unavailable quota readings and pending-install recovery.

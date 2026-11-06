@@ -150,6 +150,8 @@ def main():
                    full=installers and full_candidate(event, kind, ref),
                    macos=bool(selected & {'tv', 'tv-runtime', 'installer'}))
     lines = ''.join(f'{name}={str(value).lower()}\n' for name, value in outputs.items())
+    runtime_os = ['ubuntu-latest', 'macos-latest'] if outputs['macos'] else ['ubuntu-latest']
+    lines += 'runtime_os=' + json.dumps(runtime_os) + '\n'
     print(lines, end='')
     with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
         output.write(lines)

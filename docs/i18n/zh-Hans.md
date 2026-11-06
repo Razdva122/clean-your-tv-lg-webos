@@ -1,8 +1,8 @@
 # Clean Your TV — 用户指南
 
-> **1.8.2:** [English](../RELEASE-1.8.2.md) · [LS2 Root #337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337).
+> **1.9.0:** [English](../RELEASE-1.9.0.md) · [Root #337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337) · [#347](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/347) · [#348](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/348) · [1.8.2](../RELEASE-1.8.2.md)
 
-**C1 Beta (#298):** 在通用电脑安装程序中选择 Root。符合条件的 C1 电视会自动识别，无需单独的安装程序或标志。此路径需要全新安装，不支持自动更新，且尚未通过实体 C1 验收。打开 LG Home、长按 Back 或安全/电源停止后，Home 控制可能保持关闭；请在电视设置中重新开启更改 Home。常规 Root 路径保持不变。 如果仍有其他 No-root 组件，C1 完全移除会在更改前停止。请先通过常规 No-root 移除流程删除这些组件；状态未明确时请保留恢复数据。 [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md).
+**尚未发布的 C1 Beta（#298）：** 在通用电脑安装程序中选择 Root。符合条件的 C1 电视会自动识别，无需单独的安装程序或标志。此路径需要全新安装，不支持自动更新，且尚未通过实体 C1 验收。打开 LG Home、长按 Back 或安全/电源停止后，Home 控制可能保持关闭；请在电视设置中重新开启更改 Home。常规 Root 路径保持不变。 如果仍有其他 No-root 组件，C1 完全移除会在更改前停止。请先通过常规 No-root 移除流程删除这些组件；状态未明确时请保留恢复数据。 [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md). C1 Beta 通过 Home 按键过滤并在应用关闭后返回，不修改 CRIU/checkpoint 权限。返回时可能短暂显示 LG Home。连按三次 Home 也会停止路由；停止后请重新启用更改 Home。
 
 1.8.2 (#290): **+ / 添加应用**仅在检测到已安装的调谐器时，以电视提供的名称列出直播电视。其他隐藏的系统应用仍不显示。No-root 需要更新后的 Helper 和安装程序；Root 需要更新后的 Home 软件包。频道启动仍需在电视上验证。
 
@@ -31,7 +31,7 @@ No-root 和 Root 是适用于不同电视配置的同等选项。使用 LG 开�
 - **No-root：**启用 LG Developer Mode 和 Key Server，输入电视显示的口令，并单独接受电视配对请求。开发者模式必须保持有效；过期可能移除侧载应用。即使启用 Beta 自动续期，也要留意官方计时器。Helper 监控需要本地网络。
 - **Root：**必须已有 root SSH 访问权限。安装程序不会为电视获取 root。已取得 root 的电视不要启用开发者模式。请保留 root 访问和恢复服务。
 
-Root 需要可用的 Settings Service 和 System Profile Home 接口（`com.webos.service.systemprofile`）；仅有 root 权限并不能证明兼容性。
+Root (System Profile) 需要可用的 Settings Service 和 System Profile Home 接口（`com.webos.service.systemprofile`）；仅有 root 权限并不能证明兼容性。
 
 > **1.6.0:** Root 在准备专用 Python 或安装包之前检查必需的 Home 接口。检查失败会停止安装；通过检查并不能证明固件兼容或实体 Home 键正常。已知连接错误会显示针对性提示。请保留连接配置、信任记录和恢复数据；未完成的操作需要经过验证的恢复，不要盲目重试。保存并检查诊断报告。[详情](../development/INSTALLER-PREFLIGHT-HELP.md)。
 
@@ -41,9 +41,9 @@ Root 需要可用的 Settings Service 和 System Profile Home 接口（`com.webo
 
 1.5.4 包含支持电视 Node.js **0.10.25+** 的 Home Helper **0.6.21**；Root 仍要求 Node.js **8+**。 [Compatibility](../COMPATIBILITY.md).
 
-**未发布的 webOS 1.x 变更：**下个 No-root 安装程序在精确版本 Helper 测试后接受电视 Node.js **0.10.15+**；已发布的 1.7.1 安装程序仍要求 **0.10.25+**。这不代表旧版 WebKit、原生输入或 Home 兼容性已得到验证。请勿替换电视 runtime 或绕过检查。Root 仍要求 Node.js 8+。[测试与限制](../COMPATIBILITY.md#webos-1x-runtime-floor-unreleased)。
+**webOS 1.x — 1.8.2：**已发布的 No-root 安装程序包含 Helper 0.7.4，经精确运行版本检查后支持电视 Node.js **0.10.15+**。这不代表旧版 WebKit、原生输入或 Home 兼容性已得到验证。请勿替换电视 runtime 或绕过检查。Root 仍要求 Node.js 8+。[测试与限制](../COMPATIBILITY.md#webos-1x-runtime-floor-unreleased)。
 
-No-root Helper 需要电视 Node.js **0.10.25+**。Root 需要 Node.js **8+** 及可用的 Python **3.9+**。如有需要，安装程序会下载经验证的专用 Python；首次准备需要 **320 MiB** 可用空间。它不会替换系统 Python。请保留恢复功能引用的运行环境。[Python 说明（英文）](../OPTIONAL-PYTHON.md)。Developer Mode 自动续期为 **Beta，默认关闭**；无 root 电视上的实际续期尚未确认，请继续检查官方计时器。
+No-root Helper 需要电视 Node.js **0.10.15+**。Root 需要 Node.js **8+** 及可用的 Python **3.9+**。如有需要，安装程序会下载经验证的专用 Python；首次准备需要 **320 MiB** 可用空间。它不会替换系统 Python。请保留恢复功能引用的运行环境。[Python 说明（英文）](../OPTIONAL-PYTHON.md)。Developer Mode 自动续期为 **Beta，默认关闭**；无 root 电视上的实际续期尚未确认，请继续检查官方计时器。
 
 ### 设置 Developer Mode（No-root）
 
@@ -69,7 +69,7 @@ Developer Mode 让 CYTV 可以在没有 root 的电视上安装应用。
 
 [Android 安装程序（英文）](../../android/README.md)：在右上角选择语言。更新时不要卸载或清除数据。Android 7 / WebView 108 是最低要求，并非已验证的手机配置；验收使用 Android 15 ARM64 / WebView 124 模拟器。实体手机及真实手机到电视的恢复流程仍未验证。
 
-**未发布的 Android 候选版本：**对于原始 Root 操作 `install / coordinator-submitted`，恢复选项审查可在明确确认后使用原始保存的配置和 SSH 主机密钥执行只读检查。请勿卸载应用、清除数据、替换配置或重复安装。仅使用维护者指定的已签名重建 APK；公开 APK 尚不包含此流程。[步骤与限制](../../android/README.md#interrupted-root-installation-inspection-unreleased)。
+**Android 1.8.2：**恢复选项审查可在明确确认后，使用原始保存的配置和 SSH 主机密钥，只读检查原始 Root 操作 `install / coordinator-submitted`。请保留应用、私人数据和记录，不要替换配置或重复安装。检查不会恢复执行操作。 [步骤与限制](../../android/README.md#interrupted-root-installation-inspection-unreleased)
 
 桌面向导自动选择系统语言，也可手动选择并保存。电视端在**设置 → 语言**中选择，或使用系统/自动选项。安装程序与电视偏好独立。完整代码见[语言索引](../LANGUAGES.md)。
 
@@ -143,6 +143,8 @@ Homebrew Channel 拒绝此安装程序访问。在 webOS 11 上，Homebrew 0.7.3
 
 **1.6.0:** 为同一台已保存的电视选择**检查恢复选项**，或运行 `cytv recover`。检查和更改需要分别确认，默认为“否”；`--yes` 不会批准。Root 仅在现有验证通过后继续。No-root 仅在现有软件包服务检查允许时提供删除选项；删除可能重置 Home 偏好设置。不会自动开始新的安装。状态未知或访问被拒绝时，请保存报告并停止；保留日志，不要重复删除。#201 的完成证据以及 #216 的实际电视恢复仍未确认。 [Recovery](../RECOVERY.md). 求助时请提供型号、固件、版本类别、安装程序版本、失败步骤及预期/实际表现；分享前检查报告并删除秘密信息。
 
+尚未发布：Root 激活失败后，使用同一已保存连接检查恢复（`cytv recover`）。继续需要验证 LG Home 已恢复、控制已关闭、软件包/updater 完整，并单独确认。保留日志；不要重新安装或删除 failsafe 标记。 [Recovery](../RECOVERY.md#failed-root-activation-unreleased).
+
 1.7.0: 如果原始日志能证明 No-root 删除在首次软件包请求前停止，恢复可在没有全局软件包状态权限的情况下继续。请单独确认删除，验证删除完成后再单独开始安装。结果未知或已发送的操作仍会阻止继续；保留已保存的连接和日志。1.6.0 不含此更改。[详情](../RECOVERY.md#no-root-removal-stopped-before-package-submission-unreleased)。
 
 [文档导航](../README.md) · [报告问题](../FEEDBACK.md)
@@ -161,13 +163,13 @@ Homebrew Channel 拒绝此安装程序访问。在 webOS 11 上，Homebrew 0.7.3
 
 ## 主题
 
-在下一版本预览中，**Home 设置 → 壁纸**显示当前主题壁纸、检测到的电视能力和当前模式。自动模式选择兼容画质；仅当主题包含相应资源时才可选择 4K、1080p 或图片。视频播放失败时会回退到图片。调暗程度每次调整 5%，也可恢复主题默认设置。Classic 和无壁纸主题会明确显示无壁纸状态。
+在 1.8.2 中，**Home 设置 → 壁纸**显示当前主题壁纸、检测到的电视能力和当前模式。自动模式选择兼容画质；仅当主题包含相应资源时才可选择 4K、1080p 或图片。视频播放失败时会回退到图片。调暗程度每次调整 5%，也可恢复主题默认设置。Classic 和无壁纸主题会明确显示无壁纸状态。
 
-下一版本预览的个人壁纸：在桌面 CYTV 中打开“壁纸”，选择 JPG/PNG、调整裁剪，并输入 Home 设置显示的电视局域网地址及接收 PIN。CYTV 在本地生成无声视频；只有裁剪后的原图分辨率足够时才提供 4K。在电视选择从 CYTV 接收或手机上传，并用同一 Wi-Fi 的手机扫描二维码。手机发送的是最高 1920×1080 的普通图片，不使用原生 4K 视频层；清晰度受电视界面分辨率限制。发送前确认提示，然后在电视预览并应用。个人上传会保留，可在壁纸设置中重新选择或删除。取消或文件被拒绝时会保留原背景。需要匹配的下一版本 Home/服务与 CYTV 构建。
+1.8.2 的个人壁纸：在桌面 CYTV 中打开“壁纸”，选择 JPG/PNG、调整裁剪，并输入 Home 设置显示的电视局域网地址及接收 PIN。CYTV 在本地生成无声视频；只有裁剪后的原图分辨率足够时才提供 4K。在电视选择从 CYTV 接收或手机上传，并用同一 Wi-Fi 的手机扫描二维码。手机发送的是最高 1920×1080 的普通图片，不使用原生 4K 视频层；清晰度受电视界面分辨率限制。发送前确认提示，然后在电视预览并应用。个人上传会保留，可在壁纸设置中重新选择或删除。取消或文件被拒绝时会保留原背景。需要匹配的 1.8.2 或更新版本 Home/服务与 CYTV 构建。
 
-自选动态视频（下一版本预览）：在桌面 CYTV → 壁纸中选择 MP4/MOV/MKV/WebM，时长 1–60 秒，最大 512 MiB、3840×2160。声音会被移除，画面居中裁剪为 16:9。较小视频转换为兼容的 1080p 输出；只有原始裁剪尺寸足够时才生成 UHD。使用电视地址/PIN 发送，然后在电视上预览并应用。手机上传仍仅支持 JPG/PNG。最终软件包验证和实体电视测试尚未完成。
+自选动态视频（1.8.2）：在桌面 CYTV → 壁纸中选择 MP4/MOV/MKV/WebM，时长 1–60 秒，最大 512 MiB、3840×2160。声音会被移除，画面居中裁剪为 16:9。较小视频转换为兼容的 1080p 输出；只有原始裁剪尺寸足够时才生成 UHD。使用电视地址/PIN 发送，然后在电视上预览并应用。手机上传仍仅支持 JPG/PNG。实体电视测试范围仍然有限，请参阅 [1.8.2](../RELEASE-1.8.2.md)。
 
-下一版本的内置壁纸：**Home 设置 → 壁纸 → 内置壁纸 → Black Hole**。视频作者为 **Xecutioner**，获准在注明作者的前提下非商业使用。确认其他主题时会启用该主题自己的壁纸；Black Hole 和个人上传仍可重新选择。连续 4K 流避免每次循环回到文件开头，并提供兼容视频或图片作为后备。
+1.8.2 的内置壁纸：**Home 设置 → 壁纸 → 内置壁纸 → Black Hole**。视频作者为 **Xecutioner**，获准在注明作者的前提下非商业使用。确认其他主题时会启用该主题自己的壁纸；Black Hole 和个人上传仍可重新选择。连续 4K 流避免每次循环回到文件开头，并提供兼容视频或图片作为后备。
 
 Android CYTV: **设置电视** · **壁纸** · **维护**. 在电视上打开 Home 设置 → 壁纸 → 从手机上传。用手机相机扫描二维码，选择 JPG/PNG，然后在电视上应用。 手机上传：最高 1920×1080 的图片，不支持原生 4K 视频。真正的 4K 请使用电脑版 CYTV。
 
@@ -216,3 +218,9 @@ Android CYTV: **设置电视** · **壁纸** · **维护**. 在电视上打开 H
 [HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).
 
 > **1.6.0:** 请保留最初失败尝试的报告。新报告将已记录的首次错误与后续检查区分开，并提供经过筛选的 Doctor/状态摘要。安装、状态检查或恢复成功后也可导出报告。缺失的历史证据仍标为未知；报告不授予恢复操作权限。 [↗](../development/INSTALLER-DIAGNOSTICS.md).
+
+## 存储空间
+
+候选构建为安装、主题和个人照片/视频壁纸显示所需、可用及缺少的 MiB 空间，包括临时副本和预留空间。应用配额、64 MiB 主题缓存和临时视频缓存是不同限制。webOS 无法提供的数据会明确标为未知。请清理所指的存储位置；不会自动清理。
+
+空间估算（TV）：需要 128.0 MiB；可用 96.0 MiB；还缺 32.0 MiB。

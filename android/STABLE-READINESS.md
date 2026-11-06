@@ -1,6 +1,8 @@
 # Android stable readiness
 
-> **Unpublished 1.8.1 candidate:** see [candidate versions, setup and recovery limits](../docs/RELEASE-1.8.1.md). Published downloads remain on 1.7.1. C1 Beta is fresh-install only, selected automatically in the common installer; normal OTA is unavailable and physical C1 acceptance is pending. Historical results below retain their original artifact scope.
+> **Release 1.9.0:** see [versions, tested scope and recovery limits](../docs/RELEASE-1.9.0.md). C1 Beta is fresh-install only, selected automatically in the common installer; normal OTA is unavailable and physical C1 acceptance is pending. Historical results below retain their original artifact scope.
+
+> **1.9.0 artifact acceptance:** Android0.9.0/code23, exact original-signer code22 upgrade, four synthetic files, real Store and native OperationChecks passed on an isolated API35 ARM64 userdebug emulator. [Exact APK/source/hashes and limits](../docs/history/2026-11-06-root-wake-key-release.md#final-cold-start-retained-rollback-and-android-upgrade). Physical phone-to-TV and minimum-device acceptance remain unverified.
 
 > Release 1.7.1 uses Android 0.7.1 / versionCode 19. Exact source/signer/payload verification, original-signer code18-to-code19 emulator upgrade and native Store/operation checks are recorded in the [1.7.1 acceptance record](../docs/history/2026-11-03-release-1.7.1-host-checks.md). Physical phone-to-TV and minimum-device acceptance remain unverified. Historical evidence below stays scoped to its original APK.
 

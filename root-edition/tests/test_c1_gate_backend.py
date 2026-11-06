@@ -77,6 +77,72 @@ class BackendTests(unittest.TestCase):
             with self.subTest(info=info, bits=bits), self.assertRaises(ValueError):
                 self.gate.admit(info, data, pointer_bits=bits)
 
+    def checkpoint(self):
+        shared = self.root / 'cmn_data'
+        target = shared / 'checkpoint/com.webos.app.home'
+        target.mkdir(parents=True, mode=0o755)
+        (target / 'snapshot').write_bytes(b'original checkpoint')
+        return shared, target
+
+    def test_checkpoint_preflight_rejects_nonsticky_shared_parent_read_only(self):
+        shared, target = self.checkpoint()
+        shared.chmod(0o777)
+        with patch.object(self.gate, 'CHECKPOINTS', (target,)):
+            with self.assertRaisesRegex(ValueError, 'checkpoint'):
+                self.gate.checkpoint_preflight(self.uid)
+        self.assertEqual(shared.stat().st_mode & 0o7777, 0o777)
+        self.assertEqual((target / 'snapshot').read_bytes(), b'original checkpoint')
+
+    def test_checkpoint_preflight_keeps_native_leaf_and_sticky_ancestor_rules(self):
+        shared, target = self.checkpoint()
+        shared.chmod(0o1777)
+        with patch.object(self.gate, 'CHECKPOINTS', (target,)):
+            self.gate.checkpoint_preflight(self.uid)
+            target.parent.chmod(0o1777)
+            self.gate.checkpoint_preflight(self.uid)
+            for mode in (0o777, 0o1777):
+                target.chmod(mode)
+                with self.subTest(mode=mode), self.assertRaises(ValueError):
+                    self.gate.checkpoint_preflight(self.uid)
+            target.chmod(0o755)
+            target.rename(target.with_name('retained'))
+            target.symlink_to(target.with_name('retained'))
+            with self.assertRaises(ValueError):
+                self.gate.checkpoint_preflight(self.uid)
+        self.assertEqual((target / 'snapshot').read_bytes(), b'original checkpoint')
+
+    def test_absent_optional_checkpoint_is_not_created_by_preflight(self):
+        target = self.root / 'absent/checkpoint/home'
+        with patch.object(self.gate, 'CHECKPOINTS', (target,)):
+            self.gate.checkpoint_preflight(self.uid)
+        self.assertFalse(target.parent.exists())
+
+    def test_probe_rejects_checkpoints_before_home_read_or_luna(self):
+        with patch.object(self.gate.os, 'geteuid', return_value=0), \
+                patch.object(self.gate.sys, 'platform', 'linux'), \
+                patch.object(self.gate, 'checkpoint_preflight', side_effect=ValueError('checkpoint refused')), \
+                patch.object(self.gate, 'secure') as read, patch.object(self.gate, 'luna') as rpc:
+            with self.assertRaisesRegex(ValueError, 'checkpoint'):
+                self.gate.probe()
+        read.assert_not_called()
+        rpc.assert_not_called()
+
+    def test_checkpoint_refusal_precedes_durable_install_reservation_and_effects(self):
+        from installation import Ownership, device_operation
+        from updater.store import Store
+        shared, target = self.checkpoint()
+        shared.chmod(0o777)
+        store = Store(self.root / 'ownership', uid=self.uid)
+        owner = Ownership(store)
+        with patch.object(self.gate, 'CHECKPOINTS', (target,)):
+            with self.assertRaisesRegex(ValueError, 'checkpoint'):
+                with device_operation('deploy', ownership=owner, read=lambda path: None,
+                        check=lambda: self.gate.checkpoint_preflight(self.uid)):
+                    self.fail('Unsafe checkpoint admitted installation effects')
+        self.assertIsNone(owner.status())
+        self.assertIsNone(store.read('operation'))
+        self.assertEqual((target / 'snapshot').read_bytes(), b'original checkpoint')
+
     def test_status_requires_real_native_stock_proof_without_fake_profiles(self):
         self.write_descriptor()
         native = {'returnValue': True, 'backend': 'c1-native-gate', 'state': 'stock',

@@ -1,6 +1,6 @@
 # Documentation
 
-Current release: [1.8.2](RELEASE-1.8.2.md), including tested scope and known limitations. Previous release: [1.7.1](RELEASE-1.7.1.md).
+Published release: [1.8.2](RELEASE-1.8.2.md), including tested scope and known limitations. [1.9.0 is an unpublished candidate](RELEASE-1.9.0.md); it has no new physical acceptance. Previous release: [1.7.1](RELEASE-1.7.1.md).
 
 Start with a task. You do not need the developer reports to install or use Clean Your TV.
 

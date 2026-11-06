@@ -1,6 +1,6 @@
 # Install Clean Your TV
 
-> **Unpublished 1.8.1 candidate:** see [candidate versions, setup and recovery limits](RELEASE-1.8.1.md). Published downloads remain on 1.7.1. C1 Beta is fresh-install only, selected automatically in the common installer; normal OTA is unavailable and physical C1 acceptance is pending. Historical results below retain their original artifact scope.
+> **Release 1.9.0:** see [versions, tested scope and recovery limits](RELEASE-1.9.0.md). C1 Beta is fresh-install only, selected automatically in the common installer; normal OTA is unavailable and physical C1 acceptance is pending. Historical results below retain their original artifact scope.
 
 > The [1.7.1 maintenance release](RELEASE-1.7.1.md) changes the host installer and browser demo; TV component versions remain those of 1.7.0. See the [1.7.0 device observations and limits](history/2026-11-03-release-1.7.0-final-packages.md). Obtain available packages from [GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases).
 
@@ -19,8 +19,11 @@ See [compatibility](COMPATIBILITY.md) for tested TVs and remaining limits.
 Root setup does not obtain root or flash firmware. Do not enable Developer Mode
 over an existing rooted setup, or run Root routing and No-root Helper together.
 [Compare everyday controls and limits](EDITIONS.md).
-Root also requires working Settings Service and System Profile Home interfaces
-(`com.webos.service.systemprofile`); root access alone does not establish compatibility.
+Normal profile-based Root also requires working Settings Service and System Profile
+Home interfaces (`com.webos.service.systemprofile`). Eligible C1 TVs use the separate,
+fresh-install-only [C1 Beta backend](development/C1-NATIVE-GATE.md), which does not
+require those interfaces and has no physical C1 acceptance or normal OTA support.
+Root access alone does not establish compatibility.
 
 ## 2. Prepare your TV and computer
 

@@ -3,7 +3,7 @@
 Historical result (2026-10-27): [corrected C3 acceptance and manual physical rollback](../docs/RELEASE-1.4.0-ACCEPTANCE.md) passed in the recorded scope. The maintainer accepted #90 and requested closure. Pending statements below describe earlier investigation checkpoints; other hardware remains unverified.
 
 For current setup use [installation](../docs/INSTALL.md), [update preparation](UPDATES.md)
-and [current release limits](../docs/RELEASE-1.6.0.md). The
+and [current release scope and acceptance](../docs/RELEASE-1.9.0.md). The
 [1.4.0 acceptance](../docs/RELEASE-1.4.0-ACCEPTANCE.md) remains historical; the
 Root 0.6.1 standby failure in [#171](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/171)
 is unresolved. Root 0.7.0 has scoped signed-update, active retained-rollback,
@@ -15,6 +15,8 @@ this does not establish a fix for #171. See
 This is a developer test plan; bounded trials below are not a normal installer
 Keep/confirmation step. Dated checkpoints retain their original builds and do
 not override later issue evidence or accept new candidate artifacts.
+
+Current1.9.0 C3 update, controls/audio, standby, cold-start and retained rollback results are in the [artifact-bound record](../docs/history/2026-11-06-root-wake-key-release.md#final-cold-start-retained-rollback-and-android-upgrade). Settings status #347 remains a deferred failure; other-model claims remain unverified.
 
 ## When to repeat this matrix
 
@@ -145,6 +147,23 @@ not validate the then-new nonce or optional foreground request. The #90
 checkpoint below retains its original scope; it does not describe the later
 Root 0.6.1 standby failure in #171. Preserve explicit off in every retest.
 
+## Candidate wake-key release settling (2026-11-06)
+
+The candidate reader waits up to 750 ms for an initially held key state to clear.
+It discards the initial historical queue once. Fresh Home down/repeat while
+waiting cancels pending activation (`startup / home_activity`); key-up permits
+settling, and fresh malformed input fails closed. Normal gesture recognizers are
+created only after all keys are released. No READY or PING is sent during this interval; the
+existing independent two-second supervisor deadline is not extended. A persistent
+held flag, input error, invalid channel or exhausted drain still fails closed.
+Emergency/off state is never automatically re-enabled.
+
+This mitigates a transient held-key startup condition. It does not identify the
+physical key or repair a persistent/stale input bitmap. The renewed C3 failure
+and remaining exact-package tests are recorded in the
+[dated investigation](../docs/history/2026-11-06-root-wake-key-release.md).
+Historical diagnostic-only behavior below retains its original scope.
+
 <a id="issue-90-intermittent-wake-input-startup-diagnostic-source"></a>
 ## Historical issue 90: intermittent wake input startup
 
@@ -192,6 +211,25 @@ For a supervised retest:
 Local regression: `python3 -m unittest discover -s root-edition/tests -p 'test_emergency*.py'` covers all nine explicit-loss branches, startup/active read errors, full-log
 fallback and unchanged wire signals, plus gesture/recovery/watchdog tests. No new user setup/control flow is
 introduced; localized user guides retain the known standby limitation.
+
+### Health-context refusal diagnostics (unreleased, #334)
+
+`HealthContextError` retains ValueError recovery semantics and distinguishes
+`transaction-mismatch`, `binding-restored`, `generation-mismatch`, `token-mismatch`,
+`boot-mismatch`, `phase-inactive` and `failsafe-present`. The publisher supervisor
+appends `health-context-rejected` to its existing private emergency log before
+calling `recover(..., 'supervisor_error')`. It contains only the fixed reason,
+process ID and monotonic uptime. `emergency-recovery` includes the same process
+and time fields for correlation. Diagnostic write failure cannot skip recovery.
+READY/PING processing, heartbeat/deadline bounds and emergency controls are unchanged.
+
+The code names the first failing predicate in that observation, not necessarily
+the first failure across processes. A `binding-restored`/`phase-inactive` record
+may follow another process's recovery; correlate the original attempt's preceding
+observer, guardian and `bound-exit-decision` events. No token or boot identity is
+included in the new record. Raw logs still need private inspection and redaction.
+Host tests do not establish the original device cause. Rebuilt, verified runtime
+delivery is required; an app-only update does not change retained runtime files.
 
 2026-10-27 investigation: on the saved C3 test target, read-only CLI inspection
 verified recovery integrity and restored routing with intent disabled. After

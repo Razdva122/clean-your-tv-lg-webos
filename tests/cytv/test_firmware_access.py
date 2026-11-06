@@ -54,6 +54,14 @@ class Tests(unittest.TestCase):
         self.api=self.root/'permissions/homebrew-configuration.api.json';self.receipt=self.root/'firmware-permissions.json';self.events=[]
     def grant(self,enable=True,lock_product=True):
         return self.function(self.root,self.bus,self.apps,self.install,enable=enable,lock_product=lock_product,refresh=lambda:self.events.append('scan'),uid=os.getuid())
+    def test_shared_compositor_activation_preserves_active_registration_proof(self):
+        path=self.paths['service'];raw=path.read_bytes().replace(('Name='+SERVICE).encode(),('Name='+SERVICE+';com.webos.cleanyourtv.root.lease').encode());path.write_bytes(raw)
+        saved=json.loads(self.snapshot.read_bytes());saved['capabilities']=['theme-receiver-v1','wallpaper-media-v1','c1-keyfilter-v1']
+        saved['files'][str(path)]['installed_sha256']=sha(raw);self.snapshot.write_bytes(encode(saved))
+        self.assertTrue(self.grant()['permissions_installed'])
+        path.write_bytes(b'changed')
+        with self.assertRaises(ValueError):self.grant()
+
     def test_explicit_repair_runs_only_after_protected_checks_then_strict_readback(self):
         info=self.apps/'applications'/APP/'appinfo.json';info.parent.chmod(0o777)
         before=self.manifest.read_bytes();calls=[]
@@ -241,6 +249,16 @@ class Tests(unittest.TestCase):
             self.assertEqual(ns['execute']('finish-update','tx'),{'finished':True})
         self.assertEqual(calls,[{'lock_product':False,'automatic':True,'feature':f} for _ in range(2) for f in ('firmware','theme-receiver')])
 
+    def test_wallpaper_startup_prepares_only_own_apis_before_backend_dispatch(self):
+        raw=(ROOT/'root-edition/runtime/cli.py').read_text();tree=ast.parse(raw);calls=[]
+        ns={'firmware_access':lambda **kw:calls.append(kw) or {'returnValue':True},
+            'gate_backend':lambda: self.fail('Wallpaper permission setup must precede backend dispatch')}
+        for name in ('execute',):
+            node=next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name==name)
+            exec(ast.get_source_segment(raw,node),ns)
+        self.assertTrue(ns['execute']('provision-wallpaper-access')['returnValue'])
+        self.assertEqual(calls,[{'lock_product':False,'automatic':True,'feature':feature} for feature in ('theme-receiver','wallpaper-media')])
+
     def test_host_streams_verified_source_instead_of_a_long_ssh_command(self):
         from cytv.operations import Installer
         from unittest.mock import MagicMock
@@ -300,6 +318,39 @@ class Tests(unittest.TestCase):
 
     def receiver(self, enable=True):
         return self.function(self.root,self.bus,self.apps,self.install,feature='theme-receiver',enable=enable,refresh=lambda:self.events.append('scan'),uid=os.getuid())
+
+    def media(self, enable=True):
+        return self.function(self.root,self.bus,self.apps,self.install,feature='wallpaper-media',enable=enable,refresh=lambda:self.events.append('scan'),uid=os.getuid())
+
+    def protect_media_worker(self):
+        service=self.root/'service';service.mkdir()
+        package=service/'package.json';package.write_bytes(encode({'name':SERVICE,'wallpaperMediaProtocol':1}));package.chmod(0o600)
+        worker=service/'service.js';worker.write_bytes(b'verified media worker');worker.chmod(0o600)
+        proof=json.loads(self.proof.read_bytes())
+        proof['files'].update({str(path):sha(path.read_bytes()) for path in (package,worker)})
+        self.proof.write_bytes(encode(proof))
+
+    def test_media_attachment_requires_protected_worker_capability_and_preserves_legacy_contract(self):
+        before=self.manifest.read_bytes()
+        with self.assertRaises(ValueError):self.media()
+        self.assertEqual(self.manifest.read_bytes(),before)
+        self.protect_media_worker();self.receiver();receiver=(self.root/'theme-receiver-permissions.json').read_bytes()
+        unchanged={p:p.read_bytes() for p in (self.snapshot,self.proof,*self.paths.values())}
+        self.media();self.grant();self.receiver();self.media()
+        api=self.root/'permissions/wallpaper-media.api.json'
+        self.assertEqual(json.loads(api.read_bytes()),{GROUP:[SERVICE+'/'+name for name in ('wallpaperCacheStart','wallpaperCacheWrite','wallpaperCacheCommit','wallpaperCacheKeepAlive','wallpaperCacheStop')]})
+        self.assertEqual((self.root/'theme-receiver-permissions.json').read_bytes(),receiver)
+        for p,raw in unchanged.items():self.assertEqual(p.read_bytes(),raw)
+        self.media(False);self.receiver(False);self.grant(False)
+        self.assertEqual(json.loads(self.manifest.read_bytes()),self.normal)
+
+    def test_media_capability_cannot_be_inferred_from_unprotected_package_or_release(self):
+        self.protect_media_worker()
+        proof=json.loads(self.proof.read_bytes());proof['files'].pop(str(self.root/'service/package.json'));self.proof.write_bytes(encode(proof))
+        (self.root/'release.json').write_bytes(encode({'capabilities':['theme-receiver-v1','wallpaper-media-v1']}))
+        before=self.manifest.read_bytes()
+        with self.assertRaises(ValueError):self.media()
+        self.assertEqual(self.manifest.read_bytes(),before)
 
     def test_receiver_upgrade_preserves_legacy_contract_and_independent_firmware_choice(self):
         before={p:p.read_bytes() for p in [self.snapshot,self.proof,*self.paths.values()]}

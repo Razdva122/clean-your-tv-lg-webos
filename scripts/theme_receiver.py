@@ -30,6 +30,10 @@ def inject(files, standalone=False):
         if modules['core.js'].count(phone_import) != 1:
             raise ValueError('Expected one canonical phone page import')
         core = modules['core.js'].replace(phone_import, b'var phonePage = phonePageModule.exports;')
+        cache_import = b"require('./wallpaper-cache')"
+        if core.count(cache_import) != 1:
+            raise ValueError('Expected one receiver capabilities cache import')
+        core = core.replace(cache_import, b'wallpaperCacheModule.exports')
         bundled = (b'(function(){var phonePageModule={exports:{}};'
                    b'(function(module,exports){\n' + modules['wallpaper-phone.js'] + b'\n})(phonePageModule,phonePageModule.exports);'
                    b'var receiverCore={exports:{}};'

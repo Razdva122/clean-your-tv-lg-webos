@@ -1,10 +1,21 @@
 'use strict';
 var Service = require('webos-service');
 var execFile = require('child_process').execFile;
-var service = new Service('com.cleanyourtv.root.preview.service');
 function pythonCommand(){return require('/var/lib/clean-your-tv-root/python_boot.js').command('/var/lib/clean-your-tv-root');}
-
 var runtime = '/var/lib/clean-your-tv-root/runtime/cli.py';
+// LS2 snapshots provided groups at connection/category registration. Attach our
+// fixed APIs first; an optional grant failure must never disable recovery.
+if (process.getuid() === 0) {
+  try { require('child_process').execFileSync(pythonCommand(), [runtime, 'provision-wallpaper-access'], {timeout:30000,maxBuffer:16384}); } catch (_) {}
+}
+var service = new Service('com.cleanyourtv.root.preview.service');
+
+// Independent subscription lane: a serialized recovery operation cannot delay
+// lease revocation, and normal Root never spawns this C1-only helper.
+require('./c1-lease')(service, {createService:function (id, activityManager, options) {
+  return new Service(id, activityManager, options);
+}});
+
 // Audio recovery has a separate process-wide transaction lock and never runs on service load.
 var audio = require('./handlers').audio(function () { return process.getuid(); }, function (command) {
   return new Promise(function (resolve, reject) {

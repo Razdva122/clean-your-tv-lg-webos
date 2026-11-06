@@ -18,6 +18,8 @@ class Remote:
 
     def run(self, command, data=None, timeout=30):
         self.calls.append(('run', command))
+        if command.startswith('LC_ALL=C df -Pk '):
+            return 'Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/test 10000000 0 10000000 0% /shared'
         if 'CYTV_NODE_READY' in command: return 'CYTV_NODE_READY'
         if 'CYTV_HELPER_IDLE' in command: return 'CYTV_HELPER_IDLE'
         if command == 'uname -m':
@@ -244,6 +246,65 @@ class OperationTests(unittest.TestCase):
         remote.luna = luna
         self.installer(remote).install(self.inventory, 'secret')
         self.assertEqual(list(temp.iterdir()), [])
+
+    def test_partial_helper_failure_then_denied_recovery_keeps_original_evidence(self):
+        from cytv import diagnostics
+        from cytv.desktop import DesktopConsole
+        from cytv.errors import TVRejected
+        from cytv.recovery import recover
+        for inherited in (False, True):
+            with self.subTest(inherited=inherited):
+                remote = Remote()
+                installer = self.installer(remote)
+                self.store.finish(installer.profile)
+                original = remote.luna
+                rejected = TVRejected('TV rejected the operation. Run cytv doctor; no automatic retry was attempted.',
+                    {'returnValue': False, 'errorCode': -1, 'errorText': 'PRIVATE'},
+                    'com.webos.appInstallService/status')
+                def luna(uri, payload, **kwargs):
+                    if uri.endswith('/dev/install'):
+                        remote.calls.append(('luna', uri, payload))
+                        self.assertEqual(payload['id'], operations.HELPER)
+                        remote.installed = [{'id': operations.HELPER, 'version': '0.6.13'}]
+                        raise TVRejected('Install failed', {'statusValue': 24,
+                            'details': {'state': 'install failed', 'errorCode': -1, 'reason': 'PRIVATE'}}, uri)
+                    if uri == 'com.webos.appInstallService/status':
+                        remote.calls.append(('luna', uri, payload))
+                        raise rejected
+                    return original(uri, payload, **kwargs)
+                remote.luna = luna
+                with self.assertRaises(TVRejected) as first:
+                    installer.install(self.inventory, 'PRIVATE-KEY')
+                first_report = json.loads(diagnostics.create_report(self.store, 'install', installer.profile,
+                    'install-helper', first.exception).read_text())
+                self.assertEqual(first_report['first_failure']['luna']['status_value'], 24)
+                if inherited:
+                    self.store.checkpoint(installer.profile, previous=self.store.pending(installer.profile),
+                                          action='uninstall', stage='pending')
+                receipt = self.store.device_dir(installer.profile)/'operation.json'
+                before = receipt.read_bytes()
+                directory = self.store.device_dir(installer.profile)/'diagnostic-failures'
+                retained = {p.name: p.read_bytes() for p in directory.iterdir()}
+                remote.calls.clear()
+                events = []
+                with self.assertRaises(TVRejected) as failure:
+                    recover(installer, lambda _: 'y', DesktopConsole(lambda k,v: events.append((k,v))))
+                report = diagnostics.create_report(self.store, 'recover', installer.profile, 'recover', failure.exception)
+                current = json.loads(report.read_text())
+                self.assertIs(failure.exception, rejected)
+                self.assertEqual(failure.exception.luna['operation'], 'package-status')
+                self.assertEqual(failure.exception.luna['error_code'], -1)
+                self.assertEqual(current['first_failure'], first_report['first_failure'])
+                self.assertEqual(receipt.read_bytes(), before)
+                self.assertEqual({p.name:p.read_bytes() for p in directory.iterdir()}, retained)
+                self.assertFalse(any(c[0]=='upload' for c in remote.calls))
+                self.assertEqual([c[1] for c in remote.calls if c[0]=='luna'],
+                    ['com.webos.applicationManager/dev/listApps', 'com.webos.appInstallService/status'])
+                self.assertTrue(any(k=='recovery-plan' and v['state']=='blocked' for k,v in events))
+                self.assertNotIn('PRIVATE', report.read_text())
+                self.assertNotIn('PRIVATE', str(failure.exception))
+                self.assertNotIn('cytv doctor', str(failure.exception))
+                self.assertIn('Recovery cannot verify the earlier package operation', str(failure.exception))
 
     def test_unstarted_no_root_removal_does_not_require_denied_monitor(self):
         from cytv.errors import TVRejected
@@ -1384,6 +1445,42 @@ class OperationTests(unittest.TestCase):
         self.assertIn('screen launch unconfirmed', result['reconciled'])
         self.assertIsNone(self.store.pending(installer.profile))
         self.assertFalse(any(c[0]=='luna' or c[1].endswith(' enable') for c in remote.calls))
+
+    def test_failed_activation_recovers_only_after_explicit_confirmation_without_installing_again(self):
+        from cytv.recovery import recover
+        from cytv.terminal import Console
+        self.root_bundle();remote=Remote(fail='enable');installer=self.installer(remote,'root')
+        with self.assertRaises(RuntimeError):installer.install(self.inventory)
+        previous=self.store.pending(installer.profile)
+        remote.active={'recovery':{'integrity_verified':True},'guardian_active':False,
+            'intent':{'enabled':False,'phase':'disabled'},'journal':{'state':'restored'},
+            'effective':{'sam_home':'com.webos.app.home','profiles':{
+                'defaultApps':{'categories':{'home':'com.webos.app.home'}},'idleApp':{'appId':'com.webos.app.home'}}}}
+        original=remote.run
+        def run(command,**kwargs):
+            if 'deploy.json' in command:return '{"stage":"installed-recovery-only"}'
+            for marker in ('CYTV_ROOT_FILES_OK','CYTV_ACTIVATION_RECOVERABLE'):
+                if marker in command:
+                    remote.calls.append(('run',command));return marker
+            if command.endswith(' enable'):
+                remote.fail=None
+                remote.active={'recovery':{'integrity_verified':True},'guardian_active':True,
+                    'intent':{'enabled':True,'phase':'active'},'effective':{'sam_home':package.ROOT_APP,'profiles':{
+                        'defaultApps':{'categories':{'home':package.ROOT_APP}},'idleApp':{'appId':package.ROOT_APP}}}}
+            return original(command,**kwargs)
+        remote.run=run;checkpoint=len(remote.calls)
+        answers=iter(('y',''))
+        recover(installer,lambda _:next(answers),Console(lambda *_:None))
+        self.assertEqual(self.store.pending(installer.profile),previous)
+        self.assertFalse(any(c[0]=='run' and c[1].endswith(' enable') for c in remote.calls[checkpoint:]))
+        answers=iter(('y','y','3'))
+        recover(installer,lambda _:next(answers),Console(lambda *_:None))
+        self.assertIsNone(self.store.pending(installer.profile))
+        later=remote.calls[checkpoint:]
+        self.assertEqual(sum(c[0]=='run' and c[1].endswith(' enable') for c in later),1)
+        self.assertFalse(any(c[0]=='upload' or '/dev/install' in c[1] or '/dev/remove' in c[1] for c in later))
+        saved=list(self.store.device_dir(installer.profile).glob('recovery-*.json'))
+        self.assertEqual(len(saved),1);self.assertEqual(json.loads(saved[0].read_text())['previous'],previous)
 
     def test_incomplete_idle_routing_keeps_activation_receipt(self):
         remote=Remote()

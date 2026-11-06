@@ -30,12 +30,13 @@ def plan(reply, sam_home):
     if (sam_home != STOCK or p['defaultApps']['categories']['home'] != STOCK
             or p['idleApp']['appId'] != STOCK or p['idleApp']['support'] is not True):
         raise ValueError('This trial requires the verified stock routing baseline')
+    candidate_profile = copy.deepcopy(p)
+    candidate_profile['defaultApps']['categories']['home'] = CANDIDATE
+    candidate_profile['idleApp']['appId'] = CANDIDATE
     return {
         'ready_to_deploy': False,
         'baseline': baseline,
-        'candidate_profile': {
-            'defaultApps': {'categories': {'home': CANDIDATE}},
-            'idleApp': {'appId': CANDIDATE}},
+        'candidate_profile': candidate_profile,
         'requirements': [
             'Independent recovery of owned profile file and generated effective values',
             'Conflict-checked deletion of only the trial-owned profile',

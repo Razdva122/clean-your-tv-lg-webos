@@ -29,6 +29,7 @@ done
 has() { [[ "$selected" == *" $1 "* ]]; }
 
 if primary && { has ui || has tv; }; then
+  node tests/themes/storage-budget.cjs
   node tests/home-viewport.cjs
   node tests/home-presentation.cjs
   node tests/noroot-presentation-context.cjs
@@ -87,6 +88,8 @@ build/tests/test-filter
 for file in launcher/*.js native/app/*.js native/service/*.js renewal-service/*.js; do node --check "$file"; done
 
 python3 tests/root-node-compat.py
+node root-edition/service/test-c1-filter.cjs
+node root-edition/service/test-c1-lease.cjs
 node root-edition/service/test-audio-recovery.cjs
 node root-edition/service/test-handlers.js
 node root-edition/service/test-startup.cjs

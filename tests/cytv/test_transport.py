@@ -17,6 +17,23 @@ class RejectedAuthTransport:
 
 
 class TransportTests(unittest.TestCase):
+    def test_failed_command_preserves_only_fixed_space_category(self):
+        from cytv.errors import TVCommandError
+        from unittest.mock import Mock
+        for parts in ([b'PRIVATE: No space left on ', b'device: PRIVATE'],
+                      [b'Disk quota exceeded: PRIVATE'], [b'Permission denied: PRIVATE']):
+            channel = Mock()
+            channel.recv_ready.return_value = False
+            channel.recv_stderr_ready.side_effect = [True] * len(parts) + [False]
+            channel.recv_stderr.side_effect = parts
+            channel.exit_status_ready.return_value = True
+            channel.recv_exit_status.return_value = 1
+            with self.assertRaises(TVCommandError) as caught:
+                list(SSH.__new__(SSH).chunks(channel, 1))
+            expected = 'user-error' if b'Permission' in parts[0] else 'tv-storage-full'
+            self.assertEqual(caught.exception.reason_code, expected)
+            self.assertNotIn('PRIVATE', str(caught.exception))
+
     def test_inspection_secret_refuses_echo_fallback_and_propagates_cancel(self):
         import getpass
         import warnings
