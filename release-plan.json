@@ -81,6 +81,11 @@
       "pr": 365,
       "issues": [],
       "summary": "Fix full-candidate browser and Windows test assumptions"
+    },
+    {
+      "pr": 367,
+      "issues": [],
+      "summary": "Fix removal compatibility with modern Node, fixed SDK directories, broken legacy startup services and known private receipts; preserve specific retry diagnostics"
     }
   ],
   "excluded": [],

@@ -69,3 +69,22 @@ connection/retry, a verified full kernel boot, final absence readback and repeat
 Remove. An AC power-disconnect result is not available. Fresh interrupted setup,
 pristine unrooted Developer Mode and other hardware remain untested unless
 separately recorded. No public release or shipping notice is announced.
+
+## Integrated source and replacement preflight
+
+PR #367 head `c13f33c29e5faed797b6a8068844f0fe1641f50d` passed all eight
+Linux/macOS runtime groups, browser, ARM/Python and integration policy
+([42285970466](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42285970466)).
+Merge `d158b3738` has the identical tested tree. The actual inventory is collected
+without changing the unpublished version set. Helper remains byte-identical to
+published 0.7.4; Android retains its existing signer and no Homebrew promotion
+approval is selected. No new signing input is introduced.
+
+`release-inputs.py` identifies ten guarded changes relative to the prior selected
+build, so a replacement full candidate is required: `cytv/diagnostic_context.py`,
+`cytv/failure_help.py`, `cytv/no_root_cleanup.py`, `root-edition/cleanup_tail.js`,
+`root-edition/install_device.py`, `root-edition/tests/test_clean_removal.py`,
+`root-edition/tests/test_cleanup_tail.py`, `tests/cytv/test_diagnostic_context.py`,
+`tests/cytv/test_failure_help.py` and `tests/cytv/test_no_root_simple_removal.py`.
+The following freeze commit changes only exempt release metadata and documents.
+Physical acceptance remains deferred; the source/build gate does not complete it.
