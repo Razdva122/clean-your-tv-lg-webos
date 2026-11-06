@@ -15,10 +15,10 @@ or missing/false proof result must stay neutral.
 | Boundary or observation | Expected user behavior | Runnable evidence / current limit |
 | --- | --- | --- |
 | Connection lost during removal | Clear connection error and Try again, same uninstall/TV/port | `tests.cytv.test_simple_removal_ui.SimpleRemovalUITests.test_connection_loss_try_again_runs_same_uninstall_target`; `android/tests/simple-removal.cjs` |
-| Retry after the original approval | Same durable goal, no recovery wizard, no second initial confirmation | `test_actual_cli_retry_reuses_approved_goal_without_second_confirmation` in the same Qt class; RED on baseline `6416c005` until the simple CLI provider lands |
-| Partial setup or missing app/files | Delete present known items, skip absent items; old pending does not force installation | Root/No-root simple provider filesystem tests and combined UI orchestration are required before candidate freeze; UI mocks do not prove deletion |
+| Retry after the original approval | Same durable goal, no recovery wizard, no second initial confirmation | `test_actual_cli_retry_reuses_approved_goal_without_second_confirmation` in the same Qt class; passes in the 72-case combined host run at `c419a3a8` |
+| Partial setup or missing app/files | Delete present known items, skip absent items; old pending does not force installation | `test_simple_removal` / `test_cleanup_tail` in Root tests and `tests.cytv.test_no_root_simple_removal`: real temporary filesystems with modeled package/device replies; [source results and limits](../history/2026-11-06-practical-clean-removal.md) |
 | Full restart requested | Explain power disconnect/reconnect and wait for the network, then Try again | `test_restart_required_is_neutral_and_explains_full_power_restart`; Android simple-removal cases in all 13 languages and both editions |
-| Standby, Quick Start or same boot | Still pending; only a real boot change permits final sweep | Backend boot-ID tests are required. UI only tests the neutral pending/result contract |
+| Standby, Quick Start or same boot | Still pending; only a real boot change permits final sweep | Root `test_simple_removal` and No-root `test_no_root_simple_removal` cover unchanged/changed boot IDs; UI tests only the neutral pending/result contract. A modeled boot change is not physical cold-boot acceptance |
 | Final result flags | Only both true flags with clean-removal disposition can show completion | `test_explicit_remove_needs_removed_and_verified_clean`; `test_explicit_uninstall_requires_clean_disposition_and_true_proof` in `tests.cytv.test_desktop_recovery`; `android/tests/removal-result.cjs` and `simple-removal.cjs` |
 | Actual busy/access-denied/package failure | Wait and retry, restore required Root access, or inspect error and retry | Bounded shared copy in `cytv/recovery_ui.py`; Android bridge/browser cases in all 13 locales. Actual denial classification belongs the providers |
 | Unknown or structured service code | Fixed human text, raw/private values excluded from main UI | `tests.cytv.test_recovery_ui`; `android.tests.test_bridge.BridgeTests.test_cleanup_details_are_localized_and_never_forward_unknown_codes` |
@@ -34,8 +34,14 @@ they do not establish removal prerequisites or retroactively recover a reporter'
 original cause. No removal result on #201/#307/#359 or any other reporter's TV is
 claimed, and another installation is not required to populate this matrix.
 
-Still pending: combined Root/No-root provider integration, current boot/readback
-contracts on supported firmware, complete candidate suites/builds, and physical
+Focused provider/UI integration and independent scoped reviews are recorded in the
+[practical removal source checkpoint](../history/2026-11-06-practical-clean-removal.md).
+The initial broader installer/Android run failed a Homebrew continuation fixture
+and final cleanup-result propagation. The producer fix has 49 focused passing
+tests at `a827d1df`. The continuation fixture has a focused correction; the broader
+installer run still has failures under diagnosis and final review remains pending.
+Still pending: final combined review, current boot/readback contracts on supported
+firmware, complete candidate suites/builds, and physical
 Home, normal keys, sound, standby, cold boot, OTA and rollback acceptance. Keep
 stable downloads distinct from candidate source instructions. Do not publish
 another user's results or diagnostics without the required approval.

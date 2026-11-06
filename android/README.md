@@ -11,9 +11,10 @@ Use your phone to install either **No-root** (Developer Mode) or **Root**
 or cloud service is needed. The APK includes the offline interface and TV packages;
 optional TV Python is a separate verified download.
 
-Published **1.8.2** uses **Android 0.8.2 / versionCode 22**. The unpublished
-1.9.0 candidate uses Android 0.9.0 / versionCode 23; use only its identified
-signed artifact for candidate testing. New APK acceptance remains pending.
+Published **1.9.0** uses **Android 0.9.0 / versionCode 23**. Its exact original-signer
+upgrade and retained-data checks are recorded in the [artifact acceptance record](../docs/history/2026-11-06-root-wake-key-release.md#final-cold-start-retained-rollback-and-android-upgrade).
+The next candidate adds the removal flow below. Use only its identified signed
+artifact for candidate testing; acceptance of the new APK remains pending.
 [Download the signed APK](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest) ·
 [Full installation guide](../docs/INSTALL.md) · [Recovery](#recovery-and-private-data) ·
 [Report a problem](../docs/FEEDBACK.md)
