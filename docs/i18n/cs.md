@@ -96,3 +96,6 @@ Nevydáno: po selhání aktivace Root použijte stejné uložené připojení a 
 Kandidátní sestavení zobrazují potřebné, volné a chybějící místo v MiB pro instalaci, motivy a vlastní fotografické/video tapety. Zahrnují dočasné kopie a rezervu. Kvóta aplikace, mezipaměť motivů 64 MiB a videa jsou samostatné limity. Neznámé hodnoty jsou označené. Uvolněte uvedené úložiště; automatické čištění se neprovádí.
 
 Odhad místa (TV): potřeba 128.0 MiB; volné 96.0 MiB; chybí 32.0 MiB.
+
+
+Kandidát: po odmítnutí aktivace Root lze samostatným potvrzením dokončit ověřené nastavení s LG Home a vypnutým ovládáním Home. Balíčky a data obnovy zůstanou zachovány. Úplné systémové aktualizace připravte zvlášť; aktualizace samotného launcheru neaktualizuje runtime. [↗](../RECOVERY.md#candidate-finish-verified-root-setup-with-home-control-off).

@@ -1469,7 +1469,7 @@ class OperationTests(unittest.TestCase):
                         'defaultApps':{'categories':{'home':package.ROOT_APP}},'idleApp':{'appId':package.ROOT_APP}}}}
             return original(command,**kwargs)
         remote.run=run;checkpoint=len(remote.calls)
-        answers=iter(('y',''))
+        answers=iter(('y','',''))
         recover(installer,lambda _:next(answers),Console(lambda *_:None))
         self.assertEqual(self.store.pending(installer.profile),previous)
         self.assertFalse(any(c[0]=='run' and c[1].endswith(' enable') for c in remote.calls[checkpoint:]))

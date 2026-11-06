@@ -67,9 +67,29 @@ def metadata(value):
     return result
 
 
+def root_diagnostics_summary(value):
+    value=mapping(value);result={}
+    if version(value.get('runtime_release')):result['runtime_release']=value['runtime_release']
+    result['components']={key:item for key,item in mapping(value.get('components')).items()
+                          if key in ('root','root_updater','system_updater') and version(item)}
+    result['component_reads']={key:choice(item,('read','missing','unsafe','unavailable'))
+        for key,item in mapping(value.get('component_reads')).items() if key in ('root','root_updater','system_updater')}
+    log=mapping(value.get('health_log'))
+    result['health_log']={'status':choice(log.get('status'),('read','missing','unsafe','unavailable'))}
+    if 'scope' in log:
+        result['health_log']['scope']=choice(log['scope'],('historical-tail','since-enable'))
+    if 'health_refusal' in log:
+        result['health_log']['health_refusal']=choice(log['health_refusal'],('generic','transaction-mismatch',
+            'binding-restored','generation-mismatch','token-mismatch','boot-mismatch','phase-inactive','failsafe-present'))
+    if type(log.get('supervisor_error')) is bool:result['health_log']['supervisor_error']=log['supervisor_error']
+    return result
+
+
 def tv_summary(value):
     value = mapping(value)
     result = metadata(value)
+    if 'root_diagnostics' in value:
+        result['root_diagnostics'] = root_diagnostics_summary(value['root_diagnostics'])
     if 'setup_outcome' in value:
         from .outcomes import summary
         result['setup_outcome'] = summary(value['setup_outcome'])
@@ -163,6 +183,8 @@ def status_summary(value):
             if name and version(app.get('version')):
                 components[name] = app['version']
         result['components'] = components
+    if 'observation_phase' in value:
+        result['observation_phase']=choice(value['observation_phase'],('before-enable',))
     if 'helper_state' in device:
         result['helper_state'] = choice(device['helper_state'], HELPER_STATES)
     if 'product' in device:

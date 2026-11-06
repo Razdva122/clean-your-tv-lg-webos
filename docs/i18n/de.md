@@ -224,3 +224,6 @@ Die Computer-/Android-Installer von 1.6.0 und migrierten OTA-Clients wählen 720
 Kandidaten zeigen für Installation, Themes und persönliche Foto-/Videohintergründe den geschätzten Bedarf, freien und fehlenden Platz in MiB. Temporäre Kopien und Reserve sind enthalten. App-Quote, 64-MiB-Theme-Cache und Video-Cache sind getrennte Grenzen. Unbekannte Werte werden ausdrücklich genannt. Nur den angegebenen Speicher freigeben; keine automatische Bereinigung.
 
 Speicherbedarf (TV): benötigt 128.0 MiB; frei 96.0 MiB; fehlen 32.0 MiB.
+
+
+Kandidat: Nach Ablehnen der Root-Aktivierung kann eine separate Bestätigung die geprüfte Einrichtung mit LG Home und ausgeschalteter Home-Steuerung abschließen. Pakete und Wiederherstellungsdaten bleiben erhalten. Vollständige Systemupdates separat vorbereiten; ein Launcher-Update aktualisiert die Laufzeit nicht. [↗](../RECOVERY.md#candidate-finish-verified-root-setup-with-home-control-off).

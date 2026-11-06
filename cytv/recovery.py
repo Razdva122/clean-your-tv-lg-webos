@@ -36,6 +36,13 @@ def recover(installer, ask, write, non_interactive=False):
                 installer.resume_root_setup()
                 installer.outcome.review_home(ask, write)
                 plan(write, 'complete', 'Review TV checks', 'Save diagnostic report…')
+            elif (pending and pending.get('action') == 'activate-root'
+                    and pending.get('home_backend') != 'c1-native-gate'):
+                write('Home control will stay off. Installed packages and recovery data will be kept.')
+                if prompts.confirm('Finish Root setup with Home control off?', ask, write):
+                    installer.finish_root_setup_disabled()
+                    plan(write, 'complete', 'Root setup finished with LG Home and Home control off.',
+                         'Prepare updates for all TV components separately, then open Software updates. Compatibility and rollback checks still apply.')
             return
         if not pending:
             verified_removal = (result.get('reconciled') == 'product-removal-verified' and
