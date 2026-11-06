@@ -93,9 +93,9 @@ Start from reviewed6416; backend providers work in their own branches.
 
 ## Task6 — integration and versioned release candidate
 
-- [ ] Integrate reviewed Root/No-root/UI changes into one branch, reconcile latest
+- [x] Integrate reviewed Root/No-root/UI changes into one branch, reconcile latest
   issue/release evidence and preserve concurrent release/next scope.
-- [ ] Complete combined verification and whole-branch review, fix findings, open a
+- [x] Complete combined verification and whole-branch review, fix findings, open a
   compact feature PR to release/next with accurate partial issue summaries and
   run actual PR CI. Merge with a merge commit under existing authorization.
 - [ ] Reconcile issue statuses, collect/commit release inventory and update the

@@ -133,3 +133,33 @@ without interpreter/dynamic headers: 39,740 bytes, SHA256
 This changes installer support inputs; the final candidate must use this corrected
 source. Published Helper bytes remain unchanged; prior binary evidence retains
 its original scope. Independent scoped review approved the portability correction.
+
+## Versioned source freeze and pre-dispatch check
+
+PR #363 final head `73fb794989de35bef1b358bd70d494d77ec50b95` passed all eight
+Linux/macOS runtime shards, browser and ARM/Python checks
+([42268724309](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42268724309)),
+Windows/Intel runtime
+([42268724084](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42268724084)),
+preview and integration policy. The missing CI compiler dependency was declared
+as the same pinned Zig 0.14.1 already used by assembly; no test was skipped to
+resolve that failure. Merge `32db69fa` has the exact tested product tree.
+
+Candidate inputs are release 1.10.0, cytv/Root 0.11.0, Home 1.11.0, independent
+Updaters 0.5.0, Android 0.10.0/code24 and fresh System 1.2.3. Manifests, README,
+notes and exact System replacement checks agree. Eligible original supervisor
+versions and interrupted-bundle/hash guards remain unchanged; System 1.1.2 has
+no new general migration path.
+
+A preliminary local TV payload at `a53a2160` built and verified the versioned
+Home FHD/HD, Root variants and updater packages. Helper 0.7.4 is still 320,974
+bytes with authenticated published SHA256
+`5c27a000b35ccbfeb0689dbd80ff8f2d0f4f70094794f64b101cadb91733501f`;
+new Helper transition approval does not apply to identical bytes. The installer
+support utility matches the corrected ARM hash above. The existing Android
+signer secret was available; no Homebrew promotion record is selected.
+
+These are source/pre-dispatch checks. The full candidate must be explicitly
+built and pinned before exact-artifact/device acceptance; none is implied here.
+The collected inventory includes #363 with the original reports still qualified.
+Further features are held for the next cycle until this candidate ships.

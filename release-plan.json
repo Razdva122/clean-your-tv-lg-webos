@@ -56,6 +56,26 @@
       "pr": 361,
       "issues": [],
       "summary": "Fix Root app discovery and unify Home catalog filtering"
+    },
+    {
+      "pr": 363,
+      "issues": [
+        101,
+        133,
+        152,
+        161,
+        200,
+        201,
+        216,
+        240,
+        288,
+        295,
+        307,
+        334,
+        355,
+        359
+      ],
+      "summary": "Add practical verified removal and same-goal retry, typed authentication and retained recovery evidence; original installation causes and reporter device recoveries remain unconfirmed"
     }
   ],
   "excluded": [],
