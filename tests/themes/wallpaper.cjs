@@ -52,3 +52,14 @@ assert.match(f.nodes.ctvWallpaperImage.textContent,/blob:poster/,'decoder-only s
 f.api.suspend('presentation');assert.equal(f.nodes.ctvWallpaperImage.textContent,'','transparent Home still hides the poster');
 f.api.resume('presentation');assert.match(f.nodes.ctvWallpaperImage.textContent,/blob:poster/);
 f.api.resume('decoder-context');assert.equal(f.videos.length,1,'positive context can release the decoder-only hold');f.api.reset();
+
+f=fixture(false);f.api.configure(f.input);
+const personal={...f.input,origin:'phone',manifest:{...f.input.manifest,id:'personal:wallpaper'}};
+f.api.setPersonal(personal,true);assert.equal(f.api.state().source,'personal');
+f.api.setThemePreview(true);assert.equal(f.api.state().source,'theme');assert.equal(f.api.state().themeId,'test:theme');
+f.api.configure({...f.input,manifest:{...f.input.manifest,id:'test:candidate'}});
+f.api.setPersonal({...personal,manifest:{...personal.manifest,title:'Replacement'}},true);
+assert.equal(f.api.state().themeId,'test:candidate','personal media updates cannot cover an active theme trial');
+f.api.setThemePreview(false);assert.equal(f.api.state().source,'personal');assert.equal(f.api.state().title,'Replacement');
+const resumed=f.videos.at(-1);f.api.setThemePreview(false);assert.equal(f.videos.at(-1),resumed,'releasing an inactive trial does not restart the wallpaper');
+f.api.reset();console.log('PASS temporary theme trial source, candidate replacement and personal restoration');
