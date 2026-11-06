@@ -14,7 +14,8 @@ class ContextTests(unittest.TestCase):
         self.store.begin(self.profile,'install')
         first=self.report('install','install-helper',TVCommandError(127))
         self.store.request_clean_removal(self.profile)
-        self.store.checkpoint(self.profile,stage='verified-clean',removal_reason='removal-verified')
+        self.store.checkpoint(self.profile,stage='verified-clean',removal_reason='removal-verified',
+                              result={'removed':True,'verified_clean':True})
         self.store.finish_clean_removal(self.profile)
         later=self.report('uninstall','uninstall',status={'removed':True,'verified_clean':True})
         self.assertEqual(later['first_failure'],first['first_failure'])

@@ -39,13 +39,46 @@ class NativeOperationsTests(unittest.TestCase):
         self.assertIn('--experimental-c1-gate',remote.run.call_args.args[0])
         with self.assertRaises(ValueError):installer.root_action('enable',experimental=True)
 
-    def test_full_removal_uses_native_restore_driver_before_normal_coordinator(self):
-        remote=MagicMock();remote.run.return_value='CYTV_C1_GATE'
-        installer=Installer(remote,None,{'edition':'root'},'.',{})
-        installer.product_action=MagicMock(side_effect=AssertionError('normal coordinator'))
-        with patch('cytv.root_gate.remove_project', return_value={'removed':True}) as remove:
-            self.assertEqual(installer.uninstall_project(),{'removed':True})
-            remove.assert_called_once_with(installer)
+    def test_full_removal_selects_current_native_bundle_for_shared_cleanup(self):
+        import hashlib
+        from tests.cytv.test_full_uninstall import FullUninstallTests
+        installer,remote,store,profile,calls,device=FullUninstallTests.fixture(self)
+        native=installer.payload/'root-c1';native.mkdir()
+        source=b'current trusted native restore driver'
+        (native/'install_driver.py').write_bytes(source)
+        (native/'bundle.json').write_text(json.dumps({'files':{
+            'install_driver.py':hashlib.sha256(source).hexdigest()}}))
+        installer.native_root_present=MagicMock(return_value=True)
+        upload=installer.upload_product
+        with patch.object(installer,'upload_product',wraps=upload) as bundled, \
+             patch('cytv.root_gate.remove_project',side_effect=AssertionError('legacy removal bypass')) as legacy:
+            result=installer.uninstall_project()
+            self.assertIs(result['removed'],True);self.assertIs(result['verified_clean'],True)
+            bundled.assert_called_once_with(native,clean_removal=True)
+            legacy.assert_not_called()
+        roots=[call.args[1] for call in remote.upload.call_args_list if call.args[0].endswith('/root/install_driver.py')]
+        self.assertEqual(roots,[source])
+        self.assertEqual([action for action,_ in calls],['clean-target','clean-remove'])
+        self.assertIsNone(store.pending(profile));remote.luna.assert_not_called()
+
+    def test_native_cleanup_refuses_missing_or_foreign_current_bundle_before_device_request(self):
+        import hashlib
+        from tests.cytv.test_full_uninstall import FullUninstallTests
+        for foreign in (False,True):
+            with self.subTest(foreign=foreign):
+                installer,remote,store,profile,calls,device=FullUninstallTests.fixture(self)
+                installer.native_root_present=MagicMock(return_value=True)
+                target=installer.payload/'foreign';target.write_bytes(b'preserve foreign bytes')
+                if foreign:
+                    native=installer.payload/'root-c1';native.mkdir()
+                    (native/'install_driver.py').symlink_to(target)
+                    (native/'bundle.json').write_text(json.dumps({'files':{
+                        'install_driver.py':hashlib.sha256(target.read_bytes()).hexdigest()}}))
+                with self.assertRaises(UserError):installer.uninstall_project()
+                self.assertEqual(calls,[])
+                self.assertIsNotNone(store.pending(profile))
+                self.assertEqual(target.read_bytes(),b'preserve foreign bytes')
+                remote.upload.assert_not_called();remote.luna.assert_not_called()
 
     def test_uncertain_install_submission_stays_pending_when_root_files_are_absent(self):
         with tempfile.TemporaryDirectory() as folder:
