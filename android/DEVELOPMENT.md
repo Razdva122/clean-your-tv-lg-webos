@@ -48,6 +48,7 @@ node android/tests/maintenance.cjs
 node android/tests/recovery-journey.cjs
 node android/tests/removal-result.cjs
 node android/tests/simple-removal.cjs
+node android/tests/restart-result.cjs
 node android/tests/screenshots.cjs
 ```
 

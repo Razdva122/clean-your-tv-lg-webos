@@ -165,8 +165,10 @@ proof. Eligible Root setup may still finish separately with LG Home/Home control
 off. Physical checks remain separate. See the
 [candidate removal flow](RECOVERY.md#next-candidate-original-operation-recovery-and-full-removal).
 
-If any step fails, **Save diagnostic report…** is the primary action. Save that
-attempt's report with the normal file dialog and attach it to your issue; no
+For unfinished removal, **Try again** is the primary action and repeats the same
+approved goal. **Save diagnostic report…** remains available. For other failed
+steps, saving the report is the primary action. Save that attempt's report with
+the normal file dialog and attach it to your issue; no
 terminal or later `doctor` run is needed. Cancelling the file dialog or choosing
 an unwritable destination keeps the original report available. If report creation
 failed, the window says so; include the visible error instead. Unknown outcomes

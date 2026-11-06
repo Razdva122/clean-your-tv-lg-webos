@@ -79,16 +79,42 @@ class SimpleRemovalUITests(unittest.TestCase):
         self.assertEqual(self.fixture.remote.calls, [])
 
     def test_restart_required_overrides_stale_complete_flags(self):
-        def runner(argv, **kwargs):
-            kwargs['write'].recovery_plan({'state':'complete','disposition':'clean-removal',
-                'removed':True,'verified_clean':True,'restart_required':True,
-                'summary':'Clean Your TV removal is verified.','next_step':'Try again'})
-            return 0
-        w = self.fixture.window()
-        w.run = runner
-        w.start('uninstall', self.fixture.profile)
-        self.fixture.pump(lambda: not w.running)
-        self.assertEqual(w.title.text(), 'Restart the TV to finish removal')
+        variants = ({'restart_required':True},
+                    {'removal':{'stage':'restart-required'}},
+                    {'restart_required':False,'removal':{'stage':'restart-required'}},
+                    {'restart_required':False,'removal':{'stage':'package-removal','reason':'restart-required'}},
+                    {'restart_required':False,'reason':'restart-required'})
+        for variant in variants:
+            with self.subTest(variant=variant):
+                def runner(argv, **kwargs):
+                    kwargs['write'].recovery_plan({'state':'complete','disposition':'clean-removal',
+                        'removed':True,'verified_clean':True,
+                        'summary':'Clean Your TV removal is verified.','next_step':'Try again',**variant})
+                    return 0
+                w = self.fixture.window()
+                w.run = runner
+                w.start('uninstall', self.fixture.profile)
+                self.fixture.pump(lambda: not w.running)
+                self.assertEqual(w.title.text(), 'Restart the TV to finish removal')
+                self.assertIn('disconnect it from power', w.subtitle.text())
+                w.close()
+
+    def test_malformed_removal_data_stays_neutral_without_widget_crash(self):
+        for malformed in ('PRIVATE', ['PRIVATE'], True, 1, {'stage':['PRIVATE'],'reason':{'PRIVATE':1}}):
+            with self.subTest(removal=malformed):
+                def runner(argv, **kwargs):
+                    kwargs['write'].recovery_plan({'state':'waiting','disposition':'clean-removal',
+                        'removed':False,'verified_clean':False,'removal':malformed,
+                        'summary':'Removal is not finished yet.','next_step':'Try again'})
+                    return 0
+                w = self.fixture.window()
+                w.run = runner
+                w.start('uninstall', self.fixture.profile)
+                self.fixture.pump(lambda: not w.running)
+                self.assertEqual(w.title.text(), 'Removal is not finished yet.')
+                self.assertIn('Check the connection and try again.', w.subtitle.text())
+                self.assertNotIn('PRIVATE', w.subtitle.text())
+                w.close()
 
     def test_explicit_remove_needs_removed_and_verified_clean(self):
         for removed in (None,False,True):

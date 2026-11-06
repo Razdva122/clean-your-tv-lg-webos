@@ -54,3 +54,24 @@ provider review, real boot-ID/final-sweep tests, complete candidate checks/build
 and physical Home/normal keys/sound/standby/cold boot/OTA/rollback remain pending.
 No reporter device result or universal cleanup compatibility is claimed. See the
 [current matrix](../development/INSTALLER-RECOVERY-MATRIX.md).
+
+## Scoped UI review correction
+
+Review of `1534cc8e` reproduced another completion mismatch: a recognized
+`removal.stage: restart-required` with stale true completion flags could show
+green when its top-level flag was absent or false. Qt also failed on truthy
+non-dictionary removal data. A single bounded semantic restart predicate now
+controls Qt instruction and completion, and supplies the Android bridge Boolean.
+Android uses one matching semantic predicate for instruction and completion;
+translated stage text has no authority. Top-level restart flag/reason and fixed
+nested stage/reason signals all keep the result pending. Malformed shapes use
+safe fallback wording. Desktop documentation now correctly names Try again as
+the primary action for unfinished removal.
+
+Targeted RED reproduced nine Qt/bridge subcase failures and Chrome's stage-only
+bypass. Targeted GREEN: **31 tests passed, 0.590 s**, covering actual Qt workers,
+all bridge tests, bounded presentation and actual Home-off completion. Chrome
+`restart-result.cjs` passed five contradictory restart variants, five malformed
+shapes, and positive verified-clean/Home-off controls. Python 3.9 grammar,
+JavaScript syntax and `git diff --check` passed. No unchanged full suite was
+repeated; the provider integration requirements above remain outstanding.

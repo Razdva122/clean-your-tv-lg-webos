@@ -579,8 +579,10 @@ class Wizard(QMainWindow):
                          type(self.recovery_plan.get('actions')) is list and
                          'continue-removal' in self.recovery_plan.get('actions', []))))
             if self.recovery_plan:
+                from .recovery_ui import removal_restart_required
+                restart = removal_restart_required(self.recovery_plan)
                 completed = (value == 0 and self.recovery_plan['state'] == 'complete' and
-                             self.recovery_plan.get('restart_required') is not True and
+                             not restart and
                              (self.command != 'uninstall' or self.recovery_plan.get('disposition') == 'clean-removal') and
                              (self.recovery_plan.get('disposition') != 'clean-removal' or
                               self.recovery_plan.get('verified_clean') is True and self.recovery_plan.get('removed') is True))
@@ -628,7 +630,6 @@ class Wizard(QMainWindow):
                 from .recovery_ui import removal_details
                 detail = removal_details(self.recovery_plan, self.failure_help)
                 if cleanup and not completed:
-                    restart = self.recovery_plan.get('restart_required') is True or (self.recovery_plan.get('removal') or {}).get('stage') == 'restart-required'
                     self.title.setText(tr('Cancelled' if value == 130 else 'Restart the TV to finish removal' if restart else 'Removal is not finished yet.'))
                     self.badge.setText(self.title.text())
                     message = detail.get('blocker_text') or 'Removal could not be confirmed. Check the connection and try again.'
