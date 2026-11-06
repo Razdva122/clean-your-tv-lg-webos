@@ -196,3 +196,64 @@ reading; it does not replace actual Windows CI.
 `tests/themes/liquid-glass-ui.cjs` and `tests/themes/ribbon-builtin-ui.cjs`.
 All known corrections are grouped before one replacement full dispatch. No TV
 operation or original reporter recovery is established by these checks.
+
+## Replacement full candidate and exact artifact checks
+
+The replacement [full candidate run 42276916934, attempt 1](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42276916934)
+uses frozen source `c45c1a3183e8b0161ae4c09df692d8b9482e5bfe`. All four desktop
+platforms, Android and the complete mandatory validation passed. This run is
+selected in `release-plan.json`; the earlier failed run is not selected.
+
+The [fresh browser-theme job](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42276916934/job/128095700008)
+executed all 43 profile commands through the final Root/No-root wallpaper route.
+Ribbon/Liquid Glass in both editions, No-root input coalescing, first-frame/held
+geometry, UHD continuity and fallback guards passed. Browser-core used separately
+authenticated matching evidence from successful PR job `128089615920`, source
+`2bfd80e6`; this is not described as a fresh browser-core execution. All eight
+Linux/macOS runtime groups and ARM/Python validation passed under the documented
+fresh/matching-evidence policy.
+
+The [actual Windows job](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42276916934/job/128095609365)
+ran all 827 installer tests in 200.064 seconds: no failures/errors, 160 expected
+platform skips. All 22 i18n cases passed; the three POSIX fixtures are the narrow
+Windows exclusions and portable package generation/rebinding remains covered.
+Frozen console payload (318 public files), runtime and localized cp1252 output
+checks passed. The extracted desktop package passed `--check-payload`,
+`--check-runtime` and `--smoke-test`; the checked subprocess exit codes establish
+success even though GUI stdout is not logged separately. Both artifacts uploaded.
+
+The downloaded Android artifact (ID `13534435219`) matched GitHub archive SHA256
+`06c129571868a5df79b41dc7bef59a3e083439186f29d7e9732bd14e713441e0`.
+APK SHA256 is `34fad92979eaf9cf6519741e8e28677c602da4c8d498f40544990dcc01db1769`.
+Embedded source/version provenance and every one of 316 payload hashes passed
+independent local verification. Actual package manifests show Home FHD/HD 1.11.0,
+Root variants 0.11.0, both independent Updaters 0.5.0, fresh System 1.2.3 and
+Helper 0.7.4. The APK is 0.10.0/code24, arm64-v8a and non-debuggable; CI verified
+the original signing certificate. Helper is exactly the published 320,974-byte
+archive with SHA256 `5c27a000b35ccbfeb0689dbd80ff8f2d0f4f70094794f64b101cadb91733501f`.
+Installer support retains ARM utility SHA256
+`c943cd280ffb6a1972d7235520aa237c9bd4efcc96ed88fa397b6601247cd275`.
+
+This is source/build/artifact verification, not TV or phone acceptance. No device
+installation/removal, full power boot, Home routing, remote/emergency behavior,
+sound, standby, cold boot, OTA or rollback was tested on this candidate. TV model,
+firmware/webOS and remote remain unknown/untested. Original reporter outcomes are
+unconfirmed; the release PR remains draft and nothing has been publicly shipped.
+
+### Retained candidate artifacts
+
+These are Actions ZIP digests, not device acceptance or public feed hashes.
+
+| Artifact | ID | SHA256 |
+| --- | --- | --- |
+| cytv-android-arm64 | 13534435219 | `06c129571868a5df79b41dc7bef59a3e083439186f29d7e9732bd14e713441e0` |
+| cytv-android-native-tests | 13534105498 | `3694b4eaadcdcd58b9d8815f830405ad0b05ae82366527e2110fe2eafa2297ee` |
+| cytv-linux-x64 | 13534820562 | `560597fd3ff887fba0bfc0ac17631e198f1b4abe99f02d72ecafd3648904171c` |
+| cytv-linux-x64-desktop | 13534625797 | `063ff8625d893845ef96116899cc1706ae44f5b483329f64e48c560da8099c98` |
+| cytv-macos-arm64 | 13534886200 | `e042bbd7611d4e6430033bde6f62b68d846add823abd714abc50005871a431b2` |
+| cytv-macos-arm64-desktop | 13534656402 | `da1b43e030518465a242616f409b658872a2d9bc7f894a9b92e6551c0fb9bca4` |
+| cytv-macos-x64 | 13534662169 | `d4656bcc1c1d9907c6b6e018790053300ab528ff96bb4bf8fe70003a0f3322c1` |
+| cytv-macos-x64-desktop | 13535251278 | `67b8250ea4795a6b0eb917fd0e8b54ec964d087e5a53e0921ddeaa13b454f0e5` |
+| cytv-windows-x64 | 13533642807 | `bc4bea5ed2e326fe3d2ad9c0bbdb1b8ed91b84c16c185bed7d2ed5edb43659d4` |
+| cytv-windows-x64-desktop | 13533602887 | `dc7d895f57333d228370072c3ec443bb7f54a645d862eb26ab8e554fcf93381a` |
+| homebrew-candidate | 13532544129 | `366545c4001951b96f8b92dcc22448dbe19037ee020bb3d100ee0a54e8a7b202` |

@@ -98,11 +98,20 @@ Start from reviewed6416; backend providers work in their own branches.
 - [x] Complete combined verification and whole-branch review, fix findings, open a
   compact feature PR to release/next with accurate partial issue summaries and
   run actual PR CI. Merge with a merge commit under existing authorization.
-- [ ] Reconcile issue statuses, collect/commit release inventory and update the
+- [x] Reconcile issue statuses, collect/commit release inventory and update the
   candidate PR. Do not close unconfirmed reports or announce delivery from a merge.
-- [ ] Select consistent versions/manifests/README/notes and finish documentation.
+- [x] Select consistent versions/manifests/README/notes and finish documentation.
   Verify published baselines and exact unchanged Helper0.7.4 bytes. Complete all
   selected signing/prerequisites before one full candidate dispatch.
-- [ ] Build/pin the final successful candidate attempt and verify artifacts. Report
+- [x] Build/pin the final successful candidate attempt and verify artifacts. Report
   version/run/results and pending physical acceptance truthfully. Main stays
   unpublished. Preserve required reports and archive only this task's worktrees.
+
+Completion: #363 and test-only #365 are merged into `release/next`; full build
+42276916934:1 at `c45c1a31` passed and is pinned. Exact Android provenance, all 316
+payload hashes, published Helper identity and final platform artifacts were
+verified. Existing issue comments were updated without closing unconfirmed
+reports; physical acceptance and main publication remain pending. Private task
+records were preserved outside worktrees. The managed app refused companion
+worktree archival because another active task still uses those checkouts; no
+active checkout was forcibly removed. This chat retains its coordinator checkout.
