@@ -13,8 +13,9 @@ optional TV Python is a separate verified download.
 
 Published **1.9.0** uses **Android 0.9.0 / versionCode 23**. Its exact original-signer
 upgrade and retained-data checks are recorded in the [artifact acceptance record](../docs/history/2026-11-06-root-wake-key-release.md#final-cold-start-retained-rollback-and-android-upgrade).
-The next candidate adds the removal flow below. Use only its identified signed
-artifact for candidate testing; acceptance of the new APK remains pending.
+Candidate **1.10.0** uses **Android 0.10.0 / versionCode 24** and adds the removal
+flow below. It is not published yet. Use only its identified signed artifact for
+candidate testing; acceptance of the new APK remains pending.
 [Download the signed APK](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest) ·
 [Full installation guide](../docs/INSTALL.md) · [Recovery](#recovery-and-private-data) ·
 [Report a problem](../docs/FEEDBACK.md)
