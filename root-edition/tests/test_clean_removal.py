@@ -312,6 +312,90 @@ class PartialDeviceRemoval(unittest.TestCase):
         self.assertEqual(driver.clean_remove(identifier)['stage'],'verified-clean')
         self.assertEqual(calls.count('remove-com.cleanyourtv.root.preview'),1)
 
+    def optional_startup_restart(self, app, service, outcome, interrupted=False):
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        present.add(app)
+        rpc=driver.device.rpc;disabled=[];remaining={'owned':True}
+        foreign={'name':'foreign.job','activityId':9,'callback':{'method':'luna://org.foreign/tick'}}
+        own={'name':'com.local.nativehome.boot','activityId':7,
+             'callback':{'method':'luna://com.local.nativehome.service/tick'}}
+        def actual(method,data):
+            if method==service+'/disable':
+                disabled.append(method)
+                if isinstance(outcome,Exception):raise outcome
+                return outcome
+            if method=='com.palm.activitymanager/list':
+                return {'returnValue':True,'activities':[foreign]+([own] if remaining['owned'] else [])}
+            if method=='com.palm.activitymanager/cancel':
+                self.assertEqual(data,{'activityId':7});remaining['owned']=False
+                return {'returnValue':True}
+            return rpc(method,data)
+        driver.device.rpc=actual
+        shared=driver.device.shared_cleanup;actions=[]
+        def cleanup(action,record,**kwargs):
+            actions.append(action);return shared(action,record,**kwargs)
+        driver.device.shared_cleanup=cleanup
+        if interrupted:
+            with patch.object(driver.device,'remove_owned_registrations',side_effect=OSError('interrupted readback')):
+                paused=driver.clean_remove(identifier)
+            self.assertIn('controls-restored',paused['done'])
+            self.assertFalse(any(name.startswith('remove-') for name in calls))
+        first=driver.clean_remove(identifier)
+        self.assertEqual(first['stage'],'restart-required',first)
+        self.assertEqual(first['cleanup_startup_unavailable'],[service])
+        self.assertIs(first['result']['removed'],False)
+        self.assertIs(first['result']['verified_clean'],False)
+        self.assertFalse(any(name.startswith('remove-') for name in calls))
+        self.assertTrue((root/'state/ssap.json').exists())
+        self.assertFalse(remaining['owned']);self.assertIn('stop',actions)
+        self.assertEqual(driver.clean_remove(identifier)['stage'],'restart-required')
+        driver.device.current_boot='22222222-2222-2222-2222-222222222222'
+        final=driver.clean_remove(identifier)
+        self.assertEqual(final['stage'],'verified-clean',final)
+        self.assertIs(final['result']['verified_clean'],True)
+        self.assertEqual(disabled,[service+'/disable'])
+        self.assertFalse((root/'state/ssap.json').exists())
+        self.assertEqual(actual('com.palm.activitymanager/list',{})['activities'],[foreign])
+
+    def test_unconfirmed_legacy_startup_moves_boot_before_package_and_file_cleanup(self):
+        for app,service,reply in (
+                ('com.gathin.tvhome','com.gathin.tvhome.renewal',
+                 {'returnValue':True,'state':{'enabled':False,'error':'cancel-unconfirmed'}}),
+                ('com.local.nativehome','com.local.nativehome.service',
+                 {'returnValue':True,'cancel':{'returnValue':False}})):
+            with self.subTest(service=service):self.optional_startup_restart(app,service,reply)
+
+    def test_unavailable_optional_startup_moves_boot_before_package_and_file_cleanup(self):
+        for error in (RuntimeError('Bus operation rejected'),TimeoutError('Bus response timed out')):
+            with self.subTest(error=error):
+                self.optional_startup_restart('com.gathin.tvhome','com.gathin.tvhome.renewal',error)
+
+    def test_optional_startup_boot_checkpoint_survives_interrupted_registration_readback(self):
+        self.optional_startup_restart('com.gathin.tvhome','com.gathin.tvhome.renewal',
+            {'returnValue':True,'state':{'enabled':False,'error':'cancel-unconfirmed'}},interrupted=True)
+
+    def test_optional_fallback_does_not_hide_other_errors_or_owned_activity_refusal(self):
+        for activity_refusal in (False,True):
+            with self.subTest(activity_refusal=activity_refusal):
+                driver,identifier,root,updater,payload,calls,present=self.fixture()
+                present.add('com.gathin.tvhome');rpc=driver.device.rpc
+                def actual(method,data):
+                    if method=='com.gathin.tvhome.renewal/disable':
+                        if not activity_refusal:raise RuntimeError('unrelated current failure')
+                        return {'returnValue':True,'state':{'enabled':False,'error':'cancel-unconfirmed'}}
+                    if activity_refusal and method=='com.palm.activitymanager/list':
+                        return {'returnValue':True,'activities':[{'name':'com.gathin.tvhome.renewal.hourly',
+                            'activityId':7,'callback':{'method':'luna://com.gathin.tvhome.renewal/tick'}}]}
+                    if method=='com.palm.activitymanager/cancel':raise RuntimeError('Bus operation rejected')
+                    return rpc(method,data)
+                driver.device.rpc=actual
+                result=driver.clean_remove(identifier)
+                self.assertEqual(result['state'],'recovery_required',result)
+                self.assertNotEqual(result['stage'],'restart-required')
+                self.assertNotEqual(result['stage'],'verified-clean')
+                self.assertFalse(any(name.startswith('remove-') for name in calls))
+                self.assertTrue((root/'state/ssap.json').exists())
+
     def test_unknown_old_outcome_does_not_prevent_owned_file_cleanup(self):
         driver,identifier,root,updater,payload,calls,present=self.fixture(unknown=True)
         present.clear()
