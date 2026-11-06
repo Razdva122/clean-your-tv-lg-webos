@@ -1,15 +1,15 @@
 const assert = require('assert'), fs = require('fs'), vm = require('vm');
 const profile = {schema:1,inventory:{apps:[{id:'app.one',title:'One',icon:'data:image/png;base64,YQ=='}],inputs:[]},config:{columns:5,dockApps:[],hiddenApps:[]},settings:{'tvhome.order':'{"dock":"","ids":["app.one"]}'}};
 const tick = () => new Promise(resolve => setImmediate(resolve));
-function harness(edition, {unavailable=false, corrupt=false, versionMismatch=false, noBackup=false, corruptProfile=false, snapshotProfile=profile, phase='verifying', storage, tiles=['app.one']}={}) {
+function harness(edition, {unavailable=false, corrupt=false, versionMismatch=false, noBackup=false, corruptProfile=false, snapshotProfile=profile, phase='verifying', systemRpc, schedule=setTimeout, storage, tiles=['app.one']}={}) {
   const calls=[], scripts=[], memory=storage||new Map(), errors=[];
   const data=require(edition==='root'?'../../root-edition/ui/root-profile-data':'../../launcher/user-data');
   const restored={profile:corruptProfile?{}:snapshotProfile,transaction:'a'.repeat(32),version:versionMismatch?'9.9.9':'1.2.3',phase:phase};
   const window={ROOT_VERSION:'1.2.3',CONFIG:profile.config,TV_APPS:{apps:[{id:'packaged'}],inputs:[]},HomeData:data,RootProfileData:data,AppLibrary:require('../../launcher/app-library'),
-    SystemUpdates:{open:o=>errors.push(o),rpc:async(method,payload)=>{calls.push([method,payload]);if(unavailable)throw Object.assign(Error('absent'),{unavailable:true});if(corrupt)throw Error('corrupt journal');return method==='restoreProfile'?(noBackup?null:restored):{};}},
+    SystemUpdates:{open:o=>errors.push(o),rpc:async(method,payload)=>{calls.push([method,payload]);if(systemRpc)return systemRpc(method,payload,restored);if(unavailable)throw Object.assign(Error('absent'),{unavailable:true});if(corrupt)throw Error('corrupt journal');return method==='restoreProfile'?(noBackup?null:restored):{};}},
     RootUpdates:{rpc:async()=>null,open:o=>errors.push(o)}};
   const document={createElement:()=>({}),body:{appendChild:s=>scripts.push(s)},querySelector:()=>tiles.length?{}:null,querySelectorAll:()=>tiles.map(id=>({getAttribute:()=>id}))};
-  const ctx={window,document,localStorage:{getItem:k=>memory.has(k)?memory.get(k):null,setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k)},setTimeout,clearTimeout,Promise,XMLHttpRequest:class{open(){}send(){this.status=200;this.responseText=JSON.stringify({id:'com.gathin.tvhome',version:'1.2.3'});this.onload();}}};
+  const ctx={window,document,localStorage:{getItem:k=>memory.has(k)?memory.get(k):null,setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k)},setTimeout:schedule,clearTimeout,Promise,XMLHttpRequest:class{open(){}send(){this.status=200;this.responseText=JSON.stringify({id:'com.gathin.tvhome',version:'1.2.3'});this.onload();}}};
   Object.assign(ctx,window);
   window.location={reload(){errors.push('reload');}};
   vm.runInNewContext(fs.readFileSync(edition==='root'?'root-edition/ui/root-profile.js':'launcher/profile-bootstrap.js','utf8'),ctx);
@@ -93,6 +93,54 @@ async function startAppearance(h) {
       assert.equal((await startAppearance(h)).id,'builtin:classic',edition+' interrupted/invalid/missing-cache appearance still fails safe');
       assert.equal(h.memory.has('tvhome.theme.trial.v1'),false,'theme manager consumes recovery marker');
     }
+  }
+  // An early CARD launch must not consume the one-shot restoration before the
+  // supervisor enters verification. Removing the pending-start wait breaks this.
+  for (const finalPhase of ['verifying','verifying-rollback']) {
+    let phase='installing';const timers=[];
+    const h=harness('root',{phase:finalPhase,schedule:fn=>timers.push(fn),systemRpc:async(method,payload,restored)=> {
+      if(method==='status')return {id:'a'.repeat(32),edition:'root',phase};
+      if(method==='restoreProfile')return phase==='installing'?null:restored;
+      return {};
+    }});await tick();
+    assert.equal(h.scripts.length,0,'early launch must wait instead of rendering an unverified packaged profile');
+    assert.equal(h.calls.some(c=>c[0]==='healthy'),false);
+    assert.equal(timers.length,1,'pending startup schedules one bounded retry without needing a relaunch event');
+    phase=finalPhase;timers.shift()();await tick();
+    assert.equal(h.scripts.length,1);
+    assert.equal(h.window.TV_APPS.apps[0].id,'app.one','snapshot must be applied before app.js');
+    let presented;h.window.HomeUIReady=new Promise(resolve=>presented=resolve);
+    h.scripts[0].onload();await tick();assert(!h.calls.some(c=>c[0]==='healthy'));
+    h.window.RootLauncherRendered=true;presented();await tick();
+    assert.equal(h.calls.filter(c=>c[0]==='healthy').length,1,'genuine render confirms the correct verification leg');
+    assert.equal(h.errors.length,0);
+  }
+  for (const outcome of ['changed-status','changed-profile','unavailable','recovery-required','aborted','timeout']) {
+    let next=false;const timers=[];
+    const h=harness('root',{schedule:fn=>timers.push(fn),systemRpc:async(method,payload,restored)=> {
+      if(next&&outcome==='unavailable')throw Object.assign(Error('service not found'),{unavailable:true});
+      if(method==='restoreProfile')return next&&outcome==='changed-profile'?{...restored,transaction:'b'.repeat(32)}:null;
+      if(method==='status')return {id:next&&outcome==='changed-status'?'b'.repeat(32):'a'.repeat(32),edition:'root',phase:next&&['recovery-required','aborted'].includes(outcome)?outcome:'installing'};
+      throw Error('Unexpected RPC: '+method);
+    }});await tick();next=true;
+    for(let attempt=0;attempt<121&&timers.length;attempt++){timers.shift()();await tick();}
+    assert.equal(timers.length,0,'startup retries must stop: '+outcome);
+    assert.equal(h.calls.some(c=>c[0]==='healthy'),false,'pending/failed transaction cannot report health');
+    assert.equal(h.scripts.length,outcome==='aborted'?1:0,'only an aborted unchanged update can release ordinary startup: '+outcome);
+    assert.equal(h.errors.length,outcome==='aborted'?0:1,'unsafe or expired pending startup enters Recovery: '+outcome);
+  }
+  for (const state of [null,{id:'a'.repeat(32),edition:'no-root',phase:'installing'},{id:'a'.repeat(32),edition:'root',phase:'aborted'}]) {
+    const h=harness('root',{systemRpc:async(method)=>method==='status'?state:null});await tick();
+    assert.equal(h.scripts.length,1,'absent/other-edition/aborted transaction retains ordinary startup');
+    assert.equal(h.errors.length,0);
+  }
+  // The null read can race the transition itself: retry even if status already
+  // sees verification/completion, rather than silently falling back to legacy.
+  for (const phase of ['verifying','complete','rolled-back']) {
+    let reads=0;const timers=[];
+    const h=harness('root',{phase,schedule:fn=>timers.push(fn),systemRpc:async(method,payload,restored)=>method==='status'?{id:'a'.repeat(32),edition:'root',phase}:method==='restoreProfile'?(reads++?restored:null):{}});
+    await tick();assert.equal(h.scripts.length,0);timers.shift()();await tick();
+    assert.equal(h.scripts.length,1);assert.equal(h.window.TV_APPS.apps[0].id,'app.one');
   }
   const layout=JSON.stringify({version:1,ids:['app.one'],hidden:[],catalog:profile.inventory.apps});
   let root=harness('root',{storage:new Map([['tvhome.layout',layout]])});await tick();
