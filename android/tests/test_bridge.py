@@ -185,10 +185,59 @@ class BridgeTests(unittest.TestCase):
             for language in i18n.LANGUAGES.keys() - {'auto'}:
                 i18n.set_language(language)
                 for prompt, kind in [('SSH key passphrase: ', 'key'), ('Root SSH password (hidden): ', 'root'), ('Developer Mode passphrase: ', 'developer')]:
-                    module.Callbacks(native).secret(Console(interactive=False).prompt(prompt))
-                    self.assertEqual(native.events[-1]['secretType'], kind)
+                    for text in (prompt, Console(interactive=False).prompt(prompt)):
+                        module.Callbacks(native).secret(text)
+                        self.assertEqual(native.events[-1]['secretType'], kind)
         finally:
             i18n.set_language('en')
+
+    def test_typed_secret_survives_cli_localization_in_every_locale(self):
+        from cytv import cli, i18n
+        from cytv.transport import CredentialPrompt
+        module = self.module()
+        self.addCleanup(i18n.set_language, 'en')
+        class Native:
+            def __init__(self): self.events = []
+            def request(self, raw): self.events.append(json.loads(raw)); return 'PRIVATE-SECRET'
+        native = Native()
+        def secret(prompt):
+            self.assertIsInstance(prompt, CredentialPrompt)
+            return module.Callbacks(native).secret(prompt)
+        def connect(profile, directory, secret, trust):
+            for text, kind in [('SSH key passphrase: ', 'key'), ('Root SSH password (hidden): ', 'root'),
+                               ('Developer Mode passphrase: ', 'developer')]:
+                secret(CredentialPrompt(text, kind))
+            raise EOFError
+        with tempfile.TemporaryDirectory() as tmp:
+            for language in set(i18n.LANGUAGES) - {'auto'}:
+                with self.subTest(language=language):
+                    native.events.clear(); output = []
+                    code = cli.main(['status', '--host', '192.0.2.10', '--edition', 'root',
+                                     '--data-dir', tmp, '--language', language], connect=connect,
+                                    secret=secret, write=output.append)
+                    self.assertEqual(code, 130)
+                    self.assertEqual([e['secretType'] for e in native.events], ['key', 'root', 'developer'])
+                    if language != 'en':
+                        self.assertNotIn('Root SSH password (hidden)', native.events[1]['text'])
+                    self.assertNotIn('PRIVATE-SECRET', json.dumps(native.events) + '\n'.join(output))
+
+    def test_explicit_secret_type_is_authoritative_and_unsupported_types_are_refused(self):
+        from cytv.transport import CredentialPrompt
+        from unittest.mock import Mock
+        native = Mock(); native.request.return_value = 'secret'
+        callbacks = self.module().Callbacks(native)
+        prompt = CredentialPrompt('Developer Mode passphrase: ', 'root')
+        callbacks.secret(prompt)
+        self.assertEqual(json.loads(native.request.call_args.args[0])['secretType'], 'root')
+        native.reset_mock()
+        for kind in ('unknown', '', None):
+            with self.subTest(kind=kind):
+                with self.assertRaises(ValueError):
+                    CredentialPrompt('hidden', kind)
+                prompt.credential_type = kind
+                with self.assertRaises(ValueError):
+                    callbacks.secret(prompt)
+        native.request.assert_not_called()
 
     def test_progress_events_use_source_messages_before_translation(self):
         from cytv import i18n

@@ -300,9 +300,12 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     write('Enter your existing TV root SSH password. This was set when SSH access was configured.')
                 write('Typing is hidden: no characters or dots appear.')
                 write('Enter = submit   |   Ctrl+C = cancel')
-            return secret(write.prompt(prompt))
+            localized = write.prompt(prompt)
+            if isinstance(prompt, CredentialPrompt):
+                localized = CredentialPrompt(localized, prompt.credential_type)
+            return secret(localized)
 
-        from .transport import SSH
+        from .transport import SSH, CredentialPrompt
         with store.lock(profile), diagnostics.context.operation_context(store, profile):
             if args.command == 'replace-system-updater':
                 if store.pending(profile): raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')

@@ -46,6 +46,25 @@ class TransportTests(unittest.TestCase):
         for error in (EOFError,KeyboardInterrupt):
             with patch('getpass.getpass',side_effect=error),self.assertRaises(error):inspection_secret('hidden: ')
 
+    def test_developer_authentication_requests_typed_string_without_persisting_on_cancel(self):
+        prompts = []
+        def secret(prompt):
+            self.assertIsInstance(prompt, str)
+            self.assertTrue(prompt.startswith('Developer Mode'))
+            self.assertEqual(prompt.credential_type, 'developer')
+            prompts.append(prompt)
+            return 'PRIVATE-SECRET'
+        with tempfile.TemporaryDirectory() as tmp, \
+             patch('paramiko.SSHClient') as client, \
+             patch('cytv.transport.developer_key', return_value=('key', b'PRIVATE-KEY')):
+            client.return_value.connect.side_effect = EOFError
+            with self.assertRaises(EOFError):
+                SSH.connect({'host': '192.0.2.10', 'port': 9922, 'edition': 'no-root'},
+                            tmp, secret, lambda *_: False)
+            self.assertEqual(len(prompts), 1)
+            self.assertFalse(list(Path(tmp).iterdir()))
+            client.return_value.close.assert_called_once()
+
     def test_developer_key_diagnostics_distinguish_response_from_unlock_failure(self):
         import paramiko
         from cytv.transport import developer_key
@@ -282,6 +301,8 @@ class TransportTests(unittest.TestCase):
             key = load_identity(path, lambda prompt: prompts.append(prompt) or 'private-test-passphrase')
             self.assertEqual(key.asbytes(), original.asbytes())
             self.assertEqual(len(prompts), 1)
+            self.assertIsInstance(prompts[0], str)
+            self.assertEqual(prompts[0].credential_type, 'key')
 
     def test_json_stream_handles_split_utf8_and_multiple_events(self):
         replies = JsonReplies()

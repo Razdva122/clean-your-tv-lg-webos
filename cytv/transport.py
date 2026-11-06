@@ -20,6 +20,16 @@ class AgentLoginFailed(UserError):
     """An automatic agent attempt needs an explicit fresh manual connection."""
 
 
+class CredentialPrompt(str):
+    """A string-compatible secret prompt with a language-independent type."""
+    def __new__(cls, text, credential_type):
+        if credential_type not in ('key', 'root', 'developer'):
+            raise ValueError('Unsupported credential type')
+        prompt = super().__new__(cls, text)
+        prompt.credential_type = credential_type
+        return prompt
+
+
 def inspection_secret(prompt):
     import getpass
     import warnings
@@ -152,7 +162,7 @@ def load_identity(path, secret):
     try:
         return paramiko.PKey.from_path(path)
     except (TypeError, ValueError, paramiko.PasswordRequiredException):
-        return paramiko.PKey.from_path(path, passphrase=secret('SSH key passphrase: ').encode())
+        return paramiko.PKey.from_path(path, passphrase=secret(CredentialPrompt('SSH key passphrase: ', 'key')).encode())
 
 
 def root_auth(secret, profile=None, identity_prompt=None, automatic=True, password_fallback=False):
@@ -182,7 +192,7 @@ def root_auth(secret, profile=None, identity_prompt=None, automatic=True, passwo
             if path:
                 yield OnDiskPrivateKey('root', 'python-config', Path(path), load_identity(Path(path), secret))
             else:
-                yield Password(username='root', password_getter=lambda: secret('Root SSH password (hidden): '))
+                yield Password(username='root', password_getter=lambda: secret(CredentialPrompt('Root SSH password (hidden): ', 'root')))
 
         def authenticate(self, transport):
             self.agent = None
@@ -261,7 +271,7 @@ class SSH:
             if keyfile.exists():
                 options['pkey'] = paramiko.RSAKey.from_private_key_file(str(keyfile))
             else:
-                key, raw = developer_key(profile['host'], secret('Developer Mode passphrase: '))
+                key, raw = developer_key(profile['host'], secret(CredentialPrompt('Developer Mode passphrase: ', 'developer')))
                 options['pkey'] = key
                 # Store only after a successful SSH authentication.
         else:

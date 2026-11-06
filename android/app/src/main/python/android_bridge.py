@@ -60,13 +60,18 @@ class Callbacks:
         return self.request(**event)
 
     def secret(self, prompt):
-        # CLI prompts have already been translated. Send a stable semantic tag
-        # so the WebView never guesses the credential type from translated prose.
-        labels = {'key': 'SSH key passphrase: ', 'root': 'Root SSH password (hidden): ',
-                  'developer': 'Developer Mode passphrase: '}
-        label_text = prompt.strip().removeprefix('> ').strip()
-        kind = next((key for key, label in labels.items()
-                     if label_text == i18n.translate(label).strip()), 'developer')
+        if hasattr(prompt, 'credential_type'):
+            kind = prompt.credential_type
+        else:
+            # Exact compatibility for pre-typed callers only. Transport supplies
+            # metadata for both raw passive and CLI-localized authentication.
+            labels = {'key': 'SSH key passphrase: ', 'root': 'Root SSH password (hidden): ',
+                      'developer': 'Developer Mode passphrase: '}
+            text = prompt.strip().removeprefix('> ').strip()
+            kind = next((key for key, label in labels.items()
+                         if text in (label.strip(), i18n.translate(label).strip())), 'developer')
+        if kind not in ('key', 'root', 'developer'):
+            raise ValueError('Unsupported credential type')
         return self.request(kind='secret', text=prompt, secretType=kind)
 
     def trust(self, value, root):
