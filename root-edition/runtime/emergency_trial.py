@@ -1,5 +1,6 @@
 """Opt-in bounded emergency-exit trial; permanent activation remains unavailable."""
 import json
+import math
 import os
 from pathlib import Path
 import subprocess
@@ -10,6 +11,8 @@ import threading
 import device_adapter as d
 import bounded_profile_trial as bounded
 from emergency_watchdog import watch
+
+HEARTBEAT_TIMEOUT = 2
 
 
 def record(value, error=False):
@@ -60,17 +63,45 @@ def recover(transaction, reason):
     return False  # Independent deadline and boot recovery remain armed.
 
 
+def startup_deadline(transaction):
+    """Leave the existing twenty-second publication/recovery reserve untouched."""
+    journal=d.safe_json(d.STATE/'profile-trial.json')
+    deadline=journal.get('deadline');now=time.monotonic()
+    if (journal.get('transaction')!=transaction or journal.get('state')!='pending'
+            or type(deadline) not in (int,float) or not math.isfinite(deadline)
+            or not now+20<deadline<=now+90):
+        raise ValueError('Invalid or exhausted guarded startup deadline')
+    return deadline-20
+
+
 def supervise(transaction):
     d.trusted_dir(d.STATE)
     j = d.safe_json(d.STATE/'profile-trial.json')
     if j['transaction'] != transaction or j['state'] != 'pending': return
     r, w = os.pipe(); observer = None
     try:
+        from persistent_recovery import Coordinator
+        from persistent_store import Store
+        c=Coordinator(Store(d.STATE))
+        bound=os.path.lexists(c.binding) and c.read_binding()['transaction']==transaction
+        if bound:
+            from persistent_health import context, require_guardian
+            deadline=startup_deadline(transaction)
+            # Cold expected-package validation belongs before the input loop.
+            # A READY pipe event alone must not start the parent's health wait.
+            context(transaction)
+            while time.monotonic()<deadline:
+                try:
+                    require_guardian(transaction);break
+                except (OSError,ValueError):time.sleep(min(.1,max(0,deadline-time.monotonic())))
+            else:raise RuntimeError('Guardian not ready within guarded startup deadline')
         observer = subprocess.Popen([d.current_executable(), str(Path(__file__).with_name('emergency_reader.py')), str(w)],
                                     pass_fds=(w,), stdin=subprocess.DEVNULL, close_fds=True)
         os.close(w); w = None
         sequence = [0]
+        health_ready = [False]
         def ping():
+            started=time.monotonic()
             # Legacy trials have no durable binding and keep their fixed timer.
             from persistent_recovery import Coordinator
             from persistent_store import Store
@@ -81,6 +112,10 @@ def supervise(transaction):
             require_guardian(transaction)
             sequence[0] += 1
             publish(transaction, sequence[0])
+            if time.monotonic()-started>=HEARTBEAT_TIMEOUT:
+                raise RuntimeError('Input heartbeat validation exceeded watchdog deadline')
+            if not health_ready[0]:
+                save_ready(transaction,observer);health_ready[0]=True
         visit = [None]
         def open_lg_home():
             # Luna may take seconds; never block the input health channel.
@@ -90,8 +125,8 @@ def supervise(transaction):
                 except Exception as exc: record({'screen_launch_error':str(exc)})
             visit[0] = threading.Thread(target=launch, daemon=True)
             visit[0].start()
-        reason = watch(r, lambda why:recover(transaction, why), timeout=2,
-                       on_ready=lambda:save_ready(transaction, observer),
+        reason = watch(r, lambda why:recover(transaction, why), timeout=HEARTBEAT_TIMEOUT,
+                       on_ready=lambda:None if bound else save_ready(transaction, observer),
                        finished=lambda:completed(transaction), on_ping=ping, on_lg_home=open_lg_home)
         record({'event':'emergency-monitor-ended','reason':reason,'transaction':transaction})
     except Exception as exc:
@@ -115,13 +150,14 @@ def supervise(transaction):
 
 def start(before_publish=None):
     def spawn(transaction):
+        deadline=startup_deadline(transaction)
         guardian = bounded.spawn(transaction)
         fd = os.open(d.STATE/'emergency.log', os.O_CREAT|os.O_APPEND|os.O_WRONLY|os.O_NOFOLLOW, 0o600)
         try:
             supervisor = subprocess.Popen([d.current_executable(), str(Path(__file__).resolve()), transaction],
                 stdin=subprocess.DEVNULL, stdout=fd, stderr=fd, start_new_session=True, close_fds=True)
         finally: os.close(fd)
-        for _ in range(30):
+        while time.monotonic()<deadline:
             try: ready = d.safe_json(d.STATE/'escape-ready.json')
             except FileNotFoundError: ready = {}
             if ready.get('transaction') == transaction and ready.get('pid') == supervisor.pid:
@@ -130,7 +166,7 @@ def start(before_publish=None):
                         and d.process_start(ready['observer_pid']) == ready.get('observer_start_ticks')):
                     break
             if supervisor.poll() is not None: raise RuntimeError('Emergency observer failed before activation')
-            time.sleep(.1)
+            time.sleep(min(.1,max(0,deadline-time.monotonic())))
         else: raise RuntimeError('Emergency observer not ready; Home was not activated')
         class Guarded:
             pid = guardian.pid
