@@ -119,3 +119,17 @@ The original CI failure and its correction belong to
 [implementation PR #363](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/363);
 only its final successful revision can authorize integration. These are host/source
 checks, not physical OTA or removal acceptance.
+
+## Linux support utility portability
+
+The next PR CI revision found strict GCC sign-comparison/indentation diagnostics
+and a macOS-only temporary test path. At `fee4d5eb`, filesystem mode parameters
+use `mode_t`, unconditional statements are separated, and the fixture uses a
+resolved platform temporary directory. No flags, permissions or gate semantics
+were relaxed. Actual native gate/Root fence checks passed 12 cases on Linux and
+12 on macOS. Strict Zig 0.14.1 ARM compilation produced a static ELF32 EABI5
+without interpreter/dynamic headers: 39,740 bytes, SHA256
+`c943cd280ffb6a1972d7235520aa237c9bd4efcc96ed88fa397b6601247cd275`.
+This changes installer support inputs; the final candidate must use this corrected
+source. Published Helper bytes remain unchanged; prior binary evidence retains
+its original scope. Independent scoped review approved the portability correction.
