@@ -4,11 +4,15 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const policy = require('../launcher/theme-policy.js');
+const {metadata} = require('../launcher/theme-data.js');
 const {loadRegistry, keyFor, readLocal} = require('./check-theme-submissions.cjs');
 const projectRoot = path.resolve(__dirname, '..');
 function generateCatalog(options = {}) {
   const showcaseRoot = options.showcaseRoot || path.join(projectRoot, 'showcase');
   const entries = loadRegistry(showcaseRoot);
+  const moving = JSON.parse(fs.readFileSync(path.join(projectRoot, 'showcase/moving-wallpapers.json')));
+  if (!Array.isArray(moving) || moving.some(hash => typeof hash !== 'string' || !/^[a-f0-9]{64}$/.test(hash))) throw Error('Invalid reviewed wallpaper motion');
+  const media = (manifest, length) => metadata(manifest, length, !!manifest.wallpaperVideo && manifest.wallpaperVideo.variants.some(video => moving.includes(video.sha256)));
   const files = new Map();
   const add = (name, bytes) => files.set(name, Buffer.from(bytes));
   for (const name of ['classic-preview.png', 'CLASSIC-CREDITS.txt']) {
@@ -32,7 +36,7 @@ function generateCatalog(options = {}) {
       if (bytes.length !== file.size || hash(bytes) !== file.sha256) throw new Error('Built-in byte/hash mismatch: ' + base + file.path);
     }
     const preview = manifest.assets.find(asset => asset.id === manifest.previewAssetId);
-    themes.push({id:entry.id, title:manifest.title, version:manifest.themeVersion, builtin:true, description:manifest.description, author:manifest.author.name, license:manifest.license.identifier, preview:base + preview.path, credits:base + manifest.license.creditsPath, licenseFile:base + manifest.license.textPath, url:entry.url, digest:entry.digest});
+    themes.push({...media(manifest, descriptor.length), id:entry.id, title:manifest.title, version:manifest.themeVersion, builtin:true, description:manifest.description, author:manifest.author.name, license:manifest.license.identifier, preview:base + preview.path, credits:base + manifest.license.creditsPath, licenseFile:base + manifest.license.textPath, url:entry.url, digest:entry.digest});
     ids.add(entry.id);
   }
   for (const {record:r, manifest:m, base} of entries) {
@@ -42,7 +46,7 @@ function generateCatalog(options = {}) {
     add(preview, readLocal(showcaseRoot, r.previewFiles[0], 6291456));
     add(directory + 'CREDITS.txt', readLocal(showcaseRoot, r.creditsFile, 6291456));
     add(directory + 'LICENSE.txt', readLocal(showcaseRoot, base + m.license.textPath, 6291456));
-    themes.push({id:r.id, title:r.title, version:r.themeVersion, author:r.author.name, license:r.license, description:r.description, preview, url:r.descriptorUrl, digest:r.descriptorSha256});
+    themes.push({...media(m, readLocal(showcaseRoot, base + 'cytv-theme.json', 65536).length), id:r.id, title:r.title, version:r.themeVersion, author:r.author.name, license:r.license, description:r.description, preview, url:r.descriptorUrl, digest:r.descriptorSha256});
   }
   add('theme-catalog.json', JSON.stringify({schemaVersion:1, themes}, null, 2) + '\n');
   return files;

@@ -1,6 +1,8 @@
 /* Standard theme settings, thirteen UI languages. */
 HomeI18n.add({
   "ru": {
+    "{size} MB": "{size} МБ",
+    "Video wallpaper": "Видеофон",
     "Remove theme?": "Удалить тему?",
     "Classic will be restored.": "Будет восстановлена Classic.",
     "Theme network error": "Не удалось подключиться к источнику темы",
@@ -70,6 +72,8 @@ HomeI18n.add({
     "Invalid received theme chunk": "Некорректный фрагмент полученной темы"
   },
   "de": {
+    "{size} MB": "{size} MB",
+    "Video wallpaper": "Videohintergrund",
     "Remove theme?": "Theme entfernen?",
     "Classic will be restored.": "Classic wird wiederhergestellt.",
     "Theme network error": "Verbindung zur Theme-Quelle fehlgeschlagen",
@@ -139,6 +143,8 @@ HomeI18n.add({
     "Invalid received theme chunk": "Ungültiger empfangener Designabschnitt"
   },
   "es": {
+    "{size} MB": "{size} MB",
+    "Video wallpaper": "Fondo de vídeo",
     "Remove theme?": "¿Eliminar el tema?",
     "Classic will be restored.": "Se restaurará Classic.",
     "Theme network error": "No se pudo conectar con la fuente del tema",
@@ -208,6 +214,8 @@ HomeI18n.add({
     "Invalid received theme chunk": "Fragmento del tema recibido no válido"
   },
   "pt-BR": {
+    "{size} MB": "{size} MB",
+    "Video wallpaper": "Papel de parede em vídeo",
     "Remove theme?": "Remover tema?",
     "Classic will be restored.": "Classic será restaurado.",
     "Theme network error": "Não foi possível conectar à origem do tema",
@@ -277,6 +285,8 @@ HomeI18n.add({
     "Invalid received theme chunk": "Fragmento inválido do tema recebido"
   },
   "fr": {
+    "{size} MB": "{size} Mo",
+    "Video wallpaper": "Fond d’écran vidéo",
     "Remove theme?": "Supprimer le thème ?",
     "Classic will be restored.": "Classic sera rétabli.",
     "Theme network error": "Connexion à la source du thème impossible",
@@ -346,6 +356,8 @@ HomeI18n.add({
     "Invalid received theme chunk": "Fragment du thème reçu invalide"
   },
   "it": {
+    "{size} MB": "{size} MB",
+    "Video wallpaper": "Sfondo video",
     "Remove theme?": "Rimuovere il tema?",
     "Classic will be restored.": "Verrà ripristinato Classic.",
     "Theme network error": "Connessione all’origine del tema non riuscita",
@@ -415,6 +427,8 @@ HomeI18n.add({
     "Invalid received theme chunk": "Frammento del tema ricevuto non valido"
   },
   "ko": {
+    "{size} MB": "{size} MB",
+    "Video wallpaper": "동영상 배경화면",
     "Remove theme?": "테마를 삭제할까요?",
     "Classic will be restored.": "Classic이 복원됩니다.",
     "Theme network error": "테마 소스에 연결할 수 없습니다",
@@ -484,6 +498,8 @@ HomeI18n.add({
     "Invalid received theme chunk": "받은 테마 조각이 올바르지 않습니다"
   },
   "hi": {
+    "{size} MB": "{size} MB",
+    "Video wallpaper": "वीडियो वॉलपेपर",
     "Remove theme?": "थीम हटाएँ?",
     "Classic will be restored.": "Classic बहाल होगा।",
     "Theme network error": "थीम स्रोत से कनेक्ट नहीं हो सका",
@@ -553,6 +569,8 @@ HomeI18n.add({
     "Invalid received theme chunk": "प्राप्त थीम का अंश अमान्य है"
   },
   "pl": {
+    "{size} MB": "{size} MB",
+    "Video wallpaper": "Tapeta wideo",
     "Remove theme?": "Usunąć motyw?",
     "Classic will be restored.": "Classic zostanie przywrócony.",
     "Theme network error": "Nie można połączyć się ze źródłem motywu",
@@ -622,6 +640,8 @@ HomeI18n.add({
     "Invalid received theme chunk": "Nieprawidłowy fragment odebranego motywu"
   },
   "zh-Hans": {
+    "{size} MB": "{size} MB",
+    "Video wallpaper": "视频壁纸",
     "Remove theme?": "删除主题？",
     "Classic will be restored.": "将恢复 Classic。",
     "Theme network error": "无法连接主题来源",
@@ -691,6 +711,8 @@ HomeI18n.add({
     "Invalid received theme chunk": "收到的主题分块无效"
   },
   "zh-Hant": {
+    "{size} MB": "{size} MB",
+    "Video wallpaper": "影片桌布",
     "Remove theme?": "刪除主題？",
     "Classic will be restored.": "將還原 Classic。",
     "Theme network error": "無法連線至主題來源",
@@ -760,6 +782,8 @@ HomeI18n.add({
     "Invalid received theme chunk": "收到的主題區塊無效"
   },
   "en": {
+    "{size} MB": "{size} MB",
+    "Video wallpaper": "Video wallpaper",
     "Remove theme?": "Remove theme?",
     "Classic will be restored.": "Classic will be restored.",
     "Theme network error": "Theme network error",
@@ -833,6 +857,8 @@ HomeI18n.add({
 /* Czech TV interface (#211). */
 HomeI18n.add({
   "cs": {
+    "{size} MB": "{size} MB",
+    "Video wallpaper": "Video na pozadí",
     "Remove theme?": "Odstranit motiv?",
     "Classic will be restored.": "Obnoví se Classic.",
     "Theme network error": "Chyba sítě při načítání motivu",
