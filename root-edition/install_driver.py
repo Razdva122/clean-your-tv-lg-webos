@@ -225,6 +225,11 @@ class Coordinator:
             record=self.status(identifier)
             self.device.operation=lease;self.device.ownership=self.ownership
             if final_readback_only:
+                if _optional_record(self.store,'submission-'+identifier)!=submission:
+                    raise ValueError('original_candidate_changed')
+                options=self.device.verify_resume(payload,submission)
+                if candidate_digest(payload,_verified_payload(payload,options['prepare_supervisor']))!=submission.get('candidate_sha256'):
+                    raise ValueError('original_candidate_changed')
                 self.device.continuation_quiescent(payload)
                 if record.get('candidate_sha256')!=previous.get('candidate_sha256'):
                     raise ValueError('original_candidate_changed')

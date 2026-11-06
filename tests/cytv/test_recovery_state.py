@@ -18,6 +18,9 @@ class RecoveryStateTests(unittest.TestCase):
             'candidate_sha256':'b'*64,'proof_sha256':'c'*64,'code_sha256':'d'*64}}
         value=assess({'edition':'root'},pending,observed)
         self.assertEqual(value['actions'],['cancel-install','retain-evidence'])
+        observed['device']={'product':{'operation':'e'*32}}
+        self.assertEqual(assess({'edition':'root'},pending,observed)['reason'],'foreign-operation')
+        observed['device']={}
         observed['cancellation']['operation']='e'*32
         self.assertNotIn('cancel-install',assess({'edition':'root'},pending,observed)['actions'])
     def test_assessment_is_conservative_and_never_exports_receipts(self):

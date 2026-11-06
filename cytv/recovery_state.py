@@ -40,17 +40,17 @@ def assess(profile, pending, observation=None):
         return result('blocked', 'unsupported-receipt', 'retain-evidence')
     if 'previous' in pending:
         return result('blocked', 'inherited-operation', 'retain-evidence')
+    if pending.get('product_operation') and product:
+        if product.get('operation') != pending['product_operation']:
+            return result('blocked', 'foreign-operation', 'check', 'retain-evidence')
+        if product.get('state') == 'pending':
+            return result('waiting', 'operation-live', 'check', 'retain-evidence')
     cancellation=observation.get('cancellation')
     if (profile.get('edition')=='root' and pending.get('action')=='install' and pending.get('product_operation')
             and type(cancellation) is dict and cancellation.get('operation')==pending['product_operation']
             and cancellation.get('home_changed') is False
             and cancellation.get('state') in ('admissible','admitted','remove-observed','cancellation-terminal-pending','cancelled-and-removed')):
         return result('cancellation-ready','cancellation-verified','cancel-install','retain-evidence')
-    if pending.get('product_operation') and product:
-        if product.get('operation') != pending['product_operation']:
-            return result('blocked', 'foreign-operation', 'check', 'retain-evidence')
-        if product.get('state') == 'pending':
-            return result('waiting', 'operation-live', 'check', 'retain-evidence')
     if profile.get('edition') == 'root' and device:
         if product.get('can_resume') is True and product.get('resume_reason')=='original_final_readback_verified':
             return result('product-ready','final-readback-verified','continue-product','retain-evidence')

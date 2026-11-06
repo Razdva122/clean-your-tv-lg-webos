@@ -401,6 +401,26 @@ class RealHandoffTests(unittest.TestCase):
             fixture.assert_preserved(self)
 
 class ExplicitRecoveryTests(unittest.TestCase):
+    def test_final_worker_rechecks_snapshot_after_acquiring_original_lease(self):
+        from contextlib import contextmanager
+        from install_fixture import CurrentInstallation
+        from install_device import LocalDevice
+        from unittest.mock import patch
+        with CurrentInstallation() as fixture:
+            device=LocalDevice();driver=install_driver.Coordinator(device,fixture.owner)
+            with redirect_stderr(io.StringIO()),patch.object(device,'readback',side_effect=ValueError('interruption')):
+                driver.install('a'*32,fixture.payload)
+            snapshot=fixture.snapshot('a'*32);self.bind_candidate(fixture,'a'*32,snapshot)
+            original=fixture.owner.operation
+            @contextmanager
+            def changed(*args,**kwargs):
+                with original(*args,**kwargs) as lease:
+                    (snapshot/'root-updater/install_driver.py').write_bytes(b'changed while waiting')
+                    yield lease
+            with patch.object(fixture.owner,'operation',side_effect=changed),self.assertRaises(ValueError):
+                driver.resume('a'*32,snapshot,final_readback_only=True)
+            self.assertFalse(fixture.owner.status()['terminal'])
+
     def test_host_orchestration_reaches_original_filesystem_coordinator_without_package_replay(self):
         import json,shlex
         from install_fixture import CurrentInstallation
