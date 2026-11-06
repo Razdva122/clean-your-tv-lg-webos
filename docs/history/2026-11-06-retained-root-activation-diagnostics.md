@@ -46,9 +46,9 @@ lines, arbitrary error text or cursor hashes. Export and history revalidate fiel
   enable failure from optional collection errors; pre-enable status timing is explicit.
 - Snapshot cases cover legacy refusal, new fixed reason, missing/unsafe metadata,
   symlink refusal, hostile values, passive reads, rotation/truncation, large-log
-  append and partial baseline lines. Independent review found the last two cursor
+  append, partial baseline lines and changed same-size file metadata. Independent review found the last two cursor
   gaps; each was reproduced red and corrected green.
-- Eight activation recovery cases, seven snapshot cases, four retained-diagnostic
+- Eight activation recovery cases, eight snapshot cases, four retained-diagnostic
   cases and eight System Updater host orchestration cases pass. The new bootstrap
   case proves pending activation blocks preparation, explicit Home-off completion
   preserves the original receipt, and separate preparation uses its existing flow.
@@ -89,3 +89,8 @@ and rollback on the reported device remain unverified. The original health-conte
 predicate/cause and successful reporter recovery are not established. Keep #334 open;
 these are a guarded continuation option and diagnostic improvements, not proof of a
 fixed TV or universal compatibility.
+
+Linux PR CI found immediate inode reuse after file recreation. A same-size rewrite
+regression reproduced the ambiguous cursor scope locally; unchanged size now also
+requires unchanged mtime/ctime before selecting `since-enable`. Eight final snapshot
+cases and the affected diagnostics/recovery/bootstrap cases pass after correction.

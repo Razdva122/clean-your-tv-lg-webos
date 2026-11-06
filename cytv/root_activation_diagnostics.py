@@ -79,6 +79,8 @@ def snapshot(root=ROOT, installed=INSTALLED, uid=0, cursor=None):
         end=info.st_size
         same=(type(cursor) is dict and cursor.get('device')==info.st_dev and cursor.get('inode')==info.st_ino
               and type(cursor.get('size')) is int and start<=cursor['size']<=end)
+        if same and cursor['size']==end:
+            same=(cursor.get('mtime_ns')==info.st_mtime_ns and cursor.get('ctime_ns')==info.st_ctime_ns)
         if same:
             offset=cursor['size']-start
             anchor=cursor.get('start')
@@ -103,7 +105,7 @@ def snapshot(root=ROOT, installed=INSTALLED, uid=0, cursor=None):
                 health['health_refusal']=reason
             if value.get('event')=='emergency-recovery' and reason=='supervisor_error':health['supervisor_error']=True
         out['health_log']=health
-        out['cursor']={'device':info.st_dev,'inode':info.st_ino,'size':end,'start':end-min(4096,len(raw)),'digest':hashlib.sha256(raw[-4096:]).hexdigest(),'line_boundary':not end or raw.endswith(b'\n')}
+        out['cursor']={'device':info.st_dev,'inode':info.st_ino,'size':end,'start':end-min(4096,len(raw)),'digest':hashlib.sha256(raw[-4096:]).hexdigest(),'line_boundary':not end or raw.endswith(b'\n'),'mtime_ns':info.st_mtime_ns,'ctime_ns':info.st_ctime_ns}
     except FileNotFoundError:out['health_log']={'status':'missing'}
     except (OSError,ValueError,TypeError):out['health_log']={'status':'unsafe'}
     return out

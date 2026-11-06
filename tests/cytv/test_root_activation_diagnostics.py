@@ -82,3 +82,9 @@ class ActivationSnapshotTests(unittest.TestCase):
             out.write('{"event":"emergency-recovery","reason":"supervisor_error"}\n')
         result=self.snapshot(before['cursor'])
         self.assertEqual(result['health_log'],{'status':'read','scope':'since-enable','supervisor_error':True})
+
+    def test_same_size_rewrite_with_changed_metadata_is_historical(self):
+        before=self.snapshot();info=self.log.stat();raw=self.log.read_bytes()
+        self.log.write_bytes(raw)
+        os.utime(self.log,ns=(info.st_atime_ns,info.st_mtime_ns+1000000000))
+        self.assertEqual(self.snapshot(before['cursor'])['health_log']['scope'],'historical-tail')
