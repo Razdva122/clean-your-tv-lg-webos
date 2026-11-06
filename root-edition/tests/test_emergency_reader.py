@@ -1,23 +1,89 @@
-import os,select,struct,subprocess,sys,unittest
+import os,struct,subprocess,sys,unittest
 from pathlib import Path
 RUNTIME=Path(__file__).resolve().parents[1]/'runtime'
 sys.path.insert(0,str(RUNTIME))
 from emergency_watchdog import watch
 class ReaderTests(unittest.TestCase):
- def run_input(self,events):
+ def run_input(self,events,release_delay=0):
   ir,iw=os.pipe();hr,hw=os.pipe();env=os.environ.copy();env['PYTHONPATH']=str(RUNTIME)
-  code='import sys;from emergency_reader import observe;observe(int(sys.argv[1]),int(sys.argv[2]),lambda:True)'
-  p=subprocess.Popen([sys.executable,'-c',code,str(ir),str(hw)],pass_fds=(ir,hw),env=env,stderr=subprocess.PIPE)
+  code='import sys,time;from emergency_reader import observe;started=time.monotonic();observe(int(sys.argv[1]),int(sys.argv[2]),lambda:time.monotonic()-started>=float(sys.argv[3]))'
+  p=subprocess.Popen([sys.executable,'-c',code,str(ir),str(hw),str(release_delay)],pass_fds=(ir,hw),env=env,stderr=subprocess.PIPE)
   os.close(ir);os.close(hw)
   try:
-   self.assertTrue(select.select([hr],[],[],2)[0]);os.write(iw,events)
-   return watch(hr,lambda reason:True,timeout=.5)
+   return watch(hr,lambda reason:True,timeout=2,on_ready=lambda:os.write(iw,events))
   finally:
    if p.poll() is None:p.kill()
    p.communicate();os.close(iw);os.close(hr)
  def test_three_taps_pass_through_reader_to_watchdog(self):
   data=b''.join(struct.pack('<IIHHi',1,t*1000,1,773,v) for t,v in [(0,1),(100,0),(300,1),(400,0),(600,1),(700,0)])
   self.assertEqual(self.run_input(data),'escape')
+ def test_released_wake_key_allows_fresh_emergency_gesture(self):
+  data=b''.join(struct.pack('<IIHHi',1,t*1000,1,773,v) for t,v in [(0,1),(100,0),(300,1),(400,0),(600,1),(700,0)])
+  self.assertEqual(self.run_input(data,release_delay=.15),'escape')
+ def test_key_that_stays_held_never_becomes_ready(self):
+  self.assertEqual(self.run_input(b'',release_delay=10),'input_lost')
+ def test_only_initial_historical_gestures_are_discarded(self):
+  import contextlib,io
+  import emergency_reader as reader
+  from unittest.mock import patch
+  taps=b''.join(struct.pack('<IIHHi',1,t*1000,1,773,v) for t,v in [(0,1),(100,0),(300,1),(400,0),(600,1),(700,0)])
+  dropped=struct.pack('<IIHHi',2,0,0,3,0)
+  hr,hw=os.pipe()
+  try:
+   with patch.object(reader.os,'set_blocking'),patch.object(reader.os,'read',side_effect=[taps,BlockingIOError(),dropped]),patch.object(reader.select,'select',return_value=([42],[],[])),contextlib.redirect_stderr(io.StringIO()):
+    reader.observe(42,hw,lambda:True)
+   os.close(hw);hw=None
+   self.assertEqual(os.read(hr,256),b'READY\nLOST\n')
+  finally:
+   os.close(hr)
+   if hw is not None:os.close(hw)
+ def test_fresh_home_during_release_wait_cancels_activation(self):
+  import contextlib,io,json
+  import emergency_reader as reader
+  from unittest.mock import Mock,patch
+  for value in (1,2):
+   with self.subTest(value=value):
+    home=struct.pack('<IIHHi',1,0,1,773,value);hr,hw=os.pipe();log=io.StringIO()
+    try:
+     with patch.object(reader.os,'set_blocking'),patch.object(reader.os,'read',side_effect=[BlockingIOError(),home,BlockingIOError(),b'']),patch.object(reader.select,'select',return_value=([42],[],[])),contextlib.redirect_stderr(log):
+      reader.observe(42,hw,Mock(side_effect=[False,True]))
+     os.close(hw);hw=None
+     self.assertEqual(os.read(hr,256),b'LOST\n','Fresh Home must prevent READY and pending activation')
+     self.assertEqual(json.loads(log.getvalue()),{'event':'input-observer-fault','phase':'startup','reason':'home_activity'})
+    finally:
+     os.close(hr)
+     if hw is not None:os.close(hw)
+ def test_release_wait_accepts_key_up_without_counting_it_as_a_gesture(self):
+  import contextlib,io
+  import emergency_reader as reader
+  from unittest.mock import Mock,patch
+  up=struct.pack('<IIHHi',1,0,1,773,0);dropped=struct.pack('<IIHHi',2,0,0,3,0)
+  hr,hw=os.pipe()
+  try:
+   with patch.object(reader.os,'set_blocking'),patch.object(reader.os,'read',side_effect=[BlockingIOError(),up,BlockingIOError(),dropped]),patch.object(reader.select,'select',return_value=([42],[],[])),contextlib.redirect_stderr(io.StringIO()):
+    reader.observe(42,hw,Mock(side_effect=[False,True]))
+   os.close(hw);hw=None
+   self.assertEqual(os.read(hr,256),b'READY\nLOST\n')
+  finally:
+   os.close(hr)
+   if hw is not None:os.close(hw)
+ def test_release_wait_still_refuses_input_faults_before_ready(self):
+  import contextlib,io,json
+  import emergency_reader as reader
+  from unittest.mock import Mock,patch
+  cases=[(b'','eof'),(b'bad','partial_event'),(struct.pack('<IIHHi',1,1000000,1,116,0),'invalid_timestamp'),(struct.pack('<IIHHi',1,0,0,3,0),'events_dropped'),(struct.pack('<IIHHi',1,0,1,773,3),'invalid_key_value')]
+  for data,reason in cases:
+   with self.subTest(reason=reason):
+    hr,hw=os.pipe();log=io.StringIO()
+    try:
+     with patch.object(reader.os,'set_blocking'),patch.object(reader.os,'read',side_effect=[BlockingIOError(),data]),contextlib.redirect_stderr(log):
+      reader.observe(42,hw,Mock(side_effect=[False,True]))
+     os.close(hw);hw=None
+     self.assertEqual(os.read(hr,256),b'LOST\n')
+     self.assertEqual(json.loads(log.getvalue()),{'event':'input-observer-fault','phase':'startup','reason':reason})
+    finally:
+     os.close(hr)
+     if hw is not None:os.close(hw)
  def test_input_loss_recovers(self):
   self.assertEqual(self.run_input(struct.pack('<IIHHi',1,0,0,3,0)),'input_lost')
  def test_partial_event_recovers(self):
@@ -43,7 +109,7 @@ class FaultDiagnosticsTests(unittest.TestCase):
   event=lambda kind,code,value,usec=0:struct.pack('<IIHHi',1,usec,kind,code,value)
   cases=[
    ([b''],True,'startup','eof',b'LOST\n'),
-   ([BlockingIOError()],False,'startup','keys_held',b'LOST\n'),
+   ([BlockingIOError()]*64,False,'startup','keys_held',b'LOST\n'),
    ([event(1,773,1)]*64,True,'startup','drain_limit',b'LOST\n'),
    ([BlockingIOError(),b''],True,'active','eof',b'READY\nLOST\n'),
    ([BlockingIOError(),b'bad'],True,'active','partial_event',b'READY\nLOST\n'),
