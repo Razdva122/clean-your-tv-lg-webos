@@ -1,7 +1,20 @@
 {
   "schema": 1,
   "version": null,
-  "changes": [],
+  "changes": [
+    {
+      "pr": 346,
+      "issues": [],
+      "summary": "Reuse authenticated PR test units in candidate validation"
+    },
+    {
+      "pr": 349,
+      "issues": [
+        348
+      ],
+      "summary": "Bound updater cache and completed installer staging retention"
+    }
+  ],
   "excluded": [],
   "acceptance": ""
 }
