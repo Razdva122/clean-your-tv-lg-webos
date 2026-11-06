@@ -15,6 +15,7 @@ from . import package
 SERVICES = {
     'com.local.nativehome': frozenset(('com.local.nativehome.service',)),
     'com.gathin.tvhome': frozenset(('com.gathin.tvhome.renewal',)),
+    'com.cleanyourtv.updater': frozenset(('com.cleanyourtv.updater.service',)),
 }
 
 
