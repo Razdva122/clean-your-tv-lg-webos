@@ -108,7 +108,7 @@ software manager; this does not uninstall TV apps or delete saved recovery data.
 The installer chooses the computer’s language automatically.
 Use the language selector to save another language, or choose **Auto** to follow
 system settings. On the TV, use **Settings → Language**; this is a separate preference.
-See the [twelve localized installation, use and recovery guides](LANGUAGES.md).
+See the [localized installation, use and recovery guides](LANGUAGES.md).
 
 ## In the wizard
 

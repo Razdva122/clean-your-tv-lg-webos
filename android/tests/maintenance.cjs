@@ -212,5 +212,5 @@ print(json.dumps(result))
     await page.close();
   }
   await browser.close();
-  console.log('PASS Android maintenance: twelve locales, correct commands, connection flow, progress, replay, readable text and responsive widths');
+  console.log('PASS Android maintenance: thirteen locales, correct commands, connection flow, progress, replay, readable text and responsive widths');
 })().catch(async error=>{console.error(error);if(browser)await browser.close();process.exitCode=1});

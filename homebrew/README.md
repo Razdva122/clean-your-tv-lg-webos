@@ -8,7 +8,7 @@ This is an unpublished Root-edition installation path. Physical TV acceptance
 (Task 8), public asset verification, meaningful human review, screenshots and
 catalog-maintainer approval remain separate gates. The catalog file is a review
 **draft**, not a submitted or approved listing. See the [candidate setup guide](../docs/INSTALL.md#candidate-on-tv-root-installation),
-all twelve [localized guides](../docs/LANGUAGES.md), and the [physical acceptance/state inventory](../docs/development/HOMEBREW-INSTALL-ACCEPTANCE.md).
+all [localized guides](../docs/LANGUAGES.md), and the [physical acceptance/state inventory](../docs/development/HOMEBREW-INSTALL-ACCEPTANCE.md).
 
 The installer requires a rooted compatible LG webOS TV, Homebrew Channel's exec
 service with actual root execution, Node.js 8+, and a usable Python 3.9+ or the
@@ -36,7 +36,7 @@ actual Installer-app access has been accepted.
 
 The candidate uses its existing read-only, app-originated `inspect` as the access
 preflight. An exact LS2 `exec` denial now shows **Homebrew access denied** with
-that workaround in all twelve languages. Only Check status and Close are offered;
+that workaround in all supported languages. Only Check status and Close are offered;
 a saved request ID is retained, and retry inspects before querying its status.
 The message also applies if access is lost after opening. Missing services,
 malformed replies and backend/root failures retain their generic handling; raw

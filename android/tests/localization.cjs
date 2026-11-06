@@ -6,8 +6,8 @@ const vm = require('node:vm');
 const ui = path.resolve(__dirname, '../app/src/main/assets/ui');
 const {words, languages} = vm.runInNewContext(fs.readFileSync(path.join(ui, 'translations.js'), 'utf8') + ';({words,languages})');
 const resolver = vm.runInNewContext(fs.readFileSync(path.join(ui, 'app.js'), 'utf8').match(/function resolveLanguage\(tag\)\{[^\n]+/)[0] + ';resolveLanguage', {languages});
-for (const [tag, selected] of [['zh','zh-Hans'],['zh-CN','zh-Hans'],['zh-SG','zh-Hans'],['zh-TW','zh-Hant'],['zh-HK','zh-Hant'],['zh-MO','zh-Hant'],['zh-Hant-CN','zh-Hant'],['zh-Hans-TW','zh-Hans'],['ZH_hAnT_sG','zh-Hant'],['zh-Hans-HK','zh-Hans']]) assert.equal(resolver(tag),selected,tag);
-const expected = ['de','en','es','fr','hi','it','ko','pl','pt-BR','ru','zh-Hans','zh-Hant'];
+for (const [tag, selected] of [['cs','cs'],['cs-CZ','cs'],['CS_cz','cs'],['zh','zh-Hans'],['zh-CN','zh-Hans'],['zh-SG','zh-Hans'],['zh-TW','zh-Hant'],['zh-HK','zh-Hant'],['zh-MO','zh-Hant'],['zh-Hant-CN','zh-Hant'],['zh-Hans-TW','zh-Hans'],['ZH_hAnT_sG','zh-Hant'],['zh-Hans-HK','zh-Hans']]) assert.equal(resolver(tag),selected,tag);
+const expected = ['cs','de','en','es','fr','hi','it','ko','pl','pt-BR','ru','zh-Hans','zh-Hant'];
 assert.deepEqual(Object.keys(languages).sort(), expected);
 assert.deepEqual(Object.keys(words).sort(), expected);
 for (const [code, dictionary] of Object.entries(words)) {
@@ -20,6 +20,9 @@ for (const [code, dictionary] of Object.entries(words)) {
     }
   }
 }
+assert.equal(languages.cs, 'Čeština');
+const czechXml=fs.readFileSync(path.join(ui,'../../res/values-cs/strings.xml'),'utf8');
+for(const [name,key] of [['installation_channel','notificationChannel'],['installation_progress','notificationText'],['webview_update','webviewUpdate']]) assert(czechXml.includes('name="'+name+'" formatted="false">'+words.cs[key]+'</string>'),'cs: '+name);
 for (const [code, script] of [['zh-Hans','Hans'],['zh-Hant','Hant']]) {
   const xml=fs.readFileSync(path.join(ui,'../../res/values-b+zh+'+script+'/strings.xml'),'utf8');
   for(const [name,key] of [['installation_channel','notificationChannel'],['installation_progress','notificationText'],['webview_update','webviewUpdate']]) assert(xml.includes('name="'+name+'" formatted="false">'+words[code][key]+'</string>'),code+': '+name);
@@ -62,12 +65,12 @@ let browser;
   await page.locator('[data-action=connect]').click();
   await page.locator('#port').fill('2222');
   await page.locator('.language').click();
-  await page.locator('[data-language=de]').click();
+  await page.locator('[data-language=cs]').click();
   assert.equal(await page.locator('#port').inputValue(), '2222');
   await page.locator('[data-action=start]').click();
-  assert.equal(await page.evaluate(()=>requests[0].language), 'de');
+  assert.equal(await page.evaluate(()=>requests[0].language), 'cs');
   await page.evaluate(()=>receiveNative({kind:'secret',id:'secret',secretType:'key',text:'SSH key passphrase:'}));
-  assert.equal(await page.locator('#prompt-title').textContent(), words.de.keySecretTitle);
+  assert.equal(await page.locator('#prompt-title').textContent(), words.cs.keySecretTitle);
   await page.locator('#prompt-value').fill('SENSITIVE');
   await page.keyboard.press('Escape');
   assert(!(await page.locator('body').innerText()).includes('SENSITIVE'));
@@ -87,7 +90,7 @@ let browser;
   assert.equal(await page.evaluate(()=>requests.at(-1).action), 'install');
   assert.deepEqual(errors, []);
   await page.close();
-  for (const [locale, saved, selected] of [['pt-PT',null,'pt-BR'],['ko-KR','invalid','ko'],['ja-JP',null,'en'],['zh-CN',null,'zh-Hans'],['zh-SG',null,'zh-Hans'],['zh-TW',null,'zh-Hant'],['zh-HK',null,'zh-Hant'],['zh-MO',null,'zh-Hant'],['zh-Hant-CN',null,'zh-Hant'],['zh-Hans-TW',null,'zh-Hans'],['zh-CN','zh-Hant','zh-Hant']]) {
+  for (const [locale, saved, selected] of [['cs-CZ',null,'cs'],['cs',null,'cs'],['en-US','cs','cs'],['pt-PT',null,'pt-BR'],['ko-KR','invalid','ko'],['ja-JP',null,'en'],['zh-CN',null,'zh-Hans'],['zh-SG',null,'zh-Hans'],['zh-TW',null,'zh-Hant'],['zh-HK',null,'zh-Hant'],['zh-MO',null,'zh-Hant'],['zh-Hant-CN',null,'zh-Hant'],['zh-Hans-TW',null,'zh-Hans'],['zh-CN','zh-Hant','zh-Hant']]) {
     const context=await browser.newContext({locale});
     const p=await context.newPage();
     if(saved) await p.addInitScript(value=>localStorage.setItem('cytv-language',value),saved);
@@ -110,5 +113,5 @@ let browser;
   }
   assert.deepEqual(errors, []);
   await browser.close();
-  console.log('All twelve Android locales: complete catalogs, current-language picker, persistence, system locale, form preservation and localized native requests passed.');
+  console.log('All thirteen Android locales: complete catalogs, current-language picker, persistence, system locale, form preservation and localized native requests passed.');
 })().catch(async error=>{console.error(error);if(browser)await browser.close();process.exitCode=1});

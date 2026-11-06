@@ -66,6 +66,7 @@ try {
     "hi",
     "pl",
     "ru",
+    "cs",
     "zh-Hans",
     "zh-Hant",
   ]) {
@@ -88,8 +89,8 @@ try {
   await staticPage.goto(host + base + "ru/install/");
   await staticPage.locator(".languages summary").focus();
   await staticPage.keyboard.press("Enter");
-  await staticPage.locator('.languages a[hreflang="de"]').click();
-  assert.equal(new URL(staticPage.url()).pathname, base + "de/install/");
+  await staticPage.locator('.languages a[hreflang="cs"]').click();
+  assert.equal(new URL(staticPage.url()).pathname, base + "cs/install/");
   await staticPage.goto(host + base + "ru/help/");
   for (const id of [
     "connection",
@@ -103,8 +104,8 @@ try {
     await staticPage.locator("#" + id + " h2").waitFor({ state: "visible" });
   }
   await staticPage.locator(".languages summary").click();
-  await staticPage.locator('.languages a[hreflang="de"]').click();
-  assert.equal(new URL(staticPage.url()).pathname, base + "de/help/");
+  await staticPage.locator('.languages a[hreflang="cs"]').click();
+  assert.equal(new URL(staticPage.url()).pathname, base + "cs/help/");
   // The compact header must keep every destination reachable without JavaScript.
   await staticPage.setViewportSize({ width: 320, height: 812 });
   await staticPage.goto(host + base + "ru/");
@@ -125,6 +126,8 @@ try {
   for (const [lang, width] of [
     ["en", 1440],
     ["ru", 390],
+    ["cs", 320],
+    ["cs", 1440],
     ["de", 320],
     ["de", 360],
     ["hi", 390],
@@ -193,7 +196,9 @@ try {
     await page.getByRole("button", { name: edition, exact: true }).click();
     await frame.locator("#tiles .focused").waitFor();
     await page.locator('#previewThemes[aria-busy="false"]').waitFor();
-    await page.getByRole("button", { name: "Liquid Glass", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Liquid Glass", exact: true })
+      .click();
     await page.waitForFunction(
       () =>
         document.getElementById("screen").contentWindow.ThemeManager?.current()
@@ -202,7 +207,7 @@ try {
   }
   assert.deepEqual(errors, []);
   console.log(
-    "PASS 72 pages without JavaScript; keyboard language switching; help deep links; mobile tables/layouts; legacy fragment routing; offline Root/No-root theme demo",
+    "PASS 78 pages without JavaScript; keyboard language switching; help deep links; mobile tables/layouts; legacy fragment routing; offline Root/No-root theme demo",
   );
 } finally {
   await browser?.close();

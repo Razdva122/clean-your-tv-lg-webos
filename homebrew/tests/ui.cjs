@@ -6,11 +6,18 @@ const APP=process.env.CYTV_INSTALLER_APP||path.join(__dirname,'../app'),ID='a'.r
 (async()=>{
  assert(fs.existsSync(path.join(APP,'index.html')),'TV installer interface is required');
  const catalog=fs.readFileSync(path.join(APP,'i18n.js'),'utf8'),sandbox={window:{localStorage:{getItem(){return 'en';},setItem(){}},navigator:{language:'en'},document:{documentElement:{}}}};vm.runInNewContext(catalog,sandbox);
- for(const [tag,selected] of [['zh','zh-Hans'],['zh-CN','zh-Hans'],['zh-SG','zh-Hans'],['zh-TW','zh-Hant'],['zh-HK','zh-Hant'],['zh-MO','zh-Hant'],['zh-Hant-CN','zh-Hant'],['zh-Hans-TW','zh-Hans'],['ZH_hAnT_sG','zh-Hant'],['zh-Hans-HK','zh-Hans']]){
+ for(const [tag,selected] of [['cs','cs'],['cs-CZ','cs'],['CS_cz','cs'],['zh','zh-Hans'],['zh-CN','zh-Hans'],['zh-SG','zh-Hans'],['zh-TW','zh-Hant'],['zh-HK','zh-Hant'],['zh-MO','zh-Hant'],['zh-Hant-CN','zh-Hant'],['zh-Hans-TW','zh-Hans'],['ZH_hAnT_sG','zh-Hant'],['zh-Hans-HK','zh-Hans']]){
   const test={window:{localStorage:{getItem(){return null;}},navigator:{language:tag},document:{documentElement:{}}}};vm.runInNewContext(catalog,test);assert.equal(test.window.document.documentElement.lang,selected,tag);
  }
- assert.equal(Object.keys(sandbox.window.InstallerI18n.names).length,12);
+ assert.equal(Object.keys(sandbox.window.InstallerI18n.names).length,13);
  const keys=vm.runInNewContext(catalog.match(/var keys=(\[[^;]+\]);/)[1]);keys.push('continueOriginal','resumeConfirm','homebrewDeniedTitle','homebrewDeniedBody');for(const locale of Object.keys(sandbox.window.InstallerI18n.names)){sandbox.window.InstallerI18n.set(locale);for(const key of keys){const text=sandbox.window.InstallerI18n.t(key);assert.equal(typeof text,'string',locale+': '+key);assert(text.trim(),locale+': '+key);assert.notEqual(text,key,locale+': translated '+key);}}
+ const czech=sandbox.window.InstallerI18n;sandbox.window.InstallerI18n.set('en');const english=keys.map(key=>czech.t(key));czech.set('cs');
+ assert.equal(czech.names.cs,'Čeština');
+ for(const [index,key] of keys.entries())if(key!=='components')assert.notEqual(czech.t(key),english[index],'Czech must not fall back to English: '+key);
+ let stored='cs';const persisted={window:{localStorage:{getItem(){return stored;},setItem(key,value){stored=value;}},navigator:{language:'en'},document:{documentElement:{}}}};
+ vm.runInNewContext(catalog,persisted);assert.equal(persisted.window.document.documentElement.lang,'cs','saved Czech wins over device English');
+ persisted.window.InstallerI18n.set('en');assert.equal(stored,'en');persisted.window.InstallerI18n.set('cs');assert.equal(stored,'cs');
+ vm.runInNewContext(catalog,persisted);assert.equal(persisted.window.document.documentElement.lang,'cs','manual choice survives reload');
  const browser=await chromium.launch({headless:true,channel:process.env.BROWSER_CHANNEL||'chrome'});
  async function fixture(state,locale='en',size={width:1280,height:720}){
   const context=await browser.newContext({viewport:size,locale});
@@ -22,7 +29,7 @@ const APP=process.env.CYTV_INSTALLER_APP||path.join(__dirname,'../app'),ID='a'.r
    await route.fulfill({path:file});
   });
   await context.addInitScript(({state,ID,LEASE,SHA,locale})=>{
-   localStorage.setItem('cytv.installer.language',locale);window.calls=[];window.model=state;window.saved=ID;
+   if(!localStorage.getItem('cytv.installer.language'))localStorage.setItem('cytv.installer.language',locale);window.calls=[];window.model=state;window.saved=ID;
    if(state.savedOperation)localStorage.setItem('cytv.installer.operation',ID);
    if(state.noHbc)return;
    window.PalmServiceBridge=function(){this.cancel=function(){};this.call=function(uri,raw){
@@ -48,6 +55,10 @@ const APP=process.env.CYTV_INSTALLER_APP||path.join(__dirname,'../app'),ID='a'.r
    assert((await choice.evaluate(el=>getComputedStyle(el).fontFamily)).includes(font),'Chinese picker labels need their packaged script font before selection');
   }
   await p.locator('#back').click();await p.waitForSelector('[data-screen="review"]');
+  await p.locator('#language').click();await p.locator('#lang-cs').click();await p.waitForSelector('[data-screen="review"]');
+  assert.equal(await p.locator('html').getAttribute('lang'),'cs');assert.equal(await p.locator('#install').textContent(),'Instalovat');
+  await p.reload();await p.waitForSelector('[data-screen="review"]');assert.equal(await p.locator('html').getAttribute('lang'),'cs');
+
   await p.locator('#install').focus();await p.keyboard.press('ArrowDown');assert.notEqual(await p.evaluate(()=>document.activeElement.id),'install');
   await p.locator('#install').focus();await p.keyboard.press('Enter');await p.waitForSelector('[data-screen="confirm"]');
   await p.keyboard.press('Escape');await p.waitForSelector('[data-screen="review"]');assert.equal(await p.evaluate(()=>document.activeElement.id),'install');assert((await p.evaluate(()=>calls)).every(c=>c.includes(' inspect')),'cancel never submits');
@@ -59,7 +70,7 @@ const APP=process.env.CYTV_INSTALLER_APP||path.join(__dirname,'../app'),ID='a'.r
   f=await fixture({state:'prerequisites',runtime:{privateRuntimeRequired:true,requiredSpace:335544320}});p=f.page;await p.waitForSelector('[data-screen="prerequisites"]');assert(!(await p.evaluate(()=>calls)).some(c=>c.includes('prepare-runtime')));await p.locator('#prepare').click();await p.locator('#confirm').click();await p.waitForSelector('[data-screen="review"]');assert.equal((await p.evaluate(()=>calls)).filter(c=>c.endsWith('prepare-runtime')).length,1);await f.context.close();
   f=await fixture({state:'installed',versions:{root:'1.2.3','root-updater':'2.3.4'}});p=f.page;await p.waitForSelector('[data-screen="installed"]');assert((await p.locator('#versions').textContent()).includes('1.2.3'));assert.equal(await p.locator('#install').count(),0);await p.locator('#remove').click();await p.waitForSelector('[data-screen="confirm"]');assert(!(await p.evaluate(()=>calls)).some(c=>c.includes(' remove ')));await p.keyboard.press('Escape');assert.equal(await p.evaluate(()=>document.activeElement.id),'remove');await f.context.close();
   f=await fixture({state:'fresh',loseReply:true});p=f.page;await p.waitForSelector('#install');await p.locator('#install').click();await p.locator('#confirm').click();await p.waitForSelector('[data-screen="progress"]');assert.equal((await p.evaluate(()=>calls)).filter(c=>c.includes(' install ')).length,1);assert.equal(await p.locator('#install').count(),0);await p.locator('#refresh').click();assert.equal((await p.evaluate(()=>calls)).filter(c=>c.includes(' install ')).length,1);await f.context.close();
-  f=await fixture({state:'recovery_required',active:{operation:ID,state:'recovery_required',action:'install'},status:{operation:ID,state:'recovery_required',action:'install',can_resume:true}});p=f.page;await p.waitForSelector('#resume');await p.locator('#resume').click();assert(!(await p.evaluate(()=>calls)).some(c=>c.includes('--resume')));await p.locator('#confirm').click();await p.waitForSelector('[data-screen="progress"]');assert((await p.evaluate(()=>calls)).some(c=>c.endsWith('install --operation '+ 'a'.repeat(32)+' --resume')));await f.context.close();
+  f=await fixture({state:'recovery_required',active:{operation:ID,state:'recovery_required',action:'install'},status:{operation:ID,state:'recovery_required',action:'install',can_resume:true}},'cs');p=f.page;await p.waitForSelector('#resume');assert.equal(await p.locator('#resume').textContent(),'Pokračovat v původní operaci · Instalovat');await p.locator('#resume').click();assert((await p.locator('#content').textContent()).includes('Odesílání neznámých balíčků zůstane zablokováno.'));assert(!(await p.evaluate(()=>calls)).some(c=>c.includes('--resume')));await p.locator('#confirm').click();await p.waitForSelector('[data-screen="progress"]');assert((await p.evaluate(()=>calls)).some(c=>c.endsWith('install --operation '+ 'a'.repeat(32)+' --resume')));await f.context.close();
   for(const savedOperation of [false,true]){
    f=await fixture({execDenied:true,savedOperation});p=f.page;await p.waitForSelector('[data-screen="homebrew-access"]');
    assert((await p.locator('#content').textContent()).includes('0.7.3'));assert((await p.locator('#content').textContent()).includes('Android'));
@@ -86,7 +97,7 @@ const APP=process.env.CYTV_INSTALLER_APP||path.join(__dirname,'../app'),ID='a'.r
   assert.equal(await p.evaluate(()=>localStorage.getItem('cytv.installer.operation')),ID);assert.equal(await p.locator('#restore,#resume').count(),0);await f.context.close();
   f=await fixture({state:'fresh',noHbc:true});p=f.page;await p.waitForSelector('[data-screen="unsupported"]');assert.equal(await p.locator('#install').count(),0);await f.context.close();
   f=await fixture({state:'installed',versions:{root:'1.2.3','root-updater':'2.3.4'},status:{state:'complete',current:false,action:'install'}});p=f.page;await p.waitForSelector('#activate');await p.evaluate(id=>localStorage.setItem('cytv.installer.operation',id),ID);await p.reload();await p.waitForSelector('[data-screen="installed"]');assert.equal(await p.locator('#install').count(),0);await f.context.close();
-  for(const locale of ['en','de','es','pt-BR','fr','it','ko','hi','pl','ru','zh-Hans','zh-Hant'])for(const size of [{width:1280,height:720},{width:1920,height:1080}]){
+  for(const locale of ['en','de','es','pt-BR','fr','it','ko','hi','pl','ru','cs','zh-Hans','zh-Hant'])for(const size of [{width:1280,height:720},{width:1920,height:1080}]){
    f=await fixture({state:'installed',versions:{root:'1.2.3','root-updater':'2.3.4'}},locale,size);p=f.page;await p.waitForSelector('[data-screen="installed"]');await p.evaluate(()=>document.fonts.ready);
    const metrics=await p.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,font:parseFloat(getComputedStyle(document.querySelector('#content p')).fontSize),lang:document.documentElement.lang}));assert(metrics.scroll<=metrics.width,JSON.stringify(metrics));assert(metrics.font>=24);assert.equal(metrics.lang,locale);
    await p.locator('#remove').focus();await p.keyboard.press('ArrowDown');const rect=await p.evaluate(()=>{const r=document.activeElement.getBoundingClientRect();return {top:r.top,bottom:r.bottom};});assert(rect.top>=0&&rect.bottom<=size.height,'remote focus remains visible');
@@ -100,6 +111,6 @@ const APP=process.env.CYTV_INSTALLER_APP||path.join(__dirname,'../app'),ID='a'.r
    if(process.env.CYTV_SCREENSHOTS&&['de','hi','ko'].includes(locale))await p.screenshot({path:path.join(process.env.CYTV_SCREENSHOTS,'denied-'+locale+'-'+size.width+'.png')});
    await f.context.close();
   }
-  console.log('PASS TV UI: exact exec denial at inspect/submit/status/poll, retained-request recovery, inspect-only reopen, durable foreign request, explicit runtime, cancellation, one submission/lost reply, installed versions, D-pad/Back/focus, twelve locales at 720p/1080p');
+  console.log('PASS TV UI: exact exec denial at inspect/submit/status/poll, retained-request recovery, inspect-only reopen, durable foreign request, explicit runtime, cancellation, one submission/lost reply, installed versions, D-pad/Back/focus, thirteen locales at 720p/1080p');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

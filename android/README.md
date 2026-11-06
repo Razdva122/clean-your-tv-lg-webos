@@ -29,8 +29,9 @@ configuration remain unverified. See [acceptance and limits](STABLE-READINESS.md
 Update over your existing APK without uninstalling or clearing data; the
 application ID and signing certificate are retained.
 
-The interface supports twelve languages and follows the phone language on first
-launch, with English fallback. Tap the top-right language control to choose and
+The source interface supports thirteen languages, including Czech, and follows
+the phone language on first launch, with English fallback. Czech requires a new
+published APK; use English if it is absent from your current download. Tap the top-right language control to choose and
 save another language. Root and No-root are equal options for different TV access.
 
 <a id="release-140"></a>
