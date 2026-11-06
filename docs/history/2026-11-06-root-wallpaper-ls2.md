@@ -65,3 +65,7 @@ setup/controls are unchanged and no locale announces the fix as shipped.
 
 Inventory/record validation passed, including 16 release-flow, 10 release-input
 and 3 README release-metadata tests. No main merge or public release is claimed.
+
+Metadata PR #343 was recognized as merged when its head was directly pushed by
+explicit owner instruction. The collector records it as a metadata-only exclusion,
+without adding another product change or changing the 14-PR/8-issue scope.

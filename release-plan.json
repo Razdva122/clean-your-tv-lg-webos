@@ -99,6 +99,11 @@
       "summary": "Prepare retained Root receiver/media-cache APIs before LS2 registration using protected private-worker capability; preserve legacy snapshots/receipts; replacement full build and signed-package acceptance pending."
     }
   ],
-  "excluded": [],
+  "excluded": [
+    {
+      "pr": 343,
+      "reason": "Metadata-only inventory/build-pin record; no additional product change."
+    }
+  ],
   "acceptance": ""
 }
