@@ -270,7 +270,9 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             if not prompts.confirm(verb + '?', ask, write, default=args.command == 'install'):
                 write('Cancelled. No TV changes were made.')
                 return 0
-        payload, manifest = Path(payload_root) if payload_root is not None else payload_dir(), {}
+        # Canonicalize the selected local build root (macOS /var is an OS
+        # alias); authenticated support members still reject indirect children.
+        payload, manifest = (Path(payload_root) if payload_root is not None else payload_dir()).resolve(), {}
         if args.command in ('install', 'enable-system-updates','enable-firmware-access','disable-firmware-access','replace-system-updater'):
             try:
                 manifest = package.verify_payload(payload)
@@ -310,10 +312,14 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             profile, recovering = store.connection_profile(profile)
             if args.command=='uninstall':
                 if not recovering:store.save(profile)
-                intent=store.request_clean_removal(profile)
-                write.recovery_plan({'state':'waiting','disposition':'clean-removal',
-                    'summary':'Removal has been requested. Continue the remaining cleanup for this TV.',
-                    'next_step':'Connect to the TV to continue cleanup.'})
+                store.request_clean_removal(profile)
+            from .recovery import removal_plan
+            cleanup=(store.pending(profile) or {}).get('recovery_protocol')=='clean-removal-v1'
+            if args.command in ('uninstall','recover') and cleanup:
+                removal_plan(write,store,profile,state='waiting',connecting=True)
+                try:manifest=package.verify_payload(payload)
+                except FileNotFoundError:
+                    raise UserError('Release payload is missing. Download a built cytv executable or run python scripts/build-cytv.py --payload-only from source.') from None
             if args.command == 'replace-system-updater':
                 if store.pending(profile): raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
             if args.command in ('enable-firmware-access','disable-firmware-access','recover-system-rollback') and store.pending(profile):raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
@@ -551,10 +557,10 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     write('Return to the start screen, choose Set up my TV and confirm reinstallation. In the console, run cytv install.')
                 else:
                     write.raw(json.dumps(result, indent=2))
-            if args.command in ('install', 'status', 'restore', 'recover'):
+            if args.command in ('install', 'status', 'restore', 'recover', 'uninstall'):
                 diagnostics.save_result(write, store, args.command, profile,
                     'install-complete' if args.command == 'install' else phase, tv_info,
-                    checks=checks.results, status=result if args.command in ('status', 'restore') else tv_info.get('status'))
+                    checks=checks.results, status=result if args.command in ('status', 'restore', 'uninstall') else tv_info.get('status'))
             if args.command == 'install':
                 diagnostics.context.clear_previous_attempt(store, profile)
             if args.command in ('status', 'doctor', 'restore'):
@@ -573,9 +579,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
         write.error(str(exc))
         if phase in ('pair-tv', 'read-inventory'):
             write('Installation has not started. No TV packages were changed by this attempt.')
-        if args.command == 'uninstall' and phase == 'uninstall' and profile['edition'] == 'root' and store.pending(profile):
-            from .recovery import plan, BLOCKED
-            plan(write, 'blocked', BLOCKED)
+        from .recovery import removal_plan
+        removal_plan(write,store,profile)
         explain_failure(write, store, profile, phase, exc)
         diagnostics.suggest_issue(write, store, args.command, profile, phase, exc, tv_info, checks=checks.results, status=tv_info.get('status'))
         return 2
@@ -590,9 +595,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
         }
         write.error('Could not read the TV applications. Keep the TV on and accept its pairing request. Installation has not started.'
               if phase in ('pair-tv', 'read-inventory') and kind != 'ModuleNotFoundError' else hints.get(kind, 'Operation could not be confirmed. Save the diagnostic report and keep recovery data; do not retry blindly.'))
-        if args.command == 'uninstall' and phase == 'uninstall' and profile['edition'] == 'root' and store.pending(profile):
-            from .recovery import plan, BLOCKED
-            plan(write, 'blocked', BLOCKED)
+        from .recovery import removal_plan
+        removal_plan(write,store,profile)
         explain_failure(write, store, profile, phase, exc)
         diagnostics.suggest_issue(write, store, args.command, profile, phase, exc, tv_info, checks=checks.results, status=tv_info.get('status'))
         return 1

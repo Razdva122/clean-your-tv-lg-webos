@@ -16,6 +16,22 @@ def plan(write, state, summary, next_step=KEPT, actions=None):
     write.recovery_plan(value)
 
 
+def removal_plan(write, store, profile, state='blocked', connecting=False):
+    """Expose only current safe assessment fields, with the selected TV bound."""
+    if not profile:return False
+    pending=store.pending(profile)
+    if not pending or pending.get('recovery_protocol')!='clean-removal-v1':return False
+    from .recovery_state import removal_summary
+    summary=removal_summary(pending)
+    assessment=assess(profile,pending,None)
+    write.recovery(profile)
+    write.recovery_plan({'state':state,'disposition':'clean-removal',
+        'summary':'Removal has been requested. Continue the remaining cleanup for this TV.',
+        'next_step':'Connect to the TV to continue cleanup.' if connecting else 'Continue the remaining cleanup for this TV.',
+        'removal':summary,'actions':assessment['actions'],'reason':summary['reason']})
+    return True
+
+
 def recover(installer, ask, write, non_interactive=False, initial_observation=None):
     """Review first; never implicitly reinstall, erase receipts or retry a mutation."""
     plan(write, 'review', REVIEW)
@@ -158,6 +174,7 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
             raise UserError(BLOCKED, reason_code='pending-operation')
         plan(write, 'complete', 'Finished', SEPARATE)
     except Exception as error:
+        if removal_plan(write,installer.store,installer.profile):raise
         from .failure_help import for_error
         help = for_error(error, 'recover', installer.profile, installer.store.pending(installer.profile))
         if help and help['code'] != 'pending-operation':

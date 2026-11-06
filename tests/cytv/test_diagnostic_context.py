@@ -10,6 +10,53 @@ from cytv.errors import UserError, TVCommandError
 
 
 class ContextTests(unittest.TestCase):
+    def test_clean_removal_keeps_original_failure_after_success_and_exports_current_proof(self):
+        self.store.begin(self.profile,'install')
+        first=self.report('install','install-helper',TVCommandError(127))
+        self.store.request_clean_removal(self.profile)
+        self.store.checkpoint(self.profile,stage='verified-clean',removal_reason='removal-verified')
+        self.store.finish_clean_removal(self.profile)
+        later=self.report('uninstall','uninstall',status={'removed':True,'verified_clean':True})
+        self.assertEqual(later['first_failure'],first['first_failure'])
+        self.assertEqual(later['status'],{'removed':True,'verified_clean':True})
+        self.assertIsNone(later['pending'])
+
+    def test_clean_removal_unknown_original_does_not_become_new_ssh_failure(self):
+        self.store.begin(self.profile,'install')
+        original=self.store.pending(self.profile)
+        self.store.request_clean_removal(self.profile)
+        later=self.report('uninstall','ssh-connect',TVCommandError(255))
+        self.assertIsNone(later['first_failure'])
+        self.assertEqual(later['ssh_command']['exit_status'],255)
+        self.assertEqual(self.store.pending(self.profile)['previous'],original)
+
+    def test_clean_removal_original_receipt_lineage_is_bounded_and_projected(self):
+        self.store.begin(self.profile,'install')
+        first=self.report('install','install-helper',TVCommandError(127))
+        intent=self.store.request_clean_removal(self.profile)
+        intent.pop('previous')
+        path=self.store.device_dir(self.profile)/'operation.json'
+        state.private_write(path,json.dumps(intent).encode())
+        later=self.report('uninstall','ssh-connect',TVCommandError(255))
+        self.assertEqual(later['first_failure'],first['first_failure'])
+        self.assertNotIn(intent['diagnostic_id'],json.dumps(later))
+        intent['original_receipt']='../PRIVATE.json'
+        state.private_write(path,json.dumps(intent).encode())
+        blocked=self.report('uninstall','ssh-connect',TVCommandError(255))
+        self.assertEqual(blocked['failure_history'],'unavailable')
+        self.assertIsNone(blocked['first_failure'])
+
+    def test_truncated_original_lineage_does_not_guess_the_first_failure(self):
+        self.store.begin(self.profile,'install')
+        self.report('install','install-helper',TVCommandError(127))
+        original=self.store.pending(self.profile)
+        for _ in range(17):original={'action':'install','previous':original}
+        state.private_write(self.store.device_dir(self.profile)/'operation.json',json.dumps(original).encode())
+        self.store.request_clean_removal(self.profile)
+        later=self.report('uninstall','ssh-connect',TVCommandError(255))
+        self.assertIsNone(later['first_failure'])
+        self.assertEqual(later['failure_history'],'unavailable')
+
     def test_recovery_proof_categories_are_fixed_and_do_not_export_admission_material(self):
         from cytv.diagnostic_context import status_summary
         value=status_summary({'device':{'product':{'resume_reason':'original-snapshot-unverified','operation':'PRIVATE'}},

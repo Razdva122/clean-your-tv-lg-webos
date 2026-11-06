@@ -261,6 +261,8 @@ class Store:
                     break
                 current = current.get('previous')
         private_write(directory / 'operation.json', json.dumps(value).encode())
+        self.diagnostic_created=value['diagnostic_id']
+        self.diagnostic_action='uninstall'
         return value
 
     def finish_clean_removal(self, profile):
@@ -269,6 +271,7 @@ class Store:
             raise UserError('Removal is not verified. Recovery data was kept.')
         private_write(self.device_dir(profile) / 'clean-removal.json', json.dumps(value).encode())
         self.finish(profile)
+        self.diagnostic_removal=value
 
     def recovery(self, profile, action):
         path = self.device_dir(profile) / ('recovery-' + uuid.uuid4().hex + '.json')

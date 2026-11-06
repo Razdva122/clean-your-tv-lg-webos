@@ -38,9 +38,10 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
     }
     from .recovery_state import assess, summary
     report['recovery'] = {**summary(profile or {}, pending), **assess(profile, pending, status)}
-    if pending and pending.get('recovery_protocol')=='clean-removal-v1':
+    removal=pending or (getattr(store,'diagnostic_removal',None) if action in ('uninstall','recover') else None)
+    if removal and removal.get('recovery_protocol')=='clean-removal-v1':
         from .recovery_state import removal_summary
-        report['removal']=removal_summary(pending)
+        report['removal']=removal_summary(removal)
     from .failure_help import for_error, report_summary
     help = for_error(error, phase, profile, pending)
     if help:
@@ -81,7 +82,7 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
         for key in ('luna', 'connection', 'ssh_command', 'python_cache', 'python_runtime', 'root_recovery'):
             if key in report:
                 report[key] = safe_error.get(key, {})
-    report.update(context.history(report, store, profile, error, pending))
+    report.update(context.history(report, store, profile, error, removal or pending))
     if error is not None and action in ('recover', 'status', 'doctor'):
         report['observation_failure'] = context.failure_summary(report)
     path = store.root / 'reports' / ('diagnostic-' + uuid.uuid4().hex[:12] + '.json')

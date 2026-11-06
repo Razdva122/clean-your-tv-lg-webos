@@ -267,7 +267,8 @@ class CLITests(unittest.TestCase):
                     ['1'], remote=MagicMock())
                 self.assertEqual(code, 0, output)
                 self.assertTrue(calls)
-                verify.assert_not_called()
+                if command=='uninstall':verify.assert_called_once()
+                else:verify.assert_not_called()
                 operation.install.assert_not_called()
                 if command == 'doctor':
                     operation.preflight.assert_called_once_with()
@@ -322,7 +323,8 @@ class CLITests(unittest.TestCase):
     def test_interrupted_removal_explains_how_to_continue_in_the_app(self):
         from unittest.mock import MagicMock
         from cytv.errors import UserError
-        with tempfile.TemporaryDirectory() as tmp, patch('cytv.cli.Installer') as installer:
+        with tempfile.TemporaryDirectory() as tmp, patch('cytv.cli.Installer') as installer, \
+                patch('cytv.cli.package.verify_payload',return_value={}):
             profile = state.target('192.0.2.10', 'root')
             store = state.Store(tmp)
             store.save(profile)
@@ -333,8 +335,8 @@ class CLITests(unittest.TestCase):
             self.assertEqual(code, 2, output)
             self.assertIn('Check TV and continue removal?', output)
             self.assertNotIn('choose Remove again', output)
-            self.assertIn('Do not repeat removal', output)
-            self.assertTrue(store.pending(profile)['root_submitted'])
+            self.assertIn('Continue the remaining cleanup for this TV.', output)
+            self.assertTrue(store.pending(profile)['previous']['root_submitted'])
 
     def setUp(self):
         from cytv import i18n
