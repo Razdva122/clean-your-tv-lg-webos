@@ -99,6 +99,13 @@
       "summary": "Prepare retained Root receiver/media-cache APIs before LS2 registration using protected private-worker capability; preserve legacy snapshots/receipts; replacement full build and signed-package acceptance pending."
     },
     {
+      "pr": 344,
+      "issues": [
+        90
+      ],
+      "summary": "Bound wake-key readiness before Root activation; fresh Home cancels pending activation, persistent held keys remain fail-closed; signed C3 standby acceptance pending."
+    },
+    {
       "pr": 345,
       "issues": [],
       "summary": "Fix demo video playback after switching themes"

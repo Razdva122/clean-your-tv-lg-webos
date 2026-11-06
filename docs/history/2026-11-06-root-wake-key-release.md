@@ -93,3 +93,11 @@ triple-Home and explicit Off. Record cold boot separately. Retained rollback,
 Root personal image/video and other-model/Android checks remain separate.
 Stop on unresolved recovery or unknown package outcomes. Preserve private
 diagnostics and original journals; publish only this redacted interpretation.
+
+## Combined candidate freeze
+
+PR #344 merged at `eb16bd39cda5310012b4ac8b3aed098aa0e4e10a` after successful [final source checks](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42171984176). The frozen inventory contains 16 implementation PRs and nine related issues, including #341 and the owner-admitted demo-only #345. No CI-reuse implementation is part of this candidate.
+
+Actual local TV packages were revalidated at that combined source: payload integrity, component versions, manifests against authenticated retained 1.8.2, and all four System edition/resolution sets passed. The staged reader matches the final reviewed source; Helper bytes and canonical archive remain unchanged. Changes since the focused package build are confined to the browser demo, its tests and release metadata. Existing Helper approval and deferred Homebrew promotion are retained. This is pre-dispatch package evidence, not CI signing or physical acceptance.
+
+The previous full build and signed Root artifact predate these fixes and cannot be installed for this acceptance. The next complete candidate must be signed in ordinary Root QA mode before owner-supervised C3 update and affected Home/standby checks. The prior standby failure remains unresolved until that test; cold boot and rollback are separate scenarios. No stable publication or main merge is authorized.
