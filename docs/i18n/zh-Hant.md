@@ -83,6 +83,8 @@ No-root: 要重新啟動 Home 控制，請開啟 Home Helper，選擇啟動 Help
 
 [回報問題](../FEEDBACK.md) · [詳細復原說明（英文）](../RECOVERY.md) · [更新或移除（英文）](../MAINTENANCE.md) · [其他語言](../LANGUAGES.md)
 
+在後續組建中，只有主題支援且已開啟輸入來源預覽，並且選擇或正在播放 4K 時，才會顯示此提示與「關閉 HDMI 預覽」按鈕。 HDMI 預覽期間，4K 影片桌布會暫時切換為 1080p 靜態圖片。關閉輸入來源預覽即可讓桌布維持 4K。
+
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="v110-起的可選-root-python"></a>
 <a id="120-的-lg-固件更新阻止功能"></a>

@@ -83,6 +83,8 @@ TV 모델, 펌웨어, No-root 또는 Root, 설치 기기, 실패한 단계와 �
 
 [문제 신고](../FEEDBACK.md) · [자세한 복구 — 영어](../RECOVERY.md) · [업데이트 및 삭제 — 영어](../MAINTENANCE.md) · [다른 언어](../LANGUAGES.md)
 
+향후 빌드에서는 4K가 선택되었거나 재생 중이고 입력 미리보기가 켜진 테마에서만 안내와 “HDMI 미리보기 끄기” 버튼이 표시됩니다. HDMI 미리보기 중에는 4K 동영상 배경이 일시적으로 1080p 정지 이미지로 바뀝니다. 배경을 4K로 유지하려면 입력 미리보기를 끄세요.
+
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="root용-선택적-python-런타임"></a>
 <a id="하드웨어-검증-범위"></a>

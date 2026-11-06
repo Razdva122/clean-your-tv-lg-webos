@@ -83,6 +83,8 @@ Indica modello TV, firmware, No-root o Root, dispositivo di installazione, passa
 
 [Segnala un problema](../FEEDBACK.md) · [Ripristino — inglese](../RECOVERY.md) · [Aggiornare o rimuovere — inglese](../MAINTENANCE.md) · [Altre lingue](../LANGUAGES.md)
 
+Nelle prossime build, l’avviso e il pulsante «Disattiva anteprima HDMI» compaiono con 4K selezionato o attivo solo nei temi con l’anteprima degli ingressi abilitata. Durante l’anteprima HDMI, lo sfondo video 4K viene temporaneamente sostituito da un’immagine statica a 1080p. Disattiva l’anteprima degli ingressi per mantenere lo sfondo in 4K.
+
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="requisiti"></a>
 <a id="python-opzionale-per-root"></a>

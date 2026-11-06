@@ -19,7 +19,20 @@
   "files": {
     "wallpaper-4k.mp4": "37a30030526f89a939ad09c852736a9d0b01722630e2aca01869da2a70f256fb",
     "wallpaper-1080p.mp4": "f8d669b241905e0699b57d13fff111ef4bd3e916a9b3343639347ad7f9036244",
-    "wallpaper.jpg": "a619ba83b8c40dd776ced668829ff9af02f42084e025d1d96aba6605807b3df7",
-    "preview.jpg": "81a6c73bc14de1a317cc0d3b50ea9387bd9f8a03438ab23f6d80152ed208b39c"
+    "wallpaper.jpg": "09a813e920f3a56fb81194b89c12069cdf2d8d09e33b5b235da40c53fb39e0a3",
+    "preview.jpg": "d978ea2db9dfdc68e47a6c39edef576c9245d0cce8a3e90dccc968ef714b63a0"
+  },
+  "poster": {
+    "source": "assets/wallpaper-4k.mp4",
+    "frame": 0,
+    "width": 3840,
+    "height": 2160,
+    "filter": "format=rgb24,scale=out_color_matrix=bt601:out_range=full,format=yuvj444p",
+    "jpegQuality": 2,
+    "pixelFormat": "yuvj444p",
+    "colorMatrix": "BT.601",
+    "range": "full",
+    "ffmpegVersion": "7.1",
+    "note": "Decode the shipped BT.709 video to RGB before JPEG conversion. Video files and stream are unchanged."
   }
 }

@@ -2,10 +2,11 @@
 (function(root){
  'use strict';var data=root.ThemeData,choiceKey='tvhome.theme.choice.v1',trialKey='tvhome.theme.trial.v1',active={id:'builtin:classic',title:'Classic'},trial=null,ready,homeVersion,notice='',builtin,generation=0,rollback=null,confirmationQueue=Promise.resolve();
  function emit(){document.dispatchEvent(new CustomEvent('home-theme-change'));}
+ function themeWallpaperPreview(enabled){if(root.HomeWallpaper&&root.HomeWallpaper.setThemePreview)root.HomeWallpaper.setThemePreview(enabled);}
  function current(){return {id:active.id,title:active.title,digest:active.digest||null,notice:notice,trial:!!trial};}
  function classic(){root.ThemeRuntime.reset();active={id:'builtin:classic',title:'Classic'};}
  function persist(choice){localStorage.setItem(choiceKey,JSON.stringify(choice));if(localStorage.getItem(choiceKey)!==JSON.stringify(choice))throw Error('Could not save theme selection');}
- function recover(error){generation++;if(trial)clearTimeout(trial.timer);trial=null;rollback=null;classic();try{localStorage.removeItem(choiceKey);localStorage.removeItem(trialKey);}catch(_){}notice=error||'Theme recovery: Classic restored';emit();}
+ function recover(error){generation++;if(trial)clearTimeout(trial.timer);trial=null;rollback=null;themeWallpaperPreview(false);classic();try{localStorage.removeItem(choiceKey);localStorage.removeItem(trialKey);}catch(_){}notice=error||'Theme recovery: Classic restored';emit();}
  function selection(){var raw=localStorage.getItem(choiceKey);if(raw===null)return {id:'builtin:classic',title:'Classic'};var s=JSON.parse(raw);if(!s||typeof s.id!=='string'||typeof s.title!=='string'||s.title.length>100||!/^builtin:[a-z0-9][a-z0-9-]{0,63}$/.test(s.id)&&!/^github:/.test(s.id)||s.id.indexOf('github:')===0&&!/^[a-f0-9]{64}$/.test(s.digest))throw Error('Invalid saved theme selection');return s;}
  // The caller exposes Home only after validated appearance (or bounded Classic recovery).
  function start(present){if(ready)return ready;if(root.CYTV_THEME_AUTHOR_PREVIEW){ready=Promise.resolve().then(function(){if(present)return present();});return ready;}
@@ -54,7 +55,7 @@
   });
  }
 
- function begin(s,immediate){if(trial)return Promise.reject(Error('Finish the current theme preview first'));var token=++generation;return start().then(environment).then(function(){if(token!==generation)throw Error('Cancelled');var previous=selection();localStorage.setItem(trialKey,JSON.stringify({kind:'trial',id:s.id,previous:previous}));trial={previous:previous,choice:s,expires:Date.now()+20000,timer:null};
+ function begin(s,immediate){if(trial)return Promise.reject(Error('Finish the current theme preview first'));var token=++generation;return start().then(environment).then(function(){if(token!==generation)throw Error('Cancelled');var previous=selection();localStorage.setItem(trialKey,JSON.stringify({kind:'trial',id:s.id,previous:previous}));trial={previous:previous,choice:s,expires:Date.now()+20000,timer:null};themeWallpaperPreview(true);
    return (s.id==='builtin:classic'?Promise.resolve().then(classic):payload(s).then(function(pack){return apply(pack,s,token);})).then(function(){if(token!==generation)throw Error('Cancelled');trial.expires=Date.now()+20000;if(!immediate)trial.timer=setTimeout(cancel,20000);emit();},function(e){if(token!==generation)throw e;return cancel().then(function(){throw e;});});
   });}
  function selectInstalled(s){if(trial)return Promise.reject(Error('Finish the current theme preview first'));var token=++generation;return list().then(function(items){
@@ -66,7 +67,7 @@
 
  function cancel(){var token=++generation;if(!trial&&!rollback)return Promise.resolve();var state={previous:trial?trial.previous:rollback.previous};if(trial)clearTimeout(trial.timer);trial=null;rollback=state;
   var restore=state.previous.id==='builtin:classic'?Promise.resolve().then(function(){if(token===generation)classic();}):payload(state.previous).then(function(pack){return apply(pack,state.previous,token);});
-  return restore.catch(function(e){if(token===generation)recover(e.message);}).then(function(){if(rollback===state)rollback=null;if(token!==generation)return;try{localStorage.removeItem(trialKey);}catch(e){recover(e.message);}emit();});
+  return restore.catch(function(e){if(token===generation)recover(e.message);}).then(function(){if(rollback===state)rollback=null;if(token!==generation)return;themeWallpaperPreview(false);try{localStorage.removeItem(trialKey);}catch(e){recover(e.message);}emit();});
  }
 
  function confirm(){
@@ -80,7 +81,7 @@
    var switchWallpaper=wallpaper&&state.previous.id!==active.id?wallpaper.select('theme').then(function(){changed=true;}):Promise.resolve();
    return switchWallpaper.then(function(){
     if(trial!==state)throw Error('Cancelled');
-    persist({id:active.id,title:active.title,digest:active.digest||null});localStorage.removeItem(trialKey);clearTimeout(state.timer);trial=null;rollback=null;notice='';emit();
+    persist({id:active.id,title:active.title,digest:active.digest||null});localStorage.removeItem(trialKey);clearTimeout(state.timer);trial=null;rollback=null;themeWallpaperPreview(false);notice='';emit();
    }).catch(function(error){
     var restore=changed&&previousWallpaper?wallpaper.select(previousWallpaper):Promise.resolve();
     return restore.catch(function(){}).then(function(){if(trial!==state)throw error;try{persist(state.previous);}catch(_){recover(error.message);throw error;}return cancel().then(function(){throw error;});});

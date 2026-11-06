@@ -83,6 +83,8 @@ No-root: 要重新启动 Home 控制，请打开 Home Helper，选择启动 Help
 
 [报告问题](../FEEDBACK.md) · [详细恢复说明（英文）](../RECOVERY.md) · [更新或卸载（英文）](../MAINTENANCE.md) · [其他语言](../LANGUAGES.md)
 
+在后续构建中，只有主题支持且已开启输入源预览，并且选择或正在播放 4K 时，才会显示此提示和“关闭 HDMI 预览”按钮。 HDMI 预览期间，4K 视频壁纸会暂时切换为 1080p 静态图片。关闭输入源预览可让壁纸保持 4K。
+
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="v110-起的可选-root-python"></a>
 <a id="120-的-lg-固件更新阻止功能"></a>
