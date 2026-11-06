@@ -96,7 +96,7 @@
       "issues": [
         337
       ],
-      "summary": "Prepare retained Root receiver/media-cache APIs before LS2 registration using protected private-worker capability; preserve legacy snapshots/receipts; replacement full build and signed-package acceptance pending."
+      "summary": "Prepare retained Root receiver/media-cache APIs before LS2 registration using protected private-worker capability; preserve legacy snapshots/receipts; retained-device image/video acceptance remains unverified."
     },
     {
       "pr": 344,
