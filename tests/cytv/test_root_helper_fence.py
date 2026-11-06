@@ -17,8 +17,8 @@ from cytv import package
 class RootHelperFence(unittest.TestCase):
     def test_prepared_owner_blocks_new_install_until_explicit_verified_finish(self):
         self.assertTrue(hasattr(gate,'fence_root_helper'),'Root lifecycle adapter is missing')
-        with tempfile.TemporaryDirectory(dir='/private/tmp') as directory:
-            root=Path(directory);base=root/'apps';base.mkdir()
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory).resolve();base=root/'apps';base.mkdir()
             for suffix in ('applications/com.local.nativehome','services/com.local.nativehome.service'):
                 state=base/suffix/'state';state.mkdir(parents=True,mode=0o770)
                 os.chown(state,-1,os.getgid())
