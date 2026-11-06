@@ -141,7 +141,8 @@ snapshot and four-method receiver receipt. Admission requires both private
 endpoint or recovery operation is granted. Permission failure keeps recovery
 available. Delivery requires a coherent signed System update of Root and its
 private infrastructure; a Home-only update cannot replace the private worker.
-This is not included in the frozen 1.9.0 candidate. No-root uses its existing
+The owner admitted this fix to the 1.9.0 candidate through #341; its replacement
+full build and signed-package acceptance remain required. No-root uses its existing
 same-application service permissions.
 
 Opening Receive from computer creates one 10-minute session, a random service session ID and a six-digit PIN. Only private IPv4 addresses are advertised. HTTP POST `/v1/theme` on TV TCP 8879 requires `X-CYTV-PIN`, application/json, private/loopback local/peer addresses and exact local Host; browser Origin headers are rejected. Body cap is 10 MiB, request deadline 15 seconds, wrong-PIN cap 20; concurrent, malformed, oversized and expired uploads fail. Receipt returns 202 and closes the HTTP listener. That response confirms transport only, not validation/application.

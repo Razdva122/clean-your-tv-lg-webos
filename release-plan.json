@@ -90,13 +90,15 @@
       "pr": 340,
       "issues": [],
       "summary": "Align exact System1.2.2 replacement admission/readback/result and current supervisor policy; preserve strict owner eligibility and original-source interrupted recovery."
+    },
+    {
+      "pr": 341,
+      "issues": [
+        337
+      ],
+      "summary": "Prepare retained Root receiver/media-cache APIs before LS2 registration using protected private-worker capability; preserve legacy snapshots/receipts; replacement full build and signed-package acceptance pending."
     }
   ],
   "excluded": [],
-  "acceptance": "",
-  "build": {
-    "run_id": 42112684336,
-    "attempt": 1,
-    "source": "56dc30549722037b08c012b7de2253aec7530516"
-  }
+  "acceptance": ""
 }

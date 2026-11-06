@@ -70,9 +70,14 @@ Installer promotion remains disabled without its independent hardware/human reco
 
 ## Known limits and acceptance
 
-The retained C3 Root personal-image/video LS2 receiver refusal **#337 is deferred**;
-this candidate does not fix or silently waive it. No new receiver permission is
-introduced to bypass it. Built-in video and personal transfer remain separate paths.
+The owner admitted [#341](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/341)
+to address retained Root receiver permissions and missing personal-video cache
+access (#337). It prepares the fixed APIs before LS2 registration and requires a
+protected private-worker capability for the five media-cache methods. Legacy
+snapshots and receiver receipts remain unchanged. A new complete candidate and
+signed-package acceptance are required; the earlier selected build predates this
+change. [Source checks and remaining acceptance](history/2026-11-06-root-wallpaper-ls2.md).
+Built-in video and personal transfer remain separate paths.
 Original #96/#282/#298/#307/#334 reports remain open according to their unresolved
 work; host tests and package installation are not compatibility evidence.
 
@@ -84,7 +89,7 @@ signed Root QA provenance and package hashes. The bounded morning session needs:
 2. Short/repeated Home, Back cancel/exit, arrows/OK/pointer/wheel/volume, explicit
    Root Off and physical emergency return with Helper stopped.
 3. Ribbon editing/hide/undo and theme/storage feedback; distinguish built-in media
-   from the known refused personal receiver path. Do not modify TV storage to fill
+   from personal receiver/image/video acceptance for #337. Do not modify TV storage to fill
    a report or manufacture a low-space condition.
 4. Standby and cold boot recorded separately, including actual routing and audio.
 5. Suitable B4/C4 Home/AOD/Settings/SAM/cache and update/rollback checks, plus separate
