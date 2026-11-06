@@ -57,6 +57,21 @@ class ContextTests(unittest.TestCase):
         self.assertIsNone(later['first_failure'])
         self.assertEqual(later['failure_history'],'unavailable')
 
+    def test_intermediate_removal_failure_does_not_fill_unknown_original_cause(self):
+        from paramiko import AuthenticationException
+        self.store.begin(self.profile,'install')
+        original=self.store.pending(self.profile)
+        self.store.finish(self.profile)  # Model the retained historical wrapper shape.
+        self.store.begin(self.profile,'uninstall',previous=original)
+        intermediate=self.report('uninstall','uninstall',TVCommandError(127))
+        self.store.request_clean_removal(self.profile)
+        later=self.report('uninstall','ssh-connect',AuthenticationException('PRIVATE CURRENT'))
+        self.assertIsNone(later['first_failure'])
+        self.assertEqual(later['failure_history'],'not-recorded')
+        self.assertEqual(later['intermediate_failures'],[intermediate['first_failure']])
+        self.assertEqual(later['reason_code'],'ssh-authentication')
+        self.assertNotIn('PRIVATE',json.dumps(later))
+
     def test_recovery_proof_categories_are_fixed_and_do_not_export_admission_material(self):
         from cytv.diagnostic_context import status_summary
         value=status_summary({'device':{'product':{'resume_reason':'original-snapshot-unverified','operation':'PRIVATE'}},

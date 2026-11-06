@@ -40,6 +40,14 @@ no Installer result or Store method is stubbed. They expose trusted-manifest
 loading, fresh phase/target and diagnostic-export integration that must be fixed
 and rerun before candidate acceptance. This checkpoint is not release-ready.
 
+Follow-up `3b4f9a5c` made both wiring tests pass and verified 146 focused
+backend/CLI/Qt tests. Trusted payload loading, current bound cleanup plans and
+standard diagnostic export are now connected. A subsequent focused lineage
+regression also preserves an unknown original install cause when an intermediate
+removal has a recorded failure; that later failure is attributed separately.
+These source results do not establish complete cross-edition removal or physical
+acceptance; the remaining adapter and device requirements still apply.
+
 Still unverified by these source tests: Linux-specific session/cgroup behavior,
 retail SSH persistence, real private-filesystem permission/rename semantics,
 vendor terminal delivery after disconnect/reboot, old Helper writer drainage,

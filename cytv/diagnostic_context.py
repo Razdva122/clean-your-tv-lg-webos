@@ -392,6 +392,11 @@ def history(report, store, profile, error, pending):
                 seen=set()
                 for _ in range(16):
                     if type(original) is not dict:break
+                    if result['first_failure'] is not None:
+                        result.setdefault('intermediate_failures',[]).append(result['first_failure'])
+                    # Only this oldest visited operation can supply its cause.
+                    # Missing older history must never inherit a wrapper error.
+                    result.update(first_failure=None,failure_history='not-recorded')
                     prior=original.get('diagnostic_id')
                     if type(prior) is str and re.fullmatch('[a-f0-9]{32}',prior) and prior not in seen:
                         seen.add(prior)
