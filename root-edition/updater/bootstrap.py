@@ -31,6 +31,13 @@ def permission_plan():
 def digest(raw):return hashlib.sha256(raw).hexdigest()
 
 
+def persistent_code(manifest):
+    """Keep one-time installer helpers outside supervisor-pinned TV code."""
+    from coordinator_inventory import INSTALLER_ONLY_FILES
+    return {name:sha for name,sha in manifest['files'].items()
+            if name not in ('root-updater.ipk','setup-updater.py',*INSTALLER_ONLY_FILES)}
+
+
 def verify_bundle(bundle,reader=None,allow_legacy_recovery=False):
     bundle=Path(bundle);reader=safe_bytes if reader is None else reader
     manifest=json.loads(reader(bundle/'bundle.json',limit=65536))
@@ -127,7 +134,7 @@ def apply(bundle,baseline):
     store.write('bootstrap-bundle',{'schema':1,'bundle':manifest,'package':{'sha256':manifest['files']['root-updater.ipk'],'size':len(safe_bytes(bundle/'root-updater.ipk'))}})
     install_launcher(STATE, atomic)
     store.write('bootstrap',{'phase':'prepared','bundle':manifest})
-    code_files={k:v for k,v in manifest['files'].items() if k not in ('root-updater.ipk','setup-updater.py')}
+    code_files=persistent_code(manifest)
     for name in code_files:
         target=code/name;target.parent.mkdir(mode=0o700,exist_ok=True)
         atomic(target,safe_bytes(bundle/name))
@@ -222,7 +229,7 @@ def resume(bundle):
     expected={'schema':1,'bundle':manifest,'package':{'sha256':manifest['files']['root-updater.ipk'],'size':len(safe_bytes(bundle/'root-updater.ipk'))}}
     if store.read('bootstrap-bundle')!=expected:
         raise ValueError('Matching original bootstrap bundle proof required; retain state for recovery')
-    code={k:v for k,v in manifest['files'].items() if k not in ('root-updater.ipk','setup-updater.py')}
+    code=persistent_code(manifest)
     infrastructure=store.read('infrastructure')
     if not isinstance(infrastructure,dict) or infrastructure.get('code')!=code:
         raise ValueError('Retained code differs from original bootstrap bundle')

@@ -686,6 +686,34 @@ class ExplicitRecoveryTests(unittest.TestCase):
         finally:client.close()
 
 class ComponentTerminalRecoveryTests(unittest.TestCase):
+    def test_bootstrap_keeps_cleanup_helpers_in_authenticated_stage_only(self):
+        import hashlib,json,shutil
+        from install_fixture import CurrentInstallation
+        from updater import bootstrap,device as updater_device,store as updater_store
+        from unittest.mock import patch
+        installer_only={'cancel_install.py','cancel_provision.py','clean_removal.py','cleanup_tail.js','cleanup_no_root_private.js'}
+        with CurrentInstallation() as fixture:
+            bundle=fixture.payload/'root-updater';manifest=bootstrap.verify_bundle(bundle)
+            self.assertTrue(installer_only <= set(manifest['files']))
+            descriptor=fixture.up_store.read('current');proof=(fixture.root/'recovery-provision.json').read_bytes()
+            root_manifest=json.loads((fixture.payload/'root/bundle.json').read_text())
+            raw=(fixture.payload/'root'/root_manifest['package']).read_bytes()
+            shutil.rmtree(fixture.updater)
+            real_store=updater_store.Store
+            class FixtureStore(real_store):
+                def __init__(self,root,uid=0):super().__init__(root,uid=os.getuid())
+            def atomic(path,raw,mode=0o600):
+                path.write_bytes(raw.encode() if isinstance(raw,str) else raw);path.chmod(mode)
+            with patch.object(bootstrap,'STATE',fixture.updater),patch.object(bootstrap,'safe_bytes',fixture.device_module.safe_bytes),patch.object(bootstrap,'atomic',atomic),patch.object(bootstrap,'preflight',return_value=(manifest,root_manifest,descriptor,proof,raw)),patch.object(updater_store,'Store',FixtureStore),patch.object(updater_device.Device,'integrity'),patch.object(updater_device.Device,'routing_status',return_value={'active':False,'safe':True}),patch('observed_install.install',return_value=self.terminal('com.cleanyourtv.root.updater')),patch.object(bootstrap,'finish_registration',return_value={'installed':True}):
+                self.assertTrue(bootstrap.apply(bundle,fixture.payload/'root')['installed'])
+            saved=FixtureStore(fixture.updater)
+            code=saved.read('infrastructure')['code']
+            self.assertEqual(set(code),set(manifest['files'])-installer_only-{'root-updater.ipk','setup-updater.py'})
+            self.assertFalse(any((fixture.updater/'code'/name).exists() for name in installer_only))
+            self.assertEqual(saved.read('bootstrap-bundle')['bundle'],manifest)
+            for name in installer_only:
+                self.assertEqual(hashlib.sha256((bundle/name).read_bytes()).hexdigest(),manifest['files'][name])
+
     @staticmethod
     def terminal(app):
         return {'completed':True,'event':{'id':app,'statusValue':30,'returnValue':True,'details':{'packageId':app,'client':'com.webos.lunasend-99','ipkFile':'/var/lib/clean-your-tv-installer/cytv-root-install-fixture/package.ipk'}}}
@@ -765,11 +793,14 @@ class ComponentTerminalRecoveryTests(unittest.TestCase):
             fixture.up_store.write('bootstrap-bundle',{'schema':1,'bundle':manifest,'package':{'sha256':manifest['files']['root-updater.ipk'],'size':(fixture.payload/'root-updater/root-updater.ipk').stat().st_size}})
             fixture.up_store.write('bootstrap',{'phase':'provisioning'})
             fixture.up_store.write('installed-terminal',self.terminal('com.cleanyourtv.root.updater'))
-            with patch.object(bootstrap,'STATE',fixture.updater),patch.object(bootstrap,'ROOT_STATE',fixture.root),patch.object(bootstrap,'INSTALLED',fixture.installed),patch.object(bootstrap,'BASE',base),patch.object(bootstrap,'HOOK',hook),patch.object(bootstrap,'safe_bytes',fixture.device_module.safe_bytes),patch.object(bootstrap,'atomic',atomic),patch.object(updater_store,'Store',FixtureStore),patch.object(updater_device,'Device',FixtureDevice),patch('startup_hook.install_link'),patch.object(provision,'refresh',side_effect=[RuntimeError('transient scanner failure'),None]):
+            with patch.object(bootstrap,'STATE',fixture.updater),patch.object(bootstrap,'ROOT_STATE',fixture.root),patch.object(bootstrap,'INSTALLED',fixture.installed),patch.object(bootstrap,'BASE',base),patch.object(bootstrap,'HOOK',hook),patch.object(bootstrap,'safe_bytes',fixture.device_module.safe_bytes),patch.object(bootstrap,'atomic',atomic),patch.object(updater_store,'Store',FixtureStore),patch.object(updater_device,'Device',FixtureDevice),patch('startup_hook.install_link'),patch.object(provision,'refresh',side_effect=[RuntimeError('transient scanner failure'),None]),patch.dict(sys.modules),patch.object(sys,'path',[str(fixture.payload/'root-updater')]+sys.path):
+                sys.modules.pop('cancel_provision',None)
+                self.assertFalse((fixture.updater/'code/cancel_provision.py').exists())
                 from installation import device_operation
                 read=lambda path: fixture.up_store.read('bootstrap') if path.parent==fixture.updater and path.name=='bootstrap.json' else None
                 with self.assertRaisesRegex(RuntimeError,'transient'):
                     with device_operation('root-bootstrap',ownership=fixture.owner,read=read):bootstrap.resume(fixture.payload/'root-updater')
+                self.assertEqual(Path(sys.modules['cancel_provision'].__file__).resolve(),(fixture.payload/'root-updater/cancel_provision.py').resolve())
                 pending=fixture.owner.status()['id']
                 self.assertFalse(fixture.owner.status()['terminal'])
                 saved=fixture.up_store.read('registration')

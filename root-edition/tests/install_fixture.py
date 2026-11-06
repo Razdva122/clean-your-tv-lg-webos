@@ -45,7 +45,8 @@ class CurrentInstallation:
         proof={'version':1,'mode':'recovery-only','files':{str(self.root/'runtime'/name):hashlib.sha256((self.root/'runtime'/name).read_bytes()).hexdigest() for name in deploy.RUNTIME_FILES}}
         self.root_store=Store(self.root,uid=os.getuid());self.root_store.write('recovery-provision',proof)
         self.root_store.write('deploy',{'app':deploy.APP,'stage':'installed-recovery-only'})
-        code={k:v for k,v in up_manifest['files'].items() if k not in ('root-updater.ipk','setup-updater.py')}
+        from updater.bootstrap import persistent_code
+        code=persistent_code(up_manifest)
         for name in code:
             target=self.updater/'code'/name;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes((self.payload/'root-updater'/name).read_bytes());target.chmod(0o600)
         self.up_store=Store(self.updater,uid=os.getuid());self.up_store.write('infrastructure',{'schema':1,'runtime':1,'updater':1,'code':code,'recovery_sha256':hashlib.sha256((self.root/'recovery-provision.json').read_bytes()).hexdigest()})
