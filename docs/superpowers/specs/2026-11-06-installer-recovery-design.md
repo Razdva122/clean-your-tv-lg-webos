@@ -1,72 +1,114 @@
-# Installer recovery design
+# Installer recovery and practical clean removal
 
-Approved scope: the maintainer approved the seven-part recovery proposal in the current Codex chat on 2026-11-06 and requested complete, understandable recovery rather than a small patch. This document records that scope; implementation does not authorize a TV connection or a release.
+## Goal and scope
 
-## Goal
+Removal must work after a successful, failed or interrupted installation. The
+user should see a short, understandable sequence, a useful connection error and
+**Try again**, followed by a truthful final result. Root and No-root, console,
+desktop and Android use the same desired-absence goal. All13 user-guide locales
+must describe the same current flow.
 
-An interrupted operation opens an understandable recovery review that separates installed packages, configuration, Home activation, vendor-operation outcome and device acceptance. Every offered mutation must be justified by original-operation evidence and revalidated immediately before effects. The supported outcome is continued setup, completed setup with LG Home, verified cancellation/removal, or an explicit evidence blocker with a useful private diagnostic.
+The current scope retains the reviewed authentication, assessment, diagnostics
+and supported setup recovery work. The maintainer subsequently chose a simpler
+remover: delete the project's existing objects and use a full TV restart plus
+fresh verification, rather than extending Helper and every service with a new
+shared lifecycle protocol. Helper0.7.4 remains byte-identical to the published
+package. New Helper/service lifecycle instrumentation and a separate background
+removal-observer framework are excluded from this release.
 
-## Architecture
+## User flow
 
-Retain Store, Root Ownership, component journals, existing continuation/cancellation proofs and transport. Introduce a common recovery assessment with fixed reason/action codes, separate observation from explicit reconciliation, and use the same assessment across CLI, desktop, Android and exported diagnostics. Do not introduce a database, dependency or a second product coordinator.
+1. Confirm full project removal once and record its intent before connecting.
+   Ask the user to close other installer instances. Preserve the original private
+   profile, history and first failure; these explain the old result but do not
+   authorize or block the new cleanup goal.
+2. Restore owned Home control and disable our startup hooks and known jobs using
+   existing supported controls. Preserve unrelated routes, apps, Developer Mode,
+   Homebrew/rooting and genuine owner inverse data.
+3. Remove currently registered project packages through the package manager.
+   A missing package or file is a normal skipped step. Sweep known owned paths
+   without following links into foreign trees. Existing pending records, missing
+   SAM registration and unknown old install success are not prerequisites for
+   deleting known owned residues.
+4. Require one full TV restart and verify an actual kernel boot-ID change before
+   final cleanup and success. If an old resident installer could still submit
+   work, put the restart before the final package-removal/sweep phase instead.
+   Re-run the final sweep after the restart because old memory-resident code may
+   recreate data before shutdown. Standby alone does not satisfy this step.
+5. Verify current absence of project packages, services/registrations, startup,
+   owned control hooks, credentials/configuration and staging. Return
+   `removed:true` and `verified_clean:true` only after this readback and completion
+   of the same saved cleanup goal.
 
-Authentication uses semantic credential types independent of localization. Current Root activation recovery is extended with a directly selectable Home-off completion; complete signed runtime delivery remains a separate compatible action. PR #357 owns the health-startup race and is not duplicated here.
+A disconnect is a disconnect: show "Connection to the TV was interrupted. Check
+the connection and try again." Retry reconnects, inspects current presence and
+continues the same goal; it does not replay a saved command sequence or begin a
+new installation. Already completed work is skipped. A lost response is not a
+success claim. Actual package-manager busy, permission denial or an active known
+external update has a specific explanation and the appropriate retry/access step.
+Do not disguise a permanently refused old journal as an active TV operation.
 
-New Root receipts explicitly identify the recovery protocol. New No-root receipts retain per-package request/terminal evidence. A detached, bounded Developer Mode observer must persist the original subscribed response on the TV across host disconnection; it must not require the Root-only global monitor. Unknown submission never authorizes replay. A reboot before terminal persistence remains unknown unless an authoritative vendor contract provides a result.
+## Implementation boundaries
 
-Legacy receipts remain immutable evidence. Recognized legacy Root cancellation uses reviewed existing proofs; unsupported layouts, changed files, foreign routing, uncertain package removal and missing trust are explicit refusals. No-root historical outcome loss (#201/#307) cannot be repaired by inventing a transaction ID, using inventory as terminal evidence, deleting pending or replaying install/remove. Document the missing vendor contract and expose a precise support state.
+Reuse Store and the original Root coordinator/component locks. A genuinely active
+Root worker may prevent concurrent mutation; show a useful waiting/retry result.
+Retain Root's narrowly required Node/lock utility for removing managed Python and
+rechecking absence. Do not add a second coordinator, transferable effect tokens,
+new Helper generation files, shared UID/GID lifecycle namespace, prepareRemoval
+ACKs or global tracking of every service callback for this release.
 
-## Invariants
+Use fixed project app/service/path namespaces and fresh inventory. Restore shared
+registrations from known ownership/inverse data; never delete arbitrary foreign
+files or a public directory solely because its name starts with cytv. Unlink a
+known owned symlink itself without traversing its target. Preserve genuine owner
+backups separately; delete product credentials, configuration, executable support,
+private recovery payloads and large staging. Minimal non-executable ownership or
+removal records may remain where required by existing Root fencing.
 
-- Preserve original profile, host pin, candidate identity, first failure and receipts. No secrets or raw logs in public diagnostics.
-- Observation never resubmits a package, enables Home, changes routing or clears uncertainty. Trusted support-code staging, where needed, is separately explained.
-- Mutations require a default-No explicit choice and fresh proof under existing locks. Status polling does not authorize a mutation.
-- Existing legacy readers and supported runtime floors remain compatible: host Python 3.9+, Helper/No-root TV Node 0.10.15+, Root Node 8+ and existing Python selection rules.
-- Preserve emergency stop, triple Home, key-up delivery, independent guardian, watchdog, rollback and foreign registrations. Never automatically clear emergency state.
-- Keep physical Home, audio, standby, cold boot, OTA and rollback observations separate from package or source-test success.
+If No-root lacks permission to remove Root-owned residues, offer a clear normal
+Root-access handoff. A single inert package is allowed only when actual missing
+SAM registration prevents the OS from retiring its own protected registration or
+service data. It preserves only the exact project namespace, contains no functional
+Home/controller/startup/private keys and is followed by ordinary removal/readback.
+Do not build a general carrier/replay framework or infer that generic error24/-2
+always means busy or absent.
 
-## Verification and delivery
+A restart does not establish the outcome of an old vendor or Homebrew job. Keep
+that outcome unknown. If there is evidence of an actually active accepted external
+project update, wait for its supported completion/status rather than deleting its
+receipt or claiming the updater idle from an empty inventory. This is a narrow
+busy condition, not a universal old-success requirement for removal.
 
-Reproduce the Android untranslated-secret failure before fixing it. Exercise each recovery action through real orchestration and temporary filesystem journals, inject interruption at reservation/submission/terminal/readback boundaries, assert exact mutation counts, retain uncertain/corrupt evidence, and cover concurrent changes between review and confirmation. Exercise common desktop/Android UI in a browser. Run affected installer/setup/Android and TV runtime checks with pinned dependencies; full frozen-candidate and physical acceptance remain release gates.
+## State, presentation and diagnostics
 
-User-facing flow changes update all existing localized guides and installer catalogs. Candidate-only behavior stays separate from published instructions. Preparation targets release/next without version bumps, release pin changes or automatic issue closure. Record unresolved legacy/vendor and hardware acceptance limits with the implementation.
+Persist a small phase/checkpoint and actual boot baseline within the existing
+`clean-removal-v1` intent. Useful phases are requested, controls-restored,
+package-removal, restart-required, private-cleanup and verified-clean. While waiting
+for restart return `removed:false`, `verified_clean:false`, `restart_required:true`.
+A prior completed receipt is not permission to ignore newly present project data;
+a legitimate fresh install starts a new cleanup generation.
 
-## Subsequent candidate authorization
+CLI/Qt/Android must display the same bounded phase/reason and **Try again** for
+the same trusted target. Retrying an already confirmed cleanup does not reopen an
+unrelated recovery wizard. Explicit uninstall is green only with clean-removal
+disposition and both exact Boolean success fields. Unknown codes and exit0 do not
+supply proof. Preserve semantic credential types, the original known/unknown
+failure, separately attributed intermediate failures and the current connection
+error. Standard uninstall diagnostics remain exportable and redacted.
 
-On 2026-11-06 the maintainer explicitly requested merge into release/next and a new versioned release-candidate build after all implementation work completes. The final stage therefore includes coordinated integration, inventory/version/documentation preparation and one full candidate dispatch under RELEASE-FLOW.md. It does not authorize main publication, device changes or inferred hardware acceptance. Implementation tasks continue without changing release inputs until that final stage.
+## Verification and release
 
+Test successful and partial setup; missing packages/files/SAM; current busy and
+permission failure; disconnect then retry with no duplicate installation;
+restart-before-success and final sweep; repeated clean removal; fresh install then
+remove; foreign routes/files and owner backups. Use actual Store/CLI/Qt and Android
+bridge/browser journeys, real filesystem deletion and appropriate process checks.
+Include the public359 shape: old generic install failure and later denied global
+package-status; do not call that unsupported global monitor to authorize removal.
 
-## Explicit clean-removal requirement — 2026-11-06
-
-The maintainer explicitly requires removal to leave a clean TV whether setup succeeded, failed or was interrupted. This expands the earlier recovery-only scope. Implement full removal before final UI/localization and candidate integration. Removal is its own desired-absence operation; reconstructing or completing the old installation is not a prerequisite. Preserve the old receipt and first failure as historical audit, without relabeling an unknown installation successful.
-
-Clean means no product application, functioning service, startup/control capture, owned EIM/routing override, private credential/configuration or executable/large staging remains. Restore the verified preinstallation Home baseline (normally LG Home); preserve unrelated applications, Developer Mode, Homebrew, rooting, third-party routes and genuine preexisting-owner backups. A compact private non-executable removal fence/audit receipt may remain to prevent late setup resurrection. Do not retain complete live product trees or raw credential/code archives and call that clean. Explicit removal authorizes deletion of changed product-owned preferences/data; installation-continuation hash equality is not a universal prerequisite for deleting our own namespace. Shared/foreign registrations still require exact ownership restoration proof.
-
-Use existing Store and edition coordinators with a durable clean-removal intent linked to all original/nested operations. Stages are requested, original-writers-fenced, controls-restored, package-removal, private-cleanup and verified-clean. The same intent survives reconnect/retry; a pending install must not merely disable Remove. A disconnected or unavailable TV keeps the removal requested with exact unfinished state, never a false success. Observation remains read-only. Once prior CYTV writers are fenced and a new accepted platform removal reaches its own authoritative terminal/readback, the previous installation outcome may remain unknown without blocking the new goal.
-
-### Root cleanup
-
-Transition under original Ownership/component locks and retain terminal tombstones honored by existing workers. Fence even operations interrupted before first lease/request checkpoint. Use current verified support code and data-only original snapshots; never execute retained code to establish trust or bypass an active lease with a fresh UUID. Restore only owned routing/registrations and finish required rollback before deleting their backups. Extend normal full-project removal to failed deployment/provisioning/updater/bootstrap states. Do not require finishing product installation or activating Home. Remove all owned product packages, startup and service registrations, then retire disposable live/private/staged material with fixed ownership-confined inventories. Retain only genuine owner backups and minimal receipts, separately from executable product archives. Repeated removal revalidates the clean state; uncertain new vendor removal is not replayed.
-
-### No-root cleanup
-
-Extend the existing observer into the sole TV-side effect executor. Package spawn, configuration publication and EIM/launch must pass a revocable lifecycle gate; the host cannot retain a transferable permission to send an effect after cleanup. Reuse pinned Zig 0.14.1 for a small standalone static ARM gate if needed; this adds no third-party dependency. Subsequent actual-source testing reproduced an old Helper opened-lock-before-flock/reinstall race, so minimal Helper bootstrap/relay lifecycle participation is required. Select a new Helper version at freeze and complete the mandatory published-Home/new-Helper compatibility gate before full RC dispatch; do not change bytes under 0.7.4 or invent device evidence. Securely open one never-recreated lock inode and hold its kernel lock through fence validation, claims and each effect's relevant local completion boundary. Persist revocation while holding the same gate. Local process exit/lock release does not establish vendor drain. Preserve existing emergency/watchdog behavior and existing normal controls.
-
-A new explicit remove is distinct from replaying the unknown install. Preserve actual request/app/package identity and original subscriptions. Model accepted, definitely-unsubmitted-busy, absent-without-drain, terminal-removed and unknown separately. Only established pre-admission refusal allows a bounded new attempt; arbitrary error24/negative replies are not assumed busy. Missing SAM registration may make dev/remove fail before exclusion. A narrowly built inert cleanup carrier is a candidate repair path: exact owned app/package IDs and union of known owned service identities, no control functionality/startup/private credentials, fresh bound dev/install terminal and readback, then subscribed remove and complete registration/data readback. A service-free carrier is insufficient when it discards old service identity inventory. No guessed high versions, force flags, permissions elevation, vendor-daemon kill or blind carrier loops. Unsupported retail/API cases keep precise removal progress; source/OSE models cannot be reported as universal retail acceptance.
-
-New protocol operations must fence delayed workers and copied-host configuration before claiming clean. Existing v1/legacy actors cannot retroactively honor a new marker: admit only an actually established original executor drain/compatible guard and new destructive platform barrier. Unrelated future external installers are outside the guarantee; known already-started CYTV work is not. Never use empty inventory, no-SAM refusal, PID timeout or current desired state as a substitute for the required barrier.
-
-### Verification and scope
-
-Test successful and partial Root/No-root setup, failures before/after every submission, delayed old launchers/configuration, two hosts, source mismatch, missing SAM with retained services/data, carrier failures/unknown terminals, partial updater/provisioning, changed owned preferences, foreign route/backup preservation, interrupted private cleanup and repeated already-clean removal. Include new issue #359: original package exception/unknown followed by denied package-status, without inferring absent packages or pre-submission state. Preserve original/current failure separation and add bounded phase/category diagnostics at source boundaries. CLI, actual Qt and Android browser must expose one understandable removal journey and truthful final result across all 13 locales.
-
-No TV connection, public installation report or main publication is authorized. The already authorized release/next integration and new versioned full RC happen after this expanded implementation, independent review and affected checks. Physical retail removal, controls, audio, standby/cold boot and rollback remain separate acceptance gates.
-
-
-## Parallel execution and runtime evidence refinement
-
-The maintainer explicitly requested parallel work to accelerate the candidate. Root/shared intent, No-root native/runtime cleanup and frontend/localization now use isolated managed worktrees and a frozen Store/removal-summary contract. Their independent reviews and final combined checks remain mandatory.
-
-Actual published Helper source demonstrates that acquiring current controller/relay locks cannot revoke an old executable paused after opening the lock but before flock: after deletion and a later legitimate reinstall, its old inode can execute the new path. Future Helper entry/relay must join a stable shared lifecycle gate, validate original executable identity after lock and propagate the lifetime descriptor. The shared non-secret fence directory is separate from the owner-only observer/credential state. Runtime UID/group/jail visibility and previous-Home compatibility require genuine device acceptance; source/process tests do not provide it.
-
-For legacy runtimes that cannot honor generation fencing, investigate a normal restart-required removal continuation after authoritative package removal and startup cleanup: verify an actual new boot identity and fresh final absence without interpreting reboot as vendor idle. Unknown external accepted jobs remain distinct. Never mark clean before the required local-writer and platform barriers. This is an implementation option to prove, not a claim that existing reporter devices were cleaned.
+Complete focused tests, independent review, combined checks and actual PR CI.
+Integrate into release/next, collect scope and prepare one versioned full RC under
+CONTRIBUTING/RELEASE-FLOW. Authenticate the unchanged published Helper bytes instead
+of inventing a new Helper transition approval. Source/build results are not TV
+compatibility or another reporter's verified recovery. No TV operation, public
+installation report or main publication has been authorized in this task.
