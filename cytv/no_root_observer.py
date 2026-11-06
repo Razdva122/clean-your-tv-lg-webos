@@ -113,17 +113,19 @@ function publicStage(){
  if(s.uid!==uid||(s.mode&511)!==493||s.dev!==identity.dev||s.ino!==identity.ino)fail('changed-public-stage');
 }
 function stateDirectory(name){
+ var leaf;
  function owner(s){return s.uid===uid||s.uid===5999&&s.gid===5000;}
  for(var current=name;;current=path.dirname(current)){
   var s=fs.lstatSync(current);if(!s.isDirectory()||s.isSymbolicLink())fail('unsafe-state-parent');
   if(current===name&&(!owner(s)||(s.mode&2)))fail('unsafe-state-owner');
+  if(current===name)leaf=s;
   if(current===path.dirname(current))break;
  }
  ['ssap-key.json','apps.json'].forEach(function(child){
   var file=name+'/'+child;if(!exists(file))return;var s=fs.lstatSync(file);
   if(!s.isFile()||s.nlink!==1||!owner(s)||(s.mode&2)||(child==='ssap-key.json'&&(s.mode&7)))fail('unsafe-config-file');
  });
- return fs.lstatSync(name);
+ return leaf;
 }
 function upload(){
  attached();var proof=input.proof||{},isArtifact=input.command==='upload-artifact',destination,name,digest,mode,pinned;
@@ -143,7 +145,9 @@ function upload(){
  }
  // Cwd pins the verified directory inode. All writes below are relative: a
  // rename/symlink substitution of its old path cannot redirect private bytes.
- process.chdir(destination);if(!same(pinned,fs.statSync('.')))fail('changed-upload-directory');
+ process.chdir(destination);
+ var entered=isArtifact?fs.statSync('.'):stateDirectory('.');
+ if(!same(pinned,entered))fail('changed-upload-directory');
  var tmp='.cytv-'+crypto.randomBytes(16).toString('hex'),fd=fs.openSync(tmp,c.O_WRONLY|c.O_CREAT|c.O_EXCL|c.O_NOFOLLOW,384);
  var size=0,digestStream=crypto.createHash('sha256'),finished=false;
  function cleanup(){if(fd!==null){fs.closeSync(fd);fd=null;}if(exists(tmp))fs.unlinkSync(tmp);}
