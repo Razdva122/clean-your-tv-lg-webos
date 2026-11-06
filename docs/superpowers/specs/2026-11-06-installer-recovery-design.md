@@ -30,3 +30,7 @@ Legacy receipts remain immutable evidence. Recognized legacy Root cancellation u
 Reproduce the Android untranslated-secret failure before fixing it. Exercise each recovery action through real orchestration and temporary filesystem journals, inject interruption at reservation/submission/terminal/readback boundaries, assert exact mutation counts, retain uncertain/corrupt evidence, and cover concurrent changes between review and confirmation. Exercise common desktop/Android UI in a browser. Run affected installer/setup/Android and TV runtime checks with pinned dependencies; full frozen-candidate and physical acceptance remain release gates.
 
 User-facing flow changes update all existing localized guides and installer catalogs. Candidate-only behavior stays separate from published instructions. Preparation targets release/next without version bumps, release pin changes or automatic issue closure. Record unresolved legacy/vendor and hardware acceptance limits with the implementation.
+
+## Subsequent candidate authorization
+
+On 2026-11-06 the maintainer explicitly requested merge into release/next and a new versioned release-candidate build after all implementation work completes. The final stage therefore includes coordinated integration, inventory/version/documentation preparation and one full candidate dispatch under RELEASE-FLOW.md. It does not authorize main publication, device changes or inferred hardware acceptance. Implementation tasks continue without changing release inputs until that final stage.

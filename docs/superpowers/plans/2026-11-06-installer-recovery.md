@@ -14,7 +14,7 @@
 
 - Host Python 3.9+, No-root TV Node 0.10.15+, Root Node 8+; existing interpreter validation remains authoritative.
 - Preserve trust, original operation/candidate binding, first failure, emergency stop, watchdog, rollback and foreign state.
-- No TV connections, public installation reports, release versions or release build pins in this task.
+- No TV connections or public installation reports. The maintainer subsequently authorized merge into release/next and preparation of a new versioned release candidate after implementation and verification; release version/build changes belong only to the final coordinated candidate stage.
 - No unknown install/remove replay, file-only terminal inference or automatic legacy journal clearing.
 - Update existing locales and guides for every changed user flow; describe unverified hardware honestly.
 
@@ -75,3 +75,13 @@
 - [ ] Add a maintained failure-injection matrix linked to real tests and identify untested physical/device/vendor contracts. Do not request repeated owner probes merely to fill it.
 - [ ] Run installer/setup/Android, affected TV runtime and browser checks with pinned dependencies; fix failures and independently review the whole branch.
 - [ ] Commit, prepare a compact PR to release/next with linked issues and honest remaining acceptance, reconcile actual issue labels, and preserve the branch before removing the temporary worktree.
+
+### Task 6: Integrate and build the next release candidate
+
+**Authorization:** The maintainer requested in the current Codex chat on 2026-11-06: after finishing everything, merge into the release candidate and build a new candidate version. This authorizes release/next integration and candidate preparation/build, not main publication or a TV operation.
+
+- [ ] Complete all implementation tasks, independent review, affected tests and actual PR CI. Reconcile new PR/issue comments and preserve any concurrently selected release scope.
+- [ ] Follow docs/RELEASE-FLOW.md as the single candidate coordinator: merge reviewed implementation into release/next with a merge commit, collect inventory and keep one current candidate record.
+- [ ] Select consistent next release/component versions from actual inventory and packaging impact, finish notes and affected localized documentation, and verify baseline/signing prerequisites before full dispatch. Reuse unchanged authenticated evidence where allowed.
+- [ ] Explicitly dispatch one full candidate from the complete frozen source, fix deterministic failures, and rerun only failed jobs at unchanged source when appropriate. Pin only its final successful run/attempt.
+- [ ] Report exact candidate version/run, package verification and remaining physical acceptance honestly. Leave main unpublished and do not claim installed-device recovery from source/build success.
