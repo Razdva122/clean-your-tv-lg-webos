@@ -110,7 +110,7 @@ class Ownership:
         return value
 
     @contextmanager
-    def operation(self, owner, journal, resume=None, check=None):
+    def operation(self, owner, journal, resume=None, check=None, handoff=None):
         directory = self.store._directory()
         fd = None
         try:
@@ -121,7 +121,8 @@ class Ownership:
             except BlockingIOError: raise Busy() from None
             if check is not None: check()
             previous = self.status()
-            if previous and (not previous['terminal'] or resume is not None):
+            replace = previous is not None and handoff is not None and handoff(previous) is True
+            if previous and not replace and (not previous['terminal'] or resume is not None):
                 if (previous['id'], previous['owner'], previous['journal']) != (resume, owner, journal):
                     raise Busy()
                 record = previous
@@ -133,8 +134,10 @@ class Ownership:
                        for v in (owner,journal)):
                     raise ValueError('invalid_installation_owner')
                 self.store.write('operation', record)
+            self.fd=fd
             yield record
         finally:
+            self.fd=None
             if fd is not None: os.close(fd)
             os.close(directory)
 
@@ -146,6 +149,21 @@ class Ownership:
             raise ValueError('invalid_installation_stage')
         record.update(stage=stage, terminal=terminal)
         self.store.write('operation', record)
+
+    @contextmanager
+    def removal(self, identifier):
+        """Transfer the existing lease under its original mutex, never bypass it.
+
+        The permanent nonterminal exclusion is deliberate: historical workers
+        treat a different owner as busy even after the requested absence is
+        verified. Clean completion is recorded separately, not install success.
+        """
+        current = self.status()
+        owner = current['owner'] if current else 'clean-removal'
+        journal = current['journal'] if current else 'product-'+identifier+'.json'
+        with self.operation(owner, journal, resume=current['id'] if current else None) as lease:
+            saved = dict(lease)
+            yield lease, saved
 
 
 JOURNALS = {

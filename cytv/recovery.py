@@ -10,8 +10,10 @@ BLOCKED = 'Recovery could not be verified. Save the diagnostic report and keep r
 SEPARATE = 'Recovery finished. Start a new setup separately when you are ready.'
 
 
-def plan(write, state, summary, next_step=KEPT):
-    write.recovery_plan({'state': state, 'summary': summary, 'next_step': next_step})
+def plan(write, state, summary, next_step=KEPT, actions=None):
+    value={'state':state,'summary':summary,'next_step':next_step}
+    if actions is not None:value['actions']=actions
+    write.recovery_plan(value)
 
 
 def recover(installer, ask, write, non_interactive=False, initial_observation=None):
@@ -29,10 +31,24 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
         installer.tv_info.update(status=result)
         pending = installer.store.pending(installer.profile)
         assessment = assess(installer.profile, pending, result)
+        if pending and pending.get('recovery_protocol')=='clean-removal-v1':
+            from .recovery_state import removal_summary
+            summary=removal_summary(pending)
+            write.recovery_plan({'state':'ready','disposition':'clean-removal',
+                'summary':'Removal has been requested. Continue the remaining cleanup for this TV.',
+                'next_step':'Continue the remaining cleanup for this TV.','removal':summary,'actions':assessment['actions']})
+            if prompts.confirm('Continue removing Clean Your TV?',ask,write):
+                completed=installer.continue_clean_removal(pending)
+                if completed.get('verified_clean') is not True:
+                    raise UserError('Removal is still in progress. Recovery data and the remaining cleanup step were kept.',reason_code='pending-operation')
+                write.recovery_plan({'state':'complete','disposition':'clean-removal','verified_clean':True,
+                                     'summary':'Clean Your TV removal is verified.','next_step':SEPARATE})
+            else:write(KEPT)
+            return
         if pending and pending.get('recovery_protocol')=='no-root-original-stream-v1':
             if 'continue-no-root' not in assessment['actions']:
                 raise UserError(BLOCKED,reason_code='pending-operation')
-            plan(write,'ready','The original No-root operation can continue its verified remaining work. Unknown package requests will not be repeated.')
+            plan(write,'ready','The original No-root operation can continue its verified remaining work. Unknown package requests will not be repeated.',actions=assessment['actions'])
             if prompts.confirm('Continue the original No-root operation?',ask,write):
                 installer.continue_no_root(pending)
                 plan(write,'complete','Recovery record finished. Original evidence was archived.',SEPARATE)
@@ -46,7 +62,7 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
             result=installer.inspect_root_product(pending)
             assessment=assess(installer.profile,pending,result)
         if 'continue-product' in assessment['actions']:
-            plan(write,'ready','The original package operation can finish its verified final readback. Home control will stay off until you choose it separately.')
+            plan(write,'ready','The original package operation can finish its verified final readback. Home control will stay off until you choose it separately.',actions=assessment['actions'])
             if not prompts.confirm('Continue the original Root operation?',ask,write):
                 write(KEPT)
                 return
@@ -61,7 +77,7 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
             proof=installer.inspect_root_cancellation(pending)
             if proof.get('state') not in ('admissible','admitted','remove-observed','cancellation-terminal-pending','cancelled-and-removed'):
                 raise UserError(BLOCKED,reason_code='pending-operation')
-            plan(write,'ready','The original failed Root installation can be cancelled using verified evidence. A new installation will not start.')
+            plan(write,'ready','The original failed Root installation can be cancelled using verified evidence. A new installation will not start.',actions=assessment['actions'])
             if proof.get('state')!='cancelled-and-removed' and not prompts.confirm('Are LG Home and the normal remote controls working now?',ask,write):
                 write(KEPT)
                 return
@@ -102,8 +118,9 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
                 write('Home control will stay off. Installed packages and recovery data will be kept.')
                 if prompts.confirm('Finish Root setup with Home control off?', ask, write):
                     installer.finish_root_setup_disabled(expected_pending=pending)
-                    plan(write, 'complete', 'Root setup finished with LG Home and Home control off.',
-                         'Prepare updates for all TV components separately, then open Software updates. Compatibility and rollback checks still apply.')
+                    write.recovery_plan({'state':'complete','disposition':'home-off',
+                        'summary':'Root setup finished with LG Home and Home control off.',
+                        'next_step':'Prepare updates for all TV components separately, then open Software updates. Compatibility and rollback checks still apply.'})
             return
         if not pending:
             verified_removal = (result.get('reconciled') == 'product-removal-verified' and

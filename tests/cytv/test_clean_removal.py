@@ -55,6 +55,16 @@ class RemovalIntentTests(unittest.TestCase):
             'state':'cleanup-in-progress', 'stage':'requested',
             'reason':'removal-requested', 'original_outcome':'unknown'})
 
+    def test_new_install_has_new_removal_generation_after_old_clean_result(self):
+        first=self.store.request_clean_removal(self.profile)
+        self.store.checkpoint(self.profile,stage='verified-clean')
+        self.store.finish_clean_removal(self.profile)
+        self.store.begin(self.profile,'install')
+        self.store.finish(self.profile)
+        second=self.store.request_clean_removal(self.profile)
+        self.assertNotEqual(first['removal_operation'],second['removal_operation'])
+        self.assertEqual(second['stage'],'requested')
+
 
 if __name__ == '__main__':
     unittest.main()

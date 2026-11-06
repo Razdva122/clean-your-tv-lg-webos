@@ -1,6 +1,6 @@
 # Installer Recovery Implementation Plan
 
-> **For agentic workers:** Use subagent-driven-development for implementation and independent review. Execute tasks sequentially in this worktree; do not dispatch concurrent implementation agents. Expanded order: 1–4, then 7 (Root clean removal), 8 (No-root clean removal), 5 (all UI/localization), 6 (integration/RC).
+> **For agentic workers:** Use subagent-driven-development for implementation and independent review. Tasks 1–4 are complete. The maintainer subsequently requested parallel execution: tasks 7 (Root/shared backend), 8 (No-root/runtime) and the independent frontend portion of 5 run in separate managed worktrees with the frozen shared removal-intent contract. Integrate and independently review all three, finish Task5 provider integration, then Task6 release/RC. Never edit another worker's owned files or share a Git index.
 
 **Goal:** Recover supported interrupted installations through the installer, with understandable outcomes and sufficient operation-bound diagnostics.
 
@@ -102,7 +102,7 @@
 
 ### Task 8: Fenced No-root clean removal and partial-package repair
 
-**Files:** cytv/no_root_observer.py, transport/state/operations/recovery/diagnostics as needed; focused standalone native lifecycle gate and existing payload/Android builders; dedicated real-process/native/package-contract tests. Preserve Helper0.7.4 bytes and reuse existing pinned compiler, no third-party runtime library.
+**Files:** cytv/no_root_observer.py, transport/state/operations/recovery/diagnostics as needed; focused standalone native lifecycle gate and existing payload/Android builders; dedicated real-process/native/package-contract tests. Reuse the pinned compiler, no third-party runtime library. A reproduced old Helper open-before-flock/reinstall race requires minimal Helper lifecycle participation and a real version bump; prepare compiled reviewed artifacts and the mandatory published-Home/new-Helper compatibility approval before full candidate dispatch.
 
 - [ ] Add a securely opened never-recreated kernel lifecycle gate and generation revocation, with sole TV-side execution for package/config/EIM/launch effects. Test inherited lock lifetime, paused child/bootstrap, crash, copied host and late effect; no PID/time reclamation or transferable host mutation tokens.
 - [ ] Add removal-intent supersession from successful/failed/new/recognized legacy installs, seal/fence old opportunities, preserve original outcome audit, and use a new destructive removal's own admission/terminal rather than requiring old install success. Establish required platform contracts explicitly; no empty-inventory/no-SAM/drain inference.

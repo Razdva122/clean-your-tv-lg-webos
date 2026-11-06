@@ -21,7 +21,7 @@ def removal_summary(pending):
     reason = pending.get('removal_reason')
     previous = pending.get('previous', {})
     outcome = previous.get('state') if type(previous) is dict else None
-    return {'state':'verified-clean' if stage == 'verified-clean' else 'cleanup-in-progress',
+    return {'state':'verified-clean' if stage == 'verified-clean' and reason == 'removal-verified' else 'cleanup-in-progress',
             'stage':stage, 'reason':reason if reason in REMOVAL_REASONS else 'removal-requested',
             'original_outcome':outcome if outcome in ('complete', 'recovery_required') else 'unknown'}
 

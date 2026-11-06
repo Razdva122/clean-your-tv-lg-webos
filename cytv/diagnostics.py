@@ -24,6 +24,7 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
         'schema': 1, 'cytv_version': __version__,
         'timestamp_utc': datetime.now(timezone.utc).isoformat(),
         'desktop': {'os': platform.system(), 'architecture': platform.machine(), 'python': platform.python_version()},
+        'frontend': context.choice(context.mapping(tv_info).get('frontend'),('console','desktop','android')),
         'action': action, 'edition': profile.get('edition') if profile else None,
         'phase': phase,
         'error_type': type(error).__name__ if error else None,
@@ -37,6 +38,9 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
     }
     from .recovery_state import assess, summary
     report['recovery'] = {**summary(profile or {}, pending), **assess(profile, pending, status)}
+    if pending and pending.get('recovery_protocol')=='clean-removal-v1':
+        from .recovery_state import removal_summary
+        report['removal']=removal_summary(pending)
     from .failure_help import for_error, report_summary
     help = for_error(error, phase, profile, pending)
     if help:

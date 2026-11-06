@@ -170,6 +170,19 @@ def stage_updater(payload):
     (payload/'updater.ipk').write_bytes(pack_app(app,service))
 
 
+def stage_installer_support(payload, work):
+    """Independent static support; never alter a pinned Helper package."""
+    target = Path(payload) / 'installer-support'
+    target.mkdir(parents=True, exist_ok=True)
+    environment = dict(os.environ, ZIG_GLOBAL_CACHE_DIR=str(Path(work) / 'zig-global-cache'),
+                       ZIG_LOCAL_CACHE_DIR=str(Path(work) / 'zig-cache'))
+    for name in ('lifecycle-gate', 'cleanup-noop'):
+        subprocess.run([sys.executable, '-m', 'ziglang', 'cc', '-target', 'arm-linux-musleabi',
+                        '-std=c99', '-Wall', '-Wextra', '-Werror', '-Os', '-static', '-s',
+                        'native/installer/' + name + '.c', '-o', str(target / name)],
+                       cwd=ROOT, env=environment, check=True)
+
+
 def build_payload():
     versions = json.loads((ROOT / "release-versions.json").read_text())
     work = (ROOT / 'build/cytv').resolve()
@@ -177,6 +190,7 @@ def build_payload():
     if payload.exists():
         shutil.rmtree(payload)
     payload.mkdir(parents=True)
+    stage_installer_support(payload, work)
     helper = helper_baseline(versions['helper'])
     if helper is None:
         import ziglang
