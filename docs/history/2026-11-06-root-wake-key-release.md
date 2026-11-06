@@ -75,8 +75,8 @@ source bytes (reader SHA-256
 This local package proof is not a selected full build or a signed TV artifact.
 
 This is a bounded mitigation for transient startup flags, not proof that a
-persistent/stale bitmap or every standby failure is fixed. Source installation
-and physical acceptance remain pending. No normal setup/control instructions
+persistent/stale bitmap or every standby failure is fixed. At source review, installation and physical acceptance were pending; see the
+subsequent scoped candidate observations below. No normal setup/control instructions
 change; localized guides retain their existing safety/recovery instructions.
 
 ## Remaining acceptance and release boundary
@@ -101,3 +101,79 @@ PR #344 merged at `eb16bd39cda5310012b4ac8b3aed098aa0e4e10a` after successful [f
 Actual local TV packages were revalidated at that combined source: payload integrity, component versions, manifests against authenticated retained 1.8.2, and all four System edition/resolution sets passed. The staged reader matches the final reviewed source; Helper bytes and canonical archive remain unchanged. Changes since the focused package build are confined to the browser demo, its tests and release metadata. Existing Helper approval and deferred Homebrew promotion are retained. This is pre-dispatch package evidence, not CI signing or physical acceptance.
 
 The previous full build and signed Root artifact predate these fixes and cannot be installed for this acceptance. The next complete candidate must be signed in ordinary Root QA mode before owner-supervised C3 update and affected Home/standby checks. The prior standby failure remains unresolved until that test; cold boot and rollback are separate scenarios. No stable publication or main merge is authorized.
+
+## Signed candidate C3 observations
+
+These observations belong to selected build
+[42176689817:1](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42176689817),
+source `6659cd9ed1dd16d19f452d1d2a958c51c092b0a4`, acceptance token
+`42176689817:1`. All mandatory platform, runtime, ARM Python and full browser
+jobs passed. Ordinary Root QA signing
+[42178746923:1](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42178746923)
+completed with publish=false at metadata-equivalent source
+`5e8bf096b4f1d36967d2b08af3171f9704cde9b7`.
+The artifact digest, source/run/attempt provenance, production signature and every
+component size/hash/version were verified before device admission.
+
+| Signed component | Version | SHA-256 |
+| --- | --- | --- |
+| Root | 0.10.0 | `f85b23e662ce0c6e6ba9cd4b14e0ffe89ce0bead7ca511baa53e041cd42f8115` |
+| Root Updater | 0.4.5 | `ef6cd860b415d400b80054addbf47d27eb99b1d07f59ad7531683bb16659a77e` |
+| Infrastructure | 0.10.0 | `3532e0ea3c13a50a6854af66413a66cf4a2c715ede07eb97a7d3c42d835f1bd1` |
+
+Signed envelope SHA-256:
+`f8cdab66746cc0f65f1794738d7f9a0cd0a7f82c6addaf2fcbc3abddab89688f`.
+Signed artifact 13484192078 SHA-256:
+`e94d7b03e52e5a43c770f282d39402ab7a52a65c6fd42b5cfe9cd6ec0c235c67`.
+
+The same maintainer-owned C3/firmware/SDK/remote and macOS ARM64 host described
+above were used. Upgrade source was published 1.8.2, with Root/infrastructure
+0.9.3, Root Updater 0.4.4 and stopped Helper. System Updater 1.1.2 remained pinned.
+
+The first host attempt stopped at live UI profile capture before install
+admission; a subsequent capture from the loaded UI succeeded. Three status
+observations confirmed the original transaction and component identities had not
+changed. The first admitted update then aborted before any component installer
+intent: available /var space was about 156.1 MiB versus required 157.1 MiB.
+All three installer intents were false, with no submission/terminal, and Home
+resume for the abort completed. Real installed versions remained 0.9.3/0.4.4.
+
+The owner explicitly authorized stale-package cleanup, then chose to execute the
+provided command personally. Two content-verified, unreferenced historical cache
+copies freed approximately 54 MiB; available space read back as 215156 KiB
+(about 210.1 MiB). No agent deleted TV files. Recovery journals, current/prior
+packages, WAM data, private Python and historical replacement evidence were not
+modified. Storage retention is a separate next-release follow-up.
+
+Fresh supported admission from the exact finished, pre-intent abort used the same
+signed candidate and a fresh actual UI profile. All three actual component
+installer terminals succeeded. The ordinary launcher health signal and transaction/
+Home resume completed. The captured profile's canonical digest matches the new
+transaction; no whole-profile identity after subsequent user setting changes is
+claimed. Actual installed appinfo versions and reader SHA-256 were read back:
+Root 0.10.0, Root Updater 0.4.5, System 1.1.2, final reader `d032b473...` above.
+
+| Scenario | Expected / observed | Result |
+| --- | --- | --- |
+| Signed update from 1.8.2 | Supported worker completes all components and ordinary Home health; exact installed versions/reader confirmed | PASS after owner cleanup; initial space refusal retained above |
+| Post-update Home/audio | Enable Change Home, video with sound/volume, short Home returns Clean without recovery busy/hang | Owner PASS; active intent/guardian read back |
+| Standby routing/audio | Remote Off for requested approximately 20 seconds, On, short Home, settings wait and return to video | Routing/audio PASS; active intent/guardian confirmed by service and actual UI caller; UI status FAIL below |
+| Settings status after standby | Open panel should show current active state | FAIL: message stays Changing Home control and switch disabled/unchecked despite active backend; Back/reopen restores correct state |
+| Triple-Home emergency Off | Three Home presses in two seconds, then later short Home must stay LG; controls/audio usable | Owner PASS; disabled intent, stopped guardian, verified integrity and stopped Helper read back |
+
+The maintainer explicitly deferred the Settings presentation failure to the next
+release, tracked as [#347](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/347).
+No UI fix is included in these bytes. The initially returned transient phase was
+not captured; stale transitional status is supported by source inspection and
+successful panel reopening, not a directly observed initial response. This is
+separate from the earlier recovery-busy/Home-close failure with disabled routing.
+
+Final state: candidate 1.9.0 installed, LG Home available, Root emergency Off,
+guardian stopped, Helper stopped, recovery integrity verified. System transaction
+is complete and retained rollback is available. Retained rollback was not
+exercised. Cold boot, new-package long-Back/pointer/wheel/editing cases, personal
+receiver/media (#337), C1/B4/C4 behavior, No-root and exact Android upgrade/data
+retention remain untested here. Do not copy the earlier baseline's manual results
+onto different candidate bytes. These scoped results are not complete release
+acceptance, universal compatibility, public-feed/anonymous-download acceptance,
+or authorization to merge main/publish stable.

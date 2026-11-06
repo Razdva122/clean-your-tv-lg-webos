@@ -103,7 +103,7 @@
       "issues": [
         90
       ],
-      "summary": "Bound wake-key readiness before Root activation; fresh Home cancels pending activation, persistent held keys remain fail-closed; signed C3 standby acceptance pending."
+      "summary": "Bound wake-key readiness before Root activation; fresh Home cancels pending activation and persistent held keys remain fail-closed."
     },
     {
       "pr": 345,
@@ -122,5 +122,6 @@
     "run_id": 42176689817,
     "attempt": 1,
     "source": "6659cd9ed1dd16d19f452d1d2a958c51c092b0a4"
-  }
+  },
+  "acceptance_build": "42176689817:1"
 }
