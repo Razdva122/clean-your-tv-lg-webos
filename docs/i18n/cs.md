@@ -72,6 +72,12 @@ Uveďte model TV, firmware, No-root nebo Root, instalační zařízení, krok a 
 
 V připravovaných sestaveních se při zvoleném nebo aktivním 4K zobrazí upozornění a tlačítko „Vypnout náhledy HDMI“ pouze u motivů se zapnutými náhledy vstupů. Během náhledu HDMI se 4K video na pozadí dočasně nahradí statickým obrázkem v 1080p. Vypněte náhledy vstupů, aby pozadí zůstalo ve 4K.
 
+### Kandidát: jednoduché odebrání
+
+Tlačítka výše stále nabízejí vydanou verzi. V příštím kandidátu vyberte v Údržbě **Odinstalovat Clean Your TV** se stejným uloženým připojením TV. Potvrďte jednou. Přítomné známé aplikace a soubory projektu se odeberou, chybějící se přeskočí, i po částečné instalaci.
+
+Na výzvu odpojte TV od napájení, znovu připojte, počkejte na síť a vyberte **Zkusit znovu**. Pohotovost nebo Quick Start není úplný restart; CYTV TV automaticky nerestartuje. Při ztrátě spojení je zkontrolujte a opakujte stejný cíl odebrání bez dalšího průvodce obnovou. Při odmítnutí přístupu použijte požadované připojení Root; pokud je TV zaneprázdněn, počkejte a zkuste znovu. Úspěch se zobrazí až po ověření závěrečného úklidu. Zachovejte klíče a původní zprávy. Nouzové ovládání a souhlas se sdílením výše platí dál.
+
 <!-- Legacy anchors retained for existing links. -->
 <a id="automatické-rozlišení-grafiky-kandidát"></a>
 <a id="čeština--rozhraní-televizoru"></a>

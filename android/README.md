@@ -11,9 +11,11 @@ Use your phone to install either **No-root** (Developer Mode) or **Root**
 or cloud service is needed. The APK includes the offline interface and TV packages;
 optional TV Python is a separate verified download.
 
-Published **1.8.2** uses **Android 0.8.2 / versionCode 22**. The unpublished
-1.9.0 candidate uses Android 0.9.0 / versionCode 23; use only its identified
-signed artifact for candidate testing. New APK acceptance remains pending.
+Published **1.9.0** uses **Android 0.9.0 / versionCode 23**. Its exact original-signer
+upgrade and retained-data checks are recorded in the [artifact acceptance record](../docs/history/2026-11-06-root-wake-key-release.md#final-cold-start-retained-rollback-and-android-upgrade).
+Candidate **1.10.0** uses **Android 0.10.0 / versionCode 24** and adds the removal
+flow below. It is not published yet. Use only its identified signed artifact for
+candidate testing; acceptance of the new APK remains pending.
 [Download the signed APK](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest) ·
 [Full installation guide](../docs/INSTALL.md) · [Recovery](#recovery-and-private-data) ·
 [Report a problem](../docs/FEEDBACK.md)
@@ -64,6 +66,19 @@ The start screen also has **Wallpapers**, which explains the TV-hosted QR upload
 
 ## Interrupted Root installation inspection (1.8.2)
 
+The next unpublished candidate adds **Uninstall Clean Your TV** in Maintenance.
+Use the same saved TV and confirm removal once. Present known project apps/files
+are removed; missing ones are skipped, including after a partial installation.
+When prompted, disconnect/reconnect TV power, wait for the network, then choose
+**Try again** to perform the final sweep. Standby/Quick Start is not a full
+restart; CYTV does not reboot the TV itself. A lost connection offers the same
+Try again action without another recovery wizard or initial removal confirmation.
+Actual access denial asks for Root access, and actual busy work asks you to wait.
+Success requires both removed and verified-clean results. Keep app data, keys and
+original reports. Eligible Root Home-off setup remains a separate completed goal;
+physical Home, sound, standby and cold boot remain separate observations. This
+candidate flow is separate from the published inspection below.
+
 Published 1.8.2 (Android 0.8.2 / versionCode 22) includes a bounded inspection
 path for an original Root `install / coordinator-submitted` operation. It reads
 evidence without resuming the failed installation. Update the existing app in
@@ -97,8 +112,9 @@ check status before reinstalling. The app retains operation receipts and does
 not automatically repeat installation after process death. Keep the same TV,
 edition and SSH port; pending or unknown outcomes need inspection.
 
-Android exposes install, status and restore. For removal, use desktop/CLI with
-the retained connection and evidence. An interrupted No-root removal needs its
+Published Android exposes install, status, inspection and restore. The next
+candidate adds explicit removal in Maintenance; use its retained connection and
+evidence. An interrupted No-root removal needs its
 verified continuation and separate confirmation; an unknown removal outcome stays
 blocked. Status and restore do not download Python. Keep runtime slots needed
 for recovery.

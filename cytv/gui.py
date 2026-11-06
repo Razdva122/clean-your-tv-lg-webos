@@ -540,12 +540,20 @@ class Wizard(QMainWindow):
             self.recovery_plan = dict(value)
             self.steps.hide()
             self.rail_title.setText(tr('Review recovery options'))
+            from .recovery_ui import removal_details
+            detail = removal_details(self.recovery_plan)
+            if detail:
+                self.subtitle.setText('\n'.join(tr(text) for text in detail.values() if text))
+                self.subtitle.show()
         elif kind == 'recovery':
             self.recovery_profile = dict(value)
         elif kind == 'prompt':
             self.show_prompt(value)
         elif kind == 'done':
             self.running = False
+            if value == 0 and self.command == 'uninstall' and self.recovery_plan is None:
+                self.recovery_plan = {'state':'review', 'summary':'Removal is not verified.',
+                                      'next_step':'Read the result below before continuing.'}
             self.set_error_state(value not in (0, 130))
             self.language.setEnabled(True)
             self.pending = None
@@ -558,17 +566,32 @@ class Wizard(QMainWindow):
             self.subtitle.setText(tr('Read the result below before continuing.'))
             self.rail_note.setText(tr('Read the result below before continuing.'))
             self.badge.setText(self.title.text())
-            if self.command == 'install':
+            if self.command == 'install' and not self.recovery_plan:
                 self.update_steps(self.current_step, value)
             self.content.moveCursor(self.content.textCursor().MoveOperation.End)
             failed = value not in (0, 130)
-            recover = (self.recovery_profile is not None and self.recovery_plan is None and
-                       (value == 0 or (self.failure_help or {}).get('code') == 'removal-not-submitted'))
+            cleanup = self.command == 'uninstall' or self.recovery_plan is not None and self.recovery_plan.get('disposition') == 'clean-removal'
+            completed = False
+            recover = (not cleanup and self.recovery_profile is not None and
+                       ((self.recovery_plan is None and
+                         (value == 0 or (self.failure_help or {}).get('code') in ('removal-not-submitted','no-root-recovery'))) or
+                        (self.recovery_plan is not None and self.recovery_plan.get('state') != 'complete' and
+                         type(self.recovery_plan.get('actions')) is list and
+                         'continue-removal' in self.recovery_plan.get('actions', []))))
             if self.recovery_plan:
-                self.title.setText(tr('Review recovery options'))
-                self.subtitle.setText(tr(self.recovery_plan['summary']))
+                from .recovery_ui import removal_restart_required
+                restart = removal_restart_required(self.recovery_plan)
+                completed = (value == 0 and self.recovery_plan['state'] == 'complete' and
+                             not restart and
+                             (self.command != 'uninstall' or self.recovery_plan.get('disposition') == 'clean-removal') and
+                             (self.recovery_plan.get('disposition') != 'clean-removal' or
+                              self.recovery_plan.get('verified_clean') is True and self.recovery_plan.get('removed') is True))
+                self.title.setText(tr('Cancelled' if value == 130 else self.recovery_plan['summary'] if completed else 'Review recovery options'))
+                self.subtitle.setText(tr(self.recovery_plan.get('next_step', '') if completed else self.recovery_plan['summary']))
+                self.badge.setText(self.title.text())
+            retry_removal = cleanup and not completed and self.recovery_profile is not None
             setup_review = False
-            if value == 0 and 'packages' in self.check_results:
+            if value == 0 and not self.recovery_plan and 'packages' in self.check_results:
                 confirmed = all(self.check_results.get(key, {}).get('status') == 'pass'
                                 for key in ('packages', 'startup', 'home-button'))
                 setup_review = not confirmed
@@ -581,15 +604,18 @@ class Wizard(QMainWindow):
                 self.badge.setText(self.title.text())
                 self.subtitle.setText(tr('Checking recovery does not reinstall or remove packages. Root checks may run verified support code.'))
                 self.button('Review recovery options', lambda: self.start('recover', profile), not failed)
+            elif retry_removal:
+                profile = dict(self.recovery_profile)
+                self.button('Try again', lambda: self.start('uninstall', profile), True)
             if self.report:
-                self.button('Save diagnostic report…', self.save_report, failed or setup_review)
+                self.button('Save diagnostic report…', self.save_report, (failed or setup_review) and not retry_removal)
                 if failed:
                     self.subtitle.setText(tr('Save the report from this failed attempt and attach it to your issue. Recovery data has been kept.'))
             elif failed:
                 self.subtitle.setText(tr('A diagnostic report could not be created. Include the visible error when opening an issue.'))
-            if failed or self.check_results.get('home-button', {}).get('status') == 'fail':
+            if (failed and not cleanup) or self.check_results.get('home-button', {}).get('status') == 'fail':
                 self.button('Open an issue', lambda: QDesktopServices.openUrl(QUrl(diagnostics.ISSUE_URL)))
-            self.button('Back to start', self.home, not recover and not ((failed or setup_review) and self.report))
+            self.button('Back to start', self.home, not retry_removal and not recover and not ((failed or setup_review) and self.report))
             failed_checks = [result for result in self.check_results.values() if result['status'] in ('fail', 'unknown')]
             if failed and failed_checks:
                 self.subtitle.setText(tr('Failed') + ': ' + ', '.join(tr(result['label']) for result in failed_checks) + '\n' + self.subtitle.text())
@@ -600,6 +626,16 @@ class Wizard(QMainWindow):
                 self.subtitle.setText(tr(self.failure_help['next_step']))
                 if not self.report:
                     self.subtitle.setText(self.subtitle.text()+'\n'+tr('A diagnostic report could not be created. Include the visible error when opening an issue.'))
+            if self.recovery_plan:
+                from .recovery_ui import removal_details
+                detail = removal_details(self.recovery_plan, self.failure_help)
+                if cleanup and not completed:
+                    self.title.setText(tr('Cancelled' if value == 130 else 'Restart the TV to finish removal' if restart else 'Removal is not finished yet.'))
+                    self.badge.setText(self.title.text())
+                    message = detail.get('blocker_text') or 'Removal could not be confirmed. Check the connection and try again.'
+                    if self.failure_help and self.failure_help.get('code') in ('ssh-auth-root','ssh-auth-no-root','ssh-key-file','ssh-identity','developer-key-server','developer-key-unlock','developer-key-response'):
+                        message = self.failure_help['next_step']
+                    self.subtitle.setText(tr(message)+('' if restart else '\n'+tr(detail.get('stage_text', ''))))
 
     def show_prompt(self, prompt):
         self.check_panel.hide()
@@ -616,8 +652,9 @@ class Wizard(QMainWindow):
             self.show_preparation(0, prompt)
             return
         if prompt.secret:
-            developer = prompt.label.startswith('Developer Mode')
-            title = 'Developer Mode code (Passphrase)' if developer else prompt.title
+            developer = prompt.credential_type == 'developer'
+            title = {'developer':'Developer Mode code (Passphrase)', 'key':'SSH key passphrase',
+                     'root':'Root SSH password (hidden)'}.get(prompt.credential_type, prompt.title)
             self.title.setText(tr(title))
             self.subtitle.hide()
             if developer:
@@ -626,11 +663,11 @@ class Wizard(QMainWindow):
                     self.instruction_card('Important', [
                     'Use the code from the TV, not your LG account password. If no code is visible, turn on Key Server.'])]
             else:
-                help_text = ('Enter the passphrase that unlocks your private SSH key file.' if prompt.label.startswith('SSH key')
+                help_text = ('Enter the passphrase that unlocks your private SSH key file.' if prompt.credential_type == 'key'
                              else 'Enter your existing TV root SSH password. This was set when SSH access was configured.')
                 cards = [self.instruction_card(title, [help_text])]
             self.content.setHtml('<p style="margin-bottom: 16px"></p>'.join(cards))
-        label = QLabel(tr('Connection check' if self.command != 'install' and prompt.label.startswith('Edition [') else 'Developer Mode code (Passphrase)' if prompt.secret and prompt.label.startswith('Developer Mode') else prompt.title))
+        label = QLabel(tr(title if prompt.secret else 'Connection check' if self.command != 'install' and prompt.label.startswith('Edition [') else prompt.title))
         label.setWordWrap(True)
         label.setObjectName('promptTitle')
         self.form_layout.addWidget(label)

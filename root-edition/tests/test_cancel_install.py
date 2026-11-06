@@ -12,6 +12,94 @@ sys.path.insert(0,str(Path(__file__).resolve().parent))
 from install_fixture import CurrentInstallation
 
 class CancellationTests(unittest.TestCase):
+    def test_packaged_entry_refuses_unsupported_runtime_before_inspection_or_removal(self):
+        import contextlib,io
+        output=io.StringIO()
+        argv=['cancel_install.py','inspect','--operation',self.identifier,'--code-sha256','c'*64,'--report-refusal']
+        with patch.object(sys,'argv',argv),patch.object(self.module,'trusted_code_digest',return_value='c'*64), \
+             patch.object(self.module,'checked_store',return_value=self.f.owner.store), \
+             patch.object(self.deploy,'require_node',side_effect=RuntimeError('Root requires TV Node.js 8+')), \
+             patch.object(self.module.Recovery,'inspect',return_value={'state':'admissible'}) as inspect, \
+             contextlib.redirect_stdout(output):
+            self.module.main()
+        self.assertEqual(json.loads(output.getvalue())['state'],'blocked')
+        self.assertEqual(json.loads(output.getvalue())['reason'],'recovery-code-incompatible')
+        inspect.assert_not_called();self.assertEqual(self.calls,[])
+    def test_missing_home_interfaces_have_fixed_refusal_and_submit_nothing(self):
+        original=self.device.rpc
+        self.device.rpc=lambda method,payload: {} if method.endswith('getProfiles') else original(method,payload)
+        with self.assertRaises(ValueError) as caught:self.inspect()
+        self.assertEqual(self.module.refusal_code(caught.exception),'stock-routing-unverified')
+        self.assertEqual(self.calls,[]);self.assert_original()
+    def test_host_cancellation_uses_real_device_proofs_and_archives_original_receipt(self):
+        from cytv import state,operations
+        from cytv.root_install_recovery import RECOVERY_ENTRY
+        import shlex
+        host=state.Store(self.f.base/'host');profile=state.target('fixture.local','root')
+        host.begin(profile,'install',stage='coordinator-submitted',product_operation=self.identifier)
+        original=host.pending(profile)
+        bundle=self.f.payload/'root-updater'
+        manifest=json.loads((bundle/'bundle.json').read_text())
+        pin=self.module.digest(dict(bundle=manifest,recovery={name:hashlib.sha256((bundle/name).read_bytes()).hexdigest()
+            for name in self.module.RECOVERY_FILES}))
+        self.recovery.code_sha256=pin
+        calls=[];uploads={};test=self
+        class Remote:
+            def upload(self,path,data,mode=0o600):uploads[path]=data
+            def run(self,command,**kwargs):
+                words=shlex.split(command)
+                if '/usr/bin/node' in words:return '/usr/bin/python3'
+                if command.startswith(('umask ','mkdir ')):return ''
+                test.assertIn(RECOVERY_ENTRY,words);test.assertIn('-I',words)
+                test.assertEqual(host.pending(profile),original)
+                action=words[words.index(RECOVERY_ENTRY)+3];calls.append(action)
+                test.assertEqual(words[words.index('--operation')+1],test.identifier)
+                test.assertEqual(words[words.index('--code-sha256')+1],pin)
+                if action=='inspect':return json.dumps(test.inspect())
+                test.assertEqual(action,'remove')
+                candidate=words[words.index('--candidate')+1]
+                proof=words[words.index('--proof-sha256')+1]
+                # Preserve the real device reply exactly across the JSON/SSH
+                # boundary: no host-side enrichment of missing binding fields.
+                return json.dumps(test.recovery.remove(test.identifier,candidate,proof))
+        installer=operations.Installer(Remote(),host,profile,self.f.payload,{})
+        with patch('observed_install.remove',side_effect=self.remove):
+            reviewed=installer.inspect_root_cancellation(original)
+            installer.cancel_root_product(original,reviewed)
+        self.assertEqual(calls,['inspect','inspect','remove','inspect'])
+        self.assertEqual(len(self.calls),1);self.assert_original()
+        self.assertIsNone(host.pending(profile))
+        archive=json.loads(next(host.device_dir(profile).glob('recovery-*.json')).read_text())
+        self.assertEqual(archive['previous'],original)
+        self.assertEqual(archive['disposition']['state'],'cancelled-and-removed')
+        self.assertEqual(archive['disposition']['code_sha256'],pin)
+        self.assertTrue(any(path.endswith('/bundle.json') for path in uploads))
+
+    def test_refusal_categories_distinguish_missing_terminal_and_foreign_routing(self):
+        (self.f.root/'install-terminal.json').unlink()
+        with self.assertRaises(ValueError) as caught:self.inspect()
+        self.assertEqual(self.module.refusal_code(caught.exception),'package-terminal-unverified')
+        self.f.root_store.write('install-terminal',self.terminal)
+        with patch.object(self.recovery,'baseline',side_effect=ValueError('lg_home_routing_unconfirmed')):
+            with self.assertRaises(ValueError) as caught:self.inspect()
+        self.assertEqual(self.module.refusal_code(caught.exception),'stock-routing-unverified')
+        self.assertEqual(self.module.refusal_code(ValueError('PRIVATE arbitrary path')),'recovery-evidence-unverified')
+        self.assertEqual(self.calls,[]);self.assert_original()
+
+    def test_recovery_modules_are_packaged_and_previous_inventory_is_inspect_only(self):
+        from updater.bootstrap import verify_bundle
+        bundle=self.snapshot/'root-updater'
+        manifest=json.loads((bundle/'bundle.json').read_text())
+        self.assertTrue({'cancel_install.py','cancel_provision.py'} <= manifest['files'].keys())
+        for name in ('cancel_install.py','cancel_provision.py','clean_removal.py','cleanup_tail.js','cleanup_no_root_private.js'):
+            del manifest['files'][name];(bundle/name).unlink()
+        (bundle/'bundle.json').write_text(json.dumps(manifest))
+        with self.assertRaises(ValueError):verify_bundle(bundle)
+        self.assertEqual(verify_bundle(bundle,allow_legacy_recovery=True),manifest)
+        del manifest['files']['install_driver.py']
+        (bundle/'bundle.json').write_text(json.dumps(manifest))
+        with self.assertRaises(ValueError):verify_bundle(bundle,allow_legacy_recovery=True)
+
     def setUp(self):
         self.fixture=CurrentInstallation();self.f=self.fixture.__enter__();self.addCleanup(self.fixture.__exit__,None,None,None)
         import cancel_install,deploy,install_driver

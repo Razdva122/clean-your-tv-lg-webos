@@ -186,10 +186,11 @@ class CLITests(unittest.TestCase):
             store = state.Store(tmp)
             profile = state.target('192.0.2.10', 'no-root')
             store.begin(profile, 'uninstall')
+            store.save(profile);(store.device_dir(profile)/'known_hosts').write_bytes(b'original pin')
             inst = cls.return_value
             inst.store, inst.profile = store, profile
             inst.remote.luna.return_value = {'returnValue': True, 'status': {'apps': []}}
-            inst.status.return_value = {'can_resume_root_setup': False}
+            inst.observe_recovery.return_value = {'can_resume_root_setup': False}
             inst.uninstall.side_effect = UserError('Removal remains unconfirmed')
             code, output, _ = self.run_cli(['--host', profile['host'], '--edition', 'no-root',
                 '--data-dir', tmp, '--yes'], ['y', 'y'], remote=MagicMock())
@@ -211,10 +212,11 @@ class CLITests(unittest.TestCase):
                 store = state.Store(tmp)
                 profile = state.target('192.0.2.10', 'no-root')
                 store.begin(profile, action)
+                store.save(profile);(store.device_dir(profile)/'known_hosts').write_bytes(b'original pin')
                 inst = cls.return_value
                 inst.store, inst.profile = store, profile
                 inst.remote.luna.return_value = {'returnValue': True, 'status': {'apps': []}}
-                inst.status.return_value = {'can_resume_root_setup': False}
+                inst.observe_recovery.return_value = {'can_resume_root_setup': False}
                 inst.uninstall.side_effect = lambda: store.finish(profile)
                 inst.version_summary.return_value = []
                 flags = ['--yes', '--non-interactive'] if choice == 'non-interactive' else [] if choice == 'y' else ['--yes']
@@ -242,7 +244,7 @@ class CLITests(unittest.TestCase):
             profile = state.target('192.0.2.10', 'root')
             store.begin(profile, 'install')
             cls.return_value.store, cls.return_value.profile = store, profile
-            cls.return_value.status.return_value = {'can_resume_root_setup': False}
+            cls.return_value.observe_recovery.return_value = {'can_resume_root_setup': False}
             code, output, _ = self.run_cli(['--host', profile['host'], '--edition', 'root',
                 '--data-dir', tmp, '--yes'], ['y'], remote=MagicMock())
             self.assertEqual(code, 2, output)
@@ -265,7 +267,8 @@ class CLITests(unittest.TestCase):
                     ['1'], remote=MagicMock())
                 self.assertEqual(code, 0, output)
                 self.assertTrue(calls)
-                verify.assert_not_called()
+                if command=='uninstall':verify.assert_called_once()
+                else:verify.assert_not_called()
                 operation.install.assert_not_called()
                 if command == 'doctor':
                     operation.preflight.assert_called_once_with()
@@ -320,18 +323,20 @@ class CLITests(unittest.TestCase):
     def test_interrupted_removal_explains_how_to_continue_in_the_app(self):
         from unittest.mock import MagicMock
         from cytv.errors import UserError
-        with tempfile.TemporaryDirectory() as tmp, patch('cytv.cli.Installer') as installer:
+        with tempfile.TemporaryDirectory() as tmp, patch('cytv.cli.Installer') as installer, \
+                patch('cytv.cli.package.verify_payload',return_value={}):
             profile = state.target('192.0.2.10', 'root')
             store = state.Store(tmp)
             store.save(profile)
+            (store.device_dir(profile)/'known_hosts').write_bytes(b'original pin')
             store.begin(profile, 'uninstall', full_project=True, root_submitted=True)
             installer.return_value.uninstall.side_effect = UserError('connection lost')
             code, output, _ = self.run_cli(['uninstall', '--data-dir', tmp], ['y'], remote=MagicMock())
             self.assertEqual(code, 2, output)
             self.assertIn('Check TV and continue removal?', output)
             self.assertNotIn('choose Remove again', output)
-            self.assertIn('Do not repeat removal', output)
-            self.assertTrue(store.pending(profile)['root_submitted'])
+            self.assertIn('Continue the remaining cleanup for this TV.', output)
+            self.assertTrue(store.pending(profile)['previous']['root_submitted'])
 
     def setUp(self):
         from cytv import i18n
@@ -398,19 +403,20 @@ class CLITests(unittest.TestCase):
                  patch('cytv.cli.Installer') as cls, patch('cytv.tv.SSAP') as ssap:
                 store = state.Store(tmp); profile = state.target('192.0.2.10', 'root')
                 store.begin(profile, 'setup-root-updater', stage='verify', requires_updater=True)
+                store.save(profile);(store.device_dir(profile)/'known_hosts').write_bytes(b'original pin')
                 inst = cls.return_value
                 inst.store, inst.profile = store, profile
                 def status():
                     if resolved: store.finish(profile)
                     return {'can_resume_root_setup': resume, 'deployment_stage':'installed-recovery-only', 'device':{'result':{'recovery':{'integrity_verified':True}}}}
-                inst.status.side_effect = status
+                inst.observe_recovery.side_effect = status
                 if resolved:
                     from cytv.errors import ExistingRoot
                     inst.preflight.side_effect = ExistingRoot('existing')
                 inst.resume_root_setup.return_value = {'updates_ready':True}
-                code, output, _ = self.run_cli(['--host','192.0.2.10','--edition','root','--data-dir',tmp], ['', 'y', 'y' if accept else 'n'], remote=MagicMock())
+                code, output, _ = self.run_cli(['--host','192.0.2.10','--edition','root','--data-dir',tmp], ['', 'y'] + (['1', 'y'] if accept else ['']), remote=MagicMock())
                 self.assertEqual(code, 0 if resolved or resume else 2, output)
-                inst.status.assert_called()
+                inst.observe_recovery.assert_called()
                 self.assertEqual(inst.resume_root_setup.call_count, int(resume and accept))
                 if resume: inst.select_graphics.assert_not_called()
                 inst.install.assert_not_called()

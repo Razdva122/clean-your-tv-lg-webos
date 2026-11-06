@@ -143,19 +143,32 @@ Existing console commands remain available in the separately distributed CLI.
 
 <a id="guided-no-root-recovery-and-reinstallation-in-130"></a>
 
-### Recover and reinstall No-root
+### Review interrupted setup or removal
 
 If a No-root installation or removal remains unfinished after **Check TV status**, connection
-diagnostics or **Return to LG Home**, click **Recover and reinstall**. The wizard
+diagnostics or **Return to LG Home**, click **Review recovery options**. The wizard
 keeps the same TV, edition and SSH port, even when several connections are saved.
-It reconnects, checks the current state and asks you to finish removal with a
-separate, default-No confirmation. It restores LG Home, verifies removal, then
-shows the bundled versions for review before installing. **Set up my TV** also
-offers this recovery when it finds an unfinished removal. Returning to LG Home
-alone does not complete removal.
+It asks before inspection and before each supported change, with No selected by
+default. Recovery never starts a new installation automatically. **Set up my TV**
+also enters recovery when it finds a retained operation. Returning to LG Home
+alone does not complete removal. Unknown package/setup outcomes keep their data.
 
-If any step fails, **Save diagnostic report…** is the primary action. Save that
-attempt's report with the normal file dialog and attach it to your issue; no
+For the next candidate, **Uninstall Clean Your TV** uses a simple removal flow:
+confirm once, stop/remove known present project items, fully restart the TV when
+asked, then choose **Try again** for the final sweep. Disconnect and reconnect
+power; standby and Quick Start are not enough. CYTV never restarts the TV
+itself. Missing items are skipped, including after a partial setup. Connection
+loss needs a connection check and Try again on the same saved TV, without another
+recovery wizard. An actual access denial asks for Root; an actual busy operation
+asks you to wait and try again. Completion needs both removed and verified-clean
+proof. Eligible Root setup may still finish separately with LG Home/Home control
+off. Physical checks remain separate. See the
+[candidate removal flow](RECOVERY.md#next-candidate-original-operation-recovery-and-full-removal).
+
+For unfinished removal, **Try again** is the primary action and repeats the same
+approved goal. **Save diagnostic report…** remains available. For other failed
+steps, saving the report is the primary action. Save that attempt's report with
+the normal file dialog and attach it to your issue; no
 terminal or later `doctor` run is needed. Cancelling the file dialog or choosing
 an unwritable destination keeps the original report available. If report creation
 failed, the window says so; include the visible error instead. Unknown outcomes
@@ -177,6 +190,9 @@ submitted twice automatically.
 
 Root recovery records, archived updater state and referenced managed Python
 runtime slots remain for diagnostics and recovery.
+That is the published retention baseline. The next candidate additionally removes
+owned private setup/runtime data when its cleanup proof permits; minimal removal
+records and ownership backups may remain. A blocked cleanup is reported explicitly.
 They have no active service or startup registration. The Mac application and its
 local reports remain installed on your computer.
 

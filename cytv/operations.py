@@ -64,6 +64,8 @@ def root_updater_paths():
 
 
 def require_removal_idle(remote, profile, pending):
+    if pending and pending.get('recovery_protocol') == 'no-root-original-stream-v1':
+        raise UserError('The original No-root operation cannot safely continue. Recovery data was kept.', reason_code='pending-operation')
     # A fresh uninstall reserves its journal before restore(), and only changes
     # to "removing" before any package request. Resume that pre-submission state
     # like a fresh uninstall: dev/remove has its own terminal reply stream.
@@ -183,7 +185,7 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
             source=program(self.payload.resolve()/'system-updater')
             python=self._python(ROOT_STATE)
             reply=json.loads(self.remote.run(self._python_command([python,'-I','-B','-']),data=source.encode(),timeout=600))
-            if not isinstance(reply,dict) or reply.get('installed') is not True or reply.get('version')!='1.2.2' or not all(reply.get(k) is True for k in ('root_unchanged','home_unchanged','profile_storage_untouched')):
+            if not isinstance(reply,dict) or reply.get('installed') is not True or reply.get('version')!='1.2.3' or not all(reply.get(k) is True for k in ('root_unchanged','home_unchanged','profile_storage_untouched')):
                 raise ValueError('Unconfirmed System replacement')
             return reply
         except Exception:
@@ -251,9 +253,10 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
         self.store.finish(self.profile)
         return reply
 
-    def coordinator_code(self):
+    def coordinator_code(self, recovery=False):
         """Stage trusted host code for read-only handoff/status, never retained code."""
-        existing=getattr(self,'_coordinator_code',None)
+        cache='_recovery_code' if recovery else '_coordinator_code'
+        existing=getattr(self,cache,None)
         if existing: return existing
         bundle=self.payload/'root-updater'
         manifest=json.loads((bundle/'bundle.json').read_text())
@@ -266,16 +269,16 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
                 raise UserError('Root Updater bundle is missing or invalid. Use a complete installer build.')
         stage='/tmp/cytv-coordinator-'+uuid.uuid4().hex
         self.remote.run('umask 077; mkdir '+stage)
-        for name in files:
-            if name.endswith('.ipk'): continue
+        for name in (*files,'bundle.json') if recovery else files:
+            if name.endswith('.ipk') and not recovery: continue
             target=stage+'/'+package.safe_name(name)
             self.remote.run('mkdir -p '+shlex.quote(str(PurePosixPath(target).parent)))
             self.remote.upload(target,(bundle/name).read_bytes(),mode=0o600)
-        self._coordinator_code=stage
+        setattr(self,cache,stage)
         return stage
 
-    def product_action(self, action, operation=None, payload=None, migrate=False, verify_current=False):
-        if action not in ('inspect','install','status','remove'): raise ValueError('Unsupported product action')
+    def product_action(self, action, operation=None, payload=None, migrate=False, verify_current=False, resume=False, trusted_recovery=False, retire_stages=(), helper_fence=None, removal_intent=None, removal_lease=None):
+        if action not in ('inspect','install','status','remove','clean-remove','clean-status','clean-target'): raise ValueError('Unsupported product action')
         if action!='inspect' and (not isinstance(operation,str) or not re.fullmatch('[a-f0-9]{32}',operation)):
             raise ValueError('Invalid product operation')
         # Keep execution-boundary evidence without exporting commands, paths or
@@ -284,7 +287,14 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
         try:
             driver=(payload+'/root-updater' if payload else self.coordinator_code())+'/install_driver.py'
             boundary='python-select'
-            args=[self._python(),driver,action]
+            if action in ('clean-remove','clean-target'):
+                # Fresh support imports and a host-verified interpreter; no
+                # retained launcher/binding module executes during full cleanup.
+                python=self._select_python(provision=True)
+                self._selected_python=python
+                entry='import runpy,sys;sys.path.insert(0,sys.argv.pop(1));sys.argv.pop(0);runpy.run_path(sys.argv[0],run_name="__main__")'
+                args=[python,'-I','-B','-c',entry,driver.rsplit('/',1)[0],driver,action]
+            else:args=[action] if trusted_recovery or resume else [self._python(),driver,action]
             if operation: args+=['--operation',operation]
             if payload:
                 args+=['--payload',payload]
@@ -292,8 +302,30 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
                 if candidate: args+=['--candidate',candidate]
             if migrate: args.append('--migrate-packaged-home')
             if verify_current:args.append('--verify-current')
+            if removal_intent is not None:
+                if action!='clean-remove' or not re.fullmatch('[a-f0-9]{32}',removal_intent):raise ValueError('Invalid removal intent')
+                args+=['--removal-intent',removal_intent]
+            if helper_fence is not None:
+                if action!='clean-remove':raise ValueError('Helper fence requires clean removal')
+                args+=['--helper-fence',json.dumps(helper_fence,sort_keys=True,separators=(',',':'))]
+            if removal_lease is not None:
+                if action!='clean-remove' or (removal_lease!='-' and not re.fullmatch('[a-f0-9]{32}',removal_lease)):
+                    raise ValueError('Invalid current removal lease')
+                args+=['--removal-lease',removal_lease]
+            for retired in retire_stages:
+                if action!='clean-remove' or not isinstance(retired,str) or not re.fullmatch(r'/tmp/cytv-product-[a-f0-9]{32}',retired):
+                    raise ValueError('Invalid cleanup support stage')
+                args+=['--retire-stage',retired]
+            if resume:
+                if action != 'install' or payload is not None:
+                    raise ValueError('Original installation continuation required')
+                args += ['--resume', '--final-readback-only']
             boundary='driver'
-            reply=json.loads(self.remote.run(self._python_command(args),timeout=90))
+            if trusted_recovery or resume:
+                from .root_install_recovery import run
+                raw=run(self,driver.rsplit('/',1)[0],'install_driver.py',args,timeout=90)
+            else:raw=self.remote.run(self._python_command(args),timeout=1080 if action=='clean-remove' else 90)
+            reply=json.loads(raw)
         except TVCommandError as error:
             error.root_action=action
             error.root_boundary=boundary
@@ -315,7 +347,7 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
             raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
         return reply['result']
 
-    def upload_product(self, root_bundle):
+    def upload_product(self, root_bundle, clean_removal=False):
         bundles=(('root',root_bundle),('root-updater',self.payload/'root-updater'))
         manifests={};candidate={}
         for component,bundle in bundles:
@@ -328,6 +360,13 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
             candidate[component]=hashlib.sha256(raw).hexdigest()
         digest=hashlib.sha256(json.dumps(candidate,sort_keys=True,separators=(',',':')).encode()).hexdigest()
         stage='/tmp/cytv-product-'+uuid.uuid4().hex
+        if clean_removal:
+            pending=self.store.pending(self.profile)
+            if not pending or pending.get('recovery_protocol')!='clean-removal-v1':raise ValueError('Clean removal intent required')
+            stages=list(pending.get('cleanup_stages',[]))
+            if any(not isinstance(path,str) or not re.fullmatch(r'/tmp/cytv-product-[a-f0-9]{32}',path) for path in stages):
+                raise ValueError('Invalid cleanup support stage')
+            self.store.checkpoint(self.profile,cleanup_stages=stages+[stage])
         self.remote.run('umask 077; mkdir '+stage)
         for component,bundle in bundles:
             for name in (*manifests[component]['files'],'bundle.json'):
@@ -632,57 +671,22 @@ printf '%s' "$cytv_state"
         for data in (helper, launcher):
             for name, content in package.data_files(data).items():
                 if '/state/' not in name:
-                    expected['/media/developer/apps/' + name] = hashlib.sha256(content).hexdigest()
+                    expected[BASE.removesuffix('/usr/palm') + '/' + name] = hashlib.sha256(content).hexdigest()
         key_data = json.dumps({'key': ssap_key}).encode()
         ids = [app['id'] for app in inventory['apps'] if app['id'] not in (HOME, HELPER, 'com.webos.app.home', package.ROOT_APP)]
         apps_data = json.dumps(ids).encode()
         expected[HELPER_STATE + '/ssap-key.json'] = hashlib.sha256(key_data).hexdigest()
         expected[HELPER_STATE + '/apps.json'] = hashlib.sha256(apps_data).hexdigest()
         storage.install(self.remote, {'helper.ipk': helper, 'launcher.ipk': launcher}, self.progress)
-        self.store.begin(self.profile, 'install', expected=expected,
-                         versions={HOME: self.manifest['home_version'], HELPER: self.manifest['helper_version']})
-        stage = '/media/developer/temp/cytv-' + uuid.uuid4().hex
-        # appinstalld may run as another UID. Allow traversal/read, never foreign writes.
-        self.remote.run('umask 022; mkdir -p /media/developer/temp && '
-                        'case "$(LC_ALL=C ls -ld /media/developer/temp | cut -c10)" in '
-                        'x|t) ;; *) chmod o+x /media/developer/temp || exit 1;; esac && '
-                        'mkdir -m 755 ' + stage)
-        for app, data, name in ((HELPER, helper, 'helper.ipk'), (HOME, launcher, 'launcher.ipk')):
-            self.progress('Installing ' + ('Home Helper' if app == HELPER else 'Home') + '…')
-            path = stage + '/' + name
-            self.remote.upload(path, data, mode=0o644)
-            self.remote.luna('com.webos.appInstallService/dev/install', {'id': app, 'ipkUrl': path, 'subscribe': True}, terminal='installed', timeout=150)
-        self.verify_installed()
-        self.outcome.packages_verified()
-        self.progress('Configuring Home Helper…')
-        self.remote.upload(HELPER_STATE + '/ssap-key.json', key_data, mode=0o640)
-        self.remote.upload(HELPER_STATE + '/apps.json', apps_data, mode=0o644)
-        self.save_eim('unknown')  # Persist uncertainty before submitting registration.
-        try:
-            self.remote.luna('com.webos.service.eim/addDevice', {'appId': HOME, 'pigImage': '', 'mvpdIcon': ''})
-            self.save_eim(True)
-        except TVRejected:
-            self.save_eim(self.read_eim())
-            self.progress('Warning: early input restoration is unavailable; startup will use the guarded fallback.')
-        except RuntimeError:
-            self.store.checkpoint(self.profile, eim_registered='unknown')
-            self.progress('Warning: early input restoration was not confirmed; startup will use the guarded fallback.')
-        self.progress('Starting Home Helper…')
-        self.outcome.launch_submitted()
-        self.remote.luna('com.webos.applicationManager/launch', {'id': HELPER, 'params': {'nativeHomeStart': True}})
-        self.outcome.launch_accepted()
-        from .state import private_write
-        private_write(self.store.device_dir(self.profile) / 'installation.json',
-                      json.dumps({'eim_registered': self.store.pending(self.profile).get('eim_registered', 'unknown')}).encode())
-        self.store.finish(self.profile)
-        self.remote.run('rm -f ' + stage + '/helper.ipk ' + stage + '/launcher.ipk; rmdir ' + stage)
-        try:
-            observed = self.helper_state(timeout=5)
-            self.outcome.startup_observed('process-observed' if observed == 'running' else
-                                          'not-observed' if observed in ('stopped', 'stale') else 'unverified')
-        except Exception:
-            self.outcome.startup_observed('unverified')
-        return {'installed': 'no-root', 'launch_requested': True, 'hardware_verified': False}
+        from . import no_root_observer
+        pending = no_root_observer.begin(self, 'install', {'helper.ipk': helper, 'launcher.ipk': launcher},
+            {HOME: self.manifest['home_version'], HELPER: self.manifest['helper_version']}, expected,
+            {'ssap-key.json': key_data, 'apps.json': apps_data})
+        return self.continue_no_root(pending)
+
+    def continue_no_root(self, expected_pending):
+        from .no_root_observer import continue_operation
+        return continue_operation(self, expected_pending)
 
     def install_root(self, inventory, migrate, reinstall=None):
         if self.tv_info.get('home_backend') == 'c1-native-gate':
@@ -725,7 +729,8 @@ printf '%s' "$cytv_state"
                 self.preflight(install=True, home_interfaces=True)
             operation=uuid.uuid4().hex
             self.store.begin(self.profile,'install',release_sha=release_sha,bundle_sha=bundle_sha,migrate=migrate,
-                             requires_updater=True,product_operation=operation,stage='coordinator-upload')
+                             requires_updater=True,product_operation=operation,stage='coordinator-upload',
+                             recovery_protocol='root-final-readback-v1')
             self.progress('Uploading Root and recovery runtime…')
             stage=self.upload_product(bundle)
             self.store.checkpoint(self.profile,stage='coordinator-submitted',product_payload=stage)
@@ -926,6 +931,9 @@ print('CYTV_UPDATER_VERIFIED')
         raise UserError('Installed version did not match the package. Run cytv status; do not retry blindly.', reason_code='version-mismatch')
 
     def status(self):
+        pending=self.store.pending(self.profile)
+        if pending and pending.get('recovery_protocol')=='clean-removal-v1':
+            return self.observe_recovery()
         result=self._status()
         self.tv_info['status']=result
         if (self.profile['edition']=='root'
@@ -933,12 +941,135 @@ print('CYTV_UPDATER_VERIFIED')
             self.collect_root_diagnostics()
         return result
 
-    def _status(self):
+    def observe_recovery(self):
+        """Read current proofs without clearing or archiving the host receipt.
+
+        Root checks can stage verified support code, as explained by the UI;
+        they never submit packages or activate Home here.
+        """
+        from .recovery_state import assess
         pending = self.store.pending(self.profile)
+        if pending and pending.get('recovery_protocol')=='clean-removal-v1':
+            from .recovery_state import removal_summary
+            result={'device':{},'pending':pending,'assessment':assess(self.profile,pending),
+                    'removal':removal_summary(pending),'can_resume_root_setup':False}
+            self.tv_info['status']=result
+            return result
+        initial = assess(self.profile, pending)
+        result = ({'device': {}, 'pending': pending, 'can_resume_root_setup': False}
+                  if initial['reason'] in ('unsupported-receipt', 'inherited-operation')
+                  else self._status(reconcile=False, trusted_recovery=pending is not None and
+                                    pending.get('recovery_protocol') == 'root-final-readback-v1'))
+        result['assessment'] = assess(self.profile, self.store.pending(self.profile), result)
+        self.tv_info['status'] = result
+        return result
+
+    def inspect_root_product(self, expected_pending):
+        """Explicit trusted support-code inspection of one original installation."""
+        pending=self.store.pending(self.profile)
+        if (pending != expected_pending or not pending or 'previous' in pending
+                or self.profile['edition']!='root' or pending.get('action')!='install'
+                or not re.fullmatch('[a-f0-9]{32}',pending.get('product_operation',''))):
+            raise UserError('Recovery evidence changed. Check recovery again; recovery data was kept.', reason_code='pending-operation')
+        result=self._status(reconcile=False, trusted_recovery=True)
+        if self.store.pending(self.profile)!=pending:
+            raise UserError('Recovery evidence changed. Check recovery again; recovery data was kept.', reason_code='pending-operation')
+        from .recovery_state import assess
+        result['assessment']=assess(self.profile,pending,result)
+        self.tv_info['status']=result
+        return result
+
+    def _save_product_baseline(self, pending, observation):
+        event=observation.get('device',{}).get('product',{})
+        proof=event.get('result',{})
+        if (self.store.pending(self.profile)!=pending or event.get('operation')!=pending.get('product_operation')
+                or event.get('state')!='complete' or event.get('current') is not True
+                or observation.get('can_resume_root_setup') is not True
+                or not re.fullmatch('[a-f0-9]{64}',proof.get('baseline_sha',''))):
+            raise UserError('Root setup could not be verified for continuation. Recovery data was kept.')
+        from .state import private_write
+        history=self.store.recovery(self.profile,'continue-root-product')
+        private_write(history,json.dumps({'action':'continue-root-product','previous':pending}).encode())
+        self.store.checkpoint(self.profile,stage='verify',baseline_sha=proof['baseline_sha'],requires_updater=True)
+
+    def continue_root_product(self, expected_pending):
+        result=self.inspect_root_product(expected_pending)
+        event=result['device']['product']
+        if event.get('can_resume') is not True or event.get('resume_reason')!='original_final_readback_verified':
+            raise UserError('Root continuation could not be verified. Recovery data was kept.', reason_code='pending-operation')
+        operation=expected_pending['product_operation']
+        reply=self.product_action('install',operation,resume=True)
+        deadline=time.monotonic()+120
+        while reply['state']=='pending' and time.monotonic()<deadline:
+            time.sleep(1)
+            reply=self.product_action('status',operation,verify_current=True,trusted_recovery=True)
+        result=self.inspect_root_product(expected_pending)
+        self._save_product_baseline(expected_pending,result)
+        return result
+
+    def inspect_root_cancellation(self, expected_pending):
+        from .root_install_recovery import invoke
+        if (self.profile['edition']!='root' or not isinstance(expected_pending,dict)
+                or expected_pending.get('action')!='install'
+                or self.store.pending(self.profile)!=expected_pending or 'previous' in expected_pending):
+            raise UserError('Recovery evidence changed. Check recovery again; recovery data was kept.', reason_code='pending-operation')
+        proof=invoke(self,'inspect',expected_pending)
+        if self.store.pending(self.profile)!=expected_pending:
+            raise UserError('Recovery evidence changed. Check recovery again; recovery data was kept.', reason_code='pending-operation')
+        from .recovery_state import assess
+        status=self.tv_info.setdefault('status',{})
+        status['cancellation']=proof
+        status['assessment']=assess(self.profile,expected_pending,status)
+        return proof
+
+    def cancel_root_product(self, expected_pending, expected_proof):
+        from .root_install_recovery import invoke
+        proof=self.inspect_root_cancellation(expected_pending)
+        if (proof!=expected_proof or proof.get('state') not in
+                ('admissible','admitted','remove-observed','cancellation-terminal-pending','cancelled-and-removed')):
+            raise UserError('Root cancellation could not be verified. Recovery data was kept.', reason_code='pending-operation')
+        if proof['state']!='cancelled-and-removed':
+            invoke(self,'remove',expected_pending,proof)
+        disposition=self.inspect_root_cancellation(expected_pending)
+        if (disposition.get('state')!='cancelled-and-removed' or disposition.get('lease_terminal') is not True
+                or disposition.get('proof_sha256')!=proof.get('proof_sha256')
+                or disposition.get('candidate_sha256')!=proof.get('candidate_sha256')
+                or disposition.get('home_changed') is not False):
+            raise UserError('Root cancellation could not be verified. Recovery data was kept.', reason_code='pending-operation')
+        from .state import private_write
+        history=self.store.recovery(self.profile,'cancelled-root-install')
+        private_write(history,json.dumps({'action':'cancelled-root-install','stage':'verified',
+                                        'previous':expected_pending,'disposition':disposition}).encode())
+        self.store.finish(self.profile)
+        return disposition
+
+    def reconcile_recovery(self, expected_pending):
+        """Explicit local completion; fresh backend evidence remains authority."""
+        previous = self.store.pending(self.profile)
+        if not previous or previous != expected_pending:
+            raise UserError('Recovery evidence changed. Check recovery again; recovery data was kept.', reason_code='pending-operation')
+        result = self.observe_recovery()
+        reason = result.get('reconciliation')
+        if (reason not in ('product-removal-verified', 'root-activation-verified')
+                or self.store.pending(self.profile) != previous):
+            raise UserError('Recovery could not be verified. Recovery data was kept.', reason_code='pending-operation')
+        from .state import private_write
+        receipt = self.store.recovery(self.profile, 'reconcile-recovery')
+        private_write(receipt, json.dumps({'action': 'reconcile-recovery', 'stage': 'verified',
+            'reason': reason, 'previous': previous}).encode())
+        self.store.finish(self.profile)
+        return {'reconciled': reason}
+
+    def _status(self, reconcile=True, trusted_recovery=False):
+        pending = self.store.pending(self.profile)
+        if pending and pending.get('recovery_protocol') == 'no-root-original-stream-v1':
+            from .no_root_observer import observe
+            return observe(self, pending)
         reconciled = None
+        reconciliation = None
         can_resume = False
         if (self.profile['edition']=='root' and pending and pending.get('action')=='install'
-                and pending.get('stage')=='coordinator-submitted'):
+                and pending.get('stage')=='coordinator-submitted' and not trusted_recovery):
             # A failed submission/status (including SSH 127) does not authorize
             # staging a replacement driver or executing retained binding code.
             from .root_passive import collect
@@ -955,28 +1086,44 @@ print('CYTV_UPDATER_VERIFIED')
                     return {'device':{'product':active},'pending':None,'reconciled':None,'can_resume_root_setup':False,'active_operation':active.get('operation')}
             except (OSError,RuntimeError,ValueError,KeyError):pass
         if pending and pending.get('product_operation') and pending.get('action') in ('install','uninstall'):
-            event=self.product_action('status',pending['product_operation'],verify_current=True)
+            event=self.product_action('status',pending['product_operation'],verify_current=True,
+                                      **({'trusted_recovery':True} if trusted_recovery else {}))
             complete=event['state']=='complete' and event.get('current') is True
             can_resume=False
             if complete and pending['action']=='install':
+                event=dict(event)
+                reason='current-package-files-unverified'
                 try:
+                    proof=event['result']
+                    if (proof.get('installed')!=package.ROOT_APP or proof.get('home_changed') is not False
+                            or proof.get('verified') is not True or not re.fullmatch('[a-f0-9]{64}',proof.get('baseline_sha',''))):
+                        raise ValueError('current_product_proof_required')
                     device=self.root_action('status').get('result',{})
+                    reason='stock-routing-unverified'
                     if self.root_setup_inactive(device):
+                        reason='updater-baseline-unverified'
                         self.verify_root_updater(event['result']['baseline_sha']);can_resume=True
+                    elif (device.get('effective',{}).get('sam_home')=='com.webos.app.home'
+                          and device.get('effective',{}).get('profiles',{}).get('defaultApps',{}).get('categories',{}).get('home')=='com.webos.app.home'
+                          and device.get('effective',{}).get('profiles',{}).get('idleApp',{}).get('appId')=='com.webos.app.home'):
+                        reason='intent-guardian-unverified'
                 except (RuntimeError,ValueError,KeyError,TypeError):pass
+                if not can_resume:event['setup_reason']=reason
             if complete and pending['action']=='uninstall':
-                self.store.finish(self.profile)
-                reconciled='product-removal-verified'
+                reconciliation='product-removal-verified'
+                if reconcile:
+                    self.store.finish(self.profile)
+                    reconciled=reconciliation
             return {'device':{'product':event},'pending':self.store.pending(self.profile),'reconciled':reconciled,
-                    'can_resume_root_setup':can_resume}
+                    'reconciliation':reconciliation, 'can_resume_root_setup':can_resume}
         if pending and pending.get('action') == 'enable-system-updates':
             report = self.system_updater_cleanup('status')
-            if report.get('present') is False:
+            if reconcile and report.get('present') is False:
                 # The root helper also proves no owned bootstrap process can
                 # still create state or submit an installer operation.
                 self.store.finish(self.profile)
                 reconciled = 'system-updater-not-started'
-            elif report.get('present') is True and report.get('bootstrap_complete') is True and report.get('disabled') is False:
+            elif reconcile and report.get('present') is True and report.get('bootstrap_complete') is True and report.get('disabled') is False:
                 self.store.finish(self.profile)
                 reconciled = 'system-updater-bootstrap-verified'
             return {'device': {'system_updater': report}, 'pending': self.store.pending(self.profile),
@@ -988,7 +1135,7 @@ print('CYTV_UPDATER_VERIFIED')
             journal = json.loads(raw)
             stage = journal.get('stage')
             result = {'deployment_stage': stage}
-            if pending and pending['action'] == 'archive-root-state':
+            if reconcile and pending and pending['action'] == 'archive-root-state':
                 readback = self.root_archive('reconcile', pending.get('archive'), pending.get('identity'))
                 if readback.get('state') in ('archived', 'not-archived'):
                     self.store.finish(self.profile)
@@ -998,17 +1145,20 @@ print('CYTV_UPDATER_VERIFIED')
                 result = self.root_action('status')
                 if (pending and pending['action'] == 'activate-root'
                         and self.root_active(result.get('result', {}))
+                        and (reconcile or self.root_files_match(pending))
                         and (pending.get('home_backend') != 'c1-native-gate' or
                              result.get('result', {}).get('backend') == 'c1-native-gate'
                              and result.get('result', {}).get('effective', {}).get('token') == pending.get('home_token'))):
-                    self.store.finish(self.profile)
-                    reconciled = ('root-activation-verified' if pending.get('launch_requested') is True
-                                  else 'root-activation-verified; screen launch unconfirmed, press Home to open it')
+                    reconciliation = 'root-activation-verified'
+                    if reconcile:
+                        self.store.finish(self.profile)
+                        reconciled = ('root-activation-verified' if pending.get('launch_requested') is True
+                                      else 'root-activation-verified; screen launch unconfirmed, press Home to open it')
                 can_resume = self.can_resume_root_setup(pending, result.get('result', {}))
-                if self.recover_unstarted_root_updater(pending, result.get('result', {})):
+                if reconcile and self.recover_unstarted_root_updater(pending, result.get('result', {})):
                     pending = None
                     reconciled = 'updater-not-started; recovery verified; reinstallation available'
-                if (pending and pending['action'] == 'install' and not pending.get('requires_updater')
+                if (reconcile and pending and pending['action'] == 'install' and not pending.get('requires_updater')
                         and pending.get('home_backend') != 'c1-native-gate'
                         and result.get('result', {}).get('recovery', {}).get('integrity_verified') is True
                         and self.root_files_match(pending)):
@@ -1016,10 +1166,10 @@ print('CYTV_UPDATER_VERIFIED')
                     reconciled = 'root-installation-verified'
             elif stage == 'uninstalled-state-retained':
                 self.verify_absent(package.ROOT_APP)
-                if pending and pending['action'] == 'uninstall' and not pending.get('full_project'):
+                if reconcile and pending and pending['action'] == 'uninstall' and not pending.get('full_project'):
                     self.store.finish(self.profile)
                     reconciled = 'root-removal-verified; TV evidence retained'
-            elif (stage == 'absent' and pending and pending['action'] == 'install'
+            elif (reconcile and stage == 'absent' and pending and pending['action'] == 'install'
                   and (pending.get('home_backend') != 'c1-native-gate' or pending.get('stage') == 'upload')):
                 self.verify_absent(package.ROOT_APP)
                 self.store.finish(self.profile)
@@ -1031,7 +1181,7 @@ print('CYTV_UPDATER_VERIFIED')
             # interrupted installer transaction. No supported terminal readback
             # is established for these legacy receipts; retain them unchanged.
         return {'device': result, 'pending': self.store.pending(self.profile), 'reconciled': reconciled,
-                'can_resume_root_setup': can_resume,
+                'can_resume_root_setup': can_resume, 'reconciliation': reconciliation,
                 **({'deployment_stage': stage} if self.profile['edition'] == 'root' else {})}
 
     @staticmethod
@@ -1114,28 +1264,41 @@ print('CYTV_UPDATER_VERIFIED')
         except (OSError, RuntimeError, ValueError, TypeError, KeyError, AttributeError):
             return False
 
-    def finish_root_setup_disabled(self):
+    def finish_root_setup_disabled(self, expected_pending=None):
         """Explicitly cancel only verified restored activation, preserving its receipt."""
-        result=self.status()
         previous=self.store.pending(self.profile)
+        if expected_pending is not None and previous != expected_pending:
+            raise UserError('Recovery evidence changed. Check recovery again; recovery data was kept.', reason_code='pending-operation')
+        product=bool(previous and previous.get('action')=='install' and previous.get('product_operation'))
+        result=self.inspect_root_product(previous) if product else self.observe_recovery()
         if (self.profile['edition']!='root' or not previous
-                or previous.get('action')!='activate-root'
+                or self.store.pending(self.profile) != previous
+                or (previous.get('action')!='activate-root' and not product)
                 or previous.get('home_backend')=='c1-native-gate'
                 or result.get('can_resume_root_setup') is not True):
             raise UserError('Root setup could not be verified for continuation. Recovery data was kept.')
         from .state import private_write
         receipt=self.store.recovery(self.profile,'finish-root-setup-disabled')
         private_write(receipt,json.dumps({'action':'finish-root-setup-disabled','stage':'verified',
-            'home_changed':False,'previous':previous}).encode())
+            'home_changed':False,'previous':previous,
+            'baseline_sha':result['device']['product']['result']['baseline_sha'] if product else previous['baseline_sha']}).encode())
         self.store.finish(self.profile)
         self.outcome.packages_verified()
         return {'home_changed':False,'updates_ready':True,'home_control':'disabled'}
 
-    def resume_root_setup(self):
+    def resume_root_setup(self, expected_pending=None):
         # Revalidate after the user's confirmation; never resubmit package setup.
+        previous = self.store.pending(self.profile)
+        if expected_pending is not None and previous != expected_pending:
+            raise UserError('Recovery evidence changed. Check recovery again; recovery data was kept.', reason_code='pending-operation')
         self.outcome.begin()
-        if self.status().get('can_resume_root_setup') is not True:
+        observation=(self.inspect_root_product(previous) if previous and previous.get('action')=='install'
+                     and previous.get('product_operation') else self.observe_recovery())
+        if (observation.get('can_resume_root_setup') is not True
+                or self.store.pending(self.profile) != previous):
             raise UserError('Root setup could not be verified for continuation. Recovery data was kept.')
+        if previous.get('action')=='install' and previous.get('product_operation'):
+            self._save_product_baseline(previous,observation)
         previous = self.store.pending(self.profile)
         if previous and previous.get('action') == 'activate-root':
             from .state import private_write
@@ -1369,40 +1532,83 @@ print('CYTV_PROJECT_REMOVED')
         return reply
 
     def uninstall_project(self):
-        # Experimental Root has no updater/coordinator installation. Retained
-        # native evidence selects its restricted restore-before-remove driver,
-        # including when a damaged descriptor prevents a normal status reply.
-        if self.native_root_present():
-            from .root_gate import remove_project
-            return remove_project(self)
+        pending=self.store.request_clean_removal(self.profile)
+        return self.continue_clean_removal(pending)
+
+    def continue_clean_removal(self, expected_pending):
+        """Explicit adapter dispatch; advisory summaries are never credentials."""
         pending=self.store.pending(self.profile)
-        if pending:
-            if pending.get('action')!='uninstall' or pending.get('full_project') is not True or not pending.get('product_operation'):
-                raise UserError('An earlier operation needs recovery before full removal. Recovery data was kept.')
-            event=self.product_action('status',pending['product_operation'],verify_current=True)
-            if event['state']!='complete' or event.get('current') is not True:
-                raise UserError('Previous package removal outcome is unknown or the app reappeared; it was not submitted again.')
-            result=event['result']
-        else:
-            # Validate/stage the current trusted code before reserving host intent.
-            self.coordinator_code()
-            operation=uuid.uuid4().hex
-            self.store.begin(self.profile,'uninstall',full_project=True,product_operation=operation,stage='coordinator-upload')
-            stage=self.upload_product(self.payload/'root')
-            self.store.checkpoint(self.profile,stage='coordinator-submitted',product_payload=stage)
-            result=self.await_product('remove',operation,stage)
-        proof=self.product_action('status',(self.store.pending(self.profile) or {})['product_operation'],verify_current=True)
-        if proof.get('current') is not True:
-            raise UserError('Project startup or service registrations remain. Removal is not complete.')
-        if result.get('removed') is not True or result.get('applications_services_startup_removed') is not True:
-            raise UserError('Project startup or service registrations remain. Removal is not complete.')
-        self.store.finish(self.profile)
-        return result
+        if pending!=expected_pending or not pending or pending.get('recovery_protocol')!='clean-removal-v1':
+            raise UserError('Removal evidence changed. Recovery data was kept.',reason_code='pending-operation')
+        if self.profile['edition']=='no-root':
+            from .no_root_cleanup import continue_removal
+            return continue_removal(self,pending)
+        operation=pending['product_operation']
+        self.progress('Removing Clean Your TV; earlier installation results will be kept.')
+        from .root_clean_tail import resume as resume_tail
+        reply=resume_tail(self,pending)
+        if reply is None:
+            root_bundle=self.payload/'root'
+            if self.native_root_present():
+                root_bundle=self.payload/'root-c1'
+                if not root_bundle.is_dir():
+                    raise UserError('Native C1 recovery could not be verified. Removal has not started.')
+            stage=self.upload_product(root_bundle,clean_removal=True)
+            retire_stages=list(pending.get('cleanup_stages',[]))
+            old=pending
+            while isinstance(old,dict):
+                retained=old.get('product_payload')
+                if isinstance(retained,str) and re.fullmatch(r'/tmp/cytv-product-[a-f0-9]{32}',retained):retire_stages.append(retained)
+                old=old.get('previous')
+            self.store.checkpoint(self.profile,product_payload=stage)
+            target=self.product_action('clean-target',operation,stage)
+            selected=target.get('target_operation');lease=target.get('target_lease')
+            goal=target.get('target_removal') or pending['removal_operation']
+            if (not isinstance(selected,str) or not re.fullmatch('[a-f0-9]{32}',selected)
+                    or not isinstance(goal,str) or not re.fullmatch('[a-f0-9]{32}',goal)
+                    or lease is not None and (not isinstance(lease,str) or not re.fullmatch('[a-f0-9]{32}',lease))):
+                raise UserError('Removal evidence changed. Recovery data was kept.')
+            self.store.checkpoint(self.profile,removal_target_operation=selected,removal_target_lease=lease,removal_target_intent=goal)
+            reply=self.product_action('clean-remove',selected,stage,retire_stages=tuple(dict.fromkeys(retire_stages)),
+                                      removal_intent=goal,removal_lease=lease or '-')
+        from .recovery_state import REMOVAL_STAGES, REMOVAL_REASONS
+        phase=reply.get('stage')
+        if phase in REMOVAL_STAGES:
+            self.store.checkpoint(self.profile,stage=phase,removal_reason=reply.get('reason') if reply.get('reason') in REMOVAL_REASONS else 'ownership-conflict')
+        result=reply.get('result',{})
+        if result.get('restart_required') is True:
+            self.store.checkpoint(self.profile,stage='restart-required',removal_reason='restart-required',cleanup_boot_id=reply.get('cleanup_boot_id'))
+            return dict(result,removed=False,verified_clean=False,restart_required=True)
+        failure=reply.get('cleanup_error')
+        messages={
+            'root-worker-busy':'Another Clean Your TV operation is still running. Wait for it to finish, then choose Try again.',
+            'root-access-required':'Root access is required to remove the remaining files. Restore Root SSH access, then choose Try again.',
+            'removal-failed':'The TV could not finish removing a package. Choose Try again.',
+            'cleanup-check-failed':'Some Clean Your TV files or settings remain. Choose Try again.'}
+        if failure in messages:
+            self.store.checkpoint(self.profile,removal_reason=failure)
+            raise UserError(messages[failure],reason_code=failure)
+        if (reply.get('state')!='complete' or phase!='verified-clean'
+                or result.get('removed') is not True or result.get('private_cleanup_verified') is not True
+                or reply.get('current') is not True):
+            raise UserError(messages['cleanup-check-failed'],reason_code='cleanup-check-failed')
+        result=dict(result,verified_clean=True)
+        self.store.checkpoint(self.profile,stage='verified-clean',removal_reason='removal-verified',result=result)
+        self.store.finish_clean_removal(self.profile)
+        return dict(result,verified_clean=True)
 
     def uninstall(self, full_project=False):
-        if full_project and self.profile['edition'] == 'root':
-            return self.uninstall_project()
+        if full_project:
+            pending=self.store.request_clean_removal(self.profile)
+            return self.continue_clean_removal(pending)
         pending = self.store.pending(self.profile)
+        if self.profile['edition']=='no-root' and (not pending or pending.get('recovery_protocol')=='no-root-original-stream-v1'):
+            from . import no_root_observer
+            if pending and pending.get('action')!='uninstall':
+                no_root_observer.refuse()
+            if not pending:
+                pending=no_root_observer.begin(self,'remove',{}, {}, {}, {})
+            return self.continue_no_root(pending)
         if pending:
             # Repeated remove requests are just as uncertain as repeated installs.
             resuming_remove = pending['action'] == 'uninstall' and self.profile['edition'] == 'no-root'

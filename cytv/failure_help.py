@@ -32,6 +32,9 @@ GUIDES = {
         'Choose Review recovery options for the same saved TV connection. Removal requires a separate confirmation; setup starts separately.', False),
     'pending-operation': ('An earlier operation is unresolved', 'This failure does not prove that the earlier package operation finished.',
         'Save the report and keep the original saved connection and recovery data. Use only verified recovery; do not blindly retry setup, Restore or removal.', False),
+    'no-root-recovery': ('Review the original No-root operation',
+        'Package outcomes and remaining setup are checked from the original saved evidence.',
+        'Choose Review recovery options for the same saved TV connection. Unknown package or setup requests are not repeated.',False),
 }
 
 
@@ -50,10 +53,6 @@ def for_error(error, phase, profile=None, pending=None):
     elif (pending and edition == 'no-root' and phase in ('recover', 'uninstall')
             and isinstance(error, TVRejected) and error.luna.get('operation') == 'package-status'):
         code = 'recovery-status-rejected'
-    elif pending and phase == 'uninstall' and unsubmitted_removal(profile, pending):
-        code = 'removal-not-submitted'
-    elif pending:
-        code = 'pending-operation'
     elif reason in ('root-home-interfaces','root-requirements') and edition=='root':
         code = reason
     elif reason in ('ssh-trust-record', 'ssh-identity-unverified') or 'BadHostKeyException' in names:
@@ -75,9 +74,17 @@ def for_error(error, phase, profile=None, pending=None):
             code = 'ssh-protocol'
         elif isinstance(error,(OSError,TimeoutError)) or 'NoValidConnectionsError' in names:
             code = 'ssh-unreachable'
+    if code is None and pending:
+        code = ('no-root-recovery' if edition=='no-root' and pending.get('recovery_protocol')=='no-root-original-stream-v1'
+                else 'removal-not-submitted' if phase == 'uninstall' and unsubmitted_removal(profile, pending)
+                else 'pending-operation')
     if code is None:
         return None
     title, detail, next_step, edit = GUIDES[code]
+    if pending and code.startswith(('ssh-', 'developer-key-')):
+        if code in ('ssh-unreachable', 'ssh-protocol'):
+            next_step = 'Keep the TV awake on the same home network. Check network access and VPN isolation using the original trusted connection.'
+        next_step += ' Keep the original saved TV connection and recovery data; do not replace or edit the connection to bypass recovery.'
     return {'code':code, 'title':title, 'detail':detail, 'next_step':next_step,
             'pending':bool(pending), 'can_edit_connection':edit and not bool(pending)}
 

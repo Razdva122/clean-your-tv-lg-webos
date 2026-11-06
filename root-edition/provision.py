@@ -468,7 +468,7 @@ def disable_trials():
         finally: os.close(directory)
     finally: os.close(fd)
 
-def rollback():
+def rollback(restored=None):
     saved = json.loads(secure(STATE/'ls2-provision-snapshot.json'))
     if saved.get('version') != 1 or saved.get('service') != NAME or set(saved['files']) != {str(p) for p in FILES.values()}:
         raise ValueError('Invalid provision snapshot')
@@ -498,8 +498,8 @@ def rollback():
             raise ValueError('LS2 file drift: '+path)
     if saved.get('phase') != 'restoring':
         disable_trials()
-        restored = rpc('restore')
-        runtime = restored.get('result')
+        reply = rpc('restore') if restored is None else {'result':restored}
+        runtime = reply.get('result')
         if not isinstance(runtime,dict) or runtime.get('returnValue') is not True or runtime.get('result') not in ('restored','absent'):
             raise ValueError('Recovery is not terminal; keep boot activity registered')
         rpc('unregister')

@@ -131,8 +131,8 @@ def collect(remote, operation, pending=None):
     return dict(schema=1,status='unsafe')
 
 
-def inspect_saved(store, profile, operation, secret):
-    """One original-profile inspection; never persist authentication or recovery."""
+def inspect_saved(store, profile, operation, secret, after_observe=None):
+    """Read original records, then optionally enter a separately confirmed review."""
     from .transport import SSH
     program(operation)
     with store.lock(profile):
@@ -148,11 +148,19 @@ def inspect_saved(store, profile, operation, secret):
         directory = store.device_dir(profile)
         paths = [directory / name for name in ('profile.json', 'known_hosts', 'operation.json')]
         before = [path.read_bytes() for path in paths]
-        remote = SSH.connect(profile, directory, secret, lambda *_: False, persist=False)
+        try:
+            remote = SSH.connect(profile, directory, secret, lambda *_: False, persist=False)
+        except Exception as error:
+            error.observation_phase = 'ssh-connect'
+            raise
         try:
             result = collect(remote, operation, pending)
             if store.pending(profile) != pending or [path.read_bytes() for path in paths] != before:
                 raise ValueError('original_host_records_changed')
+            if after_observe is not None:
+                # The passive contract ends here. The shared interactive review
+                # requires separate confirmation before trusted support staging.
+                return after_observe(remote,result)
             return result
         finally:
             remote.close()

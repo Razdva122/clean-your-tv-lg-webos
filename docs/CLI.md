@@ -330,9 +330,20 @@ Saved profiles keep subsequent commands short. Multiple profiles show a numbered
 selection; `--host`, `--edition`, `--port` and `--identity` select explicitly.
 Options work before or after the command. `restore` restores LG Home behavior
 without removing applications. `uninstall` restores before requesting removal and
-checks application, service and package absence. Root preserves its recovery
-evidence, including after removal; retained TV state blocks reinstallation by
-design. See [Root rollout](../root-edition/ROLLOUT.md).
+checks application, service and package absence. The published Root installer
+retains recovery evidence and referenced runtime data; do not delete it to force
+reinstallation. See [Root rollout](../root-edition/ROLLOUT.md).
+
+In the next unpublished candidate, explicit `cytv uninstall` confirms one cleanup
+goal on the saved connection, removes known present project items and skips missing
+ones, including after failed or partial setup. Old pending or unknown install
+success does not require completing that installation first. When asked, disconnect
+and reconnect TV power, wait for the network, then run `cytv uninstall` again
+(**Try again** in desktop/Android) for the final sweep. Standby/Quick Start does
+not satisfy the checked boot change. Connection loss offers the same retry; actual
+busy work or access denial keeps its specific wait/access guidance. Final success
+requires both removed and verified-clean proof; see
+[candidate removal](RECOVERY.md#next-candidate-original-operation-recovery-and-full-removal).
 
 `--yes` accepts the install/restore/removal summary only; it never accepts SSH trust. `--non-interactive` rejects local input prompts and requires
 previously established host trust and usable credentials (saved/explicit key,
@@ -406,11 +417,14 @@ supported file-only reconciliation for a denied/unknown installer outcome.
 Root reconciliation still requires its terminal deployment stage and verified
 recovery integrity. See [No-root authority limits](development/NO-ROOT-PACKAGE-AUTHORITY.md).
 
-An incomplete install may be explicitly removed only after the TV installer reports
-idle. An uncertain removal is not submitted again. `restore` remains available
-and records its result while retaining incomplete-install evidence. If readback is
-incomplete, access is denied, or recovery reports a conflict, retain the evidence
-and follow the edition's [recovery instructions](RECOVERY.md).
+The published recovery flow requires installer-idle proof before removing an
+incomplete install and does not repeat an uncertain removal. The next candidate's
+explicit `uninstall` instead checks current project presence, uses the actual
+restart checkpoint and verifies final absence as described above. It does not
+infer the outcome of an old vendor request or bypass a currently active worker,
+real OS busy condition, access denial or foreign ownership. Setup continuation
+and recovery retain their own admission checks. `restore` remains available;
+retain original reports and follow the edition's [recovery instructions](RECOVERY.md).
 
 Optional early input restoration is tracked separately. A rejected registration
 uses the guarded fallback. Rejection alone does not establish that an older

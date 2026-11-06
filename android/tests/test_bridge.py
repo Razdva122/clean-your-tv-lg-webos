@@ -9,6 +9,60 @@ SOURCE = Path(__file__).resolve().parents[1] / 'app/src/main/python/android_brid
 
 
 class BridgeTests(unittest.TestCase):
+    def test_uninstall_is_an_explicit_supported_action(self):
+        module = self.module()
+        args = module.arguments({'host':'192.0.2.10', 'edition':'no-root',
+                                 'action':'uninstall', 'language':'en'}, '/private/profiles')
+        self.assertEqual(args[0], 'uninstall')
+        self.assertNotIn('--yes', args)
+
+    def test_recovery_result_preserves_fixed_disposition_and_verified_cleanup(self):
+        module = self.module()
+        class Native:
+            def __init__(self): self.events = []
+            def emit(self, raw): self.events.append(json.loads(raw))
+        native = Native()
+        console = module.AndroidConsole(module.Callbacks(native))
+        console.recovery_plan({'state':'complete','disposition':'clean-removal','verified_clean':True,
+                               'summary':'Clean Your TV removal is verified.','next_step':'Other TV apps stay installed.',
+                               'private':'PRIVATE-ORIGINAL-RECEIPT'})
+        self.assertEqual(native.events[-1]['disposition'], 'clean-removal')
+        self.assertTrue(native.events[-1]['verified_clean'])
+        self.assertNotIn('PRIVATE', json.dumps(native.events))
+
+    def test_cleanup_details_are_localized_and_never_forward_unknown_codes(self):
+        from cytv import i18n
+        self.addCleanup(i18n.set_language, 'en')
+        i18n.set_language('en')
+        module = self.module()
+        class Native:
+            def __init__(self): self.events = []
+            def emit(self, raw): self.events.append(json.loads(raw))
+        native = Native()
+        console = module.AndroidConsole(module.Callbacks(native))
+        console.recovery_plan({'state':'blocked','disposition':'clean-removal',
+            'summary':'Removal is still in progress.','next_step':'Continue the remaining cleanup for this TV.',
+            'actions':['continue-removal','PRIVATE'], 'reason':'PRIVATE',
+            'removal':{'stage':'private-cleanup','reason':'private-cleanup-incomplete','private':'PRIVATE'}})
+        event = native.events[-1]
+        self.assertEqual(event['stageText'], 'Removing private setup data…')
+        self.assertEqual(event['blockerText'], 'Some project files remain. Try again to finish removal.')
+        self.assertEqual(event['actions'], ['continue-removal'])
+        self.assertNotIn('PRIVATE', json.dumps(event))
+
+    def test_restart_semantics_are_forwarded_without_relying_on_translated_stage(self):
+        module = self.module()
+        class Native:
+            def __init__(self): self.events = []
+            def emit(self, raw): self.events.append(json.loads(raw))
+        native = Native()
+        console = module.AndroidConsole(module.Callbacks(native))
+        for value in ({'removal':{'stage':'restart-required'}}, {'restart_required':False,'reason':'restart-required'}):
+            console.recovery_plan({'state':'complete','disposition':'clean-removal',
+                'removed':True,'verified_clean':True,'summary':'Clean Your TV removal is verified.',
+                'next_step':'Try again',**value})
+            self.assertIs(native.events[-1].get('restart_required'), True)
+
     def test_check_events_translate_text_but_preserve_ids_and_status(self):
         from cytv import i18n
         self.addCleanup(i18n.set_language, 'en')
@@ -70,14 +124,17 @@ class BridgeTests(unittest.TestCase):
         class Native:
             def __init__(self):self.events=[]
             def emit(self,raw):self.events.append(json.loads(raw))
-        native=Native();console=module.AndroidConsole(module.Callbacks(native))
-        guide=for_error(TimeoutError('PRIVATE-PASSWORD'),'ssh-connect',{'edition':'root','host':'PRIVATE-HOST'}, {'action':'install'})
-        console.failure_help(guide)
-        event=native.events[-1]
-        self.assertEqual((event['kind'],event['code']),('failure-help','pending-operation'))
-        self.assertTrue(event['pending']);self.assertFalse(event['canEditConnection'])
-        self.assertNotEqual(event['title'],guide['title'])
-        self.assertNotIn('PRIVATE',json.dumps(native.events))
+        for edition in ('root', 'no-root'):
+            with self.subTest(edition=edition):
+                native=Native();console=module.AndroidConsole(module.Callbacks(native))
+                guide=for_error(TimeoutError('PRIVATE-PASSWORD'),'ssh-connect',
+                                {'edition':edition,'host':'PRIVATE-HOST'}, {'action':'install'})
+                console.failure_help(guide)
+                event=native.events[-1]
+                self.assertEqual((event['kind'],event['code']),('failure-help','ssh-unreachable'))
+                self.assertTrue(event['pending']);self.assertFalse(event['canEditConnection'])
+                self.assertNotEqual(event['title'],guide['title'])
+                self.assertNotIn('PRIVATE',json.dumps(native.events))
 
     def test_recovery_failure_advice_keeps_private_data_out_and_offers_only_inspection(self):
         from cytv import cli, state, i18n
@@ -131,7 +188,7 @@ class BridgeTests(unittest.TestCase):
     def test_rejects_invalid_or_unapproved_commands_before_connecting(self):
         module = self.module()
         for request in ({'host': 'bad;cmd', 'edition': 'root'},
-                        {'host': '192.168.1.2', 'edition': 'root', 'action': 'uninstall'},
+                        {'host': '192.168.1.2', 'edition': 'root', 'action': 'force-delete'},
                         {'host': '192.168.1.2', 'edition': 'other'},
                         {'host': '192.168.1.2', 'edition': 'root', 'port': 0}):
             with self.subTest(request=request), self.assertRaises(ValueError):
@@ -185,10 +242,59 @@ class BridgeTests(unittest.TestCase):
             for language in i18n.LANGUAGES.keys() - {'auto'}:
                 i18n.set_language(language)
                 for prompt, kind in [('SSH key passphrase: ', 'key'), ('Root SSH password (hidden): ', 'root'), ('Developer Mode passphrase: ', 'developer')]:
-                    module.Callbacks(native).secret(Console(interactive=False).prompt(prompt))
-                    self.assertEqual(native.events[-1]['secretType'], kind)
+                    for text in (prompt, Console(interactive=False).prompt(prompt)):
+                        module.Callbacks(native).secret(text)
+                        self.assertEqual(native.events[-1]['secretType'], kind)
         finally:
             i18n.set_language('en')
+
+    def test_typed_secret_survives_cli_localization_in_every_locale(self):
+        from cytv import cli, i18n
+        from cytv.transport import CredentialPrompt
+        module = self.module()
+        self.addCleanup(i18n.set_language, 'en')
+        class Native:
+            def __init__(self): self.events = []
+            def request(self, raw): self.events.append(json.loads(raw)); return 'PRIVATE-SECRET'
+        native = Native()
+        def secret(prompt):
+            self.assertIsInstance(prompt, CredentialPrompt)
+            return module.Callbacks(native).secret(prompt)
+        def connect(profile, directory, secret, trust):
+            for text, kind in [('SSH key passphrase: ', 'key'), ('Root SSH password (hidden): ', 'root'),
+                               ('Developer Mode passphrase: ', 'developer')]:
+                secret(CredentialPrompt(text, kind))
+            raise EOFError
+        with tempfile.TemporaryDirectory() as tmp:
+            for language in set(i18n.LANGUAGES) - {'auto'}:
+                with self.subTest(language=language):
+                    native.events.clear(); output = []
+                    code = cli.main(['status', '--host', '192.0.2.10', '--edition', 'root',
+                                     '--data-dir', tmp, '--language', language], connect=connect,
+                                    secret=secret, write=output.append)
+                    self.assertEqual(code, 130)
+                    self.assertEqual([e['secretType'] for e in native.events], ['key', 'root', 'developer'])
+                    if language != 'en':
+                        self.assertNotIn('Root SSH password (hidden)', native.events[1]['text'])
+                    self.assertNotIn('PRIVATE-SECRET', json.dumps(native.events) + '\n'.join(output))
+
+    def test_explicit_secret_type_is_authoritative_and_unsupported_types_are_refused(self):
+        from cytv.transport import CredentialPrompt
+        from unittest.mock import Mock
+        native = Mock(); native.request.return_value = 'secret'
+        callbacks = self.module().Callbacks(native)
+        prompt = CredentialPrompt('Developer Mode passphrase: ', 'root')
+        callbacks.secret(prompt)
+        self.assertEqual(json.loads(native.request.call_args.args[0])['secretType'], 'root')
+        native.reset_mock()
+        for kind in ('unknown', '', None):
+            with self.subTest(kind=kind):
+                with self.assertRaises(ValueError):
+                    CredentialPrompt('hidden', kind)
+                prompt.credential_type = kind
+                with self.assertRaises(ValueError):
+                    callbacks.secret(prompt)
+        native.request.assert_not_called()
 
     def test_progress_events_use_source_messages_before_translation(self):
         from cytv import i18n

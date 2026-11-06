@@ -9,7 +9,7 @@ let browser;
 (async () => {
   browser = await chromium.launch({headless:true, executablePath:process.env.CYTV_CHROME || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});
   for (const [locale, dictionary] of Object.entries(words)) {
-    for (const action of ['status', 'restore', 'home-diagnostics', 'recover']) {
+    for (const action of ['status', 'restore', 'home-diagnostics', 'recover', 'uninstall']) {
       const page = await browser.newPage({locale, viewport:{width:320, height:740}, reducedMotion:'reduce'});
       await page.addInitScript(() => {
         window.requests = [];
@@ -23,24 +23,24 @@ let browser;
       await page.locator('[data-action=tools]').click();
       assert.equal(await page.locator('.steps').count(), 0);
       await page.locator(`[data-action=choose-${action==='home-diagnostics'?'diagnostics':action}]`).click();
-      assert.equal(await page.locator('h1').innerText(), dictionary[action==='recover'?'recoveryReview':action==='home-diagnostics'?'homeDiagnostics':action==='status'?'statusTool':'restore']);
+      assert.equal(await page.locator('h1').innerText(), dictionary[action==='uninstall'?'uninstall':action==='recover'?'recoveryReview':action==='home-diagnostics'?'homeDiagnostics':action==='status'?'statusTool':'restore']);
       await page.locator('#host').fill('192.168.1.50');
       await page.locator('[data-action=inspect]').click();
       assert.equal(await page.locator('.steps').count(), 0);
       assert.equal(await page.locator('h1').innerText(), dictionary.connectionMethod);
       await page.locator('[data-action=back]').click();
-      assert.equal(await page.locator('h1').innerText(), dictionary[action==='recover'?'recoveryReview':action==='home-diagnostics'?'homeDiagnostics':action==='status'?'statusTool':'restore']);
+      assert.equal(await page.locator('h1').innerText(), dictionary[action==='uninstall'?'uninstall':action==='recover'?'recoveryReview':action==='home-diagnostics'?'homeDiagnostics':action==='status'?'statusTool':'restore']);
       assert.equal(await page.locator('#host').inputValue(), '192.168.1.50');
       await page.locator('[data-action=inspect]').click();
       await page.locator('[data-action=connect]').click();
-      assert.equal(await page.locator('h1').innerText(), dictionary[action==='recover'?'recoveryReview':action==='home-diagnostics'?'homeDiagnostics':action==='status'?'statusTool':'restore']);
+      assert.equal(await page.locator('h1').innerText(), dictionary[action==='uninstall'?'uninstall':action==='recover'?'recoveryReview':action==='home-diagnostics'?'homeDiagnostics':action==='status'?'statusTool':'restore']);
       assert(!(await page.locator('body').innerText()).includes(dictionary.reviewFoot));
       await page.locator('[data-action=start]').click();
       assert.equal(await page.evaluate(()=>requests.at(-1).action), action);
       assert.equal(await page.locator('.task-list').count(), 0);
       assert.equal(await page.locator('.progress-copy p').innerText(), dictionary[action==='home-diagnostics'?'diagnosticProgress':'maintenanceProgress']);
       assert.equal(await page.locator('#live-caption').innerText(), dictionary.awaiting);
-      const expectedTitle = dictionary[action==='recover'?'recoveryReview':action==='home-diagnostics'?'homeDiagnostics':action==='status'?'statusTitle':'restoreTitle'].replace('<br>', '\n');
+      const expectedTitle = dictionary[action==='uninstall'?'uninstall':action==='recover'?'recoveryReview':action==='home-diagnostics'?'homeDiagnostics':action==='status'?'statusTitle':'restoreTitle'].replace('<br>', '\n');
       assert.equal(await page.locator('[role=progressbar]').getAttribute('aria-label'), expectedTitle.replace('\n', ' '));
       await page.evaluate(()=>receiveNative({kind:'stage', stage:3}));
       assert.equal(await page.locator('.task-list').count(), 0);
@@ -64,7 +64,7 @@ let browser;
     }
   }
   for (const [edition, port] of [['no-root', 9922], ['root', 2222]]) {
-    for (const action of ['status', 'restore', 'home-diagnostics', 'recover']) {
+    for (const action of ['status', 'restore', 'home-diagnostics', 'recover', 'uninstall']) {
       const page = await browser.newPage({locale:'en'});
       await page.addInitScript(edition => {
         window.requests = [];
@@ -96,7 +96,7 @@ let browser;
     }
   }
   // Recovery-only install results must never claim installed Helper behavior.
-  for (const state of ['review', 'ready', 'blocked', 'complete']) {
+  for (const state of ['review', 'ready', 'blocked', 'waiting', 'complete']) {
     const page = await browser.newPage({locale:'ru', viewport:{width:320,height:740}});
     await page.addInitScript(() => {
       window.CYTV={hasKey:()=>false,snapshot:()=> '[]',answer:()=>{}};
@@ -113,11 +113,45 @@ let browser;
     assert.equal(await page.locator('[data-action=status]').count(),0);
     assert.equal(await page.locator('[data-action=recover]').count(),state==='review'?1:0);
     assert.equal(await page.locator('[data-action=save-report]').count(),1);
-    assert.equal(await page.locator('.recovery-info').innerText(),'Сохраните отчёт');
+    assert.equal(await page.locator(state==='complete'?'.progress-copy p':'.recovery-info').innerText(),'Сохраните отчёт');
+    assert.equal(await page.locator('.review-symbol').count(),state==='complete'?0:1);
+    if(state!=='complete')assert.equal(await page.locator('.result-symbol svg use[href="#check"]').count(),0);
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     await page.evaluate(()=>receiveNative({kind:'question',text:'Проверить? [y/N]',defaultNo:true,context:'Отдельное подтверждение'}));
     await page.waitForFunction(()=>document.activeElement?.dataset.action==='cancel-prompt');
     assert.equal(await page.locator('[data-action=confirm]').count(),1);
+    await page.close();
+  }
+  // A removal exit code cannot substitute for the backend's final cleanup proof.
+  for (const verifiedClean of [undefined,false,true]) {
+    const page=await browser.newPage({locale:'en'});
+    await page.addInitScript(()=>window.CYTV={hasKey:()=>false,snapshot:()=> '[]',answer:()=>{}});
+    await page.goto('file://'+path.join(ui,'index.html'));
+    await page.evaluate(verifiedClean=>{
+      receiveNative({kind:'started',config:{host:'192.0.2.10',edition:'root',action:'uninstall'}});
+      receiveNative({kind:'recovery-plan',state:'complete',disposition:'clean-removal',removed:true,verified_clean:verifiedClean,
+        summary:'Clean Your TV removal is verified.',nextStep:'Other TV apps stay installed.'});
+      receiveNative({kind:'finished',code:0});
+    },verifiedClean);
+    assert.equal(await page.locator('.review-symbol').count(),verifiedClean===true?0:1);
+    assert.equal(await page.locator('h1').innerText(),verifiedClean===true?'Clean Your TV removal is verified.':'Removal is not finished yet.');
+    await page.close();
+  }
+  // An intentionally completed LG Home goal outranks physical Clean Home checks.
+  {
+    const page=await browser.newPage({locale:'en',viewport:{width:320,height:740}});
+    await page.addInitScript(()=>window.CYTV={hasKey:()=>false,snapshot:()=> '[]',answer:()=>{}});
+    await page.goto('file://'+path.join(ui,'index.html'));
+    await page.evaluate(()=>{
+      receiveNative({kind:'started',config:{host:'192.0.2.10',edition:'root',action:'install'}});
+      receiveNative({kind:'check',checkId:'packages',status:'pass',label:'Packages',detail:'',statusText:'pass'});
+      receiveNative({kind:'check',checkId:'home-button',status:'unknown',label:'Home button',detail:'Not tested',statusText:'unknown'});
+      receiveNative({kind:'recovery-plan',state:'complete',disposition:'home-off',summary:'Root setup finished with LG Home and Home control off.',nextStep:'Keep LG Home active.'});
+      receiveNative({kind:'finished',code:0});
+    });
+    assert.equal(await page.locator('h1').innerText(),'Root setup finished with LG Home and Home control off.');
+    assert.equal(await page.locator('.review-symbol').count(),0);
+    assert((await page.locator('.tv-checks').innerText()).includes('Not tested'));
     await page.close();
   }
   for (const [locale,dictionary] of Object.entries(words)) {

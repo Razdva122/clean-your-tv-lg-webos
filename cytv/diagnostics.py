@@ -24,6 +24,7 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
         'schema': 1, 'cytv_version': __version__,
         'timestamp_utc': datetime.now(timezone.utc).isoformat(),
         'desktop': {'os': platform.system(), 'architecture': platform.machine(), 'python': platform.python_version()},
+        'frontend': context.choice(context.mapping(tv_info).get('frontend'),('console','desktop','android')),
         'action': action, 'edition': profile.get('edition') if profile else None,
         'phase': phase,
         'error_type': type(error).__name__ if error else None,
@@ -35,8 +36,12 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
         'checks': context.checks_summary(checks),
         'privacy': 'No addresses, SSH identities, exception text, credentials, app inventory, environment or raw TV logs are collected.',
     }
-    from .recovery_state import summary
-    report['recovery'] = summary(profile or {}, pending)
+    from .recovery_state import assess, summary
+    report['recovery'] = {**summary(profile or {}, pending), **assess(profile, pending, status)}
+    removal=pending or (getattr(store,'diagnostic_removal',None) if action in ('uninstall','recover') else None)
+    if removal and removal.get('recovery_protocol')=='clean-removal-v1':
+        from .recovery_state import removal_summary
+        report['removal']=removal_summary(removal)
     from .failure_help import for_error, report_summary
     help = for_error(error, phase, profile, pending)
     if help:
@@ -77,7 +82,9 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
         for key in ('luna', 'connection', 'ssh_command', 'python_cache', 'python_runtime', 'root_recovery'):
             if key in report:
                 report[key] = safe_error.get(key, {})
-    report.update(context.history(report, store, profile, error, pending))
+    report.update(context.history(report, store, profile, error, removal or pending))
+    if error is not None and action in ('recover', 'status', 'doctor'):
+        report['observation_failure'] = context.failure_summary(report)
     path = store.root / 'reports' / ('diagnostic-' + uuid.uuid4().hex[:12] + '.json')
     private_write(path, json.dumps(report, indent=2).encode())
     return path

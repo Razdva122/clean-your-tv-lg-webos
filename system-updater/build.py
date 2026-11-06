@@ -13,7 +13,7 @@ from cytv import package
 
 SERVICE='com.cleanyourtv.system.updater.service'
 APP='com.cleanyourtv.system.updater'
-VERSION='1.2.2'
+VERSION='1.2.3'
 APPS={'home':'com.gathin.tvhome','helper':'com.local.nativehome','updater':'com.cleanyourtv.updater','root':'com.cleanyourtv.root.preview','root-updater':'com.cleanyourtv.root.updater'}
 
 def digest(raw):return hashlib.sha256(raw).hexdigest()
@@ -86,13 +86,14 @@ def component(name,raw,local=True,release=None,graphics="1920x1080"):
 
 def infrastructure(payload,graphics="1920x1080"):
     root_folder="root-720p" if graphics=="1280x720" else "root"
+    installer_only=assigned(ROOT/'root-edition/coordinator_inventory.py','INSTALLER_ONLY_FILES')
     files={}
     for folder,prefix in ((root_folder,''),('root-updater','updater/')):
         root=Path(payload)/folder
         manifest=json.loads(source(root/'bundle.json'))
         for name,expected in manifest['files'].items():
             package.safe_name(name)
-            if (folder==root_folder and not name.startswith('runtime/')) or (folder=='root-updater' and name in ('root-updater.ipk','setup-updater.py')):continue
+            if (folder==root_folder and not name.startswith('runtime/')) or (folder=='root-updater' and name in ('root-updater.ipk','setup-updater.py',*installer_only)):continue
             raw=source(root/name)
             if digest(raw)!=expected:raise ValueError('Infrastructure bundle hash mismatch')
             files[prefix+name]=raw

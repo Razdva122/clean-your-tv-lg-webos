@@ -24,7 +24,7 @@ class PythonCacheCLITests(unittest.TestCase):
                                 ask=no_tv, secret=no_tv, connect=no_tv, search=no_tv,
                                 inspect=no_tv, write=output.append)
             self.assertEqual(code, 0)
-            self.assertEqual(calls, [Path(tmp) / 'python-cache'])
+            self.assertEqual(calls, [Path(tmp).resolve() / 'python-cache'])
             self.assertIn('verified-python.tar.gz', '\n'.join(output))
 
     def test_preparation_failure_has_its_own_diagnostic_phase(self):

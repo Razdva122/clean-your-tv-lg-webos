@@ -85,6 +85,12 @@ Podaj model TV, firmware, No-root lub Root, urządzenie instalujące, krok i kom
 
 W nadchodzących kompilacjach ostrzeżenie i przycisk „Wyłącz podgląd HDMI” pojawią się przy wybranym lub aktywnym 4K tylko w motywach z włączonym podglądem wejść. Podczas podglądu HDMI tapeta wideo 4K jest tymczasowo zastępowana statycznym obrazem 1080p. Wyłącz podgląd wejść, aby zachować tapetę w 4K.
 
+### Kandydat: proste usuwanie
+
+Przyciski powyżej nadal oferują opublikowaną wersję. W następnym kandydacie wybierz **Odinstaluj Clean Your TV** w Konserwacji dla tego samego zapisanego połączenia. Potwierdź raz. Znane aplikacje i pliki projektu, które istnieją, zostaną usunięte; brakujące zostaną pominięte, także po częściowej instalacji.
+
+Gdy pojawi się prośba, odłącz zasilanie TV, podłącz ponownie, poczekaj na sieć i wybierz **Spróbuj ponownie**. Czuwanie lub Quick Start nie jest pełnym restartem; CYTV nie uruchamia TV ponownie automatycznie. Po utracie połączenia sprawdź je i ponów to samo usuwanie bez kolejnego kreatora odzyskiwania. Przy odmowie dostępu użyj żądanego połączenia Root; gdy TV jest zajęty, poczekaj i ponów. Sukces pojawi się dopiero po weryfikacji końcowego czyszczenia. Zachowaj klucze i oryginalne raporty. Sterowanie awaryjne i zgoda na udostępnianie nadal obowiązują.
+
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="opcjonalny-python-dla-root"></a>
 <a id="testy-sprzętowe-i-ograniczenia"></a>

@@ -50,7 +50,7 @@ class FailureHelpTests(unittest.TestCase):
     def test_pending_evidence_blocks_connection_edit_and_generic_recovery_advice(self):
         error=type('AuthenticationException',(Exception,),{})('PRIVATE')
         help=self.guide(error,pending={'action':'install','stage':'coordinator-submitted'})
-        self.assertEqual(help['code'],'pending-operation')
+        self.assertEqual(help['code'],'ssh-auth-root')
         self.assertFalse(help['can_edit_connection'])
         self.assertTrue(help['pending'])
 
@@ -142,6 +142,7 @@ class FailureHelpTests(unittest.TestCase):
         from cytv.desktop import DesktopConsole
         with tempfile.TemporaryDirectory() as tmp:
             profile=state.target('192.0.2.10','root');store=state.Store(tmp);store.save(profile)
+            (store.device_dir(profile)/'known_hosts').write_bytes(b'original pin')
             store.begin(profile,'install',stage='coordinator-submitted')
             path=store.device_dir(profile)/'operation.json';before=path.read_bytes();events=[]
             def connect(*args):raise TimeoutError('PRIVATE')
@@ -149,8 +150,8 @@ class FailureHelpTests(unittest.TestCase):
                      write=DesktopConsole(lambda k,v:events.append((k,v))))
             self.assertEqual(path.read_bytes(),before)
             help=next(v for k,v in events if k=='failure-help')
-            self.assertEqual(help['code'],'pending-operation')
+            self.assertEqual(help['code'],'ssh-unreachable')
             self.assertFalse(help['can_edit_connection'])
             report=json.loads(next(Path(tmp).glob('reports/*.json')).read_text())
-            self.assertEqual(report['guidance'],{'code':'pending-operation','pending':True})
+            self.assertEqual(report['guidance'],{'code':'ssh-unreachable','pending':True})
             self.assertNotIn('PRIVATE',json.dumps(report))
