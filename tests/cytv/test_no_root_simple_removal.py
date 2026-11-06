@@ -47,6 +47,7 @@ class Remote:
         return {'returnValue':True}
 
 
+@unittest.skipIf(os.name=='nt' or not shutil.which('node'),'POSIX TV filesystem model requires Node')
 class SimpleRemoval(unittest.TestCase):
     def setUp(self):
         from cytv import no_root_cleanup
@@ -143,7 +144,7 @@ class SimpleRemoval(unittest.TestCase):
         self.assertFalse(any(uri.endswith('/dev/remove') for uri,_ in self.remote.calls))
         self.reboot();self.assertTrue(self.remove()['verified_clean']);self.assertFalse(source.exists())
 
-    @unittest.skipIf(os.getuid()==0,'permission boundary requires an unprivileged SDK model')
+    @unittest.skipIf(getattr(os,'getuid',lambda:-1)()==0,'permission boundary requires an unprivileged SDK model')
     def test_actual_registration_permission_denial_requests_root_access(self):
         directory=self.root/'bus/roles.d';directory.mkdir();role=directory/'com.local.nativehome.service.json';role.write_text('{}')
         directory.chmod(0o555)
@@ -151,3 +152,32 @@ class SimpleRemoval(unittest.TestCase):
             with self.assertRaisesRegex(UserError,'Root access'):self.remove()
             self.assertTrue(role.exists())
         finally:directory.chmod(0o755)
+
+    def test_known_partial_upload_is_removed_after_restart_without_valid_archive(self):
+        identifier='a'*32
+        self.own_file('.cytv-installer/operations/'+identifier+'/private.json','changed old data')
+        partial=self.own_file('temp/cytv-'+identifier+'/helper.ipk','interrupted upload')
+        foreign=self.own_file('temp/cytv-'+'b'*32+'/helper.ipk','unrelated unknown file')
+        self.assertTrue(self.remove()['restart_required']);self.reboot()
+        original=self.remote.transform
+        self.remote.transform=lambda code:code.replace('function next(){if(!stages.length)',"if(input.action==='sweep')throw Error('connection interrupted after private sweep');function next(){if(!stages.length)")
+        with self.assertRaises(RuntimeError):self.remove()
+        self.remote.transform=original
+        self.assertTrue(self.remove()['verified_clean']);self.assertFalse(partial.exists());self.assertTrue(foreign.exists())
+
+    @unittest.skipUnless(getattr(os,'getuid',lambda:-1)()==501,'legacy501 shared-container ownership model')
+    def test_legacy_shared_package_service_containers_do_not_block_own_cleanup(self):
+        for kind,name in [('packages','com.local.nativehome'),('services','com.local.nativehome.service')]:
+            self.own_file('apps/usr/palm/'+kind+'/'+name+'/own.json')
+            foreign=self.own_file('apps/usr/palm/'+kind+'/org.foreign.app/keep.json','preserve')
+            (self.root/'developer/apps/usr/palm'/kind).chmod(0o777)
+        self.remove();self.reboot();self.assertTrue(self.remove()['verified_clean'])
+        self.assertEqual(foreign.read_text(),'preserve')
+
+    def test_shared_container_exception_does_not_cover_applications_parent(self):
+        own=self.own_file('apps/usr/palm/applications/com.local.nativehome/keep.json')
+        own.parent.parent.chmod(0o777)
+        try:
+            with self.assertRaises(UserError):self.remove()
+            self.assertTrue(own.exists())
+        finally:own.parent.parent.chmod(0o755)
