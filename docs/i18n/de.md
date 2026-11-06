@@ -85,6 +85,12 @@ Nennen Sie TV-Modell, Firmware, No-root oder Root, Installationsgerät, Schritt 
 
 In kommenden Builds erscheinen bei ausgewähltem oder aktivem 4K der Hinweis und die Schaltfläche „HDMI-Vorschau deaktivieren“ nur bei Designs mit aktivierter Eingangsvorschau. Während der HDMI-Vorschau wird das 4K-Hintergrundvideo vorübergehend durch ein statisches 1080p-Bild ersetzt. Deaktivieren Sie die Eingangsvorschau, um den Hintergrund in 4K zu behalten.
 
+### Kandidat: Wiederherstellung und vollständige Entfernung
+
+Die Download-Schaltflächen oben liefern weiterhin die veröffentlichte Version. Der nächste Kandidat ergänzt die Fortsetzung des ursprünglichen Vorgangs und **Clean Your TV deinstallieren** auf Desktop und Android. Dieselbe gespeicherte TV-Verbindung verwenden; Prüfung und jede Änderung separat bestätigen. Geeignete Root-Einrichtung kann mit LG Home und ausgeschalteter Home-Steuerung beendet werden. Dieses Ziel ist dann erreicht; Home-Taste, Ton, Standby und Kaltstart bleiben separate Prüfungen.
+
+Entfernung bewahrt das frühere Installationsergebnis. Erfolg wird erst gemeldet, wenn eigene Apps, Dienste, Autostart und private Einrichtungsdaten nachweislich entfernt sind. Unbekannte Herstellerergebnisse, laufende Arbeit, Eigentumskonflikte oder fehlende Prüfungen können sie blockieren; sie ist nicht für jede fehlgeschlagene Einrichtung garantiert. Vorhandenen Bericht und Wiederherstellungsdaten behalten. Nicht neu installieren, App-Daten löschen, Developer Mode zurücksetzen oder Löschung erzwingen. Künftige Beobachtung rekonstruiert keine alten Ergebnisse. Die Notfallsteuerung oben gilt weiter; Berichte nur mit Ihrer Zustimmung teilen.
+
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="optionales-python-für-root-in-v110"></a>
 <a id="lg-firmware-sperre-in-120"></a>

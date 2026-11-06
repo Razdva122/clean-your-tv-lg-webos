@@ -9,6 +9,47 @@ SOURCE = Path(__file__).resolve().parents[1] / 'app/src/main/python/android_brid
 
 
 class BridgeTests(unittest.TestCase):
+    def test_uninstall_is_an_explicit_supported_action(self):
+        module = self.module()
+        args = module.arguments({'host':'192.0.2.10', 'edition':'no-root',
+                                 'action':'uninstall', 'language':'en'}, '/private/profiles')
+        self.assertEqual(args[0], 'uninstall')
+        self.assertNotIn('--yes', args)
+
+    def test_recovery_result_preserves_fixed_disposition_and_verified_cleanup(self):
+        module = self.module()
+        class Native:
+            def __init__(self): self.events = []
+            def emit(self, raw): self.events.append(json.loads(raw))
+        native = Native()
+        console = module.AndroidConsole(module.Callbacks(native))
+        console.recovery_plan({'state':'complete','disposition':'clean-removal','verified_clean':True,
+                               'summary':'Clean Your TV removal is verified.','next_step':'Other TV apps stay installed.',
+                               'private':'PRIVATE-ORIGINAL-RECEIPT'})
+        self.assertEqual(native.events[-1]['disposition'], 'clean-removal')
+        self.assertTrue(native.events[-1]['verified_clean'])
+        self.assertNotIn('PRIVATE', json.dumps(native.events))
+
+    def test_cleanup_details_are_localized_and_never_forward_unknown_codes(self):
+        from cytv import i18n
+        self.addCleanup(i18n.set_language, 'en')
+        i18n.set_language('en')
+        module = self.module()
+        class Native:
+            def __init__(self): self.events = []
+            def emit(self, raw): self.events.append(json.loads(raw))
+        native = Native()
+        console = module.AndroidConsole(module.Callbacks(native))
+        console.recovery_plan({'state':'blocked','disposition':'clean-removal',
+            'summary':'Removal is still in progress.','next_step':'Continue the remaining cleanup for this TV.',
+            'actions':['continue-removal','PRIVATE'], 'reason':'PRIVATE',
+            'removal':{'stage':'private-cleanup','reason':'private-cleanup-incomplete','private':'PRIVATE'}})
+        event = native.events[-1]
+        self.assertEqual(event['stageText'], 'Removing private setup data…')
+        self.assertEqual(event['blockerText'], 'Private setup data cleanup is incomplete. Keep recovery data.')
+        self.assertEqual(event['actions'], ['continue-removal'])
+        self.assertNotIn('PRIVATE', json.dumps(event))
+
     def test_check_events_translate_text_but_preserve_ids_and_status(self):
         from cytv import i18n
         self.addCleanup(i18n.set_language, 'en')
@@ -134,7 +175,7 @@ class BridgeTests(unittest.TestCase):
     def test_rejects_invalid_or_unapproved_commands_before_connecting(self):
         module = self.module()
         for request in ({'host': 'bad;cmd', 'edition': 'root'},
-                        {'host': '192.168.1.2', 'edition': 'root', 'action': 'uninstall'},
+                        {'host': '192.168.1.2', 'edition': 'root', 'action': 'force-delete'},
                         {'host': '192.168.1.2', 'edition': 'other'},
                         {'host': '192.168.1.2', 'edition': 'root', 'port': 0}):
             with self.subTest(request=request), self.assertRaises(ValueError):

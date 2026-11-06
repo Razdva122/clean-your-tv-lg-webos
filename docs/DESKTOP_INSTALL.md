@@ -143,16 +143,26 @@ Existing console commands remain available in the separately distributed CLI.
 
 <a id="guided-no-root-recovery-and-reinstallation-in-130"></a>
 
-### Recover and reinstall No-root
+### Review interrupted setup or removal
 
 If a No-root installation or removal remains unfinished after **Check TV status**, connection
-diagnostics or **Return to LG Home**, click **Recover and reinstall**. The wizard
+diagnostics or **Return to LG Home**, click **Review recovery options**. The wizard
 keeps the same TV, edition and SSH port, even when several connections are saved.
-It reconnects, checks the current state and asks you to finish removal with a
-separate, default-No confirmation. It restores LG Home, verifies removal, then
-shows the bundled versions for review before installing. **Set up my TV** also
-offers this recovery when it finds an unfinished removal. Returning to LG Home
-alone does not complete removal.
+It asks before inspection and before each supported change, with No selected by
+default. Recovery never starts a new installation automatically. **Set up my TV**
+also enters recovery when it finds a retained operation. Returning to LG Home
+alone does not complete removal. Unknown package/setup outcomes keep their data.
+
+The next candidate can continue verified remaining work of the original operation
+or finish eligible Root setup with LG Home and Home control off. Completion names
+the chosen goal; physical Home/sound/standby/cold-boot checks stay separate.
+Retaining evidence or cancelling sign-in is a review/cancelled outcome, never a
+green installation success. **Uninstall Clean Your TV** records a separate removal
+goal even after interrupted setup. It reports success only after owned package,
+service, startup and private-data cleanup checks pass. Old runtime writers,
+unknown vendor results or ownership/readback conflicts can still block it; do not
+force removal or erase the original saved connection. See the
+[candidate scope and limits](RECOVERY.md#next-candidate-original-operation-recovery-and-full-removal).
 
 If any step fails, **Save diagnostic report…** is the primary action. Save that
 attempt's report with the normal file dialog and attach it to your issue; no
@@ -177,6 +187,9 @@ submitted twice automatically.
 
 Root recovery records, archived updater state and referenced managed Python
 runtime slots remain for diagnostics and recovery.
+That is the published retention baseline. The next candidate additionally removes
+owned private setup/runtime data when its cleanup proof permits; minimal removal
+records and ownership backups may remain. A blocked cleanup is reported explicitly.
 They have no active service or startup registration. The Mac application and its
 local reports remain installed on your computer.
 

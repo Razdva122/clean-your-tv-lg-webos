@@ -30,6 +30,46 @@ stopped. Physical No-root acceptance remains unverified for the exact Helper tra
 
 ## Interrupted setup or removal
 
+### Next candidate: original-operation recovery and full removal
+
+The following additions are source/candidate work; published downloads above keep
+their existing release scope. Use **Review recovery options** on the same saved
+TV connection (`cytv recover`). Inspection and every change require separate
+confirmation; retaining data or cancelling authentication leaves the operation
+unresolved. Desktop and Android show this as review/waiting, even when the command
+exits normally. Save the existing diagnostic report rather than repeating setup.
+
+For supported evidence, the installer can continue only verified remaining work
+of the original operation. Unknown package requests, unknown configuration or
+restore results, active workers, mismatched ownership and unsupported legacy
+records do not grant retry permission. Root support checks may execute verified
+support code after confirmation. Original connection and host pin remain required;
+password cancellation does not replace them or clear recovery data.
+
+**Uninstall Clean Your TV** (`cytv uninstall`) is an explicit removal goal on
+desktop and Android, including after interrupted setup. It retains the earlier
+installation outcome and records the remaining cleanup separately: stop earlier
+writers, restore controls, remove project packages, clean owned private setup data
+and verify absence. Only verified completion reports removal success. Missing
+proof, unknown vendor results, foreign state, unavailable checks or an old runtime
+whose writers cannot be proven stopped can still block removal. It is not a
+promise that every historical failed installation can be erased. Do not clear app
+data, reset Developer Mode, delete receipts or force removal around a refusal.
+Minimal removal records and ownership backups may remain intentionally; ordinary
+TV apps stay installed. Returning to LG Home alone is not full removal.
+
+Eligible Root setup also offers **Finish setup with LG Home and Home control off**
+directly in the recovery choices. Its completion is the selected goal; it does not
+require activating Clean Home. Physical Home, audio, standby and cold boot remain
+separate observed/untested results. Recovery does not clear emergency or watchdog
+stops; use the existing on-TV controls described above.
+
+The future No-root observer cannot reconstruct the terminal outcome of legacy
+operations such as #201, #307 or #359. In #359 the first install failure is unknown;
+the later rejected package-status check is a separate observation, not its proven
+cause. Keep both records without another installation. See the maintained
+[failure-injection matrix](development/INSTALLER-RECOVERY-MATRIX.md).
+
 <a id="interrupted-setup-or-removal-in-110"></a>
 <a id="interrupted-no-root-installation-in-the-unpublished-140-candidate"></a>
 
@@ -82,8 +122,9 @@ original evidence and do not edit installed runtime files or integrity receipts.
 
 If activation keeps failing on the retained runtime, do not repeatedly select
 **Finish Root setup?**. The next installer offers a separate default-No choice,
-**Finish Root setup with Home control off?**, after you decline activation.
-It is offered only for a pending profile-backend activation that passes the same
+**Finish setup with LG Home and Home control off**, directly in the recovery menu,
+followed by **Finish Root setup with Home control off?** (default No).
+It is offered only for eligible pending profile-backend setup that passes the same
 strict disabled/restored routing, binding, file, completed product and Root Updater
 checks. Confirmation repeats those checks. C1 Beta and unknown state are excluded.
 
