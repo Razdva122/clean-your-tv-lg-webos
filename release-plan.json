@@ -69,7 +69,8 @@
     {
       "pr": 385,
       "issues": [
-        201
+        201,
+        378
       ],
       "summary": "Fix No-root observer storage before pending and retain confirmed legacy cleanup; original device installation/recovery remains unverified"
     }
