@@ -215,7 +215,7 @@ and repeats existing activation eligibility checks before resolving that pending
 activation. It neither enables Home nor updates code. See the [candidate recovery
 path](../RECOVERY.md#candidate-finish-verified-root-setup-with-home-control-off).
 
-## No-root observer failures (next candidate, #376)
+## No-root observer failures (next candidate, #376 and #378)
 
 An optional `no_root_observer` object identifies the fixed observer `command`
 and `failure` category. It is revalidated in the current report, `first_failure`
@@ -226,6 +226,7 @@ preserved. The SSH receive deadline now has the fixed reason `operation-timeout`
 
 | Failure | Established fact | Next investigation or correction |
 | --- | --- | --- |
+| `observer-error` | The launched Node invocation returned a matching error envelope. | Inspect the fixed `exception_name`, `exception_code` and `observer_reason` categories. The envelope is always rejected as an observation; it cannot authorize recovery. |
 | `command-failed` | The SSH command returned nonzero. | Use the numeric status to narrow shell/runtime/storage investigation. Status 127 can mean a missing command, but does not identify which one. Do not infer an IPK failure or change permissions from it. |
 | `timeout` | The SSH receive deadline expired or the transport raised a timeout. | Inspect the original operation using its saved connection when available; timeout does not prove cancellation or allow resubmission. |
 | `connection-interrupted` | The existing transport identified connection loss. | Restore the existing trusted connection with the TV awake; preserve recovery data. |
@@ -240,6 +241,32 @@ removing the dependency on an `env` binary with `-u` support. Failure to unset
 stops before Node; the command is never retried. The trusted observer program,
 its hash, original capsule and package/configuration protocol are unchanged.
 This is a portability correction, not evidence that the affected TV lacks `env -u`.
+
+The current launcher wraps synchronous observer execution with a bounded error
+reply. `exception_name` admits standard Error/TypeError/SyntaxError/ReferenceError/
+RangeError names; `exception_code` admits fixed module, permission, storage and
+filesystem codes; `observer_reason` admits the observer's fixed guard reasons.
+Unknown values become `unknown` on the TV and again during current/retained report
+export. No exception message, stack, path, operation ID or arbitrary object is
+exported. `ENOSPC`/`EDQUOT` retain the existing TV storage guidance and
+`tv-storage-full` reason. A handled runtime failure returns a JSON error envelope
+on stdout; it is not a successful observer result or a numeric SSH failure.
+The host checks the operation binding and rejects every error envelope, including
+empty or malformed detail. There is no retry, extra probe, permission repair or
+receipt cleanup.
+
+The wrapper does not change the bound `PROGRAM`, protocol or existing capsule
+hashes. It covers synchronous runtime/guard errors in the current invocation,
+including `prepare` and `status`. Shell/Node startup failures, parse failures
+before execution and later asynchronous/detached-worker failures can still use
+`command-failed`, transport or existing terminal evidence; absence of a runtime
+category does not identify the cause. No TV compatibility is inferred.
+
+`first_failure` belongs to the pending operation's diagnostic ID, not the TV's
+entire installation history. Different timestamps across exports do not establish
+that the same operation's first failure was overwritten. Preserve original
+records and investigate the intervening workflow privately; do not publish the
+private operation receipt or repeat installation to populate history.
 
 Old `pending-operation` reports cannot recover the discarded command exit code
 or distinguish these categories retrospectively. Do not repeat installation to
