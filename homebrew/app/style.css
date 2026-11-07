@@ -1,39 +1,223 @@
-@font-face{font-family:CYTV;src:url(fonts/NotoSans.ttf)}
-@font-face{font-family:CYTVHindi;src:url(fonts/NotoSansDevanagari.ttf)}
-@font-face{font-family:CYTVKorean;src:url(fonts/NotoSansKR.ttf)}
-*{box-sizing:border-box}
-html{height:100%;background:#101216;color:#f5f7fa;font-family:CYTV,CYTVChineseSC,CYTVChineseTC,sans-serif}
-html:lang(hi){font-family:CYTVHindi,CYTV,CYTVChineseSC,CYTVChineseTC,sans-serif}
-html:lang(ko){font-family:CYTVKorean,CYTV,CYTVChineseSC,CYTVChineseTC,sans-serif}
-body{margin:0;padding:4vh 5vw;font-size:26px;line-height:1.5}
-main{max-width:1400px;margin:0 auto;background:#202329;border:1px solid #414650;border-radius:24px;padding:32px 40px}
-header{display:flex;align-items:center;border-bottom:1px solid #414650;padding-bottom:24px;margin-bottom:24px}
-header img{width:76px;height:76px;margin-right:24px}
-header div{flex:1;min-width:0}
-h1{font-size:42px;line-height:1.2;margin:0}
-h2{font-size:34px;line-height:1.3;margin:0 0 16px}
-p{margin:12px 0 20px;color:#ccd1db;font-size:26px}
-.eyebrow{font-size:22px;margin:0 0 6px}
-footer{color:#ccd1db;font-size:24px;border-top:1px solid #414650;padding-top:20px;margin-top:24px}
-button{font:inherit;font-size:26px;line-height:1.4;white-space:normal;word-wrap:break-word;max-width:100%;border:3px solid transparent;border-radius:12px;padding:14px 22px;background:#343941;color:#f5f7fa;cursor:pointer;min-height:64px;text-align:left;margin:8px 16px 8px 0}
-button:focus{outline:3px solid #b8d3ff;outline-offset:3px;border-color:#f5f7fa;background:#46556c}
-button:active{background:#526780}
-button:disabled{opacity:.5;cursor:default}
-button.primary{background:#dceaff;color:#142335}
-button.primary:focus{background:#b8d3ff}
-button.danger{border-color:#d3a3a3}
-#language{font-size:24px;flex-shrink:0;margin-right:0;max-width:30%}
-.actions{display:flex;flex-wrap:wrap}
-.details{padding:16px 22px;border:1px solid #626a76;border-radius:12px}
-.details p:last-child{margin-bottom:0}
-#technical{font-size:24px;word-wrap:break-word}
-@media(max-width:1400px),(max-height:800px){body{font-size:24px;padding:4vh 5vw}main{padding:24px 30px}h1{font-size:36px}h2{font-size:30px}p,button{font-size:24px}header{padding-bottom:18px;margin-bottom:20px}footer{font-size:24px}}
-@media(max-width:700px){body{padding:20px}main{padding:24px}header{flex-wrap:wrap}header img{width:56px;height:56px;margin-right:16px}#language{max-width:100%;margin-top:20px}h1{font-size:30px}.actions{display:block}.actions button{width:100%;margin-right:0}}
+@font-face {
+  font-family: CYTV;
+  src: url(fonts/NotoSans.ttf);
+}
+@font-face {
+  font-family: CYTVHindi;
+  src: url(fonts/NotoSansDevanagari.ttf);
+}
+@font-face {
+  font-family: CYTVKorean;
+  src: url(fonts/NotoSansKR.ttf);
+}
+* {
+  box-sizing: border-box;
+}
+html {
+  height: 100%;
+  background: #101216;
+  color: #f5f7fa;
+  font-family: CYTV, CYTVChineseSC, CYTVChineseTC, sans-serif;
+}
+html:lang(hi) {
+  font-family: CYTVHindi, CYTV, CYTVChineseSC, CYTVChineseTC, sans-serif;
+}
+html:lang(ko) {
+  font-family: CYTVKorean, CYTV, CYTVChineseSC, CYTVChineseTC, sans-serif;
+}
+body {
+  margin: 0;
+  padding: 4vh 5vw;
+  font-size: 26px;
+  line-height: 1.5;
+}
+main {
+  max-width: 1400px;
+  margin: 0 auto;
+  background: #202329;
+  border: 1px solid #414650;
+  border-radius: 24px;
+  padding: 32px 40px;
+}
+header {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #414650;
+  padding-bottom: 24px;
+  margin-bottom: 24px;
+}
+header img {
+  width: 76px;
+  height: 76px;
+  margin-right: 24px;
+}
+header div {
+  flex: 1;
+  min-width: 0;
+}
+h1 {
+  font-size: 42px;
+  line-height: 1.2;
+  margin: 0;
+}
+h2 {
+  font-size: 34px;
+  line-height: 1.3;
+  margin: 0 0 16px;
+}
+p {
+  margin: 12px 0 20px;
+  color: #ccd1db;
+  font-size: 26px;
+}
+.eyebrow {
+  font-size: 22px;
+  margin: 0 0 6px;
+}
+footer {
+  color: #ccd1db;
+  font-size: 24px;
+  border-top: 1px solid #414650;
+  padding-top: 20px;
+  margin-top: 24px;
+}
+button {
+  font: inherit;
+  font-size: 26px;
+  line-height: 1.4;
+  white-space: normal;
+  word-wrap: break-word;
+  max-width: 100%;
+  border: 3px solid transparent;
+  border-radius: 12px;
+  padding: 14px 22px;
+  background: #343941;
+  color: #f5f7fa;
+  cursor: pointer;
+  min-height: 64px;
+  text-align: left;
+  margin: 8px 16px 8px 0;
+}
+button:focus {
+  outline: 3px solid #b8d3ff;
+  outline-offset: 3px;
+  border-color: #f5f7fa;
+  background: #46556c;
+}
+button:active {
+  background: #526780;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+button.primary {
+  background: #dceaff;
+  color: #142335;
+}
+button.primary:focus {
+  background: #b8d3ff;
+}
+button.danger {
+  border-color: #d3a3a3;
+}
+#language {
+  font-size: 24px;
+  flex-shrink: 0;
+  margin-right: 0;
+  max-width: 30%;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+}
+.details {
+  padding: 16px 22px;
+  border: 1px solid #626a76;
+  border-radius: 12px;
+}
+.details p:last-child {
+  margin-bottom: 0;
+}
+#technical {
+  font-size: 24px;
+  word-wrap: break-word;
+}
+@media (max-width: 1400px), (max-height: 800px) {
+  body {
+    font-size: 24px;
+    padding: 4vh 5vw;
+  }
+  main {
+    padding: 24px 30px;
+  }
+  h1 {
+    font-size: 36px;
+  }
+  h2 {
+    font-size: 30px;
+  }
+  p,
+  button {
+    font-size: 24px;
+  }
+  header {
+    padding-bottom: 18px;
+    margin-bottom: 20px;
+  }
+  footer {
+    font-size: 24px;
+  }
+}
+@media (max-width: 700px) {
+  body {
+    padding: 20px;
+  }
+  main {
+    padding: 24px;
+  }
+  header {
+    flex-wrap: wrap;
+  }
+  header img {
+    width: 56px;
+    height: 56px;
+    margin-right: 16px;
+  }
+  #language {
+    max-width: 100%;
+    margin-top: 20px;
+  }
+  h1 {
+    font-size: 30px;
+  }
+  .actions {
+    display: block;
+  }
+  .actions button {
+    width: 100%;
+    margin-right: 0;
+  }
+}
 
-@font-face{font-family:CYTVChineseSC;src:url(fonts/NotoSansSC.ttf)}
-@font-face{font-family:CYTVChineseTC;src:url(fonts/NotoSansTC.ttf)}
-html:lang(zh-Hans){font-family:CYTVChineseSC,CYTVChineseTC,CYTV,sans-serif}
-html:lang(zh-Hant){font-family:CYTVChineseTC,CYTVChineseSC,CYTV,sans-serif}
+@font-face {
+  font-family: CYTVChineseSC;
+  src: url(fonts/NotoSansSC.ttf);
+}
+@font-face {
+  font-family: CYTVChineseTC;
+  src: url(fonts/NotoSansTC.ttf);
+}
+html:lang(zh-Hans) {
+  font-family: CYTVChineseSC, CYTVChineseTC, CYTV, sans-serif;
+}
+html:lang(zh-Hant) {
+  font-family: CYTVChineseTC, CYTVChineseSC, CYTV, sans-serif;
+}
 
-button[lang="zh-Hans"]{font-family:CYTVChineseSC,CYTVChineseTC,CYTV,sans-serif}
-button[lang="zh-Hant"]{font-family:CYTVChineseTC,CYTVChineseSC,CYTV,sans-serif}
+button[lang='zh-Hans'] {
+  font-family: CYTVChineseSC, CYTVChineseTC, CYTV, sans-serif;
+}
+button[lang='zh-Hant'] {
+  font-family: CYTVChineseTC, CYTVChineseSC, CYTV, sans-serif;
+}

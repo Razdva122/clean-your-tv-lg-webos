@@ -1,9 +1,76 @@
 <!doctype html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=1920"><title>Home Updater</title><link rel="stylesheet" href="renewal-panel.css"><link rel="stylesheet" href="i18n.css"><style>body{margin:0;background:#111519}#diagnostic{white-space:pre-wrap;overflow-wrap:break-word;font-size:21px;color:#ccd1db}#diagnostic[hidden]{display:none}</style></head>
-<body><section id="legacyRecovery" class="root-settings root-updates companion-app" role="dialog" aria-modal="true" aria-label="Home Updater"><div class="root-settings-card">
-<div class="settings-heading"><h1 data-i18n="Home Updater">Home Updater</h1><span class="settings-edition">No-root</span></div>
-<div id="recoveryReading" class="update-notes" role="region" aria-label="Home Updater">
-<p data-i18n="If Home stops working after an update, use this app to restore the previous version. For regular updates, open Home settings.">If Home stops working after an update, use this app to restore the previous version. For regular updates, open Home settings.</p>
-<p id="status" class="root-update-status" aria-live="polite">Reading status…</p><p id="guidance"></p><pre id="diagnostic" hidden></pre></div>
-<div class="renewal-actions update-actions"><button data-i18n="Open Home" id="open" class="companion-primary">Open Home</button><button data-i18n="Refresh status" id="refresh">Refresh status</button><button data-i18n="Restore previous Home" id="restore" hidden disabled>Restore previous Home</button><button data-i18n="Show diagnostics" id="details" aria-expanded="false">Show diagnostics</button></div>
-<p class="update-hint" data-i18n="← → Choose action · Back Open Home">← → Choose action · Back Open Home</p></div></section><script src="i18n.js"></script><script src="catalogs.js"></script><script src="root-locales.js"></script><script src="release-notes.js"></script><script src="system-updates.js"></script><script src="app.js"></script></body></html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920" />
+    <title>Home Updater</title>
+    <link rel="stylesheet" href="renewal-panel.css" />
+    <link rel="stylesheet" href="i18n.css" />
+    <style>
+      body{margin:0;background:#111519}#diagnostic{white-space:pre-wrap;overflow-wrap:break-word;font-size:21px;color:#ccd1db}#diagnostic[hidden]{display:none}
+    </style>
+  </head>
+  <body>
+    <section
+      id="legacyRecovery"
+      class="root-settings root-updates companion-app"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Home Updater"
+    >
+      <div class="root-settings-card">
+        <div class="settings-heading">
+          <h1 data-i18n="Home Updater">Home Updater</h1>
+          <span class="settings-edition">No-root</span>
+        </div>
+        <div
+          id="recoveryReading"
+          class="update-notes"
+          role="region"
+          aria-label="Home Updater"
+        >
+          <p
+            data-i18n="If Home stops working after an update, use this app to restore the previous version. For regular updates, open Home settings."
+          >
+            If Home stops working after an update, use this app to restore the
+            previous version. For regular updates, open Home settings.
+          </p>
+          <p id="status" class="root-update-status" aria-live="polite">
+            Reading status…
+          </p>
+          <p id="guidance"></p>
+          <pre id="diagnostic" hidden></pre>
+        </div>
+        <div class="renewal-actions update-actions">
+          <button data-i18n="Open Home" id="open" class="companion-primary">
+            Open Home</button
+          ><button data-i18n="Refresh status" id="refresh">
+            Refresh status</button
+          ><button
+            data-i18n="Restore previous Home"
+            id="restore"
+            hidden
+            disabled
+          >
+            Restore previous Home</button
+          ><button
+            data-i18n="Show diagnostics"
+            id="details"
+            aria-expanded="false"
+          >
+            Show diagnostics
+          </button>
+        </div>
+        <p class="update-hint" data-i18n="← → Choose action · Back Open Home">
+          ← → Choose action · Back Open Home
+        </p>
+      </div>
+    </section>
+    <script src="i18n.js"></script>
+    <script src="catalogs.js"></script>
+    <script src="root-locales.js"></script>
+    <script src="release-notes.js"></script>
+    <script src="system-updates.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

@@ -1,35 +1,148 @@
 'use strict';
 // Exercise current source CSS without regenerating committed bundled provenance.
-const {assert,fs,path,chromium,stage,open}=require('./browser.cjs');
-const {compileThemeCss}=require('../../theme-api/compile.cjs');
-(async()=>{
- const rules=(await compileThemeCss(fs.readFileSync('themes/ribbon/theme.css','utf8'))).bundle;
- const manifest=JSON.parse(fs.readFileSync('launcher/themes/ribbon/cytv-theme.json'));
- manifest.layout=JSON.parse(fs.readFileSync('themes/ribbon/theme.json')).layout;
- manifest.defaults.wallpaperAssetId=null;delete manifest.wallpaperVideo;manifest.requires.capabilities=manifest.requires.capabilities.filter(c=>c!=="video-wallpaper-v1");
- manifest.assets=JSON.parse(fs.readFileSync("tests/themes/fixtures/valid-manifest.json")).assets;
- const site=stage(),browser=await chromium.launch({headless:true,channel:process.env.BROWSER_CHANNEL||'chrome'});
- try{for(const edition of ['launcher','root-launcher']){
-  const {page,errors}=await open(browser,site,edition);
-  try{
-   await page.evaluate(({manifest,rules})=>ThemeRuntime.apply({manifest,rules,assetHandles:{}}),{manifest,rules});
-   const group=await page.locator('#topButtons').evaluate(n=>{const s=getComputedStyle(n),b=n.getBoundingClientRect();return {x:b.x,y:b.y,width:b.width,height:b.height,background:s.backgroundColor,before:getComputedStyle(n,'::before').backgroundColor,transform:getComputedStyle(n,'::before').transform};});
-   assert.deepEqual({x:group.x,y:group.y,height:group.height},{x:0,y:900,height:180},'shortcuts occupy the full bottom lane');
-   const firstLeft=await page.locator('#tiles .item').first().evaluate(n=>n.offsetLeft);assert(Math.abs(group.width-firstLeft)<1,'utility block meets the first card including the renderer skew margin');
-   assert.notEqual(group.transform,'none','utility group continues the app-card skew');
-   assert.equal(group.before,'rgb(32, 36, 43)','outlined charcoal block remains distinct from the backdrop');
-   const fills=await page.locator('#tiles .item[data-app-id] .card').evaluateAll(ns=>ns.map(n=>({actual:getComputedStyle(n).backgroundColor,native:n.style.background})));
-   assert(fills.every(f=>f.actual===f.native),'every app keeps its native solid fill across the card');
-   assert(new Set(fills.map(f=>f.actual)).size>3,'native app fills remain distinct');
-   await page.locator('#btnSettings').hover();
-   const focus=await page.locator('#btnSettings').evaluate(n=>{const s=getComputedStyle(n);return {border:s.borderTopColor,width:s.borderTopWidth,background:s.backgroundColor,icon:getComputedStyle(n.querySelector('svg')).width};});
-   assert.equal(focus.border,'rgb(255, 255, 255)');assert.equal(focus.width,'3px');assert.equal(focus.icon,'30px');
-   await page.screenshot({path:path.resolve('build/ribbon-reference-'+edition+'.png'),animations:'disabled'});
-   const external=structuredClone(manifest);external.id='github:razdva122/clean-your-tv-lg-webos:external-ribbon';delete external.layout.presentation;external.requires.capabilities=external.requires.capabilities.filter(c=>c!=='overlay-presentation-v1');
-   await page.evaluate(manifest=>ThemeRuntime.apply({manifest,rules:{schemaVersion:1,rules:[]},assetHandles:{}}),external);
-   assert.equal(await page.locator('#topButtons').evaluate(n=>getComputedStyle(n,'::before').content),'none','external Ribbon themes keep their original shortcut geometry');
-   const lastControl=await page.locator('#btnSettings').boundingBox();assert(lastControl.x+lastControl.width<=256,'compact default shortcuts fit even at the minimum left inset without skew');
-   assert.deepEqual(errors,[]);console.log('PASS reference Ribbon black shortcut group and native solid fills: '+edition);
-  }finally{await page.close();}
- }}finally{await browser.close();}
-})().catch(e=>{console.error(e);process.exitCode=1;});
+const { assert, fs, path, chromium, stage, open } = require('./browser.cjs');
+const { compileThemeCss } = require('../../theme-api/compile.cjs');
+(async () => {
+  const rules = (
+    await compileThemeCss(fs.readFileSync('themes/ribbon/theme.css', 'utf8'))
+  ).bundle;
+  const manifest = JSON.parse(
+    fs.readFileSync('launcher/themes/ribbon/cytv-theme.json')
+  );
+  manifest.layout = JSON.parse(
+    fs.readFileSync('themes/ribbon/theme.json')
+  ).layout;
+  manifest.defaults.wallpaperAssetId = null;
+  delete manifest.wallpaperVideo;
+  manifest.requires.capabilities = manifest.requires.capabilities.filter(
+    (c) => c !== 'video-wallpaper-v1'
+  );
+  manifest.assets = JSON.parse(
+    fs.readFileSync('tests/themes/fixtures/valid-manifest.json')
+  ).assets;
+  const site = stage(),
+    browser = await chromium.launch({
+      headless: true,
+      channel: process.env.BROWSER_CHANNEL || 'chrome'
+    });
+  try {
+    for (const edition of ['launcher', 'root-launcher']) {
+      const { page, errors } = await open(browser, site, edition);
+      try {
+        await page.evaluate(
+          ({ manifest, rules }) =>
+            ThemeRuntime.apply({ manifest, rules, assetHandles: {} }),
+          { manifest, rules }
+        );
+        const group = await page.locator('#topButtons').evaluate((n) => {
+          const s = getComputedStyle(n),
+            b = n.getBoundingClientRect();
+          return {
+            x: b.x,
+            y: b.y,
+            width: b.width,
+            height: b.height,
+            background: s.backgroundColor,
+            before: getComputedStyle(n, '::before').backgroundColor,
+            transform: getComputedStyle(n, '::before').transform
+          };
+        });
+        assert.deepEqual(
+          { x: group.x, y: group.y, height: group.height },
+          { x: 0, y: 900, height: 180 },
+          'shortcuts occupy the full bottom lane'
+        );
+        const firstLeft = await page
+          .locator('#tiles .item')
+          .first()
+          .evaluate((n) => n.offsetLeft);
+        assert(
+          Math.abs(group.width - firstLeft) < 1,
+          'utility block meets the first card including the renderer skew margin'
+        );
+        assert.notEqual(
+          group.transform,
+          'none',
+          'utility group continues the app-card skew'
+        );
+        assert.equal(
+          group.before,
+          'rgb(32, 36, 43)',
+          'outlined charcoal block remains distinct from the backdrop'
+        );
+        const fills = await page
+          .locator('#tiles .item[data-app-id] .card')
+          .evaluateAll((ns) =>
+            ns.map((n) => ({
+              actual: getComputedStyle(n).backgroundColor,
+              native: n.style.background
+            }))
+          );
+        assert(
+          fills.every((f) => f.actual === f.native),
+          'every app keeps its native solid fill across the card'
+        );
+        assert(
+          new Set(fills.map((f) => f.actual)).size > 3,
+          'native app fills remain distinct'
+        );
+        await page.locator('#btnSettings').hover();
+        const focus = await page.locator('#btnSettings').evaluate((n) => {
+          const s = getComputedStyle(n);
+          return {
+            border: s.borderTopColor,
+            width: s.borderTopWidth,
+            background: s.backgroundColor,
+            icon: getComputedStyle(n.querySelector('svg')).width
+          };
+        });
+        assert.equal(focus.border, 'rgb(255, 255, 255)');
+        assert.equal(focus.width, '3px');
+        assert.equal(focus.icon, '30px');
+        await page.screenshot({
+          path: path.resolve('build/ribbon-reference-' + edition + '.png'),
+          animations: 'disabled'
+        });
+        const external = structuredClone(manifest);
+        external.id = 'github:razdva122/clean-your-tv-lg-webos:external-ribbon';
+        delete external.layout.presentation;
+        external.requires.capabilities = external.requires.capabilities.filter(
+          (c) => c !== 'overlay-presentation-v1'
+        );
+        await page.evaluate(
+          (manifest) =>
+            ThemeRuntime.apply({
+              manifest,
+              rules: { schemaVersion: 1, rules: [] },
+              assetHandles: {}
+            }),
+          external
+        );
+        assert.equal(
+          await page
+            .locator('#topButtons')
+            .evaluate((n) => getComputedStyle(n, '::before').content),
+          'none',
+          'external Ribbon themes keep their original shortcut geometry'
+        );
+        const lastControl = await page.locator('#btnSettings').boundingBox();
+        assert(
+          lastControl.x + lastControl.width <= 256,
+          'compact default shortcuts fit even at the minimum left inset without skew'
+        );
+        assert.deepEqual(errors, []);
+        console.log(
+          'PASS reference Ribbon black shortcut group and native solid fills: ' +
+            edition
+        );
+      } finally {
+        await page.close();
+      }
+    }
+  } finally {
+    await browser.close();
+  }
+})().catch((e) => {
+  console.error(e);
+  process.exitCode = 1;
+});

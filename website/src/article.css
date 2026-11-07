@@ -56,7 +56,7 @@
   background: var(--color-paper-2);
 }
 
-.article-nav nav a[aria-current="page"] {
+.article-nav nav a[aria-current='page'] {
   border-inline-start-color: var(--color-accent);
   color: var(--color-ink);
   background: var(--color-paper-2);

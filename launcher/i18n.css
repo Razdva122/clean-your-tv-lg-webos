@@ -1,37 +1,42 @@
 @font-face {
-  font-family: "CYTV NotoSans";
-  src: url("fonts/NotoSans.ttf") format("truetype");
+  font-family: 'CYTV NotoSans';
+  src: url('fonts/NotoSans.ttf') format('truetype');
   font-weight: 400;
 }
 
 @font-face {
-  font-family: "CYTV NotoSansDevanagari";
-  src: url("fonts/NotoSansDevanagari.ttf") format("truetype");
+  font-family: 'CYTV NotoSansDevanagari';
+  src: url('fonts/NotoSansDevanagari.ttf') format('truetype');
   font-weight: 400;
 }
 
 @font-face {
-  font-family: "CYTV NotoSansKR";
-  src: url("fonts/NotoSansKR.ttf") format("truetype");
+  font-family: 'CYTV NotoSansKR';
+  src: url('fonts/NotoSansKR.ttf') format('truetype');
   font-weight: 400;
 }
 
 @font-face {
-  font-family: "CYTV NotoSansSC";
-  src: url("fonts/NotoSansSC.ttf") format("truetype");
+  font-family: 'CYTV NotoSansSC';
+  src: url('fonts/NotoSansSC.ttf') format('truetype');
   font-weight: 400;
 }
 
 @font-face {
-  font-family: "CYTV NotoSansTC";
-  src: url("fonts/NotoSansTC.ttf") format("truetype");
+  font-family: 'CYTV NotoSansTC';
+  src: url('fonts/NotoSansTC.ttf') format('truetype');
   font-weight: 400;
 }
 
 /* Packaged fallbacks also keep Chinese text available offline. */
 
-html,body,button {
-  font-family: Outfit,"CYTV NotoSans","CYTV NotoSansDevanagari","CYTV NotoSansSC","CYTV NotoSansTC","CYTV NotoSansKR","Noto Sans","Noto Sans Devanagari","Noto Sans CJK KR","Malgun Gothic",sans-serif;
+html,
+body,
+button {
+  font-family:
+    Outfit, 'CYTV NotoSans', 'CYTV NotoSansDevanagari', 'CYTV NotoSansSC',
+    'CYTV NotoSansTC', 'CYTV NotoSansKR', 'Noto Sans', 'Noto Sans Devanagari',
+    'Noto Sans CJK KR', 'Malgun Gothic', sans-serif;
 }
 
 #languagePicker {
@@ -44,7 +49,7 @@ html,body,button {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(7,10,14,.96);
+  background: rgba(7, 10, 14, 0.96);
   color: #f5f7fa;
 }
 
@@ -74,13 +79,15 @@ html,body,button {
   margin: 12px 0 20px;
 }
 
-#languageChoices, #settingsLanguageChoices {
+#languageChoices,
+#settingsLanguageChoices {
   display: flex;
   flex-wrap: wrap;
   margin: -8px;
 }
 
-#languageChoices button, #settingsLanguageChoices button {
+#languageChoices button,
+#settingsLanguageChoices button {
   font: inherit;
   font-size: 26px;
   line-height: 1.5;
@@ -93,11 +100,13 @@ html,body,button {
   text-align: left;
 }
 
-#languageChoices button[aria-pressed="true"], #settingsLanguageChoices button[aria-pressed="true"] {
+#languageChoices button[aria-pressed='true'],
+#settingsLanguageChoices button[aria-pressed='true'] {
   border-color: #7f9ecb;
 }
 
-#languageChoices button:focus, #settingsLanguageChoices button:focus {
+#languageChoices button:focus,
+#settingsLanguageChoices button:focus {
   outline: 3px solid #b8d3ff;
   outline-offset: 3px;
   background: #46556c;
@@ -108,12 +117,17 @@ html,body,button {
   color: #ffd1bd;
 }
 
-html[lang="hi"] #greeting,html[lang="ko"] #greeting {
+html[lang='hi'] #greeting,
+html[lang='ko'] #greeting {
   line-height: 1.45;
 }
 
-#renewalPanel,html .root-settings,#updatePanel {
-  font-family: Outfit,"CYTV NotoSans","CYTV NotoSansDevanagari","CYTV NotoSansSC","CYTV NotoSansTC","CYTV NotoSansKR",sans-serif;
+#renewalPanel,
+html .root-settings,
+#updatePanel {
+  font-family:
+    Outfit, 'CYTV NotoSans', 'CYTV NotoSansDevanagari', 'CYTV NotoSansSC',
+    'CYTV NotoSansTC', 'CYTV NotoSansKR', sans-serif;
 }
 
 /* Long localized dates wrap within the header instead of pushing shortcuts off screen. */
@@ -128,7 +142,9 @@ html[lang="hi"] #greeting,html[lang="ko"] #greeting {
   margin-left: 32px;
 }
 
-#clock,#ampm,.divider {
+#clock,
+#ampm,
+.divider {
   flex-shrink: 0;
 }
 
@@ -136,10 +152,11 @@ html[lang="hi"] #greeting,html[lang="ko"] #greeting {
   min-width: 0;
   white-space: normal;
   line-height: 1.4;
-  letter-spacing: .06em;
+  letter-spacing: 0.06em;
 }
 
-html[lang="hi"] #greeting,html[lang="hi"] #date {
+html[lang='hi'] #greeting,
+html[lang='hi'] #date {
   letter-spacing: 0;
 }
 
@@ -153,7 +170,7 @@ html[lang="hi"] #greeting,html[lang="hi"] #date {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(7,10,14,.88);
+  background: rgba(7, 10, 14, 0.88);
   color: #f5f7fa;
 }
 
@@ -214,14 +231,15 @@ html[lang="hi"] #greeting,html[lang="hi"] #date {
   background: #46556c;
 }
 
-@media(max-width:700px) {
+@media (max-width: 700px) {
   .confirmation-card {
     padding: 28px;
   }
   .confirmation-card h2 {
     font-size: 28px;
   }
-  .confirmation-card p,.confirmation-actions button {
+  .confirmation-card p,
+  .confirmation-actions button {
     font-size: 22px;
   }
   .confirmation-actions {
@@ -231,7 +249,8 @@ html[lang="hi"] #greeting,html[lang="hi"] #date {
 
 /* Margin spacing also works before grid/flex gap support. */
 
-#languageChoices button, #settingsLanguageChoices button {
+#languageChoices button,
+#settingsLanguageChoices button {
   width: calc(50% - 16px);
   margin: 8px;
 }
@@ -244,24 +263,46 @@ html[lang="hi"] #greeting,html[lang="hi"] #date {
   margin: 10px;
 }
 
-html[lang="zh-Hans"],html[lang="zh-Hans"] body,html[lang="zh-Hans"] button,html[lang="zh-Hans"] #renewalPanel,html[lang="zh-Hans"] .root-settings,html[lang="zh-Hans"] #updatePanel {
-  font-family: Outfit,"CYTV NotoSansSC","CYTV NotoSansTC","CYTV NotoSans",sans-serif;
+html[lang='zh-Hans'],
+html[lang='zh-Hans'] body,
+html[lang='zh-Hans'] button,
+html[lang='zh-Hans'] #renewalPanel,
+html[lang='zh-Hans'] .root-settings,
+html[lang='zh-Hans'] #updatePanel {
+  font-family:
+    Outfit, 'CYTV NotoSansSC', 'CYTV NotoSansTC', 'CYTV NotoSans', sans-serif;
 }
 
-html[lang="zh-Hant"],html[lang="zh-Hant"] body,html[lang="zh-Hant"] button,html[lang="zh-Hant"] #renewalPanel,html[lang="zh-Hant"] .root-settings,html[lang="zh-Hant"] #updatePanel {
-  font-family: Outfit,"CYTV NotoSansTC","CYTV NotoSansSC","CYTV NotoSans",sans-serif;
+html[lang='zh-Hant'],
+html[lang='zh-Hant'] body,
+html[lang='zh-Hant'] button,
+html[lang='zh-Hant'] #renewalPanel,
+html[lang='zh-Hant'] .root-settings,
+html[lang='zh-Hant'] #updatePanel {
+  font-family:
+    Outfit, 'CYTV NotoSansTC', 'CYTV NotoSansSC', 'CYTV NotoSans', sans-serif;
 }
 
-#languageChoices button[lang="zh-Hans"], #settingsLanguageChoices button[lang="zh-Hans"] {
-  font-family: "CYTV NotoSansSC","CYTV NotoSansTC",sans-serif;
+#languageChoices button[lang='zh-Hans'],
+#settingsLanguageChoices button[lang='zh-Hans'] {
+  font-family: 'CYTV NotoSansSC', 'CYTV NotoSansTC', sans-serif;
 }
 
-#languageChoices button[lang="zh-Hant"], #settingsLanguageChoices button[lang="zh-Hant"] {
-  font-family: "CYTV NotoSansTC","CYTV NotoSansSC",sans-serif;
+#languageChoices button[lang='zh-Hant'],
+#settingsLanguageChoices button[lang='zh-Hant'] {
+  font-family: 'CYTV NotoSansTC', 'CYTV NotoSansSC', sans-serif;
 }
 
-#settingsLanguageChoices button { width:calc(33.333% - 16px); }
-#settingsLanguageChoices button[data-language="auto"] { width:calc(100% - 16px); }
-@media (max-height:800px) {
- #settingsLanguageChoices button { min-height:48px; padding:8px 12px; font-size:22px; }
+#settingsLanguageChoices button {
+  width: calc(33.333% - 16px);
+}
+#settingsLanguageChoices button[data-language='auto'] {
+  width: calc(100% - 16px);
+}
+@media (max-height: 800px) {
+  #settingsLanguageChoices button {
+    min-height: 48px;
+    padding: 8px 12px;
+    font-size: 22px;
+  }
 }
