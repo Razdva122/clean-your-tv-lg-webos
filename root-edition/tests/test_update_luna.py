@@ -1,4 +1,4 @@
-"""Activity inventory has its own bounded reply budget; other RPCs stay small."""
+"""Catalog and activity reads have bounded room; other RPCs stay small."""
 import json
 from pathlib import Path
 import subprocess
@@ -28,6 +28,36 @@ class ReplyBoundsTests(unittest.TestCase):
         finally:
             self.assertTrue(children)
             self.assertTrue(all(child.poll() is not None for child in children),'RPC must reap its client on success and failure')
+
+    def test_negative_reply_keeps_fixed_call_and_code_without_private_error(self):
+        spawn=subprocess.Popen
+        response={'returnValue':False,'errorCode':-1,'errorText':'Denied method call PRIVATE'}
+        def sender(args,**kwargs):
+            return spawn([sys.executable,'-c',
+                'import sys;print(sys.argv[1],flush=True);sys.stdin.buffer.read()',json.dumps(response)],**kwargs)
+        with patch.object(luna.subprocess,'Popen',side_effect=sender):
+            with self.assertRaises(RuntimeError) as caught:
+                luna.call('luna://com.webos.settingsservice/getSystemSettings',{})
+        self.assertEqual(getattr(caught.exception,'luna',None),
+            {'call':'home-settings','reason':'permission-denied','error_code':-1})
+        self.assertEqual(str(caught.exception),'Bus operation rejected')
+        self.assertNotIn('PRIVATE',str(caught.exception.__dict__))
+
+    def test_timeout_keeps_call_and_reaps_client_without_private_data(self):
+        spawn=subprocess.Popen;children=[]
+        def sender(args,**kwargs):
+            child=spawn([sys.executable,'-c','import sys;sys.stdin.buffer.read()'],**kwargs)
+            children.append(child);return child
+        with patch.object(luna.subprocess,'Popen',side_effect=sender):
+            with self.assertRaises(TimeoutError) as caught:
+                luna.call('luna://com.webos.applicationManager/dev/listApps',{},timeout=0.05)
+        self.assertEqual(caught.exception.luna,{'call':'apps-dev','reason':'timeout'})
+        self.assertTrue(all(child.poll() is not None for child in children))
+
+    def test_app_inventories_have_bounded_room_for_real_catalogs(self):
+        for uri in ('luna://com.webos.applicationManager/dev/listApps','luna://com.webos.applicationManager/listApps'):
+            with self.subTest(uri=uri):
+                self.assertTrue(self.reply(uri,90000)['returnValue'])
 
     def test_large_activity_list_keeps_ownership_fields(self):
         reply=self.reply('luna://com.palm.activitymanager/list',90000)

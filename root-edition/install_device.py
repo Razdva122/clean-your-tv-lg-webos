@@ -502,10 +502,17 @@ class LocalDevice:
         return call('luna://com.cleanyourtv.updater.service/status',{},app_id='com.gathin.tvhome')
 
     def apps(self):
-        value=self.rpc('com.webos.applicationManager/dev/listApps',{})
-        apps=value.get('apps')
-        if not isinstance(apps,list) or not all(isinstance(a,dict) and isinstance(a.get('id'),str) for a in apps):
-            raise ValueError('invalid_app_inventory')
+        from updater.luna import context
+        method='com.webos.applicationManager/dev/listApps'
+        try:value=self.rpc(method,{})
+        except (RuntimeError,TimeoutError) as error:
+            if (str(error) not in ('Bus operation rejected','Bus response timed out')
+                    or getattr(error,'luna',{}).get('reason')=='malformed-reply'):raise
+            method='com.webos.applicationManager/listApps'
+            value=self.rpc(method,{})
+        apps=value.get('apps') if isinstance(value,dict) else None
+        if not isinstance(apps,list) or not all(isinstance(a,dict) and isinstance(a.get('id'),str) and a['id'] for a in apps):
+            raise context(ValueError('invalid_app_inventory'),method,'malformed-reply')
         return {a['id'] for a in apps}
 
     @staticmethod
