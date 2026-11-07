@@ -5,7 +5,7 @@ var crypto = require('crypto'),
   fs = require('fs'),
   URL = require('url').URL;
 // Keep aligned with build.VERSION and the packaged app/service metadata.
-var SUPERVISOR_VERSION = '1.2.3';
+var SUPERVISOR_VERSION = '1.2.4';
 var REPO = 'https://github.com/Razdva122/clean-your-tv-lg-webos/releases/';
 var IDENTITIES = {
   home: 'com.gathin.tvhome',
