@@ -37,7 +37,9 @@ module.exports=function(data,log,onForeground,onReset,onPower){
   cleanup=function(){clearTimeout(deadline);clearInterval(pulse);};
   s.on('open',function(){
    if(closed||socket!==s)return;
-   s.send(JSON.stringify({type:'register',id:'register',payload:{forcePairing:false,pairingType:'PROMPT','client-key':key,manifest:{manifestVersion:1,appVersion:'1.1',permissions:['READ_APP_STATUS','READ_RUNNING_APPS','READ_POWER_STATE','CONTROL_POWER']}}}));
+   // Same full manifest as app-inventory.js: webOS 3.x stores the LAST registered
+   // permission set per key, so a smaller request revokes the others.
+   s.send(JSON.stringify({type:'register',id:'register',payload:{forcePairing:false,pairingType:'PROMPT','client-key':key,manifest:{manifestVersion:1,appVersion:'1.1',permissions:['READ_APP_STATUS','READ_RUNNING_APPS','READ_POWER_STATE','CONTROL_POWER','READ_INSTALLED_APPS','READ_INPUT_DEVICE_LIST']}}}));
   });
   s.on('pong',function(){if(!closed&&socket===s)alive=true;});
   s.on('message',function(raw){

@@ -19,7 +19,9 @@ const query=require('../../native/service/app-inventory');
  class Inputs extends WS {constructor(url,opts){super(url);inputSocket=this;assert.equal(opts.maxPayload,256*1024);}send(raw){const msg=JSON.parse(raw);if(msg.type==='register')inputRegistration=msg;else inputRequest=msg;queueMicrotask(()=>this.emit('message',JSON.stringify(msg.type==='register'?{type:'registered'}:{id:'inputs',type:'response',payload:{returnValue:true,devices:[{appId:'com.webos.app.hdmi3',id:'HDMI_3',label:'HDMI 3',connected:true,spdProductDescription:'Console',serial:'PRIVATE'},{appId:'com.webos.app.hdmi1',connected:false},{appId:'unknown',label:'x'.repeat(300),connected:'yes'}]}})));}}
  const devices=await query({...options,inputs:true,WebSocket:Inputs});
  assert.equal(inputRequest.uri,'ssap://tv/getExternalInputList','input read must use its fixed paired endpoint');
- assert.deepEqual(inputRegistration.payload.manifest.permissions,['READ_INPUT_DEVICE_LIST']);
+ // webOS 3.x keeps only the last registered permission set per key: every Helper
+ // SSAP client must request the same full manifest as screen-watch.js.
+ assert.deepEqual(inputRegistration.payload.manifest.permissions,['READ_APP_STATUS','READ_RUNNING_APPS','READ_POWER_STATE','CONTROL_POWER','READ_INSTALLED_APPS','READ_INPUT_DEVICE_LIST']);
  assert.deepEqual(devices,[{appId:'com.webos.app.hdmi3',id:'HDMI_3',label:'HDMI 3',spdProductDescription:'Console',connected:true},{appId:'com.webos.app.hdmi1',connected:false},{appId:'unknown',label:'x'.repeat(256),connected:null}]);assert(inputSocket.closed);assert(!JSON.stringify(devices).includes('PRIVATE'));
  for(const payload of [{returnValue:false},{returnValue:true,devices:[null]},{returnValue:true,devices:{}},{returnValue:true,devices:[{connected:true}]}]){
   class InvalidInput extends WS {send(raw){const msg=JSON.parse(raw);queueMicrotask(()=>this.emit('message',JSON.stringify(msg.type==='register'?{type:'registered'}:{id:'inputs',type:'response',payload})));}}

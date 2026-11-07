@@ -41,7 +41,9 @@ module.exports=function(options){
     }
     attemptTimer=setTimeout(retry,Math.max(500,Math.floor((options.timeout||8000)/hosts.length)));
 
-   current.on('open',function(){if(done||socket!==current)return;send({type:'register',id:'register',payload:{forcePairing:false,pairingType:'PROMPT','client-key':key.key,manifest:{manifestVersion:1,appVersion:'1.1',permissions:[inputs?'READ_INPUT_DEVICE_LIST':'READ_INSTALLED_APPS']}}});});
+   // Same full manifest as screen-watch.js: webOS 3.x stores the LAST registered
+   // permission set per key, so a smaller request revokes the others.
+   current.on('open',function(){if(done||socket!==current)return;send({type:'register',id:'register',payload:{forcePairing:false,pairingType:'PROMPT','client-key':key.key,manifest:{manifestVersion:1,appVersion:'1.1',permissions:['READ_APP_STATUS','READ_RUNNING_APPS','READ_POWER_STATE','CONTROL_POWER','READ_INSTALLED_APPS','READ_INPUT_DEVICE_LIST']}}});});
    current.on('message',function(raw){
     if(done||socket!==current)return;
     var message;try{message=JSON.parse(String(raw));}catch(_){finish('invalid-response');return;}
