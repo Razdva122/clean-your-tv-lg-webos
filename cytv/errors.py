@@ -22,6 +22,13 @@ class UserError(RuntimeError):
         self.reason_code = reason_code
 
 
+def connection_interrupted(error):
+    """Transient transport loss only; credentials and host trust never retry."""
+    return (getattr(error, 'reason_code', None) == 'connection-interrupted'
+            or isinstance(error, (ConnectionError, TimeoutError))
+            or type(error).__name__ in ('SSHException', 'NoValidConnectionsError'))
+
+
 
 class PythonCacheError(UserError):
     """Allowlisted host acquisition failure; never carry remote exception text."""

@@ -91,6 +91,8 @@ Les boutons ci-dessus proposent toujours la version publiée. Dans le prochain c
 
 Quand demandé, débranchez l’alimentation TV, rebranchez-la, attendez le réseau et choisissez **Réessayer**. Veille ou Quick Start n’est pas un redémarrage complet ; CYTV ne redémarre pas le téléviseur automatiquement. En cas de déconnexion, vérifiez la connexion et réessayez la même suppression sans autre assistant de récupération. Si l’accès est refusé, utilisez la connexion Root demandée ; si le téléviseur est occupé, patientez et réessayez. Le succès apparaît seulement après vérification du nettoyage final. Gardez les clés et rapports d’origine. Les commandes d’urgence et le consentement au partage restent applicables.
 
+Dans ce candidat, une installation échouée ou interrompue propose directement la récupération. Si No-root ne peut pas continuer, confirmez une fois la suppression complète. La suppression effectue jusqu’à trois tentatives en cas de perte temporaire de connexion ou de processus CYTV occupé. Si Root est nécessaire, choisissez **Se connecter avec Root** pour le même téléviseur ; le nettoyage Root vérifié termine aussi sa suppression No-root bloquée. Après un échec d’activation Root, CYTV tente de rétablir et vérifier LG Home sans réactiver. Une annulation avec du travail inachevé conserve le rapport et les actions de récupération. L’arrêt d’urgence reste actif.
+
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="python-facultatif-pour-root-dans-v110"></a>
 <a id="blocage-du-micrologiciel-lg-dans-120"></a>

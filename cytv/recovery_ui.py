@@ -40,6 +40,14 @@ CONNECTION_FAILURES = ('ssh-unreachable','ssh-protocol','ssh-auth-root','ssh-aut
                        'ssh-key-file','ssh-identity','developer-key-server','developer-key-unlock','developer-key-response')
 
 
+def root_removal_profile(store, source):
+    """Choose connection details only; normal Root sign-in/trust still applies."""
+    from .state import target
+    saved = [profile for profile in store.profiles()
+             if profile['host'] == source['host'] and profile['edition'] == 'root']
+    return saved[0] if len(saved) == 1 else target(source['host'], 'root')
+
+
 def removal_connection_failure(plan, failure=None):
     """Current connection guidance changes presentation, never restart authority."""
     if type(plan) is not dict or plan.get('disposition') != 'clean-removal':

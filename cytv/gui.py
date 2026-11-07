@@ -575,6 +575,7 @@ class Wizard(QMainWindow):
             recover = (not cleanup and self.recovery_profile is not None and
                        ((self.recovery_plan is None and
                          (value == 0 or (self.failure_help or {}).get('code') in ('removal-not-submitted','no-root-recovery'))) or
+                        (self.recovery_plan is not None and self.recovery_plan.get('state') == 'review') or
                         (self.recovery_plan is not None and self.recovery_plan.get('state') != 'complete' and
                          type(self.recovery_plan.get('actions')) is list and
                          'continue-removal' in self.recovery_plan.get('actions', []))))
@@ -600,13 +601,19 @@ class Wizard(QMainWindow):
                 self.badge.setText(self.title.text())
             if recover:
                 profile = dict(self.recovery_profile)
-                self.title.setText(tr('Review recovery options'))
+                self.title.setText(tr('Cancelled' if value == 130 else 'Review recovery options'))
                 self.badge.setText(self.title.text())
                 self.subtitle.setText(tr('Checking recovery does not reinstall or remove packages. Root checks may run verified support code.'))
                 self.button('Review recovery options', lambda: self.start('recover', profile), not failed)
             elif retry_removal:
                 profile = dict(self.recovery_profile)
-                self.button('Try again', lambda: self.start('uninstall', profile), True)
+                if 'connect-root' in self.recovery_plan.get('actions', []):
+                    from .recovery_ui import root_removal_profile
+                    from .state import Store
+                    root_profile = root_removal_profile(Store(), profile)
+                    self.button('Connect using Root', lambda: self.start('uninstall', root_profile), True)
+                else:
+                    self.button('Try again', lambda: self.start('uninstall', profile), True)
             if self.report:
                 self.button('Save diagnostic report…', self.save_report, (failed or setup_review) and not retry_removal)
                 if failed:

@@ -204,6 +204,7 @@ const words = {
     'guideExample': 'Příklad od LG',
     'guideNote':
       'Příklad od LG. Na vašem televizoru může obrazovka vypadat jinak. Použijte kód zobrazený na vlastním televizoru.',
+    'connectRoot': 'Připojit přes Root',
     'recoveryReview': 'Prohlédnout možnosti obnovení',
     'recoveryReviewDesc':
       'Než se rozhodnete, co dál, zkontrolujte přerušené nastavení. Změny vyžadují samostatné potvrzení.',
@@ -398,6 +399,7 @@ const words = {
     'guideExample': 'Пример экрана LG',
     'guideNote':
       'Пример экрана LG. На вашем телевизоре он может выглядеть иначе. Вводите код со своего ТВ.',
+    'connectRoot': 'Подключиться через Root',
     'recoveryReview': 'Проверить варианты восстановления',
     'recoveryReviewDesc':
       'Проверьте прерванную установку. Для изменений потребуется отдельное подтверждение.',
@@ -591,6 +593,7 @@ const words = {
     'guideExample': 'Example from LG',
     'guideNote':
       'Example from LG. The screen may look different on your TV. Use the code shown on your own TV.',
+    'connectRoot': 'Connect using Root',
     'recoveryReview': 'Review recovery options',
     'recoveryReviewDesc':
       'Check an interrupted setup before deciding what to do. Changes require separate confirmation.',
@@ -792,6 +795,7 @@ const words = {
     'guideExample': 'Beispiel von LG',
     'guideNote':
       'Beispiel von LG. Der Bildschirm Ihres TV kann anders aussehen. Verwenden Sie den Code auf Ihrem eigenen TV.',
+    'connectRoot': 'Mit Root verbinden',
     'recoveryReview': 'Wiederherstellungsoptionen prüfen',
     'recoveryReviewDesc':
       'Prüfen Sie eine unterbrochene Einrichtung. Änderungen erfordern eine gesonderte Bestätigung.',
@@ -993,6 +997,7 @@ const words = {
     'guideExample': 'Exemple LG',
     'guideNote':
       'Exemple LG. L’écran de votre TV peut être différent. Utilisez le code affiché sur votre propre TV.',
+    'connectRoot': 'Se connecter avec Root',
     'recoveryReview': 'Examiner les options de récupération',
     'recoveryReviewDesc':
       'Vérifiez une installation interrompue. Les modifications nécessitent une confirmation distincte.',
@@ -1190,6 +1195,7 @@ const words = {
     'guideExample': 'Esempio LG',
     'guideNote':
       'Esempio LG. La schermata della tua TV potrebbe essere diversa. Usa il codice mostrato sulla tua TV.',
+    'connectRoot': 'Connetti con Root',
     'recoveryReview': 'Esamina le opzioni di ripristino',
     'recoveryReviewDesc':
       'Verifica una configurazione interrotta. Le modifiche richiedono una conferma separata.',
@@ -1387,6 +1393,7 @@ const words = {
     'guideExample': 'Ejemplo de LG',
     'guideNote':
       'Ejemplo de LG. La pantalla de tu TV puede ser diferente. Usa el código que aparece en tu propio TV.',
+    'connectRoot': 'Conectar con Root',
     'recoveryReview': 'Revisar opciones de recuperación',
     'recoveryReviewDesc':
       'Comprueba una instalación interrumpida. Los cambios requieren otra confirmación.',
@@ -1586,6 +1593,7 @@ const words = {
     'guideExample': 'Exemplo da LG',
     'guideNote':
       'Exemplo da LG. A tela da sua TV pode ser diferente. Use o código exibido na sua própria TV.',
+    'connectRoot': 'Conectar com Root',
     'recoveryReview': 'Revisar opções de recuperação',
     'recoveryReviewDesc':
       'Verifique uma instalação interrompida. Alterações exigem confirmação separada.',
@@ -1782,6 +1790,7 @@ const words = {
     'guideExample': 'Przykład LG',
     'guideNote':
       'Przykład LG. Ekran Twojego TV może wyglądać inaczej. Użyj kodu widocznego na własnym TV.',
+    'connectRoot': 'Połącz przez Root',
     'recoveryReview': 'Sprawdź opcje odzyskiwania',
     'recoveryReviewDesc':
       'Sprawdź przerwaną konfigurację. Zmiany wymagają osobnego potwierdzenia.',
@@ -1969,6 +1978,7 @@ const words = {
     'guideExample': 'LG 예시 화면',
     'guideNote':
       'LG 예시 화면입니다. TV에 따라 화면이 다를 수 있습니다. 자신의 TV에 표시된 코드를 사용하세요.',
+    'connectRoot': 'Root로 연결',
     'recoveryReview': '복구 옵션 확인',
     'recoveryReviewDesc':
       '중단된 설정을 확인합니다. 변경하려면 별도로 확인해야 합니다.',
@@ -2152,6 +2162,7 @@ const words = {
     'guideExample': 'LG का उदाहरण',
     'guideNote':
       'यह LG का उदाहरण है। आपके TV की स्क्रीन अलग दिख सकती है। अपने TV पर दिखा कोड ही उपयोग करें।',
+    'connectRoot': 'Root से कनेक्ट करें',
     'recoveryReview': 'पुनर्प्राप्ति विकल्प जाँचें',
     'recoveryReviewDesc':
       'रुके हुए सेटअप की जाँच करें। बदलाव के लिए अलग पुष्टि आवश्यक है।',
@@ -2324,6 +2335,7 @@ const words = {
     'guideExample': 'LG 示例画面',
     'guideNote':
       'LG 示例画面。您的电视界面可能有所不同。请使用您自己电视上显示的代码。',
+    'connectRoot': '通过 Root 连接',
     'recoveryReview': '检查恢复选项',
     'recoveryReviewDesc': '检查中断的安装。更改需要单独确认。',
     'tvChecksReview': '查看电视检查结果',
@@ -2494,6 +2506,7 @@ const words = {
     'guideExample': 'LG 範例畫面',
     'guideNote':
       'LG 範例畫面。您的電視介面可能有所不同。請使用您自己電視上顯示的代碼。',
+    'connectRoot': '透過 Root 連線',
     'recoveryReview': '檢查復原選項',
     'recoveryReviewDesc': '檢查中斷的安裝。變更需要另行確認。',
     'tvChecksReview': '查看電視檢查結果',

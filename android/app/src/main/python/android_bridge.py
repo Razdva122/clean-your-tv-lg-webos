@@ -190,7 +190,8 @@ def inspect_root_recovery(config, callbacks, payload=None):
             return 2 if store.pending(profile) else 0
         return root_passive.inspect_saved(store,profile,pending.get('product_operation'),callbacks.secret,after_observe=review)
     except (EOFError, KeyboardInterrupt):
-        write(KEPT)
+        from cytv.recovery import cancelled
+        cancelled(write, store, profile, 'recover', 'recover')
         return 130
     except Exception as error:
         from cytv.failure_help import for_error

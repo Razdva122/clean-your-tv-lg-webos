@@ -296,7 +296,7 @@ function result() {
     : cancelled
       ? 'cancelledDesc'
       : 'failedDesc';
-  return `<div class="result-symbol ${complete ? '' : needsReview ? 'review-symbol' : 'error-symbol'}">${icon(complete ? 'check' : 'alert')}</div><section class="center progress-copy ${!ok && !cancelled ? 'error-result' : ''}"><h1>${cancelled ? t('cancelled') : recoveryPlan ? (recovered ? esc(recoveryPlan.summary) : isCleanup() ? t(restartPresentation() ? 'restartRemoval' : 'removalPending') : t('recoveryReview')) : ok && setup ? t(verified ? 'homeObserved' : 'tvChecksReview') : failureHelp ? esc(failureHelp.title) : t(title)}</h1><p>${recoveryPlan ? esc(recovered ? recoveryPlan.nextStep : isCleanup() ? t('removalPending') : recoveryPlan.summary) : ok && setup ? t('tvChecksDesc') : failureHelp ? esc(failureHelp.detail) : t(desc)}</p><div class="target">${edition === 'root' ? 'Root' : 'No-root'}<span> / </span>${esc(host)}</div></section>${!ok && errorLogs.size ? `<p class="error-summary error-text" role="alert">${esc([...errorLogs].at(-1))}</p>` : ''}${checkList()}${ok && !recoveryPlan && action === 'install' ? `<div class="recovery-info"><h3>${t('recoveryTitle')}</h3><p>${t('recoveryDesc')}</p><div class="gesture"><kbd>Home</kbd> × 3 <span class="muted"> / 2 ${t('seconds')}</span></div></div>` : ''}${ok && !recoveryPlan && action === 'install' && edition === 'no-root' ? `<div class="recovery-info"><p>${t('tryHomeHelp')}</p><p>${t('resumeHomeHelp')}</p><p>${t('sessionHelp')}</p></div>` : ''}${recoveryPlan && !recovered ? recoveryDetails() : ''}${failureHelp && !isCleanup() ? `<section class="recovery-info" role="note"><p>${esc(failureHelp.nextStep)}</p></section>` : ''}${logBlock()}<footer class="bottom">${reportReady ? `<button class="${recoveryPlan && isCleanup() && !recovered ? 'secondary' : 'primary'}" data-action="save-report">${t('saveReport')}${icon('file')}</button>` : ''}${recoveryPlan ? `${isCleanup() && !recovered ? primary('tryAgain', 'retry-removal', 'refresh') : canReviewRecovery() ? primary('recoveryReview', 'recover', 'refresh') : ''}<button class="secondary" data-action="home">${t('done')}</button>` : !ok ? `${!failureHelp || failureHelp.canEditConnection ? `<button class="secondary" data-action="to-connection">${t('toConnection')}</button>` : ''}<button class="text-button maintenance-link" data-action="home">${t('done')}</button>` : reportReady ? `<button class="secondary" data-action="home">${t('done')}</button>` : primary('done', 'home', 'check')}</footer>`;
+  return `<div class="result-symbol ${complete ? '' : needsReview ? 'review-symbol' : 'error-symbol'}">${icon(complete ? 'check' : 'alert')}</div><section class="center progress-copy ${!ok && !cancelled ? 'error-result' : ''}"><h1>${cancelled ? t('cancelled') : recoveryPlan ? (recovered ? esc(recoveryPlan.summary) : isCleanup() ? t(restartPresentation() ? 'restartRemoval' : 'removalPending') : t('recoveryReview')) : ok && setup ? t(verified ? 'homeObserved' : 'tvChecksReview') : failureHelp ? esc(failureHelp.title) : t(title)}</h1><p>${recoveryPlan ? esc(recovered ? recoveryPlan.nextStep : isCleanup() ? t('removalPending') : recoveryPlan.summary) : ok && setup ? t('tvChecksDesc') : failureHelp ? esc(failureHelp.detail) : t(desc)}</p><div class="target">${edition === 'root' ? 'Root' : 'No-root'}<span> / </span>${esc(host)}</div></section>${!ok && errorLogs.size ? `<p class="error-summary error-text" role="alert">${esc([...errorLogs].at(-1))}</p>` : ''}${checkList()}${ok && !recoveryPlan && action === 'install' ? `<div class="recovery-info"><h3>${t('recoveryTitle')}</h3><p>${t('recoveryDesc')}</p><div class="gesture"><kbd>Home</kbd> × 3 <span class="muted"> / 2 ${t('seconds')}</span></div></div>` : ''}${ok && !recoveryPlan && action === 'install' && edition === 'no-root' ? `<div class="recovery-info"><p>${t('tryHomeHelp')}</p><p>${t('resumeHomeHelp')}</p><p>${t('sessionHelp')}</p></div>` : ''}${recoveryPlan && !recovered ? recoveryDetails() : ''}${failureHelp && !isCleanup() ? `<section class="recovery-info" role="note"><p>${esc(failureHelp.nextStep)}</p></section>` : ''}${logBlock()}<footer class="bottom">${reportReady ? `<button class="${recoveryPlan && isCleanup() && !recovered ? 'secondary' : 'primary'}" data-action="save-report">${t('saveReport')}${icon('file')}</button>` : ''}${recoveryPlan ? `${isCleanup() && !recovered ? (recoveryPlan.actions?.includes('connect-root') ? primary('connectRoot', 'connect-root', 'key') : primary('tryAgain', 'retry-removal', 'refresh')) : canReviewRecovery() ? primary('recoveryReview', 'recover', 'refresh') : ''}<button class="secondary" data-action="home">${t('done')}</button>` : !ok ? `${!failureHelp || failureHelp.canEditConnection ? `<button class="secondary" data-action="to-connection">${t('toConnection')}</button>` : ''}<button class="text-button maintenance-link" data-action="home">${t('done')}</button>` : reportReady ? `<button class="secondary" data-action="home">${t('done')}</button>` : primary('done', 'home', 'check')}</footer>`;
 }
 function wallpapers() {
   return `${step()}<section class="page-intro"><h1>${t('wallpapers')}</h1><p>${t('wallpaperInstructions')}</p></section><div class="wallpaper-limit" role="note">${icon('alert')}<p>${t('wallpaperLimit')}</p></div><footer class="bottom"><div class="footnote">${icon('wifi')}${t('networkFoot')}</div></footer>`;
@@ -638,6 +638,12 @@ document.addEventListener('click', (event) => {
     readForm();
     if (native) CYTV.importKey();
     else info(t('browserKey'));
+  } else if (cmd === 'connect-root') {
+    action = 'uninstall';
+    edition = 'root';
+    port = '22';
+    screen = 'connection';
+    render();
   } else if (cmd === 'retry-removal') {
     action = 'uninstall';
     start(true);
@@ -666,8 +672,11 @@ document.addEventListener('click', (event) => {
     render();
   } else if (cmd === 'recover' || cmd === 'status' || cmd === 'restore') {
     action = cmd;
-    screen = 'connection';
-    render();
+    if (cmd === 'recover' && canReviewRecovery()) start(true);
+    else {
+      screen = 'connection';
+      render();
+    }
   }
 });
 languagePicker.addEventListener('cancel', (event) => {

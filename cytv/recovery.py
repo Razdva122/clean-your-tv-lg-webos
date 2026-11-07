@@ -16,6 +16,42 @@ def plan(write, state, summary, next_step=KEPT, actions=None):
     write.recovery_plan(value)
 
 
+def offer_install_recovery(write, store, profile):
+    pending = store.pending(profile) if profile else None
+    if not pending or pending.get('action') not in ('install', 'activate-root'):
+        return False
+    write.recovery(profile)
+    plan(write, 'review', REVIEW, KEPT, actions=['check', 'retain-evidence'])
+    return True
+
+
+def cancelled(write, store, profile, action, phase, tv_info=None, checks=None):
+    """Stopping host interaction does not cancel an accepted TV request."""
+    pending = store.pending(profile) if profile else None
+    if not pending:
+        write('Cancelled. Installation has not started.' if action == 'install'
+              else 'Cancelled. If an installation was submitted, run cytv status before retrying.')
+        return
+    write('Cancelled. If an installation was submitted, run cytv status before retrying.')
+    if not removal_plan(write, store, profile, state='waiting'):
+        offer_install_recovery(write, store, profile)
+    from . import diagnostics
+    diagnostics.save_result(write, store, action, profile, phase, tv_info, checks=checks)
+
+
+def remove_failed_no_root(installer, ask, write):
+    plan(write, 'ready', 'Finish removing Clean Your TV before installing again. LG Home will be restored and remaining Clean Your TV packages removed.')
+    if not prompts.confirm('Remove remaining Clean Your TV packages?', ask, write):
+        write(KEPT)
+        return
+    completed = installer.uninstall_project()
+    if completed.get('removed') is True and completed.get('verified_clean') is True and completed.get('restart_required') is not True:
+        write.recovery_plan({'state':'complete','disposition':'clean-removal','removed':True,'verified_clean':True,
+            'summary':'Clean Your TV removal is verified.','next_step':SEPARATE})
+    else:
+        removal_plan(write, installer.store, installer.profile, state='waiting')
+
+
 def removal_plan(write, store, profile, state='blocked', connecting=False, failure=None):
     """Expose only current safe assessment fields, with the selected TV bound."""
     if not profile:return False
@@ -24,6 +60,8 @@ def removal_plan(write, store, profile, state='blocked', connecting=False, failu
     from .recovery_state import removal_summary
     summary=removal_summary(pending)
     assessment=assess(profile,pending,None)
+    if summary['reason']=='root-access-required' and profile['edition']=='no-root':
+        assessment['actions'].insert(0, 'connect-root')
     write.recovery(profile)
     restart=summary['reason']=='restart-required' or summary['stage']=='restart-required'
     value = {'state':state,'disposition':'clean-removal','removed':False,'verified_clean':False,'restart_required':restart,
@@ -49,7 +87,25 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
             write(KEPT)
             return
     try:
-        result = installer.observe_recovery() if initial_observation is None else initial_observation
+        pending = installer.store.pending(installer.profile)
+        if pending and pending.get('activation_restore_pending') is True:
+            if not installer.recover_failed_activation():
+                raise UserError(BLOCKED, reason_code='pending-operation')
+        try:
+            result = installer.observe_recovery() if initial_observation is None else initial_observation
+        except Exception as error:
+            if (installer.profile['edition'] == 'no-root' and pending
+                    and pending.get('recovery_protocol') == 'no-root-original-stream-v1'):
+                # Cleanup reads current presence independently of a damaged or
+                # incomplete old observer. Its separate confirmation is required.
+                from . import diagnostics
+                try:
+                    diagnostics.create_report(installer.store, 'recover', installer.profile, 'recover', error)
+                except (OSError, ValueError, TypeError):
+                    pass
+                remove_failed_no_root(installer, ask, write)
+                return
+            raise
         installer.tv_info.update(status=result)
         pending = installer.store.pending(installer.profile)
         assessment = assess(installer.profile, pending, result)
@@ -71,7 +127,8 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
             return
         if pending and pending.get('recovery_protocol')=='no-root-original-stream-v1':
             if 'continue-no-root' not in assessment['actions']:
-                raise UserError(BLOCKED,reason_code='pending-operation')
+                remove_failed_no_root(installer, ask, write)
+                return
             plan(write,'ready','The original No-root operation can continue its verified remaining work. Unknown package requests will not be repeated.',actions=assessment['actions'])
             if prompts.confirm('Continue the original No-root operation?',ask,write):
                 installer.continue_no_root(pending)
