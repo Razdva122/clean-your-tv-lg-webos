@@ -25,7 +25,7 @@ class UserError(RuntimeError):
 def connection_interrupted(error):
     """Transient transport loss only; credentials and host trust never retry."""
     return (getattr(error, 'reason_code', None) == 'connection-interrupted'
-            or isinstance(error, (ConnectionError, TimeoutError, EOFError))
+            or isinstance(error, (ConnectionError, TimeoutError))
             or type(error).__name__ in ('SSHException', 'NoValidConnectionsError'))
 
 

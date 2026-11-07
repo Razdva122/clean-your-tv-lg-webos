@@ -55,6 +55,17 @@ class FailureJourneys(unittest.TestCase):
         self.assertEqual(code, 130)
         self.assertFalse(any(kind in ('recovery', 'report') for kind, _ in self.events))
 
+    def test_cancelled_cleanup_authentication_is_not_retried_as_network_loss(self):
+        pending = self.store.request_clean_removal(self.profile)
+        connect = Mock(side_effect=EOFError)
+        with patch('cytv.cli.sleep'), patch('cytv.cli.package.verify_payload', return_value={}):
+            code = cli.main(['uninstall', '--yes', '--host', self.profile['host'], '--edition', 'root',
+                             '--language', 'en', '--data-dir', str(self.store.root)],
+                            write=self.write, connect=connect, payload_root=self.store.root)
+        self.assertEqual(code, 130)
+        self.assertEqual(connect.call_count, 1)
+        self.assertEqual(self.store.pending(self.profile), pending)
+
     def test_root_blocker_is_saved_and_offers_access_handoff(self):
         profile = state.target(self.profile['host'], 'no-root')
         pending = self.store.request_clean_removal(profile)

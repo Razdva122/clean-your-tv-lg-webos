@@ -44,7 +44,9 @@ installers need rebuilding; no Helper behavior or package baseline changes here.
 
 - New regression cases reproduced the five original stops before implementation.
   Further regressions reproduced uncertain carrier replay and premature status
-  reconciliation before their corrections. The final 20 new cases pass.
+  reconciliation before their corrections. A final cancellation regression
+  prevents a closed credential prompt from being retried as transport loss.
+  The final 21 new cases pass.
 - Complete host installer discovery ran 1,015 tests with two platform skips;
   its 15 errors were sandbox denials of loopback socket binding, with no product
   assertion failures. All 33 tests in those SSH/TLS/HTTP modules subsequently
