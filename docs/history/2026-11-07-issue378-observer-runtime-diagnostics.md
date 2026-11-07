@@ -50,9 +50,28 @@ No old diagnostic can recover discarded remote evidence retrospectively.
 - Independent review found no actionable defects; its 11 diagnostics and 19
   real observer tests passed, and the generated launcher parsed as ES5.
 - Python 3.9 AST syntax, `npm run format:check` and `git diff --check` passed.
-- Combined `LC_ALL=en_US.UTF-8 PYTHON=<maintained-venv>/bin/python bash scripts/test.sh installer android setup`
-  is running at implementation handoff; its final result is not yet claimed.
-  Per maintainer instruction, implementation CI is not awaited before merging;
+- The initial combined `LC_ALL=en_US.UTF-8 PYTHON=<maintained-venv>/bin/python bash scripts/test.sh installer android setup`
+  ran on implementation head `aa5f6c80`: setup 266 passed, Homebrew payload 8 and
+  installer/continuation 6+6 passed, runtime/bridge/UI checks passed. The 1,029
+  installer cases ended with 11 failures, 24 errors and two skips; Android was
+  not reached in that stop-on-failure run. All failures came from three modules
+  using SSH test adapters that still required `code == PROGRAM`.
+- The test-only follow-up recognizes the complete bound PROGRAM inside the
+  current launcher, preserving sender/timeout and disconnect/retire injection.
+  A separate pre-correction real integration run reproduced four failures and
+  eleven errors across 16 tests. After the first three adapter corrections,
+  integration/operations ran 101 cases with only the separately identified
+  retire-injector failure remaining; all 85 operations cases passed. The fourth
+  adapter correction passed that retire/readback case independently.
+- On merged `781a4b94` (including #381) plus the four test-adapter corrections,
+  integration/desktop-recovery/diagnostics passed all 55 cases. Android passed
+  all 43 cases. These targeted checks cover every failed module in the initial
+  broader run; the initial 1,029-case result remains a failed, superseded run,
+  not a claimed complete post-correction pass.
+- Independent follow-up review found no actionable defects in the four fixture
+  comparisons. Their Python 3.9 syntax and `git diff --check` passed. Local
+  Markdown targets were verified.
+- Per maintainer instruction, implementation CI is not awaited before merging;
   complete combined candidate validation remains required before release.
 
 ## Documentation, delivery and limits
@@ -69,3 +88,15 @@ The original #378 installation/recovery outcome remains unresolved; keep it open
 at the status of that remaining investigation, not awaiting-release/released for
 the diagnostic-only change. Physical installation, controls/emergency release,
 sound, standby, cold boot, OTA and rollback remain untested.
+
+## Candidate integration
+
+[PR #382](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/382) merged into
+`release/next` as `781a4b94cafb3d277d93f850ad7e072a3139ea44`, from implementation
+head `aa5f6c80552b658149373bf7dc5628c6bce7dd69`. The maintainer explicitly
+requested immediate merge without waiting for feature-PR CI. The release
+inventory includes #382/#378 with an explicit unresolved-original summary.
+No build is selected and no physical acceptance or public delivery is claimed.
+The integration also contains concurrently merged #381; earlier focused
+results describe #382's starting tree and must not be presented as a complete
+combined-candidate pass.

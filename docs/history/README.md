@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [No-root observer runtime diagnostics, 2026-11-07](2026-11-07-issue378-observer-runtime-diagnostics.md): bounded runtime/guard error envelopes, retained storage reasons and unchanged recovery/source bindings; original #378 cause remains unconfirmed.
+
 - [No-root webOS 3.x compatibility, 2026-11-07](2026-11-07-webos3-compatibility.md): conflict resolution, focus/Updater corrections, exact legacy-Node checks, package tests and pending candidate/device acceptance.
 
 - [Root removal catalog fallback, 2026-11-07](2026-11-07-issue240-removal-catalog.md): bounded catalog compatibility, first/latest failure detail and source regressions; original #240 recovery and retail acceptance remain unverified.
