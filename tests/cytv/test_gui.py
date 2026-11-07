@@ -1,5 +1,6 @@
 """Offline widget checks; never connect to a TV."""
 import os
+import sys
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 import tempfile
 import time
@@ -305,7 +306,8 @@ class GuiTests(unittest.TestCase):
         self.assertIn('VPN', text)
         self.assertIn('System Settings', text)
 
-    def test_russian_permission_help_and_actions_fit_small_window(self):
+    @unittest.skipUnless(sys.platform == 'darwin', 'macOS permission layout uses native macOS font metrics')
+    def test_russian_macos_permission_help_and_actions_fit_small_window(self):
         import errno
         from cytv import i18n
         from cytv.failure_help import for_error
