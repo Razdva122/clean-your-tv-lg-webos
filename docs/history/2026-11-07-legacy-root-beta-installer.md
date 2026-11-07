@@ -93,6 +93,22 @@ were being completed and failed only the new-message checks. The fresh complete
 run above passed. Expected negative fixtures print vendor-busy tracebacks and
 argument-parser errors; these do not represent failing tests.
 
+## Installer choice clarity follow-up
+
+The desktop alternative-edition prompt now uses visible cards with separate
+Install No-root, Try Root Beta and Cancel actions. The headings immediately
+identify No-root's reduced functionality and Root Beta's insufficient TV testing.
+Descriptions explain the missing system Home routing/Root-only controls and
+Beta's unavailable automatic updates. The second Beta confirmation also names
+the action explicitly; cancellation remains the default. Shared copy and all
+13 localized guides reflect these limitations.
+
+Focused GUI, desktop bridge, CLI, runtime offer and translation checks passed
+**113 tests**; Android checks passed **44 tests**. Layout checks cover all 13
+languages at 900 by 680, including complete wrapped text, non-overlapping cards,
+reachable actions and scrolling. Actual offscreen Qt screenshots were inspected;
+no TV was contacted. Independent follow-up review found no remaining P1/P2 issues.
+
 ## Remaining release work
 
 The implementation is not physical acceptance or a published compatibility fix.

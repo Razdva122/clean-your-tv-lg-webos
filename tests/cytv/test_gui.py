@@ -7,7 +7,7 @@ import unittest
 from unittest.mock import patch
 from pathlib import Path
 try:
-    from PySide6.QtWidgets import QApplication, QPushButton, QLineEdit, QComboBox, QRadioButton, QDialog
+    from PySide6.QtWidgets import QApplication, QPushButton, QLineEdit, QComboBox, QRadioButton, QDialog, QLabel, QScrollArea
     from cytv.gui import Wizard
     from cytv.desktop import Prompt
     HAS_QT = True
@@ -17,6 +17,83 @@ except ImportError:
 
 @unittest.skipUnless(HAS_QT, 'Desktop build dependencies are optional for CLI tests')
 class GuiTests(unittest.TestCase):
+    def test_runtime_alternatives_are_visible_direct_actions_with_separate_cancel(self):
+        from cytv import i18n
+        from cytv.desktop import Channel
+        from cytv.root_runtime import NOTICE, NO_ROOT_TITLE, NO_ROOT_DETAIL, BETA_TITLE
+        for language in ('en', 'ru', 'de'):
+            for choice, action in (('1', 'Install No-root'), ('2', 'Try Root Beta'), ('0', 'Cancel')):
+                with self.subTest(language=language, choice=choice):
+                    w=Wizard()
+                    self.addCleanup(w.close)
+                    i18n.set_language(language)
+                    w.channel=Channel(lambda *_:None)
+                    w.show_prompt(Prompt('Alternative edition [0]: ',[
+                        ('1',NO_ROOT_TITLE,NO_ROOT_DETAIL),('2',BETA_TITLE,NOTICE),('0','Cancel','')]))
+                    self.assertFalse(w.form.findChildren(QComboBox),'Alternatives must be visible without opening a list')
+                    buttons=w.form.findChildren(QPushButton)
+                    self.assertFalse(any(button.text()==i18n.translate('Continue') for button in buttons))
+                    selected=next(button for button in buttons if button.text()==i18n.translate(action))
+                    cancel=next(button for button in buttons if button.text()==i18n.translate('Cancel'))
+                    self.assertTrue(cancel.isDefault())
+                    self.assertTrue(all(not button.isDefault() for button in buttons if button!=cancel))
+                    self.assertTrue(any(label.wordWrap() and label.text()==i18n.translate(NOTICE)
+                                        for label in w.form.findChildren(QLabel)))
+                    selected.click()
+                    self.assertEqual(w.channel.answers.get_nowait(),choice)
+
+    def test_runtime_alternative_without_beta_does_not_offer_beta_action(self):
+        w=Wizard()
+        self.addCleanup(w.close)
+        w.show_prompt(Prompt('Alternative edition [0]: ',[
+            ('1','Install No-root using existing root SSH','Uses Home and Home Helper. Developer Mode is not installed.'),
+            ('0','Cancel','')]))
+        self.assertFalse(w.form.findChildren(QComboBox))
+        self.assertEqual(len(w.form.findChildren(QPushButton)),2)
+
+    def test_beta_confirmation_names_the_action_and_cancel(self):
+        from cytv.desktop import Channel
+        for choice, action in (('y','Try Root Beta'),('n','Cancel')):
+            w=Wizard()
+            self.addCleanup(w.close)
+            w.channel=Channel(lambda *_:None)
+            w.show_prompt(Prompt('Install experimental Root Beta? [y/N]: '))
+            button=next(button for button in w.form.findChildren(QPushButton) if button.text()==action)
+            button.click()
+            self.assertEqual(w.channel.answers.get_nowait(),choice)
+
+    def test_runtime_choices_keep_full_descriptions_visible_in_all_languages(self):
+        from cytv import i18n
+        from cytv.root_runtime import NOTICE, NO_ROOT_TITLE, NO_ROOT_DETAIL, BETA_TITLE
+        for language in set(i18n.LANGUAGES)-{'auto'}:
+            with self.subTest(language=language):
+                w=Wizard()
+                self.addCleanup(w.close)
+                i18n.set_language(language)
+                w.preview.hide()
+                w.resize(900,680)
+                w.show_prompt(Prompt('Alternative edition [0]: ',[
+                    ('1',NO_ROOT_TITLE,NO_ROOT_DETAIL),('2',BETA_TITLE,NOTICE),('0','Cancel','')]))
+                w.show()
+                for _ in range(3): self.app.processEvents()
+                scroll=w.form.findChild(QScrollArea,'runtimeChoices')
+                descriptions=[label for label in w.form.findChildren(QLabel) if label.objectName() in ('choiceDetail','promptTitle') and label.isVisible()]
+                self.assertEqual(len(descriptions),4)
+                for label in descriptions:
+                    self.assertGreaterEqual(label.height(),label.heightForWidth(label.width()))
+                    self.assertTrue(label.parentWidget().rect().contains(label.geometry()))
+                    scroll.ensureWidgetVisible(label)
+                    self.app.processEvents()
+                    self.assertTrue(scroll.viewport().rect().contains(label.mapTo(scroll.viewport(),label.rect().bottomRight())))
+                    for sibling in label.parentWidget().findChildren(QPushButton):
+                        self.assertFalse(label.geometry().intersects(sibling.geometry()),'Choice text must not hide behind its action')
+                for button in w.form.findChildren(QPushButton):
+                    if button.parentWidget()!=w.form:
+                        scroll.ensureWidgetVisible(button)
+                        self.app.processEvents()
+                    self.assertTrue(w.rect().contains(button.mapTo(w,button.rect().bottomRight())))
+                w.close()
+
     def test_edition_switch_replaces_failed_root_checks_with_new_checks(self):
         w=Wizard()
         self.addCleanup(w.close)

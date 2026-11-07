@@ -4,7 +4,7 @@ Clean Your TV gives your LG webOS TV a personal Home screen: your apps in your o
 
 ## UNRELEASED candidate: older TV Node.js
 
-These choices belong to an unpublished candidate, not the published downloads. If ordinary Root rejects the TV Node.js version (it requires Node.js 8+), the installer can offer **No-root using existing root SSH**: Home and Home Helper without installing Developer Mode. Never enable Developer Mode over existing root. Only **exact Node.js 0.12.2** can additionally offer **Root Beta**, with separate packages and explicit confirmation. It does not replace system Node.js and has no automatic/OTA updates; use the computer installer.
+These choices belong to an unpublished candidate, not the published downloads. If ordinary Root rejects the TV Node.js version (it requires Node.js 8+), the installer can offer **No-root using existing root SSH**: Home and Home Helper without installing Developer Mode. Never enable Developer Mode over existing root. Only **exact Node.js 0.12.2** can additionally offer **Root Beta**, with separate packages and explicit confirmation. It does not replace system Node.js and has no automatic/OTA updates; use the computer installer. No-root has reduced functionality: no system Home routing or Root-only controls. Root Beta is not sufficiently tested on TVs.
 
 All remaining native, Home-interface and Python requirements still apply. Owner-supervised physical QA remains untested; this is not a compatibility claim. Save the diagnostic report, mark untested checks and voluntarily share a redacted result manually using the [feedback guide](../FEEDBACK.md). Nothing is posted automatically.
 

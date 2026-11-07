@@ -9,12 +9,12 @@ from PySide6.QtCore import QObject, Signal, QUrl, QTimer, Qt
 from PySide6.QtGui import QDesktopServices, QIcon, QFontDatabase, QFont, QPixmap
 from PySide6.QtWidgets import (QApplication, QFileDialog, QFrame, QHBoxLayout,
                               QLabel, QLineEdit, QMainWindow, QMessageBox, QProgressBar,
-                              QPushButton, QTextBrowser, QVBoxLayout, QWidget, QButtonGroup, QDialog)
+                              QPushButton, QTextBrowser, QVBoxLayout, QWidget, QButtonGroup, QDialog, QScrollArea, QLayout)
 
 from cytv import __version__, cli, diagnostics, i18n
 from cytv.i18n import translate as tr
 from cytv.desktop import Channel
-from cytv.gui_style import STYLE, TVPreview, Select, EditionOption, BrandSignature
+from cytv.gui_style import STYLE, TVPreview, Select, EditionOption, BrandSignature, WrappedLabel
 
 MAINTENANCE_ACTIONS = (
     ('Review recovery options', 'recover'),
@@ -193,6 +193,10 @@ class Wizard(QMainWindow):
         super().resizeEvent(event)
         if hasattr(self, 'preview'):
             self.preview.setFixedHeight(144 if self.height() < 760 else 206)
+        if hasattr(self, 'form'):
+            choices = self.form.findChild(QScrollArea, 'runtimeChoices')
+            if choices is not None:
+                choices.setMinimumHeight(min(360, max(240, self.height()-440)))
 
     def apply_language_font(self):
         family = {'zh-Hans': 'Noto Sans SC', 'zh-Hant': 'Noto Sans TC'}.get(i18n.resolved_language())
@@ -688,14 +692,16 @@ class Wizard(QMainWindow):
         self.form_layout.addWidget(label)
         if prompt.kind == 'confirm':
             trust_prompt = prompt.label.startswith('Connect and remember this TV?')
-            label = 'Connect and remember' if trust_prompt else 'Continue'
+            beta_prompt = prompt.label.startswith('Install experimental Root Beta?')
+            label = 'Connect and remember' if trust_prompt else 'Try Root Beta' if beta_prompt else 'Continue'
             yes = self.button(label, lambda: self.submit('y'), prompt.default == 'y')
-            no = self.button('No, go back / cancel this operation', lambda: self.submit('n'), prompt.default == 'n')
+            no = self.button('Cancel' if beta_prompt else 'No, go back / cancel this operation', lambda: self.submit('n'), prompt.default == 'n')
             (yes if prompt.default == 'y' else no).setFocus()
             if trust_prompt:
                 self.button('Connection details', lambda: self.submit('?'))
         elif prompt.kind == 'choice' and prompt.label.startswith('Edition'):
-            options = QWidget()
+            options = QFrame()
+            options.setObjectName('runtimeChoiceList')
             row = QHBoxLayout(options)
             row.setContentsMargins(0, 0, 0, 0)
             row.setSpacing(12)
@@ -712,6 +718,45 @@ class Wizard(QMainWindow):
             group.buttonToggled.connect(lambda: proceed.setEnabled(group.checkedButton() is not None))
             if group.checkedButton():
                 group.checkedButton().setFocus()
+        elif prompt.kind == 'choice' and prompt.label.startswith('Alternative edition'):
+            # These choices lead to different setup paths. Keep both explanations
+            # visible and give each action its own verb; cancellation is separate.
+            label.hide()
+            choices = QScrollArea()
+            choices.setObjectName('runtimeChoices')
+            choices.setFrameShape(QFrame.Shape.NoFrame)
+            choices.setWidgetResizable(True)
+            choices.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            choices.setMinimumHeight(min(360, max(240, self.height()-440)))
+            options = QWidget()
+            rows = QVBoxLayout(options)
+            rows.setContentsMargins(0, 0, 0, 0)
+            rows.setSpacing(10)
+            rows.setSizeConstraint(QLayout.SizeConstraint.SetMinimumSize)
+            choices.setWidget(options)
+            options.setAutoFillBackground(False)
+            self.form_layout.addWidget(choices)
+            for key, name, detail in prompt.options:
+                if key == '0':
+                    continue
+                card = QFrame()
+                card.setObjectName('runtimeChoice')
+                column = QVBoxLayout(card)
+                column.setContentsMargins(14, 12, 14, 12)
+                column.setSpacing(8)
+                column.setSizeConstraint(QLayout.SizeConstraint.SetMinimumSize)
+                title = WrappedLabel(tr(name))
+                title.setObjectName('promptTitle')
+                column.addWidget(title)
+                description = WrappedLabel(tr(detail))
+                description.setObjectName('choiceDetail')
+                column.addWidget(description)
+                action = 'Install No-root' if key == '1' else 'Try Root Beta'
+                self.button(action, lambda _checked=False, selected=key: self.submit(selected), layout=column)
+                rows.addWidget(card)
+            cancel = self.button('Cancel', lambda: self.submit('0'))
+            cancel.setDefault(True)
+            cancel.setFocus()
         elif prompt.kind == 'choice':
             choices = Select()
             choices.setAccessibleName(tr(prompt.title))

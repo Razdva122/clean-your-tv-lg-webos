@@ -5,7 +5,10 @@ from . import state, prompts
 from .errors import UserError
 
 BETA = 'node012-beta'
-NOTICE = 'Root Beta for Node.js 0.12.2: TV compatibility is unverified. Automatic updates are unavailable. Please share voluntary feedback after testing.'
+NO_ROOT_TITLE = 'No-root — reduced functionality'
+NO_ROOT_DETAIL = 'Home with Home Helper, without system Home routing or Root-only controls. Uses existing root SSH; Developer Mode is not installed.'
+BETA_TITLE = 'Root Beta — not sufficiently tested'
+NOTICE = 'Root Beta for Node.js 0.12.2 is not sufficiently tested on TVs. Automatic updates are unavailable. Please share voluntary feedback after testing.'
 FEEDBACK = 'Please save the diagnostic report and share your result: model, firmware, remote, Home, emergency exit, sound, standby and cold boot. Mark untested checks. Nothing is sent automatically.'
 NODE_BETA_PROBE = '/usr/bin/node -e \'process.exit(process.versions.node === "0.12.2" ? 0 : 1)\''
 FRESH_PROBE = '''for cytv_path in /var/lib/clean-your-tv-root /var/lib/clean-your-tv-root-updater /var/lib/clean-your-tv-system-updater /var/lib/clean-your-tv-installation; do
@@ -71,10 +74,10 @@ def offer(installer, args, ask, write):
     write.heading('Choose an alternative edition')
     from .i18n import translate
     write(translate('Ordinary Root requires Node.js 8+. Detected TV Node.js: {version}').format(version=value))
-    write.option(1, 'Install No-root using existing root SSH', 'Uses Home and Home Helper. Developer Mode is not installed.')
+    write.option(1, NO_ROOT_TITLE, NO_ROOT_DETAIL)
     beta = BETA in options and installer.manifest.get('legacy_root_beta') == 'legacy-root-beta'
     if beta:
-        write.option(2, 'Root Beta for Node.js 0.12.2', NOTICE)
+        write.option(2, BETA_TITLE, NOTICE)
     write.option(0, 'Cancel')
     if args.non_interactive:
         raise UserError('Choose an alternative edition interactively; --yes does not select Root Beta.', reason_code='root-requirements')

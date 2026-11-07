@@ -3,7 +3,7 @@ from pathlib import Path
 from PySide6.QtCore import Qt, QRectF, QSize
 from PySide6.QtGui import QColor, QFont, QLinearGradient, QPainter, QPalette, QPen
 from PySide6.QtSvg import QSvgRenderer
-from PySide6.QtWidgets import QWidget, QComboBox, QRadioButton
+from PySide6.QtWidgets import QWidget, QComboBox, QRadioButton, QLabel, QSizePolicy
 
 # Approved B1 marks retain their original colours. The working UI uses quiet
 # warm charcoal surfaces and restrained controls rather than bright brand fills.
@@ -31,6 +31,10 @@ QLabel#title[state="error"], QLabel#badge[state="error"] { color: #ff6b6b; }
 QLabel#subtitle { color: #c0b5a5; font-size: 15px; }
 QTextBrowser { background: transparent; color: #c0b5a5; border: none; padding: 0; selection-background-color: #51483e; }
 QWidget#form { background: #272521; border-radius: 12px; }
+QFrame#runtimeChoice { background: #24221e; border: 1px solid #51483e; border-radius: 10px; }
+QScrollArea#runtimeChoices { background: transparent; border: none; }
+QWidget#runtimeChoiceList { background: #2a2722; }
+QLabel#choiceDetail { color: #c0b5a5; font-size: 15px; }
 QLabel#promptTitle { font-size: 16px; font-weight: 600; }
 QPushButton { background: #302d28; border: 1px solid #796956; border-radius: 8px; padding: 10px 16px; font-weight: 500; min-height: 22px; }
 QPushButton:hover { background: #3a342d; border-color: #a28c73; }
@@ -128,6 +132,18 @@ class TVPreview(QWidget):
         p.drawRoundedRect(QRectF(273, 176, 16, 9), 2, 2)
         p.drawRoundedRect(QRectF(244, 184, 74, 4), 2, 2)
         p.end()
+
+
+class WrappedLabel(QLabel):
+    """Reserve the actual wrapped height instead of clipping in a nested form."""
+    def __init__(self, text):
+        super().__init__(text)
+        self.setWordWrap(True)
+        self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.setMinimumHeight(self.heightForWidth(self.width()))
 
 
 class Select(QComboBox):
