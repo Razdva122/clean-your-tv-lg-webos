@@ -465,6 +465,7 @@ with os.fdopen(f,'rb') as stream:
         return reply
 
     def preflight(self, install=False, home_interfaces=False):
+        diagnostics.context.collect_node_version(self.remote, self.tv_info)
         if self.profile['edition'] == 'root':
             from .python_runtime import SYSTEM_PROBE
             probes = ('test "$(id -u)" = 0', 'test -x /usr/bin/python3',
@@ -1067,6 +1068,7 @@ print('CYTV_UPDATER_VERIFIED')
         raise UserError('Installed version did not match the package. Run cytv status; do not retry blindly.', reason_code='version-mismatch')
 
     def status(self):
+        diagnostics.context.collect_node_version(self.remote, self.tv_info)
         pending=self.store.pending(self.profile)
         if pending and pending.get('recovery_protocol')=='clean-removal-v1':
             return self.observe_recovery()
