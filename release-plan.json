@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": null,
+  "version": "1.11.0",
   "changes": [
     {
       "pr": 370,
@@ -73,6 +73,16 @@
         378
       ],
       "summary": "Fix No-root observer storage before pending and retain confirmed legacy cleanup; original device installation/recovery remains unverified"
+    },
+    {
+      "pr": 386,
+      "issues": [],
+      "summary": "Stream oversized SSH commands with separate binary stdin; preserve original No-root operation recovery"
+    },
+    {
+      "pr": 387,
+      "issues": [],
+      "summary": "Synchronize System Updater1.2.4 build/policy and strict replacement target/readback/result pins; existing installed-source limits retained"
     }
   ],
   "excluded": [],

@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [1.11.0 freeze and pre-dispatch checks](2026-11-07-release-1.11.0-freeze.md): versioned preliminary payload, bounded C3 Helper compatibility, original SSH failure/recovery and final full-candidate gates.
+
 - [No-root observer storage, 2026-11-07](2026-11-07-no-root-observer-storage.md): writable private storage, one pre-journal storage check and confirmed cleanup for older pending capsules; retail installation/recovery remains unverified.
 
 - [No-root observer runtime diagnostics, 2026-11-07](2026-11-07-issue378-observer-runtime-diagnostics.md): bounded runtime/guard error envelopes, retained storage reasons and unchanged recovery/source bindings; original #378 cause remains unconfirmed.

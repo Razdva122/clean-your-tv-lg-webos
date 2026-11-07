@@ -54,11 +54,11 @@ and creating your own theme.
 
 ## Download and install
 
-**Candidate branch:** v1.10.0 is not published yet. The release metadata below is
-prepared for publication; download buttons still follow the latest published v1.9.0.
+**Candidate branch:** v1.11.0 is not published yet. The release metadata below is
+prepared for publication; download buttons still follow the latest published v1.10.0.
 
 <!-- release:downloads -->
-Current stable release: **[v1.10.0](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.10.0)** — [release notes](docs/RELEASE-1.10.0.md).
+Current stable release: **[v1.11.0](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.11.0)** — [release notes](docs/RELEASE-1.11.0.md).
 <!-- /release:downloads -->
 
 [![Download Windows x64 graphical installer — GUI ZIP](assets/brand/downloads/windows.svg)](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/cytv-windows-x64-desktop.zip)
@@ -138,15 +138,15 @@ For contributors: [build and technical references](docs/development/README.md),
 <!-- release:components -->
 | Component | Stable version |
 | --- | --- |
-| cytv installer | 0.11.0 |
-| Home | 1.11.0 |
-| Home Helper | 0.7.4 |
-| Root edition | 0.11.0 |
-| Both edition Updaters | 0.5.0 |
-| Android installer / versionCode | 0.10.0 / 24 |
+| cytv installer | 0.12.0 |
+| Home | 1.12.0 |
+| Home Helper | 0.7.5 |
+| Root edition | 0.12.0 |
+| Both edition Updaters | 0.5.1 |
+| Android installer / versionCode | 0.11.0 / 25 |
 <!-- /release:components -->
 
-Fresh System Updater target: 1.2.3 / protocol 1. Existing supervisors stay pinned; installed 1.1.2 has no general replacement path. See the [candidate delivery limits](docs/RELEASE-1.10.0.md).
+Fresh System Updater target: 1.2.4 / protocol 1. Existing supervisors stay pinned; installed 1.1.2 has no general replacement path. See the [candidate delivery limits](docs/RELEASE-1.11.0.md).
 
 Historical System Updater in 1.7.0: 1.2.0 / protocol 1.
 See the [1.7.0 release notes](docs/RELEASE-1.7.0.md)
