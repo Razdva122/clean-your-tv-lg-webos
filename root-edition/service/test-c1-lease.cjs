@@ -582,4 +582,40 @@ assert.strictEqual(
   1,
   'real service supplies alias factory independently of recovery handlers'
 );
-console.log('C1 lease broker tests passed');
+function schema3(files, model, sdk) {
+  var m = JSON.parse(files[ROOT + '/home-backend.json']);
+  m.schema = 3;
+  m.admission.model = model;
+  m.admission.webos = sdk;
+  m.admission.firmware = '23.25.55';
+  files[ROOT + '/home-backend.json'] = Buffer.from(JSON.stringify(m));
+}
+['55NANO77SRA', 'OLED55C37LA', '55UP7000PUA'].forEach(function (model) {
+  var a = fixture(undefined, function (files) {
+    schema3(files, model, '9.2.2');
+  });
+  a.subscribe();
+  assert.strictEqual(a.calls.length, 1, 'schema3 is model-independent');
+  a.reply(native());
+  assert.strictEqual(a.replies.at(-1).healthy, true);
+});
+var unsupported = fixture(undefined, function (files) {
+  schema3(files, '55NANO77SRA', '11.2.0');
+});
+assert.strictEqual(
+  unsupported.aliasCount,
+  0,
+  'C++ generation is not compositor-admitted'
+);
+var disguised = fixture(undefined, function (files) {
+  schema3(files, '55NANO77SRA', '9.2.2');
+  var m = JSON.parse(files[ROOT + '/home-backend.json']);
+  m.schema = 2;
+  files[ROOT + '/home-backend.json'] = Buffer.from(JSON.stringify(m));
+});
+assert.strictEqual(
+  disguised.aliasCount,
+  0,
+  'schema2 retains C1-only admission'
+);
+console.log('C1 and experimental compositor lease broker tests passed');

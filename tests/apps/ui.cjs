@@ -40,6 +40,11 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
               };
             if (uri.endsWith('/listApps') && window.inventoryOverride)
               r = { returnValue: true, apps: window.inventoryOverride };
+            if (
+              uri === 'luna://com.local.nativehome.service/listApps' &&
+              window.inventoryDenied
+            )
+              r = { returnValue: false, errorCode: -1 };
             if (uri.endsWith('/launch')) r = { returnValue: true };
             this.onservicecallback(JSON.stringify(r));
           }, 10);
@@ -254,6 +259,43 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
       ['b', 'c', 'a', '+'],
       'restored layout persists'
     );
+    // A cross-package refusal still discovers apps through Home's own service.
+    const layoutBeforeFallback = await page.evaluate(() =>
+      localStorage.getItem('tvhome.layout')
+    );
+    await page.evaluate(() => {
+      window.inventoryDenied = true;
+      window.inventoryOverride = [
+        { id: 'org.example.homebrew', title: 'Example homebrew' }
+      ];
+      window.calls = [];
+    });
+    await page.locator('.add-app').click();
+    await page
+      .locator('#appPicker [data-app-id="org.example.homebrew"]')
+      .waitFor();
+    assert.deepEqual(
+      await page.evaluate(() =>
+        calls.filter((c) => c.uri.endsWith('/listApps')).map((c) => c.uri)
+      ),
+      [
+        'luna://com.local.nativehome.service/listApps',
+        'luna://com.gathin.tvhome.renewal/listApps'
+      ]
+    );
+    await page
+      .locator('#appPicker [data-app-id="org.example.homebrew"]')
+      .click();
+    assert(
+      (await ids()).includes('org.example.homebrew'),
+      'fallback inventory remains selectable'
+    );
+    await page.evaluate(
+      (state) => localStorage.setItem('tvhome.layout', state),
+      layoutBeforeFallback
+    );
+    await page.reload();
+    await ready();
     await page.unroute('**/apps.js');
     await page.route('**/apps.js', (r) =>
       r.fulfill({

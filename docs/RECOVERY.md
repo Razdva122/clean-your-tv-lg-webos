@@ -1,5 +1,12 @@
 # Recover TV controls or an interrupted installation
 
+> **Unpublished candidate (#364):** experimental compositor recovery stops routing
+> before removing only its own filter. Safety/power stops require explicit
+> re-enable. If Home identity changed, the owned filter can be released after
+> retirement, but full stock proof remains unverified and recovery evidence is
+> retained. Do not delete journals or remove another launcher's state. See
+> [capability-based admission](development/C1-NATIVE-GATE.md#unpublished-capability-based-compositor-admission-364).
+
 > **Release 1.9.0:** see [versions, tested scope and recovery limits](RELEASE-1.9.0.md). C1 Beta is fresh-install only, selected automatically in the common installer; normal OTA is unavailable and physical C1 acceptance is pending. Historical results below retain their original artifact scope.
 
 ## Return to LG Home

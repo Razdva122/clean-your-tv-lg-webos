@@ -1,5 +1,61 @@
 # Experimental C1 Home routing
 
+## Unpublished capability-based compositor admission (#364)
+
+The next installer extends the existing mount-free protocol to capability-admitted
+Qt webOS SDK 6–9 TVs. Model names are recorded observations, not an allowlist;
+55NANO77SRA / SDK 9.2.2 / firmware 23.25.55 is the motivating report, not hardware
+acceptance. This section describes source preparation, not published support.
+
+Internal package, backend and lease names retain `c1` for compatibility. Existing
+schema1 mount recovery and schema2 C1 selection are unchanged. New nonlegacy
+admissions use schema3. A schema3 marker cannot be relabeled schema2 to bypass
+admission. The common installer requires a payload advertising
+`admission_schema:3` and a mount-free release with `compositor_admission:3`.
+
+Before device installation reservation and before activation, admission checks
+the observed model/firmware/SDK, native ARM32 Home, 32-bit interpreter/input ABI,
+protected stock native app manifest, vendor Qt Home-filter chain/scripts and
+independent read-only emergency channel. System Profile must explicitly report
+its exact absent-service reply. Permission denials, unknown replies, C++
+compositor generations, Home-covering mounts, known other Home integration state
+and nonvendor filters refuse this path. An existing Home binding in Input Hook
+also refuses admission; that configuration is only read and is never exported or
+modified. No foreign integration is removed or repaired. A Magic Remote product
+name alone is insufficient: the input channel must advertise Home and Back.
+
+Schema3 configd writes use `volatile:true`; exact readback is mandatory. The
+durable inverse precedes writes, and failure retains the transaction. Restore
+first stops native routing and retires the lifecycle controller, then reconciles
+only the owned filter against the current chain, preserving other entries and
+metadata. Controller records include a boot UUID, so previous-boot PIDs are never
+followed or signaled. Changed native Home identity permits owned-filter removal
+after confirmed retirement, but retains disabled recovery state and refuses to
+claim stock proof or delete evidence.
+If configd resets the volatile filter, the lifecycle controller stops its lease
+and cancels return; it never automatically reinstalls the filter.
+
+Boot reconciliation restores rather than rearms. Lease loss, safety stop and
+power recovery require explicit Enable. Changed model, firmware, SDK or Home
+fingerprint requires fresh admission; recovery does not require fresh admission.
+No SAM/input daemon restart, Home/checkpoint mount, CRIU change, input injection
+or network endpoint is added. Normal OTA remains disabled; there is no in-place
+migration from another Home integration.
+
+Local fixtures cover schema3 selection, broker authority, volatile/readback
+transactions, foreign changes, interrupted writes, boot/PID identity, changed
+Home recovery and legacy schema protection. Existing filter/native tests cover
+independent leases, paired releases, unrelated keys and emergency stops. Physical
+controls, sound, HDMI, standby, cold boot and recovery remain untested. No reporter
+operation or further diagnostics are requested.
+
+The temporary configd selection is informed by [Home Chooser's live filter
+research](https://github.com/webosbrew/home-chooser/blob/1123add757aafdf6922ce2b630e3bc192c408c38/docs/home-key-hook.md).
+No vendor script is copied or patched; this implementation retains the existing
+private filter and native lease barrier instead of Home Chooser's executable gate.
+
+## Existing C1 selection and recovery
+
 This unpublished backend addresses [#298](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/298). The common computer installer selects it for eligible fresh C1 Root installations. It has no automatic updates and has not passed physical C1 acceptance. Existing normal Root bundles keep their profile backend.
 
 ## Selection and recovery

@@ -109,3 +109,5 @@ Quand demandé, débranchez l’alimentation TV, rebranchez-la, attendez le rés
 <a id="espace-de-stockage"></a>
 
 Références détaillées en anglais : [prérequis](../COMPATIBILITY.md) · [commandes](../CONTROLS.md) · [thèmes](../THEMES.md) · [mises à jour](../UPDATES.md).
+
+> Candidat non publié : Root Home expérimental est sélectionné selon les capacités Qt SDK 6–9, sans liste de modèles. Compatibilité matérielle et OTA normal non vérifiés. Les autres intégrations Home restent intactes ; après un arrêt de sécurité ou de courant, réactivez Home explicitement. [#364](../development/C1-NATIVE-GATE.md#unpublished-capability-based-compositor-admission-364).

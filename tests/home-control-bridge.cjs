@@ -58,6 +58,38 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'cytv-control-'));
     req = JSON.parse(
       fs.readFileSync(path.join(dir, 'input-request.json'), 'utf8')
     );
+    const catalog = create(fs, dir, {
+      catalog: true,
+      now: () => now,
+      later: (f) => queue.push(f),
+      nonce: () => String(++seq).padStart(32, '0')
+    });
+    const catalogPending = catalog('listApps', {}),
+      catalogReq = JSON.parse(
+        fs.readFileSync(path.join(dir, 'catalog-request.json'), 'utf8')
+      );
+    assert.equal(catalogReq.method, 'listApps');
+    fs.writeFileSync(
+      path.join(dir, 'catalog-response.json'),
+      JSON.stringify({
+        id: catalogReq.id,
+        returnValue: true,
+        apps: [{ id: 'org.example', title: 'Example' }]
+      })
+    );
+    queue.pop()();
+    assert.equal((await catalogPending).apps[0].id, 'org.example');
+    for (const method of ['homeStatus', 'setHomeControl', 'inputStatus'])
+      assert.equal(
+        (await catalog(method, {})).returnValue,
+        false,
+        'catalog channel is read-only'
+      );
+    assert.equal(
+      (await catalog('listApps', { uri: 'PRIVATE' })).returnValue,
+      false,
+      'catalog query accepts no caller-selected arguments'
+    );
     const homePending = send('homeStatus', {}),
       homeReq = JSON.parse(
         fs.readFileSync(path.join(dir, 'home-request.json'), 'utf8')

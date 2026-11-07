@@ -14,6 +14,40 @@ PROFILES={'returnValue':True,'profiles':{'defaultApps':{'categories':{'home':'co
 
 
 class CapabilityTests(unittest.TestCase):
+    def test_generic_compositor_admission_is_capability_based_not_model_list(self):
+        import struct
+        from cytv.root_capabilities import verify
+        missing = {'returnValue':False, 'errorCode':-1, 'errorText':'Service does not exist: com.webos.service.systemprofile.'}
+        header = struct.pack('<16sHHIIIIIHHHHHH', b'\x7fELF\x01\x01\x01', 3, 40, 1, 64, 52, 0, 0, 52, 32, 2, 0, 0, 0)
+        dump = ' '.join(str(n) for n in header)
+        observed = '0 1 755 50684\n'+dump+'\nCYTV_HOME_ELF\n'+dump
+        chain = [{'file':'/usr/lib/qt5/qml/KeyFilters/systemUi.js','handler':'handleSystemKeys'}]
+        for model,sdk,firmware in (('55NANO77SRA','9.2.2','23.25.55'),('OLED55C37LA','8.3.0','13.40.90'),('55UP7000PUA','6.5.3','03.53.45')):
+            def luna(uri, payload, **kw):
+                if 'systemprofile' in uri: return missing
+                if 'getSystemInfo' in uri: return dict(returnValue=True, modelName=model, firmwareVersion=firmware, sdkVersion=sdk)
+                if 'getConfigs' in uri: return {'returnValue':True,'configs':{'com.webos.surfacemanager.keyFilters':chain}}
+                raise AssertionError(uri)
+            remote=Mock();remote.luna.side_effect=luna;remote.run.return_value=observed
+            info={}
+            self.assertEqual(verify(remote,CheckList(),info,allow_c1=True,allow_compositor=True),'c1-native-gate')
+            self.assertEqual(info['home_backend_schema'],3)
+            self.assertNotIn('home-profiles',info['root_requirements'])
+
+    def test_generic_compositor_refuses_unknown_chain_or_unsupported_sdk(self):
+        from cytv.root_capabilities import compositor_device
+        for sdk,chain in [('11.2.0',[]),('9.2.2',[]),('9.2.2',[{'file':'/foreign/home.js','handler':'handleSystemKeys'}])]:
+            remote=Mock()
+            remote.luna.side_effect=[dict(returnValue=True,modelName='55NANO77SRA',firmwareVersion='23.25.55',sdkVersion=sdk),
+                {'returnValue':True,'configs':{'com.webos.surfacemanager.keyFilters':chain}}]
+            self.assertFalse(compositor_device(remote))
+
+    def test_generic_permission_denial_never_enters_native_admission(self):
+        from cytv.root_capabilities import verify,RootCapabilityError
+        remote=Mock();remote.luna.return_value={'returnValue':False,'errorCode':-1,'errorText':'Access denied'}
+        with self.assertRaises(RootCapabilityError): verify(remote,CheckList(),{},allow_c1=True,allow_compositor=True)
+        remote.run.assert_not_called()
+
     def verify(self, settings=SETTINGS, profiles=PROFILES):
         from cytv.root_capabilities import verify
         remote=Mock();remote.luna.side_effect=[copy.deepcopy(settings),copy.deepcopy(profiles)]

@@ -27,17 +27,22 @@ function integer(value, min, max) {
 function digest(value) {
   return typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
 }
-function admission(value) {
+function admission(value, schema) {
   var version = /^\d{1,3}\.\d{1,3}\.\d{1,3}(?:-[A-Za-z0-9.]+)?$/;
   return (
     keys(value, 'model,firmware,webos,target_sha256,target') &&
     typeof value.model === 'string' &&
-    /^OLED(?:48|55|65|77|83)C1[A-Z0-9]{2,12}$/.test(value.model) &&
+    (schema === 2
+      ? /^OLED(?:48|55|65|77|83)C1[A-Z0-9]{2,12}$/
+      : /^[A-Za-z0-9._-]{1,128}$/
+    ).test(value.model) &&
     typeof value.firmware === 'string' &&
     version.test(value.firmware) &&
     typeof value.webos === 'string' &&
     version.test(value.webos) &&
-    value.webos.indexOf('6.') === 0 &&
+    (schema === 2
+      ? value.webos.indexOf('6.') === 0
+      : /^[6-9]\./.test(value.webos)) &&
     digest(value.target_sha256) &&
     keys(value.target, 'dev,ino,size,mtime_ns') &&
     integer(value.target.dev, 0, Math.pow(2, 63)) &&
@@ -150,12 +155,12 @@ module.exports = function (service, options) {
         marker,
         'schema,backend,experimental,native_sha256,admission,routing'
       ) ||
-      marker.schema !== 2 ||
+      (marker.schema !== 2 && marker.schema !== 3) ||
       marker.backend !== BACKEND ||
       marker.routing !== ROUTING ||
       marker.experimental !== true ||
       !digest(marker.native_sha256) ||
-      !admission(marker.admission)
+      !admission(marker.admission, marker.schema)
     )
       throw Error('Unselected lease backend');
     var binary = read(ROOT + '/runtime/c1-keyfilter-guard', 16777216, true);
