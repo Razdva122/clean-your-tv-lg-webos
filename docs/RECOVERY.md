@@ -35,6 +35,38 @@ minutes. Stop and triple Home remain persistent stops and require explicit
 stopped. Physical No-root acceptance remains unverified for the exact Helper transition; see
 [recovery behavior and limits](HELPER-DIAGNOSTICS.md#watchdog-recovery-unpublished-candidate-155).
 
+<a id="ssh-identity-changed"></a>
+
+## SSH identity changed after a reset or SSH change
+
+If a report shows `ssh-identity-changed` / `BadHostKeyException` at
+`ssh-connect`, the presented SSH host key differs from the saved trusted key.
+CYTV stopped before authentication and before inspecting or continuing recovery
+on the TV. This differs from first-use **Connect and remember this TV?**:
+that prompt cannot approve replacement of an existing pin. A factory reset or
+reroot may explain a new key, but does not verify the TV's identity.
+
+Keep the original saved connection/profile, SSH keys, trust records, diagnostic
+reports and pending-operation receipts privately. A retained
+`uninstall / coordinator-submitted` describes earlier work; it is not the cause
+of the host-key mismatch or proof of what removal completed. Do not clear
+`known_hosts`, delete/recreate the profile or pending records, disable host-key
+checks, or repeat removal, installation, reset or rooting to bypass this stop.
+
+Before maintainer-assisted trust recovery, the owner must independently establish
+that the endpoint is the intended TV and verify its current host-key fingerprint
+through an already trusted access path or a trusted local/on-device method.
+Record which independent method was used, the verified fingerprint and the
+owner-confirmed reset/SSH-change history for private maintainer review. A key
+presented by the blocked network connection, an address or a reset history alone
+is insufficient. Do not upload keys, profiles or raw diagnostics publicly.
+
+CYTV currently supplies no supported automatic host-key replacement or re-trust
+command. Even after independent identity verification, maintainers still need a
+reviewed, profile-preserving trust-recovery procedure before recovery can resume.
+Keep the pending operation intact until that procedure and the subsequent trusted
+inspection establish the allowed next action.
+
 ## Interrupted setup or removal
 
 ### Next candidate: original-operation recovery and full removal

@@ -210,7 +210,9 @@ installation uses `[Y/n]` (Enter continues). Removal and restore still require a
    fingerprint for optional comparison with an independently trusted connection.
    This first-use approval establishes trust; it cannot independently certify an
    unknown TV. A changed saved key or a matching revoked trust record is blocked
-   before sign-in, without a confirmation override.
+   before sign-in, without a confirmation override. For `ssh-identity-changed`,
+   stop and follow [changed SSH identity recovery](RECOVERY.md#ssh-identity-changed);
+   no supported automatic re-trust command is supplied.
 4. **No-root:** enable Developer Mode and Key Server on the TV, enter its passphrase
    when requested, then accept the separate remote-control pairing request on TV.
    **Root:** after host-key verification, cytv first tries automatic sign-in:
@@ -403,6 +405,11 @@ a completed one; keep that evidence for review, never delete it to force progres
 See [replacement and recovery](RECOVERY.md#replace-the-root-system-updater-candidate).
 
 ## Interrupted operations
+
+If connection stops at `ssh-connect` with `ssh-identity-changed` /
+`BadHostKeyException`, recovery has not inspected the TV. Preserve the saved
+profile and pending receipts; follow [independent identity verification and
+trust-recovery limits](RECOVERY.md#ssh-identity-changed) before further recovery.
 
 A private local receipt is synchronized before installation/removal, and
 recovery attempts have separate receipts. A failed command never means a package
