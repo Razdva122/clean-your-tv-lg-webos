@@ -85,6 +85,8 @@ No-root: Pour relancer le contrôle de Home, ouvrez Home Helper, choisissez Dém
 
 ## Besoin d’aide ?
 
+Si `ssh-identity-changed` apparaît après une réinitialisation ou une modification SSH, arrêtez : CYTV a bloqué la clé mémorisée modifiée avant l’authentification. La confirmation de confiance initiale ne la remplace pas ; une désinstallation en attente n’explique pas cet écart. Conservez le profil d’origine, les clés et les données de récupération. Aucune commande automatique de renouvellement de confiance n’est prise en charge. Il faut vérifier indépendamment l’identité/l’empreinte du TV, puis disposer d’une procédure revue préservant le profil : [récupération de l’identité SSH](../RECOVERY.md#ssh-identity-changed).
+
 Après une interruption, utilisez la même connexion enregistrée et commencez par **Vérifier l’état du téléviseur**. Continuez uniquement avec l’action de récupération proposée par l’assistant. Si l’état est inconnu, enregistrez le rapport de diagnostic et arrêtez-vous ; conservez les données de récupération et ne réinstallez pas à l’aveugle.
 
 Pendant la récupération, laissez le contrôle de Home désactivé et conservez les rapports de diagnostic originaux ainsi que la connexion enregistrée. Confirmez séparément la vérification et les modifications. Suivez le guide détaillé pour votre version installée ; ne forcez pas la réinstallation et n’effacez pas l’état de récupération.

@@ -245,7 +245,13 @@ fs.writeSync=function(fd,b){if(Buffer.isBuffer(b)&&b.toString().indexOf('private
             h.sender.write_text('#!/usr/bin/env python3\nimport os,signal,time\nfrom pathlib import Path\n'
                 'signal.signal(signal.SIGTERM,lambda *_:None)\nPath('+repr(str(h.root/'sender-pid'))+').write_text(str(os.getpid()))\n'
                 'print(\'{"details":{"state":"installed"}}\',flush=True)\nwhile True:time.sleep(.05)\n')
-            h.call('start',0);self.assertEqual(h.wait()['terminal'],'success')
+            h.call('start',0)
+            # The sender starts only after the permanent claim is fully written
+            # and synced. Do not poll strict evidence reads during its creation.
+            sender_pid=h.root/'sender-pid';deadline=time.monotonic()+5
+            while not sender_pid.exists() and time.monotonic()<deadline:time.sleep(.01)
+            self.assertTrue(sender_pid.exists(),'sender did not start after claim persistence')
+            self.assertEqual(h.wait()['terminal'],'success')
             pid=int((h.root/'sender-pid').read_text());alive=True;deadline=time.monotonic()+2.5
             try:
                 while time.monotonic()<deadline:

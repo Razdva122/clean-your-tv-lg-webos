@@ -131,6 +131,29 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8879';
       'settings-tab-home',
       'status must preserve category navigation focus'
     );
+    // A backend transition completes while Settings stays open, without writes.
+    await page.evaluate(() => {
+      settingsBackend.phase = 'enabling';
+      document.dispatchEvent(new Event('webOSRelaunch'));
+    });
+    await page.waitForFunction(
+      () =>
+        document.querySelector('.settings-status').textContent ===
+        'Changing Home control…'
+    );
+    assert(await toggle.isDisabled());
+    await page.evaluate(() => (settingsBackend.phase = 'active'));
+    await page.waitForFunction(
+      () => !document.querySelector('.root-settings [role=switch]').disabled
+    );
+    assert.equal(await toggle.getAttribute('aria-checked'), 'true');
+    assert.deepEqual(
+      await page.evaluate(() =>
+        settingsBackend.calls.filter((m) => m !== 'status')
+      ),
+      [],
+      'status convergence never enables or restores Home'
+    );
     await page.evaluate(() => {
       settingsBackend.fail = true;
       document.dispatchEvent(new Event('webOSRelaunch'));
