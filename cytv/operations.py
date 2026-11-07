@@ -99,6 +99,16 @@ class Installer:
         self.checks = checks if checks is not None else CheckList()
         from .outcomes import SetupOutcome
         self.outcome = SetupOutcome(self.checks, self.tv_info)
+        self.use_runtime_variant()
+
+    def use_runtime_variant(self):
+        if self.profile.get('root_variant') == 'node012-beta':
+            from .root_runtime import select_payload
+            if not getattr(self, '_runtime_variant_selected', False):
+                self.payload, self.manifest = select_payload(self.payload, self.manifest)
+                self._runtime_variant_selected = True
+            self.tv_info['root_variant'] = 'node012-beta'
+            self.checks.root_variant = 'node012-beta'
 
     @staticmethod
     def _python_command(args):
@@ -187,7 +197,7 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
             source=program(self.payload.resolve()/'system-updater')
             python=self._python(ROOT_STATE)
             reply=json.loads(self.remote.run(self._python_command([python,'-I','-B','-']),data=source.encode(),timeout=600))
-            if not isinstance(reply,dict) or reply.get('installed') is not True or reply.get('version')!='1.2.4' or not all(reply.get(k) is True for k in ('root_unchanged','home_unchanged','profile_storage_untouched')):
+            if not isinstance(reply,dict) or reply.get('installed') is not True or reply.get('version')!='1.2.5' or not all(reply.get(k) is True for k in ('root_unchanged','home_unchanged','profile_storage_untouched')):
                 raise ValueError('Unconfirmed System replacement')
             return reply
         except Exception:
@@ -208,6 +218,8 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
             raise UserError('Homebrew API access repair was not confirmed. Keep recovery state and retry the same command.') from None
 
     def enable_system_updates(self):
+        if self.profile.get('root_variant') == 'node012-beta':
+            raise UserError('Root Beta automatic updates are unavailable; use the computer installer.')
         """Provision the independent supervisor without replacing the active edition."""
         if self.store.pending(self.profile):
             raise UserError('Previous operation is unresolved. Run cytv status; retain recovery state before retrying.')
@@ -384,6 +396,8 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
         reply=self.product_action('inspect')
         if reply.get('reason')=='restart-required':
             raise UserError('Previous Root was removed. Restart the TV with its remote, wait for LG Home, then run cytv again. Old Root processes must stop before reinstallation. Recovery data was kept.',reason_code='restart-required')
+        if reply.get('reason')=='project-apps-remain':
+            raise UserError('Clean Your TV apps are present after the previous full removal. To switch to Root, first run Uninstall Clean Your TV with the saved Root connection. This removes No-root Home and Helper too; back up preferences, wait for verified removal, then install Root.',reason_code='project-apps-remain')
         result=reply.get('installation')
         if not isinstance(result,dict):
             raise UserError('Root operation was not confirmed. Run cytv status; retain recovery state.', reason_code='root-operation-unconfirmed')
@@ -459,6 +473,11 @@ with os.fdopen(f,'rb') as stream:
                       '/usr/bin/python3 -c "import json"', '/usr/bin/python3 -c "import fcntl"',
                       self._python_command(['/usr/bin/python3', '-I', '-B', '-c', SYSTEM_PROBE]),
                       '/usr/bin/node -e \'process.exit(Number(process.versions.node.split(".")[0]) >= 8 ? 0 : 1)\'')
+            if self.profile.get('root_variant') == 'node012-beta':
+                from .root_runtime import NODE_BETA_PROBE, VENDOR_PROBE
+                probes = (*probes[:-1], NODE_BETA_PROBE)
+                if self.remote.run(VENDOR_PROBE, timeout=10).strip() != 'CYTV_VENDOR_READY':
+                    raise UserError('Root Beta vendor modules could not be loaded. Installation has not started. Save the diagnostic report.', reason_code='root-requirements')
             checks = dict.fromkeys(diagnostics.ROOT_REQUIREMENTS, 'unknown')
             self.tv_info['root_requirements'] = checks
             python = self._python()
@@ -521,11 +540,15 @@ with os.fdopen(f,'rb') as stream:
                                   installation.get('can_install') is True and
                                   self.tv_info.get('home_backend')!='c1-native-gate')
                     except UserError as error:
-                        if error.reason_code=='restart-required':raise
+                        if error.reason_code in ('restart-required','project-apps-remain'):raise
                     except (OSError,ValueError,RuntimeError): pass
                 if existing and not maintain:
                     raise ExistingRoot('Root is already installed or recovery state remains. Connect interactively to review reinstallation; existing state was left unchanged.')
         else:
+            if install and self.profile.get('connection') == 'root-ssh':
+                from .root_runtime import FRESH_PROBE
+                if self.remote.run(FRESH_PROBE, timeout=10).strip() != 'CYTV_FRESH_ROOT':
+                    raise UserError('Previous Root installation needs recovery. Run cytv status or cytv restore. Reinstallation has not started; recovery data was left unchanged.')
             self.checks.update('architecture', 'running')
             arch = self.remote.run('uname -m').strip()
             self.tv_info.update(kernel_arch=arch if arch in diagnostics.KERNEL_ARCHES else 'unknown',
@@ -693,7 +716,8 @@ printf '%s' "$cytv_state"
         apps_data = json.dumps(ids).encode()
         expected[HELPER_STATE + '/ssap-key.json'] = hashlib.sha256(key_data).hexdigest()
         expected[HELPER_STATE + '/apps.json'] = hashlib.sha256(apps_data).hexdigest()
-        storage.install(self.remote, {'helper.ipk': helper, 'launcher.ipk': launcher}, self.progress)
+        storage.install(self.remote, {'helper.ipk': helper, 'launcher.ipk': launcher}, self.progress,
+                        root=self.profile.get('connection') == 'root-ssh')
         from . import no_root_observer
         pending = no_root_observer.begin(self, 'install', {'helper.ipk': helper, 'launcher.ipk': launcher},
             {HOME: self.manifest['home_version'], HELPER: self.manifest['helper_version']}, expected,
@@ -761,9 +785,12 @@ printf '%s' "$cytv_state"
             self.store.checkpoint(self.profile,stage='verify',baseline_sha=baseline_sha)
             self.verify_root_updater(baseline_sha)
             self.outcome.packages_verified()
+            updates_ready = self.profile.get('root_variant') != 'node012-beta'
+            # This receipt proves recovery infrastructure readiness, not OTA eligibility.
             self.store.checkpoint(self.profile, action='activate-root', stage='stop-helper', updates_ready=True)
             self.activate_root()
-            return dict(result, home_changed=True, launch_requested=True, updates_ready=True)
+            return dict(result, home_changed=True, launch_requested=True, updates_ready=updates_ready,
+                        beta=not updates_ready)
 
     def verify_root_updater(self, baseline_sha):
         script = """
@@ -930,13 +957,26 @@ print('CYTV_UPDATER_VERIFIED')
         """Use the existing fixed Root catalog reader; Root needs no SSAP key."""
         import base64
         if self.profile['edition']!='root':raise ValueError('Root inventory requires Root')
+        observed=self.tv_info['root_inventory']={'applications':'unknown','inputs':'unknown'}
         try:
             module=self.coordinator_code()+'/app-inventory.js'
-            program=('var reader=require('+json.dumps(module)+');Promise.all([reader(),reader.inputs()]).then(function(value){process.stdout.write(JSON.stringify(value));},function(){process.exit(1);});').encode()
+            # An EIM denial must not discard a valid application catalog. Null marks
+            # a failed fixed query; never synthesize successful input readback.
+            program=('var reader=require('+json.dumps(module)+');'
+                     'function unavailable(){return null;}'
+                     'Promise.all([reader().catch(unavailable),reader.inputs().catch(unavailable)])'
+                     '.then(function(value){process.stdout.write(JSON.stringify(value));},function(){process.exit(1);});').encode()
             value=json.loads(self.remote.run('/usr/bin/node',data=program,timeout=30))
-            if (not isinstance(value,list) or len(value)!=2 or not isinstance(value[0],list) or len(value[0])>200
-                    or not isinstance(value[1],dict) or value[1].get('returnValue') is not True
-                    or not isinstance(value[1].get('devices'),list) or len(value[1]['devices'])>100):raise ValueError('Invalid Root inventory')
+            if not isinstance(value,list) or len(value)!=2:raise ValueError('Invalid Root inventory')
+            observed['applications']='unavailable' if value[0] is None else 'unknown'
+            observed['inputs']=('unavailable' if value[1] is None else 'read'
+                if isinstance(value[1],dict) and value[1].get('returnValue') is True
+                and isinstance(value[1].get('devices'),list) and len(value[1]['devices'])<=100 else 'invalid')
+            if not isinstance(value[0],list) or len(value[0])>200:
+                if value[0] is not None:observed['applications']='invalid'
+                raise ValueError('Invalid Root inventory')
+            if observed['inputs']=='invalid':raise ValueError('Invalid Root inputs')
+            observed['applications']='invalid'
             def text(value):
                 return isinstance(value,str) and bool(value) and '\0' not in value and len(value.encode('utf-8'))<=256
             apps=[];seen=set()
@@ -952,11 +992,14 @@ print('CYTV_UPDATER_VERIFIED')
                 if isinstance(app.get('iconColor'),str) and re.fullmatch('#[a-fA-F0-9]{6}',app['iconColor']):item['iconColor']=app['iconColor']
                 apps.append(item)
             inputs=[];seen=set()
-            for device in value[1]['devices']:
+            for device in value[1]['devices'] if value[1] is not None else []:
                 if not isinstance(device,dict) or not text(device.get('appId')) or device['appId'] in seen:continue
                 label=next((device[k] for k in ('label','deviceName','spdProductDescription','id','appId') if text(device.get(k))),device['appId'])
                 seen.add(device['appId']);inputs.append({'appId':device['appId'],'label':label})
             result={'apps':apps,'inputs':inputs};package.inventory_script(result)
+            observed['applications']='read'
+            if observed['inputs']=='unavailable':
+                self.progress('Warning: TV inputs could not be read. Continuing with applications only.')
             return result
         except (ConnectionError,TimeoutError,EOFError) as error:
             raise UserError('Connection to the TV was interrupted. Check the connection and try again.',reason_code='connection-interrupted') from error
@@ -1387,7 +1430,7 @@ print('CYTV_UPDATER_VERIFIED')
             'baseline_sha':result['device']['product']['result']['baseline_sha'] if product else previous['baseline_sha']}).encode())
         self.store.finish(self.profile)
         self.outcome.packages_verified()
-        return {'home_changed':False,'updates_ready':True,'home_control':'disabled'}
+        return {'home_changed':False,'updates_ready':self.profile.get('root_variant') != 'node012-beta','home_control':'disabled'}
 
     def resume_root_setup(self, expected_pending=None):
         # Revalidate after the user's confirmation; never resubmit package setup.
@@ -1415,7 +1458,8 @@ print('CYTV_UPDATER_VERIFIED')
                     'updates_ready':False,'backend':'c1-native-gate','beta':True}
         self.store.checkpoint(self.profile, action='activate-root', stage='stop-helper', updates_ready=True)
         self.activate_root()
-        return {'installed': package.ROOT_APP, 'home_changed': True, 'launch_requested': True, 'updates_ready': True}
+        return {'installed': package.ROOT_APP, 'home_changed': True, 'launch_requested': True,
+                'updates_ready': self.profile.get('root_variant') != 'node012-beta'}
 
     def recover_unstarted_root_updater(self, pending, device):
         """Resolve only a proven pre-bootstrap failure; never change TV state."""
@@ -1553,7 +1597,7 @@ print('CYTV_ROOT_FILES_OK')
                 if installation.get('clean_removal_verified') is True and installation.get('can_install') is True:
                     return {'restored':True,'already_removed':True}
             except UserError as error:
-                if error.reason_code=='restart-required':raise
+                if error.reason_code in ('restart-required','project-apps-remain'):raise
             except (OSError,ValueError,RuntimeError):
                 pass
             return self.root_action('restore')

@@ -236,6 +236,7 @@ class SSH:
     @classmethod
     def connect(cls, profile, directory, secret, trust, identity_prompt=None, automatic=True, persist=True):
         import paramiko
+        root_ssh = profile['edition'] == 'root' or profile.get('connection') == 'root-ssh'
         directory = Path(directory)
         known = directory / 'known_hosts'
         if not persist:
@@ -253,17 +254,17 @@ class SSH:
 
         class PinnedPolicy(paramiko.MissingHostKeyPolicy):
             def missing_host_key(self, connection, hostname, key):
-                if not persist or not trust(fingerprint(key), profile['edition'] == 'root'):
+                if not persist or not trust(fingerprint(key), root_ssh):
                     raise UserError('SSH host key was not verified. Connection cancelled.', reason_code='ssh-identity-unverified')
                 connection.get_host_keys().add(hostname, key.get_name(), key)
                 save_host_keys(connection.get_host_keys(), known)
 
         client.set_missing_host_key_policy(PinnedPolicy())
         options = dict(hostname=profile['host'], port=profile['port'],
-                       username='root' if profile['edition'] == 'root' else 'prisoner',
+                       username='root' if root_ssh else 'prisoner',
                        timeout=10, banner_timeout=10, auth_timeout=15,
                        allow_agent=False, look_for_keys=False)
-        if profile['edition'] == 'no-root':
+        if not root_ssh:
             # Developer Mode SSH servers may accept only ssh-rsa and omit
             # server-sig-algs; Paramiko otherwise attempts an RSA SHA-2 signature.
             options['disabled_algorithms'] = {'pubkeys': ['rsa-sha2-512', 'rsa-sha2-256']}
@@ -283,9 +284,9 @@ class SSH:
             client.connect(**options)
             if persist:
                 save_host_keys(client.get_host_keys(), known)
-            if persist and profile['edition'] == 'no-root' and not keyfile.exists():
+            if persist and not root_ssh and not keyfile.exists():
                 private_write(keyfile, raw)
-            return cls(client, root=profile['edition'] == 'root')
+            return cls(client, root=root_ssh)
         except AgentLoginFailed:
             client.close()
             if not persist or not automatic or identity_prompt is None:

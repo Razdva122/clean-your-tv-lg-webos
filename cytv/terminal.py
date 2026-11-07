@@ -106,6 +106,9 @@ class Console:
     def recovery(self, profile):
         self('Review recovery options')
 
+    def selected_profile(self, profile):
+        pass
+
     def recovery_plan(self, value):
         self.heading(value['summary'])
         self(value['next_step'])

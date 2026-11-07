@@ -148,6 +148,15 @@ class DiagnosticTests(unittest.TestCase):
             self.assertEqual(value['state'],'failed')
             self.assertIsNone(value['return_value'])
 
+    def test_project_apps_cleanup_reason_survives_without_remote_text(self):
+        from cytv.errors import UserError
+        with tempfile.TemporaryDirectory() as tmp:
+            report=diagnostics.create_report(state.Store(tmp),'status',None,'status',
+                UserError('PRIVATE',reason_code='project-apps-remain'))
+            value=json.loads(report.read_text())
+            self.assertEqual(value['reason_code'],'project-apps-remain')
+            self.assertNotIn('PRIVATE',report.read_text())
+
     def test_developer_key_reason_is_allowlisted_without_credentials_or_exception_text(self):
         from cytv.errors import DeveloperKeyError
         with tempfile.TemporaryDirectory() as tmp:

@@ -1,5 +1,7 @@
 # Android stable readiness
 
+> **v1.12.0:** Android 0.12.0 / code26 retains the application and original signing identity. The exact original-signer code25-to-code26 upgrade, synthetic Store retention and native fixtures passed on an isolated API35 ARM64 emulator. [Artifact-bound acceptance and limits](../docs/history/2026-11-07-release-1.12.0-scoped-qa.md); physical phones and live phone-to-TV operations remain untested. Earlier evidence below remains historical.
+
 > **1.10.0:** the [final acceptance record](../docs/history/2026-11-07-release-1.10.0-final-acceptance.md) binds the exact original-signer code23-to-code24 emulator upgrade, synthetic Store retention and packaged source/payload verification. Physical phone/live phone-to-TV and minimum-device paths remain untested; no new physical compatibility claim is made.
 
 

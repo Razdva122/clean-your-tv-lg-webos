@@ -49,6 +49,8 @@ sys.stdin.read()
         self.sender.chmod(0o700)
 
     def run(self, command, data=None, timeout=30):
+        if 'CYTV_FRESH_ROOT' in command:
+            return 'CYTV_FRESH_ROOT'
         if 'CYTV_NODE_READY' in command:
             return super().run(command,data,timeout)
         if 'CYTV_STOP_RETAINED' in command:
@@ -57,7 +59,7 @@ sys.stdin.read()
         if '-e' in words and '/usr/bin/node' in words:
             code=words[words.index('-e')+1]
             argument=words[-1]
-            if observer.PROGRAM in code:
+            if observer.PROGRAM in code or observer.ROOT_PROGRAM in code:
                 request=json.loads(argument)
                 request['sender']=str(self.sender)
                 request['timeout']=3000
@@ -66,7 +68,7 @@ sys.stdin.read()
             result=subprocess.run([shutil.which('node'),'-e',code,argument],input=data,capture_output=True,timeout=timeout)
             if result.returncode: raise RuntimeError(result.stderr.decode())
             reply=result.stdout.decode()
-            if observer.PROGRAM in code and self.cut and request['command']=='status':
+            if (observer.PROGRAM in code or observer.ROOT_PROGRAM in code) and self.cut and request['command']=='status':
                 value=json.loads(reply)
                 if value['slots'][0]['terminal']=='success':
                     self.cut=False
@@ -118,6 +120,33 @@ class OriginalOperationIntegration(unittest.TestCase):
             patcher=patch.object(operations,name,value);patcher.start();self.addCleanup(patcher.stop)
         self.installer=operations.Installer(self.remote,self.store,self.profile,fixture.payload,fixture.manifest,lambda *_:None)
         self.inventory=fixture.inventory
+
+    def test_root_ssh_observer_install_and_remove_keep_original_receipts(self):
+        # Host fixture substitutes UID and fixed TV paths only. Run the actual
+        # root-transport observer, its private sender and durable package stream.
+        self.profile.update(connection='root-ssh', port=22)
+        self.remote.root=True
+        root_private=str(self.root/'root-private')
+        root_public=str(self.root/'root-public')
+        source=observer.ROOT_PROGRAM.replace("uid!==0||root!==", 'uid!=='+str(os.geteuid())+'||root!==')
+        source=source.replace('/tmp/.cytv-installer-root',root_private).replace('/var/lib/clean-your-tv-installer',root_public)
+        ownership_log=str(self.root/'configuration-owners')
+        source=source.replace('var uid=process.getuid()',
+            'var originalChown=fs.fchownSync;fs.fchownSync=function(fd,uid,gid){fs.appendFileSync('+json.dumps(ownership_log)+',uid+":"+gid+"\\n");return originalChown(fd,uid,gid);};var uid=process.getuid()')
+        # ProcessRemote supplies the fixture sender instead of the TV binary.
+        source=source.replace("input.sender!=='/usr/bin/luna-send'", 'input.sender!=='+json.dumps(str(self.remote.sender)))
+        with patch.object(observer,'ROOT_PROGRAM',source), patch.object(observer,'ROOT_SSH_PRIVATE',root_private), \
+             patch.object(observer,'ROOT_SSH_PUBLIC',root_public):
+            self.installer.install(self.inventory,'original-secret')
+            self.assertIsNone(self.store.pending(self.profile))
+            self.assertEqual((self.root/'requests').read_text().splitlines(),list(observer.APPS))
+            owner=Path(operations.HELPER_STATE).stat()
+            self.assertEqual(Path(ownership_log).read_text().splitlines(),[str(owner.st_uid)+':'+str(owner.st_gid)]*2,
+                             'Both configuration files must inherit the checked sandbox owner/group')
+            self.installer.uninstall()
+            self.assertIsNone(self.store.pending(self.profile))
+            self.assertEqual((self.root/'requests').read_text().splitlines(),list(observer.APPS)*2)
+            self.assertEqual(list(Path(root_public).iterdir()),[])
 
     def test_storage_failure_before_journal_does_not_block_another_setup(self):
         # A valid private namespace, but no writable/usable staging parent.

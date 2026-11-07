@@ -10,6 +10,16 @@ from cytv.errors import UserError, TVCommandError
 
 
 class ContextTests(unittest.TestCase):
+    def test_root_inventory_summary_excludes_untrusted_details(self):
+        report=self.report('install','read-inventory',UserError('PRIVATE'),tv_info={'root_inventory':{
+            'applications':'read','inputs':'unavailable','raw':'PRIVATE'}})
+        self.assertEqual(report['tv'].get('root_inventory'),{'applications':'read','inputs':'unavailable'})
+        self.assertNotIn('PRIVATE',json.dumps(report))
+        unknown=diagnostics.context.tv_summary({'root_inventory':{
+            'applications':'PRIVATE','inputs':{'devices':'PRIVATE'}}})
+        self.assertEqual(unknown.get('root_inventory'),{'applications':'unknown','inputs':'unknown'})
+        self.assertNotIn('PRIVATE',json.dumps(unknown))
+
     def test_worker_failures_export_current_call_but_strip_untrusted_fields(self):
         from cytv.diagnostic_context import product_summary
         product={'failure':{'exception_type':'RuntimeError',

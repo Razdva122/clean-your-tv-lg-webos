@@ -90,6 +90,77 @@ const path = require('node:path');
       0,
       'new run clears old checks'
     );
+    await page.evaluate(() => {
+      CYTV.answer = (raw) => {
+        window.lastAnswer = JSON.parse(raw);
+      };
+      CYTV.start = (raw) => {
+        window.lastStart = JSON.parse(raw);
+      };
+      receiveNative({
+        kind: 'started',
+        config: {
+          host: '192.0.2.10',
+          edition: 'root',
+          port: 22,
+          action: 'install'
+        }
+      });
+      receiveNative({
+        kind: 'selected-profile',
+        profile: {
+          host: '192.0.2.10',
+          edition: 'no-root',
+          port: 22,
+          connection: 'root-ssh'
+        }
+      });
+      receiveNative({
+        kind: 'question',
+        id: 'legacy',
+        text: 'Alternative edition [0]: ',
+        defaultChoice: '0',
+        options: [
+          { value: '1', label: 'No-root via root SSH' },
+          { value: '2', label: 'Root Beta for Node.js 0.12.2' },
+          { value: '0', label: 'Cancel' }
+        ]
+      });
+    });
+    await page.waitForFunction(
+      () => document.activeElement?.dataset.value === '0'
+    );
+    assert.match(await page.locator('.target').textContent(), /No-root/);
+    await page.locator('[data-action=choice-prompt][data-value="0"]').click();
+    assert.equal(await page.evaluate(() => lastAnswer.value), '0');
+    await page.evaluate(() => {
+      receiveNative({ kind: 'finished', code: 0 });
+      action = 'status';
+      start(true);
+    });
+    assert.equal(await page.evaluate(() => lastStart.connection), 'root-ssh');
+    assert.equal(await page.evaluate(() => lastStart.edition), 'no-root');
+    await page.evaluate(() => {
+      receiveNative({
+        kind: 'started',
+        config: {
+          host: '192.0.2.10',
+          edition: 'root',
+          port: 22,
+          action: 'install'
+        }
+      });
+      receiveNative({
+        kind: 'selected-profile',
+        profile: {
+          host: '192.0.2.10',
+          edition: 'root',
+          port: 22,
+          root_variant: 'node012-beta'
+        }
+      });
+    });
+    assert.match(await page.locator('.target').textContent(), /Root Beta/);
     assert.deepEqual(errors, []);
     console.log(
       'Android checks: updates, retained failures, pending steps, escaping and reset passed.'

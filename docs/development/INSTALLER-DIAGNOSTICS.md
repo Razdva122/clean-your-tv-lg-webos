@@ -5,6 +5,24 @@ without treating it as recovery authority. These changes are in source only;
 v1.5.4 does not contain them. No TV compatibility or completed recovery follows
 from a diagnostic report.
 
+## Optional Root input inventory (next candidate)
+
+Root setup still requires a validated, nonempty application catalog. An unavailable
+EIM input snapshot no longer discards that catalog: setup warns and continues
+with an empty captured input list. A successful snapshot is preserved; malformed
+host envelopes, failed/empty application reads and SSH failures remain blocked.
+The shared installer checklist retains `inventory: unknown` for this partial read.
+Home can add inputs through its existing live status reader when available;
+inputs may remain absent while the TV refuses that reader.
+
+`tv.root_inventory` independently projects `applications` and `inputs` as `read`,
+`unavailable`, `invalid` or `unknown`. `unknown` means the boundary did not produce
+a classified result. Only these fixed keys/values are exported, including in
+failure history. No IDs, names, raw replies or exception text are retained there.
+This fixes a reproduced source failure path; it does not establish the cause or
+resolution of a reporter's device failure. Rebuild installers to deliver it.
+No TV package, permission, endpoint, persistent device state or pairing changes.
+
 ## Report contents
 
 The next recovery candidate adds a fixed semantic `frontend` field:

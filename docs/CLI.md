@@ -26,6 +26,8 @@ inventory during installation. Each row has a text status as well as a visual
 marker. Results remain visible after failure; subsequent steps stay **Not checked**.
 An interrupted probe is **Could not verify**, not evidence of a missing runtime.
 
+In the next unpublished candidate, Root setup continues with a warning if TV inputs cannot be read but the application list is valid. Inputs may be missing from Home; a failed or empty application list still stops setup. Save the diagnostic report if the warning persists. The combined inventory check remains **Could not verify**, rather than claiming that the input read passed.
+
 Python and Node.js checks concern the **TV**, not the computer running cytv.
 Root setup can prepare private Python only when its other prerequisites pass;
 `doctor` does not prepare a runtime or request control pairing. A failed runtime
@@ -210,7 +212,9 @@ installation uses `[Y/n]` (Enter continues). Removal and restore still require a
    fingerprint for optional comparison with an independently trusted connection.
    This first-use approval establishes trust; it cannot independently certify an
    unknown TV. A changed saved key or a matching revoked trust record is blocked
-   before sign-in, without a confirmation override.
+   before sign-in, without a confirmation override. For `ssh-identity-changed`,
+   stop and follow [changed SSH identity recovery](RECOVERY.md#ssh-identity-changed);
+   no supported automatic re-trust command is supplied.
 4. **No-root:** enable Developer Mode and Key Server on the TV, enter its passphrase
    when requested, then accept the separate remote-control pairing request on TV.
    **Root:** after host-key verification, cytv first tries automatic sign-in:
@@ -334,7 +338,7 @@ checks application, service and package absence. The published Root installer
 retains recovery evidence and referenced runtime data; do not delete it to force
 reinstallation. See [Root rollout](../root-edition/ROLLOUT.md).
 
-In the next unpublished candidate, explicit `cytv uninstall` confirms one cleanup
+In published v1.11.0 and later, explicit `cytv uninstall` confirms one cleanup
 goal on the saved connection, removes known present project items and skips missing
 ones, including after failed or partial setup. Old pending or unknown install
 success does not require completing that installation first. When asked, disconnect
@@ -343,7 +347,7 @@ and reconnect TV power, wait for the network, then run `cytv uninstall` again
 not satisfy the checked boot change. Connection loss offers the same retry; actual
 busy work or access denial keeps its specific wait/access guidance. Final success
 requires both removed and verified-clean proof; see
-[candidate removal](RECOVERY.md#next-candidate-original-operation-recovery-and-full-removal).
+[removal](RECOVERY.md#next-candidate-original-operation-recovery-and-full-removal).
 
 `--yes` accepts the install/restore/removal summary only; it never accepts SSH trust. `--non-interactive` rejects local input prompts and requires
 previously established host trust and usable credentials (saved/explicit key,
@@ -404,6 +408,11 @@ See [replacement and recovery](RECOVERY.md#replace-the-root-system-updater-candi
 
 ## Interrupted operations
 
+If connection stops at `ssh-connect` with `ssh-identity-changed` /
+`BadHostKeyException`, recovery has not inspected the TV. Preserve the saved
+profile and pending receipts; follow [independent identity verification and
+trust-recovery limits](RECOVERY.md#ssh-identity-changed) before further recovery.
+
 A private local receipt is synchronized before installation/removal, and
 recovery attempts have separate receipts. A failed command never means a package
 was not installed. **Do not delete journals or rerun installation blindly.**
@@ -417,9 +426,8 @@ supported file-only reconciliation for a denied/unknown installer outcome.
 Root reconciliation still requires its terminal deployment stage and verified
 recovery integrity. See [No-root authority limits](development/NO-ROOT-PACKAGE-AUTHORITY.md).
 
-The published recovery flow requires installer-idle proof before removing an
-incomplete install and does not repeat an uncertain removal. The next candidate's
-explicit `uninstall` instead checks current project presence, uses the actual
+Recovery continuation requires its original installer-idle proof and does not
+repeat an uncertain removal. Published v1.11.0 explicit `uninstall` checks current project presence, uses the actual
 restart checkpoint and verifies final absence as described above. It does not
 infer the outcome of an old vendor request or bypass a currently active worker,
 real OS busy condition, access denial or foreign ownership. Setup continuation
@@ -615,16 +623,16 @@ not delete files itself. Session Storage and other app state are excluded.
 `--yes` does not authorize cleanup; noninteractive mode and pending local operations
 are refused. Cache rebuilding may slow the next app launch. No reboot, automatic
 retry or setup resume occurs. See [scope, manual maintenance and evidence](WAM-CLEANUP.md).
-Published installers do not include this action yet.
+This action is included in published v1.11.0.
 
-## Candidate: redirected Windows output and POSIX payloads (#107)
+## Redirected Windows output and POSIX payloads (#107)
 
-The next candidate preserves the stream's selected encoding and writes unsupported
+Published v1.11.0 preserves the stream's selected encoding and writes unsupported
 console characters as backslash escapes (for example, `\u041f`) instead of failing
 with `UnicodeEncodeError`. UTF-8 output keeps the original localized text. This
 applies to help, errors and normal CLI output; it does not change TV settings or
 saved JSON data. A UTF-8 terminal/log remains preferable for readable localized text.
-These source changes are not a claim about already published installers.
+Check the actual package version when comparing earlier installer behavior.
 
 Windows source checkouts use LF for text through `.gitattributes`; binary assets
 remain unchanged. `--check-payload` verifies file hashes and rejects CR characters

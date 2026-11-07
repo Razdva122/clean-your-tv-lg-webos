@@ -1,5 +1,15 @@
 # Release history and device evidence
 
+- [Release 1.12.0 scoped QA, 2026-11-07](2026-11-07-release-1.12.0-scoped-qa.md): exact Android emulator upgrade/native checks, packaged UI and icons, authorized C3 delivery/Home/controls/audio/standby, physical Beta deferral and unresolved pre-suspension Home disable.
+
+- [1.12.0 verified candidate artifacts, 2026-11-07](2026-11-07-release-1.12.0-artifacts.md): successful full build42384446335:1, verified archive/package hashes and pending exact-package acceptance.
+
+- [1.12.0 freeze and package preflight, 2026-11-07](2026-11-07-release-1.12.0-freeze.md): complete five-PR scope, selected versions, signed baselines and pending exact-package acceptance.
+
+- [Small issue follow-ups, 2026-11-07](2026-11-07-small-issue-followups.md): transitional Home status, private retention diagnostics and SSH trust guidance; combined CI, observer test synchronization and remaining device/recovery scope.
+
+- [Post-1.11.0 integration, 2026-11-07](2026-11-07-post-1.11.0-integration.md): legacy Root Beta, optional input discovery, visible icon selection and edition-transition guidance; combined host checks and outstanding exact-package acceptance.
+
 - [1.11.0 maintainer C3 QA](2026-11-07-release-1.11.0-tv-qa.md): exact-byte No-root and final Root controls/audio/standby/emergency, normal full removal after restart, non-blocking icon issue394 and explicit untested paths.
 
 - [1.11.0 failed full run and replacement](2026-11-07-release-1.11.0-candidate-replacement.md): complete failure inventory, combined Windows fixture/CI evidence correction, replacement build and final package gates.

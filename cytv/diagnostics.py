@@ -36,6 +36,11 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
         'checks': context.checks_summary(checks),
         'privacy': 'No addresses, SSH identities, exception text, credentials, app inventory, environment or raw TV logs are collected.',
     }
+    if profile:
+        if profile.get('root_variant') == 'node012-beta':
+            report['root_variant'] = 'node012-beta'
+        if profile.get('connection') == 'root-ssh':
+            report['connection_mode'] = 'root-ssh'
     from .recovery_state import assess, summary
     if pending and pending.get('activation_restore') in ('verified', 'unverified'):
         report['activation_recovery'] = {'lg_home':pending['activation_restore'],

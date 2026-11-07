@@ -89,7 +89,7 @@ See [recovery](RECOVERY.md).
 
 ## Remove or replace Root Edition
 
-For the next unpublished candidate, choose **Uninstall Clean Your TV** on desktop
+In published v1.11.0 and later, choose **Uninstall Clean Your TV** on desktop
 or Android, or run `cytv uninstall`, using the saved Root connection. Confirm once.
 Removal stops owned controls/startup, removes registered project packages and
 known present files, and skips missing items even after partial setup. When asked,
@@ -97,10 +97,10 @@ disconnect and reconnect TV power, wait for the network and choose **Try again**
 for the final sweep. Standby and Quick Start are not a full restart. A lost
 connection offers the same Retry; CYTV never restarts the TV automatically.
 Completion requires both removed and verified-clean proof. See the
-[current candidate procedure](../docs/RECOVERY.md#next-candidate-original-operation-recovery-and-full-removal).
+[current removal procedure](../docs/RECOVERY.md#next-candidate-original-operation-recovery-and-full-removal).
 
-The published installer retains required journals, archives and referenced Python
-slots after removal. The candidate additionally retires owned private recovery,
+Published v1.11.0 retains required journals, archives and referenced Python
+slots after removal and retires owned private recovery,
 configuration, credentials and runtime data; minimal non-executable removal records
 or genuine ownership backups may remain. Do not delete records manually to force
 installation. Original unknown install outcomes remain unknown; current cleanup

@@ -21,7 +21,8 @@ PROGRAM = r'''
   try{
    var s=fs.fstatSync(fd);
    if(!s.isFile()||s.uid!==0||s.nlink!==1||(s.mode&(mask===undefined?63:mask))||s.size>limit)fail('unsafe');
-   var size=tail?Math.min(tail,s.size):s.size,b=Buffer.alloc(size),offset=0;
+   // Every allocated byte is read before parsing or hashing, including on legacy Node.
+   var size=tail?Math.min(tail,s.size):s.size,b=new Buffer(size),offset=0;
    while(offset<size){
     var n=fs.readSync(fd,b,offset,size-offset,s.size-size+offset);
     if(n<=0)fail('unsafe');offset+=n;

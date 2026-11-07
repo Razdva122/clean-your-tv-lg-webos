@@ -1,17 +1,25 @@
 """Real filesystem retention: terminal proof, cross-store references and safe deletion."""
 import hashlib
+import io
+from contextlib import redirect_stderr
 import os
 from pathlib import Path
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
+from types import SimpleNamespace
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from updater import store as storage
 
 
 class RetentionTests(unittest.TestCase):
     def setUp(self):
+        self.syslog=Mock()
+        logger=patch.dict(sys.modules,{"syslog":SimpleNamespace(LOG_INFO=6,syslog=self.syslog)})
+        logger.start();self.addCleanup(logger.stop)
+        self.stderr=io.StringIO();capture=redirect_stderr(self.stderr);capture.__enter__()
+        self.addCleanup(capture.__exit__,None,None,None)
         self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
         self.root=Path(self.tmp.name).resolve()
         self.stores=[storage.Store(self.root/name,uid=os.getuid()) for name in ('system','legacy')]
@@ -32,6 +40,73 @@ class RetentionTests(unittest.TestCase):
         path.write_bytes(raw);path.chmod(0o600);return path
 
     def prune(self):return storage.prune_update_caches(self.stores)
+
+    def summary(self,scope,reason,removed):
+        message='cytv-retention scope='+scope+' reason='+reason+' removed='+str(removed)
+        self.assertIn(message,self.stderr.getvalue())
+        self.assertTrue(any(call.args[-1]==message for call in self.syslog.call_args_list))
+
+    def test_diagnostics_distinguish_noop_refusal_and_changed_proof(self):
+        self.assertEqual(self.prune(),0);self.summary('cache','complete',0)
+        self.stderr.truncate(0);self.stderr.seek(0)
+        self.stores[1].write('private-secret-record',{'secret':'token'})
+        self.assertEqual(self.prune(),0);self.summary('cache','admission-refused',0)
+        self.assertNotIn('private-secret-record',self.stderr.getvalue())
+        self.assertNotIn(str(self.root),self.stderr.getvalue())
+        (Path(self.stores[1].root)/'private-secret-record.json').unlink()
+        old=self.package(self.stores[0],b'private package');original=self.stores[0].read;calls=[]
+        def read(name):
+            if name=='transaction':
+                calls.append(name)
+                if len(calls)==2:self.stores[0].write('current-root',{'sha256':old.name})
+            return original(name)
+        with patch.object(self.stores[0],'read',side_effect=read):self.assertEqual(self.prune(),0)
+        self.summary('cache','proof-changed',0);self.assertTrue(old.exists())
+        self.assertNotIn(old.name,self.stderr.getvalue())
+
+    def test_diagnostics_count_unlinks_before_fsync_failure_and_survive_sink_errors(self):
+        old=self.package(self.stores[0],b'private package')
+        with patch.object(storage.os,'fsync',side_effect=OSError('private /path token')):
+            self.assertEqual(self.prune(),1)
+        self.assertFalse(old.exists());self.summary('cache','filesystem-error',1)
+        self.assertNotIn('private /path token',self.stderr.getvalue())
+        self.package(self.stores[0],b'next package')
+        with patch('syslog.syslog',side_effect=RuntimeError('private sink')), patch('sys.stderr',None):
+            self.assertEqual(self.prune(),1)
+
+    def test_absent_syslog_keeps_stderr_observable_and_return_unchanged(self):
+        old=self.package(self.stores[0],b'private package')
+        with patch.dict(sys.modules,{'syslog':None}):self.assertEqual(self.prune(),1)
+        self.assertFalse(old.exists())
+        self.assertIn('scope=cache reason=complete removed=1',self.stderr.getvalue())
+
+    def test_later_unlink_failure_reports_partial_progress(self):
+        files=[self.package(self.stores[0],raw) for raw in (b'first',b'second')]
+        original=os.unlink;calls=[]
+        def unlink(name,**kwargs):
+            calls.append(name)
+            if len(calls)==2:raise OSError('private filename credential')
+            return original(name,**kwargs)
+        with patch.object(storage.os,'unlink',side_effect=unlink):self.assertEqual(self.prune(),1)
+        self.summary('cache','filesystem-error',1)
+        self.assertEqual(sum(path.exists() for path in files),1)
+        self.assertNotIn('private filename credential',self.stderr.getvalue())
+
+    def test_new_unknown_record_during_revalidation_reports_proof_change(self):
+        old=self.package(self.stores[0],b'private package');original=self.stores[0].read;calls=[]
+        def read(name):
+            if name=='transaction':
+                calls.append(name)
+                if len(calls)==2:self.stores[1].write('new-private-record',{'secret':'token'})
+            return original(name)
+        with patch.object(self.stores[0],'read',side_effect=read):self.assertEqual(self.prune(),0)
+        self.summary('cache','proof-changed',0);self.assertTrue(old.exists())
+
+    def test_peer_admission_error_is_observable(self):
+        peer=self.root/'private-peer';peer.symlink_to(self.root/'missing')
+        self.assertEqual(storage.prune_peer_caches(self.stores[0],peer),0)
+        self.summary('cache-peer','filesystem-error',0)
+        self.assertNotIn('private-peer',self.stderr.getvalue())
 
     def test_terminal_sweep_preserves_union_of_all_store_references(self):
         current=self.package(self.stores[0],b'current');rollback=self.package(self.stores[0],b'rollback')
@@ -125,6 +200,11 @@ class RetentionTests(unittest.TestCase):
 class StagingTests(unittest.TestCase):
     def setUp(self):
         from installation import Ownership
+        self.syslog=Mock()
+        logger=patch.dict(sys.modules,{"syslog":SimpleNamespace(LOG_INFO=6,syslog=self.syslog)})
+        logger.start();self.addCleanup(logger.stop)
+        self.stderr=io.StringIO();capture=redirect_stderr(self.stderr);capture.__enter__()
+        self.addCleanup(capture.__exit__,None,None,None)
         self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
         self.store=storage.Store(Path(self.tmp.name).resolve()/'installation',uid=os.getuid())
         self.owner=Ownership(self.store);self.identifier='d'*32
@@ -143,6 +223,43 @@ class StagingTests(unittest.TestCase):
     def retire(self):
         import install_driver
         return install_driver.retire_staging(self.store,self.identifier,self.owner)
+
+    def summary(self,reason,removed):
+        message='cytv-retention scope=staging reason='+reason+' removed='+str(removed)
+        self.assertIn(message,self.stderr.getvalue())
+        self.assertTrue(any(call.args[-1]==message for call in self.syslog.call_args_list))
+        self.assertNotIn(self.identifier,self.stderr.getvalue())
+        self.assertNotIn(str(self.tree),self.stderr.getvalue())
+        self.assertNotIn('app.ipk',self.stderr.getvalue())
+
+    def test_staging_diagnostics_distinguish_refusal_missing_inventory_and_noop(self):
+        self.assertEqual(self.retire(),0);self.summary('admission-refused',0)
+        with self.owner.operation('product','product-'+self.identifier+'.json') as lease:
+            self.records(lease);self.owner.stage(lease,'complete',terminal=True)
+            submission=self.store.read('submission-'+self.identifier);submission.pop('staging')
+            self.store.write('submission-'+self.identifier,submission)
+            self.assertEqual(self.retire(),0);self.summary('missing-inventory',0)
+            self.records(lease)
+            self.assertEqual(self.retire(),2);self.summary('complete',2)
+            self.assertEqual(self.retire(),0);self.summary('complete',0)
+
+    def test_staging_changed_proof_and_partial_filesystem_failure_are_observable(self):
+        expected={n:hashlib.sha256(raw).hexdigest() for n,raw in self.files.items()}
+        self.assertEqual(storage.retire_verified_files(self.store,'request-'+self.identifier,expected,lambda:False),0)
+        self.summary('proof-changed',0)
+        with patch.object(storage.os,'fsync',side_effect=OSError('secret private path')):
+            self.assertEqual(storage.retire_verified_files(self.store,'request-'+self.identifier,expected,lambda:True),1)
+        self.summary('filesystem-error',1)
+        self.assertEqual(sum((self.tree/name).exists() for name in self.files),1)
+        self.assertNotIn('secret private path',self.stderr.getvalue())
+
+    def test_post_retirement_peer_error_preserves_actual_removed_count(self):
+        with self.owner.operation('product','product-'+self.identifier+'.json') as lease:
+            self.records(lease);self.owner.stage(lease,'complete',terminal=True)
+            with patch('install_device.UPDATER',self.tree/'private-peer'), patch('install_device.SUPERVISOR',self.tree/'missing'):
+                (self.tree/'private-peer').symlink_to(self.tree/'missing')
+                self.assertEqual(self.retire(),2)
+            self.summary('filesystem-error',2)
 
     def test_terminal_staging_retires_payload_preserving_log_and_journals(self):
         with self.owner.operation('product','product-'+self.identifier+'.json') as lease:

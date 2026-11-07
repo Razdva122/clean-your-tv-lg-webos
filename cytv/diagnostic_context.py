@@ -17,7 +17,7 @@ ROOT_ACTIONS = ('inspect', 'install', 'status', 'remove', 'enable', 'restore', '
 REASONS = ('unknown', 'user-error', 'ssh-command-failed', 'ssh-unreachable',
            'ssh-authentication', 'ssh-identity-changed', 'ssh-trust-record', 'ssh-identity-unverified', 'host-runtime',
            'helper-running', 'helper-state-unverified', 'root-requirements',
-           'pending-operation', 'root-operation-unconfirmed', 'version-mismatch',
+           'pending-operation', 'root-operation-unconfirmed', 'project-apps-remain', 'version-mismatch',
            'inventory-unavailable', 'graphics-unverified', 'root-home-interfaces',
            'root-worker-busy', 'root-access-required', 'removal-failed',
            'cleanup-check-failed', 'connection-interrupted', 'operation-timeout', 'tv-storage-full')
@@ -96,6 +96,12 @@ def root_diagnostics_summary(value):
 def tv_summary(value):
     value = mapping(value)
     result = metadata(value)
+    if 'root_inventory' in value:
+        inventory=mapping(value['root_inventory'])
+        result['root_inventory']={key:choice(inventory.get(key),('read','unavailable','invalid'))
+                                  for key in ('applications','inputs')}
+    if version(value.get('node_version')):
+        result['node_version'] = value['node_version']
     if 'root_diagnostics' in value:
         result['root_diagnostics'] = root_diagnostics_summary(value['root_diagnostics'])
     if 'setup_outcome' in value:

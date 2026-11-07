@@ -2,6 +2,12 @@
 
 Clean Your TV gives your LG webOS TV a personal Home screen: your apps in your order, without sponsored rows in this menu. Install from a computer or Android phone; the computer can be switched off afterward.
 
+## UNRELEASED candidate: older TV Node.js
+
+These choices belong to an unpublished candidate, not the published downloads. If ordinary Root rejects the TV Node.js version (it requires Node.js 8+), the installer can offer **No-root using existing root SSH**: Home and Home Helper without installing Developer Mode. Never enable Developer Mode over existing root. Only **exact Node.js 0.12.2** can additionally offer **Root Beta**, with separate packages and explicit confirmation. It does not replace system Node.js and has no automatic/OTA updates; use the computer installer. No-root has reduced functionality: no system Home routing or Root-only controls. Root Beta is not sufficiently tested on TVs.
+
+All remaining native, Home-interface and Python requirements still apply. Owner-supervised physical QA remains untested; this is not a compatibility claim. Save the diagnostic report, mark untested checks and voluntarily share a redacted result manually using the [feedback guide](../FEEDBACK.md). Nothing is posted automatically.
+
 ## 1. Download the installer
 
 Click the picture for your device. The buttons download the latest published release. For a Mac, choose Apple Silicon (M1 or newer) or Intel; check Apple menu → About This Mac.
@@ -22,6 +28,8 @@ Turn on the TV and connect it and your computer or phone to the same home networ
 
 - **No-root** — if you do not have root access. Set up Developer Mode below.
 - **Root** — if you already have root SSH access. The installer does not root the TV. Do not enable Developer Mode on that TV; keep SSH access and recovery data.
+
+**No-root → Root:** If No-root was installed again after full removal, switching to Root may require cleanup first. Back up Home preferences, choose **Uninstall Clean Your TV** with the saved Root connection and wait for verified removal. This also removes No-root Home and Helper. Then install Root; keep recovery records.
 
 ### Developer Mode setup (No-root)
 
@@ -58,6 +66,8 @@ The desktop wizard selects your system language automatically; its language sele
 3. For No-root, enter the code from Developer Mode and approve the TV prompt. For Root, use your existing SSH credentials; approve a new SSH identity only for your own TV on a trusted network. If a saved key has changed, stop and investigate.
 4. Follow the wizard. Keep the TV on, stay on the same network and leave CYTV open until it finishes. Do not force-stop the Android app. Root activates Home control immediately after preparing recovery.
 
+In the next unpublished candidate, Root setup continues with a warning if TV inputs cannot be read but the application list is valid. Inputs may be missing from Home; a failed or empty application list still stops setup. Save the diagnostic report if the warning persists.
+
 ## 5. Check your remote
 
 1. Open another TV app and briefly press **Home**. Clean Your TV should open. Tell the wizard what you saw; leave the check skipped if you did not test it.
@@ -75,6 +85,8 @@ No-root: To restart Home control, open Home Helper, choose Start Helper and conf
 
 ## Need help?
 
+If `ssh-identity-changed` appears after a reset or SSH change, stop: CYTV blocked the changed saved key before sign-in. The first-use trust prompt cannot replace it, and a pending uninstall does not explain the mismatch. Keep the original saved profile, keys and recovery records. No supported automatic re-trust command is supplied. Independent TV identity/fingerprint verification and a reviewed procedure preserving the profile are needed: [changed SSH identity recovery](../RECOVERY.md#ssh-identity-changed).
+
 If installation was interrupted, use the same saved connection and choose **Check TV status** first. Continue only through the recovery action offered by the wizard. If the state is unknown, save the diagnostic report and stop; keep recovery data and do not blindly repeat installation.
 
 During recovery, keep Home control off and retain the original diagnostic reports and saved connection. Confirm inspection and changes separately. Follow the detailed recovery guide for your installed version; do not force reinstallation or clear recovery state.
@@ -85,13 +97,13 @@ For help, include TV model, firmware, No-root or Root, installer device, failed 
 
 In upcoming builds, the warning and **Disable HDMI previews** action appear only for themes with input previews enabled when 4K is selected or active. During HDMI previews, the 4K video wallpaper temporarily switches to a static 1080p image. Disable input previews to keep the wallpaper in 4K.
 
-### Candidate: straightforward removal
+### Straightforward removal (v1.11.0+)
 
-The download buttons above still provide the published release. In the next candidate, choose **Uninstall Clean Your TV** in Maintenance with the same saved TV connection. Confirm once. Removal deletes known project apps and files that are present and skips absent items, including after a partial installation.
+In published v1.11.0 and later, choose **Uninstall Clean Your TV** in Maintenance with the same saved TV connection. Confirm once. Removal deletes known project apps and files that are present and skips absent items, including after a partial installation.
 
 When asked, disconnect the TV from power, reconnect it, wait for the network and choose **Try again**. Standby or Quick Start is not a full restart; CYTV does not restart the TV automatically. A connection loss needs a connection check and Try again on the same goal, without another recovery wizard. If access is denied, use the requested Root connection; if the TV is busy, wait and retry. Success appears only after final cleanup is verified. Keep your keys and original reports. The emergency controls and sharing consent above still apply.
 
-In this candidate, failed or interrupted setup offers recovery directly. If No-root setup cannot continue, confirm full removal once. Removal automatically retries transient connection loss and a busy CYTV worker up to three attempts. If Root access is required, choose **Connect using Root** for the same TV; verified Root cleanup also finishes its blocked No-root removal. A failed Root activation attempts to restore and verify LG Home without repeating activation. Cancellation with unfinished work keeps a diagnostic report and recovery actions. Emergency-stop state remains unchanged.
+In v1.11.0 and later, failed or interrupted setup offers recovery directly. If No-root setup cannot continue, confirm full removal once. Removal automatically retries transient connection loss and a busy CYTV worker up to three attempts. If Root access is required, choose **Connect using Root** for the same TV; verified Root cleanup also finishes its blocked No-root removal. A failed Root activation attempts to restore and verify LG Home without repeating activation. Cancellation with unfinished work keeps a diagnostic report and recovery actions. Emergency-stop state remains unchanged.
 
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="optional-python-for-root-in-v110"></a>

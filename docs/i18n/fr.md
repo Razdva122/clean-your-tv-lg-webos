@@ -2,6 +2,12 @@
 
 Clean Your TV donne à votre LG webOS un écran d’accueil personnel : vos applications dans votre ordre, sans rangées sponsorisées dans ce menu. Installez-le depuis un ordinateur ou un téléphone Android ; l’ordinateur peut ensuite rester éteint.
 
+## Candidat UNRELEASED : ancien Node.js du TV
+
+Ces options appartiennent à un candidat non publié, pas aux téléchargements publiés. Si Root standard refuse la version Node.js du TV (Node.js 8+ requis), l’installateur peut proposer **No-root via l’accès SSH root existant** : Home et Home Helper sans installer Developer Mode. N’activez jamais Developer Mode sur un TV déjà rooté. Seul **Node.js exactement 0.12.2** permet aussi de proposer **Root Beta**, avec des paquets distincts et une confirmation explicite. Le Node.js système n’est pas remplacé ; aucune mise à jour automatique/OTA n’est disponible. Utilisez l’installateur sur ordinateur. No-root a des fonctionnalités réduites : sans redirection système de Home ni commandes propres à Root. Root Beta n’a pas été suffisamment testé sur les TV.
+
+Les autres exigences natives, d’interfaces Home et de Python restent obligatoires. Les tests physiques supervisés par le propriétaire restent à effectuer ; aucune compatibilité n’est affirmée. Enregistrez le rapport de diagnostic, indiquez les tests non effectués et partagez volontairement un résultat expurgé manuellement selon le [guide de retour](../FEEDBACK.md). Rien n’est publié automatiquement.
+
 ## 1. Télécharger l’installateur
 
 Cliquez sur l’image de votre appareil. Les boutons téléchargent la dernière version publiée. Sur Mac, choisissez Apple Silicon (M1 ou plus récent) ou Intel : menu Apple → À propos de ce Mac.
@@ -22,6 +28,8 @@ Allumez la TV et connectez-la au même réseau domestique que votre ordinateur o
 
 - **No-root** — si vous n’avez pas d’accès root. Configurez Developer Mode ci-dessous.
 - **Root** — si vous avez déjà un accès root par SSH. L’installateur ne roote pas la TV. N’activez pas Developer Mode sur cette TV ; conservez l’accès SSH et les données de récupération.
+
+**No-root → Root:** Si No-root a été réinstallé après une suppression complète, le passage à Root peut nécessiter un nettoyage préalable. Sauvegardez les préférences de Home, choisissez **Désinstaller Clean Your TV** avec la connexion Root enregistrée et attendez la suppression vérifiée. Cela supprime aussi Home et Helper de No-root. Installez ensuite Root et conservez les données de récupération.
 
 ### Configurer Developer Mode (No-root)
 
@@ -58,6 +66,8 @@ L’assistant utilise initialement la langue du système et mémorise votre choi
 3. No-root : saisissez le code de Developer Mode et acceptez la demande sur la TV. Root : utilisez vos identifiants SSH. N’acceptez une nouvelle identité SSH que pour votre propre TV sur un réseau fiable. Si une clé enregistrée a changé, arrêtez-vous et recherchez la cause.
 4. Suivez l’assistant. Gardez la TV allumée, le même réseau et CYTV ouvert jusqu’à la fin. Ne forcez pas l’arrêt de l’application Android. Root active le contrôle de Home dès la récupération préparée.
 
+Dans le prochain candidat non publié, l’installation Root continue avec un avertissement si les entrées du TV ne peuvent pas être lues mais que la liste des applications est valide. Des entrées peuvent manquer dans Home ; une liste d’applications illisible ou vide arrête toujours l’installation. Enregistrez le rapport de diagnostic si l’avertissement persiste.
+
 ## 5. Vérifier la télécommande
 
 1. Ouvrez une autre application sur la TV et appuyez brièvement sur **Home**. Clean Your TV doit s’ouvrir. Indiquez votre observation dans l’assistant ; ignorez le test si vous ne l’avez pas effectué.
@@ -75,6 +85,8 @@ No-root: Pour relancer le contrôle de Home, ouvrez Home Helper, choisissez Dém
 
 ## Besoin d’aide ?
 
+Si `ssh-identity-changed` apparaît après une réinitialisation ou une modification SSH, arrêtez : CYTV a bloqué la clé mémorisée modifiée avant l’authentification. La confirmation de confiance initiale ne la remplace pas ; une désinstallation en attente n’explique pas cet écart. Conservez le profil d’origine, les clés et les données de récupération. Aucune commande automatique de renouvellement de confiance n’est prise en charge. Il faut vérifier indépendamment l’identité/l’empreinte du TV, puis disposer d’une procédure revue préservant le profil : [récupération de l’identité SSH](../RECOVERY.md#ssh-identity-changed).
+
 Après une interruption, utilisez la même connexion enregistrée et commencez par **Vérifier l’état du téléviseur**. Continuez uniquement avec l’action de récupération proposée par l’assistant. Si l’état est inconnu, enregistrez le rapport de diagnostic et arrêtez-vous ; conservez les données de récupération et ne réinstallez pas à l’aveugle.
 
 Pendant la récupération, laissez le contrôle de Home désactivé et conservez les rapports de diagnostic originaux ainsi que la connexion enregistrée. Confirmez séparément la vérification et les modifications. Suivez le guide détaillé pour votre version installée ; ne forcez pas la réinstallation et n’effacez pas l’état de récupération.
@@ -85,13 +97,13 @@ Indiquez modèle de TV, micrologiciel, No-root ou Root, appareil d’installatio
 
 Dans les prochaines versions, l’avertissement et le bouton « Désactiver l’aperçu HDMI » apparaissent lorsque la 4K est sélectionnée ou active, uniquement pour les thèmes dont l’aperçu des entrées est activé. Pendant l’aperçu HDMI, le fond vidéo 4K est temporairement remplacé par une image fixe en 1080p. Désactivez l’aperçu des entrées pour conserver le fond en 4K.
 
-### Candidat : suppression simple
+### Suppression simple (v1.11.0+)
 
-Les boutons ci-dessus proposent toujours la version publiée. Dans le prochain candidat, choisissez **Désinstaller Clean Your TV** dans Maintenance avec la même connexion enregistrée. Confirmez une fois. Les applications et fichiers connus du projet présents sont supprimés ; les éléments absents sont ignorés, même après une installation partielle.
+Dans v1.11.0 et les versions suivantes, choisissez **Désinstaller Clean Your TV** dans Maintenance avec la même connexion enregistrée. Confirmez une fois. Les applications et fichiers connus du projet présents sont supprimés ; les éléments absents sont ignorés, même après une installation partielle.
 
 Quand demandé, débranchez l’alimentation TV, rebranchez-la, attendez le réseau et choisissez **Réessayer**. Veille ou Quick Start n’est pas un redémarrage complet ; CYTV ne redémarre pas le téléviseur automatiquement. En cas de déconnexion, vérifiez la connexion et réessayez la même suppression sans autre assistant de récupération. Si l’accès est refusé, utilisez la connexion Root demandée ; si le téléviseur est occupé, patientez et réessayez. Le succès apparaît seulement après vérification du nettoyage final. Gardez les clés et rapports d’origine. Les commandes d’urgence et le consentement au partage restent applicables.
 
-Dans ce candidat, une installation échouée ou interrompue propose directement la récupération. Si No-root ne peut pas continuer, confirmez une fois la suppression complète. La suppression effectue jusqu’à trois tentatives en cas de perte temporaire de connexion ou de processus CYTV occupé. Si Root est nécessaire, choisissez **Se connecter avec Root** pour le même téléviseur ; le nettoyage Root vérifié termine aussi sa suppression No-root bloquée. Après un échec d’activation Root, CYTV tente de rétablir et vérifier LG Home sans réactiver. Une annulation avec du travail inachevé conserve le rapport et les actions de récupération. L’arrêt d’urgence reste actif.
+Depuis v1.11.0, une installation échouée ou interrompue propose directement la récupération. Si No-root ne peut pas continuer, confirmez une fois la suppression complète. La suppression effectue jusqu’à trois tentatives en cas de perte temporaire de connexion ou de processus CYTV occupé. Si Root est nécessaire, choisissez **Se connecter avec Root** pour le même téléviseur ; le nettoyage Root vérifié termine aussi sa suppression No-root bloquée. Après un échec d’activation Root, CYTV tente de rétablir et vérifier LG Home sans réactiver. Une annulation avec du travail inachevé conserve le rapport et les actions de récupération. L’arrêt d’urgence reste actif.
 
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="python-facultatif-pour-root-dans-v110"></a>

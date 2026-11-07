@@ -29,9 +29,12 @@ Select affected scenarios using the [scoped release acceptance rules](../docs/RE
 Bind every result to build run/attempt, artifact SHA-256 and TV/firmware/state.
 Evidence-only edits preserve the same selected bytes and do not require another
 physical run. Carry a prior scenario only when all its artifacts and preconditions
-match; source similarity alone is insufficient. Behavioral JS and unknown/shared
-changes conservatively select the full matrix. Unresolved failures and untested
-paths retain their original status. The stage requirements below still apply to
+match; source similarity alone is insufficient. The tool's broad categories are
+review prompts. Select individual cases by changed behavior, package entrypoints and dependencies; a Settings/catalog/font change
+does not automatically select cold boot, observer suspension or failsafe. Document
+why other cases are not selected; do not call them passes on the new package.
+Unisolated dependencies require investigation or a broader relevant case set.
+Unresolved failures and untested paths retain their original status. The stage requirements below still apply to
 any scenario selected for retest.
 
 ## Local checks (no TV required)
@@ -52,6 +55,11 @@ Existing launcher/helper tests remain part of the normal suite. Root tooling is
 not included in the production IPKs by `scripts/build.sh`.
 
 ## Hardware gates (user present)
+
+This table is a case library. Run the affected rows selected in the candidate
+plan, preserving any existing release blocker. Independent recovery readiness
+is required before changes; actual forced recovery/rollback is not repeated
+for every unrelated UI update.
 
 Before each stage, verify the baseline, off-device backup and independent recovery.
 Use one bounded change at a time. Do not count a successful API reply as a visible
@@ -85,8 +93,10 @@ SSH keys, private backups, firmware images or complete device logs.
 
 For each selected package, record its `bundle.json` SHA-256 before starting.
 Use the linked current acceptance record for completed exact-artifact scenarios;
-repeat only cases selected by changed bytes or preconditions. This checklist
-describes the required evidence, not a blanket statement that every case is pending:
+repeat only cases selected by changed bytes or preconditions. The items below
+define evidence for selected cases, not mandatory repeated installations or a
+blanket statement that every case is pending. Use a supported update when that
+is the chosen transition; do not uninstall/reinstall just to populate the list:
 
 1. Inspect existing recovery/updater state before replacing anything; check the
    candidate payload and record its exact source/build. Do not bypass retained
@@ -123,7 +133,10 @@ rollback. The original independent 60-second guardian remains armed. Failure to
 acknowledge observer readiness prevents Home publication. Production helper state
 is never changed.
 
-Required supervised tests on the final package:
+Select the following supervised fault matrix when input/gesture recognition,
+observer/supervisor lifecycle, emergency routing or their dependencies change.
+It is not an automatic gate for unrelated icon, font or status text changes.
+When selected, use the final package:
 
 1. Ordinary Home and navigation still work; triple short Home restores LG Home
    before the deadline without magnification.
@@ -310,10 +323,13 @@ these facts and the session-race hypothesis from hardware acceptance.
 
 Host regressions cover fresh ON→OFF subscription transitions, initial/stale OFF,
 unknown/unsubscribed/malformed/lost streams, cache expiry, actual child cleanup,
-old-session writers and observer exits before boot dispatch. Escape, explicit
-off, package loss, failsafe, same-session input faults, unconfirmed trials and
-restore-before-gate remain mandatory. Rebuild coherent artifacts after product changes
-and repeat the affected supervised matrix (unknown/shared impact requires the full matrix); do not re-enable
+old-session writers and observer exits before boot dispatch. For that shutdown
+fix, the selected regression set also required escape, explicit off, package
+loss, failsafe, same-session input faults, unconfirmed trials and restore-before-gate.
+This is the historical scope of that mechanism change, not a full physical pass
+for every later shared-file edit. Rebuild coherent artifacts after product changes
+and select affected cases using the current dependency review above. Unisolated
+impact requires investigation or an appropriate broader case set. Never re-enable
 fault-disabled Root automatically or edit installed runtime/receipts.
 
 
