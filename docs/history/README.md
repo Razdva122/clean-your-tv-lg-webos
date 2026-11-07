@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [Local recovery storage diagnostics, 2026-11-07](2026-11-07-local-recovery-storage-diagnostics.md): private local failure categories, pre-journal local storage checks and preserved original evidence; no device-recovery claim.
+
 - [Small issue follow-ups, 2026-11-07](2026-11-07-small-issue-followups.md): transitional Home status, private retention diagnostics and SSH trust guidance; combined CI, observer test synchronization and remaining device/recovery scope.
 
 - [Post-1.11.0 integration, 2026-11-07](2026-11-07-post-1.11.0-integration.md): legacy Root Beta, optional input discovery, visible icon selection and edition-transition guidance; combined host checks and outstanding exact-package acceptance.

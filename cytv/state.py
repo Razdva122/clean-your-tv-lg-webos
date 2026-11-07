@@ -9,7 +9,7 @@ import re
 import stat
 import tempfile
 import uuid
-from .errors import UserError
+from .errors import UserError, LocalRecoveryError, is_storage_full
 
 
 def sync_directory(path):
@@ -90,15 +90,18 @@ class Store:
 
     def _capsule_path(self, profile, operation):
         if not isinstance(operation, str) or not re.fullmatch('[a-f0-9]{32}', operation):
-            raise UserError('The original private recovery data is missing or changed. Recovery data was kept.')
-        directory = self.device_dir(profile)
+            raise LocalRecoveryError('operation-invalid', 'operation')
+        try:
+            directory = self.device_dir(profile)
+        except OSError as error:
+            raise LocalRecoveryError('directory-access', 'profile', storage_full=is_storage_full(error)) from None
         # Reuse the existing Chaquopy context proof for Android's system-owned
         # /data ancestors; desktop roots retain the full ancestry check.
         from .python_runtime import _android_cache_anchor
         try:
             android_anchor=_android_cache_anchor(directory)
-        except UserError:
-            raise UserError('The original private recovery data is missing or changed. Recovery data was kept.') from None
+        except (UserError, OSError):
+            raise LocalRecoveryError('directory-access', 'ancestor') from None
         parents=(directory,*directory.parents)
         if android_anchor:
             directory,anchor=android_anchor
@@ -106,15 +109,34 @@ class Store:
             while parent!=anchor:
                 parents.append(parent);parent=parent.parent
         for parent in parents:
-            info = parent.lstat()
+            location = 'profile' if parent == directory else 'ancestor'
+            try:
+                info = parent.lstat()
+            except OSError:
+                raise LocalRecoveryError('directory-access', location) from None
+            details = dict(location=location, mode=format(info.st_mode & 0o7777, '04o'))
+            if os.name != 'nt':
+                details['owner'] = 'root' if info.st_uid == 0 else 'current-user' if info.st_uid == os.getuid() else 'other'
             if not stat.S_ISDIR(info.st_mode):
-                raise UserError('The original private recovery data is missing or changed. Recovery data was kept.')
-            if os.name != 'nt' and (info.st_uid not in (0, os.getuid()) or
-                    info.st_mode & 0o022 and not (info.st_uid == 0 and info.st_mode & stat.S_ISVTX)):
-                raise UserError('The original private recovery data is missing or changed. Recovery data was kept.')
-        if os.name != 'nt' and directory.lstat().st_mode & 0o077:
-            raise UserError('The original private recovery data is missing or changed. Recovery data was kept.')
+                raise LocalRecoveryError('directory-type', **details)
+            if os.name != 'nt' and info.st_uid not in (0, os.getuid()):
+                raise LocalRecoveryError('directory-owner', **details)
+            if os.name != 'nt' and (info.st_mode & 0o022 and not (info.st_uid == 0 and info.st_mode & stat.S_ISVTX)
+                                   or parent == directory and info.st_mode & 0o077):
+                raise LocalRecoveryError('directory-permissions', **details)
         return directory / ('capsule-' + operation + '.json')
+
+    def check_capsule_storage(self, profile, operation):
+        """Exercise private local writes before recording an operation or contacting its observer."""
+        path = self._capsule_path(profile, operation)
+        try:
+            with tempfile.TemporaryFile(dir=path.parent) as stream:
+                stream.write(b'CYTV')
+                stream.flush()
+                os.fsync(stream.fileno())
+            sync_directory(path.parent)
+        except OSError as error:
+            raise LocalRecoveryError('storage-unavailable', 'profile', storage_full=is_storage_full(error)) from None
 
     def save_capsule(self, profile, operation, value):
         """Exclusive original bytes, durable before any remote effect."""
@@ -132,21 +154,26 @@ class Store:
         try:
             path = self._capsule_path(profile, operation)
             before = path.lstat()
-            if (not stat.S_ISREG(before.st_mode) or before.st_nlink != 1 or before.st_size > 192*1024*1024 or
-                    os.name != 'nt' and (before.st_uid != os.getuid() or before.st_mode & 0o777 != 0o600)):
-                raise ValueError('unsafe capsule')
+            if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1 or before.st_size > 192*1024*1024:
+                raise LocalRecoveryError('capsule-unsafe')
+            if os.name != 'nt' and (before.st_uid != os.getuid() or before.st_mode & 0o777 != 0o600):
+                raise LocalRecoveryError('capsule-permissions', mode=format(before.st_mode & 0o7777, '04o'),
+                                         owner='root' if before.st_uid == 0 else 'current-user' if before.st_uid == os.getuid() else 'other')
             fd = os.open(path, os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0) | getattr(os, 'O_NONBLOCK', 0))
             with os.fdopen(fd, 'rb') as stream:
                 opened = os.fstat(stream.fileno())
                 if (before.st_dev, before.st_ino) != (opened.st_dev, opened.st_ino):
-                    raise ValueError('changed capsule')
+                    raise LocalRecoveryError('capsule-changed')
                 raw = stream.read(192*1024*1024+1)
             if len(raw) > 192*1024*1024 or hashlib.sha256(raw).hexdigest() != digest:
-                raise ValueError('changed capsule')
+                raise LocalRecoveryError('capsule-changed')
             return json.loads(raw)
-        except (OSError, ValueError, TypeError):
-            raise UserError('The original private recovery data is missing or changed. Recovery data was kept.',
-                            reason_code='pending-operation') from None
+        except FileNotFoundError:
+            raise LocalRecoveryError('capsule-missing') from None
+        except OSError:
+            raise LocalRecoveryError('capsule-access') from None
+        except (ValueError, TypeError):
+            raise LocalRecoveryError('capsule-invalid') from None
 
     def retire_capsule(self, profile, operation, digest):
         """Retire only exact original bytes after the caller archived completion."""

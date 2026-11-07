@@ -23,6 +23,27 @@ This fixes a reproduced source failure path; it does not establish the cause or
 resolution of a reporter's device failure. Rebuild installers to deliver it.
 No TV package, permission, endpoint, persistent device state or pairing changes.
 
+## Local recovery storage (next candidate, #201)
+
+Optional `local_recovery` distinguishes host directory ownership/permissions,
+directory type/access, unavailable storage, missing/unsafe/changed/invalid capsule
+bytes, invalid operation selectors and incompatible retained observer source.
+It appears in current errors and revalidated first/current-observation history.
+Only fixed `reason` and `location` (`profile`, `ancestor`, `capsule`, `operation`)
+categories, an optional four-digit octal `mode`, and an optional `owner`
+(`root`, `current-user`, `other`) cross the export boundary. Unknown values are
+filtered; paths, account names, numeric IDs and raw exceptions are excluded.
+
+A local ancestry refusal happens before capsule content is read: it does not
+prove that a file disappeared or changed, and is separate from TV Luna refusal.
+Before a new No-root receipt, local storage validation exercises a temporary
+private write/flush/fsync and directory sync. Failure creates no pending journal
+or capsule and does not invoke the TV observer. This is an early usability check,
+not a reservation of disk capacity; later failures retain ordinary pending state.
+No ownership/permissions are changed, no old source is executed, and no recovery
+or removal confirmation is bypassed. Existing old reports cannot gain a newly
+invented cause. These source changes require rebuilt installers.
+
 ## Report contents
 
 The next recovery candidate adds a fixed semantic `frontend` field:

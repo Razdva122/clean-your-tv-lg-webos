@@ -11,7 +11,7 @@ import shlex
 import time
 import uuid
 
-from .errors import (UserError, TVCommandError, TV_STORAGE_FULL, no_root_observer_details,
+from .errors import (UserError, LocalRecoveryError, TVCommandError, TV_STORAGE_FULL, no_root_observer_details,
                      OBSERVER_EXCEPTION_NAMES, OBSERVER_EXCEPTION_CODES, OBSERVER_REASONS)
 
 PROTOCOL = 'no-root-original-stream-v1'
@@ -583,6 +583,7 @@ def refuse():
 
 def begin(installer, action, artifacts, versions, expected, configuration):
     operation = uuid.uuid4().hex
+    installer.store.check_capsule_storage(installer.profile, operation)
     # No package request or durable pending receipt until storage is usable.
     root_ssh = installer.profile.get('connection') == 'root-ssh'
     check_plan = make_plan(operation, uuid.uuid4().hex, action, artifacts, versions, PUBLIC_ROOT, root_ssh=root_ssh)
@@ -627,9 +628,10 @@ def capsule(installer, pending):
                 plan['diagnostic_id'] != pending['diagnostic_id'] or plan['protocol'] != PROTOCOL or
                 plan['action'] != ('install' if pending['action'] == 'install' else 'remove') or
                 hashlib.sha256(value['source'].encode()).hexdigest() != plan['source_sha256'] or
-                value['source'] != source_for(installer.profile.get('connection') == 'root-ssh') or
                 value['expected'] != pending['expected']):
             refuse()
+        if value['source'] != source_for(installer.profile.get('connection') == 'root-ssh'):
+            raise LocalRecoveryError('source-incompatible')
         artifacts = {name: base64.b64decode(raw, validate=True) for name, raw in value['artifacts'].items()}
         config_hash=hashlib.sha256(canonical({name:hashlib.sha256(raw.encode()).hexdigest() for name,raw in value['configuration'].items()}).encode()).hexdigest()
         rebuilt = make_plan(plan['operation'], plan['diagnostic_id'], plan['action'], artifacts, pending['versions'], PUBLIC_ROOT,config_hash,
