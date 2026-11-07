@@ -179,3 +179,40 @@ They failed on the old activity bound and passed after the two-line correction.
 The fixed caller-identity regression also passed. The normal payload build copies
 the change into both updater support bundles; all TV IPKs remain byte-identical.
 The replacement candidate must include and verify the changed support bytes.
+
+### Snapshot-aware restart continuation
+
+Removal's raw kernel UUID comparison missed a known firmware property already
+documented in [Root cold-start identity](../development/ROOT-COLD-BOOT.md): a
+snapshot boot can reuse that UUID. Clock/uptime heuristics are not substituted.
+Root removal now calls the existing `intent_runtime.boot_identity` from the
+current verified payload in isolated Python. A legacy raw baseline without a
+valid prior verified pair is replaced with a session baseline and requires a
+further restart. Every rebaseline clears the prior verified fact. No new Root
+boot service, observer, journal or marker format is introduced.
+
+No-root records a single non-executable, private volatile marker for its already
+approved removal goal. Creation binds the goal and actual kernel UUID; the host
+captures its inode and device before effects. Probe never recreates it. A changed
+kernel UUID or absence of the captured marker supplies the boot fact; altered
+contents, ownership, mode, links or inode refuse continuation. Inventory remains
+read-only. Marker retirement independently checks restart evidence. Before rearm
+creates a replacement marker, the existing host journal clears the old proof,
+so a lost response can recover the exact goal and establish a fresh baseline.
+
+The Root tail uses a strict, distinct, same-format durable baseline/verified pair
+only as the previously observed boot fact. Original ownership, package receipts,
+current package/private-file absence, routing, process, activity and registration
+checks remain mandatory. This permits retry after Python retirement and a later
+volatile reset. Only the three known existing Root boot-session files are retired
+through the pinned scanner after that durable proof; final readback checks the
+directory is absent. Unknown members and unsafe metadata still block removal.
+
+Focused host verification passed: 84 Root cleanup/tail/simple/handoff tests
+(three platform skips), 25 tail tests on exact Node 8 (one platform skip), and
+41 No-root cleanup tests. Eight affected cases passed on each exact Node
+0.10.15, 0.10.25, 0.12.2 and 8.12.0. The emitted legacy-compatible JavaScript
+is bound to SHA256 `3726e7990da5fe2232302d5a84620b38fae3f121ad93e47b7716588bc6429cab`.
+Regressions reproduced UUID-only refusal, mixed-format false progress and a lost
+rearm response before their fixes. These are source/model results; they do not
+establish universal volatile-store lifetime or pristine No-root TV acceptance.

@@ -23,7 +23,7 @@ APPS=('com.cleanyourtv.root.preview','com.cleanyourtv.root.updater','com.cleanyo
 def packages():
     return {app:{'state':'absent','readback':{'app':app,'absent':True}} for app in APPS}
 HARNESS=r'''
-var real=require('fs'),vm=require('vm'),base=process.argv[2],source=process.argv[3],paths={},calls=[];
+var real=require('fs'),vm=require('vm'),base=process.argv[2],source=process.argv[3],paths={},calls=[],profileReads=0;
 function path(p){
  if(typeof p!=='string')return p;
  if(p==='/')return base;
@@ -57,7 +57,7 @@ var cp={spawnSync:function(command,args,options){
  var method=args[2],value={returnValue:true};
  if(method.indexOf('listApps')!==-1)value.apps=[];
  else if(method.indexOf('getSystemSettings')!==-1)value.settings={defaultApps:{home:process.env.FOREIGN_ROUTE?'changed':'third.party.home'}};
- else if(method.indexOf('getProfiles')!==-1){if(process.env.MISSING_PROFILES)value.returnValue=false;else value.profiles={defaultApps:{categories:{home:'third.party.home'}},idleApp:{appId:'third.party.home'}};}
+ else if(method.indexOf('getProfiles')!==-1){if(process.env.FAIL_FINAL_READBACK && ++profileReads===2)throw Error('injected final readback failure');if(process.env.MISSING_PROFILES)value.returnValue=false;else value.profiles={defaultApps:{categories:{home:'third.party.home'}},idleApp:{appId:'third.party.home'}};}
  else if(method.indexOf('activitymanager')!==-1)value.activities=[];
  else if(method.indexOf('getAllInputStatus')!==-1)value.devices=[];
  else throw Error('Unexpected RPC '+method);
@@ -82,7 +82,7 @@ class CleanupTail(unittest.TestCase):
             p=self.runtime/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text('owned '+name)
         files={str(p.relative_to(self.runtime)):hashlib.sha256(p.read_bytes()).hexdigest() for p in self.runtime.rglob('*') if p.is_file()}
         self.record=dict(schema=1,protocol='clean-removal-v1',operation=ID,removal='d'*32,lease='b'*32,stage='private-cleanup',
-            state='recovery_required',cleanup_boot_id='11111111-1111-1111-1111-111111111111',routes=['third.party.home']*3,support_stages=[],packages=packages(),
+            state='recovery_required',cleanup_boot_id='11111111-1111-1111-1111-111111111111:session-'+'a'*32,cleanup_verified_boot_id='11111111-1111-1111-1111-111111111111:session-'+'b'*32,routes=['third.party.home']*3,support_stages=[],packages=packages(),
             done=['original-writers-fenced','controls-restored','package-removal','private-cleanup'],
             runtime_cleanup=dict(root=RUNTIME,files=files),result=dict(removed=True,applications_services_startup_removed=True,private_cleanup_verified=False))
         self.write('clean-removal-'+ID+'.json',self.record)
@@ -220,10 +220,63 @@ class CleanupTail(unittest.TestCase):
             self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
 
     def test_same_boot_cannot_finish_even_with_current_absence(self):
-        self.record['cleanup_boot_id']='22222222-2222-2222-2222-222222222222'
+        self.record['cleanup_boot_id']=self.record['cleanup_verified_boot_id']
         self.write('clean-removal-'+ID+'.json',self.record)
         result,reply=self.run_tail();self.assertNotEqual(result.returncode,0)
         self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+
+    def boot_directory(self):
+        directory=self.base/'tmp/clean-your-tv-root-boot';directory.mkdir(mode=0o700)
+        for name in ('session.lock','session.json','normal.json'):
+            p=directory/name;p.write_text('{}');p.chmod(0o600)
+        return directory
+
+    def test_durable_boot_fact_survives_retired_python_and_later_tmp_clear(self):
+        directory=self.boot_directory()
+        result,reply=self.run_tail(FAIL_FINAL_READBACK='1')
+        self.assertNotEqual(result.returncode,0)
+        self.assertFalse(self.runtime.exists());self.assertFalse(directory.exists())
+        saved=json.loads((self.state/('clean-removal-'+ID+'.json')).read_text())
+        self.assertEqual(saved['stage'],'private-cleanup')
+        (self.base/'proc/sys/kernel/random/boot_id').write_text('33333333-3333-3333-3333-333333333333')
+        result,reply=self.run_tail()
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(reply['stage'],'verified-clean');self.assertFalse(directory.exists())
+
+    def test_unknown_boot_directory_member_is_preserved(self):
+        directory=self.boot_directory();(directory/'foreign').write_text('preserve')
+        result,reply=self.run_tail();self.assertNotEqual(result.returncode,0)
+        self.assertEqual(sorted(p.name for p in directory.iterdir()),['foreign','normal.json','session.json','session.lock'])
+
+    def test_unsafe_boot_directory_and_hardlink_are_preserved(self):
+        directory=self.boot_directory();foreign=self.base/'foreign-boot';foreign.write_text('preserve')
+        os.link(foreign,directory/'extra-link')
+        result,reply=self.run_tail();self.assertNotEqual(result.returncode,0)
+        self.assertEqual(foreign.read_text(),'preserve');self.assertTrue((directory/'session.json').exists())
+        (directory/'extra-link').unlink();(directory/'session.json').unlink();os.link(foreign,directory/'session.json')
+        result,reply=self.run_tail();self.assertNotEqual(result.returncode,0)
+        self.assertEqual(foreign.read_text(),'preserve');self.assertTrue((directory/'session.lock').exists())
+
+    def test_boot_directory_symlink_never_follows_foreign_target(self):
+        foreign=self.base/'foreign-boot';foreign.mkdir(mode=0o700)
+        (foreign/'session.json').write_text('preserve')
+        (self.base/'tmp/clean-your-tv-root-boot').symlink_to(foreign,target_is_directory=True)
+        result,reply=self.run_tail();self.assertNotEqual(result.returncode,0)
+        self.assertEqual((foreign/'session.json').read_text(),'preserve')
+
+    def test_missing_mixed_or_malformed_boot_fact_cannot_retire_runtime(self):
+        baseline=self.record['cleanup_boot_id']
+        for value in (None,baseline,'22222222-2222-2222-2222-222222222222',baseline+'extra',baseline+'\n'):
+            self.record['cleanup_verified_boot_id']=value;self.write('clean-removal-'+ID+'.json',self.record)
+            result,reply=self.run_tail();self.assertNotEqual(result.returncode,0)
+            self.assertTrue(self.runtime.exists())
+            self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+
+    def test_legacy_distinct_raw_boot_fact_remains_valid(self):
+        self.record['cleanup_boot_id']='11111111-1111-1111-1111-111111111111'
+        self.record['cleanup_verified_boot_id']='22222222-2222-2222-2222-222222222222'
+        self.write('clean-removal-'+ID+'.json',self.record)
+        result,reply=self.run_tail();self.assertEqual(result.returncode,0,result.stderr)
 
     def test_changed_owned_runtime_bytes_are_removed_without_execution(self):
         (self.runtime/'lib/secret.py').write_text('changed old bytes; never execute')

@@ -8,6 +8,7 @@ import fcntl
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import stat
 import subprocess
@@ -21,6 +22,18 @@ APPS = ('com.cleanyourtv.root.preview', 'com.cleanyourtv.root.updater',
         'com.local.nativehome', 'com.gathin.tvhome')
 PRE_ACTIVATION=('prepared','install-submitting','install-accepted','install-observed','payload-verified','personalization-complete')+tuple(
     'provision-'+step+'-'+phase for step in ('apply','resume_pending','refresh','finalize') for phase in ('starting','complete'))
+
+
+def boot_format(value):
+    if not isinstance(value,str):return None
+    match=re.fullmatch(r'([a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})(:session-[a-f0-9]{32})?',value)
+    if not match or match[1]=='00000000-0000-0000-0000-000000000000':return None
+    return 'session' if match[2] else 'kernel'
+
+
+def verified_restart(record):
+    baseline=record.get('cleanup_boot_id');verified=record.get('cleanup_verified_boot_id')
+    return bool(boot_format(baseline) and boot_format(baseline)==boot_format(verified) and baseline!=verified)
 
 
 def runtime_restore(payload, uid=0):

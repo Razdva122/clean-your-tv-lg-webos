@@ -3,7 +3,7 @@
 // Python must never rewrite completion after this process starts retirement.
 var fs=require('fs'), nodeCrypto=require('crypto'), cp=require('child_process');
 var C=fs.constants, uid=process.getuid(), mode=process.argv[2], id=process.argv[3], removal=process.argv[9];
-var state='/var/lib/clean-your-tv-installation';
+var state='/var/lib/clean-your-tv-installation', bootRoot='/tmp/clean-your-tv-root-boot';
 var runtime='/var/lib/clean-your-tv-python/4a71641c8d5536175e404a961624e8656eba30e97b5026f6bd7dc31e4bbeaaea';
 var apps=['com.cleanyourtv.root.preview','com.cleanyourtv.root.updater','com.cleanyourtv.system.updater','com.cleanyourtv.updater','com.local.nativehome','com.gathin.tvhome'];
 var opened=[], directory, record, lease;
@@ -45,8 +45,13 @@ function packageReceipts(){
     var item=record.packages[app];
     if(!object(item)||item.state!=='absent'||!object(item.readback)||item.readback.app!==app||item.readback.absent!==true)throw Error('package-absence-unverified');
   });
-  var boot=fs.readFileSync('/proc/sys/kernel/random/boot_id').toString('utf8').trim();
-  if(typeof record.cleanup_boot_id!=='string'||!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(record.cleanup_boot_id)||boot===record.cleanup_boot_id)throw Error('restart-required');
+  function format(value){
+    if(typeof value!=='string')return null;
+    var found=/^([a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})(:session-[a-f0-9]{32})?$/.exec(value);
+    return found && found[0]===value && found[1]!=='00000000-0000-0000-0000-000000000000' ? (found[2]?'session':'kernel') : null;
+  }
+  var baseline=record.cleanup_boot_id, verified=record.cleanup_verified_boot_id;
+  if(!format(baseline)||format(baseline)!==format(verified)||baseline===verified)throw Error('restart-required');
 }
 function rpc(method,payload){
   var result=cp.spawnSync('/usr/bin/luna-send',['-n','1','luna://'+method,JSON.stringify(payload)],{timeout:15000,maxBuffer:2097152});
@@ -54,6 +59,7 @@ function rpc(method,payload){
   var value=JSON.parse(result.stdout.toString());if(value.returnValue!==true)throw Error('cleanup-readback-unavailable');return value;
 }
 function absent(final){
+  if(final && exists(bootRoot))throw Error('boot-session-remains');
   var inventory=rpc('com.webos.applicationManager/dev/listApps',{}).apps;
   if(!Array.isArray(inventory) || inventory.some(function(a){return apps.indexOf(a.id)!==-1;}))throw Error('package-remains');
   apps.forEach(function(app){['applications/'+app,'packages/'+app,'services/'+app+(app==='com.gathin.tvhome'?'.renewal':'.service')].forEach(function(name){
@@ -196,6 +202,7 @@ try{
       retire(stage.path,null,stage);
     });
     retire(runtime,cleanup.files,null,true);
+    retire(bootRoot,{'session.lock':true,'session.json':true,'normal.json':true},null,true);
     gates.forEach(function(entry){
       if(!/^\/tmp\/cytv-root-tail-[a-f0-9]{32}$/.test(entry.path))throw Error('invalid-tail-stage');
       if(!exists(entry.path))return;

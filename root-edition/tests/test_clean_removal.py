@@ -430,7 +430,7 @@ class PartialDeviceRemoval(unittest.TestCase):
         device=Model();device.payload=payload
         device.shared_cleanup=lambda action,record,**kwargs:{'schema':1,'present':[],'blocked':[],'root_present':[]}
         device.current_boot="11111111-1111-1111-1111-111111111111"
-        device.boot_id=lambda:device.current_boot
+        device.boot_id=lambda:device.current_boot+':session-'+device.current_boot[0]*32
         owner=Ownership(Store(base/'installation',uid=os.getuid()))
         identifier='c'*32
         with owner.operation('product','product-'+identifier+'.json') as lease:
@@ -466,6 +466,54 @@ class PartialDeviceRemoval(unittest.TestCase):
             return json.loads(p.read_text()) if p and p.exists() else None
         import json
         return Coordinator(device,owner,read),identifier,root,updater,payload,calls,present
+
+    def test_boot_reader_authenticates_current_runtime_and_requires_session_identity(self):
+        import deploy,install_device
+        from install_fixture import CurrentInstallation
+        with CurrentInstallation() as fixture:
+            device=install_device.LocalDevice();device.payload=fixture.payload
+            value='11111111-1111-1111-1111-111111111111:session-'+'a'*32
+            with patch.object(deploy,'command',return_value={'returnValue':True,'boot':value}) as command:
+                self.assertEqual(device.boot_id(),value)
+                args=command.call_args.args[0]
+                self.assertEqual(args[1:4],['-I','-B','-c'])
+                self.assertIn(repr(str(fixture.payload/'root/runtime')),args[4])
+                self.assertIn('boot_identity()',args[4])
+                self.assertNotIn(str(fixture.root/'runtime'),args[4])
+                (fixture.payload/'root/runtime/intent_runtime.py').write_text('changed current code')
+                with self.assertRaises(ValueError):device.boot_id()
+                self.assertEqual(command.call_count,1)
+
+    def test_malformed_boot_baseline_refuses_without_sampling_or_cleanup(self):
+        driver,identifier,*_=self.fixture();driver.clean_remove(identifier)
+        name='clean-removal-'+identifier;record=driver.ownership.store.read(name)
+        record['cleanup_boot_id']='invalid';driver.ownership.store.write(name,record)
+        with patch.object(driver.device,'boot_id',side_effect=AssertionError('must not create marker')):
+            result=driver.clean_remove(identifier)
+        self.assertNotEqual(result['stage'],'verified-clean')
+        self.assertEqual(result['cleanup_boot_id'],'invalid')
+
+    def test_durable_restart_fact_does_not_recreate_retired_boot_marker(self):
+        driver,identifier,*_=self.fixture();driver.clean_remove(identifier)
+        driver.device.current_boot='22222222-2222-2222-2222-222222222222'
+        self.assertEqual(driver.clean_remove(identifier)['stage'],'verified-clean')
+        driver.device.payload=None
+        with patch.object(driver.device,'boot_id',side_effect=AssertionError('must not create marker')):
+            self.assertEqual(driver.clean_remove(identifier)['stage'],'verified-clean')
+
+    def test_legacy_baseline_reseeds_and_clears_unusable_verified_fact(self):
+        driver,identifier,*_=self.fixture()
+        first=driver.clean_remove(identifier)
+        store=driver.ownership.store
+        name='clean-removal-'+identifier
+        record=store.read(name);record['cleanup_boot_id']=driver.device.current_boot
+        record['cleanup_verified_boot_id']='22222222-2222-2222-2222-222222222222:session-'+'b'*32
+        store.write(name,record)
+        result=driver.clean_remove(identifier)
+        self.assertEqual(result['stage'],'restart-required')
+        saved=store.read(name)
+        self.assertIn(':session-',saved['cleanup_boot_id'])
+        self.assertNotIn('cleanup_verified_boot_id',saved)
 
     def test_real_partial_trees_clean_without_finishing_install_or_changing_foreign_home(self):
         driver,identifier,root,updater,payload,calls,present=self.fixture()
