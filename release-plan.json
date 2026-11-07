@@ -1,7 +1,29 @@
 {
   "schema": 1,
   "version": null,
-  "changes": [],
+  "changes": [
+    {
+      "pr": 388,
+      "issues": [
+        383
+      ],
+      "summary": "Offer exact-Node-0.12.2 Root Beta and No-root over root SSH; original-device and physical acceptance remain unverified"
+    },
+    {
+      "pr": 391,
+      "issues": [
+        389
+      ],
+      "summary": "Continue Root setup when optional input discovery fails; preserve required application checks and unverified input diagnostics"
+    },
+    {
+      "pr": 398,
+      "issues": [
+        394
+      ],
+      "summary": "Preserve visible original Root icons within the shared budget and admit the exact system-app root; physical icon acceptance pending"
+    }
+  ],
   "excluded": [],
   "acceptance": ""
 }
