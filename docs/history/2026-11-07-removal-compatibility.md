@@ -309,3 +309,40 @@ The maintainer-requested future release rule now requires one complete planned
 case inventory before a consolidated correction batch, followed by affected and
 newly reachable verification before merge and one frozen RC build. Blocked cases
 remain explicitly untested; valid unchanged evidence is reused.
+
+## Selected final RC
+
+[42342955933:1](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42342955933)
+completed successfully from `d20196379a6052a7133a0fbb2bc42050225ec94a`: all
+21 jobs passed, including four desktop builds, Android and the complete validation
+gate. This is the replacement selected build; no second full build was started
+for the final correction batch. Eleven expected artifacts were present and unexpired.
+
+Independent evidence review confirmed fresh Windows execution: 846 tests, 174
+platform skips, strict cp1252 console checks and all three extracted desktop
+checks passed. Theme coverage executed all 43 commands afresh; browser-core used
+an authenticated matching PR receipt with verified archive digest, run/job/tree
+binding and identical 1,424 guarded inputs. Exact counts and reuse are distinct
+from hardware or universal compatibility acceptance.
+
+Android artifact ZIP SHA256 is
+`ac7b5748ceb6021a9fe4cc68d556bb33a2e38a8d7d27c0daed2cbe50c2d64030`;
+APK SHA256 is `114e4b14538360167925e7d6aafa05b15998be0ab87e76eeaac75a1cc954c00f`.
+Authenticated CI signature verification is bound to that actual APK and the
+unchanged original certificate. All 316 payload data files plus their manifest,
+11 UI assets and 53 embedded Python sources were independently matched to the
+frozen source. All ten TV IPKs remain byte-identical to the preceding candidate.
+
+The 16 Android result cases and the 13-language/two-edition fixture matrix reuse
+the already executed exact UI/source/fixture bytes and preconditions. They were
+not freshly executed by the candidate's generic browser job: the Android CJS
+scripts are not wired into those CI entrypoints. That automation gap is recorded
+as a follow-up; it is not concealed as a fresh CI pass and did not trigger another
+unchanged manual run or a second candidate build. No physical phone result is
+claimed.
+
+The actual macOS ARM console artifact archive matched authenticated SHA256
+`e96a391026d45549c70c0de278cc8a19f500fe1c95c2de5d17e46ef1546b6e60`.
+Its executable started as cytv 0.11.0 and independently verified its embedded
+316-file payload. Final public device acceptance and stable publication remain
+separate from these source, build, artifact and local-fixture results.
