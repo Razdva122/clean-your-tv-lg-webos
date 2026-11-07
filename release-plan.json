@@ -21,7 +21,7 @@
       "issues": [
         394
       ],
-      "summary": "Preserve visible original Root icons within the shared budget and admit the exact system-app root; physical icon acceptance pending"
+      "summary": "Preserve visible original Root icons within the shared budget and admit the exact system-app root; exact-package C3 icon acceptance passed"
     },
     {
       "pr": 400,
@@ -46,10 +46,11 @@
     }
   ],
   "excluded": [],
-  "acceptance": "",
+  "acceptance": "Scoped exact-artifact QA: docs/history/2026-11-07-release-1.12.0-scoped-qa.md. OLED55C3RLA firmware43.21.71/webOS SDK11.2.0, remote model unknown, macOS ARM64: signed Root0.13.0/updater0.5.2/infrastructure0.13.0 delivery, original icons, Home after explicit normal enable, arrows/OK, volume/audible sound and standby Settings convergence passed. Android0.12.0/code26 original-signer upgrade/retention/native tests passed on API35 ARM64 emulator; packaged Settings/font/icon cases passed. Maintainer explicitly instructed shipment after disclosure of unexplained Home disable before update suspension; retain as unresolved follow-up, not automatic Home-preservation acceptance. Physical Beta explicitly deferred, no compatibility claim; cold boot/retained rollback/fresh No-root not selected; physical phone/live Android-TV paths untested. No new product fix or weakened recovery guard. Exact component/APK hashes and provenance in linked record.",
   "build": {
     "run_id": 42384446335,
     "attempt": 1,
     "source": "5d9f505eaff12f743c666997a3364c8a6e18e73e"
-  }
+  },
+  "acceptance_build": "42384446335:1"
 }

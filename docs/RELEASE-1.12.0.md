@@ -1,7 +1,7 @@
 # v1.12.0 — legacy runtime choices and Root follow-ups
 
-Unpublished candidate frozen on 2026-11-07 for [release PR #399](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/399).
-[Full build 42384446335:1](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42384446335) passed all 21 jobs; [verified artifacts and remaining gates](history/2026-11-07-release-1.12.0-artifacts.md). Stable signatures/publication and affected acceptance remain pending.
+Frozen on 2026-11-07 for [release PR #399](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/399).
+[Full build 42384446335:1](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42384446335) passed all 21 jobs; [verified artifacts and remaining gates](history/2026-11-07-release-1.12.0-artifacts.md). Scoped acceptance is complete with the limitations below; public delivery is confirmed only after signed package/feed verification.
 New features remain outside this candidate until publication.
 
 ## Changes
@@ -15,7 +15,7 @@ New features remain outside this candidate until publication.
   stays unverified; missing or malformed required applications still stop setup.
 - Hidden apps no longer consume the visible Root icon budget; the exact system
   application root is admitted with existing path/image/size limits (#398 / #394).
-  Visible-icon acceptance on the new packages remains pending.
+  Exact-package C3 acceptance loads all33 original visible icons without project fallbacks.
 - The known No-root-to-Root transition block explains backup, explicit full removal
   using the saved Root connection, verified cleanup, then Root setup (#400 / #396).
   Full removal also removes No-root Home and Helper; ownership guards remain.
@@ -37,7 +37,7 @@ New features remain outside this candidate until publication.
 
 ## Versions and delivery
 
-| Component | Published v1.11.0 | Candidate v1.12.0 |
+| Component | Published v1.11.0 | v1.12.0 |
 | --- | --- | --- |
 | Home FHD/HD | 1.12.0 | 1.13.0 |
 | Home Helper | 0.7.5 | 0.7.5 |
@@ -81,6 +81,7 @@ case selection, explicit physical-Beta deferral, exact APK emulator acceptance,
 package browser checks and authorized C3 update. Root icons and Home after explicit
 owner enable passed; automatic Home preservation through the update remains
 unproved. Owner-confirmed arrows/OK, volume/audible sound and post-standby Settings
-convergence passed. No release-wide acceptance is asserted while the unexpected
-pre-suspension Home disable needs disposition. Legacy Beta bootstrap and original #383/#389 outcomes
+convergence passed. After disclosure of the unexpected pre-suspension Home disable, the maintainer
+explicitly instructed shipment with this unresolved observation retained as a
+follow-up, not a passing automatic-resume result. Legacy Beta bootstrap and original #383/#389 outcomes
 remain unverified; partial #348/#368 work leaves those original reports open.

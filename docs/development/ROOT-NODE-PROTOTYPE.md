@@ -1,6 +1,8 @@
 # Root Node 0.12.2 compatibility prototype
 
-## Unreleased installer Beta
+<a id="unreleased-installer-beta"></a>
+
+## Release 1.12.0 installer Beta
 
 The separate `--legacy-node-beta` build mode enables exact Node 0.12.2 admission
 in generated device code. The original `--legacy-node-prototype` mode below
