@@ -100,3 +100,16 @@ No build is selected and no physical acceptance or public delivery is claimed.
 The integration also contains concurrently merged #381; earlier focused
 results describe #382's starting tree and must not be presented as a complete
 combined-candidate pass.
+
+The test-adapter follow-up [#384](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/384)
+merged as `277d33e51ef392cef9b3794a3155d22c997693e6` from head
+`a3a71020481fca0f2e25b5b71b01fa823abb8949`, also without waiting for CI.
+Both implementation PRs are collected in the candidate inventory. The source
+checks above are not final candidate build or device acceptance.
+
+A later issue reply prompted a focused request for existing diagnostic JSON and
+an optional read-only comparison of the published `env -u` launch with the
+candidate POSIX `unset` launch. No observer/package request or recovery-state
+change is requested. #378 is open at `status:needs-info` pending that evidence;
+the source improvements do not establish the original device cause. No new
+reporter installation result is republished here.

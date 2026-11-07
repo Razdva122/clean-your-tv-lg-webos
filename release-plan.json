@@ -51,6 +51,20 @@
         47
       ],
       "summary": "Address No-root webOS 3.x web/service startup, jailed Helper status and SSAP permissions; preserve diagnostics focus and legacy Updater URLs; original-device/Developer Mode acceptance pending"
+    },
+    {
+      "pr": 382,
+      "issues": [
+        378
+      ],
+      "summary": "Add bounded No-root observer runtime/guard diagnostics and retain storage reasons; original installation/recovery cause remains unconfirmed"
+    },
+    {
+      "pr": 384,
+      "issues": [
+        378
+      ],
+      "summary": "Preserve observer sender/disconnect/retire fault injection in test adapters; document superseded failures and targeted passes"
     }
   ],
   "excluded": [],
