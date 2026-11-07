@@ -1,5 +1,6 @@
 """Automatic font preparation follows runtime translations, never edits sources."""
 import json
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -116,12 +117,15 @@ class PreparationTests(unittest.TestCase):
         self.assertTrue({ord(c) for c in '简约书'} <= combined)
         self.assertIn(ord('简'),fonts.coverage(prepared['fonts/NotoSansSC.ttf']))
         # Every locale can display a shared community title; Hant retains priority.
-        css=(ROOT/'launcher/i18n.css').read_text()
-        self.assertIn('Outfit,"CYTV NotoSansTC","CYTV NotoSansSC"',css)
-        self.assertIn('"CYTV NotoSansDevanagari","CYTV NotoSansSC","CYTV NotoSansTC","CYTV NotoSansKR"',css)
-        homebrew=(ROOT/'homebrew/app/style.css').read_text()
-        self.assertIn('font-family:CYTVChineseTC,CYTVChineseSC,CYTV',homebrew)
-        self.assertIn('font-family:CYTV,CYTVChineseSC,CYTVChineseTC',homebrew)
+        def cascades(path):
+            return [tuple(font.strip().strip('\"\'') for font in value.split(','))
+                    for value in re.findall(r'font-family\s*:\s*([^;]+);', path.read_text())]
+        css=cascades(ROOT/'launcher/i18n.css')
+        self.assertTrue(any(family[:3] == ('Outfit','CYTV NotoSansTC','CYTV NotoSansSC') for family in css))
+        self.assertTrue(any(family[2:6] == ('CYTV NotoSansDevanagari','CYTV NotoSansSC','CYTV NotoSansTC','CYTV NotoSansKR') for family in css))
+        homebrew=cascades(ROOT/'homebrew/app/style.css')
+        self.assertTrue(any(family[:3] == ('CYTVChineseTC','CYTVChineseSC','CYTV') for family in homebrew))
+        self.assertTrue(any(family[:3] == ('CYTV','CYTVChineseSC','CYTVChineseTC') for family in homebrew))
 
     def test_foreign_markup_and_css_are_excluded_but_nested_chinese_survives(self):
         inputs={'foreign.html':b'<html lang="en"><span lang="ko-KR">&#x3409;</span><script>HomeI18n.add({"zh-Hans":{"x":"\\u529b"}});</script></html>',

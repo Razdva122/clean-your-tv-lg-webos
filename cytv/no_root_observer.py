@@ -11,7 +11,7 @@ import shlex
 import time
 import uuid
 
-from .errors import UserError
+from .errors import UserError, TVCommandError, no_root_observer_details
 
 PROTOCOL = 'no-root-original-stream-v1'
 ROOT = '/media/developer/.cytv-installer'
@@ -471,20 +471,43 @@ def make_plan(operation, diagnostic_id, action, artifacts, versions, public_root
                 configuration_sha256=configuration_sha256 or hashlib.sha256(b'{}').hexdigest())
 
 
+def observation_error(command, failure, error=None):
+    # Preserve typed errors (including storage guidance and numeric SSH status),
+    # while arbitrary transport exception messages stay private.
+    if not isinstance(error, UserError):
+        error = UserError('The original No-root observation could not be verified. Recovery data was kept.',
+                          reason_code='pending-operation')
+    error.no_root_observer = no_root_observer_details({'command': command, 'failure': failure})
+    return error
+
+
 def invoke(remote, plan, command, slot=None, source=None, proof=None, data=None):
     request = dict(root=ROOT, public_root=PUBLIC_ROOT, plan=plan, command=command, slot=slot)
     if command == 'prepare':
         request['source'] = PROGRAM if source is None else source
     if proof is not None:request['proof']=proof
     try:
-        reply = json.loads(remote.run('env -u NODE_OPTIONS -u NODE_PATH /usr/bin/node -e ' +
-                                     shlex.quote(PROGRAM) + ' ' + shlex.quote(canonical(request)), data=data, timeout=100 if data is not None else 30))
-        if not isinstance(reply, dict) or reply.get('operation') != plan['operation']:
-            raise ValueError('foreign-observer')
-        return reply
-    except (OSError, RuntimeError, ValueError, KeyError, TypeError):
-        raise UserError('The original No-root observation could not be verified. Recovery data was kept.',
-                        reason_code='pending-operation') from None
+        # POSIX unset avoids depending on the TV env utility supporting -u.
+        raw = remote.run('unset NODE_OPTIONS NODE_PATH && /usr/bin/node -e ' +
+                         shlex.quote(PROGRAM) + ' ' + shlex.quote(canonical(request)),
+                         data=data, timeout=100 if data is not None else 30)
+    except UnicodeError:
+        raise observation_error(command, 'invalid-json') from None
+    except (OSError, RuntimeError, ValueError, KeyError, TypeError) as error:
+        failure = ('command-failed' if isinstance(error, TVCommandError) else
+                   'timeout' if isinstance(error, TimeoutError) or getattr(error, 'reason_code', None) == 'operation-timeout' else
+                   'connection-interrupted' if getattr(error, 'reason_code', None) == 'connection-interrupted' else
+                   'transport-error')
+        raise observation_error(command, failure, error) from None
+    try:
+        reply = json.loads(raw)
+    except (ValueError, TypeError):
+        raise observation_error(command, 'invalid-json') from None
+    if not isinstance(reply, dict):
+        raise observation_error(command, 'invalid-reply')
+    if reply.get('operation') != plan['operation']:
+        raise observation_error(command, 'foreign-operation')
+    return reply
 
 
 def refuse():
@@ -665,11 +688,11 @@ def snapshot(installer, value):
             or not isinstance(result.get('configuration'),dict)
             or set(result['configuration'])!=set(('files','eim','launch') if plan['action']=='install' else ('restore',))
             or any(state not in ('prepared','unknown','complete') for state in result['configuration'].values())):
-        refuse()
+        raise observation_error('status', 'invalid-status')
     for slot in result['slots']:
         if (not isinstance(slot,dict) or slot.get('submission') not in ('prepared','claimed-possibly-submitted','sealed') or
                 slot.get('terminal') not in ('none','success','failure') or slot.get('readback') not in ('matches','not-checked')):
-            refuse()
+            raise observation_error('status', 'invalid-status')
     return result
 
 

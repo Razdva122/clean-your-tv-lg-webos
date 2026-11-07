@@ -85,11 +85,11 @@ class SimpleRemovalUITests(unittest.TestCase):
         w.submit('y')
         self.fixture.pump(lambda: not w.running)
         intent = self.fixture.store.pending(self.fixture.profile)
-        self.assertEqual(len(attempts), 1)
+        self.assertEqual(len(attempts), 3)
         self.fixture.button(w, 'Try again').click()
         self.fixture.pump(lambda: not w.running or w.pending is not None)
         self.assertIsNone(w.pending, 'Same-goal retry must not ask for removal approval again')
-        self.assertEqual(attempts, [self.fixture.profile, self.fixture.profile])
+        self.assertEqual(attempts, [self.fixture.profile]*6)
         self.assertEqual(self.fixture.store.pending(self.fixture.profile)['removal_operation'], intent['removal_operation'])
         self.assertEqual(self.fixture.remote.calls, [])
 

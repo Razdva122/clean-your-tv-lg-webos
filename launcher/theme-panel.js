@@ -1,95 +1,1239 @@
 /* Standard trusted theme settings and a Home-visible trial confirmation. */
-(function(root){
- 'use strict';var panel,card,previous,signal=null,busy=false,mode='list',tick,view=0,settingsOwner=false,previewLeases=[],inlineHost=null,inlineActive=false;
- function t(s,p){return root.HomeI18n?HomeI18n.t(s,p):s;}
- function openNow(){return !!panel&&!panel.hidden&&(!inlineHost||inlineActive||mode==='trial');}
- function node(tag,text){var el=document.createElement(tag);if(text!==undefined)el.textContent=t(text);return el;}
- function button(label,fn,id){var b=node('button',label);b.type='button';if(id)b.id=id;b.onclick=fn;card.appendChild(b);return b;}
- function disposePreviews(){previewLeases.forEach(function(lease){lease.dispose();});previewLeases=[];}
- function heading(title,description){disposePreviews();card.removeAttribute('aria-busy');card.textContent='';var titleNode=node('h2',title);if(title==='Themes')titleNode.className='theme-list-title';card.appendChild(titleNode);if(description)card.appendChild(node('p',description));}
- function message(text){var e=document.getElementById('themeMessage');if(!e){e=node('p');e.id='themeMessage';e.setAttribute('role','status');card.appendChild(e);}e.textContent=t(text);}
- function focusFirst(){var b=card.querySelector('button:not([disabled]),input');if(b)b.focus();}
- function parentVisible(visible){['#renewalPanel','.root-settings'].forEach(function(id){var el=document.querySelector(id);if(el)el.style.visibility=visible?'':'hidden';});}
- function standard(){clearInterval(tick);if(inlineHost){inlineHost.appendChild(panel);panel.classList.add('theme-inline');panel.removeAttribute('aria-modal');panel.setAttribute('role','region');}panel.classList.remove('theme-trial');panel.classList.remove('theme-picker');parentVisible(true);if(root.ThemeRuntime){ThemeRuntime.suspend('themes');if(settingsOwner)ThemeRuntime.suspend('settings');}}
- function picker(){if(inlineHost){standard();return;}clearInterval(tick);panel.classList.remove('theme-trial');panel.classList.add('theme-picker');parentVisible(false);if(root.ThemeRuntime){ThemeRuntime.resume('themes');ThemeRuntime.resume('settings');}}
- function close(){stopReceiver();if(!inlineHost||!card.querySelector('.theme-installed-grid'))disposePreviews();var version=++view;if(signal){signal.cancelled=true;if(signal.cancel)signal.cancel();signal=null;}busy=false;root.ThemeManager.cancel().then(function(){if(version!==view)return;standard();if(inlineHost){if(card.querySelector('.theme-installed-grid')){mode='list';applying(false);refreshSelected();}else render();var tab=document.querySelector('[data-category="themes"]');if(tab)tab.focus();}else{panel.hidden=true;if(root.ThemeRuntime)ThemeRuntime.resume('themes');if(previous)previous.focus();}});}
- function deactivate(){stopReceiver();inlineActive=false;if(!panel||panel.hidden)return;view++;disposePreviews();clearInterval(tick);if(signal){signal.cancelled=true;if(signal.cancel)signal.cancel();signal=null;}busy=false;root.ThemeManager.cancel();standard();panel.hidden=true;if(root.ThemeRuntime)ThemeRuntime.resume('themes');}
+(function (root) {
+  'use strict';
 
-
- function failed(e){if(!openNow())return;var ownsFocus=!inlineHost||panel.contains(document.activeElement);view++;busy=false;standard();heading('Themes');message(e.message);button('Restore Classic',function(){root.ThemeManager.reset();render();});button('Back',close);if(ownsFocus)focusFirst();}
- function trial(item){busy=true;mode='preparing';heading('Preparing theme…');var version=++view;button('Cancel',revert);root.ThemeManager.begin(item).then(function(){if(version!==view)return;busy=false;mode='trial';if(inlineHost){document.body.appendChild(panel);panel.classList.remove('theme-inline');panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');}panel.classList.add('theme-trial');parentVisible(false);root.ThemeRuntime.resume('themes');root.ThemeRuntime.resume('settings');heading('Keep this theme?');var timer=node('p');timer.id='themeCountdown';card.appendChild(timer);
-   function count(){timer.textContent=t('Reverting in {count} seconds',{count:root.ThemeManager.remaining()});}count();tick=setInterval(count,250);
-   button('Keep theme',function(){root.ThemeManager.confirm().then(render,failed);},'themeKeep');button('Revert',revert,'themeRevert');focusFirst();
-  },function(e){if(version===view)failed(e);});}
- function revert(){var version=++view;mode='rollback';heading('Reverting…');button('Restore Classic',function(){root.ThemeManager.reset();render();});button('Back',close);focusFirst();root.ThemeManager.cancel().then(function(){if(version===view)render();},function(e){if(version===view)failed(e);});}
- function render(){stopReceiver();if(!openNow())return;var ownsFocus=panel.contains(document.activeElement);picker();mode='list';busy=true;var version=++view;heading('Themes');message('Loading themes…');button('Restore Classic',function(){root.ThemeManager.reset();render();});button('Back',close);if(ownsFocus)focusFirst();var loadingFocus=document.activeElement;
-  Promise.all([root.ThemeManager.list(),root.ThemeData.request('theme-catalog.json',65536,true).then(function(bytes){return JSON.parse(root.ThemeData.decode(bytes)).themes||[];}).catch(function(){return [];})]).then(function(result){var items=result[0],previews=result[1];if(version!==view)return;var restoreSelected=!inlineHost||panel.contains(document.activeElement)||ownsFocus&&document.activeElement===loadingFocus;busy=false;heading('Themes');var current=root.ThemeManager.current();if(current.notice)message(current.notice);function isSelected(item){return item.id===current.id&&(!item.digest||item.digest===current.digest);}items=items.filter(isSelected).concat(items.filter(function(item){return !isSelected(item);}));var installed=node('div');installed.className='theme-installed-grid';card.appendChild(installed);
-   var pointerFocus=false;
-   installed.addEventListener('mousedown',function(){pointerFocus=true;setTimeout(function(){pointerFocus=false;},0);});
-   // A pointer already targets a visible control; moving its row during focus loses the click.
-   installed.addEventListener('focusin',function(event){if(pointerFocus)return;var row=event.target;while(row&&row.parentNode!==installed)row=row.parentNode;if(!row)return;var bounds=row.getBoundingClientRect(),lane=installed.getBoundingClientRect();if(bounds.left<lane.left+8)installed.scrollLeft-=lane.left+8-bounds.left;else if(bounds.right>lane.right-8)installed.scrollLeft+=bounds.right-lane.right+8;});
-   items.forEach(function(item){var selected=item.id===current.id&&(!item.digest||item.digest===current.digest),row=node('div');row.className='theme-option';row.themeItem=item;row.setAttribute('data-selected',String(selected));installed.appendChild(row);var b=node('button');b.type='button';b.className='theme-choice';b.setAttribute('data-theme-id',item.id);b.setAttribute('aria-pressed',String(selected));b.setAttribute('aria-label',item.title+(item.version?' '+item.version:'')+(selected?' · '+t('Selected'):''));b.onclick=function(){selectInstalled(item);};var presentation=previews.filter(function(entry){return entry.id===item.id&&(item.builtin||entry.digest===item.digest);})[0],preview=item.builtin&&presentation;if(preview){try{root.ThemeData.path(preview.preview);if(/^(theme-catalog|themes)\//.test(preview.preview))previewImage(preview,b);}catch(_){}}else if(!item.builtin){var slot=node('div');slot.className='theme-preview-slot';b.appendChild(slot);mediaBadges(presentation||item,slot);installedPreview(item,slot);}b.appendChild(node('strong',item.title));var badge=node('span','Selected');badge.className='theme-selected';badge.setAttribute('aria-hidden',String(!selected));b.appendChild(badge);row.appendChild(b);row.appendChild(node('small',themeSize(preview||item)||(item.builtin?'Built-in':'Downloaded')));if(!item.builtin){var meta=node('p',item.version+' · '+item.author+' · '+item.license);meta.className='theme-meta';row.appendChild(meta);}
-    var rowActions=node('div');rowActions.className='theme-card-actions';row.appendChild(rowActions);var apply=node('button','Apply theme');apply.type='button';apply.onclick=function(){selectInstalled(item);};rowActions.appendChild(apply);
-    if(!item.builtin){var remove=node('button','Remove');remove.className='theme-remove';remove.onclick=function(){removeInstalled(item);};rowActions.appendChild(remove);}
-   });
-   var actions=node('div');actions.className='theme-picker-actions';card.insertBefore(actions,installed);
-   function entryAction(label,description,fn,id){var b=button(label,fn,id);b.className='theme-entry-action';var detail=node('small',description);b.appendChild(detail);actions.appendChild(b);}
-   entryAction('Theme showcase','Community themes',catalog,'themeCatalog');entryAction('Receive from computer','Send a theme from your computer',receivePush,'themeReceive');
-   entryAction('Add by ID','Theme ID',urlForm,'themeAddUrl');
-   if(!inlineHost)button('Back',close);var selected=Array.prototype.slice.call(installed.querySelectorAll('button[data-theme-id]')).filter(function(b){return b.getAttribute('aria-pressed')==='true';})[0];if(restoreSelected){if(selected)selected.focus();else focusFirst();}else if(inlineHost){var appearance=document.getElementById('settings-pane-themes');if(appearance&&appearance.contains(document.activeElement))document.activeElement.scrollIntoView({block:'nearest'});}
-
-  },function(e){if(version===view)failed(e);});
- }
- function installedPreview(item,parent){root.ThemeManager.preview(item).then(function(lease){
-  if(!openNow()||!card.contains(parent)||(mode!=='list'&&mode!=='applying-installed')){lease.dispose();return;}
-  try{var image=previewImage({preview:lease.url},parent);image.onerror=function(){image.hidden=true;lease.dispose();};previewLeases.push(lease);}catch(_){lease.dispose();}
- },function(){/* A missing or rejected preview must not hide an installed choice. */});}
- function themeSize(entry){return entry.packageSize===undefined?(entry.builtin?t('Built-in'):''):t('{size} MB',{size:Math.max(0.1,entry.packageSize/1000000).toFixed(1)});}
- function mediaBadges(entry,parent){if(!entry.has4k&&!entry.hasVideo)return;var badges=node('span');badges.className='theme-media-badges';if(entry.has4k){var quality=node('span','4K');quality.className='theme-media-badge';badges.appendChild(quality);}if(entry.hasVideo){var video=node('span');video.className='theme-media-badge theme-video-badge';video.setAttribute('role','img');video.setAttribute('aria-label',t('Video wallpaper'));badges.appendChild(video);}parent.appendChild(badges);}
- function previewImage(entry,parent){if(!entry.preview)return;var frame=parent.classList.contains('theme-preview-slot')?parent:node('div');if(frame!==parent){frame.className='theme-preview-frame';parent.insertBefore(frame,parent.firstChild);}var image=node('img');image.src=entry.preview;image.alt='';image.width=480;image.height=270;image.onerror=function(){image.hidden=true;};frame.insertBefore(image,frame.firstChild);mediaBadges(entry,frame);return image;}
- function catalog(){var installedIds=Object.create(null);standard();mode='catalog';if(signal){signal.cancelled=true;if(signal.cancel)signal.cancel();}signal={cancelled:false};var requestSignal=signal,version=++view;heading('Theme showcase','Choose a preview to see details.');message('Loading themes…');button('Back',render);focusFirst();
-  function display(entries){if(version!==view)return;var focused=document.activeElement,ownsFocus=panel.contains(focused),key=focused&&focused.getAttribute('data-theme-id'),refreshFocused=focused&&focused.id==='themeCatalogRefresh',backFocused=focused&&focused.id==='themeCatalogBack';heading('Theme showcase','Choose a preview to see details.');if(entries.notice)message(entries.notice);entries=entries.filter(function(entry){return !installedIds[entry.id];});if(!entries.length)message('All available themes are already installed');var grid=node('div');grid.className='theme-catalog-grid';card.appendChild(grid);entries.forEach(function(entry){var b=node('button');b.type='button';b.className='theme-catalog-card';b.setAttribute('data-theme-id',entry.id);previewImage(entry,b);b.appendChild(node('strong',entry.title));b.appendChild(node('small',[entry.builtin?t('Built-in'):entry.version,entry.packageSize===undefined?'':themeSize(entry)].filter(Boolean).join(' · ')));b.onclick=function(){detail(entry);};grid.appendChild(b);});button('Refresh',catalog,'themeCatalogRefresh');button('Back',render,'themeCatalogBack');var target=key&&Array.prototype.slice.call(grid.children).filter(function(b){return b.getAttribute('data-theme-id')===key;})[0];if(refreshFocused)target=document.getElementById('themeCatalogRefresh');if(backFocused)target=document.getElementById('themeCatalogBack');if(ownsFocus){if(target)target.focus();else focusFirst();}}
-  root.ThemeManager.list().then(function(items){if(version!==view)return [];items.forEach(function(item){installedIds[item.id]=true;});return root.ThemeManager.catalog(requestSignal,display);}).then(function(entries){if(version!==view)return;signal=null;display(entries);},function(e){if(version===view)failed(e);});
- }
-
- function removeInstalled(item){if(busy)return;standard();view++;mode='remove';heading('Remove theme?',item.title+(item.version?' · '+item.version:''));var active=root.ThemeManager.current();if(active.id===item.id&&active.digest===item.digest)card.appendChild(node('p','Classic will be restored.'));
-  button('Remove',function(){if(busy)return;busy=true;mode='removing';var requestView=++view;Array.prototype.forEach.call(card.querySelectorAll('button'),function(b){b.disabled=true;});var current=root.ThemeManager.current();if(current.id===item.id&&current.digest===item.digest)root.ThemeManager.reset();root.ThemeManager.remove(item).then(function(){if(requestView===view){busy=false;render();}},function(e){if(requestView===view)failed(e);});},'themeRemoveConfirm');button('Cancel',render,'themeRemoveCancel').focus();
- }
- function applying(active){card.setAttribute('aria-busy',String(active));Array.prototype.forEach.call(card.querySelectorAll('button'),function(b){b.disabled=active&&b!==document.activeElement&&b.onclick!==close;if(active&&b.onclick!==close)b.setAttribute('aria-disabled','true');else b.removeAttribute('aria-disabled');});}
- function refreshSelected(){var current=root.ThemeManager.current();Array.prototype.forEach.call(card.querySelectorAll('.theme-option'),function(row){var item=row.themeItem,selected=item.id===current.id&&(!item.digest||item.digest===current.digest),choice=row.querySelector('.theme-choice');row.setAttribute('data-selected',String(selected));choice.setAttribute('aria-pressed',String(selected));choice.setAttribute('aria-label',item.title+(item.version?' '+item.version:'')+(selected?' · '+t('Selected'):''));row.querySelector('.theme-selected').setAttribute('aria-hidden',String(!selected));});}
- function selectInstalled(item){if(busy)return;var retained=!!card.querySelector('.theme-installed-grid'),version=++view;busy=true;mode='applying-installed';applying(true);root.ThemeManager.selectInstalled(item).then(function(){if(version===view){busy=false;if(retained){mode='list';applying(false);refreshSelected();}else render();}},function(e){if(version===view)failed(e);});}
- function detail(entry,installed,immediate){mode='detail';var version=++view;heading(entry.title);var hero=node('div');hero.className='theme-detail-preview';previewImage(entry,hero);card.appendChild(hero);if(entry.packageSize!==undefined)card.appendChild(node('p',themeSize(entry)));if(entry.description)card.appendChild(node('p',entry.description));if(entry.builtin)card.appendChild(node('p','Built-in'));else card.appendChild(node('p',[entry.author,entry.version,entry.license].filter(Boolean).join(' · ')));
-  function actions(item){if(version!==view)return;if(item&&item.storageBudget)card.appendChild(node('p',root.StorageBudget.format(item.storageBudget)));if(item)button(immediate?'Apply theme':'Try theme',function(){if(immediate)selectInstalled(item);else trial(item);},immediate?'themeApply':'themeTry');else button('Download theme',function(){download(entry,true);},'themeDownload');button('Back',catalog);focusFirst();}
-  if(entry.builtin||installed)actions(installed||entry);else root.ThemeManager.list().then(function(items){actions(items.filter(function(item){return item.id===entry.id&&item.digest===entry.digest;})[0]);},function(e){if(version===view)failed(e);});
- }
- var receiverSession=null,receiverTimer=null,receiverSignal=null;
- function stopReceiver(){clearTimeout(receiverTimer);receiverTimer=null;if(receiverSignal){receiverSignal.cancelled=true;if(receiverSignal.cancel)receiverSignal.cancel();receiverSignal=null;}if(receiverSession){if(root.ThemeReceiver)root.ThemeReceiver.stop(receiverSession.sessionId);receiverSession=null;}}
- function receivePush(){stopReceiver();standard();if(root.CYTV_BROWSER_PREVIEW===true){view++;mode='receiver-preview';busy=false;heading('Receive from computer','This is a browser preview. The receiver runs on your TV.');card.appendChild(node('p','On your TV, open Settings → Themes → Receive from computer. Then use Send to TV on this computer.'));button('Back',render);focusFirst();return;}mode='receiver';busy=false;var version=++view,requestSignal={cancelled:false};receiverSignal=requestSignal;heading('Receive from computer','Send a theme from your computer');message('Starting TV receiver…');button('Cancel',function(){stopReceiver();render();},'themeReceiverCancel');focusFirst();
-  function live(){return version===view&&!requestSignal.cancelled&&openNow();}
-  function error(e){if(!live())return;stopReceiver();busy=false;heading('Receive from computer');message(e.message);button('Try again',receivePush,'themeReceiverRetry');button('Back',render);focusFirst();}
-  function poll(){if(!live())return;if(Date.now()>=receiverSession.expiresAt){error(Error('Theme receiver session expired. Try again.'));return;}var id=receiverSession.sessionId;root.ThemeReceiver.status(id,requestSignal).then(function(state){if(!live())return;if(state.state!=='received'){message(state.state==='receiving'?'Receiving theme…':'Waiting for computer…');receiverTimer=setTimeout(poll,500);return;}message('Checking received theme…');return root.ThemeReceiver.read(id,state.size,requestSignal).then(function(envelope){if(!live())throw Error('Cancelled');return root.ThemeManager.installEnvelope(envelope,requestSignal);}).then(function(item){if(!live())return;stopReceiver();busy=false;detail(item,item,true);});}).catch(error);}
-  if(!root.ThemeReceiver){error(Error('Theme receiver unavailable. Update Home and its service, then try again.'));return;}
-  root.ThemeReceiver.start(requestSignal).then(function(session){if(!live()){root.ThemeReceiver.stop(session.sessionId);return;}receiverSession=session;heading('Receive from computer','Enter this TV address and PIN in Send to TV on your computer.');var info=node('div');info.className='theme-receiver-connection';var address=node('p');address.id='themeReceiverAddress';address.textContent=session.addresses.join(' · ');info.appendChild(node('label','TV address'));info.appendChild(address);info.appendChild(node('label','Six-digit PIN'));var pin=node('p');pin.id='themeReceiverPin';pin.textContent=session.pin;info.appendChild(pin);var expires=node('p');expires.id='themeReceiverDeadline';expires.textContent=t('PIN expires at {time}',{time:new Date(session.expiresAt).toLocaleTimeString()});info.appendChild(expires);card.appendChild(info);card.appendChild(node('p','Only share on a trusted home network. The PIN expires after 10 minutes.'));message('Waiting for computer…');button('Cancel',function(){stopReceiver();render();},'themeReceiverCancel');focusFirst();poll();},error);
- }
-
- function urlForm(){standard();view++;mode='url';heading('Add by ID','Enter the theme ID, for example 102300a209.');var label=node('label','Theme ID');var input=node('input');input.id='themeUrl';input.type='text';input.placeholder='102300a209';input.maxLength=1000;input.autocomplete='off';label.appendChild(input);card.appendChild(label);var hint=node('p');hint.id='themeUrlHint';hint.setAttribute('aria-live','polite');card.appendChild(hint);input.oninput=function(){var short=root.ThemeData.shortLink(input.value);hint.textContent=short?t('Will open: {url}',{url:short}):'';};button('Load',function(){loadUrl(input.value);},'themeLoad');button('Back',render);input.focus();}
- function loadUrl(url){busy=true;mode='download';signal={cancelled:false};var version=++view;heading('Add by ID');message('Checking theme source…');button('Cancel',function(){if(signal){signal.cancelled=true;if(signal.cancel)signal.cancel();}view++;busy=false;render();});focusFirst();
-  root.ThemeManager.resolve(url,signal).then(function(entries){if(version!==view)return;busy=false;mode='collection';heading('Choose a theme');if(!entries.length)message('This collection is empty');entries.forEach(function(entry){button(entry.title+' · '+entry.version,function(){download(entry);});});button('Back',render);focusFirst();},function(e){if(version===view)failed(e);});}
- function download(entry,showDetail){busy=true;mode='download';signal={cancelled:false};var version=++view;heading(entry.title||'Add by ID');message('Downloading theme…');button('Cancel',function(){signal.cancelled=true;if(signal.cancel)signal.cancel();view++;busy=false;render();});focusFirst();
-  root.ThemeManager.install(entry,signal,function(i,total){if(version===view)message(t('Downloading file {count} of {total}',{count:i,total:total}));}).then(function(item){if(version!==view)return;busy=false;signal=null;if(showDetail)detail(entry,item);else render();},function(e){if(version===view)failed(e);});
- }
- function build(){panel=node('section');panel.id='homeThemePanel';panel.hidden=true;panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-label',t('Themes'));card=node('div');card.className='theme-settings-card';panel.appendChild(card);(inlineHost||document.body).appendChild(panel);if(inlineHost){panel.classList.add('theme-inline');panel.setAttribute('role','region');panel.removeAttribute('aria-modal');}}
- document.addEventListener('keydown',function(e){if(!openNow()||inlineHost&&mode==='list'||inlineHost&&mode!=='trial'&&!panel.contains(e.target))return;var key=e.keyCode;if([9,13,27,37,38,39,40,461].indexOf(key)<0)return;
-  if(e.target.tagName==='INPUT'&&[13,37,39].indexOf(key)>=0){e.stopImmediatePropagation();return;}
-  e.preventDefault();e.stopImmediatePropagation();if(key===27||key===461){if(mode==='trial'||mode==='preparing')revert();else if(mode==='rollback')close();else if(mode==='list'||mode==='applying-installed')close();else if(mode==='detail')catalog();else{stopReceiver();if(signal){signal.cancelled=true;if(signal.cancel)signal.cancel();}view++;render();}return;}
-  var controls=Array.prototype.filter.call(card.querySelectorAll('button:not([disabled]),input'),function(el){return !el.hidden&&el.offsetHeight>0;}),index=controls.indexOf(document.activeElement);
-  if(key===13){if(e.repeat)return;if(e.target.tagName==='INPUT')loadUrl(e.target.value);else if(controls[index])controls[index].click();return;}
-  if(mode==='catalog'&&[37,38,39,40].indexOf(key)>=0&&document.activeElement.classList.contains('theme-catalog-card')){var cards=Array.prototype.slice.call(card.querySelectorAll('.theme-catalog-card')),at=cards.indexOf(document.activeElement),columns=cards.filter(function(b){return b.offsetTop===cards[0].offsetTop;}).length||1,next=at+(key===38?-columns:key===40?columns:key===37?-1:1);if(next>=0&&next<cards.length){cards[next].focus();return;}if(key===37||key===38)return;if(key===40){controls[controls.length-1].focus();return;}}
-  if(controls.length)controls[(index+(key===37||key===38||key===9&&e.shiftKey?-1:1)+controls.length)%controls.length].focus();
- },true);
- document.addEventListener('keyup',function(e){if(inlineHost&&(mode==='list'||mode!=='trial'&&!panel.contains(e.target)))return;if(openNow()&&e.target.tagName==='INPUT'&&e.keyCode===13){e.stopImmediatePropagation();return;}if(openNow()&&[13,27,37,38,39,40,461].indexOf(e.keyCode)>=0){e.preventDefault();e.stopImmediatePropagation();}},true);
- document.addEventListener('focusin',function(e){if(openNow()&&(!inlineHost||mode==='trial')&&!panel.contains(e.target))focusFirst();},true);
- document.addEventListener('home-theme-change',function(){if(openNow()&&mode==='trial'&&!root.ThemeManager.current().trial)render();});
- document.addEventListener('visibilitychange',function(){if(document.hidden&&mode==='receiver'){stopReceiver();view++;busy=false;heading('Receive from computer');message('Theme receiver stopped. Try again.');button('Try again',receivePush,'themeReceiverRetry');button('Back',render);focusFirst();}if(document.hidden&&root.ThemeManager.current().trial)root.ThemeManager.cancel();});
- root.HomeThemePanel={isOpen:function(){return openNow()&&(!inlineHost||mode!=='list');},handlesKey:function(e){return openNow()&&mode!=='list'&&(mode==='trial'||panel.contains(e.target));},mount:function(host){inlineHost=host;if(!panel)build();host.appendChild(panel);},activate:function(active){if(!inlineHost)return;inlineActive=active;if(!active){deactivate();return;}if(!panel)build();if(panel.hidden){settingsOwner=true;panel.hidden=false;render();}},unmount:deactivate,open:function(){if(inlineHost){var tab=document.querySelector('[data-category="themes"]');if(tab)tab.click();root.HomeThemePanel.activate(true);return;}if(openNow())return;if(!panel)build();previous=document.activeElement;settingsOwner=!!(root.RenewalPanel&&root.RenewalPanel.isOpen());panel.hidden=false;render();}};
-}(this));
+  var panel,
+    card,
+    previous,
+    signal = null,
+    busy = false,
+    mode = 'list',
+    tick,
+    view = 0,
+    settingsOwner = false,
+    previewLeases = [],
+    inlineHost = null,
+    inlineActive = false;
+  function t(s, p) {
+    return root.HomeI18n ? HomeI18n.t(s, p) : s;
+  }
+  function openNow() {
+    return (
+      !!panel &&
+      !panel.hidden &&
+      (!inlineHost || inlineActive || mode === 'trial')
+    );
+  }
+  function node(tag, text) {
+    var el = document.createElement(tag);
+    if (text !== undefined) el.textContent = t(text);
+    return el;
+  }
+  function button(label, fn, id) {
+    var b = node('button', label);
+    b.type = 'button';
+    if (id) b.id = id;
+    b.onclick = fn;
+    card.appendChild(b);
+    return b;
+  }
+  function disposePreviews() {
+    previewLeases.forEach(function (lease) {
+      lease.dispose();
+    });
+    previewLeases = [];
+  }
+  function heading(title, description) {
+    disposePreviews();
+    card.removeAttribute('aria-busy');
+    card.textContent = '';
+    var titleNode = node('h2', title);
+    if (title === 'Themes') titleNode.className = 'theme-list-title';
+    card.appendChild(titleNode);
+    if (description) card.appendChild(node('p', description));
+  }
+  function message(text) {
+    var e = document.getElementById('themeMessage');
+    if (!e) {
+      e = node('p');
+      e.id = 'themeMessage';
+      e.setAttribute('role', 'status');
+      card.appendChild(e);
+    }
+    e.textContent = t(text);
+  }
+  function focusFirst() {
+    var b = card.querySelector('button:not([disabled]),input');
+    if (b) b.focus();
+  }
+  function parentVisible(visible) {
+    ['#renewalPanel', '.root-settings'].forEach(function (id) {
+      var el = document.querySelector(id);
+      if (el) el.style.visibility = visible ? '' : 'hidden';
+    });
+  }
+  function standard() {
+    clearInterval(tick);
+    if (inlineHost) {
+      inlineHost.appendChild(panel);
+      panel.classList.add('theme-inline');
+      panel.removeAttribute('aria-modal');
+      panel.setAttribute('role', 'region');
+    }
+    panel.classList.remove('theme-trial');
+    panel.classList.remove('theme-picker');
+    parentVisible(true);
+    if (root.ThemeRuntime) {
+      ThemeRuntime.suspend('themes');
+      if (settingsOwner) ThemeRuntime.suspend('settings');
+    }
+  }
+  function picker() {
+    if (inlineHost) {
+      standard();
+      return;
+    }
+    clearInterval(tick);
+    panel.classList.remove('theme-trial');
+    panel.classList.add('theme-picker');
+    parentVisible(false);
+    if (root.ThemeRuntime) {
+      ThemeRuntime.resume('themes');
+      ThemeRuntime.resume('settings');
+    }
+  }
+  function close() {
+    stopReceiver();
+    if (!inlineHost || !card.querySelector('.theme-installed-grid'))
+      disposePreviews();
+    var version = ++view;
+    if (signal) {
+      signal.cancelled = true;
+      if (signal.cancel) signal.cancel();
+      signal = null;
+    }
+    busy = false;
+    root.ThemeManager.cancel().then(function () {
+      if (version !== view) return;
+      standard();
+      if (inlineHost) {
+        if (card.querySelector('.theme-installed-grid')) {
+          mode = 'list';
+          applying(false);
+          refreshSelected();
+        } else render();
+        var tab = document.querySelector('[data-category="themes"]');
+        if (tab) tab.focus();
+      } else {
+        panel.hidden = true;
+        if (root.ThemeRuntime) ThemeRuntime.resume('themes');
+        if (previous) previous.focus();
+      }
+    });
+  }
+  function deactivate() {
+    stopReceiver();
+    inlineActive = false;
+    if (!panel || panel.hidden) return;
+    view++;
+    disposePreviews();
+    clearInterval(tick);
+    if (signal) {
+      signal.cancelled = true;
+      if (signal.cancel) signal.cancel();
+      signal = null;
+    }
+    busy = false;
+    root.ThemeManager.cancel();
+    standard();
+    panel.hidden = true;
+    if (root.ThemeRuntime) ThemeRuntime.resume('themes');
+  }
+  function failed(e) {
+    if (!openNow()) return;
+    var ownsFocus = !inlineHost || panel.contains(document.activeElement);
+    view++;
+    busy = false;
+    standard();
+    heading('Themes');
+    message(e.message);
+    button('Restore Classic', function () {
+      root.ThemeManager.reset();
+      render();
+    });
+    button('Back', close);
+    if (ownsFocus) focusFirst();
+  }
+  function trial(item) {
+    busy = true;
+    mode = 'preparing';
+    heading('Preparing theme…');
+    var version = ++view;
+    button('Cancel', revert);
+    root.ThemeManager.begin(item).then(
+      function () {
+        if (version !== view) return;
+        busy = false;
+        mode = 'trial';
+        if (inlineHost) {
+          document.body.appendChild(panel);
+          panel.classList.remove('theme-inline');
+          panel.setAttribute('role', 'dialog');
+          panel.setAttribute('aria-modal', 'true');
+        }
+        panel.classList.add('theme-trial');
+        parentVisible(false);
+        root.ThemeRuntime.resume('themes');
+        root.ThemeRuntime.resume('settings');
+        heading('Keep this theme?');
+        var timer = node('p');
+        timer.id = 'themeCountdown';
+        card.appendChild(timer);
+        function count() {
+          timer.textContent = t('Reverting in {count} seconds', {
+            count: root.ThemeManager.remaining()
+          });
+        }
+        count();
+        tick = setInterval(count, 250);
+        button(
+          'Keep theme',
+          function () {
+            root.ThemeManager.confirm().then(render, failed);
+          },
+          'themeKeep'
+        );
+        button('Revert', revert, 'themeRevert');
+        focusFirst();
+      },
+      function (e) {
+        if (version === view) failed(e);
+      }
+    );
+  }
+  function revert() {
+    var version = ++view;
+    mode = 'rollback';
+    heading('Reverting…');
+    button('Restore Classic', function () {
+      root.ThemeManager.reset();
+      render();
+    });
+    button('Back', close);
+    focusFirst();
+    root.ThemeManager.cancel().then(
+      function () {
+        if (version === view) render();
+      },
+      function (e) {
+        if (version === view) failed(e);
+      }
+    );
+  }
+  function render() {
+    stopReceiver();
+    if (!openNow()) return;
+    var ownsFocus = panel.contains(document.activeElement);
+    picker();
+    mode = 'list';
+    busy = true;
+    var version = ++view;
+    heading('Themes');
+    message('Loading themes…');
+    button('Restore Classic', function () {
+      root.ThemeManager.reset();
+      render();
+    });
+    button('Back', close);
+    if (ownsFocus) focusFirst();
+    var loadingFocus = document.activeElement;
+    Promise.all([
+      root.ThemeManager.list(),
+      root.ThemeData.request('theme-catalog.json', 65536, true)
+        .then(function (bytes) {
+          return JSON.parse(root.ThemeData.decode(bytes)).themes || [];
+        })
+        .catch(function () {
+          return [];
+        })
+    ]).then(
+      function (result) {
+        var items = result[0],
+          previews = result[1];
+        if (version !== view) return;
+        var restoreSelected =
+          !inlineHost ||
+          panel.contains(document.activeElement) ||
+          (ownsFocus && document.activeElement === loadingFocus);
+        busy = false;
+        heading('Themes');
+        var current = root.ThemeManager.current();
+        if (current.notice) message(current.notice);
+        function isSelected(item) {
+          return (
+            item.id === current.id &&
+            (!item.digest || item.digest === current.digest)
+          );
+        }
+        items = items.filter(isSelected).concat(
+          items.filter(function (item) {
+            return !isSelected(item);
+          })
+        );
+        var installed = node('div');
+        installed.className = 'theme-installed-grid';
+        card.appendChild(installed);
+        var pointerFocus = false;
+        installed.addEventListener('mousedown', function () {
+          pointerFocus = true;
+          setTimeout(function () {
+            pointerFocus = false;
+          }, 0);
+        });
+        // A pointer already targets a visible control; moving its row during focus loses the click.
+        installed.addEventListener('focusin', function (event) {
+          if (pointerFocus) return;
+          var row = event.target;
+          while (row && row.parentNode !== installed) row = row.parentNode;
+          if (!row) return;
+          var bounds = row.getBoundingClientRect(),
+            lane = installed.getBoundingClientRect();
+          if (bounds.left < lane.left + 8)
+            installed.scrollLeft -= lane.left + 8 - bounds.left;
+          else if (bounds.right > lane.right - 8)
+            installed.scrollLeft += bounds.right - lane.right + 8;
+        });
+        items.forEach(function (item) {
+          var selected =
+              item.id === current.id &&
+              (!item.digest || item.digest === current.digest),
+            row = node('div');
+          row.className = 'theme-option';
+          row.themeItem = item;
+          row.setAttribute('data-selected', String(selected));
+          installed.appendChild(row);
+          var b = node('button');
+          b.type = 'button';
+          b.className = 'theme-choice';
+          b.setAttribute('data-theme-id', item.id);
+          b.setAttribute('aria-pressed', String(selected));
+          b.setAttribute(
+            'aria-label',
+            item.title +
+              (item.version ? ' ' + item.version : '') +
+              (selected ? ' · ' + t('Selected') : '')
+          );
+          b.onclick = function () {
+            selectInstalled(item);
+          };
+          var presentation = previews.filter(function (entry) {
+              return (
+                entry.id === item.id &&
+                (item.builtin || entry.digest === item.digest)
+              );
+            })[0],
+            preview = item.builtin && presentation;
+          if (preview) {
+            try {
+              root.ThemeData.path(preview.preview);
+              if (/^(theme-catalog|themes)\//.test(preview.preview))
+                previewImage(preview, b);
+            } catch (_) {}
+          } else if (!item.builtin) {
+            var slot = node('div');
+            slot.className = 'theme-preview-slot';
+            b.appendChild(slot);
+            mediaBadges(presentation || item, slot);
+            installedPreview(item, slot);
+          }
+          b.appendChild(node('strong', item.title));
+          var badge = node('span', 'Selected');
+          badge.className = 'theme-selected';
+          badge.setAttribute('aria-hidden', String(!selected));
+          b.appendChild(badge);
+          row.appendChild(b);
+          row.appendChild(
+            node(
+              'small',
+              themeSize(preview || item) ||
+                (item.builtin ? 'Built-in' : 'Downloaded')
+            )
+          );
+          if (!item.builtin) {
+            var meta = node(
+              'p',
+              item.version + ' · ' + item.author + ' · ' + item.license
+            );
+            meta.className = 'theme-meta';
+            row.appendChild(meta);
+          }
+          var rowActions = node('div');
+          rowActions.className = 'theme-card-actions';
+          row.appendChild(rowActions);
+          var apply = node('button', 'Apply theme');
+          apply.type = 'button';
+          apply.onclick = function () {
+            selectInstalled(item);
+          };
+          rowActions.appendChild(apply);
+          if (!item.builtin) {
+            var remove = node('button', 'Remove');
+            remove.className = 'theme-remove';
+            remove.onclick = function () {
+              removeInstalled(item);
+            };
+            rowActions.appendChild(remove);
+          }
+        });
+        var actions = node('div');
+        actions.className = 'theme-picker-actions';
+        card.insertBefore(actions, installed);
+        function entryAction(label, description, fn, id) {
+          var b = button(label, fn, id);
+          b.className = 'theme-entry-action';
+          var detail = node('small', description);
+          b.appendChild(detail);
+          actions.appendChild(b);
+        }
+        entryAction(
+          'Theme showcase',
+          'Community themes',
+          catalog,
+          'themeCatalog'
+        );
+        entryAction(
+          'Receive from computer',
+          'Send a theme from your computer',
+          receivePush,
+          'themeReceive'
+        );
+        entryAction('Add by ID', 'Theme ID', urlForm, 'themeAddUrl');
+        if (!inlineHost) button('Back', close);
+        var selected = Array.prototype.slice
+          .call(installed.querySelectorAll('button[data-theme-id]'))
+          .filter(function (b) {
+            return b.getAttribute('aria-pressed') === 'true';
+          })[0];
+        if (restoreSelected) {
+          if (selected) selected.focus();
+          else focusFirst();
+        } else if (inlineHost) {
+          var appearance = document.getElementById('settings-pane-themes');
+          if (appearance && appearance.contains(document.activeElement))
+            document.activeElement.scrollIntoView({
+              block: 'nearest'
+            });
+        }
+      },
+      function (e) {
+        if (version === view) failed(e);
+      }
+    );
+  }
+  function installedPreview(item, parent) {
+    root.ThemeManager.preview(item).then(
+      function (lease) {
+        if (
+          !openNow() ||
+          !card.contains(parent) ||
+          (mode !== 'list' && mode !== 'applying-installed')
+        ) {
+          lease.dispose();
+          return;
+        }
+        try {
+          var image = previewImage(
+            {
+              preview: lease.url
+            },
+            parent
+          );
+          image.onerror = function () {
+            image.hidden = true;
+            lease.dispose();
+          };
+          previewLeases.push(lease);
+        } catch (_) {
+          lease.dispose();
+        }
+      },
+      function () {
+        /* A missing or rejected preview must not hide an installed choice. */
+      }
+    );
+  }
+  function themeSize(entry) {
+    return entry.packageSize === undefined
+      ? entry.builtin
+        ? t('Built-in')
+        : ''
+      : t('{size} MB', {
+          size: Math.max(0.1, entry.packageSize / 1000000).toFixed(1)
+        });
+  }
+  function mediaBadges(entry, parent) {
+    if (!entry.has4k && !entry.hasVideo) return;
+    var badges = node('span');
+    badges.className = 'theme-media-badges';
+    if (entry.has4k) {
+      var quality = node('span', '4K');
+      quality.className = 'theme-media-badge';
+      badges.appendChild(quality);
+    }
+    if (entry.hasVideo) {
+      var video = node('span');
+      video.className = 'theme-media-badge theme-video-badge';
+      video.setAttribute('role', 'img');
+      video.setAttribute('aria-label', t('Video wallpaper'));
+      badges.appendChild(video);
+    }
+    parent.appendChild(badges);
+  }
+  function previewImage(entry, parent) {
+    if (!entry.preview) return;
+    var frame = parent.classList.contains('theme-preview-slot')
+      ? parent
+      : node('div');
+    if (frame !== parent) {
+      frame.className = 'theme-preview-frame';
+      parent.insertBefore(frame, parent.firstChild);
+    }
+    var image = node('img');
+    image.src = entry.preview;
+    image.alt = '';
+    image.width = 480;
+    image.height = 270;
+    image.onerror = function () {
+      image.hidden = true;
+    };
+    frame.insertBefore(image, frame.firstChild);
+    mediaBadges(entry, frame);
+    return image;
+  }
+  function catalog() {
+    var installedIds = Object.create(null);
+    standard();
+    mode = 'catalog';
+    if (signal) {
+      signal.cancelled = true;
+      if (signal.cancel) signal.cancel();
+    }
+    signal = {
+      cancelled: false
+    };
+    var requestSignal = signal,
+      version = ++view;
+    heading('Theme showcase', 'Choose a preview to see details.');
+    message('Loading themes…');
+    button('Back', render);
+    focusFirst();
+    function display(entries) {
+      if (version !== view) return;
+      var focused = document.activeElement,
+        ownsFocus = panel.contains(focused),
+        key = focused && focused.getAttribute('data-theme-id'),
+        refreshFocused = focused && focused.id === 'themeCatalogRefresh',
+        backFocused = focused && focused.id === 'themeCatalogBack';
+      heading('Theme showcase', 'Choose a preview to see details.');
+      if (entries.notice) message(entries.notice);
+      entries = entries.filter(function (entry) {
+        return !installedIds[entry.id];
+      });
+      if (!entries.length)
+        message('All available themes are already installed');
+      var grid = node('div');
+      grid.className = 'theme-catalog-grid';
+      card.appendChild(grid);
+      entries.forEach(function (entry) {
+        var b = node('button');
+        b.type = 'button';
+        b.className = 'theme-catalog-card';
+        b.setAttribute('data-theme-id', entry.id);
+        previewImage(entry, b);
+        b.appendChild(node('strong', entry.title));
+        b.appendChild(
+          node(
+            'small',
+            [
+              entry.builtin ? t('Built-in') : entry.version,
+              entry.packageSize === undefined ? '' : themeSize(entry)
+            ]
+              .filter(Boolean)
+              .join(' · ')
+          )
+        );
+        b.onclick = function () {
+          detail(entry);
+        };
+        grid.appendChild(b);
+      });
+      button('Refresh', catalog, 'themeCatalogRefresh');
+      button('Back', render, 'themeCatalogBack');
+      var target =
+        key &&
+        Array.prototype.slice.call(grid.children).filter(function (b) {
+          return b.getAttribute('data-theme-id') === key;
+        })[0];
+      if (refreshFocused)
+        target = document.getElementById('themeCatalogRefresh');
+      if (backFocused) target = document.getElementById('themeCatalogBack');
+      if (ownsFocus) {
+        if (target) target.focus();
+        else focusFirst();
+      }
+    }
+    root.ThemeManager.list()
+      .then(function (items) {
+        if (version !== view) return [];
+        items.forEach(function (item) {
+          installedIds[item.id] = true;
+        });
+        return root.ThemeManager.catalog(requestSignal, display);
+      })
+      .then(
+        function (entries) {
+          if (version !== view) return;
+          signal = null;
+          display(entries);
+        },
+        function (e) {
+          if (version === view) failed(e);
+        }
+      );
+  }
+  function removeInstalled(item) {
+    if (busy) return;
+    standard();
+    view++;
+    mode = 'remove';
+    heading(
+      'Remove theme?',
+      item.title + (item.version ? ' · ' + item.version : '')
+    );
+    var active = root.ThemeManager.current();
+    if (active.id === item.id && active.digest === item.digest)
+      card.appendChild(node('p', 'Classic will be restored.'));
+    button(
+      'Remove',
+      function () {
+        if (busy) return;
+        busy = true;
+        mode = 'removing';
+        var requestView = ++view;
+        Array.prototype.forEach.call(
+          card.querySelectorAll('button'),
+          function (b) {
+            b.disabled = true;
+          }
+        );
+        var current = root.ThemeManager.current();
+        if (current.id === item.id && current.digest === item.digest)
+          root.ThemeManager.reset();
+        root.ThemeManager.remove(item).then(
+          function () {
+            if (requestView === view) {
+              busy = false;
+              render();
+            }
+          },
+          function (e) {
+            if (requestView === view) failed(e);
+          }
+        );
+      },
+      'themeRemoveConfirm'
+    );
+    button('Cancel', render, 'themeRemoveCancel').focus();
+  }
+  function applying(active) {
+    card.setAttribute('aria-busy', String(active));
+    Array.prototype.forEach.call(card.querySelectorAll('button'), function (b) {
+      b.disabled =
+        active && b !== document.activeElement && b.onclick !== close;
+      if (active && b.onclick !== close)
+        b.setAttribute('aria-disabled', 'true');
+      else b.removeAttribute('aria-disabled');
+    });
+  }
+  function refreshSelected() {
+    var current = root.ThemeManager.current();
+    Array.prototype.forEach.call(
+      card.querySelectorAll('.theme-option'),
+      function (row) {
+        var item = row.themeItem,
+          selected =
+            item.id === current.id &&
+            (!item.digest || item.digest === current.digest),
+          choice = row.querySelector('.theme-choice');
+        row.setAttribute('data-selected', String(selected));
+        choice.setAttribute('aria-pressed', String(selected));
+        choice.setAttribute(
+          'aria-label',
+          item.title +
+            (item.version ? ' ' + item.version : '') +
+            (selected ? ' · ' + t('Selected') : '')
+        );
+        row
+          .querySelector('.theme-selected')
+          .setAttribute('aria-hidden', String(!selected));
+      }
+    );
+  }
+  function selectInstalled(item) {
+    if (busy) return;
+    var retained = !!card.querySelector('.theme-installed-grid'),
+      version = ++view;
+    busy = true;
+    mode = 'applying-installed';
+    applying(true);
+    root.ThemeManager.selectInstalled(item).then(
+      function () {
+        if (version === view) {
+          busy = false;
+          if (retained) {
+            mode = 'list';
+            applying(false);
+            refreshSelected();
+          } else render();
+        }
+      },
+      function (e) {
+        if (version === view) failed(e);
+      }
+    );
+  }
+  function detail(entry, installed, immediate) {
+    mode = 'detail';
+    var version = ++view;
+    heading(entry.title);
+    var hero = node('div');
+    hero.className = 'theme-detail-preview';
+    previewImage(entry, hero);
+    card.appendChild(hero);
+    if (entry.packageSize !== undefined)
+      card.appendChild(node('p', themeSize(entry)));
+    if (entry.description) card.appendChild(node('p', entry.description));
+    if (entry.builtin) card.appendChild(node('p', 'Built-in'));
+    else
+      card.appendChild(
+        node(
+          'p',
+          [entry.author, entry.version, entry.license]
+            .filter(Boolean)
+            .join(' · ')
+        )
+      );
+    function actions(item) {
+      if (version !== view) return;
+      if (item && item.storageBudget)
+        card.appendChild(
+          node('p', root.StorageBudget.format(item.storageBudget))
+        );
+      if (item)
+        button(
+          immediate ? 'Apply theme' : 'Try theme',
+          function () {
+            if (immediate) selectInstalled(item);
+            else trial(item);
+          },
+          immediate ? 'themeApply' : 'themeTry'
+        );
+      else
+        button(
+          'Download theme',
+          function () {
+            download(entry, true);
+          },
+          'themeDownload'
+        );
+      button('Back', catalog);
+      focusFirst();
+    }
+    if (entry.builtin || installed) actions(installed || entry);
+    else
+      root.ThemeManager.list().then(
+        function (items) {
+          actions(
+            items.filter(function (item) {
+              return item.id === entry.id && item.digest === entry.digest;
+            })[0]
+          );
+        },
+        function (e) {
+          if (version === view) failed(e);
+        }
+      );
+  }
+  var receiverSession = null,
+    receiverTimer = null,
+    receiverSignal = null;
+  function stopReceiver() {
+    clearTimeout(receiverTimer);
+    receiverTimer = null;
+    if (receiverSignal) {
+      receiverSignal.cancelled = true;
+      if (receiverSignal.cancel) receiverSignal.cancel();
+      receiverSignal = null;
+    }
+    if (receiverSession) {
+      if (root.ThemeReceiver)
+        root.ThemeReceiver.stop(receiverSession.sessionId);
+      receiverSession = null;
+    }
+  }
+  function receivePush() {
+    stopReceiver();
+    standard();
+    if (root.CYTV_BROWSER_PREVIEW === true) {
+      view++;
+      mode = 'receiver-preview';
+      busy = false;
+      heading(
+        'Receive from computer',
+        'This is a browser preview. The receiver runs on your TV.'
+      );
+      card.appendChild(
+        node(
+          'p',
+          'On your TV, open Settings → Themes → Receive from computer. Then use Send to TV on this computer.'
+        )
+      );
+      button('Back', render);
+      focusFirst();
+      return;
+    }
+    mode = 'receiver';
+    busy = false;
+    var version = ++view,
+      requestSignal = {
+        cancelled: false
+      };
+    receiverSignal = requestSignal;
+    heading('Receive from computer', 'Send a theme from your computer');
+    message('Starting TV receiver…');
+    button(
+      'Cancel',
+      function () {
+        stopReceiver();
+        render();
+      },
+      'themeReceiverCancel'
+    );
+    focusFirst();
+    function live() {
+      return version === view && !requestSignal.cancelled && openNow();
+    }
+    function error(e) {
+      if (!live()) return;
+      stopReceiver();
+      busy = false;
+      heading('Receive from computer');
+      message(e.message);
+      button('Try again', receivePush, 'themeReceiverRetry');
+      button('Back', render);
+      focusFirst();
+    }
+    function poll() {
+      if (!live()) return;
+      if (Date.now() >= receiverSession.expiresAt) {
+        error(Error('Theme receiver session expired. Try again.'));
+        return;
+      }
+      var id = receiverSession.sessionId;
+      root.ThemeReceiver.status(id, requestSignal)
+        .then(function (state) {
+          if (!live()) return;
+          if (state.state !== 'received') {
+            message(
+              state.state === 'receiving'
+                ? 'Receiving theme…'
+                : 'Waiting for computer…'
+            );
+            receiverTimer = setTimeout(poll, 500);
+            return;
+          }
+          message('Checking received theme…');
+          return root.ThemeReceiver.read(id, state.size, requestSignal)
+            .then(function (envelope) {
+              if (!live()) throw Error('Cancelled');
+              return root.ThemeManager.installEnvelope(envelope, requestSignal);
+            })
+            .then(function (item) {
+              if (!live()) return;
+              stopReceiver();
+              busy = false;
+              detail(item, item, true);
+            });
+        })
+        .catch(error);
+    }
+    if (!root.ThemeReceiver) {
+      error(
+        Error(
+          'Theme receiver unavailable. Update Home and its service, then try again.'
+        )
+      );
+      return;
+    }
+    root.ThemeReceiver.start(requestSignal).then(function (session) {
+      if (!live()) {
+        root.ThemeReceiver.stop(session.sessionId);
+        return;
+      }
+      receiverSession = session;
+      heading(
+        'Receive from computer',
+        'Enter this TV address and PIN in Send to TV on your computer.'
+      );
+      var info = node('div');
+      info.className = 'theme-receiver-connection';
+      var address = node('p');
+      address.id = 'themeReceiverAddress';
+      address.textContent = session.addresses.join(' · ');
+      info.appendChild(node('label', 'TV address'));
+      info.appendChild(address);
+      info.appendChild(node('label', 'Six-digit PIN'));
+      var pin = node('p');
+      pin.id = 'themeReceiverPin';
+      pin.textContent = session.pin;
+      info.appendChild(pin);
+      var expires = node('p');
+      expires.id = 'themeReceiverDeadline';
+      expires.textContent = t('PIN expires at {time}', {
+        time: new Date(session.expiresAt).toLocaleTimeString()
+      });
+      info.appendChild(expires);
+      card.appendChild(info);
+      card.appendChild(
+        node(
+          'p',
+          'Only share on a trusted home network. The PIN expires after 10 minutes.'
+        )
+      );
+      message('Waiting for computer…');
+      button(
+        'Cancel',
+        function () {
+          stopReceiver();
+          render();
+        },
+        'themeReceiverCancel'
+      );
+      focusFirst();
+      poll();
+    }, error);
+  }
+  function urlForm() {
+    standard();
+    view++;
+    mode = 'url';
+    heading('Add by ID', 'Enter the theme ID, for example 102300a209.');
+    var label = node('label', 'Theme ID');
+    var input = node('input');
+    input.id = 'themeUrl';
+    input.type = 'text';
+    input.placeholder = '102300a209';
+    input.maxLength = 1000;
+    input.autocomplete = 'off';
+    label.appendChild(input);
+    card.appendChild(label);
+    var hint = node('p');
+    hint.id = 'themeUrlHint';
+    hint.setAttribute('aria-live', 'polite');
+    card.appendChild(hint);
+    input.oninput = function () {
+      var short = root.ThemeData.shortLink(input.value);
+      hint.textContent = short
+        ? t('Will open: {url}', {
+            url: short
+          })
+        : '';
+    };
+    button(
+      'Load',
+      function () {
+        loadUrl(input.value);
+      },
+      'themeLoad'
+    );
+    button('Back', render);
+    input.focus();
+  }
+  function loadUrl(url) {
+    busy = true;
+    mode = 'download';
+    signal = {
+      cancelled: false
+    };
+    var version = ++view;
+    heading('Add by ID');
+    message('Checking theme source…');
+    button('Cancel', function () {
+      if (signal) {
+        signal.cancelled = true;
+        if (signal.cancel) signal.cancel();
+      }
+      view++;
+      busy = false;
+      render();
+    });
+    focusFirst();
+    root.ThemeManager.resolve(url, signal).then(
+      function (entries) {
+        if (version !== view) return;
+        busy = false;
+        mode = 'collection';
+        heading('Choose a theme');
+        if (!entries.length) message('This collection is empty');
+        entries.forEach(function (entry) {
+          button(entry.title + ' · ' + entry.version, function () {
+            download(entry);
+          });
+        });
+        button('Back', render);
+        focusFirst();
+      },
+      function (e) {
+        if (version === view) failed(e);
+      }
+    );
+  }
+  function download(entry, showDetail) {
+    busy = true;
+    mode = 'download';
+    signal = {
+      cancelled: false
+    };
+    var version = ++view;
+    heading(entry.title || 'Add by ID');
+    message('Downloading theme…');
+    button('Cancel', function () {
+      signal.cancelled = true;
+      if (signal.cancel) signal.cancel();
+      view++;
+      busy = false;
+      render();
+    });
+    focusFirst();
+    root.ThemeManager.install(entry, signal, function (i, total) {
+      if (version === view)
+        message(
+          t('Downloading file {count} of {total}', {
+            count: i,
+            total: total
+          })
+        );
+    }).then(
+      function (item) {
+        if (version !== view) return;
+        busy = false;
+        signal = null;
+        if (showDetail) detail(entry, item);
+        else render();
+      },
+      function (e) {
+        if (version === view) failed(e);
+      }
+    );
+  }
+  function build() {
+    panel = node('section');
+    panel.id = 'homeThemePanel';
+    panel.hidden = true;
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-modal', 'true');
+    panel.setAttribute('aria-label', t('Themes'));
+    card = node('div');
+    card.className = 'theme-settings-card';
+    panel.appendChild(card);
+    (inlineHost || document.body).appendChild(panel);
+    if (inlineHost) {
+      panel.classList.add('theme-inline');
+      panel.setAttribute('role', 'region');
+      panel.removeAttribute('aria-modal');
+    }
+  }
+  document.addEventListener(
+    'keydown',
+    function (e) {
+      if (
+        !openNow() ||
+        (inlineHost && mode === 'list') ||
+        (inlineHost && mode !== 'trial' && !panel.contains(e.target))
+      )
+        return;
+      var key = e.keyCode;
+      if ([9, 13, 27, 37, 38, 39, 40, 461].indexOf(key) < 0) return;
+      if (e.target.tagName === 'INPUT' && [13, 37, 39].indexOf(key) >= 0) {
+        e.stopImmediatePropagation();
+        return;
+      }
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (key === 27 || key === 461) {
+        if (mode === 'trial' || mode === 'preparing') revert();
+        else if (mode === 'rollback') close();
+        else if (mode === 'list' || mode === 'applying-installed') close();
+        else if (mode === 'detail') catalog();
+        else {
+          stopReceiver();
+          if (signal) {
+            signal.cancelled = true;
+            if (signal.cancel) signal.cancel();
+          }
+          view++;
+          render();
+        }
+        return;
+      }
+      var controls = Array.prototype.filter.call(
+          card.querySelectorAll('button:not([disabled]),input'),
+          function (el) {
+            return !el.hidden && el.offsetHeight > 0;
+          }
+        ),
+        index = controls.indexOf(document.activeElement);
+      if (key === 13) {
+        if (e.repeat) return;
+        if (e.target.tagName === 'INPUT') loadUrl(e.target.value);
+        else if (controls[index]) controls[index].click();
+        return;
+      }
+      if (
+        mode === 'catalog' &&
+        [37, 38, 39, 40].indexOf(key) >= 0 &&
+        document.activeElement.classList.contains('theme-catalog-card')
+      ) {
+        var cards = Array.prototype.slice.call(
+            card.querySelectorAll('.theme-catalog-card')
+          ),
+          at = cards.indexOf(document.activeElement),
+          columns =
+            cards.filter(function (b) {
+              return b.offsetTop === cards[0].offsetTop;
+            }).length || 1,
+          next =
+            at +
+            (key === 38
+              ? -columns
+              : key === 40
+                ? columns
+                : key === 37
+                  ? -1
+                  : 1);
+        if (next >= 0 && next < cards.length) {
+          cards[next].focus();
+          return;
+        }
+        if (key === 37 || key === 38) return;
+        if (key === 40) {
+          controls[controls.length - 1].focus();
+          return;
+        }
+      }
+      if (controls.length)
+        controls[
+          (index +
+            (key === 37 || key === 38 || (key === 9 && e.shiftKey) ? -1 : 1) +
+            controls.length) %
+            controls.length
+        ].focus();
+    },
+    true
+  );
+  document.addEventListener(
+    'keyup',
+    function (e) {
+      if (
+        inlineHost &&
+        (mode === 'list' || (mode !== 'trial' && !panel.contains(e.target)))
+      )
+        return;
+      if (openNow() && e.target.tagName === 'INPUT' && e.keyCode === 13) {
+        e.stopImmediatePropagation();
+        return;
+      }
+      if (openNow() && [13, 27, 37, 38, 39, 40, 461].indexOf(e.keyCode) >= 0) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+      }
+    },
+    true
+  );
+  document.addEventListener(
+    'focusin',
+    function (e) {
+      if (
+        openNow() &&
+        (!inlineHost || mode === 'trial') &&
+        !panel.contains(e.target)
+      )
+        focusFirst();
+    },
+    true
+  );
+  document.addEventListener('home-theme-change', function () {
+    if (openNow() && mode === 'trial' && !root.ThemeManager.current().trial)
+      render();
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden && mode === 'receiver') {
+      stopReceiver();
+      view++;
+      busy = false;
+      heading('Receive from computer');
+      message('Theme receiver stopped. Try again.');
+      button('Try again', receivePush, 'themeReceiverRetry');
+      button('Back', render);
+      focusFirst();
+    }
+    if (document.hidden && root.ThemeManager.current().trial)
+      root.ThemeManager.cancel();
+  });
+  root.HomeThemePanel = {
+    isOpen: function () {
+      return openNow() && (!inlineHost || mode !== 'list');
+    },
+    handlesKey: function (e) {
+      return (
+        openNow() &&
+        mode !== 'list' &&
+        (mode === 'trial' || panel.contains(e.target))
+      );
+    },
+    mount: function (host) {
+      inlineHost = host;
+      if (!panel) build();
+      host.appendChild(panel);
+    },
+    activate: function (active) {
+      if (!inlineHost) return;
+      inlineActive = active;
+      if (!active) {
+        deactivate();
+        return;
+      }
+      if (!panel) build();
+      if (panel.hidden) {
+        settingsOwner = true;
+        panel.hidden = false;
+        render();
+      }
+    },
+    unmount: deactivate,
+    open: function () {
+      if (inlineHost) {
+        var tab = document.querySelector('[data-category="themes"]');
+        if (tab) tab.click();
+        root.HomeThemePanel.activate(true);
+        return;
+      }
+      if (openNow()) return;
+      if (!panel) build();
+      previous = document.activeElement;
+      settingsOwner = !!(root.RenewalPanel && root.RenewalPanel.isOpen());
+      panel.hidden = false;
+      render();
+    }
+  };
+})(this);

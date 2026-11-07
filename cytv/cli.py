@@ -5,6 +5,7 @@ import io
 import json
 from pathlib import Path
 import sys
+from time import sleep
 
 from . import __version__, package, state, i18n
 from .errors import UserError, TVNotReady, ExistingRoot
@@ -71,6 +72,9 @@ def explain_failure(write, store, profile, phase, error):
         write.failure_help(help)
         if help['code'] in ('removal-not-submitted','no-root-recovery'):
             write.recovery(profile)
+        if phase != 'recover' and pending and pending.get('action') in ('install', 'activate-root'):
+            from .recovery import offer_install_recovery
+            offer_install_recovery(write, store, profile)
     return help
 
 
@@ -343,22 +347,33 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 checks.prepare(profile['edition'], args.command)
             checks.update('ssh', 'running')
             write('Connecting to the TV…')
-            if connect:
-                # Older embedders accept exactly four positional arguments.
-                import inspect as signature_inspect
-                options = {}
-                if recovering:
-                    try:
-                        signature_inspect.signature(connect).bind(profile, store.device_dir(profile), secret_with_help, trust, persist=False)
-                        options['persist'] = False
-                    except TypeError:
-                        pass
-                remote = connect(profile, store.device_dir(profile), secret_with_help,
-                                 (lambda *_: False) if recovering else trust, **options)
-            else:
-                remote = SSH.connect(profile, store.device_dir(profile), secret_with_help, trust,
-                                     identity_prompt=None if recovering or args.non_interactive else lambda: prompts.root_credentials(ask, write),
-                                     persist=not recovering)
+            def connect_tv(pinned):
+                if connect:
+                    # Older embedders accept exactly four positional arguments.
+                    import inspect as signature_inspect
+                    options = {}
+                    if pinned:
+                        try:
+                            signature_inspect.signature(connect).bind(profile, store.device_dir(profile), secret_with_help, trust, persist=False)
+                            options['persist'] = False
+                        except TypeError:
+                            pass
+                    return connect(profile, store.device_dir(profile), secret_with_help,
+                                   (lambda *_: False) if pinned else trust, **options)
+                return SSH.connect(profile, store.device_dir(profile), secret_with_help, trust,
+                                   identity_prompt=None if pinned or args.non_interactive else lambda: prompts.root_credentials(ask, write),
+                                   persist=not pinned)
+
+            from .errors import connection_interrupted
+            for attempt in range(3 if cleanup else 1):
+                try:
+                    remote = connect_tv(recovering)
+                    break
+                except Exception as error:
+                    if not cleanup or attempt == 2 or not connection_interrupted(error):
+                        raise
+                    write('Connecting to the TV…')
+                    sleep(attempt + 1)
             checks.update('ssh', 'pass')
             if not recovering and args.command in ('install', 'status', 'doctor', 'recover'):
                 diagnostics.context.collect_metadata(remote, tv_info)
@@ -368,6 +383,14 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 if pending and pending.get('recovery_protocol')=='clean-removal-v1' and pending.get('connection_pending') is True:
                     store.checkpoint(profile,connection_pending=False)
             installer = Installer(remote, store, profile, payload, manifest, write, tv_info=tv_info, checks=checks)
+            def reconnect_tv():
+                nonlocal remote
+                if remote is not None:
+                    remote.close()
+                    remote = None
+                remote = connect_tv(True)
+                return remote
+            installer.reconnect = reconnect_tv
             if args.command == 'install':
                 reinstall = None
                 resume = False
@@ -591,8 +614,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
         return 0
     except (EOFError, KeyboardInterrupt, StopIteration):
         checks.finish_running(cancelled=True)
-        write('Cancelled. Installation has not started.' if args.command == 'install' and phase in ('pair-tv', 'read-inventory', 'prepare-payload', 'select-tv', 'select-edition', 'inspect-tv', 'ssh-connect', 'inspect-installation')
-              else 'Cancelled. If an installation was submitted, run cytv status before retrying.')
+        from .recovery import cancelled
+        cancelled(write, store, profile, args.command, phase, tv_info, checks.results)
         return 130
     except UserError as exc:
         checks.finish_running()

@@ -1,41 +1,125 @@
 const assert = require('node:assert/strict');
 const fs = require('fs');
-assert.ok(fs.existsSync(__dirname+'/../../launcher/app-library.js'), 'app library must exist');
+assert.ok(
+  fs.existsSync(__dirname + '/../../launcher/app-library.js'),
+  'app library must exist'
+);
 const create = require('../../launcher/app-library').create;
-const inventory = [{id:'a',title:'A',icon:''},{id:'b',title:'B',icon:''},{id:'c',title:'C',icon:''}];
+const inventory = [
+  { id: 'a', title: 'A', icon: '' },
+  { id: 'b', title: 'B', icon: '' },
+  { id: 'c', title: 'C', icon: '' }
+];
 const map = new Map();
-const storage = {getItem:k=>map.get(k)||null,setItem:(k,v)=>map.set(k,v)};
-const config = {columns:5,dockApps:['b'],hiddenApps:['c']};
+const storage = {
+  getItem: (k) => map.get(k) || null,
+  setItem: (k, v) => map.set(k, v)
+};
+const config = { columns: 5, dockApps: ['b'], hiddenApps: ['c'] };
 let model = create(storage, inventory, config);
-assert.deepEqual(model.visible().map(a=>a.id), ['b','a']);
-model.save(['a','b'], ['c']);
-model.save(['b'], ['c','a']);
+assert.deepEqual(
+  model.visible().map((a) => a.id),
+  ['b', 'a']
+);
+model.save(['a', 'b'], ['c']);
+model.save(['b'], ['c', 'a']);
 model = create(storage, inventory, config);
-assert.deepEqual(model.visible().map(a=>a.id), ['b']);
-assert.deepEqual(model.available().map(a=>a.id), ['a','c']);
-model.refresh([...inventory,{id:'d',title:'D',icon:''}]);
-assert.deepEqual(model.visible().map(a=>a.id), ['b'], 'refresh must not add tiles automatically');
+assert.deepEqual(
+  model.visible().map((a) => a.id),
+  ['b']
+);
+assert.deepEqual(
+  model.available().map((a) => a.id),
+  ['a', 'c']
+);
+model.refresh([...inventory, { id: 'd', title: 'D', icon: '' }]);
+assert.deepEqual(
+  model.visible().map((a) => a.id),
+  ['b'],
+  'refresh must not add tiles automatically'
+);
 model.add('d');
-assert.deepEqual(model.visible().map(a=>a.id), ['b','d']);
+assert.deepEqual(
+  model.visible().map((a) => a.id),
+  ['b', 'd']
+);
 model = create(storage, inventory, config);
-assert.deepEqual(model.visible().map(a=>a.id), ['b','d'], 'newly discovered app survives restart');
-model.save([], ['a','b','c','d']);
+assert.deepEqual(
+  model.visible().map((a) => a.id),
+  ['b', 'd'],
+  'newly discovered app survives restart'
+);
+model.save([], ['a', 'b', 'c', 'd']);
 assert.deepEqual(model.visible(), []);
-model.add('a'); model.add('a');
-assert.deepEqual(model.visible().map(a=>a.id), ['a'], 'no duplicate tiles');
-model.refresh([{id:'a',title:'A',icon:''},{id:'com.local.nativehome',title:'Helper',icon:''}]);
-assert.deepEqual(model.available().map(a=>a.id), ['b','c','d'], 'partial inventory preserves known apps and excludes internal helper');
-const bad = create({getItem:()=>'{bad',setItem(){throw Error('full')}}, inventory, config);
-assert.deepEqual(bad.visible().map(a=>a.id), ['b','a']);
-assert.throws(()=>bad.save([], ['a','b','c']));
-assert.deepEqual(bad.visible().map(a=>a.id), ['b','a'], 'failed writes must not change layout');
-const utilities = [{id:'com.sdk.ares.hostedapp',title:'Ares Hosted App',icon:''},
- {id:'com.cleanyourtv.root.updater',title:'Root Updater',icon:''}];
-const saved = {version:1,ids:['a'],hidden:[],catalog:utilities};
-const picker = create({getItem:()=>JSON.stringify(saved),setItem(){}}, inventory, config);
-assert.deepEqual(picker.available().map(a=>a.id), ['b','c'], 'saved development/updater utilities must not appear in Add app');
-picker.refresh(utilities.concat({id:'d',title:'D',icon:''}));
-assert.deepEqual(picker.available().map(a=>a.id), ['b','c','d'], 'fresh inventory keeps ordinary apps selectable and hides only the two utilities');
-const existing = create({getItem:()=>JSON.stringify({...saved,ids:utilities.map(a=>a.id)})}, utilities, config);
-assert.deepEqual(existing.visible().map(a=>a.id), utilities.map(a=>a.id), 'picker exclusions must preserve existing Home tiles');
-console.log('PASS app layout, migration, refresh, restart, empty screen and storage errors');
+model.add('a');
+model.add('a');
+assert.deepEqual(
+  model.visible().map((a) => a.id),
+  ['a'],
+  'no duplicate tiles'
+);
+model.refresh([
+  { id: 'a', title: 'A', icon: '' },
+  { id: 'com.local.nativehome', title: 'Helper', icon: '' }
+]);
+assert.deepEqual(
+  model.available().map((a) => a.id),
+  ['b', 'c', 'd'],
+  'partial inventory preserves known apps and excludes internal helper'
+);
+const bad = create(
+  {
+    getItem: () => '{bad',
+    setItem() {
+      throw Error('full');
+    }
+  },
+  inventory,
+  config
+);
+assert.deepEqual(
+  bad.visible().map((a) => a.id),
+  ['b', 'a']
+);
+assert.throws(() => bad.save([], ['a', 'b', 'c']));
+assert.deepEqual(
+  bad.visible().map((a) => a.id),
+  ['b', 'a'],
+  'failed writes must not change layout'
+);
+const utilities = [
+  { id: 'com.sdk.ares.hostedapp', title: 'Ares Hosted App', icon: '' },
+  { id: 'com.cleanyourtv.root.updater', title: 'Root Updater', icon: '' }
+];
+const saved = { version: 1, ids: ['a'], hidden: [], catalog: utilities };
+const picker = create(
+  { getItem: () => JSON.stringify(saved), setItem() {} },
+  inventory,
+  config
+);
+assert.deepEqual(
+  picker.available().map((a) => a.id),
+  ['b', 'c'],
+  'saved development/updater utilities must not appear in Add app'
+);
+picker.refresh(utilities.concat({ id: 'd', title: 'D', icon: '' }));
+assert.deepEqual(
+  picker.available().map((a) => a.id),
+  ['b', 'c', 'd'],
+  'fresh inventory keeps ordinary apps selectable and hides only the two utilities'
+);
+const existing = create(
+  {
+    getItem: () => JSON.stringify({ ...saved, ids: utilities.map((a) => a.id) })
+  },
+  utilities,
+  config
+);
+assert.deepEqual(
+  existing.visible().map((a) => a.id),
+  utilities.map((a) => a.id),
+  'picker exclusions must preserve existing Home tiles'
+);
+console.log(
+  'PASS app layout, migration, refresh, restart, empty screen and storage errors'
+);

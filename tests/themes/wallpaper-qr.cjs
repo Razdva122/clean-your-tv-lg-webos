@@ -1,1 +1,21 @@
-const fs=require('fs'),vm=require('vm'),assert=require('assert/strict'),decode=require('jsqr');const ctx={};assert(fs.existsSync('launcher/wallpaper-qr.js'),'offline QR exists');vm.runInNewContext(fs.readFileSync('launcher/wallpaper-qr.js','utf8'),ctx);const text='http://192.168.10.40:8879/wallpaper#pin=123456',qr=ctx.WallpaperQR.matrix(text),scale=8,width=(qr.length+8)*scale,data=new Uint8ClampedArray(width*width*4);for(let y=0;y<width;y++)for(let x=0;x<width;x++){const dark=qr[Math.floor(y/scale)-4]?.[Math.floor(x/scale)-4],i=(y*width+x)*4;data[i]=data[i+1]=data[i+2]=dark?0:255;data[i+3]=255;}assert.equal(decode(data,width,width).data,text);console.log('PASS QR offline roundtrip with real decoder');
+const fs = require('fs'),
+  vm = require('vm'),
+  assert = require('assert/strict'),
+  decode = require('jsqr');
+const ctx = {};
+assert(fs.existsSync('launcher/wallpaper-qr.js'), 'offline QR exists');
+vm.runInNewContext(fs.readFileSync('launcher/wallpaper-qr.js', 'utf8'), ctx);
+const text = 'http://192.168.10.40:8879/wallpaper#pin=123456',
+  qr = ctx.WallpaperQR.matrix(text),
+  scale = 8,
+  width = (qr.length + 8) * scale,
+  data = new Uint8ClampedArray(width * width * 4);
+for (let y = 0; y < width; y++)
+  for (let x = 0; x < width; x++) {
+    const dark = qr[Math.floor(y / scale) - 4]?.[Math.floor(x / scale) - 4],
+      i = (y * width + x) * 4;
+    data[i] = data[i + 1] = data[i + 2] = dark ? 0 : 255;
+    data[i + 3] = 255;
+  }
+assert.equal(decode(data, width, width).data, text);
+console.log('PASS QR offline roundtrip with real decoder');

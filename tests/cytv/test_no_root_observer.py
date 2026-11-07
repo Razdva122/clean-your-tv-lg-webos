@@ -65,12 +65,12 @@ sys.stdin.read()
     @property
     def directory(self):return self.root/'private/operations'/self.plan['operation']
 
-    def wait(self,index=0):
+    def wait(self,index=0,reason=None):
         deadline=time.monotonic()+5
         while time.monotonic()<deadline:
             result=self.call('status')
             slot=result['slots'][index]
-            if slot['terminal']!='none' or slot['reason']:return slot
+            if (slot['terminal']!='none' or slot['reason']) and (reason is None or slot['reason']==reason):return slot
             time.sleep(.03)
         raise AssertionError('observer did not end')
 
@@ -270,7 +270,10 @@ fs.writeSync=function(fd,b){if(Buffer.isBuffer(b)&&b.toString().indexOf('private
         for after_publication in (False,True):
             with self.subTest(after_publication=after_publication),tempfile.TemporaryDirectory(dir=PROCESS_TMP) as root:
                 prefix="var fs=require('fs'),link=fs.linkSync,sync=fs.fsyncSync,seen=false;fs.linkSync=function(a,b){var result=link.apply(fs,arguments);if(b.indexOf('/terminal-0.json')>=0)seen=true;return result;};fs.fsyncSync=function(){if(seen){seen=false;throw Error('directory sync failed');}return sync.apply(fs,arguments);};" if after_publication else ''
-                h=Harness(root,source=prefix+observer.PROGRAM);h.prepare();h.call('start',0);slot=h.wait()
+                h=Harness(root,source=prefix+observer.PROGRAM);h.prepare();h.call('start',0)
+                # The terminal link is published before the failed directory sync
+                # is recorded; wait for that evidence rather than racing its writer.
+                slot=h.wait(reason='terminal-persistence-unverified' if after_publication else None)
                 self.assertEqual(slot['terminal'],'success')
                 if after_publication:
                     self.assertEqual(slot['reason'],'terminal-persistence-unverified')

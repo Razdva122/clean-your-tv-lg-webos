@@ -1,106 +1,49 @@
 {
   "schema": 1,
-  "version": "1.10.0",
+  "version": null,
   "changes": [
     {
-      "pr": 346,
-      "issues": [],
-      "summary": "Reuse authenticated PR test units in candidate validation"
-    },
-    {
-      "pr": 349,
+      "pr": 370,
       "issues": [
-        348
+        207
       ],
-      "summary": "Bound updater cache and completed installer staging retention"
+      "summary": "Add bounded No-root inventory fallback and fresh remote icons; original IR routing and physical/TLS acceptance remain unresolved"
     },
     {
-      "pr": 352,
+      "pr": 371,
       "issues": [
-        351
+        364
       ],
-      "summary": "Fix Root OTA readiness after an early launcher start"
+      "summary": "Add experimental capability-admitted Qt SDK 6-9 compositor Home and owned-filter recovery; target-device compatibility remains unverified"
     },
     {
-      "pr": 354,
+      "pr": 372,
+      "issues": [],
+      "summary": "Centralize shared build resources and AR writing; automate formatting and preserve host Python/source-injection contracts"
+    },
+    {
+      "pr": 375,
+      "issues": [],
+      "summary": "Remove dead cleanup paths and unused bindings while preserving active cleanup and recovery exports"
+    },
+    {
+      "pr": 377,
+      "issues": [],
+      "summary": "Complete failed-install recovery and safe removal continuation"
+    },
+    {
+      "pr": 379,
       "issues": [
-        334
+        240
       ],
-      "summary": "Offer guarded Home-off completion and retained-runtime diagnostics; original #334 cause and device recovery remain unconfirmed"
+      "summary": "Add Root removal catalog fallback and bounded first/latest failure detail; original installation cause and device recovery remain unverified"
     },
     {
-      "pr": 356,
+      "pr": 380,
       "issues": [
-        211
+        376
       ],
-      "summary": "Simplify installation guides and add Czech across installers"
-    },
-    {
-      "pr": 357,
-      "issues": [
-        334
-      ],
-      "summary": "Validate Root health before announcing startup readiness"
-    },
-    {
-      "pr": 358,
-      "issues": [],
-      "summary": "Fix video wallpaper continuity, theme trials and colour consistency"
-    },
-    {
-      "pr": 360,
-      "issues": [],
-      "summary": "Show readable theme media badges and add Craciun UHD still video"
-    },
-    {
-      "pr": 361,
-      "issues": [],
-      "summary": "Fix Root app discovery and unify Home catalog filtering"
-    },
-    {
-      "pr": 363,
-      "issues": [
-        101,
-        133,
-        152,
-        161,
-        200,
-        201,
-        216,
-        240,
-        288,
-        295,
-        307,
-        334,
-        355,
-        359
-      ],
-      "summary": "Add practical verified removal and same-goal retry, typed authentication and retained recovery evidence; original installation causes and reporter device recoveries remain unconfirmed"
-    },
-    {
-      "pr": 365,
-      "issues": [],
-      "summary": "Fix full-candidate browser and Windows test assumptions"
-    },
-    {
-      "pr": 367,
-      "issues": [],
-      "summary": "Fix removal compatibility with modern Node, fixed SDK directories, broken legacy startup services and known private receipts; preserve specific retry diagnostics"
-    },
-    {
-      "pr": 369,
-      "issues": [
-        101,
-        133,
-        240,
-        359
-      ],
-      "summary": "Complete removal retry, snapshot restart, native finalization, bounded SSH transport and current failure guidance; original installation reports remain unconfirmed"
-    },
-    {
-      "pr": 373,
-      "issues": [],
-      "summary": "Restore verified Root reinstallation, resumable fence handoff and Root SSH catalog reads; original installation reports remain unconfirmed"
+      "summary": "Preserve No-root observer failure evidence and portable launch; original installation/recovery cause remains unconfirmed"
     }
   ],
   "excluded": [],

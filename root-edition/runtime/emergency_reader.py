@@ -12,7 +12,8 @@ import struct
 import sys
 import time
 from pathlib import Path
-from emergency_gesture import TripleHome, LongBack
+try: from .emergency_gesture import TripleHome, LongBack
+except ImportError: from emergency_gesture import TripleHome, LongBack
 EVENT = struct.Struct('<IIHHi')
 NAME = b'LGE M-RCU - Builtin [0]'
 

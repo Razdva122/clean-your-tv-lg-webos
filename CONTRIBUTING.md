@@ -32,7 +32,16 @@ For every release candidate, complete the affected parts of the [documentation p
 record reviewed guides and verification in the release PR, and keep candidate
 instructions separate from published downloads and historical hardware evidence.
 
-Run `npm ci` first. TV web packages use Babel/core-js and PostCSS, with a strict
+Run `npm ci` first. For host Python checks, reuse `.venv-cytv` (or the active
+virtualenv), rather than a bare system interpreter. `scripts/test.sh` selects
+that environment automatically and passes it to child checks; `PYTHON` explicitly
+overrides the selection. For direct Python commands use
+`.venv-cytv/bin/python` on macOS/Linux or `.venv-cytv/Scripts/python.exe` on Windows.
+Create/populate a missing environment using [the build setup](docs/BUILD.md).
+Host Python subprocesses must use `sys.executable`, so fontTools and other
+installed dependencies remain available without manual PATH changes.
+
+TV web packages use Babel/core-js and PostCSS, with a strict
 compatibility check after conversion; see [TV web build](docs/TV-WEB-BUILD.md).
 Helper app/service JS uses a separate Babel/core-js/safe-buffer build for TV
 Node 0.10.15+. Set `NODE010`, `NODE01025` and `NODE012` to run its regression
@@ -52,6 +61,22 @@ into another record. New code, failures or changed test preconditions justify a
 new affected run. Describe the test model, firmware, expected behavior and actual
 behavior. Separate standby tests from cold
 boots. Never claim compatibility from a successful package installation alone.
+
+Use `npm run format` to format versioned JavaScript, CSS and HTML sources, and
+`npm run format:check` to check their formatting. Untracked files, vendored code
+and immutable/generated theme snapshots are excluded. The root Prettier settings
+retain LF endings, avoid trailing commas and leave embedded source strings alone;
+formatting does not replace TV compatibility checks. The website retains its own
+Astro formatting configuration. Python and native C sources use separate tools.
+
+VS Code and Cursor workspace settings format JavaScript, CSS and HTML on save
+with the recommended Prettier extension. Install that extension when prompted;
+the project uses its pinned local Prettier and shared ignore rules. `npm ci`
+also installs the Husky pre-commit hook. Before each commit, lint-staged formats
+only staged supported files and preserves unstaged edits in partially staged
+files. Syntax errors stop the commit. After installing with `--ignore-scripts`,
+run `npm run prepare` once to enable the hook. `npm run format:staged` runs the
+same hook task manually. Vendored/generated exclusions apply to both paths.
 
 Input changes must preserve triple-Home emergency release (long Home in legacy
 Helper versions through 0.6.13), watchdog behavior, key-up delivery

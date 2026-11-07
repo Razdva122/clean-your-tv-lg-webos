@@ -16,7 +16,7 @@ import sys
 import tempfile
 import time
 
-from .errors import COMPUTER_STORAGE_FULL, reports_storage_full, UserError
+from .errors import COMPUTER_STORAGE_FULL, reports_storage_full
 from . import storage
 
 from PySide6.QtCore import QByteArray, QBuffer, QIODevice, QRect, Qt

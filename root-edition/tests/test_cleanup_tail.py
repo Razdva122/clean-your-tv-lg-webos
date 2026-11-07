@@ -7,6 +7,7 @@ requires the unchanged source on a Linux runner. Production has no test hooks.
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import tempfile
@@ -56,7 +57,7 @@ var fake={getuid:process.getuid,pid:999999,ppid:999998,argv:['node','-',process.
 var cp={spawnSync:function(command,args,options){
  if(command==='/proc/self/fd/3')return require('child_process').spawnSync(command,args,options);
  var method=args[2],value={returnValue:true};
- if(method.indexOf('listApps')!==-1){if(process.env.PRIVATE_ERROR)throw Error(process.env.PRIVATE_ERROR);value.apps=[];}
+ if(method.indexOf('listApps')!==-1){if(process.env.PRIVATE_ERROR)throw Error(process.env.PRIVATE_ERROR);if(process.env.ALL_CATALOGS_DENIED || process.env.DEV_CATALOG_DENIED && method.indexOf('/dev/')!==-1)value.returnValue=false;if(process.env.CATALOG_MALFORMED && method.indexOf('/dev/')!==-1)delete value.returnValue;value.apps=[];}
  else if(method.indexOf('getSystemSettings')!==-1)value.settings={defaultApps:{home:process.env.FOREIGN_ROUTE?'changed':'third.party.home'}};
  else if(method.indexOf('getProfiles')!==-1){if(process.env.FAIL_FINAL_READBACK && ++profileReads===2)throw Error('injected final readback failure');if(process.env.MISSING_PROFILES)value.returnValue=false;else value.profiles={defaultApps:{categories:{home:'third.party.home'}},idleApp:{appId:'third.party.home'}};}
  else if(method.indexOf('activitymanager')!==-1)value.activities=JSON.parse(process.env.ACTIVITIES||'[]');
@@ -102,6 +103,25 @@ class CleanupTail(unittest.TestCase):
             env={**os.environ,**environment},timeout=15)
         self.assertTrue(result.stdout,result.stderr)
         return result,json.loads(result.stdout)
+
+    def test_finalizer_accepts_fallback_catalog_and_still_checks_package_paths(self):
+        owned=self.base/'media/developer/apps/usr/palm/applications/com.local.nativehome'
+        owned.mkdir(parents=True)
+        result,reply=self.run_tail(DEV_CATALOG_DENIED='1')
+        self.assertEqual(reply['cleanup_error'],'package-remains')
+        self.assertTrue((self.runtime/'bin/python3.13').exists())
+        owned.rmdir()
+        result,reply=self.run_tail(DEV_CATALOG_DENIED='1')
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(reply['stage'],'verified-clean')
+
+    def test_unavailable_or_malformed_catalog_never_retires_runtime(self):
+        for flags,reason in (({'ALL_CATALOGS_DENIED':'1'},'cleanup-readback-unavailable'),
+                             ({'CATALOG_MALFORMED':'1'},'cleanup-readback-malformed')):
+            result,reply=self.run_tail(**flags)
+            self.assertEqual(result.returncode,1)
+            self.assertEqual(reply['cleanup_error'],reason)
+            self.assertTrue((self.runtime/'bin/python3.13').exists())
 
     def test_actual_stdin_entry_reaches_selector_guard_with_readonly_global_crypto(self):
         # Node 20+ exposes getter-only global WebCrypto for stdin scripts. Model
@@ -358,7 +378,10 @@ class CleanupTail(unittest.TestCase):
         package=foreign/'helper.ipk';package.write_bytes(ipk('org.foreign.app','1.0.0',{},architecture='arm'))
         shared=PRIVATE_CLEANUP_PROGRAM.replace('/media/developer',str(self.base/'media/developer')).replace('/var/luna-service2-dev',str(self.base/'var/luna-service2-dev'))
         shared=shared.replace('/var/lib',str(self.base/'var/lib')).replace('/var/webos-profile',str(self.base/'var/webos-profile')).replace('/proc/sys/kernel/random/boot_id',str(self.base/'proc/sys/kernel/random/boot_id'))
-        source=self.base/'current-tail.js';source.write_text(SOURCE.read_text().replace('var privateCleanupSource=null;','var privateCleanupSource='+json.dumps(shared)+';'))
+        source=self.base/'current-tail.js'
+        injected,count=re.subn(r'\bvar\s+privateCleanupSource\s*=\s*null\s*;',lambda _: 'var privateCleanupSource='+json.dumps(shared)+';',SOURCE.read_text())
+        self.assertEqual(count,1,'Expected one private cleanup source declaration')
+        source.write_text(injected)
         harness=self.harness.read_text()
         # Only the shared current Node program executes normally; TV RPC stays simulated.
         marker='spawnSync:function(command,args,options){'

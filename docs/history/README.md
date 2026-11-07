@@ -1,5 +1,9 @@
 # Release history and device evidence
 
+- [Root removal catalog fallback, 2026-11-07](2026-11-07-issue240-removal-catalog.md): bounded catalog compatibility, first/latest failure detail and source regressions; original #240 recovery and retail acceptance remain unverified.
+
+- [Next candidate integration, 2026-11-07](2026-11-07-next-candidate-integration.md): inventory fallback, experimental compositor, formatting, cleanup/recovery and observer diagnostics; combined source checks, metadata-base recovery and pending versioned build/device acceptance.
+
 - [Removal compatibility corrections, 2026-11-07](2026-11-07-removal-compatibility.md): real-stdin regression, bounded SDK/private-data compatibility, legacy-service boot checkpoint and clearer diagnostics; final changed-removal acceptance pending.
 
 - [Practical clean removal source checkpoint, 2026-11-06](2026-11-06-practical-clean-removal.md): scoped Root/No-root/UI and combined host checks, current broader-run blockers and final candidate/device limits.

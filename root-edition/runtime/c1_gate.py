@@ -95,7 +95,7 @@ def selection(root=STATE, uid=0):
             raise ValueError('Missing experimental Home backend selection; retain recovery evidence')
         return None
     value = json.loads(secure(path, uid, 8192))
-    if isinstance(value, dict) and type(value.get('schema')) is int and value['schema'] == 2:
+    if isinstance(value, dict) and type(value.get('schema')) is int and value['schema'] in (2,3):
         if __package__:
             from . import c1_keyfilter
         else:
@@ -514,7 +514,7 @@ def enable_locked(root, uid, seconds, resume_token=None):
 
 
 def execute(mode, transaction=None, root=STATE, uid=0):
-    # Dispatch a selected schema 2 without changing schema 1 recovery ordering.
+    # Dispatch compositor schemas without changing schema 1 recovery ordering.
     # Native/binary authority still rejects any missing or orphaned selection.
     selected = selection(root, uid) if os.path.lexists(Path(root)/'home-backend.json') else None
     if selected and selected.get('routing') == 'compositor-keyfilter-v1':

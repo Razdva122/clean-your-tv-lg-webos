@@ -1,6 +1,8 @@
 /* Settings use the same TV-scale layout in both editions. */
 
-#renewalPanel,.root-settings,#updatePanel {
+#renewalPanel,
+.root-settings,
+#updatePanel {
   position: fixed;
   top: 0;
   right: 0;
@@ -10,16 +12,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(7,10,14,.93);
+  background: rgba(7, 10, 14, 0.93);
   color: #f5f7fa;
-  font-family: Outfit,sans-serif;
+  font-family: Outfit, sans-serif;
 }
 
-#renewalPanel.hidden,#updatePanel.hidden,.root-settings[hidden] {
+#renewalPanel.hidden,
+#updatePanel.hidden,
+.root-settings[hidden] {
   display: none;
 }
 
-.renewal-card,.root-settings-card {
+.renewal-card,
+.root-settings-card {
   box-sizing: border-box;
   width: 1120px;
   max-width: 92vw;
@@ -38,7 +43,8 @@
   justify-content: space-between;
 }
 
-.renewal-card h2,.root-settings h1 {
+.renewal-card h2,
+.root-settings h1 {
   font-size: 40px;
   line-height: 1.2;
   margin: 0;
@@ -53,7 +59,8 @@
   white-space: nowrap;
 }
 
-.renewal-card p,.root-settings p {
+.renewal-card p,
+.root-settings p {
   font-size: 24px;
   line-height: 1.4;
   color: #ccd1db;
@@ -66,18 +73,21 @@
   padding-top: 18px;
 }
 
-.renewal-card h3,.root-settings h2 {
+.renewal-card h3,
+.root-settings h2 {
   font-size: 28px;
   line-height: 1.25;
   margin: 0 0 8px;
 }
 
-.renewal-card .renewal-warning,.root-settings .settings-warning {
+.renewal-card .renewal-warning,
+.root-settings .settings-warning {
   color: #efd49a;
   font-size: 22px;
 }
 
-#renewalStatus,.root-settings .settings-status {
+#renewalStatus,
+.root-settings .settings-status {
   white-space: pre-line;
   font-size: 23px;
   line-height: 1.4;
@@ -91,7 +101,8 @@
   flex-wrap: wrap;
 }
 
-.renewal-actions button,.root-settings button {
+.renewal-actions button,
+.root-settings button {
   box-sizing: border-box;
   font: inherit;
   font-size: 25px;
@@ -104,15 +115,17 @@
   cursor: pointer;
 }
 
-.renewal-actions button:focus,.root-settings button:focus {
+.renewal-actions button:focus,
+.root-settings button:focus {
   outline: 3px solid #b8d3ff;
   outline-offset: 3px;
   border-color: #f5f7fa;
   background: #46556c;
 }
 
-.renewal-actions button:disabled,.root-settings button:disabled {
-  opacity: .5;
+.renewal-actions button:disabled,
+.root-settings button:disabled {
+  opacity: 0.5;
   cursor: default;
 }
 
@@ -133,7 +146,7 @@
 }
 
 .settings-chevron:before {
-  content: "›";
+  content: '›';
 }
 
 .settings-update-dot {
@@ -143,10 +156,12 @@
   height: 16px;
   border-radius: 50%;
   background: #ffb347;
-  box-shadow: 0 0 0 4px #ffb34726,0 0 14px #ffb34770;
+  box-shadow:
+    0 0 0 4px #ffb34726,
+    0 0 14px #ffb34770;
 }
 
-.settings-links button[data-update-available="true"] .settings-update-dot {
+.settings-links button[data-update-available='true'] .settings-update-dot {
   display: inline-block;
 }
 
@@ -165,10 +180,11 @@
 }
 
 .settings-danger {
-  color: #ffd1bd!important;
+  color: #ffd1bd !important;
 }
 
-#renewalDetails,.root-updates .root-update-details {
+#renewalDetails,
+.root-updates .root-update-details {
   font-size: 21px;
   line-height: 1.4;
   white-space: pre-wrap;
@@ -176,7 +192,9 @@
   color: #ccd1db;
 }
 
-#renewalDetails.hidden,.root-settings button[hidden],#homeRoutingToggle[hidden] {
+#renewalDetails.hidden,
+.root-settings button[hidden],
+#homeRoutingToggle[hidden] {
   display: none;
 }
 
@@ -186,7 +204,8 @@
   border-radius: 4px;
 }
 
-#updateStatus,#updateNotes {
+#updateStatus,
+#updateNotes {
   white-space: pre-line;
 }
 
@@ -201,15 +220,20 @@
   margin-bottom: 18px;
 }
 
-@media(max-width:1000px) {
-  .renewal-card,.root-settings-card {
+@media (max-width: 1000px) {
+  .renewal-card,
+  .root-settings-card {
     padding: 24px;
     max-height: 94vh;
   }
-  .renewal-card h2,.root-settings h1 {
+  .renewal-card h2,
+  .root-settings h1 {
     font-size: 32px;
   }
-  .renewal-card p,.root-settings p,.renewal-actions button,.root-settings button {
+  .renewal-card p,
+  .root-settings p,
+  .renewal-actions button,
+  .root-settings button {
     font-size: 22px;
   }
   .settings-heading {
@@ -248,7 +272,7 @@
 }
 
 .home-routing-switch:before {
-  content: "";
+  content: '';
   position: absolute;
   right: 24px;
   top: 50%;
@@ -262,7 +286,7 @@
 }
 
 .home-routing-switch:after {
-  content: "";
+  content: '';
   position: absolute;
   right: 62px;
   top: 50%;
@@ -273,12 +297,12 @@
   background: #f5f7fa;
 }
 
-.home-routing-switch[aria-checked="true"]:before {
+.home-routing-switch[aria-checked='true']:before {
   background: #b8d3ff;
   border-color: #b8d3ff;
 }
 
-.home-routing-switch[aria-checked="true"]:after {
+.home-routing-switch[aria-checked='true']:after {
   right: 30px;
   background: #202329;
 }
@@ -291,7 +315,8 @@
   text-align: center;
 }
 
-.renewal-card .home-visit-hint,.root-settings .home-visit-hint {
+.renewal-card .home-visit-hint,
+.root-settings .home-visit-hint {
   font-size: 21px;
   margin: 14px 0 0;
   color: #bfc8d4;
@@ -309,7 +334,7 @@
   background: #46556c;
 }
 
-@media(max-width:700px) {
+@media (max-width: 700px) {
   .home-routing-actions {
     flex-direction: column;
   }
@@ -328,7 +353,8 @@
 
 /* Update dialogs reserve a TV-scale reading area and keep every action visible. */
 
-.root-updates .root-settings-card,#updatePanel .update-card {
+.root-updates .root-settings-card,
+#updatePanel .update-card {
   display: flex;
   flex-direction: column;
   width: 1440px;
@@ -340,18 +366,21 @@
   background: #20262d;
 }
 
-.root-updates .settings-heading,#updatePanel .settings-heading {
+.root-updates .settings-heading,
+#updatePanel .settings-heading {
   flex-shrink: 0;
   margin-bottom: 18px;
 }
 
-.root-updates h1,#updatePanel h2 {
+.root-updates h1,
+#updatePanel h2 {
   font-size: 44px;
   line-height: 1.2;
   margin: 0;
 }
 
-.root-updates .root-update-details,#updatePanel .update-versions {
+.root-updates .root-update-details,
+#updatePanel .update-versions {
   flex-shrink: 0;
   max-height: none;
   overflow: visible;
@@ -362,7 +391,8 @@
   margin: 0 0 14px;
 }
 
-.root-updates .root-update-status,#updatePanel .root-update-status {
+.root-updates .root-update-status,
+#updatePanel .root-update-status {
   flex-shrink: 0;
   height: auto;
   min-height: 36px;
@@ -374,7 +404,8 @@
   margin: 0 0 18px;
 }
 
-.root-updates .update-notes-heading,#updatePanel .update-notes-heading {
+.root-updates .update-notes-heading,
+#updatePanel .update-notes-heading {
   flex-shrink: 0;
   border-top: 1px solid #414b58;
   padding-top: 18px;
@@ -394,26 +425,32 @@
   color: #e0e6ed;
 }
 
-.root-updates .release-notes-content h2,#updatePanel .release-notes-content h2 {
+.root-updates .release-notes-content h2,
+#updatePanel .release-notes-content h2 {
   font-size: 30px;
   line-height: 1.3;
   margin: 20px 0 12px;
 }
 
-.root-updates .release-notes-content h3,#updatePanel .release-notes-content h3 {
+.root-updates .release-notes-content h3,
+#updatePanel .release-notes-content h3 {
   font-size: 27px;
   line-height: 1.3;
   margin: 18px 0 10px;
 }
 
-.root-updates .release-notes-content p,#updatePanel .release-notes-content p,.update-notes ul,.update-notes ol {
+.root-updates .release-notes-content p,
+#updatePanel .release-notes-content p,
+.update-notes ul,
+.update-notes ol {
   font-size: 28px;
   line-height: 1.5;
   margin: 0 0 18px;
   max-width: 72ch;
 }
 
-.update-notes ul,.update-notes ol {
+.update-notes ul,
+.update-notes ol {
   padding-left: 36px;
 }
 
@@ -423,14 +460,15 @@
 }
 
 .update-notes code {
-  font-size: .92em;
+  font-size: 0.92em;
 }
 
-.update-notes>:first-child {
-  margin-top: 0!important;
+.update-notes > :first-child {
+  margin-top: 0 !important;
 }
 
-.root-updates .update-actions,#updatePanel .update-actions {
+.root-updates .update-actions,
+#updatePanel .update-actions {
   flex-shrink: 0;
   flex-wrap: wrap;
   border-top: 1px solid #414b58;
@@ -438,7 +476,8 @@
   padding-top: 20px;
 }
 
-.root-updates .update-actions button,#updatePanel .update-actions button {
+.root-updates .update-actions button,
+#updatePanel .update-actions button {
   display: block;
   width: auto;
   margin: 0;
@@ -448,16 +487,23 @@
   padding: 14px 24px;
 }
 
-.root-updates .update-actions button[hidden],#updatePanel .update-actions button[hidden],#updatePanel .release-notes-content[hidden],#updatePanel .update-notes-heading[hidden],.root-updates .release-notes-content[hidden],.root-updates .update-notes-heading[hidden] {
+.root-updates .update-actions button[hidden],
+#updatePanel .update-actions button[hidden],
+#updatePanel .release-notes-content[hidden],
+#updatePanel .update-notes-heading[hidden],
+.root-updates .release-notes-content[hidden],
+.root-updates .update-notes-heading[hidden] {
   display: none;
 }
 
-.root-updates .update-actions button:nth-child(2),#updateInstall {
+.root-updates .update-actions button:nth-child(2),
+#updateInstall {
   background: #dceaff;
   color: #142335;
 }
 
-.root-updates .update-hint,#updatePanel .update-hint {
+.root-updates .update-hint,
+#updatePanel .update-hint {
   flex-shrink: 0;
   font-size: 21px;
   line-height: 1.3;
@@ -465,34 +511,44 @@
   margin: 18px 0 0;
 }
 
-@media(max-height:800px),(max-width:1000px) {
-  .root-updates .root-settings-card,#updatePanel .update-card {
+@media (max-height: 800px), (max-width: 1000px) {
+  .root-updates .root-settings-card,
+  #updatePanel .update-card {
     padding: 24px 32px;
     height: 92vh;
   }
-  .root-updates h1,#updatePanel h2 {
+  .root-updates h1,
+  #updatePanel h2 {
     font-size: 34px;
   }
-  .root-updates .root-update-details,#updatePanel .update-versions {
+  .root-updates .root-update-details,
+  #updatePanel .update-versions {
     font-size: 25px;
   }
-  .root-updates .root-update-status,#updatePanel .root-update-status {
+  .root-updates .root-update-status,
+  #updatePanel .root-update-status {
     font-size: 22px;
     margin-bottom: 12px;
   }
-  .root-updates .release-notes-content p,#updatePanel .release-notes-content p,.update-notes ul,.update-notes ol {
+  .root-updates .release-notes-content p,
+  #updatePanel .release-notes-content p,
+  .update-notes ul,
+  .update-notes ol {
     font-size: 24px;
   }
-  .root-updates .update-actions button,#updatePanel .update-actions button {
+  .root-updates .update-actions button,
+  #updatePanel .update-actions button {
     font-size: 23px;
     min-height: 56px;
     padding: 12px 20px;
   }
-  .root-updates .update-hint,#updatePanel .update-hint {
+  .root-updates .update-hint,
+  #updatePanel .update-hint {
     font-size: 18px;
     margin-top: 14px;
   }
-  .root-updates .update-actions,#updatePanel .update-actions {
+  .root-updates .update-actions,
+  #updatePanel .update-actions {
     margin-top: auto;
     padding-top: 14px;
   }
@@ -570,7 +626,7 @@
   margin: 20px 0;
 }
 
-@media(max-width:1000px) {
+@media (max-width: 1000px) {
   .settings-main .settings-links button {
     font-size: 22px;
     padding: 14px 16px;
@@ -583,7 +639,7 @@
   }
 }
 
-@media(max-width:700px) {
+@media (max-width: 700px) {
   .settings-main .settings-links {
     flex-direction: column;
   }
@@ -595,17 +651,19 @@
   }
 }
 
-@media(max-height:800px) and (min-width:701px) {
+@media (max-height: 800px) and (min-width: 701px) {
   .settings-main {
     padding: 16px 32px;
   }
-  .renewal-card.settings-main h2,.root-settings .settings-main h1 {
+  .renewal-card.settings-main h2,
+  .root-settings .settings-main h1 {
     font-size: 34px;
   }
   .settings-main .settings-home {
     margin-top: 12px;
   }
-  .renewal-card.settings-main h3,.root-settings .settings-main h2 {
+  .renewal-card.settings-main h3,
+  .root-settings .settings-main h2 {
     font-size: 26px;
   }
   .settings-main .settings-status {
@@ -627,7 +685,9 @@
     margin-top: 10px;
     padding-top: 10px;
   }
-  .settings-main .settings-links button,.settings-main .settings-developer button,.settings-main .settings-footer button {
+  .settings-main .settings-links button,
+  .settings-main .settings-developer button,
+  .settings-main .settings-footer button {
     font-size: 22px;
     padding: 12px 18px;
   }
@@ -645,7 +705,7 @@
   .settings-main .settings-footer p {
     font-size: 19px;
   }
-  .settings-main .renewal-actions>button {
+  .settings-main .renewal-actions > button {
     margin-bottom: 0;
   }
 }
@@ -670,20 +730,20 @@
 
 /* Explicit spacing instead of flex gap, for webOS 3.x through 5.x. */
 
-.settings-heading>:not(:first-child) {
+.settings-heading > :not(:first-child) {
   margin-left: 24px;
 }
 
-.renewal-actions>button {
+.renewal-actions > button {
   margin-right: 12px;
   margin-bottom: 12px;
 }
 
-.renewal-actions>button:last-child {
+.renewal-actions > button:last-child {
   margin-right: 0;
 }
 
-.settings-footer>:not(:first-child) {
+.settings-footer > :not(:first-child) {
   margin-left: 24px;
 }
 
@@ -691,26 +751,27 @@
   margin-left: 12px;
 }
 
-.home-routing-actions>button {
+.home-routing-actions > button {
   margin-bottom: 0;
 }
 
-.home-routing-actions>:not(:first-child) {
+.home-routing-actions > :not(:first-child) {
   margin-left: 18px;
 }
 
-.root-updates .update-actions button,#updatePanel .update-actions button {
+.root-updates .update-actions button,
+#updatePanel .update-actions button {
   margin: 0 16px 12px 0;
 }
 
-@media(max-width:1000px) {
-  .settings-heading>:not(:first-child) {
+@media (max-width: 1000px) {
+  .settings-heading > :not(:first-child) {
     margin-left: 12px;
   }
 }
 
-@media(max-width:700px) {
-  .home-routing-actions>:not(:first-child) {
+@media (max-width: 700px) {
+  .home-routing-actions > :not(:first-child) {
     margin-left: 0;
     margin-top: 18px;
   }
@@ -733,9 +794,21 @@
   border-color: #303842;
   border-radius: 18px;
 }
-.settings-workspace .settings-heading { flex-shrink: 0; padding-bottom: 28px; }
-.settings-columns { display: flex; flex: 1; min-height: 0; }
-.settings-categories.renewal-actions { display: block; flex: 0 0 340px; padding: 8px 24px 8px 8px; overflow-y: auto; }
+.settings-workspace .settings-heading {
+  flex-shrink: 0;
+  padding-bottom: 28px;
+}
+.settings-columns {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.settings-categories.renewal-actions {
+  display: block;
+  flex: 0 0 340px;
+  padding: 8px 24px 8px 8px;
+  overflow-y: auto;
+}
 .settings-categories button {
   position: relative;
   display: flex;
@@ -751,59 +824,194 @@
   font-size: 25px;
   line-height: 1.25;
 }
-.settings-categories button[aria-selected="true"] { background: #242b34; }
-.settings-categories button[aria-selected="true"]:before {
-  content: ""; position: absolute; left: -10px; top: 14px; bottom: 14px;
-  width: 4px; border-radius: 4px; background: #72aaff;
+.settings-categories button[aria-selected='true'] {
+  background: #242b34;
 }
-.settings-categories button:focus { outline: 3px solid #b8d3ff; outline-offset: 2px; background: #303f54; }
-.settings-categories svg { width: 28px; height: 28px; flex-shrink: 0; margin-right: 16px; fill: none; stroke: #b4becb; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-.settings-content { flex: 1; min-width: 0; border-left: 1px solid #303842; padding-left: 44px; overflow-y: auto; }
-.settings-pane { display: block; padding: 8px 10px 16px; }
-.settings-pane[hidden] { display: none; }
-.renewal-card .settings-pane>h3,.root-settings .settings-pane>h3 { font-size: 36px; padding-bottom: 24px; margin: 0 0 28px; border-bottom: 1px solid #303842; }
-.settings-workspace .settings-home { margin-top: 0; }
-.settings-pane .settings-layout,.settings-pane .settings-developer { margin-top: 16px; }
-.settings-pane>button,.settings-pane .settings-layout>button { display: flex; align-items: center; width: 100%; min-height: 76px; margin: 0 0 18px; text-align: left; }
-.settings-workspace .home-routing-actions { display: block; }
-.settings-workspace .home-routing-actions>button { display: block; width: 100%; margin: 16px 0 0; }
-.settings-workspace .settings-footer { justify-content: flex-end; flex-shrink: 0; margin-top: 24px; padding-top: 18px; }
-.settings-pane [data-update-available="true"] .settings-update-dot { display: inline-block; }
-.settings-pane .settings-chevron { margin-left: auto; }
-.settings-pane .settings-update-dot { margin-right: 18px; }
-@media(max-height:800px) {
- .settings-workspace.settings-main { height: 92vh; padding: 22px 32px 16px; }
- .settings-workspace .settings-heading { padding-bottom: 18px; }
- .settings-categories.renewal-actions { flex-basis: 280px; padding-right: 20px; }
- .settings-categories button { min-height: 58px; font-size: 21px; padding: 10px 12px; margin-bottom: 6px; }
- .settings-categories svg { width: 24px; height: 24px; margin-right: 12px; }
- .settings-content { padding-left: 28px; }
- .renewal-card .settings-pane>h3,.root-settings .settings-pane>h3 { font-size: 30px; padding-bottom: 18px; margin-bottom: 20px; }
- .settings-pane>button,.settings-pane .settings-layout>button { min-height: 64px; font-size: 22px; }
+.settings-categories button[aria-selected='true']:before {
+  content: '';
+  position: absolute;
+  left: -10px;
+  top: 14px;
+  bottom: 14px;
+  width: 4px;
+  border-radius: 4px;
+  background: #72aaff;
 }
-@media(max-width:700px) {
- .settings-workspace.settings-main { max-width: 98vw; padding: 18px 12px; }
- .settings-categories.renewal-actions { flex-basis: 34%; padding-right: 10px; }
- .settings-categories button { font-size: 17px; padding: 10px 6px; }
- .settings-categories svg { display: none; }
- .settings-content { padding-left: 12px; }
- .settings-workspace .settings-edition { white-space: normal; }
+.settings-categories button:focus {
+  outline: 3px solid #b8d3ff;
+  outline-offset: 2px;
+  background: #303f54;
+}
+.settings-categories svg {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  margin-right: 16px;
+  fill: none;
+  stroke: #b4becb;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.settings-content {
+  flex: 1;
+  min-width: 0;
+  border-left: 1px solid #303842;
+  padding-left: 44px;
+  overflow-y: auto;
+}
+.settings-pane {
+  display: block;
+  padding: 8px 10px 16px;
+}
+.settings-pane[hidden] {
+  display: none;
+}
+.renewal-card .settings-pane > h3,
+.root-settings .settings-pane > h3 {
+  font-size: 36px;
+  padding-bottom: 24px;
+  margin: 0 0 28px;
+  border-bottom: 1px solid #303842;
+}
+.settings-workspace .settings-home {
+  margin-top: 0;
+}
+.settings-pane .settings-layout,
+.settings-pane .settings-developer {
+  margin-top: 16px;
+}
+.settings-pane > button,
+.settings-pane .settings-layout > button {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 76px;
+  margin: 0 0 18px;
+  text-align: left;
+}
+.settings-workspace .home-routing-actions {
+  display: block;
+}
+.settings-workspace .home-routing-actions > button {
+  display: block;
+  width: 100%;
+  margin: 16px 0 0;
+}
+.settings-workspace .settings-footer {
+  justify-content: flex-end;
+  flex-shrink: 0;
+  margin-top: 24px;
+  padding-top: 18px;
+}
+.settings-pane [data-update-available='true'] .settings-update-dot {
+  display: inline-block;
+}
+.settings-pane .settings-chevron {
+  margin-left: auto;
+}
+.settings-pane .settings-update-dot {
+  margin-right: 18px;
+}
+@media (max-height: 800px) {
+  .settings-workspace.settings-main {
+    height: 92vh;
+    padding: 22px 32px 16px;
+  }
+  .settings-workspace .settings-heading {
+    padding-bottom: 18px;
+  }
+  .settings-categories.renewal-actions {
+    flex-basis: 280px;
+    padding-right: 20px;
+  }
+  .settings-categories button {
+    min-height: 58px;
+    font-size: 21px;
+    padding: 10px 12px;
+    margin-bottom: 6px;
+  }
+  .settings-categories svg {
+    width: 24px;
+    height: 24px;
+    margin-right: 12px;
+  }
+  .settings-content {
+    padding-left: 28px;
+  }
+  .renewal-card .settings-pane > h3,
+  .root-settings .settings-pane > h3 {
+    font-size: 30px;
+    padding-bottom: 18px;
+    margin-bottom: 20px;
+  }
+  .settings-pane > button,
+  .settings-pane .settings-layout > button {
+    min-height: 64px;
+    font-size: 22px;
+  }
+}
+@media (max-width: 700px) {
+  .settings-workspace.settings-main {
+    max-width: 98vw;
+    padding: 18px 12px;
+  }
+  .settings-categories.renewal-actions {
+    flex-basis: 34%;
+    padding-right: 10px;
+  }
+  .settings-categories button {
+    font-size: 17px;
+    padding: 10px 6px;
+  }
+  .settings-categories svg {
+    display: none;
+  }
+  .settings-content {
+    padding-left: 12px;
+  }
+  .settings-workspace .settings-edition {
+    white-space: normal;
+  }
 }
 
-.settings-workspace .settings-home>h2,.settings-workspace .settings-home>h3 { display: none; }
+.settings-workspace .settings-home > h2,
+.settings-workspace .settings-home > h3 {
+  display: none;
+}
 
-.settings-pane button[hidden],.settings-pane .settings-layout.hidden { display: none; }
+.settings-pane button[hidden],
+.settings-pane .settings-layout.hidden {
+  display: none;
+}
 
 /* Keep Appearance scroll geometry when a theme owns its column count. */
-.settings-pane .settings-layout.home-columns-entry.hidden { display: flex; visibility: hidden; }
-.settings-pane .home-columns-entry>button[hidden] { display: flex; visibility: hidden; }
+.settings-pane .settings-layout.home-columns-entry.hidden {
+  display: flex;
+  visibility: hidden;
+}
+.settings-pane .home-columns-entry > button[hidden] {
+  display: flex;
+  visibility: hidden;
+}
 
-.settings-categories button[data-update-available="true"] .settings-update-dot { display: inline-block; }
-.settings-categories .settings-update-dot { margin-left: 16px; width: 12px; height: 12px; }
+.settings-categories button[data-update-available='true'] .settings-update-dot {
+  display: inline-block;
+}
+.settings-categories .settings-update-dot {
+  margin-left: 16px;
+  width: 12px;
+  height: 12px;
+}
 
 /* Keep the visibility switch inside its Appearance setting row. */
-.settings-layout .home-routing-switch { position: relative; padding-right: 128px; }
-#homeAppsError:empty { display: none; }
+.settings-layout .home-routing-switch {
+  position: relative;
+  padding-right: 128px;
+}
+#homeAppsError:empty {
+  display: none;
+}
 
 /* Helper diagnostics stay inside the physical viewport, including 720p TVs. */
 .helper-panel .root-settings-card {
@@ -812,7 +1020,9 @@
   max-height: 92vh;
   overflow-y: auto;
 }
-.helper-panel .root-settings-card>h1,.helper-panel .root-settings-card>p,.helper-panel .renewal-actions {
+.helper-panel .root-settings-card > h1,
+.helper-panel .root-settings-card > p,
+.helper-panel .renewal-actions {
   flex-shrink: 0;
 }
 .helper-panel-diagnostics {
@@ -829,12 +1039,29 @@
   border: 1px solid #626a76;
   border-radius: 8px;
 }
-.helper-panel-diagnostics[hidden] { display: none; }
-.helper-panel-diagnostics:focus { outline: 3px solid #b8d3ff; outline-offset: -3px; }
-@media(max-height:800px) {
-  .helper-panel .root-settings-card { padding: 24px 32px; }
-  .helper-panel h1 { font-size: 32px; }
-  .helper-panel p,.helper-panel .settings-status { font-size: 21px; }
-  .helper-panel button { font-size: 22px; padding: 12px 18px; }
-  .helper-panel-diagnostics { font-size: 18px; }
+.helper-panel-diagnostics[hidden] {
+  display: none;
+}
+.helper-panel-diagnostics:focus {
+  outline: 3px solid #b8d3ff;
+  outline-offset: -3px;
+}
+@media (max-height: 800px) {
+  .helper-panel .root-settings-card {
+    padding: 24px 32px;
+  }
+  .helper-panel h1 {
+    font-size: 32px;
+  }
+  .helper-panel p,
+  .helper-panel .settings-status {
+    font-size: 21px;
+  }
+  .helper-panel button {
+    font-size: 22px;
+    padding: 12px 18px;
+  }
+  .helper-panel-diagnostics {
+    font-size: 18px;
+  }
 }

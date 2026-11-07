@@ -1,7 +1,7 @@
 # v1.10.0 — practical removal and installer recovery
 
-Unpublished release candidate. Downloads are not public until publication completes.
-Final package/device acceptance is pending; source checks do not establish TV compatibility.
+Release 1.10.0. Downloads become available when publication and public verification complete.
+[Exact build, accepted installer scope and untested limits](history/2026-11-07-release-1.10.0-final-acceptance.md).
 
 ## Changes
 
@@ -40,8 +40,8 @@ Android keeps its application identity and original signer.
 
 See [practical removal source evidence](history/2026-11-06-practical-clean-removal.md)
 and [candidate PR #350](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/350)
-for the exact selected build, checks and remaining acceptance. The candidate remains
-draft until its complete build and affected physical acceptance are recorded.
+for the exact selected build, checks and remaining acceptance. The final build and scoped acceptance are recorded in the linked acceptance record.
+A release announcement follows successful public package/feed verification.
 
 Source/model checks do not establish physical acceptance. Consult the release PR
 and exact artifact-bound acceptance records for tested, blocked and untested paths;

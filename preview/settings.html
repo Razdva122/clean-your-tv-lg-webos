@@ -1,14 +1,31 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Home settings · Local preview</title>
-<style>
-@font-face{font-family:Outfit;src:url('/launcher/fonts/outfit.ttf')}body{margin:0;background:#101319;color:#f5f7fa;font-family:Outfit,sans-serif}nav{position:fixed;top:0;left:0;right:0;z-index:11000;display:flex;align-items:center;gap:10px;padding:14px 24px;background:#101319;border-bottom:1px solid #414650}nav a{padding:10px 14px;border:1px solid #687381;border-radius:8px;color:#f5f7fa;text-decoration:none;font-size:16px}nav a[aria-current=page]{background:#b8d3ff;color:#202329;border-color:#b8d3ff}nav span{margin-left:auto;color:#bfc8d4}#renewalPanel,#updatePanel,.root-settings{padding-top:72px;box-sizing:border-box}.renewal-card,.root-settings-card{max-height:calc(100vh - 112px)!important}#toast{position:fixed;bottom:20px;left:24px;z-index:12000;background:#b8d3ff;color:#202329;padding:16px;border-radius:10px;display:none}#toast.shown{display:block}#reopen{position:absolute;top:110px;left:24px;padding:18px;font:inherit}button:focus,a:focus{outline:3px solid #b8d3ff;outline-offset:4px}@media(max-width:600px){nav{padding:12px}nav span{display:none}.settings-heading{align-items:flex-start;flex-direction:column}}
-</style>
-<script>window.TV_APPS={apps:[]};window.ROOT_VERSION='0.0.1';</script><script src="/preview/bridge.js"></script>
-</head><body><nav aria-label="Preview edition"><a href="?edition=no-root" id="no-root">No-root Edition</a><a href="?edition=root" id="root">Root Edition</a><span>Local preview · TV actions simulated</span></nav><button id="reopen" onclick="RenewalPanel.open()">Open settings</button><div id="toast"></div>
-<script>
-var rootEdition=new URLSearchParams(location.search).get('edition')==='root';
-document.getElementById(rootEdition?'root':'no-root').setAttribute('aria-current','page');
-var css=document.createElement('link');css.rel='stylesheet';css.href=rootEdition?'/root-launcher/root-settings.css':'/launcher/renewal-panel.css';document.head.appendChild(css);
-var files=['/launcher/release-notes.js','/launcher/settings-categories.js'].concat(rootEdition?['/root-launcher/root-exit.js','/root-launcher/root-firmware-control.js','/root-launcher/root-firmware.js','/root-launcher/root-audio.js','/root-launcher/root-settings.js','/root-launcher/root-updates.js']:['/launcher/update-panel.js','/launcher/renewal-panel.js']);
-function next(){if(!files.length){window.RenewalPanel.open();return;}var s=document.createElement('script');s.src=files.shift();s.onload=next;document.body.appendChild(s);}next();
-</script></body></html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Home settings · Local preview</title>
+    <style>
+      @font-face{font-family:Outfit;src:url('/launcher/fonts/outfit.ttf')}body{margin:0;background:#101319;color:#f5f7fa;font-family:Outfit,sans-serif}nav{position:fixed;top:0;left:0;right:0;z-index:11000;display:flex;align-items:center;gap:10px;padding:14px 24px;background:#101319;border-bottom:1px solid #414650}nav a{padding:10px 14px;border:1px solid #687381;border-radius:8px;color:#f5f7fa;text-decoration:none;font-size:16px}nav a[aria-current=page]{background:#b8d3ff;color:#202329;border-color:#b8d3ff}nav span{margin-left:auto;color:#bfc8d4}#renewalPanel,#updatePanel,.root-settings{padding-top:72px;box-sizing:border-box}.renewal-card,.root-settings-card{max-height:calc(100vh - 112px)!important}#toast{position:fixed;bottom:20px;left:24px;z-index:12000;background:#b8d3ff;color:#202329;padding:16px;border-radius:10px;display:none}#toast.shown{display:block}#reopen{position:absolute;top:110px;left:24px;padding:18px;font:inherit}button:focus,a:focus{outline:3px solid #b8d3ff;outline-offset:4px}@media(max-width:600px){nav{padding:12px}nav span{display:none}.settings-heading{align-items:flex-start;flex-direction:column}}
+    </style>
+    <script>
+      window.TV_APPS={apps:[]};window.ROOT_VERSION='0.0.1';
+    </script>
+    <script src="/preview/bridge.js"></script>
+  </head>
+  <body>
+    <nav aria-label="Preview edition">
+      <a href="?edition=no-root" id="no-root">No-root Edition</a
+      ><a href="?edition=root" id="root">Root Edition</a
+      ><span>Local preview · TV actions simulated</span>
+    </nav>
+    <button id="reopen" onclick="RenewalPanel.open()">Open settings</button>
+    <div id="toast"></div>
+    <script>
+      var rootEdition=new URLSearchParams(location.search).get('edition')==='root';
+      document.getElementById(rootEdition?'root':'no-root').setAttribute('aria-current','page');
+      var css=document.createElement('link');css.rel='stylesheet';css.href=rootEdition?'/root-launcher/root-settings.css':'/launcher/renewal-panel.css';document.head.appendChild(css);
+      var files=['/launcher/release-notes.js','/launcher/settings-categories.js'].concat(rootEdition?['/root-launcher/root-exit.js','/root-launcher/root-firmware-control.js','/root-launcher/root-firmware.js','/root-launcher/root-audio.js','/root-launcher/root-settings.js','/root-launcher/root-updates.js']:['/launcher/update-panel.js','/launcher/renewal-panel.js']);
+      function next(){if(!files.length){window.RenewalPanel.open();return;}var s=document.createElement('script');s.src=files.shift();s.onload=next;document.body.appendChild(s);}next();
+    </script>
+  </body>
+</html>

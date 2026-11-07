@@ -19,6 +19,16 @@ original-outcome categories. It does not export the original receipt, private
 recovery data, operation IDs, tokens, paths or raw replies, and grants no mutation
 authority. [Failure-injection matrix](INSTALLER-RECOVERY-MATRIX.md).
 
+The next candidate also keeps the first Root cleanup `failure` separate from
+`last_failure`, which describes the latest failed attempt and its cleanup stage.
+For bounded Luna reads these contain only a fixed call identifier, a fixed reason
+(permission denial, missing service/method, negative/malformed/oversized reply,
+timeout or client startup failure), and an optional signed 32-bit error code.
+Both the TV producer and host exporter filter these fields. Raw error text,
+request payloads, inventories and routes are excluded. Existing old failures
+remain unchanged; new detail cannot reconstruct an earlier discarded exception.
+These fields diagnose a blocker and never authorize skipping control restoration.
+
 New package rejection reports preserve the fixed `install failed` and
 `remove failed` Luna states. When the original reply includes `details.reason`,
 optional `luna.reason` retains only the nine fixed LG OSE IPK failure categories
@@ -204,3 +214,36 @@ The separately confirmed Home-off completion archives the original local receipt
 and repeats existing activation eligibility checks before resolving that pending
 activation. It neither enables Home nor updates code. See the [candidate recovery
 path](../RECOVERY.md#candidate-finish-verified-root-setup-with-home-control-off).
+
+## No-root observer failures (next candidate, #376)
+
+An optional `no_root_observer` object identifies the fixed observer `command`
+and `failure` category. It is revalidated in the current report, `first_failure`
+and `observation_failure`. It contains no operation identifier, command text,
+Node environment, filesystem path or remote output. Numeric SSH exit status
+stays in `ssh_command.exit_status`; existing insufficient-storage guidance is
+preserved. The SSH receive deadline now has the fixed reason `operation-timeout`.
+
+| Failure | Established fact | Next investigation or correction |
+| --- | --- | --- |
+| `command-failed` | The SSH command returned nonzero. | Use the numeric status to narrow shell/runtime/storage investigation. Status 127 can mean a missing command, but does not identify which one. Do not infer an IPK failure or change permissions from it. |
+| `timeout` | The SSH receive deadline expired or the transport raised a timeout. | Inspect the original operation using its saved connection when available; timeout does not prove cancellation or allow resubmission. |
+| `connection-interrupted` | The existing transport identified connection loss. | Restore the existing trusted connection with the TV awake; preserve recovery data. |
+| `transport-error` | Another transport exception prevented observation. | Maintainer investigation is required; arbitrary exception text remains private. |
+| `invalid-json` | The command response could not be decoded as JSON. | Investigate runtime output/encoding privately; do not treat raw output as recovery evidence. |
+| `invalid-reply` | JSON was returned with the wrong top-level shape. | Investigate the response contract; do not continue setup. |
+| `foreign-operation` | The response did not identify the expected original operation. | Retain the original receipt and investigate the mismatch; never adopt another operation's response. |
+| `invalid-status` | The matching response failed status validation. | Investigate the status schema/evidence; do not weaken validation or clear pending. |
+
+Observer launch uses POSIX shell `unset NODE_OPTIONS NODE_PATH` before Node,
+removing the dependency on an `env` binary with `-u` support. Failure to unset
+stops before Node; the command is never retried. The trusted observer program,
+its hash, original capsule and package/configuration protocol are unchanged.
+This is a portability correction, not evidence that the affected TV lacks `env -u`.
+
+Old `pending-operation` reports cannot recover the discarded command exit code
+or distinguish these categories retrospectively. Do not repeat installation to
+populate a report. A new report may describe a later observation failure while
+the original cause remains unknown. Neither these categories nor the portable
+launch establish recovery or compatibility on the reporting device. See the
+[source verification record](../history/2026-11-07-no-root-observer-evidence.md).

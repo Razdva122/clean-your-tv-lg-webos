@@ -5,7 +5,7 @@ try:
 except ImportError:
  from profile_plan import CANDIDATE, STOCK
 
-def call(uri,payload,timeout=5):
+def call(uri,payload,timeout=5,allow_failure=False):
  # Keep stdin open until a reply. Closing it makes this TV's luna-send exit early.
  p=subprocess.Popen(['/usr/bin/luna-send','-n','1',uri,json.dumps(payload)],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
  try:
@@ -18,7 +18,8 @@ def call(uri,payload,timeout=5):
    if len(data)>65536:raise ValueError('Oversized reply')
    try:value=json.loads(data)
    except ValueError:continue
-   if value.get('returnValue') is not True:raise RuntimeError(str(value))
+   if not isinstance(value,dict):raise ValueError('Invalid Luna reply')
+   if value.get('returnValue') is not True and not (allow_failure and value.get('returnValue') is False):raise RuntimeError(str(value))
    return value
   raise TimeoutError(uri)
  finally:

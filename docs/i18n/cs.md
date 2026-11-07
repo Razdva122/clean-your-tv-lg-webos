@@ -78,6 +78,8 @@ Tlačítka výše stále nabízejí vydanou verzi. V příštím kandidátu vybe
 
 Na výzvu odpojte TV od napájení, znovu připojte, počkejte na síť a vyberte **Zkusit znovu**. Pohotovost nebo Quick Start není úplný restart; CYTV TV automaticky nerestartuje. Při ztrátě spojení je zkontrolujte a opakujte stejný cíl odebrání bez dalšího průvodce obnovou. Při odmítnutí přístupu použijte požadované připojení Root; pokud je TV zaneprázdněn, počkejte a zkuste znovu. Úspěch se zobrazí až po ověření závěrečného úklidu. Zachovejte klíče a původní zprávy. Nouzové ovládání a souhlas se sdílením výše platí dál.
 
+V tomto kandidátu je po neúspěšné nebo přerušené instalaci přímo dostupná obnova. Pokud No-root nemůže pokračovat, potvrďte jednou úplné odebrání. Při dočasné ztrátě spojení nebo zaneprázdněném procesu CYTV proběhnou nejvýše tři pokusy. Je-li nutný Root, zvolte **Připojit přes Root** pro stejnou TV; ověřený úklid Root dokončí i její zablokované odebrání No-root. Po chybě aktivace Root se CYTV pokusí obnovit a ověřit LG Home bez opakované aktivace. Zrušení s nedokončenou prací zachová zprávu a kroky obnovy. Nouzové zastavení zůstane zachováno.
+
 <!-- Legacy anchors retained for existing links. -->
 <a id="automatické-rozlišení-grafiky-kandidát"></a>
 <a id="čeština--rozhraní-televizoru"></a>
@@ -85,3 +87,5 @@ Na výzvu odpojte TV od napájení, znovu připojte, počkejte na síť a vybert
 <a id="aktualizace-a-obnovení"></a>
 <a id="automatické-rozlišení-grafiky-160"></a>
 <a id="místo-v-úložišti"></a>
+
+> Nevydaný kandidát: experimentální Root Home se vybírá podle schopností Qt SDK 6–9, bez seznamu modelů. Hardwarová kompatibilita a běžné OTA nejsou ověřeny. Jiné integrace Home zůstávají beze změny; po bezpečnostním nebo napájecím zastavení ovládání Home výslovně zapněte. [#364](../development/C1-NATIVE-GATE.md#unpublished-capability-based-compositor-admission-364).

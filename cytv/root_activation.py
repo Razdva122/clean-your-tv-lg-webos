@@ -92,6 +92,10 @@ def activate(installer):
         installer.outcome.startup_observed('root-state-verified')
     except (OSError, RuntimeError, ValueError):
         installer.outcome.startup_observed('unverified')
+        try:
+            installer.recover_failed_activation()
+        except Exception:
+            pass  # Retain the original activation failure even if storage is full.
         raise
     installer.store.finish(installer.profile)
     return requested

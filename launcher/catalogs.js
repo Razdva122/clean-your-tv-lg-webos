@@ -1,2809 +1,4029 @@
 HomeI18n.add({
-  "en": {
-    "A signed Home update is available.": "A signed Home update is available.",
-    "Add app": "Add app",
-    "All installed apps are already on Home.": "All installed apps are already on Home.",
-    "App hidden. Restore it with Add app.": "App hidden. Restore it with Add app.",
-    "Auto-renewal enabled (Beta)": "Auto-renewal enabled (Beta)",
-    "Auto-renewal off": "Auto-renewal off",
-    "Automatic (system language)": "Automatic (system language)",
-    "Back": "Back",
-    "Back to Home": "Back to Home",
-    "Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.": "Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.",
+  'en': {
+    'A signed Home update is available.': 'A signed Home update is available.',
+    'Add app': 'Add app',
+    'All installed apps are already on Home.':
+      'All installed apps are already on Home.',
+    'App hidden. Restore it with Add app.':
+      'App hidden. Restore it with Add app.',
+    'Auto-renewal enabled (Beta)': 'Auto-renewal enabled (Beta)',
+    'Auto-renewal off': 'Auto-renewal off',
+    'Automatic (system language)': 'Automatic (system language)',
+    'Back': 'Back',
+    'Back to Home': 'Back to Home',
+    'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
+      'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.',
     "Can't open {app}": "Can't open {app}",
-    "Change Home": "Change Home",
-    "Change was not confirmed. Check the switch and try again.": "Change was not confirmed. Check the switch and try again.",
-    "Changing Home control…": "Changing Home control…",
-    "Check failed": "Check failed",
-    "Check pending": "Check pending",
-    "Check session": "Check session",
-    "Checking Home control…": "Checking Home control…",
-    "Checking auto-renewal…": "Checking auto-renewal…",
-    "Checking for updates…": "Checking for updates…",
-    "Checking installed apps…": "Checking installed apps…",
-    "Choose a language. Home will reload.": "Choose a language. Home will reload.",
-    "Choose an app to add to Home.": "Choose an app to add to Home.",
-    "Choose where Home and return from apps take you.": "Choose where Home and return from apps take you.",
-    "Confirm update": "Confirm update",
-    "Connection failed — retry scheduled": "Connection failed — retry scheduled",
-    "Could not open LG Home. Check Home Helper and try again.": "Could not open LG Home. Check Home Helper and try again.",
-    "Could not save language. Please try again.": "Could not save language. Please try again.",
-    "Could not save state": "Could not save state",
-    "Could not save your complete profile. Nothing was installed.": "Could not save your complete profile. Nothing was installed.",
-    "Couldn't restore app. Please try again.": "Couldn't restore app. Please try again.",
-    "Couldn't save changes. Please try again.": "Couldn't save changes. Please try again.",
-    "Developer Mode auto-renewal (Beta)": "Developer Mode auto-renewal (Beta)",
-    "Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.": "Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.",
-    "Disable could not be saved. Retry before restarting the service.": "Disable could not be saved. Retry before restarting the service.",
-    "Ethernet": "Ethernet",
-    "Good afternoon": "Good afternoon",
-    "Good evening": "Good evening",
-    "Good morning": "Good morning",
-    "Good night": "Good night",
-    "Hide diagnostics": "Hide diagnostics",
-    "Hide from Home": "Hide from Home",
-    "Hold Back for 1.2 seconds to open LG Home. Your settings stay saved.": "Hold Back for 1.2 seconds to open LG Home. Your settings stay saved.",
-    "Home": "Home",
-    "Home status is unknown. The Home button may still work.": "Home status is unknown. The Home button may still work.",
-    "Home and return from apps open Clean Your TV.": "Home and return from apps open Clean Your TV.",
-    "Home and return from apps open LG Home.": "Home and return from apps open LG Home.",
-    "Home is up to date.": "Home is up to date.",
-    "Home settings": "Home settings",
-    "Home will close during installation. Your app list and settings will be saved first. Press Confirm update to continue.": "Home will close during installation. Your app list and settings will be saved first. Press Confirm update to continue.",
-    "Inputs": "Inputs",
-    "Installed Home {installed} · Available {available}": "Installed Home {installed} · Available {available}",
-    "Installing Home… Keep the TV on. If this screen closes, open Home again or use Home Updater for recovery.": "Installing Home… Keep the TV on. If this screen closes, open Home again or use Home Updater for recovery.",
-    "LG response could not confirm renewal": "LG response could not confirm renewal",
-    "Language": "Language",
-    "Last checked: {date}": "Last checked: {date}",
-    "Last confirmed renewal: {date}": "Last confirmed renewal: {date}",
-    "Live TV": "Live TV",
-    "Manage Home, software updates and your TV.": "Manage Home, software updates and your TV.",
-    "Network settings": "Network settings",
-    "No inputs found": "No inputs found",
-    "No readable Developer Mode session": "No readable Developer Mode session",
-    "No recovery result available. Your helper has not been changed.": "No recovery result available. Your helper has not been changed.",
-    "Not yet": "Not yet",
-    "Offline": "Offline",
-    "Open LG Home": "Open LG Home",
-    "This button opens LG Home once. Your Home screen choice and settings stay saved.": "This button opens LG Home once. Your Home screen choice and settings stay saved.",
-    "Recovery": "Recovery",
-    "Recovery state: {status}. Use Home Updater to restore the previous version if offered.": "Recovery state: {status}. Use Home Updater to restore the previous version if offered.",
-    "Renewal confirmed": "Renewal confirmed",
-    "Saving apps, icons and settings…": "Saving apps, icons and settings…",
-    "Service unavailable. Install the complete Home package and try again. Manage your Developer Mode timer manually.": "Service unavailable. Install the complete Home package and try again. Manage your Developer Mode timer manually.",
-    "Session changed — retry scheduled": "Session changed — retry scheduled",
-    "Session checked": "Session checked",
-    "Session expired — open Developer Mode": "Session expired — open Developer Mode",
-    "Settings": "Settings",
-    "Setup error: {error}. Use Developer Mode manually.": "Setup error: {error}. Use Developer Mode manually.",
-    "Share this with your TV model and firmware at:": "Share this with your TV model and firmware at:",
-    "Show diagnostics": "Show diagnostics",
-    "Showing the saved list. Could not refresh apps from the TV.": "Showing the saved list. Could not refresh apps from the TV.",
-    "Software updates": "Software updates",
-    "TV settings": "TV settings",
-    "Try again": "Try again",
-    "Turn off auto-renewal": "Turn off auto-renewal",
-    "Turn on auto-renewal": "Turn on auto-renewal",
-    "Undo": "Undo",
-    "Update Home": "Update Home",
-    "Update Home Helper using the installation guide first.": "Update Home Helper using the installation guide first.",
-    "Update Home or open LG settings for picture, sound and network.": "Update Home or open LG settings for picture, sound and network.",
-    "Update available, but a verified recovery package for your installed version is missing.": "Update available, but a verified recovery package for your installed version is missing.",
-    "Update available. Without root, install it from a computer using the guide.": "Update available. Without root, install it from a computer using the guide.",
-    "Update outcome is not confirmed. Open Home Updater → Recovery before retrying.": "Update outcome is not confirmed. Open Home Updater → Recovery before retrying.",
-    "Update service or signed release unavailable. Install the separate Home Updater package once, then retry. Your current Home is unchanged.": "Update service or signed release unavailable. Install the separate Home Updater package once, then retry. Your current Home is unchanged.",
-    "Update state: {status}. Reopen Home when installation finishes.": "Update state: {status}. Reopen Home when installation finishes.",
-    "Updates and TV": "Updates and TV",
-    "Working…": "Working…",
-    "Your Home screen": "Your Home screen",
-    "Your installed Home is newer than this release.": "Your installed Home is newer than this release.",
-    "{app} added": "{app} added",
-    "{hours} hours remaining (estimate)": "{hours} hours remaining (estimate)",
-    "← ↑ ↓ → Move   ·   OK Place   ·   Back Cancel   ·   ↓ Below last row to hide": "← ↑ ↓ → Move   ·   OK Place   ·   Back Cancel   ·   ↓ Below last row to hide",
-    "No-root Edition": "No-root Edition",
-    "Cancel": "Cancel",
-    "Install Home update?": "Install Home update?",
-    "Restore previous Home?": "Restore previous Home?",
-    "Home will close during installation. Your apps and settings will be saved.": "Home will close during installation. Your apps and settings will be saved.",
-    "The previous Home version and saved settings will be restored.": "The previous Home version and saved settings will be restored.",
-    "Install update": "Install update",
-    "Restore previous Home": "Restore previous Home",
-    "Release notes": "Release notes",
-    "↑ ↓ Read notes · ← → Choose action · Back Close": "↑ ↓ Read notes · ← → Choose action · Back Close",
-    "← → Choose action · Back Open Home": "← → Choose action · Back Open Home",
-    "Home control could not be restored automatically. Open Home settings.": "Home control could not be restored automatically. Open Home settings.",
-    "Your previous Home screen choice has been restored.": "Your previous Home screen choice has been restored.",
-    "Home control remains off because it was disabled during the update.": "Home control remains off because it was disabled during the update.",
-    "Rollback remains available until the next update.": "Rollback remains available until the next update.",
-    "Previous Root version and profile restored.": "Previous Root version and profile restored.",
-    "Installed: {version}": "Installed: {version}",
-    "Available: {version}": "Available: {version}",
-    "Software updates. Update available.": "Software updates. Update available.",
-    "Open LG Home once, keeping your Home choice.": "Open LG Home once, keeping your Home choice.",
-    "Hold Back for 1.2 seconds to open LG Home.": "Hold Back for 1.2 seconds to open LG Home.",
-    "Developer Mode": "Developer Mode",
-    "Beta": "Beta",
-    "Home Helper": "Home Helper",
-    "Home button settings": "Home button settings",
-    "Start Helper": "Start Helper",
-    "Start Helper?": "Start Helper?",
-    "Starting Helper…": "Starting Helper…",
-    "Helper opens Home with your remote and helps you return to Home after turning on the TV.": "Helper opens Home with your remote and helps you return to Home after turning on the TV.",
-    "Helper is unavailable. Reinstall the complete Home package from your computer.": "Helper is unavailable. Reinstall the complete Home package from your computer.",
-    "Helper was stopped for safety. Start it only when you are ready to use Home control again.": "Helper was stopped for safety. Start it only when you are ready to use Home control again.",
-    "Helper is stopped. Start it to use the Home button and return from apps.": "Helper is stopped. Start it to use the Home button and return from apps.",
-    "Start Helper to use Home control again. Your saved Home screen choice will be used.": "Start Helper to use Home control again. Your saved Home screen choice will be used.",
-    "Status is unavailable.": "Status is unavailable.",
-    "Try refreshing. If this continues, reinstall the complete Home package from your computer.": "Try refreshing. If this continues, reinstall the complete Home package from your computer.",
-    "No recovery needed.": "No recovery needed.",
-    "Open Home to continue.": "Open Home to continue.",
-    "Open Home to continue. If the update caused a problem, you can restore the previous version.": "Open Home to continue. If the update caused a problem, you can restore the previous version.",
-    "Recovery needs attention.": "Recovery needs attention.",
-    "Refresh status first. If recovery remains unavailable, use the installer on your computer.": "Refresh status first. If recovery remains unavailable, use the installer on your computer.",
-    "An update is in progress.": "An update is in progress.",
-    "Keep the TV powered on. Status will refresh automatically.": "Keep the TV powered on. Status will refresh automatically.",
-    "Could not open Home.": "Could not open Home.",
-    "If Home stops working after an update, use this app to restore the previous version. For regular updates, open Home settings.": "If Home stops working after an update, use this app to restore the previous version. For regular updates, open Home settings.",
-    "Open Home": "Open Home",
-    "Refresh status": "Refresh status"
+    'Change Home': 'Change Home',
+    'Change was not confirmed. Check the switch and try again.':
+      'Change was not confirmed. Check the switch and try again.',
+    'Changing Home control…': 'Changing Home control…',
+    'Check failed': 'Check failed',
+    'Check pending': 'Check pending',
+    'Check session': 'Check session',
+    'Checking Home control…': 'Checking Home control…',
+    'Checking auto-renewal…': 'Checking auto-renewal…',
+    'Checking for updates…': 'Checking for updates…',
+    'Checking installed apps…': 'Checking installed apps…',
+    'Choose a language. Home will reload.':
+      'Choose a language. Home will reload.',
+    'Choose an app to add to Home.': 'Choose an app to add to Home.',
+    'Choose where Home and return from apps take you.':
+      'Choose where Home and return from apps take you.',
+    'Confirm update': 'Confirm update',
+    'Connection failed — retry scheduled':
+      'Connection failed — retry scheduled',
+    'Could not open LG Home. Check Home Helper and try again.':
+      'Could not open LG Home. Check Home Helper and try again.',
+    'Could not save language. Please try again.':
+      'Could not save language. Please try again.',
+    'Could not save state': 'Could not save state',
+    'Could not save your complete profile. Nothing was installed.':
+      'Could not save your complete profile. Nothing was installed.',
+    "Couldn't restore app. Please try again.":
+      "Couldn't restore app. Please try again.",
+    "Couldn't save changes. Please try again.":
+      "Couldn't save changes. Please try again.",
+    'Developer Mode auto-renewal (Beta)': 'Developer Mode auto-renewal (Beta)',
+    'Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.':
+      'Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.',
+    'Disable could not be saved. Retry before restarting the service.':
+      'Disable could not be saved. Retry before restarting the service.',
+    'Ethernet': 'Ethernet',
+    'Good afternoon': 'Good afternoon',
+    'Good evening': 'Good evening',
+    'Good morning': 'Good morning',
+    'Good night': 'Good night',
+    'Hide diagnostics': 'Hide diagnostics',
+    'Hide from Home': 'Hide from Home',
+    'Hold Back for 1.2 seconds to open LG Home. Your settings stay saved.':
+      'Hold Back for 1.2 seconds to open LG Home. Your settings stay saved.',
+    'Home': 'Home',
+    'Home status is unknown. The Home button may still work.':
+      'Home status is unknown. The Home button may still work.',
+    'Home and return from apps open Clean Your TV.':
+      'Home and return from apps open Clean Your TV.',
+    'Home and return from apps open LG Home.':
+      'Home and return from apps open LG Home.',
+    'Home is up to date.': 'Home is up to date.',
+    'Home settings': 'Home settings',
+    'Home will close during installation. Your app list and settings will be saved first. Press Confirm update to continue.':
+      'Home will close during installation. Your app list and settings will be saved first. Press Confirm update to continue.',
+    'Inputs': 'Inputs',
+    'Installed Home {installed} · Available {available}':
+      'Installed Home {installed} · Available {available}',
+    'Installing Home… Keep the TV on. If this screen closes, open Home again or use Home Updater for recovery.':
+      'Installing Home… Keep the TV on. If this screen closes, open Home again or use Home Updater for recovery.',
+    'LG response could not confirm renewal':
+      'LG response could not confirm renewal',
+    'Language': 'Language',
+    'Last checked: {date}': 'Last checked: {date}',
+    'Last confirmed renewal: {date}': 'Last confirmed renewal: {date}',
+    'Live TV': 'Live TV',
+    'Manage Home, software updates and your TV.':
+      'Manage Home, software updates and your TV.',
+    'Network settings': 'Network settings',
+    'No inputs found': 'No inputs found',
+    'No readable Developer Mode session': 'No readable Developer Mode session',
+    'No recovery result available. Your helper has not been changed.':
+      'No recovery result available. Your helper has not been changed.',
+    'Not yet': 'Not yet',
+    'Offline': 'Offline',
+    'Open LG Home': 'Open LG Home',
+    'This button opens LG Home once. Your Home screen choice and settings stay saved.':
+      'This button opens LG Home once. Your Home screen choice and settings stay saved.',
+    'Recovery': 'Recovery',
+    'Recovery state: {status}. Use Home Updater to restore the previous version if offered.':
+      'Recovery state: {status}. Use Home Updater to restore the previous version if offered.',
+    'Renewal confirmed': 'Renewal confirmed',
+    'Saving apps, icons and settings…': 'Saving apps, icons and settings…',
+    'Service unavailable. Install the complete Home package and try again. Manage your Developer Mode timer manually.':
+      'Service unavailable. Install the complete Home package and try again. Manage your Developer Mode timer manually.',
+    'Session changed — retry scheduled': 'Session changed — retry scheduled',
+    'Session checked': 'Session checked',
+    'Session expired — open Developer Mode':
+      'Session expired — open Developer Mode',
+    'Settings': 'Settings',
+    'Setup error: {error}. Use Developer Mode manually.':
+      'Setup error: {error}. Use Developer Mode manually.',
+    'Share this with your TV model and firmware at:':
+      'Share this with your TV model and firmware at:',
+    'Show diagnostics': 'Show diagnostics',
+    'Showing the saved list. Could not refresh apps from the TV.':
+      'Showing the saved list. Could not refresh apps from the TV.',
+    'Software updates': 'Software updates',
+    'TV settings': 'TV settings',
+    'Try again': 'Try again',
+    'Turn off auto-renewal': 'Turn off auto-renewal',
+    'Turn on auto-renewal': 'Turn on auto-renewal',
+    'Undo': 'Undo',
+    'Update Home': 'Update Home',
+    'Update Home Helper using the installation guide first.':
+      'Update Home Helper using the installation guide first.',
+    'Update Home or open LG settings for picture, sound and network.':
+      'Update Home or open LG settings for picture, sound and network.',
+    'Update available, but a verified recovery package for your installed version is missing.':
+      'Update available, but a verified recovery package for your installed version is missing.',
+    'Update available. Without root, install it from a computer using the guide.':
+      'Update available. Without root, install it from a computer using the guide.',
+    'Update outcome is not confirmed. Open Home Updater → Recovery before retrying.':
+      'Update outcome is not confirmed. Open Home Updater → Recovery before retrying.',
+    'Update service or signed release unavailable. Install the separate Home Updater package once, then retry. Your current Home is unchanged.':
+      'Update service or signed release unavailable. Install the separate Home Updater package once, then retry. Your current Home is unchanged.',
+    'Update state: {status}. Reopen Home when installation finishes.':
+      'Update state: {status}. Reopen Home when installation finishes.',
+    'Updates and TV': 'Updates and TV',
+    'Working…': 'Working…',
+    'Your Home screen': 'Your Home screen',
+    'Your installed Home is newer than this release.':
+      'Your installed Home is newer than this release.',
+    '{app} added': '{app} added',
+    '{hours} hours remaining (estimate)': '{hours} hours remaining (estimate)',
+    '← ↑ ↓ → Move   ·   OK Place   ·   Back Cancel   ·   ↓ Below last row to hide':
+      '← ↑ ↓ → Move   ·   OK Place   ·   Back Cancel   ·   ↓ Below last row to hide',
+    'No-root Edition': 'No-root Edition',
+    'Cancel': 'Cancel',
+    'Install Home update?': 'Install Home update?',
+    'Restore previous Home?': 'Restore previous Home?',
+    'Home will close during installation. Your apps and settings will be saved.':
+      'Home will close during installation. Your apps and settings will be saved.',
+    'The previous Home version and saved settings will be restored.':
+      'The previous Home version and saved settings will be restored.',
+    'Install update': 'Install update',
+    'Restore previous Home': 'Restore previous Home',
+    'Release notes': 'Release notes',
+    '↑ ↓ Read notes · ← → Choose action · Back Close':
+      '↑ ↓ Read notes · ← → Choose action · Back Close',
+    '← → Choose action · Back Open Home': '← → Choose action · Back Open Home',
+    'Home control could not be restored automatically. Open Home settings.':
+      'Home control could not be restored automatically. Open Home settings.',
+    'Your previous Home screen choice has been restored.':
+      'Your previous Home screen choice has been restored.',
+    'Home control remains off because it was disabled during the update.':
+      'Home control remains off because it was disabled during the update.',
+    'Rollback remains available until the next update.':
+      'Rollback remains available until the next update.',
+    'Previous Root version and profile restored.':
+      'Previous Root version and profile restored.',
+    'Installed: {version}': 'Installed: {version}',
+    'Available: {version}': 'Available: {version}',
+    'Software updates. Update available.':
+      'Software updates. Update available.',
+    'Open LG Home once, keeping your Home choice.':
+      'Open LG Home once, keeping your Home choice.',
+    'Hold Back for 1.2 seconds to open LG Home.':
+      'Hold Back for 1.2 seconds to open LG Home.',
+    'Developer Mode': 'Developer Mode',
+    'Beta': 'Beta',
+    'Home Helper': 'Home Helper',
+    'Home button settings': 'Home button settings',
+    'Start Helper': 'Start Helper',
+    'Start Helper?': 'Start Helper?',
+    'Starting Helper…': 'Starting Helper…',
+    'Helper opens Home with your remote and helps you return to Home after turning on the TV.':
+      'Helper opens Home with your remote and helps you return to Home after turning on the TV.',
+    'Helper is unavailable. Reinstall the complete Home package from your computer.':
+      'Helper is unavailable. Reinstall the complete Home package from your computer.',
+    'Helper was stopped for safety. Start it only when you are ready to use Home control again.':
+      'Helper was stopped for safety. Start it only when you are ready to use Home control again.',
+    'Helper is stopped. Start it to use the Home button and return from apps.':
+      'Helper is stopped. Start it to use the Home button and return from apps.',
+    'Start Helper to use Home control again. Your saved Home screen choice will be used.':
+      'Start Helper to use Home control again. Your saved Home screen choice will be used.',
+    'Status is unavailable.': 'Status is unavailable.',
+    'Try refreshing. If this continues, reinstall the complete Home package from your computer.':
+      'Try refreshing. If this continues, reinstall the complete Home package from your computer.',
+    'No recovery needed.': 'No recovery needed.',
+    'Open Home to continue.': 'Open Home to continue.',
+    'Open Home to continue. If the update caused a problem, you can restore the previous version.':
+      'Open Home to continue. If the update caused a problem, you can restore the previous version.',
+    'Recovery needs attention.': 'Recovery needs attention.',
+    'Refresh status first. If recovery remains unavailable, use the installer on your computer.':
+      'Refresh status first. If recovery remains unavailable, use the installer on your computer.',
+    'An update is in progress.': 'An update is in progress.',
+    'Keep the TV powered on. Status will refresh automatically.':
+      'Keep the TV powered on. Status will refresh automatically.',
+    'Could not open Home.': 'Could not open Home.',
+    'If Home stops working after an update, use this app to restore the previous version. For regular updates, open Home settings.':
+      'If Home stops working after an update, use this app to restore the previous version. For regular updates, open Home settings.',
+    'Open Home': 'Open Home',
+    'Refresh status': 'Refresh status'
   },
-  "de": {
-    "A signed Home update is available.": "Ein signiertes Home-Update ist verfügbar.",
-    "Add app": "App hinzufügen",
-    "All installed apps are already on Home.": "Alle installierten Apps sind bereits auf Home.",
-    "App hidden. Restore it with Add app.": "App ausgeblendet. Mit „App hinzufügen“ wiederherstellen.",
-    "Auto-renewal enabled (Beta)": "Automatische Verlängerung aktiv (Beta)",
-    "Auto-renewal off": "Automatische Verlängerung aus",
-    "Automatic (system language)": "Automatisch (Systemsprache)",
-    "Back": "Zurück",
-    "Back to Home": "Zurück zu Home",
-    "Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.": "Beta: Die Verlängerung ist auf No-root-TVs noch nicht bestätigt. Prüfen Sie weiterhin den Timer in der Developer Mode-App.",
-    "Can't open {app}": "{app} kann nicht geöffnet werden",
-    "Change Home": "Home ändern",
-    "Change was not confirmed. Check the switch and try again.": "Änderung nicht bestätigt. Prüfen Sie den Schalter und versuchen Sie es erneut.",
-    "Changing Home control…": "Home-Steuerung wird geändert…",
-    "Check failed": "Prüfung fehlgeschlagen",
-    "Check pending": "Prüfung ausstehend",
-    "Check session": "Sitzung prüfen",
-    "Checking Home control…": "Home-Steuerung wird geprüft…",
-    "Checking auto-renewal…": "Automatische Verlängerung wird geprüft…",
-    "Checking for updates…": "Updates werden gesucht…",
-    "Checking installed apps…": "Installierte Apps werden geprüft…",
-    "Choose a language. Home will reload.": "Wählen Sie eine Sprache. Home wird neu geladen.",
-    "Choose an app to add to Home.": "Wählen Sie eine App für Home.",
-    "Choose where Home and return from apps take you.": "Wählen Sie das Ziel für Home und die Rückkehr aus Apps.",
-    "Confirm update": "Update bestätigen",
-    "Connection failed — retry scheduled": "Verbindung fehlgeschlagen — erneuter Versuch geplant",
-    "Could not open LG Home. Check Home Helper and try again.": "LG Home konnte nicht geöffnet werden. Prüfen Sie Home Helper und versuchen Sie es erneut.",
-    "Could not save language. Please try again.": "Sprache konnte nicht gespeichert werden. Bitte erneut versuchen.",
-    "Could not save state": "Status konnte nicht gespeichert werden",
-    "Could not save your complete profile. Nothing was installed.": "Ihr vollständiges Profil konnte nicht gespeichert werden. Es wurde nichts installiert.",
-    "Couldn't restore app. Please try again.": "App konnte nicht wiederhergestellt werden. Bitte erneut versuchen.",
-    "Couldn't save changes. Please try again.": "Änderungen konnten nicht gespeichert werden. Bitte erneut versuchen.",
-    "Developer Mode auto-renewal (Beta)": "Developer Mode automatisch verlängern (Beta)",
-    "Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.": "Developer Mode hält Home installiert. Die automatische Verlängerung versucht, die Sitzung bei eingeschaltetem und verbundenem TV zu verlängern.",
-    "Disable could not be saved. Retry before restarting the service.": "Deaktivierung konnte nicht gespeichert werden. Vor dem Neustart des Dienstes erneut versuchen.",
-    "Ethernet": "Ethernet",
-    "Good afternoon": "Guten Tag",
-    "Good evening": "Guten Abend",
-    "Good morning": "Guten Morgen",
-    "Good night": "Gute Nacht",
-    "Hide diagnostics": "Diagnose ausblenden",
-    "Hide from Home": "Auf Home ausblenden",
-    "Hold Back for 1.2 seconds to open LG Home. Your settings stay saved.": "Halten Sie Zurück 1,2 Sekunden gedrückt, um LG Home zu öffnen. Ihre Einstellungen bleiben gespeichert.",
-    "Home": "Home",
-    "Home status is unknown. The Home button may still work.": "Home-Status unbekannt. Die Home-Taste kann weiter funktionieren.",
-    "Home and return from apps open Clean Your TV.": "Home und die Rückkehr aus Apps öffnen Clean Your TV.",
-    "Home and return from apps open LG Home.": "Home und die Rückkehr aus Apps öffnen LG Home.",
-    "Home is up to date.": "Home ist aktuell.",
-    "Home settings": "Home-Einstellungen",
-    "Home will close during installation. Your app list and settings will be saved first. Press Confirm update to continue.": "Home wird während der Installation geschlossen. Ihre App-Liste und Einstellungen werden zuvor gespeichert. Wählen Sie „Update bestätigen“, um fortzufahren.",
-    "Inputs": "Eingänge",
-    "Installed Home {installed} · Available {available}": "Home installiert: {installed} · Verfügbar: {available}",
-    "Installing Home… Keep the TV on. If this screen closes, open Home again or use Home Updater for recovery.": "Home wird installiert… Lassen Sie den TV eingeschaltet. Falls dieser Bildschirm schließt, öffnen Sie Home erneut oder nutzen Sie Home Updater zur Wiederherstellung.",
-    "LG response could not confirm renewal": "LG-Antwort konnte die Verlängerung nicht bestätigen",
-    "Language": "Sprache",
-    "Last checked: {date}": "Zuletzt geprüft: {date}",
-    "Last confirmed renewal: {date}": "Letzte bestätigte Verlängerung: {date}",
-    "Live TV": "Live-TV",
-    "Manage Home, software updates and your TV.": "Home, Softwareupdates und Ihren TV verwalten.",
-    "Network settings": "Netzwerkeinstellungen",
-    "No inputs found": "Keine Eingänge gefunden",
-    "No readable Developer Mode session": "Keine lesbare Developer Mode-Sitzung",
-    "No recovery result available. Your helper has not been changed.": "Kein Wiederherstellungsergebnis verfügbar. Ihr Helper wurde nicht geändert.",
-    "Not yet": "Noch nicht",
-    "Offline": "Offline",
-    "Open LG Home": "LG Home öffnen",
-    "This button opens LG Home once. Your Home screen choice and settings stay saved.": "Diese Taste öffnet LG Home einmalig. Die Auswahl Ihres Startbildschirms und Ihre Einstellungen bleiben gespeichert.",
-    "Recovery": "Wiederherstellung",
-    "Recovery state: {status}. Use Home Updater to restore the previous version if offered.": "Wiederherstellungsstatus: {status}. Stellen Sie mit Home Updater die vorherige Version wieder her, sofern angeboten.",
-    "Renewal confirmed": "Verlängerung bestätigt",
-    "Saving apps, icons and settings…": "Apps, Symbole und Einstellungen werden gespeichert…",
-    "Service unavailable. Install the complete Home package and try again. Manage your Developer Mode timer manually.": "Dienst nicht verfügbar. Installieren Sie das vollständige Home-Paket und versuchen Sie es erneut. Verwalten Sie den Developer Mode-Timer manuell.",
-    "Session changed — retry scheduled": "Sitzung geändert — erneuter Versuch geplant",
-    "Session checked": "Sitzung geprüft",
-    "Session expired — open Developer Mode": "Sitzung abgelaufen — Developer Mode öffnen",
-    "Settings": "Einstellungen",
-    "Setup error: {error}. Use Developer Mode manually.": "Einrichtungsfehler: {error}. Verwenden Sie Developer Mode manuell.",
-    "Share this with your TV model and firmware at:": "Teilen Sie dies mit TV-Modell und Firmware unter:",
-    "Show diagnostics": "Diagnose anzeigen",
-    "Showing the saved list. Could not refresh apps from the TV.": "Gespeicherte Liste wird angezeigt. Apps konnten nicht vom TV aktualisiert werden.",
-    "Software updates": "Softwareupdates",
-    "TV settings": "TV-Einstellungen",
-    "Try again": "Erneut versuchen",
-    "Turn off auto-renewal": "Automatische Verlängerung ausschalten",
-    "Turn on auto-renewal": "Automatische Verlängerung einschalten",
-    "Undo": "Rückgängig",
-    "Update Home": "Home aktualisieren",
-    "Update Home Helper using the installation guide first.": "Aktualisieren Sie zuerst Home Helper anhand der Installationsanleitung.",
-    "Update Home or open LG settings for picture, sound and network.": "Home aktualisieren oder LG-Einstellungen für Bild, Ton und Netzwerk öffnen.",
-    "Update available, but a verified recovery package for your installed version is missing.": "Update verfügbar, aber ein geprüftes Wiederherstellungspaket für Ihre installierte Version fehlt.",
-    "Update available. Without root, install it from a computer using the guide.": "Update verfügbar. Ohne Root installieren Sie es nach Anleitung vom Computer aus.",
-    "Update outcome is not confirmed. Open Home Updater → Recovery before retrying.": "Update-Ergebnis nicht bestätigt. Öffnen Sie vor einem erneuten Versuch Home Updater → Wiederherstellung.",
-    "Update service or signed release unavailable. Install the separate Home Updater package once, then retry. Your current Home is unchanged.": "Updatedienst oder signierte Veröffentlichung nicht verfügbar. Installieren Sie einmal das separate Home Updater-Paket und versuchen Sie es erneut. Ihr aktuelles Home bleibt unverändert.",
-    "Update state: {status}. Reopen Home when installation finishes.": "Update-Status: {status}. Öffnen Sie Home nach Abschluss der Installation erneut.",
-    "Updates and TV": "Updates und TV",
-    "Working…": "Wird ausgeführt…",
-    "Your Home screen": "Ihr Home-Bildschirm",
-    "Your installed Home is newer than this release.": "Ihr installiertes Home ist neuer als diese Veröffentlichung.",
-    "{app} added": "{app} hinzugefügt",
-    "{hours} hours remaining (estimate)": "Noch {hours} Stunden (geschätzt)",
-    "← ↑ ↓ → Move   ·   OK Place   ·   Back Cancel   ·   ↓ Below last row to hide": "← ↑ ↓ → Verschieben   ·   OK Platzieren   ·   Zurück Abbrechen   ·   ↓ Unter letzte Zeile zum Ausblenden",
-    "No-root Edition": "Version ohne Root",
-    "Cancel": "Abbrechen",
-    "Install Home update?": "Home-Update installieren?",
-    "Restore previous Home?": "Vorheriges Home wiederherstellen?",
-    "Home will close during installation. Your apps and settings will be saved.": "Home wird während der Installation geschlossen. Ihre Apps und Einstellungen werden gespeichert.",
-    "The previous Home version and saved settings will be restored.": "Die vorherige Home-Version und die gespeicherten Einstellungen werden wiederhergestellt.",
-    "Install update": "Update installieren",
-    "Restore previous Home": "Vorheriges Home wiederherstellen",
-    "Release notes": "Neuerungen",
-    "↑ ↓ Read notes · ← → Choose action · Back Close": "↑ ↓ Änderungen lesen · ← → Aktion wählen · Zurück Schließen",
-    "← → Choose action · Back Open Home": "← → Aktion wählen · Zurück Home öffnen",
-    "Home control could not be restored automatically. Open Home settings.": "Die Home-Steuerung konnte nicht automatisch wiederhergestellt werden. Öffne die Home-Einstellungen.",
-    "Your previous Home screen choice has been restored.": "Deine vorherige Startbildschirmauswahl wurde wiederhergestellt.",
-    "Home control remains off because it was disabled during the update.": "Die Home-Steuerung bleibt aus, weil sie während des Updates deaktiviert wurde.",
-    "Rollback remains available until the next update.": "Die Rückkehr bleibt bis zum nächsten Update verfügbar.",
-    "Previous Root version and profile restored.": "Vorherige Root-Version und Profil wiederhergestellt.",
-    "Installed: {version}": "Installiert: {version}",
-    "Available: {version}": "Verfügbar: {version}",
-    "Software updates. Update available.": "Softwareupdates. Ein Update ist verfügbar.",
-    "Open LG Home once, keeping your Home choice.": "LG Home einmal öffnen; die Home-Auswahl bleibt gespeichert.",
-    "Hold Back for 1.2 seconds to open LG Home.": "Zurück 1,2 Sekunden halten, um LG Home zu öffnen.",
-    "Developer Mode": "Entwicklermodus",
-    "Beta": "Beta",
-    "Home Helper": "Home Helper",
-    "Home button settings": "Home-Taste einrichten",
-    "Start Helper": "Helper starten",
-    "Start Helper?": "Helper starten?",
-    "Starting Helper…": "Helper wird gestartet…",
-    "Helper opens Home with your remote and helps you return to Home after turning on the TV.": "Helper öffnet Home mit der Fernbedienung und hilft nach dem Einschalten des Fernsehers zu Home zurückzukehren.",
-    "Helper is unavailable. Reinstall the complete Home package from your computer.": "Helper ist nicht verfügbar. Installieren Sie das vollständige Home-Paket vom Computer neu.",
-    "Helper was stopped for safety. Start it only when you are ready to use Home control again.": "Helper wurde zur Sicherheit gestoppt. Starten Sie ihn, wenn Sie die Home-Steuerung wieder nutzen möchten.",
-    "Helper is stopped. Start it to use the Home button and return from apps.": "Helper ist gestoppt. Starten Sie ihn für die Home-Taste und die Rückkehr aus Apps.",
-    "Start Helper to use Home control again. Your saved Home screen choice will be used.": "Starten Sie Helper, um Home wieder zu steuern. Ihre gespeicherte Home-Auswahl wird verwendet.",
-    "Status is unavailable.": "Status ist nicht verfügbar.",
-    "Try refreshing. If this continues, reinstall the complete Home package from your computer.": "Aktualisieren Sie den Status. Bleibt das Problem bestehen, installieren Sie das vollständige Home-Paket vom Computer neu.",
-    "No recovery needed.": "Keine Wiederherstellung erforderlich.",
-    "Open Home to continue.": "Öffnen Sie Home, um fortzufahren.",
-    "Open Home to continue. If the update caused a problem, you can restore the previous version.": "Öffnen Sie Home. Falls das Update Probleme verursacht hat, können Sie die vorherige Version wiederherstellen.",
-    "Recovery needs attention.": "Wiederherstellung erfordert Aufmerksamkeit.",
-    "Refresh status first. If recovery remains unavailable, use the installer on your computer.": "Aktualisieren Sie zuerst den Status. Bleibt die Wiederherstellung nicht verfügbar, verwenden Sie das Installationsprogramm auf Ihrem Computer.",
-    "An update is in progress.": "Ein Update wird installiert.",
-    "Keep the TV powered on. Status will refresh automatically.": "Lassen Sie den Fernseher eingeschaltet. Der Status wird automatisch aktualisiert.",
-    "Could not open Home.": "Home konnte nicht geöffnet werden.",
-    "If Home stops working after an update, use this app to restore the previous version. For regular updates, open Home settings.": "Wenn Home nach einem Update nicht mehr funktioniert, können Sie hier die vorherige Version wiederherstellen. Reguläre Updates finden Sie in den Home-Einstellungen.",
-    "Open Home": "Home öffnen",
-    "Refresh status": "Status aktualisieren"
+  'de': {
+    'A signed Home update is available.':
+      'Ein signiertes Home-Update ist verfügbar.',
+    'Add app': 'App hinzufügen',
+    'All installed apps are already on Home.':
+      'Alle installierten Apps sind bereits auf Home.',
+    'App hidden. Restore it with Add app.':
+      'App ausgeblendet. Mit „App hinzufügen“ wiederherstellen.',
+    'Auto-renewal enabled (Beta)': 'Automatische Verlängerung aktiv (Beta)',
+    'Auto-renewal off': 'Automatische Verlängerung aus',
+    'Automatic (system language)': 'Automatisch (Systemsprache)',
+    'Back': 'Zurück',
+    'Back to Home': 'Zurück zu Home',
+    'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
+      'Beta: Die Verlängerung ist auf No-root-TVs noch nicht bestätigt. Prüfen Sie weiterhin den Timer in der Developer Mode-App.',
+    "Can't open {app}": '{app} kann nicht geöffnet werden',
+    'Change Home': 'Home ändern',
+    'Change was not confirmed. Check the switch and try again.':
+      'Änderung nicht bestätigt. Prüfen Sie den Schalter und versuchen Sie es erneut.',
+    'Changing Home control…': 'Home-Steuerung wird geändert…',
+    'Check failed': 'Prüfung fehlgeschlagen',
+    'Check pending': 'Prüfung ausstehend',
+    'Check session': 'Sitzung prüfen',
+    'Checking Home control…': 'Home-Steuerung wird geprüft…',
+    'Checking auto-renewal…': 'Automatische Verlängerung wird geprüft…',
+    'Checking for updates…': 'Updates werden gesucht…',
+    'Checking installed apps…': 'Installierte Apps werden geprüft…',
+    'Choose a language. Home will reload.':
+      'Wählen Sie eine Sprache. Home wird neu geladen.',
+    'Choose an app to add to Home.': 'Wählen Sie eine App für Home.',
+    'Choose where Home and return from apps take you.':
+      'Wählen Sie das Ziel für Home und die Rückkehr aus Apps.',
+    'Confirm update': 'Update bestätigen',
+    'Connection failed — retry scheduled':
+      'Verbindung fehlgeschlagen — erneuter Versuch geplant',
+    'Could not open LG Home. Check Home Helper and try again.':
+      'LG Home konnte nicht geöffnet werden. Prüfen Sie Home Helper und versuchen Sie es erneut.',
+    'Could not save language. Please try again.':
+      'Sprache konnte nicht gespeichert werden. Bitte erneut versuchen.',
+    'Could not save state': 'Status konnte nicht gespeichert werden',
+    'Could not save your complete profile. Nothing was installed.':
+      'Ihr vollständiges Profil konnte nicht gespeichert werden. Es wurde nichts installiert.',
+    "Couldn't restore app. Please try again.":
+      'App konnte nicht wiederhergestellt werden. Bitte erneut versuchen.',
+    "Couldn't save changes. Please try again.":
+      'Änderungen konnten nicht gespeichert werden. Bitte erneut versuchen.',
+    'Developer Mode auto-renewal (Beta)':
+      'Developer Mode automatisch verlängern (Beta)',
+    'Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.':
+      'Developer Mode hält Home installiert. Die automatische Verlängerung versucht, die Sitzung bei eingeschaltetem und verbundenem TV zu verlängern.',
+    'Disable could not be saved. Retry before restarting the service.':
+      'Deaktivierung konnte nicht gespeichert werden. Vor dem Neustart des Dienstes erneut versuchen.',
+    'Ethernet': 'Ethernet',
+    'Good afternoon': 'Guten Tag',
+    'Good evening': 'Guten Abend',
+    'Good morning': 'Guten Morgen',
+    'Good night': 'Gute Nacht',
+    'Hide diagnostics': 'Diagnose ausblenden',
+    'Hide from Home': 'Auf Home ausblenden',
+    'Hold Back for 1.2 seconds to open LG Home. Your settings stay saved.':
+      'Halten Sie Zurück 1,2 Sekunden gedrückt, um LG Home zu öffnen. Ihre Einstellungen bleiben gespeichert.',
+    'Home': 'Home',
+    'Home status is unknown. The Home button may still work.':
+      'Home-Status unbekannt. Die Home-Taste kann weiter funktionieren.',
+    'Home and return from apps open Clean Your TV.':
+      'Home und die Rückkehr aus Apps öffnen Clean Your TV.',
+    'Home and return from apps open LG Home.':
+      'Home und die Rückkehr aus Apps öffnen LG Home.',
+    'Home is up to date.': 'Home ist aktuell.',
+    'Home settings': 'Home-Einstellungen',
+    'Home will close during installation. Your app list and settings will be saved first. Press Confirm update to continue.':
+      'Home wird während der Installation geschlossen. Ihre App-Liste und Einstellungen werden zuvor gespeichert. Wählen Sie „Update bestätigen“, um fortzufahren.',
+    'Inputs': 'Eingänge',
+    'Installed Home {installed} · Available {available}':
+      'Home installiert: {installed} · Verfügbar: {available}',
+    'Installing Home… Keep the TV on. If this screen closes, open Home again or use Home Updater for recovery.':
+      'Home wird installiert… Lassen Sie den TV eingeschaltet. Falls dieser Bildschirm schließt, öffnen Sie Home erneut oder nutzen Sie Home Updater zur Wiederherstellung.',
+    'LG response could not confirm renewal':
+      'LG-Antwort konnte die Verlängerung nicht bestätigen',
+    'Language': 'Sprache',
+    'Last checked: {date}': 'Zuletzt geprüft: {date}',
+    'Last confirmed renewal: {date}': 'Letzte bestätigte Verlängerung: {date}',
+    'Live TV': 'Live-TV',
+    'Manage Home, software updates and your TV.':
+      'Home, Softwareupdates und Ihren TV verwalten.',
+    'Network settings': 'Netzwerkeinstellungen',
+    'No inputs found': 'Keine Eingänge gefunden',
+    'No readable Developer Mode session':
+      'Keine lesbare Developer Mode-Sitzung',
+    'No recovery result available. Your helper has not been changed.':
+      'Kein Wiederherstellungsergebnis verfügbar. Ihr Helper wurde nicht geändert.',
+    'Not yet': 'Noch nicht',
+    'Offline': 'Offline',
+    'Open LG Home': 'LG Home öffnen',
+    'This button opens LG Home once. Your Home screen choice and settings stay saved.':
+      'Diese Taste öffnet LG Home einmalig. Die Auswahl Ihres Startbildschirms und Ihre Einstellungen bleiben gespeichert.',
+    'Recovery': 'Wiederherstellung',
+    'Recovery state: {status}. Use Home Updater to restore the previous version if offered.':
+      'Wiederherstellungsstatus: {status}. Stellen Sie mit Home Updater die vorherige Version wieder her, sofern angeboten.',
+    'Renewal confirmed': 'Verlängerung bestätigt',
+    'Saving apps, icons and settings…':
+      'Apps, Symbole und Einstellungen werden gespeichert…',
+    'Service unavailable. Install the complete Home package and try again. Manage your Developer Mode timer manually.':
+      'Dienst nicht verfügbar. Installieren Sie das vollständige Home-Paket und versuchen Sie es erneut. Verwalten Sie den Developer Mode-Timer manuell.',
+    'Session changed — retry scheduled':
+      'Sitzung geändert — erneuter Versuch geplant',
+    'Session checked': 'Sitzung geprüft',
+    'Session expired — open Developer Mode':
+      'Sitzung abgelaufen — Developer Mode öffnen',
+    'Settings': 'Einstellungen',
+    'Setup error: {error}. Use Developer Mode manually.':
+      'Einrichtungsfehler: {error}. Verwenden Sie Developer Mode manuell.',
+    'Share this with your TV model and firmware at:':
+      'Teilen Sie dies mit TV-Modell und Firmware unter:',
+    'Show diagnostics': 'Diagnose anzeigen',
+    'Showing the saved list. Could not refresh apps from the TV.':
+      'Gespeicherte Liste wird angezeigt. Apps konnten nicht vom TV aktualisiert werden.',
+    'Software updates': 'Softwareupdates',
+    'TV settings': 'TV-Einstellungen',
+    'Try again': 'Erneut versuchen',
+    'Turn off auto-renewal': 'Automatische Verlängerung ausschalten',
+    'Turn on auto-renewal': 'Automatische Verlängerung einschalten',
+    'Undo': 'Rückgängig',
+    'Update Home': 'Home aktualisieren',
+    'Update Home Helper using the installation guide first.':
+      'Aktualisieren Sie zuerst Home Helper anhand der Installationsanleitung.',
+    'Update Home or open LG settings for picture, sound and network.':
+      'Home aktualisieren oder LG-Einstellungen für Bild, Ton und Netzwerk öffnen.',
+    'Update available, but a verified recovery package for your installed version is missing.':
+      'Update verfügbar, aber ein geprüftes Wiederherstellungspaket für Ihre installierte Version fehlt.',
+    'Update available. Without root, install it from a computer using the guide.':
+      'Update verfügbar. Ohne Root installieren Sie es nach Anleitung vom Computer aus.',
+    'Update outcome is not confirmed. Open Home Updater → Recovery before retrying.':
+      'Update-Ergebnis nicht bestätigt. Öffnen Sie vor einem erneuten Versuch Home Updater → Wiederherstellung.',
+    'Update service or signed release unavailable. Install the separate Home Updater package once, then retry. Your current Home is unchanged.':
+      'Updatedienst oder signierte Veröffentlichung nicht verfügbar. Installieren Sie einmal das separate Home Updater-Paket und versuchen Sie es erneut. Ihr aktuelles Home bleibt unverändert.',
+    'Update state: {status}. Reopen Home when installation finishes.':
+      'Update-Status: {status}. Öffnen Sie Home nach Abschluss der Installation erneut.',
+    'Updates and TV': 'Updates und TV',
+    'Working…': 'Wird ausgeführt…',
+    'Your Home screen': 'Ihr Home-Bildschirm',
+    'Your installed Home is newer than this release.':
+      'Ihr installiertes Home ist neuer als diese Veröffentlichung.',
+    '{app} added': '{app} hinzugefügt',
+    '{hours} hours remaining (estimate)': 'Noch {hours} Stunden (geschätzt)',
+    '← ↑ ↓ → Move   ·   OK Place   ·   Back Cancel   ·   ↓ Below last row to hide':
+      '← ↑ ↓ → Verschieben   ·   OK Platzieren   ·   Zurück Abbrechen   ·   ↓ Unter letzte Zeile zum Ausblenden',
+    'No-root Edition': 'Version ohne Root',
+    'Cancel': 'Abbrechen',
+    'Install Home update?': 'Home-Update installieren?',
+    'Restore previous Home?': 'Vorheriges Home wiederherstellen?',
+    'Home will close during installation. Your apps and settings will be saved.':
+      'Home wird während der Installation geschlossen. Ihre Apps und Einstellungen werden gespeichert.',
+    'The previous Home version and saved settings will be restored.':
+      'Die vorherige Home-Version und die gespeicherten Einstellungen werden wiederhergestellt.',
+    'Install update': 'Update installieren',
+    'Restore previous Home': 'Vorheriges Home wiederherstellen',
+    'Release notes': 'Neuerungen',
+    '↑ ↓ Read notes · ← → Choose action · Back Close':
+      '↑ ↓ Änderungen lesen · ← → Aktion wählen · Zurück Schließen',
+    '← → Choose action · Back Open Home':
+      '← → Aktion wählen · Zurück Home öffnen',
+    'Home control could not be restored automatically. Open Home settings.':
+      'Die Home-Steuerung konnte nicht automatisch wiederhergestellt werden. Öffne die Home-Einstellungen.',
+    'Your previous Home screen choice has been restored.':
+      'Deine vorherige Startbildschirmauswahl wurde wiederhergestellt.',
+    'Home control remains off because it was disabled during the update.':
+      'Die Home-Steuerung bleibt aus, weil sie während des Updates deaktiviert wurde.',
+    'Rollback remains available until the next update.':
+      'Die Rückkehr bleibt bis zum nächsten Update verfügbar.',
+    'Previous Root version and profile restored.':
+      'Vorherige Root-Version und Profil wiederhergestellt.',
+    'Installed: {version}': 'Installiert: {version}',
+    'Available: {version}': 'Verfügbar: {version}',
+    'Software updates. Update available.':
+      'Softwareupdates. Ein Update ist verfügbar.',
+    'Open LG Home once, keeping your Home choice.':
+      'LG Home einmal öffnen; die Home-Auswahl bleibt gespeichert.',
+    'Hold Back for 1.2 seconds to open LG Home.':
+      'Zurück 1,2 Sekunden halten, um LG Home zu öffnen.',
+    'Developer Mode': 'Entwicklermodus',
+    'Beta': 'Beta',
+    'Home Helper': 'Home Helper',
+    'Home button settings': 'Home-Taste einrichten',
+    'Start Helper': 'Helper starten',
+    'Start Helper?': 'Helper starten?',
+    'Starting Helper…': 'Helper wird gestartet…',
+    'Helper opens Home with your remote and helps you return to Home after turning on the TV.':
+      'Helper öffnet Home mit der Fernbedienung und hilft nach dem Einschalten des Fernsehers zu Home zurückzukehren.',
+    'Helper is unavailable. Reinstall the complete Home package from your computer.':
+      'Helper ist nicht verfügbar. Installieren Sie das vollständige Home-Paket vom Computer neu.',
+    'Helper was stopped for safety. Start it only when you are ready to use Home control again.':
+      'Helper wurde zur Sicherheit gestoppt. Starten Sie ihn, wenn Sie die Home-Steuerung wieder nutzen möchten.',
+    'Helper is stopped. Start it to use the Home button and return from apps.':
+      'Helper ist gestoppt. Starten Sie ihn für die Home-Taste und die Rückkehr aus Apps.',
+    'Start Helper to use Home control again. Your saved Home screen choice will be used.':
+      'Starten Sie Helper, um Home wieder zu steuern. Ihre gespeicherte Home-Auswahl wird verwendet.',
+    'Status is unavailable.': 'Status ist nicht verfügbar.',
+    'Try refreshing. If this continues, reinstall the complete Home package from your computer.':
+      'Aktualisieren Sie den Status. Bleibt das Problem bestehen, installieren Sie das vollständige Home-Paket vom Computer neu.',
+    'No recovery needed.': 'Keine Wiederherstellung erforderlich.',
+    'Open Home to continue.': 'Öffnen Sie Home, um fortzufahren.',
+    'Open Home to continue. If the update caused a problem, you can restore the previous version.':
+      'Öffnen Sie Home. Falls das Update Probleme verursacht hat, können Sie die vorherige Version wiederherstellen.',
+    'Recovery needs attention.': 'Wiederherstellung erfordert Aufmerksamkeit.',
+    'Refresh status first. If recovery remains unavailable, use the installer on your computer.':
+      'Aktualisieren Sie zuerst den Status. Bleibt die Wiederherstellung nicht verfügbar, verwenden Sie das Installationsprogramm auf Ihrem Computer.',
+    'An update is in progress.': 'Ein Update wird installiert.',
+    'Keep the TV powered on. Status will refresh automatically.':
+      'Lassen Sie den Fernseher eingeschaltet. Der Status wird automatisch aktualisiert.',
+    'Could not open Home.': 'Home konnte nicht geöffnet werden.',
+    'If Home stops working after an update, use this app to restore the previous version. For regular updates, open Home settings.':
+      'Wenn Home nach einem Update nicht mehr funktioniert, können Sie hier die vorherige Version wiederherstellen. Reguläre Updates finden Sie in den Home-Einstellungen.',
+    'Open Home': 'Home öffnen',
+    'Refresh status': 'Status aktualisieren'
   },
-  "es": {
-    "A signed Home update is available.": "Hay una actualización firmada de Home disponible.",
-    "Add app": "Añadir aplicación",
-    "All installed apps are already on Home.": "Todas las aplicaciones instaladas ya están en Home.",
-    "App hidden. Restore it with Add app.": "Aplicación oculta. Recupérala con «Añadir app».",
-    "Auto-renewal enabled (Beta)": "Renovación automática activada (Beta)",
-    "Auto-renewal off": "Renovación automática desactivada",
-    "Automatic (system language)": "Automático (idioma del sistema)",
-    "Back": "Atrás",
-    "Back to Home": "Volver a Home",
-    "Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.": "Beta: la renovación aún no está verificada en televisores sin root. Sigue comprobando el temporizador en la aplicación Developer Mode.",
-    "Can't open {app}": "No se puede abrir {app}",
-    "Change Home": "Cambiar Home",
-    "Change was not confirmed. Check the switch and try again.": "No se confirmó el cambio. Comprueba el interruptor e inténtalo de nuevo.",
-    "Changing Home control…": "Cambiando el control de Home…",
-    "Check failed": "Comprobación fallida",
-    "Check pending": "Comprobación pendiente",
-    "Check session": "Comprobar sesión",
-    "Checking Home control…": "Comprobando el control de Home…",
-    "Checking auto-renewal…": "Comprobando la renovación automática…",
-    "Checking for updates…": "Buscando actualizaciones…",
-    "Checking installed apps…": "Comprobando las aplicaciones instaladas…",
-    "Choose a language. Home will reload.": "Elige un idioma. Home se recargará.",
-    "Choose an app to add to Home.": "Elige una aplicación para añadir a Home.",
-    "Choose where Home and return from apps take you.": "Elige adónde llevan Home y la vuelta desde las aplicaciones.",
-    "Confirm update": "Confirmar actualización",
-    "Connection failed — retry scheduled": "Falló la conexión — reintento programado",
-    "Could not open LG Home. Check Home Helper and try again.": "No se pudo abrir LG Home. Comprueba Home Helper e inténtalo de nuevo.",
-    "Could not save language. Please try again.": "No se pudo guardar el idioma. Inténtalo de nuevo.",
-    "Could not save state": "No se pudo guardar el estado",
-    "Could not save your complete profile. Nothing was installed.": "No se pudo guardar tu perfil completo. No se instaló nada.",
-    "Couldn't restore app. Please try again.": "No se pudo restaurar la aplicación. Inténtalo de nuevo.",
-    "Couldn't save changes. Please try again.": "No se pudieron guardar los cambios. Inténtalo de nuevo.",
-    "Developer Mode auto-renewal (Beta)": "Renovación automática de Developer Mode (Beta)",
-    "Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.": "Developer Mode mantiene Home instalado. La renovación automática intenta ampliar la sesión mientras el televisor está encendido y conectado.",
-    "Disable could not be saved. Retry before restarting the service.": "No se pudo guardar la desactivación. Reintenta antes de reiniciar el servicio.",
-    "Ethernet": "Ethernet",
-    "Good afternoon": "Buenas tardes",
-    "Good evening": "Buenas noches",
-    "Good morning": "Buenos días",
-    "Good night": "Que descanses",
-    "Hide diagnostics": "Ocultar diagnóstico",
-    "Hide from Home": "Ocultar en Home",
-    "Hold Back for 1.2 seconds to open LG Home. Your settings stay saved.": "Mantén Atrás durante 1,2 segundos para abrir LG Home. Tus ajustes se conservarán.",
-    "Home": "Home",
-    "Home status is unknown. The Home button may still work.": "Estado de Home desconocido. El botón Home puede seguir funcionando.",
-    "Home and return from apps open Clean Your TV.": "Home y la vuelta desde las aplicaciones abren Clean Your TV.",
-    "Home and return from apps open LG Home.": "Home y la vuelta desde las aplicaciones abren LG Home.",
-    "Home is up to date.": "Home está actualizado.",
-    "Home settings": "Ajustes de Home",
-    "Home will close during installation. Your app list and settings will be saved first. Press Confirm update to continue.": "Home se cerrará durante la instalación. Primero se guardarán tus aplicaciones y ajustes. Pulsa Confirmar actualización para continuar.",
-    "Inputs": "Entradas",
-    "Installed Home {installed} · Available {available}": "Home instalado: {installed} · Disponible: {available}",
-    "Installing Home… Keep the TV on. If this screen closes, open Home again or use Home Updater for recovery.": "Instalando Home… Mantén el televisor encendido. Si esta pantalla se cierra, vuelve a abrir Home o usa Home Updater para recuperar.",
-    "LG response could not confirm renewal": "La respuesta de LG no confirmó la renovación",
-    "Language": "Idioma",
-    "Last checked: {date}": "Última comprobación: {date}",
-    "Last confirmed renewal: {date}": "Última renovación confirmada: {date}",
-    "Live TV": "TV en directo",
-    "Manage Home, software updates and your TV.": "Gestiona Home, las actualizaciones y tu televisor.",
-    "Network settings": "Ajustes de red",
-    "No inputs found": "No se encontraron entradas",
-    "No readable Developer Mode session": "No se puede leer ninguna sesión de Developer Mode",
-    "No recovery result available. Your helper has not been changed.": "No hay resultado de recuperación disponible. Tu Helper no ha cambiado.",
-    "Not yet": "Todavía no",
-    "Offline": "Sin conexión",
-    "Open LG Home": "Abrir LG Home",
-    "This button opens LG Home once. Your Home screen choice and settings stay saved.": "Este botón abre LG Home una vez. La elección de pantalla de inicio y los ajustes se conservan.",
-    "Recovery": "Recuperación",
-    "Recovery state: {status}. Use Home Updater to restore the previous version if offered.": "Estado de recuperación: {status}. Usa Home Updater para restaurar la versión anterior si se ofrece.",
-    "Renewal confirmed": "Renovación confirmada",
-    "Saving apps, icons and settings…": "Guardando aplicaciones, iconos y ajustes…",
-    "Service unavailable. Install the complete Home package and try again. Manage your Developer Mode timer manually.": "Servicio no disponible. Instala el paquete completo de Home y reintenta. Gestiona el temporizador de Developer Mode manualmente.",
-    "Session changed — retry scheduled": "Sesión modificada — reintento programado",
-    "Session checked": "Sesión comprobada",
-    "Session expired — open Developer Mode": "Sesión caducada — abre Developer Mode",
-    "Settings": "Ajustes",
-    "Setup error: {error}. Use Developer Mode manually.": "Error de configuración: {error}. Usa Developer Mode manualmente.",
-    "Share this with your TV model and firmware at:": "Comparte esto junto con el modelo y firmware del televisor en:",
-    "Show diagnostics": "Mostrar diagnóstico",
-    "Showing the saved list. Could not refresh apps from the TV.": "Se muestra la lista guardada. No se pudieron actualizar las aplicaciones desde el televisor.",
-    "Software updates": "Actualizaciones de software",
-    "TV settings": "Ajustes del televisor",
-    "Try again": "Reintentar",
-    "Turn off auto-renewal": "Desactivar renovación automática",
-    "Turn on auto-renewal": "Activar renovación automática",
-    "Undo": "Deshacer",
-    "Update Home": "Actualizar Home",
-    "Update Home Helper using the installation guide first.": "Actualiza primero Home Helper siguiendo la guía de instalación.",
-    "Update Home or open LG settings for picture, sound and network.": "Actualiza Home o abre los ajustes de LG de imagen, sonido y red.",
-    "Update available, but a verified recovery package for your installed version is missing.": "Hay una actualización, pero falta un paquete de recuperación verificado para tu versión instalada.",
-    "Update available. Without root, install it from a computer using the guide.": "Hay una actualización. Sin root, instálala desde un ordenador siguiendo la guía.",
-    "Update outcome is not confirmed. Open Home Updater → Recovery before retrying.": "El resultado de la actualización no está confirmado. Abre Home Updater → Recuperación antes de reintentar.",
-    "Update service or signed release unavailable. Install the separate Home Updater package once, then retry. Your current Home is unchanged.": "Servicio de actualización o versión firmada no disponible. Instala una vez el paquete independiente Home Updater y reintenta. Tu Home actual no ha cambiado.",
-    "Update state: {status}. Reopen Home when installation finishes.": "Estado de actualización: {status}. Vuelve a abrir Home cuando termine la instalación.",
-    "Updates and TV": "Actualizaciones y TV",
-    "Working…": "Procesando…",
-    "Your Home screen": "Tu pantalla Home",
-    "Your installed Home is newer than this release.": "Tu Home instalado es más reciente que esta versión.",
-    "{app} added": "Se añadió {app}",
-    "{hours} hours remaining (estimate)": "Quedan {hours} horas (estimación)",
-    "← ↑ ↓ → Move   ·   OK Place   ·   Back Cancel   ·   ↓ Below last row to hide": "← ↑ ↓ → Mover   ·   OK Colocar   ·   Atrás Cancelar   ·   ↓ Bajo la última fila para ocultar",
-    "No-root Edition": "Edición sin root",
-    "Cancel": "Cancelar",
-    "Install Home update?": "¿Instalar la actualización de Home?",
-    "Restore previous Home?": "¿Restaurar la versión anterior de Home?",
-    "Home will close during installation. Your apps and settings will be saved.": "Home se cerrará durante la instalación. Tus aplicaciones y ajustes se guardarán.",
-    "The previous Home version and saved settings will be restored.": "Se restaurarán la versión anterior de Home y los ajustes guardados.",
-    "Install update": "Instalar actualización",
-    "Restore previous Home": "Restaurar Home anterior",
-    "Release notes": "Novedades",
-    "↑ ↓ Read notes · ← → Choose action · Back Close": "↑ ↓ Leer cambios · ← → Elegir acción · Atrás Cerrar",
-    "← → Choose action · Back Open Home": "← → Elegir acción · Atrás Abrir Home",
-    "Home control could not be restored automatically. Open Home settings.": "No se pudo restaurar el control de Home automáticamente. Abre los ajustes de Home.",
-    "Your previous Home screen choice has been restored.": "Se ha restaurado tu selección anterior de pantalla de inicio.",
-    "Home control remains off because it was disabled during the update.": "El control de Home sigue desactivado porque se desactivó durante la actualización.",
-    "Rollback remains available until the next update.": "La restauración sigue disponible hasta la próxima actualización.",
-    "Previous Root version and profile restored.": "Se restauraron la versión anterior de Root y el perfil.",
-    "Installed: {version}": "Instalada: {version}",
-    "Available: {version}": "Disponible: {version}",
-    "Software updates. Update available.": "Actualizaciones de software. Hay una actualización disponible.",
-    "Open LG Home once, keeping your Home choice.": "Abre LG Home una vez sin cambiar tu pantalla de inicio.",
-    "Hold Back for 1.2 seconds to open LG Home.": "Mantén Atrás 1,2 segundos para abrir LG Home.",
-    "Developer Mode": "Modo de desarrollador",
-    "Beta": "Beta",
-    "Home Helper": "Home Helper",
-    "Home button settings": "Configurar botón Home",
-    "Start Helper": "Iniciar Helper",
-    "Start Helper?": "¿Iniciar Helper?",
-    "Starting Helper…": "Iniciando Helper…",
-    "Helper opens Home with your remote and helps you return to Home after turning on the TV.": "Helper abre Home con el mando y ayuda a volver a Home al encender el televisor.",
-    "Helper is unavailable. Reinstall the complete Home package from your computer.": "Helper no está disponible. Reinstala el paquete completo de Home desde el ordenador.",
-    "Helper was stopped for safety. Start it only when you are ready to use Home control again.": "Helper se detuvo por seguridad. Inícialo cuando quieras volver a usar el control de Home.",
-    "Helper is stopped. Start it to use the Home button and return from apps.": "Helper está detenido. Inícialo para usar el botón Home y volver desde las aplicaciones.",
-    "Start Helper to use Home control again. Your saved Home screen choice will be used.": "Inicia Helper para volver a controlar Home. Se usará tu pantalla de inicio guardada.",
-    "Status is unavailable.": "No se pudo consultar el estado.",
-    "Try refreshing. If this continues, reinstall the complete Home package from your computer.": "Actualiza el estado. Si persiste, reinstala el paquete completo de Home desde el ordenador.",
-    "No recovery needed.": "No se necesita recuperación.",
-    "Open Home to continue.": "Abre Home para continuar.",
-    "Open Home to continue. If the update caused a problem, you can restore the previous version.": "Abre Home. Si la actualización causó problemas, puedes restaurar la versión anterior.",
-    "Recovery needs attention.": "La recuperación requiere atención.",
-    "Refresh status first. If recovery remains unavailable, use the installer on your computer.": "Primero actualiza el estado. Si la recuperación sigue sin estar disponible, usa el instalador del ordenador.",
-    "An update is in progress.": "Hay una actualización en curso.",
-    "Keep the TV powered on. Status will refresh automatically.": "Mantén el televisor encendido. El estado se actualizará automáticamente.",
-    "Could not open Home.": "No se pudo abrir Home.",
-    "If Home stops working after an update, use this app to restore the previous version. For regular updates, open Home settings.": "Si Home deja de funcionar tras una actualización, usa esta app para restaurar la versión anterior. Para actualizaciones normales, abre los ajustes de Home.",
-    "Open Home": "Abrir Home",
-    "Refresh status": "Actualizar estado"
+  'es': {
+    'A signed Home update is available.':
+      'Hay una actualización firmada de Home disponible.',
+    'Add app': 'Añadir aplicación',
+    'All installed apps are already on Home.':
+      'Todas las aplicaciones instaladas ya están en Home.',
+    'App hidden. Restore it with Add app.':
+      'Aplicación oculta. Recupérala con «Añadir app».',
+    'Auto-renewal enabled (Beta)': 'Renovación automática activada (Beta)',
+    'Auto-renewal off': 'Renovación automática desactivada',
+    'Automatic (system language)': 'Automático (idioma del sistema)',
+    'Back': 'Atrás',
+    'Back to Home': 'Volver a Home',
+    'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
+      'Beta: la renovación aún no está verificada en televisores sin root. Sigue comprobando el temporizador en la aplicación Developer Mode.',
+    "Can't open {app}": 'No se puede abrir {app}',
+    'Change Home': 'Cambiar Home',
+    'Change was not confirmed. Check the switch and try again.':
+      'No se confirmó el cambio. Comprueba el interruptor e inténtalo de nuevo.',
+    'Changing Home control…': 'Cambiando el control de Home…',
+    'Check failed': 'Comprobación fallida',
+    'Check pending': 'Comprobación pendiente',
+    'Check session': 'Comprobar sesión',
+    'Checking Home control…': 'Comprobando el control de Home…',
+    'Checking auto-renewal…': 'Comprobando la renovación automática…',
+    'Checking for updates…': 'Buscando actualizaciones…',
+    'Checking installed apps…': 'Comprobando las aplicaciones instaladas…',
+    'Choose a language. Home will reload.':
+      'Elige un idioma. Home se recargará.',
+    'Choose an app to add to Home.': 'Elige una aplicación para añadir a Home.',
+    'Choose where Home and return from apps take you.':
+      'Elige adónde llevan Home y la vuelta desde las aplicaciones.',
+    'Confirm update': 'Confirmar actualización',
+    'Connection failed — retry scheduled':
+      'Falló la conexión — reintento programado',
+    'Could not open LG Home. Check Home Helper and try again.':
+      'No se pudo abrir LG Home. Comprueba Home Helper e inténtalo de nuevo.',
+    'Could not save language. Please try again.':
+      'No se pudo guardar el idioma. Inténtalo de nuevo.',
+    'Could not save state': 'No se pudo guardar el estado',
+    'Could not save your complete profile. Nothing was installed.':
+      'No se pudo guardar tu perfil completo. No se instaló nada.',
+    "Couldn't restore app. Please try again.":
+      'No se pudo restaurar la aplicación. Inténtalo de nuevo.',
+    "Couldn't save changes. Please try again.":
+      'No se pudieron guardar los cambios. Inténtalo de nuevo.',
+    'Developer Mode auto-renewal (Beta)':
+      'Renovación automática de Developer Mode (Beta)',
+    'Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.':
+      'Developer Mode mantiene Home instalado. La renovación automática intenta ampliar la sesión mientras el televisor está encendido y conectado.',
+    'Disable could not be saved. Retry before restarting the service.':
+      'No se pudo guardar la desactivación. Reintenta antes de reiniciar el servicio.',
+    'Ethernet': 'Ethernet',
+    'Good afternoon': 'Buenas tardes',
+    'Good evening': 'Buenas noches',
+    'Good morning': 'Buenos días',
+    'Good night': 'Que descanses',
+    'Hide diagnostics': 'Ocultar diagnóstico',
+    'Hide from Home': 'Ocultar en Home',
+    'Hold Back for 1.2 seconds to open LG Home. Your settings stay saved.':
+      'Mantén Atrás durante 1,2 segundos para abrir LG Home. Tus ajustes se conservarán.',
+    'Home': 'Home',
+    'Home status is unknown. The Home button may still work.':
+      'Estado de Home desconocido. El botón Home puede seguir funcionando.',
+    'Home and return from apps open Clean Your TV.':
+      'Home y la vuelta desde las aplicaciones abren Clean Your TV.',
+    'Home and return from apps open LG Home.':
+      'Home y la vuelta desde las aplicaciones abren LG Home.',
+    'Home is up to date.': 'Home está actualizado.',
+    'Home settings': 'Ajustes de Home',
+    'Home will close during installation. Your app list and settings will be saved first. Press Confirm update to continue.':
+      'Home se cerrará durante la instalación. Primero se guardarán tus aplicaciones y ajustes. Pulsa Confirmar actualización para continuar.',
+    'Inputs': 'Entradas',
+    'Installed Home {installed} · Available {available}':
+      'Home instalado: {installed} · Disponible: {available}',
+    'Installing Home… Keep the TV on. If this screen closes, open Home again or use Home Updater for recovery.':
+      'Instalando Home… Mantén el televisor encendido. Si esta pantalla se cierra, vuelve a abrir Home o usa Home Updater para recuperar.',
+    'LG response could not confirm renewal':
+      'La respuesta de LG no confirmó la renovación',
+    'Language': 'Idioma',
+    'Last checked: {date}': 'Última comprobación: {date}',
+    'Last confirmed renewal: {date}': 'Última renovación confirmada: {date}',
+    'Live TV': 'TV en directo',
+    'Manage Home, software updates and your TV.':
+      'Gestiona Home, las actualizaciones y tu televisor.',
+    'Network settings': 'Ajustes de red',
+    'No inputs found': 'No se encontraron entradas',
+    'No readable Developer Mode session':
+      'No se puede leer ninguna sesión de Developer Mode',
+    'No recovery result available. Your helper has not been changed.':
+      'No hay resultado de recuperación disponible. Tu Helper no ha cambiado.',
+    'Not yet': 'Todavía no',
+    'Offline': 'Sin conexión',
+    'Open LG Home': 'Abrir LG Home',
+    'This button opens LG Home once. Your Home screen choice and settings stay saved.':
+      'Este botón abre LG Home una vez. La elección de pantalla de inicio y los ajustes se conservan.',
+    'Recovery': 'Recuperación',
+    'Recovery state: {status}. Use Home Updater to restore the previous version if offered.':
+      'Estado de recuperación: {status}. Usa Home Updater para restaurar la versión anterior si se ofrece.',
+    'Renewal confirmed': 'Renovación confirmada',
+    'Saving apps, icons and settings…':
+      'Guardando aplicaciones, iconos y ajustes…',
+    'Service unavailable. Install the complete Home package and try again. Manage your Developer Mode timer manually.':
+      'Servicio no disponible. Instala el paquete completo de Home y reintenta. Gestiona el temporizador de Developer Mode manualmente.',
+    'Session changed — retry scheduled':
+      'Sesión modificada — reintento programado',
+    'Session checked': 'Sesión comprobada',
+    'Session expired — open Developer Mode':
+      'Sesión caducada — abre Developer Mode',
+    'Settings': 'Ajustes',
+    'Setup error: {error}. Use Developer Mode manually.':
+      'Error de configuración: {error}. Usa Developer Mode manualmente.',
+    'Share this with your TV model and firmware at:':
+      'Comparte esto junto con el modelo y firmware del televisor en:',
+    'Show diagnostics': 'Mostrar diagnóstico',
+    'Showing the saved list. Could not refresh apps from the TV.':
+      'Se muestra la lista guardada. No se pudieron actualizar las aplicaciones desde el televisor.',
+    'Software updates': 'Actualizaciones de software',
+    'TV settings': 'Ajustes del televisor',
+    'Try again': 'Reintentar',
+    'Turn off auto-renewal': 'Desactivar renovación automática',
+    'Turn on auto-renewal': 'Activar renovación automática',
+    'Undo': 'Deshacer',
+    'Update Home': 'Actualizar Home',
+    'Update Home Helper using the installation guide first.':
+      'Actualiza primero Home Helper siguiendo la guía de instalación.',
+    'Update Home or open LG settings for picture, sound and network.':
+      'Actualiza Home o abre los ajustes de LG de imagen, sonido y red.',
+    'Update available, but a verified recovery package for your installed version is missing.':
+      'Hay una actualización, pero falta un paquete de recuperación verificado para tu versión instalada.',
+    'Update available. Without root, install it from a computer using the guide.':
+      'Hay una actualización. Sin root, instálala desde un ordenador siguiendo la guía.',
+    'Update outcome is not confirmed. Open Home Updater → Recovery before retrying.':
+      'El resultado de la actualización no está confirmado. Abre Home Updater → Recuperación antes de reintentar.',
+    'Update service or signed release unavailable. Install the separate Home Updater package once, then retry. Your current Home is unchanged.':
+      'Servicio de actualización o versión firmada no disponible. Instala una vez el paquete independiente Home Updater y reintenta. Tu Home actual no ha cambiado.',
+    'Update state: {status}. Reopen Home when installation finishes.':
+      'Estado de actualización: {status}. Vuelve a abrir Home cuando termine la instalación.',
+    'Updates and TV': 'Actualizaciones y TV',
+    'Working…': 'Procesando…',
+    'Your Home screen': 'Tu pantalla Home',
+    'Your installed Home is newer than this release.':
+      'Tu Home instalado es más reciente que esta versión.',
+    '{app} added': 'Se añadió {app}',
+    '{hours} hours remaining (estimate)': 'Quedan {hours} horas (estimación)',
+    '← ↑ ↓ → Move   ·   OK Place   ·   Back Cancel   ·   ↓ Below last row to hide':
+      '← ↑ ↓ → Mover   ·   OK Colocar   ·   Atrás Cancelar   ·   ↓ Bajo la última fila para ocultar',
+    'No-root Edition': 'Edición sin root',
+    'Cancel': 'Cancelar',
+    'Install Home update?': '¿Instalar la actualización de Home?',
+    'Restore previous Home?': '¿Restaurar la versión anterior de Home?',
+    'Home will close during installation. Your apps and settings will be saved.':
+      'Home se cerrará durante la instalación. Tus aplicaciones y ajustes se guardarán.',
+    'The previous Home version and saved settings will be restored.':
+      'Se restaurarán la versión anterior de Home y los ajustes guardados.',
+    'Install update': 'Instalar actualización',
+    'Restore previous Home': 'Restaurar Home anterior',
+    'Release notes': 'Novedades',
+    '↑ ↓ Read notes · ← → Choose action · Back Close':
+      '↑ ↓ Leer cambios · ← → Elegir acción · Atrás Cerrar',
+    '← → Choose action · Back Open Home':
+      '← → Elegir acción · Atrás Abrir Home',
+    'Home control could not be restored automatically. Open Home settings.':
+      'No se pudo restaurar el control de Home automáticamente. Abre los ajustes de Home.',
+    'Your previous Home screen choice has been restored.':
+      'Se ha restaurado tu selección anterior de pantalla de inicio.',
+    'Home control remains off because it was disabled during the update.':
+      'El control de Home sigue desactivado porque se desactivó durante la actualización.',
+    'Rollback remains available until the next update.':
+      'La restauración sigue disponible hasta la próxima actualización.',
+    'Previous Root version and profile restored.':
+      'Se restauraron la versión anterior de Root y el perfil.',
+    'Installed: {version}': 'Instalada: {version}',
+    'Available: {version}': 'Disponible: {version}',
+    'Software updates. Update available.':
+      'Actualizaciones de software. Hay una actualización disponible.',
+    'Open LG Home once, keeping your Home choice.':
+      'Abre LG Home una vez sin cambiar tu pantalla de inicio.',
+    'Hold Back for 1.2 seconds to open LG Home.':
+      'Mantén Atrás 1,2 segundos para abrir LG Home.',
+    'Developer Mode': 'Modo de desarrollador',
+    'Beta': 'Beta',
+    'Home Helper': 'Home Helper',
+    'Home button settings': 'Configurar botón Home',
+    'Start Helper': 'Iniciar Helper',
+    'Start Helper?': '¿Iniciar Helper?',
+    'Starting Helper…': 'Iniciando Helper…',
+    'Helper opens Home with your remote and helps you return to Home after turning on the TV.':
+      'Helper abre Home con el mando y ayuda a volver a Home al encender el televisor.',
+    'Helper is unavailable. Reinstall the complete Home package from your computer.':
+      'Helper no está disponible. Reinstala el paquete completo de Home desde el ordenador.',
+    'Helper was stopped for safety. Start it only when you are ready to use Home control again.':
+      'Helper se detuvo por seguridad. Inícialo cuando quieras volver a usar el control de Home.',
+    'Helper is stopped. Start it to use the Home button and return from apps.':
+      'Helper está detenido. Inícialo para usar el botón Home y volver desde las aplicaciones.',
+    'Start Helper to use Home control again. Your saved Home screen choice will be used.':
+      'Inicia Helper para volver a controlar Home. Se usará tu pantalla de inicio guardada.',
+    'Status is unavailable.': 'No se pudo consultar el estado.',
+    'Try refreshing. If this continues, reinstall the complete Home package from your computer.':
+      'Actualiza el estado. Si persiste, reinstala el paquete completo de Home desde el ordenador.',
+    'No recovery needed.': 'No se necesita recuperación.',
+    'Open Home to continue.': 'Abre Home para continuar.',
+    'Open Home to continue. If the update caused a problem, you can restore the previous version.':
+      'Abre Home. Si la actualización causó problemas, puedes restaurar la versión anterior.',
+    'Recovery needs attention.': 'La recuperación requiere atención.',
+    'Refresh status first. If recovery remains unavailable, use the installer on your computer.':
+      'Primero actualiza el estado. Si la recuperación sigue sin estar disponible, usa el instalador del ordenador.',
+    'An update is in progress.': 'Hay una actualización en curso.',
+    'Keep the TV powered on. Status will refresh automatically.':
+      'Mantén el televisor encendido. El estado se actualizará automáticamente.',
+    'Could not open Home.': 'No se pudo abrir Home.',
+    'If Home stops working after an update, use this app to restore the previous version. For regular updates, open Home settings.':
+      'Si Home deja de funcionar tras una actualización, usa esta app para restaurar la versión anterior. Para actualizaciones normales, abre los ajustes de Home.',
+    'Open Home': 'Abrir Home',
+    'Refresh status': 'Actualizar estado'
   },
-  "pt-BR": {
-    "A signed Home update is available.": "Uma atualização assinada do Home está disponível.",
-    "Add app": "Adicionar aplicativo",
-    "All installed apps are already on Home.": "Todos os aplicativos instalados já estão no Home.",
-    "App hidden. Restore it with Add app.": "Aplicativo oculto. Restaure com «Adicionar app».",
-    "Auto-renewal enabled (Beta)": "Renovação automática ativada (Beta)",
-    "Auto-renewal off": "Renovação automática desativada",
-    "Automatic (system language)": "Automático (idioma do sistema)",
-    "Back": "Voltar",
-    "Back to Home": "Voltar ao Home",
-    "Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.": "Beta: a renovação ainda não foi verificada em TVs sem root. Continue conferindo o cronômetro no aplicativo Developer Mode.",
-    "Can't open {app}": "Não foi possível abrir {app}",
-    "Change Home": "Alterar Home",
-    "Change was not confirmed. Check the switch and try again.": "A alteração não foi confirmada. Confira o interruptor e tente novamente.",
-    "Changing Home control…": "Alterando o controle do Home…",
-    "Check failed": "Falha na verificação",
-    "Check pending": "Verificação pendente",
-    "Check session": "Verificar sessão",
-    "Checking Home control…": "Verificando o controle do Home…",
-    "Checking auto-renewal…": "Verificando a renovação automática…",
-    "Checking for updates…": "Buscando atualizações…",
-    "Checking installed apps…": "Verificando aplicativos instalados…",
-    "Choose a language. Home will reload.": "Escolha um idioma. O Home será recarregado.",
-    "Choose an app to add to Home.": "Escolha um aplicativo para adicionar ao Home.",
-    "Choose where Home and return from apps take you.": "Escolha o destino de Home e do retorno dos aplicativos.",
-    "Confirm update": "Confirmar atualização",
-    "Connection failed — retry scheduled": "Falha na conexão — nova tentativa agendada",
-    "Could not open LG Home. Check Home Helper and try again.": "Não foi possível abrir LG Home. Confira Home Helper e tente novamente.",
-    "Could not save language. Please try again.": "Não foi possível salvar o idioma. Tente novamente.",
-    "Could not save state": "Não foi possível salvar o estado",
-    "Could not save your complete profile. Nothing was installed.": "Não foi possível salvar seu perfil completo. Nada foi instalado.",
-    "Couldn't restore app. Please try again.": "Não foi possível restaurar o aplicativo. Tente novamente.",
-    "Couldn't save changes. Please try again.": "Não foi possível salvar as alterações. Tente novamente.",
-    "Developer Mode auto-renewal (Beta)": "Renovação automática do Developer Mode (Beta)",
-    "Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.": "Developer Mode mantém o Home instalado. A renovação automática tenta estender a sessão enquanto a TV está ligada e conectada.",
-    "Disable could not be saved. Retry before restarting the service.": "Não foi possível salvar a desativação. Tente novamente antes de reiniciar o serviço.",
-    "Ethernet": "Ethernet",
-    "Good afternoon": "Boa tarde",
-    "Good evening": "Boa noite",
-    "Good morning": "Bom dia",
-    "Good night": "Bom descanso",
-    "Hide diagnostics": "Ocultar diagnóstico",
-    "Hide from Home": "Ocultar do Home",
-    "Hold Back for 1.2 seconds to open LG Home. Your settings stay saved.": "Segure Voltar por 1,2 segundos para abrir LG Home. Suas configurações serão mantidas.",
-    "Home": "Home",
-    "Home status is unknown. The Home button may still work.": "Estado de Home desconhecido. O botão Home ainda pode funcionar.",
-    "Home and return from apps open Clean Your TV.": "Home e o retorno dos aplicativos abrem Clean Your TV.",
-    "Home and return from apps open LG Home.": "Home e o retorno dos aplicativos abrem LG Home.",
-    "Home is up to date.": "O Home está atualizado.",
-    "Home settings": "Configurações do Home",
-    "Home will close during installation. Your app list and settings will be saved first. Press Confirm update to continue.": "O Home fechará durante a instalação. Sua lista de aplicativos e configurações serão salvas antes. Pressione Confirmar atualização para continuar.",
-    "Inputs": "Entradas",
-    "Installed Home {installed} · Available {available}": "Home instalado: {installed} · Disponível: {available}",
-    "Installing Home… Keep the TV on. If this screen closes, open Home again or use Home Updater for recovery.": "Instalando Home… Mantenha a TV ligada. Se esta tela fechar, reabra Home ou use Home Updater para recuperação.",
-    "LG response could not confirm renewal": "A resposta da LG não confirmou a renovação",
-    "Language": "Idioma",
-    "Last checked: {date}": "Última verificação: {date}",
-    "Last confirmed renewal: {date}": "Última renovação confirmada: {date}",
-    "Live TV": "TV ao vivo",
-    "Manage Home, software updates and your TV.": "Gerencie Home, atualizações de software e sua TV.",
-    "Network settings": "Configurações de rede",
-    "No inputs found": "Nenhuma entrada encontrada",
-    "No readable Developer Mode session": "Nenhuma sessão legível do Developer Mode",
-    "No recovery result available. Your helper has not been changed.": "Nenhum resultado de recuperação disponível. Seu Helper não foi alterado.",
-    "Not yet": "Ainda não",
-    "Offline": "Sem conexão",
-    "Open LG Home": "Abrir LG Home",
-    "This button opens LG Home once. Your Home screen choice and settings stay saved.": "Este botão abre o LG Home uma vez. A escolha da tela inicial e as configurações são mantidas.",
-    "Recovery": "Recuperação",
-    "Recovery state: {status}. Use Home Updater to restore the previous version if offered.": "Estado da recuperação: {status}. Use Home Updater para restaurar a versão anterior, se disponível.",
-    "Renewal confirmed": "Renovação confirmada",
-    "Saving apps, icons and settings…": "Salvando aplicativos, ícones e configurações…",
-    "Service unavailable. Install the complete Home package and try again. Manage your Developer Mode timer manually.": "Serviço indisponível. Instale o pacote completo do Home e tente novamente. Gerencie o cronômetro do Developer Mode manualmente.",
-    "Session changed — retry scheduled": "Sessão alterada — nova tentativa agendada",
-    "Session checked": "Sessão verificada",
-    "Session expired — open Developer Mode": "Sessão expirada — abra Developer Mode",
-    "Settings": "Configurações",
-    "Setup error: {error}. Use Developer Mode manually.": "Erro de configuração: {error}. Use Developer Mode manualmente.",
-    "Share this with your TV model and firmware at:": "Compartilhe isto com o modelo e firmware da TV em:",
-    "Show diagnostics": "Mostrar diagnóstico",
-    "Showing the saved list. Could not refresh apps from the TV.": "Exibindo a lista salva. Não foi possível atualizar os aplicativos da TV.",
-    "Software updates": "Atualizações de software",
-    "TV settings": "Configurações da TV",
-    "Try again": "Tentar novamente",
-    "Turn off auto-renewal": "Desativar renovação automática",
-    "Turn on auto-renewal": "Ativar renovação automática",
-    "Undo": "Desfazer",
-    "Update Home": "Atualizar Home",
-    "Update Home Helper using the installation guide first.": "Atualize Home Helper primeiro usando o guia de instalação.",
-    "Update Home or open LG settings for picture, sound and network.": "Atualize Home ou abra as configurações LG de imagem, som e rede.",
-    "Update available, but a verified recovery package for your installed version is missing.": "Atualização disponível, mas falta um pacote de recuperação verificado para a versão instalada.",
-    "Update available. Without root, install it from a computer using the guide.": "Atualização disponível. Sem root, instale pelo computador seguindo o guia.",
-    "Update outcome is not confirmed. Open Home Updater → Recovery before retrying.": "O resultado da atualização não foi confirmado. Abra Home Updater → Recuperação antes de tentar novamente.",
-    "Update service or signed release unavailable. Install the separate Home Updater package once, then retry. Your current Home is unchanged.": "Serviço de atualização ou versão assinada indisponível. Instale o pacote separado Home Updater uma vez e tente novamente. Seu Home atual não foi alterado.",
-    "Update state: {status}. Reopen Home when installation finishes.": "Estado da atualização: {status}. Reabra Home quando a instalação terminar.",
-    "Updates and TV": "Atualizações e TV",
-    "Working…": "Processando…",
-    "Your Home screen": "Sua tela Home",
-    "Your installed Home is newer than this release.": "O Home instalado é mais recente que esta versão.",
-    "{app} added": "{app} adicionado",
-    "{hours} hours remaining (estimate)": "Restam {hours} horas (estimativa)",
-    "← ↑ ↓ → Move   ·   OK Place   ·   Back Cancel   ·   ↓ Below last row to hide": "← ↑ ↓ → Mover   ·   OK Posicionar   ·   Voltar Cancelar   ·   ↓ Abaixo da última linha para ocultar",
-    "No-root Edition": "Edição sem root",
-    "Cancel": "Cancelar",
-    "Install Home update?": "Instalar atualização do Home?",
-    "Restore previous Home?": "Restaurar a versão anterior do Home?",
-    "Home will close during installation. Your apps and settings will be saved.": "O Home será fechado durante a instalação. Seus aplicativos e configurações serão salvos.",
-    "The previous Home version and saved settings will be restored.": "A versão anterior do Home e as configurações salvas serão restauradas.",
-    "Install update": "Instalar atualização",
-    "Restore previous Home": "Restaurar Home anterior",
-    "Release notes": "Novidades",
-    "↑ ↓ Read notes · ← → Choose action · Back Close": "↑ ↓ Ler alterações · ← → Escolher ação · Voltar Fechar",
-    "← → Choose action · Back Open Home": "← → Escolher ação · Voltar Abrir Home",
-    "Home control could not be restored automatically. Open Home settings.": "Não foi possível restaurar o controle do Home automaticamente. Abra as configurações do Home.",
-    "Your previous Home screen choice has been restored.": "Sua escolha anterior de tela inicial foi restaurada.",
-    "Home control remains off because it was disabled during the update.": "O controle do Home continua desligado porque foi desativado durante a atualização.",
-    "Rollback remains available until the next update.": "A reversão continua disponível até a próxima atualização.",
-    "Previous Root version and profile restored.": "Versão anterior do Root e perfil restaurados.",
-    "Installed: {version}": "Instalada: {version}",
-    "Available: {version}": "Disponível: {version}",
-    "Software updates. Update available.": "Atualizações de software. Há uma atualização disponível.",
-    "Open LG Home once, keeping your Home choice.": "Abra o LG Home uma vez sem mudar sua tela inicial.",
-    "Hold Back for 1.2 seconds to open LG Home.": "Segure Voltar por 1,2 segundos para abrir o LG Home.",
-    "Developer Mode": "Modo de Desenvolvedor",
-    "Beta": "Beta",
-    "Home Helper": "Home Helper",
-    "Home button settings": "Configurar botão Home",
-    "Start Helper": "Iniciar Helper",
-    "Start Helper?": "Iniciar Helper?",
-    "Starting Helper…": "Iniciando Helper…",
-    "Helper opens Home with your remote and helps you return to Home after turning on the TV.": "O Helper abre o Home pelo controle remoto e ajuda a voltar ao Home ao ligar a TV.",
-    "Helper is unavailable. Reinstall the complete Home package from your computer.": "Helper indisponível. Reinstale o pacote completo do Home pelo computador.",
-    "Helper was stopped for safety. Start it only when you are ready to use Home control again.": "O Helper foi parado por segurança. Inicie-o quando quiser voltar a usar o controle do Home.",
-    "Helper is stopped. Start it to use the Home button and return from apps.": "O Helper está parado. Inicie-o para usar o botão Home e voltar dos aplicativos.",
-    "Start Helper to use Home control again. Your saved Home screen choice will be used.": "Inicie o Helper para controlar o Home novamente. A escolha de tela inicial salva será usada.",
-    "Status is unavailable.": "Não foi possível consultar o status.",
-    "Try refreshing. If this continues, reinstall the complete Home package from your computer.": "Atualize o status. Se persistir, reinstale o pacote completo do Home pelo computador.",
-    "No recovery needed.": "Não é necessário restaurar.",
-    "Open Home to continue.": "Abra o Home para continuar.",
-    "Open Home to continue. If the update caused a problem, you can restore the previous version.": "Abra o Home. Se a atualização causou problemas, você pode restaurar a versão anterior.",
-    "Recovery needs attention.": "A restauração precisa de atenção.",
-    "Refresh status first. If recovery remains unavailable, use the installer on your computer.": "Primeiro atualize o status. Se a restauração continuar indisponível, use o instalador no computador.",
-    "An update is in progress.": "Uma atualização está em andamento.",
-    "Keep the TV powered on. Status will refresh automatically.": "Mantenha a TV ligada. O status será atualizado automaticamente.",
-    "Could not open Home.": "Não foi possível abrir o Home.",
-    "If Home stops working after an update, use this app to restore the previous version. For regular updates, open Home settings.": "Se o Home parar de funcionar após uma atualização, use este app para restaurar a versão anterior. Para atualizações normais, abra as configurações do Home.",
-    "Open Home": "Abrir Home",
-    "Refresh status": "Atualizar status"
+  'pt-BR': {
+    'A signed Home update is available.':
+      'Uma atualização assinada do Home está disponível.',
+    'Add app': 'Adicionar aplicativo',
+    'All installed apps are already on Home.':
+      'Todos os aplicativos instalados já estão no Home.',
+    'App hidden. Restore it with Add app.':
+      'Aplicativo oculto. Restaure com «Adicionar app».',
+    'Auto-renewal enabled (Beta)': 'Renovação automática ativada (Beta)',
+    'Auto-renewal off': 'Renovação automática desativada',
+    'Automatic (system language)': 'Automático (idioma do sistema)',
+    'Back': 'Voltar',
+    'Back to Home': 'Voltar ao Home',
+    'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
+      'Beta: a renovação ainda não foi verificada em TVs sem root. Continue conferindo o cronômetro no aplicativo Developer Mode.',
+    "Can't open {app}": 'Não foi possível abrir {app}',
+    'Change Home': 'Alterar Home',
+    'Change was not confirmed. Check the switch and try again.':
+      'A alteração não foi confirmada. Confira o interruptor e tente novamente.',
+    'Changing Home control…': 'Alterando o controle do Home…',
+    'Check failed': 'Falha na verificação',
+    'Check pending': 'Verificação pendente',
+    'Check session': 'Verificar sessão',
+    'Checking Home control…': 'Verificando o controle do Home…',
+    'Checking auto-renewal…': 'Verificando a renovação automática…',
+    'Checking for updates…': 'Buscando atualizações…',
+    'Checking installed apps…': 'Verificando aplicativos instalados…',
+    'Choose a language. Home will reload.':
+      'Escolha um idioma. O Home será recarregado.',
+    'Choose an app to add to Home.':
+      'Escolha um aplicativo para adicionar ao Home.',
+    'Choose where Home and return from apps take you.':
+      'Escolha o destino de Home e do retorno dos aplicativos.',
+    'Confirm update': 'Confirmar atualização',
+    'Connection failed — retry scheduled':
+      'Falha na conexão — nova tentativa agendada',
+    'Could not open LG Home. Check Home Helper and try again.':
+      'Não foi possível abrir LG Home. Confira Home Helper e tente novamente.',
+    'Could not save language. Please try again.':
+      'Não foi possível salvar o idioma. Tente novamente.',
+    'Could not save state': 'Não foi possível salvar o estado',
+    'Could not save your complete profile. Nothing was installed.':
+      'Não foi possível salvar seu perfil completo. Nada foi instalado.',
+    "Couldn't restore app. Please try again.":
+      'Não foi possível restaurar o aplicativo. Tente novamente.',
+    "Couldn't save changes. Please try again.":
+      'Não foi possível salvar as alterações. Tente novamente.',
+    'Developer Mode auto-renewal (Beta)':
+      'Renovação automática do Developer Mode (Beta)',
+    'Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.':
+      'Developer Mode mantém o Home instalado. A renovação automática tenta estender a sessão enquanto a TV está ligada e conectada.',
+    'Disable could not be saved. Retry before restarting the service.':
+      'Não foi possível salvar a desativação. Tente novamente antes de reiniciar o serviço.',
+    'Ethernet': 'Ethernet',
+    'Good afternoon': 'Boa tarde',
+    'Good evening': 'Boa noite',
+    'Good morning': 'Bom dia',
+    'Good night': 'Bom descanso',
+    'Hide diagnostics': 'Ocultar diagnóstico',
+    'Hide from Home': 'Ocultar do Home',
+    'Hold Back for 1.2 seconds to open LG Home. Your settings stay saved.':
+      'Segure Voltar por 1,2 segundos para abrir LG Home. Suas configurações serão mantidas.',
+    'Home': 'Home',
+    'Home status is unknown. The Home button may still work.':
+      'Estado de Home desconhecido. O botão Home ainda pode funcionar.',
+    'Home and return from apps open Clean Your TV.':
+      'Home e o retorno dos aplicativos abrem Clean Your TV.',
+    'Home and return from apps open LG Home.':
+      'Home e o retorno dos aplicativos abrem LG Home.',
+    'Home is up to date.': 'O Home está atualizado.',
+    'Home settings': 'Configurações do Home',
+    'Home will close during installation. Your app list and settings will be saved first. Press Confirm update to continue.':
+      'O Home fechará durante a instalação. Sua lista de aplicativos e configurações serão salvas antes. Pressione Confirmar atualização para continuar.',
+    'Inputs': 'Entradas',
+    'Installed Home {installed} · Available {available}':
+      'Home instalado: {installed} · Disponível: {available}',
+    'Installing Home… Keep the TV on. If this screen closes, open Home again or use Home Updater for recovery.':
+      'Instalando Home… Mantenha a TV ligada. Se esta tela fechar, reabra Home ou use Home Updater para recuperação.',
+    'LG response could not confirm renewal':
+      'A resposta da LG não confirmou a renovação',
+    'Language': 'Idioma',
+    'Last checked: {date}': 'Última verificação: {date}',
+    'Last confirmed renewal: {date}': 'Última renovação confirmada: {date}',
+    'Live TV': 'TV ao vivo',
+    'Manage Home, software updates and your TV.':
+      'Gerencie Home, atualizações de software e sua TV.',
+    'Network settings': 'Configurações de rede',
+    'No inputs found': 'Nenhuma entrada encontrada',
+    'No readable Developer Mode session':
+      'Nenhuma sessão legível do Developer Mode',
+    'No recovery result available. Your helper has not been changed.':
+      'Nenhum resultado de recuperação disponível. Seu Helper não foi alterado.',
+    'Not yet': 'Ainda não',
+    'Offline': 'Sem conexão',
+    'Open LG Home': 'Abrir LG Home',
+    'This button opens LG Home once. Your Home screen choice and settings stay saved.':
+      'Este botão abre o LG Home uma vez. A escolha da tela inicial e as configurações são mantidas.',
+    'Recovery': 'Recuperação',
+    'Recovery state: {status}. Use Home Updater to restore the previous version if offered.':
+      'Estado da recuperação: {status}. Use Home Updater para restaurar a versão anterior, se disponível.',
+    'Renewal confirmed': 'Renovação confirmada',
+    'Saving apps, icons and settings…':
+      'Salvando aplicativos, ícones e configurações…',
+    'Service unavailable. Install the complete Home package and try again. Manage your Developer Mode timer manually.':
+      'Serviço indisponível. Instale o pacote completo do Home e tente novamente. Gerencie o cronômetro do Developer Mode manualmente.',
+    'Session changed — retry scheduled':
+      'Sessão alterada — nova tentativa agendada',
+    'Session checked': 'Sessão verificada',
+    'Session expired — open Developer Mode':
+      'Sessão expirada — abra Developer Mode',
+    'Settings': 'Configurações',
+    'Setup error: {error}. Use Developer Mode manually.':
+      'Erro de configuração: {error}. Use Developer Mode manualmente.',
+    'Share this with your TV model and firmware at:':
+      'Compartilhe isto com o modelo e firmware da TV em:',
+    'Show diagnostics': 'Mostrar diagnóstico',
+    'Showing the saved list. Could not refresh apps from the TV.':
+      'Exibindo a lista salva. Não foi possível atualizar os aplicativos da TV.',
+    'Software updates': 'Atualizações de software',
+    'TV settings': 'Configurações da TV',
+    'Try again': 'Tentar novamente',
+    'Turn off auto-renewal': 'Desativar renovação automática',
+    'Turn on auto-renewal': 'Ativar renovação automática',
+    'Undo': 'Desfazer',
+    'Update Home': 'Atualizar Home',
+    'Update Home Helper using the installation guide first.':
+      'Atualize Home Helper primeiro usando o guia de instalação.',
+    'Update Home or open LG settings for picture, sound and network.':
+      'Atualize Home ou abra as configurações LG de imagem, som e rede.',
+    'Update available, but a verified recovery package for your installed version is missing.':
+      'Atualização disponível, mas falta um pacote de recuperação verificado para a versão instalada.',
+    'Update available. Without root, install it from a computer using the guide.':
+      'Atualização disponível. Sem root, instale pelo computador seguindo o guia.',
+    'Update outcome is not confirmed. Open Home Updater → Recovery before retrying.':
+      'O resultado da atualização não foi confirmado. Abra Home Updater → Recuperação antes de tentar novamente.',
+    'Update service or signed release unavailable. Install the separate Home Updater package once, then retry. Your current Home is unchanged.':
+      'Serviço de atualização ou versão assinada indisponível. Instale o pacote separado Home Updater uma vez e tente novamente. Seu Home atual não foi alterado.',
+    'Update state: {status}. Reopen Home when installation finishes.':
+      'Estado da atualização: {status}. Reabra Home quando a instalação terminar.',
+    'Updates and TV': 'Atualizações e TV',
+    'Working…': 'Processando…',
+    'Your Home screen': 'Sua tela Home',
+    'Your installed Home is newer than this release.':
+      'O Home instalado é mais recente que esta versão.',
+    '{app} added': '{app} adicionado',
+    '{hours} hours remaining (estimate)': 'Restam {hours} horas (estimativa)',
+    '← ↑ ↓ → Move   ·   OK Place   ·   Back Cancel   ·   ↓ Below last row to hide':
+      '← ↑ ↓ → Mover   ·   OK Posicionar   ·   Voltar Cancelar   ·   ↓ Abaixo da última linha para ocultar',
+    'No-root Edition': 'Edição sem root',
+    'Cancel': 'Cancelar',
+    'Install Home update?': 'Instalar atualização do Home?',
+    'Restore previous Home?': 'Restaurar a versão anterior do Home?',
+    'Home will close during installation. Your apps and settings will be saved.':
+      'O Home será fechado durante a instalação. Seus aplicativos e configurações serão salvos.',
+    'The previous Home version and saved settings will be restored.':
+      'A versão anterior do Home e as configurações salvas serão restauradas.',
+    'Install update': 'Instalar atualização',
+    'Restore previous Home': 'Restaurar Home anterior',
+    'Release notes': 'Novidades',
+    '↑ ↓ Read notes · ← → Choose action · Back Close':
+      '↑ ↓ Ler alterações · ← → Escolher ação · Voltar Fechar',
+    '← → Choose action · Back Open Home':
+      '← → Escolher ação · Voltar Abrir Home',
+    'Home control could not be restored automatically. Open Home settings.':
+      'Não foi possível restaurar o controle do Home automaticamente. Abra as configurações do Home.',
+    'Your previous Home screen choice has been restored.':
+      'Sua escolha anterior de tela inicial foi restaurada.',
+    'Home control remains off because it was disabled during the update.':
+      'O controle do Home continua desligado porque foi desativado durante a atualização.',
+    'Rollback remains available until the next update.':
+      'A reversão continua disponível até a próxima atualização.',
+    'Previous Root version and profile restored.':
+      'Versão anterior do Root e perfil restaurados.',
+    'Installed: {version}': 'Instalada: {version}',
+    'Available: {version}': 'Disponível: {version}',
+    'Software updates. Update available.':
+      'Atualizações de software. Há uma atualização disponível.',
+    'Open LG Home once, keeping your Home choice.':
+      'Abra o LG Home uma vez sem mudar sua tela inicial.',
+    'Hold Back for 1.2 seconds to open LG Home.':
+      'Segure Voltar por 1,2 segundos para abrir o LG Home.',
+    'Developer Mode': 'Modo de Desenvolvedor',
+    'Beta': 'Beta',
+    'Home Helper': 'Home Helper',
+    'Home button settings': 'Configurar botão Home',
+    'Start Helper': 'Iniciar Helper',
+    'Start Helper?': 'Iniciar Helper?',
+    'Starting Helper…': 'Iniciando Helper…',
+    'Helper opens Home with your remote and helps you return to Home after turning on the TV.':
+      'O Helper abre o Home pelo controle remoto e ajuda a voltar ao Home ao ligar a TV.',
+    'Helper is unavailable. Reinstall the complete Home package from your computer.':
+      'Helper indisponível. Reinstale o pacote completo do Home pelo computador.',
+    'Helper was stopped for safety. Start it only when you are ready to use Home control again.':
+      'O Helper foi parado por segurança. Inicie-o quando quiser voltar a usar o controle do Home.',
+    'Helper is stopped. Start it to use the Home button and return from apps.':
+      'O Helper está parado. Inicie-o para usar o botão Home e voltar dos aplicativos.',
+    'Start Helper to use Home control again. Your saved Home screen choice will be used.':
+      'Inicie o Helper para controlar o Home novamente. A escolha de tela inicial salva será usada.',
+    'Status is unavailable.': 'Não foi possível consultar o status.',
+    'Try refreshing. If this continues, reinstall the complete Home package from your computer.':
+      'Atualize o status. Se persistir, reinstale o pacote completo do Home pelo computador.',
+    'No recovery needed.': 'Não é necessário restaurar.',
+    'Open Home to continue.': 'Abra o Home para continuar.',
+    'Open Home to continue. If the update caused a problem, you can restore the previous version.':
+      'Abra o Home. Se a atualização causou problemas, você pode restaurar a versão anterior.',
+    'Recovery needs attention.': 'A restauração precisa de atenção.',
+    'Refresh status first. If recovery remains unavailable, use the installer on your computer.':
+      'Primeiro atualize o status. Se a restauração continuar indisponível, use o instalador no computador.',
+    'An update is in progress.': 'Uma atualização está em andamento.',
+    'Keep the TV powered on. Status will refresh automatically.':
+      'Mantenha a TV ligada. O status será atualizado automaticamente.',
+    'Could not open Home.': 'Não foi possível abrir o Home.',
+    'If Home stops working after an update, use this app to restore the previous version. For regular updates, open Home settings.':
+      'Se o Home parar de funcionar após uma atualização, use este app para restaurar a versão anterior. Para atualizações normais, abra as configurações do Home.',
+    'Open Home': 'Abrir Home',
+    'Refresh status': 'Atualizar status'
   },
-  "fr": {
-    "A signed Home update is available.": "Une mise à jour signée de Home est disponible.",
-    "Add app": "Ajouter une application",
-    "All installed apps are already on Home.": "Toutes les applications installées sont déjà sur Home.",
-    "App hidden. Restore it with Add app.": "Application masquée. Rétablissez-la avec « Ajouter une app ».",
-    "Auto-renewal enabled (Beta)": "Renouvellement automatique activé (Beta)",
-    "Auto-renewal off": "Renouvellement automatique désactivé",
-    "Automatic (system language)": "Automatique (langue du système)",
-    "Back": "Retour",
-    "Back to Home": "Retour à Home",
-    "Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.": "Beta : le renouvellement n’est pas encore vérifié sur les TV sans root. Continuez à vérifier le compteur dans l’application Developer Mode.",
-    "Can't open {app}": "Impossible d’ouvrir {app}",
-    "Change Home": "Changer Home",
-    "Change was not confirmed. Check the switch and try again.": "Modification non confirmée. Vérifiez l’interrupteur et réessayez.",
-    "Changing Home control…": "Modification du contrôle de Home…",
-    "Check failed": "Échec de la vérification",
-    "Check pending": "Vérification en attente",
-    "Check session": "Vérifier la session",
-    "Checking Home control…": "Vérification du contrôle de Home…",
-    "Checking auto-renewal…": "Vérification du renouvellement automatique…",
-    "Checking for updates…": "Recherche de mises à jour…",
-    "Checking installed apps…": "Vérification des applications installées…",
-    "Choose a language. Home will reload.": "Choisissez une langue. Home sera rechargé.",
-    "Choose an app to add to Home.": "Choisissez une application à ajouter à Home.",
-    "Choose where Home and return from apps take you.": "Choisissez la destination de Home et du retour des applications.",
-    "Confirm update": "Confirmer la mise à jour",
-    "Connection failed — retry scheduled": "Échec de connexion — nouvel essai prévu",
-    "Could not open LG Home. Check Home Helper and try again.": "Impossible d’ouvrir LG Home. Vérifiez Home Helper et réessayez.",
-    "Could not save language. Please try again.": "Impossible d’enregistrer la langue. Réessayez.",
-    "Could not save state": "Impossible d’enregistrer l’état",
-    "Could not save your complete profile. Nothing was installed.": "Impossible d’enregistrer votre profil complet. Rien n’a été installé.",
-    "Couldn't restore app. Please try again.": "Impossible de restaurer l’application. Réessayez.",
-    "Couldn't save changes. Please try again.": "Impossible d’enregistrer les modifications. Réessayez.",
-    "Developer Mode auto-renewal (Beta)": "Renouvellement automatique de Developer Mode (Beta)",
-    "Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.": "Developer Mode maintient Home installé. Le renouvellement automatique tente de prolonger la session lorsque la TV est allumée et connectée.",
-    "Disable could not be saved. Retry before restarting the service.": "Impossible d’enregistrer la désactivation. Réessayez avant de redémarrer le service.",
-    "Ethernet": "Ethernet",
-    "Good afternoon": "Bon après-midi",
-    "Good evening": "Bonsoir",
-    "Good morning": "Bonjour",
-    "Good night": "Bonne nuit",
-    "Hide diagnostics": "Masquer le diagnostic",
-    "Hide from Home": "Masquer sur Home",
-    "Hold Back for 1.2 seconds to open LG Home. Your settings stay saved.": "Maintenez Retour pendant 1,2 seconde pour ouvrir LG Home. Vos paramètres restent enregistrés.",
-    "Home": "Home",
-    "Home status is unknown. The Home button may still work.": "État de Home inconnu. Le bouton Home peut encore fonctionner.",
-    "Home and return from apps open Clean Your TV.": "Home et le retour des applications ouvrent Clean Your TV.",
-    "Home and return from apps open LG Home.": "Home et le retour des applications ouvrent LG Home.",
-    "Home is up to date.": "Home est à jour.",
-    "Home settings": "Paramètres de Home",
-    "Home will close during installation. Your app list and settings will be saved first. Press Confirm update to continue.": "Home se fermera pendant l’installation. Vos applications et paramètres seront enregistrés d’abord. Appuyez sur Confirmer la mise à jour pour continuer.",
-    "Inputs": "Entrées",
-    "Installed Home {installed} · Available {available}": "Home installé : {installed} · Disponible : {available}",
-    "Installing Home… Keep the TV on. If this screen closes, open Home again or use Home Updater for recovery.": "Installation de Home… Gardez la TV allumée. Si cet écran se ferme, rouvrez Home ou utilisez Home Updater pour récupérer.",
-    "LG response could not confirm renewal": "La réponse LG n’a pas confirmé le renouvellement",
-    "Language": "Langue",
-    "Last checked: {date}": "Dernière vérification : {date}",
-    "Last confirmed renewal: {date}": "Dernier renouvellement confirmé : {date}",
-    "Live TV": "TV en direct",
-    "Manage Home, software updates and your TV.": "Gérez Home, les mises à jour et votre TV.",
-    "Network settings": "Paramètres réseau",
-    "No inputs found": "Aucune entrée trouvée",
-    "No readable Developer Mode session": "Aucune session Developer Mode lisible",
-    "No recovery result available. Your helper has not been changed.": "Aucun résultat de récupération disponible. Votre Helper n’a pas été modifié.",
-    "Not yet": "Pas encore",
-    "Offline": "Hors ligne",
-    "Open LG Home": "Ouvrir LG Home",
-    "This button opens LG Home once. Your Home screen choice and settings stay saved.": "Ce bouton ouvre LG Home une seule fois. Le choix de votre écran d’accueil et vos paramètres sont conservés.",
-    "Recovery": "Récupération",
-    "Recovery state: {status}. Use Home Updater to restore the previous version if offered.": "État de récupération : {status}. Utilisez Home Updater pour restaurer la version précédente si proposé.",
-    "Renewal confirmed": "Renouvellement confirmé",
-    "Saving apps, icons and settings…": "Enregistrement des applications, icônes et paramètres…",
-    "Service unavailable. Install the complete Home package and try again. Manage your Developer Mode timer manually.": "Service indisponible. Installez le paquet Home complet et réessayez. Gérez manuellement le compteur Developer Mode.",
-    "Session changed — retry scheduled": "Session modifiée — nouvel essai prévu",
-    "Session checked": "Session vérifiée",
-    "Session expired — open Developer Mode": "Session expirée — ouvrez Developer Mode",
-    "Settings": "Paramètres",
-    "Setup error: {error}. Use Developer Mode manually.": "Erreur de configuration : {error}. Utilisez Developer Mode manuellement.",
-    "Share this with your TV model and firmware at:": "Partagez ceci avec le modèle et le micrologiciel de votre TV à :",
-    "Show diagnostics": "Afficher le diagnostic",
-    "Showing the saved list. Could not refresh apps from the TV.": "Affichage de la liste enregistrée. Impossible d’actualiser les applications depuis la TV.",
-    "Software updates": "Mises à jour logicielles",
-    "TV settings": "Paramètres TV",
-    "Try again": "Réessayer",
-    "Turn off auto-renewal": "Désactiver le renouvellement automatique",
-    "Turn on auto-renewal": "Activer le renouvellement automatique",
-    "Undo": "Annuler",
-    "Update Home": "Mettre à jour Home",
-    "Update Home Helper using the installation guide first.": "Mettez d’abord à jour Home Helper avec le guide d’installation.",
-    "Update Home or open LG settings for picture, sound and network.": "Mettez à jour Home ou ouvrez les paramètres LG d’image, de son et de réseau.",
-    "Update available, but a verified recovery package for your installed version is missing.": "Mise à jour disponible, mais aucun paquet de récupération vérifié pour votre version installée.",
-    "Update available. Without root, install it from a computer using the guide.": "Mise à jour disponible. Sans root, installez-la depuis un ordinateur en suivant le guide.",
-    "Update outcome is not confirmed. Open Home Updater → Recovery before retrying.": "Résultat de la mise à jour non confirmé. Ouvrez Home Updater → Récupération avant de réessayer.",
-    "Update service or signed release unavailable. Install the separate Home Updater package once, then retry. Your current Home is unchanged.": "Service de mise à jour ou version signée indisponible. Installez une fois le paquet Home Updater séparé, puis réessayez. Votre Home actuel est inchangé.",
-    "Update state: {status}. Reopen Home when installation finishes.": "État de mise à jour : {status}. Rouvrez Home à la fin de l’installation.",
-    "Updates and TV": "Mises à jour et TV",
-    "Working…": "En cours…",
-    "Your Home screen": "Votre écran Home",
-    "Your installed Home is newer than this release.": "Votre Home installé est plus récent que cette version.",
-    "{app} added": "{app} ajouté",
-    "{hours} hours remaining (estimate)": "{hours} heures restantes (estimation)",
-    "← ↑ ↓ → Move   ·   OK Place   ·   Back Cancel   ·   ↓ Below last row to hide": "← ↑ ↓ → Déplacer   ·   OK Placer   ·   Retour Annuler   ·   ↓ Sous la dernière ligne pour masquer",
-    "No-root Edition": "Édition sans root",
-    "Cancel": "Annuler",
-    "Install Home update?": "Installer la mise à jour de Home ?",
-    "Restore previous Home?": "Restaurer la version précédente de Home ?",
-    "Home will close during installation. Your apps and settings will be saved.": "Home se fermera pendant l’installation. Vos applications et paramètres seront enregistrés.",
-    "The previous Home version and saved settings will be restored.": "La version précédente de Home et les paramètres enregistrés seront restaurés.",
-    "Install update": "Installer la mise à jour",
-    "Restore previous Home": "Restaurer Home précédent",
-    "Release notes": "Nouveautés",
-    "↑ ↓ Read notes · ← → Choose action · Back Close": "↑ ↓ Lire les changements · ← → Choisir · Retour Fermer",
-    "← → Choose action · Back Open Home": "← → Choisir · Retour Ouvrir Home",
-    "Home control could not be restored automatically. Open Home settings.": "Le contrôle de Home n’a pas pu être rétabli automatiquement. Ouvrez les réglages de Home.",
-    "Your previous Home screen choice has been restored.": "Votre choix précédent d’écran d’accueil a été rétabli.",
-    "Home control remains off because it was disabled during the update.": "Le contrôle de Home reste désactivé car il a été désactivé pendant la mise à jour.",
-    "Rollback remains available until the next update.": "Le retour en arrière reste disponible jusqu’à la prochaine mise à jour.",
-    "Previous Root version and profile restored.": "La version précédente de Root et le profil ont été restaurés.",
-    "Installed: {version}": "Version installée : {version}",
-    "Available: {version}": "Version disponible : {version}",
-    "Software updates. Update available.": "Mises à jour logicielles. Une mise à jour est disponible.",
-    "Open LG Home once, keeping your Home choice.": "Ouvrez LG Home une fois en conservant votre accueil.",
-    "Hold Back for 1.2 seconds to open LG Home.": "Maintenez Retour 1,2 seconde pour ouvrir LG Home.",
-    "Developer Mode": "Mode développeur",
-    "Beta": "Bêta",
-    "Home Helper": "Home Helper",
-    "Home button settings": "Configurer le bouton Home",
-    "Start Helper": "Démarrer Helper",
-    "Start Helper?": "Démarrer Helper ?",
-    "Starting Helper…": "Démarrage de Helper…",
-    "Helper opens Home with your remote and helps you return to Home after turning on the TV.": "Helper ouvre Home avec la télécommande et aide à y revenir à l’allumage du téléviseur.",
-    "Helper is unavailable. Reinstall the complete Home package from your computer.": "Helper est indisponible. Réinstallez le paquet Home complet depuis votre ordinateur.",
-    "Helper was stopped for safety. Start it only when you are ready to use Home control again.": "Helper a été arrêté par sécurité. Démarrez-le lorsque vous souhaitez réutiliser le contrôle de Home.",
-    "Helper is stopped. Start it to use the Home button and return from apps.": "Helper est arrêté. Démarrez-le pour utiliser le bouton Home et revenir depuis les applications.",
-    "Start Helper to use Home control again. Your saved Home screen choice will be used.": "Démarrez Helper pour contrôler Home à nouveau. Votre choix d’écran d’accueil enregistré sera utilisé.",
-    "Status is unavailable.": "Impossible de consulter l’état.",
-    "Try refreshing. If this continues, reinstall the complete Home package from your computer.": "Actualisez l’état. Si le problème persiste, réinstallez le paquet Home complet depuis votre ordinateur.",
-    "No recovery needed.": "Aucune restauration nécessaire.",
-    "Open Home to continue.": "Ouvrez Home pour continuer.",
-    "Open Home to continue. If the update caused a problem, you can restore the previous version.": "Ouvrez Home. Si la mise à jour a causé un problème, vous pouvez restaurer la version précédente.",
-    "Recovery needs attention.": "La restauration nécessite votre attention.",
-    "Refresh status first. If recovery remains unavailable, use the installer on your computer.": "Actualisez d’abord l’état. Si la restauration reste indisponible, utilisez l’installateur sur votre ordinateur.",
-    "An update is in progress.": "Une mise à jour est en cours.",
-    "Keep the TV powered on. Status will refresh automatically.": "Laissez le téléviseur allumé. L’état sera actualisé automatiquement.",
-    "Could not open Home.": "Impossible d’ouvrir Home.",
-    "If Home stops working after an update, use this app to restore the previous version. For regular updates, open Home settings.": "Si Home ne fonctionne plus après une mise à jour, cette application permet de restaurer la version précédente. Les mises à jour habituelles sont dans les paramètres de Home.",
-    "Open Home": "Ouvrir Home",
-    "Refresh status": "Actualiser l’état"
+  'fr': {
+    'A signed Home update is available.':
+      'Une mise à jour signée de Home est disponible.',
+    'Add app': 'Ajouter une application',
+    'All installed apps are already on Home.':
+      'Toutes les applications installées sont déjà sur Home.',
+    'App hidden. Restore it with Add app.':
+      'Application masquée. Rétablissez-la avec « Ajouter une app ».',
+    'Auto-renewal enabled (Beta)': 'Renouvellement automatique activé (Beta)',
+    'Auto-renewal off': 'Renouvellement automatique désactivé',
+    'Automatic (system language)': 'Automatique (langue du système)',
+    'Back': 'Retour',
+    'Back to Home': 'Retour à Home',
+    'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
+      'Beta : le renouvellement n’est pas encore vérifié sur les TV sans root. Continuez à vérifier le compteur dans l’application Developer Mode.',
+    "Can't open {app}": 'Impossible d’ouvrir {app}',
+    'Change Home': 'Changer Home',
+    'Change was not confirmed. Check the switch and try again.':
+      'Modification non confirmée. Vérifiez l’interrupteur et réessayez.',
+    'Changing Home control…': 'Modification du contrôle de Home…',
+    'Check failed': 'Échec de la vérification',
+    'Check pending': 'Vérification en attente',
+    'Check session': 'Vérifier la session',
+    'Checking Home control…': 'Vérification du contrôle de Home…',
+    'Checking auto-renewal…': 'Vérification du renouvellement automatique…',
+    'Checking for updates…': 'Recherche de mises à jour…',
+    'Checking installed apps…': 'Vérification des applications installées…',
+    'Choose a language. Home will reload.':
+      'Choisissez une langue. Home sera rechargé.',
+    'Choose an app to add to Home.':
+      'Choisissez une application à ajouter à Home.',
+    'Choose where Home and return from apps take you.':
+      'Choisissez la destination de Home et du retour des applications.',
+    'Confirm update': 'Confirmer la mise à jour',
+    'Connection failed — retry scheduled':
+      'Échec de connexion — nouvel essai prévu',
+    'Could not open LG Home. Check Home Helper and try again.':
+      'Impossible d’ouvrir LG Home. Vérifiez Home Helper et réessayez.',
+    'Could not save language. Please try again.':
+      'Impossible d’enregistrer la langue. Réessayez.',
+    'Could not save state': 'Impossible d’enregistrer l’état',
+    'Could not save your complete profile. Nothing was installed.':
+      'Impossible d’enregistrer votre profil complet. Rien n’a été installé.',
+    "Couldn't restore app. Please try again.":
+      'Impossible de restaurer l’application. Réessayez.',
+    "Couldn't save changes. Please try again.":
+      'Impossible d’enregistrer les modifications. Réessayez.',
+    'Developer Mode auto-renewal (Beta)':
+      'Renouvellement automatique de Developer Mode (Beta)',
+    'Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.':
+      'Developer Mode maintient Home installé. Le renouvellement automatique tente de prolonger la session lorsque la TV est allumée et connectée.',
+    'Disable could not be saved. Retry before restarting the service.':
+      'Impossible d’enregistrer la désactivation. Réessayez avant de redémarrer le service.',
+    'Ethernet': 'Ethernet',
+    'Good afternoon': 'Bon après-midi',
+    'Good evening': 'Bonsoir',
+    'Good morning': 'Bonjour',
+    'Good night': 'Bonne nuit',
+    'Hide diagnostics': 'Masquer le diagnostic',
+    'Hide from Home': 'Masquer sur Home',
+    'Hold Back for 1.2 seconds to open LG Home. Your settings stay saved.':
+      'Maintenez Retour pendant 1,2 seconde pour ouvrir LG Home. Vos paramètres restent enregistrés.',
+    'Home': 'Home',
+    'Home status is unknown. The Home button may still work.':
+      'État de Home inconnu. Le bouton Home peut encore fonctionner.',
+    'Home and return from apps open Clean Your TV.':
+      'Home et le retour des applications ouvrent Clean Your TV.',
+    'Home and return from apps open LG Home.':
+      'Home et le retour des applications ouvrent LG Home.',
+    'Home is up to date.': 'Home est à jour.',
+    'Home settings': 'Paramètres de Home',
+    'Home will close during installation. Your app list and settings will be saved first. Press Confirm update to continue.':
+      'Home se fermera pendant l’installation. Vos applications et paramètres seront enregistrés d’abord. Appuyez sur Confirmer la mise à jour pour continuer.',
+    'Inputs': 'Entrées',
+    'Installed Home {installed} · Available {available}':
+      'Home installé : {installed} · Disponible : {available}',
+    'Installing Home… Keep the TV on. If this screen closes, open Home again or use Home Updater for recovery.':
+      'Installation de Home… Gardez la TV allumée. Si cet écran se ferme, rouvrez Home ou utilisez Home Updater pour récupérer.',
+    'LG response could not confirm renewal':
+      'La réponse LG n’a pas confirmé le renouvellement',
+    'Language': 'Langue',
+    'Last checked: {date}': 'Dernière vérification : {date}',
+    'Last confirmed renewal: {date}':
+      'Dernier renouvellement confirmé : {date}',
+    'Live TV': 'TV en direct',
+    'Manage Home, software updates and your TV.':
+      'Gérez Home, les mises à jour et votre TV.',
+    'Network settings': 'Paramètres réseau',
+    'No inputs found': 'Aucune entrée trouvée',
+    'No readable Developer Mode session':
+      'Aucune session Developer Mode lisible',
+    'No recovery result available. Your helper has not been changed.':
+      'Aucun résultat de récupération disponible. Votre Helper n’a pas été modifié.',
+    'Not yet': 'Pas encore',
+    'Offline': 'Hors ligne',
+    'Open LG Home': 'Ouvrir LG Home',
+    'This button opens LG Home once. Your Home screen choice and settings stay saved.':
+      'Ce bouton ouvre LG Home une seule fois. Le choix de votre écran d’accueil et vos paramètres sont conservés.',
+    'Recovery': 'Récupération',
+    'Recovery state: {status}. Use Home Updater to restore the previous version if offered.':
+      'État de récupération : {status}. Utilisez Home Updater pour restaurer la version précédente si proposé.',
+    'Renewal confirmed': 'Renouvellement confirmé',
+    'Saving apps, icons and settings…':
+      'Enregistrement des applications, icônes et paramètres…',
+    'Service unavailable. Install the complete Home package and try again. Manage your Developer Mode timer manually.':
+      'Service indisponible. Installez le paquet Home complet et réessayez. Gérez manuellement le compteur Developer Mode.',
+    'Session changed — retry scheduled':
+      'Session modifiée — nouvel essai prévu',
+    'Session checked': 'Session vérifiée',
+    'Session expired — open Developer Mode':
+      'Session expirée — ouvrez Developer Mode',
+    'Settings': 'Paramètres',
+    'Setup error: {error}. Use Developer Mode manually.':
+      'Erreur de configuration : {error}. Utilisez Developer Mode manuellement.',
+    'Share this with your TV model and firmware at:':
+      'Partagez ceci avec le modèle et le micrologiciel de votre TV à :',
+    'Show diagnostics': 'Afficher le diagnostic',
+    'Showing the saved list. Could not refresh apps from the TV.':
+      'Affichage de la liste enregistrée. Impossible d’actualiser les applications depuis la TV.',
+    'Software updates': 'Mises à jour logicielles',
+    'TV settings': 'Paramètres TV',
+    'Try again': 'Réessayer',
+    'Turn off auto-renewal': 'Désactiver le renouvellement automatique',
+    'Turn on auto-renewal': 'Activer le renouvellement automatique',
+    'Undo': 'Annuler',
+    'Update Home': 'Mettre à jour Home',
+    'Update Home Helper using the installation guide first.':
+      'Mettez d’abord à jour Home Helper avec le guide d’installation.',
+    'Update Home or open LG settings for picture, sound and network.':
+      'Mettez à jour Home ou ouvrez les paramètres LG d’image, de son et de réseau.',
+    'Update available, but a verified recovery package for your installed version is missing.':
+      'Mise à jour disponible, mais aucun paquet de récupération vérifié pour votre version installée.',
+    'Update available. Without root, install it from a computer using the guide.':
+      'Mise à jour disponible. Sans root, installez-la depuis un ordinateur en suivant le guide.',
+    'Update outcome is not confirmed. Open Home Updater → Recovery before retrying.':
+      'Résultat de la mise à jour non confirmé. Ouvrez Home Updater → Récupération avant de réessayer.',
+    'Update service or signed release unavailable. Install the separate Home Updater package once, then retry. Your current Home is unchanged.':
+      'Service de mise à jour ou version signée indisponible. Installez une fois le paquet Home Updater séparé, puis réessayez. Votre Home actuel est inchangé.',
+    'Update state: {status}. Reopen Home when installation finishes.':
+      'État de mise à jour : {status}. Rouvrez Home à la fin de l’installation.',
+    'Updates and TV': 'Mises à jour et TV',
+    'Working…': 'En cours…',
+    'Your Home screen': 'Votre écran Home',
+    'Your installed Home is newer than this release.':
+      'Votre Home installé est plus récent que cette version.',
+    '{app} added': '{app} ajouté',
+    '{hours} hours remaining (estimate)':
+      '{hours} heures restantes (estimation)',
+    '← ↑ ↓ → Move   ·   OK Place   ·   Back Cancel   ·   ↓ Below last row to hide':
+      '← ↑ ↓ → Déplacer   ·   OK Placer   ·   Retour Annuler   ·   ↓ Sous la dernière ligne pour masquer',
+    'No-root Edition': 'Édition sans root',
+    'Cancel': 'Annuler',
+    'Install Home update?': 'Installer la mise à jour de Home ?',
+    'Restore previous Home?': 'Restaurer la version précédente de Home ?',
+    'Home will close during installation. Your apps and settings will be saved.':
+      'Home se fermera pendant l’installation. Vos applications et paramètres seront enregistrés.',
+    'The previous Home version and saved settings will be restored.':
+      'La version précédente de Home et les paramètres enregistrés seront restaurés.',
+    'Install update': 'Installer la mise à jour',
+    'Restore previous Home': 'Restaurer Home précédent',
+    'Release notes': 'Nouveautés',
+    '↑ ↓ Read notes · ← → Choose action · Back Close':
+      '↑ ↓ Lire les changements · ← → Choisir · Retour Fermer',
+    '← → Choose action · Back Open Home': '← → Choisir · Retour Ouvrir Home',
+    'Home control could not be restored automatically. Open Home settings.':
+      'Le contrôle de Home n’a pas pu être rétabli automatiquement. Ouvrez les réglages de Home.',
+    'Your previous Home screen choice has been restored.':
+      'Votre choix précédent d’écran d’accueil a été rétabli.',
+    'Home control remains off because it was disabled during the update.':
+      'Le contrôle de Home reste désactivé car il a été désactivé pendant la mise à jour.',
+    'Rollback remains available until the next update.':
+      'Le retour en arrière reste disponible jusqu’à la prochaine mise à jour.',
+    'Previous Root version and profile restored.':
+      'La version précédente de Root et le profil ont été restaurés.',
+    'Installed: {version}': 'Version installée : {version}',
+    'Available: {version}': 'Version disponible : {version}',
+    'Software updates. Update available.':
+      'Mises à jour logicielles. Une mise à jour est disponible.',
+    'Open LG Home once, keeping your Home choice.':
+      'Ouvrez LG Home une fois en conservant votre accueil.',
+    'Hold Back for 1.2 seconds to open LG Home.':
+      'Maintenez Retour 1,2 seconde pour ouvrir LG Home.',
+    'Developer Mode': 'Mode développeur',
+    'Beta': 'Bêta',
+    'Home Helper': 'Home Helper',
+    'Home button settings': 'Configurer le bouton Home',
+    'Start Helper': 'Démarrer Helper',
+    'Start Helper?': 'Démarrer Helper ?',
+    'Starting Helper…': 'Démarrage de Helper…',
+    'Helper opens Home with your remote and helps you return to Home after turning on the TV.':
+      'Helper ouvre Home avec la télécommande et aide à y revenir à l’allumage du téléviseur.',
+    'Helper is unavailable. Reinstall the complete Home package from your computer.':
+      'Helper est indisponible. Réinstallez le paquet Home complet depuis votre ordinateur.',
+    'Helper was stopped for safety. Start it only when you are ready to use Home control again.':
+      'Helper a été arrêté par sécurité. Démarrez-le lorsque vous souhaitez réutiliser le contrôle de Home.',
+    'Helper is stopped. Start it to use the Home button and return from apps.':
+      'Helper est arrêté. Démarrez-le pour utiliser le bouton Home et revenir depuis les applications.',
+    'Start Helper to use Home control again. Your saved Home screen choice will be used.':
+      'Démarrez Helper pour contrôler Home à nouveau. Votre choix d’écran d’accueil enregistré sera utilisé.',
+    'Status is unavailable.': 'Impossible de consulter l’état.',
+    'Try refreshing. If this continues, reinstall the complete Home package from your computer.':
+      'Actualisez l’état. Si le problème persiste, réinstallez le paquet Home complet depuis votre ordinateur.',
+    'No recovery needed.': 'Aucune restauration nécessaire.',
+    'Open Home to continue.': 'Ouvrez Home pour continuer.',
+    'Open Home to continue. If the update caused a problem, you can restore the previous version.':
+      'Ouvrez Home. Si la mise à jour a causé un problème, vous pouvez restaurer la version précédente.',
+    'Recovery needs attention.': 'La restauration nécessite votre attention.',
+    'Refresh status first. If recovery remains unavailable, use the installer on your computer.':
+      'Actualisez d’abord l’état. Si la restauration reste indisponible, utilisez l’installateur sur votre ordinateur.',
+    'An update is in progress.': 'Une mise à jour est en cours.',
+    'Keep the TV powered on. Status will refresh automatically.':
+      'Laissez le téléviseur allumé. L’état sera actualisé automatiquement.',
+    'Could not open Home.': 'Impossible d’ouvrir Home.',
+    'If Home stops working after an update, use this app to restore the previous version. For regular updates, open Home settings.':
+      'Si Home ne fonctionne plus après une mise à jour, cette application permet de restaurer la version précédente. Les mises à jour habituelles sont dans les paramètres de Home.',
+    'Open Home': 'Ouvrir Home',
+    'Refresh status': 'Actualiser l’état'
   },
-  "it": {
-    "A signed Home update is available.": "È disponibile un aggiornamento firmato di Home.",
-    "Add app": "Aggiungi app",
-    "All installed apps are already on Home.": "Tutte le app installate sono già su Home.",
-    "App hidden. Restore it with Add app.": "App nascosta. Ripristinala con «Aggiungi app».",
-    "Auto-renewal enabled (Beta)": "Rinnovo automatico attivato (Beta)",
-    "Auto-renewal off": "Rinnovo automatico disattivato",
-    "Automatic (system language)": "Automatico (lingua del sistema)",
-    "Back": "Indietro",
-    "Back to Home": "Torna a Home",
-    "Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.": "Beta: il rinnovo non è ancora verificato sui TV senza root. Continua a controllare il timer nell’app Developer Mode.",
-    "Can't open {app}": "Impossibile aprire {app}",
-    "Change Home": "Cambia Home",
-    "Change was not confirmed. Check the switch and try again.": "Modifica non confermata. Controlla l’interruttore e riprova.",
-    "Changing Home control…": "Modifica del controllo Home…",
-    "Check failed": "Verifica non riuscita",
-    "Check pending": "Verifica in attesa",
-    "Check session": "Verifica sessione",
-    "Checking Home control…": "Verifica del controllo Home…",
-    "Checking auto-renewal…": "Verifica del rinnovo automatico…",
-    "Checking for updates…": "Ricerca aggiornamenti…",
-    "Checking installed apps…": "Verifica delle app installate…",
-    "Choose a language. Home will reload.": "Scegli una lingua. Home verrà ricaricato.",
-    "Choose an app to add to Home.": "Scegli un’app da aggiungere a Home.",
-    "Choose where Home and return from apps take you.": "Scegli la destinazione di Home e del ritorno dalle app.",
-    "Confirm update": "Conferma aggiornamento",
-    "Connection failed — retry scheduled": "Connessione non riuscita — nuovo tentativo programmato",
-    "Could not open LG Home. Check Home Helper and try again.": "Impossibile aprire LG Home. Controlla Home Helper e riprova.",
-    "Could not save language. Please try again.": "Impossibile salvare la lingua. Riprova.",
-    "Could not save state": "Impossibile salvare lo stato",
-    "Could not save your complete profile. Nothing was installed.": "Impossibile salvare il profilo completo. Non è stato installato nulla.",
-    "Couldn't restore app. Please try again.": "Impossibile ripristinare l’app. Riprova.",
-    "Couldn't save changes. Please try again.": "Impossibile salvare le modifiche. Riprova.",
-    "Developer Mode auto-renewal (Beta)": "Rinnovo automatico di Developer Mode (Beta)",
-    "Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.": "Developer Mode mantiene Home installato. Il rinnovo automatico tenta di prolungare la sessione mentre il TV è acceso e connesso.",
-    "Disable could not be saved. Retry before restarting the service.": "Impossibile salvare la disattivazione. Riprova prima di riavviare il servizio.",
-    "Ethernet": "Ethernet",
-    "Good afternoon": "Buon pomeriggio",
-    "Good evening": "Buonasera",
-    "Good morning": "Buongiorno",
-    "Good night": "Buonanotte",
-    "Hide diagnostics": "Nascondi diagnostica",
-    "Hide from Home": "Nascondi da Home",
-    "Hold Back for 1.2 seconds to open LG Home. Your settings stay saved.": "Tieni premuto Indietro per 1,2 secondi per aprire LG Home. Le impostazioni restano salvate.",
-    "Home": "Home",
-    "Home status is unknown. The Home button may still work.": "Stato di Home sconosciuto. Il tasto Home può ancora funzionare.",
-    "Home and return from apps open Clean Your TV.": "Home e il ritorno dalle app aprono Clean Your TV.",
-    "Home and return from apps open LG Home.": "Home e il ritorno dalle app aprono LG Home.",
-    "Home is up to date.": "Home è aggiornato.",
-    "Home settings": "Impostazioni Home",
-    "Home will close during installation. Your app list and settings will be saved first. Press Confirm update to continue.": "Home si chiuderà durante l’installazione. Prima verranno salvati elenco delle app e impostazioni. Premi Conferma aggiornamento per continuare.",
-    "Inputs": "Ingressi",
-    "Installed Home {installed} · Available {available}": "Home installato: {installed} · Disponibile: {available}",
-    "Installing Home… Keep the TV on. If this screen closes, open Home again or use Home Updater for recovery.": "Installazione di Home… Lascia il TV acceso. Se questa schermata si chiude, riapri Home o usa Home Updater per il ripristino.",
-    "LG response could not confirm renewal": "La risposta LG non ha confermato il rinnovo",
-    "Language": "Lingua",
-    "Last checked: {date}": "Ultima verifica: {date}",
-    "Last confirmed renewal: {date}": "Ultimo rinnovo confermato: {date}",
-    "Live TV": "TV in diretta",
-    "Manage Home, software updates and your TV.": "Gestisci Home, gli aggiornamenti e il tuo TV.",
-    "Network settings": "Impostazioni di rete",
-    "No inputs found": "Nessun ingresso trovato",
-    "No readable Developer Mode session": "Nessuna sessione Developer Mode leggibile",
-    "No recovery result available. Your helper has not been changed.": "Nessun risultato di ripristino disponibile. Il tuo Helper non è stato modificato.",
-    "Not yet": "Non ancora",
-    "Offline": "Non in linea",
-    "Open LG Home": "Apri LG Home",
-    "This button opens LG Home once. Your Home screen choice and settings stay saved.": "Questo pulsante apre LG Home una volta. La scelta della schermata iniziale e le impostazioni restano salvate.",
-    "Recovery": "Ripristino",
-    "Recovery state: {status}. Use Home Updater to restore the previous version if offered.": "Stato del ripristino: {status}. Usa Home Updater per ripristinare la versione precedente, se disponibile.",
-    "Renewal confirmed": "Rinnovo confermato",
-    "Saving apps, icons and settings…": "Salvataggio di app, icone e impostazioni…",
-    "Service unavailable. Install the complete Home package and try again. Manage your Developer Mode timer manually.": "Servizio non disponibile. Installa il pacchetto Home completo e riprova. Gestisci manualmente il timer Developer Mode.",
-    "Session changed — retry scheduled": "Sessione modificata — nuovo tentativo programmato",
-    "Session checked": "Sessione verificata",
-    "Session expired — open Developer Mode": "Sessione scaduta — apri Developer Mode",
-    "Settings": "Impostazioni",
-    "Setup error: {error}. Use Developer Mode manually.": "Errore di configurazione: {error}. Usa Developer Mode manualmente.",
-    "Share this with your TV model and firmware at:": "Condividi questi dati con modello e firmware del TV su:",
-    "Show diagnostics": "Mostra diagnostica",
-    "Showing the saved list. Could not refresh apps from the TV.": "Visualizzazione dell’elenco salvato. Impossibile aggiornare le app dal TV.",
-    "Software updates": "Aggiornamenti software",
-    "TV settings": "Impostazioni TV",
-    "Try again": "Riprova",
-    "Turn off auto-renewal": "Disattiva rinnovo automatico",
-    "Turn on auto-renewal": "Attiva rinnovo automatico",
-    "Undo": "Annulla",
-    "Update Home": "Aggiorna Home",
-    "Update Home Helper using the installation guide first.": "Aggiorna prima Home Helper seguendo la guida di installazione.",
-    "Update Home or open LG settings for picture, sound and network.": "Aggiorna Home o apri le impostazioni LG di immagine, audio e rete.",
-    "Update available, but a verified recovery package for your installed version is missing.": "Aggiornamento disponibile, ma manca un pacchetto di ripristino verificato per la versione installata.",
-    "Update available. Without root, install it from a computer using the guide.": "Aggiornamento disponibile. Senza root, installalo da un computer seguendo la guida.",
-    "Update outcome is not confirmed. Open Home Updater → Recovery before retrying.": "Esito dell’aggiornamento non confermato. Apri Home Updater → Ripristino prima di riprovare.",
-    "Update service or signed release unavailable. Install the separate Home Updater package once, then retry. Your current Home is unchanged.": "Servizio di aggiornamento o versione firmata non disponibile. Installa una volta il pacchetto separato Home Updater, poi riprova. Il tuo Home attuale non è cambiato.",
-    "Update state: {status}. Reopen Home when installation finishes.": "Stato dell’aggiornamento: {status}. Riapri Home al termine dell’installazione.",
-    "Updates and TV": "Aggiornamenti e TV",
-    "Working…": "Operazione in corso…",
-    "Your Home screen": "La tua schermata Home",
-    "Your installed Home is newer than this release.": "Il tuo Home installato è più recente di questa versione.",
-    "{app} added": "{app} aggiunta",
-    "{hours} hours remaining (estimate)": "{hours} ore rimanenti (stima)",
-    "← ↑ ↓ → Move   ·   OK Place   ·   Back Cancel   ·   ↓ Below last row to hide": "← ↑ ↓ → Sposta   ·   OK Posiziona   ·   Indietro Annulla   ·   ↓ Sotto l’ultima riga per nascondere",
-    "No-root Edition": "Edizione senza root",
-    "Cancel": "Annulla",
-    "Install Home update?": "Installare l’aggiornamento di Home?",
-    "Restore previous Home?": "Ripristinare la versione precedente di Home?",
-    "Home will close during installation. Your apps and settings will be saved.": "Home si chiuderà durante l’installazione. Le app e le impostazioni verranno salvate.",
-    "The previous Home version and saved settings will be restored.": "Verranno ripristinati la versione precedente di Home e le impostazioni salvate.",
-    "Install update": "Installa aggiornamento",
-    "Restore previous Home": "Ripristina Home precedente",
-    "Release notes": "Novità",
-    "↑ ↓ Read notes · ← → Choose action · Back Close": "↑ ↓ Leggi modifiche · ← → Scegli azione · Indietro Chiudi",
-    "← → Choose action · Back Open Home": "← → Scegli azione · Indietro Apri Home",
-    "Home control could not be restored automatically. Open Home settings.": "Impossibile ripristinare automaticamente il controllo Home. Apri le impostazioni Home.",
-    "Your previous Home screen choice has been restored.": "La scelta precedente della schermata Home è stata ripristinata.",
-    "Home control remains off because it was disabled during the update.": "Il controllo Home resta disattivato perché è stato disattivato durante l’aggiornamento.",
-    "Rollback remains available until the next update.": "Il ripristino rimane disponibile fino al prossimo aggiornamento.",
-    "Previous Root version and profile restored.": "Versione precedente di Root e profilo ripristinati.",
-    "Installed: {version}": "Installata: {version}",
-    "Available: {version}": "Disponibile: {version}",
-    "Software updates. Update available.": "Aggiornamenti software. È disponibile un aggiornamento.",
-    "Open LG Home once, keeping your Home choice.": "Apri LG Home una volta mantenendo la schermata Home scelta.",
-    "Hold Back for 1.2 seconds to open LG Home.": "Tieni premuto Indietro per 1,2 secondi per aprire LG Home.",
-    "Developer Mode": "Modalità sviluppatore",
-    "Beta": "Beta",
-    "Home Helper": "Home Helper",
-    "Home button settings": "Configura il tasto Home",
-    "Start Helper": "Avvia Helper",
-    "Start Helper?": "Avviare Helper?",
-    "Starting Helper…": "Avvio di Helper…",
-    "Helper opens Home with your remote and helps you return to Home after turning on the TV.": "Helper apre Home con il telecomando e aiuta a tornare a Home all’accensione della TV.",
-    "Helper is unavailable. Reinstall the complete Home package from your computer.": "Helper non disponibile. Reinstalla il pacchetto Home completo dal computer.",
-    "Helper was stopped for safety. Start it only when you are ready to use Home control again.": "Helper è stato arrestato per sicurezza. Avvialo quando vuoi usare di nuovo il controllo Home.",
-    "Helper is stopped. Start it to use the Home button and return from apps.": "Helper è arrestato. Avvialo per usare il tasto Home e tornare dalle app.",
-    "Start Helper to use Home control again. Your saved Home screen choice will be used.": "Avvia Helper per controllare di nuovo Home. Verrà usata la schermata iniziale salvata.",
-    "Status is unavailable.": "Impossibile verificare lo stato.",
-    "Try refreshing. If this continues, reinstall the complete Home package from your computer.": "Aggiorna lo stato. Se il problema persiste, reinstalla il pacchetto Home completo dal computer.",
-    "No recovery needed.": "Nessun ripristino necessario.",
-    "Open Home to continue.": "Apri Home per continuare.",
-    "Open Home to continue. If the update caused a problem, you can restore the previous version.": "Apri Home. Se l’aggiornamento ha causato problemi, puoi ripristinare la versione precedente.",
-    "Recovery needs attention.": "Il ripristino richiede attenzione.",
-    "Refresh status first. If recovery remains unavailable, use the installer on your computer.": "Aggiorna prima lo stato. Se il ripristino resta indisponibile, usa il programma di installazione sul computer.",
-    "An update is in progress.": "Aggiornamento in corso.",
-    "Keep the TV powered on. Status will refresh automatically.": "Lascia la TV accesa. Lo stato si aggiornerà automaticamente.",
-    "Could not open Home.": "Impossibile aprire Home.",
-    "If Home stops working after an update, use this app to restore the previous version. For regular updates, open Home settings.": "Se Home smette di funzionare dopo un aggiornamento, usa questa app per ripristinare la versione precedente. Per gli aggiornamenti normali, apri le impostazioni di Home.",
-    "Open Home": "Apri Home",
-    "Refresh status": "Aggiorna stato"
+  'it': {
+    'A signed Home update is available.':
+      'È disponibile un aggiornamento firmato di Home.',
+    'Add app': 'Aggiungi app',
+    'All installed apps are already on Home.':
+      'Tutte le app installate sono già su Home.',
+    'App hidden. Restore it with Add app.':
+      'App nascosta. Ripristinala con «Aggiungi app».',
+    'Auto-renewal enabled (Beta)': 'Rinnovo automatico attivato (Beta)',
+    'Auto-renewal off': 'Rinnovo automatico disattivato',
+    'Automatic (system language)': 'Automatico (lingua del sistema)',
+    'Back': 'Indietro',
+    'Back to Home': 'Torna a Home',
+    'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
+      'Beta: il rinnovo non è ancora verificato sui TV senza root. Continua a controllare il timer nell’app Developer Mode.',
+    "Can't open {app}": 'Impossibile aprire {app}',
+    'Change Home': 'Cambia Home',
+    'Change was not confirmed. Check the switch and try again.':
+      'Modifica non confermata. Controlla l’interruttore e riprova.',
+    'Changing Home control…': 'Modifica del controllo Home…',
+    'Check failed': 'Verifica non riuscita',
+    'Check pending': 'Verifica in attesa',
+    'Check session': 'Verifica sessione',
+    'Checking Home control…': 'Verifica del controllo Home…',
+    'Checking auto-renewal…': 'Verifica del rinnovo automatico…',
+    'Checking for updates…': 'Ricerca aggiornamenti…',
+    'Checking installed apps…': 'Verifica delle app installate…',
+    'Choose a language. Home will reload.':
+      'Scegli una lingua. Home verrà ricaricato.',
+    'Choose an app to add to Home.': 'Scegli un’app da aggiungere a Home.',
+    'Choose where Home and return from apps take you.':
+      'Scegli la destinazione di Home e del ritorno dalle app.',
+    'Confirm update': 'Conferma aggiornamento',
+    'Connection failed — retry scheduled':
+      'Connessione non riuscita — nuovo tentativo programmato',
+    'Could not open LG Home. Check Home Helper and try again.':
+      'Impossibile aprire LG Home. Controlla Home Helper e riprova.',
+    'Could not save language. Please try again.':
+      'Impossibile salvare la lingua. Riprova.',
+    'Could not save state': 'Impossibile salvare lo stato',
+    'Could not save your complete profile. Nothing was installed.':
+      'Impossibile salvare il profilo completo. Non è stato installato nulla.',
+    "Couldn't restore app. Please try again.":
+      'Impossibile ripristinare l’app. Riprova.',
+    "Couldn't save changes. Please try again.":
+      'Impossibile salvare le modifiche. Riprova.',
+    'Developer Mode auto-renewal (Beta)':
+      'Rinnovo automatico di Developer Mode (Beta)',
+    'Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.':
+      'Developer Mode mantiene Home installato. Il rinnovo automatico tenta di prolungare la sessione mentre il TV è acceso e connesso.',
+    'Disable could not be saved. Retry before restarting the service.':
+      'Impossibile salvare la disattivazione. Riprova prima di riavviare il servizio.',
+    'Ethernet': 'Ethernet',
+    'Good afternoon': 'Buon pomeriggio',
+    'Good evening': 'Buonasera',
+    'Good morning': 'Buongiorno',
+    'Good night': 'Buonanotte',
+    'Hide diagnostics': 'Nascondi diagnostica',
+    'Hide from Home': 'Nascondi da Home',
+    'Hold Back for 1.2 seconds to open LG Home. Your settings stay saved.':
+      'Tieni premuto Indietro per 1,2 secondi per aprire LG Home. Le impostazioni restano salvate.',
+    'Home': 'Home',
+    'Home status is unknown. The Home button may still work.':
+      'Stato di Home sconosciuto. Il tasto Home può ancora funzionare.',
+    'Home and return from apps open Clean Your TV.':
+      'Home e il ritorno dalle app aprono Clean Your TV.',
+    'Home and return from apps open LG Home.':
+      'Home e il ritorno dalle app aprono LG Home.',
+    'Home is up to date.': 'Home è aggiornato.',
+    'Home settings': 'Impostazioni Home',
+    'Home will close during installation. Your app list and settings will be saved first. Press Confirm update to continue.':
+      'Home si chiuderà durante l’installazione. Prima verranno salvati elenco delle app e impostazioni. Premi Conferma aggiornamento per continuare.',
+    'Inputs': 'Ingressi',
+    'Installed Home {installed} · Available {available}':
+      'Home installato: {installed} · Disponibile: {available}',
+    'Installing Home… Keep the TV on. If this screen closes, open Home again or use Home Updater for recovery.':
+      'Installazione di Home… Lascia il TV acceso. Se questa schermata si chiude, riapri Home o usa Home Updater per il ripristino.',
+    'LG response could not confirm renewal':
+      'La risposta LG non ha confermato il rinnovo',
+    'Language': 'Lingua',
+    'Last checked: {date}': 'Ultima verifica: {date}',
+    'Last confirmed renewal: {date}': 'Ultimo rinnovo confermato: {date}',
+    'Live TV': 'TV in diretta',
+    'Manage Home, software updates and your TV.':
+      'Gestisci Home, gli aggiornamenti e il tuo TV.',
+    'Network settings': 'Impostazioni di rete',
+    'No inputs found': 'Nessun ingresso trovato',
+    'No readable Developer Mode session':
+      'Nessuna sessione Developer Mode leggibile',
+    'No recovery result available. Your helper has not been changed.':
+      'Nessun risultato di ripristino disponibile. Il tuo Helper non è stato modificato.',
+    'Not yet': 'Non ancora',
+    'Offline': 'Non in linea',
+    'Open LG Home': 'Apri LG Home',
+    'This button opens LG Home once. Your Home screen choice and settings stay saved.':
+      'Questo pulsante apre LG Home una volta. La scelta della schermata iniziale e le impostazioni restano salvate.',
+    'Recovery': 'Ripristino',
+    'Recovery state: {status}. Use Home Updater to restore the previous version if offered.':
+      'Stato del ripristino: {status}. Usa Home Updater per ripristinare la versione precedente, se disponibile.',
+    'Renewal confirmed': 'Rinnovo confermato',
+    'Saving apps, icons and settings…':
+      'Salvataggio di app, icone e impostazioni…',
+    'Service unavailable. Install the complete Home package and try again. Manage your Developer Mode timer manually.':
+      'Servizio non disponibile. Installa il pacchetto Home completo e riprova. Gestisci manualmente il timer Developer Mode.',
+    'Session changed — retry scheduled':
+      'Sessione modificata — nuovo tentativo programmato',
+    'Session checked': 'Sessione verificata',
+    'Session expired — open Developer Mode':
+      'Sessione scaduta — apri Developer Mode',
+    'Settings': 'Impostazioni',
+    'Setup error: {error}. Use Developer Mode manually.':
+      'Errore di configurazione: {error}. Usa Developer Mode manualmente.',
+    'Share this with your TV model and firmware at:':
+      'Condividi questi dati con modello e firmware del TV su:',
+    'Show diagnostics': 'Mostra diagnostica',
+    'Showing the saved list. Could not refresh apps from the TV.':
+      'Visualizzazione dell’elenco salvato. Impossibile aggiornare le app dal TV.',
+    'Software updates': 'Aggiornamenti software',
+    'TV settings': 'Impostazioni TV',
+    'Try again': 'Riprova',
+    'Turn off auto-renewal': 'Disattiva rinnovo automatico',
+    'Turn on auto-renewal': 'Attiva rinnovo automatico',
+    'Undo': 'Annulla',
+    'Update Home': 'Aggiorna Home',
+    'Update Home Helper using the installation guide first.':
+      'Aggiorna prima Home Helper seguendo la guida di installazione.',
+    'Update Home or open LG settings for picture, sound and network.':
+      'Aggiorna Home o apri le impostazioni LG di immagine, audio e rete.',
+    'Update available, but a verified recovery package for your installed version is missing.':
+      'Aggiornamento disponibile, ma manca un pacchetto di ripristino verificato per la versione installata.',
+    'Update available. Without root, install it from a computer using the guide.':
+      'Aggiornamento disponibile. Senza root, installalo da un computer seguendo la guida.',
+    'Update outcome is not confirmed. Open Home Updater → Recovery before retrying.':
+      'Esito dell’aggiornamento non confermato. Apri Home Updater → Ripristino prima di riprovare.',
+    'Update service or signed release unavailable. Install the separate Home Updater package once, then retry. Your current Home is unchanged.':
+      'Servizio di aggiornamento o versione firmata non disponibile. Installa una volta il pacchetto separato Home Updater, poi riprova. Il tuo Home attuale non è cambiato.',
+    'Update state: {status}. Reopen Home when installation finishes.':
+      'Stato dell’aggiornamento: {status}. Riapri Home al termine dell’installazione.',
+    'Updates and TV': 'Aggiornamenti e TV',
+    'Working…': 'Operazione in corso…',
+    'Your Home screen': 'La tua schermata Home',
+    'Your installed Home is newer than this release.':
+      'Il tuo Home installato è più recente di questa versione.',
+    '{app} added': '{app} aggiunta',
+    '{hours} hours remaining (estimate)': '{hours} ore rimanenti (stima)',
+    '← ↑ ↓ → Move   ·   OK Place   ·   Back Cancel   ·   ↓ Below last row to hide':
+      '← ↑ ↓ → Sposta   ·   OK Posiziona   ·   Indietro Annulla   ·   ↓ Sotto l’ultima riga per nascondere',
+    'No-root Edition': 'Edizione senza root',
+    'Cancel': 'Annulla',
+    'Install Home update?': 'Installare l’aggiornamento di Home?',
+    'Restore previous Home?': 'Ripristinare la versione precedente di Home?',
+    'Home will close during installation. Your apps and settings will be saved.':
+      'Home si chiuderà durante l’installazione. Le app e le impostazioni verranno salvate.',
+    'The previous Home version and saved settings will be restored.':
+      'Verranno ripristinati la versione precedente di Home e le impostazioni salvate.',
+    'Install update': 'Installa aggiornamento',
+    'Restore previous Home': 'Ripristina Home precedente',
+    'Release notes': 'Novità',
+    '↑ ↓ Read notes · ← → Choose action · Back Close':
+      '↑ ↓ Leggi modifiche · ← → Scegli azione · Indietro Chiudi',
+    '← → Choose action · Back Open Home':
+      '← → Scegli azione · Indietro Apri Home',
+    'Home control could not be restored automatically. Open Home settings.':
+      'Impossibile ripristinare automaticamente il controllo Home. Apri le impostazioni Home.',
+    'Your previous Home screen choice has been restored.':
+      'La scelta precedente della schermata Home è stata ripristinata.',
+    'Home control remains off because it was disabled during the update.':
+      'Il controllo Home resta disattivato perché è stato disattivato durante l’aggiornamento.',
+    'Rollback remains available until the next update.':
+      'Il ripristino rimane disponibile fino al prossimo aggiornamento.',
+    'Previous Root version and profile restored.':
+      'Versione precedente di Root e profilo ripristinati.',
+    'Installed: {version}': 'Installata: {version}',
+    'Available: {version}': 'Disponibile: {version}',
+    'Software updates. Update available.':
+      'Aggiornamenti software. È disponibile un aggiornamento.',
+    'Open LG Home once, keeping your Home choice.':
+      'Apri LG Home una volta mantenendo la schermata Home scelta.',
+    'Hold Back for 1.2 seconds to open LG Home.':
+      'Tieni premuto Indietro per 1,2 secondi per aprire LG Home.',
+    'Developer Mode': 'Modalità sviluppatore',
+    'Beta': 'Beta',
+    'Home Helper': 'Home Helper',
+    'Home button settings': 'Configura il tasto Home',
+    'Start Helper': 'Avvia Helper',
+    'Start Helper?': 'Avviare Helper?',
+    'Starting Helper…': 'Avvio di Helper…',
+    'Helper opens Home with your remote and helps you return to Home after turning on the TV.':
+      'Helper apre Home con il telecomando e aiuta a tornare a Home all’accensione della TV.',
+    'Helper is unavailable. Reinstall the complete Home package from your computer.':
+      'Helper non disponibile. Reinstalla il pacchetto Home completo dal computer.',
+    'Helper was stopped for safety. Start it only when you are ready to use Home control again.':
+      'Helper è stato arrestato per sicurezza. Avvialo quando vuoi usare di nuovo il controllo Home.',
+    'Helper is stopped. Start it to use the Home button and return from apps.':
+      'Helper è arrestato. Avvialo per usare il tasto Home e tornare dalle app.',
+    'Start Helper to use Home control again. Your saved Home screen choice will be used.':
+      'Avvia Helper per controllare di nuovo Home. Verrà usata la schermata iniziale salvata.',
+    'Status is unavailable.': 'Impossibile verificare lo stato.',
+    'Try refreshing. If this continues, reinstall the complete Home package from your computer.':
+      'Aggiorna lo stato. Se il problema persiste, reinstalla il pacchetto Home completo dal computer.',
+    'No recovery needed.': 'Nessun ripristino necessario.',
+    'Open Home to continue.': 'Apri Home per continuare.',
+    'Open Home to continue. If the update caused a problem, you can restore the previous version.':
+      'Apri Home. Se l’aggiornamento ha causato problemi, puoi ripristinare la versione precedente.',
+    'Recovery needs attention.': 'Il ripristino richiede attenzione.',
+    'Refresh status first. If recovery remains unavailable, use the installer on your computer.':
+      'Aggiorna prima lo stato. Se il ripristino resta indisponibile, usa il programma di installazione sul computer.',
+    'An update is in progress.': 'Aggiornamento in corso.',
+    'Keep the TV powered on. Status will refresh automatically.':
+      'Lascia la TV accesa. Lo stato si aggiornerà automaticamente.',
+    'Could not open Home.': 'Impossibile aprire Home.',
+    'If Home stops working after an update, use this app to restore the previous version. For regular updates, open Home settings.':
+      'Se Home smette di funzionare dopo un aggiornamento, usa questa app per ripristinare la versione precedente. Per gli aggiornamenti normali, apri le impostazioni di Home.',
+    'Open Home': 'Apri Home',
+    'Refresh status': 'Aggiorna stato'
   },
-  "ko": {
-    "A signed Home update is available.": "서명된 Home 업데이트가 있습니다.",
-    "Add app": "앱 추가",
-    "All installed apps are already on Home.": "설치된 모든 앱이 이미 Home에 있습니다.",
-    "App hidden. Restore it with Add app.": "앱을 숨겼습니다. 앱 추가로 다시 표시하세요.",
-    "Auto-renewal enabled (Beta)": "자동 갱신 켜짐 (베타)",
-    "Auto-renewal off": "자동 갱신 꺼짐",
-    "Automatic (system language)": "자동 (시스템 언어)",
-    "Back": "뒤로",
-    "Back to Home": "Home으로 돌아가기",
-    "Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.": "베타: 루팅하지 않은 TV에서는 갱신이 아직 검증되지 않았습니다. Developer Mode 앱의 타이머를 계속 확인하세요.",
-    "Can't open {app}": "{app}을(를) 열 수 없습니다",
-    "Change Home": "Home 변경",
-    "Change was not confirmed. Check the switch and try again.": "변경이 확인되지 않았습니다. 스위치를 확인하고 다시 시도하세요.",
-    "Changing Home control…": "Home 제어 변경 중…",
-    "Check failed": "확인 실패",
-    "Check pending": "확인 대기 중",
-    "Check session": "세션 확인",
-    "Checking Home control…": "Home 제어 확인 중…",
-    "Checking auto-renewal…": "자동 갱신 확인 중…",
-    "Checking for updates…": "업데이트 확인 중…",
-    "Checking installed apps…": "설치된 앱 확인 중…",
-    "Choose a language. Home will reload.": "언어를 선택하세요. Home을 다시 불러옵니다.",
-    "Choose an app to add to Home.": "Home에 추가할 앱을 선택하세요.",
-    "Choose where Home and return from apps take you.": "Home 버튼과 앱 종료 후 돌아갈 화면을 선택하세요.",
-    "Confirm update": "업데이트 확인",
-    "Connection failed — retry scheduled": "연결 실패 — 재시도 예정",
-    "Could not open LG Home. Check Home Helper and try again.": "LG Home을 열지 못했습니다. Home Helper를 확인하고 다시 시도하세요.",
-    "Could not save language. Please try again.": "언어를 저장하지 못했습니다. 다시 시도하세요.",
-    "Could not save state": "상태를 저장하지 못했습니다",
-    "Could not save your complete profile. Nothing was installed.": "전체 프로필을 저장하지 못했습니다. 아무것도 설치되지 않았습니다.",
-    "Couldn't restore app. Please try again.": "앱을 복원하지 못했습니다. 다시 시도하세요.",
-    "Couldn't save changes. Please try again.": "변경 사항을 저장하지 못했습니다. 다시 시도하세요.",
-    "Developer Mode auto-renewal (Beta)": "Developer Mode 자동 갱신 (베타)",
-    "Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.": "Developer Mode는 Home이 설치된 상태를 유지합니다. 자동 갱신은 TV가 켜져 있고 온라인일 때 세션 연장을 시도합니다.",
-    "Disable could not be saved. Retry before restarting the service.": "비활성화 상태를 저장하지 못했습니다. 서비스를 다시 시작하기 전에 재시도하세요.",
-    "Ethernet": "이더넷",
-    "Good afternoon": "좋은 오후입니다",
-    "Good evening": "좋은 저녁입니다",
-    "Good morning": "좋은 아침입니다",
-    "Good night": "편안한 밤 되세요",
-    "Hide diagnostics": "진단 숨기기",
-    "Hide from Home": "Home에서 숨기기",
-    "Hold Back for 1.2 seconds to open LG Home. Your settings stay saved.": "뒤로를 1.2초 동안 누르면 LG Home이 열립니다. 설정은 유지됩니다.",
-    "Home": "Home",
-    "Home status is unknown. The Home button may still work.": "Home 상태를 알 수 없습니다. Home 버튼은 계속 작동할 수 있습니다.",
-    "Home and return from apps open Clean Your TV.": "Home 버튼과 앱 종료 후 Clean Your TV가 열립니다.",
-    "Home and return from apps open LG Home.": "Home 버튼과 앱 종료 후 LG Home이 열립니다.",
-    "Home is up to date.": "Home은 최신 버전입니다.",
-    "Home settings": "Home 설정",
-    "Home will close during installation. Your app list and settings will be saved first. Press Confirm update to continue.": "설치하는 동안 Home이 닫힙니다. 먼저 앱 목록과 설정을 저장합니다. 계속하려면 업데이트 확인을 누르세요.",
-    "Inputs": "입력",
-    "Installed Home {installed} · Available {available}": "설치된 Home {installed} · 사용 가능 {available}",
-    "Installing Home… Keep the TV on. If this screen closes, open Home again or use Home Updater for recovery.": "Home 설치 중… TV를 켜 두세요. 이 화면이 닫히면 Home을 다시 열거나 Home Updater로 복구하세요.",
-    "LG response could not confirm renewal": "LG 응답으로 갱신을 확인하지 못했습니다",
-    "Language": "언어",
-    "Last checked: {date}": "마지막 확인: {date}",
-    "Last confirmed renewal: {date}": "마지막으로 확인된 갱신: {date}",
-    "Live TV": "실시간 TV",
-    "Manage Home, software updates and your TV.": "Home, 소프트웨어 업데이트 및 TV를 관리하세요.",
-    "Network settings": "네트워크 설정",
-    "No inputs found": "입력을 찾지 못했습니다",
-    "No readable Developer Mode session": "읽을 수 있는 Developer Mode 세션이 없습니다",
-    "No recovery result available. Your helper has not been changed.": "복구 결과가 없습니다. Helper는 변경되지 않았습니다.",
-    "Not yet": "아직 없음",
-    "Offline": "오프라인",
-    "Open LG Home": "LG Home 열기",
-    "This button opens LG Home once. Your Home screen choice and settings stay saved.": "이 버튼은 LG Home을 한 번 엽니다. 선택한 홈 화면과 설정은 유지됩니다.",
-    "Recovery": "복구",
-    "Recovery state: {status}. Use Home Updater to restore the previous version if offered.": "복구 상태: {status}. 이전 버전 복원이 제공되면 Home Updater를 사용하세요.",
-    "Renewal confirmed": "갱신 확인됨",
-    "Saving apps, icons and settings…": "앱, 아이콘 및 설정 저장 중…",
-    "Service unavailable. Install the complete Home package and try again. Manage your Developer Mode timer manually.": "서비스를 사용할 수 없습니다. 전체 Home 패키지를 설치하고 다시 시도하세요. Developer Mode 타이머를 수동으로 관리하세요.",
-    "Session changed — retry scheduled": "세션 변경됨 — 재시도 예정",
-    "Session checked": "세션 확인됨",
-    "Session expired — open Developer Mode": "세션 만료 — Developer Mode를 여세요",
-    "Settings": "설정",
-    "Setup error: {error}. Use Developer Mode manually.": "설정 오류: {error}. Developer Mode를 수동으로 사용하세요.",
-    "Share this with your TV model and firmware at:": "TV 모델 및 펌웨어와 함께 다음 주소에 공유하세요:",
-    "Show diagnostics": "진단 보기",
-    "Showing the saved list. Could not refresh apps from the TV.": "저장된 목록을 표시합니다. TV에서 앱 목록을 새로 가져오지 못했습니다.",
-    "Software updates": "소프트웨어 업데이트",
-    "TV settings": "TV 설정",
-    "Try again": "다시 시도",
-    "Turn off auto-renewal": "자동 갱신 끄기",
-    "Turn on auto-renewal": "자동 갱신 켜기",
-    "Undo": "실행 취소",
-    "Update Home": "Home 업데이트",
-    "Update Home Helper using the installation guide first.": "먼저 설치 안내에 따라 Home Helper를 업데이트하세요.",
-    "Update Home or open LG settings for picture, sound and network.": "Home을 업데이트하거나 영상, 음향 및 네트워크용 LG 설정을 여세요.",
-    "Update available, but a verified recovery package for your installed version is missing.": "업데이트가 있지만 설치된 버전에 대한 검증된 복구 패키지가 없습니다.",
-    "Update available. Without root, install it from a computer using the guide.": "업데이트가 있습니다. 루팅하지 않았다면 안내에 따라 컴퓨터에서 설치하세요.",
-    "Update outcome is not confirmed. Open Home Updater → Recovery before retrying.": "업데이트 결과가 확인되지 않았습니다. 재시도 전에 Home Updater → 복구를 여세요.",
-    "Update service or signed release unavailable. Install the separate Home Updater package once, then retry. Your current Home is unchanged.": "업데이트 서비스 또는 서명된 릴리스를 사용할 수 없습니다. 별도 Home Updater 패키지를 한 번 설치한 뒤 다시 시도하세요. 현재 Home은 변경되지 않았습니다.",
-    "Update state: {status}. Reopen Home when installation finishes.": "업데이트 상태: {status}. 설치가 끝나면 Home을 다시 여세요.",
-    "Updates and TV": "업데이트 및 TV",
-    "Working…": "처리 중…",
-    "Your Home screen": "나의 Home 화면",
-    "Your installed Home is newer than this release.": "설치된 Home이 이 릴리스보다 최신입니다.",
-    "{app} added": "{app} 추가됨",
-    "{hours} hours remaining (estimate)": "약 {hours}시간 남음",
-    "← ↑ ↓ → Move   ·   OK Place   ·   Back Cancel   ·   ↓ Below last row to hide": "← ↑ ↓ → 이동   ·   OK 배치   ·   뒤로 취소   ·   ↓ 마지막 행 아래로 내려 숨기기",
-    "No-root Edition": "루팅 없는 에디션",
-    "Cancel": "취소",
-    "Install Home update?": "Home 업데이트를 설치할까요?",
-    "Restore previous Home?": "이전 Home을 복원할까요?",
-    "Home will close during installation. Your apps and settings will be saved.": "설치 중 Home이 닫힙니다. 앱과 설정은 저장됩니다.",
-    "The previous Home version and saved settings will be restored.": "이전 Home 버전과 저장된 설정이 복원됩니다.",
-    "Install update": "업데이트 설치",
-    "Restore previous Home": "이전 Home 복원",
-    "Release notes": "새로운 기능",
-    "↑ ↓ Read notes · ← → Choose action · Back Close": "↑ ↓ 변경 사항 읽기 · ← → 동작 선택 · 뒤로 닫기",
-    "← → Choose action · Back Open Home": "← → 동작 선택 · 뒤로 Home 열기",
-    "Home control could not be restored automatically. Open Home settings.": "Home 제어를 자동으로 복원하지 못했습니다. Home 설정을 여세요.",
-    "Your previous Home screen choice has been restored.": "이전에 선택한 홈 화면이 복원되었습니다.",
-    "Home control remains off because it was disabled during the update.": "업데이트 중 Home 제어를 껐으므로 꺼진 상태로 유지됩니다.",
-    "Rollback remains available until the next update.": "다음 업데이트 전까지 이전 버전으로 복원할 수 있습니다.",
-    "Previous Root version and profile restored.": "이전 Root 버전과 프로필이 복원되었습니다.",
-    "Installed: {version}": "설치됨: {version}",
-    "Available: {version}": "사용 가능: {version}",
-    "Software updates. Update available.": "소프트웨어 업데이트. 업데이트가 있습니다.",
-    "Open LG Home once, keeping your Home choice.": "홈 화면 선택을 유지하고 LG Home을 한 번 엽니다.",
-    "Hold Back for 1.2 seconds to open LG Home.": "뒤로 버튼을 1.2초 동안 누르면 LG Home이 열립니다.",
-    "Developer Mode": "개발자 모드",
-    "Beta": "베타",
-    "Home Helper": "Home Helper",
-    "Home button settings": "Home 버튼 설정",
-    "Start Helper": "Helper 시작",
-    "Start Helper?": "Helper를 시작할까요?",
-    "Starting Helper…": "Helper 시작 중…",
-    "Helper opens Home with your remote and helps you return to Home after turning on the TV.": "Helper는 리모컨으로 Home을 열고 TV를 켠 후 Home으로 돌아가도록 도와줍니다.",
-    "Helper is unavailable. Reinstall the complete Home package from your computer.": "Helper를 사용할 수 없습니다. 컴퓨터에서 전체 Home 패키지를 다시 설치하세요.",
-    "Helper was stopped for safety. Start it only when you are ready to use Home control again.": "안전을 위해 Helper가 중지되었습니다. Home 제어를 다시 사용할 준비가 되면 시작하세요.",
-    "Helper is stopped. Start it to use the Home button and return from apps.": "Helper가 중지되었습니다. Home 버튼과 앱에서 돌아오기 기능을 사용하려면 시작하세요.",
-    "Start Helper to use Home control again. Your saved Home screen choice will be used.": "Home 제어를 다시 사용하려면 Helper를 시작하세요. 저장된 홈 화면 선택이 적용됩니다.",
-    "Status is unavailable.": "상태를 확인할 수 없습니다.",
-    "Try refreshing. If this continues, reinstall the complete Home package from your computer.": "상태를 새로 고치세요. 문제가 계속되면 컴퓨터에서 전체 Home 패키지를 다시 설치하세요.",
-    "No recovery needed.": "복원이 필요하지 않습니다.",
-    "Open Home to continue.": "계속하려면 Home을 여세요.",
-    "Open Home to continue. If the update caused a problem, you can restore the previous version.": "Home을 여세요. 업데이트 후 문제가 생겼다면 이전 버전을 복원할 수 있습니다.",
-    "Recovery needs attention.": "복원 상태를 확인해야 합니다.",
-    "Refresh status first. If recovery remains unavailable, use the installer on your computer.": "먼저 상태를 새로 고치세요. 복원이 계속 불가능하면 컴퓨터의 설치 프로그램을 사용하세요.",
-    "An update is in progress.": "업데이트가 진행 중입니다.",
-    "Keep the TV powered on. Status will refresh automatically.": "TV를 켜 두세요. 상태는 자동으로 새로 고쳐집니다.",
-    "Could not open Home.": "Home을 열 수 없습니다.",
-    "If Home stops working after an update, use this app to restore the previous version. For regular updates, open Home settings.": "업데이트 후 Home이 작동하지 않으면 이 앱에서 이전 버전을 복원할 수 있습니다. 일반 업데이트는 Home 설정에서 확인하세요.",
-    "Open Home": "Home 열기",
-    "Refresh status": "상태 새로 고침"
+  'ko': {
+    'A signed Home update is available.': '서명된 Home 업데이트가 있습니다.',
+    'Add app': '앱 추가',
+    'All installed apps are already on Home.':
+      '설치된 모든 앱이 이미 Home에 있습니다.',
+    'App hidden. Restore it with Add app.':
+      '앱을 숨겼습니다. 앱 추가로 다시 표시하세요.',
+    'Auto-renewal enabled (Beta)': '자동 갱신 켜짐 (베타)',
+    'Auto-renewal off': '자동 갱신 꺼짐',
+    'Automatic (system language)': '자동 (시스템 언어)',
+    'Back': '뒤로',
+    'Back to Home': 'Home으로 돌아가기',
+    'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
+      '베타: 루팅하지 않은 TV에서는 갱신이 아직 검증되지 않았습니다. Developer Mode 앱의 타이머를 계속 확인하세요.',
+    "Can't open {app}": '{app}을(를) 열 수 없습니다',
+    'Change Home': 'Home 변경',
+    'Change was not confirmed. Check the switch and try again.':
+      '변경이 확인되지 않았습니다. 스위치를 확인하고 다시 시도하세요.',
+    'Changing Home control…': 'Home 제어 변경 중…',
+    'Check failed': '확인 실패',
+    'Check pending': '확인 대기 중',
+    'Check session': '세션 확인',
+    'Checking Home control…': 'Home 제어 확인 중…',
+    'Checking auto-renewal…': '자동 갱신 확인 중…',
+    'Checking for updates…': '업데이트 확인 중…',
+    'Checking installed apps…': '설치된 앱 확인 중…',
+    'Choose a language. Home will reload.':
+      '언어를 선택하세요. Home을 다시 불러옵니다.',
+    'Choose an app to add to Home.': 'Home에 추가할 앱을 선택하세요.',
+    'Choose where Home and return from apps take you.':
+      'Home 버튼과 앱 종료 후 돌아갈 화면을 선택하세요.',
+    'Confirm update': '업데이트 확인',
+    'Connection failed — retry scheduled': '연결 실패 — 재시도 예정',
+    'Could not open LG Home. Check Home Helper and try again.':
+      'LG Home을 열지 못했습니다. Home Helper를 확인하고 다시 시도하세요.',
+    'Could not save language. Please try again.':
+      '언어를 저장하지 못했습니다. 다시 시도하세요.',
+    'Could not save state': '상태를 저장하지 못했습니다',
+    'Could not save your complete profile. Nothing was installed.':
+      '전체 프로필을 저장하지 못했습니다. 아무것도 설치되지 않았습니다.',
+    "Couldn't restore app. Please try again.":
+      '앱을 복원하지 못했습니다. 다시 시도하세요.',
+    "Couldn't save changes. Please try again.":
+      '변경 사항을 저장하지 못했습니다. 다시 시도하세요.',
+    'Developer Mode auto-renewal (Beta)': 'Developer Mode 자동 갱신 (베타)',
+    'Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.':
+      'Developer Mode는 Home이 설치된 상태를 유지합니다. 자동 갱신은 TV가 켜져 있고 온라인일 때 세션 연장을 시도합니다.',
+    'Disable could not be saved. Retry before restarting the service.':
+      '비활성화 상태를 저장하지 못했습니다. 서비스를 다시 시작하기 전에 재시도하세요.',
+    'Ethernet': '이더넷',
+    'Good afternoon': '좋은 오후입니다',
+    'Good evening': '좋은 저녁입니다',
+    'Good morning': '좋은 아침입니다',
+    'Good night': '편안한 밤 되세요',
+    'Hide diagnostics': '진단 숨기기',
+    'Hide from Home': 'Home에서 숨기기',
+    'Hold Back for 1.2 seconds to open LG Home. Your settings stay saved.':
+      '뒤로를 1.2초 동안 누르면 LG Home이 열립니다. 설정은 유지됩니다.',
+    'Home': 'Home',
+    'Home status is unknown. The Home button may still work.':
+      'Home 상태를 알 수 없습니다. Home 버튼은 계속 작동할 수 있습니다.',
+    'Home and return from apps open Clean Your TV.':
+      'Home 버튼과 앱 종료 후 Clean Your TV가 열립니다.',
+    'Home and return from apps open LG Home.':
+      'Home 버튼과 앱 종료 후 LG Home이 열립니다.',
+    'Home is up to date.': 'Home은 최신 버전입니다.',
+    'Home settings': 'Home 설정',
+    'Home will close during installation. Your app list and settings will be saved first. Press Confirm update to continue.':
+      '설치하는 동안 Home이 닫힙니다. 먼저 앱 목록과 설정을 저장합니다. 계속하려면 업데이트 확인을 누르세요.',
+    'Inputs': '입력',
+    'Installed Home {installed} · Available {available}':
+      '설치된 Home {installed} · 사용 가능 {available}',
+    'Installing Home… Keep the TV on. If this screen closes, open Home again or use Home Updater for recovery.':
+      'Home 설치 중… TV를 켜 두세요. 이 화면이 닫히면 Home을 다시 열거나 Home Updater로 복구하세요.',
+    'LG response could not confirm renewal':
+      'LG 응답으로 갱신을 확인하지 못했습니다',
+    'Language': '언어',
+    'Last checked: {date}': '마지막 확인: {date}',
+    'Last confirmed renewal: {date}': '마지막으로 확인된 갱신: {date}',
+    'Live TV': '실시간 TV',
+    'Manage Home, software updates and your TV.':
+      'Home, 소프트웨어 업데이트 및 TV를 관리하세요.',
+    'Network settings': '네트워크 설정',
+    'No inputs found': '입력을 찾지 못했습니다',
+    'No readable Developer Mode session':
+      '읽을 수 있는 Developer Mode 세션이 없습니다',
+    'No recovery result available. Your helper has not been changed.':
+      '복구 결과가 없습니다. Helper는 변경되지 않았습니다.',
+    'Not yet': '아직 없음',
+    'Offline': '오프라인',
+    'Open LG Home': 'LG Home 열기',
+    'This button opens LG Home once. Your Home screen choice and settings stay saved.':
+      '이 버튼은 LG Home을 한 번 엽니다. 선택한 홈 화면과 설정은 유지됩니다.',
+    'Recovery': '복구',
+    'Recovery state: {status}. Use Home Updater to restore the previous version if offered.':
+      '복구 상태: {status}. 이전 버전 복원이 제공되면 Home Updater를 사용하세요.',
+    'Renewal confirmed': '갱신 확인됨',
+    'Saving apps, icons and settings…': '앱, 아이콘 및 설정 저장 중…',
+    'Service unavailable. Install the complete Home package and try again. Manage your Developer Mode timer manually.':
+      '서비스를 사용할 수 없습니다. 전체 Home 패키지를 설치하고 다시 시도하세요. Developer Mode 타이머를 수동으로 관리하세요.',
+    'Session changed — retry scheduled': '세션 변경됨 — 재시도 예정',
+    'Session checked': '세션 확인됨',
+    'Session expired — open Developer Mode':
+      '세션 만료 — Developer Mode를 여세요',
+    'Settings': '설정',
+    'Setup error: {error}. Use Developer Mode manually.':
+      '설정 오류: {error}. Developer Mode를 수동으로 사용하세요.',
+    'Share this with your TV model and firmware at:':
+      'TV 모델 및 펌웨어와 함께 다음 주소에 공유하세요:',
+    'Show diagnostics': '진단 보기',
+    'Showing the saved list. Could not refresh apps from the TV.':
+      '저장된 목록을 표시합니다. TV에서 앱 목록을 새로 가져오지 못했습니다.',
+    'Software updates': '소프트웨어 업데이트',
+    'TV settings': 'TV 설정',
+    'Try again': '다시 시도',
+    'Turn off auto-renewal': '자동 갱신 끄기',
+    'Turn on auto-renewal': '자동 갱신 켜기',
+    'Undo': '실행 취소',
+    'Update Home': 'Home 업데이트',
+    'Update Home Helper using the installation guide first.':
+      '먼저 설치 안내에 따라 Home Helper를 업데이트하세요.',
+    'Update Home or open LG settings for picture, sound and network.':
+      'Home을 업데이트하거나 영상, 음향 및 네트워크용 LG 설정을 여세요.',
+    'Update available, but a verified recovery package for your installed version is missing.':
+      '업데이트가 있지만 설치된 버전에 대한 검증된 복구 패키지가 없습니다.',
+    'Update available. Without root, install it from a computer using the guide.':
+      '업데이트가 있습니다. 루팅하지 않았다면 안내에 따라 컴퓨터에서 설치하세요.',
+    'Update outcome is not confirmed. Open Home Updater → Recovery before retrying.':
+      '업데이트 결과가 확인되지 않았습니다. 재시도 전에 Home Updater → 복구를 여세요.',
+    'Update service or signed release unavailable. Install the separate Home Updater package once, then retry. Your current Home is unchanged.':
+      '업데이트 서비스 또는 서명된 릴리스를 사용할 수 없습니다. 별도 Home Updater 패키지를 한 번 설치한 뒤 다시 시도하세요. 현재 Home은 변경되지 않았습니다.',
+    'Update state: {status}. Reopen Home when installation finishes.':
+      '업데이트 상태: {status}. 설치가 끝나면 Home을 다시 여세요.',
+    'Updates and TV': '업데이트 및 TV',
+    'Working…': '처리 중…',
+    'Your Home screen': '나의 Home 화면',
+    'Your installed Home is newer than this release.':
+      '설치된 Home이 이 릴리스보다 최신입니다.',
+    '{app} added': '{app} 추가됨',
+    '{hours} hours remaining (estimate)': '약 {hours}시간 남음',
+    '← ↑ ↓ → Move   ·   OK Place   ·   Back Cancel   ·   ↓ Below last row to hide':
+      '← ↑ ↓ → 이동   ·   OK 배치   ·   뒤로 취소   ·   ↓ 마지막 행 아래로 내려 숨기기',
+    'No-root Edition': '루팅 없는 에디션',
+    'Cancel': '취소',
+    'Install Home update?': 'Home 업데이트를 설치할까요?',
+    'Restore previous Home?': '이전 Home을 복원할까요?',
+    'Home will close during installation. Your apps and settings will be saved.':
+      '설치 중 Home이 닫힙니다. 앱과 설정은 저장됩니다.',
+    'The previous Home version and saved settings will be restored.':
+      '이전 Home 버전과 저장된 설정이 복원됩니다.',
+    'Install update': '업데이트 설치',
+    'Restore previous Home': '이전 Home 복원',
+    'Release notes': '새로운 기능',
+    '↑ ↓ Read notes · ← → Choose action · Back Close':
+      '↑ ↓ 변경 사항 읽기 · ← → 동작 선택 · 뒤로 닫기',
+    '← → Choose action · Back Open Home': '← → 동작 선택 · 뒤로 Home 열기',
+    'Home control could not be restored automatically. Open Home settings.':
+      'Home 제어를 자동으로 복원하지 못했습니다. Home 설정을 여세요.',
+    'Your previous Home screen choice has been restored.':
+      '이전에 선택한 홈 화면이 복원되었습니다.',
+    'Home control remains off because it was disabled during the update.':
+      '업데이트 중 Home 제어를 껐으므로 꺼진 상태로 유지됩니다.',
+    'Rollback remains available until the next update.':
+      '다음 업데이트 전까지 이전 버전으로 복원할 수 있습니다.',
+    'Previous Root version and profile restored.':
+      '이전 Root 버전과 프로필이 복원되었습니다.',
+    'Installed: {version}': '설치됨: {version}',
+    'Available: {version}': '사용 가능: {version}',
+    'Software updates. Update available.':
+      '소프트웨어 업데이트. 업데이트가 있습니다.',
+    'Open LG Home once, keeping your Home choice.':
+      '홈 화면 선택을 유지하고 LG Home을 한 번 엽니다.',
+    'Hold Back for 1.2 seconds to open LG Home.':
+      '뒤로 버튼을 1.2초 동안 누르면 LG Home이 열립니다.',
+    'Developer Mode': '개발자 모드',
+    'Beta': '베타',
+    'Home Helper': 'Home Helper',
+    'Home button settings': 'Home 버튼 설정',
+    'Start Helper': 'Helper 시작',
+    'Start Helper?': 'Helper를 시작할까요?',
+    'Starting Helper…': 'Helper 시작 중…',
+    'Helper opens Home with your remote and helps you return to Home after turning on the TV.':
+      'Helper는 리모컨으로 Home을 열고 TV를 켠 후 Home으로 돌아가도록 도와줍니다.',
+    'Helper is unavailable. Reinstall the complete Home package from your computer.':
+      'Helper를 사용할 수 없습니다. 컴퓨터에서 전체 Home 패키지를 다시 설치하세요.',
+    'Helper was stopped for safety. Start it only when you are ready to use Home control again.':
+      '안전을 위해 Helper가 중지되었습니다. Home 제어를 다시 사용할 준비가 되면 시작하세요.',
+    'Helper is stopped. Start it to use the Home button and return from apps.':
+      'Helper가 중지되었습니다. Home 버튼과 앱에서 돌아오기 기능을 사용하려면 시작하세요.',
+    'Start Helper to use Home control again. Your saved Home screen choice will be used.':
+      'Home 제어를 다시 사용하려면 Helper를 시작하세요. 저장된 홈 화면 선택이 적용됩니다.',
+    'Status is unavailable.': '상태를 확인할 수 없습니다.',
+    'Try refreshing. If this continues, reinstall the complete Home package from your computer.':
+      '상태를 새로 고치세요. 문제가 계속되면 컴퓨터에서 전체 Home 패키지를 다시 설치하세요.',
+    'No recovery needed.': '복원이 필요하지 않습니다.',
+    'Open Home to continue.': '계속하려면 Home을 여세요.',
+    'Open Home to continue. If the update caused a problem, you can restore the previous version.':
+      'Home을 여세요. 업데이트 후 문제가 생겼다면 이전 버전을 복원할 수 있습니다.',
+    'Recovery needs attention.': '복원 상태를 확인해야 합니다.',
+    'Refresh status first. If recovery remains unavailable, use the installer on your computer.':
+      '먼저 상태를 새로 고치세요. 복원이 계속 불가능하면 컴퓨터의 설치 프로그램을 사용하세요.',
+    'An update is in progress.': '업데이트가 진행 중입니다.',
+    'Keep the TV powered on. Status will refresh automatically.':
+      'TV를 켜 두세요. 상태는 자동으로 새로 고쳐집니다.',
+    'Could not open Home.': 'Home을 열 수 없습니다.',
+    'If Home stops working after an update, use this app to restore the previous version. For regular updates, open Home settings.':
+      '업데이트 후 Home이 작동하지 않으면 이 앱에서 이전 버전을 복원할 수 있습니다. 일반 업데이트는 Home 설정에서 확인하세요.',
+    'Open Home': 'Home 열기',
+    'Refresh status': '상태 새로 고침'
   },
-  "hi": {
-    "A signed Home update is available.": "Home का हस्ताक्षरित अपडेट उपलब्ध है।",
-    "Add app": "ऐप जोड़ें",
-    "All installed apps are already on Home.": "सभी इंस्टॉल किए ऐप पहले से Home पर हैं।",
-    "App hidden. Restore it with Add app.": "ऐप छिपा दिया गया। ऐप जोड़ें से वापस लाएँ।",
-    "Auto-renewal enabled (Beta)": "अपने-आप नवीनीकरण चालू (बीटा)",
-    "Auto-renewal off": "अपने-आप नवीनीकरण बंद",
-    "Automatic (system language)": "स्वचालित (सिस्टम की भाषा)",
-    "Back": "वापस",
-    "Back to Home": "Home पर वापस जाएँ",
-    "Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.": "बीटा: बिना root वाले टीवी पर नवीनीकरण की पुष्टि अभी नहीं हुई है। Developer Mode ऐप में टाइमर देखते रहें।",
-    "Can't open {app}": "{app} नहीं खुल सका",
-    "Change Home": "Home बदलें",
-    "Change was not confirmed. Check the switch and try again.": "बदलाव की पुष्टि नहीं हुई। स्विच जाँचें और फिर कोशिश करें।",
-    "Changing Home control…": "Home नियंत्रण बदला जा रहा है…",
-    "Check failed": "जाँच विफल",
-    "Check pending": "जाँच बाकी है",
-    "Check session": "सत्र जाँचें",
-    "Checking Home control…": "Home नियंत्रण जाँचा जा रहा है…",
-    "Checking auto-renewal…": "अपने-आप नवीनीकरण की जाँच हो रही है…",
-    "Checking for updates…": "अपडेट खोजे जा रहे हैं…",
-    "Checking installed apps…": "इंस्टॉल किए ऐप जाँचे जा रहे हैं…",
-    "Choose a language. Home will reload.": "भाषा चुनें। Home फिर लोड होगा।",
-    "Choose an app to add to Home.": "Home पर जोड़ने के लिए ऐप चुनें।",
-    "Choose where Home and return from apps take you.": "चुनें कि Home और ऐप से वापसी पर कौन-सी स्क्रीन खुले।",
-    "Confirm update": "अपडेट की पुष्टि करें",
-    "Connection failed — retry scheduled": "कनेक्शन विफल — फिर कोशिश तय है",
-    "Could not open LG Home. Check Home Helper and try again.": "LG Home नहीं खुल सका। Home Helper जाँचें और फिर कोशिश करें।",
-    "Could not save language. Please try again.": "भाषा सहेजी नहीं जा सकी। फिर कोशिश करें।",
-    "Could not save state": "स्थिति सहेजी नहीं जा सकी",
-    "Could not save your complete profile. Nothing was installed.": "आपकी पूरी प्रोफ़ाइल सहेजी नहीं जा सकी। कुछ भी इंस्टॉल नहीं हुआ।",
-    "Couldn't restore app. Please try again.": "ऐप बहाल नहीं हो सका। फिर कोशिश करें।",
-    "Couldn't save changes. Please try again.": "बदलाव सहेजे नहीं जा सके। फिर कोशिश करें।",
-    "Developer Mode auto-renewal (Beta)": "Developer Mode का अपने-आप नवीनीकरण (बीटा)",
-    "Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.": "Developer Mode, Home को इंस्टॉल रखता है। अपने-आप नवीनीकरण टीवी चालू और ऑनलाइन रहने पर सत्र बढ़ाने की कोशिश करता है।",
-    "Disable could not be saved. Retry before restarting the service.": "बंद करने की स्थिति सहेजी नहीं जा सकी। सेवा फिर शुरू करने से पहले दोबारा कोशिश करें।",
-    "Ethernet": "ईथरनेट",
-    "Good afternoon": "शुभ दोपहर",
-    "Good evening": "शुभ संध्या",
-    "Good morning": "सुप्रभात",
-    "Good night": "शुभ रात्रि",
-    "Hide diagnostics": "निदान छिपाएँ",
-    "Hide from Home": "Home से छिपाएँ",
-    "Hold Back for 1.2 seconds to open LG Home. Your settings stay saved.": "LG Home खोलने के लिए वापस बटन 1.2 सेकंड दबाए रखें। आपकी सेटिंग्स सहेजी रहेंगी।",
-    "Home": "Home",
-    "Home status is unknown. The Home button may still work.": "Home की स्थिति अज्ञात है। Home बटन अभी भी काम कर सकता है।",
-    "Home and return from apps open Clean Your TV.": "Home और ऐप से वापसी पर Clean Your TV खुलता है।",
-    "Home and return from apps open LG Home.": "Home और ऐप से वापसी पर LG Home खुलता है।",
-    "Home is up to date.": "Home नवीनतम संस्करण पर है।",
-    "Home settings": "Home सेटिंग्स",
-    "Home will close during installation. Your app list and settings will be saved first. Press Confirm update to continue.": "इंस्टॉलेशन के दौरान Home बंद होगा। पहले आपकी ऐप सूची और सेटिंग्स सहेजी जाएँगी। जारी रखने के लिए अपडेट की पुष्टि करें दबाएँ।",
-    "Inputs": "इनपुट",
-    "Installed Home {installed} · Available {available}": "इंस्टॉल किया Home {installed} · उपलब्ध {available}",
-    "Installing Home… Keep the TV on. If this screen closes, open Home again or use Home Updater for recovery.": "Home इंस्टॉल हो रहा है… टीवी चालू रखें। यह स्क्रीन बंद हो तो Home फिर खोलें या पुनर्प्राप्ति के लिए Home Updater इस्तेमाल करें।",
-    "LG response could not confirm renewal": "LG के उत्तर से नवीनीकरण की पुष्टि नहीं हुई",
-    "Language": "भाषा",
-    "Last checked: {date}": "अंतिम जाँच: {date}",
-    "Last confirmed renewal: {date}": "अंतिम पुष्ट नवीनीकरण: {date}",
-    "Live TV": "लाइव टीवी",
-    "Manage Home, software updates and your TV.": "Home, सॉफ़्टवेयर अपडेट और अपना टीवी प्रबंधित करें।",
-    "Network settings": "नेटवर्क सेटिंग्स",
-    "No inputs found": "कोई इनपुट नहीं मिला",
-    "No readable Developer Mode session": "पढ़ने योग्य Developer Mode सत्र नहीं मिला",
-    "No recovery result available. Your helper has not been changed.": "पुनर्प्राप्ति का परिणाम उपलब्ध नहीं है। आपका Helper बदला नहीं गया।",
-    "Not yet": "अभी नहीं",
-    "Offline": "ऑफ़लाइन",
-    "Open LG Home": "LG Home खोलें",
-    "This button opens LG Home once. Your Home screen choice and settings stay saved.": "यह बटन LG Home को एक बार खोलता है। आपकी होम स्क्रीन की पसंद और सेटिंग्स सुरक्षित रहती हैं।",
-    "Recovery": "पुनर्प्राप्ति",
-    "Recovery state: {status}. Use Home Updater to restore the previous version if offered.": "पुनर्प्राप्ति स्थिति: {status}। विकल्प उपलब्ध हो तो Home Updater से पिछला संस्करण बहाल करें।",
-    "Renewal confirmed": "नवीनीकरण की पुष्टि हुई",
-    "Saving apps, icons and settings…": "ऐप, आइकन और सेटिंग्स सहेजी जा रही हैं…",
-    "Service unavailable. Install the complete Home package and try again. Manage your Developer Mode timer manually.": "सेवा उपलब्ध नहीं है। पूरा Home पैकेज इंस्टॉल करें और फिर कोशिश करें। Developer Mode का टाइमर स्वयं प्रबंधित करें।",
-    "Session changed — retry scheduled": "सत्र बदला — फिर कोशिश तय है",
-    "Session checked": "सत्र जाँचा गया",
-    "Session expired — open Developer Mode": "सत्र समाप्त — Developer Mode खोलें",
-    "Settings": "सेटिंग्स",
-    "Setup error: {error}. Use Developer Mode manually.": "सेटअप त्रुटि: {error}। Developer Mode स्वयं इस्तेमाल करें।",
-    "Share this with your TV model and firmware at:": "इसे अपने टीवी मॉडल और फ़र्मवेयर के साथ यहाँ साझा करें:",
-    "Show diagnostics": "निदान दिखाएँ",
-    "Showing the saved list. Could not refresh apps from the TV.": "सहेजी हुई सूची दिखाई जा रही है। टीवी से ऐप सूची ताज़ा नहीं हो सकी।",
-    "Software updates": "सॉफ़्टवेयर अपडेट",
-    "TV settings": "टीवी सेटिंग्स",
-    "Try again": "फिर कोशिश करें",
-    "Turn off auto-renewal": "अपने-आप नवीनीकरण बंद करें",
-    "Turn on auto-renewal": "अपने-आप नवीनीकरण चालू करें",
-    "Undo": "पहले जैसा करें",
-    "Update Home": "Home अपडेट करें",
-    "Update Home Helper using the installation guide first.": "पहले इंस्टॉलेशन मार्गदर्शिका से Home Helper अपडेट करें।",
-    "Update Home or open LG settings for picture, sound and network.": "Home अपडेट करें या चित्र, ध्वनि और नेटवर्क के लिए LG सेटिंग्स खोलें।",
-    "Update available, but a verified recovery package for your installed version is missing.": "अपडेट उपलब्ध है, लेकिन आपके इंस्टॉल किए संस्करण का सत्यापित पुनर्प्राप्ति पैकेज नहीं है।",
-    "Update available. Without root, install it from a computer using the guide.": "अपडेट उपलब्ध है। root के बिना मार्गदर्शिका के अनुसार कंप्यूटर से इंस्टॉल करें।",
-    "Update outcome is not confirmed. Open Home Updater → Recovery before retrying.": "अपडेट के परिणाम की पुष्टि नहीं हुई। दोबारा कोशिश से पहले Home Updater → पुनर्प्राप्ति खोलें।",
-    "Update service or signed release unavailable. Install the separate Home Updater package once, then retry. Your current Home is unchanged.": "अपडेट सेवा या हस्ताक्षरित रिलीज़ उपलब्ध नहीं है। अलग Home Updater पैकेज एक बार इंस्टॉल करें, फिर कोशिश करें। आपका मौजूदा Home बदला नहीं गया है।",
-    "Update state: {status}. Reopen Home when installation finishes.": "अपडेट स्थिति: {status}। इंस्टॉलेशन पूरा होने पर Home फिर खोलें।",
-    "Updates and TV": "अपडेट और टीवी",
-    "Working…": "काम जारी है…",
-    "Your Home screen": "आपकी Home स्क्रीन",
-    "Your installed Home is newer than this release.": "आपका इंस्टॉल किया Home इस रिलीज़ से नया है।",
-    "{app} added": "{app} जोड़ दिया गया",
-    "{hours} hours remaining (estimate)": "{hours} घंटे बाकी (अनुमान)",
-    "← ↑ ↓ → Move   ·   OK Place   ·   Back Cancel   ·   ↓ Below last row to hide": "← ↑ ↓ → खिसकाएँ   ·   OK रखें   ·   वापस रद्द करें   ·   ↓ छिपाने के लिए अंतिम पंक्ति से नीचे जाएँ",
-    "No-root Edition": "बिना root वाला संस्करण",
-    "Cancel": "रद्द करें",
-    "Install Home update?": "Home अपडेट इंस्टॉल करें?",
-    "Restore previous Home?": "पिछला Home बहाल करें?",
-    "Home will close during installation. Your apps and settings will be saved.": "इंस्टॉलेशन के दौरान Home बंद हो जाएगा। आपके ऐप्स और सेटिंग्स सहेजे जाएंगे।",
-    "The previous Home version and saved settings will be restored.": "Home का पिछला संस्करण और सहेजी गई सेटिंग्स बहाल की जाएंगी।",
-    "Install update": "अपडेट स्थापित करें",
-    "Restore previous Home": "पिछला Home बहाल करें",
-    "Release notes": "नया क्या है",
-    "↑ ↓ Read notes · ← → Choose action · Back Close": "↑ ↓ बदलाव पढ़ें · ← → कार्रवाई चुनें · वापस बंद करें",
-    "← → Choose action · Back Open Home": "← → कार्रवाई चुनें · वापस Home खोलें",
-    "Home control could not be restored automatically. Open Home settings.": "Home नियंत्रण अपने आप बहाल नहीं हो सका। Home सेटिंग खोलें।",
-    "Your previous Home screen choice has been restored.": "आपका पिछला होम स्क्रीन चयन बहाल कर दिया गया है।",
-    "Home control remains off because it was disabled during the update.": "अपडेट के दौरान बंद किए जाने के कारण Home नियंत्रण बंद रहता है।",
-    "Rollback remains available until the next update.": "अगले अपडेट तक पिछले संस्करण पर वापस जा सकते हैं।",
-    "Previous Root version and profile restored.": "Root का पिछला संस्करण और प्रोफ़ाइल बहाल हो गए हैं।",
-    "Installed: {version}": "स्थापित: {version}",
-    "Available: {version}": "उपलब्ध: {version}",
-    "Software updates. Update available.": "सॉफ़्टवेयर अपडेट। अपडेट उपलब्ध है।",
-    "Open LG Home once, keeping your Home choice.": "होम स्क्रीन की पसंद बनाए रखते हुए LG Home एक बार खोलें।",
-    "Hold Back for 1.2 seconds to open LG Home.": "LG Home खोलने के लिए वापस बटन 1.2 सेकंड दबाए रखें।",
-    "Developer Mode": "डेवलपर मोड",
-    "Beta": "बीटा",
-    "Home Helper": "Home Helper",
-    "Home button settings": "Home बटन सेटिंग",
-    "Start Helper": "Helper शुरू करें",
-    "Start Helper?": "Helper शुरू करें?",
-    "Starting Helper…": "Helper शुरू हो रहा है…",
-    "Helper opens Home with your remote and helps you return to Home after turning on the TV.": "Helper रिमोट से Home खोलता है और टीवी चालू होने के बाद Home पर लौटने में मदद करता है।",
-    "Helper is unavailable. Reinstall the complete Home package from your computer.": "Helper उपलब्ध नहीं है। कंप्यूटर से पूरा Home पैकेज दोबारा इंस्टॉल करें।",
-    "Helper was stopped for safety. Start it only when you are ready to use Home control again.": "सुरक्षा के लिए Helper रोक दिया गया था। Home नियंत्रण फिर उपयोग करने के लिए तैयार होने पर इसे शुरू करें।",
-    "Helper is stopped. Start it to use the Home button and return from apps.": "Helper बंद है। Home बटन और ऐप से लौटने की सुविधा के लिए इसे शुरू करें।",
-    "Start Helper to use Home control again. Your saved Home screen choice will be used.": "Home नियंत्रण फिर उपयोग करने के लिए Helper शुरू करें। आपका सहेजा हुआ होम स्क्रीन विकल्प लागू होगा।",
-    "Status is unavailable.": "स्थिति उपलब्ध नहीं है।",
-    "Try refreshing. If this continues, reinstall the complete Home package from your computer.": "स्थिति रीफ़्रेश करें। समस्या बनी रहे तो कंप्यूटर से पूरा Home पैकेज दोबारा इंस्टॉल करें।",
-    "No recovery needed.": "पुनर्स्थापना की आवश्यकता नहीं है।",
-    "Open Home to continue.": "जारी रखने के लिए Home खोलें।",
-    "Open Home to continue. If the update caused a problem, you can restore the previous version.": "Home खोलें। अपडेट से समस्या आई हो तो पिछला संस्करण पुनर्स्थापित कर सकते हैं।",
-    "Recovery needs attention.": "पुनर्स्थापना पर ध्यान देना आवश्यक है।",
-    "Refresh status first. If recovery remains unavailable, use the installer on your computer.": "पहले स्थिति रीफ़्रेश करें। पुनर्स्थापना फिर भी उपलब्ध न हो तो कंप्यूटर पर इंस्टॉलर उपयोग करें।",
-    "An update is in progress.": "अपडेट चल रहा है।",
-    "Keep the TV powered on. Status will refresh automatically.": "टीवी चालू रखें। स्थिति अपने आप रीफ़्रेश होगी।",
-    "Could not open Home.": "Home नहीं खुल सका।",
-    "If Home stops working after an update, use this app to restore the previous version. For regular updates, open Home settings.": "अपडेट के बाद Home काम न करे तो इस ऐप से पिछला संस्करण पुनर्स्थापित करें। सामान्य अपडेट के लिए Home सेटिंग खोलें।",
-    "Open Home": "Home खोलें",
-    "Refresh status": "स्थिति ताज़ा करें"
+  'hi': {
+    'A signed Home update is available.':
+      'Home का हस्ताक्षरित अपडेट उपलब्ध है।',
+    'Add app': 'ऐप जोड़ें',
+    'All installed apps are already on Home.':
+      'सभी इंस्टॉल किए ऐप पहले से Home पर हैं।',
+    'App hidden. Restore it with Add app.':
+      'ऐप छिपा दिया गया। ऐप जोड़ें से वापस लाएँ।',
+    'Auto-renewal enabled (Beta)': 'अपने-आप नवीनीकरण चालू (बीटा)',
+    'Auto-renewal off': 'अपने-आप नवीनीकरण बंद',
+    'Automatic (system language)': 'स्वचालित (सिस्टम की भाषा)',
+    'Back': 'वापस',
+    'Back to Home': 'Home पर वापस जाएँ',
+    'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
+      'बीटा: बिना root वाले टीवी पर नवीनीकरण की पुष्टि अभी नहीं हुई है। Developer Mode ऐप में टाइमर देखते रहें।',
+    "Can't open {app}": '{app} नहीं खुल सका',
+    'Change Home': 'Home बदलें',
+    'Change was not confirmed. Check the switch and try again.':
+      'बदलाव की पुष्टि नहीं हुई। स्विच जाँचें और फिर कोशिश करें।',
+    'Changing Home control…': 'Home नियंत्रण बदला जा रहा है…',
+    'Check failed': 'जाँच विफल',
+    'Check pending': 'जाँच बाकी है',
+    'Check session': 'सत्र जाँचें',
+    'Checking Home control…': 'Home नियंत्रण जाँचा जा रहा है…',
+    'Checking auto-renewal…': 'अपने-आप नवीनीकरण की जाँच हो रही है…',
+    'Checking for updates…': 'अपडेट खोजे जा रहे हैं…',
+    'Checking installed apps…': 'इंस्टॉल किए ऐप जाँचे जा रहे हैं…',
+    'Choose a language. Home will reload.': 'भाषा चुनें। Home फिर लोड होगा।',
+    'Choose an app to add to Home.': 'Home पर जोड़ने के लिए ऐप चुनें।',
+    'Choose where Home and return from apps take you.':
+      'चुनें कि Home और ऐप से वापसी पर कौन-सी स्क्रीन खुले।',
+    'Confirm update': 'अपडेट की पुष्टि करें',
+    'Connection failed — retry scheduled': 'कनेक्शन विफल — फिर कोशिश तय है',
+    'Could not open LG Home. Check Home Helper and try again.':
+      'LG Home नहीं खुल सका। Home Helper जाँचें और फिर कोशिश करें।',
+    'Could not save language. Please try again.':
+      'भाषा सहेजी नहीं जा सकी। फिर कोशिश करें।',
+    'Could not save state': 'स्थिति सहेजी नहीं जा सकी',
+    'Could not save your complete profile. Nothing was installed.':
+      'आपकी पूरी प्रोफ़ाइल सहेजी नहीं जा सकी। कुछ भी इंस्टॉल नहीं हुआ।',
+    "Couldn't restore app. Please try again.":
+      'ऐप बहाल नहीं हो सका। फिर कोशिश करें।',
+    "Couldn't save changes. Please try again.":
+      'बदलाव सहेजे नहीं जा सके। फिर कोशिश करें।',
+    'Developer Mode auto-renewal (Beta)':
+      'Developer Mode का अपने-आप नवीनीकरण (बीटा)',
+    'Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.':
+      'Developer Mode, Home को इंस्टॉल रखता है। अपने-आप नवीनीकरण टीवी चालू और ऑनलाइन रहने पर सत्र बढ़ाने की कोशिश करता है।',
+    'Disable could not be saved. Retry before restarting the service.':
+      'बंद करने की स्थिति सहेजी नहीं जा सकी। सेवा फिर शुरू करने से पहले दोबारा कोशिश करें।',
+    'Ethernet': 'ईथरनेट',
+    'Good afternoon': 'शुभ दोपहर',
+    'Good evening': 'शुभ संध्या',
+    'Good morning': 'सुप्रभात',
+    'Good night': 'शुभ रात्रि',
+    'Hide diagnostics': 'निदान छिपाएँ',
+    'Hide from Home': 'Home से छिपाएँ',
+    'Hold Back for 1.2 seconds to open LG Home. Your settings stay saved.':
+      'LG Home खोलने के लिए वापस बटन 1.2 सेकंड दबाए रखें। आपकी सेटिंग्स सहेजी रहेंगी।',
+    'Home': 'Home',
+    'Home status is unknown. The Home button may still work.':
+      'Home की स्थिति अज्ञात है। Home बटन अभी भी काम कर सकता है।',
+    'Home and return from apps open Clean Your TV.':
+      'Home और ऐप से वापसी पर Clean Your TV खुलता है।',
+    'Home and return from apps open LG Home.':
+      'Home और ऐप से वापसी पर LG Home खुलता है।',
+    'Home is up to date.': 'Home नवीनतम संस्करण पर है।',
+    'Home settings': 'Home सेटिंग्स',
+    'Home will close during installation. Your app list and settings will be saved first. Press Confirm update to continue.':
+      'इंस्टॉलेशन के दौरान Home बंद होगा। पहले आपकी ऐप सूची और सेटिंग्स सहेजी जाएँगी। जारी रखने के लिए अपडेट की पुष्टि करें दबाएँ।',
+    'Inputs': 'इनपुट',
+    'Installed Home {installed} · Available {available}':
+      'इंस्टॉल किया Home {installed} · उपलब्ध {available}',
+    'Installing Home… Keep the TV on. If this screen closes, open Home again or use Home Updater for recovery.':
+      'Home इंस्टॉल हो रहा है… टीवी चालू रखें। यह स्क्रीन बंद हो तो Home फिर खोलें या पुनर्प्राप्ति के लिए Home Updater इस्तेमाल करें।',
+    'LG response could not confirm renewal':
+      'LG के उत्तर से नवीनीकरण की पुष्टि नहीं हुई',
+    'Language': 'भाषा',
+    'Last checked: {date}': 'अंतिम जाँच: {date}',
+    'Last confirmed renewal: {date}': 'अंतिम पुष्ट नवीनीकरण: {date}',
+    'Live TV': 'लाइव टीवी',
+    'Manage Home, software updates and your TV.':
+      'Home, सॉफ़्टवेयर अपडेट और अपना टीवी प्रबंधित करें।',
+    'Network settings': 'नेटवर्क सेटिंग्स',
+    'No inputs found': 'कोई इनपुट नहीं मिला',
+    'No readable Developer Mode session':
+      'पढ़ने योग्य Developer Mode सत्र नहीं मिला',
+    'No recovery result available. Your helper has not been changed.':
+      'पुनर्प्राप्ति का परिणाम उपलब्ध नहीं है। आपका Helper बदला नहीं गया।',
+    'Not yet': 'अभी नहीं',
+    'Offline': 'ऑफ़लाइन',
+    'Open LG Home': 'LG Home खोलें',
+    'This button opens LG Home once. Your Home screen choice and settings stay saved.':
+      'यह बटन LG Home को एक बार खोलता है। आपकी होम स्क्रीन की पसंद और सेटिंग्स सुरक्षित रहती हैं।',
+    'Recovery': 'पुनर्प्राप्ति',
+    'Recovery state: {status}. Use Home Updater to restore the previous version if offered.':
+      'पुनर्प्राप्ति स्थिति: {status}। विकल्प उपलब्ध हो तो Home Updater से पिछला संस्करण बहाल करें।',
+    'Renewal confirmed': 'नवीनीकरण की पुष्टि हुई',
+    'Saving apps, icons and settings…':
+      'ऐप, आइकन और सेटिंग्स सहेजी जा रही हैं…',
+    'Service unavailable. Install the complete Home package and try again. Manage your Developer Mode timer manually.':
+      'सेवा उपलब्ध नहीं है। पूरा Home पैकेज इंस्टॉल करें और फिर कोशिश करें। Developer Mode का टाइमर स्वयं प्रबंधित करें।',
+    'Session changed — retry scheduled': 'सत्र बदला — फिर कोशिश तय है',
+    'Session checked': 'सत्र जाँचा गया',
+    'Session expired — open Developer Mode':
+      'सत्र समाप्त — Developer Mode खोलें',
+    'Settings': 'सेटिंग्स',
+    'Setup error: {error}. Use Developer Mode manually.':
+      'सेटअप त्रुटि: {error}। Developer Mode स्वयं इस्तेमाल करें।',
+    'Share this with your TV model and firmware at:':
+      'इसे अपने टीवी मॉडल और फ़र्मवेयर के साथ यहाँ साझा करें:',
+    'Show diagnostics': 'निदान दिखाएँ',
+    'Showing the saved list. Could not refresh apps from the TV.':
+      'सहेजी हुई सूची दिखाई जा रही है। टीवी से ऐप सूची ताज़ा नहीं हो सकी।',
+    'Software updates': 'सॉफ़्टवेयर अपडेट',
+    'TV settings': 'टीवी सेटिंग्स',
+    'Try again': 'फिर कोशिश करें',
+    'Turn off auto-renewal': 'अपने-आप नवीनीकरण बंद करें',
+    'Turn on auto-renewal': 'अपने-आप नवीनीकरण चालू करें',
+    'Undo': 'पहले जैसा करें',
+    'Update Home': 'Home अपडेट करें',
+    'Update Home Helper using the installation guide first.':
+      'पहले इंस्टॉलेशन मार्गदर्शिका से Home Helper अपडेट करें।',
+    'Update Home or open LG settings for picture, sound and network.':
+      'Home अपडेट करें या चित्र, ध्वनि और नेटवर्क के लिए LG सेटिंग्स खोलें।',
+    'Update available, but a verified recovery package for your installed version is missing.':
+      'अपडेट उपलब्ध है, लेकिन आपके इंस्टॉल किए संस्करण का सत्यापित पुनर्प्राप्ति पैकेज नहीं है।',
+    'Update available. Without root, install it from a computer using the guide.':
+      'अपडेट उपलब्ध है। root के बिना मार्गदर्शिका के अनुसार कंप्यूटर से इंस्टॉल करें।',
+    'Update outcome is not confirmed. Open Home Updater → Recovery before retrying.':
+      'अपडेट के परिणाम की पुष्टि नहीं हुई। दोबारा कोशिश से पहले Home Updater → पुनर्प्राप्ति खोलें।',
+    'Update service or signed release unavailable. Install the separate Home Updater package once, then retry. Your current Home is unchanged.':
+      'अपडेट सेवा या हस्ताक्षरित रिलीज़ उपलब्ध नहीं है। अलग Home Updater पैकेज एक बार इंस्टॉल करें, फिर कोशिश करें। आपका मौजूदा Home बदला नहीं गया है।',
+    'Update state: {status}. Reopen Home when installation finishes.':
+      'अपडेट स्थिति: {status}। इंस्टॉलेशन पूरा होने पर Home फिर खोलें।',
+    'Updates and TV': 'अपडेट और टीवी',
+    'Working…': 'काम जारी है…',
+    'Your Home screen': 'आपकी Home स्क्रीन',
+    'Your installed Home is newer than this release.':
+      'आपका इंस्टॉल किया Home इस रिलीज़ से नया है।',
+    '{app} added': '{app} जोड़ दिया गया',
+    '{hours} hours remaining (estimate)': '{hours} घंटे बाकी (अनुमान)',
+    '← ↑ ↓ → Move   ·   OK Place   ·   Back Cancel   ·   ↓ Below last row to hide':
+      '← ↑ ↓ → खिसकाएँ   ·   OK रखें   ·   वापस रद्द करें   ·   ↓ छिपाने के लिए अंतिम पंक्ति से नीचे जाएँ',
+    'No-root Edition': 'बिना root वाला संस्करण',
+    'Cancel': 'रद्द करें',
+    'Install Home update?': 'Home अपडेट इंस्टॉल करें?',
+    'Restore previous Home?': 'पिछला Home बहाल करें?',
+    'Home will close during installation. Your apps and settings will be saved.':
+      'इंस्टॉलेशन के दौरान Home बंद हो जाएगा। आपके ऐप्स और सेटिंग्स सहेजे जाएंगे।',
+    'The previous Home version and saved settings will be restored.':
+      'Home का पिछला संस्करण और सहेजी गई सेटिंग्स बहाल की जाएंगी।',
+    'Install update': 'अपडेट स्थापित करें',
+    'Restore previous Home': 'पिछला Home बहाल करें',
+    'Release notes': 'नया क्या है',
+    '↑ ↓ Read notes · ← → Choose action · Back Close':
+      '↑ ↓ बदलाव पढ़ें · ← → कार्रवाई चुनें · वापस बंद करें',
+    '← → Choose action · Back Open Home':
+      '← → कार्रवाई चुनें · वापस Home खोलें',
+    'Home control could not be restored automatically. Open Home settings.':
+      'Home नियंत्रण अपने आप बहाल नहीं हो सका। Home सेटिंग खोलें।',
+    'Your previous Home screen choice has been restored.':
+      'आपका पिछला होम स्क्रीन चयन बहाल कर दिया गया है।',
+    'Home control remains off because it was disabled during the update.':
+      'अपडेट के दौरान बंद किए जाने के कारण Home नियंत्रण बंद रहता है।',
+    'Rollback remains available until the next update.':
+      'अगले अपडेट तक पिछले संस्करण पर वापस जा सकते हैं।',
+    'Previous Root version and profile restored.':
+      'Root का पिछला संस्करण और प्रोफ़ाइल बहाल हो गए हैं।',
+    'Installed: {version}': 'स्थापित: {version}',
+    'Available: {version}': 'उपलब्ध: {version}',
+    'Software updates. Update available.': 'सॉफ़्टवेयर अपडेट। अपडेट उपलब्ध है।',
+    'Open LG Home once, keeping your Home choice.':
+      'होम स्क्रीन की पसंद बनाए रखते हुए LG Home एक बार खोलें।',
+    'Hold Back for 1.2 seconds to open LG Home.':
+      'LG Home खोलने के लिए वापस बटन 1.2 सेकंड दबाए रखें।',
+    'Developer Mode': 'डेवलपर मोड',
+    'Beta': 'बीटा',
+    'Home Helper': 'Home Helper',
+    'Home button settings': 'Home बटन सेटिंग',
+    'Start Helper': 'Helper शुरू करें',
+    'Start Helper?': 'Helper शुरू करें?',
+    'Starting Helper…': 'Helper शुरू हो रहा है…',
+    'Helper opens Home with your remote and helps you return to Home after turning on the TV.':
+      'Helper रिमोट से Home खोलता है और टीवी चालू होने के बाद Home पर लौटने में मदद करता है।',
+    'Helper is unavailable. Reinstall the complete Home package from your computer.':
+      'Helper उपलब्ध नहीं है। कंप्यूटर से पूरा Home पैकेज दोबारा इंस्टॉल करें।',
+    'Helper was stopped for safety. Start it only when you are ready to use Home control again.':
+      'सुरक्षा के लिए Helper रोक दिया गया था। Home नियंत्रण फिर उपयोग करने के लिए तैयार होने पर इसे शुरू करें।',
+    'Helper is stopped. Start it to use the Home button and return from apps.':
+      'Helper बंद है। Home बटन और ऐप से लौटने की सुविधा के लिए इसे शुरू करें।',
+    'Start Helper to use Home control again. Your saved Home screen choice will be used.':
+      'Home नियंत्रण फिर उपयोग करने के लिए Helper शुरू करें। आपका सहेजा हुआ होम स्क्रीन विकल्प लागू होगा।',
+    'Status is unavailable.': 'स्थिति उपलब्ध नहीं है।',
+    'Try refreshing. If this continues, reinstall the complete Home package from your computer.':
+      'स्थिति रीफ़्रेश करें। समस्या बनी रहे तो कंप्यूटर से पूरा Home पैकेज दोबारा इंस्टॉल करें।',
+    'No recovery needed.': 'पुनर्स्थापना की आवश्यकता नहीं है।',
+    'Open Home to continue.': 'जारी रखने के लिए Home खोलें।',
+    'Open Home to continue. If the update caused a problem, you can restore the previous version.':
+      'Home खोलें। अपडेट से समस्या आई हो तो पिछला संस्करण पुनर्स्थापित कर सकते हैं।',
+    'Recovery needs attention.': 'पुनर्स्थापना पर ध्यान देना आवश्यक है।',
+    'Refresh status first. If recovery remains unavailable, use the installer on your computer.':
+      'पहले स्थिति रीफ़्रेश करें। पुनर्स्थापना फिर भी उपलब्ध न हो तो कंप्यूटर पर इंस्टॉलर उपयोग करें।',
+    'An update is in progress.': 'अपडेट चल रहा है।',
+    'Keep the TV powered on. Status will refresh automatically.':
+      'टीवी चालू रखें। स्थिति अपने आप रीफ़्रेश होगी।',
+    'Could not open Home.': 'Home नहीं खुल सका।',
+    'If Home stops working after an update, use this app to restore the previous version. For regular updates, open Home settings.':
+      'अपडेट के बाद Home काम न करे तो इस ऐप से पिछला संस्करण पुनर्स्थापित करें। सामान्य अपडेट के लिए Home सेटिंग खोलें।',
+    'Open Home': 'Home खोलें',
+    'Refresh status': 'स्थिति ताज़ा करें'
   },
-  "pl": {
-    "A signed Home update is available.": "Dostępna jest podpisana aktualizacja Home.",
-    "Add app": "Dodaj aplikację",
-    "All installed apps are already on Home.": "Wszystkie zainstalowane aplikacje są już na Home.",
-    "App hidden. Restore it with Add app.": "Aplikacja ukryta. Przywróć ją przez „Dodaj aplikację”.",
-    "Auto-renewal enabled (Beta)": "Automatyczne odnawianie włączone (Beta)",
-    "Auto-renewal off": "Automatyczne odnawianie wyłączone",
-    "Automatic (system language)": "Automatycznie (język systemu)",
-    "Back": "Wstecz",
-    "Back to Home": "Wróć do Home",
-    "Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.": "Beta: odnawianie nie zostało jeszcze zweryfikowane na telewizorach bez roota. Nadal sprawdzaj licznik w aplikacji Developer Mode.",
-    "Can't open {app}": "Nie można otworzyć {app}",
-    "Change Home": "Zmień Home",
-    "Change was not confirmed. Check the switch and try again.": "Zmiana nie została potwierdzona. Sprawdź przełącznik i spróbuj ponownie.",
-    "Changing Home control…": "Zmienianie sterowania Home…",
-    "Check failed": "Sprawdzanie nie powiodło się",
-    "Check pending": "Sprawdzanie oczekuje",
-    "Check session": "Sprawdź sesję",
-    "Checking Home control…": "Sprawdzanie sterowania Home…",
-    "Checking auto-renewal…": "Sprawdzanie automatycznego odnawiania…",
-    "Checking for updates…": "Wyszukiwanie aktualizacji…",
-    "Checking installed apps…": "Sprawdzanie zainstalowanych aplikacji…",
-    "Choose a language. Home will reload.": "Wybierz język. Home zostanie ponownie załadowane.",
-    "Choose an app to add to Home.": "Wybierz aplikację do dodania do Home.",
-    "Choose where Home and return from apps take you.": "Wybierz cel przycisku Home i powrotu z aplikacji.",
-    "Confirm update": "Potwierdź aktualizację",
-    "Connection failed — retry scheduled": "Błąd połączenia — zaplanowano ponowną próbę",
-    "Could not open LG Home. Check Home Helper and try again.": "Nie udało się otworzyć LG Home. Sprawdź Home Helper i spróbuj ponownie.",
-    "Could not save language. Please try again.": "Nie udało się zapisać języka. Spróbuj ponownie.",
-    "Could not save state": "Nie udało się zapisać stanu",
-    "Could not save your complete profile. Nothing was installed.": "Nie udało się zapisać pełnego profilu. Niczego nie zainstalowano.",
-    "Couldn't restore app. Please try again.": "Nie udało się przywrócić aplikacji. Spróbuj ponownie.",
-    "Couldn't save changes. Please try again.": "Nie udało się zapisać zmian. Spróbuj ponownie.",
-    "Developer Mode auto-renewal (Beta)": "Automatyczne odnawianie Developer Mode (Beta)",
-    "Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.": "Developer Mode pozwala zachować zainstalowane Home. Automatyczne odnawianie próbuje przedłużyć sesję, gdy TV jest włączony i połączony z siecią.",
-    "Disable could not be saved. Retry before restarting the service.": "Nie udało się zapisać wyłączenia. Spróbuj ponownie przed ponownym uruchomieniem usługi.",
-    "Ethernet": "Ethernet",
-    "Good afternoon": "Miłego popołudnia",
-    "Good evening": "Dobry wieczór",
-    "Good morning": "Dzień dobry",
-    "Good night": "Dobranoc",
-    "Hide diagnostics": "Ukryj diagnostykę",
-    "Hide from Home": "Ukryj na Home",
-    "Hold Back for 1.2 seconds to open LG Home. Your settings stay saved.": "Przytrzymaj Wstecz przez 1,2 sekundy, aby otworzyć LG Home. Ustawienia pozostaną zapisane.",
-    "Home": "Home",
-    "Home status is unknown. The Home button may still work.": "Stan Home jest nieznany. Przycisk Home może nadal działać.",
-    "Home and return from apps open Clean Your TV.": "Home i powrót z aplikacji otwierają Clean Your TV.",
-    "Home and return from apps open LG Home.": "Home i powrót z aplikacji otwierają LG Home.",
-    "Home is up to date.": "Home jest aktualne.",
-    "Home settings": "Ustawienia Home",
-    "Home will close during installation. Your app list and settings will be saved first. Press Confirm update to continue.": "Home zamknie się podczas instalacji. Lista aplikacji i ustawienia zostaną wcześniej zapisane. Naciśnij Potwierdź aktualizację, aby kontynuować.",
-    "Inputs": "Wejścia",
-    "Installed Home {installed} · Available {available}": "Zainstalowane Home: {installed} · Dostępne: {available}",
-    "Installing Home… Keep the TV on. If this screen closes, open Home again or use Home Updater for recovery.": "Instalowanie Home… Nie wyłączaj TV. Jeśli ekran się zamknie, otwórz ponownie Home lub użyj Home Updater do odzyskiwania.",
-    "LG response could not confirm renewal": "Odpowiedź LG nie potwierdziła odnowienia",
-    "Language": "Język",
-    "Last checked: {date}": "Ostatnio sprawdzono: {date}",
-    "Last confirmed renewal: {date}": "Ostatnie potwierdzone odnowienie: {date}",
-    "Live TV": "Telewizja na żywo",
-    "Manage Home, software updates and your TV.": "Zarządzaj Home, aktualizacjami i telewizorem.",
-    "Network settings": "Ustawienia sieci",
-    "No inputs found": "Nie znaleziono wejść",
-    "No readable Developer Mode session": "Brak czytelnej sesji Developer Mode",
-    "No recovery result available. Your helper has not been changed.": "Brak wyniku odzyskiwania. Twój Helper nie został zmieniony.",
-    "Not yet": "Jeszcze nie",
-    "Offline": "Bez połączenia",
-    "Open LG Home": "Otwórz LG Home",
-    "This button opens LG Home once. Your Home screen choice and settings stay saved.": "Ten przycisk otwiera LG Home jednorazowo. Wybór ekranu głównego i ustawienia zostają zachowane.",
-    "Recovery": "Odzyskiwanie",
-    "Recovery state: {status}. Use Home Updater to restore the previous version if offered.": "Stan odzyskiwania: {status}. Użyj Home Updater, aby przywrócić poprzednią wersję, jeśli jest dostępna.",
-    "Renewal confirmed": "Odnowienie potwierdzone",
-    "Saving apps, icons and settings…": "Zapisywanie aplikacji, ikon i ustawień…",
-    "Service unavailable. Install the complete Home package and try again. Manage your Developer Mode timer manually.": "Usługa niedostępna. Zainstaluj pełny pakiet Home i spróbuj ponownie. Zarządzaj licznikiem Developer Mode ręcznie.",
-    "Session changed — retry scheduled": "Sesja zmieniona — zaplanowano ponowną próbę",
-    "Session checked": "Sesja sprawdzona",
-    "Session expired — open Developer Mode": "Sesja wygasła — otwórz Developer Mode",
-    "Settings": "Ustawienia",
-    "Setup error: {error}. Use Developer Mode manually.": "Błąd konfiguracji: {error}. Używaj Developer Mode ręcznie.",
-    "Share this with your TV model and firmware at:": "Udostępnij to wraz z modelem TV i wersją oprogramowania pod adresem:",
-    "Show diagnostics": "Pokaż diagnostykę",
-    "Showing the saved list. Could not refresh apps from the TV.": "Wyświetlana jest zapisana lista. Nie udało się odświeżyć aplikacji z telewizora.",
-    "Software updates": "Aktualizacje oprogramowania",
-    "TV settings": "Ustawienia TV",
-    "Try again": "Spróbuj ponownie",
-    "Turn off auto-renewal": "Wyłącz automatyczne odnawianie",
-    "Turn on auto-renewal": "Włącz automatyczne odnawianie",
-    "Undo": "Cofnij",
-    "Update Home": "Aktualizuj Home",
-    "Update Home Helper using the installation guide first.": "Najpierw zaktualizuj Home Helper zgodnie z instrukcją instalacji.",
-    "Update Home or open LG settings for picture, sound and network.": "Zaktualizuj Home lub otwórz ustawienia obrazu, dźwięku i sieci LG.",
-    "Update available, but a verified recovery package for your installed version is missing.": "Aktualizacja jest dostępna, ale brakuje zweryfikowanego pakietu odzyskiwania dla zainstalowanej wersji.",
-    "Update available. Without root, install it from a computer using the guide.": "Aktualizacja jest dostępna. Bez roota zainstaluj ją z komputera zgodnie z instrukcją.",
-    "Update outcome is not confirmed. Open Home Updater → Recovery before retrying.": "Wynik aktualizacji nie został potwierdzony. Przed ponowną próbą otwórz Home Updater → Odzyskiwanie.",
-    "Update service or signed release unavailable. Install the separate Home Updater package once, then retry. Your current Home is unchanged.": "Usługa aktualizacji lub podpisane wydanie są niedostępne. Zainstaluj osobny pakiet Home Updater jednorazowo i spróbuj ponownie. Obecne Home nie zostało zmienione.",
-    "Update state: {status}. Reopen Home when installation finishes.": "Stan aktualizacji: {status}. Otwórz ponownie Home po zakończeniu instalacji.",
-    "Updates and TV": "Aktualizacje i TV",
-    "Working…": "Przetwarzanie…",
-    "Your Home screen": "Twój ekran Home",
-    "Your installed Home is newer than this release.": "Zainstalowane Home jest nowsze od tego wydania.",
-    "{app} added": "Dodano {app}",
-    "{hours} hours remaining (estimate)": "Pozostało {hours} godz. (szacunkowo)",
-    "← ↑ ↓ → Move   ·   OK Place   ·   Back Cancel   ·   ↓ Below last row to hide": "← ↑ ↓ → Przesuń   ·   OK Umieść   ·   Wstecz Anuluj   ·   ↓ Poniżej ostatniego wiersza, aby ukryć",
-    "No-root Edition": "Edycja bez roota",
-    "Cancel": "Anuluj",
-    "Install Home update?": "Zainstalować aktualizację Home?",
-    "Restore previous Home?": "Przywrócić poprzednią wersję Home?",
-    "Home will close during installation. Your apps and settings will be saved.": "Home zamknie się na czas instalacji. Aplikacje i ustawienia zostaną zapisane.",
-    "The previous Home version and saved settings will be restored.": "Poprzednia wersja Home i zapisane ustawienia zostaną przywrócone.",
-    "Install update": "Zainstaluj aktualizację",
-    "Restore previous Home": "Przywróć poprzedni Home",
-    "Release notes": "Co nowego",
-    "↑ ↓ Read notes · ← → Choose action · Back Close": "↑ ↓ Czytaj zmiany · ← → Wybierz działanie · Wstecz Zamknij",
-    "← → Choose action · Back Open Home": "← → Wybierz działanie · Wstecz Otwórz Home",
-    "Home control could not be restored automatically. Open Home settings.": "Nie udało się automatycznie przywrócić sterowania Home. Otwórz ustawienia Home.",
-    "Your previous Home screen choice has been restored.": "Przywrócono poprzedni wybór ekranu głównego.",
-    "Home control remains off because it was disabled during the update.": "Sterowanie Home pozostaje wyłączone, ponieważ zostało wyłączone podczas aktualizacji.",
-    "Rollback remains available until the next update.": "Przywracanie pozostaje dostępne do następnej aktualizacji.",
-    "Previous Root version and profile restored.": "Przywrócono poprzednią wersję Root i profil.",
-    "Installed: {version}": "Zainstalowano: {version}",
-    "Available: {version}": "Dostępna: {version}",
-    "Software updates. Update available.": "Aktualizacje oprogramowania. Dostępna jest aktualizacja.",
-    "Open LG Home once, keeping your Home choice.": "Otwórz LG Home jednorazowo, zachowując wybór ekranu Home.",
-    "Hold Back for 1.2 seconds to open LG Home.": "Przytrzymaj Wstecz przez 1,2 sekundy, aby otworzyć LG Home.",
-    "Developer Mode": "Tryb dewelopera",
-    "Beta": "Beta",
-    "Home Helper": "Home Helper",
-    "Home button settings": "Ustawienia przycisku Home",
-    "Start Helper": "Uruchom Helper",
-    "Start Helper?": "Uruchomić Helper?",
-    "Starting Helper…": "Uruchamianie Helper…",
-    "Helper opens Home with your remote and helps you return to Home after turning on the TV.": "Helper otwiera Home pilotem i pomaga wrócić do Home po włączeniu telewizora.",
-    "Helper is unavailable. Reinstall the complete Home package from your computer.": "Helper jest niedostępny. Zainstaluj ponownie pełny pakiet Home z komputera.",
-    "Helper was stopped for safety. Start it only when you are ready to use Home control again.": "Helper został zatrzymany dla bezpieczeństwa. Uruchom go, gdy zechcesz ponownie sterować Home.",
-    "Helper is stopped. Start it to use the Home button and return from apps.": "Helper jest zatrzymany. Uruchom go, aby używać przycisku Home i wracać z aplikacji.",
-    "Start Helper to use Home control again. Your saved Home screen choice will be used.": "Uruchom Helper, aby znów sterować Home. Zostanie użyty zapisany wybór ekranu głównego.",
-    "Status is unavailable.": "Nie można sprawdzić stanu.",
-    "Try refreshing. If this continues, reinstall the complete Home package from your computer.": "Odśwież stan. Jeśli problem nie ustąpi, zainstaluj ponownie pełny pakiet Home z komputera.",
-    "No recovery needed.": "Przywracanie nie jest potrzebne.",
-    "Open Home to continue.": "Otwórz Home, aby kontynuować.",
-    "Open Home to continue. If the update caused a problem, you can restore the previous version.": "Otwórz Home. Jeśli aktualizacja spowodowała problem, możesz przywrócić poprzednią wersję.",
-    "Recovery needs attention.": "Przywracanie wymaga uwagi.",
-    "Refresh status first. If recovery remains unavailable, use the installer on your computer.": "Najpierw odśwież stan. Jeśli przywracanie nadal jest niedostępne, użyj instalatora na komputerze.",
-    "An update is in progress.": "Trwa aktualizacja.",
-    "Keep the TV powered on. Status will refresh automatically.": "Pozostaw telewizor włączony. Stan odświeży się automatycznie.",
-    "Could not open Home.": "Nie można otworzyć Home.",
-    "If Home stops working after an update, use this app to restore the previous version. For regular updates, open Home settings.": "Jeśli Home przestanie działać po aktualizacji, ta aplikacja pozwala przywrócić poprzednią wersję. Zwykłe aktualizacje znajdziesz w ustawieniach Home.",
-    "Open Home": "Otwórz Home",
-    "Refresh status": "Odśwież stan"
+  'pl': {
+    'A signed Home update is available.':
+      'Dostępna jest podpisana aktualizacja Home.',
+    'Add app': 'Dodaj aplikację',
+    'All installed apps are already on Home.':
+      'Wszystkie zainstalowane aplikacje są już na Home.',
+    'App hidden. Restore it with Add app.':
+      'Aplikacja ukryta. Przywróć ją przez „Dodaj aplikację”.',
+    'Auto-renewal enabled (Beta)': 'Automatyczne odnawianie włączone (Beta)',
+    'Auto-renewal off': 'Automatyczne odnawianie wyłączone',
+    'Automatic (system language)': 'Automatycznie (język systemu)',
+    'Back': 'Wstecz',
+    'Back to Home': 'Wróć do Home',
+    'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
+      'Beta: odnawianie nie zostało jeszcze zweryfikowane na telewizorach bez roota. Nadal sprawdzaj licznik w aplikacji Developer Mode.',
+    "Can't open {app}": 'Nie można otworzyć {app}',
+    'Change Home': 'Zmień Home',
+    'Change was not confirmed. Check the switch and try again.':
+      'Zmiana nie została potwierdzona. Sprawdź przełącznik i spróbuj ponownie.',
+    'Changing Home control…': 'Zmienianie sterowania Home…',
+    'Check failed': 'Sprawdzanie nie powiodło się',
+    'Check pending': 'Sprawdzanie oczekuje',
+    'Check session': 'Sprawdź sesję',
+    'Checking Home control…': 'Sprawdzanie sterowania Home…',
+    'Checking auto-renewal…': 'Sprawdzanie automatycznego odnawiania…',
+    'Checking for updates…': 'Wyszukiwanie aktualizacji…',
+    'Checking installed apps…': 'Sprawdzanie zainstalowanych aplikacji…',
+    'Choose a language. Home will reload.':
+      'Wybierz język. Home zostanie ponownie załadowane.',
+    'Choose an app to add to Home.': 'Wybierz aplikację do dodania do Home.',
+    'Choose where Home and return from apps take you.':
+      'Wybierz cel przycisku Home i powrotu z aplikacji.',
+    'Confirm update': 'Potwierdź aktualizację',
+    'Connection failed — retry scheduled':
+      'Błąd połączenia — zaplanowano ponowną próbę',
+    'Could not open LG Home. Check Home Helper and try again.':
+      'Nie udało się otworzyć LG Home. Sprawdź Home Helper i spróbuj ponownie.',
+    'Could not save language. Please try again.':
+      'Nie udało się zapisać języka. Spróbuj ponownie.',
+    'Could not save state': 'Nie udało się zapisać stanu',
+    'Could not save your complete profile. Nothing was installed.':
+      'Nie udało się zapisać pełnego profilu. Niczego nie zainstalowano.',
+    "Couldn't restore app. Please try again.":
+      'Nie udało się przywrócić aplikacji. Spróbuj ponownie.',
+    "Couldn't save changes. Please try again.":
+      'Nie udało się zapisać zmian. Spróbuj ponownie.',
+    'Developer Mode auto-renewal (Beta)':
+      'Automatyczne odnawianie Developer Mode (Beta)',
+    'Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.':
+      'Developer Mode pozwala zachować zainstalowane Home. Automatyczne odnawianie próbuje przedłużyć sesję, gdy TV jest włączony i połączony z siecią.',
+    'Disable could not be saved. Retry before restarting the service.':
+      'Nie udało się zapisać wyłączenia. Spróbuj ponownie przed ponownym uruchomieniem usługi.',
+    'Ethernet': 'Ethernet',
+    'Good afternoon': 'Miłego popołudnia',
+    'Good evening': 'Dobry wieczór',
+    'Good morning': 'Dzień dobry',
+    'Good night': 'Dobranoc',
+    'Hide diagnostics': 'Ukryj diagnostykę',
+    'Hide from Home': 'Ukryj na Home',
+    'Hold Back for 1.2 seconds to open LG Home. Your settings stay saved.':
+      'Przytrzymaj Wstecz przez 1,2 sekundy, aby otworzyć LG Home. Ustawienia pozostaną zapisane.',
+    'Home': 'Home',
+    'Home status is unknown. The Home button may still work.':
+      'Stan Home jest nieznany. Przycisk Home może nadal działać.',
+    'Home and return from apps open Clean Your TV.':
+      'Home i powrót z aplikacji otwierają Clean Your TV.',
+    'Home and return from apps open LG Home.':
+      'Home i powrót z aplikacji otwierają LG Home.',
+    'Home is up to date.': 'Home jest aktualne.',
+    'Home settings': 'Ustawienia Home',
+    'Home will close during installation. Your app list and settings will be saved first. Press Confirm update to continue.':
+      'Home zamknie się podczas instalacji. Lista aplikacji i ustawienia zostaną wcześniej zapisane. Naciśnij Potwierdź aktualizację, aby kontynuować.',
+    'Inputs': 'Wejścia',
+    'Installed Home {installed} · Available {available}':
+      'Zainstalowane Home: {installed} · Dostępne: {available}',
+    'Installing Home… Keep the TV on. If this screen closes, open Home again or use Home Updater for recovery.':
+      'Instalowanie Home… Nie wyłączaj TV. Jeśli ekran się zamknie, otwórz ponownie Home lub użyj Home Updater do odzyskiwania.',
+    'LG response could not confirm renewal':
+      'Odpowiedź LG nie potwierdziła odnowienia',
+    'Language': 'Język',
+    'Last checked: {date}': 'Ostatnio sprawdzono: {date}',
+    'Last confirmed renewal: {date}':
+      'Ostatnie potwierdzone odnowienie: {date}',
+    'Live TV': 'Telewizja na żywo',
+    'Manage Home, software updates and your TV.':
+      'Zarządzaj Home, aktualizacjami i telewizorem.',
+    'Network settings': 'Ustawienia sieci',
+    'No inputs found': 'Nie znaleziono wejść',
+    'No readable Developer Mode session': 'Brak czytelnej sesji Developer Mode',
+    'No recovery result available. Your helper has not been changed.':
+      'Brak wyniku odzyskiwania. Twój Helper nie został zmieniony.',
+    'Not yet': 'Jeszcze nie',
+    'Offline': 'Bez połączenia',
+    'Open LG Home': 'Otwórz LG Home',
+    'This button opens LG Home once. Your Home screen choice and settings stay saved.':
+      'Ten przycisk otwiera LG Home jednorazowo. Wybór ekranu głównego i ustawienia zostają zachowane.',
+    'Recovery': 'Odzyskiwanie',
+    'Recovery state: {status}. Use Home Updater to restore the previous version if offered.':
+      'Stan odzyskiwania: {status}. Użyj Home Updater, aby przywrócić poprzednią wersję, jeśli jest dostępna.',
+    'Renewal confirmed': 'Odnowienie potwierdzone',
+    'Saving apps, icons and settings…':
+      'Zapisywanie aplikacji, ikon i ustawień…',
+    'Service unavailable. Install the complete Home package and try again. Manage your Developer Mode timer manually.':
+      'Usługa niedostępna. Zainstaluj pełny pakiet Home i spróbuj ponownie. Zarządzaj licznikiem Developer Mode ręcznie.',
+    'Session changed — retry scheduled':
+      'Sesja zmieniona — zaplanowano ponowną próbę',
+    'Session checked': 'Sesja sprawdzona',
+    'Session expired — open Developer Mode':
+      'Sesja wygasła — otwórz Developer Mode',
+    'Settings': 'Ustawienia',
+    'Setup error: {error}. Use Developer Mode manually.':
+      'Błąd konfiguracji: {error}. Używaj Developer Mode ręcznie.',
+    'Share this with your TV model and firmware at:':
+      'Udostępnij to wraz z modelem TV i wersją oprogramowania pod adresem:',
+    'Show diagnostics': 'Pokaż diagnostykę',
+    'Showing the saved list. Could not refresh apps from the TV.':
+      'Wyświetlana jest zapisana lista. Nie udało się odświeżyć aplikacji z telewizora.',
+    'Software updates': 'Aktualizacje oprogramowania',
+    'TV settings': 'Ustawienia TV',
+    'Try again': 'Spróbuj ponownie',
+    'Turn off auto-renewal': 'Wyłącz automatyczne odnawianie',
+    'Turn on auto-renewal': 'Włącz automatyczne odnawianie',
+    'Undo': 'Cofnij',
+    'Update Home': 'Aktualizuj Home',
+    'Update Home Helper using the installation guide first.':
+      'Najpierw zaktualizuj Home Helper zgodnie z instrukcją instalacji.',
+    'Update Home or open LG settings for picture, sound and network.':
+      'Zaktualizuj Home lub otwórz ustawienia obrazu, dźwięku i sieci LG.',
+    'Update available, but a verified recovery package for your installed version is missing.':
+      'Aktualizacja jest dostępna, ale brakuje zweryfikowanego pakietu odzyskiwania dla zainstalowanej wersji.',
+    'Update available. Without root, install it from a computer using the guide.':
+      'Aktualizacja jest dostępna. Bez roota zainstaluj ją z komputera zgodnie z instrukcją.',
+    'Update outcome is not confirmed. Open Home Updater → Recovery before retrying.':
+      'Wynik aktualizacji nie został potwierdzony. Przed ponowną próbą otwórz Home Updater → Odzyskiwanie.',
+    'Update service or signed release unavailable. Install the separate Home Updater package once, then retry. Your current Home is unchanged.':
+      'Usługa aktualizacji lub podpisane wydanie są niedostępne. Zainstaluj osobny pakiet Home Updater jednorazowo i spróbuj ponownie. Obecne Home nie zostało zmienione.',
+    'Update state: {status}. Reopen Home when installation finishes.':
+      'Stan aktualizacji: {status}. Otwórz ponownie Home po zakończeniu instalacji.',
+    'Updates and TV': 'Aktualizacje i TV',
+    'Working…': 'Przetwarzanie…',
+    'Your Home screen': 'Twój ekran Home',
+    'Your installed Home is newer than this release.':
+      'Zainstalowane Home jest nowsze od tego wydania.',
+    '{app} added': 'Dodano {app}',
+    '{hours} hours remaining (estimate)':
+      'Pozostało {hours} godz. (szacunkowo)',
+    '← ↑ ↓ → Move   ·   OK Place   ·   Back Cancel   ·   ↓ Below last row to hide':
+      '← ↑ ↓ → Przesuń   ·   OK Umieść   ·   Wstecz Anuluj   ·   ↓ Poniżej ostatniego wiersza, aby ukryć',
+    'No-root Edition': 'Edycja bez roota',
+    'Cancel': 'Anuluj',
+    'Install Home update?': 'Zainstalować aktualizację Home?',
+    'Restore previous Home?': 'Przywrócić poprzednią wersję Home?',
+    'Home will close during installation. Your apps and settings will be saved.':
+      'Home zamknie się na czas instalacji. Aplikacje i ustawienia zostaną zapisane.',
+    'The previous Home version and saved settings will be restored.':
+      'Poprzednia wersja Home i zapisane ustawienia zostaną przywrócone.',
+    'Install update': 'Zainstaluj aktualizację',
+    'Restore previous Home': 'Przywróć poprzedni Home',
+    'Release notes': 'Co nowego',
+    '↑ ↓ Read notes · ← → Choose action · Back Close':
+      '↑ ↓ Czytaj zmiany · ← → Wybierz działanie · Wstecz Zamknij',
+    '← → Choose action · Back Open Home':
+      '← → Wybierz działanie · Wstecz Otwórz Home',
+    'Home control could not be restored automatically. Open Home settings.':
+      'Nie udało się automatycznie przywrócić sterowania Home. Otwórz ustawienia Home.',
+    'Your previous Home screen choice has been restored.':
+      'Przywrócono poprzedni wybór ekranu głównego.',
+    'Home control remains off because it was disabled during the update.':
+      'Sterowanie Home pozostaje wyłączone, ponieważ zostało wyłączone podczas aktualizacji.',
+    'Rollback remains available until the next update.':
+      'Przywracanie pozostaje dostępne do następnej aktualizacji.',
+    'Previous Root version and profile restored.':
+      'Przywrócono poprzednią wersję Root i profil.',
+    'Installed: {version}': 'Zainstalowano: {version}',
+    'Available: {version}': 'Dostępna: {version}',
+    'Software updates. Update available.':
+      'Aktualizacje oprogramowania. Dostępna jest aktualizacja.',
+    'Open LG Home once, keeping your Home choice.':
+      'Otwórz LG Home jednorazowo, zachowując wybór ekranu Home.',
+    'Hold Back for 1.2 seconds to open LG Home.':
+      'Przytrzymaj Wstecz przez 1,2 sekundy, aby otworzyć LG Home.',
+    'Developer Mode': 'Tryb dewelopera',
+    'Beta': 'Beta',
+    'Home Helper': 'Home Helper',
+    'Home button settings': 'Ustawienia przycisku Home',
+    'Start Helper': 'Uruchom Helper',
+    'Start Helper?': 'Uruchomić Helper?',
+    'Starting Helper…': 'Uruchamianie Helper…',
+    'Helper opens Home with your remote and helps you return to Home after turning on the TV.':
+      'Helper otwiera Home pilotem i pomaga wrócić do Home po włączeniu telewizora.',
+    'Helper is unavailable. Reinstall the complete Home package from your computer.':
+      'Helper jest niedostępny. Zainstaluj ponownie pełny pakiet Home z komputera.',
+    'Helper was stopped for safety. Start it only when you are ready to use Home control again.':
+      'Helper został zatrzymany dla bezpieczeństwa. Uruchom go, gdy zechcesz ponownie sterować Home.',
+    'Helper is stopped. Start it to use the Home button and return from apps.':
+      'Helper jest zatrzymany. Uruchom go, aby używać przycisku Home i wracać z aplikacji.',
+    'Start Helper to use Home control again. Your saved Home screen choice will be used.':
+      'Uruchom Helper, aby znów sterować Home. Zostanie użyty zapisany wybór ekranu głównego.',
+    'Status is unavailable.': 'Nie można sprawdzić stanu.',
+    'Try refreshing. If this continues, reinstall the complete Home package from your computer.':
+      'Odśwież stan. Jeśli problem nie ustąpi, zainstaluj ponownie pełny pakiet Home z komputera.',
+    'No recovery needed.': 'Przywracanie nie jest potrzebne.',
+    'Open Home to continue.': 'Otwórz Home, aby kontynuować.',
+    'Open Home to continue. If the update caused a problem, you can restore the previous version.':
+      'Otwórz Home. Jeśli aktualizacja spowodowała problem, możesz przywrócić poprzednią wersję.',
+    'Recovery needs attention.': 'Przywracanie wymaga uwagi.',
+    'Refresh status first. If recovery remains unavailable, use the installer on your computer.':
+      'Najpierw odśwież stan. Jeśli przywracanie nadal jest niedostępne, użyj instalatora na komputerze.',
+    'An update is in progress.': 'Trwa aktualizacja.',
+    'Keep the TV powered on. Status will refresh automatically.':
+      'Pozostaw telewizor włączony. Stan odświeży się automatycznie.',
+    'Could not open Home.': 'Nie można otworzyć Home.',
+    'If Home stops working after an update, use this app to restore the previous version. For regular updates, open Home settings.':
+      'Jeśli Home przestanie działać po aktualizacji, ta aplikacja pozwala przywrócić poprzednią wersję. Zwykłe aktualizacje znajdziesz w ustawieniach Home.',
+    'Open Home': 'Otwórz Home',
+    'Refresh status': 'Odśwież stan'
   },
-  "ru": {
-    "A signed Home update is available.": "Доступно подписанное обновление Home.",
-    "Add app": "Добавить приложение",
-    "All installed apps are already on Home.": "Все установленные приложения уже на Home.",
-    "App hidden. Restore it with Add app.": "Приложение скрыто. Верните его через «Добавить приложение».",
-    "Auto-renewal enabled (Beta)": "Автопродление включено (Бета)",
-    "Auto-renewal off": "Автопродление выключено",
-    "Automatic (system language)": "Автоматически (язык системы)",
-    "Back": "Назад",
-    "Back to Home": "Вернуться на Home",
-    "Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.": "Бета: продление пока не проверено на телевизорах без root. Продолжайте следить за таймером в приложении Developer Mode.",
-    "Can't open {app}": "Не удалось открыть {app}",
-    "Change Home": "Заменить Home",
-    "Change was not confirmed. Check the switch and try again.": "Изменение не подтверждено. Проверьте переключатель и повторите попытку.",
-    "Changing Home control…": "Изменяем управление Home…",
-    "Check failed": "Проверка не удалась",
-    "Check pending": "Проверка ожидается",
-    "Check session": "Проверить сессию",
-    "Checking Home control…": "Проверяем управление Home…",
-    "Checking auto-renewal…": "Проверяем автопродление…",
-    "Checking for updates…": "Проверяем обновления…",
-    "Checking installed apps…": "Проверяем установленные приложения…",
-    "Choose a language. Home will reload.": "Выберите язык. Home перезагрузится.",
-    "Choose an app to add to Home.": "Выберите приложение для добавления на Home.",
-    "Choose where Home and return from apps take you.": "Выберите, куда ведут кнопка Home и выход из приложений.",
-    "Confirm update": "Подтвердить обновление",
-    "Connection failed — retry scheduled": "Ошибка подключения — повторная попытка запланирована",
-    "Could not open LG Home. Check Home Helper and try again.": "Не удалось открыть LG Home. Проверьте Home Helper и повторите попытку.",
-    "Could not save language. Please try again.": "Не удалось сохранить язык. Повторите попытку.",
-    "Could not save state": "Не удалось сохранить состояние",
-    "Could not save your complete profile. Nothing was installed.": "Не удалось сохранить полный профиль. Ничего не установлено.",
-    "Couldn't restore app. Please try again.": "Не удалось вернуть приложение. Повторите попытку.",
-    "Couldn't save changes. Please try again.": "Не удалось сохранить изменения. Повторите попытку.",
-    "Developer Mode auto-renewal (Beta)": "Автопродление Developer Mode (Бета)",
-    "Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.": "Developer Mode сохраняет Home установленным. Автопродление пытается продлить сессию, пока телевизор включён и подключён к сети.",
-    "Disable could not be saved. Retry before restarting the service.": "Не удалось сохранить отключение. Повторите попытку до перезапуска службы.",
-    "Ethernet": "Ethernet",
-    "Good afternoon": "Добрый день",
-    "Good evening": "Добрый вечер",
-    "Good morning": "Доброе утро",
-    "Good night": "Доброй ночи",
-    "Hide diagnostics": "Скрыть диагностику",
-    "Hide from Home": "Скрыть с Home",
-    "Hold Back for 1.2 seconds to open LG Home. Your settings stay saved.": "Удерживайте «Назад» 1,2 секунды, чтобы открыть LG Home. Ваши настройки сохранятся.",
-    "Home": "Home",
-    "Home status is unknown. The Home button may still work.": "Статус Home неизвестен. Кнопка Home может продолжать работать.",
-    "Home and return from apps open Clean Your TV.": "Кнопка Home и выход из приложений открывают Clean Your TV.",
-    "Home and return from apps open LG Home.": "Кнопка Home и выход из приложений открывают LG Home.",
-    "Home is up to date.": "Установлена последняя версия Home.",
-    "Home settings": "Настройки Home",
-    "Home will close during installation. Your app list and settings will be saved first. Press Confirm update to continue.": "Во время установки Home закроется. Сначала сохранятся список приложений и настройки. Нажмите «Подтвердить обновление», чтобы продолжить.",
-    "Inputs": "Входы",
-    "Installed Home {installed} · Available {available}": "Установлено Home {installed} · Доступно {available}",
-    "Installing Home… Keep the TV on. If this screen closes, open Home again or use Home Updater for recovery.": "Устанавливаем Home… Не выключайте телевизор. Если экран закроется, снова откройте Home или используйте Home Updater для восстановления.",
-    "LG response could not confirm renewal": "Ответ LG не подтвердил продление",
-    "Language": "Язык",
-    "Last checked: {date}": "Последняя проверка: {date}",
-    "Last confirmed renewal: {date}": "Последнее подтверждённое продление: {date}",
-    "Live TV": "Эфирное ТВ",
-    "Manage Home, software updates and your TV.": "Управляйте Home, обновлениями ПО и телевизором.",
-    "Network settings": "Настройки сети",
-    "No inputs found": "Входы не найдены",
-    "No readable Developer Mode session": "Не удалось прочитать сессию Developer Mode",
-    "No recovery result available. Your helper has not been changed.": "Результат восстановления недоступен. Ваш Helper не изменён.",
-    "Not yet": "Пока нет",
-    "Offline": "Нет подключения",
-    "Open LG Home": "Открыть LG Home",
-    "This button opens LG Home once. Your Home screen choice and settings stay saved.": "Кнопка открывает LG Home один раз. Выбор главного экрана и настройки сохраняются.",
-    "Recovery": "Восстановление",
-    "Recovery state: {status}. Use Home Updater to restore the previous version if offered.": "Состояние восстановления: {status}. Если доступно, используйте Home Updater для возврата предыдущей версии.",
-    "Renewal confirmed": "Продление подтверждено",
-    "Saving apps, icons and settings…": "Сохраняем приложения, значки и настройки…",
-    "Service unavailable. Install the complete Home package and try again. Manage your Developer Mode timer manually.": "Служба недоступна. Установите полный пакет Home и повторите попытку. Управляйте таймером Developer Mode вручную.",
-    "Session changed — retry scheduled": "Сессия изменилась — повторная попытка запланирована",
-    "Session checked": "Сессия проверена",
-    "Session expired — open Developer Mode": "Сессия истекла — откройте Developer Mode",
-    "Settings": "Настройки",
-    "Setup error: {error}. Use Developer Mode manually.": "Ошибка настройки: {error}. Используйте Developer Mode вручную.",
-    "Share this with your TV model and firmware at:": "Отправьте эти данные вместе с моделью и прошивкой телевизора по адресу:",
-    "Show diagnostics": "Показать диагностику",
-    "Showing the saved list. Could not refresh apps from the TV.": "Показан сохранённый список. Не удалось обновить приложения с телевизора.",
-    "Software updates": "Обновления ПО",
-    "TV settings": "Настройки телевизора",
-    "Try again": "Повторить",
-    "Turn off auto-renewal": "Выключить автопродление",
-    "Turn on auto-renewal": "Включить автопродление",
-    "Undo": "Отменить",
-    "Update Home": "Обновить Home",
-    "Update Home Helper using the installation guide first.": "Сначала обновите Home Helper по инструкции установки.",
-    "Update Home or open LG settings for picture, sound and network.": "Обновите Home или откройте настройки изображения, звука и сети LG.",
-    "Update available, but a verified recovery package for your installed version is missing.": "Обновление доступно, но проверенного пакета восстановления для установленной версии нет.",
-    "Update available. Without root, install it from a computer using the guide.": "Обновление доступно. Без root установите его с компьютера по инструкции.",
-    "Update outcome is not confirmed. Open Home Updater → Recovery before retrying.": "Результат обновления не подтверждён. Перед повторной попыткой откройте Home Updater → Восстановление.",
-    "Update service or signed release unavailable. Install the separate Home Updater package once, then retry. Your current Home is unchanged.": "Служба обновления или подписанный выпуск недоступны. Один раз установите отдельный пакет Home Updater и повторите попытку. Текущий Home не изменён.",
-    "Update state: {status}. Reopen Home when installation finishes.": "Состояние обновления: {status}. Откройте Home снова после завершения установки.",
-    "Updates and TV": "Обновления и ТВ",
-    "Working…": "Выполняется…",
-    "Your Home screen": "Ваш экран Home",
-    "Your installed Home is newer than this release.": "Установленная версия Home новее этого выпуска.",
-    "{app} added": "Добавлено: {app}",
-    "{hours} hours remaining (estimate)": "Осталось часов: {hours} (примерно)",
-    "← ↑ ↓ → Move   ·   OK Place   ·   Back Cancel   ·   ↓ Below last row to hide": "← ↑ ↓ → Переместить   ·   OK Разместить   ·   Назад Отменить   ·   ↓ Ниже последнего ряда, чтобы скрыть",
-    "No-root Edition": "Версия без root",
-    "Cancel": "Отмена",
-    "Install Home update?": "Установить обновление Home?",
-    "Restore previous Home?": "Восстановить предыдущую версию Home?",
-    "Home will close during installation. Your apps and settings will be saved.": "Home закроется на время установки. Приложения и настройки сохранятся.",
-    "The previous Home version and saved settings will be restored.": "Будут восстановлены предыдущая версия Home и сохранённые настройки.",
-    "Install update": "Установить обновление",
-    "Restore previous Home": "Восстановить предыдущую версию",
-    "Release notes": "Что нового",
-    "↑ ↓ Read notes · ← → Choose action · Back Close": "↑ ↓ Читать изменения · ← → Выбрать действие · Назад Закрыть",
-    "← → Choose action · Back Open Home": "← → Выбрать действие · Назад Открыть Home",
-    "Home control could not be restored automatically. Open Home settings.": "Не удалось автоматически восстановить управление Home. Откройте настройки Home.",
-    "Your previous Home screen choice has been restored.": "Прежний выбор домашнего экрана восстановлен.",
-    "Home control remains off because it was disabled during the update.": "Управление Home осталось выключенным: его отключили во время обновления.",
-    "Rollback remains available until the next update.": "Откат доступен до следующего обновления.",
-    "Previous Root version and profile restored.": "Предыдущая версия Root и профиль восстановлены.",
-    "Installed: {version}": "Установлено: {version}",
-    "Available: {version}": "Доступно: {version}",
-    "Software updates. Update available.": "Обновление ПО. Доступна новая версия.",
-    "Open LG Home once, keeping your Home choice.": "Открыть LG Home один раз, сохранив выбранный экран Home.",
-    "Hold Back for 1.2 seconds to open LG Home.": "Удерживайте Назад 1,2 секунды для открытия LG Home.",
-    "Developer Mode": "Режим разработчика",
-    "Beta": "Бета",
-    "Home Helper": "Home Helper",
-    "Home button settings": "Настроить кнопку Home",
-    "Start Helper": "Запустить Helper",
-    "Start Helper?": "Запустить Helper?",
-    "Starting Helper…": "Запуск Helper…",
-    "Helper opens Home with your remote and helps you return to Home after turning on the TV.": "Helper открывает Home кнопкой пульта и помогает вернуться в Home после включения телевизора.",
-    "Helper is unavailable. Reinstall the complete Home package from your computer.": "Helper недоступен. Переустановите полный комплект Home с компьютера.",
-    "Helper was stopped for safety. Start it only when you are ready to use Home control again.": "Helper остановлен для безопасности. Запустите его, когда будете готовы снова использовать управление Home.",
-    "Helper is stopped. Start it to use the Home button and return from apps.": "Helper остановлен. Запустите его для работы кнопки Home и возврата из приложений.",
-    "Start Helper to use Home control again. Your saved Home screen choice will be used.": "Запустить Helper для управления Home? Будет использован сохранённый выбор домашнего экрана.",
-    "Status is unavailable.": "Не удалось проверить состояние.",
-    "Try refreshing. If this continues, reinstall the complete Home package from your computer.": "Обновите состояние. Если проблема сохраняется, переустановите полный комплект Home с компьютера.",
-    "No recovery needed.": "Восстановление не требуется.",
-    "Open Home to continue.": "Откройте Home, чтобы продолжить.",
-    "Open Home to continue. If the update caused a problem, you can restore the previous version.": "Откройте Home. Если после обновления возникла проблема, можно восстановить предыдущую версию.",
-    "Recovery needs attention.": "Нужно проверить восстановление.",
-    "Refresh status first. If recovery remains unavailable, use the installer on your computer.": "Сначала обновите состояние. Если восстановление по-прежнему недоступно, используйте установщик на компьютере.",
-    "An update is in progress.": "Идёт обновление.",
-    "Keep the TV powered on. Status will refresh automatically.": "Не выключайте телевизор. Состояние обновится автоматически.",
-    "Could not open Home.": "Не удалось открыть Home.",
-    "If Home stops working after an update, use this app to restore the previous version. For regular updates, open Home settings.": "Если Home перестал работать после обновления, здесь можно восстановить предыдущую версию. Обычные обновления доступны в настройках Home.",
-    "Open Home": "Открыть Home",
-    "Refresh status": "Обновить состояние"
+  'ru': {
+    'A signed Home update is available.':
+      'Доступно подписанное обновление Home.',
+    'Add app': 'Добавить приложение',
+    'All installed apps are already on Home.':
+      'Все установленные приложения уже на Home.',
+    'App hidden. Restore it with Add app.':
+      'Приложение скрыто. Верните его через «Добавить приложение».',
+    'Auto-renewal enabled (Beta)': 'Автопродление включено (Бета)',
+    'Auto-renewal off': 'Автопродление выключено',
+    'Automatic (system language)': 'Автоматически (язык системы)',
+    'Back': 'Назад',
+    'Back to Home': 'Вернуться на Home',
+    'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
+      'Бета: продление пока не проверено на телевизорах без root. Продолжайте следить за таймером в приложении Developer Mode.',
+    "Can't open {app}": 'Не удалось открыть {app}',
+    'Change Home': 'Заменить Home',
+    'Change was not confirmed. Check the switch and try again.':
+      'Изменение не подтверждено. Проверьте переключатель и повторите попытку.',
+    'Changing Home control…': 'Изменяем управление Home…',
+    'Check failed': 'Проверка не удалась',
+    'Check pending': 'Проверка ожидается',
+    'Check session': 'Проверить сессию',
+    'Checking Home control…': 'Проверяем управление Home…',
+    'Checking auto-renewal…': 'Проверяем автопродление…',
+    'Checking for updates…': 'Проверяем обновления…',
+    'Checking installed apps…': 'Проверяем установленные приложения…',
+    'Choose a language. Home will reload.':
+      'Выберите язык. Home перезагрузится.',
+    'Choose an app to add to Home.':
+      'Выберите приложение для добавления на Home.',
+    'Choose where Home and return from apps take you.':
+      'Выберите, куда ведут кнопка Home и выход из приложений.',
+    'Confirm update': 'Подтвердить обновление',
+    'Connection failed — retry scheduled':
+      'Ошибка подключения — повторная попытка запланирована',
+    'Could not open LG Home. Check Home Helper and try again.':
+      'Не удалось открыть LG Home. Проверьте Home Helper и повторите попытку.',
+    'Could not save language. Please try again.':
+      'Не удалось сохранить язык. Повторите попытку.',
+    'Could not save state': 'Не удалось сохранить состояние',
+    'Could not save your complete profile. Nothing was installed.':
+      'Не удалось сохранить полный профиль. Ничего не установлено.',
+    "Couldn't restore app. Please try again.":
+      'Не удалось вернуть приложение. Повторите попытку.',
+    "Couldn't save changes. Please try again.":
+      'Не удалось сохранить изменения. Повторите попытку.',
+    'Developer Mode auto-renewal (Beta)': 'Автопродление Developer Mode (Бета)',
+    'Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.':
+      'Developer Mode сохраняет Home установленным. Автопродление пытается продлить сессию, пока телевизор включён и подключён к сети.',
+    'Disable could not be saved. Retry before restarting the service.':
+      'Не удалось сохранить отключение. Повторите попытку до перезапуска службы.',
+    'Ethernet': 'Ethernet',
+    'Good afternoon': 'Добрый день',
+    'Good evening': 'Добрый вечер',
+    'Good morning': 'Доброе утро',
+    'Good night': 'Доброй ночи',
+    'Hide diagnostics': 'Скрыть диагностику',
+    'Hide from Home': 'Скрыть с Home',
+    'Hold Back for 1.2 seconds to open LG Home. Your settings stay saved.':
+      'Удерживайте «Назад» 1,2 секунды, чтобы открыть LG Home. Ваши настройки сохранятся.',
+    'Home': 'Home',
+    'Home status is unknown. The Home button may still work.':
+      'Статус Home неизвестен. Кнопка Home может продолжать работать.',
+    'Home and return from apps open Clean Your TV.':
+      'Кнопка Home и выход из приложений открывают Clean Your TV.',
+    'Home and return from apps open LG Home.':
+      'Кнопка Home и выход из приложений открывают LG Home.',
+    'Home is up to date.': 'Установлена последняя версия Home.',
+    'Home settings': 'Настройки Home',
+    'Home will close during installation. Your app list and settings will be saved first. Press Confirm update to continue.':
+      'Во время установки Home закроется. Сначала сохранятся список приложений и настройки. Нажмите «Подтвердить обновление», чтобы продолжить.',
+    'Inputs': 'Входы',
+    'Installed Home {installed} · Available {available}':
+      'Установлено Home {installed} · Доступно {available}',
+    'Installing Home… Keep the TV on. If this screen closes, open Home again or use Home Updater for recovery.':
+      'Устанавливаем Home… Не выключайте телевизор. Если экран закроется, снова откройте Home или используйте Home Updater для восстановления.',
+    'LG response could not confirm renewal': 'Ответ LG не подтвердил продление',
+    'Language': 'Язык',
+    'Last checked: {date}': 'Последняя проверка: {date}',
+    'Last confirmed renewal: {date}':
+      'Последнее подтверждённое продление: {date}',
+    'Live TV': 'Эфирное ТВ',
+    'Manage Home, software updates and your TV.':
+      'Управляйте Home, обновлениями ПО и телевизором.',
+    'Network settings': 'Настройки сети',
+    'No inputs found': 'Входы не найдены',
+    'No readable Developer Mode session':
+      'Не удалось прочитать сессию Developer Mode',
+    'No recovery result available. Your helper has not been changed.':
+      'Результат восстановления недоступен. Ваш Helper не изменён.',
+    'Not yet': 'Пока нет',
+    'Offline': 'Нет подключения',
+    'Open LG Home': 'Открыть LG Home',
+    'This button opens LG Home once. Your Home screen choice and settings stay saved.':
+      'Кнопка открывает LG Home один раз. Выбор главного экрана и настройки сохраняются.',
+    'Recovery': 'Восстановление',
+    'Recovery state: {status}. Use Home Updater to restore the previous version if offered.':
+      'Состояние восстановления: {status}. Если доступно, используйте Home Updater для возврата предыдущей версии.',
+    'Renewal confirmed': 'Продление подтверждено',
+    'Saving apps, icons and settings…':
+      'Сохраняем приложения, значки и настройки…',
+    'Service unavailable. Install the complete Home package and try again. Manage your Developer Mode timer manually.':
+      'Служба недоступна. Установите полный пакет Home и повторите попытку. Управляйте таймером Developer Mode вручную.',
+    'Session changed — retry scheduled':
+      'Сессия изменилась — повторная попытка запланирована',
+    'Session checked': 'Сессия проверена',
+    'Session expired — open Developer Mode':
+      'Сессия истекла — откройте Developer Mode',
+    'Settings': 'Настройки',
+    'Setup error: {error}. Use Developer Mode manually.':
+      'Ошибка настройки: {error}. Используйте Developer Mode вручную.',
+    'Share this with your TV model and firmware at:':
+      'Отправьте эти данные вместе с моделью и прошивкой телевизора по адресу:',
+    'Show diagnostics': 'Показать диагностику',
+    'Showing the saved list. Could not refresh apps from the TV.':
+      'Показан сохранённый список. Не удалось обновить приложения с телевизора.',
+    'Software updates': 'Обновления ПО',
+    'TV settings': 'Настройки телевизора',
+    'Try again': 'Повторить',
+    'Turn off auto-renewal': 'Выключить автопродление',
+    'Turn on auto-renewal': 'Включить автопродление',
+    'Undo': 'Отменить',
+    'Update Home': 'Обновить Home',
+    'Update Home Helper using the installation guide first.':
+      'Сначала обновите Home Helper по инструкции установки.',
+    'Update Home or open LG settings for picture, sound and network.':
+      'Обновите Home или откройте настройки изображения, звука и сети LG.',
+    'Update available, but a verified recovery package for your installed version is missing.':
+      'Обновление доступно, но проверенного пакета восстановления для установленной версии нет.',
+    'Update available. Without root, install it from a computer using the guide.':
+      'Обновление доступно. Без root установите его с компьютера по инструкции.',
+    'Update outcome is not confirmed. Open Home Updater → Recovery before retrying.':
+      'Результат обновления не подтверждён. Перед повторной попыткой откройте Home Updater → Восстановление.',
+    'Update service or signed release unavailable. Install the separate Home Updater package once, then retry. Your current Home is unchanged.':
+      'Служба обновления или подписанный выпуск недоступны. Один раз установите отдельный пакет Home Updater и повторите попытку. Текущий Home не изменён.',
+    'Update state: {status}. Reopen Home when installation finishes.':
+      'Состояние обновления: {status}. Откройте Home снова после завершения установки.',
+    'Updates and TV': 'Обновления и ТВ',
+    'Working…': 'Выполняется…',
+    'Your Home screen': 'Ваш экран Home',
+    'Your installed Home is newer than this release.':
+      'Установленная версия Home новее этого выпуска.',
+    '{app} added': 'Добавлено: {app}',
+    '{hours} hours remaining (estimate)': 'Осталось часов: {hours} (примерно)',
+    '← ↑ ↓ → Move   ·   OK Place   ·   Back Cancel   ·   ↓ Below last row to hide':
+      '← ↑ ↓ → Переместить   ·   OK Разместить   ·   Назад Отменить   ·   ↓ Ниже последнего ряда, чтобы скрыть',
+    'No-root Edition': 'Версия без root',
+    'Cancel': 'Отмена',
+    'Install Home update?': 'Установить обновление Home?',
+    'Restore previous Home?': 'Восстановить предыдущую версию Home?',
+    'Home will close during installation. Your apps and settings will be saved.':
+      'Home закроется на время установки. Приложения и настройки сохранятся.',
+    'The previous Home version and saved settings will be restored.':
+      'Будут восстановлены предыдущая версия Home и сохранённые настройки.',
+    'Install update': 'Установить обновление',
+    'Restore previous Home': 'Восстановить предыдущую версию',
+    'Release notes': 'Что нового',
+    '↑ ↓ Read notes · ← → Choose action · Back Close':
+      '↑ ↓ Читать изменения · ← → Выбрать действие · Назад Закрыть',
+    '← → Choose action · Back Open Home':
+      '← → Выбрать действие · Назад Открыть Home',
+    'Home control could not be restored automatically. Open Home settings.':
+      'Не удалось автоматически восстановить управление Home. Откройте настройки Home.',
+    'Your previous Home screen choice has been restored.':
+      'Прежний выбор домашнего экрана восстановлен.',
+    'Home control remains off because it was disabled during the update.':
+      'Управление Home осталось выключенным: его отключили во время обновления.',
+    'Rollback remains available until the next update.':
+      'Откат доступен до следующего обновления.',
+    'Previous Root version and profile restored.':
+      'Предыдущая версия Root и профиль восстановлены.',
+    'Installed: {version}': 'Установлено: {version}',
+    'Available: {version}': 'Доступно: {version}',
+    'Software updates. Update available.':
+      'Обновление ПО. Доступна новая версия.',
+    'Open LG Home once, keeping your Home choice.':
+      'Открыть LG Home один раз, сохранив выбранный экран Home.',
+    'Hold Back for 1.2 seconds to open LG Home.':
+      'Удерживайте Назад 1,2 секунды для открытия LG Home.',
+    'Developer Mode': 'Режим разработчика',
+    'Beta': 'Бета',
+    'Home Helper': 'Home Helper',
+    'Home button settings': 'Настроить кнопку Home',
+    'Start Helper': 'Запустить Helper',
+    'Start Helper?': 'Запустить Helper?',
+    'Starting Helper…': 'Запуск Helper…',
+    'Helper opens Home with your remote and helps you return to Home after turning on the TV.':
+      'Helper открывает Home кнопкой пульта и помогает вернуться в Home после включения телевизора.',
+    'Helper is unavailable. Reinstall the complete Home package from your computer.':
+      'Helper недоступен. Переустановите полный комплект Home с компьютера.',
+    'Helper was stopped for safety. Start it only when you are ready to use Home control again.':
+      'Helper остановлен для безопасности. Запустите его, когда будете готовы снова использовать управление Home.',
+    'Helper is stopped. Start it to use the Home button and return from apps.':
+      'Helper остановлен. Запустите его для работы кнопки Home и возврата из приложений.',
+    'Start Helper to use Home control again. Your saved Home screen choice will be used.':
+      'Запустить Helper для управления Home? Будет использован сохранённый выбор домашнего экрана.',
+    'Status is unavailable.': 'Не удалось проверить состояние.',
+    'Try refreshing. If this continues, reinstall the complete Home package from your computer.':
+      'Обновите состояние. Если проблема сохраняется, переустановите полный комплект Home с компьютера.',
+    'No recovery needed.': 'Восстановление не требуется.',
+    'Open Home to continue.': 'Откройте Home, чтобы продолжить.',
+    'Open Home to continue. If the update caused a problem, you can restore the previous version.':
+      'Откройте Home. Если после обновления возникла проблема, можно восстановить предыдущую версию.',
+    'Recovery needs attention.': 'Нужно проверить восстановление.',
+    'Refresh status first. If recovery remains unavailable, use the installer on your computer.':
+      'Сначала обновите состояние. Если восстановление по-прежнему недоступно, используйте установщик на компьютере.',
+    'An update is in progress.': 'Идёт обновление.',
+    'Keep the TV powered on. Status will refresh automatically.':
+      'Не выключайте телевизор. Состояние обновится автоматически.',
+    'Could not open Home.': 'Не удалось открыть Home.',
+    'If Home stops working after an update, use this app to restore the previous version. For regular updates, open Home settings.':
+      'Если Home перестал работать после обновления, здесь можно восстановить предыдущую версию. Обычные обновления доступны в настройках Home.',
+    'Open Home': 'Открыть Home',
+    'Refresh status': 'Обновить состояние'
   }
 });
 
 // Shared system updater and standalone recovery interface.
 HomeI18n.add({
-  "en": {
-    "System updater removal is in progress. Continue removal from the computer.": "System updater removal is in progress. Continue removal from the computer.",
-    "Update information could not be verified.": "Update information could not be verified.",
-    "Could not connect to the update server. Nothing was installed.": "Could not connect to the update server. Nothing was installed.",
-    "Update information is not available yet. Nothing was installed.": "Update information is not available yet. Nothing was installed.",
-    "No previous update is saved for rollback yet.": "No previous update is saved for rollback yet.",
-    "Update information is not available yet. Try again later.": "Update information is not available yet. Try again later.",
-    "Could not connect to check for updates. Check your connection and try again.": "Could not connect to check for updates. Check your connection and try again.",
-    "Update information could not be verified. Nothing was installed.": "Update information could not be verified. Nothing was installed.",
-    "System updater operation failed. Open Recovery.": "System updater operation failed. Open Recovery.",
-    "Updater response timed out. Open Recovery to check status.": "Updater response timed out. Open Recovery to check status.",
-    "Invalid updater response. Open Recovery.": "Invalid updater response. Open Recovery.",
-    "Home Updater": "Home Updater",
-    "Root Home": "Root Home",
-    "Root Updater": "Root Updater",
-    "Home control runtime": "Home control runtime",
-    "Update complete. Your apps and settings are preserved.": "Update complete. Your apps and settings are preserved.",
-    "Previous version and profile restored.": "Previous version and profile restored.",
-    "Update stopped before replacement. Check status before trying again.": "Update stopped before replacement. Check status before trying again.",
-    "Recovery required. Refresh status before trying again. Rollback is blocked until the installer has definitely stopped.": "Recovery required. Refresh status before trying again. Rollback is blocked until the installer has definitely stopped.",
-    "Checking the updated launcher and restored settings…": "Checking the updated launcher and restored settings…",
-    "Checking the restored launcher and saved profile…": "Checking the restored launcher and saved profile…",
-    "Restoring previous components and saved profile…": "Restoring previous components and saved profile…",
-    "Update state: {status}. Keep the TV powered on.": "Update state: {status}. Keep the TV powered on.",
-    "A signed system update is available.": "A signed system update is available.",
-    "Your apps and settings stay saved.": "Your apps and settings stay saved.",
-    "All components are up to date.": "All components are up to date.",
-    "A verified recovery package for this version is missing. Run the one-time computer setup.": "A verified recovery package for this version is missing. Run the one-time computer setup.",
-    "Update unavailable: {reason}": "Update unavailable: {reason}",
-    "For regular updates, open Home settings.": "For regular updates, open Home settings.",
-    "Recovery belongs to the other installed edition.": "Recovery belongs to the other installed edition.",
-    "Install system update?": "Install system update?",
-    "Update all": "Update all",
-    "Roll back": "Roll back",
-    "Restore previous system?": "Restore previous system?",
-    "Restore all previous components and pre-update settings. Settings changed after the update will be lost. Keep the TV powered on.": "Restore all previous components and pre-update settings. Settings changed after the update will be lost. Keep the TV powered on.",
-    "Restore previous system": "Restore previous system"
+  'en': {
+    'System updater removal is in progress. Continue removal from the computer.':
+      'System updater removal is in progress. Continue removal from the computer.',
+    'Update information could not be verified.':
+      'Update information could not be verified.',
+    'Could not connect to the update server. Nothing was installed.':
+      'Could not connect to the update server. Nothing was installed.',
+    'Update information is not available yet. Nothing was installed.':
+      'Update information is not available yet. Nothing was installed.',
+    'No previous update is saved for rollback yet.':
+      'No previous update is saved for rollback yet.',
+    'Update information is not available yet. Try again later.':
+      'Update information is not available yet. Try again later.',
+    'Could not connect to check for updates. Check your connection and try again.':
+      'Could not connect to check for updates. Check your connection and try again.',
+    'Update information could not be verified. Nothing was installed.':
+      'Update information could not be verified. Nothing was installed.',
+    'System updater operation failed. Open Recovery.':
+      'System updater operation failed. Open Recovery.',
+    'Updater response timed out. Open Recovery to check status.':
+      'Updater response timed out. Open Recovery to check status.',
+    'Invalid updater response. Open Recovery.':
+      'Invalid updater response. Open Recovery.',
+    'Home Updater': 'Home Updater',
+    'Root Home': 'Root Home',
+    'Root Updater': 'Root Updater',
+    'Home control runtime': 'Home control runtime',
+    'Update complete. Your apps and settings are preserved.':
+      'Update complete. Your apps and settings are preserved.',
+    'Previous version and profile restored.':
+      'Previous version and profile restored.',
+    'Update stopped before replacement. Check status before trying again.':
+      'Update stopped before replacement. Check status before trying again.',
+    'Recovery required. Refresh status before trying again. Rollback is blocked until the installer has definitely stopped.':
+      'Recovery required. Refresh status before trying again. Rollback is blocked until the installer has definitely stopped.',
+    'Checking the updated launcher and restored settings…':
+      'Checking the updated launcher and restored settings…',
+    'Checking the restored launcher and saved profile…':
+      'Checking the restored launcher and saved profile…',
+    'Restoring previous components and saved profile…':
+      'Restoring previous components and saved profile…',
+    'Update state: {status}. Keep the TV powered on.':
+      'Update state: {status}. Keep the TV powered on.',
+    'A signed system update is available.':
+      'A signed system update is available.',
+    'Your apps and settings stay saved.': 'Your apps and settings stay saved.',
+    'All components are up to date.': 'All components are up to date.',
+    'A verified recovery package for this version is missing. Run the one-time computer setup.':
+      'A verified recovery package for this version is missing. Run the one-time computer setup.',
+    'Update unavailable: {reason}': 'Update unavailable: {reason}',
+    'For regular updates, open Home settings.':
+      'For regular updates, open Home settings.',
+    'Recovery belongs to the other installed edition.':
+      'Recovery belongs to the other installed edition.',
+    'Install system update?': 'Install system update?',
+    'Update all': 'Update all',
+    'Roll back': 'Roll back',
+    'Restore previous system?': 'Restore previous system?',
+    'Restore all previous components and pre-update settings. Settings changed after the update will be lost. Keep the TV powered on.':
+      'Restore all previous components and pre-update settings. Settings changed after the update will be lost. Keep the TV powered on.',
+    'Restore previous system': 'Restore previous system'
   },
-  "de": {
-    "System updater removal is in progress. Continue removal from the computer.": "Der System-Updater wird entfernt. Setze die Entfernung am Computer fort.",
-    "Update information could not be verified.": "Update-Informationen konnten nicht überprüft werden.",
-    "Could not connect to the update server. Nothing was installed.": "Keine Verbindung zum Update-Server. Es wurde nichts installiert.",
-    "Update information is not available yet. Nothing was installed.": "Update-Informationen sind noch nicht verfügbar. Es wurde nichts installiert.",
-    "No previous update is saved for rollback yet.": "Es ist noch kein vorheriges Update für die Wiederherstellung gespeichert.",
-    "Update information is not available yet. Try again later.": "Update-Informationen sind noch nicht verfügbar. Versuche es später erneut.",
-    "Could not connect to check for updates. Check your connection and try again.": "Keine Verbindung zur Update-Prüfung. Prüfe deine Verbindung und versuche es erneut.",
-    "Update information could not be verified. Nothing was installed.": "Update-Informationen konnten nicht überprüft werden. Es wurde nichts installiert.",
-    "System updater operation failed. Open Recovery.": "Der System-Updater konnte den Vorgang nicht ausführen. Öffne die Wiederherstellung.",
-    "Updater response timed out. Open Recovery to check status.": "Zeitüberschreitung beim Updater. Öffne die Wiederherstellung, um den Status zu prüfen.",
-    "Invalid updater response. Open Recovery.": "Ungültige Updater-Antwort. Öffne die Wiederherstellung.",
-    "Home Updater": "Home-Updater",
-    "Root Home": "Home mit Root",
-    "Root Updater": "Root-Updater",
-    "Home control runtime": "Home-Steuerungsumgebung",
-    "Update complete. Your apps and settings are preserved.": "Update abgeschlossen. Deine Apps und Einstellungen bleiben erhalten.",
-    "Previous version and profile restored.": "Vorherige Version und Profil wiederhergestellt.",
-    "Update stopped before replacement. Check status before trying again.": "Update vor dem Ersetzen gestoppt. Prüfe vor einem erneuten Versuch den Status.",
-    "Recovery required. Refresh status before trying again. Rollback is blocked until the installer has definitely stopped.": "Wiederherstellung erforderlich. Aktualisiere zuerst den Status. Ein Rollback ist gesperrt, bis das Installationsprogramm nachweislich beendet ist.",
-    "Checking the updated launcher and restored settings…": "Der aktualisierte Home-Bildschirm und die wiederhergestellten Einstellungen werden geprüft…",
-    "Checking the restored launcher and saved profile…": "Wiederhergestellten Launcher und gespeichertes Profil prüfen…",
-    "Restoring previous components and saved profile…": "Vorherige Komponenten und gespeichertes Profil wiederherstellen…",
-    "Update state: {status}. Keep the TV powered on.": "Update-Status: {status}. Lass den Fernseher eingeschaltet.",
-    "A signed system update is available.": "Ein signiertes Systemupdate ist verfügbar.",
-    "Your apps and settings stay saved.": "Deine Apps und Einstellungen bleiben gespeichert.",
-    "All components are up to date.": "Alle Komponenten sind aktuell.",
-    "A verified recovery package for this version is missing. Run the one-time computer setup.": "Ein geprüftes Wiederherstellungspaket fehlt. Führe die einmalige Einrichtung am Computer aus.",
-    "Update unavailable: {reason}": "Update nicht verfügbar: {reason}",
-    "For regular updates, open Home settings.": "Öffne für reguläre Updates die Home-Einstellungen.",
-    "Recovery belongs to the other installed edition.": "Die Wiederherstellung gehört zur anderen installierten Edition.",
-    "Install system update?": "Systemupdate installieren?",
-    "Update all": "Alles aktualisieren",
-    "Roll back": "Zurücksetzen",
-    "Restore previous system?": "Vorheriges System wiederherstellen?",
-    "Restore all previous components and pre-update settings. Settings changed after the update will be lost. Keep the TV powered on.": "Alle vorherigen Komponenten und die Einstellungen vor dem Update wiederherstellen. Spätere Einstellungsänderungen gehen verloren. Lass den Fernseher eingeschaltet.",
-    "Restore previous system": "Vorheriges System wiederherstellen"
+  'de': {
+    'System updater removal is in progress. Continue removal from the computer.':
+      'Der System-Updater wird entfernt. Setze die Entfernung am Computer fort.',
+    'Update information could not be verified.':
+      'Update-Informationen konnten nicht überprüft werden.',
+    'Could not connect to the update server. Nothing was installed.':
+      'Keine Verbindung zum Update-Server. Es wurde nichts installiert.',
+    'Update information is not available yet. Nothing was installed.':
+      'Update-Informationen sind noch nicht verfügbar. Es wurde nichts installiert.',
+    'No previous update is saved for rollback yet.':
+      'Es ist noch kein vorheriges Update für die Wiederherstellung gespeichert.',
+    'Update information is not available yet. Try again later.':
+      'Update-Informationen sind noch nicht verfügbar. Versuche es später erneut.',
+    'Could not connect to check for updates. Check your connection and try again.':
+      'Keine Verbindung zur Update-Prüfung. Prüfe deine Verbindung und versuche es erneut.',
+    'Update information could not be verified. Nothing was installed.':
+      'Update-Informationen konnten nicht überprüft werden. Es wurde nichts installiert.',
+    'System updater operation failed. Open Recovery.':
+      'Der System-Updater konnte den Vorgang nicht ausführen. Öffne die Wiederherstellung.',
+    'Updater response timed out. Open Recovery to check status.':
+      'Zeitüberschreitung beim Updater. Öffne die Wiederherstellung, um den Status zu prüfen.',
+    'Invalid updater response. Open Recovery.':
+      'Ungültige Updater-Antwort. Öffne die Wiederherstellung.',
+    'Home Updater': 'Home-Updater',
+    'Root Home': 'Home mit Root',
+    'Root Updater': 'Root-Updater',
+    'Home control runtime': 'Home-Steuerungsumgebung',
+    'Update complete. Your apps and settings are preserved.':
+      'Update abgeschlossen. Deine Apps und Einstellungen bleiben erhalten.',
+    'Previous version and profile restored.':
+      'Vorherige Version und Profil wiederhergestellt.',
+    'Update stopped before replacement. Check status before trying again.':
+      'Update vor dem Ersetzen gestoppt. Prüfe vor einem erneuten Versuch den Status.',
+    'Recovery required. Refresh status before trying again. Rollback is blocked until the installer has definitely stopped.':
+      'Wiederherstellung erforderlich. Aktualisiere zuerst den Status. Ein Rollback ist gesperrt, bis das Installationsprogramm nachweislich beendet ist.',
+    'Checking the updated launcher and restored settings…':
+      'Der aktualisierte Home-Bildschirm und die wiederhergestellten Einstellungen werden geprüft…',
+    'Checking the restored launcher and saved profile…':
+      'Wiederhergestellten Launcher und gespeichertes Profil prüfen…',
+    'Restoring previous components and saved profile…':
+      'Vorherige Komponenten und gespeichertes Profil wiederherstellen…',
+    'Update state: {status}. Keep the TV powered on.':
+      'Update-Status: {status}. Lass den Fernseher eingeschaltet.',
+    'A signed system update is available.':
+      'Ein signiertes Systemupdate ist verfügbar.',
+    'Your apps and settings stay saved.':
+      'Deine Apps und Einstellungen bleiben gespeichert.',
+    'All components are up to date.': 'Alle Komponenten sind aktuell.',
+    'A verified recovery package for this version is missing. Run the one-time computer setup.':
+      'Ein geprüftes Wiederherstellungspaket fehlt. Führe die einmalige Einrichtung am Computer aus.',
+    'Update unavailable: {reason}': 'Update nicht verfügbar: {reason}',
+    'For regular updates, open Home settings.':
+      'Öffne für reguläre Updates die Home-Einstellungen.',
+    'Recovery belongs to the other installed edition.':
+      'Die Wiederherstellung gehört zur anderen installierten Edition.',
+    'Install system update?': 'Systemupdate installieren?',
+    'Update all': 'Alles aktualisieren',
+    'Roll back': 'Zurücksetzen',
+    'Restore previous system?': 'Vorheriges System wiederherstellen?',
+    'Restore all previous components and pre-update settings. Settings changed after the update will be lost. Keep the TV powered on.':
+      'Alle vorherigen Komponenten und die Einstellungen vor dem Update wiederherstellen. Spätere Einstellungsänderungen gehen verloren. Lass den Fernseher eingeschaltet.',
+    'Restore previous system': 'Vorheriges System wiederherstellen'
   },
-  "es": {
-    "System updater removal is in progress. Continue removal from the computer.": "Se está desinstalando el actualizador del sistema. Continúa la desinstalación desde el ordenador.",
-    "Update information could not be verified.": "No se pudo verificar la información de actualización.",
-    "Could not connect to the update server. Nothing was installed.": "No se pudo conectar al servidor de actualizaciones. No se instaló nada.",
-    "Update information is not available yet. Nothing was installed.": "La información de actualización aún no está disponible. No se instaló nada.",
-    "No previous update is saved for rollback yet.": "Todavía no hay una actualización anterior guardada para restaurar.",
-    "Update information is not available yet. Try again later.": "La información de actualización aún no está disponible. Inténtalo más tarde.",
-    "Could not connect to check for updates. Check your connection and try again.": "No se pudo conectar para buscar actualizaciones. Revisa tu conexión e inténtalo de nuevo.",
-    "Update information could not be verified. Nothing was installed.": "No se pudo verificar la información de actualización. No se instaló nada.",
-    "System updater operation failed. Open Recovery.": "Falló la operación del actualizador del sistema. Abre Recuperación.",
-    "Updater response timed out. Open Recovery to check status.": "El actualizador no respondió a tiempo. Abre Recuperación para comprobar el estado.",
-    "Invalid updater response. Open Recovery.": "Respuesta del actualizador no válida. Abre Recuperación.",
-    "Home Updater": "Actualizador de Home",
-    "Root Home": "Home con root",
-    "Root Updater": "Actualizador Root",
-    "Home control runtime": "Entorno de control de Home",
-    "Update complete. Your apps and settings are preserved.": "Actualización completada. Tus aplicaciones y ajustes se han conservado.",
-    "Previous version and profile restored.": "Se restauraron la versión anterior y el perfil.",
-    "Update stopped before replacement. Check status before trying again.": "La actualización se detuvo antes del reemplazo. Comprueba el estado antes de reintentar.",
-    "Recovery required. Refresh status before trying again. Rollback is blocked until the installer has definitely stopped.": "Se requiere recuperación. Actualiza el estado antes de continuar. La restauración queda bloqueada hasta confirmar que el instalador se ha detenido.",
-    "Checking the updated launcher and restored settings…": "Comprobando Home actualizado y los ajustes restaurados…",
-    "Checking the restored launcher and saved profile…": "Comprobando el lanzador restaurado y el perfil guardado…",
-    "Restoring previous components and saved profile…": "Restaurando los componentes anteriores y el perfil guardado…",
-    "Update state: {status}. Keep the TV powered on.": "Estado de actualización: {status}. Mantén el televisor encendido.",
-    "A signed system update is available.": "Hay una actualización del sistema firmada disponible.",
-    "Your apps and settings stay saved.": "Tus aplicaciones y ajustes se conservarán.",
-    "All components are up to date.": "Todos los componentes están actualizados.",
-    "A verified recovery package for this version is missing. Run the one-time computer setup.": "Falta un paquete de recuperación verificado para esta versión. Realiza la configuración inicial desde el ordenador.",
-    "Update unavailable: {reason}": "Actualización no disponible: {reason}",
-    "For regular updates, open Home settings.": "Para las actualizaciones habituales, abre los ajustes de Home.",
-    "Recovery belongs to the other installed edition.": "La recuperación pertenece a la otra edición instalada.",
-    "Install system update?": "¿Instalar la actualización del sistema?",
-    "Update all": "Actualizar todo",
-    "Roll back": "Volver a la versión anterior",
-    "Restore previous system?": "¿Restaurar el sistema anterior?",
-    "Restore all previous components and pre-update settings. Settings changed after the update will be lost. Keep the TV powered on.": "Restaurar todos los componentes anteriores y los ajustes previos a la actualización. Se perderán los cambios de ajustes posteriores. Mantén el televisor encendido.",
-    "Restore previous system": "Restaurar el sistema anterior"
+  'es': {
+    'System updater removal is in progress. Continue removal from the computer.':
+      'Se está desinstalando el actualizador del sistema. Continúa la desinstalación desde el ordenador.',
+    'Update information could not be verified.':
+      'No se pudo verificar la información de actualización.',
+    'Could not connect to the update server. Nothing was installed.':
+      'No se pudo conectar al servidor de actualizaciones. No se instaló nada.',
+    'Update information is not available yet. Nothing was installed.':
+      'La información de actualización aún no está disponible. No se instaló nada.',
+    'No previous update is saved for rollback yet.':
+      'Todavía no hay una actualización anterior guardada para restaurar.',
+    'Update information is not available yet. Try again later.':
+      'La información de actualización aún no está disponible. Inténtalo más tarde.',
+    'Could not connect to check for updates. Check your connection and try again.':
+      'No se pudo conectar para buscar actualizaciones. Revisa tu conexión e inténtalo de nuevo.',
+    'Update information could not be verified. Nothing was installed.':
+      'No se pudo verificar la información de actualización. No se instaló nada.',
+    'System updater operation failed. Open Recovery.':
+      'Falló la operación del actualizador del sistema. Abre Recuperación.',
+    'Updater response timed out. Open Recovery to check status.':
+      'El actualizador no respondió a tiempo. Abre Recuperación para comprobar el estado.',
+    'Invalid updater response. Open Recovery.':
+      'Respuesta del actualizador no válida. Abre Recuperación.',
+    'Home Updater': 'Actualizador de Home',
+    'Root Home': 'Home con root',
+    'Root Updater': 'Actualizador Root',
+    'Home control runtime': 'Entorno de control de Home',
+    'Update complete. Your apps and settings are preserved.':
+      'Actualización completada. Tus aplicaciones y ajustes se han conservado.',
+    'Previous version and profile restored.':
+      'Se restauraron la versión anterior y el perfil.',
+    'Update stopped before replacement. Check status before trying again.':
+      'La actualización se detuvo antes del reemplazo. Comprueba el estado antes de reintentar.',
+    'Recovery required. Refresh status before trying again. Rollback is blocked until the installer has definitely stopped.':
+      'Se requiere recuperación. Actualiza el estado antes de continuar. La restauración queda bloqueada hasta confirmar que el instalador se ha detenido.',
+    'Checking the updated launcher and restored settings…':
+      'Comprobando Home actualizado y los ajustes restaurados…',
+    'Checking the restored launcher and saved profile…':
+      'Comprobando el lanzador restaurado y el perfil guardado…',
+    'Restoring previous components and saved profile…':
+      'Restaurando los componentes anteriores y el perfil guardado…',
+    'Update state: {status}. Keep the TV powered on.':
+      'Estado de actualización: {status}. Mantén el televisor encendido.',
+    'A signed system update is available.':
+      'Hay una actualización del sistema firmada disponible.',
+    'Your apps and settings stay saved.':
+      'Tus aplicaciones y ajustes se conservarán.',
+    'All components are up to date.':
+      'Todos los componentes están actualizados.',
+    'A verified recovery package for this version is missing. Run the one-time computer setup.':
+      'Falta un paquete de recuperación verificado para esta versión. Realiza la configuración inicial desde el ordenador.',
+    'Update unavailable: {reason}': 'Actualización no disponible: {reason}',
+    'For regular updates, open Home settings.':
+      'Para las actualizaciones habituales, abre los ajustes de Home.',
+    'Recovery belongs to the other installed edition.':
+      'La recuperación pertenece a la otra edición instalada.',
+    'Install system update?': '¿Instalar la actualización del sistema?',
+    'Update all': 'Actualizar todo',
+    'Roll back': 'Volver a la versión anterior',
+    'Restore previous system?': '¿Restaurar el sistema anterior?',
+    'Restore all previous components and pre-update settings. Settings changed after the update will be lost. Keep the TV powered on.':
+      'Restaurar todos los componentes anteriores y los ajustes previos a la actualización. Se perderán los cambios de ajustes posteriores. Mantén el televisor encendido.',
+    'Restore previous system': 'Restaurar el sistema anterior'
   },
-  "pt-BR": {
-    "System updater removal is in progress. Continue removal from the computer.": "O atualizador do sistema está sendo removido. Continue a remoção pelo computador.",
-    "Update information could not be verified.": "Não foi possível verificar as informações de atualização.",
-    "Could not connect to the update server. Nothing was installed.": "Não foi possível conectar ao servidor de atualizações. Nada foi instalado.",
-    "Update information is not available yet. Nothing was installed.": "As informações de atualização ainda não estão disponíveis. Nada foi instalado.",
-    "No previous update is saved for rollback yet.": "Ainda não há uma atualização anterior salva para restauração.",
-    "Update information is not available yet. Try again later.": "As informações de atualização ainda não estão disponíveis. Tente novamente mais tarde.",
-    "Could not connect to check for updates. Check your connection and try again.": "Não foi possível conectar para buscar atualizações. Verifique sua conexão e tente novamente.",
-    "Update information could not be verified. Nothing was installed.": "Não foi possível verificar as informações de atualização. Nada foi instalado.",
-    "System updater operation failed. Open Recovery.": "A operação do atualizador do sistema falhou. Abra Recuperação.",
-    "Updater response timed out. Open Recovery to check status.": "O atualizador não respondeu a tempo. Abra a Recuperação para verificar o status.",
-    "Invalid updater response. Open Recovery.": "Resposta inválida do atualizador. Abra a Recuperação.",
-    "Home Updater": "Atualizador do Home",
-    "Root Home": "Home com root",
-    "Root Updater": "Atualizador Root",
-    "Home control runtime": "Ambiente de controle do Home",
-    "Update complete. Your apps and settings are preserved.": "Atualização concluída. Seus aplicativos e configurações foram preservados.",
-    "Previous version and profile restored.": "Versão anterior e perfil restaurados.",
-    "Update stopped before replacement. Check status before trying again.": "A atualização parou antes da substituição. Verifique o status antes de tentar novamente.",
-    "Recovery required. Refresh status before trying again. Rollback is blocked until the installer has definitely stopped.": "É necessário recuperar o sistema. Atualize o status antes de continuar. A restauração fica bloqueada até confirmar que o instalador parou.",
-    "Checking the updated launcher and restored settings…": "Verificando o Home atualizado e as configurações restauradas…",
-    "Checking the restored launcher and saved profile…": "Verificando o inicializador restaurado e o perfil salvo…",
-    "Restoring previous components and saved profile…": "Restaurando os componentes anteriores e o perfil salvo…",
-    "Update state: {status}. Keep the TV powered on.": "Status da atualização: {status}. Mantenha a TV ligada.",
-    "A signed system update is available.": "Uma atualização assinada do sistema está disponível.",
-    "Your apps and settings stay saved.": "Seus aplicativos e configurações serão mantidos.",
-    "All components are up to date.": "Todos os componentes estão atualizados.",
-    "A verified recovery package for this version is missing. Run the one-time computer setup.": "Falta um pacote de recuperação verificado para esta versão. Faça a configuração inicial pelo computador.",
-    "Update unavailable: {reason}": "Atualização indisponível: {reason}",
-    "For regular updates, open Home settings.": "Para atualizações regulares, abra as configurações do Home.",
-    "Recovery belongs to the other installed edition.": "A recuperação pertence à outra edição instalada.",
-    "Install system update?": "Instalar atualização do sistema?",
-    "Update all": "Atualizar tudo",
-    "Roll back": "Voltar à versão anterior",
-    "Restore previous system?": "Restaurar o sistema anterior?",
-    "Restore all previous components and pre-update settings. Settings changed after the update will be lost. Keep the TV powered on.": "Restaurar todos os componentes anteriores e as configurações anteriores à atualização. As alterações posteriores serão perdidas. Mantenha a TV ligada.",
-    "Restore previous system": "Restaurar o sistema anterior"
+  'pt-BR': {
+    'System updater removal is in progress. Continue removal from the computer.':
+      'O atualizador do sistema está sendo removido. Continue a remoção pelo computador.',
+    'Update information could not be verified.':
+      'Não foi possível verificar as informações de atualização.',
+    'Could not connect to the update server. Nothing was installed.':
+      'Não foi possível conectar ao servidor de atualizações. Nada foi instalado.',
+    'Update information is not available yet. Nothing was installed.':
+      'As informações de atualização ainda não estão disponíveis. Nada foi instalado.',
+    'No previous update is saved for rollback yet.':
+      'Ainda não há uma atualização anterior salva para restauração.',
+    'Update information is not available yet. Try again later.':
+      'As informações de atualização ainda não estão disponíveis. Tente novamente mais tarde.',
+    'Could not connect to check for updates. Check your connection and try again.':
+      'Não foi possível conectar para buscar atualizações. Verifique sua conexão e tente novamente.',
+    'Update information could not be verified. Nothing was installed.':
+      'Não foi possível verificar as informações de atualização. Nada foi instalado.',
+    'System updater operation failed. Open Recovery.':
+      'A operação do atualizador do sistema falhou. Abra Recuperação.',
+    'Updater response timed out. Open Recovery to check status.':
+      'O atualizador não respondeu a tempo. Abra a Recuperação para verificar o status.',
+    'Invalid updater response. Open Recovery.':
+      'Resposta inválida do atualizador. Abra a Recuperação.',
+    'Home Updater': 'Atualizador do Home',
+    'Root Home': 'Home com root',
+    'Root Updater': 'Atualizador Root',
+    'Home control runtime': 'Ambiente de controle do Home',
+    'Update complete. Your apps and settings are preserved.':
+      'Atualização concluída. Seus aplicativos e configurações foram preservados.',
+    'Previous version and profile restored.':
+      'Versão anterior e perfil restaurados.',
+    'Update stopped before replacement. Check status before trying again.':
+      'A atualização parou antes da substituição. Verifique o status antes de tentar novamente.',
+    'Recovery required. Refresh status before trying again. Rollback is blocked until the installer has definitely stopped.':
+      'É necessário recuperar o sistema. Atualize o status antes de continuar. A restauração fica bloqueada até confirmar que o instalador parou.',
+    'Checking the updated launcher and restored settings…':
+      'Verificando o Home atualizado e as configurações restauradas…',
+    'Checking the restored launcher and saved profile…':
+      'Verificando o inicializador restaurado e o perfil salvo…',
+    'Restoring previous components and saved profile…':
+      'Restaurando os componentes anteriores e o perfil salvo…',
+    'Update state: {status}. Keep the TV powered on.':
+      'Status da atualização: {status}. Mantenha a TV ligada.',
+    'A signed system update is available.':
+      'Uma atualização assinada do sistema está disponível.',
+    'Your apps and settings stay saved.':
+      'Seus aplicativos e configurações serão mantidos.',
+    'All components are up to date.': 'Todos os componentes estão atualizados.',
+    'A verified recovery package for this version is missing. Run the one-time computer setup.':
+      'Falta um pacote de recuperação verificado para esta versão. Faça a configuração inicial pelo computador.',
+    'Update unavailable: {reason}': 'Atualização indisponível: {reason}',
+    'For regular updates, open Home settings.':
+      'Para atualizações regulares, abra as configurações do Home.',
+    'Recovery belongs to the other installed edition.':
+      'A recuperação pertence à outra edição instalada.',
+    'Install system update?': 'Instalar atualização do sistema?',
+    'Update all': 'Atualizar tudo',
+    'Roll back': 'Voltar à versão anterior',
+    'Restore previous system?': 'Restaurar o sistema anterior?',
+    'Restore all previous components and pre-update settings. Settings changed after the update will be lost. Keep the TV powered on.':
+      'Restaurar todos os componentes anteriores e as configurações anteriores à atualização. As alterações posteriores serão perdidas. Mantenha a TV ligada.',
+    'Restore previous system': 'Restaurar o sistema anterior'
   },
-  "fr": {
-    "System updater removal is in progress. Continue removal from the computer.": "La suppression du programme de mise à jour système est en cours. Poursuivez la suppression depuis l’ordinateur.",
-    "Update information could not be verified.": "Les informations de mise à jour n’ont pas pu être vérifiées.",
-    "Could not connect to the update server. Nothing was installed.": "Impossible de se connecter au serveur de mise à jour. Rien n’a été installé.",
-    "Update information is not available yet. Nothing was installed.": "Les informations de mise à jour ne sont pas encore disponibles. Rien n’a été installé.",
-    "No previous update is saved for rollback yet.": "Aucune mise à jour précédente n’est encore enregistrée pour la restauration.",
-    "Update information is not available yet. Try again later.": "Les informations de mise à jour ne sont pas encore disponibles. Réessayez plus tard.",
-    "Could not connect to check for updates. Check your connection and try again.": "Impossible de se connecter pour rechercher des mises à jour. Vérifiez votre connexion et réessayez.",
-    "Update information could not be verified. Nothing was installed.": "Les informations de mise à jour n’ont pas pu être vérifiées. Rien n’a été installé.",
-    "System updater operation failed. Open Recovery.": "L’opération de mise à jour du système a échoué. Ouvrez Récupération.",
-    "Updater response timed out. Open Recovery to check status.": "Délai de réponse dépassé. Ouvrez la récupération pour vérifier l’état.",
-    "Invalid updater response. Open Recovery.": "Réponse de mise à jour invalide. Ouvrez la récupération.",
-    "Home Updater": "Mise à jour Home",
-    "Root Home": "Home avec root",
-    "Root Updater": "Mise à jour Root",
-    "Home control runtime": "Environnement de contrôle de Home",
-    "Update complete. Your apps and settings are preserved.": "Mise à jour terminée. Vos applications et réglages sont conservés.",
-    "Previous version and profile restored.": "Version précédente et profil restaurés.",
-    "Update stopped before replacement. Check status before trying again.": "Mise à jour arrêtée avant le remplacement. Vérifiez l’état avant de réessayer.",
-    "Recovery required. Refresh status before trying again. Rollback is blocked until the installer has definitely stopped.": "Une récupération est nécessaire. Actualisez l’état avant de réessayer. Le retour arrière reste bloqué tant que l’arrêt du programme d’installation n’est pas confirmé.",
-    "Checking the updated launcher and restored settings…": "Vérification de Home mis à jour et des réglages restaurés…",
-    "Checking the restored launcher and saved profile…": "Vérification du lanceur restauré et du profil enregistré…",
-    "Restoring previous components and saved profile…": "Restauration des composants précédents et du profil enregistré…",
-    "Update state: {status}. Keep the TV powered on.": "État de la mise à jour : {status}. Laissez le téléviseur allumé.",
-    "A signed system update is available.": "Une mise à jour système signée est disponible.",
-    "Your apps and settings stay saved.": "Vos applications et paramètres sont conservés.",
-    "All components are up to date.": "Tous les composants sont à jour.",
-    "A verified recovery package for this version is missing. Run the one-time computer setup.": "Le paquet de récupération vérifié de cette version manque. Effectuez la configuration initiale sur ordinateur.",
-    "Update unavailable: {reason}": "Mise à jour indisponible : {reason}",
-    "For regular updates, open Home settings.": "Pour les mises à jour habituelles, ouvrez les paramètres de Home.",
-    "Recovery belongs to the other installed edition.": "La récupération concerne l’autre édition installée.",
-    "Install system update?": "Installer la mise à jour système ?",
-    "Update all": "Tout mettre à jour",
-    "Roll back": "Revenir à la version précédente",
-    "Restore previous system?": "Restaurer le système précédent ?",
-    "Restore all previous components and pre-update settings. Settings changed after the update will be lost. Keep the TV powered on.": "Restaurer tous les composants précédents et les paramètres antérieurs à la mise à jour. Les modifications ultérieures seront perdues. Laissez le téléviseur allumé.",
-    "Restore previous system": "Restaurer le système précédent"
+  'fr': {
+    'System updater removal is in progress. Continue removal from the computer.':
+      'La suppression du programme de mise à jour système est en cours. Poursuivez la suppression depuis l’ordinateur.',
+    'Update information could not be verified.':
+      'Les informations de mise à jour n’ont pas pu être vérifiées.',
+    'Could not connect to the update server. Nothing was installed.':
+      'Impossible de se connecter au serveur de mise à jour. Rien n’a été installé.',
+    'Update information is not available yet. Nothing was installed.':
+      'Les informations de mise à jour ne sont pas encore disponibles. Rien n’a été installé.',
+    'No previous update is saved for rollback yet.':
+      'Aucune mise à jour précédente n’est encore enregistrée pour la restauration.',
+    'Update information is not available yet. Try again later.':
+      'Les informations de mise à jour ne sont pas encore disponibles. Réessayez plus tard.',
+    'Could not connect to check for updates. Check your connection and try again.':
+      'Impossible de se connecter pour rechercher des mises à jour. Vérifiez votre connexion et réessayez.',
+    'Update information could not be verified. Nothing was installed.':
+      'Les informations de mise à jour n’ont pas pu être vérifiées. Rien n’a été installé.',
+    'System updater operation failed. Open Recovery.':
+      'L’opération de mise à jour du système a échoué. Ouvrez Récupération.',
+    'Updater response timed out. Open Recovery to check status.':
+      'Délai de réponse dépassé. Ouvrez la récupération pour vérifier l’état.',
+    'Invalid updater response. Open Recovery.':
+      'Réponse de mise à jour invalide. Ouvrez la récupération.',
+    'Home Updater': 'Mise à jour Home',
+    'Root Home': 'Home avec root',
+    'Root Updater': 'Mise à jour Root',
+    'Home control runtime': 'Environnement de contrôle de Home',
+    'Update complete. Your apps and settings are preserved.':
+      'Mise à jour terminée. Vos applications et réglages sont conservés.',
+    'Previous version and profile restored.':
+      'Version précédente et profil restaurés.',
+    'Update stopped before replacement. Check status before trying again.':
+      'Mise à jour arrêtée avant le remplacement. Vérifiez l’état avant de réessayer.',
+    'Recovery required. Refresh status before trying again. Rollback is blocked until the installer has definitely stopped.':
+      'Une récupération est nécessaire. Actualisez l’état avant de réessayer. Le retour arrière reste bloqué tant que l’arrêt du programme d’installation n’est pas confirmé.',
+    'Checking the updated launcher and restored settings…':
+      'Vérification de Home mis à jour et des réglages restaurés…',
+    'Checking the restored launcher and saved profile…':
+      'Vérification du lanceur restauré et du profil enregistré…',
+    'Restoring previous components and saved profile…':
+      'Restauration des composants précédents et du profil enregistré…',
+    'Update state: {status}. Keep the TV powered on.':
+      'État de la mise à jour : {status}. Laissez le téléviseur allumé.',
+    'A signed system update is available.':
+      'Une mise à jour système signée est disponible.',
+    'Your apps and settings stay saved.':
+      'Vos applications et paramètres sont conservés.',
+    'All components are up to date.': 'Tous les composants sont à jour.',
+    'A verified recovery package for this version is missing. Run the one-time computer setup.':
+      'Le paquet de récupération vérifié de cette version manque. Effectuez la configuration initiale sur ordinateur.',
+    'Update unavailable: {reason}': 'Mise à jour indisponible : {reason}',
+    'For regular updates, open Home settings.':
+      'Pour les mises à jour habituelles, ouvrez les paramètres de Home.',
+    'Recovery belongs to the other installed edition.':
+      'La récupération concerne l’autre édition installée.',
+    'Install system update?': 'Installer la mise à jour système ?',
+    'Update all': 'Tout mettre à jour',
+    'Roll back': 'Revenir à la version précédente',
+    'Restore previous system?': 'Restaurer le système précédent ?',
+    'Restore all previous components and pre-update settings. Settings changed after the update will be lost. Keep the TV powered on.':
+      'Restaurer tous les composants précédents et les paramètres antérieurs à la mise à jour. Les modifications ultérieures seront perdues. Laissez le téléviseur allumé.',
+    'Restore previous system': 'Restaurer le système précédent'
   },
-  "it": {
-    "System updater removal is in progress. Continue removal from the computer.": "La rimozione del programma di aggiornamento del sistema è in corso. Continua la rimozione dal computer.",
-    "Update information could not be verified.": "Impossibile verificare le informazioni sugli aggiornamenti.",
-    "Could not connect to the update server. Nothing was installed.": "Impossibile connettersi al server degli aggiornamenti. Non è stato installato nulla.",
-    "Update information is not available yet. Nothing was installed.": "Le informazioni sugli aggiornamenti non sono ancora disponibili. Non è stato installato nulla.",
-    "No previous update is saved for rollback yet.": "Non è ancora salvato un aggiornamento precedente da ripristinare.",
-    "Update information is not available yet. Try again later.": "Le informazioni sugli aggiornamenti non sono ancora disponibili. Riprova più tardi.",
-    "Could not connect to check for updates. Check your connection and try again.": "Impossibile connettersi per cercare aggiornamenti. Controlla la connessione e riprova.",
-    "Update information could not be verified. Nothing was installed.": "Impossibile verificare le informazioni sugli aggiornamenti. Non è stato installato nulla.",
-    "System updater operation failed. Open Recovery.": "L’operazione di aggiornamento del sistema non è riuscita. Apri Ripristino.",
-    "Updater response timed out. Open Recovery to check status.": "Tempo di risposta scaduto. Apri Ripristino per controllare lo stato.",
-    "Invalid updater response. Open Recovery.": "Risposta di aggiornamento non valida. Apri Ripristino.",
-    "Home Updater": "Aggiornamento Home",
-    "Root Home": "Home con root",
-    "Root Updater": "Aggiornamento Root",
-    "Home control runtime": "Ambiente di controllo di Home",
-    "Update complete. Your apps and settings are preserved.": "Aggiornamento completato. App e impostazioni sono state conservate.",
-    "Previous version and profile restored.": "Versione precedente e profilo ripristinati.",
-    "Update stopped before replacement. Check status before trying again.": "Aggiornamento interrotto prima della sostituzione. Controlla lo stato prima di riprovare.",
-    "Recovery required. Refresh status before trying again. Rollback is blocked until the installer has definitely stopped.": "È necessario il ripristino. Aggiorna lo stato prima di riprovare. Il ritorno alla versione precedente resta bloccato finché non è confermato l’arresto del programma di installazione.",
-    "Checking the updated launcher and restored settings…": "Verifica di Home aggiornato e delle impostazioni ripristinate…",
-    "Checking the restored launcher and saved profile…": "Verifica del launcher ripristinato e del profilo salvato…",
-    "Restoring previous components and saved profile…": "Ripristino dei componenti precedenti e del profilo salvato…",
-    "Update state: {status}. Keep the TV powered on.": "Stato dell’aggiornamento: {status}. Lascia acceso il televisore.",
-    "A signed system update is available.": "È disponibile un aggiornamento di sistema firmato.",
-    "Your apps and settings stay saved.": "Le app e le impostazioni restano salvate.",
-    "All components are up to date.": "Tutti i componenti sono aggiornati.",
-    "A verified recovery package for this version is missing. Run the one-time computer setup.": "Manca un pacchetto di ripristino verificato per questa versione. Esegui la configurazione iniziale dal computer.",
-    "Update unavailable: {reason}": "Aggiornamento non disponibile: {reason}",
-    "For regular updates, open Home settings.": "Per gli aggiornamenti regolari, apri le impostazioni di Home.",
-    "Recovery belongs to the other installed edition.": "Il ripristino riguarda l’altra edizione installata.",
-    "Install system update?": "Installare l’aggiornamento di sistema?",
-    "Update all": "Aggiorna tutto",
-    "Roll back": "Ripristina versione precedente",
-    "Restore previous system?": "Ripristinare il sistema precedente?",
-    "Restore all previous components and pre-update settings. Settings changed after the update will be lost. Keep the TV powered on.": "Ripristina tutti i componenti precedenti e le impostazioni prima dell’aggiornamento. Le modifiche successive andranno perse. Lascia acceso il televisore.",
-    "Restore previous system": "Ripristina il sistema precedente"
+  'it': {
+    'System updater removal is in progress. Continue removal from the computer.':
+      'La rimozione del programma di aggiornamento del sistema è in corso. Continua la rimozione dal computer.',
+    'Update information could not be verified.':
+      'Impossibile verificare le informazioni sugli aggiornamenti.',
+    'Could not connect to the update server. Nothing was installed.':
+      'Impossibile connettersi al server degli aggiornamenti. Non è stato installato nulla.',
+    'Update information is not available yet. Nothing was installed.':
+      'Le informazioni sugli aggiornamenti non sono ancora disponibili. Non è stato installato nulla.',
+    'No previous update is saved for rollback yet.':
+      'Non è ancora salvato un aggiornamento precedente da ripristinare.',
+    'Update information is not available yet. Try again later.':
+      'Le informazioni sugli aggiornamenti non sono ancora disponibili. Riprova più tardi.',
+    'Could not connect to check for updates. Check your connection and try again.':
+      'Impossibile connettersi per cercare aggiornamenti. Controlla la connessione e riprova.',
+    'Update information could not be verified. Nothing was installed.':
+      'Impossibile verificare le informazioni sugli aggiornamenti. Non è stato installato nulla.',
+    'System updater operation failed. Open Recovery.':
+      'L’operazione di aggiornamento del sistema non è riuscita. Apri Ripristino.',
+    'Updater response timed out. Open Recovery to check status.':
+      'Tempo di risposta scaduto. Apri Ripristino per controllare lo stato.',
+    'Invalid updater response. Open Recovery.':
+      'Risposta di aggiornamento non valida. Apri Ripristino.',
+    'Home Updater': 'Aggiornamento Home',
+    'Root Home': 'Home con root',
+    'Root Updater': 'Aggiornamento Root',
+    'Home control runtime': 'Ambiente di controllo di Home',
+    'Update complete. Your apps and settings are preserved.':
+      'Aggiornamento completato. App e impostazioni sono state conservate.',
+    'Previous version and profile restored.':
+      'Versione precedente e profilo ripristinati.',
+    'Update stopped before replacement. Check status before trying again.':
+      'Aggiornamento interrotto prima della sostituzione. Controlla lo stato prima di riprovare.',
+    'Recovery required. Refresh status before trying again. Rollback is blocked until the installer has definitely stopped.':
+      'È necessario il ripristino. Aggiorna lo stato prima di riprovare. Il ritorno alla versione precedente resta bloccato finché non è confermato l’arresto del programma di installazione.',
+    'Checking the updated launcher and restored settings…':
+      'Verifica di Home aggiornato e delle impostazioni ripristinate…',
+    'Checking the restored launcher and saved profile…':
+      'Verifica del launcher ripristinato e del profilo salvato…',
+    'Restoring previous components and saved profile…':
+      'Ripristino dei componenti precedenti e del profilo salvato…',
+    'Update state: {status}. Keep the TV powered on.':
+      'Stato dell’aggiornamento: {status}. Lascia acceso il televisore.',
+    'A signed system update is available.':
+      'È disponibile un aggiornamento di sistema firmato.',
+    'Your apps and settings stay saved.':
+      'Le app e le impostazioni restano salvate.',
+    'All components are up to date.': 'Tutti i componenti sono aggiornati.',
+    'A verified recovery package for this version is missing. Run the one-time computer setup.':
+      'Manca un pacchetto di ripristino verificato per questa versione. Esegui la configurazione iniziale dal computer.',
+    'Update unavailable: {reason}': 'Aggiornamento non disponibile: {reason}',
+    'For regular updates, open Home settings.':
+      'Per gli aggiornamenti regolari, apri le impostazioni di Home.',
+    'Recovery belongs to the other installed edition.':
+      'Il ripristino riguarda l’altra edizione installata.',
+    'Install system update?': 'Installare l’aggiornamento di sistema?',
+    'Update all': 'Aggiorna tutto',
+    'Roll back': 'Ripristina versione precedente',
+    'Restore previous system?': 'Ripristinare il sistema precedente?',
+    'Restore all previous components and pre-update settings. Settings changed after the update will be lost. Keep the TV powered on.':
+      'Ripristina tutti i componenti precedenti e le impostazioni prima dell’aggiornamento. Le modifiche successive andranno perse. Lascia acceso il televisore.',
+    'Restore previous system': 'Ripristina il sistema precedente'
   },
-  "ko": {
-    "System updater removal is in progress. Continue removal from the computer.": "시스템 업데이터를 제거하는 중입니다. 컴퓨터에서 제거를 계속하세요.",
-    "Update information could not be verified.": "업데이트 정보를 검증할 수 없습니다.",
-    "Could not connect to the update server. Nothing was installed.": "업데이트 서버에 연결할 수 없습니다. 아무것도 설치되지 않았습니다.",
-    "Update information is not available yet. Nothing was installed.": "업데이트 정보를 아직 사용할 수 없습니다. 아무것도 설치되지 않았습니다.",
-    "No previous update is saved for rollback yet.": "아직 복원할 이전 업데이트가 저장되어 있지 않습니다.",
-    "Update information is not available yet. Try again later.": "업데이트 정보를 아직 사용할 수 없습니다. 나중에 다시 시도하세요.",
-    "Could not connect to check for updates. Check your connection and try again.": "업데이트를 확인하기 위해 연결할 수 없습니다. 연결을 확인하고 다시 시도하세요.",
-    "Update information could not be verified. Nothing was installed.": "업데이트 정보를 검증할 수 없습니다. 아무것도 설치되지 않았습니다.",
-    "System updater operation failed. Open Recovery.": "시스템 업데이트 작업에 실패했습니다. 복구를 여세요.",
-    "Updater response timed out. Open Recovery to check status.": "업데이터 응답 시간이 초과되었습니다. 복구를 열어 상태를 확인하세요.",
-    "Invalid updater response. Open Recovery.": "잘못된 업데이터 응답입니다. 복구를 여세요.",
-    "Home Updater": "Home 업데이터",
-    "Root Home": "루트 Home",
-    "Root Updater": "Root 업데이터",
-    "Home control runtime": "Home 제어 실행 환경",
-    "Update complete. Your apps and settings are preserved.": "업데이트가 완료되었습니다. 앱과 설정이 보존되었습니다.",
-    "Previous version and profile restored.": "이전 버전과 프로필이 복원되었습니다.",
-    "Update stopped before replacement. Check status before trying again.": "교체 전에 업데이트가 중지되었습니다. 다시 시도하기 전에 상태를 확인하세요.",
-    "Recovery required. Refresh status before trying again. Rollback is blocked until the installer has definitely stopped.": "복구가 필요합니다. 다시 시도하기 전에 상태를 새로 고치세요. 설치 프로그램이 완전히 종료되었음이 확인될 때까지 롤백이 차단됩니다.",
-    "Checking the updated launcher and restored settings…": "업데이트된 Home과 복원된 설정을 확인하는 중…",
-    "Checking the restored launcher and saved profile…": "복원된 런처와 저장된 프로필을 확인하는 중…",
-    "Restoring previous components and saved profile…": "이전 구성 요소와 저장된 프로필을 복원하는 중…",
-    "Update state: {status}. Keep the TV powered on.": "업데이트 상태: {status}. TV 전원을 켜 두세요.",
-    "A signed system update is available.": "서명된 시스템 업데이트가 있습니다.",
-    "Your apps and settings stay saved.": "앱과 설정은 유지됩니다.",
-    "All components are up to date.": "모든 구성 요소가 최신 상태입니다.",
-    "A verified recovery package for this version is missing. Run the one-time computer setup.": "이 버전의 검증된 복구 패키지가 없습니다. 컴퓨터에서 최초 설정을 실행하세요.",
-    "Update unavailable: {reason}": "업데이트할 수 없음: {reason}",
-    "For regular updates, open Home settings.": "일반 업데이트는 Home 설정에서 진행하세요.",
-    "Recovery belongs to the other installed edition.": "이 복구는 설치된 다른 에디션에 해당합니다.",
-    "Install system update?": "시스템 업데이트를 설치할까요?",
-    "Update all": "모두 업데이트",
-    "Roll back": "이전 버전 복원",
-    "Restore previous system?": "이전 시스템을 복원할까요?",
-    "Restore all previous components and pre-update settings. Settings changed after the update will be lost. Keep the TV powered on.": "모든 이전 구성 요소와 업데이트 전 설정을 복원합니다. 업데이트 후 변경한 설정은 사라집니다. TV 전원을 켜 두세요.",
-    "Restore previous system": "이전 시스템 복원"
+  'ko': {
+    'System updater removal is in progress. Continue removal from the computer.':
+      '시스템 업데이터를 제거하는 중입니다. 컴퓨터에서 제거를 계속하세요.',
+    'Update information could not be verified.':
+      '업데이트 정보를 검증할 수 없습니다.',
+    'Could not connect to the update server. Nothing was installed.':
+      '업데이트 서버에 연결할 수 없습니다. 아무것도 설치되지 않았습니다.',
+    'Update information is not available yet. Nothing was installed.':
+      '업데이트 정보를 아직 사용할 수 없습니다. 아무것도 설치되지 않았습니다.',
+    'No previous update is saved for rollback yet.':
+      '아직 복원할 이전 업데이트가 저장되어 있지 않습니다.',
+    'Update information is not available yet. Try again later.':
+      '업데이트 정보를 아직 사용할 수 없습니다. 나중에 다시 시도하세요.',
+    'Could not connect to check for updates. Check your connection and try again.':
+      '업데이트를 확인하기 위해 연결할 수 없습니다. 연결을 확인하고 다시 시도하세요.',
+    'Update information could not be verified. Nothing was installed.':
+      '업데이트 정보를 검증할 수 없습니다. 아무것도 설치되지 않았습니다.',
+    'System updater operation failed. Open Recovery.':
+      '시스템 업데이트 작업에 실패했습니다. 복구를 여세요.',
+    'Updater response timed out. Open Recovery to check status.':
+      '업데이터 응답 시간이 초과되었습니다. 복구를 열어 상태를 확인하세요.',
+    'Invalid updater response. Open Recovery.':
+      '잘못된 업데이터 응답입니다. 복구를 여세요.',
+    'Home Updater': 'Home 업데이터',
+    'Root Home': '루트 Home',
+    'Root Updater': 'Root 업데이터',
+    'Home control runtime': 'Home 제어 실행 환경',
+    'Update complete. Your apps and settings are preserved.':
+      '업데이트가 완료되었습니다. 앱과 설정이 보존되었습니다.',
+    'Previous version and profile restored.':
+      '이전 버전과 프로필이 복원되었습니다.',
+    'Update stopped before replacement. Check status before trying again.':
+      '교체 전에 업데이트가 중지되었습니다. 다시 시도하기 전에 상태를 확인하세요.',
+    'Recovery required. Refresh status before trying again. Rollback is blocked until the installer has definitely stopped.':
+      '복구가 필요합니다. 다시 시도하기 전에 상태를 새로 고치세요. 설치 프로그램이 완전히 종료되었음이 확인될 때까지 롤백이 차단됩니다.',
+    'Checking the updated launcher and restored settings…':
+      '업데이트된 Home과 복원된 설정을 확인하는 중…',
+    'Checking the restored launcher and saved profile…':
+      '복원된 런처와 저장된 프로필을 확인하는 중…',
+    'Restoring previous components and saved profile…':
+      '이전 구성 요소와 저장된 프로필을 복원하는 중…',
+    'Update state: {status}. Keep the TV powered on.':
+      '업데이트 상태: {status}. TV 전원을 켜 두세요.',
+    'A signed system update is available.':
+      '서명된 시스템 업데이트가 있습니다.',
+    'Your apps and settings stay saved.': '앱과 설정은 유지됩니다.',
+    'All components are up to date.': '모든 구성 요소가 최신 상태입니다.',
+    'A verified recovery package for this version is missing. Run the one-time computer setup.':
+      '이 버전의 검증된 복구 패키지가 없습니다. 컴퓨터에서 최초 설정을 실행하세요.',
+    'Update unavailable: {reason}': '업데이트할 수 없음: {reason}',
+    'For regular updates, open Home settings.':
+      '일반 업데이트는 Home 설정에서 진행하세요.',
+    'Recovery belongs to the other installed edition.':
+      '이 복구는 설치된 다른 에디션에 해당합니다.',
+    'Install system update?': '시스템 업데이트를 설치할까요?',
+    'Update all': '모두 업데이트',
+    'Roll back': '이전 버전 복원',
+    'Restore previous system?': '이전 시스템을 복원할까요?',
+    'Restore all previous components and pre-update settings. Settings changed after the update will be lost. Keep the TV powered on.':
+      '모든 이전 구성 요소와 업데이트 전 설정을 복원합니다. 업데이트 후 변경한 설정은 사라집니다. TV 전원을 켜 두세요.',
+    'Restore previous system': '이전 시스템 복원'
   },
-  "hi": {
-    "System updater removal is in progress. Continue removal from the computer.": "सिस्टम अपडेटर को हटाया जा रहा है। कंप्यूटर से हटाने की प्रक्रिया जारी रखें।",
-    "Update information could not be verified.": "अपडेट की जानकारी सत्यापित नहीं हो सकी।",
-    "Could not connect to the update server. Nothing was installed.": "अपडेट सर्वर से कनेक्ट नहीं हो सका। कुछ भी इंस्टॉल नहीं हुआ।",
-    "Update information is not available yet. Nothing was installed.": "अपडेट की जानकारी अभी उपलब्ध नहीं है। कुछ भी इंस्टॉल नहीं हुआ।",
-    "No previous update is saved for rollback yet.": "वापस लौटने के लिए अभी कोई पिछला अपडेट सहेजा नहीं गया है।",
-    "Update information is not available yet. Try again later.": "अपडेट की जानकारी अभी उपलब्ध नहीं है। बाद में फिर कोशिश करें।",
-    "Could not connect to check for updates. Check your connection and try again.": "अपडेट जाँचने के लिए कनेक्ट नहीं हो सका। अपना कनेक्शन जाँचें और फिर कोशिश करें।",
-    "Update information could not be verified. Nothing was installed.": "अपडेट की जानकारी सत्यापित नहीं हो सकी। कुछ भी इंस्टॉल नहीं हुआ।",
-    "System updater operation failed. Open Recovery.": "सिस्टम अपडेटर की कार्रवाई विफल हुई। रिकवरी खोलें।",
-    "Updater response timed out. Open Recovery to check status.": "अपडेटर के जवाब का समय समाप्त हुआ। स्थिति जाँचने के लिए रिकवरी खोलें।",
-    "Invalid updater response. Open Recovery.": "अपडेटर का जवाब अमान्य है। रिकवरी खोलें।",
-    "Home Updater": "Home अपडेटर",
-    "Root Home": "रूट Home",
-    "Root Updater": "Root अपडेटर",
-    "Home control runtime": "Home नियंत्रण रनटाइम",
-    "Update complete. Your apps and settings are preserved.": "अपडेट पूरा हुआ। आपके ऐप और सेटिंग सुरक्षित हैं।",
-    "Previous version and profile restored.": "पिछला संस्करण और प्रोफ़ाइल बहाल हो गए हैं।",
-    "Update stopped before replacement. Check status before trying again.": "बदलने से पहले अपडेट रुक गया। दोबारा कोशिश से पहले स्थिति जाँचें।",
-    "Recovery required. Refresh status before trying again. Rollback is blocked until the installer has definitely stopped.": "रिकवरी आवश्यक है। फिर से कोशिश करने से पहले स्थिति रीफ़्रेश करें। इंस्टॉलर के पूरी तरह रुकने की पुष्टि होने तक रोलबैक बंद रहेगा।",
-    "Checking the updated launcher and restored settings…": "अपडेट किए गए Home और बहाल सेटिंग की जाँच हो रही है…",
-    "Checking the restored launcher and saved profile…": "बहाल किए गए लॉन्चर और सहेजी गई प्रोफ़ाइल की जाँच हो रही है…",
-    "Restoring previous components and saved profile…": "पिछले घटक और सहेजी गई प्रोफ़ाइल बहाल हो रहे हैं…",
-    "Update state: {status}. Keep the TV powered on.": "अपडेट की स्थिति: {status}। टीवी चालू रखें।",
-    "A signed system update is available.": "हस्ताक्षरित सिस्टम अपडेट उपलब्ध है।",
-    "Your apps and settings stay saved.": "आपके ऐप और सेटिंग्स सुरक्षित रहेंगे।",
-    "All components are up to date.": "सभी घटक अद्यतित हैं।",
-    "A verified recovery package for this version is missing. Run the one-time computer setup.": "इस संस्करण का सत्यापित रिकवरी पैकेज नहीं है। कंप्यूटर से एक बार सेटअप करें।",
-    "Update unavailable: {reason}": "अपडेट उपलब्ध नहीं: {reason}",
-    "For regular updates, open Home settings.": "नियमित अपडेट के लिए Home सेटिंग खोलें।",
-    "Recovery belongs to the other installed edition.": "यह रिकवरी इंस्टॉल किए गए दूसरे संस्करण की है।",
-    "Install system update?": "सिस्टम अपडेट इंस्टॉल करें?",
-    "Update all": "सभी अपडेट करें",
-    "Roll back": "पिछला संस्करण लौटाएँ",
-    "Restore previous system?": "पिछला सिस्टम बहाल करें?",
-    "Restore all previous components and pre-update settings. Settings changed after the update will be lost. Keep the TV powered on.": "सभी पिछले घटक और अपडेट से पहले की सेटिंग बहाल करें। अपडेट के बाद बदली गई सेटिंग मिट जाएँगी। टीवी चालू रखें।",
-    "Restore previous system": "पिछला सिस्टम बहाल करें"
+  'hi': {
+    'System updater removal is in progress. Continue removal from the computer.':
+      'सिस्टम अपडेटर को हटाया जा रहा है। कंप्यूटर से हटाने की प्रक्रिया जारी रखें।',
+    'Update information could not be verified.':
+      'अपडेट की जानकारी सत्यापित नहीं हो सकी।',
+    'Could not connect to the update server. Nothing was installed.':
+      'अपडेट सर्वर से कनेक्ट नहीं हो सका। कुछ भी इंस्टॉल नहीं हुआ।',
+    'Update information is not available yet. Nothing was installed.':
+      'अपडेट की जानकारी अभी उपलब्ध नहीं है। कुछ भी इंस्टॉल नहीं हुआ।',
+    'No previous update is saved for rollback yet.':
+      'वापस लौटने के लिए अभी कोई पिछला अपडेट सहेजा नहीं गया है।',
+    'Update information is not available yet. Try again later.':
+      'अपडेट की जानकारी अभी उपलब्ध नहीं है। बाद में फिर कोशिश करें।',
+    'Could not connect to check for updates. Check your connection and try again.':
+      'अपडेट जाँचने के लिए कनेक्ट नहीं हो सका। अपना कनेक्शन जाँचें और फिर कोशिश करें।',
+    'Update information could not be verified. Nothing was installed.':
+      'अपडेट की जानकारी सत्यापित नहीं हो सकी। कुछ भी इंस्टॉल नहीं हुआ।',
+    'System updater operation failed. Open Recovery.':
+      'सिस्टम अपडेटर की कार्रवाई विफल हुई। रिकवरी खोलें।',
+    'Updater response timed out. Open Recovery to check status.':
+      'अपडेटर के जवाब का समय समाप्त हुआ। स्थिति जाँचने के लिए रिकवरी खोलें।',
+    'Invalid updater response. Open Recovery.':
+      'अपडेटर का जवाब अमान्य है। रिकवरी खोलें।',
+    'Home Updater': 'Home अपडेटर',
+    'Root Home': 'रूट Home',
+    'Root Updater': 'Root अपडेटर',
+    'Home control runtime': 'Home नियंत्रण रनटाइम',
+    'Update complete. Your apps and settings are preserved.':
+      'अपडेट पूरा हुआ। आपके ऐप और सेटिंग सुरक्षित हैं।',
+    'Previous version and profile restored.':
+      'पिछला संस्करण और प्रोफ़ाइल बहाल हो गए हैं।',
+    'Update stopped before replacement. Check status before trying again.':
+      'बदलने से पहले अपडेट रुक गया। दोबारा कोशिश से पहले स्थिति जाँचें।',
+    'Recovery required. Refresh status before trying again. Rollback is blocked until the installer has definitely stopped.':
+      'रिकवरी आवश्यक है। फिर से कोशिश करने से पहले स्थिति रीफ़्रेश करें। इंस्टॉलर के पूरी तरह रुकने की पुष्टि होने तक रोलबैक बंद रहेगा।',
+    'Checking the updated launcher and restored settings…':
+      'अपडेट किए गए Home और बहाल सेटिंग की जाँच हो रही है…',
+    'Checking the restored launcher and saved profile…':
+      'बहाल किए गए लॉन्चर और सहेजी गई प्रोफ़ाइल की जाँच हो रही है…',
+    'Restoring previous components and saved profile…':
+      'पिछले घटक और सहेजी गई प्रोफ़ाइल बहाल हो रहे हैं…',
+    'Update state: {status}. Keep the TV powered on.':
+      'अपडेट की स्थिति: {status}। टीवी चालू रखें।',
+    'A signed system update is available.':
+      'हस्ताक्षरित सिस्टम अपडेट उपलब्ध है।',
+    'Your apps and settings stay saved.':
+      'आपके ऐप और सेटिंग्स सुरक्षित रहेंगे।',
+    'All components are up to date.': 'सभी घटक अद्यतित हैं।',
+    'A verified recovery package for this version is missing. Run the one-time computer setup.':
+      'इस संस्करण का सत्यापित रिकवरी पैकेज नहीं है। कंप्यूटर से एक बार सेटअप करें।',
+    'Update unavailable: {reason}': 'अपडेट उपलब्ध नहीं: {reason}',
+    'For regular updates, open Home settings.':
+      'नियमित अपडेट के लिए Home सेटिंग खोलें।',
+    'Recovery belongs to the other installed edition.':
+      'यह रिकवरी इंस्टॉल किए गए दूसरे संस्करण की है।',
+    'Install system update?': 'सिस्टम अपडेट इंस्टॉल करें?',
+    'Update all': 'सभी अपडेट करें',
+    'Roll back': 'पिछला संस्करण लौटाएँ',
+    'Restore previous system?': 'पिछला सिस्टम बहाल करें?',
+    'Restore all previous components and pre-update settings. Settings changed after the update will be lost. Keep the TV powered on.':
+      'सभी पिछले घटक और अपडेट से पहले की सेटिंग बहाल करें। अपडेट के बाद बदली गई सेटिंग मिट जाएँगी। टीवी चालू रखें।',
+    'Restore previous system': 'पिछला सिस्टम बहाल करें'
   },
-  "pl": {
-    "System updater removal is in progress. Continue removal from the computer.": "Trwa usuwanie aktualizatora systemu. Kontynuuj usuwanie z komputera.",
-    "Update information could not be verified.": "Nie udało się zweryfikować informacji o aktualizacji.",
-    "Could not connect to the update server. Nothing was installed.": "Nie udało się połączyć z serwerem aktualizacji. Nic nie zainstalowano.",
-    "Update information is not available yet. Nothing was installed.": "Informacje o aktualizacji nie są jeszcze dostępne. Nic nie zainstalowano.",
-    "No previous update is saved for rollback yet.": "Nie zapisano jeszcze poprzedniej aktualizacji do przywrócenia.",
-    "Update information is not available yet. Try again later.": "Informacje o aktualizacji nie są jeszcze dostępne. Spróbuj ponownie później.",
-    "Could not connect to check for updates. Check your connection and try again.": "Nie udało się połączyć, aby sprawdzić aktualizacje. Sprawdź połączenie i spróbuj ponownie.",
-    "Update information could not be verified. Nothing was installed.": "Nie udało się zweryfikować informacji o aktualizacji. Nic nie zainstalowano.",
-    "System updater operation failed. Open Recovery.": "Operacja aktualizacji systemu nie powiodła się. Otwórz odzyskiwanie.",
-    "Updater response timed out. Open Recovery to check status.": "Upłynął czas odpowiedzi aktualizatora. Otwórz odzyskiwanie, aby sprawdzić stan.",
-    "Invalid updater response. Open Recovery.": "Nieprawidłowa odpowiedź aktualizatora. Otwórz odzyskiwanie.",
-    "Home Updater": "Aktualizator Home",
-    "Root Home": "Home z rootem",
-    "Root Updater": "Aktualizator Root",
-    "Home control runtime": "Środowisko sterowania Home",
-    "Update complete. Your apps and settings are preserved.": "Aktualizacja zakończona. Aplikacje i ustawienia zostały zachowane.",
-    "Previous version and profile restored.": "Przywrócono poprzednią wersję i profil.",
-    "Update stopped before replacement. Check status before trying again.": "Aktualizacja zatrzymana przed wymianą. Sprawdź stan przed ponowną próbą.",
-    "Recovery required. Refresh status before trying again. Rollback is blocked until the installer has definitely stopped.": "Wymagane jest odzyskiwanie. Odśwież stan przed ponowną próbą. Przywracanie jest zablokowane do czasu potwierdzenia zatrzymania instalatora.",
-    "Checking the updated launcher and restored settings…": "Sprawdzanie zaktualizowanego Home i przywróconych ustawień…",
-    "Checking the restored launcher and saved profile…": "Sprawdzanie przywróconego programu uruchamiającego i zapisanego profilu…",
-    "Restoring previous components and saved profile…": "Przywracanie poprzednich składników i zapisanego profilu…",
-    "Update state: {status}. Keep the TV powered on.": "Stan aktualizacji: {status}. Pozostaw telewizor włączony.",
-    "A signed system update is available.": "Dostępna jest podpisana aktualizacja systemu.",
-    "Your apps and settings stay saved.": "Aplikacje i ustawienia zostaną zachowane.",
-    "All components are up to date.": "Wszystkie składniki są aktualne.",
-    "A verified recovery package for this version is missing. Run the one-time computer setup.": "Brakuje zweryfikowanego pakietu odzyskiwania tej wersji. Przeprowadź jednorazową konfigurację na komputerze.",
-    "Update unavailable: {reason}": "Aktualizacja niedostępna: {reason}",
-    "For regular updates, open Home settings.": "Aby wykonać zwykłą aktualizację, otwórz ustawienia Home.",
-    "Recovery belongs to the other installed edition.": "Odzyskiwanie dotyczy innej zainstalowanej edycji.",
-    "Install system update?": "Zainstalować aktualizację systemu?",
-    "Update all": "Aktualizuj wszystko",
-    "Roll back": "Przywróć poprzednią wersję",
-    "Restore previous system?": "Przywrócić poprzedni system?",
-    "Restore all previous components and pre-update settings. Settings changed after the update will be lost. Keep the TV powered on.": "Przywróć wszystkie poprzednie składniki i ustawienia sprzed aktualizacji. Późniejsze zmiany ustawień zostaną utracone. Pozostaw telewizor włączony.",
-    "Restore previous system": "Przywróć poprzedni system"
+  'pl': {
+    'System updater removal is in progress. Continue removal from the computer.':
+      'Trwa usuwanie aktualizatora systemu. Kontynuuj usuwanie z komputera.',
+    'Update information could not be verified.':
+      'Nie udało się zweryfikować informacji o aktualizacji.',
+    'Could not connect to the update server. Nothing was installed.':
+      'Nie udało się połączyć z serwerem aktualizacji. Nic nie zainstalowano.',
+    'Update information is not available yet. Nothing was installed.':
+      'Informacje o aktualizacji nie są jeszcze dostępne. Nic nie zainstalowano.',
+    'No previous update is saved for rollback yet.':
+      'Nie zapisano jeszcze poprzedniej aktualizacji do przywrócenia.',
+    'Update information is not available yet. Try again later.':
+      'Informacje o aktualizacji nie są jeszcze dostępne. Spróbuj ponownie później.',
+    'Could not connect to check for updates. Check your connection and try again.':
+      'Nie udało się połączyć, aby sprawdzić aktualizacje. Sprawdź połączenie i spróbuj ponownie.',
+    'Update information could not be verified. Nothing was installed.':
+      'Nie udało się zweryfikować informacji o aktualizacji. Nic nie zainstalowano.',
+    'System updater operation failed. Open Recovery.':
+      'Operacja aktualizacji systemu nie powiodła się. Otwórz odzyskiwanie.',
+    'Updater response timed out. Open Recovery to check status.':
+      'Upłynął czas odpowiedzi aktualizatora. Otwórz odzyskiwanie, aby sprawdzić stan.',
+    'Invalid updater response. Open Recovery.':
+      'Nieprawidłowa odpowiedź aktualizatora. Otwórz odzyskiwanie.',
+    'Home Updater': 'Aktualizator Home',
+    'Root Home': 'Home z rootem',
+    'Root Updater': 'Aktualizator Root',
+    'Home control runtime': 'Środowisko sterowania Home',
+    'Update complete. Your apps and settings are preserved.':
+      'Aktualizacja zakończona. Aplikacje i ustawienia zostały zachowane.',
+    'Previous version and profile restored.':
+      'Przywrócono poprzednią wersję i profil.',
+    'Update stopped before replacement. Check status before trying again.':
+      'Aktualizacja zatrzymana przed wymianą. Sprawdź stan przed ponowną próbą.',
+    'Recovery required. Refresh status before trying again. Rollback is blocked until the installer has definitely stopped.':
+      'Wymagane jest odzyskiwanie. Odśwież stan przed ponowną próbą. Przywracanie jest zablokowane do czasu potwierdzenia zatrzymania instalatora.',
+    'Checking the updated launcher and restored settings…':
+      'Sprawdzanie zaktualizowanego Home i przywróconych ustawień…',
+    'Checking the restored launcher and saved profile…':
+      'Sprawdzanie przywróconego programu uruchamiającego i zapisanego profilu…',
+    'Restoring previous components and saved profile…':
+      'Przywracanie poprzednich składników i zapisanego profilu…',
+    'Update state: {status}. Keep the TV powered on.':
+      'Stan aktualizacji: {status}. Pozostaw telewizor włączony.',
+    'A signed system update is available.':
+      'Dostępna jest podpisana aktualizacja systemu.',
+    'Your apps and settings stay saved.':
+      'Aplikacje i ustawienia zostaną zachowane.',
+    'All components are up to date.': 'Wszystkie składniki są aktualne.',
+    'A verified recovery package for this version is missing. Run the one-time computer setup.':
+      'Brakuje zweryfikowanego pakietu odzyskiwania tej wersji. Przeprowadź jednorazową konfigurację na komputerze.',
+    'Update unavailable: {reason}': 'Aktualizacja niedostępna: {reason}',
+    'For regular updates, open Home settings.':
+      'Aby wykonać zwykłą aktualizację, otwórz ustawienia Home.',
+    'Recovery belongs to the other installed edition.':
+      'Odzyskiwanie dotyczy innej zainstalowanej edycji.',
+    'Install system update?': 'Zainstalować aktualizację systemu?',
+    'Update all': 'Aktualizuj wszystko',
+    'Roll back': 'Przywróć poprzednią wersję',
+    'Restore previous system?': 'Przywrócić poprzedni system?',
+    'Restore all previous components and pre-update settings. Settings changed after the update will be lost. Keep the TV powered on.':
+      'Przywróć wszystkie poprzednie składniki i ustawienia sprzed aktualizacji. Późniejsze zmiany ustawień zostaną utracone. Pozostaw telewizor włączony.',
+    'Restore previous system': 'Przywróć poprzedni system'
   },
-  "ru": {
-    "System updater removal is in progress. Continue removal from the computer.": "Выполняется удаление средства обновления системы. Продолжите удаление с компьютера.",
-    "Update information could not be verified.": "Не удалось проверить информацию об обновлении.",
-    "Could not connect to the update server. Nothing was installed.": "Не удалось подключиться к серверу обновлений. Ничего не установлено.",
-    "Update information is not available yet. Nothing was installed.": "Информация об обновлении пока недоступна. Ничего не установлено.",
-    "No previous update is saved for rollback yet.": "Предыдущее обновление для отката пока не сохранено.",
-    "Update information is not available yet. Try again later.": "Информация об обновлении пока недоступна. Попробуйте позже.",
-    "Could not connect to check for updates. Check your connection and try again.": "Не удалось подключиться для проверки обновлений. Проверьте соединение и повторите попытку.",
-    "Update information could not be verified. Nothing was installed.": "Не удалось проверить информацию об обновлении. Ничего не установлено.",
-    "System updater operation failed. Open Recovery.": "Не удалось выполнить операцию системного обновления. Откройте восстановление.",
-    "Updater response timed out. Open Recovery to check status.": "Истекло время ответа службы обновлений. Откройте восстановление для проверки состояния.",
-    "Invalid updater response. Open Recovery.": "Некорректный ответ службы обновлений. Откройте восстановление.",
-    "Home Updater": "Обновление Home",
-    "Root Home": "Home с root",
-    "Root Updater": "Обновление Root",
-    "Home control runtime": "Среда управления Home",
-    "Update complete. Your apps and settings are preserved.": "Обновление завершено. Приложения и настройки сохранены.",
-    "Previous version and profile restored.": "Предыдущая версия и профиль восстановлены.",
-    "Update stopped before replacement. Check status before trying again.": "Обновление остановлено до замены. Перед повтором проверьте состояние.",
-    "Recovery required. Refresh status before trying again. Rollback is blocked until the installer has definitely stopped.": "Требуется восстановление. Сначала обновите состояние. Откат заблокирован, пока установка не завершится с подтверждённым результатом.",
-    "Checking the updated launcher and restored settings…": "Проверяем обновлённый Home и восстановленные настройки…",
-    "Checking the restored launcher and saved profile…": "Проверяем восстановленный Home и сохранённый профиль…",
-    "Restoring previous components and saved profile…": "Восстанавливаем предыдущие компоненты и сохранённый профиль…",
-    "Update state: {status}. Keep the TV powered on.": "Состояние обновления: {status}. Не выключайте телевизор.",
-    "A signed system update is available.": "Доступно подписанное системное обновление.",
-    "Your apps and settings stay saved.": "Приложения и настройки сохранятся.",
-    "All components are up to date.": "Все компоненты обновлены.",
-    "A verified recovery package for this version is missing. Run the one-time computer setup.": "Нет проверенного пакета восстановления для этой версии. Выполните однократную настройку с компьютера.",
-    "Update unavailable: {reason}": "Обновление недоступно: {reason}",
-    "For regular updates, open Home settings.": "Обычные обновления доступны в настройках Home.",
-    "Recovery belongs to the other installed edition.": "Восстановление относится к другой установленной редакции.",
-    "Install system update?": "Установить системное обновление?",
-    "Update all": "Обновить всё",
-    "Roll back": "Вернуть прошлую версию",
-    "Restore previous system?": "Восстановить предыдущую систему?",
-    "Restore all previous components and pre-update settings. Settings changed after the update will be lost. Keep the TV powered on.": "Восстановить все предыдущие компоненты и настройки до обновления. Изменения настроек после обновления будут потеряны. Не выключайте телевизор.",
-    "Restore previous system": "Восстановить предыдущую систему"
+  'ru': {
+    'System updater removal is in progress. Continue removal from the computer.':
+      'Выполняется удаление средства обновления системы. Продолжите удаление с компьютера.',
+    'Update information could not be verified.':
+      'Не удалось проверить информацию об обновлении.',
+    'Could not connect to the update server. Nothing was installed.':
+      'Не удалось подключиться к серверу обновлений. Ничего не установлено.',
+    'Update information is not available yet. Nothing was installed.':
+      'Информация об обновлении пока недоступна. Ничего не установлено.',
+    'No previous update is saved for rollback yet.':
+      'Предыдущее обновление для отката пока не сохранено.',
+    'Update information is not available yet. Try again later.':
+      'Информация об обновлении пока недоступна. Попробуйте позже.',
+    'Could not connect to check for updates. Check your connection and try again.':
+      'Не удалось подключиться для проверки обновлений. Проверьте соединение и повторите попытку.',
+    'Update information could not be verified. Nothing was installed.':
+      'Не удалось проверить информацию об обновлении. Ничего не установлено.',
+    'System updater operation failed. Open Recovery.':
+      'Не удалось выполнить операцию системного обновления. Откройте восстановление.',
+    'Updater response timed out. Open Recovery to check status.':
+      'Истекло время ответа службы обновлений. Откройте восстановление для проверки состояния.',
+    'Invalid updater response. Open Recovery.':
+      'Некорректный ответ службы обновлений. Откройте восстановление.',
+    'Home Updater': 'Обновление Home',
+    'Root Home': 'Home с root',
+    'Root Updater': 'Обновление Root',
+    'Home control runtime': 'Среда управления Home',
+    'Update complete. Your apps and settings are preserved.':
+      'Обновление завершено. Приложения и настройки сохранены.',
+    'Previous version and profile restored.':
+      'Предыдущая версия и профиль восстановлены.',
+    'Update stopped before replacement. Check status before trying again.':
+      'Обновление остановлено до замены. Перед повтором проверьте состояние.',
+    'Recovery required. Refresh status before trying again. Rollback is blocked until the installer has definitely stopped.':
+      'Требуется восстановление. Сначала обновите состояние. Откат заблокирован, пока установка не завершится с подтверждённым результатом.',
+    'Checking the updated launcher and restored settings…':
+      'Проверяем обновлённый Home и восстановленные настройки…',
+    'Checking the restored launcher and saved profile…':
+      'Проверяем восстановленный Home и сохранённый профиль…',
+    'Restoring previous components and saved profile…':
+      'Восстанавливаем предыдущие компоненты и сохранённый профиль…',
+    'Update state: {status}. Keep the TV powered on.':
+      'Состояние обновления: {status}. Не выключайте телевизор.',
+    'A signed system update is available.':
+      'Доступно подписанное системное обновление.',
+    'Your apps and settings stay saved.': 'Приложения и настройки сохранятся.',
+    'All components are up to date.': 'Все компоненты обновлены.',
+    'A verified recovery package for this version is missing. Run the one-time computer setup.':
+      'Нет проверенного пакета восстановления для этой версии. Выполните однократную настройку с компьютера.',
+    'Update unavailable: {reason}': 'Обновление недоступно: {reason}',
+    'For regular updates, open Home settings.':
+      'Обычные обновления доступны в настройках Home.',
+    'Recovery belongs to the other installed edition.':
+      'Восстановление относится к другой установленной редакции.',
+    'Install system update?': 'Установить системное обновление?',
+    'Update all': 'Обновить всё',
+    'Roll back': 'Вернуть прошлую версию',
+    'Restore previous system?': 'Восстановить предыдущую систему?',
+    'Restore all previous components and pre-update settings. Settings changed after the update will be lost. Keep the TV powered on.':
+      'Восстановить все предыдущие компоненты и настройки до обновления. Изменения настроек после обновления будут потеряны. Не выключайте телевизор.',
+    'Restore previous system': 'Восстановить предыдущую систему'
   }
 });
 HomeI18n.add({
-  "en": {
-    "Helper status could not be checked on this TV. Start Helper only when you are ready to use Home control again.": "Helper status could not be checked on this TV. Start Helper only when you are ready to use Home control again."
+  'en': {
+    'Helper status could not be checked on this TV. Start Helper only when you are ready to use Home control again.':
+      'Helper status could not be checked on this TV. Start Helper only when you are ready to use Home control again.'
   },
-  "de": {
-    "Helper status could not be checked on this TV. Start Helper only when you are ready to use Home control again.": "Der Helper-Status konnte auf diesem Fernseher nicht geprüft werden. Starten Sie Helper erst, wenn Sie die Home-Steuerung wieder verwenden möchten."
+  'de': {
+    'Helper status could not be checked on this TV. Start Helper only when you are ready to use Home control again.':
+      'Der Helper-Status konnte auf diesem Fernseher nicht geprüft werden. Starten Sie Helper erst, wenn Sie die Home-Steuerung wieder verwenden möchten.'
   },
-  "es": {
-    "Helper status could not be checked on this TV. Start Helper only when you are ready to use Home control again.": "No se pudo comprobar el estado de Helper en este televisor. Inicia Helper solo cuando quieras volver a usar el control de Home."
+  'es': {
+    'Helper status could not be checked on this TV. Start Helper only when you are ready to use Home control again.':
+      'No se pudo comprobar el estado de Helper en este televisor. Inicia Helper solo cuando quieras volver a usar el control de Home.'
   },
-  "pt-BR": {
-    "Helper status could not be checked on this TV. Start Helper only when you are ready to use Home control again.": "Não foi possível verificar o estado do Helper nesta TV. Inicie o Helper somente quando quiser usar o controle de Home novamente."
+  'pt-BR': {
+    'Helper status could not be checked on this TV. Start Helper only when you are ready to use Home control again.':
+      'Não foi possível verificar o estado do Helper nesta TV. Inicie o Helper somente quando quiser usar o controle de Home novamente.'
   },
-  "fr": {
-    "Helper status could not be checked on this TV. Start Helper only when you are ready to use Home control again.": "Impossible de vérifier l’état de Helper sur ce téléviseur. Démarrez Helper uniquement lorsque vous souhaitez réutiliser le contrôle de Home."
+  'fr': {
+    'Helper status could not be checked on this TV. Start Helper only when you are ready to use Home control again.':
+      'Impossible de vérifier l’état de Helper sur ce téléviseur. Démarrez Helper uniquement lorsque vous souhaitez réutiliser le contrôle de Home.'
   },
-  "it": {
-    "Helper status could not be checked on this TV. Start Helper only when you are ready to use Home control again.": "Non è stato possibile verificare lo stato di Helper su questa TV. Avvia Helper solo quando vuoi usare di nuovo il controllo di Home."
+  'it': {
+    'Helper status could not be checked on this TV. Start Helper only when you are ready to use Home control again.':
+      'Non è stato possibile verificare lo stato di Helper su questa TV. Avvia Helper solo quando vuoi usare di nuovo il controllo di Home.'
   },
-  "ko": {
-    "Helper status could not be checked on this TV. Start Helper only when you are ready to use Home control again.": "이 TV에서 Helper 상태를 확인할 수 없습니다. Home 제어를 다시 사용할 준비가 되었을 때만 Helper를 시작하세요."
+  'ko': {
+    'Helper status could not be checked on this TV. Start Helper only when you are ready to use Home control again.':
+      '이 TV에서 Helper 상태를 확인할 수 없습니다. Home 제어를 다시 사용할 준비가 되었을 때만 Helper를 시작하세요.'
   },
-  "hi": {
-    "Helper status could not be checked on this TV. Start Helper only when you are ready to use Home control again.": "इस टीवी पर Helper की स्थिति की जाँच नहीं हो सकी। Home नियंत्रण फिर से इस्तेमाल करने के लिए तैयार होने पर ही Helper शुरू करें।"
+  'hi': {
+    'Helper status could not be checked on this TV. Start Helper only when you are ready to use Home control again.':
+      'इस टीवी पर Helper की स्थिति की जाँच नहीं हो सकी। Home नियंत्रण फिर से इस्तेमाल करने के लिए तैयार होने पर ही Helper शुरू करें।'
   },
-  "pl": {
-    "Helper status could not be checked on this TV. Start Helper only when you are ready to use Home control again.": "Nie udało się sprawdzić stanu Helper na tym telewizorze. Uruchom Helper dopiero, gdy zechcesz ponownie korzystać ze sterowania Home."
+  'pl': {
+    'Helper status could not be checked on this TV. Start Helper only when you are ready to use Home control again.':
+      'Nie udało się sprawdzić stanu Helper na tym telewizorze. Uruchom Helper dopiero, gdy zechcesz ponownie korzystać ze sterowania Home.'
   },
-  "ru": {
-    "Helper status could not be checked on this TV. Start Helper only when you are ready to use Home control again.": "Не удалось проверить состояние Helper на этом телевизоре. Запускайте Helper, только когда будете готовы снова использовать управление Home."
-  }
-});
-
-HomeI18n.add({
-  "zh-Hans": {
-    "A signed Home update is available.": "有可用的已签名 Home 更新。",
-    "Add app": "添加应用",
-    "All installed apps are already on Home.": "所有已安装的应用都已在 Home 中。",
-    "App hidden. Restore it with Add app.": "应用已隐藏。可通过“添加应用”恢复。",
-    "Auto-renewal enabled (Beta)": "自动续期已开启（Beta）",
-    "Auto-renewal off": "自动续期已关闭",
-    "Automatic (system language)": "自动（系统语言）",
-    "Back": "返回",
-    "Back to Home": "返回 Home",
-    "Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.": "Beta：尚未在无 root 权限的电视上验证续期功能。请继续检查 Developer Mode 应用中的倒计时。",
-    "Can't open {app}": "无法打开 {app}",
-    "Change Home": "更改 Home",
-    "Change was not confirmed. Check the switch and try again.": "未能确认更改。请检查开关后重试。",
-    "Changing Home control…": "正在更改 Home 控制…",
-    "Check failed": "检查失败",
-    "Check pending": "等待检查",
-    "Check session": "检查会话",
-    "Checking Home control…": "正在检查 Home 控制…",
-    "Checking auto-renewal…": "正在检查自动续期…",
-    "Checking for updates…": "正在检查更新…",
-    "Checking installed apps…": "正在检查已安装的应用…",
-    "Choose a language. Home will reload.": "请选择语言。Home 将重新加载。",
-    "Choose an app to add to Home.": "选择要添加到 Home 的应用。",
-    "Choose where Home and return from apps take you.": "选择按 Home 键或从应用返回时打开的主屏幕。",
-    "Confirm update": "确认更新",
-    "Connection failed — retry scheduled": "连接失败，已安排重试",
-    "Could not open LG Home. Check Home Helper and try again.": "无法打开 LG Home。请检查 Home Helper 后重试。",
-    "Could not save language. Please try again.": "无法保存语言。请重试。",
-    "Could not save state": "无法保存状态",
-    "Could not save your complete profile. Nothing was installed.": "无法保存完整配置。未安装任何内容。",
-    "Couldn't restore app. Please try again.": "无法恢复应用。请重试。",
-    "Couldn't save changes. Please try again.": "无法保存更改。请重试。",
-    "Developer Mode auto-renewal (Beta)": "Developer Mode 自动续期（Beta）",
-    "Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.": "Developer Mode 可让 Home 保持安装状态。自动续期会在电视开机并联网时尝试延长会话。",
-    "Disable could not be saved. Retry before restarting the service.": "无法保存关闭设置。请在重启服务前重试。",
-    "Ethernet": "以太网",
-    "Good afternoon": "下午好",
-    "Good evening": "晚上好",
-    "Good morning": "早上好",
-    "Good night": "晚安",
-    "Hide diagnostics": "隐藏诊断信息",
-    "Hide from Home": "从 Home 隐藏",
-    "Hold Back for 1.2 seconds to open LG Home. Your settings stay saved.": "按住返回键 1.2 秒可打开 LG Home。您的设置将保留。",
-    "Home": "Home",
-    "Home status is unknown. The Home button may still work.": "Home 状态未知。Home 键可能仍可使用。",
-    "Home and return from apps open Clean Your TV.": "按 Home 键或从应用返回时打开 Clean Your TV。",
-    "Home and return from apps open LG Home.": "按 Home 键或从应用返回时打开 LG Home。",
-    "Home is up to date.": "Home 已是最新版本。",
-    "Home settings": "Home 设置",
-    "Home will close during installation. Your app list and settings will be saved first. Press Confirm update to continue.": "安装期间 Home 将关闭。应用列表和设置将先行保存。按“确认更新”继续。",
-    "Inputs": "输入源",
-    "Installed Home {installed} · Available {available}": "已安装 Home {installed} · 可用版本 {available}",
-    "Installing Home… Keep the TV on. If this screen closes, open Home again or use Home Updater for recovery.": "正在安装 Home… 请保持电视开机。如果此屏幕关闭，请重新打开 Home，或使用 Home Updater 恢复。",
-    "LG response could not confirm renewal": "LG 的响应未能确认续期",
-    "Language": "语言",
-    "Last checked: {date}": "上次检查：{date}",
-    "Last confirmed renewal: {date}": "上次确认续期：{date}",
-    "Live TV": "电视直播",
-    "Manage Home, software updates and your TV.": "管理 Home、软件更新和电视设置。",
-    "Network settings": "网络设置",
-    "No inputs found": "未找到输入源",
-    "No readable Developer Mode session": "无法读取 Developer Mode 会话",
-    "No recovery result available. Your helper has not been changed.": "没有可用的恢复结果。Helper 未被更改。",
-    "Not yet": "暂不",
-    "Offline": "离线",
-    "Open LG Home": "打开 LG Home",
-    "This button opens LG Home once. Your Home screen choice and settings stay saved.": "此按钮仅打开 LG Home 一次。您选择的 Home 主屏幕和设置将保留。",
-    "Recovery": "恢复",
-    "Recovery state: {status}. Use Home Updater to restore the previous version if offered.": "恢复状态：{status}。如果 Home Updater 提供恢复选项，可用它恢复上一版本。",
-    "Renewal confirmed": "已确认续期",
-    "Saving apps, icons and settings…": "正在保存应用、图标和设置…",
-    "Service unavailable. Install the complete Home package and try again. Manage your Developer Mode timer manually.": "服务不可用。请安装完整的 Home 软件包后重试，并手动管理 Developer Mode 倒计时。",
-    "Session changed — retry scheduled": "会话已更改，已安排重试",
-    "Session checked": "会话已检查",
-    "Session expired — open Developer Mode": "会话已过期，请打开 Developer Mode",
-    "Settings": "设置",
-    "Setup error: {error}. Use Developer Mode manually.": "设置出错：{error}。请手动使用 Developer Mode。",
-    "Share this with your TV model and firmware at:": "请将此信息与电视型号及固件版本一并提交至：",
-    "Show diagnostics": "显示诊断信息",
-    "Showing the saved list. Could not refresh apps from the TV.": "正在显示已保存的列表。无法从电视刷新应用列表。",
-    "Software updates": "软件更新",
-    "TV settings": "电视设置",
-    "Try again": "重试",
-    "Turn off auto-renewal": "关闭自动续期",
-    "Turn on auto-renewal": "开启自动续期",
-    "Undo": "撤销",
-    "Update Home": "更新 Home",
-    "Update Home Helper using the installation guide first.": "请先按照安装指南更新 Home Helper。",
-    "Update Home or open LG settings for picture, sound and network.": "更新 Home，或打开 LG 设置调整画面、声音和网络。",
-    "Update available, but a verified recovery package for your installed version is missing.": "有可用更新，但缺少当前已安装版本的已验证恢复包。",
-    "Update available. Without root, install it from a computer using the guide.": "有可用更新。无 root 权限时，请按照指南从电脑安装。",
-    "Update outcome is not confirmed. Open Home Updater → Recovery before retrying.": "更新结果尚未确认。请先打开 Home Updater → 恢复，再重试。",
-    "Update service or signed release unavailable. Install the separate Home Updater package once, then retry. Your current Home is unchanged.": "更新服务或已签名版本不可用。请先安装独立的 Home Updater 软件包，再重试。当前 Home 未被更改。",
-    "Update state: {status}. Reopen Home when installation finishes.": "更新状态：{status}。安装完成后请重新打开 Home。",
-    "Updates and TV": "更新与电视",
-    "Working…": "正在处理…",
-    "Your Home screen": "您的 Home 主屏幕",
-    "Your installed Home is newer than this release.": "已安装的 Home 比此发布版本更新。",
-    "{app} added": "已添加 {app}",
-    "{hours} hours remaining (estimate)": "预计剩余 {hours} 小时",
-    "← ↑ ↓ → Move   ·   OK Place   ·   Back Cancel   ·   ↓ Below last row to hide": "← ↑ ↓ → 移动   ·   OK 放置   ·   返回 取消   ·   ↓ 移至最后一行下方可隐藏",
-    "No-root Edition": "No-root 版",
-    "Cancel": "取消",
-    "Install Home update?": "安装 Home 更新？",
-    "Restore previous Home?": "恢复上一版本的 Home？",
-    "Home will close during installation. Your apps and settings will be saved.": "安装期间 Home 将关闭。应用和设置将被保存。",
-    "The previous Home version and saved settings will be restored.": "将恢复上一版本的 Home 及已保存的设置。",
-    "Install update": "安装更新",
-    "Restore previous Home": "恢复上一版本的 Home",
-    "Release notes": "版本说明",
-    "↑ ↓ Read notes · ← → Choose action · Back Close": "↑ ↓ 阅读说明 · ← → 选择操作 · 返回 关闭",
-    "← → Choose action · Back Open Home": "← → 选择操作 · 返回 打开 Home",
-    "Home control could not be restored automatically. Open Home settings.": "无法自动恢复 Home 控制。请打开 Home 设置。",
-    "Your previous Home screen choice has been restored.": "已恢复之前选择的 Home 主屏幕。",
-    "Home control remains off because it was disabled during the update.": "Home 控制在更新期间被关闭，因此仍保持关闭。",
-    "Rollback remains available until the next update.": "下次更新前均可回退。",
-    "Previous Root version and profile restored.": "已恢复上一版本的 Root 及配置。",
-    "Installed: {version}": "已安装：{version}",
-    "Available: {version}": "可用版本：{version}",
-    "Software updates. Update available.": "软件更新。有可用更新。",
-    "Open LG Home once, keeping your Home choice.": "打开 LG Home 一次，并保留您选择的 Home。",
-    "Hold Back for 1.2 seconds to open LG Home.": "按住返回键 1.2 秒可打开 LG Home。",
-    "Developer Mode": "Developer Mode",
-    "Beta": "Beta",
-    "Home Helper": "Home Helper",
-    "Home button settings": "Home 键设置",
-    "Start Helper": "启动 Helper",
-    "Start Helper?": "启动 Helper？",
-    "Starting Helper…": "正在启动 Helper…",
-    "Helper opens Home with your remote and helps you return to Home after turning on the TV.": "Helper 可让您用遥控器打开 Home，并帮助您在电视开机后返回 Home。",
-    "Helper is unavailable. Reinstall the complete Home package from your computer.": "Helper 不可用。请从电脑重新安装完整的 Home 软件包。",
-    "Helper was stopped for safety. Start it only when you are ready to use Home control again.": "Helper 已因安全原因停止。请在准备好再次使用 Home 控制时再启动。",
-    "Helper is stopped. Start it to use the Home button and return from apps.": "Helper 已停止。启动后可使用 Home 键并从应用返回。",
-    "Start Helper to use Home control again. Your saved Home screen choice will be used.": "启动 Helper 以再次使用 Home 控制。将使用您保存的 Home 主屏幕选择。",
-    "Status is unavailable.": "无法获取状态。",
-    "Try refreshing. If this continues, reinstall the complete Home package from your computer.": "请尝试刷新。如果问题持续，请从电脑重新安装完整的 Home 软件包。",
-    "No recovery needed.": "无需恢复。",
-    "Open Home to continue.": "打开 Home 以继续。",
-    "Open Home to continue. If the update caused a problem, you can restore the previous version.": "打开 Home 以继续。如果更新导致问题，可以恢复上一版本。",
-    "Recovery needs attention.": "恢复需要处理。",
-    "Refresh status first. If recovery remains unavailable, use the installer on your computer.": "请先刷新状态。如果恢复功能仍不可用，请使用电脑上的安装程序。",
-    "An update is in progress.": "正在更新。",
-    "Keep the TV powered on. Status will refresh automatically.": "请保持电视开机。状态将自动刷新。",
-    "Could not open Home.": "无法打开 Home。",
-    "If Home stops working after an update, use this app to restore the previous version. For regular updates, open Home settings.": "如果更新后 Home 无法正常运行，可用此应用恢复上一版本。常规更新请打开 Home 设置。",
-    "Open Home": "打开 Home",
-    "Refresh status": "刷新状态",
-    "System updater removal is in progress. Continue removal from the computer.": "正在移除系统更新程序。请从电脑继续移除。",
-    "Update information could not be verified.": "无法验证更新信息。",
-    "Could not connect to the update server. Nothing was installed.": "无法连接更新服务器。未安装任何内容。",
-    "Update information is not available yet. Nothing was installed.": "更新信息暂不可用。未安装任何内容。",
-    "No previous update is saved for rollback yet.": "尚未保存可供回退的上一次更新。",
-    "Update information is not available yet. Try again later.": "更新信息暂不可用。请稍后重试。",
-    "Could not connect to check for updates. Check your connection and try again.": "无法连接以检查更新。请检查网络连接后重试。",
-    "Update information could not be verified. Nothing was installed.": "无法验证更新信息。未安装任何内容。",
-    "System updater operation failed. Open Recovery.": "系统更新程序操作失败。请打开恢复。",
-    "Updater response timed out. Open Recovery to check status.": "更新程序响应超时。请打开恢复以检查状态。",
-    "Invalid updater response. Open Recovery.": "更新程序响应无效。请打开恢复。",
-    "Home Updater": "Home Updater",
-    "Root Home": "Root Home",
-    "Root Updater": "Root Updater",
-    "Home control runtime": "Home 控制运行时",
-    "Update complete. Your apps and settings are preserved.": "更新完成。应用和设置已保留。",
-    "Previous version and profile restored.": "已恢复上一版本及配置。",
-    "Update stopped before replacement. Check status before trying again.": "更新在替换前已停止。请先检查状态，再重试。",
-    "Recovery required. Refresh status before trying again. Rollback is blocked until the installer has definitely stopped.": "需要恢复。请先刷新状态，再重试。在确认安装程序已停止前，无法回退。",
-    "Checking the updated launcher and restored settings…": "正在检查更新后的启动器和已恢复的设置…",
-    "Checking the restored launcher and saved profile…": "正在检查已恢复的启动器和已保存的配置…",
-    "Restoring previous components and saved profile…": "正在恢复之前的组件和已保存的配置…",
-    "Update state: {status}. Keep the TV powered on.": "更新状态：{status}。请保持电视开机。",
-    "A signed system update is available.": "有可用的已签名系统更新。",
-    "Your apps and settings stay saved.": "应用和设置将保留。",
-    "All components are up to date.": "所有组件均为最新版本。",
-    "A verified recovery package for this version is missing. Run the one-time computer setup.": "缺少此版本的已验证恢复包。请在电脑上完成一次性设置。",
-    "Update unavailable: {reason}": "更新不可用：{reason}",
-    "For regular updates, open Home settings.": "常规更新请打开 Home 设置。",
-    "Recovery belongs to the other installed edition.": "恢复记录属于另一个已安装的版本类型。",
-    "Install system update?": "安装系统更新？",
-    "Update all": "全部更新",
-    "Roll back": "回退",
-    "Restore previous system?": "恢复之前的系统？",
-    "Restore all previous components and pre-update settings. Settings changed after the update will be lost. Keep the TV powered on.": "恢复所有之前的组件及更新前的设置。更新后更改的设置将丢失。请保持电视开机。",
-    "Restore previous system": "恢复之前的系统",
-    "Helper status could not be checked on this TV. Start Helper only when you are ready to use Home control again.": "无法在此电视上检查 Helper 状态。请在准备好再次使用 Home 控制时再启动 Helper。"
-  },
-  "zh-Hant": {
-    "A signed Home update is available.": "有可用的已簽署 Home 更新。",
-    "Add app": "新增應用程式",
-    "All installed apps are already on Home.": "所有已安裝的應用程式都已在 Home 中。",
-    "App hidden. Restore it with Add app.": "應用程式已隱藏。可透過「新增應用程式」恢復。",
-    "Auto-renewal enabled (Beta)": "自動續期已開啟（Beta）",
-    "Auto-renewal off": "自動續期已關閉",
-    "Automatic (system language)": "自動（系統語言）",
-    "Back": "返回",
-    "Back to Home": "返回 Home",
-    "Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.": "Beta：尚未在無 root 權限的電視上驗證續期功能。請持續檢查 Developer Mode 應用程式中的倒數計時。",
-    "Can't open {app}": "無法開啟 {app}",
-    "Change Home": "變更 Home",
-    "Change was not confirmed. Check the switch and try again.": "未能確認變更。請檢查開關後再試。",
-    "Changing Home control…": "正在變更 Home 控制…",
-    "Check failed": "檢查失敗",
-    "Check pending": "等待檢查",
-    "Check session": "檢查工作階段",
-    "Checking Home control…": "正在檢查 Home 控制…",
-    "Checking auto-renewal…": "正在檢查自動續期…",
-    "Checking for updates…": "正在檢查更新…",
-    "Checking installed apps…": "正在檢查已安裝的應用程式…",
-    "Choose a language. Home will reload.": "請選擇語言。Home 將重新載入。",
-    "Choose an app to add to Home.": "選擇要新增至 Home 的應用程式。",
-    "Choose where Home and return from apps take you.": "選擇按 Home 鍵或從應用程式返回時開啟的主畫面。",
-    "Confirm update": "確認更新",
-    "Connection failed — retry scheduled": "連線失敗，已安排重試",
-    "Could not open LG Home. Check Home Helper and try again.": "無法開啟 LG Home。請檢查 Home Helper 後再試。",
-    "Could not save language. Please try again.": "無法儲存語言。請再試一次。",
-    "Could not save state": "無法儲存狀態",
-    "Could not save your complete profile. Nothing was installed.": "無法儲存完整設定檔。未安裝任何內容。",
-    "Couldn't restore app. Please try again.": "無法還原應用程式。請再試一次。",
-    "Couldn't save changes. Please try again.": "無法儲存變更。請再試一次。",
-    "Developer Mode auto-renewal (Beta)": "Developer Mode 自動續期（Beta）",
-    "Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.": "Developer Mode 可讓 Home 保持安裝狀態。自動續期會在電視開機並連網時嘗試延長工作階段。",
-    "Disable could not be saved. Retry before restarting the service.": "無法儲存關閉設定。請在重新啟動服務前再試。",
-    "Ethernet": "乙太網路",
-    "Good afternoon": "午安",
-    "Good evening": "晚上好",
-    "Good morning": "早安",
-    "Good night": "晚安",
-    "Hide diagnostics": "隱藏診斷資訊",
-    "Hide from Home": "從 Home 隱藏",
-    "Hold Back for 1.2 seconds to open LG Home. Your settings stay saved.": "按住返回鍵 1.2 秒可開啟 LG Home。您的設定將保留。",
-    "Home": "Home",
-    "Home status is unknown. The Home button may still work.": "Home 狀態未知。Home 鍵可能仍可使用。",
-    "Home and return from apps open Clean Your TV.": "按 Home 鍵或從應用程式返回時開啟 Clean Your TV。",
-    "Home and return from apps open LG Home.": "按 Home 鍵或從應用程式返回時開啟 LG Home。",
-    "Home is up to date.": "Home 已是最新版本。",
-    "Home settings": "Home 設定",
-    "Home will close during installation. Your app list and settings will be saved first. Press Confirm update to continue.": "安裝期間 Home 將關閉。應用程式清單和設定會先儲存。按「確認更新」繼續。",
-    "Inputs": "輸入來源",
-    "Installed Home {installed} · Available {available}": "已安裝 Home {installed} · 可用版本 {available}",
-    "Installing Home… Keep the TV on. If this screen closes, open Home again or use Home Updater for recovery.": "正在安裝 Home… 請保持電視開機。如果此畫面關閉，請重新開啟 Home，或使用 Home Updater 還原。",
-    "LG response could not confirm renewal": "LG 的回應未能確認續期",
-    "Language": "語言",
-    "Last checked: {date}": "上次檢查：{date}",
-    "Last confirmed renewal: {date}": "上次確認續期：{date}",
-    "Live TV": "電視直播",
-    "Manage Home, software updates and your TV.": "管理 Home、軟體更新和電視設定。",
-    "Network settings": "網路設定",
-    "No inputs found": "找不到輸入來源",
-    "No readable Developer Mode session": "無法讀取 Developer Mode 工作階段",
-    "No recovery result available. Your helper has not been changed.": "沒有可用的還原結果。Helper 未被變更。",
-    "Not yet": "暫時不要",
-    "Offline": "離線",
-    "Open LG Home": "開啟 LG Home",
-    "This button opens LG Home once. Your Home screen choice and settings stay saved.": "此按鈕僅開啟 LG Home 一次。您選擇的 Home 主畫面和設定將保留。",
-    "Recovery": "還原",
-    "Recovery state: {status}. Use Home Updater to restore the previous version if offered.": "還原狀態：{status}。如果 Home Updater 提供還原選項，可用它還原上一版本。",
-    "Renewal confirmed": "已確認續期",
-    "Saving apps, icons and settings…": "正在儲存應用程式、圖示和設定…",
-    "Service unavailable. Install the complete Home package and try again. Manage your Developer Mode timer manually.": "服務無法使用。請安裝完整的 Home 套件後再試，並手動管理 Developer Mode 倒數計時。",
-    "Session changed — retry scheduled": "工作階段已變更，已安排重試",
-    "Session checked": "工作階段已檢查",
-    "Session expired — open Developer Mode": "工作階段已到期，請開啟 Developer Mode",
-    "Settings": "設定",
-    "Setup error: {error}. Use Developer Mode manually.": "設定出錯：{error}。請手動使用 Developer Mode。",
-    "Share this with your TV model and firmware at:": "請將此資訊連同電視型號及韌體版本一併提交至：",
-    "Show diagnostics": "顯示診斷資訊",
-    "Showing the saved list. Could not refresh apps from the TV.": "正在顯示已儲存的清單。無法從電視重新整理應用程式清單。",
-    "Software updates": "軟體更新",
-    "TV settings": "電視設定",
-    "Try again": "再試一次",
-    "Turn off auto-renewal": "關閉自動續期",
-    "Turn on auto-renewal": "開啟自動續期",
-    "Undo": "復原",
-    "Update Home": "更新 Home",
-    "Update Home Helper using the installation guide first.": "請先按照安裝指南更新 Home Helper。",
-    "Update Home or open LG settings for picture, sound and network.": "更新 Home，或開啟 LG 設定調整畫面、聲音和網路。",
-    "Update available, but a verified recovery package for your installed version is missing.": "有可用更新，但缺少目前已安裝版本的已驗證還原套件。",
-    "Update available. Without root, install it from a computer using the guide.": "有可用更新。無 root 權限時，請按照指南從電腦安裝。",
-    "Update outcome is not confirmed. Open Home Updater → Recovery before retrying.": "更新結果尚未確認。請先開啟 Home Updater → 還原，再重試。",
-    "Update service or signed release unavailable. Install the separate Home Updater package once, then retry. Your current Home is unchanged.": "更新服務或已簽署版本無法使用。請先安裝獨立的 Home Updater 套件，再重試。目前的 Home 未被變更。",
-    "Update state: {status}. Reopen Home when installation finishes.": "更新狀態：{status}。安裝完成後請重新開啟 Home。",
-    "Updates and TV": "更新與電視",
-    "Working…": "正在處理…",
-    "Your Home screen": "您的 Home 主畫面",
-    "Your installed Home is newer than this release.": "已安裝的 Home 比此發行版本更新。",
-    "{app} added": "已新增 {app}",
-    "{hours} hours remaining (estimate)": "預估剩餘 {hours} 小時",
-    "← ↑ ↓ → Move   ·   OK Place   ·   Back Cancel   ·   ↓ Below last row to hide": "← ↑ ↓ → 移動   ·   OK 放置   ·   返回 取消   ·   ↓ 移至最後一列下方可隱藏",
-    "No-root Edition": "No-root 版",
-    "Cancel": "取消",
-    "Install Home update?": "安裝 Home 更新？",
-    "Restore previous Home?": "還原上一版本的 Home？",
-    "Home will close during installation. Your apps and settings will be saved.": "安裝期間 Home 將關閉。應用程式和設定將被儲存。",
-    "The previous Home version and saved settings will be restored.": "將還原上一版本的 Home 及已儲存的設定。",
-    "Install update": "安裝更新",
-    "Restore previous Home": "還原上一版本的 Home",
-    "Release notes": "版本說明",
-    "↑ ↓ Read notes · ← → Choose action · Back Close": "↑ ↓ 閱讀說明 · ← → 選擇操作 · 返回 關閉",
-    "← → Choose action · Back Open Home": "← → 選擇操作 · 返回 開啟 Home",
-    "Home control could not be restored automatically. Open Home settings.": "無法自動還原 Home 控制。請開啟 Home 設定。",
-    "Your previous Home screen choice has been restored.": "已還原先前選擇的 Home 主畫面。",
-    "Home control remains off because it was disabled during the update.": "Home 控制在更新期間被關閉，因此仍保持關閉。",
-    "Rollback remains available until the next update.": "下次更新前均可回復舊版。",
-    "Previous Root version and profile restored.": "已還原上一版本的 Root 及設定檔。",
-    "Installed: {version}": "已安裝：{version}",
-    "Available: {version}": "可用版本：{version}",
-    "Software updates. Update available.": "軟體更新。有可用更新。",
-    "Open LG Home once, keeping your Home choice.": "開啟 LG Home 一次，並保留您選擇的 Home。",
-    "Hold Back for 1.2 seconds to open LG Home.": "按住返回鍵 1.2 秒可開啟 LG Home。",
-    "Developer Mode": "Developer Mode",
-    "Beta": "Beta",
-    "Home Helper": "Home Helper",
-    "Home button settings": "Home 鍵設定",
-    "Start Helper": "啟動 Helper",
-    "Start Helper?": "啟動 Helper？",
-    "Starting Helper…": "正在啟動 Helper…",
-    "Helper opens Home with your remote and helps you return to Home after turning on the TV.": "Helper 可讓您用遙控器開啟 Home，並協助您在電視開機後返回 Home。",
-    "Helper is unavailable. Reinstall the complete Home package from your computer.": "Helper 無法使用。請從電腦重新安裝完整的 Home 套件。",
-    "Helper was stopped for safety. Start it only when you are ready to use Home control again.": "Helper 已因安全原因停止。請在準備好再次使用 Home 控制時再啟動。",
-    "Helper is stopped. Start it to use the Home button and return from apps.": "Helper 已停止。啟動後可使用 Home 鍵並從應用程式返回。",
-    "Start Helper to use Home control again. Your saved Home screen choice will be used.": "啟動 Helper 以再次使用 Home 控制。將使用您儲存的 Home 主畫面選擇。",
-    "Status is unavailable.": "無法取得狀態。",
-    "Try refreshing. If this continues, reinstall the complete Home package from your computer.": "請嘗試重新整理。如果問題持續，請從電腦重新安裝完整的 Home 套件。",
-    "No recovery needed.": "無需還原。",
-    "Open Home to continue.": "開啟 Home 以繼續。",
-    "Open Home to continue. If the update caused a problem, you can restore the previous version.": "開啟 Home 以繼續。如果更新導致問題，可以還原上一版本。",
-    "Recovery needs attention.": "還原需要處理。",
-    "Refresh status first. If recovery remains unavailable, use the installer on your computer.": "請先重新整理狀態。如果還原功能仍無法使用，請使用電腦上的安裝程式。",
-    "An update is in progress.": "正在更新。",
-    "Keep the TV powered on. Status will refresh automatically.": "請保持電視開機。狀態將自動重新整理。",
-    "Could not open Home.": "無法開啟 Home。",
-    "If Home stops working after an update, use this app to restore the previous version. For regular updates, open Home settings.": "如果更新後 Home 無法正常運作，可用此應用程式還原上一版本。一般更新請開啟 Home 設定。",
-    "Open Home": "開啟 Home",
-    "Refresh status": "重新整理狀態",
-    "System updater removal is in progress. Continue removal from the computer.": "正在移除系統更新程式。請從電腦繼續移除。",
-    "Update information could not be verified.": "無法驗證更新資訊。",
-    "Could not connect to the update server. Nothing was installed.": "無法連線至更新伺服器。未安裝任何內容。",
-    "Update information is not available yet. Nothing was installed.": "更新資訊暫時無法取得。未安裝任何內容。",
-    "No previous update is saved for rollback yet.": "尚未儲存可供回復舊版的上一次更新。",
-    "Update information is not available yet. Try again later.": "更新資訊暫時無法取得。請稍後再試。",
-    "Could not connect to check for updates. Check your connection and try again.": "無法連線以檢查更新。請檢查網路連線後再試。",
-    "Update information could not be verified. Nothing was installed.": "無法驗證更新資訊。未安裝任何內容。",
-    "System updater operation failed. Open Recovery.": "系統更新程式操作失敗。請開啟還原。",
-    "Updater response timed out. Open Recovery to check status.": "更新程式回應逾時。請開啟還原以檢查狀態。",
-    "Invalid updater response. Open Recovery.": "更新程式回應無效。請開啟還原。",
-    "Home Updater": "Home Updater",
-    "Root Home": "Root Home",
-    "Root Updater": "Root Updater",
-    "Home control runtime": "Home 控制執行環境",
-    "Update complete. Your apps and settings are preserved.": "更新完成。應用程式和設定已保留。",
-    "Previous version and profile restored.": "已還原上一版本及設定檔。",
-    "Update stopped before replacement. Check status before trying again.": "更新在替換前已停止。請先檢查狀態，再重試。",
-    "Recovery required. Refresh status before trying again. Rollback is blocked until the installer has definitely stopped.": "需要還原。請先重新整理狀態，再重試。在確認安裝程式已停止前，無法回復舊版。",
-    "Checking the updated launcher and restored settings…": "正在檢查更新後的啟動器和已還原的設定…",
-    "Checking the restored launcher and saved profile…": "正在檢查已還原的啟動器和已儲存的設定檔…",
-    "Restoring previous components and saved profile…": "正在還原先前的元件和已儲存的設定檔…",
-    "Update state: {status}. Keep the TV powered on.": "更新狀態：{status}。請保持電視開機。",
-    "A signed system update is available.": "有可用的已簽署系統更新。",
-    "Your apps and settings stay saved.": "應用程式和設定將保留。",
-    "All components are up to date.": "所有元件均為最新版本。",
-    "A verified recovery package for this version is missing. Run the one-time computer setup.": "缺少此版本的已驗證還原套件。請在電腦上完成一次性設定。",
-    "Update unavailable: {reason}": "更新無法使用：{reason}",
-    "For regular updates, open Home settings.": "一般更新請開啟 Home 設定。",
-    "Recovery belongs to the other installed edition.": "還原記錄屬於另一個已安裝的版本類型。",
-    "Install system update?": "安裝系統更新？",
-    "Update all": "全部更新",
-    "Roll back": "回復舊版",
-    "Restore previous system?": "還原先前的系統？",
-    "Restore all previous components and pre-update settings. Settings changed after the update will be lost. Keep the TV powered on.": "還原所有先前的元件及更新前的設定。更新後變更的設定將遺失。請保持電視開機。",
-    "Restore previous system": "還原先前的系統",
-    "Helper status could not be checked on this TV. Start Helper only when you are ready to use Home control again.": "無法在此電視上檢查 Helper 狀態。請在準備好再次使用 Home 控制時再啟動 Helper。"
+  'ru': {
+    'Helper status could not be checked on this TV. Start Helper only when you are ready to use Home control again.':
+      'Не удалось проверить состояние Helper на этом телевизоре. Запускайте Helper, только когда будете готовы снова использовать управление Home.'
   }
 });
 
 HomeI18n.add({
-  "en": {
-    "Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.": "Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps."
+  'zh-Hans': {
+    'A signed Home update is available.': '有可用的已签名 Home 更新。',
+    'Add app': '添加应用',
+    'All installed apps are already on Home.':
+      '所有已安装的应用都已在 Home 中。',
+    'App hidden. Restore it with Add app.':
+      '应用已隐藏。可通过“添加应用”恢复。',
+    'Auto-renewal enabled (Beta)': '自动续期已开启（Beta）',
+    'Auto-renewal off': '自动续期已关闭',
+    'Automatic (system language)': '自动（系统语言）',
+    'Back': '返回',
+    'Back to Home': '返回 Home',
+    'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
+      'Beta：尚未在无 root 权限的电视上验证续期功能。请继续检查 Developer Mode 应用中的倒计时。',
+    "Can't open {app}": '无法打开 {app}',
+    'Change Home': '更改 Home',
+    'Change was not confirmed. Check the switch and try again.':
+      '未能确认更改。请检查开关后重试。',
+    'Changing Home control…': '正在更改 Home 控制…',
+    'Check failed': '检查失败',
+    'Check pending': '等待检查',
+    'Check session': '检查会话',
+    'Checking Home control…': '正在检查 Home 控制…',
+    'Checking auto-renewal…': '正在检查自动续期…',
+    'Checking for updates…': '正在检查更新…',
+    'Checking installed apps…': '正在检查已安装的应用…',
+    'Choose a language. Home will reload.': '请选择语言。Home 将重新加载。',
+    'Choose an app to add to Home.': '选择要添加到 Home 的应用。',
+    'Choose where Home and return from apps take you.':
+      '选择按 Home 键或从应用返回时打开的主屏幕。',
+    'Confirm update': '确认更新',
+    'Connection failed — retry scheduled': '连接失败，已安排重试',
+    'Could not open LG Home. Check Home Helper and try again.':
+      '无法打开 LG Home。请检查 Home Helper 后重试。',
+    'Could not save language. Please try again.': '无法保存语言。请重试。',
+    'Could not save state': '无法保存状态',
+    'Could not save your complete profile. Nothing was installed.':
+      '无法保存完整配置。未安装任何内容。',
+    "Couldn't restore app. Please try again.": '无法恢复应用。请重试。',
+    "Couldn't save changes. Please try again.": '无法保存更改。请重试。',
+    'Developer Mode auto-renewal (Beta)': 'Developer Mode 自动续期（Beta）',
+    'Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.':
+      'Developer Mode 可让 Home 保持安装状态。自动续期会在电视开机并联网时尝试延长会话。',
+    'Disable could not be saved. Retry before restarting the service.':
+      '无法保存关闭设置。请在重启服务前重试。',
+    'Ethernet': '以太网',
+    'Good afternoon': '下午好',
+    'Good evening': '晚上好',
+    'Good morning': '早上好',
+    'Good night': '晚安',
+    'Hide diagnostics': '隐藏诊断信息',
+    'Hide from Home': '从 Home 隐藏',
+    'Hold Back for 1.2 seconds to open LG Home. Your settings stay saved.':
+      '按住返回键 1.2 秒可打开 LG Home。您的设置将保留。',
+    'Home': 'Home',
+    'Home status is unknown. The Home button may still work.':
+      'Home 状态未知。Home 键可能仍可使用。',
+    'Home and return from apps open Clean Your TV.':
+      '按 Home 键或从应用返回时打开 Clean Your TV。',
+    'Home and return from apps open LG Home.':
+      '按 Home 键或从应用返回时打开 LG Home。',
+    'Home is up to date.': 'Home 已是最新版本。',
+    'Home settings': 'Home 设置',
+    'Home will close during installation. Your app list and settings will be saved first. Press Confirm update to continue.':
+      '安装期间 Home 将关闭。应用列表和设置将先行保存。按“确认更新”继续。',
+    'Inputs': '输入源',
+    'Installed Home {installed} · Available {available}':
+      '已安装 Home {installed} · 可用版本 {available}',
+    'Installing Home… Keep the TV on. If this screen closes, open Home again or use Home Updater for recovery.':
+      '正在安装 Home… 请保持电视开机。如果此屏幕关闭，请重新打开 Home，或使用 Home Updater 恢复。',
+    'LG response could not confirm renewal': 'LG 的响应未能确认续期',
+    'Language': '语言',
+    'Last checked: {date}': '上次检查：{date}',
+    'Last confirmed renewal: {date}': '上次确认续期：{date}',
+    'Live TV': '电视直播',
+    'Manage Home, software updates and your TV.':
+      '管理 Home、软件更新和电视设置。',
+    'Network settings': '网络设置',
+    'No inputs found': '未找到输入源',
+    'No readable Developer Mode session': '无法读取 Developer Mode 会话',
+    'No recovery result available. Your helper has not been changed.':
+      '没有可用的恢复结果。Helper 未被更改。',
+    'Not yet': '暂不',
+    'Offline': '离线',
+    'Open LG Home': '打开 LG Home',
+    'This button opens LG Home once. Your Home screen choice and settings stay saved.':
+      '此按钮仅打开 LG Home 一次。您选择的 Home 主屏幕和设置将保留。',
+    'Recovery': '恢复',
+    'Recovery state: {status}. Use Home Updater to restore the previous version if offered.':
+      '恢复状态：{status}。如果 Home Updater 提供恢复选项，可用它恢复上一版本。',
+    'Renewal confirmed': '已确认续期',
+    'Saving apps, icons and settings…': '正在保存应用、图标和设置…',
+    'Service unavailable. Install the complete Home package and try again. Manage your Developer Mode timer manually.':
+      '服务不可用。请安装完整的 Home 软件包后重试，并手动管理 Developer Mode 倒计时。',
+    'Session changed — retry scheduled': '会话已更改，已安排重试',
+    'Session checked': '会话已检查',
+    'Session expired — open Developer Mode':
+      '会话已过期，请打开 Developer Mode',
+    'Settings': '设置',
+    'Setup error: {error}. Use Developer Mode manually.':
+      '设置出错：{error}。请手动使用 Developer Mode。',
+    'Share this with your TV model and firmware at:':
+      '请将此信息与电视型号及固件版本一并提交至：',
+    'Show diagnostics': '显示诊断信息',
+    'Showing the saved list. Could not refresh apps from the TV.':
+      '正在显示已保存的列表。无法从电视刷新应用列表。',
+    'Software updates': '软件更新',
+    'TV settings': '电视设置',
+    'Try again': '重试',
+    'Turn off auto-renewal': '关闭自动续期',
+    'Turn on auto-renewal': '开启自动续期',
+    'Undo': '撤销',
+    'Update Home': '更新 Home',
+    'Update Home Helper using the installation guide first.':
+      '请先按照安装指南更新 Home Helper。',
+    'Update Home or open LG settings for picture, sound and network.':
+      '更新 Home，或打开 LG 设置调整画面、声音和网络。',
+    'Update available, but a verified recovery package for your installed version is missing.':
+      '有可用更新，但缺少当前已安装版本的已验证恢复包。',
+    'Update available. Without root, install it from a computer using the guide.':
+      '有可用更新。无 root 权限时，请按照指南从电脑安装。',
+    'Update outcome is not confirmed. Open Home Updater → Recovery before retrying.':
+      '更新结果尚未确认。请先打开 Home Updater → 恢复，再重试。',
+    'Update service or signed release unavailable. Install the separate Home Updater package once, then retry. Your current Home is unchanged.':
+      '更新服务或已签名版本不可用。请先安装独立的 Home Updater 软件包，再重试。当前 Home 未被更改。',
+    'Update state: {status}. Reopen Home when installation finishes.':
+      '更新状态：{status}。安装完成后请重新打开 Home。',
+    'Updates and TV': '更新与电视',
+    'Working…': '正在处理…',
+    'Your Home screen': '您的 Home 主屏幕',
+    'Your installed Home is newer than this release.':
+      '已安装的 Home 比此发布版本更新。',
+    '{app} added': '已添加 {app}',
+    '{hours} hours remaining (estimate)': '预计剩余 {hours} 小时',
+    '← ↑ ↓ → Move   ·   OK Place   ·   Back Cancel   ·   ↓ Below last row to hide':
+      '← ↑ ↓ → 移动   ·   OK 放置   ·   返回 取消   ·   ↓ 移至最后一行下方可隐藏',
+    'No-root Edition': 'No-root 版',
+    'Cancel': '取消',
+    'Install Home update?': '安装 Home 更新？',
+    'Restore previous Home?': '恢复上一版本的 Home？',
+    'Home will close during installation. Your apps and settings will be saved.':
+      '安装期间 Home 将关闭。应用和设置将被保存。',
+    'The previous Home version and saved settings will be restored.':
+      '将恢复上一版本的 Home 及已保存的设置。',
+    'Install update': '安装更新',
+    'Restore previous Home': '恢复上一版本的 Home',
+    'Release notes': '版本说明',
+    '↑ ↓ Read notes · ← → Choose action · Back Close':
+      '↑ ↓ 阅读说明 · ← → 选择操作 · 返回 关闭',
+    '← → Choose action · Back Open Home': '← → 选择操作 · 返回 打开 Home',
+    'Home control could not be restored automatically. Open Home settings.':
+      '无法自动恢复 Home 控制。请打开 Home 设置。',
+    'Your previous Home screen choice has been restored.':
+      '已恢复之前选择的 Home 主屏幕。',
+    'Home control remains off because it was disabled during the update.':
+      'Home 控制在更新期间被关闭，因此仍保持关闭。',
+    'Rollback remains available until the next update.': '下次更新前均可回退。',
+    'Previous Root version and profile restored.':
+      '已恢复上一版本的 Root 及配置。',
+    'Installed: {version}': '已安装：{version}',
+    'Available: {version}': '可用版本：{version}',
+    'Software updates. Update available.': '软件更新。有可用更新。',
+    'Open LG Home once, keeping your Home choice.':
+      '打开 LG Home 一次，并保留您选择的 Home。',
+    'Hold Back for 1.2 seconds to open LG Home.':
+      '按住返回键 1.2 秒可打开 LG Home。',
+    'Developer Mode': 'Developer Mode',
+    'Beta': 'Beta',
+    'Home Helper': 'Home Helper',
+    'Home button settings': 'Home 键设置',
+    'Start Helper': '启动 Helper',
+    'Start Helper?': '启动 Helper？',
+    'Starting Helper…': '正在启动 Helper…',
+    'Helper opens Home with your remote and helps you return to Home after turning on the TV.':
+      'Helper 可让您用遥控器打开 Home，并帮助您在电视开机后返回 Home。',
+    'Helper is unavailable. Reinstall the complete Home package from your computer.':
+      'Helper 不可用。请从电脑重新安装完整的 Home 软件包。',
+    'Helper was stopped for safety. Start it only when you are ready to use Home control again.':
+      'Helper 已因安全原因停止。请在准备好再次使用 Home 控制时再启动。',
+    'Helper is stopped. Start it to use the Home button and return from apps.':
+      'Helper 已停止。启动后可使用 Home 键并从应用返回。',
+    'Start Helper to use Home control again. Your saved Home screen choice will be used.':
+      '启动 Helper 以再次使用 Home 控制。将使用您保存的 Home 主屏幕选择。',
+    'Status is unavailable.': '无法获取状态。',
+    'Try refreshing. If this continues, reinstall the complete Home package from your computer.':
+      '请尝试刷新。如果问题持续，请从电脑重新安装完整的 Home 软件包。',
+    'No recovery needed.': '无需恢复。',
+    'Open Home to continue.': '打开 Home 以继续。',
+    'Open Home to continue. If the update caused a problem, you can restore the previous version.':
+      '打开 Home 以继续。如果更新导致问题，可以恢复上一版本。',
+    'Recovery needs attention.': '恢复需要处理。',
+    'Refresh status first. If recovery remains unavailable, use the installer on your computer.':
+      '请先刷新状态。如果恢复功能仍不可用，请使用电脑上的安装程序。',
+    'An update is in progress.': '正在更新。',
+    'Keep the TV powered on. Status will refresh automatically.':
+      '请保持电视开机。状态将自动刷新。',
+    'Could not open Home.': '无法打开 Home。',
+    'If Home stops working after an update, use this app to restore the previous version. For regular updates, open Home settings.':
+      '如果更新后 Home 无法正常运行，可用此应用恢复上一版本。常规更新请打开 Home 设置。',
+    'Open Home': '打开 Home',
+    'Refresh status': '刷新状态',
+    'System updater removal is in progress. Continue removal from the computer.':
+      '正在移除系统更新程序。请从电脑继续移除。',
+    'Update information could not be verified.': '无法验证更新信息。',
+    'Could not connect to the update server. Nothing was installed.':
+      '无法连接更新服务器。未安装任何内容。',
+    'Update information is not available yet. Nothing was installed.':
+      '更新信息暂不可用。未安装任何内容。',
+    'No previous update is saved for rollback yet.':
+      '尚未保存可供回退的上一次更新。',
+    'Update information is not available yet. Try again later.':
+      '更新信息暂不可用。请稍后重试。',
+    'Could not connect to check for updates. Check your connection and try again.':
+      '无法连接以检查更新。请检查网络连接后重试。',
+    'Update information could not be verified. Nothing was installed.':
+      '无法验证更新信息。未安装任何内容。',
+    'System updater operation failed. Open Recovery.':
+      '系统更新程序操作失败。请打开恢复。',
+    'Updater response timed out. Open Recovery to check status.':
+      '更新程序响应超时。请打开恢复以检查状态。',
+    'Invalid updater response. Open Recovery.':
+      '更新程序响应无效。请打开恢复。',
+    'Home Updater': 'Home Updater',
+    'Root Home': 'Root Home',
+    'Root Updater': 'Root Updater',
+    'Home control runtime': 'Home 控制运行时',
+    'Update complete. Your apps and settings are preserved.':
+      '更新完成。应用和设置已保留。',
+    'Previous version and profile restored.': '已恢复上一版本及配置。',
+    'Update stopped before replacement. Check status before trying again.':
+      '更新在替换前已停止。请先检查状态，再重试。',
+    'Recovery required. Refresh status before trying again. Rollback is blocked until the installer has definitely stopped.':
+      '需要恢复。请先刷新状态，再重试。在确认安装程序已停止前，无法回退。',
+    'Checking the updated launcher and restored settings…':
+      '正在检查更新后的启动器和已恢复的设置…',
+    'Checking the restored launcher and saved profile…':
+      '正在检查已恢复的启动器和已保存的配置…',
+    'Restoring previous components and saved profile…':
+      '正在恢复之前的组件和已保存的配置…',
+    'Update state: {status}. Keep the TV powered on.':
+      '更新状态：{status}。请保持电视开机。',
+    'A signed system update is available.': '有可用的已签名系统更新。',
+    'Your apps and settings stay saved.': '应用和设置将保留。',
+    'All components are up to date.': '所有组件均为最新版本。',
+    'A verified recovery package for this version is missing. Run the one-time computer setup.':
+      '缺少此版本的已验证恢复包。请在电脑上完成一次性设置。',
+    'Update unavailable: {reason}': '更新不可用：{reason}',
+    'For regular updates, open Home settings.': '常规更新请打开 Home 设置。',
+    'Recovery belongs to the other installed edition.':
+      '恢复记录属于另一个已安装的版本类型。',
+    'Install system update?': '安装系统更新？',
+    'Update all': '全部更新',
+    'Roll back': '回退',
+    'Restore previous system?': '恢复之前的系统？',
+    'Restore all previous components and pre-update settings. Settings changed after the update will be lost. Keep the TV powered on.':
+      '恢复所有之前的组件及更新前的设置。更新后更改的设置将丢失。请保持电视开机。',
+    'Restore previous system': '恢复之前的系统',
+    'Helper status could not be checked on this TV. Start Helper only when you are ready to use Home control again.':
+      '无法在此电视上检查 Helper 状态。请在准备好再次使用 Home 控制时再启动 Helper。'
   },
-  "de": {
-    "Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.": "Halten Sie Developer Mode aktiv: Öffnen Sie die App vor Ablauf des Timers und drücken Sie bei bestehender Internetverbindung EXTEND. Nach Ablauf kann LG diese Apps entfernen."
-  },
-  "es": {
-    "Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.": "Mantén Developer Mode activo: antes de que termine el tiempo, ábrelo y pulsa EXTEND con el TV conectado a Internet. Si caduca, LG puede eliminar estas apps."
-  },
-  "pt-BR": {
-    "Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.": "Mantenha Developer Mode ativo: antes de o tempo acabar, abra o app e pressione EXTEND com a TV conectada à Internet. Se expirar, a LG pode remover esses apps."
-  },
-  "fr": {
-    "Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.": "Gardez Developer Mode actif : avant la fin du compte à rebours, ouvrez-le et appuyez sur EXTEND avec le TV connecté à Internet. À expiration, LG peut supprimer ces apps."
-  },
-  "it": {
-    "Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.": "Mantieni Developer Mode attivo: prima che scada il timer, aprilo e premi EXTEND con la TV connessa a Internet. Alla scadenza, LG può rimuovere queste app."
-  },
-  "ko": {
-    "Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.": "타이머가 끝나기 전에 Developer Mode를 열고 TV가 인터넷에 연결된 상태에서 EXTEND를 누르세요. 만료되면 LG가 이 앱들을 삭제할 수 있습니다."
-  },
-  "hi": {
-    "Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.": "Developer Mode चालू रखें: समय खत्म होने से पहले इसे खोलें और TV के इंटरनेट से जुड़े होने पर EXTEND दबाएँ। समय खत्म होने पर LG ये ऐप हटा सकता है।"
-  },
-  "pl": {
-    "Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.": "Utrzymuj Developer Mode aktywny: przed końcem odliczania otwórz aplikację i naciśnij EXTEND, gdy TV ma internet. Po wygaśnięciu LG może usunąć te aplikacje."
-  },
-  "ru": {
-    "Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.": "Следите за таймером Developer Mode: до его окончания откройте приложение и нажмите EXTEND при подключённом интернете. Если время истечёт, LG может удалить эти приложения."
-  },
-  "zh-Hans": {
-    "Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.": "请保持 Developer Mode 有效：计时结束前打开它，并在电视联网时按 EXTEND。过期后 LG 可能会删除这些应用。"
-  },
-  "zh-Hant": {
-    "Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.": "請保持 Developer Mode 有效：計時結束前開啟它，並在電視連網時按 EXTEND。過期後 LG 可能會刪除這些應用程式。"
+  'zh-Hant': {
+    'A signed Home update is available.': '有可用的已簽署 Home 更新。',
+    'Add app': '新增應用程式',
+    'All installed apps are already on Home.':
+      '所有已安裝的應用程式都已在 Home 中。',
+    'App hidden. Restore it with Add app.':
+      '應用程式已隱藏。可透過「新增應用程式」恢復。',
+    'Auto-renewal enabled (Beta)': '自動續期已開啟（Beta）',
+    'Auto-renewal off': '自動續期已關閉',
+    'Automatic (system language)': '自動（系統語言）',
+    'Back': '返回',
+    'Back to Home': '返回 Home',
+    'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
+      'Beta：尚未在無 root 權限的電視上驗證續期功能。請持續檢查 Developer Mode 應用程式中的倒數計時。',
+    "Can't open {app}": '無法開啟 {app}',
+    'Change Home': '變更 Home',
+    'Change was not confirmed. Check the switch and try again.':
+      '未能確認變更。請檢查開關後再試。',
+    'Changing Home control…': '正在變更 Home 控制…',
+    'Check failed': '檢查失敗',
+    'Check pending': '等待檢查',
+    'Check session': '檢查工作階段',
+    'Checking Home control…': '正在檢查 Home 控制…',
+    'Checking auto-renewal…': '正在檢查自動續期…',
+    'Checking for updates…': '正在檢查更新…',
+    'Checking installed apps…': '正在檢查已安裝的應用程式…',
+    'Choose a language. Home will reload.': '請選擇語言。Home 將重新載入。',
+    'Choose an app to add to Home.': '選擇要新增至 Home 的應用程式。',
+    'Choose where Home and return from apps take you.':
+      '選擇按 Home 鍵或從應用程式返回時開啟的主畫面。',
+    'Confirm update': '確認更新',
+    'Connection failed — retry scheduled': '連線失敗，已安排重試',
+    'Could not open LG Home. Check Home Helper and try again.':
+      '無法開啟 LG Home。請檢查 Home Helper 後再試。',
+    'Could not save language. Please try again.': '無法儲存語言。請再試一次。',
+    'Could not save state': '無法儲存狀態',
+    'Could not save your complete profile. Nothing was installed.':
+      '無法儲存完整設定檔。未安裝任何內容。',
+    "Couldn't restore app. Please try again.": '無法還原應用程式。請再試一次。',
+    "Couldn't save changes. Please try again.": '無法儲存變更。請再試一次。',
+    'Developer Mode auto-renewal (Beta)': 'Developer Mode 自動續期（Beta）',
+    'Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.':
+      'Developer Mode 可讓 Home 保持安裝狀態。自動續期會在電視開機並連網時嘗試延長工作階段。',
+    'Disable could not be saved. Retry before restarting the service.':
+      '無法儲存關閉設定。請在重新啟動服務前再試。',
+    'Ethernet': '乙太網路',
+    'Good afternoon': '午安',
+    'Good evening': '晚上好',
+    'Good morning': '早安',
+    'Good night': '晚安',
+    'Hide diagnostics': '隱藏診斷資訊',
+    'Hide from Home': '從 Home 隱藏',
+    'Hold Back for 1.2 seconds to open LG Home. Your settings stay saved.':
+      '按住返回鍵 1.2 秒可開啟 LG Home。您的設定將保留。',
+    'Home': 'Home',
+    'Home status is unknown. The Home button may still work.':
+      'Home 狀態未知。Home 鍵可能仍可使用。',
+    'Home and return from apps open Clean Your TV.':
+      '按 Home 鍵或從應用程式返回時開啟 Clean Your TV。',
+    'Home and return from apps open LG Home.':
+      '按 Home 鍵或從應用程式返回時開啟 LG Home。',
+    'Home is up to date.': 'Home 已是最新版本。',
+    'Home settings': 'Home 設定',
+    'Home will close during installation. Your app list and settings will be saved first. Press Confirm update to continue.':
+      '安裝期間 Home 將關閉。應用程式清單和設定會先儲存。按「確認更新」繼續。',
+    'Inputs': '輸入來源',
+    'Installed Home {installed} · Available {available}':
+      '已安裝 Home {installed} · 可用版本 {available}',
+    'Installing Home… Keep the TV on. If this screen closes, open Home again or use Home Updater for recovery.':
+      '正在安裝 Home… 請保持電視開機。如果此畫面關閉，請重新開啟 Home，或使用 Home Updater 還原。',
+    'LG response could not confirm renewal': 'LG 的回應未能確認續期',
+    'Language': '語言',
+    'Last checked: {date}': '上次檢查：{date}',
+    'Last confirmed renewal: {date}': '上次確認續期：{date}',
+    'Live TV': '電視直播',
+    'Manage Home, software updates and your TV.':
+      '管理 Home、軟體更新和電視設定。',
+    'Network settings': '網路設定',
+    'No inputs found': '找不到輸入來源',
+    'No readable Developer Mode session': '無法讀取 Developer Mode 工作階段',
+    'No recovery result available. Your helper has not been changed.':
+      '沒有可用的還原結果。Helper 未被變更。',
+    'Not yet': '暫時不要',
+    'Offline': '離線',
+    'Open LG Home': '開啟 LG Home',
+    'This button opens LG Home once. Your Home screen choice and settings stay saved.':
+      '此按鈕僅開啟 LG Home 一次。您選擇的 Home 主畫面和設定將保留。',
+    'Recovery': '還原',
+    'Recovery state: {status}. Use Home Updater to restore the previous version if offered.':
+      '還原狀態：{status}。如果 Home Updater 提供還原選項，可用它還原上一版本。',
+    'Renewal confirmed': '已確認續期',
+    'Saving apps, icons and settings…': '正在儲存應用程式、圖示和設定…',
+    'Service unavailable. Install the complete Home package and try again. Manage your Developer Mode timer manually.':
+      '服務無法使用。請安裝完整的 Home 套件後再試，並手動管理 Developer Mode 倒數計時。',
+    'Session changed — retry scheduled': '工作階段已變更，已安排重試',
+    'Session checked': '工作階段已檢查',
+    'Session expired — open Developer Mode':
+      '工作階段已到期，請開啟 Developer Mode',
+    'Settings': '設定',
+    'Setup error: {error}. Use Developer Mode manually.':
+      '設定出錯：{error}。請手動使用 Developer Mode。',
+    'Share this with your TV model and firmware at:':
+      '請將此資訊連同電視型號及韌體版本一併提交至：',
+    'Show diagnostics': '顯示診斷資訊',
+    'Showing the saved list. Could not refresh apps from the TV.':
+      '正在顯示已儲存的清單。無法從電視重新整理應用程式清單。',
+    'Software updates': '軟體更新',
+    'TV settings': '電視設定',
+    'Try again': '再試一次',
+    'Turn off auto-renewal': '關閉自動續期',
+    'Turn on auto-renewal': '開啟自動續期',
+    'Undo': '復原',
+    'Update Home': '更新 Home',
+    'Update Home Helper using the installation guide first.':
+      '請先按照安裝指南更新 Home Helper。',
+    'Update Home or open LG settings for picture, sound and network.':
+      '更新 Home，或開啟 LG 設定調整畫面、聲音和網路。',
+    'Update available, but a verified recovery package for your installed version is missing.':
+      '有可用更新，但缺少目前已安裝版本的已驗證還原套件。',
+    'Update available. Without root, install it from a computer using the guide.':
+      '有可用更新。無 root 權限時，請按照指南從電腦安裝。',
+    'Update outcome is not confirmed. Open Home Updater → Recovery before retrying.':
+      '更新結果尚未確認。請先開啟 Home Updater → 還原，再重試。',
+    'Update service or signed release unavailable. Install the separate Home Updater package once, then retry. Your current Home is unchanged.':
+      '更新服務或已簽署版本無法使用。請先安裝獨立的 Home Updater 套件，再重試。目前的 Home 未被變更。',
+    'Update state: {status}. Reopen Home when installation finishes.':
+      '更新狀態：{status}。安裝完成後請重新開啟 Home。',
+    'Updates and TV': '更新與電視',
+    'Working…': '正在處理…',
+    'Your Home screen': '您的 Home 主畫面',
+    'Your installed Home is newer than this release.':
+      '已安裝的 Home 比此發行版本更新。',
+    '{app} added': '已新增 {app}',
+    '{hours} hours remaining (estimate)': '預估剩餘 {hours} 小時',
+    '← ↑ ↓ → Move   ·   OK Place   ·   Back Cancel   ·   ↓ Below last row to hide':
+      '← ↑ ↓ → 移動   ·   OK 放置   ·   返回 取消   ·   ↓ 移至最後一列下方可隱藏',
+    'No-root Edition': 'No-root 版',
+    'Cancel': '取消',
+    'Install Home update?': '安裝 Home 更新？',
+    'Restore previous Home?': '還原上一版本的 Home？',
+    'Home will close during installation. Your apps and settings will be saved.':
+      '安裝期間 Home 將關閉。應用程式和設定將被儲存。',
+    'The previous Home version and saved settings will be restored.':
+      '將還原上一版本的 Home 及已儲存的設定。',
+    'Install update': '安裝更新',
+    'Restore previous Home': '還原上一版本的 Home',
+    'Release notes': '版本說明',
+    '↑ ↓ Read notes · ← → Choose action · Back Close':
+      '↑ ↓ 閱讀說明 · ← → 選擇操作 · 返回 關閉',
+    '← → Choose action · Back Open Home': '← → 選擇操作 · 返回 開啟 Home',
+    'Home control could not be restored automatically. Open Home settings.':
+      '無法自動還原 Home 控制。請開啟 Home 設定。',
+    'Your previous Home screen choice has been restored.':
+      '已還原先前選擇的 Home 主畫面。',
+    'Home control remains off because it was disabled during the update.':
+      'Home 控制在更新期間被關閉，因此仍保持關閉。',
+    'Rollback remains available until the next update.':
+      '下次更新前均可回復舊版。',
+    'Previous Root version and profile restored.':
+      '已還原上一版本的 Root 及設定檔。',
+    'Installed: {version}': '已安裝：{version}',
+    'Available: {version}': '可用版本：{version}',
+    'Software updates. Update available.': '軟體更新。有可用更新。',
+    'Open LG Home once, keeping your Home choice.':
+      '開啟 LG Home 一次，並保留您選擇的 Home。',
+    'Hold Back for 1.2 seconds to open LG Home.':
+      '按住返回鍵 1.2 秒可開啟 LG Home。',
+    'Developer Mode': 'Developer Mode',
+    'Beta': 'Beta',
+    'Home Helper': 'Home Helper',
+    'Home button settings': 'Home 鍵設定',
+    'Start Helper': '啟動 Helper',
+    'Start Helper?': '啟動 Helper？',
+    'Starting Helper…': '正在啟動 Helper…',
+    'Helper opens Home with your remote and helps you return to Home after turning on the TV.':
+      'Helper 可讓您用遙控器開啟 Home，並協助您在電視開機後返回 Home。',
+    'Helper is unavailable. Reinstall the complete Home package from your computer.':
+      'Helper 無法使用。請從電腦重新安裝完整的 Home 套件。',
+    'Helper was stopped for safety. Start it only when you are ready to use Home control again.':
+      'Helper 已因安全原因停止。請在準備好再次使用 Home 控制時再啟動。',
+    'Helper is stopped. Start it to use the Home button and return from apps.':
+      'Helper 已停止。啟動後可使用 Home 鍵並從應用程式返回。',
+    'Start Helper to use Home control again. Your saved Home screen choice will be used.':
+      '啟動 Helper 以再次使用 Home 控制。將使用您儲存的 Home 主畫面選擇。',
+    'Status is unavailable.': '無法取得狀態。',
+    'Try refreshing. If this continues, reinstall the complete Home package from your computer.':
+      '請嘗試重新整理。如果問題持續，請從電腦重新安裝完整的 Home 套件。',
+    'No recovery needed.': '無需還原。',
+    'Open Home to continue.': '開啟 Home 以繼續。',
+    'Open Home to continue. If the update caused a problem, you can restore the previous version.':
+      '開啟 Home 以繼續。如果更新導致問題，可以還原上一版本。',
+    'Recovery needs attention.': '還原需要處理。',
+    'Refresh status first. If recovery remains unavailable, use the installer on your computer.':
+      '請先重新整理狀態。如果還原功能仍無法使用，請使用電腦上的安裝程式。',
+    'An update is in progress.': '正在更新。',
+    'Keep the TV powered on. Status will refresh automatically.':
+      '請保持電視開機。狀態將自動重新整理。',
+    'Could not open Home.': '無法開啟 Home。',
+    'If Home stops working after an update, use this app to restore the previous version. For regular updates, open Home settings.':
+      '如果更新後 Home 無法正常運作，可用此應用程式還原上一版本。一般更新請開啟 Home 設定。',
+    'Open Home': '開啟 Home',
+    'Refresh status': '重新整理狀態',
+    'System updater removal is in progress. Continue removal from the computer.':
+      '正在移除系統更新程式。請從電腦繼續移除。',
+    'Update information could not be verified.': '無法驗證更新資訊。',
+    'Could not connect to the update server. Nothing was installed.':
+      '無法連線至更新伺服器。未安裝任何內容。',
+    'Update information is not available yet. Nothing was installed.':
+      '更新資訊暫時無法取得。未安裝任何內容。',
+    'No previous update is saved for rollback yet.':
+      '尚未儲存可供回復舊版的上一次更新。',
+    'Update information is not available yet. Try again later.':
+      '更新資訊暫時無法取得。請稍後再試。',
+    'Could not connect to check for updates. Check your connection and try again.':
+      '無法連線以檢查更新。請檢查網路連線後再試。',
+    'Update information could not be verified. Nothing was installed.':
+      '無法驗證更新資訊。未安裝任何內容。',
+    'System updater operation failed. Open Recovery.':
+      '系統更新程式操作失敗。請開啟還原。',
+    'Updater response timed out. Open Recovery to check status.':
+      '更新程式回應逾時。請開啟還原以檢查狀態。',
+    'Invalid updater response. Open Recovery.':
+      '更新程式回應無效。請開啟還原。',
+    'Home Updater': 'Home Updater',
+    'Root Home': 'Root Home',
+    'Root Updater': 'Root Updater',
+    'Home control runtime': 'Home 控制執行環境',
+    'Update complete. Your apps and settings are preserved.':
+      '更新完成。應用程式和設定已保留。',
+    'Previous version and profile restored.': '已還原上一版本及設定檔。',
+    'Update stopped before replacement. Check status before trying again.':
+      '更新在替換前已停止。請先檢查狀態，再重試。',
+    'Recovery required. Refresh status before trying again. Rollback is blocked until the installer has definitely stopped.':
+      '需要還原。請先重新整理狀態，再重試。在確認安裝程式已停止前，無法回復舊版。',
+    'Checking the updated launcher and restored settings…':
+      '正在檢查更新後的啟動器和已還原的設定…',
+    'Checking the restored launcher and saved profile…':
+      '正在檢查已還原的啟動器和已儲存的設定檔…',
+    'Restoring previous components and saved profile…':
+      '正在還原先前的元件和已儲存的設定檔…',
+    'Update state: {status}. Keep the TV powered on.':
+      '更新狀態：{status}。請保持電視開機。',
+    'A signed system update is available.': '有可用的已簽署系統更新。',
+    'Your apps and settings stay saved.': '應用程式和設定將保留。',
+    'All components are up to date.': '所有元件均為最新版本。',
+    'A verified recovery package for this version is missing. Run the one-time computer setup.':
+      '缺少此版本的已驗證還原套件。請在電腦上完成一次性設定。',
+    'Update unavailable: {reason}': '更新無法使用：{reason}',
+    'For regular updates, open Home settings.': '一般更新請開啟 Home 設定。',
+    'Recovery belongs to the other installed edition.':
+      '還原記錄屬於另一個已安裝的版本類型。',
+    'Install system update?': '安裝系統更新？',
+    'Update all': '全部更新',
+    'Roll back': '回復舊版',
+    'Restore previous system?': '還原先前的系統？',
+    'Restore all previous components and pre-update settings. Settings changed after the update will be lost. Keep the TV powered on.':
+      '還原所有先前的元件及更新前的設定。更新後變更的設定將遺失。請保持電視開機。',
+    'Restore previous system': '還原先前的系統',
+    'Helper status could not be checked on this TV. Start Helper only when you are ready to use Home control again.':
+      '無法在此電視上檢查 Helper 狀態。請在準備好再次使用 Home 控制時再啟動 Helper。'
   }
 });
 
 HomeI18n.add({
-  "en": {
-    "Home is your app screen. Home Helper makes the Home button open it.": "Home is your app screen. Home Helper makes the Home button open it."
+  'en': {
+    'Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.':
+      'Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.'
   },
-  "de": {
-    "Home is your app screen. Home Helper makes the Home button open it.": "Home ist Ihr App-Bildschirm. Home Helper sorgt dafür, dass die Home-Taste ihn öffnet."
+  'de': {
+    'Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.':
+      'Halten Sie Developer Mode aktiv: Öffnen Sie die App vor Ablauf des Timers und drücken Sie bei bestehender Internetverbindung EXTEND. Nach Ablauf kann LG diese Apps entfernen.'
   },
-  "es": {
-    "Home is your app screen. Home Helper makes the Home button open it.": "Home es tu pantalla de apps. Home Helper hace que el botón Home la abra."
+  'es': {
+    'Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.':
+      'Mantén Developer Mode activo: antes de que termine el tiempo, ábrelo y pulsa EXTEND con el TV conectado a Internet. Si caduca, LG puede eliminar estas apps.'
   },
-  "pt-BR": {
-    "Home is your app screen. Home Helper makes the Home button open it.": "Home é sua tela de apps. Home Helper faz o botão Home abrir essa tela."
+  'pt-BR': {
+    'Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.':
+      'Mantenha Developer Mode ativo: antes de o tempo acabar, abra o app e pressione EXTEND com a TV conectada à Internet. Se expirar, a LG pode remover esses apps.'
   },
-  "fr": {
-    "Home is your app screen. Home Helper makes the Home button open it.": "Home est votre écran d’apps. Home Helper permet de l’ouvrir avec la touche Home."
+  'fr': {
+    'Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.':
+      'Gardez Developer Mode actif : avant la fin du compte à rebours, ouvrez-le et appuyez sur EXTEND avec le TV connecté à Internet. À expiration, LG peut supprimer ces apps.'
   },
-  "it": {
-    "Home is your app screen. Home Helper makes the Home button open it.": "Home è la tua schermata delle app. Home Helper fa sì che il tasto Home la apra."
+  'it': {
+    'Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.':
+      'Mantieni Developer Mode attivo: prima che scada il timer, aprilo e premi EXTEND con la TV connessa a Internet. Alla scadenza, LG può rimuovere queste app.'
   },
-  "ko": {
-    "Home is your app screen. Home Helper makes the Home button open it.": "Home은 앱 화면입니다. Home Helper를 사용하면 Home 버튼으로 이 화면을 열 수 있습니다."
+  'ko': {
+    'Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.':
+      '타이머가 끝나기 전에 Developer Mode를 열고 TV가 인터넷에 연결된 상태에서 EXTEND를 누르세요. 만료되면 LG가 이 앱들을 삭제할 수 있습니다.'
   },
-  "hi": {
-    "Home is your app screen. Home Helper makes the Home button open it.": "Home आपके ऐप की स्क्रीन है। Home Helper से Home बटन दबाने पर यह स्क्रीन खुलती है।"
+  'hi': {
+    'Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.':
+      'Developer Mode चालू रखें: समय खत्म होने से पहले इसे खोलें और TV के इंटरनेट से जुड़े होने पर EXTEND दबाएँ। समय खत्म होने पर LG ये ऐप हटा सकता है।'
   },
-  "pl": {
-    "Home is your app screen. Home Helper makes the Home button open it.": "Home to ekran aplikacji. Home Helper sprawia, że przycisk Home otwiera ten ekran."
+  'pl': {
+    'Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.':
+      'Utrzymuj Developer Mode aktywny: przed końcem odliczania otwórz aplikację i naciśnij EXTEND, gdy TV ma internet. Po wygaśnięciu LG może usunąć te aplikacje.'
   },
-  "ru": {
-    "Home is your app screen. Home Helper makes the Home button open it.": "Home — экран с вашими приложениями. Home Helper нужен, чтобы открывать его кнопкой Home на пульте."
+  'ru': {
+    'Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.':
+      'Следите за таймером Developer Mode: до его окончания откройте приложение и нажмите EXTEND при подключённом интернете. Если время истечёт, LG может удалить эти приложения.'
   },
-  "zh-Hans": {
-    "Home is your app screen. Home Helper makes the Home button open it.": "Home 是您的应用主屏幕。Home Helper 让遥控器的 Home 键打开此屏幕。"
+  'zh-Hans': {
+    'Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.':
+      '请保持 Developer Mode 有效：计时结束前打开它，并在电视联网时按 EXTEND。过期后 LG 可能会删除这些应用。'
   },
-  "zh-Hant": {
-    "Home is your app screen. Home Helper makes the Home button open it.": "Home 是您的應用程式主畫面。Home Helper 讓遙控器的 Home 鍵開啟此畫面。"
+  'zh-Hant': {
+    'Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.':
+      '請保持 Developer Mode 有效：計時結束前開啟它，並在電視連網時按 EXTEND。過期後 LG 可能會刪除這些應用程式。'
   }
 });
 
 HomeI18n.add({
-  "en": {
-    "This update requires a computer migration. Keep recovery records.": "This update requires a computer migration. Keep recovery records."
+  'en': {
+    'Home is your app screen. Home Helper makes the Home button open it.':
+      'Home is your app screen. Home Helper makes the Home button open it.'
   },
-  "de": {
-    "This update requires a computer migration. Keep recovery records.": "Dieses Update erfordert eine Migration am Computer. Bewahre die Wiederherstellungsdaten auf."
+  'de': {
+    'Home is your app screen. Home Helper makes the Home button open it.':
+      'Home ist Ihr App-Bildschirm. Home Helper sorgt dafür, dass die Home-Taste ihn öffnet.'
   },
-  "es": {
-    "This update requires a computer migration. Keep recovery records.": "Esta actualización requiere una migración desde un ordenador. Conserva los registros de recuperación."
+  'es': {
+    'Home is your app screen. Home Helper makes the Home button open it.':
+      'Home es tu pantalla de apps. Home Helper hace que el botón Home la abra.'
   },
-  "pt-BR": {
-    "This update requires a computer migration. Keep recovery records.": "Esta atualização exige migração pelo computador. Preserve os registros de recuperação."
+  'pt-BR': {
+    'Home is your app screen. Home Helper makes the Home button open it.':
+      'Home é sua tela de apps. Home Helper faz o botão Home abrir essa tela.'
   },
-  "fr": {
-    "This update requires a computer migration. Keep recovery records.": "Cette mise à jour nécessite une migration depuis un ordinateur. Conservez les données de récupération."
+  'fr': {
+    'Home is your app screen. Home Helper makes the Home button open it.':
+      'Home est votre écran d’apps. Home Helper permet de l’ouvrir avec la touche Home.'
   },
-  "it": {
-    "This update requires a computer migration. Keep recovery records.": "Questo aggiornamento richiede una migrazione dal computer. Conserva i dati di ripristino."
+  'it': {
+    'Home is your app screen. Home Helper makes the Home button open it.':
+      'Home è la tua schermata delle app. Home Helper fa sì che il tasto Home la apra.'
   },
-  "ko": {
-    "This update requires a computer migration. Keep recovery records.": "이 업데이트에는 컴퓨터를 통한 마이그레이션이 필요합니다. 복구 기록을 보관하세요."
+  'ko': {
+    'Home is your app screen. Home Helper makes the Home button open it.':
+      'Home은 앱 화면입니다. Home Helper를 사용하면 Home 버튼으로 이 화면을 열 수 있습니다.'
   },
-  "hi": {
-    "This update requires a computer migration. Keep recovery records.": "इस अपडेट के लिए कंप्यूटर से माइग्रेशन आवश्यक है। रिकवरी रिकॉर्ड सुरक्षित रखें।"
+  'hi': {
+    'Home is your app screen. Home Helper makes the Home button open it.':
+      'Home आपके ऐप की स्क्रीन है। Home Helper से Home बटन दबाने पर यह स्क्रीन खुलती है।'
   },
-  "pl": {
-    "This update requires a computer migration. Keep recovery records.": "Ta aktualizacja wymaga migracji z komputera. Zachowaj dane odzyskiwania."
+  'pl': {
+    'Home is your app screen. Home Helper makes the Home button open it.':
+      'Home to ekran aplikacji. Home Helper sprawia, że przycisk Home otwiera ten ekran.'
   },
-  "ru": {
-    "This update requires a computer migration. Keep recovery records.": "Для этого обновления нужна миграция с компьютера. Сохраните записи восстановления."
+  'ru': {
+    'Home is your app screen. Home Helper makes the Home button open it.':
+      'Home — экран с вашими приложениями. Home Helper нужен, чтобы открывать его кнопкой Home на пульте.'
   },
-  "zh-Hans": {
-    "This update requires a computer migration. Keep recovery records.": "请使用电脑安装此更新，并保留恢复记录。"
+  'zh-Hans': {
+    'Home is your app screen. Home Helper makes the Home button open it.':
+      'Home 是您的应用主屏幕。Home Helper 让遥控器的 Home 键打开此屏幕。'
   },
-  "zh-Hant": {
-    "This update requires a computer migration. Keep recovery records.": "請使用電腦安裝此更新，並保留復原記錄。"
+  'zh-Hant': {
+    'Home is your app screen. Home Helper makes the Home button open it.':
+      'Home 是您的應用程式主畫面。Home Helper 讓遙控器的 Home 鍵開啟此畫面。'
+  }
+});
+
+HomeI18n.add({
+  'en': {
+    'This update requires a computer migration. Keep recovery records.':
+      'This update requires a computer migration. Keep recovery records.'
+  },
+  'de': {
+    'This update requires a computer migration. Keep recovery records.':
+      'Dieses Update erfordert eine Migration am Computer. Bewahre die Wiederherstellungsdaten auf.'
+  },
+  'es': {
+    'This update requires a computer migration. Keep recovery records.':
+      'Esta actualización requiere una migración desde un ordenador. Conserva los registros de recuperación.'
+  },
+  'pt-BR': {
+    'This update requires a computer migration. Keep recovery records.':
+      'Esta atualização exige migração pelo computador. Preserve os registros de recuperação.'
+  },
+  'fr': {
+    'This update requires a computer migration. Keep recovery records.':
+      'Cette mise à jour nécessite une migration depuis un ordinateur. Conservez les données de récupération.'
+  },
+  'it': {
+    'This update requires a computer migration. Keep recovery records.':
+      'Questo aggiornamento richiede una migrazione dal computer. Conserva i dati di ripristino.'
+  },
+  'ko': {
+    'This update requires a computer migration. Keep recovery records.':
+      '이 업데이트에는 컴퓨터를 통한 마이그레이션이 필요합니다. 복구 기록을 보관하세요.'
+  },
+  'hi': {
+    'This update requires a computer migration. Keep recovery records.':
+      'इस अपडेट के लिए कंप्यूटर से माइग्रेशन आवश्यक है। रिकवरी रिकॉर्ड सुरक्षित रखें।'
+  },
+  'pl': {
+    'This update requires a computer migration. Keep recovery records.':
+      'Ta aktualizacja wymaga migracji z komputera. Zachowaj dane odzyskiwania.'
+  },
+  'ru': {
+    'This update requires a computer migration. Keep recovery records.':
+      'Для этого обновления нужна миграция с компьютера. Сохраните записи восстановления.'
+  },
+  'zh-Hans': {
+    'This update requires a computer migration. Keep recovery records.':
+      '请使用电脑安装此更新，并保留恢复记录。'
+  },
+  'zh-Hant': {
+    'This update requires a computer migration. Keep recovery records.':
+      '請使用電腦安裝此更新，並保留復原記錄。'
   }
 });
 
 // Home column controls are shared by both editions.
 HomeI18n.add({
-  "en": {
-    "Columns": "Columns",
-    "By theme ({count})": "By theme ({count})",
-    "Choose 1–8 columns. Your choice overrides the theme.": "Choose 1–8 columns. Your choice overrides the theme.",
-    "Columns: {count}": "Columns: {count}",
-    "Could not save columns. Please try again.": "Could not save columns. Please try again."
+  'en': {
+    'Columns': 'Columns',
+    'By theme ({count})': 'By theme ({count})',
+    'Choose 1–8 columns. Your choice overrides the theme.':
+      'Choose 1–8 columns. Your choice overrides the theme.',
+    'Columns: {count}': 'Columns: {count}',
+    'Could not save columns. Please try again.':
+      'Could not save columns. Please try again.'
   },
-  "de": {
-    "Columns": "Spalten",
-    "By theme ({count})": "Nach Theme ({count})",
-    "Choose 1–8 columns. Your choice overrides the theme.": "Wähle 1–8 Spalten. Deine Auswahl hat Vorrang vor dem Theme.",
-    "Columns: {count}": "Spalten: {count}",
-    "Could not save columns. Please try again.": "Die Spaltenanzahl konnte nicht gespeichert werden. Bitte versuche es erneut."
+  'de': {
+    'Columns': 'Spalten',
+    'By theme ({count})': 'Nach Theme ({count})',
+    'Choose 1–8 columns. Your choice overrides the theme.':
+      'Wähle 1–8 Spalten. Deine Auswahl hat Vorrang vor dem Theme.',
+    'Columns: {count}': 'Spalten: {count}',
+    'Could not save columns. Please try again.':
+      'Die Spaltenanzahl konnte nicht gespeichert werden. Bitte versuche es erneut.'
   },
-  "es": {
-    "Columns": "Columnas",
-    "By theme ({count})": "Según el tema ({count})",
-    "Choose 1–8 columns. Your choice overrides the theme.": "Elige de 1 a 8 columnas. Tu elección tiene prioridad sobre el tema.",
-    "Columns: {count}": "Columnas: {count}",
-    "Could not save columns. Please try again.": "No se pudo guardar el número de columnas. Inténtalo de nuevo."
+  'es': {
+    'Columns': 'Columnas',
+    'By theme ({count})': 'Según el tema ({count})',
+    'Choose 1–8 columns. Your choice overrides the theme.':
+      'Elige de 1 a 8 columnas. Tu elección tiene prioridad sobre el tema.',
+    'Columns: {count}': 'Columnas: {count}',
+    'Could not save columns. Please try again.':
+      'No se pudo guardar el número de columnas. Inténtalo de nuevo.'
   },
-  "pt-BR": {
-    "Columns": "Colunas",
-    "By theme ({count})": "Conforme o tema ({count})",
-    "Choose 1–8 columns. Your choice overrides the theme.": "Escolha de 1 a 8 colunas. Sua escolha tem prioridade sobre o tema.",
-    "Columns: {count}": "Colunas: {count}",
-    "Could not save columns. Please try again.": "Não foi possível salvar o número de colunas. Tente novamente."
+  'pt-BR': {
+    'Columns': 'Colunas',
+    'By theme ({count})': 'Conforme o tema ({count})',
+    'Choose 1–8 columns. Your choice overrides the theme.':
+      'Escolha de 1 a 8 colunas. Sua escolha tem prioridade sobre o tema.',
+    'Columns: {count}': 'Colunas: {count}',
+    'Could not save columns. Please try again.':
+      'Não foi possível salvar o número de colunas. Tente novamente.'
   },
-  "fr": {
-    "Columns": "Colonnes",
-    "By theme ({count})": "Selon le thème ({count})",
-    "Choose 1–8 columns. Your choice overrides the theme.": "Choisissez de 1 à 8 colonnes. Votre choix est prioritaire sur le thème.",
-    "Columns: {count}": "Colonnes : {count}",
-    "Could not save columns. Please try again.": "Impossible d’enregistrer le nombre de colonnes. Réessayez."
+  'fr': {
+    'Columns': 'Colonnes',
+    'By theme ({count})': 'Selon le thème ({count})',
+    'Choose 1–8 columns. Your choice overrides the theme.':
+      'Choisissez de 1 à 8 colonnes. Votre choix est prioritaire sur le thème.',
+    'Columns: {count}': 'Colonnes : {count}',
+    'Could not save columns. Please try again.':
+      'Impossible d’enregistrer le nombre de colonnes. Réessayez.'
   },
-  "it": {
-    "Columns": "Colonne",
-    "By theme ({count})": "Secondo il tema ({count})",
-    "Choose 1–8 columns. Your choice overrides the theme.": "Scegli da 1 a 8 colonne. La tua scelta ha la precedenza sul tema.",
-    "Columns: {count}": "Colonne: {count}",
-    "Could not save columns. Please try again.": "Impossibile salvare il numero di colonne. Riprova."
+  'it': {
+    'Columns': 'Colonne',
+    'By theme ({count})': 'Secondo il tema ({count})',
+    'Choose 1–8 columns. Your choice overrides the theme.':
+      'Scegli da 1 a 8 colonne. La tua scelta ha la precedenza sul tema.',
+    'Columns: {count}': 'Colonne: {count}',
+    'Could not save columns. Please try again.':
+      'Impossibile salvare il numero di colonne. Riprova.'
   },
-  "ko": {
-    "Columns": "열 수",
-    "By theme ({count})": "테마에 따름 ({count})",
-    "Choose 1–8 columns. Your choice overrides the theme.": "1~8열을 선택하세요. 선택한 값이 테마보다 우선합니다.",
-    "Columns: {count}": "열 수: {count}",
-    "Could not save columns. Please try again.": "열 수를 저장할 수 없습니다. 다시 시도하세요."
+  'ko': {
+    'Columns': '열 수',
+    'By theme ({count})': '테마에 따름 ({count})',
+    'Choose 1–8 columns. Your choice overrides the theme.':
+      '1~8열을 선택하세요. 선택한 값이 테마보다 우선합니다.',
+    'Columns: {count}': '열 수: {count}',
+    'Could not save columns. Please try again.':
+      '열 수를 저장할 수 없습니다. 다시 시도하세요.'
   },
-  "hi": {
-    "Columns": "कॉलम",
-    "By theme ({count})": "थीम के अनुसार ({count})",
-    "Choose 1–8 columns. Your choice overrides the theme.": "1–8 कॉलम चुनें। आपकी पसंद को थीम पर प्राथमिकता दी जाएगी।",
-    "Columns: {count}": "कॉलम: {count}",
-    "Could not save columns. Please try again.": "कॉलम की संख्या सेव नहीं हो सकी। फिर से कोशिश करें।"
+  'hi': {
+    'Columns': 'कॉलम',
+    'By theme ({count})': 'थीम के अनुसार ({count})',
+    'Choose 1–8 columns. Your choice overrides the theme.':
+      '1–8 कॉलम चुनें। आपकी पसंद को थीम पर प्राथमिकता दी जाएगी।',
+    'Columns: {count}': 'कॉलम: {count}',
+    'Could not save columns. Please try again.':
+      'कॉलम की संख्या सेव नहीं हो सकी। फिर से कोशिश करें।'
   },
-  "pl": {
-    "Columns": "Kolumny",
-    "By theme ({count})": "Według motywu ({count})",
-    "Choose 1–8 columns. Your choice overrides the theme.": "Wybierz od 1 do 8 kolumn. Twój wybór ma pierwszeństwo przed motywem.",
-    "Columns: {count}": "Kolumny: {count}",
-    "Could not save columns. Please try again.": "Nie udało się zapisać liczby kolumn. Spróbuj ponownie."
+  'pl': {
+    'Columns': 'Kolumny',
+    'By theme ({count})': 'Według motywu ({count})',
+    'Choose 1–8 columns. Your choice overrides the theme.':
+      'Wybierz od 1 do 8 kolumn. Twój wybór ma pierwszeństwo przed motywem.',
+    'Columns: {count}': 'Kolumny: {count}',
+    'Could not save columns. Please try again.':
+      'Nie udało się zapisać liczby kolumn. Spróbuj ponownie.'
   },
-  "ru": {
-    "Columns": "Столбцы",
-    "By theme ({count})": "Как в теме ({count})",
-    "Choose 1–8 columns. Your choice overrides the theme.": "Выберите от 1 до 8 столбцов. Ваш выбор имеет приоритет над темой.",
-    "Columns: {count}": "Столбцы: {count}",
-    "Could not save columns. Please try again.": "Не удалось сохранить число столбцов. Попробуйте ещё раз."
+  'ru': {
+    'Columns': 'Столбцы',
+    'By theme ({count})': 'Как в теме ({count})',
+    'Choose 1–8 columns. Your choice overrides the theme.':
+      'Выберите от 1 до 8 столбцов. Ваш выбор имеет приоритет над темой.',
+    'Columns: {count}': 'Столбцы: {count}',
+    'Could not save columns. Please try again.':
+      'Не удалось сохранить число столбцов. Попробуйте ещё раз.'
   },
-  "zh-Hans": {
-    "Columns": "列数",
-    "By theme ({count})": "跟随主题（{count}）",
-    "Choose 1–8 columns. Your choice overrides the theme.": "选择 1–8 列。你的选择优先于主题设置。",
-    "Columns: {count}": "列数：{count}",
-    "Could not save columns. Please try again.": "无法保存列数。请重试。"
+  'zh-Hans': {
+    'Columns': '列数',
+    'By theme ({count})': '跟随主题（{count}）',
+    'Choose 1–8 columns. Your choice overrides the theme.':
+      '选择 1–8 列。你的选择优先于主题设置。',
+    'Columns: {count}': '列数：{count}',
+    'Could not save columns. Please try again.': '无法保存列数。请重试。'
   },
-  "zh-Hant": {
-    "Columns": "欄數",
-    "By theme ({count})": "跟隨主題（{count}）",
-    "Choose 1–8 columns. Your choice overrides the theme.": "選擇 1–8 欄。你的選擇優先於主題設定。",
-    "Columns: {count}": "欄數：{count}",
-    "Could not save columns. Please try again.": "無法儲存欄數。請重試。"
+  'zh-Hant': {
+    'Columns': '欄數',
+    'By theme ({count})': '跟隨主題（{count}）',
+    'Choose 1–8 columns. Your choice overrides the theme.':
+      '選擇 1–8 欄。你的選擇優先於主題設定。',
+    'Columns: {count}': '欄數：{count}',
+    'Could not save columns. Please try again.': '無法儲存欄數。請重試。'
   }
 });
 
 // Home app tile visibility is shared by both editions.
 HomeI18n.add({
-  "en": {
-    "Show Add app tile": "Show Add app tile"
+  'en': {
+    'Show Add app tile': 'Show Add app tile'
   },
-  "de": {
-    "Show Add app tile": "Kachel „App hinzufügen“ anzeigen"
+  'de': {
+    'Show Add app tile': 'Kachel „App hinzufügen“ anzeigen'
   },
-  "es": {
-    "Show Add app tile": "Mostrar tarjeta «Añadir app»"
+  'es': {
+    'Show Add app tile': 'Mostrar tarjeta «Añadir app»'
   },
-  "pt-BR": {
-    "Show Add app tile": "Mostrar bloco «Adicionar app»"
+  'pt-BR': {
+    'Show Add app tile': 'Mostrar bloco «Adicionar app»'
   },
-  "fr": {
-    "Show Add app tile": "Afficher la tuile « Ajouter une app »"
+  'fr': {
+    'Show Add app tile': 'Afficher la tuile « Ajouter une app »'
   },
-  "it": {
-    "Show Add app tile": "Mostra riquadro «Aggiungi app»"
+  'it': {
+    'Show Add app tile': 'Mostra riquadro «Aggiungi app»'
   },
-  "ko": {
-    "Show Add app tile": "앱 추가 타일 표시"
+  'ko': {
+    'Show Add app tile': '앱 추가 타일 표시'
   },
-  "hi": {
-    "Show Add app tile": "ऐप जोड़ें टाइल दिखाएँ"
+  'hi': {
+    'Show Add app tile': 'ऐप जोड़ें टाइल दिखाएँ'
   },
-  "pl": {
-    "Show Add app tile": "Pokaż kafelek „Dodaj aplikację”"
+  'pl': {
+    'Show Add app tile': 'Pokaż kafelek „Dodaj aplikację”'
   },
-  "ru": {
-    "Show Add app tile": "Показывать плитку «Добавить приложение»"
+  'ru': {
+    'Show Add app tile': 'Показывать плитку «Добавить приложение»'
   },
-  "zh-Hans": {
-    "Show Add app tile": "显示“添加应用”按钮"
+  'zh-Hans': {
+    'Show Add app tile': '显示“添加应用”按钮'
   },
-  "zh-Hant": {
-    "Show Add app tile": "顯示「新增應用程式」按鈕"
+  'zh-Hant': {
+    'Show Add app tile': '顯示「新增應用程式」按鈕'
   }
 });
 
 /* Czech TV interface (#211). */
 HomeI18n.add({
-  "cs": {
-    "A signed Home update is available.": "Je k dispozici podepsaná aktualizace Home.",
-    "Add app": "Přidat aplikaci",
-    "All installed apps are already on Home.": "Všechny nainstalované aplikace už jsou na Home.",
-    "App hidden. Restore it with Add app.": "Aplikace je skrytá. Obnovíte ji pomocí Přidat aplikaci.",
-    "Auto-renewal enabled (Beta)": "Automatické prodlužování zapnuto (Beta)",
-    "Auto-renewal off": "Automatické prodlužování vypnuto",
-    "Automatic (system language)": "Automaticky (jazyk systému)",
-    "Back": "Zpět",
-    "Back to Home": "Zpět na Home",
-    "Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.": "Beta: prodlužování zatím není ověřeno na televizorech bez rootu. Průběžně kontrolujte časovač v aplikaci Developer Mode.",
-    "Can't open {app}": "Nelze otevřít {app}",
-    "Change Home": "Změnit Home",
-    "Change was not confirmed. Check the switch and try again.": "Změna nebyla potvrzena. Zkontrolujte přepínač a zkuste to znovu.",
-    "Changing Home control…": "Mění se ovládání Home…",
-    "Check failed": "Kontrola selhala",
-    "Check pending": "Čeká se na kontrolu",
-    "Check session": "Zkontrolovat relaci",
-    "Checking Home control…": "Kontroluje se ovládání Home…",
-    "Checking auto-renewal…": "Kontroluje se automatické prodlužování…",
-    "Checking for updates…": "Kontrolují se aktualizace…",
-    "Checking installed apps…": "Kontrolují se nainstalované aplikace…",
-    "Choose a language. Home will reload.": "Vyberte jazyk. Home se znovu načte.",
-    "Choose an app to add to Home.": "Vyberte aplikaci, kterou chcete přidat na Home.",
-    "Choose where Home and return from apps take you.": "Vyberte, kam vás přenese tlačítko Home a návrat z aplikací.",
-    "Confirm update": "Potvrdit aktualizaci",
-    "Connection failed — retry scheduled": "Připojení selhalo — další pokus je naplánován",
-    "Could not open LG Home. Check Home Helper and try again.": "Nepodařilo se otevřít LG Home. Zkontrolujte Home Helper a zkuste to znovu.",
-    "Could not save language. Please try again.": "Jazyk se nepodařilo uložit. Zkuste to znovu.",
-    "Could not save state": "Stav se nepodařilo uložit",
-    "Could not save your complete profile. Nothing was installed.": "Úplný profil se nepodařilo uložit. Nic nebylo nainstalováno.",
-    "Couldn't restore app. Please try again.": "Aplikaci se nepodařilo obnovit. Zkuste to znovu.",
-    "Couldn't save changes. Please try again.": "Změny se nepodařilo uložit. Zkuste to znovu.",
-    "Developer Mode auto-renewal (Beta)": "Automatické prodlužování Developer Mode (Beta)",
-    "Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.": "Developer Mode udržuje Home nainstalovaný. Automatické prodlužování se pokouší prodloužit jeho relaci, když je televizor zapnutý a připojený k internetu.",
-    "Disable could not be saved. Retry before restarting the service.": "Vypnutí se nepodařilo uložit. Před restartováním služby to zkuste znovu.",
-    "Ethernet": "Ethernet",
-    "Good afternoon": "Dobré odpoledne",
-    "Good evening": "Dobrý večer",
-    "Good morning": "Dobré ráno",
-    "Good night": "Dobrou noc",
-    "Hide diagnostics": "Skrýt diagnostiku",
-    "Hide from Home": "Skrýt z Home",
-    "Hold Back for 1.2 seconds to open LG Home. Your settings stay saved.": "Podržením tlačítka Zpět na 1,2 sekundy otevřete LG Home. Vaše nastavení zůstane uložené.",
-    "Home": "Home",
-    "Home status is unknown. The Home button may still work.": "Stav Home není známý. Tlačítko Home může stále fungovat.",
-    "Home and return from apps open Clean Your TV.": "Tlačítko Home a návrat z aplikací otevírají Clean Your TV.",
-    "Home and return from apps open LG Home.": "Tlačítko Home a návrat z aplikací otevírají LG Home.",
-    "Home is up to date.": "Home je aktuální.",
-    "Home settings": "Nastavení Home",
-    "Home will close during installation. Your app list and settings will be saved first. Press Confirm update to continue.": "Home se během instalace zavře. Seznam aplikací a nastavení se nejprve uloží. Pokračujte stisknutím Potvrdit aktualizaci.",
-    "Inputs": "Vstupy",
-    "Installed Home {installed} · Available {available}": "Nainstalovaný Home {installed} · K dispozici {available}",
-    "Installing Home… Keep the TV on. If this screen closes, open Home again or use Home Updater for recovery.": "Instaluje se Home… Nechte televizor zapnutý. Pokud se tato obrazovka zavře, znovu otevřete Home nebo použijte Home Updater k obnovení.",
-    "LG response could not confirm renewal": "Odpověď LG nepotvrdila prodloužení",
-    "Language": "Jazyk",
-    "Last checked: {date}": "Poslední kontrola: {date}",
-    "Last confirmed renewal: {date}": "Poslední potvrzené prodloužení: {date}",
-    "Live TV": "Živé vysílání",
-    "Manage Home, software updates and your TV.": "Správa Home, aktualizací softwaru a televizoru.",
-    "Network settings": "Nastavení sítě",
-    "No inputs found": "Nebyly nalezeny žádné vstupy",
-    "No readable Developer Mode session": "Žádná čitelná relace Developer Mode",
-    "No recovery result available. Your helper has not been changed.": "Výsledek obnovení není k dispozici. Váš Helper nebyl změněn.",
-    "Not yet": "Zatím ne",
-    "Offline": "Offline",
-    "Open LG Home": "Otevřít LG Home",
-    "This button opens LG Home once. Your Home screen choice and settings stay saved.": "Toto tlačítko jednorázově otevře LG Home. Vaše volba obrazovky Home a nastavení zůstanou uložené.",
-    "Recovery": "Obnovení",
-    "Recovery state: {status}. Use Home Updater to restore the previous version if offered.": "Stav obnovení: {status}. Pokud je tato možnost dostupná, obnovte předchozí verzi pomocí Home Updater.",
-    "Renewal confirmed": "Prodloužení potvrzeno",
-    "Saving apps, icons and settings…": "Ukládají se aplikace, ikony a nastavení…",
-    "Service unavailable. Install the complete Home package and try again. Manage your Developer Mode timer manually.": "Služba není dostupná. Nainstalujte úplný balíček Home a zkuste to znovu. Časovač Developer Mode spravujte ručně.",
-    "Session changed — retry scheduled": "Relace se změnila — další pokus je naplánován",
-    "Session checked": "Relace zkontrolována",
-    "Session expired — open Developer Mode": "Platnost relace vypršela — otevřete Developer Mode",
-    "Settings": "Nastavení",
-    "Setup error: {error}. Use Developer Mode manually.": "Chyba nastavení: {error}. Použijte Developer Mode ručně.",
-    "Share this with your TV model and firmware at:": "Sdílejte tyto údaje spolu s modelem a firmwarem televizoru na:",
-    "Show diagnostics": "Zobrazit diagnostiku",
-    "Showing the saved list. Could not refresh apps from the TV.": "Zobrazuje se uložený seznam. Aplikace se nepodařilo znovu načíst z televizoru.",
-    "Software updates": "Aktualizace softwaru",
-    "TV settings": "Nastavení televizoru",
-    "Try again": "Zkusit znovu",
-    "Turn off auto-renewal": "Vypnout automatické prodlužování",
-    "Turn on auto-renewal": "Zapnout automatické prodlužování",
-    "Undo": "Vrátit zpět",
-    "Update Home": "Aktualizovat Home",
-    "Update Home Helper using the installation guide first.": "Nejprve aktualizujte Home Helper podle instalačního návodu.",
-    "Update Home or open LG settings for picture, sound and network.": "Aktualizujte Home nebo otevřete nastavení obrazu, zvuku a sítě LG.",
-    "Update available, but a verified recovery package for your installed version is missing.": "Aktualizace je dostupná, ale chybí ověřený balíček pro obnovení nainstalované verze.",
-    "Update available. Without root, install it from a computer using the guide.": "Aktualizace je dostupná. Bez rootu ji nainstalujte z počítače podle návodu.",
-    "Update outcome is not confirmed. Open Home Updater → Recovery before retrying.": "Výsledek aktualizace není potvrzený. Před dalším pokusem otevřete Home Updater → Obnovení.",
-    "Update service or signed release unavailable. Install the separate Home Updater package once, then retry. Your current Home is unchanged.": "Aktualizační služba nebo podepsané vydání nejsou dostupné. Jednorázově nainstalujte samostatný balíček Home Updater a zkuste to znovu. Stávající Home zůstal beze změny.",
-    "Update state: {status}. Reopen Home when installation finishes.": "Stav aktualizace: {status}. Po dokončení instalace znovu otevřete Home.",
-    "Updates and TV": "Aktualizace a TV",
-    "Working…": "Probíhá…",
-    "Your Home screen": "Vaše obrazovka Home",
-    "Your installed Home is newer than this release.": "Nainstalovaný Home je novější než toto vydání.",
-    "{app} added": "Aplikace {app} byla přidána",
-    "{hours} hours remaining (estimate)": "Zbývá {hours} hodin (odhad)",
-    "← ↑ ↓ → Move   ·   OK Place   ·   Back Cancel   ·   ↓ Below last row to hide": "← ↑ ↓ → Přesunout   ·   OK Umístit   ·   Zpět Zrušit   ·   ↓ Pod poslední řádek pro skrytí",
-    "No-root Edition": "Edice bez rootu",
-    "Cancel": "Zrušit",
-    "Install Home update?": "Nainstalovat aktualizaci Home?",
-    "Restore previous Home?": "Obnovit předchozí Home?",
-    "Home will close during installation. Your apps and settings will be saved.": "Home se během instalace zavře. Aplikace a nastavení se uloží.",
-    "The previous Home version and saved settings will be restored.": "Obnoví se předchozí verze Home a uložená nastavení.",
-    "Install update": "Nainstalovat aktualizaci",
-    "Restore previous Home": "Obnovit předchozí Home",
-    "Release notes": "Poznámky k vydání",
-    "↑ ↓ Read notes · ← → Choose action · Back Close": "↑ ↓ Číst poznámky · ← → Vybrat akci · Zpět Zavřít",
-    "← → Choose action · Back Open Home": "← → Vybrat akci · Zpět Otevřít Home",
-    "Home control could not be restored automatically. Open Home settings.": "Ovládání Home se nepodařilo automaticky obnovit. Otevřete nastavení Home.",
-    "Your previous Home screen choice has been restored.": "Vaše předchozí volba obrazovky Home byla obnovena.",
-    "Home control remains off because it was disabled during the update.": "Ovládání Home zůstává vypnuté, protože bylo během aktualizace vypnuto.",
-    "Rollback remains available until the next update.": "Návrat k předchozí verzi zůstává dostupný do příští aktualizace.",
-    "Previous Root version and profile restored.": "Předchozí verze Root a profil byly obnoveny.",
-    "Installed: {version}": "Nainstalováno: {version}",
-    "Available: {version}": "K dispozici: {version}",
-    "Software updates. Update available.": "Aktualizace softwaru. Je dostupná aktualizace.",
-    "Open LG Home once, keeping your Home choice.": "Jednorázově otevřít LG Home a zachovat vaši volbu Home.",
-    "Hold Back for 1.2 seconds to open LG Home.": "Podržením tlačítka Zpět na 1,2 sekundy otevřete LG Home.",
-    "Developer Mode": "Developer Mode",
-    "Beta": "Beta",
-    "Home Helper": "Home Helper",
-    "Home button settings": "Nastavení tlačítka Home",
-    "Start Helper": "Spustit Helper",
-    "Start Helper?": "Spustit Helper?",
-    "Starting Helper…": "Spouští se Helper…",
-    "Helper opens Home with your remote and helps you return to Home after turning on the TV.": "Helper otevírá Home pomocí dálkového ovladače a pomáhá s návratem na Home po zapnutí televizoru.",
-    "Helper is unavailable. Reinstall the complete Home package from your computer.": "Helper není dostupný. Z počítače znovu nainstalujte úplný balíček Home.",
-    "Helper was stopped for safety. Start it only when you are ready to use Home control again.": "Helper byl z bezpečnostních důvodů zastaven. Spusťte jej, až budete připraveni znovu používat ovládání Home.",
-    "Helper is stopped. Start it to use the Home button and return from apps.": "Helper je zastaven. Spusťte jej pro použití tlačítka Home a návratu z aplikací.",
-    "Start Helper to use Home control again. Your saved Home screen choice will be used.": "Spuštěním Helper obnovíte ovládání Home. Použije se uložená volba obrazovky Home.",
-    "Status is unavailable.": "Stav není dostupný.",
-    "Try refreshing. If this continues, reinstall the complete Home package from your computer.": "Zkuste obnovit stav. Pokud problém trvá, z počítače znovu nainstalujte úplný balíček Home.",
-    "No recovery needed.": "Obnovení není potřeba.",
-    "Open Home to continue.": "Pokračujte otevřením Home.",
-    "Open Home to continue. If the update caused a problem, you can restore the previous version.": "Pokračujte otevřením Home. Pokud aktualizace způsobila problém, můžete obnovit předchozí verzi.",
-    "Recovery needs attention.": "Obnovení vyžaduje pozornost.",
-    "Refresh status first. If recovery remains unavailable, use the installer on your computer.": "Nejprve obnovte stav. Pokud obnovení stále není dostupné, použijte instalační program v počítači.",
-    "An update is in progress.": "Probíhá aktualizace.",
-    "Keep the TV powered on. Status will refresh automatically.": "Nechte televizor zapnutý. Stav se obnoví automaticky.",
-    "Could not open Home.": "Nepodařilo se otevřít Home.",
-    "If Home stops working after an update, use this app to restore the previous version. For regular updates, open Home settings.": "Pokud Home po aktualizaci přestane fungovat, obnovte předchozí verzi pomocí této aplikace. Běžné aktualizace najdete v nastavení Home.",
-    "Open Home": "Otevřít Home",
-    "Refresh status": "Obnovit stav",
-    "System updater removal is in progress. Continue removal from the computer.": "Probíhá odstraňování System Updater. Pokračujte v odstraňování z počítače.",
-    "Update information could not be verified.": "Informace o aktualizaci se nepodařilo ověřit.",
-    "Could not connect to the update server. Nothing was installed.": "Nepodařilo se připojit k aktualizačnímu serveru. Nic nebylo nainstalováno.",
-    "Update information is not available yet. Nothing was installed.": "Informace o aktualizaci zatím nejsou dostupné. Nic nebylo nainstalováno.",
-    "No previous update is saved for rollback yet.": "Zatím není uložena žádná předchozí aktualizace pro návrat.",
-    "Update information is not available yet. Try again later.": "Informace o aktualizaci zatím nejsou dostupné. Zkuste to později.",
-    "Could not connect to check for updates. Check your connection and try again.": "Nepodařilo se připojit pro kontrolu aktualizací. Zkontrolujte připojení a zkuste to znovu.",
-    "Update information could not be verified. Nothing was installed.": "Informace o aktualizaci se nepodařilo ověřit. Nic nebylo nainstalováno.",
-    "System updater operation failed. Open Recovery.": "Operace System Updater selhala. Otevřete Obnovení.",
-    "Updater response timed out. Open Recovery to check status.": "Vypršel časový limit odpovědi aktualizačního programu. Stav zkontrolujte v Obnovení.",
-    "Invalid updater response. Open Recovery.": "Neplatná odpověď aktualizačního programu. Otevřete Obnovení.",
-    "Home Updater": "Home Updater",
-    "Root Home": "Root Home",
-    "Root Updater": "Root Updater",
-    "Home control runtime": "Běhové prostředí ovládání Home",
-    "Update complete. Your apps and settings are preserved.": "Aktualizace dokončena. Aplikace a nastavení byly zachovány.",
-    "Previous version and profile restored.": "Předchozí verze a profil byly obnoveny.",
-    "Update stopped before replacement. Check status before trying again.": "Aktualizace se zastavila před nahrazením. Před dalším pokusem zkontrolujte stav.",
-    "Recovery required. Refresh status before trying again. Rollback is blocked until the installer has definitely stopped.": "Je nutné obnovení. Před dalším pokusem obnovte stav. Návrat k předchozí verzi je blokován, dokud se instalační program prokazatelně nezastaví.",
-    "Checking the updated launcher and restored settings…": "Kontroluje se aktualizovaný launcher a obnovená nastavení…",
-    "Checking the restored launcher and saved profile…": "Kontroluje se obnovený launcher a uložený profil…",
-    "Restoring previous components and saved profile…": "Obnovují se předchozí součásti a uložený profil…",
-    "Update state: {status}. Keep the TV powered on.": "Stav aktualizace: {status}. Nechte televizor zapnutý.",
-    "A signed system update is available.": "Je k dispozici podepsaná aktualizace systému.",
-    "Your apps and settings stay saved.": "Aplikace a nastavení zůstanou uložené.",
-    "All components are up to date.": "Všechny součásti jsou aktuální.",
-    "A verified recovery package for this version is missing. Run the one-time computer setup.": "Chybí ověřený balíček pro obnovení této verze. Proveďte jednorázové nastavení z počítače.",
-    "Update unavailable: {reason}": "Aktualizace není dostupná: {reason}",
-    "For regular updates, open Home settings.": "Běžné aktualizace najdete v nastavení Home.",
-    "Recovery belongs to the other installed edition.": "Obnovení patří druhé nainstalované edici.",
-    "Install system update?": "Nainstalovat aktualizaci systému?",
-    "Update all": "Aktualizovat vše",
-    "Roll back": "Vrátit předchozí verzi",
-    "Restore previous system?": "Obnovit předchozí systém?",
-    "Restore all previous components and pre-update settings. Settings changed after the update will be lost. Keep the TV powered on.": "Obnoví se všechny předchozí součásti a nastavení před aktualizací. Nastavení změněná po aktualizaci budou ztracena. Nechte televizor zapnutý.",
-    "Restore previous system": "Obnovit předchozí systém",
-    "Helper status could not be checked on this TV. Start Helper only when you are ready to use Home control again.": "Stav Helper se na tomto televizoru nepodařilo zkontrolovat. Spusťte Helper, až budete připraveni znovu používat ovládání Home.",
-    "Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.": "Udržujte Developer Mode aktivní: otevřete jej před vypršením časovače a stiskněte EXTEND, když je televizor online. Po vypršení může LG tyto aplikace odstranit.",
-    "Home is your app screen. Home Helper makes the Home button open it.": "Home je vaše obrazovka aplikací. Home Helper zajišťuje její otevření tlačítkem Home.",
-    "This update requires a computer migration. Keep recovery records.": "Tato aktualizace vyžaduje migraci z počítače. Uchovejte záznamy obnovení.",
-    "Columns": "Sloupce",
-    "By theme ({count})": "Podle motivu ({count})",
-    "Choose 1–8 columns. Your choice overrides the theme.": "Vyberte 1–8 sloupců. Vaše volba má přednost před motivem.",
-    "Columns: {count}": "Sloupce: {count}",
-    "Could not save columns. Please try again.": "Počet sloupců se nepodařilo uložit. Zkuste to znovu.",
-    "Show Add app tile": "Zobrazit dlaždici Přidat aplikaci"
+  'cs': {
+    'A signed Home update is available.':
+      'Je k dispozici podepsaná aktualizace Home.',
+    'Add app': 'Přidat aplikaci',
+    'All installed apps are already on Home.':
+      'Všechny nainstalované aplikace už jsou na Home.',
+    'App hidden. Restore it with Add app.':
+      'Aplikace je skrytá. Obnovíte ji pomocí Přidat aplikaci.',
+    'Auto-renewal enabled (Beta)': 'Automatické prodlužování zapnuto (Beta)',
+    'Auto-renewal off': 'Automatické prodlužování vypnuto',
+    'Automatic (system language)': 'Automaticky (jazyk systému)',
+    'Back': 'Zpět',
+    'Back to Home': 'Zpět na Home',
+    'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
+      'Beta: prodlužování zatím není ověřeno na televizorech bez rootu. Průběžně kontrolujte časovač v aplikaci Developer Mode.',
+    "Can't open {app}": 'Nelze otevřít {app}',
+    'Change Home': 'Změnit Home',
+    'Change was not confirmed. Check the switch and try again.':
+      'Změna nebyla potvrzena. Zkontrolujte přepínač a zkuste to znovu.',
+    'Changing Home control…': 'Mění se ovládání Home…',
+    'Check failed': 'Kontrola selhala',
+    'Check pending': 'Čeká se na kontrolu',
+    'Check session': 'Zkontrolovat relaci',
+    'Checking Home control…': 'Kontroluje se ovládání Home…',
+    'Checking auto-renewal…': 'Kontroluje se automatické prodlužování…',
+    'Checking for updates…': 'Kontrolují se aktualizace…',
+    'Checking installed apps…': 'Kontrolují se nainstalované aplikace…',
+    'Choose a language. Home will reload.':
+      'Vyberte jazyk. Home se znovu načte.',
+    'Choose an app to add to Home.':
+      'Vyberte aplikaci, kterou chcete přidat na Home.',
+    'Choose where Home and return from apps take you.':
+      'Vyberte, kam vás přenese tlačítko Home a návrat z aplikací.',
+    'Confirm update': 'Potvrdit aktualizaci',
+    'Connection failed — retry scheduled':
+      'Připojení selhalo — další pokus je naplánován',
+    'Could not open LG Home. Check Home Helper and try again.':
+      'Nepodařilo se otevřít LG Home. Zkontrolujte Home Helper a zkuste to znovu.',
+    'Could not save language. Please try again.':
+      'Jazyk se nepodařilo uložit. Zkuste to znovu.',
+    'Could not save state': 'Stav se nepodařilo uložit',
+    'Could not save your complete profile. Nothing was installed.':
+      'Úplný profil se nepodařilo uložit. Nic nebylo nainstalováno.',
+    "Couldn't restore app. Please try again.":
+      'Aplikaci se nepodařilo obnovit. Zkuste to znovu.',
+    "Couldn't save changes. Please try again.":
+      'Změny se nepodařilo uložit. Zkuste to znovu.',
+    'Developer Mode auto-renewal (Beta)':
+      'Automatické prodlužování Developer Mode (Beta)',
+    'Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.':
+      'Developer Mode udržuje Home nainstalovaný. Automatické prodlužování se pokouší prodloužit jeho relaci, když je televizor zapnutý a připojený k internetu.',
+    'Disable could not be saved. Retry before restarting the service.':
+      'Vypnutí se nepodařilo uložit. Před restartováním služby to zkuste znovu.',
+    'Ethernet': 'Ethernet',
+    'Good afternoon': 'Dobré odpoledne',
+    'Good evening': 'Dobrý večer',
+    'Good morning': 'Dobré ráno',
+    'Good night': 'Dobrou noc',
+    'Hide diagnostics': 'Skrýt diagnostiku',
+    'Hide from Home': 'Skrýt z Home',
+    'Hold Back for 1.2 seconds to open LG Home. Your settings stay saved.':
+      'Podržením tlačítka Zpět na 1,2 sekundy otevřete LG Home. Vaše nastavení zůstane uložené.',
+    'Home': 'Home',
+    'Home status is unknown. The Home button may still work.':
+      'Stav Home není známý. Tlačítko Home může stále fungovat.',
+    'Home and return from apps open Clean Your TV.':
+      'Tlačítko Home a návrat z aplikací otevírají Clean Your TV.',
+    'Home and return from apps open LG Home.':
+      'Tlačítko Home a návrat z aplikací otevírají LG Home.',
+    'Home is up to date.': 'Home je aktuální.',
+    'Home settings': 'Nastavení Home',
+    'Home will close during installation. Your app list and settings will be saved first. Press Confirm update to continue.':
+      'Home se během instalace zavře. Seznam aplikací a nastavení se nejprve uloží. Pokračujte stisknutím Potvrdit aktualizaci.',
+    'Inputs': 'Vstupy',
+    'Installed Home {installed} · Available {available}':
+      'Nainstalovaný Home {installed} · K dispozici {available}',
+    'Installing Home… Keep the TV on. If this screen closes, open Home again or use Home Updater for recovery.':
+      'Instaluje se Home… Nechte televizor zapnutý. Pokud se tato obrazovka zavře, znovu otevřete Home nebo použijte Home Updater k obnovení.',
+    'LG response could not confirm renewal':
+      'Odpověď LG nepotvrdila prodloužení',
+    'Language': 'Jazyk',
+    'Last checked: {date}': 'Poslední kontrola: {date}',
+    'Last confirmed renewal: {date}': 'Poslední potvrzené prodloužení: {date}',
+    'Live TV': 'Živé vysílání',
+    'Manage Home, software updates and your TV.':
+      'Správa Home, aktualizací softwaru a televizoru.',
+    'Network settings': 'Nastavení sítě',
+    'No inputs found': 'Nebyly nalezeny žádné vstupy',
+    'No readable Developer Mode session': 'Žádná čitelná relace Developer Mode',
+    'No recovery result available. Your helper has not been changed.':
+      'Výsledek obnovení není k dispozici. Váš Helper nebyl změněn.',
+    'Not yet': 'Zatím ne',
+    'Offline': 'Offline',
+    'Open LG Home': 'Otevřít LG Home',
+    'This button opens LG Home once. Your Home screen choice and settings stay saved.':
+      'Toto tlačítko jednorázově otevře LG Home. Vaše volba obrazovky Home a nastavení zůstanou uložené.',
+    'Recovery': 'Obnovení',
+    'Recovery state: {status}. Use Home Updater to restore the previous version if offered.':
+      'Stav obnovení: {status}. Pokud je tato možnost dostupná, obnovte předchozí verzi pomocí Home Updater.',
+    'Renewal confirmed': 'Prodloužení potvrzeno',
+    'Saving apps, icons and settings…':
+      'Ukládají se aplikace, ikony a nastavení…',
+    'Service unavailable. Install the complete Home package and try again. Manage your Developer Mode timer manually.':
+      'Služba není dostupná. Nainstalujte úplný balíček Home a zkuste to znovu. Časovač Developer Mode spravujte ručně.',
+    'Session changed — retry scheduled':
+      'Relace se změnila — další pokus je naplánován',
+    'Session checked': 'Relace zkontrolována',
+    'Session expired — open Developer Mode':
+      'Platnost relace vypršela — otevřete Developer Mode',
+    'Settings': 'Nastavení',
+    'Setup error: {error}. Use Developer Mode manually.':
+      'Chyba nastavení: {error}. Použijte Developer Mode ručně.',
+    'Share this with your TV model and firmware at:':
+      'Sdílejte tyto údaje spolu s modelem a firmwarem televizoru na:',
+    'Show diagnostics': 'Zobrazit diagnostiku',
+    'Showing the saved list. Could not refresh apps from the TV.':
+      'Zobrazuje se uložený seznam. Aplikace se nepodařilo znovu načíst z televizoru.',
+    'Software updates': 'Aktualizace softwaru',
+    'TV settings': 'Nastavení televizoru',
+    'Try again': 'Zkusit znovu',
+    'Turn off auto-renewal': 'Vypnout automatické prodlužování',
+    'Turn on auto-renewal': 'Zapnout automatické prodlužování',
+    'Undo': 'Vrátit zpět',
+    'Update Home': 'Aktualizovat Home',
+    'Update Home Helper using the installation guide first.':
+      'Nejprve aktualizujte Home Helper podle instalačního návodu.',
+    'Update Home or open LG settings for picture, sound and network.':
+      'Aktualizujte Home nebo otevřete nastavení obrazu, zvuku a sítě LG.',
+    'Update available, but a verified recovery package for your installed version is missing.':
+      'Aktualizace je dostupná, ale chybí ověřený balíček pro obnovení nainstalované verze.',
+    'Update available. Without root, install it from a computer using the guide.':
+      'Aktualizace je dostupná. Bez rootu ji nainstalujte z počítače podle návodu.',
+    'Update outcome is not confirmed. Open Home Updater → Recovery before retrying.':
+      'Výsledek aktualizace není potvrzený. Před dalším pokusem otevřete Home Updater → Obnovení.',
+    'Update service or signed release unavailable. Install the separate Home Updater package once, then retry. Your current Home is unchanged.':
+      'Aktualizační služba nebo podepsané vydání nejsou dostupné. Jednorázově nainstalujte samostatný balíček Home Updater a zkuste to znovu. Stávající Home zůstal beze změny.',
+    'Update state: {status}. Reopen Home when installation finishes.':
+      'Stav aktualizace: {status}. Po dokončení instalace znovu otevřete Home.',
+    'Updates and TV': 'Aktualizace a TV',
+    'Working…': 'Probíhá…',
+    'Your Home screen': 'Vaše obrazovka Home',
+    'Your installed Home is newer than this release.':
+      'Nainstalovaný Home je novější než toto vydání.',
+    '{app} added': 'Aplikace {app} byla přidána',
+    '{hours} hours remaining (estimate)': 'Zbývá {hours} hodin (odhad)',
+    '← ↑ ↓ → Move   ·   OK Place   ·   Back Cancel   ·   ↓ Below last row to hide':
+      '← ↑ ↓ → Přesunout   ·   OK Umístit   ·   Zpět Zrušit   ·   ↓ Pod poslední řádek pro skrytí',
+    'No-root Edition': 'Edice bez rootu',
+    'Cancel': 'Zrušit',
+    'Install Home update?': 'Nainstalovat aktualizaci Home?',
+    'Restore previous Home?': 'Obnovit předchozí Home?',
+    'Home will close during installation. Your apps and settings will be saved.':
+      'Home se během instalace zavře. Aplikace a nastavení se uloží.',
+    'The previous Home version and saved settings will be restored.':
+      'Obnoví se předchozí verze Home a uložená nastavení.',
+    'Install update': 'Nainstalovat aktualizaci',
+    'Restore previous Home': 'Obnovit předchozí Home',
+    'Release notes': 'Poznámky k vydání',
+    '↑ ↓ Read notes · ← → Choose action · Back Close':
+      '↑ ↓ Číst poznámky · ← → Vybrat akci · Zpět Zavřít',
+    '← → Choose action · Back Open Home': '← → Vybrat akci · Zpět Otevřít Home',
+    'Home control could not be restored automatically. Open Home settings.':
+      'Ovládání Home se nepodařilo automaticky obnovit. Otevřete nastavení Home.',
+    'Your previous Home screen choice has been restored.':
+      'Vaše předchozí volba obrazovky Home byla obnovena.',
+    'Home control remains off because it was disabled during the update.':
+      'Ovládání Home zůstává vypnuté, protože bylo během aktualizace vypnuto.',
+    'Rollback remains available until the next update.':
+      'Návrat k předchozí verzi zůstává dostupný do příští aktualizace.',
+    'Previous Root version and profile restored.':
+      'Předchozí verze Root a profil byly obnoveny.',
+    'Installed: {version}': 'Nainstalováno: {version}',
+    'Available: {version}': 'K dispozici: {version}',
+    'Software updates. Update available.':
+      'Aktualizace softwaru. Je dostupná aktualizace.',
+    'Open LG Home once, keeping your Home choice.':
+      'Jednorázově otevřít LG Home a zachovat vaši volbu Home.',
+    'Hold Back for 1.2 seconds to open LG Home.':
+      'Podržením tlačítka Zpět na 1,2 sekundy otevřete LG Home.',
+    'Developer Mode': 'Developer Mode',
+    'Beta': 'Beta',
+    'Home Helper': 'Home Helper',
+    'Home button settings': 'Nastavení tlačítka Home',
+    'Start Helper': 'Spustit Helper',
+    'Start Helper?': 'Spustit Helper?',
+    'Starting Helper…': 'Spouští se Helper…',
+    'Helper opens Home with your remote and helps you return to Home after turning on the TV.':
+      'Helper otevírá Home pomocí dálkového ovladače a pomáhá s návratem na Home po zapnutí televizoru.',
+    'Helper is unavailable. Reinstall the complete Home package from your computer.':
+      'Helper není dostupný. Z počítače znovu nainstalujte úplný balíček Home.',
+    'Helper was stopped for safety. Start it only when you are ready to use Home control again.':
+      'Helper byl z bezpečnostních důvodů zastaven. Spusťte jej, až budete připraveni znovu používat ovládání Home.',
+    'Helper is stopped. Start it to use the Home button and return from apps.':
+      'Helper je zastaven. Spusťte jej pro použití tlačítka Home a návratu z aplikací.',
+    'Start Helper to use Home control again. Your saved Home screen choice will be used.':
+      'Spuštěním Helper obnovíte ovládání Home. Použije se uložená volba obrazovky Home.',
+    'Status is unavailable.': 'Stav není dostupný.',
+    'Try refreshing. If this continues, reinstall the complete Home package from your computer.':
+      'Zkuste obnovit stav. Pokud problém trvá, z počítače znovu nainstalujte úplný balíček Home.',
+    'No recovery needed.': 'Obnovení není potřeba.',
+    'Open Home to continue.': 'Pokračujte otevřením Home.',
+    'Open Home to continue. If the update caused a problem, you can restore the previous version.':
+      'Pokračujte otevřením Home. Pokud aktualizace způsobila problém, můžete obnovit předchozí verzi.',
+    'Recovery needs attention.': 'Obnovení vyžaduje pozornost.',
+    'Refresh status first. If recovery remains unavailable, use the installer on your computer.':
+      'Nejprve obnovte stav. Pokud obnovení stále není dostupné, použijte instalační program v počítači.',
+    'An update is in progress.': 'Probíhá aktualizace.',
+    'Keep the TV powered on. Status will refresh automatically.':
+      'Nechte televizor zapnutý. Stav se obnoví automaticky.',
+    'Could not open Home.': 'Nepodařilo se otevřít Home.',
+    'If Home stops working after an update, use this app to restore the previous version. For regular updates, open Home settings.':
+      'Pokud Home po aktualizaci přestane fungovat, obnovte předchozí verzi pomocí této aplikace. Běžné aktualizace najdete v nastavení Home.',
+    'Open Home': 'Otevřít Home',
+    'Refresh status': 'Obnovit stav',
+    'System updater removal is in progress. Continue removal from the computer.':
+      'Probíhá odstraňování System Updater. Pokračujte v odstraňování z počítače.',
+    'Update information could not be verified.':
+      'Informace o aktualizaci se nepodařilo ověřit.',
+    'Could not connect to the update server. Nothing was installed.':
+      'Nepodařilo se připojit k aktualizačnímu serveru. Nic nebylo nainstalováno.',
+    'Update information is not available yet. Nothing was installed.':
+      'Informace o aktualizaci zatím nejsou dostupné. Nic nebylo nainstalováno.',
+    'No previous update is saved for rollback yet.':
+      'Zatím není uložena žádná předchozí aktualizace pro návrat.',
+    'Update information is not available yet. Try again later.':
+      'Informace o aktualizaci zatím nejsou dostupné. Zkuste to později.',
+    'Could not connect to check for updates. Check your connection and try again.':
+      'Nepodařilo se připojit pro kontrolu aktualizací. Zkontrolujte připojení a zkuste to znovu.',
+    'Update information could not be verified. Nothing was installed.':
+      'Informace o aktualizaci se nepodařilo ověřit. Nic nebylo nainstalováno.',
+    'System updater operation failed. Open Recovery.':
+      'Operace System Updater selhala. Otevřete Obnovení.',
+    'Updater response timed out. Open Recovery to check status.':
+      'Vypršel časový limit odpovědi aktualizačního programu. Stav zkontrolujte v Obnovení.',
+    'Invalid updater response. Open Recovery.':
+      'Neplatná odpověď aktualizačního programu. Otevřete Obnovení.',
+    'Home Updater': 'Home Updater',
+    'Root Home': 'Root Home',
+    'Root Updater': 'Root Updater',
+    'Home control runtime': 'Běhové prostředí ovládání Home',
+    'Update complete. Your apps and settings are preserved.':
+      'Aktualizace dokončena. Aplikace a nastavení byly zachovány.',
+    'Previous version and profile restored.':
+      'Předchozí verze a profil byly obnoveny.',
+    'Update stopped before replacement. Check status before trying again.':
+      'Aktualizace se zastavila před nahrazením. Před dalším pokusem zkontrolujte stav.',
+    'Recovery required. Refresh status before trying again. Rollback is blocked until the installer has definitely stopped.':
+      'Je nutné obnovení. Před dalším pokusem obnovte stav. Návrat k předchozí verzi je blokován, dokud se instalační program prokazatelně nezastaví.',
+    'Checking the updated launcher and restored settings…':
+      'Kontroluje se aktualizovaný launcher a obnovená nastavení…',
+    'Checking the restored launcher and saved profile…':
+      'Kontroluje se obnovený launcher a uložený profil…',
+    'Restoring previous components and saved profile…':
+      'Obnovují se předchozí součásti a uložený profil…',
+    'Update state: {status}. Keep the TV powered on.':
+      'Stav aktualizace: {status}. Nechte televizor zapnutý.',
+    'A signed system update is available.':
+      'Je k dispozici podepsaná aktualizace systému.',
+    'Your apps and settings stay saved.':
+      'Aplikace a nastavení zůstanou uložené.',
+    'All components are up to date.': 'Všechny součásti jsou aktuální.',
+    'A verified recovery package for this version is missing. Run the one-time computer setup.':
+      'Chybí ověřený balíček pro obnovení této verze. Proveďte jednorázové nastavení z počítače.',
+    'Update unavailable: {reason}': 'Aktualizace není dostupná: {reason}',
+    'For regular updates, open Home settings.':
+      'Běžné aktualizace najdete v nastavení Home.',
+    'Recovery belongs to the other installed edition.':
+      'Obnovení patří druhé nainstalované edici.',
+    'Install system update?': 'Nainstalovat aktualizaci systému?',
+    'Update all': 'Aktualizovat vše',
+    'Roll back': 'Vrátit předchozí verzi',
+    'Restore previous system?': 'Obnovit předchozí systém?',
+    'Restore all previous components and pre-update settings. Settings changed after the update will be lost. Keep the TV powered on.':
+      'Obnoví se všechny předchozí součásti a nastavení před aktualizací. Nastavení změněná po aktualizaci budou ztracena. Nechte televizor zapnutý.',
+    'Restore previous system': 'Obnovit předchozí systém',
+    'Helper status could not be checked on this TV. Start Helper only when you are ready to use Home control again.':
+      'Stav Helper se na tomto televizoru nepodařilo zkontrolovat. Spusťte Helper, až budete připraveni znovu používat ovládání Home.',
+    'Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.':
+      'Udržujte Developer Mode aktivní: otevřete jej před vypršením časovače a stiskněte EXTEND, když je televizor online. Po vypršení může LG tyto aplikace odstranit.',
+    'Home is your app screen. Home Helper makes the Home button open it.':
+      'Home je vaše obrazovka aplikací. Home Helper zajišťuje její otevření tlačítkem Home.',
+    'This update requires a computer migration. Keep recovery records.':
+      'Tato aktualizace vyžaduje migraci z počítače. Uchovejte záznamy obnovení.',
+    'Columns': 'Sloupce',
+    'By theme ({count})': 'Podle motivu ({count})',
+    'Choose 1–8 columns. Your choice overrides the theme.':
+      'Vyberte 1–8 sloupců. Vaše volba má přednost před motivem.',
+    'Columns: {count}': 'Sloupce: {count}',
+    'Could not save columns. Please try again.':
+      'Počet sloupců se nepodařilo uložit. Zkuste to znovu.',
+    'Show Add app tile': 'Zobrazit dlaždici Přidat aplikaci'
   }
 });
 
 // Classic Inputs shelf and live input status are shared by both editions.
 HomeI18n.add({
-  "en": {
-    "Show inputs on Home": "Show inputs on Home",
-    "Preview inputs on focus": "Preview inputs on focus",
-    "Not connected": "Not connected",
-    "Connected": "Connected"
+  'en': {
+    'Show inputs on Home': 'Show inputs on Home',
+    'Preview inputs on focus': 'Preview inputs on focus',
+    'Not connected': 'Not connected',
+    'Connected': 'Connected'
   },
-  "cs": {
-    "Show inputs on Home": "Zobrazit vstupy na Home",
-    "Preview inputs on focus": "Náhled vybraného vstupu",
-    "Not connected": "Nepřipojeno",
-    "Connected": "Připojeno"
+  'cs': {
+    'Show inputs on Home': 'Zobrazit vstupy na Home',
+    'Preview inputs on focus': 'Náhled vybraného vstupu',
+    'Not connected': 'Nepřipojeno',
+    'Connected': 'Připojeno'
   },
-  "de": {
-    "Show inputs on Home": "Eingänge auf Home anzeigen",
-    "Preview inputs on focus": "Vorschau des ausgewählten Eingangs",
-    "Not connected": "Nicht verbunden",
-    "Connected": "Verbunden"
+  'de': {
+    'Show inputs on Home': 'Eingänge auf Home anzeigen',
+    'Preview inputs on focus': 'Vorschau des ausgewählten Eingangs',
+    'Not connected': 'Nicht verbunden',
+    'Connected': 'Verbunden'
   },
-  "es": {
-    "Show inputs on Home": "Mostrar entradas en Home",
-    "Preview inputs on focus": "Vista previa de la entrada seleccionada",
-    "Not connected": "No conectado",
-    "Connected": "Conectado"
+  'es': {
+    'Show inputs on Home': 'Mostrar entradas en Home',
+    'Preview inputs on focus': 'Vista previa de la entrada seleccionada',
+    'Not connected': 'No conectado',
+    'Connected': 'Conectado'
   },
-  "pt-BR": {
-    "Show inputs on Home": "Mostrar entradas no Home",
-    "Preview inputs on focus": "Pré-visualizar a entrada selecionada",
-    "Not connected": "Não conectado",
-    "Connected": "Conectado"
+  'pt-BR': {
+    'Show inputs on Home': 'Mostrar entradas no Home',
+    'Preview inputs on focus': 'Pré-visualizar a entrada selecionada',
+    'Not connected': 'Não conectado',
+    'Connected': 'Conectado'
   },
-  "fr": {
-    "Show inputs on Home": "Afficher les entrées sur Home",
-    "Preview inputs on focus": "Aperçu de l’entrée sélectionnée",
-    "Not connected": "Non connecté",
-    "Connected": "Connecté"
+  'fr': {
+    'Show inputs on Home': 'Afficher les entrées sur Home',
+    'Preview inputs on focus': 'Aperçu de l’entrée sélectionnée',
+    'Not connected': 'Non connecté',
+    'Connected': 'Connecté'
   },
-  "it": {
-    "Show inputs on Home": "Mostra ingressi su Home",
-    "Preview inputs on focus": "Anteprima dell’ingresso selezionato",
-    "Not connected": "Non collegato",
-    "Connected": "Collegato"
+  'it': {
+    'Show inputs on Home': 'Mostra ingressi su Home',
+    'Preview inputs on focus': 'Anteprima dell’ingresso selezionato',
+    'Not connected': 'Non collegato',
+    'Connected': 'Collegato'
   },
-  "ko": {
-    "Show inputs on Home": "Home에 입력 표시",
-    "Preview inputs on focus": "선택한 입력 미리보기",
-    "Not connected": "연결되지 않음",
-    "Connected": "연결됨"
+  'ko': {
+    'Show inputs on Home': 'Home에 입력 표시',
+    'Preview inputs on focus': '선택한 입력 미리보기',
+    'Not connected': '연결되지 않음',
+    'Connected': '연결됨'
   },
-  "hi": {
-    "Show inputs on Home": "Home पर इनपुट दिखाएँ",
-    "Preview inputs on focus": "चुने गए इनपुट का पूर्वावलोकन",
-    "Not connected": "कनेक्ट नहीं है",
-    "Connected": "कनेक्ट है"
+  'hi': {
+    'Show inputs on Home': 'Home पर इनपुट दिखाएँ',
+    'Preview inputs on focus': 'चुने गए इनपुट का पूर्वावलोकन',
+    'Not connected': 'कनेक्ट नहीं है',
+    'Connected': 'कनेक्ट है'
   },
-  "pl": {
-    "Show inputs on Home": "Pokaż wejścia na Home",
-    "Preview inputs on focus": "Podgląd wybranego wejścia",
-    "Not connected": "Nie podłączono",
-    "Connected": "Podłączono"
+  'pl': {
+    'Show inputs on Home': 'Pokaż wejścia na Home',
+    'Preview inputs on focus': 'Podgląd wybranego wejścia',
+    'Not connected': 'Nie podłączono',
+    'Connected': 'Podłączono'
   },
-  "ru": {
-    "Show inputs on Home": "Показывать входы на Home",
-    "Preview inputs on focus": "Предпросмотр выбранного входа",
-    "Not connected": "Не подключено",
-    "Connected": "Подключено"
+  'ru': {
+    'Show inputs on Home': 'Показывать входы на Home',
+    'Preview inputs on focus': 'Предпросмотр выбранного входа',
+    'Not connected': 'Не подключено',
+    'Connected': 'Подключено'
   },
-  "zh-Hans": {
-    "Show inputs on Home": "在 Home 上显示输入源",
-    "Preview inputs on focus": "预览所选输入源",
-    "Not connected": "未连接",
-    "Connected": "已连接"
+  'zh-Hans': {
+    'Show inputs on Home': '在 Home 上显示输入源',
+    'Preview inputs on focus': '预览所选输入源',
+    'Not connected': '未连接',
+    'Connected': '已连接'
   },
-  "zh-Hant": {
-    "Show inputs on Home": "在 Home 顯示輸入來源",
-    "Preview inputs on focus": "預覽所選輸入來源",
-    "Not connected": "未連接",
-    "Connected": "已連接"
+  'zh-Hant': {
+    'Show inputs on Home': '在 Home 顯示輸入來源',
+    'Preview inputs on focus': '預覽所選輸入來源',
+    'Not connected': '未連接',
+    'Connected': '已連接'
   }
 });

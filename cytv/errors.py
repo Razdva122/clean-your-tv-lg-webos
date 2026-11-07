@@ -22,6 +22,13 @@ class UserError(RuntimeError):
         self.reason_code = reason_code
 
 
+def connection_interrupted(error):
+    """Transient transport loss only; credentials and host trust never retry."""
+    return (getattr(error, 'reason_code', None) == 'connection-interrupted'
+            or isinstance(error, (ConnectionError, TimeoutError))
+            or type(error).__name__ in ('SSHException', 'NoValidConnectionsError'))
+
+
 
 class PythonCacheError(UserError):
     """Allowlisted host acquisition failure; never carry remote exception text."""
@@ -170,3 +177,18 @@ def root_recovery_details(value):
         number = value.get(key)
         if type(number) is int and low <= number <= high: result[key] = number
     return result
+
+
+def no_root_observer_details(value):
+    """Revalidate host observer context; never accept remote text or identifiers."""
+    if type(value) is not dict:
+        return {}
+    allowed = {
+        'command': ('prepare', 'status', 'attach', 'upload-artifact', 'upload-configuration',
+                    'artifacts', 'config-claim', 'config-result', 'start', 'worker', 'seal',
+                    'readback', 'configured', 'release', 'retire'),
+        'failure': ('command-failed', 'connection-interrupted', 'timeout', 'transport-error',
+                    'invalid-json', 'invalid-reply', 'foreign-operation', 'invalid-status'),
+    }
+    return {key: value[key] if type(value.get(key)) is str and value[key] in choices else 'unknown'
+            for key, choices in allowed.items()}

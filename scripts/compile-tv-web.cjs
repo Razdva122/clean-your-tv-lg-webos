@@ -17,76 +17,148 @@ const polyfillsName = 'compat-polyfills.js';
 function hasBlockFunction(node, inBlock) {
   if (!node || typeof node.type !== 'string') return false;
   if (node.type === 'FunctionDeclaration' && inBlock) return true;
-  if (/Function/.test(node.type)) return node.body.body.some(child => hasBlockFunction(child, false));
+  if (/Function/.test(node.type))
+    return node.body.body.some((child) => hasBlockFunction(child, false));
   const block = node.type === 'BlockStatement' || node.type === 'SwitchCase';
-  return Object.keys(node).some(key => [].concat(node[key]).some(child =>
-    child && typeof child === 'object' && hasBlockFunction(child, block || (inBlock && node.type !== 'Program'))));
+  return Object.keys(node).some((key) =>
+    []
+      .concat(node[key])
+      .some(
+        (child) =>
+          child &&
+          typeof child === 'object' &&
+          hasBlockFunction(child, block || (inBlock && node.type !== 'Program'))
+      )
+  );
 }
 
 function javascript(code, filename) {
   // Already-compatible scripts keep their bytes and global-script semantics.
-  try { if (!hasBlockFunction(acorn.parse(code, {ecmaVersion: 5}), false)) return code; } catch (_) {}
+  try {
+    if (!hasBlockFunction(acorn.parse(code, { ecmaVersion: 5 }), false))
+      return code;
+  } catch (_) {}
   const output = babel.transformSync(code, {
-    filename, cwd: root, configFile: false, babelrc: false, sourceType: 'script',
-    presets: [[require.resolve('@babel/preset-env'), {
-      targets, forceAllTransforms: true, modules: false, useBuiltIns: false, bugfixes: true
-    }]]
+    filename,
+    cwd: root,
+    configFile: false,
+    babelrc: false,
+    sourceType: 'script',
+    presets: [
+      [
+        require.resolve('@babel/preset-env'),
+        {
+          targets,
+          forceAllTransforms: true,
+          modules: false,
+          useBuiltIns: false,
+          bugfixes: true
+        }
+      ]
+    ]
   }).code;
-  acorn.parse(output, {ecmaVersion: 5});
+  acorn.parse(output, { ecmaVersion: 5 });
   return output + '\n';
 }
 
 async function stylesheet(code, filename) {
   // webOS 2 uses WebKit 538.2: emit its prefixed flex/transform/animation forms.
   // Safari 8 supplies the prefix profile, not a claim of complete TV API support.
-  const transformed = await postcss([presetEnv({browsers: targets.concat('Safari 8'), stage: 3, preserve: false,
-    features: {'logical-properties-and-values': true, 'hexadecimal-alpha-notation': true}})]).process(code, {from: filename, map: false});
+  const transformed = await postcss([
+    presetEnv({
+      browsers: targets.concat('Safari 8'),
+      stage: 3,
+      preserve: false,
+      features: {
+        'logical-properties-and-values': true,
+        'hexadecimal-alpha-notation': true
+      }
+    })
+  ]).process(code, { from: filename, map: false });
   const unsupported = [];
-  transformed.root.walkDecls(/^(overflow-wrap|word-wrap)$/, declaration => {
-    if (declaration.value === 'anywhere') unsupported.push(filename + ': ' + declaration.prop + ': anywhere requires a legacy break-word value');
+  transformed.root.walkDecls(/^(overflow-wrap|word-wrap)$/, (declaration) => {
+    if (declaration.value === 'anywhere')
+      unsupported.push(
+        filename +
+          ': ' +
+          declaration.prop +
+          ': anywhere requires a legacy break-word value'
+      );
   });
-  transformed.root.walkAtRules(/^font-face$/i, face => {
-    face.walkDecls(/^font-weight$/i, declaration => {
-      if (/\s/.test(declaration.value.trim())) unsupported.push(filename + ': font-weight ranges require static font faces for legacy engines');
+  transformed.root.walkAtRules(/^font-face$/i, (face) => {
+    face.walkDecls(/^font-weight$/i, (declaration) => {
+      if (/\s/.test(declaration.value.trim()))
+        unsupported.push(
+          filename +
+            ': font-weight ranges require static font faces for legacy engines'
+        );
     });
   });
-  await postcss([doiuse({browsers: targets, onFeatureUsage: usage => {
-    // doiuse groups legacy overflow values with newer clip/overlay features.
-    // Only the four original values are accepted, not the entire feature family.
-    if (usage.feature === 'css-overflow' && /^overflow(?:-[xy])?$/.test(usage.usage.prop) &&
-        /^(auto|hidden|scroll|visible)$/.test(usage.usage.value)) return;
-    // CSS1 scalar decorations predate the modern multi-value shorthand.
-    if (usage.feature === 'mdn-text-decoration-shorthand' && usage.usage.prop === 'text-decoration' &&
-        /^(none|underline)$/.test(usage.usage.value)) return;
-    unsupported.push(usage.message);
-  }})])
-    .process(transformed.css, {from: filename, map: false});
-  if (unsupported.length) throw Error(filename + ': unsupported CSS after PostCSS:\n' + unsupported.join('\n'));
+  await postcss([
+    doiuse({
+      browsers: targets,
+      onFeatureUsage: (usage) => {
+        // doiuse groups legacy overflow values with newer clip/overlay features.
+        // Only the four original values are accepted, not the entire feature family.
+        if (
+          usage.feature === 'css-overflow' &&
+          /^overflow(?:-[xy])?$/.test(usage.usage.prop) &&
+          /^(auto|hidden|scroll|visible)$/.test(usage.usage.value)
+        )
+          return;
+        // CSS1 scalar decorations predate the modern multi-value shorthand.
+        if (
+          usage.feature === 'mdn-text-decoration-shorthand' &&
+          usage.usage.prop === 'text-decoration' &&
+          /^(none|underline)$/.test(usage.usage.value)
+        )
+          return;
+        unsupported.push(usage.message);
+      }
+    })
+  ]).process(transformed.css, { from: filename, map: false });
+  if (unsupported.length)
+    throw Error(
+      filename + ': unsupported CSS after PostCSS:\n' + unsupported.join('\n')
+    );
   return transformed.css;
 }
 
 async function document(code, filename) {
   const tree = html.parse(code);
-  let head, hasPolyfills = false;
+  let head,
+    hasPolyfills = false;
   async function visit(node) {
     if (node.tagName === 'head') head = node;
     const attrs = node.attrs || [];
-    const source = attrs.find(attr => attr.name === 'src');
-    if (node.tagName === 'script' && source && source.value === polyfillsName) hasPolyfills = true;
+    const source = attrs.find((attr) => attr.name === 'src');
+    if (node.tagName === 'script' && source && source.value === polyfillsName)
+      hasPolyfills = true;
     if (node.tagName === 'style') {
-      for (const text of node.childNodes) text.value = await stylesheet(text.value, filename + '.style.css');
+      for (const text of node.childNodes)
+        text.value = await stylesheet(text.value, filename + '.style.css');
     }
     for (const attr of attrs) {
       if (attr.name === 'style') {
-        const css = await stylesheet('.inline{' + attr.value + '}', filename + '.attribute.css');
-        attr.value = postcss.parse(css).first.nodes.map(node => node.toString()).join(';');
+        const css = await stylesheet(
+          '.inline{' + attr.value + '}',
+          filename + '.attribute.css'
+        );
+        attr.value = postcss
+          .parse(css)
+          .first.nodes.map((node) => node.toString())
+          .join(';');
       }
     }
     if (node.tagName === 'script' && !source) {
-      const type = attrs.find(attr => attr.name === 'type');
-      if (type && type.value === 'module') throw Error(filename + ': use classic scripts, not unbundled ES modules');
+      const type = attrs.find((attr) => attr.name === 'type');
+      if (type && type.value === 'module')
+        throw Error(
+          filename + ': use classic scripts, not unbundled ES modules'
+        );
       if (!type || /^(text|application)\/javascript$/.test(type.value)) {
-        for (const text of node.childNodes) text.value = javascript(text.value, filename + '.inline.js');
+        for (const text of node.childNodes)
+          text.value = javascript(text.value, filename + '.inline.js');
       }
     }
     for (const child of node.childNodes || []) await visit(child);
@@ -94,7 +166,9 @@ async function document(code, filename) {
   }
   await visit(tree);
   if (!hasPolyfills) {
-    const script = html.parseFragment('<script src="' + polyfillsName + '"></script>').childNodes[0];
+    const script = html.parseFragment(
+      '<script src="' + polyfillsName + '"></script>'
+    ).childNodes[0];
     script.parentNode = head;
     head.childNodes.unshift(script);
   }
@@ -102,18 +176,29 @@ async function document(code, filename) {
 }
 
 async function compile(files) {
-  const output = {...files};
+  const output = { ...files };
   for (const [name, code] of Object.entries(files)) {
     if (name === polyfillsName) continue;
     if (name.endsWith('.js')) output[name] = javascript(code, name);
     if (name.endsWith('.css')) output[name] = await stylesheet(code, name);
     if (name.endsWith('.html')) output[name] = await document(code, name);
   }
-  if (Object.keys(files).some(name => name.endsWith('.html'))) {
-    output[polyfillsName] = fs.readFileSync(require.resolve('core-js-bundle/minified.js'), 'utf8');
-    acorn.parse(output[polyfillsName], {ecmaVersion: 5});
-    output['compat-LICENSE.txt'] = fs.readFileSync(require.resolve('core-js-bundle/LICENSE'), 'utf8') + '\n' +
-      fs.readFileSync(path.join(path.dirname(require.resolve('@babel/core/package.json')), 'LICENSE'), 'utf8');
+  if (Object.keys(files).some((name) => name.endsWith('.html'))) {
+    output[polyfillsName] = fs.readFileSync(
+      require.resolve('core-js-bundle/minified.js'),
+      'utf8'
+    );
+    acorn.parse(output[polyfillsName], { ecmaVersion: 5 });
+    output['compat-LICENSE.txt'] =
+      fs.readFileSync(require.resolve('core-js-bundle/LICENSE'), 'utf8') +
+      '\n' +
+      fs.readFileSync(
+        path.join(
+          path.dirname(require.resolve('@babel/core/package.json')),
+          'LICENSE'
+        ),
+        'utf8'
+      );
   }
   return output;
 }
@@ -123,7 +208,13 @@ exports.stylesheet = stylesheet;
 if (require.main === module) {
   let input = '';
   process.stdin.setEncoding('utf8');
-  process.stdin.on('data', chunk => input += chunk);
-  process.stdin.on('end', () => compile(JSON.parse(input)).then(output => process.stdout.write(JSON.stringify(output)))
-    .catch(error => {console.error(error.message); process.exitCode = 1;}));
+  process.stdin.on('data', (chunk) => (input += chunk));
+  process.stdin.on('end', () =>
+    compile(JSON.parse(input))
+      .then((output) => process.stdout.write(JSON.stringify(output)))
+      .catch((error) => {
+        console.error(error.message);
+        process.exitCode = 1;
+      })
+  );
 }

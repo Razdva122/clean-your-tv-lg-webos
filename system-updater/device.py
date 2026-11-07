@@ -1,6 +1,5 @@
 """Fixed TV effects for the independent, root-owned system supervisor."""
 import base64
-import copy
 import hashlib
 import importlib.util
 import json

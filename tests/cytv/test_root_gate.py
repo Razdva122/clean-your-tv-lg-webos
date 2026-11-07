@@ -49,6 +49,13 @@ class RootGateTests(unittest.TestCase):
         (self.folder/'bundle.json').write_text(json.dumps({'package':self.ipk,'files':files}))
         self.manifest={'root_backends':{BACKEND:{'experimental':True,'hardware_validated':False,'graphics':{'1920x1080':'root-c1','1280x720':'root-c1-720p'}}},'files':{self.variant+'/'+p.relative_to(self.folder).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in self.folder.rglob('*') if p.is_file()}}
         if hasattr(self,'installer'):self.installer.manifest=self.manifest
+
+    def test_generic_admission_cannot_install_legacy_mount_payload(self):
+        self.installer.tv_info['home_backend_schema']=3
+        with self.assertRaises(UserError):
+            root_gate.install(self.installer,self.inventory)
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertEqual(self.remote.uploads,{})
     def action(self,action,**kwargs):
         self.actions.append((action,kwargs))
         if self.failure==action:raise RuntimeError('interrupted '+action)
