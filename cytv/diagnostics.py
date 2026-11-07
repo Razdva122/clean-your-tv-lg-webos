@@ -68,6 +68,8 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
                 report['ssh_command'][key] = value
         recovery = root_recovery_details(getattr(error, 'root_recovery', None))
         if recovery: report['root_recovery'] = recovery
+    if hasattr(error, 'no_root_observer'):
+        report['no_root_observer'] = getattr(error, 'no_root_observer')
     if isinstance(error, TVRejected):
         report['luna'] = error.luna
     if isinstance(error, PythonCacheError):
@@ -79,7 +81,7 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
             ('available_kib', 'required_kib', 'wam_session_kib') if getattr(safe, key) is not None})
     if error is not None:
         safe_error = context.failure_summary(report)
-        for key in ('luna', 'connection', 'ssh_command', 'python_cache', 'python_runtime', 'root_recovery'):
+        for key in ('luna', 'connection', 'ssh_command', 'python_cache', 'python_runtime', 'root_recovery', 'no_root_observer'):
             if key in report:
                 report[key] = safe_error.get(key, {})
     report.update(context.history(report, store, profile, error, removal or pending))

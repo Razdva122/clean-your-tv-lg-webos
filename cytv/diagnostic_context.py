@@ -20,7 +20,7 @@ REASONS = ('unknown', 'user-error', 'ssh-command-failed', 'ssh-unreachable',
            'pending-operation', 'root-operation-unconfirmed', 'version-mismatch',
            'inventory-unavailable', 'graphics-unverified', 'root-home-interfaces',
            'root-worker-busy', 'root-access-required', 'removal-failed',
-           'cleanup-check-failed', 'connection-interrupted')
+           'cleanup-check-failed', 'connection-interrupted', 'operation-timeout')
 ACTIONS = ('recover', 'install', 'uninstall', 'restore', 'status', 'doctor', 'home-diagnostics',
            'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access',
            'recover-system-rollback', 'replace-system-updater', 'clean-wam-cache')
@@ -323,6 +323,9 @@ def failure_summary(value):
     recovery = root_recovery_details(value.get('root_recovery'))
     if recovery:
         result['root_recovery'] = recovery
+    if 'no_root_observer' in value:
+        from .errors import no_root_observer_details
+        result['no_root_observer'] = no_root_observer_details(value['no_root_observer'])
     if 'checks' in value:
         # Stored projections are id -> status, not UI events.
         result['checks'] = checks_summary({key: {'status': item} for key, item in mapping(value['checks']).items()})

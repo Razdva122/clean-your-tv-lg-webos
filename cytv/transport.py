@@ -342,7 +342,7 @@ class SSH:
                 raise UserError('TV connection interrupted. Run cytv status before retrying.',reason_code='connection-interrupted')
             else:
                 time.sleep(0.02)
-        raise UserError('TV operation timed out. Run cytv status before retrying.')
+        raise UserError('TV operation timed out. Run cytv status before retrying.', reason_code='operation-timeout')
 
     def run(self, command, data=None, timeout=30):
         channel = self.channel(command)
