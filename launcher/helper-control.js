@@ -112,7 +112,7 @@
       [0, 2, 3].forEach(function (i) {
         buttons[i].disabled = on;
       });
-      if (!on) focus(index);
+      if (!on && document.activeElement !== details) focus(index);
     }
     function refresh() {
       var request = ++generation;

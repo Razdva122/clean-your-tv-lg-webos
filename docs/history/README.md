@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [No-root webOS 3.x compatibility, 2026-11-07](2026-11-07-webos3-compatibility.md): conflict resolution, focus/Updater corrections, exact legacy-Node checks, package tests and pending candidate/device acceptance.
+
 - [Root removal catalog fallback, 2026-11-07](2026-11-07-issue240-removal-catalog.md): bounded catalog compatibility, first/latest failure detail and source regressions; original #240 recovery and retail acceptance remain unverified.
 
 - [Next candidate integration, 2026-11-07](2026-11-07-next-candidate-integration.md): inventory fallback, experimental compositor, formatting, cleanup/recovery and observer diagnostics; combined source checks, metadata-base recovery and pending versioned build/device acceptance.

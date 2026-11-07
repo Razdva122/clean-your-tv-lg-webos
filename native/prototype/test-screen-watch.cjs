@@ -95,6 +95,19 @@ let t = setup(),
 a.equal(s.url, 'wss://192.0.2.50:3001');
 s.emit('open');
 a.equal(s.sent[0].payload['client-key'], 'private-test-key');
+a.deepEqual(
+  Array.from(s.sent[0].payload.manifest.permissions),
+  [
+    'READ_APP_STATUS',
+    'READ_RUNNING_APPS',
+    'READ_POWER_STATE',
+    'CONTROL_POWER',
+    'READ_INSTALLED_APPS',
+    'READ_INPUT_DEVICE_LIST'
+  ],
+  'screen watcher and inventory retain the same full SSAP permission set'
+);
+
 s.emit('message', JSON.stringify({ type: 'registered' }));
 a.equal(s.sent[1].type, 'subscribe');
 s.emit(

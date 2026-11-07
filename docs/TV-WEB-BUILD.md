@@ -20,8 +20,9 @@ npm run test:compat
 All production TV web packages pass through `scripts/tv_web_build.py`:
 No-root Home, Root Home, Home Updater and Root Updater. Desktop and Android
 installers embed these compiled packages. Native executables, TV Node services
-and Python code retain their own runtimes. Helper JavaScript has a separate
-Node-targeted build described below; other TV Node services are not transformed in ordinary builds. The opt-in
+and Python code retain their own runtimes. Helper JavaScript and the No-root Home/independent Updater services use the
+separate Node-targeted build described below. Root services retain their
+existing runtime requirements. The opt-in
 [Root Node prototype](development/ROOT-NODE-PROTOTYPE.md) separately compiles the
 Root runtime closure for host tests; Root admission remains Node 8+.
 The installed cytv apps do not require Node/npm on the user's computer.
@@ -50,7 +51,9 @@ Newer overflow values are still rejected. The linter uses compatibility data;
 it is not an exhaustive proof of browser behavior.
 
 Scripts remain separate classic scripts so the existing globals and UMD
-wrappers keep their behavior. Compatible ES5 sources keep their original bytes.
+wrappers keep their behavior. Compatible ES5 sources keep their original bytes, except block function
+declarations: Acorn accepts these as ES5, but strict Chrome 38 code rejects
+them, so the compiler also transforms that syntax.
 No webpack or application-module migration is needed. Build products are staged
 separately; the compiler never overwrites a developer's app configuration,
 inventory or icons in the source tree.
@@ -121,7 +124,7 @@ retain the original maximum size, while denser layouts reserve room for the
 enlarged focus frame. These browser checks do not establish physical TV
 performance or Home-button compatibility.
 
-## Helper Node compatibility
+## Helper and No-root service Node compatibility
 
 `scripts/helper_build.py` and `scripts/compile-helper.cjs` target **Node 0.10**
 independently of Browserslist. Both `build-cytv.py` and `build.sh` compile the
@@ -138,6 +141,22 @@ The legacy tree includes async-limiter and the pure JS UTF-8 validator from
 ws 7.5.11; see its retained source notes. SSAP clients disable compression and
 keep their handshake/payload limits. TV-provided webos-service remains external.
 Published historical Helper baselines retain their original bytes.
+
+The unpublished candidate also compiles the No-root Home renewal service and
+independent Updater service through this compiler in both source-package and
+embedded-payload builds, including Home's injected theme receiver. The Updater
+uses Node's legacy `url.parse`/`url.resolve` APIs, with HTTPS, credential, host,
+port and path restrictions reapplied on every redirect; `require('url').URL` is
+unavailable on Node 0.12. No endpoint or persisted state is added. The two Helper
+SSAP clients request the same full permission set so registering inventory does
+not replace the screen watcher's permissions on webOS 3.x.
+
+`node tests/tv-service-compat.cjs` loads both compiled services and exercises
+Updater URL validation and bounded relative/CDN redirects on current Node and
+any configured `NODE010`, `NODE01025` and `NODE012` runtimes. The LS2 and HTTPS
+substitutes establish host behavior, not actual TV bus permissions, TLS access,
+Developer Mode boot, package installation or update/rollback acceptance.
+
 
 Run `node tests/helper-compat.cjs` with current Node; set `NODE010` to Node
 0.10.15, `NODE01025` to Node 0.10.25 and `NODE012` to Node 0.12.2 to test
