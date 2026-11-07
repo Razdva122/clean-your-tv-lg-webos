@@ -1,56 +1,7 @@
 {
   "schema": 1,
-  "version": "1.12.0",
-  "changes": [
-    {
-      "pr": 388,
-      "issues": [
-        383
-      ],
-      "summary": "Offer exact-Node-0.12.2 Root Beta and No-root over root SSH; original-device and physical acceptance remain unverified"
-    },
-    {
-      "pr": 391,
-      "issues": [
-        389
-      ],
-      "summary": "Continue Root setup when optional input discovery fails; preserve required application checks and unverified input diagnostics"
-    },
-    {
-      "pr": 398,
-      "issues": [
-        394
-      ],
-      "summary": "Preserve visible original Root icons within the shared budget and admit the exact system-app root; exact-package C3 icon acceptance passed"
-    },
-    {
-      "pr": 400,
-      "issues": [
-        396
-      ],
-      "summary": "Explain explicit verified cleanup before switching from reinstalled No-root to Root; preserve removal ownership and recovery guards"
-    },
-    {
-      "pr": 401,
-      "issues": [
-        347,
-        348,
-        368
-      ],
-      "summary": "Fix transitional Root Settings status; add private retention diagnostics and SSH identity recovery guidance; original #348 automatic re-entry and #368 trust recovery remain unresolved"
-    },
-    {
-      "pr": 405,
-      "issues": [],
-      "summary": "Keep the isolated generated Beta refusal test runnable on Windows; retain actual handlers and all check/install assertions without product changes"
-    }
-  ],
+  "version": null,
+  "changes": [],
   "excluded": [],
-  "acceptance": "Scoped exact-artifact QA: docs/history/2026-11-07-release-1.12.0-scoped-qa.md. OLED55C3RLA firmware43.21.71/webOS SDK11.2.0, remote model unknown, macOS ARM64: signed Root0.13.0/updater0.5.2/infrastructure0.13.0 delivery, original icons, Home after explicit normal enable, arrows/OK, volume/audible sound and standby Settings convergence passed. Android0.12.0/code26 original-signer upgrade/retention/native tests passed on API35 ARM64 emulator; packaged Settings/font/icon cases passed. Maintainer explicitly instructed shipment after disclosure of unexplained Home disable before update suspension; retain as unresolved follow-up, not automatic Home-preservation acceptance. Physical Beta explicitly deferred, no compatibility claim; cold boot/retained rollback/fresh No-root not selected; physical phone/live Android-TV paths untested. No new product fix or weakened recovery guard. Exact component/APK hashes and provenance in linked record.",
-  "build": {
-    "run_id": 42384446335,
-    "attempt": 1,
-    "source": "5d9f505eaff12f743c666997a3364c8a6e18e73e"
-  },
-  "acceptance_build": "42384446335:1"
+  "acceptance": ""
 }
