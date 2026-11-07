@@ -15,15 +15,20 @@
  function showDiagnostics(show){details.hidden=!show;buttons[4].textContent=t(show?'Hide diagnostics':'Show diagnostics');buttons[4].setAttribute('aria-expanded',String(show));if(show){renderDiagnostics();details.focus();}else focus(4);}
  function focus(i){for(var n=0;n<buttons.length;n++){index=(i+n+buttons.length)%buttons.length;if(!buttons[index].hidden&&!buttons[index].disabled){buttons[index].focus();return;}}}
  function close(){generation++;panel.hidden=true;if(previous&&previous.focus)previous.focus();}
- function refresh(){var request=++generation;diagnostic={schema:1,source:'home-helper-panel',helper_status:safeStatus(null,'pending',false),home_status:safeStatus(null,null,true)};renderDiagnostics();buttons[2].hidden=true;if(index===2)focus(0);buttons[1].disabled=true;status.textContent=t('Checking Home control…');
+ // While Home control is being checked only diagnostics stay available; Back/Exit still closes the panel.
+ function checking(on){[0,2,3].forEach(function(i){buttons[i].disabled=on;});if(!on)focus(index);}
+ function refresh(){var request=++generation;checking(true);diagnostic={schema:1,source:'home-helper-panel',helper_status:safeStatus(null,'pending',false),home_status:safeStatus(null,null,true)};renderDiagnostics();buttons[2].hidden=true;if(index===2)focus(0);buttons[1].disabled=true;status.textContent=t('Checking Home control…');
   rpc('luna://com.local.nativehome.service/status',{},function(r,outcome){if(request!==generation||panel.hidden)return;diagnostic.helper_status=safeStatus(r,outcome,false);renderDiagnostics();
    // A service refusal does not establish whether the independent Home broker works.
    var refused=outcome==='rejected';
-   if(!refused&&(!r||r.returnValue!==true||(r.running!==undefined&&typeof r.running!=='boolean'))){status.textContent=t('Helper status could not be checked on this TV. Start Helper only when you are ready to use Home control again.');buttons[2].hidden=false;return;}
-   if(!refused&&(r.running===false||r.blocked)){status.textContent=t(r.blocked?'Helper was stopped for safety. Start it only when you are ready to use Home control again.':'Helper is stopped. Start it to use the Home button and return from apps.');buttons[2].hidden=false;return;}
+   if(!refused&&(!r||r.returnValue!==true||(r.running!==undefined&&typeof r.running!=='boolean'))){status.textContent=t('Helper status could not be checked on this TV. Start Helper only when you are ready to use Home control again.');buttons[2].hidden=false;checking(false);return;}
+   if(!refused&&r.blocked){status.textContent=t('Helper was stopped for safety. Start it only when you are ready to use Home control again.');buttons[2].hidden=false;checking(false);return;}
    // Published Helper 0.6.17 omits running; homeStatus confirms control is responding.
+   // A jailed service (webOS 3.x) cannot see the controller and reports running:false,
+   // so only a homeStatus failure confirms that Helper is stopped.
    diagnostic.home_status=safeStatus(null,'pending',true);renderDiagnostics();
-   rpc('luna://com.gathin.tvhome.renewal/homeStatus',{},function(s,outcome){if(request!==generation||panel.hidden)return;diagnostic.home_status=safeStatus(s,outcome,true);renderDiagnostics();
+   rpc('luna://com.gathin.tvhome.renewal/homeStatus',{},function(s,outcome){if(request!==generation||panel.hidden)return;checking(false);diagnostic.home_status=safeStatus(s,outcome,true);renderDiagnostics();
+    if(!refused&&r.running===false&&(!s||s.returnValue!==true)){status.textContent=t('Helper is stopped. Start it to use the Home button and return from apps.');buttons[2].hidden=false;return;}
     buttons[1].disabled=!s||s.returnValue!==true||typeof s.enabled!=='boolean';
     if(refused&&buttons[1].disabled){status.textContent=t('Helper status could not be checked on this TV. Start Helper only when you are ready to use Home control again.');buttons[2].hidden=false;return;}
     status.textContent=t(buttons[1].disabled?'Home status is unknown. The Home button may still work.':s.enabled?'Home and return from apps open Clean Your TV.':'Home and return from apps open LG Home.');

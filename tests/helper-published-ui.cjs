@@ -66,16 +66,19 @@ for (const enabled of [true, false]) {
   assert.equal(ui.buttons[2].hidden, true, 'a responsive legacy controller needs no restart');
   assert.equal(ui.calls.some(c => c.uri.endsWith('/launch')), false);
 }
-for (const reply of [publishedStatus(true), {returnValue: true, running: false, blocked: false}]) {
-  const ui = panel(reply);
+// A blocked Helper is never probed; running:false is confirmed through homeStatus,
+// because a jailed service (webOS 3.x) cannot see a live controller.
+for (const [reply, home, calls] of [[publishedStatus(true), undefined, 1], [{returnValue: true, running: false, blocked: false}, {returnValue: false}, 2]]) {
+  const ui = home ? panel(reply, home) : panel(reply);
   assert.equal(ui.buttons[2].hidden, false, 'stopped or blocked Helper can be explicitly started');
-  assert.equal(ui.calls.length, 1, 'do not probe or start a stopped Helper');
+  assert.equal(ui.calls.length, calls, 'do not start a stopped Helper while checking it');
   ui.buttons[2].onclick();
-  assert.equal(ui.calls.length, 1, 'opening confirmation cannot start Helper');
+  assert.equal(ui.calls.length, calls, 'opening confirmation cannot start Helper');
   ui.window.confirmStart();
   assert.equal(ui.calls.filter(c => c.params.params && c.params.params.nativeHomeStart === true).length, 1);
 }
 assert.equal(panel({returnValue: true, running: true}).buttons[1].disabled, false, 'current protocol remains supported');
+{const ui = panel({returnValue: true, running: false, blocked: false});assert.equal(ui.buttons[2].hidden, true, 'a controller answering homeStatus is running even if a jailed service cannot see it');}
 // #196: an LS2 refusal is independent of the authenticated same-package broker.
 for (const enabled of [true, false]) {
   const ui = panel({returnValue:false,errorCode:-1}, {returnValue:true,enabled});

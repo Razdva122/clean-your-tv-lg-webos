@@ -56,7 +56,7 @@ for (const code of ['SECRET', 1e50, 1.1, null]) {
   ui = panel();ui.respond(0, {returnValue: false, errorCode: code});assert.equal(view(ui).helper_status.errorCode, null);
 }
 ui = panel();ui.respond(0, {returnValue: true, running: 'SECRET', blocked: 'SECRET'});snapshot = view(ui);assert.equal(snapshot.helper_status.running, null);assert.equal(snapshot.helper_status.blocked, null);
-ui = panel();ui.respond(0, {returnValue: true, running: false, blocked: false});assert.equal(ui.calls.length, 1);assert.equal(view(ui).helper_status.running, false);
+ui = panel();ui.respond(0, {returnValue: true, running: false, blocked: false});assert.equal(ui.calls.length, 2);ui.respond(1, {returnValue: false});assert.equal(view(ui).helper_status.running, false);assert.equal(ui.buttons[2].hidden, false);
 ui = panel();ui.respond(0, {returnValue: true, blocked: false});assert.equal(ui.calls.length, 2);ui.respond(1, {returnValue: false, errorCode: 403, enabled: 'SECRET', errorText: 'SECRET'});snapshot = view(ui);assert.equal(snapshot.home_status.outcome, 'rejected');assert.equal(snapshot.home_status.errorCode, 403);assert.equal(snapshot.home_status.enabled, null);assert.ok(!ui.details.textContent.includes('SECRET'));
 ui = panel();ui.respond(0, {returnValue: true, running: true});ui.respond(1, {returnValue: true, enabled: false});assert.equal(view(ui).home_status.enabled, false);assert.equal(ui.calls.length, 2);
 ui = panel();ui.buttons[3].click();ui.respond(1, {returnValue: false, errorCode: 2});ui.respond(0, {returnValue: true, running: true});assert.equal(view(ui).helper_status.errorCode, 2);assert.equal(ui.calls.length, 3, 'stale callback cannot trigger Home status');
