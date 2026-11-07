@@ -1,13 +1,14 @@
 # v1.10.0 — practical removal and installer recovery
 
-Unpublished release candidate. Downloads are not public until publication completes.
-Final package/device acceptance is pending; source checks do not establish TV compatibility.
+Release 1.10.0. Downloads become available when publication and public verification complete.
+[Exact build, accepted installer scope and untested limits](history/2026-11-07-release-1.10.0-final-acceptance.md).
 
 ## Changes
 
 - Explicit removal cleans present project packages and known owned files after successful, partial or interrupted setup (#363). Missing objects are skipped. A real full restart stops old resident controls/installers before the final cleanup when required. Connection loss offers **Try again** for the same approved TV/goal. Actual OS busy/access errors remain explicit; protected Root residue requires Root access. Final success requires verified absence, not an old install result.
 - Removal compatibility covers modern Node stdin execution, fixed SDK shared directories and known historical Root/System receipts. Retrying after interrupted registration restoration accepts the authenticated SDK-original state; cleanup also handles larger webOS background-task lists. Broken optional old services use the same boot-before-cleanup checkpoint; diagnostic codes and Retry advice remain specific. [Source verification](history/2026-11-07-removal-compatibility.md).
 - Full-restart checks handle webOS snapshots that reuse the kernel UUID. A legacy removal checkpoint first records a new baseline and requests another full restart; it does not infer success from a changed evidence format. Interrupted final cleanup can resume after its Python runtime has been removed.
+- After verified clean Root removal, normal setup can install again using current absence checks and the same installation mutex. Minimal old-worker fences are preserved as evidence before new component state is created; interrupted fence archival resumes under the original new-install request. Status and Restore recognize a currently verified removed state without invoking a retired driver. C1 Beta retains its fresh-install-only limitation. Root setup reads the catalog through its existing authenticated SSH reader; No-root retains SSAP pairing. [Source verification](history/2026-11-07-clean-reinstall.md).
 - Installer recovery preserves the original connection, payload and first-failure evidence, distinguishes Root password from Developer Mode credentials, and observes future No-root install subscriptions. Existing unknown package outcomes stay unknown. All 13 guides/locales describe retry and restart without a separate recovery wizard. The original device reports remain partially unresolved pending their actual supported recovery/confirmation.
 - Root startup waits for the active System profile and validated health before reporting readiness (#352, #357). Home-off completion remains separately confirmed; retained runtime diagnostics distinguish recovery and complete setup (#354). The original #334 cause and device recovery are unconfirmed.
 - Updater cache and sealed completed staging retirement are bounded; active recovery evidence and referenced blobs remain protected (#349). Retained System 1.1.2 does not receive new supervisor hooks through a Home-only update.
@@ -39,12 +40,13 @@ Android keeps its application identity and original signer.
 
 See [practical removal source evidence](history/2026-11-06-practical-clean-removal.md)
 and [candidate PR #350](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/350)
-for the exact selected build, checks and remaining acceptance. The candidate remains
-draft until its complete build and affected physical acceptance are recorded.
+for the exact selected build, checks and remaining acceptance. The final build and scoped acceptance are recorded in the linked acceptance record.
+A release announcement follows successful public package/feed verification.
 
-No TV removal/installation was performed in this implementation task. Physical Home
-routing, remote, sound, standby, cold boot, OTA and rollback on these candidate bytes
-remain untested. Earlier firmware observations retain their original artifact scope.
+Source/model checks do not establish physical acceptance. Consult the release PR
+and exact artifact-bound acceptance records for tested, blocked and untested paths;
+standby, ordinary reboot and AC cold start remain distinct scenarios. Earlier
+firmware observations retain their original artifact and precondition scope.
 Third-party files/Home settings are preserved; genuine ownership backups and minimal
 non-executable removal evidence may remain. Saved computer connection keys/reports
 are not TV residue and are retained.

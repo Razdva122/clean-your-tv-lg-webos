@@ -5,6 +5,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from updater.store import Store
 from installation import Ownership, Busy
@@ -354,6 +355,43 @@ Coordinator(Device(),Ownership(Store(sys.argv[2],uid=os.getuid())),read=lambda p
             self.assertEqual(snapshot.read_bytes(),b'verified worker v1')
             self.assertEqual(install_driver.submit('a'*32,payload,ownership=owner)['state'],'pending')
             self.assertEqual(spawn.call_count,1)
+
+    def test_submission_parent_wait_is_bounded_and_only_tracks_exact_parent(self):
+        with patch('os.getppid',side_effect=[42,42,1]),patch('time.monotonic',side_effect=[0,0.1,0.2]),patch('time.sleep') as sleep:
+            install_driver.wait_submission_parent(42)
+            self.assertEqual(sleep.call_count,2)
+        with patch('os.getppid',return_value=42),patch('time.monotonic',side_effect=[0,1,3]),patch('time.sleep') as sleep:
+            install_driver.wait_submission_parent(42)
+            self.assertEqual(sleep.call_count,1)
+
+    def test_temporary_upload_preserved_with_durable_matching_snapshot(self):
+        import shutil
+        import install_device
+        _,payload,inventories,owner=self.submission_fixture()
+        stage=Path('/tmp').resolve()/('cytv-product-'+__import__('uuid').uuid4().hex)
+        shutil.copytree(payload,stage);self.addCleanup(shutil.rmtree,stage,True)
+        synced=set();fsync=os.fsync
+        def sync(fd):
+            import stat
+            info=os.fstat(fd)
+            if stat.S_ISDIR(info.st_mode):synced.add((info.st_dev,info.st_ino))
+            return fsync(fd)
+        def spawn(*args,**kwargs):
+            snapshot=Path(owner.store.root)/('request-'+'a'*32)
+            directories=[Path(owner.store.root),snapshot,*[p for p in snapshot.rglob('*') if p.is_dir()]]
+            self.assertTrue({(p.stat().st_dev,p.stat().st_ino) for p in directories}<=synced)
+            saved=owner.store.read('submission-'+'a'*32)
+            self.assertTrue(saved['staging'])
+            self.assertTrue((stage/'root/install_driver.py').is_file())
+            device=install_device.LocalDevice();device.ownership=owner;device.payload=snapshot
+            self.assertTrue(device.current_product_stage(stage))
+            (stage/'foreign').write_bytes(b'unknown')
+            self.assertFalse(device.current_product_stage(stage))
+            (stage/'foreign').unlink()
+            (stage/'root/install_driver.py').write_bytes(b'changed')
+            self.assertFalse(device.current_product_stage(stage))
+        with patch('install_driver._verified_payload',return_value=inventories),patch('install_driver.root_review_binding',return_value={'identity':{},'code':{}}),patch.object(install_device.LocalDevice,'preflight'),patch('subprocess.Popen',side_effect=spawn),patch('os.fsync',side_effect=sync):
+            self.assertEqual(install_driver.submit('a'*32,stage,ownership=owner)['state'],'pending')
 
     def test_failed_spawn_is_retained_and_cannot_be_resubmitted(self):
         from unittest.mock import patch

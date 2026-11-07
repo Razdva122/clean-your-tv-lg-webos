@@ -1,108 +1,13 @@
 {
   "schema": 1,
-  "version": "1.10.0",
+  "version": null,
   "changes": [
     {
-      "pr": 346,
+      "pr": 372,
       "issues": [],
-      "summary": "Reuse authenticated PR test units in candidate validation"
-    },
-    {
-      "pr": 349,
-      "issues": [
-        348
-      ],
-      "summary": "Bound updater cache and completed installer staging retention"
-    },
-    {
-      "pr": 352,
-      "issues": [
-        351
-      ],
-      "summary": "Fix Root OTA readiness after an early launcher start"
-    },
-    {
-      "pr": 354,
-      "issues": [
-        334
-      ],
-      "summary": "Offer guarded Home-off completion and retained-runtime diagnostics; original #334 cause and device recovery remain unconfirmed"
-    },
-    {
-      "pr": 356,
-      "issues": [
-        211
-      ],
-      "summary": "Simplify installation guides and add Czech across installers"
-    },
-    {
-      "pr": 357,
-      "issues": [
-        334
-      ],
-      "summary": "Validate Root health before announcing startup readiness"
-    },
-    {
-      "pr": 358,
-      "issues": [],
-      "summary": "Fix video wallpaper continuity, theme trials and colour consistency"
-    },
-    {
-      "pr": 360,
-      "issues": [],
-      "summary": "Show readable theme media badges and add Craciun UHD still video"
-    },
-    {
-      "pr": 361,
-      "issues": [],
-      "summary": "Fix Root app discovery and unify Home catalog filtering"
-    },
-    {
-      "pr": 363,
-      "issues": [
-        101,
-        133,
-        152,
-        161,
-        200,
-        201,
-        216,
-        240,
-        288,
-        295,
-        307,
-        334,
-        355,
-        359
-      ],
-      "summary": "Add practical verified removal and same-goal retry, typed authentication and retained recovery evidence; original installation causes and reporter device recoveries remain unconfirmed"
-    },
-    {
-      "pr": 365,
-      "issues": [],
-      "summary": "Fix full-candidate browser and Windows test assumptions"
-    },
-    {
-      "pr": 367,
-      "issues": [],
-      "summary": "Fix removal compatibility with modern Node, fixed SDK directories, broken legacy startup services and known private receipts; preserve specific retry diagnostics"
-    },
-    {
-      "pr": 369,
-      "issues": [
-        101,
-        133,
-        240,
-        359
-      ],
-      "summary": "Complete removal retry, snapshot restart, native finalization, bounded SSH transport and current failure guidance; original installation reports remain unconfirmed"
+      "summary": "Refactor shared build assets and automate project formatting"
     }
   ],
   "excluded": [],
-  "acceptance": "",
-  "build": {
-    "run_id": 42342955933,
-    "attempt": 1,
-    "source": "d20196379a6052a7133a0fbb2bc42050225ec94a"
-  }
+  "acceptance": ""
 }

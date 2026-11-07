@@ -90,6 +90,50 @@ class CoordinatorCleanRemoval(unittest.TestCase):
         self.assertEqual(second['stage'],'verified-clean')
         self.assertNotEqual(second['lease'],first['lease'])
 
+    def test_inspect_and_restore_verified_removal_preserve_fences_and_old_request(self):
+        original=self.original();self.driver.clean_remove(self.id)
+        self.device.inspect=lambda:{'state':'recovery_required','can_install':False,'can_maintain':False}
+        self.device.restore=lambda:self.fail('removed driver executed')
+        before=self.owner.status().copy()
+        result=self.driver.inspect()
+        self.assertTrue(result.get('clean_removal_verified'))
+        self.assertTrue(result['can_install']);self.assertFalse(result['can_maintain'])
+        self.assertTrue(self.driver.restore()['already_removed'])
+        self.assertEqual(self.owner.status(),before)
+        self.assertEqual(self.owner.store.read('request-'+self.id),original)
+
+    def test_clean_inspection_refuses_incomplete_or_drifted_proof(self):
+        self.driver.clean_remove(self.id)
+        self.device.inspect=lambda:{'state':'recovery_required','can_install':False,'can_maintain':False}
+        original=self.owner.store.read('clean-removal-'+self.id)
+        for key,value in [('lease','f'*32),('current',False),('stage','private-cleanup')]:
+            with self.subTest(key=key):
+                record=dict(original);record[key]=value
+                self.owner.store.write('clean-removal-'+self.id,record)
+                with self.assertRaises((Busy,ValueError)):self.driver.inspect()
+        self.owner.store.write('clean-removal-'+self.id,original)
+        self.device.verify_clean=lambda record:False
+        with self.assertRaises((Busy,ValueError)):self.driver.inspect()
+
+    def test_clean_inspection_respects_original_global_mutex(self):
+        self.driver.clean_remove(self.id)
+        lease=self.owner.status()
+        with self.owner.operation('clean-removal',lease['journal'],resume=lease['id']):
+            with self.assertRaises(Busy):self.driver.inspect()
+
+    def test_inspect_reports_only_fixed_stale_support_restart_reason(self):
+        import install_driver,install_device,io,json
+        from contextlib import redirect_stdout
+        for error,restart in ((ValueError('support_stage_remains'),True),(ValueError('live_original_worker'),True),
+                              (ValueError('support_stage_remains private details'),False),(RuntimeError('support_stage_remains'),False)):
+            with self.subTest(error=type(error).__name__,restart=restart):
+                output=io.StringIO()
+                with patch.object(sys,'argv',['install_driver','inspect']),patch.object(Coordinator,'inspect',side_effect=error),patch.object(install_device.LocalDevice,'log'),redirect_stdout(output):
+                    install_driver.main()
+                result=json.loads(output.getvalue())
+                self.assertEqual(result.get('reason'), 'restart-required' if restart else None)
+                self.assertEqual(result['state'],'recovery_required')
+
     def test_pending_removal_cannot_handoff_to_new_install(self):
         self.device.fail='private-cleanup';self.driver.clean_remove(self.id)
         with self.assertRaises(Busy):self.driver._run('b'*32,'install',lambda checkpoint:self.fail('executed'))
@@ -685,6 +729,143 @@ class PartialDeviceRemoval(unittest.TestCase):
         self.assertFalse(result['current'])
         self.assertTrue((root/'state/ssap.json').exists())
         self.assertTrue(any(name.startswith('remove-') for name in calls))
+
+    def test_clean_readback_exempts_only_executing_checked_coordinator_stage(self):
+        import install_device
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        self.assertEqual(driver.clean_remove(identifier)['stage'],'restart-required')
+        driver.device.current_boot='22222222-2222-2222-2222-222222222222'
+        record=driver.clean_remove(identifier)
+        stage=install_device.TEMP/('cytv-coordinator-'+'a'*32);stage.mkdir()
+        (stage/'install_device.py').write_bytes(b'current support')
+        with patch.object(install_device,'__file__',str(stage/'install_device.py')), patch('coordinator_inventory.BUNDLED_FILES',('install_device.py',)):
+            self.assertTrue(driver.device.verify_clean(record))
+            other=install_device.TEMP/('cytv-coordinator-'+'b'*32);other.mkdir()
+            (other/'install_device.py').write_bytes(b'current support')
+            self.assertTrue(driver.device.verify_clean(record))
+            (other/'foreign').write_bytes(b'unknown support')
+            with self.assertRaisesRegex(ValueError,'support_stage_remains'):driver.device.verify_clean(record)
+            (other/'foreign').unlink()
+            (other/'install_device.py').write_bytes(b'stale support')
+            with self.assertRaisesRegex(ValueError,'support_stage_remains'):driver.device.verify_clean(record)
+            (other/'install_device.py').unlink()
+            (other/'install_device.py').symlink_to(stage/'install_device.py')
+            with self.assertRaisesRegex(ValueError,'support_stage_remains'):driver.device.verify_clean(record)
+
+    def test_readonly_clean_proof_runs_current_shared_cleanup_without_payload(self):
+        import install_device,json,hashlib,subprocess
+        from cytv.no_root_cleanup import PRIVATE_CLEANUP_PROGRAM
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        driver.clean_remove(identifier)
+        driver.device.current_boot='22222222-2222-2222-2222-222222222222'
+        driver.clean_remove(identifier)
+        base=root.parent
+        for name in ('developer','bus-private','varlib','profiles'):(base/name).mkdir()
+        source=PRIVATE_CLEANUP_PROGRAM.replace('/media/developer',str(base/'developer')).replace('/var/luna-service2-dev',str(base/'bus-private'))
+        source=source.replace('/var/lib',str(base/'varlib')).replace('/var/webos-profile',str(base/'profiles')).replace('/proc/sys/kernel/random/boot_id',str(base/'boot'))
+        (base/'boot').write_text('22222222-2222-2222-2222-222222222222')
+        if os.getuid()!=0:source=source.replace('if(uid!==0||','if(false||')
+        stage=install_device.TEMP/('cytv-coordinator-'+'a'*32);stage.mkdir()
+        script=stage/'cleanup_no_root_private.js';script.write_text(source)
+        (stage/'bundle.json').write_text(json.dumps({'files':{script.name:hashlib.sha256(script.read_bytes()).hexdigest()}}))
+        del driver.device.shared_cleanup
+        driver.device.payload=None
+        run=subprocess.run
+        def actual(args,**kwargs):return run([os.environ.get('NODE8','node'),*args[1:]],**kwargs)
+        with patch.object(install_device,'__file__',str(stage/'install_device.py')),patch('coordinator_inventory.BUNDLED_FILES',(script.name,)),patch('install_device.subprocess.run',side_effect=actual):
+            self.assertTrue(driver.inspect()['clean_removal_verified'])
+            self.assertTrue(driver.restore()['already_removed'])
+            script.write_text(source+'\n// changed current support')
+            with self.assertRaisesRegex(ValueError,'current_cleanup_support_changed'):driver.inspect()
+
+    def test_clean_process_proof_allows_only_exact_current_readonly_status(self):
+        import install_device
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        driver.clean_remove(identifier)
+        driver.device.current_boot='22222222-2222-2222-2222-222222222222'
+        record=driver.clean_remove(identifier)
+        stage=install_device.TEMP/('cytv-coordinator-'+'a'*32);stage.mkdir()
+        for name in ('install_device.py','install_driver.py'):(stage/name).write_bytes(b'current support')
+        process=install_device.PROC/'12345';process.mkdir()
+        args=[sys.executable,'-B',str(stage/'install_driver.py'),'status','--operation','d'*32]
+        command=process/'cmdline';command.write_bytes(b'\0'.join(arg.encode() for arg in args)+b'\0')
+        with patch.object(install_device,'__file__',str(stage/'install_device.py')),patch('coordinator_inventory.BUNDLED_FILES',('install_device.py','install_driver.py')):
+            self.assertTrue(driver.device.verify_clean(record))
+            for tail in (['--resume'],['--worker'],['--payload',str(payload)]):
+                command.write_bytes(b'\0'.join(arg.encode() for arg in args+tail)+b'\0')
+                with self.assertRaisesRegex(ValueError,'live_original_worker'):driver.device.verify_clean(record)
+            command.write_bytes(b'\0'.join(arg.encode() for arg in args)+b'\0')
+            other=install_device.TEMP/('cytv-coordinator-'+'b'*32);other.mkdir()
+            for name in ('install_device.py','install_driver.py'):(other/name).write_bytes(b'stale support')
+            command.write_bytes(b'\0'.join(arg.replace(str(stage),str(other)).encode() for arg in args)+b'\0')
+            with self.assertRaisesRegex(ValueError,'live_original_worker'):driver.device.clean_quiescent(record,all_processes=True)
+
+    def test_clean_readback_accepts_only_exact_current_product_upload(self):
+        import install_device,json,shutil,hashlib
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        driver.clean_remove(identifier)
+        driver.device.current_boot='22222222-2222-2222-2222-222222222222'
+        record=driver.clean_remove(identifier)
+        snapshot=payload.parent/'current-snapshot';snapshot.mkdir()
+        for component in ('root','root-updater'):
+            folder=snapshot/component;folder.mkdir()
+            (folder/'current.py').write_bytes(b'current bytes')
+            (folder/'bundle.json').write_text(json.dumps({'files':{'current.py':hashlib.sha256(b'current bytes').hexdigest()}}))
+        stage=install_device.TEMP/('cytv-product-'+'a'*32)
+        shutil.copytree(snapshot,stage)
+        (snapshot/'worker.log').write_bytes(b'private worker log')
+        driver.device.payload=snapshot
+        self.assertTrue(driver.device.verify_clean(record))
+        (stage/'foreign').mkdir()
+        with self.assertRaisesRegex(ValueError,'support_stage_remains'):driver.device.verify_clean(record)
+        (stage/'foreign').rmdir()
+        (stage/'root/current.py').write_bytes(b'changed bytes')
+        with self.assertRaisesRegex(ValueError,'support_stage_remains'):driver.device.verify_clean(record)
+
+    def test_interrupted_fence_archive_resumes_only_original_inodes(self):
+        import install_device
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        driver.clean_remove(identifier)
+        driver.device.current_boot='22222222-2222-2222-2222-222222222222'
+        clean=driver.clean_remove(identifier)
+        original=driver.ownership.store.read('request-'+identifier)
+        rename=os.rename
+        def interrupted(source,target,**kwargs):
+            if source==updater.name:raise OSError('interrupted archive')
+            return rename(source,target,**kwargs)
+        with patch.object(install_device.os,'rename',side_effect=interrupted):
+            failed=driver._run('d'*32,'install',lambda checkpoint:self.fail('install effects began'))
+        self.assertEqual(failed['stage'],'reserved')
+        self.assertEqual(failed['state'],'recovery_required')
+        self.assertFalse(root.exists());self.assertTrue(updater.exists())
+        driver.ownership.store.write('submission-'+'d'*32,dict(operation='d'*32,action='install'))
+        driver.device.verify_resume=lambda payload,submission:dict(migrate=False,prepare_supervisor=False)
+        def resume(payload,options,stage,checkpoint):
+            self.assertFalse(root.exists());self.assertFalse(updater.exists())
+            return {'verified':True}
+        driver.device.resume_install=resume
+        completed=driver.resume('d'*32,payload)
+        self.assertEqual(completed['state'],'complete',completed)
+        self.assertEqual(driver.ownership.store.read('request-'+identifier),original)
+        driver.device.prepare_clean_install(clean)
+
+    def test_interrupted_fence_archive_rejects_replaced_archived_directory(self):
+        import install_device
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        driver.clean_remove(identifier)
+        driver.device.current_boot='22222222-2222-2222-2222-222222222222'
+        clean=driver.clean_remove(identifier)
+        rename=os.rename
+        def interrupted(source,target,**kwargs):
+            if source==updater.name:raise OSError('interrupted archive')
+            return rename(source,target,**kwargs)
+        with patch.object(install_device.os,'rename',side_effect=interrupted):
+            driver._run('d'*32,'install',lambda checkpoint:self.fail('effects'))
+        archive=Path(driver.ownership.store.root)/('component-fences-'+identifier)
+        (archive/root.name).rename(archive/'replaced')
+        (archive/root.name).mkdir()
+        with self.assertRaisesRegex(ValueError,'component_fence_conflict'):driver.device.prepare_clean_install(clean)
+        self.assertTrue(updater.exists())
 
     def test_fresh_install_moves_minimal_fences_without_replacing_lock_inodes(self):
         driver,identifier,root,updater,payload,calls,present=self.fixture()

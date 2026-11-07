@@ -269,7 +269,7 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
                 raise UserError('Root Updater bundle is missing or invalid. Use a complete installer build.')
         stage='/tmp/cytv-coordinator-'+uuid.uuid4().hex
         self.remote.run('umask 077; mkdir '+stage)
-        for name in (*files,'bundle.json') if recovery else files:
+        for name in (*files,'bundle.json'):
             if name.endswith('.ipk') and not recovery: continue
             target=stage+'/'+package.safe_name(name)
             self.remote.run('mkdir -p '+shlex.quote(str(PurePosixPath(target).parent)))
@@ -294,7 +294,7 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
                 self._selected_python=python
                 entry='import runpy,sys;sys.path.insert(0,sys.argv.pop(1));sys.argv.pop(0);runpy.run_path(sys.argv[0],run_name="__main__")'
                 args=[python,'-I','-B','-c',entry,driver.rsplit('/',1)[0],driver,action]
-            else:args=[action] if trusted_recovery or resume else [self._python(),driver,action]
+            else:args=[action] if trusted_recovery or resume else [self._python(),'-B',driver,action]
             if operation: args+=['--operation',operation]
             if payload:
                 args+=['--payload',payload]
@@ -379,7 +379,13 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
 
     def root_installation(self):
         """Shared descriptor/profile inspection is independent of installer origin."""
-        return self.product_action('inspect')['installation']
+        reply=self.product_action('inspect')
+        if reply.get('reason')=='restart-required':
+            raise UserError('Previous Root was removed. Restart the TV with its remote, wait for LG Home, then run cytv again. Old Root processes must stop before reinstallation. Recovery data was kept.',reason_code='restart-required')
+        result=reply.get('installation')
+        if not isinstance(result,dict):
+            raise UserError('Root operation was not confirmed. Run cytv status; retain recovery state.', reason_code='root-operation-unconfirmed')
+        return result
 
     def native_root_present(self):
         script = "if " + ' || '.join('[ -e '+ROOT_STATE+'/'+name+' ] || [ -L '+ROOT_STATE+'/'+name+' ]'
@@ -505,7 +511,14 @@ with os.fdopen(f,'rb') as stream:
                 existing=self.remote.run('if ' + condition + '; then printf CYTV_EXISTING_ROOT; fi').strip()
                 maintain=False
                 if existing:
-                    try: maintain=self.root_installation().get('can_maintain') is True
+                    try:
+                        installation=self.root_installation()
+                        maintain=(installation.get('can_maintain') is True or
+                                  installation.get('clean_removal_verified') is True and
+                                  installation.get('can_install') is True and
+                                  self.tv_info.get('home_backend')!='c1-native-gate')
+                    except UserError as error:
+                        if error.reason_code=='restart-required':raise
                     except (OSError,ValueError,RuntimeError): pass
                 if existing and not maintain:
                     raise ExistingRoot('Root is already installed or recovery state remains. Connect interactively to review reinstallation; existing state was left unchanged.')
@@ -870,6 +883,43 @@ print('CYTV_UPDATER_VERIFIED')
             'n=0; while [ -e ' + HELPER_STATE + '/controller.pid ]; do '
             'n=$((n+1)); [ "$n" -le 15 ] || exit 1; sleep 1; done; fi', timeout=25)
 
+    def root_inventory(self, fallback):
+        """Use the existing fixed Root catalog reader; Root needs no SSAP key."""
+        import base64
+        if self.profile['edition']!='root':raise ValueError('Root inventory requires Root')
+        try:
+            module=self.coordinator_code()+'/app-inventory.js'
+            program=('var reader=require('+json.dumps(module)+');Promise.all([reader(),reader.inputs()]).then(function(value){process.stdout.write(JSON.stringify(value));},function(){process.exit(1);});').encode()
+            value=json.loads(self.remote.run('/usr/bin/node',data=program,timeout=30))
+            if (not isinstance(value,list) or len(value)!=2 or not isinstance(value[0],list) or len(value[0])>200
+                    or not isinstance(value[1],dict) or value[1].get('returnValue') is not True
+                    or not isinstance(value[1].get('devices'),list) or len(value[1]['devices'])>100):raise ValueError('Invalid Root inventory')
+            def text(value):
+                return isinstance(value,str) and bool(value) and '\0' not in value and len(value.encode('utf-8'))<=256
+            apps=[];seen=set()
+            for app in value[0]:
+                if not isinstance(app,dict):raise ValueError('Invalid Root application')
+                if app.get('hidden'):continue
+                if not text(app.get('id')) or not text(app.get('title')):raise ValueError('Invalid Root application')
+                if app['id'] in seen:continue
+                seen.add(app['id'])
+                icon=app.get('icon') or 'data:image/png;base64,'+base64.b64encode(fallback).decode('ascii')
+                if not isinstance(icon,str) or len(icon)>45000 or not icon.startswith(('data:image/png;base64,','data:image/jpeg;base64,','data:image/webp;base64,')):raise ValueError('Invalid Root icon')
+                item={key:app[key] for key in ('id','title')};item['icon']=icon
+                if isinstance(app.get('iconColor'),str) and re.fullmatch('#[a-fA-F0-9]{6}',app['iconColor']):item['iconColor']=app['iconColor']
+                apps.append(item)
+            inputs=[];seen=set()
+            for device in value[1]['devices']:
+                if not isinstance(device,dict) or not text(device.get('appId')) or device['appId'] in seen:continue
+                label=next((device[k] for k in ('label','deviceName','spdProductDescription','id','appId') if text(device.get(k))),device['appId'])
+                seen.add(device['appId']);inputs.append({'appId':device['appId'],'label':label})
+            result={'apps':apps,'inputs':inputs};package.inventory_script(result)
+            return result
+        except (ConnectionError,TimeoutError,EOFError) as error:
+            raise UserError('Connection to the TV was interrupted. Check the connection and try again.',reason_code='connection-interrupted') from error
+        except (OSError,ValueError,TypeError,KeyError,TVCommandError) as error:
+            raise UserError('Could not read installed applications.',reason_code='inventory-unavailable') from error
+
     def installed_apps(self, timeout=30):
         reply = self.remote.luna('com.webos.applicationManager/dev/listApps', {}, timeout=timeout)
         apps = reply.get('apps')
@@ -1134,6 +1184,12 @@ print('CYTV_UPDATER_VERIFIED')
                                   'else printf \'{"stage":"absent"}\'; fi')
             journal = json.loads(raw)
             stage = journal.get('stage')
+            if stage=='cancellation-admitted':
+                installation=self.root_installation()
+                if installation.get('clean_removal_verified') is True and installation.get('can_install') is True:
+                    return {'device':{'installation':installation},'deployment_stage':'verified-clean',
+                            'pending':self.store.pending(self.profile),'reconciled':None,
+                            'can_resume_root_setup':False,'reconciliation':None}
             result = {'deployment_stage': stage}
             if reconcile and pending and pending['action'] == 'archive-root-state':
                 readback = self.root_archive('reconcile', pending.get('archive'), pending.get('identity'))
@@ -1445,6 +1501,14 @@ print('CYTV_ROOT_FILES_OK')
 
     def restore_device(self):
         if self.profile['edition'] == 'root':
+            try:
+                installation=self.root_installation()
+                if installation.get('clean_removal_verified') is True and installation.get('can_install') is True:
+                    return {'restored':True,'already_removed':True}
+            except UserError as error:
+                if error.reason_code=='restart-required':raise
+            except (OSError,ValueError,RuntimeError):
+                pass
             return self.root_action('restore')
         self.stop_helper()
         receipt = self.store.device_dir(self.profile) / 'installation.json'

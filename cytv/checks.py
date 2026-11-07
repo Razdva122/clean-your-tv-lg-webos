@@ -32,7 +32,7 @@ class CheckList:
         if edition=='root':
             from .root_capabilities import CALLS
             names = (*names, *CALLS)
-        for name in ('ssh', *names, 'pairing', 'inventory'):
+        for name in ('ssh', *names, *(('pairing',) if edition!='root' else ()), 'inventory'):
             detail = PYTHON_HINT if name == 'python3' else ''
             if action == 'doctor' and name in ('pairing', 'inventory'):
                 detail = 'Not performed by doctor; this step runs during installation.'

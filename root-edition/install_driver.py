@@ -100,11 +100,37 @@ class Coordinator:
             raise ValueError('unknown_product_operation')
         return value
 
+    def _clean_record(self, lease):
+        identifier=operation_id(lease['journal'][8:-5])
+        record=_optional_record(self.store,'clean-removal-'+identifier)
+        if (lease['journal']!='product-'+identifier+'.json' or lease['terminal']
+                or not isinstance(record,dict) or record.get('schema')!=1
+                or record.get('protocol')!='clean-removal-v1' or record.get('operation')!=identifier
+                or record.get('lease')!=lease['id'] or record.get('stage')!='verified-clean'
+                or record.get('state')!='complete' or record.get('current') is not True
+                or record.get('result',{}).get('private_cleanup_verified') is not True):raise Busy()
+        self.device.ownership=self.ownership
+        if self.device.verify_clean(record) is not True:raise Busy()
+        return record
+
     def inspect(self):
+        lease=self.ownership.status()
+        if lease and lease['owner']=='clean-removal' and lease['stage']=='verified-clean':
+            # Resume the same reservation only to acquire its original mutex.
+            # Inspection never releases the durable old-worker fence.
+            with self.ownership.operation('clean-removal',lease['journal'],resume=lease['id']) as current:
+                if current!=lease:raise Busy()
+                self._clean_record(current)
+                return dict(state='fresh',reason='verified_clean_removal',can_install=True,
+                            can_maintain=False,clean_removal_verified=True)
         return self.device.inspect()
 
     def restore(self):
         # Emergency restoration must work even while another operation is retained.
+        lease=self.ownership.status()
+        if lease and lease['owner']=='clean-removal' and lease['stage']=='verified-clean':
+            if self.inspect().get('clean_removal_verified') is True:
+                return dict(restored=True,already_removed=True)
         return self.device.restore()
 
     def _run(self, identifier, action, perform):
@@ -120,12 +146,8 @@ class Coordinator:
             previous=self.ownership.status()
             if action=='install' and previous and previous['owner']=='clean-removal' and previous['stage']=='verified-clean':
                 old=previous['journal'][8:-5]
-                record=_optional_record(self.store,'clean-removal-'+operation_id(old))
-                if (old==identifier or not isinstance(record,dict) or record.get('protocol')!='clean-removal-v1'
-                        or record.get('lease')!=previous['id'] or record.get('stage')!='verified-clean'
-                        or record.get('current') is not True or record.get('result',{}).get('private_cleanup_verified') is not True):raise Busy()
-                self.device.ownership=self.ownership
-                if self.device.verify_clean(record) is not True:raise Busy()
+                if old==identifier:raise Busy()
+                record=self._clean_record(previous)
                 cleaned.append((previous,record))
                 return
             pending_journals('product',self.read)
@@ -503,10 +525,20 @@ def submit(identifier, payload, migrate=False, prepare_supervisor=False, action=
             receipt.update(state='recovery_required',code='worker_snapshot_unavailable')
             store.write('submission-'+identifier,receipt)
             return receipt
+        # Persist every directory entry from leaves through the request parent
+        # before sealing the durable worker snapshot.
+        from install_device import checked_store
+        for directory in sorted((root,*(p for p in root.rglob('*') if p.is_dir())),key=lambda p:len(p.parts),reverse=True):
+            fd=checked_store(directory,store.uid)._directory()
+            try:os.fsync(fd)
+            finally:os.close(fd)
+        fd=store._directory()
+        try:os.fsync(fd)
+        finally:os.close(fd)
         receipt['staging']=staging
         receipt['stage']='submitted'
         store.write('submission-'+identifier,receipt)
-        args=[sys.executable,'-B',str(root/'root-updater/install_driver.py'),action,'--operation',identifier,'--payload',str(root),'--worker']
+        args=[sys.executable,'-B',str(root/'root-updater/install_driver.py'),action,'--operation',identifier,'--payload',str(root),'--worker','--submission-parent',str(os.getpid())]
         if migrate: args.append('--migrate-packaged-home')
         if prepare_supervisor: args.append('--prepare-supervisor')
         log=root/'worker.log'
@@ -603,6 +635,17 @@ def continuation_status(identifier, store, device=None):
     return result
 
 
+def wait_submission_parent(parent):
+    """Let the exact spawning CLI exit before live-original-worker readback.
+
+    Timing never establishes cleanliness: verify_clean still checks every process
+    after this bounded drain, including a parent that has not exited.
+    """
+    import os,time
+    deadline=time.monotonic()+2
+    while os.getppid()==parent and time.monotonic()<deadline:time.sleep(0.02)
+
+
 def main():
     import argparse
     import json
@@ -624,11 +667,15 @@ def main():
     parser.add_argument('--resume',action='store_true',help='Explicitly continue the original verified request; never replay unknown submissions')
     parser.add_argument('--final-readback-only',action='store_true',help='Revalidate the final readback under the original lease; no package replay')
     parser.add_argument('--worker',action='store_true',help=argparse.SUPPRESS)
+    parser.add_argument('--submission-parent',type=int,help=argparse.SUPPRESS)
     args=parser.parse_args()
     if args.final_readback_only and (not args.resume or args.action!='install'):
         parser.error('--final-readback-only requires install --resume')
     if args.action in ('install','remove','status','clean-remove','clean-status','clean-target'): operation_id(args.operation)
     if args.action not in ('install','inspect') and (args.migrate_packaged_home or args.prepare_supervisor): parser.error('install options require install')
+    if args.submission_parent is not None:
+        if not args.worker or args.action not in ('install','remove') or args.submission_parent<=1:parser.error('invalid submission parent')
+        wait_submission_parent(args.submission_parent)
     device=LocalDevice()
     if args.action in ('inspect','status','restore','activate','clean-status','clean-target'):
         ownership=Ownership.__new__(Ownership);ownership.store=checked_store(STATE)
@@ -677,7 +724,7 @@ def main():
                     try:result['current']=device.validate_completion(result['action'],result.get('lease'))
                     except (OSError,ValueError,RuntimeError,KeyError):pass
         elif args.action=='inspect':
-            inspected=device.inspect()
+            inspected=coordinator.inspect()
             result=dict(operation=None,stage='inspect',state=inspected['state'],code='inspected',installation=inspected)
             try:
                 active=ownership.status()
@@ -691,6 +738,8 @@ def main():
     except Exception as error:
         device.log(error)
         result=dict(operation=args.operation,stage='blocked',state='recovery_required',code='operation_requires_recovery',home_changed=False)
+        if args.action=='inspect' and isinstance(error,ValueError) and error.args in (('support_stage_remains',),('live_original_worker',)):
+            result['reason']='restart-required'
         if args.action=='clean-remove':result['cleanup_error']=cleanup_failure(error)
         if args.action in ('install','remove') and not isinstance(error,Busy):
             result['action']=args.action
