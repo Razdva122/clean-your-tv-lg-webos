@@ -145,28 +145,60 @@ preview and installer UI tests. A missing/unavailable browser fingerprint forces
 fresh checks and cannot produce a reusable receipt; an unknown value never
 matches another unknown value.
 
-A unit key binds the complete nonmetadata source snapshot from `release-inputs.py`,
-unit/shard/OS, exact Python/Node/dependencies/compiler, runner image and UTC day.
-Setup additionally binds the full Git tree, because it tests README, release-plan
-and guide content. No new metadata exemption is introduced. Current release-plan
-shape is checked fresh outside reuse. README sanity runs within fresh setup or
-separately when setup is reused/unselected, avoiding a second identical local
-invocation. Package assembly, signing,
-artifact validation and physical acceptance are not replaced by test evidence.
+A v2 unit key binds an audited projection of the authenticated nonmetadata Git
+snapshot, unit/shard/OS, exact Python/Node/dependencies/compiler, runner image and
+UTC day. Independent executable test families no longer invalidate every block.
+For example, changing `tests/cytv/test_long_ssh_commands.py` invalidates installer
+work and setup, while unchanged UI/device/browser/ARM units can retain a matching
+success. The complete owning family participates on every shard, because test
+additions/deletions can repartition later cases.
 
-Only a same-repository, nonfork, successful first-attempt PR `Tests` run may produce
-a receipt, after its freshly executed checks pass. One JSON artifact per existing
-runtime/browser/ARM job lists only those fresh units, never reused units. Lookup
-verifies successful latest branch evidence, current run attempt and exact successful
-originating job, artifact digest/size/head binding, and the tested checkout via
-GitHub commit/tree data. A PR merge must contain the run head as its second parent;
-claimed fingerprints alone are insufficient. The complete authenticated source
-snapshot is recomputed. Fork consumers and explicit reruns execute fresh tests.
+This first projection is deliberately conservative: product code, dependencies,
+workflows/CI helpers, all setup/framework tests, generic/shared fixtures, package
+initializers, unknown paths and nonregular modes remain inputs to every unit.
+Audited installer fixtures consumed by Android/browser recovery and the ARM Python
+fixture belong to those units too. Theme helpers/fixtures remain global rather
+than being guessed from a filename suffix. Cross-family imports must be audited
+when dependencies change; ordinary PR routing alone is not dependency evidence.
+See `test_units`/`keys` in the evidence helper and its Git-mutation regression matrix.
+
+Setup additionally binds the full Git tree, because it tests README, release-plan
+and guide content. No release build-input exemption is introduced. Current
+release-plan shape is checked fresh outside reuse. README sanity runs within
+fresh setup or separately when setup is reused/unselected, avoiding a second
+identical local invocation. Package assembly, signing, artifact validation and
+physical acceptance are not replaced by test evidence; this change does not reuse
+installer packages across guarded source changes.
+
+Receipts originate from same-repository, nonfork, first-attempt PR `Tests`
+runs or explicit full candidates dispatched on `release/next`. They list only
+freshly passed units, never reused units. PR lookup requires a successful run and
+latest branch evidence. Full-candidate lookup requires the exact candidate
+workflow/ref, completed scope/full-release markers, and a completed successful
+originating job; another job may have failed. The latest preceding candidate's
+corresponding job must also be green. A newer failure, missing job, in-flight run
+or rerun prevents falling back to an older success.
+
+Lookup verifies current attempt, artifact digest/size/head binding and tested
+checkout through GitHub commit/tree data. A PR merge must contain the run head as
+its second parent; full candidates must test their exact run head. Each projected
+source is recomputed from the complete authenticated producer tree before
+comparing keys. Fork consumers and explicit reruns execute fresh tests.
+
+The four existing desktop build jobs have a separate `installer-host` unit for
+`tests/cytv`, distinct from runtime installer/Homebrew coverage. Its fingerprint
+includes actual Git, Zig, Python/Node, installed dependencies, Qt platform and
+runner/image identities, plus installed Linux desktop libraries. Unknown required
+identity prevents reuse and recording. Every package is still built and its
+installed-package checks still run.
 
 Receipts are bounded data: one flat `receipt.json`, at most 128 KiB compressed /
 64 KiB uncompressed, strict schema/JSON and no extraction, links or code execution.
 Missing, stale, failed, in-flight, altered or unverifiable evidence executes tests.
-Discovery checks at most 100 matching repository artifacts with a 60-second
+V2 discovery names bind kind/OS/shard/environment and policy version, not the
+whole source or selected-unit set. One receipt per existing job contains only its
+freshly executed unit keys, so a different-source receipt can supply a matching
+subset. Discovery checks at most 100 matching repository artifacts with a 60-second
 lookup budget and 20-second API deadlines; exceeding a bound is a miss, not a
 weaker proof. Each job logs executed units and
 links reused units to their originating jobs, also in its step summary. Evidence
@@ -178,10 +210,14 @@ are downloaded through the read-only
 [Actions artifacts API](https://docs.github.com/en/rest/actions/artifacts).
 No new secret, write permission, workflow, matrix or background service is needed.
 
-Bootstrap requires a genuinely successful producer on the new guarded source.
-Old PR cache markers cannot become receipts retroactively. Workflow/helper/test
-changes remain build inputs and invalidate old evidence; after integration, an
-identical combined source/environment can consume the PR's actual successes.
+Bootstrap requires freshly passed producer jobs on the new guarded source.
+Old v1 receipts, PR cache markers and historical full-run jobs cannot become v2
+receipts retroactively. Workflow/helper/test changes remain release build inputs;
+changes to the projection/trust policy invalidate every unit. After integration,
+matching projected inputs/environment can consume actual PR or candidate job
+successes, even when another test family changed. The first new-policy full
+candidate runs fresh when this batch deliberately skips separate PR suites. A first-attempt candidate can consume
+these proofs; explicit reruns remain fresh under the existing trust rule.
 Trusted publication gates and required job names remain unchanged. Hardware
 acceptance remains a separate gate.
 

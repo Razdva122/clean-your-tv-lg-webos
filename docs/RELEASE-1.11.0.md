@@ -43,6 +43,11 @@ required before publication. Published downloads remain v1.10.0 until shipping.
   pins are synchronized at1.2.4 (#387). The installed-source admission boundary
   remains1.1.0/1.1.1; retained1.1.2/1.2.x are not admitted.
 
+- CI evidence now binds audited test-family inputs, allowing unchanged units to
+  retain authenticated successes from PRs or complete candidate jobs. Windows
+  long-command regressions use the installed POSIX shell explicitly. Package
+  assembly, installed-package verification and final release gates remain fresh.
+
 ## Component versions
 
 | Component | Published v1.10.0 | Candidate v1.11.0 |

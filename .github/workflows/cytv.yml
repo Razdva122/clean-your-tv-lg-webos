@@ -183,9 +183,33 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libegl1 libopengl0 libxcb-cursor0 libxkbcommon-x11-0 libxcb-icccm4 libxcb-keysyms1 libxcb-render-util0 xvfb xauth
       - run: python -m pip install -r cytv/build-requirements.txt
-      - run: python -m unittest discover -s tests/cytv -v
+      - name: Select fresh desktop installer host tests from authenticated evidence
+        id: evidence
         env:
           QT_QPA_PLATFORM: offscreen
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/ci-test-evidence.py plan --kind desktop --os "${{ matrix.os }}" --units installer-host --directory "${{ runner.temp }}/ci-evidence"
+      - name: Test desktop installer host behavior
+        if: steps.evidence.outputs.fresh == 'true'
+        run: python -m unittest discover -s tests/cytv -v
+        env:
+          QT_QPA_PLATFORM: offscreen
+      - name: Record freshly passed desktop installer host tests
+        id: record
+        continue-on-error: true
+        if: steps.evidence.outputs.fresh == 'true' && inputs.full_candidate && github.ref == 'refs/heads/release/next' && github.run_attempt == 1
+        env:
+          QT_QPA_PLATFORM: offscreen
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/ci-test-evidence.py record --directory "${{ runner.temp }}/ci-evidence"
+      - uses: actions/upload-artifact@v4
+        continue-on-error: true
+        if: steps.record.outcome == 'success'
+        with:
+          name: ${{ steps.evidence.outputs.artifact }}
+          path: ${{ runner.temp }}/ci-evidence/receipt.json
+          retention-days: 2
+          if-no-files-found: error
       - run: python scripts/build-cytv.py --desktop
       - name: Verify installed Linux desktop package
         if: runner.os == 'Linux'
