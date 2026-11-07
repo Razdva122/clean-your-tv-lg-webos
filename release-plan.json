@@ -104,5 +104,11 @@
     }
   ],
   "excluded": [],
-  "acceptance": ""
+  "acceptance": "Maintainer-accepted installer/recovery scope; OLED55C3RLA/43.21.71/SDK11.2.0: verified removal, normal Root reinstallation, controls/audio/standby/ordinary reboot/emergency exit, same-goal removal retry and final frozen CLI clean status passed. Exact final packages/signatures, Android original-signer upgrade and all21 candidate jobs verified. Additional physical No-root/phone/AC/OTA-rollback paths explicitly untested/deferred by maintainer decision; original reports remain separate. See docs/history/2026-11-07-release-1.10.0-final-acceptance.md.",
+  "build": {
+    "run_id": 42349849993,
+    "attempt": 1,
+    "source": "db38dc2d48f9f85c88d78b8862af28d5af71707d"
+  },
+  "acceptance_build": "42349849993:1"
 }
