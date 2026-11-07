@@ -112,3 +112,5 @@ W tym kandydacie po nieudanej lub przerwanej instalacji odzyskiwanie jest dostę
 <a id="miejsce-na-dane"></a>
 
 Szczegółowe instrukcje po angielsku: [wymagania](../COMPATIBILITY.md) · [sterowanie](../CONTROLS.md) · [motywy](../THEMES.md) · [aktualizacje](../UPDATES.md).
+
+> Nieopublikowany kandydat: eksperymentalny Root Home jest wybierany według możliwości Qt SDK 6–9, bez listy modeli. Zgodność sprzętowa i zwykłe OTA nie są zweryfikowane. Inne integracje Home pozostają bez zmian; po zatrzymaniu awaryjnym lub utracie zasilania włącz Home jawnie. [#364](../development/C1-NATIVE-GATE.md#unpublished-capability-based-compositor-admission-364).

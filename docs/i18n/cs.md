@@ -87,3 +87,5 @@ V tomto kandidátu je po neúspěšné nebo přerušené instalaci přímo dostu
 <a id="aktualizace-a-obnovení"></a>
 <a id="automatické-rozlišení-grafiky-160"></a>
 <a id="místo-v-úložišti"></a>
+
+> Nevydaný kandidát: experimentální Root Home se vybírá podle schopností Qt SDK 6–9, bez seznamu modelů. Hardwarová kompatibilita a běžné OTA nejsou ověřeny. Jiné integrace Home zůstávají beze změny; po bezpečnostním nebo napájecím zastavení ovládání Home výslovně zapněte. [#364](../development/C1-NATIVE-GATE.md#unpublished-capability-based-compositor-admission-364).

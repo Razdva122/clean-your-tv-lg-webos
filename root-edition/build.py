@@ -145,6 +145,7 @@ def build(output, version='0.0.1', legacy_node_prototype=False, resolution=None,
                        native_sha256=hashlib.sha256(native_gate).hexdigest())
         if keyfilter:
             release['routing'] = 'compositor-keyfilter-v1'
+            release['compositor_admission'] = 3
             release['capabilities'].append('c1-keyfilter-v1')
     from deploy import SUPPORT_FILES, RUNTIME_FILES, checked_file
     source = Path(__file__).resolve().parent
