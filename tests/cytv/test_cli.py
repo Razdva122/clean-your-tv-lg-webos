@@ -579,13 +579,13 @@ class CLITests(unittest.TestCase):
              patch('cytv.cli.package.verify_payload', return_value={}), \
              patch('cytv.tv.SSAP') as ssap, patch('cytv.cli.Installer') as installer:
             ssap.return_value.__enter__.side_effect = TVNotReady()
-            code, output, calls = self.run_cli(['--host', '192.0.2.10', '--edition', 'root', '--data-dir', tmp], ['', '', 'q'], remote=remote)
+            code, output, calls = self.run_cli(['--host', '192.0.2.10', '--edition', 'no-root', '--data-dir', tmp], ['', '', 'q'], remote=remote)
             self.assertEqual(code, 130, output)
             self.assertIn('Turn on your TV', output)
             self.assertIn('Installation has not started', output)
             self.assertEqual(ssap.call_count, 1)
             installer.return_value.install.assert_not_called()
-            self.assertIsNone(state.Store(tmp).pending(state.target('192.0.2.10', 'root')))
+            self.assertIsNone(state.Store(tmp).pending(state.target('192.0.2.10', 'no-root')))
             self.assertFalse(list(Path(tmp).glob('reports/*.json')))
             self.assertTrue(remote.closed)
 
@@ -597,7 +597,7 @@ class CLITests(unittest.TestCase):
              patch('cytv.cli.package.verify_payload', return_value={}), \
              patch('cytv.tv.SSAP') as ssap, patch('cytv.cli.Installer') as installer:
             ssap.return_value.__enter__.side_effect = TVNotReady()
-            code, output, calls = self.run_cli(['--host', '192.0.2.10', '--edition', 'root', '--data-dir', tmp,
+            code, output, calls = self.run_cli(['--host', '192.0.2.10', '--edition', 'no-root', '--data-dir', tmp,
                                                '--non-interactive', '--yes'], remote=Remote())
             self.assertEqual(code, 2, output)
             self.assertIn('Installation has not started', output)
@@ -621,7 +621,7 @@ class CLITests(unittest.TestCase):
             session.key = None
             session.inventory.return_value = inventory
             session.__enter__.side_effect = [TVNotReady(), session]
-            code, output, calls = self.run_cli(['--host', '192.0.2.10', '--edition', 'root', '--data-dir', tmp],
+            code, output, calls = self.run_cli(['--host', '192.0.2.10', '--edition', 'no-root', '--data-dir', tmp],
                                                ['', '', ''], remote=Remote())
             self.assertEqual(code, 0, output)
             self.assertEqual(len(calls), 1)
@@ -629,7 +629,7 @@ class CLITests(unittest.TestCase):
             session.inventory.assert_called_once_with(b'test-fallback')
             installer.return_value.install.assert_called_once_with(inventory, None, False)
             installer.return_value.trial.assert_not_called()
-            self.assertIn('Review TV checks', output)
+            self.assertIn('Packages installed; Home Helper launch requested.', output)
             self.assertNotRegex(output.lower(), r'trial|countdown|keep using|preview release')
 
     def test_installation_failure_is_never_caught_as_inventory_retry(self):
@@ -643,7 +643,7 @@ class CLITests(unittest.TestCase):
             (Path(tmp)/'fallback.png').write_bytes(b'test-fallback')
             ssap.return_value.__enter__.return_value.inventory.return_value = {'apps': [], 'inputs': []}
             installer.return_value.install.side_effect = TVNotReady()
-            code, output, calls = self.run_cli(['--host', '192.0.2.10', '--edition', 'root', '--data-dir', tmp, '--yes'], remote=Remote())
+            code, output, calls = self.run_cli(['--host', '192.0.2.10', '--edition', 'no-root', '--data-dir', tmp, '--yes'], remote=Remote())
             self.assertEqual(code, 2, output)
             self.assertEqual(ssap.call_count, 1)
             installer.return_value.install.assert_called_once()

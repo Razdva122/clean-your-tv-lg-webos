@@ -265,7 +265,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 write('Hardware validation: LG C3; other models are unverified.')
                 write('Automatic SSH sign-in first; credentials only if needed.')
             write('Next: verify SSH, read your apps, then install.')
-            write('Pairing is a separate step: when the TV asks, approve CYTV with your remote.')
+            if profile['edition']=='no-root':
+                write('Pairing is a separate step: when the TV asks, approve CYTV with your remote.')
             if profile['edition'] == 'root':
                 write('Root will stop the old Home Helper, turn on Home control and open Clean Your TV Home.')
             write('Check controls on the TV after installation.')
@@ -423,24 +424,29 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 phase = 'read-inventory'
                 inventory, key = None, None
                 if not args.migrate_home and not resume:
-                    from .tv import SSAP
-                    while True:
-                        try:
-                            phase = 'pair-tv'
-                            checks.update('pairing', 'running', '')
-                            with SSAP(profile['host'], store.device_dir(profile), write) as tv:
-                                checks.update('pairing', 'pass')
-                                phase = 'read-inventory'
-                                checks.update('inventory', 'running', '')
-                                inventory = tv.inventory((payload / 'fallback.png').read_bytes())
-                                key = tv.key
-                                checks.update('inventory', 'pass')
-                            break
-                        except TVNotReady:
-                            checks.finish_running()
-                            if args.non_interactive:
-                                raise
-                            prompts.wait_for_tv(ask, write)
+                    if profile['edition']=='root':
+                        checks.update('inventory','running','')
+                        inventory=installer.root_inventory((payload/'fallback.png').read_bytes())
+                        checks.update('inventory','pass')
+                    else:
+                        from .tv import SSAP
+                        while True:
+                            try:
+                                phase = 'pair-tv'
+                                checks.update('pairing', 'running', '')
+                                with SSAP(profile['host'], store.device_dir(profile), write) as tv:
+                                    checks.update('pairing', 'pass')
+                                    phase = 'read-inventory'
+                                    checks.update('inventory', 'running', '')
+                                    inventory = tv.inventory((payload / 'fallback.png').read_bytes())
+                                    key = tv.key
+                                    checks.update('inventory', 'pass')
+                                break
+                            except TVNotReady:
+                                checks.finish_running()
+                                if args.non_interactive:
+                                    raise
+                                prompts.wait_for_tv(ask, write)
                     write(f"Read {len(inventory['apps'])} applications.")
                 phase = 'install-packages'
                 def progress(message):

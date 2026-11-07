@@ -32,7 +32,7 @@ class CleanupConnectionWire(unittest.TestCase):
                 if command=='recover':store.request_clean_removal(profile)
                 write=Capture();connect=Mock(side_effect=AuthenticationException('PRIVATE CURRENT'))
                 with patch('cytv.cli.package.verify_payload',return_value={'files':{'fixture':'digest'}}) as verify:
-                    code=cli.main([command,'--yes','--host',profile['host'],'--edition',edition,'--data-dir',tmp],
+                    code=cli.main([command,'--language','en','--yes','--host',profile['host'],'--edition',edition,'--data-dir',tmp],
                                   write=write,connect=connect,payload_root=Path(tmp)/'payload')
                 self.assertEqual(code,1)
                 verify.assert_called_once_with((Path(tmp)/'payload').resolve())
@@ -57,7 +57,7 @@ class CleanupConnectionWire(unittest.TestCase):
                 store.checkpoint(profile,stage='restart-required',removal_reason='restart-required')
                 lines=[];write=Console(lines.append,interactive=False,color=False)
                 with patch('cytv.cli.package.verify_payload',return_value={'files':{'fixture':'digest'}}):
-                    code=cli.main(['uninstall','--yes','--host',profile['host'],'--edition','root','--data-dir',tmp],
+                    code=cli.main(['uninstall','--language','en','--yes','--host',profile['host'],'--edition','root','--data-dir',tmp],
                                   write=write,connect=Mock(side_effect=error),payload_root=Path(tmp)/'payload')
                 self.assertEqual(code,1)
                 text='\n'.join(lines);current=text.index('Could not complete this step')
