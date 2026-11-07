@@ -83,3 +83,13 @@ bytes are unknown/untested. Home routing, ordinary controls, audio, standby, col
 boot, OTA, rollback and owner recovery are untested. Local modeled success is
 not a completed installation/removal report or a universal compatibility claim.
 The original #240 issue remains open until its actual remaining work is resolved.
+
+## Candidate integration
+
+PR #379 merged into release/next as 2f3724a6 at the maintainer's explicit request
+without waiting for CI. Selected Tests run 42359748100 was pending at handoff;
+this is not passing combined-candidate evidence. The broader local
+installer/setup/Android command was interrupted before completion and is not
+claimed as a pass. The targeted module/package checks above remain the actual
+local evidence. Candidate #374 retains its version/build/physical acceptance
+gates; this source integration is not public delivery or owner recovery.

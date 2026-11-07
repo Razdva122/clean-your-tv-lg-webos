@@ -25,6 +25,20 @@
       "pr": 375,
       "issues": [],
       "summary": "Remove dead cleanup paths and unused bindings while preserving active cleanup and recovery exports"
+    },
+    {
+      "pr": 379,
+      "issues": [
+        240
+      ],
+      "summary": "Add Root removal catalog fallback and bounded first/latest failure detail; original installation cause and device recovery remain unverified"
+    },
+    {
+      "pr": 380,
+      "issues": [
+        376
+      ],
+      "summary": "Preserve No-root observer failure evidence and portable launch"
     }
   ],
   "excluded": [],
