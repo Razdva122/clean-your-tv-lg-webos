@@ -90,6 +90,50 @@ class CoordinatorCleanRemoval(unittest.TestCase):
         self.assertEqual(second['stage'],'verified-clean')
         self.assertNotEqual(second['lease'],first['lease'])
 
+    def test_inspect_and_restore_verified_removal_preserve_fences_and_old_request(self):
+        original=self.original();self.driver.clean_remove(self.id)
+        self.device.inspect=lambda:{'state':'recovery_required','can_install':False,'can_maintain':False}
+        self.device.restore=lambda:self.fail('removed driver executed')
+        before=self.owner.status().copy()
+        result=self.driver.inspect()
+        self.assertTrue(result.get('clean_removal_verified'))
+        self.assertTrue(result['can_install']);self.assertFalse(result['can_maintain'])
+        self.assertTrue(self.driver.restore()['already_removed'])
+        self.assertEqual(self.owner.status(),before)
+        self.assertEqual(self.owner.store.read('request-'+self.id),original)
+
+    def test_clean_inspection_refuses_incomplete_or_drifted_proof(self):
+        self.driver.clean_remove(self.id)
+        self.device.inspect=lambda:{'state':'recovery_required','can_install':False,'can_maintain':False}
+        original=self.owner.store.read('clean-removal-'+self.id)
+        for key,value in [('lease','f'*32),('current',False),('stage','private-cleanup')]:
+            with self.subTest(key=key):
+                record=dict(original);record[key]=value
+                self.owner.store.write('clean-removal-'+self.id,record)
+                with self.assertRaises((Busy,ValueError)):self.driver.inspect()
+        self.owner.store.write('clean-removal-'+self.id,original)
+        self.device.verify_clean=lambda record:False
+        with self.assertRaises((Busy,ValueError)):self.driver.inspect()
+
+    def test_clean_inspection_respects_original_global_mutex(self):
+        self.driver.clean_remove(self.id)
+        lease=self.owner.status()
+        with self.owner.operation('clean-removal',lease['journal'],resume=lease['id']):
+            with self.assertRaises(Busy):self.driver.inspect()
+
+    def test_inspect_reports_only_fixed_stale_support_restart_reason(self):
+        import install_driver,install_device,io,json
+        from contextlib import redirect_stdout
+        for error,restart in ((ValueError('support_stage_remains'),True),(ValueError('live_original_worker'),True),
+                              (ValueError('support_stage_remains private details'),False),(RuntimeError('support_stage_remains'),False)):
+            with self.subTest(error=type(error).__name__,restart=restart):
+                output=io.StringIO()
+                with patch.object(sys,'argv',['install_driver','inspect']),patch.object(Coordinator,'inspect',side_effect=error),patch.object(install_device.LocalDevice,'log'),redirect_stdout(output):
+                    install_driver.main()
+                result=json.loads(output.getvalue())
+                self.assertEqual(result.get('reason'), 'restart-required' if restart else None)
+                self.assertEqual(result['state'],'recovery_required')
+
     def test_pending_removal_cannot_handoff_to_new_install(self):
         self.device.fail='private-cleanup';self.driver.clean_remove(self.id)
         with self.assertRaises(Busy):self.driver._run('b'*32,'install',lambda checkpoint:self.fail('executed'))
@@ -225,6 +269,97 @@ class PackageRemoval(unittest.TestCase):
 
 
 class PartialDeviceRemoval(unittest.TestCase):
+    def lockdown_retry_fixture(self, metadata=True):
+        import copy,json,types,install_device
+        from cytv.system_updater_remove import SCRIPT
+        fixture=self.fixture();driver,identifier,root,updater,payload,calls,present=fixture
+        base=install_device.BUS;system=install_device.SUPERVISOR;system.mkdir(mode=0o700)
+        app='com.cleanyourtv.root.updater';service=app+'.service'
+        paths={key:base/folder/(service+suffix) for key,folder,suffix in (
+            ('service','services.d','.service'),('role','roles.d','.service.json'),
+            ('client','client-permissions.d','.service.json'),('api','api-permissions.d','.api.json'))}
+        installed_api=json.dumps({'fixture.api':[service+'/status',service+'/install']})
+        disabled_api=json.dumps({'fixture.api':[service+'/status']})
+        registration={'files':{}}
+        for key,path in paths.items():
+            path.parent.mkdir(parents=True,exist_ok=True)
+            original='{"sdk":[]}' if key=='api' else 'SDK '+key
+            installed=installed_api if key=='api' else 'private '+key
+            path.write_text(installed);path.chmod(0o600)
+            registration['files'][str(path)]={'original':original,'installed':installed,
+                                             'mode':0o600,'uid':os.getuid(),'gid':os.getgid()}
+            if not metadata:
+                for name in ('mode','uid','gid'):registration['files'][str(path)].pop(name)
+        disabled=copy.deepcopy(registration);disabled['files'][str(paths['api'])]['installed']=disabled_api
+        original_raw=json.dumps(registration);disabled_raw=json.dumps(disabled)
+        receipt=updater/'registration.json';receipt.write_text(disabled_raw);receipt.chmod(0o600)
+        paths['api'].write_text(disabled_api)
+        legacy={'schema':1,'files':{str(paths['api']):{'original':installed_api,'disabled':disabled_api,'mode':0o600},
+                                   str(receipt):{'original':original_raw,'disabled':disabled_raw,'mode':0o600}}}
+        Store(system,uid=os.getuid()).write('legacy-lockdown',legacy)
+        module=types.ModuleType('cleanup_system_updater');exec(SCRIPT,module.__dict__);module.ROOT_UPDATER=updater
+        patcher=patch.dict(sys.modules,{'cleanup_system_updater':module});patcher.start();self.addCleanup(patcher.stop)
+        return fixture,module,system,paths,legacy
+
+    def test_lockdown_retry_keeps_authenticated_terminal_sdk_api_after_interruption(self):
+        import json
+        fixture,module,system,paths,legacy=self.lockdown_retry_fixture(metadata=False)
+        driver,identifier,root,updater,payload,calls,present=fixture
+        present.add('com.gathin.tvhome');rpc=driver.device.rpc;failed=[False]
+        def interrupted(method,data):
+            if method=='com.gathin.tvhome.renewal/disable':
+                if not failed[0]:failed[0]=True;raise RuntimeError('interrupted after registration restoration')
+                return {'returnValue':True,'state':{'enabled':False}}
+            return rpc(method,data)
+        driver.device.rpc=interrupted
+        first=driver.clean_remove(identifier)
+        self.assertEqual(first['state'],'recovery_required')
+        sdk=json.loads(legacy['files'][str(updater/'registration.json')]['original'])['files'][str(paths['api'])]['original']
+        self.assertEqual(paths['api'].read_text(),sdk)
+        writes=[];write=module.write
+        def observed(path,*args,**kwargs):writes.append(path);return write(path,*args,**kwargs)
+        with patch.object(module,'write',side_effect=observed):retry=driver.clean_remove(identifier)
+        self.assertEqual(retry['stage'],'restart-required',retry)
+        self.assertNotIn(paths['api'],writes,'Never republish the intermediate private API on Retry')
+
+    def test_lockdown_terminal_api_requires_complete_exact_lineage_before_writes(self):
+        import json
+        for damage in ('foreign-api','receipt','installed-link','disabled-snapshot','metadata','missing-receipt'):
+            with self.subTest(damage=damage):
+                fixture,module,system,paths,legacy=self.lockdown_retry_fixture()
+                driver,identifier,root,updater,payload,calls,present=fixture
+                receipt=updater/'registration.json';proof=legacy['files'][str(receipt)]
+                original=json.loads(proof['original']);api=paths['api']
+                api.write_text(original['files'][str(api)]['original']);receipt.write_text(proof['original'])
+                if damage=='foreign-api':api.write_text('foreign')
+                elif damage=='receipt':receipt.write_text('{"files":{}}')
+                elif damage=='installed-link':
+                    original['files'][str(api)]['installed']='unlinked';proof['original']=json.dumps(original);receipt.write_text(proof['original'])
+                elif damage=='disabled-snapshot':proof['disabled']=json.dumps(original)
+                elif damage=='metadata':api.chmod(0o644)
+                elif damage=='missing-receipt':legacy['files'].pop(str(receipt))
+                Store(system,uid=os.getuid()).write('legacy-lockdown',legacy)
+                before={path:path.read_bytes() for path in (*paths.values(),receipt)}
+                with patch.object(module,'write',side_effect=AssertionError('Unverified lineage wrote registration')):
+                    result=driver.clean_remove(identifier)
+                self.assertEqual(result['state'],'recovery_required')
+                self.assertEqual(before,{path:path.read_bytes() for path in before})
+
+    def test_terminal_sdk_api_with_metadata_is_scoped_to_explicit_clean_removal(self):
+        import json
+        fixture,module,system,paths,legacy=self.lockdown_retry_fixture()
+        driver,identifier,root,updater,payload,calls,present=fixture
+        receipt=updater/'registration.json';proof=legacy['files'][str(receipt)]
+        original=json.loads(proof['original']);api=paths['api']
+        api.write_text(original['files'][str(api)]['original']);receipt.write_text(proof['original'])
+        before=api.stat()
+        with self.assertRaisesRegex(ValueError,'Legacy lockdown file changed'):module.lockdown(system,api.parents[1])
+        from clean_removal import validate_restored_root_api
+        entries=module.lockdown(system,api.parents[1],check=lambda files:validate_restored_root_api(files,api.parents[1],updater,os.getuid()))
+        self.assertNotIn(str(api),entries)
+        self.assertEqual((before.st_ino,before.st_mode,before.st_uid,before.st_gid),
+                         (api.stat().st_ino,api.stat().st_mode,api.stat().st_uid,api.stat().st_gid))
+
     def test_known_completed_root_and_system_receipts_are_retired_with_inverse_preserved(self):
         import install_device
         driver,identifier,root,updater,payload,calls,present=self.fixture()
@@ -336,10 +471,13 @@ class PartialDeviceRemoval(unittest.TestCase):
                 raise AssertionError(method)
             def apps(self):return set(present)
             def cleanup(self,name,*args):calls.append('cleanup-'+name);return True
+            # This OS model stops at Python readback; actual Node/FD handoff is
+            # exercised separately for native and managed Python in test_cleanup_tail.
+            def finish_clean_tail(self,record):return None
         device=Model();device.payload=payload
         device.shared_cleanup=lambda action,record,**kwargs:{'schema':1,'present':[],'blocked':[],'root_present':[]}
         device.current_boot="11111111-1111-1111-1111-111111111111"
-        device.boot_id=lambda:device.current_boot
+        device.boot_id=lambda:device.current_boot+':session-'+device.current_boot[0]*32
         owner=Ownership(Store(base/'installation',uid=os.getuid()))
         identifier='c'*32
         with owner.operation('product','product-'+identifier+'.json') as lease:
@@ -375,6 +513,77 @@ class PartialDeviceRemoval(unittest.TestCase):
             return json.loads(p.read_text()) if p and p.exists() else None
         import json
         return Coordinator(device,owner,read),identifier,root,updater,payload,calls,present
+
+    def test_final_activity_checks_preserve_foreign_prefix_but_refuse_known_services(self):
+        from clean_removal import APPS
+        driver,identifier,*_=self.fixture();rpc=driver.device.rpc
+        foreign=[{'name':'com.cleanyourtv.recoveryprobe.boot','activityId':42,'callback':{'method':'luna://com.cleanyourtv.recoveryprobe.service/boot'}},
+                 {'name':'foreign','activityId':43,'callback':{'method':'luna://com.cleanyourtv.root.preview.service.foreign/boot'}}]
+        activities=list(foreign);cancelled=[]
+        def actual(method,data):
+            if method=='com.palm.activitymanager/list':return {'returnValue':True,'activities':activities}
+            if method=='com.palm.activitymanager/cancel':cancelled.append(data);return {'returnValue':True}
+            return rpc(method,data)
+        driver.device.rpc=actual
+        driver.clean_remove(identifier);driver.device.current_boot='22222222-2222-2222-2222-222222222222'
+        result=driver.clean_remove(identifier)
+        self.assertEqual(result['stage'],'verified-clean',result)
+        self.assertEqual(cancelled,[]);self.assertEqual(activities,foreign)
+        for app in APPS:
+            callback='luna://'+app+('.renewal/' if app=='com.gathin.tvhome' else '.service/')+'unexpected'
+            activities[:]=[{'name':'unexpected','activityId':7,'callback':{'method':callback}}]
+            with self.subTest(app=app),self.assertRaisesRegex(ValueError,'owned_activity_remains'):
+                driver.device.verify_clean(result)
+        activities[:]=[{'name':'com.cleanyourtv.root.preview.service.recovery','callback':{'method':'luna://foreign.service/boot'}}]
+        with self.assertRaisesRegex(ValueError,'owned_activity_remains'):driver.device.verify_clean(result)
+
+    def test_boot_reader_authenticates_current_runtime_and_requires_session_identity(self):
+        import deploy,install_device
+        from install_fixture import CurrentInstallation
+        with CurrentInstallation() as fixture:
+            device=install_device.LocalDevice();device.payload=fixture.payload
+            value='11111111-1111-1111-1111-111111111111:session-'+'a'*32
+            with patch.object(deploy,'command',return_value={'returnValue':True,'boot':value}) as command:
+                self.assertEqual(device.boot_id(),value)
+                args=command.call_args.args[0]
+                self.assertEqual(args[1:4],['-I','-B','-c'])
+                self.assertIn(repr(str(fixture.payload/'root/runtime')),args[4])
+                self.assertIn('boot_identity()',args[4])
+                self.assertNotIn(str(fixture.root/'runtime'),args[4])
+                (fixture.payload/'root/runtime/intent_runtime.py').write_text('changed current code')
+                with self.assertRaises(ValueError):device.boot_id()
+                self.assertEqual(command.call_count,1)
+
+    def test_malformed_boot_baseline_refuses_without_sampling_or_cleanup(self):
+        driver,identifier,*_=self.fixture();driver.clean_remove(identifier)
+        name='clean-removal-'+identifier;record=driver.ownership.store.read(name)
+        record['cleanup_boot_id']='invalid';driver.ownership.store.write(name,record)
+        with patch.object(driver.device,'boot_id',side_effect=AssertionError('must not create marker')):
+            result=driver.clean_remove(identifier)
+        self.assertNotEqual(result['stage'],'verified-clean')
+        self.assertEqual(result['cleanup_boot_id'],'invalid')
+
+    def test_durable_restart_fact_does_not_recreate_retired_boot_marker(self):
+        driver,identifier,*_=self.fixture();driver.clean_remove(identifier)
+        driver.device.current_boot='22222222-2222-2222-2222-222222222222'
+        self.assertEqual(driver.clean_remove(identifier)['stage'],'verified-clean')
+        driver.device.payload=None
+        with patch.object(driver.device,'boot_id',side_effect=AssertionError('must not create marker')):
+            self.assertEqual(driver.clean_remove(identifier)['stage'],'verified-clean')
+
+    def test_legacy_baseline_reseeds_and_clears_unusable_verified_fact(self):
+        driver,identifier,*_=self.fixture()
+        first=driver.clean_remove(identifier)
+        store=driver.ownership.store
+        name='clean-removal-'+identifier
+        record=store.read(name);record['cleanup_boot_id']=driver.device.current_boot
+        record['cleanup_verified_boot_id']='22222222-2222-2222-2222-222222222222:session-'+'b'*32
+        store.write(name,record)
+        result=driver.clean_remove(identifier)
+        self.assertEqual(result['stage'],'restart-required')
+        saved=store.read(name)
+        self.assertIn(':session-',saved['cleanup_boot_id'])
+        self.assertNotIn('cleanup_verified_boot_id',saved)
 
     def test_real_partial_trees_clean_without_finishing_install_or_changing_foreign_home(self):
         driver,identifier,root,updater,payload,calls,present=self.fixture()
@@ -520,6 +729,143 @@ class PartialDeviceRemoval(unittest.TestCase):
         self.assertFalse(result['current'])
         self.assertTrue((root/'state/ssap.json').exists())
         self.assertTrue(any(name.startswith('remove-') for name in calls))
+
+    def test_clean_readback_exempts_only_executing_checked_coordinator_stage(self):
+        import install_device
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        self.assertEqual(driver.clean_remove(identifier)['stage'],'restart-required')
+        driver.device.current_boot='22222222-2222-2222-2222-222222222222'
+        record=driver.clean_remove(identifier)
+        stage=install_device.TEMP/('cytv-coordinator-'+'a'*32);stage.mkdir()
+        (stage/'install_device.py').write_bytes(b'current support')
+        with patch.object(install_device,'__file__',str(stage/'install_device.py')), patch('coordinator_inventory.BUNDLED_FILES',('install_device.py',)):
+            self.assertTrue(driver.device.verify_clean(record))
+            other=install_device.TEMP/('cytv-coordinator-'+'b'*32);other.mkdir()
+            (other/'install_device.py').write_bytes(b'current support')
+            self.assertTrue(driver.device.verify_clean(record))
+            (other/'foreign').write_bytes(b'unknown support')
+            with self.assertRaisesRegex(ValueError,'support_stage_remains'):driver.device.verify_clean(record)
+            (other/'foreign').unlink()
+            (other/'install_device.py').write_bytes(b'stale support')
+            with self.assertRaisesRegex(ValueError,'support_stage_remains'):driver.device.verify_clean(record)
+            (other/'install_device.py').unlink()
+            (other/'install_device.py').symlink_to(stage/'install_device.py')
+            with self.assertRaisesRegex(ValueError,'support_stage_remains'):driver.device.verify_clean(record)
+
+    def test_readonly_clean_proof_runs_current_shared_cleanup_without_payload(self):
+        import install_device,json,hashlib,subprocess
+        from cytv.no_root_cleanup import PRIVATE_CLEANUP_PROGRAM
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        driver.clean_remove(identifier)
+        driver.device.current_boot='22222222-2222-2222-2222-222222222222'
+        driver.clean_remove(identifier)
+        base=root.parent
+        for name in ('developer','bus-private','varlib','profiles'):(base/name).mkdir()
+        source=PRIVATE_CLEANUP_PROGRAM.replace('/media/developer',str(base/'developer')).replace('/var/luna-service2-dev',str(base/'bus-private'))
+        source=source.replace('/var/lib',str(base/'varlib')).replace('/var/webos-profile',str(base/'profiles')).replace('/proc/sys/kernel/random/boot_id',str(base/'boot'))
+        (base/'boot').write_text('22222222-2222-2222-2222-222222222222')
+        if os.getuid()!=0:source=source.replace('if(uid!==0||','if(false||')
+        stage=install_device.TEMP/('cytv-coordinator-'+'a'*32);stage.mkdir()
+        script=stage/'cleanup_no_root_private.js';script.write_text(source)
+        (stage/'bundle.json').write_text(json.dumps({'files':{script.name:hashlib.sha256(script.read_bytes()).hexdigest()}}))
+        del driver.device.shared_cleanup
+        driver.device.payload=None
+        run=subprocess.run
+        def actual(args,**kwargs):return run([os.environ.get('NODE8','node'),*args[1:]],**kwargs)
+        with patch.object(install_device,'__file__',str(stage/'install_device.py')),patch('coordinator_inventory.BUNDLED_FILES',(script.name,)),patch('install_device.subprocess.run',side_effect=actual):
+            self.assertTrue(driver.inspect()['clean_removal_verified'])
+            self.assertTrue(driver.restore()['already_removed'])
+            script.write_text(source+'\n// changed current support')
+            with self.assertRaisesRegex(ValueError,'current_cleanup_support_changed'):driver.inspect()
+
+    def test_clean_process_proof_allows_only_exact_current_readonly_status(self):
+        import install_device
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        driver.clean_remove(identifier)
+        driver.device.current_boot='22222222-2222-2222-2222-222222222222'
+        record=driver.clean_remove(identifier)
+        stage=install_device.TEMP/('cytv-coordinator-'+'a'*32);stage.mkdir()
+        for name in ('install_device.py','install_driver.py'):(stage/name).write_bytes(b'current support')
+        process=install_device.PROC/'12345';process.mkdir()
+        args=[sys.executable,'-B',str(stage/'install_driver.py'),'status','--operation','d'*32]
+        command=process/'cmdline';command.write_bytes(b'\0'.join(arg.encode() for arg in args)+b'\0')
+        with patch.object(install_device,'__file__',str(stage/'install_device.py')),patch('coordinator_inventory.BUNDLED_FILES',('install_device.py','install_driver.py')):
+            self.assertTrue(driver.device.verify_clean(record))
+            for tail in (['--resume'],['--worker'],['--payload',str(payload)]):
+                command.write_bytes(b'\0'.join(arg.encode() for arg in args+tail)+b'\0')
+                with self.assertRaisesRegex(ValueError,'live_original_worker'):driver.device.verify_clean(record)
+            command.write_bytes(b'\0'.join(arg.encode() for arg in args)+b'\0')
+            other=install_device.TEMP/('cytv-coordinator-'+'b'*32);other.mkdir()
+            for name in ('install_device.py','install_driver.py'):(other/name).write_bytes(b'stale support')
+            command.write_bytes(b'\0'.join(arg.replace(str(stage),str(other)).encode() for arg in args)+b'\0')
+            with self.assertRaisesRegex(ValueError,'live_original_worker'):driver.device.clean_quiescent(record,all_processes=True)
+
+    def test_clean_readback_accepts_only_exact_current_product_upload(self):
+        import install_device,json,shutil,hashlib
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        driver.clean_remove(identifier)
+        driver.device.current_boot='22222222-2222-2222-2222-222222222222'
+        record=driver.clean_remove(identifier)
+        snapshot=payload.parent/'current-snapshot';snapshot.mkdir()
+        for component in ('root','root-updater'):
+            folder=snapshot/component;folder.mkdir()
+            (folder/'current.py').write_bytes(b'current bytes')
+            (folder/'bundle.json').write_text(json.dumps({'files':{'current.py':hashlib.sha256(b'current bytes').hexdigest()}}))
+        stage=install_device.TEMP/('cytv-product-'+'a'*32)
+        shutil.copytree(snapshot,stage)
+        (snapshot/'worker.log').write_bytes(b'private worker log')
+        driver.device.payload=snapshot
+        self.assertTrue(driver.device.verify_clean(record))
+        (stage/'foreign').mkdir()
+        with self.assertRaisesRegex(ValueError,'support_stage_remains'):driver.device.verify_clean(record)
+        (stage/'foreign').rmdir()
+        (stage/'root/current.py').write_bytes(b'changed bytes')
+        with self.assertRaisesRegex(ValueError,'support_stage_remains'):driver.device.verify_clean(record)
+
+    def test_interrupted_fence_archive_resumes_only_original_inodes(self):
+        import install_device
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        driver.clean_remove(identifier)
+        driver.device.current_boot='22222222-2222-2222-2222-222222222222'
+        clean=driver.clean_remove(identifier)
+        original=driver.ownership.store.read('request-'+identifier)
+        rename=os.rename
+        def interrupted(source,target,**kwargs):
+            if source==updater.name:raise OSError('interrupted archive')
+            return rename(source,target,**kwargs)
+        with patch.object(install_device.os,'rename',side_effect=interrupted):
+            failed=driver._run('d'*32,'install',lambda checkpoint:self.fail('install effects began'))
+        self.assertEqual(failed['stage'],'reserved')
+        self.assertEqual(failed['state'],'recovery_required')
+        self.assertFalse(root.exists());self.assertTrue(updater.exists())
+        driver.ownership.store.write('submission-'+'d'*32,dict(operation='d'*32,action='install'))
+        driver.device.verify_resume=lambda payload,submission:dict(migrate=False,prepare_supervisor=False)
+        def resume(payload,options,stage,checkpoint):
+            self.assertFalse(root.exists());self.assertFalse(updater.exists())
+            return {'verified':True}
+        driver.device.resume_install=resume
+        completed=driver.resume('d'*32,payload)
+        self.assertEqual(completed['state'],'complete',completed)
+        self.assertEqual(driver.ownership.store.read('request-'+identifier),original)
+        driver.device.prepare_clean_install(clean)
+
+    def test_interrupted_fence_archive_rejects_replaced_archived_directory(self):
+        import install_device
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        driver.clean_remove(identifier)
+        driver.device.current_boot='22222222-2222-2222-2222-222222222222'
+        clean=driver.clean_remove(identifier)
+        rename=os.rename
+        def interrupted(source,target,**kwargs):
+            if source==updater.name:raise OSError('interrupted archive')
+            return rename(source,target,**kwargs)
+        with patch.object(install_device.os,'rename',side_effect=interrupted):
+            driver._run('d'*32,'install',lambda checkpoint:self.fail('effects'))
+        archive=Path(driver.ownership.store.root)/('component-fences-'+identifier)
+        (archive/root.name).rename(archive/'replaced')
+        (archive/root.name).mkdir()
+        with self.assertRaisesRegex(ValueError,'component_fence_conflict'):driver.device.prepare_clean_install(clean)
+        self.assertTrue(updater.exists())
 
     def test_fresh_install_moves_minimal_fences_without_replacing_lock_inodes(self):
         driver,identifier,root,updater,payload,calls,present=self.fixture()

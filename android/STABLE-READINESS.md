@@ -1,5 +1,8 @@
 # Android stable readiness
 
+> **1.10.0:** the [final acceptance record](../docs/history/2026-11-07-release-1.10.0-final-acceptance.md) binds the exact original-signer code23-to-code24 emulator upgrade, synthetic Store retention and packaged source/payload verification. Physical phone/live phone-to-TV and minimum-device paths remain untested; no new physical compatibility claim is made.
+
+
 > **Release 1.9.0:** see [versions, tested scope and recovery limits](../docs/RELEASE-1.9.0.md). C1 Beta is fresh-install only, selected automatically in the common installer; normal OTA is unavailable and physical C1 acceptance is pending. Historical results below retain their original artifact scope.
 
 > **1.9.0 artifact acceptance:** Android0.9.0/code23, exact original-signer code22 upgrade, four synthetic files, real Store and native OperationChecks passed on an isolated API35 ARM64 userdebug emulator. [Exact APK/source/hashes and limits](../docs/history/2026-11-06-root-wake-key-release.md#final-cold-start-retained-rollback-and-android-upgrade). Physical phone-to-TV and minimum-device acceptance remain unverified.

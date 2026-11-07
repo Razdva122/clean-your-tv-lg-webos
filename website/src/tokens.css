@@ -67,8 +67,8 @@
   --color-accent: #ff4c20;
   --color-accent-ink: #241d19;
   --color-focus: #fff8eb;
-  --font-display: "CYTV Outfit", system-ui, sans-serif;
-  --font-body: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: 'CYTV Outfit', system-ui, sans-serif;
+  --font-body: system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-outlier: var(--font-body);
   --radius-card: 4px;
   --radius-pill: 999px;
@@ -78,15 +78,15 @@
 }
 
 @font-face {
-  font-family: "CYTV Outfit";
-  src: url("/assets/outfit-400.ttf") format("truetype");
+  font-family: 'CYTV Outfit';
+  src: url('/assets/outfit-400.ttf') format('truetype');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
-  font-family: "CYTV Outfit";
-  src: url("/assets/outfit-700.ttf") format("truetype");
+  font-family: 'CYTV Outfit';
+  src: url('/assets/outfit-700.ttf') format('truetype');
   font-weight: 700;
   font-style: normal;
   font-display: swap;

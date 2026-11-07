@@ -1,17 +1,59 @@
-const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
-assert(fs.existsSync('launcher/viewport.js'),'Home viewport fitting module is missing');
-const source=fs.readFileSync('launcher/viewport.js','utf8');
-const surface={style:{},getBoundingClientRect:()=>({left:0,top:0})},listeners={};
-const window={innerWidth:1280,innerHeight:720,addEventListener:(name,fn)=>listeners[name]=fn,document:{getElementById:()=>surface}};
-vm.runInNewContext(source,{window});
-assert.equal(window.HomeViewport.update(),2/3);
-assert.equal(surface.style.transform,'scale(0.6666666666666666)');
-assert.equal(surface.style.webkitTransform,surface.style.transform);
-const button={getBoundingClientRect:()=>({left:640,top:60,right:800,bottom:100,width:160,height:40})};
-const rect=window.HomeViewport.rect(button);assert.equal(rect.left,960);assert.equal(rect.top,90);assert.equal(rect.bottom,150);assert.equal(rect.width,240);
-window.innerWidth=1920;window.innerHeight=1080;listeners.resize();assert.equal(surface.style.transform,'scale(1)');
-assert.equal(window.HomeViewport.rect(button).left,640);
-window.innerWidth=3840;window.innerHeight=2160;assert.equal(window.HomeViewport.update(),1,'never stretch beyond the logical scene');
-window.innerWidth=0;window.innerHeight=0;assert.equal(window.HomeViewport.update(),1,'unavailable viewport must not hide Home');
-require('acorn').parse(source,{ecmaVersion:5});
+const assert = require('node:assert/strict'),
+  fs = require('node:fs'),
+  vm = require('node:vm');
+assert(
+  fs.existsSync('launcher/viewport.js'),
+  'Home viewport fitting module is missing'
+);
+const source = fs.readFileSync('launcher/viewport.js', 'utf8');
+const surface = {
+    style: {},
+    getBoundingClientRect: () => ({ left: 0, top: 0 })
+  },
+  listeners = {};
+const window = {
+  innerWidth: 1280,
+  innerHeight: 720,
+  addEventListener: (name, fn) => (listeners[name] = fn),
+  document: { getElementById: () => surface }
+};
+vm.runInNewContext(source, { window });
+assert.equal(window.HomeViewport.update(), 2 / 3);
+assert.equal(surface.style.transform, 'scale(0.6666666666666666)');
+assert.equal(surface.style.webkitTransform, surface.style.transform);
+const button = {
+  getBoundingClientRect: () => ({
+    left: 640,
+    top: 60,
+    right: 800,
+    bottom: 100,
+    width: 160,
+    height: 40
+  })
+};
+const rect = window.HomeViewport.rect(button);
+assert.equal(rect.left, 960);
+assert.equal(rect.top, 90);
+assert.equal(rect.bottom, 150);
+assert.equal(rect.width, 240);
+window.innerWidth = 1920;
+window.innerHeight = 1080;
+listeners.resize();
+assert.equal(surface.style.transform, 'scale(1)');
+assert.equal(window.HomeViewport.rect(button).left, 640);
+window.innerWidth = 3840;
+window.innerHeight = 2160;
+assert.equal(
+  window.HomeViewport.update(),
+  1,
+  'never stretch beyond the logical scene'
+);
+window.innerWidth = 0;
+window.innerHeight = 0;
+assert.equal(
+  window.HomeViewport.update(),
+  1,
+  'unavailable viewport must not hide Home'
+);
+require('acorn').parse(source, { ecmaVersion: 5 });
 console.log('PASS Home viewport scale, resize, logical DOM rectangles and ES5');

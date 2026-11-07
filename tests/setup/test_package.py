@@ -151,7 +151,7 @@ arch = 'arm' if helper else 'all'
             raw += header + data + (b'\n' if len(data)%2 else b'')
         with tempfile.TemporaryDirectory() as tmp:
             package = Path(tmp)/'test.ipk'; package.write_bytes(raw)
-            subprocess.run(['python3', str(ROOT/'scripts/fix-package-data.py'), str(package)], check=True, capture_output=True)
+            subprocess.run([sys.executable, str(ROOT/'scripts/fix-package-data.py'), str(package)], check=True, capture_output=True)
             data = package.read_bytes(); self.assertEqual(data[:8], b'!<arch>\n')
             offset=8; found={}
             while offset < len(data):

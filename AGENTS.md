@@ -58,6 +58,11 @@ focused-development/full-candidate split in CONTRIBUTING.md and the explicit
 candidate workflow in docs/RELEASE-FLOW.md. A preliminary TV build is never a
 substitute for final release evidence.
 
+For subsequent release QA sessions, follow
+[planned cases before batch fixes](docs/RELEASE-FLOW.md#complete-planned-cases-before-batch-fixes).
+Complete the case pass and consolidated failure inventory before product fixes
+or merging the fix batch; do not start a full RC for each finding.
+
 Keep the current PR summary compact and link dated observations. Reuse already
 read issue/PR evidence within the task, while reading every new comment, review,
 timeline event and changed release record before making a decision. Re-read the

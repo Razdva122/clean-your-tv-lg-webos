@@ -67,15 +67,13 @@ def transform(source):
             changed.append(str(path.relative_to(source)))
     path = source / 'root-edition/updater/fetch.js'
     raw = path.read_text()
-    lines = raw.splitlines()
-    for index, line in enumerate(lines):
-        if line.startswith('function allowed(raw)'):
-            lines[index] = "function allowed(raw){try{var u=new URL(raw);return u.protocol==='http:'&&u.hostname==='127.0.0.1'&&u.port==='18997'&&!u.username&&!u.password&&!u.search&&!u.hash&&(u.pathname==='/releases/latest/download/root-update.json'||/^\\/releases\\/download\\/v\\d{1,4}\\.\\d{1,4}\\.\\d{1,4}\\/com\\.cleanyourtv\\.root\\.updatetest_\\d{1,4}\\.\\d{1,4}\\.\\d{1,4}_all\\.ipk$/.test(u.pathname));}catch(_){return false;}}"
-            break
-    else:
-        raise ValueError('Expected pinned URL policy is missing')
-    updated = '\n'.join(lines) + '\n'
-    updated = updated.replace("https=require('https')", "http=require('http')").replace('req=https.get(', 'req=http.get(')
+    policy = "function allowed(raw){try{var u=new URL(raw);return u.protocol==='http:'&&u.hostname==='127.0.0.1'&&u.port==='18997'&&!u.username&&!u.password&&!u.search&&!u.hash&&(u.pathname==='/releases/latest/download/root-update.json'||/^\\/releases\\/download\\/v\\d{1,4}\\.\\d{1,4}\\.\\d{1,4}\\/com\\.cleanyourtv\\.root\\.updatetest_\\d{1,4}\\.\\d{1,4}\\.\\d{1,4}_all\\.ipk$/.test(u.pathname));}catch(_){return false;}}\n"
+    updated,count=re.subn(r'(?ms)^function allowed\(raw\)\s*\{.*?(?=^function feedName\()',lambda _:policy,raw)
+    if count!=1:raise ValueError('Expected one pinned URL policy')
+    updated,count=re.subn(r"\bhttps\s*=\s*require\(\s*(['\"])https\1\s*\)","http=require('http')",updated)
+    if count!=1:raise ValueError('Expected one HTTPS fixture import')
+    updated,count=re.subn(r'\breq\s*=\s*https\.get\s*\(', 'req=http.get(',updated)
+    if count!=1:raise ValueError('Expected one HTTPS fixture request')
     updated = updated.replace('https://github.com/Razdva122/clean-your-tv-lg-webos/releases/', FEED)
     path.write_text(updated)
     if str(path.relative_to(source)) not in changed:

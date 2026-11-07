@@ -1,37 +1,514 @@
-const {chromium,stage,fs,path}=require('./browser.cjs'),assert=require('assert/strict'),http=require('http');
-(async()=>{const site=path.resolve('build/tests/personal-tv-site');require('child_process').execFileSync('python3',['scripts/preview.py','--build',site]);const server=http.createServer((req,res)=>{const file=path.resolve(site,'.'+new URL(req.url,'http://localhost').pathname);if(!file.startsWith(site+path.sep)||!fs.existsSync(file))return res.writeHead(404).end();res.setHeader('Content-Type',({'.js':'application/javascript','.html':'text/html','.css':'text/css','.json':'application/json','.png':'image/png'})[path.extname(file)]||'application/octet-stream');res.end(fs.readFileSync(file));});await new Promise(r=>server.listen(0,'127.0.0.1',r));const browser=await chromium.launch({headless:true,channel:process.env.BROWSER_CHANNEL||'chrome'});try{for(const edition of ['launcher','root-launcher']){const page=await browser.newPage({viewport:{width:1280,height:720},locale:'en-US'});const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.route(/^https:/,r=>r.abort());await page.goto('http://127.0.0.1:'+server.address().port+'/'+edition+'/index.html');await page.locator('#tiles .focused').waitFor();await page.evaluate(()=>HomeUIReady);await page.locator('#btnSettings').click();await page.locator('[data-category=wallpapers]').click();assert.equal(await page.locator('#wallpaperPhone').count(),1,'phone action present');await page.evaluate(async()=>{
- const canvas=document.createElement('canvas');canvas.width=1280;canvas.height=720;canvas.getContext('2d').fillRect(0,0,1280,720);const data=canvas.toDataURL('image/jpeg').split(',')[1],raw=atob(data),bytes=Uint8Array.from(raw,x=>x.charCodeAt(0));window.envelope={schemaVersion:1,kind:'wallpaper',source:'phone',image:{mediaType:'image/jpeg',width:1280,height:720,size:bytes.length,sha256:ThemeData.hash(bytes),data},variants:[]};
- async function rejects(value){let rejected=false;try{await PersonalWallpaper.receive(value);}catch(_){rejected=true;}if(!rejected)throw Error('Accepted invalid wire');}
- await rejects({...envelope,arbitrary:'field'});await rejects({...envelope,variants:[{}]});await rejects({...envelope,image:{...envelope.image,width:1921}});await rejects({...envelope,image:{...envelope.image,sha256:'0'.repeat(64)}});await rejects({...envelope,image:{...envelope.image,data:envelope.image.data+'AAAA'}});await rejects({...envelope,source:'cytv',variants:[{quality:'4k',mediaType:'video/mp4',width:3840,height:2160,size:bytes.length,sha256:ThemeData.hash(bytes),data}]});
- await PersonalWallpaper.receive(envelope);
- });
- assert(await page.locator('#wallpaperPending').isVisible());assert.equal(await page.evaluate(()=>PersonalWallpaper.state().installed),false,'preview does not persist');await page.locator('#wallpaperApply').click();await page.waitForFunction(()=>PersonalWallpaper.state().installed);assert.equal(await page.evaluate(()=>HomeWallpaper.state().source),'personal');assert(await page.locator('[data-wallpaper-quality="4k"]').isDisabled(),'phone never enables 4K');assert.match(await page.locator('#wallpaperPhoneWarning').textContent(),/1080p/);
- await page.evaluate(async()=>{await PersonalWallpaper.receive(envelope);window.previousPoster=HomeWallpaper.state().posterURL;Object.defineProperty(navigator,'storage',{configurable:true,value:{estimate:()=>Promise.resolve({usage:1048576,quota:1048576})}});});
- await page.locator('#wallpaperApply').click();await page.waitForFunction(()=>document.getElementById('wallpaperStatus').textContent.includes('shortfall'));
- assert.match(await page.locator('#wallpaperStatus').textContent(),/required .* MiB; available 0.0 MiB; shortfall/);
- assert.equal(await page.evaluate(()=>HomeWallpaper.state().posterURL===previousPoster),true,'storage rejection preserves current wallpaper');
- await page.evaluate(()=>{delete navigator.storage;PersonalWallpaper.cancel();});
- await page.evaluate(async()=>{const item=(await ThemeManager.list()).find(i=>i.id==='builtin:liquid-glass');await ThemeManager.selectInstalled(item);await ThemeManager.reset();if(HomeWallpaper.state().source!=='theme'||!PersonalWallpaper.state().installed)throw Error('Theme choice must use its own wallpaper and retain the personal slot');await PersonalWallpaper.select('personal');
- const before=HomeWallpaper.state().posterURL;await PersonalWallpaper.receive(envelope);const put=IDBObjectStore.prototype.put;IDBObjectStore.prototype.put=function(){throw Error('QuotaExceededError');};try{await PersonalWallpaper.apply();throw Error('Expected quota failure');}catch(error){if(error.message==='Expected quota failure')throw error;}finally{IDBObjectStore.prototype.put=put;}if(HomeWallpaper.state().posterURL!==before)throw Error('Quota replaced current wallpaper');PersonalWallpaper.cancel();
- const operation=PersonalWallpaper.receive(envelope);PersonalWallpaper.cancel();try{await operation;throw Error('Expected cancellation');}catch(error){if(error.message==='Expected cancellation')throw error;}if(HomeWallpaper.state().posterURL!==before)throw Error('Cancellation replaced wallpaper');
- await PersonalWallpaper.receive(envelope);const applying=PersonalWallpaper.apply();PersonalWallpaper.cancel();try{await applying;}catch(_){}if(HomeWallpaper.state().posterURL!==before)throw Error('Late apply replaced wallpaper');
- });
- const wire=await page.evaluate(()=>envelope);await page.reload();await page.locator('#tiles .focused').waitFor();await page.evaluate(()=>HomeUIReady);assert.equal(await page.evaluate(()=>HomeWallpaper.state().source),'personal','restored after reload');assert.equal(await page.evaluate(()=>PersonalWallpaper.state().origin),'phone');await page.locator('#btnSettings').click();await page.locator('[data-category=wallpapers]').click();assert.match(await page.locator('#wallpaperSourceInfo').textContent(),/Uploaded from phone.*1280 × 720/);await page.evaluate(async(envelope)=>{await PersonalWallpaper.receive({...envelope,source:'cytv'});await PersonalWallpaper.apply();},wire);assert.match(await page.locator('#wallpaperSourceInfo').textContent(),/Uploaded from CYTV.*1280 × 720/);await page.evaluate(async(envelope)=>{await PersonalWallpaper.receive(envelope);await PersonalWallpaper.apply();},wire);await page.keyboard.press('Escape');await page.keyboard.press('Escape');
- await page.locator('#btnSettings').click();await page.locator('[data-category=wallpapers]').click();await page.locator('#wallpaperSourceTheme').click();await page.waitForFunction(()=>HomeWallpaper.state().source==='theme');await page.locator('#wallpaperSourcePersonal').click();await page.waitForFunction(()=>HomeWallpaper.state().source==='personal');
- await page.evaluate(()=>{window.stops=[];window.ThemeReceiver={start:()=>Promise.resolve({sessionId:'test',addresses:['192.168.1.2'],pin:'123456',expiresAt:Date.now()+100000}),status:()=>Promise.resolve({state:'waiting'}),stop:id=>{stops.push(id);return Promise.resolve();}};});await page.locator('#wallpaperPhone').click();await page.waitForFunction(()=>!document.getElementById('wallpaperConnection').hidden);assert.match(await page.locator('#wallpaperAddress').textContent(),/http:\/\/192\.168\.1\.2:8879\/wallpaper/);const decoded=await page.locator('#wallpaperQR').evaluate(canvas=>({data:Array.from(canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data),width:canvas.width,height:canvas.height}));assert.equal(require('jsqr')(new Uint8ClampedArray(decoded.data),decoded.width,decoded.height).data,'http://192.168.1.2:8879/wallpaper#pin=123456');await page.locator('[data-category=home]').click();await page.waitForFunction(()=>stops.length===1);
- await page.locator('[data-category=wallpapers]').click();
- await page.evaluate(()=>{ThemeReceiver.start=()=>new Promise(resolve=>{window.finishStart=resolve;});});await page.locator('#wallpaperPhone').click();await page.locator('[data-category=home]').click();await page.evaluate(()=>finishStart({sessionId:'late',addresses:['192.168.1.2'],pin:'123456',expiresAt:Date.now()+100000}));await page.waitForFunction(()=>stops.includes('late'));assert(await page.locator('#wallpaperConnection').isHidden(),'late start cannot reopen closed pane');
- await page.locator('[data-category=wallpapers]').click();await page.evaluate(()=>{ThemeReceiver.start=()=>Promise.resolve({sessionId:'expired',addresses:['192.168.1.2'],pin:'123456',expiresAt:Date.now()-1});});await page.locator('#wallpaperPhone').click();await page.waitForFunction(()=>stops.includes('expired'));assert(await page.locator('#wallpaperConnection').isHidden(),'expiry closes connection');
- await page.evaluate(()=>{ThemeReceiver.start=()=>Promise.resolve({sessionId:'hidden',addresses:['192.168.1.2'],pin:'123456',expiresAt:Date.now()+100000});});await page.locator('#wallpaperPhone').click();await page.waitForFunction(()=>!document.getElementById('wallpaperConnection').hidden);await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});document.dispatchEvent(new Event('visibilitychange'));Object.defineProperty(document,'hidden',{configurable:true,get:()=>false});document.dispatchEvent(new Event('visibilitychange'));});await page.waitForFunction(()=>stops.includes('hidden'));assert(await page.locator('#wallpaperConnection').isHidden(),'app hide stops connection');await page.locator('#wallpaperCYTV').click();await page.waitForFunction(()=>!document.getElementById('wallpaperConnection').hidden);assert.equal(await page.locator('#wallpaperAddress').textContent(),'192.168.1.2');assert(await page.locator('#wallpaperQR').isHidden(),'CYTV uses an IPv4 destination');await page.locator('#wallpaperReceiverCancel').click();
- await page.evaluate(()=>{window.detached=false;const original=HomeWallpaper.setPersonal;HomeWallpaper.setPersonal=function(p,e){const r=original(p,e);if(!p)window.detached=true;return r;};const revoke=URL.revokeObjectURL;URL.revokeObjectURL=function(url){if(!detached)throw Error('Revoked before renderer detach');return revoke.call(URL,url);};});await page.locator('#wallpaperRemove').click();await page.waitForFunction(()=>!PersonalWallpaper.state().installed);assert.equal(await page.evaluate(()=>HomeWallpaper.state().source),'theme');
- await page.evaluate(async(input)=>{window.envelope=input;
- await PersonalWallpaper.receive(envelope);await PersonalWallpaper.apply();await PersonalWallpaper.receive(envelope);
- const original=IDBObjectStore.prototype.put;let once=true;window.racingRemoval=null;
- IDBObjectStore.prototype.put=function(){const request=original.apply(this,arguments);if(once){once=false;this.transaction.abort=function(){};request.addEventListener('success',()=>{PersonalWallpaper.cancel();window.racingRemoval=PersonalWallpaper.remove();});}return request;};
- try{await PersonalWallpaper.apply();throw Error('Cancelled commit applied');}catch(error){if(error.message==='Cancelled commit applied')throw error;}finally{IDBObjectStore.prototype.put=original;}
- await window.racingRemoval;if(PersonalWallpaper.state().installed)throw Error('Removal lost to apply compensation');
- const db=await new Promise((resolve,reject)=>{const r=indexedDB.open('ctv-personal-wallpaper-v1',1);r.onsuccess=()=>resolve(r.result);r.onerror=reject;});const stored=await new Promise((resolve,reject)=>{const r=db.transaction('wallpaper').objectStore('wallpaper').get('slot');r.onsuccess=()=>resolve(r.result);r.onerror=reject;});db.close();if(stored)throw Error('Stale compensation resurrected removed slot');
- await PersonalWallpaper.receive(envelope);await PersonalWallpaper.apply();const selecting=PersonalWallpaper.select('personal'),removing=PersonalWallpaper.remove();await Promise.all([selecting,removing]);if(PersonalWallpaper.state().installed||HomeWallpaper.state().source!=='theme')throw Error('Select/remove race');
- },wire);
- for(const size of [{width:1280,height:720},{width:1920,height:1080}]){await page.setViewportSize(size);for(const locale of ['en','cs','de','es','pt-BR','fr','it','ko','hi','pl','ru','zh-Hans','zh-Hant']){await page.evaluate(locale=>{HomeI18n.language=()=>locale;HomeWallpaperPanel.refresh();},locale);assert(await page.locator('#homeWallpaperPanel').evaluate(el=>el.scrollWidth<=el.clientWidth+1),locale+' personal panel fits '+size.width);}await page.screenshot({path:'build/tests/personal-'+edition+'-'+size.width+'.png'});}
- assert.deepEqual(errors,[]);await page.close();}console.log('PASS personal settings both editions');}finally{await browser.close();await new Promise(r=>server.close(r));}})().catch(e=>{console.error(e);process.exit(1);});
+const { chromium, stage, fs, path } = require('./browser.cjs'),
+  assert = require('assert/strict'),
+  http = require('http');
+(async () => {
+  const site = path.resolve('build/tests/personal-tv-site');
+  require('child_process').execFileSync(process.env.PYTHON || 'python3', [
+    'scripts/preview.py',
+    '--build',
+    site
+  ]);
+  const server = http.createServer((req, res) => {
+    const file = path.resolve(
+      site,
+      '.' + new URL(req.url, 'http://localhost').pathname
+    );
+    if (!file.startsWith(site + path.sep) || !fs.existsSync(file))
+      return res.writeHead(404).end();
+    res.setHeader(
+      'Content-Type',
+      {
+        '.js': 'application/javascript',
+        '.html': 'text/html',
+        '.css': 'text/css',
+        '.json': 'application/json',
+        '.png': 'image/png'
+      }[path.extname(file)] || 'application/octet-stream'
+    );
+    res.end(fs.readFileSync(file));
+  });
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const browser = await chromium.launch({
+    headless: true,
+    channel: process.env.BROWSER_CHANNEL || 'chrome'
+  });
+  try {
+    for (const edition of ['launcher', 'root-launcher']) {
+      const page = await browser.newPage({
+        viewport: { width: 1280, height: 720 },
+        locale: 'en-US'
+      });
+      const errors = [];
+      page.on('pageerror', (e) => errors.push(e.message));
+      await page.route(/^https:/, (r) => r.abort());
+      await page.goto(
+        'http://127.0.0.1:' +
+          server.address().port +
+          '/' +
+          edition +
+          '/index.html'
+      );
+      await page.locator('#tiles .focused').waitFor();
+      await page.evaluate(() => HomeUIReady);
+      await page.locator('#btnSettings').click();
+      await page.locator('[data-category=wallpapers]').click();
+      assert.equal(
+        await page.locator('#wallpaperPhone').count(),
+        1,
+        'phone action present'
+      );
+      await page.evaluate(async () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1280;
+        canvas.height = 720;
+        canvas.getContext('2d').fillRect(0, 0, 1280, 720);
+        const data = canvas.toDataURL('image/jpeg').split(',')[1],
+          raw = atob(data),
+          bytes = Uint8Array.from(raw, (x) => x.charCodeAt(0));
+        window.envelope = {
+          schemaVersion: 1,
+          kind: 'wallpaper',
+          source: 'phone',
+          image: {
+            mediaType: 'image/jpeg',
+            width: 1280,
+            height: 720,
+            size: bytes.length,
+            sha256: ThemeData.hash(bytes),
+            data
+          },
+          variants: []
+        };
+        async function rejects(value) {
+          let rejected = false;
+          try {
+            await PersonalWallpaper.receive(value);
+          } catch (_) {
+            rejected = true;
+          }
+          if (!rejected) throw Error('Accepted invalid wire');
+        }
+        await rejects({ ...envelope, arbitrary: 'field' });
+        await rejects({ ...envelope, variants: [{}] });
+        await rejects({
+          ...envelope,
+          image: { ...envelope.image, width: 1921 }
+        });
+        await rejects({
+          ...envelope,
+          image: { ...envelope.image, sha256: '0'.repeat(64) }
+        });
+        await rejects({
+          ...envelope,
+          image: { ...envelope.image, data: envelope.image.data + 'AAAA' }
+        });
+        await rejects({
+          ...envelope,
+          source: 'cytv',
+          variants: [
+            {
+              quality: '4k',
+              mediaType: 'video/mp4',
+              width: 3840,
+              height: 2160,
+              size: bytes.length,
+              sha256: ThemeData.hash(bytes),
+              data
+            }
+          ]
+        });
+        await PersonalWallpaper.receive(envelope);
+      });
+      assert(await page.locator('#wallpaperPending').isVisible());
+      assert.equal(
+        await page.evaluate(() => PersonalWallpaper.state().installed),
+        false,
+        'preview does not persist'
+      );
+      await page.locator('#wallpaperApply').click();
+      await page.waitForFunction(() => PersonalWallpaper.state().installed);
+      assert.equal(
+        await page.evaluate(() => HomeWallpaper.state().source),
+        'personal'
+      );
+      assert(
+        await page.locator('[data-wallpaper-quality="4k"]').isDisabled(),
+        'phone never enables 4K'
+      );
+      assert.match(
+        await page.locator('#wallpaperPhoneWarning').textContent(),
+        /1080p/
+      );
+      await page.evaluate(async () => {
+        await PersonalWallpaper.receive(envelope);
+        window.previousPoster = HomeWallpaper.state().posterURL;
+        Object.defineProperty(navigator, 'storage', {
+          configurable: true,
+          value: {
+            estimate: () => Promise.resolve({ usage: 1048576, quota: 1048576 })
+          }
+        });
+      });
+      await page.locator('#wallpaperApply').click();
+      await page.waitForFunction(() =>
+        document
+          .getElementById('wallpaperStatus')
+          .textContent.includes('shortfall')
+      );
+      assert.match(
+        await page.locator('#wallpaperStatus').textContent(),
+        /required .* MiB; available 0.0 MiB; shortfall/
+      );
+      assert.equal(
+        await page.evaluate(
+          () => HomeWallpaper.state().posterURL === previousPoster
+        ),
+        true,
+        'storage rejection preserves current wallpaper'
+      );
+      await page.evaluate(() => {
+        delete navigator.storage;
+        PersonalWallpaper.cancel();
+      });
+      await page.evaluate(async () => {
+        const item = (await ThemeManager.list()).find(
+          (i) => i.id === 'builtin:liquid-glass'
+        );
+        await ThemeManager.selectInstalled(item);
+        await ThemeManager.reset();
+        if (
+          HomeWallpaper.state().source !== 'theme' ||
+          !PersonalWallpaper.state().installed
+        )
+          throw Error(
+            'Theme choice must use its own wallpaper and retain the personal slot'
+          );
+        await PersonalWallpaper.select('personal');
+        const before = HomeWallpaper.state().posterURL;
+        await PersonalWallpaper.receive(envelope);
+        const put = IDBObjectStore.prototype.put;
+        IDBObjectStore.prototype.put = function () {
+          throw Error('QuotaExceededError');
+        };
+        try {
+          await PersonalWallpaper.apply();
+          throw Error('Expected quota failure');
+        } catch (error) {
+          if (error.message === 'Expected quota failure') throw error;
+        } finally {
+          IDBObjectStore.prototype.put = put;
+        }
+        if (HomeWallpaper.state().posterURL !== before)
+          throw Error('Quota replaced current wallpaper');
+        PersonalWallpaper.cancel();
+        const operation = PersonalWallpaper.receive(envelope);
+        PersonalWallpaper.cancel();
+        try {
+          await operation;
+          throw Error('Expected cancellation');
+        } catch (error) {
+          if (error.message === 'Expected cancellation') throw error;
+        }
+        if (HomeWallpaper.state().posterURL !== before)
+          throw Error('Cancellation replaced wallpaper');
+        await PersonalWallpaper.receive(envelope);
+        const applying = PersonalWallpaper.apply();
+        PersonalWallpaper.cancel();
+        try {
+          await applying;
+        } catch (_) {}
+        if (HomeWallpaper.state().posterURL !== before)
+          throw Error('Late apply replaced wallpaper');
+      });
+      const wire = await page.evaluate(() => envelope);
+      await page.reload();
+      await page.locator('#tiles .focused').waitFor();
+      await page.evaluate(() => HomeUIReady);
+      assert.equal(
+        await page.evaluate(() => HomeWallpaper.state().source),
+        'personal',
+        'restored after reload'
+      );
+      assert.equal(
+        await page.evaluate(() => PersonalWallpaper.state().origin),
+        'phone'
+      );
+      await page.locator('#btnSettings').click();
+      await page.locator('[data-category=wallpapers]').click();
+      assert.match(
+        await page.locator('#wallpaperSourceInfo').textContent(),
+        /Uploaded from phone.*1280 × 720/
+      );
+      await page.evaluate(async (envelope) => {
+        await PersonalWallpaper.receive({ ...envelope, source: 'cytv' });
+        await PersonalWallpaper.apply();
+      }, wire);
+      assert.match(
+        await page.locator('#wallpaperSourceInfo').textContent(),
+        /Uploaded from CYTV.*1280 × 720/
+      );
+      await page.evaluate(async (envelope) => {
+        await PersonalWallpaper.receive(envelope);
+        await PersonalWallpaper.apply();
+      }, wire);
+      await page.keyboard.press('Escape');
+      await page.keyboard.press('Escape');
+      await page.locator('#btnSettings').click();
+      await page.locator('[data-category=wallpapers]').click();
+      await page.locator('#wallpaperSourceTheme').click();
+      await page.waitForFunction(
+        () => HomeWallpaper.state().source === 'theme'
+      );
+      await page.locator('#wallpaperSourcePersonal').click();
+      await page.waitForFunction(
+        () => HomeWallpaper.state().source === 'personal'
+      );
+      await page.evaluate(() => {
+        window.stops = [];
+        window.ThemeReceiver = {
+          start: () =>
+            Promise.resolve({
+              sessionId: 'test',
+              addresses: ['192.168.1.2'],
+              pin: '123456',
+              expiresAt: Date.now() + 100000
+            }),
+          status: () => Promise.resolve({ state: 'waiting' }),
+          stop: (id) => {
+            stops.push(id);
+            return Promise.resolve();
+          }
+        };
+      });
+      await page.locator('#wallpaperPhone').click();
+      await page.waitForFunction(
+        () => !document.getElementById('wallpaperConnection').hidden
+      );
+      assert.match(
+        await page.locator('#wallpaperAddress').textContent(),
+        /http:\/\/192\.168\.1\.2:8879\/wallpaper/
+      );
+      const decoded = await page.locator('#wallpaperQR').evaluate((canvas) => ({
+        data: Array.from(
+          canvas
+            .getContext('2d')
+            .getImageData(0, 0, canvas.width, canvas.height).data
+        ),
+        width: canvas.width,
+        height: canvas.height
+      }));
+      assert.equal(
+        require('jsqr')(
+          new Uint8ClampedArray(decoded.data),
+          decoded.width,
+          decoded.height
+        ).data,
+        'http://192.168.1.2:8879/wallpaper#pin=123456'
+      );
+      await page.locator('[data-category=home]').click();
+      await page.waitForFunction(() => stops.length === 1);
+      await page.locator('[data-category=wallpapers]').click();
+      await page.evaluate(() => {
+        ThemeReceiver.start = () =>
+          new Promise((resolve) => {
+            window.finishStart = resolve;
+          });
+      });
+      await page.locator('#wallpaperPhone').click();
+      await page.locator('[data-category=home]').click();
+      await page.evaluate(() =>
+        finishStart({
+          sessionId: 'late',
+          addresses: ['192.168.1.2'],
+          pin: '123456',
+          expiresAt: Date.now() + 100000
+        })
+      );
+      await page.waitForFunction(() => stops.includes('late'));
+      assert(
+        await page.locator('#wallpaperConnection').isHidden(),
+        'late start cannot reopen closed pane'
+      );
+      await page.locator('[data-category=wallpapers]').click();
+      await page.evaluate(() => {
+        ThemeReceiver.start = () =>
+          Promise.resolve({
+            sessionId: 'expired',
+            addresses: ['192.168.1.2'],
+            pin: '123456',
+            expiresAt: Date.now() - 1
+          });
+      });
+      await page.locator('#wallpaperPhone').click();
+      await page.waitForFunction(() => stops.includes('expired'));
+      assert(
+        await page.locator('#wallpaperConnection').isHidden(),
+        'expiry closes connection'
+      );
+      await page.evaluate(() => {
+        ThemeReceiver.start = () =>
+          Promise.resolve({
+            sessionId: 'hidden',
+            addresses: ['192.168.1.2'],
+            pin: '123456',
+            expiresAt: Date.now() + 100000
+          });
+      });
+      await page.locator('#wallpaperPhone').click();
+      await page.waitForFunction(
+        () => !document.getElementById('wallpaperConnection').hidden
+      );
+      await page.evaluate(() => {
+        Object.defineProperty(document, 'hidden', {
+          configurable: true,
+          get: () => true
+        });
+        document.dispatchEvent(new Event('visibilitychange'));
+        Object.defineProperty(document, 'hidden', {
+          configurable: true,
+          get: () => false
+        });
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+      await page.waitForFunction(() => stops.includes('hidden'));
+      assert(
+        await page.locator('#wallpaperConnection').isHidden(),
+        'app hide stops connection'
+      );
+      await page.locator('#wallpaperCYTV').click();
+      await page.waitForFunction(
+        () => !document.getElementById('wallpaperConnection').hidden
+      );
+      assert.equal(
+        await page.locator('#wallpaperAddress').textContent(),
+        '192.168.1.2'
+      );
+      assert(
+        await page.locator('#wallpaperQR').isHidden(),
+        'CYTV uses an IPv4 destination'
+      );
+      await page.locator('#wallpaperReceiverCancel').click();
+      await page.evaluate(() => {
+        window.detached = false;
+        const original = HomeWallpaper.setPersonal;
+        HomeWallpaper.setPersonal = function (p, e) {
+          const r = original(p, e);
+          if (!p) window.detached = true;
+          return r;
+        };
+        const revoke = URL.revokeObjectURL;
+        URL.revokeObjectURL = function (url) {
+          if (!detached) throw Error('Revoked before renderer detach');
+          return revoke.call(URL, url);
+        };
+      });
+      await page.locator('#wallpaperRemove').click();
+      await page.waitForFunction(() => !PersonalWallpaper.state().installed);
+      assert.equal(
+        await page.evaluate(() => HomeWallpaper.state().source),
+        'theme'
+      );
+      await page.evaluate(async (input) => {
+        window.envelope = input;
+        await PersonalWallpaper.receive(envelope);
+        await PersonalWallpaper.apply();
+        await PersonalWallpaper.receive(envelope);
+        const original = IDBObjectStore.prototype.put;
+        let once = true;
+        window.racingRemoval = null;
+        IDBObjectStore.prototype.put = function () {
+          const request = original.apply(this, arguments);
+          if (once) {
+            once = false;
+            this.transaction.abort = function () {};
+            request.addEventListener('success', () => {
+              PersonalWallpaper.cancel();
+              window.racingRemoval = PersonalWallpaper.remove();
+            });
+          }
+          return request;
+        };
+        try {
+          await PersonalWallpaper.apply();
+          throw Error('Cancelled commit applied');
+        } catch (error) {
+          if (error.message === 'Cancelled commit applied') throw error;
+        } finally {
+          IDBObjectStore.prototype.put = original;
+        }
+        await window.racingRemoval;
+        if (PersonalWallpaper.state().installed)
+          throw Error('Removal lost to apply compensation');
+        const db = await new Promise((resolve, reject) => {
+          const r = indexedDB.open('ctv-personal-wallpaper-v1', 1);
+          r.onsuccess = () => resolve(r.result);
+          r.onerror = reject;
+        });
+        const stored = await new Promise((resolve, reject) => {
+          const r = db
+            .transaction('wallpaper')
+            .objectStore('wallpaper')
+            .get('slot');
+          r.onsuccess = () => resolve(r.result);
+          r.onerror = reject;
+        });
+        db.close();
+        if (stored) throw Error('Stale compensation resurrected removed slot');
+        await PersonalWallpaper.receive(envelope);
+        await PersonalWallpaper.apply();
+        const selecting = PersonalWallpaper.select('personal'),
+          removing = PersonalWallpaper.remove();
+        await Promise.all([selecting, removing]);
+        if (
+          PersonalWallpaper.state().installed ||
+          HomeWallpaper.state().source !== 'theme'
+        )
+          throw Error('Select/remove race');
+      }, wire);
+      for (const size of [
+        { width: 1280, height: 720 },
+        { width: 1920, height: 1080 }
+      ]) {
+        await page.setViewportSize(size);
+        for (const locale of [
+          'en',
+          'cs',
+          'de',
+          'es',
+          'pt-BR',
+          'fr',
+          'it',
+          'ko',
+          'hi',
+          'pl',
+          'ru',
+          'zh-Hans',
+          'zh-Hant'
+        ]) {
+          await page.evaluate((locale) => {
+            HomeI18n.language = () => locale;
+            HomeWallpaperPanel.refresh();
+          }, locale);
+          assert(
+            await page
+              .locator('#homeWallpaperPanel')
+              .evaluate((el) => el.scrollWidth <= el.clientWidth + 1),
+            locale + ' personal panel fits ' + size.width
+          );
+        }
+        await page.screenshot({
+          path: 'build/tests/personal-' + edition + '-' + size.width + '.png'
+        });
+      }
+      assert.deepEqual(errors, []);
+      await page.close();
+    }
+    console.log('PASS personal settings both editions');
+  } finally {
+    await browser.close();
+    await new Promise((r) => server.close(r));
+  }
+})().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

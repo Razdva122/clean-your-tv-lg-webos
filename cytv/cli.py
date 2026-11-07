@@ -71,6 +71,7 @@ def explain_failure(write, store, profile, phase, error):
         write.failure_help(help)
         if help['code'] in ('removal-not-submitted','no-root-recovery'):
             write.recovery(profile)
+    return help
 
 
 def removal_connection_message(store, profile, phase, error):
@@ -264,7 +265,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 write('Hardware validation: LG C3; other models are unverified.')
                 write('Automatic SSH sign-in first; credentials only if needed.')
             write('Next: verify SSH, read your apps, then install.')
-            write('Pairing is a separate step: when the TV asks, approve CYTV with your remote.')
+            if profile['edition']=='no-root':
+                write('Pairing is a separate step: when the TV asks, approve CYTV with your remote.')
             if profile['edition'] == 'root':
                 write('Root will stop the old Home Helper, turn on Home control and open Clean Your TV Home.')
             write('Check controls on the TV after installation.')
@@ -422,24 +424,29 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 phase = 'read-inventory'
                 inventory, key = None, None
                 if not args.migrate_home and not resume:
-                    from .tv import SSAP
-                    while True:
-                        try:
-                            phase = 'pair-tv'
-                            checks.update('pairing', 'running', '')
-                            with SSAP(profile['host'], store.device_dir(profile), write) as tv:
-                                checks.update('pairing', 'pass')
-                                phase = 'read-inventory'
-                                checks.update('inventory', 'running', '')
-                                inventory = tv.inventory((payload / 'fallback.png').read_bytes())
-                                key = tv.key
-                                checks.update('inventory', 'pass')
-                            break
-                        except TVNotReady:
-                            checks.finish_running()
-                            if args.non_interactive:
-                                raise
-                            prompts.wait_for_tv(ask, write)
+                    if profile['edition']=='root':
+                        checks.update('inventory','running','')
+                        inventory=installer.root_inventory((payload/'fallback.png').read_bytes())
+                        checks.update('inventory','pass')
+                    else:
+                        from .tv import SSAP
+                        while True:
+                            try:
+                                phase = 'pair-tv'
+                                checks.update('pairing', 'running', '')
+                                with SSAP(profile['host'], store.device_dir(profile), write) as tv:
+                                    checks.update('pairing', 'pass')
+                                    phase = 'read-inventory'
+                                    checks.update('inventory', 'running', '')
+                                    inventory = tv.inventory((payload / 'fallback.png').read_bytes())
+                                    key = tv.key
+                                    checks.update('inventory', 'pass')
+                                break
+                            except TVNotReady:
+                                checks.finish_running()
+                                if args.non_interactive:
+                                    raise
+                                prompts.wait_for_tv(ask, write)
                     write(f"Read {len(inventory['apps'])} applications.")
                 phase = 'install-packages'
                 def progress(message):
@@ -594,8 +601,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
         if phase in ('pair-tv', 'read-inventory'):
             write('Installation has not started. No TV packages were changed by this attempt.')
         from .recovery import removal_plan
-        removal_plan(write,store,profile)
-        explain_failure(write, store, profile, phase, exc)
+        help = explain_failure(write, store, profile, phase, exc)
+        removal_plan(write,store,profile,failure=help)
         diagnostics.suggest_issue(write, store, args.command, profile, phase, exc, tv_info, checks=checks.results, status=tv_info.get('status'))
         return 2
     except Exception as exc:
@@ -613,8 +620,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
               'Some Clean Your TV files or settings remain. Choose Try again.' if args.command=='uninstall'
               else 'Operation could not be confirmed. Save the diagnostic report and keep recovery data; do not retry blindly.')))
         from .recovery import removal_plan
-        removal_plan(write,store,profile)
-        explain_failure(write, store, profile, phase, exc)
+        help = explain_failure(write, store, profile, phase, exc)
+        removal_plan(write,store,profile,failure=help)
         diagnostics.suggest_issue(write, store, args.command, profile, phase, exc, tv_info, checks=checks.results, status=tv_info.get('status'))
         return 1
     finally:

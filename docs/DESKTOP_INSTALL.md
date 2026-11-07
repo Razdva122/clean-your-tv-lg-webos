@@ -116,7 +116,8 @@ See the [localized installation, use and recovery guides](LANGUAGES.md).
 - Select a discovered TV, or use the address field and **Help finding my TV**.
 - Choose **No-root** for LG Developer Mode, or **Root** for an already rooted TV.
   Connection detection sets the current choice to match the detected connection; you can select either edition. Root privileges are verified after sign-in.
-- Review the TV and edition, then click **Continue**. Approve pairing on the TV.
+- Review the TV and edition, then click **Continue**. No-root requests control
+  pairing on the TV; Root reads the catalog through its authenticated SSH connection.
 - Root checks Python 3.9+, TV Node.js 8+, root/Homebrew services and input support.
   Eligible ARMv7 TVs without suitable Python can receive a separate pinned runtime
   over SSH; this does not certify older-TV compatibility. Root activates Home

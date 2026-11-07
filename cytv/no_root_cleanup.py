@@ -4,7 +4,7 @@ Old installation receipts describe history. They are not permission to retain
 the user's project keys or files after the user has requested their removal.
 """
 import json
-import shlex
+import base64
 import hashlib
 
 from .errors import TVRejected, UserError
@@ -20,7 +20,7 @@ PRIVATE_CLEANUP_PROGRAM = r'''
 'use strict';
 var fs=require('fs'),path=require('path'),c=require('constants'),zlib=require('zlib'),crypto=require('crypto');
 var input=JSON.parse(process.argv[process.argv.length-1]),uid=process.getuid();
-if(['inventory','sweep','stop','root-package','stage-carrier'].indexOf(input.action)<0)throw Error('invalid-cleanup-action');
+if(['inventory','sweep','stop','root-package','stage-carrier','boot-create','boot-probe','boot-retire'].indexOf(input.action)<0)throw Error('invalid-cleanup-action');
 var base='/media/developer/apps/usr/palm',publicRoot='/media/developer/temp';
 var apps=['com.local.nativehome','com.gathin.tvhome','com.cleanyourtv.updater'];
 var services=['com.local.nativehome.service','com.gathin.tvhome.renewal','com.cleanyourtv.updater.service'];
@@ -55,17 +55,52 @@ function remove(p,expected){
 function blocked(scope,error){reply.blocked.push({scope:scope,reason:error.code==='EACCES'||error.code==='EPERM'?'permission-denied':'unsafe-path'});}
 function visit(p,scope){try{var s=exists(p);if(!s)return;if(input.action==='sweep'||input.action==='root-package')remove(p,s);if(exists(p))reply.present.push(scope);}catch(e){blocked(scope,e);}}
 function rootHint(p,scope){try{if(exists(p))reply.root_present.push(scope);}catch(e){if(e.code==='EACCES')reply.root_present.push(scope);else blocked(scope,e);}}
+// A per-approved-goal volatile marker also distinguishes firmware that reuses
+// kernel UUIDs after restoring a snapshot. Inventory never creates this marker.
+if(input.action.indexOf('boot-')===0){
+ var bootRoot='/tmp';
+ ancestry(bootRoot);var parent=fs.lstatSync(bootRoot);
+ if(parent.uid!==0||(parent.mode&4095)!==1023||typeof input.removal!=='string'||!/^[a-f0-9]{32}$/.test(input.removal))fail();
+ var marker='cytv-removal-'+input.removal+'.boot',prefix='cytv-removal-v1:'+input.removal+':',proof=input.proof;
+ var markerStat=function(s){if(!s.isFile()||s.isSymbolicLink()||s.uid!==uid||(s.mode&4095)!==384||s.nlink!==1||s.size!==prefix.length+37)fail();};
+ var markerRead=function(expected){var s=exists(marker);if(!s)return null;markerStat(s);
+  var fd=fs.openSync(marker,c.O_RDONLY|c.O_NOFOLLOW|c.O_NONBLOCK),b=new Buffer(s.size),offset=0;
+  try{var opened=fs.fstatSync(fd);markerStat(opened);if(!same(s,opened))fail();
+   while(offset<b.length){var n=fs.readSync(fd,b,offset,b.length-offset,offset);if(n<=0)fail();offset+=n;}
+   var after=fs.lstatSync(marker);markerStat(after);if(!same(s,after))fail();
+  }finally{fs.closeSync(fd);}
+  var text=b.toString(),kernel=text.slice(prefix.length,-1);
+  if(text!==prefix+kernel+'\n'||!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(kernel))fail();
+  if(expected&&(!same(s,expected)||kernel!==expected.kernel))fail();return {stat:s,kernel:kernel};
+ };
+ at(bootRoot,parent,function(directory){
+  if(input.action!=='boot-create'){
+   if(!proof||Object.keys(proof).sort().join(',')!=='dev,goal,ino,kernel,schema'||proof.schema!==1||proof.goal!==input.removal||typeof proof.kernel!=='string'||!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(proof.kernel)||[proof.dev,proof.ino].some(function(n){return typeof n!=='number'||n<0||n>9007199254740991||Math.floor(n)!==n;}))fail();
+  }
+  var item=markerRead(input.action==='boot-create'?null:proof);
+  if(input.action==='boot-create'){
+   // A lost create response can reuse only this exact owned goal. If a genuine
+   // kernel change preceded host capture, establish a fresh baseline first.
+   if(item&&item.kernel!==reply.boot_id){remove(marker,item.stat);item=null;}
+   if(!item){var out=fs.openSync(marker,c.O_WRONLY|c.O_CREAT|c.O_EXCL|c.O_NOFOLLOW,384),bytes=new Buffer(prefix+reply.boot_id+'\n');
+    try{var offset=0;while(offset<bytes.length){var n=fs.writeSync(out,bytes,offset,bytes.length-offset,offset);if(n<=0)fail();offset+=n;}fs.fsyncSync(out);}finally{fs.closeSync(out);}fs.fsyncSync(directory);item=markerRead(null);}
+   reply.boot_proof={schema:1,goal:input.removal,kernel:item.kernel,dev:item.stat.dev,ino:item.stat.ino};
+  }else{
+   reply.boot_restarted=!item||proof.kernel!==reply.boot_id;
+   if(input.action==='boot-retire'){if(!reply.boot_restarted)fail();if(item)remove(marker,item.stat);}
+  }
+ });process.stdout.write(JSON.stringify(reply));return;
+}
 if(input.action==='stage-carrier'){
  var index=apps.indexOf(input.app);if(index<0||!/^[a-f0-9]{32}$/.test(input.removal)||!/^[a-f0-9]{64}$/.test(input.sha256)||!(input.size>0&&input.size<1048576))fail();
  ancestry(path.dirname(publicRoot));if(!exists(publicRoot))fs.mkdirSync(publicRoot,448);ancestry(publicRoot);
  var stage=publicRoot+'/cytv-'+input.removal,filename=['helper.ipk','launcher.ipk','updater.ipk'][index];
- if(!exists(stage))fs.mkdirSync(stage,448);ancestry(stage);var pin=fs.lstatSync(stage),parts=[],size=0;if(pin.uid!==uid||(pin.mode&511)!==448)fail();
- process.stdin.on('data',function(b){size+=b.length;if(size>input.size)fail();parts.push(b);});
- process.stdin.on('end',function(){var raw=Buffer.concat(parts,size);if(size!==input.size||crypto.createHash('sha256').update(raw).digest('hex')!==input.sha256)fail();
+ if(!exists(stage))fs.mkdirSync(stage,448);ancestry(stage);var pin=fs.lstatSync(stage);if(pin.uid!==uid||(pin.mode&511)!==448)fail();
+ if(typeof input.carrier!=='string'||input.carrier.length!==4*Math.ceil(input.size/3)||!/^[A-Za-z0-9+/]*={0,2}$/.test(input.carrier))fail();
+ var raw=new Buffer(input.carrier,'base64');if(raw.length!==input.size||crypto.createHash('sha256').update(raw).digest('hex')!==input.sha256)fail();
   at(stage,pin,function(fd){var old=exists(filename);if(old){if(!old.isFile()||old.nlink!==1||old.size!==input.size)fail();var oldFd=fs.openSync(filename,c.O_RDONLY|c.O_NOFOLLOW);try{if(!same(old,fs.fstatSync(oldFd)))fail();var bytes=new Buffer(old.size),offset=0;while(offset<bytes.length){var n=fs.readSync(oldFd,bytes,offset,bytes.length-offset,offset);if(n<=0)fail();offset+=n;}if(!same(old,fs.lstatSync(filename))||crypto.createHash('sha256').update(bytes).digest('hex')!==input.sha256)fail();}finally{fs.closeSync(oldFd);}}
-   else{var tmp='.carrier-'+crypto.randomBytes(12).toString('hex'),out=fs.openSync(tmp,c.O_WRONLY|c.O_CREAT|c.O_EXCL|c.O_NOFOLLOW,384);try{var offset=0;while(offset<raw.length)offset+=fs.writeSync(out,raw,offset,raw.length-offset,offset);fs.fsyncSync(out);}finally{fs.closeSync(out);}if(exists(filename))fail();fs.renameSync(tmp,filename);fs.fsyncSync(fd);}
-  });process.stdout.write(JSON.stringify(reply));
- });process.stdin.resume();return;
+   else{var tmp='.carrier-'+crypto.randomBytes(12).toString('hex'),out=fs.openSync(tmp,c.O_WRONLY|c.O_CREAT|c.O_EXCL|c.O_NOFOLLOW,384);try{var offset=0;while(offset<raw.length){var n=fs.writeSync(out,raw,offset,raw.length-offset,offset);if(n<=0)fail();offset+=n;}fs.fsyncSync(out);}finally{fs.closeSync(out);}if(exists(filename))fail();fs.renameSync(tmp,filename);fs.fsyncSync(fd);}
+  });process.stdout.write(JSON.stringify(reply));return;
 }
 if(input.action==='root-package'){
  if(uid!==0||apps.concat(['com.cleanyourtv.root.preview','com.cleanyourtv.root.updater','com.cleanyourtv.system.updater']).indexOf(input.app)<0)throw Error('invalid-root-package');
@@ -152,10 +187,16 @@ function next(){if(!stages.length){process.stdout.write(JSON.stringify(reply));r
 '''
 
 
-def _device(installer, action):
+def _program(request):
+    # Keep the SSH exec request tiny; old TV SSH servers reject long argv.
+    return ('process.argv.push(' + json.dumps(json.dumps(request)) + ');\n' + PRIVATE_CLEANUP_PROGRAM).encode()
+
+
+def _device(installer, action, proof=None):
     pending = installer.store.pending(installer.profile) or {}
-    raw = installer.remote.run('/usr/bin/node -e ' + shlex.quote(PRIVATE_CLEANUP_PROGRAM) + ' ' +
-                               shlex.quote(json.dumps({'action': action, 'staging_ids': pending.get('cleanup_staging_ids', [])})), timeout=90)
+    request = {'action':action, 'staging_ids':pending.get('cleanup_staging_ids', []),
+               'removal':pending.get('removal_operation'), 'proof':proof}
+    raw = installer.remote.run('/usr/bin/node', data=_program(request), timeout=90)
     value = json.loads(raw)
     if (not isinstance(value, dict) or value.get('schema') != 1 or
             not all(isinstance(value.get(k), list) for k in ('present', 'blocked', 'root_present'))):
@@ -221,8 +262,8 @@ def _repair_registration(installer, value):
             stages.append(identifier)
             installer.store.checkpoint(installer.profile, cleanup_staging_ids=stages)
         request = {'action':'stage-carrier', 'app':app, 'removal':identifier, 'size':len(carrier),
-                   'sha256':hashlib.sha256(carrier).hexdigest()}
-        installer.remote.run('/usr/bin/node -e ' + shlex.quote(PRIVATE_CLEANUP_PROGRAM) + ' ' + shlex.quote(json.dumps(request)), data=carrier, timeout=90)
+                   'sha256':hashlib.sha256(carrier).hexdigest(), 'carrier':base64.b64encode(carrier).decode('ascii')}
+        installer.remote.run('/usr/bin/node', data=_program(request), timeout=90)
         filename = ('helper.ipk', 'launcher.ipk', 'updater.ipk')[APPS.index(app)]
         installer.remote.luna('com.webos.appInstallService/dev/install',
                               {'id':app, 'ipkUrl':'/media/developer/temp/cytv-' + identifier + '/' + filename, 'subscribe':True}, terminal='installed', timeout=150)
@@ -247,11 +288,22 @@ def continue_removal(installer, expected_pending):
     if pending.get('stage') == 'verified-clean' and not current['blocked'] and not current['present'] and not apps.intersection(APPS):
         installer.store.finish_clean_removal(installer.profile)
         return {'removed': True, 'verified_clean': True}
-    baseline = pending.get('cleanup_boot_id')
-    if baseline is None or pending.get('stage') == 'verified-clean':
-        baseline = current['boot_id']
-        installer.store.checkpoint(installer.profile, cleanup_boot_id=baseline, stage='requested')
-    restarted = current['boot_id'] != baseline
+    def capture_boot():
+        # A lost re-arm create response must retry seeding, not compare the new
+        # marker against a retired inode from the previous captured baseline.
+        installer.store.checkpoint(installer.profile, cleanup_boot_proof=None, stage='requested')
+        proof = _device(installer, 'boot-create')['boot_proof']
+        installer.store.checkpoint(installer.profile, cleanup_boot_proof=proof,
+                                   cleanup_boot_id=proof['kernel'], stage='requested')
+        return proof
+    proof = pending.get('cleanup_boot_proof')
+    if proof is None or pending.get('stage') == 'verified-clean':
+        if proof is not None:
+            _device(installer, 'boot-retire', proof=proof)
+        proof = capture_boot()
+        restarted = False
+    else:
+        restarted = _device(installer, 'boot-probe', proof=proof)['boot_restarted'] is True
     installer.progress('Restoring TV controls…')
     stopped = _device(installer, 'stop')
     _check_access(stopped, defer_packages=True)
@@ -299,7 +351,8 @@ def continue_removal(installer, expected_pending):
         previous = previous.get('previous')
     if stopped.get('controller_running') or startup_failed or (resident and not restarted):
         if (stopped.get('controller_running') or startup_failed) and restarted:
-            installer.store.checkpoint(installer.profile, cleanup_boot_id=current['boot_id'])
+            _device(installer, 'boot-retire', proof=proof)
+            proof = capture_boot()
         installer.store.checkpoint(installer.profile, stage='restart-required', removal_reason='restart-required', cleanup_restart_first=True)
         installer.progress(RESTART_MESSAGE)
         return {'removed': False, 'verified_clean': False, 'restart_required': True}
@@ -321,6 +374,7 @@ def continue_removal(installer, expected_pending):
     _check_access(final)
     if final['present'] or {app['id'] for app in installer.installed_apps()}.intersection(APPS):
         raise UserError('Some project files remain. Try again to finish removal.')
+    _device(installer, 'boot-retire', proof=proof)
     installer.store.checkpoint(installer.profile, stage='verified-clean', removal_reason='removal-verified',
                                result={'removed': True, 'verified_clean': True})
     installer.store.finish_clean_removal(installer.profile)

@@ -1,5 +1,8 @@
 # Root Edition test plan
 
+> **1.10.0:** [exact final build and scoped installer acceptance](../docs/history/2026-11-07-release-1.10.0-final-acceptance.md). Maintainer-directed C3 removal/reinstallation, controls/audio, standby, ordinary reboot and escape are recorded separately from untested No-root, AC cold start, OTA/retained rollback and other-device paths. The maintainer accepted that bounded release scope; untested paths are not passes.
+
+
 Historical result (2026-10-27): [corrected C3 acceptance and manual physical rollback](../docs/RELEASE-1.4.0-ACCEPTANCE.md) passed in the recorded scope. The maintainer accepted #90 and requested closure. Pending statements below describe earlier investigation checkpoints; other hardware remains unverified.
 
 For current setup use [installation](../docs/INSTALL.md), [update preparation](UPDATES.md)

@@ -1,5 +1,8 @@
 # Release checks
 
+- Complete the [planned case pass and failure inventory](RELEASE-FLOW.md#complete-planned-cases-before-batch-fixes)
+  before the fix batch; verify affected and newly reachable cases before its merge.
+
 - Complete the [candidate documentation pass](RELEASE-FLOW.md#update-documentation-for-every-candidate)
   before marking the release PR ready; repeat after scope or version changes.
 - Update affected usage, installation, update/removal, troubleshooting and

@@ -28,7 +28,7 @@ class SharedRootInstallTests(unittest.TestCase):
         installer.product_action('status','a'*32)
         self.assertEqual(shlex.split(remote.run.call_args.args[0]),[
             'env','-u','PYTHONHOME','-u','PYTHONPATH','PYTHONDONTWRITEBYTECODE=1','PYTHONNOUSERSITE=1',
-            '/var/lib/clean-your-tv-python/4a71641c8d5536175e404a961624e8656eba30e97b5026f6bd7dc31e4bbeaaea/bin/python3.13',
+            '/var/lib/clean-your-tv-python/4a71641c8d5536175e404a961624e8656eba30e97b5026f6bd7dc31e4bbeaaea/bin/python3.13','-B',
             "/tmp/space and ' quote/install_driver.py",'status','--operation','a'*32])
         self.assertEqual(remote.run.call_count,1)
 

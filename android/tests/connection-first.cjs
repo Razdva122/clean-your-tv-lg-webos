@@ -1,2 +1,83 @@
-const {chromium}=require('playwright');const assert=require('node:assert/strict');const path=require('node:path');
-let browser;(async()=>{browser=await chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});const page=await browser.newPage({locale:'ru-RU',viewport:{width:412,height:892}});await page.addInitScript(()=>{window.CYTV={snapshot:()=> '[]',hasKey:()=>false,inspect:()=>{},start:()=>{},answer:()=>{}}});await page.goto('file://'+path.resolve(__dirname,'../app/src/main/assets/ui/index.html'));assert.equal(await page.getByRole('radio').count(),0);await page.locator('#host').fill('192.168.1.50');await page.getByRole('button',{name:'Обои',exact:true}).click();assert.match(await page.locator('main').innerText(),/1920×1080/);await page.getByRole('button',{name:'Назад',exact:true}).click();assert.equal(await page.locator('#host').inputValue(),'192.168.1.50');await page.getByRole('button',{name:'Обслуживание',exact:true}).click();assert.equal(await page.locator('.tool').count(),5);await page.getByRole('button',{name:'Назад',exact:true}).click();await page.locator('#host').fill('');await page.getByRole('button',{name:'Настроить телевизор',exact:true}).click();assert.equal(await page.locator('#host').getAttribute('aria-invalid'),'true');await page.locator('#host').fill('192.168.1.50');await page.getByRole('button',{name:'Настроить телевизор',exact:true}).click();for(const [r,d,selected]of [[true,false,'Root'],[false,true,'No-root'],[true,true,null],[false,false,null]]){await page.evaluate(([r,d])=>receiveNative({kind:'inspection',host:'192.168.1.50',root_ssh:r,developer_ssh:d,root_port:22}),[r,d]);const checked=page.locator('[role=radio][aria-checked=true]');assert.equal(await checked.count(),selected?1:0);if(selected)assert((await checked.innerText()).startsWith(selected));}await page.getByRole('radio',{name:/Root Уже есть root/}).click();await page.getByRole('button',{name:'Продолжить',exact:true}).click();assert.equal(await page.locator('#host').inputValue(),'192.168.1.50');assert.equal(await page.locator('#port').inputValue(),'22');await page.getByRole('button',{name:'Назад',exact:true}).click();assert.equal(await page.getByRole('radio').count(),2);console.log('Connection first, validated IP, conditional recommendation for both environments, manual choice when ambiguous and Back passed.');await browser.close()})().catch(async e=>{console.error(e);if(browser)await browser.close();process.exitCode=1});
+const { chromium } = require('playwright');
+const assert = require('node:assert/strict');
+const path = require('node:path');
+let browser;
+(async () => {
+  browser = await chromium.launch({
+    headless: true,
+    executablePath:
+      '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+  });
+  const page = await browser.newPage({
+    locale: 'ru-RU',
+    viewport: { width: 412, height: 892 }
+  });
+  await page.addInitScript(() => {
+    window.CYTV = {
+      snapshot: () => '[]',
+      hasKey: () => false,
+      inspect: () => {},
+      start: () => {},
+      answer: () => {}
+    };
+  });
+  await page.goto(
+    'file://' + path.resolve(__dirname, '../app/src/main/assets/ui/index.html')
+  );
+  assert.equal(await page.getByRole('radio').count(), 0);
+  await page.locator('#host').fill('192.168.1.50');
+  await page.getByRole('button', { name: 'Обои', exact: true }).click();
+  assert.match(await page.locator('main').innerText(), /1920×1080/);
+  await page.getByRole('button', { name: 'Назад', exact: true }).click();
+  assert.equal(await page.locator('#host').inputValue(), '192.168.1.50');
+  await page.getByRole('button', { name: 'Обслуживание', exact: true }).click();
+  assert.equal(await page.locator('.tool').count(), 5);
+  await page.getByRole('button', { name: 'Назад', exact: true }).click();
+  await page.locator('#host').fill('');
+  await page
+    .getByRole('button', { name: 'Настроить телевизор', exact: true })
+    .click();
+  assert.equal(
+    await page.locator('#host').getAttribute('aria-invalid'),
+    'true'
+  );
+  await page.locator('#host').fill('192.168.1.50');
+  await page
+    .getByRole('button', { name: 'Настроить телевизор', exact: true })
+    .click();
+  for (const [r, d, selected] of [
+    [true, false, 'Root'],
+    [false, true, 'No-root'],
+    [true, true, null],
+    [false, false, null]
+  ]) {
+    await page.evaluate(
+      ([r, d]) =>
+        receiveNative({
+          kind: 'inspection',
+          host: '192.168.1.50',
+          root_ssh: r,
+          developer_ssh: d,
+          root_port: 22
+        }),
+      [r, d]
+    );
+    const checked = page.locator('[role=radio][aria-checked=true]');
+    assert.equal(await checked.count(), selected ? 1 : 0);
+    if (selected) assert((await checked.innerText()).startsWith(selected));
+  }
+  await page.getByRole('radio', { name: /Root Уже есть root/ }).click();
+  await page.getByRole('button', { name: 'Продолжить', exact: true }).click();
+  assert.equal(await page.locator('#host').inputValue(), '192.168.1.50');
+  assert.equal(await page.locator('#port').inputValue(), '22');
+  await page.getByRole('button', { name: 'Назад', exact: true }).click();
+  assert.equal(await page.getByRole('radio').count(), 2);
+  console.log(
+    'Connection first, validated IP, conditional recommendation for both environments, manual choice when ambiguous and Back passed.'
+  );
+  await browser.close();
+})().catch(async (e) => {
+  console.error(e);
+  if (browser) await browser.close();
+  process.exitCode = 1;
+});

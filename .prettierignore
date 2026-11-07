@@ -1,0 +1,25 @@
+# Third-party sources and immutable/generated theme snapshots.
+**/vendor/**
+/launcher/wallpaper-qr.js
+/launcher/themes/
+/launcher/theme-catalog/
+/themes/
+/showcase/
+/distributions/
+/native/published/
+
+# The website owns its Astro configuration and generated public resources.
+/website/public/
+/website/dist/
+/website/.astro/
+
+# Local outputs and private/reference checkouts.
+/node_modules/
+**/node_modules/
+/archives/
+/build/
+/dist/
+/output/
+/work/
+/diagnostics/
+/tv-cleanup-2026-10-23/

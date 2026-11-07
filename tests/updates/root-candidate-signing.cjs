@@ -1,24 +1,241 @@
 'use strict';
-const assert=require('assert'),crypto=require('crypto'),fs=require('fs'),os=require('os'),path=require('path');
-const {signRootCandidate,notesFor}=require('../../scripts/sign-root-candidate.cjs');
-const policy=require('../../system-updater/policy');
-const key=crypto.generateKeyPairSync('rsa',{modulusLength:2048}),wrong=crypto.generateKeyPairSync('rsa',{modulusLength:2048});
-const sha=b=>crypto.createHash('sha256').update(b).digest('hex');
-function fixture(){const dir=fs.mkdtempSync(path.join(os.tmpdir(),'root-candidate-sign-')),meta={schema:1,release:'v1.5.0',source:'a'.repeat(40),run_id:12,attempt:1,artifact:{id:34,size:100,sha256:'b'.repeat(64)},versions:{release:'1.5.0',root:'0.6.0',updater:'0.3.3'},files:{}};const components=[['root','com.cleanyourtv.root.preview','ipk'],['root-updater','com.cleanyourtv.root.updater','ipk'],['root-infrastructure',null,'infrastructure']].map(([name,application,kind])=>{const file=name+(kind==='ipk'?'.ipk':'.tar.gz'),raw=Buffer.from(name);fs.writeFileSync(path.join(dir,file),raw);meta.files[file]=sha(raw);return {name,kind,...(application?{application}:{}),version:name==='root-updater'?'0.3.3':'0.6.0',url:'https://github.com/Razdva122/clean-your-tv-lg-webos/releases/download/v1.5.0/'+file,sha256:sha(raw),size:raw.length};});const manifest={schema:1,release:'v1.5.0',edition:'root',supervisor:1,minimumSupervisorVersion:'1.1.1',notes:notesFor(meta),components};const write=()=>{fs.writeFileSync(path.join(dir,'PROVENANCE.json'),JSON.stringify(meta));fs.writeFileSync(path.join(dir,'manifest.json'),JSON.stringify(manifest));};write();return {dir,meta,manifest,write,close(){fs.rmSync(dir,{recursive:true,force:true});}};}
-function run(fn){const f=fixture();try{fn(f);}finally{f.close();}}
-run(f=>{const out=signRootCandidate(f.dir,key.privateKey,key.publicKey);assert.equal(policy.verify(out,key.publicKey).edition,'root');assert.deepEqual(fs.readdirSync(f.dir).filter(x=>x.startsWith('system-update-')),['system-update-root.json']);assert.throws(()=>signRootCandidate(f.dir,key.privateKey,key.publicKey),/exists/);});
-run(f=>{fs.appendFileSync(path.join(f.dir,'root.ipk'),'tampered');assert.throws(()=>signRootCandidate(f.dir,key.privateKey,key.publicKey),/hash|size/);});
-run(f=>{f.manifest.edition='no-root';f.write();assert.throws(()=>signRootCandidate(f.dir,key.privateKey,key.publicKey),/Root/);});
-run(f=>{f.meta.files['helper.ipk']='c'.repeat(64);f.write();assert.throws(()=>signRootCandidate(f.dir,key.privateKey,key.publicKey),/inventory/);});
-run(f=>{f.meta.source='c'.repeat(40);f.write();assert.throws(()=>signRootCandidate(f.dir,key.privateKey,key.publicKey),/provenance/);});
-run(f=>{assert.throws(()=>signRootCandidate(f.dir,key.privateKey,wrong.publicKey));assert.equal(fs.existsSync(path.join(f.dir,'system-update-root.json')),false);});
-const packageJob=()=>({id:56,name:'build (macos-15, cytv-macos-arm64, dist/cytv)',status:'completed',conclusion:'success',run_id:12,head_sha:'a'.repeat(40),run_attempt:1});
-run(f=>{f.meta.preliminary=true;f.meta.branch='codex/device-qa';f.meta.package_job=packageJob();f.manifest.notes=notesFor(f.meta);f.write();const verified=policy.verify(signRootCandidate(f.dir,key.privateKey,key.publicKey),key.publicKey);assert.match(verified.notes,/PRELIMINARY/);assert.match(verified.notes,/not final release acceptance/);assert.match(verified.notes,/package job 56/);});
-run(f=>{f.meta.preliminary=true;f.meta.branch='codex/device-qa';f.meta.package_job=packageJob();f.write();assert.throws(()=>signRootCandidate(f.dir,key.privateKey,key.publicKey),/provenance/);});
-run(f=>{f.meta.preliminary=true;f.meta.branch='codex/device-qa';f.write();assert.throws(()=>signRootCandidate(f.dir,key.privateKey,key.publicKey),/preliminary/);});
-for(const value of [false,'true',1])run(f=>{f.meta.preliminary=value;f.write();assert.throws(()=>signRootCandidate(f.dir,key.privateKey,key.publicKey),/preliminary/i);});
-for(const [field,value] of [['id',0],['status','queued'],['run_id',13],['head_sha','c'.repeat(40)],['run_attempt',2],['name','other'],['conclusion','failure']])run(f=>{f.meta.preliminary=true;f.meta.branch='codex/device-qa';f.meta.package_job={...packageJob(),[field]:value};f.manifest.notes=notesFor(f.meta);f.write();assert.throws(()=>signRootCandidate(f.dir,key.privateKey,key.publicKey),/preliminary/i);});
-console.log('PASS Root-only QA signing, exact package hashes, provenance, wrong key and no No-root output');
-const directMeta=f=>{f.meta.preliminary=true;f.meta.direct_tv=true;f.meta.workflow='.github/workflows/tv-candidate.yml';f.meta.branch='codex/device-qa';f.meta.public_key_sha256=sha(Buffer.from(key.publicKey.export({type:'spki',format:'pem'})));f.meta.package_job={...packageJob(),name:'build-root-tv'};f.manifest.notes=notesFor(f.meta);};
-run(f=>{directMeta(f);f.write();assert.equal(policy.verify(signRootCandidate(f.dir,key.privateKey,key.publicKey),key.publicKey).edition,'root');});
-for(const [field,value] of [['workflow','.github/workflows/cytv.yml'],['public_key_sha256','0'.repeat(64)],['direct_tv',false]])run(f=>{directMeta(f);f.meta[field]=value;f.write();assert.throws(()=>signRootCandidate(f.dir,key.privateKey,key.publicKey),/direct|preliminary/i);});
+const assert = require('assert'),
+  crypto = require('crypto'),
+  fs = require('fs'),
+  os = require('os'),
+  path = require('path');
+const {
+  signRootCandidate,
+  notesFor
+} = require('../../scripts/sign-root-candidate.cjs');
+const policy = require('../../system-updater/policy');
+const key = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 }),
+  wrong = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+const sha = (b) => crypto.createHash('sha256').update(b).digest('hex');
+function fixture() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'root-candidate-sign-')),
+    meta = {
+      schema: 1,
+      release: 'v1.5.0',
+      source: 'a'.repeat(40),
+      run_id: 12,
+      attempt: 1,
+      artifact: { id: 34, size: 100, sha256: 'b'.repeat(64) },
+      versions: { release: '1.5.0', root: '0.6.0', updater: '0.3.3' },
+      files: {}
+    };
+  const components = [
+    ['root', 'com.cleanyourtv.root.preview', 'ipk'],
+    ['root-updater', 'com.cleanyourtv.root.updater', 'ipk'],
+    ['root-infrastructure', null, 'infrastructure']
+  ].map(([name, application, kind]) => {
+    const file = name + (kind === 'ipk' ? '.ipk' : '.tar.gz'),
+      raw = Buffer.from(name);
+    fs.writeFileSync(path.join(dir, file), raw);
+    meta.files[file] = sha(raw);
+    return {
+      name,
+      kind,
+      ...(application ? { application } : {}),
+      version: name === 'root-updater' ? '0.3.3' : '0.6.0',
+      url:
+        'https://github.com/Razdva122/clean-your-tv-lg-webos/releases/download/v1.5.0/' +
+        file,
+      sha256: sha(raw),
+      size: raw.length
+    };
+  });
+  const manifest = {
+    schema: 1,
+    release: 'v1.5.0',
+    edition: 'root',
+    supervisor: 1,
+    minimumSupervisorVersion: '1.1.1',
+    notes: notesFor(meta),
+    components
+  };
+  const write = () => {
+    fs.writeFileSync(path.join(dir, 'PROVENANCE.json'), JSON.stringify(meta));
+    fs.writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify(manifest));
+  };
+  write();
+  return {
+    dir,
+    meta,
+    manifest,
+    write,
+    close() {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  };
+}
+function run(fn) {
+  const f = fixture();
+  try {
+    fn(f);
+  } finally {
+    f.close();
+  }
+}
+run((f) => {
+  const out = signRootCandidate(f.dir, key.privateKey, key.publicKey);
+  assert.equal(policy.verify(out, key.publicKey).edition, 'root');
+  assert.deepEqual(
+    fs.readdirSync(f.dir).filter((x) => x.startsWith('system-update-')),
+    ['system-update-root.json']
+  );
+  assert.throws(
+    () => signRootCandidate(f.dir, key.privateKey, key.publicKey),
+    /exists/
+  );
+});
+run((f) => {
+  fs.appendFileSync(path.join(f.dir, 'root.ipk'), 'tampered');
+  assert.throws(
+    () => signRootCandidate(f.dir, key.privateKey, key.publicKey),
+    /hash|size/
+  );
+});
+run((f) => {
+  f.manifest.edition = 'no-root';
+  f.write();
+  assert.throws(
+    () => signRootCandidate(f.dir, key.privateKey, key.publicKey),
+    /Root/
+  );
+});
+run((f) => {
+  f.meta.files['helper.ipk'] = 'c'.repeat(64);
+  f.write();
+  assert.throws(
+    () => signRootCandidate(f.dir, key.privateKey, key.publicKey),
+    /inventory/
+  );
+});
+run((f) => {
+  f.meta.source = 'c'.repeat(40);
+  f.write();
+  assert.throws(
+    () => signRootCandidate(f.dir, key.privateKey, key.publicKey),
+    /provenance/
+  );
+});
+run((f) => {
+  assert.throws(() =>
+    signRootCandidate(f.dir, key.privateKey, wrong.publicKey)
+  );
+  assert.equal(
+    fs.existsSync(path.join(f.dir, 'system-update-root.json')),
+    false
+  );
+});
+const packageJob = () => ({
+  id: 56,
+  name: 'build (macos-15, cytv-macos-arm64, dist/cytv)',
+  status: 'completed',
+  conclusion: 'success',
+  run_id: 12,
+  head_sha: 'a'.repeat(40),
+  run_attempt: 1
+});
+run((f) => {
+  f.meta.preliminary = true;
+  f.meta.branch = 'codex/device-qa';
+  f.meta.package_job = packageJob();
+  f.manifest.notes = notesFor(f.meta);
+  f.write();
+  const verified = policy.verify(
+    signRootCandidate(f.dir, key.privateKey, key.publicKey),
+    key.publicKey
+  );
+  assert.match(verified.notes, /PRELIMINARY/);
+  assert.match(verified.notes, /not final release acceptance/);
+  assert.match(verified.notes, /package job 56/);
+});
+run((f) => {
+  f.meta.preliminary = true;
+  f.meta.branch = 'codex/device-qa';
+  f.meta.package_job = packageJob();
+  f.write();
+  assert.throws(
+    () => signRootCandidate(f.dir, key.privateKey, key.publicKey),
+    /provenance/
+  );
+});
+run((f) => {
+  f.meta.preliminary = true;
+  f.meta.branch = 'codex/device-qa';
+  f.write();
+  assert.throws(
+    () => signRootCandidate(f.dir, key.privateKey, key.publicKey),
+    /preliminary/
+  );
+});
+for (const value of [false, 'true', 1])
+  run((f) => {
+    f.meta.preliminary = value;
+    f.write();
+    assert.throws(
+      () => signRootCandidate(f.dir, key.privateKey, key.publicKey),
+      /preliminary/i
+    );
+  });
+for (const [field, value] of [
+  ['id', 0],
+  ['status', 'queued'],
+  ['run_id', 13],
+  ['head_sha', 'c'.repeat(40)],
+  ['run_attempt', 2],
+  ['name', 'other'],
+  ['conclusion', 'failure']
+])
+  run((f) => {
+    f.meta.preliminary = true;
+    f.meta.branch = 'codex/device-qa';
+    f.meta.package_job = { ...packageJob(), [field]: value };
+    f.manifest.notes = notesFor(f.meta);
+    f.write();
+    assert.throws(
+      () => signRootCandidate(f.dir, key.privateKey, key.publicKey),
+      /preliminary/i
+    );
+  });
+console.log(
+  'PASS Root-only QA signing, exact package hashes, provenance, wrong key and no No-root output'
+);
+const directMeta = (f) => {
+  f.meta.preliminary = true;
+  f.meta.direct_tv = true;
+  f.meta.workflow = '.github/workflows/tv-candidate.yml';
+  f.meta.branch = 'codex/device-qa';
+  f.meta.public_key_sha256 = sha(
+    Buffer.from(key.publicKey.export({ type: 'spki', format: 'pem' }))
+  );
+  f.meta.package_job = { ...packageJob(), name: 'build-root-tv' };
+  f.manifest.notes = notesFor(f.meta);
+};
+run((f) => {
+  directMeta(f);
+  f.write();
+  assert.equal(
+    policy.verify(
+      signRootCandidate(f.dir, key.privateKey, key.publicKey),
+      key.publicKey
+    ).edition,
+    'root'
+  );
+});
+for (const [field, value] of [
+  ['workflow', '.github/workflows/cytv.yml'],
+  ['public_key_sha256', '0'.repeat(64)],
+  ['direct_tv', false]
+])
+  run((f) => {
+    directMeta(f);
+    f.meta[field] = value;
+    f.write();
+    assert.throws(
+      () => signRootCandidate(f.dir, key.privateKey, key.publicKey),
+      /direct|preliminary/i
+    );
+  });
