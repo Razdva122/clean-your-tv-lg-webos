@@ -285,3 +285,27 @@ fallback. No path, stack or arbitrary error text is exported, and public pending
 reason/completion authority is unchanged. The latest coordinator run passed 94
 Root cleanup/tail/simple/handoff cases with three platform skips. Exact Node 8
 checks cover the diagnostic and sticky-parent changes, including refusal cases.
+
+## Final integration and candidate freeze
+
+PR [#369](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/369) merged as
+`8cfff7892c62287b137c2f3518b5567d9978d1df`, with the exact tree of tested head
+`152ff05990cf39fd5dc0a8b7bd60a8e1871cac1e`.
+[Source CI 42341815828](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42341815828)
+passed all eight Linux/macOS runtime groups, browser, optional Python and both
+aggregate gates. The optional Windows and Intel macOS runtime checks also passed.
+No source check or package build is substituted for final selected-artifact or
+device acceptance.
+
+The final normal payload preparation still produces byte-identical TV IPKs,
+including authenticated published Helper 0.7.4 and the unchanged native support
+utility. Changed helpers and manifests require a new complete candidate; the old
+42287736073 pin is cleared. Component versions stay at the unpublished 1.10.0 set,
+Android uses its original signer, and no Homebrew promotion approval is selected.
+Only regular release metadata/evidence is added at this freeze; product inputs
+must match the independently reviewed and CI-tested head above.
+
+The maintainer-requested future release rule now requires one complete planned
+case inventory before a consolidated correction batch, followed by affected and
+newly reachable verification before merge and one frozen RC build. Blocked cases
+remain explicitly untested; valid unchanged evidence is reused.

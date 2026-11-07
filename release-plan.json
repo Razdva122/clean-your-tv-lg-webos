@@ -86,6 +86,16 @@
       "pr": 367,
       "issues": [],
       "summary": "Fix removal compatibility with modern Node, fixed SDK directories, broken legacy startup services and known private receipts; preserve specific retry diagnostics"
+    },
+    {
+      "pr": 369,
+      "issues": [
+        101,
+        133,
+        240,
+        359
+      ],
+      "summary": "Complete removal retry, snapshot restart, native finalization, bounded SSH transport and current failure guidance; original installation reports remain unconfirmed"
     }
   ],
   "excluded": [],
