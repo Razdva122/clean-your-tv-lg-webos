@@ -42,10 +42,11 @@
     }
   ],
   "excluded": [],
-  "acceptance": "",
+  "acceptance": "Partial unattended maintainer-owned OLED55C3RLA firmware 43.21.71 SDK 11.2.0 Node 20.12.2, remote unknown, macOS 15.6.1 ARM64 cytv 0.13.1. Exact full build 42397755022:1 and normal signing42399412305:1; guarded signed Root 0.13.1/Updater 0.5.3/infrastructure 0.13.1 forward, original-byte rollback and forward passed with automatic Home-resume and profile/order/settings preserved. Renderer33 loaded icons/0 project fallbacks, five font faces,13 settled locales and three temporary built-in previews,11 read-only service cases, software Home/Back/arrows,30 s standby/WoL automatic Root return passed; final power-off acknowledged with subsequent TVNotReady. Two initial QA-harness assumptions were investigated and affected cases passed after readiness/focus corrections without product changes. Retained System 1.2.5 unchanged. Physical remote/key-up/emergency, audible playback and remaining Android/fresh-System/other-device acceptance pending; AC cold boot not executed. Keep candidate draft for owner manual review. Dated details: docs/history/2026-11-07-release-1.12.1-unattended-tv-qa.md.",
   "build": {
     "run_id": 42397755022,
     "attempt": 1,
     "source": "704353a68edd7e9143a427a6a07a8e8122d8a117"
-  }
+  },
+  "acceptance_build": "42397755022:1"
 }

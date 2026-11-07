@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [1.12.1 unattended C3 QA, 2026-11-07](2026-11-07-release-1.12.1-unattended-tv-qa.md): exact signed forward/rollback/forward, profile and renderer/service cases, corrected harness findings, standby/wake, final power-off and remaining manual checks.
+
 - [1.12.1 freeze and pre-dispatch checks, 2026-11-07](2026-11-07-release-1.12.1-freeze.md): six-PR scope, authenticated baselines, package/version gates, documentation and bounded acceptance plan.
 
 - [Local recovery storage diagnostics, 2026-11-07](2026-11-07-local-recovery-storage-diagnostics.md): private local failure categories, pre-journal local storage checks and preserved original evidence; no device-recovery claim.

@@ -54,15 +54,26 @@ replace retained System code. Explicit replacement still admits only installed
 and coordinator. Root Beta remains a separate exact-Node-0.12.2 payload with
 ordinary OTA disabled. Homebrew Installer promotion remains disabled.
 Android keeps its application ID and original signing identity; final exact APK
-code26-to-code27 upgrade/retained-data acceptance remains pending.
+code 26-to-code 27 upgrade/retained-data acceptance remains pending.
 
-## Validation and limits
+## Validation and remaining acceptance
 
-The [freeze and pre-dispatch record](history/2026-11-07-release-1.12.1-freeze.md)
-records scope, real package/baseline checks, documentation and planned cases.
-Implementation PR checks passed before integration; they are separate from the
-combined/frozen candidate matrix. No new TV or phone result is claimed.
-Host fixtures do not establish original-device recovery or universal compatibility.
-Physical Home/keys/audio/standby/cold boot/OTA/rollback are untested on these new
-artifacts until explicitly recorded. Existing limitations and unresolved reports
-remain visible in the release PR.
+The [freeze/pre-dispatch record](history/2026-11-07-release-1.12.1-freeze.md)
+records scope, actual package/baseline checks, documentation, independent review
+and the selected complete21-job build. Earlier PR checks remain separate from
+that final frozen-candidate validation.
+
+[Unattended C3 QA](history/2026-11-07-release-1.12.1-unattended-tv-qa.md)
+verified the exact signed Root forward/rollback/forward, preserved profile,
+renderer/fonts/icons/all 13 locales/three temporary built-in previews,11 read-only
+service cases and software Home/Back/arrows, plus 30 s standby/wake. Two initial
+harness assumptions were investigated; affected checks passed with correct
+readiness/focus preconditions, without product changes or another candidate.
+The exact candidate remains installed and the TV was powered off.
+
+Physical remote/key-up/emergency, audible playback and remaining artifact
+acceptance are pending; the PR remains draft. Retained System 1.2.5 was unchanged;
+fresh1.2.6 was not physically accepted. AC cold boot, No-root/Beta, other firmware
+and final Android signed-APK upgrade/device acceptance are not claimed by this
+Root run. Existing unresolved original reports and compatibility limits remain.
+No stable release/feed publication is claimed.
