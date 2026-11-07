@@ -1,10 +1,6 @@
 # Update Clean Your TV
 
-> **Release 1.9.0:** see [versions, tested scope and recovery limits](RELEASE-1.9.0.md). C1 Beta is fresh-install only, selected automatically in the common installer; normal OTA is unavailable and physical C1 acceptance is pending. Historical results below retain their original artifact scope.
-
-> Version 1.7.0 uses Root/infrastructure 0.8.4 and independent Updaters 0.4.2. Its two native startup source choices (LG Channels / Live TV on by default, YouTube off) replace delayed boot/wake launches. There is no HDMI startup switch; a source switched off leaves startup to firmware. Native startup preparation retains the [LG Home Auto Launch dependency](../root-edition/README.md#candidate-native-startup-choices); see [1.7.0 acceptance and limits](RELEASE-1.7.0.md). The System supervisor target stays 1.2.0/protocol1, with the existing 1.1.2 migration limits below.
-
-> Historical [1.6.0 scope and limits](RELEASE-1.6.0.md), [dated acceptance](history/2026-11-02-release-1.6.0-final-acceptance.md) and available packages on [GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases). Historical [1.5.4](RELEASE-1.5.4.md) and [1.5.0](RELEASE-1.5.0.md) evidence retains its original scope.
+> **Unpublished v1.12.0 candidate:** fresh System Updater 1.2.5 / protocol 1. Shared retention summaries reach new coherent packages; ordinary component OTA does not replace a retained System supervisor. Explicit replacement still admits only installed 1.1.0/1.1.1, not 1.1.2/1.2.x. Exact-package update and rollback acceptance is pending. [Candidate scope](RELEASE-1.12.0.md).
 
 **Existing Root installations:** published 1.4.0 is incompatible with the original
 1.3.0 System Updater destination inventory. Do not force that update or edit

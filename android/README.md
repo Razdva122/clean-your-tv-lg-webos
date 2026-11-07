@@ -1,21 +1,13 @@
 # Install Clean Your TV from Android
 
-> **Release 1.9.0:** see [versions, tested scope and recovery limits](../docs/RELEASE-1.9.0.md). C1 Beta is fresh-install only, selected automatically in the common installer; normal OTA is unavailable and physical C1 acceptance is pending. Historical results below retain their original artifact scope.
-
-> Release 1.7.1 uses Android 0.7.1 / versionCode 19 and embeds the shared installer correction; its exact signer, payload and emulator upgrade checks are in the [1.7.1 acceptance record](../docs/history/2026-11-03-release-1.7.1-host-checks.md). This guide retains the same setup flow. Use [Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases) for the latest published downloads. The historical evidence below remains scoped to its original APK.
-
-> Historical release 1.6.0 uses Android 0.6.0 / versionCode 17. See [Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases) for published downloads and [artifact-bound acceptance and limits](../docs/history/2026-11-02-release-1.6.0-final-acceptance.md).
+> **Unpublished v1.12.0 candidate:** Android 0.12.0 / versionCode 26. Final signed-APK upgrade and retained-data acceptance are pending; historical checks do not accept these bytes. See [candidate scope](../docs/RELEASE-1.12.0.md).
 
 Use your phone to install either **No-root** (Developer Mode) or **Root**
 (existing root SSH) on an LG webOS TV. No PC, Termux, phone Python installation
 or cloud service is needed. The APK includes the offline interface and TV packages;
 optional TV Python is a separate verified download.
 
-Published **1.9.0** uses **Android 0.9.0 / versionCode 23**. Its exact original-signer
-upgrade and retained-data checks are recorded in the [artifact acceptance record](../docs/history/2026-11-06-root-wake-key-release.md#final-cold-start-retained-rollback-and-android-upgrade).
-Candidate **1.10.0** uses **Android 0.10.0 / versionCode 24** and adds the removal
-flow below. It is not published yet. Use only its identified signed artifact for
-candidate testing; acceptance of the new APK remains pending.
+Published v1.11.0 uses Android 0.11.0 / versionCode 25. Update in place and keep app data, keys and recovery receipts.
 [Download the signed APK](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest) ·
 [Full installation guide](../docs/INSTALL.md) · [Recovery](#recovery-and-private-data) ·
 [Report a problem](../docs/FEEDBACK.md)
@@ -66,7 +58,7 @@ The start screen also has **Wallpapers**, which explains the TV-hosted QR upload
 
 ## Interrupted Root installation inspection (1.8.2)
 
-The next unpublished candidate adds **Uninstall Clean Your TV** in Maintenance.
+Published v1.11.0 includes **Uninstall Clean Your TV** in Maintenance.
 Use the same saved TV and confirm removal once. Present known project apps/files
 are removed; missing ones are skipped, including after a partial installation.
 When prompted, disconnect/reconnect TV power, wait for the network, then choose
@@ -76,8 +68,7 @@ Try again action without another recovery wizard or initial removal confirmation
 Actual access denial asks for Root access, and actual busy work asks you to wait.
 Success requires both removed and verified-clean results. Keep app data, keys and
 original reports. Eligible Root Home-off setup remains a separate completed goal;
-physical Home, sound, standby and cold boot remain separate observations. This
-candidate flow is separate from the published inspection below.
+physical Home, sound, standby and cold boot remain separate observations. Removal and the original-operation inspection below are separate actions.
 
 Published 1.8.2 (Android 0.8.2 / versionCode 22) includes a bounded inspection
 path for an original Root `install / coordinator-submitted` operation. It reads
@@ -112,9 +103,8 @@ check status before reinstalling. The app retains operation receipts and does
 not automatically repeat installation after process death. Keep the same TV,
 edition and SSH port; pending or unknown outcomes need inspection.
 
-Published Android exposes install, status, inspection and restore. The next
-candidate adds explicit removal in Maintenance; use its retained connection and
-evidence. An interrupted No-root removal needs its
+Published Android exposes install, status, inspection, restore and explicit removal
+in Maintenance; use its retained connection and evidence. An interrupted No-root removal needs its
 verified continuation and separate confirmation; an unknown removal outcome stays
 blocked. Status and restore do not download Python. Keep runtime slots needed
 for recovery.

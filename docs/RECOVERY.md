@@ -69,10 +69,11 @@ inspection establish the allowed next action.
 
 ## Interrupted setup or removal
 
-### Next candidate: original-operation recovery and full removal
+<a id="next-candidate-original-operation-recovery-and-full-removal"></a>
 
-These are next-candidate instructions; the download buttons still provide the
-published release. For removal, select **Uninstall Clean Your TV** on desktop or
+### Original-operation recovery and full removal (published v1.11.0)
+
+These instructions apply to published v1.11.0 and the v1.12.0 candidate. For removal, select **Uninstall Clean Your TV** on desktop or
 Android (`cytv uninstall`) using the saved TV connection. Confirm the removal
 once. A failed or partial installation does not need to complete first: remove
 known project apps/files that are present and skip items that are absent.
@@ -94,7 +95,7 @@ A failed check stays visible; it is never converted to green completion. Keep
 keys and original reports, and do not reinstall or clear Android app data to
 retry removal. Missing files are skipped; absence is not itself an error.
 
-In this candidate, failed or interrupted setup offers recovery directly. If No-root setup cannot continue, confirm full removal once. Removal automatically retries transient connection loss and a busy CYTV worker up to three attempts. If Root access is required, choose **Connect using Root** for the same TV; verified Root cleanup also finishes its blocked No-root removal. A failed Root activation attempts to restore and verify LG Home without repeating activation. Cancellation with unfinished work keeps a diagnostic report and recovery actions. Emergency-stop state remains unchanged.
+In v1.11.0 and later, failed or interrupted setup offers recovery directly. If No-root setup cannot continue, confirm full removal once. Removal automatically retries transient connection loss and a busy CYTV worker up to three attempts. If Root access is required, choose **Connect using Root** for the same TV; verified Root cleanup also finishes its blocked No-root removal. A failed Root activation attempts to restore and verify LG Home without repeating activation. Cancellation with unfinished work keeps a diagnostic report and recovery actions. Emergency-stop state remains unchanged.
 
 Returning to LG Home alone remains separate from removal. Emergency controls
 above stay available. For setup recovery, eligible Root can still finish with
@@ -105,7 +106,7 @@ not establish compatibility or successful recovery on a reporter's TV. See the
 [maintained failure-injection matrix](development/INSTALLER-RECOVERY-MATRIX.md).
 
 The version-specific recovery sections below describe their published scope.
-The candidate Remove action is available even when earlier setup is incomplete.
+The Remove action is available even when earlier setup is incomplete.
 
 <a id="interrupted-setup-or-removal-in-110"></a>
 <a id="interrupted-no-root-installation-in-the-unpublished-140-candidate"></a>
@@ -356,8 +357,8 @@ transaction or backup also blocks replacement, even if marked complete; preserve
 it for review rather than deleting it to force replacement. It does not patch
 retained pinned code in place or replay an uncertain remove/install request.
 
-The 1.9.0 installer targets System Updater 1.2.2. A completed earlier
-replacement to 1.1.1 can start a new 1.2.2 operation only
+The v1.12.0 candidate targets fresh System Updater 1.2.5; published v1.11.0 targets 1.2.4. Only installed 1.1.0/1.1.1 sources are admitted by the explicit replacement. Retained 1.1.2 and 1.2.x have no general replacement path. A completed earlier
+replacement to 1.1.1 can start a new target operation only
 after the installer authenticates its saved bundle, baseline, original archive,
 terminal removal and current owner, and confirms that later recovery has finished.
 The original completed journal is durably archived with its existing evidence;

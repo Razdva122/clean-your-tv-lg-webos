@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [1.12.0 freeze and package preflight, 2026-11-07](2026-11-07-release-1.12.0-freeze.md): complete five-PR scope, selected versions, signed baselines and pending exact-package acceptance.
+
 - [Small issue follow-ups, 2026-11-07](2026-11-07-small-issue-followups.md): transitional Home status, private retention diagnostics and SSH trust guidance; combined CI, observer test synchronization and remaining device/recovery scope.
 
 - [Post-1.11.0 integration, 2026-11-07](2026-11-07-post-1.11.0-integration.md): legacy Root Beta, optional input discovery, visible icon selection and edition-transition guidance; combined host checks and outstanding exact-package acceptance.

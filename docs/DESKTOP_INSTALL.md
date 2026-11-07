@@ -154,7 +154,7 @@ default. Recovery never starts a new installation automatically. **Set up my TV*
 also enters recovery when it finds a retained operation. Returning to LG Home
 alone does not complete removal. Unknown package/setup outcomes keep their data.
 
-For the next candidate, **Uninstall Clean Your TV** uses a simple removal flow:
+In published v1.11.0 and later, **Uninstall Clean Your TV** uses a simple removal flow:
 confirm once, stop/remove known present project items, fully restart the TV when
 asked, then choose **Try again** for the final sweep. Disconnect and reconnect
 power; standby and Quick Start are not enough. CYTV never restarts the TV
@@ -164,7 +164,7 @@ recovery wizard. An actual access denial asks for Root; an actual busy operation
 asks you to wait and try again. Completion needs both removed and verified-clean
 proof. Eligible Root setup may still finish separately with LG Home/Home control
 off. Physical checks remain separate. See the
-[candidate removal flow](RECOVERY.md#next-candidate-original-operation-recovery-and-full-removal).
+[removal flow](RECOVERY.md#next-candidate-original-operation-recovery-and-full-removal).
 
 For unfinished removal, **Try again** is the primary action and repeats the same
 approved goal. **Save diagnostic report…** remains available. For other failed
@@ -191,7 +191,7 @@ submitted twice automatically.
 
 Root recovery records, archived updater state and referenced managed Python
 runtime slots remain for diagnostics and recovery.
-That is the published retention baseline. The next candidate additionally removes
+The published v1.11.0 cleanup additionally removes
 owned private setup/runtime data when its cleanup proof permits; minimal removal
 records and ownership backups may remain. A blocked cleanup is reported explicitly.
 They have no active service or startup registration. The Mac application and its
