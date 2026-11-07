@@ -97,13 +97,13 @@ Nennen Sie TV-Modell, Firmware, No-root oder Root, Installationsgerät, Schritt 
 
 In kommenden Builds erscheinen bei ausgewähltem oder aktivem 4K der Hinweis und die Schaltfläche „HDMI-Vorschau deaktivieren“ nur bei Designs mit aktivierter Eingangsvorschau. Während der HDMI-Vorschau wird das 4K-Hintergrundvideo vorübergehend durch ein statisches 1080p-Bild ersetzt. Deaktivieren Sie die Eingangsvorschau, um den Hintergrund in 4K zu behalten.
 
-### Kandidat: einfache Entfernung
+### Einfache Entfernung (v1.11.0+)
 
-Die Download-Schaltflächen oben liefern weiterhin die veröffentlichte Version. Im nächsten Kandidaten unter Wartung **Clean Your TV deinstallieren** mit derselben gespeicherten TV-Verbindung wählen. Einmal bestätigen. Vorhandene bekannte Projekt-Apps und Dateien werden entfernt, fehlende übersprungen, auch nach einer Teilinstallation.
+Ab der veröffentlichten Version v1.11.0 unter Wartung **Clean Your TV deinstallieren** mit derselben gespeicherten TV-Verbindung wählen. Einmal bestätigen. Vorhandene bekannte Projekt-Apps und Dateien werden entfernt, fehlende übersprungen, auch nach einer Teilinstallation.
 
 Wenn aufgefordert, den TV vom Strom trennen, wieder anschließen, auf das Netzwerk warten und **Erneut versuchen** wählen. Standby oder Quick Start ist kein vollständiger Neustart; CYTV startet den TV nicht automatisch neu. Bei Verbindungsabbruch Verbindung prüfen und dasselbe Entfernen erneut versuchen, ohne weiteren Wiederherstellungsassistenten. Bei verweigertem Zugriff die angeforderte Root-Verbindung verwenden; bei beschäftigtem TV warten und erneut versuchen. Erfolg erscheint erst nach bestätigter abschließender Bereinigung. Schlüssel und Originalberichte behalten. Notfallsteuerung und Zustimmung zum Teilen gelten weiter.
 
-In diesem Kandidaten bietet eine fehlgeschlagene oder unterbrochene Einrichtung direkt die Wiederherstellung an. Kann No-root nicht fortgesetzt werden, bestätigen Sie die vollständige Entfernung einmal. Bei vorübergehendem Verbindungsverlust oder einem beschäftigten CYTV-Prozess erfolgen bis zu drei Versuche. Wählen Sie bei erforderlichem Root-Zugriff **Mit Root verbinden** für denselben TV; die verifizierte Root-Bereinigung beendet auch dessen blockierte No-root-Entfernung. Nach einem Root-Aktivierungsfehler versucht CYTV, LG Home wiederherzustellen und zu prüfen, ohne erneut zu aktivieren. Ein Abbruch mit unerledigter Arbeit behält Bericht und Wiederherstellungsaktionen. Der Notstopp bleibt erhalten.
+Ab v1.11.0 bietet eine fehlgeschlagene oder unterbrochene Einrichtung direkt die Wiederherstellung an. Kann No-root nicht fortgesetzt werden, bestätigen Sie die vollständige Entfernung einmal. Bei vorübergehendem Verbindungsverlust oder einem beschäftigten CYTV-Prozess erfolgen bis zu drei Versuche. Wählen Sie bei erforderlichem Root-Zugriff **Mit Root verbinden** für denselben TV; die verifizierte Root-Bereinigung beendet auch dessen blockierte No-root-Entfernung. Nach einem Root-Aktivierungsfehler versucht CYTV, LG Home wiederherzustellen und zu prüfen, ohne erneut zu aktivieren. Ein Abbruch mit unerledigter Arbeit behält Bericht und Wiederherstellungsaktionen. Der Notstopp bleibt erhalten.
 
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="optionales-python-für-root-in-v110"></a>

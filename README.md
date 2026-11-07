@@ -55,8 +55,10 @@ and creating your own theme.
 ## Download and install
 
 <!-- release:downloads -->
-Current stable release: **[v1.11.0](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.11.0)** — [release notes](docs/RELEASE-1.11.0.md).
+Current stable release: **[v1.12.0](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.12.0)** — [release notes](docs/RELEASE-1.12.0.md).
 <!-- /release:downloads -->
+
+This branch prepares unpublished v1.12.0. Use Releases/latest for published v1.11.0; candidate links become available only after verified publication.
 
 [![Download Windows x64 graphical installer — GUI ZIP](assets/brand/downloads/windows.svg)](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/cytv-windows-x64-desktop.zip)
 [![Download macOS Apple Silicon graphical installer — ZIP](assets/brand/downloads/macos-arm64.svg)](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/cytv-macos-arm64.zip)
@@ -135,15 +137,15 @@ For contributors: [build and technical references](docs/development/README.md),
 <!-- release:components -->
 | Component | Stable version |
 | --- | --- |
-| cytv installer | 0.12.0 |
-| Home | 1.12.0 |
+| cytv installer | 0.13.0 |
+| Home | 1.13.0 |
 | Home Helper | 0.7.5 |
-| Root edition | 0.12.0 |
-| Both edition Updaters | 0.5.1 |
-| Android installer / versionCode | 0.11.0 / 25 |
+| Root edition | 0.13.0 |
+| Both edition Updaters | 0.5.2 |
+| Android installer / versionCode | 0.12.0 / 26 |
 <!-- /release:components -->
 
-Fresh System Updater target: 1.2.4 / protocol 1. Existing supervisors stay pinned; installed 1.1.2 has no general replacement path. See the [candidate delivery limits](docs/RELEASE-1.11.0.md).
+Fresh System Updater target: 1.2.5 / protocol 1. Existing supervisors stay pinned; installed 1.1.2 has no general replacement path. See the [candidate delivery limits](docs/RELEASE-1.12.0.md).
 
 Historical System Updater in 1.7.0: 1.2.0 / protocol 1.
 See the [1.7.0 release notes](docs/RELEASE-1.7.0.md)

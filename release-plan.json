@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": null,
+  "version": "1.12.0",
   "changes": [
     {
       "pr": 388,

@@ -97,13 +97,13 @@ Indiquez modèle de TV, micrologiciel, No-root ou Root, appareil d’installatio
 
 Dans les prochaines versions, l’avertissement et le bouton « Désactiver l’aperçu HDMI » apparaissent lorsque la 4K est sélectionnée ou active, uniquement pour les thèmes dont l’aperçu des entrées est activé. Pendant l’aperçu HDMI, le fond vidéo 4K est temporairement remplacé par une image fixe en 1080p. Désactivez l’aperçu des entrées pour conserver le fond en 4K.
 
-### Candidat : suppression simple
+### Suppression simple (v1.11.0+)
 
-Les boutons ci-dessus proposent toujours la version publiée. Dans le prochain candidat, choisissez **Désinstaller Clean Your TV** dans Maintenance avec la même connexion enregistrée. Confirmez une fois. Les applications et fichiers connus du projet présents sont supprimés ; les éléments absents sont ignorés, même après une installation partielle.
+Dans v1.11.0 et les versions suivantes, choisissez **Désinstaller Clean Your TV** dans Maintenance avec la même connexion enregistrée. Confirmez une fois. Les applications et fichiers connus du projet présents sont supprimés ; les éléments absents sont ignorés, même après une installation partielle.
 
 Quand demandé, débranchez l’alimentation TV, rebranchez-la, attendez le réseau et choisissez **Réessayer**. Veille ou Quick Start n’est pas un redémarrage complet ; CYTV ne redémarre pas le téléviseur automatiquement. En cas de déconnexion, vérifiez la connexion et réessayez la même suppression sans autre assistant de récupération. Si l’accès est refusé, utilisez la connexion Root demandée ; si le téléviseur est occupé, patientez et réessayez. Le succès apparaît seulement après vérification du nettoyage final. Gardez les clés et rapports d’origine. Les commandes d’urgence et le consentement au partage restent applicables.
 
-Dans ce candidat, une installation échouée ou interrompue propose directement la récupération. Si No-root ne peut pas continuer, confirmez une fois la suppression complète. La suppression effectue jusqu’à trois tentatives en cas de perte temporaire de connexion ou de processus CYTV occupé. Si Root est nécessaire, choisissez **Se connecter avec Root** pour le même téléviseur ; le nettoyage Root vérifié termine aussi sa suppression No-root bloquée. Après un échec d’activation Root, CYTV tente de rétablir et vérifier LG Home sans réactiver. Une annulation avec du travail inachevé conserve le rapport et les actions de récupération. L’arrêt d’urgence reste actif.
+Depuis v1.11.0, une installation échouée ou interrompue propose directement la récupération. Si No-root ne peut pas continuer, confirmez une fois la suppression complète. La suppression effectue jusqu’à trois tentatives en cas de perte temporaire de connexion ou de processus CYTV occupé. Si Root est nécessaire, choisissez **Se connecter avec Root** pour le même téléviseur ; le nettoyage Root vérifié termine aussi sa suppression No-root bloquée. Après un échec d’activation Root, CYTV tente de rétablir et vérifier LG Home sans réactiver. Une annulation avec du travail inachevé conserve le rapport et les actions de récupération. L’arrêt d’urgence reste actif.
 
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="python-facultatif-pour-root-dans-v110"></a>

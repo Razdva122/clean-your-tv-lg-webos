@@ -4,6 +4,11 @@ Source-only work for [#201](https://github.com/Razdva122/clean-your-tv-lg-webos/
 No TV was contacted or changed. This records host regressions and implementation
 limits, not another user's installation result or original-device acceptance.
 
+The v1.12.0 coordinator froze its five-PR inventory during this task. This work
+stays in its own PR outside that inventory until publication; it selects no new
+build and does not change candidate inputs. The feature branch merges the frozen
+base only to preserve its published-recovery wording and history links.
+
 ## Behavior
 
 The private capsule reader now distinguishes local directory ownership,
