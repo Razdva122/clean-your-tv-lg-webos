@@ -169,17 +169,35 @@ function rpc(method, payload) {
   );
   if (result.error || result.status !== 0)
     throw Error('cleanup-readback-unavailable');
-  var value = JSON.parse(result.stdout.toString());
+  var value;
+  try {
+    value = JSON.parse(result.stdout.toString());
+  } catch (_) {
+    throw Error('cleanup-readback-malformed');
+  }
+  if (!object(value) || typeof value.returnValue !== 'boolean')
+    throw Error('cleanup-readback-malformed');
   if (value.returnValue !== true) throw Error('cleanup-readback-unavailable');
   return value;
 }
 function absent(final) {
   if (final && exists(bootRoot)) throw Error('boot-session-remains');
-  var inventory = rpc('com.webos.applicationManager/dev/listApps', {}).apps;
+  var inventory;
+  try {
+    inventory = rpc('com.webos.applicationManager/dev/listApps', {}).apps;
+  } catch (error) {
+    if (error.message !== 'cleanup-readback-unavailable') throw error;
+    inventory = rpc('com.webos.applicationManager/listApps', {}).apps;
+  }
   if (
     !Array.isArray(inventory) ||
     inventory.some(function (a) {
-      return apps.indexOf(a.id) !== -1;
+      return (
+        !object(a) ||
+        typeof a.id !== 'string' ||
+        !a.id ||
+        apps.indexOf(a.id) !== -1
+      );
     })
   )
     throw Error('package-remains');
@@ -697,7 +715,7 @@ try {
     );
   else {
     var known =
-      'boot-session-remains cleanup-member-changed cleanup-readback-unavailable cleanup-root-changed different-removal-intent incomplete-removal-receipts invalid-cleanup-selector invalid-runtime-inventory invalid-support-stage invalid-tail-stage invalid-tail-stages no-root-private-cleanup-required no-root-private-readback-unavailable original-lock-changed original-lock-required original-promotion-lock-missing original-removal-required oversized-cleanup-record owned-activity-remains owned-input-remains owned-private-registration-remains owned-process-still-used owned-registration-remains owned-route-remains package-absence-unverified package-remains private-member-remains restart-required route-changed runtime-cleanup-proof-required runtime-member-changed startup-remains support-stage-remains unexpected-promotion-lock unknown-ownership-receipt unknown-runtime-directory unknown-runtime-member unknown-support-directory unknown-support-member unknown-tail-stage unsafe-cleanup-directory unsafe-cleanup-member'.split(
+      'boot-session-remains cleanup-member-changed cleanup-readback-malformed cleanup-readback-unavailable cleanup-root-changed different-removal-intent incomplete-removal-receipts invalid-cleanup-selector invalid-runtime-inventory invalid-support-stage invalid-tail-stage invalid-tail-stages no-root-private-cleanup-required no-root-private-readback-unavailable original-lock-changed original-lock-required original-promotion-lock-missing original-removal-required oversized-cleanup-record owned-activity-remains owned-input-remains owned-private-registration-remains owned-process-still-used owned-registration-remains owned-route-remains package-absence-unverified package-remains private-member-remains restart-required route-changed runtime-cleanup-proof-required runtime-member-changed startup-remains support-stage-remains unexpected-promotion-lock unknown-ownership-receipt unknown-runtime-directory unknown-runtime-member unknown-support-directory unknown-support-member unknown-tail-stage unsafe-cleanup-directory unsafe-cleanup-member'.split(
         ' '
       );
     var diagnostic =

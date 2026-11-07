@@ -20,12 +20,15 @@ def failure_summary(error):
     import subprocess
     name=type(error).__name__
     allowed=('CalledProcessError','TimeoutExpired','ValueError','RuntimeError','OSError',
-             'PermissionError','FileNotFoundError','TypeError','KeyError')
+             'PermissionError','FileNotFoundError','TypeError','KeyError','TimeoutError')
     result={'exception_type':name if name in allowed else 'unknown'}
     if isinstance(error,subprocess.CalledProcessError) and type(error.returncode) is int and -255<=error.returncode<=255:
         result['exit_status']=error.returncode
     if isinstance(error,OSError) and type(error.errno) is int and 0<=error.errno<=4095:
         result['errno']=error.errno
+    from updater.luna import summary
+    detail=summary(getattr(error,'luna',None))
+    if detail:result['luna']=detail
     return result
 
 
@@ -314,7 +317,8 @@ class Coordinator:
                     # The independent child owns this receipt after interpreter
                     # retirement starts. Parent errors cannot overwrite its proof.
                     return dict(record,state='recovery_required',current=False,reason='private-cleanup-incomplete')
-                record.setdefault('failure',failure_summary(error))
+                record['last_failure']=dict(failure_summary(error),stage=record['stage'])
+                record.setdefault('failure',record['last_failure'])
                 record.setdefault('cleanup_error',cleanup_failure(error))
                 reasons={'requested':'original-writer-active','original-writers-fenced':'controls-unverified',
                          'controls-restored':'controls-unverified','package-removal':'removal-terminal-unknown',

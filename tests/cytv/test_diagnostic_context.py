@@ -10,6 +10,23 @@ from cytv.errors import UserError, TVCommandError
 
 
 class ContextTests(unittest.TestCase):
+    def test_worker_failures_export_current_call_but_strip_untrusted_fields(self):
+        from cytv.diagnostic_context import product_summary
+        product={'failure':{'exception_type':'RuntimeError',
+            'luna':{'call':'apps-dev','reason':'permission-denied','error_code':-1,'error_text':'PRIVATE'}},
+            'last_failure':{'exception_type':'TimeoutError','stage':'original-writers-fenced',
+                'luna':{'call':'home-settings','reason':'timeout','error_code':True,'raw':'PRIVATE'}}}
+        report=self.report('uninstall','uninstall',status={'device':{'product':product}})
+        value=report['status']['product']
+        self.assertEqual(value['failure'],{'exception_type':'RuntimeError',
+            'luna':{'call':'apps-dev','reason':'permission-denied','error_code':-1}})
+        self.assertEqual(value.get('last_failure'),{'exception_type':'TimeoutError','stage':'original-writers-fenced',
+            'luna':{'call':'home-settings','reason':'timeout'}})
+        self.assertNotIn('PRIVATE',json.dumps(report))
+        unknown=product_summary({'last_failure':{'exception_type':'PRIVATE','stage':'PRIVATE',
+            'luna':{'call':'PRIVATE','reason':'PRIVATE','error_code':'PRIVATE'}}})
+        self.assertNotIn('PRIVATE',json.dumps(unknown))
+
     def test_removal_reports_keep_fixed_failure_codes_without_private_messages(self):
         for reason in ('root-worker-busy', 'root-access-required', 'removal-failed',
                        'cleanup-check-failed', 'connection-interrupted'):
