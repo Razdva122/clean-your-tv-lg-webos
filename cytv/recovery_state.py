@@ -5,7 +5,7 @@ REASONS = ('no-pending-operation', 'removal-not-submitted', 'terminal-evidence-m
            'inherited-operation', 'unsupported-receipt', 'foreign-operation', 'operation-live',
            'packages-verified', 'observation-unverified', 'removal-verified', 'activation-verified', 'final-readback-verified', 'cancellation-verified',
            'original-work-remaining', 'original-vendor-failure', 'original-terminal-unknown', 'original-readback-unverified', 'original-reservation-unverified', 'original-configuration-unknown')
-ACTIONS = ('check', 'inspect-support', 'continue-product', 'continue-no-root', 'cancel-install', 'continue-setup', 'finish-home-off', 'reconcile', 'retain-evidence', 'continue-removal')
+ACTIONS = ('check', 'inspect-support', 'continue-product', 'continue-no-root', 'cancel-install', 'continue-setup', 'finish-home-off', 'reconcile', 'retain-evidence', 'continue-removal', 'connect-root')
 REMOVAL_STAGES = ('requested', 'original-writers-fenced', 'controls-restored', 'package-removal', 'private-cleanup', 'restart-required', 'verified-clean')
 REMOVAL_REASONS = ('removal-requested', 'original-writer-active', 'ownership-conflict', 'controls-unverified',
                    'removal-terminal-unknown', 'private-cleanup-incomplete', 'removal-verified', 'restart-required',

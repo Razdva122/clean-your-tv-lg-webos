@@ -939,6 +939,11 @@ TV input shortcuts could not be checked. Try again.|Die TV-Eingangsverknüpfunge
 TV startup could not be disabled. Try again.|Der TV-Autostart konnte nicht deaktiviert werden. Versuchen Sie es erneut.|No se pudo desactivar el inicio automático del TV. Inténtalo de nuevo.|Não foi possível desativar a inicialização automática da TV. Tente novamente.|Le démarrage automatique sur le téléviseur n’a pas pu être désactivé. Réessayez.|Impossibile disattivare l’avvio automatico sulla TV. Riprova.|TV 자동 시작을 비활성화할 수 없습니다. 다시 시도하세요.|टीवी पर ऑटोस्टार्ट बंद नहीं किया जा सका। फिर कोशिश करें।|Nie można wyłączyć autostartu w telewizorze. Spróbuj ponownie.|Не удалось отключить автозапуск на ТВ. Попробуйте ещё раз.|无法禁用电视上的自动启动。请重试。|無法停用電視上的自動啟動。請再試一次。|Automatické spouštění v televizoru se nepodařilo vypnout. Zkuste to znovu.
 """
 
+ROWS += """
+Connect using Root|Mit Root verbinden|Conectar con Root|Conectar com Root|Se connecter avec Root|Connetti con Root|Root로 연결|Root से कनेक्ट करें|Połącz przez Root|Подключиться через Root|通过 Root 连接|透過 Root 連線|Připojit přes Root
+Restoring LG Home…|LG Home wird wiederhergestellt…|Restaurando LG Home…|Restaurando LG Home…|Restauration de LG Home…|Ripristino di LG Home…|LG Home 복원 중…|LG Home बहाल किया जा रहा है…|Przywracanie LG Home…|Восстановление LG Home…|正在恢复 LG Home…|正在還原 LG Home…|Obnovování LG Home…
+"""
+
 MESSAGES = {}
 for row in ROWS.strip().splitlines():
     if not row.strip():

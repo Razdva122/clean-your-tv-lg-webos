@@ -37,6 +37,9 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
         'privacy': 'No addresses, SSH identities, exception text, credentials, app inventory, environment or raw TV logs are collected.',
     }
     from .recovery_state import assess, summary
+    if pending and pending.get('activation_restore') in ('verified', 'unverified'):
+        report['activation_recovery'] = {'lg_home':pending['activation_restore'],
+                                         'retry_required':pending.get('activation_restore_pending') is True}
     report['recovery'] = {**summary(profile or {}, pending), **assess(profile, pending, status)}
     removal=pending or (getattr(store,'diagnostic_removal',None) if action in ('uninstall','recover') else None)
     if removal and removal.get('recovery_protocol')=='clean-removal-v1':

@@ -236,13 +236,17 @@ def _remove_package(installer, app):
 
 
 def _repair_registration(installer, value):
-    """One ordinary same-ID repair per current Retry for protected No-root data."""
+    """One same-ID repair; an uncertain install is never submitted again."""
     from . import no_root_carrier, package
     candidates = {app for row in value['blocked'] if (app := _protected_package(row))}
     if not candidates or not hasattr(installer, 'payload'):
         return value
     registered = {app['id'] for app in installer.installed_apps()}
     for app in sorted(candidates - registered):
+        pending = installer.store.pending(installer.profile)
+        carriers = dict(pending.get('cleanup_carriers', {}))
+        if carriers.get(app) not in (None, 'failed'):
+            raise UserError(ROOT_MESSAGE, reason_code='root-access-required')
         def authenticated(name):
             raw = (installer.payload / package.safe_name(name)).read_bytes()
             if hashlib.sha256(raw).hexdigest() != installer.manifest['files'].get(name):
@@ -265,11 +269,22 @@ def _repair_registration(installer, value):
                    'sha256':hashlib.sha256(carrier).hexdigest(), 'carrier':base64.b64encode(carrier).decode('ascii')}
         installer.remote.run('/usr/bin/node', data=_program(request), timeout=90)
         filename = ('helper.ipk', 'launcher.ipk', 'updater.ipk')[APPS.index(app)]
-        installer.remote.luna('com.webos.appInstallService/dev/install',
-                              {'id':app, 'ipkUrl':'/media/developer/temp/cytv-' + identifier + '/' + filename, 'subscribe':True}, terminal='installed', timeout=150)
+        carriers[app] = 'submitted'
+        installer.store.checkpoint(installer.profile, cleanup_carriers=carriers)
+        try:
+            installer.remote.luna('com.webos.appInstallService/dev/install',
+                                  {'id':app, 'ipkUrl':'/media/developer/temp/cytv-' + identifier + '/' + filename, 'subscribe':True}, terminal='installed', timeout=150)
+        except TVRejected:
+            carriers[app] = 'failed'
+            installer.store.checkpoint(installer.profile, cleanup_carriers=carriers)
+            raise
+        carriers[app] = 'installed'
+        installer.store.checkpoint(installer.profile, cleanup_carriers=carriers)
         if app not in {row['id'] for row in installer.installed_apps()}:
             raise UserError('Removal could not be checked. Reconnect and try again.')
         _remove_package(installer, app)
+        carriers[app] = 'removed'
+        installer.store.checkpoint(installer.profile, cleanup_carriers=carriers)
     return _device(installer, 'sweep')
 
 
