@@ -1,8 +1,9 @@
 # v1.12.1 — installer diagnostics and verified Root removal
 
 Unpublished candidate for [release PR #413](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/413).
-Downloads still serve published v1.12.0. Full candidate build, artifact-bound
-acceptance, signing and publication are separate gates; none is implied by a PR merge.
+Downloads still serve published v1.12.0. [Full candidate 42397755022:1](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42397755022) passed all 21 jobs at frozen source `704353a6`.
+Artifact-bound acceptance, signing and publication remain separate gates; a PR
+merge alone does not establish them.
 
 ## Changes
 
