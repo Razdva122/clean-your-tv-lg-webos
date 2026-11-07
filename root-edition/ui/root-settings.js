@@ -24,6 +24,7 @@
     var checkingUpdates = false,
       categories,
       statusGeneration = 0,
+      statusTimer,
       windowGeneration = 0,
       refreshTail = Promise.resolve();
     var sourceGroup,
@@ -114,6 +115,7 @@
       if (!sourceStatus || buttons[index].disabled || busy) return;
       var next = { tv: sources.tv, youtube: sources.youtube };
       next[sourceKeys[index - 15]] = !next[sourceKeys[index - 15]];
+      stopModePoll();
       busy = true;
       buttons.forEach(function (button) {
         button.disabled = true;
@@ -264,7 +266,12 @@
         return reply.result.result;
       });
     }
+    function stopModePoll() {
+      clearTimeout(statusTimer);
+      statusTimer = null;
+    }
     function invalidateMode() {
+      stopModePoll();
       statusGeneration++;
       rootStatus = null;
       sourceStatus = null;
@@ -276,18 +283,25 @@
     }
     function refreshMode() {
       invalidateMode();
-      var generation = statusGeneration;
+      var generation = statusGeneration,
+        remainingPolls = 10;
 
       message.textContent = t('Checking Home control…');
       function read() {
-        if (generation !== statusGeneration || panel.hidden || document.hidden)
+        if (
+          generation !== statusGeneration ||
+          panel.hidden ||
+          document.hidden ||
+          busy
+        )
           return;
         return refreshSources(generation)
           .then(function () {
             if (
               generation !== statusGeneration ||
               panel.hidden ||
-              document.hidden
+              document.hidden ||
+              busy
             )
               return;
             return control('status');
@@ -296,7 +310,8 @@
             if (
               generation !== statusGeneration ||
               panel.hidden ||
-              document.hidden
+              document.hidden ||
+              busy
             )
               return;
             if (
@@ -324,6 +339,24 @@
                   ? 'Changing Home control…'
                   : 'Home and return from apps open LG Home.'
             );
+            if (buttons[3].disabled) {
+              if (!remainingPolls--)
+                throw new Error(
+                  'Response timed out. Check status before retrying.'
+                );
+              // Do not hold refreshTail (or a completed UI action) during the wait.
+              statusTimer = setTimeout(function () {
+                if (
+                  generation !== statusGeneration ||
+                  panel.hidden ||
+                  document.hidden ||
+                  busy
+                )
+                  return;
+                statusTimer = null;
+                refreshTail = refreshTail.then(read, read);
+              }, 1000);
+            }
             if (
               !panel.hidden &&
               buttons[selected].disabled &&
@@ -335,7 +368,8 @@
             if (
               generation !== statusGeneration ||
               panel.hidden ||
-              document.hidden
+              document.hidden ||
+              busy
             )
               return;
             rootStatus = null;
@@ -369,6 +403,7 @@
     function changeMode() {
       if (!rootStatus || buttons[3].disabled || busy) return;
       var active = rootStatus.intent && rootStatus.intent.phase === 'active';
+      stopModePoll();
       busy = true;
       buttons.forEach(function (b) {
         b.disabled = true;
@@ -459,6 +494,7 @@
       if (index >= 15 && index <= 16) return changeSource(index);
       if (index === 7) {
         if (!window.RootAudio) return;
+        invalidateMode();
         panel.hidden = true;
         window.RootAudio.open(request, function () {
           panel.hidden = false;
@@ -469,6 +505,7 @@
       }
       if (index === 6) {
         if (!window.RootFirmware) return;
+        invalidateMode();
         panel.hidden = true;
         window.RootFirmware.open(request, function () {
           panel.hidden = false;
@@ -484,6 +521,7 @@
           );
           return;
         }
+        invalidateMode();
         panel.hidden = true;
         window.RootUpdates.open({
           onClose: function () {
@@ -501,6 +539,7 @@
         });
         return;
       }
+      stopModePoll();
       busy = true;
       buttons.forEach(function (b) {
         b.disabled = true;

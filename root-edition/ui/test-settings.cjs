@@ -13,7 +13,9 @@ let selected,
   delayLaunch = false,
   gateBackend = false;
 const pending = [],
-  launches = [];
+  launches = [],
+  timers = new Map();
+let nextTimer = 0;
 class Element {
   constructor(tag) {
     this.tag = tag;
@@ -45,8 +47,14 @@ const context = {
   window: { close() {}, RootUpdates: { open() {} } },
   document,
   Promise,
-  setTimeout,
-  clearTimeout,
+  setTimeout(callback, delay) {
+    const id = ++nextTimer;
+    timers.set(id, { callback, delay });
+    return id;
+  },
+  clearTimeout(id) {
+    timers.delete(id);
+  },
   createRootExit: (call, launch) => async () => {
     restores++;
     phase = 'disabled';
@@ -103,6 +111,16 @@ const panel = context.window.RenewalPanel,
 async function nextStatus() {
   await tick();
   return pending.shift();
+}
+function pollTimer() {
+  return [...timers].find(([, timer]) => timer.delay === 1000);
+}
+async function poll() {
+  const entry = pollTimer();
+  assert(entry, 'transitional status schedules another read');
+  timers.delete(entry[0]);
+  entry[1].callback();
+  await tick();
 }
 function key(keyCode) {
   listeners.keydown({
@@ -338,6 +356,125 @@ function key(keyCode) {
   assert(!buttons[0].disabled);
   delayStatus = false;
   delayLaunch = false;
+  // A transitional reply must converge without another user action or write.
+  const pollingEnables = calls.filter((c) => c.uri.endsWith('/enable')).length;
+  phase = 'enabling';
+  listeners.webOSRelaunch();
+  await tick();
+  assert(buttons[0].disabled);
+  phase = 'active';
+  await poll();
+  assert(!buttons[0].disabled, 'follow-up status unlocks Change Home');
+  assert.equal(buttons[0].attrs['aria-checked'], 'true');
+  assert.equal(pollTimer(), undefined, 'stable active stops polling');
+  assert(retry.hidden);
+  // A bounded wait eventually offers the existing read-only manual retry.
+  phase = 'disabling';
+  listeners.webOSRelaunch();
+  await tick();
+  let polls = 0;
+  while (pollTimer() && polls < 20) {
+    await poll();
+    polls++;
+  }
+  assert(polls > 0 && polls < 20, 'transitional polling has a finite budget');
+  assert.equal(pollTimer(), undefined);
+  assert(buttons[0].disabled);
+  assert(
+    !retry.hidden && !retry.disabled,
+    'exhausted wait offers Check status'
+  );
+  phase = 'disabled';
+  retry.onclick();
+  await tick();
+  assert(!buttons[0].disabled);
+  assert.equal(pollTimer(), undefined, 'stable disabled does not poll');
+  // Close, background, relaunch and child-panel hide cancel scheduled reads.
+  for (const [cancel, resume] of [
+    [() => key(461), () => panel.open()],
+    [
+      () => {
+        document.hidden = true;
+        listeners.visibilitychange();
+      },
+      () => {
+        document.hidden = false;
+      }
+    ],
+    [() => listeners.webOSRelaunch(), () => {}],
+    [
+      () => buttons.find((b) => b.textContent === 'HDMI sound').onclick(),
+      () => childClose()
+    ]
+  ]) {
+    phase = 'enabling';
+    listeners.webOSRelaunch();
+    await tick();
+    const timer = pollTimer();
+    assert(timer);
+    const reads = calls.length;
+    cancel();
+    assert(!timers.has(timer[0]), 'lifecycle invalidation clears poll timer');
+    timer[1].callback();
+    assert.equal(calls.length, reads, 'even a queued stale timer does no work');
+    phase = 'disabled';
+    resume();
+    listeners.visibilitychange();
+    await tick();
+    assert(!buttons[0].disabled);
+    assert.equal(pollTimer(), undefined);
+  }
+  // A user action cancels the wait and finishes without awaiting the polling budget.
+  phase = 'enabling';
+  listeners.webOSRelaunch();
+  await tick();
+  delayLaunch = true;
+  buttons[1].onclick();
+  assert.equal(pollTimer(), undefined, 'busy visit cancels scheduled polling');
+  reply(launches.shift(), { returnValue: false });
+  await tick();
+  assert(!buttons[1].disabled, 'completed action releases its busy state');
+  assert(
+    pollTimer(),
+    'completed action independently refreshes transitional status'
+  );
+  delayLaunch = false;
+  // An in-flight poll cannot paint an old generation or schedule more reads.
+  phase = 'enabling';
+  listeners.webOSRelaunch();
+  await tick();
+  delayStatus = true;
+  await poll();
+  const stalePoll = await nextStatus();
+  listeners.webOSRelaunch();
+  reply(stalePoll, status('active'));
+  await tick();
+  assert(buttons[0].disabled);
+  assert.equal(pollTimer(), undefined);
+  reply(await nextStatus(), status('disabled'));
+  await tick();
+  assert(!buttons[0].disabled);
+  // Request timeouts retain explicit retry, with no automatic writes.
+  listeners.webOSRelaunch();
+  const timedOut = await nextStatus();
+  const timeout = [...timers].find(([, timer]) => timer.delay === 30000);
+  assert(timeout, 'status request still owns its timeout');
+  timers.delete(timeout[0]);
+  timeout[1].callback();
+  await tick();
+  assert(!retry.hidden && !retry.disabled);
+  assert.equal(pollTimer(), undefined);
+  reply(timedOut, status('active'));
+  await tick();
+  assert(buttons[0].disabled, 'late timed-out response cannot enable controls');
+  delayStatus = false;
+  retry.onclick();
+  await tick();
+  assert.equal(
+    calls.filter((c) => c.uri.endsWith('/enable')).length,
+    pollingEnables,
+    'polling, exhaustion and lifecycle recovery never enable Home'
+  );
   gateBackend = true;
   phase = 'active';
   listeners.webOSRelaunch();
