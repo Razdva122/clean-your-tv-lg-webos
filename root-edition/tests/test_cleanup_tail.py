@@ -33,6 +33,7 @@ function path(p){
 }
 var fs=Object.create(real);
 fs.openSync=function(p,flags,mode){var fd=real.openSync(path(p),flags,mode);paths[fd]=path(p);return fd;};
+fs.fstatSync=function(fd){var info=real.fstatSync(fd);if(process.env.TMP_OWNER && paths[fd]===base+'/tmp')info.uid=Number(process.env.TMP_OWNER);return info;};
 ['lstatSync','readFileSync','readlinkSync','readdirSync','rmdirSync','unlinkSync'].forEach(function(name){fs[name]=function(p){
  if(name==='readdirSync' && process.env.SWAP_RUNTIME && process.env.CYTV_REAL_PROC_FD==='1' && /^\/proc\/self\/fd\/\d+$/.test(p)){
   var held=real.readlinkSync(p);
@@ -51,11 +52,11 @@ fs.renameSync=function(a,b){return real.renameSync(path(a),path(b));};
 var lock=process.env.OWNERSHIP_FD?Number(process.env.OWNERSHIP_FD):fs.openSync('/var/lib/clean-your-tv-installation/ownership.lock','r+');
 var promotion=process.env.PROMOTION_FD?Number(process.env.PROMOTION_FD):fs.openSync('/var/lib/clean-your-tv-python/.install.lock','r+');
 var worker=process.env.WORKER_FD?Number(process.env.WORKER_FD):fs.openSync('/var/lib/clean-your-tv-installation/worker.lock','r+');
-var fake={getuid:process.getuid,pid:999999,ppid:999998,argv:['node','-',process.env.MODE||'finish','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',process.env.TAIL_STAGE||'-',String(lock),String(promotion),String(worker),process.env.GATE_SHA||'-',process.env.REMOVAL||'dddddddddddddddddddddddddddddddd'],stdout:process.stdout};
+var fake={getuid:process.getuid,pid:999999,ppid:999998,argv:['node','-',process.env.MODE||'finish','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',process.env.TAIL_STAGE||'-',String(lock),String(promotion),String(worker),process.env.GATE_SHA||'-',process.env.REMOVAL||'dddddddddddddddddddddddddddddddd'],stdout:process.stdout,stderr:process.stderr};
 var cp={spawnSync:function(command,args,options){
  if(command==='/proc/self/fd/3')return require('child_process').spawnSync(command,args,options);
  var method=args[2],value={returnValue:true};
- if(method.indexOf('listApps')!==-1)value.apps=[];
+ if(method.indexOf('listApps')!==-1){if(process.env.PRIVATE_ERROR)throw Error(process.env.PRIVATE_ERROR);value.apps=[];}
  else if(method.indexOf('getSystemSettings')!==-1)value.settings={defaultApps:{home:process.env.FOREIGN_ROUTE?'changed':'third.party.home'}};
  else if(method.indexOf('getProfiles')!==-1){if(process.env.FAIL_FINAL_READBACK && ++profileReads===2)throw Error('injected final readback failure');if(process.env.MISSING_PROFILES)value.returnValue=false;else value.profiles={defaultApps:{categories:{home:'third.party.home'}},idleApp:{appId:'third.party.home'}};}
  else if(method.indexOf('activitymanager')!==-1)value.activities=JSON.parse(process.env.ACTIVITIES||'[]');
@@ -63,7 +64,7 @@ var cp={spawnSync:function(command,args,options){
  else throw Error('Unexpected RPC '+method);
  return {status:0,stdout:Buffer.from(JSON.stringify(value))};
 }};
-try{vm.runInNewContext(real.readFileSync(source,'utf8').replace('}catch(error){','}catch(error){console.error(error.stack);'),{require:function(name){return name==='fs'?fs:name==='child_process'?cp:require(name);},process:fake,Buffer:Buffer,console:console});}
+try{vm.runInNewContext(real.readFileSync(source,'utf8'),{require:function(name){return name==='fs'?fs:name==='child_process'?cp:require(name);},process:fake,Buffer:Buffer,console:console});}
 finally{real.closeSync(lock);real.writeFileSync(process.env.MUTATION_LOG||base+'/mutations.json',JSON.stringify(calls));}
 process.exitCode=fake.exitCode||0;
 '''
@@ -111,12 +112,12 @@ class CleanupTail(unittest.TestCase):
                                  '-', '0', '-1', '-1', '-', 'd'*32],
                                 input=source, capture_output=True, text=True, timeout=15)
         self.assertEqual(result.returncode, 1, result.stderr)
-        self.assertEqual(result.stderr, '')
+        self.assertEqual(result.stderr, 'CYTV_CLEAN_TAIL: invalid-cleanup-selector\n')
         self.assertEqual(json.loads(result.stdout), {
             'operation':'../foreign', 'removal':'d'*32, 'state':'recovery_required',
-            'stage':'private-cleanup', 'current':False, 'reason':'private-cleanup-incomplete'})
+            'stage':'private-cleanup', 'current':False, 'reason':'private-cleanup-incomplete','cleanup_error':'invalid-cleanup-selector'})
 
-    def first_handoff(self, managed_executor=False, executable_symlink=False, native=False):
+    def first_handoff(self, managed_executor=False, executable_symlink=False, native=False, diagnostic=False):
         import fcntl
         import install_device
         import python_binding
@@ -164,9 +165,10 @@ class CleanupTail(unittest.TestCase):
             harness.write_text(HARNESS.replace('/var/',str(self.base/'var')+'/'))
             env={**kwargs['env'],'OWNERSHIP_FD':args[5],'PROMOTION_FD':args[6],'WORKER_FD':args[7],
                  'MUTATION_LOG':str(self.base/'first-mutations.json')}
+            if diagnostic:env['FOREIGN_ROUTE']='1'
             result=run([os.environ.get('NODE8','node'),str(harness),'/',str(target)],
                        stdout=subprocess.PIPE,stderr=subprocess.PIPE,env=env,pass_fds=kwargs['pass_fds'],timeout=15)
-            self.assertEqual(result.returncode,0,result.stderr.decode())
+            self.assertEqual(result.returncode,1 if diagnostic else 0,result.stderr.decode())
             return result
         directory=python_binding._directory
         with patch.object(python_binding,'MANAGED_ROOT',self.runtime.parent), \
@@ -181,6 +183,15 @@ class CleanupTail(unittest.TestCase):
                 self.assertEqual(calls,[])
                 self.assertTrue((self.runtime/'lib/secret.py').exists())
             else:
+                if diagnostic:
+                    import io
+                    from contextlib import redirect_stderr
+                    output=io.StringIO()
+                    with redirect_stderr(output):reply=device.finish_clean_tail(self.record)
+                    self.assertEqual(reply['cleanup_error'],'route-changed')
+                    self.assertEqual(output.getvalue(),'CYTV_CLEAN_TAIL: route-changed\n')
+                    self.assertTrue(boot.exists())
+                    return
                 reply=device.finish_clean_tail(self.record)
                 self.assertIsNotNone(reply,'Native Python still requires the final Node absence proof')
                 self.assertEqual(reply['stage'],'verified-clean',reply)
@@ -200,6 +211,9 @@ class CleanupTail(unittest.TestCase):
                     self.assertEqual(repeat['stage'],'verified-clean')
                     self.assertEqual(len(calls),2)
                     self.assertFalse(self.runtime.parent.exists());self.assertFalse(boot.exists())
+
+    def test_python_handoff_relays_safe_tail_guard_to_existing_stderr(self):
+        self.first_handoff(native=True,diagnostic=True)
 
     def test_native_python_first_handoff_retires_boot_directory_without_managed_runtime(self):
         self.first_handoff(native=True)
@@ -267,6 +281,34 @@ class CleanupTail(unittest.TestCase):
         result,reply=self.run_tail()
         self.assertEqual(result.returncode,0,result.stderr)
         self.assertEqual(reply['stage'],'verified-clean');self.assertFalse(directory.exists())
+
+    def test_exact_root_sticky_tmp_parent_allows_boot_directory_retirement(self):
+        directory=self.boot_directory();(self.base/'tmp').chmod(0o1777)
+        result,reply=self.run_tail(TMP_OWNER='0')
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(reply['stage'],'verified-clean');self.assertFalse(directory.exists())
+
+    def test_sticky_parent_exception_rejects_foreign_uid_and_other_writable_modes(self):
+        directory=self.boot_directory()
+        for owner,mode in (('123456',0o1777),('0',0o777),('0',0o1775)):
+            with self.subTest(owner=owner,mode=oct(mode)):
+                (self.base/'tmp').chmod(mode)
+                result,reply=self.run_tail(TMP_OWNER=owner)
+                self.assertNotEqual(result.returncode,0)
+                self.assertTrue(directory.exists())
+
+    def test_other_sticky_parent_does_not_gain_tmp_exception(self):
+        self.runtime.parent.chmod(0o1777)
+        result,reply=self.run_tail()
+        self.assertNotEqual(result.returncode,0)
+        self.assertTrue(self.runtime.exists())
+        self.assertEqual(reply.get('cleanup_error'),'unsafe-cleanup-member')
+
+    def test_sticky_private_boot_leaf_does_not_gain_parent_exception(self):
+        directory=self.boot_directory();directory.chmod(0o1777)
+        result,reply=self.run_tail(TMP_OWNER='0')
+        self.assertNotEqual(result.returncode,0)
+        self.assertTrue((directory/'session.json').exists())
 
     def test_unknown_boot_directory_member_is_preserved(self):
         directory=self.boot_directory();(directory/'foreign').write_text('preserve')
@@ -361,6 +403,18 @@ class CleanupTail(unittest.TestCase):
                 self.assertNotEqual(result.returncode,0)
                 self.assertTrue(self.runtime.exists())
                 self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+
+    def test_failure_exposes_only_known_guard_code(self):
+        result,reply=self.run_tail(FOREIGN_ROUTE='1')
+        self.assertNotEqual(result.returncode,0)
+        self.assertEqual(reply.get('cleanup_error'),'route-changed')
+        self.assertEqual(result.stderr,'CYTV_CLEAN_TAIL: route-changed\n')
+        for private in ('sensitivecredential','ENOENT: private path /private/secret-key'):
+            result,reply=self.run_tail(PRIVATE_ERROR=private)
+            self.assertNotEqual(result.returncode,0)
+            self.assertEqual(reply.get('cleanup_error'),'cleanup-guard-failed')
+            self.assertNotIn(private,result.stdout+result.stderr)
+            self.assertEqual(result.stderr,'CYTV_CLEAN_TAIL: cleanup-guard-failed\n')
 
     def test_changed_foreign_route_refuses_before_delete(self):
         result,reply=self.run_tail(FOREIGN_ROUTE='1')

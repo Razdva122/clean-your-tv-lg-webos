@@ -1034,6 +1034,10 @@ class LocalDevice:
                 env={key:value for key,value in os.environ.items() if key not in ('NODE_OPTIONS','NODE_PATH')})
             reply=json.loads(result.stdout)
             if reply.get('operation')!=record['operation'] or reply.get('removal')!=record['removal']:raise ValueError('cleanup_tail_unconfirmed')
+            if result.returncode:
+                code=reply.get('cleanup_error','cleanup-guard-failed')
+                if not isinstance(code,str) or not re.fullmatch('[a-z][a-z0-9-]{0,63}',code):code='cleanup-guard-failed'
+                sys.stderr.write('CYTV_CLEAN_TAIL: '+code+'\n')
             return reply
         finally:
             if promotion is not None:os.close(promotion)

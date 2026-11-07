@@ -12,14 +12,16 @@ var privateCleanupSource=null;
 function at(fd,name){return '/proc/self/fd/'+fd+(name?'/'+name:'');}
 function identity(a,b){return a.dev===b.dev && a.ino===b.ino;}
 function owned(info,dir){if(info.uid!==uid || (info.mode&18) || (dir?!info.isDirectory():!info.isFile() || info.nlink!==1))throw Error('unsafe-cleanup-member');}
-function openDir(path){
+function openDir(path,parent){
   var fd=fs.openSync('/',C.O_RDONLY|C.O_DIRECTORY|C.O_NOFOLLOW);opened.push(fd);
   path.split('/').filter(Boolean).forEach(function(name){
     fd=fs.openSync(at(fd,name),C.O_RDONLY|C.O_DIRECTORY|C.O_NOFOLLOW);opened.push(fd);
     var info=fs.fstatSync(fd);
     if(!info.isDirectory() || (info.uid!==0 && info.uid!==uid) || ((info.mode&18) && !(info.mode&512)))throw Error('unsafe-cleanup-directory');
   });
-  owned(fs.fstatSync(fd),true);return fd;
+  var info=fs.fstatSync(fd);
+  if(!(parent && path==='/tmp' && info.uid===0 && (info.mode&4095)===1023))owned(info,true);
+  return fd;
 }
 function read(fd,name){
   var file=fs.openSync(at(fd,name),C.O_RDONLY|C.O_NOFOLLOW|C.O_NONBLOCK);
@@ -149,7 +151,7 @@ function retire(path,inventory,pin,removeRoot){
     (item.dir?fs.rmdirSync:fs.unlinkSync)(path);fs.fsyncSync(item.fd);
   });
   if(removeRoot){
-    var slash=path.lastIndexOf('/'),parent=openDir(path.slice(0,slash)),name=path.slice(slash+1);
+    var slash=path.lastIndexOf('/'),parent=openDir(path.slice(0,slash),true),name=path.slice(slash+1);
     if(!identity(fs.fstatSync(root),fs.lstatSync(at(parent,name))))throw Error('cleanup-root-changed');
     fs.rmdirSync(at(parent,name));fs.fsyncSync(parent);
   }
@@ -220,5 +222,10 @@ try{
   }
 }catch(error){
   if(mode==='inspect' && error.code==='ENOENT')process.stdout.write(JSON.stringify({operation:id,removal:removal,state:'not-ready'}));
-  else {process.stdout.write(JSON.stringify({operation:id,removal:removal,state:'recovery_required',stage:'private-cleanup',current:false,reason:'private-cleanup-incomplete'}));process.exitCode=1;}
+  else {
+    var known='boot-session-remains cleanup-member-changed cleanup-readback-unavailable cleanup-root-changed different-removal-intent incomplete-removal-receipts invalid-cleanup-selector invalid-runtime-inventory invalid-support-stage invalid-tail-stage invalid-tail-stages no-root-private-cleanup-required no-root-private-readback-unavailable original-lock-changed original-lock-required original-promotion-lock-missing original-removal-required oversized-cleanup-record owned-activity-remains owned-input-remains owned-private-registration-remains owned-process-still-used owned-registration-remains owned-route-remains package-absence-unverified package-remains private-member-remains restart-required route-changed runtime-cleanup-proof-required runtime-member-changed startup-remains support-stage-remains unexpected-promotion-lock unknown-ownership-receipt unknown-runtime-directory unknown-runtime-member unknown-support-directory unknown-support-member unknown-tail-stage unsafe-cleanup-directory unsafe-cleanup-member'.split(' ');
+    var diagnostic=known.indexOf(error.message)!==-1?error.message:'cleanup-guard-failed';
+    process.stderr.write('CYTV_CLEAN_TAIL: '+diagnostic+'\n');
+    process.stdout.write(JSON.stringify({operation:id,removal:removal,state:'recovery_required',stage:'private-cleanup',current:false,reason:'private-cleanup-incomplete',cleanup_error:diagnostic}));process.exitCode=1;
+  }
 }finally{opened.reverse().forEach(function(fd){try{fs.closeSync(fd);}catch(e){}});}

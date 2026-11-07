@@ -268,3 +268,20 @@ No-root removal/carrier tests passed; two actual stdin scenarios passed on each
 exact Node 0.10.15, 0.10.25, 0.12.2 and 8.12.0, including exact carrier bytes,
 retry and malformed-carrier refusal. Final helper JavaScript SHA256 is
 `a0dde7ab2edee26aea947390c05b5e31d9bc30211cdaadd20aa368da6a751fb1`.
+
+### Finalizer parent and safe guard diagnostics
+
+The finalizer keeps private directories strict, while opening the exact shared
+`/tmp` parent permits only UID 0 and mode `01777` for the final pinned `rmdir`.
+The previous final-directory check incorrectly rejected that standard sticky
+parent after deleting the owned directory's contents. Root ownership, exact
+mode/path, no-follow traversal and the final child inode recheck remain required.
+Foreign UID, non-sticky or unexpected mode, another parent and a writable private
+leaf remain refused. The realistic sticky-parent regression failed before the fix.
+
+Failure diagnostics now expose only an exact whitelist of fixed guard codes on
+the existing reply/stderr paths; unknown or private messages map to a fixed
+fallback. No path, stack or arbitrary error text is exported, and public pending
+reason/completion authority is unchanged. The latest coordinator run passed 94
+Root cleanup/tail/simple/handoff cases with three platform skips. Exact Node 8
+checks cover the diagnostic and sticky-parent changes, including refusal cases.
