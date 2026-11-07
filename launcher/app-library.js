@@ -54,25 +54,42 @@
       refresh:function(apps) {
         // TV queries can return only part of the installed inventory. Absence
         // from a response must not erase saved tiles or apps hidden from Home.
-        // Preserve embedded icons for incomplete/raw-URL metadata, but accept a fresh embedded native resource.
+        // Preserve packaged/embedded icons, but refresh expiring remote URLs.
         var previous = catalog;
-        var updates = clean(apps).map(function(a) { var old = previous.filter(function(b) { return b.id === a.id; })[0]; if (old && old.icon && !/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(a.icon)) a.icon = old.icon; return a; });
+        var embedded = /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
+        var updates = clean(apps).map(function(a) {
+          var old = previous.filter(function(b) { return b.id === a.id; })[0];
+          if (old && old.icon && (!a.icon || !/^https?:\/\//i.test(old.icon) && !embedded.test(a.icon))) a.icon = old.icon;
+          return a;
+        });
         catalog = clean(updates.concat(previous));
       }
     };
   }
   function installed(callback) {
-    var bridge, done = false;
-    var timer = setTimeout(function() { finish(null); }, 12000);
-    function finish(apps) { if (done) return; done = true; clearTimeout(timer); if (bridge) try { bridge.cancel(); } catch (_) {} callback(apps); }
-    try {
-      bridge = new PalmServiceBridge();
-      bridge.onservicecallback = function(raw) {
-        try { var result = JSON.parse(raw); finish(result.returnValue === true && Array.isArray(result.apps) ? clean(result.apps) : null); } catch (_) { finish(null); }
-      };
-      var root = !!document.querySelector('script[src="root-settings.js"]');
-      bridge.call('luna://' + (root ? 'com.cleanyourtv.root.preview.service' : 'com.local.nativehome.service') + '/listApps', '{}');
-    } catch (_) { finish(null); }
+    var bridge, timer, done = false, generation = 0;
+    var root = !!document.querySelector('script[src="root-settings.js"]');
+    function cancel() { clearTimeout(timer); if (bridge) try { bridge.cancel(); } catch (_) {} }
+    function finish(apps) { if (done) return; done = true; cancel(); callback(apps); }
+    function read(fallback) {
+      var request = ++generation;
+      cancel();
+      function failed() { if (done || request !== generation) return; if (!root && !fallback) read(true); else finish(null); }
+      timer = setTimeout(failed, fallback ? 6000 : 12000);
+      try {
+        bridge = new PalmServiceBridge();
+        bridge.onservicecallback = function(raw) {
+          if (done || request !== generation) return;
+          var apps = null;
+          try { var result = JSON.parse(raw); if (result && result.returnValue === true && Array.isArray(result.apps)) apps = clean(result.apps); } catch (_) {}
+          if (apps !== null) finish(apps); else failed();
+        };
+        // A cross-package LS2 refusal need not block the existing native reader.
+        var service = root ? 'com.cleanyourtv.root.preview.service' : fallback ? 'com.gathin.tvhome.renewal' : 'com.local.nativehome.service';
+        bridge.call('luna://' + service + '/listApps', '{}');
+      } catch (_) { failed(); }
+    }
+    read(false);
   }
   return {create:create, installed:installed, key:KEY};
 }));

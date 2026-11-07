@@ -5,15 +5,15 @@ var diagnostics=require('./diagnostics');
 module.exports=function(fs,dir,options){
  options=options||{};
  var busy=false,now=options.now||Date.now,later=options.later||setTimeout;
- var inputs=options.inputs===true,prefix=inputs?'input':'home';
+ var inputs=options.inputs===true,catalog=options.catalog===true,prefix=catalog?'catalog':inputs?'input':'home';
  var nonce=options.nonce||function(){return require('crypto').randomBytes(16).toString('hex');};
  return function(method,payload){
   var object=payload&&typeof payload==='object'&&!Array.isArray(payload);
   var generation=method==='presentationDismissed'&&object?payload.generation:null;
-  if((inputs?['inputStatus']:['homeStatus','setHomeControl','openLGHome','presentationContext','presentationDismissed']).indexOf(method)<0||
+  if((catalog?['listApps']:inputs?['inputStatus']:['homeStatus','setHomeControl','openLGHome','presentationContext','presentationDismissed']).indexOf(method)<0||
      (method==='presentationContext'&&(!object||Object.keys(payload).length!==0))||
      (method==='presentationDismissed'&&(!object||Object.keys(payload).length!==1||Object.keys(payload)[0]!=='generation'||typeof generation!=='number'||!isFinite(generation)||Math.floor(generation)!==generation||generation<0||generation>9007199254740991))||
-     (method==='inputStatus'&&(!payload||typeof payload!=='object'||Array.isArray(payload)||Object.keys(payload).length!==0))||
+     ((method==='inputStatus'||method==='listApps')&&(!payload||typeof payload!=='object'||Array.isArray(payload)||Object.keys(payload).length!==0))||
      (method==='setHomeControl'&&(!payload||typeof payload.enabled!=='boolean')))
    return Promise.resolve({returnValue:false,errorText:'Invalid Home request'});
   if(busy)return Promise.resolve({returnValue:false,errorText:'Home control busy',diagnostic:diagnostics.describe('home','wait',{code:'BUSY'})});

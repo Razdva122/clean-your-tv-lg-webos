@@ -224,3 +224,31 @@ test('input read rejection returns a generic failure and releases the read slot'
  }
  assert.equal(reads,2);assert(!blocked(c));
 });
+
+test('catalog broker reads through the unprivileged controller independently of inputs and Home',async()=>{
+ let resolve,reads=0;const c=controller({inputQuery:options=>{reads++;assert.deepEqual(JSON.parse(JSON.stringify(options)),{timeout:3000});return new Promise(r=>resolve=r);}});
+ const own='/media/developer/apps/usr/palm/services/com.gathin.tvhome.renewal/state/home-control/';
+ function request(id,extra={}){c.files.set(own+'catalog-request.json',JSON.stringify({id:id.repeat(32),method:'listApps',expires:6000,...extra}));c.advance(400);}
+ request('a');await new Promise(r=>setImmediate(r));assert.equal(reads,1);
+ request('b');await new Promise(r=>setImmediate(r));assert.equal(reads,1,'in-flight catalog reads coalesce');
+ c.files.set(own+'home-request.json',JSON.stringify({id:'d'.repeat(32),method:'homeStatus',expires:6000}));c.advance(400);assert.equal(JSON.parse(c.files.get(own+'home-response.json')).enabled,true);
+ resolve([{id:'org.example',title:'Example'}]);await new Promise(r=>setImmediate(r));
+ assert.equal(JSON.parse(c.files.get(own+'catalog-response.json')).apps[0].id,'org.example');assert.equal(JSON.parse(c.files.get(own+'catalog-response.json')).id,'b'.repeat(32));
+ request('c',{method:'setHomeControl',enabled:false});await new Promise(r=>setImmediate(r));assert.equal(reads,1,'catalog channel cannot mutate Home');
+ request('e');await new Promise(r=>setImmediate(r));assert.equal(reads,2);
+ const previous=c.files.get(own+'catalog-response.json');c.command('stop');c.advance(400);resolve([{id:'late',title:'Late'}]);await new Promise(r=>setImmediate(r));assert.equal(c.files.get(own+'catalog-response.json'),previous);assert(blocked(c));
+});
+test('catalog broker denial stays generic, releases its slot and never starts Helper',async()=>{
+ let reads=0;const c=controller({inputQuery:()=>{reads++;return Promise.reject(Error('PRIVATE key path'));}});
+ const own='/media/developer/apps/usr/palm/services/com.gathin.tvhome.renewal/state/home-control/';
+ for(const id of ['a','b']){c.files.set(own+'catalog-request.json',JSON.stringify({id:id.repeat(32),method:'listApps',expires:6000}));c.advance(400);await new Promise(r=>setImmediate(r));const r=JSON.parse(c.files.get(own+'catalog-response.json'));assert.equal(r.returnValue,false);assert(!JSON.stringify(r).includes('PRIVATE'));}
+ assert.equal(reads,2);assert.equal(c.workers.length,1);assert(!blocked(c));
+});
+
+for(const terminal of ['EXIT 27\n','EXIT 30\n'])test('catalog reply cannot escape terminal relay output '+terminal.trim(),async()=>{
+ let resolve,reads=0;const c=controller({inputQuery:()=>{reads++;return new Promise(r=>resolve=r);}});
+ const own='/media/developer/apps/usr/palm/services/com.gathin.tvhome.renewal/state/home-control/';
+ c.files.set(own+'catalog-request.json',JSON.stringify({id:'a'.repeat(32),method:'listApps',expires:6000}));c.advance(400);await new Promise(r=>setImmediate(r));assert.equal(reads,1);
+ c.workers[0].stdout.emit('data',Buffer.from(terminal));resolve([{id:'late',title:'Late'}]);await new Promise(r=>setImmediate(r));assert(!c.files.has(own+'catalog-response.json'));
+ c.files.set(own+'catalog-request.json',JSON.stringify({id:'b'.repeat(32),method:'listApps',expires:6000}));c.advance(400);await new Promise(r=>setImmediate(r));assert.equal(reads,1,'terminal relay must not begin another catalog query');
+});

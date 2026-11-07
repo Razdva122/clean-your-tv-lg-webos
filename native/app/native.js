@@ -129,8 +129,16 @@ var homeControl=require('./home-control')(fs,data,function(enabled){
 // Keep the legacy channel for older Home packages during upgrade/rollback.
 // New Home submits only through its own service directory, visible in its jail.
 var homeChannels=[{directory:data,last:''},{directory:'/media/developer/apps/usr/palm/services/com.gathin.tvhome.renewal/state/home-control',last:''},
- {directory:'/media/developer/apps/usr/palm/services/com.gathin.tvhome.renewal/state/home-control',last:'',inputOnly:true}];
-var inputStatusPending=null;
+ {directory:'/media/developer/apps/usr/palm/services/com.gathin.tvhome.renewal/state/home-control',last:'',inputOnly:true},
+ {directory:'/media/developer/apps/usr/palm/services/com.gathin.tvhome.renewal/state/home-control',last:'',catalogOnly:true}];
+var inputStatusPending=null,catalogPending=null;
+function readCatalog(){
+ if(!catalogPending){
+  catalogPending=Promise.resolve().then(function(){return require('./app-inventory')({timeout:3000});});
+  catalogPending=catalogPending.then(function(apps){catalogPending=null;return apps;},function(){catalogPending=null;throw Error('App inventory unavailable');});
+ }
+ return catalogPending;
+}
 function readInputs(){
  if(!inputStatusPending){
   inputStatusPending=Promise.resolve().then(function(){return require('./app-inventory')({inputs:true,timeout:3000});});
@@ -139,13 +147,14 @@ function readInputs(){
  return inputStatusPending;
 }
 function readHomeRequest(channel){
- var directory=channel.directory,prefix=channel.inputOnly?'input':'home';
+ var directory=channel.directory,prefix=channel.catalogOnly?'catalog':channel.inputOnly?'input':'home';
  var request;
  try{request=JSON.parse(fs.readFileSync(directory+'/'+prefix+'-request.json','utf8'));}catch(e){return;}
  if(!request||typeof request.id!=='string'||!/^[a-f0-9]{32}$/.test(request.id)||request.id===channel.last)return;
  channel.last=request.id;
  if(typeof request.expires!=='number'||request.expires<Date.now()||request.expires>Date.now()+6000)return;
- if(channel.inputOnly&&request.method!=='inputStatus')return;
+ if((channel.inputOnly&&request.method!=='inputStatus')||(channel.catalogOnly&&request.method!=='listApps'))return;
+ if(channel.catalogOnly&&(stopping||stopRequested||fs.existsSync(data+'/blocked')||child&&child.reason!==undefined))return;
  function respond(result){
   result.id=request.id;
   try{fs.writeFileSync(directory+'/'+prefix+'-response.tmp',JSON.stringify(result),{mode:432});fs.chmodSync(directory+'/'+prefix+'-response.tmp',432);fs.renameSync(directory+'/'+prefix+'-response.tmp',directory+'/'+prefix+'-response.json');}catch(e){log({event:'home-response-error',error:String(e)});}
@@ -166,6 +175,9 @@ function readHomeRequest(channel){
   else if(request.method==='homeStatus')respond({returnValue:true,enabled:homeControl.enabled()});
   else if(request.method==='setHomeControl'){homeControl.set(request.enabled);respond({returnValue:true,enabled:homeControl.enabled()});}
   else if(request.method==='openLGHome')visitLG(function(ok){respond({returnValue:ok});});
+  else if(channel.catalogOnly&&request.method==='listApps')readCatalog().then(function(apps){
+   if(!stopping&&!stopRequested&&!fs.existsSync(data+'/blocked')&&!(child&&child.reason!==undefined)&&request.expires>Date.now())respond({returnValue:true,apps:apps});
+  },function(){if(!stopping&&!stopRequested&&!fs.existsSync(data+'/blocked')&&!(child&&child.reason!==undefined)&&request.expires>Date.now())respond({returnValue:false,errorText:'App inventory unavailable'});});
   else if(channel.inputOnly&&request.method==='inputStatus')readInputs().then(function(devices){
    if(!stopping&&!stopRequested&&!fs.existsSync(data+'/blocked')&&request.expires>Date.now())respond({returnValue:true,devices:devices});
   },function(){if(!stopping&&!stopRequested&&!fs.existsSync(data+'/blocked')&&request.expires>Date.now())respond({returnValue:false,errorText:'Input status unavailable'});});
