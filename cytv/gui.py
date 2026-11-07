@@ -468,6 +468,9 @@ class Wizard(QMainWindow):
                 if profile:
                     args += ['--host', profile['host'], '--edition', profile['edition'],
                              '--port', str(profile['port']), '--no-discovery']
+                    for field in ('connection', 'root_variant'):
+                        if profile.get(field):
+                            args += ['--'+field.replace('_','-'), profile[field]]
                 args += ['--language', i18n.language_choice()]
                 code = self.run(args, ask=self.channel.ask, secret=self.channel.secret, write=self.channel.console)
             except Exception:
@@ -547,6 +550,9 @@ class Wizard(QMainWindow):
                 self.subtitle.show()
         elif kind == 'recovery':
             self.recovery_profile = dict(value)
+        elif kind == 'selected-profile':
+            self.selected_profile = dict(value)
+            self.reset_checks()
         elif kind == 'prompt':
             self.show_prompt(value)
         elif kind == 'done':

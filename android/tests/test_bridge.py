@@ -9,6 +9,23 @@ SOURCE = Path(__file__).resolve().parents[1] / 'app/src/main/python/android_brid
 
 
 class BridgeTests(unittest.TestCase):
+    def test_selected_profile_event_preserves_choices_without_identity_paths(self):
+        module = self.module()
+        class Native:
+            def __init__(self): self.events=[]
+            def emit(self, raw): self.events.append(json.loads(raw))
+        native=Native()
+        console=module.AndroidConsole(module.Callbacks(native))
+        console.selected_profile({'host':'192.0.2.10','port':2222,'edition':'no-root',
+                                  'connection':'root-ssh','identity':'PRIVATE'})
+        event=native.events[-1]
+        self.assertEqual(event['kind'],'selected-profile')
+        self.assertEqual(event['profile']['connection'],'root-ssh')
+        self.assertNotIn('PRIVATE',json.dumps(event))
+        args=module.arguments(event['profile']|{'language':'en'},'/private/profiles')
+        self.assertIn('--connection',args)
+        self.assertIn('root-ssh',args)
+
     def test_uninstall_is_an_explicit_supported_action(self):
         module = self.module()
         args = module.arguments({'host':'192.0.2.10', 'edition':'no-root',

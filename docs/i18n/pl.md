@@ -2,6 +2,12 @@
 
 Clean Your TV to własny ekran główny dla LG webOS: Twoje aplikacje w Twojej kolejności, bez sponsorowanych rzędów w tym menu. Zainstaluj go z komputera lub telefonu z Androidem; potem komputer może być wyłączony.
 
+## Kandydat UNRELEASED: starszy Node.js w TV
+
+Te opcje dotyczą nieopublikowanego kandydata, a nie opublikowanych plików do pobrania. Jeśli standardowy Root odrzuci wersję Node.js w TV (wymaga Node.js 8+), instalator może zaproponować **No-root przez istniejący SSH root**: Home i Home Helper bez instalowania Developer Mode. Nigdy nie włączaj Developer Mode przy istniejącym root. Tylko **dokładnie Node.js 0.12.2** pozwala też wybrać **Root Beta**, z osobnymi pakietami i wyraźnym potwierdzeniem. Systemowy Node.js nie jest zastępowany; nie ma aktualizacji automatycznych/OTA. Użyj instalatora na komputerze.
+
+Pozostałe wymagania dotyczące komponentów natywnych, interfejsów Home i Pythona nadal obowiązują. Testy na fizycznym TV pod nadzorem właściciela pozostają niewykonane; nie jest to potwierdzenie zgodności. Zapisz raport diagnostyczny, oznacz niewykonane testy i dobrowolnie udostępnij ręcznie wynik bez prywatnych danych według [poradnika opinii](../FEEDBACK.md). Nic nie jest publikowane automatycznie.
+
 ## 1. Pobierz instalator
 
 Kliknij obrazek swojego urządzenia. Przyciski pobierają najnowsze opublikowane wydanie. Na Macu wybierz Apple Silicon (M1 lub nowszy) albo Intel; sprawdź w menu Apple → Ten Mac.

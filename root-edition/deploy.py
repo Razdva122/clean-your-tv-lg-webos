@@ -13,6 +13,7 @@ from observed_install import install as observed_install, OutcomeUnknown
 from python_binding import command as python_command, install_launcher
 
 APP = 'com.cleanyourtv.root.preview'
+LEGACY_NODE_BETA = False
 STATE = Path('/var/lib/clean-your-tv-root')
 INSTALLED = Path('/media/developer/apps')
 RUNTIME_FILES = ('bounded_profile_trial.py', 'cli.py', 'update_guard.py', 'device_adapter.py', 'guardian_device.py',
@@ -32,14 +33,16 @@ def require_device():
 
 def require_node():
     try:
+        policy = ('process.versions.node === "0.12.2"' if LEGACY_NODE_BETA else
+                  'Number(process.versions.node.split(".")[0]) >= 8')
         result = subprocess.run(['/usr/bin/node', '-e',
-            'process.exit(Number(process.versions.node.split(".")[0]) >= 8 ? 0 : 1)'],
+            'process.exit((' + policy + ') ? 0 : 1)'],
             stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10)
         if result.returncode == 0:
             return
     except (OSError, subprocess.TimeoutExpired):
         pass
-    raise RuntimeError('Root requires TV Node.js 8+')
+    raise RuntimeError('Root Beta requires TV Node.js 0.12.2' if LEGACY_NODE_BETA else 'Root requires TV Node.js 8+')
 
 
 def checked_file(root, name):
@@ -59,6 +62,8 @@ def verify_bundle(bundle, allow_experimental=False):
     bundle = Path(bundle).resolve()
     manifest = json.loads(checked_file(bundle, 'bundle.json'))
     release = json.loads(checked_file(bundle, 'release.json'))
+    if release.get('runtime_variant') != ('node012-beta' if LEGACY_NODE_BETA else None):
+        raise ValueError('Root runtime variant does not match the device driver')
     experimental = release.get('home_backend') == 'c1-native-gate'
     if 'home_backend' in release or 'experimental' in release or 'native_sha256' in release:
         if (not experimental or release.get('experimental') is not True

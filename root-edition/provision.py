@@ -13,6 +13,7 @@ import subprocess
 from python_binding import verify_binding
 
 NAME = 'com.cleanyourtv.root.preview.service'
+LEGACY_NODE_BETA = False
 LEASE_NAME = 'com.webos.cleanyourtv.root.lease'
 SERVICE = Path('/media/developer/apps/usr/palm/services') / NAME
 STATE = Path('/var/lib/clean-your-tv-root')
@@ -73,7 +74,7 @@ def runner_bytes():
     return ('#!/bin/sh\nset -eu\n[ "$#" -eq 0 ] || exit 2\n'
             'cd '+str(PRIVATE_SERVICE)+'\n'
             'export NODE_PATH=/usr/palm/frameworks:/usr/lib/nodejs:/usr/lib/node_modules\n'
-            'exec /usr/bin/node --require '+str(PRIVATE_SERVICE/'startup-diagnostics.js')+' /usr/palm/services/jsservicelauncher/bootstrap-node.js -- '
+            'exec /usr/bin/node '+('' if LEGACY_NODE_BETA else '--require '+str(PRIVATE_SERVICE/'startup-diagnostics.js')+' ')+'/usr/palm/services/jsservicelauncher/bootstrap-node.js -- '
             +str(STATE/'bootstrap.pid')+' /var/palm/ls2-dev '+str(PRIVATE_SERVICE)+'\n').encode()
 
 def prepare_private_service():

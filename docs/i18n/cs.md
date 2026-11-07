@@ -2,6 +2,12 @@
 
 Clean Your TV je vaše vlastní domovská obrazovka pro LG webOS: aplikace ve vašem pořadí, bez sponzorovaných řádků v této nabídce. Instalujte z počítače nebo telefonu s Androidem; po nastavení může být počítač vypnutý.
 
+## Kandidát UNRELEASED: starší Node.js v TV
+
+Tyto možnosti patří k dosud nevydanému kandidátovi, nikoli k vydaným souborům ke stažení. Pokud běžný Root odmítne verzi Node.js v TV (vyžaduje Node.js 8+), instalátor může nabídnout **No-root přes stávající root SSH**: Home a Home Helper bez instalace Developer Mode. Na TV se stávajícím root nikdy nezapínejte Developer Mode. Jen **přesně Node.js 0.12.2** umožňuje také **Root Beta**, se samostatnými balíčky a výslovným potvrzením. Systémový Node.js se nenahrazuje a automatické/OTA aktualizace nejsou dostupné; použijte instalátor v počítači.
+
+Ostatní požadavky na nativní komponenty, rozhraní Home a Python zůstávají povinné. Fyzické testy pod dohledem vlastníka zatím nebyly provedeny; nejde o potvrzení kompatibility. Uložte diagnostickou zprávu, označte neprovedené kontroly a dobrovolně sdílejte ručně výsledek bez soukromých údajů podle [průvodce zpětnou vazbou](../FEEDBACK.md). Nic se nezveřejňuje automaticky.
+
 ## 1. Stáhněte instalátor
 
 Klikněte na obrázek svého zařízení. Tlačítka stahují nejnovější zveřejněné vydání. Na Macu vyberte Apple Silicon (M1 nebo novější) nebo Intel; typ najdete v nabídce Apple → O tomto Macu.

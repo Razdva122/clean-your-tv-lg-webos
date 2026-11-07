@@ -2,6 +2,12 @@
 
 Clean Your TV 为 LG webOS 提供个人主屏幕：按自己的顺序排列应用，此菜单没有推广内容行。使用电脑或 Android 手机安装，设置完成后即可关闭电脑。
 
+## 未发布候选版本（UNRELEASED）：电视上的旧版 Node.js
+
+这些选项属于尚未发布的候选版本，不属于已发布的下载。如果普通 Root 拒绝电视的 Node.js 版本（需要 Node.js 8+），安装程序可提供**通过现有 root SSH 使用 No-root**：使用 Home 和 Home Helper，不安装 Developer Mode。已有 root 的电视切勿启用 Developer Mode。只有**版本恰好为 Node.js 0.12.2** 时，才可另外选择使用独立软件包、需要明确确认的 **Root Beta**。不会替换系统 Node.js，也不支持自动/OTA 更新；请使用电脑安装程序。
+
+其余原生组件、Home 接口和 Python 检查仍然是必需的。由所有者监督的实体电视测试尚未进行；这不代表兼容性已获验证。请保存诊断报告，标注未测试项目，并自愿按照[反馈指南](../FEEDBACK.md)手动分享已去除隐私信息的结果。不会自动发布任何内容。
+
 ## 1. 下载安装程序
 
 点击适合设备的图片。按钮下载最新已发布版本。Mac 请选择 Apple Silicon（M1 或更新）或 Intel，可在 Apple 菜单 → 关于本机中查看。

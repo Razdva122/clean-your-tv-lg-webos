@@ -12,14 +12,18 @@ def arguments(config, directory, identity=''):
     action = config.get('action', 'install')
     if action not in ('install', 'status', 'doctor', 'home-diagnostics', 'recover', 'restore', 'uninstall'):
         raise ValueError('Unsupported Android operation')
-    profile = state.target(config.get('host', ''), config.get('edition', ''), config.get('port'))
+    profile = state.target(config.get('host', ''), config.get('edition', ''), config.get('port'),
+                           connection=config.get('connection'), root_variant=config.get('root_variant'))
     language = config.get('language', 'ru')
     if language not in i18n.LANGUAGES or language == 'auto':
         raise ValueError('Unsupported Android language')
     result = [action, '--host', profile['host'], '--edition', profile['edition'],
               '--port', str(profile['port']), '--no-discovery', '--language', language,
               '--data-dir', str(directory)]
-    if identity and profile['edition'] == 'root':
+    for field in ('connection', 'root_variant'):
+        if profile.get(field):
+            result += ['--'+field.replace('_','-'), profile[field]]
+    if identity and (profile['edition'] == 'root' or profile.get('connection') == 'root-ssh'):
         result += ['--identity', str(identity)]
     return result
 
@@ -109,6 +113,10 @@ class AndroidConsole(Console):
     def recovery(self, profile):
         self.recovery_plan({'state': 'review', 'summary': 'Review recovery options',
                             'next_step': 'Recovery data kept. Installation has not restarted.'})
+
+    def selected_profile(self, profile):
+        self.callbacks.emit(kind='selected-profile', profile={key:profile[key] for key in
+                            ('host','edition','port','connection','root_variant') if key in profile})
 
     def recovery_plan(self, value):
         super().recovery_plan(value)

@@ -26,10 +26,11 @@ def load(name, file):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--baseline', action='store_true', help='Demonstrate pre-prototype failure')
+    parser.add_argument('--beta', action='store_true', help='Exercise the separately packaged Node 0.12.2 Beta closure')
     args = parser.parse_args()
     with tempfile.TemporaryDirectory(prefix='cytv-root-node-') as directory:
         base = Path(directory).resolve()
-        kwargs = {} if args.baseline else {'legacy_node_prototype': True}
+        kwargs = {} if args.baseline else ({'legacy_node_beta': True} if args.beta else {'legacy_node_prototype': True})
         root = load('root_builder', 'root-edition/build.py').build(base/'root', version='0.0.1', **kwargs)
         updater = load('root_updater_builder', 'root-edition/build_updater.py').build(base/'root-updater', **kwargs)
         system_build = load('system_builder', 'system-updater/build.py')

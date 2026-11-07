@@ -17,6 +17,16 @@ except ImportError:
 
 @unittest.skipUnless(HAS_QT, 'Desktop build dependencies are optional for CLI tests')
 class GuiTests(unittest.TestCase):
+    def test_edition_switch_replaces_failed_root_checks_with_new_checks(self):
+        w=Wizard()
+        self.addCleanup(w.close)
+        w.receive('check',{'id':'node-version','label':'TV Node.js 8+','status':'fail','detail':''})
+        w.receive('selected-profile',{'host':'192.0.2.10','port':22,'edition':'no-root','connection':'root-ssh'})
+        w.receive('check',{'id':'helper-node','label':'TV Node.js 0.10.15+','status':'pass','detail':''})
+        self.assertNotIn('node-version',w.check_results)
+        self.assertEqual(w.check_results['helper-node']['status'],'pass')
+        self.assertNotIn('TV Node.js 8+',w.check_panel.toPlainText())
+
     def test_check_results_survive_error_steps_and_reset_at_home(self):
         w = Wizard()
         self.addCleanup(w.close)
