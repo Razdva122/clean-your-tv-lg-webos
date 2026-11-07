@@ -1,7 +1,7 @@
 # v1.12.0 — legacy runtime choices and Root follow-ups
 
 Unpublished candidate frozen on 2026-11-07 for [release PR #399](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/399).
-Final build, signatures and affected acceptance must be checked before publication.
+[Full build 42384446335:1](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42384446335) passed all 21 jobs; [verified artifacts and remaining gates](history/2026-11-07-release-1.12.0-artifacts.md). Stable signatures/publication and affected acceptance remain pending.
 New features remain outside this candidate until publication.
 
 ## Changes
