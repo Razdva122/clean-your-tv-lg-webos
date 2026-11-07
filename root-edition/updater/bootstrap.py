@@ -4,7 +4,6 @@ import json
 import os
 from pathlib import Path
 import stat
-import subprocess
 
 from updater.package import APP, inspect_package, safe_bytes
 

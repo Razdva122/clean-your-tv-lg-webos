@@ -208,8 +208,8 @@ class PackageRemoval(unittest.TestCase):
             return {'completed':True,'event':{'id':identity,'details':{'packageId':identity,'state':'removed'}}}
         record={'packages':{},'original':{'outcome':'unknown'}}
         with patch('observed_install.remove',side_effect=remove):
-            clean_removal.remove_packages(device,record,lambda stage:None,lambda app:True)
-            clean_removal.remove_packages(device,record,lambda stage:None,lambda app:True)
+            clean_removal.remove_packages(device,record,lambda stage:None)
+            clean_removal.remove_packages(device,record,lambda stage:None)
         self.assertEqual(calls,[app]);self.assertEqual(record['original']['outcome'],'unknown')
 
     def test_retry_skips_absent_package_after_connection_loss(self):
@@ -218,9 +218,9 @@ class PackageRemoval(unittest.TestCase):
         app=clean_removal.APPS[0];device=Mock();device.apps.return_value={app}
         record={'packages':{}}
         with patch('observed_install.remove',side_effect=OSError('lost')) as remove:
-            with self.assertRaises(OSError):clean_removal.remove_packages(device,record,lambda stage:None,lambda app:True)
+            with self.assertRaises(OSError):clean_removal.remove_packages(device,record,lambda stage:None)
             device.apps.return_value=set()
-            clean_removal.remove_packages(device,record,lambda stage:None,lambda app:True)
+            clean_removal.remove_packages(device,record,lambda stage:None)
         self.assertEqual(remove.call_count,1)
 
 

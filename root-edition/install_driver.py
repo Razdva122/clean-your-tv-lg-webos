@@ -6,7 +6,6 @@ record; even a dead worker cannot authorize replay of an uncertain submission.
 """
 import re
 
-from coordinator_inventory import BUNDLED_FILES
 from installation import Busy, Ownership, _optional_record, pending_journals, read_journal
 
 
