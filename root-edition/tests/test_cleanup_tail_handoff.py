@@ -33,7 +33,7 @@ class CleanupTailHandoff(unittest.TestCase):
         runtime.mkdir(mode=0o700);(runtime/'bin').mkdir();(runtime/'lib').mkdir()
         for name in ('bin/python3.13','lib/secret.py'):(runtime/name).write_text('owned '+name)
         files={str(p.relative_to(runtime)):hashlib.sha256(p.read_bytes()).hexdigest() for p in runtime.rglob('*') if p.is_file()}
-        record=dict(schema=1,protocol='clean-removal-v1',operation=ID,removal='d'*32,lease='b'*32,stage='private-cleanup',state='recovery_required',cleanup_boot_id='11111111-1111-1111-1111-111111111111',
+        record=dict(schema=1,protocol='clean-removal-v1',operation=ID,removal='d'*32,lease='b'*32,stage='private-cleanup',state='recovery_required',cleanup_boot_id='11111111-1111-1111-1111-111111111111',cleanup_verified_boot_id='22222222-2222-2222-2222-222222222222',
             routes=['third.party.home']*3,support_stages=[],packages=packages(),runtime_cleanup=dict(root=RUNTIME,files=files),
             done=['original-writers-fenced','controls-restored','package-removal','private-cleanup'],
             result=dict(removed=True,applications_services_startup_removed=True,private_cleanup_verified=False))

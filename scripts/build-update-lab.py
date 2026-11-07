@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build disposable update fixtures locally. Never connects to a TV."""
 from pathlib import Path
-import hashlib,json,os,shutil,subprocess
+import hashlib,json,os,re,shutil,subprocess
 ROOT=Path(__file__).resolve().parents[1]
 stage=ROOT/'build/update-lab';out=ROOT/'dist/update-lab'
 if stage.exists(): shutil.rmtree(stage)
@@ -19,9 +19,12 @@ def package(*dirs): subprocess.run([cli,*map(str,dirs),'-o',str(out)],check=True
 renewal=clone('renewal-service','renewal')
 p=renewal/'service.js';s=p.read_text()
 # Fixture only: no token reads, LG HTTP requests, or real scheduled activities.
-s=s.replace('return worker.run();',"return Promise.resolve({status:'healthy',remainingSeconds:300000});")
-a=s.index(' schedule:function()');b=s.index('\n});',a)
-s=s[:a]+" schedule:function(){return Promise.resolve({returnValue:true});},\n cancel:function(){return Promise.resolve({returnValue:true});}"+s[b:];p.write_text(s)
+s,count=re.subn(r'\breturn\s+worker\.run\(\s*\)\s*;',"return Promise.resolve({status:'healthy',remainingSeconds:300000});",s)
+if count!=1:raise ValueError('Expected one renewal worker fixture')
+s,count=re.subn(r'(?ms)^\s*schedule:\s*function\s*\(\s*\)\s*\{.*?^\}\);',
+    " schedule:function(){return Promise.resolve({returnValue:true});},\n cancel:function(){return Promise.resolve({returnValue:true});}\n});",s)
+if count!=1:raise ValueError('Expected one renewal activity fixture')
+p.write_text(s)
 for version in ('1.2.0','1.2.1'):
     home=clone('launcher','home-'+version)
     for p in home.glob('*.js'): p.write_text(p.read_text().replace(json.loads((ROOT/'launcher/appinfo.json').read_text())['version'],version))
@@ -38,8 +41,11 @@ shutil.copy2(ROOT/'root-edition/ui/root-locales.js', ui/'root-locales.js')
 for font in (ROOT/'launcher/fonts').glob('NotoSans*'):
     shutil.copy2(font, ui/'fonts'/font.name)
 p=ui/'appinfo.json';info=json.loads(p.read_text());info.update(title='Updater Lab');p.write_text(json.dumps(info))
-p=service/'service.js';s=p.read_text().replace("await require('./transport').get(channel)","fs.readFileSync(__dirname+'/update.json','utf8')")
-s=s.replace("helper:(await app('com.local.nativehome')).version","helper:'0.6.13'");p.write_text(s)
+p=service/'service.js';s,count=re.subn(r"await\s+require\(\s*(['\"])\./transport\1\s*\)\.get\(\s*channel(?:\s*\+\s*\(\s*resolution\s*===\s*['\"]1280x720['\"]\s*\?\s*['\"]update-720p\.json['\"]\s*:\s*['\"]update\.json['\"]\s*\))?\s*\)","fs.readFileSync(__dirname+'/update.json','utf8')",p.read_text())
+if count!=1:raise ValueError('Expected one updater feed fixture')
+s,count=re.subn(r"\bhelper\s*:\s*\(\s*await\s+app\(\s*(['\"])com\.local\.nativehome\1\s*\)\s*\)\.version","helper:'0.6.13'",s)
+if count!=1:raise ValueError('Expected one Helper version fixture')
+p.write_text(s)
 p=service/'policy.js';p.write_text(p.read_text().replace('https://github.com/Razdva122/clean-your-tv-lg-webos/releases/download/','http://127.0.0.1:18999/'))
 # An ephemeral lab key never leaves this process. The production key is not used.
 subprocess.run(['node','-e',r'''

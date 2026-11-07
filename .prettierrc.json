@@ -1,0 +1,8 @@
+{
+  "singleQuote": true,
+  "quoteProps": "preserve",
+  "trailingComma": "none",
+  "endOfLine": "lf",
+  "embeddedLanguageFormatting": "off",
+  "htmlWhitespaceSensitivity": "css"
+}

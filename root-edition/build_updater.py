@@ -5,6 +5,7 @@ import hashlib
 import importlib.util
 import json
 from pathlib import Path
+import re
 
 ROOT=Path(__file__).resolve().parent
 UPDATER_FILES=('core.py','store.py','profile.py','device.py','package.py','cli.py','fetch.js','bridge.js','luna.py','bootstrap.py','ca-bundle.crt','ca-LICENSE.txt')
@@ -37,8 +38,9 @@ def build(output, legacy_node_prototype=False):
     from cytv import root_updater_remove, system_updater_remove, legacy_permissions_remove, app_permissions_remove, root_archive
     from cytv.no_root_cleanup import PRIVATE_CLEANUP_PROGRAM
     code['cleanup_no_root_private.js']=PRIVATE_CLEANUP_PROGRAM.encode()
-    code['cleanup_tail.js']=code['cleanup_tail.js'].replace(b'var privateCleanupSource=null;',
-        ('var privateCleanupSource='+json.dumps(PRIVATE_CLEANUP_PROGRAM)+';').encode())
+    code['cleanup_tail.js'],count=re.subn(rb'\bvar\s+privateCleanupSource\s*=\s*null\s*;',
+        lambda _: ('var privateCleanupSource='+json.dumps(PRIVATE_CLEANUP_PROGRAM)+';').encode(),code['cleanup_tail.js'])
+    if count!=1:raise ValueError('Expected one private cleanup source binding')
     for name,module in (('root_updater',root_updater_remove),('system_updater',system_updater_remove),('legacy_permissions',legacy_permissions_remove),('app_permissions',app_permissions_remove),('root_archive',root_archive)):
         code['cleanup_'+name+'.py']=module.SCRIPT.encode()
     code['system_updater/__init__.py']=b''

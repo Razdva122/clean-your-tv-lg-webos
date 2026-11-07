@@ -1,0 +1,17 @@
+{
+  "git.ignoredRepositories": ["archives/2026-10-24-release-desktop"],
+  "git.repositoryScanIgnoredFolders": ["node_modules", "archives"],
+  "prettier.requireConfig": true,
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[css]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[html]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  }
+}

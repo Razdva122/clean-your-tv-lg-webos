@@ -627,15 +627,17 @@ class Wizard(QMainWindow):
                 if not self.report:
                     self.subtitle.setText(self.subtitle.text()+'\n'+tr('A diagnostic report could not be created. Include the visible error when opening an issue.'))
             if self.recovery_plan:
-                from .recovery_ui import removal_details
+                from .recovery_ui import removal_details, removal_connection_failure
                 detail = removal_details(self.recovery_plan, self.failure_help)
+                connection = removal_connection_failure(self.recovery_plan, self.failure_help)
+                show_restart = restart and not connection
                 if cleanup and not completed:
-                    self.title.setText(tr('Cancelled' if value == 130 else 'Restart the TV to finish removal' if restart else 'Removal is not finished yet.'))
+                    self.title.setText(tr('Cancelled' if value == 130 else 'Restart the TV to finish removal' if show_restart else 'Removal is not finished yet.'))
                     self.badge.setText(self.title.text())
                     message = detail.get('blocker_text') or 'Removal could not be confirmed. Check the connection and try again.'
                     if self.failure_help and self.failure_help.get('code') in ('ssh-auth-root','ssh-auth-no-root','ssh-key-file','ssh-identity','developer-key-server','developer-key-unlock','developer-key-response'):
                         message = self.failure_help['next_step']
-                    self.subtitle.setText(tr(message)+('' if restart else '\n'+tr(detail.get('stage_text', ''))))
+                    self.subtitle.setText(tr(message)+('' if show_restart or connection else '\n'+tr(detail.get('stage_text', ''))))
 
     def show_prompt(self, prompt):
         self.check_panel.hide()

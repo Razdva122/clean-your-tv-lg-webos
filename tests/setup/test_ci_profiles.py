@@ -23,7 +23,7 @@ class CIProfiles(unittest.TestCase):
                 command.chmod(0o755)
             subprocess.run(['bash', str(ROOT / 'scripts/test.sh'), 'ui'], cwd=ROOT, check=True,
                            env={**os.environ, 'PATH': str(temp) + os.pathsep + os.environ['PATH'],
-                                'PROFILE_LOG': str(log)})
+                                'PROFILE_LOG': str(log), 'PYTHON': 'python3', 'CYTV_PYTHON': 'python3'})
             commands = log.read_text()
             self.assertNotIn('-browser.cjs', commands)
             self.assertIn('npm run lint:compat', commands)
@@ -59,7 +59,7 @@ class CIProfiles(unittest.TestCase):
                 subprocess.run(['bash', str(checkout / 'scripts/test.sh'), *profile.split()],
                                cwd=ROOT, check=True, capture_output=True,
                                env={**os.environ, 'PATH': str(temp) + os.pathsep + os.environ['PATH'],
-                                    'PROFILE_LOG': str(log)})
+                                    'PROFILE_LOG': str(log), 'PYTHON': 'python3', 'CYTV_PYTHON': 'python3'})
                 traces[profile] = log.read_text().splitlines()
             # Union of shard commands equals the original full profile. Only the
             # three large Python discoveries become partitioned runner calls.

@@ -1,9 +1,30 @@
-<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Update dialog overflow fixture</title><style>@font-face{font-family:Outfit;src:url('/launcher/fonts/outfit.ttf')}body{margin:0;background:#111519}</style>
-<script>
-/* Offline regression fixture. No calls leave this page or reach a TV. */
-localStorage.setItem('tvhome.language','ru');
-var longError=new Array(25).join('Не удалось завершить проверку подключения. Откройте восстановление и проверьте состояние обновления. ').slice(0,1024);
-var notes='## Автоматическая проверка обновления\n\n- **Проверка запуска проходит автоматически.** Подтверждать работу вручную не нужно.\n- Приложения, значки и настройки сохраняются при установке.\n\n## Восстановление предыдущей версии\n\n- Предыдущая версия остаётся доступной после успешного обновления.\n- Перед откатом появится предупреждение: настройки вернутся к состоянию перед обновлением.\n\n### Управление с пульта\n\nНажимайте **вверх и вниз**, чтобы прочитать весь список изменений. Действия обновления и восстановления всегда доступны внизу окна.\n\n'+new Array(5).join('## Дополнительные улучшения\n\n- Повышена надёжность восстановления настроек.\n- Подробнее в [руководстве по обновлению](https://example.invalid/guide).\n\n');
-var withError=new URLSearchParams(location.search).has('error');window.ROOT_VERSION='0.1.7';
-window.PalmServiceBridge=function(){this.cancel=function(){};this.call=function(uri){var bridge=this;setTimeout(function(){var method=uri.split('/').pop(),result=method==='check'?{installed:{version:'0.1.7'},candidate:{version:'0.1.8',notes:notes},canInstall:true}:withError?{phase:'recovery-required',error:longError,prior:{version:'0.1.7'}}:null;bridge.onservicecallback(JSON.stringify({returnValue:true,result:result}));},10);};};
-</script><script src="/launcher/i18n.js"></script><script src="/launcher/catalogs.js"></script><script src="/root-launcher/root-locales.js"></script><script src="/launcher/release-notes.js"></script><link rel="stylesheet" href="/root-launcher/root-settings.css"><link rel="stylesheet" href="/launcher/i18n.css"></head><body><script src="/root-launcher/root-updates.js"></script><script>HomeI18n.ready(function(){RootUpdates.open();setTimeout(function(){var card=document.querySelector('.root-settings-card').getBoundingClientRect(),actions=document.querySelector('.update-actions').getBoundingClientRect(),reading=document.querySelector('.update-notes');if(actions.top<card.top||actions.bottom>card.bottom||actions.bottom>innerHeight)throw Error('Update actions are clipped');if(reading.scrollHeight<=reading.clientHeight)throw Error('Long update content must be scrollable');document.body.dataset.fixtureChecks='passed';},200);});</script></body></html>
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <title>Update dialog overflow fixture</title>
+    <style>
+      @font-face{font-family:Outfit;src:url('/launcher/fonts/outfit.ttf')}body{margin:0;background:#111519}
+    </style>
+    <script>
+      /* Offline regression fixture. No calls leave this page or reach a TV. */
+      localStorage.setItem('tvhome.language','ru');
+      var longError=new Array(25).join('Не удалось завершить проверку подключения. Откройте восстановление и проверьте состояние обновления. ').slice(0,1024);
+      var notes='## Автоматическая проверка обновления\n\n- **Проверка запуска проходит автоматически.** Подтверждать работу вручную не нужно.\n- Приложения, значки и настройки сохраняются при установке.\n\n## Восстановление предыдущей версии\n\n- Предыдущая версия остаётся доступной после успешного обновления.\n- Перед откатом появится предупреждение: настройки вернутся к состоянию перед обновлением.\n\n### Управление с пульта\n\nНажимайте **вверх и вниз**, чтобы прочитать весь список изменений. Действия обновления и восстановления всегда доступны внизу окна.\n\n'+new Array(5).join('## Дополнительные улучшения\n\n- Повышена надёжность восстановления настроек.\n- Подробнее в [руководстве по обновлению](https://example.invalid/guide).\n\n');
+      var withError=new URLSearchParams(location.search).has('error');window.ROOT_VERSION='0.1.7';
+      window.PalmServiceBridge=function(){this.cancel=function(){};this.call=function(uri){var bridge=this;setTimeout(function(){var method=uri.split('/').pop(),result=method==='check'?{installed:{version:'0.1.7'},candidate:{version:'0.1.8',notes:notes},canInstall:true}:withError?{phase:'recovery-required',error:longError,prior:{version:'0.1.7'}}:null;bridge.onservicecallback(JSON.stringify({returnValue:true,result:result}));},10);};};
+    </script>
+    <script src="/launcher/i18n.js"></script>
+    <script src="/launcher/catalogs.js"></script>
+    <script src="/root-launcher/root-locales.js"></script>
+    <script src="/launcher/release-notes.js"></script>
+    <link rel="stylesheet" href="/root-launcher/root-settings.css" />
+    <link rel="stylesheet" href="/launcher/i18n.css" />
+  </head>
+  <body>
+    <script src="/root-launcher/root-updates.js"></script>
+    <script>
+      HomeI18n.ready(function(){RootUpdates.open();setTimeout(function(){var card=document.querySelector('.root-settings-card').getBoundingClientRect(),actions=document.querySelector('.update-actions').getBoundingClientRect(),reading=document.querySelector('.update-notes');if(actions.top<card.top||actions.bottom>card.bottom||actions.bottom>innerHeight)throw Error('Update actions are clipped');if(reading.scrollHeight<=reading.clientHeight)throw Error('Long update content must be scrollable');document.body.dataset.fixtureChecks='passed';},200);});
+    </script>
+  </body>
+</html>

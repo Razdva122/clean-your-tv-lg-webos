@@ -1,31 +1,36 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none'; media-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
-  <title>No-root Ribbon Lab</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="app.js" defer></script>
-</head>
-<body data-mode="full">
-  <div id="fallback">
-    <p class="eyebrow">CLEAN YOUR TV / EXPERIMENT</p>
-    <h1>No-root Ribbon</h1>
-    <p>Fullscreen fallback</p>
-    <p>No application context is detected. Choose Overlay to test transparency.</p>
-  </div>
-  <section id="ribbon" aria-label="Ribbon prototype">
-    <div class="caption">
-      <span class="eyebrow">NO-ROOT RIBBON LAB</span>
-      <p id="status" role="status">Fullscreen fallback</p>
-      <p class="hint">Back or relaunch closes</p>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none'; media-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <title>No-root Ribbon Lab</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="app.js" defer></script>
+  </head>
+  <body data-mode="full">
+    <div id="fallback">
+      <p class="eyebrow">CLEAN YOUR TV / EXPERIMENT</p>
+      <h1>No-root Ribbon</h1>
+      <p>Fullscreen fallback</p>
+      <p>
+        No application context is detected. Choose Overlay to test transparency.
+      </p>
     </div>
-    <nav aria-label="Presentation controls">
-      <button type="button" id="overlay">Overlay</button>
-      <button type="button" id="full">Fullscreen</button>
-      <button type="button" id="close">Close panel</button>
-    </nav>
-  </section>
-</body>
+    <section id="ribbon" aria-label="Ribbon prototype">
+      <div class="caption">
+        <span class="eyebrow">NO-ROOT RIBBON LAB</span>
+        <p id="status" role="status">Fullscreen fallback</p>
+        <p class="hint">Back or relaunch closes</p>
+      </div>
+      <nav aria-label="Presentation controls">
+        <button type="button" id="overlay">Overlay</button>
+        <button type="button" id="full">Fullscreen</button>
+        <button type="button" id="close">Close panel</button>
+      </nav>
+    </section>
+  </body>
 </html>

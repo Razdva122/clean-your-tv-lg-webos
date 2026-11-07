@@ -527,15 +527,21 @@ class LocalDevice:
     def root_journal(self):return read_journal(ROOT/'deploy.json')
 
     def boot_id(self):
-        value=Path('/proc/sys/kernel/random/boot_id').read_text().strip()
-        if not re.fullmatch(r'[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}',value):raise ValueError('boot_id_unavailable')
+        import deploy
+        from clean_removal import boot_format
+        root=self.payload/'root'
+        deploy.verify_bundle(root,allow_experimental=True)
+        program="import sys,json;sys.path.insert(0,%r);from intent_runtime import boot_identity;print(json.dumps({'returnValue':True,'boot':boot_identity()}))"%str(root/'runtime')
+        value=deploy.command([sys.executable,'-I','-B','-c',program]).get('boot')
+        if boot_format(value)!='session':raise ValueError('boot_id_unavailable')
         return value
 
     def shared_cleanup(self, action, record, app=None):
         """Current bundled NoRoot namespace cleaner; retained source is never run."""
         name='cleanup_no_root_private.js'
-        raw=safe_bytes(self.payload/'root-updater'/name,uid=self.ownership.store.uid)
-        manifest=json.loads(safe_bytes(self.payload/'root-updater/bundle.json',uid=self.ownership.store.uid))
+        support=self.payload/'root-updater' if self.payload is not None else Path(__file__).resolve().parent
+        raw=safe_bytes(support/name,uid=self.ownership.store.uid)
+        manifest=json.loads(safe_bytes(support/'bundle.json',uid=self.ownership.store.uid))
         if sha(raw)!=manifest['files'].get(name):raise ValueError('current_cleanup_support_changed')
         result=subprocess.run(['/usr/bin/node','-e',raw.decode(),json.dumps({'action':action,'app':app,'staging_ids':record.get('cleanup_staging_ids',[])})],
             stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=90,
@@ -557,15 +563,20 @@ class LocalDevice:
 
     def clean_remove(self, record, save):
         """Full removal using current support, old snapshots and original locks."""
-        from clean_removal import locks, routes, remove_packages, restore_registrations
+        from clean_removal import locks, routes, remove_packages, restore_registrations, validate_restored_root_api, boot_format, verified_restart
         import deploy, provision, startup_hook
         roots=(ROOT,UPDATER,SUPERVISOR)
         uid=self.ownership.store.uid
         with locks(roots,uid):
-            current_boot=self.boot_id()
-            if 'cleanup_boot_id' not in record:
-                record['cleanup_boot_id']=current_boot;save(record['stage'])
-            restarted=current_boot!=record['cleanup_boot_id']
+            restarted=verified_restart(record)
+            baseline=record.get('cleanup_boot_id')
+            if baseline is not None and not boot_format(baseline):raise ValueError('boot_id_unavailable')
+            current_boot=None if restarted else self.boot_id()
+            if not restarted:
+                if baseline is None or boot_format(baseline)=='kernel':
+                    record['cleanup_boot_id']=current_boot
+                    record.pop('cleanup_verified_boot_id',None);save(record['stage'])
+                restarted=current_boot!=record['cleanup_boot_id']
             if record['stage']=='restart-required' and not restarted:
                 return {'removed':False,'verified_clean':False,'restart_required':True}
             self.clean_quiescent(record)
@@ -620,10 +631,11 @@ class LocalDevice:
                             raise ValueError('provision_snapshot_required')
                         startup_hook.remove(provision.secure)
                 # Restore supervisor lockdown before Root updater's original
-                # registration. Exact old/new bytes only, never foreign drift.
+                # registration. Admit only its authenticated original/installed/
+                # restored-SDK chain, never foreign drift.
                 if os.path.lexists(SUPERVISOR/'legacy-lockdown.json'):
                     from cleanup_system_updater import lockdown, write
-                    entries=lockdown(SUPERVISOR,BUS)
+                    entries=lockdown(SUPERVISOR,BUS,check=lambda files:validate_restored_root_api(files,BUS,UPDATER,uid))
                     for name,entry in entries.items():write(Path(name),entry['original'].encode(),entry['mode'])
                 for state,app,hookname in ((SUPERVISOR,'com.cleanyourtv.system.updater','52-clean-your-tv-system-updater'),
                                           (UPDATER,'com.cleanyourtv.root.updater','51-clean-your-tv-root-updater')):
@@ -650,7 +662,9 @@ class LocalDevice:
                         # cleanup forever. Cancel fixed jobs below, then boot first.
                         unavailable.add(service);startup_failed=True
                         if restarted:
+                            current_boot=current_boot or self.boot_id()
                             record['cleanup_boot_id']=current_boot
+                            record.pop('cleanup_verified_boot_id',None)
                             restarted=False
                         record['cleanup_startup_unavailable']=sorted(unavailable)
                         save('original-writers-fenced')
@@ -662,7 +676,9 @@ class LocalDevice:
             self.remove_owned_registrations()
             stopped=self.shared_cleanup('stop',record)
             if (stopped.get('controller_running') or startup_failed) and restarted:
+                current_boot=current_boot or self.boot_id()
                 record['cleanup_boot_id']=current_boot
+                record.pop('cleanup_verified_boot_id',None)
                 restarted=False
             if stopped.get('controller_running') or startup_failed or restart_first and not restarted:
                 save('restart-required')
@@ -690,7 +706,7 @@ class LocalDevice:
             if not restarted:
                 save('restart-required')
                 return {'removed':False,'verified_clean':False,'restart_required':True}
-            record['cleanup_verified_boot_id']=current_boot
+            if not verified_restart(record):record['cleanup_verified_boot_id']=current_boot
             if 'private-cleanup' not in record['done']:record['done'].append('private-cleanup')
             save('private-cleanup')
         return {'removed':True,'verified_clean':True,'applications_services_startup_removed':True,'private_cleanup_verified':True}
@@ -843,6 +859,21 @@ class LocalDevice:
             try:os.fsync(parent)
             finally:os.close(parent)
 
+    def current_coordinator_reader(self, args):
+        """Concurrent polling cannot mutate a product or resume a request."""
+        if args[-1:]==[b'']:args=args[:-1]
+        try:argv=[arg.decode('utf-8') for arg in args]
+        except UnicodeError:return False
+        if len(argv)<4 or argv[0] not in (sys.executable,os.path.realpath(sys.executable)) or argv[1]!='-B':return False
+        driver=Path(argv[2]);stage=driver.parent
+        if (driver.name!='install_driver.py' or stage.parent!=TEMP
+                or not re.fullmatch(r'cytv-coordinator-[a-f0-9]{32}',stage.name)):return False
+        readonly=argv[3:]==['inspect']
+        if (len(argv) in (6,7) and argv[3:5]==['status','--operation']
+                and re.fullmatch(r'[a-f0-9]{32}',argv[5])
+                and (len(argv)==6 or argv[6]=='--verify-current')):readonly=True
+        return readonly and self.current_coordinator_stage(stage)
+
     def clean_quiescent(self, record, all_processes=False, helpers_only=False):
         snapshot=Path(self.ownership.store.root)/('request-'+record['original']['operation'])
         from clean_removal import APPS
@@ -868,6 +899,7 @@ class LocalDevice:
             if not process.name.isdigit() or int(process.name)==os.getpid():continue
             try:args=(process/'cmdline').read_bytes().split(b'\0')
             except FileNotFoundError:continue
+            if self.current_coordinator_reader(args):continue
             try:args.append(os.readlink(process/'exe').encode())
             except FileNotFoundError:pass
             if any((any(arg==prefix[:-1] or arg.startswith(prefix) for prefix in prefixes)
@@ -964,10 +996,36 @@ class LocalDevice:
         os.close(checked_store(archive,uid)._directory())
         with locks((ROOT,UPDATER,SUPERVISOR),uid):
             self.verify_clean(record)
-            for root in (ROOT,UPDATER,SUPERVISOR):
-                if not os.path.lexists(root):continue
+            roots=(ROOT,UPDATER,SUPERVISOR)
+            key='component-fences-plan-'+record['operation']
+            plan=_optional_record(self.ownership.store,key)
+            binding=dict(operation=record['operation'],lease=record['lease'],successor=self.operation['id'])
+            if plan is None:
+                if any(archive.iterdir()):raise ValueError('component_fence_conflict')
+                entries={}
+                for root in roots:
+                    info=root.lstat() if os.path.lexists(root) else None
+                    entries[root.name]=[info.st_dev,info.st_ino] if info else None
+                plan=dict(binding,entries=entries)
+                self.ownership.store.write(key,plan)
+            if any(plan.get(k)!=v for k,v in binding.items()) or set(plan.get('entries',{}))!={root.name for root in roots}:
+                raise ValueError('component_fence_conflict')
+            if {entry.name for entry in archive.iterdir()}-set(plan['entries']):raise ValueError('component_fence_conflict')
+            # Validate every remaining source and every previous move before the
+            # first rename, allowing the same reservation to finish after a crash.
+            for index,root in enumerate(roots):
                 target=archive/root.name
-                if os.path.lexists(target):raise ValueError('component_fence_conflict')
+                paths=[path for path in (root,target) if os.path.lexists(path)]
+                expected=plan['entries'][root.name]
+                if len(paths)!=(0 if expected is None else 1):raise ValueError('component_fence_conflict')
+                for path in paths:
+                    info=path.lstat()
+                    if [info.st_dev,info.st_ino]!=expected:raise ValueError('component_fence_changed')
+                    os.close(checked_store(path,uid)._directory())
+                    allowed={'deploy.json','provision.lock'} if index==0 else {'bootstrap.json','daemon.lock','worker.lock'}
+                    if {p.name for p in path.iterdir()}-allowed:raise ValueError('component_fence_changed')
+            for root in roots:
+                if not os.path.lexists(root):continue
                 sourcefd=checked_store(root.parent,uid)._directory()
                 destination=checked_store(archive,uid)._directory()
                 try:
@@ -980,7 +1038,6 @@ class LocalDevice:
         import python_binding, fcntl
         from clean_removal import retire_tree
         runtime=python_binding.MANAGED_ROOT/python_binding.ARCHIVE_SHA256
-        if not os.path.lexists(python_binding.MANAGED_ROOT) and not record.get('runtime_cleanup'):return None
         directory=checked_store(python_binding.MANAGED_ROOT,self.ownership.store.uid)._directory() if os.path.lexists(python_binding.MANAGED_ROOT) else None
         promotion=None
         try:
@@ -1020,14 +1077,79 @@ class LocalDevice:
                 env={key:value for key,value in os.environ.items() if key not in ('NODE_OPTIONS','NODE_PATH')})
             reply=json.loads(result.stdout)
             if reply.get('operation')!=record['operation'] or reply.get('removal')!=record['removal']:raise ValueError('cleanup_tail_unconfirmed')
+            if result.returncode:
+                code=reply.get('cleanup_error','cleanup-guard-failed')
+                if not isinstance(code,str) or not re.fullmatch('[a-z][a-z0-9-]{0,63}',code):code='cleanup-guard-failed'
+                sys.stderr.write('CYTV_CLEAN_TAIL: '+code+'\n')
             return reply
         finally:
             if promotion is not None:os.close(promotion)
             if directory is not None:os.close(directory)
 
+    def support_inventory(self, root):
+        os.close(checked_store(root,self.ownership.store.uid)._directory())
+        result={}
+        def scan(directory,prefix=''):
+            import stat
+            for entry in directory.iterdir():
+                name=prefix+entry.name
+                info=entry.lstat()
+                if stat.S_ISDIR(info.st_mode):
+                    os.close(checked_store(entry,self.ownership.store.uid)._directory())
+                    result[name+'/']=None
+                    scan(entry,name+'/')
+                else:result[name]=sha(safe_bytes(entry,uid=self.ownership.store.uid))
+        scan(root)
+        return result
+
+    def current_product_stage(self, path):
+        """Accept an upload only as an exact copy of this authenticated payload."""
+        if self.payload is None:return False
+        try:
+            expected={}
+            for component in ('root','root-updater'):
+                source=self.payload/component
+                raw=safe_bytes(source/'bundle.json',uid=self.ownership.store.uid)
+                files=json.loads(raw)['files']
+                expected[component+'/']=None
+                expected[component+'/bundle.json']=sha(raw)
+                for name,digest in files.items():
+                    if sha(safe_bytes(source/name,uid=self.ownership.store.uid))!=digest:return False
+                    expected[component+'/'+name]=digest
+                    for parent in Path(name).parents:
+                        if str(parent)!='.':expected[component+'/'+str(parent)+'/']=None
+            return self.support_inventory(path)==expected
+        except (OSError,ValueError,KeyError,TypeError):return False
+
+    def current_coordinator_stage(self, path):
+        """Recognize complete copies of the current host-verified support only."""
+        from coordinator_inventory import BUNDLED_FILES
+        source=Path(__file__).resolve().parent
+        try:
+            manifest=source/'bundle.json'
+            manifest_digest=None
+            if os.path.lexists(manifest):
+                raw_manifest=safe_bytes(manifest,uid=self.ownership.store.uid)
+                manifest_digest=sha(raw_manifest)
+                expected=json.loads(raw_manifest)['files']
+                expected={name:digest for name,digest in expected.items() if not name.endswith('.ipk')}
+                for name,digest in tuple(expected.items()):
+                    if sha(safe_bytes(source/name,uid=self.ownership.store.uid))!=digest:return False
+                    for parent in Path(name).parents:
+                        if str(parent)!='.':expected[str(parent)+'/']=None
+            else:expected=self.support_inventory(source)
+            if not set(BUNDLED_FILES)<=set(expected) or any(name.endswith('.ipk') or '__pycache__' in name.split('/') for name in expected):return False
+            actual=self.support_inventory(path)
+            if actual==expected:return True
+            if manifest_digest is not None:
+                expected['bundle.json']=manifest_digest
+                return actual==expected
+            return False
+        except (OSError,ValueError,KeyError,TypeError):return False
+
     def verify_clean(self, record):
-        boot=self.boot_id()
-        if boot==record.get('cleanup_boot_id') or not record.get('cleanup_boot_id'):
+        from clean_removal import verified_restart
+        if not verified_restart(record):
             raise ValueError('restart_required')
         from clean_removal import validate_package_receipts
         validate_package_receipts(record)
@@ -1044,6 +1166,8 @@ class LocalDevice:
         if private['present']:raise ValueError('no_root_private_cleanup_required')
         for path in TEMP.iterdir():
             if SUPPORT_STAGE.fullmatch(path.name) and path!=self.payload:
+                if re.fullmatch(r'cytv-coordinator-[a-f0-9]{32}',path.name) and self.current_coordinator_stage(path):continue
+                if re.fullmatch(r'cytv-product-[a-f0-9]{32}',path.name) and self.current_product_stage(path):continue
                 fd=checked_store(path,self.ownership.store.uid)._directory()
                 try:
                     if os.listdir(fd):raise ValueError('support_stage_remains')
@@ -1062,7 +1186,7 @@ class LocalDevice:
         activities=self.rpc('com.palm.activitymanager/list',{'details':True,'subscribers':True,'current':False,'internal':False}).get('activities')
         if (not isinstance(activities,list) or any(not isinstance(item,dict)
                 or item.get('name')=='com.cleanyourtv.root.preview.service.recovery'
-                or str(item.get('callback',{}).get('method','')).startswith(('luna://com.cleanyourtv.','luna://com.local.nativehome.service/','luna://com.gathin.tvhome.renewal/')) for item in activities)):
+                or str(item.get('callback',{}).get('method','')).startswith(tuple('luna://'+app+('.renewal/' if app=='com.gathin.tvhome' else '.service/') for app in APPS)) for item in activities)):
             raise ValueError('owned_activity_remains')
         devices=self.rpc('com.webos.service.eim/getAllInputStatus',{}).get('devices')
         if not isinstance(devices,list) or any(d.get('id')=='com.gathin.tvhome' or d.get('appId')=='com.gathin.tvhome' for d in devices):

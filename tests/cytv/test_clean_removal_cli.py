@@ -32,7 +32,7 @@ class CleanupConnectionWire(unittest.TestCase):
                 if command=='recover':store.request_clean_removal(profile)
                 write=Capture();connect=Mock(side_effect=AuthenticationException('PRIVATE CURRENT'))
                 with patch('cytv.cli.package.verify_payload',return_value={'files':{'fixture':'digest'}}) as verify:
-                    code=cli.main([command,'--yes','--host',profile['host'],'--edition',edition,'--data-dir',tmp],
+                    code=cli.main([command,'--language','en','--yes','--host',profile['host'],'--edition',edition,'--data-dir',tmp],
                                   write=write,connect=connect,payload_root=Path(tmp)/'payload')
                 self.assertEqual(code,1)
                 verify.assert_called_once_with((Path(tmp)/'payload').resolve())
@@ -47,3 +47,20 @@ class CleanupConnectionWire(unittest.TestCase):
                 self.assertEqual(report['reason_code'],'ssh-authentication')
                 self.assertEqual(store.pending(profile)['previous'],original)
                 self.assertNotIn('PRIVATE',json.dumps(report))
+
+    def test_current_ssh_error_does_not_reprint_restart_instructions_after_error(self):
+        for error in (TimeoutError('current connection lost'),AuthenticationException('current credentials refused')):
+            with self.subTest(error=type(error).__name__),tempfile.TemporaryDirectory() as tmp:
+                store=state.Store(tmp);profile=state.target('192.0.2.50','root')
+                store.save(profile);(store.device_dir(profile)/'known_hosts').write_bytes(b'original pin')
+                store.request_clean_removal(profile)
+                store.checkpoint(profile,stage='restart-required',removal_reason='restart-required')
+                lines=[];write=Console(lines.append,interactive=False,color=False)
+                with patch('cytv.cli.package.verify_payload',return_value={'files':{'fixture':'digest'}}):
+                    code=cli.main(['uninstall','--language','en','--yes','--host',profile['host'],'--edition','root','--data-dir',tmp],
+                                  write=write,connect=Mock(side_effect=error),payload_root=Path(tmp)/'payload')
+                self.assertEqual(code,1)
+                text='\n'.join(lines);current=text.index('Could not complete this step')
+                self.assertNotIn('disconnect it from power',text[current:])
+                self.assertNotIn('Restart the TV to finish removal',text[current:])
+                self.assertEqual(store.pending(profile)['stage'],'restart-required')

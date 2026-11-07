@@ -14,6 +14,7 @@ sys.path.insert(0, str(ROOT))
 from cytv import package
 from scripts.tv_web_build import compile_web
 from scripts.helper_build import compile_helper
+from scripts.home_assets import THEME_FILES
 
 
 def tracked_files(prefix):
@@ -34,7 +35,7 @@ def tracked_files(prefix):
                              'launcher/fonts/NotoSansTC.ttf', 'launcher/fonts/NotoSansTC-OFL.txt'],
                 'native/service': ['native/service/app-inventory.js']}
     if prefix == 'launcher':
-        required[prefix] += ['launcher/' + name for name in ['wallpaper.js', 'wallpaper.css', 'wallpaper-panel.js', 'wallpaper-panel.css', 'wallpaper-locales.js', 'wallpaper-media-cache.js', 'personal-wallpaper.js', 'wallpaper-library.js', 'wallpaper-stream.js', 'wallpapers/black-hole-stream.mp4', 'wallpaper-qr.js', 'theme-data.js', 'theme-store.js', 'theme-manager.js', 'theme-receiver.js', 'theme-panel.js', 'theme-panel.css', 'theme-locales.js', 'builtin-theme-files.json'] + json.loads((ROOT / 'launcher/builtin-theme-files.json').read_text())]
+        required[prefix] += ['launcher/' + name for name in THEME_FILES]
     if prefix == 'native/app':
         required[prefix] += [p.relative_to(ROOT).as_posix() for p in (ROOT/'native/app/vendor/ws-legacy').rglob('*') if p.is_file()]
     for name in sorted(set(result.stdout.splitlines()) | set(required.get(prefix, []))):

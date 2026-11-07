@@ -70,8 +70,7 @@ class CheckTests(unittest.TestCase):
         self.assertEqual(checks['root-user']['status'], 'pass')
         self.assertEqual(checks['node-version']['status'], 'fail')
         self.assertEqual(checks['python3']['status'], 'fail')
-        self.assertEqual(checks['pairing']['status'], 'pending')
-        self.assertIn('doctor', checks['pairing']['detail'])
+        self.assertNotIn('pairing',checks,'Root uses SSH inventory, not SSAP pairing')
         ssap.assert_not_called()
 
     def test_connection_failure_marks_only_ssh_failed_without_remote_text(self):

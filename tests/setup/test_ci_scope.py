@@ -6,6 +6,7 @@ import unittest
 import json
 import os
 import subprocess
+import sys
 import tempfile
 from unittest.mock import patch
 
@@ -114,7 +115,7 @@ class CIScope(unittest.TestCase):
             def route(event, **updates):
                 output.write_text('')
                 event_path.write_text(json.dumps(event))
-                subprocess.check_output(['python3', str(ROOT / 'scripts/ci-scope.py')], cwd=root, env={**env, **updates})
+                subprocess.check_output([sys.executable, str(ROOT / 'scripts/ci-scope.py')], cwd=root, env={**env, **updates})
                 return dict(line.split('=') for line in output.read_text().splitlines())
             self.assertEqual(route({'before': base, 'after': source})['installers'], 'false')
             draft_event = {'inputs': {'test_build': 'true'}, 'repository': {'full_name': 'owner/repo'}}
@@ -203,7 +204,7 @@ class CIScope(unittest.TestCase):
                    'GITHUB_EVENT_PATH': str(event), 'GITHUB_OUTPUT': str(output), 'CI_FULL_SUITE': 'false'}
             def route(head, full=False):
                 event.write_text(json.dumps({'pull_request': {'base': {'sha': base}, 'head': {'sha': head}}}))
-                subprocess.check_output(['python3', str(ROOT / 'scripts/ci-scope.py')], cwd=root,
+                subprocess.check_output([sys.executable, str(ROOT / 'scripts/ci-scope.py')], cwd=root,
                                         env={**env, 'CI_FULL_SUITE': str(full).lower()})
                 return dict(line.split('=') for line in output.read_text().splitlines())
             self.assertEqual(route(docs)['setup'], 'true', 'README changes must run release metadata validation')
