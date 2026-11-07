@@ -20,7 +20,7 @@ REASONS = ('unknown', 'user-error', 'ssh-command-failed', 'ssh-unreachable',
            'pending-operation', 'root-operation-unconfirmed', 'version-mismatch',
            'inventory-unavailable', 'graphics-unverified', 'root-home-interfaces',
            'root-worker-busy', 'root-access-required', 'removal-failed',
-           'cleanup-check-failed', 'connection-interrupted', 'operation-timeout')
+           'cleanup-check-failed', 'connection-interrupted', 'operation-timeout', 'tv-storage-full')
 ACTIONS = ('recover', 'install', 'uninstall', 'restore', 'status', 'doctor', 'home-diagnostics',
            'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access',
            'recover-system-rollback', 'replace-system-updater', 'clean-wam-cache')

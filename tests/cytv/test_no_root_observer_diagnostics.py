@@ -123,6 +123,108 @@ class ObserverDiagnosticsTests(unittest.TestCase):
         self.assertEqual(record['no_root_observer'], {'command': 'unknown', 'failure': 'unknown'})
         self.assertNotIn('PRIVATE', json.dumps(record))
 
+    def test_error_envelope_is_never_accepted_as_an_observation(self):
+        reply = json.dumps({'operation': 'a' * 32, 'observer_error': {
+            'exception_name': 'TypeError', 'exception_code': 'EINVAL',
+            'observer_reason': 'PRIVATE-PATH', 'stack': 'PRIVATE-KEY'}})
+        first = self.report(self.failure(reply, 'prepare'))
+        expected = {'command': 'prepare', 'failure': 'observer-error',
+                    'exception_name': 'TypeError', 'exception_code': 'EINVAL',
+                    'observer_reason': 'unknown'}
+        self.assertEqual(first['no_root_observer'], expected)
+        self.store = state.Store(self.tmp.name)
+        later = self.report(self.failure(reply), 'recover')
+        self.assertEqual(later['first_failure']['no_root_observer'], expected)
+        self.assertEqual(later['observation_failure']['no_root_observer']['failure'], 'observer-error')
+        self.assertEqual(later['recovery']['state'], 'blocked')
+        self.assertEqual(later['recovery']['actions'], ['check', 'retain-evidence'])
+        for invalid in (None, [], 'PRIVATE-KEY'):
+            error = self.failure(json.dumps({'operation': 'a' * 32, 'observer_error': invalid}))
+            self.assertEqual(error.no_root_observer['failure'], 'invalid-reply')
+        foreign = self.failure(json.dumps({'operation': 'PRIVATE', 'observer_error': {}}))
+        self.assertEqual(foreign.no_root_observer['failure'], 'foreign-operation')
+
+    def test_runtime_details_are_revalidated_in_retained_history(self):
+        self.report(self.failure(TVCommandError(1), 'prepare'))
+        record = self.store.device_dir(self.profile) / 'diagnostic-failures'
+        path = next(record.glob('*.json'))
+        saved = json.loads(path.read_text())
+        saved['no_root_observer'] = {
+            'command': 'prepare', 'failure': 'observer-error',
+            'exception_name': ['PRIVATE'], 'exception_code': {'PRIVATE': True},
+            'observer_reason': 'unsafe-directory', 'message': 'PRIVATE-KEY'}
+        path.write_text(json.dumps(saved))
+        self.store = state.Store(self.tmp.name)
+        later = self.report(self.failure('PRIVATE-NOT-JSON'), 'recover')
+        self.assertEqual(later['first_failure']['no_root_observer'], {
+            'command': 'prepare', 'failure': 'observer-error',
+            'exception_name': 'unknown', 'exception_code': 'unknown',
+            'observer_reason': 'unsafe-directory'})
+
+    @unittest.skipIf(os.name == 'nt' or not shutil.which('node'), 'Requires POSIX shell and Node')
+    def test_real_prepare_and_status_preserve_source_and_refuse_unsafe_state(self):
+        calls = []
+        def run(command, **kwargs):
+            calls.append(command)
+            command = command.replace('/usr/bin/node', shlex.quote(shutil.which('node')))
+            result = subprocess.run(['sh', '-c', command], capture_output=True, timeout=10)
+            if result.returncode:
+                raise TVCommandError(result.returncode)
+            return result.stdout.decode()
+        directory = '/private/tmp' if Path('/private/tmp').exists() else None
+        with tempfile.TemporaryDirectory(dir=directory) as tmp:
+            root = Path(tmp).resolve()
+            root.chmod(0o755)
+            public = root / 'public'
+            public.mkdir(mode=0o755)
+            private = root / 'private'
+            remote = SimpleNamespace(run=run)
+            with patch.object(observer, 'ROOT', str(private)), patch.object(observer, 'PUBLIC_ROOT', str(public)):
+                plan = observer.make_plan('a' * 32, 'b' * 32, 'install',
+                                          {'helper.ipk': b'helper', 'launcher.ipk': b'home'},
+                                          dict(zip(observer.APPS, ['1', '2'])), public_root=str(public))
+                observer.invoke(remote, plan, 'prepare')
+                before = {p: p.read_bytes() for p in private.rglob('*') if p.is_file()}
+                self.assertEqual((private / 'operations' / ('a' * 32) / 'observer.js').read_text(), observer.PROGRAM)
+                result = observer.snapshot(SimpleNamespace(remote=remote), {'plan': plan})
+                self.assertEqual(result['reservation'], 'active')
+                self.assertEqual([slot['submission'] for slot in result['slots']], ['prepared', 'prepared'])
+                private.chmod(0o755)
+                with self.assertRaises(UserError) as caught:
+                    observer.snapshot(SimpleNamespace(remote=remote), {'plan': plan})
+                self.assertEqual(caught.exception.no_root_observer['observer_reason'], 'nonprivate-directory')
+                self.assertEqual(len(calls), 3)  # No repair, extra probe or package retry.
+                self.assertEqual({p: p.read_bytes() for p in private.rglob('*') if p.is_file()}, before)
+
+    @unittest.skipIf(os.name == 'nt' or not shutil.which('node'), 'Requires POSIX shell and Node')
+    def test_real_node_failures_are_bounded_and_keep_storage_guidance(self):
+        def run(command, **kwargs):
+            command = command.replace('/usr/bin/node', shlex.quote(shutil.which('node')))
+            result = subprocess.run(['sh', '-c', command], capture_output=True, timeout=10)
+            if result.returncode:
+                raise TVCommandError(result.returncode)
+            self.assertNotIn(b'PRIVATE', result.stdout)
+            self.assertNotIn(b'PRIVATE', result.stderr)
+            return result.stdout.decode()
+        # The real observer refuses this incomplete plan before touching the filesystem.
+        with self.assertRaises(UserError) as caught:
+            observer.invoke(SimpleNamespace(run=run), self.plan, 'prepare')
+        self.assertEqual(caught.exception.no_root_observer, {
+            'command': 'prepare', 'failure': 'observer-error',
+            'exception_name': 'Error', 'exception_code': 'unknown', 'observer_reason': 'invalid-plan'})
+        for code in ('ENOSPC', 'EDQUOT', 'EACCES', 'PRIVATE-CODE'):
+            program = "var e=new Error('PRIVATE-PATH');e.code=" + json.dumps(code) + ";throw e;"
+            with self.subTest(code=code), patch.object(observer, 'PROGRAM', program):
+                with self.assertRaises(UserError) as caught:
+                    observer.invoke(SimpleNamespace(run=run), self.plan, 'status')
+                report = self.report(caught.exception, 'recover')
+                self.assertEqual(report['no_root_observer']['exception_code'],
+                                 'unknown' if code == 'PRIVATE-CODE' else code)
+                self.assertNotIn('ssh_command', report)  # No invented nonzero SSH status.
+                if code in ('ENOSPC', 'EDQUOT'):
+                    self.assertEqual(report['guidance']['code'], 'tv-storage-full')
+                    self.assertEqual(report['reason_code'], 'tv-storage-full')
+
     @unittest.skipIf(os.name == 'nt' or not shutil.which('node'), 'Requires POSIX shell and Node')
     def test_launch_needs_no_env_options_and_clears_node_environment(self):
         with tempfile.TemporaryDirectory() as tmp:

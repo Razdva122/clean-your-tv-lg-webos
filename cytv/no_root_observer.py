@@ -11,7 +11,8 @@ import shlex
 import time
 import uuid
 
-from .errors import UserError, TVCommandError, no_root_observer_details
+from .errors import (UserError, TVCommandError, TV_STORAGE_FULL, no_root_observer_details,
+                     OBSERVER_EXCEPTION_NAMES, OBSERVER_EXCEPTION_CODES, OBSERVER_REASONS)
 
 PROTOCOL = 'no-root-original-stream-v1'
 ROOT = '/media/developer/.cytv-installer'
@@ -486,10 +487,20 @@ def invoke(remote, plan, command, slot=None, source=None, proof=None, data=None)
     if command == 'prepare':
         request['source'] = PROGRAM if source is None else source
     if proof is not None:request['proof']=proof
+    # Wrap the current invocation only: retained PROGRAM bytes and capsule hashes
+    # stay unchanged. A diagnostic envelope is always a failure, never a receipt.
+    program = 'try {\n' + PROGRAM + r"""
+} catch (error) {
+ function category(value, allowed) {return typeof value==='string'&&allowed.indexOf(value)>=0?value:'unknown';}
+ process.stdout.write(JSON.stringify({operation:JSON.parse(process.argv[process.argv.length-1]).plan.operation,
+  observer_error:{exception_name:category(error&&error.name,NAMES),
+   exception_code:category(error&&error.code,CODES),observer_reason:category(error&&error.message,REASONS)}}));
+}
+""".replace('NAMES', canonical(OBSERVER_EXCEPTION_NAMES)).replace('CODES', canonical(OBSERVER_EXCEPTION_CODES)).replace('REASONS', canonical(OBSERVER_REASONS))
     try:
         # POSIX unset avoids depending on the TV env utility supporting -u.
         raw = remote.run('unset NODE_OPTIONS NODE_PATH && /usr/bin/node -e ' +
-                         shlex.quote(PROGRAM) + ' ' + shlex.quote(canonical(request)),
+                         shlex.quote(program) + ' ' + shlex.quote(canonical(request)),
                          data=data, timeout=100 if data is not None else 30)
     except UnicodeError:
         raise observation_error(command, 'invalid-json') from None
@@ -507,6 +518,15 @@ def invoke(remote, plan, command, slot=None, source=None, proof=None, data=None)
         raise observation_error(command, 'invalid-reply')
     if reply.get('operation') != plan['operation']:
         raise observation_error(command, 'foreign-operation')
+    if 'observer_error' in reply:
+        if type(reply['observer_error']) is not dict:
+            raise observation_error(command, 'invalid-reply')
+        details = no_root_observer_details(dict(reply['observer_error'], command=command, failure='observer-error'))
+        storage_error = (UserError(TV_STORAGE_FULL, reason_code='tv-storage-full')
+                         if details['exception_code'] in ('ENOSPC', 'EDQUOT') else None)
+        error = observation_error(command, 'observer-error', storage_error)
+        error.no_root_observer = details
+        raise error
     return reply
 
 
