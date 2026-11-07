@@ -258,7 +258,7 @@ def build_payload():
     manifest = {'schema': 1, 'launcher': 'launcher.ipk', 'helper': 'helper.ipk', 'graphics': GRAPHICS,
                 'home_version': json.loads(launcher['appinfo.json'])['version'],
                 'helper_version': versions['helper'],
-                'root_backends': {'c1-native-gate': {'experimental': True, 'hardware_validated': False,
+                'root_backends': {'c1-native-gate': {'experimental': True, 'hardware_validated': False, 'admission_schema': 3,
                                                      'graphics': C1_GRAPHICS}},
                 'files': {p.relative_to(payload).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
                           for p in sorted(payload.rglob('*')) if p.is_file()}}

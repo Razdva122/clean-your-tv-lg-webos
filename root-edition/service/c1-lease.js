@@ -15,12 +15,12 @@ function integer(value, min, max) {
   return typeof value === 'number' && isFinite(value) && Math.floor(value) === value && value >= min && value < max;
 }
 function digest(value) { return typeof value === 'string' && /^[a-f0-9]{64}$/.test(value); }
-function admission(value) {
+function admission(value, schema) {
   var version = /^\d{1,3}\.\d{1,3}\.\d{1,3}(?:-[A-Za-z0-9.]+)?$/;
   return keys(value, 'model,firmware,webos,target_sha256,target') &&
-    typeof value.model === 'string' && /^OLED(?:48|55|65|77|83)C1[A-Z0-9]{2,12}$/.test(value.model) &&
+    typeof value.model === 'string' && (schema === 2 ? /^OLED(?:48|55|65|77|83)C1[A-Z0-9]{2,12}$/ : /^[A-Za-z0-9._-]{1,128}$/).test(value.model) &&
     typeof value.firmware === 'string' && version.test(value.firmware) &&
-    typeof value.webos === 'string' && version.test(value.webos) && value.webos.indexOf('6.') === 0 &&
+    typeof value.webos === 'string' && version.test(value.webos) && (schema === 2 ? value.webos.indexOf('6.') === 0 : /^[6-9]\./.test(value.webos)) &&
     digest(value.target_sha256) && keys(value.target, 'dev,ino,size,mtime_ns') &&
     integer(value.target.dev, 0, Math.pow(2, 63)) && integer(value.target.ino, 1, Math.pow(2, 63)) &&
     integer(value.target.size, 52, Math.pow(2, 63)) && integer(value.target.mtime_ns, 0, Math.pow(2, 63));
@@ -68,9 +68,9 @@ module.exports = function (service, options) {
     ['/', '/var', '/var/lib', ROOT, ROOT + '/runtime'].forEach(function (path) { directory(path, false); });
     directory(ROOT + '/c1-keyfilter', true);
     var marker = JSON.parse(read(ROOT + '/home-backend.json', 8192, false).toString('utf8'));
-    if (!keys(marker, 'schema,backend,experimental,native_sha256,admission,routing') || marker.schema !== 2 ||
+    if (!keys(marker, 'schema,backend,experimental,native_sha256,admission,routing') || (marker.schema !== 2 && marker.schema !== 3) ||
         marker.backend !== BACKEND || marker.routing !== ROUTING || marker.experimental !== true ||
-        !digest(marker.native_sha256) || !admission(marker.admission)) throw Error('Unselected lease backend');
+        !digest(marker.native_sha256) || !admission(marker.admission, marker.schema)) throw Error('Unselected lease backend');
     var binary = read(ROOT + '/runtime/c1-keyfilter-guard', 16777216, true);
     if (crypto.createHash('sha256').update(binary).digest('hex') !== marker.native_sha256) throw Error('Changed lease helper');
   }

@@ -482,7 +482,8 @@ with os.fdopen(f,'rb') as stream:
                             checks.pop(name, None)
                             self.checks.update(name, 'unknown')
                     elif 'c1-native-gate' in self.manifest.get('root_backends', {}):
-                        verify(self.remote, self.checks, self.tv_info, allow_c1=True)
+                        verify(self.remote, self.checks, self.tv_info, allow_c1=True,
+                               allow_compositor=self.manifest['root_backends']['c1-native-gate'].get('admission_schema') == 3)
                     else:
                         verify(self.remote, self.checks, self.tv_info)
                 else:
@@ -885,7 +886,7 @@ print('CYTV_UPDATER_VERIFIED')
             if self.tv_info.get('home_backend') == 'c1-native-gate':
                 variant = self.manifest['root_backends']['c1-native-gate']['graphics'][self.tv_info['graphics_resolution']]
                 root = json.loads((self.payload / package.safe_name(variant) / 'release.json').read_text())['version']
-                targets = [(package.ROOT_APP, 'Root (C1 Beta)', root)]
+                targets = [(package.ROOT_APP, 'Root (experimental)' if self.tv_info.get('home_backend_schema') == 3 else 'Root (C1 Beta)', root)]
             else:
                 root = json.loads((self.payload / 'root/release.json').read_text())['version']
                 files = package.data_files((self.payload / 'root-updater/root-updater.ipk').read_bytes())

@@ -19,6 +19,7 @@ class KeyfilterIntegrationTests(unittest.TestCase):
             manifest = load('deploy').verify_bundle(root / 'bundle', allow_experimental=True)
             release = json.loads((root / 'bundle/release.json').read_bytes())
             self.assertEqual(release['routing'], 'compositor-keyfilter-v1')
+            self.assertEqual(release['compositor_admission'],3)
             self.assertIn('c1-keyfilter-v1', release['capabilities'])
             for name in ('c1-keyfilter-guard', 'c1_keyfilter.py', 'c1-home-filter.js', 'c1_gate.py'):
                 self.assertIn('runtime/' + name, manifest['files'])

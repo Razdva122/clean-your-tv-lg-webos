@@ -109,3 +109,5 @@ Wenn aufgefordert, den TV vom Strom trennen, wieder anschließen, auf das Netzwe
 <a id="speicherplatz"></a>
 
 Ausführliche Referenzen auf Englisch: [Voraussetzungen](../COMPATIBILITY.md) · [Bedienung](../CONTROLS.md) · [Designs](../THEMES.md) · [Updates](../UPDATES.md).
+
+> Unveröffentlichter Kandidat: experimentelles Root Home wird anhand der Fähigkeiten von Qt SDK 6–9 gewählt, ohne Modellliste. Hardware-Kompatibilität und normales OTA sind ungeprüft. Andere Home-Integrationen bleiben unverändert; nach einem Sicherheits- oder Stromstopp Home explizit aktivieren. [#364](../development/C1-NATIVE-GATE.md#unpublished-capability-based-compositor-admission-364).
