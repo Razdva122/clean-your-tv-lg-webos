@@ -280,6 +280,39 @@ before execution and later asynchronous/detached-worker failures can still use
 `command-failed`, transport or existing terminal evidence; absence of a runtime
 category does not identify the cause. No TV compatibility is inferred.
 
+### Filesystem failure context (next candidate)
+
+For synchronous `observer-error` replies, the launcher additionally projects the
+existing exception's `syscall` and `path` into two optional, allowlisted fields:
+
+| Field | Values and meaning |
+| --- | --- |
+| `filesystem_operation` | Native filesystem operation: `lstat`, `stat`, `open`, `read`, `write`, `mkdir`, `rmdir`, `link`, `unlink`, `rename`, `scandir`, `readdir`, `fsync`, `fchmod`, `fchown`, `fstat`, or `close`; otherwise `unknown`. |
+| `storage_area` | `private-storage` for the invocation's private observer root or descendants; `public-staging` for its public staging root or descendants; `storage-parent` for an ancestor of either root; otherwise `unknown`. Applies to Developer Mode and Root SSH roots. |
+
+Classification uses only a normalized absolute pathname already carried by the
+exception, with directory boundaries preserved. It does not resolve symlinks,
+read metadata, or identify a physical mount. The original pathname, syscall
+text outside the allowlist, exception message, stack and operation identifiers
+are never exported. Relative paths, missing/non-string paths, descriptor-only
+errors (such as `fsync` without a path) and unknown operations remain `unknown`;
+there is no inference from the exception message or another filesystem probe.
+Both fields are revalidated in current reports and retained failure history;
+older envelopes/records without them remain valid and do not gain invented data.
+
+For example, `storage-check` / `EACCES` / `mkdir` / `public-staging` narrows a
+failure to creation in SDK staging. It does not identify the denying policy or
+authorize chmod/chown, cleanup or retry. The storage check precedes creation of
+a new pending operation and package submission, so the generic
+`pending-operation` reason alone does not establish that pending exists.
+
+The context is added only by the launcher wrapper. Developer Mode and Root SSH
+observer source bytes, source hashes and capsule bindings are unchanged. No
+additional TV command, filesystem operation, permission change, automatic retry
+or recovery action is introduced. Detached/asynchronous worker errors remain
+outside this synchronous error envelope. Rebuilt host and Android installers
+are required for delivery; these additions are not in published CYTV 0.12.0.
+
 `first_failure` belongs to the pending operation's diagnostic ID, not the TV's
 entire installation history. Different timestamps across exports do not establish
 that the same operation's first failure was overwritten. Preserve original
