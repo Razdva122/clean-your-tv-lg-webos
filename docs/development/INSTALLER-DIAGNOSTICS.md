@@ -5,6 +5,27 @@ without treating it as recovery authority. These changes are in source only;
 v1.5.4 does not contain them. No TV compatibility or completed recovery follows
 from a diagnostic report.
 
+## Network connection causes (next candidate)
+
+During `ssh-connect`, inspect typed socket errors, including the values of
+Paramiko `NoValidConnectionsError.errors`. `EACCES`/`EPERM` map to
+`ssh-access-denied`, `ECONNREFUSED` to `ssh-refused`, and socket timeouts to
+`ssh-timeout`. Mixed causes and other errors retain `ssh-unreachable`; a host
+unreachable error does not establish that macOS Local Network permission was
+denied. Diagnostics export only these allowlisted codes, never the address keys,
+exception text or raw errors. Trust, authentication and local key-file failures
+retain their separate guidance. Classification is limited to initial connection.
+
+Desktop connection guidance replaces the scrolling report/checklist at failure
+with the cause, next step and explicit Doctor recheck. Doctor checks prerequisites
+and status; it does not submit package installation or resume setup. Its usual
+SSH trust/authentication prompts and saved-profile checks still apply. Edited
+connections are validated before running Doctor. Pending operations keep their
+original identity and recovery flow; no new edit/recheck shortcut is offered.
+On macOS, settings access is a user action, not an automatic permission change.
+Settings may show an older duplicate name; the app does not claim to read that
+permission state.
+
 ## Optional Root input inventory (next candidate)
 
 Root setup still requires a validated, nonempty application catalog. An unavailable

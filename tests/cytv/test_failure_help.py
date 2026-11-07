@@ -45,8 +45,38 @@ class FailureHelpTests(unittest.TestCase):
                 help=self.guide(error)
                 self.assertEqual(help['code'],code)
                 self.assertNotIn('PRIVATE',str(help))
-        self.assertEqual(self.guide(TimeoutError('PRIVATE'))['code'],'ssh-unreachable')
-        self.assertEqual(self.guide(ConnectionRefusedError(errno.ECONNREFUSED,'PRIVATE'))['code'],'ssh-unreachable')
+        self.assertEqual(self.guide(TimeoutError('PRIVATE'))['code'],'ssh-timeout')
+        self.assertEqual(self.guide(ConnectionRefusedError(errno.ECONNREFUSED,'PRIVATE'))['code'],'ssh-refused')
+
+    def test_network_errors_keep_the_underlying_cause_without_private_text(self):
+        from paramiko.ssh_exception import NoValidConnectionsError
+        cases = [(errno.EACCES, 'ssh-access-denied'), (errno.EPERM, 'ssh-access-denied'),
+                 (errno.ECONNREFUSED, 'ssh-refused'), (errno.ETIMEDOUT, 'ssh-timeout'),
+                 (errno.EHOSTUNREACH, 'ssh-unreachable')]
+        for number, expected in cases:
+            for wrapped in (False, True):
+                error = OSError(number, 'PRIVATE')
+                if wrapped:
+                    error = NoValidConnectionsError({('PRIVATE-ADDRESS', 22): error})
+                with self.subTest(errno=number, wrapped=wrapped):
+                    guide = self.guide(error)
+                    self.assertEqual(guide['code'], expected)
+                    self.assertNotIn('PRIVATE', str(guide))
+                    pending = self.guide(error, pending={'action': 'install'})
+                    self.assertFalse(pending['can_edit_connection'])
+                    self.assertIn('original saved TV connection', pending['next_step'])
+        self.assertEqual(self.guide(TimeoutError())['code'], 'ssh-timeout')
+        mixed = NoValidConnectionsError({('PRIVATE-A', 22): PermissionError(errno.EACCES, 'PRIVATE'),
+                                        ('PRIVATE-B', 22): ConnectionRefusedError(errno.ECONNREFUSED, 'PRIVATE')})
+        self.assertEqual(self.guide(mixed)['code'], 'ssh-unreachable')
+        self.assertIsNone(self.guide(PermissionError(errno.EACCES, 'PRIVATE'), phase='install-root'))
+
+    def test_saved_developer_key_permission_error_does_not_blame_network(self):
+        error = PermissionError(errno.EACCES, 'PRIVATE', '/PRIVATE/developer-key.pem')
+        guide = self.guide(error, 'no-root')
+        self.assertEqual(guide['code'], 'ssh-key-file')
+        self.assertNotIn('network', guide['next_step'].lower())
+        self.assertNotIn('PRIVATE', str(guide))
 
     def test_key_server_categories_are_actionable_without_claiming_wrong_password(self):
         for reason,code in [('key-server-unavailable','developer-key-server'),('key-unlock','developer-key-unlock'),
@@ -137,9 +167,9 @@ class FailureHelpTests(unittest.TestCase):
                           connect=connect,write=DesktopConsole(lambda k,v:events.append((k,v))))
             self.assertEqual(code,1)
             help=next(v for k,v in events if k=='failure-help')
-            self.assertEqual(help['code'],'ssh-unreachable')
+            self.assertEqual(help['code'],'ssh-refused')
             report=json.loads(next(Path(tmp).glob('reports/*.json')).read_text())
-            self.assertEqual(report['guidance'],{'code':'ssh-unreachable','pending':False})
+            self.assertEqual(report['guidance'],{'code':'ssh-refused','pending':False})
             self.assertNotIn('PRIVATE',json.dumps(report))
             self.assertNotIn('PRIVATE',str(events))
             self.assertEqual(known.read_bytes(),b'PRIVATE-TRUST-RECORD')
@@ -159,8 +189,8 @@ class FailureHelpTests(unittest.TestCase):
                      write=DesktopConsole(lambda k,v:events.append((k,v))))
             self.assertEqual(path.read_bytes(),before)
             help=next(v for k,v in events if k=='failure-help')
-            self.assertEqual(help['code'],'ssh-unreachable')
+            self.assertEqual(help['code'],'ssh-timeout')
             self.assertFalse(help['can_edit_connection'])
             report=json.loads(next(Path(tmp).glob('reports/*.json')).read_text())
-            self.assertEqual(report['guidance'],{'code':'ssh-unreachable','pending':True})
+            self.assertEqual(report['guidance'],{'code':'ssh-timeout','pending':True})
             self.assertNotIn('PRIVATE',json.dumps(report))

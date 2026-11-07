@@ -252,6 +252,109 @@ class GuiTests(unittest.TestCase):
         self.assertEqual(calls,[])
         w.home();self.assertIsNone(w.failure_help)
 
+    def test_network_failure_actions_recheck_without_install_and_preserve_recovery(self):
+        import errno
+        from cytv.failure_help import for_error
+        profile = {'host': '192.0.2.10', 'port': 22, 'edition': 'root'}
+        calls = []
+        w = Wizard(run=lambda args, **kw: calls.append(args) or 0)
+        self.addCleanup(w.close)
+        w.show()
+        w.command = 'install'
+        w.receive('selected-profile', profile)
+        w.receive('check', {'id': 'ssh', 'label': 'SSH connection and sign-in', 'status': 'fail', 'detail': ''})
+        w.receive('failure-help', for_error(PermissionError(errno.EACCES, 'PRIVATE'), 'ssh-connect', profile))
+        with patch('cytv.gui.sys.platform', 'darwin'):
+            w.receive('done', 1)
+        self.app.processEvents()
+        self.assertIn('blocked', w.subtitle.text())
+        self.assertIn('Local Network', w.content.toPlainText())
+        self.assertIn('older', w.content.toPlainText())
+        self.assertTrue(w.check_panel.isHidden())
+        buttons = {b.text(): b for b in w.form.findChildren(QPushButton)}
+        self.assertTrue(buttons['Check connection again'].isDefault())
+        with patch('cytv.gui.subprocess.Popen') as launch:
+            buttons['Open System Settings'].click()
+            launch.assert_called_once_with(['open', '-b', 'com.apple.systempreferences'])
+        buttons['Check connection again'].click()
+        self.pump(lambda: not w.running)
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0][0], 'doctor')
+        self.assertIn('--report', calls[0])
+        self.assertEqual(calls[0][calls[0].index('--host') + 1], '192.0.2.10')
+        w.home()
+        self.assertIsNone(w.selected_profile)
+        w.receive('selected-profile', profile)
+        w.receive('failure-help', for_error(PermissionError(errno.EACCES, 'PRIVATE'), 'ssh-connect', profile,
+                                          {'action': 'install', 'stage': 'coordinator-submitted'}))
+        w.receive('done', 1)
+        labels = [b.text() for b in w.form.findChildren(QPushButton)]
+        self.assertNotIn('Check connection again', labels)
+        self.assertNotIn('Change connection', labels)
+
+    def test_macos_timeout_keeps_network_checklist_with_optional_permission_advice(self):
+        from cytv.failure_help import for_error
+        w = Wizard(); self.addCleanup(w.close)
+        w.receive('selected-profile', {'host': '192.0.2.10', 'port': 22, 'edition': 'root'})
+        w.receive('failure-help', for_error(TimeoutError(), 'ssh-connect', {'edition': 'root'}))
+        with patch('cytv.gui.sys.platform', 'darwin'):
+            w.receive('done', 1)
+        text = w.content.toPlainText()
+        self.assertIn('Keep the TV on', text)
+        self.assertIn('SSH port', text)
+        self.assertIn('VPN', text)
+        self.assertIn('System Settings', text)
+
+    def test_russian_permission_help_and_actions_fit_small_window(self):
+        import errno
+        from cytv import i18n
+        from cytv.failure_help import for_error
+        w = Wizard(); self.addCleanup(w.close)
+        i18n.set_language('ru')
+        w.home(); w.resize(900, 680); w.show(); w.preview.hide()
+        w.receive('selected-profile', {'host': '192.0.2.10', 'port': 22, 'edition': 'root'})
+        w.receive('text', 'Connecting to the TV…')
+        w.receive('check', {'id': 'ssh', 'label': 'SSH connection and sign-in', 'status': 'fail', 'detail': ''})
+        report = Path(self.directory.name) / 'report.json'; report.write_text('{}')
+        w.receive('report', report)
+        w.receive('failure-help', for_error(PermissionError(errno.EACCES, 'PRIVATE'), 'ssh-connect', {'edition': 'root'}))
+        with patch('cytv.gui.sys.platform', 'darwin'), patch('cytv.gui.sys.executable', '/Applications/cytv 8.app/Contents/MacOS/cytv'):
+            w.receive('done', 1)
+        self.app.processEvents()
+        self.assertIn('cytv 8.app', w.content.toPlainText())
+        self.assertEqual(w.content.verticalScrollBar().maximum(), 0)
+        for button in w.form.findChildren(QPushButton):
+            self.assertTrue(w.rect().contains(button.mapTo(w, button.rect().bottomRight())))
+            self.assertGreaterEqual(button.height(), 44)
+
+    def test_edited_connection_is_validated_and_checked_without_installation(self):
+        calls = []
+        w = Wizard(run=lambda args, **kw: calls.append(args) or 0)
+        self.addCleanup(w.close)
+        w.edit_connection({'host': '192.0.2.10', 'port': 22, 'edition': 'root', 'root_variant': 'node012-beta'})
+        entries = w.form.findChildren(QLineEdit)
+        check = next(b for b in w.form.findChildren(QPushButton) if b.text() == 'Check connection again')
+        entries[0].setText('https://invalid')
+        check.click()
+        self.assertIn('Invalid TV address', w.subtitle.text())
+        self.assertEqual(calls, [])
+        entries[0].setText('192.0.2.20')
+        entries[1].setText('2222')
+        check.click()
+        self.pump(lambda: not w.running)
+        args = calls[0]
+        self.assertEqual(args[0], 'doctor')
+        self.assertEqual(args[args.index('--host') + 1], '192.0.2.20')
+        self.assertEqual(args[args.index('--port') + 1], '2222')
+        self.assertEqual(args[args.index('--root-variant') + 1], 'node012-beta')
+        w.edit_connection({'host': '192.0.2.10', 'port': 22, 'edition': 'root', 'root_variant': 'node012-beta'})
+        edition = next(c for c in w.form.findChildren(QComboBox) if c is not w.language)
+        edition.setCurrentIndex(1)
+        next(b for b in w.form.findChildren(QPushButton) if b.text() == 'Check connection again').click()
+        self.pump(lambda: not w.running)
+        self.assertNotIn('--root-variant', calls[1])
+        self.assertEqual(calls[1][calls[1].index('--edition') + 1], 'no-root')
+
     def test_setup_result_requires_all_three_distinct_checks(self):
         w = Wizard(); self.addCleanup(w.close)
         w.command = 'install'
