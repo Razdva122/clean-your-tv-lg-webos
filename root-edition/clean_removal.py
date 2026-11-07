@@ -20,6 +20,10 @@ from installation import _optional_record, terminal_removal
 APPS = ('com.cleanyourtv.root.preview', 'com.cleanyourtv.root.updater',
         'com.cleanyourtv.system.updater', 'com.cleanyourtv.updater',
         'com.local.nativehome', 'com.gathin.tvhome')
+# Presence (including dangling links) requires the original routing backend.
+ROUTING_EVIDENCE=('profile-trial.json','persistent-intent.json','persistent-binding.json',
+                  'profile-candidate.stage','home-backend.json','c1-gate','c1-keyfilter')
+
 PRE_ACTIVATION=('prepared','install-submitting','install-accepted','install-observed','payload-verified','personalization-complete')+tuple(
     'provision-'+step+'-'+phase for step in ('apply','resume_pending','refresh','finalize') for phase in ('starting','complete'))
 
@@ -142,8 +146,15 @@ def routes(device, record=None):
         raise ValueError('route_readback_unverified')
     never=(record or {}).get('routing_never_applied') is True
     try:reply=device.rpc('com.webos.service.systemprofile/getProfiles',{'names':['defaultApps','idleApp'],'subscribe':False})
-    except (OSError,RuntimeError,ValueError,KeyError,subprocess.SubprocessError):
+    except (OSError,RuntimeError,ValueError,KeyError,subprocess.SubprocessError) as error:
         if never:return {'mode':'never-applied','home':home}
+        # Only the firmware's exact missing-service reply admits stock-only
+        # verification. A timeout/ACL failure cannot select another backend.
+        stock={'mode':'stock-settings','home':'com.webos.app.home'}
+        if (getattr(error,'systemprofile_missing',False) is True and home==stock['home']
+                and (record or {}).get('profileless_cleanup_eligible') is True
+                and (record.get('routes') is None or record['routes']==stock)):
+            return stock
         raise
     if reply.get('returnValue') is not True:
         if never:return {'mode':'never-applied','home':home}

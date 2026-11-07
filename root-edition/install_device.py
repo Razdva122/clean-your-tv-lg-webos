@@ -620,6 +620,17 @@ class LocalDevice:
             if 'controls-restored' not in record['done']:
                 save('original-writers-fenced')
                 self.preserve_routing_inverse(record)
+                if 'profileless_cleanup_eligible' not in record:
+                    from clean_removal import ROUTING_EVIDENCE
+                    backup=self.ownership.store.read('routing-backup-'+record['operation'])
+                    # Capture before restoration can consume inverse records.
+                    # Older failed removals already retained their routing backup.
+                    record['profileless_cleanup_eligible']=(isinstance(backup,dict)
+                        and not any(name.split('/')[0] in ROUTING_EVIDENCE for name in backup)
+                        and not any(os.path.lexists(ROOT/name) for name in ROUTING_EVIDENCE)
+                        and not os.path.lexists('/var/webos-profile/override/clean-your-tv-root.json')
+                        and record.get('routes') is None)
+                    save('original-writers-fenced')
                 if os.path.lexists(ROOT):
                     # Current verified runtime reads old state as data. Guardian,
                     # key-up and emergency restoration execute before unregister.
@@ -973,7 +984,8 @@ class LocalDevice:
         key='routing-backup-'+record['operation']
         if _optional_record(self.ownership.store,key) is not None:return
         backup={}
-        for name in ('profile-trial.json','home-backend.json','c1-gate/active',
+        for name in ('profile-trial.json','persistent-intent.json','persistent-binding.json',
+                     'profile-candidate.stage','home-backend.json','c1-gate/active',
                      'c1-keyfilter/ownership.json','c1-keyfilter/pending.json',
                      'startup-hook.json','startup-hook.previous.json','system-permissions.json',
                      'firmware-permissions.json','theme-receiver-permissions.json','wallpaper-media-permissions.json'):

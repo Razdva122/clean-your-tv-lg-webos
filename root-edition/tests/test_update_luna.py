@@ -43,6 +43,29 @@ class ReplyBoundsTests(unittest.TestCase):
         self.assertEqual(str(caught.exception),'Bus operation rejected')
         self.assertNotIn('PRIVATE',str(caught.exception.__dict__))
 
+    def test_only_exact_systemprofile_absence_can_authorize_stock_only_cleanup(self):
+        spawn=subprocess.Popen
+        missing={'returnValue':False,'errorCode':-1,'errorText':'Service does not exist: com.webos.service.systemprofile.'}
+        uri='luna://com.webos.service.systemprofile/getProfiles'
+        cases=[(uri,missing,True),
+            ('luna://another.service/getProfiles',missing,False),
+            (uri,dict(missing,errorCode=True),False),
+            (uri,dict(missing,errorCode=-1.0),False),
+            (uri,dict(missing,errorText='Service is not registered: com.webos.service.systemprofile.'),False),
+            (uri,dict(missing,errorText='Permission denied PRIVATE'),False)]
+        for method,response,allowed in cases:
+            with self.subTest(method=method,response=response):
+                children=[]
+                def sender(args,**kwargs):
+                    child=spawn([sys.executable,'-c',
+                        'import sys;print(sys.argv[1],flush=True);sys.stdin.buffer.read()',json.dumps(response)],**kwargs)
+                    children.append(child);return child
+                with patch.object(luna.subprocess,'Popen',side_effect=sender):
+                    with self.assertRaises(RuntimeError) as caught:luna.call(method,{})
+                self.assertIs(getattr(caught.exception,'systemprofile_missing',None),allowed)
+                self.assertNotIn('PRIVATE',str(caught.exception.__dict__))
+                self.assertTrue(all(child.poll() is not None for child in children))
+
     def test_timeout_keeps_call_and_reaps_client_without_private_data(self):
         spawn=subprocess.Popen;children=[]
         def sender(args,**kwargs):
