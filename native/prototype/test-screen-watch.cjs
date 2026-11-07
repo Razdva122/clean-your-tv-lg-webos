@@ -27,7 +27,15 @@ function setup(withPower, secure = true) {
         this.emit('close', 1006);
       }
     }
-    ping() {
+    ping(cb) {
+      // Like ws: a ping on a socket that is not OPEN throws without a callback.
+      if (this.readyState !== undefined && this.readyState !== 1) {
+        const e = new Error(
+          'WebSocket is not open: readyState ' + this.readyState
+        );
+        if (typeof cb === 'function') return cb(e);
+        throw e;
+      }
       this.pings = (this.pings || 0) + 1;
     }
   }
@@ -451,6 +459,29 @@ for (const reason of ['close', 'error', 'stop', 'global-error', 'pairing']) {
   a.deepEqual(t.events, ['subscription']);
   t.watcher.close();
 }
+{
+  // Power-off: the socket is CLOSING before 'close' clears the heartbeat.
+  const t = setup(),
+    s = t.WS.last;
+  s.emit('open');
+  s.emit('message', JSON.stringify({ type: 'registered' }));
+  s.emit(
+    'message',
+    JSON.stringify({
+      id: 'foreground',
+      type: 'response',
+      payload: { appId: 'app' }
+    })
+  );
+  const beat = [...t.timers.values()].find((x) => x.interval).f;
+  s.readyState = 2;
+  a.doesNotThrow(beat, 'heartbeat on a CLOSING socket must not throw');
+  a.equal(s.ended, undefined);
+  beat();
+  a.equal(s.ended, true, 'a missed pong still terminates the socket');
+  t.watcher.close();
+}
+console.log('PASS: CLOSING heartbeat does not throw');
 console.log(
   'PASS: fresh registered foreground request, correlation, timeout, reset/close/errors, stale socket and single settlement'
 );
