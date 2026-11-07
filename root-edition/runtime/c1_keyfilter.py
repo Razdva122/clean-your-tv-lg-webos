@@ -1,4 +1,4 @@
-"""Explicit schema2 C1 compositor routing. No Home replacement or mounts.
+"""Schema2 C1 and schema3 capability-admitted experimental compositor routing.
 
 The native guardian owns stop/input/control/broker leases. This interpreter owns
 only the configd inverse transaction and conservative lifecycle return hints.
@@ -25,18 +25,38 @@ ROUTING = 'compositor-keyfilter-v1'
 KEY = 'com.webos.surfacemanager.keyFilters'
 STOCK = 'com.webos.app.home'
 CARD = '_WEBOS_WINDOW_TYPE_CARD'
+STOCK_APPINFO = Path('/usr/palm/applications/com.webos.app.home/appinfo.json')
+MOUNTINFO = Path('/proc/self/mountinfo')
+INPUT_BINDINGS = Path('/home/root/.config/lginputhook/keybinds.json')
+OTHER_HOME_STATE = tuple(Path(p) for p in ('/media/developer/cleanyourtv',
+    '/var/lib/tvweb/home-takeover', '/var/lib/luma-home', '/var/lib/webosbrew/homechooser'))
 secure = legacy.secure
 atomic = legacy.atomic
 boot_identity = legacy.boot_identity
 verify_ready = legacy.verify_ready
 
 
-def luna(uri,payload,timeout=5):
+def luna(uri,payload,timeout=5,allow_failure=False):
     # The controller runs as a standalone private runtime script, independently
     # of the provisioning process's package search path and working directory.
     try: from .transport import call
     except ImportError: from transport import call
+    if allow_failure:
+        return call(uri,payload,timeout=timeout,allow_failure=True)
     return call(uri,payload,timeout=timeout)
+
+
+def admission_valid(value):
+    """A recorded observation, not a compatibility claim or model allowlist."""
+    if not isinstance(value,dict) or set(value)!={'model','firmware','webos','target_sha256','target'}:
+        return False
+    target=value['target']
+    return (isinstance(value['model'],str) and re.fullmatch(r'[A-Za-z0-9._-]{1,128}',value['model']) is not None
+        and isinstance(value['firmware'],str) and legacy.VERSION.fullmatch(value['firmware']) is not None
+        and isinstance(value['webos'],str) and re.fullmatch(r'[6-9]\.\d{1,3}\.\d{1,3}(?:-[A-Za-z0-9.]+)?',value['webos']) is not None
+        and isinstance(value['target_sha256'],str) and legacy.DIGEST.fullmatch(value['target_sha256']) is not None
+        and isinstance(target,dict) and set(target)=={'dev','ino','size','mtime_ns'}
+        and all(type(v) is int and 0<=v<2**63 for v in target.values()) and target['ino']>0 and target['size']>=52)
 
 
 def selection(root=STATE, uid=0):
@@ -47,10 +67,10 @@ def selection(root=STATE, uid=0):
         return None
     value = json.loads(secure(path, uid, 8192))
     if (not isinstance(value, dict) or set(value) != {'schema','backend','experimental','routing','native_sha256','admission'}
-            or type(value['schema']) is not int or value['schema'] != 2
+            or type(value['schema']) is not int or value['schema'] not in (2,3)
             or value['backend'] != BACKEND or value['routing'] != ROUTING or value['experimental'] is not True
             or not isinstance(value['native_sha256'],str) or not legacy.DIGEST.fullmatch(value['native_sha256'])
-            or not legacy.admission_valid(value['admission'])):
+            or not (legacy.admission_valid(value['admission']) if value['schema']==2 else admission_valid(value['admission']))):
         raise ValueError('Invalid compositor selection; retain recovery evidence')
     return value
 
@@ -78,10 +98,64 @@ def read_chain():
     return validate_chain(reply['configs'].get(KEY))
 
 
-def write_chain(value):
-    reply=luna('luna://com.webos.service.config/setConfigs', {'configs':{KEY:validate_chain(value)}})
+def write_chain(value,volatile=False):
+    payload={'configs':{KEY:validate_chain(value)}}
+    if volatile: payload['volatile']=True
+    reply=luna('luna://com.webos.service.config/setConfigs', payload)
     if not isinstance(reply,dict) or reply.get('returnValue') is not True:
         raise ValueError('Configd did not acknowledge filter write')
+
+
+def stock_chain(chain):
+    chain=validate_chain(chain)
+    if (not chain or sum(e['file'].endswith('/systemUi.js') and e['handler']=='handleSystemKeys' for e in chain)!=1
+            or any(not re.fullmatch(r'/usr/lib/(?:qt5/)?qml/KeyFilters/[A-Za-z0-9_-]+\.js',e['file']) for e in chain)):
+        raise ValueError('Stock Qt Home filter chain not verified')
+    return chain
+
+
+def require_generic_environment():
+    """Read-only admission. Never repair a foreign route, input or vendor file."""
+    missing=luna('luna://com.webos.service.systemprofile/getProfiles',
+                 {'names':['defaultApps','idleApp'],'subscribe':False},allow_failure=True)
+    if (not isinstance(missing,dict) or missing.get('returnValue') is not False
+            or type(missing.get('errorCode')) is not int or missing['errorCode']!=-1
+            or missing.get('errorText')!='Service does not exist: com.webos.service.systemprofile.'):
+        raise ValueError('System Profile absence was not confirmed')
+    if any(os.path.lexists(p) for p in OTHER_HOME_STATE):
+        raise ValueError('Another Home integration is present; preserve its state')
+    if os.path.lexists(INPUT_BINDINGS):
+        bindings=json.loads(secure(INPUT_BINDINGS,limit=65536))
+        if not isinstance(bindings,dict) or '773' in bindings:
+            raise ValueError('Foreign Home input binding; no takeover attempted')
+    critical=(str(legacy.TARGET),str(STOCK_APPINFO.parent))
+    mounts=MOUNTINFO.read_text()
+    if len(mounts)>1024*1024: raise ValueError('Oversized mount table')
+    for line in mounts.splitlines():
+        fields=line.split()
+        if len(fields)<10 or ' - ' not in line: raise ValueError('Unknown mount topology')
+        target=re.sub(r'\\([0-7]{3})',lambda m:chr(int(m[1],8)),fields[4])
+        if target!='/' and any(p==target or p.startswith(target+'/') for p in critical):
+            raise ValueError('Native Home is covered by a mount; no takeover attempted')
+    app=json.loads(secure(STOCK_APPINFO,limit=65536))
+    if (not isinstance(app,dict) or app.get('id')!=STOCK or app.get('type')!='native'
+            or app.get('main') not in (str(legacy.TARGET),'file://'+str(legacy.TARGET))):
+        raise ValueError('Stock native Home manifest not verified')
+    chain=stock_chain(read_chain())
+    for entry in chain:
+        script=secure(Path(entry['file']),limit=256*1024)
+        if entry['file'].endswith('/systemUi.js') and (
+                b'Qt.Key_Super_L' not in script or not re.search(rb'function\s+handleSystemKeys\s*\(',script)):
+            raise ValueError('Unknown Qt Home filter contract')
+    try: from .emergency_reader import open_remote, query
+    except ImportError: from emergency_reader import open_remote, query
+    fd=open_remote()
+    try:
+        keys=query(fd,0x21,128)  # EVIOCGBIT(EV_KEY): advertised Home and Back.
+        if any(not keys[code//8] & (1<<(code%8)) for code in (773,412)):
+            raise ValueError('Emergency Home/Back input capabilities not verified')
+    finally:
+        os.close(fd)
 
 
 def filter_entry(root=STATE):
@@ -98,8 +172,16 @@ def reconcile(chain, root, enabled):
     return [own]+rest if enabled else rest
 
 
+def filter_present(root):
+    chain=read_chain()
+    return reconcile(chain,root,False)!=chain
+
+
 def change_chain(root, enabled, uid=0):
     before=read_chain()
+    generic=selection(root,uid)['schema']==3
+    if generic and enabled:
+        stock_chain(before)
     after=reconcile(before,root,enabled)
     directory=private_directory(root,uid)
     pending=directory/'pending.json'
@@ -135,7 +217,11 @@ def change_chain(root, enabled, uid=0):
     atomic(pending, dict(schema=1,before=before,after=after,entry=filter_entry(root)),uid)
     if read_chain()!=before:
         raise ValueError('Concurrent configd edit; retain pending evidence')
-    write_chain(after)
+    # Do not silently reinterpret retained schema2 persistent transactions.
+    if generic:
+        write_chain(after,volatile=True)
+    else:
+        write_chain(after)
     if read_chain()!=after:
         raise ValueError('Configd readback mismatch; retain pending evidence')
     pending.unlink()
@@ -149,7 +235,17 @@ def probe():
     data=legacy.secure(legacy.TARGET,limit=4*1024*1024)
     info=luna('luna://com.webos.service.tv.systemproperty/getSystemInfo',
               {'keys':['modelName','firmwareVersion','sdkVersion']})
-    value=legacy.admit(info,data)
+    try:
+        value=legacy.admit(info,data)
+    except ValueError:
+        import struct
+        value={key:info.get(field) for key,field in (('model','modelName'),('firmware','firmwareVersion'),('webos','sdkVersion'))} if isinstance(info,dict) else {}
+        candidate=dict(value,target_sha256='0'*64,target=dict(dev=0,ino=1,size=len(data),mtime_ns=0))
+        if (not isinstance(info,dict) or info.get('returnValue') is not True or struct.calcsize('P')!=4
+                or len(data)<52 or data[:7]!=b'\x7fELF\x01\x01\x01' or data[18:20]!=b'\x28\0'
+                or not admission_valid(candidate)):
+            raise ValueError('Experimental compositor requires Qt webOS 6-9 and ARM32 native Home') from None
+        require_generic_environment()
     after=legacy.TARGET.stat()
     identity=lambda st: dict(dev=st.st_dev,ino=st.st_ino,size=st.st_size,mtime_ns=st.st_mtime_ns)
     if identity(before)!=identity(after) or not before.st_mode & 0o111:
@@ -194,7 +290,7 @@ def read_intent(root=STATE, uid=0):
 def prepare(root, native_sha256, admission, uid=0):
     root=Path(root)
     if (not isinstance(native_sha256,str) or not legacy.DIGEST.fullmatch(native_sha256)
-            or not legacy.admission_valid(admission)):
+            or not admission_valid(admission)):
         raise ValueError('Invalid compositor admission')
     legacy.trusted_directory(root,uid)
     if any(os.path.lexists(root/name) for name in ('home-backend.json','c1-gate','c1-keyfilter')):
@@ -203,7 +299,7 @@ def prepare(root, native_sha256, admission, uid=0):
     token=uuid.uuid4().hex
     write_config(root,admission,token,uid)
     write_intent(root,False,token,'disabled',uid)
-    value=dict(schema=2,backend=BACKEND,experimental=True,routing=ROUTING,
+    value=dict(schema=2 if legacy.admission_valid(admission) else 3,backend=BACKEND,experimental=True,routing=ROUTING,
                native_sha256=native_sha256,admission=admission)
     atomic(root/'home-backend.json',value,uid)
     return value
@@ -339,10 +435,20 @@ def stop_controller(root,uid):
     path=private_directory(root,uid)/'controller.json'
     try: value=json.loads(secure(path,uid,4096))
     except FileNotFoundError: return
-    if (not isinstance(value,dict) or set(value)!={'pid','start','token'}
+    generic=selection(root,uid)['schema']==3
+    fields={'pid','start','token','boot'} if generic else {'pid','start','token'}
+    if (not isinstance(value,dict) or set(value)!=fields
             or type(value['pid']) is not int or value['pid']<=1 or type(value['start']) is not int
             or not isinstance(value['token'],str) or not legacy.TOKEN.fullmatch(value['token'])):
         raise ValueError('Unknown lifecycle controller identity; retain evidence')
+    if generic:
+        if not isinstance(value['boot'],str) or str(uuid.UUID(value['boot']))!=value['boot']:
+            raise ValueError('Unknown lifecycle controller boot; retain evidence')
+        if value['boot']!=boot_identity():
+            # Native routing has already stopped. A controller from a previous
+            # boot cannot own any current PID; never wait for or signal it.
+            path.unlink()
+            return
     pid=value['pid']
     try:
         if process_start(pid)!=value['start']:
@@ -368,11 +474,14 @@ def stop_controller(root,uid):
 def restore_locked(root,uid):
     native(['--restore'],root,uid)
     after=validate_native(native(['--status'],root,uid))
-    if not after['stock_verified'] or after['healthy'] or not after['stopped'] or after['guardian_pid']:
+    generic=selection(root,uid)['schema']==3
+    if after['healthy'] or not after['stopped'] or after['guardian_pid'] or (not generic and not after['stock_verified']):
         raise ValueError('Native stop retirement unverified; retain evidence')
     write_intent(root,False,after['token'],'recovering',uid)
     stop_controller(root,uid)
     change_chain(root,False,uid)
+    if not after['stock_verified']:
+        raise ValueError('Home identity changed; owned filter removed, recovery evidence retained')
     write_intent(root,False,after['token'],'disabled',uid)
     return 'restored'
 
@@ -399,8 +508,9 @@ def start_controller(root,uid,token,control_fd,log):
             '--watch',token,str(control_fd),str(ready_write)],pass_fds=(control_fd,ready_write),
             stdin=subprocess.DEVNULL,stdout=log,stderr=log,start_new_session=True,close_fds=True)
         os.close(ready_write); ready_write=None
-        atomic(private_directory(root,uid)/'controller.json',
-               dict(pid=child.pid,start=process_start(child.pid),token=token),uid)
+        record=dict(pid=child.pid,start=process_start(child.pid),token=token)
+        if selection(root,uid)['schema']==3: record['boot']=boot_identity()
+        atomic(private_directory(root,uid)/'controller.json',record,uid)
         read_handshake(ready_read,('WATCH '+token+'\n').encode(),[child])
         return child
     except BaseException:
@@ -505,6 +615,7 @@ def return_ready(root,uid,token,changed):
     if changed(): return False
     proof=validate_native(native(['--status'],root,uid,timeout=.3))
     if changed(): return False
+    if selection(root,uid)['schema']==3 and (not filter_present(root) or changed()): return False
     intent=read_intent(root,uid)
     return (intent['token']==token and intent['phase'] in ('active','trial')
             and can_return(surfaces,power,proof,token,foreground))
@@ -558,6 +669,8 @@ def watch(token,control,ready,root=STATE,uid=0):
             # At most a brief startup grace while the parent starts the guard.
             proof=validate_native(native(['--status'],root,uid,timeout=.3))
             live=proof['token']==token and proof['healthy'] and not proof['stopped']
+            if selection(root,uid)['schema']==3 and not filter_present(root):
+                raise ValueError('Volatile compositor filter lost; explicit Enable required')
             if live: armed=True
             if not live and (armed or time.monotonic()-started>8):
                 raise ValueError('Controller token inactive')

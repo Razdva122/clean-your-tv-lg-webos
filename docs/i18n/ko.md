@@ -110,3 +110,5 @@ TV 모델, 펌웨어, No-root 또는 Root, 설치 기기, 실패한 단계와 �
 <a id="저장-공간"></a>
 
 자세한 영어 참고 문서: [요구사항](../COMPATIBILITY.md) · [리모컨](../CONTROLS.md) · [테마](../THEMES.md) · [업데이트](../UPDATES.md).
+
+> 미공개 후보: 실험적 Root Home은 모델 목록 없이 Qt SDK 6–9의 기능 검사로 선택됩니다. 실제 기기 호환성과 일반 OTA는 검증되지 않았습니다. 다른 Home 통합은 변경하지 않습니다. 안전 또는 전원 중지 후 Home 제어를 명시적으로 다시 켜세요. [#364](../development/C1-NATIVE-GATE.md#unpublished-capability-based-compositor-admission-364).

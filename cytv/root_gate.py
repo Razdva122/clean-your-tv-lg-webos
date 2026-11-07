@@ -81,7 +81,10 @@ def source_bundle(installer):
     data = {'bundle.json': raw}
     for name in manifest['files']:
         data[name] = read(name)
-    validate_bundle(data, resolution)
+    _, release = validate_bundle(data, resolution)
+    if installer.tv_info.get('home_backend_schema') == 3 and (
+            release.get('routing') != 'compositor-keyfilter-v1' or release.get('compositor_admission') != 3):
+        raise ValueError('Generic compositor admission requires a matching mount-free payload')
     return data
 
 
@@ -122,7 +125,7 @@ def install(installer, inventory, migrate=False, reinstall=None):
     This host path never stages a normal updater or retries a failed native setup.
     """
     if migrate or reinstall is not None:
-        raise UserError('C1 native Home setup requires a fresh installation without migration. Existing recovery data was kept.')
+        raise UserError('Experimental Home setup requires a fresh installation without migration. Existing recovery data was kept.')
     if installer.store.pending(installer.profile):
         raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
     try:
@@ -135,10 +138,11 @@ def install(installer, inventory, migrate=False, reinstall=None):
             prepared = {name: (bundle/name).read_bytes() for name in data}
             validate_bundle(prepared, installer.tv_info['graphics_resolution'])
     except (OSError, ValueError, KeyError, TypeError, AttributeError, EOFError, tarfile.TarError) as error:
-        raise UserError('C1 native Home packages are missing or invalid. Use a complete installer build. Installation has not started.') from error
+        raise UserError('Experimental Home packages are missing or invalid. Use a complete installer build. Installation has not started.') from error
     from . import storage
     storage.install(installer.remote, prepared, installer.progress, root=True)
-    installer.progress(NOTICE)
+    installer.progress('Experimental compositor Home: physical controls and power recovery are unverified.'
+                       if installer.tv_info.get('home_backend_schema') == 3 else NOTICE)
     installer.store.begin(installer.profile, 'install', release_sha=digest(prepared['release.json']),
                           bundle_sha=digest(prepared['bundle.json']), migrate=False, requires_updater=False,
                           home_backend=BACKEND, stage='upload')

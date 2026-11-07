@@ -109,3 +109,5 @@ No-root: 要重新启动 Home 控制，请打开 Home Helper，选择启动 Help
 <a id="存储空间"></a>
 
 详细英文参考：[要求](../COMPATIBILITY.md) · [遥控器](../CONTROLS.md) · [主题](../THEMES.md) · [更新](../UPDATES.md)。
+
+> 未发布候选版本：实验性 Root Home 根据 Qt SDK 6–9 的能力检查选择，不使用型号列表。硬件兼容性及普通 OTA 尚未验证。其他 Home 集成保持不变；安全停止或电源停止后，须明确重新启用 Home 控制。 [#364](../development/C1-NATIVE-GATE.md#unpublished-capability-based-compositor-admission-364).

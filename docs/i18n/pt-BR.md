@@ -110,3 +110,5 @@ Quando solicitado, desconecte a TV da tomada, reconecte, aguarde a rede e escolh
 <a id="espaço-de-armazenamento"></a>
 
 Referências detalhadas em inglês: [requisitos](../COMPATIBILITY.md) · [controles](../CONTROLS.md) · [temas](../THEMES.md) · [atualizações](../UPDATES.md).
+
+> Candidato não publicado: Root Home experimental é escolhido pelas capacidades do Qt SDK 6–9, sem lista de modelos. Compatibilidade física e OTA normal não foram verificadas. Outras integrações Home não são alteradas; após parada de segurança ou energia, ative Home explicitamente. [#364](../development/C1-NATIVE-GATE.md#unpublished-capability-based-compositor-admission-364).

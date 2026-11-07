@@ -109,3 +109,5 @@ When asked, disconnect the TV from power, reconnect it, wait for the network and
 <a id="storage-space"></a>
 
 [Requirements](../COMPATIBILITY.md) · [Remote controls](../CONTROLS.md) · [Themes](../THEMES.md) · [Updates](../UPDATES.md).
+
+> Unpublished candidate: experimental Root Home is selected by capability checks on Qt SDK 6–9, without a model list. Physical compatibility and normal OTA are unverified. Other Home integrations are left untouched; after a safety or power stop, enable Home control explicitly. [#364](../development/C1-NATIVE-GATE.md#unpublished-capability-based-compositor-admission-364).

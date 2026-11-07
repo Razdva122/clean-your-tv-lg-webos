@@ -110,6 +110,8 @@ def tv_summary(value):
         result['arm32_supported'] = value['arm32_supported']
     if value.get('home_backend') in ('system-profile', 'c1-native-gate'):
         result['home_backend'] = value['home_backend']
+    if type(value.get('home_backend_schema')) is int and value['home_backend_schema'] in (2,3):
+        result['home_backend_schema'] = value['home_backend_schema']
     if 'root_requirements' in value:
         checks = mapping(value['root_requirements'])
         from .root_capabilities import CALLS

@@ -68,7 +68,10 @@ def c1_device(remote):
             or not re.fullmatch(r'OLED(?:48|55|65|77|83)C1[A-Z0-9]{2,12}', model)
             or not re.fullmatch(version,firmware) or not re.fullmatch(version,sdk) or not sdk.startswith('6.')):
         return False
-    result = remote.run(NATIVE_HEADERS, timeout=5)
+    return native_headers_valid(remote.run(NATIVE_HEADERS, timeout=5))
+
+
+def native_headers_valid(result):
     if not isinstance(result,str) or len(result)>2048:
         return False
     metadata, _, headers = result.partition('\n')
@@ -80,8 +83,35 @@ def c1_device(remote):
     return bool(mode & 0o111 and not mode & 0o022 and separator and arm32_elf(shell) and arm32_elf(home))
 
 
-def verify(remote, checklist, info, allow_c1=False):
+def compositor_device(remote):
+    """Preliminary admission; the bundled device runtime rechecks before effects.
+
+    Models are observations, not an allowlist. Only the researched Qt generations
+    are eligible; a newer C++ compositor must not inherit a stale configd key.
+    """
+    reply = remote.luna('com.webos.service.tv.systemproperty/getSystemInfo',
+                        {'keys':['modelName','firmwareVersion','sdkVersion']}, timeout=5)
+    if (not isinstance(reply,dict) or reply.get('returnValue') is not True
+            or not all(isinstance(reply.get(k),str) for k in ('modelName','firmwareVersion','sdkVersion'))
+            or not re.fullmatch(r'[A-Za-z0-9._-]{1,128}', str(reply.get('modelName','')))
+            or not re.fullmatch(r'\d{1,3}\.\d{1,3}\.\d{1,3}(?:-[A-Za-z0-9.]+)?',str(reply.get('firmwareVersion','')))
+            or not re.fullmatch(r'[6-9]\.\d{1,3}\.\d{1,3}(?:-[A-Za-z0-9.]+)?',str(reply.get('sdkVersion','')))):
+        return False
+    chain = remote.luna('com.webos.service.config/getConfigs',
+                        {'configNames':['com.webos.surfacemanager.keyFilters']}, timeout=5)
+    entries = chain.get('configs',{}).get('com.webos.surfacemanager.keyFilters') if isinstance(chain,dict) and chain.get('returnValue') is True else None
+    if (not isinstance(entries,list) or not 1 <= len(entries) <= 128
+            or not all(isinstance(e,dict) and isinstance(e.get('file'),str)
+                and re.fullmatch(r'/usr/lib/(?:qt5/)?qml/KeyFilters/[A-Za-z0-9_-]+\.js',e['file'])
+                and isinstance(e.get('handler'),str) and re.fullmatch(r'[A-Za-z_$][A-Za-z0-9_$]{0,127}',e['handler']) for e in entries)
+            or sum(e['file'].endswith('/systemUi.js') and e['handler']=='handleSystemKeys' for e in entries) != 1):
+        return False
+    return native_headers_valid(remote.run(NATIVE_HEADERS, timeout=5))
+
+
+def verify(remote, checklist, info, allow_c1=False, allow_compositor=False):
     info.pop('home_backend', None)
+    info.pop('home_backend_schema', None)
     reasons = info['root_capabilities'] = dict.fromkeys(CALLS, 'not-checked')
     requirements = info.setdefault('root_requirements', {})
     codes = info['root_capability_codes'] = {}
@@ -108,18 +138,23 @@ def verify(remote, checklist, info, allow_c1=False):
         if allow_c1 and name == 'home-profiles' and absent:
             try:
                 supported = c1_device(remote)
+                schema = 2
+                if not supported and allow_compositor:
+                    supported = compositor_device(remote)
+                    schema = 3
             except Exception:
                 supported = False
             reasons[name] = 'service-absent'
             if supported:
                 for key in CALLS:
                     requirements.pop(key, None)
-                checklist.update(name,'unknown','System Profile is absent. Verified the C1 native Home backend.')
-                checklist.update('home-settings','unknown','Profile settings are not required by native C1 Home.')
+                checklist.update(name,'unknown','System Profile is absent. Experimental compositor Home prerequisites passed; physical controls are unverified.')
+                checklist.update('home-settings','unknown','Profile settings are not required by compositor Home.')
                 info['home_backend'] = 'c1-native-gate'
+                info['home_backend_schema'] = schema
                 return info['home_backend']
             requirements[name] = 'fail'
-            checklist.update(name,'fail','System Profile is absent and the C1 native Home identity was not verified.')
+            checklist.update(name,'fail','System Profile is absent and a supported experimental Home backend was not verified.')
             raise RootCapabilityError()
         reasons[name] = reason
         status = 'pass' if reason=='readable' else 'unknown' if reason=='unconfirmed' else 'fail'
