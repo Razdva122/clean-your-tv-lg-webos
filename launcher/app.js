@@ -30,7 +30,6 @@
     GRID_WIDTH = 1696,
     FOCUS_SCALE = 1.1,
     FOCUS_PADDING = 12,
-    CARD_GAP = 24,
     ROW_GAP = 90,
     DOCK_PADDING = 28,
     DOCK_TOP = 680,
@@ -355,7 +354,6 @@
       tr('Network settings')
     );
   }
-  var legacyOrderKey = 'tvhome.order';
   // App editing uses the existing grid positions and focus highlight.
   var library,
     hideButton,

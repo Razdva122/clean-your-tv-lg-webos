@@ -1,4 +1,4 @@
-import argparse, io, pathlib, tarfile, sys
+import argparse, io, pathlib, tarfile
 # Rewrites the ar archive in Python: macOS BSD `ar r` turns the Debian-style ipk into a symbol-table-only archive.
 def read_ar(b):
  assert b[:8]==b'!<arch>\n','not an ar archive'

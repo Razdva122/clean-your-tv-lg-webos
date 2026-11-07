@@ -1,5 +1,4 @@
 """Private boot entry: shared package identity is DATA, never executable input."""
-import json
 import os
 from pathlib import Path
 import subprocess
