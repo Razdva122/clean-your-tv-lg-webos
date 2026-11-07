@@ -29,32 +29,38 @@ const jailed = {
   chmodSync: (p, m) => fs.chmodSync(local(p), m),
   renameSync(a, b) {
     fs.renameSync(local(a), local(b));
-    if (/\/(home|input)-request[.]json$/.test(b)) {
+    if (/\/(home|input|catalog)-request[.]json$/.test(b)) {
       const request = JSON.parse(fs.readFileSync(local(b), 'utf8'));
       const response =
-        request.method === 'inputStatus'
+        request.method === 'listApps'
           ? {
               id: request.id,
               returnValue: true,
-              devices: [{ appId: 'com.webos.app.hdmi3', connected: true }]
+              apps: [{ id: 'org.example', title: 'Example' }]
             }
-          : request.method === 'presentationContext'
+          : request.method === 'inputStatus'
             ? {
                 id: request.id,
                 returnValue: true,
-                eligible: false,
-                content: false,
-                generation: 7,
-                observedAgeMs: 0
+                devices: [{ appId: 'com.webos.app.hdmi3', connected: true }]
               }
-            : request.method === 'presentationDismissed'
+            : request.method === 'presentationContext'
               ? {
                   id: request.id,
                   returnValue: true,
-                  dismissed: true,
-                  generation: request.generation
+                  eligible: false,
+                  content: false,
+                  generation: 7,
+                  observedAgeMs: 0
                 }
-              : { id: request.id, returnValue: true, enabled: true };
+              : request.method === 'presentationDismissed'
+                ? {
+                    id: request.id,
+                    returnValue: true,
+                    dismissed: true,
+                    generation: request.generation
+                  }
+                : { id: request.id, returnValue: true, enabled: true };
       fs.writeFileSync(
         local(b.replace('-request', '-response')),
         JSON.stringify(response)
@@ -166,6 +172,30 @@ function call(app, method = 'homeStatus', payload = {}) {
       writes,
       [own + '/state/home-control/home-request.tmp'],
       'service never needs the other app mount'
+    );
+    assert.equal(typeof methods.listApps, 'function');
+    const beforeCatalog = writes.length;
+    for (const app of [
+      'other.app',
+      'com.gathin.tvhome.other',
+      '',
+      null,
+      undefined
+    ])
+      assert.equal((await call(app, 'listApps')).returnValue, false);
+    assert.equal(
+      (await call('com.gathin.tvhome', 'listApps', { path: 'PRIVATE' }))
+        .returnValue,
+      false
+    );
+    assert.equal(writes.length, beforeCatalog);
+    assert.equal(
+      (await call('com.gathin.tvhome', 'listApps')).apps[0].id,
+      'org.example'
+    );
+    assert.equal(
+      writes.at(-1),
+      own + '/state/home-control/catalog-request.tmp'
     );
     const inputs = await call('com.gathin.tvhome', 'inputStatus');
     assert.equal(inputs.devices[0].connected, true);

@@ -109,3 +109,37 @@ assert.equal(
   console.error(e);
   process.exitCode = 1;
 });
+
+const remote = create(
+  store,
+  [{ id: 'remote', title: 'Remote', icon: 'https://tv:3001/resources/old' }],
+  { columns: 5, dockApps: ['remote'] }
+);
+remote.refresh([
+  { id: 'remote', title: 'Remote', icon: 'https://tv:3001/resources/fresh' }
+]);
+assert.equal(
+  remote.visible()[0].icon,
+  'https://tv:3001/resources/fresh',
+  'a fresh resource URL replaces an expiring cached URL'
+);
+remote.refresh([{ id: 'remote', title: 'Remote' }]);
+assert.equal(
+  remote.visible()[0].icon,
+  'https://tv:3001/resources/fresh',
+  'partial metadata does not erase an existing icon'
+);
+
+const packaged = create(
+  store,
+  [{ id: 'local', title: 'Local', icon: 'icons/local.png' }],
+  { columns: 5, dockApps: ['local'] }
+);
+packaged.refresh([
+  { id: 'local', title: 'Local', icon: 'https://tv:3001/resources/new' }
+]);
+assert.equal(
+  packaged.visible()[0].icon,
+  'icons/local.png',
+  'a remote URL cannot replace a durable packaged icon'
+);
