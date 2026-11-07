@@ -276,7 +276,7 @@ def failure_summary(value):
     result = {'action': choice(value.get('action'), ACTIONS),
               'phase': choice(value.get('phase'), PHASES),
               'reason_code': choice(value.get('reason_code'), REASONS)}
-    error_types = ('RootCapabilityError', 'UserError', 'TVCommandError', 'TVRejected', 'PythonCacheError',
+    error_types = ('RootCapabilityError', 'UserError', 'LocalRecoveryError', 'TVCommandError', 'TVRejected', 'PythonCacheError',
                    'PythonPreflightError', 'DeveloperKeyError', 'TVConnectionError',
                    'AuthenticationException', 'BadHostKeyException', 'NoValidConnectionsError',
                    'OSError', 'RuntimeError', 'ValueError', 'TimeoutError', 'Exception')
@@ -332,6 +332,9 @@ def failure_summary(value):
     if 'no_root_observer' in value:
         from .errors import no_root_observer_details
         result['no_root_observer'] = no_root_observer_details(value['no_root_observer'])
+    if 'local_recovery' in value:
+        from .errors import local_recovery_details
+        result['local_recovery'] = local_recovery_details(value['local_recovery'])
     if 'checks' in value:
         # Stored projections are id -> status, not UI events.
         result['checks'] = checks_summary({key: {'status': item} for key, item in mapping(value['checks']).items()})

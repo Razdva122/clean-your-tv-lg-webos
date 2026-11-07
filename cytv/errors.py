@@ -22,6 +22,38 @@ class UserError(RuntimeError):
         self.reason_code = reason_code
 
 
+LOCAL_RECOVERY_REASONS = ('directory-owner', 'directory-permissions', 'directory-type',
+                          'directory-access', 'storage-unavailable', 'operation-invalid',
+                          'capsule-missing', 'capsule-permissions', 'capsule-unsafe',
+                          'capsule-changed', 'capsule-invalid', 'capsule-access', 'source-incompatible')
+
+
+def local_recovery_details(value):
+    value = value if type(value) is dict else {}
+    result = {key: value.get(key) if type(value.get(key)) is str and value[key] in allowed else 'unknown'
+              for key, allowed in (('reason', LOCAL_RECOVERY_REASONS),
+                                   ('location', ('profile', 'ancestor', 'capsule', 'operation')))}
+    mode = value.get('mode')
+    if type(mode) is str and re.fullmatch('[0-7]{4}', mode):
+        result['mode'] = mode
+    if type(value.get('owner')) is str and value['owner'] in ('root', 'current-user', 'other'):
+        result['owner'] = value['owner']
+    return result
+
+
+class LocalRecoveryError(UserError):
+    """Fixed local failure categories; no paths, account names or raw exceptions."""
+    def __init__(self, reason, location='capsule', *, mode=None, owner=None, storage_full=False):
+        self.local_recovery = local_recovery_details(dict(reason=reason, location=location, mode=mode, owner=owner))
+        reason = self.local_recovery['reason']
+        message = ('Local recovery storage could not be verified.' if reason.startswith('directory-') or reason == 'storage-unavailable' else
+                   'The original private recovery file is missing.' if reason == 'capsule-missing' else
+                   'The saved recovery operation is incompatible with this installer.' if reason == 'source-incompatible' else
+                   'The original private recovery file could not be verified.')
+        super().__init__((COMPUTER_STORAGE_FULL if storage_full else message) + ' Recovery data was kept.',
+                         reason_code='computer-storage-full' if storage_full else 'pending-operation')
+
+
 def connection_interrupted(error):
     """Transient transport loss only; credentials and host trust never retry."""
     return (getattr(error, 'reason_code', None) == 'connection-interrupted'

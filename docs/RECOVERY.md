@@ -69,6 +69,22 @@ inspection establish the allowed next action.
 
 ## Interrupted setup or removal
 
+### Unreleased: local recovery storage messages
+
+This improvement is outside the frozen v1.12.0 candidate.
+
+A local recovery storage refusal concerns the computer or Android app storage,
+not a TV package-status reply. It can mean that a directory's ownership or
+permissions did not pass verification, before the recovery file was read. It does
+not by itself mean that saved data disappeared. Keep the original files and
+permissions unchanged and save a diagnostic report for review; do not publish
+private paths, profiles or recovery capsules. New reports distinguish these
+categories without exposing paths or account names; see
+[local diagnostic fields and limits](development/INSTALLER-DIAGNOSTICS.md#local-recovery-storage-next-candidate-201).
+An older incompatible observer still uses separately confirmed removal through
+the existing recovery journey. A clearer message does not permit replay or prove
+the original package outcome.
+
 <a id="next-candidate-original-operation-recovery-and-full-removal"></a>
 
 ### Original-operation recovery and full removal (published v1.11.0)

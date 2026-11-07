@@ -1,5 +1,6 @@
 # Release history and device evidence
 
+- [Local recovery storage diagnostics, 2026-11-07](2026-11-07-local-recovery-storage-diagnostics.md): private local failure categories, pre-journal local storage checks and preserved original evidence; no device-recovery claim.
 - [Release 1.12.0 scoped QA, 2026-11-07](2026-11-07-release-1.12.0-scoped-qa.md): exact Android emulator upgrade/native checks, packaged UI and icons, authorized C3 delivery/Home/controls/audio/standby, physical Beta deferral and unresolved pre-suspension Home disable.
 
 - [1.12.0 verified candidate artifacts, 2026-11-07](2026-11-07-release-1.12.0-artifacts.md): successful full build42384446335:1, verified archive/package hashes and pending exact-package acceptance.
