@@ -26,6 +26,8 @@ inventory during installation. Each row has a text status as well as a visual
 marker. Results remain visible after failure; subsequent steps stay **Not checked**.
 An interrupted probe is **Could not verify**, not evidence of a missing runtime.
 
+In the next unpublished candidate, Root setup continues with a warning if TV inputs cannot be read but the application list is valid. Inputs may be missing from Home; a failed or empty application list still stops setup. Save the diagnostic report if the warning persists. The combined inventory check remains **Could not verify**, rather than claiming that the input read passed.
+
 Python and Node.js checks concern the **TV**, not the computer running cytv.
 Root setup can prepare private Python only when its other prerequisites pass;
 `doctor` does not prepare a runtime or request control pairing. A failed runtime

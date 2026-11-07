@@ -19,7 +19,7 @@ def source(path):
     return path.read_bytes()
 
 
-def build(output, legacy_node_prototype=False):
+def build(output, legacy_node_prototype=False, legacy_node_beta=False):
     version=json.loads(source(ROOT.parent/'release-versions.json'))['updater']
     output=Path(output).absolute()
     if '..' in output.parts or any(p.is_symlink() for p in (output,*output.parents)):raise ValueError('Indirect build output')
@@ -80,7 +80,10 @@ def build(output, legacy_node_prototype=False):
     files['usr/palm/packages/'+APP+'/packageinfo.json']=(json.dumps({'id':APP,'version':version,'app':APP,'services':[APP+'.service']})+'\n').encode()
     control=('Package: '+APP+'\nVersion: '+version+'\nSection: misc\nPriority: optional\nArchitecture: all\nMaintainer: Clean Your TV\nDescription: Independent Root application updater and recovery\n').encode()
     code['root-updater.ipk']=builder.ar({'debian-binary':b'2.0\n','control.tar.gz':builder.tgz({'control':control}),'data.tar.gz':builder.tgz(files,{prefix+'startup.sh'})})
-    if legacy_node_prototype:
+    if legacy_node_beta:
+        from scripts.root_node_build import compile_root_beta
+        code = compile_root_beta(code)
+    elif legacy_node_prototype:
         from scripts.root_node_build import compile_root_node
         code = compile_root_node(code)
     output.mkdir(exist_ok=False)
@@ -93,5 +96,6 @@ def build(output, legacy_node_prototype=False):
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--legacy-node-prototype',action='store_true',help='Host-only Node 0.12 prototype; admission remains Node 8+')
+    parser.add_argument('--legacy-node-beta',action='store_true',help='Node 0.12.2 Beta with ordinary OTA disabled')
     args=parser.parse_args()
-    print(build(args.output,legacy_node_prototype=args.legacy_node_prototype))
+    print(build(args.output,legacy_node_prototype=args.legacy_node_prototype,legacy_node_beta=args.legacy_node_beta))

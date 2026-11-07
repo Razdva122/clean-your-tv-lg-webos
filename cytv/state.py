@@ -21,7 +21,7 @@ def sync_directory(path):
             os.close(fd)
 
 
-def target(host, edition, port=None, identity=None):
+def target(host, edition, port=None, identity=None, connection=None, root_variant=None):
     host = host.strip().lower()
     if not re.fullmatch(r'[a-z0-9][a-z0-9.-]{0,252}', host) or '..' in host:
         raise ValueError('Enter a TV IPv4 address or hostname, without a URL or SSH options.')
@@ -29,10 +29,18 @@ def target(host, edition, port=None, identity=None):
         ipaddress.IPv4Address(host)
     if edition not in ('root', 'no-root'):
         raise ValueError('Choose root or no-root.')
-    port = int(port if port is not None else 22 if edition == 'root' else 9922)
+    if connection is not None and (connection != 'root-ssh' or edition != 'no-root'):
+        raise ValueError('Invalid SSH connection for this edition.')
+    if root_variant is not None and (root_variant != 'node012-beta' or edition != 'root'):
+        raise ValueError('Invalid Root runtime variant.')
+    port = int(port if port is not None else 22 if edition == 'root' or connection == 'root-ssh' else 9922)
     if not 1 <= port <= 65535:
         raise ValueError('SSH port must be between 1 and 65535.')
     profile = {'host': host, 'edition': edition, 'port': port}
+    if connection is not None:
+        profile['connection'] = connection
+    if root_variant is not None:
+        profile['root_variant'] = root_variant
     if identity:
         profile['identity'] = str(Path(identity).expanduser().resolve())
     return profile
@@ -71,6 +79,8 @@ class Store:
     def device_dir(self, profile):
         normalized = target(**profile)
         key = ':'.join(str(normalized[k]) for k in ('host', 'port', 'edition'))
+        if normalized.get('connection'):
+            key += ':' + normalized['connection']
         path = self.root / hashlib.sha256(key.encode()).hexdigest()[:24]
         path.mkdir(parents=True, exist_ok=True, mode=0o700)
         return path
@@ -169,7 +179,7 @@ class Store:
             if any(original[k] != selected[k] for k in ('host', 'edition', 'port')):
                 raise ValueError('foreign profile')
             profiles=self.profiles()
-            matches = [p for p in profiles if all(p[k] == original[k] for k in ('host','edition','port'))]
+            matches = [p for p in profiles if all(p.get(k) == original.get(k) for k in ('host','edition','port','connection'))]
             if matches != [original]:
                 raise ValueError('ambiguous profile')
             operation=(self.pending(original) or {}).get('product_operation')

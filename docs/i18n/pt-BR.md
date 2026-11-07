@@ -2,6 +2,12 @@
 
 Clean Your TV oferece uma tela inicial pessoal para sua LG webOS: seus apps na sua ordem, sem linhas patrocinadas neste menu. Instale pelo computador ou por um celular Android; depois o computador pode ficar desligado.
 
+## Candidato UNRELEASED: Node.js antigo na TV
+
+Estas opções pertencem a um candidato ainda não publicado, não aos downloads publicados. Se Root normal rejeitar a versão do Node.js da TV (exige Node.js 8+), o instalador pode oferecer **No-root usando o SSH root existente**: Home e Home Helper sem instalar Developer Mode. Nunca ative Developer Mode sobre um root existente. Somente **Node.js exatamente 0.12.2** permite oferecer também **Root Beta**, com pacotes separados e confirmação explícita. O Node.js do sistema não é substituído e não há atualizações automáticas/OTA; use o instalador do computador. No-root tem funcionalidade reduzida: sem redirecionamento do Home do sistema nem controles exclusivos do Root. Root Beta não foi testado suficientemente em TVs.
+
+Os demais requisitos nativos, de interfaces Home e de Python continuam obrigatórios. Os testes físicos supervisionados pelo proprietário ainda não foram realizados; isto não confirma compatibilidade. Salve o relatório de diagnóstico, marque testes não realizados e compartilhe voluntariamente um resultado sem dados privados, manualmente, pelo [guia de feedback](../FEEDBACK.md). Nada é publicado automaticamente.
+
 ## 1. Baixe o instalador
 
 Toque na imagem do seu dispositivo. Os botões baixam a versão publicada mais recente. No Mac, escolha Apple Silicon (M1 ou mais recente) ou Intel; confira no menu Apple → Sobre Este Mac.
@@ -59,6 +65,8 @@ O assistente usa inicialmente o idioma do sistema e salva sua escolha explícita
 2. Escolha **No-root** ou **Root** e confira a TV selecionada antes de continuar.
 3. No-root: digite o código do Developer Mode e aceite a solicitação na TV. Root: use suas credenciais SSH. Aceite uma nova identidade SSH apenas para sua própria TV em uma rede confiável. Se uma chave salva mudou, pare e investigue.
 4. Siga o assistente. Mantenha a TV ligada, a mesma rede e o CYTV aberto até terminar. Não force a parada do app Android. Root ativa o controle de Home logo após preparar a recuperação.
+
+No próximo candidato ainda não publicado, a instalação Root continua com um aviso se as entradas da TV não puderem ser lidas, mas a lista de aplicativos for válida. Entradas podem faltar na Home; uma lista de aplicativos com falha ou vazia ainda interrompe a instalação. Salve o relatório de diagnóstico se o aviso persistir.
 
 ## 5. Confira o controle remoto
 

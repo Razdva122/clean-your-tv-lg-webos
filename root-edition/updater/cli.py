@@ -12,6 +12,7 @@ import time
 from updater.core import Manager
 from updater.device import Device, STATE
 from updater.store import Store
+LEGACY_NODE_BETA = False
 
 FIELDS={'check':set(),'status':set(),'install':{'version','profile'},'restoreProfile':set(),
         'ready':{'transaction','version'},'confirm':{'transaction','version'},
@@ -32,6 +33,8 @@ def spawn_worker():
 
 
 def handle(method,payload,store,device,wake=spawn_worker):
+    if LEGACY_NODE_BETA and method in ('check','install'):
+        raise ValueError('Root Beta automatic updates are unavailable; use the computer installer.')
     p=validate_request(method,payload);manager=Manager(store,device)
     if method=='status':return manager.status()
     if method=='restoreProfile':return manager.restore_profile()

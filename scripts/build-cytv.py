@@ -98,6 +98,23 @@ def stage_c1_root(payload, work, version, run=subprocess.run):
             cwd=ROOT, check=True)
 
 
+def stage_legacy_root_beta(payload, version, run=subprocess.run):
+    target = Path(payload)/'legacy-root-beta'
+    target.mkdir()
+    for graphics, paths in GRAPHICS.items():
+        run([sys.executable, 'root-edition/build.py', '--output', str(target/paths['root']),
+             '--version', version, '--resolution', graphics, '--legacy-node-beta'], cwd=ROOT, check=True)
+    for script, folder in [('root-edition/build_updater.py','root-updater'), ('system-updater/build.py','system-updater')]:
+        run([sys.executable, script, '--output', str(target/folder), '--legacy-node-beta'], cwd=ROOT, check=True)
+    shutil.copy2(Path(payload)/'fallback.png', target/'fallback.png')
+    shutil.copytree(Path(payload)/'installer-support', target/'installer-support')
+    manifest = {'schema':1, 'graphics':GRAPHICS, 'runtime_variant':'node012-beta',
+                'files':{p.relative_to(target).as_posix():hashlib.sha256(p.read_bytes()).hexdigest()
+                         for p in sorted(target.rglob('*')) if p.is_file()}}
+    (target/'payload.json').write_text(json.dumps(manifest,indent=2)+'\n', encoding='utf-8')
+    package.verify_payload(target)
+
+
 
 def verify_release_versions(payload, versions):
     from cytv import __version__
@@ -241,6 +258,7 @@ def build_payload():
     subprocess.run([sys.executable, 'root-edition/build_updater.py', '--output', str(payload / 'root-updater')], cwd=ROOT, check=True)
     stage_updater(payload)
     subprocess.run([sys.executable,'system-updater/build.py','--output',str(payload/'system-updater')],cwd=ROOT,check=True)
+    stage_legacy_root_beta(payload, versions['root'])
     (payload / 'LICENSE').write_bytes((ROOT / 'LICENSE').read_bytes())
     (payload / 'THIRD_PARTY_NOTICES.md').write_bytes((ROOT / 'THIRD_PARTY_NOTICES.md').read_bytes())
     shutil.copytree(ROOT / 'cytv/licenses', payload / 'licenses/Qt', dirs_exist_ok=True)
@@ -261,6 +279,7 @@ def build_payload():
                     target.parent.mkdir(parents=True, exist_ok=True)
                     target.write_bytes(path.read_bytes())
     manifest = {'schema': 1, 'launcher': 'launcher.ipk', 'helper': 'helper.ipk', 'graphics': GRAPHICS,
+                'legacy_root_beta': 'legacy-root-beta',
                 'home_version': json.loads(launcher['appinfo.json'])['version'],
                 'helper_version': versions['helper'],
                 'root_backends': {'c1-native-gate': {'experimental': True, 'hardware_validated': False, 'admission_schema': 3,

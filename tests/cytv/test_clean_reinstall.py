@@ -97,11 +97,122 @@ class RootInventoryTests(unittest.TestCase):
         self.assertIn(b'/app-inventory.js',remote.run.call_args.kwargs['data'])
         self.assertIsNone(inst.store.pending(inst.profile))
 
+    def test_invalid_input_envelope_does_not_misclassify_unchecked_apps(self):
+        from cytv.errors import UserError
+        inst,remote=self.fixture([[{'id':'video','title':'Video'}],{'returnValue':False}])
+        with self.assertRaises(UserError):inst.root_inventory(b'fallback')
+        self.assertEqual(inst.tv_info.get('root_inventory'),{'applications':'unknown','inputs':'invalid'})
+        self.assertIsNone(inst.store.pending(inst.profile))
+
     def test_invalid_or_empty_root_catalog_stops_before_install(self):
         for result in [[],[[],{'returnValue':True,'devices':[]}],[[{'id':None,'title':'bad'}],{'returnValue':True,'devices':[]}],[[],{'returnValue':False}]]:
             inst,remote=self.fixture(result)
             with self.subTest(result=result),self.assertRaises((ValueError,RuntimeError)):inst.root_inventory(b'fallback')
             self.assertIsNone(inst.store.pending(inst.profile))
+
+class RootInventoryRuntimeTests(unittest.TestCase):
+    """Run the installer's actual Node program and reader; fake only Luna I/O."""
+    fixture=RootInventoryTests.fixture
+
+    def runtime(self, apps, inputs):
+        import json,subprocess
+        from pathlib import Path
+        from cytv.errors import TVCommandError
+        inst,remote=self.fixture(None)
+        stage=inst.payload
+        reader=Path(__file__).resolve().parents[2]/'root-edition/service/app-inventory.js'
+        (stage/'app-inventory.js').write_text(
+            'var reader=require('+json.dumps(str(reader))+');\n'
+            'var replies='+json.dumps({'apps':apps,'inputs':inputs})+';\n'
+            "function exec(file,args,options,cb){"
+            "if(file!=='/usr/bin/luna-send'||args[0]!=='-n'||args[1]!=='1'||args[3]!=='{}')throw Error('Unexpected command');"
+            "var kind=args[2]==='luna://com.webos.applicationManager/listApps'?'apps':"
+            "args[2]==='luna://com.webos.service.eim/getAllInputStatus'?'inputs':null;"
+            "if(!kind)throw Error('Unexpected URI');"
+            "setImmediate(function(){var reply=replies[kind];"
+            "if(reply==='timeout')cb(Error('PRIVATE TIMEOUT'),'', 'PRIVATE STDERR');"
+            "else cb(null,JSON.stringify(reply));});}\n"
+            "module.exports=function(){return reader(exec,function(){return 0;});};"
+            "module.exports.inputs=function(){return reader.inputs(exec,function(){return 0;});};")
+        inst.coordinator_code.return_value=str(stage)
+        def run(command,*,data,timeout):
+            self.assertEqual(command,'/usr/bin/node')
+            reply=subprocess.run(['node'],input=data,capture_output=True,timeout=timeout)
+            if reply.returncode:raise TVCommandError(reply.returncode)
+            return reply.stdout.decode()
+        remote.run.side_effect=run
+        messages=[];inst.progress=messages.append
+        return inst,messages
+
+    def test_unavailable_inputs_do_not_block_valid_applications(self):
+        from cytv import diagnostics
+        apps={'returnValue':True,'apps':[{'id':'video','title':'Video'}]}
+        for inputs in ({'returnValue':False,'errorCode':-1,'errorText':'PRIVATE'},
+                       {'returnValue':True,'devices':[None]},'timeout'):
+            with self.subTest(inputs=inputs):
+                inst,messages=self.runtime(apps,inputs)
+                try:result=inst.root_inventory(b'fallback')
+                except RuntimeError as error:self.fail('Unavailable inputs blocked valid applications: '+str(error))
+                self.assertEqual([app['id'] for app in result['apps']],['video'])
+                self.assertEqual(result['inputs'],[])
+                self.assertIn('Warning: TV inputs could not be read. Continuing with applications only.',messages)
+                report=diagnostics.context.tv_summary(inst.tv_info)
+                self.assertEqual(report['root_inventory'],{'applications':'read','inputs':'unavailable'})
+                self.assertNotIn('PRIVATE',str(report)+str(messages))
+                self.assertIsNone(inst.store.pending(inst.profile))
+
+    def test_failed_application_query_still_blocks_installation(self):
+        from cytv.errors import UserError
+        inst,messages=self.runtime({'returnValue':False,'errorText':'PRIVATE'},
+                                   {'returnValue':True,'devices':[]})
+        with self.assertRaises(UserError) as caught:inst.root_inventory(b'fallback')
+        self.assertEqual(caught.exception.reason_code,'inventory-unavailable')
+        self.assertEqual(inst.tv_info.get('root_inventory'),{'applications':'unavailable','inputs':'read'})
+        self.assertEqual(messages,[])
+        self.assertIsNone(inst.store.pending(inst.profile))
+
+    def test_input_fallback_cannot_hide_missing_or_invalid_apps(self):
+        from cytv.errors import UserError
+        for apps,expected in [({'returnValue':False},'unavailable'),
+                              ({'returnValue':True,'apps':[]},'invalid'),
+                              ({'returnValue':True,'apps':[{'id':None,'title':'Bad'}]},'invalid')]:
+            with self.subTest(apps=apps):
+                inst,messages=self.runtime(apps,{'returnValue':False})
+                with self.assertRaises(UserError):inst.root_inventory(b'fallback')
+                self.assertEqual(inst.tv_info.get('root_inventory'),{'applications':expected,'inputs':'unavailable'})
+                self.assertEqual(messages,[])
+                self.assertIsNone(inst.store.pending(inst.profile))
+
+    def test_successful_input_snapshot_is_preserved(self):
+        inst,messages=self.runtime({'returnValue':True,'apps':[{'id':'video','title':'Video'}]},
+            {'returnValue':True,'devices':[{'appId':'hdmi','label':'HDMI 1'}]})
+        result=inst.root_inventory(b'fallback')
+        self.assertEqual(result['inputs'],[{'appId':'hdmi','label':'HDMI 1'}])
+        self.assertEqual(inst.tv_info.get('root_inventory'),{'applications':'read','inputs':'read'})
+        self.assertEqual(messages,[])
+
+class RootInventoryCheckTests(unittest.TestCase):
+    def test_unavailable_input_read_is_not_displayed_as_passed(self):
+        import tempfile
+        from unittest.mock import patch,MagicMock
+        from pathlib import Path
+        from cytv import cli
+        from cytv.desktop import DesktopConsole
+        for inputs,expected in [('read','pass'),('unavailable','unknown')]:
+            with self.subTest(inputs=inputs),tempfile.TemporaryDirectory() as tmp, \
+                    patch('cytv.cli.payload_dir',return_value=Path(tmp)), \
+                    patch('cytv.cli.Installer') as cls, \
+                    patch('cytv.cli.package.verify_payload',return_value={}):
+                (Path(tmp)/'fallback.png').write_bytes(b'fallback')
+                cls.return_value.tv_info={'root_inventory':{'applications':'read','inputs':inputs}}
+                cls.return_value.root_inventory.return_value={'apps':[{'id':'video','title':'Video'}],'inputs':[]}
+                events=[]
+                code=cli.main(['install','--host','192.0.2.10','--edition','root','--data-dir',tmp,
+                               '--yes','--language','en'],connect=lambda *a:MagicMock(),
+                              write=DesktopConsole(lambda kind,value:events.append((kind,value))))
+                self.assertEqual(code,0,str(events))
+                rows=[value for kind,value in events if kind=='check' and value['id']=='inventory']
+                self.assertEqual(rows[-1]['status'],expected)
 
 class RootInventoryCLITests(unittest.TestCase):
     def test_root_install_uses_ssh_catalog_without_ssap_pairing(self):

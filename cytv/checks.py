@@ -45,6 +45,8 @@ class CheckList:
         if detail is None:
             detail = previous.get('detail', '')
         event = {'id': name, 'label': LABELS[name], 'status': status, 'detail': detail}
+        if name == 'node-version' and getattr(self, 'root_variant', None) == 'node012-beta':
+            event['label'] = 'TV Node.js 0.12.2 — Beta'
         if event != previous:
             self.results[name] = event
             self.emit(dict(event))

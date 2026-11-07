@@ -17,6 +17,8 @@ from .errors import (UserError, TVCommandError, TV_STORAGE_FULL, no_root_observe
 PROTOCOL = 'no-root-original-stream-v1'
 ROOT = '/tmp/.cytv-installer'
 PUBLIC_ROOT = '/media/developer/temp'
+ROOT_SSH_PRIVATE = '/tmp/.cytv-installer-root'
+ROOT_SSH_PUBLIC = '/var/lib/clean-your-tv-installer'
 APPS = ('com.local.nativehome', 'com.gathin.tvhome')
 
 PROGRAM = r'''
@@ -472,7 +474,26 @@ def canonical(value):
     return json.dumps(value, sort_keys=True, separators=(',', ':'), ensure_ascii=True)
 
 
-def make_plan(operation, diagnostic_id, action, artifacts, versions, public_root=PUBLIC_ROOT, configuration_sha256=None):
+# Keep the original Developer Mode program byte-for-byte: existing capsules
+# authenticate it and must remain usable after the installer is updated.
+ROOT_PROGRAM = PROGRAM.replace(
+    'var uid=process.getuid(), root=input.root, publicRoot=input.public_root;',
+    '''var uid=process.getuid(), root=input.root, publicRoot=input.public_root;
+if(!plan||plan.connection!=='root-ssh'||uid!==0||root!=='/tmp/.cytv-installer-root'||publicRoot!=='/var/lib/clean-your-tv-installer'||input.sender!=='/usr/bin/luna-send')throw Error('invalid-plan');'''
+).replace('function storageCheck(){', '''function storageCheck(){
+ if(!exists(publicRoot)){ancestry(path.dirname(publicRoot));mkdir(publicRoot,493);}''').replace(
+    'fs.fchmodSync(fd,mode);fs.fsyncSync(fd);fs.closeSync(fd);fd=null;',
+    'if(!isArtifact){fs.fchownSync(fd,pinned.uid,pinned.gid);var owner=fs.fstatSync(fd);if(owner.uid!==pinned.uid||owner.gid!==pinned.gid)fail("unsafe-config-file");}fs.fchmodSync(fd,mode);fs.fsyncSync(fd);fs.closeSync(fd);fd=null;'
+)
+
+
+def source_for(root_ssh):
+    return ROOT_PROGRAM if root_ssh else PROGRAM
+
+
+def make_plan(operation, diagnostic_id, action, artifacts, versions, public_root=PUBLIC_ROOT, configuration_sha256=None, root_ssh=False):
+    if root_ssh:
+        public_root = ROOT_SSH_PUBLIC
     slots = []
     for index, app in enumerate(APPS):
         name = ('helper.ipk', 'launcher.ipk')[index]
@@ -484,9 +505,12 @@ def make_plan(operation, diagnostic_id, action, artifacts, versions, public_root
                           request=request, request_sha256=hashlib.sha256(request.encode()).hexdigest(),
                           artifact_sha256=hashlib.sha256(artifacts[name]).hexdigest() if action == 'install' else None,
                           version=versions[app] if action == 'install' else None))
-    return dict(protocol=PROTOCOL, edition='no-root', operation=operation, diagnostic_id=diagnostic_id,
-                action=action, source_sha256=hashlib.sha256(PROGRAM.encode()).hexdigest(), slots=slots,
+    plan = dict(protocol=PROTOCOL, edition='no-root', operation=operation, diagnostic_id=diagnostic_id,
+                action=action, source_sha256=hashlib.sha256(source_for(root_ssh).encode()).hexdigest(), slots=slots,
                 configuration_sha256=configuration_sha256 or hashlib.sha256(b'{}').hexdigest())
+    if root_ssh:
+        plan['connection'] = 'root-ssh'
+    return plan
 
 
 def observation_error(command, failure, error=None):
@@ -501,12 +525,17 @@ def observation_error(command, failure, error=None):
 
 def invoke(remote, plan, command, slot=None, source=None, proof=None, data=None):
     request = dict(root=ROOT, public_root=PUBLIC_ROOT, plan=plan, command=command, slot=slot)
+    if plan.get('connection') == 'root-ssh':
+        if not getattr(remote, 'root', False):
+            refuse()
+        request.update(root=ROOT_SSH_PRIVATE, public_root=ROOT_SSH_PUBLIC, sender='/usr/bin/luna-send')
+    program_source = source_for(plan.get('connection') == 'root-ssh')
     if command == 'prepare':
-        request['source'] = PROGRAM if source is None else source
+        request['source'] = program_source if source is None else source
     if proof is not None:request['proof']=proof
     # The wrapper is not part of the source bound by a capsule. A diagnostic
     # envelope is always a failure, never a receipt.
-    program = 'try {\n' + PROGRAM + r"""
+    program = 'try {\n' + program_source + r"""
 } catch (error) {
  function category(value, allowed) {return typeof value==='string'&&allowed.indexOf(value)>=0?value:'unknown';}
  process.stdout.write(JSON.stringify({operation:JSON.parse(process.argv[process.argv.length-1]).plan.operation,
@@ -555,15 +584,16 @@ def refuse():
 def begin(installer, action, artifacts, versions, expected, configuration):
     operation = uuid.uuid4().hex
     # No package request or durable pending receipt until storage is usable.
-    check_plan = make_plan(operation, uuid.uuid4().hex, action, artifacts, versions, PUBLIC_ROOT)
+    root_ssh = installer.profile.get('connection') == 'root-ssh'
+    check_plan = make_plan(operation, uuid.uuid4().hex, action, artifacts, versions, PUBLIC_ROOT, root_ssh=root_ssh)
     invoke(installer.remote, check_plan, 'storage-check')
     installer.store.begin(installer.profile, 'install' if action == 'install' else 'uninstall',
                           recovery_protocol=PROTOCOL, observer_operation=operation,
                           expected=expected, versions=versions)
     pending = installer.store.pending(installer.profile)
     config_hash=hashlib.sha256(canonical({name:hashlib.sha256(raw).hexdigest() for name,raw in configuration.items()}).encode()).hexdigest()
-    plan = make_plan(operation, pending['diagnostic_id'], action, artifacts, versions, PUBLIC_ROOT,config_hash)
-    capsule = dict(schema=1, profile=installer.profile, plan=plan, source=PROGRAM, expected=expected,
+    plan = make_plan(operation, pending['diagnostic_id'], action, artifacts, versions, PUBLIC_ROOT,config_hash,root_ssh=root_ssh)
+    capsule = dict(schema=1, profile=installer.profile, plan=plan, source=source_for(root_ssh), expected=expected,
                    artifacts={name: base64.b64encode(raw).decode() for name, raw in artifacts.items()},
                    configuration={name: raw.decode('utf8') for name, raw in configuration.items()})
     digest = installer.store.save_capsule(installer.profile, operation, capsule)
@@ -596,12 +626,14 @@ def capsule(installer, pending):
         if (value['schema'] != 1 or value['profile'] != installer.profile or plan['operation'] != pending['observer_operation'] or
                 plan['diagnostic_id'] != pending['diagnostic_id'] or plan['protocol'] != PROTOCOL or
                 plan['action'] != ('install' if pending['action'] == 'install' else 'remove') or
-                hashlib.sha256(value['source'].encode()).hexdigest() != plan['source_sha256'] or value['source'] != PROGRAM or
+                hashlib.sha256(value['source'].encode()).hexdigest() != plan['source_sha256'] or
+                value['source'] != source_for(installer.profile.get('connection') == 'root-ssh') or
                 value['expected'] != pending['expected']):
             refuse()
         artifacts = {name: base64.b64decode(raw, validate=True) for name, raw in value['artifacts'].items()}
         config_hash=hashlib.sha256(canonical({name:hashlib.sha256(raw.encode()).hexdigest() for name,raw in value['configuration'].items()}).encode()).hexdigest()
-        rebuilt = make_plan(plan['operation'], plan['diagnostic_id'], plan['action'], artifacts, pending['versions'], PUBLIC_ROOT,config_hash)
+        rebuilt = make_plan(plan['operation'], plan['diagnostic_id'], plan['action'], artifacts, pending['versions'], PUBLIC_ROOT,config_hash,
+                            root_ssh=installer.profile.get('connection') == 'root-ssh')
         rebuilt['source_sha256'] = plan['source_sha256']
         if rebuilt != plan:
             refuse()

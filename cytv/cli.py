@@ -50,6 +50,8 @@ def parser():
     result.add_argument('--host', help=i18n.translate('TV IPv4 address or hostname'))
     result.add_argument('--no-discovery', action='store_true', help=i18n.translate('Skip local network discovery and enter a TV address manually'))
     result.add_argument('--edition', choices=('no-root', 'root'))
+    result.add_argument('--connection', choices=('root-ssh',), help=i18n.translate('No-root: use existing root SSH without Developer Mode'))
+    result.add_argument('--root-variant', choices=('node012-beta',), help=i18n.translate('Root: select the experimental Node.js 0.12.2 payload'))
     result.add_argument('--port', type=int, help=i18n.translate('SSH port (No-root: 9922; Root: 22)'))
     result.add_argument('--identity', type=Path, help=i18n.translate('Existing Root SSH private key'))
     result.add_argument('--data-dir', type=Path, help=i18n.translate('Private local profile directory'))
@@ -138,18 +140,24 @@ def choose_profile(args, store, ask, write, search, inspect):
             choice = prompts.number(ask, write, f'Edition [{default_choice}]: ', 1, 2, default=default_choice)
             edition = 'no-root' if choice == 1 else 'root'
         try:
-            profile = state.target(host, edition, args.port, args.identity)
+            profile = state.target(host, edition, args.port, args.identity, args.connection, args.root_variant)
         except ValueError:
             raise UserError('Invalid TV address or port. Use an IPv4 address or hostname and a port from 1 to 65535.') from None
         # Match saved credentials, including the identity, when targeting a known TV explicitly.
-        for saved in profiles:
-            if all(saved[k] == profile[k] for k in ('host', 'edition', 'port')):
-                profile = dict(saved)
-                break
+        matches = [saved for saved in profiles if saved['host'] == host and saved['edition'] == edition
+                   and (args.port is None or saved['port'] == profile['port'])
+                   and (args.connection is None or saved.get('connection') == args.connection)
+                   and (args.root_variant is None or saved.get('root_variant') == args.root_variant)]
+        if len(matches) == 1:
+            profile = dict(matches[0])
     if args.port is not None:
         profile['port'] = args.port
     if args.identity:
         profile['identity'] = str(args.identity.expanduser().resolve())
+    if args.connection:
+        profile['connection'] = args.connection
+    if args.root_variant:
+        profile['root_variant'] = args.root_variant
     return state.target(**profile)
 
 
@@ -230,6 +238,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             return info
 
         profile = choose_profile(args, store, ask, write, search or discovery.find_tvs, inspect_connection)
+        write.selected_profile(profile)
         if args.command == 'replace-system-updater':
             if profile['edition'] != 'root': raise UserError('System Updater replacement requires an existing Root connection.')
             if store.pending(profile): raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
@@ -249,8 +258,9 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             write.step(3, 'Prepare the TV connection')
             if profile['edition'] == 'root':
                 write('Root requires existing root and SSH access.')
-                write('Hardware validation: LG C3; other models are unverified.')
-            else:
+                if not profile.get('root_variant'):
+                    write('Hardware validation: LG C3; other models are unverified.')
+            elif profile.get('connection') != 'root-ssh':
                 write('Developer Mode lets CYTV install apps on a TV without root.')
                 write('Home is your app screen. Home Helper makes the Home button open it.')
                 write.heading('1. Developer Mode')
@@ -263,10 +273,12 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 write('Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.')
             write.step(4, 'Review and install', clear=profile['edition'] == 'root')
             write('TV: ' + profile['host'])
-            write('Edition: ' + ('Root' if profile['edition'] == 'root' else 'No-root'))
+            write('Edition: ' + ('Root Beta (Node.js 0.12.2)' if profile.get('root_variant') else
+                                'Root' if profile['edition'] == 'root' else 'No-root'))
             write('SSH port: ' + str(profile['port']))
             if profile['edition'] == 'root':
-                write('Hardware validation: LG C3; other models are unverified.')
+                if not profile.get('root_variant'):
+                    write('Hardware validation: LG C3; other models are unverified.')
                 write('Automatic SSH sign-in first; credentials only if needed.')
             write('Next: verify SSH, read your apps, then install.')
             if profile['edition']=='no-root':
@@ -290,7 +302,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
         # Canonicalize the selected local build root (macOS /var is an OS
         # alias); authenticated support members still reject indirect children.
         payload, manifest = (Path(payload_root) if payload_root is not None else payload_dir()).resolve(), {}
-        if args.command in ('install', 'enable-system-updates','enable-firmware-access','disable-firmware-access','replace-system-updater'):
+        if args.command in ('install', 'enable-system-updates','enable-firmware-access','disable-firmware-access','replace-system-updater') or profile.get('root_variant'):
             try:
                 manifest = package.verify_payload(payload)
             except FileNotFoundError:
@@ -401,6 +413,12 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     diagnostics.save_result(write, store, 'recover', profile, phase, tv_info,
                                             checks=checks.results, status=tv_info.get('status'))
                     return 0
+                from .root_runtime import require_idle, BETA, NOTICE
+                require_idle(store, profile)
+                if profile.get('root_variant') == BETA:
+                    write(NOTICE)
+                    if args.non_interactive or not prompts.confirm('Install experimental Root Beta?', ask, write):
+                        raise EOFError
                 if profile['edition'] == 'root' and not resume:
                     installer.select_graphics()
                     phase = 'inspect-installation'
@@ -434,6 +452,16 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                         if not prompts.confirm('Reinstall Root?', ask, write):
                             write('Existing Root and recovery data left unchanged.')
                             return 0
+                    except UserError as error:
+                        if (error.reason_code != 'root-requirements' or profile.get('root_variant')
+                                or tv_info.get('root_requirements', {}).get('node-version') != 'fail'):
+                            raise
+                        if args.migrate_home:
+                            raise UserError('Choose an alternative edition without --migrate-home. Installation has not started.')
+                        from .root_runtime import offer
+                        offer(installer, args, ask, write)
+                        installer.select_graphics()
+                        installer.preflight(install=True, home_interfaces=profile['edition']=='root')
                 if not reinstall and not resume:
                     phase = 'inspect-installation'
                     write.heading('Versions on the TV → versions in this installer')
@@ -450,7 +478,10 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     if profile['edition']=='root':
                         checks.update('inventory','running','')
                         inventory=installer.root_inventory((payload/'fallback.png').read_bytes())
-                        checks.update('inventory','pass')
+                        if installer.tv_info.get('root_inventory',{}).get('inputs')=='unavailable':
+                            checks.update('inventory','unknown','Warning: TV inputs could not be read. Continuing with applications only.')
+                        else:
+                            checks.update('inventory','pass')
                     else:
                         from .tv import SSAP
                         while True:
@@ -507,6 +538,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                         write('Root activation and the launch request completed. Check the separate startup and physical Home results.')
                     if result.get('updates_ready'):
                         write('Root Updater is ready. Install future compatible updates in Settings → Software updates on the TV.')
+                    if profile.get('root_variant') == 'node012-beta':
+                        write(NOTICE)
                     if result.get('backend') == 'c1-native-gate':
                         write('C1 Beta is installed. Automatic updates are unavailable; after a stop, turn Home control on again in TV settings.')
                     else:
@@ -517,8 +550,11 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     write("After installation, press Home to try it. If LG Home opens, open Home Helper from the TV's apps.")
                     write('Three short Home presses within two seconds return to LG Home. To restart Home control, open Home Helper, choose Start Helper and confirm. Your saved Home screen choice is kept.')
                     write('Packages installed; Home Helper launch requested. Check short Home, arrows/OK, Back, volume, standby and cold boot.')
-                    write('Emergency exit: three short Home presses within two seconds. Keep Developer Mode active. The computer can now be switched off.')
-                    write('Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.')
+                    if profile.get('connection') == 'root-ssh':
+                        write('No-root is installed using root SSH. Keep this saved connection for status, recovery and removal.')
+                    else:
+                        write('Emergency exit: three short Home presses within two seconds. Keep Developer Mode active. The computer can now be switched off.')
+                        write('Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.')
             elif args.command == 'recover':
                 from .recovery import recover
                 phase = 'recover'
@@ -648,6 +684,9 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
         diagnostics.suggest_issue(write, store, args.command, profile, phase, exc, tv_info, checks=checks.results, status=tv_info.get('status'))
         return 1
     finally:
+        if profile and profile.get('root_variant') == 'node012-beta' and args.command == 'install':
+            from .root_runtime import FEEDBACK
+            write(FEEDBACK)
         if remote is not None:
             remote.close()
 
