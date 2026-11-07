@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Explicit computer bootstrap; never repairs or replaces an existing supervisor."""
 import argparse
+LEGACY_NODE_BETA = False
 import gzip
 import hashlib
 import io
@@ -491,7 +492,8 @@ def main():
     args=parser.parse_args()
     if args.device:
         if not args.apply or os.geteuid()!=0 or not Path('/usr/bin/luna-send').is_file() or sys.version_info<(3,9):raise PermissionError('Explicit root webOS Python 3.9+ setup required')
-        subprocess.run(['/usr/bin/node','-e','process.exit(Number(process.versions.node.split(".")[0])>=8?0:1)'],check=True)
+        policy = 'process.versions.node === "0.12.2"' if LEGACY_NODE_BETA else 'Number(process.versions.node.split(".")[0])>=8'
+        subprocess.run(['/usr/bin/node','-e','process.exit(('+policy+')?0:1)'],check=True)
         sys.path.insert(0,str(args.bundle))
         from installation import device_operation, Ownership, read_journal, JOURNALS
         with tempfile.TemporaryDirectory(prefix='system-baseline-') as tmp:

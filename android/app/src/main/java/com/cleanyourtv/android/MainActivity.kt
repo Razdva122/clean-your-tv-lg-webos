@@ -116,7 +116,7 @@ class MainActivity : Activity() {
                 require(config.length <= 4096)
                 val raw = JSONObject(config)
                 val clean = JSONObject()
-                for (key in arrayOf("host", "edition", "port", "language", "action", "useImportedKey")) {
+                for (key in arrayOf("host", "edition", "port", "language", "action", "useImportedKey", "connection", "root_variant")) {
                     if (raw.has(key)) clean.put(key, raw.get(key))
                 }
                 require(clean.optString("action") in arrayOf("install", "status", "doctor", "home-diagnostics", "recover", "restore", "uninstall"))

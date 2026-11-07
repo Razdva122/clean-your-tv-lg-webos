@@ -96,6 +96,8 @@ def root_diagnostics_summary(value):
 def tv_summary(value):
     value = mapping(value)
     result = metadata(value)
+    if version(value.get('node_version')):
+        result['node_version'] = value['node_version']
     if 'root_diagnostics' in value:
         result['root_diagnostics'] = root_diagnostics_summary(value['root_diagnostics'])
     if 'setup_outcome' in value:

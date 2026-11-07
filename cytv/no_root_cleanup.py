@@ -22,6 +22,10 @@ var fs=require('fs'),path=require('path'),c=require('constants'),zlib=require('z
 var input=JSON.parse(process.argv[process.argv.length-1]),uid=process.getuid();
 if(['inventory','sweep','stop','root-package','stage-carrier','boot-create','boot-probe','boot-retire'].indexOf(input.action)<0)throw Error('invalid-cleanup-action');
 var base='/media/developer/apps/usr/palm',publicRoot='/media/developer/temp';
+if(input.connection==='root-ssh'){
+ if(uid!==0)throw Error('root-access-required');
+ publicRoot='/var/lib/clean-your-tv-installer';
+}
 var apps=['com.local.nativehome','com.gathin.tvhome','com.cleanyourtv.updater'];
 var services=['com.local.nativehome.service','com.gathin.tvhome.renewal','com.cleanyourtv.updater.service'];
 var reply={schema:1,boot_id:fs.readFileSync('/proc/sys/kernel/random/boot_id','utf8').trim(),present:[],blocked:[],root_present:[],startup_services:[],external_update_hint:null,resident_installer:false,staging_ids:input.staging_ids||[]};
@@ -123,6 +127,7 @@ try{
  }
 }catch(ignored){}
 var installerRoots=['/media/developer/.cytv-installer','/tmp/.cytv-installer'];
+if(uid===0)installerRoots.push('/tmp/.cytv-installer-root');
 installerRoots.forEach(function(root){try{var operations=root+'/operations';if(exists(operations)){ancestry(operations);var ids=fs.readdirSync(operations);reply.resident_installer=reply.resident_installer||ids.length>0;ids.forEach(function(id){if(/^[a-f0-9]{32}$/.test(id)&&reply.staging_ids.indexOf(id)<0)reply.staging_ids.push(id);});if(reply.staging_ids.length>128)fail();}}catch(e){blocked('installer-private',e);}});
 function helperState(state){
  ancestry(path.dirname(state));var s=fs.lstatSync(state);
@@ -197,6 +202,8 @@ def _device(installer, action, proof=None):
     pending = installer.store.pending(installer.profile) or {}
     request = {'action':action, 'staging_ids':pending.get('cleanup_staging_ids', []),
                'removal':pending.get('removal_operation'), 'proof':proof}
+    if installer.profile.get('connection') == 'root-ssh':
+        request['connection'] = 'root-ssh'
     raw = installer.remote.run('/usr/bin/node', data=_program(request), timeout=90)
     value = json.loads(raw)
     if (not isinstance(value, dict) or value.get('schema') != 1 or

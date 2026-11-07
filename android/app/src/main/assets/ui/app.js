@@ -1,5 +1,12 @@
 'use strict';
 const native = typeof window.CYTV !== 'undefined';
+function editionName() {
+  return rootVariant
+    ? 'Root Beta (Node.js 0.12.2)'
+    : edition === 'root'
+      ? 'Root'
+      : 'No-root';
+}
 function resolveLanguage(tag) {
   const parts = String(tag).replace(/_/g, '-').toLowerCase().split('-'),
     base = parts[0];
@@ -23,6 +30,8 @@ let screen = 'welcome',
   action = 'install',
   host = '',
   port = '22';
+let selectedConnection = null,
+  rootVariant = null;
 let inspecting = false,
   detected = null,
   reportReady = false;
@@ -134,7 +143,7 @@ function guideImage(name) {
   return `<figure class="guide-example"><img src="guide/${name}.png" alt="${esc(t('guideExample'))}"><figcaption>${t('guideNote')}</figcaption></figure>`;
 }
 function connection() {
-  return `${step()}<section class="page-intro"><h1>${action === 'install' ? t('connectTitle') : operationTitle()}</h1><p>${action === 'install' ? t('connectDesc') : t('toolsConnect')}</p><span class="edition-tag">${icon(edition === 'root' ? 'root' : 'shield')}${edition === 'root' ? 'Root' : 'No-root'}</span></section><form id="connection" novalidate><div class="fields"><label class="field"><span>${t('ip')}</span><input id="host" name="host" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="192.168.1.50" value="${esc(host)}" aria-describedby="host-error" aria-invalid="false"><p id="host-error" class="error" hidden></p></label><label class="field port"><span>${t('port')}</span><input id="port" name="port" type="text" inputmode="numeric" value="${esc(port)}" aria-describedby="port-error"><p id="port-error" class="error" hidden></p></label></div><p class="field-help">${t('ipHelp')}</p>${edition === 'no-root' ? `<div class="requirements"><div class="requirements-title">${icon('tv')}${t('prepare')}</div><p class="notice">${t('homeHelperHelp')}</p><div class="requirement"><span class="number">1</span><div><strong>Developer Mode</strong><p>${t('devInstall')}</p></div></div><div class="requirement"><span class="number">2</span><div><strong>LG Developer</strong><p>${t('devAccount')}</p>${guideImage('sign-in')}</div></div><div class="requirement"><span class="number">3</span><div><strong>Dev Mode Status</strong><p>${t('devDesc')}</p>${guideImage('dev-mode')}</div></div><div class="requirement"><span class="number">4</span><div><strong>Key Server</strong><p>${t('keyServerDesc')}</p>${guideImage('key-server')}</div></div></div><p class="notice">${t('sessionHelp')}</p>` : `<div class="root-notice">${t('rootNotice')}</div><div class="segment" role="group" aria-label="SSH"><button type="button" data-action="auth" data-auth="password" aria-pressed="${auth === 'password'}">${t('password')}</button><button type="button" data-action="auth" data-auth="key" aria-pressed="${auth === 'key'}">${t('sshKey')}</button></div>${auth === 'key' ? `<button type="button" class="key-button" data-action="import-key">${icon(keyReady ? 'check' : 'file')}<span>${t(keyReady ? 'keyImported' : 'importKey')}</span></button><p class="error" id="key-error" hidden>${t('keyError')}</p><p class="notice">${t('keyPrivate')}</p>` : `<p class="notice">${t('rootHint')}</p>`}`}<div class="network-tip">${icon('wifi')}<span>${t('wifiTip')}</span></div>${action === 'install' ? `<p class="notice">${t('pairingHelp')}</p>` : ''}</form><footer class="bottom">${primary(action === 'install' ? 'install' : action === 'restore' ? 'restore' : action === 'uninstall' ? 'uninstall' : 'check', 'start')}<div class="footnote">${icon('shield')}${t(action === 'install' ? 'reviewFoot' : 'progressFoot')}</div></footer>`;
+  return `${step()}<section class="page-intro"><h1>${action === 'install' ? t('connectTitle') : operationTitle()}</h1><p>${action === 'install' ? t('connectDesc') : t('toolsConnect')}</p><span class="edition-tag">${icon(edition === 'root' ? 'root' : 'shield')}${editionName()}</span></section><form id="connection" novalidate><div class="fields"><label class="field"><span>${t('ip')}</span><input id="host" name="host" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="192.168.1.50" value="${esc(host)}" aria-describedby="host-error" aria-invalid="false"><p id="host-error" class="error" hidden></p></label><label class="field port"><span>${t('port')}</span><input id="port" name="port" type="text" inputmode="numeric" value="${esc(port)}" aria-describedby="port-error"><p id="port-error" class="error" hidden></p></label></div><p class="field-help">${t('ipHelp')}</p>${edition === 'no-root' && selectedConnection !== 'root-ssh' ? `<div class="requirements"><div class="requirements-title">${icon('tv')}${t('prepare')}</div><p class="notice">${t('homeHelperHelp')}</p><div class="requirement"><span class="number">1</span><div><strong>Developer Mode</strong><p>${t('devInstall')}</p></div></div><div class="requirement"><span class="number">2</span><div><strong>LG Developer</strong><p>${t('devAccount')}</p>${guideImage('sign-in')}</div></div><div class="requirement"><span class="number">3</span><div><strong>Dev Mode Status</strong><p>${t('devDesc')}</p>${guideImage('dev-mode')}</div></div><div class="requirement"><span class="number">4</span><div><strong>Key Server</strong><p>${t('keyServerDesc')}</p>${guideImage('key-server')}</div></div></div><p class="notice">${t('sessionHelp')}</p>` : `<div class="root-notice">${t('rootNotice')}</div><div class="segment" role="group" aria-label="SSH"><button type="button" data-action="auth" data-auth="password" aria-pressed="${auth === 'password'}">${t('password')}</button><button type="button" data-action="auth" data-auth="key" aria-pressed="${auth === 'key'}">${t('sshKey')}</button></div>${auth === 'key' ? `<button type="button" class="key-button" data-action="import-key">${icon(keyReady ? 'check' : 'file')}<span>${t(keyReady ? 'keyImported' : 'importKey')}</span></button><p class="error" id="key-error" hidden>${t('keyError')}</p><p class="notice">${t('keyPrivate')}</p>` : `<p class="notice">${t('rootHint')}</p>`}`}<div class="network-tip">${icon('wifi')}<span>${t('wifiTip')}</span></div>${action === 'install' ? `<p class="notice">${t('pairingHelp')}</p>` : ''}</form><footer class="bottom">${primary(action === 'install' ? 'install' : action === 'restore' ? 'restore' : action === 'uninstall' ? 'uninstall' : 'check', 'start')}<div class="footnote">${icon('shield')}${t(action === 'install' ? 'reviewFoot' : 'progressFoot')}</div></footer>`;
 }
 function logMarkup() {
   return logs
@@ -245,7 +254,7 @@ function taskList() {
     .join('')}</ol>`;
 }
 function progress() {
-  return `<div class="progress-art" aria-hidden="true">${icon('tv')}<span class="orbit">${icon('wifi')}</span></div><section class="progress-copy center"><h1>${t(action === 'recover' ? 'recoveryReview' : action === 'home-diagnostics' ? 'homeDiagnostics' : action === 'status' || action === 'doctor' ? 'statusTitle' : action === 'restore' ? 'restoreTitle' : action === 'uninstall' ? 'uninstall' : 'progressTitle')}</h1><p>${t(action === 'home-diagnostics' ? 'diagnosticProgress' : action === 'install' ? 'progressDesc' : 'maintenanceProgress')}</p><div class="target">${edition === 'root' ? 'Root' : 'No-root'} <span> / </span> ${esc(host)}</div></section><div class="progress-line" role="progressbar" aria-label="${t(action === 'recover' ? 'recoveryReview' : action === 'home-diagnostics' ? 'homeDiagnostics' : action === 'status' || action === 'doctor' ? 'statusTitle' : action === 'restore' ? 'restoreTitle' : action === 'uninstall' ? 'uninstall' : 'progressTitle').replace('<br>', ' ')}"></div><div id="checks">${checkList()}</div><div id="tasks">${taskList()}</div><div id="recovery-details">${recoveryDetails()}</div><p class="live-caption" id="live-caption" role="status" aria-live="polite">${esc(logs.filter((l) => l.trim()).at(-1) || t(action === 'install' ? 'prepareService' : 'awaiting'))}</p>${logBlock()}<footer class="bottom"><div class="network-tip">${icon('shield')}<span>${t('progressFoot')}</span></div></footer>`;
+  return `<div class="progress-art" aria-hidden="true">${icon('tv')}<span class="orbit">${icon('wifi')}</span></div><section class="progress-copy center"><h1>${t(action === 'recover' ? 'recoveryReview' : action === 'home-diagnostics' ? 'homeDiagnostics' : action === 'status' || action === 'doctor' ? 'statusTitle' : action === 'restore' ? 'restoreTitle' : action === 'uninstall' ? 'uninstall' : 'progressTitle')}</h1><p>${t(action === 'home-diagnostics' ? 'diagnosticProgress' : action === 'install' ? 'progressDesc' : 'maintenanceProgress')}</p><div class="target">${editionName()} <span> / </span> ${esc(host)}</div></section><div class="progress-line" role="progressbar" aria-label="${t(action === 'recover' ? 'recoveryReview' : action === 'home-diagnostics' ? 'homeDiagnostics' : action === 'status' || action === 'doctor' ? 'statusTitle' : action === 'restore' ? 'restoreTitle' : action === 'uninstall' ? 'uninstall' : 'progressTitle').replace('<br>', ' ')}"></div><div id="checks">${checkList()}</div><div id="tasks">${taskList()}</div><div id="recovery-details">${recoveryDetails()}</div><p class="live-caption" id="live-caption" role="status" aria-live="polite">${esc(logs.filter((l) => l.trim()).at(-1) || t(action === 'install' ? 'prepareService' : 'awaiting'))}</p>${logBlock()}<footer class="bottom"><div class="network-tip">${icon('shield')}<span>${t('progressFoot')}</span></div></footer>`;
 }
 function result() {
   const setup = checks.has('packages');
@@ -296,7 +305,7 @@ function result() {
     : cancelled
       ? 'cancelledDesc'
       : 'failedDesc';
-  return `<div class="result-symbol ${complete ? '' : needsReview ? 'review-symbol' : 'error-symbol'}">${icon(complete ? 'check' : 'alert')}</div><section class="center progress-copy ${!ok && !cancelled ? 'error-result' : ''}"><h1>${cancelled ? t('cancelled') : recoveryPlan ? (recovered ? esc(recoveryPlan.summary) : isCleanup() ? t(restartPresentation() ? 'restartRemoval' : 'removalPending') : t('recoveryReview')) : ok && setup ? t(verified ? 'homeObserved' : 'tvChecksReview') : failureHelp ? esc(failureHelp.title) : t(title)}</h1><p>${recoveryPlan ? esc(recovered ? recoveryPlan.nextStep : isCleanup() ? t('removalPending') : recoveryPlan.summary) : ok && setup ? t('tvChecksDesc') : failureHelp ? esc(failureHelp.detail) : t(desc)}</p><div class="target">${edition === 'root' ? 'Root' : 'No-root'}<span> / </span>${esc(host)}</div></section>${!ok && errorLogs.size ? `<p class="error-summary error-text" role="alert">${esc([...errorLogs].at(-1))}</p>` : ''}${checkList()}${ok && !recoveryPlan && action === 'install' ? `<div class="recovery-info"><h3>${t('recoveryTitle')}</h3><p>${t('recoveryDesc')}</p><div class="gesture"><kbd>Home</kbd> × 3 <span class="muted"> / 2 ${t('seconds')}</span></div></div>` : ''}${ok && !recoveryPlan && action === 'install' && edition === 'no-root' ? `<div class="recovery-info"><p>${t('tryHomeHelp')}</p><p>${t('resumeHomeHelp')}</p><p>${t('sessionHelp')}</p></div>` : ''}${recoveryPlan && !recovered ? recoveryDetails() : ''}${failureHelp && !isCleanup() ? `<section class="recovery-info" role="note"><p>${esc(failureHelp.nextStep)}</p></section>` : ''}${logBlock()}<footer class="bottom">${reportReady ? `<button class="${recoveryPlan && isCleanup() && !recovered ? 'secondary' : 'primary'}" data-action="save-report">${t('saveReport')}${icon('file')}</button>` : ''}${recoveryPlan ? `${isCleanup() && !recovered ? (recoveryPlan.actions?.includes('connect-root') ? primary('connectRoot', 'connect-root', 'key') : primary('tryAgain', 'retry-removal', 'refresh')) : canReviewRecovery() ? primary('recoveryReview', 'recover', 'refresh') : ''}<button class="secondary" data-action="home">${t('done')}</button>` : !ok ? `${!failureHelp || failureHelp.canEditConnection ? `<button class="secondary" data-action="to-connection">${t('toConnection')}</button>` : ''}<button class="text-button maintenance-link" data-action="home">${t('done')}</button>` : reportReady ? `<button class="secondary" data-action="home">${t('done')}</button>` : primary('done', 'home', 'check')}</footer>`;
+  return `<div class="result-symbol ${complete ? '' : needsReview ? 'review-symbol' : 'error-symbol'}">${icon(complete ? 'check' : 'alert')}</div><section class="center progress-copy ${!ok && !cancelled ? 'error-result' : ''}"><h1>${cancelled ? t('cancelled') : recoveryPlan ? (recovered ? esc(recoveryPlan.summary) : isCleanup() ? t(restartPresentation() ? 'restartRemoval' : 'removalPending') : t('recoveryReview')) : ok && setup ? t(verified ? 'homeObserved' : 'tvChecksReview') : failureHelp ? esc(failureHelp.title) : t(title)}</h1><p>${recoveryPlan ? esc(recovered ? recoveryPlan.nextStep : isCleanup() ? t('removalPending') : recoveryPlan.summary) : ok && setup ? t('tvChecksDesc') : failureHelp ? esc(failureHelp.detail) : t(desc)}</p><div class="target">${editionName()}<span> / </span>${esc(host)}</div></section>${!ok && errorLogs.size ? `<p class="error-summary error-text" role="alert">${esc([...errorLogs].at(-1))}</p>` : ''}${checkList()}${ok && !recoveryPlan && action === 'install' ? `<div class="recovery-info"><h3>${t('recoveryTitle')}</h3><p>${t('recoveryDesc')}</p><div class="gesture"><kbd>Home</kbd> × 3 <span class="muted"> / 2 ${t('seconds')}</span></div></div>` : ''}${ok && !recoveryPlan && action === 'install' && edition === 'no-root' ? `<div class="recovery-info"><p>${t('tryHomeHelp')}</p><p>${t('resumeHomeHelp')}</p>${selectedConnection === 'root-ssh' ? '' : `<p>${t('sessionHelp')}</p>`}</div>` : ''}${recoveryPlan && !recovered ? recoveryDetails() : ''}${failureHelp && !isCleanup() ? `<section class="recovery-info" role="note"><p>${esc(failureHelp.nextStep)}</p></section>` : ''}${logBlock()}<footer class="bottom">${reportReady ? `<button class="${recoveryPlan && isCleanup() && !recovered ? 'secondary' : 'primary'}" data-action="save-report">${t('saveReport')}${icon('file')}</button>` : ''}${recoveryPlan ? `${isCleanup() && !recovered ? (recoveryPlan.actions?.includes('connect-root') ? primary('connectRoot', 'connect-root', 'key') : primary('tryAgain', 'retry-removal', 'refresh')) : canReviewRecovery() ? primary('recoveryReview', 'recover', 'refresh') : ''}<button class="secondary" data-action="home">${t('done')}</button>` : !ok ? `${!failureHelp || failureHelp.canEditConnection ? `<button class="secondary" data-action="to-connection">${t('toConnection')}</button>` : ''}<button class="text-button maintenance-link" data-action="home">${t('done')}</button>` : reportReady ? `<button class="secondary" data-action="home">${t('done')}</button>` : primary('done', 'home', 'check')}</footer>`;
 }
 function wallpapers() {
   return `${step()}<section class="page-intro"><h1>${t('wallpapers')}</h1><p>${t('wallpaperInstructions')}</p></section><div class="wallpaper-limit" role="note">${icon('alert')}<p>${t('wallpaperLimit')}</p></div><footer class="bottom"><div class="footnote">${icon('wifi')}${t('networkFoot')}</div></footer>`;
@@ -321,6 +330,10 @@ function render() {
 function readForm() {
   const input = document.getElementById('host');
   if (input) {
+    if (host !== input.value.trim()) {
+      selectedConnection = null;
+      rootVariant = null;
+    }
     host = input.value.trim();
     port = document.getElementById('port').value.trim();
   }
@@ -366,6 +379,8 @@ function validate() {
 }
 function inspectConnection() {
   if (inspecting || running || !validate()) return;
+  selectedConnection = null;
+  rootVariant = null;
   edition = null;
   detected = null;
   inspecting = true;
@@ -407,7 +422,11 @@ function start(retry = false) {
       port: Number(port),
       action,
       language,
-      useImportedKey: edition === 'root' && auth === 'key'
+      ...(selectedConnection ? { connection: selectedConnection } : {}),
+      ...(rootVariant ? { root_variant: rootVariant } : {}),
+      useImportedKey:
+        (edition === 'root' || selectedConnection === 'root-ssh') &&
+        auth === 'key'
     })
   );
 }
@@ -505,8 +524,19 @@ window.receiveNative = function (event) {
     const c = event.config;
     host = c.host;
     edition = c.edition;
+    selectedConnection = c.connection || null;
+    rootVariant = c.root_variant || null;
     port = String(c.port || (edition === 'root' ? 22 : 9922));
     action = c.action || 'install';
+    render();
+  } else if (event.kind === 'selected-profile') {
+    const p = event.profile;
+    if (p.host !== host) return;
+    edition = p.edition;
+    port = String(p.port);
+    selectedConnection = p.connection || null;
+    rootVariant = p.root_variant || null;
+    checks.clear();
     render();
   } else if (event.kind === 'failure-help') {
     failureHelp = event;
@@ -587,6 +617,8 @@ document.addEventListener('click', (event) => {
   } else if (cmd === 'close-language') {
     closeLanguages();
   } else if (cmd === 'edition') {
+    selectedConnection = null;
+    rootVariant = null;
     edition = button.dataset.edition;
     port = edition === 'root' ? '22' : '9922';
     render();
@@ -639,6 +671,8 @@ document.addEventListener('click', (event) => {
     if (native) CYTV.importKey();
     else info(t('browserKey'));
   } else if (cmd === 'connect-root') {
+    selectedConnection = null;
+    rootVariant = null;
     action = 'uninstall';
     edition = 'root';
     port = '22';

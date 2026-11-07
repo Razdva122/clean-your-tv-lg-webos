@@ -43,6 +43,7 @@ def for_error(error, phase, profile=None, pending=None):
         return None
     profile = profile if isinstance(profile,dict) else {}
     edition = profile.get('edition')
+    root_ssh = edition == 'root' or profile.get('connection') == 'root-ssh'
     names = {cls.__name__ for cls in type(error).__mro__}
     reason = getattr(error, 'reason_code', None)
     code = None
@@ -66,8 +67,8 @@ def for_error(error, phase, profile=None, pending=None):
         code = 'tv-pairing'
     elif phase == 'ssh-connect':
         if 'AuthenticationException' in names:
-            code = 'ssh-auth-root' if edition=='root' else 'ssh-auth-no-root'
-        elif edition=='root' and (isinstance(error,(FileNotFoundError,ValueError)) or
+            code = 'ssh-auth-root' if root_ssh else 'ssh-auth-no-root'
+        elif root_ssh and (isinstance(error,(FileNotFoundError,ValueError)) or
                                   (isinstance(error,PermissionError) and getattr(error,'filename',None))):
             code = 'ssh-key-file'
         elif 'SSHException' in names:
