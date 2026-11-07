@@ -199,11 +199,17 @@ var inputControl = require('./home-control')(
   __dirname + '/state/home-control',
   { inputs: true }
 );
+var catalogControl = require('./home-control')(
+  fs,
+  __dirname + '/state/home-control',
+  { catalog: true }
+);
 [
   'homeStatus',
   'setHomeControl',
   'openLGHome',
   'inputStatus',
+  'listApps',
   'presentationContext',
   'presentationDismissed'
 ].forEach(function (method) {
@@ -220,10 +226,11 @@ var inputControl = require('./home-control')(
       });
       return;
     }
-    (method === 'inputStatus' ? inputControl : homeControl)(
-      method,
-      m.payload
-    ).then(function (r) {
+    (method === 'listApps'
+      ? catalogControl
+      : method === 'inputStatus'
+        ? inputControl
+        : homeControl)(method, m.payload).then(function (r) {
       m.respond(r);
     });
   });

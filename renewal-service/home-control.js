@@ -8,7 +8,8 @@ module.exports = function (fs, dir, options) {
     now = options.now || Date.now,
     later = options.later || setTimeout;
   var inputs = options.inputs === true,
-    prefix = inputs ? 'input' : 'home';
+    catalog = options.catalog === true,
+    prefix = catalog ? 'catalog' : inputs ? 'input' : 'home';
   var nonce =
     options.nonce ||
     function () {
@@ -20,15 +21,17 @@ module.exports = function (fs, dir, options) {
     var generation =
       method === 'presentationDismissed' && object ? payload.generation : null;
     if (
-      (inputs
-        ? ['inputStatus']
-        : [
-            'homeStatus',
-            'setHomeControl',
-            'openLGHome',
-            'presentationContext',
-            'presentationDismissed'
-          ]
+      (catalog
+        ? ['listApps']
+        : inputs
+          ? ['inputStatus']
+          : [
+              'homeStatus',
+              'setHomeControl',
+              'openLGHome',
+              'presentationContext',
+              'presentationDismissed'
+            ]
       ).indexOf(method) < 0 ||
       (method === 'presentationContext' &&
         (!object || Object.keys(payload).length !== 0)) ||
@@ -41,7 +44,7 @@ module.exports = function (fs, dir, options) {
           Math.floor(generation) !== generation ||
           generation < 0 ||
           generation > 9007199254740991)) ||
-      (method === 'inputStatus' &&
+      ((method === 'inputStatus' || method === 'listApps') &&
         (!payload ||
           typeof payload !== 'object' ||
           Array.isArray(payload) ||

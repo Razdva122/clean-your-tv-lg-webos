@@ -113,12 +113,16 @@ class KeyfilterGuardTests(unittest.TestCase):
         self.assertEqual(os.read(rr,128), b''); os.close(rr)
     def test_stale_independent_channels_and_broker(self):
         p, iw, cw = self.armed()
-        deadline = time.monotonic() + 2.3
+        started = time.monotonic()
+        deadline = started + 2.3
         while p.poll() is None and time.monotonic() < deadline:
             time.sleep(.3)
             try: os.write(iw,b'PING\n')
             except BrokenPipeError: break
-            self.run_guard('--lease')
+            # Keep the broker fresh beyond controller expiry, but stop renewing
+            # before stale controller health can make --lease win the stop race.
+            if time.monotonic() - started < 1.5:
+                self.run_guard('--lease')
         s = self.finish(p); self.assertEqual(s['reason'], 'controller_expired'); self.assertFalse(s['healthy'])
     def test_broker_cannot_revive_expired_health(self):
         p, iw, cw = self.armed()

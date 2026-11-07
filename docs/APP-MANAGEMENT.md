@@ -67,6 +67,18 @@ are bounded. A missing pairing key, denied request or timeout falls back to the
 saved inventory with an explicit message. No pairing dialog is intentionally
 started, and no uninstall endpoint is called.
 
+The next candidate also tries Home's own service when the No-root cross-package
+inventory request fails or times out. This fallback needs matching updated Home
+and Home Helper packages and an already running Helper with its existing pairing
+key. It does not start Helper or change TV permissions. A stopped/older Helper
+or unavailable pairing still leaves the saved inventory usable. Physical-device
+confirmation is pending; this is not yet a published fix for #207.
+
+Fresh remote icon URLs replace older remote URLs in the next candidate. Packaged
+and embedded icons remain preferred over remote metadata, and an omitted icon
+keeps the previous one. This corrects stale URL retention; it does not resolve
+certificate rejection or guarantee that the TV's resource URLs stay valid.
+
 The new UI requires the corresponding updated service package for fresh discovery.
 With an older service it can still manage the saved inventory. A live television
 check is required before claiming compatibility with a specific firmware.

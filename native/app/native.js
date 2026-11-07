@@ -393,9 +393,34 @@ var homeChannels = [
       '/media/developer/apps/usr/palm/services/com.gathin.tvhome.renewal/state/home-control',
     last: '',
     inputOnly: true
+  },
+  {
+    directory:
+      '/media/developer/apps/usr/palm/services/com.gathin.tvhome.renewal/state/home-control',
+    last: '',
+    catalogOnly: true
   }
 ];
-var inputStatusPending = null;
+var inputStatusPending = null,
+  catalogPending = null;
+function readCatalog() {
+  if (!catalogPending) {
+    catalogPending = Promise.resolve().then(function () {
+      return require('./app-inventory')({ timeout: 3000 });
+    });
+    catalogPending = catalogPending.then(
+      function (apps) {
+        catalogPending = null;
+        return apps;
+      },
+      function () {
+        catalogPending = null;
+        throw Error('App inventory unavailable');
+      }
+    );
+  }
+  return catalogPending;
+}
 function readInputs() {
   if (!inputStatusPending) {
     inputStatusPending = Promise.resolve().then(function () {
@@ -416,7 +441,11 @@ function readInputs() {
 }
 function readHomeRequest(channel) {
   var directory = channel.directory,
-    prefix = channel.inputOnly ? 'input' : 'home';
+    prefix = channel.catalogOnly
+      ? 'catalog'
+      : channel.inputOnly
+        ? 'input'
+        : 'home';
   var request;
   try {
     request = JSON.parse(
@@ -439,7 +468,19 @@ function readHomeRequest(channel) {
     request.expires > Date.now() + 6000
   )
     return;
-  if (channel.inputOnly && request.method !== 'inputStatus') return;
+  if (
+    (channel.inputOnly && request.method !== 'inputStatus') ||
+    (channel.catalogOnly && request.method !== 'listApps')
+  )
+    return;
+  if (
+    channel.catalogOnly &&
+    (stopping ||
+      stopRequested ||
+      fs.existsSync(data + '/blocked') ||
+      (child && child.reason !== undefined))
+  )
+    return;
   function respond(result) {
     result.id = request.id;
     try {
@@ -500,6 +541,32 @@ function readHomeRequest(channel) {
       visitLG(function (ok) {
         respond({ returnValue: ok });
       });
+    else if (channel.catalogOnly && request.method === 'listApps')
+      readCatalog().then(
+        function (apps) {
+          if (
+            !stopping &&
+            !stopRequested &&
+            !fs.existsSync(data + '/blocked') &&
+            !(child && child.reason !== undefined) &&
+            request.expires > Date.now()
+          )
+            respond({ returnValue: true, apps: apps });
+        },
+        function () {
+          if (
+            !stopping &&
+            !stopRequested &&
+            !fs.existsSync(data + '/blocked') &&
+            !(child && child.reason !== undefined) &&
+            request.expires > Date.now()
+          )
+            respond({
+              returnValue: false,
+              errorText: 'App inventory unavailable'
+            });
+        }
+      );
     else if (channel.inputOnly && request.method === 'inputStatus')
       readInputs().then(
         function (devices) {
