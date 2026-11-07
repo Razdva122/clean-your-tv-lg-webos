@@ -186,6 +186,32 @@ def restore_registrations(state, app, base, uid=0):
         if safe_bytes(path,uid=uid)!=entry['original'].encode():raise ValueError('registration_restore_unverified')
 
 
+def validate_restored_root_api(files,base,root_updater,uid=0):
+    """Authenticate the final SDK API state in the two original owner snapshots."""
+    from cleanup_system_updater import read
+    api=base/'api-permissions.d/com.cleanyourtv.root.updater.service.api.json'
+    raw=read(api)
+    registration=Path(root_updater)/'registration.json';proof=files.get(str(registration))
+    if not isinstance(proof,dict) or set(proof)!={'original','disabled','mode'} or not all(isinstance(proof[k],str) for k in ('original','disabled')):raise ValueError('Legacy lockdown file changed')
+    if read(registration) not in (proof['original'].encode(),proof['disabled'].encode()):raise ValueError('Legacy lockdown file changed')
+    original=json.loads(proof['original']);disabled=json.loads(proof['disabled'])
+    paths={str(base/folder/('com.cleanyourtv.root.updater.service'+suffix)) for folder,suffix in (('services.d','.service'),('roles.d','.service.json'),('client-permissions.d','.service.json'),('api-permissions.d','.api.json'))}
+    if not isinstance(original,dict) or set(original)!={'files'} or not isinstance(original['files'],dict) or set(original['files'])!=paths:raise ValueError('Legacy lockdown file changed')
+    for entry in original['files'].values():
+        if not isinstance(entry,dict) or set(entry) not in ({'original','installed'},{'original','installed','mode','uid','gid'}) or not all(isinstance(entry[k],str) for k in ('original','installed')):raise ValueError('Legacy lockdown file changed')
+    entry=original['files'][str(api)]
+    if entry['installed']!=files[str(api)]['original'] or raw!=entry['original'].encode():raise ValueError('Legacy lockdown file changed')
+    if 'mode' in entry:
+        info=api.lstat();metadata={key:entry[key] for key in ('mode','uid','gid')}
+        if (any(type(v) is not int or v<0 for v in metadata.values()) or metadata['uid']!=uid
+                or metadata['mode']>0o777 or metadata['mode']&0o022
+                or metadata!={'mode':stat.S_IMODE(info.st_mode),'uid':info.st_uid,'gid':info.st_gid}):raise ValueError('Legacy lockdown file changed')
+    # The only authenticated transition is the System lockdown's API substitution.
+    entry['installed']=files[str(api)]['disabled']
+    if original!=disabled:raise ValueError('Legacy lockdown file changed')
+
+
+
 def original_absence_safe(record, app):
     """An absent slot needs original writer evidence, not a progress flag."""
     original=record.get('original')

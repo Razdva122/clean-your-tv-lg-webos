@@ -135,3 +135,32 @@ acceptance. All expected platform/test artifacts were present and unexpired.
 | cytv-windows-x64 | 13539530205 | `5c4853c1be580fd042443aeab87c965443928e136d11f4f2c976063b08fdc622` |
 | cytv-windows-x64-desktop | 13539515154 | `6863838460cd3132244fd899269512de0ef2cec4bc861b332ea359f7a424a2a6` |
 | homebrew-candidate | 13538177434 | `cc26c101103cd13866c31f8a9b02c18a0a7702355bd1a64d6a99032c23222dd7` |
+
+## Interrupted registration restoration follow-up
+
+The selected build above is superseded for changed removal support. A host
+regression reproduces an interrupted restoration chain: System lockdown restores
+the Root updater's installed API, Root registration restoration restores the
+original SDK API, and a later interruption occurs before `controls-restored`.
+Retry previously rejected that final SDK state as unknown lockdown drift.
+
+The clean-removal path now recognizes that state only for the fixed Root updater
+API. It checks the exact live registration receipt against the System snapshot,
+the four fixed registration paths, the linked installed/original API bytes and
+the exact disabled-snapshot transformation. Both legacy byte-only and newer
+metadata snapshots remain supported. It leaves an already restored SDK API
+untouched; all lockdown entries are validated before any restoration write.
+Unknown bytes, broken snapshot links and unsafe metadata still stop removal.
+Standalone supervisor removal keeps its default strict behavior.
+
+Focused host verification passed: 35 Root clean-removal tests, 19 supervisor
+removal tests and 39 rollback/recovery tests. The new interruption regression
+failed before the fix and passed afterward, including legacy byte-only receipts;
+six damaged-byte/receipt/metadata cases refuse before restoration writes. The
+standalone compressed SSH command remains below its unchanged 8,000-byte limit
+(7,994 bytes). The normal public payload builder passed; TV IPKs are unchanged.
+
+No new user action, translation, service or state journal is introduced. The
+existing Retry and requested full-restart instructions remain applicable.
+The old build pin is cleared; a replacement complete candidate and affected
+acceptance are required. This source record does not claim device completion.

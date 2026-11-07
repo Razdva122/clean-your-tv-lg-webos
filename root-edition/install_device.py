@@ -557,7 +557,7 @@ class LocalDevice:
 
     def clean_remove(self, record, save):
         """Full removal using current support, old snapshots and original locks."""
-        from clean_removal import locks, routes, remove_packages, restore_registrations
+        from clean_removal import locks, routes, remove_packages, restore_registrations, validate_restored_root_api
         import deploy, provision, startup_hook
         roots=(ROOT,UPDATER,SUPERVISOR)
         uid=self.ownership.store.uid
@@ -620,10 +620,11 @@ class LocalDevice:
                             raise ValueError('provision_snapshot_required')
                         startup_hook.remove(provision.secure)
                 # Restore supervisor lockdown before Root updater's original
-                # registration. Exact old/new bytes only, never foreign drift.
+                # registration. Admit only its authenticated original/installed/
+                # restored-SDK chain, never foreign drift.
                 if os.path.lexists(SUPERVISOR/'legacy-lockdown.json'):
                     from cleanup_system_updater import lockdown, write
-                    entries=lockdown(SUPERVISOR,BUS)
+                    entries=lockdown(SUPERVISOR,BUS,check=lambda files:validate_restored_root_api(files,BUS,UPDATER,uid))
                     for name,entry in entries.items():write(Path(name),entry['original'].encode(),entry['mode'])
                 for state,app,hookname in ((SUPERVISOR,'com.cleanyourtv.system.updater','52-clean-your-tv-system-updater'),
                                           (UPDATER,'com.cleanyourtv.root.updater','51-clean-your-tv-root-updater')):

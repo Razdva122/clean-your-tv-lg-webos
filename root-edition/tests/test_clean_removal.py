@@ -225,6 +225,97 @@ class PackageRemoval(unittest.TestCase):
 
 
 class PartialDeviceRemoval(unittest.TestCase):
+    def lockdown_retry_fixture(self, metadata=True):
+        import copy,json,types,install_device
+        from cytv.system_updater_remove import SCRIPT
+        fixture=self.fixture();driver,identifier,root,updater,payload,calls,present=fixture
+        base=install_device.BUS;system=install_device.SUPERVISOR;system.mkdir(mode=0o700)
+        app='com.cleanyourtv.root.updater';service=app+'.service'
+        paths={key:base/folder/(service+suffix) for key,folder,suffix in (
+            ('service','services.d','.service'),('role','roles.d','.service.json'),
+            ('client','client-permissions.d','.service.json'),('api','api-permissions.d','.api.json'))}
+        installed_api=json.dumps({'fixture.api':[service+'/status',service+'/install']})
+        disabled_api=json.dumps({'fixture.api':[service+'/status']})
+        registration={'files':{}}
+        for key,path in paths.items():
+            path.parent.mkdir(parents=True,exist_ok=True)
+            original='{"sdk":[]}' if key=='api' else 'SDK '+key
+            installed=installed_api if key=='api' else 'private '+key
+            path.write_text(installed);path.chmod(0o600)
+            registration['files'][str(path)]={'original':original,'installed':installed,
+                                             'mode':0o600,'uid':os.getuid(),'gid':os.getgid()}
+            if not metadata:
+                for name in ('mode','uid','gid'):registration['files'][str(path)].pop(name)
+        disabled=copy.deepcopy(registration);disabled['files'][str(paths['api'])]['installed']=disabled_api
+        original_raw=json.dumps(registration);disabled_raw=json.dumps(disabled)
+        receipt=updater/'registration.json';receipt.write_text(disabled_raw);receipt.chmod(0o600)
+        paths['api'].write_text(disabled_api)
+        legacy={'schema':1,'files':{str(paths['api']):{'original':installed_api,'disabled':disabled_api,'mode':0o600},
+                                   str(receipt):{'original':original_raw,'disabled':disabled_raw,'mode':0o600}}}
+        Store(system,uid=os.getuid()).write('legacy-lockdown',legacy)
+        module=types.ModuleType('cleanup_system_updater');exec(SCRIPT,module.__dict__);module.ROOT_UPDATER=updater
+        patcher=patch.dict(sys.modules,{'cleanup_system_updater':module});patcher.start();self.addCleanup(patcher.stop)
+        return fixture,module,system,paths,legacy
+
+    def test_lockdown_retry_keeps_authenticated_terminal_sdk_api_after_interruption(self):
+        import json
+        fixture,module,system,paths,legacy=self.lockdown_retry_fixture(metadata=False)
+        driver,identifier,root,updater,payload,calls,present=fixture
+        present.add('com.gathin.tvhome');rpc=driver.device.rpc;failed=[False]
+        def interrupted(method,data):
+            if method=='com.gathin.tvhome.renewal/disable':
+                if not failed[0]:failed[0]=True;raise RuntimeError('interrupted after registration restoration')
+                return {'returnValue':True,'state':{'enabled':False}}
+            return rpc(method,data)
+        driver.device.rpc=interrupted
+        first=driver.clean_remove(identifier)
+        self.assertEqual(first['state'],'recovery_required')
+        sdk=json.loads(legacy['files'][str(updater/'registration.json')]['original'])['files'][str(paths['api'])]['original']
+        self.assertEqual(paths['api'].read_text(),sdk)
+        writes=[];write=module.write
+        def observed(path,*args,**kwargs):writes.append(path);return write(path,*args,**kwargs)
+        with patch.object(module,'write',side_effect=observed):retry=driver.clean_remove(identifier)
+        self.assertEqual(retry['stage'],'restart-required',retry)
+        self.assertNotIn(paths['api'],writes,'Never republish the intermediate private API on Retry')
+
+    def test_lockdown_terminal_api_requires_complete_exact_lineage_before_writes(self):
+        import json
+        for damage in ('foreign-api','receipt','installed-link','disabled-snapshot','metadata','missing-receipt'):
+            with self.subTest(damage=damage):
+                fixture,module,system,paths,legacy=self.lockdown_retry_fixture()
+                driver,identifier,root,updater,payload,calls,present=fixture
+                receipt=updater/'registration.json';proof=legacy['files'][str(receipt)]
+                original=json.loads(proof['original']);api=paths['api']
+                api.write_text(original['files'][str(api)]['original']);receipt.write_text(proof['original'])
+                if damage=='foreign-api':api.write_text('foreign')
+                elif damage=='receipt':receipt.write_text('{"files":{}}')
+                elif damage=='installed-link':
+                    original['files'][str(api)]['installed']='unlinked';proof['original']=json.dumps(original);receipt.write_text(proof['original'])
+                elif damage=='disabled-snapshot':proof['disabled']=json.dumps(original)
+                elif damage=='metadata':api.chmod(0o644)
+                elif damage=='missing-receipt':legacy['files'].pop(str(receipt))
+                Store(system,uid=os.getuid()).write('legacy-lockdown',legacy)
+                before={path:path.read_bytes() for path in (*paths.values(),receipt)}
+                with patch.object(module,'write',side_effect=AssertionError('Unverified lineage wrote registration')):
+                    result=driver.clean_remove(identifier)
+                self.assertEqual(result['state'],'recovery_required')
+                self.assertEqual(before,{path:path.read_bytes() for path in before})
+
+    def test_terminal_sdk_api_with_metadata_is_scoped_to_explicit_clean_removal(self):
+        import json
+        fixture,module,system,paths,legacy=self.lockdown_retry_fixture()
+        driver,identifier,root,updater,payload,calls,present=fixture
+        receipt=updater/'registration.json';proof=legacy['files'][str(receipt)]
+        original=json.loads(proof['original']);api=paths['api']
+        api.write_text(original['files'][str(api)]['original']);receipt.write_text(proof['original'])
+        before=api.stat()
+        with self.assertRaisesRegex(ValueError,'Legacy lockdown file changed'):module.lockdown(system,api.parents[1])
+        from clean_removal import validate_restored_root_api
+        entries=module.lockdown(system,api.parents[1],check=lambda files:validate_restored_root_api(files,api.parents[1],updater,os.getuid()))
+        self.assertNotIn(str(api),entries)
+        self.assertEqual((before.st_ino,before.st_mode,before.st_uid,before.st_gid),
+                         (api.stat().st_ino,api.stat().st_mode,api.stat().st_uid,api.stat().st_gid))
+
     def test_known_completed_root_and_system_receipts_are_retired_with_inverse_preserved(self):
         import install_device
         driver,identifier,root,updater,payload,calls,present=self.fixture()
