@@ -23,7 +23,11 @@ module.exports = function (execFile, getuid) {
             path = require('path'),
             iconBudget = 512 * 1024;
           var apps = result.apps.slice(0, 200).map(function (a) {
-            var icon = '';
+            // The installed tuner can be invisible to LG Home; keep other system apps hidden.
+            var hidden =
+                a.id !== 'com.webos.app.livetv' &&
+                (a.visible === false || a.hidden === true),
+              icon = '';
             var variants = [
               'extraLargeIcon',
               'largeIcon',
@@ -32,7 +36,12 @@ module.exports = function (execFile, getuid) {
               'miniicon',
               'favicon'
             ];
-            for (var variant = 0; variant < variants.length; variant++) {
+            // Hidden catalog entries must not spend the visible-app icon budget.
+            for (
+              var variant = 0;
+              !hidden && variant < variants.length;
+              variant++
+            ) {
               if (
                 typeof a[variants[variant]] !== 'string' ||
                 typeof a.folderPath !== 'string'
@@ -40,7 +49,7 @@ module.exports = function (execFile, getuid) {
                 continue;
               var file = path.resolve(a.folderPath, a[variants[variant]]);
               var allowed =
-                /^\/(usr\/palm|media\/(developer|cryptofs)\/apps\/usr\/palm|mnt\/otncabi\/usr\/palm)\/applications\//;
+                /^\/(usr\/palm|media\/(developer|cryptofs|system)\/apps\/usr\/palm|mnt\/otncabi\/usr\/palm)\/applications\//;
               if (allowed.test(file) && /\.(png|jpe?g|webp)$/i.test(file))
                 try {
                   var real = fs.realpathSync(file),
@@ -78,15 +87,12 @@ module.exports = function (execFile, getuid) {
                   }
                 } catch (_) {}
             }
-            // The installed tuner can be invisible to LG Home; keep other system apps hidden.
             return {
               id: a.id,
               title: a.title,
               icon: icon,
               iconColor: a.iconColor || a.bgColor || '',
-              hidden:
-                a.id !== 'com.webos.app.livetv' &&
-                (a.visible === false || a.hidden === true)
+              hidden: hidden
             };
           });
           resolve(apps);
