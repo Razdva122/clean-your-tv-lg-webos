@@ -14,10 +14,61 @@ class Remote:
         self.calls, self.fail = [], fail
         self.uploads = {}
         self.installed = []
+        self.observers = {}
         self.active = {'recovery': {'integrity_verified': True}, 'intent': {'enabled': True, 'phase': 'active'}, 'guardian_active': True, 'effective': {'sam_home': package.ROOT_APP, 'profiles': {'idleApp': {'appId': package.ROOT_APP}, 'defaultApps': {'categories': {'home': package.ROOT_APP}}}}}
 
     def run(self, command, data=None, timeout=30):
         self.calls.append(('run', command))
+        from cytv import no_root_observer
+        if '/usr/bin/node -e ' in command:
+            args=shlex.split(command)
+            code=args[args.index('-e')+1]
+            if code==no_root_observer.PROGRAM:
+                import hashlib
+                request=json.loads(args[-1]);plan=request['plan'];action=request['command'];index=request.get('slot')
+                operation=plan['operation']
+                if action=='prepare':
+                    self.observers.setdefault(operation,{'protocol':no_root_observer.PROTOCOL,'operation':operation,'plan_sha256':hashlib.sha256(no_root_observer.canonical(plan).encode()).hexdigest(),
+                         'reservation':'active','closed':None,'configuration':{step:'prepared' for step in (('files','eim','launch') if plan['action']=='install' else ('restore',))},
+                         'slots':[{'submission':'prepared','terminal':'none','readback':'not-checked','reason':None} for _ in range(2)]})
+                result=self.observers[operation]
+                if action=='upload-artifact':
+                    self.upload(json.loads(plan['slots'][index]['request'])['ipkUrl'],data,mode=0o644)
+                if action=='upload-configuration':
+                    proof=request['proof']
+                    self.upload(proof['directory']+'/'+proof['name'],data,mode=0o640 if proof['name']=='ssap-key.json' else 0o644)
+                if action=='config-claim':
+                    won=result['configuration'][index]=='prepared'
+                    if won:result['configuration'][index]='unknown'
+                    return json.dumps({'operation':operation,'won':won,'nonce':'f'*64 if won else None,'state':result['configuration'][index]})
+                if action=='config-result':result['configuration'][index]='complete'
+                if action=='artifacts':
+                    return json.dumps({'operation':operation,'missing':[index for index,slot in enumerate(plan['slots']) if json.loads(slot['request'])['ipkUrl'] not in self.uploads]})
+                if action=='start' and result['slots'][index]['submission']=='prepared':
+                    slot=result['slots'][index];slot['submission']='claimed-possibly-submitted'
+                    try:
+                        self.luna(plan['slots'][index]['method'],json.loads(plan['slots'][index]['request']),terminal='installed' if plan['action']=='install' else 'removed',timeout=150)
+                        slot['terminal']='success'
+                    except Exception as error:
+                        from cytv.errors import TVRejected
+                        if isinstance(error,TVRejected):
+                            slot['terminal']='failure'
+                            slot['reply']={'statusValue':error.luna['status_value'],'errorCode':error.luna['error_code'],
+                                           'details':{'state':error.luna['state']}}
+                        else:slot['reason']='stream-ended'
+                if action=='readback':result['slots'][index]['readback']='matches'
+                if action=='seal':result['slots'][index]['submission']='sealed'
+                if action=='release':result['closed']={'result':'verified'};result['reservation']='closed'
+                return json.dumps(result)
+            if code==no_root_observer.FILE_CHECK:
+                import hashlib
+                expected=json.loads(args[-1]);files=dict(self.uploads)
+                for name,raw in self.uploads.items():
+                    if name.endswith('.ipk'):
+                        files.update({'/media/developer/apps/'+name:data for name,data in package.data_files(raw).items()})
+                return 'CYTV_ORIGINAL_FILES_VERIFIED' if all(name in files and hashlib.sha256(files[name]).hexdigest()==digest for name,digest in expected.items()) else ''
+            if code==no_root_observer.STATE_CHECK:return 'CYTV_CONFIGURATION_PRIVATE'
+        if 'CYTV_STOP_RETAINED' in command:return 'CYTV_START_ALLOWED'
         if command.startswith('LC_ALL=C df -Pk '):
             return 'Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/test 10000000 0 10000000 0% /shared'
         if 'CYTV_NODE_READY' in command: return 'CYTV_NODE_READY'
@@ -207,47 +258,19 @@ class OperationTests(unittest.TestCase):
 
     @unittest.skipIf(__import__('os').name == 'nt', 'TV staging uses a POSIX shell')
     def test_install_staging_is_readable_by_a_separate_installer_uid(self):
-        import subprocess
-        from cytv.transport import SSH
-        remote = Remote()
-        original_run = remote.run
-        temp = self.root / 'developer-temp'
-        temp.mkdir(mode=0o700)  # May have been created by an older installer.
-        def execute(command, data=None, timeout=30):
-            result = subprocess.run(['sh', '-c', command.replace('/media/developer/temp', str(temp))],
-                                    input=data, capture_output=True, check=True)
-            return result.stdout.decode()
-        def run(command, **kwargs):
-            if 'CYTV_PYTHON_BOUND' in command:return ''
-            if '/media/developer/temp' in command:
-                return execute(command, **kwargs)
-            return original_run(command, **kwargs)
-        remote.run = run
-        ssh = object.__new__(SSH)
-        ssh.run = execute
-        original_upload = remote.upload
-        def upload(path, data, mode=0o600):
-            if path.startswith('/media/developer/temp/'):
-                ssh.upload(path, data, mode)
-            else:
-                original_upload(path, data, mode)
-        remote.upload = upload
-        original_luna = remote.luna
-        def luna(uri, payload, **kwargs):
-            if uri.endswith('/install'):
-                path = Path(payload['ipkUrl'].replace('/media/developer/temp', str(temp)))
-                self.assertTrue(path.is_file())
-                for directory in (temp, path.parent):
-                    mode = directory.stat().st_mode & 0o777
-                    self.assertTrue(mode & 0o001, 'backend UID cannot traverse '+str(directory))
-                    self.assertEqual(mode & 0o022, 0, 'staging must not be writable by other users')
-                self.assertTrue(path.stat().st_mode & 0o004, 'backend UID cannot read IPK')
-            return original_luna(uri, payload, **kwargs)
-        remote.luna = luna
-        self.installer(remote).install(self.inventory, 'secret')
-        self.assertEqual(list(temp.iterdir()), [])
+        from tests.cytv.test_no_root_observer import Harness, PROCESS_TMP
+        with tempfile.TemporaryDirectory(dir=PROCESS_TMP) as directory:
+            observer=Harness(directory)
+            observer.prepare()
+            stage=observer.root/'public'/('cytv-'+observer.plan['operation'])
+            for directory in (observer.root/'public',stage):
+                self.assertEqual(directory.stat().st_mode & 0o777,0o755)
+            for archive in stage.iterdir():self.assertEqual(archive.stat().st_mode & 0o777,0o644)
+            self.assertEqual(observer.directory.stat().st_mode & 0o777,0o700)
+            observer.finish();observer.call('release');observer.call('retire')
+            self.assertEqual(list((observer.root/'public').iterdir()),[])
 
-    def test_partial_helper_failure_then_denied_recovery_keeps_original_evidence(self):
+    def test_new_helper_failure_recovery_keeps_original_evidence_without_monitor(self):
         from cytv import diagnostics
         from cytv.desktop import DesktopConsole
         from cytv.errors import TVRejected
@@ -287,24 +310,21 @@ class OperationTests(unittest.TestCase):
                 retained = {p.name: p.read_bytes() for p in directory.iterdir()}
                 remote.calls.clear()
                 events = []
-                with self.assertRaises(TVRejected) as failure:
+                with self.assertRaises(operations.UserError) as failure:
                     recover(installer, lambda _: 'y', DesktopConsole(lambda k,v: events.append((k,v))))
                 report = diagnostics.create_report(self.store, 'recover', installer.profile, 'recover', failure.exception)
                 current = json.loads(report.read_text())
-                self.assertIs(failure.exception, rejected)
-                self.assertEqual(failure.exception.luna['operation'], 'package-status')
-                self.assertEqual(failure.exception.luna['error_code'], -1)
+                self.assertEqual(failure.exception.reason_code, 'pending-operation')
                 self.assertEqual(current['first_failure'], first_report['first_failure'])
                 self.assertEqual(receipt.read_bytes(), before)
                 self.assertEqual({p.name:p.read_bytes() for p in directory.iterdir()}, retained)
                 self.assertFalse(any(c[0]=='upload' for c in remote.calls))
                 self.assertEqual([c[1] for c in remote.calls if c[0]=='luna'],
-                    ['com.webos.applicationManager/dev/listApps', 'com.webos.appInstallService/status'])
+                    [])
                 self.assertTrue(any(k=='recovery-plan' and v['state']=='blocked' for k,v in events))
                 self.assertNotIn('PRIVATE', report.read_text())
                 self.assertNotIn('PRIVATE', str(failure.exception))
                 self.assertNotIn('cytv doctor', str(failure.exception))
-                self.assertIn('Recovery cannot verify the earlier package operation', str(failure.exception))
 
     def test_unstarted_no_root_removal_does_not_require_denied_monitor(self):
         from cytv.errors import TVRejected
@@ -1049,7 +1069,7 @@ class OperationTests(unittest.TestCase):
                 with patch('cytv.operations.time.monotonic', side_effect=lambda: clock[0]), \
                      patch('cytv.operations.time.sleep', side_effect=lambda seconds: clock.__setitem__(0, clock[0] + seconds)):
                     installer.install(self.inventory, 'synthetic-key')
-                self.assertEqual(len(snapshots), 2)
+                self.assertEqual(len(snapshots), 5 if delayed == operations.HELPER else 4)
                 self.assertIsNone(self.store.pending(installer.profile))
                 self.assertEqual(installer.tv_info['components'], {'home': '1.2.2', 'helper': '0.6.13'})
                 calls = [c for c in remote.calls if c[0] == 'luna']
@@ -1081,7 +1101,7 @@ class OperationTests(unittest.TestCase):
             with self.assertRaises(UserError) as caught:
                 installer.install(self.inventory, 'synthetic-key')
         self.assertEqual(caught.exception.reason_code, 'version-mismatch')
-        self.assertEqual(clock[0], 10.0)
+        self.assertEqual(clock[0], 10.25)  # Helper readback precedes Home's own bounded deadline.
         self.assertGreater(len(timeouts), 1)
         self.assertTrue(all(0 < timeout <= 10 for timeout in timeouts))
         self.assertEqual(timeouts, sorted(timeouts, reverse=True))
@@ -1143,8 +1163,8 @@ class OperationTests(unittest.TestCase):
         calls = [c for c in remote.calls if c[0] == 'luna']
         installs = [c[2]['id'] for c in calls if c[1].endswith('/install')]
         self.assertEqual(installs, ['com.local.nativehome', 'com.gathin.tvhome'])
-        self.assertEqual(calls[-1][1:], ('com.webos.applicationManager/launch', {'id': 'com.local.nativehome', 'params': {'nativeHomeStart': True}}))
-        self.assertEqual(len([c for c in calls if c[1].endswith('/dev/listApps')]), 1)
+        self.assertEqual(calls[-1][1:], ('com.webos.applicationManager/launch', {'id': 'com.local.nativehome', 'params': {'nativeHomeAuto': True}}))
+        self.assertEqual(len([c for c in calls if c[1].endswith('/dev/listApps')]), 4)
         self.assertTrue(any(c[0] == 'upload' and c[1].endswith('ssap-key.json') and c[2] == 0o640 for c in remote.calls))
         self.assertIsNone(self.store.pending(installer.profile))
 
@@ -1473,7 +1493,7 @@ class OperationTests(unittest.TestCase):
         recover(installer,lambda _:next(answers),Console(lambda *_:None))
         self.assertEqual(self.store.pending(installer.profile),previous)
         self.assertFalse(any(c[0]=='run' and c[1].endswith(' enable') for c in remote.calls[checkpoint:]))
-        answers=iter(('y','y','3'))
+        answers=iter(('y','1','y','3'))
         recover(installer,lambda _:next(answers),Console(lambda *_:None))
         self.assertIsNone(self.store.pending(installer.profile))
         later=remote.calls[checkpoint:]

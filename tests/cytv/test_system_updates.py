@@ -60,6 +60,24 @@ class SystemBootstrapTests(unittest.TestCase):
         self.assertFalse(any(c[0]=='luna' and '/install' in c[1] for c in remote.calls))
         self.assertIsNone(self.store.pending(self.profile))
 
+    def test_explicit_disabled_completion_unlocks_separate_bootstrap_and_keeps_original(self):
+        from unittest.mock import MagicMock
+        self.store.begin(self.profile,'activate-root',stage='enable',product_operation='a'*32,baseline_sha='b'*64)
+        original=self.store.pending(self.profile)
+        remote=Remote();inst=self.installer(remote)
+        with self.assertRaisesRegex(UserError,'unresolved'):inst.enable_system_updates()
+        self.assertEqual(remote.calls,[])
+        # Eligibility itself is exercised with real journals/locks in Root proof tests.
+        inst.observe_recovery=MagicMock(return_value={'can_resume_root_setup':True})
+        self.assertEqual(inst.finish_root_setup_disabled()['home_control'],'disabled')
+        self.assertEqual(remote.calls,[])
+        archived=list(self.store.device_dir(self.profile).glob('recovery-*.json'))
+        self.assertEqual(json.loads(archived[0].read_text())['previous'],original)
+        self.assertTrue(inst.enable_system_updates()['installed'])
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertEqual(json.loads(archived[0].read_text())['previous'],original)
+        self.assertFalse(any(c[0]=='luna' or c[0]=='run' and ' enable' in c[1] for c in remote.calls))
+
     def test_unrooted_or_corrupt_bundle_never_uploads(self):
         remote=Remote(root=False)
         with self.assertRaisesRegex(UserError,'root'):self.installer(remote).enable_system_updates()

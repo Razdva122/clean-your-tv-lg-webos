@@ -28,7 +28,7 @@ class SharedRootInstallTests(unittest.TestCase):
         installer.product_action('status','a'*32)
         self.assertEqual(shlex.split(remote.run.call_args.args[0]),[
             'env','-u','PYTHONHOME','-u','PYTHONPATH','PYTHONDONTWRITEBYTECODE=1','PYTHONNOUSERSITE=1',
-            '/var/lib/clean-your-tv-python/4a71641c8d5536175e404a961624e8656eba30e97b5026f6bd7dc31e4bbeaaea/bin/python3.13',
+            '/var/lib/clean-your-tv-python/4a71641c8d5536175e404a961624e8656eba30e97b5026f6bd7dc31e4bbeaaea/bin/python3.13','-B',
             "/tmp/space and ' quote/install_driver.py",'status','--operation','a'*32])
         self.assertEqual(remote.run.call_count,1)
 
@@ -78,7 +78,7 @@ class SharedRootInstallTests(unittest.TestCase):
 
     def test_verified_setup_offers_separate_explicit_activation(self):
         identifier='a'*32
-        event={'operation':identifier,'stage':'complete','state':'complete','code':'verified','current':True,'result':{'verified':True,'home_changed':False,'baseline_sha':'a'*64}}
+        event={'operation':identifier,'stage':'complete','state':'complete','code':'verified','current':True,'result':{'installed':'com.cleanyourtv.root.preview','verified':True,'home_changed':False,'baseline_sha':'a'*64}}
         installer,remote,store,profile=self.fixture(event)
         store.begin(profile,'install',product_operation=identifier,requires_updater=True)
         installer.root_action=MagicMock(return_value={'result':{'journal_exists':False,'intent':None,'effective':{'sam_home':'com.webos.app.home','profiles':{'defaultApps':{'categories':{'home':'com.webos.app.home'}},'idleApp':{'appId':'com.webos.app.home','support':True}}},'recovery':{'integrity_verified':True}}})
@@ -189,7 +189,9 @@ class HistoricalCompletionTests(unittest.TestCase):
         store.begin(profile,'install',product_operation='a'*32,requires_updater=True)
         installer.root_action=MagicMock()
         self.assertFalse(installer.status()['can_resume_root_setup'])
-        with self.assertRaisesRegex(RuntimeError,'continuation'):installer.resume_root_setup()
+        from unittest.mock import patch
+        with patch('cytv.root_install_recovery.recovery_python',return_value='/usr/bin/python3'),self.assertRaisesRegex(RuntimeError,'continuation'):
+            installer.resume_root_setup()
         installer.root_action.assert_not_called();remote.luna.assert_not_called()
         self.assertIsNotNone(store.pending(profile))
 

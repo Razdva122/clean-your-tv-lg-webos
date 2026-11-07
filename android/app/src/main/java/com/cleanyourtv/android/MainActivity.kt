@@ -119,7 +119,7 @@ class MainActivity : Activity() {
                 for (key in arrayOf("host", "edition", "port", "language", "action", "useImportedKey")) {
                     if (raw.has(key)) clean.put(key, raw.get(key))
                 }
-                require(clean.optString("action") in arrayOf("install", "status", "doctor", "home-diagnostics", "recover", "restore"))
+                require(clean.optString("action") in arrayOf("install", "status", "doctor", "home-diagnostics", "recover", "restore", "uninstall"))
                 ui.post {
                     val intent = Intent(this@MainActivity, InstallerService::class.java).putExtra("config", clean.toString())
                     if (Build.VERSION.SDK_INT >= 26) startForegroundService(intent) else startService(intent)

@@ -5,8 +5,9 @@ body:
   - type: markdown
     attributes:
       value: |
-        Attach the diagnostic JSON printed by cytv after the error, or run `cytv doctor --report`.
-        The report contains installer/OS versions, the failed step and stack locations without raw exception text.
+        Attach the existing diagnostic JSON saved after the failed attempt or recovery check.
+        Do not repeat installation or run another diagnostic check just to fill this form.
+        The report contains installer/OS versions, observed state and the failed step without raw exception text.
         Review it before posting. Never attach SSH keys, pairing tokens, your profile folder, IP addresses, SSIDs or app inventories.
   - type: dropdown
     id: edition
@@ -20,12 +21,14 @@ body:
   - type: dropdown
     id: desktop
     attributes:
-      label: Computer operating system
+      label: Installer device and operating system
       options:
         - Windows
         - macOS Apple Silicon
         - macOS Intel
         - Linux
+        - Android phone or tablet
+        - Other / unknown
     validations:
       required: true
   - type: input
@@ -37,7 +40,7 @@ body:
     id: reproduction
     attributes:
       label: What did you do?
-      description: Include the cytv command without addresses/key paths, and the wizard step that failed.
+      description: Name the wizard step or cytv command without addresses/key paths. Describe the state you already observed; do not repeat a failed setup.
     validations:
       required: true
   - type: textarea
@@ -50,6 +53,6 @@ body:
     id: diagnostic
     attributes:
       label: Diagnostic report and error message
-      description: Attach the diagnostic JSON, or paste its contents here. Include the cytv version if a report could not be saved. Do not paste raw private logs.
+      description: Attach the existing diagnostic JSON after reviewing it, or say it is unavailable. Include the installer version if no report was saved. Do not attach private profiles, keys or raw logs.
     validations:
       required: true

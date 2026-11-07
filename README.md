@@ -17,7 +17,7 @@ LG screens or obtain root access.
 [English](docs/i18n/en.md) · [Deutsch](docs/i18n/de.md) · [Español](docs/i18n/es.md) ·
 [Português (Brasil)](docs/i18n/pt-BR.md) · [Français](docs/i18n/fr.md) · [Italiano](docs/i18n/it.md) ·
 [한국어](docs/i18n/ko.md) · [हिन्दी](docs/i18n/hi.md) · [Polski](docs/i18n/pl.md) ·
-[Русский](docs/i18n/ru.md) · [简体中文](docs/i18n/zh-Hans.md) · [繁體中文](docs/i18n/zh-Hant.md).
+[Čeština](docs/i18n/cs.md) · [Русский](docs/i18n/ru.md) · [简体中文](docs/i18n/zh-Hans.md) · [繁體中文](docs/i18n/zh-Hant.md).
 
 <a id="browser-preview"></a>
 
@@ -54,8 +54,11 @@ and creating your own theme.
 
 ## Download and install
 
+**Candidate branch:** v1.10.0 is not published yet. The release metadata below is
+prepared for publication; download buttons still follow the latest published v1.9.0.
+
 <!-- release:downloads -->
-Current stable release: **[v1.9.0](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.9.0)** — [release notes](docs/RELEASE-1.9.0.md).
+Current stable release: **[v1.10.0](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.10.0)** — [release notes](docs/RELEASE-1.10.0.md).
 <!-- /release:downloads -->
 
 [![Download Windows x64 graphical installer — GUI ZIP](assets/brand/downloads/windows.svg)](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/cytv-windows-x64-desktop.zip)
@@ -114,7 +117,7 @@ remote: [check requirements and known limits](docs/COMPATIBILITY.md) first.
 
 ## Guides and help
 
-[All documentation](docs/README.md) · [Guides in 12 languages](docs/LANGUAGES.md) ·
+[All documentation](docs/README.md) · [Guides in your language](docs/LANGUAGES.md) ·
 [Report a problem or a successful installation](docs/FEEDBACK.md)
 
 If an AI agent helps with installation, it should prepare a short, redacted result
@@ -135,15 +138,17 @@ For contributors: [build and technical references](docs/development/README.md),
 <!-- release:components -->
 | Component | Stable version |
 | --- | --- |
-| cytv installer | 0.10.0 |
-| Home | 1.10.0 |
+| cytv installer | 0.11.0 |
+| Home | 1.11.0 |
 | Home Helper | 0.7.4 |
-| Root edition | 0.10.0 |
-| Both edition Updaters | 0.4.5 |
-| Android installer / versionCode | 0.9.0 / 23 |
+| Root edition | 0.11.0 |
+| Both edition Updaters | 0.5.0 |
+| Android installer / versionCode | 0.10.0 / 24 |
 <!-- /release:components -->
 
-System Updater in 1.7.0: 1.2.0 / protocol 1. Existing supervisors stay pinned; installed 1.1.2 has no general replacement path in this release.
+Fresh System Updater target: 1.2.3 / protocol 1. Existing supervisors stay pinned; installed 1.1.2 has no general replacement path. See the [candidate delivery limits](docs/RELEASE-1.10.0.md).
+
+Historical System Updater in 1.7.0: 1.2.0 / protocol 1.
 See the [1.7.0 release notes](docs/RELEASE-1.7.0.md)
 and historical [1.5.0 TV acceptance and limits](docs/RELEASE-1.5.0.md).
 

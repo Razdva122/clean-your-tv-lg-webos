@@ -11,6 +11,71 @@ from cytv.recovery import recover
 
 
 class RecoveryStateTests(unittest.TestCase):
+    def test_observer_diagnostics_export_only_fixed_facts(self):
+        from cytv.diagnostic_context import status_summary
+        result=status_summary({'device':{'observer':{'operation':'PRIVATE','plan_sha256':'PRIVATE','reservation':'active',
+            'slots':[{'submission':'claimed-possibly-submitted','terminal':'failure','readback':'not-checked','reason':None,
+                      'reply':{'errorText':'PRIVATE'},'path':'PRIVATE'},
+                     {'submission':'PRIVATE','terminal':'PRIVATE','readback':'PRIVATE','reason':'PRIVATE'}]}}})
+        self.assertEqual(result.get('observer',{}).get('reservation'),'active')
+        self.assertEqual(result['observer']['slots'][0]['terminal'],'failure')
+        self.assertNotIn('PRIVATE',json.dumps(result))
+    def test_cancellation_advice_requires_matching_raw_operation_and_never_exports_proof(self):
+        from cytv.recovery_state import assess
+        pending={'action':'install','product_operation':'a'*32}
+        observed={'device':{},'cancellation':{'operation':'a'*32,'state':'admissible','home_changed':False,
+            'candidate_sha256':'b'*64,'proof_sha256':'c'*64,'code_sha256':'d'*64}}
+        value=assess({'edition':'root'},pending,observed)
+        self.assertEqual(value['actions'],['cancel-install','retain-evidence'])
+        observed['device']={'product':{'operation':'e'*32}}
+        self.assertEqual(assess({'edition':'root'},pending,observed)['reason'],'foreign-operation')
+        observed['device']={}
+        observed['cancellation']['operation']='e'*32
+        self.assertNotIn('cancel-install',assess({'edition':'root'},pending,observed)['actions'])
+    def test_assessment_is_conservative_and_never_exports_receipts(self):
+        from cytv.recovery_state import assess
+        root = {'edition': 'root'}
+        nr = {'edition': 'no-root'}
+        cases = [
+            (nr, None, {}, 'idle', 'no-pending-operation', []),
+            (nr, {'action': 'uninstall', 'stage': 'pending'}, {}, 'pre-submission', 'removal-not-submitted', ['check', 'retain-evidence']),
+            (nr, {'action': 'install', 'stage': 'pending'}, {'device': {'apps': []}}, 'blocked', 'terminal-evidence-missing', ['check', 'retain-evidence']),
+            (nr, {'action': 'install', 'stage': 'pending', 'previous': {'secret': 'PRIVATE'}}, {}, 'blocked', 'inherited-operation', ['retain-evidence']),
+            (root, {'action': 'unknown', 'stage': 'corrupt'}, {}, 'blocked', 'unsupported-receipt', ['retain-evidence']),
+            (root, None, {'active_operation': 'PRIVATE'}, 'blocked', 'foreign-operation', ['check', 'retain-evidence']),
+            (root, {'action': 'install', 'stage': 'submitted', 'product_operation': 'a'*32},
+             {'device': {'product': {'state': 'pending', 'operation': 'a'*32}}}, 'waiting', 'operation-live', ['check', 'retain-evidence']),
+            (root, {'action': 'activate-root', 'stage': 'enable'},
+             {'can_resume_root_setup': True, 'device': {'result': {}}}, 'setup-ready', 'packages-verified', ['continue-setup', 'finish-home-off', 'retain-evidence']),
+            (root, {'action': 'activate-root', 'stage': 'enable'},
+             {'can_resume_root_setup': True}, 'blocked', 'observation-unverified', ['check', 'retain-evidence']),
+            (root, {'action': 'uninstall', 'product_operation': 'a'*32},
+             {'reconciliation': 'product-removal-verified', 'device': {'product': {'operation': 'a'*32, 'state': 'complete', 'current': True}}},
+             'terminal-verified', 'removal-verified', ['reconcile', 'retain-evidence']),
+        ]
+        for profile, pending, observed, state_code, reason, actions in cases:
+            with self.subTest(reason=reason):
+                before = json.dumps([profile, pending, observed], sort_keys=True)
+                result = assess(profile, pending, observed)
+                self.assertEqual(result, {'state': state_code, 'reason': reason, 'actions': actions})
+                self.assertNotIn('PRIVATE', json.dumps(result))
+                self.assertEqual(json.dumps([profile, pending, observed], sort_keys=True), before)
+
+    def test_pending_does_not_hide_current_connection_blocker(self):
+        from paramiko import AuthenticationException
+        from cytv.errors import UserError, DeveloperKeyError
+        pending = {'action': 'install', 'stage': 'pending'}
+        for error, edition, code in ((AuthenticationException('PRIVATE'), 'root', 'ssh-auth-root'),
+                                     (TimeoutError('PRIVATE'), 'no-root', 'ssh-unreachable'),
+                                     (UserError('PRIVATE', reason_code='ssh-trust-record'), 'root', 'ssh-identity'),
+                                     (DeveloperKeyError('PRIVATE', 'key-unlock'), 'no-root', 'developer-key-unlock')):
+            guide = for_error(error, 'ssh-connect', {'edition': edition}, pending)
+            self.assertEqual(guide['code'], code)
+            self.assertTrue(guide['pending'])
+            self.assertFalse(guide['can_edit_connection'])
+            self.assertNotIn('PRIVATE', str(guide))
+            self.assertIn('original saved', guide['next_step'])
+
     def test_reports_explain_next_step_and_keep_original_journal_private(self):
         cases = [
             ({'action': 'uninstall', 'stage': 'pending'}, 'removal-not-submitted', 'review-recovery'),
@@ -71,7 +136,7 @@ class RecoveryStateTests(unittest.TestCase):
             store.begin(profile, 'install')
             before = store.pending(profile)
             installer = Mock(store=store, profile=profile)
-            installer.status.return_value = {'device': {'apps': []}}
+            installer.observe_recovery.return_value = {'device': {'apps': []}}
             installer.remote.luna.side_effect = TVRejected('PRIVATE', {'returnValue': False, 'errorCode': -1}, 'com.webos.appInstallService/status')
             events = []
             with self.assertRaises(TVRejected):

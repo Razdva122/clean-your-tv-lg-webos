@@ -5,12 +5,12 @@ const {assert,chromium,stage,open}=require('./browser.cjs');
  try{
   const context=await browser.newContext({locale:'en-US'});
   await context.addInitScript(()=>{
-   let ctor;window.inputReads=[];window.pendingInputs=[];window.holdInputs=false;
+   let ctor;window.inputReads=[];window.inputReplies=0;window.pendingInputs=[];window.holdInputs=false;
    window.inputSnapshot={returnValue:true,devices:[{appId:'preview.hdmi1',label:'HDMI 1',connected:true},{appId:'preview.hdmi2',label:'HDMI 2',connected:false}]};
    Object.defineProperty(window,'PalmServiceBridge',{configurable:true,set(value){ctor=value},get(){
     if(ctor&&!ctor.inputRecorded&&ctor.prototype.call){const call=ctor.prototype.call;ctor.prototype.call=function(uri,raw){
      if(uri==='luna://com.webos.service.eim/getAllInputStatus'){inputReads.push({uri,payload:JSON.parse(raw)});this.onservicecallback(JSON.stringify({returnValue:false,errorCode:-1}));return;}
-     if(uri==='luna://com.gathin.tvhome.renewal/inputStatus'){inputReads.push({uri,payload:JSON.parse(raw)});const answer=()=>this.onservicecallback(JSON.stringify(inputSnapshot));if(holdInputs)pendingInputs.push(answer);else setTimeout(answer,30);return;}
+     if(uri==='luna://com.gathin.tvhome.renewal/inputStatus'){inputReads.push({uri,payload:JSON.parse(raw)});const answer=()=>{inputReplies++;this.onservicecallback(JSON.stringify(inputSnapshot));};if(holdInputs)pendingInputs.push(answer);else setTimeout(answer,30);return;}
      return call.apply(this,arguments);
     };ctor.inputRecorded=true;}return ctor;
    }});
@@ -19,6 +19,9 @@ const {assert,chromium,stage,open}=require('./browser.cjs');
   assert.deepEqual(await page.evaluate(()=>inputReads.map(r=>r.uri)),['luna://com.webos.service.eim/getAllInputStatus','luna://com.gathin.tvhome.renewal/inputStatus']);
   await page.evaluate(()=>HomeLayoutState.setThemeLayout({preset:'dock-grid',columns:5,spacingScale:1,textScale:1,focusScale:1.1,inputs:'shelf'}));
   assert.deepEqual(await page.locator('.ctv-input-status').allTextContents(),['Connected','Not connected','']);
+  // Changing the shelf layout starts its own asynchronous snapshot. Drain that
+  // reply before holding the Settings request whose coalescing is tested below.
+  await page.waitForFunction(()=>inputReplies===inputReads.filter(read=>read.uri==='luna://com.gathin.tvhome.renewal/inputStatus').length);
   await page.evaluate(()=>holdInputs=true);
   await page.locator('#btnSettings').click();
   assert.equal(await page.evaluate(()=>pendingInputs.length),1,'settings refresh coalesces metadata');

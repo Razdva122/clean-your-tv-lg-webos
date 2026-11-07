@@ -12,6 +12,24 @@ SOURCE = Path(__file__).resolve().parents[1] / 'app/src/main/python/android_brid
 
 
 class AndroidRootRecoveryTests(unittest.TestCase):
+    def test_failed_passive_authentication_exports_current_blocker_without_replacing_first_failure(self):
+        from paramiko import AuthenticationException
+        from cytv import diagnostics
+        from cytv.errors import TVCommandError
+        diagnostics.create_report(self.store, 'install', self.profile, 'install-root', TVCommandError(127))
+        before = self.records()
+        with patch.object(self.bridge.SSH, 'connect', side_effect=AuthenticationException('PRIVATE')):
+            self.assertEqual(self.run_bridge(), 2)
+        report = next(json.loads(p.read_text()) for p in (self.store.root / 'reports').glob('*.json')
+                      if json.loads(p.read_text())['action'] == 'recover')
+        self.assertEqual(report['observation_failure']['guidance']['code'], 'ssh-auth-root')
+        self.assertEqual(report['first_failure']['ssh_command']['exit_status'], 127)
+        self.assertEqual(self.records(), before)
+        help_event = next(e for e in self.native.events if e['kind'] == 'failure-help')
+        self.assertEqual(help_event['code'], 'ssh-auth-root')
+        self.assertFalse(help_event['canEditConnection'])
+        self.assertNotIn('PRIVATE', json.dumps(self.native.events))
+
     def setUp(self):
         self.addCleanup(i18n.set_language, 'en')
         self.tmp = tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
@@ -34,7 +52,9 @@ class AndroidRootRecoveryTests(unittest.TestCase):
             def __init__(self): self.events = []
             def emit(self, raw): self.events.append(json.loads(raw))
             def request(self, raw):
-                self.events.append(json.loads(raw)); return self.answer
+                event=json.loads(raw);self.events.append(event)
+                if 'verified support code' in event.get('text',''):return 'n'
+                return self.answer
         self.native = Native()
 
     def records(self):
@@ -70,6 +90,7 @@ class AndroidRootRecoveryTests(unittest.TestCase):
         self.assertEqual(report['status']['product']['passive']['worker'], 'exception-recorded')
         self.assertEqual(report['status']['product']['state'], 'recovery_required')
         self.assertFalse(report['status']['can_resume_root_setup'])
+        self.assertEqual(report['recovery']['reason'], 'observation-unverified')
         for private in ('192.0.2.10', self.operation, str(self.key), 'PRIVATE KEY'):
             self.assertNotIn(private, reports[0].read_text())
         self.assertTrue(any(e['kind'] == 'report-ready' for e in self.native.events))
@@ -82,6 +103,43 @@ class AndroidRootRecoveryTests(unittest.TestCase):
              patch.object(self.bridge.SSH, 'connect') as connect:
             self.assertIn(self.run_bridge(), (0, 130))
         connect.assert_not_called(); self.assertEqual(self.records(), before)
+
+    def test_passive_authentication_keeps_key_and_root_types_in_every_locale(self):
+        from cytv.transport import load_identity, root_auth
+        before = self.records()
+        def request(raw):
+            event = json.loads(raw); self.native.events.append(event)
+            if event['kind']=='secret':return 'PRIVATE-TEST-SECRET'
+            if i18n.translate('Check the original Root operation using verified support code?') in event.get('text',''):return 'n'
+            return 'y'
+        self.native.request = request
+        remote = Mock()
+        remote.run.return_value = json.dumps({'schema': 1, 'status': 'missing'})
+        def authenticate(profile, directory, secret, trust, *, persist):
+            self.assertEqual(profile, self.profile)
+            self.assertFalse(persist)
+            self.assertFalse(trust('untrusted', True))
+            def typed_secret(prompt):
+                self.assertIsInstance(prompt, str)
+                self.assertIn(prompt.credential_type, ('key', 'root'))
+                return secret(prompt)
+            with patch('paramiko.PKey.from_path', side_effect=[ValueError('encrypted'), 'key']):
+                load_identity(self.key, typed_secret)
+            source = next(root_auth(typed_secret, automatic=False).get_sources())
+            source.password_getter()
+            return remote
+        for language in set(i18n.LANGUAGES) - {'auto'}:
+            with self.subTest(language=language):
+                self.config['language'] = language; self.native.events.clear()
+                with patch.object(self.bridge.SSH, 'connect', side_effect=authenticate):
+                    self.assertEqual(self.run_bridge(), 2)
+                events = [e for e in self.native.events if e['kind'] == 'secret']
+                self.assertEqual([e['secretType'] for e in events], ['key', 'root'])
+                self.assertEqual(self.records(), before)
+                self.assertNotIn('PRIVATE-TEST-SECRET', json.dumps(self.native.events))
+                for path in self.root.rglob('*'):
+                    if path.is_file():
+                        self.assertNotIn(b'PRIVATE-TEST-SECRET', path.read_bytes())
 
     def test_missing_original_profile_or_operation_stops_before_network(self):
         for missing in ('profile.json', 'operation.json'):
@@ -149,11 +207,21 @@ class AndroidRootRecoveryTests(unittest.TestCase):
                 self.assertEqual(path.read_bytes(), value)
 
     def test_authentication_cancellation_keeps_pin_identity_and_operation_without_retry(self):
-        before = self.records(); self.native.answer = 'y'
+        from cytv.transport import root_auth
+        before = self.records()
+        def request(raw):
+            event = json.loads(raw); self.native.events.append(event)
+            return None if event['kind'] == 'secret' else 'y'
+        self.native.request = request
+        def authenticate(profile, directory, secret, trust, *, persist):
+            source = next(root_auth(secret, automatic=False).get_sources())
+            source.password_getter()
         with patch.object(self.bridge.cli, 'main', side_effect=AssertionError('ordinary recovery used')), \
-             patch.object(self.bridge.SSH, 'connect', side_effect=EOFError) as connect:
+             patch.object(self.bridge.SSH, 'connect', side_effect=authenticate) as connect:
             self.assertEqual(self.run_bridge(), 130)
         self.assertEqual(connect.call_count, 1); self.assertEqual(self.records(), before)
+        events = [e for e in self.native.events if e['kind'] == 'secret']
+        self.assertEqual([e['secretType'] for e in events], ['root'])
 
 
 if __name__ == '__main__': unittest.main()

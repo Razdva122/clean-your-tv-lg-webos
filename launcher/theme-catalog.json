@@ -9,6 +9,9 @@
       "credits": "theme-catalog/CLASSIC-CREDITS.txt"
     },
     {
+      "packageSize": 237176,
+      "has4k": false,
+      "hasVideo": false,
       "id": "builtin:liquid-glass",
       "title": "Liquid Glass",
       "version": "1.0.0",
@@ -23,9 +26,12 @@
       "digest": "f71d277b503010df3e2850b0f57a0bc91bc37c13d97c02d644b23a724e40523f"
     },
     {
+      "packageSize": 14503419,
+      "has4k": true,
+      "hasVideo": true,
       "id": "builtin:ribbon",
       "title": "Ribbon",
-      "version": "1.3.0",
+      "version": "1.3.1",
       "builtin": true,
       "description": "Black Hole by Xecutioner, recorded at native 3840x2160, with a fixed eight-card skewed app ribbon.",
       "author": "CYTV contributors; video by Xecutioner",
@@ -34,9 +40,12 @@
       "credits": "themes/ribbon/documents/1-a111ee9dd92cf115657a4ad197a24b0ff15dee4da540b9cf5cdd95c0cff37b6d.txt",
       "licenseFile": "themes/ribbon/documents/0-ef2c9dee57bcc55339247c34ab6460d9632669a06c764df68b49e1363857964d.txt",
       "url": "themes/ribbon/cytv-theme.json",
-      "digest": "bb9796c0f0230741d36d1668e642412eee0f54bb9c8a4399870753a7bae000e7"
+      "digest": "67b837210dfba1bbd1d999abe259a0a5ad28c5cfacc3eefb3229d2fd0e79372b"
     },
     {
+      "packageSize": 4099466,
+      "has4k": true,
+      "hasVideo": false,
       "id": "github:razdva122/clean-your-tv-lg-webos:alpine",
       "title": "Alpine",
       "version": "1.5.0",
@@ -48,6 +57,9 @@
       "digest": "c182f0c8b6285cecdbc9f266f3ce95124bfcaa47635a7582514d7a01cdf74cd5"
     },
     {
+      "packageSize": 1474629,
+      "has4k": false,
+      "hasVideo": false,
       "id": "github:razdva122/clean-your-tv-lg-theme:itachi",
       "title": "Itachi · Sharingan",
       "version": "1.0.2",
@@ -59,6 +71,9 @@
       "digest": "a2d8b8ea998314b9afd28c41c97b80250baf96e26279b2f9dcd7c93417553240"
     },
     {
+      "packageSize": 65882,
+      "has4k": false,
+      "hasVideo": false,
       "id": "github:razdva122/clean-your-tv-lg-theme:terminal",
       "title": "Channel",
       "version": "1.3.3",
@@ -70,6 +85,9 @@
       "digest": "da7da0848ac0ecd60ebbcd964cb65a68fdf4fab54f30eebd56218c9d3141e17c"
     },
     {
+      "packageSize": 97442,
+      "has4k": false,
+      "hasVideo": false,
       "id": "github:invrnt/tv-themes:minimal",
       "title": "Minimal",
       "version": "1.0.1",
@@ -81,6 +99,9 @@
       "digest": "42ba8d15fce491e2cb4474c42333ab8489c8fba5d35fd7a80513bce73351bf22"
     },
     {
+      "packageSize": 52652,
+      "has4k": false,
+      "hasVideo": false,
       "id": "github:xandymelo/clean-your-tv-lg-retro-theme:retro",
       "title": "Retro",
       "version": "1.0.0",
@@ -92,6 +113,9 @@
       "digest": "e03a9455f59067d4c79da719e6b2113615f31b7790e66585d5fcea97db12f2c6"
     },
     {
+      "packageSize": 1858580,
+      "has4k": false,
+      "hasVideo": false,
       "id": "github:luigy-lemon/atmosphere-theme:atmosphere",
       "title": "Atmosphere",
       "version": "1.0.0",
@@ -103,15 +127,18 @@
       "digest": "fc0909d347f09db0cb9bd55e834cacdd4be6b319ff2b67866933ceab5c38a5d1"
     },
     {
-      "id": "github:spatariurares/clean-your-tv-themes:craciun",
+      "packageSize": 3116054,
+      "has4k": true,
+      "hasVideo": false,
+      "id": "github:razdva122/clean-your-tv-lg-webos:craciun",
       "title": "Crăciun la Brașov",
-      "version": "1.1.0",
-      "author": "Rares",
-      "license": "MIT",
+      "version": "1.2.0",
+      "author": "Rares / Clean Your TV contributors",
+      "license": "MIT AND CC-BY-4.0",
       "description": "Christmas evening by a crackling fireplace in a Romanian home, with snowy Brașov, the Tâmpa and the Black Church through the window, and a \"Crăciun fericit\" card on the mantel. Warm fire, walnut and cream, serif type.",
-      "preview": "theme-catalog/spatariurares--clean-your-tv-themes--craciun/34557f284aa2ef4f4d990543d675edb34ed9cebe6226087de4ba51a8ab11e27e/preview.jpg",
-      "url": "https://raw.githubusercontent.com/spatariurares/clean-your-tv-themes/55bead4a0aeeb45888e27d02854c345708d006a2/distributions/craciun/1.1.0/cytv-theme.json",
-      "digest": "34557f284aa2ef4f4d990543d675edb34ed9cebe6226087de4ba51a8ab11e27e"
+      "preview": "theme-catalog/razdva122--clean-your-tv-lg-webos--craciun/6f910b966f400448d4fcf08d102cb79ee7d95fe95525a4cb3fb1020b6ca9fb84/preview.jpg",
+      "url": "https://raw.githubusercontent.com/razdva122/clean-your-tv-lg-webos/5ae9459594c246e6244441765f0980b394ed0cfe/distributions/craciun/1.2.0/cytv-theme.json",
+      "digest": "6f910b966f400448d4fcf08d102cb79ee7d95fe95525a4cb3fb1020b6ca9fb84"
     }
   ]
 }

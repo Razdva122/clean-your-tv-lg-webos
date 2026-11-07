@@ -12,13 +12,15 @@ KERNEL_ARCHES = ('armv7l', 'armv7', 'armv8l', 'aarch64', 'arm64', 'x86_64', 'i68
 ROOT_REQUIREMENTS = ('root-user', 'python3', 'luna-send', 'apps-directory',
                      'luna-services-directory', 'python-json', 'python-fcntl', 'python-version', 'node-version')
 
-ROOT_ACTIONS = ('inspect', 'install', 'status', 'remove', 'enable', 'restore', 'uninstall')
+ROOT_ACTIONS = ('inspect', 'install', 'status', 'remove', 'enable', 'restore', 'uninstall', 'clean-remove', 'clean-status')
 
 REASONS = ('unknown', 'user-error', 'ssh-command-failed', 'ssh-unreachable',
            'ssh-authentication', 'ssh-identity-changed', 'ssh-trust-record', 'ssh-identity-unverified', 'host-runtime',
            'helper-running', 'helper-state-unverified', 'root-requirements',
            'pending-operation', 'root-operation-unconfirmed', 'version-mismatch',
-           'inventory-unavailable', 'graphics-unverified', 'root-home-interfaces')
+           'inventory-unavailable', 'graphics-unverified', 'root-home-interfaces',
+           'root-worker-busy', 'root-access-required', 'removal-failed',
+           'cleanup-check-failed', 'connection-interrupted')
 ACTIONS = ('recover', 'install', 'uninstall', 'restore', 'status', 'doctor', 'home-diagnostics',
            'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access',
            'recover-system-rollback', 'replace-system-updater', 'clean-wam-cache')
@@ -34,6 +36,7 @@ STATES = ('pending', 'complete', 'recovery_required', 'unknown', 'fresh', 'insta
 STAGES = ('unknown', 'blocked', 'reserved', 'root-deploy', 'root-updater', 'supervisor',
           'readback', 'complete', 'absent', 'incomplete-state', 'installed-recovery-only',
           'uninstalled-state-retained', 'pending', 'coordinator-upload', 'coordinator-submitted')
+STAGES += ('requested','original-writers-fenced','controls-restored','package-removal','private-cleanup','verified-clean')
 CODES = ('unknown_operation', 'operation_pending', 'verified', 'installation_requires_recovery',
          'operation_requires_recovery', 'recovery_evidence_required', 'continuation_requires_recovery',
          'historical_completion_is_not_current')
@@ -41,6 +44,11 @@ COMPONENTS = {'com.gathin.tvhome': 'home', 'com.local.nativehome': 'helper',
               'com.cleanyourtv.root.preview': 'root', 'com.cleanyourtv.root.updater': 'root_updater',
               'com.cleanyourtv.system.updater': 'system_updater'}
 HELPER_STATES = ('running', 'stopped', 'stale', 'uncertain', 'unknown')
+RECOVERY_REASONS = ('original_final_readback_verified','recovery_evidence_required',
+                    'original-request-unverified','original-snapshot-unverified','worker-not-quiescent',
+                    'package-terminal-unverified','current-package-files-unverified','updater-baseline-unverified',
+                    'stock-routing-unverified','intent-guardian-unverified','recovery-code-incompatible',
+                    'recovery-evidence-unverified')
 
 
 def choice(value, allowed, default='unknown'):
@@ -67,9 +75,29 @@ def metadata(value):
     return result
 
 
+def root_diagnostics_summary(value):
+    value=mapping(value);result={}
+    if version(value.get('runtime_release')):result['runtime_release']=value['runtime_release']
+    result['components']={key:item for key,item in mapping(value.get('components')).items()
+                          if key in ('root','root_updater','system_updater') and version(item)}
+    result['component_reads']={key:choice(item,('read','missing','unsafe','unavailable'))
+        for key,item in mapping(value.get('component_reads')).items() if key in ('root','root_updater','system_updater')}
+    log=mapping(value.get('health_log'))
+    result['health_log']={'status':choice(log.get('status'),('read','missing','unsafe','unavailable'))}
+    if 'scope' in log:
+        result['health_log']['scope']=choice(log['scope'],('historical-tail','since-enable'))
+    if 'health_refusal' in log:
+        result['health_log']['health_refusal']=choice(log['health_refusal'],('generic','transaction-mismatch',
+            'binding-restored','generation-mismatch','token-mismatch','boot-mismatch','phase-inactive','failsafe-present'))
+    if type(log.get('supervisor_error')) is bool:result['health_log']['supervisor_error']=log['supervisor_error']
+    return result
+
+
 def tv_summary(value):
     value = mapping(value)
     result = metadata(value)
+    if 'root_diagnostics' in value:
+        result['root_diagnostics'] = root_diagnostics_summary(value['root_diagnostics'])
     if 'setup_outcome' in value:
         from .outcomes import summary
         result['setup_outcome'] = summary(value['setup_outcome'])
@@ -135,6 +163,13 @@ def product_summary(value):
               (('state', STATES), ('stage', STAGES), ('code', CODES)) if key in value}
     if 'failure' in value:
         result['failure'] = worker_summary(value['failure'])
+    if value.get('protocol')=='clean-removal-v1':
+        from .recovery_state import REMOVAL_REASONS
+        result['removal_reason']=choice(value.get('reason'),REMOVAL_REASONS)
+    if 'resume_reason' in value:
+        result['resume_reason']=choice(value['resume_reason'],RECOVERY_REASONS)
+    if 'setup_reason' in value:
+        result['setup_reason']=choice(value['setup_reason'],RECOVERY_REASONS)
     if 'passive' in value:
         passive=mapping(value['passive'])
         result['passive']={'schema':1,**{key:choice(passive[key],allowed) for key,allowed in (
@@ -151,6 +186,33 @@ def status_summary(value):
     value = mapping(value)
     device = mapping(value.get('device', value))
     result = {}
+    if 'removal' in value:
+        from .recovery_state import REMOVAL_STAGES, REMOVAL_REASONS
+        removal=mapping(value['removal'])
+        result['removal']={'state':choice(removal.get('state'),('cleanup-in-progress','verified-clean')),
+                           'stage':choice(removal.get('stage'),REMOVAL_STAGES),
+                           'reason':choice(removal.get('reason'),REMOVAL_REASONS),
+                           'original_outcome':choice(removal.get('original_outcome'),('unknown','complete','recovery_required'))}
+    if 'observer' in device:
+        observer=mapping(device['observer'])
+        slots=observer.get('slots') if type(observer.get('slots')) is list else []
+        result['observer']={'reservation':choice(observer.get('reservation'),('active','prepared','busy','closed','unknown')),
+            'configuration':{step:choice(state,('prepared','unknown','complete')) for step,state in mapping(observer.get('configuration')).items()
+                             if step in ('files','eim','launch','restore')},
+            'slots':[{'submission':choice(mapping(slot).get('submission'),('prepared','claimed-possibly-submitted','sealed')),
+                      'terminal':choice(mapping(slot).get('terminal'),('none','success','failure')),
+                      'readback':choice(mapping(slot).get('readback'),('not-checked','matches')),
+                      'reason':choice(mapping(slot).get('reason'),('malformed-reply','malformed-utf8','oversized-stream',
+                          'oversized-reply','too-many-replies','oversized-stderr','observation-timeout','sender-unavailable',
+                          'sender-stdin-lost','stream-ended','terminal-persistence-unverified'))} for slot in slots[:2]]}
+    if 'cancellation' in value:
+        cancellation=mapping(value['cancellation'])
+        result['cancellation']={'state':choice(cancellation.get('state'),('blocked','admissible','admitted',
+            'remove-observed','cancellation-terminal-pending','cancelled-and-removed')),
+            'reason':choice(cancellation.get('reason'),RECOVERY_REASONS)}
+    if 'assessment' in value:
+        from .recovery_state import assessment_summary
+        result['assessment'] = assessment_summary(value['assessment'])
     components = {key: item for key, item in mapping(value.get('components')).items()
                   if key in COMPONENTS.values() and version(item)}
     if 'components' in value:
@@ -163,6 +225,8 @@ def status_summary(value):
             if name and version(app.get('version')):
                 components[name] = app['version']
         result['components'] = components
+    if 'observation_phase' in value:
+        result['observation_phase']=choice(value['observation_phase'],('before-enable',))
     if 'helper_state' in device:
         result['helper_state'] = choice(device['helper_state'], HELPER_STATES)
     if 'product' in device:
@@ -175,6 +239,8 @@ def status_summary(value):
     if updater:
         result['system_updater'] = {key: updater[key] for key in ('present', 'bootstrap_complete', 'disabled') if type(updater.get(key)) is bool}
     runtime = mapping(device.get('result', device))
+    for key in ('removed','verified_clean','private_cleanup_verified'):
+        if type(value.get(key)) is bool:result[key]=value[key]
     for key in ('guardian_active', 'journal_exists', 'recovery_integrity_verified', 'home_enabled'):
         if type(runtime.get(key)) is bool:
             result[key] = runtime[key]
@@ -274,6 +340,7 @@ def read_record(path):
 def operation_context(store, profile):
     """Snapshot while the normal TV lock is held, before another session can start."""
     store.diagnostic_created = None
+    store.diagnostic_removal = None
     try:
         yield
     finally:
@@ -310,6 +377,41 @@ def history(report, store, profile, error, pending):
             if path.exists() or path.is_symlink():
                 result['first_failure'] = failure_summary(read_record(path))
                 result['failure_history'] = 'recorded'
+            if mapping(pending).get('recovery_protocol')=='clean-removal-v1' and ('previous' in pending or 'original_receipt' in pending):
+                # The new cleanup failure is reported separately above. It
+                # cannot become the cause of an older unknown installation.
+                result.update(first_failure=None,failure_history='not-recorded')
+                def previous(value):
+                    original=value.get('previous')
+                    if original is None and 'original_receipt' in value:
+                        removal=value.get('removal_operation')
+                        expected='removal-original-'+removal+'.json' if type(removal) is str and re.fullmatch('[a-f0-9]{32}',removal) else None
+                        if value.get('recovery_protocol')!='clean-removal-v1' or not expected or value['original_receipt']!=expected:
+                            raise ValueError('Invalid original receipt')
+                        original=read_record(store.device_dir(profile)/expected)
+                    return original
+                original=previous(pending)
+                records={}
+                for _ in range(16):
+                    if type(original) is not dict:break
+                    # Only this oldest visited operation can supply its cause.
+                    # Missing older history must never inherit a wrapper error.
+                    result.update(first_failure=None,failure_history='not-recorded')
+                    prior=original.get('diagnostic_id')
+                    if type(prior) is str and re.fullmatch('[a-f0-9]{32}',prior):
+                        if prior not in records:
+                            saved=directory/(prior+'.json')
+                            records[prior]=failure_summary(read_record(saved)) if saved.exists() or saved.is_symlink() else None
+                        if records[prior] is not None:
+                            result['first_failure']=records[prior]
+                            result['failure_history']='recorded'
+                    original=previous(original)
+                if type(original) is dict:
+                    result.update(first_failure=None,failure_history='unavailable')
+                elif records and type(prior) is str:
+                    records.pop(prior,None)  # The original is not an intermediate failure.
+                intermediate=[value for value in records.values() if value is not None]
+                if intermediate:result['intermediate_failures']=intermediate
         elif not pending:
             path = directory / 'previous-attempt.json'
             if error is not None and report['action'] == 'install':

@@ -2,8 +2,7 @@
 """Internal trusted-source cancellation of one never-activated failed install.
 
 Not an install continuation. Original submission, snapshot, request and SDK
-terminal stay unchanged. This module is deliberately outside normal worker
-inventories: run it only from separately pinned, reviewed recovery source.
+terminal stay unchanged. Run only from a freshly staged, pinned recovery bundle.
 """
 from contextlib import contextmanager
 import fcntl
@@ -23,6 +22,23 @@ RECOVERY_FILES=('cancel_install.py','cancel_provision.py')
 
 
 def digest(value):return hashlib.sha256(encode(value)).hexdigest()
+
+
+def refusal_code(error):
+    """Fixed advice only; admission always repeats the complete proof."""
+    reasons={
+        'worker-not-quiescent':('live_original_worker','installer_not_idle'),
+        'package-terminal-unverified':('actual_install_terminal_required','actual_remove_terminal_required','removal_terminal_unknown_no_replay'),
+        'stock-routing-unverified':('lg_home_routing_unconfirmed','stock_home_settings_unconfirmed','project_routing_present','other_product_registration_present','private_root_registration_present'),
+        'intent-guardian-unverified':('never_activated_failed_install_required','provisioning_or_unknown_private_state','activity_absence_unconfirmed','recovery_activity_present'),
+        'original-request-unverified':('original_candidate_required','original_failed_install_required','original_lease_required','unexpected_terminal_lease','original_lease_stage_required','unknown_cancellation_receipt'),
+        'original-snapshot-unverified':('original_root_bundle_changed','original_candidate_changed','original_private_bytes_changed','original_cancellation_proof_changed','missing_atomic_cancellation_proof','cancellation_proof_changed','reviewed_admission_changed','original_pending_provision_snapshot_required','pending_provision_plan_changed','pending_provision_proof_changed'),
+        'recovery-code-incompatible':('pinned_recovery_code_required','reviewed_recovery_code_changed','invalid_original_root_version','unknown_original_root_inventory','migration_cancellation_unsupported','Unexpected updater bundle inventory','Root requires TV Node.js 8+','Root recovery requires TV Python 3.9+'),
+        'current-package-files-unverified':('original_package_inventory_changed','original_package_missing','root_registration_remains','root_bus_registration_remains'),
+        'updater-baseline-unverified':('other_component_state_present','other_product_package_present')}
+    for category,codes in reasons.items():
+        if error.args and error.args[0] in codes:return category
+    return 'recovery-evidence-unverified'
 
 
 class Recovery:
@@ -51,7 +67,7 @@ class Recovery:
             raise ValueError('unknown_original_root_inventory')
         for name,sha in manifest['files'].items():
             if hashlib.sha256(read(root/name)).hexdigest()!=sha:raise ValueError('original_root_bundle_changed')
-        inventories={'root':manifest,'root-updater':verify_bundle(snapshot/'root-updater',reader=read)}
+        inventories={'root':manifest,'root-updater':verify_bundle(snapshot/'root-updater',reader=read,allow_legacy_recovery=True)}
         options=submission.get('options',{})
         if options.get('prepare_supervisor') is True:
             from system_setup import verify_bundle as verify_system
@@ -73,10 +89,13 @@ class Recovery:
 
     def baseline(self, provision=None):
         if provision is None:
-            settings=self.device.rpc('com.webos.settingsservice/getSystemSettings',{'category':'general','keys':['defaultApps']})
-            profiles=self.device.rpc('com.webos.service.systemprofile/getProfiles',{'names':['defaultApps','idleApp'],'subscribe':False})['profiles']
-            if (settings['settings']['defaultApps']['home'],profiles['defaultApps']['categories']['home'],profiles['idleApp']['appId'])!=('com.webos.app.home',)*3:
-                raise ValueError('lg_home_routing_unconfirmed')
+            try:
+                settings=self.device.rpc('com.webos.settingsservice/getSystemSettings',{'category':'general','keys':['defaultApps']})
+                profiles=self.device.rpc('com.webos.service.systemprofile/getProfiles',{'names':['defaultApps','idleApp'],'subscribe':False})['profiles']
+                if (settings['settings']['defaultApps']['home'],profiles['defaultApps']['categories']['home'],profiles['idleApp']['appId'])!=('com.webos.app.home',)*3:
+                    raise ValueError('lg_home_routing_unconfirmed')
+            except (OSError,RuntimeError,ValueError,KeyError,TypeError):
+                raise ValueError('lg_home_routing_unconfirmed') from None
         # Original SDK registrations are expected; project overrides are not.
         paths=['var/webos-profile/override/clean-your-tv-root.json',
                'var/luna-service2/manifests.d/com.cleanyourtv.root.preview.recovery.json']
@@ -273,7 +292,8 @@ class Recovery:
             # This must precede archival. Old workers now take only their
             # terminal readback branch, even when the live Root tree is absent.
             if not lease['terminal']:self.owner.stage(lease,'cancelled-and-removed',terminal=True)
-            return dict(operation=identifier,state='cancelled-and-removed',lease_terminal=True,proof_sha256=proof_sha256,home_changed=False)
+            return dict(operation=identifier,candidate_sha256=candidate,code_sha256=self.code_sha256,
+                        state='cancelled-and-removed',lease_terminal=True,proof_sha256=proof_sha256,home_changed=False)
 
 
 def trusted_code_digest(code):
@@ -287,7 +307,7 @@ def trusted_code_digest(code):
 def main():
     import argparse
     import sys
-    from deploy import require_device
+    from deploy import require_device, require_node
     from installation import STATE
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action',choices=('inspect','remove'))
@@ -295,6 +315,7 @@ def main():
     parser.add_argument('--candidate')
     parser.add_argument('--code-sha256',required=True)
     parser.add_argument('--proof-sha256')
+    parser.add_argument('--report-refusal',action='store_true')
     args=parser.parse_args()
     require_device()
     code=Path(__file__).absolute().parent
@@ -303,10 +324,17 @@ def main():
     if trusted_code_digest(code)!=args.code_sha256:raise ValueError('reviewed_recovery_code_changed')
     owner=Ownership.__new__(Ownership);owner.store=store
     recovery=Recovery(LocalDevice(),owner,code_sha256=args.code_sha256)
-    if args.action=='inspect':result=recovery.inspect(args.operation,args.candidate if args.candidate is not None else recovery.saved_candidate(args.operation))
-    else:
-        if args.candidate is None or args.proof_sha256 is None:parser.error('remove requires the original candidate and a reviewed admission proof')
-        result=recovery.remove(args.operation,args.candidate,args.proof_sha256)
+    try:
+        require_node()
+        if sys.version_info < (3,9):raise RuntimeError('Root recovery requires TV Python 3.9+')
+        if args.action=='inspect':result=recovery.inspect(args.operation,args.candidate if args.candidate is not None else recovery.saved_candidate(args.operation))
+        else:
+            if args.candidate is None or args.proof_sha256 is None:parser.error('remove requires the original candidate and a reviewed admission proof')
+            result=recovery.remove(args.operation,args.candidate,args.proof_sha256)
+    except (OSError,ValueError,RuntimeError,KeyError,TypeError) as error:
+        if not args.report_refusal:raise
+        result=dict(operation=args.operation,state='blocked',reason=refusal_code(error),
+                    code_sha256=args.code_sha256,home_changed=False)
     print(json.dumps(result,sort_keys=True))
 
 

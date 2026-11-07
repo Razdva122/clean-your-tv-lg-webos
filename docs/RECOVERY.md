@@ -30,6 +30,42 @@ stopped. Physical No-root acceptance remains unverified for the exact Helper tra
 
 ## Interrupted setup or removal
 
+### Next candidate: original-operation recovery and full removal
+
+These are next-candidate instructions; the download buttons still provide the
+published release. For removal, select **Uninstall Clean Your TV** on desktop or
+Android (`cytv uninstall`) using the saved TV connection. Confirm the removal
+once. A failed or partial installation does not need to complete first: remove
+known project apps/files that are present and skip items that are absent.
+
+1. CYTV stops project controls and removes present project packages and files.
+2. When asked, disconnect the TV from power, reconnect it and wait for the TV and
+   network to return. Standby and Quick Start are not a full restart. CYTV does
+   not restart the TV automatically.
+3. Select **Try again**. This repeats the same approved removal goal on the same
+   saved connection, without a recovery wizard or another initial confirmation.
+   The installer checks the actual boot change and remaining files, then performs
+   the final sweep. Success requires both removed and verified-clean results.
+
+If the connection is interrupted, check it and select **Try again**. Existing
+installation history remains available; an old generic failure is not assigned
+an invented cause. If the OS denies access, use the requested Root connection.
+If another operation is actually running, wait for it to finish and try again.
+A failed check stays visible; it is never converted to green completion. Keep
+keys and original reports, and do not reinstall or clear Android app data to
+retry removal. Missing files are skipped; absence is not itself an error.
+
+Returning to LG Home alone remains separate from removal. Emergency controls
+above stay available. For setup recovery, eligible Root can still finish with
+LG Home and Home control off; that goal does not require activating Clean Home.
+Physical Home, sound, standby and cold boot are separate observations. A restart
+used by removal does not certify any of those checks. Candidate source tests do
+not establish compatibility or successful recovery on a reporter's TV. See the
+[maintained failure-injection matrix](development/INSTALLER-RECOVERY-MATRIX.md).
+
+The version-specific recovery sections below describe their published scope.
+The candidate Remove action is available even when earlier setup is incomplete.
+
 <a id="interrupted-setup-or-removal-in-110"></a>
 <a id="interrupted-no-root-installation-in-the-unpublished-140-candidate"></a>
 
@@ -57,9 +93,11 @@ A displayed plan is advice only, never authorization or a saved resume token.
 Legacy operations can remain blocked. This does not supply missing terminal
 installer evidence for #201 or certify recovery on #216's TV.
 
-### Failed Root activation (unreleased)
+<a id="failed-root-activation-unreleased"></a>
 
-An updated installer can offer **Finish Root setup?** for a retained profile-backend
+### Failed Root activation
+
+The published 1.9.0 installer can offer **Finish Root setup?** for a retained profile-backend
 activation after LG Home has been restored. Use the same saved connection and
 **Review recovery options** (`cytv recover`). The separate default-No confirmation
 still applies. Before offering or continuing, checks must prove disabled intent,
@@ -68,13 +106,47 @@ files and verified Root Updater recovery. A linked product installation must als
 be complete and current. Unknown, busy or conflicting evidence keeps setup blocked.
 The original activation receipt is archived locally before the explicit attempt;
 packages are not reinstalled and no recovery journal or failsafe flag is deleted.
-C1 Beta recovery is unchanged. Published 1.8.2 does not include this installer path.
+C1 Beta recovery is unchanged. This retry path does not update the retained TV runtime.
 
 This improves recovery and diagnosis; it does not establish the original cause or
 successful recovery of [issue #334](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/334).
 The updated Root runtime records a fixed health-context refusal before supervisor
 recovery. Existing runtime logs cannot be upgraded retroactively: retain the
 original evidence and do not edit installed runtime files or integrity receipts.
+
+#### Candidate: finish verified Root setup with Home control off
+
+If activation keeps failing on the retained runtime, do not repeatedly select
+**Finish Root setup?**. The next installer offers a separate default-No choice,
+**Finish setup with LG Home and Home control off**, directly in the recovery menu,
+followed by **Finish Root setup with Home control off?** (default No).
+It is offered only for eligible pending profile-backend setup that passes the same
+strict disabled/restored routing, binding, file, completed product and Root Updater
+checks. Confirmation repeats those checks. C1 Beta and unknown state are excluded.
+
+This action archives the original activation receipt on the computer and resolves
+only that local pending activation. LG Home, installed packages, TV recovery
+journals, rollback baseline and Home-off preference are preserved. It does not
+repair activation, update runtime files or prove Home-button operation. Keep the
+original diagnostic reports and saved connection.
+
+After this separate completion, use **Enable updates for all TV components**
+(`cytv enable-system-updates --edition root`) only if no compatible System Updater
+is already prepared. Existing supervisor state must use its matching recovery;
+do not repeat bootstrap over it. Open Home Root manually, then **Settings →
+Software updates → Update all** for a verified signed complete set. Preparation
+and update still enforce their original compatibility, transaction, baseline and
+rollback checks; stop on refusal and retain evidence. A launcher-only IPK cannot
+update the private runtime. This candidate flow is not yet published or physically
+accepted on the reporting TV. [Update requirements](UPDATES.md).
+
+Candidate reports include a passive retained-runtime snapshot: project component
+versions, runtime release metadata and fixed health-refusal categories. A legacy
+`generic` refusal has no predicate detail. `historical-tail` is historical evidence;
+`since-enable` bounds newly appended records around the host enable command but
+cannot identify their first causal failure or exclude another TV-side writer.
+No activation is run to fill a report. Missing/unsafe/unavailable reads remain
+explicit and never grant recovery permission.
 
 In 1.6.0, retain the original failed-attempt report.
 New reports separate a saved first error from later checks and include a filtered

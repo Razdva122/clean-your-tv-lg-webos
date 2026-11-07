@@ -26,7 +26,7 @@ before switching branches. Contributors with their own clone can use its normal
 checkout path. Temporary worktrees follow the same contribution and release rules
 as the maintained checkout.
 
-Write technical and developer documentation in English. Maintain the twelve localized
+Write technical and developer documentation in English. Maintain the localized
 user guides under `docs/i18n/` when changing user-facing setup or controls.
 For every release candidate, complete the affected parts of the [documentation pass](docs/RELEASE-FLOW.md#update-documentation-for-every-candidate),
 record reviewed guides and verification in the release PR, and keep candidate
@@ -44,9 +44,10 @@ all device runtime checks without the UI source/build suite. CI partitions the l
 Python suites across four isolated shards per OS; `scripts/test.sh --shard 2/4 tv`
 reproduces one partition, while omitting `--shard` runs the complete selected group. See
 [focused CI checks](docs/development/CI-CHECKS.md) for its narrow transport routing. Follow the affected PR checks and
-run a broader group for shared or unknown dependencies. The complete
-`scripts/test.sh` and browser suites remain required on the frozen release
-candidate; do not repeat an unchanged full local run merely to copy its result
+run a broader group for shared or unknown dependencies. Complete `scripts/test.sh`
+and browser coverage remains required on the frozen release candidate, using
+fresh execution or authenticated matching test-unit successes as documented in
+the CI checks; do not repeat an unchanged full local run merely to copy its result
 into another record. New code, failures or changed test preconditions justify a
 new affected run. Describe the test model, firmware, expected behavior and actual
 behavior. Separate standby tests from cold
@@ -112,6 +113,12 @@ cases when their artifact hashes and device/state preconditions still match.
 Use [TV development](docs/development/TV-DEVELOPMENT.md) for UI-only live feedback
 and explicit signed Root package QA. These preliminary results cannot satisfy
 the complete release gate. Themes use the existing computer-to-TV receiver.
+
+For subsequent release QA sessions, follow
+[planned cases before batch fixes](docs/RELEASE-FLOW.md#complete-planned-cases-before-batch-fixes):
+finish the case pass and consolidated failure inventory first, then fix and
+verify the batch before merging and freezing one complete candidate. This does
+not replace the focused development checks above or require unchanged manual QA.
 
 One coordinator owns the candidate, inventory, build selection and release PR.
 At freeze, finish versions and documentation together and explicitly dispatch

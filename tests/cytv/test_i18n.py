@@ -11,6 +11,38 @@ class LanguageTests(unittest.TestCase):
         self.addCleanup(i18n.set_language, 'en')
         return i18n
 
+    def test_czech_selection_locale_detection_and_persistence(self):
+        lang = self.language()
+        self.assertEqual(lang.LANGUAGES.get('cs'), 'Čeština')
+        for tag in ('cs', 'cs-CZ', 'cs_CZ.UTF-8'):
+            self.assertEqual(lang.resolve_language(tag), 'cs')
+        self.assertEqual(lang.resolve_language('auto', ['xx', 'cs-CZ']), 'cs')
+        with tempfile.TemporaryDirectory() as directory:
+            self.assertEqual(lang.configure('cs', directory), 'cs')
+            self.assertEqual(lang.configure(None, directory), 'cs')
+            self.assertEqual(json.loads((Path(directory) / 'settings.json').read_text())['language'], 'cs')
+
+    def test_czech_catalog_renders_values_and_preserves_default_no(self):
+        lang = self.language()
+        self.assertTrue(all('cs' in values for values in lang.MESSAGES.values()))
+        lang.set_language('cs')
+        self.assertEqual(lang.translate('Connect to your TV'), 'Připojení k televizoru')
+        self.assertEqual(lang.translate('Read 17 applications.'), 'Načteno 17 aplikací.')
+        self.assertEqual(lang.translate('Run cytv status.'), 'Spusťte cytv status.')
+        self.assertIn('Enter / n = ne', lang.translate('y = yes   /   Enter / n = no   /   q = quit'))
+        from cytv.desktop import Channel
+        events = []
+        channel = Channel(lambda *event: events.append(event))
+        channel.answer('n')
+        self.assertEqual(channel.ask('Install this edition? [y/N]: '), 'n')
+        self.assertEqual((events[-1][1].kind, events[-1][1].default), ('confirm', 'n'))
+        from cytv.cli import main
+        with tempfile.TemporaryDirectory() as directory:
+            lines = []
+            self.assertEqual(main(['--language', 'cs', '--data-dir', directory, '--no-discovery'],
+                                  ask=lambda _: 'q', write=lines.append), 130)
+            self.assertIn('Zrušeno', '\n'.join(lines))
+
     def test_home_observation_prompt_and_desktop_title_translate_in_all_locales(self):
         from cytv.desktop import Prompt
         lang = self.language()
@@ -22,6 +54,21 @@ class LanguageTests(unittest.TestCase):
                 self.assertNotEqual(lang.translate(prompt).strip(), prompt.strip())
                 self.assertNotEqual(lang.translate(title), title)
 
+    def test_desktop_typed_credentials_survive_all_localized_labels(self):
+        from cytv.desktop import Channel
+        from cytv.transport import CredentialPrompt
+        lang = self.language()
+        for code in set(lang.LANGUAGES) - {'auto'}:
+            lang.set_language(code)
+            for kind, label in [('key','SSH key passphrase: '), ('root','Root SSH password (hidden): '),
+                                ('developer','Developer Mode passphrase: ')]:
+                events = []
+                channel = Channel(lambda *event: events.append(event))
+                channel.answer('private fixture')
+                channel.secret(CredentialPrompt(lang.translate(label), kind))
+                with self.subTest(language=code, credential=kind):
+                    self.assertEqual(events[-1][1].credential_type, kind)
+
     def test_fixed_failure_guidance_translates_in_every_installer_locale(self):
         from cytv.failure_help import GUIDES
         from cytv.checks import LABELS
@@ -32,6 +79,25 @@ class LanguageTests(unittest.TestCase):
             lang.set_language(code)
             for message in messages:
                 with self.subTest(language=code,text=message):self.assertNotEqual(lang.translate(message),message)
+
+    def test_recovery_choices_plans_and_pending_auth_advice_translate_completely(self):
+        import ast
+        import re
+        lang = self.language()
+        source = Path(__file__).resolve().parents[2] / 'cytv/recovery.py'
+        messages = set()
+        for node in ast.walk(ast.parse(source.read_text(encoding='utf-8'))):
+            if not isinstance(node, ast.Call): continue
+            name = node.func.id if isinstance(node.func, ast.Name) else getattr(node.func, 'attr', '')
+            values = node.args[2:4] if name == 'plan' else node.args[1:2] if name == 'option' else []
+            messages.update(value.value for value in values if isinstance(value, ast.Constant) and isinstance(value.value, str))
+        messages.update(('Recovery action [0]: ', 'Recovery action', 'Keep the original saved TV connection and recovery data; do not replace or edit the connection to bypass recovery.'))
+        for code in set(lang.LANGUAGES) - {'en', 'auto'}:
+            lang.set_language(code)
+            for message in messages:
+                for sentence in ([message.strip()] if message.strip() in lang.MESSAGES else re.split(r'(?<=[.!?]) +', message.strip())):
+                    with self.subTest(language=code, text=sentence):
+                        self.assertNotEqual(lang.translate(sentence), sentence)
 
     def test_locale_variants_and_unsupported_fallback(self):
         lang = self.language()
@@ -151,6 +217,23 @@ class LanguageTests(unittest.TestCase):
                 with self.subTest(source=source, language=code):
                     self.assertTrue(value.strip())
                     self.assertEqual({name for _, name, _, _ in Formatter().parse(value) if name}, fields)
+
+    def test_catalog_rows_have_unique_canonical_messages(self):
+        from collections import Counter
+        from cytv.translations import ROWS
+        keys = Counter(row.split('|')[0] for row in ROWS.splitlines() if row.strip())
+        self.assertEqual([key for key, count in keys.items() if count > 1], [])
+
+    def test_bounded_cleanup_details_translate_in_every_locale(self):
+        from cytv.recovery_ui import REMOVAL_STAGES, REMOVAL_BLOCKERS
+        lang = self.language()
+        messages = set(REMOVAL_STAGES.values()) | set(REMOVAL_BLOCKERS.values())
+        for code in set(lang.LANGUAGES) - {'en','auto'}:
+            lang.set_language(code)
+            for message in messages - {''}:
+                with self.subTest(language=code, message=message):
+                    self.assertIn(message, lang.MESSAGES)
+                    self.assertNotEqual(lang.translate(message), message)
 
     def test_short_desktop_password_titles_are_translated_without_changing_identifiers(self):
         lang = self.language()

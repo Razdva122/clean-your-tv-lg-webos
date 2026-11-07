@@ -1,0 +1,28 @@
+/* Crăciun la Brașov: fire and walnut over a Christmas evening wallpaper. */
+.ctv-home { background-color: #1a0f0a; color: #f6e9d7; font-family: serif; }
+.ctv-ambient { background-image: linear-gradient(0deg, transparent, transparent); }
+
+.ctv-greeting { color: #f6e9d7; font-family: serif; letter-spacing: 4px; text-shadow: 0px 2px 10px rgba(26,15,10,0.85); }
+.ctv-clock { color: #f6e9d7; font-family: serif; text-shadow: 0px 3px 14px rgba(26,15,10,0.85); }
+.ctv-date, .ctv-period { color: #f6e9d7; font-family: serif; font-weight: 400; text-shadow: 0px 2px 10px rgba(26,15,10,0.85); }
+.ctv-divider { color: rgba(232,150,58,0.7); background-color: rgba(232,150,58,0.7); }
+.ctv-hero { color: #f6e9d7; font-family: serif; text-shadow: 0px 3px 16px rgba(26,15,10,0.9); }
+
+.ctv-shortcut { color: #f6e9d7; font-family: serif; background-color: rgba(59,36,24,0.72); border-color: rgba(232,150,58,0.35); }
+.ctv-shortcut.is-focused { color: #1a0f0a; background-color: #e8963a; border-color: #e8963a; }
+
+.ctv-dock { background-color: rgba(59,36,24,0.62); border-color: rgba(232,150,58,0.3); border-radius: 28px; }
+.ctv-card { border-radius: 16px; box-shadow: 0px 6px 18px rgba(26,15,10,0.55); }
+.ctv-card.is-focused { box-shadow: 0px 8px 28px rgba(232,150,58,0.55), 0px 0px 0px 2px rgba(246,233,215,0.4); }
+.ctv-label { color: #f6e9d7; font-family: serif; text-shadow: 0px 2px 8px rgba(26,15,10,0.9); }
+.ctv-label.is-focused { color: #f6e9d7; }
+
+.ctv-inputs { color: #f6e9d7; font-family: serif; background-color: rgba(42,26,18,0.95); background-image: linear-gradient(0deg, transparent, transparent); border-color: rgba(232,150,58,0.35); border-radius: 18px; }
+.ctv-input-row { color: #f6e9d7; background-color: transparent; border-radius: 12px; }
+.ctv-input-row.is-focused { color: #1a0f0a; background-color: #f6e9d7; }
+
+.ctv-library { color: #f6e9d7; background-color: rgba(26,15,10,0.45); background-image: linear-gradient(0deg, transparent, transparent); border-radius: 0px; }
+.ctv-library-panel { color: #f6e9d7; background-color: rgba(42,26,18,0.95); background-image: linear-gradient(0deg, transparent, transparent); border-color: rgba(232,150,58,0.35); border-radius: 18px; }
+.ctv-library-row, .ctv-library-close { color: #f6e9d7; background-color: #3b2418; border-color: rgba(232,150,58,0.25); border-radius: 12px; }
+.ctv-library-row.is-focused, .ctv-library-close.is-focused { color: #1a0f0a; background-color: #e8963a; }
+.ctv-library-row.is-focused .ctv-label { color: #1a0f0a; text-shadow: 0px 0px 0px transparent; }

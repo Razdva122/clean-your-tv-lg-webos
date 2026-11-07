@@ -1,0 +1,259 @@
+# Practical clean removal source checkpoint — 2026-11-06
+
+This is unpublished source verification, not final release-candidate or device
+acceptance. The maintainer chose a bounded remover: stop owned controls/startup,
+remove registered packages and known present files, require a real full restart,
+then sweep and verify absence. Missing items are skipped, including after partial
+installation. A connection loss offers **Try again** on the same approved goal.
+Actual busy work, access denial and unsafe foreign paths remain visible blockers.
+
+If an old controller or resident installer can still act, the restart checkpoint
+comes before final package/file removal. Standby and Quick Start do not satisfy
+the kernel boot-ID check. CYTV never reboots the TV automatically. Final UI success
+requires `clean-removal` disposition, exact `removed:true` and
+`verified_clean:true`, and no semantic restart signal. Old unknown installation
+outcomes remain unknown; current absence does not invent their cause.
+
+The published Helper remains **0.7.4**. No new Helper/service lifecycle protocol,
+shared UID/generation machinery or separate removal-observer framework is included.
+Root retains its existing locks and narrow support needed to retire managed
+Python safely. Minimal non-executable removal records or genuine ownership backups
+may remain; product credentials, configuration and owned runtime/staging data are
+cleanup targets. Original computer reports and saved connection keys are retained.
+
+## Checked source and results
+
+These are separate executions, not one aggregate run. Independent scoped reviews
+accepted the Root, No-root and UI fixes below. Later combined changes still need
+their own validation.
+
+| Checked source | Actual verification | Scope and limitations |
+| --- | --- | --- |
+| Root `9f51910c` | 61 removal tests: 58 passed, 3 Linux-only skips; separately 12 binding tests passed | First production handoff without a preseeded cleanup inventory removes a damaged unused managed runtime through actual Node 8. The interpreter actually executing from a managed slot still receives full integrity authentication, including symlinked executables. Temporary filesystems and modeled process/RPC state are not physical TV acceptance. |
+| No-root `e79dfae5` | 29 practical-removal and 5 carrier tests passed; 8 affected tests passed separately on Node 0.10.15, 0.10.25, 0.12.2 and 8.12.0 | Permission cases exercise production emitted JS and real temporary POSIX permissions. Normal package removal, or one inert same-ID carrier when SAM is missing, retires exact owned No-root data; Root-edition markers still require Root access. Privileged package-manager replies and filesystem retirement are modeled. Legacy Helper state mode 0777 is handled with no-follow inode checks. |
+| UI `28530a18` | 31 targeted Python tests and 12 Chrome result presentations passed after reproducing the failures | Semantic restart signals override stale completion flags; malformed removal data stays neutral; Home-off completion remains separate. This does not prove backend deletion or Android APK acceptance. |
+| Combined host `c419a3a8` | 72 tests passed in 2.709 seconds | Real CLI/Store/Qt orchestration and Android bridge with modeled SSH/device replies. Includes the previously failing same-goal retry/second-confirmation regression. |
+| Recovery result producer `a827d1df` | 49 focused tests passed in 2.413 seconds | Proven removal completion now carries both required success flags through recovery continuation. Independent scoped review approved the producer contract and its negative cases. |
+
+Root's initial combined test invocation exposed a test-order limitation:
+`test_python_binding` leaves a runtime import path in-process, causing later
+removal fixtures to import the wrong `provision` module. The two affected groups
+passed in separate processes; the limitation was not hidden or fixed by changing
+runtime security checks.
+
+Reproduce the focused source checks from the repository root with the declared
+development dependencies and configured exact Node runtimes:
+
+```sh
+PYTHONPATH=root-edition:root-edition/tests NODE8=/path/to/node8 python3 -m unittest test_cleanup_tail test_cleanup_tail_handoff test_clean_removal test_simple_removal
+PYTHONPATH=root-edition:root-edition/tests python3 -m unittest test_python_binding
+python3 -m unittest discover -s tests/cytv -p test_no_root_simple_removal.py -v
+python3 -m unittest discover -s tests/cytv -p test_no_root_carrier.py -v
+NODE_EXEC=/path/to/exact-node python3 -m unittest discover -s tests/cytv -p test_no_root_simple_removal.py -k protected_no_root -k legacy_writable_helper -k legacy_state_symlink -k known_root -k disconnect_after_carrier -k rejected_carrier -k shared_container_exception -k directory_replacement -v
+LANG=en_US.UTF-8 QT_QPA_PLATFORM=offscreen QT_LOGGING_RULES=qt.qpa.fonts=false NODE8=/path/to/node8 python3 -m unittest tests.cytv.test_simple_root_removal tests.cytv.test_clean_removal tests.cytv.test_clean_removal_cli tests.cytv.test_root_clean_tail tests.cytv.test_simple_removal_ui tests.cytv.test_desktop_recovery tests.cytv.test_recovery_ui android.tests.test_bridge
+node android/tests/restart-result.cjs
+```
+
+The 72-case command above is its recorded combined subset, not the full installer
+suite. The initial 966-case cytv run completed with 102 failed subcases, four
+errors and two skips. Ninety-six subcases were missing translations for three
+No-root messages. The remaining failures were old removal fixtures and macOS
+path-alias comparison. The corrected five modules passed all 74 tests at
+`aad6b110`; production guards were retained. The Homebrew continuation fixture
+separately passed six tests with authenticated original snapshots. Independent
+reviews approved those corrections. No unchanged successful tests were relabeled
+as fresh executions.
+
+The complete Android Python suite passed 43 tests; Chrome simple removal covered
+all 13 locales and both editions, and 12 restart/malformed-result presentations
+passed. Three new first-handoff regressions also passed on actual Linux ARM64/
+Node 8 in a disposable read-only, network-disabled container, with input hashes
+unchanged. The complete Root run and actual PR checks were still pending at this
+checkpoint; these focused results do not establish their success.
+[Maintained matrix](../development/INSTALLER-RECOVERY-MATRIX.md).
+
+## Documentation and remaining acceptance
+
+The desktop, CLI, Android and Root removal references distinguish the candidate
+flow from published retention/recovery rules. All 13 localized installation
+guides describe present-item cleanup, full power restart and same-goal Retry;
+published download buttons remain separate from candidate source instructions.
+There is no native-speaker acceptance claim.
+
+No TV operation was performed for this source checkpoint. TV model, firmware,
+webOS and remote are unknown/untested here. Package-manager admission, physical
+Home/navigation, sound, standby, cold boot, OTA and rollback were not tested.
+No outcome on another user's device or original issue cause is asserted.
+
+Remaining work: resolve the broader-run failures, complete final combined review,
+merge the reviewed implementation into `release/next`, collect scope and finalize
+versions/documentation, then build and pin the complete versioned candidate.
+Affected exact-artifact and physical acceptance remain separate. A successful
+package build or source test cannot establish a clean TV or universal compatibility.
+
+## Combined Root and OTA delivery correction
+
+The full Root run completed 1,219 tests with 24 failures, one setup error and three
+skips before the final corrections. Sixteen failures came from the test loader
+binding the runtime `provision` module where a coordinator fixture needed its own
+module. After collecting all 1,222 tests, the isolated fixture rerun passed 61
+cases with one Linux-only skip; the prior module identity was restored. The lab
+setup error used an undeclared child Python without fontTools; with the declared
+build environment, all three lab cases passed. Neither correction weakened a
+runtime check.
+
+The other failures exposed a real packaging regression: five new cleanup/cancel
+files extended the fixed infrastructure paths accepted by installed supervisors.
+At `849ac605`, these files remain hash-authenticated in the current installer
+bundle/staging, while persistent Root Updater code, receipts and the System OTA
+archive retain the exact published path set. Apply/resume share that precise
+projection and preserve the complete original staged bundle proof. Ordinary TV
+OTA/rollback does not require the five helpers. No supervisor migration, new
+loader or change to the immutable published-supervisor fixture was introduced.
+
+Fresh checks passed: the unchanged legacy archive contract (2), actual bootstrap
+and metadata resume (3), immutable rollback anchors (7), legacy update/rollback
+lifecycle (3), packaging (5), and actual packaged Node compatibility on 0.12.2,
+8.12.0 and current Node. Independent scoped review approved the delivery correction.
+The original CI failure and its correction belong to
+[implementation PR #363](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/363);
+only its final successful revision can authorize integration. These are host/source
+checks, not physical OTA or removal acceptance.
+
+## Linux support utility portability
+
+The next PR CI revision found strict GCC sign-comparison/indentation diagnostics
+and a macOS-only temporary test path. At `fee4d5eb`, filesystem mode parameters
+use `mode_t`, unconditional statements are separated, and the fixture uses a
+resolved platform temporary directory. No flags, permissions or gate semantics
+were relaxed. Actual native gate/Root fence checks passed 12 cases on Linux and
+12 on macOS. Strict Zig 0.14.1 ARM compilation produced a static ELF32 EABI5
+without interpreter/dynamic headers: 39,740 bytes, SHA256
+`c943cd280ffb6a1972d7235520aa237c9bd4efcc96ed88fa397b6601247cd275`.
+This changes installer support inputs; the final candidate must use this corrected
+source. Published Helper bytes remain unchanged; prior binary evidence retains
+its original scope. Independent scoped review approved the portability correction.
+
+## Versioned source freeze and pre-dispatch check
+
+PR #363 final head `73fb794989de35bef1b358bd70d494d77ec50b95` passed all eight
+Linux/macOS runtime shards, browser and ARM/Python checks
+([42268724309](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42268724309)),
+Windows/Intel runtime
+([42268724084](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42268724084)),
+preview and integration policy. The missing CI compiler dependency was declared
+as the same pinned Zig 0.14.1 already used by assembly; no test was skipped to
+resolve that failure. Merge `32db69fa` has the exact tested product tree.
+
+Candidate inputs are release 1.10.0, cytv/Root 0.11.0, Home 1.11.0, independent
+Updaters 0.5.0, Android 0.10.0/code24 and fresh System 1.2.3. Manifests, README,
+notes and exact System replacement checks agree. Eligible original supervisor
+versions and interrupted-bundle/hash guards remain unchanged; System 1.1.2 has
+no new general migration path.
+
+A preliminary local TV payload at `a53a2160` built and verified the versioned
+Home FHD/HD, Root variants and updater packages. Helper 0.7.4 is still 320,974
+bytes with authenticated published SHA256
+`5c27a000b35ccbfeb0689dbd80ff8f2d0f4f70094794f64b101cadb91733501f`;
+new Helper transition approval does not apply to identical bytes. The installer
+support utility matches the corrected ARM hash above. The existing Android
+signer secret was available; no Homebrew promotion record is selected.
+
+These are source/pre-dispatch checks. The full candidate must be explicitly
+built and pinned before exact-artifact/device acceptance; none is implied here.
+The collected inventory includes #363 with the original reports still qualified.
+Further features are held for the next cycle until this candidate ships.
+
+## Full-candidate validation corrections
+
+The first complete 1.10.0 candidate, frozen source `708d6f9a`, failed
+[run 42272017830](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42272017830).
+The broader theme suite reached stale `Built-in` assertions after intended size
+badges, and Windows exposed a default-encoding source read and three POSIX-only
+TV filesystem/kernel fixtures. Android, Linux and Intel desktop builds and all
+runtime shards passed; ARM macOS was cancelled by matrix failure. This run was
+not pinned and is not a valid candidate.
+
+[PR #365](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/365) changes
+only six existing tests: packaged catalog size assertions retain built-in identity,
+no-remove, offline, geometry and persistence guards; an input fixture waits for
+the observable completion of the layout-triggered response before testing another
+held request; source reads explicitly use UTF-8; Windows skips only the three
+POSIX fixtures while retaining portable package/rebinding coverage. Production
+code, timeouts and runtime safety guards are unchanged. Independent review found
+no actionable issue.
+
+The full 43-script browser collector ran every entry sequentially: 40 passed and
+three identified failures were corrected and passed targeted reruns. This is
+combined applicable evidence, not a fresh aggregate 43/43 run. Installer/fence/i18n
+checks passed all 37 cases on Linux and all 37 on macOS without skips. A CP1252
+simulation reproduced exactly 12 i18n failures and passed after explicit UTF-8
+reading; it does not replace actual Windows CI.
+
+`release-inputs.py` correctly requires a replacement candidate for these files:
+`tests/cytv/test_i18n.py`, `tests/cytv/test_no_root_gate_bootstrap.py`,
+`tests/cytv/test_root_helper_fence.py`, `tests/themes/input-noroot-status-ui.cjs`,
+`tests/themes/liquid-glass-ui.cjs` and `tests/themes/ribbon-builtin-ui.cjs`.
+All known corrections are grouped before one replacement full dispatch. No TV
+operation or original reporter recovery is established by these checks.
+
+## Replacement full candidate and exact artifact checks
+
+The replacement [full candidate run 42276916934, attempt 1](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42276916934)
+uses frozen source `c45c1a3183e8b0161ae4c09df692d8b9482e5bfe`. All four desktop
+platforms, Android and the complete mandatory validation passed. This run is
+selected in `release-plan.json`; the earlier failed run is not selected.
+
+The [fresh browser-theme job](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42276916934/job/128095700008)
+executed all 43 profile commands through the final Root/No-root wallpaper route.
+Ribbon/Liquid Glass in both editions, No-root input coalescing, first-frame/held
+geometry, UHD continuity and fallback guards passed. Browser-core used separately
+authenticated matching evidence from successful PR job `128089615920`, source
+`2bfd80e6`; this is not described as a fresh browser-core execution. All eight
+Linux/macOS runtime groups and ARM/Python validation passed under the documented
+fresh/matching-evidence policy.
+
+The [actual Windows job](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42276916934/job/128095609365)
+ran all 827 installer tests in 200.064 seconds: no failures/errors, 160 expected
+platform skips. All 22 i18n cases passed; the three POSIX fixtures are the narrow
+Windows exclusions and portable package generation/rebinding remains covered.
+Frozen console payload (318 public files), runtime and localized cp1252 output
+checks passed. The extracted desktop package passed `--check-payload`,
+`--check-runtime` and `--smoke-test`; the checked subprocess exit codes establish
+success even though GUI stdout is not logged separately. Both artifacts uploaded.
+
+The downloaded Android artifact (ID `13534435219`) matched GitHub archive SHA256
+`06c129571868a5df79b41dc7bef59a3e083439186f29d7e9732bd14e713441e0`.
+APK SHA256 is `34fad92979eaf9cf6519741e8e28677c602da4c8d498f40544990dcc01db1769`.
+Embedded source/version provenance and every one of 316 payload hashes passed
+independent local verification. Actual package manifests show Home FHD/HD 1.11.0,
+Root variants 0.11.0, both independent Updaters 0.5.0, fresh System 1.2.3 and
+Helper 0.7.4. The APK is 0.10.0/code24, arm64-v8a and non-debuggable; CI verified
+the original signing certificate. Helper is exactly the published 320,974-byte
+archive with SHA256 `5c27a000b35ccbfeb0689dbd80ff8f2d0f4f70094794f64b101cadb91733501f`.
+Installer support retains ARM utility SHA256
+`c943cd280ffb6a1972d7235520aa237c9bd4efcc96ed88fa397b6601247cd275`.
+
+This is source/build/artifact verification, not TV or phone acceptance. No device
+installation/removal, full power boot, Home routing, remote/emergency behavior,
+sound, standby, cold boot, OTA or rollback was tested on this candidate. TV model,
+firmware/webOS and remote remain unknown/untested. Original reporter outcomes are
+unconfirmed; the release PR remains draft and nothing has been publicly shipped.
+
+### Retained candidate artifacts
+
+These are Actions ZIP digests, not device acceptance or public feed hashes.
+
+| Artifact | ID | SHA256 |
+| --- | --- | --- |
+| cytv-android-arm64 | 13534435219 | `06c129571868a5df79b41dc7bef59a3e083439186f29d7e9732bd14e713441e0` |
+| cytv-android-native-tests | 13534105498 | `3694b4eaadcdcd58b9d8815f830405ad0b05ae82366527e2110fe2eafa2297ee` |
+| cytv-linux-x64 | 13534820562 | `560597fd3ff887fba0bfc0ac17631e198f1b4abe99f02d72ecafd3648904171c` |
+| cytv-linux-x64-desktop | 13534625797 | `063ff8625d893845ef96116899cc1706ae44f5b483329f64e48c560da8099c98` |
+| cytv-macos-arm64 | 13534886200 | `e042bbd7611d4e6430033bde6f62b68d846add823abd714abc50005871a431b2` |
+| cytv-macos-arm64-desktop | 13534656402 | `da1b43e030518465a242616f409b658872a2d9bc7f894a9b92e6551c0fb9bca4` |
+| cytv-macos-x64 | 13534662169 | `d4656bcc1c1d9907c6b6e018790053300ab528ff96bb4bf8fe70003a0f3322c1` |
+| cytv-macos-x64-desktop | 13535251278 | `67b8250ea4795a6b0eb917fd0e8b54ec964d087e5a53e0921ddeaa13b454f0e5` |
+| cytv-windows-x64 | 13533642807 | `bc4bea5ed2e326fe3d2ad9c0bbdb1b8ed91b84c16c185bed7d2ed5edb43659d4` |
+| cytv-windows-x64-desktop | 13533602887 | `dc7d895f57333d228370072c3ec443bb7f54a645d862eb26ab8e554fcf93381a` |
+| homebrew-candidate | 13532544129 | `366545c4001951b96f8b92dcc22448dbe19037ee020bb3d100ee0a54e8a7b202` |

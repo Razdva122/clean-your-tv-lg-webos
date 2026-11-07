@@ -13,6 +13,13 @@ class Prompt:
     secret: bool = False
 
     @property
+    def credential_type(self):
+        return getattr(self.label, 'credential_type', {
+            'SSH key passphrase: ': 'key', 'Root SSH password (hidden): ': 'root',
+            'Developer Mode passphrase: ': 'developer',
+        }.get(self.label))
+
+    @property
     def kind(self):
         if self.secret:
             return 'secret'
@@ -39,6 +46,8 @@ class Prompt:
 
 
 class DesktopConsole(Console):
+    frontend = 'desktop'
+
     def __init__(self, emit):
         self.emit = emit
         self.options = []

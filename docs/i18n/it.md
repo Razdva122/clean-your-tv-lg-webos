@@ -1,56 +1,34 @@
 # Clean Your TV — guida all’uso
 
-> **1.9.0:** [English](../RELEASE-1.9.0.md) · [Root #337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337) · [#347](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/347) · [#348](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/348) · [1.8.2](../RELEASE-1.8.2.md)
+Clean Your TV offre al tuo LG webOS una schermata Home personale: le tue app nel tuo ordine, senza righe sponsorizzate in questo menu. Installa da computer o telefono Android; dopo la configurazione puoi spegnere il computer.
 
-**C1 Beta non pubblicata (#298):** Scegli Root nel programma di installazione comune per computer. I C1 idonei vengono rilevati automaticamente; non servono un altro programma o un’opzione speciale. Questa modalità richiede un’installazione pulita, non offre aggiornamenti automatici e non è ancora stata validata su un C1 fisico. Aprire LG Home, tenere premuto Back o un arresto di sicurezza/alimentazione possono lasciare disattivato il controllo di Home; riattiva Cambia Home nelle impostazioni TV. La modalità Root normale resta invariata. Se restano altri componenti No-root, la rimozione completa C1 si arresta prima di apportare modifiche. Rimuovili prima con la normale procedura No-root; conserva i dati di ripristino se il loro stato è incerto. [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md). C1 Beta filtra il tasto Home e torna dopo la chiusura di un’app, senza modificare i permessi CRIU/checkpoint. LG Home può apparire brevemente. Anche tre pressioni su Home fermano il reindirizzamento; poi riattivare Cambia Home.
+## 1. Scarica l’installer
 
-1.8.2 (#290): **+ / Aggiungi app** propone la TV in diretta con il nome fornito dal televisore solo se il sintonizzatore risulta installato. Le altre app di sistema nascoste restano escluse. No-root richiede Helper e programma di installazione aggiornati; Root richiede il pacchetto Home aggiornato. L’avvio dei canali richiede ancora una verifica sul TV.
+Premi l’immagine del tuo dispositivo. I pulsanti scaricano l’ultima versione pubblicata. Su Mac scegli Apple Silicon (M1 o successivo) o Intel; controlla nel menu Apple → Informazioni su questo Mac.
 
-**Ribbon in Home:** Ribbon è un tema dell’unica app Home a schermo intero in entrambe le edizioni, con il proprio sfondo. Dietro le schede non vengono mostrati video o HDMI. La scelta di un’app usa il normale cambio di applicazione del televisore. I comandi di emergenza restano invariati. Le note di rilascio indicano le verifiche eseguite e i limiti noti. [Ribbon](../THEMES.md#ribbon-over-applications-unreleased).
+[![Scarica — Windows x64](../../assets/brand/downloads/windows.svg)](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/cytv-windows-x64-desktop.zip)
+[![Scarica — macOS Apple Silicon](../../assets/brand/downloads/macos-arm64.svg)](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/cytv-macos-arm64.zip)
+[![Scarica — macOS Intel](../../assets/brand/downloads/macos-x64.svg)](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/cytv-macos-x64.zip)
+[![Scarica — Linux x64](../../assets/brand/downloads/linux.svg)](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/cytv-linux-x64.deb)
+[![Scarica — Android ARM64](../../assets/brand/downloads/android.svg)](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/cytv-android-arm64.apk)
 
-Ribbon: tieni premuto OK per modificare; ←/→ sposta la scheda, ↑ seleziona × (nascondi da Home), ↓ torna alla scheda, OK conferma e Back annulla. Lo sfondo attuale rimane.
+<a id="scegliere-ledizione"></a>
 
-**1.7.0 — sorgenti di avvio Root:** In Impostazioni → La tua schermata Home, attiva **Cambia Home** per modificare **Apri prima Clean Your TV**. **LG Channels / TV in diretta** è attivo per impostazione predefinita; **YouTube** è disattivo. Con Cambia Home disattivato, gli interruttori restano visibili ma non disponibili e conservano i valori. Le preferenze restano private su questo TV e non sono incluse nell’esportazione portatile del profilo. Non conferma il comportamento all’avvio o al risveglio del TV. Se una sorgente è disattivata, il firmware del TV decide l’avvio; non è garantito il ritorno a quella sorgente. Non è presente un interruttore di avvio HDMI. [Limiti dell’avvio nativo (inglese)](../../root-edition/README.md#candidate-native-startup-choices).
+<a id="prerequisiti"></a>
 
-> Questa guida descrive la versione 1.7.0. Usa i pacchetti disponibili nelle [versioni pubblicate su GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases). Include tutti e cinque i miglioramenti dell’installatore. Alla riapertura, le impostazioni Root leggono lo stato reale; un controllo fallito non attiva Home. System Updater 1.2.0 è destinato a nuove installazioni ammesse o alla sostituzione verificata di 1.1.0/1.1.1. Il 1.1.2 installato mantiene i vecchi canali; non è prevista una migrazione generale. Conserva i dati di recupero e non forzare la sostituzione. [Versioni e limiti](../RELEASE-1.7.0.md).
+## 2. Scegliere l’edizione
 
-> v1.5.0: temi, galleria e invio dal PC alla TV. Limiti Root noti: Appearance può spostarsi di 110 px; Home potrebbe non aprirsi automaticamente dopo lo standby. La verifica sui dispositivi resta limitata. [1.5.0](../RELEASE-1.5.0.md).
+Accendi la TV e collegala alla stessa rete domestica del computer o telefono. Consenti a CYTV l’accesso alla rete locale quando richiesto.
 
-> **1.5.4:** i temi a layout fisso mantengono lo spazio della riga Columns nascosta per conservare lo scorrimento di Appearance durante Apply. Puntatore, tastiera e strumenti di accessibilità saltano Columns.
-
-[Documentazione](../README.md) · [Segnalare un problema](../FEEDBACK.md)
-
-**Verifiche storiche di 1.5.4:** L’accettazione C3 copre le prove registrate di alimentazione, Home, focus, stato disattivato e ripristino manuale della versione precedente. Altri TV, audio eARC e dispositivi Android fisici restano non verificati; l’installazione riuscita non dimostra compatibilità. [Ambito verificato (inglese)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
-
-**1.5.4:** console, desktop e Android mostrano ogni verifica TV come non eseguita, in corso, superata, fallita o non verificabile. I risultati restano visibili dopo un errore. Node.js/Python viene verificato sulla TV; `doctor` non prepara Python né richiede l’abbinamento per il controllo. Salva il rapporto prima di riprovare.
-
-## Scegliere l’edizione
-
-No-root e Root sono opzioni equivalenti per diverse configurazioni della TV. Scegli No-root per LG Developer Mode oppure Root se disponi già di accesso root tramite SSH. Compatibilità e verifiche eseguite sono specifiche di ogni edizione.
-
-- **No-root:** attiva LG Developer Mode e Key Server. Inserisci la frase di accesso mostrata sul televisore e accetta sullo schermo la richiesta separata di abbinamento. Developer Mode deve restare attivo: alla scadenza le app installate in questo modo possono essere rimosse. Controlla il timer ufficiale anche con rinnovo Beta attivo. Il monitoraggio di Helper richiede la rete locale.
-- **Root:** serve un accesso SSH root già disponibile. L’installer non ottiene i privilegi root. Non attivare Developer Mode su una configurazione già dotata di root. Mantieni disponibili accesso root e servizi di ripristino.
-
-Root (System Profile) richiede le interfacce Home funzionanti di Settings Service e System Profile (`com.webos.service.systemprofile`); il solo accesso root non garantisce la compatibilità.
-
-> **1.6.0:** Root verifica le interfacce Home necessarie prima di preparare Python privato o pacchetti. Un errore interrompe la configurazione; superare il controllo non dimostra compatibilità del firmware o funzionamento del tasto Home. Gli errori di connessione noti mostrano consigli specifici. Conserva profili, dati di fiducia e recupero; le operazioni in sospeso richiedono un recupero verificato, senza riprovare alla cieca. Salva e controlla il rapporto. [Dettagli](../development/INSTALLER-PREFLIGHT-HELP.md).
-
-## Prerequisiti
-
-Accendi il televisore e collegalo alla stessa rete locale affidabile del computer. Dopo l’installazione il computer può restare spento. La compatibilità dipende da modello, firmware e telecomando; Root ha ancora verifiche hardware da completare.
-
-1.5.4 include Home Helper **0.6.21** per Node.js **0.10.25+** sul TV; Root richiede ancora Node.js **8+**. [Compatibility](../COMPATIBILITY.md).
-
-**webOS 1.x — 1.8.2:** l’installer No-root pubblicato include Helper 0.7.4 e accetta Node.js **0.10.15+** della TV dopo test con questa versione esatta. Non è una conferma di compatibilità con vecchio WebKit, input nativo o Home. Non sostituire il runtime della TV e non aggirare i controlli. Root richiede ancora Node.js 8+. [Test e limiti](../COMPATIBILITY.md#webos-1x-runtime-floor-unreleased).
-
-No-root Helper richiede Node.js **0.10.15+** sul TV. Root richiede Node.js **8+** e Python **3.9+** funzionante. Se necessario, l’installer scarica un Python privato verificato; la preparazione iniziale richiede **320 MiB** liberi. Non sostituisce Python di sistema. Conserva gli ambienti usati dal recupero. [Python (inglese)](../OPTIONAL-PYTHON.md). Il rinnovo Developer Mode è **Beta, disattivato per impostazione predefinita**; il rinnovo reale senza root non è confermato. Controlla ancora il timer ufficiale.
+- **No-root** — se non hai accesso root. Configura Developer Mode come indicato sotto.
+- **Root** — se hai già accesso root via SSH. L’installer non esegue il root della TV. Non attivare Developer Mode su questa TV; conserva accesso SSH e dati di ripristino.
 
 ### Configurare Developer Mode (No-root)
 
 Developer Mode permette a CYTV di installare app su una TV senza root.
 
 1. Sulla TV, apri LG Apps, cerca Developer Mode e installalo.
-2. Apri Developer Mode e accedi con il tuo account LG Developer. Se necessario, crea un account su webostv.developer.lge.com.
+2. Apri Developer Mode e accedi con il tuo account LG Developer. Se necessario, crea un account su [LG Developer](https://webostv.developer.lge.com).
 3. Attiva Dev Mode Status. La TV si riavvia. Poi apri di nuovo Developer Mode.
 4. Attiva Key Server e lascia Developer Mode aperto. Inserisci il suo IP Address come indirizzo della TV in CYTV.
 5. Inserisci la Passphrase: i sei caratteri mostrati in Developer Mode sulla TV. Rispetta maiuscole e minuscole.
@@ -61,97 +39,59 @@ L’associazione è un passaggio separato: quando la TV lo chiede, autorizza CYT
 
 Mantieni Developer Mode attivo: prima che scada il timer, aprilo e premi EXTEND con la TV connessa a Internet. Alla scadenza, LG può rimuovere queste app.
 
-## Installazione e lingua
+<a id="installazione-e-lingua"></a>
 
-- **Windows x64:** scarica `cytv-windows-x64-desktop.zip`, scegli **Estrai tutto** in Esplora file e apri `cytv-desktop/cytv-desktop.exe`. Mantieni la cartella `_internal` accanto al file. La firma dell’editore Windows non è configurata. La console separata è `cytv-windows-x64.exe`; rinominala in `cytv.exe` e usa `.\cytv.exe` in PowerShell per i comandi seguenti.
-- **macOS 13+:** estrai `cytv-macos-arm64.zip` per Apple Silicon oppure `cytv-macos-x64.zip` per Intel, sposta `cytv.app` in Applicazioni e aprila. Consenti l’accesso alla rete locale. Se un download affidabile viene bloccato, usa Privacy e sicurezza → Apri comunque; non disattivare Gatekeeper. La verifica sui sistemi meno recenti non è conclusa.
-- **Linux x64:** su Ubuntu 22.04+, Debian 12+ o Mint 21+, installa `cytv-linux-x64.deb` con il gestore grafico dei pacchetti e apri Clean Your TV dal menu. Le librerie possono richiedere Internet. Linux ARM non è incluso. L’eseguibile autonomo `cytv-linux-x64` è la CLI; usa il `.deb` per l’app grafica.
+## 3. Apri l’installer
 
-[Installer Android (inglese)](../../android/README.md): scegli la lingua in alto a destra. Aggiorna senza disinstallare o cancellare dati. Android 7 / WebView 108 è il minimo, non una configurazione telefonica verificata; l’accettazione usa un emulatore Android 15 ARM64 / WebView 124. Telefoni fisici e recupero con TV reale restano non verificati.
+- **Windows x64:** scarica `cytv-windows-x64-desktop.zip`, scegli **Estrai tutto** in Esplora file e apri `cytv-desktop/cytv-desktop.exe`. Mantieni la cartella `_internal` accanto al file.
+- **macOS 13+:** estrai `cytv-macos-arm64.zip` per Apple Silicon oppure `cytv-macos-x64.zip` per Intel, sposta `cytv.app` in Applicazioni e aprila. Consenti l’accesso alla rete locale. Se un download affidabile viene bloccato, usa Privacy e sicurezza → Apri comunque; non disattivare Gatekeeper.
+- **Linux x64:** su Ubuntu 22.04+, Debian 12+ o Mint 21+, installa `cytv-linux-x64.deb` con il gestore grafico dei pacchetti e apri Clean Your TV dal menu. Le librerie possono richiedere Internet. Linux ARM non è incluso.
 
-**Android 1.8.2:** la verifica del ripristino può ispezionare un’operazione Root originale `install / coordinator-submitted` in sola lettura dopo conferma esplicita, con profilo e chiave host SSH originali. Conserva app, dati privati e ricevute; non sostituire il profilo né ripetere l’installazione. L’ispezione non riprende il ripristino. [Procedura e limiti](../../android/README.md#interrupted-root-installation-inspection-unreleased)
+**Android ARM64:** serve un telefono ARM a 64 bit con Android 7+ e WebView/Chrome 108+. Apri l’APK scaricato e autorizza l’installazione da questa origine se Android lo chiede. Apri CYTV; scegli la lingua in alto a destra. Aggiorna senza disinstallare o cancellare dati.
 
 L’assistente usa inizialmente la lingua del sistema e salva una scelta esplicita. Sul televisore, apri **Impostazioni → Lingua** e scegli una lingua oppure l’opzione automatica del sistema. Le preferenze del televisore e dell’installer sono separate. I codici sono nell’[indice delle lingue](../LANGUAGES.md).
 
-Per la CLI scaricata separatamente su macOS/Linux, dalla cartella estratta:
+## 4. Installa sul televisore
 
-```sh
-chmod +x cytv
-./cytv --language it install
-```
+1. In CYTV scegli **Configura la mia TV**. Sul computer seleziona una TV rilevata; su Android inserisci il suo indirizzo IP. Se la ricerca non trova la TV, inserisci l’indirizzo manualmente.
+2. Scegli **No-root** o **Root** e controlla il televisore prima di continuare.
+3. No-root: inserisci il codice di Developer Mode e accetta la richiesta sulla TV. Root: usa le credenziali SSH esistenti. Accetta una nuova identità SSH solo per la tua TV su una rete fidata. Se una chiave salvata cambia, fermati e verifica il motivo.
+4. Segui la procedura guidata. Tieni la TV accesa, non cambiare rete e lascia CYTV aperto fino al termine. Non forzare l’arresto dell’app Android. Root attiva il controllo Home subito dopo aver preparato il ripristino.
 
-Scegli il televisore o inserisci l’IP, seleziona l’edizione e controlla il riepilogo. Accetta una nuova identità SSH solo per il tuo televisore su una rete affidabile; una chiave salvata cambiata blocca l’accesso. Root prepara il ripristino e attiva subito Home, senza prova temporanea né passaggio per confermare il mantenimento. Verifica frecce, OK, Home, Indietro/Annulla, volume, standby e avvio a freddo.
+## 5. Controlla il telecomando
 
-**1.6.0:** verifica pacchetti, avvio e tua osservazione del tasto Home fisico sono separati. Una conferma di avvio o un processo Helper non prova l’intercettazione di Home. Apri un’altra app, premi brevemente Home una volta e scegli ciò che hai visto; il valore predefinito è **Non provato / salta**. `--yes` non risponde per te e la modalità non interattiva lascia la prova non eseguita. Un errore Home o una prova saltata non annulla i pacchetti e non reinstalla. Salva il rapporto locale per chiedere aiuto; non viene pubblicato automaticamente. Altri controlli, audio, standby e avvio a freddo restano prove separate.
+1. Apri un’altra app sulla TV e premi brevemente **Home**. Deve aprirsi Clean Your TV. Indica nella procedura guidata ciò che hai visto; salta la verifica se non l’hai eseguita.
+2. Controlla frecce, OK, Indietro, volume e audio. Prova separatamente standby/riattivazione e avvio dopo aver scollegato l’alimentazione. L’installazione riuscita non verifica da sola queste azioni.
 
-## Uso e ripristino
+<a id="uso-e-ripristino"></a>
+
+## 6. Uso e ripristino
 
 Le frecce selezionano, OK apre; tieni premuto OK per riordinare. Un breve Indietro conserva navigazione e conferma di uscita dell’app. Home apre il launcher quando il controllo è attivo. Tieni premuto Indietro per 1,2 secondi per aprire LG Home una volta. L’interruttore del controllo Home e le impostazioni restano invariati.
 
-**Premi Home tre volte entro due secondi**, rilasciandolo tra le pressioni. Ripristina LG Home e interrompe il controllo senza cancellare le preferenze. Con No-root Helper fino alla 0.6.13 inclusa, tieni invece premuto Home per circa due secondi. La pressione prolungata di Home non è il gesto di emergenza di Root.
+**Premi Home tre volte entro due secondi**, rilasciandolo tra le pressioni. Ripristina LG Home e interrompe il controllo senza cancellare le preferenze.
 
-No-root: Per riavviare il controllo Home, apri Home Helper, scegli Avvia Helper e conferma. La tua scelta della schermata Home viene mantenuta. Root: attiva **Cambia Home** nelle impostazioni Home per riprendere. **Apri LG Home** apre LG Home una volta senza cambiare la destinazione di Home. Per ripristinare LG Home come destinazione permanente, disattiva **Cambia Home** o esegui `cytv restore`. Non eseguire entrambi i controllori insieme. Se il problema ricompare, lascia attivo LG Home.
+No-root: Per riavviare il controllo Home, apri Home Helper, scegli Avvia Helper e conferma. La tua scelta della schermata Home viene mantenuta. Root: attiva **Cambia Home** nelle impostazioni Home per riprendere. **Apri LG Home** apre LG Home una volta senza cambiare la destinazione di Home. Per ripristinare LG Home come destinazione permanente, disattiva **Cambia Home**. Non eseguire entrambi i controllori insieme. Se il problema ricompare, lascia attivo LG Home.
 
-Correzione Root non ancora pubblicata: disattivare il controllo Home o scegliere Open LG Home chiude la finestra Root dopo la conferma di avvio di LG Home. Puoi aprire Home Root manualmente per accedere alle impostazioni lasciando disattivato il controllo Home.
+## Serve aiuto?
 
-> **1.5.4 — Root:** attivando esplicitamente **Cambia Home** con Root funzionante, CYTV crea un proprio ingresso nativo **Clean** e memorizza Clean come ingresso. Disattivazione del controllo Home, arresto di emergenza, errore, sospensione per aggiornamento o disinstallazione rimuovono la voce di CYTV e ripristinano l’ingresso precedente solo se il valore corrente è ancora quello impostato da CYTV; gli altri ingressi e le app in primo piano restano invariati. Su TV non supportati o con voci non appartenenti a CYTV rimane il normale controllo Home con le sue protezioni. Non è garantito che Clean appaia subito come prima schermata. I test registrati di prima schermata, standby e avvio dopo interruzione della corrente sul C3 sono riusciti, senza garanzia universale. Home può restare disattivato dopo aggiornamento/ripristino (#202), e le impostazioni mostrare uno stato vecchio (#206): chiudile e riaprile, attiva esplicitamente Cambia Home e attendi lo stato Clean. [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md) · [Native input (English)](../development/ROOT-NATIVE-INPUT.md).
+Se l’installazione viene interrotta, usa la stessa connessione salvata e scegli prima **Controlla stato TV**. Prosegui solo con il ripristino proposto dalla procedura guidata. Se lo stato è sconosciuto, salva il rapporto diagnostico e fermati; conserva i dati di ripristino e non ripetere l’installazione alla cieca.
 
-```sh
-./cytv --language it status
-./cytv --language it doctor --report
-./cytv --language it restore
-./cytv --language it uninstall
-```
+Durante il ripristino, lascia disattivato il controllo Home e conserva i rapporti diagnostici originali e la connessione salvata. Conferma separatamente la verifica e le modifiche. Segui la guida dettagliata per la versione installata; non forzare la reinstallazione e non cancellare lo stato di ripristino.
 
-> **1.6.0 (#152):** se la disattivazione di Helper viene rifiutata, il ripristino/la rimozione No-root potrà usare un arresto verificato tramite SSH. Lo stato di arresto viene conservato; un esito incerto mantiene il registro. Non eliminare i file di stato. La conferma su EF950V è ancora necessaria. [#152](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/152)
+Indica modello TV, firmware, No-root o Root, dispositivo di installazione, passaggio e messaggio di errore. Rimuovi password, chiavi, indirizzi e dati personali prima di condividere il rapporto. Non viene pubblicato automaticamente.
 
-> **1.6.0 (#201):** lo stato No-root conserva il registro di un’installazione o rimozione interrotta. File corrispondenti o app assenti non provano il completamento. Se la verifica è negata, fermarsi e conservare la diagnostica; i soli file non consentono di aggirarla. [#201](../RECOVERY.md#unreleased-uncertain-no-root-package-operations-201)
+[Segnala un problema](../FEEDBACK.md) · [Ripristino — inglese](../RECOVERY.md) · [Aggiornare o rimuovere — inglese](../MAINTENANCE.md) · [Altre lingue](../LANGUAGES.md)
 
-Dopo un’interruzione, esegui prima `status` e conserva i registri. `restore` ripristina LG Home senza rimuovere app; `uninstall` lo ripristina prima della rimozione. I dati di ripristino Root restano intenzionalmente: non cancellarli per forzare una reinstallazione. Controlla i rapporti prima di condividerli; non pubblicare chiavi o cartelle dei profili.
+Nelle prossime build, l’avviso e il pulsante «Disattiva anteprima HDMI» compaiono con 4K selezionato o attivo solo nei temi con l’anteprima degli ingressi abilitata. Durante l’anteprima HDMI, lo sfondo video 4K viene temporaneamente sostituito da un’immagine statica a 1080p. Disattiva l’anteprima degli ingressi per mantenere lo sfondo in 4K.
 
-Apri **Impostazioni di Home → Aspetto → Colonne** e scegli da 1 a 8 colonne, oppure **Secondo il tema** per usarne il valore (Classic: 5). Un numero esplicito ha la precedenza sul tema. I temi con disposizione fissa nascondono l’opzione Colonne e usano il valore dell’autore. La scelta salvata viene ripristinata passando a un tema che supporta questa impostazione. Nel tema Alpine scaricato, le app formano una sola fila orizzontale ciclica: Sinistra/Destra scorre, Su apre le scorciatoie e Giù torna alla stessa app. In Alpine puoi scorrere anche con la rotella o il touchpad; Home non si muove dietro una finestra aperta.
+### Candidato: rimozione semplice
 
-1.5.4: in **Impostazioni Home → Aspetto**, disattiva **Mostra riquadro «Aggiungi app»** per nascondere +. È attivo per impostazione predefinita. Usa **Aggiungi app** nella stessa sezione per aggiungere o ripristinare app anche con + nascosto. Puoi continuare a spostare e nascondere le app; la scelta resta dopo il riavvio. Se tutte le app sono nascoste, i controlli in alto e le impostazioni restano accessibili.
+I pulsanti sopra offrono ancora la versione pubblicata. Nel prossimo candidato, scegli **Disinstalla Clean Your TV** in Manutenzione con la stessa connessione salvata. Conferma una volta. Le app e i file noti del progetto presenti vengono eliminati; gli elementi assenti vengono saltati, anche dopo un’installazione parziale.
 
-1.7.0: il tema scelto determina se **Ingressi** usa il menu in alto o una fila HDMI; non esistono un’impostazione globale della posizione né l’interruttore **Mostra ingressi su Home**. La fila supporta attualmente solo `dock-grid`. Liquid Glass la seleziona; Classic e i temi senza questa opzione mantengono il menu in alto. Su dal dock entra nella fila, ancora Su raggiunge l’intestazione, Giù o Indietro torna al dock e OK avvia la sorgente. Se sono presenti riquadri delle sorgenti, la fila sostituisce il menu Ingressi in alto. Il nome del dispositivo proviene dai metadati degli ingressi solo se il firmware lo fornisce; altrimenti la sorgente collegata mostra **Collegato**. Home non inventa un nome PlayStation e non garantisce l’identificazione CEC. Le porte vuote restano selezionabili. Le anteprime sono **attive per impostazione predefinita**; una scelta Disattivato salvata esplicitamente rimane tale. Disattiva **Impostazioni Home → Aspetto → Anteprima dell’ingresso selezionato** per spegnerle. Quando sono attive e il tema usa la fila, un HDMI collegato può essere mostrato dopo circa 0,8 secondi di selezione. Su alcuni TV le anteprime HDMI possono riprodurre audio o attivare HDR; il silenzio non è garantito. Home non modifica automaticamente il silenziamento globale o le impostazioni HDR del TV. Live TV e le porte vuote mantengono riquadri statici. Root legge lo stato degli ingressi tramite il proprio servizio. No-root mantiene EIM diretto se consentito; in caso di permesso negato usa una richiesta di sola lettura tramite Helper già associato. Un errore lascia lo stato sconosciuto; non vengono aggiunti controlli o richieste di associazione.
+Quando richiesto, scollega l’alimentazione della TV, ricollegala, attendi la rete e scegli **Riprova**. Standby o Quick Start non è un riavvio completo; CYTV non riavvia automaticamente la TV. Se la connessione si interrompe, controllala e riprova la stessa rimozione senza un altro assistente di ripristino. Se l’accesso è negato, usa la connessione Root richiesta; se la TV è occupata, attendi e riprova. Il successo appare solo dopo la verifica della pulizia finale. Conserva chiavi e rapporti originali. Restano validi i comandi di emergenza e il consenso alla condivisione.
 
-Nelle anteprime dei temi di 1.5.4 con barra laterale opzionale, Su/Giù seleziona una voce del menu, Destra passa alle app e Sinistra dalla prima colonna delle app torna al menu.
-
-No-root 1.5.0: Helper può riprendersi da un timeout temporaneo del watchdog al risveglio, con un massimo di cinque tentativi in dieci minuti. Stop e tre pressioni di Home richiedono ancora un avvio esplicito di Helper; gli errori ripetuti lo lasciano fermo. La verifica sul TV è in attesa. [Comportamento e limiti (inglese)](../HELPER-DIAGNOSTICS.md#watchdog-recovery-unpublished-candidate-155).
-
-## Aggiornamenti e rimozione
-
-Dopo la connessione, cytv mostra versione installata → inclusa e distingue prima installazione, reinstallazione e downgrade. Controlla il riepilogo prima della conferma; `--yes` non rende sicuro un passaggio incompatibile. Conserva pacchetti funzionanti e copie private delle impostazioni. Per gli aggiornamenti dal computer ferma No-root Helper prima di sostituire i pacchetti; non disinstallare prima. Non sovrascrivere un ambiente Root attivo con una sola IPK: usa il percorso previsto da cytv. Rimuovere l’app desktop non rimuove le app TV.
-
-Apri impostazioni Home → Aggiornamenti software e verifica le versioni prima di confermare. Aggiornamento e rollback sul TV richiedono **root, Homebrew Channel** e infrastruttura di aggiornamento compatibile già preparata, anche per No-root. Senza root usa il computer. Preparare gli aggiornamenti completi è un’azione esplicita separata: [aggiornamenti (inglese)](../UPDATES.md). Recupero mostra la versione salvata; il rollback può perdere modifiche successive alle impostazioni.
-
-**Installazione 1.3.0 esistente:** il System Updater originale può rifiutare modifiche all’infrastruttura. Conservare l’operazione interrotta e seguire il recupero e la preparazione della sostituzione verificati per 1.5.0+; non eliminare i registri né riprovare alla cieca. Aggiornare solo l’app non sostituisce l’infrastruttura Root fissata. [Migrazione e recupero (inglese)](../UPDATES.md#one-time-computer-preparation).
-
-La correzione del canale impostazioni Home è pubblicata dalla 1.5.0. Aggiornare Home e Helper insieme con un installer pubblicato compatibile; aggiornare solo Home non modifica Helper. La verifica resta limitata ai modelli documentati. [#146](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/146).
-
-Il recupero audio HDMI Root è sperimentale e **disattivato per impostazione predefinita**; abilitalo solo se serve. Può interrompere audio funzionante e non dimostra compatibilità eARC. [Recupero audio (inglese)](../development/ROOT-AUDIO-RECOVERY.md). Il **CYTV Installer Homebrew non è ancora pubblicato**; usa l’installer pubblicato per computer o Android.
-
-Homebrew Channel ha negato l’accesso a questo programma di installazione. Su webOS 11, Homebrew 0.7.3 richiede un aggiornamento di compatibilità dai suoi sviluppatori. Usa il programma pubblicato per computer o Android finché una versione supportata di Homebrew non include la correzione. [#116](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/116).
-
-1.5.0+: se vecchie directory Root scrivibili impediscono l’accesso all’API del firmware, `cytv enable-firmware-access --edition root --repair-package-permissions` verifica il pacchetto corrente con dati privati attendibili e rimuove la scrittura per gruppo/altri solo dai percorsi propri di Root. File sconosciuti o modificati fermano la riparazione. Profilo, scelta Home e blocco firmware restano invariati; [dettagli (inglese)](../LG-FIRMWARE-UPDATES.md#explicit-package-permission-repair-candidate).
-
-1.5.0+: `cytv recover-system-rollback --edition root` gestisce un ripristino Root verificato quando tutti gli installer dei pacchetti sono terminati, ma è scaduto il tempo di disponibilità del launcher. Richiede il segnale autentico del launcher e rifiuta risultati d’installazione sconosciuti. Conserva pacchetti, codice e chiavi fissati, prove dell’errore e la disattivazione esplicita di Home. Un registro privato documenta il tentativo limitato. Ripetere normalmente non estende il termine. Solo dopo la scadenza dei 120 secondi, senza un segnale di disponibilità accettato né risultati d’installazione sconosciuti, `--new-recovery-attempt` archivia l’intero registro precedente con UUID/hash e apre esplicitamente un nuovo tentativo. Un recupero completato resta idempotente; nessun tentativo automatico. [Procedura e limiti (inglese)](../RECOVERY.md#root-system-rollback-readiness-candidate).
-
-1.6.0: System Updater 1.2.0 è destinato a nuove installazioni ammesse o alla sostituzione verificata di 1.1.0/1.1.1 con `cytv replace-system-updater --edition root`. Cambia solo System Updater; app Root/Root Updater, profilo completo e scelta Home restano invariati, mentre lo stato precedente viene archiviato. Operazioni sconosciute o incomplete bloccano la sostituzione. Il 1.1.2 già installato resta fissato ai canali precedenti; non esiste una migrazione generale e la sostituzione non deve essere forzata. Questo non vincola i feed No-root. [Procedura (inglese)](../RECOVERY.md#replace-the-root-system-updater-candidate)
-
-## Aiuto e altre istruzioni
-
-**1.6.0:** scegli **Esamina le opzioni di ripristino** per la stessa TV salvata o esegui `cytv recover`. Verifica e modifiche richiedono conferme separate con No predefinito; `--yes` non le autorizza. Root continua solo dopo le verifiche esistenti. No-root propone la rimozione solo se il controllo del servizio pacchetti la consente; le preferenze Home possono essere azzerate. Una nuova installazione non parte automaticamente. Se lo stato è sconosciuto o l’accesso è negato, salva il rapporto e fermati. Conserva i registri e non ripetere la rimozione. Restano aperte le prove di conclusione di #201 e il ripristino reale di #216. [Recovery](../RECOVERY.md). Per assistenza indica modello, firmware, edizione, versione dell’installer, passaggio fallito e risultato atteso/effettivo; verifica e rimuovi i segreti dal rapporto prima di condividerlo.
-
-Non pubblicato: dopo un errore di attivazione Root, usa la stessa connessione salvata per verificare il ripristino (`cytv recover`). Continuare richiede LG Home ripristinato, controllo disattivato, pacchetti/updater verificati e conferma separata. Conserva i registri; non reinstallare né eliminare i flag failsafe. [Recovery](../RECOVERY.md#failed-root-activation-unreleased).
-
-1.7.0: il recupero può riprendere una rimozione No-root interrotta prima della prima richiesta di pacchetto senza accesso allo stato globale, se il registro originale lo dimostra. Conferma la rimozione separatamente; dopo la verifica, avvia una nuova installazione a parte. Le operazioni sconosciute o già inviate restano bloccate. Conserva connessione e registri. Non incluso in 1.6.0. [Dettagli](../RECOVERY.md#no-root-removal-stopped-before-package-submission-unreleased).
-
-[Documentazione](../README.md) · [Segnalare un problema](../FEEDBACK.md)
-
-In sviluppo: se non è stata inviata alcuna richiesta di rimozione dei pacchetti, dopo un errore è disponibile **Esamina le opzioni di ripristino** per la stessa TV salvata. Verifica e rimozione richiedono conferme separate. Se la TV rifiuta la verifica dello stato dei pacchetti, il ripristino si ferma e offre un rapporto. Il riepilogo `recovery` distingue rimozione non avviata, operazione ereditata e operazioni sui pacchetti interrotte senza pubblicare il registro completo; non autorizza il ripristino.
-
-<!-- Anchors retained for links to earlier guide headings. -->
+<!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="requisiti"></a>
 <a id="python-opzionale-per-root"></a>
 <a id="verifiche-hardware-e-limiti"></a>
@@ -160,69 +100,14 @@ In sviluppo: se non è stata inviata alcuna richiesta di rimozione dei pacchetti
 <a id="novità-della-130--12"></a>
 <a id="candidato-non-pubblicato-installazione-root-tramite-homebrew"></a>
 <a id="candidato-non-pubblicato-ripristino-audio-hdmi-root"></a>
-
 <a id="temi-154"></a>
-
-## Temi
-
-In 1.8.2, **Impostazioni Home → Sfondi** mostra lo sfondo del tema attivo, le capacità rilevate della TV e la modalità attuale. Auto sceglie una qualità compatibile; 4K, 1080p e Immagine sono disponibili solo se inclusi nel tema. Se il video non funziona, viene mostrata un’immagine. Regola l’oscuramento a passi del 5% o ripristina i valori del tema. Classic e i temi senza sfondo lo indicano esplicitamente.
-
-Sfondi personali in 1.8.2: apri Sfondi in CYTV desktop, scegli JPG/PNG, regola il ritaglio e inserisci l’indirizzo privato del TV e il PIN di ricezione di Home. CYTV prepara localmente video silenziosi; il 4K è disponibile solo se il ritaglio ha risoluzione sufficiente. Sul TV scegli la ricezione da CYTV o il caricamento dal telefono e scansiona il QR sulla stessa rete Wi-Fi. Il telefono invia un’immagine normale fino a 1920×1080 senza il livello video 4K nativo; la nitidezza è limitata dalla risoluzione dell’interfaccia TV. Conferma l’avviso prima dell’invio, poi verifica l’anteprima e applica sul TV. I caricamenti personali restano salvati e si possono selezionare di nuovo o rimuovere in Sfondi. Annullamenti o file rifiutati conservano lo sfondo precedente. Servono build compatibili di Home/servizio e di CYTV da 1.8.2 in poi.
-
-Video personale in movimento (1.8.2): in CYTV per computer → Sfondi, scegli MP4/MOV/MKV/WebM da 1–60 secondi, fino a 512 MiB e 3840×2160. L’audio viene rimosso e il ritaglio è centrale in 16:9. I video più piccoli usano un’uscita compatibile a 1080p; UHD richiede un ritaglio sorgente sufficiente. Invia con indirizzo/PIN della TV, poi controlla e applica sulla TV. Dal telefono solo JPG/PNG. Le verifiche sulla TV fisica restano limitate; vedi [1.8.2](../RELEASE-1.8.2.md).
-
-Sfondi inclusi in 1.8.2: **Impostazioni Home → Sfondi → Sfondi inclusi → Black Hole**. Video di **Xecutioner**, con permesso per uso non commerciale e attribuzione. Confermare un altro tema attiva il suo sfondo; Black Hole e i caricamenti personali restano disponibili. Il flusso 4K continuo evita il riavvio a ogni ripetizione, con video/immagine compatibile di riserva.
-
-Android CYTV: **Configura TV** · **Sfondi** · **Manutenzione**. Sulla TV, apri le impostazioni Home → Sfondi → Carica dal telefono. Scansiona il QR con la fotocamera, scegli JPG/PNG e applica lo sfondo sulla TV. Dal telefono: immagini fino a 1920×1080, senza video 4K nativo. Per il vero 4K, usa CYTV sul computer.
-
-1.7.0: **Impostazioni → Temi**. **Classic**, **Liquid Glass**, **Ribbon** sono integrati e non richiedono il download del tema; Classic resta predefinito. **Channel** è esterno, dallo showcase. Durante una prova nella galleria: Scegli il tema e **Mantieni tema** entro **20 secondi**. **Ripristina**, Back o la scadenza ripristinano il precedente. Una prova interrotta avvia nuovamente Home con Classic. I temi integrati e scaricati scelti nell’elenco installato vengono applicati e salvati subito, senza timer. Vale anche per quelli ricevuti dal computer o installati tramite URL. Solo Prova tema nella galleria avvia una prova di 20 secondi.
-
-1.7.0: **Classic**, **Liquid Glass** e **Ribbon** sono integrati. **Alpine 1.4.4** passa alla **galleria dei temi** come download. Una selezione salvata di `builtin:alpine` torna a Classic con l’avviso di ripristino visibile esistente; Home non scarica Alpine automaticamente e non lo sostituisce con Liquid Glass. La versione 1.6.0 include Classic, Alpine e Ribbon.
-
-I temi installati appaiono in una sola riga a scorrimento orizzontale. Il tema attivo è sempre il primo e la sua scheda è evidenziata. Usa Sinistra/Destra per scorrere la riga.
-
-La galleria mostra solo temi non installati su questo TV. Classic, Liquid Glass, Ribbon e i temi scaricati sono nascosti, anche se esiste una versione più recente. Dopo la rimozione il tema riappare. Aggiorna tramite URL o trasferimento dal computer.
-
-Le schede sono integrate in Temi, accanto alle categorie. Galleria, installazione tramite link e trasferimento dal computer si aprono nello stesso pannello; solo una prova della galleria mostra temporaneamente Home.
-
-Aprire la galleria o scegliere Aggiorna verifica gli aggiornamenti revisionati nel repository principale senza aggiornare Home o ricaricare la pagina. Le nuove voci arrivano dopo la normale integrazione; un candidato non integrato può mostrare il catalogo incluso. Offline o in caso di errore si usano voci e anteprime incluse. I temi integrati corrispondono alla versione installata di Home. Apri l’anteprima di Channel, poi **Scarica tema** (serve internet). Dopo il download, prova e scegli **Mantieni tema** entro **20 secondi**. I temi installati funzionano offline. **Aggiungi tramite ID** resta disponibile per i link fissati.
-
-Per provare un tema non pubblicato, apri prima **Impostazioni → Temi → Ricevi dal computer** sul TV. Inserisci indirizzo TV e PIN a sei cifre in **Send to TV** nell’anteprima del computer, invia e scegli **Applica tema** sul TV. Il metodo principale collega il PC alla porta TCP **8879 del TV**, senza modificare il firewall del computer. Entrambi devono essere nella stessa rete domestica fidata. Il ricevitore si chiude dopo un invio, annullamento, uscita o **10 minuti**. Il PIN non viene salvato; il tema installato funziona offline. Non serve pubblicare su GitHub.
-
-Per un tema pubblicato, apri **Aggiungi tramite ID** e inserisci l’ID (ad esempio `102300a209`), `da.gd/102300a209` o il link GitHub completo. Home mostra l’indirizzo da.gd prima del caricamento e verifica destinazione GitHub e pacchetto. L’autore può copiare l’ID dalle note di rilascio o da **TV link → Copy ID** nell’anteprima.
-
-**1.6.0:** **Mostra diagnostica** nel pannello Home Helper mostra un riepilogo filtrato delle proprie richieste di stato. La visualizzazione non avvia Helper e non modifica il controllo Home. Condividi solo il JSON quando richiesto, dopo averlo controllato; [dettagli](../HELPER-DIAGNOSTICS.md#candidate-panel-caller-diagnostics-207).
-
-[Themes (English)](../THEMES.md) · [1.5.4 QA (English)](../history/2026-10-31-release-1.5.3-signed-root-qa.md).
-
-I temi con barra configurabile non ancora pubblicati possono collocare Ingressi, Wi-Fi e Impostazioni in basso a sinistra. Se abilitato, Sinistra dalla prima app visibile seleziona Impostazioni, poi Wi-Fi e Ingressi; Destra da Impostazioni torna alla stessa app visibile. L’installazione di un tema che richiede una nuova funzione Home viene rifiutata nelle versioni incompatibili, mantenendo aspetto e selezione attuali. Aggiorna prima Home. Un successivo downgrade può ripristinare Classic all’avvio.
-
-Temi mostra le anteprime dei temi integrati e di tutti quelli installati personalmente, anche offline. Un pulsante separato apre il catalogo pubblicato; installare un tema personale non lo pubblica.
-
-Aspetto contiene Colonne con il numero attuale e i controlli delle app. La categoria Temi contiene temi installati, galleria, ricezione dal computer e Aggiungi tramite ID a destra (es. 102300a209). Ripristina Classic dalla scheda e rimuovi i download singolarmente. Lingua offre direttamente la scelta.
-
-Nell’anteprima del browser, Ricevi dal computer spiega i passaggi sul televisore senza avviare un ricevitore TV sul computer. Usa Send to TV sopra l’anteprima. Rimuovere un tema scaricato richiede conferma; se è attivo, viene prima ripristinato Classic. Annulla conserva il tema.
-
 <a id="categorie-delle-impostazioni-candidato-non-pubblicato"></a>
-
-## Categorie delle impostazioni (1.5.4)
-
-Entrambe le edizioni mostrano le categorie a sinistra e le impostazioni a destra: schermata Home, Aspetto, Temi, Lingua, Aggiornamenti software e Avanzate. No-root aggiunge Developer Mode; Root include il firmware LG negli aggiornamenti e l’audio HDMI in Avanzate. Su/Giù naviga nella colonna, Destra entra nelle impostazioni e Sinistra torna alle categorie. Indietro torna prima alle categorie, poi chiude le impostazioni. Tab raggiunge anche il pulsante per tornare a Home.
-
-Un punto giallo su Aggiornamenti software e sul pulsante interno indica un aggiornamento disponibile. Entrambi scompaiono quando una verifica riuscita conferma che non ci sono aggiornamenti; in caso di errore resta l’ultimo stato confermato.
-
 <a id="risoluzione-grafica-automatica-candidato"></a>
+<a id="aggiornamenti-e-rimozione"></a>
+<a id="aiuto-e-altre-istruzioni"></a>
+<a id="temi"></a>
+<a id="categorie-delle-impostazioni-154"></a>
+<a id="risoluzione-grafica-automatica-160"></a>
+<a id="spazio-di-archiviazione"></a>
 
-## Risoluzione grafica automatica (1.6.0)
-
-I programmi di installazione 1.6.0 per computer/Android e i client OTA migrati scelgono 720p o 1080p in base alle capacità della TV. Se non sono verificabili, l’operazione si interrompe. I vecchi aggiornatori installati separatamente richiedono la migrazione documentata dal computer; il ripristino mantiene i pacchetti originali.
-
-[HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).
-
-> **1.6.0:** conservare il rapporto del primo tentativo fallito. I nuovi rapporti distinguono il primo errore registrato dai controlli successivi e includono un riepilogo filtrato di Doctor/stato. L’esportazione è disponibile anche dopo configurazione, controllo dello stato o ripristino riusciti. I dati storici mancanti restano sconosciuti; il rapporto non autorizza il recupero. [↗](../development/INSTALLER-DIAGNOSTICS.md).
-
-## Spazio di archiviazione
-
-Le build candidate mostrano spazio richiesto, libero e mancante in MiB per installazione, temi e sfondi foto/video. Includono copie temporanee e riserva. Quota app, cache temi da 64 MiB e cache video sono limiti separati. I valori sconosciuti sono indicati. Libera lo spazio indicato; nessuna pulizia automatica.
-
-Spazio stimato (TV): richiesti 128.0 MiB; liberi 96.0 MiB; mancanti 32.0 MiB.
+Riferimenti dettagliati in inglese: [requisiti](../COMPATIBILITY.md) · [comandi](../CONTROLS.md) · [temi](../THEMES.md) · [aggiornamenti](../UPDATES.md).

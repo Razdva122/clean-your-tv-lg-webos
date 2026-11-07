@@ -1,0 +1,31 @@
+{
+  "sourceSha256": "2eef0d73d1c600c12f368a7ded24589a45e5e6dd3f56f68d8894ba9c8b4bce4d",
+  "sourceSize": [
+    3840,
+    2160
+  ],
+  "cropSize": [
+    3840,
+    2160
+  ],
+  "motion": "still",
+  "duration": 2,
+  "fps": 25,
+  "wallpaperVideo": {
+    "variants": [
+      {
+        "quality": "4k",
+        "path": "wallpaper-4k.mp4"
+      },
+      {
+        "quality": "1080p",
+        "path": "wallpaper-1080p.mp4"
+      }
+    ]
+  },
+  "originalImageSize": [
+    1672,
+    941
+  ],
+  "sourceDetail": "Author-provided Real-ESRGAN upscale; not native UHD detail"
+}

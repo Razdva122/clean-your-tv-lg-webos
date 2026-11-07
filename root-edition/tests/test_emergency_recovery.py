@@ -1,4 +1,4 @@
-import sys,unittest
+import sys,unittest,time
 from pathlib import Path
 from unittest.mock import patch,Mock
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'runtime'))
@@ -17,11 +17,11 @@ class RecoveryTests(unittest.TestCase):
   def observe(args,**kwargs):
    os.write(kwargs['pass_fds'][0],b'READY\nPING\n');return Observer()
   log=StringIO()
-  with patch.object(e.d,'trusted_dir'),patch.object(e.d,'safe_json',return_value={'transaction':'private-tx','state':'pending'}), \
+  with patch.object(e.d,'trusted_dir'),patch.object(e.d,'safe_json',return_value={'transaction':'private-tx','state':'pending','deadline':time.monotonic()+60}), \
        patch.object(e,'save_ready'),patch.object(e,'completed',return_value=False), \
        patch.object(e.subprocess,'Popen',side_effect=observe),patch.object(e.os.path,'lexists',return_value=True), \
        patch.object(Coordinator,'read_binding',return_value={'transaction':'private-tx'}), \
-       patch.object(health,'require_guardian'), \
+       patch.object(health,'context',return_value={}),patch.object(health,'require_guardian'), \
        patch.object(health,'publish',side_effect=health.HealthContextError('failsafe-present')), \
        patch.object(e,'recover',side_effect=lambda *a:print('RECOVER',file=__import__('sys').stderr) or True), \
        redirect_stderr(log),redirect_stdout(StringIO()):
@@ -84,5 +84,5 @@ class RecoveryTests(unittest.TestCase):
  def test_no_ready_prevents_returning_guardian_for_publication(self):
   supervisor=Mock(pid=123);supervisor.poll.return_value=1
   guardian=Mock(pid=456)
-  with patch.object(e.bounded,'spawn',return_value=guardian),patch.object(e.subprocess,'Popen',return_value=supervisor),patch.object(e.os,'open',return_value=9),patch.object(e.os,'close'),patch.object(e.d,'safe_json',return_value={}),patch.object(e.bounded,'begin',side_effect=lambda spawn:spawn('tx')):
+  with patch.object(e.bounded,'spawn',return_value=guardian),patch.object(e.subprocess,'Popen',return_value=supervisor),patch.object(e.os,'open',return_value=9),patch.object(e.os,'close'),patch.object(e.d,'safe_json',return_value={'transaction':'tx','state':'pending','deadline':time.monotonic()+60}),patch.object(e.bounded,'begin',side_effect=lambda spawn:spawn('tx')):
    with self.assertRaisesRegex(RuntimeError,'before activation'):e.start()

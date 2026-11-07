@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="installation_channel" formatted="false">CYTV</string>
+    <string name="installation_progress" formatted="false">Probíhá operace na televizoru</string>
+    <string name="webview_update" formatted="false">Aktualizujte Android System WebView nebo Chrome a znovu otevřete CYTV (vyžaduje WebView 108 nebo novější).</string>
+</resources>

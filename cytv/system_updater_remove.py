@@ -89,16 +89,20 @@ def bootstrap(state):
         if len(raw)!=size or hashlib.sha256(raw).hexdigest()!=sha:raise ValueError('Supervisor baseline cache integrity mismatch')
     return value
 
-def lockdown(state,base,allow_missing=False):
+def lockdown(state,base,allow_missing=False,check=None):
     value=json.loads(read(state/'legacy-lockdown.json'))
     bases=(base,Path('/var/luna-service2'))
     allowed={str(root/folder/name) for root in bases for folder,name in (('api-permissions.d','com.cleanyourtv.updater.permissions.json'),('','com.cleanyourtv.updater.permissions.receipt.json'))}|{str(base/'api-permissions.d/com.cleanyourtv.root.updater.service.api.json'),str(ROOT_UPDATER/'registration.json')}
     if value.get('schema')!=1 or not isinstance(value.get('files'),dict) or set(value['files'])-allowed:raise ValueError('Unknown legacy lockdown ownership')
+    result=dict(value['files'])
     for name,record in value['files'].items():
         if set(record)!={'original','disabled','mode'} or not isinstance(record['original'],str) or not isinstance(record['disabled'],str) or type(record['mode']) is not int or record['mode']<0 or record['mode']>0o777 or record['mode']&0o022:raise ValueError('Legacy lockdown file changed')
         if allow_missing and not os.path.lexists(name):continue
-        if read(Path(name)) not in (record['original'].encode(),record['disabled'].encode()):raise ValueError('Legacy lockdown file changed')
-    return value['files']
+        if read(Path(name)) not in (record['original'].encode(),record['disabled'].encode()):
+            if check is None or name!=str(base/'api-permissions.d/com.cleanyourtv.root.updater.service.api.json'):raise ValueError('Legacy lockdown file changed')
+            check(value['files'])
+            del result[name]  # Already at SDK originals; never republish private API bytes.
+    return result
 
 
 

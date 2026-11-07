@@ -31,5 +31,17 @@ async function read(extra,points=[ordinary],mode='reply'){
  const rooted=await root((file,args,opts,cb)=>cb(null,JSON.stringify({returnValue:true,apps:[ordinary,tv,{id:'private-system',title:'System',visible:false}]})),()=>0);
  assert.equal(rooted.find(a=>a.id===tv.id).hidden,false,'Root must retain the installed tuner');
  assert.equal(rooted.find(a=>a.id==='private-system').hidden,true,'other hidden system apps stay filtered');
+ const mixed=[ordinary,tv,{...ordinary,title:'Duplicate'},
+  {id:'invisible',title:'Invisible system app',visible:false},
+  {id:'hidden',title:'Hidden system app',hidden:true},
+  {id:'com.sdk.ares.hostedapp',title:'Ares Hosted App'},
+  {id:'com.cleanyourtv.root.updater',title:'Root Updater'}];
+ const normalized=await root((file,args,opts,cb)=>cb(null,JSON.stringify({returnValue:true,apps:mixed})),()=>0);
+ for(const catalog of [mixed,normalized]){
+  const shared=create({getItem:()=>JSON.stringify({version:1,ids:[],hidden:[],catalog:[]}),setItem(){}},catalog,{});
+  assert.deepEqual(shared.available().map(a=>a.id).sort(),[tv.id,ordinary.id].sort(),'raw and Root catalogs share visibility, tuner, deduplication and utility picker rules');
+  shared.add(tv.id);shared.refresh([ordinary]);
+  assert.equal(shared.visible()[0].id,tv.id,'partial refresh preserves the discovered tuner tile');
+ }
  console.log('PASS discovered tuner, localized title, hidden flags, optional-query failures, absent models, deduplication and Root filtering');
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -54,7 +54,9 @@ window.HomeWallpaperLocales = {
     "Theme cache": "Кэш тем",
     "Video cache": "Видеокэш",
     "Computer temporary storage": "Временное хранилище компьютера",
-    "Remove a downloaded theme before adding another (8 themes maximum).": "Удалите загруженную тему перед добавлением новой (не более 8 тем)."
+    "Remove a downloaded theme before adding another (8 themes maximum).": "Удалите загруженную тему перед добавлением новой (не более 8 тем).",
+    "During HDMI previews, the 4K video wallpaper temporarily switches to a static 1080p image. Disable input previews to keep the wallpaper in 4K.": "Во время предпросмотра HDMI видеообои 4K временно заменяются статичным изображением в 1080p. Отключите предпросмотр, чтобы сохранять фон в 4K.",
+    "Disable HDMI previews": "Отключить предпросмотр HDMI"
   },
   "cs": {
     "Wallpapers": "Tapety",
@@ -110,7 +112,9 @@ window.HomeWallpaperLocales = {
     "Theme cache": "Mezipaměť motivů",
     "Video cache": "Mezipaměť videa",
     "Computer temporary storage": "Dočasné úložiště počítače",
-    "Remove a downloaded theme before adding another (8 themes maximum).": "Před přidáním dalšího odstraňte stažený motiv (nejvýše 8 motivů)."
+    "Remove a downloaded theme before adding another (8 themes maximum).": "Před přidáním dalšího odstraňte stažený motiv (nejvýše 8 motivů).",
+    "During HDMI previews, the 4K video wallpaper temporarily switches to a static 1080p image. Disable input previews to keep the wallpaper in 4K.": "Během náhledu HDMI se 4K video na pozadí dočasně nahradí statickým obrázkem v 1080p. Vypněte náhledy vstupů, aby pozadí zůstalo ve 4K.",
+    "Disable HDMI previews": "Vypnout náhledy HDMI"
   },
   "de": {
     "Wallpapers": "Hintergrundbilder",
@@ -166,7 +170,9 @@ window.HomeWallpaperLocales = {
     "Theme cache": "Theme-Cache",
     "Video cache": "Video-Cache",
     "Computer temporary storage": "Temporärer Computerspeicher",
-    "Remove a downloaded theme before adding another (8 themes maximum).": "Vor dem Hinzufügen ein heruntergeladenes Theme entfernen (höchstens 8 Themes)."
+    "Remove a downloaded theme before adding another (8 themes maximum).": "Vor dem Hinzufügen ein heruntergeladenes Theme entfernen (höchstens 8 Themes).",
+    "During HDMI previews, the 4K video wallpaper temporarily switches to a static 1080p image. Disable input previews to keep the wallpaper in 4K.": "Während der HDMI-Vorschau wird das 4K-Hintergrundvideo vorübergehend durch ein statisches 1080p-Bild ersetzt. Deaktivieren Sie die Eingangsvorschau, um den Hintergrund in 4K zu behalten.",
+    "Disable HDMI previews": "HDMI-Vorschau deaktivieren"
   },
   "es": {
     "Wallpapers": "Fondos de pantalla",
@@ -222,7 +228,9 @@ window.HomeWallpaperLocales = {
     "Theme cache": "Caché de temas",
     "Video cache": "Caché de vídeo",
     "Computer temporary storage": "Almacenamiento temporal del ordenador",
-    "Remove a downloaded theme before adding another (8 themes maximum).": "Elimina un tema descargado antes de añadir otro (máximo 8 temas)."
+    "Remove a downloaded theme before adding another (8 themes maximum).": "Elimina un tema descargado antes de añadir otro (máximo 8 temas).",
+    "During HDMI previews, the 4K video wallpaper temporarily switches to a static 1080p image. Disable input previews to keep the wallpaper in 4K.": "Durante la vista previa HDMI, el fondo de vídeo 4K se sustituye temporalmente por una imagen estática de 1080p. Desactiva la vista previa de entradas para mantener el fondo en 4K.",
+    "Disable HDMI previews": "Desactivar vista previa HDMI"
   },
   "pt-BR": {
     "Wallpapers": "Papéis de parede",
@@ -278,7 +286,9 @@ window.HomeWallpaperLocales = {
     "Theme cache": "Cache de temas",
     "Video cache": "Cache de vídeo",
     "Computer temporary storage": "Armazenamento temporário do computador",
-    "Remove a downloaded theme before adding another (8 themes maximum).": "Remova um tema baixado antes de adicionar outro (máximo de 8 temas)."
+    "Remove a downloaded theme before adding another (8 themes maximum).": "Remova um tema baixado antes de adicionar outro (máximo de 8 temas).",
+    "During HDMI previews, the 4K video wallpaper temporarily switches to a static 1080p image. Disable input previews to keep the wallpaper in 4K.": "Durante a prévia HDMI, o vídeo de fundo em 4K é temporariamente substituído por uma imagem estática em 1080p. Desative a prévia de entradas para manter o fundo em 4K.",
+    "Disable HDMI previews": "Desativar prévia HDMI"
   },
   "fr": {
     "Wallpapers": "Fonds d’écran",
@@ -334,7 +344,9 @@ window.HomeWallpaperLocales = {
     "Theme cache": "Cache des thèmes",
     "Video cache": "Cache vidéo",
     "Computer temporary storage": "Stockage temporaire de l’ordinateur",
-    "Remove a downloaded theme before adding another (8 themes maximum).": "Supprimez un thème téléchargé avant d’en ajouter un autre (8 thèmes maximum)."
+    "Remove a downloaded theme before adding another (8 themes maximum).": "Supprimez un thème téléchargé avant d’en ajouter un autre (8 thèmes maximum).",
+    "During HDMI previews, the 4K video wallpaper temporarily switches to a static 1080p image. Disable input previews to keep the wallpaper in 4K.": "Pendant l’aperçu HDMI, le fond vidéo 4K est temporairement remplacé par une image fixe en 1080p. Désactivez l’aperçu des entrées pour conserver le fond en 4K.",
+    "Disable HDMI previews": "Désactiver l’aperçu HDMI"
   },
   "it": {
     "Wallpapers": "Sfondi",
@@ -390,7 +402,9 @@ window.HomeWallpaperLocales = {
     "Theme cache": "Cache temi",
     "Video cache": "Cache video",
     "Computer temporary storage": "Archivio temporaneo del computer",
-    "Remove a downloaded theme before adding another (8 themes maximum).": "Rimuovi un tema scaricato prima di aggiungerne un altro (massimo 8 temi)."
+    "Remove a downloaded theme before adding another (8 themes maximum).": "Rimuovi un tema scaricato prima di aggiungerne un altro (massimo 8 temi).",
+    "During HDMI previews, the 4K video wallpaper temporarily switches to a static 1080p image. Disable input previews to keep the wallpaper in 4K.": "Durante l’anteprima HDMI, lo sfondo video 4K viene temporaneamente sostituito da un’immagine statica a 1080p. Disattiva l’anteprima degli ingressi per mantenere lo sfondo in 4K.",
+    "Disable HDMI previews": "Disattiva anteprima HDMI"
   },
   "ko": {
     "Wallpapers": "배경화면",
@@ -446,7 +460,9 @@ window.HomeWallpaperLocales = {
     "Theme cache": "테마 캐시",
     "Video cache": "비디오 캐시",
     "Computer temporary storage": "컴퓨터 임시 저장 공간",
-    "Remove a downloaded theme before adding another (8 themes maximum).": "다른 테마를 추가하기 전에 다운로드한 테마를 삭제하세요 (최대 8개)."
+    "Remove a downloaded theme before adding another (8 themes maximum).": "다른 테마를 추가하기 전에 다운로드한 테마를 삭제하세요 (최대 8개).",
+    "During HDMI previews, the 4K video wallpaper temporarily switches to a static 1080p image. Disable input previews to keep the wallpaper in 4K.": "HDMI 미리보기 중에는 4K 동영상 배경이 일시적으로 1080p 정지 이미지로 바뀝니다. 배경을 4K로 유지하려면 입력 미리보기를 끄세요.",
+    "Disable HDMI previews": "HDMI 미리보기 끄기"
   },
   "hi": {
     "Wallpapers": "वॉलपेपर",
@@ -502,7 +518,9 @@ window.HomeWallpaperLocales = {
     "Theme cache": "थीम कैश",
     "Video cache": "वीडियो कैश",
     "Computer temporary storage": "कंप्यूटर का अस्थायी भंडारण",
-    "Remove a downloaded theme before adding another (8 themes maximum).": "नई थीम जोड़ने से पहले डाउनलोड की गई थीम हटाएँ (अधिकतम 8 थीम)।"
+    "Remove a downloaded theme before adding another (8 themes maximum).": "नई थीम जोड़ने से पहले डाउनलोड की गई थीम हटाएँ (अधिकतम 8 थीम)।",
+    "During HDMI previews, the 4K video wallpaper temporarily switches to a static 1080p image. Disable input previews to keep the wallpaper in 4K.": "HDMI पूर्वावलोकन के दौरान 4K वीडियो वॉलपेपर की जगह अस्थायी रूप से स्थिर 1080p चित्र दिखता है। वॉलपेपर को 4K में बनाए रखने के लिए इनपुट पूर्वावलोकन बंद करें।",
+    "Disable HDMI previews": "HDMI पूर्वावलोकन बंद करें"
   },
   "pl": {
     "Wallpapers": "Tapety",
@@ -558,7 +576,9 @@ window.HomeWallpaperLocales = {
     "Theme cache": "Pamięć podręczna motywów",
     "Video cache": "Pamięć podręczna wideo",
     "Computer temporary storage": "Pamięć tymczasowa komputera",
-    "Remove a downloaded theme before adding another (8 themes maximum).": "Usuń pobrany motyw przed dodaniem kolejnego (maksymalnie 8 motywów)."
+    "Remove a downloaded theme before adding another (8 themes maximum).": "Usuń pobrany motyw przed dodaniem kolejnego (maksymalnie 8 motywów).",
+    "During HDMI previews, the 4K video wallpaper temporarily switches to a static 1080p image. Disable input previews to keep the wallpaper in 4K.": "Podczas podglądu HDMI tapeta wideo 4K jest tymczasowo zastępowana statycznym obrazem 1080p. Wyłącz podgląd wejść, aby zachować tapetę w 4K.",
+    "Disable HDMI previews": "Wyłącz podgląd HDMI"
   },
   "zh-Hans": {
     "Wallpapers": "壁纸",
@@ -614,7 +634,9 @@ window.HomeWallpaperLocales = {
     "Theme cache": "主题缓存",
     "Video cache": "视频缓存",
     "Computer temporary storage": "电脑临时存储",
-    "Remove a downloaded theme before adding another (8 themes maximum).": "添加新主题前请删除已下载的主题（最多 8 个）。"
+    "Remove a downloaded theme before adding another (8 themes maximum).": "添加新主题前请删除已下载的主题（最多 8 个）。",
+    "During HDMI previews, the 4K video wallpaper temporarily switches to a static 1080p image. Disable input previews to keep the wallpaper in 4K.": "HDMI 预览期间，4K 视频壁纸会暂时切换为 1080p 静态图片。关闭输入源预览可让壁纸保持 4K。",
+    "Disable HDMI previews": "关闭 HDMI 预览"
   },
   "zh-Hant": {
     "Wallpapers": "桌布",
@@ -670,6 +692,8 @@ window.HomeWallpaperLocales = {
     "Theme cache": "主題快取",
     "Video cache": "影片快取",
     "Computer temporary storage": "電腦暫存空間",
-    "Remove a downloaded theme before adding another (8 themes maximum).": "新增主題前請刪除已下載的主題（最多 8 個）。"
+    "Remove a downloaded theme before adding another (8 themes maximum).": "新增主題前請刪除已下載的主題（最多 8 個）。",
+    "During HDMI previews, the 4K video wallpaper temporarily switches to a static 1080p image. Disable input previews to keep the wallpaper in 4K.": "HDMI 預覽期間，4K 影片桌布會暫時切換為 1080p 靜態圖片。關閉輸入來源預覽即可讓桌布維持 4K。",
+    "Disable HDMI previews": "關閉 HDMI 預覽"
   }
 };

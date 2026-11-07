@@ -140,6 +140,35 @@ One coordinator owns the frozen inventory, selected build and acceptance record.
 Select versions and write candidate notes before physical acceptance. Finish
 product changes before freeze; queue unrelated changes for the following cycle.
 
+### Complete planned cases before batch fixes
+
+For subsequent release QA sessions, complete one planned case pass and failure
+inventory before changing product code for its findings or merging that fix batch.
+This order preserves focused development checks and the requirement to build a
+versioned candidate before artifact-bound physical acceptance. It applies
+prospectively and does not reopen fixes or recovery explicitly authorized before
+this rule was introduced.
+
+1. List the planned cases, artifact versions/hashes and device/state preconditions.
+   Give every case an observed pass/fail result or an explicit blocked/untested
+   reason. Valid existing evidence counts when exact artifacts and preconditions
+   match; do not repeat unchanged manual QA or make speculative TV changes merely
+   to fill the record.
+2. An early failure does not end the pass or trigger an immediate product patch.
+   Continue the remaining safe, independent cases and read-only preflights. Mark
+   cases that depend on the blocker as blocked; do not interrupt unresolved
+   recovery to force them. A complete inventory with blocked/untested cases is
+   not a full pass or completed acceptance.
+3. Consolidate the findings, then implement and review one coherent fix batch.
+   Verify affected cases and newly reachable cases before merging the finished
+   batch; one corrected case does not justify merging an unfinished batch.
+4. Finish the consolidated product/build inputs, review and freeze, then dispatch
+   one full candidate under the checks below. Do not rebuild the full RC or
+   platform matrix for each finding. After changes, rerun affected scenarios and
+   retain valid unchanged evidence. If a genuine new blocker appears, finish
+   the remaining independent planned cases and update the failure inventory
+   before the next fix batch and replacement candidate.
+
 ### Mandatory pre-dispatch check for the release coordinator
 
 Before starting a full candidate, complete and commit every input consumed by
@@ -413,19 +442,25 @@ recovery and update checks. The complete theme browser matrix and frozen desktop
 runtime matrix run at candidate freeze; native runtime changes also select their
 PR checks. Required status summaries fail if any selected check fails or is
 unexpectedly skipped.
-Feature branches run affected tests on PR events. Successful runtime results may
-be reused within the same PR/day when the checked-out merge tree (including base
-changes), selected groups, OS/image, exact Python/Node and installed Python
-dependencies match. Only a small run-ID marker is restored; no cached code executes. Its source run
-and the latest prior Tests run on that branch must still be successful; newer
-failed/running evidence or an API error forces fresh tests. Fork PRs do not use
-these markers.
-Current README/plan metadata always runs, and affected setup/packaging checks
-remain fresh. Cache outages fall back to tests; explicit rerun attempts bypass
-hits. Full candidate validation never uses these PR success markers.
+Feature branches run affected checks on PR events. Small authenticated Actions
+receipts let candidate jobs consume already successful units with identical
+nonmetadata source, selection unit, shard, OS/image, exact runtime/dependencies
+and UTC day. Setup also binds the full Git tree. Each unit runs once for matching
+inputs; missing or invalid evidence executes it. Browser core and full themes
+remain separate, and ARM Python retains its privileged checks. Full candidate
+coverage and required job names are unchanged. Current README/plan sanity checks
+and all assembly/signing/package checks remain independent.
 
-Feature branches run affected tests on PR events. The prepared candidate build
-runs the full suite once. Release PR checks retain the required Linux/macOS status
+Only same-repository first-attempt PR runs may produce receipts, after fresh checks
+pass. Consumers verify artifact digest/size, completed successful run and originating
+job, current attempt/latest branch evidence and the actual tested merge tree through
+GitHub data. Fork PRs and explicit reruns execute fresh. API/artifact failures fall
+back to tests; no reused unit is re-attested. Old cache markers cannot supply the
+new receipts, and changing the workflow/helper remains a guarded source change.
+See [CI evidence trust, bootstrap and limits](development/CI-CHECKS.md#reuse-and-metadata).
+
+The prepared candidate build completes full coverage once, executing missing
+units and consuming authenticated matching successes. Release PR checks retain the required Linux/macOS status
 names and run metadata/setup checks; the trusted Release policy enforces the full
 candidate suite. Standalone push suites and the full publication suite are removed.
 Pinned-equivalent documentation/evidence changes do not rebuild installers. Preview

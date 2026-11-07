@@ -23,10 +23,29 @@ class ContinuationTests(unittest.TestCase):
         for key,value in overrides.items():setattr(device,key,value)
         return install_driver.continuation_status(self.identifier,self.store,device)
     def test_final_readback_proof_and_snapshot_allow_explicit_continuation_without_writes(self):
-        before={p.name:(p.read_bytes(),p.stat().st_mtime_ns) for p in Path(self.store.root).iterdir()}
-        with patch('subprocess.Popen',side_effect=AssertionError('inspection spawned worker')),patch.object(Store,'write',side_effect=AssertionError('inspection wrote record')):
-            self.assertTrue(self.check()['can_resume'])
-        self.assertEqual(before,{p.name:(p.read_bytes(),p.stat().st_mtime_ns) for p in Path(self.store.root).iterdir()})
+        import io
+        from contextlib import redirect_stderr
+        from install_device import LocalDevice
+        with patch.object(sys,'path',[str(Path(__file__).resolve().parents[2]/'root-edition/tests')]+sys.path):
+            from install_fixture import CurrentInstallation
+        with CurrentInstallation() as fixture:
+            device=LocalDevice();driver=install_driver.Coordinator(device,fixture.owner)
+            with redirect_stderr(io.StringIO()),patch.object(device,'readback',side_effect=ValueError('interrupted final readback')):
+                driver.install(self.identifier,fixture.payload)
+            snapshot=fixture.snapshot(self.identifier)
+            candidate=install_driver.candidate_digest(snapshot,install_driver._verified_payload(snapshot,False))
+            for kind in ('submission','request'):
+                record=fixture.owner.store.read(kind+'-'+self.identifier);record['candidate_sha256']=candidate
+                fixture.owner.store.write(kind+'-'+self.identifier,record)
+            def state():return {str(p.relative_to(fixture.state)):(p.read_bytes(),p.stat().st_mtime_ns) for p in fixture.state.rglob('*') if p.is_file()}
+            before=state()
+            with patch('subprocess.Popen',side_effect=AssertionError('inspection spawned worker')),patch.object(Store,'write',side_effect=AssertionError('inspection wrote record')):
+                proof=install_driver.continuation_status(self.identifier,fixture.owner.store,device)
+                self.assertEqual(proof,{'can_resume':True,'resume_reason':'original_final_readback_verified'})
+            self.assertEqual(before,state());fixture.assert_preserved(self)
+
+    def test_incomplete_legacy_snapshot_does_not_allow_continuation(self):
+        self.assertEqual(self.check(),{'can_resume':False,'resume_reason':'original-snapshot-unverified'})
     def test_unknown_submission_foreign_owner_and_live_worker_are_blocked(self):
         from unittest.mock import Mock
         probe=Mock(return_value=False);self.assertFalse(self.check(continuation_ready=probe)['can_resume'])

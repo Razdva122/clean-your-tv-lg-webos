@@ -42,6 +42,24 @@ channels; tuner launch and firmware-specific compatibility still need TV accepta
 
 ## Inventory and persistence
 
+### Root store apps and picker utilities (unreleased, #361)
+
+The candidate Root service uses Application Manager's general `listApps` query
+instead of `dev/listApps`, so its fresh catalog can include Content Store apps
+alongside sideloaded apps. Hidden system apps remain filtered, with the existing
+exception for the discovered broadcast tuner. No-root keeps its existing paired
+SSAP transport.
+
+In both editions, **+ / Add app** excludes Ares Hosted App
+(`com.sdk.ares.hostedapp`) and Root Updater (`com.cleanyourtv.root.updater`),
+including entries in a saved catalog. Existing Home tiles for these utilities
+are preserved. This picker filter does not uninstall or disable either utility.
+These changes require rebuilt Home/Root packages and are not yet published.
+The shared Home catalog applies the same visibility and duplicate-ID rules to
+raw inventory, service replies and saved catalogs. Only an actually discovered
+Live TV app bypasses the platform's hidden/invisible flags; a missing tuner is
+never synthesized. User-hidden Home apps remain restorable through the picker.
+
 The launcher asks its edition's service for a fresh inventory whenever the app picker opens.
 No-root uses the helper's existing SSAP pairing key and the TV's local network
 addresses. Root uses a fixed, read-only Application Manager query. Both requests

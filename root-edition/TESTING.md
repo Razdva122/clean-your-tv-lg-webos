@@ -1,5 +1,8 @@
 # Root Edition test plan
 
+> **1.10.0:** [exact final build and scoped installer acceptance](../docs/history/2026-11-07-release-1.10.0-final-acceptance.md). Maintainer-directed C3 removal/reinstallation, controls/audio, standby, ordinary reboot and escape are recorded separately from untested No-root, AC cold start, OTA/retained rollback and other-device paths. The maintainer accepted that bounded release scope; untested paths are not passes.
+
+
 Historical result (2026-10-27): [corrected C3 acceptance and manual physical rollback](../docs/RELEASE-1.4.0-ACCEPTANCE.md) passed in the recorded scope. The maintainer accepted #90 and requested closure. Pending statements below describe earlier investigation checkpoints; other hardware remains unverified.
 
 For current setup use [installation](../docs/INSTALL.md), [update preparation](UPDATES.md)
@@ -212,6 +215,34 @@ Local regression: `python3 -m unittest discover -s root-edition/tests -p 'test_e
 fallback and unchanged wire signals, plus gesture/recovery/watchdog tests. No new user setup/control flow is
 introduced; localized user guides retain the known standby limitation.
 
+### Candidate: validate health before startup readiness (#334)
+
+A cold supervisor can spend longer than the parent's initial heartbeat wait in
+private expected-package validation. Publishing `escape-ready` on reader READY
+alone let the parent time out, restore intent/binding, and make a late publisher
+raise `Inactive or stale health context`. The host regression reproduces that
+sequence with a three-second validation delay; it is not a measured TV latency.
+
+Bound startup now validates its context before starting the input watchdog and
+waits for a fresh guardian pulse. The guardian performs its initial context check
+before claiming that pulse. `escape-ready` follows the first validated heartbeat.
+Parent/guardian readiness waits use the existing journal deadline minus the
+existing twenty-second publication reserve; the sixty-second trial is not extended.
+Existing shorter caller timeouts still apply; a timeout requires status inspection,
+with the detached guardian retaining its original recovery duty. The two-second
+input watchdog and all context predicates remain in force. A slow
+heartbeat callback cannot publish readiness after that same watchdog bound.
+Expected-inventory prewarming never caches installed presence or lifecycle authority.
+Legacy unbound READY handling and emergency gestures retain their original contract.
+
+Run `python3 -m unittest discover -s root-edition/tests -p test_health_startup.py`
+and the existing emergency, guardian, health, recovery and boot suites. Cover cold
+validation, first-pulse/readiness ordering, exhausted/invalid startup budget,
+missing guardian, failsafe and input loss before the first heartbeat. No user
+command, control, permission or journal format is changed. Rebuild and deliver
+verified Root infrastructure; updating the host installer alone cannot retrofit
+this correction into an old retained runtime. [Source proof and limits](../docs/history/2026-11-06-root-health-startup-race.md).
+
 ### Health-context refusal diagnostics (unreleased, #334)
 
 `HealthContextError` retains ValueError recovery semantics and distinguishes
@@ -221,7 +252,8 @@ appends `health-context-rejected` to its existing private emergency log before
 calling `recover(..., 'supervisor_error')`. It contains only the fixed reason,
 process ID and monotonic uptime. `emergency-recovery` includes the same process
 and time fields for correlation. Diagnostic write failure cannot skip recovery.
-READY/PING processing, heartbeat/deadline bounds and emergency controls are unchanged.
+The wire READY/PING protocol, two-second heartbeat bound and emergency controls
+are unchanged; bound startup readiness is gated as described above.
 
 The code names the first failing predicate in that observation, not necessarily
 the first failure across processes. A `binding-restored`/`phase-inactive` record

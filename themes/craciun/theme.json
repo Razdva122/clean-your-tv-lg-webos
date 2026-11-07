@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "themeApiVersion": 1,
+  "id": "github:razdva122/clean-your-tv-lg-webos:craciun",
+  "title": "Crăciun la Brașov",
+  "description": "Christmas evening by a crackling fireplace in a Romanian home, with snowy Brașov, the Tâmpa and the Black Church through the window, and a \"Crăciun fericit\" card on the mantel. Warm fire, walnut and cream, serif type.",
+  "author": {
+    "name": "Rares / Clean Your TV contributors",
+    "url": "https://github.com/razdva122"
+  },
+  "themeVersion": "1.2.0",
+  "layout": {
+    "preset": "dock-grid",
+    "columns": 5,
+    "spacingScale": 1,
+    "textScale": 1,
+    "focusScale": 1.1
+  },
+  "defaults": {
+    "wallpaperAssetId": "wallpaper",
+    "dim": 0.25,
+    "accent": "#e8963a"
+  },
+  "assets": [
+    {
+      "id": "wallpaper",
+      "path": "assets/wallpaper.jpg",
+      "mediaType": "image/jpeg",
+      "width": 3840,
+      "height": 2160
+    },
+    {
+      "id": "preview",
+      "path": "assets/preview.jpg",
+      "mediaType": "image/jpeg",
+      "width": 960,
+      "height": 540
+    }
+  ],
+  "previewAssetId": "preview",
+  "license": {
+    "identifier": "MIT AND CC-BY-4.0",
+    "textPath": "LICENSE.txt",
+    "creditsPath": "CREDITS.txt"
+  },
+  "wallpaperVideo": {
+    "variants": [
+      {
+        "quality": "4k",
+        "path": "assets/wallpaper-4k.mp4"
+      },
+      {
+        "quality": "1080p",
+        "path": "assets/wallpaper-1080p.mp4"
+      }
+    ]
+  }
+}

@@ -41,7 +41,11 @@ const types = {'.js': 'application/javascript', '.json': 'application/json', '.c
         await settings();
         const glass = page.locator('.theme-option').filter({has: page.locator('[data-theme-id="builtin:liquid-glass"]')});
         assert.equal(await glass.locator('.theme-remove').count(), 0, 'packaged Liquid Glass has no remove action');
-        assert.equal(await glass.locator('small').first().textContent(), 'Built-in');
+        const metadata = JSON.parse(fs.readFileSync(path.join(site, edition, 'theme-catalog.json'))).themes.find(item => item.id === 'builtin:liquid-glass');
+        assert.equal(metadata.builtin, true, 'the packaged catalog identifies Liquid Glass as built-in');
+        assert.equal(await glass.evaluate(row => row.themeItem.builtin), true, 'the installed choice retains built-in identity');
+        assert(Number.isInteger(metadata.packageSize) && metadata.packageSize > 0, 'the packaged catalog supplies the theme size');
+        assert.equal(await glass.locator(':scope > small').textContent(), (metadata.packageSize / 1000000).toFixed(1) + ' MB', 'installed metadata shows the packaged theme size');
         await glass.locator('.theme-choice').focus();
         const choice = await glass.locator('.theme-choice').boundingBox();
         assert(choice.x >= 0 && choice.x + choice.width <= 1920, 'remote focus reveals the packaged choice in the installed lane');

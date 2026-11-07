@@ -26,7 +26,7 @@ def build(output, legacy_node_prototype=False):
     builder=importlib.util.module_from_spec(spec);spec.loader.exec_module(builder)
     code={'updater/'+name:source(ROOT/'updater'/name) for name in UPDATER_FILES}
     code.update({name:source(ROOT/name) for name in SUPPORT})
-    for name in ('coordinator_inventory.py','install_driver.py','install_device.py'):
+    for name in ('coordinator_inventory.py','install_driver.py','install_device.py','cancel_install.py','cancel_provision.py','clean_removal.py','cleanup_tail.js'):
         code[name]=source(ROOT/name)
     code['system_setup.py']=source(ROOT.parent/'system-updater/setup.py')
     code['root_package.py']=source(ROOT.parent/'cytv/package.py')
@@ -35,6 +35,10 @@ def build(output, legacy_node_prototype=False):
     sys.path.insert(0,str(ROOT.parent))
     sys.path.insert(0,str(ROOT))
     from cytv import root_updater_remove, system_updater_remove, legacy_permissions_remove, app_permissions_remove, root_archive
+    from cytv.no_root_cleanup import PRIVATE_CLEANUP_PROGRAM
+    code['cleanup_no_root_private.js']=PRIVATE_CLEANUP_PROGRAM.encode()
+    code['cleanup_tail.js']=code['cleanup_tail.js'].replace(b'var privateCleanupSource=null;',
+        ('var privateCleanupSource='+json.dumps(PRIVATE_CLEANUP_PROGRAM)+';').encode())
     for name,module in (('root_updater',root_updater_remove),('system_updater',system_updater_remove),('legacy_permissions',legacy_permissions_remove),('app_permissions',app_permissions_remove),('root_archive',root_archive)):
         code['cleanup_'+name+'.py']=module.SCRIPT.encode()
     code['system_updater/__init__.py']=b''

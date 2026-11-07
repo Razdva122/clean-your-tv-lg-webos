@@ -20,6 +20,16 @@ class AgentLoginFailed(UserError):
     """An automatic agent attempt needs an explicit fresh manual connection."""
 
 
+class CredentialPrompt(str):
+    """A string-compatible secret prompt with a language-independent type."""
+    def __new__(cls, text, credential_type):
+        if credential_type not in ('key', 'root', 'developer'):
+            raise ValueError('Unsupported credential type')
+        prompt = super().__new__(cls, text)
+        prompt.credential_type = credential_type
+        return prompt
+
+
 def inspection_secret(prompt):
     import getpass
     import warnings
@@ -152,7 +162,7 @@ def load_identity(path, secret):
     try:
         return paramiko.PKey.from_path(path)
     except (TypeError, ValueError, paramiko.PasswordRequiredException):
-        return paramiko.PKey.from_path(path, passphrase=secret('SSH key passphrase: ').encode())
+        return paramiko.PKey.from_path(path, passphrase=secret(CredentialPrompt('SSH key passphrase: ', 'key')).encode())
 
 
 def root_auth(secret, profile=None, identity_prompt=None, automatic=True, password_fallback=False):
@@ -182,7 +192,7 @@ def root_auth(secret, profile=None, identity_prompt=None, automatic=True, passwo
             if path:
                 yield OnDiskPrivateKey('root', 'python-config', Path(path), load_identity(Path(path), secret))
             else:
-                yield Password(username='root', password_getter=lambda: secret('Root SSH password (hidden): '))
+                yield Password(username='root', password_getter=lambda: secret(CredentialPrompt('Root SSH password (hidden): ', 'root')))
 
         def authenticate(self, transport):
             self.agent = None
@@ -232,7 +242,7 @@ class SSH:
             # Internal inspection requires the original cytv pin, never TOFU or
             # importing a replacement from the user's current OpenSSH config.
             name = profile['host'] if profile['port'] == 22 else f"[{profile['host']}]:{profile['port']}"
-            if profile['edition'] != 'root' or not known.is_file() or not paramiko.HostKeys(str(known)).lookup(name):
+            if not known.is_file() or not paramiko.HostKeys(str(known)).lookup(name):
                 raise UserError('SSH host key was not verified. Connection cancelled.', reason_code='ssh-identity-unverified')
             profile = dict(profile)
         client = paramiko.SSHClient()
@@ -260,8 +270,11 @@ class SSH:
             keyfile = directory / 'developer-key.pem'
             if keyfile.exists():
                 options['pkey'] = paramiko.RSAKey.from_private_key_file(str(keyfile))
+            elif not persist:
+                client.close()
+                raise UserError('The saved Developer Mode key is required for recovery. Recovery data was kept.', reason_code='ssh-identity-unverified')
             else:
-                key, raw = developer_key(profile['host'], secret('Developer Mode passphrase: '))
+                key, raw = developer_key(profile['host'], secret(CredentialPrompt('Developer Mode passphrase: ', 'developer')))
                 options['pkey'] = key
                 # Store only after a successful SSH authentication.
         else:
@@ -270,7 +283,7 @@ class SSH:
             client.connect(**options)
             if persist:
                 save_host_keys(client.get_host_keys(), known)
-            if profile['edition'] == 'no-root' and not keyfile.exists():
+            if persist and profile['edition'] == 'no-root' and not keyfile.exists():
                 private_write(keyfile, raw)
             return cls(client, root=profile['edition'] == 'root')
         except AgentLoginFailed:
@@ -296,7 +309,7 @@ class SSH:
     def channel(self, command):
         transport = self.client.get_transport()
         if transport is None or not transport.is_active():
-            raise UserError('TV SSH connection closed. Run cytv status before retrying.')
+            raise UserError('TV SSH connection closed. Run cytv status before retrying.',reason_code='connection-interrupted')
         channel = transport.open_session(timeout=10)
         channel.settimeout(30)
         channel.exec_command(command)
@@ -326,7 +339,7 @@ class SSH:
                     raise TVCommandError(status, storage_full=storage_full)
                 return
             elif channel.closed:
-                raise UserError('TV connection interrupted. Run cytv status before retrying.')
+                raise UserError('TV connection interrupted. Run cytv status before retrying.',reason_code='connection-interrupted')
             else:
                 time.sleep(0.02)
         raise UserError('TV operation timed out. Run cytv status before retrying.')

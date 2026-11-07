@@ -74,7 +74,13 @@ class SetupTests(unittest.TestCase):
             control = read_ar((out/'root-updater.ipk').read_bytes())['control.tar.gz']
             with tarfile.open(fileobj=io.BytesIO(control), mode='r:gz') as archive:
                 self.assertIn('Version: '+version+'\n', archive.extractfile('control').read().decode())
-            self.assertFalse(any('state/' in name or 'private' in name for name in manifest['files']))
+            self.assertFalse(any('state/' in name for name in manifest['files']))
+            # This fixed source file cleans private data; it contains no device data.
+            self.assertEqual({name for name in manifest['files'] if 'private' in name},
+                             {'cleanup_no_root_private.js'})
+            from cytv.no_root_cleanup import PRIVATE_CLEANUP_PROGRAM
+            self.assertEqual((out/'cleanup_no_root_private.js').read_bytes(),
+                             PRIVATE_CLEANUP_PROGRAM.encode())
             (out/'updater/core.py').write_text('changed')
             with self.assertRaises(ValueError):verify_bundle(out)
 

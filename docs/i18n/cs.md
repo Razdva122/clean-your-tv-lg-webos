@@ -1,98 +1,87 @@
-# Čeština — rozhraní televizoru
+# Clean Your TV — průvodce instalací
 
-> **1.9.0:** [English](../RELEASE-1.9.0.md) · [Root #337](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/337) · [#347](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/347) · [#348](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/348) · [1.8.2](../RELEASE-1.8.2.md)
+Clean Your TV je vaše vlastní domovská obrazovka pro LG webOS: aplikace ve vašem pořadí, bez sponzorovaných řádků v této nabídce. Instalujte z počítače nebo telefonu s Androidem; po nastavení může být počítač vypnutý.
 
-**Nevydaná C1 Beta (#298):** Ve společném instalačním programu pro počítač zvolte Root. Způsobilé TV C1 se rozpoznají automaticky; není potřeba samostatný instalátor ani přepínač. Tato cesta vyžaduje novou instalaci, nemá automatické aktualizace a dosud neprošla přejímkou na fyzickém C1. Otevřít LG Home, dlouhý Back nebo bezpečnostní/výpadková zastávka mohou ponechat ovládání Home vypnuté; v nastavení TV znovu zapněte Změnit Home. Běžná cesta Root se nemění. Pokud zůstávají další komponenty No-root, úplné odstranění C1 se zastaví před změnami. Nejdříve je odstraňte běžným postupem No-root; při nejasném stavu zachovejte data obnovy. [C1 Beta contract (English)](../development/C1-NATIVE-GATE.md). C1 Beta filtruje tlačítko Home a vrací se po zavření aplikace bez změn oprávnění CRIU/checkpoint. LG Home se může krátce zobrazit. Trojí Home také zastaví přesměrování; poté znovu zapněte Změnit Home.
+## 1. Stáhněte instalátor
 
-1.8.2 (#290): **+ / Přidat aplikaci** nabídne živé TV pod názvem z televizoru pouze při zjištění nainstalovaného tuneru. Ostatní skryté systémové aplikace zůstávají vynechané. No-root potřebuje aktualizovaný Helper a instalátor; Root aktualizovaný balíček Home. Spuštění kanálů ještě vyžaduje ověření na TV.
+Klikněte na obrázek svého zařízení. Tlačítka stahují nejnovější zveřejněné vydání. Na Macu vyberte Apple Silicon (M1 nebo novější) nebo Intel; typ najdete v nabídce Apple → O tomto Macu.
 
-**Ribbon v Home:** Ribbon je motiv jediné celoobrazovkové aplikace Home v obou edicích s vlastním pozadím. Za kartami se nezobrazuje video ani HDMI. Výběr aplikace používá běžné přepínání aplikací televizoru. Nouzové ovládání zůstává beze změn. Rozsah testů a známá omezení uvádějí poznámky k vydání. [Ribbon](../THEMES.md#ribbon-over-applications-unreleased).
+[![Stáhnout — Windows x64](../../assets/brand/downloads/windows.svg)](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/cytv-windows-x64-desktop.zip)
+[![Stáhnout — macOS Apple Silicon](../../assets/brand/downloads/macos-arm64.svg)](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/cytv-macos-arm64.zip)
+[![Stáhnout — macOS Intel](../../assets/brand/downloads/macos-x64.svg)](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/cytv-macos-x64.zip)
+[![Stáhnout — Linux x64](../../assets/brand/downloads/linux.svg)](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/cytv-linux-x64.deb)
+[![Stáhnout — Android ARM64](../../assets/brand/downloads/android.svg)](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/cytv-android-arm64.apk)
 
-Ribbon: podržte OK pro úpravy; ←/→ přesouvá kartu, ↑ vybere × (skrýt z Home), ↓ vrátí výběr na kartu, OK potvrdí a Back zruší. Aktuální pozadí zůstává.
+## 2. Připravte televizor
 
+Zapněte TV a připojte ji ke stejné domácí síti jako počítač nebo telefon. Na vyžádání povolte aplikaci CYTV přístup k místní síti.
 
-**Nevydaný kandidát — zdroje při spuštění Root:** V Nastavení → Vaše domovská obrazovka zapněte **Změnit Home** a upravte **Otevřít Clean Your TV jako první**. **LG Channels / Živé TV** je ve výchozím nastavení zapnuté; **YouTube** vypnuté. Přepínač pro HDMI není k dispozici. Při vypnutí změny Home zůstanou přepínače viditelné, ale nedostupné, a volby se zachovají. Nastavení se ukládá soukromě v tomto televizoru a není součástí přenosného exportu profilu. Jde o kandidáta, ne o ověřené spuštění či probuzení TV.
+- **No-root** — pokud nemáte root přístup. Připravte Developer Mode podle kroků níže.
+- **Root** — pokud už máte root přístup přes SSH. Instalátor televizor nerootuje. Na této TV nezapínejte Developer Mode; zachovejte SSH přístup a data obnovy.
 
-> Tento průvodce popisuje verzi 1.6.0. Dostupné balíčky stahujte z [publikovaných vydání GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases). Čeština je dostupná v rozhraní TV, instalátory nadále nabízejí dvanáct jazyků. Ověření na TV a kontrola rodilým mluvčím dosud neproběhly. [Verze a omezení](../RELEASE-1.6.0.md).
+### Developer Mode (No-root)
 
-[Dokumentace](../README.md) · [Jazyky](../LANGUAGES.md)
+1. V TV otevřete LG Apps, vyhledejte **Developer Mode** a nainstalujte ho.
+2. Otevřete Developer Mode a přihlaste se účtem LG Developer. Účet si můžete vytvořit na [LG Developer](https://webostv.developer.lge.com).
+3. Zapněte **Dev Mode Status**. TV se restartuje; poté Developer Mode znovu otevřete.
+4. Zapněte **Key Server** a ponechte Developer Mode otevřený. **IP Address** je adresa TV, kterou zadáte do CYTV.
+5. Použijte šestiznakový kód **Passphrase** z obrazovky TV. Rozlišujte velká a malá písmena.
 
-Tento průvodce popisuje české rozhraní Home a Root Home ve verzi 1.6.0,
-nikoli český instalační program. Instalátory pro počítač, Android a Homebrew
-nadále používají dosavadních dvanáct jazyků. Pro instalaci použijte
-[anglický průvodce](en.md); nepoužívejte přepínač `--language cs`.
-Samostatný Homebrew CYTV Installer zůstává nevydaný.
+Použijte kód z TV, nikoli heslo účtu LG. Pokud kód nevidíte, zapněte Key Server. Při samostatné žádosti o párování povolte CYTV dálkovým ovladačem.
 
-## Jazyk a ovládání
+Před vypršením časovače otevřete Developer Mode a při připojení TV k internetu stiskněte **EXTEND**. Po vypršení může LG takto instalované aplikace odstranit.
 
-Ve verzi 1.8.2 zobrazuje **Nastavení Home → Tapety** tapetu aktivního motivu, zjištěné možnosti TV a aktuální režim. Auto volí kompatibilní kvalitu; 4K, 1080p a obrázek jsou dostupné jen podle obsahu motivu. Při potížích se zobrazí obrázek. Ztmavení se mění po 5 %; obnovení vrátí nastavení motivu. Classic a motivy bez tapety zobrazí tento stav výslovně.
+## 3. Otevřete instalátor
 
-Vlastní tapety ve verzi 1.8.2: v počítačovém CYTV otevřete Tapety, vyberte JPG/PNG, upravte výřez a zadejte místní adresu TV a přijímací PIN z nastavení Home. CYTV vytvoří video bez zvuku místně; 4K nabídne jen při dostatečném rozlišení výřezu. Na TV zvolte příjem z CYTV nebo nahrávání z telefonu a ve stejné Wi-Fi naskenujte QR kód. Telefon posílá běžný obrázek nejvýše 1920×1080 bez nativní 4K video vrstvy; ostrost omezuje rozlišení rozhraní TV. Před odesláním potvrďte upozornění, pak na TV zkontrolujte náhled a použijte tapetu. Vlastní obrázky zůstávají uložené a lze je znovu vybrat nebo odstranit v Tapetách. Zrušení či odmítnutý soubor zachová dosavadní pozadí. Jsou nutná odpovídající sestavení Home/služby a CYTV od verze 1.8.2.
+- **Windows x64:** rozbalte celý `cytv-windows-x64-desktop.zip` pomocí **Extrahovat vše** a otevřete `cytv-desktop/cytv-desktop.exe`. Ponechte vedle něj složku `_internal`.
+- **macOS 13+:** rozbalte ZIP pro Apple Silicon nebo Intel, přesuňte `cytv.app` do Aplikací a otevřete ji. Povolte místní síť. Pokud macOS zablokuje důvěryhodné stažení z projektu, použijte **Soukromí a zabezpečení → Přesto otevřít**. Nevypínejte Gatekeeper.
+- **Linux x64:** na Ubuntu 22.04+, Debianu 12+ nebo Mintu 21+ otevřete `cytv-linux-x64.deb` ve správci balíčků, nainstalujte ho a spusťte Clean Your TV z nabídky aplikací. Ke stažení knihoven může být potřeba internet. Balíček pro Linux ARM není k dispozici.
+- **Android ARM64:** potřebujete 64bitový ARM telefon s Androidem 7+ a WebView/Chrome 108+. Otevřete APK, na vyžádání povolte instalaci z tohoto zdroje a spusťte CYTV. Aktualizujte bez odinstalování nebo mazání dat.
 
-Vlastní pohyblivé video (1.8.2): v počítačovém CYTV → Tapety vyberte MP4/MOV/MKV/WebM, 1–60 sekund, do 512 MiB a 3840×2160. Zvuk se odstraní a obraz se ořízne uprostřed na 16:9. Menší videa používají kompatibilní výstup 1080p; UHD vyžaduje dostatečný zdrojový výřez. Odešlete přes adresu/PIN TV, potom zkontrolujte a použijte na TV. Z telefonu nadále jen JPG/PNG. Ověření na fyzickém TV zůstává omezené; viz [1.8.2](../RELEASE-1.8.2.md).
+Jazyk vyberte v instalátoru; na Androidu je volba vpravo nahoře. Jazyk TV se nastavuje zvlášť v **Nastavení → Jazyk**. Pokud vaše stažená aplikace ještě nenabízí **Čeština**, zvolte **English**; tento postup platí i pro ni.
 
-Vestavěné tapety ve verzi 1.8.2: **Nastavení Home → Tapety → Vestavěné tapety → Black Hole**. Autor videa: **Xecutioner**; povoleno nekomerční použití s uvedením autora. Potvrzení jiného motivu obnoví jeho vlastní tapetu. Black Hole i vlastní obrázky lze vybrat znovu. Souvislý 4K stream nepřetáčí video při každém opakování; k dispozici je kompatibilní video nebo obrázek.
+## 4. Nainstalujte na TV
 
-Android CYTV: **Nastavit TV** · **Tapety** · **Údržba**. Na TV otevřete nastavení Home → Tapety → Nahrát z telefonu. Naskenujte QR fotoaparátem telefonu, vyberte JPG/PNG a použijte tapetu na TV. Telefon odesílá obrázek do 1920×1080 bez nativního 4K videa; pro skutečné 4K použijte CYTV na počítači.
+1. V CYTV zvolte nastavení TV (**Set up my TV**). Na počítači vyberte nalezenou TV; na Androidu zadejte její IP adresu. Pokud hledání nic nenajde, zadejte adresu ručně.
+2. Vyberte **No-root** nebo **Root** a před pokračováním zkontrolujte televizor.
+3. No-root: zadejte kód z Developer Mode a potvrďte žádost na TV. Root: použijte svůj stávající SSH přístup. Novou SSH identitu potvrďte pouze pro vlastní TV v důvěryhodné síti. Pokud se uložený klíč změnil, zastavte se a zjistěte příčinu.
+4. Postupujte podle průvodce. Nechte TV zapnutou, neměňte síť a nezavírejte CYTV do dokončení. Na Androidu nevynucujte ukončení aplikace. Root zapne ovládání Home ihned po přípravě obnovy.
 
-Na televizoru otevřete **Settings → Language → Čeština**. Po změně se Home
-znovu načte. Volba **Automaticky (jazyk systému)** používá jazyk televizoru;
-rozpozná i `cs-CZ`. Jazyk instalátoru a televizoru se ukládá samostatně.
-Názvy aplikací, produktů a technické identifikátory se nepřekládají.
+## 5. Vyzkoušejte ovladač
 
-Šipkami vyberte položku, tlačítkem OK ji otevřete a tlačítkem Zpět zavřete
-panel. V nabídce **Nastavení** najdete vzhled, motivy, jazyk, aktualizace a
-pokročilé možnosti. Přepínač Home určuje, kam vás tlačítko Home a návrat
-z aplikací přivedou. **Otevřít LG Home** otevře původní prostředí jednou;
-uložená volba Home se nezmění. Podržení tlačítka Zpět po dobu 1,2 sekundy
-rovněž otevře LG Home.
+1. Otevřete jinou aplikaci na TV a krátce stiskněte **Home**. Má se otevřít Clean Your TV. V průvodci uveďte, co jste viděli; pokud jste test neprovedli, přeskočte ho.
+2. Vyzkoušejte šipky, OK, Zpět, hlasitost a zvuk. Samostatně ověřte pohotovostní režim/probuzení a spuštění po odpojení napájení. Samotná úspěšná instalace tyto funkce neověřuje.
 
-Při problému s ovládáním třikrát rychle stiskněte Home — nouzové vypnutí
-obnoví LG Home. U starších verzí Helper do 0.6.13 se používá dlouhé podržení
-Home. Nouzové vypnutí se automaticky neruší; ovládání Home znovu zapněte
-pouze vlastním výslovným rozhodnutím.
+## 6. Každodenní ovládání
 
-Dosud nevydaná oprava Root: vypnutí ovládání Home nebo volba Open LG Home zavře okno Root po potvrzení spuštění LG Home. Pro přístup k nastavení při vypnutém ovládání Home otevřete Home Root ručně.
+Šipky vybírají aplikaci, **OK** ji otevře. Podržením OK můžete měnit pořadí. Krátké **Zpět** zachová navigaci aplikace. Krátké **Home** otevře Clean Your TV při zapnutém ovládání Home. Podržení Zpět po dobu 1,2 sekundy otevře LG Home jednou, bez změny uložených nastavení.
 
-## Aktualizace a obnovení
+**Stiskněte Home třikrát během dvou sekund**, mezi stisky tlačítko pusťte. Otevře se LG Home a ovládání Home se zastaví. Nastavení zůstanou zachována.
 
-Před potvrzením aktualizace si přečtěte zobrazené informace. Nechte televizor
-zapnutý. Aplikace a nastavení se před aktualizací uloží. Pokud výsledek není
-potvrzený, otevřete samostatnou aplikaci Home Updater nebo Root Updater a
-nejprve obnovte stav; neopakujte ihned instalaci.
+Pro opětovné zapnutí No-root otevřete **Home Helper**, zvolte spuštění Helperu a potvrďte. Pro Root zapněte **Změnit Home** v nastavení Home. **Otevřít LG Home** otevře původní prostředí jen jednou; pro trvalé používání LG Home vypněte Změnit Home. Nespouštějte oba ovladače Home současně. Při opakované chybě nechte LG Home aktivní.
 
-Návrat k předchozí verzi je možný jen tehdy, když jej nástroj nabídne.
-Obnoví i nastavení před aktualizací; pozdější změny nastavení budou ztraceny.
-Obnovení zůstává blokováno, dokud se instalační program prokazatelně nezastaví.
-Uchovejte záznamy obnovení a použijte [postup obnovení v angličtině](../RECOVERY.md).
+## Potřebujete pomoc?
 
-No-root vyžaduje aktivní Developer Mode. Před vypršením časovače jej otevřete
-a při připojení televizoru k internetu stiskněte EXTEND. Automatické
-prodlužování je Beta, ve výchozím stavu vypnuté; kontrolujte oficiální časovač.
-Root vyžaduje již existující root přístup. Instalační program televizor nerootuje.
+Po přerušené instalaci použijte stejné uložené připojení a nejprve kontrolu stavu TV (**Check TV status**). Pokračujte jen nabízenou obnovou. Pokud je stav neznámý, uložte diagnostickou zprávu a zastavte se. Zachovejte data obnovy a neopakujte instalaci naslepo.
 
-Ve verzi 1.6.0 zobrazí **Zobrazit diagnostiku** v panelu Home Helper filtrovaný výsledek jeho vlastních dotazů na stav. Zobrazení nespustí Helper a nezmění ovládání Home. Na vyžádání sdílejte pouze zkontrolovaný JSON; [podrobnosti v angličtině](../HELPER-DIAGNOSTICS.md#candidate-panel-caller-diagnostics-207).
+Během obnovy ponechte ovládání Home vypnuté a zachovejte původní diagnostické zprávy i uložené připojení. Kontrolu a změny potvrzujte samostatně. Postupujte podle podrobného návodu pro nainstalovanou verzi; nevynucujte novou instalaci ani nemažte stav obnovy.
 
-Překlad byl ověřen automatickými kontrolami a v počítačovém prohlížeči.
-Ověření rodilým mluvčím a na fyzickém televizoru zatím neproběhlo.
-Kompatibilita závisí na konkrétním modelu, firmwaru a ovladači.
+Uveďte model TV, firmware, No-root nebo Root, instalační zařízení, krok a chybovou zprávu. Před sdílením odstraňte hesla, klíče, adresy a osobní údaje. Zpráva se nezveřejňuje automaticky.
 
-[Kompatibilita (anglicky)](../COMPATIBILITY.md) ·
-[Zpětná vazba (anglicky)](../FEEDBACK.md) ·
-[Technické podklady (anglicky)](../development/README.md)
+[Nahlásit problém — anglicky](../FEEDBACK.md) · [Obnovení — anglicky](../RECOVERY.md) · [Aktualizace a odstranění — anglicky](../MAINTENANCE.md) · [Další jazyky](../LANGUAGES.md)
 
+V připravovaných sestaveních se při zvoleném nebo aktivním 4K zobrazí upozornění a tlačítko „Vypnout náhledy HDMI“ pouze u motivů se zapnutými náhledy vstupů. Během náhledu HDMI se 4K video na pozadí dočasně nahradí statickým obrázkem v 1080p. Vypněte náhledy vstupů, aby pozadí zůstalo ve 4K.
+
+### Kandidát: jednoduché odebrání
+
+Tlačítka výše stále nabízejí vydanou verzi. V příštím kandidátu vyberte v Údržbě **Odinstalovat Clean Your TV** se stejným uloženým připojením TV. Potvrďte jednou. Přítomné známé aplikace a soubory projektu se odeberou, chybějící se přeskočí, i po částečné instalaci.
+
+Na výzvu odpojte TV od napájení, znovu připojte, počkejte na síť a vyberte **Zkusit znovu**. Pohotovost nebo Quick Start není úplný restart; CYTV TV automaticky nerestartuje. Při ztrátě spojení je zkontrolujte a opakujte stejný cíl odebrání bez dalšího průvodce obnovou. Při odmítnutí přístupu použijte požadované připojení Root; pokud je TV zaneprázdněn, počkejte a zkuste znovu. Úspěch se zobrazí až po ověření závěrečného úklidu. Zachovejte klíče a původní zprávy. Nouzové ovládání a souhlas se sdílením výše platí dál.
+
+<!-- Legacy anchors retained for existing links. -->
 <a id="automatické-rozlišení-grafiky-kandidát"></a>
-
-## Automatické rozlišení grafiky (1.6.0)
-
-Instalátory 1.6.0 pro počítač/Android a migrovaní klienti OTA volí 720p nebo 1080p podle schopností TV. Pokud je nelze ověřit, operace se zastaví. Starší samostatně instalované aktualizátory vyžadují popsanou migraci z počítače; obnova zachová původní balíčky.
-
-[HD/FHD details (English)](../development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).
-
-Nevydáno: po selhání aktivace Root použijte stejné uložené připojení a kontrolu obnovy (`cytv recover`). Pokračování vyžaduje ověřený návrat LG Home, vypnuté ovládání, integritu balíčků/updateru a samostatné potvrzení. Zachovejte záznamy; nepřeinstalovávejte ani nemažte failsafe. [Recovery](../RECOVERY.md#failed-root-activation-unreleased).
-
-## Místo v úložišti
-
-Kandidátní sestavení zobrazují potřebné, volné a chybějící místo v MiB pro instalaci, motivy a vlastní fotografické/video tapety. Zahrnují dočasné kopie a rezervu. Kvóta aplikace, mezipaměť motivů 64 MiB a videa jsou samostatné limity. Neznámé hodnoty jsou označené. Uvolněte uvedené úložiště; automatické čištění se neprovádí.
-
-Odhad místa (TV): potřeba 128.0 MiB; volné 96.0 MiB; chybí 32.0 MiB.
+<a id="čeština--rozhraní-televizoru"></a>
+<a id="jazyk-a-ovládání"></a>
+<a id="aktualizace-a-obnovení"></a>
+<a id="automatické-rozlišení-grafiky-160"></a>
+<a id="místo-v-úložišti"></a>

@@ -7,6 +7,7 @@ import time
 
 
 def call(uri,payload,timeout=15,app_id=None):
+    limit=2097152 if uri=='luna://com.palm.activitymanager/list' else 65536
     identity=[]
     if app_id is not None:
         if app_id!='com.gathin.tvhome' or uri!='luna://com.cleanyourtv.updater.service/status': raise ValueError('Unsupported fixed caller identity')
@@ -19,7 +20,7 @@ def call(uri,payload,timeout=15,app_id=None):
             chunk=os.read(p.stdout.fileno(),4096)
             if not chunk:break
             raw+=chunk
-            if len(raw)>65536:raise ValueError('Oversized bus reply')
+            if len(raw)>limit:raise ValueError('Oversized bus reply')
             try:reply=json.loads(raw)
             except ValueError:continue
             if not isinstance(reply,dict) or reply.get('returnValue') is not True:raise RuntimeError('Bus operation rejected')

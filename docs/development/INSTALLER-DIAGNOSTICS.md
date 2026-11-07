@@ -7,6 +7,18 @@ from a diagnostic report.
 
 ## Report contents
 
+The next recovery candidate adds a fixed semantic `frontend` field:
+`console`, `desktop` or `android`. It is separate from the existing Python
+runtime/operating-system fields; an Android installer must not be inferred from
+the Python platform name. Original installation failure, current inspection or
+authentication failure, source package versions, observed installed components
+and physical outcomes remain separate. Unknown old failure causes stay unknown.
+Do not repeat installation, doctor or status merely to populate these fields.
+The safe clean-removal summary contains only fixed state, stage, reason and
+original-outcome categories. It does not export the original receipt, private
+recovery data, operation IDs, tokens, paths or raw replies, and grants no mutation
+authority. [Failure-injection matrix](INSTALLER-RECOVERY-MATRIX.md).
+
 New package rejection reports preserve the fixed `install failed` and
 `remove failed` Luna states. When the original reply includes `details.reason`,
 optional `luna.reason` retains only the nine fixed LG OSE IPK failure categories
@@ -152,3 +164,43 @@ remains; it cannot finish a pending record or grant resume. Matching interpreter
 bytes are not execution proof and a later status cannot identify the original
 SSH-127 deployment cause. See [the passive contract](ROOT-PASSIVE-DIAGNOSTICS.md#original-operation-bootstrap-and-path-selection)
 and [dated checks/limits](../history/2026-11-02-root-pinned-passive-inspection.md).
+
+
+## Candidate: retained Root activation observations (#334)
+
+`tv.root_diagnostics` is an additive, revalidated projection. It contains only
+`components` (`root`, `root_updater`, `system_updater` versions), fixed
+`component_reads` outcomes, optional `runtime_release`, and `health_log`.
+App metadata and release metadata are observations, not verification of private
+runtime bytes. Existing recovery integrity/current-product checks remain separate.
+Product readback merges its result into the retained status rather than erasing
+runtime/readiness observations. A retained pre-enable status is explicitly marked
+`observation_phase: before-enable`; it is not a post-failure readback. Root activation receives the advisory
+`root-activation-pending` recovery category instead of `other-edition`.
+
+For an installed recovery-only Root, status/doctor/recovery sends a bounded,
+stdlib-only program through the already selected verified interpreter. The
+program imports no retained deployment/runtime code and writes no TV file.
+Uncertain submitted product install/remove paths keep their earlier inspection
+boundary. Reads check ancestors, file ownership/type, links and unsafe modes;
+metadata reads are capped at 64 KiB and only a 64 KiB emergency-log tail is read.
+Collection failure never hides a primary error or authorizes another operation.
+The program is embedded data, so frozen desktop and Android builds do not need
+an unpacked Python source file.
+
+Enable captures an ephemeral log cursor before the command and observes after
+its reply/failure. A validated same-file bounded overlap permits `since-enable`;
+rotation, truncation, changed/lost overlap or missing cursor falls back to
+`historical-tail`. Only complete lines are classified. `health_refusal` is
+`generic` for the old fixed ValueError or one of the seven existing reason codes;
+`supervisor_error` is a boolean. An absent refusal is not evidence of success.
+Raw lines, timestamps, transaction IDs, PIDs, boot/session identities, token
+values, paths, cursor identity/hash and arbitrary exception text are not exported.
+Historical evidence cannot establish the current cause; concurrent TV writers
+cannot be excluded by this cursor. Reports and retained failure history revalidate
+all fields, including hostile structured reason values.
+
+The separately confirmed Home-off completion archives the original local receipt
+and repeats existing activation eligibility checks before resolving that pending
+activation. It neither enables Home nor updates code. See the [candidate recovery
+path](../RECOVERY.md#candidate-finish-verified-root-setup-with-home-control-off).

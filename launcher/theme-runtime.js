@@ -16,12 +16,12 @@
     }
     owners[owner || 'manual'] = true;
     if (root.HomePresentationController) root.HomePresentationController.suspend('theme:' + (owner || 'manual'));
-    if (root.HomeWallpaper) root.HomeWallpaper.suspend(owner);
+    // Dialogs isolate theme styles, but the independent wallpaper keeps playing.
+    // Its own visibility/focus and input-preview owners release the decoder.
   }
   function resume(owner) {
     delete owners[owner || 'manual'];
     if (root.HomePresentationController) root.HomePresentationController.resume('theme:' + (owner || 'manual'));
-    if (root.HomeWallpaper) root.HomeWallpaper.resume(owner);
 
     if (suspended()) return;
     if (heldSheet && wasEnabled) heldSheet.disabled = false;
