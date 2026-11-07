@@ -1,7 +1,7 @@
 # Next candidate integration, 2026-11-07
 
 This record covers the maintainer-requested integration of implementation PRs
-#370, #371, #372 and #375 after published v1.10.0, into draft candidate #374 on
+#370, #371, #372, #375, #377, #379 and #380 after published v1.10.0, into draft candidate #374 on
 `release/next`. It selects no version or build and is not release acceptance.
 No TV was accessed or changed. Existing uncommitted work in the maintained
 checkout was left untouched; integration used a temporary managed worktree.
@@ -104,7 +104,51 @@ open; no new reporter device operation is requested by integration.
 `acceptance-report` conservatively selects `controls`, `startup`, `ui-controls`
 and `update-recovery`; these remain pending physical results, not inferred passes.
 
-All four implementation PRs are merged. #375 merge commit: `21e9ccf284926649aed77f3ba2f470c434828438`.
+The first four implementation PRs were merged before the later follow-ups. #375 merge commit: `21e9ccf284926649aed77f3ba2f470c434828438`.
 Selected checks passed on refreshed heads #371 `36381b5e` ([run](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42357316214))
 and #375 `dede5b58` ([run](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42357724857));
 the earlier green product checks and frozen desktop checks remain linked in #374.
+
+## Final seven-PR reconciliation
+
+PR #377 was integrated after its selected [combined-source tests](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42358921172)
+and [frozen desktop checks](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42358921056)
+passed at `b568ed3a54e50139718814c1c383645a1afc5ab7`. Its current-base merge
+required no conflicts; 21 auto-recovery, 85 operations and 50 Root clean-removal
+tests, the real CLI/Store/Android-event Chrome journey and formatting also passed
+locally. The old `479c8b05` run was cancelled to release its branch concurrency
+slot and is not green evidence. Merge: `186eb42586ba9c992b5e38a993226f644219aa87`.
+[Recovery source evidence](2026-11-07-installer-recovery-completion.md) retains
+its own broader checks, overlap and physical limits.
+
+The final collector also found concurrently integrated #379 and #380. Their
+changes, PR discussions, reviews, current issue discussions and dated records
+were reviewed; their existing inventory summaries and metadata edits were kept.
+#379 adds Root removal catalog fallback and bounded first/latest failure detail;
+#380 preserves typed No-root observer failures and launches Node through POSIX
+unset. These are partial source improvements; original #240/#376 causes and
+reporter recovery remain unverified. Both were already merged while their CI
+was pending; their selected [#379 CI](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42359748100)
+and [#380 CI](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42359837874)
+subsequently passed. [Root removal evidence](2026-11-07-issue240-removal-catalog.md)
+and [observer evidence](2026-11-07-no-root-observer-evidence.md) retain exact scopes.
+
+No implementation CI run above is presented as full frozen-candidate validation
+of all seven changes. On the actual combined `186eb425` tree, this command passed:
+`LC_ALL=en_US.UTF-8 PYTHON=<project-venv>/bin/python scripts/test.sh installer android setup`.
+Results: setup 266 tests; installer 1,025 tests with two platform skips; Android
+43 tests; Homebrew runtime/bridge/UI checks and the additional 8/6/6-case groups
+also passed. This run includes actual combined recovery/diagnostic interactions,
+not a sum of earlier PR results. `verify_inputs` confirms that subsequent
+release-branch metadata edits preserve those tested build inputs.
+
+The final inventory contains all seven PRs, no exclusions, no selected version
+and no pinned build. Root Updater/shared RPC infrastructure, desktop/Android
+payloads and the previously recorded Home/Helper/Root changes require coordinated
+versions, rebuilds, exact package/feed verification and rollback acceptance.
+Updated recovery guides and all thirteen localized notices remain candidate-only.
+The local baseline `prefixed-webkit` shortcut-row failure in the original #370
+record remains visible for final candidate browser review. Full versioned build,
+complete candidate browser/runtime coverage and affected physical acceptance are
+pending. No TV was contacted, no old device evidence was carried, and no failure
+or untested path was converted to a pass.
