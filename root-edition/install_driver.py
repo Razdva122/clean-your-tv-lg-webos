@@ -744,6 +744,8 @@ def main():
         result=dict(operation=args.operation,stage='blocked',state='recovery_required',code='operation_requires_recovery',home_changed=False)
         if args.action=='inspect' and isinstance(error,ValueError) and error.args in (('support_stage_remains',),('live_original_worker',)):
             result['reason']='restart-required'
+        if args.action=='inspect' and isinstance(error,ValueError) and error.args==('project_apps_remain',):
+            result['reason']='project-apps-remain'
         if args.action=='clean-remove':result['cleanup_error']=cleanup_failure(error)
         if args.action in ('install','remove') and not isinstance(error,Busy):
             result['action']=args.action

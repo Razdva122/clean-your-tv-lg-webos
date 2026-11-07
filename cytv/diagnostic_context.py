@@ -17,7 +17,7 @@ ROOT_ACTIONS = ('inspect', 'install', 'status', 'remove', 'enable', 'restore', '
 REASONS = ('unknown', 'user-error', 'ssh-command-failed', 'ssh-unreachable',
            'ssh-authentication', 'ssh-identity-changed', 'ssh-trust-record', 'ssh-identity-unverified', 'host-runtime',
            'helper-running', 'helper-state-unverified', 'root-requirements',
-           'pending-operation', 'root-operation-unconfirmed', 'version-mismatch',
+           'pending-operation', 'root-operation-unconfirmed', 'project-apps-remain', 'version-mismatch',
            'inventory-unavailable', 'graphics-unverified', 'root-home-interfaces',
            'root-worker-busy', 'root-access-required', 'removal-failed',
            'cleanup-check-failed', 'connection-interrupted', 'operation-timeout', 'tv-storage-full')

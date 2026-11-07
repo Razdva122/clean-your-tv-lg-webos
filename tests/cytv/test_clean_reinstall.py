@@ -26,6 +26,20 @@ class CleanReinstallTests(unittest.TestCase):
         with self.assertRaises(UserError) as caught:inst.root_installation()
         self.assertEqual(caught.exception.reason_code,'root-operation-unconfirmed')
 
+    def test_reinstalled_project_apps_explain_cleanup_without_retired_execution(self):
+        inst,remote=self.fixture();del inst.root_installation
+        inst.product_action=Mock(return_value={'state':'recovery_required','stage':'blocked','reason':'project-apps-remain'})
+        inst.root_action=Mock(side_effect=AssertionError('retired driver'))
+        from cytv.errors import UserError
+        for operation in (inst.root_installation,inst.status,lambda:inst.preflight(install=True),inst.restore_device):
+            with self.subTest(operation=operation),self.assertRaises(UserError) as caught:operation()
+            self.assertEqual(caught.exception.reason_code,'project-apps-remain')
+            self.assertIn('Uninstall Clean Your TV',str(caught.exception))
+            self.assertIn('No-root Home and Helper',str(caught.exception))
+            self.assertIn('back up',str(caught.exception))
+            self.assertIsNone(self.store.pending(inst.profile))
+        inst.root_action.assert_not_called()
+
     def test_stale_support_requests_restart_without_retired_restore(self):
         inst,remote=self.fixture();del inst.root_installation
         inst.product_action=Mock(return_value={'state':'recovery_required','stage':'blocked','reason':'restart-required'})

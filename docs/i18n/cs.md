@@ -19,6 +19,8 @@ Zapněte TV a připojte ji ke stejné domácí síti jako počítač nebo telefo
 - **No-root** — pokud nemáte root přístup. Připravte Developer Mode podle kroků níže.
 - **Root** — pokud už máte root přístup přes SSH. Instalátor televizor nerootuje. Na této TV nezapínejte Developer Mode; zachovejte SSH přístup a data obnovy.
 
+**No-root → Root:** Pokud jste po úplném odebrání znovu nainstalovali No-root, přechod na Root může vyžadovat nejprve vyčištění instalace. Zálohujte nastavení Home, zvolte **Odinstalovat Clean Your TV** s uloženým připojením Root a počkejte na ověřené odebrání. Odebere se také No-root Home a Helper. Poté nainstalujte Root a uchovejte záznamy obnovy.
+
 ### Developer Mode (No-root)
 
 1. V TV otevřete LG Apps, vyhledejte **Developer Mode** a nainstalujte ho.
