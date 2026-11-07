@@ -345,6 +345,13 @@ class SSH:
         raise UserError('TV operation timed out. Run cytv status before retrying.', reason_code='operation-timeout')
 
     def run(self, command, data=None, timeout=30):
+        # Some TV SSH servers disconnect on large exec requests. A builtin read
+        # consumes only the command header; binary stdin stays on the channel.
+        if len(command.encode('utf-8')) > 4096:
+            data = base64.b64encode(command.encode('utf-8')) + b'\n' + (data or b'')
+            command = ('IFS= read -r cytv_ssh_source || exit 1; '
+                       'cytv_ssh_source=$(printf %s "$cytv_ssh_source" | base64 -d && printf .) || exit 1; '
+                       'exec /bin/sh -c "${cytv_ssh_source%.}"')
         channel = self.channel(command)
         try:
             if data is not None:
