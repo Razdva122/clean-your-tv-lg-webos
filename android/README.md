@@ -7,7 +7,7 @@ Use your phone to install either **No-root** (Developer Mode) or **Root**
 or cloud service is needed. The APK includes the offline interface and TV packages;
 optional TV Python is a separate verified download.
 
-Published v1.11.0 uses Android 0.11.0 / versionCode 25. Update in place and keep app data, keys and recovery receipts.
+Published v1.12.0 uses Android 0.12.0 / versionCode 26. The unpublished v1.12.1 candidate selects Android 0.12.1 / versionCode 27; its exact signed-APK upgrade acceptance is pending. Update in place and keep app data, keys and recovery receipts.
 [Download the signed APK](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest) ·
 [Full installation guide](../docs/INSTALL.md) · [Recovery](#recovery-and-private-data) ·
 [Report a problem](../docs/FEEDBACK.md)

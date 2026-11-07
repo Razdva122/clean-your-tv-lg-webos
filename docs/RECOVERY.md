@@ -71,7 +71,7 @@ inspection establish the allowed next action.
 
 ### Unreleased: local recovery storage messages
 
-This improvement is outside the frozen v1.12.0 candidate.
+This improvement is included in the unpublished v1.12.1 candidate. Published v1.12.0 does not include it.
 
 A local recovery storage refusal concerns the computer or Android app storage,
 not a TV package-status reply. It can mean that a directory's ownership or
@@ -89,7 +89,7 @@ the original package outcome.
 
 ### Original-operation recovery and full removal (published v1.11.0)
 
-These instructions apply to published v1.11.0 and the v1.12.0 candidate. For removal, select **Uninstall Clean Your TV** on desktop or
+These instructions apply to published v1.11.0 and later, including the v1.12.1 candidate. For removal, select **Uninstall Clean Your TV** on desktop or
 Android (`cytv uninstall`) using the saved TV connection. Confirm the removal
 once. A failed or partial installation does not need to complete first: remove
 known project apps/files that are present and skip items that are absent.
@@ -373,7 +373,7 @@ transaction or backup also blocks replacement, even if marked complete; preserve
 it for review rather than deleting it to force replacement. It does not patch
 retained pinned code in place or replay an uncertain remove/install request.
 
-The v1.12.0 candidate targets fresh System Updater 1.2.5; published v1.11.0 targets 1.2.4. Only installed 1.1.0/1.1.1 sources are admitted by the explicit replacement. Retained 1.1.2 and 1.2.x have no general replacement path. A completed earlier
+The unpublished v1.12.1 candidate targets fresh System Updater 1.2.6; published v1.12.0 targets 1.2.5. Only installed 1.1.0/1.1.1 sources are admitted by the explicit replacement. Retained 1.1.2 and 1.2.x have no general replacement path. A completed earlier
 replacement to 1.1.1 can start a new target operation only
 after the installer authenticates its saved bundle, baseline, original archive,
 terminal removal and current owner, and confirms that later recovery has finished.

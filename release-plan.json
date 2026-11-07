@@ -1,7 +1,46 @@
 {
   "schema": 1,
-  "version": null,
-  "changes": [],
+  "version": "1.12.1",
+  "changes": [
+    {
+      "pr": 402,
+      "issues": [],
+      "summary": "cytv: explain SSH connection failures and offer safe rechecks"
+    },
+    {
+      "pr": 403,
+      "issues": [
+        201
+      ],
+      "summary": "Clarify local recovery storage failures and check before pending state; preserve original evidence and previously reported recoveries without a new device claim"
+    },
+    {
+      "pr": 404,
+      "issues": [
+        240
+      ],
+      "summary": "Admit strictly verified stock-only Root removal without systemprofile; original #240 installation cause and reporter-device recovery remain unverified"
+    },
+    {
+      "pr": 407,
+      "issues": [],
+      "summary": "Remove redundant test executions and obsolete Ribbon prototype checks"
+    },
+    {
+      "pr": 411,
+      "issues": [
+        409
+      ],
+      "summary": "Retain allowlisted observer filesystem context; original #409 installation blocker remains unresolved"
+    },
+    {
+      "pr": 412,
+      "issues": [
+        410
+      ],
+      "summary": "Retain validated TV Node version and fixed failure categories; original #410 installation remains unconfirmed"
+    }
+  ],
   "excluded": [],
   "acceptance": ""
 }

@@ -55,7 +55,7 @@ substitute IPKs or bypass checks. This fix does not require a TV firmware update
 
 ### If the app opens but cannot connect to the TV
 
-**Next release (unreleased):** Connection failures distinguish denied network
+**v1.12.1 candidate (unreleased):** Connection failures distinguish denied network
 access, refused SSH ports and timeouts when the operating system provides that
 cause. The failure screen shows guidance and **Check connection again** as the
 primary action. This runs Doctor, not installation. **Change connection** checks
