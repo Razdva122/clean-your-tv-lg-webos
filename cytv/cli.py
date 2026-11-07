@@ -450,7 +450,10 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     if profile['edition']=='root':
                         checks.update('inventory','running','')
                         inventory=installer.root_inventory((payload/'fallback.png').read_bytes())
-                        checks.update('inventory','pass')
+                        if installer.tv_info.get('root_inventory',{}).get('inputs')=='unavailable':
+                            checks.update('inventory','unknown','Warning: TV inputs could not be read. Continuing with applications only.')
+                        else:
+                            checks.update('inventory','pass')
                     else:
                         from .tv import SSAP
                         while True:

@@ -930,13 +930,26 @@ print('CYTV_UPDATER_VERIFIED')
         """Use the existing fixed Root catalog reader; Root needs no SSAP key."""
         import base64
         if self.profile['edition']!='root':raise ValueError('Root inventory requires Root')
+        observed=self.tv_info['root_inventory']={'applications':'unknown','inputs':'unknown'}
         try:
             module=self.coordinator_code()+'/app-inventory.js'
-            program=('var reader=require('+json.dumps(module)+');Promise.all([reader(),reader.inputs()]).then(function(value){process.stdout.write(JSON.stringify(value));},function(){process.exit(1);});').encode()
+            # An EIM denial must not discard a valid application catalog. Null marks
+            # a failed fixed query; never synthesize successful input readback.
+            program=('var reader=require('+json.dumps(module)+');'
+                     'function unavailable(){return null;}'
+                     'Promise.all([reader().catch(unavailable),reader.inputs().catch(unavailable)])'
+                     '.then(function(value){process.stdout.write(JSON.stringify(value));},function(){process.exit(1);});').encode()
             value=json.loads(self.remote.run('/usr/bin/node',data=program,timeout=30))
-            if (not isinstance(value,list) or len(value)!=2 or not isinstance(value[0],list) or len(value[0])>200
-                    or not isinstance(value[1],dict) or value[1].get('returnValue') is not True
-                    or not isinstance(value[1].get('devices'),list) or len(value[1]['devices'])>100):raise ValueError('Invalid Root inventory')
+            if not isinstance(value,list) or len(value)!=2:raise ValueError('Invalid Root inventory')
+            observed['applications']='unavailable' if value[0] is None else 'unknown'
+            observed['inputs']=('unavailable' if value[1] is None else 'read'
+                if isinstance(value[1],dict) and value[1].get('returnValue') is True
+                and isinstance(value[1].get('devices'),list) and len(value[1]['devices'])<=100 else 'invalid')
+            if not isinstance(value[0],list) or len(value[0])>200:
+                if value[0] is not None:observed['applications']='invalid'
+                raise ValueError('Invalid Root inventory')
+            if observed['inputs']=='invalid':raise ValueError('Invalid Root inputs')
+            observed['applications']='invalid'
             def text(value):
                 return isinstance(value,str) and bool(value) and '\0' not in value and len(value.encode('utf-8'))<=256
             apps=[];seen=set()
@@ -952,11 +965,14 @@ print('CYTV_UPDATER_VERIFIED')
                 if isinstance(app.get('iconColor'),str) and re.fullmatch('#[a-fA-F0-9]{6}',app['iconColor']):item['iconColor']=app['iconColor']
                 apps.append(item)
             inputs=[];seen=set()
-            for device in value[1]['devices']:
+            for device in value[1]['devices'] if value[1] is not None else []:
                 if not isinstance(device,dict) or not text(device.get('appId')) or device['appId'] in seen:continue
                 label=next((device[k] for k in ('label','deviceName','spdProductDescription','id','appId') if text(device.get(k))),device['appId'])
                 seen.add(device['appId']);inputs.append({'appId':device['appId'],'label':label})
             result={'apps':apps,'inputs':inputs};package.inventory_script(result)
+            observed['applications']='read'
+            if observed['inputs']=='unavailable':
+                self.progress('Warning: TV inputs could not be read. Continuing with applications only.')
             return result
         except (ConnectionError,TimeoutError,EOFError) as error:
             raise UserError('Connection to the TV was interrupted. Check the connection and try again.',reason_code='connection-interrupted') from error
