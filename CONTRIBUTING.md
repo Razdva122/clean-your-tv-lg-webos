@@ -114,6 +114,12 @@ Use [TV development](docs/development/TV-DEVELOPMENT.md) for UI-only live feedba
 and explicit signed Root package QA. These preliminary results cannot satisfy
 the complete release gate. Themes use the existing computer-to-TV receiver.
 
+For subsequent release QA sessions, follow
+[planned cases before batch fixes](docs/RELEASE-FLOW.md#complete-planned-cases-before-batch-fixes):
+finish the case pass and consolidated failure inventory first, then fix and
+verify the batch before merging and freezing one complete candidate. This does
+not replace the focused development checks above or require unchanged manual QA.
+
 One coordinator owns the candidate, inventory, build selection and release PR.
 At freeze, finish versions and documentation together and explicitly dispatch
 the complete candidate build. Hold new features in their working branches until
