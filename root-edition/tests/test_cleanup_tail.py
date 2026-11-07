@@ -23,7 +23,7 @@ APPS=('com.cleanyourtv.root.preview','com.cleanyourtv.root.updater','com.cleanyo
 def packages():
     return {app:{'state':'absent','readback':{'app':app,'absent':True}} for app in APPS}
 HARNESS=r'''
-var real=require('fs'),vm=require('vm'),base=process.argv[2],source=process.argv[3],paths={},calls=[];
+var real=require('fs'),vm=require('vm'),base=process.argv[2],source=process.argv[3],paths={},calls=[],profileReads=0;
 function path(p){
  if(typeof p!=='string')return p;
  if(p==='/')return base;
@@ -33,6 +33,7 @@ function path(p){
 }
 var fs=Object.create(real);
 fs.openSync=function(p,flags,mode){var fd=real.openSync(path(p),flags,mode);paths[fd]=path(p);return fd;};
+fs.fstatSync=function(fd){var info=real.fstatSync(fd);if(process.env.TMP_OWNER && paths[fd]===base+'/tmp')info.uid=Number(process.env.TMP_OWNER);return info;};
 ['lstatSync','readFileSync','readlinkSync','readdirSync','rmdirSync','unlinkSync'].forEach(function(name){fs[name]=function(p){
  if(name==='readdirSync' && process.env.SWAP_RUNTIME && process.env.CYTV_REAL_PROC_FD==='1' && /^\/proc\/self\/fd\/\d+$/.test(p)){
   var held=real.readlinkSync(p);
@@ -51,19 +52,19 @@ fs.renameSync=function(a,b){return real.renameSync(path(a),path(b));};
 var lock=process.env.OWNERSHIP_FD?Number(process.env.OWNERSHIP_FD):fs.openSync('/var/lib/clean-your-tv-installation/ownership.lock','r+');
 var promotion=process.env.PROMOTION_FD?Number(process.env.PROMOTION_FD):fs.openSync('/var/lib/clean-your-tv-python/.install.lock','r+');
 var worker=process.env.WORKER_FD?Number(process.env.WORKER_FD):fs.openSync('/var/lib/clean-your-tv-installation/worker.lock','r+');
-var fake={getuid:process.getuid,pid:999999,ppid:999998,argv:['node','-',process.env.MODE||'finish','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',process.env.TAIL_STAGE||'-',String(lock),String(promotion),String(worker),process.env.GATE_SHA||'-',process.env.REMOVAL||'dddddddddddddddddddddddddddddddd'],stdout:process.stdout};
+var fake={getuid:process.getuid,pid:999999,ppid:999998,argv:['node','-',process.env.MODE||'finish','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',process.env.TAIL_STAGE||'-',String(lock),String(promotion),String(worker),process.env.GATE_SHA||'-',process.env.REMOVAL||'dddddddddddddddddddddddddddddddd'],stdout:process.stdout,stderr:process.stderr};
 var cp={spawnSync:function(command,args,options){
  if(command==='/proc/self/fd/3')return require('child_process').spawnSync(command,args,options);
  var method=args[2],value={returnValue:true};
- if(method.indexOf('listApps')!==-1)value.apps=[];
+ if(method.indexOf('listApps')!==-1){if(process.env.PRIVATE_ERROR)throw Error(process.env.PRIVATE_ERROR);value.apps=[];}
  else if(method.indexOf('getSystemSettings')!==-1)value.settings={defaultApps:{home:process.env.FOREIGN_ROUTE?'changed':'third.party.home'}};
- else if(method.indexOf('getProfiles')!==-1){if(process.env.MISSING_PROFILES)value.returnValue=false;else value.profiles={defaultApps:{categories:{home:'third.party.home'}},idleApp:{appId:'third.party.home'}};}
- else if(method.indexOf('activitymanager')!==-1)value.activities=[];
+ else if(method.indexOf('getProfiles')!==-1){if(process.env.FAIL_FINAL_READBACK && ++profileReads===2)throw Error('injected final readback failure');if(process.env.MISSING_PROFILES)value.returnValue=false;else value.profiles={defaultApps:{categories:{home:'third.party.home'}},idleApp:{appId:'third.party.home'}};}
+ else if(method.indexOf('activitymanager')!==-1)value.activities=JSON.parse(process.env.ACTIVITIES||'[]');
  else if(method.indexOf('getAllInputStatus')!==-1)value.devices=[];
  else throw Error('Unexpected RPC '+method);
  return {status:0,stdout:Buffer.from(JSON.stringify(value))};
 }};
-try{vm.runInNewContext(real.readFileSync(source,'utf8').replace('}catch(error){','}catch(error){console.error(error.stack);'),{require:function(name){return name==='fs'?fs:name==='child_process'?cp:require(name);},process:fake,Buffer:Buffer,console:console});}
+try{vm.runInNewContext(real.readFileSync(source,'utf8'),{require:function(name){return name==='fs'?fs:name==='child_process'?cp:require(name);},process:fake,Buffer:Buffer,console:console});}
 finally{real.closeSync(lock);real.writeFileSync(process.env.MUTATION_LOG||base+'/mutations.json',JSON.stringify(calls));}
 process.exitCode=fake.exitCode||0;
 '''
@@ -82,7 +83,7 @@ class CleanupTail(unittest.TestCase):
             p=self.runtime/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text('owned '+name)
         files={str(p.relative_to(self.runtime)):hashlib.sha256(p.read_bytes()).hexdigest() for p in self.runtime.rglob('*') if p.is_file()}
         self.record=dict(schema=1,protocol='clean-removal-v1',operation=ID,removal='d'*32,lease='b'*32,stage='private-cleanup',
-            state='recovery_required',cleanup_boot_id='11111111-1111-1111-1111-111111111111',routes=['third.party.home']*3,support_stages=[],packages=packages(),
+            state='recovery_required',cleanup_boot_id='11111111-1111-1111-1111-111111111111:session-'+'a'*32,cleanup_verified_boot_id='11111111-1111-1111-1111-111111111111:session-'+'b'*32,routes=['third.party.home']*3,support_stages=[],packages=packages(),
             done=['original-writers-fenced','controls-restored','package-removal','private-cleanup'],
             runtime_cleanup=dict(root=RUNTIME,files=files),result=dict(removed=True,applications_services_startup_removed=True,private_cleanup_verified=False))
         self.write('clean-removal-'+ID+'.json',self.record)
@@ -111,12 +112,12 @@ class CleanupTail(unittest.TestCase):
                                  '-', '0', '-1', '-1', '-', 'd'*32],
                                 input=source, capture_output=True, text=True, timeout=15)
         self.assertEqual(result.returncode, 1, result.stderr)
-        self.assertEqual(result.stderr, '')
+        self.assertEqual(result.stderr, 'CYTV_CLEAN_TAIL: invalid-cleanup-selector\n')
         self.assertEqual(json.loads(result.stdout), {
             'operation':'../foreign', 'removal':'d'*32, 'state':'recovery_required',
-            'stage':'private-cleanup', 'current':False, 'reason':'private-cleanup-incomplete'})
+            'stage':'private-cleanup', 'current':False, 'reason':'private-cleanup-incomplete','cleanup_error':'invalid-cleanup-selector'})
 
-    def first_handoff(self, managed_executor=False, executable_symlink=False):
+    def first_handoff(self, managed_executor=False, executable_symlink=False, native=False, diagnostic=False):
         import fcntl
         import install_device
         import python_binding
@@ -134,6 +135,10 @@ class CleanupTail(unittest.TestCase):
             executable.unlink();executable.symlink_to(sys.executable)
         payload=self.base/'payload';(payload/'root-updater').mkdir(parents=True)
         (payload/'root-updater/cleanup_tail.js').write_bytes(SOURCE.read_bytes())
+        boot=self.boot_directory() if native else None
+        if native:
+            import shutil
+            shutil.rmtree(self.runtime.parent)
         store=Store(self.state,uid=os.getuid())
         ownership=os.open(self.state/'ownership.lock',os.O_RDWR)
         self.addCleanup(os.close,ownership);fcntl.flock(ownership,fcntl.LOCK_EX|fcntl.LOCK_NB)
@@ -144,6 +149,9 @@ class CleanupTail(unittest.TestCase):
         def node(args,**kwargs):
             calls.append(args)
             self.assertEqual(args[:3],['/usr/bin/node','-','finish'])
+            if native:
+                self.assertEqual(kwargs['pass_fds'],(ownership,store.lock_fd))
+                self.assertEqual(args[6],'-1')
             source=kwargs['input'].decode()
             # Fixed TV paths and RPCs use the existing real-file Node harness.
             # Python's first inventory/lock/handoff production path is unchanged.
@@ -151,14 +159,16 @@ class CleanupTail(unittest.TestCase):
             source=source.replace("fs.readdirSync('/tmp')",'fs.readdirSync('+repr(str(self.base/'tmp'))+')')
             source=source.replace("fs.readdirSync('/proc')",'fs.readdirSync('+repr(str(self.base/'proc'))+')')
             source=source.replace('/proc/sys/kernel/random/boot_id',str(self.base/'proc/sys/kernel/random/boot_id'))
+            source=source.replace("'/tmp/clean-your-tv-root-boot'",repr(str(self.base/'tmp/clean-your-tv-root-boot')))
             target=self.base/'first-tail.js';target.write_text(source)
             harness=self.base/'first-harness.js'
             harness.write_text(HARNESS.replace('/var/',str(self.base/'var')+'/'))
             env={**kwargs['env'],'OWNERSHIP_FD':args[5],'PROMOTION_FD':args[6],'WORKER_FD':args[7],
                  'MUTATION_LOG':str(self.base/'first-mutations.json')}
+            if diagnostic:env['FOREIGN_ROUTE']='1'
             result=run([os.environ.get('NODE8','node'),str(harness),'/',str(target)],
                        stdout=subprocess.PIPE,stderr=subprocess.PIPE,env=env,pass_fds=kwargs['pass_fds'],timeout=15)
-            self.assertEqual(result.returncode,0,result.stderr.decode())
+            self.assertEqual(result.returncode,1 if diagnostic else 0,result.stderr.decode())
             return result
         directory=python_binding._directory
         with patch.object(python_binding,'MANAGED_ROOT',self.runtime.parent), \
@@ -173,11 +183,40 @@ class CleanupTail(unittest.TestCase):
                 self.assertEqual(calls,[])
                 self.assertTrue((self.runtime/'lib/secret.py').exists())
             else:
+                if diagnostic:
+                    import io
+                    from contextlib import redirect_stderr
+                    output=io.StringIO()
+                    with redirect_stderr(output):reply=device.finish_clean_tail(self.record)
+                    self.assertEqual(reply['cleanup_error'],'route-changed')
+                    self.assertEqual(output.getvalue(),'CYTV_CLEAN_TAIL: route-changed\n')
+                    self.assertTrue(boot.exists())
+                    return
                 reply=device.finish_clean_tail(self.record)
+                self.assertIsNotNone(reply,'Native Python still requires the final Node absence proof')
                 self.assertEqual(reply['stage'],'verified-clean',reply)
                 self.assertTrue(reply['result']['verified_clean'])
                 self.assertEqual(len(calls),1)
                 self.assertFalse(self.runtime.exists())
+                if native:
+                    self.assertFalse(self.runtime.parent.exists())
+                    self.assertFalse(boot.exists())
+                    self.assertEqual(calls[0][6],'-1')
+                    self.assertEqual(self.record['runtime_cleanup']['files'],{})
+                    self.assertIs(self.record['runtime_cleanup']['promotion_required'],False)
+                    saved=json.loads((self.state/('clean-removal-'+ID+'.json')).read_text())
+                    self.assertEqual(saved['stage'],'verified-clean')
+                    # A lost final reply reuses the same proof and held locks.
+                    repeat=device.finish_clean_tail(self.record)
+                    self.assertEqual(repeat['stage'],'verified-clean')
+                    self.assertEqual(len(calls),2)
+                    self.assertFalse(self.runtime.parent.exists());self.assertFalse(boot.exists())
+
+    def test_python_handoff_relays_safe_tail_guard_to_existing_stderr(self):
+        self.first_handoff(native=True,diagnostic=True)
+
+    def test_native_python_first_handoff_retires_boot_directory_without_managed_runtime(self):
+        self.first_handoff(native=True)
 
     def test_first_handoff_external_executor_retires_changed_unused_runtime(self):
         self.first_handoff()
@@ -220,10 +259,91 @@ class CleanupTail(unittest.TestCase):
             self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
 
     def test_same_boot_cannot_finish_even_with_current_absence(self):
-        self.record['cleanup_boot_id']='22222222-2222-2222-2222-222222222222'
+        self.record['cleanup_boot_id']=self.record['cleanup_verified_boot_id']
         self.write('clean-removal-'+ID+'.json',self.record)
         result,reply=self.run_tail();self.assertNotEqual(result.returncode,0)
         self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+
+    def boot_directory(self):
+        directory=self.base/'tmp/clean-your-tv-root-boot';directory.mkdir(mode=0o700)
+        for name in ('session.lock','session.json','normal.json'):
+            p=directory/name;p.write_text('{}');p.chmod(0o600)
+        return directory
+
+    def test_durable_boot_fact_survives_retired_python_and_later_tmp_clear(self):
+        directory=self.boot_directory()
+        result,reply=self.run_tail(FAIL_FINAL_READBACK='1')
+        self.assertNotEqual(result.returncode,0)
+        self.assertFalse(self.runtime.exists());self.assertFalse(directory.exists())
+        saved=json.loads((self.state/('clean-removal-'+ID+'.json')).read_text())
+        self.assertEqual(saved['stage'],'private-cleanup')
+        (self.base/'proc/sys/kernel/random/boot_id').write_text('33333333-3333-3333-3333-333333333333')
+        result,reply=self.run_tail()
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(reply['stage'],'verified-clean');self.assertFalse(directory.exists())
+
+    def test_exact_root_sticky_tmp_parent_allows_boot_directory_retirement(self):
+        directory=self.boot_directory();(self.base/'tmp').chmod(0o1777)
+        result,reply=self.run_tail(TMP_OWNER='0')
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(reply['stage'],'verified-clean');self.assertFalse(directory.exists())
+
+    def test_sticky_parent_exception_rejects_foreign_uid_and_other_writable_modes(self):
+        directory=self.boot_directory()
+        for owner,mode in (('123456',0o1777),('0',0o777),('0',0o1775)):
+            with self.subTest(owner=owner,mode=oct(mode)):
+                (self.base/'tmp').chmod(mode)
+                result,reply=self.run_tail(TMP_OWNER=owner)
+                self.assertNotEqual(result.returncode,0)
+                self.assertTrue(directory.exists())
+
+    def test_other_sticky_parent_does_not_gain_tmp_exception(self):
+        self.runtime.parent.chmod(0o1777)
+        result,reply=self.run_tail()
+        self.assertNotEqual(result.returncode,0)
+        self.assertTrue(self.runtime.exists())
+        self.assertEqual(reply.get('cleanup_error'),'unsafe-cleanup-member')
+
+    def test_sticky_private_boot_leaf_does_not_gain_parent_exception(self):
+        directory=self.boot_directory();directory.chmod(0o1777)
+        result,reply=self.run_tail(TMP_OWNER='0')
+        self.assertNotEqual(result.returncode,0)
+        self.assertTrue((directory/'session.json').exists())
+
+    def test_unknown_boot_directory_member_is_preserved(self):
+        directory=self.boot_directory();(directory/'foreign').write_text('preserve')
+        result,reply=self.run_tail();self.assertNotEqual(result.returncode,0)
+        self.assertEqual(sorted(p.name for p in directory.iterdir()),['foreign','normal.json','session.json','session.lock'])
+
+    def test_unsafe_boot_directory_and_hardlink_are_preserved(self):
+        directory=self.boot_directory();foreign=self.base/'foreign-boot';foreign.write_text('preserve')
+        os.link(foreign,directory/'extra-link')
+        result,reply=self.run_tail();self.assertNotEqual(result.returncode,0)
+        self.assertEqual(foreign.read_text(),'preserve');self.assertTrue((directory/'session.json').exists())
+        (directory/'extra-link').unlink();(directory/'session.json').unlink();os.link(foreign,directory/'session.json')
+        result,reply=self.run_tail();self.assertNotEqual(result.returncode,0)
+        self.assertEqual(foreign.read_text(),'preserve');self.assertTrue((directory/'session.lock').exists())
+
+    def test_boot_directory_symlink_never_follows_foreign_target(self):
+        foreign=self.base/'foreign-boot';foreign.mkdir(mode=0o700)
+        (foreign/'session.json').write_text('preserve')
+        (self.base/'tmp/clean-your-tv-root-boot').symlink_to(foreign,target_is_directory=True)
+        result,reply=self.run_tail();self.assertNotEqual(result.returncode,0)
+        self.assertEqual((foreign/'session.json').read_text(),'preserve')
+
+    def test_missing_mixed_or_malformed_boot_fact_cannot_retire_runtime(self):
+        baseline=self.record['cleanup_boot_id']
+        for value in (None,baseline,'22222222-2222-2222-2222-222222222222',baseline+'extra',baseline+'\n'):
+            self.record['cleanup_verified_boot_id']=value;self.write('clean-removal-'+ID+'.json',self.record)
+            result,reply=self.run_tail();self.assertNotEqual(result.returncode,0)
+            self.assertTrue(self.runtime.exists())
+            self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+
+    def test_legacy_distinct_raw_boot_fact_remains_valid(self):
+        self.record['cleanup_boot_id']='11111111-1111-1111-1111-111111111111'
+        self.record['cleanup_verified_boot_id']='22222222-2222-2222-2222-222222222222'
+        self.write('clean-removal-'+ID+'.json',self.record)
+        result,reply=self.run_tail();self.assertEqual(result.returncode,0,result.stderr)
 
     def test_changed_owned_runtime_bytes_are_removed_without_execution(self):
         (self.runtime/'lib/secret.py').write_text('changed old bytes; never execute')
@@ -265,6 +385,36 @@ class CleanupTail(unittest.TestCase):
         result,reply=self.run_tail();self.assertEqual(result.returncode,0,result.stderr)
         self.assertEqual(foreign.read_text(),'keep foreign bytes')
         self.assertFalse(self.runtime.exists())
+
+    def test_foreign_similar_service_activities_do_not_block_tail(self):
+        activities=[{'name':'com.cleanyourtv.recoveryprobe.boot','activityId':42,'callback':{'method':'luna://com.cleanyourtv.recoveryprobe.service/boot'}},
+                    {'name':'foreign','activityId':43,'callback':{'method':'luna://com.cleanyourtv.root.preview.service.foreign/boot'}}]
+        result,reply=self.run_tail(ACTIVITIES=json.dumps(activities))
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(reply['stage'],'verified-clean')
+
+    def test_each_known_service_activity_and_reserved_recovery_name_block_tail(self):
+        methods=['luna://'+app+('.renewal/' if app=='com.gathin.tvhome' else '.service/')+'unexpected' for app in APPS]
+        activities=[{'name':'unexpected','activityId':7,'callback':{'method':method}} for method in methods]
+        activities.append({'name':'com.cleanyourtv.root.preview.service.recovery','activityId':8,'callback':{'method':'luna://foreign.service/boot'}})
+        for activity in activities:
+            with self.subTest(activity=activity):
+                result,reply=self.run_tail(ACTIVITIES=json.dumps([activity]))
+                self.assertNotEqual(result.returncode,0)
+                self.assertTrue(self.runtime.exists())
+                self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+
+    def test_failure_exposes_only_known_guard_code(self):
+        result,reply=self.run_tail(FOREIGN_ROUTE='1')
+        self.assertNotEqual(result.returncode,0)
+        self.assertEqual(reply.get('cleanup_error'),'route-changed')
+        self.assertEqual(result.stderr,'CYTV_CLEAN_TAIL: route-changed\n')
+        for private in ('sensitivecredential','ENOENT: private path /private/secret-key'):
+            result,reply=self.run_tail(PRIVATE_ERROR=private)
+            self.assertNotEqual(result.returncode,0)
+            self.assertEqual(reply.get('cleanup_error'),'cleanup-guard-failed')
+            self.assertNotIn(private,result.stdout+result.stderr)
+            self.assertEqual(result.stderr,'CYTV_CLEAN_TAIL: cleanup-guard-failed\n')
 
     def test_changed_foreign_route_refuses_before_delete(self):
         result,reply=self.run_tail(FOREIGN_ROUTE='1')

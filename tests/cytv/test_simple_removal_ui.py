@@ -40,6 +40,21 @@ class SimpleRemovalUITests(unittest.TestCase):
         self.assertEqual(attempts[0], attempts[1])
         self.assertNotIn('--yes', attempts[1])
 
+    def test_actual_cli_connection_loss_after_restart_wait_keeps_same_goal_and_plain_retry(self):
+        self.fixture.store.request_clean_removal(self.fixture.profile)
+        self.fixture.store.checkpoint(self.fixture.profile,stage='restart-required',removal_reason='restart-required')
+        original=self.fixture.store.pending(self.fixture.profile)['removal_operation']
+        def connect(profile,*args,**kwargs):raise TimeoutError('current connection lost')
+        self.fixture.connect=connect
+        w=self.fixture.window();w.start('uninstall',self.fixture.profile)
+        self.fixture.pump(lambda:not w.running)
+        self.assertEqual(w.title.text(),'Removal is not finished yet.')
+        self.assertIn('Connection to the TV was interrupted. Check the connection and try again.',w.subtitle.text())
+        self.assertNotIn('disconnect it from power',w.subtitle.text())
+        self.assertIsNotNone(self.fixture.button(w,'Try again'))
+        self.assertEqual(self.fixture.store.pending(self.fixture.profile)['removal_operation'],original)
+        self.assertEqual(self.fixture.store.pending(self.fixture.profile)['stage'],'restart-required')
+
     def test_restart_required_is_neutral_and_explains_full_power_restart(self):
         def runner(argv, **kwargs):
             write = kwargs['write']

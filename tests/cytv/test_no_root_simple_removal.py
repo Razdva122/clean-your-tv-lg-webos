@@ -1,5 +1,6 @@
 """Ordinary removal, interrupted setup, reconnect, and full-restart completion."""
 import json
+import base64
 import os
 import hashlib
 from pathlib import Path
@@ -19,20 +20,35 @@ from cytv.state import Store, target
 class Remote:
     def __init__(self, root):
         self.root=root;self.apps=set();self.calls=[];self.cut=None;self.cut_install=False;self.reject_install=False;self.broken_service=False;self.reject=None;self.transform=lambda code:code
-        self.os_cleanup=False
+        self.os_cleanup=False;self.cut_boot_create=False;self.command_limit=None;self.commands=[]
         self.boot='11111111-1111-1111-1111-111111111111'
 
     def run(self, command, data=None, timeout=30):
         from cytv import no_root_cleanup
+        self.commands.append(command)
+        if self.command_limit is not None and len(command.encode())>self.command_limit:
+            raise AssertionError('SSH exec command exceeds the TV command limit')
         words=shlex.split(command)
-        self.assert_program=words[words.index('-e')+1]
+        stdin=words==['/usr/bin/node']
+        self.assert_program=data.decode() if stdin else words[words.index('-e')+1]
+        if stdin:
+            encoded,_=json.JSONDecoder().raw_decode(self.assert_program[len('process.argv.push('):])
+            request=json.loads(encoded)
+        else:request=json.loads(words[-1])
         code=self.assert_program.replace('/media/developer',str(self.root/'developer')).replace('/var/luna-service2-dev',str(self.root/'bus'))
         code=code.replace('/var/lib',str(self.root/'varlib')).replace('/var/webos-profile',str(self.root/'profiles'))
         code=code.replace('/proc/sys/kernel/random/boot_id',str(self.root/'boot'))
         code=code.replace("'/proc/'",json.dumps(str(self.root/'proc')+'/'))
+        # Adapt only the fixed volatile root and its root UID for this host fixture.
+        volatile=self.root/'volatile';volatile.mkdir(exist_ok=True);volatile.chmod(0o1777)
+        code=code.replace("var bootRoot='/tmp';",'var bootRoot='+json.dumps(str(volatile))+';var bootLstat=fs.lstatSync;fs.lstatSync=function(p){var s=bootLstat(p);if(path.resolve(p)===bootRoot)s.uid=0;return s;};')
         (self.root/'boot').write_text(self.boot)
-        result=subprocess.run([os.environ.get('NODE_EXEC') or shutil.which('node'),'-e',self.transform(code),words[-1]],input=data,capture_output=True,timeout=timeout)
+        node=os.environ.get('NODE_EXEC') or shutil.which('node')
+        result=subprocess.run([node] if stdin else [node,'-e',self.transform(code),words[-1]],
+                              input=self.transform(code).encode() if stdin else data,capture_output=True,timeout=timeout)
         if result.returncode:raise RuntimeError(result.stderr.decode())
+        if request['action']=='boot-create' and self.cut_boot_create:
+            self.cut_boot_create=False;raise UserError('Connection to the TV was interrupted.')
         return result.stdout.decode()
 
     def luna(self, uri, payload, **kwargs):
@@ -105,7 +121,125 @@ class SimpleRemoval(unittest.TestCase):
 
     def remove(self):return self.installer.uninstall(full_project=True)
 
-    def reboot(self):self.remote.boot='22222222-2222-2222-2222-222222222222'
+    def reboot(self):
+        self.remote.boot='22222222-2222-2222-2222-222222222222'
+        for p in (self.root/'volatile').glob('cytv-removal-*.boot'):p.unlink()
+
+    def boot_marker(self):
+        goal=self.store.pending(self.profile)['removal_operation']
+        return self.root/'volatile'/('cytv-removal-'+goal+'.boot')
+
+    def test_unchanged_kernel_with_cleared_volatile_marker_finishes(self):
+        first=self.remove();self.assertTrue(first['restart_required'])
+        marker=self.boot_marker();self.assertTrue(marker.exists())
+        proof=self.store.pending(self.profile)['cleanup_boot_proof']
+        self.assertEqual(proof['kernel'],self.remote.boot)
+        self.assertTrue(self.remove()['restart_required']);self.assertTrue(marker.exists())
+        marker.unlink()  # Model the measured C3 volatile reset, kernel UUID reused.
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertTrue(self.remove()['verified_clean']);self.assertFalse(marker.exists())
+
+    def test_changed_kernel_retires_valid_marker_only_after_boot_proof(self):
+        self.remove();marker=self.boot_marker();proof=self.store.pending(self.profile)['cleanup_boot_proof']
+        with self.assertRaises((RuntimeError,UserError)):
+            self.cleanup._device(self.installer,'boot-retire',proof=proof)
+        self.assertTrue(marker.exists())
+        self.remote.boot='22222222-2222-2222-2222-222222222222'
+        self.assertTrue(self.remove()['verified_clean']);self.assertFalse(marker.exists())
+
+    def test_lost_marker_create_response_reuses_same_goal_before_effects(self):
+        self.remote.cut_boot_create=True
+        with self.assertRaisesRegex(UserError,'interrupted'):self.remove()
+        marker=self.boot_marker();before=marker.stat()
+        self.assertIsNone(self.store.pending(self.profile).get('cleanup_boot_proof'))
+        self.assertFalse(any(uri.endswith('/disable') or uri.endswith('/dev/remove') for uri,_ in self.remote.calls))
+        self.assertTrue(self.remove()['restart_required'])
+        self.assertEqual((before.st_dev,before.st_ino),(marker.stat().st_dev,marker.stat().st_ino))
+        marker.unlink();self.assertTrue(self.remove()['verified_clean'])
+
+    def test_missing_legacy_baseline_seeds_marker_instead_of_proving_restart(self):
+        self.store.request_clean_removal(self.profile)
+        self.store.checkpoint(self.profile,cleanup_boot_id='00000000-0000-0000-0000-000000000000',stage='restart-required')
+        self.assertTrue(self.remove()['restart_required']);self.assertTrue(self.boot_marker().exists())
+        self.boot_marker().unlink();self.assertTrue(self.remove()['verified_clean'])
+
+    def test_marker_tampering_never_proves_restart_or_removes_foreign_data(self):
+        for kind in ('contents','mode','hardlink','symlink','replacement'):
+            with self.subTest(kind=kind):
+                self.store=Store(self.root/('host-'+kind));self.installer.store=self.store
+                self.remove();marker=self.boot_marker();original=marker.read_bytes()
+                foreign=self.root/('foreign-'+kind);foreign.write_text('preserve')
+                if kind=='contents':marker.write_text('changed')
+                elif kind=='mode':marker.chmod(0o644)
+                elif kind=='hardlink':os.link(marker,self.root/'extra-link')
+                elif kind=='symlink':marker.unlink();marker.symlink_to(foreign)
+                else:
+                    old=marker.with_suffix('.old');marker.rename(old);marker.write_bytes(original);marker.chmod(0o600)
+                start=len(self.remote.calls)
+                with self.assertRaises((RuntimeError,UserError)):self.remove()
+                self.assertFalse(any(uri.endswith('/disable') or uri.endswith('/dev/remove') for uri,_ in self.remote.calls[start:]))
+                self.assertEqual(foreign.read_text(),'preserve')
+
+
+    def test_readonly_inventory_and_unseeded_probe_never_create_a_marker(self):
+        self.store.request_clean_removal(self.profile)
+        self.cleanup._device(self.installer,'inventory')
+        marker=self.boot_marker();self.assertFalse(marker.exists())
+        with self.assertRaises((RuntimeError,UserError)):
+            self.cleanup._device(self.installer,'boot-probe')
+        self.assertFalse(marker.exists())
+        marker.write_text('foreign existing file');marker.chmod(0o600)
+        with self.assertRaises((RuntimeError,UserError)):self.remove()
+        self.assertEqual(marker.read_text(),'foreign existing file')
+
+    def test_durable_boot_proof_precedes_control_and_package_effects(self):
+        self.remote.apps={'com.local.nativehome'}
+        key=self.own_file('apps/usr/palm/applications/com.local.nativehome/state/ssap-key.json')
+        run=self.remote.run
+        def checked(command,**kwargs):
+            encoded,_=json.JSONDecoder().raw_decode(kwargs['data'].decode()[len('process.argv.push('):])
+            action=json.loads(encoded)['action']
+            if action in ('stop','sweep'):
+                self.assertIn('cleanup_boot_proof',self.store.pending(self.profile))
+            return run(command,**kwargs)
+        self.remote.run=checked
+        self.assertTrue(self.remove()['restart_required']);self.assertFalse(key.exists())
+
+    def test_forged_or_mixed_kernel_proof_cannot_retire_same_boot_marker(self):
+        self.remove();marker=self.boot_marker();proof=self.store.pending(self.profile)['cleanup_boot_proof']
+        for value in (self.remote.boot,dict(proof,kernel='22222222-2222-2222-2222-222222222222'),dict(proof,goal='a'*32)):
+            with self.subTest(proof=value):
+                with self.assertRaises((RuntimeError,UserError)):
+                    self.cleanup._device(self.installer,'boot-retire',proof=value)
+                self.assertTrue(marker.exists())
+
+    def test_all_cleanup_actions_use_small_ssh_command_and_real_node_stdin(self):
+        self.remote.command_limit=8192
+        self.store.request_clean_removal(self.profile)
+        self.store.checkpoint(self.profile,cleanup_staging_ids=[format(n,'032x') for n in range(128)])
+        self.cleanup._device(self.installer,'inventory')
+        self.assertTrue(self.remove()['restart_required'])
+        self.reboot();self.assertTrue(self.remove()['verified_clean'])
+        self.assertTrue(self.remote.commands)
+        self.assertEqual(set(self.remote.commands),{'/usr/bin/node'})
+
+    def test_stdin_carrier_request_publishes_exact_binary_bytes_and_rejects_corruption(self):
+        self.remote.command_limit=8192
+        self.store.request_clean_removal(self.profile)
+        identifier=self.store.pending(self.profile)['removal_operation']
+        raw=bytes(range(256))*257
+        request={'action':'stage-carrier','app':'com.local.nativehome','removal':identifier,
+                 'size':len(raw),'sha256':hashlib.sha256(raw).hexdigest(),'carrier':base64.b64encode(raw).decode('ascii')}
+        self.remote.run('/usr/bin/node',data=self.cleanup._program(request),timeout=90)
+        file=self.root/'developer/temp'/('cytv-'+identifier)/'helper.ipk'
+        self.assertEqual(file.read_bytes(),raw)
+        self.remote.run('/usr/bin/node',data=self.cleanup._program(request),timeout=90)
+        self.assertEqual(file.read_bytes(),raw,'exact same staged bytes can be read back on Retry')
+        for bad in (dict(request,carrier=request['carrier'][:-4]),dict(request,sha256='0'*64)):
+            with self.subTest(size=bad['size'],hash=bad['sha256']):
+                with self.assertRaises(RuntimeError):self.remote.run('/usr/bin/node',data=self.cleanup._program(bad),timeout=90)
+                self.assertEqual(file.read_bytes(),raw)
+        self.assertEqual(set(self.remote.commands),{'/usr/bin/node'})
 
     def model_owners(self, owners):
         # Keep actual POSIX modes/inodes and Node filesystem operations; adapt
@@ -389,7 +523,25 @@ class SimpleRemoval(unittest.TestCase):
         proc=self.root/'proc'/str(os.getpid());proc.mkdir(parents=True);(proc/'cmdline').write_text(str(pid.parent.parent/'native.js')+'\0')
         self.remote.transform=lambda code:code.replace('Date.now()+8000','Date.now()+100')
         self.assertTrue(self.remove()['restart_required']);self.assertTrue(pid.exists())
+        self.boot_marker().unlink()  # New volatile lifetime, same kernel UUID.
+        self.assertTrue(self.remove()['restart_required']);self.assertTrue(pid.exists())
+        self.assertTrue(self.boot_marker().exists(),'a still-running controller requires a new captured restart baseline')
+        self.assertTrue(self.remove()['restart_required']);self.assertTrue(pid.exists())
         pid.unlink();self.reboot();self.assertTrue(self.remove()['verified_clean'])
+
+    def test_lost_rearm_create_reply_keeps_retry_seedable_without_adopting_a_mismatch(self):
+        pid=self.own_file('apps/usr/palm/applications/com.local.nativehome/state/controller.pid',str(os.getpid()))
+        proc=self.root/'proc'/str(os.getpid());proc.mkdir(parents=True);(proc/'cmdline').write_text(str(pid.parent.parent/'native.js')+'\0')
+        self.remote.transform=lambda code:code.replace('Date.now()+8000','Date.now()+100')
+        self.remove();marker=self.boot_marker()
+        with marker.open('rb') as held_old_inode:
+            marker.unlink()  # Keep the fixture inode distinct from the next marker.
+            self.remote.cut_boot_create=True
+            with self.assertRaisesRegex(UserError,'interrupted'):self.remove()
+            self.assertTrue(marker.exists())
+            self.assertTrue(self.remove()['restart_required'])
+            self.assertTrue(pid.exists())
+        pid.unlink();marker.unlink();self.assertTrue(self.remove()['verified_clean'])
 
     def test_stale_pid_of_foreign_process_does_not_force_endless_restart(self):
         pid=self.own_file('apps/usr/palm/applications/com.local.nativehome/state/controller.pid',str(os.getpid()))

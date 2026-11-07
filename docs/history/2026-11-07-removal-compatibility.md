@@ -135,3 +135,153 @@ acceptance. All expected platform/test artifacts were present and unexpired.
 | cytv-windows-x64 | 13539530205 | `5c4853c1be580fd042443aeab87c965443928e136d11f4f2c976063b08fdc622` |
 | cytv-windows-x64-desktop | 13539515154 | `6863838460cd3132244fd899269512de0ef2cec4bc861b332ea359f7a424a2a6` |
 | homebrew-candidate | 13538177434 | `cc26c101103cd13866c31f8a9b02c18a0a7702355bd1a64d6a99032c23222dd7` |
+
+## Interrupted registration restoration follow-up
+
+The selected build above is superseded for changed removal support. A host
+regression reproduces an interrupted restoration chain: System lockdown restores
+the Root updater's installed API, Root registration restoration restores the
+original SDK API, and a later interruption occurs before `controls-restored`.
+Retry previously rejected that final SDK state as unknown lockdown drift.
+
+The clean-removal path now recognizes that state only for the fixed Root updater
+API. It checks the exact live registration receipt against the System snapshot,
+the four fixed registration paths, the linked installed/original API bytes and
+the exact disabled-snapshot transformation. Both legacy byte-only and newer
+metadata snapshots remain supported. It leaves an already restored SDK API
+untouched; all lockdown entries are validated before any restoration write.
+Unknown bytes, broken snapshot links and unsafe metadata still stop removal.
+Standalone supervisor removal keeps its default strict behavior.
+
+Focused host verification passed: 35 Root clean-removal tests, 19 supervisor
+removal tests and 39 rollback/recovery tests. The new interruption regression
+failed before the fix and passed afterward, including legacy byte-only receipts;
+six damaged-byte/receipt/metadata cases refuse before restoration writes. The
+standalone compressed SSH command remains below its unchanged 8,000-byte limit
+(7,994 bytes). The normal public payload builder passed; TV IPKs are unchanged.
+
+No new user action, translation, service or state journal is introduced. The
+existing Retry and requested full-restart instructions remain applicable.
+The old build pin is cleared; a replacement complete candidate and affected
+acceptance are required. This source record does not claim device completion.
+
+### Bounded activity inventory
+
+The existing detailed activity listing can exceed the generic updater RPC
+64-KiB response limit. Dropping subscriber data is insufficient and must not
+replace the activity name/callback/ID ownership proof. The RPC helper now allows
+2 MiB only for the exact `luna://com.palm.activitymanager/list` URI, matching the
+existing recovery-activity and final-cleanup helpers. Every other URI, including
+near matches, keeps its 64-KiB bound; queries and cancellation selection are
+unchanged. Three real child-pipe tests cover successful larger inventory,
+oversized refusal, other/near-match URI refusal and client process reaping.
+They failed on the old activity bound and passed after the two-line correction.
+The fixed caller-identity regression also passed. The normal payload build copies
+the change into both updater support bundles; all TV IPKs remain byte-identical.
+The replacement candidate must include and verify the changed support bytes.
+
+### Snapshot-aware restart continuation
+
+Removal's raw kernel UUID comparison missed a known firmware property already
+documented in [Root cold-start identity](../development/ROOT-COLD-BOOT.md): a
+snapshot boot can reuse that UUID. Clock/uptime heuristics are not substituted.
+Root removal now calls the existing `intent_runtime.boot_identity` from the
+current verified payload in isolated Python. A legacy raw baseline without a
+valid prior verified pair is replaced with a session baseline and requires a
+further restart. Every rebaseline clears the prior verified fact. No new Root
+boot service, observer, journal or marker format is introduced.
+
+No-root records a single non-executable, private volatile marker for its already
+approved removal goal. Creation binds the goal and actual kernel UUID; the host
+captures its inode and device before effects. Probe never recreates it. A changed
+kernel UUID or absence of the captured marker supplies the boot fact; altered
+contents, ownership, mode, links or inode refuse continuation. Inventory remains
+read-only. Marker retirement independently checks restart evidence. Before rearm
+creates a replacement marker, the existing host journal clears the old proof,
+so a lost response can recover the exact goal and establish a fresh baseline.
+
+The Root tail uses a strict, distinct, same-format durable baseline/verified pair
+only as the previously observed boot fact. Original ownership, package receipts,
+current package/private-file absence, routing, process, activity and registration
+checks remain mandatory. This permits retry after Python retirement and a later
+volatile reset. Only the three known existing Root boot-session files are retired
+through the pinned scanner after that durable proof; final readback checks the
+directory is absent. Unknown members and unsafe metadata still block removal.
+
+Focused host verification passed: 88 Root cleanup/tail/simple/handoff tests
+(three platform skips), 28 tail tests on exact Node 8 (one platform skip), and
+41 No-root cleanup tests. Eight affected cases passed on each exact Node
+0.10.15, 0.10.25, 0.12.2 and 8.12.0. The preceding boot-proof batch used JavaScript
+SHA256 `3726e7990da5fe2232302d5a84620b38fae3f121ad93e47b7716588bc6429cab`;
+the later stdin transport correction below has its own source binding.
+Regressions reproduced UUID-only refusal, mixed-format false progress and a lost
+rearm response before their fixes. These are source/model results; they do not
+establish universal volatile-store lifetime or pristine No-root TV acceptance.
+
+### Final activity scope
+
+The final Python and Node readbacks now use the six fixed component service URI
+namespaces, with the trailing slash delimiter, rather than every service sharing
+the `com.cleanyourtv.` prefix. Cancellation remains restricted to its existing
+exact owned name/callback pairs. An unrelated diagnostic probe or near-match
+service is preserved and no longer blocks removal; actual component callbacks
+and the reserved Root recovery activity still prevent a clean result. Both
+readback regressions failed before the correction. The focused counts above
+include the new positive and refusal cases. No broader deletion is introduced.
+
+The same existing Node finalizer now handles native Python when no managed
+runtime exists. It receives the original ownership and worker descriptors, an
+empty runtime inventory and no promotion descriptor; it creates no managed
+directory or lock. This avoids leaving the cleanup-created boot session behind
+on that supported interpreter path. The real child handoff regression failed
+before removal of the early return and passed afterward, including a repeated
+reply under the same locks.
+
+### Current connection guidance
+
+A current connection or typed SSH/key error now takes presentation priority over
+a retained restart-required stage in console, desktop and Android results. The
+restart/completion authority is unchanged. The initial saved-state notice may
+still explain the pending restart before connecting; after a connection failure
+the current advice is Try again or the existing typed authentication guidance.
+Android keeps Retry primary and report export secondary when both are available.
+No new action, translated string or recovery protocol is introduced.
+
+Focused verification passed 13 UI/CLI regression tests and 111 affected
+CLI/recovery/desktop/bridge tests, plus 16 Chrome result cases. The existing
+13-language, two-edition removal matrix passed; strict contradictory-success
+cases remain neutral. The stale-restart presentation reproduced before the fix.
+
+### Bounded SSH execution
+
+The No-root cleaner now follows the existing bare-Node stdin execution pattern,
+rather than placing its source and request in a long SSH command. Both entry
+points use exactly `/usr/bin/node` (13 bytes); up to 128 staging identifiers flow
+through stdin. The existing carrier uses bounded base64 in that same source
+request, with encoded-size checks before decoding, followed by the unchanged
+raw-size, SHA256, path, owner and inode checks. No staged loader, dependency or
+new executable TV file is introduced. Root local consumers retain their existing
+argument format.
+
+The command-size regression failed on the old implementation. All 48 dedicated
+No-root removal/carrier tests passed; two actual stdin scenarios passed on each
+exact Node 0.10.15, 0.10.25, 0.12.2 and 8.12.0, including exact carrier bytes,
+retry and malformed-carrier refusal. Final helper JavaScript SHA256 is
+`a0dde7ab2edee26aea947390c05b5e31d9bc30211cdaadd20aa368da6a751fb1`.
+
+### Finalizer parent and safe guard diagnostics
+
+The finalizer keeps private directories strict, while opening the exact shared
+`/tmp` parent permits only UID 0 and mode `01777` for the final pinned `rmdir`.
+The previous final-directory check incorrectly rejected that standard sticky
+parent after deleting the owned directory's contents. Root ownership, exact
+mode/path, no-follow traversal and the final child inode recheck remain required.
+Foreign UID, non-sticky or unexpected mode, another parent and a writable private
+leaf remain refused. The realistic sticky-parent regression failed before the fix.
+
+Failure diagnostics now expose only an exact whitelist of fixed guard codes on
+the existing reply/stderr paths; unknown or private messages map to a fixed
+fallback. No path, stack or arbitrary error text is exported, and public pending
+reason/completion authority is unchanged. The latest coordinator run passed 94
+Root cleanup/tail/simple/handoff cases with three platform skips. Exact Node 8
+checks cover the diagnostic and sticky-parent changes, including refusal cases.

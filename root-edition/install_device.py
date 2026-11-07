@@ -527,8 +527,13 @@ class LocalDevice:
     def root_journal(self):return read_journal(ROOT/'deploy.json')
 
     def boot_id(self):
-        value=Path('/proc/sys/kernel/random/boot_id').read_text().strip()
-        if not re.fullmatch(r'[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}',value):raise ValueError('boot_id_unavailable')
+        import deploy
+        from clean_removal import boot_format
+        root=self.payload/'root'
+        deploy.verify_bundle(root,allow_experimental=True)
+        program="import sys,json;sys.path.insert(0,%r);from intent_runtime import boot_identity;print(json.dumps({'returnValue':True,'boot':boot_identity()}))"%str(root/'runtime')
+        value=deploy.command([sys.executable,'-I','-B','-c',program]).get('boot')
+        if boot_format(value)!='session':raise ValueError('boot_id_unavailable')
         return value
 
     def shared_cleanup(self, action, record, app=None):
@@ -557,15 +562,20 @@ class LocalDevice:
 
     def clean_remove(self, record, save):
         """Full removal using current support, old snapshots and original locks."""
-        from clean_removal import locks, routes, remove_packages, restore_registrations
+        from clean_removal import locks, routes, remove_packages, restore_registrations, validate_restored_root_api, boot_format, verified_restart
         import deploy, provision, startup_hook
         roots=(ROOT,UPDATER,SUPERVISOR)
         uid=self.ownership.store.uid
         with locks(roots,uid):
-            current_boot=self.boot_id()
-            if 'cleanup_boot_id' not in record:
-                record['cleanup_boot_id']=current_boot;save(record['stage'])
-            restarted=current_boot!=record['cleanup_boot_id']
+            restarted=verified_restart(record)
+            baseline=record.get('cleanup_boot_id')
+            if baseline is not None and not boot_format(baseline):raise ValueError('boot_id_unavailable')
+            current_boot=None if restarted else self.boot_id()
+            if not restarted:
+                if baseline is None or boot_format(baseline)=='kernel':
+                    record['cleanup_boot_id']=current_boot
+                    record.pop('cleanup_verified_boot_id',None);save(record['stage'])
+                restarted=current_boot!=record['cleanup_boot_id']
             if record['stage']=='restart-required' and not restarted:
                 return {'removed':False,'verified_clean':False,'restart_required':True}
             self.clean_quiescent(record)
@@ -620,10 +630,11 @@ class LocalDevice:
                             raise ValueError('provision_snapshot_required')
                         startup_hook.remove(provision.secure)
                 # Restore supervisor lockdown before Root updater's original
-                # registration. Exact old/new bytes only, never foreign drift.
+                # registration. Admit only its authenticated original/installed/
+                # restored-SDK chain, never foreign drift.
                 if os.path.lexists(SUPERVISOR/'legacy-lockdown.json'):
                     from cleanup_system_updater import lockdown, write
-                    entries=lockdown(SUPERVISOR,BUS)
+                    entries=lockdown(SUPERVISOR,BUS,check=lambda files:validate_restored_root_api(files,BUS,UPDATER,uid))
                     for name,entry in entries.items():write(Path(name),entry['original'].encode(),entry['mode'])
                 for state,app,hookname in ((SUPERVISOR,'com.cleanyourtv.system.updater','52-clean-your-tv-system-updater'),
                                           (UPDATER,'com.cleanyourtv.root.updater','51-clean-your-tv-root-updater')):
@@ -650,7 +661,9 @@ class LocalDevice:
                         # cleanup forever. Cancel fixed jobs below, then boot first.
                         unavailable.add(service);startup_failed=True
                         if restarted:
+                            current_boot=current_boot or self.boot_id()
                             record['cleanup_boot_id']=current_boot
+                            record.pop('cleanup_verified_boot_id',None)
                             restarted=False
                         record['cleanup_startup_unavailable']=sorted(unavailable)
                         save('original-writers-fenced')
@@ -662,7 +675,9 @@ class LocalDevice:
             self.remove_owned_registrations()
             stopped=self.shared_cleanup('stop',record)
             if (stopped.get('controller_running') or startup_failed) and restarted:
+                current_boot=current_boot or self.boot_id()
                 record['cleanup_boot_id']=current_boot
+                record.pop('cleanup_verified_boot_id',None)
                 restarted=False
             if stopped.get('controller_running') or startup_failed or restart_first and not restarted:
                 save('restart-required')
@@ -690,7 +705,7 @@ class LocalDevice:
             if not restarted:
                 save('restart-required')
                 return {'removed':False,'verified_clean':False,'restart_required':True}
-            record['cleanup_verified_boot_id']=current_boot
+            if not verified_restart(record):record['cleanup_verified_boot_id']=current_boot
             if 'private-cleanup' not in record['done']:record['done'].append('private-cleanup')
             save('private-cleanup')
         return {'removed':True,'verified_clean':True,'applications_services_startup_removed':True,'private_cleanup_verified':True}
@@ -980,7 +995,6 @@ class LocalDevice:
         import python_binding, fcntl
         from clean_removal import retire_tree
         runtime=python_binding.MANAGED_ROOT/python_binding.ARCHIVE_SHA256
-        if not os.path.lexists(python_binding.MANAGED_ROOT) and not record.get('runtime_cleanup'):return None
         directory=checked_store(python_binding.MANAGED_ROOT,self.ownership.store.uid)._directory() if os.path.lexists(python_binding.MANAGED_ROOT) else None
         promotion=None
         try:
@@ -1020,14 +1034,18 @@ class LocalDevice:
                 env={key:value for key,value in os.environ.items() if key not in ('NODE_OPTIONS','NODE_PATH')})
             reply=json.loads(result.stdout)
             if reply.get('operation')!=record['operation'] or reply.get('removal')!=record['removal']:raise ValueError('cleanup_tail_unconfirmed')
+            if result.returncode:
+                code=reply.get('cleanup_error','cleanup-guard-failed')
+                if not isinstance(code,str) or not re.fullmatch('[a-z][a-z0-9-]{0,63}',code):code='cleanup-guard-failed'
+                sys.stderr.write('CYTV_CLEAN_TAIL: '+code+'\n')
             return reply
         finally:
             if promotion is not None:os.close(promotion)
             if directory is not None:os.close(directory)
 
     def verify_clean(self, record):
-        boot=self.boot_id()
-        if boot==record.get('cleanup_boot_id') or not record.get('cleanup_boot_id'):
+        from clean_removal import verified_restart
+        if not verified_restart(record):
             raise ValueError('restart_required')
         from clean_removal import validate_package_receipts
         validate_package_receipts(record)
@@ -1062,7 +1080,7 @@ class LocalDevice:
         activities=self.rpc('com.palm.activitymanager/list',{'details':True,'subscribers':True,'current':False,'internal':False}).get('activities')
         if (not isinstance(activities,list) or any(not isinstance(item,dict)
                 or item.get('name')=='com.cleanyourtv.root.preview.service.recovery'
-                or str(item.get('callback',{}).get('method','')).startswith(('luna://com.cleanyourtv.','luna://com.local.nativehome.service/','luna://com.gathin.tvhome.renewal/')) for item in activities)):
+                or str(item.get('callback',{}).get('method','')).startswith(tuple('luna://'+app+('.renewal/' if app=='com.gathin.tvhome' else '.service/') for app in APPS)) for item in activities)):
             raise ValueError('owned_activity_remains')
         devices=self.rpc('com.webos.service.eim/getAllInputStatus',{}).get('devices')
         if not isinstance(devices,list) or any(d.get('id')=='com.gathin.tvhome' or d.get('appId')=='com.gathin.tvhome' for d in devices):

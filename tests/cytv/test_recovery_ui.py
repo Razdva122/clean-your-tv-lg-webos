@@ -26,3 +26,13 @@ class RecoveryPresentationTests(unittest.TestCase):
         self.assertEqual(removal_details({'disposition':'clean-removal','removal':{
             'stage':'verified-clean','reason':'removal-verified'}}),
             {'stage_text':'Verifying removal…','blocker_text':''})
+
+    def test_current_connection_or_auth_help_overrides_only_restart_presentation(self):
+        from cytv.recovery_ui import removal_details, removal_restart_required
+        plan={'disposition':'clean-removal','restart_required':True,'removal':{'stage':'restart-required','reason':'restart-required'}}
+        for code,next_step in [('ssh-unreachable','Connection to the TV was interrupted. Check the connection and try again.'),('ssh-auth-root','Use the existing Root SSH key.')]:
+            with self.subTest(code=code):
+                detail=removal_details(plan,{'code':code,'next_step':next_step})
+                self.assertEqual(detail['blocker_text'],next_step)
+                self.assertNotIn('Restart',detail['stage_text'])
+                self.assertTrue(removal_restart_required(plan),'current connection advice cannot authorize completion')

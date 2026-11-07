@@ -3,7 +3,7 @@
 // Python must never rewrite completion after this process starts retirement.
 var fs=require('fs'), nodeCrypto=require('crypto'), cp=require('child_process');
 var C=fs.constants, uid=process.getuid(), mode=process.argv[2], id=process.argv[3], removal=process.argv[9];
-var state='/var/lib/clean-your-tv-installation';
+var state='/var/lib/clean-your-tv-installation', bootRoot='/tmp/clean-your-tv-root-boot';
 var runtime='/var/lib/clean-your-tv-python/4a71641c8d5536175e404a961624e8656eba30e97b5026f6bd7dc31e4bbeaaea';
 var apps=['com.cleanyourtv.root.preview','com.cleanyourtv.root.updater','com.cleanyourtv.system.updater','com.cleanyourtv.updater','com.local.nativehome','com.gathin.tvhome'];
 var opened=[], directory, record, lease;
@@ -12,14 +12,16 @@ var privateCleanupSource=null;
 function at(fd,name){return '/proc/self/fd/'+fd+(name?'/'+name:'');}
 function identity(a,b){return a.dev===b.dev && a.ino===b.ino;}
 function owned(info,dir){if(info.uid!==uid || (info.mode&18) || (dir?!info.isDirectory():!info.isFile() || info.nlink!==1))throw Error('unsafe-cleanup-member');}
-function openDir(path){
+function openDir(path,parent){
   var fd=fs.openSync('/',C.O_RDONLY|C.O_DIRECTORY|C.O_NOFOLLOW);opened.push(fd);
   path.split('/').filter(Boolean).forEach(function(name){
     fd=fs.openSync(at(fd,name),C.O_RDONLY|C.O_DIRECTORY|C.O_NOFOLLOW);opened.push(fd);
     var info=fs.fstatSync(fd);
     if(!info.isDirectory() || (info.uid!==0 && info.uid!==uid) || ((info.mode&18) && !(info.mode&512)))throw Error('unsafe-cleanup-directory');
   });
-  owned(fs.fstatSync(fd),true);return fd;
+  var info=fs.fstatSync(fd);
+  if(!(parent && path==='/tmp' && info.uid===0 && (info.mode&4095)===1023))owned(info,true);
+  return fd;
 }
 function read(fd,name){
   var file=fs.openSync(at(fd,name),C.O_RDONLY|C.O_NOFOLLOW|C.O_NONBLOCK);
@@ -45,8 +47,13 @@ function packageReceipts(){
     var item=record.packages[app];
     if(!object(item)||item.state!=='absent'||!object(item.readback)||item.readback.app!==app||item.readback.absent!==true)throw Error('package-absence-unverified');
   });
-  var boot=fs.readFileSync('/proc/sys/kernel/random/boot_id').toString('utf8').trim();
-  if(typeof record.cleanup_boot_id!=='string'||!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(record.cleanup_boot_id)||boot===record.cleanup_boot_id)throw Error('restart-required');
+  function format(value){
+    if(typeof value!=='string')return null;
+    var found=/^([a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})(:session-[a-f0-9]{32})?$/.exec(value);
+    return found && found[0]===value && found[1]!=='00000000-0000-0000-0000-000000000000' ? (found[2]?'session':'kernel') : null;
+  }
+  var baseline=record.cleanup_boot_id, verified=record.cleanup_verified_boot_id;
+  if(!format(baseline)||format(baseline)!==format(verified)||baseline===verified)throw Error('restart-required');
 }
 function rpc(method,payload){
   var result=cp.spawnSync('/usr/bin/luna-send',['-n','1','luna://'+method,JSON.stringify(payload)],{timeout:15000,maxBuffer:2097152});
@@ -54,6 +61,7 @@ function rpc(method,payload){
   var value=JSON.parse(result.stdout.toString());if(value.returnValue!==true)throw Error('cleanup-readback-unavailable');return value;
 }
 function absent(final){
+  if(final && exists(bootRoot))throw Error('boot-session-remains');
   var inventory=rpc('com.webos.applicationManager/dev/listApps',{}).apps;
   if(!Array.isArray(inventory) || inventory.some(function(a){return apps.indexOf(a.id)!==-1;}))throw Error('package-remains');
   apps.forEach(function(app){['applications/'+app,'packages/'+app,'services/'+app+(app==='com.gathin.tvhome'?'.renewal':'.service')].forEach(function(name){
@@ -94,7 +102,7 @@ function absent(final){
     if(fs.readdirSync(at(fd)).some(function(name){return keep.indexOf(name)===-1;}))throw Error('private-member-remains');
   });
   var activities=rpc('com.palm.activitymanager/list',{details:true,subscribers:true,current:false,internal:false}).activities;
-  if(!Array.isArray(activities) || activities.some(function(item){return !item || item.name==='com.cleanyourtv.root.preview.service.recovery' || ['luna://com.cleanyourtv.','luna://com.local.nativehome.service/','luna://com.gathin.tvhome.renewal/'].some(function(prefix){return String((item.callback||{}).method||'').indexOf(prefix)===0;});}))throw Error('owned-activity-remains');
+  if(!Array.isArray(activities) || activities.some(function(item){return !item || item.name==='com.cleanyourtv.root.preview.service.recovery' || apps.some(function(app){return String((item.callback||{}).method||'').indexOf('luna://'+app+(app==='com.gathin.tvhome'?'.renewal/':'.service/'))===0;});}))throw Error('owned-activity-remains');
   var inputs=rpc('com.webos.service.eim/getAllInputStatus',{}).devices;
   if(!Array.isArray(inputs) || inputs.some(function(item){return item.id==='com.gathin.tvhome'||item.appId==='com.gathin.tvhome';}))throw Error('owned-input-remains');
   fs.readdirSync('/proc').filter(function(n){return /^[0-9]+$/.test(n) && Number(n)!==process.pid && !(process.argv[4]==='-' && record.runtime_cleanup.parent_pid===process.ppid && Number(n)===process.ppid);}).forEach(function(pid){
@@ -143,7 +151,7 @@ function retire(path,inventory,pin,removeRoot){
     (item.dir?fs.rmdirSync:fs.unlinkSync)(path);fs.fsyncSync(item.fd);
   });
   if(removeRoot){
-    var slash=path.lastIndexOf('/'),parent=openDir(path.slice(0,slash)),name=path.slice(slash+1);
+    var slash=path.lastIndexOf('/'),parent=openDir(path.slice(0,slash),true),name=path.slice(slash+1);
     if(!identity(fs.fstatSync(root),fs.lstatSync(at(parent,name))))throw Error('cleanup-root-changed');
     fs.rmdirSync(at(parent,name));fs.fsyncSync(parent);
   }
@@ -196,6 +204,7 @@ try{
       retire(stage.path,null,stage);
     });
     retire(runtime,cleanup.files,null,true);
+    retire(bootRoot,{'session.lock':true,'session.json':true,'normal.json':true},null,true);
     gates.forEach(function(entry){
       if(!/^\/tmp\/cytv-root-tail-[a-f0-9]{32}$/.test(entry.path))throw Error('invalid-tail-stage');
       if(!exists(entry.path))return;
@@ -213,5 +222,10 @@ try{
   }
 }catch(error){
   if(mode==='inspect' && error.code==='ENOENT')process.stdout.write(JSON.stringify({operation:id,removal:removal,state:'not-ready'}));
-  else {process.stdout.write(JSON.stringify({operation:id,removal:removal,state:'recovery_required',stage:'private-cleanup',current:false,reason:'private-cleanup-incomplete'}));process.exitCode=1;}
+  else {
+    var known='boot-session-remains cleanup-member-changed cleanup-readback-unavailable cleanup-root-changed different-removal-intent incomplete-removal-receipts invalid-cleanup-selector invalid-runtime-inventory invalid-support-stage invalid-tail-stage invalid-tail-stages no-root-private-cleanup-required no-root-private-readback-unavailable original-lock-changed original-lock-required original-promotion-lock-missing original-removal-required oversized-cleanup-record owned-activity-remains owned-input-remains owned-private-registration-remains owned-process-still-used owned-registration-remains owned-route-remains package-absence-unverified package-remains private-member-remains restart-required route-changed runtime-cleanup-proof-required runtime-member-changed startup-remains support-stage-remains unexpected-promotion-lock unknown-ownership-receipt unknown-runtime-directory unknown-runtime-member unknown-support-directory unknown-support-member unknown-tail-stage unsafe-cleanup-directory unsafe-cleanup-member'.split(' ');
+    var diagnostic=known.indexOf(error.message)!==-1?error.message:'cleanup-guard-failed';
+    process.stderr.write('CYTV_CLEAN_TAIL: '+diagnostic+'\n');
+    process.stdout.write(JSON.stringify({operation:id,removal:removal,state:'recovery_required',stage:'private-cleanup',current:false,reason:'private-cleanup-incomplete',cleanup_error:diagnostic}));process.exitCode=1;
+  }
 }finally{opened.reverse().forEach(function(fd){try{fs.closeSync(fd);}catch(e){}});}

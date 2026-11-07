@@ -36,6 +36,19 @@ def removal_restart_required(plan):
             or removal.get('stage') == 'restart-required' or removal.get('reason') == 'restart-required')
 
 
+CONNECTION_FAILURES = ('ssh-unreachable','ssh-protocol','ssh-auth-root','ssh-auth-no-root',
+                       'ssh-key-file','ssh-identity','developer-key-server','developer-key-unlock','developer-key-response')
+
+
+def removal_connection_failure(plan, failure=None):
+    """Current connection guidance changes presentation, never restart authority."""
+    if type(plan) is not dict or plan.get('disposition') != 'clean-removal':
+        return False
+    removal = plan.get('removal') if type(plan.get('removal')) is dict else {}
+    return ((failure or {}).get('code') in CONNECTION_FAILURES or
+            plan.get('reason') == 'connection-interrupted' or removal.get('reason') == 'connection-interrupted')
+
+
 def removal_details(plan, failure=None):
     if plan.get('disposition') != 'clean-removal':
         return {}
@@ -44,8 +57,11 @@ def removal_details(plan, failure=None):
     reason = value.get('reason') if type(value.get('reason')) is str else None
     if type(plan.get('reason')) is str and plan['reason'] in REMOVAL_BLOCKERS:
         reason = plan['reason']
-    if (failure or {}).get('code') in ('ssh-unreachable','ssh-protocol'):
-        reason = 'connection-interrupted'
+    if removal_connection_failure(plan, failure):
+        auth = (failure or {}).get('code') in CONNECTION_FAILURES[2:]
+        return {'stage_text':'Verifying removal…',
+                'blocker_text':failure['next_step'] if auth and type(failure.get('next_step')) is str
+                               else REMOVAL_BLOCKERS['connection-interrupted']}
     if removal_restart_required(plan):
         stage = reason = 'restart-required'
     return {'stage_text':REMOVAL_STAGES.get(stage, 'Verifying removal…'),

@@ -19,7 +19,7 @@ class SimpleRemoval(unittest.TestCase):
     def prepare(self, **kwargs):
         fixture=self.fixture(**kwargs)
         self.boot='11111111-1111-1111-1111-111111111111'
-        fixture[0].device.boot_id=lambda:self.boot
+        fixture[0].device.boot_id=lambda:self.boot+':session-'+self.boot[0]*32
         return fixture
 
     def test_partial_removal_requires_full_boot_then_fresh_sweep(self):
@@ -186,8 +186,12 @@ class SimpleRemoval(unittest.TestCase):
         self.assertEqual(first['stage'],'restart-required',first)
         self.assertEqual(calls.count('remove-'+APPS[0]),0)
         self.assertTrue((root/'state/ssap.json').exists())
+        name='clean-removal-'+identifier;record=driver.ownership.store.read(name)
+        record['cleanup_verified_boot_id']='11111111-1111-1111-1111-111111111111:session-'+'b'*32
+        driver.ownership.store.write(name,record)
         self.boot='22222222-2222-2222-2222-222222222222'
         self.assertEqual(driver.clean_remove(identifier)['stage'],'restart-required')
+        self.assertNotIn('cleanup_verified_boot_id',driver.ownership.store.read(name))
         self.assertEqual(calls.count('remove-'+APPS[0]),0)
         running=False
         self.assertEqual(driver.clean_remove(identifier)['stage'],'restart-required')
