@@ -110,6 +110,10 @@ class DesktopConsole(Console):
         super().recovery(profile)
         self.emit('recovery', dict(profile))
 
+    def selected_profile(self, profile):
+        self.emit('selected-profile', {key:profile[key] for key in
+                  ('host','edition','port','connection','root_variant') if key in profile})
+
 
 class Channel:
     def __init__(self, emit):

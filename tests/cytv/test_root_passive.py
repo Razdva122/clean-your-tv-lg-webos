@@ -39,16 +39,16 @@ class PassiveBootstrapTests(unittest.TestCase):
 
     def collect(self,foreign=False):
         harness=r'''
-const fs=require('fs'),vm=require('vm'),path=require('path');
-const fixture=JSON.parse(process.argv[1]),code=JSON.parse(process.argv[2]),foreign=process.argv[3]==='true';
-function local(p){if(typeof p!=='string'||p[0]!=='/'||p.includes('..'))throw Error('unexpected-path');return path.join(fixture,p);}
+var fs=require('fs'),vm=require('vm'),path=require('path'),c=require('constants');
+var fixture=JSON.parse(process.argv[1]),code=JSON.parse(process.argv[2]),foreign=process.argv[3]==='true';
+function local(p){if(typeof p!=='string'||p[0]!=='/'||p.indexOf('..')>=0)throw Error('unexpected-path');return path.join(fixture,p);}
 function stat(s){s.uid=foreign&&s.isFile()?123:0;return s;}
-const ro={lstatSync:p=>stat(fs.lstatSync(local(p))),
- openSync(p,flags){if((flags&3)!==0||!(flags&fs.constants.O_NOFOLLOW))throw Error('not-read-only');return fs.openSync(local(p),flags);},
- fstatSync:fd=>stat(fs.fstatSync(fd)),readSync:fs.readSync.bind(fs),closeSync:fs.closeSync.bind(fs)};
-const output=[];
-vm.runInNewContext(code,{Buffer,console:{log:s=>output.push(s)},process:{getuid:()=>0},
- require:n=>{if(n==='fs')return ro;if(n==='constants'||n==='crypto')return require(n);throw Error('unexpected-module');}});
+var ro={lstatSync:function(p){return stat(fs.lstatSync(local(p)));},
+ openSync:function(p,flags){if((flags&3)!==0||!(flags&c.O_NOFOLLOW))throw Error('not-read-only');return fs.openSync(local(p),flags);},
+ fstatSync:function(fd){return stat(fs.fstatSync(fd));},readSync:fs.readSync.bind(fs),closeSync:fs.closeSync.bind(fs)};
+var output=[];
+vm.runInNewContext(code,{Buffer:Buffer,console:{log:function(s){output.push(s);}},process:{getuid:function(){return 0;}},
+ require:function(n){if(n==='fs')return ro;if(n==='constants'||n==='crypto')return require(n);throw Error('unexpected-module');}});
 process.stdout.write(JSON.stringify(output));
 '''
         before={str(p):(p.read_bytes(),p.stat().st_mode) for p in self.root.rglob('*') if p.is_file() and not p.is_symlink()}
@@ -59,6 +59,13 @@ process.stdout.write(JSON.stringify(output));
         after={str(p):(p.read_bytes(),p.stat().st_mode) for p in self.root.rglob('*') if p.is_file() and not p.is_symlink()}
         self.assertEqual(before,after)
         return json.loads(output[0])
+
+    @unittest.skipUnless(os.environ.get('NODE012'), 'Exact NODE012 not supplied')
+    def test_legacy_node_reads_retained_records_without_executing_them(self):
+        from unittest.mock import patch
+        with patch.dict(os.environ, {'ROOT_DIAGNOSTIC_NODE':os.environ['NODE012']}):
+            self.assertEqual(self.collect()['status'], 'read')
+            self.assertEqual(self.collect(foreign=True)['status'], 'unsafe')
 
     def test_reads_only_exact_original_operation_and_never_executes_worker(self):
         got=self.collect();self.assertEqual(got['status'],'read')

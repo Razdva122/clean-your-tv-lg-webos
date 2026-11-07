@@ -103,6 +103,7 @@ build/tests/test-filter
 for file in launcher/*.js native/app/*.js native/service/*.js renewal-service/*.js; do node --check "$file"; done
 
 "$PYTHON" tests/root-node-compat.py
+"$PYTHON" tests/root-node-compat.py --beta
 node root-edition/service/test-c1-filter.cjs
 node root-edition/service/test-c1-lease.cjs
 node root-edition/service/test-audio-recovery.cjs

@@ -40,7 +40,7 @@ Manage them in **Settings → Themes** on your TV.
 
 Ribbon wallpaper video: **Xecutioner** · non-commercial use with attribution.
 
-The candidate keeps Ribbon inside the single full-screen Home app, with its own wallpaper in both editions. It does not show another app or HDMI behind the cards. Final package/device acceptance remains pending.
+Ribbon stays inside the single full-screen Home app, with its own wallpaper in both editions. It does not show another app or HDMI behind the cards. See [compatibility](docs/COMPATIBILITY.md) for the tested scope.
 
 **[Try the themes in the main browser preview →](https://razdva122.github.io/clean-your-tv-lg-webos/demo/)**
 
@@ -53,9 +53,6 @@ and creating your own theme.
 <a id="get-started"></a>
 
 ## Download and install
-
-**Candidate branch:** v1.11.0 is not published yet. The release metadata below is
-prepared for publication; download buttons still follow the latest published v1.10.0.
 
 <!-- release:downloads -->
 Current stable release: **[v1.11.0](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.11.0)** — [release notes](docs/RELEASE-1.11.0.md).

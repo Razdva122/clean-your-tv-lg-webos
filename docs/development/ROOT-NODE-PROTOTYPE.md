@@ -1,5 +1,62 @@
 # Root Node 0.12.2 compatibility prototype
 
+## Unreleased installer Beta
+
+The separate `--legacy-node-beta` build mode enables exact Node 0.12.2 admission
+in generated device code. The original `--legacy-node-prototype` mode below
+remains host-only with Node 8+ admission. Neither is a hardware support claim.
+
+The common installer stages Beta under `legacy-root-beta/`, containing both
+graphics variants, the complete Root Updater/coordinator and System Updater.
+All source transformations occur before bundle, IPK and outer payload hashes.
+Beta marks `release.json` with `runtime_variant: node012-beta`; normal deployment
+drivers reject that bundle. Generated Root and System setup accept only exact
+0.12.2, and both updater Python entrypoints refuse `check` and new `install`
+before network/transaction work. Status, restoration and original recovery remain
+available. The normal shipping Root graph retains its Node 8+ gate.
+
+Node 0.12.2 rejects Node's `--require` option. Its Beta recovery runner retains
+the unchanged firmware bootstrap as the main script and initializes diagnostics
+when entering project service code. Failures before project entry are therefore
+not covered by that diagnostic file. Passive original-operation reads use
+legacy Buffer APIs and never execute retained code.
+
+Before any install submission, the shared CLI offers a default-cancel choice
+after an identified ordinary Root Node refusal. Beta needs an additional
+default-no confirmation; `--yes` cannot choose it. Other old Node versions offer
+No-root only, subject to Helper requirements. Both editions' local pending work
+and retained Root device state prevent a switch. All frontends reuse these
+choices and persist the transport/variant for later maintenance.
+
+No-root over root SSH uses the existing root authentication and pinned host key,
+the private Luna sender, a distinct root-owned observer namespace and protected
+IPK staging under `/var/lib/clean-your-tv-installer`. Its configuration uploads
+inherit the verified Helper state directory's owner/group before publication.
+The original Developer Mode observer program remains byte-identical so its
+existing authenticated capsules remain usable. Product edition remains No-root;
+root SSH does not grant permission to remove an unrelated Root installation.
+
+Useful source commands (no TV connection):
+
+```sh
+npm ci
+.venv-cytv/bin/python scripts/build-cytv.py --payload-only
+NODE012=/absolute/path/to/node-v0.12.2/bin/node .venv-cytv/bin/python tests/root-node-compat.py --beta
+NODE012=/absolute/path/to/node-v0.12.2/bin/node .venv-cytv/bin/python -m unittest tests.cytv.test_legacy_beta_build tests.cytv.test_root_runtime tests.cytv.test_root_passive
+```
+
+CLI maintenance can explicitly select `--edition no-root --connection root-ssh`
+or `--edition root --root-variant node012-beta`; normal saved-profile selection
+retains these fields. Beta feedback uses the existing local report and manual
+[feedback guide](../FEEDBACK.md), including model, firmware/webOS, remote,
+installer platform, exact versions, expected/actual tests and attempted recovery.
+Untested fields remain untested. No automatic uploads or issue comments occur.
+
+Physical acceptance and signed public delivery are still outstanding. This work
+does not change an active frozen release's scope or select a release build.
+
+## Original host prototype
+
 This is an **opt-in host prototype for issue #160**, not a supported installation
 path. Root still requires system Node 8+ in the computer installer, on-device
 setup, deployment and Homebrew bootstrap. No TV was accessed to develop it.

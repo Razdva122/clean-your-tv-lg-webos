@@ -100,6 +100,8 @@ def tv_summary(value):
         inventory=mapping(value['root_inventory'])
         result['root_inventory']={key:choice(inventory.get(key),('read','unavailable','invalid'))
                                   for key in ('applications','inputs')}
+    if version(value.get('node_version')):
+        result['node_version'] = value['node_version']
     if 'root_diagnostics' in value:
         result['root_diagnostics'] = root_diagnostics_summary(value['root_diagnostics'])
     if 'setup_outcome' in value:

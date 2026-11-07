@@ -99,6 +99,16 @@ class Installer:
         self.checks = checks if checks is not None else CheckList()
         from .outcomes import SetupOutcome
         self.outcome = SetupOutcome(self.checks, self.tv_info)
+        self.use_runtime_variant()
+
+    def use_runtime_variant(self):
+        if self.profile.get('root_variant') == 'node012-beta':
+            from .root_runtime import select_payload
+            if not getattr(self, '_runtime_variant_selected', False):
+                self.payload, self.manifest = select_payload(self.payload, self.manifest)
+                self._runtime_variant_selected = True
+            self.tv_info['root_variant'] = 'node012-beta'
+            self.checks.root_variant = 'node012-beta'
 
     @staticmethod
     def _python_command(args):
@@ -208,6 +218,8 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
             raise UserError('Homebrew API access repair was not confirmed. Keep recovery state and retry the same command.') from None
 
     def enable_system_updates(self):
+        if self.profile.get('root_variant') == 'node012-beta':
+            raise UserError('Root Beta automatic updates are unavailable; use the computer installer.')
         """Provision the independent supervisor without replacing the active edition."""
         if self.store.pending(self.profile):
             raise UserError('Previous operation is unresolved. Run cytv status; retain recovery state before retrying.')
@@ -459,6 +471,11 @@ with os.fdopen(f,'rb') as stream:
                       '/usr/bin/python3 -c "import json"', '/usr/bin/python3 -c "import fcntl"',
                       self._python_command(['/usr/bin/python3', '-I', '-B', '-c', SYSTEM_PROBE]),
                       '/usr/bin/node -e \'process.exit(Number(process.versions.node.split(".")[0]) >= 8 ? 0 : 1)\'')
+            if self.profile.get('root_variant') == 'node012-beta':
+                from .root_runtime import NODE_BETA_PROBE, VENDOR_PROBE
+                probes = (*probes[:-1], NODE_BETA_PROBE)
+                if self.remote.run(VENDOR_PROBE, timeout=10).strip() != 'CYTV_VENDOR_READY':
+                    raise UserError('Root Beta vendor modules could not be loaded. Installation has not started. Save the diagnostic report.', reason_code='root-requirements')
             checks = dict.fromkeys(diagnostics.ROOT_REQUIREMENTS, 'unknown')
             self.tv_info['root_requirements'] = checks
             python = self._python()
@@ -526,6 +543,10 @@ with os.fdopen(f,'rb') as stream:
                 if existing and not maintain:
                     raise ExistingRoot('Root is already installed or recovery state remains. Connect interactively to review reinstallation; existing state was left unchanged.')
         else:
+            if install and self.profile.get('connection') == 'root-ssh':
+                from .root_runtime import FRESH_PROBE
+                if self.remote.run(FRESH_PROBE, timeout=10).strip() != 'CYTV_FRESH_ROOT':
+                    raise UserError('Previous Root installation needs recovery. Run cytv status or cytv restore. Reinstallation has not started; recovery data was left unchanged.')
             self.checks.update('architecture', 'running')
             arch = self.remote.run('uname -m').strip()
             self.tv_info.update(kernel_arch=arch if arch in diagnostics.KERNEL_ARCHES else 'unknown',
@@ -693,7 +714,8 @@ printf '%s' "$cytv_state"
         apps_data = json.dumps(ids).encode()
         expected[HELPER_STATE + '/ssap-key.json'] = hashlib.sha256(key_data).hexdigest()
         expected[HELPER_STATE + '/apps.json'] = hashlib.sha256(apps_data).hexdigest()
-        storage.install(self.remote, {'helper.ipk': helper, 'launcher.ipk': launcher}, self.progress)
+        storage.install(self.remote, {'helper.ipk': helper, 'launcher.ipk': launcher}, self.progress,
+                        root=self.profile.get('connection') == 'root-ssh')
         from . import no_root_observer
         pending = no_root_observer.begin(self, 'install', {'helper.ipk': helper, 'launcher.ipk': launcher},
             {HOME: self.manifest['home_version'], HELPER: self.manifest['helper_version']}, expected,
@@ -761,9 +783,12 @@ printf '%s' "$cytv_state"
             self.store.checkpoint(self.profile,stage='verify',baseline_sha=baseline_sha)
             self.verify_root_updater(baseline_sha)
             self.outcome.packages_verified()
+            updates_ready = self.profile.get('root_variant') != 'node012-beta'
+            # This receipt proves recovery infrastructure readiness, not OTA eligibility.
             self.store.checkpoint(self.profile, action='activate-root', stage='stop-helper', updates_ready=True)
             self.activate_root()
-            return dict(result, home_changed=True, launch_requested=True, updates_ready=True)
+            return dict(result, home_changed=True, launch_requested=True, updates_ready=updates_ready,
+                        beta=not updates_ready)
 
     def verify_root_updater(self, baseline_sha):
         script = """
@@ -1403,7 +1428,7 @@ print('CYTV_UPDATER_VERIFIED')
             'baseline_sha':result['device']['product']['result']['baseline_sha'] if product else previous['baseline_sha']}).encode())
         self.store.finish(self.profile)
         self.outcome.packages_verified()
-        return {'home_changed':False,'updates_ready':True,'home_control':'disabled'}
+        return {'home_changed':False,'updates_ready':self.profile.get('root_variant') != 'node012-beta','home_control':'disabled'}
 
     def resume_root_setup(self, expected_pending=None):
         # Revalidate after the user's confirmation; never resubmit package setup.
@@ -1431,7 +1456,8 @@ print('CYTV_UPDATER_VERIFIED')
                     'updates_ready':False,'backend':'c1-native-gate','beta':True}
         self.store.checkpoint(self.profile, action='activate-root', stage='stop-helper', updates_ready=True)
         self.activate_root()
-        return {'installed': package.ROOT_APP, 'home_changed': True, 'launch_requested': True, 'updates_ready': True}
+        return {'installed': package.ROOT_APP, 'home_changed': True, 'launch_requested': True,
+                'updates_ready': self.profile.get('root_variant') != 'node012-beta'}
 
     def recover_unstarted_root_updater(self, pending, device):
         """Resolve only a proven pre-bootstrap failure; never change TV state."""
