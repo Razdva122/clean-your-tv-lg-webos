@@ -6,8 +6,8 @@
 /* Hallmark · dropped inert LG webOS eyebrow · gate 54, the same compatibility fact remains in the lead and brand mark */
 /* Hallmark · hero-review: subagent, fix then ship · 1 finding resolved: launcher enlarged beside offer */
 /* Hallmark · finish-review: subagent, fix · 1 finding resolved: full help questions wrap naturally · gap: none */
-@import url("./tokens.css");
-@import url("./base.css");
+@import url('./tokens.css');
+@import url('./base.css');
 
 :root {
   font-synthesis: none;
@@ -38,14 +38,14 @@ summary:active {
   opacity: 0.8;
 }
 button:disabled,
-[aria-disabled="true"] {
+[aria-disabled='true'] {
   opacity: 0.55;
   cursor: not-allowed;
 }
 a:focus-visible,
 summary:focus-visible,
 button:focus-visible,
-[tabindex="0"]:focus-visible {
+[tabindex='0']:focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: var(--space-2xs);
 }
@@ -88,7 +88,7 @@ button:focus-visible,
   display: inline-flex;
   align-items: center;
 }
-.primary-nav a[aria-current="page"] {
+.primary-nav a[aria-current='page'] {
   color: var(--color-ink);
   text-decoration: underline;
   text-decoration-color: var(--color-accent);
@@ -117,7 +117,7 @@ button:focus-visible,
   font-size: var(--text-sm);
 }
 .languages summary::after {
-  content: "⌄";
+  content: '⌄';
   font-size: var(--text-md);
 }
 .languages nav,
@@ -147,8 +147,8 @@ button:focus-visible,
 }
 .languages nav a:hover,
 .mobile-menu nav a:hover,
-.languages nav a[aria-current="true"],
-.mobile-menu nav a[aria-current="page"] {
+.languages nav a[aria-current='true'],
+.mobile-menu nav a[aria-current='page'] {
   background: var(--color-paper);
   color: var(--color-ink);
 }
@@ -606,6 +606,13 @@ main:focus {
   }
 }
 
-.missing-page { padding-block:var(--space-3xl); }
-.missing-page p,.missing-page ul { margin-top:var(--space-xl); }
-.missing-page li { margin-block:var(--space-sm); }
+.missing-page {
+  padding-block: var(--space-3xl);
+}
+.missing-page p,
+.missing-page ul {
+  margin-top: var(--space-xl);
+}
+.missing-page li {
+  margin-block: var(--space-sm);
+}

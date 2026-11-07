@@ -122,7 +122,8 @@ try{
   try{var transaction=JSON.parse(bytes.toString());if(transaction.schema===1&&['installing','rolling-back','recovery-required'].indexOf(transaction.status)>=0)reply.external_update_hint=transaction.status;}catch(ignored){}
  }
 }catch(ignored){}
-try{var operations='/media/developer/.cytv-installer/operations';if(exists(operations)){ancestry(operations);var ids=fs.readdirSync(operations);reply.resident_installer=ids.length>0;ids.forEach(function(id){if(/^[a-f0-9]{32}$/.test(id)&&reply.staging_ids.indexOf(id)<0)reply.staging_ids.push(id);});if(reply.staging_ids.length>128)fail();}}catch(e){blocked('installer-private',e);}
+var installerRoots=['/media/developer/.cytv-installer','/tmp/.cytv-installer'];
+installerRoots.forEach(function(root){try{var operations=root+'/operations';if(exists(operations)){ancestry(operations);var ids=fs.readdirSync(operations);reply.resident_installer=reply.resident_installer||ids.length>0;ids.forEach(function(id){if(/^[a-f0-9]{32}$/.test(id)&&reply.staging_ids.indexOf(id)<0)reply.staging_ids.push(id);});if(reply.staging_ids.length>128)fail();}}catch(e){blocked('installer-private',e);}});
 function helperState(state){
  ancestry(path.dirname(state));var s=fs.lstatSync(state);
  // Published Helper accepts legacy shared state0777 when chmod is unavailable.
@@ -149,7 +150,7 @@ if(input.action==='stop'){
  };stopped();return;
 }
 apps.forEach(function(app,index){visit(base+'/applications/'+app,app+' app');visit(base+'/packages/'+app,app+' package');visit(base+'/services/'+services[index],app+' service');});
-visit('/media/developer/.cytv-installer','installer-private');
+installerRoots.forEach(function(root){visit(root,'installer-private');});
 // Only fixed project registration names. Existing foreign roles/routes are not
 // inferred to belong to this project merely because they reference an app.
 ['services.d','roles.d','client-permissions.d','api-permissions.d','manifests.d','groups.d'].forEach(function(folder){
@@ -236,13 +237,17 @@ def _remove_package(installer, app):
 
 
 def _repair_registration(installer, value):
-    """One ordinary same-ID repair per current Retry for protected No-root data."""
+    """One same-ID repair; an uncertain install is never submitted again."""
     from . import no_root_carrier, package
     candidates = {app for row in value['blocked'] if (app := _protected_package(row))}
     if not candidates or not hasattr(installer, 'payload'):
         return value
     registered = {app['id'] for app in installer.installed_apps()}
     for app in sorted(candidates - registered):
+        pending = installer.store.pending(installer.profile)
+        carriers = dict(pending.get('cleanup_carriers', {}))
+        if carriers.get(app) not in (None, 'failed'):
+            raise UserError(ROOT_MESSAGE, reason_code='root-access-required')
         def authenticated(name):
             raw = (installer.payload / package.safe_name(name)).read_bytes()
             if hashlib.sha256(raw).hexdigest() != installer.manifest['files'].get(name):
@@ -265,11 +270,22 @@ def _repair_registration(installer, value):
                    'sha256':hashlib.sha256(carrier).hexdigest(), 'carrier':base64.b64encode(carrier).decode('ascii')}
         installer.remote.run('/usr/bin/node', data=_program(request), timeout=90)
         filename = ('helper.ipk', 'launcher.ipk', 'updater.ipk')[APPS.index(app)]
-        installer.remote.luna('com.webos.appInstallService/dev/install',
-                              {'id':app, 'ipkUrl':'/media/developer/temp/cytv-' + identifier + '/' + filename, 'subscribe':True}, terminal='installed', timeout=150)
+        carriers[app] = 'submitted'
+        installer.store.checkpoint(installer.profile, cleanup_carriers=carriers)
+        try:
+            installer.remote.luna('com.webos.appInstallService/dev/install',
+                                  {'id':app, 'ipkUrl':'/media/developer/temp/cytv-' + identifier + '/' + filename, 'subscribe':True}, terminal='installed', timeout=150)
+        except TVRejected:
+            carriers[app] = 'failed'
+            installer.store.checkpoint(installer.profile, cleanup_carriers=carriers)
+            raise
+        carriers[app] = 'installed'
+        installer.store.checkpoint(installer.profile, cleanup_carriers=carriers)
         if app not in {row['id'] for row in installer.installed_apps()}:
             raise UserError('Removal could not be checked. Reconnect and try again.')
         _remove_package(installer, app)
+        carriers[app] = 'removed'
+        installer.store.checkpoint(installer.profile, cleanup_carriers=carriers)
     return _device(installer, 'sweep')
 
 

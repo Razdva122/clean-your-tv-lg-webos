@@ -50,6 +50,23 @@ class CoordinatorCleanRemoval(unittest.TestCase):
         with self.assertRaises(Busy):
             with self.owner.operation('product', 'product-'+self.id+'.json', resume=original['lease']): pass
 
+    def test_retry_keeps_first_and_latest_failure_separate(self):
+        first=RuntimeError('PRIVATE first');first.luna={'call':'apps-dev','reason':'permission-denied','error_code':-1}
+        last=TimeoutError('PRIVATE last');last.luna={'call':'home-settings','reason':'timeout'}
+        def failed(record,save):
+            save('original-writers-fenced');raise first
+        self.device.clean_remove=failed
+        one=self.driver.clean_remove(self.id)
+        def retried(record,save):
+            save('original-writers-fenced');raise last
+        self.device.clean_remove=retried
+        two=self.driver.clean_remove(self.id)
+        self.assertEqual(two['failure'],one['failure'])
+        self.assertEqual(two.get('last_failure'),{'exception_type':'TimeoutError',
+            'stage':'original-writers-fenced','luna':{'call':'home-settings','reason':'timeout'}})
+        self.assertEqual(two['failure']['luna']['call'],'apps-dev')
+        self.assertNotIn('PRIVATE',str(two))
+
     def test_before_first_lease_late_original_worker_cannot_acquire(self):
         result = self.driver.clean_remove(self.id)
         with self.assertRaises(Busy):
@@ -252,8 +269,8 @@ class PackageRemoval(unittest.TestCase):
             return {'completed':True,'event':{'id':identity,'details':{'packageId':identity,'state':'removed'}}}
         record={'packages':{},'original':{'outcome':'unknown'}}
         with patch('observed_install.remove',side_effect=remove):
-            clean_removal.remove_packages(device,record,lambda stage:None,lambda app:True)
-            clean_removal.remove_packages(device,record,lambda stage:None,lambda app:True)
+            clean_removal.remove_packages(device,record,lambda stage:None)
+            clean_removal.remove_packages(device,record,lambda stage:None)
         self.assertEqual(calls,[app]);self.assertEqual(record['original']['outcome'],'unknown')
 
     def test_retry_skips_absent_package_after_connection_loss(self):
@@ -262,9 +279,9 @@ class PackageRemoval(unittest.TestCase):
         app=clean_removal.APPS[0];device=Mock();device.apps.return_value={app}
         record={'packages':{}}
         with patch('observed_install.remove',side_effect=OSError('lost')) as remove:
-            with self.assertRaises(OSError):clean_removal.remove_packages(device,record,lambda stage:None,lambda app:True)
+            with self.assertRaises(OSError):clean_removal.remove_packages(device,record,lambda stage:None)
             device.apps.return_value=set()
-            clean_removal.remove_packages(device,record,lambda stage:None,lambda app:True)
+            clean_removal.remove_packages(device,record,lambda stage:None)
         self.assertEqual(remove.call_count,1)
 
 
@@ -881,6 +898,83 @@ class PartialDeviceRemoval(unittest.TestCase):
         archived=Path(original.store.root)/('component-fences-'+identifier)
         for path,inode in inodes.items():self.assertEqual((archived/path.parent.name/path.name).stat().st_ino,inode)
         self.assertEqual(original.store.read('request-'+identifier),before)
+
+    def test_catalog_fallback_sweeps_unregistered_residue_without_redundant_removal(self):
+        import types,install_device
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        original=driver.device.rpc
+        def rpc(method,data):
+            if method=='com.webos.applicationManager/dev/listApps':raise RuntimeError('Bus operation rejected')
+            if method=='com.webos.applicationManager/listApps':return {'returnValue':True,'apps':[{'id':app} for app in present]}
+            return original(method,data)
+        driver.device.rpc=rpc
+        driver.device.apps=types.MethodType(install_device.LocalDevice.apps,driver.device)
+        # SDK can leave an empty package directory after unregistering it.
+        # The existing confined sweeper handles it without a new package request.
+        leftover=driver.device.package_paths('com.local.nativehome')[1]
+        leftover.mkdir(parents=True)
+        shared=driver.device.shared_cleanup
+        def sweep(action,record,**kwargs):
+            if action=='root-package' and kwargs.get('app')=='com.local.nativehome' and leftover.exists():leftover.rmdir()
+            return shared(action,record,**kwargs)
+        driver.device.shared_cleanup=sweep
+        self.assertNotIn('com.local.nativehome',driver.device.apps())
+        self.assertEqual(driver.clean_remove(identifier)['stage'],'restart-required')
+        driver.device.current_boot='22222222-2222-2222-2222-222222222222'
+        self.assertEqual(driver.clean_remove(identifier)['stage'],'verified-clean')
+        self.assertNotIn('remove-com.local.nativehome',calls)
+        self.assertFalse(leftover.exists())
+
+    def test_catalog_timeout_can_fall_back_but_malformed_catalog_cannot_claim_absence(self):
+        import types,install_device
+        for failure in (TimeoutError('Bus response timed out'),None):
+            driver,identifier,root,updater,payload,calls,present=self.fixture()
+            original=driver.device.rpc
+            def rpc(method,data):
+                if method=='com.webos.applicationManager/dev/listApps':
+                    if failure:raise failure
+                    return {'returnValue':True,'apps':[{'id':None}]}
+                if method=='com.webos.applicationManager/listApps':return {'returnValue':True,'apps':[]}
+                return original(method,data)
+            driver.device.rpc=rpc
+            driver.device.apps=types.MethodType(install_device.LocalDevice.apps,driver.device)
+            if failure:self.assertEqual(driver.device.apps(),set())
+            else:
+                with patch.object(driver.device,'log'):result=driver.clean_remove(identifier)
+                self.assertEqual(result['last_failure']['luna'],{'call':'apps-dev','reason':'malformed-reply'})
+                self.assertEqual(result['stage'],'original-writers-fenced')
+                self.assertFalse(any(name.startswith('remove-') for name in calls))
+
+    def test_malformed_rpc_envelope_cannot_be_hidden_by_valid_fallback(self):
+        import types,install_device
+        from updater.luna import context
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        original=driver.device.rpc
+        def rpc(method,data):
+            if method=='com.webos.applicationManager/dev/listApps':
+                raise context(RuntimeError('Bus operation rejected'),method,'malformed-reply')
+            if method=='com.webos.applicationManager/listApps':return {'returnValue':True,'apps':[]}
+            return original(method,data)
+        driver.device.rpc=rpc
+        driver.device.apps=types.MethodType(install_device.LocalDevice.apps,driver.device)
+        with patch.object(driver.device,'log'):result=driver.clean_remove(identifier)
+        self.assertEqual(result['stage'],'original-writers-fenced')
+        self.assertEqual(result.get('last_failure',{}).get('luna'),{'call':'apps-dev','reason':'malformed-reply'})
+        self.assertFalse(any(name.startswith('remove-') for name in calls))
+
+    def test_both_catalog_reads_denied_block_before_package_removal(self):
+        import types,install_device
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        def refused(method,data):
+            from updater.luna import context
+            raise context(RuntimeError('Bus operation rejected'),method,'negative-reply',{'errorCode':-1})
+        driver.device.rpc=refused
+        driver.device.apps=types.MethodType(install_device.LocalDevice.apps,driver.device)
+        with patch.object(driver.device,'log'):result=driver.clean_remove(identifier)
+        self.assertEqual(result['stage'],'original-writers-fenced')
+        self.assertEqual(result['last_failure']['luna'],{'call':'apps','reason':'negative-reply','error_code':-1})
+        self.assertFalse(any(name.startswith('remove-') for name in calls))
+        self.assertTrue((root/'state/ssap.json').exists())
 
     def test_never_activated_partial_can_clean_when_profile_interface_unavailable(self):
         driver,identifier,root,updater,payload,calls,present=self.fixture(missing_profiles=True)

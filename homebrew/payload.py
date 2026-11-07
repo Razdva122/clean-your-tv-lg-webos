@@ -3,7 +3,6 @@ import hashlib
 import json
 from pathlib import Path
 import re
-import stat
 import tarfile
 from cytv import python_runtime as runtime
 

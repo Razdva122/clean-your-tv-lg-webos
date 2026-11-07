@@ -1,11 +1,45 @@
 /* Outside the scaled Home surface: the media plane always fills the real viewport. */
-#ctvWallpaper { position: fixed; top: 0; right: 0; bottom: 0; left: 0; overflow: hidden; pointer-events: none; display: none; z-index: 0; }
-#ctvWallpaperVideo { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
-#ctvWallpaperDim { position: absolute; top: 0; right: 0; bottom: 0; left: 0; z-index: 1; }
+#ctvWallpaper {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  overflow: hidden;
+  pointer-events: none;
+  display: none;
+  z-index: 0;
+}
+#ctvWallpaperVideo {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+#ctvWallpaperDim {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+}
 /* App-colour glow must not recolour either the poster or the video wallpaper. */
-#homeSurface.ctv-home.ctv-wallpaper-active .ctv-ambient { visibility: hidden !important; }
-html.ctv-wallpaper-playing, body.ctv-wallpaper-playing { background: transparent !important; }
-#homeSurface.ctv-home.ctv-wallpaper-playing { background: transparent !important; z-index: 1; }
+#homeSurface.ctv-home.ctv-wallpaper-active .ctv-ambient {
+  visibility: hidden !important;
+}
+html.ctv-wallpaper-playing,
+body.ctv-wallpaper-playing {
+  background: transparent !important;
+}
+#homeSurface.ctv-home.ctv-wallpaper-playing {
+  background: transparent !important;
+  z-index: 1;
+}
 
 /* Keep the opaque poster above the decoding video until its first presented frame. */
-#homeSurface.ctv-home.ctv-wallpaper-preparing { z-index:1; }
+#homeSurface.ctv-home.ctv-wallpaper-preparing {
+  z-index: 1;
+}

@@ -225,25 +225,6 @@ def validate_restored_root_api(files,base,root_updater,uid=0):
 
 
 
-def original_absence_safe(record, app):
-    """An absent slot needs original writer evidence, not a progress flag."""
-    original=record.get('original')
-    if not isinstance(original,dict) or 'request' not in original or not isinstance(original.get('components'),dict):return False
-    components=record.get('fenced_components',original['components'])
-    if not isinstance(components,dict):return False
-    key={APPS[0]:'deploy',APPS[1]:'root-bootstrap',APPS[2]:'system-bootstrap'}.get(app)
-    if key and key not in components:return False
-    journal=components.get(key) if key else None
-    if journal is None:
-        request=original.get('request')
-        if request is None or key is None:return True
-        before={'deploy':('reserved','blocked'),
-                'root-bootstrap':('reserved','blocked','root-deploy'),
-                'system-bootstrap':('reserved','blocked','root-deploy','root-updater')}
-        return isinstance(request,dict) and request.get('stage') in before[key]
-    return isinstance(journal,dict) and journal.get('stage',journal.get('phase')) in ('prepared','installing-updater','installing-supervisor')
-
-
 def validate_package_receipts(record):
     packages=record.get('packages')
     if not isinstance(packages,dict) or set(packages)!=set(APPS):raise ValueError('incomplete_removal_receipts')
@@ -252,7 +233,7 @@ def validate_package_receipts(record):
             raise ValueError('package_absence_unverified')
 
 
-def remove_packages(device, record, save, absent_safe=None):
+def remove_packages(device, record, save):
     """Retry explicit removal against current presence, keeping old outcomes separate."""
     from observed_install import remove
     errors=[]

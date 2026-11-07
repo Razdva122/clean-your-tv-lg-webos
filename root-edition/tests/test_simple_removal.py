@@ -56,7 +56,7 @@ class SimpleRemoval(unittest.TestCase):
         device=Mock();device.apps.return_value=set()
         record={'packages':{APPS[0]:{'state':'submitted'}}}
         with patch('observed_install.remove') as remove:
-            remove_packages(device,record,lambda stage:None,lambda app:False)
+            remove_packages(device,record,lambda stage:None)
         remove.assert_not_called()
         self.assertEqual(record['packages'][APPS[0]]['state'],'absent')
 

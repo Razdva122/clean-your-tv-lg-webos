@@ -7,6 +7,7 @@ import shlex
 import shutil
 import tempfile
 import time
+from time import sleep
 import uuid
 
 from . import package, i18n, diagnostics, graphics, storage
@@ -92,6 +93,7 @@ class Installer:
         self.remote, self.store, self.profile = remote, store, profile
         self.payload, self.manifest, self.progress = Path(payload), manifest, progress
         self.helper_retry = lambda: False
+        self.reconnect = None
         self.tv_info = tv_info if tv_info is not None else {}
         from .checks import CheckList
         self.checks = checks if checks is not None else CheckList()
@@ -185,7 +187,7 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
             source=program(self.payload.resolve()/'system-updater')
             python=self._python(ROOT_STATE)
             reply=json.loads(self.remote.run(self._python_command([python,'-I','-B','-']),data=source.encode(),timeout=600))
-            if not isinstance(reply,dict) or reply.get('installed') is not True or reply.get('version')!='1.2.3' or not all(reply.get(k) is True for k in ('root_unchanged','home_unchanged','profile_storage_untouched')):
+            if not isinstance(reply,dict) or reply.get('installed') is not True or reply.get('version')!='1.2.4' or not all(reply.get(k) is True for k in ('root_unchanged','home_unchanged','profile_storage_untouched')):
                 raise ValueError('Unconfirmed System replacement')
             return reply
         except Exception:
@@ -488,7 +490,8 @@ with os.fdopen(f,'rb') as stream:
                             checks.pop(name, None)
                             self.checks.update(name, 'unknown')
                     elif 'c1-native-gate' in self.manifest.get('root_backends', {}):
-                        verify(self.remote, self.checks, self.tv_info, allow_c1=True)
+                        verify(self.remote, self.checks, self.tv_info, allow_c1=True,
+                               allow_compositor=self.manifest['root_backends']['c1-native-gate'].get('admission_schema') == 3)
                     else:
                         verify(self.remote, self.checks, self.tv_info)
                 else:
@@ -826,6 +829,42 @@ print('CYTV_UPDATER_VERIFIED')
                 if not self.helper_retry():
                     raise UserError('Root is installed, but Home Helper has not stopped. Press Home three times within two seconds (older Helper: hold Home for two seconds), release all buttons, then use Home settings > Turn on Home control. Run cytv status or cytv restore before reinstalling.') from None
 
+    def recover_failed_activation(self):
+        """Compensate our activation through the ownership-checked restore path.
+
+        Keep the original stage/error, including when the compensation fails.
+        Never repeat enable/launch or acknowledge the installation as complete.
+        """
+        pending = self.store.pending(self.profile)
+        if (self.profile['edition'] != 'root' or not pending or 'previous' in pending
+                or pending.get('action') not in ('install', 'activate-root')
+                or pending.get('stage') not in ('enable', 'launch', 'launch-submitting')):
+            return False
+        self.store.checkpoint(self.profile, activation_restore_pending=True, activation_restore='unverified')
+        self.progress('Restoring LG Home…')
+        for attempt in range(2):
+            try:
+                current = self.root_action('status').get('result', {})
+                if current.get('recovery', {}).get('integrity_verified') is not True:
+                    return False
+                if not self.root_setup_inactive(current):
+                    self.root_action('restore')
+                    if not self.root_setup_inactive(self.root_action('status').get('result', {})):
+                        return False
+                self.store.checkpoint(self.profile, activation_restore_pending=False, activation_restore='verified')
+                self.progress('LG Home is restored.')
+                return True
+            except Exception as error:
+                from .errors import connection_interrupted
+                reconnect = getattr(self, 'reconnect', None)
+                if attempt or not reconnect or not connection_interrupted(error):
+                    return False
+                try:
+                    self.remote = reconnect()
+                except Exception:
+                    return False
+        return False
+
     def activate_root(self):
         pending=self.store.pending(self.profile) or {}
         if pending.get('home_backend') == 'c1-native-gate':
@@ -852,8 +891,12 @@ print('CYTV_UPDATER_VERIFIED')
             if not self.root_active(self.root_action('status').get('result', {})):
                 raise UserError('Root activation or recovery readback was not confirmed. Run cytv status or cytv restore. Recovery data was kept.')
             self.outcome.startup_observed('root-state-verified')
-        except (RuntimeError, ValueError) as error:
+        except (OSError, RuntimeError, ValueError) as error:
             self.outcome.startup_observed('unverified')
+            try:
+                self.recover_failed_activation()
+            except Exception:
+                pass  # A failed recovery checkpoint must not replace the first error.
             if isinstance(error, UserError):
                 raise  # Preserve sanitized SSH/Luna evidence and the pending stage.
             raise UserError('Root is installed, but activation or opening Home could not be confirmed. Run cytv status to inspect it, or cytv restore to return to LG Home. Recovery data was kept; do not reinstall blindly.') from None
@@ -935,7 +978,7 @@ print('CYTV_UPDATER_VERIFIED')
             if self.tv_info.get('home_backend') == 'c1-native-gate':
                 variant = self.manifest['root_backends']['c1-native-gate']['graphics'][self.tv_info['graphics_resolution']]
                 root = json.loads((self.payload / package.safe_name(variant) / 'release.json').read_text())['version']
-                targets = [(package.ROOT_APP, 'Root (C1 Beta)', root)]
+                targets = [(package.ROOT_APP, 'Root (experimental)' if self.tv_info.get('home_backend_schema') == 3 else 'Root (C1 Beta)', root)]
             else:
                 root = json.loads((self.payload / 'root/release.json').read_text())['version']
                 files = package.data_files((self.payload / 'root-updater/root-updater.ipk').read_bytes())
@@ -1112,6 +1155,8 @@ print('CYTV_UPDATER_VERIFIED')
 
     def _status(self, reconcile=True, trusted_recovery=False):
         pending = self.store.pending(self.profile)
+        restoring = bool(pending and pending.get('activation_restore_pending') is True)
+        reconcile = reconcile and not restoring
         if pending and pending.get('recovery_protocol') == 'no-root-original-stream-v1':
             from .no_root_observer import observe
             return observe(self, pending)
@@ -1165,7 +1210,7 @@ print('CYTV_UPDATER_VERIFIED')
                     self.store.finish(self.profile)
                     reconciled=reconciliation
             return {'device':{'product':event},'pending':self.store.pending(self.profile),'reconciled':reconciled,
-                    'reconciliation':reconciliation, 'can_resume_root_setup':can_resume}
+                    'reconciliation':reconciliation, 'can_resume_root_setup':can_resume and not restoring}
         if pending and pending.get('action') == 'enable-system-updates':
             report = self.system_updater_cleanup('status')
             if reconcile and report.get('present') is False:
@@ -1199,7 +1244,7 @@ print('CYTV_UPDATER_VERIFIED')
                     reconciled = 'root-archive-' + readback['state']
             if stage == 'installed-recovery-only':
                 result = self.root_action('status')
-                if (pending and pending['action'] == 'activate-root'
+                if (pending and not restoring and pending['action'] == 'activate-root'
                         and self.root_active(result.get('result', {}))
                         and (reconcile or self.root_files_match(pending))
                         and (pending.get('home_backend') != 'c1-native-gate' or
@@ -1270,6 +1315,8 @@ print('CYTV_UPDATER_VERIFIED')
             return False
 
     def can_resume_root_setup(self, pending, device):
+        if pending and pending.get('activation_restore_pending') is True:
+            return False
         if (self.profile['edition'] == 'root' and pending
                 and pending.get('action') == 'activate-root'
                 and pending.get('home_backend') != 'c1-native-gate'):
@@ -1540,22 +1587,10 @@ print('CYTV_ROOT_FILES_OK')
             raise UserError('Updater permissions removal could not be verified.')
         return reply
 
-    def root_updater_cleanup(self, action, archive):
-        from .root_updater_remove import COMMAND
-        reply = json.loads(self.remote.run(self._python_command([self._python(), '-c', COMMAND, action, archive]), timeout=60))
-        if not isinstance(reply, dict):
-            raise UserError('Root Updater cleanup could not be verified.')
-        return reply
-
     def cleanup_legacy_permissions(self):
         from .legacy_permissions_remove import SCRIPT
         if self.remote.run(self._python_command([self._python(), '-c', SCRIPT]), timeout=30).strip() != 'CYTV_LEGACY_PERMISSIONS_REMOVED':
             raise UserError('Updater permissions removal could not be verified.')
-
-    def cleanup_updater_app_permissions(self):
-        from .app_permissions_remove import SCRIPT
-        if self.remote.run(self._python_command([self._python(), '-c', SCRIPT]), timeout=30).strip() != 'CYTV_APP_PERMISSIONS_REMOVED':
-            raise UserError('Root Updater app permissions removal could not be verified. Recovery data was kept.')
 
     def verify_project_startup_removed(self):
         script = """import os
@@ -1586,20 +1621,57 @@ print('CYTV_PROJECT_REMOVED')
         except (KeyError, TypeError, ValueError):
             raise UserError('LG Home routing could not be verified. Keep recovery data.') from None
 
-    def recover_root_removal(self, action):
-        from .root_remove_recovery import SCRIPT
-        reply = json.loads(self.remote.run(self._python_command([self._python(), '-c', SCRIPT, action]), timeout=1080))
-        if not isinstance(reply, dict) or reply.get('returnValue') is not True:
-            if isinstance(reply, dict) and reply.get('reason') == 'busy':
-                raise UserError('The previous removal is still running. Wait a minute, then choose Remove again. The app will check the TV before continuing.')
-            raise UserError('The TV has not confirmed the previous package removal. Recovery records were kept. Restart the TV, then choose Remove again to check its state. If this message returns, send the diagnostic report to support.')
-        return reply
-
     def uninstall_project(self):
         pending=self.store.request_clean_removal(self.profile)
         return self.continue_clean_removal(pending)
 
     def continue_clean_removal(self, expected_pending):
+        from .errors import connection_interrupted
+        from .recovery_state import REMOVAL_REASONS
+        # Root's verified full-project absence also completes blocked No-root
+        # goals for this host. Never use an old receipt or cross-host proof.
+        related = []
+        if self.profile['edition'] == 'root':
+            for profile in self.store.profiles():
+                pending = self.store.pending(profile)
+                if (profile['host'] == self.profile['host'] and profile['edition'] == 'no-root' and pending
+                        and pending.get('recovery_protocol') == 'clean-removal-v1'
+                        and pending.get('removal_reason') == 'root-access-required'):
+                    related.append((profile, pending))
+        reconnect = getattr(self, 'reconnect', None)
+        lost = False
+        for attempt in range(3):
+            try:
+                if lost:
+                    self.remote = reconnect()
+                result = self._continue_clean_removal(expected_pending)
+                if result.get('removed') is True and result.get('verified_clean') is True and result.get('restart_required') is not True:
+                    for profile, pending in related:
+                        if self.store.pending(profile) == pending:
+                            self.store.checkpoint(profile, stage='verified-clean', removal_reason='removal-verified',
+                                result={'removed':True, 'verified_clean':True},
+                                root_removal_operation=expected_pending['removal_operation'])
+                            self.store.finish_clean_removal(profile)
+                return result
+            except Exception as error:
+                lost = connection_interrupted(error)
+                reason = 'connection-interrupted' if lost else getattr(error, 'reason_code', None)
+                if (reason in REMOVAL_REASONS and self.store.pending(self.profile)
+                        and (self.profile['edition'] == 'no-root' or reason in
+                             ('connection-interrupted', 'root-access-required', 'root-worker-busy', 'removal-failed'))):
+                    self.store.checkpoint(self.profile, removal_reason=reason)
+                if not reconnect or attempt == 2 or not (lost or reason == 'root-worker-busy'):
+                    raise
+                try:
+                    diagnostics.create_report(self.store, 'uninstall', self.profile, 'uninstall', error,
+                                              getattr(self, 'tv_info', {}))
+                except (OSError, ValueError, TypeError):
+                    pass
+                expected_pending = self.store.pending(self.profile)
+                self.progress('Connecting to the TV…' if lost else 'Another Clean Your TV operation is still running. Wait for it to finish, then choose Try again.')
+                sleep(attempt + 1)
+
+    def _continue_clean_removal(self, expected_pending):
         """Explicit adapter dispatch; advisory summaries are never credentials."""
         pending=self.store.pending(self.profile)
         if pending!=expected_pending or not pending or pending.get('recovery_protocol')!='clean-removal-v1':

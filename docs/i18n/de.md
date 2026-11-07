@@ -91,6 +91,8 @@ Die Download-Schaltflächen oben liefern weiterhin die veröffentlichte Version.
 
 Wenn aufgefordert, den TV vom Strom trennen, wieder anschließen, auf das Netzwerk warten und **Erneut versuchen** wählen. Standby oder Quick Start ist kein vollständiger Neustart; CYTV startet den TV nicht automatisch neu. Bei Verbindungsabbruch Verbindung prüfen und dasselbe Entfernen erneut versuchen, ohne weiteren Wiederherstellungsassistenten. Bei verweigertem Zugriff die angeforderte Root-Verbindung verwenden; bei beschäftigtem TV warten und erneut versuchen. Erfolg erscheint erst nach bestätigter abschließender Bereinigung. Schlüssel und Originalberichte behalten. Notfallsteuerung und Zustimmung zum Teilen gelten weiter.
 
+In diesem Kandidaten bietet eine fehlgeschlagene oder unterbrochene Einrichtung direkt die Wiederherstellung an. Kann No-root nicht fortgesetzt werden, bestätigen Sie die vollständige Entfernung einmal. Bei vorübergehendem Verbindungsverlust oder einem beschäftigten CYTV-Prozess erfolgen bis zu drei Versuche. Wählen Sie bei erforderlichem Root-Zugriff **Mit Root verbinden** für denselben TV; die verifizierte Root-Bereinigung beendet auch dessen blockierte No-root-Entfernung. Nach einem Root-Aktivierungsfehler versucht CYTV, LG Home wiederherzustellen und zu prüfen, ohne erneut zu aktivieren. Ein Abbruch mit unerledigter Arbeit behält Bericht und Wiederherstellungsaktionen. Der Notstopp bleibt erhalten.
+
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="optionales-python-für-root-in-v110"></a>
 <a id="lg-firmware-sperre-in-120"></a>
@@ -109,3 +111,5 @@ Wenn aufgefordert, den TV vom Strom trennen, wieder anschließen, auf das Netzwe
 <a id="speicherplatz"></a>
 
 Ausführliche Referenzen auf Englisch: [Voraussetzungen](../COMPATIBILITY.md) · [Bedienung](../CONTROLS.md) · [Designs](../THEMES.md) · [Updates](../UPDATES.md).
+
+> Unveröffentlichter Kandidat: experimentelles Root Home wird anhand der Fähigkeiten von Qt SDK 6–9 gewählt, ohne Modellliste. Hardware-Kompatibilität und normales OTA sind ungeprüft. Andere Home-Integrationen bleiben unverändert; nach einem Sicherheits- oder Stromstopp Home explizit aktivieren. [#364](../development/C1-NATIVE-GATE.md#unpublished-capability-based-compositor-admission-364).

@@ -1,5 +1,7 @@
 # Root Edition test plan
 
+> **1.11.0:** [exact final C3 QA](../docs/history/2026-11-07-release-1.11.0-tv-qa.md) records final installer setup, controls/audio, standby, key-up, emergency return and verified full removal after an ordinary OS reboot. The maintainer requested publication with icon issue394 non-blocking and edition-transition guidance deferred. AC cold boot was waived; OTA/retained rollback and other untested paths are not passes.
+
 > **1.10.0:** [exact final build and scoped installer acceptance](../docs/history/2026-11-07-release-1.10.0-final-acceptance.md). Maintainer-directed C3 removal/reinstallation, controls/audio, standby, ordinary reboot and escape are recorded separately from untested No-root, AC cold start, OTA/retained rollback and other-device paths. The maintainer accepted that bounded release scope; untested paths are not passes.
 
 

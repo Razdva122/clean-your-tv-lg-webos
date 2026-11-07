@@ -1,19 +1,16 @@
 #!/usr/bin/env python3
 """Build an offline, isolated Root candidate IPK from the public UI sources."""
 import argparse
-import gzip
 import hashlib
-import io
 import json
 from pathlib import Path
-import tarfile
 import sys
 import struct
 
 import preview
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from scripts.tv_web_build import compile_web
-from cytv.package import IPK_MTIME
+from cytv.package import ar
 
 
 SERVICE_ID = 'com.cleanyourtv.root.preview.service'
@@ -74,17 +71,6 @@ def tgz(files, executables=()):
     """Secure owned package leaves, without chmod records for platform containers."""
     from cytv.package import tgz as package_tgz
     return package_tgz(files, executable=executables)
-
-
-def ar(parts):
-    buffer = io.BytesIO(b'!<arch>\n')
-    buffer.seek(0, 2)
-    for name, data in parts.items():
-        buffer.write((f'{name + "/":<16}{0:<12}{0:<6}{0:<6}{"100644":<8}{len(data):<10}`\n').encode('ascii'))
-        buffer.write(data)
-        if len(data) % 2:
-            buffer.write(b'\n')
-    return buffer.getvalue()
 
 
 def build(output, version='0.0.1', legacy_node_prototype=False, resolution=None, experimental_c1_gate=None, experimental_c1_keyfilter=None):
@@ -157,6 +143,7 @@ def build(output, version='0.0.1', legacy_node_prototype=False, resolution=None,
                        native_sha256=hashlib.sha256(native_gate).hexdigest())
         if keyfilter:
             release['routing'] = 'compositor-keyfilter-v1'
+            release['compositor_admission'] = 3
             release['capabilities'].append('c1-keyfilter-v1')
     from deploy import SUPPORT_FILES, RUNTIME_FILES, checked_file
     source = Path(__file__).resolve().parent

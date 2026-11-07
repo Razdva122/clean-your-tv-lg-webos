@@ -1,6 +1,5 @@
 """Recovery-only device adapter. There is deliberately no activation command."""
 import fcntl
-import hashlib
 import json
 import os
 import re

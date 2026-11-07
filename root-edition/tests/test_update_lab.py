@@ -6,6 +6,7 @@ import json
 import re
 from pathlib import Path, PurePosixPath
 import subprocess
+import sys
 import tarfile
 import tempfile
 import unittest
@@ -60,7 +61,7 @@ class LabTests(unittest.TestCase):
         cls.addClassCleanup(cls.tmp.cleanup)
         cls.output = Path(cls.tmp.name).resolve() / 'lab'
         cls.production_key = (ROOT / 'updater-service/release-public.pem').read_bytes()
-        subprocess.run(['python3', str(SCRIPT), '--output', str(cls.output)], check=True, cwd=ROOT)
+        subprocess.run([sys.executable, str(SCRIPT), '--output', str(cls.output)], check=True, cwd=ROOT)
 
     def test_builds_real_isolated_root_and_updater_packages(self):
         for label, version in (('baseline', '0.1.0'), ('candidate', '0.1.1'), ('rollback-test', '0.1.2')):
@@ -105,12 +106,12 @@ class LabTests(unittest.TestCase):
         self.assertIn('/var/webos-profile/override/clean-your-tv-root-updatetest.json', (source / 'root-edition/runtime/device_adapter.py').read_text())
         original = subprocess.check_output(['git', 'show', 'HEAD:root-edition/ui/root-settings.css'], cwd=ROOT)
         self.assertEqual((source / 'root-edition/ui/root-settings.css').read_bytes(), original)
-        result = subprocess.run(['python3', str(SCRIPT), '--output', str(self.output)], cwd=ROOT, capture_output=True)
+        result = subprocess.run([sys.executable, str(SCRIPT), '--output', str(self.output)], cwd=ROOT, capture_output=True)
         self.assertNotEqual(result.returncode, 0, 'Existing output must never be replaced')
 
     def test_pinned_offers_verify_and_use_only_loopback_transport(self):
         source = self.output / 'source/root-edition'
-        subprocess.run(['python3', '-c', 'from updater.bootstrap import verify_bundle; import sys; verify_bundle(sys.argv[1])', str(self.output / 'updater-bundle')], cwd=source, check=True)
+        subprocess.run([sys.executable, '-c', 'from updater.bootstrap import verify_bundle; import sys; verify_bundle(sys.argv[1])', str(self.output / 'updater-bundle')], cwd=source, check=True)
         for version in ('0.1.1', '0.1.2'):
             offer = self.output / ('offer-' + version + '.json')
             envelope = json.loads(offer.read_text())

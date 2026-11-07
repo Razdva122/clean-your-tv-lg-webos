@@ -1,5 +1,21 @@
 # Release history and device evidence
 
+- [1.11.0 maintainer C3 QA](2026-11-07-release-1.11.0-tv-qa.md): exact-byte No-root and final Root controls/audio/standby/emergency, normal full removal after restart, non-blocking icon issue394 and explicit untested paths.
+
+- [1.11.0 failed full run and replacement](2026-11-07-release-1.11.0-candidate-replacement.md): complete failure inventory, combined Windows fixture/CI evidence correction, replacement build and final package gates.
+
+- [1.11.0 freeze and pre-dispatch checks](2026-11-07-release-1.11.0-freeze.md): versioned preliminary payload, bounded C3 Helper compatibility, original SSH failure/recovery and final full-candidate gates.
+
+- [No-root observer storage, 2026-11-07](2026-11-07-no-root-observer-storage.md): writable private storage, one pre-journal storage check and confirmed cleanup for older pending capsules; retail installation/recovery remains unverified.
+
+- [No-root observer runtime diagnostics, 2026-11-07](2026-11-07-issue378-observer-runtime-diagnostics.md): bounded runtime/guard error envelopes, retained storage reasons and unchanged recovery/source bindings; original #378 cause remains unconfirmed.
+
+- [No-root webOS 3.x compatibility, 2026-11-07](2026-11-07-webos3-compatibility.md): conflict resolution, focus/Updater corrections, exact legacy-Node checks, package tests and pending candidate/device acceptance.
+
+- [Root removal catalog fallback, 2026-11-07](2026-11-07-issue240-removal-catalog.md): bounded catalog compatibility, first/latest failure detail and source regressions; original #240 recovery and retail acceptance remain unverified.
+
+- [Next candidate integration, 2026-11-07](2026-11-07-next-candidate-integration.md): inventory fallback, experimental compositor, formatting, cleanup/recovery and observer diagnostics; combined source checks, metadata-base recovery and pending versioned build/device acceptance.
+
 - [Removal compatibility corrections, 2026-11-07](2026-11-07-removal-compatibility.md): real-stdin regression, bounded SDK/private-data compatibility, legacy-service boot checkpoint and clearer diagnostics; final changed-removal acceptance pending.
 
 - [Practical clean removal source checkpoint, 2026-11-06](2026-11-06-practical-clean-removal.md): scoped Root/No-root/UI and combined host checks, current broader-run blockers and final candidate/device limits.

@@ -57,7 +57,7 @@ sys.stdin.read()
         if '-e' in words and '/usr/bin/node' in words:
             code=words[words.index('-e')+1]
             argument=words[-1]
-            if code==observer.PROGRAM:
+            if observer.PROGRAM in code:
                 request=json.loads(argument)
                 request['sender']=str(self.sender)
                 request['timeout']=3000
@@ -66,7 +66,7 @@ sys.stdin.read()
             result=subprocess.run([shutil.which('node'),'-e',code,argument],input=data,capture_output=True,timeout=timeout)
             if result.returncode: raise RuntimeError(result.stderr.decode())
             reply=result.stdout.decode()
-            if code==observer.PROGRAM and self.cut and request['command']=='status':
+            if observer.PROGRAM in code and self.cut and request['command']=='status':
                 value=json.loads(reply)
                 if value['slots'][0]['terminal']=='success':
                     self.cut=False
@@ -119,6 +119,17 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.installer=operations.Installer(self.remote,self.store,self.profile,fixture.payload,fixture.manifest,lambda *_:None)
         self.inventory=fixture.inventory
 
+    def test_storage_failure_before_journal_does_not_block_another_setup(self):
+        # A valid private namespace, but no writable/usable staging parent.
+        with patch.object(observer, 'PUBLIC_ROOT', str(self.root/'missing'/'public')):
+            with self.assertRaises(RuntimeError):
+                self.installer.install(self.inventory, 'original-secret')
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertFalse(list(self.store.device_dir(self.profile).glob('capsule-*.json')))
+        self.assertFalse((self.root/'requests').exists())
+        self.installer.install(self.inventory, 'original-secret')
+        self.assertEqual((self.root/'requests').read_text().splitlines(), list(observer.APPS))
+
     def test_removal_transport_loss_cannot_be_sealed_by_empty_eim_inventory(self):
         self.installer.install(self.inventory,'original-secret')
         (self.root/'requests').write_text('')
@@ -144,7 +155,7 @@ class OriginalOperationIntegration(unittest.TestCase):
         def cut(command,data=None,timeout=30):
             if '-e' in shlex.split(command):
                 words=shlex.split(command)
-                if words[words.index('-e')+1]==observer.PROGRAM and json.loads(words[-1])['command']=='retire':
+                if observer.PROGRAM in words[words.index('-e')+1] and json.loads(words[-1])['command']=='retire':
                     raise RuntimeError('lost retire acknowledgement')
             return original(command,data,timeout)
         self.remote.run=cut
@@ -270,6 +281,15 @@ class OriginalOperationIntegration(unittest.TestCase):
         with patch.object(observer,'PROGRAM',observer.PROGRAM+'\n// changed reader'):
             with self.assertRaises(RuntimeError):self.installer.continue_no_root(pending)
         self.assertEqual(len(self.remote.calls),before)
+        self.assertEqual(self.store.pending(self.profile),pending)
+        self.assertEqual((self.root/'requests').read_text().splitlines(),[operations.HELPER])
+
+    def test_lost_volatile_observer_does_not_authorize_resubmission(self):
+        self.remote.cut=True
+        with self.assertRaises(RuntimeError):self.installer.install(self.inventory,'original-secret')
+        pending=self.store.pending(self.profile)
+        shutil.rmtree(self.root/'private')  # A boot may clear /tmp evidence.
+        with self.assertRaises(RuntimeError):self.installer.continue_no_root(pending)
         self.assertEqual(self.store.pending(self.profile),pending)
         self.assertEqual((self.root/'requests').read_text().splitlines(),[operations.HELPER])
 

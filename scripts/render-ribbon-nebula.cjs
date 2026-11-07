@@ -1,11 +1,30 @@
 'use strict';
 // Offline original procedural artwork; no author code or shaders ship to the TV.
-const fs=require('node:fs'),path=require('node:path');
-const {chromium}=require('playwright');
-(async()=>{const b=await chromium.launch({headless:true,...(process.env.BROWSER_CHANNEL?{channel:process.env.BROWSER_CHANNEL}:{})});try{const p=await b.newPage({viewport:{width:1024,height:576}});await p.setContent('<canvas id="nebula"></canvas>');const result=await p.evaluate(()=>{
-const c=document.getElementById('nebula');c.width=4096;c.height=2304;const gl=c.getContext('webgl',{alpha:false,antialias:false,preserveDrawingBuffer:true});if(!gl)throw Error('WebGL unavailable');
-const vertex='attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
-const fragment=`precision highp float;
+const fs = require('node:fs'),
+  path = require('node:path');
+const { chromium } = require('playwright');
+(async () => {
+  const b = await chromium.launch({
+    headless: true,
+    ...(process.env.BROWSER_CHANNEL
+      ? { channel: process.env.BROWSER_CHANNEL }
+      : {})
+  });
+  try {
+    const p = await b.newPage({ viewport: { width: 1024, height: 576 } });
+    await p.setContent('<canvas id="nebula"></canvas>');
+    const result = await p.evaluate(() => {
+      const c = document.getElementById('nebula');
+      c.width = 4096;
+      c.height = 2304;
+      const gl = c.getContext('webgl', {
+        alpha: false,
+        antialias: false,
+        preserveDrawingBuffer: true
+      });
+      if (!gl) throw Error('WebGL unavailable');
+      const vertex = 'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
+      const fragment = `precision highp float;
 uniform vec2 resolution;
 float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453123);}
 float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}
@@ -37,7 +56,52 @@ col*=fade;col=max(col,vec3(0.));
 col+=vec3((hash(gl_FragCoord.xy)-.5)/1024.)*step(.002,max(col.r,max(col.g,col.b)));
 gl_FragColor=vec4(clamp(col,0.,1.),1.);
 }`;
-function shader(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s));return s;}
-const pr=gl.createProgram();gl.attachShader(pr,shader(gl.VERTEX_SHADER,vertex));gl.attachShader(pr,shader(gl.FRAGMENT_SHADER,fragment));gl.linkProgram(pr);if(!gl.getProgramParameter(pr,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(pr));gl.useProgram(pr);
-const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);const loc=gl.getAttribLocation(pr,'p');gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);gl.uniform2f(gl.getUniformLocation(pr,'resolution'),c.width,c.height);gl.viewport(0,0,c.width,c.height);gl.drawArrays(gl.TRIANGLES,0,6);gl.finish();if(gl.getError()!==gl.NO_ERROR)throw Error('Render failed');return {data:c.toDataURL('image/png').split(',')[1],renderer:gl.getParameter(gl.RENDERER),width:c.width,height:c.height};
-});const out=path.resolve('build/ribbon-blue-nebula-original.png');fs.mkdirSync(path.dirname(out),{recursive:true});fs.writeFileSync(out,Buffer.from(result.data,'base64'));delete result.data;console.log(out,result);}finally{await b.close()}})().catch(e=>{console.error(e);process.exitCode=1});
+      function shader(type, src) {
+        const s = gl.createShader(type);
+        gl.shaderSource(s, src);
+        gl.compileShader(s);
+        if (!gl.getShaderParameter(s, gl.COMPILE_STATUS))
+          throw Error(gl.getShaderInfoLog(s));
+        return s;
+      }
+      const pr = gl.createProgram();
+      gl.attachShader(pr, shader(gl.VERTEX_SHADER, vertex));
+      gl.attachShader(pr, shader(gl.FRAGMENT_SHADER, fragment));
+      gl.linkProgram(pr);
+      if (!gl.getProgramParameter(pr, gl.LINK_STATUS))
+        throw Error(gl.getProgramInfoLog(pr));
+      gl.useProgram(pr);
+      const buf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(
+        gl.ARRAY_BUFFER,
+        new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]),
+        gl.STATIC_DRAW
+      );
+      const loc = gl.getAttribLocation(pr, 'p');
+      gl.enableVertexAttribArray(loc);
+      gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+      gl.uniform2f(gl.getUniformLocation(pr, 'resolution'), c.width, c.height);
+      gl.viewport(0, 0, c.width, c.height);
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+      gl.finish();
+      if (gl.getError() !== gl.NO_ERROR) throw Error('Render failed');
+      return {
+        data: c.toDataURL('image/png').split(',')[1],
+        renderer: gl.getParameter(gl.RENDERER),
+        width: c.width,
+        height: c.height
+      };
+    });
+    const out = path.resolve('build/ribbon-blue-nebula-original.png');
+    fs.mkdirSync(path.dirname(out), { recursive: true });
+    fs.writeFileSync(out, Buffer.from(result.data, 'base64'));
+    delete result.data;
+    console.log(out, result);
+  } finally {
+    await b.close();
+  }
+})().catch((e) => {
+  console.error(e);
+  process.exitCode = 1;
+});

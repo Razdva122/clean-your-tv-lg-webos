@@ -11,10 +11,11 @@ import shlex
 import time
 import uuid
 
-from .errors import UserError
+from .errors import (UserError, TVCommandError, TV_STORAGE_FULL, no_root_observer_details,
+                     OBSERVER_EXCEPTION_NAMES, OBSERVER_EXCEPTION_CODES, OBSERVER_REASONS)
 
 PROTOCOL = 'no-root-original-stream-v1'
-ROOT = '/media/developer/.cytv-installer'
+ROOT = '/tmp/.cytv-installer'
 PUBLIC_ROOT = '/media/developer/temp'
 APPS = ('com.local.nativehome', 'com.gathin.tvhome')
 
@@ -37,17 +38,20 @@ function canonical(value){
 }
 function same(a,b){return a.dev===b.dev&&a.ino===b.ino;}
 function exists(name){try{fs.lstatSync(name);return true;}catch(e){if(e.code==='ENOENT')return false;throw e;}}
-function directory(name,privateLeaf){
+function directory(name,privateLeaf,sdk){
  var s=fs.lstatSync(name);
  if(!s.isDirectory()||s.isSymbolicLink()||(s.uid!==0&&s.uid!==uid))fail('unsafe-directory');
  // A root-owned sticky temporary ancestor is safe for an owned private child.
- if((s.mode&18)&&!(s.uid===0&&(s.mode&512)))fail('writable-directory');
+ // SDK staging is a vendor-owned shared namespace, not private evidence.
+ var sdkParent=sdk&&s.uid===0&&((name===publicRoot&&(s.mode&4095)===511)||
+     (name==='/media/developer'&&[509,511].indexOf(s.mode&4095)>=0));
+ if((s.mode&18)&&!(s.uid===0&&(s.mode&512))&&!sdkParent)fail('writable-directory');
  if(privateLeaf&&(s.uid!==uid||(s.mode&511)!==448))fail('nonprivate-directory');
  return s;
 }
 function ancestry(name,publicAccess){
  var current=path.resolve(name);
- for(;;){var s=directory(current,false);if(publicAccess&&!(s.mode&1))fail('private-public-parent');var parent=path.dirname(current);if(parent===current)break;current=parent;}
+ for(;;){var s=directory(current,false,publicAccess);if(publicAccess&&!(s.mode&1))fail('private-public-parent');var parent=path.dirname(current);if(parent===current)break;current=parent;}
 }
 function sync(name){var fd=fs.openSync(name,c.O_RDONLY|c.O_NOFOLLOW);try{fs.fsyncSync(fd);}finally{fs.closeSync(fd);}}
 function mkdir(name,mode){
@@ -56,7 +60,7 @@ function mkdir(name,mode){
  finally{fs.closeSync(fd);}sync(path.dirname(name));
 }
 function read(name,limit,publicFile){
- ancestry(path.dirname(name));
+ ancestry(path.dirname(name),publicFile);
  var before=fs.lstatSync(name), fd, raw;
  if(!before.isFile()||before.isSymbolicLink()||before.nlink!==1||before.uid!==uid||
     (before.mode&511)!==(publicFile?420:384)||before.size>limit)fail('unsafe-file');
@@ -279,6 +283,19 @@ function prepare(){
  }
  return {operation:op,plan_sha256:planSha};
 }
+function storageCheck(){
+ ancestry(path.dirname(root));
+ if(!exists(root))mkdir(root,448);directory(root,true);
+ if(exists(active)&&fs.readdirSync(active).length)fail('foreign-reservation');
+ ancestry(publicRoot,true);
+ // Exercise writes and durable publication before the host creates pending.
+ // Names are exclusive; never clean another operation's files.
+ var probe=root+'/.probe-'+op,link=probe+'.link',stageProbe=publicRoot+'/.cytv-probe-'+op;
+ exclusive(probe,'probe');
+ try{fs.linkSync(probe,link);sync(root);}finally{if(exists(link))fs.unlinkSync(link);fs.unlinkSync(probe);sync(root);}
+ mkdir(stageProbe,493);fs.rmdirSync(stageProbe);sync(publicRoot);
+ return {operation:op};
+}
 function slotIndex(){if(typeof input.slot!=='number'||input.slot%1||input.slot<0||input.slot>=plan.slots.length)fail('invalid-slot');return input.slot;}
 function worker(i){
  attached();predecessor(i);
@@ -378,6 +395,7 @@ function release(){
 }
 var result;
 switch(input.command){
+case 'storage-check':result=storageCheck();break;
 case 'prepare':result=prepare();break;
 case 'status':result=status();break;
 case 'attach':attached();sync(active);sync(root);result={operation:op};break;
@@ -471,20 +489,62 @@ def make_plan(operation, diagnostic_id, action, artifacts, versions, public_root
                 configuration_sha256=configuration_sha256 or hashlib.sha256(b'{}').hexdigest())
 
 
+def observation_error(command, failure, error=None):
+    # Preserve typed errors (including storage guidance and numeric SSH status),
+    # while arbitrary transport exception messages stay private.
+    if not isinstance(error, UserError):
+        error = UserError('The original No-root observation could not be verified. Recovery data was kept.',
+                          reason_code='pending-operation')
+    error.no_root_observer = no_root_observer_details({'command': command, 'failure': failure})
+    return error
+
+
 def invoke(remote, plan, command, slot=None, source=None, proof=None, data=None):
     request = dict(root=ROOT, public_root=PUBLIC_ROOT, plan=plan, command=command, slot=slot)
     if command == 'prepare':
         request['source'] = PROGRAM if source is None else source
     if proof is not None:request['proof']=proof
+    # The wrapper is not part of the source bound by a capsule. A diagnostic
+    # envelope is always a failure, never a receipt.
+    program = 'try {\n' + PROGRAM + r"""
+} catch (error) {
+ function category(value, allowed) {return typeof value==='string'&&allowed.indexOf(value)>=0?value:'unknown';}
+ process.stdout.write(JSON.stringify({operation:JSON.parse(process.argv[process.argv.length-1]).plan.operation,
+  observer_error:{exception_name:category(error&&error.name,NAMES),
+   exception_code:category(error&&error.code,CODES),observer_reason:category(error&&error.message,REASONS)}}));
+}
+""".replace('NAMES', canonical(OBSERVER_EXCEPTION_NAMES)).replace('CODES', canonical(OBSERVER_EXCEPTION_CODES)).replace('REASONS', canonical(OBSERVER_REASONS))
     try:
-        reply = json.loads(remote.run('env -u NODE_OPTIONS -u NODE_PATH /usr/bin/node -e ' +
-                                     shlex.quote(PROGRAM) + ' ' + shlex.quote(canonical(request)), data=data, timeout=100 if data is not None else 30))
-        if not isinstance(reply, dict) or reply.get('operation') != plan['operation']:
-            raise ValueError('foreign-observer')
-        return reply
-    except (OSError, RuntimeError, ValueError, KeyError, TypeError):
-        raise UserError('The original No-root observation could not be verified. Recovery data was kept.',
-                        reason_code='pending-operation') from None
+        # POSIX unset avoids depending on the TV env utility supporting -u.
+        raw = remote.run('unset NODE_OPTIONS NODE_PATH && /usr/bin/node -e ' +
+                         shlex.quote(program) + ' ' + shlex.quote(canonical(request)),
+                         data=data, timeout=100 if data is not None else 30)
+    except UnicodeError:
+        raise observation_error(command, 'invalid-json') from None
+    except (OSError, RuntimeError, ValueError, KeyError, TypeError) as error:
+        failure = ('command-failed' if isinstance(error, TVCommandError) else
+                   'timeout' if isinstance(error, TimeoutError) or getattr(error, 'reason_code', None) == 'operation-timeout' else
+                   'connection-interrupted' if getattr(error, 'reason_code', None) == 'connection-interrupted' else
+                   'transport-error')
+        raise observation_error(command, failure, error) from None
+    try:
+        reply = json.loads(raw)
+    except (ValueError, TypeError):
+        raise observation_error(command, 'invalid-json') from None
+    if not isinstance(reply, dict):
+        raise observation_error(command, 'invalid-reply')
+    if reply.get('operation') != plan['operation']:
+        raise observation_error(command, 'foreign-operation')
+    if 'observer_error' in reply:
+        if type(reply['observer_error']) is not dict:
+            raise observation_error(command, 'invalid-reply')
+        details = no_root_observer_details(dict(reply['observer_error'], command=command, failure='observer-error'))
+        storage_error = (UserError(TV_STORAGE_FULL, reason_code='tv-storage-full')
+                         if details['exception_code'] in ('ENOSPC', 'EDQUOT') else None)
+        error = observation_error(command, 'observer-error', storage_error)
+        error.no_root_observer = details
+        raise error
+    return reply
 
 
 def refuse():
@@ -494,6 +554,9 @@ def refuse():
 
 def begin(installer, action, artifacts, versions, expected, configuration):
     operation = uuid.uuid4().hex
+    # No package request or durable pending receipt until storage is usable.
+    check_plan = make_plan(operation, uuid.uuid4().hex, action, artifacts, versions, PUBLIC_ROOT)
+    invoke(installer.remote, check_plan, 'storage-check')
     installer.store.begin(installer.profile, 'install' if action == 'install' else 'uninstall',
                           recovery_protocol=PROTOCOL, observer_operation=operation,
                           expected=expected, versions=versions)
@@ -665,11 +728,11 @@ def snapshot(installer, value):
             or not isinstance(result.get('configuration'),dict)
             or set(result['configuration'])!=set(('files','eim','launch') if plan['action']=='install' else ('restore',))
             or any(state not in ('prepared','unknown','complete') for state in result['configuration'].values())):
-        refuse()
+        raise observation_error('status', 'invalid-status')
     for slot in result['slots']:
         if (not isinstance(slot,dict) or slot.get('submission') not in ('prepared','claimed-possibly-submitted','sealed') or
                 slot.get('terminal') not in ('none','success','failure') or slot.get('readback') not in ('matches','not-checked')):
-            refuse()
+            raise observation_error('status', 'invalid-status')
     return result
 
 

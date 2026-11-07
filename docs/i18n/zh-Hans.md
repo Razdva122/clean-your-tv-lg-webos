@@ -91,6 +91,8 @@ No-root: 要重新启动 Home 控制，请打开 Home Helper，选择启动 Help
 
 出现提示时，请断开电视电源后重新连接，等待网络恢复，然后选择**重试**。待机或 Quick Start 不等于完全重启；CYTV 不会自动重启电视。连接中断时，请检查连接并重试同一移除目标，无需另一个恢复向导。访问被拒绝时，请使用要求的 Root 连接；电视忙碌时，请稍候再试。只有验证最终清理后才显示成功。请保留密钥和原始报告。上述紧急控制及分享同意要求仍有效。
 
+此候选版本在安装失败或中断后直接提供恢复入口。如果 No-root 无法继续，请确认一次完整移除。遇到临时断线或 CYTV 进程忙碌时，移除最多自动尝试三次。如果需要 Root 权限，请为同一台电视选择 **通过 Root 连接**；经验证的 Root 清理也会完成该电视被阻止的 No-root 移除。Root 激活失败时，程序尝试恢复并验证 LG Home，不会重复激活。取消未完成的操作会保留诊断报告和恢复操作。紧急停止状态保持不变。
+
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="v110-起的可选-root-python"></a>
 <a id="120-的-lg-固件更新阻止功能"></a>
@@ -109,3 +111,5 @@ No-root: 要重新启动 Home 控制，请打开 Home Helper，选择启动 Help
 <a id="存储空间"></a>
 
 详细英文参考：[要求](../COMPATIBILITY.md) · [遥控器](../CONTROLS.md) · [主题](../THEMES.md) · [更新](../UPDATES.md)。
+
+> 未发布候选版本：实验性 Root Home 根据 Qt SDK 6–9 的能力检查选择，不使用型号列表。硬件兼容性及普通 OTA 尚未验证。其他 Home 集成保持不变；安全停止或电源停止后，须明确重新启用 Home 控制。 [#364](../development/C1-NATIVE-GATE.md#unpublished-capability-based-compositor-admission-364).

@@ -13,7 +13,6 @@ from pathlib import Path
 import re
 import runpy
 import shlex
-import shutil
 import stat
 import subprocess
 import sys

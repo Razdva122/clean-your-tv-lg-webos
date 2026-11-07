@@ -23,10 +23,11 @@ class Remote:
         if '/usr/bin/node -e ' in command:
             args=shlex.split(command)
             code=args[args.index('-e')+1]
-            if code==no_root_observer.PROGRAM:
+            if no_root_observer.PROGRAM in code:
                 import hashlib
                 request=json.loads(args[-1]);plan=request['plan'];action=request['command'];index=request.get('slot')
                 operation=plan['operation']
+                if action=='storage-check':return json.dumps({'operation':operation})
                 if action=='prepare':
                     self.observers.setdefault(operation,{'protocol':no_root_observer.PROTOCOL,'operation':operation,'plan_sha256':hashlib.sha256(no_root_observer.canonical(plan).encode()).hexdigest(),
                          'reservation':'active','closed':None,'configuration':{step:'prepared' for step in (('files','eim','launch') if plan['action']=='install' else ('restore',))},
@@ -310,21 +311,20 @@ class OperationTests(unittest.TestCase):
                 retained = {p.name: p.read_bytes() for p in directory.iterdir()}
                 remote.calls.clear()
                 events = []
-                with self.assertRaises(operations.UserError) as failure:
-                    recover(installer, lambda _: 'y', DesktopConsole(lambda k,v: events.append((k,v))))
-                report = diagnostics.create_report(self.store, 'recover', installer.profile, 'recover', failure.exception)
+                recover(installer, lambda question: 'n' if 'Remove remaining' in question else 'y',
+                        DesktopConsole(lambda k,v: events.append((k,v))))
+                report = diagnostics.create_report(self.store, 'recover', installer.profile, 'recover')
                 current = json.loads(report.read_text())
-                self.assertEqual(failure.exception.reason_code, 'pending-operation')
                 self.assertEqual(current['first_failure'], first_report['first_failure'])
                 self.assertEqual(receipt.read_bytes(), before)
                 self.assertEqual({p.name:p.read_bytes() for p in directory.iterdir()}, retained)
                 self.assertFalse(any(c[0]=='upload' for c in remote.calls))
                 self.assertEqual([c[1] for c in remote.calls if c[0]=='luna'],
                     [])
-                self.assertTrue(any(k=='recovery-plan' and v['state']=='blocked' for k,v in events))
+                self.assertTrue(any(k=='recovery-plan' and v['state']=='ready' for k,v in events))
                 self.assertNotIn('PRIVATE', report.read_text())
-                self.assertNotIn('PRIVATE', str(failure.exception))
-                self.assertNotIn('cytv doctor', str(failure.exception))
+                self.assertNotIn('PRIVATE', str(events))
+                self.assertNotIn('cytv doctor', str(events))
 
     def test_unstarted_no_root_removal_does_not_require_denied_monitor(self):
         from cytv.errors import TVRejected
@@ -1491,7 +1491,9 @@ class OperationTests(unittest.TestCase):
         remote.run=run;checkpoint=len(remote.calls)
         answers=iter(('y',''))
         recover(installer,lambda _:next(answers),Console(lambda *_:None))
-        self.assertEqual(self.store.pending(installer.profile),previous)
+        self.assertEqual(self.store.pending(installer.profile),dict(previous,
+            activation_restore_pending=False,activation_restore='verified'))
+        previous=self.store.pending(installer.profile)
         self.assertFalse(any(c[0]=='run' and c[1].endswith(' enable') for c in remote.calls[checkpoint:]))
         answers=iter(('y','1','y','3'))
         recover(installer,lambda _:next(answers),Console(lambda *_:None))

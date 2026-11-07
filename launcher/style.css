@@ -45,7 +45,8 @@
 .ctv-theme-suspended .ctv-ambient {
   visibility: hidden;
 }
-html, body {
+html,
+body {
   width: 100%;
   height: 100%;
   overflow: hidden;
@@ -55,24 +56,31 @@ html, body {
   cursor: default;
 }
 /* The Root window is an overlay; only positively observed content makes Home clear. */
-html[data-home-presentation="overlay"], html[data-home-presentation="closed"],
-body[data-home-presentation="overlay"], body[data-home-presentation="closed"] {
+html[data-home-presentation='overlay'],
+html[data-home-presentation='closed'],
+body[data-home-presentation='overlay'],
+body[data-home-presentation='closed'] {
   background: transparent !important;
 }
-body[data-home-presentation="overlay"] #homeSurface.ctv-home {
+body[data-home-presentation='overlay'] #homeSurface.ctv-home {
   background-color: transparent !important;
   background-image: none !important;
 }
-body[data-home-presentation="overlay"] #homeSurface.ctv-home::before {
+body[data-home-presentation='overlay'] #homeSurface.ctv-home::before {
   top: auto;
   height: 400px;
-  background: linear-gradient(180deg, transparent, rgba(0,0,0,.8) 40%, rgba(0,0,0,.92)) !important;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(0, 0, 0, 0.8) 40%,
+    rgba(0, 0, 0, 0.92)
+  ) !important;
 }
-body[data-home-presentation="overlay"] .ctv-ambient {
+body[data-home-presentation='overlay'] .ctv-ambient {
   visibility: hidden !important;
 }
-body[data-home-presentation="closed"] #homeSurface,
-body[data-home-presentation="closed"] #toast {
+body[data-home-presentation='closed'] #homeSurface,
+body[data-home-presentation='closed'] #toast {
   visibility: hidden !important;
 }
 /* ---- ambient glow ---------------------------------------------------------------------------- */
@@ -119,7 +127,9 @@ body[data-home-presentation="closed"] #toast {
   line-height: 1;
   white-space: nowrap;
   opacity: 0;
-  transition: opacity 240ms cubic-bezier(0.2, 0.8, 0.2, 1), transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition:
+    opacity 240ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
   pointer-events: none;
 }
 /* ---- header ---------------------------------------------------------------------------------- */
@@ -132,7 +142,9 @@ header {
   justify-content: space-between;
   align-items: flex-end;
   z-index: 3;
-  transition: opacity 300ms ease, transform 360ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition:
+    opacity 300ms ease,
+    transform 360ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 /* Below the dock: the header slides away so the grid gets the whole screen. */
 body.scrolled header {
@@ -175,7 +187,10 @@ body.scrolled header {
   padding: 0 40px 0 32px;
   border: 2px solid rgba(255, 255, 255, 0.22);
   white-space: nowrap;
-  transition: background 160ms ease, color 160ms ease, transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition:
+    background 160ms ease,
+    color 160ms ease,
+    transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .pill svg {
   background-size: contain;
@@ -216,8 +231,11 @@ body.scrolled header {
   position: absolute;
   opacity: 0;
   transform: translateY(24px);
-  transition: opacity 400ms ease, transform 400ms cubic-bezier(0.2, 0.8, 0.3, 1),
-    left 320ms cubic-bezier(0.25, 0.8, 0.3, 1), top 320ms cubic-bezier(0.25, 0.8, 0.3, 1);
+  transition:
+    opacity 400ms ease,
+    transform 400ms cubic-bezier(0.2, 0.8, 0.3, 1),
+    left 320ms cubic-bezier(0.25, 0.8, 0.3, 1),
+    top 320ms cubic-bezier(0.25, 0.8, 0.3, 1);
 }
 .item.shown {
   opacity: 1;
@@ -226,8 +244,8 @@ body.scrolled header {
 /* Classic tiles are their own layers: the focus zoom then repaints one tile instead of
    4K tiles of the whole grid. These layers are unscaled at rest (the card zoom paints
    inside them, and input tiles only scale during their FLIP), so text stays sharp. */
-#homeSurface[data-layout="dock-grid"] #tiles .item,
-#homeSurface[data-layout="dock-grid"] .input-tile {
+#homeSurface[data-layout='dock-grid'] #tiles .item,
+#homeSurface[data-layout='dock-grid'] .input-tile {
   will-change: transform;
 }
 .item.dock .name {
@@ -301,7 +319,9 @@ body.editing #glass {
   text-overflow: ellipsis;
   opacity: 0;
   transform: translateY(-12px);
-  transition: opacity 220ms ease, transform 220ms ease;
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease;
 }
 .item.focused .name {
   opacity: 1;
@@ -317,7 +337,9 @@ body.editing #glass {
   overflow: hidden;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 180ms ease, transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition:
+    opacity 180ms ease,
+    transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
   will-change: transform;
 }
 /* Bright top specular. */
@@ -336,7 +358,9 @@ body.editing #glass {
   padding: 16px;
   border: 2px solid rgba(255, 255, 255, 0.2);
   transform-origin: top;
-  transition: opacity 220ms ease, transform 220ms cubic-bezier(0.2, 0.8, 0.3, 1);
+  transition:
+    opacity 220ms ease,
+    transform 220ms cubic-bezier(0.2, 0.8, 0.3, 1);
 }
 #inputsPanel.hidden {
   opacity: 0;
@@ -420,7 +444,10 @@ body.editing #glass {
 .input-tile {
   position: absolute;
   top: 12px;
-  transition: transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1), background 160ms ease, opacity 200ms ease;
+  transition:
+    transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    background 160ms ease,
+    opacity 200ms ease;
 }
 .input-tile.pressed {
   transform: scale(0.96);
@@ -558,7 +585,7 @@ body.editing #glass {
   opacity: 1;
 }
 /* Classic keeps the localized date on two lines: weekday, then month and day. */
-#homeSurface[data-layout="dock-grid"] #date {
+#homeSurface[data-layout='dock-grid'] #date {
   white-space: pre-line;
 }
 /* ---- toast ----------------------------------------------------------------------------------- */
@@ -613,7 +640,9 @@ body.editing #glass {
   width: 100%;
   text-align: center;
 }
-#hideApp, #appUndo button, #appPicker button {
+#hideApp,
+#appUndo button,
+#appPicker button {
   font: inherit;
   color: inherit;
   cursor: pointer;
@@ -641,7 +670,10 @@ body.editing #glass {
   stroke-width: 1.7;
   stroke-linecap: round;
 }
-#hideApp.focused, #hideApp:focus, #appUndo button:focus, #appPicker button:focus {
+#hideApp.focused,
+#hideApp:focus,
+#appUndo button:focus,
+#appPicker button:focus {
   border-color: white;
   background: #f3f3f4;
   color: #15161a;
@@ -720,7 +752,10 @@ body.editing #glass {
 #appPickerClose {
   padding: 16px 28px;
 }
-#hideApp[hidden], #editHint[hidden], #appUndo[hidden], #appPicker[hidden] {
+#hideApp[hidden],
+#editHint[hidden],
+#appUndo[hidden],
+#appPicker[hidden] {
   display: none;
 }
 body.editing header {
@@ -729,9 +764,25 @@ body.editing header {
 /* Old engines keep normal motion; this optional accessibility override is safe to ignore. */
 /* doiuse-disable prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
-  .item, .card, #glass, .name, #stage, #hero, .pill, #inputShelf, #inputShelfWindow, #inputShelfTrack,
-  .input-tile, .input-glyph, .input-dot, .input-name, .input-detail, #viewport, #viewport::before,
-  #viewport::after, .ambient {
+  .item,
+  .card,
+  #glass,
+  .name,
+  #stage,
+  #hero,
+  .pill,
+  #inputShelf,
+  #inputShelfWindow,
+  #inputShelfTrack,
+  .input-tile,
+  .input-glyph,
+  .input-dot,
+  .input-name,
+  .input-detail,
+  #viewport,
+  #viewport::before,
+  #viewport::after,
+  .ambient {
     transition: none !important;
     animation: none !important;
   }
@@ -758,116 +809,465 @@ body.editing .item.moving .name {
 }
 
 /* Trusted layout templates. External CSS never controls hit areas or positions. */
-.ctv-theme-active #glass::before { background: none; }
-#homeSurface[data-layout="icon-grid"] #hero,
-#homeSurface[data-layout="side-grid"] #hero { display: none; }
-#homeSurface[data-layout="icon-grid"] header { top: 70px; align-items: center; }
-#homeSurface[data-layout="icon-grid"] #clock { font-size: 46px; }
-#homeSurface[data-layout="icon-grid"] #ampm { font-size: 22px; margin-bottom: 4px; }
-#homeSurface[data-layout="icon-grid"] #greeting,
-#homeSurface[data-layout="icon-grid"] .divider { display: none; }
-#homeSurface[data-layout="icon-grid"] #date { font-size: 22px; margin: 0 0 5px 28px; }
-#homeSurface[data-layout="icon-grid"] .pill { height: 60px; padding: 0 22px; font-size: 25px; }
-#homeSurface[data-layout="icon-grid"] .pill svg { height: 30px; width: 30px; }
-#homeSurface[data-layout="icon-grid"] .card { background: #171717 !important; }
-#homeSurface[data-layout="icon-grid"] .card img { top: 50%; left: 50%; width: 70%; height: 70%; object-fit: contain; transform: translate(-50%,-50%); }
-#homeSurface[data-layout="icon-grid"] .name,
-#homeSurface[data-layout="side-grid"] .name { opacity: 1; transform: none; }
+.ctv-theme-active #glass::before {
+  background: none;
+}
+#homeSurface[data-layout='icon-grid'] #hero,
+#homeSurface[data-layout='side-grid'] #hero {
+  display: none;
+}
+#homeSurface[data-layout='icon-grid'] header {
+  top: 70px;
+  align-items: center;
+}
+#homeSurface[data-layout='icon-grid'] #clock {
+  font-size: 46px;
+}
+#homeSurface[data-layout='icon-grid'] #ampm {
+  font-size: 22px;
+  margin-bottom: 4px;
+}
+#homeSurface[data-layout='icon-grid'] #greeting,
+#homeSurface[data-layout='icon-grid'] .divider {
+  display: none;
+}
+#homeSurface[data-layout='icon-grid'] #date {
+  font-size: 22px;
+  margin: 0 0 5px 28px;
+}
+#homeSurface[data-layout='icon-grid'] .pill {
+  height: 60px;
+  padding: 0 22px;
+  font-size: 25px;
+}
+#homeSurface[data-layout='icon-grid'] .pill svg {
+  height: 30px;
+  width: 30px;
+}
+#homeSurface[data-layout='icon-grid'] .card {
+  background: #171717 !important;
+}
+#homeSurface[data-layout='icon-grid'] .card img {
+  top: 50%;
+  left: 50%;
+  width: 70%;
+  height: 70%;
+  object-fit: contain;
+  transform: translate(-50%, -50%);
+}
+#homeSurface[data-layout='icon-grid'] .name,
+#homeSurface[data-layout='side-grid'] .name {
+  opacity: 1;
+  transform: none;
+}
 
-#homeSurface[data-layout="side-grid"] header { left: 0; top: 0; right: auto; width: 480px; height: 1080px; padding: 100px 64px; display: block; }
-#homeSurface[data-layout="side-grid"] #timeRow { flex-wrap: wrap; }
-#homeSurface[data-layout="side-grid"] #clock { font-size: 76px; }
-#homeSurface[data-layout="side-grid"] #ampm { font-size: 25px; margin-bottom: 12px; }
-#homeSurface[data-layout="side-grid"] #greeting,
-#homeSurface[data-layout="side-grid"] .divider { display: none; }
-#homeSurface[data-layout="side-grid"] #date { width: 100%; margin-top: 30px; white-space: normal; line-height: 1.5; font-size: 27px; }
-#homeSurface[data-layout="side-grid"] #topButtons { display: block; margin-top: 120px; }
-#homeSurface[data-layout="side-grid"] .pill { margin: 16px 0; padding: 0 16px; width: 352px; font-size: 27px; }
-#homeSurface[data-layout="side-grid"] .card { background: #181818 !important; }
-#homeSurface[data-layout="side-grid"] .card img { top: 50%; left: 50%; width: 72%; height: 68%; object-fit: contain; transform: translate(-50%,-50%); }
-#homeSurface[data-layout="side-grid"] #viewport { left: 500px; }
-#homeSurface[data-layout="side-grid"] #stage { left: -500px; }
+#homeSurface[data-layout='side-grid'] header {
+  left: 0;
+  top: 0;
+  right: auto;
+  width: 480px;
+  height: 1080px;
+  padding: 100px 64px;
+  display: block;
+}
+#homeSurface[data-layout='side-grid'] #timeRow {
+  flex-wrap: wrap;
+}
+#homeSurface[data-layout='side-grid'] #clock {
+  font-size: 76px;
+}
+#homeSurface[data-layout='side-grid'] #ampm {
+  font-size: 25px;
+  margin-bottom: 12px;
+}
+#homeSurface[data-layout='side-grid'] #greeting,
+#homeSurface[data-layout='side-grid'] .divider {
+  display: none;
+}
+#homeSurface[data-layout='side-grid'] #date {
+  width: 100%;
+  margin-top: 30px;
+  white-space: normal;
+  line-height: 1.5;
+  font-size: 27px;
+}
+#homeSurface[data-layout='side-grid'] #topButtons {
+  display: block;
+  margin-top: 120px;
+}
+#homeSurface[data-layout='side-grid'] .pill {
+  margin: 16px 0;
+  padding: 0 16px;
+  width: 352px;
+  font-size: 27px;
+}
+#homeSurface[data-layout='side-grid'] .card {
+  background: #181818 !important;
+}
+#homeSurface[data-layout='side-grid'] .card img {
+  top: 50%;
+  left: 50%;
+  width: 72%;
+  height: 68%;
+  object-fit: contain;
+  transform: translate(-50%, -50%);
+}
+#homeSurface[data-layout='side-grid'] #viewport {
+  left: 500px;
+}
+#homeSurface[data-layout='side-grid'] #stage {
+  left: -500px;
+}
 
 /* Channel uses readable rows, a fixed header and a separate selection detail. */
-#homeSurface[data-layout="channel-list"] header { top: 52px; align-items: center; }
-#homeSurface[data-layout="channel-list"] #timeRow { display: block; }
-#homeSurface[data-layout="channel-list"] #clock { font-size: 52px; }
-#homeSurface[data-layout="channel-list"] #ampm { font-size: 24px; margin-bottom: 5px; }
-#homeSurface[data-layout="channel-list"] #greeting,
-#homeSurface[data-layout="channel-list"] .divider { display: none; }
-#homeSurface[data-layout="channel-list"] #date { display: block; font-size: 22px; margin: 10px 0 0; }
-#homeSurface[data-layout="channel-list"] .pill { height: 76px; font-size: 30px; padding: 0 28px; }
-#homeSurface[data-layout="channel-list"] .pill svg { width: 36px; height: 36px; }
-#homeSurface[data-layout="channel-list"] #viewport { top: 200px; }
-#homeSurface[data-layout="channel-list"] #stage { top: -200px; }
-#homeSurface[data-layout="channel-list"] #hero { left: 1270px; right: 80px; white-space: normal; overflow-wrap: break-word; font-size: 52px; line-height: 1.25; max-height: 420px; overflow: hidden; }
-#homeSurface[data-layout="channel-list"] #hero::before { content: attr(data-position); display: block; font-size: 24px; line-height: 1; font-weight: 400; margin-bottom: 24px; }
-#channelArtwork { display: none; position: absolute; left: 1270px; top: 250px; width: 480px; height: 240px; object-fit: contain; background: #141414; pointer-events: none; }
-#homeSurface[data-layout="channel-list"] #channelArtwork { display: block; }
+#homeSurface[data-layout='channel-list'] header {
+  top: 52px;
+  align-items: center;
+}
+#homeSurface[data-layout='channel-list'] #timeRow {
+  display: block;
+}
+#homeSurface[data-layout='channel-list'] #clock {
+  font-size: 52px;
+}
+#homeSurface[data-layout='channel-list'] #ampm {
+  font-size: 24px;
+  margin-bottom: 5px;
+}
+#homeSurface[data-layout='channel-list'] #greeting,
+#homeSurface[data-layout='channel-list'] .divider {
+  display: none;
+}
+#homeSurface[data-layout='channel-list'] #date {
+  display: block;
+  font-size: 22px;
+  margin: 10px 0 0;
+}
+#homeSurface[data-layout='channel-list'] .pill {
+  height: 76px;
+  font-size: 30px;
+  padding: 0 28px;
+}
+#homeSurface[data-layout='channel-list'] .pill svg {
+  width: 36px;
+  height: 36px;
+}
+#homeSurface[data-layout='channel-list'] #viewport {
+  top: 200px;
+}
+#homeSurface[data-layout='channel-list'] #stage {
+  top: -200px;
+}
+#homeSurface[data-layout='channel-list'] #hero {
+  left: 1270px;
+  right: 80px;
+  white-space: normal;
+  overflow-wrap: break-word;
+  font-size: 52px;
+  line-height: 1.25;
+  max-height: 420px;
+  overflow: hidden;
+}
+#homeSurface[data-layout='channel-list'] #hero::before {
+  content: attr(data-position);
+  display: block;
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 400;
+  margin-bottom: 24px;
+}
+#channelArtwork {
+  display: none;
+  position: absolute;
+  left: 1270px;
+  top: 250px;
+  width: 480px;
+  height: 240px;
+  object-fit: contain;
+  background: #141414;
+  pointer-events: none;
+}
+#homeSurface[data-layout='channel-list'] #channelArtwork {
+  display: block;
+}
 #homeSurface.ctv-channel-multi #channelArtwork,
-#homeSurface.ctv-channel-multi #hero { display: none; }
-#homeSurface[data-layout="channel-list"] .card { background: transparent; }
-#homeSurface[data-layout="channel-list"] .card::after { box-shadow: none; }
-#homeSurface[data-layout="channel-list"] .card img { left: 60px; top: 12px; width: 64px; height: 64px; object-fit: contain; transform: none; background: #181818; }
-#homeSurface[data-layout="channel-list"] .name { position: absolute; top: 0; left: 148px; right: 16px; height: 88px; line-height: 88px; font-size: 32px; margin: 0; opacity: 1; transform: none; text-align: left; pointer-events: none; }
-#homeSurface[data-layout="channel-list"] .item::before { content: attr(data-channel); position: absolute; left: 12px; top: 0; font: 26px/88px monospace; color: #69beed; z-index: 3; pointer-events: none; }
-#homeSurface[data-layout="channel-list"] .item.focused::before { color: #181818; }
-#homeSurface[data-layout="channel-list"] .card.missing-icon::after { font-size: 44px; left: 60px; top: 12px; right: auto; width: 64px; height: 64px; }
-#homeSurface[data-layout="channel-list"] .add-app svg { position: absolute; top: 12px; left: 60px; width: 64px; height: 64px; }
+#homeSurface.ctv-channel-multi #hero {
+  display: none;
+}
+#homeSurface[data-layout='channel-list'] .card {
+  background: transparent;
+}
+#homeSurface[data-layout='channel-list'] .card::after {
+  box-shadow: none;
+}
+#homeSurface[data-layout='channel-list'] .card img {
+  left: 60px;
+  top: 12px;
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  transform: none;
+  background: #181818;
+}
+#homeSurface[data-layout='channel-list'] .name {
+  position: absolute;
+  top: 0;
+  left: 148px;
+  right: 16px;
+  height: 88px;
+  line-height: 88px;
+  font-size: 32px;
+  margin: 0;
+  opacity: 1;
+  transform: none;
+  text-align: left;
+  pointer-events: none;
+}
+#homeSurface[data-layout='channel-list'] .item::before {
+  content: attr(data-channel);
+  position: absolute;
+  left: 12px;
+  top: 0;
+  font: 26px/88px monospace;
+  color: #69beed;
+  z-index: 3;
+  pointer-events: none;
+}
+#homeSurface[data-layout='channel-list'] .item.focused::before {
+  color: #181818;
+}
+#homeSurface[data-layout='channel-list'] .card.missing-icon::after {
+  font-size: 44px;
+  left: 60px;
+  top: 12px;
+  right: auto;
+  width: 64px;
+  height: 64px;
+}
+#homeSurface[data-layout='channel-list'] .add-app svg {
+  position: absolute;
+  top: 12px;
+  left: 60px;
+  width: 64px;
+  height: 64px;
+}
 /* Large column choices keep a useful 48px glyph and a 24px label. */
-#homeSurface.ctv-channel-compact .card img { left: 50%; top: 8px; width: 48px; height: 48px; transform: translateX(-50%); }
-#homeSurface.ctv-channel-compact .name { left: 8px; right: 8px; top: 62px; height: 32px; font-size: 24px; line-height: 32px; text-align: center; }
-#homeSurface.ctv-channel-compact .item::before { display: none; }
-#homeSurface.ctv-channel-compact .add-app svg { top: 8px; left: 50%; width: 48px; height: 48px; transform: translateX(-50%); }
-#homeSurface.ctv-channel-compact .card.missing-icon::after { left: 0; top: 6px; right: 0; width: auto; height: 50px; font-size: 36px; }
+#homeSurface.ctv-channel-compact .card img {
+  left: 50%;
+  top: 8px;
+  width: 48px;
+  height: 48px;
+  transform: translateX(-50%);
+}
+#homeSurface.ctv-channel-compact .name {
+  left: 8px;
+  right: 8px;
+  top: 62px;
+  height: 32px;
+  font-size: 24px;
+  line-height: 32px;
+  text-align: center;
+}
+#homeSurface.ctv-channel-compact .item::before {
+  display: none;
+}
+#homeSurface.ctv-channel-compact .add-app svg {
+  top: 8px;
+  left: 50%;
+  width: 48px;
+  height: 48px;
+  transform: translateX(-50%);
+}
+#homeSurface.ctv-channel-compact .card.missing-icon::after {
+  left: 0;
+  top: 6px;
+  right: 0;
+  width: auto;
+  height: 50px;
+  font-size: 36px;
+}
 /* The label and number share row coordinates; selected/moving icons stay aligned. */
-#homeSurface[data-layout="channel-list"] .item.focused .card,
-#homeSurface[data-layout="channel-list"] .item.moving .card { transform: none; animation: none; }
+#homeSurface[data-layout='channel-list'] .item.focused .card,
+#homeSurface[data-layout='channel-list'] .item.moving .card {
+  transform: none;
+  animation: none;
+}
 /* A single immediate row highlight: no smaller border followed by a travelling glass. */
-#homeSurface[data-layout="channel-list"] #glass { visibility: hidden; transition: none; }
-#homeSurface[data-layout="channel-list"] #hero,
-#homeSurface[data-layout="channel-list"] #stage,
-#homeSurface[data-layout="channel-list"] .item,
-#homeSurface[data-layout="channel-list"] .card { transition: none; }
+#homeSurface[data-layout='channel-list'] #glass {
+  visibility: hidden;
+  transition: none;
+}
+#homeSurface[data-layout='channel-list'] #hero,
+#homeSurface[data-layout='channel-list'] #stage,
+#homeSurface[data-layout='channel-list'] .item,
+#homeSurface[data-layout='channel-list'] .card {
+  transition: none;
+}
 /* Keep candidate skins flat and leave selected-frame room before labels. */
-.ctv-theme-active .card::after { border-radius: inherit; box-shadow: none; }
-#homeSurface[data-layout="side-grid"] .name,
-#homeSurface[data-layout="icon-grid"] .name { margin-top: 34px; }
+.ctv-theme-active .card::after {
+  border-radius: inherit;
+  box-shadow: none;
+}
+#homeSurface[data-layout='side-grid'] .name,
+#homeSurface[data-layout='icon-grid'] .name {
+  margin-top: 34px;
+}
 
 /* Scenic: wallpaper first, a large quiet clock and one bottom row at a time. */
-#homeSurface[data-layout="scenic-grid"] { background-size: cover; background-position: center; }
-#homeSurface[data-layout="scenic-grid"]::before { content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(90deg, rgba(0,0,0,0.28), transparent 65%), linear-gradient(180deg, rgba(0,0,0,0.18), transparent 45%, rgba(0,0,0,0.86)); pointer-events: none; }
-#homeSurface[data-layout="scenic-grid"] header { top: 104px; align-items: flex-start; }
-#homeSurface[data-layout="scenic-grid"] #timeRow { display: block; }
-#homeSurface[data-layout="scenic-grid"] #clock { font-size: 176px; font-weight: 300; letter-spacing: -4px; }
-#homeSurface[data-layout="scenic-grid"] #ampm { font-size: 40px; margin-left: 16px; }
-#homeSurface[data-layout="scenic-grid"] #date { display: block; font-size: 30px; margin: 22px 0 0 6px; text-transform: none; letter-spacing: 0; }
-#homeSurface[data-layout="scenic-grid"] #greeting,
-#homeSurface[data-layout="scenic-grid"] .divider,
-#homeSurface[data-layout="scenic-grid"] #glass { display: none; }
-#homeSurface[data-layout="scenic-grid"] .pill { height: 72px; padding: 0 24px; font-size: 28px; margin-left: 14px; }
-#homeSurface[data-layout="scenic-grid"] .pill svg { width: 32px; height: 32px; margin-right: 12px; }
-#homeSurface[data-layout="scenic-grid"] #viewport { top: 730px; bottom: 50px; }
-#homeSurface[data-layout="scenic-grid"] #stage { top: -730px; transition: none; }
-#homeSurface[data-layout="scenic-grid"] .item { padding-bottom: 12px; border-radius: 6px; transition: none; }
-#homeSurface[data-layout="scenic-grid"] .item.focused,
-#homeSurface[data-layout="scenic-grid"] .item.moving { outline: none; background: transparent; }
-#homeSurface[data-layout="scenic-grid"] .card { border-radius: 14px; transform: none; transition: none; }
-#homeSurface[data-layout="scenic-grid"] .card img { top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; transform: none; }
-#homeSurface[data-layout="scenic-grid"] .name { opacity: 1; transform: none; font-size: 28px; margin: 16px -32px 0; line-height: 32px; height: 32px; font-weight: 400; }
-#homeSurface[data-layout="scenic-grid"] .card.missing-icon::after { font-size: 48px; }
-body.editing #homeSurface[data-layout="scenic-grid"] #viewport { top: 600px; }
-body.editing #homeSurface[data-layout="scenic-grid"] #stage { top: -600px; }
-.ctv-position { display: none; }
-#homeSurface[data-layout="scenic-grid"] .ctv-position { display: block; position: absolute; top: 0; left: auto; right: 112px; color: #ece7df; font-size: 28px; z-index: 3; pointer-events: none; }
-body.editing #homeSurface[data-layout="scenic-grid"] .ctv-position { display: none; }
+#homeSurface[data-layout='scenic-grid'] {
+  background-size: cover;
+  background-position: center;
+}
+#homeSurface[data-layout='scenic-grid']::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.28), transparent 65%),
+    linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.18),
+      transparent 45%,
+      rgba(0, 0, 0, 0.86)
+    );
+  pointer-events: none;
+}
+#homeSurface[data-layout='scenic-grid'] header {
+  top: 104px;
+  align-items: flex-start;
+}
+#homeSurface[data-layout='scenic-grid'] #timeRow {
+  display: block;
+}
+#homeSurface[data-layout='scenic-grid'] #clock {
+  font-size: 176px;
+  font-weight: 300;
+  letter-spacing: -4px;
+}
+#homeSurface[data-layout='scenic-grid'] #ampm {
+  font-size: 40px;
+  margin-left: 16px;
+}
+#homeSurface[data-layout='scenic-grid'] #date {
+  display: block;
+  font-size: 30px;
+  margin: 22px 0 0 6px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+#homeSurface[data-layout='scenic-grid'] #greeting,
+#homeSurface[data-layout='scenic-grid'] .divider,
+#homeSurface[data-layout='scenic-grid'] #glass {
+  display: none;
+}
+#homeSurface[data-layout='scenic-grid'] .pill {
+  height: 72px;
+  padding: 0 24px;
+  font-size: 28px;
+  margin-left: 14px;
+}
+#homeSurface[data-layout='scenic-grid'] .pill svg {
+  width: 32px;
+  height: 32px;
+  margin-right: 12px;
+}
+#homeSurface[data-layout='scenic-grid'] #viewport {
+  top: 730px;
+  bottom: 50px;
+}
+#homeSurface[data-layout='scenic-grid'] #stage {
+  top: -730px;
+  transition: none;
+}
+#homeSurface[data-layout='scenic-grid'] .item {
+  padding-bottom: 12px;
+  border-radius: 6px;
+  transition: none;
+}
+#homeSurface[data-layout='scenic-grid'] .item.focused,
+#homeSurface[data-layout='scenic-grid'] .item.moving {
+  outline: none;
+  background: transparent;
+}
+#homeSurface[data-layout='scenic-grid'] .card {
+  border-radius: 14px;
+  transform: none;
+  transition: none;
+}
+#homeSurface[data-layout='scenic-grid'] .card img {
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transform: none;
+}
+#homeSurface[data-layout='scenic-grid'] .name {
+  opacity: 1;
+  transform: none;
+  font-size: 28px;
+  margin: 16px -32px 0;
+  line-height: 32px;
+  height: 32px;
+  font-weight: 400;
+}
+#homeSurface[data-layout='scenic-grid'] .card.missing-icon::after {
+  font-size: 48px;
+}
+body.editing #homeSurface[data-layout='scenic-grid'] #viewport {
+  top: 600px;
+}
+body.editing #homeSurface[data-layout='scenic-grid'] #stage {
+  top: -600px;
+}
+.ctv-position {
+  display: none;
+}
+#homeSurface[data-layout='scenic-grid'] .ctv-position {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: auto;
+  right: 112px;
+  color: #ece7df;
+  font-size: 28px;
+  z-index: 3;
+  pointer-events: none;
+}
+body.editing #homeSurface[data-layout='scenic-grid'] .ctv-position {
+  display: none;
+}
 
-#homeSurface[data-layout="scenic-grid"] #hero { display: block; left: 112px; right: 400px; font-size: 34px; line-height: 1.2; font-weight: 400; letter-spacing: 0; white-space: normal; word-wrap: break-word; max-height: 132px; overflow: hidden; transition: none; text-shadow: 0 2px 12px rgba(0,0,0,0.8); }
-#homeSurface[data-layout="scenic-grid"] .add-app .name { white-space: normal; height: 64px; }
-#homeSurface[data-layout="scenic-grid"] .item.focused .card { border: 3px solid #ece7df; }
+#homeSurface[data-layout='scenic-grid'] #hero {
+  display: block;
+  left: 112px;
+  right: 400px;
+  font-size: 34px;
+  line-height: 1.2;
+  font-weight: 400;
+  letter-spacing: 0;
+  white-space: normal;
+  word-wrap: break-word;
+  max-height: 132px;
+  overflow: hidden;
+  transition: none;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8);
+}
+#homeSurface[data-layout='scenic-grid'] .add-app .name {
+  white-space: normal;
+  height: 64px;
+}
+#homeSurface[data-layout='scenic-grid'] .item.focused .card {
+  border: 3px solid #ece7df;
+}
 
 /* Reorder controls remain in the trusted footer; the ribbon needs no arrow cluster. */
-#homeSurface[data-layout="scenic-grid"] .item.moving::after { content: none; }
+#homeSurface[data-layout='scenic-grid'] .item.moving::after {
+  content: none;
+}
 
 /* Remote focus follows every key immediately; pointer movement keeps its transitions.
    In particular, repeated arrows must not continually retarget an unfinished scroll.
@@ -881,21 +1281,24 @@ body.editing #homeSurface[data-layout="scenic-grid"] .ctv-position { display: no
 /* Other layouts, and themes that don't opt into Classic motion, keep fully immediate
    remote focus. (Chrome 38 has no attribute selectors inside :not(), so the other
    presets are listed.) */
-#homeSurface.ctv-remote-navigation.ctv-theme-active:not(.ctv-classic-motion) #glass,
-#homeSurface.ctv-remote-navigation.ctv-theme-active:not(.ctv-classic-motion) .card,
-#homeSurface.ctv-remote-navigation.ctv-theme-active:not(.ctv-classic-motion) .name,
-#homeSurface.ctv-remote-navigation[data-layout="icon-grid"] #glass,
-#homeSurface.ctv-remote-navigation[data-layout="icon-grid"] .card,
-#homeSurface.ctv-remote-navigation[data-layout="icon-grid"] .name,
-#homeSurface.ctv-remote-navigation[data-layout="side-grid"] #glass,
-#homeSurface.ctv-remote-navigation[data-layout="side-grid"] .card,
-#homeSurface.ctv-remote-navigation[data-layout="side-grid"] .name,
-#homeSurface.ctv-remote-navigation[data-layout="channel-list"] #glass,
-#homeSurface.ctv-remote-navigation[data-layout="channel-list"] .card,
-#homeSurface.ctv-remote-navigation[data-layout="channel-list"] .name,
-#homeSurface.ctv-remote-navigation[data-layout="scenic-grid"] #glass,
-#homeSurface.ctv-remote-navigation[data-layout="scenic-grid"] .card,
-#homeSurface.ctv-remote-navigation[data-layout="scenic-grid"] .name {
+#homeSurface.ctv-remote-navigation.ctv-theme-active:not(.ctv-classic-motion)
+  #glass,
+#homeSurface.ctv-remote-navigation.ctv-theme-active:not(.ctv-classic-motion)
+  .card,
+#homeSurface.ctv-remote-navigation.ctv-theme-active:not(.ctv-classic-motion)
+  .name,
+#homeSurface.ctv-remote-navigation[data-layout='icon-grid'] #glass,
+#homeSurface.ctv-remote-navigation[data-layout='icon-grid'] .card,
+#homeSurface.ctv-remote-navigation[data-layout='icon-grid'] .name,
+#homeSurface.ctv-remote-navigation[data-layout='side-grid'] #glass,
+#homeSurface.ctv-remote-navigation[data-layout='side-grid'] .card,
+#homeSurface.ctv-remote-navigation[data-layout='side-grid'] .name,
+#homeSurface.ctv-remote-navigation[data-layout='channel-list'] #glass,
+#homeSurface.ctv-remote-navigation[data-layout='channel-list'] .card,
+#homeSurface.ctv-remote-navigation[data-layout='channel-list'] .name,
+#homeSurface.ctv-remote-navigation[data-layout='scenic-grid'] #glass,
+#homeSurface.ctv-remote-navigation[data-layout='scenic-grid'] .card,
+#homeSurface.ctv-remote-navigation[data-layout='scenic-grid'] .name {
   transition: none !important;
 }
 /* A single tap glides to the next row; app.js removes this during held arrows. */
@@ -917,32 +1320,106 @@ body.editing #homeSurface[data-layout="scenic-grid"] .ctv-position { display: no
   animation: ctv-bump-right 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 @keyframes ctv-bump-down {
-  40% { transform: translateY(10px); }
+  40% {
+    transform: translateY(10px);
+  }
 }
 @keyframes ctv-bump-left {
-  40% { transform: translateX(-10px); }
+  40% {
+    transform: translateX(-10px);
+  }
 }
 @keyframes ctv-bump-right {
-  40% { transform: translateX(10px); }
+  40% {
+    transform: translateX(10px);
+  }
 }
 
 /* Ribbon editing keeps the lane anchored and exposes controls at the moving card. */
-body.ribbon-editing #homeSurface[data-ribbon="true"] #viewport,
-body.ribbon-editing #homeSurface[data-ribbon="true"] #stage { top: 0; }
-body.ribbon-editing #homeSurface.ctv-home[data-ribbon="true"] .item .name { display: none !important; }
-body.ribbon-editing #homeSurface[data-ribbon="true"] .item.moving .card { outline: none; }
-.ribbon-edit-arrow { position: absolute; z-index: 6; width: 28px; height: 40px; display: flex; align-items: center; justify-content: center; color: #fff; pointer-events: none; }
-.ribbon-edit-arrow svg { width: 24px; height: 40px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-.ribbon-edit-left { left: -30px; }
-.ribbon-edit-right { right: -30px; }
-.ribbon-delete-mark { display: none; }
-body.ribbon-editing #hideApp { bottom: auto; width: 52px; height: 52px; padding: 0; border: 0; border-radius: 0; background: transparent; color: #fff; justify-content: center; }
-body.ribbon-editing #hideApp::before { content: none; }
-body.ribbon-editing #hideApp .hide-standard-icon { display: none; }
-body.ribbon-editing #hideApp .ribbon-delete-mark { display: block; width: 36px; height: 36px; stroke-width: 2.8; }
-body.ribbon-editing #hideApp span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
-body.ribbon-editing #hideApp.focused { background: transparent; color: #fff; }
-body.ribbon-editing #hideApp.focused .ribbon-delete-mark { width: 44px; height: 44px; stroke-width: 3.2; }
-body.ribbon-editing #editHint { bottom: auto; color: #fff; text-shadow: 0 2px 6px #000; }
+body.ribbon-editing #homeSurface[data-ribbon='true'] #viewport,
+body.ribbon-editing #homeSurface[data-ribbon='true'] #stage {
+  top: 0;
+}
+body.ribbon-editing #homeSurface.ctv-home[data-ribbon='true'] .item .name {
+  display: none !important;
+}
+body.ribbon-editing #homeSurface[data-ribbon='true'] .item.moving .card {
+  outline: none;
+}
+.ribbon-edit-arrow {
+  position: absolute;
+  z-index: 6;
+  width: 28px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  pointer-events: none;
+}
+.ribbon-edit-arrow svg {
+  width: 24px;
+  height: 40px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ribbon-edit-left {
+  left: -30px;
+}
+.ribbon-edit-right {
+  right: -30px;
+}
+.ribbon-delete-mark {
+  display: none;
+}
+body.ribbon-editing #hideApp {
+  bottom: auto;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #fff;
+  justify-content: center;
+}
+body.ribbon-editing #hideApp::before {
+  content: none;
+}
+body.ribbon-editing #hideApp .hide-standard-icon {
+  display: none;
+}
+body.ribbon-editing #hideApp .ribbon-delete-mark {
+  display: block;
+  width: 36px;
+  height: 36px;
+  stroke-width: 2.8;
+}
+body.ribbon-editing #hideApp span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+body.ribbon-editing #hideApp.focused {
+  background: transparent;
+  color: #fff;
+}
+body.ribbon-editing #hideApp.focused .ribbon-delete-mark {
+  width: 44px;
+  height: 44px;
+  stroke-width: 3.2;
+}
+body.ribbon-editing #editHint {
+  bottom: auto;
+  color: #fff;
+  text-shadow: 0 2px 6px #000;
+}
 
-#homeSurface.ctv-remote-navigation #hideApp { transition: none !important; }
+#homeSurface.ctv-remote-navigation #hideApp {
+  transition: none !important;
+}

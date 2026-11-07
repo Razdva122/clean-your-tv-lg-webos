@@ -1,5 +1,12 @@
 # Recover TV controls or an interrupted installation
 
+> **Unpublished candidate (#364):** experimental compositor recovery stops routing
+> before removing only its own filter. Safety/power stops require explicit
+> re-enable. If Home identity changed, the owned filter can be released after
+> retirement, but full stock proof remains unverified and recovery evidence is
+> retained. Do not delete journals or remove another launcher's state. See
+> [capability-based admission](development/C1-NATIVE-GATE.md#unpublished-capability-based-compositor-admission-364).
+
 > **Release 1.9.0:** see [versions, tested scope and recovery limits](RELEASE-1.9.0.md). C1 Beta is fresh-install only, selected automatically in the common installer; normal OTA is unavailable and physical C1 acceptance is pending. Historical results below retain their original artifact scope.
 
 ## Return to LG Home
@@ -54,6 +61,8 @@ If another operation is actually running, wait for it to finish and try again.
 A failed check stays visible; it is never converted to green completion. Keep
 keys and original reports, and do not reinstall or clear Android app data to
 retry removal. Missing files are skipped; absence is not itself an error.
+
+In this candidate, failed or interrupted setup offers recovery directly. If No-root setup cannot continue, confirm full removal once. Removal automatically retries transient connection loss and a busy CYTV worker up to three attempts. If Root access is required, choose **Connect using Root** for the same TV; verified Root cleanup also finishes its blocked No-root removal. A failed Root activation attempts to restore and verify LG Home without repeating activation. Cancellation with unfinished work keeps a diagnostic report and recovery actions. Emergency-stop state remains unchanged.
 
 Returning to LG Home alone remains separate from removal. Emergency controls
 above stay available. For setup recovery, eligible Root can still finish with

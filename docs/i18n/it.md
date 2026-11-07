@@ -91,6 +91,8 @@ I pulsanti sopra offrono ancora la versione pubblicata. Nel prossimo candidato, 
 
 Quando richiesto, scollega l’alimentazione della TV, ricollegala, attendi la rete e scegli **Riprova**. Standby o Quick Start non è un riavvio completo; CYTV non riavvia automaticamente la TV. Se la connessione si interrompe, controllala e riprova la stessa rimozione senza un altro assistente di ripristino. Se l’accesso è negato, usa la connessione Root richiesta; se la TV è occupata, attendi e riprova. Il successo appare solo dopo la verifica della pulizia finale. Conserva chiavi e rapporti originali. Restano validi i comandi di emergenza e il consenso alla condivisione.
 
+In questo candidato, un’installazione non riuscita o interrotta offre direttamente il ripristino. Se No-root non può proseguire, conferma una volta la rimozione completa. La rimozione esegue fino a tre tentativi in caso di perdita temporanea della connessione o processo CYTV occupato. Se serve Root, scegli **Connetti con Root** per la stessa TV; la pulizia Root verificata completa anche la rimozione No-root bloccata. Se l’attivazione Root fallisce, CYTV tenta di ripristinare e verificare LG Home senza ripetere l’attivazione. L’annullamento con lavoro incompleto conserva rapporto e azioni di ripristino. L’arresto di emergenza resta invariato.
+
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="requisiti"></a>
 <a id="python-opzionale-per-root"></a>
@@ -111,3 +113,5 @@ Quando richiesto, scollega l’alimentazione della TV, ricollegala, attendi la r
 <a id="spazio-di-archiviazione"></a>
 
 Riferimenti dettagliati in inglese: [requisiti](../COMPATIBILITY.md) · [comandi](../CONTROLS.md) · [temi](../THEMES.md) · [aggiornamenti](../UPDATES.md).
+
+> Candidato non pubblicato: Root Home sperimentale è selezionato in base alle capacità Qt SDK 6–9, senza elenco di modelli. Compatibilità hardware e OTA normale non verificati. Le altre integrazioni Home restano intatte; dopo un arresto di sicurezza o alimentazione, riattiva Home esplicitamente. [#364](../development/C1-NATIVE-GATE.md#unpublished-capability-based-compositor-admission-364).

@@ -22,6 +22,13 @@ class UserError(RuntimeError):
         self.reason_code = reason_code
 
 
+def connection_interrupted(error):
+    """Transient transport loss only; credentials and host trust never retry."""
+    return (getattr(error, 'reason_code', None) == 'connection-interrupted'
+            or isinstance(error, (ConnectionError, TimeoutError))
+            or type(error).__name__ in ('SSHException', 'NoValidConnectionsError'))
+
+
 
 class PythonCacheError(UserError):
     """Allowlisted host acquisition failure; never carry remote exception text."""
@@ -170,3 +177,47 @@ def root_recovery_details(value):
         number = value.get(key)
         if type(number) is int and low <= number <= high: result[key] = number
     return result
+
+
+# Fixed runtime categories shared by the trusted launcher and report revalidation.
+OBSERVER_EXCEPTION_NAMES = ('Error', 'TypeError', 'SyntaxError', 'ReferenceError', 'RangeError')
+OBSERVER_EXCEPTION_CODES = ('MODULE_NOT_FOUND', 'ERR_DLOPEN_FAILED', 'EACCES', 'EPERM',
+                            'ENOENT', 'ENOSPC', 'EDQUOT', 'EINVAL', 'ENOTSUP', 'EOPNOTSUPP',
+                            'EEXIST', 'ENOTDIR', 'EISDIR', 'ELOOP', 'EROFS', 'EMFILE', 'ENFILE', 'EIO')
+OBSERVER_REASONS = (
+    'changed-artifact', 'changed-directory', 'changed-file',
+    'changed-plan-source', 'changed-public-stage', 'changed-reservation',
+    'changed-source', 'changed-upload', 'changed-upload-directory',
+    'claimed-artifact-missing', 'configuration-unverified', 'conflicting-terminal',
+    'foreign-configuration-result', 'foreign-evidence', 'foreign-reservation',
+    'foreign-slot', 'invalid-claim', 'invalid-closure',
+    'invalid-configuration-claim', 'invalid-configuration-result', 'invalid-configuration-step',
+    'invalid-configuration-upload', 'invalid-plan', 'invalid-readback',
+    'invalid-seal', 'invalid-slot', 'invalid-terminal',
+    'invalid-terminal-reply', 'invalid-upload', 'missing-public-stage',
+    'nonprivate-directory', 'operation-closed', 'operation-not-closed',
+    'predecessor-unverified', 'private-public-parent', 'short-read',
+    'short-write', 'terminal-unverified', 'unexpected-reservation',
+    'unresolved-slot', 'unsafe-config-file', 'unsafe-directory',
+    'unsafe-file', 'unsafe-state-owner', 'unsafe-state-parent',
+    'unsupported-command', 'unsupported-storage', 'upload-too-large',
+    'writable-directory',
+)
+
+
+def no_root_observer_details(value):
+    """Revalidate host observer context; never accept remote text or identifiers."""
+    if type(value) is not dict:
+        return {}
+    allowed = {
+        'command': ('storage-check', 'prepare', 'status', 'attach', 'upload-artifact', 'upload-configuration',
+                    'artifacts', 'config-claim', 'config-result', 'start', 'worker', 'seal',
+                    'readback', 'configured', 'release', 'retire'),
+        'failure': ('command-failed', 'connection-interrupted', 'timeout', 'transport-error',
+                    'invalid-json', 'invalid-reply', 'foreign-operation', 'invalid-status', 'observer-error'),
+    }
+    if value.get('failure') == 'observer-error':
+        allowed.update(exception_name=OBSERVER_EXCEPTION_NAMES, exception_code=OBSERVER_EXCEPTION_CODES,
+                       observer_reason=OBSERVER_REASONS)
+    return {key: value[key] if type(value.get(key)) is str and value[key] in choices else 'unknown'
+            for key, choices in allowed.items()}

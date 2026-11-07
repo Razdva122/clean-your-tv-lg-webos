@@ -15,7 +15,7 @@ class BuildAssetsTests(unittest.TestCase):
         app = {'appinfo.json': json.dumps({'id':'com.gathin.tvhome','version':'1.0.0','type':'native'}).encode()}
         files = package.data_files(build['pack_app'](app, sources))
         prefix = 'usr/palm/services/com.gathin.tvhome.renewal/'
-        self.assertEqual(files[prefix+'diagnostics.js'], (root/'renewal-service/diagnostics.js').read_bytes())
+        self.assertEqual(files[prefix+'diagnostics.js'], build['compile_helper'](sources)['diagnostics.js'])
         self.assertIn(b"require('./diagnostics')", files[prefix+'service.js'])
 
     def test_home_channel_is_provisioned_and_survives_personalization(self):

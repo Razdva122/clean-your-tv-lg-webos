@@ -1,5 +1,11 @@
 # Install Clean Your TV
 
+> **Unpublished candidate (#364):** experimental compositor Home admission is
+> based on verified capabilities of Qt SDK 6–9 TVs, not a model list. It requires
+> a fresh setup, stock native Home and a compatible read-only emergency-input
+> channel; conflicting Home integrations are left untouched. Physical compatibility
+> and ordinary OTA are not established. See [scope and recovery](development/C1-NATIVE-GATE.md#unpublished-capability-based-compositor-admission-364).
+
 > **Release 1.9.0:** see [versions, tested scope and recovery limits](RELEASE-1.9.0.md). C1 Beta is fresh-install only, selected automatically in the common installer; normal OTA is unavailable and physical C1 acceptance is pending. Historical results below retain their original artifact scope.
 
 > The [1.7.1 maintenance release](RELEASE-1.7.1.md) changes the host installer and browser demo; TV component versions remain those of 1.7.0. See the [1.7.0 device observations and limits](history/2026-11-03-release-1.7.0-final-packages.md). Obtain available packages from [GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases).

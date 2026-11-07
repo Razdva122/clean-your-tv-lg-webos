@@ -17,13 +17,14 @@ class UpdateUiPackageTests(unittest.TestCase):
                 (root/folder).mkdir(parents=True)
             shutil.copytree(ROOT/'updater-app', root/'updater-app')
             shutil.copy(ROOT/'scripts/build-updater.sh', root/'scripts/build-updater.sh')
-            for name in ('tv_web_build.py', 'chinese_fonts.py', 'compile-tv-web.cjs'):
+            for name in ('tv_web_build.py', 'chinese_fonts.py', 'compile-tv-web.cjs', 'helper_build.py', 'compile-helper.cjs'):
                 shutil.copy(ROOT/'scripts'/name, root/'scripts'/name)
             shutil.copy(ROOT/'package.json', root/'package.json')
             for name in ('system-updates.js', 'release-notes.js', 'renewal-panel.css', 'i18n.js', 'i18n.css', 'catalogs.js', 'user-data.js'):
                 shutil.copy(ROOT/'launcher'/name, root/'launcher'/name)
+            # The service is compiled for the TV's Node, so its script fixtures must parse.
             for name in ('service.js', 'permissions.js', 'services.json', 'release-public.pem', 'ca-bundle.crt', 'ca-LICENSE.txt'):
-                (root/'updater-service'/name).write_text('fixture')
+                (root/'updater-service'/name).write_text("'use strict';\n" if name.endswith('.js') else 'fixture')
             for name in ('scripts/update-permissions.cjs', 'scripts/lib/update-permissions.cjs',
                          'root-edition/ui/root-locales.js', 'launcher/fonts/NotoSans.ttf', 'docs/UPDATES.md'):
                 (root/name).write_text('fixture')

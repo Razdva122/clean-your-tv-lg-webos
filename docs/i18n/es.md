@@ -91,6 +91,8 @@ Los botones anteriores siguen ofreciendo la versión publicada. En el próximo c
 
 Cuando se indique, desconecta la alimentación del TV, vuelve a conectarla, espera la red y elige **Intentar de nuevo**. Espera o Quick Start no es un reinicio completo; CYTV no reinicia el TV automáticamente. Si se pierde la conexión, compruébala y reintenta la misma eliminación sin otro asistente de recuperación. Si se deniega el acceso, usa la conexión Root solicitada; si el TV está ocupado, espera y reintenta. Solo se muestra éxito tras verificar la limpieza final. Conserva las claves y los informes originales. Siguen vigentes los controles de emergencia y el consentimiento para compartir.
 
+En este candidato, una instalación fallida o interrumpida ofrece recuperación directamente. Si No-root no puede continuar, confirma la eliminación completa una vez. La eliminación realiza hasta tres intentos ante cortes temporales de conexión o un proceso CYTV ocupado. Si requiere Root, elige **Conectar con Root** para el mismo TV; la limpieza Root verificada también completa su eliminación No-root bloqueada. Si falla la activación Root, CYTV intenta restaurar y verificar LG Home sin repetir la activación. Cancelar trabajo pendiente conserva el informe y las acciones de recuperación. Se mantiene la parada de emergencia.
+
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="python-opcional-para-root-en-v110"></a>
 <a id="bloqueo-de-firmware-lg-en-120"></a>
@@ -109,3 +111,5 @@ Cuando se indique, desconecta la alimentación del TV, vuelve a conectarla, espe
 <a id="espacio-de-almacenamiento"></a>
 
 Referencias detalladas en inglés: [requisitos](../COMPATIBILITY.md) · [controles](../CONTROLS.md) · [temas](../THEMES.md) · [actualizaciones](../UPDATES.md).
+
+> Candidato no publicado: Root Home experimental se elige por capacidades de Qt SDK 6–9, sin lista de modelos. La compatibilidad física y OTA normal no están verificadas. No se modifican otras integraciones Home; tras una parada de seguridad o energía, activa Home explícitamente. [#364](../development/C1-NATIVE-GATE.md#unpublished-capability-based-compositor-admission-364).

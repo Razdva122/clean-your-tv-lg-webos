@@ -7,11 +7,21 @@ Zig 0.14.1, and a C compiler for tests. CI uses Node 22. These are source-build
 requirements; installed cytv packages carry their host runtime.
 
 ```sh
-npm ci --ignore-scripts --no-audit --no-fund
-python3 -m pip install -r scripts/build-requirements.txt
+npm ci --no-audit --no-fund
+python3 -m venv .venv-cytv
+. .venv-cytv/bin/activate
+python -m pip install -r cytv/build-requirements.txt
 scripts/test.sh
 scripts/build.sh
 ```
+
+Reuse an existing `.venv-cytv` instead of recreating it. On Windows, activate
+`.venv-cytv/Scripts/activate` in Bash (or `Scripts/Activate.ps1` in PowerShell).
+`scripts/test.sh` also finds `.venv-cytv` without activation; an active virtualenv
+or explicit `PYTHON` takes precedence. Direct commands should use that environment's
+Python, and Python scripts should spawn `sys.executable`, not a separate `python3`
+from PATH. The pinned `fonttools` dependency is a host build requirement; it is
+not installed on the TV.
 
 Chinese fonts are prepared automatically from verified pinned sources when a
 translation adds glyphs. Reuse `build/chinese-font-cache` for offline builds;
