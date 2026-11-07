@@ -31,6 +31,10 @@ New features remain outside this candidate until publication.
   verification and a reviewed profile-preserving trust-recovery implementation
   remain necessary; no host-key replacement command is added.
 
+- Windows host validation isolates the generated Beta policy from its unused
+  TV-only lock import while retaining every refusal assertion (#405). No product
+  behavior or package version changes in this correction.
+
 ## Versions and delivery
 
 | Component | Published v1.11.0 | Candidate v1.12.0 |

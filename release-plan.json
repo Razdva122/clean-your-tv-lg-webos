@@ -38,6 +38,11 @@
         368
       ],
       "summary": "Fix transitional Root Settings status; add private retention diagnostics and SSH identity recovery guidance; original #348 automatic re-entry and #368 trust recovery remain unresolved"
+    },
+    {
+      "pr": 405,
+      "issues": [],
+      "summary": "Keep the isolated generated Beta refusal test runnable on Windows; retain actual handlers and all check/install assertions without product changes"
     }
   ],
   "excluded": [],
