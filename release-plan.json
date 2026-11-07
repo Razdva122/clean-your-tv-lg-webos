@@ -83,6 +83,11 @@
       "pr": 387,
       "issues": [],
       "summary": "Synchronize System Updater1.2.4 build/policy and strict replacement target/readback/result pins; existing installed-source limits retained"
+    },
+    {
+      "pr": 393,
+      "issues": [],
+      "summary": "Reuse unchanged CI unit successes and correct Windows SSH fixture"
     }
   ],
   "excluded": [],
