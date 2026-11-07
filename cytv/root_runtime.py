@@ -69,6 +69,7 @@ def offer(installer, args, ask, write):
     if not options:
         raise UserError('Root requirements failed or could not be verified: node-version. Check the diagnostic report.', reason_code='root-requirements')
     installer.tv_info['node_version'] = value[1:]
+    installer.tv_info['node_version_status'] = 'read'
     if installer.remote.run(FRESH_PROBE, timeout=10).strip() != 'CYTV_FRESH_ROOT':
         raise UserError('Previous Root installation needs recovery. Run cytv status or cytv restore. Reinstallation has not started; recovery data was left unchanged.')
     write.heading('Choose an alternative edition')

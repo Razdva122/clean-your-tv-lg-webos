@@ -36,7 +36,8 @@ class SessionTests(unittest.TestCase):
    self.assertFalse(s.record('tx',boot='old'))
    self.assertFalse(h.path('tx').with_suffix('.shutdown').exists())
 
-class PowerTests(unittest.TestCase):
+class PowerFixture:
+ """Power-state fixtures without inherited test collection."""
  def setUp(self):
   import tempfile,os
   import persistent_health as h,device_adapter as d
@@ -47,6 +48,8 @@ class PowerTests(unittest.TestCase):
   value=dict(returnValue=True,state=state)
   if initial:value['subscribed']=True
   power.event(value)
+
+class PowerTests(PowerFixture, unittest.TestCase):
  def test_observed_active_to_standby_precedes_manager_and_preserves_fresh_evidence(self):
   power=s.PowerState('tx','boot-a')
   self.event(power,'Active',True)
@@ -95,7 +98,7 @@ class PowerTests(unittest.TestCase):
   self.assertFalse(s.stopping('tx'));self.event(new,'Active Standby',True)
   self.assertFalse(s.stopping('tx'))
 
-class SubscriptionTests(PowerTests):
+class SubscriptionTests(PowerFixture, unittest.TestCase):
  def run_stream(self, chunks):
   import threading
   from unittest.mock import Mock
@@ -148,7 +151,7 @@ class SubscriptionTests(PowerTests):
    s.observe_power('tx','boot-a',stop)
 
 
-class ResumeTransitionTests(PowerTests):
+class ResumeTransitionTests(PowerFixture, unittest.TestCase):
  def test_processing_active_retains_off_proof_until_completed_resume(self):
   power=s.PowerState('tx','boot-a')
   self.event(power,'Active',True);self.event(power,'Power Off')
@@ -176,7 +179,7 @@ class ResumeTransitionTests(PowerTests):
    s.observe_power('tx','boot-a',threading.Event())
 
 
-class WakeDiagnosticTests(PowerTests):
+class WakeDiagnosticTests(PowerFixture, unittest.TestCase):
  def snapshot(self):
   import json,persistent_health as h
   return json.loads(h.path('tx').with_suffix('.wake').read_text())

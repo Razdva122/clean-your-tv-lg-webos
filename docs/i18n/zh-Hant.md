@@ -2,9 +2,13 @@
 
 Clean Your TV 為 LG webOS 提供個人主畫面：依自己的順序排列應用程式，此選單沒有贊助內容列。使用電腦或 Android 手機安裝，設定完成後即可關閉電腦。
 
-## 未發布候選版本（UNRELEASED）：電視上的舊版 Node.js
+**v1.12.1 — 下一版本（尚未發佈）：** 連線錯誤將區分網路存取遭拒、SSH 連接埠拒絕連線與逾時。**再次檢查連線**執行診斷而不安裝套件；**修改連線**檢查修改後的連線資訊。在 macOS 上，**開啟系統設定**協助尋找區域網路權限，其中可能顯示舊副本的名稱。未完成的操作繼續使用原有復原流程。
 
-這些選項屬於尚未發布的候選版本，不屬於已發布的下載。若一般 Root 拒絕電視的 Node.js 版本（需要 Node.js 8+），安裝程式可提供**透過現有 root SSH 使用 No-root**：使用 Home 和 Home Helper，不安裝 Developer Mode。已有 root 的電視切勿啟用 Developer Mode。只有**版本恰好為 Node.js 0.12.2** 時，才可另外選擇使用獨立套件、需要明確確認的 **Root Beta**。不會取代系統 Node.js，也不支援自動/OTA 更新；請使用電腦安裝程式。 No-root 功能受限：不提供系統層級 Home 路由或 Root 專屬控制功能。Root Beta 尚未在電視上進行充分測試。
+<a id="未發布候選版本unreleased電視上的舊版-nodejs"></a>
+
+## 電視上的舊版 Node.js（已隨 v1.12.0 發布）
+
+這些選項已包含在發布的 v1.12.0 中。若一般 Root 拒絕電視的 Node.js 版本（需要 Node.js 8+），安裝程式可提供**透過現有 root SSH 使用 No-root**：使用 Home 和 Home Helper，不安裝 Developer Mode。已有 root 的電視切勿啟用 Developer Mode。只有**版本恰好為 Node.js 0.12.2** 時，才可另外選擇使用獨立套件、需要明確確認的 **Root Beta**。不會取代系統 Node.js，也不支援自動/OTA 更新；請使用電腦安裝程式。 No-root 功能受限：不提供系統層級 Home 路由或 Root 專屬控制功能。Root Beta 尚未在電視上進行充分測試。
 
 其餘原生元件、Home 介面和 Python 檢查仍然是必要的。由擁有者監督的實體電視測試尚未進行；這不代表相容性已獲驗證。請儲存診斷報告，標註未測試項目，並自願依照[回饋指南](../FEEDBACK.md)手動分享已移除隱私資訊的結果。不會自動發布任何內容。
 

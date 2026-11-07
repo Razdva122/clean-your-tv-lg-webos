@@ -55,6 +55,19 @@ substitute IPKs or bypass checks. This fix does not require a TV firmware update
 
 ### If the app opens but cannot connect to the TV
 
+**v1.12.1 candidate (unreleased):** Connection failures distinguish denied network
+access, refused SSH ports and timeouts when the operating system provides that
+cause. The failure screen shows guidance and **Check connection again** as the
+primary action. This runs Doctor, not installation. **Change connection** checks
+an edited address, edition and port without starting setup. On macOS, **Open
+System Settings** opens Settings; follow the displayed Privacy & Security →
+Local Network path. macOS may list an older duplicate app name. The app cannot
+infer the permission switch state from an unreachable/timeout error. Connection
+editing/recheck shortcuts are withheld while an operation needs recovery;
+follow the existing recovery flow. Saving diagnostics and reporting an issue
+remain optional secondary actions.
+
+
 1. Turn on the TV and connect it and your Mac to the same home network.
 2. Open **System Settings → Privacy & Security → Local Network** and enable **cytv**
    if it is listed. Allow access when the app asks.

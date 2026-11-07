@@ -55,8 +55,10 @@ and creating your own theme.
 ## Download and install
 
 <!-- release:downloads -->
-Current stable release: **[v1.12.0](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.12.0)** — [release notes](docs/RELEASE-1.12.0.md).
+Current stable release: **[v1.12.1](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.12.1)** — [release notes](docs/RELEASE-1.12.1.md).
 <!-- /release:downloads -->
+
+> **Unpublished v1.12.1 candidate:** the checked metadata above describes the candidate. Public downloads still serve v1.12.0 until verified publication.
 
 Release v1.12.0 includes the scoped C3 and Android emulator checks recorded in the [acceptance notes](docs/history/2026-11-07-release-1.12.0-scoped-qa.md), with Beta and automatic Home-preservation limits stated explicitly.
 
@@ -137,15 +139,15 @@ For contributors: [build and technical references](docs/development/README.md),
 <!-- release:components -->
 | Component | Stable version |
 | --- | --- |
-| cytv installer | 0.13.0 |
-| Home | 1.13.0 |
+| cytv installer | 0.13.1 |
+| Home | 1.13.1 |
 | Home Helper | 0.7.5 |
-| Root edition | 0.13.0 |
-| Both edition Updaters | 0.5.2 |
-| Android installer / versionCode | 0.12.0 / 26 |
+| Root edition | 0.13.1 |
+| Both edition Updaters | 0.5.3 |
+| Android installer / versionCode | 0.12.1 / 27 |
 <!-- /release:components -->
 
-Fresh System Updater target: 1.2.5 / protocol 1. Existing supervisors stay pinned; installed 1.1.2 has no general replacement path. See the [candidate delivery limits](docs/RELEASE-1.12.0.md).
+Fresh System Updater target: 1.2.6 / protocol 1. Existing supervisors stay pinned; installed 1.1.2 has no general replacement path. See the [candidate delivery limits](docs/RELEASE-1.12.1.md).
 
 Historical System Updater in 1.7.0: 1.2.0 / protocol 1.
 See the [1.7.0 release notes](docs/RELEASE-1.7.0.md)

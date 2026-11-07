@@ -2,9 +2,13 @@
 
 Clean Your TV ofrece una pantalla de inicio personal para tu LG webOS: tus aplicaciones en tu orden, sin filas patrocinadas en este menú. Instálalo desde un ordenador o teléfono Android; después puedes apagar el ordenador.
 
-## Candidato UNRELEASED: Node.js antiguo en el TV
+**v1.12.1 — Próxima versión (sin publicar):** Los errores distinguirán acceso a la red denegado, puertos SSH que rechazan conexiones y tiempos de espera agotados. **Comprobar conexión de nuevo** ejecuta diagnósticos sin instalar paquetes; **Cambiar conexión** comprueba los datos editados. En macOS, **Abrir Ajustes del Sistema** ayuda a encontrar el acceso a la red local; puede aparecer el nombre de una copia anterior. Las operaciones pendientes conservan su proceso de recuperación.
 
-Estas opciones pertenecen a un candidato aún no publicado, no a las descargas publicadas. Si Root normal rechaza la versión de Node.js del TV (requiere Node.js 8+), el instalador puede ofrecer **No-root mediante el SSH root existente**: Home y Home Helper sin instalar Developer Mode. Nunca actives Developer Mode sobre un root existente. Solo **Node.js 0.12.2 exacto** permite ofrecer también **Root Beta**, con paquetes separados y confirmación explícita. No sustituye el Node.js del sistema ni tiene actualizaciones automáticas/OTA; usa el instalador del ordenador. No-root tiene funciones reducidas: sin redirección de Home del sistema ni controles exclusivos de Root. Root Beta no se ha probado lo suficiente en televisores.
+<a id="candidato-unreleased-nodejs-antiguo-en-el-tv"></a>
+
+## Node.js antiguo en el TV (publicado en v1.12.0)
+
+Estas opciones están incluidas en la versión publicada v1.12.0. Si Root normal rechaza la versión de Node.js del TV (requiere Node.js 8+), el instalador puede ofrecer **No-root mediante el SSH root existente**: Home y Home Helper sin instalar Developer Mode. Nunca actives Developer Mode sobre un root existente. Solo **Node.js 0.12.2 exacto** permite ofrecer también **Root Beta**, con paquetes separados y confirmación explícita. No sustituye el Node.js del sistema ni tiene actualizaciones automáticas/OTA; usa el instalador del ordenador. No-root tiene funciones reducidas: sin redirección de Home del sistema ni controles exclusivos de Root. Root Beta no se ha probado lo suficiente en televisores.
 
 Los demás requisitos nativos, de interfaces Home y de Python siguen siendo obligatorios. Las pruebas físicas supervisadas por el propietario siguen pendientes; esto no confirma compatibilidad. Guarda el informe de diagnóstico, marca las pruebas no realizadas y comparte voluntariamente un resultado sin datos privados de forma manual mediante la [guía de comentarios](../FEEDBACK.md). No se publica nada automáticamente.
 

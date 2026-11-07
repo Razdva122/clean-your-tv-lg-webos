@@ -43,6 +43,11 @@ def context(error,uri,reason,reply=None):
                 ('service-missing',('service does not exist','service is not registered')),
                 ('method-missing',('unknown method','method does not exist'))):
                 if any(phrase in text for phrase in phrases):value['reason']=category;break
+    # Recovery authority must not use the broader diagnostic text categories.
+    error.systemprofile_missing=(uri.removeprefix('luna://')=='com.webos.service.systemprofile/getProfiles'
+        and reason=='negative-reply' and isinstance(reply,dict) and reply.get('returnValue') is False
+        and type(reply.get('errorCode')) is int and reply['errorCode']==-1
+        and reply.get('errorText')=='Service does not exist: com.webos.service.systemprofile.')
     error.luna=summary(value)
     return error
 

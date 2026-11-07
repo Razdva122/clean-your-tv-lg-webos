@@ -2,9 +2,13 @@
 
 Clean Your TV je vaše vlastní domovská obrazovka pro LG webOS: aplikace ve vašem pořadí, bez sponzorovaných řádků v této nabídce. Instalujte z počítače nebo telefonu s Androidem; po nastavení může být počítač vypnutý.
 
-## Kandidát UNRELEASED: starší Node.js v TV
+**v1.12.1 — Příští verze (nevydaná):** Chyby spojení rozliší odepřený přístup k síti, odmítnutí portem SSH a vypršení času. **Znovu prověřit spojení** spustí diagnostiku bez instalace balíčků; **Změnit připojení** prověří upravené údaje. V macOS tlačítko **Otevřít Nastavení systému** pomůže najít přístup k místní síti; může se zobrazit název starší kopie. Nedokončené operace zachovají svůj postup obnovy.
 
-Tyto možnosti patří k dosud nevydanému kandidátovi, nikoli k vydaným souborům ke stažení. Pokud běžný Root odmítne verzi Node.js v TV (vyžaduje Node.js 8+), instalátor může nabídnout **No-root přes stávající root SSH**: Home a Home Helper bez instalace Developer Mode. Na TV se stávajícím root nikdy nezapínejte Developer Mode. Jen **přesně Node.js 0.12.2** umožňuje také **Root Beta**, se samostatnými balíčky a výslovným potvrzením. Systémový Node.js se nenahrazuje a automatické/OTA aktualizace nejsou dostupné; použijte instalátor v počítači. No-root má omezené funkce: bez systémového přesměrování Home a ovládacích funkcí vyhrazených pro Root. Root Beta nebyl na televizorech dostatečně otestován.
+<a id="kandidát-unreleased-starší-nodejs-v-tv"></a>
+
+## Starší Node.js v TV (vydáno ve v1.12.0)
+
+Tyto možnosti jsou součástí vydané verze v1.12.0. Pokud běžný Root odmítne verzi Node.js v TV (vyžaduje Node.js 8+), instalátor může nabídnout **No-root přes stávající root SSH**: Home a Home Helper bez instalace Developer Mode. Na TV se stávajícím root nikdy nezapínejte Developer Mode. Jen **přesně Node.js 0.12.2** umožňuje také **Root Beta**, se samostatnými balíčky a výslovným potvrzením. Systémový Node.js se nenahrazuje a automatické/OTA aktualizace nejsou dostupné; použijte instalátor v počítači. No-root má omezené funkce: bez systémového přesměrování Home a ovládacích funkcí vyhrazených pro Root. Root Beta nebyl na televizorech dostatečně otestován.
 
 Ostatní požadavky na nativní komponenty, rozhraní Home a Python zůstávají povinné. Fyzické testy pod dohledem vlastníka zatím nebyly provedeny; nejde o potvrzení kompatibility. Uložte diagnostickou zprávu, označte neprovedené kontroly a dobrovolně sdílejte ručně výsledek bez soukromých údajů podle [průvodce zpětnou vazbou](../FEEDBACK.md). Nic se nezveřejňuje automaticky.
 
