@@ -44,7 +44,7 @@ class RemoteDirectoryTests(unittest.TestCase):
             bundle(payload/'root-updater',{'install_driver.py':b'# driver','system_updater/support/core.py':b'# core','root-updater.ipk':b'ipk'})
             bundle(payload/'system-updater',{'setup-system-updater.py':b'# setup','system-updater.ipk':b'ipk','system_updater/support/core.py':b'# core'},schema=1,supervisor=1)
             expected={
-                'coordinator_code':{'install_driver.py','system_updater/support/core.py'},
+                'coordinator_code':{'install_driver.py','system_updater/support/core.py','bundle.json'},
                 'upload_product':{'root/deploy.py','root/runtime/native/helper','root/bundle.json','root-updater/install_driver.py','root-updater/system_updater/support/core.py','root-updater/root-updater.ipk','root-updater/bundle.json'},
                 'enable_system_updates':{'setup-system-updater.py','system-updater.ipk','system_updater/support/core.py','bundle.json'},
             }

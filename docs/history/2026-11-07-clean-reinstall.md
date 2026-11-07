@@ -55,6 +55,9 @@ fresh-install-only guard; this correction does not enable native reinstallation.
 - Host operations/CLI/shared regression pass: 148 tests passed before the added
   Root SSH inventory adapter. Its final affected CLI, checks, inventory and TV
   pass ran 72 tests successfully, including unchanged No-root SSAP retry cases.
+  A further 81 desktop/Qt/recovery/Android-bridge checks passed. The English
+  guidance assertion explicitly selects English instead of depending on the host
+  locale. Captured catalog data also passed the actual Root profile validator.
 - Independent review approved the final ownership/cleanup, read-only support and
   Root inventory changes with no outstanding Critical/Important findings.
 - Focused payload verification preserves all TV IPK bytes, published Helper0.7.4
