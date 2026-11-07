@@ -396,6 +396,8 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
         reply=self.product_action('inspect')
         if reply.get('reason')=='restart-required':
             raise UserError('Previous Root was removed. Restart the TV with its remote, wait for LG Home, then run cytv again. Old Root processes must stop before reinstallation. Recovery data was kept.',reason_code='restart-required')
+        if reply.get('reason')=='project-apps-remain':
+            raise UserError('Clean Your TV apps are present after the previous full removal. To switch to Root, first run Uninstall Clean Your TV with the saved Root connection. This removes No-root Home and Helper too; back up preferences, wait for verified removal, then install Root.',reason_code='project-apps-remain')
         result=reply.get('installation')
         if not isinstance(result,dict):
             raise UserError('Root operation was not confirmed. Run cytv status; retain recovery state.', reason_code='root-operation-unconfirmed')
@@ -538,7 +540,7 @@ with os.fdopen(f,'rb') as stream:
                                   installation.get('can_install') is True and
                                   self.tv_info.get('home_backend')!='c1-native-gate')
                     except UserError as error:
-                        if error.reason_code=='restart-required':raise
+                        if error.reason_code in ('restart-required','project-apps-remain'):raise
                     except (OSError,ValueError,RuntimeError): pass
                 if existing and not maintain:
                     raise ExistingRoot('Root is already installed or recovery state remains. Connect interactively to review reinstallation; existing state was left unchanged.')
@@ -1595,7 +1597,7 @@ print('CYTV_ROOT_FILES_OK')
                 if installation.get('clean_removal_verified') is True and installation.get('can_install') is True:
                     return {'restored':True,'already_removed':True}
             except UserError as error:
-                if error.reason_code=='restart-required':raise
+                if error.reason_code in ('restart-required','project-apps-remain'):raise
             except (OSError,ValueError,RuntimeError):
                 pass
             return self.root_action('restore')

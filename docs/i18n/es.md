@@ -29,6 +29,8 @@ Enciende el TV y conéctalo a la misma red doméstica que el ordenador o teléfo
 - **No-root** — si no tienes acceso root. Prepara Developer Mode siguiendo los pasos de abajo.
 - **Root** — si ya tienes acceso root por SSH. El instalador no obtiene root. No actives Developer Mode en ese TV; conserva el acceso SSH y los datos de recuperación.
 
+**No-root → Root:** Si volvió a instalar No-root después de una eliminación completa, cambiar a Root puede requerir una limpieza previa. Guarde las preferencias de Home, elija **Desinstalar Clean Your TV** con la conexión Root guardada y espere la eliminación verificada. Esto también elimina Home y Helper de No-root. Luego instale Root; conserve los registros de recuperación.
+
 ### Configurar Developer Mode (No-root)
 
 Developer Mode permite a CYTV instalar apps en un TV sin root.

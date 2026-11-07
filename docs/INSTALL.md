@@ -31,6 +31,8 @@ fresh-install-only [C1 Beta backend](development/C1-NATIVE-GATE.md), which does 
 require those interfaces and has no physical C1 acceptance or normal OTA support.
 Root access alone does not establish compatibility.
 
+If No-root was installed again after full removal, switching to Root may require cleanup first. Back up Home preferences, choose **Uninstall Clean Your TV** with the saved Root connection and wait for verified removal. This also removes No-root Home and Helper. Then install Root; keep recovery records.
+
 ## 2. Prepare your TV and computer
 
 Turn on the TV. Connect it and your computer to the same trusted local network.

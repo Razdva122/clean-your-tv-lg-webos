@@ -29,6 +29,8 @@ Clean Your TV 为 LG webOS 提供个人主屏幕：按自己的顺序排列应�
 - **No-root** — 电视没有 root 权限时选择。按下方步骤设置 Developer Mode。
 - **Root** — 已有 SSH root 访问权限时选择。安装程序不会为电视获取 root。请勿在此电视上开启 Developer Mode；保留 SSH 访问和恢复数据。
 
+**No-root → Root:** 如果在完整移除后重新安装了 No-root，切换到 Root 前可能需要先清理。请备份 Home 偏好设置，使用已保存的 Root 连接选择**卸载 Clean Your TV**，并等待移除验证完成。这也会移除 No-root Home 和 Helper。然后安装 Root；请保留恢复记录。
+
 ### 设置 Developer Mode（No-root）
 
 Developer Mode 让 CYTV 可以在没有 root 的电视上安装应用。
