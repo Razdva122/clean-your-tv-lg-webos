@@ -1,7 +1,13 @@
 {
   "schema": 1,
   "version": null,
-  "changes": [],
+  "changes": [
+    {
+      "pr": 372,
+      "issues": [],
+      "summary": "Refactor shared build assets and automate project formatting"
+    }
+  ],
   "excluded": [],
   "acceptance": ""
 }
