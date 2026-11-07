@@ -208,11 +208,63 @@ volatile reset. Only the three known existing Root boot-session files are retire
 through the pinned scanner after that durable proof; final readback checks the
 directory is absent. Unknown members and unsafe metadata still block removal.
 
-Focused host verification passed: 84 Root cleanup/tail/simple/handoff tests
-(three platform skips), 25 tail tests on exact Node 8 (one platform skip), and
+Focused host verification passed: 88 Root cleanup/tail/simple/handoff tests
+(three platform skips), 28 tail tests on exact Node 8 (one platform skip), and
 41 No-root cleanup tests. Eight affected cases passed on each exact Node
-0.10.15, 0.10.25, 0.12.2 and 8.12.0. The emitted legacy-compatible JavaScript
-is bound to SHA256 `3726e7990da5fe2232302d5a84620b38fae3f121ad93e47b7716588bc6429cab`.
+0.10.15, 0.10.25, 0.12.2 and 8.12.0. The preceding boot-proof batch used JavaScript
+SHA256 `3726e7990da5fe2232302d5a84620b38fae3f121ad93e47b7716588bc6429cab`;
+the later stdin transport correction below has its own source binding.
 Regressions reproduced UUID-only refusal, mixed-format false progress and a lost
 rearm response before their fixes. These are source/model results; they do not
 establish universal volatile-store lifetime or pristine No-root TV acceptance.
+
+### Final activity scope
+
+The final Python and Node readbacks now use the six fixed component service URI
+namespaces, with the trailing slash delimiter, rather than every service sharing
+the `com.cleanyourtv.` prefix. Cancellation remains restricted to its existing
+exact owned name/callback pairs. An unrelated diagnostic probe or near-match
+service is preserved and no longer blocks removal; actual component callbacks
+and the reserved Root recovery activity still prevent a clean result. Both
+readback regressions failed before the correction. The focused counts above
+include the new positive and refusal cases. No broader deletion is introduced.
+
+The same existing Node finalizer now handles native Python when no managed
+runtime exists. It receives the original ownership and worker descriptors, an
+empty runtime inventory and no promotion descriptor; it creates no managed
+directory or lock. This avoids leaving the cleanup-created boot session behind
+on that supported interpreter path. The real child handoff regression failed
+before removal of the early return and passed afterward, including a repeated
+reply under the same locks.
+
+### Current connection guidance
+
+A current connection or typed SSH/key error now takes presentation priority over
+a retained restart-required stage in console, desktop and Android results. The
+restart/completion authority is unchanged. The initial saved-state notice may
+still explain the pending restart before connecting; after a connection failure
+the current advice is Try again or the existing typed authentication guidance.
+Android keeps Retry primary and report export secondary when both are available.
+No new action, translated string or recovery protocol is introduced.
+
+Focused verification passed 13 UI/CLI regression tests and 111 affected
+CLI/recovery/desktop/bridge tests, plus 16 Chrome result cases. The existing
+13-language, two-edition removal matrix passed; strict contradictory-success
+cases remain neutral. The stale-restart presentation reproduced before the fix.
+
+### Bounded SSH execution
+
+The No-root cleaner now follows the existing bare-Node stdin execution pattern,
+rather than placing its source and request in a long SSH command. Both entry
+points use exactly `/usr/bin/node` (13 bytes); up to 128 staging identifiers flow
+through stdin. The existing carrier uses bounded base64 in that same source
+request, with encoded-size checks before decoding, followed by the unchanged
+raw-size, SHA256, path, owner and inode checks. No staged loader, dependency or
+new executable TV file is introduced. Root local consumers retain their existing
+argument format.
+
+The command-size regression failed on the old implementation. All 48 dedicated
+No-root removal/carrier tests passed; two actual stdin scenarios passed on each
+exact Node 0.10.15, 0.10.25, 0.12.2 and 8.12.0, including exact carrier bytes,
+retry and malformed-carrier refusal. Final helper JavaScript SHA256 is
+`a0dde7ab2edee26aea947390c05b5e31d9bc30211cdaadd20aa368da6a751fb1`.

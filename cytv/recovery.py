@@ -16,7 +16,7 @@ def plan(write, state, summary, next_step=KEPT, actions=None):
     write.recovery_plan(value)
 
 
-def removal_plan(write, store, profile, state='blocked', connecting=False):
+def removal_plan(write, store, profile, state='blocked', connecting=False, failure=None):
     """Expose only current safe assessment fields, with the selected TV bound."""
     if not profile:return False
     pending=store.pending(profile)
@@ -26,11 +26,15 @@ def removal_plan(write, store, profile, state='blocked', connecting=False):
     assessment=assess(profile,pending,None)
     write.recovery(profile)
     restart=summary['reason']=='restart-required' or summary['stage']=='restart-required'
-    write.recovery_plan({'state':state,'disposition':'clean-removal','removed':False,'verified_clean':False,'restart_required':restart,
+    value = {'state':state,'disposition':'clean-removal','removed':False,'verified_clean':False,'restart_required':restart,
         'summary':'Restart the TV to finish removal' if restart else 'Removal has been requested. Continue the remaining cleanup for this TV.',
         'next_step':('Restart the TV completely: disconnect it from power, reconnect it, then choose Try again. Standby is not a full restart.' if restart
                      else 'Connect to the TV to continue cleanup.' if connecting else 'Continue the remaining cleanup for this TV.'),
-        'removal':summary,'actions':assessment['actions'],'reason':summary['reason']})
+        'removal':summary,'actions':assessment['actions'],'reason':summary['reason']}
+    from .recovery_ui import removal_connection_failure, removal_details
+    if removal_connection_failure(value, failure):
+        value.update(summary='Removal is not finished yet.',next_step=removal_details(value, failure)['blocker_text'])
+    write.recovery_plan(value)
     return True
 
 

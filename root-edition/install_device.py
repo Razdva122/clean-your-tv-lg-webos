@@ -995,7 +995,6 @@ class LocalDevice:
         import python_binding, fcntl
         from clean_removal import retire_tree
         runtime=python_binding.MANAGED_ROOT/python_binding.ARCHIVE_SHA256
-        if not os.path.lexists(python_binding.MANAGED_ROOT) and not record.get('runtime_cleanup'):return None
         directory=checked_store(python_binding.MANAGED_ROOT,self.ownership.store.uid)._directory() if os.path.lexists(python_binding.MANAGED_ROOT) else None
         promotion=None
         try:
@@ -1077,7 +1076,7 @@ class LocalDevice:
         activities=self.rpc('com.palm.activitymanager/list',{'details':True,'subscribers':True,'current':False,'internal':False}).get('activities')
         if (not isinstance(activities,list) or any(not isinstance(item,dict)
                 or item.get('name')=='com.cleanyourtv.root.preview.service.recovery'
-                or str(item.get('callback',{}).get('method','')).startswith(('luna://com.cleanyourtv.','luna://com.local.nativehome.service/','luna://com.gathin.tvhome.renewal/')) for item in activities)):
+                or str(item.get('callback',{}).get('method','')).startswith(tuple('luna://'+app+('.renewal/' if app=='com.gathin.tvhome' else '.service/') for app in APPS)) for item in activities)):
             raise ValueError('owned_activity_remains')
         devices=self.rpc('com.webos.service.eim/getAllInputStatus',{}).get('devices')
         if not isinstance(devices,list) or any(d.get('id')=='com.gathin.tvhome' or d.get('appId')=='com.gathin.tvhome' for d in devices):

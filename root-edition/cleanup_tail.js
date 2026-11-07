@@ -100,7 +100,7 @@ function absent(final){
     if(fs.readdirSync(at(fd)).some(function(name){return keep.indexOf(name)===-1;}))throw Error('private-member-remains');
   });
   var activities=rpc('com.palm.activitymanager/list',{details:true,subscribers:true,current:false,internal:false}).activities;
-  if(!Array.isArray(activities) || activities.some(function(item){return !item || item.name==='com.cleanyourtv.root.preview.service.recovery' || ['luna://com.cleanyourtv.','luna://com.local.nativehome.service/','luna://com.gathin.tvhome.renewal/'].some(function(prefix){return String((item.callback||{}).method||'').indexOf(prefix)===0;});}))throw Error('owned-activity-remains');
+  if(!Array.isArray(activities) || activities.some(function(item){return !item || item.name==='com.cleanyourtv.root.preview.service.recovery' || apps.some(function(app){return String((item.callback||{}).method||'').indexOf('luna://'+app+(app==='com.gathin.tvhome'?'.renewal/':'.service/'))===0;});}))throw Error('owned-activity-remains');
   var inputs=rpc('com.webos.service.eim/getAllInputStatus',{}).devices;
   if(!Array.isArray(inputs) || inputs.some(function(item){return item.id==='com.gathin.tvhome'||item.appId==='com.gathin.tvhome';}))throw Error('owned-input-remains');
   fs.readdirSync('/proc').filter(function(n){return /^[0-9]+$/.test(n) && Number(n)!==process.pid && !(process.argv[4]==='-' && record.runtime_cleanup.parent_pid===process.ppid && Number(n)===process.ppid);}).forEach(function(pid){

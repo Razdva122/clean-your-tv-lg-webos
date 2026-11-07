@@ -1,5 +1,6 @@
 """Ordinary removal, interrupted setup, reconnect, and full-restart completion."""
 import json
+import base64
 import os
 import hashlib
 from pathlib import Path
@@ -19,13 +20,21 @@ from cytv.state import Store, target
 class Remote:
     def __init__(self, root):
         self.root=root;self.apps=set();self.calls=[];self.cut=None;self.cut_install=False;self.reject_install=False;self.broken_service=False;self.reject=None;self.transform=lambda code:code
-        self.os_cleanup=False;self.cut_boot_create=False
+        self.os_cleanup=False;self.cut_boot_create=False;self.command_limit=None;self.commands=[]
         self.boot='11111111-1111-1111-1111-111111111111'
 
     def run(self, command, data=None, timeout=30):
         from cytv import no_root_cleanup
+        self.commands.append(command)
+        if self.command_limit is not None and len(command.encode())>self.command_limit:
+            raise AssertionError('SSH exec command exceeds the TV command limit')
         words=shlex.split(command)
-        self.assert_program=words[words.index('-e')+1]
+        stdin=words==['/usr/bin/node']
+        self.assert_program=data.decode() if stdin else words[words.index('-e')+1]
+        if stdin:
+            encoded,_=json.JSONDecoder().raw_decode(self.assert_program[len('process.argv.push('):])
+            request=json.loads(encoded)
+        else:request=json.loads(words[-1])
         code=self.assert_program.replace('/media/developer',str(self.root/'developer')).replace('/var/luna-service2-dev',str(self.root/'bus'))
         code=code.replace('/var/lib',str(self.root/'varlib')).replace('/var/webos-profile',str(self.root/'profiles'))
         code=code.replace('/proc/sys/kernel/random/boot_id',str(self.root/'boot'))
@@ -34,9 +43,11 @@ class Remote:
         volatile=self.root/'volatile';volatile.mkdir(exist_ok=True);volatile.chmod(0o1777)
         code=code.replace("var bootRoot='/tmp';",'var bootRoot='+json.dumps(str(volatile))+';var bootLstat=fs.lstatSync;fs.lstatSync=function(p){var s=bootLstat(p);if(path.resolve(p)===bootRoot)s.uid=0;return s;};')
         (self.root/'boot').write_text(self.boot)
-        result=subprocess.run([os.environ.get('NODE_EXEC') or shutil.which('node'),'-e',self.transform(code),words[-1]],input=data,capture_output=True,timeout=timeout)
+        node=os.environ.get('NODE_EXEC') or shutil.which('node')
+        result=subprocess.run([node] if stdin else [node,'-e',self.transform(code),words[-1]],
+                              input=self.transform(code).encode() if stdin else data,capture_output=True,timeout=timeout)
         if result.returncode:raise RuntimeError(result.stderr.decode())
-        if json.loads(words[-1])['action']=='boot-create' and self.cut_boot_create:
+        if request['action']=='boot-create' and self.cut_boot_create:
             self.cut_boot_create=False;raise UserError('Connection to the TV was interrupted.')
         return result.stdout.decode()
 
@@ -186,7 +197,8 @@ class SimpleRemoval(unittest.TestCase):
         key=self.own_file('apps/usr/palm/applications/com.local.nativehome/state/ssap-key.json')
         run=self.remote.run
         def checked(command,**kwargs):
-            action=json.loads(shlex.split(command)[-1])['action']
+            encoded,_=json.JSONDecoder().raw_decode(kwargs['data'].decode()[len('process.argv.push('):])
+            action=json.loads(encoded)['action']
             if action in ('stop','sweep'):
                 self.assertIn('cleanup_boot_proof',self.store.pending(self.profile))
             return run(command,**kwargs)
@@ -200,6 +212,34 @@ class SimpleRemoval(unittest.TestCase):
                 with self.assertRaises((RuntimeError,UserError)):
                     self.cleanup._device(self.installer,'boot-retire',proof=value)
                 self.assertTrue(marker.exists())
+
+    def test_all_cleanup_actions_use_small_ssh_command_and_real_node_stdin(self):
+        self.remote.command_limit=8192
+        self.store.request_clean_removal(self.profile)
+        self.store.checkpoint(self.profile,cleanup_staging_ids=[format(n,'032x') for n in range(128)])
+        self.cleanup._device(self.installer,'inventory')
+        self.assertTrue(self.remove()['restart_required'])
+        self.reboot();self.assertTrue(self.remove()['verified_clean'])
+        self.assertTrue(self.remote.commands)
+        self.assertEqual(set(self.remote.commands),{'/usr/bin/node'})
+
+    def test_stdin_carrier_request_publishes_exact_binary_bytes_and_rejects_corruption(self):
+        self.remote.command_limit=8192
+        self.store.request_clean_removal(self.profile)
+        identifier=self.store.pending(self.profile)['removal_operation']
+        raw=bytes(range(256))*257
+        request={'action':'stage-carrier','app':'com.local.nativehome','removal':identifier,
+                 'size':len(raw),'sha256':hashlib.sha256(raw).hexdigest(),'carrier':base64.b64encode(raw).decode('ascii')}
+        self.remote.run('/usr/bin/node',data=self.cleanup._program(request),timeout=90)
+        file=self.root/'developer/temp'/('cytv-'+identifier)/'helper.ipk'
+        self.assertEqual(file.read_bytes(),raw)
+        self.remote.run('/usr/bin/node',data=self.cleanup._program(request),timeout=90)
+        self.assertEqual(file.read_bytes(),raw,'exact same staged bytes can be read back on Retry')
+        for bad in (dict(request,carrier=request['carrier'][:-4]),dict(request,sha256='0'*64)):
+            with self.subTest(size=bad['size'],hash=bad['sha256']):
+                with self.assertRaises(RuntimeError):self.remote.run('/usr/bin/node',data=self.cleanup._program(bad),timeout=90)
+                self.assertEqual(file.read_bytes(),raw)
+        self.assertEqual(set(self.remote.commands),{'/usr/bin/node'})
 
     def model_owners(self, owners):
         # Keep actual POSIX modes/inodes and Node filesystem operations; adapt

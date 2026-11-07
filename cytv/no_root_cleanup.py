@@ -4,7 +4,7 @@ Old installation receipts describe history. They are not permission to retain
 the user's project keys or files after the user has requested their removal.
 """
 import json
-import shlex
+import base64
 import hashlib
 
 from .errors import TVRejected, UserError
@@ -95,13 +95,12 @@ if(input.action==='stage-carrier'){
  var index=apps.indexOf(input.app);if(index<0||!/^[a-f0-9]{32}$/.test(input.removal)||!/^[a-f0-9]{64}$/.test(input.sha256)||!(input.size>0&&input.size<1048576))fail();
  ancestry(path.dirname(publicRoot));if(!exists(publicRoot))fs.mkdirSync(publicRoot,448);ancestry(publicRoot);
  var stage=publicRoot+'/cytv-'+input.removal,filename=['helper.ipk','launcher.ipk','updater.ipk'][index];
- if(!exists(stage))fs.mkdirSync(stage,448);ancestry(stage);var pin=fs.lstatSync(stage),parts=[],size=0;if(pin.uid!==uid||(pin.mode&511)!==448)fail();
- process.stdin.on('data',function(b){size+=b.length;if(size>input.size)fail();parts.push(b);});
- process.stdin.on('end',function(){var raw=Buffer.concat(parts,size);if(size!==input.size||crypto.createHash('sha256').update(raw).digest('hex')!==input.sha256)fail();
+ if(!exists(stage))fs.mkdirSync(stage,448);ancestry(stage);var pin=fs.lstatSync(stage);if(pin.uid!==uid||(pin.mode&511)!==448)fail();
+ if(typeof input.carrier!=='string'||input.carrier.length!==4*Math.ceil(input.size/3)||!/^[A-Za-z0-9+/]*={0,2}$/.test(input.carrier))fail();
+ var raw=new Buffer(input.carrier,'base64');if(raw.length!==input.size||crypto.createHash('sha256').update(raw).digest('hex')!==input.sha256)fail();
   at(stage,pin,function(fd){var old=exists(filename);if(old){if(!old.isFile()||old.nlink!==1||old.size!==input.size)fail();var oldFd=fs.openSync(filename,c.O_RDONLY|c.O_NOFOLLOW);try{if(!same(old,fs.fstatSync(oldFd)))fail();var bytes=new Buffer(old.size),offset=0;while(offset<bytes.length){var n=fs.readSync(oldFd,bytes,offset,bytes.length-offset,offset);if(n<=0)fail();offset+=n;}if(!same(old,fs.lstatSync(filename))||crypto.createHash('sha256').update(bytes).digest('hex')!==input.sha256)fail();}finally{fs.closeSync(oldFd);}}
-   else{var tmp='.carrier-'+crypto.randomBytes(12).toString('hex'),out=fs.openSync(tmp,c.O_WRONLY|c.O_CREAT|c.O_EXCL|c.O_NOFOLLOW,384);try{var offset=0;while(offset<raw.length)offset+=fs.writeSync(out,raw,offset,raw.length-offset,offset);fs.fsyncSync(out);}finally{fs.closeSync(out);}if(exists(filename))fail();fs.renameSync(tmp,filename);fs.fsyncSync(fd);}
-  });process.stdout.write(JSON.stringify(reply));
- });process.stdin.resume();return;
+   else{var tmp='.carrier-'+crypto.randomBytes(12).toString('hex'),out=fs.openSync(tmp,c.O_WRONLY|c.O_CREAT|c.O_EXCL|c.O_NOFOLLOW,384);try{var offset=0;while(offset<raw.length){var n=fs.writeSync(out,raw,offset,raw.length-offset,offset);if(n<=0)fail();offset+=n;}fs.fsyncSync(out);}finally{fs.closeSync(out);}if(exists(filename))fail();fs.renameSync(tmp,filename);fs.fsyncSync(fd);}
+  });process.stdout.write(JSON.stringify(reply));return;
 }
 if(input.action==='root-package'){
  if(uid!==0||apps.concat(['com.cleanyourtv.root.preview','com.cleanyourtv.root.updater','com.cleanyourtv.system.updater']).indexOf(input.app)<0)throw Error('invalid-root-package');
@@ -188,10 +187,16 @@ function next(){if(!stages.length){process.stdout.write(JSON.stringify(reply));r
 '''
 
 
+def _program(request):
+    # Keep the SSH exec request tiny; old TV SSH servers reject long argv.
+    return ('process.argv.push(' + json.dumps(json.dumps(request)) + ');\n' + PRIVATE_CLEANUP_PROGRAM).encode()
+
+
 def _device(installer, action, proof=None):
     pending = installer.store.pending(installer.profile) or {}
-    raw = installer.remote.run('/usr/bin/node -e ' + shlex.quote(PRIVATE_CLEANUP_PROGRAM) + ' ' +
-                               shlex.quote(json.dumps({'action': action, 'staging_ids': pending.get('cleanup_staging_ids', []), 'removal': pending.get('removal_operation'), 'proof': proof})), timeout=90)
+    request = {'action':action, 'staging_ids':pending.get('cleanup_staging_ids', []),
+               'removal':pending.get('removal_operation'), 'proof':proof}
+    raw = installer.remote.run('/usr/bin/node', data=_program(request), timeout=90)
     value = json.loads(raw)
     if (not isinstance(value, dict) or value.get('schema') != 1 or
             not all(isinstance(value.get(k), list) for k in ('present', 'blocked', 'root_present'))):
@@ -257,8 +262,8 @@ def _repair_registration(installer, value):
             stages.append(identifier)
             installer.store.checkpoint(installer.profile, cleanup_staging_ids=stages)
         request = {'action':'stage-carrier', 'app':app, 'removal':identifier, 'size':len(carrier),
-                   'sha256':hashlib.sha256(carrier).hexdigest()}
-        installer.remote.run('/usr/bin/node -e ' + shlex.quote(PRIVATE_CLEANUP_PROGRAM) + ' ' + shlex.quote(json.dumps(request)), data=carrier, timeout=90)
+                   'sha256':hashlib.sha256(carrier).hexdigest(), 'carrier':base64.b64encode(carrier).decode('ascii')}
+        installer.remote.run('/usr/bin/node', data=_program(request), timeout=90)
         filename = ('helper.ipk', 'launcher.ipk', 'updater.ipk')[APPS.index(app)]
         installer.remote.luna('com.webos.appInstallService/dev/install',
                               {'id':app, 'ipkUrl':'/media/developer/temp/cytv-' + identifier + '/' + filename, 'subscribe':True}, terminal='installed', timeout=150)

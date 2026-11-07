@@ -58,7 +58,7 @@ var cp={spawnSync:function(command,args,options){
  if(method.indexOf('listApps')!==-1)value.apps=[];
  else if(method.indexOf('getSystemSettings')!==-1)value.settings={defaultApps:{home:process.env.FOREIGN_ROUTE?'changed':'third.party.home'}};
  else if(method.indexOf('getProfiles')!==-1){if(process.env.FAIL_FINAL_READBACK && ++profileReads===2)throw Error('injected final readback failure');if(process.env.MISSING_PROFILES)value.returnValue=false;else value.profiles={defaultApps:{categories:{home:'third.party.home'}},idleApp:{appId:'third.party.home'}};}
- else if(method.indexOf('activitymanager')!==-1)value.activities=[];
+ else if(method.indexOf('activitymanager')!==-1)value.activities=JSON.parse(process.env.ACTIVITIES||'[]');
  else if(method.indexOf('getAllInputStatus')!==-1)value.devices=[];
  else throw Error('Unexpected RPC '+method);
  return {status:0,stdout:Buffer.from(JSON.stringify(value))};
@@ -116,7 +116,7 @@ class CleanupTail(unittest.TestCase):
             'operation':'../foreign', 'removal':'d'*32, 'state':'recovery_required',
             'stage':'private-cleanup', 'current':False, 'reason':'private-cleanup-incomplete'})
 
-    def first_handoff(self, managed_executor=False, executable_symlink=False):
+    def first_handoff(self, managed_executor=False, executable_symlink=False, native=False):
         import fcntl
         import install_device
         import python_binding
@@ -134,6 +134,10 @@ class CleanupTail(unittest.TestCase):
             executable.unlink();executable.symlink_to(sys.executable)
         payload=self.base/'payload';(payload/'root-updater').mkdir(parents=True)
         (payload/'root-updater/cleanup_tail.js').write_bytes(SOURCE.read_bytes())
+        boot=self.boot_directory() if native else None
+        if native:
+            import shutil
+            shutil.rmtree(self.runtime.parent)
         store=Store(self.state,uid=os.getuid())
         ownership=os.open(self.state/'ownership.lock',os.O_RDWR)
         self.addCleanup(os.close,ownership);fcntl.flock(ownership,fcntl.LOCK_EX|fcntl.LOCK_NB)
@@ -144,6 +148,9 @@ class CleanupTail(unittest.TestCase):
         def node(args,**kwargs):
             calls.append(args)
             self.assertEqual(args[:3],['/usr/bin/node','-','finish'])
+            if native:
+                self.assertEqual(kwargs['pass_fds'],(ownership,store.lock_fd))
+                self.assertEqual(args[6],'-1')
             source=kwargs['input'].decode()
             # Fixed TV paths and RPCs use the existing real-file Node harness.
             # Python's first inventory/lock/handoff production path is unchanged.
@@ -151,6 +158,7 @@ class CleanupTail(unittest.TestCase):
             source=source.replace("fs.readdirSync('/tmp')",'fs.readdirSync('+repr(str(self.base/'tmp'))+')')
             source=source.replace("fs.readdirSync('/proc')",'fs.readdirSync('+repr(str(self.base/'proc'))+')')
             source=source.replace('/proc/sys/kernel/random/boot_id',str(self.base/'proc/sys/kernel/random/boot_id'))
+            source=source.replace("'/tmp/clean-your-tv-root-boot'",repr(str(self.base/'tmp/clean-your-tv-root-boot')))
             target=self.base/'first-tail.js';target.write_text(source)
             harness=self.base/'first-harness.js'
             harness.write_text(HARNESS.replace('/var/',str(self.base/'var')+'/'))
@@ -174,10 +182,27 @@ class CleanupTail(unittest.TestCase):
                 self.assertTrue((self.runtime/'lib/secret.py').exists())
             else:
                 reply=device.finish_clean_tail(self.record)
+                self.assertIsNotNone(reply,'Native Python still requires the final Node absence proof')
                 self.assertEqual(reply['stage'],'verified-clean',reply)
                 self.assertTrue(reply['result']['verified_clean'])
                 self.assertEqual(len(calls),1)
                 self.assertFalse(self.runtime.exists())
+                if native:
+                    self.assertFalse(self.runtime.parent.exists())
+                    self.assertFalse(boot.exists())
+                    self.assertEqual(calls[0][6],'-1')
+                    self.assertEqual(self.record['runtime_cleanup']['files'],{})
+                    self.assertIs(self.record['runtime_cleanup']['promotion_required'],False)
+                    saved=json.loads((self.state/('clean-removal-'+ID+'.json')).read_text())
+                    self.assertEqual(saved['stage'],'verified-clean')
+                    # A lost final reply reuses the same proof and held locks.
+                    repeat=device.finish_clean_tail(self.record)
+                    self.assertEqual(repeat['stage'],'verified-clean')
+                    self.assertEqual(len(calls),2)
+                    self.assertFalse(self.runtime.parent.exists());self.assertFalse(boot.exists())
+
+    def test_native_python_first_handoff_retires_boot_directory_without_managed_runtime(self):
+        self.first_handoff(native=True)
 
     def test_first_handoff_external_executor_retires_changed_unused_runtime(self):
         self.first_handoff()
@@ -318,6 +343,24 @@ class CleanupTail(unittest.TestCase):
         result,reply=self.run_tail();self.assertEqual(result.returncode,0,result.stderr)
         self.assertEqual(foreign.read_text(),'keep foreign bytes')
         self.assertFalse(self.runtime.exists())
+
+    def test_foreign_similar_service_activities_do_not_block_tail(self):
+        activities=[{'name':'com.cleanyourtv.recoveryprobe.boot','activityId':42,'callback':{'method':'luna://com.cleanyourtv.recoveryprobe.service/boot'}},
+                    {'name':'foreign','activityId':43,'callback':{'method':'luna://com.cleanyourtv.root.preview.service.foreign/boot'}}]
+        result,reply=self.run_tail(ACTIVITIES=json.dumps(activities))
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(reply['stage'],'verified-clean')
+
+    def test_each_known_service_activity_and_reserved_recovery_name_block_tail(self):
+        methods=['luna://'+app+('.renewal/' if app=='com.gathin.tvhome' else '.service/')+'unexpected' for app in APPS]
+        activities=[{'name':'unexpected','activityId':7,'callback':{'method':method}} for method in methods]
+        activities.append({'name':'com.cleanyourtv.root.preview.service.recovery','activityId':8,'callback':{'method':'luna://foreign.service/boot'}})
+        for activity in activities:
+            with self.subTest(activity=activity):
+                result,reply=self.run_tail(ACTIVITIES=json.dumps([activity]))
+                self.assertNotEqual(result.returncode,0)
+                self.assertTrue(self.runtime.exists())
+                self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
 
     def test_changed_foreign_route_refuses_before_delete(self):
         result,reply=self.run_tail(FOREIGN_ROUTE='1')

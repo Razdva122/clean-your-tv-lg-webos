@@ -427,6 +427,9 @@ class PartialDeviceRemoval(unittest.TestCase):
                 raise AssertionError(method)
             def apps(self):return set(present)
             def cleanup(self,name,*args):calls.append('cleanup-'+name);return True
+            # This OS model stops at Python readback; actual Node/FD handoff is
+            # exercised separately for native and managed Python in test_cleanup_tail.
+            def finish_clean_tail(self,record):return None
         device=Model();device.payload=payload
         device.shared_cleanup=lambda action,record,**kwargs:{'schema':1,'present':[],'blocked':[],'root_present':[]}
         device.current_boot="11111111-1111-1111-1111-111111111111"
@@ -466,6 +469,29 @@ class PartialDeviceRemoval(unittest.TestCase):
             return json.loads(p.read_text()) if p and p.exists() else None
         import json
         return Coordinator(device,owner,read),identifier,root,updater,payload,calls,present
+
+    def test_final_activity_checks_preserve_foreign_prefix_but_refuse_known_services(self):
+        from clean_removal import APPS
+        driver,identifier,*_=self.fixture();rpc=driver.device.rpc
+        foreign=[{'name':'com.cleanyourtv.recoveryprobe.boot','activityId':42,'callback':{'method':'luna://com.cleanyourtv.recoveryprobe.service/boot'}},
+                 {'name':'foreign','activityId':43,'callback':{'method':'luna://com.cleanyourtv.root.preview.service.foreign/boot'}}]
+        activities=list(foreign);cancelled=[]
+        def actual(method,data):
+            if method=='com.palm.activitymanager/list':return {'returnValue':True,'activities':activities}
+            if method=='com.palm.activitymanager/cancel':cancelled.append(data);return {'returnValue':True}
+            return rpc(method,data)
+        driver.device.rpc=actual
+        driver.clean_remove(identifier);driver.device.current_boot='22222222-2222-2222-2222-222222222222'
+        result=driver.clean_remove(identifier)
+        self.assertEqual(result['stage'],'verified-clean',result)
+        self.assertEqual(cancelled,[]);self.assertEqual(activities,foreign)
+        for app in APPS:
+            callback='luna://'+app+('.renewal/' if app=='com.gathin.tvhome' else '.service/')+'unexpected'
+            activities[:]=[{'name':'unexpected','activityId':7,'callback':{'method':callback}}]
+            with self.subTest(app=app),self.assertRaisesRegex(ValueError,'owned_activity_remains'):
+                driver.device.verify_clean(result)
+        activities[:]=[{'name':'com.cleanyourtv.root.preview.service.recovery','callback':{'method':'luna://foreign.service/boot'}}]
+        with self.assertRaisesRegex(ValueError,'owned_activity_remains'):driver.device.verify_clean(result)
 
     def test_boot_reader_authenticates_current_runtime_and_requires_session_identity(self):
         import deploy,install_device
