@@ -80,6 +80,7 @@ The freeze itself did not access a TV. The later
 case selection, explicit physical-Beta deferral, exact APK emulator acceptance,
 package browser checks and authorized C3 update. Root icons and Home after explicit
 owner enable passed; automatic Home preservation through the update remains
-unproved. Controls/audio and standby observations are pending. No release-wide
-acceptance is asserted. Legacy Beta bootstrap and original #383/#389 outcomes
+unproved. Owner-confirmed arrows/OK, volume/audible sound and post-standby Settings
+convergence passed. No release-wide acceptance is asserted while the unexpected
+pre-suspension Home disable needs disposition. Legacy Beta bootstrap and original #383/#389 outcomes
 remain unverified; partial #348/#368 work leaves those original reports open.
