@@ -444,19 +444,25 @@ PR checks. Required status summaries fail if any selected check fails or is
 unexpectedly skipped.
 Feature branches run affected checks on PR events. Small authenticated Actions
 receipts let candidate jobs consume already successful units with identical
-nonmetadata source, selection unit, shard, OS/image, exact runtime/dependencies
-and UTC day. Setup also binds the full Git tree. Each unit runs once for matching
-inputs; missing or invalid evidence executes it. Browser core and full themes
+audited per-unit source projection, selection unit, shard, OS/image, exact
+runtime/dependencies and UTC day. Shared/unknown/product inputs remain
+conservative, and setup additionally binds the complete Git tree. Each unit runs
+once for matching inputs; missing or invalid evidence executes it. Browser core and full themes
 remain separate, and ARM Python retains its privileged checks. Full candidate
 coverage and required job names are unchanged. Current README/plan sanity checks
 and all assembly/signing/package checks remain independent.
 
-Only same-repository first-attempt PR runs may produce receipts, after fresh checks
-pass. Consumers verify artifact digest/size, completed successful run and originating
-job, current attempt/latest branch evidence and the actual tested merge tree through
-GitHub data. Fork PRs and explicit reruns execute fresh. API/artifact failures fall
-back to tests; no reused unit is re-attested. Old cache markers cannot supply the
-new receipts, and changing the workflow/helper remains a guarded source change.
+Same-repository first-attempt PR runs and explicit full candidates on
+`release/next` may produce receipts after fresh checks pass. Consumers verify
+artifact digest/size, the successful originating job, current attempt/latest
+relevant evidence and the actual tested tree through GitHub data. A completed
+failed full candidate may supply its successful jobs only when the latest
+candidate's corresponding job is also green; scope/full-release markers and
+exact workflow/ref are required. Desktop host tests retain separate platform
+units; package assembly and installed-package checks always execute. Fork PRs
+and explicit reruns execute fresh. API/artifact failures fall back to tests; no
+reused unit is re-attested. Old cache markers cannot supply new receipts, and
+changing the workflow/helper remains a guarded source change.
 See [CI evidence trust, bootstrap and limits](development/CI-CHECKS.md#reuse-and-metadata).
 
 The prepared candidate build completes full coverage once, executing missing

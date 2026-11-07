@@ -1,6 +1,8 @@
 """Exercise bounded SSH exec requests with a real local shell and binary stdin."""
 import hashlib
+from pathlib import Path
 import shlex
+import shutil
 import subprocess
 import sys
 import unittest
@@ -19,7 +21,15 @@ class LocalChannel:
         self.input += data
 
     def shutdown_write(self):
-        result = subprocess.run(self.command, shell=True, input=self.input,
+        shell = Path('/bin/sh')
+        if sys.platform == 'win32':
+            git = shutil.which('git')
+            if git is None:
+                raise RuntimeError('Git for Windows is required for the local POSIX shell fixture')
+            # Both Git/bin/git.exe and Git/cmd/git.exe belong to this installation.
+            # Do not use a PATH bash.exe, which may be the Windows WSL launcher.
+            shell = Path(git).resolve().parent.parent / 'bin' / 'sh.exe'
+        result = subprocess.run([str(shell), '-c', self.command], input=self.input,
                                 capture_output=True, timeout=10)
         self.stdout, self.stderr, self.status = result.stdout, result.stderr, result.returncode
 
@@ -47,7 +57,7 @@ class LongSSHCommands(unittest.TestCase):
 
     def test_long_command_preserves_binary_input_and_empty_stdin(self):
         code = 'import sys,hashlib;print(hashlib.sha256(sys.stdin.buffer.read()).hexdigest())'
-        command = shlex.join([sys.executable, '-c', code]) + '\n# ' + 'padding' * 5000
+        command = shlex.join([Path(sys.executable).as_posix(), '-c', code]) + '\n# ' + 'padding' * 5000
         for data in (None, b'', bytes(range(256)) * 10000 + b'\nPRIVATE\x00\xff'):
             with self.subTest(data_size=len(data or b'')):
                 remote = self.remote()

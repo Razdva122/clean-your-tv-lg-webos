@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import runpy
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -89,6 +90,290 @@ class EvidenceTests(unittest.TestCase):
 
     def missing(self, ctx=None):
         return self.m['select_missing'](ctx or self.ctx, 'owner/repo', 20, self.api)['missing']
+
+    def write_commit(self, path, content='first\n'):
+        target = self.root / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(content)
+        self.git('add', path)
+        self.git('commit', '-qm', 'change ' + path)
+        return target
+
+    def all_keys(self):
+        result = {}
+        for shard in ('1/4', '2/4', '3/4', '4/4'):
+            ctx = self.context('ui tv-runtime setup installer android preview', shard=shard)
+            result.update({(unit, shard): key for unit, key in ctx['keys'].items()})
+        for kind, units in (('browser', 'browser-core browser-themes'), ('optional', 'optional-python')):
+            result.update({(unit, '1/4'): key for unit, key in self.context(units, kind=kind)['keys'].items()})
+        return result
+
+    def test_git_test_leaf_mutations_invalidate_owning_families_across_all_shards(self):
+        # Expectations come from executed test groups and cross-family fixture imports.
+        cases = [
+            ('tests/cytv/test_long_ssh_commands.py', {'installer', 'setup'}),
+            ('tests/cytv/test_operations.py', {'installer', 'android', 'browser-core', 'setup'}),
+            ('tests/cytv/test_desktop_recovery.py', {'installer', 'android', 'browser-core', 'setup'}),
+            ('tests/cytv/test_no_root_integration.py', {'installer', 'android', 'browser-core', 'setup'}),
+            ('tests/cytv/test_no_root_observer.py', {'installer', 'android', 'browser-core', 'setup'}),
+            ('tests/cytv/clean_removal_fixture.py', {'installer', 'android', 'browser-core', 'setup'}),
+            ('tests/cytv/test_python_runtime.py', {'installer', 'optional-python', 'setup'}),
+            ('root-edition/tests/test_installation.py', {'tv-runtime', 'installer', 'setup'}),
+            ('tests/system_updates/test_core.py', {'tv-runtime', 'installer', 'setup'}),
+            ('homebrew/tests/runtime.cjs', {'installer', 'setup'}),
+            ('homebrew/tests/test_payload.py', {'installer', 'setup'}),
+            ('android/tests/test_bridge.py', {'android', 'browser-core', 'setup'}),
+            ('android/tests/auto-recovery-journey.cjs', {'android', 'browser-core', 'setup'}),
+            ('tests/updates/feed.cjs', {'tv-runtime', 'setup'}),
+            ('tests/apps/inventory-fallback.cjs', {'tv-runtime', 'setup'}),
+            ('tests/i18n/coverage.cjs', {'tv-runtime', 'setup'}),
+            ('tests/showcase/registry.cjs', {'preview', 'setup'}),
+            ('tests/preview-bridge.cjs', {'preview', 'setup'}),
+            ('tests/test_preview.py', {'preview', 'setup'}),
+        ]
+        for path, expected in cases:
+            with self.subTest(path=path):
+                self.git('reset', '--hard', self.head)
+                before = self.all_keys()
+                target = self.write_commit(path)
+                added = self.all_keys()
+                self.assertEqual({key for key in before if before[key] != added[key]},
+                                 {key for key in before if key[0] in expected})
+                self.write_commit(path, 'second\n')
+                edited = self.all_keys()
+                self.assertEqual({key for key in added if added[key] != edited[key]},
+                                 {key for key in before if key[0] in expected})
+                target.unlink()
+                self.git('add', path)
+                self.git('commit', '-qm', 'delete test')
+                deleted = self.all_keys()
+                self.assertEqual({key for key in edited if edited[key] != deleted[key]},
+                                 {key for key in before if key[0] in expected})
+
+    def test_unknown_shared_policy_product_and_dependency_mutations_invalidate_every_unit(self):
+        paths = ('new/product.py', 'scripts/ci-test-evidence.py', 'scripts/test.sh',
+                 '.github/workflows/tests.yml', 'package-lock.json', 'scripts/build-requirements.txt',
+                 'tests/setup/test_ci_test_evidence.py', 'tests/setup/test_release_inputs.py',
+                 'tests/cytv/__init__.py', 'tests/cytv/helper.py', 'tests/cytv/fixtures/input.py',
+                 'root-edition/tests/install_fixture.py', 'android/tests/recovery_events.py',
+                 'tests/themes/presentation.cjs', 'tests/showcase/fixture.cjs',
+                 'tests/apps/ui.cjs', 'tests/i18n/browser.cjs')
+        for path in paths:
+            with self.subTest(path=path):
+                before = self.all_keys()
+                self.write_commit(path)
+                after = self.all_keys()
+                self.assertTrue(all(before[key] != after[key] for key in before), path)
+
+    def test_nonregular_test_leaf_is_global_but_regular_executable_mode_stays_scoped(self):
+        path = 'tests/cytv/test_long_ssh_commands.py'
+        target = self.write_commit(path)
+        before = self.all_keys()
+        target.chmod(0o755)
+        self.git('add', path)
+        self.git('commit', '-qm', 'executable test')
+        after = self.all_keys()
+        self.assertEqual({key[0] for key in before if before[key] != after[key]}, {'setup', 'installer'})
+        target.unlink()
+        target.symlink_to('../../code.py')
+        self.git('add', path)
+        self.git('commit', '-qm', 'nonregular test')
+        nonregular = self.all_keys()
+        self.assertTrue(all(after[key] != nonregular[key] for key in after))
+
+    def test_partial_receipt_remains_discoverable_after_unrelated_source_changes(self):
+        self.write_commit('tests/cytv/test_long_ssh_commands.py')
+        consumer = self.context('tv setup installer android preview')
+        self.assertEqual(self.missing(consumer), ['android', 'installer', 'preview', 'setup'])
+        self.assertEqual(set(self.m['select_missing'](consumer, 'owner/repo', 20, self.api)['reused']),
+                         {'ui', 'tv-runtime'})
+        # A forged projected key must still be recomputed from the producer tree.
+        forged = self.m['make_receipt'](self.ctx, 'owner/repo', 10, 1, 100)
+        forged['keys']['installer'] = consumer['keys']['installer']
+        self.raw = self.archive(forged)
+        self.artifact.update(size_in_bytes=len(self.raw), digest='sha256:' + hashlib.sha256(self.raw).hexdigest())
+        self.assertEqual(self.missing(consumer), ['android', 'installer', 'preview', 'setup'])
+
+    def test_old_schema_cannot_bootstrap_new_policy_receipts(self):
+        receipt = self.m['make_receipt'](self.ctx, 'owner/repo', 10, 1, 100)
+        receipt['schema'] = 1
+        self.raw = self.archive(receipt)
+        self.artifact.update(size_in_bytes=len(self.raw), digest='sha256:' + hashlib.sha256(self.raw).hexdigest())
+        self.assertEqual(self.missing(), ['installer', 'setup', 'tv-runtime', 'ui'])
+
+    def candidate_producer(self, kind='runtime', platform='ubuntu-latest', units='tv setup installer'):
+        self.ctx = self.m['context'](kind, platform, '1/4', units,
+                                    {'day': '2026-11-06', 'python': '3.12'}, root=self.root)
+        self.run.update(event='workflow_dispatch', head_branch='release/next',
+                        path='.github/workflows/cytv.yml', conclusion='failure')
+        names = {'runtime': 'validation / runtime (ubuntu-latest, 1)',
+                 'browser': 'validation / browser', 'optional': 'validation / optional-python',
+                 'desktop': 'build (windows-latest, cytv-windows-x64, dist/cytv.exe)'}
+        self.job['name'] = names[kind]
+        self.raw = self.archive(self.m['make_receipt'](self.ctx, 'owner/repo', 10, 1, 100))
+        self.artifact.update(name=self.ctx['artifact'], size_in_bytes=len(self.raw),
+                             digest='sha256:' + hashlib.sha256(self.raw).hexdigest())
+        self.responses['actions/workflows/cytv.yml/runs?branch=release%2Fnext&event=workflow_dispatch&per_page=100'] = {'workflow_runs': [self.run]}
+        jobs = [self.job, {'id': 101, 'name': 'scope', 'status': 'completed', 'conclusion': 'success'},
+                {'id': 102, 'name': 'validation / full-release', 'status': 'completed', 'conclusion': 'failure'}]
+        self.responses['actions/runs/10/attempts/1/jobs?per_page=100'] = {'jobs': jobs, 'total_count': len(jobs)}
+
+    def test_failed_full_candidate_can_supply_successful_direct_units(self):
+        for kind, units in (('runtime', 'tv setup installer'), ('browser', 'browser-core browser-themes'),
+                            ('optional', 'optional-python')):
+            with self.subTest(kind=kind):
+                self.candidate_producer(kind=kind, units=units)
+                self.assertEqual(self.missing(), [])
+
+    def test_full_candidate_requires_authentic_origin_full_marker_and_latest_job_success(self):
+        self.candidate_producer()
+        all_units = ['installer', 'setup', 'tv-runtime', 'ui']
+        jobs = self.responses['actions/runs/10/attempts/1/jobs?per_page=100']['jobs']
+        for obj, field, value in ((self.run, 'conclusion', 'cancelled'), (self.run, 'run_attempt', 2),
+                                  (self.run, 'head_branch', 'main'), (self.run, 'head_sha', 'f' * 40),
+                                  (self.run, 'head_repository', {'full_name': 'fork/repo'}),
+                                  (self.run, 'path', '.github/workflows/other.yml'),
+                                  (self.job, 'name', 'validation / runtime (macos-latest, 1)'),
+                                  (self.job, 'conclusion', 'failure'), (jobs[1], 'conclusion', 'failure'),
+                                  (jobs[2], 'conclusion', 'skipped'), (jobs[2], 'status', 'in_progress')):
+            with self.subTest(field=field, value=value):
+                saved = obj[field]
+                obj[field] = value
+                self.assertEqual(self.missing(), all_units)
+                obj[field] = saved
+        latest = {**self.run, 'id': 11}
+        listing = self.responses['actions/workflows/cytv.yml/runs?branch=release%2Fnext&event=workflow_dispatch&per_page=100']['workflow_runs']
+        listing.append(latest)
+        self.responses['actions/runs/11/attempts/1/jobs?per_page=100'] = {'jobs': copy.deepcopy(jobs), 'total_count': len(jobs)}
+        latest_jobs = self.responses['actions/runs/11/attempts/1/jobs?per_page=100']['jobs']
+        # Newer green job permits older direct proof; it does not attest new keys.
+        self.assertEqual(self.missing(), [])
+        for changes in ({'conclusion': 'failure'}, {'status': 'in_progress'}, {'name': 'missing job'}):
+            original = latest_jobs[0].copy()
+            latest_jobs[0].update(changes)
+            self.assertEqual(self.missing(), all_units)
+            latest_jobs[0].clear()
+            latest_jobs[0].update(original)
+        latest['run_attempt'] = 2
+        self.assertEqual(self.missing(), all_units)
+
+    def test_desktop_proof_is_platform_specific_and_separate_from_runtime_homebrew(self):
+        self.candidate_producer('desktop', 'windows-latest', 'installer-host')
+        self.assertEqual(self.missing(), [])
+        for platform in ('ubuntu-22.04', 'macos-15', 'macos-15-intel'):
+            ctx = self.m['context']('desktop', platform, '1/4', 'installer-host', self.ctx['environment'], root=self.root)
+            self.assertEqual(self.missing(ctx), ['installer-host'])
+        self.assertEqual(self.missing(self.context('installer')), ['installer'])
+        self.write_commit('homebrew/tests/test_payload.py')
+        consumer = self.m['context']('desktop', 'windows-latest', '1/4', 'installer-host', self.ctx['environment'], root=self.root)
+        self.assertEqual(self.missing(consumer), [])
+        self.write_commit('tests/cytv/test_long_ssh_commands.py')
+        consumer = self.m['context']('desktop', 'windows-latest', '1/4', 'installer-host', self.ctx['environment'], root=self.root)
+        self.assertEqual(self.missing(consumer), ['installer-host'])
+
+    def test_cli_records_only_authorized_full_dispatch_fresh_units(self):
+        directory = self.root / 'evidence'
+        directory.mkdir()
+        (directory / 'plan.json').write_text(json.dumps({**self.ctx, 'units': ['ui']}))
+        event = self.root / 'event.json'
+        event.write_text(json.dumps({'inputs': {'full_candidate': True}}))
+        env = {'GITHUB_REPOSITORY': 'owner/repo', 'GITHUB_RUN_ID': '20', 'GITHUB_RUN_ATTEMPT': '1',
+               'GITHUB_EVENT_NAME': 'workflow_dispatch', 'GITHUB_EVENT_PATH': str(event)}
+        self.responses['actions/runs/20'] = {**self.run, 'id': 20, 'event': 'workflow_dispatch',
+             'path': '.github/workflows/cytv.yml', 'head_branch': 'release/next', 'status': 'in_progress'}
+        self.responses['actions/runs/20/attempts/1/jobs?per_page=100'] = {'total_count': 1, 'jobs': [
+             {'id': 200, 'name': 'validation / runtime (ubuntu-latest, 1)', 'status': 'in_progress'}]}
+        with patch.dict('os.environ', env), patch.dict(self.m['main'].__globals__, {'github_api': lambda _repo: self.api}), patch('sys.argv', ['ci-test-evidence.py', 'record', '--directory', str(directory)]):
+            self.m['main']()
+            self.assertEqual(set(json.loads((directory / 'receipt.json').read_text())['keys']), {'ui'})
+            for value in (False, 'false', None):
+                event.write_text(json.dumps({'inputs': {'full_candidate': value}}))
+                with self.assertRaises(ValueError):
+                    self.m['main']()
+
+    def test_desktop_missing_required_tool_identity_runs_fresh_and_cannot_record(self):
+        missing = [False]
+        def process(*args):
+            if args == ('git', '--version') and missing[0]:
+                raise OSError('unavailable Git')
+            if args[0] == '/bin/sh':
+                return 'cytv-ci-shell'
+            return 'actual-version'
+        runner = {'RUNNER_OS': 'Windows', 'RUNNER_ARCH': 'X64', 'ImageOS': 'win25', 'ImageVersion': '20261101'}
+        with patch.dict(self.m['environment'].__globals__, {'command': process}), patch.dict('os.environ', runner):
+            known = self.m['environment']('desktop')
+            self.assertEqual(known['git'], 'actual-version')
+            self.assertEqual(known['zig'], 'actual-version')
+            self.assertTrue(known['identity_ready'])
+            self.candidate_producer('desktop', 'windows-latest', 'installer-host')
+            missing[0] = True
+            unavailable = self.m['environment']('desktop')
+            ctx = self.m['context']('desktop', 'windows-latest', '1/4', 'installer-host', unavailable, root=self.root)
+            self.assertEqual(self.missing(ctx), ['installer-host'])
+            with self.assertRaises(ValueError):
+                self.m['make_receipt'](ctx, 'owner/repo', 20, 1, 200)
+
+    def test_desktop_shell_content_and_probe_bind_actual_git_shell(self):
+        git = (self.root / 'Git' / 'cmd' / 'git.exe').resolve()
+        git.parent.mkdir(parents=True)
+        git.write_bytes(b'git')
+        shell = git.parent.parent / 'bin' / 'sh.exe'
+        shell.parent.mkdir()
+        shell.write_bytes(b'first shell')
+        broken = [False]
+        def process(*args):
+            if args[0] == str(shell):
+                if broken[0]:
+                    raise OSError('unprobeable shell')
+                return 'cytv-ci-shell'
+            return 'actual-version'
+        runner = {'RUNNER_OS': 'Windows', 'RUNNER_ARCH': 'X64', 'ImageOS': 'win25', 'ImageVersion': '20261101'}
+        with patch.dict(self.m['environment'].__globals__, {'command': process}), patch.dict('os.environ', runner), patch('sys.platform', 'win32'), patch('shutil.which', side_effect=lambda name: str(git) if name == 'git' else None):
+            first = self.m['environment']('desktop')
+            self.assertTrue(first['identity_ready'])
+            self.assertEqual(first['shell']['path'], str(shell))
+            before = self.m['context']('desktop', 'windows-latest', '1/4', 'installer-host', first, root=self.root)
+            shell.write_bytes(b'different shell, identical Git version')
+            second = self.m['environment']('desktop')
+            after = self.m['context']('desktop', 'windows-latest', '1/4', 'installer-host', second, root=self.root)
+            self.assertNotEqual(before['keys'], after['keys'])
+            for missing_file in (False, True):
+                broken[0] = not missing_file
+                if missing_file:
+                    shell.unlink()
+                unavailable = self.m['environment']('desktop')
+                self.assertFalse(unavailable['identity_ready'])
+                ctx = self.m['context']('desktop', 'windows-latest', '1/4', 'installer-host', unavailable, root=self.root)
+                self.assertEqual(self.missing(ctx), ['installer-host'])
+                with self.assertRaises(ValueError):
+                    self.m['make_receipt'](ctx, 'owner/repo', 20, 1, 200)
+
+    def test_desktop_absent_cc_is_observed_but_unprobeable_present_cc_is_not_evidence(self):
+        present = [False]
+        def process(*args):
+            if args == ('cc', '--version'):
+                raise OSError('compiler cannot execute')
+            if args[0] == '/bin/sh':
+                return 'cytv-ci-shell'
+            return 'actual-version'
+        runner = {'RUNNER_OS': 'macOS', 'RUNNER_ARCH': 'ARM64', 'ImageOS': 'macos15', 'ImageVersion': '20261101'}
+        real_which = shutil.which
+        with patch.dict(self.m['environment'].__globals__, {'command': process}), patch.dict('os.environ', runner), patch('shutil.which', side_effect=lambda name: ('/toolchain/cc' if present[0] else None) if name == 'cc' else real_which(name)):
+            self.assertTrue(self.m['environment']('desktop')['identity_ready'])
+            present[0] = True
+            unavailable = self.m['environment']('desktop')
+            self.assertFalse(unavailable['identity_ready'])
+            ctx = self.m['context']('desktop', 'macos-15', '1/4', 'installer-host', unavailable, root=self.root)
+            self.assertEqual(self.missing(ctx), ['installer-host'])
+            with self.assertRaises(ValueError):
+                self.m['make_receipt'](ctx, 'owner/repo', 20, 1, 200)
+
+    def test_api_pipe_reader_works_without_posix_selectors(self):
+        executable = self.root / 'gh'
+        executable.write_text('#!/usr/bin/env python3\nimport json\nprint(json.dumps(dict(ok=True)))\n')
+        executable.chmod(0o755)
+        with patch.dict('os.environ', {'PATH': str(self.root) + os.pathsep + os.environ['PATH']}), patch('selectors.DefaultSelector', side_effect=OSError('Windows pipe')):
+            self.assertEqual(self.m['github_api']('owner/repo')('test'), {'ok': True})
 
     def test_matching_partial_coverage_runs_only_missing_units(self):
         self.assertEqual(self.missing(self.context('tv setup installer android preview')), ['android', 'preview'])
@@ -258,6 +543,10 @@ class EvidenceTests(unittest.TestCase):
             api = self.m['github_api']('owner/repo')
             with self.assertRaisesRegex(ValueError, 'exceeds'):
                 api('actions/artifacts/50/zip', binary=True)
+            executable.write_text('#!/usr/bin/env python3\nimport time\ntime.sleep(30)\n')
+            with patch.object(self.m['github_api'].__globals__['time'], 'monotonic', side_effect=[0, 21]):
+                with self.assertRaisesRegex(TimeoutError, 'deadline'):
+                    api('actions/artifacts/50/zip', binary=True)
             executable.write_text('#!/usr/bin/env python3\nraise SystemExit(1)\n')
             with self.assertRaisesRegex(ValueError, 'API failed'):
                 api('actions/artifacts/50/zip', binary=True)

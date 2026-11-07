@@ -159,7 +159,7 @@ jobs:
       - name: Record freshly passed runtime units
         id: record
         continue-on-error: true
-        if: steps.evidence.outputs.fresh == 'true' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.run_attempt == 1
+        if: steps.evidence.outputs.fresh == 'true' && github.run_attempt == 1 && ((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) || (github.event_name == 'workflow_dispatch' && inputs.full_suite && github.ref == 'refs/heads/release/next'))
         env:
           GH_TOKEN: ${{ github.token }}
         run: python scripts/ci-test-evidence.py record --directory "$RUNNER_TEMP/ci-evidence"
@@ -205,7 +205,7 @@ jobs:
       - name: Record freshly passed ARM Python work
         id: record
         continue-on-error: true
-        if: steps.evidence.outputs.fresh == 'true' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.run_attempt == 1
+        if: steps.evidence.outputs.fresh == 'true' && github.run_attempt == 1 && ((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) || (github.event_name == 'workflow_dispatch' && inputs.full_suite && github.ref == 'refs/heads/release/next'))
         env:
           GH_TOKEN: ${{ github.token }}
         run: python scripts/ci-test-evidence.py record --directory "$RUNNER_TEMP/ci-evidence"
@@ -298,7 +298,7 @@ jobs:
       - name: Record freshly passed browser units
         id: record
         continue-on-error: true
-        if: steps.evidence.outputs.fresh == 'true' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.run_attempt == 1
+        if: steps.evidence.outputs.fresh == 'true' && github.run_attempt == 1 && ((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) || (github.event_name == 'workflow_dispatch' && inputs.full_suite && github.ref == 'refs/heads/release/next'))
         env:
           GH_TOKEN: ${{ github.token }}
         run: python scripts/ci-test-evidence.py record --directory "$RUNNER_TEMP/ci-evidence"
