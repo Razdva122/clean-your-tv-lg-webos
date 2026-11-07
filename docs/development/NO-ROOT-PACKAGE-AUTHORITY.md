@@ -88,6 +88,35 @@ this focused change does not select or modify a frozen release candidate.
 
 ## Remaining evidence
 
+### Observer storage (next candidate, 2026-11-07)
+
+New operations keep private observer evidence in `/tmp/.cytv-installer` (0700),
+under verified sticky temporary ancestry. IPKs remain in the vendor SDK staging
+namespace `/media/developer/temp`; the observer accepts the fixed root-owned
+SDK containers with their retail permissions, while its private evidence keeps
+the stricter ancestry rules. No vendor permission is changed. The public staging
+path retains the SDK's shared-namespace trust limitation; inode checks do not
+make the installer's later pathname open atomic with host verification.
+
+Before recording pending, one storage check exercises private write/hardlink/sync
+and public staging creation/removal. Failure leaves no new operation receipt or
+capsule. This does not guarantee later writes against disconnects or full disks.
+
+Already pending operations retain their journal/capsule. All earlier observer
+sources, including partial installations, use the cleanup fallback after this
+source change. A source mismatch or
+lost volatile evidence cannot authorize replay. **Review recovery options** offers
+the existing separately confirmed project removal, which archives the original,
+skips absent packages and requires its normal full-restart verification. A new
+setup is a separate action after verified removal; status never clears pending
+because files are absent. Cleanup recognizes both the old and new private roots.
+No new confirmation, package endpoint or recovery protocol is introduced.
+
+The implementation has host regression coverage only; retail installation and
+recovery remain unverified. See the [source record](../history/2026-11-07-no-root-observer-storage.md).
+
+### Original historical transaction contract
+
 The next work belongs to maintainer research into terminal authority, rather
 than another C2 inventory request. Before implementing reconciliation, establish
 the following contracts; any later device observations require separately agreed

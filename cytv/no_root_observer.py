@@ -15,7 +15,7 @@ from .errors import (UserError, TVCommandError, TV_STORAGE_FULL, no_root_observe
                      OBSERVER_EXCEPTION_NAMES, OBSERVER_EXCEPTION_CODES, OBSERVER_REASONS)
 
 PROTOCOL = 'no-root-original-stream-v1'
-ROOT = '/media/developer/.cytv-installer'
+ROOT = '/tmp/.cytv-installer'
 PUBLIC_ROOT = '/media/developer/temp'
 APPS = ('com.local.nativehome', 'com.gathin.tvhome')
 
@@ -38,17 +38,20 @@ function canonical(value){
 }
 function same(a,b){return a.dev===b.dev&&a.ino===b.ino;}
 function exists(name){try{fs.lstatSync(name);return true;}catch(e){if(e.code==='ENOENT')return false;throw e;}}
-function directory(name,privateLeaf){
+function directory(name,privateLeaf,sdk){
  var s=fs.lstatSync(name);
  if(!s.isDirectory()||s.isSymbolicLink()||(s.uid!==0&&s.uid!==uid))fail('unsafe-directory');
  // A root-owned sticky temporary ancestor is safe for an owned private child.
- if((s.mode&18)&&!(s.uid===0&&(s.mode&512)))fail('writable-directory');
+ // SDK staging is a vendor-owned shared namespace, not private evidence.
+ var sdkParent=sdk&&s.uid===0&&((name===publicRoot&&(s.mode&4095)===511)||
+     (name==='/media/developer'&&[509,511].indexOf(s.mode&4095)>=0));
+ if((s.mode&18)&&!(s.uid===0&&(s.mode&512))&&!sdkParent)fail('writable-directory');
  if(privateLeaf&&(s.uid!==uid||(s.mode&511)!==448))fail('nonprivate-directory');
  return s;
 }
 function ancestry(name,publicAccess){
  var current=path.resolve(name);
- for(;;){var s=directory(current,false);if(publicAccess&&!(s.mode&1))fail('private-public-parent');var parent=path.dirname(current);if(parent===current)break;current=parent;}
+ for(;;){var s=directory(current,false,publicAccess);if(publicAccess&&!(s.mode&1))fail('private-public-parent');var parent=path.dirname(current);if(parent===current)break;current=parent;}
 }
 function sync(name){var fd=fs.openSync(name,c.O_RDONLY|c.O_NOFOLLOW);try{fs.fsyncSync(fd);}finally{fs.closeSync(fd);}}
 function mkdir(name,mode){
@@ -57,7 +60,7 @@ function mkdir(name,mode){
  finally{fs.closeSync(fd);}sync(path.dirname(name));
 }
 function read(name,limit,publicFile){
- ancestry(path.dirname(name));
+ ancestry(path.dirname(name),publicFile);
  var before=fs.lstatSync(name), fd, raw;
  if(!before.isFile()||before.isSymbolicLink()||before.nlink!==1||before.uid!==uid||
     (before.mode&511)!==(publicFile?420:384)||before.size>limit)fail('unsafe-file');
@@ -280,6 +283,19 @@ function prepare(){
  }
  return {operation:op,plan_sha256:planSha};
 }
+function storageCheck(){
+ ancestry(path.dirname(root));
+ if(!exists(root))mkdir(root,448);directory(root,true);
+ if(exists(active)&&fs.readdirSync(active).length)fail('foreign-reservation');
+ ancestry(publicRoot,true);
+ // Exercise writes and durable publication before the host creates pending.
+ // Names are exclusive; never clean another operation's files.
+ var probe=root+'/.probe-'+op,link=probe+'.link',stageProbe=publicRoot+'/.cytv-probe-'+op;
+ exclusive(probe,'probe');
+ try{fs.linkSync(probe,link);sync(root);}finally{if(exists(link))fs.unlinkSync(link);fs.unlinkSync(probe);sync(root);}
+ mkdir(stageProbe,493);fs.rmdirSync(stageProbe);sync(publicRoot);
+ return {operation:op};
+}
 function slotIndex(){if(typeof input.slot!=='number'||input.slot%1||input.slot<0||input.slot>=plan.slots.length)fail('invalid-slot');return input.slot;}
 function worker(i){
  attached();predecessor(i);
@@ -379,6 +395,7 @@ function release(){
 }
 var result;
 switch(input.command){
+case 'storage-check':result=storageCheck();break;
 case 'prepare':result=prepare();break;
 case 'status':result=status();break;
 case 'attach':attached();sync(active);sync(root);result={operation:op};break;
@@ -487,8 +504,8 @@ def invoke(remote, plan, command, slot=None, source=None, proof=None, data=None)
     if command == 'prepare':
         request['source'] = PROGRAM if source is None else source
     if proof is not None:request['proof']=proof
-    # Wrap the current invocation only: retained PROGRAM bytes and capsule hashes
-    # stay unchanged. A diagnostic envelope is always a failure, never a receipt.
+    # The wrapper is not part of the source bound by a capsule. A diagnostic
+    # envelope is always a failure, never a receipt.
     program = 'try {\n' + PROGRAM + r"""
 } catch (error) {
  function category(value, allowed) {return typeof value==='string'&&allowed.indexOf(value)>=0?value:'unknown';}
@@ -537,6 +554,9 @@ def refuse():
 
 def begin(installer, action, artifacts, versions, expected, configuration):
     operation = uuid.uuid4().hex
+    # No package request or durable pending receipt until storage is usable.
+    check_plan = make_plan(operation, uuid.uuid4().hex, action, artifacts, versions, PUBLIC_ROOT)
+    invoke(installer.remote, check_plan, 'storage-check')
     installer.store.begin(installer.profile, 'install' if action == 'install' else 'uninstall',
                           recovery_protocol=PROTOCOL, observer_operation=operation,
                           expected=expected, versions=versions)

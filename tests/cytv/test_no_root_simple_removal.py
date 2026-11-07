@@ -41,6 +41,9 @@ class Remote:
         code=code.replace("'/proc/'",json.dumps(str(self.root/'proc')+'/'))
         # Adapt only the fixed volatile root and its root UID for this host fixture.
         volatile=self.root/'volatile';volatile.mkdir(exist_ok=True);volatile.chmod(0o1777)
+        code=code.replace('/tmp/.cytv-installer',str(volatile/'.cytv-installer'))
+        code=code.replace('function ancestry(p){',
+            'var hostLstat=fs.lstatSync;fs.lstatSync=function(p){var s=hostLstat(p);if(p==='+json.dumps(str(volatile))+')s.uid=0;return s;};\nfunction ancestry(p){')
         code=code.replace("var bootRoot='/tmp';",'var bootRoot='+json.dumps(str(volatile))+';var bootLstat=fs.lstatSync;fs.lstatSync=function(p){var s=bootLstat(p);if(path.resolve(p)===bootRoot)s.uid=0;return s;};')
         (self.root/'boot').write_text(self.boot)
         node=os.environ.get('NODE_EXEC') or shutil.which('node')
@@ -138,6 +141,43 @@ class SimpleRemoval(unittest.TestCase):
         marker.unlink()  # Model the measured C3 volatile reset, kernel UUID reused.
         self.assertTrue(self.remove()['verified_clean'])
         self.assertTrue(self.remove()['verified_clean']);self.assertFalse(marker.exists())
+
+    def test_legacy_observer_prepare_failure_uses_confirmed_removal_and_keeps_capsule(self):
+        from cytv import recovery, no_root_observer
+        from cytv.desktop import DesktopConsole
+        operation='a'*32
+        self.store.begin(self.profile,'install',recovery_protocol=no_root_observer.PROTOCOL,
+                         observer_operation=operation,expected={},versions={})
+        digest=self.store.save_capsule(self.profile,operation,{'source':'legacy-source','plan':{}})
+        self.store.checkpoint(self.profile,capsule_sha256=digest)
+        directory=self.store.device_dir(self.profile)
+        original=(directory/'operation.json').read_bytes()
+        capsule=(directory/('capsule-'+operation+'.json')).read_bytes()
+        self.installer.tv_info={}
+        events=[];write=DesktopConsole(lambda kind,value:events.append((kind,value)))
+        answers=iter(['y','n'])
+        recovery.recover(self.installer,lambda _:next(answers),write)
+        self.assertEqual((directory/'operation.json').read_bytes(),original)
+        self.assertEqual(self.remote.commands,[])  # No retained source execution.
+        answers=iter(['y','y'])
+        recovery.recover(self.installer,lambda _:next(answers),write)
+        pending=self.store.pending(self.profile)
+        self.assertEqual(pending['recovery_protocol'],'clean-removal-v1')
+        self.assertEqual((directory/pending['original_receipt']).read_bytes(),original)
+        self.reboot()
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertEqual((directory/('capsule-'+operation+'.json')).read_bytes(),capsule)
+        self.assertFalse(any(uri.endswith(('/dev/install','/dev/remove','appInstallService/status')) for uri,_ in self.remote.calls))
+
+    def test_new_private_observer_is_included_in_explicit_removal(self):
+        private=self.root/'volatile/.cytv-installer/operations'/('a'*32)
+        private.mkdir(parents=True);(private/'prepared.json').write_text('owned evidence')
+        self.assertTrue(self.remove()['restart_required'])
+        self.assertTrue(private.exists())  # A full boot fences the old worker first.
+        self.reboot()
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertFalse(private.exists())
 
     def test_changed_kernel_retires_valid_marker_only_after_boot_proof(self):
         self.remove();marker=self.boot_marker();proof=self.store.pending(self.profile)['cleanup_boot_proof']
