@@ -164,3 +164,18 @@ No new user action, translation, service or state journal is introduced. The
 existing Retry and requested full-restart instructions remain applicable.
 The old build pin is cleared; a replacement complete candidate and affected
 acceptance are required. This source record does not claim device completion.
+
+### Bounded activity inventory
+
+The existing detailed activity listing can exceed the generic updater RPC
+64-KiB response limit. Dropping subscriber data is insufficient and must not
+replace the activity name/callback/ID ownership proof. The RPC helper now allows
+2 MiB only for the exact `luna://com.palm.activitymanager/list` URI, matching the
+existing recovery-activity and final-cleanup helpers. Every other URI, including
+near matches, keeps its 64-KiB bound; queries and cancellation selection are
+unchanged. Three real child-pipe tests cover successful larger inventory,
+oversized refusal, other/near-match URI refusal and client process reaping.
+They failed on the old activity bound and passed after the two-line correction.
+The fixed caller-identity regression also passed. The normal payload build copies
+the change into both updater support bundles; all TV IPKs remain byte-identical.
+The replacement candidate must include and verify the changed support bytes.
