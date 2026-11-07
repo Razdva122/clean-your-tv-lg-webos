@@ -246,6 +246,40 @@ def _cache_identity(info):
             info.st_nlink, info.st_size, info.st_mtime_ns, info.st_ctime_ns)
 
 
+class _RetentionChanged(ValueError):
+    """A previously admitted proof or deletion plan changed."""
+
+
+def retention_reason(error):
+    """Classify failures without forwarding exception text or private values."""
+    if isinstance(error, _RetentionChanged): return 'proof-changed'
+    while error is not None:
+        if isinstance(error, OSError): return 'filesystem-error'
+        error = error.__cause__
+    return 'admission-refused'
+
+
+def retention_summary(scope, reason, removed=0):
+    """Best-effort fixed summaries; never records paths, IDs or inventories."""
+    if (scope not in ('cache', 'cache-peer', 'staging')
+            or reason not in ('complete', 'admission-refused', 'missing-inventory',
+                              'proof-changed', 'filesystem-error')
+            or type(removed) is not int or removed < 0): return
+    message = 'cytv-retention scope='+scope+' reason='+reason+' removed='+str(removed)
+    # Workers may discard stderr. The platform logger is an independent sink;
+    # neither logging availability nor its failures may affect retention.
+    try:
+        import syslog
+        syslog.syslog(syslog.LOG_INFO, message)
+    except Exception:
+        pass
+    try:
+        import sys
+        sys.stderr.write(message+'\n')
+    except Exception:
+        pass
+
+
 def prune_update_caches(stores, *, product_complete=False):
     """Remove only verified unreferenced blobs after terminal update/Home proof.
 
@@ -256,6 +290,8 @@ def prune_update_caches(stores, *, product_complete=False):
     import hashlib
     from contextlib import ExitStack
     removed = 0
+    reason = 'complete'
+    revalidating = False
     try:
         before = _cache_snapshot(stores, product_complete)
         protected = set()
@@ -284,20 +320,23 @@ def prune_update_caches(stores, *, product_complete=False):
                                 or info.st_mode & 0o022 or info.st_size > 64*1024*1024): raise ValueError('unsafe cache entry')
                         digest = hashlib.sha256()
                         for chunk in iter(lambda: stream.read(1024*1024), b''): digest.update(chunk)
-                        if _cache_identity(os.fstat(stream.fileno())) != _cache_identity(info) or digest.hexdigest() != name[:64]: raise ValueError('changed cache entry')
+                        if _cache_identity(os.fstat(stream.fileno())) != _cache_identity(info) or digest.hexdigest() != name[:64]: raise _RetentionChanged('changed cache entry')
                     if name[:64] not in protected: plan.append((cache, name, info))
-            if _cache_snapshot(stores, product_complete) != before: raise ValueError('changed cache references')
+            revalidating = True
+            if _cache_snapshot(stores, product_complete) != before: raise _RetentionChanged('changed cache references')
             # Validate all entries before the first mutation. Each unlink remains
             # anchored to the checked directory and checks the original identity.
             for cache, name, info in plan:
-                if _cache_identity(os.stat(name, dir_fd=cache, follow_symlinks=False)) != _cache_identity(info): raise ValueError('changed cache entry')
+                if _cache_identity(os.stat(name, dir_fd=cache, follow_symlinks=False)) != _cache_identity(info): raise _RetentionChanged('changed cache entry')
             for cache, name, info in plan:
                 if _cache_snapshot(stores, product_complete) != before or _cache_identity(os.stat(name, dir_fd=cache, follow_symlinks=False)) != _cache_identity(info):
-                    raise ValueError('changed retention plan')
-                os.unlink(name, dir_fd=cache);os.fsync(cache);removed += 1
-    except (OSError, ValueError, TypeError, KeyError):
+                    raise _RetentionChanged('changed retention plan')
+                os.unlink(name, dir_fd=cache);removed += 1;os.fsync(cache)
+    except (OSError, ValueError, TypeError, KeyError) as error:
         # Retention failure must not change an update/recovery outcome.
-        pass
+        reason = retention_reason(error)
+        if revalidating and reason == 'admission-refused': reason = 'proof-changed'
+    retention_summary('cache', reason, removed)
     return removed
 
 
@@ -307,7 +346,8 @@ def prune_peer_caches(store, peer):
         stores = [store]
         if os.path.lexists(peer): stores.append(Store(peer, uid=store.uid))
         return prune_update_caches(stores)
-    except (OSError, ValueError):
+    except (OSError, ValueError) as error:
+        retention_summary('cache-peer', retention_reason(error))
         return 0
 
 
@@ -320,8 +360,11 @@ def retire_verified_files(store, relative, expected, stable):
     import hashlib
     from contextlib import ExitStack
     removed = 0
+    reason = 'complete'
     try:
-        if not isinstance(expected, dict) or not expected: return 0
+        if not isinstance(expected, dict) or not expected:
+            retention_summary('staging', 'missing-inventory')
+            return 0
         for name, digest in expected.items():
             if (not isinstance(name, str) or not re.fullmatch(r'(?:[a-zA-Z0-9_.-]+/)*[a-zA-Z0-9_.-]+', name)
                     or any(part in ('.', '..') for part in name.split('/'))
@@ -350,7 +393,7 @@ def retire_verified_files(store, relative, expected, stable):
                             digest = hashlib.sha256()
                             for chunk in iter(lambda: stream.read(1024*1024), b''): digest.update(chunk)
                             if _cache_identity(os.fstat(stream.fileno())) != _cache_identity(info) or digest.hexdigest() != expected[path]:
-                                raise ValueError('staging changed')
+                                raise _RetentionChanged('staging changed')
                         plan.append((directory, name, info))
             # Logs and journals outside the named payload roots are never swept.
             for name in sorted({name.split('/')[0] for name in expected}):
@@ -358,14 +401,15 @@ def retire_verified_files(store, relative, expected, stable):
                 try: child = os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=root)
                 except FileNotFoundError: continue
                 stack.callback(os.close, child);scan(child, name+'/')
-            if not stable(): raise ValueError('terminal staging proof changed')
+            if not stable(): raise _RetentionChanged('terminal staging proof changed')
             for directory, name, info in plan:
                 if _cache_identity(os.stat(name, dir_fd=directory, follow_symlinks=False)) != _cache_identity(info):
-                    raise ValueError('staging changed')
+                    raise _RetentionChanged('staging changed')
             for directory, name, info in plan:
                 if not stable() or _cache_identity(os.stat(name, dir_fd=directory, follow_symlinks=False)) != _cache_identity(info):
-                    raise ValueError('staging retirement changed')
-                os.unlink(name, dir_fd=directory);os.fsync(directory);removed += 1
-    except (OSError, ValueError, TypeError, KeyError):
-        pass
+                    raise _RetentionChanged('staging retirement changed')
+                os.unlink(name, dir_fd=directory);removed += 1;os.fsync(directory)
+    except (OSError, ValueError, TypeError, KeyError) as error:
+        reason = retention_reason(error)
+    retention_summary('staging', reason, removed)
     return removed
