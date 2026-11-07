@@ -151,11 +151,20 @@ def worker_summary(value):
     value = mapping(value)
     result = {'exception_type': choice(value.get('exception_type'),
               ('CalledProcessError', 'TimeoutExpired', 'ValueError', 'RuntimeError', 'OSError',
-               'PermissionError', 'FileNotFoundError', 'TypeError', 'KeyError'))}
+               'PermissionError', 'FileNotFoundError', 'TypeError', 'KeyError', 'TimeoutError'))}
     for key, low, high in (('exit_status', -255, 255), ('errno', 0, 4095)):
         item = value.get(key)
         if type(item) is int and low <= item <= high:
             result[key] = item
+    if 'stage' in value:result['stage']=choice(value['stage'],STAGES)
+    detail=mapping(value.get('luna'))
+    if detail:
+        result['luna']={'call':choice(detail.get('call'),('apps-dev','apps','home-settings','home-profiles',
+            'helper-disable','home-disable','activities-list','activity-cancel','inputs-list','input-delete','other'),'other'),
+            'reason':choice(detail.get('reason'),('negative-reply','permission-denied','service-missing','method-missing',
+                'timeout','oversized-reply','malformed-reply','client-start-failed'))}
+        code=detail.get('error_code')
+        if type(code) is int and -(2**31)<=code<2**31:result['luna']['error_code']=code
     return result
 
 
@@ -163,8 +172,8 @@ def product_summary(value):
     value = mapping(value)
     result = {key: choice(value[key], allowed) for key, allowed in
               (('state', STATES), ('stage', STAGES), ('code', CODES)) if key in value}
-    if 'failure' in value:
-        result['failure'] = worker_summary(value['failure'])
+    for key in ('failure','last_failure'):
+        if key in value:result[key] = worker_summary(value[key])
     if value.get('protocol')=='clean-removal-v1':
         from .recovery_state import REMOVAL_REASONS
         result['removal_reason']=choice(value.get('reason'),REMOVAL_REASONS)

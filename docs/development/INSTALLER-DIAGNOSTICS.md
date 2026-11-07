@@ -19,6 +19,16 @@ original-outcome categories. It does not export the original receipt, private
 recovery data, operation IDs, tokens, paths or raw replies, and grants no mutation
 authority. [Failure-injection matrix](INSTALLER-RECOVERY-MATRIX.md).
 
+The next candidate also keeps the first Root cleanup `failure` separate from
+`last_failure`, which describes the latest failed attempt and its cleanup stage.
+For bounded Luna reads these contain only a fixed call identifier, a fixed reason
+(permission denial, missing service/method, negative/malformed/oversized reply,
+timeout or client startup failure), and an optional signed 32-bit error code.
+Both the TV producer and host exporter filter these fields. Raw error text,
+request payloads, inventories and routes are excluded. Existing old failures
+remain unchanged; new detail cannot reconstruct an earlier discarded exception.
+These fields diagnose a blocker and never authorize skipping control restoration.
+
 New package rejection reports preserve the fixed `install failed` and
 `remove failed` Luna states. When the original reply includes `details.reason`,
 optional `luna.reason` retains only the nine fixed LG OSE IPK failure categories
