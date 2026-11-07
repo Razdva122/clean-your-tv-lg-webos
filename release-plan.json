@@ -96,6 +96,11 @@
         359
       ],
       "summary": "Complete removal retry, snapshot restart, native finalization, bounded SSH transport and current failure guidance; original installation reports remain unconfirmed"
+    },
+    {
+      "pr": 373,
+      "issues": [],
+      "summary": "Restore verified Root reinstallation, resumable fence handoff and Root SSH catalog reads; original installation reports remain unconfirmed"
     }
   ],
   "excluded": [],

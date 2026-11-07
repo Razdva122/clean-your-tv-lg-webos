@@ -43,9 +43,10 @@ and [candidate PR #350](https://github.com/Razdva122/clean-your-tv-lg-webos/pull
 for the exact selected build, checks and remaining acceptance. The candidate remains
 draft until its complete build and affected physical acceptance are recorded.
 
-No TV removal/installation was performed in this implementation task. Physical Home
-routing, remote, sound, standby, cold boot, OTA and rollback on these candidate bytes
-remain untested. Earlier firmware observations retain their original artifact scope.
+Source/model checks do not establish physical acceptance. Consult the release PR
+and exact artifact-bound acceptance records for tested, blocked and untested paths;
+standby, ordinary reboot and AC cold start remain distinct scenarios. Earlier
+firmware observations retain their original artifact and precondition scope.
 Third-party files/Home settings are preserved; genuine ownership backups and minimal
 non-executable removal evidence may remain. Saved computer connection keys/reports
 are not TV residue and are retained.
