@@ -107,8 +107,16 @@
       panel.hidden = true;
       if (previous && previous.focus) previous.focus();
     }
+    // While Home control is being checked only diagnostics stay available; Back/Exit still closes the panel.
+    function checking(on) {
+      [0, 2, 3].forEach(function (i) {
+        buttons[i].disabled = on;
+      });
+      if (!on && document.activeElement !== details) focus(index);
+    }
     function refresh() {
       var request = ++generation;
+      checking(true);
       diagnostic = {
         schema: 1,
         source: 'home-helper-panel',
@@ -139,18 +147,20 @@
               'Helper status could not be checked on this TV. Start Helper only when you are ready to use Home control again.'
             );
             buttons[2].hidden = false;
+            checking(false);
             return;
           }
-          if (!refused && (r.running === false || r.blocked)) {
+          if (!refused && r.blocked) {
             status.textContent = t(
-              r.blocked
-                ? 'Helper was stopped for safety. Start it only when you are ready to use Home control again.'
-                : 'Helper is stopped. Start it to use the Home button and return from apps.'
+              'Helper was stopped for safety. Start it only when you are ready to use Home control again.'
             );
             buttons[2].hidden = false;
+            checking(false);
             return;
           }
           // Published Helper 0.6.17 omits running; homeStatus confirms control is responding.
+          // A jailed service (webOS 3.x) cannot see the controller and reports running:false,
+          // so only a homeStatus failure confirms that Helper is stopped.
           diagnostic.home_status = safeStatus(null, 'pending', true);
           renderDiagnostics();
           rpc(
@@ -158,8 +168,20 @@
             {},
             function (s, outcome) {
               if (request !== generation || panel.hidden) return;
+              checking(false);
               diagnostic.home_status = safeStatus(s, outcome, true);
               renderDiagnostics();
+              if (
+                !refused &&
+                r.running === false &&
+                (!s || s.returnValue !== true)
+              ) {
+                status.textContent = t(
+                  'Helper is stopped. Start it to use the Home button and return from apps.'
+                );
+                buttons[2].hidden = false;
+                return;
+              }
               buttons[1].disabled =
                 !s || s.returnValue !== true || typeof s.enabled !== 'boolean';
               if (refused && buttons[1].disabled) {

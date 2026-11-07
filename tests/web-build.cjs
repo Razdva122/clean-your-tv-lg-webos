@@ -14,6 +14,28 @@ const acorn = require('acorn');
   };
   const output = await compile(source);
   acorn.parse(output['app.js'], { ecmaVersion: 5 });
+  // ES5-valid, but Chrome 38 (webOS 3.x) throws on strict block function declarations.
+  const blockFn = (
+    await compile({
+      'legacy.js':
+        "'use strict';if(window){function f(){return 3}window.blockResult=f();}"
+    })
+  )['legacy.js'];
+  assert(
+    !/\{\s*function f\(/.test(blockFn),
+    'strict block function declarations must be transformed'
+  );
+  const blockContext = vm.createContext({});
+  vm.runInContext('window=this;', blockContext);
+  vm.runInContext(blockFn, blockContext);
+  assert.equal(blockContext.blockResult, 3);
+  const plainES5 =
+    'window.plain = function(){ if (window) { var x = function(){ return 1; }; return x(); } };';
+  assert.equal(
+    (await compile({ 'plain.js': plainES5 }))['plain.js'],
+    plainES5,
+    'compatible ES5 keeps its bytes'
+  );
   assert(
     output['index.html'].indexOf('src="compat-polyfills.js"') <
       output['index.html'].indexOf('src="app.js"'),

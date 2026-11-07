@@ -53,9 +53,11 @@ python3 - <<'PYRECEIVER'
 import runpy
 from pathlib import Path
 from scripts.theme_receiver import inject
+from scripts.helper_build import compile_helper
 import shutil
 sources = runpy.run_path('scripts/build-cytv.py')['tracked_files']('renewal-service')
-files = inject({name: data for name, data in sources.items() if not name.startswith('state/')})
+# The service runs on the TV's Node (0.12 on webOS 3.x): compile it like Helper.
+files = compile_helper(inject({name: data for name, data in sources.items() if not name.startswith('state/')}))
 output = Path('build/home-service')
 if output.exists():
     shutil.rmtree(output)

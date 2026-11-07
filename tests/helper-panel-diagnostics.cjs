@@ -218,8 +218,10 @@ assert.equal(snapshot.helper_status.running, null);
 assert.equal(snapshot.helper_status.blocked, null);
 ui = panel();
 ui.respond(0, { returnValue: true, running: false, blocked: false });
-assert.equal(ui.calls.length, 1);
+assert.equal(ui.calls.length, 2);
+ui.respond(1, { returnValue: false });
 assert.equal(view(ui).helper_status.running, false);
+assert.equal(ui.buttons[2].hidden, false);
 ui = panel();
 ui.respond(0, { returnValue: true, blocked: false });
 assert.equal(ui.calls.length, 2);
@@ -297,6 +299,41 @@ for (const label of ['Show diagnostics', 'Hide diagnostics'])
     'reuse all thirteen locale strings'
   );
 
+// A delayed status reply must not steal focus from read-only diagnostics.
+for (const outcome of [
+  'home-success',
+  'home-failure',
+  'blocked',
+  'status-failure'
+]) {
+  const pending = panel();
+  view(pending);
+  pending.respond(
+    0,
+    outcome === 'status-failure'
+      ? { returnValue: true, running: 'invalid' }
+      : { returnValue: true, running: false, blocked: outcome === 'blocked' }
+  );
+  if (outcome.indexOf('home-') === 0)
+    pending.respond(1, {
+      returnValue: outcome === 'home-success',
+      enabled: true
+    });
+  assert.equal(
+    pending.document.activeElement,
+    pending.details,
+    outcome + ': retain diagnostics focus'
+  );
+  pending.key(40);
+  assert.equal(
+    pending.details.scrollTop,
+    80,
+    outcome + ': remote still scrolls diagnostics'
+  );
+  pending.key(461);
+  assert.equal(pending.details.hidden, true);
+  assert.equal(pending.document.activeElement, pending.buttons[4]);
+}
 console.log(
   'PASS Helper panel diagnostics: safe caller outcomes, refusal/timeout/malformed data, no extra RPCs, stale generations, navigation and start consent'
 );

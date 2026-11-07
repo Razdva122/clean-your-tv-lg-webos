@@ -1,16 +1,17 @@
 'use strict';
 var https = require('https');
-var URL = require('url').URL;
+var urls = require('url');
 // Only the fixed project's release assets may be requested. Redirects are limited
 // to GitHub's asset CDN. No cookies, authorization headers or private addresses.
 function allowed(raw) {
   try {
-    var u = new URL(raw);
+    if (typeof raw !== 'string') return false;
+    var u = urls.parse(raw);
     return (
       u.protocol === 'https:' &&
-      !u.username &&
-      !u.password &&
-      u.port === '' &&
+      !u.auth &&
+      (!u.port || u.port === '443') &&
+      !/(^|\/)(\.|%2e){1,2}(\/|$)/i.test(u.pathname || '') &&
       ((u.hostname === 'github.com' &&
         u.pathname.indexOf('/Razdva122/clean-your-tv-lg-webos/releases/') ===
           0) ||
@@ -36,7 +37,7 @@ function get(url, redirects) {
       if (e) reject(Error('download-failed'));
       else resolve(data);
     }
-    var options = Object.assign(require('url').parse(url), {
+    var options = Object.assign(urls.parse(url), {
       rejectUnauthorized: true,
       ca: require('fs').readFileSync(__dirname + '/ca-bundle.crt', 'utf8'),
       headers: {
@@ -48,7 +49,11 @@ function get(url, redirects) {
       if ([301, 302, 303, 307, 308].indexOf(res.statusCode) >= 0) {
         res.resume();
         clearTimeout(timer);
-        get(new URL(res.headers.location, url).href, (redirects || 0) + 1).then(
+        if (typeof res.headers.location !== 'string' || !res.headers.location) {
+          done(Error('redirect'));
+          return;
+        }
+        get(urls.resolve(url, res.headers.location), (redirects || 0) + 1).then(
           function (x) {
             done(null, x);
           },

@@ -148,7 +148,14 @@ const query = require('../../native/service/app-inventory');
     'ssap://tv/getExternalInputList',
     'input read must use its fixed paired endpoint'
   );
+  // webOS 3.x keeps only the last registered permission set per key: every Helper
+  // SSAP client must request the same full manifest as screen-watch.js.
   assert.deepEqual(inputRegistration.payload.manifest.permissions, [
+    'READ_APP_STATUS',
+    'READ_RUNNING_APPS',
+    'READ_POWER_STATE',
+    'CONTROL_POWER',
+    'READ_INSTALLED_APPS',
     'READ_INPUT_DEVICE_LIST'
   ]);
   assert.deepEqual(devices, [

@@ -60,6 +60,7 @@ fi
 if has tv || has tv-runtime; then
 if primary; then
 node tests/helper-compat.cjs
+node tests/tv-service-compat.cjs
 node tests/passive-remote-diagnostic.cjs
 node tests/helper-panel-diagnostics.cjs
 for test in tests/apps/*.cjs; do

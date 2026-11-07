@@ -12,11 +12,31 @@ const targets = require('../package.json').browserslist;
 const root = path.resolve(__dirname, '..');
 const polyfillsName = 'compat-polyfills.js';
 
+// ES5 parsing accepts function declarations inside blocks, but Chrome 38 rejects
+// them in strict code (webOS 3.x SyntaxError), so such scripts must be transformed.
+function hasBlockFunction(node, inBlock) {
+  if (!node || typeof node.type !== 'string') return false;
+  if (node.type === 'FunctionDeclaration' && inBlock) return true;
+  if (/Function/.test(node.type))
+    return node.body.body.some((child) => hasBlockFunction(child, false));
+  const block = node.type === 'BlockStatement' || node.type === 'SwitchCase';
+  return Object.keys(node).some((key) =>
+    []
+      .concat(node[key])
+      .some(
+        (child) =>
+          child &&
+          typeof child === 'object' &&
+          hasBlockFunction(child, block || (inBlock && node.type !== 'Program'))
+      )
+  );
+}
+
 function javascript(code, filename) {
   // Already-compatible scripts keep their bytes and global-script semantics.
   try {
-    acorn.parse(code, { ecmaVersion: 5 });
-    return code;
+    if (!hasBlockFunction(acorn.parse(code, { ecmaVersion: 5 }), false))
+      return code;
   } catch (_) {}
   const output = babel.transformSync(code, {
     filename,
