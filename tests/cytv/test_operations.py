@@ -23,7 +23,7 @@ class Remote:
         if '/usr/bin/node -e ' in command:
             args=shlex.split(command)
             code=args[args.index('-e')+1]
-            if code==no_root_observer.PROGRAM:
+            if no_root_observer.PROGRAM in code:
                 import hashlib
                 request=json.loads(args[-1]);plan=request['plan'];action=request['command'];index=request.get('slot')
                 operation=plan['operation']

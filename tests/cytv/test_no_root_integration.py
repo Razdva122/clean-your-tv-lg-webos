@@ -57,7 +57,7 @@ sys.stdin.read()
         if '-e' in words and '/usr/bin/node' in words:
             code=words[words.index('-e')+1]
             argument=words[-1]
-            if code==observer.PROGRAM:
+            if observer.PROGRAM in code:
                 request=json.loads(argument)
                 request['sender']=str(self.sender)
                 request['timeout']=3000
@@ -66,7 +66,7 @@ sys.stdin.read()
             result=subprocess.run([shutil.which('node'),'-e',code,argument],input=data,capture_output=True,timeout=timeout)
             if result.returncode: raise RuntimeError(result.stderr.decode())
             reply=result.stdout.decode()
-            if code==observer.PROGRAM and self.cut and request['command']=='status':
+            if observer.PROGRAM in code and self.cut and request['command']=='status':
                 value=json.loads(reply)
                 if value['slots'][0]['terminal']=='success':
                     self.cut=False
@@ -144,7 +144,7 @@ class OriginalOperationIntegration(unittest.TestCase):
         def cut(command,data=None,timeout=30):
             if '-e' in shlex.split(command):
                 words=shlex.split(command)
-                if words[words.index('-e')+1]==observer.PROGRAM and json.loads(words[-1])['command']=='retire':
+                if observer.PROGRAM in words[words.index('-e')+1] and json.loads(words[-1])['command']=='retire':
                     raise RuntimeError('lost retire acknowledgement')
             return original(command,data,timeout)
         self.remote.run=cut
