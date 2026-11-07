@@ -80,6 +80,15 @@ class LanguageTests(unittest.TestCase):
             for message in messages:
                 with self.subTest(language=code,text=message):self.assertNotEqual(lang.translate(message),message)
 
+    def test_connection_actions_and_macos_instructions_translate_with_app_name(self):
+        lang = self.language()
+        message = 'In System Settings → Privacy & Security → Local Network, allow {app}. macOS may show an older copy’s name. Fully quit cytv and reopen it after changing access.'
+        for code in set(lang.LANGUAGES) - {'en', 'auto'}:
+            lang.set_language(code)
+            for text in ('Check connection again', 'Change connection', 'Open System Settings', message):
+                self.assertNotEqual(lang.translate(text), text)
+            self.assertIn('cytv 8.app', lang.translate(message).format(app='cytv 8.app'))
+
     def test_recovery_choices_plans_and_pending_auth_advice_translate_completely(self):
         import ast
         import re

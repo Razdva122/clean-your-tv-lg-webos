@@ -36,8 +36,10 @@ def removal_restart_required(plan):
             or removal.get('stage') == 'restart-required' or removal.get('reason') == 'restart-required')
 
 
-CONNECTION_FAILURES = ('ssh-unreachable','ssh-protocol','ssh-auth-root','ssh-auth-no-root',
+NETWORK_FAILURES = ('ssh-unreachable','ssh-protocol','ssh-access-denied','ssh-refused','ssh-timeout')
+AUTH_FAILURES = ('ssh-auth-root','ssh-auth-no-root',
                        'ssh-key-file','ssh-identity','developer-key-server','developer-key-unlock','developer-key-response')
+CONNECTION_FAILURES = NETWORK_FAILURES + AUTH_FAILURES
 
 
 def root_removal_profile(store, source):
@@ -66,9 +68,9 @@ def removal_details(plan, failure=None):
     if type(plan.get('reason')) is str and plan['reason'] in REMOVAL_BLOCKERS:
         reason = plan['reason']
     if removal_connection_failure(plan, failure):
-        auth = (failure or {}).get('code') in CONNECTION_FAILURES[2:]
+        specific = (failure or {}).get('code') in (*AUTH_FAILURES, 'ssh-access-denied', 'ssh-refused')
         return {'stage_text':'Verifying removal…',
-                'blocker_text':failure['next_step'] if auth and type(failure.get('next_step')) is str
+                'blocker_text':failure['next_step'] if specific and type(failure.get('next_step')) is str
                                else REMOVAL_BLOCKERS['connection-interrupted']}
     if removal_restart_required(plan):
         stage = reason = 'restart-required'

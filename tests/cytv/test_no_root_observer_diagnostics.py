@@ -152,14 +152,118 @@ class ObserverDiagnosticsTests(unittest.TestCase):
         saved['no_root_observer'] = {
             'command': 'prepare', 'failure': 'observer-error',
             'exception_name': ['PRIVATE'], 'exception_code': {'PRIVATE': True},
-            'observer_reason': 'unsafe-directory', 'message': 'PRIVATE-KEY'}
+            'observer_reason': 'unsafe-directory', 'message': 'PRIVATE-KEY',
+            'filesystem_operation': ['PRIVATE'], 'storage_area': 'private-storage'}
         path.write_text(json.dumps(saved))
         self.store = state.Store(self.tmp.name)
         later = self.report(self.failure('PRIVATE-NOT-JSON'), 'recover')
         self.assertEqual(later['first_failure']['no_root_observer'], {
             'command': 'prepare', 'failure': 'observer-error',
             'exception_name': 'unknown', 'exception_code': 'unknown',
-            'observer_reason': 'unsafe-directory'})
+            'observer_reason': 'unsafe-directory',
+            'filesystem_operation': 'unknown', 'storage_area': 'private-storage'})
+
+    def test_filesystem_details_survive_export_and_history_without_raw_paths(self):
+        reply = json.dumps({'operation': 'a' * 32, 'observer_error': {
+            'exception_name': 'Error', 'exception_code': 'EACCES', 'observer_reason': 'unknown',
+            'filesystem_operation': 'mkdir', 'storage_area': 'public-staging',
+            'path': '/PRIVATE/path', 'message': 'PRIVATE-KEY'}})
+        first = self.report(self.failure(reply, 'storage-check'))
+        self.assertEqual(first['no_root_observer']['filesystem_operation'], 'mkdir')
+        self.assertEqual(first['no_root_observer']['storage_area'], 'public-staging')
+        self.store = state.Store(self.tmp.name)
+        later = self.report(self.failure('PRIVATE-NOT-JSON'), 'recover')
+        self.assertEqual(later['first_failure']['no_root_observer'], first['no_root_observer'])
+        record = diagnostics.context.failure_summary({'no_root_observer': {
+            'command': 'storage-check', 'failure': 'observer-error',
+            'filesystem_operation': {'PRIVATE': True}, 'storage_area': '/PRIVATE/path'}})
+        self.assertEqual(record['no_root_observer']['filesystem_operation'], 'unknown')
+        self.assertEqual(record['no_root_observer']['storage_area'], 'unknown')
+        self.assertNotIn('PRIVATE', json.dumps(record))
+
+    @unittest.skipIf(os.name == 'nt' or not shutil.which('node') or os.getuid() == 0,
+                     'Requires POSIX shell, Node and an unprivileged user')
+    def test_real_storage_refusal_identifies_staging_without_pending_or_package_requests(self):
+        calls = []
+        def run(command, **kwargs):
+            calls.append(command)
+            command = command.replace('/usr/bin/node', shlex.quote(runtime))
+            result = subprocess.run(['sh', '-c', command], capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr.decode())
+            return result.stdout.decode()
+        directory = '/private/tmp' if Path('/private/tmp').exists() else None
+        with tempfile.TemporaryDirectory(dir=directory) as tmp:
+            root = Path(tmp).resolve()
+            root.chmod(0o755)
+            public = root / 'public'
+            public.mkdir(mode=0o555)
+            private = root / 'private'
+            store = state.Store(root / 'host')
+            installer = SimpleNamespace(remote=SimpleNamespace(run=run), store=store, profile=self.profile)
+            runtimes = [shutil.which('node')] + [os.environ[name] for name in
+                       ('NODE010', 'NODE01025', 'NODE012') if os.environ.get(name)]
+            for runtime in runtimes:
+                with self.subTest(runtime=runtime), patch.object(observer, 'ROOT', str(private)), \
+                        patch.object(observer, 'PUBLIC_ROOT', str(public)):
+                    calls.clear()
+                    with self.assertRaises(UserError) as caught:
+                        observer.begin(installer, 'install', {'helper.ipk': b'helper', 'launcher.ipk': b'home'},
+                                       dict(zip(observer.APPS, ['1', '2'])), {}, {})
+                    details = caught.exception.no_root_observer
+                    self.assertEqual(details['command'], 'storage-check')
+                    self.assertEqual(details['exception_code'], 'EACCES')
+                    self.assertEqual(details['filesystem_operation'], 'mkdir')
+                    self.assertEqual(details['storage_area'], 'public-staging')
+                    self.assertIsNone(store.pending(self.profile))
+                    self.assertEqual(len(calls), 1)
+                    self.assertEqual(list(public.iterdir()), [])
+                    self.assertEqual(list(private.iterdir()), [])
+
+    @unittest.skipIf(os.name == 'nt' or not shutil.which('node'), 'Requires POSIX shell and Node')
+    def test_wrapper_classifies_only_fixed_filesystem_categories_on_supported_runtimes(self):
+        cases = [
+            ('mkdir', '/tmp/.cytv-installer/PRIVATE/probe', 'mkdir', 'private-storage'),
+            ('open', '/tmp/.cytv-installer', 'open', 'private-storage'),
+            ('link', '/media/developer/temp/PRIVATE/probe', 'link', 'public-staging'),
+            ('lstat', '/media/developer/temp', 'lstat', 'public-staging'),
+            ('open', '/tmp', 'open', 'storage-parent'),
+            ('open', '/tmp/', 'open', 'storage-parent'),
+            ('lstat', '/media/developer', 'lstat', 'storage-parent'),
+            ('lstat', '/', 'lstat', 'storage-parent'),
+            ('open', '/tmp/.cytv-installer-PRIVATE/probe', 'open', 'unknown'),
+            ('open', '/tmp/.cytv-installer/../PRIVATE', 'open', 'unknown'),
+            ('open', 'PRIVATE/relative', 'open', 'unknown'),
+            ('fsync', None, 'fsync', 'unknown'),
+            ('PRIVATE-SYSCALL', {'PRIVATE': True}, 'unknown', 'unknown'),
+        ]
+        runtimes = [shutil.which('node')] + [os.environ[name] for name in
+                   ('NODE010', 'NODE01025', 'NODE012') if os.environ.get(name)]
+        for runtime in runtimes:
+            def run(command, **kwargs):
+                command = command.replace('/usr/bin/node', shlex.quote(runtime))
+                result = subprocess.run(['sh', '-c', command], capture_output=True, timeout=10)
+                self.assertEqual(result.returncode, 0, result.stderr.decode())
+                self.assertNotIn(b'PRIVATE', result.stdout)
+                self.assertNotIn(b'PRIVATE', result.stderr)
+                return result.stdout.decode()
+            for root_ssh in (False, True):
+                root_cases = cases if not root_ssh else [
+                    ('open', '/tmp/.cytv-installer-root/PRIVATE', 'open', 'private-storage'),
+                    ('mkdir', '/var/lib/clean-your-tv-installer/PRIVATE', 'mkdir', 'public-staging'),
+                    ('lstat', '/var/lib', 'lstat', 'storage-parent'),
+                    ('open', '/tmp/.cytv-installer/PRIVATE', 'open', 'unknown'),
+                ]
+                for syscall, path, operation, area in root_cases:
+                    with self.subTest(runtime=runtime, root_ssh=root_ssh, syscall=syscall, path=path):
+                        program = ("var e=new Error('PRIVATE-MESSAGE');e.code='EACCES';e.syscall=" +
+                                   json.dumps(syscall) + ';e.path=' + json.dumps(path) + ';throw e;')
+                        plan = dict(self.plan, **({'connection': 'root-ssh'} if root_ssh else {}))
+                        with patch.object(observer, 'ROOT_PROGRAM' if root_ssh else 'PROGRAM', program):
+                            with self.assertRaises(UserError) as caught:
+                                observer.invoke(SimpleNamespace(run=run, root=root_ssh), plan, 'storage-check')
+                        report = self.report(caught.exception)
+                        self.assertEqual(report['no_root_observer']['filesystem_operation'], operation)
+                        self.assertEqual(report['no_root_observer']['storage_area'], area)
 
     @unittest.skipIf(os.name == 'nt' or not shutil.which('node'), 'Requires POSIX shell and Node')
     def test_real_prepare_and_status_preserve_source_and_refuse_unsafe_state(self):
@@ -211,7 +315,8 @@ class ObserverDiagnosticsTests(unittest.TestCase):
             observer.invoke(SimpleNamespace(run=run), self.plan, 'prepare')
         self.assertEqual(caught.exception.no_root_observer, {
             'command': 'prepare', 'failure': 'observer-error',
-            'exception_name': 'Error', 'exception_code': 'unknown', 'observer_reason': 'invalid-plan'})
+            'exception_name': 'Error', 'exception_code': 'unknown', 'observer_reason': 'invalid-plan',
+            'filesystem_operation': 'unknown', 'storage_area': 'unknown'})
         for code in ('ENOSPC', 'EDQUOT', 'EACCES', 'PRIVATE-CODE'):
             program = "var e=new Error('PRIVATE-PATH');e.code=" + json.dumps(code) + ";throw e;"
             with self.subTest(code=code), patch.object(observer, 'PROGRAM', program):

@@ -121,7 +121,7 @@ class NativeInputTests(unittest.TestCase):
 
 
 import test_persistent_recovery as recovery
-class NativeRecoveryTests(recovery.IntegrationTests):
+class NativeRecoveryTests(recovery.IntegrationFixture, unittest.TestCase):
  def test_fault_restores_routes_even_when_native_cleanup_fails(self):
   def fail():
    self.assertEqual(self.read(),self.baseline)

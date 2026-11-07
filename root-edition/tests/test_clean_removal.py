@@ -1002,6 +1002,122 @@ class PartialDeviceRemoval(unittest.TestCase):
         self.assertFalse(any(name.startswith('remove-') for name in calls))
         self.assertTrue((root/'state/ssap.json').exists())
 
+    def profileless_fixture(self, reply=None, home='com.webos.app.home'):
+        from updater.luna import context
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        # Old incomplete provisioning is not a trusted pre-activation stage.
+        Store(root,uid=os.getuid()).write('deploy',{'version':1,'app':'com.cleanyourtv.root.preview','stage':'installed-recovery-only'})
+        original=driver.device.rpc
+        missing={'returnValue':False,'errorCode':-1,'errorText':'Service does not exist: com.webos.service.systemprofile.'}
+        response=missing if reply is None else reply
+        def rpc(method,data):
+            if method.endswith('/getSystemSettings'):
+                return {'returnValue':True,'settings':{'defaultApps':{'home':home}}}
+            if method.endswith('/getProfiles'):
+                if isinstance(response,Exception):raise response
+                raise context(RuntimeError('Bus operation rejected'),method,'negative-reply',response)
+            return original(method,data)
+        driver.device.rpc=rpc
+        return driver,identifier,root,updater,payload,calls,present
+
+    def test_webos5_stock_home_can_remove_from_an_old_fenced_attempt(self):
+        driver,identifier,root,updater,payload,calls,present=self.profileless_fixture()
+        # Model the published remover's failed attempt, before new support exists.
+        from updater.luna import context
+        method='com.webos.service.systemprofile/getProfiles'
+        old_error=context(RuntimeError('Bus operation rejected'),method,'negative-reply',
+            {'returnValue':False,'errorCode':-1,'errorText':'Service does not exist: com.webos.service.systemprofile.'})
+        with patch.object(driver.device,'log'),patch('clean_removal.routes',side_effect=old_error):
+            first=driver.clean_remove(identifier)
+        # The old checkpoint predates the new eligibility observation.
+        first.pop('profileless_cleanup_eligible',None)
+        driver.ownership.store.write('clean-removal-'+identifier,first)
+        self.assertEqual(first['stage'],'original-writers-fenced')
+        self.assertFalse(first['routing_never_applied'])
+        self.assertEqual(first['last_failure']['luna'],{'call':'home-profiles','reason':'service-missing','error_code':-1})
+        self.assertEqual(driver.clean_remove(identifier)['stage'],'restart-required')
+        driver.device.current_boot='22222222-2222-2222-2222-222222222222'
+        result=driver.clean_remove(identifier)
+        self.assertEqual(result['stage'],'verified-clean',result)
+        self.assertEqual(result['routes'],{'mode':'stock-settings','home':'com.webos.app.home'})
+        self.assertEqual(result['original']['request']['state'],'recovery_required')
+        self.assertFalse(present)
+        self.assertFalse(any('setSystem' in name or 'setDefault' in name for name in calls))
+
+    def test_webos5_saved_inverse_and_previous_profiles_prevent_backend_downgrade(self):
+        for proof in ('backup','profiles','override','refused'):
+            with self.subTest(proof=proof):
+                driver,identifier,root,updater,payload,calls,present=self.profileless_fixture()
+                driver.device.ownership=driver.ownership
+                if proof=='backup':
+                    # The live journal may already have been consumed by an old
+                    # restoration; its original inverse must still block fallback.
+                    driver.ownership.store.write('routing-backup-'+identifier,{'profile-trial.json':'{}'})
+                if proof=='override':
+                    exists=os.path.lexists
+                    guard=patch('install_device.os.path.lexists',side_effect=lambda path:
+                        str(path)=='/var/webos-profile/override/clean-your-tv-root.json' or exists(path))
+                else:
+                    from contextlib import nullcontext
+                    guard=nullcontext()
+                # Seed a fenced checkpoint without performing a TV-side restore.
+                with patch.object(driver.device,'clean_remove',side_effect=RuntimeError('old failure')),patch.object(driver.device,'log'):
+                    record=driver.clean_remove(identifier)
+                if proof=='profiles':record['routes']=['com.webos.app.home']*3
+                if proof=='refused':record['profileless_cleanup_eligible']=False
+                driver.ownership.store.write('clean-removal-'+identifier,record)
+                with guard,patch.object(driver.device,'log'):result=driver.clean_remove(identifier)
+                self.assertEqual(result['stage'],'original-writers-fenced')
+                self.assertFalse(any(name.startswith('remove-') for name in calls))
+                self.assertTrue((root/'state/ssap.json').exists())
+
+    def test_webos5_post_restart_home_drift_preserves_removal_fence(self):
+        driver,identifier,root,updater,payload,calls,present=self.profileless_fixture()
+        self.assertEqual(driver.clean_remove(identifier)['stage'],'restart-required')
+        driver.device.current_boot='22222222-2222-2222-2222-222222222222'
+        rpc=driver.device.rpc
+        def changed(method,data):
+            if method.endswith('/getSystemSettings'):
+                return {'returnValue':True,'settings':{'defaultApps':{'home':'third.party.home'}}}
+            return rpc(method,data)
+        driver.device.rpc=changed
+        with patch.object(driver.device,'log'):result=driver.clean_remove(identifier)
+        self.assertEqual(result['state'],'recovery_required')
+        self.assertNotEqual(result['stage'],'verified-clean')
+        self.assertFalse(result.get('current',False))
+        self.assertFalse(driver.ownership.status()['terminal'])
+
+    def test_webos5_cleanup_does_not_hide_other_profile_failures(self):
+        replies=[TimeoutError('Bus response timed out'),RuntimeError('Bus operation rejected'),
+            {'returnValue':False,'errorCode':-1,'errorText':'Permission denied'},
+            {'returnValue':False,'errorCode':-1,'errorText':'Service does not exist: another.service.'},
+            {'returnValue':False,'errorCode':True,'errorText':'Service does not exist: com.webos.service.systemprofile.'},
+            {'returnValue':False,'errorCode':-1,'errorText':'Service does not exist: com.webos.service.systemprofile. extra'}]
+        for reply in replies:
+            with self.subTest(reply=reply):
+                driver,identifier,root,updater,payload,calls,present=self.profileless_fixture(reply)
+                with patch.object(driver.device,'log'):result=driver.clean_remove(identifier)
+                self.assertEqual(result['stage'],'original-writers-fenced')
+                self.assertTrue((root/'state/ssap.json').exists())
+                self.assertFalse(any(name.startswith('remove-') for name in calls))
+
+    def test_webos5_profileless_cleanup_requires_stock_home_and_no_routing_evidence(self):
+        for marker in ('profile-trial.json','persistent-intent.json','persistent-binding.json',
+                       'profile-candidate.stage','home-backend.json','c1-gate','c1-keyfilter'):
+            with self.subTest(marker=marker):
+                driver,identifier,root,updater,payload,calls,present=self.profileless_fixture()
+                (root/marker).write_text('{}')
+                with patch.object(driver.device,'log'):result=driver.clean_remove(identifier)
+                self.assertEqual(result['stage'],'original-writers-fenced')
+                self.assertTrue((root/marker).exists())
+                self.assertFalse(any(name.startswith('remove-') for name in calls))
+        for home in ('third.party.home','com.gathin.tvhome','',None):
+            with self.subTest(home=home):
+                driver,identifier,root,updater,payload,calls,present=self.profileless_fixture(home=home)
+                with patch.object(driver.device,'log'):result=driver.clean_remove(identifier)
+                self.assertEqual(result['stage'],'original-writers-fenced')
+                self.assertFalse(any(name.startswith('remove-') for name in calls))
+
     def test_never_activated_partial_can_clean_when_profile_interface_unavailable(self):
         driver,identifier,root,updater,payload,calls,present=self.fixture(missing_profiles=True)
         self.assertEqual(driver.clean_remove(identifier)['stage'],'restart-required')

@@ -14,7 +14,7 @@ ROOT_REQUIREMENTS = ('root-user', 'python3', 'luna-send', 'apps-directory',
 
 ROOT_ACTIONS = ('inspect', 'install', 'status', 'remove', 'enable', 'restore', 'uninstall', 'clean-remove', 'clean-status')
 
-REASONS = ('unknown', 'user-error', 'ssh-command-failed', 'ssh-unreachable',
+REASONS = ('unknown', 'user-error', 'ssh-command-failed', 'ssh-unreachable', 'ssh-access-denied', 'ssh-refused', 'ssh-timeout',
            'ssh-authentication', 'ssh-identity-changed', 'ssh-trust-record', 'ssh-identity-unverified', 'host-runtime',
            'helper-running', 'helper-state-unverified', 'root-requirements',
            'pending-operation', 'root-operation-unconfirmed', 'project-apps-remain', 'version-mismatch',

@@ -58,8 +58,8 @@ var cp={spawnSync:function(command,args,options){
  if(command==='/proc/self/fd/3')return require('child_process').spawnSync(command,args,options);
  var method=args[2],value={returnValue:true};
  if(method.indexOf('listApps')!==-1){if(process.env.PRIVATE_ERROR)throw Error(process.env.PRIVATE_ERROR);if(process.env.ALL_CATALOGS_DENIED || process.env.DEV_CATALOG_DENIED && method.indexOf('/dev/')!==-1)value.returnValue=false;if(process.env.CATALOG_MALFORMED && method.indexOf('/dev/')!==-1)delete value.returnValue;value.apps=[];}
- else if(method.indexOf('getSystemSettings')!==-1)value.settings={defaultApps:{home:process.env.FOREIGN_ROUTE?'changed':'third.party.home'}};
- else if(method.indexOf('getProfiles')!==-1){if(process.env.FAIL_FINAL_READBACK && ++profileReads===2)throw Error('injected final readback failure');if(process.env.MISSING_PROFILES)value.returnValue=false;else value.profiles={defaultApps:{categories:{home:'third.party.home'}},idleApp:{appId:'third.party.home'}};}
+ else if(method.indexOf('getSystemSettings')!==-1)value.settings={defaultApps:{home:process.env.SETTINGS_HOME||(process.env.FOREIGN_ROUTE?'changed':'third.party.home')}};
+ else if(method.indexOf('getProfiles')!==-1){if(process.env.FAIL_FINAL_READBACK && ++profileReads===2)throw Error('injected final readback failure');if(process.env.MISSING_PROFILES){value.returnValue=false;if(process.env.PROFILE_ERROR)value=JSON.parse(process.env.PROFILE_ERROR);}else value.profiles={defaultApps:{categories:{home:'third.party.home'}},idleApp:{appId:'third.party.home'}};}
  else if(method.indexOf('activitymanager')!==-1)value.activities=JSON.parse(process.env.ACTIVITIES||'[]');
  else if(method.indexOf('getAllInputStatus')!==-1)value.devices=[];
  else throw Error('Unexpected RPC '+method);
@@ -464,6 +464,45 @@ class CleanupTail(unittest.TestCase):
             self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
         self.record.pop('schema');self.write('clean-removal-'+ID+'.json',self.record)
         result,reply=self.run_tail();self.assertNotEqual(result.returncode,0)
+        self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+
+    def test_stock_settings_tail_finishes_without_systemprofile(self):
+        self.record['profileless_cleanup_eligible']=True
+        self.record['routes']={'mode':'stock-settings','home':'com.webos.app.home'}
+        self.write('clean-removal-'+ID+'.json',self.record)
+        missing=json.dumps({'returnValue':False,'errorCode':-1,'errorText':'Service does not exist: com.webos.service.systemprofile.'})
+        result,reply=self.run_tail(MISSING_PROFILES='1',PROFILE_ERROR=missing,SETTINGS_HOME='com.webos.app.home')
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(reply['stage'],'verified-clean')
+        self.assertFalse(self.runtime.exists())
+
+    def test_stock_settings_tail_requires_exact_missing_service_and_stock_readback(self):
+        self.record['profileless_cleanup_eligible']=True
+        self.record['routes']={'mode':'stock-settings','home':'com.webos.app.home'}
+        self.write('clean-removal-'+ID+'.json',self.record)
+        for reply in ({'returnValue':False,'errorCode':-1,'errorText':'Permission denied'},
+                      {'returnValue':False,'errorCode':-1,'errorText':'Service does not exist: another.service.'},
+                      {'returnValue':False,'errorCode':True,'errorText':'Service does not exist: com.webos.service.systemprofile.'},
+                      {'returnValue':False}, {'errorCode':-1}, [],
+                      {'returnValue':True}, {'returnValue':True,'profiles':None},
+                      {'returnValue':True,'profiles':{}}):
+            with self.subTest(reply=reply):
+                result,_=self.run_tail(MISSING_PROFILES='1',PROFILE_ERROR=json.dumps(reply),SETTINGS_HOME='com.webos.app.home')
+                self.assertNotEqual(result.returncode,0)
+                self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+                self.assertTrue(self.runtime.exists())
+        missing=json.dumps({'returnValue':False,'errorCode':-1,'errorText':'Service does not exist: com.webos.service.systemprofile.'})
+        result,_=self.run_tail(MISSING_PROFILES='1',PROFILE_ERROR=missing,SETTINGS_HOME='third.party.home')
+        self.assertNotEqual(result.returncode,0)
+        self.assertTrue(self.runtime.exists())
+        # A service appearing later cannot silently change the selected contract.
+        result,_=self.run_tail(SETTINGS_HOME='com.webos.app.home')
+        self.assertNotEqual(result.returncode,0)
+        self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+        self.record.pop('profileless_cleanup_eligible')
+        self.write('clean-removal-'+ID+'.json',self.record)
+        result,_=self.run_tail(MISSING_PROFILES='1',PROFILE_ERROR=missing,SETTINGS_HOME='com.webos.app.home')
+        self.assertNotEqual(result.returncode,0)
         self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
 
     def test_only_recorded_never_applied_routing_allows_missing_profile_interface(self):

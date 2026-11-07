@@ -8,6 +8,19 @@ from cytv import cli, diagnostics, state
 
 
 class DiagnosticTests(unittest.TestCase):
+    def test_ssh_report_exports_cause_without_wrapped_addresses_or_error_text(self):
+        import errno
+        from paramiko.ssh_exception import NoValidConnectionsError
+        with tempfile.TemporaryDirectory() as tmp:
+            for number, code in [(errno.EACCES, 'ssh-access-denied'),
+                                 (errno.ECONNREFUSED, 'ssh-refused'), (errno.ETIMEDOUT, 'ssh-timeout')]:
+                error = NoValidConnectionsError({('PRIVATE-HOST', 22): OSError(number, 'PRIVATE-TEXT')})
+                path = diagnostics.create_report(state.Store(tmp), 'install', None, 'ssh-connect', error)
+                report = json.loads(path.read_text())
+                self.assertEqual(report['reason_code'], code)
+                self.assertEqual(report['guidance']['code'], code)
+                self.assertNotIn('PRIVATE', path.read_text())
+
     def test_package_failure_states_and_fixed_reasons_survive_report_export(self):
         from cytv.transport import terminal_reply
         from cytv.errors import TVRejected

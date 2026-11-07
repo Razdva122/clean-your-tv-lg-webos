@@ -184,6 +184,10 @@ OBSERVER_EXCEPTION_NAMES = ('Error', 'TypeError', 'SyntaxError', 'ReferenceError
 OBSERVER_EXCEPTION_CODES = ('MODULE_NOT_FOUND', 'ERR_DLOPEN_FAILED', 'EACCES', 'EPERM',
                             'ENOENT', 'ENOSPC', 'EDQUOT', 'EINVAL', 'ENOTSUP', 'EOPNOTSUPP',
                             'EEXIST', 'ENOTDIR', 'EISDIR', 'ELOOP', 'EROFS', 'EMFILE', 'ENFILE', 'EIO')
+OBSERVER_FILESYSTEM_OPERATIONS = ('lstat', 'stat', 'open', 'read', 'write', 'mkdir', 'rmdir',
+                                 'link', 'unlink', 'rename', 'scandir', 'readdir', 'fsync',
+                                 'fchmod', 'fchown', 'fstat', 'close')
+OBSERVER_STORAGE_AREAS = ('private-storage', 'public-staging', 'storage-parent')
 OBSERVER_REASONS = (
     'changed-artifact', 'changed-directory', 'changed-file',
     'changed-plan-source', 'changed-public-stage', 'changed-reservation',
@@ -219,5 +223,10 @@ def no_root_observer_details(value):
     if value.get('failure') == 'observer-error':
         allowed.update(exception_name=OBSERVER_EXCEPTION_NAMES, exception_code=OBSERVER_EXCEPTION_CODES,
                        observer_reason=OBSERVER_REASONS)
+        # Optional for older error envelopes and retained diagnostic records.
+        for key, choices in (('filesystem_operation', OBSERVER_FILESYSTEM_OPERATIONS),
+                             ('storage_area', OBSERVER_STORAGE_AREAS)):
+            if key in value:
+                allowed[key] = choices
     return {key: value[key] if type(value.get(key)) is str and value[key] in choices else 'unknown'
             for key, choices in allowed.items()}

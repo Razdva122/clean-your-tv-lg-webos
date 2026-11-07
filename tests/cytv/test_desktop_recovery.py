@@ -502,7 +502,7 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.assertEqual(report['frontend'], 'desktop')
         original_failure = self.store.device_dir(self.profile)/'diagnostic-failures'/(original['diagnostic_id']+'.json')
         self.assertEqual(json.loads(original_failure.read_bytes()), first)
-        self.assertEqual(report['guidance']['code'], 'ssh-unreachable')
+        self.assertEqual(report['guidance']['code'], 'ssh-timeout')
         self.assertNotIn('PRIVATE', w.report.read_text())
 
     def test_unstarted_removal_gui_recovers_without_monitor_permission(self):
