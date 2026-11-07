@@ -91,6 +91,33 @@ sys.stdin.read()
 
 @unittest.skipIf(os.name=='nt','The TV observer uses POSIX process and filesystem primitives')
 class ObserverProcesses(unittest.TestCase):
+    def test_sdk_staging_permissions_with_private_sticky_storage(self):
+        with tempfile.TemporaryDirectory(dir=PROCESS_TMP) as root:
+            h=Harness(root)
+            developer=h.root/'developer';developer.mkdir(mode=0o775);developer.chmod(0o775)
+            public=developer/'temp';public.mkdir(mode=0o777);public.chmod(0o777)
+            # Model the fixed root-owned SDK containers; real Node still runs
+            # as this unprivileged host user and performs every storage operation.
+            prefix="var fs=require('fs'),original=fs.lstatSync;fs.lstatSync=function(p){var s=original(p);if(p===DEV||p===PUB)s.uid=0;return s;};".replace('DEV',json.dumps(str(developer))).replace('PUB',json.dumps(str(public)))
+            h.source=prefix+observer.PROGRAM.replace("'/media/developer'",json.dumps(str(developer)))
+            h.config['public_root']=str(public)
+            h.plan=observer.make_plan('a'*32,'b'*32,'install',{'helper.ipk':b'helper','launcher.ipk':b'home'},dict(zip(observer.APPS,['1','2'])),public_root=str(public))
+            h.plan['source_sha256']=hashlib.sha256(h.source.encode()).hexdigest()
+            runtimes=[shutil.which('node')]+[os.environ[name] for name in ('NODE010','NODE01025','NODE012') if os.environ.get(name)]
+            for runtime in runtimes:
+                with self.subTest(runtime=runtime):
+                    h.runtime=runtime
+                    for mode in (0o775,0o777):
+                        developer.chmod(mode)
+                        h.call('storage-check')
+            self.assertEqual(list(public.iterdir()),[])
+            self.assertFalse((h.root/'requests').exists())
+            h.call('prepare')
+            self.assertEqual(h.call('status')['reservation'],'active')
+            self.assertEqual((h.root/'private').stat().st_mode&0o777,0o700)
+            public.chmod(0o775)  # Only the exact known SDK layout is admitted.
+            h.call('storage-check',ok=False)
+
     def test_pinned_stream_uploads_on_every_configured_runtime(self):
         runtimes=[shutil.which('node')]+[os.environ[name] for name in ('NODE010','NODE01025','NODE012') if os.environ.get(name)]
         for runtime in runtimes:

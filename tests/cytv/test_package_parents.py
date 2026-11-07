@@ -33,7 +33,8 @@ class PackageParentTests(unittest.TestCase):
                    'service.js': b'void 0;'}
         raw = builder['pack_app'](app, service, architecture='arm')
         self.assert_parent_entries(raw)
-        self.assertEqual(package.data_files(raw)['usr/palm/services/com.local.nativehome.service/service.js'], b'void 0;')
+        self.assertEqual(package.data_files(raw)['usr/palm/services/com.local.nativehome.service/service.js'],
+                         builder['compile_helper'](service)['service.js'])
 
     def test_home_personalization_keeps_parents_and_state_permissions(self):
         app = 'com.gathin.tvhome'

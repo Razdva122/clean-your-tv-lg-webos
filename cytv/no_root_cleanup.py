@@ -122,7 +122,8 @@ try{
   try{var transaction=JSON.parse(bytes.toString());if(transaction.schema===1&&['installing','rolling-back','recovery-required'].indexOf(transaction.status)>=0)reply.external_update_hint=transaction.status;}catch(ignored){}
  }
 }catch(ignored){}
-try{var operations='/media/developer/.cytv-installer/operations';if(exists(operations)){ancestry(operations);var ids=fs.readdirSync(operations);reply.resident_installer=ids.length>0;ids.forEach(function(id){if(/^[a-f0-9]{32}$/.test(id)&&reply.staging_ids.indexOf(id)<0)reply.staging_ids.push(id);});if(reply.staging_ids.length>128)fail();}}catch(e){blocked('installer-private',e);}
+var installerRoots=['/media/developer/.cytv-installer','/tmp/.cytv-installer'];
+installerRoots.forEach(function(root){try{var operations=root+'/operations';if(exists(operations)){ancestry(operations);var ids=fs.readdirSync(operations);reply.resident_installer=reply.resident_installer||ids.length>0;ids.forEach(function(id){if(/^[a-f0-9]{32}$/.test(id)&&reply.staging_ids.indexOf(id)<0)reply.staging_ids.push(id);});if(reply.staging_ids.length>128)fail();}}catch(e){blocked('installer-private',e);}});
 function helperState(state){
  ancestry(path.dirname(state));var s=fs.lstatSync(state);
  // Published Helper accepts legacy shared state0777 when chmod is unavailable.
@@ -149,7 +150,7 @@ if(input.action==='stop'){
  };stopped();return;
 }
 apps.forEach(function(app,index){visit(base+'/applications/'+app,app+' app');visit(base+'/packages/'+app,app+' package');visit(base+'/services/'+services[index],app+' service');});
-visit('/media/developer/.cytv-installer','installer-private');
+installerRoots.forEach(function(root){visit(root,'installer-private');});
 // Only fixed project registration names. Existing foreign roles/routes are not
 // inferred to belong to this project merely because they reference an app.
 ['services.d','roles.d','client-permissions.d','api-permissions.d','manifests.d','groups.d'].forEach(function(folder){
