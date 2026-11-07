@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [1.11.0 maintainer C3 QA](2026-11-07-release-1.11.0-tv-qa.md): exact-byte No-root and final Root controls/audio/standby/emergency, normal full removal after restart, non-blocking icon issue394 and explicit untested paths.
+
 - [1.11.0 failed full run and replacement](2026-11-07-release-1.11.0-candidate-replacement.md): complete failure inventory, combined Windows fixture/CI evidence correction, replacement build and final package gates.
 
 - [1.11.0 freeze and pre-dispatch checks](2026-11-07-release-1.11.0-freeze.md): versioned preliminary payload, bounded C3 Helper compatibility, original SSH failure/recovery and final full-candidate gates.

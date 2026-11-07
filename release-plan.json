@@ -91,10 +91,11 @@
     }
   ],
   "excluded": [],
-  "acceptance": "",
+  "acceptance": "Maintainer-owned OLED55C3RLA firmware43.21.71 SDK11.2.0, remote exact model unknown, macOS15.6.1 ARM64 final cytv0.12.0. Exact final Home1.12.0/Helper0.7.5 public bytes verified; owner confirmed No-root UI/arrows/OK/Back/settings, app launch, single Home, audio/volume and30s standby/wake. Earlier exact-byte Helper emergency compatibility retained. Final CLI Root0.12.0/Updater0.5.1 installed and activated with package/recovery readback and no pending; owner confirmed UI/keys/audio, held-arrow release, Home return, standby/wake and triple-Home emergency LG return with audio. Normal full Root removal required one ordinary OS reboot then same-goal continuation, verified-clean; all project apps/startup hooks absent, LG Home and audio confirmed. Nonblocking icon defect394 deferred; confusing edition-transition explanation deferred to next-release agent PR. AC cold boot not repeated at owner request; OTA/retained rollback, unrooted Developer Mode, HDMI/CEC, Android and other-device paths not claimed. Maintainer explicitly requested publication after this bounded QA pass. Detailed observations: docs/history/2026-11-07-release-1.11.0-tv-qa.md.",
   "build": {
     "run_id": 42370069375,
     "attempt": 1,
     "source": "f537a65243f564b1fbd7fff04703de9836f3e97f"
-  }
+  },
+  "acceptance_build": "42370069375:1"
 }

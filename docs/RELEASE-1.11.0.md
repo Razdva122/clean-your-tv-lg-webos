@@ -1,8 +1,6 @@
 # v1.11.0 — legacy compatibility and installation recovery
 
-Unpublished release candidate. Scope frozen by the maintainer on 2026-11-07;
-packages, complete candidate validation and affected physical acceptance remain
-required before publication. Published downloads remain v1.10.0 until shipping.
+Scope frozen by the maintainer on 2026-11-07. [Full candidate42370069375:1](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42370069375) passed all21 jobs. The maintainer requested publication after the [bounded C3 QA pass](history/2026-11-07-release-1.11.0-tv-qa.md); untested paths remain explicit.
 
 ## Changes
 
@@ -66,7 +64,7 @@ same-package Start/confirmation, enabled status, non-root-controller and physica
 triple-Home/arrow checks on the authorized C3. The committed approval binds real
 published package hashes and the candidate canonical Helper archive. Actual
 normal automatic OTA/rollback and unrooted Developer Mode provisioning remain
-untested; final candidate equivalence and affected acceptance are still required.
+untested; final candidate equivalence passed, and the bounded final C3 observations are linked below.
 Fresh System 1.2.4 versions changed packaged sources; ordinary component OTA does
 not replace a retained System supervisor or authorize general migration.
 Homebrew Installer remains unreleased with no promotion record. Android retains
@@ -77,12 +75,20 @@ its application ID and signing identity.
 [Candidate PR #374](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/374)
 contains the current build, gates and linked implementation evidence.
 [Freeze/preflight record](history/2026-11-07-release-1.11.0-freeze.md) records
-actual preliminary packages and checks separately from final acceptance.
+actual preliminary packages and checks separately from the final [C3 QA observations](history/2026-11-07-release-1.11.0-tv-qa.md).
 
 The preliminary Helper compatibility observation above is bounded to its exact
-packages and C3 state; it is not final release acceptance. Broader Home routing,
-unrelated buttons/key-up, sound, HDMI/CEC, standby, cold boot,
-installation/removal, complete OTA and rollback need their affected exact-artifact
-checks. Earlier TV observations remain bound to their original bytes and state.
+packages and C3 state; the final case pass below supplies separate physical
+observations. HDMI/CEC, pointer/wheel, true cold boot, complete OTA and rollback
+remain untested. Earlier TV observations remain bound to their original bytes
+and state.
 Do not clear emergency stops, uncertain receipts or recovery journals to force
 installation. Partial fixes do not close unresolved reports.
+
+The final C3 session passed No-root/Root UI, single-Home routing, audio/volume,
+standby/wake, Root key-up and emergency LG return, and normal full removal after
+an OS restart. AC cold boot was waived and not executed; normal OTA/retained
+rollback, unrooted Developer Mode, Android and other-device acceptance are not
+claimed. [Root icon fallback #394](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/394)
+is a maintainer-accepted non-blocking follow-up. Clearer No-root/Root transition
+guidance is assigned separately for the next release; current guards remain.
