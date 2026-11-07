@@ -66,7 +66,7 @@ class RootPreflightTests(unittest.TestCase):
                                  '/media/developer/apps', '/var/luna-service2-dev', '/usr/bin/node'), paths.values()))
 
         class Remote:
-            def run(self, command):
+            def run(self, command, **kwargs):
                 for original, path in replacements.items():
                     command = command.replace(original, shlex.quote(str(path)))
                 uid = '1000' if 'root-user' in failed else '0'
@@ -100,6 +100,9 @@ class RootPreflightTests(unittest.TestCase):
             Installer(self.remote(Path(tmp)), None, {'edition': 'root'}, '.', {},
                       tv_info=info).preflight()
             self.assertEqual(info['root_requirements'], dict.fromkeys(REQUIREMENTS, 'pass'))
+            self.assertEqual(info.get('node_version_status'), 'read')
+            self.assertEqual(info.get('node_version'),
+                             subprocess.check_output([shutil.which('node'), '--version'], text=True).strip()[1:])
 
     @unittest.skipUnless(os.name == 'posix', 'TV shell probes require POSIX Python with fcntl')
     def test_cli_report_identifies_requirements_without_private_remote_output(self):

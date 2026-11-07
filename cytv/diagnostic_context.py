@@ -102,6 +102,9 @@ def tv_summary(value):
                                   for key in ('applications','inputs')}
     if version(value.get('node_version')):
         result['node_version'] = value['node_version']
+    if 'node_version_status' in value:
+        result['node_version_status'] = choice(value['node_version_status'],
+            ('read', 'missing', 'launch-error', 'invalid-output', 'unavailable'), 'unavailable')
     if 'root_diagnostics' in value:
         result['root_diagnostics'] = root_diagnostics_summary(value['root_diagnostics'])
     if 'setup_outcome' in value:
@@ -135,6 +138,31 @@ def tv_summary(value):
         result['components'] = {key: item for key, item in mapping(value['components']).items()
                                  if key in COMPONENTS.values() and version(item)}
     return result
+
+
+def collect_node_version(remote, info):
+    """Read evidence before admission; never substitute it for runtime probes."""
+    info.pop('node_version', None)
+    info['node_version_status'] = 'unavailable'
+    try:
+        reply = remote.run('''if [ ! -e /usr/bin/node ] && [ ! -L /usr/bin/node ]; then
+printf CYTV_NODE_MISSING
+elif cytv_node_version=$(/usr/bin/node --version 2>/dev/null); then
+printf 'CYTV_NODE_VERSION %s' "$cytv_node_version"
+else
+printf CYTV_NODE_LAUNCH_ERROR
+fi''', timeout=10).strip()
+    except Exception:
+        return
+    if reply == 'CYTV_NODE_MISSING':
+        info['node_version_status'] = 'missing'
+    elif reply == 'CYTV_NODE_LAUNCH_ERROR':
+        info['node_version_status'] = 'launch-error'
+    else:
+        match = re.fullmatch(r'CYTV_NODE_VERSION v([0-9]{1,5}\.[0-9]{1,5}\.[0-9]{1,5})', reply) if type(reply) is str else None
+        info['node_version_status'] = 'read' if match else 'invalid-output'
+        if match:
+            info['node_version'] = match[1]
 
 
 def collect_metadata(remote, info):

@@ -5,6 +5,24 @@ without treating it as recovery authority. These changes are in source only;
 v1.5.4 does not contain them. No TV compatibility or completed recovery follows
 from a diagnostic report.
 
+## TV Node version (next candidate)
+
+Root and No-root preflight and status checks read `/usr/bin/node --version`
+before checking other requirements. Diagnostic `tv.node_version` retains a
+validated numeric version, including an older version rejected by admission.
+`tv.node_version_status` distinguishes `read`, `missing` (no file or symlink),
+`launch-error` (present but execution failed, including a broken symlink or
+missing executable permission), `invalid-output` (a successful command without
+a recognized version), and `unavailable` (the read could not be completed).
+Each new read clears any previous version so an older observation cannot be
+reported as current after failure. Both fields survive failure-history export.
+
+This optional read never replaces or relaxes the existing Root, Root Beta or
+Helper runtime probes. A version-read failure does not hide the primary failure
+or authorize package preparation. Only the validated version and fixed status
+are exported; raw command output, stderr and exception text are excluded.
+No new TV installation, configuration, permission or endpoint is introduced.
+
 ## Network connection causes (next candidate)
 
 During `ssh-connect`, inspect typed socket errors, including the values of

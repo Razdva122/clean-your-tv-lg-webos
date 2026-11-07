@@ -71,6 +71,8 @@ class RuntimeChoices(unittest.TestCase):
                         offer(installer, args, lambda _:'', Console(lambda _:None))
                     self.assertEqual(profile['edition'], 'root')
                     self.assertIsNone(store.pending(profile))
+                self.assertEqual(installer.tv_info.get('node_version'), '0.12.2')
+                self.assertEqual(installer.tv_info.get('node_version_status'), 'read')
 
     def test_explicit_beta_needs_second_confirmation(self):
         from cytv.root_runtime import offer
