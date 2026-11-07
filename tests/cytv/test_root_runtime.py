@@ -1,4 +1,5 @@
 """Legacy choices must preserve recovery and authentication boundaries."""
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -20,6 +21,7 @@ class RuntimeChoices(unittest.TestCase):
         with self.assertRaisesRegex(UserError,'Previous Root installation needs recovery'):
             installer.preflight(install=True)
 
+    @unittest.skipIf(os.name == 'nt', 'TV shell fixture requires POSIX paths')
     def test_unavailable_vendor_probe_is_a_result_not_an_ssh_failure(self):
         from cytv.root_runtime import VENDOR_PROBE, FRESH_PROBE
         import subprocess
