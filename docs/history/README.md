@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [Release 1.12.0 scoped QA, 2026-11-07](2026-11-07-release-1.12.0-scoped-qa.md): exact Android emulator upgrade/native checks, packaged UI and icons, authorized C3 delivery, physical Beta deferral and unresolved Home precondition.
+
 - [1.12.0 verified candidate artifacts, 2026-11-07](2026-11-07-release-1.12.0-artifacts.md): successful full build42384446335:1, verified archive/package hashes and pending exact-package acceptance.
 
 - [1.12.0 freeze and package preflight, 2026-11-07](2026-11-07-release-1.12.0-freeze.md): complete five-PR scope, selected versions, signed baselines and pending exact-package acceptance.

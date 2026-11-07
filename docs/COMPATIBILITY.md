@@ -22,8 +22,9 @@ over root. Unknown or unreadable Node output does not authorize either path.
 Beta leaves system Node unchanged, retains Python/vendor module/Home checks and
 blocks ordinary OTA. Host checks do not establish native LS2 registration, Home,
 emergency, audio, power or rollback compatibility on any TV, including #383.
-Owner-authorized exact-package physical acceptance remains required before
-publication. See [implementation and testing](development/ROOT-NODE-PROTOTYPE.md#unreleased-installer-beta).
+For candidate1.12.0 the maintainer explicitly deferred physical Beta testing;
+this is an unverified Beta limitation, not compatibility evidence or a passing
+#383 outcome. [Selected checks and limits](history/2026-11-07-release-1.12.0-scoped-qa.md). See [implementation and testing](development/ROOT-NODE-PROTOTYPE.md#unreleased-installer-beta).
 
 Release 1.5.4 includes Home Helper 0.6.21 with TV Node.js 0.10.25+ support for
 [#152](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/152).

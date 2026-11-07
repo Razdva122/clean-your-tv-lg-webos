@@ -61,7 +61,10 @@ original bundle/coordinator. Root Beta is a distinct exact-Node payload with
 ordinary OTA disabled, not acceptance of regular Root on legacy Node.
 
 Android retains the application ID and original signing certificate. Its final
-signed APK upgrade and retained-data acceptance remain pending. Homebrew Installer
+signed APK original-signer code25-to-code26 upgrade and synthetic retained-data
+checks passed on an isolated API35 ARM64 emulator; see the
+[scoped QA record](history/2026-11-07-release-1.12.0-scoped-qa.md). Physical-phone and live phone-to-TV
+operations remain untested. Homebrew Installer
 promotion remains disabled; there is no selected release approval.
 
 ## Validation and remaining acceptance
@@ -72,9 +75,11 @@ source evidence is in the [integration record](history/2026-11-07-post-1.11.0-in
 and [#401 record](history/2026-11-07-small-issue-followups.md), including its original
 failed observer run and separately corrected final CI.
 
-No TV was accessed for this freeze. Earlier C3 observations certify their original
-artifacts/state only. Exact-package Home routing, controls/emergency/key-up, icons,
-Settings convergence, audio, standby, AC cold boot, update/rollback and recovery/
-removal remain separate owner-authorized acceptance cases. Legacy Beta bootstrap
-and original #383/#389 outcomes are unverified. A package build or install is not
-physical acceptance. Partial #348/#368 work leaves those original reports open.
+The freeze itself did not access a TV. The later
+[scoped QA record](history/2026-11-07-release-1.12.0-scoped-qa.md) records the maintainer's
+case selection, explicit physical-Beta deferral, exact APK emulator acceptance,
+package browser checks and authorized C3 update. Root icons and Home after explicit
+owner enable passed; automatic Home preservation through the update remains
+unproved. Controls/audio and standby observations are pending. No release-wide
+acceptance is asserted. Legacy Beta bootstrap and original #383/#389 outcomes
+remain unverified; partial #348/#368 work leaves those original reports open.
