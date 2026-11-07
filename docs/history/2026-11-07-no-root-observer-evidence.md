@@ -70,3 +70,15 @@ release version, selected build or candidate scope is changed here.
 
 Physical installation, Home/Back/emergency behavior, sound, standby, cold boot,
 OTA and rollback are untested. Source/model tests do not certify those paths.
+
+## Integration into the next candidate
+
+[PR #380](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/380) merged into
+`release/next` as `6cb529ed92bbb39027c815fb567410efbcace79a`. Its final head
+`e50860090b5a98a61656126c1bb559a82bec0cb0` includes concurrent #379; all 72
+affected observer/report/history/guidance checks passed on that combined source.
+The earlier full local installer/Android results above precede #379.
+[Final-head CI](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42359837874)
+is pending at integration; release-routing policy passed. No publication or new
+physical acceptance is claimed. The release inventory keeps #376 linked while
+explicitly retaining its unknown original installation/recovery cause.
