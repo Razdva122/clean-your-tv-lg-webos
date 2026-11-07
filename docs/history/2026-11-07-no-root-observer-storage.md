@@ -80,3 +80,11 @@ are selected here.
 Documentation: the developer authority reference is updated. Existing setup,
 recovery confirmations, restart guidance, messages and all translated controls
 remain applicable; no localized user-facing step changes are introduced.
+
+## Integration
+
+[PR #385](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/385) merged into
+`release/next` as `459f10718482d3096ff4cada4e2d320cf01c53c4`, for draft
+[candidate #374](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/374).
+Standalone CI was skipped by explicit maintainer instruction. No public release,
+selected build or device acceptance is claimed. The original issue remains open.

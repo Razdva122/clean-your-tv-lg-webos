@@ -65,6 +65,13 @@
         378
       ],
       "summary": "Preserve observer sender/disconnect/retire fault injection in test adapters; document superseded failures and targeted passes"
+    },
+    {
+      "pr": 385,
+      "issues": [
+        201
+      ],
+      "summary": "Fix No-root observer storage before pending and retain confirmed legacy cleanup; original device installation/recovery remains unverified"
     }
   ],
   "excluded": [],
