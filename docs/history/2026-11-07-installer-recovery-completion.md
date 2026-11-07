@@ -62,6 +62,13 @@ installers need rebuilding; no Helper behavior or package baseline changes here.
   and reported no remaining Critical/Important findings. Formatting and PR CI
   results are recorded in the implementation PR.
 
+[PR #377](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/377) merged
+into `release/next` as `186eb42586ba9c992b5e38a993226f644219aa87` after
+[combined-head CI](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42358921172)
+and both frozen desktop runtime checks passed. A further 55 recovery/native
+checks passed on the resulting candidate including the neighboring #379/#380
+changes. This is implementation integration, not frozen release acceptance.
+
 TV model, firmware/webOS and remote are untested for this change. Physical Home,
 key-up/emergency behavior, audio, standby, cold boot, OTA and rollback must not be
 inferred from these source checks. Candidate build selection, version bumps,
