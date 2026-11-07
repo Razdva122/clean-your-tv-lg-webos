@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [Small issue follow-ups, 2026-11-07](2026-11-07-small-issue-followups.md): transitional Home status, private retention diagnostics and SSH trust guidance; combined CI, observer test synchronization and remaining device/recovery scope.
+
 - [Post-1.11.0 integration, 2026-11-07](2026-11-07-post-1.11.0-integration.md): legacy Root Beta, optional input discovery, visible icon selection and edition-transition guidance; combined host checks and outstanding exact-package acceptance.
 
 - [1.11.0 maintainer C3 QA](2026-11-07-release-1.11.0-tv-qa.md): exact-byte No-root and final Root controls/audio/standby/emergency, normal full removal after restart, non-blocking icon issue394 and explicit untested paths.

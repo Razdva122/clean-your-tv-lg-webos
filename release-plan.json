@@ -29,6 +29,15 @@
         396
       ],
       "summary": "Explain explicit verified cleanup before switching from reinstalled No-root to Root; preserve removal ownership and recovery guards"
+    },
+    {
+      "pr": 401,
+      "issues": [
+        347,
+        348,
+        368
+      ],
+      "summary": "Fix transitional Root Settings status; add private retention diagnostics and SSH identity recovery guidance; original #348 automatic re-entry and #368 trust recovery remain unresolved"
     }
   ],
   "excluded": [],
