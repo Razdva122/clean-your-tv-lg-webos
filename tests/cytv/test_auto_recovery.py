@@ -1,5 +1,7 @@
 """User journeys after failed setup; only TV IO is simulated."""
 import json
+import os
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -231,6 +233,7 @@ class ActivationCompensation(unittest.TestCase):
 
 
 class RemovalContinuation(unittest.TestCase):
+    @unittest.skipIf(os.name == 'nt' or not shutil.which('node'), 'POSIX TV filesystem model requires Node')
     def test_uncertain_cleanup_carrier_is_not_reinstalled_when_inventory_lags(self):
         from tests.cytv.test_no_root_simple_removal import SimpleRemoval
         fixture = SimpleRemoval()
@@ -352,6 +355,7 @@ class RemovalContinuation(unittest.TestCase):
         self.assertEqual(record['previous'], original['previous'])
         self.assertIsNotNone(store.pending(foreign))
 
+    @unittest.skipIf(os.name == 'nt' or not shutil.which('node'), 'POSIX TV filesystem model requires Node')
     def test_lost_remove_response_reconnects_and_finishes_without_duplicate_package_request(self):
         from tests.cytv.test_no_root_simple_removal import SimpleRemoval
         fixture = SimpleRemoval()
