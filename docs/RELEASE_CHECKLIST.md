@@ -1,5 +1,12 @@
 # Release checks
 
+- Select a short case list from the actual release diff using
+  [risk-based case selection](RELEASE-FLOW.md#select-cases-by-the-failure-they-could-detect).
+  Give every case a changed-path/dependency reason and use the least expensive
+  faithful check. The component matrices are case libraries, not an automatic
+  full physical pass. Record exclusions and explicit deferrals; do not relabel
+  untested new artifacts as passed.
+
 - Complete the [planned case pass and failure inventory](RELEASE-FLOW.md#complete-planned-cases-before-batch-fixes)
   before the fix batch; verify affected and newly reachable cases before its merge.
 
@@ -32,8 +39,11 @@
 
 - Keep development-only tools out of production IPKs.
 - Source integration as Root Preview does not certify a stable binary release.
-- Do not publish a stable Root Edition installer until the hardware gates in
-  [Root Edition testing](../root-edition/TESTING.md) pass.
-- Verify exact metadata, registration cache, both profiles and SAM Home rollback.
+- Do not publish a stable Root Edition installer until the selected affected hardware gates in
+  [Root Edition testing](../root-edition/TESTING.md) pass and remaining limitations
+  are explicitly recorded. Existing release-blocking failures remain gates.
+- Select exact metadata/registration-cache, profile and SAM rollback cases when
+  their code, package boundary or state transition is affected; preserve independent
+  recovery readiness before device changes.
 - Document native-button emergency behavior separately from No-root controls.
 - Never present a diagnostic-app result as a production-launcher result.

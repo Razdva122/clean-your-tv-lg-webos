@@ -1,6 +1,6 @@
 # Install Clean Your TV from Android
 
-> **Unpublished v1.12.0 candidate:** Android 0.12.0 / versionCode 26. Final signed-APK upgrade and retained-data acceptance are pending; historical checks do not accept these bytes. See [candidate scope](../docs/RELEASE-1.12.0.md).
+> **v1.12.0:** Android 0.12.0 / versionCode 26. Exact original-signer code25-to-code26 upgrade, synthetic retained data and native fixtures passed on an API35 ARM64 emulator. Physical phones and live phone-to-TV operations remain untested. See [scoped acceptance and limits](../docs/history/2026-11-07-release-1.12.0-scoped-qa.md).
 
 Use your phone to install either **No-root** (Developer Mode) or **Root**
 (existing root SSH) on an LG webOS TV. No PC, Termux, phone Python installation

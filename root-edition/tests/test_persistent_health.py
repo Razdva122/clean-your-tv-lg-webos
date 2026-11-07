@@ -4,9 +4,9 @@ from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'runtime'))
 import device_adapter as d
 import persistent_health as h
-from test_persistent_recovery import IntegrationTests
+from test_persistent_recovery import IntegrationFixture
 
-class HealthTests(IntegrationTests):
+class HealthTests(IntegrationFixture, unittest.TestCase):
  def setUp(self):
   super().setUp()
   self.health=self.root/'volatile';self.health.mkdir(mode=0o700)

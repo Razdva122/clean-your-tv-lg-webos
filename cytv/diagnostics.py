@@ -60,6 +60,8 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
     elif type(error).__name__ in ('NoValidConnectionsError', 'AuthenticationException', 'BadHostKeyException', 'ImportError'):
         reason = {'NoValidConnectionsError': 'ssh-unreachable', 'AuthenticationException': 'ssh-authentication',
                   'BadHostKeyException': 'ssh-identity-changed', 'ImportError': 'host-runtime'}[type(error).__name__]
+    if phase == 'ssh-connect' and help and help['code'] in ('ssh-unreachable', 'ssh-access-denied', 'ssh-refused', 'ssh-timeout'):
+        reason = help['code']
     report['reason_code'] = context.choice(reason, context.REASONS)
     if status is not None:
         report['status'] = context.status_summary(status)

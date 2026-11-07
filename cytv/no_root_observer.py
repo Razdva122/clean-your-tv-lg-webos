@@ -12,7 +12,8 @@ import time
 import uuid
 
 from .errors import (UserError, LocalRecoveryError, TVCommandError, TV_STORAGE_FULL, no_root_observer_details,
-                     OBSERVER_EXCEPTION_NAMES, OBSERVER_EXCEPTION_CODES, OBSERVER_REASONS)
+                     OBSERVER_EXCEPTION_NAMES, OBSERVER_EXCEPTION_CODES, OBSERVER_REASONS,
+                     OBSERVER_FILESYSTEM_OPERATIONS)
 
 PROTOCOL = 'no-root-original-stream-v1'
 ROOT = '/tmp/.cytv-installer'
@@ -538,11 +539,28 @@ def invoke(remote, plan, command, slot=None, source=None, proof=None, data=None)
     program = 'try {\n' + program_source + r"""
 } catch (error) {
  function category(value, allowed) {return typeof value==='string'&&allowed.indexOf(value)>=0?value:'unknown';}
- process.stdout.write(JSON.stringify({operation:JSON.parse(process.argv[process.argv.length-1]).plan.operation,
+ var request=JSON.parse(process.argv[process.argv.length-1]);
+ function storageArea(value) {
+  if(typeof value!=='string'||value.charAt(0)!=='/')return 'unknown';
+  var path=require('path'), name=path.resolve(value);
+  var roots=[request.root,request.public_root], areas=['private-storage','public-staging'];
+  for(var i=0;i<roots.length;i++){
+   if(name===roots[i]||name.indexOf(roots[i]+'/')===0)return areas[i];
+  }
+  for(var j=0;j<roots.length;j++){
+   for(var parent=path.dirname(roots[j]);;parent=path.dirname(parent)){
+    if(name===parent)return 'storage-parent';
+    if(parent===path.dirname(parent))break;
+   }
+  }
+  return 'unknown';
+ }
+ process.stdout.write(JSON.stringify({operation:request.plan.operation,
   observer_error:{exception_name:category(error&&error.name,NAMES),
-   exception_code:category(error&&error.code,CODES),observer_reason:category(error&&error.message,REASONS)}}));
+   exception_code:category(error&&error.code,CODES),observer_reason:category(error&&error.message,REASONS),
+   filesystem_operation:category(error&&error.syscall,FILESYSTEM_OPERATIONS),storage_area:storageArea(error&&error.path)}}));
 }
-""".replace('NAMES', canonical(OBSERVER_EXCEPTION_NAMES)).replace('CODES', canonical(OBSERVER_EXCEPTION_CODES)).replace('REASONS', canonical(OBSERVER_REASONS))
+""".replace('NAMES', canonical(OBSERVER_EXCEPTION_NAMES)).replace('CODES', canonical(OBSERVER_EXCEPTION_CODES)).replace('REASONS', canonical(OBSERVER_REASONS)).replace('FILESYSTEM_OPERATIONS', canonical(OBSERVER_FILESYSTEM_OPERATIONS))
     try:
         # POSIX unset avoids depending on the TV env utility supporting -u.
         raw = remote.run('unset NODE_OPTIONS NODE_PATH && /usr/bin/node -e ' +

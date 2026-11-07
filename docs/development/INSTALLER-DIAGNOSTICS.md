@@ -5,6 +5,27 @@ without treating it as recovery authority. These changes are in source only;
 v1.5.4 does not contain them. No TV compatibility or completed recovery follows
 from a diagnostic report.
 
+## Network connection causes (next candidate)
+
+During `ssh-connect`, inspect typed socket errors, including the values of
+Paramiko `NoValidConnectionsError.errors`. `EACCES`/`EPERM` map to
+`ssh-access-denied`, `ECONNREFUSED` to `ssh-refused`, and socket timeouts to
+`ssh-timeout`. Mixed causes and other errors retain `ssh-unreachable`; a host
+unreachable error does not establish that macOS Local Network permission was
+denied. Diagnostics export only these allowlisted codes, never the address keys,
+exception text or raw errors. Trust, authentication and local key-file failures
+retain their separate guidance. Classification is limited to initial connection.
+
+Desktop connection guidance replaces the scrolling report/checklist at failure
+with the cause, next step and explicit Doctor recheck. Doctor checks prerequisites
+and status; it does not submit package installation or resume setup. Its usual
+SSH trust/authentication prompts and saved-profile checks still apply. Edited
+connections are validated before running Doctor. Pending operations keep their
+original identity and recovery flow; no new edit/recheck shortcut is offered.
+On macOS, settings access is a user action, not an automatic permission change.
+Settings may show an older duplicate name; the app does not claim to read that
+permission state.
+
 ## Optional Root input inventory (next candidate)
 
 Root setup still requires a validated, nonempty application catalog. An unavailable
@@ -300,6 +321,39 @@ including `prepare` and `status`. Shell/Node startup failures, parse failures
 before execution and later asynchronous/detached-worker failures can still use
 `command-failed`, transport or existing terminal evidence; absence of a runtime
 category does not identify the cause. No TV compatibility is inferred.
+
+### Filesystem failure context (next candidate)
+
+For synchronous `observer-error` replies, the launcher additionally projects the
+existing exception's `syscall` and `path` into two optional, allowlisted fields:
+
+| Field | Values and meaning |
+| --- | --- |
+| `filesystem_operation` | Native filesystem operation: `lstat`, `stat`, `open`, `read`, `write`, `mkdir`, `rmdir`, `link`, `unlink`, `rename`, `scandir`, `readdir`, `fsync`, `fchmod`, `fchown`, `fstat`, or `close`; otherwise `unknown`. |
+| `storage_area` | `private-storage` for the invocation's private observer root or descendants; `public-staging` for its public staging root or descendants; `storage-parent` for an ancestor of either root; otherwise `unknown`. Applies to Developer Mode and Root SSH roots. |
+
+Classification uses only a normalized absolute pathname already carried by the
+exception, with directory boundaries preserved. It does not resolve symlinks,
+read metadata, or identify a physical mount. The original pathname, syscall
+text outside the allowlist, exception message, stack and operation identifiers
+are never exported. Relative paths, missing/non-string paths, descriptor-only
+errors (such as `fsync` without a path) and unknown operations remain `unknown`;
+there is no inference from the exception message or another filesystem probe.
+Both fields are revalidated in current reports and retained failure history;
+older envelopes/records without them remain valid and do not gain invented data.
+
+For example, `storage-check` / `EACCES` / `mkdir` / `public-staging` narrows a
+failure to creation in SDK staging. It does not identify the denying policy or
+authorize chmod/chown, cleanup or retry. The storage check precedes creation of
+a new pending operation and package submission, so the generic
+`pending-operation` reason alone does not establish that pending exists.
+
+The context is added only by the launcher wrapper. Developer Mode and Root SSH
+observer source bytes, source hashes and capsule bindings are unchanged. No
+additional TV command, filesystem operation, permission change, automatic retry
+or recovery action is introduced. Detached/asynchronous worker errors remain
+outside this synchronous error envelope. Rebuilt host and Android installers
+are required for delivery; these additions are not in published CYTV 0.12.0.
 
 `first_failure` belongs to the pending operation's diagnostic ID, not the TV's
 entire installation history. Different timestamps across exports do not establish

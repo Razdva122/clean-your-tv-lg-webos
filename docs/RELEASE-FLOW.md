@@ -380,27 +380,69 @@ Before testing, run:
 python3 scripts/release-flow.py acceptance-report
 ```
 
-This conservatively recommends scenarios from changes since `main`; it is not an
-acceptance result or a replacement for reviewing dependencies. Only known visual
-assets select `ui-controls` alone. Behavioral frontend JS and unknown/shared paths
-select the full matrix. Service/input paths select controls, startup and recovery;
-installer/updater paths select update-recovery, including post-transition controls
-and audio. Add scenarios whenever the change affects their preconditions.
+The command conservatively recommends **areas to review**, not a mandatory list
+of physical tests. A behavioral JS or shared-file match can select every area;
+the coordinator must refine that output into cases using the actual diff,
+packaged contents and dependencies before scheduling device work.
 
-Record one row per scenario with build run/attempt, artifact SHA-256, model and
-firmware, initial state/upgrade source, expected/observed result, evidence link,
-and untested paths. `update-recovery` includes installation/update/retained rollback
-and controls/audio after the transition; `startup` distinguishes standby and cold
-boot; `controls` includes Home, Back, other controls and emergency off. Retain
-independent recovery and owner-presence requirements for physical changes.
+### Select cases by the failure they could detect
 
-Carry an observation only when all artifacts used by that scenario have identical
-hashes and its preconditions (firmware, prior state/version and upgrade path) match.
-The candidate input comparison is enough to keep the same selected installer
-bytes across evidence edits; source similarity across rebuilt packages alone is
-not enough. Do not repeat unchanged cases merely because the overall release
-number changed. Do not carry a different model's result or label an untested path
-passed. An unresolved failure remains a failure until investigated.
+For each proposed case, record: changed behavior/input, plausible failure,
+relevant entrypoints/dependencies, existing evidence, and the smallest check
+whose failure would change the release decision. Keep one short candidate table:
+
+| Case | Why this release can affect it | Minimum check / existing evidence | Disposition |
+| --- | --- | --- | --- |
+| Concrete behavior | Changed path plus dependent mechanism | Automated, artifact, emulator or physical check | Selected, already verified, not selected, deferred or blocked |
+
+- Select affected behavior and its immediate integration boundary. A status-panel
+  change can need transitional-status/Off checks and one reported standby case;
+  it does not automatically require AC cold boots, process suspension, failsafe
+  and whole-edition rollback. An icon-reader change needs bounded catalog/path
+  cases and icon presentation, not every input gesture.
+- Prefer host/browser checks for deterministic validation, warnings and recovery
+  text. Use an emulator for Android package/runtime/update-state checks. Reserve
+  physical work for behavior those environments cannot observe. Do not reset,
+  reinstall, delete state or repeat whole-edition updates just to reach a message
+  already covered by a faithful fixture.
+- A changed aggregate IPK/installer hash requires checking the changed package's
+  delivery/load boundary; it does not by itself select every feature in that
+  package. Compare inner files, generated code, entrypoints, permissions, shared
+  dependencies and state formats. Metadata/font-only changes do not imply a new
+  input/watchdog implementation. If a dependency cannot be isolated, investigate
+  it or select the appropriate broader cases; do not exclude it by assumption.
+- After a supported installation/update chosen for this QA pass, make one short
+  usable-state check appropriate to that transition. Reuse that observation for
+  related cases instead of reinstalling once per issue. Keep independent recovery
+  readiness before any device change; exercising destructive fault/failsafe cases
+  is selected only when their mechanisms or preconditions are affected.
+- Record why unrelated cases are **not selected for this regression pass**.
+  Keep their historical observations and limitations, without calling them passes
+  on new artifacts. An existing unresolved release-blocking failure stays a gate;
+  narrowing the list cannot waive it. A genuinely deferred risk requires the
+  maintainer's explicit decision, not silence.
+
+The full matrix in component test plans is a case library. Startup changes can
+select standby and AC cold boot separately; input/routing changes can select
+Home, Back, key-up and emergency recovery; install/updater changes can select
+particular update/rollback/source-state transitions. Neither a new release number,
+a version-only bump nor a broad directory match makes every library row mandatory.
+The complete frozen CI/build, signing/provenance checks and existing device
+ownership/consent rules remain unchanged.
+
+Record one row per **selected** physical scenario with build run/attempt, artifact
+SHA-256, model/firmware, initial state/upgrade source, expected/observed result,
+evidence link and untested paths. Distinguish standby from cold boot, physical
+controls from synthetic replies, and actual rollback from baseline inspection.
+Finish the selected case pass and consolidated failure inventory before fixes.
+
+Carry an observation as a pass only when all artifacts used by that scenario have
+identical hashes and its preconditions (firmware, prior state/version and upgrade
+path) match. Source similarity across rebuilt packages is insufficient to claim
+new-artifact acceptance. A case excluded after dependency review is **not selected**,
+not automatically passed or newly accepted. Do not repeat unchanged cases merely
+because the overall release number changed, carry another model's result, or
+label an untested path passed. Unresolved failures retain their recorded result.
 
 For a failed CI job at unchanged source, use GitHub's **Re-run failed jobs** or
 `gh run rerun RUN_ID --failed`; successful jobs and their artifacts remain

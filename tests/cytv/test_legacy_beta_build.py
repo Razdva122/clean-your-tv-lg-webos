@@ -67,8 +67,8 @@ class BetaBuild(unittest.TestCase):
             source = file.read_text()
             context = {'__name__':'beta_handler', '__file__':str(file), 'spawn_worker':lambda:None}
             code = source[:source.index('def spawn_worker')]
-            # Imports are already covered by each updater suite; isolate the generated policy/handler.
-            code = '\n'.join(line for line in code.splitlines() if not line.startswith(('from updater.', 'from system_updater.', 'from .')))
+            # Imports are covered by updater suites; the isolated policy never uses TV worker locks.
+            code = '\n'.join(line for line in code.splitlines() if line != 'import fcntl' and not line.startswith(('from updater.', 'from system_updater.', 'from .')))
             exec(code, context)
             start = source.index('def handle(')
             end = source.index('\ndef worker(', start)

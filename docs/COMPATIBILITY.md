@@ -11,9 +11,9 @@ an IPK does not prove that Home, recovery or startup works on a particular TV.
 
 ## TV requirements
 
-### Unreleased candidate: legacy Root choices
+### Release 1.12.0: legacy Root choices
 
-The next installer source includes a separate, explicitly selected **Root Beta
+The 1.12.0 installer includes a separate, explicitly selected **Root Beta
 for exactly Node.js 0.12.2**. It also offers **No-root using existing root SSH**
 when ordinary Root rejects an identified older Node version. The fallback keeps
 Home/Helper's own runtime and ARM32 checks; it does not install Developer Mode
@@ -22,8 +22,9 @@ over root. Unknown or unreadable Node output does not authorize either path.
 Beta leaves system Node unchanged, retains Python/vendor module/Home checks and
 blocks ordinary OTA. Host checks do not establish native LS2 registration, Home,
 emergency, audio, power or rollback compatibility on any TV, including #383.
-Owner-authorized exact-package physical acceptance remains required before
-publication. See [implementation and testing](development/ROOT-NODE-PROTOTYPE.md#unreleased-installer-beta).
+For release1.12.0 the maintainer explicitly deferred physical Beta testing;
+this is an unverified Beta limitation, not compatibility evidence or a passing
+#383 outcome. [Selected checks and limits](history/2026-11-07-release-1.12.0-scoped-qa.md). See [implementation and testing](development/ROOT-NODE-PROTOTYPE.md#unreleased-installer-beta).
 
 Release 1.5.4 includes Home Helper 0.6.21 with TV Node.js 0.10.25+ support for
 [#152](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/152).

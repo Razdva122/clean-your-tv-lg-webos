@@ -52,7 +52,8 @@ class Tests(unittest.TestCase):
         self.assertIsNone(self.ownership.status())
 
 
-class FlowTests(unittest.TestCase):
+class FlowFixture:
+    """Shared replacement fixture; version variants explicitly inherit FlowTests."""
     def setUp(self):
         from cytv import system_updater_replace as module
         self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup);self.base=Path(os.path.realpath(self.tmp.name))
@@ -144,6 +145,8 @@ class FlowTests(unittest.TestCase):
     def resume(self,bundle):self.calls.append('resume');self.verify_bundle(bundle);return {'installed':True}
     def run_replacement(self,bundle=None,source_sha='a'*64):
         return self.ns['replace'](bundle or self.bundle,self.setup,self.cleanup,self.manager,self.store,self.ownership,self.remove,lambda t,a:t.get('completed') is True and t['event']['details']['packageId']==a,lambda owner:None,system=self.system,source_sha=source_sha)
+
+class FlowTests(FlowFixture, unittest.TestCase):
     def test_other_target_versions_are_rejected_before_device_changes(self):
         for version in ('1.2.1','1.2.2','1.2.3','1.2.4','1.2.6'):
             with self.subTest(version=version):
@@ -270,7 +273,7 @@ class Retained111FlowTests(FlowTests):
                 self.assertIsNone(self.store.read('system-replacement'))
                 self.assertIsNone(self.ownership.status())
 
-class HistoricalReplacementTests(FlowTests):
+class HistoricalReplacementTests(FlowFixture, unittest.TestCase):
     def historical(self):
         import shutil
         self.run_replacement()

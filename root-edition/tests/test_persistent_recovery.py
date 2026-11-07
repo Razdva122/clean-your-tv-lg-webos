@@ -11,7 +11,8 @@ from profile_recovery import prepare,journal_payload
 from profile_plan import STOCK,CANDIDATE,snapshot
 from test_root_runtime_profile_plan import response
 
-class IntegrationTests(unittest.TestCase):
+class IntegrationFixture:
+ """Shared setup only; concrete suites own their test methods."""
  def setUp(self):
   self.tmp=tempfile.TemporaryDirectory();self.root=Path(self.tmp.name).resolve();self.root.chmod(0o700)
   self.apps=self.root/'apps/usr/palm/applications';self.apps.mkdir(parents=True);
@@ -47,6 +48,8 @@ class IntegrationTests(unittest.TestCase):
   return b
  def call(self,uri,payload):return {'returnValue':True}
  def write(self,target):self.home=target
+
+class IntegrationTests(IntegrationFixture, unittest.TestCase):
  def test_exit_disables_intent_before_real_routing_restore(self):
   original=d.restore_once;seen=[]
   def restore(**kw):seen.append(self.store.read()['enabled']);return original(**kw)
@@ -204,7 +207,7 @@ class IntegrationTests(unittest.TestCase):
    self.assertIsNone(intent_runtime.restore())
   self.assertEqual(self.home,CANDIDATE)
 
-class ShutdownTests(IntegrationTests):
+class ShutdownTests(IntegrationFixture, unittest.TestCase):
  def setUp(self):
   super().setUp()
   boot=patch('intent_runtime.boot_identity',return_value='boot-a')

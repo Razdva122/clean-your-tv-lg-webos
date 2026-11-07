@@ -1,7 +1,7 @@
 # v1.12.0 — legacy runtime choices and Root follow-ups
 
-Unpublished candidate frozen on 2026-11-07 for [release PR #399](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/399).
-Final build, signatures and affected acceptance must be checked before publication.
+Frozen on 2026-11-07 for [release PR #399](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/399).
+[Full build 42384446335:1](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42384446335) passed all 21 jobs; [verified artifacts and remaining gates](history/2026-11-07-release-1.12.0-artifacts.md). Scoped acceptance is complete with the limitations below; public delivery is confirmed only after signed package/feed verification.
 New features remain outside this candidate until publication.
 
 ## Changes
@@ -15,7 +15,7 @@ New features remain outside this candidate until publication.
   stays unverified; missing or malformed required applications still stop setup.
 - Hidden apps no longer consume the visible Root icon budget; the exact system
   application root is admitted with existing path/image/size limits (#398 / #394).
-  Visible-icon acceptance on the new packages remains pending.
+  Exact-package C3 acceptance loads all33 original visible icons without project fallbacks.
 - The known No-root-to-Root transition block explains backup, explicit full removal
   using the saved Root connection, verified cleanup, then Root setup (#400 / #396).
   Full removal also removes No-root Home and Helper; ownership guards remain.
@@ -31,9 +31,13 @@ New features remain outside this candidate until publication.
   verification and a reviewed profile-preserving trust-recovery implementation
   remain necessary; no host-key replacement command is added.
 
+- Windows host validation isolates the generated Beta policy from its unused
+  TV-only lock import while retaining every refusal assertion (#405). No product
+  behavior or package version changes in this correction.
+
 ## Versions and delivery
 
-| Component | Published v1.11.0 | Candidate v1.12.0 |
+| Component | Published v1.11.0 | v1.12.0 |
 | --- | --- | --- |
 | Home FHD/HD | 1.12.0 | 1.13.0 |
 | Home Helper | 0.7.5 | 0.7.5 |
@@ -57,7 +61,10 @@ original bundle/coordinator. Root Beta is a distinct exact-Node payload with
 ordinary OTA disabled, not acceptance of regular Root on legacy Node.
 
 Android retains the application ID and original signing certificate. Its final
-signed APK upgrade and retained-data acceptance remain pending. Homebrew Installer
+signed APK original-signer code25-to-code26 upgrade and synthetic retained-data
+checks passed on an isolated API35 ARM64 emulator; see the
+[scoped QA record](history/2026-11-07-release-1.12.0-scoped-qa.md). Physical-phone and live phone-to-TV
+operations remain untested. Homebrew Installer
 promotion remains disabled; there is no selected release approval.
 
 ## Validation and remaining acceptance
@@ -68,9 +75,13 @@ source evidence is in the [integration record](history/2026-11-07-post-1.11.0-in
 and [#401 record](history/2026-11-07-small-issue-followups.md), including its original
 failed observer run and separately corrected final CI.
 
-No TV was accessed for this freeze. Earlier C3 observations certify their original
-artifacts/state only. Exact-package Home routing, controls/emergency/key-up, icons,
-Settings convergence, audio, standby, AC cold boot, update/rollback and recovery/
-removal remain separate owner-authorized acceptance cases. Legacy Beta bootstrap
-and original #383/#389 outcomes are unverified. A package build or install is not
-physical acceptance. Partial #348/#368 work leaves those original reports open.
+The freeze itself did not access a TV. The later
+[scoped QA record](history/2026-11-07-release-1.12.0-scoped-qa.md) records the maintainer's
+case selection, explicit physical-Beta deferral, exact APK emulator acceptance,
+package browser checks and authorized C3 update. Root icons and Home after explicit
+owner enable passed; automatic Home preservation through the update remains
+unproved. Owner-confirmed arrows/OK, volume/audible sound and post-standby Settings
+convergence passed. After disclosure of the unexpected pre-suspension Home disable, the maintainer
+explicitly instructed shipment with this unresolved observation retained as a
+follow-up, not a passing automatic-resume result. Legacy Beta bootstrap and original #383/#389 outcomes
+remain unverified; partial #348/#368 work leaves those original reports open.

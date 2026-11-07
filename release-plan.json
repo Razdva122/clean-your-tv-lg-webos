@@ -1,45 +1,7 @@
 {
   "schema": 1,
-  "version": "1.12.0",
-  "changes": [
-    {
-      "pr": 388,
-      "issues": [
-        383
-      ],
-      "summary": "Offer exact-Node-0.12.2 Root Beta and No-root over root SSH; original-device and physical acceptance remain unverified"
-    },
-    {
-      "pr": 391,
-      "issues": [
-        389
-      ],
-      "summary": "Continue Root setup when optional input discovery fails; preserve required application checks and unverified input diagnostics"
-    },
-    {
-      "pr": 398,
-      "issues": [
-        394
-      ],
-      "summary": "Preserve visible original Root icons within the shared budget and admit the exact system-app root; physical icon acceptance pending"
-    },
-    {
-      "pr": 400,
-      "issues": [
-        396
-      ],
-      "summary": "Explain explicit verified cleanup before switching from reinstalled No-root to Root; preserve removal ownership and recovery guards"
-    },
-    {
-      "pr": 401,
-      "issues": [
-        347,
-        348,
-        368
-      ],
-      "summary": "Fix transitional Root Settings status; add private retention diagnostics and SSH identity recovery guidance; original #348 automatic re-entry and #368 trust recovery remain unresolved"
-    }
-  ],
+  "version": null,
+  "changes": [],
   "excluded": [],
   "acceptance": ""
 }

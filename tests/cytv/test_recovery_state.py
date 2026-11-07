@@ -66,7 +66,7 @@ class RecoveryStateTests(unittest.TestCase):
         from cytv.errors import UserError, DeveloperKeyError
         pending = {'action': 'install', 'stage': 'pending'}
         for error, edition, code in ((AuthenticationException('PRIVATE'), 'root', 'ssh-auth-root'),
-                                     (TimeoutError('PRIVATE'), 'no-root', 'ssh-unreachable'),
+                                     (TimeoutError('PRIVATE'), 'no-root', 'ssh-timeout'),
                                      (UserError('PRIVATE', reason_code='ssh-trust-record'), 'root', 'ssh-identity'),
                                      (DeveloperKeyError('PRIVATE', 'key-unlock'), 'no-root', 'developer-key-unlock')):
             guide = for_error(error, 'ssh-connect', {'edition': edition}, pending)
