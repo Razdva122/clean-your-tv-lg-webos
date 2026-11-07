@@ -7,6 +7,10 @@ project's pinned Prettier configuration. The newer inventory fallback and the
 other integration changes were retained. Original contributor commits remain
 in the ancestry; no force push is needed.
 
+Implementation revision: `20c8d063e7c0aa075c5630623c0d59f46c7143b2`. Integrated
+into `release/next` as merge `a83c8011534481adb2178a3263fec115d142cd93`.
+The follow-up inventory commit selects no version and records no new acceptance.
+
 ## Changes and review
 
 - Transform strict block function declarations that Acorn accepts as ES5 but

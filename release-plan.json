@@ -44,6 +44,13 @@
         376
       ],
       "summary": "Preserve No-root observer failure evidence and portable launch; original installation/recovery cause remains unconfirmed"
+    },
+    {
+      "pr": 381,
+      "issues": [
+        47
+      ],
+      "summary": "Address No-root webOS 3.x web/service startup, jailed Helper status and SSAP permissions; preserve diagnostics focus and legacy Updater URLs; original-device/Developer Mode acceptance pending"
     }
   ],
   "excluded": [],
