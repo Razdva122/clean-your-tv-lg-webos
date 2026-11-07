@@ -3,6 +3,13 @@
   "version": null,
   "changes": [
     {
+      "pr": 370,
+      "issues": [
+        207
+      ],
+      "summary": "Fix No-root inventory fallback and stale remote icon URLs"
+    },
+    {
       "pr": 372,
       "issues": [],
       "summary": "Refactor shared build assets and automate project formatting"
