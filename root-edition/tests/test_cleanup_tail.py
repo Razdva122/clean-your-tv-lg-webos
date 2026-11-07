@@ -7,6 +7,7 @@ requires the unchanged source on a Linux runner. Production has no test hooks.
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import tempfile
@@ -358,7 +359,10 @@ class CleanupTail(unittest.TestCase):
         package=foreign/'helper.ipk';package.write_bytes(ipk('org.foreign.app','1.0.0',{},architecture='arm'))
         shared=PRIVATE_CLEANUP_PROGRAM.replace('/media/developer',str(self.base/'media/developer')).replace('/var/luna-service2-dev',str(self.base/'var/luna-service2-dev'))
         shared=shared.replace('/var/lib',str(self.base/'var/lib')).replace('/var/webos-profile',str(self.base/'var/webos-profile')).replace('/proc/sys/kernel/random/boot_id',str(self.base/'proc/sys/kernel/random/boot_id'))
-        source=self.base/'current-tail.js';source.write_text(SOURCE.read_text().replace('var privateCleanupSource=null;','var privateCleanupSource='+json.dumps(shared)+';'))
+        source=self.base/'current-tail.js'
+        injected,count=re.subn(r'\bvar\s+privateCleanupSource\s*=\s*null\s*;',lambda _: 'var privateCleanupSource='+json.dumps(shared)+';',SOURCE.read_text())
+        self.assertEqual(count,1,'Expected one private cleanup source declaration')
+        source.write_text(injected)
         harness=self.harness.read_text()
         # Only the shared current Node program executes normally; TV RPC stays simulated.
         marker='spawnSync:function(command,args,options){'

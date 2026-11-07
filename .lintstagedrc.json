@@ -1,0 +1,3 @@
+{
+  "*.{js,cjs,mjs,css,html}": "prettier --config .prettierrc.json --write"
+}

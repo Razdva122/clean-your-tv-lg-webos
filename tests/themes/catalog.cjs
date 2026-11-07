@@ -4,59 +4,200 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const fixture = require('../showcase/fixture.cjs');
-const {generateCatalog, buildCatalog} = require('../../scripts/build-tv-theme-catalog.cjs');
+const {
+  generateCatalog,
+  buildCatalog
+} = require('../../scripts/build-tv-theme-catalog.cjs');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'tv-catalog-'));
 try {
   const active = fixture(root, 'active', 'Active');
   for (const availability of ['removed', 'unavailable']) {
     const entry = fixture(root, availability, availability);
     entry.record.availability = availability;
-    fs.writeFileSync(path.join(root, 'registry', require('../../scripts/check-theme-submissions.cjs').keyFor(entry.record.id) + '.json'), JSON.stringify(entry.record));
+    fs.writeFileSync(
+      path.join(
+        root,
+        'registry',
+        require('../../scripts/check-theme-submissions.cjs').keyFor(
+          entry.record.id
+        ) + '.json'
+      ),
+      JSON.stringify(entry.record)
+    );
   }
-  const generated = generateCatalog({showcaseRoot: root});
+  const generated = generateCatalog({ showcaseRoot: root });
   const catalog = JSON.parse(generated.get('theme-catalog.json'));
-  const builtins = JSON.parse(fs.readFileSync(path.resolve('launcher/builtin-themes.json'))).themes;
-  assert.deepEqual(catalog.themes.map(t => t.id), ['builtin:classic', ...builtins.map(entry=>entry.id), active.record.id]);
-  const external = catalog.themes.find(entry=>entry.id===active.record.id);
+  const builtins = JSON.parse(
+    fs.readFileSync(path.resolve('launcher/builtin-themes.json'))
+  ).themes;
+  assert.deepEqual(
+    catalog.themes.map((t) => t.id),
+    ['builtin:classic', ...builtins.map((entry) => entry.id), active.record.id]
+  );
+  const external = catalog.themes.find(
+    (entry) => entry.id === active.record.id
+  );
   assert.equal(external.url, active.record.descriptorUrl);
   assert.equal(external.digest, active.record.descriptorSha256);
-  assert.equal(external.packageSize, Buffer.byteLength(JSON.stringify(active.manifest)) + Object.values(active.bytes).reduce((sum, bytes) => sum + bytes.length, 0));
+  assert.equal(
+    external.packageSize,
+    Buffer.byteLength(JSON.stringify(active.manifest)) +
+      Object.values(active.bytes).reduce((sum, bytes) => sum + bytes.length, 0)
+  );
   assert.equal(external.has4k, false);
   assert.equal(external.hasVideo, false);
   const metadata = require('../../launcher/theme-data.js').metadata;
-  const scenic = {rules:{size:10}, assets:[{id:'wall',size:20,width:3840,height:2160},{id:'preview',size:30,width:960,height:540}], documents:[], defaults:{wallpaperAssetId:'wall'}, wallpaperVideo:{variants:[{size:40,width:1920,height:1080}]}};
-  assert.deepEqual(metadata(scenic, 100), {packageSize:200,has4k:false,hasVideo:false}, 'a UHD image and an unreviewed video do not promise UHD output or motion');
-  assert.equal(metadata(scenic,100,true).hasVideo,true,'reviewed moving video gets the film badge');
+  const scenic = {
+    rules: { size: 10 },
+    assets: [
+      { id: 'wall', size: 20, width: 3840, height: 2160 },
+      { id: 'preview', size: 30, width: 960, height: 540 }
+    ],
+    documents: [],
+    defaults: { wallpaperAssetId: 'wall' },
+    wallpaperVideo: { variants: [{ size: 40, width: 1920, height: 1080 }] }
+  };
+  assert.deepEqual(
+    metadata(scenic, 100),
+    { packageSize: 200, has4k: false, hasVideo: false },
+    'a UHD image and an unreviewed video do not promise UHD output or motion'
+  );
+  assert.equal(
+    metadata(scenic, 100, true).hasVideo,
+    true,
+    'reviewed moving video gets the film badge'
+  );
   scenic.defaults.wallpaperAssetId = 'preview';
-  assert.equal(metadata(scenic, 100).has4k, false, 'only UHD video enables the 4K output badge');
-  scenic.wallpaperVideo.variants.push({size:50,width:3840,height:2160});
-  assert.equal(metadata(scenic, 100).has4k, true, '4K video counts even with an HD image fallback');
-  const actual=JSON.parse(generateCatalog().get('theme-catalog.json')).themes;
-  assert.equal(actual.find(t=>t.title==='Alpine').hasVideo,false,'still MP4 is not a moving background');
-  assert.equal(actual.find(t=>t.title==='Ribbon').hasVideo,true);
-  assert.equal(actual.find(t=>t.title==='Crăciun la Brașov').has4k,true,'maintained package has a UHD video variant');
-  assert.equal(actual.find(t=>t.title==='Crăciun la Brașov').hasVideo,false,'its UHD MP4 is still');
-  for(const entry of builtins){const local=catalog.themes.find(theme=>theme.id===entry.id),manifest=JSON.parse(fs.readFileSync(path.resolve('launcher',entry.url))),base=entry.url.slice(0,entry.url.lastIndexOf('/')+1);assert.equal(local.preview,base+manifest.assets.find(asset=>asset.id===manifest.previewAssetId).path);assert.equal(local.credits,base+manifest.license.creditsPath);assert.equal(local.licenseFile,base+manifest.license.textPath);}
-  for (const t of catalog.themes) assert.match(t.preview, /^(?:theme-catalog|themes)\/[a-zA-Z0-9/._-]+$/);
-  const builtinRoot=path.join(root,'builtins');fs.mkdirSync(builtinRoot);fs.copyFileSync(path.resolve('launcher/builtin-themes.json'),path.join(builtinRoot,'builtin-themes.json'));fs.cpSync(path.resolve('launcher/themes'),path.join(builtinRoot,'themes'),{recursive:true});
-  const firstBuiltin=builtins[0],localDescriptor=path.join(builtinRoot,firstBuiltin.url),localManifest=JSON.parse(fs.readFileSync(localDescriptor)),localBase=path.dirname(localDescriptor),creditsFile=path.join(localBase,localManifest.license.creditsPath);
-  const badCredits=fs.readFileSync(creditsFile);badCredits[0]^=1;fs.writeFileSync(creditsFile,badCredits);assert.throws(()=>generateCatalog({showcaseRoot:root,builtinRoot}),/byte\/hash mismatch/,'catalog does not expose unverified built-in credits');
-  fs.copyFileSync(path.resolve('launcher',path.dirname(firstBuiltin.url),localManifest.license.creditsPath),creditsFile);fs.appendFileSync(localDescriptor,' ');assert.throws(()=>generateCatalog({showcaseRoot:root,builtinRoot}),/descriptor digest mismatch/);
+  assert.equal(
+    metadata(scenic, 100).has4k,
+    false,
+    'only UHD video enables the 4K output badge'
+  );
+  scenic.wallpaperVideo.variants.push({ size: 50, width: 3840, height: 2160 });
+  assert.equal(
+    metadata(scenic, 100).has4k,
+    true,
+    '4K video counts even with an HD image fallback'
+  );
+  const actual = JSON.parse(generateCatalog().get('theme-catalog.json')).themes;
+  assert.equal(
+    actual.find((t) => t.title === 'Alpine').hasVideo,
+    false,
+    'still MP4 is not a moving background'
+  );
+  assert.equal(actual.find((t) => t.title === 'Ribbon').hasVideo, true);
+  assert.equal(
+    actual.find((t) => t.title === 'Crăciun la Brașov').has4k,
+    true,
+    'maintained package has a UHD video variant'
+  );
+  assert.equal(
+    actual.find((t) => t.title === 'Crăciun la Brașov').hasVideo,
+    false,
+    'its UHD MP4 is still'
+  );
+  for (const entry of builtins) {
+    const local = catalog.themes.find((theme) => theme.id === entry.id),
+      manifest = JSON.parse(
+        fs.readFileSync(path.resolve('launcher', entry.url))
+      ),
+      base = entry.url.slice(0, entry.url.lastIndexOf('/') + 1);
+    assert.equal(
+      local.preview,
+      base +
+        manifest.assets.find((asset) => asset.id === manifest.previewAssetId)
+          .path
+    );
+    assert.equal(local.credits, base + manifest.license.creditsPath);
+    assert.equal(local.licenseFile, base + manifest.license.textPath);
+  }
+  for (const t of catalog.themes)
+    assert.match(t.preview, /^(?:theme-catalog|themes)\/[a-zA-Z0-9/._-]+$/);
+  const builtinRoot = path.join(root, 'builtins');
+  fs.mkdirSync(builtinRoot);
+  fs.copyFileSync(
+    path.resolve('launcher/builtin-themes.json'),
+    path.join(builtinRoot, 'builtin-themes.json')
+  );
+  fs.cpSync(path.resolve('launcher/themes'), path.join(builtinRoot, 'themes'), {
+    recursive: true
+  });
+  const firstBuiltin = builtins[0],
+    localDescriptor = path.join(builtinRoot, firstBuiltin.url),
+    localManifest = JSON.parse(fs.readFileSync(localDescriptor)),
+    localBase = path.dirname(localDescriptor),
+    creditsFile = path.join(localBase, localManifest.license.creditsPath);
+  const badCredits = fs.readFileSync(creditsFile);
+  badCredits[0] ^= 1;
+  fs.writeFileSync(creditsFile, badCredits);
+  assert.throws(
+    () => generateCatalog({ showcaseRoot: root, builtinRoot }),
+    /byte\/hash mismatch/,
+    'catalog does not expose unverified built-in credits'
+  );
+  fs.copyFileSync(
+    path.resolve(
+      'launcher',
+      path.dirname(firstBuiltin.url),
+      localManifest.license.creditsPath
+    ),
+    creditsFile
+  );
+  fs.appendFileSync(localDescriptor, ' ');
+  assert.throws(
+    () => generateCatalog({ showcaseRoot: root, builtinRoot }),
+    /descriptor digest mismatch/
+  );
   const output = path.join(root, 'output');
-  buildCatalog({showcaseRoot:root, launcherRoot:output});
-  assert.doesNotThrow(() => buildCatalog({showcaseRoot:root, launcherRoot:output, check:true}));
-  const before = Array.from(generated, ([name, bytes]) => [name, require('node:crypto').createHash('sha256').update(bytes).digest('hex')]);
-  assert.deepEqual(Array.from(generateCatalog({showcaseRoot:root}), ([name, bytes]) => [name, require('node:crypto').createHash('sha256').update(bytes).digest('hex')]), before);
+  buildCatalog({ showcaseRoot: root, launcherRoot: output });
+  assert.doesNotThrow(() =>
+    buildCatalog({ showcaseRoot: root, launcherRoot: output, check: true })
+  );
+  const before = Array.from(generated, ([name, bytes]) => [
+    name,
+    require('node:crypto').createHash('sha256').update(bytes).digest('hex')
+  ]);
+  assert.deepEqual(
+    Array.from(generateCatalog({ showcaseRoot: root }), ([name, bytes]) => [
+      name,
+      require('node:crypto').createHash('sha256').update(bytes).digest('hex')
+    ]),
+    before
+  );
   fs.writeFileSync(path.join(output, 'theme-catalog/orphan.txt'), 'old');
-  assert.throws(() => buildCatalog({showcaseRoot:root, launcherRoot:output, check:true}), /stale/);
-  buildCatalog({showcaseRoot:root, launcherRoot:output});
-  assert.equal(fs.existsSync(path.join(output, 'theme-catalog/orphan.txt')), false);
-  const inventory = JSON.parse(fs.readFileSync(path.join(output, 'builtin-theme-files.json')));
+  assert.throws(
+    () =>
+      buildCatalog({ showcaseRoot: root, launcherRoot: output, check: true }),
+    /stale/
+  );
+  buildCatalog({ showcaseRoot: root, launcherRoot: output });
+  assert.equal(
+    fs.existsSync(path.join(output, 'theme-catalog/orphan.txt')),
+    false
+  );
+  const inventory = JSON.parse(
+    fs.readFileSync(path.join(output, 'builtin-theme-files.json'))
+  );
   for (const name of generated.keys()) assert.ok(inventory.includes(name));
   fs.appendFileSync(path.join(output, external.preview), 'changed');
-  assert.throws(() => buildCatalog({showcaseRoot:root, launcherRoot:output, check:true}), /stale/);
+  assert.throws(
+    () =>
+      buildCatalog({ showcaseRoot: root, launcherRoot: output, check: true }),
+    /stale/
+  );
   active.record.previewFiles[0] = '../escape.png';
-  fs.writeFileSync(path.join(root, 'registry', require('../../scripts/check-theme-submissions.cjs').keyFor(active.record.id) + '.json'), JSON.stringify(active.record));
-  assert.throws(() => generateCatalog({showcaseRoot:root}));
+  fs.writeFileSync(
+    path.join(
+      root,
+      'registry',
+      require('../../scripts/check-theme-submissions.cjs').keyFor(
+        active.record.id
+      ) + '.json'
+    ),
+    JSON.stringify(active.record)
+  );
+  assert.throws(() => generateCatalog({ showcaseRoot: root }));
   console.log('TV theme catalogue tests passed');
-} finally { fs.rmSync(root, {recursive:true, force:true}); }
+} finally {
+  fs.rmSync(root, { recursive: true, force: true });
+}

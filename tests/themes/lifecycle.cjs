@@ -1,23 +1,325 @@
 'use strict';
-const assert=require('assert/strict'),fs=require('fs'),vm=require('vm');
-const external={id:'github:owner/repo:theme',title:'External',digest:'a'.repeat(64)};
-function fixture(initial=external){const values=new Map(),state={visual:'builtin:classic',prepare:null,failSave:false};if(initial)values.set('tvhome.theme.choice.v1',JSON.stringify(initial));
- const ctx={Promise,setTimeout,clearTimeout,Date,console,CustomEvent:function(type){this.type=type;},requestAnimationFrame:fn=>fn(),document:{dispatchEvent(){}},localStorage:{getItem:k=>values.has(k)?values.get(k):null,setItem(k,v){if(state.failSave&&k==='tvhome.theme.choice.v1'&&JSON.parse(v).id==='builtin:alpine')throw Error('quota');values.set(k,v);},removeItem:k=>values.delete(k)},ThemeRuntime:{reset(){state.visual='builtin:classic';},apply(p){state.visual=p.manifest.id;}},ThemeStore:{get:async()=>({id:external.id,digest:external.digest}),list:async()=>[{id:external.id,digest:external.digest}]} ,ThemeData:{request:async url=>url==='appinfo.json'?{version:'1.5.1'}:{schemaVersion:1,themes:[{id:'builtin:alpine',title:'Alpine',version:'1.0.0',url:'themes/alpine/cytv-theme.json',digest:'b'.repeat(64)}]},decode:x=>JSON.stringify(x),verify:pack=>({manifest:{id:pack.id,title:'External',themeVersion:'1.0.0',license:{identifier:'MIT'},author:{name:'Author'}}}),load:async()=>({id:'builtin:alpine',digest:'b'.repeat(64)}),prepare:async pack=>{if(state.prepare)return state.prepare(pack);return {manifest:{id:pack.id,title:pack.id==='builtin:alpine'?'Alpine':'External'},assetHandles:{}};},dispose(){}}};ctx.window=ctx;vm.runInNewContext(fs.readFileSync('launcher/theme-manager.js','utf8'),ctx);return {m:ctx.ThemeManager,state,values,ctx};}
-const turn=()=>new Promise(r=>setImmediate(r));
-(async()=>{
- let f=fixture();await f.m.start();await f.m.begin({id:'builtin:alpine',title:'Alpine'});let release;f.state.prepare=pack=>new Promise(r=>{release=()=>r({manifest:{id:pack.id,title:'External'},assetHandles:{}});});const reverting=f.m.cancel();await turn();f.m.reset();release();await reverting;assert.equal(f.state.visual,'builtin:classic','late rollback cannot overwrite Reset Classic');assert.equal(f.m.current().id,'builtin:classic');
- f=fixture();await f.m.start();await f.m.begin({id:'builtin:alpine',title:'Alpine'});let rejectOld;f.state.prepare=pack=>pack.id===external.id?new Promise((r,reject)=>{rejectOld=reject;}):Promise.resolve({manifest:{id:pack.id,title:'Alpine'},assetHandles:{}});const old=f.m.cancel();await turn();await f.m.begin({id:'builtin:alpine',title:'Alpine'});rejectOld(Error('late decode failure'));await old;assert.equal(f.m.current().id,'builtin:alpine');assert.equal(f.m.current().trial,true,'late rollback failure cannot clear a newer trial');await f.m.confirm();assert.equal(JSON.parse(f.values.get(f.m.choiceKey)).id,'builtin:alpine');
- f=fixture(null);await f.m.start();await f.m.begin({id:'builtin:alpine',title:'Alpine'});f.state.failSave=true;await assert.rejects(()=>f.m.confirm(),/quota/);assert.equal(f.state.visual,'builtin:classic');assert.equal(f.values.has(f.m.trialKey),false);
- f=fixture(null);await f.m.start();const cancelled=f.m.begin({id:'builtin:alpine',title:'Alpine'});await f.m.cancel();await assert.rejects(()=>cancelled,/Cancelled/);assert.equal(f.state.visual,'builtin:classic','cancel before preparation never applies');
- f=fixture();f.ctx.CYTV_THEME_AUTHOR_PREVIEW=true;await f.m.start();assert.equal(f.state.visual,'builtin:classic','trusted author mode ignores persisted TV selection');
- f=fixture();let marked=false;f.state.prepare=pack=>{marked=f.values.has(f.m.trialKey);return {manifest:{id:pack.id,title:'External'},assetHandles:{}};};await f.m.start();assert.equal(marked,true,'boot recovery marker must precede native cached-image decode');
- f=fixture(null);await f.m.selectInstalled({id:'builtin:alpine',title:'Alpine'});assert.equal(f.m.current().trial,false);assert.equal(JSON.parse(f.values.get(f.m.choiceKey)).id,'builtin:alpine');assert.equal(f.values.has(f.m.trialKey),false);
- f=fixture(null);await f.m.selectInstalled(external);assert.equal(f.m.current().trial,false);assert.equal(JSON.parse(f.values.get(f.m.choiceKey)).digest,external.digest);await assert.rejects(f.m.selectInstalled({id:external.id,digest:'c'.repeat(64)}),/not installed/);
- f=fixture(null);f.state.failSave=true;await assert.rejects(f.m.selectInstalled({id:'builtin:alpine',title:'Alpine'}),/quota/);assert.equal(f.m.current().id,'builtin:classic');assert.equal(f.values.has(f.m.trialKey),false);
- f=fixture(null);let recoveryMarked=false;f.state.prepare=pack=>{recoveryMarked=f.values.has(f.m.trialKey);throw Error('decode failed');};await assert.rejects(f.m.selectInstalled({id:'builtin:alpine',title:'Alpine'}),/decode failed/);assert.equal(recoveryMarked,true);assert.equal(f.m.current().id,'builtin:classic');assert.equal(f.values.has(f.m.trialKey),false);
- f=fixture(null);let finishList;f.ctx.ThemeStore.list=()=>new Promise(resolve=>{finishList=resolve;});const lateSelection=f.m.selectInstalled({id:'builtin:alpine'});await turn();await f.m.cancel();finishList([]);await assert.rejects(lateSelection,/Cancelled/);assert.equal(f.m.current().id,'builtin:classic');
- f=fixture(null);const listWaiters=[];f.ctx.ThemeStore.list=()=>new Promise(resolve=>listWaiters.push(resolve));const firstSelection=f.m.selectInstalled({id:'builtin:alpine'});await turn();const latestSelection=f.m.selectInstalled({id:'builtin:classic'});await turn();listWaiters[1]([]);await latestSelection;listWaiters[0]([]);await assert.rejects(firstSelection,/Cancelled/);assert.equal(f.m.current().id,'builtin:classic');assert.equal(f.m.current().trial,false);
- f=fixture(null);let wallpaperSource='builtin:black-hole',wallpaperQueue=Promise.resolve();f.ctx.PersonalWallpaper={state:()=>({source:wallpaperSource.indexOf('builtin:')===0?'builtin':wallpaperSource,builtinId:wallpaperSource}),select:next=>{wallpaperQueue=wallpaperQueue.then(()=>{wallpaperSource=next;});return wallpaperQueue;}};await f.m.start();await f.m.begin({id:'builtin:alpine',title:'Alpine'});const confirmations=await Promise.allSettled([f.m.confirm(),f.m.confirm()]);assert(confirmations.every(result=>result.status==='fulfilled'),'duplicate Keep actions must share the same in-flight confirmation');assert.equal(wallpaperSource,'theme','a duplicate confirmation cannot restore the old built-in wallpaper');assert.equal(f.m.current().id,'builtin:alpine');
- f=fixture(null);wallpaperSource='builtin:black-hole';wallpaperQueue=Promise.resolve();let releaseWallpaper,firstWallpaperWrite=true;f.ctx.PersonalWallpaper={state:()=>({source:wallpaperSource.indexOf('builtin:')===0?'builtin':wallpaperSource,builtinId:wallpaperSource}),select:next=>{wallpaperQueue=wallpaperQueue.then(()=>firstWallpaperWrite?(firstWallpaperWrite=false,new Promise(resolve=>{releaseWallpaper=()=>{wallpaperSource=next;resolve();};})):Promise.resolve().then(()=>{wallpaperSource=next;}));return wallpaperQueue;}};await f.m.start();await f.m.begin({id:'builtin:alpine',title:'Alpine'});const obsoleteConfirm=f.m.confirm();await turn();await f.m.cancel();await f.m.begin({id:'builtin:alpine',title:'Alpine'});const currentConfirm=f.m.confirm();const settledConfirmations=Promise.allSettled([obsoleteConfirm,currentConfirm]);releaseWallpaper();const confirmedResults=await settledConfirmations;assert.equal(confirmedResults[1].status,'fulfilled');assert.equal(wallpaperSource,'theme','cancelled confirmation cannot overwrite a newer accepted wallpaper');assert.equal(f.m.current().id,'builtin:alpine');
- console.log('Theme lifecycle: immediate installed selection, cancellation races, recovery markers and rollback passed');
-})().catch(e=>{console.error(e);process.exitCode=1;});
+const assert = require('assert/strict'),
+  fs = require('fs'),
+  vm = require('vm');
+const external = {
+  id: 'github:owner/repo:theme',
+  title: 'External',
+  digest: 'a'.repeat(64)
+};
+function fixture(initial = external) {
+  const values = new Map(),
+    state = { visual: 'builtin:classic', prepare: null, failSave: false };
+  if (initial) values.set('tvhome.theme.choice.v1', JSON.stringify(initial));
+  const ctx = {
+    Promise,
+    setTimeout,
+    clearTimeout,
+    Date,
+    console,
+    CustomEvent: function (type) {
+      this.type = type;
+    },
+    requestAnimationFrame: (fn) => fn(),
+    document: { dispatchEvent() {} },
+    localStorage: {
+      getItem: (k) => (values.has(k) ? values.get(k) : null),
+      setItem(k, v) {
+        if (
+          state.failSave &&
+          k === 'tvhome.theme.choice.v1' &&
+          JSON.parse(v).id === 'builtin:alpine'
+        )
+          throw Error('quota');
+        values.set(k, v);
+      },
+      removeItem: (k) => values.delete(k)
+    },
+    ThemeRuntime: {
+      reset() {
+        state.visual = 'builtin:classic';
+      },
+      apply(p) {
+        state.visual = p.manifest.id;
+      }
+    },
+    ThemeStore: {
+      get: async () => ({ id: external.id, digest: external.digest }),
+      list: async () => [{ id: external.id, digest: external.digest }]
+    },
+    ThemeData: {
+      request: async (url) =>
+        url === 'appinfo.json'
+          ? { version: '1.5.1' }
+          : {
+              schemaVersion: 1,
+              themes: [
+                {
+                  id: 'builtin:alpine',
+                  title: 'Alpine',
+                  version: '1.0.0',
+                  url: 'themes/alpine/cytv-theme.json',
+                  digest: 'b'.repeat(64)
+                }
+              ]
+            },
+      decode: (x) => JSON.stringify(x),
+      verify: (pack) => ({
+        manifest: {
+          id: pack.id,
+          title: 'External',
+          themeVersion: '1.0.0',
+          license: { identifier: 'MIT' },
+          author: { name: 'Author' }
+        }
+      }),
+      load: async () => ({ id: 'builtin:alpine', digest: 'b'.repeat(64) }),
+      prepare: async (pack) => {
+        if (state.prepare) return state.prepare(pack);
+        return {
+          manifest: {
+            id: pack.id,
+            title: pack.id === 'builtin:alpine' ? 'Alpine' : 'External'
+          },
+          assetHandles: {}
+        };
+      },
+      dispose() {}
+    }
+  };
+  ctx.window = ctx;
+  vm.runInNewContext(fs.readFileSync('launcher/theme-manager.js', 'utf8'), ctx);
+  return { m: ctx.ThemeManager, state, values, ctx };
+}
+const turn = () => new Promise((r) => setImmediate(r));
+(async () => {
+  let f = fixture();
+  await f.m.start();
+  await f.m.begin({ id: 'builtin:alpine', title: 'Alpine' });
+  let release;
+  f.state.prepare = (pack) =>
+    new Promise((r) => {
+      release = () =>
+        r({ manifest: { id: pack.id, title: 'External' }, assetHandles: {} });
+    });
+  const reverting = f.m.cancel();
+  await turn();
+  f.m.reset();
+  release();
+  await reverting;
+  assert.equal(
+    f.state.visual,
+    'builtin:classic',
+    'late rollback cannot overwrite Reset Classic'
+  );
+  assert.equal(f.m.current().id, 'builtin:classic');
+  f = fixture();
+  await f.m.start();
+  await f.m.begin({ id: 'builtin:alpine', title: 'Alpine' });
+  let rejectOld;
+  f.state.prepare = (pack) =>
+    pack.id === external.id
+      ? new Promise((r, reject) => {
+          rejectOld = reject;
+        })
+      : Promise.resolve({
+          manifest: { id: pack.id, title: 'Alpine' },
+          assetHandles: {}
+        });
+  const old = f.m.cancel();
+  await turn();
+  await f.m.begin({ id: 'builtin:alpine', title: 'Alpine' });
+  rejectOld(Error('late decode failure'));
+  await old;
+  assert.equal(f.m.current().id, 'builtin:alpine');
+  assert.equal(
+    f.m.current().trial,
+    true,
+    'late rollback failure cannot clear a newer trial'
+  );
+  await f.m.confirm();
+  assert.equal(JSON.parse(f.values.get(f.m.choiceKey)).id, 'builtin:alpine');
+  f = fixture(null);
+  await f.m.start();
+  await f.m.begin({ id: 'builtin:alpine', title: 'Alpine' });
+  f.state.failSave = true;
+  await assert.rejects(() => f.m.confirm(), /quota/);
+  assert.equal(f.state.visual, 'builtin:classic');
+  assert.equal(f.values.has(f.m.trialKey), false);
+  f = fixture(null);
+  await f.m.start();
+  const cancelled = f.m.begin({ id: 'builtin:alpine', title: 'Alpine' });
+  await f.m.cancel();
+  await assert.rejects(() => cancelled, /Cancelled/);
+  assert.equal(
+    f.state.visual,
+    'builtin:classic',
+    'cancel before preparation never applies'
+  );
+  f = fixture();
+  f.ctx.CYTV_THEME_AUTHOR_PREVIEW = true;
+  await f.m.start();
+  assert.equal(
+    f.state.visual,
+    'builtin:classic',
+    'trusted author mode ignores persisted TV selection'
+  );
+  f = fixture();
+  let marked = false;
+  f.state.prepare = (pack) => {
+    marked = f.values.has(f.m.trialKey);
+    return { manifest: { id: pack.id, title: 'External' }, assetHandles: {} };
+  };
+  await f.m.start();
+  assert.equal(
+    marked,
+    true,
+    'boot recovery marker must precede native cached-image decode'
+  );
+  f = fixture(null);
+  await f.m.selectInstalled({ id: 'builtin:alpine', title: 'Alpine' });
+  assert.equal(f.m.current().trial, false);
+  assert.equal(JSON.parse(f.values.get(f.m.choiceKey)).id, 'builtin:alpine');
+  assert.equal(f.values.has(f.m.trialKey), false);
+  f = fixture(null);
+  await f.m.selectInstalled(external);
+  assert.equal(f.m.current().trial, false);
+  assert.equal(JSON.parse(f.values.get(f.m.choiceKey)).digest, external.digest);
+  await assert.rejects(
+    f.m.selectInstalled({ id: external.id, digest: 'c'.repeat(64) }),
+    /not installed/
+  );
+  f = fixture(null);
+  f.state.failSave = true;
+  await assert.rejects(
+    f.m.selectInstalled({ id: 'builtin:alpine', title: 'Alpine' }),
+    /quota/
+  );
+  assert.equal(f.m.current().id, 'builtin:classic');
+  assert.equal(f.values.has(f.m.trialKey), false);
+  f = fixture(null);
+  let recoveryMarked = false;
+  f.state.prepare = (pack) => {
+    recoveryMarked = f.values.has(f.m.trialKey);
+    throw Error('decode failed');
+  };
+  await assert.rejects(
+    f.m.selectInstalled({ id: 'builtin:alpine', title: 'Alpine' }),
+    /decode failed/
+  );
+  assert.equal(recoveryMarked, true);
+  assert.equal(f.m.current().id, 'builtin:classic');
+  assert.equal(f.values.has(f.m.trialKey), false);
+  f = fixture(null);
+  let finishList;
+  f.ctx.ThemeStore.list = () =>
+    new Promise((resolve) => {
+      finishList = resolve;
+    });
+  const lateSelection = f.m.selectInstalled({ id: 'builtin:alpine' });
+  await turn();
+  await f.m.cancel();
+  finishList([]);
+  await assert.rejects(lateSelection, /Cancelled/);
+  assert.equal(f.m.current().id, 'builtin:classic');
+  f = fixture(null);
+  const listWaiters = [];
+  f.ctx.ThemeStore.list = () =>
+    new Promise((resolve) => listWaiters.push(resolve));
+  const firstSelection = f.m.selectInstalled({ id: 'builtin:alpine' });
+  await turn();
+  const latestSelection = f.m.selectInstalled({ id: 'builtin:classic' });
+  await turn();
+  listWaiters[1]([]);
+  await latestSelection;
+  listWaiters[0]([]);
+  await assert.rejects(firstSelection, /Cancelled/);
+  assert.equal(f.m.current().id, 'builtin:classic');
+  assert.equal(f.m.current().trial, false);
+  f = fixture(null);
+  let wallpaperSource = 'builtin:black-hole',
+    wallpaperQueue = Promise.resolve();
+  f.ctx.PersonalWallpaper = {
+    state: () => ({
+      source:
+        wallpaperSource.indexOf('builtin:') === 0 ? 'builtin' : wallpaperSource,
+      builtinId: wallpaperSource
+    }),
+    select: (next) => {
+      wallpaperQueue = wallpaperQueue.then(() => {
+        wallpaperSource = next;
+      });
+      return wallpaperQueue;
+    }
+  };
+  await f.m.start();
+  await f.m.begin({ id: 'builtin:alpine', title: 'Alpine' });
+  const confirmations = await Promise.allSettled([
+    f.m.confirm(),
+    f.m.confirm()
+  ]);
+  assert(
+    confirmations.every((result) => result.status === 'fulfilled'),
+    'duplicate Keep actions must share the same in-flight confirmation'
+  );
+  assert.equal(
+    wallpaperSource,
+    'theme',
+    'a duplicate confirmation cannot restore the old built-in wallpaper'
+  );
+  assert.equal(f.m.current().id, 'builtin:alpine');
+  f = fixture(null);
+  wallpaperSource = 'builtin:black-hole';
+  wallpaperQueue = Promise.resolve();
+  let releaseWallpaper,
+    firstWallpaperWrite = true;
+  f.ctx.PersonalWallpaper = {
+    state: () => ({
+      source:
+        wallpaperSource.indexOf('builtin:') === 0 ? 'builtin' : wallpaperSource,
+      builtinId: wallpaperSource
+    }),
+    select: (next) => {
+      wallpaperQueue = wallpaperQueue.then(() =>
+        firstWallpaperWrite
+          ? ((firstWallpaperWrite = false),
+            new Promise((resolve) => {
+              releaseWallpaper = () => {
+                wallpaperSource = next;
+                resolve();
+              };
+            }))
+          : Promise.resolve().then(() => {
+              wallpaperSource = next;
+            })
+      );
+      return wallpaperQueue;
+    }
+  };
+  await f.m.start();
+  await f.m.begin({ id: 'builtin:alpine', title: 'Alpine' });
+  const obsoleteConfirm = f.m.confirm();
+  await turn();
+  await f.m.cancel();
+  await f.m.begin({ id: 'builtin:alpine', title: 'Alpine' });
+  const currentConfirm = f.m.confirm();
+  const settledConfirmations = Promise.allSettled([
+    obsoleteConfirm,
+    currentConfirm
+  ]);
+  releaseWallpaper();
+  const confirmedResults = await settledConfirmations;
+  assert.equal(confirmedResults[1].status, 'fulfilled');
+  assert.equal(
+    wallpaperSource,
+    'theme',
+    'cancelled confirmation cannot overwrite a newer accepted wallpaper'
+  );
+  assert.equal(f.m.current().id, 'builtin:alpine');
+  console.log(
+    'Theme lifecycle: immediate installed selection, cancellation races, recovery markers and rollback passed'
+  );
+})().catch((e) => {
+  console.error(e);
+  process.exitCode = 1;
+});

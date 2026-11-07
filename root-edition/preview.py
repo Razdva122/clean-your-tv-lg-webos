@@ -7,6 +7,9 @@ import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from scripts.home_assets import THEME_FILES
+
 APP_ID = 'com.cleanyourtv.root.preview'
 SOURCE = Path(__file__).resolve().parents[1] / 'launcher'
 # Explicit public-source inventory: never recursively copy a developer workspace.
@@ -15,7 +18,7 @@ FILES = (
     'brand-v2-icon.png', 'brand-v2-largeIcon.png', 'splash.png',
     'fonts/outfit-300.ttf', 'fonts/outfit-400.ttf', 'fonts/outfit-500.ttf', 'fonts/outfit-700.ttf', 'fonts/NotoSans.ttf', 'fonts/NotoSans-OFL.txt', 'fonts/NotoSansDevanagari.ttf', 'fonts/NotoSansDevanagari-OFL.txt', 'fonts/NotoSansKR.ttf', 'fonts/NotoSansKR-OFL.txt', 'fonts/NotoSansSC.ttf', 'fonts/NotoSansSC-OFL.txt', 'fonts/NotoSansTC.ttf', 'fonts/NotoSansTC-OFL.txt', 'fonts/OFL.txt',
 )
-FILES += tuple(['wallpaper.js', 'wallpaper.css', 'wallpaper-panel.js', 'wallpaper-panel.css', 'wallpaper-locales.js', 'wallpaper-media-cache.js', 'personal-wallpaper.js', 'wallpaper-library.js', 'wallpaper-stream.js', 'wallpapers/black-hole-stream.mp4', 'wallpaper-qr.js', 'theme-data.js', 'theme-store.js', 'theme-manager.js', 'theme-receiver.js', 'theme-panel.js', 'theme-panel.css', 'theme-locales.js', 'builtin-theme-files.json'] + json.loads((SOURCE / 'builtin-theme-files.json').read_text()))
+FILES += tuple(THEME_FILES)
 UI = Path(__file__).resolve().parent / 'ui'
 UI_FILES = ('root-audio-locales.js', 'root-audio.js', 'root-locales.js', 'root-exit.js', 'root-firmware-control.js', 'root-firmware.js', 'root-settings.js', 'root-settings.css', 'root-profile-data.js', 'root-profile.js', 'root-updates.js')
 
@@ -58,9 +61,11 @@ def prepare(version='0.0.1', resolution=None):
         'user-data.js', 'update-panel.js')]
     tags.append('<link rel="stylesheet" href="renewal-panel.css">')
     for tag in tags:
-        if html.count(tag) != 1:
+        # Prettier uses an optional HTML void-element closing slash.
+        pattern = re.escape(tag[:-1]) + r'\s*/?>' if tag.startswith('<link ') else re.escape(tag)
+        if len(re.findall(pattern, html)) != 1:
             raise ValueError('Unexpected launcher HTML: ' + tag)
-        html = html.replace(tag, '')
+        html = re.sub(pattern, '', html)
     # Root's independent profile bootstrap never loads ordinary updater/renewal code.
     entry = '<script src="profile-bootstrap.js"></script>'
     if html.count(entry) != 1:

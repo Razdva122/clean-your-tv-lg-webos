@@ -1,70 +1,101 @@
 <!doctype html>
 <html lang="en">
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Home · Local Preview</title>
-<link rel="icon" href="data:,">
-<link rel="stylesheet" href="launcher/theme-panel.css">
-<style>
-  * { box-sizing: border-box; }
-  body { margin: 0; background: #111113; color: #ededee; font: 14px system-ui, sans-serif; height: 100vh; display: flex; flex-direction: column; }
-  header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; padding: 16px 24px; border-bottom: 1px solid #303034; }
-  strong { font-size: 16px; } span { color: #aaaab2; }
-  nav { display: flex; gap: 4px; padding: 4px; border: 1px solid #44444b; border-radius: 10px; }
-  nav button { border: 0; border-radius: 6px; padding: 9px 14px; background: transparent; color: #aaaab2; font: inherit; cursor: pointer; }
-  nav button[aria-pressed="true"] { background: #ededee; color: #111113; }
-  nav button:focus-visible { outline: 2px solid #92b8ff; outline-offset: 2px; }
-  .themes { padding:12px 24px;border-bottom:1px solid #303034; }
-  .themes h2 { font-size:14px;margin:0 0 10px; }
-  #previewThemes { display:flex;gap:10px;overflow-x:auto;padding:3px; }
-  #previewThemes button { flex:0 0 160px;text-align:left;background:#19191d;color:inherit;border:1px solid #44444b;border-radius:9px;padding:0 0 9px;overflow:hidden;cursor:pointer;font:inherit; }
-  #previewThemes button[aria-pressed="true"] { border-color:#ededee;box-shadow:0 0 0 1px #ededee; }
-  #previewThemes button:focus-visible { outline:2px solid #92b8ff;outline-offset:2px; }
-  #previewThemes button:disabled { opacity:.6;cursor:wait; }
-  #previewThemes img { display:block;width:160px;height:90px;object-fit:cover; }
-  #previewThemes strong,#previewThemes small { display:block;margin:7px 10px 0; }
-  #previewThemes strong { font-size:13px; } #previewThemes small { color:#aaaab2;font-size:11px; }
-  #themeStatus { margin:8px 0 0;color:#aaaab2;font-size:12px; } #themeStatus:empty { display:none; }
-  .presentation { display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:10px 24px;border-bottom:1px solid #303034; }
-  .presentation p { margin:0;color:#b9bac2;font-size:12px; }
-  main { position: relative; flex: 1; min-height: 0; overflow: hidden; }
-  iframe { position: absolute; border: 0; width: 1920px; height: 1080px; transform-origin: top left; background: black; }
-  footer { padding: 12px 24px; color: #aaaab2; font-size: 12px; }
-</style>
-<header><strong>Home / Preview</strong><span>1920 × 1080 · original reference apps · live reload enabled</span><nav aria-label="Launcher edition"><button type="button" data-edition="no-root" aria-pressed="true">No-root Edition</button><button type="button" data-edition="root" aria-pressed="false">Root Edition</button></nav></header>
-<section class="themes" role="region" aria-label="Themes"><h2>Themes</h2><div id="previewThemes" aria-busy="true"></div><p id="themeStatus" role="status" aria-live="polite">Loading themes…</p></section>
-<section class="presentation" aria-label="Preview navigation"><nav aria-label="Simulated remote"><button type="button" id="previewHome">Home</button><button type="button" id="previewBack">Back</button></nav><p id="presentationStatus" role="status">Full-screen Home with its own wallpaper. TV functions are simulated.</p></section>
-<main><iframe id="screen" title="LG webOS launcher" src="launcher/index.html"></iframe></main>
-<footer>Mouse or ↑ ↓ ← → · Enter — OK · Hold Enter — move tile · Esc — back. TV functions are simulated.</footer>
-<script>
-  const screen = document.getElementById('screen');
-  const area = document.querySelector('main');
-  const editions = document.querySelectorAll('[data-edition]');
-  function selectEdition() {
-    const edition = location.hash === '#root' ? 'root' : 'no-root';
-    const source = edition === 'root' ? 'root-launcher/index.html' : 'launcher/index.html';
-    editions.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.edition === edition)));
-    screen.title = (edition === 'root' ? 'Root' : 'No-root') + ' Edition launcher';
-    if (screen.getAttribute('src') !== source) screen.src = source;
-  }
-  editions.forEach(button => button.onclick = () => { location.hash = button.dataset.edition; });
-  window.addEventListener('hashchange', selectEdition);
-  selectEdition();
-  function fit() {
-    const scale = Math.min(area.clientWidth / 1920, area.clientHeight / 1080);
-    screen.style.transform = 'scale(' + scale + ')';
-    screen.style.left = (area.clientWidth - 1920 * scale) / 2 + 'px';
-    screen.style.top = (area.clientHeight - 1080 * scale) / 2 + 'px';
-  }
-  new ResizeObserver(fit).observe(area);
-  screen.addEventListener('load', () => { fit(); screen.contentWindow.focus(); });
-  window.addEventListener('keydown', event => {
-    if (event.target.closest('nav, .themes')) return;
-    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', 'Escape'].includes(event.key)) screen.contentWindow.focus();
-  });
-  fit();
-</script>
-<script src="preview/themes.js"></script>
-<script src="preview/presentation.js"></script>
-__LIVE_RELOAD__
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Home · Local Preview</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="launcher/theme-panel.css" />
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #111113; color: #ededee; font: 14px system-ui, sans-serif; height: 100vh; display: flex; flex-direction: column; }
+    header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; padding: 16px 24px; border-bottom: 1px solid #303034; }
+    strong { font-size: 16px; } span { color: #aaaab2; }
+    nav { display: flex; gap: 4px; padding: 4px; border: 1px solid #44444b; border-radius: 10px; }
+    nav button { border: 0; border-radius: 6px; padding: 9px 14px; background: transparent; color: #aaaab2; font: inherit; cursor: pointer; }
+    nav button[aria-pressed="true"] { background: #ededee; color: #111113; }
+    nav button:focus-visible { outline: 2px solid #92b8ff; outline-offset: 2px; }
+    .themes { padding:12px 24px;border-bottom:1px solid #303034; }
+    .themes h2 { font-size:14px;margin:0 0 10px; }
+    #previewThemes { display:flex;gap:10px;overflow-x:auto;padding:3px; }
+    #previewThemes button { flex:0 0 160px;text-align:left;background:#19191d;color:inherit;border:1px solid #44444b;border-radius:9px;padding:0 0 9px;overflow:hidden;cursor:pointer;font:inherit; }
+    #previewThemes button[aria-pressed="true"] { border-color:#ededee;box-shadow:0 0 0 1px #ededee; }
+    #previewThemes button:focus-visible { outline:2px solid #92b8ff;outline-offset:2px; }
+    #previewThemes button:disabled { opacity:.6;cursor:wait; }
+    #previewThemes img { display:block;width:160px;height:90px;object-fit:cover; }
+    #previewThemes strong,#previewThemes small { display:block;margin:7px 10px 0; }
+    #previewThemes strong { font-size:13px; } #previewThemes small { color:#aaaab2;font-size:11px; }
+    #themeStatus { margin:8px 0 0;color:#aaaab2;font-size:12px; } #themeStatus:empty { display:none; }
+    .presentation { display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:10px 24px;border-bottom:1px solid #303034; }
+    .presentation p { margin:0;color:#b9bac2;font-size:12px; }
+    main { position: relative; flex: 1; min-height: 0; overflow: hidden; }
+    iframe { position: absolute; border: 0; width: 1920px; height: 1080px; transform-origin: top left; background: black; }
+    footer { padding: 12px 24px; color: #aaaab2; font-size: 12px; }
+  </style>
+  <header>
+    <strong>Home / Preview</strong
+    ><span>1920 × 1080 · original reference apps · live reload enabled</span>
+    <nav aria-label="Launcher edition">
+      <button type="button" data-edition="no-root" aria-pressed="true">
+        No-root Edition</button
+      ><button type="button" data-edition="root" aria-pressed="false">
+        Root Edition
+      </button>
+    </nav>
+  </header>
+  <section class="themes" role="region" aria-label="Themes">
+    <h2>Themes</h2>
+    <div id="previewThemes" aria-busy="true"></div>
+    <p id="themeStatus" role="status" aria-live="polite">Loading themes…</p>
+  </section>
+  <section class="presentation" aria-label="Preview navigation">
+    <nav aria-label="Simulated remote">
+      <button type="button" id="previewHome">Home</button
+      ><button type="button" id="previewBack">Back</button>
+    </nav>
+    <p id="presentationStatus" role="status">
+      Full-screen Home with its own wallpaper. TV functions are simulated.
+    </p>
+  </section>
+  <main>
+    <iframe
+      id="screen"
+      title="LG webOS launcher"
+      src="launcher/index.html"
+    ></iframe>
+  </main>
+  <footer>
+    Mouse or ↑ ↓ ← → · Enter — OK · Hold Enter — move tile · Esc — back. TV
+    functions are simulated.
+  </footer>
+  <script>
+    const screen = document.getElementById('screen');
+    const area = document.querySelector('main');
+    const editions = document.querySelectorAll('[data-edition]');
+    function selectEdition() {
+      const edition = location.hash === '#root' ? 'root' : 'no-root';
+      const source = edition === 'root' ? 'root-launcher/index.html' : 'launcher/index.html';
+      editions.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.edition === edition)));
+      screen.title = (edition === 'root' ? 'Root' : 'No-root') + ' Edition launcher';
+      if (screen.getAttribute('src') !== source) screen.src = source;
+    }
+    editions.forEach(button => button.onclick = () => { location.hash = button.dataset.edition; });
+    window.addEventListener('hashchange', selectEdition);
+    selectEdition();
+    function fit() {
+      const scale = Math.min(area.clientWidth / 1920, area.clientHeight / 1080);
+      screen.style.transform = 'scale(' + scale + ')';
+      screen.style.left = (area.clientWidth - 1920 * scale) / 2 + 'px';
+      screen.style.top = (area.clientHeight - 1080 * scale) / 2 + 'px';
+    }
+    new ResizeObserver(fit).observe(area);
+    screen.addEventListener('load', () => { fit(); screen.contentWindow.focus(); });
+    window.addEventListener('keydown', event => {
+      if (event.target.closest('nav, .themes')) return;
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', 'Escape'].includes(event.key)) screen.contentWindow.focus();
+    });
+    fit();
+  </script>
+  <script src="preview/themes.js"></script>
+  <script src="preview/presentation.js"></script>
+  __LIVE_RELOAD__
 </html>

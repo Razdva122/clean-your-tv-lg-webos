@@ -1,15 +1,20 @@
 /* Trusted UI: theme rules never target this dialog. */
 #homeLayoutPanel {
   position: fixed;
-  top: 0; right: 0; bottom: 0; left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   z-index: 20000;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #f5f7fa;
-  background: rgba(7, 10, 14, .96);
+  background: rgba(7, 10, 14, 0.96);
 }
-#homeLayoutPanel[hidden] { display: none; }
+#homeLayoutPanel[hidden] {
+  display: none;
+}
 #homeLayoutPanel .layout-card {
   width: 960px;
   max-width: 92vw;
@@ -20,9 +25,20 @@
   border-radius: 24px;
   background: #202329;
 }
-#homeLayoutPanel h2 { font-size: 40px; font-weight: 500; }
-#homeLayoutPanel p { font-size: 26px; line-height: 1.4; margin: 18px 0; }
-#homeLayoutPanel .layout-choices { display: flex; flex-wrap: wrap; margin: -8px; }
+#homeLayoutPanel h2 {
+  font-size: 40px;
+  font-weight: 500;
+}
+#homeLayoutPanel p {
+  font-size: 26px;
+  line-height: 1.4;
+  margin: 18px 0;
+}
+#homeLayoutPanel .layout-choices {
+  display: flex;
+  flex-wrap: wrap;
+  margin: -8px;
+}
 #homeLayoutPanel button {
   font: inherit;
   font-size: 28px;
@@ -34,9 +50,26 @@
   color: #f5f7fa;
   cursor: pointer;
 }
-#homeLayoutPanel .layout-choices button { width: calc(33.333% - 16px); margin: 8px; }
-#homeLayoutPanel button[aria-pressed="true"] { border-color: #b8d3ff; }
-#homeLayoutPanel button:focus { outline: 4px solid #b8d3ff; outline-offset: 2px; background: #46556c; }
-#homeLayoutError { color: #ffd1bd; min-height: 36px; }
-.settings-layout { margin-top: 16px; }
-.settings-layout button { width: 100%; text-align: left; }
+#homeLayoutPanel .layout-choices button {
+  width: calc(33.333% - 16px);
+  margin: 8px;
+}
+#homeLayoutPanel button[aria-pressed='true'] {
+  border-color: #b8d3ff;
+}
+#homeLayoutPanel button:focus {
+  outline: 4px solid #b8d3ff;
+  outline-offset: 2px;
+  background: #46556c;
+}
+#homeLayoutError {
+  color: #ffd1bd;
+  min-height: 36px;
+}
+.settings-layout {
+  margin-top: 16px;
+}
+.settings-layout button {
+  width: 100%;
+  text-align: left;
+}

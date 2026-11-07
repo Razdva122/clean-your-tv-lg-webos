@@ -1,4 +1,4 @@
-import ast
+import runpy
 from pathlib import Path
 import unittest
 
@@ -7,10 +7,18 @@ FILES = ['wallpaper.js', 'wallpaper.css', 'wallpaper-panel.js', 'wallpaper-panel
 
 class WallpaperPackageTest(unittest.TestCase):
     def test_explicit_public_inventories_include_all_wallpaper_modules(self):
-        for name in ['scripts/preview.py', 'root-edition/preview.py', 'scripts/build-cytv.py']:
-            strings = {n.value for n in ast.walk(ast.parse((ROOT / name).read_text())) if isinstance(n, ast.Constant) and isinstance(n.value, str)}
+        preview = runpy.run_path(str(ROOT / 'scripts/preview.py'))
+        root_preview = runpy.run_path(str(ROOT / 'root-edition/preview.py'))
+        build = runpy.run_path(str(ROOT / 'scripts/build-cytv.py'))
+        inventories = {
+            'No-root browser preview': preview['LAUNCHER_FILES'],
+            'Root browser preview': preview['ROOT_LAUNCHER_FILES'],
+            'Root package sources': root_preview['FILES'],
+            'No-root package sources': build['tracked_files']('launcher'),
+        }
+        for name, files in inventories.items():
             for asset in FILES:
-                self.assertTrue(asset in strings or 'launcher/' + asset in strings, (name, asset))
+                self.assertIn(asset, files, (name, asset))
 
     def test_bootstrap_and_trusted_media_csp(self):
         html = (ROOT / 'launcher/index.html').read_text()

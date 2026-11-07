@@ -1,23 +1,341 @@
 'use strict';
 // Browser-only LS2 fixtures with real theme bytes; no physical-device claim.
-const {assert,fs,path,chromium,stage}=require('./browser.cjs'),http=require('http');
-const registry=require('../../scripts/check-theme-submissions.cjs').loadRegistry(),entry=registry.find(e=>e.record.title==='Channel');
-const envelope={schemaVersion:1,descriptor:fs.readFileSync(path.resolve('showcase',entry.base,'cytv-theme.json')).toString('base64'),files:{}};
-for(const f of entry.files.filter(f=>f!=='cytv-theme.json'))envelope.files[f]=fs.readFileSync(path.resolve('showcase',entry.base,f)).toString('base64');
-(async()=>{const site=stage(),server=http.createServer((req,res)=>{const f=path.resolve(site,'.'+new URL(req.url,'http://localhost').pathname);if(!f.startsWith(site+path.sep)||!fs.existsSync(f))return res.writeHead(404).end();res.end(fs.readFileSync(f));});await new Promise(r=>server.listen(0,'127.0.0.1',r));const browser=await chromium.launch({headless:true,channel:process.env.BROWSER_CHANNEL||'chrome'});
-try{for(const edition of ['launcher','root-launcher']){const page=await browser.newPage({viewport:{width:1920,height:1080},locale:'en-US'});await page.route('**/appinfo.json',r=>r.fulfill({json:edition==='root-launcher'?{version:'0.5.1',themeEngineVersion:'1.5.1'}:{version:'1.5.1'}}));await page.goto('http://127.0.0.1:'+server.address().port+'/'+edition+'/index.html');await page.locator('#tiles .focused').waitFor();await page.evaluate(()=>ThemeManager.start());await page.locator('#btnSettings').click();await page.locator('[data-category=themes]').click();await page.locator('#themeReceive').click();await page.getByText('This is a browser preview. The receiver runs on your TV.',{exact:true}).waitFor();assert.equal(await page.locator('#themeReceiverRetry').count(),0,'browser preview does not advise a service update');assert.equal(await page.locator('#themeReceiveLegacy').count(),0,'only PC-to-TV transfer is offered');await page.keyboard.press('Escape');await page.evaluate(()=>{window.CYTV_BROWSER_PREVIEW=false;});await page.locator('#themeReceive').click();await page.locator('#themeReceiverRetry').waitFor();assert.match(await page.locator('#themeMessage').innerText(),/unavailable/);assert.equal(await page.locator('#themeReceiveLegacy').count(),0);const spacing=await page.locator('#homeThemePanel').getByRole('button',{name:'Back',exact:true}).evaluate(el=>el.getBoundingClientRect().left-document.getElementById('themeReceiverRetry').getBoundingClientRect().right);assert(spacing>=10,'receiver error actions have a visible gap');await page.keyboard.press('Escape');await page.addScriptTag({path:path.resolve('launcher/theme-receiver.js')});await page.evaluate(env=>{
-window.receiverFixture={calls:[],mode:'waiting',envelope:env,delay:0};window.PalmServiceBridge=function(){this.cancel=function(){};this.call=function(uri,payload){const f=receiverFixture,p=JSON.parse(payload),method=uri.split('/').pop();f.calls.push({uri,method,payload:p});let response={returnValue:true};if(method==='themeReceiverStart')Object.assign(response,{sessionId:'fixture',pin:'123456',addresses:['192.168.1.9'],expiresAt:Date.now()+600000,port:8879});if(method==='themeReceiverStatus')Object.assign(response,{state:f.mode==='waiting'?'waiting':'received',size:new TextEncoder().encode(JSON.stringify(f.envelope)).length});if(method==='themeReceiverRead'){const bytes=new TextEncoder().encode(JSON.stringify(f.envelope)),part=bytes.slice(p.offset,p.offset+48000);let raw='';part.forEach(b=>raw+=String.fromCharCode(b));Object.assign(response,{offset:p.offset,data:btoa(raw),nextOffset:p.offset+part.length,done:p.offset+part.length===bytes.length});if(f.mode==='bad-chunk')response.nextOffset++;}setTimeout(()=>this.onservicecallback(JSON.stringify(response)),method==='themeReceiverStart'?f.delay:0);};};},envelope);
-async function enter(){await page.locator('#themeReceive').click();}
-await enter();await page.locator('#themeReceiverPin').waitFor();assert.equal(await page.locator('#themeReceiverPin').innerText(),'123456');assert.equal(await page.locator('#themeComputer').count(),0);assert.equal(await page.evaluate(()=>receiverFixture.calls.find(c=>c.method==='themeReceiverStart').uri),'luna://'+(edition==='launcher'?'com.gathin.tvhome.renewal':'com.cleanyourtv.root.preview.service')+'/themeReceiverStart');await page.keyboard.press('Escape');await page.waitForFunction(()=>receiverFixture.calls.some(c=>c.method==='themeReceiverStop'));
-// Leaving Appearance and hiding the document both close the temporary listener.
-await enter();await page.locator('#themeReceiverPin').waitFor();await page.evaluate(()=>{receiverFixture.calls=[];HomeThemePanel.activate(false);});await page.waitForFunction(()=>receiverFixture.calls.some(c=>c.method==='themeReceiverStop'));await page.evaluate(()=>HomeThemePanel.activate(true));await enter();await page.locator('#themeReceiverPin').waitFor();await page.evaluate(()=>{receiverFixture.calls=[];Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));});await page.waitForFunction(()=>receiverFixture.calls.some(c=>c.method==='themeReceiverStop'));await page.locator('#themeReceiverRetry').waitFor();await page.evaluate(()=>Object.defineProperty(document,'hidden',{configurable:true,value:false}));await page.keyboard.press('Escape');
-await page.evaluate(()=>{receiverFixture.calls=[];receiverFixture.delay=100;});await page.locator('#themeReceive').click();await page.keyboard.press('Escape');await page.waitForFunction(()=>receiverFixture.calls.some(c=>c.method==='themeReceiverStop'));assert.equal(await page.locator('#themeReceiverPin').count(),0,'start race cannot reopen screen');
-await page.evaluate(()=>{receiverFixture.delay=0;receiverFixture.mode='bad-chunk';});await page.locator('#themeReceive').click();await page.locator('#themeReceiverRetry').waitFor();assert.equal(await page.evaluate(async()=>(await ThemeStore.list()).length),0);
-// Closing while LS2 chunks are pending invalidates the import and stops the service.
-await page.evaluate(()=>{receiverFixture.mode='received';const old=ThemeReceiver.read;ThemeReceiver.read=function(id,size,signal){return new Promise(resolve=>setTimeout(resolve,100)).then(()=>old(id,size,signal));};});await page.locator('#themeReceiverRetry').click();await page.waitForFunction(()=>receiverFixture.calls.some(c=>c.method==='themeReceiverStatus'));await page.keyboard.press('Escape');await page.waitForTimeout(180);assert.equal(await page.evaluate(async()=>(await ThemeStore.list()).length),0,'cancelled read never caches');
-await page.locator('#themeReceive').click();await page.locator('#themeApply').waitFor();await page.evaluate(()=>ThemeStore.clear());await page.keyboard.press('Escape');await page.keyboard.press('Escape');
-// Abort an actual IDB write after it has been issued, before transaction commit.
-const cancelledWrite=await page.evaluate(async env=>{const pack=ThemeData.unpackEnvelope(env,'1.5.1'),signal={cancelled:false},original=IDBObjectStore.prototype.put;IDBObjectStore.prototype.put=function(value){const request=original.call(this,value);signal.cancelled=true;signal.cancel();return request;};try{await ThemeStore.put(pack,1,signal);return false;}catch(e){return e.message==='Cancelled'&&(await ThemeStore.list()).length===0;}finally{IDBObjectStore.prototype.put=original;}},envelope);assert.equal(cancelledWrite,true,'cancellation aborts active cache transaction');
-await page.evaluate(()=>{receiverFixture.mode='bad-chunk';});await page.locator('#themeReceive').click();await page.locator('#themeReceiverRetry').waitFor();
-await page.evaluate(()=>{receiverFixture.mode='received';receiverFixture.envelope.files[Object.keys(receiverFixture.envelope.files)[0]]=btoa('bad');});await page.locator('#themeReceiverRetry').click();await page.locator('#themeReceiverRetry').waitFor();assert.equal(await page.evaluate(async()=>(await ThemeStore.list()).length),0,'invalid hashes never cache');await page.evaluate(env=>{receiverFixture.envelope=env;},envelope);await page.locator('#themeReceiverRetry').click();await page.locator('#themeApply').waitFor();assert.equal(await page.evaluate(()=>ThemeManager.current().id),'builtin:classic');assert.equal(await page.evaluate(()=>JSON.stringify(localStorage).includes('123456')),false);await page.locator('#themeApply').click();await page.waitForFunction(id=>ThemeManager.current().id===id&&!ThemeManager.current().trial,entry.record.id);assert.equal(await page.locator('#themeKeep').count(),0);console.log('PASS receiver LS2 assembly, cancellation, validation and immediate Apply: '+edition);await page.close();}}
-finally{await browser.close();await new Promise(r=>server.close(r));}})().catch(e=>{console.error(e);process.exitCode=1;});
+const { assert, fs, path, chromium, stage } = require('./browser.cjs'),
+  http = require('http');
+const registry =
+    require('../../scripts/check-theme-submissions.cjs').loadRegistry(),
+  entry = registry.find((e) => e.record.title === 'Channel');
+const envelope = {
+  schemaVersion: 1,
+  descriptor: fs
+    .readFileSync(path.resolve('showcase', entry.base, 'cytv-theme.json'))
+    .toString('base64'),
+  files: {}
+};
+for (const f of entry.files.filter((f) => f !== 'cytv-theme.json'))
+  envelope.files[f] = fs
+    .readFileSync(path.resolve('showcase', entry.base, f))
+    .toString('base64');
+(async () => {
+  const site = stage(),
+    server = http.createServer((req, res) => {
+      const f = path.resolve(
+        site,
+        '.' + new URL(req.url, 'http://localhost').pathname
+      );
+      if (!f.startsWith(site + path.sep) || !fs.existsSync(f))
+        return res.writeHead(404).end();
+      res.end(fs.readFileSync(f));
+    });
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const browser = await chromium.launch({
+    headless: true,
+    channel: process.env.BROWSER_CHANNEL || 'chrome'
+  });
+  try {
+    for (const edition of ['launcher', 'root-launcher']) {
+      const page = await browser.newPage({
+        viewport: { width: 1920, height: 1080 },
+        locale: 'en-US'
+      });
+      await page.route('**/appinfo.json', (r) =>
+        r.fulfill({
+          json:
+            edition === 'root-launcher'
+              ? { version: '0.5.1', themeEngineVersion: '1.5.1' }
+              : { version: '1.5.1' }
+        })
+      );
+      await page.goto(
+        'http://127.0.0.1:' +
+          server.address().port +
+          '/' +
+          edition +
+          '/index.html'
+      );
+      await page.locator('#tiles .focused').waitFor();
+      await page.evaluate(() => ThemeManager.start());
+      await page.locator('#btnSettings').click();
+      await page.locator('[data-category=themes]').click();
+      await page.locator('#themeReceive').click();
+      await page
+        .getByText('This is a browser preview. The receiver runs on your TV.', {
+          exact: true
+        })
+        .waitFor();
+      assert.equal(
+        await page.locator('#themeReceiverRetry').count(),
+        0,
+        'browser preview does not advise a service update'
+      );
+      assert.equal(
+        await page.locator('#themeReceiveLegacy').count(),
+        0,
+        'only PC-to-TV transfer is offered'
+      );
+      await page.keyboard.press('Escape');
+      await page.evaluate(() => {
+        window.CYTV_BROWSER_PREVIEW = false;
+      });
+      await page.locator('#themeReceive').click();
+      await page.locator('#themeReceiverRetry').waitFor();
+      assert.match(
+        await page.locator('#themeMessage').innerText(),
+        /unavailable/
+      );
+      assert.equal(await page.locator('#themeReceiveLegacy').count(), 0);
+      const spacing = await page
+        .locator('#homeThemePanel')
+        .getByRole('button', { name: 'Back', exact: true })
+        .evaluate(
+          (el) =>
+            el.getBoundingClientRect().left -
+            document
+              .getElementById('themeReceiverRetry')
+              .getBoundingClientRect().right
+        );
+      assert(spacing >= 10, 'receiver error actions have a visible gap');
+      await page.keyboard.press('Escape');
+      await page.addScriptTag({
+        path: path.resolve('launcher/theme-receiver.js')
+      });
+      await page.evaluate((env) => {
+        window.receiverFixture = {
+          calls: [],
+          mode: 'waiting',
+          envelope: env,
+          delay: 0
+        };
+        window.PalmServiceBridge = function () {
+          this.cancel = function () {};
+          this.call = function (uri, payload) {
+            const f = receiverFixture,
+              p = JSON.parse(payload),
+              method = uri.split('/').pop();
+            f.calls.push({ uri, method, payload: p });
+            let response = { returnValue: true };
+            if (method === 'themeReceiverStart')
+              Object.assign(response, {
+                sessionId: 'fixture',
+                pin: '123456',
+                addresses: ['192.168.1.9'],
+                expiresAt: Date.now() + 600000,
+                port: 8879
+              });
+            if (method === 'themeReceiverStatus')
+              Object.assign(response, {
+                state: f.mode === 'waiting' ? 'waiting' : 'received',
+                size: new TextEncoder().encode(JSON.stringify(f.envelope))
+                  .length
+              });
+            if (method === 'themeReceiverRead') {
+              const bytes = new TextEncoder().encode(
+                  JSON.stringify(f.envelope)
+                ),
+                part = bytes.slice(p.offset, p.offset + 48000);
+              let raw = '';
+              part.forEach((b) => (raw += String.fromCharCode(b)));
+              Object.assign(response, {
+                offset: p.offset,
+                data: btoa(raw),
+                nextOffset: p.offset + part.length,
+                done: p.offset + part.length === bytes.length
+              });
+              if (f.mode === 'bad-chunk') response.nextOffset++;
+            }
+            setTimeout(
+              () => this.onservicecallback(JSON.stringify(response)),
+              method === 'themeReceiverStart' ? f.delay : 0
+            );
+          };
+        };
+      }, envelope);
+      async function enter() {
+        await page.locator('#themeReceive').click();
+      }
+      await enter();
+      await page.locator('#themeReceiverPin').waitFor();
+      assert.equal(
+        await page.locator('#themeReceiverPin').innerText(),
+        '123456'
+      );
+      assert.equal(await page.locator('#themeComputer').count(), 0);
+      assert.equal(
+        await page.evaluate(
+          () =>
+            receiverFixture.calls.find((c) => c.method === 'themeReceiverStart')
+              .uri
+        ),
+        'luna://' +
+          (edition === 'launcher'
+            ? 'com.gathin.tvhome.renewal'
+            : 'com.cleanyourtv.root.preview.service') +
+          '/themeReceiverStart'
+      );
+      await page.keyboard.press('Escape');
+      await page.waitForFunction(() =>
+        receiverFixture.calls.some((c) => c.method === 'themeReceiverStop')
+      );
+      // Leaving Appearance and hiding the document both close the temporary listener.
+      await enter();
+      await page.locator('#themeReceiverPin').waitFor();
+      await page.evaluate(() => {
+        receiverFixture.calls = [];
+        HomeThemePanel.activate(false);
+      });
+      await page.waitForFunction(() =>
+        receiverFixture.calls.some((c) => c.method === 'themeReceiverStop')
+      );
+      await page.evaluate(() => HomeThemePanel.activate(true));
+      await enter();
+      await page.locator('#themeReceiverPin').waitFor();
+      await page.evaluate(() => {
+        receiverFixture.calls = [];
+        Object.defineProperty(document, 'hidden', {
+          configurable: true,
+          value: true
+        });
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+      await page.waitForFunction(() =>
+        receiverFixture.calls.some((c) => c.method === 'themeReceiverStop')
+      );
+      await page.locator('#themeReceiverRetry').waitFor();
+      await page.evaluate(() =>
+        Object.defineProperty(document, 'hidden', {
+          configurable: true,
+          value: false
+        })
+      );
+      await page.keyboard.press('Escape');
+      await page.evaluate(() => {
+        receiverFixture.calls = [];
+        receiverFixture.delay = 100;
+      });
+      await page.locator('#themeReceive').click();
+      await page.keyboard.press('Escape');
+      await page.waitForFunction(() =>
+        receiverFixture.calls.some((c) => c.method === 'themeReceiverStop')
+      );
+      assert.equal(
+        await page.locator('#themeReceiverPin').count(),
+        0,
+        'start race cannot reopen screen'
+      );
+      await page.evaluate(() => {
+        receiverFixture.delay = 0;
+        receiverFixture.mode = 'bad-chunk';
+      });
+      await page.locator('#themeReceive').click();
+      await page.locator('#themeReceiverRetry').waitFor();
+      assert.equal(
+        await page.evaluate(async () => (await ThemeStore.list()).length),
+        0
+      );
+      // Closing while LS2 chunks are pending invalidates the import and stops the service.
+      await page.evaluate(() => {
+        receiverFixture.mode = 'received';
+        const old = ThemeReceiver.read;
+        ThemeReceiver.read = function (id, size, signal) {
+          return new Promise((resolve) => setTimeout(resolve, 100)).then(() =>
+            old(id, size, signal)
+          );
+        };
+      });
+      await page.locator('#themeReceiverRetry').click();
+      await page.waitForFunction(() =>
+        receiverFixture.calls.some((c) => c.method === 'themeReceiverStatus')
+      );
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(180);
+      assert.equal(
+        await page.evaluate(async () => (await ThemeStore.list()).length),
+        0,
+        'cancelled read never caches'
+      );
+      await page.locator('#themeReceive').click();
+      await page.locator('#themeApply').waitFor();
+      await page.evaluate(() => ThemeStore.clear());
+      await page.keyboard.press('Escape');
+      await page.keyboard.press('Escape');
+      // Abort an actual IDB write after it has been issued, before transaction commit.
+      const cancelledWrite = await page.evaluate(async (env) => {
+        const pack = ThemeData.unpackEnvelope(env, '1.5.1'),
+          signal = { cancelled: false },
+          original = IDBObjectStore.prototype.put;
+        IDBObjectStore.prototype.put = function (value) {
+          const request = original.call(this, value);
+          signal.cancelled = true;
+          signal.cancel();
+          return request;
+        };
+        try {
+          await ThemeStore.put(pack, 1, signal);
+          return false;
+        } catch (e) {
+          return (
+            e.message === 'Cancelled' && (await ThemeStore.list()).length === 0
+          );
+        } finally {
+          IDBObjectStore.prototype.put = original;
+        }
+      }, envelope);
+      assert.equal(
+        cancelledWrite,
+        true,
+        'cancellation aborts active cache transaction'
+      );
+      await page.evaluate(() => {
+        receiverFixture.mode = 'bad-chunk';
+      });
+      await page.locator('#themeReceive').click();
+      await page.locator('#themeReceiverRetry').waitFor();
+      await page.evaluate(() => {
+        receiverFixture.mode = 'received';
+        receiverFixture.envelope.files[
+          Object.keys(receiverFixture.envelope.files)[0]
+        ] = btoa('bad');
+      });
+      await page.locator('#themeReceiverRetry').click();
+      await page.locator('#themeReceiverRetry').waitFor();
+      assert.equal(
+        await page.evaluate(async () => (await ThemeStore.list()).length),
+        0,
+        'invalid hashes never cache'
+      );
+      await page.evaluate((env) => {
+        receiverFixture.envelope = env;
+      }, envelope);
+      await page.locator('#themeReceiverRetry').click();
+      await page.locator('#themeApply').waitFor();
+      assert.equal(
+        await page.evaluate(() => ThemeManager.current().id),
+        'builtin:classic'
+      );
+      assert.equal(
+        await page.evaluate(() =>
+          JSON.stringify(localStorage).includes('123456')
+        ),
+        false
+      );
+      await page.locator('#themeApply').click();
+      await page.waitForFunction(
+        (id) =>
+          ThemeManager.current().id === id && !ThemeManager.current().trial,
+        entry.record.id
+      );
+      assert.equal(await page.locator('#themeKeep').count(), 0);
+      console.log(
+        'PASS receiver LS2 assembly, cancellation, validation and immediate Apply: ' +
+          edition
+      );
+      await page.close();
+    }
+  } finally {
+    await browser.close();
+    await new Promise((r) => server.close(r));
+  }
+})().catch((e) => {
+  console.error(e);
+  process.exitCode = 1;
+});
