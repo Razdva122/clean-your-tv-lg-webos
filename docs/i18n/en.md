@@ -2,6 +2,8 @@
 
 Clean Your TV gives your LG webOS TV a personal Home screen: your apps in your order, without sponsored rows in this menu. Install from a computer or Android phone; the computer can be switched off afterward.
 
+**Next release (unreleased):** Connection errors will explain denied network access, refused SSH ports or timeouts. **Check connection again** runs diagnostics without installing packages; **Change connection** checks edited connection details. On macOS, **Open System Settings** helps find Local Network access; an older copy’s name may appear there. Pending operations retain their recovery flow.
+
 ## UNRELEASED candidate: older TV Node.js
 
 These choices belong to an unpublished candidate, not the published downloads. If ordinary Root rejects the TV Node.js version (it requires Node.js 8+), the installer can offer **No-root using existing root SSH**: Home and Home Helper without installing Developer Mode. Never enable Developer Mode over existing root. Only **exact Node.js 0.12.2** can additionally offer **Root Beta**, with separate packages and explicit confirmation. It does not replace system Node.js and has no automatic/OTA updates; use the computer installer. No-root has reduced functionality: no system Home routing or Root-only controls. Root Beta is not sufficiently tested on TVs.

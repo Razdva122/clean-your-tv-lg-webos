@@ -2,6 +2,8 @@
 
 Clean Your TV oferece uma tela inicial pessoal para sua LG webOS: seus apps na sua ordem, sem linhas patrocinadas neste menu. Instale pelo computador ou por um celular Android; depois o computador pode ficar desligado.
 
+**Próxima versão (não publicada):** Os erros distinguirão acesso à rede negado, portas SSH que recusam conexões e tempo esgotado. **Verificar conexão novamente** executa diagnósticos sem instalar pacotes; **Alterar conexão** verifica os dados editados. No macOS, **Abrir Ajustes do Sistema** ajuda a encontrar o acesso à rede local; pode aparecer o nome de uma cópia anterior. Operações pendentes mantêm seu fluxo de recuperação.
+
 ## Candidato UNRELEASED: Node.js antigo na TV
 
 Estas opções pertencem a um candidato ainda não publicado, não aos downloads publicados. Se Root normal rejeitar a versão do Node.js da TV (exige Node.js 8+), o instalador pode oferecer **No-root usando o SSH root existente**: Home e Home Helper sem instalar Developer Mode. Nunca ative Developer Mode sobre um root existente. Somente **Node.js exatamente 0.12.2** permite oferecer também **Root Beta**, com pacotes separados e confirmação explícita. O Node.js do sistema não é substituído e não há atualizações automáticas/OTA; use o instalador do computador. No-root tem funcionalidade reduzida: sem redirecionamento do Home do sistema nem controles exclusivos do Root. Root Beta não foi testado suficientemente em TVs.

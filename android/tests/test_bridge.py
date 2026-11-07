@@ -148,7 +148,7 @@ class BridgeTests(unittest.TestCase):
                                 {'edition':edition,'host':'PRIVATE-HOST'}, {'action':'install'})
                 console.failure_help(guide)
                 event=native.events[-1]
-                self.assertEqual((event['kind'],event['code']),('failure-help','ssh-unreachable'))
+                self.assertEqual((event['kind'],event['code']),('failure-help','ssh-timeout'))
                 self.assertTrue(event['pending']);self.assertFalse(event['canEditConnection'])
                 self.assertNotEqual(event['title'],guide['title'])
                 self.assertNotIn('PRIVATE',json.dumps(native.events))

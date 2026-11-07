@@ -30,7 +30,7 @@ class RecoveryPresentationTests(unittest.TestCase):
     def test_current_connection_or_auth_help_overrides_only_restart_presentation(self):
         from cytv.recovery_ui import removal_details, removal_restart_required
         plan={'disposition':'clean-removal','restart_required':True,'removal':{'stage':'restart-required','reason':'restart-required'}}
-        for code,next_step in [('ssh-unreachable','Connection to the TV was interrupted. Check the connection and try again.'),('ssh-auth-root','Use the existing Root SSH key.')]:
+        for code,next_step in [('ssh-unreachable','Connection to the TV was interrupted. Check the connection and try again.'),('ssh-auth-root','Use the existing Root SSH key.'),('ssh-access-denied','Check app network access.'),('ssh-refused','Check the SSH port.'),('ssh-timeout','Connection to the TV was interrupted. Check the connection and try again.')]:
             with self.subTest(code=code):
                 detail=removal_details(plan,{'code':code,'next_step':next_step})
                 self.assertEqual(detail['blocker_text'],next_step)
