@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 """Review or apply one-time Root Updater setup through explicit root SSH."""
 import argparse
-import importlib.util
 import json
 from pathlib import Path
 import shlex
 import subprocess
-import sys
 import tempfile
 import uuid
 

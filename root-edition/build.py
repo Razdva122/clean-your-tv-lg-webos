@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
 """Build an offline, isolated Root candidate IPK from the public UI sources."""
 import argparse
-import gzip
 import hashlib
 import json
 from pathlib import Path
-import tarfile
 import sys
 import struct
 
 import preview
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from scripts.tv_web_build import compile_web
-from cytv.package import IPK_MTIME, ar
+from cytv.package import ar
 
 
 SERVICE_ID = 'com.cleanyourtv.root.preview.service'

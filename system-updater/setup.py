@@ -9,7 +9,6 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 import shlex
-import shutil
 import stat
 import subprocess
 import sys

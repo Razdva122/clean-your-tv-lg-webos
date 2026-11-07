@@ -7,12 +7,24 @@
       "issues": [
         207
       ],
-      "summary": "Fix No-root inventory fallback and stale remote icon URLs"
+      "summary": "Add bounded No-root inventory fallback and fresh remote icons; original IR routing and physical/TLS acceptance remain unresolved"
+    },
+    {
+      "pr": 371,
+      "issues": [
+        364
+      ],
+      "summary": "Add experimental capability-admitted Qt SDK 6-9 compositor Home and owned-filter recovery; target-device compatibility remains unverified"
     },
     {
       "pr": 372,
       "issues": [],
-      "summary": "Refactor shared build assets and automate project formatting"
+      "summary": "Centralize shared build resources and AR writing; automate formatting and preserve host Python/source-injection contracts"
+    },
+    {
+      "pr": 375,
+      "issues": [],
+      "summary": "Remove dead cleanup paths and unused bindings while preserving active cleanup and recovery exports"
     }
   ],
   "excluded": [],

@@ -1587,22 +1587,10 @@ print('CYTV_ROOT_FILES_OK')
             raise UserError('Updater permissions removal could not be verified.')
         return reply
 
-    def root_updater_cleanup(self, action, archive):
-        from .root_updater_remove import COMMAND
-        reply = json.loads(self.remote.run(self._python_command([self._python(), '-c', COMMAND, action, archive]), timeout=60))
-        if not isinstance(reply, dict):
-            raise UserError('Root Updater cleanup could not be verified.')
-        return reply
-
     def cleanup_legacy_permissions(self):
         from .legacy_permissions_remove import SCRIPT
         if self.remote.run(self._python_command([self._python(), '-c', SCRIPT]), timeout=30).strip() != 'CYTV_LEGACY_PERMISSIONS_REMOVED':
             raise UserError('Updater permissions removal could not be verified.')
-
-    def cleanup_updater_app_permissions(self):
-        from .app_permissions_remove import SCRIPT
-        if self.remote.run(self._python_command([self._python(), '-c', SCRIPT]), timeout=30).strip() != 'CYTV_APP_PERMISSIONS_REMOVED':
-            raise UserError('Root Updater app permissions removal could not be verified. Recovery data was kept.')
 
     def verify_project_startup_removed(self):
         script = """import os
@@ -1632,15 +1620,6 @@ print('CYTV_PROJECT_REMOVED')
                 raise ValueError('LG Home routing differs')
         except (KeyError, TypeError, ValueError):
             raise UserError('LG Home routing could not be verified. Keep recovery data.') from None
-
-    def recover_root_removal(self, action):
-        from .root_remove_recovery import SCRIPT
-        reply = json.loads(self.remote.run(self._python_command([self._python(), '-c', SCRIPT, action]), timeout=1080))
-        if not isinstance(reply, dict) or reply.get('returnValue') is not True:
-            if isinstance(reply, dict) and reply.get('reason') == 'busy':
-                raise UserError('The previous removal is still running. Wait a minute, then choose Remove again. The app will check the TV before continuing.')
-            raise UserError('The TV has not confirmed the previous package removal. Recovery records were kept. Restart the TV, then choose Remove again to check its state. If this message returns, send the diagnostic report to support.')
-        return reply
 
     def uninstall_project(self):
         pending=self.store.request_clean_removal(self.profile)
