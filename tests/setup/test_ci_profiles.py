@@ -53,8 +53,10 @@ class CIProfiles(unittest.TestCase):
                          'updater-service', 'updater-app', 'tests'):
                 (checkout / name).symlink_to(ROOT / name, target_is_directory=True)
             traces = {}
-            for profile in ('ui', 'tv', 'tv-runtime', 'tv tv-runtime', '',
-                            '--shard 1/4', '--shard 2/4', '--shard 3/4', '--shard 4/4'):
+            profiles = ['ui', 'tv', 'tv-runtime', 'tv tv-runtime', '']
+            profiles += [f'--shard {index}/{count}' for count in (1, 2, 3, 4)
+                         for index in range(1, count + 1)]
+            for profile in profiles:
                 log = temp / (profile.replace(' ', '-').replace('/', '-') or 'full')
                 subprocess.run(['bash', str(checkout / 'scripts/test.sh'), *profile.split()],
                                cwd=ROOT, check=True, capture_output=True,
@@ -64,17 +66,31 @@ class CIProfiles(unittest.TestCase):
             # Union of shard commands equals the original full profile. Only the
             # three large Python discoveries become partitioned runner calls.
             large_suites = ('root-edition/tests', 'tests/setup', 'tests/cytv')
-            sharded = Counter()
-            for index in range(1, 5):
-                commands = traces[f'--shard {index}/4']
-                for directory in large_suites:
-                    command = f'python3 scripts/test-shard.py --shard {index}/4 -s {directory}'
-                    self.assertEqual(commands.count(command), 1)
-                sharded.update(command for command in commands if 'scripts/test-shard.py' not in command)
             original = Counter(traces[''])
             for directory in large_suites:
                 self.assertEqual(original.pop(f'python3 -m unittest discover -s {directory}'), 1)
-            self.assertEqual(sharded, original)
+            for count in (1, 2, 3, 4):
+                sharded = Counter()
+                for index in range(1, count + 1):
+                    commands = traces[f'--shard {index}/{count}']
+                    for directory in large_suites:
+                        command = f'python3 scripts/test-shard.py --shard {index}/{count} -s {directory}'
+                        self.assertEqual(commands.count(command), 1)
+                    sharded.update(command for command in commands if 'scripts/test-shard.py' not in command)
+                self.assertEqual(sharded, original, f'{count} shards must retain each serial command exactly once')
+            # Serial groups must leave shard 1, with each dependency-coherent
+            # block kept together in its own isolated checkout.
+            for command in ('node tests/helper-compat.cjs',
+                            'node homebrew/tests/ui.cjs'):
+                self.assertIn(command, traces['--shard 2/4'])
+                self.assertNotIn(command, traces['--shard 1/4'])
+            for command in ('python3 tests/root-node-compat.py', 'python3 tests/root-node-compat.py --beta'):
+                self.assertIn(command, traces['--shard 3/4'])
+                self.assertNotIn(command, traces['--shard 2/4'])
+            self.assertIn('python3 -m unittest discover -s tests/system_updates', traces['--shard 4/4'])
+            self.assertNotIn('python3 -m unittest discover -s tests/system_updates', traces['--shard 1/4'])
+            self.assertIn('node tests/root-decoder-ui.cjs', traces['--shard 2/4'])
+            self.assertNotIn('node tests/root-decoder-ui.cjs', traces['--shard 1/4'])
             self.assertEqual(traces['tv'], traces['ui'] + traces['tv-runtime'])
             self.assertEqual(traces['tv'], traces['tv tv-runtime'])
             self.assertNotIn('npm run test:themes', traces['tv-runtime'])

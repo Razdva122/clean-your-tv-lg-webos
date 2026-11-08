@@ -91,6 +91,31 @@ class EvidenceTests(unittest.TestCase):
     def missing(self, ctx=None):
         return self.m['select_missing'](ctx or self.ctx, 'owner/repo', 20, self.api)['missing']
 
+    def test_lookup_reads_each_json_endpoint_once_and_does_not_cache_across_plans(self):
+        calls = []
+        def counted(path, binary=False):
+            calls.append((path, binary))
+            return self.api(path, binary)
+        self.assertEqual(self.m['select_missing'](self.ctx, 'owner/repo', 20, counted)['missing'], [])
+        self.assertEqual(calls.count(('actions/runs/10', False)), 1)
+        self.run['conclusion'] = 'failure'
+        self.assertEqual(self.m['select_missing'](self.ctx, 'owner/repo', 20, counted)['missing'],
+                         ['installer', 'setup', 'tv-runtime', 'ui'])
+        self.assertEqual(calls.count(('actions/runs/10', False)), 2)
+
+    def test_nonmatching_receipt_keys_skip_provenance_requests(self):
+        receipt = self.m['make_receipt'](self.ctx, 'owner/repo', 10, 1, 100)
+        receipt['keys'] = {unit: '0' * 64 for unit in receipt['keys']}
+        self.raw = self.archive(receipt)
+        self.artifact.update(size_in_bytes=len(self.raw), digest='sha256:' + hashlib.sha256(self.raw).hexdigest())
+        calls = []
+        def counted(path, binary=False):
+            calls.append(path)
+            return self.api(path, binary)
+        result = self.m['select_missing'](self.ctx, 'owner/repo', 20, counted)
+        self.assertEqual(result['missing'], ['installer', 'setup', 'tv-runtime', 'ui'])
+        self.assertEqual(len(calls), 2)  # Listing and bounded, digest-checked receipt only.
+
     def write_commit(self, path, content='first\n'):
         target = self.root / path
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -184,7 +209,7 @@ class EvidenceTests(unittest.TestCase):
     def test_partial_receipt_remains_discoverable_after_unrelated_source_changes(self):
         self.write_commit('tests/cytv/test_long_ssh_commands.py')
         consumer = self.context('tv setup installer android preview')
-        self.assertEqual(self.missing(consumer), ['android', 'installer', 'preview', 'setup'])
+        self.assertEqual(self.missing(consumer), ['android', 'installer', 'setup'])
         self.assertEqual(set(self.m['select_missing'](consumer, 'owner/repo', 20, self.api)['reused']),
                          {'ui', 'tv-runtime'})
         # A forged projected key must still be recomputed from the producer tree.
@@ -192,7 +217,7 @@ class EvidenceTests(unittest.TestCase):
         forged['keys']['installer'] = consumer['keys']['installer']
         self.raw = self.archive(forged)
         self.artifact.update(size_in_bytes=len(self.raw), digest='sha256:' + hashlib.sha256(self.raw).hexdigest())
-        self.assertEqual(self.missing(consumer), ['android', 'installer', 'preview', 'setup'])
+        self.assertEqual(self.missing(consumer), ['android', 'installer', 'setup'])
 
     def test_old_schema_cannot_bootstrap_new_policy_receipts(self):
         receipt = self.m['make_receipt'](self.ctx, 'owner/repo', 10, 1, 100)
@@ -376,11 +401,17 @@ class EvidenceTests(unittest.TestCase):
             self.assertEqual(self.m['github_api']('owner/repo')('test'), {'ok': True})
 
     def test_matching_partial_coverage_runs_only_missing_units(self):
-        self.assertEqual(self.missing(self.context('tv setup installer android preview')), ['android', 'preview'])
+        self.assertEqual(self.missing(self.context('tv setup installer android preview')), ['android'])
 
     def test_alias_and_nonprimary_shard_do_not_claim_nonexecuted_units(self):
-        self.assertEqual(self.context('tv ui tv-runtime android preview setup', shard='2/4')['units'], ['setup', 'tv-runtime'])
-        self.assertEqual(self.context('ui android preview', shard='2/4')['units'], [])
+        self.assertEqual(self.context('tv ui tv-runtime android preview setup', shard='2/4')['units'], ['preview', 'setup', 'tv-runtime'])
+        self.assertEqual(self.context('ui android preview', shard='2/4')['units'], ['preview'])
+        # Keep these assertions in this existing test so verification itself does
+        # not shift every subsequent setup test's modulo partition.
+        expected = {1: ['android', 'setup', 'ui'], 2: ['preview', 'setup'],
+                    3: ['setup'], 4: ['setup']}
+        for index, units in expected.items():
+            self.assertEqual(self.context('ui android preview setup', shard=f'{index}/4')['units'], units)
 
     def test_metadata_only_change_preserves_runtime_but_invalidates_setup(self):
         (self.root / 'README.md').write_text('second\n')
@@ -515,22 +546,25 @@ class EvidenceTests(unittest.TestCase):
             before = self.m['environment']('runtime')
             self.assertEqual(before.get('browser'), '130.0.0.0')
             self.assertEqual(before['browser_channel'], 'chrome')
-            self.ctx = self.context('installer preview', environment=before)
+            self.ctx = self.context('installer preview', shard='2/4', environment=before)
+            self.job['name'] = 'runtime (ubuntu-latest, 2)'
             self.raw = self.archive(self.m['make_receipt'](self.ctx, 'owner/repo', 10, 1, 100))
             self.artifact.update(name=self.ctx['artifact'], size_in_bytes=len(self.raw), digest='sha256:' + hashlib.sha256(self.raw).hexdigest())
             self.assertEqual(self.missing(), [])
             version[0] = '131.0.0.0'
             after = self.m['environment']('runtime')
-            self.assertEqual(self.missing(self.context('installer preview', environment=after)), ['installer', 'preview'])
+            self.assertEqual(self.missing(self.context('installer preview', shard='2/4', environment=after)), ['installer', 'preview'])
             version[0] = '130.0.0.0'
             with patch.dict('os.environ', {'BROWSER_CHANNEL': 'chrome-beta'}):
                 other_channel = self.m['environment']('runtime')
-            self.assertEqual(self.missing(self.context('installer preview', environment=other_channel)), ['installer', 'preview'])
-            self.assertNotIn('browser', self.m['environment']('runtime', '2/4'))
+            self.assertEqual(self.missing(self.context('installer preview', shard='2/4', environment=other_channel)), ['installer', 'preview'])
+            self.assertEqual(self.m['environment']('runtime', '2/4').get('browser'), '130.0.0.0')
+            self.assertNotIn('browser', self.m['environment']('runtime', '3/4'))
+            self.assertNotIn('browser', self.m['environment']('runtime', '4/4'))
             unavailable[0] = True
             unknown = self.m['environment']('runtime')
             self.assertIsNone(unknown['browser'])
-            ctx = self.context('installer preview', environment=unknown)
+            ctx = self.context('installer preview', shard='2/4', environment=unknown)
             self.assertEqual(self.missing(ctx), ['installer', 'preview'])
             with self.assertRaisesRegex(ValueError, 'browser'):
                 self.m['make_receipt'](ctx, 'owner/repo', 20, 1, 200)
@@ -567,19 +601,19 @@ class EvidenceTests(unittest.TestCase):
                 'environment': lambda *_args: {'day': '2026-11-06', 'python': '3.12'},
                 'context': lambda *args: real_context(*args, root=self.root)}):
             argv = ['ci-test-evidence.py', 'plan', '--directory', str(directory), '--kind', 'runtime',
-                    '--os', 'ubuntu-latest', '--units', 'tv setup installer preview']
+                    '--os', 'ubuntu-latest', '--units', 'tv setup installer android']
             with patch('sys.argv', argv):
                 self.m['main']()
-            self.assertIn('missing=preview\n', output.read_text())
+            self.assertIn('missing=android\n', output.read_text())
             with patch('sys.argv', ['ci-test-evidence.py', 'record', '--directory', str(directory)]):
                 self.m['main']()
             receipt = json.loads((directory / 'receipt.json').read_text())
-            self.assertEqual(set(receipt['keys']), {'preview'})
+            self.assertEqual(set(receipt['keys']), {'android'})
             event.write_text(json.dumps({'pull_request': {'head': {'repo': {'full_name': 'fork/repo'}}}}))
             output.write_text('')
             with patch('sys.argv', argv):
                 self.m['main']()
-            self.assertIn('missing=installer preview setup tv-runtime ui\n', output.read_text())
+            self.assertIn('missing=android installer setup tv-runtime ui\n', output.read_text())
             with patch('sys.argv', ['ci-test-evidence.py', 'record', '--directory', str(directory)]):
                 with self.assertRaisesRegex(ValueError, 'same-repository'):
                     self.m['main']()
@@ -587,15 +621,15 @@ class EvidenceTests(unittest.TestCase):
             with patch.dict('os.environ', {'GITHUB_RUN_ATTEMPT': '2'}), patch('sys.argv', argv):
                 output.write_text('')
                 self.m['main']()
-            self.assertIn('missing=installer preview setup tv-runtime ui\n', output.read_text())
+            self.assertIn('missing=android installer setup tv-runtime ui\n', output.read_text())
 
     def test_api_outage_runs_tests_and_record_contains_only_fresh_units(self):
         def unavailable(*_args, **_kwargs):
             raise OSError('offline')
         self.assertEqual(self.m['select_missing'](self.ctx, 'owner/repo', 20, unavailable)['missing'], ['installer', 'setup', 'tv-runtime', 'ui'])
-        selected = self.m['select_missing'](self.context('tv setup installer preview'), 'owner/repo', 20, self.api)
-        record = self.m['make_receipt']({**self.context('tv setup installer preview'), 'units': selected['missing']}, 'owner/repo', 20, 1, 200)
-        self.assertEqual(set(record['keys']), {'preview'})
+        selected = self.m['select_missing'](self.context('tv setup installer android'), 'owner/repo', 20, self.api)
+        record = self.m['make_receipt']({**self.context('tv setup installer android'), 'units': selected['missing']}, 'owner/repo', 20, 1, 200)
+        self.assertEqual(set(record['keys']), {'android'})
 
 
 if __name__ == '__main__':

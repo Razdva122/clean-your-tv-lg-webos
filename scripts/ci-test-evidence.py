@@ -55,7 +55,9 @@ def normalize(kind, units, shard):
     if kind != 'runtime' and shard != '1/4':
         raise ValueError('Browser/optional evidence has no runtime partition')
     if kind == 'runtime' and shard != '1/4':
-        units -= {'ui', 'android', 'preview'}
+        units -= {'ui', 'android'}
+    if kind == 'runtime' and shard != '2/4':
+        units.discard('preview')
     return sorted(units)
 
 
@@ -269,13 +271,24 @@ def select_missing(ctx, repo, current, api):
     if ctx['environment'].get('browser', '') is None or ctx['environment'].get('identity_ready') is False:
         return {'missing': ctx['units'], 'reused': {}}
     reused = {}
-    deadline = time.monotonic() + 60
-    def bounded_api(*args, **kwargs):
+    started = time.monotonic()
+    deadline = started + 60
+    # One lookup observes one bounded API snapshot; never persist mutable run state.
+    responses = {}
+    requests = cache_hits = rejected_keys = 0
+    def bounded_api(path, binary=False):
+        nonlocal requests, cache_hits
         if time.monotonic() >= deadline:
             raise TimeoutError('Evidence lookup budget exhausted')
-        value = api(*args, **kwargs)
+        if not binary and path in responses:
+            cache_hits += 1
+            return responses[path]
+        requests += 1
+        value = api(path, binary=binary)
         if time.monotonic() >= deadline:
             raise TimeoutError('Evidence lookup budget exhausted')
+        if not binary:
+            responses[path] = value
         return value
     try:
         # Bounded recent discovery: older/missing evidence executes, never grants coverage.
@@ -291,6 +304,12 @@ def select_missing(ctx, repo, current, api):
                 if type(size) is not int or not 0 < size <= ARCHIVE_LIMIT:
                     continue
                 receipt = receipt_from_archive(bounded_api(f'actions/artifacts/{artifact["id"]}/zip', binary=True), artifact)
+                # A mismatch can only reject work. Matching keys still require every
+                # provenance, latest-run, job and authenticated-tree check below.
+                if not any(receipt['keys'].get(unit) == ctx['keys'][unit]
+                           for unit in ctx['units'] if unit not in reused):
+                    rejected_keys += 1
+                    continue
                 reused.update(validate_receipt(ctx, receipt, artifact, repo, current, bounded_api))
             except Exception:
                 # Untrusted/malformed or unavailable evidence is only a cache miss.
@@ -299,6 +318,8 @@ def select_missing(ctx, repo, current, api):
                 break
     except Exception:
         pass  # Discovery is optional; actual tests remain mandatory.
+    print(f'Evidence lookup: {time.monotonic() - started:.2f}s, {requests} API requests, '
+          f'{cache_hits} cached responses, {rejected_keys} nonmatching receipts')
     return {'missing': sorted(set(ctx['units']) - set(reused)), 'reused': reused}
 
 
@@ -373,9 +394,9 @@ def environment(kind, shard='1/4'):
         result['identity_ready'] = (all(result[name] for name in required)
                                     and result.get('desktop_libraries', True) is not None
                                     and (result['compiler_path'] is None or bool(result['compiler'])))
-    if kind == 'browser' or (kind == 'runtime' and shard == '1/4'):
-        # Primary runtime preview/Homebrew checks use system Chrome, independently
-        # of the separate Chromium browser job. Unknown versions never grant reuse.
+    if kind == 'browser' or (kind == 'runtime' and shard in ('1/4', '2/4')):
+        # Keep UI (1) bound conservatively; Homebrew and preview (2) use Chrome,
+        # independently of the Chromium browser job. Unknown versions never grant reuse.
         result['browser'] = None
         try:
             result['playwright'] = command('node', '-e', "process.stdout.write(require('playwright/package.json').version)")
