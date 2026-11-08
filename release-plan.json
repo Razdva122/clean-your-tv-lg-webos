@@ -102,6 +102,11 @@
       "pr": 436,
       "issues": [],
       "summary": "Allow checked Root or No-root setup after full removal; retire completed destructive leases and keep old retries read-only; physical transition acceptance remains pending"
+    },
+    {
+      "pr": 439,
+      "issues": [],
+      "summary": "Fix clean Root-to-No-root staging and successor removal, fresh profile capture and System launcher grants; keep inert temporary leftovers nonblocking. C3 preliminary flow verified; physical Helper and final candidate acceptance remain pending"
     }
   ],
   "excluded": [],
