@@ -134,6 +134,20 @@ permission state.
 
 ## Optional Root input inventory
 
+The next candidate reads both fixed Luna catalogs directly over the existing
+authenticated SSH transport, as the normal Root installation path rather than
+retrying a failed Node subprocess. Each query keeps stdin open until its reply,
+has an eight-second deadline and retains the original 1 MiB application / 256 KiB
+input response bounds. Queries run sequentially, so two timeouts can take about
+16 seconds plus SSH channel setup. No new pairing or permission is requested.
+
+Captured replies are passed as JSON data to the current on-TV catalog/icon
+reader through its existing I/O-provider argument. That step still runs Node for
+bounded local icon reads and normalization, but cannot load `child_process` to
+launch the queries. No TV service or TV package sources change. The installed
+service's separate runtime readers are unchanged; this is an installer fix, not
+physical Home/input acceptance. No-root retains its existing inventory transport.
+
 Root setup still requires a validated, nonempty application catalog. An unavailable
 EIM input snapshot no longer discards that catalog: setup warns and continues
 with an empty captured input list. A successful snapshot is preserved; malformed
