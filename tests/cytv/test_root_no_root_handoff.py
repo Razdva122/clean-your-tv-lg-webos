@@ -80,7 +80,7 @@ class HandoffSupport(unittest.TestCase):
 HARNESS=r'''
 var real=require('fs'),vm=require('vm'),base=process.argv[2],input=JSON.parse(process.argv[3]),source=process.argv[4];
 var paths={},native={},events=[];
-function path(p){if(typeof p!=='string')return p;if(p==='/')return base;var m=/^\/proc\/self\/fd\/(\d+)(.*)$/.exec(p);if(m)return paths[m[1]]+m[2];if(p.indexOf('/var/')===0||p.indexOf('/tmp/')===0)return base+p;return p;}
+function path(p){if(typeof p!=='string')return p;if(p==='/')return base;var m=/^\/proc\/self\/fd\/(\d+)(.*)$/.exec(p);if(m)return paths[m[1]]+m[2];if(p==='/var'||p==='/tmp'||p==='/media'||p.indexOf('/var/')===0||p.indexOf('/tmp/')===0||p.indexOf('/media/')===0)return base+p;return p;}
 var fs=Object.create(real);
 fs.openSync=function(p,flags,mode){var fd=real.openSync(path(p),flags,mode);paths[fd]=path(p);return fd;};
 native[3]=real.openSync(base+'/var/lib/clean-your-tv-installation/ownership.lock','r');
@@ -89,12 +89,14 @@ if(input.promotion_fd4)native[4]=real.openSync(base+'/var/lib/clean-your-tv-pyth
 fs.fstatSync=function(fd){if(fd===4&&!native[4]){if(input.internal_fd4){var other=real.fstatSync(native[3]);other.uid=0;return other;}var e=Error('closed');e.code='EBADF';throw e;}var s=real.fstatSync(native[fd]||fd);s.uid=0;return s;};
 fs.lstatSync=function(p){var s=real.lstatSync(path(p));s.uid=0;return s;};
 ['readdirSync','rmdirSync','unlinkSync'].forEach(function(name){fs[name]=function(p){return real[name](path(p));};});
+fs.mkdirSync=function(p,mode){return real.mkdirSync(path(p),mode);};
+fs.linkSync=function(a,b){return real.linkSync(path(a),path(b));};
 fs.renameSync=function(a,b){if(input.fail_owner_write&&b.slice(-15)==='/operation.json')throw Error('interrupted owner publication');return real.renameSync(path(a),path(b));};
 fs.readFileSync=function(p){return real.readFileSync(path(p));};
 var cp={spawnSync:function(command,args,opts){events.push({kind:'verify',args:args,stdio:opts.stdio});return {status:input.fail_verify?1:0,stdout:new Buffer(JSON.stringify({state:'verified-clean',operation:'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',removal:'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',lease:'cccccccccccccccccccccccccccccccc'}))};},spawn:function(command,args,opts){events.push({kind:'spawn',command:command,args:args,stdio:opts.stdio,detached:opts.detached});return {unref:function(){}};}};
 var fake=Object.create(process);fake.getuid=function(){return 0;};fake.argv=['node','-e',JSON.stringify(input)];
 try{vm.runInNewContext(real.readFileSync(source,'utf8'),{require:function(name){return name==='fs'?fs:name==='child_process'?cp:require(name);},process:fake,Buffer:Buffer,console:console,setTimeout:setTimeout,clearTimeout:clearTimeout,setImmediate:setImmediate});}
-catch(e){process.stderr.write(e.message);process.exitCode=1;}
+catch(e){process.stderr.write(e.stack||e.message);process.exitCode=1;}
 finally{real.writeFileSync(base+'/events.json',JSON.stringify(events));}
 '''
 
@@ -217,6 +219,97 @@ class SuccessorOwnership(unittest.TestCase):
                 self.write(name,dict(original,**{field:value}))
                 self.assertEqual(self.run_guard('claim',self.plan).returncode,1)
                 self.assertEqual(json.loads((self.base/'events.json').read_text()),[])
+
+    def original_prepare_request(self):
+        from cytv import no_root_observer as observer
+        # Real fixed-path observer bytes run through the filesystem adapter;
+        # public TV ancestors are searchable, private operation leaves are not.
+        for directory in (self.base,self.base/'var',self.base/'var/lib'):directory.chmod(0o755)
+        (self.base/'tmp').mkdir(mode=0o755)
+        self.source=observer.ROOT_PROGRAM
+        self.plan=observer.make_plan('d'*32,'e'*32,'install',
+            {'helper.ipk':b'helper','launcher.ipk':b'home'},
+            {'com.local.nativehome':'0.8.0','com.gathin.tvhome':'1.13.1'},
+            root_ssh=True,root_handoff=self.stamp)
+        return dict(root=observer.ROOT_SSH_PRIVATE,public_root=observer.ROOT_SSH_PUBLIC,
+                    sender='/usr/bin/luna-send',plan=self.plan,command='prepare',source=self.source)
+
+    def closed_successor(self):
+        self.assertEqual(self.run_guard('claim',self.plan).returncode,0)
+        private=self.base/('tmp/.cytv-installer-root/operations/'+self.plan['operation'])
+        private.mkdir(parents=True,mode=0o700)
+        value=dict(protocol='no-root-original-stream-v1',operation=self.plan['operation'],
+                   plan_sha256=hashlib.sha256(__import__('cytv.no_root_observer',fromlist=['canonical']).canonical(self.plan).encode()).hexdigest(),
+                   source_sha256=self.plan['source_sha256'],result='verified')
+        path=private/'closed.json';path.write_text(json.dumps(value));path.chmod(0o600)
+        self.write('clean-removal-'+'a'*32+'.json',dict(removal='b'*32,lease='9'*32,
+            final_fence='c'*32,final_original_lease='9'*32,stage='verified-clean',state='complete',current=True,
+            result=dict(verified_clean=True,private_cleanup_verified=True)))
+
+    def test_completed_no_root_owner_can_select_shared_cleanup_without_ignoring_real_root(self):
+        self.closed_successor()
+        before=(self.state/'operation.json').read_bytes()
+        result=self.run_guard('cleanup-target')
+        self.assertEqual(result.returncode,0,result.stderr)
+        value=json.loads(result.stdout)
+        self.assertEqual(value['operation'],self.plan['operation'])
+        self.assertEqual(value['lease'],json.loads(before)['id'])
+        self.assertEqual((self.state/'operation.json').read_bytes(),before)
+        app=self.base/'media/developer/apps/usr/palm/applications/com.cleanyourtv.root.preview'
+        app.mkdir(parents=True)
+        self.assertEqual(self.run_guard('cleanup-target').returncode,1)
+        self.assertEqual((self.state/'operation.json').read_bytes(),before)
+
+    def test_cleanup_target_refuses_unclosed_observer_and_nonminimal_root_state(self):
+        self.assertEqual(self.run_guard('claim',self.plan).returncode,0)
+        self.assertEqual(self.run_guard('cleanup-target').returncode,1)
+        self.closed_successor()
+        root=self.base/'var/lib/clean-your-tv-root';root.mkdir(mode=0o700)
+        (root/'config.json').write_text('still installed')
+        self.assertEqual(self.run_guard('cleanup-target').returncode,1)
+
+    def test_original_observer_prepares_after_clean_probe_removed_public_ancestor(self):
+        request=self.original_prepare_request()
+        public=self.base/'var/lib/clean-your-tv-installer'
+        self.assertFalse(public.exists())
+        self.assertEqual(self.run_guard('claim',self.plan).returncode,0)
+        result=self.run_guard('observer',self.plan,source=self.source,request=request)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(public.stat().st_mode&0o777,0o755)
+        self.assertTrue((public/('cytv-'+self.plan['operation'])).is_dir())
+        prepared=self.base/('tmp/.cytv-installer-root/operations/'+self.plan['operation']+'/prepared.json')
+        before=prepared.read_bytes();inode=public.stat().st_ino
+        result=self.run_guard('observer',self.plan,source=self.source,request=request)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(prepared.read_bytes(),before)
+        self.assertEqual(public.stat().st_ino,inode)
+        result=self.run_guard('observer',self.plan,source=self.source,request=dict(request,command='status'))
+        self.assertEqual(result.returncode,0,result.stderr)
+        state=json.loads(result.stdout)
+        self.assertEqual(state['reservation'],'active')
+        self.assertEqual([s['submission'] for s in state['slots']],['prepared','prepared'])
+
+    def test_unsafe_public_ancestor_refuses_before_original_observer_creates_evidence(self):
+        request=self.original_prepare_request()
+        public=self.base/'var/lib/clean-your-tv-installer';public.mkdir(mode=0o700)
+        self.assertEqual(self.run_guard('claim',self.plan).returncode,0)
+        result=self.run_guard('observer',self.plan,source=self.source,request=request)
+        self.assertEqual(result.returncode,1)
+        self.assertEqual(public.stat().st_mode&0o777,0o700)
+        self.assertFalse((self.base/'tmp/.cytv-installer-root').exists())
+
+    def test_changed_prepare_request_cannot_create_successor_staging(self):
+        request=self.original_prepare_request()
+        self.assertEqual(self.run_guard('claim',self.plan).returncode,0)
+        changes=[dict(plan=dict(self.plan,operation='f'*32)),
+                 dict(public_root='/var/lib/foreign'),dict(root='/tmp/foreign'),
+                 dict(sender='/foreign'),dict(source=self.source+'\n')]
+        for change in changes:
+            with self.subTest(fields=list(change)):
+                result=self.run_guard('observer',self.plan,source=self.source,request=dict(request,**change))
+                self.assertEqual(result.returncode,1)
+                self.assertFalse((self.base/'var/lib/clean-your-tv-installer').exists())
+                self.assertFalse((self.base/'tmp/.cytv-installer-root').exists())
 
     def test_crash_between_binding_and_owner_resumes_identical_reservation(self):
         before=(self.state/'operation.json').read_bytes()

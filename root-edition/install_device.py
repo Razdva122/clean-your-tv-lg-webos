@@ -741,7 +741,8 @@ class LocalDevice:
             if not verified_restart(record):record['cleanup_verified_boot_id']=current_boot
             if 'private-cleanup' not in record['done']:record['done'].append('private-cleanup')
             save('private-cleanup')
-        return {'removed':True,'verified_clean':True,'applications_services_startup_removed':True,'private_cleanup_verified':True}
+        return {'removed':True,'verified_clean':True,'applications_services_startup_removed':True,'private_cleanup_verified':True,
+                'temporary_files_retained':bool(record.get('retained_temporary_stages'))}
 
     def remove_owned_registrations(self):
         devices=self.rpc('com.webos.service.eim/getAllInputStatus',{}).get('devices')
@@ -975,6 +976,22 @@ class LocalDevice:
             elif path.name.startswith('cytv-system-updater-'):
                 manifest=self.system_setup().verify_bundle(path)
                 allowed={name.split('/')[0] for name in manifest['files']}|{'bundle.json'}
+                retain=bool(names-allowed-{'__pycache__'})
+                if '__pycache__' in names:
+                    cache=checked_store(path/'__pycache__',uid);cached=cache._directory()
+                    try:bytecode=os.listdir(cached)
+                    finally:os.close(cached)
+                    sources=[name[:-3] for name in manifest['files'] if '/' not in name and name.endswith('.py')]
+                    for name in bytecode:
+                        if not any(re.fullmatch(re.escape(source)+r'\.cpython-[0-9]{2,3}(?:\.opt-[12])?\.pyc',name) for source in sources):
+                            retain=True
+                        else:safe_bytes(path/'__pycache__'/name,uid=uid)
+                    allowed.add('__pycache__')
+                if retain:
+                    entry={'path':str(path),'dev':info.st_dev,'ino':info.st_ino}
+                    retained=record.setdefault('retained_temporary_stages',[])
+                    if entry not in retained:retained.append(entry)
+                    continue  # Inert unknown temporary data must not strand removal.
             else:
                 # Unrecorded gate-only staging has no product metadata and is
                 # not classified from its name or ELF header alone.
@@ -1226,6 +1243,11 @@ class LocalDevice:
         if private['present']:raise ValueError('no_root_private_cleanup_required')
         for path in TEMP.iterdir():
             if SUPPORT_STAGE.fullmatch(path.name) and path!=self.payload:
+                if path.name.startswith('cytv-system-updater-'):
+                    fd=checked_store(path,self.ownership.store.uid)._directory()
+                    try:info=os.fstat(fd)
+                    finally:os.close(fd)
+                    if {'path':str(path),'dev':info.st_dev,'ino':info.st_ino} in record.get('retained_temporary_stages',[]):continue
                 if re.fullmatch(r'cytv-coordinator-[a-f0-9]{32}',path.name) and self.current_coordinator_stage(path):continue
                 if re.fullmatch(r'cytv-product-[a-f0-9]{32}',path.name) and self.current_product_stage(path):continue
                 fd=checked_store(path,self.ownership.store.uid)._directory()

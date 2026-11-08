@@ -325,7 +325,21 @@ function absent(final) {
           name
         )
       ) {
-        var fd = openDir('/tmp/' + name);
+        var fd = openDir('/tmp/' + name),
+          info = fs.fstatSync(fd);
+        if (
+          /^cytv-system-updater-[a-f0-9]{32}$/.test(name) &&
+          (record.retained_temporary_stages || []).some(function (entry) {
+            return (
+              object(entry) &&
+              Object.keys(entry).length === 3 &&
+              entry.path === '/tmp/' + name &&
+              entry.dev === info.dev &&
+              entry.ino === info.ino
+            );
+          })
+        )
+          return;
         if (fs.readdirSync(at(fd)).length) throw Error('support-stage-remains');
       }
     });
@@ -504,6 +518,13 @@ function absent(final) {
       });
       (record.archives || []).forEach(function (item) {
         prefixes.push(item.path + '/');
+      });
+      (record.retained_temporary_stages || []).forEach(function (entry) {
+        if (
+          object(entry) &&
+          /^\/tmp\/cytv-system-updater-[a-f0-9]{32}$/.test(entry.path)
+        )
+          prefixes.push(entry.path + '/');
       });
       if (
         args.some(function (arg) {

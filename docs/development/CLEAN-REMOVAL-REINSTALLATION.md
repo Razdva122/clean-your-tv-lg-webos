@@ -54,6 +54,16 @@ read-only observation can offer continuation of the authenticated saved plan.
 The immutable `PROGRAM` and `ROOT_PROGRAM` observer bytes remain unchanged;
 this support is the outer ownership wrapper, not a rewritten recovery capsule.
 
+The capability probe restores empty staging leaves to absence. After the exact
+successor is reserved, its install `prepare` recreates the public staging parent
+under the same native locks. It checks the inner plan, paths, sender and original
+source before creation, pins the root-owned parent without following links,
+creates mode 0755 atomically regardless of umask and syncs both directories.
+An existing unsafe leaf refuses without changing its mode. A repeated prepare
+keeps the existing parent inode and original observer evidence. Removal does not
+create this install-only parent. This is new setup state, not residue kept by
+the preceding full cleanup.
+
 The disposable native gate verifies and retires its own temporary file before
 checking clean state. Large legacy support is sent on stdin, rather than a
 single oversized argv element. Descriptor I/O uses APIs available on exact
@@ -79,3 +89,25 @@ these host tests. See the dated candidate observations for actual device work.
 Home/remote, sound, standby, cold boot, OTA and rollback require their own exact
 artifact observations; an uninstall restart or package installation proves none
 of them.
+
+
+### Removing a No-root successor reached through Root SSH
+
+The minimal inert predecessor fences are not a reason to strand the successor's
+full-removal goal. On `root-access-required`, the same No-root goal may use the
+shared Root cleaner only with a native-locked proof of its current No-root lease,
+exact closed observer and completed predecessor final fence, absent Root packages
+and hooks, and the fixed inert private-file inventory. Persist the proof before
+continuation and refuse changed leases, selectors or removal intents. A live or
+unverified Root installation still requires its Root workflow. Node 0.12.2 uses
+the verified nested Beta payload. This does not weaken the normal No-root private
+cleaner or retain public staging after full removal.
+
+Native System bootstrap runs with bytecode disabled, matching managed/standalone
+setup. Older verified System staging may contain a top-level CPython cache.
+Retire it as data only when safe regular leaves match canonical cache names for
+manifest-listed top-level Python modules. Unknown files in an independently verified, inactive System staging directory
+are retained with their exact directory identity and reported as a nonblocking
+temporary-files warning. Python and the final native/Node gate use the same
+exception; unrelated/current support stages and live processes remain guarded.
+Never load a retained `.pyc` to authorize removal.

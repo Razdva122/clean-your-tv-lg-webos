@@ -116,6 +116,30 @@ class CleanupTail(unittest.TestCase):
         self.assertTrue(result.stdout,result.stderr)
         return result,json.loads(result.stdout)
 
+    def test_inert_system_staging_does_not_block_final_removal_or_recheck(self):
+        stage=self.base/'tmp'/('cytv-system-updater-'+'c'*32);stage.mkdir(mode=0o700)
+        (stage/'unknown-diagnostic.txt').write_text('retain without execution')
+        info=stage.stat()
+        self.record['retained_temporary_stages']=[dict(path='/tmp/'+stage.name,dev=info.st_dev,ino=info.st_ino)]
+        self.record['result']['temporary_files_retained']=True
+        self.write('clean-removal-'+ID+'.json',self.record)
+        result,reply=self.run_tail()
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertTrue(reply['result']['temporary_files_retained'])
+        self.assertTrue((stage/'unknown-diagnostic.txt').exists())
+        result,reply=self.run_tail(MODE='verify')
+        self.assertEqual(result.returncode,0,result.stderr)
+        process=self.base/'proc/99991';process.mkdir()
+        (process/'cmdline').write_bytes(('/usr/bin/python3\0/tmp/'+stage.name+'/setup-system-updater.py\0').encode())
+        result,reply=self.run_tail(MODE='verify')
+        self.assertEqual(reply.get('cleanup_error'),'owned-process-still-used')
+        (process/'cmdline').unlink();process.rmdir()
+        saved=json.loads((self.state/('clean-removal-'+ID+'.json')).read_text())
+        saved['retained_temporary_stages'][0]['ino']+=1
+        self.write('clean-removal-'+ID+'.json',saved)
+        result,reply=self.run_tail(MODE='verify')
+        self.assertEqual(reply['cleanup_error'],'support-stage-remains')
+
     def test_finalizer_accepts_fallback_catalog_and_still_checks_package_paths(self):
         owned=self.base/'media/developer/apps/usr/palm/applications/com.local.nativehome'
         owned.mkdir(parents=True)
