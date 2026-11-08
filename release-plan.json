@@ -29,6 +29,13 @@
         101
       ],
       "summary": "Remove proven never-activated Root installations without Home APIs; original #101 installation cause and reporter-device recovery remain unconfirmed"
+    },
+    {
+      "pr": 426,
+      "issues": [
+        397
+      ],
+      "summary": "Retain allowlisted Root catalog/input failure categories and bounded Luna codes; original #397 installation failure and reporter-device compatibility remain unresolved"
     }
   ],
   "excluded": [],
