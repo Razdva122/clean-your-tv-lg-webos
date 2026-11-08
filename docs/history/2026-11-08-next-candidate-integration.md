@@ -78,3 +78,33 @@ mutation authority. Desktop/Android payloads need versioned rebuilds; affected
 key-selection, Helper-before-pairing, full-removal/restart/reinstall and EIM
 behavior need exact-artifact hardware acceptance. Maintenance/recovery references
 and all thirteen guides describe the changes as unreleased.
+
+## #419 / #428: passive IR contribution with safety corrections
+
+The original ferrets6 head `82229cfa` is preserved in #428 ancestry, with credit
+to ferrets6 and Mr-Hubiverse. Merge #428 source `5d34dddb` incorporates the
+contribution and safety corrections together; GitHub subsequently marked #419
+merged, and the collector includes both PRs. The unsafe original head was not
+integrated separately ahead of its fixes.
+
+Head `6a4bc912` passed selected CI [42455004348 attempt 2](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42455004348).
+The first attempt's sole runtime failure was a dependency download reset during
+`test_update_lab` setup. Only failed jobs were retried; existing successful jobs
+were retained, with no product workaround. Independent complete-source safety
+review found no blocker in the final source.
+
+Combined source passes isolated IR exit/watchdog/Off-On/Stop/deferred-close
+controller scenarios, 82 existing resume/watchdog cases, the C IR baseline and
+all four Off-On/overflow scenarios, plus 16 release-flow checks. Fresh triple-Home
+escape still exits 27; grabbed M-RCU behavior is unchanged. Unexpected persistent
+IR read errors without normal poll device-loss flags remain optional defensive
+hardening, not a demonstrated regression; do not claim every imaginable failure
+is harmless. No permission grant, disableHome setting or automatic emergency
+reset is introduced.
+
+Helper/manifests/pins and embedding installers need versioned rebuilds and genuine
+published-Home/new-Helper transition approval. Guides mark the approximately
+700 ms delay, possible LG Home flash, held Home and unknown plain Developer Mode
+access as unpublished. Original LJ550T routing, actual input access, physical
+source duplication, key-up/unrelated buttons, power, sound and OTA/rollback still
+need affected exact-artifact acceptance; no new TV result is claimed.

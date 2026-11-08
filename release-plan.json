@@ -10,6 +10,13 @@
       "summary": "Do not crash the Helper on a heartbeat during power-off"
     },
     {
+      "pr": 419,
+      "issues": [
+        207
+      ],
+      "summary": "Include ferrets6 passive IR Home contribution through reviewed safety batch #428; original #207 device access/routing remains unconfirmed"
+    },
+    {
       "pr": 421,
       "issues": [
         351
@@ -43,6 +50,13 @@
         422
       ],
       "summary": "Continue exactly owned Root Home routing while rearming fresh startup protection; final physical Home and emergency acceptance for #422 remain pending"
+    },
+    {
+      "pr": 428,
+      "issues": [
+        207
+      ],
+      "summary": "Fence passive IR Home across stop, relay recovery and evdev overflow while preserving fresh triple-Home escape; original #207 physical acceptance remains pending"
     },
     {
       "pr": 430,
