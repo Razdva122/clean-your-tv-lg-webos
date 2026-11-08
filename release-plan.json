@@ -59,6 +59,13 @@
       "summary": "Fence passive IR Home across stop, relay recovery and evdev overflow while preserving fresh triple-Home escape; original #207 physical acceptance remains pending"
     },
     {
+      "pr": 429,
+      "issues": [
+        311
+      ],
+      "summary": "Keep legacy clocks compact and retain aggregate No-root icon diagnostics; original #311 icon/Home symptoms still await requested reporter clarification"
+    },
+    {
       "pr": 430,
       "issues": [
         355

@@ -145,3 +145,21 @@ TV/CLI/diagnostic/socket/context/recovery tests pass 131 cases; clock/core/catal
 checks (all thirteen languages), formatting and diff checks pass. No clock or
 privacy guard was weakened. The updated head still needs mandatory CI before
 integration; this paragraph is preparation evidence, not a merge claim.
+
+## Final #429 integration and handoff checkpoint
+
+Final reviewed head `e8ae8f8c` passed [Tests 42458264627](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42458264627)
+(all eight Linux/macOS runtime shards, browser, optional Python and both OS
+summaries), [Windows/Intel Mac host runtime 42458264550](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42458264550),
+website and integration policy. Merge source: `2e22c62b`. Existing input-equivalence
+verification confirms this product merge matches the successful CI head; later
+external Markdown/plan edits are metadata. The earlier 131 local combined cases,
+clock/core/catalog checks, conflict-resolution review and formatting remain valid.
+
+All thirteen implementation PRs are now incorporated; only draft #425 remains
+open. Candidate versions, complete build/signing/acceptance and the mandatory new
+Helper transition gate are still unselected/uncompleted. Physical cases are in
+the [actual-change checklist](2026-11-08-next-candidate-physical-checklist.md),
+and the next coordinator's work/issue limits are in the
+[handoff record](2026-11-08-release-candidate-handoff.md). No publication or new
+physical-device acceptance is claimed.
