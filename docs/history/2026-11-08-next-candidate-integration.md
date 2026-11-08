@@ -108,3 +108,40 @@ published-Home/new-Helper transition approval. Guides mark the approximately
 access as unpublished. Original LJ550T routing, actual input access, physical
 source duplication, key-up/unrelated buttons, power, sound and OTA/rollback still
 need affected exact-artifact acceptance; no new TV result is claimed.
+
+## #432: Root cleanup restoration boundaries
+
+Head `ed22bd44` passed selected CI [42457011325](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42457011325)
+and independent source/privacy review. Merge source: `e1afcd7c`.
+Combined source passes 69 Root clean-removal and 44 diagnostic-context/recovery
+projection tests, plus 16 release-flow checks. The producer and host allowlist
+fixed cleanup_step values, preserve exact exceptions and retain original inverse,
+receipts and failure-before-package-removal ordering. Updater/coordinator and
+embedding installers require rebuilt payloads. Original #418 remains needs-info
+under its existing saved-error request; do not rerun device recovery to fill a
+new diagnostic category. Synthetic packaged export checks are the relevant gate.
+
+## #433: SSH socket causes
+
+Head `2f342b8` passed selected CI [42457129023](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42457129023)
+and independent complete-source/privacy review. Merge source: `ef0b110a`.
+Combined SSH/report/history, diagnostic context and recovery projection tests
+pass all 51 cases; 16 release-flow checks pass. Socket categories are fixed,
+sorted, deduplicated and revalidated. Existing authentication/trust/key-file/phase
+handling is retained, with no new connection retry, endpoint or TV probe.
+Desktop/console/Android installers need rebuilt embeddings. Original #420 stays
+needs-info under its existing published-version Doctor/context request; neither
+historical missing causes nor native Windows ARM64/TV acceptance are inferred.
+
+## #429: conflict resolution before integration
+
+The original reviewed head `d1a498f5` passed its selected CI. New diagnostic
+additions made its tv_summary/document insertion conflict with #430. The merge
+resolution retains both complete icon_inventory and root_setup_recovery blocks
+and both guide sections; independent follow-up review confirmed all existing
+Root inventory/node/capability/privacy fields remained. After #432/#433 entered,
+the prepared branch merged the final base without another conflict. Combined
+TV/CLI/diagnostic/socket/context/recovery tests pass 131 cases; clock/core/catalog
+checks (all thirteen languages), formatting and diff checks pass. No clock or
+privacy guard was weakened. The updated head still needs mandatory CI before
+integration; this paragraph is preparation evidence, not a merge claim.

@@ -67,6 +67,19 @@ class CoordinatorCleanRemoval(unittest.TestCase):
         self.assertEqual(two['failure']['luna']['call'],'apps-dev')
         self.assertNotIn('PRIVATE',str(two))
 
+    def test_cleanup_context_rethrows_same_error_and_worker_filters_untrusted_steps(self):
+        from clean_removal import cleanup_step
+        from install_driver import failure_summary
+        error=RuntimeError('PRIVATE')
+        with self.assertRaises(RuntimeError) as caught:
+            with cleanup_step('home-readback'):
+                raise error
+        self.assertIs(caught.exception,error)
+        self.assertEqual(failure_summary(error),{'exception_type':'RuntimeError','cleanup_step':'home-readback'})
+        for unsafe in ('PRIVATE',{'path':'PRIVATE'},['PRIVATE'],True,None):
+            error.cleanup_step=unsafe
+            self.assertEqual(failure_summary(error),{'exception_type':'RuntimeError'})
+
     def test_before_first_lease_late_original_worker_cannot_acquire(self):
         result = self.driver.clean_remove(self.id)
         with self.assertRaises(Busy):
@@ -343,6 +356,42 @@ class PartialDeviceRemoval(unittest.TestCase):
         module=types.ModuleType('cleanup_system_updater');exec(SCRIPT,module.__dict__);module.ROOT_UPDATER=updater
         patcher=patch.dict(sys.modules,{'cleanup_system_updater':module});patcher.start();self.addCleanup(patcher.stop)
         return fixture,module,system,paths,legacy
+
+    def test_restore_subprocess_failure_names_boundary_and_retains_inverse(self):
+        import subprocess, deploy
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        original=driver.ownership.store.read('request-'+identifier)
+        inverse='{"fixture":"PRIVATE routing inverse"}'
+        (root/'profile-trial.json').write_text(inverse)
+        error=subprocess.CalledProcessError(1,['PRIVATE command'],output=b'PRIVATE output',stderr=b'PRIVATE stderr')
+        with patch.object(deploy,'command',side_effect=error),patch.object(driver.device,'log'):
+            result=driver.clean_remove(identifier)
+        self.assertEqual(result['last_failure'],{'exception_type':'CalledProcessError','exit_status':1,
+            'stage':'original-writers-fenced','cleanup_step':'runtime-restore'})
+        self.assertEqual(result['state'],'recovery_required')
+        self.assertFalse(result['current'])
+        self.assertEqual(driver.ownership.store.read('request-'+identifier),original)
+        self.assertEqual((root/'profile-trial.json').read_text(),inverse)
+        self.assertEqual(driver.ownership.store.read('routing-backup-'+identifier)['profile-trial.json'],inverse)
+        self.assertFalse(any(call.startswith(('remove-','cleanup-')) for call in calls))
+        self.assertNotIn('PRIVATE',str(result['last_failure']))
+
+    def test_legacy_permissions_failure_does_not_blame_runtime_restore_on_retry(self):
+        import subprocess, deploy
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        with patch.object(deploy,'command',side_effect=subprocess.CalledProcessError(1,['PRIVATE'])),patch.object(driver.device,'log'):
+            first=driver.clean_remove(identifier)
+        cleanup=driver.device.cleanup
+        def fail(name,*args):
+            if name=='legacy_permissions':raise subprocess.CalledProcessError(7,['PRIVATE'])
+            return cleanup(name,*args)
+        with patch.object(driver.device,'cleanup',side_effect=fail),patch.object(driver.device,'log'):
+            second=driver.clean_remove(identifier)
+        self.assertEqual(second['failure'],first['failure'])
+        self.assertEqual(second['last_failure']['cleanup_step'],'legacy-permissions')
+        self.assertEqual(second['last_failure']['exit_status'],7)
+        self.assertTrue(root.exists());self.assertTrue(updater.exists())
+        self.assertFalse(any(call.startswith('remove-') for call in calls))
 
     def test_lockdown_retry_keeps_authenticated_terminal_sdk_api_after_interruption(self):
         import json

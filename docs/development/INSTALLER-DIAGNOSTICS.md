@@ -82,7 +82,7 @@ or authorize package preparation. Only the validated version and fixed status
 are exported; raw command output, stderr and exception text are excluded.
 No new TV installation, configuration, permission or endpoint is introduced.
 
-## Network connection causes (next candidate)
+## Network connection causes
 
 During `ssh-connect`, inspect typed socket errors, including the values of
 Paramiko `NoValidConnectionsError.errors`. `EACCES`/`EPERM` map to
@@ -92,6 +92,26 @@ unreachable error does not establish that macOS Local Network permission was
 denied. Diagnostics export only these allowlisted codes, never the address keys,
 exception text or raw errors. Trust, authentication and local key-file failures
 retain their separate guidance. Classification is limited to initial connection.
+
+The reason-code guidance above shipped in v1.12.1 (#402). The next candidate
+additionally preserves `connection.protocol: "ssh"` and `connection.causes`
+for socket failures at `ssh-connect`. This sorted, unique list contains only
+`access-denied`, `refused`, `timeout`, `host-unreachable`, `network-unreachable`,
+`name-resolution` or `unknown`. Categories come from the existing typed socket
+exception/errno (including Paramiko's per-address values), not error messages.
+Mixed causes retain the existing generic guidance while the list preserves each
+observed category. It is not a diagnosis of the firewall, selected port, Root
+availability or TV compatibility.
+
+The shared `create_report` / `failure_summary` path retains and revalidates these
+categories in the standard desktop/console/Android export, recorded first failure,
+previous attempt and current observation. Old reports without the field remain
+valid; discarded causes cannot be recovered retroactively. SSH authentication,
+trust and local key-file errors, unrelated phases and successful connections do
+not acquire socket causes. There are no extra connection attempts, TV probes,
+permissions, endpoints or recovery-state changes. Rebuild the embedding installers
+to deliver this diagnostic change (#420); physical Windows ARM64/TV acceptance
+remains separate from host synthetic tests.
 
 Desktop connection guidance replaces the scrolling report/checklist at failure
 with the cause, next step and explicit Doctor recheck. Doctor checks prerequisites
@@ -185,6 +205,23 @@ Both the TV producer and host exporter filter these fields. Raw error text,
 request payloads, inventories and routes are excluded. Existing old failures
 remain unchanged; new detail cannot reconstruct an earlier discarded exception.
 These fields diagnose a blocker and never authorize skipping control restoration.
+
+Unreleased Root cleanup adds `cleanup_step` to `status.product.failure` and
+`status.product.last_failure` when control restoration fails inside an instrumented
+boundary: `routing-inverse`, `runtime-restore`, `provision-rollback`, `startup-hook`,
+`legacy-lockdown`, `registration-restore`, `legacy-permissions` or `home-readback`.
+This distinguishes subprocess failures sharing `original-writers-fenced`; it does
+not expose the child's command, output or detailed cause. Failures outside those
+boundaries omit the field; old records remain unchanged. Both worker and host
+allowlist values; unrecognized persisted/remote values export as `unknown`.
+The operation-matched coordinator reply feeds the existing host status summary,
+Save diagnostic report action, `observation_failure` and retained first-failure
+history projection. Rebuild Root coordinator/Updater and embedding installers
+through the coordinated release; host source alone cannot add TV-side context.
+No new TV call, state file, recovery admission, timeout or cleanup ordering is
+introduced. Saved backups, original receipts and failure-before-package-removal
+behavior are preserved. An old exit status cannot identify its historical step;
+these fields neither authorize a retry nor prove recovery or physical Home.
 
 New package rejection reports preserve the fixed `install failed` and
 `remove failed` Luna states. When the original reply includes `details.reason`,

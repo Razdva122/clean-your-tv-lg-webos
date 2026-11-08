@@ -26,6 +26,9 @@ def failure_summary(error):
         result['exit_status']=error.returncode
     if isinstance(error,OSError) and type(error.errno) is int and 0<=error.errno<=4095:
         result['errno']=error.errno
+    step=getattr(error,'cleanup_step',None)
+    if isinstance(step,str) and step in ('routing-inverse','runtime-restore','provision-rollback','startup-hook',
+            'legacy-lockdown','registration-restore','legacy-permissions','home-readback'):result['cleanup_step']=step
     from updater.luna import summary
     detail=summary(getattr(error,'luna',None))
     if detail:result['luna']=detail

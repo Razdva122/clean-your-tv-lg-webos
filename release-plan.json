@@ -69,6 +69,20 @@
       "pr": 431,
       "issues": [],
       "summary": "Keep removal and reinstallation moving through recoverable failures"
+    },
+    {
+      "pr": 432,
+      "issues": [
+        418
+      ],
+      "summary": "Retain allowlisted Root control-restoration failure boundaries without changing recovery authority; original #418 installation/recovery remains unresolved"
+    },
+    {
+      "pr": 433,
+      "issues": [
+        420
+      ],
+      "summary": "Retain fixed SSH socket-cause categories in reports and failure history without new retries or probes; original #420 connection failure remains unresolved"
     }
   ],
   "excluded": [],
