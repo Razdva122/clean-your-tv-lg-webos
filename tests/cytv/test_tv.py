@@ -246,5 +246,21 @@ class NativeIconQualityTests(unittest.TestCase):
                 self.assertTrue(result.startswith('data:image/png;base64,'))
 
 
+class PermissionTests(unittest.TestCase):
+    def test_mac_pairing_requests_only_the_helper_permissions(self):
+        import re
+        import lgtv
+        root = Path(__file__).resolve().parents[2]
+
+        def manifest(path):
+            block = re.search(r'permissions: \[(.*?)\]', (root/path).read_text(), re.S).group(1)
+            return re.findall(r"'([A-Z_]+)'", block)
+
+        self.assertEqual(lgtv.PERMISSIONS, manifest('native/app/screen-watch.js'))
+        self.assertEqual(set(lgtv.PERMISSIONS), set(manifest('native/service/app-inventory.js')))
+        self.assertNotIn('CONTROL_INPUT_TEXT', lgtv.PERMISSIONS)
+        self.assertNotIn('CONTROL_MOUSE_AND_KEYBOARD', lgtv.PERMISSIONS)
+
+
 if __name__ == '__main__':
     unittest.main()
