@@ -143,6 +143,7 @@ Object.keys(handlers).forEach(function (method) {
 // Activity registration belongs to the root installer, not the web service.
 
 var inventoryPending = null,
+  inventoryPriority = null,
   inputStatus = require('./app-inventory').inputHandler();
 service.register('listApps', function (message) {
   if (
@@ -150,7 +151,27 @@ service.register('listApps', function (message) {
     Object.prototype.hasOwnProperty.call(message.payload, 'inputs')
   )
     return inputStatus(message);
-  if (!inventoryPending) inventoryPending = require('./app-inventory')();
+  var priorityIds = message.payload ? message.payload.priorityIds : undefined;
+  if (priorityIds === undefined) priorityIds = [];
+  if (
+    !Array.isArray(priorityIds) ||
+    priorityIds.length > 200 ||
+    priorityIds.some(function (id) {
+      return typeof id !== 'string' || !id || id.length > 256;
+    })
+  ) {
+    message.respond({ returnValue: false, errorText: 'Invalid icon priority' });
+    return;
+  }
+  var priority = JSON.stringify(priorityIds);
+  if (!inventoryPending || inventoryPriority !== priority) {
+    inventoryPending = require('./app-inventory')(
+      undefined,
+      undefined,
+      priorityIds
+    );
+    inventoryPriority = priority;
+  }
   var request = inventoryPending;
   request.then(
     function (apps) {

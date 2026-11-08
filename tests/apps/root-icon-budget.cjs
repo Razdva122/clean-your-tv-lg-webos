@@ -14,7 +14,7 @@ function png(size) {
 function app(id, extra = {}) {
   return { id, title: id, folderPath: folder, icon: 'icon.png', ...extra };
 }
-async function read(apps, files = {}) {
+async function read(apps, files = {}, priorityIds) {
   const reads = [];
   const sandbox = {
     module: { exports: {} },
@@ -43,10 +43,66 @@ async function read(apps, files = {}) {
   const result = await sandbox.module.exports(
     (file, args, options, callback) =>
       callback(null, JSON.stringify({ returnValue: true, apps })),
-    () => 0
+    () => 0,
+    priorityIds
   );
   return { apps: JSON.parse(JSON.stringify(result)), reads };
 }
+test('late pinned icons receive the budget first without changing catalog order or bounds', async () => {
+  const catalog = Array.from({ length: 151 }, (_, i) => app('app' + i));
+  const result = await read(catalog, {}, ['app145', 'app150']);
+  assert.deepEqual(
+    result.apps.map((a) => a.id),
+    catalog.map((a) => a.id)
+  );
+  assert(result.apps[145].icon, 'pinned app at position 146 gets its icon');
+  assert(result.apps[150].icon, 'the next pinned app also gets its icon');
+  assert.equal(result.apps.filter((a) => a.icon).length, 16);
+  assert.equal(
+    result.apps[14].icon,
+    '',
+    'unprioritized icons use only the remainder'
+  );
+  const limited = await read(
+    catalog,
+    {},
+    Array.from({ length: 17 }, (_, i) => 'app' + (150 - i))
+  );
+  assert(limited.apps[150].icon);
+  assert.equal(
+    limited.apps[134].icon,
+    '',
+    'priority order still respects the total budget'
+  );
+  assert.equal(limited.reads.length, 16);
+  const hidden = await read([app('hidden', { hidden: true }), ...catalog], {}, [
+    'hidden',
+    'absent',
+    'app145'
+  ]);
+  assert.equal(hidden.apps[0].icon, '');
+  assert(hidden.apps[146].icon);
+});
+test('priority IDs are bounded metadata and cannot supply commands or paths', async () => {
+  for (const priority of [
+    null,
+    {},
+    'app',
+    [12],
+    [''],
+    ['x'.repeat(257)],
+    Array(201).fill('app')
+  ]) {
+    await assert.rejects(
+      read([app('app')], {}, priority),
+      /invalid-icon-priority/
+    );
+  }
+  assert.deepEqual(
+    await read([app('app')], {}, ['/etc/private.png']),
+    await read([app('app')])
+  );
+});
 test('hidden catalog entries cannot consume visible icon budget, including the hidden tuner exception', async () => {
   const catalog = [
     ...Array.from({ length: 129 }, (_, i) =>
