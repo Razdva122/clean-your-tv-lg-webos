@@ -42,3 +42,22 @@ RED failure, then passed all cases after correction. Formatting and diff checks
 passed. Independent read-only review found no blocking issues in either CI fix.
 Updated-head GitHub CI is required before integration. The original firmware,
 public-feed and packaged icon acceptance remain outstanding on the final artifacts.
+
+## Integration checkpoint
+
+Both corrected heads passed all eight Linux/macOS runtime shards, browser,
+optional Python and both OS aggregate checks; website build and integration
+policy also passed:
+
+- #421 `7cd18578`: [Tests 42454515821](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42454515821), integrated as `331e9951`.
+- #423 `e988828d`: [Tests 42454672347](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42454672347), integrated as `d5f8fb98`.
+
+On combined source `d5f8fb98`, the Root catalog and System profile regressions,
+14 icon-budget/priority-service/inventory-fallback tests, 16 release-flow tests
+and 3 README metadata tests passed. No unchanged full suite or physical case was
+repeated. Candidate #425 collects #415/#421/#423/#424 without selecting a version,
+build pin or acceptance. At freeze, rebuild/version shared Home UI, Root Home
+and its service, Root Updater's embedded inventory/coordinator, Helper and
+embedding installers as appropriate. Final package contents, public-feed/early
+launch, budget-exhausting catalog presentation, compatibility and rollback
+acceptance remain pending.

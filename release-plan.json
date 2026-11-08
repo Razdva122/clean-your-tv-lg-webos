@@ -17,6 +17,13 @@
       "summary": "Retry exact transient Root OTA permission refusals within the existing startup budget; original permission-race cause and final public-feed/early-launch device acceptance remain unconfirmed"
     },
     {
+      "pr": 423,
+      "issues": [
+        416
+      ],
+      "summary": "Prioritize visible Root app icons within fixed inventory limits and refresh newly pinned missing icons; packaged-device acceptance remains pending"
+    },
+    {
       "pr": 424,
       "issues": [
         101
