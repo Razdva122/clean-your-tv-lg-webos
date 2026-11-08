@@ -1,6 +1,6 @@
 # Clean removal and a subsequent edition installation
 
-This is an unreleased source contract. A completed uninstall must leave a TV
+This is the removal/reinstallation contract delivered in v1.13.0. A completed uninstall must leave a TV
 ready for another supported Root or No-root setup. Disabling Home control alone
 does not uninstall the Root edition. Current installation, controls, firmware
 requirements and emergency-stop checks still apply.

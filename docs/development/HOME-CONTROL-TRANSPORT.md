@@ -2,7 +2,9 @@
 
 [Development references](README.md) · [Diagnostics](../SETTINGS-DIAGNOSTICS.md)
 
-## Unreleased correction for #146
+<a id="unreleased-correction-for-146"></a>
+
+## Service transport correction for #146
 
 The original broker used the Helper application's absolute `state` path from a
 jailed JavaScript service. LG documents that JS services can access their own

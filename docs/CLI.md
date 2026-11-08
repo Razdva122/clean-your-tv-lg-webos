@@ -137,7 +137,7 @@ including with `--yes`; noninteractive recovery stops. Root checks may run verif
 support code. Only verified Root/updater state permits separately confirmed Home
 activation. In 1.6.0, No-root removal requires the package-service idle guard
 before the offer and again at mutation; unknown removal outcomes or conflicts
-stop before cleanup. Unreleased installers can omit that global check only for
+stop before cleanup. The installer can omit that global check only for
 an original No-root `uninstall / pending` journal proving no package request was
 submitted, without prior operations or unexpected fields. See the
 [pre-submission recovery boundary](RECOVERY.md#no-root-removal-stopped-before-package-submission-unreleased). Removing packages may reset Home preferences.
@@ -476,7 +476,7 @@ stack **file/function/line locations**. It excludes exception text, source lines
 locals, addresses, identity paths, credentials, app lists, environment and raw TV
 logs. No report is submitted automatically.
 
-In the next candidate (#311), the existing No-root inventory read adds aggregate
+In v1.13.0 (#311), the existing No-root inventory read adds aggregate
 `tv.icon_inventory` counters for embedded/fallback icons, missing/rejected icon
 URIs, failed downloads and unsupported image signatures. No addresses or app
 identities are included; no extra TV reads are performed. These fields describe

@@ -1,4 +1,6 @@
-# Early Root admission and connection guidance (unreleased)
+<a id="early-root-admission-and-connection-guidance-unreleased"></a>
+
+# Early Root admission and connection guidance
 
 [CLI](../CLI.md) · [Diagnostic evidence](INSTALLER-DIAGNOSTICS.md) ·
 [Recovery journey](INSTALLER-RECOVERY.md)

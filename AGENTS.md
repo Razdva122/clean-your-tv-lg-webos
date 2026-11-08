@@ -4,6 +4,15 @@ Read `CONTRIBUTING.md` before making changes. Follow its workspace and temporary
 worktree cleanup rules, along with its branch, release, documentation and
 verification rules.
 
+## Localized user guides
+
+Follow CONTRIBUTING.md: `docs/i18n/` contains practical instructions in each named
+language, not release news. Do not add project release/component versions, candidate
+or publication banners, changelogs, developer details or QA/issue status. Keep
+necessary installation prerequisites, controls and recovery instructions, and
+preserve existing anchor aliases. Put release history and evidence in the canonical
+release/developer/history documents instead.
+
 ## Installation results and user consent
 
 For installations on another user's device, including recovery from an interrupted

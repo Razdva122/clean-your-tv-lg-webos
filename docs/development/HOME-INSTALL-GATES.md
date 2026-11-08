@@ -2,7 +2,7 @@
 
 Related issues: #140, #133. The controller-state and firmware gates shipped in
 v1.5.0; immutable Helper 0.6.19 does not contain them. The Node 0.10.25 target
-below shipped in v1.5.4. The SSH stop fallback described below is unreleased.
+below shipped in v1.5.4. The SSH stop fallback described below shipped in v1.6.0.
 
 ## No-root recovery after Helper service refusal (#152)
 
@@ -37,7 +37,9 @@ Existing state path validation, trusted directory ownership, shared-group checks
 no world writes, exclusive staging and cleanup on failure remain required.
 No new persistent preference, permission, or network endpoint is introduced.
 
-### Legacy process matching (unpublished follow-up for #152)
+<a id="legacy-process-matching-unpublished-follow-up-for-152"></a>
+
+### Legacy process matching (#152)
 
 The installer scans NUL-separated `/proc/*/cmdline` arguments for the controller
 identity, exact `native.js` path or exact relay path. An installed app or the

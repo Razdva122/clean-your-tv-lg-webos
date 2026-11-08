@@ -15,9 +15,11 @@
 The Magic Remote pointer and wheel pass through. Wheel-to-tile navigation is not
 implemented. The launcher does not take over app-specific Back behavior.
 
-### Standard IR remote (unpublished No-root candidate)
+<a id="standard-ir-remote-unpublished-no-root-candidate"></a>
 
-The candidate observes `LGE RCU` read-only without grabbing or re-emitting its
+### Standard IR remote (No-root Helper 0.8.0)
+
+Helper observes `LGE RCU` read-only without grabbing or re-emitting its
 keys. Releasing a short Home press schedules Clean after about 700 ms; stock LG
 Home may flash first. Held Home stays with webOS. Triple Home still stops Helper;
 Home-control Off, Stop, relay exit and watchdog recovery cancel pending IR work.
@@ -26,7 +28,7 @@ returns; only fresh complete presses can activate Home or count towards escape.
 
 This is source behavior, not verified access or acceptance on stock Developer
 Mode TVs or the original LJ550T. Do not change input permissions to enable it.
-This feature is selected for unpublished v1.13.0 / Helper 0.8.0; published v1.12.1 does not include it.
+This feature is included in published v1.13.0 / Helper 0.8.0; v1.12.1 did not include it.
 [Source checks, attribution and remaining gates](history/2026-11-08-issue207-ir-safety.md).
 
 <a id="inputs-unpublished-170-candidate"></a>

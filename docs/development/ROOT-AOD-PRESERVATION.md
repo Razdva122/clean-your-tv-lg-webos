@@ -1,7 +1,7 @@
 # Preserving AOD during Root profile activation
 
-Unpublished correction for [#282](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/282).
-It requires rebuilt matching Root infrastructure and installers. Host regression
+Published correction for [#282](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/282).
+Use matching released Root infrastructure and installers. Host regression
 results do not establish the original C4 failure cause or B4 compatibility.
 
 ## Write boundaries
@@ -12,7 +12,7 @@ The independently read stock baseline contains the complete `defaultApps` and
 categories, support flags and unknown vendor fields even when profile resolution
 replaces a nested category map instead of merging its members.
 
-Both candidate activation and stock recovery use the same transport. It reads
+Both activation and stock recovery use the same transport. It reads
 Settings Service `general.defaultApps`, copies the whole object, changes only
 `home`, submits `com.webos.settingsservice/setSystemSettings`, and verifies the
 whole settings object afterward. The former activation-only `setDefaultApp`

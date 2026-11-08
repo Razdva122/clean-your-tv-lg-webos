@@ -1,4 +1,6 @@
-# Update storage retention (unreleased)
+<a id="update-storage-retention-unreleased"></a>
+
+# Update storage retention
 
 Update caches retain every SHA-256 reference in both updater stores, including
 immutable baselines, installed packages, bootstrap/infrastructure records and the

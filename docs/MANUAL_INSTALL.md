@@ -517,7 +517,7 @@ Home and your Quick Access assignment. See [No-root maintenance](MAINTENANCE.md)
 ### Root
 
 Root supports compatible signed edition release sets through Settings after
-[updater setup](../root-edition/UPDATES.md). The unreleased normal source setup
+[updater setup](../root-edition/UPDATES.md). The normal source setup
 above includes Root Updater; published tagged bundles retain their own matching
 separate procedure. System Updater is optional and requires explicit preparation
 before whole-edition updates. Homebrew upgrades CYTV Installer only, not product
@@ -526,7 +526,7 @@ components. `setup.py` has no manual
 recovery files, manifests and journals must match. Retain the original bundle
 and private backups outside the TV.
 
-For the unreleased shared-product flow, complete removal uses both verified
+For the shared-product flow, complete removal uses both verified
 bundles and a new removal operation ID (distinct from the install ID):
 
 ```bash

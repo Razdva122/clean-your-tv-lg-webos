@@ -60,7 +60,9 @@ Keep keys and reports; do not reinstall or clear app data just to retry removal.
 Returning to LG Home remains a separate action.
 See [removal](RECOVERY.md#next-candidate-original-operation-recovery-and-full-removal).
 
-### Unreleased: removal and reinstallation continuation
+<a id="unreleased-removal-and-reinstallation-continuation"></a>
+
+### Removal and reinstallation continuation (v1.13.0)
 
 After a removal connection error, open the connection details on desktop or
 return to the connection screen on Android. The pending TV address, edition,

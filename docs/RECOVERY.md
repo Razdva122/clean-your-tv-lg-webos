@@ -1,6 +1,6 @@
 # Recover TV controls or an interrupted installation
 
-> **Unpublished candidate (#364):** experimental compositor recovery stops routing
+> **Experimental compositor routing (#364):** experimental compositor recovery stops routing
 > before removing only its own filter. Safety/power stops require explicit
 > re-enable. If Home identity changed, the owned filter can be released after
 > retirement, but full stock proof remains unverified and recovery evidence is
@@ -74,9 +74,11 @@ inspection establish the allowed next action.
 
 ## Interrupted setup or removal
 
-### Unreleased: local recovery storage messages
+<a id="unreleased-local-recovery-storage-messages"></a>
 
-This improvement is included in the unpublished v1.12.1 candidate. Published v1.12.0 does not include it.
+### Local recovery storage messages
+
+These messages are included from published v1.12.1 onward; v1.12.0 did not include them.
 
 A local recovery storage refusal concerns the computer or Android app storage,
 not a TV package-status reply. It can mean that a directory's ownership or
@@ -118,7 +120,7 @@ retry removal. Missing files are skipped; absence is not itself an error.
 
 In v1.11.0 and later, failed or interrupted setup offers recovery directly. If No-root setup cannot continue, confirm full removal once. Removal automatically retries transient connection loss and a busy CYTV worker up to three attempts. If Root access is required, choose **Connect using Root** for the same TV; verified Root cleanup also finishes its blocked No-root removal. A failed Root activation attempts to restore and verify LG Home without repeating activation. Cancellation with unfinished work keeps a diagnostic report and recovery actions. Emergency-stop state remains unchanged.
 
-**Next candidate:** verified full removal leaves the TV ready for a new Root or No-root installation. Minimal inactive removal receipts prevent old work from resuming; do not delete them manually. Finish recovery first if removal or its current checks are incomplete.
+**v1.13.0:** verified full removal leaves the TV ready for a new Root or No-root installation. Minimal inactive removal receipts prevent old work from resuming; do not delete them manually. Finish recovery first if removal or its current checks are incomplete.
 
 Returning to LG Home alone remains separate from removal. Emergency controls
 above stay available. For setup recovery, eligible Root can still finish with
@@ -179,10 +181,12 @@ The updated Root runtime records a fixed health-context refusal before superviso
 recovery. Existing runtime logs cannot be upgraded retroactively: retain the
 original evidence and do not edit installed runtime files or integrity receipts.
 
-#### Candidate: finish verified Root setup with Home control off
+<a id="candidate-finish-verified-root-setup-with-home-control-off"></a>
+
+#### Finish verified Root setup with Home control off
 
 If activation keeps failing on the retained runtime, do not repeatedly select
-**Finish Root setup?**. The next installer offers a separate default-No choice,
+**Finish Root setup?**. The installer offers a separate default-No choice,
 **Finish setup with LG Home and Home control off**, directly in the recovery menu,
 followed by **Finish Root setup with Home control off?** (default No).
 It is offered only for eligible pending profile-backend setup that passes the same
@@ -202,10 +206,9 @@ do not repeat bootstrap over it. Open Home Root manually, then **Settings →
 Software updates → Update all** for a verified signed complete set. Preparation
 and update still enforce their original compatibility, transaction, baseline and
 rollback checks; stop on refusal and retain evidence. A launcher-only IPK cannot
-update the private runtime. This candidate flow is not yet published or physically
-accepted on the reporting TV. [Update requirements](UPDATES.md).
+update the private runtime. This flow is published, but physical recovery on the reporting TV remains unconfirmed. [Update requirements](UPDATES.md).
 
-Candidate reports include a passive retained-runtime snapshot: project component
+Current reports include a passive retained-runtime snapshot: project component
 versions, runtime release metadata and fixed health-refusal categories. A legacy
 `generic` refusal has no predicate detail. `historical-tail` is historical evidence;
 `since-enable` bounds newly appended records around the host enable command but
@@ -380,7 +383,7 @@ transaction or backup also blocks replacement, even if marked complete; preserve
 it for review rather than deleting it to force replacement. It does not patch
 retained pinned code in place or replay an uncertain remove/install request.
 
-The unpublished v1.13.0 candidate targets fresh System Updater 1.2.7; published v1.12.1 targets 1.2.6. Only installed 1.1.0/1.1.1 sources are admitted by the explicit replacement. Retained 1.1.2 and 1.2.x have no general replacement path. A completed earlier
+Published v1.13.0 includes fresh System Updater 1.2.7; v1.12.1 included 1.2.6. Only installed 1.1.0/1.1.1 sources are admitted by the explicit replacement. Retained 1.1.2 and 1.2.x have no general replacement path. A completed earlier
 replacement to 1.1.1 can start a new target operation only
 after the installer authenticates its saved bundle, baseline, original archive,
 terminal removal and current owner, and confirms that later recovery has finished.

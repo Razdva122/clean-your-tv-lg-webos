@@ -1,8 +1,9 @@
-# Video wallpapers and settings (next-release development)
+<a id="video-wallpapers-and-settings-next-release-development"></a>
 
-This feature is included in the unpublished 1.8.1 candidate (#281). Existing published image-only themes continue to use their ordinary
-fallback. Do not interpret this source document or desktop playback as shipping
-or universal hardware acceptance.
+# Video wallpapers and settings
+
+This feature is included in published v1.8.2 (#281). Existing image-only themes continue to use their ordinary
+fallback. This source contract and desktop playback do not establish universal hardware acceptance.
 
 ## Theme contract
 
