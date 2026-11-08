@@ -3,7 +3,7 @@
 [Documentation](README.md) · [Feedback and privacy](FEEDBACK.md)
 
 The published diagnostics help identify failures; they do not by themselves fix
-the unresolved C5/webOS26 status transport. The [unreleased transport correction](development/HOME-CONTROL-TRANSPORT.md)
+the unresolved C5/webOS26 status transport. The [packaged transport correction](development/HOME-CONTROL-TRANSPORT.md)
 for [#146](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/146) moves requests into the renewal service's own package; it requires coordinated Home/Helper packaging and physical acceptance.
 
 ## Collecting a report
@@ -71,7 +71,7 @@ This change does not alter storage locations/ownership, grant permissions,
 introduce a service endpoint, change the file protocol, restart Helper, or clear
 an emergency stop. In published packages, the missing writable renewal-state directory remains an
 access/provisioning hypothesis until effective service permissions are measured.
-The unreleased #146 source change provisions only the renewal service's two owned
+The #146 transport change provisions only the renewal service's two owned
 state/channel directories; it does not change platform mounts or shared SDK
 parents. Effective C1/C5 service/controller access remains unverified.
 

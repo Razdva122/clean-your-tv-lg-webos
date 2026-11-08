@@ -1,6 +1,6 @@
 # Ribbon presentation in the single Home application
 
-This is the current unpublished contract. Historical prototype and device
+This is the published single-Home contract from v1.8.2. Historical prototype and device
 observations retain their original scope in dated acceptance records.
 
 ## Native host

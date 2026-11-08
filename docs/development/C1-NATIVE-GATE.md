@@ -1,11 +1,13 @@
 # Experimental C1 Home routing
 
-## Unpublished capability-based compositor admission (#364)
+<a id="unpublished-capability-based-compositor-admission-364"></a>
 
-The next installer extends the existing mount-free protocol to capability-admitted
+## Experimental capability-based compositor admission (#364)
+
+The installer extends the existing mount-free protocol to capability-admitted
 Qt webOS SDK 6–9 TVs. Model names are recorded observations, not an allowlist;
 55NANO77SRA / SDK 9.2.2 / firmware 23.25.55 is the motivating report, not hardware
-acceptance. This section describes source preparation, not published support.
+acceptance. This experimental path is packaged in published releases from v1.11.0; target-TV physical compatibility remains unverified.
 
 Internal package, backend and lease names retain `c1` for compatibility. Existing
 schema1 mount recovery and schema2 C1 selection are unchanged. New nonlegacy
@@ -56,7 +58,7 @@ private filter and native lease barrier instead of Home Chooser's executable gat
 
 ## Existing C1 selection and recovery
 
-This unpublished backend addresses [#298](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/298). The common computer installer selects it for eligible fresh C1 Root installations. It has no automatic updates and has not passed physical C1 acceptance. Existing normal Root bundles keep their profile backend.
+This experimental backend addresses [#298](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/298). The common computer installer selects it for eligible fresh C1 Root installations. It has no automatic updates and has not passed physical C1 acceptance. Existing normal Root bundles keep their profile backend.
 
 ## Selection and recovery
 

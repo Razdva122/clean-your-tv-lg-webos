@@ -1,11 +1,14 @@
-# Installer diagnostic evidence (unreleased)
+<a id="installer-diagnostic-evidence-unreleased"></a>
+
+# Installer diagnostic evidence
 
 The shared desktop, console and Android installer now exports diagnostic context
-without treating it as recovery authority. These changes are in source only;
-v1.5.4 does not contain them. No TV compatibility or completed recovery follows
+without treating it as recovery authority. Use current released installers; older releases such as v1.5.4 lack this context. No TV compatibility or completed recovery follows
 from a diagnostic report.
 
-## No-root icon inventory (next candidate, #311)
+<a id="no-root-icon-inventory-next-candidate-311"></a>
+
+## No-root icon inventory (v1.13.0, #311)
 
 The existing No-root inventory read records aggregate `tv.icon_inventory` in
 success/failure reports and filtered failure history. It performs no additional
@@ -33,7 +36,9 @@ application IDs/titles, image bytes or exception text are retained in this objec
 The summary does not identify which app failed or prove any suspected device
 cause. Status/Doctor alone do not reread icons or reconstruct an earlier attempt.
 
-## Retained Root activation checks (next candidate, #355)
+<a id="retained-root-activation-checks-next-candidate-355"></a>
+
+## Retained Root activation checks (v1.13.0, #355)
 
 For a retained `activate-root` receipt, `tv.root_setup_recovery` adds a fixed
 `reason` and `checks` map to the normal report and revalidated failure history.
@@ -64,7 +69,9 @@ recover discarded detail. Rebuilt desktop/console/Android installers are require
 no TV package, permission, endpoint or persistent device state is added. No device
 recovery or hardware compatibility is established by these synthetic host tests.
 
-## TV Node version (next candidate)
+<a id="tv-node-version-next-candidate"></a>
+
+## TV Node version
 
 Root and No-root preflight and status checks read `/usr/bin/node --version`
 before checking other requirements. Diagnostic `tv.node_version` retains a
@@ -93,7 +100,7 @@ denied. Diagnostics export only these allowlisted codes, never the address keys,
 exception text or raw errors. Trust, authentication and local key-file failures
 retain their separate guidance. Classification is limited to initial connection.
 
-The reason-code guidance above shipped in v1.12.1 (#402). The next candidate
+The reason-code guidance above shipped in v1.12.1 (#402). Published v1.13.0
 additionally preserves `connection.protocol: "ssh"` and `connection.causes`
 for socket failures at `ssh-connect`. This sorted, unique list contains only
 `access-denied`, `refused`, `timeout`, `host-unreachable`, `network-unreachable`,
@@ -123,7 +130,9 @@ On macOS, settings access is a user action, not an automatic permission change.
 Settings may show an older duplicate name; the app does not claim to read that
 permission state.
 
-## Optional Root input inventory (next candidate)
+<a id="optional-root-input-inventory-next-candidate"></a>
+
+## Optional Root input inventory
 
 Root setup still requires a validated, nonempty application catalog. An unavailable
 EIM input snapshot no longer discards that catalog: setup warns and continues
@@ -141,7 +150,9 @@ This fixes a reproduced source failure path; it does not establish the cause or
 resolution of a reporter's device failure. Rebuild installers to deliver it.
 No TV package, permission, endpoint, persistent device state or pairing changes.
 
-## Root inventory failure detail (unreleased, #397)
+<a id="root-inventory-failure-detail-unreleased-397"></a>
+
+## Root inventory failure detail (v1.13.0, #397)
 
 `tv.root_inventory_failures` retains independent `applications` and `inputs`
 failures from the fixed Root SSH reader. Each entry contains a fixed `reason`
@@ -155,13 +166,13 @@ detail before collecting the new observation.
 
 These categories explain a current read failure; they never authorize recovery
 or relax required application validation. Optional input failure still permits
-valid applications with the existing warning. Rebuild the shared installers and
-Root service/support packages through the next candidate; existing public
-packages cannot recover discarded detail from a historical report. No new
+valid applications with the existing warning. Use the matching v1.13.0 installers and Root service/support packages. New packages cannot recover discarded detail from a historical report. No new
 permission, endpoint or user prompt is introduced. Physical reporter-device
 acceptance and the original #397 cause remain unverified.
 
-## Local recovery storage (next candidate, #201)
+<a id="local-recovery-storage-next-candidate-201"></a>
+
+## Local recovery storage (#201)
 
 Optional `local_recovery` distinguishes host directory ownership/permissions,
 directory type/access, unavailable storage, missing/unsafe/changed/invalid capsule
@@ -196,7 +207,7 @@ original-outcome categories. It does not export the original receipt, private
 recovery data, operation IDs, tokens, paths or raw replies, and grants no mutation
 authority. [Failure-injection matrix](INSTALLER-RECOVERY-MATRIX.md).
 
-The next candidate also keeps the first Root cleanup `failure` separate from
+Published v1.13.0 also keeps the first Root cleanup `failure` separate from
 `last_failure`, which describes the latest failed attempt and its cleanup stage.
 For bounded Luna reads these contain only a fixed call identifier, a fixed reason
 (permission denial, missing service/method, negative/malformed/oversized reply,
@@ -206,7 +217,7 @@ request payloads, inventories and routes are excluded. Existing old failures
 remain unchanged; new detail cannot reconstruct an earlier discarded exception.
 These fields diagnose a blocker and never authorize skipping control restoration.
 
-Unreleased Root cleanup adds `cleanup_step` to `status.product.failure` and
+Published v1.13.0 Root cleanup adds `cleanup_step` to `status.product.failure` and
 `status.product.last_failure` when control restoration fails inside an instrumented
 boundary: `routing-inverse`, `runtime-restore`, `provision-rollback`, `startup-hook`,
 `legacy-lockdown`, `registration-restore`, `legacy-permissions` or `home-readback`.
@@ -256,7 +267,9 @@ successful TV work into a failed command. `doctor --report` remains explicit.
 Review every report before sharing. The special Home-button recording retains
 its separately documented application-ID/timing scope.
 
-## Recovery journal summary (unreleased)
+<a id="recovery-journal-summary-unreleased"></a>
+
+## Recovery journal summary
 
 Additive `recovery` is computed from the original local journal snapshot already
 used by the report, without another TV query or receipt rewrite:
@@ -278,7 +291,9 @@ guidance offers explicitly confirmed inspection after a failed original removal.
 Original error capture/history behavior is unchanged; these fields do not reconstruct
 legacy first failures or establish that a submitted package transaction terminated.
 
-## Root admission and connection advice (unreleased)
+<a id="root-admission-and-connection-advice-unreleased"></a>
+
+## Root admission and connection advice
 
 Optional `guidance` contains only an allowlisted advice code and a Boolean pending
 flag. Root `tv.root_capabilities` uses two fixed check keys and reasons: readable,
@@ -288,7 +303,9 @@ Home routes are excluded. Current and retained first-failure projections are
 revalidated; these fields cannot grant recovery authority or prove compatibility.
 See the [preflight and guidance contract](INSTALLER-PREFLIGHT-HELP.md).
 
-## Root activation evidence (unreleased)
+<a id="root-activation-evidence-unreleased"></a>
+
+## Root activation evidence
 
 Root activation now preserves existing typed installer errors instead of replacing
 SSH command failures or definite TV launch rejections with a generic activation
@@ -351,7 +368,9 @@ logs or free-form exception messages are added. Diagnostic evidence never
 clears pending, launches recovery, retries a package transaction, enables Home,
 clears emergency stop or changes permissions.
 
-## Setup outcomes (unreleased)
+<a id="setup-outcomes-unreleased"></a>
+
+## Setup outcomes
 
 `tv.setup_outcome` distinguishes fixed package verification, launch request,
 startup observation and owner-reported physical Home results. These are
@@ -409,9 +428,11 @@ and repeats existing activation eligibility checks before resolving that pending
 activation. It neither enables Home nor updates code. See the [candidate recovery
 path](../RECOVERY.md#candidate-finish-verified-root-setup-with-home-control-off).
 
-## No-root observer failures (next candidate, #376 and #378)
+<a id="no-root-observer-failures-next-candidate-376-and-378"></a>
 
-The unreleased Developer Mode storage selector adds `command: storage-select`.
+## No-root observer failures (#376 and #378)
+
+The published Developer Mode storage selector adds `command: storage-select`.
 It performs only metadata reads before the existing `storage-check` and pending
 creation. An unsafe existing location or ambiguous pair of roots is a refusal,
 not permission to erase recovery data. Selection is never run for an existing
@@ -462,7 +483,9 @@ before execution and later asynchronous/detached-worker failures can still use
 `command-failed`, transport or existing terminal evidence; absence of a runtime
 category does not identify the cause. No TV compatibility is inferred.
 
-### Filesystem failure context (next candidate)
+<a id="filesystem-failure-context-next-candidate"></a>
+
+### Filesystem failure context
 
 For synchronous `observer-error` replies, the launcher additionally projects the
 existing exception's `syscall` and `path` into two optional, allowlisted fields:

@@ -23,7 +23,7 @@ Restore saved eARC setting: use it only if eARC on is your desired setting.
 
 ## Runtime and authority
 
-The next candidate places the audio transaction engine and detached worker in
+The runtime places the audio transaction engine and detached worker in
 `runtime/cli.py`, independent of the UI/JS RPC lifetime and Home-button controller.
 `service/handlers.js` permits only fixed operations, exact keys/booleans and uid0.
 Audio state uses `status` with `{audio:"status"}`; explicit configuration/recovery

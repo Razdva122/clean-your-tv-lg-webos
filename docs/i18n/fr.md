@@ -4,7 +4,7 @@ Clean Your TV donne à votre LG webOS un écran d’accueil personnel : vos appl
 
 **Publié dans v1.12.1:** Les erreurs distinguent un accès réseau refusé, un port SSH refusant la connexion et un délai expiré. **Retester la connexion** lance un diagnostic sans installer de paquets ; **Modifier la connexion** vérifie les paramètres modifiés. Sur macOS, **Ouvrir Réglages Système** aide à trouver l’accès au réseau local ; le nom d’une ancienne copie peut apparaître. Les opérations en attente conservent leur procédure de récupération.
 
-Non publié, v1.13.0 / Helper 0.8.0 : Home bref sur une télécommande IR ouvre Clean après environ 700 ms ; LG Home peut apparaître avant. Home maintenu reste géré par webOS. L’accès aux entrées en Developer Mode normal n’est pas vérifié ; ne modifiez pas les permissions. Le triple Home et le redémarrage explicite après un arrêt sont conservés.
+v1.13.0 / Helper 0.8.0 : Home bref sur une télécommande IR ouvre Clean après environ 700 ms ; LG Home peut apparaître avant. Home maintenu reste géré par webOS. L’accès aux entrées en Developer Mode normal n’est pas vérifié ; ne modifiez pas les permissions. Le triple Home et le redémarrage explicite après un arrêt sont conservés.
 
 <a id="candidat-unreleased--ancien-nodejs-du-tv"></a>
 
@@ -72,7 +72,7 @@ L’assistant utilise initialement la langue du système et mémorise votre choi
 3. No-root : saisissez le code de Developer Mode et acceptez la demande sur la TV. Root : utilisez vos identifiants SSH. N’acceptez une nouvelle identité SSH que pour votre propre TV sur un réseau fiable. Si une clé enregistrée a changé, arrêtez-vous et recherchez la cause.
 4. Suivez l’assistant. Gardez la TV allumée, le même réseau et CYTV ouvert jusqu’à la fin. Ne forcez pas l’arrêt de l’application Android. Root active le contrôle de Home dès la récupération préparée.
 
-Dans le prochain candidat non publié, l’installation Root continue avec un avertissement si les entrées du TV ne peuvent pas être lues mais que la liste des applications est valide. Des entrées peuvent manquer dans Home ; une liste d’applications illisible ou vide arrête toujours l’installation. Enregistrez le rapport de diagnostic si l’avertissement persiste.
+Dans la version publiée, l’installation Root continue avec un avertissement si les entrées du TV ne peuvent pas être lues mais que la liste des applications est valide. Des entrées peuvent manquer dans Home ; une liste d’applications illisible ou vide arrête toujours l’installation. Enregistrez le rapport de diagnostic si l’avertissement persiste.
 
 ## 5. Vérifier la télécommande
 
@@ -83,7 +83,7 @@ Dans le prochain candidat non publié, l’installation Root continue avec un av
 
 ## 6. Utilisation et récupération
 
-Prise en charge IR No-root non publiée : relâcher Home après un appui court programme Clean après environ 700 ms ; LG Home peut apparaître brièvement. Un appui long reste géré par webOS et trois appuis arrêtent toujours Helper. L’accès en Developer Mode standard reste non vérifié ; ne modifiez pas les permissions des périphériques d’entrée.
+Prise en charge IR No-root (Helper 0.8.0) : relâcher Home après un appui court programme Clean après environ 700 ms ; LG Home peut apparaître brièvement. Un appui long reste géré par webOS et trois appuis arrêtent toujours Helper. L’accès en Developer Mode standard reste non vérifié ; ne modifiez pas les permissions des périphériques d’entrée.
 
 Les flèches sélectionnent, OK ouvre ; maintenez OK pour réorganiser. Un appui bref sur Retour conserve la navigation et la confirmation de sortie de l’application. Home ouvre le lanceur si le contrôle est actif. Maintenez Retour pendant 1,2 seconde pour ouvrir LG Home une fois. L’interrupteur du contrôle de Home et vos paramètres restent inchangés.
 
@@ -105,7 +105,7 @@ Indiquez modèle de TV, micrologiciel, No-root ou Root, appareil d’installatio
 
 [Signaler un problème](../FEEDBACK.md) · [Récupération — anglais](../RECOVERY.md) · [Mettre à jour ou supprimer — anglais](../MAINTENANCE.md) · [Autres langues](../LANGUAGES.md)
 
-Dans les prochaines versions, l’avertissement et le bouton « Désactiver l’aperçu HDMI » apparaissent lorsque la 4K est sélectionnée ou active, uniquement pour les thèmes dont l’aperçu des entrées est activé. Pendant l’aperçu HDMI, le fond vidéo 4K est temporairement remplacé par une image fixe en 1080p. Désactivez l’aperçu des entrées pour conserver le fond en 4K.
+Dans les versions actuelles, l’avertissement et le bouton « Désactiver l’aperçu HDMI » apparaissent lorsque la 4K est sélectionnée ou active, uniquement pour les thèmes dont l’aperçu des entrées est activé. Pendant l’aperçu HDMI, le fond vidéo 4K est temporairement remplacé par une image fixe en 1080p. Désactivez l’aperçu des entrées pour conserver le fond en 4K.
 
 ### Suppression simple (v1.11.0+)
 
@@ -113,11 +113,11 @@ Dans v1.11.0 et les versions suivantes, choisissez **Désinstaller Clean Your TV
 
 Quand demandé, débranchez l’alimentation TV, rebranchez-la, attendez le réseau et choisissez **Réessayer**. Veille ou Quick Start n’est pas un redémarrage complet ; CYTV ne redémarre pas le téléviseur automatiquement. En cas de déconnexion, vérifiez la connexion et réessayez la même suppression sans autre assistant de récupération. Si l’accès est refusé, utilisez la connexion Root demandée ; si le téléviseur est occupé, patientez et réessayez. Le succès apparaît seulement après vérification du nettoyage final. Gardez les clés et rapports d’origine. Les commandes d’urgence et le consentement au partage restent applicables.
 
-**Prochain candidat :** après une suppression complète vérifiée, vous pouvez réinstaller Root ou No-root. Des traces minimales inactives empêchent la reprise des anciennes opérations ; ne les supprimez pas manuellement. Si la suppression ou ses vérifications restent incomplètes, terminez d’abord la récupération.
+**v1.13.0 :** après une suppression complète vérifiée, vous pouvez réinstaller Root ou No-root. Des traces minimales inactives empêchent la reprise des anciennes opérations ; ne les supprimez pas manuellement. Si la suppression ou ses vérifications restent incomplètes, terminez d’abord la récupération.
 
 Depuis v1.11.0, une installation échouée ou interrompue propose directement la récupération. Si No-root ne peut pas continuer, confirmez une fois la suppression complète. La suppression effectue jusqu’à trois tentatives en cas de perte temporaire de connexion ou de processus CYTV occupé. Si Root est nécessaire, choisissez **Se connecter avec Root** pour le même téléviseur ; le nettoyage Root vérifié termine aussi sa suppression No-root bloquée. Après un échec d’activation Root, CYTV tente de rétablir et vérifier LG Home sans réactiver. Une annulation avec du travail inachevé conserve le rapport et les actions de récupération. L’arrêt d’urgence reste actif.
 
-> **Améliorations non encore publiées :** Après une erreur de connexion pendant la suppression, ouvrez les détails, vérifiez le réseau ou choisissez une clé SSH Root existante, puis réessayez. Adresse, édition, port et vérification de la clé du téléviseur restent fixes. No-root vérifie Helper avant l’association : arrêtez-le et confirmez la nouvelle vérification dans le même parcours. Seul un téléviseur vide vérifié sans installation en attente peut éviter le redémarrage ; après une suppression réelle, effectuez le redémarrage demandé. Les restes de l’ancien Root Updater conduisent à une suppression complète confirmée séparément avant une nouvelle installation. Si le service des entrées échoue, le nettoyage sûr des paquets continue ; le succès exige toujours la vérification du nettoyage du raccourci.
+> **Améliorations v1.13.0 :** Après une erreur de connexion pendant la suppression, ouvrez les détails, vérifiez le réseau ou choisissez une clé SSH Root existante, puis réessayez. Adresse, édition, port et vérification de la clé du téléviseur restent fixes. No-root vérifie Helper avant l’association : arrêtez-le et confirmez la nouvelle vérification dans le même parcours. Seul un téléviseur vide vérifié sans installation en attente peut éviter le redémarrage ; après une suppression réelle, effectuez le redémarrage demandé. Les restes de l’ancien Root Updater conduisent à une suppression complète confirmée séparément avant une nouvelle installation. Si le service des entrées échoue, le nettoyage sûr des paquets continue ; le succès exige toujours la vérification du nettoyage du raccourci.
 
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="python-facultatif-pour-root-dans-v110"></a>
@@ -138,4 +138,4 @@ Depuis v1.11.0, une installation échouée ou interrompue propose directement la
 
 Références détaillées en anglais : [prérequis](../COMPATIBILITY.md) · [commandes](../CONTROLS.md) · [thèmes](../THEMES.md) · [mises à jour](../UPDATES.md).
 
-> Candidat non publié : Root Home expérimental est sélectionné selon les capacités Qt SDK 6–9, sans liste de modèles. Compatibilité matérielle et OTA normal non vérifiés. Les autres intégrations Home restent intactes ; après un arrêt de sécurité ou de courant, réactivez Home explicitement. [#364](../development/C1-NATIVE-GATE.md#unpublished-capability-based-compositor-admission-364).
+> Expérimental : Root Home expérimental est sélectionné selon les capacités Qt SDK 6–9, sans liste de modèles. Compatibilité matérielle et OTA normal non vérifiés. Les autres intégrations Home restent intactes ; après un arrêt de sécurité ou de courant, réactivez Home explicitement. [#364](../development/C1-NATIVE-GATE.md#unpublished-capability-based-compositor-admission-364).

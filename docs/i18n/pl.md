@@ -4,7 +4,7 @@ Clean Your TV to własny ekran główny dla LG webOS: Twoje aplikacje w Twojej k
 
 **Wydano w v1.12.1:** Błędy rozróżniają odmowę dostępu do sieci, odrzucenie połączenia przez port SSH i przekroczenie czasu. **Sprawdź połączenie ponownie** uruchamia diagnostykę bez instalowania pakietów; **Zmień połączenie** sprawdza zmienione dane. W macOS **Otwórz Ustawienia systemowe** pomaga znaleźć dostęp do sieci lokalnej; może być widoczna nazwa starszej kopii. Oczekujące operacje zachowują procedurę odzyskiwania.
 
-Nieopublikowana v1.13.0 / Helper 0.8.0: krótkie Home na pilocie IR otwiera Clean po około 700 ms; najpierw może mignąć LG Home. Przytrzymanie Home pozostaje w webOS. Dostęp do wejścia w zwykłym Developer Mode jest niezweryfikowany; nie zmieniaj uprawnień. Potrójne Home i jawne uruchomienie po zatrzymaniu pozostają.
+v1.13.0 / Helper 0.8.0: krótkie Home na pilocie IR otwiera Clean po około 700 ms; najpierw może mignąć LG Home. Przytrzymanie Home pozostaje w webOS. Dostęp do wejścia w zwykłym Developer Mode jest niezweryfikowany; nie zmieniaj uprawnień. Potrójne Home i jawne uruchomienie po zatrzymaniu pozostają.
 
 <a id="kandydat-unreleased-starszy-nodejs-w-tv"></a>
 
@@ -72,7 +72,7 @@ Kreator początkowo używa języka systemu i zapamiętuje wybrany język. Na tel
 3. No-root: wpisz kod z Developer Mode i zaakceptuj prośbę na TV. Root: użyj swoich danych SSH. Akceptuj nową tożsamość SSH tylko dla własnego TV w zaufanej sieci. Jeśli zapisany klucz się zmienił, zatrzymaj się i ustal przyczynę.
 4. Postępuj według kreatora. Zostaw TV włączony, nie zmieniaj sieci i nie zamykaj CYTV do końca. Nie wymuszaj zatrzymania aplikacji Android. Root włącza sterowanie Home zaraz po przygotowaniu odzyskiwania.
 
-W następnym, jeszcze nieopublikowanym kandydacie instalacja Root jest kontynuowana z ostrzeżeniem, jeśli nie można odczytać wejść TV, ale lista aplikacji jest prawidłowa. W Home może brakować wejść; nieodczytana lub pusta lista aplikacji nadal zatrzymuje instalację. Jeśli ostrzeżenie się powtarza, zapisz raport diagnostyczny.
+W opublikowanej wersji instalacja Root jest kontynuowana z ostrzeżeniem, jeśli nie można odczytać wejść TV, ale lista aplikacji jest prawidłowa. W Home może brakować wejść; nieodczytana lub pusta lista aplikacji nadal zatrzymuje instalację. Jeśli ostrzeżenie się powtarza, zapisz raport diagnostyczny.
 
 ## 5. Sprawdź pilota
 
@@ -83,7 +83,7 @@ W następnym, jeszcze nieopublikowanym kandydacie instalacja Root jest kontynuow
 
 ## 6. Obsługa i odzyskiwanie
 
-Nieopublikowana obsługa pilotów IR w No-root: zwolnienie Home po krótkim naciśnięciu planuje otwarcie Clean po około 700 ms; najpierw może mignąć LG Home. Przytrzymanie Home pozostaje w gestii webOS, a trzy naciśnięcia nadal zatrzymują Helper. Dostęp w zwykłym Developer Mode nie jest potwierdzony; nie zmieniaj uprawnień urządzeń wejściowych.
+Obsługa pilotów IR w No-root (Helper 0.8.0): zwolnienie Home po krótkim naciśnięciu planuje otwarcie Clean po około 700 ms; najpierw może mignąć LG Home. Przytrzymanie Home pozostaje w gestii webOS, a trzy naciśnięcia nadal zatrzymują Helper. Dostęp w zwykłym Developer Mode nie jest potwierdzony; nie zmieniaj uprawnień urządzeń wejściowych.
 
 Strzałki wybierają, OK otwiera; przytrzymaj OK, aby zmienić kolejność. Krótkie Wstecz zachowuje nawigację aplikacji i jej potwierdzenie wyjścia. Home otwiera ekran Clean Your TV, gdy sterowanie jest aktywne. Przytrzymaj Wstecz przez 1,2 sekundy, aby jednorazowo otworzyć LG Home. Przełącznik sterowania Home i ustawienia pozostają bez zmian.
 
@@ -105,7 +105,7 @@ Podaj model TV, firmware, No-root lub Root, urządzenie instalujące, krok i kom
 
 [Zgłoś problem](../FEEDBACK.md) · [Odzyskiwanie — angielski](../RECOVERY.md) · [Aktualizacja i usuwanie — angielski](../MAINTENANCE.md) · [Inne języki](../LANGUAGES.md)
 
-W nadchodzących kompilacjach ostrzeżenie i przycisk „Wyłącz podgląd HDMI” pojawią się przy wybranym lub aktywnym 4K tylko w motywach z włączonym podglądem wejść. Podczas podglądu HDMI tapeta wideo 4K jest tymczasowo zastępowana statycznym obrazem 1080p. Wyłącz podgląd wejść, aby zachować tapetę w 4K.
+W aktualnych wersjach ostrzeżenie i przycisk „Wyłącz podgląd HDMI” pojawiają się przy wybranym lub aktywnym 4K tylko w motywach z włączonym podglądem wejść. Podczas podglądu HDMI tapeta wideo 4K jest tymczasowo zastępowana statycznym obrazem 1080p. Wyłącz podgląd wejść, aby zachować tapetę w 4K.
 
 ### Proste usuwanie (v1.11.0+)
 
@@ -113,11 +113,11 @@ W opublikowanej wersji v1.11.0 i nowszych wybierz **Odinstaluj Clean Your TV** w
 
 Gdy pojawi się prośba, odłącz zasilanie TV, podłącz ponownie, poczekaj na sieć i wybierz **Spróbuj ponownie**. Czuwanie lub Quick Start nie jest pełnym restartem; CYTV nie uruchamia TV ponownie automatycznie. Po utracie połączenia sprawdź je i ponów to samo usuwanie bez kolejnego kreatora odzyskiwania. Przy odmowie dostępu użyj żądanego połączenia Root; gdy TV jest zajęty, poczekaj i ponów. Sukces pojawi się dopiero po weryfikacji końcowego czyszczenia. Zachowaj klucze i oryginalne raporty. Sterowanie awaryjne i zgoda na udostępnianie nadal obowiązują.
 
-**Następny kandydat:** po zweryfikowanym pełnym usunięciu można ponownie zainstalować Root lub No-root. Minimalne nieaktywne zapisy blokują wznowienie starych operacji; nie usuwaj ich ręcznie. Jeśli usuwanie lub jego kontrola są nieukończone, najpierw dokończ odzyskiwanie.
+**v1.13.0:** po zweryfikowanym pełnym usunięciu można ponownie zainstalować Root lub No-root. Minimalne nieaktywne zapisy blokują wznowienie starych operacji; nie usuwaj ich ręcznie. Jeśli usuwanie lub jego kontrola są nieukończone, najpierw dokończ odzyskiwanie.
 
 Od v1.11.0 po nieudanej lub przerwanej instalacji odzyskiwanie jest dostępne bezpośrednio. Jeśli No-root nie może kontynuować, potwierdź raz pełne usunięcie. Przy chwilowej utracie połączenia lub zajętym procesie CYTV usuwanie podejmuje do trzech prób. Jeśli potrzebny jest Root, wybierz **Połącz przez Root** dla tego samego TV; zweryfikowane czyszczenie Root kończy też zablokowane usuwanie No-root. Po błędzie aktywacji Root CYTV próbuje przywrócić i sprawdzić LG Home bez ponownej aktywacji. Anulowanie z niedokończoną pracą zachowuje raport i działania odzyskiwania. Stan zatrzymania awaryjnego pozostaje bez zmian.
 
-> **Ulepszenia jeszcze niewydane:** Po błędzie połączenia podczas usuwania otwórz szczegóły, sprawdź sieć lub wybierz istniejący klucz SSH Root i ponów próbę. Adres, edycja, port i weryfikacja klucza telewizora pozostają ustalone. No-root sprawdza Helper przed parowaniem: zatrzymaj go i potwierdź ponowne sprawdzenie w tym samym procesie. Tylko zweryfikowany pusty telewizor bez niedokończonej instalacji może pominąć restart; po faktycznym usuwaniu wykonaj wymagany restart. Pozostałości starego Root Updater prowadzą do osobno potwierdzanego pełnego usunięcia przed nową instalacją. Awaria usługi wejść pozwala kontynuować bezpieczne usuwanie pakietów; sukces nadal wymaga potwierdzenia usunięcia skrótu.
+> **Ulepszenia v1.13.0:** Po błędzie połączenia podczas usuwania otwórz szczegóły, sprawdź sieć lub wybierz istniejący klucz SSH Root i ponów próbę. Adres, edycja, port i weryfikacja klucza telewizora pozostają ustalone. No-root sprawdza Helper przed parowaniem: zatrzymaj go i potwierdź ponowne sprawdzenie w tym samym procesie. Tylko zweryfikowany pusty telewizor bez niedokończonej instalacji może pominąć restart; po faktycznym usuwaniu wykonaj wymagany restart. Pozostałości starego Root Updater prowadzą do osobno potwierdzanego pełnego usunięcia przed nową instalacją. Awaria usługi wejść pozwala kontynuować bezpieczne usuwanie pakietów; sukces nadal wymaga potwierdzenia usunięcia skrótu.
 
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="opcjonalny-python-dla-root"></a>
@@ -139,4 +139,4 @@ Od v1.11.0 po nieudanej lub przerwanej instalacji odzyskiwanie jest dostępne be
 
 Szczegółowe instrukcje po angielsku: [wymagania](../COMPATIBILITY.md) · [sterowanie](../CONTROLS.md) · [motywy](../THEMES.md) · [aktualizacje](../UPDATES.md).
 
-> Nieopublikowany kandydat: eksperymentalny Root Home jest wybierany według możliwości Qt SDK 6–9, bez listy modeli. Zgodność sprzętowa i zwykłe OTA nie są zweryfikowane. Inne integracje Home pozostają bez zmian; po zatrzymaniu awaryjnym lub utracie zasilania włącz Home jawnie. [#364](../development/C1-NATIVE-GATE.md#unpublished-capability-based-compositor-admission-364).
+> Tryb eksperymentalny: eksperymentalny Root Home jest wybierany według możliwości Qt SDK 6–9, bez listy modeli. Zgodność sprzętowa i zwykłe OTA nie są zweryfikowane. Inne integracje Home pozostają bez zmian; po zatrzymaniu awaryjnym lub utracie zasilania włącz Home jawnie. [#364](../development/C1-NATIVE-GATE.md#unpublished-capability-based-compositor-admission-364).

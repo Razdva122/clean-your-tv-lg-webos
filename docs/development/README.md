@@ -17,28 +17,28 @@ before using a low-level recovery or installation procedure.
 - [CLI reference](../CLI.md), [manual installation](../MANUAL_INSTALL.md), [Android development](../../android/DEVELOPMENT.md).
 - [Root bundle](../../root-edition/package/README.md), [Root development](../../root-edition/DEVELOPMENT.md), [Root runtime contract](../../root-edition/runtime/README.md).
 - [Contribute a theme](CONTRIBUTING-THEMES.md): PC preview, LAN testing, fixed distributions and Showcase PRs.
-- [Home CSS styling surface](THEME-CSS.md): unreleased visual hooks, engine geometry and trusted dialog boundaries.
+- [Home CSS styling surface](THEME-CSS.md): visual hooks, engine geometry and trusted dialog boundaries.
 - [Video wallpapers and Wallpapers settings](WALLPAPERS.md): next-release media contract, automatic quality, local cache ownership and acceptance limits.
 - [Homebrew Installer](../../homebrew/README.md) is **unreleased**; [packaging and promotion gates](../../homebrew/DEVELOPMENT.md).
 
 ## Understand behavior and diagnose failures
 
-- [Early Root admission and connection guidance](INSTALLER-PREFLIGHT-HELP.md): existing Home-interface contract before runtime preparation, typed localized advice and unchanged recovery/trust authority; unreleased.
+- [Early Root admission and connection guidance](INSTALLER-PREFLIGHT-HELP.md): existing Home-interface contract before runtime preparation, typed localized advice and unchanged recovery/trust authority.
 
-- [Root native startup input](ROOT-NATIVE-INPUT.md): unpublished owned EIM lifecycle and acceptance limits.
-- [Experimental C1 native gate](C1-NATIVE-GATE.md): separate backend, independent native recovery and physical acceptance limits; unreleased.
+- [Root native startup input](ROOT-NATIVE-INPUT.md): owned EIM lifecycle and acceptance limits.
+- [Experimental C1 native gate](C1-NATIVE-GATE.md): separate backend, independent native recovery and physical acceptance limits.
 - [Theme development status](THEMES.md), [Home styling parts and CSS rules](THEME-CSS.md).
 
-- [Home settings transport](HOME-CONTROL-TRANSPORT.md): unreleased service-owned IPC, packaging and rollback requirements.
-- [Helper relay cleanup outcomes](HELPER-RELAY-CLEANUP.md): unpublished failure reporting, blocked recovery and synthetic evdev verification.
-- [Home installation gates](HOME-INSTALL-GATES.md): unreleased control-file ownership and Root firmware preflight fixes, packaging requirements and retained-recovery limits.
+- [Home settings transport](HOME-CONTROL-TRANSPORT.md): service-owned IPC, packaging and rollback requirements.
+- [Helper relay cleanup outcomes](HELPER-RELAY-CLEANUP.md): relay failure reporting, blocked recovery and synthetic evdev verification.
+- [Home installation gates](HOME-INSTALL-GATES.md): control-file ownership and Root firmware preflight fixes, packaging requirements and retained-recovery limits.
 - [Home graphics resolution](HOME-GRAPHICS-RESOLUTION.md) and [passive remote diagnostic](PASSIVE-REMOTE-DIAGNOSTICS.md): candidate 720p layout/build support and read-only evidence; physical IR mapping remains unverified.
 - [Companion entry points](../COMPANION-APPS.md), [Helper diagnostics](../HELPER-DIAGNOSTICS.md), [Home/settings diagnostics](../SETTINGS-DIAGNOSTICS.md).
 - [Root doctor](../../root-edition/DOCTOR.md), [current Root limits](../../root-edition/STATUS.md), [Root validation](../../root-edition/TESTING.md).
-- [Separate installer outcomes](INSTALLER-OUTCOMES.md): package proofs, launch/runtime evidence and explicitly owner-reported Home; unreleased.
-- [Installer recovery journey](INSTALLER-RECOVERY.md): separately confirmed recovery, existing authority guards and frontend outcome semantics; unreleased.
-- [Clean removal and reinstallation](CLEAN-REMOVAL-REINSTALLATION.md): final cleanup fences, read-only completed retries and a bound Root-SSH No-root successor; unreleased.
-- [Installer diagnostic evidence](INSTALLER-DIAGNOSTICS.md): primary-error retention, safe status/check projections and private host correlation; unreleased.
+- [Separate installer outcomes](INSTALLER-OUTCOMES.md): package proofs, launch/runtime evidence and explicitly owner-reported Home.
+- [Installer recovery journey](INSTALLER-RECOVERY.md): separately confirmed recovery, existing authority guards and frontend outcome semantics.
+- [Clean removal and reinstallation](CLEAN-REMOVAL-REINSTALLATION.md): final cleanup fences, read-only completed retries and a bound Root-SSH No-root successor.
+- [Installer diagnostic evidence](INSTALLER-DIAGNOSTICS.md): primary-error retention, safe status/check projections and private host correlation.
 - [Individual Root recovery handoffs](ROOT-RECOVERY-HANDOFFS.md): per-issue decisions, authentication blockers and pending-operation diagnostic boundaries.
 - [Read-only Root admission](ROOT-READONLY-ADMISSION.md): private owner handoff, isolated inspection and unsupported firmware boundaries.
 - [Passive Root worker diagnostics](ROOT-PASSIVE-DIAGNOSTICS.md): bounded saved-error categories without code staging, routing calls or cancellation admission.
@@ -51,7 +51,7 @@ before using a low-level recovery or installation procedure.
 ## Release and update maintenance
 
 - [Release integration flow](../RELEASE-FLOW.md), [release checklist](../RELEASE_CHECKLIST.md), [packaging/signing/publication](../RELEASE-PROCESS.md).
-- [Update storage retention](UPDATE-STORAGE.md): unreleased terminal-only cache and product staging cleanup, with recovery limits.
+- [Update storage retention](UPDATE-STORAGE.md): terminal-only cache and product staging cleanup, with recovery limits.
 - [Current update guidance](../UPDATES.md), [Root updater](../../root-edition/UPDATES.md), [legacy Home-only updater procedures](LEGACY-HOME-UPDATES.md).
 - [Private signed Root candidate acceptance](SIGNED-ROOT-CANDIDATE-ACCEPTANCE.md): explicit pre-publication admission without changing the installed supervisor or stable feed.
 - [Original 1.3.0 OTA contract correction](ROOT-OTA-13-COMPATIBILITY.md), [update lab runbook](UPDATE-LAB-RUNBOOK.md), [remaining transaction work](UPDATE-TRANSACTION-REMAINING.md).

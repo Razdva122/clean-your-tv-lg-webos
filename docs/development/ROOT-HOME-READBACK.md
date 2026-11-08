@@ -1,6 +1,6 @@
 # Root setup with an absent Home override
 
-This is **unreleased** setup behavior for issue #82, reported on
+This describes published setup behavior for issue #82, reported on
 43NANO90A6B / firmware 33.31.61 with cytv 0.3.1 and Root 0.3.0.
 No physical acceptance of this correction has been performed.
 

@@ -4,7 +4,7 @@ Clean Your TV je vaše vlastní domovská obrazovka pro LG webOS: aplikace ve va
 
 **Vydáno ve v1.12.1:** Chyby spojení rozlišují odepřený přístup k síti, odmítnutí portem SSH a vypršení času. **Znovu prověřit spojení** spustí diagnostiku bez instalace balíčků; **Změnit připojení** prověří upravené údaje. V macOS tlačítko **Otevřít Nastavení systému** pomůže najít přístup k místní síti; může se zobrazit název starší kopie. Nedokončené operace zachovají svůj postup obnovy.
 
-Nevydaná v1.13.0 / Helper 0.8.0: krátké Home na IR ovladači otevře Clean asi za 700 ms; LG Home může krátce probliknout. Podržení Home zůstává webOS. Přístup ke vstupu v běžném Developer Mode není ověřen; neměňte oprávnění. Trojí Home a výslovné spuštění po zastavení zůstávají.
+v1.13.0 / Helper 0.8.0: krátké Home na IR ovladači otevře Clean asi za 700 ms; LG Home může krátce probliknout. Podržení Home zůstává webOS. Přístup ke vstupu v běžném Developer Mode není ověřen; neměňte oprávnění. Trojí Home a výslovné spuštění po zastavení zůstávají.
 
 <a id="kandidát-unreleased-starší-nodejs-v-tv"></a>
 
@@ -61,7 +61,7 @@ Jazyk vyberte v instalátoru; na Androidu je volba vpravo nahoře. Jazyk TV se n
 3. No-root: zadejte kód z Developer Mode a potvrďte žádost na TV. Root: použijte svůj stávající SSH přístup. Novou SSH identitu potvrďte pouze pro vlastní TV v důvěryhodné síti. Pokud se uložený klíč změnil, zastavte se a zjistěte příčinu.
 4. Postupujte podle průvodce. Nechte TV zapnutou, neměňte síť a nezavírejte CYTV do dokončení. Na Androidu nevynucujte ukončení aplikace. Root zapne ovládání Home ihned po přípravě obnovy.
 
-V příštím, dosud nevydaném kandidátovi pokračuje instalace Root s upozorněním, pokud nelze načíst vstupy televizoru, ale seznam aplikací je platný. V Home mohou chybět vstupy; chyba načtení nebo prázdný seznam aplikací instalaci nadále zastaví. Pokud se upozornění opakuje, uložte diagnostickou zprávu.
+Ve vydané verzi pokračuje instalace Root s upozorněním, pokud nelze načíst vstupy televizoru, ale seznam aplikací je platný. V Home mohou chybět vstupy; chyba načtení nebo prázdný seznam aplikací instalaci nadále zastaví. Pokud se upozornění opakuje, uložte diagnostickou zprávu.
 
 ## 5. Vyzkoušejte ovladač
 
@@ -70,7 +70,7 @@ V příštím, dosud nevydaném kandidátovi pokračuje instalace Root s upozorn
 
 ## 6. Každodenní ovládání
 
-Dosud nevydaná podpora IR v No-root: uvolnění Home po krátkém stisku naplánuje Clean přibližně za 700 ms; nejprve může probliknout LG Home. Podržení Home zůstává webOS a trojí stisk stále zastaví Helper. Přístup v běžném Developer Mode není ověřen; neměňte oprávnění vstupních zařízení.
+Podpora IR v No-root (Helper 0.8.0): uvolnění Home po krátkém stisku naplánuje Clean přibližně za 700 ms; nejprve může probliknout LG Home. Podržení Home zůstává webOS a trojí stisk stále zastaví Helper. Přístup v běžném Developer Mode není ověřen; neměňte oprávnění vstupních zařízení.
 
 Šipky vybírají aplikaci, **OK** ji otevře. Podržením OK můžete měnit pořadí. Krátké **Zpět** zachová navigaci aplikace. Krátké **Home** otevře Clean Your TV při zapnutém ovládání Home. Podržení Zpět po dobu 1,2 sekundy otevře LG Home jednou, bez změny uložených nastavení.
 
@@ -92,7 +92,7 @@ Uveďte model TV, firmware, No-root nebo Root, instalační zařízení, krok a 
 
 [Nahlásit problém — anglicky](../FEEDBACK.md) · [Obnovení — anglicky](../RECOVERY.md) · [Aktualizace a odstranění — anglicky](../MAINTENANCE.md) · [Další jazyky](../LANGUAGES.md)
 
-V připravovaných sestaveních se při zvoleném nebo aktivním 4K zobrazí upozornění a tlačítko „Vypnout náhledy HDMI“ pouze u motivů se zapnutými náhledy vstupů. Během náhledu HDMI se 4K video na pozadí dočasně nahradí statickým obrázkem v 1080p. Vypněte náhledy vstupů, aby pozadí zůstalo ve 4K.
+V aktuálních verzích se při zvoleném nebo aktivním 4K zobrazí upozornění a tlačítko „Vypnout náhledy HDMI“ pouze u motivů se zapnutými náhledy vstupů. Během náhledu HDMI se 4K video na pozadí dočasně nahradí statickým obrázkem v 1080p. Vypněte náhledy vstupů, aby pozadí zůstalo ve 4K.
 
 ### Jednoduché odebrání (v1.11.0+)
 
@@ -100,11 +100,11 @@ Ve vydané verzi v1.11.0 a novějších vyberte v Údržbě **Odinstalovat Clean
 
 Na výzvu odpojte TV od napájení, znovu připojte, počkejte na síť a vyberte **Zkusit znovu**. Pohotovost nebo Quick Start není úplný restart; CYTV TV automaticky nerestartuje. Při ztrátě spojení je zkontrolujte a opakujte stejný cíl odebrání bez dalšího průvodce obnovou. Při odmítnutí přístupu použijte požadované připojení Root; pokud je TV zaneprázdněn, počkejte a zkuste znovu. Úspěch se zobrazí až po ověření závěrečného úklidu. Zachovejte klíče a původní zprávy. Nouzové ovládání a souhlas se sdílením výše platí dál.
 
-**Příští kandidát:** po ověřeném úplném odebrání lze znovu nainstalovat Root nebo No-root. Minimální neaktivní záznamy brání pokračování starých operací; nemažte je ručně. Pokud odebrání nebo jeho kontroly nejsou dokončené, nejprve dokončete obnovu.
+**v1.13.0:** po ověřeném úplném odebrání lze znovu nainstalovat Root nebo No-root. Minimální neaktivní záznamy brání pokračování starých operací; nemažte je ručně. Pokud odebrání nebo jeho kontroly nejsou dokončené, nejprve dokončete obnovu.
 
 Od v1.11.0 je po neúspěšné nebo přerušené instalaci přímo dostupná obnova. Pokud No-root nemůže pokračovat, potvrďte jednou úplné odebrání. Při dočasné ztrátě spojení nebo zaneprázdněném procesu CYTV proběhnou nejvýše tři pokusy. Je-li nutný Root, zvolte **Připojit přes Root** pro stejnou TV; ověřený úklid Root dokončí i její zablokované odebrání No-root. Po chybě aktivace Root se CYTV pokusí obnovit a ověřit LG Home bez opakované aktivace. Zrušení s nedokončenou prací zachová zprávu a kroky obnovy. Nouzové zastavení zůstane zachováno.
 
-> **Dosud nevydaná vylepšení:** Po chybě připojení během odstranění otevřete podrobnosti, zkontrolujte síť nebo vyberte existující SSH klíč Root a zkuste to znovu. Adresa, edice, port a ověření klíče TV zůstávají pevné. No-root kontroluje Helper před párováním: zastavte jej a potvrďte opětovnou kontrolu ve stejném průvodci. Restart lze přeskočit pouze u ověřeně prázdné TV bez nedokončené instalace; po skutečném odstranění proveďte požadovaný restart. Zbytky starého Root Updater vedou před novou instalací k samostatně potvrzenému úplnému odstranění. Při selhání služby vstupů pokračuje bezpečné odstranění balíčků; úspěch stále vyžaduje ověření odstranění zástupce.
+> **Vylepšení v1.13.0:** Po chybě připojení během odstranění otevřete podrobnosti, zkontrolujte síť nebo vyberte existující SSH klíč Root a zkuste to znovu. Adresa, edice, port a ověření klíče TV zůstávají pevné. No-root kontroluje Helper před párováním: zastavte jej a potvrďte opětovnou kontrolu ve stejném průvodci. Restart lze přeskočit pouze u ověřeně prázdné TV bez nedokončené instalace; po skutečném odstranění proveďte požadovaný restart. Zbytky starého Root Updater vedou před novou instalací k samostatně potvrzenému úplnému odstranění. Při selhání služby vstupů pokračuje bezpečné odstranění balíčků; úspěch stále vyžaduje ověření odstranění zástupce.
 
 <!-- Legacy anchors retained for existing links. -->
 <a id="automatické-rozlišení-grafiky-kandidát"></a>
@@ -114,4 +114,4 @@ Od v1.11.0 je po neúspěšné nebo přerušené instalaci přímo dostupná obn
 <a id="automatické-rozlišení-grafiky-160"></a>
 <a id="místo-v-úložišti"></a>
 
-> Nevydaný kandidát: experimentální Root Home se vybírá podle schopností Qt SDK 6–9, bez seznamu modelů. Hardwarová kompatibilita a běžné OTA nejsou ověřeny. Jiné integrace Home zůstávají beze změny; po bezpečnostním nebo napájecím zastavení ovládání Home výslovně zapněte. [#364](../development/C1-NATIVE-GATE.md#unpublished-capability-based-compositor-admission-364).
+> Experimentální režim: experimentální Root Home se vybírá podle schopností Qt SDK 6–9, bez seznamu modelů. Hardwarová kompatibilita a běžné OTA nejsou ověřeny. Jiné integrace Home zůstávají beze změny; po bezpečnostním nebo napájecím zastavení ovládání Home výslovně zapněte. [#364](../development/C1-NATIVE-GATE.md#unpublished-capability-based-compositor-admission-364).

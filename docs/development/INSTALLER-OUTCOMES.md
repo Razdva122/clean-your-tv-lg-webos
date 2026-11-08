@@ -1,4 +1,6 @@
-# Separate installer outcomes (unreleased)
+<a id="separate-installer-outcomes-unreleased"></a>
+
+# Separate installer outcomes
 
 The shared host installer keeps package verification, launch submission/acceptance,
 startup evidence and owner-reported Home behavior separate. `SetupOutcome` in

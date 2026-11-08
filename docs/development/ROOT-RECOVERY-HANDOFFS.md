@@ -175,9 +175,7 @@ the original identity regardless of the current Android auth form. No coordinato
 retained Python, Luna call, trust update or worker replay is involved. The internal
 PC script uses the same host selector; it is not an Android installation step.
 The owner has already tested Android 0.8.2; do not ask them to wait for that baseline
-or repeat the same failed recovery. The next candidate adds typed authentication
-and explicit original-operation recovery choices; those changes need their own
-exact artifact and acceptance. The [bounded phone procedure](../../android/README.md#interrupted-root-installation-inspection-unreleased)
+or repeat the same failed recovery. Current installers include typed authentication and explicit original-operation recovery choices; delivery does not establish recovery on the reporting device. The [bounded phone procedure](../../android/README.md#interrupted-root-installation-inspection-unreleased)
 describes the published inspection scope. Source checks do not establish physical
 Android-to-TV acceptance or original recovery. Missing/ambiguous local records stop; do not copy replacement
 profiles or ask the owner to repeat failed recovery attempts.

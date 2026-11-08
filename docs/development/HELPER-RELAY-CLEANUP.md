@@ -1,8 +1,6 @@
 # Helper relay cleanup outcomes
 
-This describes the next unpublished Helper source. It does not establish target
-input, firmware or cold-boot acceptance. Helper source changes require a rebuilt,
-versioned package; the unchanged published Helper package does not contain them.
+This describes the relay cleanup behavior included in released Helper packages. It does not establish target input, firmware or cold-boot acceptance. Use the matching versioned package; older installed Helpers retain their original behavior.
 
 On leaving its input loop, the relay attempts key-up cleanup, removal of the
 physical input grab, and closure of both input/output descriptors. A failure in
