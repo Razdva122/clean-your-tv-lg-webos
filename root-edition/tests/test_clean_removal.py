@@ -1118,13 +1118,78 @@ class PartialDeviceRemoval(unittest.TestCase):
                 self.assertEqual(result['stage'],'original-writers-fenced')
                 self.assertFalse(any(name.startswith('remove-') for name in calls))
 
+    def test_never_activated_removal_needs_no_home_apis_even_after_old_failed_attempt(self):
+        from updater.luna import context
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        error=context(RuntimeError('Bus operation rejected'),
+            'com.webos.settingsservice/getSystemSettings','negative-reply',{'returnValue':False})
+        with patch.object(driver.device,'log'),patch('clean_removal.routes',side_effect=error):
+            first=driver.clean_remove(identifier)
+        self.assertEqual(first['stage'],'original-writers-fenced')
+        first.pop('profileless_cleanup_eligible',None)
+        driver.store.write('clean-removal-'+identifier,first)
+        original=driver.device.rpc
+        def unavailable(method,data):
+            if method.endswith(('/getSystemSettings','/getProfiles')):
+                self.fail('Untouched Home must not require a firmware Home API')
+            return original(method,data)
+        driver.device.rpc=unavailable
+        self.assertEqual(driver.clean_remove(identifier)['stage'],'restart-required')
+        self.assertEqual(driver.clean_remove(identifier)['stage'],'restart-required')
+        driver.device.current_boot='22222222-2222-2222-2222-222222222222'
+        final=driver.clean_remove(identifier)
+        self.assertEqual(final['stage'],'verified-clean',final)
+        self.assertEqual(final['routes'],{'mode':'never-applied'})
+        self.assertFalse(present)
+        self.assertEqual(final['original']['request']['state'],'recovery_required')
+
+    def test_never_applied_restart_preserves_new_routing_marker_before_cleanup(self):
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        self.assertEqual(driver.clean_remove(identifier)['stage'],'restart-required')
+        marker=root/'persistent-intent.json';marker.write_text('{}')
+        driver.device.current_boot='22222222-2222-2222-2222-222222222222'
+        original=driver.device.rpc
+        def unavailable(method,data):
+            if method.endswith(('/getSystemSettings','/getProfiles')):raise RuntimeError('Home API unavailable')
+            return original(method,data)
+        driver.device.rpc=unavailable
+        with patch.object(driver.device,'log'):result=driver.clean_remove(identifier)
+        self.assertEqual(result['state'],'recovery_required')
+        self.assertNotEqual(result['stage'],'verified-clean')
+        self.assertEqual(marker.read_text(),'{}')
+
+    def test_old_pre_activation_readback_upgrades_only_with_fresh_no_effect_proof(self):
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        self.assertEqual(driver.clean_remove(identifier)['stage'],'restart-required')
+        record=driver.store.read('clean-removal-'+identifier)
+        record['routes']=['third.party.home']*3
+        driver.store.write('clean-removal-'+identifier,record)
+        driver.device.current_boot='22222222-2222-2222-2222-222222222222'
+        final=driver.clean_remove(identifier)
+        self.assertEqual(final['stage'],'verified-clean',final)
+        self.assertEqual(final['routes'],{'mode':'never-applied'})
+
+    def test_never_applied_proof_rechecks_live_and_preserved_routing_evidence(self):
+        import clean_removal
+        for source in ('live','backup','phase','eligibility'):
+            with self.subTest(source=source):
+                driver,identifier,root,updater,payload,calls,present=self.fixture()
+                self.assertEqual(driver.clean_remove(identifier)['stage'],'restart-required')
+                record=driver.store.read('clean-removal-'+identifier)
+                if source=='live':(root/'persistent-intent.json').write_text('{}')
+                if source=='backup':driver.store.write('routing-backup-'+identifier,{'profile-trial.json':'{}'})
+                if source=='phase':record['fenced_components']['deploy']['stage']='installed-recovery-only'
+                if source=='eligibility':record['profileless_cleanup_eligible']=False
+                with patch.object(driver.device,'rpc',side_effect=RuntimeError('Home API unavailable')):
+                    with self.assertRaises(RuntimeError):clean_removal.routes(driver.device,record)
+
     def test_never_activated_partial_can_clean_when_profile_interface_unavailable(self):
         driver,identifier,root,updater,payload,calls,present=self.fixture(missing_profiles=True)
         self.assertEqual(driver.clean_remove(identifier)['stage'],'restart-required')
         driver.device.current_boot='22222222-2222-2222-2222-222222222222'
         result=driver.clean_remove(identifier)
         self.assertEqual(result['stage'],'verified-clean',result)
-        self.assertEqual(result['routes'],{'mode':'never-applied','home':'third.party.home'})
+        self.assertEqual(result['routes'],{'mode':'never-applied'})
         self.assertTrue(result['routing_never_applied'])
         self.assertFalse(any('setSystem' in name or 'setProfiles' in name for name in calls))
 
