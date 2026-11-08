@@ -1,7 +1,8 @@
 # v1.13.0 — passive IR Home and safer continuation
 
-Unpublished preparation for [release PR #425](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/425), after published v1.12.1.
-No complete candidate build or physical acceptance is selected. The published
+Unpublished candidate for [release PR #425](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/425), after published v1.12.1.
+The pre-dispatch Helper compatibility probe passed; full-build selection and
+final-candidate physical acceptance remain pending. The published
 download buttons still serve v1.12.1. Do not install these preliminary packages
 as a verified release or infer that an integrated fix resolved a reporter's TV.
 
@@ -10,8 +11,13 @@ as a verified release or infer that an integrated fix resolved a reporter's TV.
 - Allow a new Root or No-root setup after verified full removal (#436). Retire
   the completed removal's destructive authority, preserve only inactive recovery
   fences, and keep old retries from deleting a later installation. Root-SSH
-  No-root setup binds its original plan under the same locks. Physical full
-  uninstall/reinstall and P00 compatibility acceptance remain pending.
+  No-root setup binds its original plan under the same locks. The C3 preliminary
+  removal/reinstall and published-Home/new-Helper probe passed; final candidate
+  acceptance remains separate.
+- Complete clean Root-to-No-root staging and subsequent No-root removal (#439).
+  Inert temporary files can be retained with a warning without blocking a new
+  setup. Fresh Root capture accepts inventories with an empty optional icon color;
+  fresh System setup reopens the launcher to apply its new service permissions.
 - Select owned Developer Mode jail storage when its temporary directory cannot
   host private observer evidence (#435, #409). Recovery stays bound to the original
   location; unsafe or ambiguous roots refuse setup. Existing temporary-space and
@@ -63,9 +69,11 @@ All desktop/Android installers and normal/Beta Root payloads need rebuilding.
 The actual builder's historical Helper byte pins cover 0.6.16/0.6.17/0.6.19,
 not 0.7.5. A new source-built Helper version is required regardless: release
 assembly refuses changed bytes under an unchanged published version. New 0.8.0
-requires genuine published Home 1.13.1/new Helper compatibility and rollback
-evidence matching its canonical archive hash before full candidate dispatch.
-The old 0.7.4→0.7.5 approval does not cover this transition.
+has a committed published Home 1.13.1/new Helper probe matching its exact canonical
+archive hash. Short Home, triple-Home escape, later Home staying LG, arrows and
+volume buttons passed on the C3; see the
+[compatibility record](history/2026-11-08-helper-0.8.0-compatibility.md). This is not
+an automatic OTA/rollback or final-build acceptance claim.
 
 Existing System supervisors remain pinned; component OTA does not replace them.
 Explicit replacement still admits only installed 1.1.0/1.1.1, not 1.1.2/1.2.x.
@@ -84,4 +92,5 @@ reviewed PR checks; it is distinct from full frozen-candidate validation.
 The [bounded physical checklist](history/2026-11-08-next-candidate-physical-checklist.md)
 separates the mandatory pre-dispatch Helper probe from later exact-build
 acceptance. Public-feed verification cannot pass against an unpublished QA offer.
-No TV was contacted or changed in this preparation task.
+The [consolidated C3 pass](history/2026-11-08-c3-preliminary-qa.md) records actual
+device changes, fixes, outcomes and the remaining acceptance scope.

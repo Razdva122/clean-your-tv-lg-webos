@@ -245,3 +245,18 @@ Preliminary installer build
 was dispatched once with `test_build=true` from exact source `6dc6ee49`. Its status
 and output verification are maintained in RC #425. This is draft feedback
 packaging, not a frozen full-candidate pin or publication.
+
+
+## P00 physical closure before full dispatch
+
+The owner returned for the physical Helper probe. A fresh ordinary Root full
+cleanup, requested software reboot and same-goal completion allowed installation
+of the same published Home 1.13.1 and exact candidate Helper 0.8.0. Published
+Home Start Helper/confirmation, 203 public file hashes, enabled Home control and
+non-root controller UIDs 5431 were reverified. The owner confirmed short Home
+from an app returned to our launcher; readback confirmed Home and running Helper.
+Triple Home then opened LG Home; later Home stayed LG, arrows and volume buttons
+worked. Readback confirmed stopped Helper, LG foreground and no pending operation.
+The stop was preserved. This supersedes the earlier P00 physical blocker only;
+other blocked/untested cases are not silently promoted. See the
+[exact compatibility record](2026-11-08-helper-0.8.0-compatibility.md).

@@ -106,7 +106,7 @@
     {
       "pr": 439,
       "issues": [],
-      "summary": "Fix clean Root-to-No-root staging and successor removal, fresh profile capture and System launcher grants; keep inert temporary leftovers nonblocking. C3 preliminary flow verified; physical Helper and final candidate acceptance remain pending"
+      "summary": "Fix clean Root-to-No-root staging and successor removal, fresh profile capture and System launcher grants; keep inert temporary leftovers nonblocking. C3 preliminary flow verified; published-Home/new-Helper short/triple Home passed; final candidate acceptance remains pending"
     }
   ],
   "excluded": [],
