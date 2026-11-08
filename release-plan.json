@@ -3,6 +3,13 @@
   "version": null,
   "changes": [
     {
+      "pr": 415,
+      "issues": [
+        414
+      ],
+      "summary": "Do not crash the Helper on a heartbeat during power-off"
+    },
+    {
       "pr": 424,
       "issues": [
         101
