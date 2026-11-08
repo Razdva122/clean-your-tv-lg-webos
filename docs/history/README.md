@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [Next candidate preparation, 2026-11-09](2026-11-09-next-candidate-preparation.md): integrated PR inventory, combined host checks, authenticated published baselines and coordination of unfinished Root/Beta work; no new device acceptance.
+
 - [Root installer catalog reads over SSH, 2026-11-08](2026-11-08-issue389-direct-catalog-ssh.md): fixed bounded reads without TV Node subprocesses, preserved icon/validation behavior and synthetic host verification; reporter-device acceptance remains unverified.
 
 - [v1.13.0 full candidate artifacts, 2026-11-08](2026-11-08-release-1.13.0-artifacts.md): pinned successful full build, exact embedded Helper equivalence, signed Root provenance, genuine update/rollback and explicit remaining acceptance.
