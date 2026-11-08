@@ -7,6 +7,10 @@ as a verified release or infer that an integrated fix resolved a reporter's TV.
 
 ## Changes
 
+- Select owned Developer Mode jail storage when its temporary directory cannot
+  host private observer evidence (#435, #409). Recovery stays bound to the original
+  location; unsafe or ambiguous roots refuse setup. Existing temporary-space and
+  full-restart requirements remain. Physical reporter confirmation is pending.
 - Add passive standard IR short-Home handling in No-root Helper, based on
   ferrets6's contribution and the reviewed safety batch (#419/#428, #207).
   Home opens after approximately 700 ms, possibly after LG Home flashes. Held

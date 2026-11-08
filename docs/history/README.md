@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [Developer Mode storage integration, 2026-11-08](2026-11-08-next-candidate-storage-integration.md): PR #435, focused CI/review, unchanged versions and pending #409 device confirmation.
+
 - [v1.13.0 preparation, 2026-11-08](2026-11-08-release-1.13.0-preparation.md): versioned preliminary packages, automated checks, mandatory Helper compatibility blocker and the bounded physical plan. No new TV acceptance.
 
 - [1.12.1 unattended C3 QA, 2026-11-07](2026-11-07-release-1.12.1-unattended-tv-qa.md): exact signed forward/rollback/forward, profile and renderer/service cases, corrected harness findings, standby/wake, final power-off and remaining manual checks.

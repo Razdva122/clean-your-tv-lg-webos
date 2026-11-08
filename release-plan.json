@@ -90,6 +90,13 @@
         420
       ],
       "summary": "Retain fixed SSH socket-cause categories in reports and failure history without new retries or probes; original #420 connection failure remains unresolved"
+    },
+    {
+      "pr": 435,
+      "issues": [
+        409
+      ],
+      "summary": "Select owned Developer Mode jail storage for the observed private mkdir/EACCES boundary; capacity, restart proof and physical #409 acceptance remain pending"
     }
   ],
   "excluded": [],
