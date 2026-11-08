@@ -23,8 +23,8 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
           setTimeout(() => {
             let r = { returnValue: false };
             if (
-              uri ===
-              'luna://com.cleanyourtv.system.updater.service/restoreProfile'
+              uri.endsWith('/restoreProfile') ||
+              uri === 'luna://com.cleanyourtv.system.updater.service/status'
             )
               r = { returnValue: true, result: null };
             if (uri.endsWith('/listApps') && !window.offline)
@@ -40,6 +40,22 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
               };
             if (uri.endsWith('/listApps') && window.inventoryOverride)
               r = { returnValue: true, apps: window.inventoryOverride };
+            if (
+              uri.endsWith('/listApps') &&
+              location.pathname.startsWith('/root-launcher/')
+            ) {
+              const priority = JSON.parse(raw).priorityIds || [];
+              r = {
+                returnValue: true,
+                apps: ['a', 'b', 'c'].map((id) => ({
+                  id,
+                  title: id.toUpperCase(),
+                  icon: priority.includes(id)
+                    ? 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII='
+                    : ''
+                }))
+              };
+            }
             if (
               uri === 'luna://com.local.nativehome.service/listApps' &&
               window.inventoryDenied
@@ -353,6 +369,54 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
       'row6',
       '+'
     ]);
+    // Simulate an exhausted Root catalog: only requested priorities have icons.
+    await page.unroute('**/apps.js');
+    await page.route('**/apps.js', (r) =>
+      r.fulfill({
+        body: 'window.TV_APPS={apps:[{id:"b",title:"B",icon:""}],inputs:[]};'
+      })
+    );
+    await page.evaluate(() => {
+      localStorage.clear();
+      localStorage.setItem(
+        'tvhome.layout',
+        JSON.stringify({
+          version: 1,
+          ids: ['b'],
+          hidden: [],
+          catalog: [{ id: 'b', title: 'B', icon: '' }]
+        })
+      );
+    });
+    await page.goto(base + '/root-launcher/index.html');
+    await ready();
+    await page.waitForFunction(
+      () =>
+        document.querySelector('#tiles [data-app-id="b"] img')?.naturalWidth > 0
+    );
+    assert.deepEqual(
+      await page.evaluate(
+        () =>
+          calls.find((c) => c.uri.endsWith('/listApps') && !c.p.inputs).p
+            .priorityIds
+      ),
+      ['b']
+    );
+    await page.locator('.add-app').click();
+    await page.locator('#appPicker [data-app-id="c"]').click();
+    await page.waitForFunction(
+      () =>
+        document.querySelector('#tiles [data-app-id="c"] img')?.naturalWidth > 0
+    );
+    assert.deepEqual(await ids(), ['b', 'c', '+']);
+    assert.deepEqual(
+      await page.evaluate(
+        () =>
+          calls.filter((c) => c.uri.endsWith('/listApps') && !c.p.inputs).at(-1)
+            .p.priorityIds
+      ),
+      ['c', 'b']
+    );
     assert.deepEqual(errors, []);
     await page.screenshot({ path: '/tmp/home-app-management.png' });
     console.log(
