@@ -3,7 +3,7 @@
 The web frontend targets **Chromium 38**, the engine documented for webOS 3.x.
 The same compiled assets run on later Chromium-based webOS engines. This is a
 frontend build target, not a claim that Home Helper, input devices or firmware
-services work on every TV. An unreleased #152 correction also emits the prefixed
+services work on every TV. The published #152 correction also emits the prefixed
 layout/transform/animation forms required by webOS 2.x WebKit 538.2. Autoprefixer
 uses Safari 8 as its prefix profile; that is not a complete WebKit compatibility
 target or physical EF950V acceptance. The unsupported-feature gate remains intact.
@@ -80,7 +80,7 @@ done
 ```
 
 See [fontTools instancing](https://fonttools.readthedocs.io/en/latest/varLib/instancer.html).
-No setup steps or controls change. The fix is unreleased; visual acceptance on
+No setup steps or controls change. The fix is packaged; visual acceptance on
 the reporter's LG LM6370PSB / webOS 4.5 / Chromium 53 remains required. Host tests
 verify assets and rendering in a current browser, not physical TV readability.
 The separately reported Helper-unavailable state remains unresolved.
@@ -142,7 +142,7 @@ ws 7.5.11; see its retained source notes. SSAP clients disable compression and
 keep their handshake/payload limits. TV-provided webos-service remains external.
 Published historical Helper baselines retain their original bytes.
 
-The unpublished candidate also compiles the No-root Home renewal service and
+The published build also compiles the No-root Home renewal service and
 independent Updater service through this compiler in both source-package and
 embedded-payload builds, including Home's injected theme receiver. The Updater
 uses Node's legacy `url.parse`/`url.resolve` APIs, with HTTPS, credential, host,
@@ -172,10 +172,9 @@ when available. The legacy WebSocket imports the named EventEmitter constructor
 and skips optional TLS write batching when unavailable on Node 0.10.
 This verifies Node compatibility, not access to a TV's evdev devices.
 
-Node 0.10.25 support shipped in v1.5.4 for #152; the next candidate lowers only
+Node 0.10.25 support shipped in v1.5.4 for #152; later published installers lower only
 No-root installer admission to 0.10.15 for #283/#284 after exact runtime checks,
-including unchanged published Helper 0.6.22 JavaScript. The published 1.7.1
-installer still requires 0.10.25. No Helper product byte or Root requirement is
+including unchanged published Helper 0.6.22 JavaScript. The older 1.7.1 installer still requires 0.10.25. No Helper product byte or Root requirement is
 changed by this admission correction. The dated [webOS 1.x investigation](history/2026-11-04-webos1-node-floor.md)
 records runtime/archive hashes and untested hardware scope. Launcher WebKit,
 Home/Back, emergency release, standby, cold boot and recovery still require

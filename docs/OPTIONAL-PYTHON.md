@@ -97,7 +97,7 @@ The old generic download error cannot identify the cause on a particular Mac;
 success on a different host does not establish that cause either. The 1.6.0 change
 adds host diagnostics only; Root recovery is outside that change.
 
-**Unreleased macOS correction:** the download context additionally loads macOS's
+**macOS trust context:** the download context additionally loads macOS's
 system CA file. Published frozen Python builds can retain certificate paths from
 their build machine that do not exist on another Mac, causing a `tls` failure
 before archive validation. Certificate and hostname verification remain required;

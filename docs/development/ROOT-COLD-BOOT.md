@@ -2,7 +2,7 @@
 
 Historical result (2026-10-27): [corrected C3 acceptance and manual physical rollback](../RELEASE-1.4.0-ACCEPTANCE.md) passed in the recorded scope. The maintainer accepted #90 and requested closure. Pending statements below describe earlier investigation checkpoints; other hardware remains unverified.
 
-This is unpublished source work for issue #104. It is separate from issue #90's
+This records source work for issue #104, delivered in earlier releases. It is separate from issue #90's
 intermittent standby input-readiness failure and PR #103's diagnostic reader.
 
 ## Observed existing-source behavior
@@ -56,7 +56,7 @@ path before claiming compatibility. Do not infer a new session solely from an
 absent guardian, and never clear session state while Root is running.
 
 Earlier releases added one guarded foreground launch after protected startup.
-The current unpublished candidate removes those boot/wake launch paths entirely.
+Published v1.7.0 removed those boot/wake launch paths entirely.
 It prepares the existing owned native input before the next startup according to
 [the selected source policy](ROOT-NATIVE-INPUT.md). Missing/unsupported native
 selection leaves normal manual Home routing; it never starts a late launch loop.

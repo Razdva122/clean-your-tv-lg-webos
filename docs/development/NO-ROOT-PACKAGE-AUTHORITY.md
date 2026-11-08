@@ -63,7 +63,9 @@ firmware. No supported historical readback was established, so neither legacy
 pending action gains a reconciliation path. The handoff identifies the exact
 vendor contract needed before a device probe can be designed.
 
-## Normal-install catalog convergence (unreleased)
+<a id="normal-install-catalog-convergence-unreleased"></a>
+
+## Normal-install catalog convergence
 
 After both live `dev/install` streams return terminal success, the No-root
 installer uses a ten-second polling budget for one `/dev/listApps` snapshot
@@ -88,7 +90,9 @@ this focused change does not select or modify a frozen release candidate.
 
 ## Remaining evidence
 
-### Observer storage (next candidate, 2026-11-07)
+<a id="observer-storage-next-candidate-2026-11-07"></a>
+
+### Observer storage (from v1.12.0)
 
 The v1.11.0 storage correction keeps private observer evidence in `/tmp/.cytv-installer` (0700),
 under verified sticky temporary ancestry. IPKs remain in the vendor SDK staging
@@ -115,7 +119,9 @@ No new confirmation, package endpoint or recovery protocol is introduced.
 The implementation has host regression coverage only; retail installation and
 recovery remain unverified. See the [source record](../history/2026-11-07-no-root-observer-storage.md).
 
-### Developer Mode private storage selection (unreleased)
+<a id="developer-mode-private-storage-selection-unreleased"></a>
+
+### Developer Mode private storage selection
 
 Developer Mode can expose a jail with an owned, writable `/` while `/tmp` is
 execute-only. New Developer Mode operations first make one read-only selection

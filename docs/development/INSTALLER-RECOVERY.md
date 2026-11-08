@@ -1,4 +1,6 @@
-# Installer recovery journey (unreleased)
+<a id="installer-recovery-journey-unreleased"></a>
+
+# Installer recovery journey
 
 `cytv recover` is shared by console, desktop and Android. A pending `install`
 delegates to this journey and returns before new installation. The host TV lock
@@ -25,7 +27,7 @@ transaction-terminal authority. Matching files, app absence, diagnostic IDs and
 advisory plans never reconcile an uncertain install. See the
 [No-root authority limits](NO-ROOT-PACKAGE-AUTHORITY.md).
 
-Unreleased #152 correction: both the recovery offer and `uninstall()` use the
+Published #152 correction: both the recovery offer and `uninstall()` use the
 same `require_removal_idle` gate. The global monitor is unnecessary only for a
 No-root journal with `action=uninstall`, `stage=pending`, no removal entries and
 only `action`, `stage`, `diagnostic_id`, `eim_registered`, `removals` keys. This
@@ -62,7 +64,7 @@ No component/release version, build selection or physical acceptance is selected
 by this focused change. Public downloads still point to the published release.
 
 
-For a retained Root activation, upcoming installer diagnostics distinguish the
+For a retained Root activation, current installer diagnostics distinguish the
 first unverified receipt/routing/files/product/Updater/rollback/binding boundary
 and checks not reached or still pending. See [diagnostic fields and limits](INSTALLER-DIAGNOSTICS.md#retained-root-activation-checks-next-candidate-355).
 These observations preserve the existing recovery admission; no extra TV checks

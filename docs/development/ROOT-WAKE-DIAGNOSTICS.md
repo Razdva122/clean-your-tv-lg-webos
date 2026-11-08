@@ -2,8 +2,8 @@
 
 This tracks the unresolved [Root standby report #171](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/171).
 Published v1.6.0 includes wake and shutdown-decision diagnostics, not a verified
-fix of the original failure. The current unpublished candidate removes all late
-boot/wake launch requests and adds configurable native startup choices; see
+fix of the original failure. Published v1.7.0 removed all late
+boot/wake launch requests and added configurable native startup choices; see
 [the current native contract](ROOT-NATIVE-INPUT.md). Historical device outcomes
 below are retained with their original scope.
 

@@ -78,13 +78,12 @@ and embedded icons remain preferred over remote metadata, and an omitted icon
 keeps the previous one. This corrects stale URL retention; it does not resolve
 certificate rejection or guarantee that the TV's resource URLs stay valid.
 
-For #416, the next Root candidate gives apps already shown on Home first access
+In v1.13.0 / Root 0.13.2, #416 gives apps already shown on Home first access
 to its bounded icon cache. Adding an app whose icon was omitted requests it
 again with that app first. The catalog order and 512 KiB total / 32 KiB per-file
 limits stay unchanged, so a large catalog can still contain missing icons in
 the picker. This needs a rebuilt Root Home package and service; older services
-keep their original allocation order. This change is not yet published or
-verified on the reporter's TV. Controls and saved layout formats are unchanged.
+keep their original allocation order. The change is published; confirmation on the reporter's TV remains pending. Controls and saved layout formats are unchanged.
 
 The new UI requires the corresponding updated service package for fresh discovery.
 With an older service it can still manage the saved inventory. A live television

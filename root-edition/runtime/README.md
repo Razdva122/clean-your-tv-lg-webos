@@ -69,7 +69,9 @@ lifetime assumption requires verification on other snapshot firmware; kernel UUI
 reuse alone does not establish a new session. Corrupt/indirect session records
 are rejected, not silently reset.
 
-## Native startup choices (unpublished candidate)
+<a id="native-startup-choices-unpublished-candidate"></a>
+
+## Native startup choices
 
 Boot dispatch only restores/rearms guarded Home routing. It never launches the
 launcher over a foreground app. The former boot/wake presentation functions and
@@ -112,7 +114,7 @@ Recovery provisioning is `recovery-provision.json`: version 1, mode `recovery-on
 Device-specific assumptions requiring hardware acceptance: webOS systemprofile getProfiles/debug/rescan methods; defaultApps and idleApp schema; settingsservice general.defaultApps readback representing SAM's setting; settingsservice setSystemSettings preserving general.defaultApps; appCategory home registration; stock app `com.webos.app.home`; Linux `/proc` guardian identity; `/var/luna/preferences/webosbrew_failsafe`; filesystem durability; boot activity delivery under reboot and failsafe. Trial requires all three original routing values to name stock Home and idleApp.support true.
 
 [AOD/category preservation and recovery compatibility](../../docs/development/ROOT-AOD-PRESERVATION.md)
-describes the unpublished version 2 active journal and version 1 restored bridge.
+describes the version 2 active journal and version 1 restored bridge.
 
 Local tests exercise policy, real file ownership/conflict handling, subprocess timer readiness, abrupt publication process death, provisioning gates, isolated identity and restoration. They do not establish TV boot, remote Home/Back routing or power-loss behavior.
 

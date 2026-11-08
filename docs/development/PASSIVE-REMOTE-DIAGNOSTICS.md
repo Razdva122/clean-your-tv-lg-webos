@@ -5,7 +5,9 @@ prepared for the investigation of issue #207. It does not use the Helper and doe
 not establish a Home mapping. No TV was accessed while preparing or testing it.
 Desktop fixtures exercise the parser and safeguards, not physical TV acceptance.
 
-## Delivery over the existing SSH connection (unreleased)
+<a id="delivery-over-the-existing-ssh-connection-unreleased"></a>
+
+## Delivery over the existing SSH connection
 
 The stdin entrypoint supports an agreed observation without putting a script file
 on the TV. Before the session, download the reviewed script to the computer from

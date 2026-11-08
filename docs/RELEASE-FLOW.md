@@ -91,8 +91,18 @@ release PR ready. Release notes alone do not replace updated usage instructions.
   devices and prerequisites, and affected component documentation. Update commands,
   download links, versions, screenshots and recovery/rollback instructions where
   behavior changed. Remove obsolete instructions.
-- Review translated guides for the same changes. Update affected translations;
-  record any remaining gaps explicitly in the release PR.
+- Review translated guides for the same changes. Keep `docs/i18n/` limited to
+  practical installation, prerequisites, controls and recovery in each named language;
+  omit project release/component versions, release news, candidate banners, developer
+  details and QA/issue status. Preserve required OS/runtime prerequisites and old
+  anchors. Update affected translations and record remaining gaps in the release PR.
+- Before publication, inventory temporary `unpublished`, `unreleased`, `next candidate`
+  and equivalent translated notices in current guides and component documentation.
+  After verified publication, reconcile those notices in `main` and `release/next`,
+  including documentation-only corrections made directly to `main`. README version
+  checks cover only marked metadata blocks and do not complete this prose review.
+  Retain actual unpromoted features, experimental/hardware limits, historical records
+  and old anchor aliases; publication alone is not physical-device acceptance.
 - Check documented commands and links against the candidate's actual CLI and
   artifacts. Distinguish candidate-only instructions from the published stable
   release, and retain honest hardware-tested and untested limitations.

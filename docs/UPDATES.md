@@ -1,6 +1,6 @@
 # Update Clean Your TV
 
-> **Unpublished v1.13.0 candidate:** fresh System Updater 1.2.7 / protocol 1. Changed shared Luna support reaches newly built coherent packages; ordinary component OTA does not replace a retained System supervisor. Explicit replacement still admits only installed 1.1.0/1.1.1, not 1.1.2/1.2.x. Exact-package update and rollback acceptance is pending. [Candidate scope](RELEASE-1.13.0.md).
+> **Published v1.13.0:** fresh System Updater 1.2.7 / protocol 1. Changed shared Luna support reaches newly built coherent packages; ordinary component OTA does not replace a retained System supervisor. Explicit replacement still admits only installed 1.1.0/1.1.1, not 1.1.2/1.2.x. Signed Root update/rollback/forward passed on the maintainer C3 with retained System 1.2.5. This does not verify replacement of every supervisor, No-root OTA or ordinary public-feed early-launch behavior. [Tested scope and limits](history/2026-11-08-release-1.13.0-artifacts.md).
 
 **Existing Root installations:** published 1.4.0 is incompatible with the original
 1.3.0 System Updater destination inventory. Do not force that update or edit

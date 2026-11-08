@@ -47,7 +47,9 @@ Wrong TV time, expired leaf certificates, a proxy's private CA and unsupported T
 protocols still cause a safe failure. The bundled roots do not bypass those checks.
 
 
-## Computer installer: local TV control TLS compatibility (unreleased)
+<a id="computer-installer-local-tv-control-tls-compatibility-unreleased"></a>
+
+## Computer installer: local TV control TLS compatibility
 
 The `cytv` installer first connects to the TV's SSAP endpoint at
 `wss://TV:3001` using Python's default TLS cipher policy. If this connection

@@ -1,11 +1,11 @@
 # Root native startup input
 
-Published baseline: v1.6.0 includes the earlier owned EIM entry. The source-choice
-policy below is **candidate-only / unpublished** and has no final package-bound
-TV acceptance. Track the remaining report in [#171](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/171).
+Published v1.7.0 includes two native startup-source choices. See the [current controls](../CONTROLS.md#back-app-exits-and-startup) and [artifact-bound scope](../RELEASE-1.7.0.md). The three-source policy below is historical development context; its HDMI option was not shipped. Track the remaining report in [#171](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/171).
 Historical #204 acceptance remains limited to its original bytes and scenarios.
 
-## Behavior
+<a id="behavior"></a>
+
+## Historical three-source policy
 
 After healthy explicit **Change Home** activation, Root registers its existing
 app as an owned native External Input Manager (EIM) input. Firmware can select
