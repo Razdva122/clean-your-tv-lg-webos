@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [v1.13.0 full candidate artifacts, 2026-11-08](2026-11-08-release-1.13.0-artifacts.md): pinned successful full build, exact embedded Helper equivalence, signed Root provenance, genuine update/rollback and explicit remaining acceptance.
+
 - [Helper 0.8.0 pre-dispatch compatibility, 2026-11-08](2026-11-08-helper-0.8.0-compatibility.md): authenticated published Home 1.13.1, exact new Helper, physical short/triple Home, stopped-state readback and explicit remaining final-candidate gates.
 
 - [C3 preliminary case pass, 2026-11-08](2026-11-08-c3-preliminary-qa.md): complete available case/failure inventory before the fix batch; physical new Root Home/audio/emergency, disabled-state cold boot, No-root preparation failure and explicit remaining gates.
