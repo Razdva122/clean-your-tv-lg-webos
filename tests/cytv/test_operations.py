@@ -25,6 +25,9 @@ class Remote:
         if '/usr/bin/node -e ' in command:
             args=shlex.split(command)
             code=args[args.index('-e')+1]
+            if no_root_observer.STORAGE_SELECT in code:
+                request=json.loads(args[-1])
+                return json.dumps({'operation':request['plan']['operation'],'root':request['root']})
             if no_root_observer.PROGRAM in code:
                 import hashlib
                 request=json.loads(args[-1]);plan=request['plan'];action=request['command'];index=request.get('slot')

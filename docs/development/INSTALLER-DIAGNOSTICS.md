@@ -411,6 +411,12 @@ path](../RECOVERY.md#candidate-finish-verified-root-setup-with-home-control-off)
 
 ## No-root observer failures (next candidate, #376 and #378)
 
+The unreleased Developer Mode storage selector adds `command: storage-select`.
+It performs only metadata reads before the existing `storage-check` and pending
+creation. An unsafe existing location or ambiguous pair of roots is a refusal,
+not permission to erase recovery data. Selection is never run for an existing
+capsule or Root SSH. See [storage selection and recovery binding](NO-ROOT-PACKAGE-AUTHORITY.md#developer-mode-private-storage-selection-unreleased).
+
 An optional `no_root_observer` object identifies the fixed observer `command`
 and `failure` category. It is revalidated in the current report, `first_failure`
 and `observation_failure`. It contains no operation identifier, command text,

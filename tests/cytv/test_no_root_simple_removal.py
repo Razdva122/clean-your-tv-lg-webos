@@ -42,6 +42,7 @@ class Remote:
         # Adapt only the fixed volatile root and its root UID for this host fixture.
         volatile=self.root/'volatile';volatile.mkdir(exist_ok=True);volatile.chmod(0o1777)
         code=code.replace('/tmp/.cytv-installer',str(volatile/'.cytv-installer'))
+        code=code.replace("'/.cytv-installer'",json.dumps(str(self.root/'jail-private')))
         code=code.replace('function ancestry(p){',
             'var hostLstat=fs.lstatSync;fs.lstatSync=function(p){var s=hostLstat(p);if(p==='+json.dumps(str(volatile))+')s.uid=0;return s;};\nfunction ancestry(p){')
         code=code.replace("var bootRoot='/tmp';",'var bootRoot='+json.dumps(str(volatile))+';var bootLstat=fs.lstatSync;fs.lstatSync=function(p){var s=bootLstat(p);if(path.resolve(p)===bootRoot)s.uid=0;return s;};')
@@ -278,6 +279,25 @@ class SimpleRemoval(unittest.TestCase):
         self.reboot()
         self.assertTrue(self.remove()['verified_clean'])
         self.assertFalse(private.exists())
+
+    @unittest.skipIf(getattr(os,'getuid',lambda:0)()==0,'Requires an unprivileged Developer Mode user')
+    def test_jail_private_observer_is_preserved_until_restart_then_removed(self):
+        private=self.root/'jail-private';private.mkdir(mode=0o700)
+        operation=private/'operations'/('a'*32);operation.mkdir(parents=True)
+        evidence=operation/'prepared.json';evidence.write_text('original evidence')
+        self.assertTrue(self.remove()['restart_required'])
+        self.assertEqual(evidence.read_text(),'original evidence')
+        self.reboot()
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertFalse(private.exists())
+
+    @unittest.skipIf(getattr(os,'getuid',lambda:0)()==0,'Requires an unprivileged Developer Mode user')
+    def test_unsafe_jail_private_leaf_is_never_deleted_or_repaired(self):
+        private=self.root/'jail-private';private.mkdir(mode=0o755)
+        evidence=private/'foreign';evidence.write_text('keep')
+        with self.assertRaises((RuntimeError,UserError)):self.remove()
+        self.assertEqual(evidence.read_text(),'keep')
+        self.assertEqual(private.stat().st_mode&0o777,0o755)
 
     def test_changed_kernel_retires_valid_marker_only_after_boot_proof(self):
         self.remove();marker=self.boot_marker();proof=self.store.pending(self.profile)['cleanup_boot_proof']

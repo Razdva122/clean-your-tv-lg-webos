@@ -246,7 +246,7 @@ def no_root_observer_details(value):
     if type(value) is not dict:
         return {}
     allowed = {
-        'command': ('storage-check', 'prepare', 'status', 'attach', 'upload-artifact', 'upload-configuration',
+        'command': ('storage-select', 'storage-check', 'prepare', 'status', 'attach', 'upload-artifact', 'upload-configuration',
                     'artifacts', 'config-claim', 'config-result', 'start', 'worker', 'seal',
                     'readback', 'configured', 'release', 'retire'),
         'failure': ('command-failed', 'connection-interrupted', 'timeout', 'transport-error',
