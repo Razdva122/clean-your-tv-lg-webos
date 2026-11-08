@@ -70,18 +70,18 @@ class RuntimeTests(unittest.TestCase):
   with patch.object(r,'coordinator',return_value=c),patch.object(r,'boot_identity',return_value='same'),patch.object(r.d.FAILSAFE.__class__,'exists',return_value=True),patch.object(r.d,'active_guardian',return_value=True):r.boot()
   self.assertTrue(c.boot.call_args.args[-1])
  def test_boot_restarts_only_after_coordinator_verified_recovery(self):
-  c=Mock(binding=self.root/'missing-binding');c.store.read.return_value={'boot':'old','phase':'active'}
+  c=Mock(binding=self.root/'missing-binding');c.store.read.return_value={'version':1,'generation':1,'boot':'old','phase':'active','enabled':True,'token':'old-attempt'}
   new={'phase':'starting'};c.boot.return_value={'effect':'start_guarded','intent':new}
-  with patch.object(r,'coordinator',return_value=c),patch.object(r,'boot_identity',return_value='new'),patch('boot_gate.wait',return_value=True),patch.object(r.d.FAILSAFE.__class__,'exists',return_value=False):r.boot()
+  with patch.object(r,'coordinator',return_value=c),patch.object(r,'boot_identity',return_value='new'),patch('boot_gate.eligible',return_value=False),patch('boot_gate.wait',return_value=True),patch.object(r.d.FAILSAFE.__class__,'exists',return_value=False):r.boot()
   c.restart.assert_called_once_with(new)
   c.exit.assert_not_called()
 
  def test_true_failsafe_restores_before_refusing_restart(self):
-  c=Mock(binding=self.root/'missing-binding');c.store.read.return_value={'boot':'old','phase':'active'}
+  c=Mock(binding=self.root/'missing-binding');c.store.read.return_value={'version':1,'generation':1,'boot':'old','phase':'active','enabled':True,'token':'old-attempt'}
   new={'phase':'starting'};c.boot.return_value={'effect':'start_guarded','intent':new}
   def refused():
    c.boot.assert_called_once();c.restart.assert_not_called();return False
-  with patch.object(r,'coordinator',return_value=c),patch.object(r,'boot_identity',return_value='new'),patch.object(r.d.FAILSAFE.__class__,'exists',return_value=True),patch('boot_gate.wait',side_effect=refused):
+  with patch.object(r,'coordinator',return_value=c),patch.object(r,'boot_identity',return_value='new'),patch.object(r.d.FAILSAFE.__class__,'exists',return_value=True),patch('boot_gate.eligible',return_value=False),patch('boot_gate.wait',side_effect=refused):
    self.assertEqual(r.boot(),'restored')
   c.exit.assert_called_once_with(new,reason='fault');c.restart.assert_not_called()
 
@@ -92,7 +92,7 @@ class RuntimeTests(unittest.TestCase):
   c.shutdown.assert_called_once_with(intent);c.exit.assert_not_called();c.restart.assert_not_called()
 
  def test_duplicate_boot_during_gate_wait_cannot_disable_starting_intent(self):
-  current=[{'boot':'old','phase':'active'}]
+  current=[{'version':1,'generation':1,'boot':'old','phase':'active','enabled':True,'token':'old-attempt'}]
   new={'boot':'new','phase':'starting'}
   c=Mock(binding=self.root/'missing-binding');c.store.read.side_effect=lambda:current[0]
   def recover(*args):
@@ -102,7 +102,7 @@ class RuntimeTests(unittest.TestCase):
    self.assertEqual(r.boot(),'boot-in-progress')
    c.exit.assert_not_called()
    return True
-  with patch.object(r,'coordinator',return_value=c),patch.object(r,'boot_identity',return_value='new'),patch.object(r.d.FAILSAFE.__class__,'exists',return_value=False),patch('boot_gate.wait',side_effect=gate),patch.object(r.d,'safe_json',return_value={}),patch.object(r.d,'active_guardian',return_value=False):
+  with patch.object(r,'coordinator',return_value=c),patch.object(r,'boot_identity',return_value='new'),patch.object(r.d.FAILSAFE.__class__,'exists',return_value=False),patch('boot_gate.eligible',return_value=False),patch('boot_gate.wait',side_effect=gate),patch.object(r.d,'safe_json',return_value={}),patch.object(r.d,'active_guardian',return_value=False):
    r.boot()
   c.restart.assert_called_once_with(new);c.exit.assert_not_called()
  def test_invalid_identity_attempts_fault_recovery_without_rearm(self):

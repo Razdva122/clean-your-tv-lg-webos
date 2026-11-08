@@ -148,6 +148,11 @@ and restrict the file to owner access. This includes real configuration, order,
 language/layout and embedded icons. Never create an empty profile or reuse a
 historical capture merely to pass admission.
 
+Fresh discovery can include an empty optional icon color. Capture omits colors
+outside the canonical six-digit hex form from its copy of that inventory; it
+does not rewrite the live catalog or relax validation of a stored/received
+profile. A valid existing color is preserved.
+
 ```sh
 chmod 600 work/current-root-profile.json
 python3 scripts/tv-dev.py install \
@@ -199,3 +204,11 @@ Tests model native-bridge traps, storage separation, staging failure, unsafe pat
 command construction, exact signed artifact identity, package tampering and the
 existing admission controller transport. They never connect to a TV. Final release
 checks and device evidence remain separate.
+
+
+Fresh System Updater registration refreshes the LS2 service scan and restarts the
+exact edition launcher process before reporting completion. A page reload alone
+retains the old client's grants and can refuse `restoreProfile`. The normal
+close/relaunch does not enable Root or clear emergency Off. If close or relaunch
+is refused, keep bootstrap evidence and use the supported continuation; do not
+edit permissions or readiness receipts.

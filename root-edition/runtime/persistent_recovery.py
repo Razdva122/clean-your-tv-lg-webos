@@ -134,6 +134,8 @@ class Coordinator:
                 d.native_input_disable()
 
     def _recover_route(self, intent):
+        from boot_gate import repair
+        repair(self)
         if intent['enabled'] and not d.home_present():intent,_=self.event(intent,'fault')
         try:
             if not os.path.lexists(self.binding) and not intent['enabled']:
@@ -165,6 +167,8 @@ class Coordinator:
                     or d.read() != journal['baseline']):
                 raise ValueError('Routing restoration not verified')
             self.write_binding(dict(binding, restored=True))
+            from boot_gate import load, remove
+            if load() is not None: remove()
             updated, effect = self.event(intent, 'restored')
             return dict(intent=updated, effect=effect, restored_transaction=tx)
         except Exception:

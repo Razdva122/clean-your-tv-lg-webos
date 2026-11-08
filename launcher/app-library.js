@@ -188,7 +188,7 @@
       }
     };
   }
-  function installed(callback) {
+  function installed(callback, priorityIds) {
     var bridge,
       timer,
       done = false,
@@ -239,7 +239,12 @@
           : fallback
             ? 'com.gathin.tvhome.renewal'
             : 'com.local.nativehome.service';
-        bridge.call('luna://' + service + '/listApps', '{}');
+        bridge.call(
+          'luna://' + service + '/listApps',
+          root && priorityIds
+            ? JSON.stringify({ priorityIds: priorityIds })
+            : '{}'
+        );
       } catch (_) {
         failed();
       }

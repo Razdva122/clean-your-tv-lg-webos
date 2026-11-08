@@ -90,7 +90,7 @@ this focused change does not select or modify a frozen release candidate.
 
 ### Observer storage (next candidate, 2026-11-07)
 
-New operations keep private observer evidence in `/tmp/.cytv-installer` (0700),
+The v1.11.0 storage correction keeps private observer evidence in `/tmp/.cytv-installer` (0700),
 under verified sticky temporary ancestry. IPKs remain in the vendor SDK staging
 namespace `/media/developer/temp`; the observer accepts the fixed root-owned
 SDK containers with their retail permissions, while its private evidence keeps
@@ -114,6 +114,57 @@ No new confirmation, package endpoint or recovery protocol is introduced.
 
 The implementation has host regression coverage only; retail installation and
 recovery remain unverified. See the [source record](../history/2026-11-07-no-root-observer-storage.md).
+
+### Developer Mode private storage selection (unreleased)
+
+Developer Mode can expose a jail with an owned, writable `/` while `/tmp` is
+execute-only. New Developer Mode operations first make one read-only selection
+between `/tmp/.cytv-installer` and `/.cytv-installer`. A sole existing root is
+retained; two existing roots refuse setup rather than hide another reservation.
+An existing unsafe leaf is never repaired or bypassed. With neither root present,
+the jail root is admitted only for a non-root UID owning its real parent, with
+owner read/write/traversal and no group/other write bits. Otherwise the legacy
+temporary root remains selected. The existing storage check must then pass all
+private ownership/0700/ancestry, write/link/fsync and SDK staging checks before
+pending is created. There is no fallback after storage refusal or package work.
+
+New jail-root plans carry `private_root` inside the plan covered by the observer's
+canonical hash and the host capsule digest. The host admits only the two fixed
+Developer Mode locations. Continuation, observation and detached workers use the
+original selected path; they never select another root when evidence is missing.
+Legacy plans without the field still mean `/tmp/.cytv-installer`. Both bound
+observer source strings are unchanged, so this addition does not invalidate
+otherwise compatible existing capsules. Earlier incompatible sources retain the
+historical confirmed-cleanup fallback described above. Root SSH keeps its exact
+private/public roots and does not run selection.
+
+Developer Mode cleanup includes the fixed jail leaf in its resident-worker,
+staging-scope, idle and explicit sweep checks, retaining the ordinary restart
+fence. It requires a real, owned `0700` leaf and strict private ancestry; foreign,
+symlinked or writable private roots block cleanup. Root SSH cleanup does not
+interpret `/.cytv-installer` in its different filesystem namespace as owned
+Developer Mode evidence. Cross-namespace device cleanup is not established by
+host fixtures. No parent chmod/chown, automatic migration or capsule editing is
+introduced; SDK IPKs stay under `/media/developer/temp`.
+
+The existing volatile restart-proof marker remains under `/tmp` with its original
+strict sticky-parent checks. A persistent jail directory cannot replace proof of
+a full restart. Firmware refusing that marker may still block explicit removal;
+this change must not turn that refusal into a clean result or permission to replay.
+Host continuation and cleanup fixtures do not establish physical installation,
+restart proof, removal or compatibility on a reporting TV. Rebuild shared
+desktop/console/Android installers and Root Updater's embedded cleanup bundle;
+do not reuse a previously built candidate as evidence for these changed bytes.
+
+The earlier conservative per-filesystem installation budget remains separate:
+SDK package staging, private observer evidence and vendor package-manager scratch
+are different needs. `storage.install` still checks the unpacked-package estimate
+plus reserve on `/tmp` before selection. Zero available `/tmp` space therefore
+stops before pending or package submission even with a writable jail root. This
+change neither proves that vendor scratch is accessible in the jailed namespace
+nor moves its estimate to the private evidence directory. Revising that estimate
+requires separate filesystem/vendor evidence; it is not a workaround for a
+capacity refusal.
 
 ### Original historical transaction contract
 

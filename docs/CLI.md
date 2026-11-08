@@ -26,7 +26,7 @@ inventory during installation. Each row has a text status as well as a visual
 marker. Results remain visible after failure; subsequent steps stay **Not checked**.
 An interrupted probe is **Could not verify**, not evidence of a missing runtime.
 
-In the next unpublished candidate, Root setup continues with a warning if TV inputs cannot be read but the application list is valid. Inputs may be missing from Home; a failed or empty application list still stops setup. Save the diagnostic report if the warning persists. The combined inventory check remains **Could not verify**, rather than claiming that the input read passed.
+In published v1.12.1, Root setup continues with a warning if TV inputs cannot be read but the application list is valid. Inputs may be missing from Home; a failed or empty application list still stops setup. Save the diagnostic report if the warning persists. The combined inventory check remains **Could not verify**, rather than claiming that the input read passed.
 
 Python and Node.js checks concern the **TV**, not the computer running cytv.
 Root setup can prepare private Python only when its other prerequisites pass;
@@ -475,6 +475,13 @@ desktop OS/architecture, edition, action, failed phase, pending action/stage and
 stack **file/function/line locations**. It excludes exception text, source lines,
 locals, addresses, identity paths, credentials, app lists, environment and raw TV
 logs. No report is submitted automatically.
+
+In the next candidate (#311), the existing No-root inventory read adds aggregate
+`tv.icon_inventory` counters for embedded/fallback icons, missing/rejected icon
+URIs, failed downloads and unsupported image signatures. No addresses or app
+identities are included; no extra TV reads are performed. These fields describe
+the captured installer read, not live Home rendering or a physical Home-button
+result. [Field definitions and limits](development/INSTALLER-DIAGNOSTICS.md#no-root-icon-inventory-next-candidate-311).
 
 In 1.6.0 (#200), host private-Python acquisition failures add only an allowlisted
 `python_cache.reason`. See [cache failure categories](OPTIONAL-PYTHON.md#unreleased-host-cache-failure-categories-200).

@@ -399,6 +399,7 @@ class CLITests(unittest.TestCase):
                 if 'CYTV_PYTHON_BOUND' in command:return ''
                 if 'CYTV_ROOT_READY' in command: return 'CYTV_ROOT_READY'
                 if 'CYTV_EXISTING_ROOT' in command: return 'CYTV_EXISTING_ROOT'
+                if 'CYTV_EXISTING_UPDATER' in command: return ''
                 if 'CYTV_C1_GATE' in command: return ''
                 if 'deploy.json' in command: return '{"stage":"installed-recovery-only"}'
                 if 'deploy.py status' in command:
@@ -660,6 +661,7 @@ class CLITests(unittest.TestCase):
             session = ssap.return_value
             session.key = None
             session.inventory.return_value = inventory
+            session.icon_diagnostics = {'schema': 1, 'status': 'complete', 'fallback': 3}
             session.__enter__.side_effect = [TVNotReady(), session]
             code, output, calls = self.run_cli(['--host', '192.0.2.10', '--edition', 'no-root', '--data-dir', tmp],
                                                ['', '', ''], remote=Remote())
@@ -670,6 +672,8 @@ class CLITests(unittest.TestCase):
             installer.return_value.install.assert_called_once_with(inventory, None, False)
             installer.return_value.trial.assert_not_called()
             self.assertIn('Packages installed; Home Helper launch requested.', output)
+            report = json.loads(next(Path(tmp).glob('reports/*.json')).read_text())
+            self.assertEqual(report['tv'].get('icon_inventory'), session.icon_diagnostics)
             self.assertNotRegex(output.lower(), r'trial|countdown|keep using|preview release')
 
     def test_installation_failure_is_never_caught_as_inventory_retry(self):

@@ -77,7 +77,16 @@ function read(fd, name) {
     var info = fs.fstatSync(file);
     owned(info, false);
     if (info.size > 4194304) throw Error('oversized-cleanup-record');
-    return fs.readFileSync(file);
+    var raw = Buffer.alloc(info.size),
+      offset = 0;
+    while (offset < raw.length) {
+      var count = fs.readSync(file, raw, offset, raw.length - offset, offset);
+      if (count <= 0) throw Error('cleanup-member-changed');
+      offset += count;
+    }
+    if (fs.fstatSync(file).size !== info.size)
+      throw Error('cleanup-member-changed');
+    return raw;
   } finally {
     fs.closeSync(file);
   }
@@ -93,7 +102,13 @@ function write(fd, name, value) {
       384
     );
   try {
-    fs.writeFileSync(file, JSON.stringify(value));
+    var raw = Buffer.from(JSON.stringify(value)),
+      offset = 0;
+    while (offset < raw.length) {
+      var count = fs.writeSync(file, raw, offset, raw.length - offset, null);
+      if (count <= 0) throw Error('cleanup-member-changed');
+      offset += count;
+    }
     fs.fsyncSync(file);
   } finally {
     fs.closeSync(file);
@@ -188,6 +203,48 @@ function rpc(method, payload) {
   }
   return value;
 }
+function routingUntouched() {
+  var evidence = [
+    'profile-trial.json',
+    'persistent-intent.json',
+    'persistent-binding.json',
+    'profile-candidate.stage',
+    'home-backend.json',
+    'c1-gate',
+    'c1-keyfilter'
+  ];
+  var deploy = record.fenced_components && record.fenced_components.deploy;
+  if (
+    record.routing_never_applied !== true ||
+    record.profileless_cleanup_eligible !== true ||
+    !object(deploy) ||
+    !(
+      [
+        'prepared',
+        'install-submitting',
+        'install-accepted',
+        'install-observed',
+        'payload-verified',
+        'personalization-complete'
+      ].indexOf(deploy.stage) !== -1 ||
+      /^provision-(?:apply|resume_pending|refresh|finalize)-(?:starting|complete)$/.test(
+        deploy.stage
+      )
+    )
+  )
+    return false;
+  var backup = json(directory, 'routing-backup-' + id + '.json');
+  return (
+    object(backup) &&
+    !Object.keys(backup).some(function (name) {
+      return evidence.indexOf(name.split('/')[0]) !== -1;
+    }) &&
+    !evidence.some(function (name) {
+      return exists('/var/lib/clean-your-tv-root/' + name);
+    }) &&
+    !exists('/var/webos-profile/override/clean-your-tv-root.json')
+  );
+}
 function absent(final) {
   if (final && exists(bootRoot)) throw Error('boot-session-remains');
   var inventory;
@@ -268,57 +325,80 @@ function absent(final) {
           name
         )
       ) {
-        var fd = openDir('/tmp/' + name);
+        var fd = openDir('/tmp/' + name),
+          info = fs.fstatSync(fd);
+        if (
+          /^cytv-system-updater-[a-f0-9]{32}$/.test(name) &&
+          (record.retained_temporary_stages || []).some(function (entry) {
+            return (
+              object(entry) &&
+              Object.keys(entry).length === 3 &&
+              entry.path === '/tmp/' + name &&
+              entry.dev === info.dev &&
+              entry.ino === info.ino
+            );
+          })
+        )
+          return;
         if (fs.readdirSync(at(fd)).length) throw Error('support-stage-remains');
       }
     });
-  var settings = rpc('com.webos.settingsservice/getSystemSettings', {
-    category: 'general',
-    keys: ['defaultApps']
-  });
-  var home = settings.settings.defaultApps.home,
-    stockOnly =
-      record.profileless_cleanup_eligible === true &&
-      object(record.routes) &&
-      record.routes.mode === 'stock-settings' &&
-      record.routes.home === 'com.webos.app.home' &&
-      home === record.routes.home,
-    profiles,
-    never =
-      record.routing_never_applied === true &&
-      record.routes &&
-      record.routes.mode === 'never-applied';
-  if (typeof home !== 'string' || !home || apps.indexOf(home) !== -1)
-    throw Error('owned-route-remains');
-  try {
-    profiles = rpc('com.webos.service.systemprofile/getProfiles', {
-      names: ['defaultApps', 'idleApp'],
-      subscribe: false
-    }).profiles;
-    if (!object(profiles)) throw Error('cleanup-readback-malformed');
-  } catch (error) {
-    if (!never && !(stockOnly && error.systemprofile_missing === true))
-      throw error;
-  }
-  if (profiles) {
-    if (stockOnly) throw Error('route-changed');
-    var routes = [
-      home,
-      profiles.defaultApps.categories.home,
-      profiles.idleApp.appId
-    ];
-    if (
-      routes.some(function (route) {
-        return (
-          typeof route !== 'string' || !route || apps.indexOf(route) !== -1
-        );
-      })
-    )
+  // No Home consumer setting is required when the fenced original operation
+  // never reached routing and both original inverse and current paths agree.
+  if (!(
+    object(record.routes) &&
+    record.routes.mode === 'never-applied' &&
+    Object.keys(record.routes).length === 1 &&
+    routingUntouched()
+  )) {
+    var settings = rpc('com.webos.settingsservice/getSystemSettings', {
+      category: 'general',
+      keys: ['defaultApps']
+    });
+    var home = settings.settings.defaultApps.home,
+      stockOnly =
+        record.profileless_cleanup_eligible === true &&
+        object(record.routes) &&
+        record.routes.mode === 'stock-settings' &&
+        record.routes.home === 'com.webos.app.home' &&
+        home === record.routes.home,
+      profiles,
+      never =
+        record.routing_never_applied === true &&
+        record.routes &&
+        record.routes.mode === 'never-applied';
+    if (typeof home !== 'string' || !home || apps.indexOf(home) !== -1)
       throw Error('owned-route-remains');
-    if (!never && JSON.stringify(routes) !== JSON.stringify(record.routes))
-      throw Error('route-changed');
+    try {
+      profiles = rpc('com.webos.service.systemprofile/getProfiles', {
+        names: ['defaultApps', 'idleApp'],
+        subscribe: false
+      }).profiles;
+      if (!object(profiles)) throw Error('cleanup-readback-malformed');
+    } catch (error) {
+      if (!never && !(stockOnly && error.systemprofile_missing === true))
+        throw error;
+    }
+    if (profiles) {
+      if (stockOnly) throw Error('route-changed');
+      var routes = [
+        home,
+        profiles.defaultApps.categories.home,
+        profiles.idleApp.appId
+      ];
+      if (
+        routes.some(function (route) {
+          return (
+            typeof route !== 'string' || !route || apps.indexOf(route) !== -1
+          );
+        })
+      )
+        throw Error('owned-route-remains');
+      if (!never && JSON.stringify(routes) !== JSON.stringify(record.routes))
+        throw Error('route-changed');
+    }
+    if (never && home !== record.routes.home) throw Error('route-changed');
   }
-  if (never && home !== record.routes.home) throw Error('route-changed');
   [
     'services.d',
     'roles.d',
@@ -439,6 +519,13 @@ function absent(final) {
       (record.archives || []).forEach(function (item) {
         prefixes.push(item.path + '/');
       });
+      (record.retained_temporary_stages || []).forEach(function (entry) {
+        if (
+          object(entry) &&
+          /^\/tmp\/cytv-system-updater-[a-f0-9]{32}$/.test(entry.path)
+        )
+          prefixes.push(entry.path + '/');
+      });
       if (
         args.some(function (arg) {
           return prefixes.some(function (prefix) {
@@ -539,6 +626,38 @@ function retire(path, inventory, pin, removeRoot) {
     fs.fsyncSync(parent);
   }
 }
+function finalizeFence() {
+  var final = record.final_fence || nodeCrypto.randomBytes(16).toString('hex');
+  if (!/^[a-f0-9]{32}$/.test(final) || final === record.lease)
+    throw Error('unknown-ownership-receipt');
+  record.final_fence = final;
+  record.final_original_lease = record.lease;
+  record.stage = 'private-cleanup';
+  record.state = 'recovery_required';
+  record.current = false;
+  write(directory, 'clean-removal-' + id + '.json', record);
+  lease.id = final;
+  lease.stage = 'final-fence-pending';
+  write(directory, 'operation.json', lease);
+  record.stage = 'verified-clean';
+  record.state = 'complete';
+  record.current = true;
+  record.reason = 'removal-verified';
+  write(directory, 'clean-removal-' + id + '.json', record);
+  lease.stage = 'verified-clean';
+  write(directory, 'operation.json', lease);
+}
+function completion() {
+  return {
+    operation: id,
+    removal: removal,
+    state: 'complete',
+    stage: 'verified-clean',
+    current: true,
+    reason: 'removal-verified',
+    result: record.result
+  };
+}
 try {
   if (!/^[a-f0-9]{32}$/.test(id)) throw Error('invalid-cleanup-selector');
   directory = openDir(state);
@@ -578,6 +697,27 @@ try {
       throw Error('unexpected-promotion-lock');
     inheritedLock(process.argv[7], at(directory, 'worker.lock'));
     lease = json(directory, 'operation.json');
+    var predecessor =
+      lease.owner === 'clean-removal' &&
+      lease.journal === 'product-' + id + '.json';
+    if (
+      mode === 'verify' &&
+      lease.owner === 'no-root' &&
+      /^no-root-[a-f0-9]{32}\.json$/.test(lease.journal) &&
+      lease.stage === 'reserved'
+    ) {
+      var successor = json(directory, lease.journal);
+      predecessor =
+        successor &&
+        successor.schema === 1 &&
+        successor.protocol === 'no-root-root-handoff-v1' &&
+        successor.lease === lease.id &&
+        successor.predecessor &&
+        successor.predecessor.operation === id &&
+        successor.predecessor.removal === removal &&
+        successor.predecessor.lease === (record.final_fence || record.lease) &&
+        successor.predecessor.lease !== lease.id;
+    }
     if (
       !lease ||
       Object.keys(lease).sort().join(',') !==
@@ -585,7 +725,10 @@ try {
       lease.schema !== 1 ||
       typeof lease.id !== 'string' ||
       !/^[a-f0-9]{32}$/.test(lease.id) ||
-      ['private-cleanup', 'verified-clean'].indexOf(lease.stage) === -1 ||
+      (['private-cleanup', 'verified-clean', 'final-fence-pending'].indexOf(
+        lease.stage
+      ) === -1 &&
+        !(mode === 'verify' && predecessor && lease.stage === 'reserved')) ||
       lease.terminal !== false
     )
       throw Error('unknown-ownership-receipt');
@@ -594,11 +737,16 @@ try {
       record.schema !== 1 ||
       record.protocol !== 'clean-removal-v1' ||
       record.operation !== id ||
-      record.lease !== lease.id ||
+      (record.final_fence &&
+        (record.final_original_lease !== record.lease ||
+          !/^[a-f0-9]{32}$/.test(record.final_fence) ||
+          record.final_fence === record.lease)) ||
+      (record.lease !== lease.id &&
+        record.final_fence !== lease.id &&
+        !(mode === 'verify' && predecessor && lease.owner === 'no-root')) ||
       typeof record.removal !== 'string' ||
       !/^[a-f0-9]{32}$/.test(record.removal) ||
-      lease.owner !== 'clean-removal' ||
-      lease.journal !== 'product-' + id + '.json' ||
+      !predecessor ||
       ['private-cleanup', 'verified-clean'].indexOf(record.stage) === -1 ||
       record.state !==
         (record.stage === 'verified-clean'
@@ -620,110 +768,135 @@ try {
     )
       throw Error('original-removal-required');
     packageReceipts();
-    var cleanup = record.runtime_cleanup;
     if (
-      !cleanup ||
-      cleanup.root !== runtime ||
-      !cleanup.files ||
-      typeof cleanup.files !== 'object' ||
-      Array.isArray(cleanup.files)
-    )
-      throw Error('runtime-cleanup-proof-required');
-    Object.keys(cleanup.files).forEach(function (name) {
+      mode === 'verify' ||
+      mode === 'finalize' ||
+      record.final_fence === lease.id
+    ) {
+      var pendingFinal =
+        mode === 'finish' &&
+        record.final_fence === lease.id &&
+        lease.stage === 'final-fence-pending';
       if (
-        !/^(?:[a-zA-Z0-9_.+-]+\/)*[a-zA-Z0-9_.+-]+$/.test(name) ||
-        name.split('/').some(function (p) {
-          return p === '.' || p === '..';
-        }) ||
-        !/^[a-f0-9]{64}$/.test(cleanup.files[name])
+        (!pendingFinal &&
+          lease.stage !== 'verified-clean' &&
+          lease.owner !== 'no-root') ||
+        (!pendingFinal && record.stage !== 'verified-clean') ||
+        (!pendingFinal && record.current !== true) ||
+        record.result.private_cleanup_verified !== true ||
+        record.result.verified_clean !== true ||
+        !record.runtime_cleanup ||
+        Object.keys(record.runtime_cleanup.files || {}).length ||
+        exists(runtime)
       )
-        throw Error('invalid-runtime-inventory');
-    });
-    if (
-      cleanup.promotion_required === true &&
-      !exists('/var/lib/clean-your-tv-python/.install.lock')
-    )
-      throw Error('original-promotion-lock-missing');
-    var gates = record.tail_stages || [];
-    if (!Array.isArray(gates)) throw Error('invalid-tail-stages');
-    (process.argv[4] === '-' ? [] : process.argv[4].split(',')).forEach(
-      function (path) {
-        if (!/^\/tmp\/cytv-root-tail-[a-f0-9]{32}$/.test(path))
-          throw Error('invalid-tail-stage');
+        throw Error('original-removal-required');
+      // Admission is a current readback, never another cleanup attempt.
+      // Keep all original lock inodes and receipts untouched.
+      absent(true);
+      if (pendingFinal || (mode === 'finalize' && !record.final_fence))
+        finalizeFence();
+      process.stdout.write(
+        JSON.stringify(
+          mode === 'finish'
+            ? completion()
+            : {
+                operation: id,
+                removal: removal,
+                lease: record.final_fence || record.lease,
+                state: 'verified-clean'
+              }
+        )
+      );
+    } else {
+      var cleanup = record.runtime_cleanup;
+      if (
+        !cleanup ||
+        cleanup.root !== runtime ||
+        !cleanup.files ||
+        typeof cleanup.files !== 'object' ||
+        Array.isArray(cleanup.files)
+      )
+        throw Error('runtime-cleanup-proof-required');
+      Object.keys(cleanup.files).forEach(function (name) {
         if (
-          !exists(path) ||
-          gates.some(function (entry) {
-            return entry.path === path;
+          !/^(?:[a-zA-Z0-9_.+-]+\/)*[a-zA-Z0-9_.+-]+$/.test(name) ||
+          name.split('/').some(function (p) {
+            return p === '.' || p === '..';
+          }) ||
+          !/^[a-f0-9]{64}$/.test(cleanup.files[name])
+        )
+          throw Error('invalid-runtime-inventory');
+      });
+      if (
+        cleanup.promotion_required === true &&
+        !exists('/var/lib/clean-your-tv-python/.install.lock')
+      )
+        throw Error('original-promotion-lock-missing');
+      var gates = record.tail_stages || [];
+      if (!Array.isArray(gates)) throw Error('invalid-tail-stages');
+      (process.argv[4] === '-' ? [] : process.argv[4].split(',')).forEach(
+        function (path) {
+          if (!/^\/tmp\/cytv-root-tail-[a-f0-9]{32}$/.test(path))
+            throw Error('invalid-tail-stage');
+          if (
+            !exists(path) ||
+            gates.some(function (entry) {
+              return entry.path === path;
+            })
+          )
+            return;
+          var fd = openDir(path),
+            info = fs.fstatSync(fd);
+          gates.push({ path: path, dev: info.dev, ino: info.ino });
+        }
+      );
+      record.tail_stages = gates;
+      write(directory, 'clean-removal-' + id + '.json', record);
+      // The parent is allowed to wait for its own child tail with the same flock.
+      // Other users of this private runtime prevent retirement.
+      absent(false);
+      (record.support_stages || []).forEach(function (stage) {
+        if (!/^\/tmp\/cytv-product-[a-f0-9]{32}$/.test(stage.path))
+          throw Error('invalid-support-stage');
+        retire(stage.path, null, stage);
+      });
+      retire(runtime, cleanup.files, null, true);
+      retire(
+        bootRoot,
+        { 'session.lock': true, 'session.json': true, 'normal.json': true },
+        null,
+        true
+      );
+      gates.forEach(function (entry) {
+        if (!/^\/tmp\/cytv-root-tail-[a-f0-9]{32}$/.test(entry.path))
+          throw Error('invalid-tail-stage');
+        if (!exists(entry.path)) return;
+        var gatefd = openDir(entry.path),
+          info = fs.fstatSync(gatefd),
+          names = fs.readdirSync(at(gatefd));
+        if (
+          info.dev !== entry.dev ||
+          info.ino !== entry.ino ||
+          names.some(function (name) {
+            return name !== 'gate';
           })
         )
-          return;
-        var fd = openDir(path),
-          info = fs.fstatSync(fd);
-        gates.push({ path: path, dev: info.dev, ino: info.ino });
-      }
-    );
-    record.tail_stages = gates;
-    write(directory, 'clean-removal-' + id + '.json', record);
-    // The parent is allowed to wait for its own child tail with the same flock.
-    // Other users of this private runtime prevent retirement.
-    absent(false);
-    (record.support_stages || []).forEach(function (stage) {
-      if (!/^\/tmp\/cytv-product-[a-f0-9]{32}$/.test(stage.path))
-        throw Error('invalid-support-stage');
-      retire(stage.path, null, stage);
-    });
-    retire(runtime, cleanup.files, null, true);
-    retire(
-      bootRoot,
-      { 'session.lock': true, 'session.json': true, 'normal.json': true },
-      null,
-      true
-    );
-    gates.forEach(function (entry) {
-      if (!/^\/tmp\/cytv-root-tail-[a-f0-9]{32}$/.test(entry.path))
-        throw Error('invalid-tail-stage');
-      if (!exists(entry.path)) return;
-      var gatefd = openDir(entry.path),
-        info = fs.fstatSync(gatefd),
-        names = fs.readdirSync(at(gatefd));
-      if (
-        info.dev !== entry.dev ||
-        info.ino !== entry.ino ||
-        names.some(function (name) {
-          return name !== 'gate';
-        })
-      )
-        throw Error('unknown-tail-stage');
-      if (names.length) {
-        var executable = fs.lstatSync(at(gatefd, 'gate'));
-        owned(executable, false);
-        fs.unlinkSync(at(gatefd, 'gate'));
-        fs.fsyncSync(gatefd);
-      }
-    });
-    absent(true);
-    record.stage = 'verified-clean';
-    record.state = 'complete';
-    record.current = true;
-    record.reason = 'removal-verified';
-    record.result.private_cleanup_verified = true;
-    record.result.verified_clean = true;
-    cleanup.files = {};
-    delete cleanup.parent_pid;
-    write(directory, 'clean-removal-' + id + '.json', record);
-    lease.stage = 'verified-clean';
-    write(directory, 'operation.json', lease);
-    process.stdout.write(
-      JSON.stringify({
-        operation: id,
-        removal: removal,
-        state: 'complete',
-        stage: 'verified-clean',
-        current: true,
-        reason: 'removal-verified',
-        result: record.result
-      })
-    );
+          throw Error('unknown-tail-stage');
+        if (names.length) {
+          var executable = fs.lstatSync(at(gatefd, 'gate'));
+          owned(executable, false);
+          fs.unlinkSync(at(gatefd, 'gate'));
+          fs.fsyncSync(gatefd);
+        }
+      });
+      absent(true);
+      record.result.private_cleanup_verified = true;
+      record.result.verified_clean = true;
+      cleanup.files = {};
+      delete cleanup.parent_pid;
+      finalizeFence();
+      process.stdout.write(JSON.stringify(completion()));
+    }
   }
 } catch (error) {
   if (mode === 'inspect' && error.code === 'ENOENT')

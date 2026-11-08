@@ -1,5 +1,17 @@
 # Release history and device evidence
 
+- [v1.13.0 full candidate artifacts, 2026-11-08](2026-11-08-release-1.13.0-artifacts.md): pinned successful full build, exact embedded Helper equivalence, signed Root provenance, genuine update/rollback and explicit remaining acceptance.
+
+- [Helper 0.8.0 pre-dispatch compatibility, 2026-11-08](2026-11-08-helper-0.8.0-compatibility.md): authenticated published Home 1.13.1, exact new Helper, physical short/triple Home, stopped-state readback and explicit remaining final-candidate gates.
+
+- [C3 preliminary case pass, 2026-11-08](2026-11-08-c3-preliminary-qa.md): complete available case/failure inventory before the fix batch; physical new Root Home/audio/emergency, disabled-state cold boot, No-root preparation failure and explicit remaining gates.
+
+- [Clean removal and reinstallation, 2026-11-08](2026-11-08-root-clean-removal-reinstallation.md): source defect, ownership changes, restored bounded C3 preflight and unverified full-transition acceptance.
+
+- [Developer Mode storage integration, 2026-11-08](2026-11-08-next-candidate-storage-integration.md): PR #435, focused CI/review, unchanged versions and pending #409 device confirmation.
+
+- [v1.13.0 preparation, 2026-11-08](2026-11-08-release-1.13.0-preparation.md): versioned preliminary packages, automated checks, mandatory Helper compatibility blocker and the bounded physical plan. No new TV acceptance.
+
 - [1.12.1 unattended C3 QA, 2026-11-07](2026-11-07-release-1.12.1-unattended-tv-qa.md): exact signed forward/rollback/forward, profile and renderer/service cases, corrected harness findings, standby/wake, final power-off and remaining manual checks.
 
 - [1.12.1 freeze and pre-dispatch checks, 2026-11-07](2026-11-07-release-1.12.1-freeze.md): six-PR scope, authenticated baselines, package/version gates, documentation and bounded acceptance plan.

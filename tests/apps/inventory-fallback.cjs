@@ -2,7 +2,7 @@ const test = require('node:test'),
   assert = require('node:assert/strict'),
   fs = require('node:fs'),
   vm = require('node:vm');
-function fixture(root = false) {
+function fixture(root = false, priorityIds) {
   const calls = [],
     timers = new Map();
   let seq = 0,
@@ -27,7 +27,7 @@ function fixture(root = false) {
       this.call = (uri, payload) => {
         calls.push(this);
         this.uri = uri;
-        assert.equal(payload, '{}');
+        this.payload = JSON.parse(payload);
       };
     }
   };
@@ -38,7 +38,7 @@ function fixture(root = false) {
   context.module.exports.installed((apps) => {
     result = apps;
     completed++;
-  });
+  }, priorityIds);
   return {
     calls,
     reply: (i, reply) =>
@@ -74,6 +74,12 @@ function fixture(root = false) {
     timers
   };
 }
+test('only Root passes ordered visible IDs as icon priorities; legacy requests stay empty', () => {
+  const ids = ['late', 'first'];
+  assert.deepEqual(fixture(true, ids).calls[0].payload, { priorityIds: ids });
+  assert.deepEqual(fixture(false, ids).calls[0].payload, {});
+  assert.deepEqual(fixture(true).calls[0].payload, {});
+});
 test('No-root inventory denied by LS2 reads the authorized same-package broker', () => {
   const f = fixture();
   assert.equal(f.calls[0].uri, 'luna://com.local.nativehome.service/listApps');

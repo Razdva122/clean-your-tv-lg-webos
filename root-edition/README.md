@@ -4,7 +4,7 @@
 
 **Ribbon in Home:** Ribbon is a theme of the single persistent full-screen CARD Home, with its own wallpaper. It does not show another application or HDMI beneath the cards. Theme selection does not change the window type, Home routing or emergency controls. [Behavior and acceptance limits](../docs/THEMES.md#ribbon-over-applications-unreleased).
 
-> This guide describes 1.7.0 with Root/infrastructure 0.8.4 and Root Updater 0.4.2. Use [Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases) for the latest published downloads. Exact-artifact results and limits are maintained in the [1.7.0 package acceptance record](../docs/history/2026-11-03-release-1.7.0-final-packages.md).
+> Source candidate v1.13.0 selects Root/infrastructure 0.13.2 and Root Updater 0.5.4; [scope and pending gates](../docs/RELEASE-1.13.0.md). [Published downloads](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest) remain v1.12.1 until verified publication. Historical 1.7.0 used Root/infrastructure 0.8.4 and Root Updater 0.4.2; its [package acceptance record](../docs/history/2026-11-03-release-1.7.0-final-packages.md) retains its original scope.
 
 Use Clean Your TV as the system Home on an **already rooted LG webOS TV**.
 Short Home opens Clean; confirmed Back exit returns through native Home routing.

@@ -339,6 +339,12 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
         from .transport import SSH, CredentialPrompt
         with store.lock(profile), diagnostics.context.operation_context(store, profile):
             profile, recovering = store.connection_profile(profile)
+            # An explicit sign-in key may change; the saved TV identity and pin
+            # must still be resolved and verified before using it.
+            if (recovering and args.identity and args.command == 'uninstall'
+                    and (profile['edition'] == 'root' or profile.get('connection') == 'root-ssh')
+                    and (store.pending(profile) or {}).get('recovery_protocol') == 'clean-removal-v1'):
+                profile = dict(profile, identity=str(args.identity.expanduser().resolve()))
             if args.command=='uninstall':
                 if not recovering:store.save(profile)
                 store.request_clean_removal(profile)
@@ -442,6 +448,14 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                             raise UserError('Previous Root installation needs recovery. Run cytv status or cytv restore. Reinstallation has not started; recovery data was left unchanged.')
                         if args.non_interactive:
                             raise UserError('Root is already installed or removal data remains. Run cytv interactively to review reinstallation. --yes does not approve replacing Root.')
+                        if installer.has_root_updater():
+                            from .recovery import remove_before_reinstall
+                            write('This removes Root, Root Updater, their services and startup hooks, plus any installed No-root Home, Helper and Updater.')
+                            write('Recovery records are retained for diagnostics. Other TV apps stay installed.')
+                            phase = args.command = 'uninstall'
+                            remove_before_reinstall(installer, ask, write)
+                            diagnostics.save_result(write, store, 'uninstall', profile, phase, tv_info, checks=checks.results)
+                            return 0
                         write.heading('Versions on the TV → versions in this installer')
                         for row in installer.version_summary():
                             write(row)
@@ -470,6 +484,20 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     if not args.yes and not prompts.confirm('Install these versions?', ask, write, default=True):
                         write('Cancelled. No TV changes were made.')
                         return 0
+                if profile['edition'] == 'no-root':
+                    phase = 'inspect-installation'
+                    while True:
+                        try:
+                            installer.preflight(install=True)
+                            break
+                        except UserError as error:
+                            if error.reason_code != 'helper-running' or args.non_interactive:
+                                raise
+                            write.heading('Stop Home Helper on the TV')
+                            write('Press Home three times within two seconds (older Helper: hold Home for two seconds), then release all buttons and wait for LG Home.')
+                            if not prompts.confirm('Try stopping Helper again?', ask, write, default=True):
+                                write('Cancelled. No TV changes were made.')
+                                return 0
                 if not resume:
                     installer.select_graphics()
                 phase = 'read-inventory'
@@ -492,7 +520,12 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                                     checks.update('pairing', 'pass')
                                     phase = 'read-inventory'
                                     checks.update('inventory', 'running', '')
-                                    inventory = tv.inventory((payload / 'fallback.png').read_bytes())
+                                    try:
+                                        inventory = tv.inventory((payload / 'fallback.png').read_bytes())
+                                    finally:
+                                        icon_counts = getattr(tv, 'icon_diagnostics', None)
+                                        if type(icon_counts) is dict:
+                                            tv_info['icon_inventory'] = icon_counts
                                     key = tv.key
                                     checks.update('inventory', 'pass')
                                 break
@@ -627,7 +660,10 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                                          'summary':'Clean Your TV removal is verified.','next_step':'Other TV apps stay installed.'})
                     write.heading('Clean Your TV removed')
                     write('Clean Your TV removed. Its apps, startup and Home-button control were removed.')
-                    write('Only ownership backups and minimal removal records were kept.')
+                    if result.get('temporary_files_retained'):
+                        write('Some temporary files were kept; they do not prevent reinstallation.')
+                    else:
+                        write('Only ownership backups and minimal removal records were kept.')
                 elif result.get('restart_required') is True:
                     from .recovery import removal_plan
                     removal_plan(write,store,profile,state='waiting')

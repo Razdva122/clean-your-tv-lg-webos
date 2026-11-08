@@ -7,7 +7,7 @@ Use your phone to install either **No-root** (Developer Mode) or **Root**
 or cloud service is needed. The APK includes the offline interface and TV packages;
 optional TV Python is a separate verified download.
 
-Published v1.12.0 uses Android 0.12.0 / versionCode 26. The unpublished v1.12.1 candidate selects Android 0.12.1 / versionCode 27; its exact signed-APK upgrade acceptance is pending. Update in place and keep app data, keys and recovery receipts.
+Published v1.12.1 uses Android 0.12.1 / versionCode 27, with [artifact-bound emulator acceptance](../docs/history/2026-11-08-release-1.12.1-publication-acceptance.md). The unpublished v1.13.0 candidate selects Android 0.13.0 / versionCode 28; its exact signed-APK upgrade acceptance is pending. Update in place and keep app data, keys and recovery receipts.
 [Download the signed APK](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest) ·
 [Full installation guide](../docs/INSTALL.md) · [Recovery](#recovery-and-private-data) ·
 [Report a problem](../docs/FEEDBACK.md)
@@ -24,8 +24,7 @@ Update over your existing APK without uninstalling or clearing data; the
 application ID and signing certificate are retained.
 
 The source interface supports thirteen languages, including Czech, and follows
-the phone language on first launch, with English fallback. Czech requires a new
-published APK; use English if it is absent from your current download. Tap the top-right language control to choose and
+the phone language on first launch, with English fallback. Published v1.12.1 includes Czech. Tap the top-right language control to choose and
 save another language. Root and No-root are equal options for different TV access.
 
 <a id="release-140"></a>
@@ -48,7 +47,7 @@ The [visible TV checklist](../docs/CLI.md#visible-tv-checks-unreleased) shows in
    a compatible TV loader/libc is still required. Working system Python skips this download.
    See [runtime limits](../docs/OPTIONAL-PYTHON.md). CYTV does not root or flash the TV.
 
-Older 32-bit phones and x86 devices are not included in this APK. The UI includes install, status and restore; it does not expose uninstall or automatic discovery. The full TV app inventory is imported automatically. Compatible whole-edition TV updates require separate computer-assisted System
+Older 32-bit phones and x86 devices are not included in this APK. The UI includes install, status and restore; explicit removal is available in Maintenance; automatic discovery is not exposed. The full TV app inventory is imported automatically. Compatible whole-edition TV updates require separate computer-assisted System
 Updater bootstrap with root/Homebrew services. Unrooted TVs use the installer.
 The APK does not expose that bootstrap action; see [updates](../root-edition/UPDATES.md).
 

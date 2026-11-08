@@ -57,33 +57,52 @@ def include_tuner(launchpoints, installed):
 class Inventory:
     def __init__(self, host, fallback, fetch=fetch_icon):
         self.host, self.fallback, self.fetch = host, fallback, fetch
+        self.icon_diagnostics = {'schema': 1, 'status': 'reading', **dict.fromkeys(
+            ('apps', 'embedded', 'fallback', 'missing_uri', 'rejected_uri', 'fetch_failed', 'invalid_image'), 0)}
 
     def icon(self, app):
-        data, kind = self.fallback, 'png'
+        data, kind, has_uri = self.fallback, 'png', False
+        counts = self.icon_diagnostics
         for key in ('extraLargeIcon', 'largeIcon', 'mediumLargeIcon', 'icon', 'miniicon', 'favicon'):
+            candidate = app.get(key)
+            if candidate is None or candidate == '':
+                continue
+            has_uri = True
             try:
-                candidate = app.get(key, '')
                 if not isinstance(candidate, str):
-                    continue
+                    raise ValueError('Invalid icon URI')
                 url = urllib.parse.urlsplit(candidate)
                 if url.scheme not in ('http', 'https') or url.hostname != self.host or url.username or url.password:
-                    continue
+                    raise ValueError('Invalid icon URI')
                 if url.port not in (None, 80, 443, 3000, 3001):
-                    continue
-                data = self.fetch(url.geturl())
-                if data.startswith(b'\xff\xd8'):
-                    kind = 'jpeg'
-                elif data[:4] == b'RIFF' and data[8:12] == b'WEBP':
-                    kind = 'webp'
-                elif not data.startswith(b'\x89PNG\r\n\x1a\n'):
-                    data = self.fallback
-                    continue
-                break
-            except (OSError, ValueError):
+                    raise ValueError('Invalid icon port')
+            except ValueError:
+                counts['rejected_uri'] += 1
                 continue
+            try:
+                data = self.fetch(url.geturl())
+            except (OSError, ValueError):
+                counts['fetch_failed'] += 1
+                continue
+            if data.startswith(b'\xff\xd8'):
+                kind = 'jpeg'
+            elif data[:4] == b'RIFF' and data[8:12] == b'WEBP':
+                kind = 'webp'
+            elif not data.startswith(b'\x89PNG\r\n\x1a\n'):
+                counts['invalid_image'] += 1
+                data = self.fallback
+                continue
+            counts['embedded'] += 1
+            break
+        else:
+            counts['fallback'] += 1
+            if not has_uri:
+                counts['missing_uri'] += 1
         return 'data:image/' + kind + ';base64,' + base64.b64encode(data).decode()
 
     def build(self, launchpoints, inputs):
+        self.icon_diagnostics.update({key: 0 for key in self.icon_diagnostics if key not in ('schema', 'status')},
+                                     status='reading')
         if not isinstance(launchpoints, list) or not isinstance(inputs, list) or len(launchpoints) > 300 or len(inputs) > 100:
             raise ValueError('Unexpected TV inventory')
         apps, seen = [], set()
@@ -96,6 +115,7 @@ class Inventory:
             if appid in seen:
                 continue
             seen.add(appid)
+            self.icon_diagnostics['apps'] += 1
             apps.append({'id': appid, 'title': title, 'icon': self.icon(app),
                          'iconColor': str(app.get('iconColor') or app.get('bgColor') or '')[:64]})
         devices = []
@@ -104,6 +124,7 @@ class Inventory:
                 continue
             label = device.get('label') or device.get('id') or device['appId']
             devices.append({'appId': device['appId'][:256], 'label': str(label)[:256]})
+        self.icon_diagnostics['status'] = 'complete'
         return {'apps': apps, 'inputs': devices}
 
 
@@ -182,6 +203,7 @@ class SSAP:
             raise UserError('Reading TV applications timed out. Keep the TV on and check the connection.') from exc
 
     def inventory(self, fallback):
+        self.icon_diagnostics = {'schema': 1, 'status': 'unavailable'}
         points = self.call('ssap://com.webos.applicationManager/listLaunchPoints').get('launchPoints')
         inputs = self.call('ssap://tv/getExternalInputList').get('devices')
         # listLaunchPoints can omit the installed broadcast tuner entirely.
@@ -194,4 +216,6 @@ class SSAP:
             installed = None
         if isinstance(installed, dict) and installed.get('returnValue') is not False:
             points = include_tuner(points, installed.get('apps'))
-        return Inventory(self.host, fallback).build(points, inputs)
+        inventory = Inventory(self.host, fallback)
+        self.icon_diagnostics = inventory.icon_diagnostics
+        return inventory.build(points, inputs)

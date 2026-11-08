@@ -40,6 +40,7 @@ for (const mutate of [
   (p) => (p.inventory.apps[0].icon = 'data:image/png;base64,YQ='),
   (p) => (p.settings['tvhome.order'] = 'broken'),
   (p) => (p.settings['tvhome.order'] = '{"dock":"","ids":["same","same"]}'),
+  (p) => (p.inventory.apps[0].iconColor = ''),
   (p) => (p.inventory.apps[0].iconColor = ['#123456'])
 ]) {
   const p = JSON.parse(JSON.stringify(profile));
@@ -514,6 +515,26 @@ function harness({
     '{"dock":"app.one","ids":[]}'
   );
   const packaged = JSON.parse(JSON.stringify(profile.inventory));
+  // Fresh discovery commonly supplies an empty optional color. Capture must
+  // omit noncanonical cosmetic metadata without weakening stored-profile reads.
+  for (const color of ['', 'red', '#123', '#12GG56', null, ['#123456']]) {
+    const discovered = JSON.parse(JSON.stringify(profile.inventory));
+    discovered.apps[0].iconColor = color;
+    const fresh = harness({ packaged: discovered });
+    await tick();
+    const captured = await fresh.window.RootProfile.capture({ system: true });
+    assert(!Object.hasOwn(captured.inventory.apps[0], 'iconColor'));
+    assert.deepStrictEqual(fresh.window.TV_APPS.apps[0].iconColor, color);
+    data.validate(captured);
+  }
+  const colored = JSON.parse(JSON.stringify(profile.inventory));
+  colored.apps[0].iconColor = '#12aBcF';
+  const validColor = harness({ packaged: colored });
+  await tick();
+  assert.strictEqual(
+    (await validColor.window.RootProfile.capture()).inventory.apps[0].iconColor,
+    '#12aBcF'
+  );
   packaged.apps[0].icon = 'icons/one.png';
   h = harness({ packaged });
   await tick();

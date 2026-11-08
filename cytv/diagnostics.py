@@ -50,7 +50,7 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
     if removal and removal.get('recovery_protocol')=='clean-removal-v1':
         from .recovery_state import removal_summary
         report['removal']=removal_summary(removal)
-    from .failure_help import for_error, report_summary
+    from .failure_help import for_error, report_summary, network_failure_causes
     help = for_error(error, phase, profile, pending)
     if help:
         report['guidance'] = report_summary(help)
@@ -62,6 +62,7 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
                   'BadHostKeyException': 'ssh-identity-changed', 'ImportError': 'host-runtime'}[type(error).__name__]
     if phase == 'ssh-connect' and help and help['code'] in ('ssh-unreachable', 'ssh-access-denied', 'ssh-refused', 'ssh-timeout'):
         reason = help['code']
+        report['connection'] = {'protocol': 'ssh', 'causes': network_failure_causes(error)}
     report['reason_code'] = context.choice(reason, context.REASONS)
     if status is not None:
         report['status'] = context.status_summary(status)

@@ -369,6 +369,22 @@ def provision(bundle,baseline,state=STATE,installed=INSTALLED,base=BASE,hook=HOO
     return finish_registration(bundle,baseline,state,installed,base,hook,refresh)
 
 
+def restart_registered_launcher(edition,rpc=None):
+    """New LS2 client grants require a new launcher process, not a page reload."""
+    if edition not in ('root','no-root'):raise ValueError('Unknown launcher edition')
+    if rpc is None:
+        from system_updater.support.luna import call
+        rpc=call
+    app=APPS['root' if edition=='root' else 'home']
+    for method in ('closeByAppId','launch'):
+        try:reply=rpc('luna://com.webos.applicationManager/'+method,{'id':app})
+        except RuntimeError as error:
+            if method=='closeByAppId' and getattr(error,'stopped_launcher',None)==app:continue
+            raise
+        if not isinstance(reply,dict) or reply.get('returnValue') is not True:
+            raise ValueError('Launcher '+method+' rejected after supervisor registration')
+
+
 def finish_registration(bundle,baseline,state=STATE,installed=INSTALLED,base=BASE,hook=HOOK,refresh=None):
     require_normal_root()
     bundle=Path(bundle);baseline=Path(baseline);state=Path(state);code=state/'code'
@@ -413,6 +429,7 @@ def finish_registration(bundle,baseline,state=STATE,installed=INSTALLED,base=BAS
         executable=next((p for p in (Path('/usr/bin/ls-control'),Path('/usr/sbin/ls-control')) if p.is_file()),None)
         if executable is None:raise ValueError('ls-control unavailable')
         subprocess.run([str(executable),'scan-services'],check=True,timeout=15,stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+        restart_registered_launcher(current['edition'])
     else:refresh()
     require_legacy_idle()
     for item in current['components']:

@@ -2,7 +2,9 @@
 
 Clean Your TV je vaše vlastní domovská obrazovka pro LG webOS: aplikace ve vašem pořadí, bez sponzorovaných řádků v této nabídce. Instalujte z počítače nebo telefonu s Androidem; po nastavení může být počítač vypnutý.
 
-**v1.12.1 — Příští verze (nevydaná):** Chyby spojení rozliší odepřený přístup k síti, odmítnutí portem SSH a vypršení času. **Znovu prověřit spojení** spustí diagnostiku bez instalace balíčků; **Změnit připojení** prověří upravené údaje. V macOS tlačítko **Otevřít Nastavení systému** pomůže najít přístup k místní síti; může se zobrazit název starší kopie. Nedokončené operace zachovají svůj postup obnovy.
+**Vydáno ve v1.12.1:** Chyby spojení rozlišují odepřený přístup k síti, odmítnutí portem SSH a vypršení času. **Znovu prověřit spojení** spustí diagnostiku bez instalace balíčků; **Změnit připojení** prověří upravené údaje. V macOS tlačítko **Otevřít Nastavení systému** pomůže najít přístup k místní síti; může se zobrazit název starší kopie. Nedokončené operace zachovají svůj postup obnovy.
+
+Nevydaná v1.13.0 / Helper 0.8.0: krátké Home na IR ovladači otevře Clean asi za 700 ms; LG Home může krátce probliknout. Podržení Home zůstává webOS. Přístup ke vstupu v běžném Developer Mode není ověřen; neměňte oprávnění. Trojí Home a výslovné spuštění po zastavení zůstávají.
 
 <a id="kandidát-unreleased-starší-nodejs-v-tv"></a>
 
@@ -68,11 +70,15 @@ V příštím, dosud nevydaném kandidátovi pokračuje instalace Root s upozorn
 
 ## 6. Každodenní ovládání
 
+Dosud nevydaná podpora IR v No-root: uvolnění Home po krátkém stisku naplánuje Clean přibližně za 700 ms; nejprve může probliknout LG Home. Podržení Home zůstává webOS a trojí stisk stále zastaví Helper. Přístup v běžném Developer Mode není ověřen; neměňte oprávnění vstupních zařízení.
+
 Šipky vybírají aplikaci, **OK** ji otevře. Podržením OK můžete měnit pořadí. Krátké **Zpět** zachová navigaci aplikace. Krátké **Home** otevře Clean Your TV při zapnutém ovládání Home. Podržení Zpět po dobu 1,2 sekundy otevře LG Home jednou, bez změny uložených nastavení.
 
 **Stiskněte Home třikrát během dvou sekund**, mezi stisky tlačítko pusťte. Otevře se LG Home a ovládání Home se zastaví. Nastavení zůstanou zachována.
 
 Pro opětovné zapnutí No-root otevřete **Home Helper**, zvolte spuštění Helperu a potvrďte. Pro Root zapněte **Změnit Home** v nastavení Home. **Otevřít LG Home** otevře původní prostředí jen jednou; pro trvalé používání LG Home vypněte Změnit Home. Nespouštějte oba ovladače Home současně. Při opakované chybě nechte LG Home aktivní.
+
+Aktualizace znovu nespustí zastavený No-root Helper. Obnovte jej výslovně výše uvedeným postupem; ručně nemažte značky zastavení.
 
 ## Potřebujete pomoc?
 
@@ -94,7 +100,11 @@ Ve vydané verzi v1.11.0 a novějších vyberte v Údržbě **Odinstalovat Clean
 
 Na výzvu odpojte TV od napájení, znovu připojte, počkejte na síť a vyberte **Zkusit znovu**. Pohotovost nebo Quick Start není úplný restart; CYTV TV automaticky nerestartuje. Při ztrátě spojení je zkontrolujte a opakujte stejný cíl odebrání bez dalšího průvodce obnovou. Při odmítnutí přístupu použijte požadované připojení Root; pokud je TV zaneprázdněn, počkejte a zkuste znovu. Úspěch se zobrazí až po ověření závěrečného úklidu. Zachovejte klíče a původní zprávy. Nouzové ovládání a souhlas se sdílením výše platí dál.
 
+**Příští kandidát:** po ověřeném úplném odebrání lze znovu nainstalovat Root nebo No-root. Minimální neaktivní záznamy brání pokračování starých operací; nemažte je ručně. Pokud odebrání nebo jeho kontroly nejsou dokončené, nejprve dokončete obnovu.
+
 Od v1.11.0 je po neúspěšné nebo přerušené instalaci přímo dostupná obnova. Pokud No-root nemůže pokračovat, potvrďte jednou úplné odebrání. Při dočasné ztrátě spojení nebo zaneprázdněném procesu CYTV proběhnou nejvýše tři pokusy. Je-li nutný Root, zvolte **Připojit přes Root** pro stejnou TV; ověřený úklid Root dokončí i její zablokované odebrání No-root. Po chybě aktivace Root se CYTV pokusí obnovit a ověřit LG Home bez opakované aktivace. Zrušení s nedokončenou prací zachová zprávu a kroky obnovy. Nouzové zastavení zůstane zachováno.
+
+> **Dosud nevydaná vylepšení:** Po chybě připojení během odstranění otevřete podrobnosti, zkontrolujte síť nebo vyberte existující SSH klíč Root a zkuste to znovu. Adresa, edice, port a ověření klíče TV zůstávají pevné. No-root kontroluje Helper před párováním: zastavte jej a potvrďte opětovnou kontrolu ve stejném průvodci. Restart lze přeskočit pouze u ověřeně prázdné TV bez nedokončené instalace; po skutečném odstranění proveďte požadovaný restart. Zbytky starého Root Updater vedou před novou instalací k samostatně potvrzenému úplnému odstranění. Při selhání služby vstupů pokračuje bezpečné odstranění balíčků; úspěch stále vyžaduje ověření odstranění zástupce.
 
 <!-- Legacy anchors retained for existing links. -->
 <a id="automatické-rozlišení-grafiky-kandidát"></a>

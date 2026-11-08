@@ -17,10 +17,31 @@ from .errors import (UserError, LocalRecoveryError, TVCommandError, TV_STORAGE_F
 
 PROTOCOL = 'no-root-original-stream-v1'
 ROOT = '/tmp/.cytv-installer'
+JAIL_ROOT = '/.cytv-installer'
 PUBLIC_ROOT = '/media/developer/temp'
 ROOT_SSH_PRIVATE = '/tmp/.cytv-installer-root'
 ROOT_SSH_PUBLIC = '/var/lib/clean-your-tv-installer'
 APPS = ('com.local.nativehome', 'com.gathin.tvhome')
+
+# Read-only selection before pending. Never rediscover a root for recovery.
+STORAGE_SELECT = r'''
+(function(){
+'use strict';
+var fs=require('fs'),path=require('path'),input=JSON.parse(process.argv[process.argv.length-1]);
+var root=input.root,uid=process.getuid();
+function present(name){try{fs.lstatSync(name);return true;}catch(e){if(e.code==='ENOENT')return false;throw e;}}
+var legacy=present(root),jail=present(input.alternate_root);
+if(legacy&&jail)throw Error('foreign-reservation');
+if(!legacy){
+ var parent=fs.lstatSync(path.dirname(input.alternate_root));
+ var safe=uid!==0&&parent.isDirectory()&&!parent.isSymbolicLink()&&parent.uid===uid&&
+    (parent.mode&448)===448&&!(parent.mode&18);
+ if(jail&&!safe)throw Error('unsafe-directory');
+ if(safe)root=input.alternate_root;
+}
+process.stdout.write(JSON.stringify({operation:input.plan.operation,root:root}));
+}());
+'''
 
 PROGRAM = r'''
 (function () {
@@ -492,7 +513,7 @@ def source_for(root_ssh):
     return ROOT_PROGRAM if root_ssh else PROGRAM
 
 
-def make_plan(operation, diagnostic_id, action, artifacts, versions, public_root=PUBLIC_ROOT, configuration_sha256=None, root_ssh=False):
+def make_plan(operation, diagnostic_id, action, artifacts, versions, public_root=PUBLIC_ROOT, configuration_sha256=None, root_ssh=False, private_root=None, root_handoff=None):
     if root_ssh:
         public_root = ROOT_SSH_PUBLIC
     slots = []
@@ -511,7 +532,26 @@ def make_plan(operation, diagnostic_id, action, artifacts, versions, public_root
                 configuration_sha256=configuration_sha256 or hashlib.sha256(b'{}').hexdigest())
     if root_ssh:
         plan['connection'] = 'root-ssh'
+    if private_root is not None:
+        if root_ssh or type(private_root) is not str or private_root not in (ROOT, JAIL_ROOT):
+            refuse()
+        plan['private_root'] = private_root
+    if root_handoff is not None:
+        from .root_no_root_handoff import validate
+        if not root_ssh:refuse()
+        plan['root_handoff']=validate(root_handoff)
     return plan
+
+
+def private_root(plan):
+    if plan.get('connection') == 'root-ssh':
+        if 'private_root' in plan:
+            refuse()
+        return ROOT_SSH_PRIVATE
+    root = plan.get('private_root', ROOT)
+    if type(root) is not str or root not in (ROOT, JAIL_ROOT):
+        refuse()
+    return root
 
 
 def observation_error(command, failure, error=None):
@@ -525,12 +565,17 @@ def observation_error(command, failure, error=None):
 
 
 def invoke(remote, plan, command, slot=None, source=None, proof=None, data=None):
-    request = dict(root=ROOT, public_root=PUBLIC_ROOT, plan=plan, command=command, slot=slot)
+    request = dict(root=private_root(plan), public_root=PUBLIC_ROOT, plan=plan, command=command, slot=slot)
     if plan.get('connection') == 'root-ssh':
         if not getattr(remote, 'root', False):
             refuse()
         request.update(root=ROOT_SSH_PRIVATE, public_root=ROOT_SSH_PUBLIC, sender='/usr/bin/luna-send')
     program_source = source_for(plan.get('connection') == 'root-ssh')
+    if command == 'storage-select':
+        if plan.get('connection') == 'root-ssh' or 'private_root' in plan:
+            refuse()
+        request['alternate_root'] = JAIL_ROOT
+        program_source = STORAGE_SELECT
     if command == 'prepare':
         request['source'] = program_source if source is None else source
     if proof is not None:request['proof']=proof
@@ -563,9 +608,16 @@ def invoke(remote, plan, command, slot=None, source=None, proof=None, data=None)
 """.replace('NAMES', canonical(OBSERVER_EXCEPTION_NAMES)).replace('CODES', canonical(OBSERVER_EXCEPTION_CODES)).replace('REASONS', canonical(OBSERVER_REASONS)).replace('FILESYSTEM_OPERATIONS', canonical(OBSERVER_FILESYSTEM_OPERATIONS))
     try:
         # POSIX unset avoids depending on the TV env utility supporting -u.
-        raw = remote.run('unset NODE_OPTIONS NODE_PATH && /usr/bin/node -e ' +
-                         shlex.quote(program) + ' ' + shlex.quote(canonical(request)),
-                         data=data, timeout=100 if data is not None else 30)
+        if 'root_handoff' in plan:
+            from .root_no_root_handoff import call
+            loaded=getattr(remote,'_cytv_root_handoff_support',None)
+            if not loaded:refuse()
+            raw=call(remote,loaded,'storage' if command=='storage-check' else 'observer',
+                     plan=plan,source=program_source,request=request,data=data)
+        else:
+            raw = remote.run('unset NODE_OPTIONS NODE_PATH && /usr/bin/node -e ' +
+                             shlex.quote(program) + ' ' + shlex.quote(canonical(request)),
+                             data=data, timeout=100 if data is not None else 30)
     except UnicodeError:
         raise observation_error(command, 'invalid-json') from None
     except (OSError, RuntimeError, ValueError, KeyError, TypeError) as error:
@@ -604,19 +656,32 @@ def begin(installer, action, artifacts, versions, expected, configuration):
     installer.store.check_capsule_storage(installer.profile, operation)
     # No package request or durable pending receipt until storage is usable.
     root_ssh = installer.profile.get('connection') == 'root-ssh'
-    check_plan = make_plan(operation, uuid.uuid4().hex, action, artifacts, versions, PUBLIC_ROOT, root_ssh=root_ssh)
+    handoff=getattr(installer,'_root_handoff',None)
+    check_plan = make_plan(operation, uuid.uuid4().hex, action, artifacts, versions, PUBLIC_ROOT, root_ssh=root_ssh,root_handoff=handoff)
+    selected = None
+    if not root_ssh:
+        selected = invoke(installer.remote, check_plan, 'storage-select').get('root')
+        if type(selected) is not str or selected not in (ROOT, JAIL_ROOT):
+            refuse()
+        if selected == ROOT:
+            selected = None  # Preserve legacy plans and capsule bindings.
+        else:
+            check_plan['private_root'] = selected
     invoke(installer.remote, check_plan, 'storage-check')
     installer.store.begin(installer.profile, 'install' if action == 'install' else 'uninstall',
                           recovery_protocol=PROTOCOL, observer_operation=operation,
                           expected=expected, versions=versions)
     pending = installer.store.pending(installer.profile)
     config_hash=hashlib.sha256(canonical({name:hashlib.sha256(raw).hexdigest() for name,raw in configuration.items()}).encode()).hexdigest()
-    plan = make_plan(operation, pending['diagnostic_id'], action, artifacts, versions, PUBLIC_ROOT,config_hash,root_ssh=root_ssh)
+    plan = make_plan(operation, pending['diagnostic_id'], action, artifacts, versions, PUBLIC_ROOT,config_hash,root_ssh=root_ssh,private_root=selected,root_handoff=handoff)
     capsule = dict(schema=1, profile=installer.profile, plan=plan, source=source_for(root_ssh), expected=expected,
                    artifacts={name: base64.b64encode(raw).decode() for name, raw in artifacts.items()},
                    configuration={name: raw.decode('utf8') for name, raw in configuration.items()})
     digest = installer.store.save_capsule(installer.profile, operation, capsule)
     installer.store.checkpoint(installer.profile, capsule_sha256=digest)
+    if handoff:
+        from .root_no_root_handoff import call
+        call(installer.remote,installer.remote._cytv_root_handoff_support,'claim',plan=plan)
     invoke(installer.remote, plan, 'prepare')
     stage_remaining(installer,capsule)
     return installer.store.pending(installer.profile)
@@ -653,10 +718,13 @@ def capsule(installer, pending):
         artifacts = {name: base64.b64decode(raw, validate=True) for name, raw in value['artifacts'].items()}
         config_hash=hashlib.sha256(canonical({name:hashlib.sha256(raw.encode()).hexdigest() for name,raw in value['configuration'].items()}).encode()).hexdigest()
         rebuilt = make_plan(plan['operation'], plan['diagnostic_id'], plan['action'], artifacts, pending['versions'], PUBLIC_ROOT,config_hash,
-                            root_ssh=installer.profile.get('connection') == 'root-ssh')
+                            root_ssh=installer.profile.get('connection') == 'root-ssh', private_root=plan.get('private_root'),root_handoff=plan.get('root_handoff'))
         rebuilt['source_sha256'] = plan['source_sha256']
         if rebuilt != plan:
             refuse()
+        if 'root_handoff' in plan:
+            from .root_no_root_handoff import support
+            installer.remote._cytv_root_handoff_support=support(installer)
         if plan['action'] == 'install':
             from .operations import HELPER_STATE
             if set(value['configuration']) != {'ssap-key.json', 'apps.json'}:
@@ -789,7 +857,13 @@ def snapshot(installer, value):
 
 
 def observe(installer, pending):
-    value=capsule(installer,pending); result=snapshot(installer,value)
+    value=capsule(installer,pending)
+    if 'root_handoff' in value['plan']:
+        from .root_no_root_handoff import continuation
+        if continuation(installer,value['plan']) in ('unclaimed','unprepared'):
+            return dict(device={'observer':{'operation':value['plan']['operation']}},pending=pending,
+                        reconciled=None,can_resume_root_setup=False,no_root_ready=True,no_root_reason='original-work-remaining')
+    result=snapshot(installer,value)
     ready=True
     reason='original-work-remaining'
     if result.get('reservation') not in ('active','prepared','closed'):
@@ -877,7 +951,7 @@ def configure(installer,value):
         installer.store.checkpoint(installer.profile,configuration_stage='eim-submitted')
         disposition='verified'
         try:
-            installer.remote.luna('com.webos.service.eim/addDevice',{'appId':HOME,'pigImage':'','mvpdIcon':''})
+            configuration_luna(installer,plan,'com.webos.service.eim/addDevice',{'appId':HOME,'pigImage':'','mvpdIcon':''})
             installer.save_eim(True)
         except TVRejected:
             installer.save_eim(installer.read_eim())
@@ -894,17 +968,33 @@ def configure(installer,value):
         installer.store.checkpoint(installer.profile,configuration_stage='launch-submitted')
         installer.outcome.launch_submitted()
         # Automatic native entry preserves a stop arriving after the host guard.
-        installer.remote.luna('com.webos.applicationManager/launch',{'id':HELPER,'params':{'nativeHomeAuto':True}})
+        configuration_luna(installer,plan,'com.webos.applicationManager/launch',{'id':HELPER,'params':{'nativeHomeAuto':True}})
         installer.outcome.launch_accepted()
         finish_step(installer,plan,'launch',token)
     installer.store.checkpoint(installer.profile,configuration_stage='complete')
+
+
+def configuration_luna(installer,plan,uri,payload):
+    if 'root_handoff' not in plan:return installer.remote.luna(uri,payload)
+    from .root_no_root_handoff import call
+    from .transport import terminal_reply
+    raw=call(installer.remote,installer.remote._cytv_root_handoff_support,'luna',plan=plan,uri=uri,payload=payload)
+    value=json.loads(raw)
+    if not terminal_reply(value,uri=uri):refuse()
+    return value
 
 
 def continue_operation(installer, expected_pending):
     pending=installer.store.pending(installer.profile)
     if pending!=expected_pending:
         refuse()
-    value=capsule(installer,pending);plan=value['plan'];result=snapshot(installer,value)
+    value=capsule(installer,pending);plan=value['plan']
+    if 'root_handoff' in plan:
+        from .root_no_root_handoff import call,continuation
+        call(installer.remote,installer.remote._cytv_root_handoff_support,'claim',plan=plan)
+        if continuation(installer,plan)=='unprepared':
+            invoke(installer.remote,plan,'prepare',source=value['source'])
+    result=snapshot(installer,value)
     if installer.store.pending(installer.profile)!=pending:
         refuse()
     if not result.get('closed'):

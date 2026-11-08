@@ -250,6 +250,38 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
     console.log(
       'PASS thirteen TV languages, app name preservation, inline remote navigation, persisted override and automatic reset'
     );
+    for (const edition of ['launcher', 'root-launcher']) {
+      const context = await browser.newContext({
+        viewport: { width: 1280, height: 720 },
+        locale: 'ru'
+      });
+      await context.addInitScript(() => {
+        window.Intl = undefined;
+        Date.prototype.toLocaleTimeString = function () {
+          return '10:57:36 PM GMT+04:00';
+        };
+      });
+      const page = await context.newPage();
+      await page.goto(base + '/' + edition + '/index.html');
+      await page.locator('#tiles .add-app').waitFor();
+      await page.evaluate(() => document.fonts.ready);
+      assert.match(await page.locator('#clock').textContent(), /^\d{2}:\d{2}$/);
+      assert.equal(await page.locator('#ampm').textContent(), '');
+      assert(
+        await page.evaluate(() => {
+          const clock = document
+            .getElementById('clock')
+            .getBoundingClientRect();
+          const buttons = document
+            .getElementById('topButtons')
+            .getBoundingClientRect();
+          return clock.right <= buttons.left;
+        }),
+        edition + ' legacy clock must not overlap header shortcuts'
+      );
+      await context.close();
+    }
+    console.log('PASS compact clock without Intl in both 720p Home editions');
   } finally {
     await browser.close();
   }

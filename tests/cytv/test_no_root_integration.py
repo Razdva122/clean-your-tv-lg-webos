@@ -59,7 +59,7 @@ sys.stdin.read()
         if '-e' in words and '/usr/bin/node' in words:
             code=words[words.index('-e')+1]
             argument=words[-1]
-            if observer.PROGRAM in code or observer.ROOT_PROGRAM in code:
+            if observer.PROGRAM in code or observer.ROOT_PROGRAM in code or observer.STORAGE_SELECT in code:
                 request=json.loads(argument)
                 request['sender']=str(self.sender)
                 request['timeout']=3000
@@ -120,6 +120,92 @@ class OriginalOperationIntegration(unittest.TestCase):
             patcher=patch.object(operations,name,value);patcher.start();self.addCleanup(patcher.stop)
         self.installer=operations.Installer(self.remote,self.store,self.profile,fixture.payload,fixture.manifest,lambda *_:None)
         self.inventory=fixture.inventory
+
+    @unittest.skipIf(getattr(os,'getuid',lambda:0)()==0,'Requires an unprivileged Developer Mode user')
+    def test_execute_only_tmp_uses_owned_jail_storage_and_resumes_pinned_operation(self):
+        jail=self.root/'jail';jail.mkdir(mode=0o755)
+        blocked=self.root/'blocked-tmp';blocked.mkdir(mode=0o111)
+        self.addCleanup(blocked.chmod,0o755)
+        private=str(jail/'.cytv-installer')
+        self.remote.cut=True
+        with patch.object(observer,'ROOT',str(blocked/'.cytv-installer')), \
+             patch.object(observer,'JAIL_ROOT',private,create=True):
+            with self.assertRaises(RuntimeError):self.installer.install(self.inventory,'original-secret')
+            pending=self.store.pending(self.profile)
+            self.assertIsNotNone(pending)
+            saved=observer.capsule(self.installer,pending)
+            self.assertEqual(saved['plan']['private_root'],private)
+            self.assertEqual(Path(private).stat().st_mode&0o777,0o700)
+            self.assertEqual((self.root/'requests').read_text().splitlines(),[operations.HELPER])
+            # Continuation must use the original owned leaf even when its
+            # parent loses write access, without selecting another root.
+            jail.chmod(0o555);self.addCleanup(jail.chmod,0o755)
+            before=len(self.remote.calls)
+            self.installer.continue_no_root(pending)
+            self.assertFalse(any(call[:2]==('observer','storage-select') for call in self.remote.calls[before:]))
+            self.assertIsNone(self.store.pending(self.profile))
+            self.assertEqual((self.root/'requests').read_text().splitlines(),list(observer.APPS))
+            self.assertTrue((Path(private)/'operations'/pending['observer_operation']/'closed.json').exists())
+            self.assertEqual(list((self.root/'public').iterdir()),[])
+
+    def test_existing_legacy_storage_is_not_bypassed_for_a_new_jail_root(self):
+        (self.root/'private').mkdir(mode=0o755)  # Unsafe private leaf; never repair it.
+        jail=self.root/'jail';jail.mkdir(mode=0o755)
+        with patch.object(observer,'JAIL_ROOT',str(jail/'.cytv-installer'),create=True):
+            with self.assertRaises(RuntimeError):self.installer.install(self.inventory,'original-secret')
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertFalse((jail/'.cytv-installer').exists())
+        self.assertEqual((self.root/'private').stat().st_mode&0o777,0o755)
+        self.assertFalse((self.root/'requests').exists())
+
+    def test_two_existing_private_roots_refuse_setup_without_repair_or_submission(self):
+        (self.root/'private').mkdir(mode=0o700)
+        jail=self.root/'jail';jail.mkdir(mode=0o755)
+        alternative=jail/'.cytv-installer';alternative.mkdir(mode=0o700)
+        evidence=alternative/'retained';evidence.write_bytes(b'keep')
+        with patch.object(observer,'JAIL_ROOT',str(alternative),create=True):
+            with self.assertRaises(RuntimeError):self.installer.install(self.inventory,'original-secret')
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertFalse((self.root/'requests').exists())
+        self.assertEqual(evidence.read_bytes(),b'keep')
+
+    def test_legacy_capsule_stays_bound_and_foreign_private_root_is_rejected(self):
+        self.remote.cut=True
+        with self.assertRaises(RuntimeError):self.installer.install(self.inventory,'original-secret')
+        pending=self.store.pending(self.profile)
+        original=observer.capsule(self.installer,pending)
+        self.assertNotIn('private_root',original['plan'])
+        self.assertEqual(observer.private_root(original['plan']),str(self.root/'private'))
+        before=len(self.remote.calls)
+        for root in ('/media/developer/temp/foreign',None,{},[]):
+            changed=dict(original,plan=dict(original['plan'],private_root=root))
+            with self.subTest(root=root), patch.object(self.store,'read_capsule',return_value=changed):
+                with self.assertRaises(RuntimeError):observer.capsule(self.installer,pending)
+        self.assertEqual(len(self.remote.calls),before)
+        self.assertEqual((self.root/'requests').read_text().splitlines(),[operations.HELPER])
+        self.assertEqual(self.store.pending(self.profile),pending)
+
+    def test_zero_tmp_budget_still_stops_before_private_storage_selection(self):
+        # A writable private evidence root does not establish vendor scratch
+        # capacity. Preserve the earlier per-filesystem admission boundary.
+        jail=self.root/'jail';jail.mkdir(mode=0o755)
+        private=jail/'.cytv-installer';private.mkdir(mode=0o700)
+        original=self.remote.run
+        def run(command,**kwargs):
+            if command=='LC_ALL=C df -Pk /tmp':
+                return 'Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/tmp 1024 1024 0 100% /tmp'
+            if command=='LC_ALL=C df -Pk /media/developer':
+                return 'Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/apps 10000000 0 10000000 0% /media/developer'
+            return original(command,**kwargs)
+        self.remote.run=run
+        with patch.object(observer,'JAIL_ROOT',str(private)):
+            with self.assertRaises(RuntimeError) as caught:self.installer.install(self.inventory,'original-secret')
+        self.assertEqual(caught.exception.reason_code,'tv-storage-full')
+        self.assertIn('(/tmp)',str(caught.exception))
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertFalse(any(call[:2]==('observer','storage-select') for call in self.remote.calls))
+        self.assertFalse((self.root/'requests').exists())
+        self.assertEqual(list(private.iterdir()),[])
 
     def test_root_ssh_observer_install_and_remove_keep_original_receipts(self):
         # Host fixture substitutes UID and fixed TV paths only. Run the actual

@@ -21,11 +21,21 @@ APPS = ('com.cleanyourtv.root.preview', 'com.cleanyourtv.root.updater',
         'com.cleanyourtv.system.updater', 'com.cleanyourtv.updater',
         'com.local.nativehome', 'com.gathin.tvhome')
 # Presence (including dangling links) requires the original routing backend.
-ROUTING_EVIDENCE=('profile-trial.json','persistent-intent.json','persistent-binding.json',
+ROUTING_EVIDENCE=('profile-trial.json','persistent-intent.json','persistent-binding.json','boot-continuation.json',
                   'profile-candidate.stage','home-backend.json','c1-gate','c1-keyfilter')
 
 PRE_ACTIVATION=('prepared','install-submitting','install-accepted','install-observed','payload-verified','personalization-complete')+tuple(
     'provision-'+step+'-'+phase for step in ('apply','resume_pending','refresh','finalize') for phase in ('starting','complete'))
+
+
+# Diagnostic context only; never used for recovery admission or progress.
+@contextmanager
+def cleanup_step(name):
+    try:
+        yield
+    except Exception as error:
+        error.cleanup_step=name
+        raise
 
 
 def boot_format(value):
@@ -140,6 +150,8 @@ def retire_tree(path, allowed, keep=(), uid=0, parent_uid=None):
 
 
 def routes(device, record=None):
+    if record is not None and device.routing_untouched(record):
+        return {'mode':'never-applied'}
     settings=device.rpc('com.webos.settingsservice/getSystemSettings',{'category':'general','keys':['defaultApps']})
     home=settings.get('settings',{}).get('defaultApps',{}).get('home')
     if settings.get('returnValue') is not True or not isinstance(home,str) or not home or home in APPS:

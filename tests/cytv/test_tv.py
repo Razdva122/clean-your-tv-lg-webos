@@ -9,6 +9,44 @@ from cytv.errors import TVNotReady, TVConnectionError
 
 
 class InventoryTests(unittest.TestCase):
+    def test_icon_diagnostics_count_causes_without_retaining_metadata(self):
+        png = b'\x89PNG\r\n\x1a\noriginal'
+        fetched = []
+        def fetch(url):
+            fetched.append(url)
+            if '/failed' in url: raise OSError('PRIVATE error and address')
+            return b'not-an-image' if '/invalid' in url else png
+        inventory = Inventory('192.0.2.10', b'fallback', fetch)
+        urls = [None, ['PRIVATE'], 'https://PRIVATE/icon',
+                'http://192.0.2.10/failed?PRIVATE', 'http://192.0.2.10/invalid',
+                'http://192.0.2.10/good', 'http://192.0.2.10/good']
+        apps = [dict(id='PRIVATE-' + str(i), title='PRIVATE', icon=url)
+                for i, url in enumerate(urls)]
+        apps[-1]['largeIcon'] = 'http://192.0.2.10/failed'
+        result = inventory.build(apps, [])
+        self.assertEqual(len(result['apps']), 7)
+        self.assertEqual(len(fetched), 5)
+        self.assertEqual(getattr(inventory, 'icon_diagnostics', None), {
+            'schema': 1, 'status': 'complete', 'apps': 7, 'embedded': 2,
+            'fallback': 5, 'missing_uri': 1, 'rejected_uri': 2,
+            'fetch_failed': 2, 'invalid_image': 1})
+        self.assertNotIn('PRIVATE', json.dumps(inventory.icon_diagnostics))
+
+    def test_ssap_retains_icon_diagnostics_on_inventory_failure(self):
+        session = object.__new__(SSAP)
+        session.host = '192.0.2.10'
+        def call(uri):
+            if uri.endswith('/listLaunchPoints'): return {'launchPoints': [{'id': 'PRIVATE', 'title': 'PRIVATE'}]}
+            if uri.endswith('/getExternalInputList'): return {'devices': []}
+            return {'apps': []}
+        session.call = call
+        self.assertEqual(len(session.inventory(b'fallback')['apps']), 1)
+        self.assertEqual(getattr(session, 'icon_diagnostics', {}).get('fallback'), 1)
+        def unavailable(uri): raise TVConnectionError('PRIVATE')
+        session.call = unavailable
+        with self.assertRaises(TVConnectionError): session.inventory(b'fallback')
+        self.assertEqual(session.icon_diagnostics, {'schema': 1, 'status': 'unavailable'})
+
     def test_fresh_inventory_uses_local_fallback_and_never_fetches_foreign_urls(self):
         requests = []
         inventory = Inventory('192.0.2.10', b'fallback-png', lambda url: requests.append(url) or b'png')

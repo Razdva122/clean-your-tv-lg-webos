@@ -37,6 +37,7 @@ before using a low-level recovery or installation procedure.
 - [Root doctor](../../root-edition/DOCTOR.md), [current Root limits](../../root-edition/STATUS.md), [Root validation](../../root-edition/TESTING.md).
 - [Separate installer outcomes](INSTALLER-OUTCOMES.md): package proofs, launch/runtime evidence and explicitly owner-reported Home; unreleased.
 - [Installer recovery journey](INSTALLER-RECOVERY.md): separately confirmed recovery, existing authority guards and frontend outcome semantics; unreleased.
+- [Clean removal and reinstallation](CLEAN-REMOVAL-REINSTALLATION.md): final cleanup fences, read-only completed retries and a bound Root-SSH No-root successor; unreleased.
 - [Installer diagnostic evidence](INSTALLER-DIAGNOSTICS.md): primary-error retention, safe status/check projections and private host correlation; unreleased.
 - [Individual Root recovery handoffs](ROOT-RECOVERY-HANDOFFS.md): per-issue decisions, authentication blockers and pending-operation diagnostic boundaries.
 - [Read-only Root admission](ROOT-READONLY-ADMISSION.md): private owner handoff, isolated inspection and unsupported firmware boundaries.

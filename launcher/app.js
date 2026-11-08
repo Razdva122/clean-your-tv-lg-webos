@@ -813,6 +813,7 @@
           library.add(app.id);
           closePicker();
           rebuild(app.id);
+          if (!app.icon && window.ROOT_VERSION) refreshInstalledApps(app.id);
           showToast(
             tr('{app} added', {
               app: app.title
@@ -859,7 +860,40 @@
             ? tr('Choose an app to add to Home.')
             : tr('All installed apps are already on Home.');
       renderPicker(choices);
+    }, visibleAppIds());
+  }
+  function visibleAppIds(first) {
+    var ids = library.visible().map(function (app) {
+      return app.id;
     });
+    return first
+      ? [first].concat(
+          ids.filter(function (id) {
+            return id !== first;
+          })
+        )
+      : ids;
+  }
+  function refreshInstalledApps(first) {
+    AppLibrary.installed(function (apps) {
+      if (apps !== null) {
+        library.refresh(apps);
+        // Keep inventory updates, but let the next normal rebuild render them
+        // when a menu, edit or button hold already owns the interaction.
+        if (
+          focusZone === 'grid' &&
+          !moveState &&
+          !pickerOpen &&
+          !undoState &&
+          !okHoldTimer &&
+          !pointerTimer &&
+          !document.hidden &&
+          !(window.RenewalPanel && window.RenewalPanel.isOpen())
+        ) {
+          rebuild(tiles[focusedTile] && tiles[focusedTile].app.id);
+        }
+      }
+    }, visibleAppIds(first));
   }
   function initializeApps() {
     library = AppLibrary.create(
@@ -1013,25 +1047,7 @@
       true
     );
     rebuild();
-    AppLibrary.installed(function (apps) {
-      if (apps !== null) {
-        library.refresh(apps);
-        // Keep inventory updates, but let the next normal rebuild render them
-        // when a menu, edit or button hold already owns the interaction.
-        if (
-          focusZone === 'grid' &&
-          !moveState &&
-          !pickerOpen &&
-          !undoState &&
-          !okHoldTimer &&
-          !pointerTimer &&
-          !document.hidden &&
-          !(window.RenewalPanel && window.RenewalPanel.isOpen())
-        ) {
-          rebuild(tiles[focusedTile] && tiles[focusedTile].app.id);
-        }
-      }
-    });
+    refreshInstalledApps();
   }
   // Tile rendering, icon colors and grid geometry.
   function createTile(app) {

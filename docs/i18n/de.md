@@ -2,7 +2,9 @@
 
 Clean Your TV ist Ihr persönlicher Startbildschirm für LG webOS: Ihre Apps in Ihrer Reihenfolge, ohne Werbereihen in diesem Menü. Installieren Sie es mit einem Computer oder Android-Smartphone; danach kann der Computer ausgeschaltet bleiben.
 
-**v1.12.1 — Nächste Version (unveröffentlicht):** Verbindungsfehler unterscheiden verweigerten Netzwerkzugriff, abgelehnte SSH-Ports und Zeitüberschreitungen. **Verbindung erneut prüfen** startet Diagnose ohne Paketinstallation; **Verbindung ändern** prüft geänderte Daten. Unter macOS hilft **Systemeinstellungen öffnen**, den Zugriff auf das lokale Netzwerk zu finden; dort kann der Name einer älteren Kopie stehen. Ausstehende Vorgänge behalten ihren Wiederherstellungsablauf.
+**Veröffentlicht in v1.12.1:** Verbindungsfehler unterscheiden verweigerten Netzwerkzugriff, abgelehnte SSH-Ports und Zeitüberschreitungen. **Verbindung erneut prüfen** startet Diagnose ohne Paketinstallation; **Verbindung ändern** prüft geänderte Daten. Unter macOS hilft **Systemeinstellungen öffnen**, den Zugriff auf das lokale Netzwerk zu finden; dort kann der Name einer älteren Kopie stehen. Ausstehende Vorgänge behalten ihren Wiederherstellungsablauf.
+
+Unveröffentlicht v1.13.0 / Helper 0.8.0: kurzes Home auf der IR-Fernbedienung öffnet Clean nach etwa 700 ms; LG Home kann kurz erscheinen. Gehaltenes Home bleibt bei webOS. Eingabezugriff im normalen Developer Mode ist ungeprüft; Berechtigungen nicht ändern. Dreimal Home und ausdrücklicher Neustart nach einem Stopp bleiben erhalten.
 
 <a id="unreleased-kandidat-älteres-tv-nodejs"></a>
 
@@ -81,11 +83,15 @@ Im nächsten unveröffentlichten Kandidaten wird die Root-Einrichtung mit einer 
 
 ## 6. Bedienung und Wiederherstellung
 
+Noch unveröffentlichte IR-Unterstützung für No-root: Nach kurzem Drücken und Loslassen von Home wird Clean nach etwa 700 ms geöffnet; LG Home kann zuerst aufblitzen. Langes Home bleibt bei webOS; dreimal Home stoppt weiterhin Helper. Der Zugriff mit normalem Developer Mode ist unbestätigt; ändern Sie keine Eingabegeräteberechtigungen.
+
 Pfeile wählen eine Kachel, OK öffnet sie; OK gedrückt halten zum Verschieben. Kurzes Zurück behält Navigation und Beendigungsdialog der App bei. Kurzes Home öffnet bei aktiver Home-Steuerung den Launcher. Zurück 1,2 Sekunden gedrückt halten, um LG Home einmalig zu öffnen. Der Home-Schalter und Ihre Einstellungen bleiben unverändert.
 
 **Home innerhalb von zwei Sekunden dreimal kurz drücken**, dazwischen loslassen. Dies stellt LG Home wieder her und stoppt die Steuerung, ohne Einstellungen zurückzusetzen.
 
 No-root: Öffnen Sie zum Neustart der Home-Steuerung Home Helper, wählen Sie Helper starten und bestätigen Sie. Ihre gespeicherte Home-Auswahl bleibt erhalten. Root: **Home ändern** in den Home-Einstellungen einschalten, um fortzufahren. **LG Home öffnen** öffnet LG Home einmalig, ohne das Home-Ziel zu ändern. Für LG Home als dauerhaftes Ziel **Home ändern** ausschalten. Beide Steuerungen nie gleichzeitig betreiben. Bei wiederholtem Fehler LG Home aktiv lassen.
+
+Ein Update startet einen gestoppten No-root Helper nicht neu. Starten Sie ihn ausdrücklich wie oben beschrieben; löschen Sie keine Stoppmarkierungen manuell.
 
 ## Brauchen Sie Hilfe?
 
@@ -107,7 +113,11 @@ Ab der veröffentlichten Version v1.11.0 unter Wartung **Clean Your TV deinstall
 
 Wenn aufgefordert, den TV vom Strom trennen, wieder anschließen, auf das Netzwerk warten und **Erneut versuchen** wählen. Standby oder Quick Start ist kein vollständiger Neustart; CYTV startet den TV nicht automatisch neu. Bei Verbindungsabbruch Verbindung prüfen und dasselbe Entfernen erneut versuchen, ohne weiteren Wiederherstellungsassistenten. Bei verweigertem Zugriff die angeforderte Root-Verbindung verwenden; bei beschäftigtem TV warten und erneut versuchen. Erfolg erscheint erst nach bestätigter abschließender Bereinigung. Schlüssel und Originalberichte behalten. Notfallsteuerung und Zustimmung zum Teilen gelten weiter.
 
+**Nächster Kandidat:** Nach einer geprüften vollständigen Entfernung kann Root oder No-root neu installiert werden. Minimale inaktive Entfernungsnachweise verhindern die Fortsetzung alter Vorgänge; löschen Sie sie nicht manuell. Schließen Sie bei unvollständiger Entfernung oder Prüfung zuerst die Wiederherstellung ab.
+
 Ab v1.11.0 bietet eine fehlgeschlagene oder unterbrochene Einrichtung direkt die Wiederherstellung an. Kann No-root nicht fortgesetzt werden, bestätigen Sie die vollständige Entfernung einmal. Bei vorübergehendem Verbindungsverlust oder einem beschäftigten CYTV-Prozess erfolgen bis zu drei Versuche. Wählen Sie bei erforderlichem Root-Zugriff **Mit Root verbinden** für denselben TV; die verifizierte Root-Bereinigung beendet auch dessen blockierte No-root-Entfernung. Nach einem Root-Aktivierungsfehler versucht CYTV, LG Home wiederherzustellen und zu prüfen, ohne erneut zu aktivieren. Ein Abbruch mit unerledigter Arbeit behält Bericht und Wiederherstellungsaktionen. Der Notstopp bleibt erhalten.
+
+> **Noch nicht veröffentlichte Verbesserungen:** Öffnen Sie nach einem Verbindungsfehler beim Entfernen die Verbindungsdetails, prüfen Sie das Netzwerk oder wählen Sie einen vorhandenen Root-SSH-Schlüssel und versuchen Sie es erneut. TV-Adresse, Edition, Port und Hostschlüsselprüfung bleiben fest. No-root prüft Helper vor dem Pairing: stoppen Sie ihn und bestätigen Sie die erneute Prüfung im selben Ablauf. Nur ein nachweislich leerer TV ohne offene Einrichtung kann den Neustart überspringen; nach tatsächlichem Entfernen bleibt der angeforderte Neustart nötig. Reste des alten Root Updater führen vor der Neueinrichtung zu einer separat bestätigten vollständigen Entfernung. Bei Fehlern des Eingangsdiensts geht die sichere Paketbereinigung weiter; Erfolg erfordert weiterhin die bestätigte Verknüpfungsbereinigung.
 
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="optionales-python-für-root-in-v110"></a>

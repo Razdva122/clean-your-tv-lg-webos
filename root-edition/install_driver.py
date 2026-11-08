@@ -26,6 +26,9 @@ def failure_summary(error):
         result['exit_status']=error.returncode
     if isinstance(error,OSError) and type(error.errno) is int and 0<=error.errno<=4095:
         result['errno']=error.errno
+    step=getattr(error,'cleanup_step',None)
+    if isinstance(step,str) and step in ('routing-inverse','runtime-restore','provision-rollback','startup-hook',
+            'legacy-lockdown','registration-restore','legacy-permissions','home-readback'):result['cleanup_step']=step
     from updater.luna import summary
     detail=summary(getattr(error,'luna',None))
     if detail:result['luna']=detail
@@ -116,11 +119,28 @@ class Coordinator:
         if (lease['journal']!='product-'+identifier+'.json' or lease['terminal']
                 or not isinstance(record,dict) or record.get('schema')!=1
                 or record.get('protocol')!='clean-removal-v1' or record.get('operation')!=identifier
-                or record.get('lease')!=lease['id'] or record.get('stage')!='verified-clean'
+                or not isinstance(record.get('lease'),str) or not re.fullmatch('[a-f0-9]{32}',record['lease'])
+                or record.get('final_fence',record.get('lease'))!=lease['id'] or record.get('stage')!='verified-clean'
+                or (record.get('final_fence') is not None and record.get('final_original_lease')!=record.get('lease'))
                 or record.get('state')!='complete' or record.get('current') is not True
                 or record.get('result',{}).get('private_cleanup_verified') is not True):raise Busy()
         self.device.ownership=self.ownership
         if self.device.verify_clean(record) is not True:raise Busy()
+        return record
+
+    def _finish_clean(self, record, lease):
+        """Retire destructive authority before publishing successful absence."""
+        import uuid
+        final=record.setdefault('final_fence',uuid.uuid4().hex)
+        if not isinstance(final,str) or not re.fullmatch('[a-f0-9]{32}',final) or final==record['lease']:raise Busy()
+        record.update(stage='private-cleanup',state='recovery_required',current=False)
+        record['final_original_lease']=record['lease']
+        self.store.write('clean-removal-'+record['operation'],record)
+        lease.update(id=final,stage='final-fence-pending')
+        self.store.write('operation',lease)
+        record.update(stage='verified-clean',state='complete',reason='removal-verified',current=True)
+        self.store.write('clean-removal-'+record['operation'],record)
+        self.ownership.stage(lease,'verified-clean')
         return record
 
     def inspect(self):
@@ -240,8 +260,17 @@ class Coordinator:
             record=_optional_record(self.store,'clean-removal-'+selected)
             if record is not None:
                 if (record.get('schema')!=1 or record.get('protocol')!='clean-removal-v1'
-                        or record.get('operation')!=selected or record.get('lease')!=lease['id']):raise Busy()
-                goal=operation_id(record.get('removal'))
+                        or record.get('operation')!=selected):raise Busy()
+                if record.get('final_fence')==lease['id']:
+                    # A distinct user-approved Remove gets a new goal. The old
+                    # completed target can only be retried as a readback.
+                    if (lease['stage']=='verified-clean' and record.get('stage')=='verified-clean'
+                            and record.get('state')=='complete' and record.get('current') is True):
+                        selected=identifier
+                    else:goal=operation_id(record.get('removal'))
+                elif record.get('lease')==lease['id']:
+                    goal=operation_id(record.get('removal'))
+                else:raise Busy()
         return dict(operation=identifier,state='fresh',target_operation=selected,
                     target_lease=lease['id'] if lease else None,target_removal=goal)
 
@@ -252,13 +281,38 @@ class Coordinator:
         name = 'clean-removal-'+identifier
         with self.store.lock(blocking=False), self.ownership.removal(identifier,expected=expected_lease) as (lease, original_lease):
             record = _optional_record(self.store, name)
+            if (record is not None and record.get('final_fence') is not None
+                    and lease['id'] in (record.get('lease'),record.get('final_fence'))):
+                if (record.get('schema')!=1 or record.get('protocol')!='clean-removal-v1'
+                        or record.get('operation')!=identifier or record.get('removal')!=intent
+                        or record.get('final_original_lease')!=record.get('lease')
+                        or lease['owner']!='clean-removal' or lease['journal']!='product-'+identifier+'.json'
+                        or record.get('result',{}).get('private_cleanup_verified') is not True):raise Busy()
+                self.device.operation=lease;self.device.ownership=self.ownership
+                if self.device.verify_clean(record) is not True:raise Busy()
+                if record.get('stage')=='verified-clean' and lease['stage']=='verified-clean' and record['final_fence']==lease['id']:return record
+                if lease['stage']!='final-fence-pending' and not (lease['id']==record['lease'] and record.get('current') is False):raise Busy()
+                return self._finish_clean(record,lease)
             if record is None:
                 if lease['owner'] == 'clean-removal':
                     # Fresh reservation may have crashed before the first write;
                     # a different removal selector must never take it over.
-                    if lease['journal'] != 'product-'+identifier+'.json': raise Busy()
+                    if lease['journal'] != 'product-'+identifier+'.json':
+                        match=re.fullmatch(r'product-([a-f0-9]{32})\.json',lease['journal'])
+                        completed=_optional_record(self.store,'clean-removal-'+match.group(1)) if match else None
+                        if (not completed or completed.get('final_fence')!=lease['id']
+                                or completed.get('stage')!='verified-clean' or lease['stage']!='verified-clean'
+                                or completed.get('state')!='complete' or completed.get('current') is not True
+                                or intent==completed.get('removal') or identifier==completed.get('operation')):raise Busy()
                 elif lease['owner'] == 'product' and lease['journal'] != 'product-'+identifier+'.json' and not lease['terminal']:
                     raise Busy()
+                elif lease['owner']=='no-root':
+                    if not re.fullmatch(r'no-root-[a-f0-9]{32}\.json',lease['journal']):raise Busy()
+                    binding=_optional_record(self.store,lease['journal'][:-5])
+                    if (not binding or binding.get('schema')!=1 or binding.get('protocol')!='no-root-root-handoff-v1'
+                            or binding.get('lease')!=lease['id'] or binding.get('operation')!=lease['journal'][8:-5]
+                            or not re.fullmatch('[a-f0-9]{64}',str(binding.get('plan_sha256','')))
+                            or identifier==binding['operation']):raise Busy()
                 elif lease['owner'] not in ('product','deploy','root-bootstrap','root-update','system-bootstrap','system-update'):
                     raise Busy()
                 from installation import JOURNALS
@@ -315,9 +369,7 @@ class Coordinator:
                     tail=self.device.finish_clean_tail(record)
                     if tail is not None:return dict(record,**tail)
                 if hasattr(self.device,'retire_current_support'):self.device.retire_current_support()
-                record.update(stage='verified-clean', state='complete', reason='removal-verified',current=True)
-                self.store.write(name, record)
-                self.ownership.stage(lease, 'verified-clean')
+                self._finish_clean(record,lease)
             except Exception as error:
                 log_failure(self.device,error)
                 if getattr(self.device,'cleanup_tail_started',False):

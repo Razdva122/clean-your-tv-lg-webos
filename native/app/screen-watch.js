@@ -228,7 +228,10 @@ module.exports = function (data, log, onForeground, onReset, onPower) {
               return;
             }
             alive = false;
-            s.ping();
+            // ws throws from ping() unless the socket is OPEN. At power-off it
+            // can be CLOSING before 'close' clears this interval; the callback
+            // takes that error instead, and the next tick terminates.
+            s.ping(function () {});
           }, 5000);
         }
         onForeground(m.payload.appId);

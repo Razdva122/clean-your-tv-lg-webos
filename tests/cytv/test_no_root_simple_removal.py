@@ -42,6 +42,7 @@ class Remote:
         # Adapt only the fixed volatile root and its root UID for this host fixture.
         volatile=self.root/'volatile';volatile.mkdir(exist_ok=True);volatile.chmod(0o1777)
         code=code.replace('/tmp/.cytv-installer',str(volatile/'.cytv-installer'))
+        code=code.replace("'/.cytv-installer'",json.dumps(str(self.root/'jail-private')))
         code=code.replace('function ancestry(p){',
             'var hostLstat=fs.lstatSync;fs.lstatSync=function(p){var s=hostLstat(p);if(p==='+json.dumps(str(volatile))+')s.uid=0;return s;};\nfunction ancestry(p){')
         code=code.replace("var bootRoot='/tmp';",'var bootRoot='+json.dumps(str(volatile))+';var bootLstat=fs.lstatSync;fs.lstatSync=function(p){var s=bootLstat(p);if(path.resolve(p)===bootRoot)s.uid=0;return s;};')
@@ -124,6 +125,106 @@ class SimpleRemoval(unittest.TestCase):
 
     def remove(self):return self.installer.uninstall(full_project=True)
 
+    def test_empty_tv_with_verified_idle_processes_needs_no_restart(self):
+        (self.root/'proc').mkdir()
+        result=self.remove()
+        self.assertTrue(result['verified_clean'])
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertFalse(any(uri.endswith('/dev/remove') for uri,_ in self.remote.calls))
+
+    def test_empty_files_with_live_or_unreadable_processes_still_need_restart(self):
+        proc=self.root/'proc'/'123';proc.mkdir(parents=True)
+        for argv in ('/usr/bin/node\0/media/developer/apps/usr/palm/services/com.gathin.tvhome.renewal/service.js\0',
+                     '/usr/bin/node\0-e\0setInterval(function(){},1000)\0',
+                     '/usr/bin/node\0--eval=setInterval(function(){},1000)\0',
+                     '/usr/bin/node\0--eval\0setInterval(function(){},1000)\0',
+                     '/usr/bin/node\0--max-old-space-size=64\0',
+                     '/usr/bin/python3\0-cimport time; time.sleep(60)\0argument\0',
+                     '/usr/bin/python3\0-icprint(1)\0argument\0', None):
+            with self.subTest(argv=argv):
+                if self.store.pending(self.profile):self.store.finish(self.profile)
+                (self.store.device_dir(self.profile)/'clean-removal.json').unlink(missing_ok=True)
+                if argv is not None:(proc/'cmdline').write_text(argv.replace('/media/developer',str(self.root/'developer')))
+                elif (proc/'cmdline').exists():(proc/'cmdline').unlink()
+                self.assertTrue(self.remove()['restart_required'])
+
+    def test_foreign_absolute_script_does_not_force_restart_on_empty_tv(self):
+        proc=self.root/'proc'/'123';proc.mkdir(parents=True)
+        (proc/'cmdline').write_text('/usr/bin/node\0/usr/palm/services/org.foreign/service.js\0')
+        self.assertTrue(self.remove()['verified_clean'])
+
+    def test_relative_script_in_deleted_project_cwd_still_requires_restart(self):
+        proc=self.root/'proc'/'123';proc.mkdir(parents=True)
+        (proc/'cmdline').write_text('/usr/bin/node\0service.js\0')
+        (proc/'cwd').symlink_to(self.root/'developer/apps/usr/palm/services/com.gathin.tvhome.renewal')
+        self.assertTrue(self.remove()['restart_required'])
+
+    def test_empty_files_with_unresolved_installation_do_not_skip_restart(self):
+        (self.root/'proc').mkdir()
+        self.store.begin(self.profile,'install',stage='submitted')
+        self.assertTrue(self.remove()['restart_required'])
+
+    def test_input_read_failure_uses_owned_delete_and_finishes_after_restart(self):
+        self.remote.apps={'com.gathin.tvhome'}
+        original=self.remote.luna
+        def luna(uri,payload,**kwargs):
+            if uri.endswith('/getAllInputStatus'):
+                raise TVRejected('Unavailable',{'returnValue':False,'errorCode':-1},uri)
+            return original(uri,payload,**kwargs)
+        self.remote.luna=luna
+        self.assertTrue(self.remove()['restart_required'])
+        self.assertFalse(self.remote.apps)
+        self.assertIn(('com.webos.service.eim/deleteDevice',{'appId':'com.gathin.tvhome'}),self.remote.calls)
+        self.reboot()
+        self.assertTrue(self.remove()['verified_clean'])
+
+    def test_input_service_failure_defers_only_registration_and_never_claims_clean(self):
+        self.remote.apps={'com.gathin.tvhome'}
+        original=self.remote.luna
+        def luna(uri,payload,**kwargs):
+            if uri.startswith('com.webos.service.eim/'):
+                raise TVRejected('Unavailable',{'returnValue':False,'errorCode':-1},uri)
+            return original(uri,payload,**kwargs)
+        self.remote.luna=luna
+        self.assertTrue(self.remove()['restart_required'])
+        self.assertFalse(self.remote.apps)
+        self.reboot()
+        with self.assertRaisesRegex(UserError,'input shortcuts'):
+            self.remove()
+        self.assertIsNotNone(self.store.pending(self.profile))
+        self.remote.luna=original
+        self.assertTrue(self.remove()['verified_clean'])
+
+    def test_input_timeout_or_malformed_reply_does_not_block_package_cleanup(self):
+        for error in (UserError('TV command ended without a confirmed result. Run cytv status.'),
+                      UserError('TV operation timed out. Run cytv status before retrying.',reason_code='operation-timeout'),
+                      ValueError('Invalid TV response')):
+            with self.subTest(error=str(error)):
+                if self.store.pending(self.profile):self.store.finish(self.profile)
+                self.remote.apps={'com.gathin.tvhome'}
+                original=self.remote.luna
+                def luna(uri,payload,**kwargs):
+                    if uri.startswith('com.webos.service.eim/'):raise error
+                    return original(uri,payload,**kwargs)
+                self.remote.luna=luna
+                try:
+                    self.assertTrue(self.remove()['restart_required'])
+                    self.assertFalse(self.remote.apps)
+                    self.assertTrue(self.store.pending(self.profile)['cleanup_inputs_pending'])
+                finally:self.remote.luna=original
+
+    def test_input_connection_loss_is_not_hidden_as_an_optional_service_error(self):
+        self.remote.apps={'com.gathin.tvhome'}
+        original=self.remote.luna
+        def luna(uri,payload,**kwargs):
+            if uri.endswith('/getAllInputStatus'):
+                raise UserError('Lost connection',reason_code='connection-interrupted')
+            return original(uri,payload,**kwargs)
+        self.remote.luna=luna
+        with self.assertRaises(UserError) as caught:self.remove()
+        self.assertEqual(caught.exception.reason_code,'connection-interrupted')
+        self.assertTrue(self.remote.apps)
+
     def reboot(self):
         self.remote.boot='22222222-2222-2222-2222-222222222222'
         for p in (self.root/'volatile').glob('cytv-removal-*.boot'):p.unlink()
@@ -140,6 +241,7 @@ class SimpleRemoval(unittest.TestCase):
         self.assertTrue(self.remove()['restart_required']);self.assertTrue(marker.exists())
         marker.unlink()  # Model the measured C3 volatile reset, kernel UUID reused.
         self.assertTrue(self.remove()['verified_clean'])
+        (self.root/'proc').mkdir(exist_ok=True)  # Current idle proof for a new explicit goal.
         self.assertTrue(self.remove()['verified_clean']);self.assertFalse(marker.exists())
 
     def test_legacy_observer_prepare_failure_uses_confirmed_removal_and_keeps_capsule(self):
@@ -178,6 +280,43 @@ class SimpleRemoval(unittest.TestCase):
         self.reboot()
         self.assertTrue(self.remove()['verified_clean'])
         self.assertFalse(private.exists())
+
+    def test_root_transport_project_staging_is_removed_after_restart(self):
+        # Substitute only the unavailable host root UID branch; fixed project
+        # directory, restart fence and real file sweep remain production code.
+        original=self.remote.transform
+        self.remote.transform=lambda code:original(code).replace('if(uid===0)installerRoots.push',
+            'if(uid==='+str(os.getuid())+')installerRoots.push')
+        private=self.root/'varlib/clean-your-tv-installer'
+        private.mkdir(mode=0o755)
+        artifact=private/('cytv-'+'a'*32)/'launcher.ipk';artifact.parent.mkdir();artifact.write_bytes(b'private project staging')
+        operation=self.root/'volatile/.cytv-installer-root/operations'/('a'*32)
+        operation.mkdir(parents=True)
+        (operation/'prepared.json').write_text('retained original observer')
+        self.assertTrue(self.remove()['restart_required'])
+        self.assertTrue(artifact.exists())
+        self.reboot()
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertFalse(private.exists())
+
+    @unittest.skipIf(getattr(os,'getuid',lambda:0)()==0,'Requires an unprivileged Developer Mode user')
+    def test_jail_private_observer_is_preserved_until_restart_then_removed(self):
+        private=self.root/'jail-private';private.mkdir(mode=0o700)
+        operation=private/'operations'/('a'*32);operation.mkdir(parents=True)
+        evidence=operation/'prepared.json';evidence.write_text('original evidence')
+        self.assertTrue(self.remove()['restart_required'])
+        self.assertEqual(evidence.read_text(),'original evidence')
+        self.reboot()
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertFalse(private.exists())
+
+    @unittest.skipIf(getattr(os,'getuid',lambda:0)()==0,'Requires an unprivileged Developer Mode user')
+    def test_unsafe_jail_private_leaf_is_never_deleted_or_repaired(self):
+        private=self.root/'jail-private';private.mkdir(mode=0o755)
+        evidence=private/'foreign';evidence.write_text('keep')
+        with self.assertRaises((RuntimeError,UserError)):self.remove()
+        self.assertEqual(evidence.read_text(),'keep')
+        self.assertEqual(private.stat().st_mode&0o777,0o755)
 
     def test_changed_kernel_retires_valid_marker_only_after_boot_proof(self):
         self.remove();marker=self.boot_marker();proof=self.store.pending(self.profile)['cleanup_boot_proof']
@@ -417,6 +556,7 @@ class SimpleRemoval(unittest.TestCase):
 
     def test_repeat_clean_is_noop_but_fresh_install_requires_new_restart(self):
         self.remove();self.reboot();self.assertTrue(self.remove()['verified_clean'])
+        (self.root/'proc').mkdir(exist_ok=True)
         self.assertTrue(self.remove()['verified_clean'])
         self.store.begin(self.profile,'install');self.store.finish(self.profile)
         self.remote.apps={'com.gathin.tvhome'}

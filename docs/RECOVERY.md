@@ -20,6 +20,11 @@ choose **Start Helper** and confirm. To resume Root, turn **Change Home** on in
 Home settings. Opening Home alone does not restart a stopped Helper.
 **Open LG Home** only visits LG Home once; it keeps the saved Home choice.
 
+Updating packages does not restart a stopped No-root Helper. After updating to
+a release containing a fix for the fault, use **Start Helper** above to resume
+Home control explicitly. Do not delete `blocked`/`stopped` markers manually or
+expect an update to clear an emergency stop.
+
 If controls fail again, leave LG Home active and save diagnostics. Do not repeatedly
 clear stop flags after a fault. A Quick Access assignment to Home offers another
 way to open it, but does not restart Helper.
@@ -112,6 +117,8 @@ keys and original reports, and do not reinstall or clear Android app data to
 retry removal. Missing files are skipped; absence is not itself an error.
 
 In v1.11.0 and later, failed or interrupted setup offers recovery directly. If No-root setup cannot continue, confirm full removal once. Removal automatically retries transient connection loss and a busy CYTV worker up to three attempts. If Root access is required, choose **Connect using Root** for the same TV; verified Root cleanup also finishes its blocked No-root removal. A failed Root activation attempts to restore and verify LG Home without repeating activation. Cancellation with unfinished work keeps a diagnostic report and recovery actions. Emergency-stop state remains unchanged.
+
+**Next candidate:** verified full removal leaves the TV ready for a new Root or No-root installation. Minimal inactive removal receipts prevent old work from resuming; do not delete them manually. Finish recovery first if removal or its current checks are incomplete.
 
 Returning to LG Home alone remains separate from removal. Emergency controls
 above stay available. For setup recovery, eligible Root can still finish with
@@ -373,7 +380,7 @@ transaction or backup also blocks replacement, even if marked complete; preserve
 it for review rather than deleting it to force replacement. It does not patch
 retained pinned code in place or replay an uncertain remove/install request.
 
-The unpublished v1.12.1 candidate targets fresh System Updater 1.2.6; published v1.12.0 targets 1.2.5. Only installed 1.1.0/1.1.1 sources are admitted by the explicit replacement. Retained 1.1.2 and 1.2.x have no general replacement path. A completed earlier
+The unpublished v1.13.0 candidate targets fresh System Updater 1.2.7; published v1.12.1 targets 1.2.6. Only installed 1.1.0/1.1.1 sources are admitted by the explicit replacement. Retained 1.1.2 and 1.2.x have no general replacement path. A completed earlier
 replacement to 1.1.1 can start a new target operation only
 after the installer authenticates its saved bundle, baseline, original archive,
 terminal removal and current owner, and confirms that later recovery has finished.

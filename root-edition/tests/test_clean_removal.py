@@ -67,6 +67,19 @@ class CoordinatorCleanRemoval(unittest.TestCase):
         self.assertEqual(two['failure']['luna']['call'],'apps-dev')
         self.assertNotIn('PRIVATE',str(two))
 
+    def test_cleanup_context_rethrows_same_error_and_worker_filters_untrusted_steps(self):
+        from clean_removal import cleanup_step
+        from install_driver import failure_summary
+        error=RuntimeError('PRIVATE')
+        with self.assertRaises(RuntimeError) as caught:
+            with cleanup_step('home-readback'):
+                raise error
+        self.assertIs(caught.exception,error)
+        self.assertEqual(failure_summary(error),{'exception_type':'RuntimeError','cleanup_step':'home-readback'})
+        for unsafe in ('PRIVATE',{'path':'PRIVATE'},['PRIVATE'],True,None):
+            error.cleanup_step=unsafe
+            self.assertEqual(failure_summary(error),{'exception_type':'RuntimeError'})
+
     def test_before_first_lease_late_original_worker_cannot_acquire(self):
         result = self.driver.clean_remove(self.id)
         with self.assertRaises(Busy):
@@ -106,6 +119,49 @@ class CoordinatorCleanRemoval(unittest.TestCase):
         second=self.driver.clean_remove(new)
         self.assertEqual(second['stage'],'verified-clean')
         self.assertNotEqual(second['lease'],first['lease'])
+
+    def test_old_clean_remove_and_workers_cannot_reclaim_no_root_successor(self):
+        original=self.driver.clean_remove(self.id)
+        successor=dict(schema=1,id='f'*32,owner='no-root',journal='no-root-'+'e'*32+'.json',stage='reserved',terminal=False)
+        self.owner.store.write('operation',successor)
+        before=list(self.device.calls)
+        for expected in (None,original['lease']):
+            with self.subTest(expected=expected),self.assertRaises(Busy):
+                self.driver.clean_remove(self.id,intent=original['removal'],expected_lease=expected)
+        with self.assertRaises(Busy):
+            with self.owner.operation('product','product-'+self.id+'.json',resume=original['lease']):pass
+        self.assertEqual(self.device.calls,before)
+        self.assertEqual(self.owner.status(),successor)
+
+    def test_completed_removal_rotates_fence_and_old_retry_cannot_sweep_new_apps(self):
+        first=self.driver.clean_remove(self.id)
+        self.assertNotEqual(first['lease'],self.owner.status()['id'])
+        self.assertEqual(first['final_fence'],self.owner.status()['id'])
+        before=list(self.device.calls)
+        self.device.clean_remove=lambda *args:self.fail('completed goal swept a new installation')
+        self.device.verify_clean=lambda record:(_ for _ in ()).throw(ValueError('project_apps_remain'))
+        with self.assertRaisesRegex(ValueError,'project_apps_remain'):self.driver.clean_remove(self.id)
+        self.assertEqual(before,self.device.calls)
+
+    def test_new_explicit_remove_selects_new_goal_after_completed_fence(self):
+        first=self.driver.clean_remove(self.id)
+        new='d'*32
+        target=self.driver.removal_target(new)
+        self.assertEqual(target['target_operation'],new)
+        self.assertIsNone(target['target_removal'])
+        second=self.driver.clean_remove(new,intent='e'*32,expected_lease=target['target_lease'])
+        self.assertEqual(second['stage'],'verified-clean')
+        self.assertNotEqual(second['final_fence'],first['final_fence'])
+        self.assertEqual(self.owner.store.read('clean-removal-'+self.id),first)
+
+    def test_explicit_new_root_removal_can_retire_bound_no_root_successor(self):
+        first=self.driver.clean_remove(self.id)
+        binding=dict(schema=1,protocol='no-root-root-handoff-v1',operation='e'*32,lease='f'*32,plan_sha256='0'*64)
+        self.owner.store.write('no-root-'+binding['operation'],binding)
+        self.owner.store.write('operation',dict(schema=1,id=binding['lease'],owner='no-root',journal='no-root-'+binding['operation']+'.json',stage='reserved',terminal=False))
+        second=self.driver.clean_remove('d'*32,intent='9'*32,expected_lease='f'*32)
+        self.assertEqual(second['stage'],'verified-clean')
+        self.assertNotEqual(second['final_fence'],first['final_fence'])
 
     def test_inspect_and_restore_verified_removal_preserve_fences_and_old_request(self):
         original=self.original();self.driver.clean_remove(self.id)
@@ -343,6 +399,42 @@ class PartialDeviceRemoval(unittest.TestCase):
         module=types.ModuleType('cleanup_system_updater');exec(SCRIPT,module.__dict__);module.ROOT_UPDATER=updater
         patcher=patch.dict(sys.modules,{'cleanup_system_updater':module});patcher.start();self.addCleanup(patcher.stop)
         return fixture,module,system,paths,legacy
+
+    def test_restore_subprocess_failure_names_boundary_and_retains_inverse(self):
+        import subprocess, deploy
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        original=driver.ownership.store.read('request-'+identifier)
+        inverse='{"fixture":"PRIVATE routing inverse"}'
+        (root/'profile-trial.json').write_text(inverse)
+        error=subprocess.CalledProcessError(1,['PRIVATE command'],output=b'PRIVATE output',stderr=b'PRIVATE stderr')
+        with patch.object(deploy,'command',side_effect=error),patch.object(driver.device,'log'):
+            result=driver.clean_remove(identifier)
+        self.assertEqual(result['last_failure'],{'exception_type':'CalledProcessError','exit_status':1,
+            'stage':'original-writers-fenced','cleanup_step':'runtime-restore'})
+        self.assertEqual(result['state'],'recovery_required')
+        self.assertFalse(result['current'])
+        self.assertEqual(driver.ownership.store.read('request-'+identifier),original)
+        self.assertEqual((root/'profile-trial.json').read_text(),inverse)
+        self.assertEqual(driver.ownership.store.read('routing-backup-'+identifier)['profile-trial.json'],inverse)
+        self.assertFalse(any(call.startswith(('remove-','cleanup-')) for call in calls))
+        self.assertNotIn('PRIVATE',str(result['last_failure']))
+
+    def test_legacy_permissions_failure_does_not_blame_runtime_restore_on_retry(self):
+        import subprocess, deploy
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        with patch.object(deploy,'command',side_effect=subprocess.CalledProcessError(1,['PRIVATE'])),patch.object(driver.device,'log'):
+            first=driver.clean_remove(identifier)
+        cleanup=driver.device.cleanup
+        def fail(name,*args):
+            if name=='legacy_permissions':raise subprocess.CalledProcessError(7,['PRIVATE'])
+            return cleanup(name,*args)
+        with patch.object(driver.device,'cleanup',side_effect=fail),patch.object(driver.device,'log'):
+            second=driver.clean_remove(identifier)
+        self.assertEqual(second['failure'],first['failure'])
+        self.assertEqual(second['last_failure']['cleanup_step'],'legacy-permissions')
+        self.assertEqual(second['last_failure']['exit_status'],7)
+        self.assertTrue(root.exists());self.assertTrue(updater.exists())
+        self.assertFalse(any(call.startswith('remove-') for call in calls))
 
     def test_lockdown_retry_keeps_authenticated_terminal_sdk_api_after_interruption(self):
         import json
@@ -773,6 +865,21 @@ class PartialDeviceRemoval(unittest.TestCase):
         self.assertTrue((root/'state/ssap.json').exists())
         self.assertTrue(any(name.startswith('remove-') for name in calls))
 
+    def test_retained_inert_system_temp_does_not_block_clean_readback(self):
+        import install_device
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        driver.clean_remove(identifier)
+        driver.device.current_boot='22222222-2222-2222-2222-222222222222'
+        record=driver.clean_remove(identifier)
+        stage=install_device.TEMP/('cytv-system-updater-'+'a'*32);stage.mkdir(mode=0o700)
+        (stage/'diagnostic.txt').write_text('preserve unknown temporary data')
+        info=stage.stat()
+        record['retained_temporary_stages']=[dict(path=str(stage),dev=info.st_dev,ino=info.st_ino)]
+        self.assertTrue(driver.device.verify_clean(record))
+        self.assertTrue((stage/'diagnostic.txt').exists())
+        record['retained_temporary_stages'][0]['ino']+=1
+        with self.assertRaisesRegex(ValueError,'support_stage_remains'):driver.device.verify_clean(record)
+
     def test_clean_readback_exempts_only_executing_checked_coordinator_stage(self):
         import install_device
         driver,identifier,root,updater,payload,calls,present=self.fixture()
@@ -1118,13 +1225,78 @@ class PartialDeviceRemoval(unittest.TestCase):
                 self.assertEqual(result['stage'],'original-writers-fenced')
                 self.assertFalse(any(name.startswith('remove-') for name in calls))
 
+    def test_never_activated_removal_needs_no_home_apis_even_after_old_failed_attempt(self):
+        from updater.luna import context
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        error=context(RuntimeError('Bus operation rejected'),
+            'com.webos.settingsservice/getSystemSettings','negative-reply',{'returnValue':False})
+        with patch.object(driver.device,'log'),patch('clean_removal.routes',side_effect=error):
+            first=driver.clean_remove(identifier)
+        self.assertEqual(first['stage'],'original-writers-fenced')
+        first.pop('profileless_cleanup_eligible',None)
+        driver.store.write('clean-removal-'+identifier,first)
+        original=driver.device.rpc
+        def unavailable(method,data):
+            if method.endswith(('/getSystemSettings','/getProfiles')):
+                self.fail('Untouched Home must not require a firmware Home API')
+            return original(method,data)
+        driver.device.rpc=unavailable
+        self.assertEqual(driver.clean_remove(identifier)['stage'],'restart-required')
+        self.assertEqual(driver.clean_remove(identifier)['stage'],'restart-required')
+        driver.device.current_boot='22222222-2222-2222-2222-222222222222'
+        final=driver.clean_remove(identifier)
+        self.assertEqual(final['stage'],'verified-clean',final)
+        self.assertEqual(final['routes'],{'mode':'never-applied'})
+        self.assertFalse(present)
+        self.assertEqual(final['original']['request']['state'],'recovery_required')
+
+    def test_never_applied_restart_preserves_new_routing_marker_before_cleanup(self):
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        self.assertEqual(driver.clean_remove(identifier)['stage'],'restart-required')
+        marker=root/'persistent-intent.json';marker.write_text('{}')
+        driver.device.current_boot='22222222-2222-2222-2222-222222222222'
+        original=driver.device.rpc
+        def unavailable(method,data):
+            if method.endswith(('/getSystemSettings','/getProfiles')):raise RuntimeError('Home API unavailable')
+            return original(method,data)
+        driver.device.rpc=unavailable
+        with patch.object(driver.device,'log'):result=driver.clean_remove(identifier)
+        self.assertEqual(result['state'],'recovery_required')
+        self.assertNotEqual(result['stage'],'verified-clean')
+        self.assertEqual(marker.read_text(),'{}')
+
+    def test_old_pre_activation_readback_upgrades_only_with_fresh_no_effect_proof(self):
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        self.assertEqual(driver.clean_remove(identifier)['stage'],'restart-required')
+        record=driver.store.read('clean-removal-'+identifier)
+        record['routes']=['third.party.home']*3
+        driver.store.write('clean-removal-'+identifier,record)
+        driver.device.current_boot='22222222-2222-2222-2222-222222222222'
+        final=driver.clean_remove(identifier)
+        self.assertEqual(final['stage'],'verified-clean',final)
+        self.assertEqual(final['routes'],{'mode':'never-applied'})
+
+    def test_never_applied_proof_rechecks_live_and_preserved_routing_evidence(self):
+        import clean_removal
+        for source in ('live','backup','phase','eligibility'):
+            with self.subTest(source=source):
+                driver,identifier,root,updater,payload,calls,present=self.fixture()
+                self.assertEqual(driver.clean_remove(identifier)['stage'],'restart-required')
+                record=driver.store.read('clean-removal-'+identifier)
+                if source=='live':(root/'persistent-intent.json').write_text('{}')
+                if source=='backup':driver.store.write('routing-backup-'+identifier,{'profile-trial.json':'{}'})
+                if source=='phase':record['fenced_components']['deploy']['stage']='installed-recovery-only'
+                if source=='eligibility':record['profileless_cleanup_eligible']=False
+                with patch.object(driver.device,'rpc',side_effect=RuntimeError('Home API unavailable')):
+                    with self.assertRaises(RuntimeError):clean_removal.routes(driver.device,record)
+
     def test_never_activated_partial_can_clean_when_profile_interface_unavailable(self):
         driver,identifier,root,updater,payload,calls,present=self.fixture(missing_profiles=True)
         self.assertEqual(driver.clean_remove(identifier)['stage'],'restart-required')
         driver.device.current_boot='22222222-2222-2222-2222-222222222222'
         result=driver.clean_remove(identifier)
         self.assertEqual(result['stage'],'verified-clean',result)
-        self.assertEqual(result['routes'],{'mode':'never-applied','home':'third.party.home'})
+        self.assertEqual(result['routes'],{'mode':'never-applied'})
         self.assertTrue(result['routing_never_applied'])
         self.assertFalse(any('setSystem' in name or 'setProfiles' in name for name in calls))
 

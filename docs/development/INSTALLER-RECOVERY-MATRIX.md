@@ -7,6 +7,18 @@ prerequisite. A lost connection offers Try again on the same approved goal and
 saved target. Actual OS access denial and busy work get their own instructions.
 No automatic TV reboot or hidden retry runs. [User instructions](../RECOVERY.md).
 
+The next source changes add a narrow exception for an initially empty No-root
+TV: two current absence/process checks, no inherited operation and confirmed
+input-shortcut cleanup permit immediate completion. Unreadable/anonymous/live
+processes retain the restart path. Current connection help preserves the saved
+endpoint and host pin while allowing an explicitly selected Root sign-in key.
+Helper is checked before No-root pairing; its stop gesture and recheck stay in
+the same setup. Legacy Root Updater remnants offer separately confirmed full
+removal before a new inventory. EIM list rejection falls back to the fixed own
+shortcut delete; failed shortcut cleanup is deferred until safe package cleanup
+finishes, and still blocks verified-clean. These are unpublished source changes,
+not physical acceptance; see [current maintenance guidance](../MAINTENANCE.md#unreleased-removal-and-reinstallation-continuation).
+
 This matrix describes source/UI coverage. Simulated SSH replies, local processes
 and browser events are not physical TV or vendor acceptance. Final success needs
 `removed: true` and `verified_clean: true` from the backend; a restart-required
@@ -20,10 +32,13 @@ or missing/false proof result must stay neutral.
 | Full restart requested | Explain power disconnect/reconnect and wait for the network, then Try again | `test_restart_required_is_neutral_and_explains_full_power_restart`; Android simple-removal cases in all 13 languages and both editions |
 | Standby or unchanged boot lifetime | Still pending; a verified full restart is required | Root reuses the existing snapshot-aware kernel/session identity; No-root accepts a changed kernel UUID or disappearance of its previously captured per-goal volatile marker. Legacy baselines require fresh capture and another restart. `test_simple_removal`, `test_cleanup_tail` and `test_no_root_simple_removal` cover unchanged sessions, reused UUIDs, tampering and interrupted continuation. A modeled boot change is not physical cold-boot acceptance |
 | Verified Root removal → normal setup | Revalidate current absence under the original mutex; preserve old fences and resume the same successor request after an interrupted move | `tests.cytv.test_clean_reinstall` and `test_clean_removal.CoordinatorCleanRemoval`; [source record and limitations](../history/2026-11-07-clean-reinstall.md) |
+| Verified full removal → Root or No-root (next candidate) | Retire the completed destructive lease, keep old retries read-only, and bind a Root-SSH No-root successor under the original locks; recover incomplete goals before new setup | `test_root_no_root_handoff`, `test_clean_removal` and `test_cleanup_tail`; [contract and host/device limits](CLEAN-REMOVAL-REINSTALLATION.md) |
 | Root removal catalog denied or timed out | Read the ordinary application catalog once; malformed replies and two unavailable catalogs remain blocked. Keep fixed-path sweeping/absence, registration and routing verification | `test_clean_removal` catalog cases and `test_cleanup_tail` fallback/residue checks; [source record](../history/2026-11-07-issue240-removal-catalog.md) |
 | Root removal without `systemprofile` (next candidate) | Admit only the exact missing-service reply, stock LG Home in Settings Service, and lock-held pre-restore proof that no current or backed-up routing inverse/backend exists. Preserve old fences, restoration, package absence and restart checks; ACL/timeouts, malformed replies, foreign Home and routing evidence still block | `test_clean_removal` webOS 5 cases, `test_cleanup_tail` stock-settings cases and `test_update_luna` exact-reply cases; [source scope and limits](../history/2026-11-07-issue240-profileless-removal.md) |
+| Never-activated Root removal without Home APIs (next candidate) | Use the lock-held original pre-activation stage, preserved routing inverse and current routing-path absence to prove CYTV never changed Home. Recheck before each destructive continuation and in the final Node process; retain full restart/package/private-data verification. New routing evidence blocks cleanup before deletion | `test_clean_removal` never-activated/never-applied cases and `test_cleanup_tail` untouched-Home cases; [source verification and limits](../history/2026-11-08-issue101-untouched-home-removal.md) |
 | Retried Root cleanup fails differently | Keep the first failure and export the latest fixed call/reason/code and stage separately | `test_retry_keeps_first_and_latest_failure_separate`; `test_diagnostic_context` exported-report privacy regression |
 | Root catalog access | Reuse the fixed Root SSH catalog/input reader; a failed optional input query warns and keeps valid apps, while failed/empty app reads still block. Partial inventory stays unverified in the checklist; no SSAP pairing or new permission | Actual Node program/reader and CLI/checklist regressions in `tests.cytv.test_clean_reinstall`; No-root keeps the existing SSAP path |
+| Root inventory read fails (unreleased, #397) | Retain separate fixed application/input failure reasons and bounded Luna codes; no raw replies or app list in diagnostics. Required apps still block, optional inputs still warn | Real Node stdin reader/host and exported-report privacy cases in `tests.cytv.test_clean_reinstall` / `test_diagnostic_context`; real child-process classifications in `tests/apps/root-inventory-diagnostics.cjs` |
 | Final result flags | Only both true flags with clean-removal disposition can show completion | `test_explicit_remove_needs_removed_and_verified_clean`; `test_explicit_uninstall_requires_clean_disposition_and_true_proof` in `tests.cytv.test_desktop_recovery`; `android/tests/removal-result.cjs` and `simple-removal.cjs` |
 | Actual busy/access-denied/package failure | Wait and retry, restore required Root access, or inspect error and retry | Bounded shared copy in `cytv/recovery_ui.py`; Android bridge/browser cases in all 13 locales. Actual denial classification belongs the providers |
 | Unknown or structured service code | Fixed human text, raw/private values excluded from main UI | `tests.cytv.test_recovery_ui`; `android.tests.test_bridge.BridgeTests.test_cleanup_details_are_localized_and_never_forward_unknown_codes` |

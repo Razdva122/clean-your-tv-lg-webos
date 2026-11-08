@@ -2,7 +2,9 @@
 
 Clean Your TV gives your LG webOS TV a personal Home screen: your apps in your order, without sponsored rows in this menu. Install from a computer or Android phone; the computer can be switched off afterward.
 
-**v1.12.1 — Next release (unreleased):** Connection errors will explain denied network access, refused SSH ports or timeouts. **Check connection again** runs diagnostics without installing packages; **Change connection** checks edited connection details. On macOS, **Open System Settings** helps find Local Network access; an older copy’s name may appear there. Pending operations retain their recovery flow.
+**Published v1.12.1:** Connection errors explain denied network access, refused SSH ports or timeouts. **Check connection again** runs diagnostics without installing packages; **Change connection** checks edited connection details. On macOS, **Open System Settings** helps find Local Network access; an older copy’s name may appear there. Pending operations retain their recovery flow.
+
+Unpublished v1.13.0 / Helper 0.8.0: standard IR short Home opens Clean after about 700 ms; LG Home may flash first. Held Home stays with webOS. Stock Developer Mode input access is unverified; do not change permissions. Triple Home and explicit restart after a stop remain required.
 
 <a id="unreleased-candidate-older-tv-nodejs"></a>
 
@@ -70,7 +72,7 @@ The desktop wizard selects your system language automatically; its language sele
 3. For No-root, enter the code from Developer Mode and approve the TV prompt. For Root, use your existing SSH credentials; approve a new SSH identity only for your own TV on a trusted network. If a saved key has changed, stop and investigate.
 4. Follow the wizard. Keep the TV on, stay on the same network and leave CYTV open until it finishes. Do not force-stop the Android app. Root activates Home control immediately after preparing recovery.
 
-In the next unpublished candidate, Root setup continues with a warning if TV inputs cannot be read but the application list is valid. Inputs may be missing from Home; a failed or empty application list still stops setup. Save the diagnostic report if the warning persists.
+In published v1.12.1, Root setup continues with a warning if TV inputs cannot be read but the application list is valid. Inputs may be missing from Home; a failed or empty application list still stops setup. Save the diagnostic report if the warning persists.
 
 ## 5. Check your remote
 
@@ -81,11 +83,15 @@ In the next unpublished candidate, Root setup continues with a warning if TV inp
 
 ## 6. Everyday use and recovery
 
+Unpublished No-root IR support: a short Home release schedules Clean after about 700 ms; LG Home may flash first. Held Home stays with webOS, and triple Home still stops Helper. Access on stock Developer Mode TVs remains unverified; do not change input permissions.
+
 Arrows select tiles; OK opens them; hold OK to reorder. Short Back retains the app's navigation and exit confirmation. Short Home opens Clean Your TV while Home control is active. Hold Back for 1.2 seconds to open LG Home once. The Home-control switch and your settings remain unchanged.
 
 **Press Home three times within two seconds**, releasing between presses, to return to LG Home and stop Home control. This preserves preferences.
 
 No-root: To restart Home control, open Home Helper, choose Start Helper and confirm. Your saved Home screen choice is kept. Root: turn **Change Home** on in Home settings to resume. **Open LG Home** opens LG Home once without changing routing. To restore LG Home as the persistent destination, turn **Change Home** off. Do not run both controllers together. If a failure repeats, leave LG Home active.
+
+An update does not restart a stopped No-root Helper. Resume it explicitly as described above; do not delete stop markers manually.
 
 ## Need help?
 
@@ -107,7 +113,11 @@ In published v1.11.0 and later, choose **Uninstall Clean Your TV** in Maintenanc
 
 When asked, disconnect the TV from power, reconnect it, wait for the network and choose **Try again**. Standby or Quick Start is not a full restart; CYTV does not restart the TV automatically. A connection loss needs a connection check and Try again on the same goal, without another recovery wizard. If access is denied, use the requested Root connection; if the TV is busy, wait and retry. Success appears only after final cleanup is verified. Keep your keys and original reports. The emergency controls and sharing consent above still apply.
 
+**Next candidate:** verified full removal leaves the TV ready for a new Root or No-root installation. Minimal inactive removal receipts prevent old work from resuming; do not delete them manually. Finish recovery first if removal or its current checks are incomplete.
+
 In v1.11.0 and later, failed or interrupted setup offers recovery directly. If No-root setup cannot continue, confirm full removal once. Removal automatically retries transient connection loss and a busy CYTV worker up to three attempts. If Root access is required, choose **Connect using Root** for the same TV; verified Root cleanup also finishes its blocked No-root removal. A failed Root activation attempts to restore and verify LG Home without repeating activation. Cancellation with unfinished work keeps a diagnostic report and recovery actions. Emergency-stop state remains unchanged.
+
+> **Unreleased continuation improvements:** After a removal connection error, open the connection details, check network access or choose an existing Root SSH key, then retry. The TV address, edition, port and host-key checks stay fixed. No-root checks Helper before pairing: stop it and confirm the recheck in the same setup. An empty TV can skip restart only with verified absence and no unresolved setup; actual removal still requires the requested restart. Legacy Root Updater remnants lead to separately confirmed full removal before new setup. Input-service failure allows safe package cleanup, but success still requires verified shortcut cleanup.
 
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="optional-python-for-root-in-v110"></a>

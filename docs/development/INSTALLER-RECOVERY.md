@@ -60,3 +60,11 @@ remain unrecorded when the first-stage diagnostic history has no observation.
 Rebuild embedding desktop/Android payloads through the normal candidate process.
 No component/release version, build selection or physical acceptance is selected
 by this focused change. Public downloads still point to the published release.
+
+
+For a retained Root activation, upcoming installer diagnostics distinguish the
+first unverified receipt/routing/files/product/Updater/rollback/binding boundary
+and checks not reached or still pending. See [diagnostic fields and limits](INSTALLER-DIAGNOSTICS.md#retained-root-activation-checks-next-candidate-355).
+These observations preserve the existing recovery admission; no extra TV checks
+or changes are performed to fill the report, and legacy discarded causes remain
+unknown.
