@@ -49,13 +49,23 @@ fs.fstatSync=function(fd){var info=real.fstatSync(fd);if(process.env.TMP_OWNER &
  }
  return real[name](path(p));
 };});
-fs.renameSync=function(a,b){return real.renameSync(path(a),path(b));};
+fs.renameSync=function(a,b){
+ var value;try{value=JSON.parse(real.readFileSync(path(a),'utf8'));}catch(e){}
+ if(value&&value.final_fence&&process.env.FAIL_FINAL_COMPLETE&&value.stage==='verified-clean')throw Error('interrupted final receipt');
+ if(value&&value.stage==='final-fence-pending'&&process.env.FAIL_FINAL_OWNER)throw Error('interrupted fence publication');
+ if(value&&value.stage==='verified-clean'&&value.owner==='clean-removal'&&process.env.FAIL_FINAL_VERIFIED)throw Error('interrupted verified owner');
+ return real.renameSync(path(a),path(b));
+};
 var lock=process.env.OWNERSHIP_FD?Number(process.env.OWNERSHIP_FD):fs.openSync('/var/lib/clean-your-tv-installation/ownership.lock','r+');
 var promotion=process.env.PROMOTION_FD?Number(process.env.PROMOTION_FD):fs.openSync('/var/lib/clean-your-tv-python/.install.lock','r+');
 var worker=process.env.WORKER_FD?Number(process.env.WORKER_FD):fs.openSync('/var/lib/clean-your-tv-installation/worker.lock','r+');
 var fake={getuid:process.getuid,pid:999999,ppid:999998,argv:['node','-',process.env.MODE||'finish','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',process.env.TAIL_STAGE||'-',String(lock),String(promotion),String(worker),process.env.GATE_SHA||'-',process.env.REMOVAL||'dddddddddddddddddddddddddddddddd'],stdout:process.stdout,stderr:process.stderr};
 var cp={spawnSync:function(command,args,options){
  if(command==='/proc/self/fd/3')return require('child_process').spawnSync(command,args,options);
+ if(command==='/usr/bin/node'&&args[0]==='-e'){
+  if(JSON.parse(args[2]).action!=='inventory')throw Error('Unexpected private cleanup effect');
+  return {status:0,stdout:Buffer.from?Buffer.from('{"schema":1,"present":[],"blocked":[]}'):new Buffer('{"schema":1,"present":[],"blocked":[]}')};
+ }
  var method=args[2],value={returnValue:true};
  if(method.indexOf('listApps')!==-1){if(process.env.PRIVATE_ERROR)throw Error(process.env.PRIVATE_ERROR);if(process.env.ALL_CATALOGS_DENIED || process.env.DEV_CATALOG_DENIED && method.indexOf('/dev/')!==-1)value.returnValue=false;if(process.env.CATALOG_MALFORMED && method.indexOf('/dev/')!==-1)delete value.returnValue;value.apps=[];}
  else if(method.indexOf('getSystemSettings')!==-1){if(process.env.NO_HOME_APIS)throw Error('Home APIs unavailable');value.settings={defaultApps:{home:process.env.SETTINGS_HOME||(process.env.FOREIGN_ROUTE?'changed':'third.party.home')}};}
@@ -63,9 +73,11 @@ var cp={spawnSync:function(command,args,options){
  else if(method.indexOf('activitymanager')!==-1)value.activities=JSON.parse(process.env.ACTIVITIES||'[]');
  else if(method.indexOf('getAllInputStatus')!==-1)value.devices=[];
  else throw Error('Unexpected RPC '+method);
- return {status:0,stdout:Buffer.from(JSON.stringify(value))};
+ return {status:0,stdout:Buffer.from?Buffer.from(JSON.stringify(value)):new Buffer(JSON.stringify(value))};
 }};
-try{vm.runInNewContext(real.readFileSync(source,'utf8'),{require:function(name){return name==='fs'?fs:name==='child_process'?cp:require(name);},process:fake,Buffer:Buffer,console:console});}
+fake.versions=process.versions;fake.env=process.env;fake.platform=process.platform;fake.nextTick=process.nextTick;
+var context={require:function(name){return name==='fs'?fs:name==='child_process'?cp:require(name);},process:fake,Buffer:Buffer,console:console};context.global=context;
+try{vm.runInNewContext(real.readFileSync(source,'utf8'),context);}
 finally{real.closeSync(lock);real.writeFileSync(process.env.MUTATION_LOG||base+'/mutations.json',JSON.stringify(calls));}
 process.exitCode=fake.exitCode||0;
 '''
@@ -115,6 +127,97 @@ class CleanupTail(unittest.TestCase):
         self.assertEqual(result.returncode,0,result.stderr)
         self.assertEqual(reply['stage'],'verified-clean')
 
+    def test_verified_removal_admission_is_read_only_and_rechecks_live_state(self):
+        result,reply=self.run_tail()
+        self.assertEqual(result.returncode,0,result.stderr)
+        before={p.name:p.read_bytes() for p in self.state.iterdir() if p.is_file()}
+        result,reply=self.run_tail(MODE='verify')
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(reply['state'],'verified-clean')
+        self.assertEqual(reply['lease'],json.loads((self.state/'operation.json').read_text())['id'])
+        self.assertNotEqual(reply['lease'],'b'*32)
+        self.assertEqual(before,{p.name:p.read_bytes() for p in self.state.iterdir() if p.is_file()})
+        self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+        owned=self.base/'media/developer/apps/usr/palm/applications/com.local.nativehome'
+        owned.mkdir(parents=True)
+        result,reply=self.run_tail(MODE='verify')
+        self.assertEqual(result.returncode,1)
+        self.assertEqual(reply['cleanup_error'],'package-remains')
+        result,reply=self.run_tail(MODE='finish')
+        self.assertEqual(result.returncode,1)
+        self.assertTrue(owned.exists())
+        self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+
+    def test_legacy_completed_removal_finalizes_without_sweeping_and_then_stays_read_only(self):
+        result,_=self.run_tail();self.assertEqual(result.returncode,0,result.stderr)
+        record=json.loads((self.state/('clean-removal-'+ID+'.json')).read_text())
+        record.pop('final_fence');record.pop('final_original_lease')
+        self.write('clean-removal-'+ID+'.json',record)
+        self.write('operation.json',dict(schema=1,id='b'*32,owner='clean-removal',journal='product-'+ID+'.json',stage='verified-clean',terminal=False))
+        result,reply=self.run_tail(MODE='finalize')
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertNotEqual(reply['lease'],'b'*32)
+        self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+        before={p.name:p.read_bytes() for p in self.state.iterdir() if p.is_file()}
+        result,_=self.run_tail(MODE='finalize')
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(before,{p.name:p.read_bytes() for p in self.state.iterdir() if p.is_file()})
+
+    def test_incomplete_removal_cannot_be_admitted_or_finished_by_verification(self):
+        before=(self.state/('clean-removal-'+ID+'.json')).read_bytes()
+        result,reply=self.run_tail(MODE='verify')
+        self.assertEqual(result.returncode,1)
+        self.assertEqual(before,(self.state/('clean-removal-'+ID+'.json')).read_bytes())
+        self.assertTrue((self.runtime/'bin/python3.13').exists())
+
+    def test_final_fence_crashes_resume_same_uuid_without_repeating_cleanup(self):
+        for point in ('FAIL_FINAL_OWNER','FAIL_FINAL_COMPLETE','FAIL_FINAL_VERIFIED'):
+            with self.subTest(point=point):
+                # A separate real-file fixture for each publication boundary.
+                case=CleanupTail();case.setUp()
+                try:
+                    result,reply=case.run_tail(**{point:'1'})
+                    self.assertEqual(result.returncode,1)
+                    record=json.loads((case.state/('clean-removal-'+ID+'.json')).read_text())
+                    planned=record['final_fence']
+                    result,reply=case.run_tail(MODE='verify')
+                    self.assertEqual(result.returncode,1,'Incomplete publication was admitted')
+                    result,reply=case.run_tail()
+                    self.assertEqual(result.returncode,0,result.stderr)
+                    self.assertEqual(json.loads((case.state/'operation.json').read_text())['id'],planned)
+                    result,reply=case.run_tail()
+                    self.assertEqual(result.returncode,0,result.stderr)
+                    self.assertEqual(json.loads((case.base/'mutations.json').read_text()),[])
+                finally:case.doCleanups()
+
+    def test_successor_allows_read_only_absence_but_fences_old_cleanup(self):
+        result,_=self.run_tail();self.assertEqual(result.returncode,0,result.stderr)
+        name='no-root-'+'e'*32+'.json'
+        final=json.loads((self.state/'operation.json').read_text())['id']
+        self.write(name,dict(schema=1,protocol='no-root-root-handoff-v1',lease='f'*32,
+            predecessor=dict(operation=ID,removal='d'*32,lease=final)))
+        self.write('operation.json',dict(schema=1,id='f'*32,owner='no-root',journal=name,stage='reserved',terminal=False))
+        before=(self.state/'operation.json').read_bytes()
+        result,reply=self.run_tail(MODE='verify')
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(reply['state'],'verified-clean')
+        result,reply=self.run_tail(MODE='finish')
+        self.assertEqual(result.returncode,1)
+        self.assertEqual((self.state/'operation.json').read_bytes(),before)
+
+    @unittest.skipUnless(os.environ.get('NODE012'),'Exact Node 0.12.2 is optional on the host')
+    def test_legacy_compiled_cleanup_and_admission_use_descriptor_io_on_node012(self):
+        from scripts.root_node_build import compile_root_beta
+        compiled=self.base/'legacy-tail.js'
+        compiled.write_bytes(compile_root_beta({'cleanup_tail.js':SOURCE.read_bytes()})['cleanup_tail.js'])
+        with patch.dict(os.environ,NODE8=os.environ['NODE012']),patch(__name__+'.SOURCE',compiled):
+            result,reply=self.run_tail()
+            self.assertEqual(result.returncode,0,result.stderr)
+            self.assertEqual(reply['stage'],'verified-clean')
+            result,reply=self.run_tail(MODE='verify')
+            self.assertEqual(result.returncode,0,result.stderr)
+            self.assertEqual(reply['state'],'verified-clean')
+
     def test_unavailable_or_malformed_catalog_never_retires_runtime(self):
         for flags,reason in (({'ALL_CATALOGS_DENIED':'1'},'cleanup-readback-unavailable'),
                              ({'CATALOG_MALFORMED':'1'},'cleanup-readback-malformed')):
@@ -163,7 +266,7 @@ class CleanupTail(unittest.TestCase):
         ownership=os.open(self.state/'ownership.lock',os.O_RDWR)
         self.addCleanup(os.close,ownership);fcntl.flock(ownership,fcntl.LOCK_EX|fcntl.LOCK_NB)
         device=install_device.LocalDevice.__new__(install_device.LocalDevice)
-        device.ownership=SimpleNamespace(store=store,fd=ownership)
+        device.ownership=SimpleNamespace(store=store,fd=ownership,status=lambda:store.read('operation'))
         device.payload=payload;device.clean_quiescent=lambda *args,**kwargs:None
         run=subprocess.run;calls=[]
         def node(args,**kwargs):
@@ -226,10 +329,18 @@ class CleanupTail(unittest.TestCase):
                     self.assertIs(self.record['runtime_cleanup']['promotion_required'],False)
                     saved=json.loads((self.state/('clean-removal-'+ID+'.json')).read_text())
                     self.assertEqual(saved['stage'],'verified-clean')
-                    # A lost final reply reuses the same proof and held locks.
-                    repeat=device.finish_clean_tail(self.record)
-                    self.assertEqual(repeat['stage'],'verified-clean')
-                    self.assertEqual(len(calls),2)
+                    # A stale Python caller cannot rewrite the completed proof;
+                    # supported retries use current coordinator/Node readback.
+                    before=(self.state/('clean-removal-'+ID+'.json')).read_bytes()
+                    with self.assertRaisesRegex(ValueError,'completed_removal_readback_required'):
+                        device.finish_clean_tail(self.record)
+                    self.assertEqual((self.state/('clean-removal-'+ID+'.json')).read_bytes(),before)
+                    self.assertEqual(len(calls),1)
+                    store.write('operation',dict(schema=1,id='f'*32,owner='no-root',journal='no-root-'+'e'*32+'.json',stage='reserved',terminal=False))
+                    with self.assertRaisesRegex(ValueError,'completed_removal_readback_required'):
+                        device.finish_clean_tail(self.record)
+                    self.assertEqual((self.state/('clean-removal-'+ID+'.json')).read_bytes(),before)
+                    self.assertEqual(len(calls),1)
                     self.assertFalse(self.runtime.parent.exists());self.assertFalse(boot.exists())
 
     def test_python_handoff_relays_safe_tail_guard_to_existing_stderr(self):

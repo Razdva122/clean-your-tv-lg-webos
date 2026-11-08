@@ -277,8 +277,9 @@ class Store:
             value = json.loads(completed.read_text())
             if value.get('recovery_protocol') != 'clean-removal-v1' or value.get('stage') != 'verified-clean':
                 raise UserError('Removal evidence changed. Recovery data was kept.')
-            private_write(directory / 'operation.json', json.dumps(value).encode())
-            return value
+            # A new explicit Remove is a new goal. Try again retains the active
+            # pending above; a completed goal never regains destructive power.
+            private_write(directory / ('clean-removal-history-'+uuid.uuid4().hex+'.json'), completed.read_bytes())
         identifier = uuid.uuid4().hex
         value = {'action':'uninstall', 'full_project':True,
                  'recovery_protocol':'clean-removal-v1', 'removal_operation':identifier,

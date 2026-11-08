@@ -71,7 +71,10 @@ def offer(installer, args, ask, write):
     installer.tv_info['node_version'] = value[1:]
     installer.tv_info['node_version_status'] = 'read'
     if installer.remote.run(FRESH_PROBE, timeout=10).strip() != 'CYTV_FRESH_ROOT':
-        raise UserError('Previous Root installation needs recovery. Run cytv status or cytv restore. Reinstallation has not started; recovery data was left unchanged.')
+        from .root_no_root_handoff import probe
+        try:installer._root_handoff=probe(installer)
+        except (OSError,ValueError,RuntimeError):
+            raise UserError('Previous Root installation needs recovery. Run cytv status or cytv restore. Reinstallation has not started; recovery data was left unchanged.') from None
     write.heading('Choose an alternative edition')
     from .i18n import translate
     write(translate('Ordinary Root requires Node.js 8+. Detected TV Node.js: {version}').format(version=value))

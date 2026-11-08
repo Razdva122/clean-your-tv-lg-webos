@@ -241,6 +241,7 @@ class SimpleRemoval(unittest.TestCase):
         self.assertTrue(self.remove()['restart_required']);self.assertTrue(marker.exists())
         marker.unlink()  # Model the measured C3 volatile reset, kernel UUID reused.
         self.assertTrue(self.remove()['verified_clean'])
+        (self.root/'proc').mkdir(exist_ok=True)  # Current idle proof for a new explicit goal.
         self.assertTrue(self.remove()['verified_clean']);self.assertFalse(marker.exists())
 
     def test_legacy_observer_prepare_failure_uses_confirmed_removal_and_keeps_capsule(self):
@@ -276,6 +277,24 @@ class SimpleRemoval(unittest.TestCase):
         private.mkdir(parents=True);(private/'prepared.json').write_text('owned evidence')
         self.assertTrue(self.remove()['restart_required'])
         self.assertTrue(private.exists())  # A full boot fences the old worker first.
+        self.reboot()
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertFalse(private.exists())
+
+    def test_root_transport_project_staging_is_removed_after_restart(self):
+        # Substitute only the unavailable host root UID branch; fixed project
+        # directory, restart fence and real file sweep remain production code.
+        original=self.remote.transform
+        self.remote.transform=lambda code:original(code).replace('if(uid===0)installerRoots.push',
+            'if(uid==='+str(os.getuid())+')installerRoots.push')
+        private=self.root/'varlib/clean-your-tv-installer'
+        private.mkdir(mode=0o755)
+        artifact=private/('cytv-'+'a'*32)/'launcher.ipk';artifact.parent.mkdir();artifact.write_bytes(b'private project staging')
+        operation=self.root/'volatile/.cytv-installer-root/operations'/('a'*32)
+        operation.mkdir(parents=True)
+        (operation/'prepared.json').write_text('retained original observer')
+        self.assertTrue(self.remove()['restart_required'])
+        self.assertTrue(artifact.exists())
         self.reboot()
         self.assertTrue(self.remove()['verified_clean'])
         self.assertFalse(private.exists())
@@ -537,6 +556,7 @@ class SimpleRemoval(unittest.TestCase):
 
     def test_repeat_clean_is_noop_but_fresh_install_requires_new_restart(self):
         self.remove();self.reboot();self.assertTrue(self.remove()['verified_clean'])
+        (self.root/'proc').mkdir(exist_ok=True)
         self.assertTrue(self.remove()['verified_clean'])
         self.store.begin(self.profile,'install');self.store.finish(self.profile)
         self.remote.apps={'com.gathin.tvhome'}

@@ -120,6 +120,49 @@ class CoordinatorCleanRemoval(unittest.TestCase):
         self.assertEqual(second['stage'],'verified-clean')
         self.assertNotEqual(second['lease'],first['lease'])
 
+    def test_old_clean_remove_and_workers_cannot_reclaim_no_root_successor(self):
+        original=self.driver.clean_remove(self.id)
+        successor=dict(schema=1,id='f'*32,owner='no-root',journal='no-root-'+'e'*32+'.json',stage='reserved',terminal=False)
+        self.owner.store.write('operation',successor)
+        before=list(self.device.calls)
+        for expected in (None,original['lease']):
+            with self.subTest(expected=expected),self.assertRaises(Busy):
+                self.driver.clean_remove(self.id,intent=original['removal'],expected_lease=expected)
+        with self.assertRaises(Busy):
+            with self.owner.operation('product','product-'+self.id+'.json',resume=original['lease']):pass
+        self.assertEqual(self.device.calls,before)
+        self.assertEqual(self.owner.status(),successor)
+
+    def test_completed_removal_rotates_fence_and_old_retry_cannot_sweep_new_apps(self):
+        first=self.driver.clean_remove(self.id)
+        self.assertNotEqual(first['lease'],self.owner.status()['id'])
+        self.assertEqual(first['final_fence'],self.owner.status()['id'])
+        before=list(self.device.calls)
+        self.device.clean_remove=lambda *args:self.fail('completed goal swept a new installation')
+        self.device.verify_clean=lambda record:(_ for _ in ()).throw(ValueError('project_apps_remain'))
+        with self.assertRaisesRegex(ValueError,'project_apps_remain'):self.driver.clean_remove(self.id)
+        self.assertEqual(before,self.device.calls)
+
+    def test_new_explicit_remove_selects_new_goal_after_completed_fence(self):
+        first=self.driver.clean_remove(self.id)
+        new='d'*32
+        target=self.driver.removal_target(new)
+        self.assertEqual(target['target_operation'],new)
+        self.assertIsNone(target['target_removal'])
+        second=self.driver.clean_remove(new,intent='e'*32,expected_lease=target['target_lease'])
+        self.assertEqual(second['stage'],'verified-clean')
+        self.assertNotEqual(second['final_fence'],first['final_fence'])
+        self.assertEqual(self.owner.store.read('clean-removal-'+self.id),first)
+
+    def test_explicit_new_root_removal_can_retire_bound_no_root_successor(self):
+        first=self.driver.clean_remove(self.id)
+        binding=dict(schema=1,protocol='no-root-root-handoff-v1',operation='e'*32,lease='f'*32,plan_sha256='0'*64)
+        self.owner.store.write('no-root-'+binding['operation'],binding)
+        self.owner.store.write('operation',dict(schema=1,id=binding['lease'],owner='no-root',journal='no-root-'+binding['operation']+'.json',stage='reserved',terminal=False))
+        second=self.driver.clean_remove('d'*32,intent='9'*32,expected_lease='f'*32)
+        self.assertEqual(second['stage'],'verified-clean')
+        self.assertNotEqual(second['final_fence'],first['final_fence'])
+
     def test_inspect_and_restore_verified_removal_preserve_fences_and_old_request(self):
         original=self.original();self.driver.clean_remove(self.id)
         self.device.inspect=lambda:{'state':'recovery_required','can_install':False,'can_maintain':False}

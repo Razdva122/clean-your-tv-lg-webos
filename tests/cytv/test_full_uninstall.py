@@ -170,20 +170,25 @@ class FullUninstallTests(unittest.TestCase):
         self.assertEqual(calls,[('clean-target','a'*32),('clean-remove','b'*32)])
         remote.luna.assert_not_called()
 
-    def test_reappeared_package_requires_current_cleanup_in_same_goal(self):
+    def test_new_explicit_goal_removes_reappeared_package_without_reusing_completed_authority(self):
         inst,remote,store,profile,calls,device=self.fixture()
         store.begin(profile,'uninstall',full_project=True,product_operation='a'*32)
         self.assertTrue(inst.uninstall(full_project=True)['verified_clean'])
         receipt=json.loads((store.device_dir(profile)/'clean-removal.json').read_bytes())
         device['present']=True
         pending=store.request_clean_removal(profile)
-        self.assertEqual(pending['removal_operation'],receipt['removal_operation'])
+        self.assertNotEqual(pending['removal_operation'],receipt['removal_operation'])
+        device.update(target_operation=pending['product_operation'],target_removal=pending['removal_operation'],target_lease='f'*32)
         self.assertIsNotNone(inst.status()['pending'])
         self.assertTrue(device['present'])
         self.assertTrue(inst.uninstall(full_project=True)['verified_clean'])
         self.assertFalse(device['present'])
-        self.assertEqual(calls,[('clean-target','a'*32),('clean-remove','b'*32)]*2)
-        self.assertEqual(device['requests'],[('b'*32,'e'*32,'c'*32)]*2)
+        self.assertEqual(calls,[('clean-target','a'*32),('clean-remove','b'*32),
+            ('clean-target',pending['product_operation']),('clean-remove',pending['product_operation'])])
+        self.assertEqual(device['requests'],[('b'*32,'e'*32,'c'*32),
+            (pending['product_operation'],pending['removal_operation'],'f'*32)])
         again=json.loads((store.device_dir(profile)/'clean-removal.json').read_bytes())
-        self.assertEqual(again['previous'],receipt['previous'])
+        self.assertNotIn('previous',again)
+        history=list(store.device_dir(profile).glob('clean-removal-history-*.json'))
+        self.assertTrue(any(json.loads(path.read_text())==receipt for path in history))
         self.assertIsNone(store.pending(profile));remote.luna.assert_not_called()

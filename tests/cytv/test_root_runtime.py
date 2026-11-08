@@ -11,6 +11,21 @@ from cytv.errors import UserError
 
 
 class RuntimeChoices(unittest.TestCase):
+    def test_verified_clean_root_removal_can_enter_no_root_preflight_without_python(self):
+        from cytv.operations import Installer
+        from tests.cytv.test_operations import Remote as FixtureRemote
+        class Remote(FixtureRemote):
+            root=True
+            def run(self,command,**kw):
+                if 'CYTV_FRESH_ROOT' in command:return 'CYTV_RETAINED_ROOT'
+                return super().run(command,**kw)
+        remote=Remote();installer=Installer(remote,None,state.target('192.0.2.10','no-root',connection='root-ssh'),'.',{})
+        stamp=dict(operation='a'*32,removal='b'*32,lease='c'*32)
+        with patch('cytv.root_no_root_handoff.probe',return_value=stamp):
+            installer.preflight(install=True)
+        self.assertEqual(installer._root_handoff,stamp)
+        self.assertFalse(any('python' in call[1] for call in remote.calls if call[0]=='run'))
+
     def test_direct_no_root_root_ssh_install_cannot_bypass_retained_root_state(self):
         from cytv.operations import Installer
         class Remote:

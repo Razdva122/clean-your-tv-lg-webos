@@ -127,7 +127,7 @@ try{
  }
 }catch(ignored){}
 var installerRoots=['/media/developer/.cytv-installer','/tmp/.cytv-installer'];
-if(uid===0)installerRoots.push('/tmp/.cytv-installer-root');
+if(uid===0)installerRoots.push('/tmp/.cytv-installer-root','/var/lib/clean-your-tv-installer');
 else installerRoots.push('/.cytv-installer');
 function privateInstaller(root){
  if(root!=='/.cytv-installer')return;
@@ -364,6 +364,8 @@ def continue_removal(installer, expected_pending):
     if any(app in apps for app in ('com.cleanyourtv.root.preview', 'com.cleanyourtv.root.updater', 'com.cleanyourtv.system.updater')):
         raise UserError(ROOT_MESSAGE, reason_code='root-access-required')
     if pending.get('stage') == 'verified-clean' and not current['blocked'] and not current['present'] and not apps.intersection(APPS):
+        from .root_no_root_handoff import release
+        release(installer)
         installer.store.finish_clean_removal(installer.profile)
         return {'removed': True, 'verified_clean': True}
     empty = (pending.get('stage') == 'requested' and not pending.get('previous') and not pending.get('cleanup_boot_proof')
@@ -377,6 +379,8 @@ def continue_removal(installer, expected_pending):
                 and _device(installer, 'idle').get('idle') is True):
             installer.store.checkpoint(installer.profile, stage='verified-clean', removal_reason='removal-verified',
                                        result={'removed': True, 'verified_clean': True})
+            from .root_no_root_handoff import release
+            release(installer)
             installer.store.finish_clean_removal(installer.profile)
             return {'removed': True, 'verified_clean': True}
     def capture_boot():
@@ -468,5 +472,7 @@ def continue_removal(installer, expected_pending):
     _device(installer, 'boot-retire', proof=proof)
     installer.store.checkpoint(installer.profile, stage='verified-clean', removal_reason='removal-verified',
                                result={'removed': True, 'verified_clean': True})
+    from .root_no_root_handoff import release
+    release(installer)
     installer.store.finish_clean_removal(installer.profile)
     return {'removed': True, 'verified_clean': True}

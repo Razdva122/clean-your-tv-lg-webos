@@ -118,6 +118,8 @@ retry removal. Missing files are skipped; absence is not itself an error.
 
 In v1.11.0 and later, failed or interrupted setup offers recovery directly. If No-root setup cannot continue, confirm full removal once. Removal automatically retries transient connection loss and a busy CYTV worker up to three attempts. If Root access is required, choose **Connect using Root** for the same TV; verified Root cleanup also finishes its blocked No-root removal. A failed Root activation attempts to restore and verify LG Home without repeating activation. Cancellation with unfinished work keeps a diagnostic report and recovery actions. Emergency-stop state remains unchanged.
 
+**Next candidate:** verified full removal leaves the TV ready for a new Root or No-root installation. Minimal inactive removal receipts prevent old work from resuming; do not delete them manually. Finish recovery first if removal or its current checks are incomplete.
+
 Returning to LG Home alone remains separate from removal. Emergency controls
 above stay available. For setup recovery, eligible Root can still finish with
 LG Home and Home control off; that goal does not require activating Clean Home.

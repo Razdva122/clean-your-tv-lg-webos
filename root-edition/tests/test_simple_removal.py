@@ -22,7 +22,16 @@ class SimpleRemoval(unittest.TestCase):
         fixture[0].device.boot_id=lambda:self.boot+':session-'+self.boot[0]*32
         return fixture
 
-    def test_partial_removal_requires_full_boot_then_fresh_sweep(self):
+    def restage(self,driver,payload):
+        # Normal host dispatch uploads current support for each new goal; the
+        # previous full removal deliberately retired this model's old copy.
+        (payload/'root/runtime').mkdir(parents=True,exist_ok=True)
+        (payload/'root/runtime/cli.py').write_text('current source')
+        (payload/'root-updater').mkdir(exist_ok=True)
+        (payload/'root-updater/bundle.json').write_text('{"files":{"install_driver.py":"fixture","package.json":"fixture","services.json":"fixture"}}')
+        driver.device.payload=payload
+
+    def test_partial_removal_requires_boot_and_completed_goal_cannot_sweep_new_residue(self):
         driver,identifier,root,updater,payload,calls,present=self.prepare()
         first=driver.clean_remove(identifier)
         self.assertEqual(first['stage'],'restart-required',first)
@@ -36,10 +45,16 @@ class SimpleRemoval(unittest.TestCase):
         self.assertFalse((root/'state/ssap.json').exists())
         driver.device.payload=None
         (root/'state').mkdir();(root/'state/ssap.json').write_text('reappeared at boot')
-        self.assertEqual(driver.clean_remove(identifier)['stage'],'verified-clean')
+        with self.assertRaisesRegex(ValueError,'private_members_remain'):
+            driver.clean_remove(identifier)
+        self.assertTrue((root/'state/ssap.json').exists())
+        self.restage(driver,payload)
+        target=driver.removal_target('e'*32)
+        new=driver.clean_remove(target['target_operation'],intent='e'*32,expected_lease=target['target_lease'])
+        self.assertEqual(new['stage'],'restart-required',new)
+        self.boot='33333333-3333-3333-3333-333333333333'
+        self.assertEqual(driver.clean_remove('e'*32,intent='e'*32)['stage'],'verified-clean')
         self.assertFalse((root/'state/ssap.json').exists())
-        driver.device.payload=None
-        self.assertEqual(driver.clean_remove(identifier)['stage'],'verified-clean')
         self.assertEqual(calls.count('remove-'+APPS[0]),1)
 
     def test_unknown_old_install_does_not_block_owned_residue_cleanup(self):
@@ -99,16 +114,21 @@ class SimpleRemoval(unittest.TestCase):
             driver.clean_remove(target['target_operation'],intent='e'*32,expected_lease=target['target_lease'])
         self.assertEqual(calls,[])
 
-    def test_fresh_host_reuses_current_completed_tv_goal_without_replacing_history(self):
+    def test_fresh_explicit_remove_selects_new_goal_without_replacing_history(self):
         driver,identifier,root,updater,payload,calls,present=self.prepare()
         driver.clean_remove(identifier,intent='d'*32)
         self.boot='22222222-2222-2222-2222-222222222222'
-        driver.clean_remove(identifier,intent='d'*32)
-        driver.device.payload=None
+        completed=driver.clean_remove(identifier,intent='d'*32)
+        self.restage(driver,payload)
         target=driver.removal_target('e'*32)
-        self.assertEqual(target['target_removal'],'d'*32)
-        result=driver.clean_remove(target['target_operation'],intent=target['target_removal'],expected_lease=target['target_lease'])
+        self.assertEqual(target['target_operation'],'e'*32)
+        self.assertIsNone(target['target_removal'])
+        result=driver.clean_remove(target['target_operation'],intent='e'*32,expected_lease=target['target_lease'])
+        self.assertEqual(result['stage'],'restart-required',result)
+        self.boot='33333333-3333-3333-3333-333333333333'
+        result=driver.clean_remove('e'*32,intent='e'*32)
         self.assertEqual(result['state'],'complete')
+        self.assertEqual(driver.store.read('clean-removal-'+identifier),completed)
 
     def test_current_removal_goal_drift_is_rejected_under_original_lock(self):
         from installation import Busy
