@@ -54,6 +54,33 @@ Final #451 changes require a refreshed compatibility/control documentation pass.
 Installation, update/removal, recovery and component guides must be reconciled
 with the final inventory before readiness; historical results retain their scope.
 
+Also reviewed edition selection, installation, update and recovery instructions,
+Root entry-point packaging and the Android guide. Corrected stale v1.13.0
+candidate/v1.12.1 download text in Root's README, README's fresh-System note and
+the old v1.12.1-candidate reference in recovery. No commands or inbound anchors
+changed. Final #451 admission guidance is still owned by its implementation.
+
+## Published baseline authentication
+
+Published v1.13.0 is neither draft nor prerelease. Downloaded BUILD-INFO,
+SHA256SUMS, four signed System feeds, both Home graphics IPKs and Helper0.8.0.
+Every downloaded checksum matches SHA256SUMS. All four envelopes verify with
+the repository's pinned public key; downloaded Home/Helper hashes and sizes match
+the signed component bindings. BUILD-INFO source is
+`7edc6cecd492c31ebf82940ba0a6a983875c989d`, matching the release target, and its
+versions match the unchanged preparation metadata. No credentials or device data
+were needed. The following are authenticated published baselines, not new tests:
+
+| Package | SHA-256 |
+| --- | --- |
+| Home1.13.2 FHD | `a1cef43e5317dc309cb7c424304ce943a1a8c9bb7f2926866d6eb9f3f043f0ec` |
+| Home1.13.2 HD | `77cad4a33d8b4fa8e37af6fdb54e32611afde90c7d6f8f2848b40994b4ced1a0` |
+| Helper0.8.0 | `6116d99281d2f5c21ff192ddb07ce6cbdae4223573999ac0d310d86ace87e0c2` |
+
+README release metadata checks pass (3 tests), formatting check passes and
+`git diff --check` is clean. The combined installer/Android/setup run remains
+in progress; no result is inferred from partial output.
+
 ## Acceptance planning
 
 No TV is accessed or changed in this preparation. Model, firmware, remote and

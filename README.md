@@ -143,7 +143,7 @@ For contributors: [build and technical references](docs/development/README.md),
 | Android installer / versionCode | 0.13.0 / 28 |
 <!-- /release:components -->
 
-Fresh candidate System Updater target: 1.2.7 / protocol 1. Existing supervisors stay pinned; installed 1.1.2 has no general replacement path. See the [candidate delivery limits](docs/RELEASE-1.13.0.md).
+Published v1.13.0 fresh System Updater: 1.2.7 / protocol 1. Existing supervisors stay pinned; installed 1.1.2 has no general replacement path. See the [delivery limits](docs/RELEASE-1.13.0.md).
 
 Historical System Updater in 1.7.0: 1.2.0 / protocol 1.
 See the [1.7.0 release notes](docs/RELEASE-1.7.0.md)
