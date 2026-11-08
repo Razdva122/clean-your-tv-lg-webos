@@ -20,17 +20,19 @@ to the existing shards to avoid adding all their work to shard 1:
 
 | Shard | Serial checks, in addition to its Python partitions |
 | --- | --- |
-| 1 | UI/theme source checks, Android, preview; fresh metadata and Linux ownership checks remain here |
+| 1 | UI/theme source checks, Android; fresh metadata and Linux ownership checks remain here |
 | 2 | Helper/TV/legacy Node, native controls/watchdog, Root service JS; Homebrew payload/bridge/UI/installer checks |
 | 3 | No additional serial block |
-| 4 | No-root/system updater JS and complete `tests/system_updates` discovery |
+| 4 | No-root/system updater JS, complete `tests/system_updates` discovery, preview |
 
 Browser and ARM Python validation retain their separate jobs. Each selected
 serial block executes once per OS, with its existing command order and failure
 handling. The complete command multiset across shards equals unsharded execution;
 there is no concurrent execution inside a checkout. Browser identity is bound to
-both runtime shards 1 (preview) and 2 (Homebrew); an unknown browser cannot grant
-reused evidence. Changed routing is itself a global fingerprint input, so receipts
+runtime shards 2 (Homebrew) and 4 (preview), conservatively retaining shard 1's
+existing UI binding; an unknown browser cannot grant reused evidence. `preview`
+receipts are selected only on shard 4; UI/Android receipts remain on shard 1.
+Changed routing is itself a global fingerprint input, so receipts
 for the previous layout cannot attest the new layout.
 
 Without `--shard`, local profiles and the no-argument full suite are unchanged.
@@ -75,6 +77,9 @@ first Linux/macOS shards versus 6m27s–9m28s/6m53s–8m18s on the other shards.
 The first Linux job's executable log showed about 90s of TV/legacy work and 38s
 of Homebrew work before redistribution to shard 2, plus 49s of updater work moved
 to shard 4. These are observations from that run, not a fixed speedup promise.
+[The first redistribution run](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42496760027)
+passed, reducing the first Linux/macOS jobs to 10m04s/9m51s. Preview then moved as
+one complete block from shard 1 to shard 4 to address the remaining macOS skew.
 
 ## Runner use, dependency caches and artifact retention
 
