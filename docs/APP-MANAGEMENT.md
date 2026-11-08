@@ -26,25 +26,24 @@ settings section to add apps or restore hidden ones without showing + again.
 The choice survives restart and is included in the layout saved for system
 update/rollback recovery. A failed save leaves the previous choice active.
 
-## Live TV discovery (unreleased, #290)
+## Live TV discovery (published in v1.12.1)
 
 **+ / Add app** can offer the broadcast tuner under the TV's own localized name
 (for example, Live TV) when Application Manager reports it installed. Some
 firmware omits the tuner from launch points and marks its app invisible; the
-candidate includes this discovered tuner without exposing other hidden system
+published service includes this discovered tuner without exposing other hidden system
 apps. It does not invent an app on models where the tuner is not discovered.
 
 No-root needs the updated Home Helper for picker refresh and the updated installer
 for initial inventory. Root needs the updated Home package. An unsupported or
-failed supplementary query preserves the normal app list. These changes are not
-yet in published downloads. Discovery is verified separately from launching
+failed supplementary query preserves the normal app list. These changes are in published v1.12.1. Discovery is verified separately from launching
 channels; tuner launch and firmware-specific compatibility still need TV acceptance.
 
 ## Inventory and persistence
 
-### Root store apps and picker utilities (unreleased, #361)
+### Root store apps and picker utilities (published in v1.12.1)
 
-The candidate Root service uses Application Manager's general `listApps` query
+The published Root service uses Application Manager's general `listApps` query
 instead of `dev/listApps`, so its fresh catalog can include Content Store apps
 alongside sideloaded apps. Hidden system apps remain filtered, with the existing
 exception for the discovered broadcast tuner. No-root keeps its existing paired
@@ -54,7 +53,7 @@ In both editions, **+ / Add app** excludes Ares Hosted App
 (`com.sdk.ares.hostedapp`) and Root Updater (`com.cleanyourtv.root.updater`),
 including entries in a saved catalog. Existing Home tiles for these utilities
 are preserved. This picker filter does not uninstall or disable either utility.
-These changes require rebuilt Home/Root packages and are not yet published.
+Published v1.12.1 includes these Home/Root packages.
 The shared Home catalog applies the same visibility and duplicate-ID rules to
 raw inventory, service replies and saved catalogs. Only an actually discovered
 Live TV app bypasses the platform's hidden/invisible flags; a missing tuner is
@@ -67,14 +66,14 @@ are bounded. A missing pairing key, denied request or timeout falls back to the
 saved inventory with an explicit message. No pairing dialog is intentionally
 started, and no uninstall endpoint is called.
 
-The next candidate also tries Home's own service when the No-root cross-package
+Published v1.12.1 also tries Home's own service when the No-root cross-package
 inventory request fails or times out. This fallback needs matching updated Home
 and Home Helper packages and an already running Helper with its existing pairing
 key. It does not start Helper or change TV permissions. A stopped/older Helper
 or unavailable pairing still leaves the saved inventory usable. Physical-device
-confirmation is pending; this is not yet a published fix for #207.
+confirmation is pending; this does not establish resolution of #207.
 
-Fresh remote icon URLs replace older remote URLs in the next candidate. Packaged
+Published v1.12.1 replaces older remote icon URLs with fresh remote URLs. Packaged
 and embedded icons remain preferred over remote metadata, and an omitted icon
 keeps the previous one. This corrects stale URL retention; it does not resolve
 certificate rejection or guarantee that the TV's resource URLs stay valid.

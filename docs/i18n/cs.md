@@ -2,7 +2,9 @@
 
 Clean Your TV je vaše vlastní domovská obrazovka pro LG webOS: aplikace ve vašem pořadí, bez sponzorovaných řádků v této nabídce. Instalujte z počítače nebo telefonu s Androidem; po nastavení může být počítač vypnutý.
 
-**v1.12.1 — Příští verze (nevydaná):** Chyby spojení rozliší odepřený přístup k síti, odmítnutí portem SSH a vypršení času. **Znovu prověřit spojení** spustí diagnostiku bez instalace balíčků; **Změnit připojení** prověří upravené údaje. V macOS tlačítko **Otevřít Nastavení systému** pomůže najít přístup k místní síti; může se zobrazit název starší kopie. Nedokončené operace zachovají svůj postup obnovy.
+**Vydáno ve v1.12.1:** Chyby spojení rozlišují odepřený přístup k síti, odmítnutí portem SSH a vypršení času. **Znovu prověřit spojení** spustí diagnostiku bez instalace balíčků; **Změnit připojení** prověří upravené údaje. V macOS tlačítko **Otevřít Nastavení systému** pomůže najít přístup k místní síti; může se zobrazit název starší kopie. Nedokončené operace zachovají svůj postup obnovy.
+
+Nevydaná v1.13.0 / Helper 0.8.0: krátké Home na IR ovladači otevře Clean asi za 700 ms; LG Home může krátce probliknout. Podržení Home zůstává webOS. Přístup ke vstupu v běžném Developer Mode není ověřen; neměňte oprávnění. Trojí Home a výslovné spuštění po zastavení zůstávají.
 
 <a id="kandidát-unreleased-starší-nodejs-v-tv"></a>
 

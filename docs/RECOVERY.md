@@ -378,7 +378,7 @@ transaction or backup also blocks replacement, even if marked complete; preserve
 it for review rather than deleting it to force replacement. It does not patch
 retained pinned code in place or replay an uncertain remove/install request.
 
-The unpublished v1.12.1 candidate targets fresh System Updater 1.2.6; published v1.12.0 targets 1.2.5. Only installed 1.1.0/1.1.1 sources are admitted by the explicit replacement. Retained 1.1.2 and 1.2.x have no general replacement path. A completed earlier
+The unpublished v1.13.0 candidate targets fresh System Updater 1.2.7; published v1.12.1 targets 1.2.6. Only installed 1.1.0/1.1.1 sources are admitted by the explicit replacement. Retained 1.1.2 and 1.2.x have no general replacement path. A completed earlier
 replacement to 1.1.1 can start a new target operation only
 after the installer authenticates its saved bundle, baseline, original archive,
 terminal removal and current owner, and confirms that later recovery has finished.

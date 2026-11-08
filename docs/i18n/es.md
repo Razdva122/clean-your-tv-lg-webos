@@ -2,7 +2,9 @@
 
 Clean Your TV ofrece una pantalla de inicio personal para tu LG webOS: tus aplicaciones en tu orden, sin filas patrocinadas en este menú. Instálalo desde un ordenador o teléfono Android; después puedes apagar el ordenador.
 
-**v1.12.1 — Próxima versión (sin publicar):** Los errores distinguirán acceso a la red denegado, puertos SSH que rechazan conexiones y tiempos de espera agotados. **Comprobar conexión de nuevo** ejecuta diagnósticos sin instalar paquetes; **Cambiar conexión** comprueba los datos editados. En macOS, **Abrir Ajustes del Sistema** ayuda a encontrar el acceso a la red local; puede aparecer el nombre de una copia anterior. Las operaciones pendientes conservan su proceso de recuperación.
+**Publicado en v1.12.1:** Los errores distinguen acceso a la red denegado, puertos SSH que rechazan conexiones y tiempos de espera agotados. **Comprobar conexión de nuevo** ejecuta diagnósticos sin instalar paquetes; **Cambiar conexión** comprueba los datos editados. En macOS, **Abrir Ajustes del Sistema** ayuda a encontrar el acceso a la red local; puede aparecer el nombre de una copia anterior. Las operaciones pendientes conservan su proceso de recuperación.
+
+Sin publicar, v1.13.0 / Helper 0.8.0: Home breve en un mando IR abre Clean tras unos 700 ms; LG Home puede aparecer antes. Mantener Home sigue en webOS. El acceso de entrada en Developer Mode normal no está verificado; no cambies permisos. Se mantienen el triple Home y el inicio explícito tras una parada.
 
 <a id="candidato-unreleased-nodejs-antiguo-en-el-tv"></a>
 

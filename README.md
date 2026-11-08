@@ -55,12 +55,12 @@ and creating your own theme.
 ## Download and install
 
 <!-- release:downloads -->
-Current stable release: **[v1.12.1](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.12.1)** — [release notes](docs/RELEASE-1.12.1.md).
+Current stable release: **[v1.13.0](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.13.0)** — [release notes](docs/RELEASE-1.13.0.md).
 <!-- /release:downloads -->
 
-> **Unpublished v1.12.1 candidate:** the checked metadata above describes the candidate. Public downloads still serve v1.12.0 until verified publication.
+> **Unpublished v1.13.0 candidate:** the metadata sections describe the selected candidate. Public download buttons still serve v1.12.1 until verified publication.
 
-Release v1.12.0 includes the scoped C3 and Android emulator checks recorded in the [acceptance notes](docs/history/2026-11-07-release-1.12.0-scoped-qa.md), with Beta and automatic Home-preservation limits stated explicitly.
+Published v1.12.1 acceptance and the known physical Home-routing limitation are recorded in the [acceptance notes](docs/history/2026-11-08-release-1.12.1-publication-acceptance.md); those observations do not accept new candidate artifacts.
 
 [![Download Windows x64 graphical installer — GUI ZIP](assets/brand/downloads/windows.svg)](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/cytv-windows-x64-desktop.zip)
 [![Download macOS Apple Silicon graphical installer — ZIP](assets/brand/downloads/macos-arm64.svg)](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/cytv-macos-arm64.zip)
@@ -139,15 +139,15 @@ For contributors: [build and technical references](docs/development/README.md),
 <!-- release:components -->
 | Component | Stable version |
 | --- | --- |
-| cytv installer | 0.13.1 |
-| Home | 1.13.1 |
-| Home Helper | 0.7.5 |
-| Root edition | 0.13.1 |
-| Both edition Updaters | 0.5.3 |
-| Android installer / versionCode | 0.12.1 / 27 |
+| cytv installer | 0.14.0 |
+| Home | 1.13.2 |
+| Home Helper | 0.8.0 |
+| Root edition | 0.13.2 |
+| Both edition Updaters | 0.5.4 |
+| Android installer / versionCode | 0.13.0 / 28 |
 <!-- /release:components -->
 
-Fresh System Updater target: 1.2.6 / protocol 1. Existing supervisors stay pinned; installed 1.1.2 has no general replacement path. See the [candidate delivery limits](docs/RELEASE-1.12.1.md).
+Fresh candidate System Updater target: 1.2.7 / protocol 1. Existing supervisors stay pinned; installed 1.1.2 has no general replacement path. See the [candidate delivery limits](docs/RELEASE-1.13.0.md).
 
 Historical System Updater in 1.7.0: 1.2.0 / protocol 1.
 See the [1.7.0 release notes](docs/RELEASE-1.7.0.md)

@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [v1.13.0 preparation, 2026-11-08](2026-11-08-release-1.13.0-preparation.md): versioned preliminary packages, automated checks, mandatory Helper compatibility blocker and the bounded physical plan. No new TV acceptance.
+
 - [1.12.1 unattended C3 QA, 2026-11-07](2026-11-07-release-1.12.1-unattended-tv-qa.md): exact signed forward/rollback/forward, profile and renderer/service cases, corrected harness findings, standby/wake, final power-off and remaining manual checks.
 
 - [1.12.1 freeze and pre-dispatch checks, 2026-11-07](2026-11-07-release-1.12.1-freeze.md): six-PR scope, authenticated baselines, package/version gates, documentation and bounded acceptance plan.

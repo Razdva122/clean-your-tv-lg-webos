@@ -2,7 +2,9 @@
 
 Clean Your TV gives your LG webOS TV a personal Home screen: your apps in your order, without sponsored rows in this menu. Install from a computer or Android phone; the computer can be switched off afterward.
 
-**v1.12.1 — Next release (unreleased):** Connection errors will explain denied network access, refused SSH ports or timeouts. **Check connection again** runs diagnostics without installing packages; **Change connection** checks edited connection details. On macOS, **Open System Settings** helps find Local Network access; an older copy’s name may appear there. Pending operations retain their recovery flow.
+**Published v1.12.1:** Connection errors explain denied network access, refused SSH ports or timeouts. **Check connection again** runs diagnostics without installing packages; **Change connection** checks edited connection details. On macOS, **Open System Settings** helps find Local Network access; an older copy’s name may appear there. Pending operations retain their recovery flow.
+
+Unpublished v1.13.0 / Helper 0.8.0: standard IR short Home opens Clean after about 700 ms; LG Home may flash first. Held Home stays with webOS. Stock Developer Mode input access is unverified; do not change permissions. Triple Home and explicit restart after a stop remain required.
 
 <a id="unreleased-candidate-older-tv-nodejs"></a>
 
@@ -70,7 +72,7 @@ The desktop wizard selects your system language automatically; its language sele
 3. For No-root, enter the code from Developer Mode and approve the TV prompt. For Root, use your existing SSH credentials; approve a new SSH identity only for your own TV on a trusted network. If a saved key has changed, stop and investigate.
 4. Follow the wizard. Keep the TV on, stay on the same network and leave CYTV open until it finishes. Do not force-stop the Android app. Root activates Home control immediately after preparing recovery.
 
-In the next unpublished candidate, Root setup continues with a warning if TV inputs cannot be read but the application list is valid. Inputs may be missing from Home; a failed or empty application list still stops setup. Save the diagnostic report if the warning persists.
+In published v1.12.1, Root setup continues with a warning if TV inputs cannot be read but the application list is valid. Inputs may be missing from Home; a failed or empty application list still stops setup. Save the diagnostic report if the warning persists.
 
 ## 5. Check your remote
 

@@ -37,7 +37,7 @@ Do not bypass a failed runtime gate.
 | | No-root | Root |
 | --- | --- | --- |
 | Access | Active LG Developer Mode, Key Server and local networking | Existing root, trusted root SSH and compatible Homebrew services |
-| TV runtime | Node.js 0.10.15+ for the compiled Helper (published and retained candidate 0.7.5) | Node.js 8+ and Python 3.9+ with the required modules |
+| TV runtime | Node.js 0.10.15+ for the compiled Helper (published 0.7.5; unpublished candidate 0.8.0) | Node.js 8+ and Python 3.9+ with the required modules |
 | Input | Compatible remote devices and native input access | Supported ARM32 userspace and compatible Magic Remote input |
 | Ongoing requirement | Keep Developer Mode active and Helper pairing/networking available | Keep independent recovery services and their referenced runtime intact |
 

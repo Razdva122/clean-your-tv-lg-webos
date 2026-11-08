@@ -2,8 +2,7 @@
 
 This is a plan, not a test result. Its integrated scope is #415/#419/#421/#423/
 #424/#426/#427/#428/#429/#430/#431/#432/#433 at source merge `2e22c62b`.
-Reconcile it with `release-plan.json` and final artifact selection before freeze. Candidate version, selected build/attempt,
-package hashes and devices are unset. Every case starts **UNTESTED**. Source CI,
+Reconcile it with `release-plan.json` and final artifact selection before freeze. Selected version: v1.13.0 (Home 1.13.2, Helper 0.8.0, Root 0.13.2, both Updaters 0.5.4, cytv 0.14.0, Android 0.13.0/code28, fresh System 1.2.7). Final build/attempt, final hashes and devices are unset. Preliminary hashes and host results are in the [preparation record](2026-11-08-release-1.13.0-preparation.md). Every physical case starts **UNTESTED**. Source CI,
 package installation and historical observations do not accept these new bytes.
 
 ## Admission and record
@@ -55,6 +54,57 @@ package installation and historical observations do not accept these new bytes.
 | #433 | Controlled host/loopback/synthetic Windows socket causes become fixed sorted unique categories. Reports/history contain no addresses, exception prose or credentials. No new retry, auth/trust bypass or device probe. Native Windows ARM64 evidence remains separately identified. |
 | #429 | Compiled clock missing/broken-Intl fallback and both 720p editions/13 locales; aggregate icon counters/history/privacy, including coexistence with Root recovery/inventory diagnostic fields. No icon admission/download-policy change. |
 | #431 | Desktop/Android connection-help and selected-key retry preserve target/trust; Back cannot abandon running work. Controlled process/EIM fixtures keep uncertainty and pending cleanup. Use browser/emulator/packaged host tests where available; no physical failure is required solely to export a category. |
+
+## Bounded owner session and current disposition
+
+No device ownership, access or physical-test authorization is established in this
+chat. Do not derive it from the old C3 reports or issue attachments. Record the
+owner's selected device and scope before any connection. Unknown model,
+firmware/webOS, remote, edition and installer host remain **unknown**.
+
+**Phase A — pre-dispatch P00 (15 minutes plus normal package operations):** only
+on an explicitly selected maintainer/project test device with a healthy existing
+recovery path and no competing active Root/No-root control, verify the published Home 1.13.1 FHD (or separately selected HD)
+with source-built Helper 0.8.0. Use normal same-app package installation and the
+published Home's Start Helper confirmation; observe actual Home-control status,
+short physical Home and fresh triple-Home escape with usable LG controls. Restore
+the agreed Home/profile through supported operations. Do not launch a controller
+directly, clear emergency markers, edit roles/receipts or add permissions. Capture
+actual installed public-file hashes, terminal operations and device/runtime/UID
+context privately; publish only the redacted result within authorized QA scope.
+Commit a truthful `native/helper-rollback-compatibility.json` naming the exact
+canonical candidate archive and published package hashes, then run
+`verify_helper_transition` against those same retained packages. Failed/unknown
+operations stop dependent work. This is compatibility evidence, not complete OTA
+or fresh stock Developer Mode acceptance.
+
+**Phase B — after the final successful complete build:** select applicable
+P01–P12 in advance. Budget one 25-minute Root session for P05/P06/P08/P09/P12,
+one 20-minute No-root session for P01–P04/P10/P12, and a separately agreed
+standby/cold-boot interval for P07. Select P11 only for an existing suitable lab
+state or separately authorized recovery; do not manufacture a failure. Defer
+unavailable remote, legacy hardware or exhausted-catalog conditions explicitly.
+An unpublished signed QA update can support the selected update path but cannot
+pass the future public-feed check. Finish safe independent rows and consolidate
+all failures before any new product-fix batch.
+
+| Case | Current result | Blocking prerequisite / actual result |
+| --- | --- | --- |
+| P00 — published Home/new Helper | BLOCKED | Packages prepared; owner/device/scope not selected, no physical observation or approval. |
+| P01–P04 — No-root IR/remote/Helper | BLOCKED | Final successful build and owner-selected eligible device/remotes; no physical result. |
+| P05–P06 — Root startup/emergency | BLOCKED | Final successful build, healthy retained-route state and owner scope; no physical result. |
+| P07 — standby / AC cold boot | BLOCKED | Distinct agreed intervals and safe device state; neither observed. |
+| P08 — update / rollback | BLOCKED | Final signed artifact/rollback selection and owner scope; public-feed case additionally awaits publication. |
+| P09 — icon budget | BLOCKED | Final package and an existing suitable catalog; no extra app installation for coverage. |
+| P10 — clock on legacy hardware | BLOCKED | Final package and selected hardware; browser simulations are supporting evidence only. |
+| P11 — removal / reinstall | NOT SELECTED | No suitable lab/recovery state or authorization selected. |
+| P12 — usability sentinel | BLOCKED | Same selected healthy physical session; no audio/control observation. |
+
+For each selected case retain a single result row with date, model,
+firmware/webOS/runtime, remote, edition, host, versions, final run:attempt,
+package hashes, preconditions, expected/actual result, PASS/FAIL/BLOCKED/
+NOT SELECTED/UNTESTED, problems, attempted resolutions and observed outcomes.
+Do not copy private connection or diagnostic data into this table.
 
 ## Result sheet
 
