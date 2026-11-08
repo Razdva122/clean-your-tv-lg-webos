@@ -12,7 +12,9 @@ def compile_root_beta(files):
     return compile_root_node(files)
 
 def compile_root_node(files):
-    scripts = {name: raw.decode('utf-8') for name, raw in files.items() if name.endswith('.js')}
+    # The QML compositor filter is already ES5 and has no Node module loader.
+    scripts = {name: raw.decode('utf-8') for name, raw in files.items()
+               if name.endswith('.js') and name != 'runtime/c1-home-filter.js'}
     result = subprocess.run(['node', str(ROOT/'scripts/compile-root-node.cjs')],
                             input=json.dumps(scripts), capture_output=True, text=True,
                             encoding='utf-8', cwd=ROOT, timeout=120)

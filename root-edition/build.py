@@ -87,8 +87,8 @@ def build(output, version='0.0.1', legacy_node_prototype=False, resolution=None,
         candidate = Path(experimental_helper).absolute()
         native_gate = checked_file(candidate.parent, candidate.name)
         validate_native_gate(native_gate)
-        if legacy_node_prototype or legacy_node_beta:
-            raise ValueError('Experimental C1 gate does not admit the legacy Node prototype')
+        if legacy_node_prototype or (legacy_node_beta and not keyfilter):
+            raise ValueError('Legacy Node Beta only admits mount-free compositor routing; the host prototype is not admitted')
     files = compile_web(preview.prepare(version=version, resolution=resolution))
     info = json.loads(files['appinfo.json'])
     app_id = info['id']

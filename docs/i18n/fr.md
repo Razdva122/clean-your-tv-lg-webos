@@ -25,6 +25,8 @@ Allumez la TV et connectez-la au même réseau domestique que votre ordinateur o
 - **No-root** — si vous n’avez pas d’accès root. Configurez Developer Mode ci-dessous.
 - **Root** — si vous avez déjà un accès root par SSH. L’installateur ne roote pas la TV. N’activez pas Developer Mode sur cette TV ; conservez l’accès SSH et les données de récupération.
 
+Pour Root, l’installateur vérifie et choisit une méthode disponible pour contrôler Home. Si la compatibilité ne peut pas être vérifiée, l’installation s’arrête ; ne contournez pas le contrôle qui a échoué.
+
 **No-root → Root:** Si No-root a été réinstallé après une suppression complète, le passage à Root peut nécessiter un nettoyage préalable. Sauvegardez les préférences de Home, choisissez **Désinstaller Clean Your TV** avec la connexion Root enregistrée et attendez la suppression vérifiée. Cela supprime aussi Home et Helper de No-root. Installez ensuite Root et conservez les données de récupération.
 
 ### Configurer Developer Mode (No-root)

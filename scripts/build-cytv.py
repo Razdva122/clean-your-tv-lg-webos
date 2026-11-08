@@ -82,6 +82,8 @@ def pack_app(appfiles, servicefiles, architecture='all', helper=False):
 GRAPHICS = {'1920x1080': {'launcher': 'launcher.ipk', 'root': 'root'},
             '1280x720': {'launcher': 'launcher-720p.ipk', 'root': 'root-720p'}}
 C1_GRAPHICS = {'1920x1080': 'root-c1', '1280x720': 'root-c1-720p'}
+ROOT_BACKENDS = {'c1-native-gate': {'experimental': True, 'hardware_validated': False,
+                                  'admission_schema': 3, 'graphics': C1_GRAPHICS}}
 
 
 def stage_c1_root(payload, work, version, run=subprocess.run):
@@ -92,13 +94,19 @@ def stage_c1_root(payload, work, version, run=subprocess.run):
     run([sys.executable, '-m', 'ziglang', 'cc', '-target', 'arm-linux-musleabi',
          '-Os', '-static', '-s', 'root-edition/gate/keyfilter.c', '-o', str(helper)],
         cwd=ROOT, env=environment, check=True)
+    stage_keyfilter_variants(payload, version, helper, run=run)
+    return helper
+
+
+def stage_keyfilter_variants(payload, version, helper, run=subprocess.run, legacy_node_beta=False):
     for graphics, folder in C1_GRAPHICS.items():
         run([sys.executable, 'root-edition/build.py', '--output', str(Path(payload) / folder),
-             '--version', version, '--resolution', graphics, '--experimental-c1-keyfilter', str(helper)],
+             '--version', version, '--resolution', graphics, '--experimental-c1-keyfilter', str(helper),
+             *(['--legacy-node-beta'] if legacy_node_beta else [])],
             cwd=ROOT, check=True)
 
 
-def stage_legacy_root_beta(payload, version, run=subprocess.run):
+def stage_legacy_root_beta(payload, version, keyfilter_guard, run=subprocess.run):
     target = Path(payload)/'legacy-root-beta'
     target.mkdir()
     for graphics, paths in GRAPHICS.items():
@@ -106,9 +114,10 @@ def stage_legacy_root_beta(payload, version, run=subprocess.run):
              '--version', version, '--resolution', graphics, '--legacy-node-beta'], cwd=ROOT, check=True)
     for script, folder in [('root-edition/build_updater.py','root-updater'), ('system-updater/build.py','system-updater')]:
         run([sys.executable, script, '--output', str(target/folder), '--legacy-node-beta'], cwd=ROOT, check=True)
+    stage_keyfilter_variants(target, version, keyfilter_guard, run=run, legacy_node_beta=True)
     shutil.copy2(Path(payload)/'fallback.png', target/'fallback.png')
     shutil.copytree(Path(payload)/'installer-support', target/'installer-support')
-    manifest = {'schema':1, 'graphics':GRAPHICS, 'runtime_variant':'node012-beta',
+    manifest = {'schema':1, 'graphics':GRAPHICS, 'runtime_variant':'node012-beta', 'root_backends':ROOT_BACKENDS,
                 'files':{p.relative_to(target).as_posix():hashlib.sha256(p.read_bytes()).hexdigest()
                          for p in sorted(target.rglob('*')) if p.is_file()}}
     (target/'payload.json').write_text(json.dumps(manifest,indent=2)+'\n', encoding='utf-8')
@@ -254,11 +263,11 @@ def build_payload():
     stage_guide_assets(payload)
     for graphics, paths in GRAPHICS.items():
         subprocess.run([sys.executable, 'root-edition/build.py', '--output', str(payload / paths['root']), '--version', versions['root'], '--resolution', graphics], cwd=ROOT, check=True)
-    stage_c1_root(payload, work, versions['root'])
+    keyfilter_guard = stage_c1_root(payload, work, versions['root'])
     subprocess.run([sys.executable, 'root-edition/build_updater.py', '--output', str(payload / 'root-updater')], cwd=ROOT, check=True)
     stage_updater(payload)
     subprocess.run([sys.executable,'system-updater/build.py','--output',str(payload/'system-updater')],cwd=ROOT,check=True)
-    stage_legacy_root_beta(payload, versions['root'])
+    stage_legacy_root_beta(payload, versions['root'], keyfilter_guard)
     (payload / 'LICENSE').write_bytes((ROOT / 'LICENSE').read_bytes())
     (payload / 'THIRD_PARTY_NOTICES.md').write_bytes((ROOT / 'THIRD_PARTY_NOTICES.md').read_bytes())
     shutil.copytree(ROOT / 'cytv/licenses', payload / 'licenses/Qt', dirs_exist_ok=True)
@@ -282,8 +291,7 @@ def build_payload():
                 'legacy_root_beta': 'legacy-root-beta',
                 'home_version': json.loads(launcher['appinfo.json'])['version'],
                 'helper_version': versions['helper'],
-                'root_backends': {'c1-native-gate': {'experimental': True, 'hardware_validated': False, 'admission_schema': 3,
-                                                     'graphics': C1_GRAPHICS}},
+                'root_backends': ROOT_BACKENDS,
                 'files': {p.relative_to(payload).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
                           for p in sorted(payload.rglob('*')) if p.is_file()}}
     (payload / 'payload.json').write_text(json.dumps(manifest, indent=2), encoding='utf-8')

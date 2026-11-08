@@ -12,7 +12,7 @@ assert.strictEqual(
 );
 var ROOT = '/var/lib/clean-your-tv-root',
   binary = Buffer.from('native helper fixture');
-function fixture(uid, initialChange) {
+function fixture(uid, initialChange, diskDirectory) {
   var callbacks = [],
     timers = [],
     cancel,
@@ -61,18 +61,47 @@ function fixture(uid, initialChange) {
       metadata[path] || {}
     );
   }
+  var realFds = {},
+    fileIndex = 0,
+    positions = {};
   var fakefs = {
     constants: require('fs').constants,
     lstatSync: stat,
-    openSync: function (p) {
+    openSync: function (p, flags) {
       if (!files[p]) throw Error('missing');
+      positions[p] = 0;
+      if (diskDirectory) {
+        var file = diskDirectory + '/lease-' + ++fileIndex;
+        fs.writeFileSync(file, files[p]);
+        var fd = fs.openSync(file, flags);
+        realFds[fd] = p;
+        return fd;
+      }
       return p;
     },
-    fstatSync: stat,
+    fstatSync: function (fd) {
+      return stat(realFds[fd] || fd);
+    },
     readFileSync: function (p) {
+      if (typeof p === 'number') return fs.readFileSync(p);
       return files[p];
     },
-    closeSync: function () {}
+    readSync: function (fd, buffer, offset, length, position) {
+      if (typeof fd === 'number')
+        return fs.readSync(fd, buffer, offset, length, position);
+      var start = positions[fd] || 0;
+      var size = files[fd].copy(
+        buffer,
+        offset,
+        start,
+        start + Math.min(length, 17)
+      );
+      positions[fd] = start + size;
+      return size;
+    },
+    closeSync: function (fd) {
+      if (typeof fd === 'number') fs.closeSync(fd);
+    }
   };
   var opts = {
     now: function () {
@@ -199,10 +228,23 @@ function native(token) {
   };
 }
 var f = fixture();
+if (process.argv[2]) {
+  var disk = fixture(undefined, undefined, process.argv[2]);
+  assert.strictEqual(
+    disk.aliasCount,
+    1,
+    'real descriptor reads must establish lease authority'
+  );
+  disk.subscribe();
+  assert.strictEqual(disk.calls.length, 1);
+  disk.reply(native());
+  assert.strictEqual(disk.replies.at(-1).healthy, true);
+}
 assert.strictEqual(f.calls.length, 0, 'module load never starts native');
 f.subscribe();
 assert.strictEqual(f.calls.length, 1);
-assert.deepStrictEqual(f.calls[0].args, ['--lease']);
+assert.strictEqual(f.calls[0].args.length, 1);
+assert.strictEqual(f.calls[0].args[0], '--lease');
 assert.strictEqual(f.calls[0].path, ROOT + '/runtime/c1-keyfilter-guard');
 assert(f.calls[0].options.timeout <= 1000);
 f.reply(native());
@@ -242,6 +284,14 @@ assert.strictEqual(f.calls.length, 0);
   },
   function (f) {
     f.metadata[ROOT + '/home-backend.json'] = { uid: 1000 };
+  },
+  function (f) {
+    var path = ROOT + '/home-backend.json';
+    f.metadata[path] = { size: f.files[path].length - 1 };
+  },
+  function (f) {
+    var path = ROOT + '/home-backend.json';
+    f.metadata[path] = { size: f.files[path].length + 1 };
   },
   function (f) {
     f.metadata[ROOT + '/c1-keyfilter'] = { mode: 0o755 };
@@ -445,7 +495,9 @@ f = fixture();
 f.subscribe();
 f.reply(native());
 f.home();
-assert.deepStrictEqual(f.calls.at(-1).args, ['--home', 'a'.repeat(32)]);
+assert.strictEqual(f.calls.at(-1).args.length, 2);
+assert.strictEqual(f.calls.at(-1).args[0], '--home');
+assert.strictEqual(f.calls.at(-1).args[1], 'a'.repeat(32));
 assert(f.calls.at(-1).options.timeout >= 2300);
 var beforeHome = f.calls.length;
 f.tick(400);
@@ -590,22 +642,37 @@ function schema3(files, model, sdk) {
   m.admission.firmware = '23.25.55';
   files[ROOT + '/home-backend.json'] = Buffer.from(JSON.stringify(m));
 }
-['55NANO77SRA', 'OLED55C37LA', '55UP7000PUA'].forEach(function (model) {
+['55NANO77SRA', 'OLED55C37LA', '55UP7000PUA', '60UJ6050-UA'].forEach(
+  function (model) {
+    var a = fixture(undefined, function (files) {
+      schema3(files, model, '9.2.2');
+    });
+    a.subscribe();
+    assert.strictEqual(a.calls.length, 1, 'schema3 is model-independent');
+    a.reply(native());
+    assert.strictEqual(a.replies.at(-1).healthy, true);
+  }
+);
+['3.9.0', '4.4.3', '5.6.2', '10.3.1', '12.0.0'].forEach(function (sdk) {
   var a = fixture(undefined, function (files) {
-    schema3(files, model, '9.2.2');
+    schema3(files, 'capability-admitted', sdk);
   });
   a.subscribe();
-  assert.strictEqual(a.calls.length, 1, 'schema3 is model-independent');
+  assert.strictEqual(
+    a.calls.length,
+    1,
+    'recorded SDK must not substitute for capability admission'
+  );
   a.reply(native());
   assert.strictEqual(a.replies.at(-1).healthy, true);
 });
 var unsupported = fixture(undefined, function (files) {
-  schema3(files, '55NANO77SRA', '11.2.0');
+  schema3(files, '55NANO77SRA', 'invalid');
 });
 assert.strictEqual(
   unsupported.aliasCount,
   0,
-  'C++ generation is not compositor-admitted'
+  'malformed observation is not admitted'
 );
 var disguised = fixture(undefined, function (files) {
   schema3(files, '55NANO77SRA', '9.2.2');

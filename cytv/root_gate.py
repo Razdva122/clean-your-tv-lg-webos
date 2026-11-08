@@ -82,6 +82,8 @@ def source_bundle(installer):
     for name in manifest['files']:
         data[name] = read(name)
     _, release = validate_bundle(data, resolution)
+    if release.get('runtime_variant') != installer.profile.get('root_variant'):
+        raise ValueError('Home backend runtime does not match the selected Root variant')
     if installer.tv_info.get('home_backend_schema') == 3 and (
             release.get('routing') != 'compositor-keyfilter-v1' or release.get('compositor_admission') != 3):
         raise ValueError('Generic compositor admission requires a matching mount-free payload')

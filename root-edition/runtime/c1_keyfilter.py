@@ -53,7 +53,7 @@ def admission_valid(value):
     target=value['target']
     return (isinstance(value['model'],str) and re.fullmatch(r'[A-Za-z0-9._-]{1,128}',value['model']) is not None
         and isinstance(value['firmware'],str) and legacy.VERSION.fullmatch(value['firmware']) is not None
-        and isinstance(value['webos'],str) and re.fullmatch(r'[6-9]\.\d{1,3}\.\d{1,3}(?:-[A-Za-z0-9.]+)?',value['webos']) is not None
+        and isinstance(value['webos'],str) and legacy.VERSION.fullmatch(value['webos']) is not None
         and isinstance(value['target_sha256'],str) and legacy.DIGEST.fullmatch(value['target_sha256']) is not None
         and isinstance(target,dict) and set(target)=={'dev','ino','size','mtime_ns'}
         and all(type(v) is int and 0<=v<2**63 for v in target.values()) and target['ino']>0 and target['size']>=52)
@@ -114,6 +114,16 @@ def stock_chain(chain):
     return chain
 
 
+def vendor_script(path):
+    # LG commonly aliases /usr/lib/qt5 to /usr/lib. Resolve that alias, then
+    # apply the existing ownership/no-symlink checks to the actual vendor tree.
+    canonical=Path(path).resolve(strict=True)
+    if (canonical.name!=Path(path).name or not re.fullmatch(
+            r'/usr/lib/(?:qt5/)?qml/KeyFilters/[A-Za-z0-9_-]+\.js',str(canonical))):
+        raise ValueError('Key filter resolves outside the vendor tree')
+    return secure(canonical,limit=256*1024)
+
+
 def require_generic_environment():
     """Read-only admission. Never repair a foreign route, input or vendor file."""
     missing=luna('luna://com.webos.service.systemprofile/getProfiles',
@@ -143,7 +153,7 @@ def require_generic_environment():
         raise ValueError('Stock native Home manifest not verified')
     chain=stock_chain(read_chain())
     for entry in chain:
-        script=secure(Path(entry['file']),limit=256*1024)
+        script=vendor_script(entry['file'])
         if entry['file'].endswith('/systemUi.js') and (
                 b'Qt.Key_Super_L' not in script or not re.search(rb'function\s+handleSystemKeys\s*\(',script)):
             raise ValueError('Unknown Qt Home filter contract')
@@ -244,8 +254,8 @@ def probe():
         if (not isinstance(info,dict) or info.get('returnValue') is not True or struct.calcsize('P')!=4
                 or len(data)<52 or data[:7]!=b'\x7fELF\x01\x01\x01' or data[18:20]!=b'\x28\0'
                 or not admission_valid(candidate)):
-            raise ValueError('Experimental compositor requires Qt webOS 6-9 and ARM32 native Home') from None
-        require_generic_environment()
+            raise ValueError('Experimental compositor requires verified Qt Home capabilities and ARM32 native Home') from None
+    require_generic_environment()
     after=legacy.TARGET.stat()
     identity=lambda st: dict(dev=st.st_dev,ino=st.st_ino,size=st.st_size,mtime_ns=st.st_mtime_ns)
     if identity(before)!=identity(after) or not before.st_mode & 0o111:

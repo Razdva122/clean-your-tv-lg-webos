@@ -25,6 +25,8 @@ TV를 켜고 컴퓨터 또는 휴대전화와 같은 홈 네트워크에 연결�
 - **No-root** — root 권한이 없는 TV입니다. 아래 순서대로 Developer Mode를 준비하세요.
 - **Root** — 이미 SSH root 접근이 가능한 TV입니다. 설치 프로그램은 TV를 루팅하지 않습니다. 이 TV에서는 Developer Mode를 켜지 말고 SSH 접근과 복구 데이터를 보존하세요.
 
+Root에서는 설치 프로그램이 사용 가능한 Home 제어 방식을 확인하고 선택합니다. 호환성을 확인할 수 없으면 설치가 중지됩니다. 실패한 검사를 우회하지 마세요.
+
 **No-root → Root:** 전체 제거 후 No-root를 다시 설치했다면 Root로 전환하기 전에 정리가 필요할 수 있습니다. Home 환경설정을 백업하고 저장된 Root 연결로 **Clean Your TV 제거**를 선택한 뒤 제거 확인이 끝날 때까지 기다리세요. No-root Home과 Helper도 제거됩니다. 그다음 Root를 설치하고 복구 기록은 보관하세요.
 
 ### Developer Mode 설정 (No-root)

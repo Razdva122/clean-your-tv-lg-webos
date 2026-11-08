@@ -13,6 +13,38 @@ sys.path[:0] = [str(ROOT / 'runtime'), str(ROOT)]
 
 
 class RuntimeTests(unittest.TestCase):
+    def test_old_sdk_probe_and_saved_selection_use_capabilities_end_to_end(self):
+        import struct
+        target=self.root/'native-home'
+        header=struct.pack('<16sHHIIIIIHHHHHH',b'\x7fELF\x01\x01\x01',3,40,1,64,52,0,0,52,32,2,0,0,0)
+        target.write_bytes(header);target.chmod(0o700)
+        real_secure=self.k.legacy.secure
+        def read(path,*args,**kwargs):
+            if Path(path)==target:return header
+            return real_secure(path,*args,**kwargs)
+        for sdk in ('3.9.0','4.4.3','5.6.2','12.0.0'):
+            with self.subTest(sdk=sdk),patch.object(self.k.legacy,'TARGET',target),patch.object(self.k.os,'geteuid',return_value=0),patch.object(self.k.sys,'platform','linux'),patch.object(self.k.legacy,'secure',side_effect=read),patch('struct.calcsize',return_value=4),patch.object(self.k,'luna',return_value=dict(returnValue=True,modelName='capability-admitted',firmwareVersion='06.10.55',sdkVersion=sdk)),patch.object(self.k,'require_generic_environment') as environment,patch.object(self.k,'read_chain',return_value=[]):
+                observed=self.k.probe()
+                self.assertEqual(observed['webos'],sdk)
+                self.assertTrue(self.k.admission_valid(observed))
+                environment.assert_called_once_with()
+                self.admission=observed
+                marker=self.prepare()
+                self.assertEqual(marker['schema'],3)
+                self.assertEqual(self.k.legacy.selection(self.root,self.uid),marker)
+                (self.root/'home-backend.json').unlink()
+                import shutil
+                shutil.rmtree(self.root/'c1-keyfilter')
+
+    def test_vendor_qt5_alias_is_read_only_and_cannot_resolve_outside_vendor_tree(self):
+        allowed=Path('/usr/lib/qml/KeyFilters/systemUi.js')
+        with patch.object(Path,'resolve',return_value=allowed),patch.object(self.k,'secure',return_value=b'vendor') as read:
+            self.assertEqual(self.k.vendor_script('/usr/lib/qt5/qml/KeyFilters/systemUi.js'),b'vendor')
+            read.assert_called_once_with(allowed,limit=256*1024)
+        with patch.object(Path,'resolve',return_value=Path('/foreign/systemUi.js')),patch.object(self.k,'secure') as read:
+            with self.assertRaises(ValueError): self.k.vendor_script('/usr/lib/qt5/qml/KeyFilters/systemUi.js')
+            read.assert_not_called()
+
     def generic(self):
         return dict(self.admission,model='55NANO77SRA',firmware='23.25.55',webos='9.2.2')
 
@@ -33,8 +65,12 @@ class RuntimeTests(unittest.TestCase):
         def secure(path,*args,**kw):
             if str(path)==vendor['file']:return b'function handleSystemKeys() { return Qt.Key_Super_L; }'
             return real_secure(path,self.uid,*args,**kw)
-        with patch.object(self.k,'STOCK_APPINFO',appinfo),patch.object(self.k,'MOUNTINFO',mountinfo),patch.object(self.k,'OTHER_HOME_STATE',(other,)),patch.object(self.k,'INPUT_BINDINGS',bindings),patch.object(self.k,'secure',side_effect=secure),patch.object(self.k,'luna',return_value=missing),patch.object(self.k,'read_chain',return_value=[vendor]),patch.object(emergency_reader,'open_remote',side_effect=reader),patch.object(emergency_reader,'query',return_value=keys):
+        with patch.object(self.k,'STOCK_APPINFO',appinfo),patch.object(self.k,'MOUNTINFO',mountinfo),patch.object(self.k,'OTHER_HOME_STATE',(other,)),patch.object(self.k,'INPUT_BINDINGS',bindings),patch.object(self.k,'secure',side_effect=secure),patch.object(self.k,'vendor_script',side_effect=lambda path:secure(Path(path))),patch.object(self.k,'luna',return_value=missing),patch.object(self.k,'read_chain',return_value=[vendor]),patch.object(emergency_reader,'open_remote',side_effect=reader),patch.object(emergency_reader,'query',return_value=keys):
             self.k.require_generic_environment()
+            for invalid in (dict(app,type='flutter'),dict(app,type='web'),dict(app,main='ribbon.qml')):
+                appinfo.write_text(json.dumps(invalid))
+                with self.assertRaisesRegex(ValueError,'manifest'): self.k.require_generic_environment()
+            appinfo.write_text(json.dumps(app))
             bindings.write_text('{"773":{"action":"launch","id":"foreign.home"}}');bindings.chmod(0o600)
             with self.assertRaises(ValueError):self.k.require_generic_environment()
             bindings.unlink()
@@ -51,6 +87,10 @@ class RuntimeTests(unittest.TestCase):
             with patch.object(self.k,'read_chain',return_value=[dict(vendor,file='/foreign/home.js')]),self.assertRaises(ValueError):self.k.require_generic_environment()
 
     def test_schema3_admits_capabilities_without_expanding_legacy_c1_schema(self):
+        for sdk in ('3.9.0','4.4.3','5.6.2','10.3.1','12.0.0'):
+            value=dict(self.generic(),webos=sdk)
+            self.assertTrue(self.k.admission_valid(value))
+            self.assertFalse(self.k.legacy.admission_valid(value))
         for model in ('55NANO77SRA','OLED55C37LA','55UP7000PUA'):
             value=dict(self.generic(),model=model)
             self.assertTrue(self.k.admission_valid(value))
@@ -90,8 +130,8 @@ class RuntimeTests(unittest.TestCase):
         write.assert_not_called()
         self.assertFalse((self.root/'c1-keyfilter/pending.json').exists())
 
-    def test_generic_unknown_identity_and_cpp_generation_are_refused(self):
-        for change in ({'model':''},{'webos':'11.2.0'},{'firmware':'unknown'},{'target_sha256':'x'*64}):
+    def test_generic_unknown_identity_is_refused(self):
+        for change in ({'model':''},{'webos':'invalid'},{'firmware':'unknown'},{'target_sha256':'x'*64}):
             self.assertFalse(self.k.admission_valid(dict(self.generic(),**change)))
 
     def test_schema3_interrupted_write_is_recoverable_after_firmware_change(self):
@@ -253,10 +293,11 @@ class RuntimeTests(unittest.TestCase):
 
     def test_probe_is_independent_of_legacy_checkpoint_probe(self):
         target=self.root/'home'; target.write_bytes(b'ELF')
-        with patch.object(self.k.legacy,'TARGET',target), patch.object(self.k.os,'geteuid',return_value=0), patch.object(self.k.sys,'platform','linux'), patch.object(self.k.legacy,'probe',side_effect=AssertionError('legacy checkpoint probe')), patch.object(self.k.legacy,'secure',return_value=b'ELF'), patch.object(self.k.legacy,'admit',return_value={k:self.admission[k] for k in ('model','firmware','webos')}), patch.object(self.k,'luna',return_value={'returnValue':True}), patch.object(self.k,'read_chain',return_value=[]):
+        with patch.object(self.k.legacy,'TARGET',target), patch.object(self.k.os,'geteuid',return_value=0), patch.object(self.k.sys,'platform','linux'), patch.object(self.k.legacy,'probe',side_effect=AssertionError('legacy checkpoint probe')), patch.object(self.k.legacy,'secure',return_value=b'ELF'), patch.object(self.k.legacy,'admit',return_value={k:self.admission[k] for k in ('model','firmware','webos')}), patch.object(self.k,'luna',return_value={'returnValue':True}), patch.object(self.k,'read_chain',return_value=[]),patch.object(self.k,'require_generic_environment') as environment:
             target.chmod(0o700)
             observed=self.k.probe()
         self.assertEqual(observed['target']['size'],3)
+        environment.assert_called_once_with()
         self.assertEqual(observed['model'],self.admission['model'])
 
     def test_restore_clears_interrupted_prewrite_intent_after_absence_readback(self):

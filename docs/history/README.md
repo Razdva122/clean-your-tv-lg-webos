@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [Shared Root/Beta KeyFilters development, 2026-11-09](2026-11-09-root-beta-keyfilters.md): capability admission, exact legacy Node and ARM32 build checks, component handoff and unverified native-Home/ribbon limits.
+
 - [Next candidate preparation, 2026-11-09](2026-11-09-next-candidate-preparation.md): integrated PR inventory, combined host checks, authenticated published baselines and coordination of unfinished Root/Beta work; no new device acceptance.
 
 - [Root installer catalog reads over SSH, 2026-11-08](2026-11-08-issue389-direct-catalog-ssh.md): fixed bounded reads without TV Node subprocesses, preserved icon/validation behavior and synthetic host verification; reporter-device acceptance remains unverified.

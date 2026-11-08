@@ -86,8 +86,8 @@ def native_headers_valid(result):
 def compositor_device(remote):
     """Preliminary admission; the bundled device runtime rechecks before effects.
 
-    Models are observations, not an allowlist. Only the researched Qt generations
-    are eligible; a newer C++ compositor must not inherit a stale configd key.
+    Model and SDK are observations, not admission lists. Native Home and the
+    vendor JS chain are required; the device rechecks their actual contract.
     """
     reply = remote.luna('com.webos.service.tv.systemproperty/getSystemInfo',
                         {'keys':['modelName','firmwareVersion','sdkVersion']}, timeout=5)
@@ -95,7 +95,7 @@ def compositor_device(remote):
             or not all(isinstance(reply.get(k),str) for k in ('modelName','firmwareVersion','sdkVersion'))
             or not re.fullmatch(r'[A-Za-z0-9._-]{1,128}', str(reply.get('modelName','')))
             or not re.fullmatch(r'\d{1,3}\.\d{1,3}\.\d{1,3}(?:-[A-Za-z0-9.]+)?',str(reply.get('firmwareVersion','')))
-            or not re.fullmatch(r'[6-9]\.\d{1,3}\.\d{1,3}(?:-[A-Za-z0-9.]+)?',str(reply.get('sdkVersion','')))):
+            or not re.fullmatch(r'\d{1,3}\.\d{1,3}\.\d{1,3}(?:-[A-Za-z0-9.]+)?',str(reply.get('sdkVersion','')))):
         return False
     chain = remote.luna('com.webos.service.config/getConfigs',
                         {'configNames':['com.webos.surfacemanager.keyFilters']}, timeout=5)

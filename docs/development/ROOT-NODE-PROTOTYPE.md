@@ -8,6 +8,15 @@ The separate `--legacy-node-beta` build mode enables exact Node 0.12.2 admission
 in generated device code. The original `--legacy-node-prototype` mode below
 remains host-only with Node 8+ admission. Neither is a hardware support claim.
 
+The next installer also includes a Node 0.12.2 build of the existing mount-free
+KeyFilters Home backend. Its source and selection are shared with ordinary Root;
+only the Node compatibility build/runtime policy differ. Selection still requires
+explicitly absent System Profile and supported firmware/device capabilities.
+This unpublished change admits by verified capabilities rather than an SDK
+number. It still requires a stock native Home executable; in-compositor Home
+ribbons are unsupported. SDK 3.9.0 fixture success is not target-TV acceptance. See
+[shared Home backend and recovery limits](C1-NATIVE-GATE.md#shared-root-runtime-variants-unpublished-beta-packaging).
+
 The common installer stages Beta under `legacy-root-beta/`, containing both
 graphics variants, the complete Root Updater/coordinator and System Updater.
 All source transformations occur before bundle, IPK and outer payload hashes.
