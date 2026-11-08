@@ -65,7 +65,7 @@ sys.stdin.read()
                 request['timeout']=3000
                 argument=json.dumps(request)
                 self.calls.append(('observer',request['command'],request.get('slot')))
-            result=subprocess.run([shutil.which('node'),'-e',code,argument],input=data,capture_output=True,timeout=timeout)
+            result=subprocess.run([shutil.which('node'),'-e',code]+words[words.index('-e')+2:-1]+[argument],input=data,capture_output=True,timeout=timeout)
             if result.returncode: raise RuntimeError(result.stderr.decode())
             reply=result.stdout.decode()
             if (observer.PROGRAM in code or observer.ROOT_PROGRAM in code) and self.cut and request['command']=='status':
@@ -264,6 +264,30 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.assertEqual((self.root/'requests').read_text(),'')
         observed=self.installer.observe_recovery()
         self.assertNotIn('continue-no-root',observed['assessment']['actions'])
+
+    def test_update_repairs_vendor_key_mode_without_replaying_packages_or_clearing_stop(self):
+        self.installer.install(self.inventory,'original-secret')
+        directory=Path(operations.HELPER_STATE)
+        key=directory/'ssap-key.json';key.chmod(0o775)
+        (directory/'apps.json').chmod(0o775)
+        blocked=directory/'blocked';blocked.write_bytes(b'retained-emergency-stop')
+        # Configuration may proceed, but the existing emergency stop must still
+        # block automatic launch before its claim is consumed.
+        with self.assertRaises(RuntimeError):self.installer.install(self.inventory,'original-secret')
+        self.assertEqual(key.stat().st_mode&0o777,0o640)
+        self.assertEqual(blocked.read_bytes(),b'retained-emergency-stop')
+        pending=self.store.pending(self.profile)
+        saved=observer.capsule(self.installer,pending)
+        observed=observer.snapshot(self.installer,saved)
+        self.assertEqual(observed['configuration']['files'],'complete')
+        self.assertEqual(observed['configuration']['launch'],'prepared')
+        self.assertEqual((self.root/'requests').read_text().splitlines(),list(observer.APPS)*2)
+        # Model a later explicit user review of the stop latch, then continue
+        # the same transaction without submitting either package again.
+        blocked.unlink()
+        self.installer.continue_no_root(pending)
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertEqual((self.root/'requests').read_text().splitlines(),list(observer.APPS)*2)
 
     def test_closed_retry_requires_original_configuration_readback(self):
         original=self.remote.run

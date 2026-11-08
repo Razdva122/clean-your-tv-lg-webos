@@ -761,17 +761,43 @@ FILE_CHECK = r'''
 
 STATE_CHECK = r'''
 (function(){
- var fs=require('fs'),path=require('path'),directory=process.argv[process.argv.length-1],uid=process.getuid();
+ var fs=require('fs'),path=require('path'),c=require('constants'),directory=process.argv[process.argv.length-1],uid=process.getuid();
+ var repair=process.argv[process.argv.length-2]==='repair-key-mode',leaf,key;
  function owner(s){return s.uid===uid||s.uid===5999&&s.gid===5000;}
+ function same(a,b){return a.dev===b.dev&&a.ino===b.ino;}
  for(var current=directory;;current=path.dirname(current)){
   var s=fs.lstatSync(current);if(!s.isDirectory()||s.isSymbolicLink())throw Error('unsafe-state-parent');
-  if(current===directory&&(!owner(s)||(s.mode&2)))throw Error('unsafe-state-owner');
+  if(current===directory){if(!owner(s)||(s.mode&2))throw Error('unsafe-state-owner');leaf=s;}
   if(current===path.dirname(current))break;
  }
+ // Validate both leaves before changing anything. Only the observed vendor
+ // 0775 key mode is repairable; retain the inode, owner, group and key bytes.
  ['ssap-key.json','apps.json'].forEach(function(name){
   var s;try{s=fs.lstatSync(directory+'/'+name);}catch(e){if(e.code==='ENOENT')return;throw e;}
-  if(!s.isFile()||s.nlink!==1||!owner(s)||(s.mode&2)||(name==='ssap-key.json'&&(s.mode&7)))throw Error('unsafe-config-file');
- });process.stdout.write('CYTV_CONFIGURATION_PRIVATE');
+  if(!s.isFile()||s.nlink!==1||!owner(s)||(s.mode&2))throw Error('unsafe-config-file');
+  if(name==='ssap-key.json'&&(s.mode&7)){
+   if(!repair||s.uid!==uid||(s.mode&4095)!==509)throw Error('unsafe-config-file');
+   key=s;
+  }
+ });
+ if(key){
+  if(typeof c.O_NOFOLLOW!=='number'||typeof c.O_DIRECTORY!=='number')throw Error('unsupported-storage');
+  var parent=fs.openSync(directory,c.O_RDONLY|c.O_NOFOLLOW|c.O_DIRECTORY),fd;
+  try{
+   if(!same(leaf,fs.fstatSync(parent)))throw Error('unsafe-state-parent');
+   process.chdir(directory);
+   if(!same(leaf,fs.statSync('.'))||!same(leaf,fs.lstatSync(directory)))throw Error('unsafe-state-parent');
+   fd=fs.openSync('ssap-key.json',c.O_RDONLY|c.O_NOFOLLOW|c.O_NONBLOCK);
+   var opened=fs.fstatSync(fd);
+   if(!same(key,opened)||!opened.isFile()||opened.nlink!==1||opened.uid!==uid||opened.gid!==key.gid||
+      (opened.mode&4095)!==509||!same(key,fs.lstatSync('ssap-key.json')))throw Error('unsafe-config-file');
+   fs.fchmodSync(fd,416);fs.fsyncSync(fd);
+   var after=fs.fstatSync(fd);
+   if(!same(key,after)||after.uid!==key.uid||after.gid!==key.gid||(after.mode&4095)!==416||
+      after.nlink!==1||!same(key,fs.lstatSync('ssap-key.json'))||!same(leaf,fs.lstatSync(directory)))throw Error('unsafe-config-file');
+  }finally{if(fd!==undefined)fs.closeSync(fd);fs.closeSync(parent);}
+ }
+ process.stdout.write('CYTV_CONFIGURATION_PRIVATE');
 }());
 '''
 
@@ -934,7 +960,12 @@ def configure(installer,value):
     from .errors import TVRejected
     plan=value['plan']
     expected={HELPER_STATE+'/'+name:value['expected'][HELPER_STATE+'/'+name] for name in value['configuration']}
-    if installer.remote.run('/usr/bin/node -e '+shlex.quote(STATE_CHECK)+' '+shlex.quote(HELPER_STATE)).strip()!='CYTV_CONFIGURATION_PRIVATE':refuse()
+    # Only an authenticated install continuation with an idle Helper can
+    # restrict the known vendor-normalized key mode. Status stays read-only;
+    # immutable observer/capsule bytes and emergency latches are untouched.
+    repair=(plan.get('connection')!='root-ssh' and installer.helper_state() in ('stopped','stale'))
+    mode=' repair-key-mode ' if repair else ' '
+    if installer.remote.run('/usr/bin/node -e '+shlex.quote(STATE_CHECK)+mode+shlex.quote(HELPER_STATE)).strip()!='CYTV_CONFIGURATION_PRIVATE':refuse()
     token=claim_step(installer,plan,'files')
     if token:
         if installer.helper_state() not in ('stopped','stale'):refuse()
