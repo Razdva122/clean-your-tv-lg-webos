@@ -108,3 +108,15 @@ published-Home/new-Helper transition approval. Guides mark the approximately
 access as unpublished. Original LJ550T routing, actual input access, physical
 source duplication, key-up/unrelated buttons, power, sound and OTA/rollback still
 need affected exact-artifact acceptance; no new TV result is claimed.
+
+## #432: Root cleanup restoration boundaries
+
+Head `ed22bd44` passed selected CI [42457011325](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42457011325)
+and independent source/privacy review. Merge source: `e1afcd7c`.
+Combined source passes 69 Root clean-removal and 44 diagnostic-context/recovery
+projection tests, plus 16 release-flow checks. The producer and host allowlist
+fixed cleanup_step values, preserve exact exceptions and retain original inverse,
+receipts and failure-before-package-removal ordering. Updater/coordinator and
+embedding installers require rebuilt payloads. Original #418 remains needs-info
+under its existing saved-error request; do not rerun device recovery to fill a
+new diagnostic category. Synthetic packaged export checks are the relevant gate.

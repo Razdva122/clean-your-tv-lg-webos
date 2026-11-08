@@ -69,6 +69,13 @@
       "pr": 431,
       "issues": [],
       "summary": "Keep removal and reinstallation moving through recoverable failures"
+    },
+    {
+      "pr": 432,
+      "issues": [
+        418
+      ],
+      "summary": "Retain allowlisted Root control-restoration failure boundaries without changing recovery authority; original #418 installation/recovery remains unresolved"
     }
   ],
   "excluded": [],
