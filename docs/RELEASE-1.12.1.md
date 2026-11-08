@@ -1,7 +1,8 @@
 # v1.12.1 — installer diagnostics and verified Root removal
 
-Unpublished candidate for [release PR #413](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/413).
-Downloads still serve published v1.12.0. [Full candidate 42397755022:1](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42397755022) passed all 21 jobs at frozen source `704353a6`.
+[Release PR #413](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/413).
+The maintainer authorized publishing the exact frozen candidate with the known
+Home-routing limitation below. [Full candidate 42397755022:1](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42397755022) passed all 21 jobs at frozen source `704353a6`.
 Artifact-bound acceptance, signing and publication remain separate gates; a PR
 merge alone does not establish them.
 
@@ -53,8 +54,9 @@ replace retained System code. Explicit replacement still admits only installed
 1.1.0/1.1.1, not 1.1.2/1.2.x; an interrupted replacement needs its original bundle
 and coordinator. Root Beta remains a separate exact-Node-0.12.2 payload with
 ordinary OTA disabled. Homebrew Installer promotion remains disabled.
-Android keeps its application ID and original signing identity; final exact APK
-code 26-to-code 27 upgrade/retained-data acceptance remains pending.
+Android keeps its application ID and original signing identity. The exact final
+APK code26-to-code27 upgrade, synthetic-data retention and native fixtures passed
+on an isolated API35 ARM64 emulator. Physical phone-to-TV acceptance is untested.
 
 ## Validation and remaining acceptance
 
@@ -71,9 +73,20 @@ harness assumptions were investigated; affected checks passed with correct
 readiness/focus preconditions, without product changes or another candidate.
 The exact candidate remains installed and the TV was powered off.
 
-Physical remote/key-up/emergency, audible playback and remaining artifact
-acceptance are pending; the PR remains draft. Retained System 1.2.5 was unchanged;
-fresh1.2.6 was not physically accepted. AC cold boot, No-root/Beta, other firmware
-and final Android signed-APK upgrade/device acceptance are not claimed by this
-Root run. Existing unresolved original reports and compatibility limits remain.
-No stable release/feed publication is claimed.
+[Final artifact acceptance and maintainer disposition](history/2026-11-08-release-1.12.1-publication-acceptance.md)
+records the Android upgrade and explicit publication authorization. Physical Home
+failed as described below; it is accepted as a known existing limitation.
+Retained System 1.2.5 was unchanged; fresh1.2.6 was not physically accepted.
+Physical phone-to-TV, audible playback, key-up/emergency, AC cold boot,
+No-root/Beta and other firmware are untested in this focused pass. No additional
+physical coverage or universal compatibility is claimed.
+
+## Known limitation accepted for this release
+
+On the maintainer C3 / firmware 43.21.71 / LGE MR23, physical Home after startup
+opened LG Home in two observed episodes while Root intent, guardian and project
+Home routes remained active. [Issue #422](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/422)
+remains open. The maintainer confirmed the bug existed previously and explicitly
+authorized this release despite it. No fix is included or claimed; the native
+keyfilter selection cause remains under investigation.
+[Observed failures and release disposition](history/2026-11-08-release-1.12.1-physical-home-qa.md).
