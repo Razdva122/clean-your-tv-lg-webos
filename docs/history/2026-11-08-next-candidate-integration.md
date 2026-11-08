@@ -60,3 +60,21 @@ permission/error handling remain unchanged. Desktop/console/Android installers
 need rebuilding. Original #355 cause, device recovery and the requested genuinely
 passive inspection path remain queued and unverified; the issue is not delivered
 or resolved by adding future diagnostic evidence.
+
+## #431: actionable removal/reinstallation
+
+Head `1a6bb6fe` passed selected CI [42456340320](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42456340320)
+and desktop host checks [42456340315](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42456340315),
+plus independent complete-source recovery review. Merge source: `652e0547`.
+Combined maintenance/no-root removal/Qt result/recovery-diagnostic/context tests
+pass all 110 cases using `QT_QPA_PLATFORM=offscreen PYTHONPATH=tests/cytv`, with
+16 release-flow checks. No existing reporter issue is claimed fixed by this
+direct maintainer-request PR.
+
+Retry retains the approved target, host pin and durable goal. Unknown process,
+shortcut or cleanup evidence still blocks verified-clean completion. Emergency
+stops remain. The local `cleanup_inputs_pending` journal field grants no device
+mutation authority. Desktop/Android payloads need versioned rebuilds; affected
+key-selection, Helper-before-pairing, full-removal/restart/reinstall and EIM
+behavior need exact-artifact hardware acceptance. Maintenance/recovery references
+and all thirteen guides describe the changes as unreleased.

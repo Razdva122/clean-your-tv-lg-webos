@@ -50,6 +50,11 @@
         355
       ],
       "summary": "Retain allowlisted Root setup-recovery refusal stages; original #355 activation cause, C2 recovery and passive diagnostic-path follow-up remain unresolved"
+    },
+    {
+      "pr": 431,
+      "issues": [],
+      "summary": "Keep removal and reinstallation moving through recoverable failures"
     }
   ],
   "excluded": [],
