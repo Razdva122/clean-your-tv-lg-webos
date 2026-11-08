@@ -81,6 +81,8 @@ In the next unpublished candidate, Root setup continues with a warning if TV inp
 
 ## 6. Everyday use and recovery
 
+Unpublished No-root IR support: a short Home release schedules Clean after about 700 ms; LG Home may flash first. Held Home stays with webOS, and triple Home still stops Helper. Access on stock Developer Mode TVs remains unverified; do not change input permissions.
+
 Arrows select tiles; OK opens them; hold OK to reorder. Short Back retains the app's navigation and exit confirmation. Short Home opens Clean Your TV while Home control is active. Hold Back for 1.2 seconds to open LG Home once. The Home-control switch and your settings remain unchanged.
 
 **Press Home three times within two seconds**, releasing between presses, to return to LG Home and stop Home control. This preserves preferences.

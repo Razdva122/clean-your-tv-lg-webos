@@ -81,6 +81,8 @@ No próximo candidato ainda não publicado, a instalação Root continua com um 
 
 ## 6. Uso e recuperação
 
+Suporte IR No-root ainda não publicado: soltar Home após um toque curto agenda o Clean para cerca de 700 ms depois; o LG Home pode aparecer primeiro. Segurar Home continua com o webOS e três toques ainda param o Helper. O acesso pelo Developer Mode padrão não foi verificado; não altere permissões dos dispositivos de entrada.
+
 Setas selecionam; OK abre; segure OK para reorganizar. Um toque em Voltar mantém a navegação e a confirmação de saída do aplicativo. Home abre o lançador com o controle ativo. Segure Voltar por 1,2 segundos para abrir LG Home uma vez. O interruptor de controle do Home e suas configurações não mudam.
 
 **Pressione Home três vezes em dois segundos**, soltando entre os toques. Isso restaura LG Home e interrompe o controle sem apagar preferências.

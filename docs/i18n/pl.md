@@ -81,6 +81,8 @@ W następnym, jeszcze nieopublikowanym kandydacie instalacja Root jest kontynuow
 
 ## 6. Obsługa i odzyskiwanie
 
+Nieopublikowana obsługa pilotów IR w No-root: zwolnienie Home po krótkim naciśnięciu planuje otwarcie Clean po około 700 ms; najpierw może mignąć LG Home. Przytrzymanie Home pozostaje w gestii webOS, a trzy naciśnięcia nadal zatrzymują Helper. Dostęp w zwykłym Developer Mode nie jest potwierdzony; nie zmieniaj uprawnień urządzeń wejściowych.
+
 Strzałki wybierają, OK otwiera; przytrzymaj OK, aby zmienić kolejność. Krótkie Wstecz zachowuje nawigację aplikacji i jej potwierdzenie wyjścia. Home otwiera ekran Clean Your TV, gdy sterowanie jest aktywne. Przytrzymaj Wstecz przez 1,2 sekundy, aby jednorazowo otworzyć LG Home. Przełącznik sterowania Home i ustawienia pozostają bez zmian.
 
 **Naciśnij Home trzy razy w ciągu dwóch sekund**, puszczając przycisk po każdym naciśnięciu. Przywraca to LG Home i zatrzymuje sterowanie bez usuwania preferencji.
