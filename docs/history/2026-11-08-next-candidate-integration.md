@@ -27,3 +27,19 @@ catalog failure still blocks; optional inputs remain warnings. Root service,
 embedded updater/coordinator and desktop/Android payloads require rebuilds at
 freeze. Original #397 installation failure and reporter compatibility remain
 unresolved; diagnostic integration is not recovery or a delivered fix.
+
+## #427: retained Home route during startup
+
+Head `5b92afce` passed selected CI [42454004721](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42454004721)
+and independent complete-source safety review. Merge source: `f9a5e7e4`.
+Combined source passes 17 continuation and 66 clean-removal cases, run in separate
+`unittest discover` processes, plus 16 release-flow checks. A custom attempt to
+load both selected modules in one process failed because their `sys.path` changes
+selected the installer's `provision` instead of runtime `provision`; isolated
+discovery corrected that invocation. No product guard was relaxed to hide it.
+
+The original baseline/owned route is retained while fresh startup authority is
+armed. The new private continuation record remains recovery/cleanup evidence,
+not public diagnostics. Root runtime/infrastructure and embedding payloads need
+versioned rebuilds. #422 stays open for exact-package physical Home/emergency,
+ordinary power cycles, distinct standby/cold boot and update/rollback acceptance.

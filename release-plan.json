@@ -36,6 +36,13 @@
         397
       ],
       "summary": "Retain allowlisted Root catalog/input failure categories and bounded Luna codes; original #397 installation failure and reporter-device compatibility remain unresolved"
+    },
+    {
+      "pr": 427,
+      "issues": [
+        422
+      ],
+      "summary": "Continue exactly owned Root Home routing while rearming fresh startup protection; final physical Home and emergency acceptance for #422 remain pending"
     }
   ],
   "excluded": [],
