@@ -20,6 +20,22 @@ class ContextTests(unittest.TestCase):
         self.assertEqual(unknown.get('root_inventory'),{'applications':'unknown','inputs':'unknown'})
         self.assertNotIn('PRIVATE',json.dumps(unknown))
 
+    def test_root_inventory_failures_revalidate_all_fields(self):
+        report=self.report('install','read-inventory',UserError('PRIVATE'),tv_info={
+            'root_inventory_failures':{
+                'applications':{'reason':'permission-denied','error_code':-1,'raw':'PRIVATE'},
+                'inputs':{'reason':'PRIVATE','error_code':True,'path':'PRIVATE'},
+                'PRIVATE':{'reason':'timeout'}}})
+        self.assertEqual(report['tv'].get('root_inventory_failures'),{
+            'applications':{'reason':'permission-denied','error_code':-1},
+            'inputs':{'reason':'unknown'}})
+        self.assertNotIn('PRIVATE',json.dumps(report))
+        for code in (True,2**31,-2**31-1,1.5,'PRIVATE',{},None):
+            value=diagnostics.context.tv_summary({'root_inventory_failures':{
+                'applications':{'reason':'negative-reply','error_code':code}}})
+            self.assertEqual(value.get('root_inventory_failures'),{
+                'applications':{'reason':'negative-reply'}})
+
     def test_worker_failures_export_current_call_but_strip_untrusted_fields(self):
         from cytv.diagnostic_context import product_summary
         product={'failure':{'exception_type':'RuntimeError',

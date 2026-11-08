@@ -959,16 +959,20 @@ print('CYTV_UPDATER_VERIFIED')
         import base64
         if self.profile['edition']!='root':raise ValueError('Root inventory requires Root')
         observed=self.tv_info['root_inventory']={'applications':'unknown','inputs':'unknown'}
+        self.tv_info.pop('root_inventory_failures',None)
         try:
             module=self.coordinator_code()+'/app-inventory.js'
             # An EIM denial must not discard a valid application catalog. Null marks
             # a failed fixed query; never synthesize successful input readback.
             program=('var reader=require('+json.dumps(module)+');'
-                     'function unavailable(){return null;}'
-                     'Promise.all([reader().catch(unavailable),reader.inputs().catch(unavailable)])'
-                     '.then(function(value){process.stdout.write(JSON.stringify(value));},function(){process.exit(1);});').encode()
+                     'var failures={};function unavailable(kind){return function(error){'
+                     'failures[kind]=error&&error.inventory||{reason:"unknown"};return null;};}'
+                     'Promise.all([reader().catch(unavailable("applications")),reader.inputs().catch(unavailable("inputs"))])'
+                     '.then(function(value){value.push(failures);process.stdout.write(JSON.stringify(value));},function(){process.exit(1);});').encode()
             value=json.loads(self.remote.run('/usr/bin/node',data=program,timeout=30))
-            if not isinstance(value,list) or len(value)!=2:raise ValueError('Invalid Root inventory')
+            if not isinstance(value,list) or len(value)!=3 or not isinstance(value[2],dict):raise ValueError('Invalid Root inventory')
+            failures=diagnostics.context.inventory_failures(value[2])
+            if failures:self.tv_info['root_inventory_failures']=failures
             observed['applications']='unavailable' if value[0] is None else 'unknown'
             observed['inputs']=('unavailable' if value[1] is None else 'read'
                 if isinstance(value[1],dict) and value[1].get('returnValue') is True
