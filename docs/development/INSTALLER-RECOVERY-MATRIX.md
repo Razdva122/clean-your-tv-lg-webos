@@ -7,6 +7,18 @@ prerequisite. A lost connection offers Try again on the same approved goal and
 saved target. Actual OS access denial and busy work get their own instructions.
 No automatic TV reboot or hidden retry runs. [User instructions](../RECOVERY.md).
 
+The next source changes add a narrow exception for an initially empty No-root
+TV: two current absence/process checks, no inherited operation and confirmed
+input-shortcut cleanup permit immediate completion. Unreadable/anonymous/live
+processes retain the restart path. Current connection help preserves the saved
+endpoint and host pin while allowing an explicitly selected Root sign-in key.
+Helper is checked before No-root pairing; its stop gesture and recheck stay in
+the same setup. Legacy Root Updater remnants offer separately confirmed full
+removal before a new inventory. EIM list rejection falls back to the fixed own
+shortcut delete; failed shortcut cleanup is deferred until safe package cleanup
+finishes, and still blocks verified-clean. These are unpublished source changes,
+not physical acceptance; see [current maintenance guidance](../MAINTENANCE.md#unreleased-removal-and-reinstallation-continuation).
+
 This matrix describes source/UI coverage. Simulated SSH replies, local processes
 and browser events are not physical TV or vendor acceptance. Final success needs
 `removed: true` and `verified_clean: true` from the backend; a restart-required

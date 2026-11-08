@@ -60,6 +60,32 @@ Keep keys and reports; do not reinstall or clear app data just to retry removal.
 Returning to LG Home remains a separate action.
 See [removal](RECOVERY.md#next-candidate-original-operation-recovery-and-full-removal).
 
+### Unreleased: removal and reinstallation continuation
+
+After a removal connection error, open the connection details on desktop or
+return to the connection screen on Android. The pending TV address, edition,
+SSH port and host-key verification remain fixed. Check network access or select
+an existing Root SSH private key, then retry the same removal. Choosing a key
+does not replace the saved host pin or recovery records.
+
+No-root setup checks Helper before pairing. If it is running, stop it with the
+documented Home gesture and confirm the recheck in the current setup. An unknown
+process state still blocks replacement; emergency-stop markers are preserved.
+
+A completely empty No-root installation can finish without a restart only after
+current files, package registrations, input shortcuts and process absence have
+been checked, with no unresolved prior installation. Actual removal still uses
+the requested full restart. If the input-list API fails, CYTV tries deleting only
+its own input shortcut and continues safe package cleanup. A remaining unverified
+shortcut keeps removal pending; retry after the service is available. No success
+is shown merely because the packages disappeared.
+
+When the legacy Root reinstallation path finds Root Updater remnants, it offers
+full project removal before reading the new setup inventory. This includes any
+No-root Home and Helper; back up preferences first. Confirm removal separately,
+finish any required restart/cleanup, then start setup again. Ordinary verified
+Root maintenance and the native fresh-install-only guard are unchanged.
+
 The following manual steps are for the source installations described above.
 
 1. Press Home three times within two seconds to stop interception.

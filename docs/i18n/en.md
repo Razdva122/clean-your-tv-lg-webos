@@ -111,6 +111,8 @@ When asked, disconnect the TV from power, reconnect it, wait for the network and
 
 In v1.11.0 and later, failed or interrupted setup offers recovery directly. If No-root setup cannot continue, confirm full removal once. Removal automatically retries transient connection loss and a busy CYTV worker up to three attempts. If Root access is required, choose **Connect using Root** for the same TV; verified Root cleanup also finishes its blocked No-root removal. A failed Root activation attempts to restore and verify LG Home without repeating activation. Cancellation with unfinished work keeps a diagnostic report and recovery actions. Emergency-stop state remains unchanged.
 
+> **Unreleased continuation improvements:** After a removal connection error, open the connection details, check network access or choose an existing Root SSH key, then retry. The TV address, edition, port and host-key checks stay fixed. No-root checks Helper before pairing: stop it and confirm the recheck in the same setup. An empty TV can skip restart only with verified absence and no unresolved setup; actual removal still requires the requested restart. Legacy Root Updater remnants lead to separately confirmed full removal before new setup. Input-service failure allows safe package cleanup, but success still requires verified shortcut cleanup.
+
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="optional-python-for-root-in-v110"></a>
 <a id="lg-firmware-blocking-in-120"></a>

@@ -483,6 +483,8 @@ class Wizard(QMainWindow):
                     for field in ('connection', 'root_variant'):
                         if profile.get(field):
                             args += ['--'+field.replace('_','-'), profile[field]]
+                    if profile.get('identity'):
+                        args += ['--identity', profile['identity']]
                 args += ['--language', i18n.language_choice()]
                 code = self.run(args, ask=self.channel.ask, secret=self.channel.secret, write=self.channel.console)
             except Exception:
@@ -632,6 +634,9 @@ class Wizard(QMainWindow):
                     self.button('Connect using Root', lambda: self.start('uninstall', root_profile), True)
                 else:
                     self.button('Try again', lambda: self.start('uninstall', profile), True)
+                from .recovery_ui import removal_connection_failure
+                if removal_connection_failure(self.recovery_plan, self.failure_help):
+                    self.button('Connection details', lambda: self.edit_connection(profile, removal=True))
             connection_help = (failed and self.failure_help and self.failure_help.get('can_edit_connection')
                                and self.failure_help['code'].startswith(('ssh-', 'developer-key-'))
                                and self.selected_profile and not self.recovery_plan and not self.recovery_profile)
@@ -701,12 +706,14 @@ class Wizard(QMainWindow):
         except OSError:
             self.error_dialog('Open System Settings', self.failure_help['next_step'])
 
-    def edit_connection(self, profile):
+    def edit_connection(self, profile, removal=False):
         """Check edited fields; never resume installation from a connection error."""
         self.clear_form()
         self.set_error_state(False)
         self.title.setText(tr('Connection details'))
         self.subtitle.setText(tr('Review the selected edition and SSH port against your existing trusted access. Do not weaken SSH security or disable host verification.'))
+        if removal and self.failure_help:
+            self.subtitle.setText(tr(self.failure_help['next_step']))
         self.content.hide()
         self.steps.hide()
         self.check_panel.hide()
@@ -715,6 +722,10 @@ class Wizard(QMainWindow):
         for key in ('root', 'no-root'):
             edition.addItem('Root' if key == 'root' else 'No-root', key)
         edition.setCurrentIndex(0 if profile['edition'] == 'root' else 1)
+        if removal:
+            address.setReadOnly(True)
+            port.setReadOnly(True)
+            edition.setEnabled(False)
         for text, control in [('TV IPv4 address or hostname', address), ('Edition', edition),
                               ('SSH port (No-root: 9922; Root: 22)', port)]:
             label = QLabel(tr(text))
@@ -731,8 +742,14 @@ class Wizard(QMainWindow):
             except ValueError:
                 self.subtitle.setText(tr('Invalid TV address or port. Use an IPv4 address or hostname and a port from 1 to 65535.'))
                 return
-            self.start('doctor', edited)
-        self.button('Check connection again', check, True)
+            self.start('uninstall' if removal else 'doctor', edited)
+        if removal and (profile['edition'] == 'root' or profile.get('connection') == 'root-ssh'):
+            def choose_key():
+                filename, _ = QFileDialog.getOpenFileName(self, tr('Choose your existing SSH private key'))
+                if filename:
+                    self.start('uninstall', dict(profile, identity=filename))
+            self.button('Choose key file…', choose_key)
+        self.button('Try again' if removal else 'Check connection again', check, True)
         self.button('Back to start', self.home)
         address.setFocus()
 

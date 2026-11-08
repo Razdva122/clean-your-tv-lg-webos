@@ -111,6 +111,8 @@ Cuando se indique, desconecta la alimentación del TV, vuelve a conectarla, espe
 
 Desde v1.11.0, una instalación fallida o interrumpida ofrece recuperación directamente. Si No-root no puede continuar, confirma la eliminación completa una vez. La eliminación realiza hasta tres intentos ante cortes temporales de conexión o un proceso CYTV ocupado. Si requiere Root, elige **Conectar con Root** para el mismo TV; la limpieza Root verificada también completa su eliminación No-root bloqueada. Si falla la activación Root, CYTV intenta restaurar y verificar LG Home sin repetir la activación. Cancelar trabajo pendiente conserva el informe y las acciones de recuperación. Se mantiene la parada de emergencia.
 
+> **Mejoras aún no publicadas:** Si falla la conexión durante la eliminación, abre sus detalles, comprueba la red o elige una clave SSH Root existente y reintenta. La dirección, edición, puerto y verificación de la clave del TV siguen fijados. No-root comprueba Helper antes del emparejamiento: detenlo y confirma la nueva comprobación sin reiniciar el proceso. Solo un TV vacío verificado y sin instalación pendiente puede omitir el reinicio; tras una eliminación real sigue siendo necesario el reinicio solicitado. Los restos del antiguo Root Updater llevan a una eliminación completa con confirmación aparte antes de instalar de nuevo. Si falla el servicio de entradas, continúa la limpieza segura de paquetes; el éxito exige verificar también la limpieza del acceso directo.
+
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="python-opcional-para-root-en-v110"></a>
 <a id="bloqueo-de-firmware-lg-en-120"></a>
