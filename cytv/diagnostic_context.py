@@ -224,6 +224,9 @@ def worker_summary(value):
         if type(item) is int and low <= item <= high:
             result[key] = item
     if 'stage' in value:result['stage']=choice(value['stage'],STAGES)
+    if 'cleanup_step' in value:
+        result['cleanup_step']=choice(value['cleanup_step'],('routing-inverse','runtime-restore',
+            'provision-rollback','startup-hook','legacy-lockdown','registration-restore','legacy-permissions','home-readback'))
     detail=mapping(value.get('luna'))
     if detail:
         result['luna']={'call':choice(detail.get('call'),('apps-dev','apps','home-settings','home-profiles',

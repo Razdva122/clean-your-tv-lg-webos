@@ -570,7 +570,7 @@ class LocalDevice:
 
     def clean_remove(self, record, save):
         """Full removal using current support, old snapshots and original locks."""
-        from clean_removal import locks, routes, remove_packages, restore_registrations, validate_restored_root_api, boot_format, verified_restart
+        from clean_removal import locks, routes, remove_packages, restore_registrations, validate_restored_root_api, boot_format, verified_restart, cleanup_step
         import deploy, provision, startup_hook
         roots=(ROOT,UPDATER,SUPERVISOR)
         uid=self.ownership.store.uid
@@ -619,7 +619,8 @@ class LocalDevice:
             startup_failed=bool(record.get('cleanup_startup_unavailable')) and not restarted
             if 'controls-restored' not in record['done']:
                 save('original-writers-fenced')
-                self.preserve_routing_inverse(record)
+                with cleanup_step('routing-inverse'):
+                    self.preserve_routing_inverse(record)
                 if 'profileless_cleanup_eligible' not in record:
                     from clean_removal import ROUTING_EVIDENCE
                     backup=self.ownership.store.read('routing-backup-'+record['operation'])
@@ -637,29 +638,34 @@ class LocalDevice:
                     program=('import sys,json;sys.path.insert(0,'+repr(str(self.payload/'root-updater'))+');'
                              'from clean_removal import runtime_restore;'
                              'print(json.dumps(runtime_restore('+repr(str(self.payload/'root'))+')))')
-                    restored=deploy.command([sys.executable,'-I','-B','-c',program])
-                    if restored.get('result') not in ('restored','absent'):raise ValueError('controls_restore_unverified')
+                    with cleanup_step('runtime-restore'):
+                        restored=deploy.command([sys.executable,'-I','-B','-c',program])
+                        if restored.get('result') not in ('restored','absent'):raise ValueError('controls_restore_unverified')
                     snapshot=read_journal(ROOT/'ls2-provision-snapshot.json')
                     if snapshot is not None:
                         self.ownership.store.write('owner-backup-'+record['operation'],{'provision':snapshot})
-                        provision.rollback(restored=restored)
-                        provision.refresh()
+                        with cleanup_step('provision-rollback'):
+                            provision.rollback(restored=restored)
+                            provision.refresh()
                     else:
                         if any(os.path.lexists(ROOT/name) for name in ('recovery-provision.json','recovery-provision.pending.json')):
                             raise ValueError('provision_snapshot_required')
-                        startup_hook.remove(provision.secure)
+                        with cleanup_step('startup-hook'):
+                            startup_hook.remove(provision.secure)
                 # Restore supervisor lockdown before Root updater's original
                 # registration. Admit only its authenticated original/installed/
                 # restored-SDK chain, never foreign drift.
                 if os.path.lexists(SUPERVISOR/'legacy-lockdown.json'):
                     from cleanup_system_updater import lockdown, write
-                    entries=lockdown(SUPERVISOR,BUS,check=lambda files:validate_restored_root_api(files,BUS,UPDATER,uid))
-                    for name,entry in entries.items():write(Path(name),entry['original'].encode(),entry['mode'])
+                    with cleanup_step('legacy-lockdown'):
+                        entries=lockdown(SUPERVISOR,BUS,check=lambda files:validate_restored_root_api(files,BUS,UPDATER,uid))
+                        for name,entry in entries.items():write(Path(name),entry['original'].encode(),entry['mode'])
                 for state,app,hookname in ((SUPERVISOR,'com.cleanyourtv.system.updater','52-clean-your-tv-system-updater'),
                                           (UPDATER,'com.cleanyourtv.root.updater','51-clean-your-tv-root-updater')):
                     if not os.path.lexists(state):continue
-                    restore_registrations(state,app,BUS,uid)
-                    startup_hook.remove_link(provision.secure,state,INIT/hookname,app,startup_hook.owned_legacy(app,state))
+                    with cleanup_step('registration-restore'):
+                        restore_registrations(state,app,BUS,uid)
+                        startup_hook.remove_link(provision.secure,state,INIT/hookname,app,startup_hook.owned_legacy(app,state))
                 unavailable=set(record.get('cleanup_startup_unavailable',[]))
                 for app,service in (('com.local.nativehome','com.local.nativehome.service'),
                                     ('com.gathin.tvhome','com.gathin.tvhome.renewal')):
@@ -688,8 +694,10 @@ class LocalDevice:
                         save('original-writers-fenced')
                 # Existing precise legacy permission remover restores its own
                 # original bytes. No blanket routing setter is used.
-                self.cleanup('legacy_permissions')
-                record['routes']=routes(self,record)
+                with cleanup_step('legacy-permissions'):
+                    self.cleanup('legacy_permissions')
+                with cleanup_step('home-readback'):
+                    record['routes']=routes(self,record)
                 record['done'].append('controls-restored');save('controls-restored')
             # Recheck before destructive work: a retry must not erase newly
             # appeared routing evidence and then use its absence as proof.
