@@ -1,5 +1,7 @@
 # Android stable readiness
 
+> **v1.13.0:** exact original-signer Android0.13.0/code28 upgrade from published code27, four synthetic retained files, real Store seed/verify, native OperationChecks and idle no-replay passed on an isolated API35 ARM64 userdebug emulator. [Artifact-bound acceptance](../docs/history/2026-11-08-release-1.13.0-artifacts.md#final-android-signed-artifact-acceptance). Physical phone and live phone-to-TV remain untested.
+
 > **v1.12.1:** exact original-signer Android0.12.1/code27 upgrade from published code26, four synthetic retained files, real Store seed/verify, native OperationChecks and idle no-replay passed on an isolated API35 ARM64 userdebug emulator. [Artifact-bound acceptance](../docs/history/2026-11-08-release-1.12.1-publication-acceptance.md). Physical phone and live phone-to-TV paths remain untested.
 
 > **v1.12.0:** Android 0.12.0 / code26 retains the application and original signing identity. The exact original-signer code25-to-code26 upgrade, synthetic Store retention and native fixtures passed on an isolated API35 ARM64 emulator. [Artifact-bound acceptance and limits](../docs/history/2026-11-07-release-1.12.0-scoped-qa.md); physical phones and live phone-to-TV operations remain untested. Earlier evidence below remains historical.

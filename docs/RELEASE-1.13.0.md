@@ -1,10 +1,6 @@
 # v1.13.0 — passive IR Home and safer continuation
 
-Unpublished candidate for [release PR #425](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/425), after published v1.12.1.
-The pre-dispatch Helper compatibility probe passed; full-build selection and
-final-candidate physical acceptance remain pending. The published
-download buttons still serve v1.12.1. Do not install these preliminary packages
-as a verified release or infer that an integrated fix resolved a reporter's TV.
+Release [v1.13.0](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.13.0), after v1.12.1. Full build42491346675:1 and its exact signed Root artifacts passed the selected C3 acceptance; Android original-signer code27→28 emulator upgrade passed. See the [artifact-bound acceptance and limitations](history/2026-11-08-release-1.13.0-artifacts.md). Integrated partial improvements do not establish that every reporter's device is fixed.
 
 ## Changes
 
@@ -12,8 +8,8 @@ as a verified release or infer that an integrated fix resolved a reporter's TV.
   the completed removal's destructive authority, preserve only inactive recovery
   fences, and keep old retries from deleting a later installation. Root-SSH
   No-root setup binds its original plan under the same locks. The C3 preliminary
-  removal/reinstall and published-Home/new-Helper probe passed; final candidate
-  acceptance remains separate.
+  removal/reinstall and published-Home/new-Helper probe passed; final artifact-bound
+  acceptance and its scope are linked above.
 - Complete clean Root-to-No-root staging and subsequent No-root removal (#439).
   Inert temporary files can be retained with a warning without blocking a new
   setup. Fresh Root capture accepts inventories with an empty optional icon color;
@@ -32,12 +28,14 @@ as a verified release or infer that an integrated fix resolved a reporter's TV.
   An already stopped Helper still needs explicit Start Helper and confirmation;
   installing an update does not clear emergency-stop state.
 - Preserve an exactly owned Root Home route while arming fresh startup protection
-  (#427, #422). Actual physical Home, emergency and power acceptance is pending;
-  the published v1.12.1 failures remain recorded separately.
+  (#427, #422). Final C3 remote wake, AC cold start, short Home and triple-Home
+  escape passed; the earlier v1.12.1 failures remain recorded as history.
 - Retry exact transient Root OTA profile permission refusals within the existing
   startup budget (#421, #351). Health still requires legitimate profile, tile and
-  presented-frame evidence. Final signed early-start, public-feed and rollback
-  acceptance remain pending; original permission-race causality is unconfirmed.
+  presented-frame evidence. Final signed update/rollback/forward and actual
+  renderer/profile preservation passed on C3 with retained System1.2.5; ordinary
+  reporter public-feed acceptance remains separate and original causality is
+  unconfirmed.
 - Give visible Root apps priority within the existing icon budget; refresh a
   newly pinned missing icon (#423, #416). Catalog order and size limits remain.
   Keep legacy clocks compact with an HH:MM fallback (#429, #311).
@@ -65,7 +63,8 @@ as a verified release or infer that an integrated fix resolved a reporter's TV.
 | Both edition Updaters | 0.5.3 | 0.5.4 | Shared locales and embedded Root coordinator closure |
 | Fresh System / protocol | 1.2.6 / 1 | 1.2.7 / 1 | Changed shared runtime/infrastructure closure |
 
-All desktop/Android installers and normal/Beta Root payloads need rebuilding.
+All desktop/Android installers and normal/Beta Root payloads were rebuilt in the
+selected complete candidate.
 The actual builder's historical Helper byte pins cover 0.6.16/0.6.17/0.6.19,
 not 0.7.5. A new source-built Helper version is required regardless: release
 assembly refuses changed bytes under an unchanged published version. New 0.8.0
@@ -81,7 +80,8 @@ Root Beta remains a separate exact-Node-0.12.2 payload with ordinary OTA disable
 C1 compositor admission and Homebrew Installer promotion retain their independent
 unverified gates; no Homebrew release approval is selected. Android retains its
 application ID and persistent signer; exact code27→code28 APK upgrade acceptance
-is pending. No new general firmware or phone compatibility is claimed.
+passed on the isolated emulator. No new general firmware or phone compatibility
+is claimed.
 
 ## Validation and remaining gates
 

@@ -110,10 +110,11 @@
     }
   ],
   "excluded": [],
-  "acceptance": "",
+  "acceptance": "Maintainer delegated autonomous publication after verified final checks. Pinned full build 42491346675:1 at 21fe6718 passed all 18 jobs; protected Root QA signing 42493164110 and exact artifact digests, signature, provenance and package checks passed. On maintainer C3 OLED55C3RLA, firmware43.21.71/SDK11.2.0/Node20.12.2, LG Magic Remote exact model unknown, macOS ARM64: original System1.2.5 performed signed Root0.13.1/Updater0.5.3 to final Root0.13.2/Updater0.5.4, retained rollback and forward. Real renderer,33 tiles and original profile/theme equality passed;27 immutable System files stayed unchanged. Owner remote off/10s/on and repeated app-to-short Home returned Root;30s AC boot reset uptime1885.04 to114.43, audible video, short Home to Root, triple Home to LG and later Home staying LG passed. Final Root Off/LG/recovery integrity/no pending confirmed. Published Home1.13.1 with exact Helper0.8.0 passed normal UI Start/confirmation,203 public-file hashes, non-root UID5431, physical Home/escape and arrows/volume; full artifact canonical archive matches. Exact original-signer Android0.13.0 code27-to28 emulator upgrade preserved4 synthetic files and real Store; native OperationChecks and idle no-replay passed. Mac console/runtime and498 payload files verified. No blocking failure remains in selected cases. Other remotes/IR,stock Developer Mode,physical phones/minimum WebView,legacy TVs,exhausted catalog and extended Helper standby remain scoped limitations, not physical passes; original reporter issues stay open as appropriate. Public package/feed verification follows publication. Full observations, failures/recovery and selection rationale: docs/history/2026-11-08-release-1.13.0-artifacts.md and docs/history/2026-11-08-helper-0.8.0-compatibility.md.",
   "build": {
     "run_id": 42491346675,
     "attempt": 1,
     "source": "21fe6718f10db53b18cd59d54e0f6765a2672f68"
-  }
+  },
+  "acceptance_build": "42491346675:1"
 }
