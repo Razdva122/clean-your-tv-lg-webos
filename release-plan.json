@@ -10,6 +10,13 @@
       "summary": "Do not crash the Helper on a heartbeat during power-off"
     },
     {
+      "pr": 421,
+      "issues": [
+        351
+      ],
+      "summary": "Retry exact transient Root OTA permission refusals within the existing startup budget; original permission-race cause and final public-feed/early-launch device acceptance remain unconfirmed"
+    },
+    {
       "pr": 424,
       "issues": [
         101
