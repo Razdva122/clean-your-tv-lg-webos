@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Check GitHub for a newer stable computer installer. Desktop and console users
+  explicitly choose the release page or their current installer. Unavailable
+  checks remain nonblocking; pending recovery bypasses the advisory.
+
 ## 1.9.0 — unpublished candidate
 
 - Preserve complete Root profile/AOD destinations and add guarded recovery after a verified restored activation failure. Original device reports remain unresolved.
