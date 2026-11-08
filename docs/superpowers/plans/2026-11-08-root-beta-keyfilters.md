@@ -10,7 +10,12 @@
 - [x] Reuse the compiled native guard and shared backend metadata in both payloads; allow only the mount-free backend in Beta.
 - [x] Preserve the QML script and verify the generated Beta service/driver with exact Node 0.12.2.
 - [x] Run installer, setup and affected device-runtime/lease/filter/recovery checks, review the diff and document the unpublished behavior and limits.
-- [ ] Save the focused changes on a feature branch/PR targeting `release/next`, reconcile related issue status and clean up the temporary worktree.
+- [x] Save the focused changes on a feature branch/PR targeting `release/next` and reconcile related issue status.
+
+Delivery: [PR #451](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/451),
+branch `codex/root-beta-keyfilters`, targets `release/next`. The original #410
+remains open/planned because this does not admit its SDK 3.9.0. Archive the
+temporary worktree after saving the final documentation; preserve the pushed PR.
 
 Review found an additional legacy API boundary in the shared lease broker:
 Node 0.12.2 does not support `fs.readFileSync(fd)`. A real-descriptor regression
