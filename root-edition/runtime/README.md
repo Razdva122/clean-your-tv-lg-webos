@@ -47,7 +47,7 @@ state instead of using this Root runtime.
 For the retained rollback live-authority window, capture/staging order and unresolved
 old-CLI forward cancellation, see the [2026-11-01 investigation](../../docs/history/2026-11-01-root-home-settings-intent.md).
 
-A confirmed normal shutdown retains the Home override, generated profile and transaction binding so bootd can select Clean Your TV as its first app. Startup recovery still restores the old transaction before arming fresh health protection. Explicit exit, input failure without a shutdown signal, and failsafe recovery restore LG Home.
+A confirmed normal shutdown retains the Home override, generated profile and transaction binding so bootd can select Clean Your TV as its first app. A normal new-session start may continue an exactly owned retained route without removing its override, rescanning profiles, rewriting Home or launching a foreground app. It preserves the original recovery baseline and file identity, rotates transaction/generation/token, and arms fresh input supervision plus an independent guardian before waiting for the normal-init gate. Uncertain ownership, missing predecessor evidence or a surviving predecessor guardian/supervisor/reader refuses continuation and retains conservative recovery. Explicit exit, input failure without a shutdown signal, and failsafe recovery restore LG Home.
 
 The shutdown monitor accepts only fresh transaction/session-bound evidence.
 Its local tvpower subscription must observe ON before Active Standby/Power Off;
@@ -179,3 +179,46 @@ Loss before activation completes makes post-ready handling withdraw the owned
 priority. Close invalidates eligibility first, waits at most two seconds for an
 in-flight operation lock, then attempts one fresh guarded withdrawal. No native
 RPC replay or late application launch is introduced.
+
+
+## Retained Home startup continuation (#422)
+
+`boot_gate.py` also owns the root-private `boot-continuation.json` schema-1
+record. It holds exact prior/next lifecycle, binding and routing journal snapshots;
+it stores private routing/lifecycle data and must not be published as a raw
+diagnostic. It is written atomically with
+0600 permissions under the existing 0700 Root state directory. Cleanup classifies
+it as routing evidence and preserves it in the finite inverse backup before
+removal. The immutable runtime file inventory remains unchanged.
+
+The continuation admits only a confirmed enabled prior session, the exact
+original profile payload/device/inode/mode/link count, matching effective routes,
+and independently absent predecessor protection processes. The original stock
+baseline is never inferred from current routing, replaced, or marked restored.
+A new transaction prevents stale processes or health files acquiring authority.
+Snapshot resumes with surviving/uncertain old processes use conservative recovery;
+continuity is not promised for that state.
+
+Before authority changes, a detached bootstrap monitor acknowledges readiness.
+Its fixed deadline and private parent-death pipe invoke ordinary recovery even
+if the dispatcher dies between record, intent, journal and binding writes. The
+record repairs only exact saved states or their ordinary recovery transitions.
+An interrupted handoff is recovery-only on subsequent dispatch; it cannot enable
+Home. The bootstrap monitor is disarmed only after the fresh guardian and input
+reader acknowledge readiness. The ordinary independent 60-second deadline is
+never restarted after gate waiting, and its 20-second recovery reserve remains.
+
+Before the normal init marker exists, ordinary startup and a genuine failsafe
+cannot yet be distinguished. A recovery-only input supervisor protects this
+bounded classification interval: READY/PING do not authorize persistent health,
+and triple-Home, input loss and the two-second heartbeat watchdog still recover.
+The normal-marker/cleared-failsafe gate waits at most 35 seconds, additionally
+limited by the original recovery reserve. Missing marker, uncleared failsafe,
+package loss, exhausted budget, observer failure or explicit Off disables and
+restores LG. No code clears failsafe or automatically re-enables emergency-stop
+state. Only the verified normal gate releases ordinary current-session health;
+active intent still requires fresh input and guardian proof.
+
+This is a runtime sequencing correction, with no loading screen or UI launch
+restriction. Host simulations and subprocess failure injection do not establish
+physical remote, standby, cold-boot, audio, signed update or rollback acceptance.
