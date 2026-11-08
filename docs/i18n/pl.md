@@ -111,6 +111,8 @@ Gdy pojawi się prośba, odłącz zasilanie TV, podłącz ponownie, poczekaj na 
 
 Od v1.11.0 po nieudanej lub przerwanej instalacji odzyskiwanie jest dostępne bezpośrednio. Jeśli No-root nie może kontynuować, potwierdź raz pełne usunięcie. Przy chwilowej utracie połączenia lub zajętym procesie CYTV usuwanie podejmuje do trzech prób. Jeśli potrzebny jest Root, wybierz **Połącz przez Root** dla tego samego TV; zweryfikowane czyszczenie Root kończy też zablokowane usuwanie No-root. Po błędzie aktywacji Root CYTV próbuje przywrócić i sprawdzić LG Home bez ponownej aktywacji. Anulowanie z niedokończoną pracą zachowuje raport i działania odzyskiwania. Stan zatrzymania awaryjnego pozostaje bez zmian.
 
+> **Ulepszenia jeszcze niewydane:** Po błędzie połączenia podczas usuwania otwórz szczegóły, sprawdź sieć lub wybierz istniejący klucz SSH Root i ponów próbę. Adres, edycja, port i weryfikacja klucza telewizora pozostają ustalone. No-root sprawdza Helper przed parowaniem: zatrzymaj go i potwierdź ponowne sprawdzenie w tym samym procesie. Tylko zweryfikowany pusty telewizor bez niedokończonej instalacji może pominąć restart; po faktycznym usuwaniu wykonaj wymagany restart. Pozostałości starego Root Updater prowadzą do osobno potwierdzanego pełnego usunięcia przed nową instalacją. Awaria usługi wejść pozwala kontynuować bezpieczne usuwanie pakietów; sukces nadal wymaga potwierdzenia usunięcia skrótu.
+
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="opcjonalny-python-dla-root"></a>
 <a id="testy-sprzętowe-i-ograniczenia"></a>

@@ -729,6 +729,10 @@ printf '%s' "$cytv_state"
         from .no_root_observer import continue_operation
         return continue_operation(self, expected_pending)
 
+    def has_root_updater(self):
+        condition=' || '.join('[ -e '+p+' ] || [ -L '+p+' ]' for p in root_updater_paths())
+        return bool(self.remote.run('if '+condition+'; then printf CYTV_EXISTING_UPDATER; fi').strip())
+
     def install_root(self, inventory, migrate, reinstall=None):
         if self.tv_info.get('home_backend') == 'c1-native-gate':
             from .root_gate import install
@@ -745,10 +749,8 @@ printf '%s' "$cytv_state"
                     raise ValueError('Root Updater bundle integrity mismatch')
         except (OSError, KeyError, TypeError, ValueError) as error:
             raise UserError('Root Updater bundle is missing or invalid. Use a complete installer build.') from error
-        if reinstall:
-            condition=' || '.join('[ -e '+p+' ] || [ -L '+p+' ]' for p in root_updater_paths())
-            if self.remote.run('if '+condition+'; then printf CYTV_EXISTING_UPDATER; fi').strip():
-                raise UserError('Root Updater already exists or setup state remains. Use Software updates on the TV; if unavailable, inspect recovery before reinstalling.')
+        if reinstall and self.has_root_updater():
+            raise UserError('Root Updater already exists or setup state remains. Use Software updates on the TV; if unavailable, inspect recovery before reinstalling.')
         with tempfile.TemporaryDirectory(prefix='cytv-root-') as tmp:
             bundle = Path(tmp).resolve() / 'root'
             shutil.copytree(self.payload / self._graphics_paths['root'], bundle)

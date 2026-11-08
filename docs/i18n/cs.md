@@ -98,6 +98,8 @@ Na výzvu odpojte TV od napájení, znovu připojte, počkejte na síť a vybert
 
 Od v1.11.0 je po neúspěšné nebo přerušené instalaci přímo dostupná obnova. Pokud No-root nemůže pokračovat, potvrďte jednou úplné odebrání. Při dočasné ztrátě spojení nebo zaneprázdněném procesu CYTV proběhnou nejvýše tři pokusy. Je-li nutný Root, zvolte **Připojit přes Root** pro stejnou TV; ověřený úklid Root dokončí i její zablokované odebrání No-root. Po chybě aktivace Root se CYTV pokusí obnovit a ověřit LG Home bez opakované aktivace. Zrušení s nedokončenou prací zachová zprávu a kroky obnovy. Nouzové zastavení zůstane zachováno.
 
+> **Dosud nevydaná vylepšení:** Po chybě připojení během odstranění otevřete podrobnosti, zkontrolujte síť nebo vyberte existující SSH klíč Root a zkuste to znovu. Adresa, edice, port a ověření klíče TV zůstávají pevné. No-root kontroluje Helper před párováním: zastavte jej a potvrďte opětovnou kontrolu ve stejném průvodci. Restart lze přeskočit pouze u ověřeně prázdné TV bez nedokončené instalace; po skutečném odstranění proveďte požadovaný restart. Zbytky starého Root Updater vedou před novou instalací k samostatně potvrzenému úplnému odstranění. Při selhání služby vstupů pokračuje bezpečné odstranění balíčků; úspěch stále vyžaduje ověření odstranění zástupce.
+
 <!-- Legacy anchors retained for existing links. -->
 <a id="automatické-rozlišení-grafiky-kandidát"></a>
 <a id="čeština--rozhraní-televizoru"></a>

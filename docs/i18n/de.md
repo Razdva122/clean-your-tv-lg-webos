@@ -111,6 +111,8 @@ Wenn aufgefordert, den TV vom Strom trennen, wieder anschließen, auf das Netzwe
 
 Ab v1.11.0 bietet eine fehlgeschlagene oder unterbrochene Einrichtung direkt die Wiederherstellung an. Kann No-root nicht fortgesetzt werden, bestätigen Sie die vollständige Entfernung einmal. Bei vorübergehendem Verbindungsverlust oder einem beschäftigten CYTV-Prozess erfolgen bis zu drei Versuche. Wählen Sie bei erforderlichem Root-Zugriff **Mit Root verbinden** für denselben TV; die verifizierte Root-Bereinigung beendet auch dessen blockierte No-root-Entfernung. Nach einem Root-Aktivierungsfehler versucht CYTV, LG Home wiederherzustellen und zu prüfen, ohne erneut zu aktivieren. Ein Abbruch mit unerledigter Arbeit behält Bericht und Wiederherstellungsaktionen. Der Notstopp bleibt erhalten.
 
+> **Noch nicht veröffentlichte Verbesserungen:** Öffnen Sie nach einem Verbindungsfehler beim Entfernen die Verbindungsdetails, prüfen Sie das Netzwerk oder wählen Sie einen vorhandenen Root-SSH-Schlüssel und versuchen Sie es erneut. TV-Adresse, Edition, Port und Hostschlüsselprüfung bleiben fest. No-root prüft Helper vor dem Pairing: stoppen Sie ihn und bestätigen Sie die erneute Prüfung im selben Ablauf. Nur ein nachweislich leerer TV ohne offene Einrichtung kann den Neustart überspringen; nach tatsächlichem Entfernen bleibt der angeforderte Neustart nötig. Reste des alten Root Updater führen vor der Neueinrichtung zu einer separat bestätigten vollständigen Entfernung. Bei Fehlern des Eingangsdiensts geht die sichere Paketbereinigung weiter; Erfolg erfordert weiterhin die bestätigte Verknüpfungsbereinigung.
+
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="optionales-python-für-root-in-v110"></a>
 <a id="lg-firmware-sperre-in-120"></a>
