@@ -87,6 +87,8 @@ Setas selecionam; OK abre; segure OK para reorganizar. Um toque em Voltar manté
 
 No-root: Para reiniciar o controle de Home, abra Home Helper, escolha Iniciar Helper e confirme. Sua tela Home escolhida será mantida. Root: ative **Alterar Home** nas configurações do Home para retomar. **Abrir LG Home** abre LG Home uma vez sem mudar o destino de Home. Para restaurar LG Home como destino permanente, desative **Alterar Home**. Nunca execute os dois controladores juntos. Se a falha voltar, mantenha LG Home ativo.
 
+Uma atualização não reinicia um Helper No-root parado. Retome-o explicitamente como descrito acima; não exclua manualmente os marcadores de parada.
+
 ## Precisa de ajuda?
 
 Se aparecer `ssh-identity-changed` após restaurar o TV ou alterar o SSH, pare: o CYTV bloqueou a mudança da chave salva antes da autenticação. A confirmação inicial de confiança não a substitui; uma desinstalação pendente não explica a divergência. Guarde o perfil original, as chaves e os registros de recuperação. Não há comando automático compatível para renovar a confiança. É preciso verificar independentemente a identidade/impressão digital do TV e revisar um procedimento que preserve o perfil: [recuperação da identidade SSH](../RECOVERY.md#ssh-identity-changed).
