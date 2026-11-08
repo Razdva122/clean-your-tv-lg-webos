@@ -39,14 +39,18 @@ class RemovalIntentTests(unittest.TestCase):
         self.assertNotIn('unsubmitted', str(intent))
         self.assertEqual(removal_summary(intent)['state'], 'cleanup-in-progress')
 
-    def test_completed_request_is_reused_for_readback_without_new_generation(self):
+    def test_new_explicit_remove_after_completion_gets_new_goal_and_retains_history(self):
         intent = self.store.request_clean_removal(self.profile)
         self.store.checkpoint(self.profile, stage='verified-clean', result={'removed': True,'verified_clean':True})
         self.store.finish_clean_removal(self.profile)
         self.assertIsNone(self.store.pending(self.profile))
         again = self.store.request_clean_removal(self.profile)
-        self.assertEqual(again['removal_operation'], intent['removal_operation'])
-        self.assertEqual(again['stage'], 'verified-clean')
+        self.assertNotEqual(again['removal_operation'], intent['removal_operation'])
+        self.assertEqual(again['stage'], 'requested')
+        self.assertEqual(self.store.request_clean_removal(self.profile),again)
+        histories=list(self.store.device_dir(self.profile).glob('clean-removal-history-*.json'))
+        self.assertEqual(len(histories),1)
+        self.assertEqual(json.loads(histories[0].read_text())['removal_operation'],intent['removal_operation'])
 
     def test_intent_persists_before_connection_or_support_staging(self):
         intent = self.store.request_clean_removal(self.profile)

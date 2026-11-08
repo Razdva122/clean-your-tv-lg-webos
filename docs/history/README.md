@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [Clean removal and reinstallation, 2026-11-08](2026-11-08-root-clean-removal-reinstallation.md): source defect, ownership changes, restored bounded C3 preflight and unverified full-transition acceptance.
+
 - [Developer Mode storage integration, 2026-11-08](2026-11-08-next-candidate-storage-integration.md): PR #435, focused CI/review, unchanged versions and pending #409 device confirmation.
 
 - [v1.13.0 preparation, 2026-11-08](2026-11-08-release-1.13.0-preparation.md): versioned preliminary packages, automated checks, mandatory Helper compatibility blocker and the bounded physical plan. No new TV acceptance.

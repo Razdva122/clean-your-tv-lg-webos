@@ -1081,6 +1081,16 @@ class LocalDevice:
 
     def finish_clean_tail(self, record):
         """Transfer final runtime cleanup to Node with the same inherited flock."""
+        saved=_optional_record(self.ownership.store,'clean-removal-'+record['operation'])
+        current=self.ownership.status()
+        if saved and saved.get('final_fence') is not None:
+            # A completed destructive goal has no authority over later files.
+            # Its supported retry is the current coordinator/Node readback.
+            raise ValueError('completed_removal_readback_required')
+        if (not current or current['owner']!='clean-removal'
+                or current['journal']!='product-'+record['operation']+'.json'
+                or current['id']!=record['lease']):
+            raise ValueError('original_removal_required')
         import python_binding, fcntl
         from clean_removal import retire_tree
         runtime=python_binding.MANAGED_ROOT/python_binding.ARCHIVE_SHA256
