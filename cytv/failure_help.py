@@ -1,5 +1,6 @@
 """Fixed, phase-bound advice. It never connects, retries, repairs or grants trust."""
 import errno
+import socket
 
 from .errors import DeveloperKeyError, TVConnectionError, TVRejected, is_storage_full, TV_STORAGE_FULL, COMPUTER_STORAGE_FULL
 from .recovery_state import unsubmitted_removal
@@ -45,18 +46,32 @@ GUIDES = {
 }
 
 
-def network_failure_code(error):
-    """Use typed socket causes, including Paramiko's per-address failures."""
+NETWORK_CAUSES = {
+    'access-denied': 'ssh-access-denied', 'refused': 'ssh-refused', 'timeout': 'ssh-timeout',
+    'host-unreachable': 'ssh-unreachable', 'network-unreachable': 'ssh-unreachable',
+    'name-resolution': 'ssh-unreachable', 'unknown': 'ssh-unreachable',
+}
+
+
+def network_failure_causes(error):
+    """A bounded set of typed causes, never address keys or exception prose."""
     errors = getattr(error, 'errors', None)
-    causes = list(errors.values()) if isinstance(errors, dict) and errors else [error]
-    codes = set()
+    causes = errors.values() if isinstance(errors, dict) and errors else (error,)
+    result = set()
     for cause in causes:
         number = getattr(cause, 'errno', None)
-        codes.add('ssh-access-denied' if number in (errno.EACCES, errno.EPERM) else
-                  'ssh-refused' if number == errno.ECONNREFUSED else
-                  'ssh-timeout' if isinstance(cause, TimeoutError) or number == errno.ETIMEDOUT else
-                  'ssh-unreachable')
-    # Mixed causes do not prove a single diagnosis. Never inspect exception prose.
+        result.add('name-resolution' if isinstance(cause, socket.gaierror) else
+                   'access-denied' if number in (errno.EACCES, errno.EPERM) else
+                   'refused' if number == errno.ECONNREFUSED else
+                   'timeout' if isinstance(cause, TimeoutError) or number == errno.ETIMEDOUT else
+                   'host-unreachable' if number == errno.EHOSTUNREACH else
+                   'network-unreachable' if number == errno.ENETUNREACH else 'unknown')
+    return sorted(result)
+
+
+def network_failure_code(error):
+    """Mixed causes do not prove a single diagnosis."""
+    codes = {NETWORK_CAUSES[cause] for cause in network_failure_causes(error)}
     return codes.pop() if len(codes) == 1 else 'ssh-unreachable'
 
 
