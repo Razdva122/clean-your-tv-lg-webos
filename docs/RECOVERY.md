@@ -20,6 +20,11 @@ choose **Start Helper** and confirm. To resume Root, turn **Change Home** on in
 Home settings. Opening Home alone does not restart a stopped Helper.
 **Open LG Home** only visits LG Home once; it keeps the saved Home choice.
 
+Updating packages does not restart a stopped No-root Helper. After updating to
+a release containing a fix for the fault, use **Start Helper** above to resume
+Home control explicitly. Do not delete `blocked`/`stopped` markers manually or
+expect an update to clear an emergency stop.
+
 If controls fail again, leave LG Home active and save diagnostics. Do not repeatedly
 clear stop flags after a fault. A Quick Access assignment to Home offers another
 way to open it, but does not restart Helper.

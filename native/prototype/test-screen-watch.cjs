@@ -1,7 +1,8 @@
 const fs = require('fs'),
   vm = require('vm'),
   a = require('node:assert/strict'),
-  { EventEmitter } = require('events');
+  { EventEmitter } = require('events'),
+  legacyPing = require('../app/vendor/ws-legacy').prototype.ping;
 const source = fs.readFileSync(require.resolve('../app/screen-watch'), 'utf8');
 function setup(withPower, secure = true) {
   let seq = 0,
@@ -16,6 +17,14 @@ function setup(withPower, secure = true) {
       super();
       this.url = url;
       this.sent = [];
+      this.readyState = 1;
+      // Substitute the transport, retaining the real legacy ws ping contract.
+      this._sender = {
+        ping: (data, mask, cb) => {
+          this.pings = (this.pings || 0) + 1;
+          if (cb) cb();
+        }
+      };
       WS.last = this;
     }
     send(v) {
@@ -28,15 +37,7 @@ function setup(withPower, secure = true) {
       }
     }
     ping(cb) {
-      // Like ws: a ping on a socket that is not OPEN throws without a callback.
-      if (this.readyState !== undefined && this.readyState !== 1) {
-        const e = new Error(
-          'WebSocket is not open: readyState ' + this.readyState
-        );
-        if (typeof cb === 'function') return cb(e);
-        throw e;
-      }
-      this.pings = (this.pings || 0) + 1;
+      return legacyPing.call(this, cb);
     }
   }
   const sandbox = {
@@ -459,8 +460,8 @@ for (const reason of ['close', 'error', 'stop', 'global-error', 'pairing']) {
   a.deepEqual(t.events, ['subscription']);
   t.watcher.close();
 }
-{
-  // Power-off: the socket is CLOSING before 'close' clears the heartbeat.
+for (const state of [2, 3]) {
+  // Power-off: the socket can stop being OPEN before close clears the timer.
   const t = setup(),
     s = t.WS.last;
   s.emit('open');
@@ -473,15 +474,44 @@ for (const reason of ['close', 'error', 'stop', 'global-error', 'pairing']) {
       payload: { appId: 'app' }
     })
   );
-  const beat = [...t.timers.values()].find((x) => x.interval).f;
-  s.readyState = 2;
-  a.doesNotThrow(beat, 'heartbeat on a CLOSING socket must not throw');
+  const beat = [...t.timers.values()].find((x) => x.interval).f,
+    resets = t.resets();
+  s.readyState = state;
+  a.doesNotThrow(
+    beat,
+    'heartbeat on socket state ' + state + ' must not throw'
+  );
   a.equal(s.ended, undefined);
   beat();
   a.equal(s.ended, true, 'a missed pong still terminates the socket');
+  a.equal(t.resets(), resets + 1, 'termination resets the foreground state');
+  a.equal([...t.timers.values()].filter((x) => x.interval).length, 0);
+  fireTimer(t, 10000);
+  a.notEqual(t.WS.last, s, 'a failed heartbeat still allows reconnection');
   t.watcher.close();
+  a.equal(t.timers.size, 0);
 }
-console.log('PASS: CLOSING heartbeat does not throw');
+{
+  const { t, s } = registered();
+  s.emit(
+    'message',
+    JSON.stringify({ id: 'foreground', payload: { appId: 'app' } })
+  );
+  const beat = [...t.timers.values()].find((x) => x.interval).f;
+  beat();
+  a.equal(s.pings, 1, 'the heartbeat invokes the legacy ws ping sender');
+  s.emit('pong');
+  beat();
+  a.equal(s.pings, 2, 'a pong permits the next heartbeat');
+  a.equal(s.ended, undefined, 'a responsive socket stays connected');
+  beat();
+  a.equal(s.ended, true, 'a missing pong still terminates an OPEN socket');
+  t.watcher.close();
+  a.equal(t.timers.size, 0);
+}
+console.log(
+  'PASS: legacy ws CLOSING/CLOSED heartbeat, reconnect, pong and timeout'
+);
 console.log(
   'PASS: fresh registered foreground request, correlation, timeout, reset/close/errors, stale socket and single settlement'
 );
