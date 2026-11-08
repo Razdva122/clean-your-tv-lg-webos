@@ -58,7 +58,7 @@ var cp={spawnSync:function(command,args,options){
  if(command==='/proc/self/fd/3')return require('child_process').spawnSync(command,args,options);
  var method=args[2],value={returnValue:true};
  if(method.indexOf('listApps')!==-1){if(process.env.PRIVATE_ERROR)throw Error(process.env.PRIVATE_ERROR);if(process.env.ALL_CATALOGS_DENIED || process.env.DEV_CATALOG_DENIED && method.indexOf('/dev/')!==-1)value.returnValue=false;if(process.env.CATALOG_MALFORMED && method.indexOf('/dev/')!==-1)delete value.returnValue;value.apps=[];}
- else if(method.indexOf('getSystemSettings')!==-1)value.settings={defaultApps:{home:process.env.SETTINGS_HOME||(process.env.FOREIGN_ROUTE?'changed':'third.party.home')}};
+ else if(method.indexOf('getSystemSettings')!==-1){if(process.env.NO_HOME_APIS)throw Error('Home APIs unavailable');value.settings={defaultApps:{home:process.env.SETTINGS_HOME||(process.env.FOREIGN_ROUTE?'changed':'third.party.home')}};}
  else if(method.indexOf('getProfiles')!==-1){if(process.env.FAIL_FINAL_READBACK && ++profileReads===2)throw Error('injected final readback failure');if(process.env.MISSING_PROFILES){value.returnValue=false;if(process.env.PROFILE_ERROR)value=JSON.parse(process.env.PROFILE_ERROR);}else value.profiles={defaultApps:{categories:{home:'third.party.home'}},idleApp:{appId:'third.party.home'}};}
  else if(method.indexOf('activitymanager')!==-1)value.activities=JSON.parse(process.env.ACTIVITIES||'[]');
  else if(method.indexOf('getAllInputStatus')!==-1)value.devices=[];
@@ -504,6 +504,38 @@ class CleanupTail(unittest.TestCase):
         result,_=self.run_tail(MISSING_PROFILES='1',PROFILE_ERROR=missing,SETTINGS_HOME='com.webos.app.home')
         self.assertNotEqual(result.returncode,0)
         self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+
+    def untouched_record(self):
+        self.record.update(routing_never_applied=True,profileless_cleanup_eligible=True,
+            fenced_components={'deploy':{'stage':'install-observed'}},routes={'mode':'never-applied'})
+        self.write('routing-backup-'+ID+'.json',{})
+        self.write('clean-removal-'+ID+'.json',self.record)
+
+    def test_untouched_home_tail_finishes_without_home_apis(self):
+        self.untouched_record()
+        result,reply=self.run_tail(NO_HOME_APIS='1',MISSING_PROFILES='1')
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(reply['stage'],'verified-clean')
+        self.assertFalse(self.runtime.exists())
+
+    def test_untouched_home_tail_refuses_missing_or_contradictory_proof(self):
+        for evidence in ('backup','missing-backup','phase','eligibility','live'):
+            with self.subTest(evidence=evidence):
+                self.untouched_record()
+                marker=None
+                if evidence=='backup':self.write('routing-backup-'+ID+'.json',{'profile-trial.json':'{}'})
+                if evidence=='missing-backup':(self.state/('routing-backup-'+ID+'.json')).unlink()
+                if evidence=='phase':self.record['fenced_components']['deploy']['stage']='installed-recovery-only'
+                if evidence=='eligibility':self.record['profileless_cleanup_eligible']=False
+                if evidence=='live':
+                    marker=self.base/'var/lib/clean-your-tv-root/persistent-intent.json'
+                    marker.parent.mkdir(exist_ok=True);marker.write_text('{}')
+                self.write('clean-removal-'+ID+'.json',self.record)
+                result,reply=self.run_tail(NO_HOME_APIS='1')
+                self.assertNotEqual(result.returncode,0)
+                self.assertTrue(self.runtime.exists())
+                self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+                if marker:marker.unlink();marker.parent.rmdir()
 
     def test_only_recorded_never_applied_routing_allows_missing_profile_interface(self):
         result,reply=self.run_tail(MISSING_PROFILES='1');self.assertNotEqual(result.returncode,0)

@@ -691,6 +691,12 @@ class LocalDevice:
                 self.cleanup('legacy_permissions')
                 record['routes']=routes(self,record)
                 record['done'].append('controls-restored');save('controls-restored')
+            # Recheck before destructive work: a retry must not erase newly
+            # appeared routing evidence and then use its absence as proof.
+            if (record.get('routing_never_applied') is True
+                    and record.get('profileless_cleanup_eligible') is True
+                    and not self.routing_untouched(record)):
+                raise ValueError('routing_evidence_changed')
             self.remove_owned_registrations()
             stopped=self.shared_cleanup('stop',record)
             if (stopped.get('controller_running') or startup_failed) and restarted:
@@ -977,6 +983,19 @@ class LocalDevice:
             retire_tree(path,set(item['allowed']),uid=uid)
 
 
+    def routing_untouched(self, record):
+        """Prove absence of CYTV routing effects, independently of firmware APIs."""
+        from clean_removal import PRE_ACTIVATION, ROUTING_EVIDENCE
+        deploy=(record.get('fenced_components') or {}).get('deploy') or {}
+        if (record.get('routing_never_applied') is not True
+                or record.get('profileless_cleanup_eligible') is not True
+                or deploy.get('stage') not in PRE_ACTIVATION):return False
+        backup=self.ownership.store.read('routing-backup-'+record['operation'])
+        return (isinstance(backup,dict)
+            and not any(name.split('/')[0] in ROUTING_EVIDENCE for name in backup)
+            and not any(os.path.lexists(ROOT/name) for name in ROUTING_EVIDENCE)
+            and not os.path.lexists('/var/webos-profile/override/clean-your-tv-root.json'))
+
     def preserve_routing_inverse(self, record):
         # Exact finite data-only inverse records, captured before restore can
         # consume them. Credentials, executable trees and mutable preferences
@@ -1175,7 +1194,11 @@ class LocalDevice:
         from clean_removal import APPS, routes
         if self.apps().intersection(APPS):raise ValueError('project_apps_remain')
         for app in APPS:self.absent(app)
-        if routes(self,record)!=record.get('routes'):raise ValueError('restored_routes_changed')
+        current_routes=routes(self,record)
+        if current_routes!=record.get('routes'):
+            if current_routes!={'mode':'never-applied'}:raise ValueError('restored_routes_changed')
+            # Upgrade older pre-activation readbacks only with fresh no-effect proof.
+            record['routes']=current_routes
         for name in ('50-clean-your-tv-root','51-clean-your-tv-root-updater','52-clean-your-tv-system-updater'):
             if os.path.lexists(INIT/name):raise ValueError('startup_remains')
         for name in ('/var/luna-service2/manifests.d/com.cleanyourtv.root.preview.recovery.json',

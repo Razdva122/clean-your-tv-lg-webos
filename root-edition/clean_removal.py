@@ -140,6 +140,8 @@ def retire_tree(path, allowed, keep=(), uid=0, parent_uid=None):
 
 
 def routes(device, record=None):
+    if record is not None and device.routing_untouched(record):
+        return {'mode':'never-applied'}
     settings=device.rpc('com.webos.settingsservice/getSystemSettings',{'category':'general','keys':['defaultApps']})
     home=settings.get('settings',{}).get('defaultApps',{}).get('home')
     if settings.get('returnValue') is not True or not isinstance(home,str) or not home or home in APPS:
