@@ -392,8 +392,8 @@ def environment(kind, shard='1/4'):
         result['identity_ready'] = (all(result[name] for name in required)
                                     and result.get('desktop_libraries', True) is not None
                                     and (result['compiler_path'] is None or bool(result['compiler'])))
-    if kind == 'browser' or (kind == 'runtime' and shard == '1/4'):
-        # Primary runtime preview/Homebrew checks use system Chrome, independently
+    if kind == 'browser' or (kind == 'runtime' and shard in ('1/4', '2/4')):
+        # Runtime preview (1) and Homebrew (2) checks use system Chrome, independently
         # of the separate Chromium browser job. Unknown versions never grant reuse.
         result['browser'] = None
         try:

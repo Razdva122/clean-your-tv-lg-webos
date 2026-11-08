@@ -551,7 +551,9 @@ class EvidenceTests(unittest.TestCase):
             with patch.dict('os.environ', {'BROWSER_CHANNEL': 'chrome-beta'}):
                 other_channel = self.m['environment']('runtime')
             self.assertEqual(self.missing(self.context('installer preview', environment=other_channel)), ['installer', 'preview'])
-            self.assertNotIn('browser', self.m['environment']('runtime', '2/4'))
+            self.assertEqual(self.m['environment']('runtime', '2/4').get('browser'), '130.0.0.0')
+            self.assertNotIn('browser', self.m['environment']('runtime', '3/4'))
+            self.assertNotIn('browser', self.m['environment']('runtime', '4/4'))
             unavailable[0] = True
             unknown = self.m['environment']('runtime')
             self.assertIsNone(unknown['browser'])

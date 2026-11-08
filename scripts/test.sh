@@ -22,6 +22,7 @@ unset CI_TEST_TIMINGS_DIR
 # Shards run in separate CI checkouts; never export this selection to child tests.
 shard=""
 shard_index=1
+shard_count=1
 if [[ "${1:-}" == --shard ]]; then
   shard="${2:-}"
   if [[ ! "$shard" =~ ^[1-9][0-9]{0,2}/[1-9][0-9]{0,2}$ ]] || (( ${shard%/*} > ${shard#*/} )); then
@@ -29,9 +30,13 @@ if [[ "${1:-}" == --shard ]]; then
     exit 2
   fi
   shard_index="${shard%/*}"
+  shard_count="${shard#*/}"
   shift 2
 fi
 primary() { [[ "$shard_index" == 1 ]]; }
+# Serial blocks run once across the matrix; smaller local matrices fold their
+# owners modulo the shard count. Unsharded execution retains every block/order.
+on_shard() { [[ -z "$shard" ]] || (( shard_index == ($1 - 1) % shard_count + 1 )); }
 python_suite() {
   if [[ "$1" == tests/cytv && -n "$test_timings_directory" ]]; then
     "$PYTHON" scripts/test-shard.py --shard "${shard:-1/1}" -s "$1" --timings "$test_timings_directory/cytv.json"
@@ -64,7 +69,7 @@ if primary && { has ui || has tv; }; then
 fi
 
 if has tv || has tv-runtime; then
-if primary; then
+if on_shard 2; then
 node tests/helper-compat.cjs
 node tests/tv-service-compat.cjs
 node tests/passive-remote-diagnostic.cjs
@@ -128,7 +133,7 @@ for test in root-edition/tests/test_update_*.cjs; do node "$test"; done
 for file in root-edition/updater/*.js; do node --check "$file"; done
 fi
 python_suite root-edition/tests
-if primary; then
+if on_shard 4; then
 
 for test in tests/updates/*.cjs; do node "$test"; done
 for test in tests/system_updates/*.cjs; do node "$test"; done
@@ -142,7 +147,7 @@ if has setup; then
   python_suite tests/setup
 fi
 if has installer; then
-  if primary; then
+  if on_shard 2; then
   "$PYTHON" -m unittest discover -s homebrew/tests -p test_payload.py
   node homebrew/tests/runtime.cjs
   node homebrew/tests/bridge.cjs

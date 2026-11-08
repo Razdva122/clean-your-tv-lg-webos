@@ -15,11 +15,27 @@ case in deterministic discovery order. Every discovered occurrence belongs to
 exactly one shard; new cases are included automatically. Existing repeated
 discovery of imported test classes is preserved, not silently deduplicated. Each shard keeps discovery
 order and unittest's class/module fixture handling. Shared fixtures run once per
-participating shard, so there is some extra setup cost. All other commands,
-including JS, native controls/watchdog, smaller Python suites and Linux ownership,
-run on shard 1. Browser and ARM Python validation retain their separate jobs.
+participating shard, so there is some extra setup cost. Serial blocks are assigned
+to the existing shards to avoid adding all their work to shard 1:
+
+| Shard | Serial checks, in addition to its Python partitions |
+| --- | --- |
+| 1 | UI/theme source checks, Android, preview; fresh metadata and Linux ownership checks remain here |
+| 2 | Helper/TV/legacy Node, native controls/watchdog, Root service JS; Homebrew payload/bridge/UI/installer checks |
+| 3 | No additional serial block |
+| 4 | No-root/system updater JS and complete `tests/system_updates` discovery |
+
+Browser and ARM Python validation retain their separate jobs. Each selected
+serial block executes once per OS, with its existing command order and failure
+handling. The complete command multiset across shards equals unsharded execution;
+there is no concurrent execution inside a checkout. Browser identity is bound to
+both runtime shards 1 (preview) and 2 (Homebrew); an unknown browser cannot grant
+reused evidence. Changed routing is itself a global fingerprint input, so receipts
+for the previous layout cannot attest the new layout.
 
 Without `--shard`, local profiles and the no-argument full suite are unchanged.
+For local shard counts below four, serial owners fold modulo the count; `1/1`
+therefore retains every block. The Python partition rule is unchanged.
 Reproduce one CI partition from its own checkout with, for example:
 
 ```sh
@@ -52,6 +68,13 @@ network operations. In [run 42049095791](https://github.com/Razdva122/clean-your
 ARM job package installation alone took 26m11s; test sharding does not address
 that independent delay. Record observed PR timings rather than promising a fixed
 fourfold end-to-end speedup.
+
+The serial redistribution uses [run 42494183249](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42494183249)
+(2026-11-08, `62935a34`) as its baseline: runtime jobs were 12m29s/11m45s on the
+first Linux/macOS shards versus 6m27s–9m28s/6m53s–8m18s on the other shards.
+The first Linux job's executable log showed about 90s of TV/legacy work and 38s
+of Homebrew work before redistribution to shard 2, plus 49s of updater work moved
+to shard 4. These are observations from that run, not a fixed speedup promise.
 
 ## Runner use, dependency caches and artifact retention
 
