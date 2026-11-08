@@ -470,6 +470,158 @@ async function startAppearance(h) {
     );
     assert.equal(h.errors.length, 0);
   }
+  // The installed supervisor can reject reads while package replacement repairs
+  // its legacy permission registrations. A rejected read must not consume boot.
+  const permissionError =
+    'Legacy updater permissions changed; computer recovery required';
+  for (const failedRead of ['initial-profile', 'pending-profile', 'status']) {
+    let stage = failedRead === 'initial-profile' ? 'permission' : 'installing';
+    const timers = [];
+    const h = harness('root', {
+      schedule: (fn) => timers.push(fn),
+      systemRpc: async (method, payload, restored) => {
+        if (
+          stage === 'permission' &&
+          (method === 'restoreProfile'
+            ? failedRead !== 'status'
+            : method === 'status')
+        )
+          throw Error(permissionError);
+        if (method === 'restoreProfile')
+          return stage === 'verifying' ? restored : null;
+        if (method === 'status')
+          return { id: 'a'.repeat(32), edition: 'root', phase: 'installing' };
+        return {};
+      }
+    });
+    await tick();
+    if (stage === 'installing') {
+      stage = 'permission';
+      timers.shift()();
+      await tick();
+    }
+    assert.equal(h.scripts.length, 0, 'permission refusal cannot render');
+    assert.equal(h.errors.length, 0, 'transient refusal must not consume boot');
+    assert.equal(timers.length, 1, 'permission refusal shares bounded polling');
+    stage = 'verifying';
+    timers.shift()();
+    await tick();
+    assert.equal(h.scripts.length, 1);
+    assert.equal(h.window.TV_APPS.apps[0].id, 'app.one');
+    let presented;
+    h.window.HomeUIReady = new Promise((resolve) => (presented = resolve));
+    h.scripts[0].onload();
+    await tick();
+    assert(!h.calls.some((c) => c[0] === 'healthy'));
+    h.window.RootLauncherRendered = true;
+    presented();
+    await tick();
+    assert.equal(h.calls.filter((c) => c[0] === 'healthy').length, 1);
+    assert.equal(h.errors.length, 0);
+  }
+  for (const failure of [permissionError, 'corrupt journal']) {
+    const timers = [];
+    const h = harness('root', {
+      schedule: (fn) => timers.push(fn),
+      systemRpc: async () => {
+        throw Error(failure);
+      }
+    });
+    await tick();
+    let retries = 0;
+    while (timers.length && retries < 121) {
+      timers.shift()();
+      retries++;
+      await tick();
+    }
+    assert.equal(retries, failure === permissionError ? 120 : 0);
+    assert.equal(timers.length, 0);
+    assert.equal(h.scripts.length, 0, 'permanent refusal stays fail-closed');
+    assert(!h.calls.some((c) => c[0] === 'healthy'));
+    assert.equal(h.errors.length, 1);
+  }
+  for (const outcome of ['service-lost', 'changed-profile', 'changed-status']) {
+    let stage = 'installing';
+    const timers = [];
+    const h = harness('root', {
+      schedule: (fn) => timers.push(fn),
+      systemRpc: async (method, payload, restored) => {
+        if (stage === 'permission') throw Error(permissionError);
+        if (stage === 'after' && outcome === 'service-lost')
+          throw Object.assign(Error('service not found'), {
+            unavailable: true
+          });
+        if (method === 'restoreProfile')
+          return stage === 'after' && outcome === 'changed-profile'
+            ? { ...restored, transaction: 'b'.repeat(32) }
+            : null;
+        return {
+          id: stage === 'after' ? 'b'.repeat(32) : 'a'.repeat(32),
+          edition: 'root',
+          phase: 'installing'
+        };
+      }
+    });
+    await tick();
+    stage = 'permission';
+    timers.shift()();
+    await tick();
+    assert.equal(h.errors.length, 0);
+    stage = 'after';
+    timers.shift()();
+    await tick();
+    assert.equal(h.scripts.length, 0, outcome + ' remains fail-closed');
+    assert.equal(h.errors.length, 1);
+    assert.equal(timers.length, 0);
+    assert(!h.calls.some((c) => c[0] === 'healthy'));
+  }
+  {
+    const timers = [];
+    let reads = 0;
+    const h = harness('root', {
+      schedule: (fn) => timers.push(fn),
+      systemRpc: async () => {
+        if (reads++ === 0) throw Error(permissionError);
+        throw Object.assign(Error('service not found'), { unavailable: true });
+      }
+    });
+    await tick();
+    timers.shift()();
+    await tick();
+    assert.equal(
+      h.scripts.length,
+      0,
+      'known supervisor cannot fall back to legacy'
+    );
+    assert.equal(h.errors.length, 1);
+  }
+  {
+    const timers = [];
+    let reads = 0;
+    const h = harness('root', {
+      schedule: (fn) => timers.push(fn),
+      systemRpc: async (method) => {
+        if (method === 'restoreProfile') {
+          if (reads++ % 2) throw Error(permissionError);
+          return null;
+        }
+        return { id: 'a'.repeat(32), edition: 'root', phase: 'installing' };
+      }
+    });
+    await tick();
+    for (let retry = 0; retry < 120; retry++) {
+      assert.equal(timers.length, 1);
+      timers.shift()();
+      await tick();
+    }
+    assert.equal(
+      timers.length,
+      0,
+      'permission retries cannot reset startup budget'
+    );
+    assert.equal(h.errors.length, 1);
+    assert.equal(h.scripts.length, 0);
+  }
   for (const outcome of [
     'changed-status',
     'changed-profile',

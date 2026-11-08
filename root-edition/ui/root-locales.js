@@ -3964,3 +3964,59 @@ if (window.HomeI18n)
       'System update profile readiness timed out': '等待系統更新設定檔逾時'
     }
   });
+
+if (window.HomeI18n)
+  window.HomeI18n.add({
+    'en': {
+      'Legacy updater permissions changed; computer recovery required':
+        'Legacy updater permissions changed; computer recovery required'
+    },
+    'cs': {
+      'Legacy updater permissions changed; computer recovery required':
+        'Oprávnění původního aktualizačního nástroje se změnila; je nutné obnovení pomocí počítače'
+    },
+    'de': {
+      'Legacy updater permissions changed; computer recovery required':
+        'Die Berechtigungen des bisherigen Updaters haben sich geändert; eine Wiederherstellung per Computer ist erforderlich'
+    },
+    'es': {
+      'Legacy updater permissions changed; computer recovery required':
+        'Los permisos del actualizador anterior han cambiado; se requiere recuperación desde un ordenador'
+    },
+    'pt-BR': {
+      'Legacy updater permissions changed; computer recovery required':
+        'As permissões do atualizador anterior mudaram; é necessária a recuperação pelo computador'
+    },
+    'fr': {
+      'Legacy updater permissions changed; computer recovery required':
+        'Les autorisations de l’ancien outil de mise à jour ont changé ; une récupération depuis un ordinateur est nécessaire'
+    },
+    'it': {
+      'Legacy updater permissions changed; computer recovery required':
+        'Le autorizzazioni del precedente programma di aggiornamento sono cambiate; è necessario il ripristino tramite computer'
+    },
+    'ko': {
+      'Legacy updater permissions changed; computer recovery required':
+        '기존 업데이트 도구의 권한이 변경되었습니다. 컴퓨터를 통한 복구가 필요합니다'
+    },
+    'hi': {
+      'Legacy updater permissions changed; computer recovery required':
+        'पुराने अपडेटर की अनुमतियाँ बदल गई हैं; कंप्यूटर से रिकवरी ज़रूरी है'
+    },
+    'pl': {
+      'Legacy updater permissions changed; computer recovery required':
+        'Uprawnienia poprzedniego narzędzia aktualizacji uległy zmianie; wymagane jest odzyskiwanie za pomocą komputera'
+    },
+    'ru': {
+      'Legacy updater permissions changed; computer recovery required':
+        'Права прежнего средства обновления изменились; требуется восстановление с компьютера'
+    },
+    'zh-Hans': {
+      'Legacy updater permissions changed; computer recovery required':
+        '旧版更新程序的权限已更改；需要通过计算机恢复'
+    },
+    'zh-Hant': {
+      'Legacy updater permissions changed; computer recovery required':
+        '舊版更新程式的權限已變更；需要透過電腦復原'
+    }
+  });
