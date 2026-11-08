@@ -120,3 +120,15 @@ receipts and failure-before-package-removal ordering. Updater/coordinator and
 embedding installers require rebuilt payloads. Original #418 remains needs-info
 under its existing saved-error request; do not rerun device recovery to fill a
 new diagnostic category. Synthetic packaged export checks are the relevant gate.
+
+## #433: SSH socket causes
+
+Head `2f342b8` passed selected CI [42457129023](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42457129023)
+and independent complete-source/privacy review. Merge source: `ef0b110a`.
+Combined SSH/report/history, diagnostic context and recovery projection tests
+pass all 51 cases; 16 release-flow checks pass. Socket categories are fixed,
+sorted, deduplicated and revalidated. Existing authentication/trust/key-file/phase
+handling is retained, with no new connection retry, endpoint or TV probe.
+Desktop/console/Android installers need rebuilt embeddings. Original #420 stays
+needs-info under its existing published-version Doctor/context request; neither
+historical missing causes nor native Windows ARM64/TV acceptance are inferred.
