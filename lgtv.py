@@ -61,9 +61,10 @@ async def session(host, **connect_args):
     key = msg["payload"]["client-key"]
     if keys.get(host) != key:
         keys[host] = key
-        with open(KEY_FILE, "w") as f:
+        fd = os.open(KEY_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        os.fchmod(fd, 0o600)  # O_CREAT's mode does not apply to an existing file
+        with os.fdopen(fd, "w") as f:
             json.dump(keys, f, indent=1)
-        os.chmod(KEY_FILE, 0o600)
     return ws
 
 

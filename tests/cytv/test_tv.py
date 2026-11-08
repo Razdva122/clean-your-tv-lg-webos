@@ -262,5 +262,46 @@ class PermissionTests(unittest.TestCase):
         self.assertNotIn('CONTROL_MOUSE_AND_KEYBOARD', lgtv.PERMISSIONS)
 
 
+class KeyFileTests(unittest.TestCase):
+    def pair(self, existing=None):
+        import asyncio, contextlib, io, os
+        from unittest.mock import AsyncMock
+        import lgtv
+        modes, real_dump = [], json.dump
+
+        def dump(obj, stream, **kwargs):
+            modes.append(os.fstat(stream.fileno()).st_mode & 0o777)
+            real_dump(obj, stream, **kwargs)
+
+        class Socket:
+            async def send(self, data):
+                pass
+
+            async def recv(self):
+                return json.dumps({'type': 'registered', 'payload': {'client-key': 'new-key'}})
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / '.lgtv-key.json'
+            if existing is not None:
+                path.write_text(json.dumps(existing))
+                path.chmod(0o644)
+            umask = os.umask(0o022)
+            try:
+                with patch('lgtv.KEY_FILE', str(path)), patch('json.dump', new=dump), \
+                        patch('lgtv.websockets.connect', new=AsyncMock(return_value=Socket())), \
+                        contextlib.redirect_stdout(io.StringIO()):
+                    asyncio.run(lgtv.session('192.0.2.10'))
+            finally:
+                os.umask(umask)
+            return modes, path.stat().st_mode & 0o777, json.loads(path.read_text())
+
+    def test_new_key_file_is_private_while_the_key_is_written(self):
+        self.assertEqual(self.pair(), ([0o600], 0o600, {'192.0.2.10': 'new-key'}))
+
+    def test_existing_readable_key_file_is_restricted_before_the_key_is_written(self):
+        self.assertEqual(self.pair({'192.0.2.20': 'other-key'}),
+                         ([0o600], 0o600, {'192.0.2.20': 'other-key', '192.0.2.10': 'new-key'}))
+
+
 if __name__ == '__main__':
     unittest.main()
