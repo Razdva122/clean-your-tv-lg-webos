@@ -48,6 +48,12 @@ def context(error,uri,reason,reply=None):
         and reason=='negative-reply' and isinstance(reply,dict) and reply.get('returnValue') is False
         and type(reply.get('errorCode')) is int and reply['errorCode']==-1
         and reply.get('errorText')=='Service does not exist: com.webos.service.systemprofile.')
+    error.stopped_launcher=None
+    if (uri=='luna://com.webos.applicationManager/closeByAppId' and reason=='negative-reply'
+            and isinstance(reply,dict) and reply.get('returnValue') is False
+            and type(reply.get('errorCode')) is int and reply['errorCode']==40):
+        for app in ('com.cleanyourtv.root.preview','com.gathin.tvhome'):
+            if reply.get('errorText')==app+' is not running':error.stopped_launcher=app
     error.luna=summary(value)
     return error
 

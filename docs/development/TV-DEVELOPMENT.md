@@ -204,3 +204,11 @@ Tests model native-bridge traps, storage separation, staging failure, unsafe pat
 command construction, exact signed artifact identity, package tampering and the
 existing admission controller transport. They never connect to a TV. Final release
 checks and device evidence remain separate.
+
+
+Fresh System Updater registration refreshes the LS2 service scan and restarts the
+exact edition launcher process before reporting completion. A page reload alone
+retains the old client's grants and can refuse `restoreProfile`. The normal
+close/relaunch does not enable Root or clear emergency Off. If close or relaunch
+is refused, keep bootstrap evidence and use the supported continuation; do not
+edit permissions or readiness receipts.

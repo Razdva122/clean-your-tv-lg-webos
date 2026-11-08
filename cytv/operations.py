@@ -1799,8 +1799,29 @@ print('CYTV_PROJECT_REMOVED')
         if pending!=expected_pending or not pending or pending.get('recovery_protocol')!='clean-removal-v1':
             raise UserError('Removal evidence changed. Recovery data was kept.',reason_code='pending-operation')
         if self.profile['edition']=='no-root':
-            from .no_root_cleanup import continue_removal
-            return continue_removal(self,pending)
+            from .root_no_root_handoff import cleanup_target, cleanup_stamp
+            if 'root_cleanup_lease' not in pending:
+                from .no_root_cleanup import continue_removal
+                try:return continue_removal(self,pending)
+                except UserError as error:
+                    if error.reason_code!='root-access-required' or self.profile.get('connection')!='root-ssh':raise
+                    try:stamp=cleanup_target(self)
+                    except (OSError,ValueError,RuntimeError):raise error from None
+                    self.store.checkpoint(self.profile,root_cleanup_lease=stamp['lease'],
+                        root_cleanup_operation=stamp['operation'],root_cleanup_node=stamp['node'])
+                    pending=self.store.pending(self.profile)
+            cleanup_stamp(dict(lease=pending['root_cleanup_lease'],operation=pending.get('root_cleanup_operation'),
+                               node=pending.get('root_cleanup_node')))
+        return self._continue_root_clean_removal(pending)
+
+    def _continue_root_clean_removal(self, pending):
+        if (self.profile['edition']=='no-root' and pending.get('root_cleanup_node')=='0.12.2'
+                and self.manifest.get('runtime_variant')!='node012-beta'):
+            from .root_runtime import select_payload
+            original=self.payload,self.manifest
+            self.payload,self.manifest=select_payload(*original)
+            try:return self._continue_root_clean_removal(pending)
+            finally:self.payload,self.manifest=original
         operation=pending['product_operation']
         self.progress('Removing Clean Your TV; earlier installation results will be kept.')
         from .root_clean_tail import resume as resume_tail
@@ -1822,6 +1843,11 @@ print('CYTV_PROJECT_REMOVED')
             target=self.product_action('clean-target',operation,stage)
             selected=target.get('target_operation');lease=target.get('target_lease')
             goal=target.get('target_removal') or pending['removal_operation']
+            if pending.get('root_cleanup_lease') and (
+                    lease!=pending['root_cleanup_lease']
+                    or selected!=pending.get('removal_target_operation',pending['product_operation'])
+                    or goal!=pending.get('removal_target_intent',pending['removal_operation'])):
+                raise UserError('Removal evidence changed. Recovery data was kept.',reason_code='pending-operation')
             if (not isinstance(selected,str) or not re.fullmatch('[a-f0-9]{32}',selected)
                     or not isinstance(goal,str) or not re.fullmatch('[a-f0-9]{32}',goal)
                     or lease is not None and (not isinstance(lease,str) or not re.fullmatch('[a-f0-9]{32}',lease))):

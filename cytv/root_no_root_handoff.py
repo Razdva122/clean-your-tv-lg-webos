@@ -354,6 +354,91 @@ PROGRAM = r'''
     )
       fail();
   }
+  if (input.command === 'cleanup-target') {
+    // A completed No-root successor may remove itself through the existing
+    // shared Root cleaner. Classify only inert predecessor fences; never infer
+    // this permission from directory names or an advisory host summary.
+    closed();
+    var predecessor = read(
+      dir,
+      'clean-removal-' + original.operation + '.json'
+    );
+    if (
+      predecessor.final_fence !== original.lease ||
+      predecessor.removal !== original.removal ||
+      predecessor.stage !== 'verified-clean' ||
+      predecessor.state !== 'complete' ||
+      predecessor.current !== true ||
+      !object(predecessor.result) ||
+      predecessor.result.verified_clean !== true ||
+      predecessor.result.private_cleanup_verified !== true
+    )
+      fail();
+    var missing = function (path) {
+      try {
+        fs.lstatSync(path);
+        fail();
+      } catch (e) {
+        if (e.code !== 'ENOENT') throw e;
+      }
+    };
+    var rootApps = [
+      'com.cleanyourtv.root.preview',
+      'com.cleanyourtv.root.updater',
+      'com.cleanyourtv.system.updater'
+    ];
+    rootApps.forEach(function (app) {
+      ['applications/', 'services/', 'packages/'].forEach(function (kind) {
+        missing(
+          '/media/developer/apps/usr/palm/' +
+            kind +
+            app +
+            (kind === 'services/' ? '.service' : '')
+        );
+      });
+    });
+    missing('/var/webos-profile/override/clean-your-tv-root.json');
+    [
+      '50-clean-your-tv-root',
+      '51-clean-your-tv-root-updater',
+      '52-clean-your-tv-system-updater'
+    ].forEach(function (name) {
+      missing('/var/lib/webosbrew/init.d/' + name);
+    });
+    ['root', 'root-updater', 'system-updater', 'python'].forEach(
+      function (name, index) {
+        var path = '/var/lib/clean-your-tv-' + name;
+        try {
+          fs.lstatSync(path);
+        } catch (e) {
+          if (e.code === 'ENOENT') return;
+          throw e;
+        }
+        var leaf = directory(path),
+          keep =
+            index === 0
+              ? ['deploy.json', 'provision.lock']
+              : index === 3
+                ? ['.install.lock']
+                : ['bootstrap.json', 'daemon.lock', 'worker.lock'];
+        if (
+          fs.readdirSync(at(leaf)).some(function (name) {
+            return keep.indexOf(name) === -1;
+          })
+        )
+          fail();
+      }
+    );
+    promotionDescriptor();
+    process.stdout.write(
+      JSON.stringify({
+        lease: lease.id,
+        operation: binding.operation,
+        node: process.versions.node
+      })
+    );
+    return;
+  }
   if (input.command === 'probe') {
     if (binding) closed();
     else verify('finalize');
@@ -676,7 +761,7 @@ def call(remote, loaded, command, plan=None, source=None, request=None, data=Non
     cleanup,gate=loaded
     stage='/tmp/cytv-root-tail-'+uuid.uuid4().hex
     value=dict(command=command,wrapper=PROGRAM,stage=stage,gate_sha256=hashlib.sha256(gate).hexdigest())
-    if command in ('probe','claim','release','storage','continuation'):
+    if command in ('probe','claim','release','storage','continuation','cleanup-target'):
         if data is not None:refuse()
         value['cleanup_stdin']=True
         data=cleanup.encode('utf8')
@@ -711,6 +796,19 @@ def probe(installer):
     value=validate(json.loads(call(installer.remote,loaded,'probe')))
     installer.remote._cytv_root_handoff_support=loaded
     return value
+
+
+def cleanup_stamp(value):
+    if (type(value) is not dict or set(value)!={'operation','lease','node'}
+            or any(type(value.get(k)) is not str or not re.fullmatch('[a-f0-9]{32}',value[k]) for k in ('operation','lease'))
+            or type(value.get('node')) is not str or not re.fullmatch(r'\d+\.\d+\.\d+',value['node'])):refuse()
+    version=tuple(map(int,value['node'].split('.')))
+    if version[0]<8 and version!=(0,12,2):refuse()
+    return value
+
+
+def cleanup_target(installer):
+    return cleanup_stamp(json.loads(call(installer.remote,support(installer),'cleanup-target')))
 
 
 def continuation(installer,plan):

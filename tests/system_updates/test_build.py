@@ -20,6 +20,53 @@ def fixture(root):
         (root/(name+'.ipk')).write_bytes(package.ipk(app,version,files))
 
 class BuildTests(unittest.TestCase):
+    def test_registration_refresh_restarts_launcher_without_enabling_home(self):
+        setup=load('setup')
+        for edition,app in [('root','com.cleanyourtv.root.preview'),('no-root','com.gathin.tvhome')]:
+            calls=[]
+            def rpc(uri,payload):
+                calls.append((uri,payload));return {'returnValue':True}
+            setup.restart_registered_launcher(edition,rpc)
+            self.assertEqual(calls,[('luna://com.webos.applicationManager/closeByAppId',{'id':app}),
+                                    ('luna://com.webos.applicationManager/launch',{'id':app})])
+
+    def test_registration_refresh_continues_after_previous_close_and_failed_launch(self):
+        setup=load('setup');calls=[];attempt=[0]
+        def rpc(uri,payload):
+            calls.append(uri)
+            if uri.endswith('/closeByAppId'):
+                if attempt[0]:
+                    error=RuntimeError('Bus operation rejected');error.stopped_launcher=payload['id'];raise error
+                return {'returnValue':True}
+            attempt[0]+=1
+            return {'returnValue':attempt[0]>1}
+        with self.assertRaisesRegex(ValueError,'launch'):setup.restart_registered_launcher('root',rpc)
+        setup.restart_registered_launcher('root',rpc)
+        self.assertEqual(len(calls),4)
+
+    def test_only_exact_owned_close_reply_identifies_stopped_launcher(self):
+        import importlib.util
+        spec=importlib.util.spec_from_file_location('qa_luna',ROOT/'root-edition/updater/luna.py')
+        luna=importlib.util.module_from_spec(spec);spec.loader.exec_module(luna)
+        uri='luna://com.webos.applicationManager/closeByAppId'
+        for app in ('com.cleanyourtv.root.preview','com.gathin.tvhome'):
+            reply=dict(returnValue=False,errorCode=40,errorText=app+' is not running')
+            error=luna.context(RuntimeError(),uri,'negative-reply',reply)
+            self.assertEqual(getattr(error,'stopped_launcher',None),app)
+            for changed in (dict(reply,errorCode=-1),dict(reply,errorText=app+' denied'),dict(reply,errorCode=True)):
+                self.assertIsNone(getattr(luna.context(RuntimeError(),uri,'negative-reply',changed),'stopped_launcher',None))
+            self.assertIsNone(getattr(luna.context(RuntimeError(),uri.replace('/closeByAppId','/launch'),'negative-reply',reply),'stopped_launcher',None))
+
+    def test_registration_refresh_refusal_does_not_launch_or_report_success(self):
+        setup=load('setup');calls=[]
+        def rpc(uri,payload):
+            calls.append(uri);return {'returnValue':False}
+        with self.assertRaisesRegex(ValueError,'closeByAppId'):
+            setup.restart_registered_launcher('root',rpc)
+        self.assertEqual(len(calls),1)
+        with self.assertRaises(ValueError):setup.restart_registered_launcher('unknown',rpc)
+        self.assertEqual(len(calls),1)
+
     def test_baseline_keeps_exact_personalized_packages_and_readback(self):
         build=load('build');setup=load('setup')
         with tempfile.TemporaryDirectory() as tmp:
@@ -157,7 +204,10 @@ class BuildTests(unittest.TestCase):
                 with patch('observed_install.install',side_effect=AssertionError('known terminal resubmitted')):
                     with device_operation('system-bootstrap',recovery=True,ownership=owner,read=read) as lease:
                         self.assertEqual(lease['id'],pending)
-                        result=setup.resume(bundle,state,installed,base,hook,refresh=lambda:None)
+                        with patch.object(setup.Path,'is_file',return_value=True),patch.object(setup.subprocess,'run') as scan,patch.object(setup,'restart_registered_launcher') as restart:
+                            result=setup.resume(bundle,state,installed,base,hook)
+                        self.assertEqual(scan.call_args.args[0][-1],'scan-services')
+                        restart.assert_called_once_with('no-root')
                 self.assertTrue(owner.status()['terminal'])
                 own=json.loads((state/'installed-package.json').read_text())
                 self.assertEqual((state/'cache'/(own['package']['sha256']+'.ipk')).read_bytes(),(bundle/'system-updater.ipk').read_bytes())

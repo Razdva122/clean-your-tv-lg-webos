@@ -118,3 +118,64 @@ read-only probes then reported stopped and the new normal attempt succeeded.
 That initial refusal remains in private evidence. Published UI/controller and
 physical Home compatibility are separate; no new compatibility approval was
 written on the strength of package installation alone.
+
+
+## Autonomous follow-up and consolidated fixes
+
+The published Home UI's actual Start Helper action and confirmation were exercised
+with Helper stopped through the ordinary installer first. The controller reached
+running with four observed UIDs of 5431 (non-root). All 203 installed Home/Helper
+public files matched their exact prepared package hashes above; the canonical
+Helper archive digest was also checked. This is UI/package/controller evidence,
+not physical short-Home, triple-Home, standby or legacy compatibility acceptance.
+
+The newly reachable No-root full removal exposed another failure: minimal inert
+Root ownership fences were classified as a live Root installation, even with the
+saved Root SSH connection. The same pending No-root removal goal was retained.
+The fix permits the existing Root cleaner only after a read-only, native-locked
+proof of the exact closed observer, completed predecessor clean fence, matching
+current No-root lease, absent Root packages/hooks and inert private directory
+inventory. Changed leases, another goal, live/unverified Root and unsafe entries
+still refuse. No edition/connection or recovery history is silently replaced.
+Node 0.12.2 selects the authenticated Beta cleaner and restores the host payload
+selection afterwards. The immutable observer programs remain byte-identical.
+
+On C3 the original No-root goal then completed normally: one requested software
+reboot, same-goal continuation and verified application/service/startup/private
+absence. A new Root 0.13.2 / Root Updater 0.5.4 package-only installation succeeded
+without activating Home control. Before restoring any saved profile, actual fresh
+capture omitted the one invalid optional color, preserved the live inventory and
+rendered the launcher. Afterwards the owner's original profile and binary theme
+were restored through the normal UI APIs and read back equal.
+
+Fresh System 1.2.7 setup first stopped before state creation or package submission.
+The snapshot-only diagnostic succeeded, and ordinary installer status confirmed
+`system-updater-not-started`; only then was a new normal attempt made. It installed
+successfully. The initial pre-install refusal remains unexplained and recorded;
+it was not converted into a pass or bypassed by deleting recovery state.
+
+The post-bootstrap `restoreProfile` failure reproduced after ordinary page reload.
+Closing Root with applicationManager `closeByAppId` and launching it again restored
+the real renderer immediately. This isolates the existing process's LS2 client
+grants: registering the new permissions does not refresh that client on page
+reload. Setup now closes/relaunches the exact edition launcher after service scan,
+without enabling Home, changing emergency state or relaxing permissions. An exact owned-app already-stopped reply permits relaunch, including continuation
+after a failed launch. Other refused close/launch operations cannot report
+completed bootstrap. The normal resume path retains
+its original package terminal and registration proof. The new restart helper also passed on C3 with the actual applicationManager
+boundary. The automatic final setup sequence still needs exact rebuilt-bundle
+device confirmation.
+
+Final host evidence for the cleanup follow-up: installer 1,160 cases (six skips),
+Android 44, handoff 23 (one Linux-only skip on macOS), five No-root dispatch cases,
+and exact Node 0.12.2 / 8.12.0 handoff runs pass. Root runtime 1,173 (four skips),
+setup 280 and System 132 passed before the final registration fix; System 136
+then passed with that fix; seven shared Luna cases also pass. Independent review checked the No-root fence cleaner,
+including a caught-and-fixed strict-mode block-function incompatibility on exact
+Node 0.12.2. Current-head CI and final bundle observations are recorded in PR #439.
+
+The 13 localized installation guides were reviewed: no new user action or control
+sequence is introduced by the guarded cleanup delegation or automatic launcher
+restart. Technical cleanup and System setup references describe the changes.
+The full-candidate compatibility gate remains unsatisfied; no previous Root
+physical Home result is reused as Helper evidence, and no approval JSON is changed.

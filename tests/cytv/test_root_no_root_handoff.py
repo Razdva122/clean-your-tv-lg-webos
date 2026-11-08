@@ -80,7 +80,7 @@ class HandoffSupport(unittest.TestCase):
 HARNESS=r'''
 var real=require('fs'),vm=require('vm'),base=process.argv[2],input=JSON.parse(process.argv[3]),source=process.argv[4];
 var paths={},native={},events=[];
-function path(p){if(typeof p!=='string')return p;if(p==='/')return base;var m=/^\/proc\/self\/fd\/(\d+)(.*)$/.exec(p);if(m)return paths[m[1]]+m[2];if(p==='/var'||p==='/tmp'||p.indexOf('/var/')===0||p.indexOf('/tmp/')===0)return base+p;return p;}
+function path(p){if(typeof p!=='string')return p;if(p==='/')return base;var m=/^\/proc\/self\/fd\/(\d+)(.*)$/.exec(p);if(m)return paths[m[1]]+m[2];if(p==='/var'||p==='/tmp'||p==='/media'||p.indexOf('/var/')===0||p.indexOf('/tmp/')===0||p.indexOf('/media/')===0)return base+p;return p;}
 var fs=Object.create(real);
 fs.openSync=function(p,flags,mode){var fd=real.openSync(path(p),flags,mode);paths[fd]=path(p);return fd;};
 native[3]=real.openSync(base+'/var/lib/clean-your-tv-installation/ownership.lock','r');
@@ -233,6 +233,40 @@ class SuccessorOwnership(unittest.TestCase):
             root_ssh=True,root_handoff=self.stamp)
         return dict(root=observer.ROOT_SSH_PRIVATE,public_root=observer.ROOT_SSH_PUBLIC,
                     sender='/usr/bin/luna-send',plan=self.plan,command='prepare',source=self.source)
+
+    def closed_successor(self):
+        self.assertEqual(self.run_guard('claim',self.plan).returncode,0)
+        private=self.base/('tmp/.cytv-installer-root/operations/'+self.plan['operation'])
+        private.mkdir(parents=True,mode=0o700)
+        value=dict(protocol='no-root-original-stream-v1',operation=self.plan['operation'],
+                   plan_sha256=hashlib.sha256(__import__('cytv.no_root_observer',fromlist=['canonical']).canonical(self.plan).encode()).hexdigest(),
+                   source_sha256=self.plan['source_sha256'],result='verified')
+        path=private/'closed.json';path.write_text(json.dumps(value));path.chmod(0o600)
+        self.write('clean-removal-'+'a'*32+'.json',dict(removal='b'*32,lease='9'*32,
+            final_fence='c'*32,final_original_lease='9'*32,stage='verified-clean',state='complete',current=True,
+            result=dict(verified_clean=True,private_cleanup_verified=True)))
+
+    def test_completed_no_root_owner_can_select_shared_cleanup_without_ignoring_real_root(self):
+        self.closed_successor()
+        before=(self.state/'operation.json').read_bytes()
+        result=self.run_guard('cleanup-target')
+        self.assertEqual(result.returncode,0,result.stderr)
+        value=json.loads(result.stdout)
+        self.assertEqual(value['operation'],self.plan['operation'])
+        self.assertEqual(value['lease'],json.loads(before)['id'])
+        self.assertEqual((self.state/'operation.json').read_bytes(),before)
+        app=self.base/'media/developer/apps/usr/palm/applications/com.cleanyourtv.root.preview'
+        app.mkdir(parents=True)
+        self.assertEqual(self.run_guard('cleanup-target').returncode,1)
+        self.assertEqual((self.state/'operation.json').read_bytes(),before)
+
+    def test_cleanup_target_refuses_unclosed_observer_and_nonminimal_root_state(self):
+        self.assertEqual(self.run_guard('claim',self.plan).returncode,0)
+        self.assertEqual(self.run_guard('cleanup-target').returncode,1)
+        self.closed_successor()
+        root=self.base/'var/lib/clean-your-tv-root';root.mkdir(mode=0o700)
+        (root/'config.json').write_text('still installed')
+        self.assertEqual(self.run_guard('cleanup-target').returncode,1)
 
     def test_original_observer_prepares_after_clean_probe_removed_public_ancestor(self):
         request=self.original_prepare_request()

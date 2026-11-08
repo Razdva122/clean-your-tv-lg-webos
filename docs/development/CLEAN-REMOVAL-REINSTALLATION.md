@@ -89,3 +89,16 @@ these host tests. See the dated candidate observations for actual device work.
 Home/remote, sound, standby, cold boot, OTA and rollback require their own exact
 artifact observations; an uninstall restart or package installation proves none
 of them.
+
+
+### Removing a No-root successor reached through Root SSH
+
+The minimal inert predecessor fences are not a reason to strand the successor's
+full-removal goal. On `root-access-required`, the same No-root goal may use the
+shared Root cleaner only with a native-locked proof of its current No-root lease,
+exact closed observer and completed predecessor final fence, absent Root packages
+and hooks, and the fixed inert private-file inventory. Persist the proof before
+continuation and refuse changed leases, selectors or removal intents. A live or
+unverified Root installation still requires its Root workflow. Node 0.12.2 uses
+the verified nested Beta payload. This does not weaken the normal No-root private
+cleaner or retain public staging after full removal.
