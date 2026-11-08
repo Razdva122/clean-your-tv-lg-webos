@@ -28,6 +28,16 @@ PRE_ACTIVATION=('prepared','install-submitting','install-accepted','install-obse
     'provision-'+step+'-'+phase for step in ('apply','resume_pending','refresh','finalize') for phase in ('starting','complete'))
 
 
+# Diagnostic context only; never used for recovery admission or progress.
+@contextmanager
+def cleanup_step(name):
+    try:
+        yield
+    except Exception as error:
+        error.cleanup_step=name
+        raise
+
+
 def boot_format(value):
     if not isinstance(value,str):return None
     match=re.fullmatch(r'([a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})(:session-[a-f0-9]{32})?',value)

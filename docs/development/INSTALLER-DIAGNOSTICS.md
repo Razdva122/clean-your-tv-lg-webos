@@ -107,6 +107,23 @@ request payloads, inventories and routes are excluded. Existing old failures
 remain unchanged; new detail cannot reconstruct an earlier discarded exception.
 These fields diagnose a blocker and never authorize skipping control restoration.
 
+Unreleased Root cleanup adds `cleanup_step` to `status.product.failure` and
+`status.product.last_failure` when control restoration fails inside an instrumented
+boundary: `routing-inverse`, `runtime-restore`, `provision-rollback`, `startup-hook`,
+`legacy-lockdown`, `registration-restore`, `legacy-permissions` or `home-readback`.
+This distinguishes subprocess failures sharing `original-writers-fenced`; it does
+not expose the child's command, output or detailed cause. Failures outside those
+boundaries omit the field; old records remain unchanged. Both worker and host
+allowlist values; unrecognized persisted/remote values export as `unknown`.
+The operation-matched coordinator reply feeds the existing host status summary,
+Save diagnostic report action, `observation_failure` and retained first-failure
+history projection. Rebuild Root coordinator/Updater and embedding installers
+through the coordinated release; host source alone cannot add TV-side context.
+No new TV call, state file, recovery admission, timeout or cleanup ordering is
+introduced. Saved backups, original receipts and failure-before-package-removal
+behavior are preserved. An old exit status cannot identify its historical step;
+these fields neither authorize a retry nor prove recovery or physical Home.
+
 New package rejection reports preserve the fixed `install failed` and
 `remove failed` Luna states. When the original reply includes `details.reason`,
 optional `luna.reason` retains only the nine fixed LG OSE IPK failure categories

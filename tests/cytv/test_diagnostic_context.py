@@ -37,6 +37,30 @@ class ContextTests(unittest.TestCase):
             'luna':{'call':'PRIVATE','reason':'PRIVATE','error_code':'PRIVATE'}}})
         self.assertNotIn('PRIVATE',json.dumps(unknown))
 
+    def test_cleanup_step_survives_export_and_history_with_allowlist(self):
+        self.store.begin(self.profile,'install')
+        original=self.report('install','activate-root',TVCommandError(1))['first_failure']
+        self.store.request_clean_removal(self.profile)
+        product={'last_failure':{'exception_type':'CalledProcessError','exit_status':1,
+            'stage':'original-writers-fenced','cleanup_step':'runtime-restore','stderr':'PRIVATE'}}
+        report=self.report('recover','recover',UserError('PRIVATE',reason_code='cleanup-check-failed'),
+            status={'device':{'product':product}})
+        expected=report['status']['product']['last_failure']
+        self.assertEqual(expected.get('cleanup_step'),'runtime-restore')
+        self.assertEqual(report['observation_failure']['status']['product']['last_failure'],expected)
+        later=self.report('doctor','doctor-complete')
+        self.assertEqual(later['first_failure'],original)
+        history_store=state.Store(Path(self.tmp.name)/'history')
+        history_store.begin(self.profile,'uninstall')
+        diagnostics.create_report(history_store,'uninstall',self.profile,'uninstall',UserError('PRIVATE'),
+            status={'device':{'product':product}})
+        saved=json.loads(diagnostics.create_report(history_store,'doctor',self.profile,'doctor-complete').read_text())
+        self.assertEqual(saved['first_failure']['status']['product']['last_failure'],expected)
+        product['last_failure']['cleanup_step']='PRIVATE'
+        unsafe=self.report('status','status',status={'device':{'product':product}})
+        self.assertEqual(unsafe['status']['product']['last_failure']['cleanup_step'],'unknown')
+        self.assertNotIn('PRIVATE',json.dumps([report,later,unsafe]))
+
     def test_removal_reports_keep_fixed_failure_codes_without_private_messages(self):
         for reason in ('root-worker-busy', 'root-access-required', 'removal-failed',
                        'cleanup-check-failed', 'connection-interrupted'):
