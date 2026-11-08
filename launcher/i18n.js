@@ -182,13 +182,17 @@
   }
   function formatTime(value) {
     try {
-      return new Date(value).toLocaleTimeString(active, {
+      // Old WebKit silently ignores toLocaleTimeString options. Require Intl
+      // here so engines without it use the compact clock below.
+      return new Intl.DateTimeFormat(active, {
         hour: twelveHour() ? 'numeric' : '2-digit',
         minute: '2-digit'
-      });
+      }).format(new Date(value));
     } catch (_) {
       var d = new Date(value);
-      return d.getHours() + ':' + ('0' + d.getMinutes()).slice(-2);
+      return (
+        ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2)
+      );
     }
   }
   function closePicker() {

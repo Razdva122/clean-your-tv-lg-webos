@@ -492,7 +492,12 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                                     checks.update('pairing', 'pass')
                                     phase = 'read-inventory'
                                     checks.update('inventory', 'running', '')
-                                    inventory = tv.inventory((payload / 'fallback.png').read_bytes())
+                                    try:
+                                        inventory = tv.inventory((payload / 'fallback.png').read_bytes())
+                                    finally:
+                                        icon_counts = getattr(tv, 'icon_diagnostics', None)
+                                        if type(icon_counts) is dict:
+                                            tv_info['icon_inventory'] = icon_counts
                                     key = tv.key
                                     checks.update('inventory', 'pass')
                                 break

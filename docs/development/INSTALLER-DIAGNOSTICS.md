@@ -5,6 +5,34 @@ without treating it as recovery authority. These changes are in source only;
 v1.5.4 does not contain them. No TV compatibility or completed recovery follows
 from a diagnostic report.
 
+## No-root icon inventory (next candidate, #311)
+
+The existing No-root inventory read records aggregate `tv.icon_inventory` in
+success/failure reports and filtered failure history. It performs no additional
+TV calls and does not change icon admission, download limits or fallback policy.
+A missing object means this path was not observed by this installer; older reports
+cannot be reconstructed. Root's separate icon reader is not instrumented here.
+
+- `schema`: 1. `status`: `unavailable` before catalog/input retrieval completes,
+  `reading` during validation/icon processing, or `complete` when inventory returns.
+  This describes collection, not successful loading of all icons or Home acceptance.
+- `apps`, `embedded`, `fallback`: processed unique visible apps and their icon
+  outcomes. Hidden/duplicate entries do not consume these counts.
+- `missing_uri`: apps without a nonempty icon candidate in the supported fields.
+- `rejected_uri`: candidates rejected for invalid metadata, URI syntax, scheme,
+  host, credentials or port. No blocked address is requested.
+- `fetch_failed`: accepted candidates whose existing download raises an I/O or
+  value error, including TLS/HTTP failures and the existing size check.
+- `invalid_image`: downloaded candidates without a supported image signature.
+
+Cause counters count candidates, except `missing_uri` which counts apps. One app
+can fail a larger candidate and embed a smaller one, so cause counts need not
+match fallback counts. Only fixed numeric counters (0–1800) and fixed statuses
+are exported and revalidated in report/history projections. No URIs, paths,
+application IDs/titles, image bytes or exception text are retained in this object.
+The summary does not identify which app failed or prove any suspected device
+cause. Status/Doctor alone do not reread icons or reconstruct an earlier attempt.
+
 ## TV Node version (next candidate)
 
 Root and No-root preflight and status checks read `/usr/bin/node --version`

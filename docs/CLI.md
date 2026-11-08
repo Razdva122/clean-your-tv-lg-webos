@@ -476,6 +476,13 @@ stack **file/function/line locations**. It excludes exception text, source lines
 locals, addresses, identity paths, credentials, app lists, environment and raw TV
 logs. No report is submitted automatically.
 
+In the next candidate (#311), the existing No-root inventory read adds aggregate
+`tv.icon_inventory` counters for embedded/fallback icons, missing/rejected icon
+URIs, failed downloads and unsupported image signatures. No addresses or app
+identities are included; no extra TV reads are performed. These fields describe
+the captured installer read, not live Home rendering or a physical Home-button
+result. [Field definitions and limits](development/INSTALLER-DIAGNOSTICS.md#no-root-icon-inventory-next-candidate-311).
+
 In 1.6.0 (#200), host private-Python acquisition failures add only an allowlisted
 `python_cache.reason`. See [cache failure categories](OPTIONAL-PYTHON.md#unreleased-host-cache-failure-categories-200).
 

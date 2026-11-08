@@ -96,6 +96,14 @@ def root_diagnostics_summary(value):
 def tv_summary(value):
     value = mapping(value)
     result = metadata(value)
+    if 'icon_inventory' in value:
+        icons = mapping(value['icon_inventory'])
+        result['icon_inventory'] = {'schema': 1, 'status': choice(icons.get('status'),
+            ('reading', 'complete', 'unavailable'), 'unavailable')}
+        for key in ('apps', 'embedded', 'fallback', 'missing_uri', 'rejected_uri', 'fetch_failed', 'invalid_image'):
+            count = icons.get(key)
+            if type(count) is int and 0 <= count <= 1800:
+                result['icon_inventory'][key] = count
     if 'root_inventory' in value:
         inventory=mapping(value['root_inventory'])
         result['root_inventory']={key:choice(inventory.get(key),('read','unavailable','invalid'))

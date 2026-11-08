@@ -137,3 +137,41 @@ assert.equal(failedTV.HomeI18n.language(), 'fr');
 console.log(
   'PASS escaped markup and fallback when TV locale service is unavailable'
 );
+
+// Legacy WebKit may ignore locale options without throwing, leaking seconds/GMT.
+for (const intl of [undefined, {}]) {
+  const legacy = vm.createContext({ Intl: intl });
+  vm.runInContext(
+    'Date.prototype.toLocaleTimeString = function () { return "10:57:36 PM GMT+04:00"; };',
+    legacy
+  );
+  vm.runInContext(source, legacy);
+  for (const [hour, minute, expected] of [
+    [0, 5, '00:05'],
+    [12, 5, '12:05'],
+    [22, 57, '22:57']
+  ]) {
+    const stamp = new Date(2026, 10, 7, hour, minute, 36).getTime();
+    assert.equal(legacy.HomeI18n.formatTime(stamp), expected);
+  }
+}
+for (const [lang, expected] of [
+  ['en', ['12:05 AM', '12:05 PM', '10:05 PM']],
+  ['ru', ['00:05', '12:05', '22:05']],
+  ['de', ['00:05', '12:05', '22:05']],
+  ['ko', ['오전 12:05', '오후 12:05', '오후 10:05']]
+]) {
+  const modern = vm.createContext({ navigator: { language: lang } });
+  vm.runInContext(
+    'Date.prototype.toLocaleTimeString = function () { return "10:57:36 PM GMT+04:00"; };',
+    modern
+  );
+  vm.runInContext(source, modern);
+  for (const [index, hour] of [0, 12, 22].entries()) {
+    const stamp = new Date(2026, 10, 7, hour, 5, 36).getTime();
+    assert.equal(modern.HomeI18n.formatTime(stamp), expected[index]);
+  }
+}
+console.log(
+  'PASS compact legacy clock and localized modern hour/minute formatting'
+);

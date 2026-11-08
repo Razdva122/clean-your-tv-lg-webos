@@ -8,6 +8,25 @@ from cytv import cli, diagnostics, state
 
 
 class DiagnosticTests(unittest.TestCase):
+    def test_icon_counts_are_allowlisted_again_before_report_and_history_export(self):
+        counts = {'schema': 'PRIVATE', 'status': 'complete', 'apps': 7, 'embedded': 2,
+                  'fallback': 5, 'missing_uri': 1, 'rejected_uri': 2,
+                  'fetch_failed': 2, 'invalid_image': 1, 'PRIVATE': 'PRIVATE'}
+        with tempfile.TemporaryDirectory() as tmp:
+            path = diagnostics.create_report(state.Store(tmp), 'install', None, 'read-inventory',
+                                             tv_info={'icon_inventory': counts})
+            report = json.loads(path.read_text())
+            expected = dict(counts, schema=1)
+            del expected['PRIVATE']
+            self.assertEqual(report['tv'].get('icon_inventory'), expected)
+            from cytv.diagnostic_context import failure_summary, tv_summary
+            self.assertEqual(failure_summary(report)['tv']['icon_inventory'], expected)
+            self.assertNotIn('PRIVATE', path.read_text())
+            for value in (-1, 1801, True, 'PRIVATE', {}, []):
+                with self.subTest(value=value):
+                    safe = tv_summary({'icon_inventory': {'status': 'PRIVATE', 'apps': value}})
+                    self.assertEqual(safe['icon_inventory'], {'schema': 1, 'status': 'unavailable'})
+
     def test_ssh_report_exports_cause_without_wrapped_addresses_or_error_text(self):
         import errno
         from paramiko.ssh_exception import NoValidConnectionsError
