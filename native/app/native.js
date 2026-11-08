@@ -89,7 +89,13 @@ var child,
 var restarts = [],
   restartTimer = null,
   cleaning = false,
-  stopRequested = false;
+  stopRequested = false,
+  irHomeTimer = null;
+// The standard IR remote is observed, not grabbed, so webOS also opens its own Home
+// on IR Home. Launching custom Home after this delay lands it above LG Home.
+// ponytail: fixed delay from #207, not measured per model; replace it with a
+// foreground signal if webOS ever reports its Home bar.
+var IR_HOME_DELAY = 700;
 var homeCloseState = 'idle',
   homeCloseWaiters = [],
   terminalUI = false,
@@ -650,6 +656,7 @@ function finish(code, signal, needsCleanup, relayReason) {
     code === 22 || code === 27 || relayReason === 27 || stopRequested;
   invalidatePresentation(!terminalUI);
   clearTimeout(restartTimer);
+  clearTimeout(irHomeTimer);
   cancelResume();
   if (screenWatch) screenWatch.close();
   clearInterval(timer);
@@ -818,7 +825,7 @@ function start(recovering) {
         screenPolicy.back(true, monotonic());
       }
       if (line === 'BACK_UP') screenPolicy.back(false, monotonic());
-      if (line === 'HOME') {
+      if (line === 'HOME' || line === 'IRHOME') {
         screenPolicy.clearBack();
         homeSequence++;
         lastHomeAt = monotonic();
@@ -842,23 +849,28 @@ function start(recovering) {
         worker.stdin.write(homeControl.enabled() ? 'E' : 'D');
       }
       if (line === 'LGHOME' && !stopRequested) visitLG();
-      if (
-        line === 'HOME' &&
-        homeControl.enabled() &&
-        !visitingLG &&
-        !stopRequested &&
-        !launching
-      ) {
-        suppressReturnUntil = 0;
-        launching = true;
-        launchHome('home', function (ok) {
-          launching = false;
-          if (!ok && child === worker) worker.stdin.end();
-        });
+      if (line === 'HOME') openHome(worker);
+      // Repeated IR Home presses restart the delay, so they open Home once.
+      if (line === 'IRHOME') {
+        clearTimeout(irHomeTimer);
+        irHomeTimer = setTimeout(function () {
+          irHomeTimer = null;
+          if (child === worker && ready && !stopping) openHome(worker);
+        }, IR_HOME_DELAY);
       }
     }
   });
   worker.stdin.on('error', function () {});
+}
+function openHome(worker) {
+  if (!homeControl.enabled() || visitingLG || stopRequested || launching)
+    return;
+  suppressReturnUntil = 0;
+  launching = true;
+  launchHome('home', function (ok) {
+    launching = false;
+    if (!ok && child === worker) worker.stdin.end();
+  });
 }
 var timer = setInterval(function () {
   if (stopping) return;
