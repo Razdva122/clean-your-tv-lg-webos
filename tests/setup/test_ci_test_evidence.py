@@ -404,12 +404,12 @@ class EvidenceTests(unittest.TestCase):
         self.assertEqual(self.missing(self.context('tv setup installer android preview')), ['android'])
 
     def test_alias_and_nonprimary_shard_do_not_claim_nonexecuted_units(self):
-        self.assertEqual(self.context('tv ui tv-runtime android preview setup', shard='2/4')['units'], ['setup', 'tv-runtime'])
-        self.assertEqual(self.context('ui android preview', shard='2/4')['units'], [])
-
-    def test_serial_unit_receipts_follow_the_actual_shard_owners(self):
-        expected = {1: ['android', 'setup', 'ui'], 2: ['setup'],
-                    3: ['setup'], 4: ['preview', 'setup']}
+        self.assertEqual(self.context('tv ui tv-runtime android preview setup', shard='2/4')['units'], ['preview', 'setup', 'tv-runtime'])
+        self.assertEqual(self.context('ui android preview', shard='2/4')['units'], ['preview'])
+        # Keep these assertions in this existing test so verification itself does
+        # not shift every subsequent setup test's modulo partition.
+        expected = {1: ['android', 'setup', 'ui'], 2: ['preview', 'setup'],
+                    3: ['setup'], 4: ['setup']}
         for index, units in expected.items():
             self.assertEqual(self.context('ui android preview setup', shard=f'{index}/4')['units'], units)
 
@@ -533,7 +533,7 @@ class EvidenceTests(unittest.TestCase):
                 self.artifact.update(size_in_bytes=len(raw), digest='sha256:' + hashlib.sha256(raw).hexdigest())
                 self.assertEqual(self.missing(), ['installer', 'setup', 'tv-runtime', 'ui'])
 
-    def test_browser_runtime_shards_bind_actual_system_chrome_and_unknown_is_not_evidence(self):
+    def test_primary_runtime_binds_actual_system_chrome_and_unknown_is_not_evidence(self):
         version = ['130.0.0.0']
         unavailable = [False]
         def process(*args):
@@ -546,25 +546,25 @@ class EvidenceTests(unittest.TestCase):
             before = self.m['environment']('runtime')
             self.assertEqual(before.get('browser'), '130.0.0.0')
             self.assertEqual(before['browser_channel'], 'chrome')
-            self.ctx = self.context('installer preview', shard='4/4', environment=before)
-            self.job['name'] = 'runtime (ubuntu-latest, 4)'
+            self.ctx = self.context('installer preview', shard='2/4', environment=before)
+            self.job['name'] = 'runtime (ubuntu-latest, 2)'
             self.raw = self.archive(self.m['make_receipt'](self.ctx, 'owner/repo', 10, 1, 100))
             self.artifact.update(name=self.ctx['artifact'], size_in_bytes=len(self.raw), digest='sha256:' + hashlib.sha256(self.raw).hexdigest())
             self.assertEqual(self.missing(), [])
             version[0] = '131.0.0.0'
             after = self.m['environment']('runtime')
-            self.assertEqual(self.missing(self.context('installer preview', shard='4/4', environment=after)), ['installer', 'preview'])
+            self.assertEqual(self.missing(self.context('installer preview', shard='2/4', environment=after)), ['installer', 'preview'])
             version[0] = '130.0.0.0'
             with patch.dict('os.environ', {'BROWSER_CHANNEL': 'chrome-beta'}):
                 other_channel = self.m['environment']('runtime')
-            self.assertEqual(self.missing(self.context('installer preview', shard='4/4', environment=other_channel)), ['installer', 'preview'])
+            self.assertEqual(self.missing(self.context('installer preview', shard='2/4', environment=other_channel)), ['installer', 'preview'])
             self.assertEqual(self.m['environment']('runtime', '2/4').get('browser'), '130.0.0.0')
             self.assertNotIn('browser', self.m['environment']('runtime', '3/4'))
-            self.assertEqual(self.m['environment']('runtime', '4/4').get('browser'), '130.0.0.0')
+            self.assertNotIn('browser', self.m['environment']('runtime', '4/4'))
             unavailable[0] = True
             unknown = self.m['environment']('runtime')
             self.assertIsNone(unknown['browser'])
-            ctx = self.context('installer preview', shard='4/4', environment=unknown)
+            ctx = self.context('installer preview', shard='2/4', environment=unknown)
             self.assertEqual(self.missing(ctx), ['installer', 'preview'])
             with self.assertRaisesRegex(ValueError, 'browser'):
                 self.m['make_receipt'](ctx, 'owner/repo', 20, 1, 200)

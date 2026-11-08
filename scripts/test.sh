@@ -160,7 +160,7 @@ fi
 if primary && has android; then
   "$PYTHON" -m unittest discover -s android/tests
 fi
-if on_shard 4 && has preview; then
+if on_shard 2 && has preview; then
   node tests/home-presentation-ui.cjs
   node tests/root-decoder-ui.cjs
   node tests/preview-presentation-ui.cjs

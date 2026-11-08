@@ -87,7 +87,7 @@ class CIProfiles(unittest.TestCase):
                 self.assertNotIn(command, traces['--shard 1/4'])
             self.assertIn('python3 -m unittest discover -s tests/system_updates', traces['--shard 4/4'])
             self.assertNotIn('python3 -m unittest discover -s tests/system_updates', traces['--shard 1/4'])
-            self.assertIn('node tests/root-decoder-ui.cjs', traces['--shard 4/4'])
+            self.assertIn('node tests/root-decoder-ui.cjs', traces['--shard 2/4'])
             self.assertNotIn('node tests/root-decoder-ui.cjs', traces['--shard 1/4'])
             self.assertEqual(traces['tv'], traces['ui'] + traces['tv-runtime'])
             self.assertEqual(traces['tv'], traces['tv tv-runtime'])

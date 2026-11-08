@@ -56,7 +56,7 @@ def normalize(kind, units, shard):
         raise ValueError('Browser/optional evidence has no runtime partition')
     if kind == 'runtime' and shard != '1/4':
         units -= {'ui', 'android'}
-    if kind == 'runtime' and shard != '4/4':
+    if kind == 'runtime' and shard != '2/4':
         units.discard('preview')
     return sorted(units)
 
@@ -394,8 +394,8 @@ def environment(kind, shard='1/4'):
         result['identity_ready'] = (all(result[name] for name in required)
                                     and result.get('desktop_libraries', True) is not None
                                     and (result['compiler_path'] is None or bool(result['compiler'])))
-    if kind == 'browser' or (kind == 'runtime' and shard in ('1/4', '2/4', '4/4')):
-        # Keep UI (1) bound conservatively; Homebrew (2) and preview (4) use Chrome,
+    if kind == 'browser' or (kind == 'runtime' and shard in ('1/4', '2/4')):
+        # Keep UI (1) bound conservatively; Homebrew and preview (2) use Chrome,
         # independently of the Chromium browser job. Unknown versions never grant reuse.
         result['browser'] = None
         try:
