@@ -5,6 +5,7 @@
 - Check GitHub for a newer stable computer installer. Desktop and console users
   explicitly choose the release page or their current installer. Unavailable
   checks remain nonblocking; pending recovery bypasses the advisory.
+- Include the shared guarded KeyFilters Home backend in the opt-in Node 0.12.2 Root Beta payload. Keep firmware admission, native recovery and disabled Beta OTA unchanged; target-device acceptance remains unverified.
 
 ## 1.9.0 — unpublished candidate
 

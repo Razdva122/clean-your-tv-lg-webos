@@ -12,7 +12,7 @@ assert.strictEqual(
 );
 var ROOT = '/var/lib/clean-your-tv-root',
   binary = Buffer.from('native helper fixture');
-function fixture(uid, initialChange) {
+function fixture(uid, initialChange, diskDirectory) {
   var callbacks = [],
     timers = [],
     cancel,
@@ -61,18 +61,47 @@ function fixture(uid, initialChange) {
       metadata[path] || {}
     );
   }
+  var realFds = {},
+    fileIndex = 0,
+    positions = {};
   var fakefs = {
     constants: require('fs').constants,
     lstatSync: stat,
-    openSync: function (p) {
+    openSync: function (p, flags) {
       if (!files[p]) throw Error('missing');
+      positions[p] = 0;
+      if (diskDirectory) {
+        var file = diskDirectory + '/lease-' + ++fileIndex;
+        fs.writeFileSync(file, files[p]);
+        var fd = fs.openSync(file, flags);
+        realFds[fd] = p;
+        return fd;
+      }
       return p;
     },
-    fstatSync: stat,
+    fstatSync: function (fd) {
+      return stat(realFds[fd] || fd);
+    },
     readFileSync: function (p) {
+      if (typeof p === 'number') return fs.readFileSync(p);
       return files[p];
     },
-    closeSync: function () {}
+    readSync: function (fd, buffer, offset, length, position) {
+      if (typeof fd === 'number')
+        return fs.readSync(fd, buffer, offset, length, position);
+      var start = positions[fd] || 0;
+      var size = files[fd].copy(
+        buffer,
+        offset,
+        start,
+        start + Math.min(length, 17)
+      );
+      positions[fd] = start + size;
+      return size;
+    },
+    closeSync: function (fd) {
+      if (typeof fd === 'number') fs.closeSync(fd);
+    }
   };
   var opts = {
     now: function () {
@@ -199,10 +228,23 @@ function native(token) {
   };
 }
 var f = fixture();
+if (process.argv[2]) {
+  var disk = fixture(undefined, undefined, process.argv[2]);
+  assert.strictEqual(
+    disk.aliasCount,
+    1,
+    'real descriptor reads must establish lease authority'
+  );
+  disk.subscribe();
+  assert.strictEqual(disk.calls.length, 1);
+  disk.reply(native());
+  assert.strictEqual(disk.replies.at(-1).healthy, true);
+}
 assert.strictEqual(f.calls.length, 0, 'module load never starts native');
 f.subscribe();
 assert.strictEqual(f.calls.length, 1);
-assert.deepStrictEqual(f.calls[0].args, ['--lease']);
+assert.strictEqual(f.calls[0].args.length, 1);
+assert.strictEqual(f.calls[0].args[0], '--lease');
 assert.strictEqual(f.calls[0].path, ROOT + '/runtime/c1-keyfilter-guard');
 assert(f.calls[0].options.timeout <= 1000);
 f.reply(native());
@@ -242,6 +284,14 @@ assert.strictEqual(f.calls.length, 0);
   },
   function (f) {
     f.metadata[ROOT + '/home-backend.json'] = { uid: 1000 };
+  },
+  function (f) {
+    var path = ROOT + '/home-backend.json';
+    f.metadata[path] = { size: f.files[path].length - 1 };
+  },
+  function (f) {
+    var path = ROOT + '/home-backend.json';
+    f.metadata[path] = { size: f.files[path].length + 1 };
   },
   function (f) {
     f.metadata[ROOT + '/c1-keyfilter'] = { mode: 0o755 };
@@ -445,7 +495,9 @@ f = fixture();
 f.subscribe();
 f.reply(native());
 f.home();
-assert.deepStrictEqual(f.calls.at(-1).args, ['--home', 'a'.repeat(32)]);
+assert.strictEqual(f.calls.at(-1).args.length, 2);
+assert.strictEqual(f.calls.at(-1).args[0], '--home');
+assert.strictEqual(f.calls.at(-1).args[1], 'a'.repeat(32));
 assert(f.calls.at(-1).options.timeout >= 2300);
 var beforeHome = f.calls.length;
 f.tick(400);

@@ -15,6 +15,27 @@ admissions use schema3. A schema3 marker cannot be relabeled schema2 to bypass
 admission. The common installer requires a payload advertising
 `admission_schema:3` and a mount-free release with `compositor_admission:3`.
 
+### Shared Root runtime variants (unpublished Beta packaging)
+
+Ordinary Root already packages this alternative. The next installer also embeds
+it in the explicitly selected Node 0.12.2 Root Beta payload. Both variants use
+the same host selector, device admission, Python backend, QML filter and native
+guardian source. The guardian is compiled once and reused; only the Node closure
+and its authenticated runtime policy differ. The QML filter is not a Node
+module and remains byte-identical, without Node compatibility shims.
+
+Successful Home profile reads retain the normal profile backend. Only the exact
+absent-System-Profile reply permits alternative admission; permission errors,
+timeouts and malformed replies never authorize it. Beta and ordinary bundles
+cannot be substituted for each other. The host-only legacy prototype and old
+mount backend remain excluded from the combined Beta build. Existing firmware,
+ARM32, input, ownership and foreign-state checks are unchanged. In particular,
+this does not admit SDK 3.9.0 or establish a fix for #410.
+
+The same fresh-install, emergency-stop, explicit re-enable, restore and disabled
+OTA rules apply to both runtime variants. No new state layout, LS2 permission or
+network endpoint is added. Host tests are not physical TV acceptance.
+
 Before device installation reservation and before activation, admission checks
 the observed model/firmware/SDK, native ARM32 Home, 32-bit interpreter/input ABI,
 protected stock native app manifest, vendor Qt Home-filter chain/scripts and
@@ -72,7 +93,7 @@ Triple Home, long Back, Open LG Home, lease loss, controller loss, trial expiry 
 
 State is root-owned under `/var/lib/clean-your-tv-root/c1-keyfilter` (0700), with volatile guardian state under `/tmp/clean-your-tv-root-keyfilter`. The selected marker remains `home-backend.json`. A native guardian requires independent emergency-input, lifecycle-controller and service-broker leases. The filter expires its own in-memory lease and passes Home to LG when authority is lost. Healthy Home requests and lifecycle returns both use the guardian's fixed `--home TOKEN` operation. Durable stop revokes authority before waiting for an in-flight launch and closing only the owned Root app, then requesting LG Home. Recovery never signals a journal PID. SIGKILL cannot execute guardian UI cleanup: the compositor lease expires independently, but explicit Restore may still be needed to close retained Root UI and reconcile the owned chain.
 
-The private Root service owns the LS2 alias `com.webos.cleanyourtv.root.lease`. Root provisioning adds its name to the existing project activation record and snapshots the exact original; it is not advertised as a developer-package service outside the application ID. Only authenticated `com.webos.surfacemanager` may call its two methods, `c1Lease` and `c1Home`. The alias accepts no arbitrary command or application ID. The existing activation-file path remains registered by the package manifest; LS2 supports multiple names in its semicolon-delimited `Name` field. Vendor compositor roles are not edited. No network endpoint is added. Ordinary Root does not activate this alias.
+The private Root service owns the LS2 alias `com.webos.cleanyourtv.root.lease`. Root provisioning adds its name to the existing project activation record and snapshots the exact original; it is not advertised as a developer-package service outside the application ID. Only authenticated `com.webos.surfacemanager` may call its two methods, `c1Lease` and `c1Home`. The alias accepts no arbitrary command or application ID. The existing activation-file path remains registered by the package manifest; LS2 supports multiple names in its semicolon-delimited `Name` field. Vendor compositor roles are not edited. No network endpoint is added. The System Profile backend does not activate this alias.
 
 Restore retires the guardian and controller before removing exactly the owned configd chain entry. Foreign entries are preserved. Concurrent or unexpected edits, failed UI release and uncertain retirement retain recovery evidence. Do not delete journals, private files or stop latches to bypass refusal. Full C1 removal still refuses when other No-root components remain; remove those through their normal flow first. Root and System Updater reject experimental/orphaned state.
 

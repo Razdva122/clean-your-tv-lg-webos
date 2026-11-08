@@ -14,6 +14,59 @@ PROFILES={'returnValue':True,'profiles':{'defaultApps':{'categories':{'home':'co
 
 
 class CapabilityTests(unittest.TestCase):
+    def test_normal_and_beta_share_preflight_selection_and_refusal_before_python(self):
+        import struct
+        from cytv.operations import Installer
+        from cytv.root_capabilities import NATIVE_HEADERS, RootCapabilityError
+        from cytv.root_runtime import VENDOR_PROBE
+        from tests.cytv.test_operations import Remote
+        missing = {'returnValue':False,'errorCode':-1,'errorText':'Service does not exist: com.webos.service.systemprofile.'}
+        header = struct.pack('<16sHHIIIIIHHHHHH', b'\x7fELF\x01\x01\x01', 3, 40, 1, 64, 52, 0, 0, 52, 32, 2, 0, 0, 0)
+        dump = ' '.join(str(n) for n in header)
+        observed = '0 1 755 50684\n'+dump+'\nCYTV_HOME_ELF\n'+dump
+        chain = [{'file':'/usr/lib/qt5/qml/KeyFilters/systemUi.js','handler':'handleSystemKeys'}]
+        for beta in (False, True):
+            for case in ('profiles', 'keyfilters', 'sdk3', 'denied', 'unknown-chain'):
+                with self.subTest(beta=beta,case=case), tempfile.TemporaryDirectory() as folder:
+                    class TV(Remote):
+                        prepared = False
+                        def run(self, command, **kwargs):
+                            if command == VENDOR_PROBE: return 'CYTV_VENDOR_READY'
+                            if command == NATIVE_HEADERS: return observed
+                            if 'CYTV_ROOT_READY' in command and '/usr/bin/python3' in command and not self.prepared:
+                                return 'CYTV_ROOT_MISSING'
+                            return super().run(command, **kwargs)
+                        def luna(self, uri, payload, **kwargs):
+                            if 'systemprofile' in uri:
+                                return copy.deepcopy(PROFILES if case=='profiles' else dict(missing,errorText='Access denied') if case=='denied' else missing)
+                            if 'getSystemInfo' in uri:
+                                return dict(returnValue=True,modelName='55NANO77SRA',firmwareVersion='23.25.55',sdkVersion='3.9.0' if case=='sdk3' else '9.2.2')
+                            if 'getConfigs' in uri:
+                                return {'returnValue':True,'configs':{'com.webos.surfacemanager.keyFilters':[] if case=='unknown-chain' else chain}}
+                            if 'getSystemSettings' in uri: return copy.deepcopy(SETTINGS)
+                            return super().luna(uri,payload,**kwargs)
+                    remote=TV();root=Path(folder)
+                    profile=state.target('192.0.2.10','root',**({'root_variant':'node012-beta'} if beta else {}))
+                    manifest={'root_backends':{'c1-native-gate':{'admission_schema':3}}}
+                    with patch('cytv.root_runtime.select_payload',return_value=(root,manifest)):
+                        installer=Installer(remote,state.Store(root/'host'),profile,root,manifest)
+                    def provision(**kwargs):
+                        self.assertEqual(kwargs,{'provision':True})
+                        self.assertEqual(installer.tv_info['home_backend'],'system-profile' if case=='profiles' else 'c1-native-gate')
+                        remote.prepared=True
+                        return '/usr/bin/python3'
+                    with patch.object(installer,'_python',return_value='/usr/bin/python3'), patch.object(installer,'_select_python',side_effect=provision) as prepare:
+                        if case in ('profiles','keyfilters'):
+                            installer.preflight(install=True,home_interfaces=True)
+                            prepare.assert_called_once_with(provision=True)
+                            if case=='keyfilters': self.assertEqual(installer.tv_info['home_backend_schema'],3)
+                        else:
+                            with self.assertRaises(RootCapabilityError):
+                                installer.preflight(install=True,home_interfaces=True)
+                            prepare.assert_not_called()
+                    self.assertIsNone(installer.store.pending(profile))
+                    self.assertEqual(remote.uploads,{})
+
     def test_generic_compositor_admission_is_capability_based_not_model_list(self):
         import struct
         from cytv.root_capabilities import verify

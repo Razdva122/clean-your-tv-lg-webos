@@ -134,9 +134,17 @@ module.exports = function (service, options) {
         (executable && !(info.mode & 64))
       )
         throw Error('Unsafe lease file');
-      var data = fs.readFileSync(fd);
-      if (data.length > limit) throw Error('Oversized lease file');
-      return data;
+      // Node 0.12 cannot readFileSync(fd). Keep the authenticated descriptor
+      // and bound reads to the verified size plus one byte to detect growth.
+      var data = Buffer.alloc(info.size + 1);
+      var offset = 0;
+      while (offset < data.length) {
+        var count = fs.readSync(fd, data, offset, data.length - offset, null);
+        if (!count) break;
+        offset += count;
+      }
+      if (offset !== info.size) throw Error('Lease file changed while reading');
+      return data.slice(0, offset);
     } finally {
       fs.closeSync(fd);
     }

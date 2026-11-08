@@ -1,0 +1,28 @@
+# Shared Root and Root Beta KeyFilters implementation plan
+
+**Goal:** Make the existing guarded compositor Home backend available to both Root runtime variants when System Profile is explicitly absent.
+
+**Design:** Keep one installer selector and one device backend. The existing SDK 6–9, ARM32, stock filter, ownership, emergency and recovery checks stay authoritative. Package a Node 0.12.2 build of the same backend in the already opt-in Beta payload; do not introduce a second Home implementation or widen firmware admission. QML filter code must stay independent of Node compatibility shims.
+
+**Scope:** The user's request in this chat authorizes implementation of this existing-flow change. No TV access, release publication, version bump or compatibility claim for issue #410 is included.
+
+- [x] Add failing regressions for combined Beta/KeyFilters builds, runtime identity, shared payload selection and firmware refusal.
+- [x] Reuse the compiled native guard and shared backend metadata in both payloads; allow only the mount-free backend in Beta.
+- [x] Preserve the QML script and verify the generated Beta service/driver with exact Node 0.12.2.
+- [x] Run installer, setup and affected device-runtime/lease/filter/recovery checks, review the diff and document the unpublished behavior and limits.
+- [ ] Save the focused changes on a feature branch/PR targeting `release/next`, reconcile related issue status and clean up the temporary worktree.
+
+Review found an additional legacy API boundary in the shared lease broker:
+Node 0.12.2 does not support `fs.readFileSync(fd)`. A real-descriptor regression
+reproduced refusal before the common bounded `readSync` fix. Partial reads and
+size changes are covered without relaxing owner, mode, inode, hash or stop checks.
+The subsequent independent review found no remaining actionable issues.
+
+Verified on the host: `scripts/test.sh installer setup` (1,167 installer tests,
+three skipped; 281 setup tests, plus the selected Homebrew checks), 79 C1 runtime
+tests, 43 focused final regressions, final payload tests for both resolutions,
+and the generated Beta closure on exact Node 0.12.2, Node 8.12.0 and current Node.
+The real Zig 0.14.1 static ARM32 guardian was also built once and reused in four
+ordinary/Beta KeyFilters bundles; their manifests and unchanged QML bytes passed
+host verification. Formatting and whitespace checks passed. No TV was accessed;
+physical Home, emergency, audio, power, OTA and rollback remain untested here.
