@@ -24,7 +24,8 @@ reproduced refusal before the common bounded `readSync` fix. Partial reads and
 size changes are covered without relaxing owner, mode, inode, hash or stop checks.
 The subsequent independent review found no remaining actionable issues.
 
-Verified on the host: `scripts/test.sh installer setup` (1,167 installer tests,
+Initial implementation verification (before the capability follow-up):
+`scripts/test.sh installer setup` (1,167 installer tests,
 three skipped; 281 setup tests, plus the selected Homebrew checks), 79 C1 runtime
 tests, 43 focused final regressions, final payload tests for both resolutions,
 and the generated Beta closure on exact Node 0.12.2, Node 8.12.0 and current Node.
@@ -32,3 +33,8 @@ The real Zig 0.14.1 static ARM32 guardian was also built once and reused in four
 ordinary/Beta KeyFilters bundles; their manifests and unchanged QML bytes passed
 host verification. Formatting and whitespace checks passed. No TV was accessed;
 physical Home, emergency, audio, power, OTA and rollback remain untested here.
+
+The November 9 follow-up removes the schema3 SDK-number gate across host,
+device and broker, validates live Qt APIs and safely resolves the vendor Qt5
+alias. See [current evidence and release handoff](../../history/2026-11-09-root-beta-keyfilters.md)
+for checks and remaining native-Home/ribbon limits.
