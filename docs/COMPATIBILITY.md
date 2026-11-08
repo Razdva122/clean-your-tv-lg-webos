@@ -71,13 +71,34 @@ Helper-free first-install mode promising that behavior.
 
 [Exact hashes, runtime cases, packaging and limits](history/2026-11-04-webos1-node-floor.md).
 
+## User-reported working TVs
+
+<!-- compatibility-reports:start -->
+- OLED65G19LA — No-root — firmware 03.53.45 — webOS SDK 6.5.3 — v1.5.4
+- OLED55B19LA — No-root — firmware 03.53.45 — webOS 6; SDK 6.5.3 — v1.11.0
+- OLED55G36LA — No-root — firmware 23.25.40 — webOS SDK 9.2.2
+- OLED55B36LA — No-root — firmware 33.31.75 — webOS SDK 10.3.2
+- OLED83G36LA — No-root — firmware 43.21.71 — webOS SDK 11.2.0 — v1.13.0
+- 55SK8100PLA — No-root — firmware 05.50.70 — webOS 4; SDK 4.4.0
+- 50NANO80ASA — No-root — firmware 33.31.80 — webOS 25; SDK10.3.2
+- UN70006LA — No-root — firmware 04.64.00 — v1.2.0
+- OLED65C3PUA — No-root — firmware 43.21.96
+- OLED55C3RLA — Root — firmware 43.21.71 — webOS SDK11.2.0 — v1.13.0
+- 55UR91006LA — No-root — firmware 33.31.75 — webOS SDK10.3.2 — v1.11.0
+- OLED55C2PUA — No-root — firmware 33.31.68 — webOS 10.3.1 / build 3006
+- LG C3 — No-root — webOS 26
+- LG C5 77″ — No-root
+<!-- compatibility-reports:end -->
+
+These are reports for the listed configurations, not a guarantee for every firmware or test case. Unreported versions are omitted. Earlier failures and untested paths remain in the evidence below.
+
 ## What has been tested
 
 | Configuration | Evidence and limits |
 | --- | --- |
-| OLED55C3RLA / firmware 43.21.71, Root | [1.6.0 scoped acceptance](history/2026-11-02-release-1.6.0-final-acceptance.md): controls, fault recovery and genuine Homebrew failsafe, with the documented standby presentation limitation. Earlier [published 1.4.0 acceptance](RELEASE-1.4.0-ACCEPTANCE.md): corrected startup, controls, standby/cold-boot cases and manual whole-product rollback in the recorded scope. No guarantee of immediate first-screen startup or other models. |
+| OLED55C3RLA / firmware 43.21.71, Root | [v1.13.0 exact-artifact acceptance](history/2026-11-08-release-1.13.0-artifacts.md): signed update/rollback/forward through retained System 1.2.5, physical short/triple Home, remote off/on, AC cold boot and audible playback. [Exact Helper transition](history/2026-11-08-helper-0.8.0-compatibility.md) is separate No-root evidence. Earlier [1.6.0](history/2026-11-02-release-1.6.0-final-acceptance.md) and [1.4.0](RELEASE-1.4.0-ACCEPTANCE.md) observations retain their original scope. No guarantee of immediate first-screen startup or other models. |
 | OLED55C46LA (C4), No-root | Earlier community Helper results have outstanding firmware/input and long-Back confirmation. [Original reports](history/COMPATIBILITY.md#historical-110-hardware-evidence). |
-| C5 / webOS 26; BX / webOS 5; UK6540PTD | Unresolved or unverified paths remain. Do not infer support from another model or an architecture check. |
+| Specific C5 / webOS 26, BX / webOS 5 and UK6540PTD reports | Unresolved or unverified paths remain on the reporting devices. Positive reports above belong to their own configurations; they do not resolve a different owner’s failure. |
 | Other models, firmware and remotes | Unverified until their actual controls and recovery paths are checked. |
 | Android | Scoped Android 15 ARM64 / WebView 124 emulator acceptance, including native recovery fixtures; physical phones, minimum-version devices and live phone-to-TV recovery remain unverified. [1.6.0 evidence and limits](history/2026-11-02-release-1.6.0-final-acceptance.md); [readiness details](../android/STABLE-READINESS.md). |
 

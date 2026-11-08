@@ -1,0 +1,60 @@
+---
+import { z } from 'astro/zod';
+import data from '../../../docs/compatibility-reports.json';
+import { support } from '../lib/support';
+import type { Locale } from '../lib/site';
+interface Props {
+  lang: Locale;
+}
+const { lang } = Astro.props,
+  t = support[lang];
+const text = z.string().trim().min(1);
+const { reports } = z
+  .object({
+    schema: z.literal(1),
+    reports: z.array(
+      z.object({
+        id: text,
+        model: text,
+        edition: z.enum(['root', 'no-root']).nullable(),
+        firmware: text.nullable(),
+        webos: text.nullable(),
+        release: text.nullable(),
+        showOnWebsite: z.boolean().optional()
+      })
+    )
+  })
+  .parse(data);
+const visible = reports.filter((report) => report.showOnWebsite === true);
+---
+
+{visible.length > 0 && (
+  <section aria-labelledby="reported-tvs-title">
+    <h2 id="reported-tvs-title">{t.reportsTitle}</h2>
+    <ul class="compatibility-reports">
+      {visible.map((report) => (
+        <li data-report-id={report.id}>
+          <strong>{report.model}</strong>
+          {report.edition && (
+            <> — {report.edition === 'root' ? 'Root' : 'No-root'}</>
+          )}
+          {report.firmware && (
+            <>
+              ; {t.firmwareLabel} {report.firmware}
+            </>
+          )}
+          {report.webos && (
+            <>
+              ; {t.webosLabel} {report.webos}
+            </>
+          )}
+          {report.release && (
+            <>
+              ; {t.releaseLabel} {report.release}
+            </>
+          )}
+        </li>
+      ))}
+    </ul>
+  </section>
+)}

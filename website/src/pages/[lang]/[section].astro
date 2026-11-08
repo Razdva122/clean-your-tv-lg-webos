@@ -1,8 +1,9 @@
 ---
-import { getEntry, render } from "astro:content";
-import Site from "../../layouts/Site.astro";
-import Comparison from "../../components/Comparison.astro";
-import { support, topics } from "../../lib/support";
+import { getEntry, render } from 'astro:content';
+import Site from '../../layouts/Site.astro';
+import Comparison from '../../components/Comparison.astro';
+import CompatibilityReports from '../../components/CompatibilityReports.astro';
+import { support, topics } from '../../lib/support';
 import {
   locales,
   sections,
@@ -11,11 +12,11 @@ import {
   base,
   repo,
   type Locale,
-  type Section,
-} from "../../lib/site";
+  type Section
+} from '../../lib/site';
 export function getStaticPaths() {
   return locales.flatMap((lang) =>
-    sections.filter(Boolean).map((section) => ({ params: { lang, section } })),
+    sections.filter(Boolean).map((section) => ({ params: { lang, section } }))
   );
 }
 const lang = Astro.params.lang as Locale,
@@ -23,8 +24,8 @@ const lang = Astro.params.lang as Locale,
   t = copy[lang],
   extra = support[lang];
 const entry =
-  section === "install" ? await getEntry("guides", lang) : undefined;
-if (section === "install" && !entry)
+  section === 'install' ? await getEntry('guides', lang) : undefined;
+if (section === 'install' && !entry)
   throw new Error(`Missing installation translation: ${lang}`);
 const rendered = entry ? await render(entry) : undefined;
 const Content = rendered?.Content;
@@ -40,23 +41,23 @@ const Content = rendered?.Content;
         {sections.filter(Boolean).map((page) => (
           <a
             href={route(lang, page)}
-            aria-current={page === section ? "page" : undefined}
+            aria-current={page === section ? 'page' : undefined}
           >
             {t.nav[sections.indexOf(page)]}
           </a>
         ))}
       </nav>
-      <a class="button secondary" href={base + "demo/"}>
+      <a class="button secondary" href={base + 'demo/'}>
         {t.tryDemo}
       </a>
     </aside>
     <article class="prose">
-      {section === "install" ? (
+      {section === 'install' ? (
         <>{Content && <Content />}</>
       ) : (
         <>
           <h1>{t.nav[sections.indexOf(section)]}</h1>
-          {section === "editions" && (
+          {section === 'editions' && (
             <>
               <p class="lead">{t.choose}</p>
               <Comparison lang={lang} />
@@ -66,15 +67,16 @@ const Content = rendered?.Content;
               <p>{t.root}</p>
               <h2>{t.nav[3]}</h2>
               <p>{t.compatibility}</p>
-              <a class="text-link" href={route(lang, "compatibility")}>
+              <a class="text-link" href={route(lang, 'compatibility')}>
                 {t.requirements}
               </a>
             </>
           )}
-          {section === "compatibility" && (
+          {section === 'compatibility' && (
             <>
               <p class="lead">{t.compatibility}</p>
               <Comparison lang={lang} compact />
+              <CompatibilityReports lang={lang} />
               <h2>{extra.checksTitle}</h2>
               <ul>
                 {extra.checks.map((check) => (
@@ -84,25 +86,25 @@ const Content = rendered?.Content;
               <p>
                 <a
                   class="text-link"
-                  href={repo + "/blob/main/docs/COMPATIBILITY.md"}
+                  href={repo + '/blob/main/docs/COMPATIBILITY.md'}
                 >
                   {t.evidence}
                 </a>
               </p>
               <p>
-                <a class="text-link" href={route(lang, "help")}>
+                <a class="text-link" href={route(lang, 'help')}>
                   {extra.helpTitle}
                 </a>
               </p>
             </>
           )}
-          {section === "help" && (
+          {section === 'help' && (
             <>
               <p class="lead">{extra.helpDescription}</p>
               <ul class="topic-links" aria-label={extra.helpTitle}>
                 {topics.map((topic, index) => (
                   <li>
-                    <a href={"#" + topic.id}>{extra.help[index][0]}</a>
+                    <a href={'#' + topic.id}>{extra.help[index][0]}</a>
                   </li>
                 ))}
               </ul>
@@ -110,24 +112,24 @@ const Content = rendered?.Content;
                 <section id={topic.id}>
                   <h2>{extra.help[index][0]}</h2>
                   <p>{extra.help[index][1]}</p>
-                  <a href={repo + "/blob/main/" + topic.reference}>
+                  <a href={repo + '/blob/main/' + topic.reference}>
                     {extra.referenceLabel}
                   </a>
                 </section>
               ))}
             </>
           )}
-          {section === "themes" && (
+          {section === 'themes' && (
             <>
               <p class="lead">{t.themes}</p>
-              {["Classic", "Liquid Glass", "Ribbon"].map((theme) => (
+              {['Classic', 'Liquid Glass', 'Ribbon'].map((theme) => (
                 <figure>
                   <img
                     src={
                       base +
-                      "assets/" +
-                      theme.toLowerCase().replace(/ /g, "-") +
-                      ".jpg"
+                      'assets/' +
+                      theme.toLowerCase().replace(/ /g, '-') +
+                      '.jpg'
                     }
                     alt={`${t.themeImage}: ${theme}`}
                     width="1920"
@@ -137,7 +139,7 @@ const Content = rendered?.Content;
                   <figcaption>{theme}</figcaption>
                 </figure>
               ))}
-              <a class="button secondary" href={base + "demo/"}>
+              <a class="button secondary" href={base + 'demo/'}>
                 {t.tryDemo}
               </a>
             </>
@@ -145,10 +147,10 @@ const Content = rendered?.Content;
           <hr />
           <p>{t.limits}</p>
           <div class="actions">
-            <a class="button" href={route(lang, "install")}>
+            <a class="button" href={route(lang, 'install')}>
               {t.nav[1]}
             </a>
-            <a href={repo + "/releases/latest"}>{t.download}</a>
+            <a href={repo + '/releases/latest'}>{t.download}</a>
           </div>
         </>
       )}
