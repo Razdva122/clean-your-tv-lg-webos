@@ -62,6 +62,26 @@ This fixes a reproduced source failure path; it does not establish the cause or
 resolution of a reporter's device failure. Rebuild installers to deliver it.
 No TV package, permission, endpoint, persistent device state or pairing changes.
 
+## Root inventory failure detail (unreleased, #397)
+
+`tv.root_inventory_failures` retains independent `applications` and `inputs`
+failures from the fixed Root SSH reader. Each entry contains a fixed `reason`
+and, for a negative Luna reply, an optional signed 32-bit integer `error_code`.
+Reasons distinguish root-required, client-start-failed, client-error, timeout,
+oversized-reply, negative-reply, permission-denied, service-missing,
+method-missing and malformed-reply. Unknown categories become `unknown`; raw
+stdout/stderr, bus error text, application lists, IDs and filesystem paths are
+excluded both at collection and report export. Retrying clears stale failure
+detail before collecting the new observation.
+
+These categories explain a current read failure; they never authorize recovery
+or relax required application validation. Optional input failure still permits
+valid applications with the existing warning. Rebuild the shared installers and
+Root service/support packages through the next candidate; existing public
+packages cannot recover discarded detail from a historical report. No new
+permission, endpoint or user prompt is introduced. Physical reporter-device
+acceptance and the original #397 cause remain unverified.
+
 ## Local recovery storage (next candidate, #201)
 
 Optional `local_recovery` distinguishes host directory ownership/permissions,

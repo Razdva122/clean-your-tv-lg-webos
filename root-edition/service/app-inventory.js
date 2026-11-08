@@ -1,9 +1,53 @@
 'use strict';
+// Diagnostic categories only; never expose raw bus replies or child output.
+function failure(message, reason, reply) {
+  var error = Error(message),
+    detail = { reason: reason };
+  if (reply && reply.returnValue === false) {
+    var text =
+      typeof reply.errorText === 'string'
+        ? reply.errorText.slice(0, 1024).toLowerCase()
+        : '';
+    if (/denied method|permission denied|access denied/.test(text))
+      detail.reason = 'permission-denied';
+    else if (/service does not exist|service is not registered/.test(text))
+      detail.reason = 'service-missing';
+    else if (/unknown method|method does not exist/.test(text))
+      detail.reason = 'method-missing';
+    var code = reply.errorCode;
+    if (
+      typeof code === 'number' &&
+      Math.floor(code) === code &&
+      code >= -2147483648 &&
+      code <= 2147483647
+    )
+      detail.error_code = code;
+  }
+  error.inventory = detail;
+  return error;
+}
+
+function clientReason(error) {
+  if (error.code === 'ENOENT' || error.code === 'EACCES')
+    return 'client-start-failed';
+  if (
+    error.code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER' ||
+    /^(stdout|stderr) maxBuffer/.test(error.message || '')
+  )
+    return 'oversized-reply';
+  if (
+    error.code === 'ETIMEDOUT' ||
+    (error.killed === true && error.signal === 'SIGTERM')
+  )
+    return 'timeout';
+  return 'client-error';
+}
+
 // Fixed read-only query. No caller-supplied commands, paths or launch parameters.
 module.exports = function (execFile, getuid) {
   return new Promise(function (resolve, reject) {
     if ((getuid || process.getuid)() !== 0) {
-      reject(Error('Root service required'));
+      reject(failure('Root service required', 'root-required'));
       return;
     }
     (execFile || require('child_process').execFile)(
@@ -12,12 +56,18 @@ module.exports = function (execFile, getuid) {
       { timeout: 8000, maxBuffer: 1024 * 1024 },
       function (error, stdout) {
         if (error) {
-          reject(Error('inventory-unavailable'));
+          reject(failure('inventory-unavailable', clientReason(error)));
           return;
         }
         try {
           var result = JSON.parse(stdout);
-          if (result.returnValue !== true || !Array.isArray(result.apps))
+          if (result && result.returnValue === false)
+            throw failure('inventory-unavailable', 'negative-reply', result);
+          if (
+            !result ||
+            result.returnValue !== true ||
+            !Array.isArray(result.apps)
+          )
             throw Error('invalid-inventory');
           var fs = require('fs'),
             path = require('path'),
@@ -96,8 +146,12 @@ module.exports = function (execFile, getuid) {
             };
           });
           resolve(apps);
-        } catch (_) {
-          reject(Error('invalid-inventory'));
+        } catch (error) {
+          reject(
+            error && error.inventory
+              ? error
+              : failure('invalid-inventory', 'malformed-reply')
+          );
         }
       }
     );
@@ -109,7 +163,7 @@ module.exports = function (execFile, getuid) {
 module.exports.inputs = function (execFile, getuid) {
   return new Promise(function (resolve, reject) {
     if ((getuid || process.getuid)() !== 0) {
-      reject(Error('input-status-unavailable'));
+      reject(failure('input-status-unavailable', 'root-required'));
       return;
     }
     (execFile || require('child_process').execFile)(
@@ -118,11 +172,13 @@ module.exports.inputs = function (execFile, getuid) {
       { timeout: 8000, maxBuffer: 256 * 1024 },
       function (error, stdout) {
         if (error) {
-          reject(Error('input-status-unavailable'));
+          reject(failure('input-status-unavailable', clientReason(error)));
           return;
         }
         try {
           var result = JSON.parse(stdout);
+          if (result && result.returnValue === false)
+            throw failure('input-status-unavailable', 'negative-reply', result);
           if (
             !result ||
             result.returnValue !== true ||
@@ -149,8 +205,12 @@ module.exports.inputs = function (execFile, getuid) {
             return clean;
           });
           resolve({ returnValue: true, devices: devices });
-        } catch (_) {
-          reject(Error('input-status-unavailable'));
+        } catch (error) {
+          reject(
+            error && error.inventory
+              ? error
+              : failure('input-status-unavailable', 'malformed-reply')
+          );
         }
       }
     );

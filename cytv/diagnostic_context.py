@@ -93,6 +93,20 @@ def root_diagnostics_summary(value):
     return result
 
 
+def inventory_failures(value):
+    result={}
+    reasons=('root-required','client-start-failed','client-error','timeout','oversized-reply',
+             'negative-reply','permission-denied','service-missing','method-missing','malformed-reply')
+    for key,detail in mapping(value).items():
+        if key not in ('applications','inputs'):continue
+        detail=mapping(detail)
+        item={'reason':choice(detail.get('reason'),reasons)}
+        code=detail.get('error_code')
+        if type(code) is int and -(2**31)<=code<2**31:item['error_code']=code
+        result[key]=item
+    return result
+
+
 def tv_summary(value):
     value = mapping(value)
     result = metadata(value)
@@ -100,6 +114,8 @@ def tv_summary(value):
         inventory=mapping(value['root_inventory'])
         result['root_inventory']={key:choice(inventory.get(key),('read','unavailable','invalid'))
                                   for key in ('applications','inputs')}
+    if 'root_inventory_failures' in value:
+        result['root_inventory_failures']=inventory_failures(value['root_inventory_failures'])
     if version(value.get('node_version')):
         result['node_version'] = value['node_version']
     if 'node_version_status' in value:
