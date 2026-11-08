@@ -11,7 +11,11 @@ SDK numbers are recorded observations, not an allowlist;
 acceptance. This experimental path is packaged in published releases from v1.11.0; target-TV physical compatibility remains unverified.
 
 Internal package, backend and lease names retain `c1` for compatibility. Existing
-schema1 mount recovery and schema2 C1 selection are unchanged. New nonlegacy
+schema1 mount recovery and schema2 C1 identity/state/recovery formats are preserved.
+The candidate applies the shared read-only environment checks to schema2 fresh
+probes and explicit re-enable too: exact System Profile absence, stock native
+manifest/vendor chain, no foreign state or covering mounts, and emergency input.
+This tightens admission; restore remains independent of re-admission. New nonlegacy
 admissions use schema3. A schema3 marker cannot be relabeled schema2 to bypass
 admission. The common installer requires a payload advertising
 `admission_schema:3` and a mount-free release with `compositor_admission:3`.

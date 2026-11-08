@@ -1,100 +1,144 @@
-# Next candidate preparation — 2026-11-09
+# v1.14.0 candidate preparation — 2026-11-09
 
-Release coordinator: current preparation chat. Candidate [#442](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/442)
-remains an unfrozen draft after published v1.13.0. No final version, complete
-candidate build or new device acceptance is selected yet.
+Candidate [#442](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/442)
+contains seven implementation PRs: #441, #444, #445, #447, #449, #450 and #451.
+All use merge commits into `release/next`; none is excluded. Root/Beta #451 was
+held for its existing task's completed revision, then reviewed and merged only
+after a80392fb passed its final required CI. No new features are admitted after
+this scope/version freeze. The PR stays draft for exact-build acceptance.
 
-## Integration and remaining scope
+## Versions and actual packaging dependencies
 
-PRs #441, #444, #449 and #450 were merged with merge commits after inspecting
-their descriptions, comments, reviews and successful required checks. Earlier
-documentation #445 and compatibility-list #447 are also collected in the plan.
-The implementation checks cover their respective revisions; they do not attest
-a frozen combined candidate. The combined installer/Android/setup pass passed on the integrated product inputs at `c601f0e8`: 1,179 installer cases (six expected skips), 44 Android cases and 285 setup cases, plus selected Homebrew checks.
-
-The maintainer explicitly said PR #451 needs further work and requested
-coordination with its existing chat. That chat is implementing firmware-capability
-selection for the shared ordinary/Beta Home backend. Its old SDK 6–9-only scope
-is not final. Do not merge that earlier revision or dispatch the full matrix
-before the completed revision, its tests and packaging impact are reviewed.
-
-Issues #437 and #389 are open at `status:awaiting-release` for the integrated
-failure-path fixes. Reporter-device confirmation remains outstanding. No reporter
-installation result or raw diagnostic is republished in this record. #410's
-original outcome must be assessed against the final #451 scope, not its title.
-
-## Proposed packaging, pending final scope
-
-| Component | Published baseline | Proposed target | Reason |
+| Component | Published v1.13.0 | Frozen target | Reason |
 | --- | --- | --- | --- |
-| Release | 1.13.0 | 1.14.0 | Installer advisory and expanded Root/Beta backend |
-| Home | 1.13.2 | 1.13.2 | No selected Home source change |
-| Helper | 0.8.0 | 0.8.0 | No selected Helper source change; exact bytes must match |
-| cytv | 0.14.0 | 0.15.0 | Advisory, catalog transport and continuation repair |
-| Android / versionCode | 0.13.0 / 28 | 0.14.0 / 29 | Shared installer operations and embedded payload |
-| Root | 0.13.2 | TBD | Final #451 runtime and infrastructure closure pending |
-| Independent updater | 0.5.4 | TBD | Audit embedded coordinator/recovery closure after #451 |
-| Fresh System | 1.2.7 / protocol 1 | TBD | Audit its embedded closure after #451 |
+| Release | 1.13.0 | 1.14.0 | Advisory and shared capability-based Root backend |
+| Home FHD/HD | 1.13.2 | 1.13.3 | Shared Chinese subset changes |
+| Helper | 0.8.0 | 0.8.0 | Exact published bytes retained |
+| cytv | 0.14.0 | 0.15.0 | Advisory, catalog transport, continuation and selector |
+| Android / versionCode | 0.13.0 / 28 | 0.14.0 / 29 | Shared operations and embedded packages |
+| Root / infrastructure | 0.13.2 | 0.14.0 | Service broker, admission and normal/Beta closure |
+| Both edition Updaters | 0.5.4 | 0.5.5 | Shared Chinese subset changes; runtime unchanged |
+| Fresh System / protocol | 1.2.7 / 1 | 1.2.7 / 1 | All 29 own bundle files match published bytes |
 
-All targets are proposals, not committed version bumps. Home/Helper same-version
-packages must be compared with authenticated published bytes before dispatch.
-If Helper changes, the mandatory published-Home/new-Helper probe applies before
-the full candidate. No Homebrew Installer approval is selected. Preserve Android
-application ID, signing identity and stored user data.
+Initial source review suggested retaining Home/Updater versions because their
+runtime sources were unchanged. Actual package preflight disproved that proposal:
+`scripts/chinese_fonts.py` also reads the installer's literal translation corpus.
+#449's first literal adds U+4E92 (互) to both SC/TC subsets, with no removed glyphs.
+The first preliminary package comparison differed only in those two font files;
+both Home graphics packages and both Updaters therefore require version bumps.
+No font algorithm or runtime fix was added. A subsequent package-version check
+caught the still-old renewal-service manifest; it was synchronized to Home1.13.3
+before the full dispatch. These preliminary failures are not recorded as passes.
 
-## Documentation pass in progress
+Helper0.8.0 is byte-for-byte identical to the signed published package, so no new
+Helper transition or compatibility approval is selected. System's 29 own files
+also retain exact published bytes. Root and its infrastructure archive change;
+Updater version metadata changes in the dependent Root recovery closure too.
+Regenerate release-set data for the new artifacts. Existing supervisors remain
+pinned, with no new migration permission. Homebrew promotion remains disabled.
+Android keeps its application ID, original signer and private storage layout.
 
-Reviewed the merged documentation changes in #445/#447/#449, README release
-boundaries, `docs/CLI.md`, `docs/DESKTOP_INSTALL.md`, `docs/COMPATIBILITY.md`,
-the relevant installer authority/diagnostic/recovery references and
-`android/STABLE-READINESS.md`. #449 adds practical advice in all 13 locales.
-Its new advisory remains explicitly unreleased in the English component guides.
-Localized guides retain practical instructions without release/status banners.
-Final #451 changes require a refreshed compatibility/control documentation pass.
-Installation, update/removal, recovery and component guides must be reconciled
-with the final inventory before readiness; historical results retain their scope.
-
-Also reviewed edition selection, installation, update and recovery instructions,
-Root entry-point packaging and the Android guide. Corrected stale v1.13.0
-candidate/v1.12.1 download text in Root's README, README's fresh-System note and
-the old v1.12.1-candidate reference in recovery. No commands or inbound anchors
-changed. Final #451 admission guidance is still owned by its implementation.
-
-## Published baseline authentication
+## Authenticated baseline and host verification
 
 Published v1.13.0 is neither draft nor prerelease. Downloaded BUILD-INFO,
-SHA256SUMS, four signed System feeds, both Home graphics IPKs and Helper0.8.0.
-Every downloaded checksum matches SHA256SUMS. All four envelopes verify with
-the repository's pinned public key; downloaded Home/Helper hashes and sizes match
-the signed component bindings. BUILD-INFO source is
-`7edc6cecd492c31ebf82940ba0a6a983875c989d`, matching the release target, and its
-versions match the unchanged preparation metadata. No credentials or device data
-were needed. The following are authenticated published baselines, not new tests:
+SHA256SUMS, four signed System feeds, both Home IPKs, Helper, both Updaters and
+the Root release archive. Downloaded asset checksums match SHA256SUMS. The four
+feed signatures verify with the pinned public key; downloaded Home/Helper hashes
+and sizes match signed bindings. BUILD-INFO source
+`7edc6cecd492c31ebf82940ba0a6a983875c989d` matches the release target and versions.
+Published Root archive manifests authenticate the extracted bundle files before
+comparison; no device or private data is involved.
 
-| Package | SHA-256 |
+| Retained baseline | SHA-256 |
 | --- | --- |
 | Home1.13.2 FHD | `a1cef43e5317dc309cb7c424304ce943a1a8c9bb7f2926866d6eb9f3f043f0ec` |
 | Home1.13.2 HD | `77cad4a33d8b4fa8e37af6fdb54e32611afde90c7d6f8f2848b40994b4ced1a0` |
 | Helper0.8.0 | `6116d99281d2f5c21ff192ddb07ce6cbdae4223573999ac0d310d86ace87e0c2` |
+| System1.2.7 IPK | `4debad924655388c5d3450a81a83496cbc40e48e66ce150ec858fdf8f99ef96c` |
 
-README release metadata checks pass (3 tests), formatting check passes and
-`git diff --check` is clean. The combined installer/Android/setup run exited successfully. Independent read-only integration review found no actionable issue in these four PRs and confirmed unchanged Home/Helper/Updater/System dependency closures. Its conclusion excludes unfinished #451.
+Host: macOS ARM64, Python3.14.2 project virtualenv, Node23.11.0, locked npm
+installation. `scripts/test.sh installer android setup` on the four-PR integrated
+product inputs c601f0e8 passed 1,179 installer cases (six skips), 44 Android and
+285 setup cases, plus selected Homebrew checks. Final #451 a80392fb passed 1,185
+installer cases (three skips), 286 setup cases, 81 C1 runtime cases, exact
+Node0.12.2/8.12.0/current generated-closure checks and real ARM32 builds in its
+own task. Its final Linux/macOS, browser, ARM Python and Windows/macOS desktop
+runtime CI passed. [Detailed development evidence](2026-11-09-root-beta-keyfilters.md).
+These precede the versioned complete candidate; none is new TV acceptance.
 
-## Acceptance planning
+Independent integration reviews found no runtime/security issue. Review found
+stale SDK6–9/C1-only installation wording; it is corrected to distinguish the
+unpublished shared Root/Beta path, capability requirements and physical limits.
+Schema2 identity/state/recovery formats are preserved, but fresh probes and
+explicit re-enable now require the shared read-only environment checks too.
+That is conservative admission hardening, not unchanged admission; restore does
+not call the admission probe. Developer guidance and release notes record it.
+README metadata tests (3), formatting and whitespace checks pass. Versioned
+payload validation and final frozen CI results are recorded below when complete.
 
-No TV is accessed or changed in this preparation. Model, firmware, remote and
-installer device for new physical acceptance are unselected. Existing C3 and
-Android emulator observations apply only to their original v1.13.0 artifacts.
+## Documentation
 
-| Case | Changed path / plausible failure | Smallest useful check | State |
+Reviewed README, documentation index, edition selection, installation,
+maintenance/removal, updates, recovery, controls, CLI/desktop, compatibility and
+prerequisites, Root entry/recovery/update guides, Android guide/readiness, and the
+affected developer authority/diagnostic/CI references. The merged #445/#447/#449
+and #451 documentation covers current behavior and all 13 localized guides.
+Localized additions are practical selection/advisory steps, with no project
+release versions, publication banners or QA status. Existing anchors remain.
+Unchanged controls/removal/feedback instructions require no new command or
+permission. Fixed stale published-v1.13.0 candidate/download wording in README,
+Root README and recovery. New candidate-specific guide notices remain honest
+until publication; historical evidence and actual unpromoted Homebrew/Beta limits
+retain their original scope. [Candidate release notes](../RELEASE-1.14.0.md).
+
+## Scoped acceptance and issue disposition
+
+No TV was accessed or changed. New physical model/firmware/remote and installer
+platform for device acceptance are unselected/unknown. Historical C3 and Android
+emulator results retain their original hashes and state preconditions.
+
+| Case | Changed path / plausible failure | Minimum useful check | State |
 | --- | --- | --- | --- |
-| Desktop latest-version advisory | #449 may interrupt setup or bypass explicit choice | GUI/CLI metadata-error and bundled-version regressions, packaged desktop smoke | Host integration pass passed; final package pending |
-| No-root pending continuation | #444 narrows a checked 0775 key to 0640 | Original-operation continuation, unsafe inode refusal and retained emergency stop regressions; affected device continuation after supported update | Host integration pass passed; device untested |
-| Root catalog discovery | #450 removes Node subprocess dependency | Actual reader with subprocess loading forbidden, stream/deadline/empty-app checks; packaged setup boundary | Host integration pass passed; device untested |
-| Root/Beta firmware capabilities | #451 changes admission and compositor integration | Final negative/positive firmware fixtures and exact legacy runtimes, then selected native Home/emergency/recovery cases | Blocked on final #451 revision |
-| Android update | New APK embeds changed shared operations | Exact original-signer code28→29 emulator upgrade, retained Store and native operation fixtures | Pending final APK |
+| Latest installer choice | #449 could bypass explicit choice or block recovery | GUI/CLI metadata/error/consent regressions; packaged desktop smoke | Source tests passed; final installers pending |
+| No-root continuation | #444 repairs only an exact owned key | Original operation/inode/emergency-stop tests; supported affected-device continuation | Host passed; reporter device untested |
+| Root catalogs | #450 bypasses Node child process | Actual reader with subprocess forbidden, stream/deadline/mandatory-app checks; packaged setup | Host passed; reporter device untested |
+| Shared Root/Beta KeyFilters | #451 changes admission and loaded broker/filter | Exact legacy runtimes and refusal fixtures; versioned fresh alternative setup, Home/emergency/key-up/restore and fault cleanup | Host passed; physical cases pending |
+| Ordinary Root | Shared broker loads in the normal service too | Exact package/service load and normal profile selection; short usable-state/control check after selected delivery | Pending final artifacts |
+| Shared fonts | New corpus adds one Chinese glyph | Font coverage, generated package/resource comparison and Chinese browser rendering | Preliminary font delta verified; frozen browser pending |
+| Android update | New APK and embedded shared operations | Exact original-signer code28→29 emulator upgrade, retained Store/native operation checks | Pending final APK |
 
-Standby, AC cold boot, audio, OTA and rollback are not new passes. Refine their
-selection from the final runtime/dependency diff; do not repeat unrelated cases
-solely because the release number changes. Existing unresolved blockers remain
-gates. Exact build/attempt and artifact hashes are required for later acceptance.
+The original #410 remains open/planned: native ARM32 LG Home is still required;
+in-compositor LG panels are refused and a KeyFilters field alone is insufficient.
+#389 and #437 remain open/awaiting-release for their integrated source fixes, with
+reporter-device confirmation outstanding. No reporter installation result or raw
+diagnostic is republished. Experimental compositor/Beta ordinary OTA must remain
+refused. Unchanged No-root input/watchdog code and routine package-version changes
+do not select a whole new controls/AC-boot matrix by themselves. Changed Root
+native paths still need their selected emergency/recovery and power-state cases;
+no existing unresolved blocker is waived. Audible playback/HDMI, standby, AC cold
+boot, OTA/rollback and physical phone-to-TV are not new passes. Final acceptance
+must name build/attempt, artifact hashes, device/state preconditions and observed
+results. No approval or acceptance is inferred from host tests.
+
+## Completed pre-dispatch payload check
+
+The final `build-cytv.py --payload-only` exits successfully and verifies 596 public
+payload files, graphics, component/service metadata and normal/Beta backend
+closures. The preliminary same-version/font and renewal-manifest failures above
+are resolved before any full candidate dispatch. Eighteen Chinese font/preparation
+tests pass. Home/Updater public file sets match the prior packages: only selected
+version fields and the two SC/TC fonts differ. Helper matches exact prior bytes;
+all 29 System own files match its authenticated published bundle. No Helper
+transition probe is needed for those identical Helper bytes.
+
+| Preliminary versioned package | SHA-256 |
+| --- | --- |
+| Home1.13.3 FHD | `74a683cc91556beb530d8ba0fa9160f6e84ab5c17990f01681b436ff53e67489` |
+| Home1.13.3 HD | `d14675151a8feaad6157e44ed2a17e5d07ebcb33a0703e149b3cfc61c11ac6a7` |
+| No-root Updater0.5.5 | `1878a84a223058d3fe3c622cdb29f181fa3ec93d3e89ec0dea0aed3355de0ed9` |
+| Root Updater0.5.5 | `141aecaba4c5e700d5cd1bda2b8f691c28aca49a679277402115207df0b7827f` |
+| Root0.14.0 FHD | `114d3ad1a8a390741c7140dc8b424c415a6661865b3eced6d4562e101c893ecb` |
+| Root0.14.0 HD | `ed98a51864f2ad04d8ed22257ca77eebfc4f2f6aeef6117058bb4c985a23741c` |
+
+These are local preliminary packages, not pinned CI artifacts or device acceptance.
+Final metadata/notes/inventory agree; full candidate validation remains to run.

@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": null,
+  "version": "1.14.0",
   "changes": [
     {
       "pr": 441,
@@ -35,6 +35,13 @@
         389
       ],
       "summary": "Read Root installer catalogs over SSH without Node subprocesses"
+    },
+    {
+      "pr": 451,
+      "issues": [
+        410
+      ],
+      "summary": "Share capability-checked KeyFilters across Root and Root Beta; native Home recovery remains required and original #410 is unconfirmed"
     }
   ],
   "excluded": [],

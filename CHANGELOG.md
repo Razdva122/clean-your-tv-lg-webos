@@ -1,7 +1,11 @@
 # Changelog
 
-## Unreleased
+## 1.14.0 — unpublished candidate
 
+- Repair exact No-root continuation key permissions and read Root catalogs over
+  SSH without TV Node subprocesses; retain emergency stops and strict app checks.
+- Rebuild Chinese font subsets with the installer corpus; balance CI shards and
+  reconcile current/localized guides and the user-confirmed TV list.
 - Check GitHub for a newer stable computer installer. Desktop and console users
   explicitly choose the release page or their current installer. Unavailable
   checks remain nonblocking; pending recovery bypasses the advisory.
