@@ -28,6 +28,14 @@ as the maintained checkout.
 
 Write technical and developer documentation in English. Maintain the localized
 user guides under `docs/i18n/` when changing user-facing setup or controls.
+Localized guides in `docs/i18n/` are practical installation and usage instructions
+in their named language. Keep project release/component version numbers, changelogs,
+RC/publication notices, developer implementation details and QA/issue status out of
+these guides. Link release notes and developer evidence from their canonical pages
+instead. Retain only prerequisite versions necessary to choose/install safely
+(such as supported OS/runtime requirements), current controls and recovery steps.
+Do not prepend release-news blocks. Preserve existing inbound anchor aliases.
+
 For every release candidate, complete the affected parts of the [documentation pass](docs/RELEASE-FLOW.md#update-documentation-for-every-candidate),
 record reviewed guides and verification in the release PR, and keep candidate
 instructions separate from published downloads and historical hardware evidence.

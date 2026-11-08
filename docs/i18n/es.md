@@ -2,18 +2,6 @@
 
 Clean Your TV ofrece una pantalla de inicio personal para tu LG webOS: tus aplicaciones en tu orden, sin filas patrocinadas en este menú. Instálalo desde un ordenador o teléfono Android; después puedes apagar el ordenador.
 
-**Publicado en v1.12.1:** Los errores distinguen acceso a la red denegado, puertos SSH que rechazan conexiones y tiempos de espera agotados. **Comprobar conexión de nuevo** ejecuta diagnósticos sin instalar paquetes; **Cambiar conexión** comprueba los datos editados. En macOS, **Abrir Ajustes del Sistema** ayuda a encontrar el acceso a la red local; puede aparecer el nombre de una copia anterior. Las operaciones pendientes conservan su proceso de recuperación.
-
-v1.13.0 / Helper 0.8.0: Home breve en un mando IR abre Clean tras unos 700 ms; LG Home puede aparecer antes. Mantener Home sigue en webOS. El acceso de entrada en Developer Mode normal no está verificado; no cambies permisos. Se mantienen el triple Home y el inicio explícito tras una parada.
-
-<a id="candidato-unreleased-nodejs-antiguo-en-el-tv"></a>
-
-## Node.js antiguo en el TV (publicado en v1.12.0)
-
-Estas opciones están incluidas en la versión publicada v1.12.0. Si Root normal rechaza la versión de Node.js del TV (requiere Node.js 8+), el instalador puede ofrecer **No-root mediante el SSH root existente**: Home y Home Helper sin instalar Developer Mode. Nunca actives Developer Mode sobre un root existente. Solo **Node.js 0.12.2 exacto** permite ofrecer también **Root Beta**, con paquetes separados y confirmación explícita. No sustituye el Node.js del sistema ni tiene actualizaciones automáticas/OTA; usa el instalador del ordenador. No-root tiene funciones reducidas: sin redirección de Home del sistema ni controles exclusivos de Root. Root Beta no se ha probado lo suficiente en televisores.
-
-Los demás requisitos nativos, de interfaces Home y de Python siguen siendo obligatorios. Las pruebas físicas supervisadas por el propietario siguen pendientes; esto no confirma compatibilidad. Guarda el informe de diagnóstico, marca las pruebas no realizadas y comparte voluntariamente un resultado sin datos privados de forma manual mediante la [guía de comentarios](../FEEDBACK.md). No se publica nada automáticamente.
-
 ## 1. Descarga el instalador
 
 Pulsa la imagen de tu dispositivo. Los botones descargan la última versión publicada. En Mac, elige Apple Silicon (M1 o posterior) o Intel; consulta menú Apple → Acerca de este Mac.
@@ -72,7 +60,7 @@ El asistente de escritorio usa inicialmente el idioma del sistema y guarda una s
 3. No-root: introduce el código de Developer Mode y acepta la solicitud en el TV. Root: usa tus credenciales SSH. Acepta una nueva identidad SSH solo para tu propio TV en una red de confianza. Si cambia una clave guardada, detente e investiga.
 4. Sigue el asistente. Mantén el TV encendido, la misma red y CYTV abierto hasta que termine. No fuerces el cierre de la app Android. Root activa el control de Home justo después de preparar la recuperación.
 
-En la versión publicada, la instalación Root continúa con un aviso si no se pueden leer las entradas del TV pero la lista de aplicaciones es válida. Pueden faltar entradas en Home; una lista de aplicaciones fallida o vacía sigue deteniendo la instalación. Guarda el informe de diagnóstico si el aviso persiste.
+La instalación Root continúa con un aviso si no se pueden leer las entradas del TV pero la lista de aplicaciones es válida. Pueden faltar entradas en Home; una lista de aplicaciones fallida o vacía sigue deteniendo la instalación. Guarda el informe de diagnóstico si el aviso persiste.
 
 ## 5. Comprueba el mando
 
@@ -83,7 +71,7 @@ En la versión publicada, la instalación Root continúa con un aviso si no se p
 
 ## 6. Uso y recuperación
 
-Compatibilidad IR de No-root (Helper 0.8.0): al soltar Home tras una pulsación breve, Clean se programa para unos 700 ms después; LG Home puede aparecer primero. Mantener Home sigue correspondiendo a webOS y tres pulsaciones siguen deteniendo Helper. El acceso con Developer Mode normal no está verificado; no cambie los permisos de entrada.
+Compatibilidad IR de No-root: al soltar Home tras una pulsación breve, Clean se programa para unos 700 ms después; LG Home puede aparecer primero. Mantener Home sigue correspondiendo a webOS y tres pulsaciones siguen deteniendo Helper. El acceso con Developer Mode normal no está verificado; no cambie los permisos de entrada.
 
 Las flechas seleccionan y OK abre; mantén OK para reordenar. Una pulsación breve de Atrás conserva la navegación y confirmación de salida de cada aplicación. Home abre el lanzador mientras el control está activo. Mantén Atrás durante 1,2 segundos para abrir LG Home una vez. El interruptor de control de Home y tus ajustes no cambian.
 
@@ -105,19 +93,15 @@ Indica modelo, firmware, No-root o Root, dispositivo de instalación, paso y men
 
 [Informar de un problema](../FEEDBACK.md) · [Recuperación — inglés](../RECOVERY.md) · [Actualizar o eliminar — inglés](../MAINTENANCE.md) · [Otros idiomas](../LANGUAGES.md)
 
-En las versiones actuales, el aviso y el botón «Desactivar vista previa HDMI» solo aparecen con 4K seleccionado o activo en temas con la vista previa de entradas activada. Durante la vista previa HDMI, el fondo de vídeo 4K se sustituye temporalmente por una imagen estática de 1080p. Desactiva la vista previa de entradas para mantener el fondo en 4K.
+### Eliminación sencilla
 
-### Eliminación sencilla (v1.11.0+)
-
-En v1.11.0 y posteriores, elige **Desinstalar Clean Your TV** en Mantenimiento con la misma conexión guardada. Confirma una vez. Se eliminan las apps y archivos conocidos del proyecto que estén presentes y se omiten los ausentes, incluso después de una instalación parcial.
+Elige **Desinstalar Clean Your TV** en Mantenimiento con la misma conexión guardada. Confirma una vez. Se eliminan las apps y archivos conocidos del proyecto que estén presentes y se omiten los ausentes, incluso después de una instalación parcial.
 
 Cuando se indique, desconecta la alimentación del TV, vuelve a conectarla, espera la red y elige **Intentar de nuevo**. Espera o Quick Start no es un reinicio completo; CYTV no reinicia el TV automáticamente. Si se pierde la conexión, compruébala y reintenta la misma eliminación sin otro asistente de recuperación. Si se deniega el acceso, usa la conexión Root solicitada; si el TV está ocupado, espera y reintenta. Solo se muestra éxito tras verificar la limpieza final. Conserva las claves y los informes originales. Siguen vigentes los controles de emergencia y el consentimiento para compartir.
 
-**v1.13.0:** tras una eliminación completa verificada, puedes instalar Root o No-root de nuevo. Los registros mínimos inactivos impiden que se reanuden operaciones antiguas; no los borres manualmente. Si la eliminación o sus comprobaciones siguen incompletas, termina primero la recuperación.
+Una instalación fallida o interrumpida ofrece recuperación directamente. Si No-root no puede continuar, confirma la eliminación completa una vez. La eliminación realiza hasta tres intentos ante cortes temporales de conexión o un proceso CYTV ocupado. Si requiere Root, elige **Conectar con Root** para el mismo TV; la limpieza Root verificada también completa su eliminación No-root bloqueada. Si falla la activación Root, CYTV intenta restaurar y verificar LG Home sin repetir la activación. Cancelar trabajo pendiente conserva el informe y las acciones de recuperación. Se mantiene la parada de emergencia.
 
-Desde v1.11.0, una instalación fallida o interrumpida ofrece recuperación directamente. Si No-root no puede continuar, confirma la eliminación completa una vez. La eliminación realiza hasta tres intentos ante cortes temporales de conexión o un proceso CYTV ocupado. Si requiere Root, elige **Conectar con Root** para el mismo TV; la limpieza Root verificada también completa su eliminación No-root bloqueada. Si falla la activación Root, CYTV intenta restaurar y verificar LG Home sin repetir la activación. Cancelar trabajo pendiente conserva el informe y las acciones de recuperación. Se mantiene la parada de emergencia.
-
-> **Mejoras de v1.13.0:** Si falla la conexión durante la eliminación, abre sus detalles, comprueba la red o elige una clave SSH Root existente y reintenta. La dirección, edición, puerto y verificación de la clave del TV siguen fijados. No-root comprueba Helper antes del emparejamiento: detenlo y confirma la nueva comprobación sin reiniciar el proceso. Solo un TV vacío verificado y sin instalación pendiente puede omitir el reinicio; tras una eliminación real sigue siendo necesario el reinicio solicitado. Los restos del antiguo Root Updater llevan a una eliminación completa con confirmación aparte antes de instalar de nuevo. Si falla el servicio de entradas, continúa la limpieza segura de paquetes; el éxito exige verificar también la limpieza del acceso directo.
+Si falla la conexión durante la eliminación, abre sus detalles, comprueba la red o elige una clave SSH Root existente y reintenta. La dirección, edición, puerto y verificación de la clave del TV siguen fijados. No-root comprueba Helper antes del emparejamiento: detenlo y confirma la nueva comprobación sin reiniciar el proceso. Solo un TV vacío verificado y sin instalación pendiente puede omitir el reinicio; tras una eliminación real sigue siendo necesario el reinicio solicitado. Los restos del antiguo Root Updater llevan a una eliminación completa con confirmación aparte antes de instalar de nuevo. Si falla el servicio de entradas, continúa la limpieza segura de paquetes; el éxito exige verificar también la limpieza del acceso directo.
 
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="python-opcional-para-root-en-v110"></a>
@@ -138,4 +122,6 @@ Desde v1.11.0, una instalación fallida o interrumpida ofrece recuperación dire
 
 Referencias detalladas en inglés: [requisitos](../COMPATIBILITY.md) · [controles](../CONTROLS.md) · [temas](../THEMES.md) · [actualizaciones](../UPDATES.md).
 
-> Experimental: Root Home experimental se elige por capacidades de Qt SDK 6–9, sin lista de modelos. La compatibilidad física y OTA normal no están verificadas. No se modifican otras integraciones Home; tras una parada de seguridad o energía, activa Home explícitamente. [#364](../development/C1-NATIVE-GATE.md#unpublished-capability-based-compositor-admission-364).
+<a id="candidato-unreleased-nodejs-antiguo-en-el-tv"></a>
+<a id="nodejs-antiguo-en-el-tv-publicado-en-v1120"></a>
+<a id="eliminación-sencilla-v1110"></a>
