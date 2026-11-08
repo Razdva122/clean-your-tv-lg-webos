@@ -58,10 +58,6 @@ and creating your own theme.
 Current stable release: **[v1.13.0](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.13.0)** — [release notes](docs/RELEASE-1.13.0.md).
 <!-- /release:downloads -->
 
-> **Unpublished v1.13.0 candidate:** the metadata sections describe the selected candidate. Public download buttons still serve v1.12.1 until verified publication.
-
-Published v1.12.1 acceptance and the known physical Home-routing limitation are recorded in the [acceptance notes](docs/history/2026-11-08-release-1.12.1-publication-acceptance.md); those observations do not accept new candidate artifacts.
-
 [![Download Windows x64 graphical installer — GUI ZIP](assets/brand/downloads/windows.svg)](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/cytv-windows-x64-desktop.zip)
 [![Download macOS Apple Silicon graphical installer — ZIP](assets/brand/downloads/macos-arm64.svg)](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/cytv-macos-arm64.zip)
 [![Download macOS Intel graphical installer — ZIP](assets/brand/downloads/macos-x64.svg)](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/cytv-macos-x64.zip)
