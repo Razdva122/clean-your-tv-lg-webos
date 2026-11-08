@@ -10,7 +10,7 @@ PRs #441, #444, #449 and #450 were merged with merge commits after inspecting
 their descriptions, comments, reviews and successful required checks. Earlier
 documentation #445 and compatibility-list #447 are also collected in the plan.
 The implementation checks cover their respective revisions; they do not attest
-a frozen combined candidate. The combined installer/Android/setup pass is running.
+a frozen combined candidate. The combined installer/Android/setup pass passed on the integrated product inputs at `c601f0e8`: 1,179 installer cases (six expected skips), 44 Android cases and 285 setup cases, plus selected Homebrew checks.
 
 The maintainer explicitly said PR #451 needs further work and requested
 coordination with its existing chat. That chat is implementing firmware-capability
@@ -78,8 +78,7 @@ were needed. The following are authenticated published baselines, not new tests:
 | Helper0.8.0 | `6116d99281d2f5c21ff192ddb07ce6cbdae4223573999ac0d310d86ace87e0c2` |
 
 README release metadata checks pass (3 tests), formatting check passes and
-`git diff --check` is clean. The combined installer/Android/setup run remains
-in progress; no result is inferred from partial output.
+`git diff --check` is clean. The combined installer/Android/setup run exited successfully. Independent read-only integration review found no actionable issue in these four PRs and confirmed unchanged Home/Helper/Updater/System dependency closures. Its conclusion excludes unfinished #451.
 
 ## Acceptance planning
 
@@ -89,9 +88,9 @@ Android emulator observations apply only to their original v1.13.0 artifacts.
 
 | Case | Changed path / plausible failure | Smallest useful check | State |
 | --- | --- | --- | --- |
-| Desktop latest-version advisory | #449 may interrupt setup or bypass explicit choice | GUI/CLI metadata-error and bundled-version regressions, packaged desktop smoke | Host integration pass running; final package pending |
-| No-root pending continuation | #444 narrows a checked 0775 key to 0640 | Original-operation continuation, unsafe inode refusal and retained emergency stop regressions; affected device continuation after supported update | Host integration pass running; device untested |
-| Root catalog discovery | #450 removes Node subprocess dependency | Actual reader with subprocess loading forbidden, stream/deadline/empty-app checks; packaged setup boundary | Host integration pass running; device untested |
+| Desktop latest-version advisory | #449 may interrupt setup or bypass explicit choice | GUI/CLI metadata-error and bundled-version regressions, packaged desktop smoke | Host integration pass passed; final package pending |
+| No-root pending continuation | #444 narrows a checked 0775 key to 0640 | Original-operation continuation, unsafe inode refusal and retained emergency stop regressions; affected device continuation after supported update | Host integration pass passed; device untested |
+| Root catalog discovery | #450 removes Node subprocess dependency | Actual reader with subprocess loading forbidden, stream/deadline/empty-app checks; packaged setup boundary | Host integration pass passed; device untested |
 | Root/Beta firmware capabilities | #451 changes admission and compositor integration | Final negative/positive firmware fixtures and exact legacy runtimes, then selected native Home/emergency/recovery cases | Blocked on final #451 revision |
 | Android update | New APK embeds changed shared operations | Exact original-signer code28→29 emulator upgrade, retained Store and native operation fixtures | Pending final APK |
 
