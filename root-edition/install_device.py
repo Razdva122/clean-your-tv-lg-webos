@@ -604,7 +604,7 @@ class LocalDevice:
                 latest=record['fenced_components']['deploy'] or {}
                 from clean_removal import PRE_ACTIVATION
                 record['routing_never_applied']=(latest.get('stage') in PRE_ACTIVATION and not any(
-                    os.path.lexists(ROOT/name) for name in ('profile-trial.json','persistent-intent.json','persistent-binding.json',
+                    os.path.lexists(ROOT/name) for name in ('profile-trial.json','persistent-intent.json','persistent-binding.json','boot-continuation.json',
                         'home-backend.json','c1-gate','c1-keyfilter')))
                 self.ownership.store.write('clean-removal-'+record['operation'],record)
                 # Original journals remain immutable in the coordinator receipt.
@@ -775,7 +775,7 @@ class LocalDevice:
             'recovery-failure.json','run-recovery-service','recovery-service.json','bootstrap.pid',
             'activity-registration.json','startup-hook.json','startup-hook.previous.json',
             'profile-trial.json','profile-trial.lock','persistent-intent.json','persistent-intent.lock',
-            'persistent-binding.json','profile-guardian-ready.json','profile-recovery.log',
+            'persistent-binding.json','boot-continuation.json','profile-guardian-ready.json','profile-recovery.log',
             'profile-candidate.stage','native-input.json','software-update.lock','update-block.json',
             'update-home-cancel.json','update-home-resume.json','session.lock','boot-dispatch.lock',
             'startup-policy.json','startup-policy.lock','health.log','audio','failsafe',
@@ -984,7 +984,7 @@ class LocalDevice:
         key='routing-backup-'+record['operation']
         if _optional_record(self.ownership.store,key) is not None:return
         backup={}
-        for name in ('profile-trial.json','persistent-intent.json','persistent-binding.json',
+        for name in ('profile-trial.json','persistent-intent.json','persistent-binding.json','boot-continuation.json',
                      'profile-candidate.stage','home-backend.json','c1-gate/active',
                      'c1-keyfilter/ownership.json','c1-keyfilter/pending.json',
                      'startup-hook.json','startup-hook.previous.json','system-permissions.json',

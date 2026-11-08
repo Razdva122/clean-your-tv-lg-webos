@@ -21,6 +21,7 @@ class RecoveryTests(unittest.TestCase):
        patch.object(e,'save_ready'),patch.object(e,'completed',return_value=False), \
        patch.object(e.subprocess,'Popen',side_effect=observe),patch.object(e.os.path,'lexists',return_value=True), \
        patch.object(Coordinator,'read_binding',return_value={'transaction':'private-tx'}), \
+       patch('boot_gate.waiting',return_value=False), \
        patch.object(health,'context',return_value={}),patch.object(health,'require_guardian'), \
        patch.object(health,'publish',side_effect=health.HealthContextError('failsafe-present')), \
        patch.object(e,'recover',side_effect=lambda *a:print('RECOVER',file=__import__('sys').stderr) or True), \

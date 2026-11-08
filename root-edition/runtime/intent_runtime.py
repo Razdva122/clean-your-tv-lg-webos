@@ -146,6 +146,11 @@ def _boot():
     if c is None: return _legacy_native_recovery()
     if later_legacy_trial(c): return None
     intent = c.store.read()
+    from boot_gate import load as continuation_record
+    if continuation_record() is not None:
+        # An interrupted handoff is recovery-only, never proof of fresh health.
+        c.exit(intent, reason='fault')
+        return 'restored'
     try: identity = boot_identity()
     except (OSError,ValueError):
         c.exit(intent,reason='fault')
@@ -170,6 +175,11 @@ def _boot():
         except Exception: pass  # Diagnostic storage must never block fault recovery.
         c.exit(intent, reason='fault')
         return 'restored'
+    from boot_gate import eligible, start as continue_boot
+    if eligible(c, intent, identity):
+        result = continue_boot(c, intent, identity)
+        startup_after_ready(result)
+        return result
     # Restore first. Normal startup also sets FAILSAFE temporarily; only the
     # current-boot init.d marker plus a cleared flag permits reactivation.
     from boot_gate import audit, observation

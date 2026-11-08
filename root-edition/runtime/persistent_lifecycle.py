@@ -6,7 +6,7 @@ Boot identifiers must distinguish snapshot resumes that reset monotonic uptime.
 """
 PHASES = ('disabled', 'trial', 'active', 'stopping', 'recovering', 'starting')
 FIELDS = {'version', 'generation', 'phase', 'enabled', 'boot', 'token'}
-EVENTS = ('enable', 'confirmed', 'boot', 'restored', 'ready', 'exit', 'fault', 'shutdown')
+EVENTS = ('enable', 'confirmed', 'boot', 'restored', 'ready', 'exit', 'fault', 'shutdown', 'resume')
 
 
 def initial():
@@ -43,7 +43,7 @@ def transition(state, event):
     if type(event.get('generation')) is not int:
         raise ValueError('Event generation required')
     if event['generation'] != state['generation']: return dict(state), 'none'
-    if kind in ('enable', 'boot'):
+    if kind in ('enable', 'boot', 'resume'):
         if not identifier(event.get('boot')) or not identifier(event.get('token')):
             raise ValueError('Boot and attempt identity required')
         if kind == 'boot' and type(event.get('failsafe')) is not bool:
@@ -56,6 +56,13 @@ def transition(state, event):
         new.update(generation=state['generation']+1, phase='trial', enabled=False,
                    boot=event['boot'], token=event['token'])
         effect = 'start_guarded'
+    elif kind == 'resume':
+        if (state['phase'] not in ('active','stopping') or not state['enabled']
+                or state['boot'] == event['boot']):
+            raise ValueError('Continuation requires confirmed prior-session intent')
+        new.update(generation=state['generation']+1, phase='starting', enabled=True,
+                   boot=event['boot'], token=event['token'])
+        effect = 'continue_guarded'
     elif kind == 'boot':
         if not event['failsafe'] and event['boot'] == state['boot']:
             return new, 'none'
