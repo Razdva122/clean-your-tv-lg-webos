@@ -172,7 +172,8 @@ class RootInventoryRuntimeTests(unittest.TestCase):
             self.assertEqual(command,'/usr/bin/node')
             guard=("var Module=require('module'),load=Module._load;"
                    "Module._load=function(name){if(name==='child_process')throw Error('Forbidden child_process');"
-                   "return load.apply(this,arguments);};\n").encode()
+                   "var loaded=load.apply(this,arguments);"
+                   "return name==='path'?loaded.posix:loaded;};\n").encode()
             if icon is not None:
                 guard+=("var originalLoad=Module._load;Module._load=function(name){"
                     "if(name==='fs')return {realpathSync:function(file){return file;},"
