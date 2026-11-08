@@ -1,6 +1,6 @@
 ---
-import { copy, type Locale } from "../lib/site";
-import { support } from "../lib/support";
+import { copy, type Locale } from '../lib/site';
+import { support } from '../lib/support';
 interface Props {
   lang: Locale;
   compact?: boolean;
@@ -10,10 +10,10 @@ const { lang, compact = false } = Astro.props,
   extra = support[lang];
 const rows = [
   extra.access,
-  ["Node.js 0.10.25+", "Node.js 8+ / Python 3.9+"],
+  ['Node.js 0.10.15+', 'Node.js 8+ / Python 3.9+'],
   extra.keep,
   extra.resume,
-  extra.updates,
+  extra.updates
 ];
 ---
 

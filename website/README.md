@@ -86,9 +86,11 @@ Public download actions use
 expand hardware compatibility beyond documented version-specific results. Newly
 written website translations have automated/browser checks, not native-speaker
 acceptance. The compatibility page includes localized access/runtime requirements and an owner
-checklist. Detailed device evidence remains linked to its maintained English
-record. No private diagnostics or other users’ installation reports are copied
-into the new website content.
+checklist. A short user-confirmed model list reads `../docs/compatibility-reports.json`;
+only records explicitly marked `showOnWebsite: true` appear. It displays models,
+editions and known versions; source links, dates and diagnostic details remain
+in the audit record. Results apply to their recorded versions, not every device
+in a model family. No private diagnostics are copied into website content.
 
 ## URLs and publication
 

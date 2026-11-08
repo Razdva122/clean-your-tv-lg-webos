@@ -49,6 +49,44 @@ assert.deepEqual(
   [...locales].sort(),
   'support locale registry'
 );
+const reports = JSON.parse(
+  readFileSync(
+    new URL('../../docs/compatibility-reports.json', import.meta.url),
+    'utf8'
+  )
+).reports;
+const visibleReports = reports.filter(
+  (report) => report.showOnWebsite === true
+);
+const compatibilityDoc = readFileSync(
+  new URL('../../docs/COMPATIBILITY.md', import.meta.url),
+  'utf8'
+);
+const reportBlock = compatibilityDoc.match(
+  /<!-- compatibility-reports:start -->([\s\S]*?)<!-- compatibility-reports:end -->/
+)?.[1];
+assert(reportBlock, 'compatibility documentation report block');
+const reportLines = reportBlock
+  .split('\n')
+  .filter((line) => line.startsWith('- '));
+assert.equal(
+  reportLines.length,
+  visibleReports.length,
+  'compatibility documentation model count'
+);
+for (const report of visibleReports) {
+  const line = reportLines.find((line) =>
+    line.startsWith('- ' + report.model + ' —')
+  );
+  assert(line, 'compatibility documentation missing model ' + report.model);
+  for (const value of [report.firmware, report.webos, report.release].filter(
+    Boolean
+  ))
+    assert(
+      line.includes(value),
+      'compatibility documentation missing reported version ' + value
+    );
+}
 function translated(value, reference, label) {
   if (typeof reference === 'string') {
     assert(
@@ -82,6 +120,10 @@ function translated(value, reference, label) {
 for (const lang of locales) {
   translated(translations[lang], translations.en, lang);
   translated(support[lang], support.en, lang + ' support');
+  assert(
+    support[lang].reportsTitle?.trim(),
+    lang + ' missing device reports heading'
+  );
   assert.equal(
     translations[lang].nav.length,
     pages.length,
@@ -236,6 +278,58 @@ for (const lang of locales)
           route + ' missing help topic ' + id
         );
       }
+    }
+    if (page === 'compatibility/') {
+      const list = all.find(
+        (n) => attr(n, 'class') === 'compatibility-reports'
+      );
+      assert.equal(
+        Boolean(list),
+        visibleReports.length > 0,
+        route + ' device list visibility'
+      );
+      if (list) {
+        const items = nodes(list).filter((n) => n.tagName === 'li');
+        assert.equal(
+          items.length,
+          visibleReports.length,
+          route + ' confirmed model count'
+        );
+        assert(
+          !nodes(list).some((n) => n.tagName === 'a'),
+          route + ' device list must not show evidence links'
+        );
+        for (const report of visibleReports) {
+          const item = items.find(
+            (n) => attr(n, 'data-report-id') === report.id
+          );
+          assert(item, route + ' missing confirmed model ' + report.id);
+          const text = nodes(item)
+            .filter((n) => n.nodeName === '#text')
+            .map((n) => n.value)
+            .join('');
+          for (const value of [
+            report.model,
+            report.firmware,
+            report.webos,
+            report.release
+          ].filter(Boolean))
+            assert(
+              text.includes(value),
+              route + ' missing reported value ' + value
+            );
+          for (const source of report.sources)
+            assert(
+              !text.includes(source.url) &&
+                (!source.date || !text.includes(source.date)),
+              route + ' evidence must remain internal'
+            );
+        }
+      }
+      assert(
+        html.includes('Node.js 0.10.15+'),
+        route + ' released No-root runtime floor'
+      );
     }
     if (page === 'editions/' || page === 'compatibility/') {
       const table = all.find((n) => n.tagName === 'table');

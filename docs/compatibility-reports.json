@@ -1,0 +1,386 @@
+{
+  "schema": 1,
+  "reviewedAt": "2026-11-08",
+  "reports": [
+    {
+      "id": "g1-noroot",
+      "model": "OLED65G19LA",
+      "firmware": "03.53.45",
+      "webos": "SDK 6.5.3",
+      "edition": "no-root",
+      "release": "v1.5.4",
+      "showOnWebsite": true,
+      "result": "controls-tested",
+      "reportedVersions": "release v1.5.4; Home 1.6.1; Helper 0.6.21",
+      "installer": "macOS ARM64 console",
+      "remote": null,
+      "tested": {
+        "install": "official installer completed",
+        "Home": "physical Home from streaming and HDMI, Quick Access",
+        "emergency": "initial triple-Home/LG stop and explicit restart sequence worked",
+        "audio": "owner reports playback and applicable audio/casting checks passed; individual eARC/casting use unspecified",
+        "power": "standby/wake and true cold boot with both computers off passed",
+        "OTA_rollback": "unknown / not explicitly reported"
+      },
+      "limitations": "Owner-operated, not independent observation; emergency-stop persistence through restart, long term, Dev Mode expiry and OTA untested",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/146#issuecomment-6558997384"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "b1-noroot",
+      "model": "OLED55B19LA",
+      "firmware": "03.53.45",
+      "webos": "6; SDK 6.5.3",
+      "edition": "no-root",
+      "release": "v1.11.0",
+      "showOnWebsite": true,
+      "result": "controls-tested",
+      "reportedVersions": "release v1.11.0; cytv 0.12.0 on preceding status; Home 1.12.0; Helper 0.7.5",
+      "installer": "Bazzite Linux x86_64",
+      "remote": null,
+      "tested": {
+        "install": "fresh install after supported verified removal; startup check passed",
+        "Home": "Home, navigation, Back, volume passed",
+        "emergency": "unknown / not explicitly reported",
+        "audio": "unknown / not explicitly reported",
+        "power": "standby/wake and cold-start checks passed",
+        "OTA_rollback": "unknown / not explicitly reported"
+      },
+      "limitations": "Triple-Home and audible playback not explicitly confirmed; generic volume is not audio playback",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/201#issuecomment-6710015765"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/201#issuecomment-6707247146"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "g3-55-noroot",
+      "model": "OLED55G36LA",
+      "firmware": "23.25.40",
+      "webos": "SDK 9.2.2",
+      "edition": "no-root",
+      "release": null,
+      "showOnWebsite": true,
+      "result": "controls-tested",
+      "reportedVersions": "cytv 0.12.0; Home 1.12.0; Helper 0.7.5",
+      "installer": "Windows 11 x64 desktop",
+      "remote": null,
+      "tested": {
+        "install": "supported old pending cleanup + full restart + fresh setup; packages/startup passed",
+        "Home": "physical Plex -> short Home -> Clean",
+        "emergency": "unknown / not explicitly reported",
+        "audio": "unknown / not explicitly reported",
+        "power": "unknown / not explicitly reported",
+        "OTA_rollback": "unknown / not explicitly reported"
+      },
+      "limitations": "Emergency/audio/standby/cold boot not reported as functional tests; cleanup power cycle is not Home cold-start acceptance",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/378#issuecomment-6708252703"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/378#issuecomment-6705486805"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "b3-noroot",
+      "model": "OLED55B36LA",
+      "firmware": "33.31.75",
+      "webos": "SDK 10.3.2",
+      "edition": "no-root",
+      "release": null,
+      "showOnWebsite": true,
+      "result": "controls-tested",
+      "reportedVersions": "cytv 0.13.0; installed Home/Helper versions unknown",
+      "installer": "macOS Apple Silicon",
+      "remote": null,
+      "tested": {
+        "install": "supported recovery then fresh setup; packages/startup passed",
+        "Home": "app -> physical short Home -> Clean",
+        "emergency": "unknown / not explicitly reported",
+        "audio": "unknown / not explicitly reported",
+        "power": "unknown / not explicitly reported",
+        "OTA_rollback": "unknown / not explicitly reported"
+      },
+      "limitations": "Do not infer installed versions from release mapping; no emergency/audio/power/OTA result",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/378#issuecomment-6712354535"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "g3-83-noroot",
+      "model": "OLED83G36LA",
+      "firmware": "43.21.71",
+      "webos": "SDK 11.2.0",
+      "edition": "no-root",
+      "release": "v1.13.0",
+      "showOnWebsite": true,
+      "result": "controls-tested",
+      "reportedVersions": "release v1.13.0; cytv 0.14.0; Home 1.13.2; Helper 0.8.0",
+      "installer": "macOS ARM64",
+      "remote": null,
+      "tested": {
+        "install": "install-complete; packages verified; no current error/pending",
+        "Home": "startup process observed; Home button user-confirmed",
+        "emergency": "unknown / not explicitly reported",
+        "audio": "unknown / not explicitly reported",
+        "power": "unknown / not explicitly reported",
+        "OTA_rollback": "unknown / not explicitly reported"
+      },
+      "limitations": "No emergency/audio/power/OTA check reported",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/409#issuecomment-6724126161"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/409#issuecomment-6719664693"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "sk8100-noroot",
+      "model": "55SK8100PLA",
+      "firmware": "05.50.70",
+      "webos": "4; SDK 4.4.0",
+      "edition": "no-root",
+      "release": null,
+      "showOnWebsite": true,
+      "result": "controls-tested",
+      "reportedVersions": "source ef80d24 / release1.6.0 metadata; Home1.7.0; Helper0.6.21",
+      "installer": "macOS26.6.2 Apple Silicon",
+      "remote": "LG Magic Remote",
+      "tested": {
+        "install": "source install succeeded after adding missing fontTools dependencies",
+        "Home": "Home shows/works; app -> Home -> Clean",
+        "emergency": "unknown / not explicitly reported",
+        "audio": "unknown / not explicitly reported",
+        "power": "unknown / not explicitly reported",
+        "OTA_rollback": "unknown / not explicitly reported"
+      },
+      "limitations": "Emergency/audio/power/OTA untested; arrows/OK/Back/volume not individually confirmed",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/272"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "nano80asa-noroot",
+      "model": "50NANO80ASA",
+      "firmware": "33.31.80",
+      "webos": "25; SDK10.3.2",
+      "edition": "no-root",
+      "release": null,
+      "showOnWebsite": true,
+      "result": "controls-tested",
+      "reportedVersions": "Home1.4.1; Helper0.6.19; local proposed Retro CSS",
+      "installer": "unknown (source development; local Python3.9)",
+      "remote": null,
+      "tested": {
+        "install": "unknown / not explicitly reported",
+        "Home": "physical YouTube -> Home; arrows/OK/Back",
+        "emergency": "unknown / not explicitly reported",
+        "audio": "unknown / not explicitly reported",
+        "power": "unknown / not explicitly reported",
+        "OTA_rollback": "unknown / not explicitly reported"
+      },
+      "limitations": "Cold boot explicitly untested; later API1 Retro submission only browser-tested, not physical validation of shipped Retro",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/69"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "un7000-noroot",
+      "model": "UN70006LA",
+      "firmware": "04.64.00",
+      "webos": null,
+      "edition": "no-root",
+      "release": "v1.2.0",
+      "showOnWebsite": true,
+      "result": "reported-working",
+      "reportedVersions": "success releasev1.2.0; successful component/cytv versions unknown",
+      "installer": "Windows AMD64",
+      "remote": null,
+      "tested": {
+        "install": "reporter says issue resolved by v1.2.0; functionality confirmed working",
+        "Home": "unknown / not explicitly reported",
+        "emergency": "unknown / not explicitly reported",
+        "audio": "unknown / not explicitly reported",
+        "power": "unknown / not explicitly reported",
+        "OTA_rollback": "unknown / not explicitly reported"
+      },
+      "limitations": "No named Home/emergency/audio/power checks; do not infer components",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/51#issuecomment-6402113050"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/51"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "c3-65-noroot",
+      "model": "OLED65C3PUA",
+      "firmware": "43.21.96",
+      "webos": null,
+      "edition": "no-root",
+      "release": null,
+      "showOnWebsite": true,
+      "result": "reported-working",
+      "reportedVersions": "Home1.10.0; Helper0.7.4",
+      "installer": "unknown",
+      "remote": null,
+      "tested": {
+        "install": "owner says installed and works well",
+        "Home": "unknown / not explicitly reported",
+        "emergency": "unknown / not explicitly reported",
+        "audio": "unknown / not explicitly reported",
+        "power": "unknown / not explicitly reported",
+        "OTA_rollback": "unknown / not explicitly reported"
+      },
+      "limitations": "Weather feature request; no individual control/audio/power/OTA tests",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/353"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "c3-maintainer-root",
+      "model": "OLED55C3RLA",
+      "firmware": "43.21.71",
+      "webos": "SDK11.2.0",
+      "edition": "root",
+      "release": "v1.13.0",
+      "showOnWebsite": true,
+      "result": "controls-tested",
+      "reportedVersions": "releasev1.13.0 Root0.13.2/RootUpdater0.5.4/retainedSystem1.2.5; P00publishedHome1.13.1/Helper0.8.0",
+      "installer": "macOSARM64",
+      "remote": "LGMagicexactmodelunknown",
+      "tested": {
+        "install": "genuinesignedupdate/rollback/forward; exactprofile/theme33tiles",
+        "Home": "repeatedphysicalappshortHomeRoot; No-rootP00Homepass",
+        "emergency": "tripleHomeLG/laterHomeLG; finalOff",
+        "audio": "audiblevideo",
+        "power": "remote10swake andAC30scoldbootpassed",
+        "OTA_rollback": "signedselectedofferforward/retainedrollback/forward passed; notordinarypublicfeed"
+      },
+      "limitations": "Historical#422failsremain; othermodels, remotes, stockDevModeIR and ordinarypublicfeed separate",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/blob/v1.13.0/docs/history/2026-11-08-release-1.13.0-artifacts.md"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/blob/v1.13.0/docs/history/2026-11-08-helper-0.8.0-compatibility.md"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/422"
+        }
+      ],
+      "evidenceKind": "maintainer-qa"
+    },
+    {
+      "id": "ur9100-noroot",
+      "model": "55UR91006LA",
+      "firmware": "33.31.75",
+      "webos": "SDK10.3.2",
+      "edition": "no-root",
+      "release": "v1.11.0",
+      "showOnWebsite": true,
+      "result": "controls-tested",
+      "reportedVersions": "releasev1.11.0/cytv0.12.0; Home1.12.0; Helper0.7.5; DevMode2.1.2",
+      "installer": "macOS27.2 ARM64 desktop",
+      "remote": null,
+      "tested": {
+        "install": "supported cleanup/fullrestart then fresh setup succeeded; bothappslisted",
+        "Home": "owner app -> physicalHome -> Clean",
+        "emergency": "not tested",
+        "audio": "unknown / not reported",
+        "power": "standby and functionalcoldboot untested; fullrestart for cleanup accepted after disablingQuickStart+ and secondunplug",
+        "OTA_rollback": "not tested"
+      },
+      "limitations": "Startup could not be verified by installer. Firstunplugnotdetected; QuickStart+ cause unproved. Controls otherthanHome not reported.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/406"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "c2-reddit-noroot",
+      "model": "OLED55C2PUA",
+      "firmware": "33.31.68",
+      "webos": "10.3.1 / build 3006",
+      "edition": "no-root",
+      "release": null,
+      "showOnWebsite": true,
+      "result": "reported-working",
+      "tested": "Owner reports successful No-root installation and works great so far.",
+      "limitations": "Owner customized tile/icon layout; individual Home, audio, power and rollback checks were not reported.",
+      "sources": [
+        {
+          "url": "https://www.reddit.com/r/LGOLED/comments/1xf4ast/comment/19rpnmqtzojlv/"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "c3-reddit-noroot",
+      "model": "LG C3",
+      "firmware": null,
+      "webos": "26",
+      "edition": "no-root",
+      "release": null,
+      "showOnWebsite": true,
+      "result": "reported-working",
+      "tested": "Owner reports No-root works great and is very satisfied.",
+      "limitations": "Exact model suffix, firmware, project versions and individual control/power checks unknown. Owner customized background.",
+      "sources": [
+        {
+          "url": "https://www.reddit.com/r/webos/comments/1xf4hc1/comment/19rw899h3otdw/"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "c5-77-reddit-noroot",
+      "model": "LG C5 77″",
+      "firmware": null,
+      "webos": null,
+      "edition": "no-root",
+      "release": null,
+      "showOnWebsite": true,
+      "result": "reported-working",
+      "tested": "Owner reports installed No-root launcher and describes it as fantastic.",
+      "limitations": "Exact model suffix, firmware, webOS, release and individual control/power checks unknown. Owner customized Liquid Glass theme with Homey.",
+      "sources": [
+        {
+          "url": "https://www.reddit.com/r/webos/comments/1xp8595/comment/19s8yazl6ekv7/"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    }
+  ]
+}

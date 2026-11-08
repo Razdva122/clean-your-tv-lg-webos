@@ -62,7 +62,11 @@
         "For an emergency stop, press Home three times within two seconds, releasing between presses; Helper through 0.6.13 instead uses a roughly two-second hold. Stop state persists until explicitly resumed. For maintenance use cytv and the saved TV connection. Do not uninstall first merely to update: that can erase app settings. Removing cytv from the computer does not remove TV apps. Keep recovery evidence after removal."
       ]
     ],
-    "tableHint": "Scroll sideways to compare both editions."
+    "tableHint": "Scroll sideways to compare both editions.",
+    "reportsTitle": "User-confirmed TVs",
+    "firmwareLabel": "Firmware",
+    "webosLabel": "webOS",
+    "releaseLabel": "Project release"
   },
   "de": {
     "helpTitle": "Hilfe und Wiederherstellung",
@@ -127,7 +131,11 @@
         "Für den Notausstieg Home innerhalb von zwei Sekunden dreimal drücken und dazwischen loslassen. Helper bis einschließlich 0.6.13 verwendet stattdessen etwa zwei Sekunden Halten. Der Stopp bleibt bis zum ausdrücklichen Fortsetzen bestehen. Wartung über cytv und die gespeicherte Verbindung durchführen. Nicht allein für ein Update zuerst deinstallieren: App-Einstellungen können verloren gehen. Entfernen von cytv am Computer entfernt keine TV-Apps. Wiederherstellungsnachweise auch nach Entfernung behalten."
       ]
     ],
-    "tableHint": "Seitlich scrollen, um beide Editionen zu vergleichen."
+    "tableHint": "Seitlich scrollen, um beide Editionen zu vergleichen.",
+    "reportsTitle": "Von Nutzern bestätigte TVs",
+    "firmwareLabel": "Firmware",
+    "webosLabel": "webOS",
+    "releaseLabel": "Projektversion"
   },
   "es": {
     "helpTitle": "Ayuda y recuperación",
@@ -192,7 +200,11 @@
         "Para detener de emergencia, pulsa Home tres veces en dos segundos, soltando entre pulsaciones; Helper hasta 0.6.13 usa en cambio una pulsación de unos dos segundos. La parada persiste hasta reanudar explícitamente. Para mantenimiento usa cytv y la conexión guardada. No desinstales primero solo para actualizar: puedes perder ajustes. Quitar cytv del ordenador no elimina apps del TV. Conserva los datos de recuperación tras la eliminación."
       ]
     ],
-    "tableHint": "Desplázate horizontalmente para comparar ambas ediciones."
+    "tableHint": "Desplázate horizontalmente para comparar ambas ediciones.",
+    "reportsTitle": "TV confirmados por usuarios",
+    "firmwareLabel": "Firmware",
+    "webosLabel": "webOS",
+    "releaseLabel": "Versión del proyecto"
   },
   "pt-BR": {
     "helpTitle": "Ajuda e recuperação",
@@ -257,7 +269,11 @@
         "Para parada de emergência, pressione Home três vezes em dois segundos, soltando entre os toques; o Helper até 0.6.13 usa uma pressão de cerca de dois segundos. A parada permanece até a retomada explícita. Use cytv e a conexão salva para manutenção. Não desinstale apenas para atualizar: isso pode apagar configurações. Remover cytv do computador não remove os apps da TV. Preserve as evidências de recuperação após a remoção."
       ]
     ],
-    "tableHint": "Role para os lados para comparar as duas edições."
+    "tableHint": "Role para os lados para comparar as duas edições.",
+    "reportsTitle": "TVs confirmadas por usuários",
+    "firmwareLabel": "Firmware",
+    "webosLabel": "webOS",
+    "releaseLabel": "Versão do projeto"
   },
   "fr": {
     "helpTitle": "Aide et récupération",
@@ -322,7 +338,11 @@
         "Pour l’arrêt d’urgence, appuyez trois fois sur Home en deux secondes en relâchant entre chaque pression ; Helper jusqu’à 0.6.13 utilise plutôt un appui d’environ deux secondes. L’arrêt persiste jusqu’à une reprise explicite. Pour la maintenance, utilisez cytv et la connexion enregistrée. Ne désinstallez pas avant une simple mise à jour : les réglages peuvent être perdus. Retirer cytv de l’ordinateur ne supprime pas les apps TV. Conservez les preuves de récupération après suppression."
       ]
     ],
-    "tableHint": "Faites défiler horizontalement pour comparer les deux éditions."
+    "tableHint": "Faites défiler horizontalement pour comparer les deux éditions.",
+    "reportsTitle": "TV confirmées par les utilisateurs",
+    "firmwareLabel": "Micrologiciel",
+    "webosLabel": "webOS",
+    "releaseLabel": "Version du projet"
   },
   "it": {
     "helpTitle": "Aiuto e ripristino",
@@ -387,7 +407,11 @@
         "Per lo stop di emergenza premi Home tre volte in due secondi, rilasciando tra le pressioni; Helper fino a 0.6.13 usa invece una pressione di circa due secondi. Lo stop resta fino alla ripresa esplicita. Per la manutenzione usa cytv e la connessione salvata. Non disinstallare prima di un semplice aggiornamento: puoi perdere impostazioni. Rimuovere cytv dal computer non elimina le app TV. Conserva le prove di ripristino dopo la rimozione."
       ]
     ],
-    "tableHint": "Scorri lateralmente per confrontare entrambe le edizioni."
+    "tableHint": "Scorri lateralmente per confrontare entrambe le edizioni.",
+    "reportsTitle": "TV confermate dagli utenti",
+    "firmwareLabel": "Firmware",
+    "webosLabel": "webOS",
+    "releaseLabel": "Versione del progetto"
   },
   "ko": {
     "helpTitle": "도움말 및 복구",
@@ -452,7 +476,11 @@
         "비상 정지는 2초 안에 Home을 세 번 누르되 매번 놓습니다. Helper 0.6.13 이하는 대신 약 2초간 누릅니다. 명시적으로 재개할 때까지 정지는 유지됩니다. 유지 관리는 cytv와 저장된 연결로 하세요. 단순 업데이트 전에 삭제하면 앱 설정이 지워질 수 있습니다. 컴퓨터에서 cytv를 지워도 TV 앱은 삭제되지 않습니다. 삭제 후에도 복구 증거를 보존하세요."
       ]
     ],
-    "tableHint": "옆으로 스크롤하여 두 에디션을 비교하세요."
+    "tableHint": "옆으로 스크롤하여 두 에디션을 비교하세요.",
+    "reportsTitle": "사용자가 확인한 TV",
+    "firmwareLabel": "펌웨어",
+    "webosLabel": "webOS",
+    "releaseLabel": "프로젝트 버전"
   },
   "hi": {
     "helpTitle": "मदद और रिकवरी",
@@ -517,7 +545,11 @@
         "आपातकालीन रोक के लिए दो सेकंड में Home तीन बार दबाएँ और बीच में छोड़ें। Helper 0.6.13 तक इसके बदले लगभग दो सेकंड दबाए रखें। रोक स्पष्ट रूप से फिर शुरू करने तक बनी रहती है। रखरखाव के लिए cytv और सेव कनेक्शन लें। सिर्फ अपडेट के लिए पहले अनइंस्टॉल न करें: ऐप सेटिंग मिट सकती हैं। कंप्यूटर से cytv हटाने पर टीवी ऐप नहीं हटते। हटाने के बाद भी रिकवरी प्रमाण रखें।"
       ]
     ],
-    "tableHint": "दोनों संस्करणों की तुलना के लिए बगल में स्क्रॉल करें।"
+    "tableHint": "दोनों संस्करणों की तुलना के लिए बगल में स्क्रॉल करें।",
+    "reportsTitle": "उपयोगकर्ताओं द्वारा पुष्टि किए गए टीवी",
+    "firmwareLabel": "फ़र्मवेयर",
+    "webosLabel": "webOS",
+    "releaseLabel": "प्रोजेक्ट संस्करण"
   },
   "pl": {
     "helpTitle": "Pomoc i odzyskiwanie",
@@ -582,7 +614,11 @@
         "Aby awaryjnie zatrzymać, naciśnij Home trzy razy w dwie sekundy, puszczając pomiędzy naciśnięciami. Helper do 0.6.13 używa zamiast tego przytrzymania przez około dwie sekundy. Zatrzymanie trwa do jawnego wznowienia. Do konserwacji użyj cytv i zapisanego połączenia. Nie odinstalowuj przed zwykłą aktualizacją: ustawienia mogą zniknąć. Usunięcie cytv z komputera nie usuwa aplikacji TV. Zachowaj dowody odzyskiwania po usunięciu."
       ]
     ],
-    "tableHint": "Przewiń w bok, aby porównać obie edycje."
+    "tableHint": "Przewiń w bok, aby porównać obie edycje.",
+    "reportsTitle": "Telewizory potwierdzone przez użytkowników",
+    "firmwareLabel": "Oprogramowanie TV",
+    "webosLabel": "webOS",
+    "releaseLabel": "Wersja projektu"
   },
   "ru": {
     "helpTitle": "Помощь и восстановление",
@@ -647,7 +683,11 @@
         "Для аварийной остановки нажмите Home трижды за две секунды, отпуская между нажатиями. Helper до 0.6.13 включительно вместо этого использует удержание примерно две секунды. Остановка сохраняется до явного возобновления. Для обслуживания используйте cytv и сохранённое подключение. Не удаляйте приложения перед обычным обновлением: настройки могут потеряться. Удаление cytv с компьютера не удаляет приложения ТВ. Сохраняйте материалы восстановления после удаления."
       ]
     ],
-    "tableHint": "Прокрутите таблицу в сторону, чтобы сравнить обе редакции."
+    "tableHint": "Прокрутите таблицу в сторону, чтобы сравнить обе редакции.",
+    "reportsTitle": "ТВ с подтверждением пользователей",
+    "firmwareLabel": "Прошивка",
+    "webosLabel": "webOS",
+    "releaseLabel": "Релиз проекта"
   },
   "zh-Hans": {
     "helpTitle": "帮助与恢复",
@@ -712,7 +752,11 @@
         "紧急停止时，在两秒内按三次 Home，每次都松开。Helper 0.6.13 及更早版本改为按住约两秒。停止状态持续到明确恢复为止。维护请使用 cytv 和已保存的连接。不要为了普通更新先卸载，否则可能丢失应用设置。从电脑移除 cytv 不会删除电视应用。卸载后仍请保留恢复证据。"
       ]
     ],
-    "tableHint": "横向滚动以比较两个版本。"
+    "tableHint": "横向滚动以比较两个版本。",
+    "reportsTitle": "用户确认可用的电视",
+    "firmwareLabel": "固件",
+    "webosLabel": "webOS",
+    "releaseLabel": "项目版本"
   },
   "zh-Hant": {
     "helpTitle": "說明與復原",
@@ -777,7 +821,11 @@
         "緊急停止時，在兩秒內按三次 Home，每次都放開。Helper 0.6.13 及更早版本改為按住約兩秒。停止狀態持續到明確恢復為止。維護請使用 cytv 和已儲存的連線。不要為了一般更新先解除安裝，否則可能遺失應用程式設定。從電腦移除 cytv 不會刪除電視應用程式。解除安裝後仍請保留復原證據。"
       ]
     ],
-    "tableHint": "橫向捲動以比較兩個版本。"
+    "tableHint": "橫向捲動以比較兩個版本。",
+    "reportsTitle": "使用者確認可用的電視",
+    "firmwareLabel": "韌體",
+    "webosLabel": "webOS",
+    "releaseLabel": "專案版本"
   },
   "cs": {
     "helpTitle": "Pomoc a obnova",
@@ -842,6 +890,10 @@
         "Pro nouzové ukončení stiskněte Home třikrát během dvou sekund a mezi stisky tlačítko uvolněte; Helper do verze 0.6.13 místo toho používá přibližně dvousekundové podržení. Stav zastavení trvá až do výslovného obnovení. Pro údržbu použijte cytv a uložené připojení k televizoru. Před aktualizací produkt neodinstalovávejte jen kvůli aktualizaci: můžete tím smazat nastavení aplikací. Odebrání cytv z počítače neodebere aplikace z televizoru. Po odebrání uchovejte záznamy pro obnovu."
       ]
     ],
-    "tableHint": "Posunutím do strany porovnáte obě edice."
+    "tableHint": "Posunutím do strany porovnáte obě edice.",
+    "reportsTitle": "TV potvrzené uživateli",
+    "firmwareLabel": "Firmware",
+    "webosLabel": "webOS",
+    "releaseLabel": "Verze projektu"
   }
 }
