@@ -12,7 +12,9 @@ The next installer also includes a Node 0.12.2 build of the existing mount-free
 KeyFilters Home backend. Its source and selection are shared with ordinary Root;
 only the Node compatibility build/runtime policy differ. Selection still requires
 explicitly absent System Profile and supported firmware/device capabilities.
-This packaging change is unpublished and does not add SDK 3 support. See
+This unpublished change admits by verified capabilities rather than an SDK
+number. It still requires a stock native Home executable; in-compositor Home
+ribbons are unsupported. SDK 3.9.0 fixture success is not target-TV acceptance. See
 [shared Home backend and recovery limits](C1-NATIVE-GATE.md#shared-root-runtime-variants-unpublished-beta-packaging).
 
 The common installer stages Beta under `legacy-root-beta/`, containing both

@@ -2,7 +2,7 @@
 
 **Goal:** Make the existing guarded compositor Home backend available to both Root runtime variants when System Profile is explicitly absent.
 
-**Design:** Keep one installer selector and one device backend. The existing SDK 6–9, ARM32, stock filter, ownership, emergency and recovery checks stay authoritative. Package a Node 0.12.2 build of the same backend in the already opt-in Beta payload; do not introduce a second Home implementation or widen firmware admission. QML filter code must stay independent of Node compatibility shims.
+**Design:** Keep one installer selector and one device backend. Verify ARM32 native Home, stock Qt filter APIs, ownership, emergency and recovery capabilities rather than using an SDK-number allowlist. Package a Node 0.12.2 build of the same backend in the already opt-in Beta payload; do not introduce a second Home implementation or weaken recovery admission. QML filter code must stay independent of Node compatibility shims.
 
 **Scope:** The user's request in this chat authorizes implementation of this existing-flow change. No TV access, release publication, version bump or compatibility claim for issue #410 is included.
 
@@ -14,7 +14,8 @@
 
 Delivery: [PR #451](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/451),
 branch `codex/root-beta-keyfilters`, targets `release/next`. The original #410
-remains open/planned because this does not admit its SDK 3.9.0. Archive the
+remains open/planned because the reported TV has not passed the native-Home and
+recovery capability checks; its SDK number alone no longer blocks schema3. Archive the
 temporary worktree after saving the final documentation; preserve the pushed PR.
 
 Review found an additional legacy API boundary in the shared lease broker:

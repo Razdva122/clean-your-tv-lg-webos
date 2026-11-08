@@ -5,7 +5,8 @@
 ## Experimental capability-based compositor admission (#364)
 
 The installer extends the existing mount-free protocol to capability-admitted
-Qt webOS SDK 6–9 TVs. Model names are recorded observations, not an allowlist;
+Qt TVs with a stock ARM32 native Home. In the next installer, model names and
+SDK numbers are recorded observations, not an allowlist;
 55NANO77SRA / SDK 9.2.2 / firmware 23.25.55 is the motivating report, not hardware
 acceptance. This experimental path is packaged in published releases from v1.11.0; target-TV physical compatibility remains unverified.
 
@@ -28,9 +29,26 @@ Successful Home profile reads retain the normal profile backend. Only the exact
 absent-System-Profile reply permits alternative admission; permission errors,
 timeouts and malformed replies never authorize it. Beta and ordinary bundles
 cannot be substituted for each other. The host-only legacy prototype and old
-mount backend remain excluded from the combined Beta build. Existing firmware,
-ARM32, input, ownership and foreign-state checks are unchanged. In particular,
-this does not admit SDK 3.9.0 or establish a fix for #410.
+mount backend remain excluded from the combined Beta build. Schema3 admission
+now uses capabilities at every boundary (host preflight, device selection and
+lease broker), without a numeric SDK floor. Schema2 retains its historical C1
+identity rule. ARM32, input, ownership and foreign-state checks remain required.
+A synthetic SDK 3.9.0/native-Home fixture passes; the actual #410 TV has not passed
+those checks and no fix for that report is established.
+
+The vendor filter files must resolve inside the protected vendor KeyFilters tree;
+the common `/usr/lib/qt5` alias is accepted without writing through it. The live
+filter verifies its Qt key/policy, timer, Luna and application-manager APIs before
+subscribing. Missing APIs leave Home with LG and prevent guardian activation.
+
+A configured KeyFilters field alone does not prove compatibility. The existing
+guardian authenticates `/usr/bin/com.webos.app.home` and returns to LG by launching
+that native application. Firmware with an in-compositor ribbon, a web/Flutter
+Home or no native executable is refused. Glasshouse uses a different recovery
+mechanism for its standalone/ribbon mode: it clears its Home mapping and injects
+a 100 ms key press after a delay; its source also records a B8 HDMI regression
+when forcibly closing the foreground app. That mechanism is not part of this
+native-Home backend. See the [pinned implementation](https://github.com/rorygallagher2024/glasshouse/blob/0d5007aac997d23d2405cfe4f7aad42a1685bb1f/server/lib/home.js#L1335).
 
 The same fresh-install, emergency-stop, explicit re-enable, restore and disabled
 OTA rules apply to both runtime variants. No new state layout, LS2 permission or

@@ -40,9 +40,7 @@ function admission(value, schema) {
     version.test(value.firmware) &&
     typeof value.webos === 'string' &&
     version.test(value.webos) &&
-    (schema === 2
-      ? value.webos.indexOf('6.') === 0
-      : /^[6-9]\./.test(value.webos)) &&
+    (schema !== 2 || value.webos.indexOf('6.') === 0) &&
     digest(value.target_sha256) &&
     keys(value.target, 'dev,ino,size,mtime_ns') &&
     integer(value.target.dev, 0, Math.pow(2, 63)) &&

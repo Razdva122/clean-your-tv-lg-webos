@@ -26,13 +26,13 @@ class CapabilityTests(unittest.TestCase):
         observed = '0 1 755 50684\n'+dump+'\nCYTV_HOME_ELF\n'+dump
         chain = [{'file':'/usr/lib/qt5/qml/KeyFilters/systemUi.js','handler':'handleSystemKeys'}]
         for beta in (False, True):
-            for case in ('profiles', 'keyfilters', 'sdk3', 'denied', 'unknown-chain'):
+            for case in ('profiles', 'keyfilters', 'sdk3', 'sdk5', 'denied', 'unknown-chain', 'missing-native'):
                 with self.subTest(beta=beta,case=case), tempfile.TemporaryDirectory() as folder:
                     class TV(Remote):
                         prepared = False
                         def run(self, command, **kwargs):
                             if command == VENDOR_PROBE: return 'CYTV_VENDOR_READY'
-                            if command == NATIVE_HEADERS: return observed
+                            if command == NATIVE_HEADERS: return '' if case=='missing-native' else observed
                             if 'CYTV_ROOT_READY' in command and '/usr/bin/python3' in command and not self.prepared:
                                 return 'CYTV_ROOT_MISSING'
                             return super().run(command, **kwargs)
@@ -40,7 +40,7 @@ class CapabilityTests(unittest.TestCase):
                             if 'systemprofile' in uri:
                                 return copy.deepcopy(PROFILES if case=='profiles' else dict(missing,errorText='Access denied') if case=='denied' else missing)
                             if 'getSystemInfo' in uri:
-                                return dict(returnValue=True,modelName='55NANO77SRA',firmwareVersion='23.25.55',sdkVersion='3.9.0' if case=='sdk3' else '9.2.2')
+                                return dict(returnValue=True,modelName='55NANO77SRA',firmwareVersion='23.25.55',sdkVersion={'sdk3':'3.9.0','sdk5':'5.6.2'}.get(case,'9.2.2'))
                             if 'getConfigs' in uri:
                                 return {'returnValue':True,'configs':{'com.webos.surfacemanager.keyFilters':[] if case=='unknown-chain' else chain}}
                             if 'getSystemSettings' in uri: return copy.deepcopy(SETTINGS)
@@ -56,10 +56,10 @@ class CapabilityTests(unittest.TestCase):
                         remote.prepared=True
                         return '/usr/bin/python3'
                     with patch.object(installer,'_python',return_value='/usr/bin/python3'), patch.object(installer,'_select_python',side_effect=provision) as prepare:
-                        if case in ('profiles','keyfilters'):
+                        if case in ('profiles','keyfilters','sdk3','sdk5'):
                             installer.preflight(install=True,home_interfaces=True)
                             prepare.assert_called_once_with(provision=True)
-                            if case=='keyfilters': self.assertEqual(installer.tv_info['home_backend_schema'],3)
+                            if case!='profiles': self.assertEqual(installer.tv_info['home_backend_schema'],3)
                         else:
                             with self.assertRaises(RootCapabilityError):
                                 installer.preflight(install=True,home_interfaces=True)
@@ -75,7 +75,7 @@ class CapabilityTests(unittest.TestCase):
         dump = ' '.join(str(n) for n in header)
         observed = '0 1 755 50684\n'+dump+'\nCYTV_HOME_ELF\n'+dump
         chain = [{'file':'/usr/lib/qt5/qml/KeyFilters/systemUi.js','handler':'handleSystemKeys'}]
-        for model,sdk,firmware in (('55NANO77SRA','9.2.2','23.25.55'),('OLED55C37LA','8.3.0','13.40.90'),('55UP7000PUA','6.5.3','03.53.45')):
+        for model,sdk,firmware in (('55NANO77SRA','9.2.2','23.25.55'),('OLED55C37LA','8.3.0','13.40.90'),('55UP7000PUA','6.5.3','03.53.45'),('60UJ6050-UA','3.9.0','06.10.55'),('OLED55CXPUA','5.6.2','04.64.00'),('future-native-qt','12.0.0','01.00.00')):
             def luna(uri, payload, **kw):
                 if 'systemprofile' in uri: return missing
                 if 'getSystemInfo' in uri: return dict(returnValue=True, modelName=model, firmwareVersion=firmware, sdkVersion=sdk)
@@ -87,9 +87,9 @@ class CapabilityTests(unittest.TestCase):
             self.assertEqual(info['home_backend_schema'],3)
             self.assertNotIn('home-profiles',info['root_requirements'])
 
-    def test_generic_compositor_refuses_unknown_chain_or_unsupported_sdk(self):
+    def test_generic_compositor_refuses_unknown_chain_or_invalid_identity(self):
         from cytv.root_capabilities import compositor_device
-        for sdk,chain in [('11.2.0',[]),('9.2.2',[]),('9.2.2',[{'file':'/foreign/home.js','handler':'handleSystemKeys'}])]:
+        for sdk,chain in [('11.2.0',[]),('9.2.2',[]),('invalid',[]),('9.2.2',[{'file':'/foreign/home.js','handler':'handleSystemKeys'}])]:
             remote=Mock()
             remote.luna.side_effect=[dict(returnValue=True,modelName='55NANO77SRA',firmwareVersion='23.25.55',sdkVersion=sdk),
                 {'returnValue':True,'configs':{'com.webos.surfacemanager.keyFilters':chain}}]

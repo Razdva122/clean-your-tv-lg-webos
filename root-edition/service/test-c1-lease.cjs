@@ -642,22 +642,37 @@ function schema3(files, model, sdk) {
   m.admission.firmware = '23.25.55';
   files[ROOT + '/home-backend.json'] = Buffer.from(JSON.stringify(m));
 }
-['55NANO77SRA', 'OLED55C37LA', '55UP7000PUA'].forEach(function (model) {
+['55NANO77SRA', 'OLED55C37LA', '55UP7000PUA', '60UJ6050-UA'].forEach(
+  function (model) {
+    var a = fixture(undefined, function (files) {
+      schema3(files, model, '9.2.2');
+    });
+    a.subscribe();
+    assert.strictEqual(a.calls.length, 1, 'schema3 is model-independent');
+    a.reply(native());
+    assert.strictEqual(a.replies.at(-1).healthy, true);
+  }
+);
+['3.9.0', '4.4.3', '5.6.2', '10.3.1', '12.0.0'].forEach(function (sdk) {
   var a = fixture(undefined, function (files) {
-    schema3(files, model, '9.2.2');
+    schema3(files, 'capability-admitted', sdk);
   });
   a.subscribe();
-  assert.strictEqual(a.calls.length, 1, 'schema3 is model-independent');
+  assert.strictEqual(
+    a.calls.length,
+    1,
+    'recorded SDK must not substitute for capability admission'
+  );
   a.reply(native());
   assert.strictEqual(a.replies.at(-1).healthy, true);
 });
 var unsupported = fixture(undefined, function (files) {
-  schema3(files, '55NANO77SRA', '11.2.0');
+  schema3(files, '55NANO77SRA', 'invalid');
 });
 assert.strictEqual(
   unsupported.aliasCount,
   0,
-  'C++ generation is not compositor-admitted'
+  'malformed observation is not admitted'
 );
 var disguised = fixture(undefined, function (files) {
   schema3(files, '55NANO77SRA', '9.2.2');
