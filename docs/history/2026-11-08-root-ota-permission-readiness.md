@@ -48,3 +48,14 @@ The final signed Root package still needs ordinary public-feed/early-launch
 acceptance on hardware. This source fix does not close #351 or certify the
 original retained System 1.1.2 configuration. User update commands and controls
 are unchanged; `docs/UPDATES.md` and `root-edition/UPDATES.md` were reviewed.
+
+## CI follow-up — 2026-11-08
+
+The Linux/macOS `test-catalogs.cjs` failure reproduced at `d55635a0`:
+its source scan found the exact permission-refusal text absent from the Root
+catalogs. Added that message in all thirteen languages without changing the
+service-match bytes, startup retry policy or catalog assertions. The unchanged
+catalog regression now passes (215 messages); `tests/system_updates/profile.cjs`,
+`root-edition/ui/test-profile.cjs`, formatting and diff checks also pass.
+Updated-head GitHub CI and release-coordinator integration remain separate gates.
+No TV operation was performed.
