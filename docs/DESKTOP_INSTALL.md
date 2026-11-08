@@ -1,5 +1,21 @@
 # Install cytv without a terminal
 
+## Installer update check (unreleased)
+
+Before a new installation, the computer installer checks GitHub's latest stable
+release and compares its installer version from `BUILD-INFO.json` with the running
+installer. If newer, choose **Open GitHub and download the latest version** to open
+the release page and stop this installation, or **No, install this version** to
+explicitly continue with the embedded packages. It never replaces itself or
+silently switches packages. The terminal also prints the download link.
+
+Network, rate-limit, TLS or invalid-metadata errors show an unavailable-check
+notice and allow installation to continue. Requests use HTTPS with a three-second
+timeout per request; no TV data or credentials are sent. Pending operations and
+maintenance/recovery commands skip this check. Non-interactive installation stops
+when a newer installer is found unless `--use-bundled-version` is explicitly given;
+`--yes` alone does not authorize using an older installer.
+
 > **Release 1.9.0:** see [versions, tested scope and recovery limits](RELEASE-1.9.0.md). C1 Beta is fresh-install only, selected automatically in the common installer; normal OTA is unavailable and physical C1 acceptance is pending. Historical results below retain their original artifact scope.
 
 > Release 1.7.1 rebuilds cytv 0.8.1 to correct macOS bundled-package validation. Use the published release link below for available downloads. [Patch scope and checks](RELEASE-1.7.1.md).

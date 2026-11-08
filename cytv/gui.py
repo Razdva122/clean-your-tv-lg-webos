@@ -34,7 +34,7 @@ class Events(QObject):
 
 
 class Wizard(QMainWindow):
-    def __init__(self, run=cli.main):
+    def __init__(self, run=cli.interactive_main):
         super().__init__()
         i18n.configure()
         self.run = run
@@ -787,7 +787,16 @@ class Wizard(QMainWindow):
         label.setWordWrap(True)
         label.setObjectName('promptTitle')
         self.form_layout.addWidget(label)
-        if prompt.kind == 'confirm':
+        if prompt.label == 'Installer version choice: ':
+            from .installer_update import DOWNLOAD, CONTINUE, RELEASES
+            self.title.setText(tr('A newer installer is available'))
+            self.subtitle.hide()
+            def download_installer():
+                QDesktopServices.openUrl(QUrl(RELEASES))
+                self.submit('1')
+            self.button(DOWNLOAD, download_installer, True).setFocus()
+            self.button(CONTINUE, lambda: self.submit('2'))
+        elif prompt.kind == 'confirm':
             trust_prompt = prompt.label.startswith('Connect and remember this TV?')
             beta_prompt = prompt.label.startswith('Install experimental Root Beta?')
             label = 'Connect and remember' if trust_prompt else 'Try Root Beta' if beta_prompt else 'Continue'
