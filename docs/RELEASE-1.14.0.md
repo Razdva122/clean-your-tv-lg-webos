@@ -2,8 +2,9 @@
 
 Unpublished release candidate after v1.13.0, tracked in
 [PR #442](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/442).
-Versions and scope are frozen for complete build validation. No new physical
-acceptance or public delivery is claimed.
+Scope and versions are frozen. [Full candidate42519326218:1](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42519326218)
+passed all21 jobs at4f9bcec1 and is pinned in the plan. New physical acceptance
+and public delivery remain pending.
 
 ## Changes
 
@@ -71,9 +72,11 @@ All eight implementation/maintenance PRs are included; #451's final a80392fb CI 
 Linux/macOS, browser, ARM Python and Windows/macOS desktop runtime checks.
 Those results precede versioned frozen-candidate build validation.
 
-Complete candidate build/provenance, same-version package comparison, Android
-original-signer code28→29 upgrade and affected exact-artifact TV acceptance remain
-release gates. Home/emergency controls, unrelated keys, audio/HDMI, standby,
+The complete candidate and same-version package comparison passed. The actual
+Mac ARM64 installer artifact matches its GitHub digest; all596 embedded payload
+hashes and component versions verify and match the preliminary package record.
+Android original-signer code28→29 upgrade and affected exact-artifact TV acceptance,
+followed by protected signing/publication and feed verification, remain release gates. Home/emergency controls, unrelated keys, audio/HDMI, standby,
 AC cold boot and recovery/rollback on changed artifacts are not established by
 host tests or package installation. Existing v1.13.0 observations retain their
 original hashes, model/firmware and state preconditions. No TV was accessed in

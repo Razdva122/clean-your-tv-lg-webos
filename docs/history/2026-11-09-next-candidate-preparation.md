@@ -75,7 +75,7 @@ explicit re-enable now require the shared read-only environment checks too.
 That is conservative admission hardening, not unchanged admission; restore does
 not call the admission probe. Developer guidance and release notes record it.
 README metadata tests (3), formatting and whitespace checks pass. Versioned
-payload validation and final frozen CI results are recorded below when complete.
+payload validation and final frozen CI results are recorded below.
 
 ## Documentation
 
@@ -100,13 +100,13 @@ emulator results retain their original hashes and state preconditions.
 
 | Case | Changed path / plausible failure | Minimum useful check | State |
 | --- | --- | --- | --- |
-| Latest installer choice | #449 could bypass explicit choice or block recovery | GUI/CLI metadata/error/consent regressions; packaged desktop smoke | Source tests passed; final installers pending |
+| Latest installer choice | #449 could bypass explicit choice or block recovery | GUI/CLI metadata/error/consent regressions; packaged desktop smoke | Source and packaged host checks passed |
 | No-root continuation | #444 repairs only an exact owned key | Original operation/inode/emergency-stop tests; supported affected-device continuation | Host passed; reporter device untested |
 | Root catalogs | #450 bypasses Node child process | Actual reader with subprocess forbidden, stream/deadline/mandatory-app checks; packaged setup | Host passed; reporter device untested |
-| Shared Root/Beta KeyFilters | #451 changes admission and loaded broker/filter | Exact legacy runtimes and refusal fixtures; versioned fresh alternative setup, Home/emergency/key-up/restore and fault cleanup | Host passed; physical cases pending |
-| Ordinary Root | Shared broker loads in the normal service too | Exact package/service load and normal profile selection; short usable-state/control check after selected delivery | Pending final artifacts |
-| Shared fonts | New corpus adds one Chinese glyph | Font coverage, generated package/resource comparison and Chinese browser rendering | Preliminary font delta verified; frozen browser pending |
-| Android update | New APK and embedded shared operations | Exact original-signer code28→29 emulator upgrade, retained Store/native operation checks | Pending final APK |
+| Shared Root/Beta KeyFilters | #451 changes admission and loaded broker/filter | Exact legacy runtimes and refusal fixtures; versioned fresh alternative setup, Home/emergency/key-up/restore and fault cleanup | Host/final build passed; physical cases pending |
+| Ordinary Root | Shared broker loads in the normal service too | Exact package/service load and normal profile selection; short usable-state/control check after selected delivery | Final artifact/host checks passed; physical checks pending |
+| Shared fonts | New corpus adds one Chinese glyph | Font coverage, generated package/resource comparison and Chinese browser rendering | Font delta, exact CI payload and frozen browser coverage passed |
+| Android update | New APK and embedded shared operations | Exact original-signer code28→29 emulator upgrade, retained Store/native operation checks | Final signed APK verified in CI; exact upgrade/native acceptance pending |
 
 The original #410 remains open/planned: native ARM32 LG Home is still required;
 in-compositor LG panels are refused and a KeyFilters field alone is insufficient.
@@ -142,7 +142,7 @@ transition probe is needed for those identical Helper bytes.
 | Root0.14.0 HD | `ed98a51864f2ad04d8ed22257ca77eebfc4f2f6aeef6117058bb4c985a23741c` |
 
 These are local preliminary packages, not pinned CI artifacts or device acceptance.
-Final metadata/notes/inventory agree; full candidate validation remains to run.
+Final metadata/notes/inventory agree; completed full-candidate validation is below.
 
 ## Consolidated first-run inventory and replacement
 
@@ -173,3 +173,33 @@ be represented as a retry of unchanged source or a successful pin of the failed
 run. Existing package preflight and scoped physical limitations remain applicable;
 no old device result is relabeled as acceptance of new artifacts. Normal trusted
 unit receipts may reuse matching successful checks without weakening coverage.
+
+## Selected complete candidate and exact artifact verification
+
+[Full build42519326218:1](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42519326218)
+completed successfully at `4f9bcec196441eb23a5b4ff29fbe9a76dd5b8619`: all21 jobs
+passed. This includes four desktop builds/package-runtime checks, signed Android,
+all8 Linux/macOS runtime shards, browser/full-theme coverage, ARM Python, Homebrew
+and the full-release marker. The Windows host suite that exposed the fixture
+failure now passes on an actual Windows runner. Coverage uses fresh checks and
+normal authenticated matching unit receipts; no required area is dropped or
+new receipt fabricated. The failed first candidate is retained as history only.
+
+The committed build pin selects this run/attempt/source; acceptance stays empty
+and no acceptance_build token is asserted before actual device observations.
+GitHub lists all9 expected console/desktop/Android artifacts, nonexpired and with
+SHA-256 digests. Downloaded `cytv-macos-arm64` matches API artifact digest
+`sha256:6414d30124d91a32c447b153fc57797a1f482315b0d2f6572d00df6a5875a24f`.
+Its console SHA-256 is
+`484d4fd9cc8d5ad38fddc94d03eff6d4b37c6e49621cb5d402448b25725d92fd`.
+Without executing the binary, the release verifier checked all596 embedded
+payload file hashes and component versions. Its complete payload hash map equals
+the preliminary payload, including all package hashes recorded above; Helper
+and System retain the authenticated published bytes. This is exact CI artifact
+verification, not a new physical/Home/OTA/rollback observation.
+
+The release remains draft for the selected TV and Android exact-upgrade/native
+acceptance cases, final signing/public-feed verification and publication. #410
+is still unresolved/planned; #389/#437 await delivery and reporter-device results.
+Only metadata/evidence changes follow the selected build, with input equivalence
+verified before pushing the pin. Do not rebuild for these records alone.
