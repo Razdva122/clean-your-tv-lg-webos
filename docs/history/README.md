@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [Root installer catalog reads over SSH, 2026-11-08](2026-11-08-issue389-direct-catalog-ssh.md): fixed bounded reads without TV Node subprocesses, preserved icon/validation behavior and synthetic host verification; reporter-device acceptance remains unverified.
+
 - [v1.13.0 full candidate artifacts, 2026-11-08](2026-11-08-release-1.13.0-artifacts.md): pinned successful full build, exact embedded Helper equivalence, signed Root provenance, genuine update/rollback and explicit remaining acceptance.
 
 - [Helper 0.8.0 pre-dispatch compatibility, 2026-11-08](2026-11-08-helper-0.8.0-compatibility.md): authenticated published Home 1.13.1, exact new Helper, physical short/triple Home, stopped-state readback and explicit remaining final-candidate gates.

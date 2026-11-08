@@ -999,13 +999,24 @@ else:
         observed=self.tv_info['root_inventory']={'applications':'unknown','inputs':'unknown'}
         self.tv_info.pop('root_inventory_failures',None)
         try:
+            from .root_catalog import capture
+            replies,failures=capture(self.remote)
+            if failures:self.tv_info['root_inventory_failures']=failures
             module=self.coordinator_code()+'/app-inventory.js'
-            # An EIM denial must not discard a valid application catalog. Null marks
-            # a failed fixed query; never synthesize successful input readback.
+            # Reuse the shipped validation/icon reader with captured SSH replies.
+            # Supplying its I/O provider avoids even loading Node child_process.
+            captured=json.dumps({'replies':replies,'failures':failures},separators=(',',':'))
             program=('var reader=require('+json.dumps(module)+');'
-                     'var failures={};function unavailable(kind){return function(error){'
+                     'var captured=JSON.parse('+json.dumps(captured)+'),failures=captured.failures;'
+                     'function reply(file,args,options,done){'
+                     'var index=args[2]==="luna://com.webos.applicationManager/listApps"?0:'
+                     'args[2]==="luna://com.webos.service.eim/getAllInputStatus"?1:-1;'
+                     'if(file!=="/usr/bin/luna-send"||index<0)throw Error("Invalid catalog read");'
+                     'done(null,JSON.stringify(captured.replies[index]));}'
+                     'function unavailable(kind){return function(error){'
                      'failures[kind]=error&&error.inventory||{reason:"unknown"};return null;};}'
-                     'Promise.all([reader().catch(unavailable("applications")),reader.inputs().catch(unavailable("inputs"))])'
+                     'Promise.all([captured.replies[0]===null?Promise.resolve(null):reader(reply).catch(unavailable("applications")),'
+                     'captured.replies[1]===null?Promise.resolve(null):reader.inputs(reply).catch(unavailable("inputs"))])'
                      '.then(function(value){value.push(failures);process.stdout.write(JSON.stringify(value));},function(){process.exit(1);});').encode()
             value=json.loads(self.remote.run('/usr/bin/node',data=program,timeout=30))
             if not isinstance(value,list) or len(value)!=3 or not isinstance(value[2],dict):raise ValueError('Invalid Root inventory')

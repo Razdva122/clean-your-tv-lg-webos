@@ -82,6 +82,11 @@ class RootInventoryTests(unittest.TestCase):
         from cytv.state import Store,target
         t=tempfile.TemporaryDirectory();self.addCleanup(t.cleanup)
         remote=Mock();remote.run.return_value=json.dumps(result+[{}] if isinstance(result,list) and len(result)==2 else result)
+        from types import SimpleNamespace
+        remote.channel.side_effect=lambda command:SimpleNamespace(command=command,close=lambda:None)
+        remote.chunks.side_effect=lambda channel,timeout:[json.dumps({'returnValue':True,
+            'apps':[{'id':'video','title':'Video'}]} if 'listApps' in channel.command else
+            {'returnValue':True,'devices':[]}).encode()]
         inst=Installer(remote,Store(t.name),target('192.0.2.10','root'),Path(t.name),{})
         inst.coordinator_code=Mock(return_value='/tmp/cytv-coordinator-'+'a'*32)
         return inst,remote
@@ -111,35 +116,70 @@ class RootInventoryTests(unittest.TestCase):
             self.assertIsNone(inst.store.pending(inst.profile))
 
 class RootInventoryRuntimeTests(unittest.TestCase):
-    """Run the installer's actual Node program and reader; fake only Luna I/O."""
+    """Execute the real reader with Node subprocess loading forbidden; fake SSH I/O."""
     fixture=RootInventoryTests.fixture
 
-    def runtime(self, apps, inputs):
-        import json,subprocess
+    def runtime(self, apps, inputs, icon=None):
+        import json,subprocess,shlex
         from pathlib import Path
-        from cytv.errors import TVCommandError
+        from types import SimpleNamespace
+        from cytv.errors import TVCommandError,UserError
         inst,remote=self.fixture(None)
         stage=inst.payload
         reader=Path(__file__).resolve().parents[2]/'root-edition/service/app-inventory.js'
         (stage/'app-inventory.js').write_text(
             'var reader=require('+json.dumps(str(reader))+');\n'
-            'var replies='+json.dumps({'apps':apps,'inputs':inputs})+';\n'
-            "function exec(file,args,options,cb){"
-            "if(file!=='/usr/bin/luna-send'||args[0]!=='-n'||args[1]!=='1'||args[3]!=='{}')throw Error('Unexpected command');"
-            "var kind=args[2]==='luna://com.webos.applicationManager/listApps'?'apps':"
-            "args[2]==='luna://com.webos.service.eim/getAllInputStatus'?'inputs':null;"
-            "if(!kind)throw Error('Unexpected URI');"
-            "setImmediate(function(){var reply=replies[kind];"
-            "if(reply==='timeout')cb(Object.assign(Error('PRIVATE TIMEOUT'),{killed:true,signal:'SIGTERM'}),'', 'PRIVATE STDERR');"
-            "else if(reply==='oversized')cb(Object.assign(Error('PRIVATE BUFFER'),{code:'ERR_CHILD_PROCESS_STDIO_MAXBUFFER'}),'','PRIVATE');"
-            "else if(reply==='missing-client')cb(Object.assign(Error('PRIVATE PATH'),{code:'ENOENT'}),'','PRIVATE');"
-            "else cb(null,JSON.stringify(reply));});}\n"
-            "module.exports=function(){return reader(exec,function(){return 0;});};"
-            "module.exports.inputs=function(){return reader.inputs(exec,function(){return 0;});};")
+            "module.exports=function(exec){return reader(exec,function(){return 0;});};"
+            "module.exports.inputs=function(exec){return reader.inputs(exec,function(){return 0;});};")
         inst.coordinator_code.return_value=str(stage)
+        replies={'luna://com.webos.applicationManager/listApps':apps,
+                 'luna://com.webos.service.eim/getAllInputStatus':inputs}
+        channels=[]
+        def channel(command):
+            args=shlex.split(command)
+            self.assertEqual(args[:5],['/usr/bin/luna-send','-n','1','-w','8000'])
+            self.assertEqual(args[6:],[ '{}'])
+            self.assertIn(args[5],replies)
+            current=SimpleNamespace(uri=args[5],closed=False)
+            current.close=lambda:setattr(current,'closed',True)
+            current.shutdown_write=lambda:self.fail('EOF sent before Luna reply')
+            channels.append(current)
+            return current
+        def chunks(current,timeout):
+            self.assertEqual(timeout,8)
+            reply=replies[current.uri]
+            if reply=='timeout':raise UserError('PRIVATE TIMEOUT',reason_code='operation-timeout')
+            if reply=='disconnect':raise UserError('PRIVATE CONNECTION',reason_code='connection-interrupted')
+            if reply=='missing-client':raise TVCommandError(127)
+            if reply=='denied-client':raise TVCommandError(126)
+            if reply=='oversized':yield b' '*(1048577 if 'listApps' in current.uri else 262145)
+            elif reply=='malformed':yield b'PRIVATE INVALID JSON'
+            elif reply in ('trailing','second-reply','truncated-utf8','oversized-tail','late-exit'):
+                yield b'{"returnValue":true,"apps":[{"id":"video","title":"Video"}]}'
+                if reply=='trailing':yield b'PRIVATE INVALID TAIL'
+                elif reply=='second-reply':yield b'{}'
+                elif reply=='truncated-utf8':yield b'\xe2'
+                elif reply=='late-exit':raise TVCommandError(1)
+                else:yield b' '*(1024*1024)
+            else:
+                raw=json.dumps(reply,ensure_ascii=False).encode()
+                for offset in range(0,len(raw),7):yield raw[offset:offset+7]
+        remote.channel.side_effect=channel
+        remote.chunks.side_effect=chunks
+        remote.catalog_channels=channels
+        self.addCleanup(lambda:self.assertTrue(all(channel.closed for channel in channels)))
         def run(command,*,data,timeout):
             self.assertEqual(command,'/usr/bin/node')
-            reply=subprocess.run(['node'],input=data,capture_output=True,timeout=timeout)
+            guard=("var Module=require('module'),load=Module._load;"
+                   "Module._load=function(name){if(name==='child_process')throw Error('Forbidden child_process');"
+                   "return load.apply(this,arguments);};\n").encode()
+            if icon is not None:
+                guard+=("var originalLoad=Module._load;Module._load=function(name){"
+                    "if(name==='fs')return {realpathSync:function(file){return file;},"
+                    "statSync:function(){return {isFile:function(){return true;},size:"+str(len(icon))+"};},"
+                    "readFileSync:function(){return Buffer.from("+json.dumps(icon.hex())+",'hex');}};"
+                    "return originalLoad.apply(this,arguments);};\n").encode()
+            reply=subprocess.run(['node'],input=guard+data,capture_output=True,timeout=timeout)
             if reply.returncode:raise TVCommandError(reply.returncode)
             return reply.stdout.decode()
         remote.run.side_effect=run
@@ -150,7 +190,7 @@ class RootInventoryRuntimeTests(unittest.TestCase):
         from cytv import diagnostics
         apps={'returnValue':True,'apps':[{'id':'video','title':'Video'}]}
         for inputs in ({'returnValue':False,'errorCode':-1,'errorText':'PRIVATE'},
-                       {'returnValue':True,'devices':[None]},'timeout'):
+                       {'returnValue':True,'devices':[None]},'timeout','malformed','oversized'):
             with self.subTest(inputs=inputs):
                 inst,messages=self.runtime(apps,inputs)
                 try:result=inst.root_inventory(b'fallback')
@@ -199,8 +239,10 @@ class RootInventoryRuntimeTests(unittest.TestCase):
              {'reason':'negative-reply'}),
             ({'returnValue':True,'apps':None},{'reason':'malformed-reply'}),
             ('timeout',{'reason':'timeout'}),
+            ('malformed',{'reason':'malformed-reply'}),
             ('oversized',{'reason':'oversized-reply'}),
-            ('missing-client',{'reason':'client-start-failed'})]
+            ('missing-client',{'reason':'client-start-failed'}),
+            ('denied-client',{'reason':'client-start-failed'})]
         for apps,expected in cases:
             with self.subTest(expected=expected):
                 inst,messages=self.runtime(apps,'timeout')
@@ -219,6 +261,43 @@ class RootInventoryRuntimeTests(unittest.TestCase):
         self.assertEqual(result['inputs'],[{'appId':'hdmi','label':'HDMI 1'}])
         self.assertEqual(inst.tv_info.get('root_inventory'),{'applications':'read','inputs':'read'})
         self.assertEqual(messages,[])
+        self.assertEqual(len(inst.remote.catalog_channels),2)
+
+    def test_connection_loss_during_optional_input_read_is_fatal(self):
+        from cytv.errors import UserError
+        inst,messages=self.runtime({'returnValue':True,'apps':[{'id':'video','title':'Video'}]},'disconnect')
+        with self.assertRaises(UserError) as caught:inst.root_inventory(b'fallback')
+        self.assertEqual(caught.exception.reason_code,'connection-interrupted')
+        self.assertEqual(messages,[])
+
+    def test_direct_reply_keeps_original_icon_and_metadata(self):
+        import base64
+        icon=bytes.fromhex('89504e470d0a1a0a0000000000000000')
+        inst,messages=self.runtime({'returnValue':True,'apps':[{
+            'id':'video','title':'Video','folderPath':'/usr/palm/applications/video',
+            'extraLargeIcon':'icon.png','iconColor':'#123456'}]},
+            {'returnValue':True,'devices':[]},icon=icon)
+        result=inst.root_inventory(b'fallback')
+        self.assertEqual(result['apps'],[{'id':'video','title':'Video','iconColor':'#123456',
+            'icon':'data:image/png;base64,'+base64.b64encode(icon).decode()}])
+
+    def test_captured_reply_is_data_even_with_script_like_titles(self):
+        title='Video 雪\u2028";require("child_process"); //'
+        inst,messages=self.runtime({'returnValue':True,'apps':[{'id':'video','title':title}]},
+                                   {'returnValue':True,'devices':[]})
+        result=inst.root_inventory(b'fallback')
+        self.assertEqual(result['apps'][0]['title'],title)
+
+    def test_valid_prefix_cannot_hide_trailing_or_failed_response(self):
+        from cytv.errors import UserError
+        for mode,reason in [('trailing','malformed-reply'),('second-reply','malformed-reply'),
+                            ('truncated-utf8','malformed-reply'),('oversized-tail','oversized-reply'),
+                            ('late-exit','client-error')]:
+            with self.subTest(mode=mode):
+                inst,messages=self.runtime(mode,{'returnValue':True,'devices':[]})
+                with self.assertRaises(UserError):inst.root_inventory(b'fallback')
+                self.assertEqual(inst.tv_info.get('root_inventory_failures'),{'applications':{'reason':reason}})
+                self.assertEqual(messages,[])
 
 class RootInventoryCheckTests(unittest.TestCase):
     def test_unavailable_input_read_is_not_displayed_as_passed(self):
