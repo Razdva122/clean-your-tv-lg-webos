@@ -1,7 +1,8 @@
 # v1.14.0 candidate preparation — 2026-11-09
 
 Candidate [#442](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/442)
-contains seven implementation PRs: #441, #444, #445, #447, #449, #450 and #451.
+contains eight implementation/maintenance PRs: #441, #444, #445, #447, #449, #450,
+#451 and release-blocking fixture correction #452.
 All use merge commits into `release/next`; none is excluded. Root/Beta #451 was
 held for its existing task's completed revision, then reviewed and merged only
 after a80392fb passed its final required CI. No new features are admitted after
@@ -142,3 +143,33 @@ transition probe is needed for those identical Helper bytes.
 
 These are local preliminary packages, not pinned CI artifacts or device acceptance.
 Final metadata/notes/inventory agree; full candidate validation remains to run.
+
+## Consolidated first-run inventory and replacement
+
+Full candidate42516955873:1 at7f0a98df completed all21 jobs:20 successful and
+one failed Windows desktop job. Linux, macOS ARM64/Intel, Android, all8 runtime
+shards, full browser/themes, ARM Python and aggregate validation completed.
+Windows stopped during its host suite:1,057 cases,237 skips, one failed existing
+`RootInventoryRuntimeTests.test_direct_reply_keeps_original_icon_and_metadata`.
+No Windows installer artifact was produced. This failed run is not selected.
+
+The fixture ran the real TV reader with the Windows host `path.resolve`, so the
+POSIX TV icon path became a drive/backslash path and failed the reader allowlist.
+Forcing `path.win32` on macOS reproduced the exact fallback-icon failure before
+the fix. #452 selects the real Node `path.posix` in the fixture's existing module
+guard, retaining its forbidden-child-process check, filesystem fixture and real
+icon/metadata assertions. All9 runtime cases pass under the same forced-Windows
+injection after the fix; all21 clean-reinstall tests pass normally. Independent
+review and the complete PR CI pass. Only this fixture changed; no product code,
+package/version, state format or device action changed.
+
+The isolated fixture correction was prepared while the independent first-run
+cases finished, then merged only after the complete failure inventory above.
+No product fix or feature was interleaved with that case pass. There are no other
+observed failures in this pass. Source-equivalence checking explicitly reports
+`Candidate build inputs changed; rebuild required: tests/cytv/test_clean_reinstall.py`.
+That guarded validation input requires one replacement full candidate; it cannot
+be represented as a retry of unchanged source or a successful pin of the failed
+run. Existing package preflight and scoped physical limitations remain applicable;
+no old device result is relabeled as acceptance of new artifacts. Normal trusted
+unit receipts may reuse matching successful checks without weakening coverage.

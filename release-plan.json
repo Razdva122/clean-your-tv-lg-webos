@@ -42,6 +42,11 @@
         410
       ],
       "summary": "Share capability-checked KeyFilters across Root and Root Beta; native Home recovery remains required and original #410 is unconfirmed"
+    },
+    {
+      "pr": 452,
+      "issues": [],
+      "summary": "Use TV POSIX paths in the Windows catalog fixture"
     }
   ],
   "excluded": [],

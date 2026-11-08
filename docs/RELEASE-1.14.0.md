@@ -33,7 +33,8 @@ acceptance or public delivery is claimed.
   re-admit the device. Ordinary profile routing remains preferred
   when its reads succeed.
 - Balance existing CI work across four shards per OS and retain timings without
-  weakening coverage or evidence trust (#441). Reconcile published/localized
+  weakening coverage or evidence trust (#441). Use TV POSIX paths in the Windows
+  catalog test fixture (#452), preserving the real-reader icon assertions. Reconcile published/localized
   guides (#445) and curate the user-confirmed TV list (#447).
 
 The original #410 report remains open/planned. A synthetic SDK3.9.0/native-Home
@@ -66,7 +67,7 @@ Preserve Android application ID, original signer and private stored data.
 record the integrated host checks and documentation review.
 [Root/Beta development evidence](history/2026-11-09-root-beta-keyfilters.md)
 records exact legacy runtimes, ARM32 builds, refusal cases and limitations.
-All seven implementation PRs are included; #451's final a80392fb CI passed
+All eight implementation/maintenance PRs are included; #451's final a80392fb CI passed
 Linux/macOS, browser, ARM Python and Windows/macOS desktop runtime checks.
 Those results precede versioned frozen-candidate build validation.
 
