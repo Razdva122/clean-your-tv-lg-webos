@@ -77,6 +77,8 @@ QT_QPA_PLATFORM=offscreen .venv-cytv/bin/python scripts/test-shard.py \
 
 `CI_TEST_TIMINGS_DIR=build/test-timings scripts/test.sh installer` enables the
 same report through the existing profile. Unset, the local profile is unchanged.
+The shell consumes this variable without exporting it to nested test profiles,
+so those profiles cannot overwrite the outer report.
 Timings are diagnostics, never authenticated success receipts. A reused unit has
 no fresh timing artifact. Cancelled processes and discovery failures may have no
 JSON report; the existing test gate still fails.

@@ -1,6 +1,8 @@
 """Shard routing must neither lose tests nor turn discovery failures green."""
 import json
+import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -11,6 +13,24 @@ RUNNER = ROOT / 'scripts/test-shard.py'
 
 
 class CIShards(unittest.TestCase):
+    def test_profile_consumes_timing_directory_without_exporting_it_to_nested_tests(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'scripts').mkdir()
+            shutil.copy(ROOT / 'scripts/test.sh', root / 'scripts/test.sh')
+            python = root / 'python'
+            log = root / 'calls'
+            python.write_text('#!/bin/sh\nprintf "%s\\n" "${CI_TEST_TIMINGS_DIR-unset}" "$@" > "$TIMING_CALLS"\n')
+            python.chmod(0o755)
+            timings = root / 'timing reports'
+            result = subprocess.run(['bash', str(root / 'scripts/test.sh'), '--shard', '2/4', 'installer'],
+                                    env={**os.environ, 'PYTHON': str(python), 'TIMING_CALLS': str(log),
+                                         'CI_TEST_TIMINGS_DIR': str(timings)}, text=True, capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(log.read_text().splitlines(),
+                             ['unset', 'scripts/test-shard.py', '--shard', '2/4', '-s',
+                              'tests/cytv', '--timings', str(timings / 'cytv.json')])
+
     def run_shard(self, directory, shard, *args):
         return subprocess.run([sys.executable, str(RUNNER), '--shard', shard,
                                '-s', str(directory), *args], cwd=ROOT,

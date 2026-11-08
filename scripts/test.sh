@@ -15,6 +15,10 @@ fi
 export PYTHON
 export CYTV_PYTHON="${CYTV_PYTHON:-$PYTHON}"
 if [[ "$PYTHON" == */* ]]; then export PATH="$(dirname "$PYTHON"):$PATH"; fi
+# Consume reporting configuration here; nested profile tests must not inherit it
+# or overwrite the outer suite's report in the same directory.
+test_timings_directory="${CI_TEST_TIMINGS_DIR:-}"
+unset CI_TEST_TIMINGS_DIR
 # Shards run in separate CI checkouts; never export this selection to child tests.
 shard=""
 shard_index=1
@@ -29,8 +33,8 @@ if [[ "${1:-}" == --shard ]]; then
 fi
 primary() { [[ "$shard_index" == 1 ]]; }
 python_suite() {
-  if [[ "$1" == tests/cytv && -n "${CI_TEST_TIMINGS_DIR:-}" ]]; then
-    "$PYTHON" scripts/test-shard.py --shard "${shard:-1/1}" -s "$1" --timings "$CI_TEST_TIMINGS_DIR/cytv.json"
+  if [[ "$1" == tests/cytv && -n "$test_timings_directory" ]]; then
+    "$PYTHON" scripts/test-shard.py --shard "${shard:-1/1}" -s "$1" --timings "$test_timings_directory/cytv.json"
   elif [[ -n "$shard" ]]; then
     "$PYTHON" scripts/test-shard.py --shard "$shard" -s "$1"
   else
