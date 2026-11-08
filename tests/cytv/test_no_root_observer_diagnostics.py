@@ -215,7 +215,7 @@ class ObserverDiagnosticsTests(unittest.TestCase):
                     self.assertEqual(details['filesystem_operation'], 'mkdir')
                     self.assertEqual(details['storage_area'], 'public-staging')
                     self.assertIsNone(store.pending(self.profile))
-                    self.assertEqual(len(calls), 1)
+                    self.assertEqual(len(calls), 2)  # Read-only selection, then the single storage check.
                     self.assertEqual(list(public.iterdir()), [])
                     self.assertEqual(list(private.iterdir()), [])
 
