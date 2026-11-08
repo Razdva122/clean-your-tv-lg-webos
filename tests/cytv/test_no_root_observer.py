@@ -170,6 +170,39 @@ fs.writeSync=function(fd,b){if(Buffer.isBuffer(b)&&b.toString().indexOf('private
                         self.assertEqual((state/'ssap-key.json').read_bytes(),b'private-original')
                         self.assertEqual((state/'ssap-key.json').stat().st_mode&0o777,0o640)
 
+    def test_key_mode_repair_only_restricts_a_checked_owned_single_link_inode(self):
+        runtimes=[shutil.which('node')]+[os.environ[name] for name in ('NODE010','NODE01025','NODE012') if os.environ.get(name)]
+        for runtime in runtimes:
+            with self.subTest(runtime=runtime),tempfile.TemporaryDirectory(dir=PROCESS_TMP) as root:
+                state=Path(root).resolve()/'state';state.mkdir(mode=0o775)
+                key=state/'ssap-key.json';key.write_bytes(b'retained-key');key.chmod(0o775)
+                apps=state/'apps.json';apps.write_bytes(b'[]');apps.chmod(0o775)
+                latch=state/'blocked';latch.write_bytes(b'keep-stop');latch.chmod(0o775)
+                before=key.stat()
+                def run(repair=False):
+                    args=['repair-key-mode'] if repair else []
+                    return subprocess.run([runtime,'-e',observer.STATE_CHECK]+args+[str(state)],capture_output=True,timeout=5)
+                self.assertNotEqual(run().returncode,0,'Read-only status must not silently repair permissions')
+                result=run(True)
+                self.assertEqual(result.returncode,0,result.stderr.decode())
+                after=key.stat()
+                self.assertEqual(after.st_mode&0o777,0o640)
+                self.assertEqual((after.st_ino,after.st_uid,after.st_gid),(before.st_ino,before.st_uid,before.st_gid))
+                self.assertEqual(key.read_bytes(),b'retained-key')
+                self.assertEqual(latch.read_bytes(),b'keep-stop')
+                self.assertEqual(latch.stat().st_mode&0o777,0o775)
+                for kind in ('world-write','hardlink','symlink','unsafe-apps'):
+                    with self.subTest(kind=kind):
+                        key.unlink();key.write_bytes(b'retained-key');key.chmod(0o775)
+                        other=state/'other';other.unlink(missing_ok=True)
+                        if kind=='world-write':key.chmod(0o777)
+                        if kind=='hardlink':os.link(key,other)
+                        if kind=='symlink':key.rename(other);key.symlink_to(other)
+                        if kind=='unsafe-apps':apps.chmod(0o777)
+                        self.assertNotEqual(run(True).returncode,0)
+                        self.assertEqual(key.stat().st_mode&0o777,0o777 if kind=='world-write' else 0o775)
+                        self.assertEqual(key.read_bytes(),b'retained-key')
+
     def test_target_readback_scripts_run_on_every_configured_runtime(self):
         runtimes=[shutil.which('node')]+[os.environ[name] for name in ('NODE010','NODE01025','NODE012') if os.environ.get(name)]
         for runtime in runtimes:
