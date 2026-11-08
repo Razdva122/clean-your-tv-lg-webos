@@ -793,31 +793,64 @@ printf '%s' "$cytv_state"
             return dict(result, home_changed=True, launch_requested=True, updates_ready=updates_ready,
                         beta=not updates_ready)
 
+    def _root_setup_check(self, name, state):
+        detail = self.tv_info.get('root_setup_recovery')
+        if detail is not None:
+            detail['checks'][name] = state
+            if state == 'pending': detail['reason'] = 'pending'
+            elif state == 'unverified': detail['reason'] = name+'-unverified'
+
     def verify_root_updater(self, baseline_sha):
         script = """
-import hashlib, sys
+import errno, hashlib, sys
 from pathlib import Path
-sys.path.insert(0, '/var/lib/clean-your-tv-root-updater/code')
-from updater.device import Device, STATE
-from updater.store import Store
-from updater.package import safe_bytes, inspect_package
-store = Store(STATE)
-Device(store).integrity()
-if store.read('bootstrap').get('phase') != 'complete': raise ValueError('Incomplete updater setup')
-current = store.read('current')
-if current.get('sha256') != sys.argv[1]: raise ValueError('Rollback baseline mismatch')
-raw = safe_bytes(STATE / 'cache' / (sys.argv[1] + '.ipk'), uid=0)
-if hashlib.sha256(raw).hexdigest() != sys.argv[1]: raise ValueError('Rollback cache mismatch')
-inspect_package(raw, current)
-print('CYTV_UPDATER_VERIFIED')
+step = 'updater'
+try:
+    sys.path.insert(0, '/var/lib/clean-your-tv-root-updater/code')
+    from updater.device import Device, STATE
+    from updater.store import Store
+    from updater.package import safe_bytes, inspect_package
+    store = Store(STATE)
+    Device(store).integrity()
+    if store.read('bootstrap').get('phase') != 'complete': raise ValueError('Incomplete updater setup')
+    step = 'rollback-baseline'
+    current = store.read('current')
+    if current.get('sha256') != sys.argv[1]: raise ValueError('Rollback baseline mismatch')
+    raw = safe_bytes(STATE / 'cache' / (sys.argv[1] + '.ipk'), uid=0)
+    if hashlib.sha256(raw).hexdigest() != sys.argv[1]: raise ValueError('Rollback cache mismatch')
+    inspect_package(raw, current)
+except Exception as error:
+    # Preserve transport storage-full detection for real filesystem exhaustion.
+    if isinstance(error, OSError) and error.errno in (errno.ENOSPC, errno.EDQUOT): raise
+    # A fixed failed-boundary marker is evidence only; success still needs every check.
+    print('CYTV_UPDATER_UNVERIFIED '+step)
+else:
+    print('CYTV_UPDATER_VERIFIED')
 """
-        if self.remote.run(self._python_command([self._python(), '-c', script, baseline_sha]), timeout=60).strip() != 'CYTV_UPDATER_VERIFIED':
+        command = self._python_command([self._python(), '-c', script, baseline_sha])
+        self._root_setup_check('updater', 'pending')
+        self._root_setup_check('rollback-baseline', 'pending')
+        raw = self.remote.run(command, timeout=60).strip()
+        if raw != 'CYTV_UPDATER_VERIFIED':
+            if raw == 'CYTV_UPDATER_UNVERIFIED updater':
+                self._root_setup_check('rollback-baseline', 'not-run')
+                self._root_setup_check('updater', 'unverified')
+            elif raw == 'CYTV_UPDATER_UNVERIFIED rollback-baseline':
+                self._root_setup_check('updater', 'verified')
+                self._root_setup_check('rollback-baseline', 'unverified')
+            else:
+                self._root_setup_check('updater', 'unverified')
             raise UserError('Root updater recovery verification failed. Keep recovery state and run cytv status.')
+        self._root_setup_check('updater', 'verified')
+        self._root_setup_check('rollback-baseline', 'verified')
+        self._root_setup_check('updater-transaction', 'pending')
         reply = self.remote.luna(UPDATER_APP + '.service/status', {}, app_id=package.ROOT_APP, timeout=110)
         transaction=reply.get('result')
         healthy=(transaction is None or (isinstance(transaction,dict) and transaction.get('schema')==1 and isinstance(transaction.get('id'),str) and re.fullmatch('[a-f0-9]{32}',transaction['id']) and transaction.get('phase') in ('complete','rolled-back','aborted') and transaction.get('homeResumePhase')==transaction.get('phase')))
         if reply.get('returnValue') is not True or 'result' not in reply or not healthy:
+            self._root_setup_check('updater-transaction', 'unverified')
             raise UserError('Root updater service is not ready. Keep recovery state and run cytv status.')
+        self._root_setup_check('updater-transaction', 'verified')
 
     @staticmethod
     def root_active(result):
@@ -1090,6 +1123,7 @@ print('CYTV_UPDATER_VERIFIED')
         they never submit packages or activate Home here.
         """
         from .recovery_state import assess
+        self.tv_info.pop('root_setup_recovery', None)
         pending = self.store.pending(self.profile)
         if pending and pending.get('recovery_protocol')=='clean-removal-v1':
             from .recovery_state import removal_summary
@@ -1203,6 +1237,7 @@ print('CYTV_UPDATER_VERIFIED')
         return {'reconciled': reason}
 
     def _status(self, reconcile=True, trusted_recovery=False):
+        self.tv_info.pop('root_setup_recovery', None)
         pending = self.store.pending(self.profile)
         restoring = bool(pending and pending.get('activation_restore_pending') is True)
         reconcile = reconcile and not restoring
@@ -1365,6 +1400,9 @@ print('CYTV_UPDATER_VERIFIED')
 
     def can_resume_root_setup(self, pending, device):
         if pending and pending.get('activation_restore_pending') is True:
+            if self.profile['edition'] == 'root' and pending.get('action') == 'activate-root':
+                self.tv_info['root_setup_recovery'] = {'reason': 'restoration-pending',
+                    'checks': dict.fromkeys(diagnostics.context.ROOT_SETUP_CHECKS, 'not-run')}
             return False
         if (self.profile['edition'] == 'root' and pending
                 and pending.get('action') == 'activate-root'
@@ -1392,28 +1430,57 @@ print('CYTV_UPDATER_VERIFIED')
             return False
 
     def can_resume_root_activation(self, pending, device):
-        if (pending.get('stage') not in ('stop-helper', 'enable', 'launch')
+        # Advice only: retain original short-circuit order and all admission predicates.
+        detail = {'reason': 'not-run',
+                  'checks': dict.fromkeys(diagnostics.context.ROOT_SETUP_CHECKS, 'not-run')}
+        self.tv_info['root_setup_recovery'] = detail
+        def check(name, verified):
+            self._root_setup_check(name, 'verified' if verified else 'unverified')
+            return verified
+        if not check('receipt', not (pending.get('stage') not in ('stop-helper', 'enable', 'launch')
                 or pending.get('requires_updater') is not True or pending.get('updates_ready') is not True
                 or not isinstance(pending.get('baseline_sha'), str)
-                or re.fullmatch('[a-f0-9]{64}', pending['baseline_sha']) is None
-                or not self.root_setup_inactive(device)
-                or not isinstance(device.get('journal'), dict)
-                or device['journal'].get('state') != 'restored'
-                or (device.get('intent') or {}).get('phase') != 'disabled'):
+                or re.fullmatch('[a-f0-9]{64}', pending['baseline_sha']) is None)):
             return False
+        if not check('stock-home', self.root_setup_inactive(device)):
+            return False
+        if not check('restored-journal', not (not isinstance(device.get('journal'), dict)
+                or device['journal'].get('state') != 'restored'
+                or (device.get('intent') or {}).get('phase') != 'disabled')):
+            return False
+        current = 'files'
         try:
-            if not self.root_files_match(pending): return False
+            self._root_setup_check(current, 'pending')
+            if not check(current, self.root_files_match(pending)): return False
+            current = 'product'
             if pending.get('product_operation'):
+                self._root_setup_check(current, 'pending')
                 event = self.product_action('status', pending['product_operation'], verify_current=True)
                 proof = event.get('result', {})
-                if (event.get('state') != 'complete' or event.get('current') is not True
+                if not check(current, not (event.get('state') != 'complete' or event.get('current') is not True
                         or proof.get('verified') is not True or proof.get('home_changed') is not False
-                        or proof.get('baseline_sha') != pending['baseline_sha']):
+                        or proof.get('baseline_sha') != pending['baseline_sha'])):
                     return False
+            else:
+                self._root_setup_check(current, 'not-required')
+            current = 'updater'
+            self._root_setup_check(current, 'pending')
             self.verify_root_updater(pending['baseline_sha'])
+            # Successful return covers every verifier substep.
+            for name in ('updater', 'rollback-baseline', 'updater-transaction'):
+                self._root_setup_check(name, 'verified')
+            current = 'binding'
+            self._root_setup_check(current, 'pending')
             from .root_activation_recovery import SCRIPT
-            return self.remote.run(self._python_command([self._python(), '-c', SCRIPT])).strip() == 'CYTV_ACTIVATION_RECOVERABLE'
+            if not check(current, self.remote.run(self._python_command([self._python(), '-c', SCRIPT])).strip() == 'CYTV_ACTIVATION_RECOVERABLE'):
+                return False
+            detail['reason'] = 'verified'
+            return True
         except (OSError, RuntimeError, ValueError, TypeError, KeyError, AttributeError):
+            if detail['reason'] == 'pending':
+                # No classified reply: later remote substeps remain pending, not assumed absent.
+                pending_checks = [name for name, state in detail['checks'].items() if state == 'pending']
+                self._root_setup_check(pending_checks[0] if pending_checks else current, 'unverified')
             return False
 
     def finish_root_setup_disabled(self, expected_pending=None):

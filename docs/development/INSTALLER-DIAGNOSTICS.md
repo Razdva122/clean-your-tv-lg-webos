@@ -5,6 +5,37 @@ without treating it as recovery authority. These changes are in source only;
 v1.5.4 does not contain them. No TV compatibility or completed recovery follows
 from a diagnostic report.
 
+## Retained Root activation checks (next candidate, #355)
+
+For a retained `activate-root` receipt, `tv.root_setup_recovery` adds a fixed
+`reason` and `checks` map to the normal report and revalidated failure history.
+The ordered checks are `receipt`, `stock-home`, `restored-journal`, `files`,
+`product`, `updater`, `rollback-baseline`, `updater-transaction` and `binding`.
+States are `verified`, `unverified`, `not-run`, `pending` and `not-required`;
+unknown or malformed persisted values become `unknown`. Reasons are `verified`,
+`restoration-pending`, `pending`, `not-run` or the failed check plus `-unverified`.
+
+`not-run` means short-circuit evaluation never reached that check. `pending`
+means the remote aggregate check was submitted but its substep result could not
+be established, such as after transport failure. The existing Updater check now
+returns only a fixed failed-boundary marker, distinguishing its integrity/bootstrap
+from the rollback baseline/cache/package checks. Its separate service transaction
+read remains mandatory. The original success marker, predicates, call order,
+timeouts and continuation decision remain unchanged. No extra probes are added.
+The `binding` category groups refusal/error of the existing locked recovery proof;
+it does not export tokens, generations, transactions, hashes, routes, paths or
+exception text, and it cannot identify a discarded historical health-context cause.
+
+These fields explain a generic `observation-unverified` refusal; they do not fill
+installation preflight checks that recovery never ran. Recovery checks can execute
+retained/support code and take existing locks; this patch does not turn `recover`,
+`status` or `doctor` into wholly passive commands. It does not activate, restore,
+remove or reinstall anything automatically, and grants no recovery authority.
+Do not rerun an operation merely to populate diagnostics. Earlier reports cannot
+recover discarded detail. Rebuilt desktop/console/Android installers are required;
+no TV package, permission, endpoint or persistent device state is added. No device
+recovery or hardware compatibility is established by these synthetic host tests.
+
 ## TV Node version (next candidate)
 
 Root and No-root preflight and status checks read `/usr/bin/node --version`
