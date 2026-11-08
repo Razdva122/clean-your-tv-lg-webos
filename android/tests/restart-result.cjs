@@ -75,6 +75,9 @@ let browser;
       'ssh-unreachable',
       'Connection to the TV was interrupted. Check the connection and try again.'
     ],
+    ['ssh-access-denied', 'Check network permissions.'],
+    ['ssh-refused', 'Check the SSH port.'],
+    ['ssh-timeout', 'Check the TV network.'],
     ['ssh-auth-root', 'Check your Root SSH key.'],
     ['developer-key-server', 'Enable Key Server on the TV.']
   ]) {

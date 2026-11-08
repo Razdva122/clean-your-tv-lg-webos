@@ -2,6 +2,7 @@
 import html
 from pathlib import Path
 import shutil
+import subprocess
 import sys
 import threading
 
@@ -43,6 +44,7 @@ class Wizard(QMainWindow):
         self.collect_preparation = False
         self.report = None
         self.recovery_profile = None
+        self.selected_profile = None
         self.recovery_plan = None
         self.failure_help = None
         self.worker = None
@@ -224,13 +226,17 @@ class Wizard(QMainWindow):
         self.home()
 
     def clear_form(self):
-        while self.form_layout.count():
-            item = self.form_layout.takeAt(0)
-            widget = item.widget()
-            if widget:
-                widget.hide()
-                widget.setParent(None)
-                widget.deleteLater()
+        def clear(layout):
+            while layout.count():
+                item = layout.takeAt(0)
+                widget = item.widget()
+                if widget:
+                    widget.hide()
+                    widget.setParent(None)
+                    widget.deleteLater()
+                elif item.layout():
+                    clear(item.layout())
+        clear(self.form_layout)
 
     def button(self, label, callback, default=False, layout=None):
         button = QPushButton(tr(label))
@@ -279,6 +285,7 @@ class Wizard(QMainWindow):
     def home(self):
         self.reset_checks()
         self.recovery_profile = None
+        self.selected_profile = None
         self.recovery_plan = None
         self.failure_help = None
         self.preparation = []
@@ -451,6 +458,7 @@ class Wizard(QMainWindow):
         self.language.setEnabled(False)
         self.report = None
         self.recovery_profile = None
+        self.selected_profile = None
         self.recovery_plan = None
         self.failure_help = None
         self.pending = None
@@ -624,15 +632,30 @@ class Wizard(QMainWindow):
                     self.button('Connect using Root', lambda: self.start('uninstall', root_profile), True)
                 else:
                     self.button('Try again', lambda: self.start('uninstall', profile), True)
+            connection_help = (failed and self.failure_help and self.failure_help.get('can_edit_connection')
+                               and self.failure_help['code'].startswith(('ssh-', 'developer-key-'))
+                               and self.selected_profile and not self.recovery_plan and not self.recovery_profile)
+            if connection_help:
+                profile = dict(self.selected_profile)
+                self.button('Check connection again', lambda: self.start('doctor', profile), True).setFocus()
+                actions = QHBoxLayout()
+                self.form_layout.addLayout(actions)
+                if sys.platform == 'darwin' and self.failure_help['code'] in ('ssh-access-denied', 'ssh-unreachable', 'ssh-timeout'):
+                    self.button('Open System Settings', self.open_network_settings, layout=actions)
+                self.button('Change connection', lambda: self.edit_connection(profile), layout=actions)
+            report_actions = None
+            if connection_help:
+                report_actions = QHBoxLayout()
+                self.form_layout.addLayout(report_actions)
             if self.report:
-                self.button('Save diagnostic report…', self.save_report, (failed or setup_review) and not retry_removal)
+                self.button('Save diagnostic report…', self.save_report, (failed or setup_review) and not retry_removal and not connection_help, layout=report_actions)
                 if failed:
                     self.subtitle.setText(tr('Save the report from this failed attempt and attach it to your issue. Recovery data has been kept.'))
             elif failed:
                 self.subtitle.setText(tr('A diagnostic report could not be created. Include the visible error when opening an issue.'))
             if (failed and not cleanup) or self.check_results.get('home-button', {}).get('status') == 'fail':
-                self.button('Open an issue', lambda: QDesktopServices.openUrl(QUrl(diagnostics.ISSUE_URL)))
-            self.button('Back to start', self.home, not retry_removal and not recover and not ((failed or setup_review) and self.report))
+                self.button('Open an issue', lambda: QDesktopServices.openUrl(QUrl(diagnostics.ISSUE_URL)), layout=report_actions)
+            self.button('Back to start', self.home, not connection_help and not retry_removal and not recover and not ((failed or setup_review) and self.report))
             failed_checks = [result for result in self.check_results.values() if result['status'] in ('fail', 'unknown')]
             if failed and failed_checks:
                 self.subtitle.setText(tr('Failed') + ': ' + ', '.join(tr(result['label']) for result in failed_checks) + '\n' + self.subtitle.text())
@@ -655,6 +678,63 @@ class Wizard(QMainWindow):
                     if self.failure_help and self.failure_help.get('code') in ('ssh-auth-root','ssh-auth-no-root','ssh-key-file','ssh-identity','developer-key-server','developer-key-unlock','developer-key-response'):
                         message = self.failure_help['next_step']
                     self.subtitle.setText(tr(message)+('' if show_restart or connection else '\n'+tr(detail.get('stage_text', ''))))
+
+            if connection_help:
+                self.subtitle.setText(tr(self.failure_help['detail']))
+                if not self.report:
+                    self.subtitle.setText(self.subtitle.text()+'\n'+tr('A diagnostic report could not be created. Include the visible error when opening an issue.'))
+                messages = [self.failure_help['next_step']]
+                if sys.platform == 'darwin' and self.failure_help['code'] in ('ssh-access-denied', 'ssh-unreachable', 'ssh-timeout'):
+                    # macOS can retain an older duplicate's display name. The socket
+                    # error alone does not establish the Local Network switch state.
+                    app = next((p.name for p in Path(sys.executable).parents if p.suffix == '.app'), 'cytv')
+                    mac_help = tr('In System Settings → Privacy & Security → Local Network, allow {app}. macOS may show an older copy’s name. Fully quit cytv and reopen it after changing access.').format(app=app)
+                    messages = [mac_help] if self.failure_help['code'] == 'ssh-access-denied' else [*messages, mac_help]
+                self.content.setMaximumHeight(16777215)
+                self.content.setHtml(''.join('<p>'+html.escape(tr(message))+'</p>' for message in messages))
+                self.content.moveCursor(self.content.textCursor().MoveOperation.Start)
+                self.check_panel.hide()
+
+    def open_network_settings(self):
+        try:
+            subprocess.Popen(['open', '-b', 'com.apple.systempreferences'])
+        except OSError:
+            self.error_dialog('Open System Settings', self.failure_help['next_step'])
+
+    def edit_connection(self, profile):
+        """Check edited fields; never resume installation from a connection error."""
+        self.clear_form()
+        self.set_error_state(False)
+        self.title.setText(tr('Connection details'))
+        self.subtitle.setText(tr('Review the selected edition and SSH port against your existing trusted access. Do not weaken SSH security or disable host verification.'))
+        self.content.hide()
+        self.steps.hide()
+        self.check_panel.hide()
+        address, port = QLineEdit(profile['host']), QLineEdit(str(profile['port']))
+        edition = Select()
+        for key in ('root', 'no-root'):
+            edition.addItem('Root' if key == 'root' else 'No-root', key)
+        edition.setCurrentIndex(0 if profile['edition'] == 'root' else 1)
+        for text, control in [('TV IPv4 address or hostname', address), ('Edition', edition),
+                              ('SSH port (No-root: 9922; Root: 22)', port)]:
+            label = QLabel(tr(text))
+            label.setBuddy(control)
+            control.setAccessibleName(label.text())
+            self.form_layout.addWidget(label)
+            self.form_layout.addWidget(control)
+        def check():
+            from .state import target
+            try:
+                options = {key: profile[key] for key in ('connection', 'root_variant')
+                           if key in profile and edition.currentData() == profile['edition']}
+                edited = target(address.text(), edition.currentData(), port.text(), **options)
+            except ValueError:
+                self.subtitle.setText(tr('Invalid TV address or port. Use an IPv4 address or hostname and a port from 1 to 65535.'))
+                return
+            self.start('doctor', edited)
+        self.button('Check connection again', check, True)
+        self.button('Back to start', self.home)
+        address.setFocus()
 
     def show_prompt(self, prompt):
         self.check_panel.hide()

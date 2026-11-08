@@ -2,10 +2,10 @@ import sys,time,unittest
 from pathlib import Path
 from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'runtime'))
-from test_persistent_recovery import IntegrationTests
+from test_persistent_recovery import IntegrationFixture
 import device_adapter as d
 
-class PromotionTests(IntegrationTests):
+class PromotionTests(IntegrationFixture, unittest.TestCase):
  def setUp(self):
   super().setUp()
   for name in ('provision.verify','helper_bridge.require_idle','persistent_health.require_guardian'):

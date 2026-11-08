@@ -197,6 +197,9 @@ function connectionFailure() {
   return (
     [
       'ssh-unreachable',
+      'ssh-access-denied',
+      'ssh-refused',
+      'ssh-timeout',
       'ssh-protocol',
       'ssh-auth-root',
       'ssh-auth-no-root',
@@ -219,6 +222,9 @@ function recoveryDetails() {
   if (isCleanup()) {
     if (
       [
+        'ssh-access-denied',
+        'ssh-refused',
+        'ssh-timeout',
         'ssh-auth-root',
         'ssh-auth-no-root',
         'ssh-key-file',

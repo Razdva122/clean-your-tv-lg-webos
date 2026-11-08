@@ -60,6 +60,8 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
     elif type(error).__name__ in ('NoValidConnectionsError', 'AuthenticationException', 'BadHostKeyException', 'ImportError'):
         reason = {'NoValidConnectionsError': 'ssh-unreachable', 'AuthenticationException': 'ssh-authentication',
                   'BadHostKeyException': 'ssh-identity-changed', 'ImportError': 'host-runtime'}[type(error).__name__]
+    if phase == 'ssh-connect' and help and help['code'] in ('ssh-unreachable', 'ssh-access-denied', 'ssh-refused', 'ssh-timeout'):
+        reason = help['code']
     report['reason_code'] = context.choice(reason, context.REASONS)
     if status is not None:
         report['status'] = context.status_summary(status)
@@ -78,6 +80,9 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
         if recovery: report['root_recovery'] = recovery
     if hasattr(error, 'no_root_observer'):
         report['no_root_observer'] = getattr(error, 'no_root_observer')
+    if hasattr(error, 'local_recovery'):
+        from .errors import local_recovery_details
+        report['local_recovery'] = local_recovery_details(error.local_recovery)
     if isinstance(error, TVRejected):
         report['luna'] = error.luna
     if isinstance(error, PythonCacheError):
@@ -89,7 +94,7 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
             ('available_kib', 'required_kib', 'wam_session_kib') if getattr(safe, key) is not None})
     if error is not None:
         safe_error = context.failure_summary(report)
-        for key in ('luna', 'connection', 'ssh_command', 'python_cache', 'python_runtime', 'root_recovery', 'no_root_observer'):
+        for key in ('luna', 'connection', 'ssh_command', 'python_cache', 'python_runtime', 'root_recovery', 'no_root_observer', 'local_recovery'):
             if key in report:
                 report[key] = safe_error.get(key, {})
     report.update(context.history(report, store, profile, error, removal or pending))

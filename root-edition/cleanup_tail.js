@@ -177,7 +177,15 @@ function rpc(method, payload) {
   }
   if (!object(value) || typeof value.returnValue !== 'boolean')
     throw Error('cleanup-readback-malformed');
-  if (value.returnValue !== true) throw Error('cleanup-readback-unavailable');
+  if (value.returnValue !== true) {
+    var error = Error('cleanup-readback-unavailable');
+    error.systemprofile_missing =
+      method === 'com.webos.service.systemprofile/getProfiles' &&
+      value.errorCode === -1 &&
+      value.errorText ===
+        'Service does not exist: com.webos.service.systemprofile.';
+    throw error;
+  }
   return value;
 }
 function absent(final) {
@@ -269,6 +277,12 @@ function absent(final) {
     keys: ['defaultApps']
   });
   var home = settings.settings.defaultApps.home,
+    stockOnly =
+      record.profileless_cleanup_eligible === true &&
+      object(record.routes) &&
+      record.routes.mode === 'stock-settings' &&
+      record.routes.home === 'com.webos.app.home' &&
+      home === record.routes.home,
     profiles,
     never =
       record.routing_never_applied === true &&
@@ -281,10 +295,13 @@ function absent(final) {
       names: ['defaultApps', 'idleApp'],
       subscribe: false
     }).profiles;
+    if (!object(profiles)) throw Error('cleanup-readback-malformed');
   } catch (error) {
-    if (!never) throw error;
+    if (!never && !(stockOnly && error.systemprofile_missing === true))
+      throw error;
   }
   if (profiles) {
+    if (stockOnly) throw Error('route-changed');
     var routes = [
       home,
       profiles.defaultApps.categories.home,

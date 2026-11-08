@@ -19,6 +19,8 @@ class Remote:
 
     def run(self, command, data=None, timeout=30):
         self.calls.append(('run', command))
+        if 'CYTV_NODE_VERSION' in command and '/usr/bin/node --version' in command:
+            return 'CYTV_NODE_VERSION v8.12.0'
         from cytv import no_root_observer
         if '/usr/bin/node -e ' in command:
             args=shlex.split(command)
@@ -839,6 +841,8 @@ class OperationTests(unittest.TestCase):
                 self.assertEqual(receipt.read_bytes(), record)
                 self.assertTrue(all(call[0] == 'luna' and call[1].endswith('/dev/listApps')
                                     or call[0] == 'run' and 'CYTV_HELPER_' in call[1]
+                                    or call[0] == 'run' and 'CYTV_NODE_VERSION' in call[1]
+                                       and '/usr/bin/node --version' in call[1]
                                     for call in remote.calls))
                 receipt.unlink()
 
@@ -1565,6 +1569,7 @@ class OperationTests(unittest.TestCase):
         installer = self.installer(remote)
         installer.preflight(install=True)
         self.assertEqual(installer.tv_info, {
+            'node_version': '8.12.0', 'node_version_status': 'read',
             'kernel_arch': 'aarch64', 'userland_abi': 'arm32', 'arm32_supported': True,
             'helper_state': 'stopped'})
         self.assertFalse(any(c[0] == 'upload' for c in remote.calls))

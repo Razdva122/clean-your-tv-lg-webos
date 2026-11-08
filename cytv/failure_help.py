@@ -1,4 +1,6 @@
 """Fixed, phase-bound advice. It never connects, retries, repairs or grants trust."""
+import errno
+
 from .errors import DeveloperKeyError, TVConnectionError, TVRejected, is_storage_full, TV_STORAGE_FULL, COMPUTER_STORAGE_FULL
 from .recovery_state import unsubmitted_removal
 
@@ -8,6 +10,11 @@ REPORT = 'Save the diagnostic report and keep the saved connection and recovery 
 GUIDES = {
     'tv-storage-full': ('Not enough space on the TV', TV_STORAGE_FULL, REPORT, False),
     'computer-storage-full': ('Not enough space on this computer', COMPUTER_STORAGE_FULL, REPORT, False),
+    'ssh-access-denied': ('Network access was denied', 'This computer blocked the connection before SSH sign-in.',
+        "Review this app's network permissions and firewall or VPN rules, then check the connection again.", True),
+    'ssh-refused': ('The TV refused the connection', 'The selected SSH port is not accepting connections.',
+        'Check the TV address, edition and SSH port. Root requires existing root SSH; No-root normally uses Developer Mode on port 9922.', True),
+    'ssh-timeout': ('The TV did not respond', 'The connection timed out before SSH sign-in.', NETWORK, True),
     'ssh-unreachable': ('Check the TV connection', 'The selected SSH connection could not be reached or timed out.', NETWORK, True),
     'ssh-auth-root': ('SSH sign-in was not confirmed', 'Root sign-in needs your existing trusted SSH access.',
         'Use the existing root SSH password or supported private key. Its key passphrase unlocks the file; it is not the TV password.', True),
@@ -36,6 +43,21 @@ GUIDES = {
         'Package outcomes and remaining setup are checked from the original saved evidence.',
         'Choose Review recovery options for the same saved TV connection. Unknown package or setup requests are not repeated.',False),
 }
+
+
+def network_failure_code(error):
+    """Use typed socket causes, including Paramiko's per-address failures."""
+    errors = getattr(error, 'errors', None)
+    causes = list(errors.values()) if isinstance(errors, dict) and errors else [error]
+    codes = set()
+    for cause in causes:
+        number = getattr(cause, 'errno', None)
+        codes.add('ssh-access-denied' if number in (errno.EACCES, errno.EPERM) else
+                  'ssh-refused' if number == errno.ECONNREFUSED else
+                  'ssh-timeout' if isinstance(cause, TimeoutError) or number == errno.ETIMEDOUT else
+                  'ssh-unreachable')
+    # Mixed causes do not prove a single diagnosis. Never inspect exception prose.
+    return codes.pop() if len(codes) == 1 else 'ssh-unreachable'
 
 
 def for_error(error, phase, profile=None, pending=None):
@@ -68,13 +90,13 @@ def for_error(error, phase, profile=None, pending=None):
     elif phase == 'ssh-connect':
         if 'AuthenticationException' in names:
             code = 'ssh-auth-root' if root_ssh else 'ssh-auth-no-root'
-        elif root_ssh and (isinstance(error,(FileNotFoundError,ValueError)) or
-                                  (isinstance(error,PermissionError) and getattr(error,'filename',None))):
+        elif (isinstance(error,PermissionError) and getattr(error,'filename',None)
+              or root_ssh and isinstance(error,(FileNotFoundError,ValueError))):
             code = 'ssh-key-file'
         elif 'SSHException' in names:
             code = 'ssh-protocol'
         elif isinstance(error,(OSError,TimeoutError)) or 'NoValidConnectionsError' in names:
-            code = 'ssh-unreachable'
+            code = network_failure_code(error)
     if code is None and isinstance(pending, dict) and pending.get('recovery_protocol') == 'clean-removal-v1':
         return None  # The existing removal plan already explains the safe retry.
     if code is None and pending:
@@ -85,7 +107,7 @@ def for_error(error, phase, profile=None, pending=None):
         return None
     title, detail, next_step, edit = GUIDES[code]
     if pending and code.startswith(('ssh-', 'developer-key-')):
-        if code in ('ssh-unreachable', 'ssh-protocol'):
+        if code in ('ssh-unreachable', 'ssh-timeout', 'ssh-protocol'):
             next_step = 'Keep the TV awake on the same home network. Check network access and VPN isolation using the original trusted connection.'
         next_step += ' Keep the original saved TV connection and recovery data; do not replace or edit the connection to bypass recovery.'
     return {'code':code, 'title':title, 'detail':detail, 'next_step':next_step,
