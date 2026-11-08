@@ -9,6 +9,7 @@ import subprocess
 import tempfile
 import time
 import unittest
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / 'root-edition/gate/keyfilter.c'
@@ -60,12 +61,14 @@ class KeyfilterGuardTests(unittest.TestCase):
         return json.loads(p.stdout), p.returncode
     def spawn(self, seconds=0, ready=(True, True), broker=True):
         ir, iw = os.pipe(); cr, cw = os.pipe(); rr, rw = os.pipe()
+        # Queue the tiny fixture records while our read ends are still open;
+        # a stopped guardian may refuse and close its inherited ends at once.
+        for flag, fd in zip(ready, (iw, cw)):
+            if flag: os.write(fd, b'READY\n')
         p = subprocess.Popen([str(self.binary), '--guard', TOKEN, str(ir), str(cr), str(rw), str(seconds)],
                              pass_fds=(ir, cr, rw), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         for fd in (ir, cr, rw): os.close(fd)
         self.guards.append((p, (iw, cw)))
-        for flag, fd in zip(ready, (iw, cw)):
-            if flag: os.write(fd, b'READY\n')
         if broker:
             deadline = time.monotonic() + 1
             while time.monotonic() < deadline:
@@ -138,7 +141,21 @@ class KeyfilterGuardTests(unittest.TestCase):
     def test_restore_latches_before_retirement_and_no_rearm(self):
         p, iw, cw = self.armed(); s, rc = self.run_guard('--restore')
         self.assertEqual(rc,0); self.assertTrue(s['stopped']); self.assertTrue(s['stock_verified']); self.finish(p)
-        p, iw, cw, rr = self.spawn(); self.finish(p); self.assertEqual(os.read(rr,128), b''); os.close(rr)
+        stopped = (self.root/'state/stopped').read_bytes()
+        launch = subprocess.Popen
+        def refused_before_parent_resumes(*args, **kwargs):
+            child = launch(*args, **kwargs)
+            child.wait(timeout=3)
+            return child
+        # Reproduce the CI schedule: the retained stop latch lets the child
+        # refuse before the parent continues after Popen.
+        with mock.patch.object(subprocess, 'Popen', side_effect=refused_before_parent_resumes):
+            p, iw, cw, rr = self.spawn(broker=False)
+        refused = self.finish(p)
+        self.assertFalse(refused['returnValue']); self.assertFalse(refused['healthy'])
+        self.assertTrue(refused['stopped']); self.assertEqual(refused['reason'], 'guard_refused')
+        self.assertEqual((self.root/'state/stopped').read_bytes(), stopped)
+        self.assertEqual(os.read(rr,128), b''); os.close(rr)
     def test_malformed_active_is_preserved(self):
         (self.root/'state/active').write_text('invalid\n'); (self.root/'state/active').chmod(0o600)
         s, rc = self.run_guard('--restore'); self.assertNotEqual(rc,0)
