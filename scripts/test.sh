@@ -102,6 +102,9 @@ build/tests/test-relay-watchdog > build/tests/relay-watchdog.log
 tail -1 build/tests/relay-watchdog.log
 cc -std=c99 -Wall -Wextra -Werror native/prototype/test_relay_ir.c native/prototype/filter.c -o build/tests/test-relay-ir
 build/tests/test-relay-ir
+for scenario in off-on overflow-taps overflow-press overflow-emergency; do
+  build/tests/test-relay-ir "$scenario"
+done
 build/tests/test-filter
 for file in launcher/*.js native/app/*.js native/service/*.js renewal-service/*.js; do node --check "$file"; done
 

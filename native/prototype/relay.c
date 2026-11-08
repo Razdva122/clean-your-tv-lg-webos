@@ -92,15 +92,19 @@ int main(int argc,char**argv){
  int startup_reason=wait_for_release(ms,startup_keys,startup_pump);
  if(startup_reason){if(startup_reason==14)report("FAIL source-held\n");if(startup_reason==16)report("FAIL destination-busy\n");return startup_reason;}
  if(ioctl(in,GRAB,1)<0){report("FAIL grab\n");return 17;}
- report("READY\n");struct filter f={0},irf={0};uint64_t last=ms(),irDown=0;int reason=0;struct pollfd p[3]={{in,POLLIN,0},{0,POLLIN,0},{ir,POLLIN,0}};
+ report("READY\n");struct filter f={0},irf={0};uint64_t last=ms(),irDown=0;int reason=0,irSyncLost=0;struct pollfd p[3]={{in,POLLIN,0},{0,POLLIN,0},{ir,POLLIN,0}};
  while(!stop&&!output_failed){uint64_t now=ms();if(now-last>2000){reason=20;break;}if(filter_timeout(&f,now)==OPEN_LG&&report("LGHOME\n")<0)break;
  int r=poll(p,3,50);if(r<0){if(errno==EINTR)continue;reason=23;break;}
  if(p[1].revents&(POLLHUP|POLLERR)){reason=24;break;}
- if(p[1].revents&POLLIN){char b[64];ssize_t n=read(0,b,sizeof b);if(n<=0){reason=24;break;}last=ms();for(int i=0;i<n;i++){if(b[i]=='D'){f.disabled=irf.disabled=1;f.home=irf.home=0;f.count=irf.count=0;}if(b[i]=='E'){f.disabled=irf.disabled=0;f.home=irf.home=0;f.count=irf.count=0;}if(b[i]=='Q')stop=1;if(b[i]=='S')raise(SIGSTOP);}if(report("P\n")<0)break;}
+ if(p[1].revents&POLLIN){char b[64];ssize_t n=read(0,b,sizeof b);if(n<=0){reason=24;break;}last=ms();for(int i=0;i<n;i++){if(b[i]=='D'){f.disabled=irf.disabled=1;f.home=irf.home=0;f.count=irf.count=0;irDown=0;}if(b[i]=='E'){f.disabled=irf.disabled=0;f.home=irf.home=0;f.count=irf.count=0;irDown=0;}if(b[i]=='Q')stop=1;if(b[i]=='S')raise(SIGSTOP);}if(report("P\n")<0)break;}
  /* Losing the IR source only disables IR Home; M-RCU keeps working. */
  if(p[2].fd>=0&&p[2].revents&(POLLHUP|POLLERR|POLLNVAL)){close(p[2].fd);p[2].fd=-1;if(report("IR_LOST\n")<0)break;}
  else if(p[2].fd>=0&&p[2].revents&POLLIN){struct ev e[64];ssize_t n=read(p[2].fd,e,sizeof e);
   if(n>0&&n%sizeof e[0]==0)for(int i=0;i<n/(int)sizeof e[0];i++){
+   /* Overflow invalidates this passive source, not the grabbed M-RCU path.
+    * Discard events through SYN_REPORT and require a new complete press. */
+   if(e[i].type==0&&e[i].code==3){irf.home=irf.short_press=irf.count=0;irDown=0;irSyncLost=1;continue;}
+   if(irSyncLost){if(e[i].type==0&&e[i].code==0)irSyncLost=0;continue;}
    if(e[i].type!=1)continue;
    uint64_t t=ms();
    if(filter_event(&irf,e+i,t)==RELEASE){reason=27;stop=1;break;}

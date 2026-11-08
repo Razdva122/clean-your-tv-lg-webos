@@ -81,6 +81,8 @@ Im nächsten unveröffentlichten Kandidaten wird die Root-Einrichtung mit einer 
 
 ## 6. Bedienung und Wiederherstellung
 
+Noch unveröffentlichte IR-Unterstützung für No-root: Nach kurzem Drücken und Loslassen von Home wird Clean nach etwa 700 ms geöffnet; LG Home kann zuerst aufblitzen. Langes Home bleibt bei webOS; dreimal Home stoppt weiterhin Helper. Der Zugriff mit normalem Developer Mode ist unbestätigt; ändern Sie keine Eingabegeräteberechtigungen.
+
 Pfeile wählen eine Kachel, OK öffnet sie; OK gedrückt halten zum Verschieben. Kurzes Zurück behält Navigation und Beendigungsdialog der App bei. Kurzes Home öffnet bei aktiver Home-Steuerung den Launcher. Zurück 1,2 Sekunden gedrückt halten, um LG Home einmalig zu öffnen. Der Home-Schalter und Ihre Einstellungen bleiben unverändert.
 
 **Home innerhalb von zwei Sekunden dreimal kurz drücken**, dazwischen loslassen. Dies stellt LG Home wieder her und stoppt die Steuerung, ohne Einstellungen zurückzusetzen.

@@ -81,6 +81,8 @@ En el próximo candidato aún no publicado, la instalación Root continúa con u
 
 ## 6. Uso y recuperación
 
+Compatibilidad IR de No-root aún no publicada: al soltar Home tras una pulsación breve, Clean se programa para unos 700 ms después; LG Home puede aparecer primero. Mantener Home sigue correspondiendo a webOS y tres pulsaciones siguen deteniendo Helper. El acceso con Developer Mode normal no está verificado; no cambie los permisos de entrada.
+
 Las flechas seleccionan y OK abre; mantén OK para reordenar. Una pulsación breve de Atrás conserva la navegación y confirmación de salida de cada aplicación. Home abre el lanzador mientras el control está activo. Mantén Atrás durante 1,2 segundos para abrir LG Home una vez. El interruptor de control de Home y tus ajustes no cambian.
 
 **Pulsa Home tres veces en dos segundos**, soltando entre pulsaciones. Se recupera LG Home y se detiene el control sin borrar preferencias.

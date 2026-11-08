@@ -9,6 +9,8 @@ let now = 1000,
   worker,
   tick,
   timerId = 0;
+let holdClose = false,
+  pendingClose = null;
 const launches = [],
   files = new Map(),
   timers = new Map();
@@ -16,6 +18,10 @@ function Service() {
   this.register = () => {};
   this.activityManager = { create() {} };
   this.call = (uri, p, cb) => {
+    if (holdClose && uri.endsWith('/closeByAppId')) {
+      pendingClose = cb;
+      return;
+    }
     if (uri.endsWith('/launch')) launches.push(p.id);
     cb({ payload: { returnValue: true, state: { enabled: true, schema: 3 } } });
   };
@@ -52,6 +58,7 @@ const context = {
           worker.stdin = new EventEmitter();
           worker.stdin.write = () => {};
           worker.stdin.end = () => {};
+          worker.kill = () => {};
           return worker;
         }
       };
@@ -118,6 +125,40 @@ relay('READY');
 const homes = () => launches.filter((id) => id === 'com.gathin.tvhome').length;
 const base = homes();
 
+const scenario = process.argv[2];
+if (scenario) {
+  if (scenario === 'recovery-close') {
+    holdClose = true;
+    rpc('setHomeControl', { enabled: false });
+    rpc('setHomeControl', { enabled: true });
+  }
+  relay('IRHOME');
+  if (scenario === 'exit') worker.emit('exit', 0, null);
+  else if (scenario === 'watchdog') {
+    now += 3000;
+    tick();
+  } else if (scenario === 'recovery-close') {
+    fire(700);
+    const source = worker;
+    source.emit('exit', 20, null);
+    source.emit('close', 20, null);
+    pendingClose({ payload: { returnValue: true } });
+  } else if (scenario === 'off-on') {
+    rpc('setHomeControl', { enabled: false });
+    rpc('setHomeControl', { enabled: true });
+  } else if (scenario === 'stop') {
+    files.set(
+      '/media/developer/apps/usr/palm/applications/com.local.nativehome/state/control.json',
+      JSON.stringify({ cmd: 'stop' })
+    );
+    tick();
+  } else throw new Error('Unknown IR regression: ' + scenario);
+  fire(700);
+  assert.equal(homes(), base, 'pending IR Home cancelled after ' + scenario);
+  console.log('PASS pending IR Home cancelled after ' + scenario);
+  process.exit(0);
+}
+
 relay('IRHOME');
 assert.equal(homes(), base, 'IR Home waits for LG Home to open first');
 assert.equal(pending(700), 1);
@@ -143,3 +184,13 @@ assert.equal(homes(), base + 2, 'no custom Home after the triple-Home exit');
 console.log(
   'PASS real controller: IR Home after delay, coalesced repeats, none while Off or after emergency exit'
 );
+
+for (const name of ['exit', 'watchdog', 'off-on', 'stop', 'recovery-close']) {
+  const result = require('child_process').spawnSync(
+    process.execPath,
+    [__filename, name],
+    { encoding: 'utf8' }
+  );
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  process.stdout.write(result.stdout);
+}

@@ -81,6 +81,8 @@ Developer Mode 讓 CYTV 可以在沒有 root 的電視上安裝應用程式。
 
 ## 6. 日常使用與恢復
 
+尚未發布的 No-root 紅外線遙控支援：短按並放開 Home 後，預定約 700 毫秒後開啟 Clean；LG Home 可能先短暫出現。長按 Home 仍由 webOS 處理，連按三次仍會停止 Helper。一般 Developer Mode 電視上的存取能力尚未驗證；請勿變更輸入裝置權限。
+
 方向鍵選擇圖塊，OK 打開，按住 OK 調整順序。短按返回保留應用本身的導航和退出確認。啟用 Home 控制時，短按 Home 打開 Clean Your TV。按住返回 1.2 秒會臨時打開 LG Home 一次，不改變 Home 控制開關和設定。
 
 **兩秒內按 Home 三次，每次都鬆開**，即可返回 LG Home 並停止 Home 控制，偏好設定保留。

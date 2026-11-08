@@ -175,6 +175,8 @@ function refreshPresentation(generation, done) {
   screenWatch.foreground(finish);
 }
 function launchHome(reason, done) {
+  // A deferred close reply cannot transfer an old activation to a new relay.
+  var worker = child;
   var retained =
     reason === 'home' &&
     lastForeground === 'com.gathin.tvhome' &&
@@ -185,7 +187,11 @@ function launchHome(reason, done) {
       !current ||
       stopping ||
       stopRequested ||
-      (child && child.reason !== undefined) ||
+      child !== worker ||
+      (worker &&
+        (worker.reason !== undefined ||
+          worker.exited ||
+          worker.watchdogKill)) ||
       visitingLG ||
       generation !== presentation.generation()
     ) {
@@ -196,7 +202,11 @@ function launchHome(reason, done) {
       if (
         stopping ||
         stopRequested ||
-        (child && child.reason !== undefined) ||
+        child !== worker ||
+        (worker &&
+          (worker.reason !== undefined ||
+            worker.exited ||
+            worker.watchdogKill)) ||
         visitingLG ||
         generation !== presentation.generation()
       ) {
@@ -347,6 +357,7 @@ function launch(id, done, params) {
 var visitingLG = false,
   suppressReturnUntil = 0;
 function visitLG(done) {
+  cancelIrHome();
   if (visitingLG) {
     if (done) done(false);
     return;
@@ -378,6 +389,7 @@ var homeControl = require('./home-control')(
   fs,
   data,
   function (enabled) {
+    cancelIrHome();
     cancelResume();
     if (screenPolicy) screenPolicy.reset();
     if (child) child.stdin.write(enabled ? 'E' : 'D');
@@ -613,6 +625,7 @@ function readStop() {
       JSON.parse(fs.readFileSync(data + '/control.json', 'utf8')).cmd === 'stop'
     ) {
       stopRequested = true;
+      cancelIrHome();
       block(false);
       cancelResume();
     }
@@ -656,7 +669,7 @@ function finish(code, signal, needsCleanup, relayReason) {
     code === 22 || code === 27 || relayReason === 27 || stopRequested;
   invalidatePresentation(!terminalUI);
   clearTimeout(restartTimer);
-  clearTimeout(irHomeTimer);
+  cancelIrHome();
   cancelResume();
   if (screenWatch) screenWatch.close();
   clearInterval(timer);
@@ -724,6 +737,7 @@ function finish(code, signal, needsCleanup, relayReason) {
 }
 function workerClosed(worker, code, signal) {
   if (child !== worker || stopping) return;
+  cancelIrHome();
   var needsCleanup = ready || !!signal;
   child = null;
   ready = false;
@@ -801,6 +815,7 @@ function start(recovering) {
   // close follows exit AND stdio drain; the old relay/lock cannot overlap a retry.
   worker.on('exit', function () {
     worker.exited = true;
+    if (child === worker) cancelIrHome();
   });
   worker.on('close', function (code, signal) {
     workerClosed(worker, code, signal);
@@ -817,7 +832,10 @@ function start(recovering) {
         continue;
       }
       log({ event: 'worker', message: line });
-      if (/^EXIT [0-9]+$/.test(line)) worker.reason = Number(line.slice(5));
+      if (/^EXIT [0-9]+$/.test(line)) {
+        worker.reason = Number(line.slice(5));
+        cancelIrHome();
+      }
       if (worker.reason !== undefined || worker.watchdogKill || worker.exited)
         continue;
       if (line === 'BACK_DOWN') {
@@ -849,7 +867,10 @@ function start(recovering) {
         worker.stdin.write(homeControl.enabled() ? 'E' : 'D');
       }
       if (line === 'LGHOME' && !stopRequested) visitLG();
-      if (line === 'HOME') openHome(worker);
+      if (line === 'HOME') {
+        cancelIrHome();
+        openHome(worker);
+      }
       // Repeated IR Home presses restart the delay, so they open Home once.
       if (line === 'IRHOME') {
         clearTimeout(irHomeTimer);
@@ -862,8 +883,23 @@ function start(recovering) {
   });
   worker.stdin.on('error', function () {});
 }
+function cancelIrHome() {
+  clearTimeout(irHomeTimer);
+  irHomeTimer = null;
+}
 function openHome(worker) {
-  if (!homeControl.enabled() || visitingLG || stopRequested || launching)
+  if (
+    child !== worker ||
+    !ready ||
+    stopping ||
+    worker.exited ||
+    worker.watchdogKill ||
+    worker.reason !== undefined ||
+    !homeControl.enabled() ||
+    visitingLG ||
+    stopRequested ||
+    launching
+  )
     return;
   suppressReturnUntil = 0;
   launching = true;
@@ -960,6 +996,7 @@ var timer = setInterval(function () {
       log({ event: 'worker-watchdog' });
       watchdogLatch();
       child.watchdogKill = true;
+      cancelIrHome();
       child.kill('SIGKILL');
       return;
     }
