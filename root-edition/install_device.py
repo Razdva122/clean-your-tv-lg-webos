@@ -975,6 +975,16 @@ class LocalDevice:
             elif path.name.startswith('cytv-system-updater-'):
                 manifest=self.system_setup().verify_bundle(path)
                 allowed={name.split('/')[0] for name in manifest['files']}|{'bundle.json'}
+                if '__pycache__' in names:
+                    cache=checked_store(path/'__pycache__',uid);cached=cache._directory()
+                    try:bytecode=os.listdir(cached)
+                    finally:os.close(cached)
+                    sources=[name[:-3] for name in manifest['files'] if '/' not in name and name.endswith('.py')]
+                    for name in bytecode:
+                        if not any(re.fullmatch(re.escape(source)+r'\.cpython-[0-9]{2,3}(?:\.opt-[12])?\.pyc',name) for source in sources):
+                            raise ValueError('unclassified_support_stage')
+                        safe_bytes(path/'__pycache__'/name,uid=uid)
+                    allowed.add('__pycache__')
             else:
                 # Unrecorded gate-only staging has no product metadata and is
                 # not classified from its name or ELF header alone.

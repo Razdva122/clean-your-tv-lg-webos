@@ -260,7 +260,7 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
         self.store.checkpoint(self.profile, stage='setup')
         self.progress('Preparing updates for every TV component…')
         reply = json.loads(self.remote.run(self._python_command([
-            self._python(), stage + '/setup-system-updater.py', '--bundle', stage,
+            self._python(), '-B', stage + '/setup-system-updater.py', '--bundle', stage,
             '--edition', self.profile['edition'], '--device', '--apply']), timeout=360))
         if not isinstance(reply, dict) or reply.get('installed') is not True:
             raise UserError('System updater setup was not confirmed. Keep recovery state and run cytv status.')

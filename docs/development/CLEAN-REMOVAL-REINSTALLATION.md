@@ -102,3 +102,9 @@ continuation and refuse changed leases, selectors or removal intents. A live or
 unverified Root installation still requires its Root workflow. Node 0.12.2 uses
 the verified nested Beta payload. This does not weaken the normal No-root private
 cleaner or retain public staging after full removal.
+
+Native System bootstrap runs with bytecode disabled, matching managed/standalone
+setup. Older verified System staging may contain a top-level CPython cache.
+Retire it as data only when safe regular leaves match canonical cache names for
+manifest-listed top-level Python modules. Unknown members remain a refusal;
+never load a retained `.pyc` to authorize removal.

@@ -179,3 +179,24 @@ sequence is introduced by the guarded cleanup delegation or automatic launcher
 restart. Technical cleanup and System setup references describe the changes.
 The full-candidate compatibility gate remains unsatisfied; no previous Root
 physical Home result is reused as Helper evidence, and no approval JSON is changed.
+
+### Additional fresh-System removal finding
+
+A repeat of full cleanup after fresh System setup stopped at
+`unclassified_support_stage`. The first refusal also included two diagnostic
+artifacts created by the QA snapshot probe inside installer staging. Those
+QA-owned artifacts were preserved separately, without changing product journals;
+the same removal goal still refused afterwards. Readback isolated a product
+failure: native Python bootstrap had generated top-level `__pycache__` entries
+for the staged manifest's installation/package/binding modules. Managed Python
+and standalone SSH setup already suppress bytecode; the computer installer's
+native path did not.
+
+The installer now passes `-B`. Historical System staging caches can be retired
+only when each safe regular cache leaf has a canonical CPython cache filename
+matching a top-level Python source in the independently verified bundle manifest.
+Unknown cache members still refuse before deletion; bytecode is never imported
+or used as cleanup authority. Existing pinned unlink, owner, mode, link and
+whole-inventory checks remain. Real native subprocess and `py_compile` regressions
+first reproduced both failures and now pass, alongside 73 cleanup regressions and
+nine installer System cases. Independent review found no remaining defect.

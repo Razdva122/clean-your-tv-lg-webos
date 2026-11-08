@@ -49,6 +49,24 @@ class SystemBootstrapTests(unittest.TestCase):
     def installer(self, remote):
         return operations.Installer(remote,self.store,self.profile,self.payload,{},progress=lambda _:None)
 
+    def test_native_bootstrap_does_not_leave_bytecode_in_verified_staging(self):
+        import shlex,subprocess,sys
+        from unittest.mock import patch
+        work=self.path/'native-stage';work.mkdir()
+        (work/'dependency.py').write_text('value=True')
+        entry=work/'setup-system-updater.py'
+        entry.write_text("import json,sys;from pathlib import Path;sys.path.insert(0,str(Path(__file__).parent));import dependency;print(json.dumps({'installed':dependency.value}))")
+        remote=Remote();original=remote.run
+        def run(command,**kwargs):
+            if 'setup-system-updater.py' not in command:return original(command,**kwargs)
+            args=shlex.split(command);index=next(i for i,a in enumerate(args) if a.endswith('/setup-system-updater.py'))
+            return subprocess.check_output([*args[:index],str(entry)],text=True)
+        remote.run=run
+        installer=self.installer(remote)
+        with patch.object(installer,'_python',return_value=sys.executable):
+            self.assertTrue(installer.enable_system_updates()['installed'])
+        self.assertFalse((work/'__pycache__').exists(),'Native bootstrap created an unclassified cache that blocks full removal')
+
     def test_bootstrap_uploads_verified_bundle_without_reinstalling_home(self):
         remote=Remote();result=self.installer(remote).enable_system_updates()
         self.assertTrue(result['installed'])
