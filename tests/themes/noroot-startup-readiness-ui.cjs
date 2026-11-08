@@ -168,6 +168,10 @@ const { compile } = require('../../scripts/compile-tv-web.cjs');
           if(window.earlyRoot&&rootRestoreReads++===0){
             this.onservicecallback(JSON.stringify({returnValue:true,result:null}));return;
           }
+          if(window.earlyRoot==='permission'&&rootRestoreReads===2){
+            rootAudit.push('permission-refused');
+            this.onservicecallback(JSON.stringify({returnValue:false,errorText:'Legacy updater permissions changed; computer recovery required'}));return;
+          }
           const icon='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aE1sAAAAASUVORK5CYII=';
           const profile={schema:1,inventory:{apps:[{id:'readiness.app',title:'Readiness fixture',icon}],inputs:[]},config:{columns:5,dockApps:['readiness.app'],hiddenApps:[]},settings:{}};
           this.onservicecallback(JSON.stringify({returnValue:true,result:{profile,transaction:'readiness-root',version:ROOT_VERSION,phase:'verifying'}}));return;
@@ -266,8 +270,14 @@ const { compile } = require('../../scripts/compile-tv-web.cjs');
         if (earlyRoot) {
           assert.equal(
             root.audit.filter((event) => event === 'restore').length,
-            2
+            earlyRoot === 'permission' ? 3 : 2
           );
+          if (earlyRoot === 'permission')
+            assert(
+              root.audit.indexOf('permission-refused') <
+                root.audit.indexOf('healthy'),
+              'a transient permission refusal still requires genuine profile/frame health'
+            );
           assert(
             root.audit.indexOf('pending') < root.audit.indexOf('healthy'),
             'early CARD startup waits for the transaction without a relaunch event'
@@ -457,8 +467,10 @@ const { compile } = require('../../scripts/compile-tv-web.cjs');
       for (const edition of editions)
         for (const savedBuiltin of [false, true])
           await check(savedBuiltin, edition);
-    if (!historical && !overlapOnly && editions.includes('root-launcher'))
+    if (!historical && !overlapOnly && editions.includes('root-launcher')) {
       await check(false, 'root-launcher', true);
+      await check(false, 'root-launcher', 'permission');
+    }
     if (!historical || overlapOnly)
       for (const edition of editions)
         for (const scenario of [
