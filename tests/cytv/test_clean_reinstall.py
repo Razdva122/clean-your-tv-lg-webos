@@ -81,7 +81,7 @@ class RootInventoryTests(unittest.TestCase):
         from cytv.operations import Installer
         from cytv.state import Store,target
         t=tempfile.TemporaryDirectory();self.addCleanup(t.cleanup)
-        remote=Mock();remote.run.return_value=json.dumps(result)
+        remote=Mock();remote.run.return_value=json.dumps(result+[{}] if isinstance(result,list) and len(result)==2 else result)
         inst=Installer(remote,Store(t.name),target('192.0.2.10','root'),Path(t.name),{})
         inst.coordinator_code=Mock(return_value='/tmp/cytv-coordinator-'+'a'*32)
         return inst,remote
@@ -130,7 +130,9 @@ class RootInventoryRuntimeTests(unittest.TestCase):
             "args[2]==='luna://com.webos.service.eim/getAllInputStatus'?'inputs':null;"
             "if(!kind)throw Error('Unexpected URI');"
             "setImmediate(function(){var reply=replies[kind];"
-            "if(reply==='timeout')cb(Error('PRIVATE TIMEOUT'),'', 'PRIVATE STDERR');"
+            "if(reply==='timeout')cb(Object.assign(Error('PRIVATE TIMEOUT'),{killed:true,signal:'SIGTERM'}),'', 'PRIVATE STDERR');"
+            "else if(reply==='oversized')cb(Object.assign(Error('PRIVATE BUFFER'),{code:'ERR_CHILD_PROCESS_STDIO_MAXBUFFER'}),'','PRIVATE');"
+            "else if(reply==='missing-client')cb(Object.assign(Error('PRIVATE PATH'),{code:'ENOENT'}),'','PRIVATE');"
             "else cb(null,JSON.stringify(reply));});}\n"
             "module.exports=function(){return reader(exec,function(){return 0;});};"
             "module.exports.inputs=function(){return reader.inputs(exec,function(){return 0;});};")
@@ -181,6 +183,33 @@ class RootInventoryRuntimeTests(unittest.TestCase):
                 with self.assertRaises(UserError):inst.root_inventory(b'fallback')
                 self.assertEqual(inst.tv_info.get('root_inventory'),{'applications':expected,'inputs':'unavailable'})
                 self.assertEqual(messages,[])
+                self.assertIsNone(inst.store.pending(inst.profile))
+
+    def test_failed_queries_export_bounded_independent_causes(self):
+        from cytv import diagnostics
+        from cytv.errors import UserError
+        cases=[
+            ({'returnValue':False,'errorCode':-1,'errorText':'Permission denied PRIVATE'},
+             {'reason':'permission-denied','error_code':-1}),
+            ({'returnValue':False,'errorCode':-1,'errorText':'Service does not exist: PRIVATE'},
+             {'reason':'service-missing','error_code':-1}),
+            ({'returnValue':False,'errorCode':-1,'errorText':'Unknown method PRIVATE'},
+             {'reason':'method-missing','error_code':-1}),
+            ({'returnValue':False,'errorCode':True,'errorText':'PRIVATE'},
+             {'reason':'negative-reply'}),
+            ({'returnValue':True,'apps':None},{'reason':'malformed-reply'}),
+            ('timeout',{'reason':'timeout'}),
+            ('oversized',{'reason':'oversized-reply'}),
+            ('missing-client',{'reason':'client-start-failed'})]
+        for apps,expected in cases:
+            with self.subTest(expected=expected):
+                inst,messages=self.runtime(apps,'timeout')
+                with self.assertRaises(UserError) as caught:inst.root_inventory(b'fallback')
+                self.assertEqual(caught.exception.reason_code,'inventory-unavailable')
+                report=diagnostics.context.tv_summary(inst.tv_info)
+                self.assertEqual(report.get('root_inventory_failures'),
+                    {'applications':expected,'inputs':{'reason':'timeout'}})
+                self.assertNotIn('PRIVATE',str(report)+str(messages))
                 self.assertIsNone(inst.store.pending(inst.profile))
 
     def test_successful_input_snapshot_is_preserved(self):

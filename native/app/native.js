@@ -89,7 +89,13 @@ var child,
 var restarts = [],
   restartTimer = null,
   cleaning = false,
-  stopRequested = false;
+  stopRequested = false,
+  irHomeTimer = null;
+// The standard IR remote is observed, not grabbed, so webOS also opens its own Home
+// on IR Home. Launching custom Home after this delay lands it above LG Home.
+// ponytail: fixed delay from #207, not measured per model; replace it with a
+// foreground signal if webOS ever reports its Home bar.
+var IR_HOME_DELAY = 700;
 var homeCloseState = 'idle',
   homeCloseWaiters = [],
   terminalUI = false,
@@ -169,6 +175,8 @@ function refreshPresentation(generation, done) {
   screenWatch.foreground(finish);
 }
 function launchHome(reason, done) {
+  // A deferred close reply cannot transfer an old activation to a new relay.
+  var worker = child;
   var retained =
     reason === 'home' &&
     lastForeground === 'com.gathin.tvhome' &&
@@ -179,7 +187,11 @@ function launchHome(reason, done) {
       !current ||
       stopping ||
       stopRequested ||
-      (child && child.reason !== undefined) ||
+      child !== worker ||
+      (worker &&
+        (worker.reason !== undefined ||
+          worker.exited ||
+          worker.watchdogKill)) ||
       visitingLG ||
       generation !== presentation.generation()
     ) {
@@ -190,7 +202,11 @@ function launchHome(reason, done) {
       if (
         stopping ||
         stopRequested ||
-        (child && child.reason !== undefined) ||
+        child !== worker ||
+        (worker &&
+          (worker.reason !== undefined ||
+            worker.exited ||
+            worker.watchdogKill)) ||
         visitingLG ||
         generation !== presentation.generation()
       ) {
@@ -341,6 +357,7 @@ function launch(id, done, params) {
 var visitingLG = false,
   suppressReturnUntil = 0;
 function visitLG(done) {
+  cancelIrHome();
   if (visitingLG) {
     if (done) done(false);
     return;
@@ -372,6 +389,7 @@ var homeControl = require('./home-control')(
   fs,
   data,
   function (enabled) {
+    cancelIrHome();
     cancelResume();
     if (screenPolicy) screenPolicy.reset();
     if (child) child.stdin.write(enabled ? 'E' : 'D');
@@ -607,6 +625,7 @@ function readStop() {
       JSON.parse(fs.readFileSync(data + '/control.json', 'utf8')).cmd === 'stop'
     ) {
       stopRequested = true;
+      cancelIrHome();
       block(false);
       cancelResume();
     }
@@ -650,6 +669,7 @@ function finish(code, signal, needsCleanup, relayReason) {
     code === 22 || code === 27 || relayReason === 27 || stopRequested;
   invalidatePresentation(!terminalUI);
   clearTimeout(restartTimer);
+  cancelIrHome();
   cancelResume();
   if (screenWatch) screenWatch.close();
   clearInterval(timer);
@@ -717,6 +737,7 @@ function finish(code, signal, needsCleanup, relayReason) {
 }
 function workerClosed(worker, code, signal) {
   if (child !== worker || stopping) return;
+  cancelIrHome();
   var needsCleanup = ready || !!signal;
   child = null;
   ready = false;
@@ -794,6 +815,7 @@ function start(recovering) {
   // close follows exit AND stdio drain; the old relay/lock cannot overlap a retry.
   worker.on('exit', function () {
     worker.exited = true;
+    if (child === worker) cancelIrHome();
   });
   worker.on('close', function (code, signal) {
     workerClosed(worker, code, signal);
@@ -810,7 +832,10 @@ function start(recovering) {
         continue;
       }
       log({ event: 'worker', message: line });
-      if (/^EXIT [0-9]+$/.test(line)) worker.reason = Number(line.slice(5));
+      if (/^EXIT [0-9]+$/.test(line)) {
+        worker.reason = Number(line.slice(5));
+        cancelIrHome();
+      }
       if (worker.reason !== undefined || worker.watchdogKill || worker.exited)
         continue;
       if (line === 'BACK_DOWN') {
@@ -818,7 +843,7 @@ function start(recovering) {
         screenPolicy.back(true, monotonic());
       }
       if (line === 'BACK_UP') screenPolicy.back(false, monotonic());
-      if (line === 'HOME') {
+      if (line === 'HOME' || line === 'IRHOME') {
         screenPolicy.clearBack();
         homeSequence++;
         lastHomeAt = monotonic();
@@ -842,23 +867,46 @@ function start(recovering) {
         worker.stdin.write(homeControl.enabled() ? 'E' : 'D');
       }
       if (line === 'LGHOME' && !stopRequested) visitLG();
-      if (
-        line === 'HOME' &&
-        homeControl.enabled() &&
-        !visitingLG &&
-        !stopRequested &&
-        !launching
-      ) {
-        suppressReturnUntil = 0;
-        launching = true;
-        launchHome('home', function (ok) {
-          launching = false;
-          if (!ok && child === worker) worker.stdin.end();
-        });
+      if (line === 'HOME') {
+        cancelIrHome();
+        openHome(worker);
+      }
+      // Repeated IR Home presses restart the delay, so they open Home once.
+      if (line === 'IRHOME') {
+        clearTimeout(irHomeTimer);
+        irHomeTimer = setTimeout(function () {
+          irHomeTimer = null;
+          if (child === worker && ready && !stopping) openHome(worker);
+        }, IR_HOME_DELAY);
       }
     }
   });
   worker.stdin.on('error', function () {});
+}
+function cancelIrHome() {
+  clearTimeout(irHomeTimer);
+  irHomeTimer = null;
+}
+function openHome(worker) {
+  if (
+    child !== worker ||
+    !ready ||
+    stopping ||
+    worker.exited ||
+    worker.watchdogKill ||
+    worker.reason !== undefined ||
+    !homeControl.enabled() ||
+    visitingLG ||
+    stopRequested ||
+    launching
+  )
+    return;
+  suppressReturnUntil = 0;
+  launching = true;
+  launchHome('home', function (ok) {
+    launching = false;
+    if (!ok && child === worker) worker.stdin.end();
+  });
 }
 var timer = setInterval(function () {
   if (stopping) return;
@@ -948,6 +996,7 @@ var timer = setInterval(function () {
       log({ event: 'worker-watchdog' });
       watchdogLatch();
       child.watchdogKill = true;
+      cancelIrHome();
       child.kill('SIGKILL');
       return;
     }

@@ -40,6 +40,48 @@ class SimpleRemovalUITests(unittest.TestCase):
         self.assertEqual(attempts[0], attempts[1])
         self.assertNotIn('--yes', attempts[1])
 
+    def test_removal_connection_help_keeps_target_locked_and_retries_removal(self):
+        from PySide6.QtWidgets import QLineEdit, QComboBox
+        attempts=[]
+        def runner(argv,**kwargs):
+            attempts.append(argv)
+            write=kwargs['write'];write.recovery(self.fixture.profile)
+            write.failure_help({'code':'ssh-timeout','title':'The TV did not respond','detail':'Connection timed out.',
+                                'next_step':'Keep the TV awake.','pending':True,'can_edit_connection':False})
+            write.recovery_plan({'state':'waiting','disposition':'clean-removal','summary':'Removal is not finished yet.',
+                                 'next_step':'Try again','actions':['continue-removal'],'reason':'connection-interrupted'})
+            return 1
+        w=self.fixture.window();w.run=runner;w.start('uninstall',self.fixture.profile)
+        self.fixture.pump(lambda:not w.running)
+        button=self.fixture.button(w,'Connection details');self.assertIsNotNone(button);button.click()
+        fields=w.findChildren(QLineEdit)
+        self.assertTrue(fields);self.assertTrue(all(field.isReadOnly() for field in fields))
+        self.assertTrue(all(not field.isEnabled() for field in w.findChildren(QComboBox) if field.accessibleName()=='Edition'))
+        self.fixture.button(w,'Try again').click();self.fixture.pump(lambda:not w.running)
+        self.assertEqual(attempts[0],attempts[1])
+
+    def test_removal_connection_help_can_select_an_existing_root_signin_key(self):
+        from unittest.mock import patch
+        profile=dict(self.fixture.profile,edition='root',port=2222)
+        attempts=[]
+        def runner(argv,**kwargs):
+            attempts.append(argv);write=kwargs['write'];write.recovery(profile)
+            write.failure_help({'code':'ssh-key-file','title':'Check the local SSH key','detail':'Key unavailable.',
+                                'next_step':'Choose an existing key.','pending':True,'can_edit_connection':False})
+            write.recovery_plan({'state':'waiting','disposition':'clean-removal','summary':'Removal is not finished yet.',
+                                 'next_step':'Try again','actions':['continue-removal']})
+            return 1
+        w=self.fixture.window();w.run=runner;w.start('uninstall',profile)
+        self.fixture.pump(lambda:not w.running)
+        self.fixture.button(w,'Connection details').click()
+        with patch('cytv.gui.QFileDialog.getOpenFileName',return_value=('/existing/key','')):
+            self.fixture.button(w,'Choose key file…').click()
+        self.fixture.pump(lambda:not w.running)
+        self.assertEqual(attempts[-1][attempts[-1].index('--identity')+1],'/existing/key')
+        self.assertEqual(attempts[-1][0],'uninstall')
+        self.assertEqual(attempts[-1][attempts[-1].index('--host')+1],profile['host'])
+        self.assertEqual(attempts[-1][attempts[-1].index('--port')+1],'2222')
+
     def test_actual_cli_connection_loss_after_restart_wait_keeps_same_goal_and_plain_retry(self):
         self.fixture.store.request_clean_removal(self.fixture.profile)
         self.fixture.store.checkpoint(self.fixture.profile,stage='restart-required',removal_reason='restart-required')

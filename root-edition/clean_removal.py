@@ -21,7 +21,7 @@ APPS = ('com.cleanyourtv.root.preview', 'com.cleanyourtv.root.updater',
         'com.cleanyourtv.system.updater', 'com.cleanyourtv.updater',
         'com.local.nativehome', 'com.gathin.tvhome')
 # Presence (including dangling links) requires the original routing backend.
-ROUTING_EVIDENCE=('profile-trial.json','persistent-intent.json','persistent-binding.json',
+ROUTING_EVIDENCE=('profile-trial.json','persistent-intent.json','persistent-binding.json','boot-continuation.json',
                   'profile-candidate.stage','home-backend.json','c1-gate','c1-keyfilter')
 
 PRE_ACTIVATION=('prepared','install-submitting','install-accepted','install-observed','payload-verified','personalization-complete')+tuple(

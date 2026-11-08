@@ -39,7 +39,7 @@ def cancelled(write, store, profile, action, phase, tv_info=None, checks=None):
     diagnostics.save_result(write, store, action, profile, phase, tv_info, checks=checks)
 
 
-def remove_failed_no_root(installer, ask, write):
+def remove_before_reinstall(installer, ask, write):
     plan(write, 'ready', 'Finish removing Clean Your TV before installing again. LG Home will be restored and remaining Clean Your TV packages removed.')
     if not prompts.confirm('Remove remaining Clean Your TV packages?', ask, write):
         write(KEPT)
@@ -103,7 +103,7 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
                     diagnostics.create_report(installer.store, 'recover', installer.profile, 'recover', error)
                 except (OSError, ValueError, TypeError):
                     pass
-                remove_failed_no_root(installer, ask, write)
+                remove_before_reinstall(installer, ask, write)
                 return
             raise
         installer.tv_info.update(status=result)
@@ -127,7 +127,7 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
             return
         if pending and pending.get('recovery_protocol')=='no-root-original-stream-v1':
             if 'continue-no-root' not in assessment['actions']:
-                remove_failed_no_root(installer, ask, write)
+                remove_before_reinstall(installer, ask, write)
                 return
             plan(write,'ready','The original No-root operation can continue its verified remaining work. Unknown package requests will not be repeated.',actions=assessment['actions'])
             if prompts.confirm('Continue the original No-root operation?',ask,write):

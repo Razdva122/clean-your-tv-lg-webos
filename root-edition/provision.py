@@ -377,7 +377,7 @@ def prepare_stock_home():
     # Even a dangling marker is ambiguous. Never alter established recovery or
     # an existing routing transaction to retrofit support onto retained code.
     blocked = [STATE/name for name in ('recovery-provision.json','profile-trial.json',
-               'persistent-intent.json','persistent-binding.json','profile-candidate.stage')]
+               'persistent-intent.json','persistent-binding.json','boot-continuation.json','profile-candidate.stage')]
     blocked.append(Path('/var/webos-profile/override/clean-your-tv-root.json'))
     if pending is None and any(os.path.lexists(path) for path in blocked):
         raise ValueError('Home initialization requires never-activated provisioning')

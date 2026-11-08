@@ -86,6 +86,7 @@ node tests/resume.cjs
 node tests/controller-resume.cjs
 node --test tests/controller-resume-home.cjs tests/controller-watchdog.cjs
 node tests/controller-home.cjs
+node tests/controller-ir-home.cjs
 for test in native/prototype/test-*.cjs; do node "$test"; done
 "$PYTHON" -m unittest discover -s tests -p test_stop_fs.py
 "$PYTHON" -m unittest discover -s tests -p 'test_private*.py'
@@ -99,6 +100,11 @@ tail -1 build/tests/relay-startup.log
 cc -std=c99 -Wall -Wextra -Werror native/prototype/test_relay_watchdog.c native/prototype/filter.c -o build/tests/test-relay-watchdog
 build/tests/test-relay-watchdog > build/tests/relay-watchdog.log
 tail -1 build/tests/relay-watchdog.log
+cc -std=c99 -Wall -Wextra -Werror native/prototype/test_relay_ir.c native/prototype/filter.c -o build/tests/test-relay-ir
+build/tests/test-relay-ir
+for scenario in off-on overflow-taps overflow-press overflow-emergency; do
+  build/tests/test-relay-ir "$scenario"
+done
 build/tests/test-filter
 for file in launcher/*.js native/app/*.js native/service/*.js renewal-service/*.js; do node --check "$file"; done
 

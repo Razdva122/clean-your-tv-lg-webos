@@ -127,8 +127,10 @@ class AndroidConsole(Console):
         optional['restart_required'] = removal_restart_required(value)
         if type(value.get('actions')) is list:
             optional['actions'] = [item for item in value['actions'] if type(item) is str and item in ACTIONS]
-        if type(value.get('reason')) is str and value['reason'] in REASONS:
-            optional['reason'] = value['reason']
+        removal = value.get('removal') if type(value.get('removal')) is dict else {}
+        reason = value.get('reason', removal.get('reason'))
+        if type(reason) is str and reason in REASONS:
+            optional['reason'] = reason
         detail = removal_details(value)
         if detail:
             optional.update(stageText=i18n.translate(detail['stage_text']), blockerText=i18n.translate(detail['blocker_text']))

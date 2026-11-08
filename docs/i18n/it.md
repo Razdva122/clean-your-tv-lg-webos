@@ -81,6 +81,8 @@ Nel prossimo candidato non ancora pubblicato, l’installazione Root continua co
 
 ## 6. Uso e ripristino
 
+Supporto IR No-root non ancora pubblicato: rilasciare Home dopo una pressione breve programma Clean dopo circa 700 ms; LG Home potrebbe apparire prima. La pressione prolungata resta a webOS e tre pressioni fermano ancora Helper. L’accesso con Developer Mode standard non è verificato; non modificare i permessi dei dispositivi di input.
+
 Le frecce selezionano, OK apre; tieni premuto OK per riordinare. Un breve Indietro conserva navigazione e conferma di uscita dell’app. Home apre il launcher quando il controllo è attivo. Tieni premuto Indietro per 1,2 secondi per aprire LG Home una volta. L’interruttore del controllo Home e le impostazioni restano invariati.
 
 **Premi Home tre volte entro due secondi**, rilasciandolo tra le pressioni. Ripristina LG Home e interrompe il controllo senza cancellare le preferenze.
@@ -110,6 +112,8 @@ In v1.11.0 e versioni successive, scegli **Disinstalla Clean Your TV** in Manute
 Quando richiesto, scollega l’alimentazione della TV, ricollegala, attendi la rete e scegli **Riprova**. Standby o Quick Start non è un riavvio completo; CYTV non riavvia automaticamente la TV. Se la connessione si interrompe, controllala e riprova la stessa rimozione senza un altro assistente di ripristino. Se l’accesso è negato, usa la connessione Root richiesta; se la TV è occupata, attendi e riprova. Il successo appare solo dopo la verifica della pulizia finale. Conserva chiavi e rapporti originali. Restano validi i comandi di emergenza e il consenso alla condivisione.
 
 Da v1.11.0, un’installazione non riuscita o interrotta offre direttamente il ripristino. Se No-root non può proseguire, conferma una volta la rimozione completa. La rimozione esegue fino a tre tentativi in caso di perdita temporanea della connessione o processo CYTV occupato. Se serve Root, scegli **Connetti con Root** per la stessa TV; la pulizia Root verificata completa anche la rimozione No-root bloccata. Se l’attivazione Root fallisce, CYTV tenta di ripristinare e verificare LG Home senza ripetere l’attivazione. L’annullamento con lavoro incompleto conserva rapporto e azioni di ripristino. L’arresto di emergenza resta invariato.
+
+> **Miglioramenti non ancora pubblicati:** Dopo un errore di connessione durante la rimozione, apri i dettagli, verifica la rete o scegli una chiave SSH Root esistente e riprova. Indirizzo, edizione, porta e verifica della chiave del TV restano fissi. No-root controlla Helper prima dell’abbinamento: arrestalo e conferma il nuovo controllo nello stesso percorso. Solo un TV vuoto verificato senza installazioni in sospeso può evitare il riavvio; dopo una rimozione effettiva serve il riavvio richiesto. I residui del vecchio Root Updater portano alla rimozione completa con conferma separata prima della nuova installazione. Se il servizio ingressi non funziona, la pulizia sicura dei pacchetti prosegue; il successo richiede comunque la verifica della pulizia del collegamento.
 
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="requisiti"></a>

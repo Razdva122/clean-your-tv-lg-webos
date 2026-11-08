@@ -106,7 +106,38 @@ let browser;
             await page.locator('h1').innerText(),
             words[language].restartRemoval
           );
-        await page.locator('[data-action=retry-removal]').click();
+        if (reason === 'connection-interrupted') {
+          assert.equal(
+            await page.locator('[data-action=to-connection]').count(),
+            1
+          );
+          await page.locator('[data-action=to-connection]').click();
+          assert.equal(
+            await page.locator('#host').getAttribute('readonly'),
+            ''
+          );
+          assert.equal(
+            await page.locator('#port').getAttribute('readonly'),
+            ''
+          );
+          await page.evaluate(() => goBack());
+          assert.equal(
+            await page.locator('[data-action=retry-removal]').count(),
+            1
+          );
+          await page.locator('[data-action=to-connection]').click();
+          assert.equal(
+            await page.locator('#host').getAttribute('readonly'),
+            ''
+          );
+          await page.evaluate(() => {
+            document.getElementById('host').value = '192.0.2.99';
+            document.getElementById('port').value = '1234';
+          });
+          await page.locator('[data-action=start]').click();
+          await page.evaluate(() => goBack());
+          assert.equal(await page.locator('.progress-line').count(), 1);
+        } else await page.locator('[data-action=retry-removal]').click();
         const request = await page.evaluate(() => requests.at(-1));
         for (const key of ['host', 'edition', 'port', 'action', 'language'])
           assert.equal(request[key], target[key], key);

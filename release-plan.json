@@ -10,11 +10,65 @@
       "summary": "Do not crash the Helper on a heartbeat during power-off"
     },
     {
+      "pr": 419,
+      "issues": [
+        207
+      ],
+      "summary": "Include ferrets6 passive IR Home contribution through reviewed safety batch #428; original #207 device access/routing remains unconfirmed"
+    },
+    {
+      "pr": 421,
+      "issues": [
+        351
+      ],
+      "summary": "Retry exact transient Root OTA permission refusals within the existing startup budget; original permission-race cause and final public-feed/early-launch device acceptance remain unconfirmed"
+    },
+    {
+      "pr": 423,
+      "issues": [
+        416
+      ],
+      "summary": "Prioritize visible Root app icons within fixed inventory limits and refresh newly pinned missing icons; packaged-device acceptance remains pending"
+    },
+    {
       "pr": 424,
       "issues": [
         101
       ],
       "summary": "Remove proven never-activated Root installations without Home APIs; original #101 installation cause and reporter-device recovery remain unconfirmed"
+    },
+    {
+      "pr": 426,
+      "issues": [
+        397
+      ],
+      "summary": "Retain allowlisted Root catalog/input failure categories and bounded Luna codes; original #397 installation failure and reporter-device compatibility remain unresolved"
+    },
+    {
+      "pr": 427,
+      "issues": [
+        422
+      ],
+      "summary": "Continue exactly owned Root Home routing while rearming fresh startup protection; final physical Home and emergency acceptance for #422 remain pending"
+    },
+    {
+      "pr": 428,
+      "issues": [
+        207
+      ],
+      "summary": "Fence passive IR Home across stop, relay recovery and evdev overflow while preserving fresh triple-Home escape; original #207 physical acceptance remains pending"
+    },
+    {
+      "pr": 430,
+      "issues": [
+        355
+      ],
+      "summary": "Retain allowlisted Root setup-recovery refusal stages; original #355 activation cause, C2 recovery and passive diagnostic-path follow-up remain unresolved"
+    },
+    {
+      "pr": 431,
+      "issues": [],
+      "summary": "Keep removal and reinstallation moving through recoverable failures"
     }
   ],
   "excluded": [],

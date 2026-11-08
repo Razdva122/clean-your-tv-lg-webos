@@ -85,11 +85,13 @@ def supervise(transaction):
         c=Coordinator(Store(d.STATE))
         bound=os.path.lexists(c.binding) and c.read_binding()['transaction']==transaction
         if bound:
+            from boot_gate import waiting
+            pending_gate=waiting(transaction)
             from persistent_health import context, require_guardian
             deadline=startup_deadline(transaction)
             # Cold expected-package validation belongs before the input loop.
             # A READY pipe event alone must not start the parent's health wait.
-            context(transaction)
+            if not pending_gate: context(transaction)
             while time.monotonic()<deadline:
                 try:
                     require_guardian(transaction);break
@@ -110,8 +112,10 @@ def supervise(transaction):
             if c.read_binding()['transaction'] != transaction: return
             from persistent_health import publish, require_guardian
             require_guardian(transaction)
-            sequence[0] += 1
-            publish(transaction, sequence[0])
+            from boot_gate import waiting
+            if not waiting(transaction):
+                sequence[0] += 1
+                publish(transaction, sequence[0])
             if time.monotonic()-started>=HEARTBEAT_TIMEOUT:
                 raise RuntimeError('Input heartbeat validation exceeded watchdog deadline')
             if not health_ready[0]:
@@ -148,37 +152,39 @@ def supervise(transaction):
         if w is not None: os.close(w)
 
 
+def spawn_guarded(transaction):
+    deadline=startup_deadline(transaction)
+    guardian = bounded.spawn(transaction)
+    fd = os.open(d.STATE/'emergency.log', os.O_CREAT|os.O_APPEND|os.O_WRONLY|os.O_NOFOLLOW, 0o600)
+    try:
+        supervisor = subprocess.Popen([d.current_executable(), str(Path(__file__).resolve()), transaction],
+            stdin=subprocess.DEVNULL, stdout=fd, stderr=fd, start_new_session=True, close_fds=True)
+    finally: os.close(fd)
+    while time.monotonic()<deadline:
+        try: ready = d.safe_json(d.STATE/'escape-ready.json')
+        except FileNotFoundError: ready = {}
+        if ready.get('transaction') == transaction and ready.get('pid') == supervisor.pid:
+            if (supervisor.poll() is None and guardian.poll() is None
+                    and d.process_start(supervisor.pid) == ready.get('start_ticks')
+                    and d.process_start(ready['observer_pid']) == ready.get('observer_start_ticks')):
+                break
+        if supervisor.poll() is not None: raise RuntimeError('Emergency observer failed before activation')
+        time.sleep(min(.1,max(0,deadline-time.monotonic())))
+    else: raise RuntimeError('Emergency observer not ready; Home was not activated')
+    class Guarded:
+        pid = guardian.pid
+        def poll(self):
+            if guardian.poll() is not None or supervisor.poll() is not None: return 1
+            try:
+                if d.process_start(ready['observer_pid']) != ready['observer_start_ticks']: return 1
+            except (OSError, ValueError): return 1
+            return None
+    return Guarded()
+
+
 def start(before_publish=None):
-    def spawn(transaction):
-        deadline=startup_deadline(transaction)
-        guardian = bounded.spawn(transaction)
-        fd = os.open(d.STATE/'emergency.log', os.O_CREAT|os.O_APPEND|os.O_WRONLY|os.O_NOFOLLOW, 0o600)
-        try:
-            supervisor = subprocess.Popen([d.current_executable(), str(Path(__file__).resolve()), transaction],
-                stdin=subprocess.DEVNULL, stdout=fd, stderr=fd, start_new_session=True, close_fds=True)
-        finally: os.close(fd)
-        while time.monotonic()<deadline:
-            try: ready = d.safe_json(d.STATE/'escape-ready.json')
-            except FileNotFoundError: ready = {}
-            if ready.get('transaction') == transaction and ready.get('pid') == supervisor.pid:
-                if (supervisor.poll() is None and guardian.poll() is None
-                        and d.process_start(supervisor.pid) == ready.get('start_ticks')
-                        and d.process_start(ready['observer_pid']) == ready.get('observer_start_ticks')):
-                    break
-            if supervisor.poll() is not None: raise RuntimeError('Emergency observer failed before activation')
-            time.sleep(min(.1,max(0,deadline-time.monotonic())))
-        else: raise RuntimeError('Emergency observer not ready; Home was not activated')
-        class Guarded:
-            pid = guardian.pid
-            def poll(self):
-                if guardian.poll() is not None or supervisor.poll() is not None: return 1
-                try:
-                    if d.process_start(ready['observer_pid']) != ready['observer_start_ticks']: return 1
-                except (OSError, ValueError): return 1
-                return None
-        return Guarded()
-    if before_publish is None: return bounded.begin(spawn)
-    return bounded.begin(spawn, before_publish=before_publish)
+    if before_publish is None: return bounded.begin(spawn_guarded)
+    return bounded.begin(spawn_guarded, before_publish=before_publish)
 
 
 if __name__ == '__main__':

@@ -51,6 +51,21 @@ RECOVERY_REASONS = ('original_final_readback_verified','recovery_evidence_requir
                     'recovery-evidence-unverified')
 
 
+ROOT_SETUP_CHECKS = ('receipt', 'stock-home', 'restored-journal', 'files', 'product',
+                     'updater', 'rollback-baseline', 'updater-transaction', 'binding')
+ROOT_SETUP_REASONS = ('not-run', 'pending', 'verified', 'restoration-pending',
+                      *(name+'-unverified' for name in ROOT_SETUP_CHECKS))
+
+
+def root_setup_summary(value):
+    value = mapping(value)
+    checks = mapping(value.get('checks'))
+    return {'reason': choice(value.get('reason'), ROOT_SETUP_REASONS),
+            'checks': {name: choice(checks.get(name),
+                ('not-run', 'pending', 'verified', 'unverified', 'not-required'))
+                for name in ROOT_SETUP_CHECKS}}
+
+
 def choice(value, allowed, default='unknown'):
     return value if type(value) is str and value in allowed else default
 
@@ -93,6 +108,20 @@ def root_diagnostics_summary(value):
     return result
 
 
+def inventory_failures(value):
+    result={}
+    reasons=('root-required','client-start-failed','client-error','timeout','oversized-reply',
+             'negative-reply','permission-denied','service-missing','method-missing','malformed-reply')
+    for key,detail in mapping(value).items():
+        if key not in ('applications','inputs'):continue
+        detail=mapping(detail)
+        item={'reason':choice(detail.get('reason'),reasons)}
+        code=detail.get('error_code')
+        if type(code) is int and -(2**31)<=code<2**31:item['error_code']=code
+        result[key]=item
+    return result
+
+
 def tv_summary(value):
     value = mapping(value)
     result = metadata(value)
@@ -104,10 +133,14 @@ def tv_summary(value):
             count = icons.get(key)
             if type(count) is int and 0 <= count <= 1800:
                 result['icon_inventory'][key] = count
+    if 'root_setup_recovery' in value:
+        result['root_setup_recovery'] = root_setup_summary(value['root_setup_recovery'])
     if 'root_inventory' in value:
         inventory=mapping(value['root_inventory'])
         result['root_inventory']={key:choice(inventory.get(key),('read','unavailable','invalid'))
                                   for key in ('applications','inputs')}
+    if 'root_inventory_failures' in value:
+        result['root_inventory_failures']=inventory_failures(value['root_inventory_failures'])
     if version(value.get('node_version')):
         result['node_version'] = value['node_version']
     if 'node_version_status' in value:
