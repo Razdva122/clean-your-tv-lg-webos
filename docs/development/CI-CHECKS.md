@@ -21,8 +21,8 @@ to the existing shards to avoid adding all their work to shard 1:
 | Shard | Serial checks, in addition to its Python partitions |
 | --- | --- |
 | 1 | UI/theme source checks, Android; fresh metadata and Linux ownership checks remain here |
-| 2 | Helper/TV/legacy Node, native controls/watchdog, Root service JS; Homebrew payload/bridge/UI/installer checks; preview |
-| 3 | No additional serial block |
+| 2 | Helper/TV compatibility, native controls/watchdog, Root service JS; Homebrew payload/bridge/UI/installer checks; preview |
+| 3 | Packaged Root legacy Node prototype and Beta regressions (`tests/root-node-compat.py`, normal and `--beta`) |
 | 4 | No-root/system updater JS and complete `tests/system_updates` discovery |
 
 Browser and ARM Python validation retain their separate jobs. Each selected
@@ -74,8 +74,8 @@ fourfold end-to-end speedup.
 The serial redistribution uses [run 42494183249](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42494183249)
 (2026-11-08, `62935a34`) as its baseline: runtime jobs were 12m29s/11m45s on the
 first Linux/macOS shards versus 6m27s–9m28s/6m53s–8m18s on the other shards.
-The first Linux job's executable log showed about 90s of TV/legacy work and 38s
-of Homebrew work before redistribution to shard 2, plus 49s of updater work moved
+The first Linux job's executable log showed about 90s of TV/legacy work now shared
+by shards 2 and 3, and 38s of Homebrew work moved to shard 2, plus 49s of updater work moved
 to shard 4. These are observations from that run, not a fixed speedup promise.
 Preview shares Homebrew's browser-equipped shard 2. Routing regressions extend
 existing test methods instead of adding discovery occurrences, so the checks for

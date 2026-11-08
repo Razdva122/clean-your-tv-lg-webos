@@ -118,9 +118,13 @@ for scenario in off-on overflow-taps overflow-press overflow-emergency; do
 done
 build/tests/test-filter
 for file in launcher/*.js native/app/*.js native/service/*.js renewal-service/*.js; do node --check "$file"; done
+fi
 
+if on_shard 3; then
 "$PYTHON" tests/root-node-compat.py
 "$PYTHON" tests/root-node-compat.py --beta
+fi
+if on_shard 2; then
 node root-edition/service/test-c1-filter.cjs
 node root-edition/service/test-c1-lease.cjs
 node root-edition/service/test-audio-recovery.cjs

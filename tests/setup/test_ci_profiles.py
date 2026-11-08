@@ -81,10 +81,12 @@ class CIProfiles(unittest.TestCase):
             # Serial groups must leave shard 1, with each dependency-coherent
             # block kept together in its own isolated checkout.
             for command in ('node tests/helper-compat.cjs',
-                            'python3 tests/root-node-compat.py',
                             'node homebrew/tests/ui.cjs'):
                 self.assertIn(command, traces['--shard 2/4'])
                 self.assertNotIn(command, traces['--shard 1/4'])
+            for command in ('python3 tests/root-node-compat.py', 'python3 tests/root-node-compat.py --beta'):
+                self.assertIn(command, traces['--shard 3/4'])
+                self.assertNotIn(command, traces['--shard 2/4'])
             self.assertIn('python3 -m unittest discover -s tests/system_updates', traces['--shard 4/4'])
             self.assertNotIn('python3 -m unittest discover -s tests/system_updates', traces['--shard 1/4'])
             self.assertIn('node tests/root-decoder-ui.cjs', traces['--shard 2/4'])
