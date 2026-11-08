@@ -269,13 +269,24 @@ def select_missing(ctx, repo, current, api):
     if ctx['environment'].get('browser', '') is None or ctx['environment'].get('identity_ready') is False:
         return {'missing': ctx['units'], 'reused': {}}
     reused = {}
-    deadline = time.monotonic() + 60
-    def bounded_api(*args, **kwargs):
+    started = time.monotonic()
+    deadline = started + 60
+    # One lookup observes one bounded API snapshot; never persist mutable run state.
+    responses = {}
+    requests = cache_hits = rejected_keys = 0
+    def bounded_api(path, binary=False):
+        nonlocal requests, cache_hits
         if time.monotonic() >= deadline:
             raise TimeoutError('Evidence lookup budget exhausted')
-        value = api(*args, **kwargs)
+        if not binary and path in responses:
+            cache_hits += 1
+            return responses[path]
+        requests += 1
+        value = api(path, binary=binary)
         if time.monotonic() >= deadline:
             raise TimeoutError('Evidence lookup budget exhausted')
+        if not binary:
+            responses[path] = value
         return value
     try:
         # Bounded recent discovery: older/missing evidence executes, never grants coverage.
@@ -291,6 +302,12 @@ def select_missing(ctx, repo, current, api):
                 if type(size) is not int or not 0 < size <= ARCHIVE_LIMIT:
                     continue
                 receipt = receipt_from_archive(bounded_api(f'actions/artifacts/{artifact["id"]}/zip', binary=True), artifact)
+                # A mismatch can only reject work. Matching keys still require every
+                # provenance, latest-run, job and authenticated-tree check below.
+                if not any(receipt['keys'].get(unit) == ctx['keys'][unit]
+                           for unit in ctx['units'] if unit not in reused):
+                    rejected_keys += 1
+                    continue
                 reused.update(validate_receipt(ctx, receipt, artifact, repo, current, bounded_api))
             except Exception:
                 # Untrusted/malformed or unavailable evidence is only a cache miss.
@@ -299,6 +316,8 @@ def select_missing(ctx, repo, current, api):
                 break
     except Exception:
         pass  # Discovery is optional; actual tests remain mandatory.
+    print(f'Evidence lookup: {time.monotonic() - started:.2f}s, {requests} API requests, '
+          f'{cache_hits} cached responses, {rejected_keys} nonmatching receipts')
     return {'missing': sorted(set(ctx['units']) - set(reused)), 'reused': reused}
 
 

@@ -91,6 +91,31 @@ class EvidenceTests(unittest.TestCase):
     def missing(self, ctx=None):
         return self.m['select_missing'](ctx or self.ctx, 'owner/repo', 20, self.api)['missing']
 
+    def test_lookup_reads_each_json_endpoint_once_and_does_not_cache_across_plans(self):
+        calls = []
+        def counted(path, binary=False):
+            calls.append((path, binary))
+            return self.api(path, binary)
+        self.assertEqual(self.m['select_missing'](self.ctx, 'owner/repo', 20, counted)['missing'], [])
+        self.assertEqual(calls.count(('actions/runs/10', False)), 1)
+        self.run['conclusion'] = 'failure'
+        self.assertEqual(self.m['select_missing'](self.ctx, 'owner/repo', 20, counted)['missing'],
+                         ['installer', 'setup', 'tv-runtime', 'ui'])
+        self.assertEqual(calls.count(('actions/runs/10', False)), 2)
+
+    def test_nonmatching_receipt_keys_skip_provenance_requests(self):
+        receipt = self.m['make_receipt'](self.ctx, 'owner/repo', 10, 1, 100)
+        receipt['keys'] = {unit: '0' * 64 for unit in receipt['keys']}
+        self.raw = self.archive(receipt)
+        self.artifact.update(size_in_bytes=len(self.raw), digest='sha256:' + hashlib.sha256(self.raw).hexdigest())
+        calls = []
+        def counted(path, binary=False):
+            calls.append(path)
+            return self.api(path, binary)
+        result = self.m['select_missing'](self.ctx, 'owner/repo', 20, counted)
+        self.assertEqual(result['missing'], ['installer', 'setup', 'tv-runtime', 'ui'])
+        self.assertEqual(len(calls), 2)  # Listing and bounded, digest-checked receipt only.
+
     def write_commit(self, path, content='first\n'):
         target = self.root / path
         target.parent.mkdir(parents=True, exist_ok=True)

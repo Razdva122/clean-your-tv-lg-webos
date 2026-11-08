@@ -191,9 +191,18 @@ jobs:
         run: python scripts/ci-test-evidence.py plan --kind desktop --os "${{ matrix.os }}" --units installer-host --directory "${{ runner.temp }}/ci-evidence"
       - name: Test desktop installer host behavior
         if: steps.evidence.outputs.fresh == 'true'
-        run: python -m unittest discover -s tests/cytv -v
+        run: python scripts/test-shard.py -s tests/cytv -v --timings "${{ runner.temp }}/test-timings/cytv.json"
         env:
           QT_QPA_PLATFORM: offscreen
+      - name: Retain installer host test timings and skip reasons
+        if: always() && steps.evidence.outputs.fresh == 'true'
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: cytv-test-timings-desktop-${{ matrix.os }}
+          path: ${{ runner.temp }}/test-timings/*.json
+          retention-days: 14
+          if-no-files-found: ignore
       - name: Record freshly passed desktop installer host tests
         id: record
         continue-on-error: true

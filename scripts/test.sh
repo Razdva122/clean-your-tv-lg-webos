@@ -29,7 +29,9 @@ if [[ "${1:-}" == --shard ]]; then
 fi
 primary() { [[ "$shard_index" == 1 ]]; }
 python_suite() {
-  if [[ -n "$shard" ]]; then
+  if [[ "$1" == tests/cytv && -n "${CI_TEST_TIMINGS_DIR:-}" ]]; then
+    "$PYTHON" scripts/test-shard.py --shard "${shard:-1/1}" -s "$1" --timings "$CI_TEST_TIMINGS_DIR/cytv.json"
+  elif [[ -n "$shard" ]]; then
     "$PYTHON" scripts/test-shard.py --shard "$shard" -s "$1"
   else
     "$PYTHON" -m unittest discover -s "$1"

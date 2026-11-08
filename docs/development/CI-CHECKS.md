@@ -55,6 +55,53 @@ fourfold end-to-end speedup.
 
 ## Runner use, dependency caches and artifact retention
 
+### Installer test timings and skips
+
+Fresh runtime installer shards and desktop build host tests retain
+`cytv-test-timings-*` JSON artifacts for 14 days, including on test failures.
+The step summary lists the slowest 20 test occurrences and 10 shared fixture
+transitions. JSON includes every executed occurrence, shared class/module setup
+and teardown (including cleanups), overall test execution time, and skip reasons.
+Per-test durations include that test's setup, body and teardown. Fixture hook
+durations include hook overhead; nested module teardown is subtracted from module
+setup to avoid double counting. Discovery and dependency installation are outside
+the reported execution time. Repeated imported tests are preserved.
+
+Reproduce the report locally with the project Python environment:
+
+```sh
+QT_QPA_PLATFORM=offscreen .venv-cytv/bin/python scripts/test-shard.py \
+  -s tests/cytv --timings build/test-timings/cytv.json
+# Optional: add --shard 2/4 for one partition.
+```
+
+`CI_TEST_TIMINGS_DIR=build/test-timings scripts/test.sh installer` enables the
+same report through the existing profile. Unset, the local profile is unchanged.
+Timings are diagnostics, never authenticated success receipts. A reused unit has
+no fresh timing artifact. Cancelled processes and discovery failures may have no
+JSON report; the existing test gate still fails.
+
+Conditional skips do not imply obsolete coverage. POSIX filesystem/process
+fixtures run on Linux/macOS rather than Windows; Qt/wallpaper cases need desktop
+build dependencies. Exact legacy Node cases run in Linux runtime jobs, and Linux
+root-only Python bootstrap cases run in the privileged optional-Python step.
+The legacy UID-501 ownership scenario requires that specific unprivileged host
+identity; inspect its actual skip records before changing the fixture. Do not
+remove these scenarios merely because another job skips them.
+
+### Evidence lookup cost
+
+Each lookup memoizes successful JSON API responses only for that invocation,
+within its existing 60-second budget. The next lookup re-reads mutable run state;
+failed requests are not cached. Binary receipts retain their existing size/digest
+checks. A receipt with no key matching any still-missing unit is rejected before
+provenance requests. Matching keys alone never grant coverage: originating run,
+latest-run status, successful job, checkout/tree and projected inputs are still
+authenticated. Logs show elapsed lookup time, API request count, memoized response
+hits and receipts rejected by keys, without logging raw API responses.
+
+### Runner allocation and retention
+
 The scope job emits `runtime_os` as JSON for the runtime matrix. Linux remains
 present, including for documentation-only changes, so the required summaries
 still receive a successful runtime dependency. macOS is allocated only when
@@ -87,6 +134,7 @@ Retention applies to newly uploaded Actions artifacts:
 | Direct Root TV candidate and signed Root QA candidate | 90 days |
 | Assembled release archive | 90 days |
 | Test-unit evidence receipts | 2 days (same UTC-day identity still required) |
+| Installer test timings and skip reasons | 14 days |
 | Theme review preview | 3 days |
 | Pages deployment artifact | 1 day (explicit existing action default) |
 
