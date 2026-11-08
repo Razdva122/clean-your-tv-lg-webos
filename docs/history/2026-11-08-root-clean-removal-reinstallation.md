@@ -107,3 +107,20 @@ these focused corrections do not establish physical acceptance.
 The recovery/removal instructions and all thirteen localized guides now explain
 the upcoming post-removal setup behavior. Completed historical evidence remains
 intact; no raw device data, addresses, credentials or private paths are included.
+
+## Integration
+
+PR #436 merged into `release/next` at `9d4180cf7e0a20bbf2d5c0d7b487ca3c2d036525`
+on 2026-11-08 after independent review and successful final-head
+[Tests 42474339515](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42474339515):
+all eight Linux/macOS runtime shards, both aggregate jobs, browser and optional
+Python passed. The real Linux guard/worker integration is selected in installer
+shard 3, which passed. Release PR policy and preview build also passed; full-release
+and deployment were unselected. This is implementation CI, not a final candidate.
+
+Actual macOS ARM64 console/desktop packaging and embedded 498-file payload/runtime
+smoke passed. The frozen console reports cytv 0.14.0 and contains the exact final
+ownership wrapper. The native delayed-worker lock case also passed with actual
+Node 8.12.0 and 0.12.2 processes. No additional TV changes or physical acceptance
+were performed. PR #435 is integrated separately; candidate versions and the
+unselected final build/acceptance remain unchanged.

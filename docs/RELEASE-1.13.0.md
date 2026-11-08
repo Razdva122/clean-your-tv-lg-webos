@@ -7,6 +7,11 @@ as a verified release or infer that an integrated fix resolved a reporter's TV.
 
 ## Changes
 
+- Allow a new Root or No-root setup after verified full removal (#436). Retire
+  the completed removal's destructive authority, preserve only inactive recovery
+  fences, and keep old retries from deleting a later installation. Root-SSH
+  No-root setup binds its original plan under the same locks. Physical full
+  uninstall/reinstall and P00 compatibility acceptance remain pending.
 - Select owned Developer Mode jail storage when its temporary directory cannot
   host private observer evidence (#435, #409). Recovery stays bound to the original
   location; unsafe or ambiguous roots refuse setup. Existing temporary-space and

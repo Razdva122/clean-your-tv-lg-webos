@@ -97,6 +97,11 @@
         409
       ],
       "summary": "Select owned Developer Mode jail storage for the observed private mkdir/EACCES boundary; capacity, restart proof and physical #409 acceptance remain pending"
+    },
+    {
+      "pr": 436,
+      "issues": [],
+      "summary": "Allow checked Root or No-root setup after full removal; retire completed destructive leases and keep old retries read-only; physical transition acceptance remains pending"
     }
   ],
   "excluded": [],
