@@ -200,3 +200,16 @@ or used as cleanup authority. Existing pinned unlink, owner, mode, link and
 whole-inventory checks remain. Real native subprocess and `py_compile` regressions
 first reproduced both failures and now pass, alongside 73 cleanup regressions and
 nine installer System cases. Independent review found no remaining defect.
+
+
+The owner then explicitly narrowed cleanup acceptance: inert temporary/cache
+leftovers must not block removal or reinstallation. Final behavior preserves
+unknown files in independently verified inactive System staging, records its
+exact safe directory identity and reports `temporary_files_retained` as a
+nonblocking localized warning. Both Python and final Node absence checks honor
+that same limited identity; changed identities, live processes, active support,
+Home routes, startup, services and blocking product state remain guarded.
+Known generated caches are still removed when safely classified. Regression
+coverage includes retained unknown data, finalization, subsequent readback and
+refusal of an inode mismatch. This supersedes the earlier strict refusal for
+unknown temporary System staging members; it does not relax product removal.

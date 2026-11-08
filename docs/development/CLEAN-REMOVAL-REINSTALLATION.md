@@ -106,5 +106,8 @@ cleaner or retain public staging after full removal.
 Native System bootstrap runs with bytecode disabled, matching managed/standalone
 setup. Older verified System staging may contain a top-level CPython cache.
 Retire it as data only when safe regular leaves match canonical cache names for
-manifest-listed top-level Python modules. Unknown members remain a refusal;
-never load a retained `.pyc` to authorize removal.
+manifest-listed top-level Python modules. Unknown files in an independently verified, inactive System staging directory
+are retained with their exact directory identity and reported as a nonblocking
+temporary-files warning. Python and the final native/Node gate use the same
+exception; unrelated/current support stages and live processes remain guarded.
+Never load a retained `.pyc` to authorize removal.

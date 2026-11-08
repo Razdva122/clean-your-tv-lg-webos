@@ -660,7 +660,10 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                                          'summary':'Clean Your TV removal is verified.','next_step':'Other TV apps stay installed.'})
                     write.heading('Clean Your TV removed')
                     write('Clean Your TV removed. Its apps, startup and Home-button control were removed.')
-                    write('Only ownership backups and minimal removal records were kept.')
+                    if result.get('temporary_files_retained'):
+                        write('Some temporary files were kept; they do not prevent reinstallation.')
+                    else:
+                        write('Only ownership backups and minimal removal records were kept.')
                 elif result.get('restart_required') is True:
                     from .recovery import removal_plan
                     removal_plan(write,store,profile,state='waiting')

@@ -19,7 +19,7 @@ def load(name):
     module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module);return module
 
 class NativeSystemStage(unittest.TestCase):
-    def test_known_native_bytecode_is_retired_but_unknown_members_refuse(self):
+    def test_known_cache_is_retired_and_unknown_temporary_files_are_retained(self):
         for extra in (None,'notes.txt','foreign.cpython-312.pyc'):
             with self.subTest(extra=extra),tempfile.TemporaryDirectory() as tmp:
                 root=Path(tmp).resolve();stage=root/('cytv-system-updater-'+'a'*32)
@@ -31,7 +31,9 @@ class NativeSystemStage(unittest.TestCase):
                 device.system_setup=lambda:load('setup')
                 with patch.object(install_device,'TEMP',root):
                     if extra:
-                        with self.assertRaises(ValueError):device.retire_temporary_support({'operation':'b'*32})
+                        record={'operation':'b'*32}
+                        device.retire_temporary_support(record)
+                        self.assertEqual(record['retained_temporary_stages'][0]['path'],str(stage))
                         self.assertTrue((stage/'bundle.json').exists())
                         self.assertTrue((stage/'__pycache__'/extra).exists())
                     else:

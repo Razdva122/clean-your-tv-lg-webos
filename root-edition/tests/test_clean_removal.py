@@ -865,6 +865,21 @@ class PartialDeviceRemoval(unittest.TestCase):
         self.assertTrue((root/'state/ssap.json').exists())
         self.assertTrue(any(name.startswith('remove-') for name in calls))
 
+    def test_retained_inert_system_temp_does_not_block_clean_readback(self):
+        import install_device
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        driver.clean_remove(identifier)
+        driver.device.current_boot='22222222-2222-2222-2222-222222222222'
+        record=driver.clean_remove(identifier)
+        stage=install_device.TEMP/('cytv-system-updater-'+'a'*32);stage.mkdir(mode=0o700)
+        (stage/'diagnostic.txt').write_text('preserve unknown temporary data')
+        info=stage.stat()
+        record['retained_temporary_stages']=[dict(path=str(stage),dev=info.st_dev,ino=info.st_ino)]
+        self.assertTrue(driver.device.verify_clean(record))
+        self.assertTrue((stage/'diagnostic.txt').exists())
+        record['retained_temporary_stages'][0]['ino']+=1
+        with self.assertRaisesRegex(ValueError,'support_stage_remains'):driver.device.verify_clean(record)
+
     def test_clean_readback_exempts_only_executing_checked_coordinator_stage(self):
         import install_device
         driver,identifier,root,updater,payload,calls,present=self.fixture()
