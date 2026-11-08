@@ -125,6 +125,14 @@ def inventory_failures(value):
 def tv_summary(value):
     value = mapping(value)
     result = metadata(value)
+    if 'icon_inventory' in value:
+        icons = mapping(value['icon_inventory'])
+        result['icon_inventory'] = {'schema': 1, 'status': choice(icons.get('status'),
+            ('reading', 'complete', 'unavailable'), 'unavailable')}
+        for key in ('apps', 'embedded', 'fallback', 'missing_uri', 'rejected_uri', 'fetch_failed', 'invalid_image'):
+            count = icons.get(key)
+            if type(count) is int and 0 <= count <= 1800:
+                result['icon_inventory'][key] = count
     if 'root_setup_recovery' in value:
         result['root_setup_recovery'] = root_setup_summary(value['root_setup_recovery'])
     if 'root_inventory' in value:

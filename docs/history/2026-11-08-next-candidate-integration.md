@@ -132,3 +132,16 @@ handling is retained, with no new connection retry, endpoint or TV probe.
 Desktop/console/Android installers need rebuilt embeddings. Original #420 stays
 needs-info under its existing published-version Doctor/context request; neither
 historical missing causes nor native Windows ARM64/TV acceptance are inferred.
+
+## #429: conflict resolution before integration
+
+The original reviewed head `d1a498f5` passed its selected CI. New diagnostic
+additions made its tv_summary/document insertion conflict with #430. The merge
+resolution retains both complete icon_inventory and root_setup_recovery blocks
+and both guide sections; independent follow-up review confirmed all existing
+Root inventory/node/capability/privacy fields remained. After #432/#433 entered,
+the prepared branch merged the final base without another conflict. Combined
+TV/CLI/diagnostic/socket/context/recovery tests pass 131 cases; clock/core/catalog
+checks (all thirteen languages), formatting and diff checks pass. No clock or
+privacy guard was weakened. The updated head still needs mandatory CI before
+integration; this paragraph is preparation evidence, not a merge claim.
