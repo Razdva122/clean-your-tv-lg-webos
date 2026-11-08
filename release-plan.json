@@ -1,7 +1,42 @@
 {
   "schema": 1,
   "version": null,
-  "changes": [],
+  "changes": [
+    {
+      "pr": 441,
+      "issues": [],
+      "summary": "Balance runtime shards and reduce CI overhead"
+    },
+    {
+      "pr": 444,
+      "issues": [
+        437
+      ],
+      "summary": "Repair No-root updates after pairing-key permission normalization"
+    },
+    {
+      "pr": 445,
+      "issues": [],
+      "summary": "docs: reconcile published guidance and simplify localized installation guides"
+    },
+    {
+      "pr": 447,
+      "issues": [],
+      "summary": "website: list user-confirmed TVs and reported versions"
+    },
+    {
+      "pr": 449,
+      "issues": [],
+      "summary": "Offer latest GitHub installer before computer installation"
+    },
+    {
+      "pr": 450,
+      "issues": [
+        389
+      ],
+      "summary": "Read Root installer catalogs over SSH without Node subprocesses"
+    }
+  ],
   "excluded": [],
   "acceptance": ""
 }
