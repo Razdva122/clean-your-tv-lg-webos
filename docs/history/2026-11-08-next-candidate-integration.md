@@ -43,3 +43,20 @@ armed. The new private continuation record remains recovery/cleanup evidence,
 not public diagnostics. Root runtime/infrastructure and embedding payloads need
 versioned rebuilds. #422 stays open for exact-package physical Home/emergency,
 ordinary power cycles, distinct standby/cold boot and update/rollback acceptance.
+
+## #430: Root recovery refusal diagnostics
+
+Reviewed head `58ab418` passed selected CI [42455080424](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42455080424)
+and independent complete-source/privacy review. Merge source: `8e62885c`.
+The integrated diagnostic/recovery/context/clean-reinstall selection passes all
+74 cases with `PYTHONPATH=tests/cytv`; these tests import their sibling fixtures
+by unqualified module name. Invoking the same selection without that test path
+first produced a fixture import error, not a recovery behavior result. Sixteen
+release-flow tests and diff checks also pass.
+
+Root app/input diagnostic categories from #426 remain alongside the new recovery
+stage projection. Eligibility predicates, remote call count/order and existing
+permission/error handling remain unchanged. Desktop/console/Android installers
+need rebuilding. Original #355 cause, device recovery and the requested genuinely
+passive inspection path remain queued and unverified; the issue is not delivered
+or resolved by adding future diagnostic evidence.

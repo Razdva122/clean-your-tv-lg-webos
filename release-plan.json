@@ -43,6 +43,13 @@
         422
       ],
       "summary": "Continue exactly owned Root Home routing while rearming fresh startup protection; final physical Home and emergency acceptance for #422 remain pending"
+    },
+    {
+      "pr": 430,
+      "issues": [
+        355
+      ],
+      "summary": "Retain allowlisted Root setup-recovery refusal stages; original #355 activation cause, C2 recovery and passive diagnostic-path follow-up remain unresolved"
     }
   ],
   "excluded": [],
