@@ -51,6 +51,21 @@ RECOVERY_REASONS = ('original_final_readback_verified','recovery_evidence_requir
                     'recovery-evidence-unverified')
 
 
+ROOT_SETUP_CHECKS = ('receipt', 'stock-home', 'restored-journal', 'files', 'product',
+                     'updater', 'rollback-baseline', 'updater-transaction', 'binding')
+ROOT_SETUP_REASONS = ('not-run', 'pending', 'verified', 'restoration-pending',
+                      *(name+'-unverified' for name in ROOT_SETUP_CHECKS))
+
+
+def root_setup_summary(value):
+    value = mapping(value)
+    checks = mapping(value.get('checks'))
+    return {'reason': choice(value.get('reason'), ROOT_SETUP_REASONS),
+            'checks': {name: choice(checks.get(name),
+                ('not-run', 'pending', 'verified', 'unverified', 'not-required'))
+                for name in ROOT_SETUP_CHECKS}}
+
+
 def choice(value, allowed, default='unknown'):
     return value if type(value) is str and value in allowed else default
 
@@ -96,6 +111,8 @@ def root_diagnostics_summary(value):
 def tv_summary(value):
     value = mapping(value)
     result = metadata(value)
+    if 'root_setup_recovery' in value:
+        result['root_setup_recovery'] = root_setup_summary(value['root_setup_recovery'])
     if 'root_inventory' in value:
         inventory=mapping(value['root_inventory'])
         result['root_inventory']={key:choice(inventory.get(key),('read','unavailable','invalid'))
