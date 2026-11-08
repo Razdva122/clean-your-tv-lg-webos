@@ -349,6 +349,11 @@ def failure_summary(value):
     connection = mapping(value.get('connection'))
     if connection.get('protocol') == 'developer-key':
         result['connection'] = {'protocol': 'developer-key', 'reason_code': DeveloperKeyError('', connection.get('reason_code')).reason_code}
+    elif connection.get('protocol') == 'ssh':
+        from .failure_help import NETWORK_CAUSES
+        causes = connection.get('causes')
+        result['connection'] = {'protocol': 'ssh', 'causes': sorted({item for item in causes
+            if type(item) is str and item in NETWORK_CAUSES}) if type(causes) is list else []}
     elif connection.get('protocol') == 'ssap':
         code = connection.get('close_code')
         safe = TVConnectionError('', close_code=code if type(code) is int else None, reason_code=connection.get('reason_code'))
