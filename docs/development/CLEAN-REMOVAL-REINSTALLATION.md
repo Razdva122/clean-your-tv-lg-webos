@@ -59,6 +59,12 @@ checking clean state. Large legacy support is sent on stdin, rather than a
 single oversized argv element. Descriptor I/O uses APIs available on exact
 Node 0.12.2. Unknown or changed support refuses before effects.
 
+An absent managed-Python parent means there is no promotion descriptor. Node may
+reuse fd 4 internally; only a descriptor matching the real `.install.lock` inode
+is inherited when that parent exists. A Linux integration test runs the actual
+native gate, guard, VM observer and detached worker with real `/proc/self/fd`
+and flock; only fixed host paths/UID and the independent cleanup proof are modeled.
+
 ## Verification scope
 
 `tests/cytv/test_root_no_root_handoff.py`, Root `test_clean_removal.py` and

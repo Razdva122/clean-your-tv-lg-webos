@@ -6,6 +6,7 @@ import shutil
 from pathlib import Path
 import tempfile
 import subprocess
+import sys
 import time
 from types import SimpleNamespace
 import unittest
@@ -84,7 +85,8 @@ var fs=Object.create(real);
 fs.openSync=function(p,flags,mode){var fd=real.openSync(path(p),flags,mode);paths[fd]=path(p);return fd;};
 native[3]=real.openSync(base+'/var/lib/clean-your-tv-installation/ownership.lock','r');
 native[5]=real.openSync(base+'/var/lib/clean-your-tv-installation/worker.lock','r');
-fs.fstatSync=function(fd){if(fd===4){var e=Error('closed');e.code='EBADF';throw e;}var s=real.fstatSync(native[fd]||fd);s.uid=0;return s;};
+if(input.promotion_fd4)native[4]=real.openSync(base+'/var/lib/clean-your-tv-python/.install.lock','r');
+fs.fstatSync=function(fd){if(fd===4&&!native[4]){if(input.internal_fd4){var other=real.fstatSync(native[3]);other.uid=0;return other;}var e=Error('closed');e.code='EBADF';throw e;}var s=real.fstatSync(native[fd]||fd);s.uid=0;return s;};
 fs.lstatSync=function(p){var s=real.lstatSync(path(p));s.uid=0;return s;};
 ['readdirSync','rmdirSync','unlinkSync'].forEach(function(name){fs[name]=function(p){return real[name](path(p));};});
 fs.renameSync=function(a,b){if(input.fail_owner_write&&b.slice(-15)==='/operation.json')throw Error('interrupted owner publication');return real.renameSync(path(a),path(b));};
@@ -136,6 +138,23 @@ class SuccessorOwnership(unittest.TestCase):
         self.assertEqual(result.returncode,1)
         self.assertEqual((self.state/'operation.json').read_bytes(),before)
         self.assertFalse((self.state/('no-root-'+'d'*32+'.json')).exists())
+
+    def test_unrelated_node_fd4_is_not_an_inherited_python_promotion_lock(self):
+        result=self.run_guard('claim',self.plan,internal_fd4=True)
+        self.assertEqual(result.returncode,0,result.stderr)
+        event=json.loads((self.base/'events.json').read_text())[0]
+        self.assertEqual(event['args'][5],'-1')
+        self.assertEqual(event['stdio'][4],'ignore')
+
+    def test_existing_python_promotion_lock_requires_the_exact_inherited_inode(self):
+        parent=self.base/'var/lib/clean-your-tv-python';parent.mkdir(mode=0o755)
+        (parent/'.install.lock').touch(mode=0o600)
+        self.assertEqual(self.run_guard('claim',self.plan,internal_fd4=True).returncode,1)
+        result=self.run_guard('claim',self.plan,promotion_fd4=True)
+        self.assertEqual(result.returncode,0,result.stderr)
+        event=json.loads((self.base/'events.json').read_text())[0]
+        self.assertEqual(event['args'][5],'4')
+        self.assertEqual(event['stdio'][4],4)
 
     def test_claim_is_bound_idempotent_and_changed_plan_cannot_take_active_owner(self):
         result=self.run_guard('claim',self.plan);self.assertEqual(result.returncode,0,result.stderr)
@@ -219,6 +238,56 @@ class SuccessorOwnership(unittest.TestCase):
 
 @unittest.skipIf(os.name=='nt' or not shutil.which('cc') or not shutil.which('node'),'POSIX native gate and Node required')
 class DelayedWorker(unittest.TestCase):
+    @unittest.skipUnless(sys.platform.startswith('linux'),'Requires real Linux /proc/self/fd traversal')
+    def test_real_guard_claim_and_detached_worker_keep_original_locks_without_python(self):
+        from cytv.root_no_root_handoff import PROGRAM
+        with tempfile.TemporaryDirectory() as tmp:
+            base=Path(tmp).resolve();state=base/'installation';state.mkdir(mode=0o700)
+            for name in ('ownership.lock','worker.lock'):(state/name).touch(mode=0o600)
+            gate=base/'gate';source=Path(__file__).resolve().parents[2]/'native/installer/lifecycle-gate.c'
+            result=subprocess.run(['cc','-O2','-DCYTV_ROOT_LOCK_DIRECTORY='+json.dumps(str(state)),
+                '-DCYTV_RUNTIME_LOCK_DIRECTORY='+json.dumps(str(base/'absent-runtime')),str(source),'-o',str(gate)],capture_output=True,text=True)
+            self.assertEqual(result.returncode,0,result.stderr)
+            node=shutil.which('node');uid=os.getuid()
+            # Only fixed namespace/host UID adaptations; execute the actual
+            # guard, native locks, VM observer and detached child processes.
+            program=PROGRAM.replace('/var/lib/clean-your-tv-installation',str(state))
+            program=program.replace('/var/lib/clean-your-tv-python',str(base/'absent-runtime'))
+            program=program.replace('process.getuid() !== 0','process.getuid() !== '+str(uid))
+            program=program.replace('s.uid !== 0','[0,'+str(uid)+'].indexOf(s.uid) < 0')
+            program=program.replace("'/usr/bin/node'",json.dumps(node))
+            marker=base/'worker'
+            observer=("var input=JSON.parse(process.argv[process.argv.length-1]);"
+                "if(input.command==='worker'){require('fs').appendFileSync("+json.dumps(str(marker))+",'submitted\\n');setTimeout(function(){},1500);}"
+                "else{require('child_process').spawn(process.execPath,['/tmp/.cytv-installer-root/operations/'+input.plan.operation+'/observer.js',JSON.stringify({command:'worker',plan:input.plan})],{cwd:"+json.dumps(str(base))+"}).unref();}")
+            predecessor=dict(operation='a'*32,removal='b'*32,lease='c'*32)
+            plan=dict(connection='root-ssh',operation='d'*32,root_handoff=predecessor,source_sha256=hashlib.sha256(observer.encode()).hexdigest())
+            def write(name,value):
+                file=state/name;file.write_text(json.dumps(value));file.chmod(0o600)
+            write('operation.json',dict(schema=1,id='c'*32,owner='clean-removal',journal='product-'+'a'*32+'.json',stage='verified-clean',terminal=False))
+            write('clean-removal-'+'a'*32+'.json',dict(removal='b'*32,final_fence='c'*32,stage='verified-clean',current=True))
+            # Cleanup RPC/absence is a fixed proof fixture here; the real
+            # cleanup verifier has its independent filesystem/RPC tests.
+            proof="process.stdout.write("+json.dumps(json.dumps(dict(state='verified-clean',**predecessor)))+");"
+            def run(command,**extra):
+                request=dict(command=command,plan=plan,wrapper=program,cleanup=proof)
+                request.update(extra)
+                return subprocess.run([str(gate),'root-clean-lock',node,'-e',program,json.dumps(request)],capture_output=True,text=True,timeout=10)
+            result=run('claim');self.assertEqual(result.returncode,0,result.stderr)
+            result=run('observer',source=observer,request={'command':'start','plan':plan})
+            self.assertEqual(result.returncode,0,result.stderr)
+            deadline=time.monotonic()+3
+            while not marker.exists() and time.monotonic()<deadline:time.sleep(.01)
+            self.assertTrue(marker.exists(),'The real detached worker never entered its observer')
+            busy=subprocess.run([str(gate),'root-clean-lock','/bin/true'],capture_output=True)
+            self.assertEqual(busy.returncode,75)
+            while time.monotonic()<deadline:
+                result=subprocess.run([str(gate),'root-clean-lock','/bin/true'],capture_output=True)
+                if result.returncode==0:break
+                time.sleep(.05)
+            self.assertEqual(result.returncode,0)
+            self.assertEqual(marker.read_text(),'submitted\n')
+
     def test_native_busy_observation_waits_without_repeating_package_worker(self):
         from cytv.root_no_root_handoff import call
         with tempfile.TemporaryDirectory() as tmp:

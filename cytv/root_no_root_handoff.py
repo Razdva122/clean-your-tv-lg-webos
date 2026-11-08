@@ -275,14 +275,23 @@ PROGRAM = r'''
   } else fail();
   if (binding && binding.revoked === true && input.command !== 'release')
     fail();
-  function verify(mode) {
-    var promotion = -1;
+  function promotionDescriptor() {
     try {
-      owned(fs.fstatSync(4), false);
-      promotion = 4;
+      fs.lstatSync('/var/lib/clean-your-tv-python');
     } catch (e) {
-      if (e.code !== 'EBADF') throw e;
+      if (e.code === 'ENOENT') return -1;
+      throw e;
     }
+    var parent = directory('/var/lib/clean-your-tv-python');
+    var expected = fs.lstatSync(at(parent, '.install.lock'));
+    var held = fs.fstatSync(4);
+    owned(expected, false);
+    owned(held, false);
+    if (!same(expected, held)) fail();
+    return 4;
+  }
+  function verify(mode) {
+    var promotion = promotionDescriptor();
     var result = cp.spawnSync(
       '/usr/bin/node',
       [
@@ -605,12 +614,7 @@ PROGRAM = r'''
           request: request
         };
         var stdio = ['ignore', 'ignore', 'ignore', 3, 'ignore', 5];
-        try {
-          fs.fstatSync(4);
-          stdio[4] = 4;
-        } catch (e) {
-          if (e.code !== 'EBADF') throw e;
-        }
+        if (promotionDescriptor() === 4) stdio[4] = 4;
         var opts = { detached: true, stdio: stdio, cwd: options.cwd };
         child.wrapper = input.wrapper;
         return cp.spawn(

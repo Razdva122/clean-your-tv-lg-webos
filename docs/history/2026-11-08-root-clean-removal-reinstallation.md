@@ -89,6 +89,14 @@ Local macOS arm64 verification before PR submission:
   coordinator/device bytes match their packaged files. Python 3.9 parsing,
   unchanged bound observer byte comparison, formatting and diff checks passed.
 
+The final full TV-runtime rerun passed 1,173 Root cases (three platform skips),
+132 System cases and native/service/legacy compatibility checks. Android passed
+44 cases. Additional review reproduced a promotion-lock misclassification when
+an absent Python parent lets Node reuse fd 4. The fix verifies the expected inode
+when present and otherwise ignores that descriptor. Eighteen focused cases pass
+on current Node, exact Node 8.12.0 and 0.12.2, with the Linux-only native
+guard/worker integration skipped on macOS and required in Linux CI. No TV changed.
+
 Broad runs exposed older test expectations that a completed goal would resweep
 new files or reuse its destructive intent. Those cases now require a separate
 explicit goal and preserve the historical record. Model tests restage current
