@@ -54,6 +54,16 @@ read-only observation can offer continuation of the authenticated saved plan.
 The immutable `PROGRAM` and `ROOT_PROGRAM` observer bytes remain unchanged;
 this support is the outer ownership wrapper, not a rewritten recovery capsule.
 
+The capability probe restores empty staging leaves to absence. After the exact
+successor is reserved, its install `prepare` recreates the public staging parent
+under the same native locks. It checks the inner plan, paths, sender and original
+source before creation, pins the root-owned parent without following links,
+creates mode 0755 atomically regardless of umask and syncs both directories.
+An existing unsafe leaf refuses without changing its mode. A repeated prepare
+keeps the existing parent inode and original observer evidence. Removal does not
+create this install-only parent. This is new setup state, not residue kept by
+the preceding full cleanup.
+
 The disposable native gate verifies and retires its own temporary file before
 checking clean state. Large legacy support is sent on stdin, rather than a
 single oversized argv element. Descriptor I/O uses APIs available on exact

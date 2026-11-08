@@ -587,6 +587,35 @@ PROGRAM = r'''
   }
   if (input.command !== 'observer' || sha(input.source) !== plan.source_sha256)
     fail();
+  if (input.request.command === 'prepare' && plan.action === 'install') {
+    if (
+      canonical(input.request.plan) !== canonical(plan) ||
+      input.request.root !== '/tmp/.cytv-installer-root' ||
+      input.request.public_root !== '/var/lib/clean-your-tv-installer' ||
+      input.request.sender !== '/usr/bin/luna-send' ||
+      input.request.source !== input.source
+    )
+      fail();
+    // The read/write capability probe restores clean absence. Preparation is
+    // the successor's first durable use of this public staging parent, under
+    // its exact lease and the original native locks. Keep the capsule unchanged.
+    var stagingParent = directory('/var/lib'),
+      stagingName = at(stagingParent, 'clean-your-tv-installer'),
+      mask = process.umask(0);
+    try {
+      try {
+        fs.mkdirSync(stagingName, 493);
+      } catch (e) {
+        if (e.code !== 'EEXIST') throw e;
+      }
+    } finally {
+      process.umask(mask);
+    }
+    var staging = directory('/var/lib/clean-your-tv-installer');
+    if ((fs.fstatSync(staging).mode & 4095) !== 493) fail();
+    fs.fsyncSync(staging);
+    fs.fsyncSync(stagingParent);
+  }
   execute();
   function execute() {
     // Preserve the immutable observer source while retaining Root locks in its

@@ -99,6 +99,13 @@
             snapshot.inventory.apps.map(function (app) {
               return icon(app.icon).then(function (embedded) {
                 app.icon = embedded;
+                // Discovery can supply empty/noncanonical cosmetic metadata;
+                // omit it at capture, keeping stored-profile validation strict.
+                if (
+                  typeof app.iconColor !== 'string' ||
+                  !/^#[0-9a-fA-F]{6}$/.test(app.iconColor)
+                )
+                  delete app.iconColor;
               });
             })
           ).then(function () {

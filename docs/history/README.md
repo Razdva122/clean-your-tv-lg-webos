@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [C3 preliminary case pass, 2026-11-08](2026-11-08-c3-preliminary-qa.md): complete available case/failure inventory before the fix batch; physical new Root Home/audio/emergency, disabled-state cold boot, No-root preparation failure and explicit remaining gates.
+
 - [Clean removal and reinstallation, 2026-11-08](2026-11-08-root-clean-removal-reinstallation.md): source defect, ownership changes, restored bounded C3 preflight and unverified full-transition acceptance.
 
 - [Developer Mode storage integration, 2026-11-08](2026-11-08-next-candidate-storage-integration.md): PR #435, focused CI/review, unchanged versions and pending #409 device confirmation.

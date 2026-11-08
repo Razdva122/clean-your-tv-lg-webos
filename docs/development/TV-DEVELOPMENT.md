@@ -148,6 +148,11 @@ and restrict the file to owner access. This includes real configuration, order,
 language/layout and embedded icons. Never create an empty profile or reuse a
 historical capture merely to pass admission.
 
+Fresh discovery can include an empty optional icon color. Capture omits colors
+outside the canonical six-digit hex form from its copy of that inventory; it
+does not rewrite the live catalog or relax validation of a stored/received
+profile. A valid existing color is preserved.
+
 ```sh
 chmod 600 work/current-root-profile.json
 python3 scripts/tv-dev.py install \
