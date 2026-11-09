@@ -150,6 +150,15 @@ cases when their artifact hashes and device/state preconditions still match.
 
 ## Short development and release cycles
 
+Use one [verification ledger](docs/RELEASE-FLOW.md#verification-ledger-and-repeat-rules)
+throughout development, integration and release acceptance. Before repeating a
+test, build or device operation, identify the changed input or missing evidence
+and the decision the result will resolve. Moving work between a branch, PR and
+RC does not invalidate matching evidence. After fixes, rerun affected checks;
+finish the batch before one full candidate dispatch. Retry infrastructure or
+policy failures at the failed gate without repeating successful builds or device
+operations. Required final artifact acceptance and provenance checks still apply.
+
 Use [TV development](docs/development/TV-DEVELOPMENT.md) for UI-only live feedback
 and explicit signed Root package QA. These preliminary results cannot satisfy
 the complete release gate. Themes use the existing computer-to-TV receiver.

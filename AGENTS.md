@@ -80,6 +80,23 @@ For subsequent release QA sessions, follow
 Complete the case pass and consolidated failure inventory before product fixes
 or merging the fix batch; do not start a full RC for each finding.
 
+### Prevent repeated verification and installation loops
+
+Follow the [verification reuse rules](docs/RELEASE-FLOW.md#verification-ledger-and-repeat-rules).
+Keep one verification ledger for the release across branches, PRs, agents and RCs.
+Before launching a test, build, signing run or device operation, check existing
+results and record the specific missing evidence or changed input that requires
+it. A branch change, merge, new PR, new agent or new status report is not a reason
+to repeat a check. If no release decision depends on its result, do not run it.
+
+After a fix, rerun affected checks only. Complete the whole fix batch and required
+preflights before one full candidate dispatch. Repeat a device install or rollback
+only for an affected, still-unverified scenario on the required artifact; record
+why existing evidence cannot cover it before changing the device. A GitHub policy,
+network or runner failure requires retrying the failed gate, not rebuilding or
+reinstalling successful artifacts. Never weaken required provenance or final
+artifact acceptance to avoid a justified check.
+
 Keep the current PR summary compact and link dated observations. Reuse already
 read issue/PR evidence within the task, while reading every new comment, review,
 timeline event and changed release record before making a decision. Re-read the
