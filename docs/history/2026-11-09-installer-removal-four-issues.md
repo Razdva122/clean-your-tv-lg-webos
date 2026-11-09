@@ -82,8 +82,30 @@ The corrected focused checks include:
 - Changed Python parses with Python 3.9 grammar; formatting and whitespace checks
   passed before the final consolidated commit.
 
-The broader installer/setup/Android/TV-runtime command is recorded separately below
-when it completes; the focused results do not stand in for a frozen candidate.
+The complete affected local command exited successfully:
+
+```sh
+PYTHON=<maintained-project-venv>/bin/python PYTHONDONTWRITEBYTECODE=1 \
+NODE8=<exact-8.12.0> NODE012=<exact-0.12.2> \
+NODE010=<exact-0.10.15> NODE01025=<exact-0.10.25> \
+scripts/test.sh installer setup android tv-runtime
+```
+
+It passed 1,192 installer cases (three declared skips), 286 setup cases, 44
+Android Python cases, 1,185 Root runtime cases (three declared skips), 136 System
+cases and selected JS/native/compatibility/package checks. Final scoped cleanup
+rerun passed all 55 cases (two platform/container skips) on exact Node 8.12.0 and
+compiled Node 0.12.2; the final C1 payload test rerun passed both cases. Windows
+retains byte/manifest validation while the native runtime-selector execution is
+POSIX-only. These implementation checks do not substitute for a frozen candidate.
+The [implementation PR](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/457)
+records subsequent integration/publication separately. Product/test head
+`a5cdaaae` passed all selected PR checks: [Tests 42567793891](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42567793891),
+including eight Linux/macOS runtime shards, browser and optional Python;
+[Windows/Intel Mac runtime 42567793959](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42567793959)
+and [preview build 42567794013](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42567794013)
+also passed. Release policy passed; full-release/deployment were unselected.
+The final evidence-only commit preserves every product/test input.
 
 ## Packaging and acceptance limits
 
