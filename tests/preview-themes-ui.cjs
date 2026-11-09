@@ -113,6 +113,64 @@ const http = require('node:http');
         'metadata adds no focus targets'
       );
     }
+    const exportedThemes = JSON.parse(
+      fs.readFileSync(path.join(site, 'preview/themes.json'))
+    ).themes;
+    const videoFilter = page.getByRole('button', {
+      name: 'Video',
+      exact: true
+    });
+    const fourKFilter = page.getByRole('button', { name: '4K', exact: true });
+    const visibleThemes = () =>
+      page
+        .locator('#previewThemes button:visible')
+        .evaluateAll((buttons) =>
+          buttons.map((button) => button.dataset.theme)
+        );
+    const initialTheme = await frame
+      .locator('body')
+      .evaluate(() => ThemeManager.current().id);
+    await videoFilter.focus();
+    await page.keyboard.press('Space');
+    assert.equal(await videoFilter.getAttribute('aria-pressed'), 'true');
+    assert.deepEqual(
+      await visibleThemes(),
+      exportedThemes.filter((t) => t.hasVideo).map((t) => t.id)
+    );
+    await fourKFilter.click();
+    assert.deepEqual(
+      await visibleThemes(),
+      exportedThemes.filter((t) => t.hasVideo && t.has4k).map((t) => t.id)
+    );
+    assert.equal(
+      await frame.locator('body').evaluate(() => ThemeManager.current().id),
+      initialTheme,
+      'filtering must not change the selected theme'
+    );
+    assert.equal(
+      packages.length,
+      0,
+      'filtering must not download theme packages'
+    );
+    await videoFilter.click();
+    assert.deepEqual(
+      await visibleThemes(),
+      exportedThemes.filter((t) => t.has4k).map((t) => t.id)
+    );
+    for (const edition of ['Root Edition', 'No-root Edition']) {
+      await page.getByRole('button', { name: edition, exact: true }).click();
+      await page.locator('#previewThemes[aria-busy="false"]').waitFor();
+      assert.equal(await fourKFilter.getAttribute('aria-pressed'), 'true');
+      assert.deepEqual(
+        await visibleThemes(),
+        exportedThemes.filter((t) => t.has4k).map((t) => t.id)
+      );
+    }
+    await fourKFilter.click();
+    assert.deepEqual(
+      await visibleThemes(),
+      exportedThemes.map((t) => t.id)
+    );
     await page.route('**/preview/packages/*.json', async (route) => {
       await page.unroute('**/preview/packages/*.json');
       await route.fulfill({ json: { schemaVersion: 1 } });
@@ -243,10 +301,38 @@ const http = require('node:http');
       'failed package is retried; successful packages are reused across edition switches'
     );
     assert.equal(new Set(packages).size, 7);
+    // A catalogue without matching media must explain the empty result and reset.
+    const noVideo = JSON.parse(
+      fs.readFileSync(path.join(site, 'preview/themes.json'))
+    );
+    for (const theme of noVideo.themes) theme.hasVideo = false;
+    await page.route('**/preview/themes.json', (route) =>
+      route.fulfill({ json: noVideo })
+    );
+    await page.setViewportSize({ width: 320, height: 900 });
+    await page.reload();
+    await page.locator('#previewThemes[aria-busy="false"]').waitFor();
+    await videoFilter.click();
+    assert.deepEqual(await visibleThemes(), []);
+    assert.equal(await page.locator('#filterStatus').isVisible(), true);
+    assert.equal(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth
+      ),
+      true,
+      'filters must fit a narrow phone screen'
+    );
+    await videoFilter.focus();
+    await page.keyboard.press('Enter');
+    assert.deepEqual(
+      await visibleThemes(),
+      exportedThemes.map((t) => t.id)
+    );
+    assert.equal(await page.locator('#filterStatus').isVisible(), false);
     assert.deepEqual(errors, []);
     await browser.close();
     console.log(
-      'PASS inline published Themes in Root/No-root, offline validated packages and original app order'
+      'PASS inline Themes; Video/4K filters, intersection, keyboard, edition persistence, empty results and 320px layout; offline packages and original app order'
     );
   } catch (e) {
     console.error(await page.locator('#themeStatus').innerText());

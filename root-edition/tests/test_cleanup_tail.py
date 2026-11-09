@@ -63,7 +63,7 @@ var lock=process.env.OWNERSHIP_FD?Number(process.env.OWNERSHIP_FD):fs.openSync('
 var promotion=process.env.PROMOTION_FD?Number(process.env.PROMOTION_FD):fs.openSync('/var/lib/clean-your-tv-python/.install.lock','r+');
 var worker=process.env.WORKER_FD?Number(process.env.WORKER_FD):fs.openSync('/var/lib/clean-your-tv-installation/worker.lock','r+');
 var fake={getuid:process.getuid,pid:999999,ppid:999998,argv:['node','-',process.env.MODE||'finish','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',process.env.TAIL_STAGE||'-',String(lock),String(promotion),String(worker),process.env.GATE_SHA||'-',process.env.REMOVAL||'dddddddddddddddddddddddddddddddd'],stdout:process.stdout,stderr:process.stderr};
-var cp={spawnSync:function(command,args,options){
+function fixtureReply(command,args,options){
  if(command==='/proc/self/fd/3')return require('child_process').spawnSync(command,args,options);
  if(command==='/usr/bin/node'&&args[0]==='-e'){
   if(JSON.parse(args[2]).action!=='inventory')throw Error('Unexpected private cleanup effect');
@@ -73,17 +73,25 @@ var cp={spawnSync:function(command,args,options){
  if(method.indexOf('listApps')!==-1){if(process.env.PRIVATE_ERROR)throw Error(process.env.PRIVATE_ERROR);if(process.env.ALL_CATALOGS_DENIED || process.env.DEV_CATALOG_DENIED && method.indexOf('/dev/')!==-1)value.returnValue=false;if(process.env.CATALOG_MALFORMED && method.indexOf('/dev/')!==-1)delete value.returnValue;value.apps=[];}
  else if(method.indexOf('getSystemSettings')!==-1){if(process.env.NO_HOME_APIS)throw Error('Home APIs unavailable');value.settings={defaultApps:{home:process.env.SETTINGS_HOME||(process.env.FOREIGN_ROUTE?'changed':'third.party.home')}};}
  else if(method.indexOf('getProfiles')!==-1){if(process.env.FAIL_FINAL_READBACK && ++profileReads===2)throw Error('injected final readback failure');if(process.env.MISSING_PROFILES){value.returnValue=false;if(process.env.PROFILE_ERROR)value=JSON.parse(process.env.PROFILE_ERROR);}else value.profiles={defaultApps:{categories:{home:'third.party.home'}},idleApp:{appId:'third.party.home'}};}
- else if(method.indexOf('activitymanager')!==-1)value.activities=JSON.parse(process.env.ACTIVITIES||'[]');
+ else if(method.indexOf('activitymanager')!==-1){
+  if(process.env.ACTIVITY_BOTH_UNAVAILABLE || process.env.ACTIVITY_LIST_UNAVAILABLE && method.indexOf('/list')!==-1)return {status:1,stdout:new Buffer('')};
+  value.activities=JSON.parse(process.env.ACTIVITIES||'[]');
+  if(process.env.ACTIVITY_MALFORMED && method.indexOf('/list')!==-1)value.activities={};
+ }
  else if(method.indexOf('getAllInputStatus')!==-1)value.devices=[];
  else if(method.indexOf('getConfigs')!==-1)value.configs={'com.webos.surfacemanager.keyFilters':JSON.parse(process.env.FILTER_CHAIN||'[{"file":"/usr/lib/qml/KeyFilters/systemUi.js","handler":"handleSystemKeys"}]')};
  else throw Error('Unexpected RPC '+method);
  return {status:0,stdout:Buffer.from?Buffer.from(JSON.stringify(value)):new Buffer(JSON.stringify(value))};
+}
+var cp={spawnSync:function(command,args,options){if(process.env.NO_SYNC)throw Error('sync child unsupported');return fixtureReply(command,args,options);},spawn:function(command,args,options){
+ var E=require('events').EventEmitter,child=new E();child.stdout=new E();child.stderr=new E();child.stdin=new E();child.kill=function(){process.nextTick(function(){child.emit('close',null,'SIGKILL');});};
+ process.nextTick(function(){try{var reply=fixtureReply(command,args,options);child.stdout.emit('data',reply.stdout);child.emit('close',reply.status,null);}catch(error){child.emit('error',error);child.emit('close',1,null);}});return child;
 }};
 fake.versions=process.versions;fake.env=process.env;fake.platform=process.platform;fake.nextTick=process.nextTick;
-var context={require:function(name){return name==='fs'?fs:name==='child_process'?cp:require(name);},process:fake,Buffer:Buffer,console:console};context.global=context;
-try{vm.runInNewContext(real.readFileSync(source,'utf8'),context);}
-finally{real.closeSync(lock);real.writeFileSync(process.env.MUTATION_LOG||base+'/mutations.json',JSON.stringify(calls));}
-process.exitCode=fake.exitCode||0;
+var context={require:function(name){return name==='fs'?fs:name==='child_process'?cp:require(name);},process:fake,Buffer:Buffer,console:console,setTimeout:setTimeout,clearTimeout:clearTimeout,setImmediate:setImmediate,clearImmediate:clearImmediate};context.global=context;
+function finished(){real.closeSync(lock);real.writeFileSync(process.env.MUTATION_LOG||base+'/mutations.json',JSON.stringify(calls));process.exitCode=fake.exitCode||0;}
+var outcome=vm.runInNewContext(real.readFileSync(source,'utf8'),context);
+if(outcome&&typeof outcome.then==='function')outcome.then(finished,function(error){console.error(error);fake.exitCode=1;finished();});else finished();
 '''
 
 
@@ -119,6 +127,25 @@ class CleanupTail(unittest.TestCase):
             env={**os.environ,**environment},timeout=15)
         self.assertTrue(result.stdout,result.stderr)
         return result,json.loads(result.stdout)
+
+    def test_legacy_tv_cleanup_uses_async_children_and_activity_fallback(self):
+        result,reply=self.run_tail(NO_SYNC='1',ACTIVITY_LIST_UNAVAILABLE='1')
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(reply['stage'],'verified-clean')
+        self.assertFalse(self.runtime.exists())
+        result,reply=self.run_tail(NO_SYNC='1',ACTIVITY_LIST_UNAVAILABLE='1',MODE='verify')
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(reply['state'],'verified-clean')
+
+    def test_activity_fallback_never_accepts_missing_or_malformed_inventory(self):
+        for flags in ({'ACTIVITY_BOTH_UNAVAILABLE':'1'},{'ACTIVITY_MALFORMED':'1'},
+                      {'ACTIVITY_LIST_UNAVAILABLE':'1','ACTIVITIES':'[null]'},
+                      {'ACTIVITY_LIST_UNAVAILABLE':'1','ACTIVITIES':'[{"callback":{"method":"luna://com.local.nativehome.service/tick"}}]'}):
+            with self.subTest(flags=flags):
+                result,reply=self.run_tail(**flags)
+                self.assertEqual(result.returncode,1)
+                self.assertTrue(self.runtime.exists())
+                self.assertNotEqual(reply.get('state'),'complete')
 
     def test_inert_system_staging_does_not_block_final_removal_or_recheck(self):
         stage=self.base/'tmp'/('cytv-system-updater-'+'c'*32);stage.mkdir(mode=0o700)
@@ -190,6 +217,74 @@ class CleanupTail(unittest.TestCase):
         result,_=self.run_tail(MODE='finalize')
         self.assertEqual(result.returncode,0,result.stderr)
         self.assertEqual(before,{p.name:p.read_bytes() for p in self.state.iterdir() if p.is_file()})
+
+    def test_completed_legacy_receipt_reconciles_after_retiring_own_scratch_directories(self):
+        result,_=self.run_tail();self.assertEqual(result.returncode,0,result.stderr)
+        record=json.loads((self.state/('clean-removal-'+ID+'.json')).read_text())
+        record.pop('final_fence');record.pop('final_original_lease')
+        self.write('clean-removal-'+ID+'.json',record)
+        self.write('operation.json',dict(schema=1,id='b'*32,owner='clean-removal',journal='product-'+ID+'.json',stage='verified-clean',terminal=False))
+        stage='/tmp/cytv-root-tail-'+'c'*32
+        directory=self.base/stage.lstrip('/');directory.mkdir(mode=0o700)
+        (directory/'gate').write_bytes(b'current gate')
+        (directory/'gate').chmod(0o700)
+        old='/tmp/cytv-root-tail-'+'e'*32
+        old_directory=self.base/old.lstrip('/');old_directory.mkdir(mode=0o700)
+        (old_directory/'gate').write_bytes(b'previous installer gate')
+        (old_directory/'gate').chmod(0o700)
+        (old_directory/'.cytv.ABC123').write_bytes(b'interrupted atomic upload')
+        (old_directory/'cache').mkdir(mode=0o700)
+        (old_directory/'cache/partial').write_bytes(b'owned temporary bytes')
+        result,reply=self.run_tail(MODE='finish',TAIL_STAGE=old+','+stage,GATE_SHA=hashlib.sha256(b'current gate').hexdigest())
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(reply['state'],'complete')
+        saved=json.loads((self.state/('clean-removal-'+ID+'.json')).read_text())
+        self.assertEqual(saved['tail_stages'],record['tail_stages'],'completed cleanup must not acquire another destructive stage')
+        self.assertNotEqual(saved['final_fence'],'b'*32)
+        before={p.name:p.read_bytes() for p in self.state.iterdir() if p.is_file()}
+        result,reply=self.run_tail(MODE='finish')
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(before,{p.name:p.read_bytes() for p in self.state.iterdir() if p.is_file()})
+
+    def test_completed_readback_removes_own_scratch_tree_without_following_links(self):
+        result,_=self.run_tail();self.assertEqual(result.returncode,0,result.stderr)
+        before={p.name:p.read_bytes() for p in self.state.iterdir() if p.is_file()}
+        stage='/tmp/cytv-root-tail-'+'c'*32
+        directory=self.base/stage.lstrip('/');directory.mkdir(mode=0o700)
+        (directory/'gate').write_bytes(b'old or partial inert gate')
+        cache=directory/'cache';cache.mkdir(mode=0o700)
+        (cache/'partial-upload').write_bytes(b'owned temporary bytes')
+        foreign=self.base/'foreign';foreign.mkdir(mode=0o700)
+        (foreign/'keep').write_text('preserve')
+        (directory/'outside').symlink_to(foreign,target_is_directory=True)
+        result,reply=self.run_tail(MODE='finish',TAIL_STAGE=stage,GATE_SHA='f'*64)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertFalse(directory.exists())
+        self.assertEqual((foreign/'keep').read_text(),'preserve')
+        self.assertEqual(before,{p.name:p.read_bytes() for p in self.state.iterdir() if p.is_file()})
+
+    def test_completed_readback_preserves_unsafe_or_redirected_scratch_root(self):
+        for kind in ('writable','redirected','hardlink'):
+            with self.subTest(kind=kind):
+                case=CleanupTail();case.setUp()
+                try:
+                    result,_=case.run_tail();self.assertEqual(result.returncode,0,result.stderr)
+                    before={p.name:p.read_bytes() for p in case.state.iterdir() if p.is_file()}
+                    stage='/tmp/cytv-root-tail-'+'c'*32
+                    directory=case.base/stage.lstrip('/')
+                    foreign=case.base/'foreign';foreign.mkdir(mode=0o700)
+                    (foreign/'keep').write_text('preserve')
+                    if kind=='redirected':directory.symlink_to(foreign,target_is_directory=True)
+                    else:
+                        directory.mkdir(mode=0o700)
+                        if kind=='writable':directory.chmod(0o777)
+                        else:os.link(foreign/'keep',directory/'gate')
+                    result,reply=case.run_tail(MODE='finish',TAIL_STAGE=stage,GATE_SHA='f'*64)
+                    self.assertEqual(result.returncode,1)
+                    self.assertTrue(directory.exists())
+                    self.assertEqual((foreign/'keep').read_text(),'preserve')
+                    self.assertEqual(before,{p.name:p.read_bytes() for p in case.state.iterdir() if p.is_file()})
+                finally:case.doCleanups()
 
     def test_incomplete_removal_cannot_be_admitted_or_finished_by_verification(self):
         before=(self.state/('clean-removal-'+ID+'.json')).read_bytes()
@@ -523,9 +618,9 @@ class CleanupTail(unittest.TestCase):
         source.write_text(injected)
         harness=self.harness.read_text()
         # Only the shared current Node program executes normally; TV RPC stays simulated.
-        marker='spawnSync:function(command,args,options){'
+        marker='spawn:function(command,args,options){'
         self.assertIn(marker,harness)
-        harness=harness.replace(marker,marker+'if(command==="/usr/bin/node")return require("child_process").spawnSync(process.execPath,args,options);',1)
+        harness=harness.replace(marker,marker+'if(command==="/usr/bin/node")return require("child_process").spawn(process.execPath,args,options);',1)
         self.harness.write_text(harness)
         result=subprocess.run([os.environ.get('NODE8','node'),str(self.harness),str(self.base),str(source)],capture_output=True,text=True,timeout=15)
         self.assertEqual(result.returncode,0,result.stderr)
@@ -574,9 +669,9 @@ class CleanupTail(unittest.TestCase):
         for private in ('sensitivecredential','ENOENT: private path /private/secret-key'):
             result,reply=self.run_tail(PRIVATE_ERROR=private)
             self.assertNotEqual(result.returncode,0)
-            self.assertEqual(reply.get('cleanup_error'),'cleanup-guard-failed')
+            self.assertEqual(reply.get('cleanup_error'),'cleanup-readback-unavailable')
             self.assertNotIn(private,result.stdout+result.stderr)
-            self.assertEqual(result.stderr,'CYTV_CLEAN_TAIL: cleanup-guard-failed\n')
+            self.assertEqual(result.stderr,'CYTV_CLEAN_TAIL: cleanup-readback-unavailable\n')
 
     def test_changed_foreign_route_refuses_before_delete(self):
         result,reply=self.run_tail(FOREIGN_ROUTE='1')
@@ -630,7 +725,7 @@ class CleanupTail(unittest.TestCase):
         return home,appinfo,vendor
 
     def compositor_tail(self,**env):
-        return self.run_tail(SYSTEM_DEVICE='1',NO_HOME_APIS='1',MISSING_PROFILES='1',
+        return self.run_tail(NO_SYNC='1',SYSTEM_DEVICE='1',NO_HOME_APIS='1',MISSING_PROFILES='1',
             PROFILE_ERROR=json.dumps({'returnValue':False,'errorCode':-1,'errorText':'Service does not exist: com.webos.service.systemprofile.'}),**env)
 
     def test_current_stock_compositor_tail_finishes_without_home_settings(self):

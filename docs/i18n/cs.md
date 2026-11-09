@@ -88,6 +88,8 @@ Uveďte model TV, firmware, No-root nebo Root, instalační zařízení, krok a 
 
 Vyberte v Údržbě **Odinstalovat Clean Your TV** se stejným uloženým připojením TV. Potvrďte jednou. Přítomné známé aplikace a soubory projektu se odeberou, chybějící se přeskočí, i po částečné instalaci.
 
+Na starších televizorech bez samostatné aplikace LG Home může odebrání No-root přepnout obrazovku na živé vysílání. Nechte televizor zapnutý a na požádání jej restartujte; nemažte data obnovení ani neresetujte televizor.
+
 Na výzvu odpojte TV od napájení, znovu připojte, počkejte na síť a vyberte **Zkusit znovu**. Pohotovost nebo Quick Start není úplný restart; CYTV TV automaticky nerestartuje. Při ztrátě spojení je zkontrolujte a opakujte stejný cíl odebrání bez dalšího průvodce obnovou. Při odmítnutí přístupu použijte požadované připojení Root; pokud je TV zaneprázdněn, počkejte a zkuste znovu. Úspěch se zobrazí až po ověření závěrečného úklidu. Zachovejte klíče a původní zprávy. Nouzové ovládání a souhlas se sdílením výše platí dál.
 
 Je po neúspěšné nebo přerušené instalaci přímo dostupná obnova. Pokud No-root nemůže pokračovat, potvrďte jednou úplné odebrání. Při dočasné ztrátě spojení nebo zaneprázdněném procesu CYTV proběhnou nejvýše tři pokusy. Je-li nutný Root, zvolte **Připojit přes Root** pro stejnou TV; ověřený úklid Root dokončí i její zablokované odebrání No-root. Po chybě aktivace Root se CYTV pokusí obnovit a ověřit LG Home bez opakované aktivace. Zrušení s nedokončenou prací zachová zprávu a kroky obnovy. Nouzové zastavení zůstane zachováno.

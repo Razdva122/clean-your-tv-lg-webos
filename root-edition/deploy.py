@@ -83,6 +83,8 @@ def verify_bundle(bundle, allow_experimental=False):
     if experimental and routing:
         expected.remove('runtime/c1-home-gate')
         expected.update(('runtime/c1-keyfilter-guard', 'runtime/c1_keyfilter.py', 'runtime/c1-home-filter.js'))
+        if 'runtime/c1-home-gate' in manifest.get('files',{}):
+            expected.add('runtime/c1-home-gate')  # Removal-only schema-1 executor; never fresh install routing.
         if release.get('capabilities') != ['theme-receiver-v1','wallpaper-media-v1','c1-keyfilter-v1']:
             raise ValueError('Invalid compositor routing capabilities')
     if manifest.get('package') != package or set(manifest.get('files', {})) != expected:

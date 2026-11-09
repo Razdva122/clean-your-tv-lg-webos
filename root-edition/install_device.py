@@ -769,7 +769,8 @@ class LocalDevice:
         if any(item.get('id')=='com.gathin.tvhome' or item.get('appId')=='com.gathin.tvhome' for item in devices):
             if self.rpc('com.webos.service.eim/deleteDevice',{'appId':'com.gathin.tvhome'}).get('returnValue') is not True:
                 raise ValueError('owned_input_registration_remains')
-        activities=self.rpc('com.palm.activitymanager/list',{'details':True,'subscribers':True,'current':False,'internal':False}).get('activities')
+        from clean_removal import activities as read_activities
+        activities=read_activities(self)
         if not isinstance(activities,list):raise ValueError('activity_readback_unverified')
         own={'com.local.nativehome.boot':'luna://com.local.nativehome.service/tick',
              'com.gathin.tvhome.renewal.hourly':'luna://com.gathin.tvhome.renewal/tick',
@@ -1307,7 +1308,8 @@ class LocalDevice:
             allowed={'deploy.json','provision.lock'} if index==0 else {'bootstrap.json','daemon.lock','worker.lock'}
             os.close(checked_store(root,self.ownership.store.uid)._directory())
             if set(p.name for p in root.iterdir())-allowed:raise ValueError('private_members_remain')
-        activities=self.rpc('com.palm.activitymanager/list',{'details':True,'subscribers':True,'current':False,'internal':False}).get('activities')
+        from clean_removal import activities as read_activities
+        activities=read_activities(self)
         if (not isinstance(activities,list) or any(not isinstance(item,dict)
                 or item.get('name')=='com.cleanyourtv.root.preview.service.recovery'
                 or str(item.get('callback',{}).get('method','')).startswith(tuple('luna://'+app+('.renewal/' if app=='com.gathin.tvhome' else '.service/') for app in APPS)) for item in activities)):

@@ -1,16 +1,14 @@
-/* Hallmark · shape: Workbench (home), Long Document (guides) · genre: editorial · theme: brand · redesign: full
- * hero: Offer (/), Banner (guides) · nav: compact index and native mobile menu · footer: brand mast
- * signature: actual launcher at first-screen scale · imagery: existing product screenshots · job: try
- * axes: dark / rounded sans / orange signal · posture: restrained · contrast: verified · fold: verified · v2.0.0 */
-/* Hallmark · pre-emit critique: P4 H4 E3 S4 R4 V4 · weakest: E, replace ad hoc spacing and repeated navigation with a shared system */
-/* Hallmark · dropped inert LG webOS eyebrow · gate 54, the same compatibility fact remains in the lead and brand mark */
-/* Hallmark · hero-review: subagent, fix then ship · 1 finding resolved: launcher enlarged beside offer */
-/* Hallmark · finish-review: subagent, fix · 1 finding resolved: full help questions wrap naturally · gap: none */
 @import url('./tokens.css');
 @import url('./base.css');
 
 :root {
   font-synthesis: none;
+}
+body {
+  background:
+    radial-gradient(ellipse at 8% 0%, #a8956820, transparent 42rem),
+    radial-gradient(ellipse at 98% 20%, #bc59201a, transparent 55rem),
+    var(--color-paper);
 }
 html,
 body {
@@ -56,15 +54,25 @@ button:focus-visible,
   padding-inline: var(--gutter);
 }
 .site-header {
-  max-width: var(--container);
-  margin-inline: auto;
-  min-height: var(--header-height);
-  padding: var(--space-md) var(--gutter);
+  width: calc(100% - 2 * var(--gutter));
+  max-width: calc(var(--container) - 2 * var(--gutter));
+  margin: var(--space-md) auto 0;
+  min-height: 72px;
+  padding: var(--space-xs) var(--space-lg);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-pill);
+  background: #2b2b2ee8;
+  box-shadow:
+    0 8px 32px #00000024,
+    inset 0 1px 0 #ffffff08;
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
   display: flex;
   align-items: center;
   gap: var(--space-lg);
-  position: relative;
-  z-index: var(--z-dropdown);
+  position: sticky;
+  top: var(--space-md);
+  z-index: var(--z-sticky-nav);
 }
 .brand {
   flex-shrink: 0;
@@ -123,8 +131,8 @@ button:focus-visible,
 .languages nav,
 .mobile-menu nav {
   position: absolute;
-  right: var(--gutter);
-  top: 100%;
+  right: var(--space-sm);
+  top: calc(100% + var(--space-sm));
   background: var(--color-paper-3);
   color: var(--color-ink);
   padding: var(--space-sm);
@@ -133,7 +141,8 @@ button:focus-visible,
   overflow: auto;
   z-index: var(--z-dropdown);
   box-shadow: var(--shadow-menu);
-  border-radius: var(--radius-control);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-card);
 }
 .languages nav a,
 .mobile-menu nav a {
@@ -182,7 +191,7 @@ main:focus {
   background: var(--color-ink);
   color: var(--color-paper);
   font-size: var(--text-md);
-  font-weight: 400;
+  font-weight: 700;
   text-decoration: none;
   white-space: nowrap;
   transition:
@@ -215,37 +224,35 @@ main:focus {
   text-decoration-thickness: var(--rule-hair);
 }
 .hero {
-  height: calc(100svh - var(--header-height));
-  min-height: 680px;
-  max-height: 840px;
-  padding-block: var(--space-lg);
+  padding-block: var(--space-3xl) var(--space-xl);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 3.3fr);
-  align-items: center;
-  gap: var(--space-lg);
+  gap: var(--space-2xl);
 }
 .intro-grid {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--space-lg);
+  text-align: center;
 }
 .hero h1 {
-  font-size: clamp(3rem, 4.3vw, 4rem);
-  font-weight: 400;
-  max-width: 12ch;
-  line-height: 1.05;
+  font-size: var(--text-display);
+  font-weight: 700;
+  max-width: 18ch;
+  line-height: 1.04;
   hyphens: none;
+  color: var(--color-ink);
 }
 .hero .lead {
-  font-size: var(--text-md);
-  line-height: 1.6;
+  font-size: var(--text-lead);
+  line-height: 1.5;
   color: var(--color-muted);
-  max-width: 32ch;
+  max-width: 56ch;
 }
 .hero .actions {
-  align-items: flex-start;
+  justify-content: center;
+  margin-top: var(--space-xs);
 }
 .tv {
   margin: 0;
@@ -268,7 +275,9 @@ main:focus {
   height: auto;
   max-width: 100%;
   object-fit: contain;
+  border: 1px solid var(--color-rule);
   border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 .tv figcaption {
   margin: 0;
@@ -285,9 +294,11 @@ main:focus {
   gap: var(--gap-columns);
 }
 .benefits p {
-  padding-top: var(--space-lg);
-  border-top: var(--rule-hair) solid var(--color-rule);
-  font-size: var(--text-xl);
+  padding: var(--space-lg);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-card);
+  background: #ffffff05;
+  font-size: var(--text-lg);
   line-height: 1.4;
   color: var(--color-ink-2);
 }
@@ -317,8 +328,10 @@ main:focus {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
   gap: var(--gap-columns);
-  padding-bottom: var(--space-xl);
-  border-bottom: var(--rule-hair) solid var(--color-rule);
+  padding: var(--space-lg);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-card);
+  background: #ffffff05;
 }
 .editions h3 {
   font-size: var(--text-3xl);
@@ -326,7 +339,7 @@ main:focus {
 .theme-section {
   color: var(--color-ink);
   padding-block: var(--section-gap-s);
-  background: var(--color-paper-2);
+  background: transparent;
 }
 .section-heading {
   display: flex;
@@ -385,8 +398,10 @@ main:focus {
 }
 .quick-steps li {
   counter-increment: steps;
-  border-top: var(--rule-hair) solid var(--color-rule);
-  padding-top: var(--space-lg);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-card);
+  background: #ffffff05;
+  padding: var(--space-lg);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -482,7 +497,7 @@ main:focus {
   .hero h1 {
     grid-row: auto;
     font-size: clamp(2.75rem, 8vw, 4.5rem);
-    max-width: 19ch;
+    max-width: 18ch;
   }
   .hero .lead,
   .hero .actions {
@@ -505,7 +520,9 @@ main:focus {
     width: 120px;
   }
   .site-header {
-    gap: var(--space-md);
+    gap: var(--space-sm);
+    padding-inline: var(--space-sm);
+    min-height: 64px;
   }
   .site-header .mobile-menu summary {
     font-size: var(--text-sm);
@@ -519,9 +536,9 @@ main:focus {
   }
   .languages nav,
   .mobile-menu nav {
-    max-width: calc(100% - 2 * var(--gutter));
+    max-width: calc(100% - 2 * var(--space-sm));
     min-width: 0;
-    width: calc(100% - 2 * var(--gutter));
+    width: calc(100% - 2 * var(--space-sm));
   }
   .hero h1 {
     font-size: clamp(2.6rem, 9vw, 3.5rem);

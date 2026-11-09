@@ -9,14 +9,14 @@ import {
   repo,
   description,
   type Locale,
-  type Section,
-} from "../lib/site";
+  type Section
+} from '../lib/site';
 interface Props {
   lang: Locale;
   section?: Section;
   root?: boolean;
 }
-const { lang, section = "", root = false } = Astro.props;
+const { lang, section = '', root = false } = Astro.props;
 const t = copy[lang],
   index = sections.indexOf(section);
 const title = section
@@ -24,19 +24,19 @@ const title = section
   : `Clean Your TV — LG webOS | ${t.headline}`;
 const canonical = origin + route(lang, section);
 const menuLabel = {
-  en: "Menu",
-  ru: "Меню",
-  de: "Menü",
-  es: "Menú",
-  "pt-BR": "Menu",
-  fr: "Menu",
-  it: "Menu",
-  ko: "메뉴",
-  hi: "मेन्यू",
-  pl: "Menu",
-  "zh-Hans": "菜单",
-  "zh-Hant": "選單",
-  cs: "Nabídka",
+  en: 'Menu',
+  ru: 'Меню',
+  de: 'Menü',
+  es: 'Menú',
+  'pt-BR': 'Menu',
+  fr: 'Menu',
+  it: 'Menu',
+  ko: '메뉴',
+  hi: 'मेन्यू',
+  pl: 'Menu',
+  'zh-Hans': '菜单',
+  'zh-Hant': '選單',
+  cs: 'Nabídka'
 }[lang];
 ---
 
@@ -58,20 +58,20 @@ const menuLabel = {
     <link
       rel="alternate"
       hreflang="x-default"
-      href={origin + route("en", section)}
+      href={origin + route('en', section)}
     />
     <link
       rel="icon"
       type="image/svg+xml"
-      href={base + "assets/symbol-color.svg"}
+      href={base + 'assets/symbol-color.svg'}
     />
     <meta property="og:type" content="website" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description(lang, section)} />
     <meta property="og:url" content={canonical} />
-    <meta property="og:image" content={origin + base + "assets/classic.jpg"} />
+    <meta property="og:image" content={origin + base + 'assets/classic.jpg'} />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="theme-color" content="#241D19" />
+    <meta name="theme-color" content="#202022" />
   </head>
   <body>
     <a class="skip" href="#content">
@@ -80,7 +80,7 @@ const menuLabel = {
     <header class="site-header">
       <a class="brand" href={route(lang)} aria-label="Clean Your TV">
         <img
-          src={base + "assets/logo-dark.svg"}
+          src={base + 'assets/logo-dark.svg'}
           alt="Clean Your TV — for LG webOS"
           width="250"
           height="70"
@@ -90,7 +90,7 @@ const menuLabel = {
         {sections.map((page, i) => (
           <a
             href={route(lang, page)}
-            aria-current={section === page ? "page" : undefined}
+            aria-current={section === page ? 'page' : undefined}
           >
             {t.nav[i]}
           </a>
@@ -102,7 +102,7 @@ const menuLabel = {
           {sections.map((page, i) => (
             <a
               href={route(lang, page)}
-              aria-current={section === page ? "page" : undefined}
+              aria-current={section === page ? 'page' : undefined}
             >
               {t.nav[i]}
             </a>
@@ -119,7 +119,7 @@ const menuLabel = {
               href={route(code, section)}
               hreflang={code}
               lang={code}
-              aria-current={lang === code ? "true" : undefined}
+              aria-current={lang === code ? 'true' : undefined}
             >
               {copy[code].name}
             </a>
@@ -133,7 +133,7 @@ const menuLabel = {
     <footer class="site-footer">
       <a class="footer-mark" href={route(lang)} aria-label="Clean Your TV">
         <img
-          src={base + "assets/logo-dark.svg"}
+          src={base + 'assets/logo-dark.svg'}
           alt="Clean Your TV — for LG webOS"
           width="250"
           height="70"
@@ -143,8 +143,8 @@ const menuLabel = {
       <p>{t.footer}</p>
       <div>
         <a href={repo}>{t.source}</a>
-        <a href={route(lang, "help")}>{t.nav[5]}</a>
-        <a href={repo + "/releases/latest"}>{t.download}</a>
+        <a href={route(lang, 'help')}>{t.nav[5]}</a>
+        <a href={repo + '/releases/latest'}>{t.download}</a>
       </div>
     </footer>
     {root && <script is:inline>

@@ -50,6 +50,23 @@ def verified_restart(record):
     return bool(boot_format(baseline) and boot_format(baseline)==boot_format(verified) and baseline!=verified)
 
 
+
+def activities(device):
+    """Read the complete activity inventory on both retail API generations."""
+    payload={'details':True,'subscribers':True,'current':False,'internal':False}
+    try:
+        reply=device.rpc('com.palm.activitymanager/list',payload)
+    except (RuntimeError,TimeoutError) as error:
+        if getattr(error,'luna',{}).get('reason') not in ('timeout','service-missing','method-missing','negative-reply'):
+            raise
+        reply=device.rpc('com.palm.activitymanager/getActivityInfo',payload)
+    rows=reply.get('activities') if isinstance(reply,dict) else None
+    if (not isinstance(reply,dict) or reply.get('returnValue') is not True or not isinstance(rows,list)
+            or any(not isinstance(row,dict) or ('callback' in row and not isinstance(row['callback'],dict)) for row in rows)):
+        raise ValueError('Activity inventory could not be verified')
+    return rows
+
+
 def runtime_restore(payload, uid=0):
     """Called in an isolated interpreter with only the current verified bundle.
 

@@ -2,11 +2,35 @@
 (() => {
   const screen = document.getElementById('screen'),
     cards = document.getElementById('previewThemes'),
-    status = document.getElementById('themeStatus');
+    status = document.getElementById('themeStatus'),
+    filters = document.querySelectorAll('[data-theme-filter]'),
+    filterStatus = document.getElementById('filterStatus');
   let data,
     desired = null,
     generation = 0;
   const packages = new Map();
+  function filterThemes() {
+    const active = Array.from(filters).filter(
+      (button) => button.getAttribute('aria-pressed') === 'true'
+    );
+    let visible = 0;
+    for (const button of cards.querySelectorAll('button')) {
+      button.hidden = active.some(
+        (filter) => button.dataset[filter.dataset.themeFilter] !== 'true'
+      );
+      if (!button.hidden) visible++;
+    }
+    filterStatus.hidden = visible !== 0;
+    cards.scrollLeft = 0;
+  }
+  for (const button of filters)
+    button.onclick = () => {
+      button.setAttribute(
+        'aria-pressed',
+        String(button.getAttribute('aria-pressed') !== 'true')
+      );
+      filterThemes();
+    };
   function selected(manager) {
     for (const button of cards.querySelectorAll('button'))
       button.setAttribute(
@@ -18,6 +42,7 @@
     cards.setAttribute('aria-busy', String(value));
     for (const button of cards.querySelectorAll('button'))
       button.disabled = value;
+    for (const button of filters) button.disabled = value || !data;
   }
   async function apply(item, frame, view) {
     const manager = frame.ThemeManager;
@@ -82,6 +107,8 @@
         const button = document.createElement('button');
         button.type = 'button';
         button.dataset.theme = item.id;
+        button.dataset.hasVideo = String(!!item.hasVideo);
+        button.dataset.has4k = String(!!item.has4k);
         button.setAttribute('aria-label', item.title);
         button.setAttribute('aria-pressed', 'false');
         const image = document.createElement('img');
@@ -136,6 +163,7 @@
           }
         };
       }
+      filterThemes();
       frame.document.addEventListener('home-theme-change', () => {
         if (view === generation || frame === screen.contentWindow)
           selected(frame.ThemeManager);
