@@ -47,13 +47,13 @@
       "pr": 452,
       "issues": [],
       "summary": "Use TV POSIX paths in the Windows catalog fixture"
+    },
+    {
+      "pr": 456,
+      "issues": [],
+      "summary": "Fix bounded Root QA signing capacity for shared runtimes"
     }
   ],
   "excluded": [],
-  "acceptance": "",
-  "build": {
-    "run_id": 42519326218,
-    "attempt": 1,
-    "source": "4f9bcec196441eb23a5b4ff29fbe9a76dd5b8619"
-  }
+  "acceptance": ""
 }

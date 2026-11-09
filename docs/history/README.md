@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [v1.14.0 candidate QA, 2026-11-09](2026-11-09-release-1.14.0-qa.md): exact Android emulator upgrade, C3 recovery/catalog preflight, complete initial failure inventory and bounded signing-capacity correction; final device cases remain pending.
+
 - [Shared Root/Beta KeyFilters development, 2026-11-09](2026-11-09-root-beta-keyfilters.md): capability admission, exact legacy Node and ARM32 build checks, component handoff and unverified native-Home/ribbon limits.
 
 - [Next candidate preparation, 2026-11-09](2026-11-09-next-candidate-preparation.md): integrated PR inventory, combined host checks, authenticated published baselines and coordination of unfinished Root/Beta work; no new device acceptance.
