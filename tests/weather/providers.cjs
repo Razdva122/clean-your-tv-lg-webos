@@ -1,6 +1,32 @@
 'use strict';
 const assert = require('node:assert/strict');
 const Weather = require('../../launcher/weather-data.js');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const dayLabelSource = fs
+  .readFileSync(require.resolve('../../launcher/weather.js'), 'utf8')
+  .match(/  function dayLabel\([\s\S]*?\n  }/)[0];
+function rendererDayLabel(day, weather, now) {
+  class ClockDate extends Date {
+    static now() {
+      return now;
+    }
+  }
+  return vm.runInNewContext('(' + dayLabelSource + ')', {
+    Date: ClockDate,
+    t: (value) => value,
+    weekday: (value) => value
+  })(day, 0, weather);
+}
+function metAt(now) {
+  const body = met();
+  body.properties.meta.updated_at = new Date(now - 4.5 * 3600000).toISOString();
+  body.properties.timeseries = [0, 24].map((hours) => ({
+    ...structuredClone(body.properties.timeseries[0]),
+    time: new Date(now + hours * 3600000 - 30 * 60000).toISOString()
+  }));
+  return body;
+}
 const timeout = setTimeout(() => {
   throw Error('provider test did not finish');
 }, 5000);
@@ -128,7 +154,7 @@ const settings = (provider = 'auto') => ({
     (b) => (b.properties.meta.units.relative_humidity = 'fraction'),
     (b) => (b.properties.meta.updated_at = 'bad'),
     (b) => (b.properties.meta.updated_at = '2026-02-30T00:00:00Z'),
-    (b) => (b.properties.meta.updated_at = '2026-10-24T12:00:00Z'),
+    (b) => (b.properties.meta.updated_at = '2026-10-24T12:29:59Z'),
     (b) => (b.properties.timeseries[0].time = 'bad'),
     (b) => (b.properties.timeseries[3].time = '2026-11-31T00:00:00Z'),
     (b) =>
@@ -140,6 +166,45 @@ const settings = (provider = 'auto') => ({
     const body = met();
     mutate(body);
     assert.throws(() => Weather.normalizeMet(body, place, NOW));
+  }
+  for (const hours of [3.5, 4.5, 6, 12]) {
+    const body = met();
+    body.properties.meta.updated_at = new Date(
+      NOW - hours * 3600000
+    ).toISOString();
+    assert.equal(
+      Weather.normalizeMet(body, place, NOW).temp,
+      10,
+      `${hours}-hour model retains current forecast points`
+    );
+  }
+  const oldPoint = met();
+  oldPoint.properties.timeseries = [oldPoint.properties.timeseries[0]];
+  assert.throws(() => Weather.normalizeMet(oldPoint, place, NOW + 3 * 3600000));
+  for (const [zone, instant, offset] of [
+    ['Asia/Tokyo', '2026-10-24T23:30:00Z', 32400],
+    ['Asia/Tokyo', '2026-10-25T15:30:00Z', 32400],
+    ['America/Los_Angeles', '2026-10-25T00:30:00Z', -25200],
+    ['Europe/Berlin', '2026-10-25T00:30:00Z', 7200],
+    ['Europe/Berlin', '2026-10-25T01:30:00Z', 3600]
+  ]) {
+    const now = Date.parse(instant);
+    const weather = Weather.normalizeMet(
+      metAt(now),
+      { ...place, timezone: zone },
+      now
+    );
+    assert.equal(
+      rendererDayLabel(weather.days[0], weather, now),
+      'Today',
+      zone + ' local midnight'
+    );
+    assert.equal(
+      rendererDayLabel(weather.days[1], weather, now),
+      'Tomorrow',
+      zone + ' next local date'
+    );
+    assert.equal(weather.offset, offset, zone + ' current offset');
   }
   const extended = met();
   for (let day = 27; day <= 31; day++) {
@@ -171,6 +236,9 @@ const settings = (provider = 'auto') => ({
     global.Intl = undefined;
     assert.equal(Weather.normalizeMet(met(), place, NOW).timezone, 'UTC');
     assert.equal(Weather.normalizeMet(met(), place, NOW).days[0].low, 4);
+    const utc = Weather.normalizeMet(met(), place, NOW);
+    assert.equal(utc.offset, 0);
+    assert.equal(rendererDayLabel(utc.days[0], utc, NOW), 'Today');
   } finally {
     global.Intl = intl;
   }
@@ -295,6 +363,40 @@ const settings = (provider = 'auto') => ({
     'manual MET never displays legacy Open-Meteo'
   );
   isolated.store.destroy();
+  const dstCache = {
+    ...settings('met-no'),
+    caches: {
+      'met-no': {
+        key: '52.500,13.400',
+        updated: NOW,
+        data: Weather.normalizeMet(metAt(NOW), place, NOW)
+      }
+    }
+  };
+  const dstRestored = harness(dstCache);
+  dstRestored.advance(3600000);
+  await dstRestored.store.start();
+  assert.equal(
+    dstRestored.store.state().data.offset,
+    3600,
+    'restored MET offset follows DST'
+  );
+  assert.equal(
+    dstRestored.calls.length,
+    0,
+    'DST does not force fresh forecast request'
+  );
+  dstRestored.store.destroy();
+  const dstLive = harness(dstCache);
+  await dstLive.store.start();
+  assert.equal(dstLive.store.state().data.offset, 7200);
+  dstLive.advance(3600000);
+  assert.equal(
+    dstLive.store.state().data.offset,
+    3600,
+    'live cached offset follows DST'
+  );
+  dstLive.store.destroy();
   const aged = harness({
     ...settings('met-no'),
     caches: {

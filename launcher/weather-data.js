@@ -7,6 +7,8 @@
   var KEY = 'tvhome.weather.v1',
     FRESH = 15 * 60000,
     MET_FRESH = 3 * 60 * 60000,
+    // Global MET models update every six hours; allow one missed model cycle.
+    MET_MODEL_AGE = 12 * 60 * 60000,
     MAX_AGE = 6 * 60 * 60000,
     RETRY = 5 * 60000,
     AUTO_AGE = 24 * 60 * 60000;
@@ -110,6 +112,39 @@
       return null;
     }
   }
+  function calendarFormatter(zone) {
+    return zone !== 'UTC'
+      ? new Intl.DateTimeFormat('en-US', {
+          timeZone: zone,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        })
+      : null;
+  }
+  function calendarParts(formatter, ms) {
+    return formatter.format(new Date(ms)).match(/\d+/g);
+  }
+  function calendarOffset(formatter, ms) {
+    if (!formatter) return 0;
+    var parts = calendarParts(formatter, ms);
+    return (
+      (Date.UTC(
+        Number(parts[2]),
+        Number(parts[0]) - 1,
+        Number(parts[1]),
+        Number(parts[3]) % 24,
+        Number(parts[4]),
+        Number(parts[5])
+      ) -
+        Math.floor(ms / 1000) * 1000) /
+      1000
+    );
+  }
   function metCode(symbol) {
     var name = String(symbol || '').replace(/_(day|night|polartwilight)$/, ''),
       simple = { clearsky: 0, fair: 1, partlycloudy: 2, cloudy: 3, fog: 45 };
@@ -153,23 +188,15 @@
       units.relative_humidity !== '%' ||
       !isFinite(updated) ||
       updated > nowMs ||
-      nowMs - updated > MET_FRESH ||
+      nowMs - updated > MET_MODEL_AGE ||
       !Array.isArray(rows) ||
       !rows.length
     )
       throw Error('weather-invalid');
-    var formatter =
-      zone !== 'UTC'
-        ? new Intl.DateTimeFormat('en-US', {
-            timeZone: zone,
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit'
-          })
-        : null;
+    var formatter = calendarFormatter(zone);
     function dateKey(ms) {
       if (!formatter) return new Date(ms).toISOString().slice(0, 10);
-      var parts = formatter.format(new Date(ms)).split('/');
+      var parts = calendarParts(formatter, ms);
       return parts[2] + '-' + parts[0] + '-' + parts[1];
     }
     var points = rows
@@ -243,7 +270,7 @@
       isDay: current.isDay,
       time: new Date(current.ms).toISOString(),
       timezone: zone,
-      offset: 0,
+      offset: calendarOffset(formatter, nowMs),
       days: days
     };
   }
@@ -456,6 +483,13 @@
     }
     function state() {
       expire();
+      if (model.source === 'met-no' && model.data) {
+        // Cached forecasts can cross a DST change without needing a new request.
+        model.data.offset = calendarOffset(
+          calendarFormatter(timezone(model.data.timezone) || 'UTC'),
+          now()
+        );
+      }
       return JSON.parse(JSON.stringify(model));
     }
     function cancel() {
