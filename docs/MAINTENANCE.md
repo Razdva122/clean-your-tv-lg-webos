@@ -48,6 +48,11 @@ uninstall the applications. First press Home three times within two seconds to s
 
 ## Uninstall
 
+The next installer update adds removal support for older LG stock screens: if
+there is no separate LG Home app, No-root removal may switch to Live TV. This is
+not yet in the published installer. Keep the TV on and follow the normal restart
+and **Try again** prompts; retain the saved connection and recovery records.
+
 In published v1.11.0 and later, select **Uninstall Clean Your TV** on desktop
 or Android (`cytv uninstall`) with the saved connection and confirm once. It
 removes known present apps/files and skips missing ones, even after partial setup.

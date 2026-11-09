@@ -14,6 +14,7 @@ CALLS={
     'com.local.nativehome.service/disable':'helper-disable',
     'com.gathin.tvhome.renewal/disable':'home-disable',
     'com.palm.activitymanager/list':'activities-list',
+    'com.palm.activitymanager/getActivityInfo':'activities-list',
     'com.palm.activitymanager/cancel':'activity-cancel',
     'com.webos.service.eim/getAllInputStatus':'inputs-list',
     'com.webos.service.eim/deleteDevice':'input-delete'}
@@ -59,7 +60,7 @@ def context(error,uri,reason,reply=None):
 
 
 def call(uri,payload,timeout=15,app_id=None):
-    limit=2097152 if uri in ('luna://com.palm.activitymanager/list',
+    limit=2097152 if uri in ('luna://com.palm.activitymanager/list','luna://com.palm.activitymanager/getActivityInfo',
         'luna://com.webos.applicationManager/dev/listApps','luna://com.webos.applicationManager/listApps') else 65536
     identity=[]
     if app_id is not None:
