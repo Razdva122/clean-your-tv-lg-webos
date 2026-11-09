@@ -1,4 +1,4 @@
-/* Offline weather demo translations. */
+/* Shared Home weather translations. */
 window.WeatherLocales = {
   'en': {
     'Weather': 'Weather',

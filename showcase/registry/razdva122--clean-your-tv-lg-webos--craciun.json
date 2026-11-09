@@ -8,26 +8,26 @@
     "sourceProfile": "https://github.com/razdva122"
   },
   "sourceRepository": "https://github.com/razdva122/clean-your-tv-lg-webos",
-  "sourceCommit": "cbab0161859d57897f25652152b1b2cf57463fc2",
-  "descriptorUrl": "https://raw.githubusercontent.com/razdva122/clean-your-tv-lg-webos/5ae9459594c246e6244441765f0980b394ed0cfe/distributions/craciun/1.2.0/cytv-theme.json",
-  "descriptorSha256": "6f910b966f400448d4fcf08d102cb79ee7d95fe95525a4cb3fb1020b6ca9fb84",
-  "themeVersion": "1.2.0",
+  "sourceCommit": "f84ca319566743f3f4e777259ce1ba2e01470a34",
+  "descriptorUrl": "https://raw.githubusercontent.com/razdva122/clean-your-tv-lg-webos/78ed8cd6a6589056c3d799f5e95f7233c558683f/distributions/craciun/1.3.0/cytv-theme.json",
+  "descriptorSha256": "b0a5648b029a28b2688879b5c7c5e3c13aed9b84d71cb9c2915bbffccac7a72c",
+  "themeVersion": "1.3.0",
   "themeApiVersion": 1,
   "license": "MIT AND CC-BY-4.0",
-  "creditsFile": "assets/razdva122--clean-your-tv-lg-webos--craciun/6f910b966f400448d4fcf08d102cb79ee7d95fe95525a4cb3fb1020b6ca9fb84/documents/1-92982c9851dd093b4a60e162a4ab8dfe4b32474135e2e0861149c13c7fca12e2.txt",
+  "creditsFile": "assets/razdva122--clean-your-tv-lg-webos--craciun/b0a5648b029a28b2688879b5c7c5e3c13aed9b84d71cb9c2915bbffccac7a72c/documents/1-92982c9851dd093b4a60e162a4ab8dfe4b32474135e2e0861149c13c7fca12e2.txt",
   "previewFiles": [
-    "assets/razdva122--clean-your-tv-lg-webos--craciun/6f910b966f400448d4fcf08d102cb79ee7d95fe95525a4cb3fb1020b6ca9fb84/assets/preview-2a4618b650cdf96fd622a4a1cde7a4df60724693f1026db5ed7cc335fabeb200.jpg"
+    "assets/razdva122--clean-your-tv-lg-webos--craciun/b0a5648b029a28b2688879b5c7c5e3c13aed9b84d71cb9c2915bbffccac7a72c/assets/preview-2a4618b650cdf96fd622a4a1cde7a4df60724693f1026db5ed7cc335fabeb200.jpg"
   ],
   "tags": [
     "dark",
     "colorful"
   ],
   "addedAt": "2026-11-06",
-  "reviewedAt": "2026-11-06",
+  "reviewedAt": "2026-11-09",
   "evidence": [
     {
       "kind": "browser",
-      "summary": "Craciun 1.2.0 source and ordinary distribution hashes validated. Both Root and No-root browser previews apply the package, retain app order and decode its still video at 3840x2160. All card previews load; cards show 4K and 3.1 MB with no motion icon. Original CSS, preview and JPEG fallback are byte-identical to author 1.1.0. AI-generated 1672x941 source was upscaled by the author, not native UHD detail. Physical production package, Home routing, sound, power and OTA are not tested by these browser checks."
+      "summary": "Candidate weather-v1 compatibility update, compiled and policy/hash validated against clean main runtime f84ca319566743f3f4e777259ce1ba2e01470a34. Browser theme/format matrix is recorded separately in the weather integration evidence. No new physical-TV acceptance; original historical evidence does not apply to this new package."
     }
   ]
 }

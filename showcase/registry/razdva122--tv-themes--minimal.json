@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "id": "github:razdva122/tv-themes:minimal",
+  "title": "Minimal",
+  "description": "Pure black, four large cards with no dock band, soft shadows and a quiet header without the greeting.",
+  "author": {
+    "name": "invrnt",
+    "sourceProfile": "https://github.com/invrnt"
+  },
+  "sourceRepository": "https://github.com/razdva122/tv-themes",
+  "sourceCommit": "dbfcc84948ab6ef0a152b073588d7ecc6662ea01",
+  "descriptorUrl": "https://raw.githubusercontent.com/razdva122/tv-themes/1efae76b5d4b1f4069b711a5eb6006f3bb703581/distributions/minimal/1.1.0/cytv-theme.json",
+  "descriptorSha256": "47e4bdcdb3ab8dd3e28c6d0088125c67e2c994fe532d541970d13b1c173aacc8",
+  "themeVersion": "1.1.0",
+  "themeApiVersion": 1,
+  "license": "MIT",
+  "creditsFile": "assets/razdva122--tv-themes--minimal/47e4bdcdb3ab8dd3e28c6d0088125c67e2c994fe532d541970d13b1c173aacc8/documents/1-6de7b192be3d461336ecd173e3fdcd670078ace798a539ffc5aecbcb55902af5.txt",
+  "previewFiles": [
+    "assets/razdva122--tv-themes--minimal/47e4bdcdb3ab8dd3e28c6d0088125c67e2c994fe532d541970d13b1c173aacc8/assets/preview-ac673ebcfde73a01aebea17820db511ec380ce5ca51397a6da58e9e59b390345.png"
+  ],
+  "tags": [
+    "dark",
+    "minimal"
+  ],
+  "addedAt": "2026-10-30",
+  "reviewedAt": "2026-11-09",
+  "evidence": [
+    {
+      "kind": "browser",
+      "summary": "Candidate weather-v1 compatibility update, compiled and policy/hash validated against clean main runtime f84ca319566743f3f4e777259ce1ba2e01470a34. Browser theme/format matrix is recorded separately in the weather integration evidence. No new physical-TV acceptance; original historical evidence does not apply to this new package."
+    },
+    {
+      "kind": "browser",
+      "summary": "Temporary maintainer fork authorized for weather integration. Original source: https://github.com/invrnt/tv-themes. Original author/license/asset credits retained. Fork has a distinct identity; existing upstream installations are not silently replaced."
+    }
+  ],
+  "upstreamRepository": "https://github.com/invrnt/tv-themes"
+}

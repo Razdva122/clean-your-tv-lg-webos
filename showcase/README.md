@@ -217,3 +217,7 @@ and commit the generated launcher catalogue, previews, notices and inventory tog
 Appearance → Theme showcase uses this offline snapshot; external downloads retain the
 reviewed commit-pinned source. Removed/unavailable records are not installable cards.
 This does not publish a Home package or refresh installed TVs before the normal release.
+
+## Weather integration
+
+See the [shared weather contract](../docs/development/WEATHER.md) for supported formats, developer styling, preset reservations, compatibility and maintainer fork provenance. Home owns weather data and settings; themes contain no provider code.

@@ -1,0 +1,75 @@
+# Weather integration — browser and source evidence, 2026-11-09
+
+Feature integration: [PR #463](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/463), issue #353.
+This is focused development evidence, not a frozen application release or physical
+TV acceptance record. No TV was contacted. Model, firmware/webOS, remote and TV
+edition installation results: unknown/untested. Installer platform: macOS host;
+no installer run in this task. Browser: Playwright Chromium, 1920×1080.
+
+## Scope and observed results
+
+- `npm run test:weather`: typed capability/schema/parts, opt-in data state,
+  canonical units, malformed responses/cache, cancellation, stale/expiry/backoff,
+  local restore, preset reservations and Inputs shelf passed.
+- `source .venv-cytv/bin/activate && npm run test:themes`: complete existing theme
+  unit suite passed, including receiver HTTP, transport/hash checks, startup,
+  capability rejection, builtin regeneration, catalog, runtime/compile and media.
+- `node scripts/check-theme-submissions.cjs`: 13 reviewed records validated;
+  eight active catalog themes. Old entries and immutable package bytes retained.
+- `node scripts/check-tv-web.cjs`: all four frontend compatibility profiles passed.
+- `npm run test:weather:browser`: both editions' real settings/navigation paths
+  passed. The preview build was transformed by the packaged TV web compiler before
+  testing. Off issued no provider requests; Berlin search/selection and canonical
+  metric/imperial controls worked. Forecast showed four rows. Weather hid after
+  one Down while the header remained; Up restored it. Back returned city-dialog
+  focus and Off hid subordinate settings/preview.
+- Full matrix: 832 cases = eight catalog themes × four requested formats × 13
+  languages × two editions. All passed supported-format fallback, weather
+  visibility, header/hero/Inputs separation, on-screen bounds and row overflow.
+  Screenshots cover Russian settings; additional full-screen visual inspection
+  covers theme surfaces. Data was synthetic, no private inventory/location.
+- Live production XHR smoke against Open-Meteo: manual Berlin search returned
+  Germany, current data and four daily ranges, status ready. No API key or real
+  user location was used. GeoJS auto behavior used controlled city/failure
+  responses; live host egress sometimes has no city, handled as not determined.
+
+## Findings and resolution
+
+The full matrix found overflow in Korean Crăciun forecast temperatures. Canvas
+text measurement selected different locale/font fallback than the rendered DOM.
+The shared renderer now measures actual glyph ranges, preserving theme type and
+TV text size. The Korean case and subsequent complete matrix passed. Malformed
+network/cache values are sanitized and invalid preference batches do not partly
+mutate the state. A subtle Open-Meteo source link accompanies actual data, with
+licenses in Advanced; the removed verbose Weather settings block remains absent.
+
+## Theme provenance and author handoff
+
+Own source weather commit: `5052717b1d436b385d01f067976c2362fb401c08`.
+Liquid Glass 1.1.0 and Ribbon 1.4.0 compiled snapshots pin that source.
+Alpine 1.6.0 and Crăciun 1.3.0 source pins
+`f84ca319566743f3f4e777259ce1ba2e01470a34`; package commit `78ed8cd6`.
+Build validation reports pin the complete clean candidate runtime inventory.
+
+Temporary fork distribution branches are separate from upstream-compatible
+source branches. Upstream authors were notified through focused PRs:
+
+- [Minimal](https://github.com/invrnt/tv-themes/pull/1): all formats, monochrome.
+- [Retro](https://github.com/xandymelo/clean-your-tv-lg-retro-theme/pull/1): all
+  formats, square neon appearance.
+- [Atmosphere](https://github.com/Luigy-Lemon/atmosphere-theme/pull/1): Ribbon
+  suppression; the source builder also requires a weather-capable runtime.
+
+Catalog replacement is in the feature branch. It has not shipped in stable Home.
+Fork identity, original author, upstream repository and original asset/license
+credits are explicit; no existing upstream installation is silently migrated.
+
+## Outstanding release acceptance
+
+Actual TV TLS/certificates/CORS for each provider; visual legibility from TV
+viewing distance; native remote navigation, wake, standby, cold boot; live/offline
+transition on a TV; final Home OTA/rollback and application candidate checks are
+untested. Earlier theme device reports do not establish acceptance of the new
+packages. Do not mark #353 released or announce application delivery on this
+browser evidence. The author runtime and theme artifacts remain candidates until
+normal release gates are completed.

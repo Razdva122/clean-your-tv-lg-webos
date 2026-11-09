@@ -8,15 +8,15 @@
     "sourceProfile": "https://github.com/razdva122"
   },
   "sourceRepository": "https://github.com/razdva122/clean-your-tv-lg-webos",
-  "sourceCommit": "053f91cca27b7196582f3d4bd1d0b56cb353689e",
-  "descriptorUrl": "https://raw.githubusercontent.com/razdva122/clean-your-tv-lg-webos/8cc4cb919d7bc67783989e75974712e697d11158/distributions/alpine/1.5.0/cytv-theme.json",
-  "descriptorSha256": "c182f0c8b6285cecdbc9f266f3ce95124bfcaa47635a7582514d7a01cdf74cd5",
-  "themeVersion": "1.5.0",
+  "sourceCommit": "f84ca319566743f3f4e777259ce1ba2e01470a34",
+  "descriptorUrl": "https://raw.githubusercontent.com/razdva122/clean-your-tv-lg-webos/78ed8cd6a6589056c3d799f5e95f7233c558683f/distributions/alpine/1.6.0/cytv-theme.json",
+  "descriptorSha256": "1b9284d2ee91d0fea152da20f081e2c23336fc3554323f8685613034ca7fd7a5",
+  "themeVersion": "1.6.0",
   "themeApiVersion": 1,
   "license": "MIT AND CC-BY-SA-3.0-DE",
-  "creditsFile": "assets/razdva122--clean-your-tv-lg-webos--alpine/c182f0c8b6285cecdbc9f266f3ce95124bfcaa47635a7582514d7a01cdf74cd5/documents/1-acf7de24e7dd8b3377184caabf4b4e92839b1c49a1382b0024dfe0c36681d124.txt",
+  "creditsFile": "assets/razdva122--clean-your-tv-lg-webos--alpine/1b9284d2ee91d0fea152da20f081e2c23336fc3554323f8685613034ca7fd7a5/documents/1-acf7de24e7dd8b3377184caabf4b4e92839b1c49a1382b0024dfe0c36681d124.txt",
   "previewFiles": [
-    "assets/razdva122--clean-your-tv-lg-webos--alpine/c182f0c8b6285cecdbc9f266f3ce95124bfcaa47635a7582514d7a01cdf74cd5/assets/preview-fe9982c4f31cc719cbe7d1e239646931b9495b58e8f08ffd50da8594efdff2bf.jpg"
+    "assets/razdva122--clean-your-tv-lg-webos--alpine/1b9284d2ee91d0fea152da20f081e2c23336fc3554323f8685613034ca7fd7a5/assets/preview-fe9982c4f31cc719cbe7d1e239646931b9495b58e8f08ffd50da8594efdff2bf.jpg"
   ],
   "tags": [
     "dark",
@@ -24,11 +24,11 @@
     "minimal"
   ],
   "addedAt": "2026-11-02",
-  "reviewedAt": "2026-11-03",
+  "reviewedAt": "2026-11-09",
   "evidence": [
     {
       "kind": "browser",
-      "summary": "Next-release candidate. Actual shared Home renderer in both Root and No-root browser previews decoded embedded H.264 at 3840x2160, switched to 1080p/image and released the decoder. Real 6000x4000 Bachalpsee source, no upscaling. No physical-TV acceptance; published 1.4.4 bytes remain unchanged."
+      "summary": "Candidate weather-v1 compatibility update, compiled and policy/hash validated against clean main runtime f84ca319566743f3f4e777259ce1ba2e01470a34. Browser theme/format matrix is recorded separately in the weather integration evidence. No new physical-TV acceptance; original historical evidence does not apply to this new package."
     }
   ]
 }

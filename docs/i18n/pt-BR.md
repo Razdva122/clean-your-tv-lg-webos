@@ -132,3 +132,7 @@ Referências detalhadas em inglês: [requisitos](../COMPATIBILITY.md) · [contro
 <a id="candidato-unreleased-nodejs-antigo-na-tv"></a>
 <a id="nodejs-antigo-na-tv-publicado-na-v1120"></a>
 <a id="remoção-simples-v1110"></a>
+
+## Clima
+
+Abra Configurações → Clima, abaixo de Papéis de parede. Ative o clima e abra Cidade para pesquisar e selecionar a região e o país corretos, ou escolha Automático para uma cidade aproximada pela conexão. Uma VPN pode alterar o resultado; se a cidade não aparecer ou estiver errada, use a busca manual. A cidade detectada ou escolhida aparece nas configurações. Escolha °C / m/s ou °F / mph e um formato disponível: compacto, atual, detalhado ou quatro dias. A prévia segue o tema; Exemplo indica dados ilustrativos. Liquid Glass aceita apenas o formato compacto. Ribbon e Atmosphere não exibem clima. Desativar oculta as demais opções e interrompe as solicitações. Em uma falha, dados recentes podem permanecer por algum tempo; depois o clima fica oculto até atualizar.

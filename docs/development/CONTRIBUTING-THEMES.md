@@ -797,3 +797,7 @@ It needs no shortening-service secret; the standard job token updates only the
 author's release. Theme files are read as data, not executed. The preview can
 retrieve the matching release's metadata, or accept its full published descriptor
 URL manually. This does not submit anything to Showcase.
+
+## Weather integration
+
+See the [shared weather contract](WEATHER.md) for supported formats, developer styling, preset reservations, compatibility and maintainer fork provenance. Home owns weather data and settings; themes contain no provider code.

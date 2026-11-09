@@ -131,3 +131,7 @@ Références détaillées en anglais: [prérequis](../COMPATIBILITY.md) · [comm
 <a id="candidat-unreleased--ancien-nodejs-du-tv"></a>
 <a id="ancien-nodejs-du-tv-publié-dans-v1120"></a>
 <a id="suppression-simple-v1110"></a>
+
+## Météo
+
+Ouvrez Réglages → Météo, sous Fonds d’écran. Activez la météo puis ouvrez Ville pour rechercher et choisir la bonne région et le bon pays, ou choisissez Automatique pour une ville approximative selon votre connexion. Un VPN peut modifier le résultat ; utilisez la recherche manuelle si la ville manque ou est incorrecte. La ville détectée ou choisie apparaît dans les réglages. Choisissez °C / m/s ou °F / mph et un format disponible : compact, actuel, détaillé ou quatre jours. L’aperçu suit le thème ; Exemple indique des données fictives. Liquid Glass accepte uniquement le format compact. Ribbon et Atmosphere n’affichent pas la météo. La désactivation masque les autres options et arrête les requêtes. En cas de panne, les données récentes peuvent rester temporairement ; ensuite la météo est masquée jusqu’à son actualisation.

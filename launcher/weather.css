@@ -568,3 +568,32 @@ body.editing #homeWeather {
   border-width: 0 !important;
   box-shadow: none !important;
 }
+
+.home-weather .weather-credit {
+  display: block;
+  margin-top: 8px;
+  color: inherit;
+  opacity: 0.65;
+  text-align: right;
+  font-size: 20px;
+  line-height: 26px;
+  text-decoration: none;
+  pointer-events: auto;
+}
+.weather-data-credits {
+  font-size: 24px;
+  line-height: 1.6;
+  opacity: 0.8;
+}
+.weather-data-credits a {
+  color: inherit;
+}
+
+.home-weather .weather-line .weather-credit {
+  margin-top: 0;
+  flex-shrink: 0;
+}
+#homeSurface.weather-reserves-right #ribbonPosition {
+  left: 112px;
+  right: auto;
+}

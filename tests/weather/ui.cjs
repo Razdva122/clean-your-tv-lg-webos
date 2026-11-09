@@ -12,6 +12,27 @@ if (!process.env.WEATHER_SITE) {
     ['scripts/preview.py', '--build', site],
     { stdio: 'pipe' }
   );
+  for (const edition of ['launcher', 'root-launcher']) {
+    const folder = path.join(site, edition),
+      sources = {};
+    function walk(dir) {
+      for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+        const file = path.join(dir, e.name);
+        if (e.isDirectory()) walk(file);
+        else if (/\.(js|css|html)$/.test(file))
+          sources[path.relative(folder, file)] = fs.readFileSync(file, 'utf8');
+      }
+    }
+    walk(folder);
+    const compiled = JSON.parse(
+      cp.execFileSync(process.execPath, ['scripts/compile-tv-web.cjs'], {
+        input: JSON.stringify(sources),
+        maxBuffer: 64 * 1024 * 1024
+      })
+    );
+    for (const [name, content] of Object.entries(compiled))
+      fs.writeFileSync(path.join(folder, name), content);
+  }
 }
 const city = {
   id: 2950159,

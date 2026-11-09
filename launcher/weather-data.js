@@ -13,6 +13,9 @@
   function finite(v) {
     return typeof v === 'number' && isFinite(v) ? v : null;
   }
+  function bounded(v, low, high) {
+    return finite(v) !== null && v >= low && v <= high ? v : null;
+  }
   function text(v, max) {
     return typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : null;
   }
@@ -73,11 +76,13 @@
     return {
       city: place.name,
       temp: c.temperature_2m,
-      feels: finite(c.apparent_temperature),
-      wind: finite(c.wind_speed_10m),
-      humidity: finite(c.relative_humidity_2m),
-      precip: finite(
-        d.precipitation_probability_max && d.precipitation_probability_max[0]
+      feels: bounded(c.apparent_temperature, -150, 150),
+      wind: bounded(c.wind_speed_10m, 0, 150),
+      humidity: bounded(c.relative_humidity_2m, 0, 100),
+      precip: bounded(
+        d.precipitation_probability_max && d.precipitation_probability_max[0],
+        0,
+        100
       ),
       code: finite(c.weather_code),
       isDay: c.is_day !== 0,
@@ -411,6 +416,7 @@
       var cache = saved.cache;
       if (
         cache &&
+        model.location &&
         cache.key === key() &&
         finite(cache.updated) !== null &&
         now() >= cache.updated &&
@@ -419,7 +425,45 @@
         finite(cache.data.temp) !== null &&
         Array.isArray(cache.data.days)
       ) {
-        model.data = cache.data;
+        try {
+          var data = cache.data,
+            days = data.days.filter(function (day) {
+              return day && typeof day === 'object';
+            });
+          model.data = normalize(
+            {
+              current: {
+                temperature_2m: data.temp,
+                apparent_temperature: data.feels,
+                wind_speed_10m: data.wind,
+                relative_humidity_2m: data.humidity,
+                weather_code: data.code,
+                is_day: data.isDay === false ? 0 : 1,
+                time: data.time
+              },
+              daily: {
+                time: days.map(function (d) {
+                  return d.date;
+                }),
+                temperature_2m_min: days.map(function (d) {
+                  return d.low;
+                }),
+                temperature_2m_max: days.map(function (d) {
+                  return d.high;
+                }),
+                weather_code: days.map(function (d) {
+                  return d.code;
+                }),
+                precipitation_probability_max: [data.precip]
+              },
+              timezone: data.timezone,
+              utc_offset_seconds: data.offset
+            },
+            model.location
+          );
+        } catch (_) {
+          return refresh();
+        }
         model.updated = cache.updated;
         model.stale = now() - cache.updated >= FRESH;
         model.status = model.stale ? 'stale' : 'ready';
@@ -434,8 +478,11 @@
           (k === 'units' && ['metric', 'imperial'].indexOf(next[k]) >= 0) ||
           (k === 'preferred' && formats.indexOf(next[k]) >= 0)
         )
-          model[k] = next[k];
+          return;
         else throw Error('weather-preferences');
+      });
+      Object.keys(next).forEach(function (k) {
+        model[k] = next[k];
       });
       if (!model.enabled) cancel();
       persist();

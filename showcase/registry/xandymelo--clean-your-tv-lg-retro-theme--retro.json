@@ -30,5 +30,6 @@
       "kind": "browser",
       "summary": "Browser renderer scenarios captured: Home, Inputs and Settings; no physical-TV validation performed."
     }
-  ]
+  ],
+  "availability": "removed"
 }

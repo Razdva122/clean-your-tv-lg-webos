@@ -229,29 +229,24 @@
   }
 
   function fitLabels(container) {
-    const context = doc.createElement('canvas').getContext('2d');
+    const range = doc.createRange();
+    function textWidth(label) {
+      // Measure the rendered glyphs, including locale-specific font fallback.
+      range.selectNodeContents(label);
+      return Math.ceil(range.getBoundingClientRect().width);
+    }
     let width = 138,
       tempWidth = 58;
     Array.prototype.forEach.call(
       container.querySelectorAll('.weather-row>span:first-child'),
       function (label) {
-        const style = getComputedStyle(label);
-        context.font = style.fontSize + ' ' + style.fontFamily;
-        width = Math.max(
-          width,
-          Math.ceil(context.measureText(label.textContent).width)
-        );
+        width = Math.max(width, textWidth(label));
       }
     );
     Array.prototype.forEach.call(
       container.querySelectorAll('.weather-low,.weather-high'),
       function (label) {
-        const style = getComputedStyle(label);
-        context.font = style.fontSize + ' ' + style.fontFamily;
-        tempWidth = Math.max(
-          tempWidth,
-          Math.ceil(context.measureText(label.textContent).width)
-        );
+        tempWidth = Math.max(tempWidth, textWidth(label));
       }
     );
     Array.prototype.forEach.call(
@@ -288,7 +283,14 @@
   function paint(target, format, data, preview) {
     const a = appearance(),
       w = a.options;
-    target.innerHTML = content(format, w.icons, data);
+    const markup = content(format, w.icons, data),
+      credit = data.city
+        ? '<a class="weather-credit" href="https://open-meteo.com/" tabindex="-1">Open-Meteo</a>'
+        : '';
+    target.innerHTML =
+      format === 'text'
+        ? markup.slice(0, -6) + credit + '</div>'
+        : markup + credit;
     target.setAttribute('data-format', format);
     if (!doc.getElementById('weatherDefaults')) {
       const defaults = doc.createElement('style');
@@ -354,6 +356,12 @@
       }
       const show = options.enabled && !!effective && !!options.data;
       element.hidden = !show;
+      doc
+        .getElementById('homeSurface')
+        .classList.toggle(
+          'weather-reserves-right',
+          show && effective !== 'text' && state.preset === 'scenic-grid'
+        );
       doc
         .getElementById('homeSurface')
         .classList.toggle(
@@ -585,6 +593,11 @@
           store.setPreferences({ units: b.dataset.weatherUnit });
         })
     );
+    const credits = document.createElement('p');
+    credits.className = 'weather-data-credits';
+    credits.innerHTML =
+      'Open-Meteo · GeoNames — <a tabindex="0" href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a><br>GeoJS · <a tabindex="0" href="https://github.com/basmilius/meteocons">Meteocons — Bas Milius (MIT)</a>';
+    groups.find((group) => group.id === 'advanced').elements.push(credits);
     groups.splice(
       groups.findIndex((group) => group.id === 'wallpapers') + 1,
       0,

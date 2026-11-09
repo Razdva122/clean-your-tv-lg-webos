@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "github:razdva122/clean-your-tv-lg-retro-theme:retro",
+  "title": "Retro",
+  "description": "A neon pixel-inspired theme with square cards, hard shadows and a night-blue grid.",
+  "author": {
+    "name": "xandymelo",
+    "sourceProfile": "https://github.com/xandymelo"
+  },
+  "sourceRepository": "https://github.com/razdva122/clean-your-tv-lg-retro-theme",
+  "sourceCommit": "0660f4315bd486167bcb7c6b11499ec3f518730f",
+  "descriptorUrl": "https://raw.githubusercontent.com/razdva122/clean-your-tv-lg-retro-theme/6f508e9330e44183e3c5ae7abbc834a752900882/distributions/retro/1.1.0/cytv-theme.json",
+  "descriptorSha256": "315aff3bf631708e54bc51d9b3edd40d50544a39bf961f91dc44d06b28d742de",
+  "themeVersion": "1.1.0",
+  "themeApiVersion": 1,
+  "license": "MIT",
+  "creditsFile": "assets/razdva122--clean-your-tv-lg-retro-theme--retro/315aff3bf631708e54bc51d9b3edd40d50544a39bf961f91dc44d06b28d742de/documents/1-e6e2b7694580978f09614dc562ab6b0e645a260e1c6c698b560f6850a29a2a1a.txt",
+  "previewFiles": [
+    "assets/razdva122--clean-your-tv-lg-retro-theme--retro/315aff3bf631708e54bc51d9b3edd40d50544a39bf961f91dc44d06b28d742de/assets/preview-6afff7724b35f089e33969f0b523424547de6c6068e6a3e55e7939940e487c9a.png"
+  ],
+  "tags": [],
+  "addedAt": "2026-10-31",
+  "reviewedAt": "2026-11-09",
+  "evidence": [
+    {
+      "kind": "browser",
+      "summary": "Candidate weather-v1 compatibility update, compiled and policy/hash validated against clean main runtime f84ca319566743f3f4e777259ce1ba2e01470a34. Browser theme/format matrix is recorded separately in the weather integration evidence. No new physical-TV acceptance; original historical evidence does not apply to this new package."
+    },
+    {
+      "kind": "browser",
+      "summary": "Temporary maintainer fork authorized for weather integration. Original source: https://github.com/xandymelo/clean-your-tv-lg-retro-theme. Original author/license/asset credits retained. Fork has a distinct identity; existing upstream installations are not silently replaced."
+    }
+  ],
+  "upstreamRepository": "https://github.com/xandymelo/clean-your-tv-lg-retro-theme"
+}

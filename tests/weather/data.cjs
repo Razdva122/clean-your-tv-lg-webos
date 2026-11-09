@@ -144,6 +144,24 @@ const payload = {
       location
     )
   );
+  const damaged = JSON.parse(memory[Weather.key]);
+  damaged.cache.data.days = [null, { date: '<bad>', low: -999, high: 999 }];
+  damaged.cache.data.humidity = 150;
+  memory[Weather.key] = JSON.stringify(damaged);
+  const sanitized = create();
+  await sanitized.start();
+  assert.deepEqual(sanitized.state().data.days, []);
+  assert.equal(sanitized.state().data.humidity, null);
+  const enabled = sanitized.state().enabled;
+  assert.throws(() =>
+    sanitized.setPreferences({ enabled: !enabled, invalid: true })
+  );
+  assert.equal(
+    sanitized.state().enabled,
+    enabled,
+    'invalid preferences do not partially mutate state'
+  );
+  sanitized.destroy();
   assert.equal(Weather.condition(null).label, 'Unavailable');
   assert.equal(Weather.condition(0, false).icon, 'clear-night');
   console.log(
