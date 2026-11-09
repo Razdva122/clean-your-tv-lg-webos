@@ -534,7 +534,7 @@
         const line = preview.querySelector('.weather-line');
         width =
           [...line.children].reduce(
-            (sum, child) => sum + child.offsetWidth,
+            (sum, child) => sum + child.getBoundingClientRect().width,
             0
           ) +
           20 * (line.children.length - 1);

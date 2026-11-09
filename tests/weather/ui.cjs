@@ -135,6 +135,28 @@ const weather = {
     await page.waitForTimeout(70);
     assert.equal(await page.locator('.weather-live-preview').isVisible(), true);
     assert.equal(await page.locator('#homeWeather').isVisible(), false);
+    await page.locator('[data-weather-choice="text"]').click();
+    await page.waitForTimeout(70);
+    const compactPreview = await page.evaluate(() => {
+      const preview = document.getElementById('weatherPreview'),
+        area = document.querySelector('.weather-preview-window'),
+        p = preview.getBoundingClientRect(),
+        a = area.getBoundingClientRect();
+      return {
+        inlineIcons: preview.querySelectorAll('svg').length,
+        width: p.width,
+        inside:
+          p.left >= a.left - 2 &&
+          p.top >= a.top - 2 &&
+          p.right <= a.right + 2 &&
+          p.bottom <= a.bottom + 2
+      };
+    });
+    assert(compactPreview.inlineIcons > 0, 'Compact uses the real inline SVG');
+    assert(
+      compactPreview.width > 0 && compactPreview.inside,
+      'Compact SVG preview fits its window ' + JSON.stringify(compactPreview)
+    );
     await page.locator('.weather-city-summary').click();
     await page.locator('.weather-city-search input').fill('Berlin');
     await page.locator('.weather-city-search input').press('Enter');
