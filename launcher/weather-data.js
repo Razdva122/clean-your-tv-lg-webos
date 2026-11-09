@@ -397,6 +397,7 @@
       listeners = [],
       dead = false,
       caches = {},
+      metAttempt = readMetAttempt(saved.metAttempt),
       lastSource =
         saved.lastSource === 'met-no' || saved.lastSource === 'open-meteo'
           ? saved.lastSource
@@ -408,6 +409,28 @@
             model.location.longitude.toFixed(3)
         : '';
     }
+    function metKey(place) {
+      return place
+        ? String(Math.round(place.latitude * 10000) / 10000) +
+            ',' +
+            String(Math.round(place.longitude * 10000) / 10000)
+        : '';
+    }
+    function readMetAttempt(value) {
+      if (value === undefined || value === null) return null;
+      var parts = typeof value.key === 'string' ? value.key.split(',') : [],
+        place = { latitude: Number(parts[0]), longitude: Number(parts[1]) },
+        validKey =
+          parts.length === 2 &&
+          bounded(place.latitude, -90, 90) !== null &&
+          bounded(place.longitude, -180, 180) !== null &&
+          metKey(place) === value.key;
+      // Bad/future records impose one bounded cooldown, never an indefinite lockout.
+      return {
+        key: validKey ? value.key : metKey(model.location),
+        at: !validKey || bounded(value.at, 0, now()) === null ? now() : value.at
+      };
+    }
     function persist() {
       try {
         storage.setItem(
@@ -416,6 +439,7 @@
             version: 1,
             provider: model.provider,
             lastSource: lastSource,
+            metAttempt: metAttempt,
             caches: caches,
             enabled: model.enabled,
             units: model.units,
@@ -616,11 +640,34 @@
             model.provider === 'auto' ? lastSource || 'met-no' : model.provider;
           function attempt(source, fallback) {
             if (token !== generation) return Promise.resolve();
+            var cache = caches[source];
+            if (
+              (source === 'met-no' || !force || source !== first) &&
+              cache &&
+              cache.key === key() &&
+              now() >= cache.updated &&
+              now() - cache.updated < (source === 'met-no' ? MET_FRESH : FRESH)
+            ) {
+              model.data = cache.data;
+              model.source = source;
+              model.updated = cache.updated;
+              model.stale = false;
+              lastSource = source;
+              return Promise.resolve();
+            }
             var operation = Promise.resolve()
               .then(function () {
                 if (token !== generation) return;
                 if (source === 'met-no') {
                   if (!env.metRequest) throw Error('weather-unavailable');
+                  if (
+                    metAttempt &&
+                    metAttempt.key === metKey(model.location) &&
+                    now() - metAttempt.at < MET_FRESH
+                  )
+                    throw Error('weather-cooldown');
+                  metAttempt = { key: metKey(model.location), at: now() };
+                  persist();
                   active = env.metRequest(model.location);
                   return active.promise;
                 }
@@ -752,6 +799,7 @@
         } catch (_) {}
       });
       useCache();
+      persist();
       return refresh();
     }
     function setPreferences(next) {

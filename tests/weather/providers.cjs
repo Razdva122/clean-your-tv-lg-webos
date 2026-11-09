@@ -82,6 +82,12 @@ function harness(saved, late = false) {
         resolve = a;
         reject = b;
       });
+      if (source === 'met-no')
+        assert.equal(
+          JSON.parse(memory).metAttempt.at,
+          clock,
+          'attempt persists before native transport starts'
+        );
       const item = { source, value, resolve, reject, cancelled: false };
       calls.push(item);
       return {
@@ -258,6 +264,232 @@ const settings = (provider = 'auto') => ({
     assert.equal(h.store.state().status, 'error');
     h.store.destroy();
   }
+  // Admission belongs to MET's actual request boundary, not success/backoff state.
+  const cooldown = harness(settings('met-no'));
+  cooldown.store.start();
+  await flush();
+  cooldown.calls[0].reject(Error('offline'));
+  await flush();
+  cooldown.advance(5 * 60000);
+  cooldown.store.refresh();
+  await flush();
+  assert.equal(
+    cooldown.calls.length,
+    1,
+    'failed MET attempt cannot repeat after five minutes'
+  );
+  await cooldown.store.refresh(true);
+  assert.equal(cooldown.calls.length, 1, 'force cannot bypass MET cadence');
+  await cooldown.store.setPreferences({
+    enabled: false,
+    provider: 'open-meteo'
+  });
+  await cooldown.store.setPreferences({ enabled: true, provider: 'met-no' });
+  assert.equal(
+    cooldown.calls.length,
+    1,
+    'Off/source toggle cannot bypass MET cadence'
+  );
+  assert.equal(cooldown.store.state().status, 'error');
+  assert.equal(
+    cooldown.store.state().data,
+    null,
+    'cooldown cannot claim ready without data'
+  );
+  const failedReload = harness(cooldown.saved());
+  failedReload.advance(5 * 60000);
+  await failedReload.store.start();
+  assert.equal(failedReload.calls.length, 0, 'failed attempt survives reload');
+  failedReload.store.destroy();
+  cooldown.advance(175 * 60000 - 1);
+  await cooldown.store.refresh(true);
+  assert.equal(cooldown.calls.length, 1, 'blocked just before three hours');
+  cooldown.advance(1);
+  cooldown.store.refresh(true);
+  await flush();
+  assert.equal(cooldown.calls.length, 2, 'three-hour boundary permits request');
+  cooldown.store.destroy();
+  const cachedFallback = harness({
+    ...settings(),
+    lastSource: 'open-meteo',
+    caches: {
+      'open-meteo': {
+        key: '52.500,13.400',
+        updated: NOW - 16 * 60000,
+        data: Weather.normalize(om, place)
+      },
+      'met-no': {
+        key: '52.500,13.400',
+        updated: NOW - 10 * 60000,
+        data: Weather.normalizeMet(met(), place, NOW)
+      }
+    }
+  });
+  cachedFallback.store.start();
+  await flush();
+  assert.equal(cachedFallback.calls[0].source, 'open-meteo');
+  cachedFallback.calls[0].reject(Error('offline'));
+  await flush();
+  assert.equal(
+    cachedFallback.calls.length,
+    1,
+    'Auto fallback reuses fresh MET entry'
+  );
+  assert.equal(cachedFallback.store.state().source, 'met-no');
+  assert.equal(
+    cachedFallback.store.state().updated,
+    NOW - 10 * 60000,
+    'reuse preserves cache age'
+  );
+  await cachedFallback.store.refresh(true);
+  assert.equal(
+    cachedFallback.calls.length,
+    1,
+    'force reuses fresh source entry'
+  );
+  cachedFallback.store.destroy();
+  for (const stoppedBy of ['off', 'hidden', 'provider', 'destroy']) {
+    const stopped = harness(settings('met-no'), true);
+    stopped.store.start();
+    await flush();
+    if (stoppedBy === 'off')
+      await stopped.store.setPreferences({ enabled: false });
+    if (stoppedBy === 'hidden') stopped.store.setAllowed(false);
+    if (stoppedBy === 'provider')
+      await stopped.store.setPreferences({
+        enabled: false,
+        provider: 'open-meteo'
+      });
+    if (stoppedBy === 'destroy') stopped.store.destroy();
+    assert(stopped.calls[0].cancelled);
+    stopped.calls[0].resolve(met());
+    await flush();
+    assert.equal(stopped.calls.length, 1, 'cancel cannot trigger fallback');
+    const resumed = harness({
+      ...stopped.saved(),
+      enabled: true,
+      provider: 'met-no'
+    });
+    await resumed.store.start();
+    assert.equal(
+      resumed.calls.length,
+      0,
+      stoppedBy + ' cancellation persists cooldown'
+    );
+    assert.equal(resumed.store.state().status, 'error');
+    resumed.store.destroy();
+    stopped.store.destroy();
+  }
+  const autoCooldown = harness(settings('met-no'));
+  autoCooldown.store.start();
+  await flush();
+  autoCooldown.calls[0].reject(Error('offline'));
+  await flush();
+  autoCooldown.store.setPreferences({ provider: 'auto' });
+  await flush();
+  assert.equal(
+    autoCooldown.calls.length,
+    2,
+    'Auto can use other provider while MET cools down'
+  );
+  assert.equal(autoCooldown.calls[1].source, 'open-meteo');
+  autoCooldown.calls[1].resolve(om);
+  await flush();
+  autoCooldown.store.destroy();
+  for (const record of [
+    { key: '52.5,13.4', at: NOW + 100 * 3600000 },
+    { key: '52.5,13.4', at: 'bad' },
+    { key: '52.5,13.4', at: -1 },
+    { key: 'bad', at: NOW },
+    { key: 'bad', at: NOW - 24 * 3600000 },
+    false
+  ]) {
+    const damagedAttempt = harness({
+      ...settings('met-no'),
+      metAttempt: record
+    });
+    damagedAttempt.store.start();
+    await flush();
+    assert.equal(
+      damagedAttempt.calls.length,
+      0,
+      'malformed/future record has conservative cooldown'
+    );
+    assert.deepEqual(
+      damagedAttempt.saved().metAttempt,
+      { key: '52.5,13.4', at: NOW },
+      'repair persists a bounded timestamp'
+    );
+    damagedAttempt.advance(3 * 3600000);
+    damagedAttempt.store.refresh(true);
+    await flush();
+    assert.equal(
+      damagedAttempt.calls.length,
+      1,
+      'repaired record permits request at three hours'
+    );
+    damagedAttempt.store.destroy();
+  }
+  const cachedOpenFallback = harness({
+    ...settings(),
+    lastSource: 'met-no',
+    metAttempt: { key: '52.5,13.4', at: NOW },
+    caches: {
+      'open-meteo': {
+        key: '52.500,13.400',
+        updated: NOW - 10 * 60000,
+        data: Weather.normalize(om, place)
+      }
+    }
+  });
+  await cachedOpenFallback.store.start();
+  await cachedOpenFallback.store.refresh(true);
+  assert.equal(
+    cachedOpenFallback.calls.length,
+    0,
+    'forced Auto fallback reuses fresh Open-Meteo entry'
+  );
+  assert.equal(cachedOpenFallback.store.state().source, 'open-meteo');
+  assert.equal(cachedOpenFallback.store.state().updated, NOW - 10 * 60000);
+  cachedOpenFallback.store.destroy();
+  const moved = harness({
+    ...settings('met-no'),
+    location: { ...place, latitude: -1.23455 },
+    metAttempt: { key: '-1.2345,13.4', at: NOW }
+  });
+  await moved.store.start();
+  assert.equal(
+    moved.calls.length,
+    0,
+    'request key matches native negative tie rounding'
+  );
+  moved.store.search('next');
+  moved.calls[0].resolve({
+    results: [{ ...place, id: 2, latitude: -1.234549, name: 'renamed' }]
+  });
+  await flush();
+  await moved.store.select(2);
+  assert.equal(
+    moved.calls.length,
+    1,
+    'same canonical request under new location name stays blocked'
+  );
+  moved.store.search('different');
+  moved.calls[1].resolve({ results: [{ ...place, id: 3, latitude: -1.2344 }] });
+  await flush();
+  moved.store.select(3);
+  await flush();
+  assert.equal(
+    moved.calls[2].source,
+    'met-no',
+    'genuinely different request location can start'
+  );
+  assert.deepEqual(
+    moved.saved().metAttempt,
+    { key: '-1.2344,13.4', at: NOW },
+    'only latest request location retained'
+  );
+  moved.store.destroy();
   const h = harness(settings());
   h.store.start();
   await flush();
@@ -268,20 +500,32 @@ const settings = (provider = 'auto') => ({
   h.calls[1].resolve(om);
   await flush();
   assert.equal(h.store.state().source, 'open-meteo');
-  h.advance(14 * 60000);
-  h.store.refresh(true);
+  h.advance(16 * 60000);
+  h.store.refresh();
   await flush();
   assert.equal(h.calls[2].source, 'open-meteo', 'last good first');
   h.calls[2].reject(Error('offline'));
   await flush();
-  assert.equal(h.calls[3].source, 'met-no');
-  h.calls[3].resolve(met());
+  assert.equal(
+    h.calls.length,
+    3,
+    'failed first MET attempt remains in cooldown'
+  );
+  assert.equal(h.store.state().status, 'stale');
+  h.advance(164 * 60000);
+  h.store.refresh(true);
+  await flush();
+  h.calls[3].reject(Error('offline'));
+  await flush();
+  assert.equal(h.calls[4].source, 'met-no', 'MET eligible at three hours');
+  h.calls[4].resolve(metAt(NOW + 3 * 3600000));
   await flush();
   assert.equal(h.store.state().source, 'met-no');
+  const manualOpen = h.store.setPreferences({ provider: 'open-meteo' });
+  await flush();
+  h.calls[5].resolve(om);
+  await manualOpen;
   const count = h.calls.length;
-  await h.store.setPreferences({ provider: 'open-meteo' });
-  assert.equal(h.store.state().source, 'open-meteo');
-  assert.equal(h.calls.length, count, 'fresh source cache');
   await h.store.setPreferences({ provider: 'met-no' });
   assert.equal(h.store.state().source, 'met-no');
   assert.equal(h.calls.length, count, 'MET three hour freshness');
@@ -290,7 +534,7 @@ const settings = (provider = 'auto') => ({
     'open-meteo'
   ]);
   const reload = harness(h.saved());
-  reload.advance(14 * 60000);
+  reload.advance(3 * 3600000);
   await reload.store.start();
   assert.equal(reload.calls.length, 0);
   assert.equal(reload.store.state().source, 'met-no');
