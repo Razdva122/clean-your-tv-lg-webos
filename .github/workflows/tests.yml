@@ -228,6 +228,25 @@ jobs:
           retention-days: 2
           if-no-files-found: error
 
+  phone-heic:
+    needs: scope
+    if: needs.scope.outputs.tv == 'true' || needs.scope.outputs.ui == 'true'
+    runs-on: macos-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npx playwright install webkit chromium
+      - name: Check actual HEIC decode and local phone upload
+        run: npm run test:wallpaper:heic
+
   browser:
     needs: scope
     if: needs.scope.outputs.tv == 'true' || needs.scope.outputs.ui == 'true'

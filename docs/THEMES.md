@@ -205,3 +205,11 @@ data is credited to the Norwegian Meteorological Institute (CC BY 4.0); provider
 terms and other credits are available in Data sources. See
 [weather implementation and limits](development/WEATHER.md)
 and [release notes](RELEASE-1.15.0.md).
+
+## iPhone photos from the phone upload page
+
+Open Settings → Wallpapers → Upload from phone and scan the code. In Safari 17 or newer on iPhone, choose a JPG, PNG or HEIC/HEIF photo, crop it, acknowledge the quality limit and send it. Choose Apply on the TV. Photos stay on your phone during conversion; only a JPEG goes to the TV. Input limit: 32 MiB and 50 million pixels, including typical 24 MP and 48 MP iPhone photos. Output is at most 1080p and 2 MiB. If your browser cannot open HEIC, use Safari 17 or newer or choose JPG/PNG. This phone-page support does not add HEIC to the Mac app’s file picker.
+
+HEIC decoding depends on native browser support; [Safari 17 added HEIC/HEIF support](https://webkit.org/blog/14445/webkit-features-in-safari-17-0/). Conversion uses the browser’s image decoder and canvas, without a remote conversion service or a downloaded decoder. This changes the temporary phone page served by the receiving service, so an installed TV needs a matching updated service package. Updating the desktop app alone does not change that page.
+
+For the real-decoder regression on macOS, run `npx playwright install webkit chromium`, then `npm run test:wallpaper:heic`. It uses synthetic HEIC fixtures, tests content checks and generic MIME types, verifies JPEG upload through the local receiver, and checks unsupported-browser guidance.

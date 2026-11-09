@@ -143,3 +143,7 @@ Choose the forecast provider: Auto, MET Norway or Open-Meteo. Auto starts with M
 Forecast coordinates go to api.met.no or api.open-meteo.com; city searches go to geocoding-api.open-meteo.com. Optional automatic city lookup sends your public IP to get.geojs.io. Connections use HTTPS; no API key is needed. Location, source and cache stay on the TV. Data sources includes provider terms and credits, including the Norwegian Meteorological Institute (MET Norway, CC BY 4.0).
 
 The Data sources button in the Weather heading opens provider and license information.
+
+## iPhone wallpaper upload
+
+Open Settings → Wallpapers → Upload from phone and scan the code. In Safari 17 or newer on iPhone, choose a JPG, PNG or HEIC/HEIF photo, crop it, acknowledge the quality limit and send it. Choose Apply on the TV. Photos stay on your phone during conversion; only a JPEG goes to the TV. Input limit: 32 MiB and 50 million pixels, including typical 24 MP and 48 MP iPhone photos. Output is at most 1080p and 2 MiB. If your browser cannot open HEIC, use Safari 17 or newer or choose JPG/PNG. This phone-page support does not add HEIC to the Mac app’s file picker.

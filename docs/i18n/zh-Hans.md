@@ -143,3 +143,7 @@ No-root: 要重新启动 Home 控制，请打开 Home Helper，选择启动 Help
 预报坐标发送至 api.met.no 或 api.open-meteo.com，城市搜索发送至 geocoding-api.open-meteo.com。可选的自动定位会向 get.geojs.io 发送公网 IP。连接使用 HTTPS，无需 API 密钥。位置、来源和缓存保存在电视上。“数据来源”包含服务条款和署名，包括挪威气象研究所（MET Norway，CC BY 4.0）。
 
 点击天气标题旁的“数据来源”可查看服务和许可信息。
+
+## 从iPhone上传壁纸
+
+打开设置 → 壁纸 → 从手机上传并扫描二维码。在iPhone的Safari 17或更新版本中选择JPG、PNG或HEIC/HEIF照片，裁剪、确认画质限制后发送，再在电视上选择应用。转换在手机上完成，仅将JPEG发送到电视。输入上限为32 MiB和5000万像素，包含常见的24 MP和48 MP照片。输出最高为1080p和2 MiB。如浏览器无法打开HEIC，请使用Safari 17或更新版本，或选择JPG/PNG。此功能不改变Mac应用的文件选择器。

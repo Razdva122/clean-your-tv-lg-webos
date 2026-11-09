@@ -143,3 +143,7 @@ Choisissez la source des prévisions : Auto, MET Norway ou Open-Meteo. Auto comm
 Les coordonnées sont envoyées à api.met.no ou api.open-meteo.com, les recherches de villes à geocoding-api.open-meteo.com. La localisation automatique facultative transmet votre IP publique à get.geojs.io. Les connexions utilisent HTTPS ; aucune clé API n’est nécessaire. Le lieu, la source et le cache restent sur le téléviseur. Sources des données présente les conditions et crédits, dont l’Institut météorologique norvégien (MET Norway, CC BY 4.0).
 
 Le bouton Sources des données dans l’en-tête Météo ouvre les informations sur les services et licences.
+
+## Photo iPhone comme fond d’écran
+
+Ouvrez Paramètres → Fonds d’écran → Envoyer depuis le téléphone et scannez le code. Dans Safari 17 ou plus récent sur iPhone, choisissez JPG, PNG ou HEIC/HEIF, recadrez, acceptez la limite de qualité et envoyez. Choisissez Appliquer sur le TV. La conversion reste sur le téléphone ; seul un JPEG est envoyé au TV. Entrée : 32 Mio et 50 millions de pixels maximum, dont les photos courantes de 24 et 48 MP. Sortie : 1080p et 2 Mio maximum. Si HEIC ne s’ouvre pas, utilisez Safari 17 ou plus récent ou JPG/PNG. Le sélecteur de l’app Mac reste inchangé.

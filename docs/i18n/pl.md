@@ -144,3 +144,7 @@ Wybierz źródło prognozy: Auto, MET Norway lub Open-Meteo. Auto zaczyna od MET
 Współrzędne trafiają do api.met.no lub api.open-meteo.com, wyszukiwania miast do geocoding-api.open-meteo.com. Opcjonalna automatyczna lokalizacja wysyła publiczny adres IP do get.geojs.io. Połączenia używają HTTPS; klucz API nie jest potrzebny. Miejsce, źródło i pamięć podręczna pozostają w telewizorze. Źródła danych zawierają warunki i autorstwo, w tym Norweski Instytut Meteorologiczny (MET Norway, CC BY 4.0).
 
 Przycisk Źródła danych w nagłówku Pogoda otwiera informacje o usługach i licencjach.
+
+## Tapeta z iPhone’a
+
+Otwórz Ustawienia → Tapety → Prześlij z telefonu i zeskanuj kod. W Safari 17 lub nowszym na iPhonie wybierz JPG, PNG albo HEIC/HEIF, wykadruj, zaakceptuj ograniczenie jakości i wyślij. Na TV wybierz Zastosuj. Konwersja odbywa się w telefonie; do TV trafia tylko JPEG. Limit wejścia: 32 MiB i 50 milionów pikseli, w tym typowe zdjęcia 24 i 48 MP. Wyjście: maksymalnie 1080p i 2 MiB. Jeśli HEIC się nie otwiera, użyj Safari 17 lub nowszego albo JPG/PNG. Nie dotyczy to wyboru plików w aplikacji Mac.

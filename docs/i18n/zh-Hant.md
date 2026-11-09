@@ -143,3 +143,7 @@ No-root: 要重新啟動 Home 控制，請開啟 Home Helper，選擇啟動 Help
 預報座標傳送至 api.met.no 或 api.open-meteo.com，城市搜尋傳送至 geocoding-api.open-meteo.com。選用的自動定位會向 get.geojs.io 傳送公用 IP。連線使用 HTTPS，無需 API 金鑰。位置、來源與快取儲存在電視上。「資料來源」包含服務條款與署名，包括挪威氣象研究所（MET Norway，CC BY 4.0）。
 
 點選天氣標題旁的「資料來源」可查看服務和授權資訊。
+
+## 從iPhone上傳桌布
+
+開啟設定 → 桌布 → 從手機上傳並掃描QR碼。在iPhone的Safari 17或更新版本中選擇JPG、PNG或HEIC/HEIF照片，裁切、確認畫質限制後傳送，再在電視上選擇套用。轉換在手機上完成，僅將JPEG傳送到電視。輸入上限為32 MiB和5000萬像素，包含常見的24 MP和48 MP照片。輸出最高為1080p和2 MiB。如瀏覽器無法開啟HEIC，請使用Safari 17或更新版本，或選擇JPG/PNG。此功能不變更Mac應用程式的檔案選擇器。

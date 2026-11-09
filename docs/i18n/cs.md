@@ -119,3 +119,7 @@ Vyberte zdroj předpovědi: Auto, MET Norway nebo Open-Meteo. Auto začne s MET 
 Souřadnice se posílají na api.met.no nebo api.open-meteo.com, hledání měst na geocoding-api.open-meteo.com. Volitelné automatické určení města předává veřejnou IP adresu na get.geojs.io. Spojení používají HTTPS; klíč API není potřeba. Místo, zdroj a mezipaměť zůstávají v televizoru. Zdroje dat obsahují podmínky a autorství včetně Norského meteorologického institutu (MET Norway, CC BY 4.0).
 
 Tlačítko Zdroje dat v záhlaví Počasí otevře informace o službách a licencích.
+
+## Nahrání tapety z iPhonu
+
+Otevřete Nastavení → Tapety → Nahrát z telefonu a naskenujte kód. V Safari 17 nebo novějším na iPhonu vyberte JPG, PNG nebo HEIC/HEIF, upravte výřez, potvrďte omezení kvality a odešlete. Na TV zvolte Použít. Převod probíhá v telefonu; TV dostane JPEG. Limit vstupu je 32 MiB a 50 milionů pixelů (včetně běžných 24MP a 48MP fotek); výstup nejvýše 1080p a 2 MiB. Pokud prohlížeč HEIC neotevře, použijte novější Safari nebo JPG/PNG. Tato podpora se týká stránky v telefonu, ne výběru souboru v aplikaci pro Mac.

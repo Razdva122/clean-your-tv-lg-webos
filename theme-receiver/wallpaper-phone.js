@@ -90,8 +90,8 @@ function phone() {
       ? {
           title: 'Обои для телевизора',
           intro:
-            'Выберите JPG или PNG. Кадрируйте фото и отправьте на телевизор в вашей сети.',
-          file: 'Фото JPG / PNG',
+            'Выберите JPG, PNG или HEIC с iPhone. Кадрируйте фото и отправьте на телевизор в вашей сети.',
+          file: 'Фото JPG / PNG / HEIC',
           pin: 'PIN на телевизоре',
           zoom: 'Масштаб',
           x: 'По горизонтали',
@@ -105,14 +105,16 @@ function phone() {
           error:
             'Не удалось отправить. Проверьте PIN и заново откройте приём на телевизоре.',
           invalid:
-            'Выберите исправный JPG или PNG (до 32 МиБ, до 24 миллионов пикселей). HEIC и видео не поддерживаются.',
+            'Выберите исправный JPG, PNG или HEIC (до 32 МиБ, до 50 миллионов пикселей). Видео не поддерживается.',
+          heicUnsupported:
+            'Не удалось открыть HEIC в этом браузере. Откройте страницу в Safari 17 или новее на iPhone либо выберите JPG или PNG.',
           stopped: 'Отменено. Заново откройте приём на телевизоре.'
         }
       : {
           title: 'TV wallpaper',
           intro:
-            'Choose JPG or PNG, crop your photo, then send to the TV on your local network.',
-          file: 'JPG / PNG photo',
+            'Choose JPG, PNG or an iPhone HEIC photo, crop your photo, then send to the TV on your local network.',
+          file: 'JPG / PNG / HEIC photo',
           pin: 'PIN shown on TV',
           zoom: 'Zoom',
           x: 'Horizontal position',
@@ -126,7 +128,9 @@ function phone() {
           error:
             'Could not send. Check the PIN and reopen receiving on your TV.',
           invalid:
-            'Choose a valid JPG or PNG (up to 32 MiB, 24 million pixels). HEIC and video are unsupported.',
+            'Choose a valid JPG, PNG or HEIC (up to 32 MiB, 50 million pixels). Video is unsupported.',
+          heicUnsupported:
+            'Could not open this HEIC photo. Open this page in Safari 17 or newer on your iPhone, or choose JPG or PNG.',
           stopped: 'Cancelled. Reopen receiving on your TV.'
         };
   var warnings = {
@@ -219,15 +223,14 @@ function phone() {
     var token = ++serial,
       file = this.files[0];
     image = null;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    el('status').textContent = '';
     el('ack').checked = false;
     controls();
     if (url) URL.revokeObjectURL(url);
     url = null;
     if (!file) return;
-    if (
-      ['image/jpeg', 'image/png'].indexOf(file.type) < 0 ||
-      file.size > 32 * 1024 * 1024
-    ) {
+    if (!file.size || file.size > 32 * 1024 * 1024) {
       el('status').textContent = texts.invalid;
       return;
     }
@@ -240,17 +243,59 @@ function phone() {
           bytes[1] === 80 &&
           bytes[2] === 78 &&
           bytes[3] === 71,
-        jpeg = bytes[0] === 255 && bytes[1] === 216;
-      if (!(file.type === 'image/png' ? png : jpeg)) {
+        jpeg = bytes[0] === 255 && bytes[1] === 216,
+        heic = false;
+      // MIME and filename may be empty or generic in iPhone's Files picker.
+      // Accept only actual JPEG/PNG bytes or a bounded HEIF file-type box.
+      if (
+        bytes.length >= 16 &&
+        String.fromCharCode.apply(null, bytes.subarray(4, 8)) === 'ftyp'
+      ) {
+        var boxSize = new DataView(reader.result).getUint32(0);
+        if (
+          boxSize >= 16 &&
+          boxSize <= file.size &&
+          boxSize <= bytes.length &&
+          boxSize % 4 === 0
+        ) {
+          for (var at = 8; at + 4 <= boxSize; at += 4) {
+            if (at === 12) continue; // Minor version, not a compatible brand.
+            var brand = String.fromCharCode.apply(
+              null,
+              bytes.subarray(at, at + 4)
+            );
+            if (
+              [
+                'heic',
+                'heix',
+                'hevc',
+                'hevx',
+                'heim',
+                'heis',
+                'hevm',
+                'hevs',
+                'mif1',
+                'msf1'
+              ].indexOf(brand) >= 0
+            )
+              heic = true;
+          }
+        }
+      }
+      if (!png && !jpeg && !heic) {
         el('status').textContent = texts.invalid;
         return;
       }
-      url = URL.createObjectURL(file);
+      url = URL.createObjectURL(
+        new Blob([file], {
+          type: png ? 'image/png' : jpeg ? 'image/jpeg' : 'image/heic'
+        })
+      );
       var next = new Image();
       next.onload = function () {
         if (token !== serial) return;
         if (
-          next.width * next.height > 24000000 ||
+          next.width * next.height > 50000000 ||
           next.width < 16 ||
           next.height < 9
         ) {
@@ -268,14 +313,19 @@ function phone() {
       };
       next.onerror = function () {
         if (token === serial) {
-          el('status').textContent = texts.invalid;
+          el('status').textContent = heic
+            ? texts.heicUnsupported
+            : texts.invalid;
           URL.revokeObjectURL(url);
           url = null;
         }
       };
       next.src = url;
     };
-    reader.readAsArrayBuffer(file.slice(0, 16));
+    reader.onerror = function () {
+      if (token === serial) el('status').textContent = texts.invalid;
+    };
+    reader.readAsArrayBuffer(file.slice(0, 4096));
   };
   el('send').onclick = function () {
     if (el('send').disabled) return;
@@ -378,7 +428,7 @@ function phone() {
 }
 
 module.exports =
-  '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TV wallpaper</title><style>*{box-sizing:border-box}body{margin:0;background:#101820;color:#f5f7fa;font:16px/1.5 system-ui,sans-serif}main{max-width:560px;padding:24px 20px 40px;margin:auto}h1{font-size:28px;line-height:1.2}p{margin:16px 0}label{display:block;margin:16px 0 6px}input,button{font:inherit;min-height:48px}input[type=file]{width:100%;padding:8px 0}input[type=range]{width:100%}input[type=text]{width:100%;padding:10px;border:1px solid #8fa6b6;border-radius:6px;background:#182934;color:inherit}canvas{display:block;width:100%;height:auto;aspect-ratio:16/9;background:#000;margin:20px 0}button{padding:10px 16px;border:0;border-radius:6px;cursor:pointer;background:#65d1cb;color:#0e2629;margin:8px 8px 0 0}button:disabled{opacity:.5;cursor:default}#warning{border-left:4px solid #e6b85e;padding:12px;background:#24303a}#ack{width:24px;height:24px;min-height:24px;vertical-align:middle;margin-right:10px}#status{min-height:48px}:focus-visible{outline:3px solid #e6b85e;outline-offset:3px}</style><main><h1 id="title"></h1><p id="intro"></p><label for="pin" id="pinLabel">PIN</label><input id="pin" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="off"><label for="file" id="fileLabel">JPG / PNG</label><input id="file" type="file" accept="image/jpeg,image/png"><canvas id="preview" width="320" height="180" aria-label="16:9 crop preview"></canvas><label for="zoom">Zoom</label><input id="zoom" type="range" min="1" max="3" step=".05" value="1" disabled><label for="x">Horizontal position</label><input id="x" type="range" min="0" max="100" value="50" disabled><label for="y">Vertical position</label><input id="y" type="range" min="0" max="100" value="50" disabled><p id="warning"></p><label><input id="ack" type="checkbox"><span id="ackLabel"></span></label><button id="send" disabled></button><button id="cancel"></button><p id="status" role="status" aria-live="polite"></p></main><script>' +
+  '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TV wallpaper</title><style>*{box-sizing:border-box}body{margin:0;background:#101820;color:#f5f7fa;font:16px/1.5 system-ui,sans-serif}main{max-width:560px;padding:24px 20px 40px;margin:auto}h1{font-size:28px;line-height:1.2}p{margin:16px 0}label{display:block;margin:16px 0 6px}input,button{font:inherit;min-height:48px}input[type=file]{width:100%;padding:8px 0}input[type=range]{width:100%}input[type=text]{width:100%;padding:10px;border:1px solid #8fa6b6;border-radius:6px;background:#182934;color:inherit}canvas{display:block;width:100%;height:auto;aspect-ratio:16/9;background:#000;margin:20px 0}button{padding:10px 16px;border:0;border-radius:6px;cursor:pointer;background:#65d1cb;color:#0e2629;margin:8px 8px 0 0}button:disabled{opacity:.5;cursor:default}#warning{border-left:4px solid #e6b85e;padding:12px;background:#24303a}#ack{width:24px;height:24px;min-height:24px;vertical-align:middle;margin-right:10px}#status{min-height:48px}:focus-visible{outline:3px solid #e6b85e;outline-offset:3px}</style><main><h1 id="title"></h1><p id="intro"></p><label for="pin" id="pinLabel">PIN</label><input id="pin" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="off"><label for="file" id="fileLabel">JPG / PNG / HEIC</label><input id="file" type="file" accept="image/jpeg,image/png,image/heic,image/heif,image/heic-sequence,image/heif-sequence,.heic,.heif"><canvas id="preview" width="320" height="180" aria-label="16:9 crop preview"></canvas><label for="zoom">Zoom</label><input id="zoom" type="range" min="1" max="3" step=".05" value="1" disabled><label for="x">Horizontal position</label><input id="x" type="range" min="0" max="100" value="50" disabled><label for="y">Vertical position</label><input id="y" type="range" min="0" max="100" value="50" disabled><p id="warning"></p><label><input id="ack" type="checkbox"><span id="ackLabel"></span></label><button id="send" disabled></button><button id="cancel"></button><p id="status" role="status" aria-live="polite"></p></main><script>' +
   '(' +
   phone.toString() +
   ')();</script></html>';
