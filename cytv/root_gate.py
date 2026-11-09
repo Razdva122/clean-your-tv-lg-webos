@@ -136,7 +136,7 @@ def install(installer, inventory, migrate=False, reinstall=None):
             bundle = Path(folder)/'root';bundle.mkdir()
             for name, raw in data.items():
                 path = bundle/name;path.parent.mkdir(parents=True, exist_ok=True);path.write_bytes(raw)
-            package.personalize_root(bundle, inventory)
+            package.personalize_root(bundle, inventory, tv_name=getattr(installer, 'tv_name', None))
             prepared = {name: (bundle/name).read_bytes() for name in data}
             validate_bundle(prepared, installer.tv_info['graphics_resolution'])
     except (OSError, ValueError, KeyError, TypeError, AttributeError, EOFError, tarfile.TarError) as error:

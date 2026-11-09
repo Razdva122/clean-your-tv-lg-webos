@@ -1,5 +1,7 @@
 # Clean Your TV — user guide
 
+Unreleased: The graphical installer and interactive CLI ask for a TV name, defaulting to **Home**. For scripts, use `--tv-name "Aashiyaan"`; `--yes` and non-interactive installs otherwise use Home. The name (up to 48 characters) labels the launcher and its webOS loading screen, not the TV’s network identity. LG controls the “Loading…” message. The name is applied during installation; a later replacement package may restore its default title.
+
 Unreleased installer change: before a new installation, the computer installer checks for a newer stable installer on GitHub. Choose “Open GitHub and download the latest version” to stop and download it, or “No, install this version” to continue explicitly. If the check fails, you can continue. Pending operations and recovery skip the check.
 
 Clean Your TV gives your LG webOS TV a personal Home screen: your apps in your order, without sponsored rows in this menu. Install from a computer or Android phone; the computer can be switched off afterward.

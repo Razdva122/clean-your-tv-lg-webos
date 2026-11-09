@@ -698,6 +698,8 @@ printf '%s' "$cytv_state"
 
     def install(self, inventory, ssap_key=None, migrate=False, reinstall=None):
         # All local validation precedes the durable mutation receipt.
+        if getattr(self, 'tv_name', None) is not None:
+            self.tv_name = package.normalize_tv_name(self.tv_name)
         pending = self.store.pending(self.profile)
         replace_activation = (reinstall == 'installed' and self.profile['edition'] == 'root'
                               and pending and pending.get('action') == 'activate-root'
@@ -720,7 +722,8 @@ printf '%s' "$cytv_state"
             return self.install_root(inventory, migrate, reinstall)
         if not ssap_key:
             raise ValueError('Remote-control pairing is required for No-root.')
-        launcher, _ = package.personalize((self.payload / self._graphics_paths['launcher']).read_bytes(), HOME, inventory)
+        launcher, _ = package.personalize((self.payload / self._graphics_paths['launcher']).read_bytes(), HOME, inventory,
+                                         tv_name=getattr(self, 'tv_name', None))
         helper = (self.payload / self.manifest['helper']).read_bytes()
         expected = {}
         for data in (helper, launcher):
@@ -767,8 +770,8 @@ printf '%s' "$cytv_state"
         with tempfile.TemporaryDirectory(prefix='cytv-root-') as tmp:
             bundle = Path(tmp).resolve() / 'root'
             shutil.copytree(self.payload / self._graphics_paths['root'], bundle)
-            if not migrate:
-                package.personalize_root(bundle, inventory)
+            if not migrate or getattr(self, 'tv_name', None) is not None:
+                package.personalize_root(bundle, inventory if not migrate else None, tv_name=getattr(self, 'tv_name', None))
             manifest = json.loads((bundle / 'bundle.json').read_text())
             for name, digest in manifest['files'].items():
                 if hashlib.sha256((bundle / package.safe_name(name)).read_bytes()).hexdigest() != digest:

@@ -50,6 +50,7 @@ def parser():
     result.add_argument('--host', help=i18n.translate('TV IPv4 address or hostname'))
     result.add_argument('--no-discovery', action='store_true', help=i18n.translate('Skip local network discovery and enter a TV address manually'))
     result.add_argument('--edition', choices=('no-root', 'root'))
+    result.add_argument('--tv-name', type=package.normalize_tv_name, help=i18n.translate('Launcher name shown while loading (default: Home)'))
     result.add_argument('--connection', choices=('root-ssh',), help=i18n.translate('No-root: use existing root SSH without Developer Mode'))
     result.add_argument('--root-variant', choices=('node012-beta',), help=i18n.translate('Root: select the experimental Node.js 0.12.2 payload'))
     result.add_argument('--port', type=int, help=i18n.translate('SSH port (No-root: 9922; Root: 22)'))
@@ -201,6 +202,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
     remote = None
     store, profile, phase, tv_info = state.Store(args.data_dir), None, 'select-tv', {'frontend':getattr(write,'frontend','console')}
     try:
+        if args.tv_name is not None and args.command != 'install':
+            raise UserError('--tv-name applies only to installation.')
         if args.new_recovery_attempt and (args.command != 'recover-system-rollback' or args.edition == 'no-root'):
             raise UserError('--new-recovery-attempt applies only to Root rollback recovery.')
         if args.repair_package_permissions and (args.command!='enable-firmware-access' or args.edition=='no-root'):
@@ -495,6 +498,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                                 return 0
                 if not resume:
                     installer.select_graphics()
+                    installer.tv_name = (args.tv_name if args.tv_name is not None else
+                                         'Home' if args.non_interactive or args.yes else prompts.tv_name(ask, write))
                 phase = 'read-inventory'
                 inventory, key = None, None
                 if not args.migrate_home and not resume:

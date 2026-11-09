@@ -1,5 +1,20 @@
 # cytv standalone installer
 
+## Name the launcher (unreleased)
+
+Interactive installation asks **What would you like to name your TV?**, with
+**Home** as the default. The graphical installer presents the same question.
+For scripted setup, use `cytv install --tv-name "Aashiyaan"` alongside your normal
+connection options. `--yes` and non-interactive installation use Home unless
+`--tv-name` is supplied. The option is only accepted for installation.
+
+Names can contain up to 48 Unicode characters; blank input selects Home and
+control characters are rejected. The installed launcher title and its webOS
+loading-screen label use this name in both editions. LG supplies the localized
+“Loading…” text; this does not change that text or the TV's network name. The
+name persists in the installed package across restart. A later package update
+can restore its own title; this is not an on-TV rename or update-preservation API.
+
 <a id="installer-update-check-unreleased"></a>
 
 ## Installer update check

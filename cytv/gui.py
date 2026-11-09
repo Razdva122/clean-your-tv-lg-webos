@@ -887,6 +887,10 @@ class Wizard(QMainWindow):
                 entry.setEchoMode(QLineEdit.EchoMode.Password)
             elif 'IP address' in prompt.label:
                 entry.setPlaceholderText(tr('For example, 192.168.1.50'))
+            elif prompt.label == 'TV name [Home]: ':
+                entry.setText(prompt.default)
+                entry.setMaxLength(48)
+                entry.selectAll()
             self.form_layout.addWidget(entry)
             def submit_entry():
                 value = entry.text()

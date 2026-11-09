@@ -18,6 +18,18 @@ except ImportError:
 
 @unittest.skipUnless(HAS_QT, 'Desktop build dependencies are optional for CLI tests')
 class GuiTests(unittest.TestCase):
+    def test_tv_name_prompt_prefills_home_and_submits_custom_name(self):
+        w=Wizard();self.addCleanup(w.close)
+        from cytv.desktop import Channel
+        w.channel=Channel(lambda *_:None)
+        w.show_prompt(Prompt('TV name [Home]: '))
+        entry=w.form.findChildren(QLineEdit)[0]
+        self.assertEqual(entry.text(),'Home')
+        self.assertEqual(entry.maxLength(),48)
+        entry.setText('Aashiyaan')
+        next(button for button in w.form.findChildren(QPushButton) if button.text()=='Continue').click()
+        self.assertEqual(w.channel.answers.get_nowait(),'Aashiyaan')
+
     def test_default_wizard_runs_update_gate_before_payload_or_tv_changes(self):
         from cytv import installer_update as update
         w=Wizard()

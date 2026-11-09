@@ -1,5 +1,7 @@
 # Clean Your TV — instrukcja użytkownika
 
+Jeszcze nieopublikowane: instalator graficzny i interaktywny CLI pytają o nazwę TV; domyślnie **Home**. W skryptach użyj `--tv-name "Aashiyaan"`. Z `--yes` lub bez interakcji domyślną nazwą jest Home. Nazwa (do 48 znaków) pojawia się w launcherze i na ekranie ładowania webOS, bez zmiany nazwy sieciowej. Komunikatem „Loading…” steruje LG. Późniejsza wymiana pakietu może przywrócić domyślny tytuł.
+
 Nieopublikowana zmiana instalatora: przed nową instalacją instalator na komputerze sprawdza nowszą stabilną wersję na GitHubie. Wybierz „Otwórz GitHub i pobierz najnowszą wersję”, aby zatrzymać instalację i ją pobrać, lub „Nie, zainstaluj tę wersję”, aby jawnie kontynuować. Jeśli sprawdzenie się nie powiedzie, możesz kontynuować. Oczekujące operacje i odzyskiwanie pomijają sprawdzenie.
 
 Clean Your TV to własny ekran główny dla LG webOS: Twoje aplikacje w Twojej kolejności, bez sponsorowanych rzędów w tym menu. Zainstaluj go z komputera lub telefonu z Androidem; potem komputer może być wyłączony.

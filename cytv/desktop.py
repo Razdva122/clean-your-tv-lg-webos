@@ -35,6 +35,8 @@ class Prompt:
 
     @property
     def default(self):
+        if self.label == 'TV name [Home]: ':
+            return 'Home'
         if self.kind == 'confirm':
             return 'y' if '[Y/n]' in self.label else 'n'
         match = re.search(r'\[(\d+)\]', self.label)
@@ -42,6 +44,8 @@ class Prompt:
 
     @property
     def title(self):
+        if self.label == 'TV name [Home]: ':
+            return 'What would you like to name your TV?'
         return re.sub(r'\s*\[[^]]+\]', '', self.label).strip().rstrip(':')
 
 
