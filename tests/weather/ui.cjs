@@ -77,6 +77,12 @@ const weather = {
       }),
       errors = [],
       calls = [];
+    let geoLocation = {
+      city: 'Berlin',
+      country_code: 'DE',
+      latitude: '52.52',
+      longitude: '13.41'
+    };
     await page.clock.install({ time: new Date('2026-11-09T18:30:00Z') });
     page.on('pageerror', (e) => errors.push(e.message));
     await page.route(/^https?:/, (r) => {
@@ -89,12 +95,7 @@ const weather = {
       if (url.includes('api.open-meteo')) return r.fulfill({ json: weather });
       if (url.includes('get.geojs.io'))
         return r.fulfill({
-          json: {
-            city: 'Berlin',
-            country_code: 'DE',
-            latitude: '52.52',
-            longitude: '13.41'
-          }
+          json: geoLocation
         });
       return r.abort();
     });
@@ -489,61 +490,92 @@ const weather = {
       await page.locator('.weather-actual-source').innerText(),
       /Open-Meteo/
     );
-    // A new location forces native work; hiding/Off cancels it and never falls back.
-    const nativeBefore = await page.evaluate(() => weatherBridgeCalls.length),
-      lifecycleOmBefore = calls.filter((u) => /api.open-meteo/.test(u)).length;
-    await page.evaluate(() => {
-      HomeWeather.store.clear();
-      weatherBridgeHold = true;
-      HomeWeather.store.setPreferences({ provider: 'auto', enabled: true });
-      HomeWeather.store.setMode('auto');
-    });
-    await page.waitForFunction(
-      (count) =>
-        weatherBridgeCalls.length > count &&
-        !/Cancel$/.test(weatherBridgeCalls[weatherBridgeCalls.length - 1].uri),
-      nativeBefore
-    );
-    await page.evaluate(() => {
-      Object.defineProperty(document, 'visibilityState', {
-        configurable: true,
-        value: 'hidden'
+    // Each cancellation case uses a genuinely different request location.
+    // Same-location resume must honor MET admission even though clear() was used.
+    for (const [index, lifecycle] of ['hidden', 'pagehide', 'Off'].entries()) {
+      geoLocation = { ...geoLocation, latitude: String(53 + index) };
+      const nativeBefore = await page.evaluate(() => weatherBridgeCalls.length),
+        omBefore = calls.filter((u) => /api.open-meteo/.test(u)).length;
+      await page.evaluate(() => {
+        HomeWeather.store.clear();
+        weatherBridgeFail = false;
+        weatherBridgeHold = true;
+        HomeWeather.store.setPreferences({ provider: 'auto', enabled: true });
+        HomeWeather.store.setMode('auto');
       });
-      document.dispatchEvent(new Event('visibilitychange'));
-    });
-    await page.waitForFunction(() =>
-      /Cancel$/.test(weatherBridgeCalls[weatherBridgeCalls.length - 1].uri)
-    );
-    await page.evaluate(() => {
-      Object.defineProperty(document, 'visibilityState', {
-        configurable: true,
-        value: 'visible'
-      });
-      document.dispatchEvent(new Event('visibilitychange'));
-    });
-    await page.waitForFunction(
-      () =>
-        !/Cancel$/.test(weatherBridgeCalls[weatherBridgeCalls.length - 1].uri)
-    );
-    await page.evaluate(() => window.dispatchEvent(new Event('pagehide')));
-    await page.waitForFunction(() =>
-      /Cancel$/.test(weatherBridgeCalls[weatherBridgeCalls.length - 1].uri)
-    );
-    await page.evaluate(() => window.dispatchEvent(new Event('pageshow')));
-    await page.waitForFunction(
-      () =>
-        !/Cancel$/.test(weatherBridgeCalls[weatherBridgeCalls.length - 1].uri)
-    );
-    await page.locator('.weather-enabled').click();
-    await page.waitForFunction(() =>
-      /Cancel$/.test(weatherBridgeCalls[weatherBridgeCalls.length - 1].uri)
-    );
-    await page.waitForTimeout(50);
-    assert.equal(
-      calls.filter((u) => /api.open-meteo/.test(u)).length,
-      lifecycleOmBefore,
-      'Auto cancellation never starts fallback'
-    );
+      await page.waitForFunction(
+        ({ count, latitude }) => {
+          const last = weatherBridgeCalls[weatherBridgeCalls.length - 1];
+          return (
+            weatherBridgeCalls.length > count &&
+            !/Cancel$/.test(last.uri) &&
+            last.body.latitude === latitude
+          );
+        },
+        { count: nativeBefore, latitude: Number(geoLocation.latitude) }
+      );
+      await page.waitForFunction(
+        () =>
+          document
+            .querySelector('.weather-enabled')
+            .getAttribute('aria-checked') === 'true'
+      );
+      const pending = await page.evaluate(
+        () => weatherBridgeCalls[weatherBridgeCalls.length - 1]
+      );
+      if (lifecycle === 'hidden')
+        await page.evaluate(() => {
+          Object.defineProperty(document, 'visibilityState', {
+            configurable: true,
+            value: 'hidden'
+          });
+          document.dispatchEvent(new Event('visibilitychange'));
+        });
+      else if (lifecycle === 'pagehide')
+        await page.evaluate(() => window.dispatchEvent(new Event('pagehide')));
+      else await page.locator('.weather-enabled').click();
+      await page.waitForFunction((id) => {
+        const last = weatherBridgeCalls[weatherBridgeCalls.length - 1];
+        return /Cancel$/.test(last.uri) && last.body.id === id;
+      }, pending.body.id);
+      await page.waitForTimeout(50);
+      assert.equal(
+        await page.evaluate(() => weatherBridgeCalls.length),
+        nativeBefore + 2,
+        lifecycle + ' cancels only the original native request'
+      );
+      assert.equal(
+        calls.filter((u) => /api.open-meteo/.test(u)).length,
+        omBefore,
+        lifecycle + ' cancellation cannot start fallback while disallowed'
+      );
+      if (lifecycle === 'hidden')
+        await page.evaluate(() => {
+          Object.defineProperty(document, 'visibilityState', {
+            configurable: true,
+            value: 'visible'
+          });
+          document.dispatchEvent(new Event('visibilitychange'));
+        });
+      else if (lifecycle === 'pagehide')
+        await page.evaluate(() => window.dispatchEvent(new Event('pageshow')));
+      else await page.locator('.weather-enabled').click();
+      // Resuming allows a new Auto refresh. MET stays in cooldown; OM is eligible.
+      await page.waitForFunction(
+        () => HomeWeather.store.state().source === 'open-meteo'
+      );
+      await page.waitForTimeout(50);
+      assert.equal(
+        await page.evaluate(() => weatherBridgeCalls.length),
+        nativeBefore + 2,
+        lifecycle + ' same-location resume cannot restart MET within cooldown'
+      );
+      assert.equal(
+        calls.filter((u) => /api.open-meteo/.test(u)).length,
+        omBefore + 1,
+        lifecycle + ' allowed Auto resume makes exactly one Open-Meteo request'
+      );
+    }
     assert.deepEqual(errors, []);
     results.push({
       edition,
