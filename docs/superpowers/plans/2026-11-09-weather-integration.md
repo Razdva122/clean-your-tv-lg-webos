@@ -32,6 +32,8 @@
 - [x] Prepare focused upstream updates for third-party Minimal, Retro and Atmosphere rather than rewriting their signed historical packages or claiming ownership.
 - [x] Update the local `clean-your-tv-lg-theme` author repository: contract docs, examples, new-weather preview controls, tests and exact candidate runtime provenance.
 - [x] Export a matching candidate runtime only after main-source commit; keep candidate status until normal release gates are met.
-- [ ] Create reviewable PRs targeting the correct integration branches, link #353, verify CI and reconcile issue labels. Publish theme artifacts only against compatible Home/runtime evidence; report any ownership/release dependency explicitly.
+- [x] Create reviewable PRs targeting the correct integration branches, link #353, verify CI and reconcile issue labels. Publish theme artifacts only against compatible Home/runtime evidence; report any ownership/release dependency explicitly.
 
 Sources attribution placement was subsequently approved in the Weather heading; see the production refinement in the spec. Legacy profiles deliberately do not export/enable weather or transfer location. Final TV acceptance remains with the application release coordinator.
+
+Main PR: #463. Paired author-tools PR: Razdva122/clean-your-tv-lg-theme#9, pinned to clean runtime source 3b04d656f2e5bfc11f44693a8fe012770e7da858. Local source/browser/toolkit and remote package-hash checks passed; remote CI was still running at handoff. Public application delivery and physical acceptance are deliberately outside this feature branch.

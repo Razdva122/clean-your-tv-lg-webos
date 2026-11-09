@@ -93,3 +93,21 @@ Fork candidate artifacts are published as explicit prereleases, not app releases
 [Minimal](https://github.com/Razdva122/tv-themes/releases/tag/weather-v1.1.0-candidate.1),
 [Retro](https://github.com/Razdva122/clean-your-tv-lg-retro-theme/releases/tag/weather-v1.1.0-candidate.1),
 [Atmosphere](https://github.com/Razdva122/atmosphere-theme/releases/tag/weather-v1.1.0-candidate.1).
+
+## Paired author toolkit
+
+[Author tools PR #9](https://github.com/Razdva122/clean-your-tv-lg-theme/pull/9)
+contains the contract guards, updated examples/docs and synthetic preview controls.
+Its lock pins clean main source `3b04d656f2e5bfc11f44693a8fe012770e7da858`;
+all 71 tests passed against that complete compiled export in both browser editions,
+with zero outgoing weather/geolocation provider requests. The local reviewed
+export is retained in the author checkout's ignored `.runtime/weather-candidate`;
+CI recreates the complete export from the exact lock, never a floating branch.
+The runtime remains candidate. Main and toolkit PRs are ready for review; remote
+CI was still running at handoff, with no failure observed at that check.
+
+Published fork archive SHA-256 values (also attached to their prereleases):
+
+- Minimal: `68637d10548c6d22af35e5bee5510e29b18f99411ddedf44e3088391ee00e03a`
+- Retro: `43e0c93a807d2523f49b43a0089378e69c07421aab9e34057f422675f3c46a61`
+- Atmosphere: `6c41027938ce00d11540e0ed9972f9022d6ebe90328bd7412b1ac498bc1c9526`
