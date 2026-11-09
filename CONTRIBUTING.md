@@ -95,6 +95,13 @@ Share only redacted logs. Exclude SSH/SSAP credentials, addresses, SSIDs, app
 inventories and personal screenshots. Report security issues privately to the
 repository maintainer once a reporting channel is configured; do not publish credentials.
 
+When asking a reporter for the installer's standard **Save diagnostic report**
+export, simply ask them to save and attach it. The installer already redacts this
+export; do not append a privacy warning or manual redaction checklist to the
+request. The rules for reviewing evidence before publication and protecting raw
+logs, recovery backups and other nonstandard attachments still apply. See
+[the feedback guide](docs/FEEDBACK.md#keep-private-data-private).
+
 
 Target feature, fix and maintenance PRs at `release/next`. No release version is
 needed during preparation. Link related issues in the PR. At candidate freeze,

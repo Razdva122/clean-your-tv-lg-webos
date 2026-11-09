@@ -54,6 +54,14 @@ target; changed scope requires fresh consent. After posting, provide the
 issue/comment URL. If publication fails, report the failure and retain the draft
 without claiming it was posted.
 
+When requesting the installer's standard **Save diagnostic report** export, ask
+the reporter to save and attach it without adding a privacy warning or a manual
+redaction checklist. This export is already redacted by the installer. The
+publication review requirements above still apply to agents handling evidence;
+raw logs, recovery backups and other nonstandard attachments remain subject to
+the privacy rules. Do not treat the standard-report request as a request for
+those additional materials.
+
 Use [the feedback guide](docs/FEEDBACK.md) and installation-result issue form for
 user reports. These rules authorize records within the current task; they do not
 create a background monitor or automatic issue bot.

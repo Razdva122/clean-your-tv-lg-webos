@@ -34,8 +34,13 @@ not confirmation that installation or physical Home works. Older releases such a
 
 ## Keep private data private
 
-Review a draft before posting. Prefer the installer's redacted diagnostic summary
-and a few relevant lines over a full log. Remove SSH/SSAP keys, passphrases,
+The installer's standard **Save diagnostic report** export is already redacted.
+When requesting it, ask the reporter to save and attach the report without adding
+a privacy warning or manual redaction checklist.
+
+Agents must still review evidence before publishing it. For raw logs, manually
+assembled summaries and other nonstandard attachments, review a draft before
+posting. Prefer a few relevant, redacted lines over a full log. Remove SSH/SSAP keys, passphrases,
 pairing tokens, IP/MAC addresses, SSIDs, serial numbers, app inventories, private
 paths, screenshots with personal content and recovery backups. A filename saying
 “diagnostic” does not guarantee that its contents are safe to share.
