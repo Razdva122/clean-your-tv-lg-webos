@@ -9,7 +9,9 @@ const registry =
   require('../../scripts/check-theme-submissions.cjs').loadRegistry();
 (async () => {
   const site = stage(),
-    entry = registry.find((e) => e.record.title === 'Channel'),
+    entry = registry.find(
+      (e) => e.record.id === 'github:razdva122/clean-your-tv-lg-webos:alpine'
+    ),
     base = entry.record.descriptorUrl.slice(
       0,
       entry.record.descriptorUrl.lastIndexOf('/') + 1
@@ -25,13 +27,13 @@ const registry =
     envelope.files[f] = fs
       .readFileSync(path.resolve('showcase', entry.base, f))
       .toString('base64');
-  // This lifecycle scenario intentionally contains one external choice (Channel).
+  // This lifecycle scenario intentionally contains one external choice (Alpine).
   // Keep its navigation/removal assertions independent of new reviewed listings.
   for (const edition of ['launcher', 'root-launcher']) {
     const file = path.join(site, edition, 'theme-catalog.json'),
       catalog = JSON.parse(fs.readFileSync(file));
     catalog.themes = catalog.themes.filter(
-      (e) => e.builtin || e.title === 'Classic' || e.title === 'Channel'
+      (e) => e.builtin || e.title === 'Classic' || e.id === entry.record.id
     );
     fs.writeFileSync(file, JSON.stringify(catalog));
   }
@@ -71,9 +73,6 @@ const registry =
         errors = [];
       page.setDefaultTimeout(10000);
       page.on('pageerror', (e) => errors.push(e.message));
-      await context.route('**/appinfo.json', (route) =>
-        route.fulfill({ json: { version: '1.5.1' } })
-      );
       let refreshCatalog = false;
       const catalogCommit = 'a'.repeat(40),
         catalogBase =
@@ -97,8 +96,8 @@ const registry =
             fs.readFileSync(path.join(site, 'launcher', 'theme-catalog.json'))
           );
           if (refreshCatalog)
-            catalog.themes.find((e) => e.title === 'Channel').title =
-              'Channel refreshed';
+            catalog.themes.find((e) => e.title === 'Alpine').title =
+              'Alpine refreshed';
           return route.fulfill({ json: catalog });
         }
         if (url.startsWith(catalogBase)) {
@@ -202,7 +201,7 @@ const registry =
       await page.locator('#themeCatalogRefresh').click();
       await page
         .locator('.theme-catalog-card')
-        .filter({ hasText: 'Channel refreshed' })
+        .filter({ hasText: 'Alpine refreshed' })
         .waitFor();
       assert.equal(
         await page.evaluate(() => window.catalogNoReload),
@@ -220,7 +219,7 @@ const registry =
         () =>
           document.querySelector('.theme-catalog-card strong') &&
           document.querySelector('.theme-catalog-card strong').textContent ===
-            'Channel'
+            'Alpine'
       );
       await page.locator('.theme-catalog-card').first().focus();
       await page.keyboard.press('ArrowDown');
@@ -228,10 +227,10 @@ const registry =
       await page.keyboard.press('Shift+Tab');
       assert.equal(await page.locator(':focus').innerText(), 'Refresh');
       await page.keyboard.press('Shift+Tab');
-      assert.match(await page.locator(':focus').innerText(), /Channel/);
+      assert.match(await page.locator(':focus').innerText(), /Alpine/);
       await page
         .locator('.theme-catalog-card')
-        .filter({ hasText: 'Channel' })
+        .filter({ hasText: 'Alpine' })
         .click();
       await page.locator('#themeDownload').click();
       await page.locator('#themeTry').waitFor();
@@ -265,7 +264,7 @@ const registry =
       );
       await page
         .locator('.theme-option')
-        .filter({ hasText: 'Channel' })
+        .filter({ hasText: 'Alpine' })
         .getByRole('button', { name: 'Remove', exact: true })
         .click();
       await page.locator('#themeRemoveConfirm').click();
@@ -276,7 +275,7 @@ const registry =
       await page.locator('#themeCatalog').click();
       await page
         .locator('.theme-catalog-card')
-        .filter({ hasText: 'Channel' })
+        .filter({ hasText: 'Alpine' })
         .waitFor();
       assert.equal(
         await page.locator('.theme-catalog-card').count(),
@@ -289,7 +288,7 @@ const registry =
       await page.locator('[data-category=themes]').click();
       await page
         .locator('.theme-option')
-        .filter({ hasText: 'Channel' })
+        .filter({ hasText: 'Alpine' })
         .locator('.theme-choice')
         .click();
       await page.waitForFunction((id) => {
