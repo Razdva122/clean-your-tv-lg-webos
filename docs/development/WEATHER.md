@@ -59,8 +59,8 @@ behaviors themselves.
 
 ## Data and settings
 
-Settings → Weather follows Wallpapers. Off by default; Off hides subordinate
-controls and cancels requests. Manual city search uses Open-Meteo geocoding;
+Settings → Weather follows Wallpapers. Off by default; Off cancels requests and hides city, units and format controls;
+source selection remains available. Manual city search uses Open-Meteo geocoding;
 Automatic city selection explicitly opts into approximate GeoJS IP lookup. A VPN
 can change that result; missing city names are not invented. Manual search is the fallback.
 Only the selected city/region/country/coordinates and lookup time are retained.
@@ -69,8 +69,11 @@ responses are bounded to 1 MiB and fields are validated. No provider key is ship
 
 Forecast data stays in °C and m/s in storage. Metric/imperial presentation converts
 without refetching. Open-Meteo refreshes after 15 minutes; MET Norway refreshes
-no more often than every three hours. Source caches are retained at most six hours; failures back
-off for five minutes. Auto city refresh is at most daily.
+no more often than every three hours. One last-attempt timestamp for the current
+MET request location preserves this bound after failures, cancellation, source
+changes and reload. Fresh source cache is reused during fallback. Source caches
+are retained at most six hours; the general five-minute failure backoff cannot
+override MET admission. Auto city refresh is at most daily.
 Language changes localize condition codes, weekdays and supported city names.
 Cancellation fences prevent old city/theme/enable responses from being applied.
 Missing optional values are omitted. Preview without real data says Example;

@@ -44,6 +44,11 @@ Open-Meteo, not untested sources or public proxies.
   manually selected source's cache. MET refresh interval is at least three hours;
   Open-Meteo retains its existing interval; existing six-hour maximum cache age
   remains. Switching/reloading must reuse fresh source entries, not hammer MET.
+  Persist one last MET attempt key/timestamp before transport, independent of
+  successful cache data, to honor the interval after failure, cancellation,
+  force, source changes and reload. Match native four-decimal request rounding;
+  a genuinely different request location may replace that single record. Reuse
+  fresh matching source cache during Auto fallback without extending its age.
   MET model metadata may be at most twelve hours old (two global six-hour model
   cycles, allowing one missed cycle); the current forecast point must remain
   within three hours. These validity bounds are independent of polling and

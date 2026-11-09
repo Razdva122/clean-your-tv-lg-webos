@@ -69,11 +69,11 @@
 
 **Interfaces:** `HomeWeatherTransport.met(place)` implements the Task2 metRequest contract, using Task1 LS2 methods. Choose Root versus Home service at call time. Existing weather store is created with that function; brand IDs match Task2 exactly.
 
-- [ ] Add failing bridge tests for unavailable PalmServiceBridge, both service URIs, JSON validation, deadline, explicit cancel and late callbacks; no request while Off.
-- [ ] Add failing compiled UI cases with a test LS2 fixture resolving MET data: manual/Auto choices, actual source, no silent manual fallback, remote focus/Back, source attribution and Compact preview containment.
-- [ ] Implement deadline-bound bridge with unique bounded request ID; cancel original call and send weatherForecastCancel for the same ID. Do not override browser User-Agent or expose arbitrary request parameters.
-- [ ] Add labeled source choices/actual-source feedback to current Weather layout, adapting existing remote navigation and all13 translations. Add MET terms/license attribution. Preserve current panel hierarchy, typography and unsupported-theme behavior; use ui-ux-pro-max for targeted focus/layout QA.
-- [ ] Run compiled UI both editions, all832 theme/locale cases plus source/HD bounds cases, formatting and package resource checks; commit owned files and report evidence. No full candidate dispatch.
+- [x] Add failing bridge tests for unavailable PalmServiceBridge, both service URIs, JSON validation, deadline, explicit cancel and late callbacks; no request while Off.
+- [x] Add failing compiled UI cases with a test LS2 fixture resolving MET data: manual/Auto choices, actual source, no silent manual fallback, remote focus/Back, source attribution and Compact preview containment.
+- [x] Implement deadline-bound bridge with unique bounded request ID; cancel original call and send weatherForecastCancel for the same ID. Do not override browser User-Agent or expose arbitrary request parameters.
+- [x] Add labeled source choices/actual-source feedback to current Weather layout, adapting existing remote navigation and all13 translations. Add MET terms/license attribution. Preserve current panel hierarchy, typography and unsupported-theme behavior; use ui-ux-pro-max for targeted focus/layout QA.
+- [x] Run compiled UI both editions, all832 theme/locale cases plus source/HD bounds cases, formatting and package resource checks; commit owned files and report evidence. No full candidate dispatch.
 
 ### Task 4: Completed PR verification failure and practical documentation
 
