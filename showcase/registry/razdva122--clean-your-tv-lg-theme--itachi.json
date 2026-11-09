@@ -24,7 +24,7 @@
     "high-contrast"
   ],
   "addedAt": "2026-10-29",
-  "reviewedAt": "2026-10-30",
+  "reviewedAt": "2026-11-09",
   "evidence": [
     {
       "kind": "browser",
@@ -34,5 +34,6 @@
       "kind": "browser",
       "summary": "Toolkit tag v1.0.2 and pinned remote bytes verified. Inline main Home preview tested in Root and No-root with external network blocked: all four themes apply, selected theme survives edition switch and original app order is retained. Browser only; physical-TV acceptance untested."
     }
-  ]
+  ],
+  "availability": "removed"
 }

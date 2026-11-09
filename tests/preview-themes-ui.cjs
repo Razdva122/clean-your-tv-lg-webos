@@ -67,6 +67,17 @@ const http = require('node:http');
       .locator('#tiles .item[data-app-id]')
       .evaluateAll((items) => items.map((i) => i.dataset.appId));
     await page.locator('#previewThemes[aria-busy="false"]').waitFor();
+    for (const id of [
+      'github:razdva122/clean-your-tv-lg-theme:terminal',
+      'github:razdva122/clean-your-tv-lg-theme:itachi'
+    ])
+      assert.equal(
+        await page
+          .locator('#previewThemes button[data-theme="' + id + '"]')
+          .count(),
+        0,
+        'retired early themes are not offered in the catalogue'
+      );
     assert.equal(
       packages.length,
       0,
@@ -200,18 +211,16 @@ const http = require('node:http');
           await frame
             .locator('body')
             .evaluate(() => ThemeManager.current().title),
-          'Itachi · Sharingan',
+          'Crăciun la Brașov',
           'selected theme survives edition switch'
         );
       for (const title of [
         'Retro',
-        'Channel',
         'Alpine',
         'Classic',
         'Minimal',
         'Atmosphere',
-        'Crăciun la Brașov',
-        'Itachi · Sharingan'
+        'Crăciun la Brașov'
       ]) {
         await page.getByRole('button', { name: title, exact: true }).click();
         await page.waitForFunction((title) => {
@@ -297,10 +306,13 @@ const http = require('node:http');
     }
     assert.equal(
       packages.length,
-      8,
+      catalog.filter((entry) => !entry.builtin).length + 1,
       'failed package is retried; successful packages are reused across edition switches'
     );
-    assert.equal(new Set(packages).size, 7);
+    assert.equal(
+      new Set(packages).size,
+      catalog.filter((entry) => !entry.builtin).length
+    );
     // A catalogue without matching media must explain the empty result and reset.
     const noVideo = JSON.parse(
       fs.readFileSync(path.join(site, 'preview/themes.json'))

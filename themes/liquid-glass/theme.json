@@ -8,7 +8,7 @@
     "name": "Clean Your TV contributors",
     "url": "https://github.com/razdva122"
   },
-  "themeVersion": "1.0.0",
+  "themeVersion": "1.1.0",
   "layout": {
     "preset": "dock-grid",
     "columns": 5,
@@ -17,7 +17,15 @@
     "focusScale": 1.1,
     "allowColumnOverride": true,
     "motion": "classic",
-    "inputs": "shelf"
+    "inputs": "shelf",
+    "weather": {
+      "formats": [
+        "text"
+      ],
+      "scale": 1,
+      "padding": 0,
+      "icons": "fill"
+    }
   },
   "defaults": {
     "wallpaperAssetId": "wallpaper",

@@ -714,7 +714,9 @@ Voting and automatic promotion into built-in themes are **not implemented**.
 Popularity is not approval, and a public listing does not bundle a theme with
 Home. Version 1.6.0 includes Classic, Alpine and Ribbon. Version 1.7.0
 includes Classic, Liquid Glass and Ribbon; Alpine 1.4.4 is an external
-Showcase listing, alongside Channel. Saved `builtin:alpine` choices recover to
+Showcase listing. The early Channel and Itachi themes are retired from the
+current catalogue; their historical records and installed copies are retained.
+Saved `builtin:alpine` choices recover to
 Classic with the visible recovery notice, without an automatic download or
 replacement by Liquid Glass.
 

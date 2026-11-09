@@ -57,34 +57,6 @@
       "digest": "c182f0c8b6285cecdbc9f266f3ce95124bfcaa47635a7582514d7a01cdf74cd5"
     },
     {
-      "packageSize": 1474629,
-      "has4k": false,
-      "hasVideo": false,
-      "id": "github:razdva122/clean-your-tv-lg-theme:itachi",
-      "title": "Itachi · Sharingan",
-      "version": "1.0.2",
-      "author": "CYTV personal themes",
-      "license": "LicenseRef-Personal-Fan-Theme",
-      "description": "Dark Itachi wallpaper and CSS-only white logo effects. Original application images remain unchanged.",
-      "preview": "theme-catalog/razdva122--clean-your-tv-lg-theme--itachi/a2d8b8ea998314b9afd28c41c97b80250baf96e26279b2f9dcd7c93417553240/preview.jpg",
-      "url": "https://raw.githubusercontent.com/razdva122/clean-your-tv-lg-theme/a361b56c81f5dd0e13fd91e5bbd9ac6c40794c79/distributions/itachi/1.0.2/cytv-theme.json",
-      "digest": "a2d8b8ea998314b9afd28c41c97b80250baf96e26279b2f9dcd7c93417553240"
-    },
-    {
-      "packageSize": 65882,
-      "has4k": false,
-      "hasVideo": false,
-      "id": "github:razdva122/clean-your-tv-lg-theme:terminal",
-      "title": "Channel",
-      "version": "1.3.3",
-      "author": "Clean Your TV contributors",
-      "license": "MIT",
-      "description": "A readable teletext Home with numbered rows, a selected-app preview and matching app library.",
-      "preview": "theme-catalog/razdva122--clean-your-tv-lg-theme--terminal/da7da0848ac0ecd60ebbcd964cb65a68fdf4fab54f30eebd56218c9d3141e17c/preview.png",
-      "url": "https://raw.githubusercontent.com/razdva122/clean-your-tv-lg-theme/b7e413752ce5d4b30f1af8fd9a2361dd5955bec7/distributions/channel/1.3.3/cytv-theme.json",
-      "digest": "da7da0848ac0ecd60ebbcd964cb65a68fdf4fab54f30eebd56218c9d3141e17c"
-    },
-    {
       "packageSize": 97442,
       "has4k": false,
       "hasVideo": false,

@@ -522,6 +522,17 @@ async function compileSource(input) {
     },
     source.layout
   );
+  if (
+    compiled.bundle.rules.some((r) =>
+      r.selector.some(
+        (s) => s.part === 'weather' || s.part.startsWith('weather-')
+      )
+    ) &&
+    !Object.hasOwn(source.layout, 'weather')
+  )
+    source.layout.weather = {};
+  if (Object.hasOwn(source.layout, 'weather'))
+    source.requires.capabilities.push('weather-v1');
   if (declaredVideos) source.requires.capabilities.push('video-wallpaper-v1');
   if (Object.hasOwn(source.layout, 'inputs'))
     source.requires.capabilities.push('input-placement-v1');

@@ -8,7 +8,7 @@
     "name": "CYTV contributors; video by Xecutioner",
     "url": "https://github.com/razdva122"
   },
-  "themeVersion": "1.3.1",
+  "themeVersion": "1.4.0",
   "layout": {
     "preset": "scenic-grid",
     "columns": 8,
@@ -29,6 +29,12 @@
       "labels": "focused-above",
       "showClock": false,
       "iconScale": 0.65
+    },
+    "weather": {
+      "formats": [],
+      "scale": 1,
+      "padding": 0,
+      "icons": "fill"
     }
   },
   "defaults": {

@@ -8,14 +8,25 @@
     "name": "Clean Your TV contributors",
     "url": "https://github.com/razdva122"
   },
-  "themeVersion": "1.5.0",
+  "themeVersion": "1.6.0",
   "layout": {
     "preset": "scenic-grid",
     "columns": 8,
     "spacingScale": 1,
     "textScale": 1,
     "focusScale": 1.1,
-    "allowColumnOverride": false
+    "allowColumnOverride": false,
+    "weather": {
+      "formats": [
+        "text",
+        "current",
+        "details",
+        "forecast"
+      ],
+      "scale": 1,
+      "padding": 28,
+      "icons": "fill"
+    }
   },
   "defaults": {
     "wallpaperAssetId": "landscape",
