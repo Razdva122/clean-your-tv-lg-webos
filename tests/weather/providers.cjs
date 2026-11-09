@@ -691,6 +691,52 @@ const settings = (provider = 'auto') => ({
   assert.deepEqual(relocated.saved().caches, {}, 'only one location retained');
   assert.equal(relocated.calls[2].source, 'met-no');
   relocated.store.destroy();
+  for (const provider of ['met-no', 'open-meteo']) {
+    const localizedPlace = { ...place, id: 2950159 };
+    const localized = harness({
+      ...settings(provider),
+      location: localizedPlace,
+      lastSource: provider,
+      caches: {
+        'met-no': {
+          key: '52.500,13.400',
+          updated: NOW,
+          data: Weather.normalizeMet(met(), localizedPlace, NOW)
+        },
+        'open-meteo': {
+          key: '52.500,13.400',
+          updated: NOW,
+          data: Weather.normalize(om, localizedPlace)
+        }
+      }
+    });
+    await localized.store.start();
+    localized.store.setLanguage('ru');
+    await flush();
+    assert.match(localized.calls[0].value, /geocoding-api.*\/v1\/get/);
+    localized.calls[0].resolve({ ...localizedPlace, name: 'Берлин' });
+    await flush();
+    assert.equal(localized.store.state().data.city, 'Берлин');
+    await localized.store.setPreferences({
+      provider: provider === 'met-no' ? 'open-meteo' : 'met-no'
+    });
+    assert.equal(localized.store.state().location.name, 'Берлин');
+    assert.equal(
+      localized.store.state().data.city,
+      'Берлин',
+      'switching fresh source cache preserves the localized city'
+    );
+    assert.equal(
+      localized.calls.length,
+      1,
+      'localization needs no forecast refetch'
+    );
+    for (const cache of Object.values(localized.saved().caches)) {
+      assert.equal(cache.data.city, 'Берлин');
+      assert.equal(cache.updated, NOW, 'localization cannot extend cache age');
+    }
+    localized.store.destroy();
+  }
   clearTimeout(timeout);
   console.log(
     'PASS weather providers normalization, bounded selection, caches and cancellation'

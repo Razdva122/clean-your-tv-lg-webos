@@ -33,7 +33,9 @@ acceptance of that replacement and final package/feed verification remain pendin
   Unknown mounts and foreign Home state remain refused. This is not proof of
   the original reporter's mount subtype or successful device recovery.
 - Unify website/demo presentation and add independent Video/4K theme filters
-  (#461). Reconcile the previous publication's current documentation (#460).
+  (#461). Detect and remember visitor language at the neutral website entry;
+  retain explicit locale URLs (#468). Reconcile the previous publication's
+  current documentation (#460).
 
 ## Versions and packaging
 

@@ -619,6 +619,9 @@
               if (l && l.id === model.location.id) {
                 model.location = l;
                 if (model.data) model.data.city = l.name;
+                Object.keys(caches).forEach(function (source) {
+                  caches[source].data.city = l.name;
+                });
                 locationLanguage = language;
                 persist();
               }
