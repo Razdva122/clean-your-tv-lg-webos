@@ -34,6 +34,7 @@ export default defineConfig({
   base,
   trailingSlash: 'always',
   output: 'static',
+  devToolbar: { enabled: false },
   markdown: { processor: unified({ remarkPlugins: [documentationLinks] }) },
   i18n: {
     defaultLocale: 'en',

@@ -213,13 +213,22 @@ which resolves directory indexes itself.
 
 ## Visual design
 
-The product site uses a graphite palette, restrained warm ambient gradients,
-a floating translucent header, pill controls and rounded product imagery inspired
-by https://plxnative.com/. The centered home-page introduction leads into the
-existing launcher demo. Shared tokens and CSS apply the same visual language to
-all locales and guides; screenshots, installation content and destinations stay
-project-owned. The header and language/menu controls work without JavaScript;
-its background remains readable without backdrop-filter support.
+The product site retains the original logo, graphite palette and orange brand
+accent. The home page leads with a real Liquid Glass demo screenshot beside the
+introduction, then a theme gallery, edition prerequisites, installation steps and
+editorial links. A solid header, restrained control/screen radii, system typography
+and shorter section spacing replace the translucent pill shell, decorative
+gradients and repeated framed text cards. No generated hardware images, invented
+customer evidence or new front-end dependencies are used.
+
+`home.css` owns the product-page composition. `editorial.css` provides a narrower
+reading measure, a desktop margin index and a native collapsed mobile contents
+menu for articles. The article index features a real product screenshot and
+linked summaries. Existing localized installation guides keep their original
+content and anchors in `article.css`; shared header, footer and tokens cover all
+locales. Header, language and article contents navigation work without JavaScript.
+The Astro development toolbar is disabled so local design previews show only
+the site's own interface.
 
 The interactive demo uses matching graphite surfaces, rounded edition and remote
 controls, outlined theme previews and a framed TV viewport. Its shared source is

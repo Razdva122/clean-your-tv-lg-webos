@@ -180,6 +180,29 @@ try {
   // Article discovery, translation links and text remain usable without JavaScript.
   const articleContext = await browser.newContext({ javaScriptEnabled: false });
   const articlePage = await articleContext.newPage();
+  // The reading index must also be usable on phones without JavaScript.
+  await articlePage.setViewportSize({ width: 390, height: 844 });
+  await articlePage.goto(host + base + 'ru/articles/root-vs-no-root/');
+  const mobileContents = articlePage.locator('.mobile-toc');
+  assert.equal(
+    await mobileContents.count(),
+    1,
+    'article has a mobile table of contents'
+  );
+  assert.equal(
+    await mobileContents.getAttribute('open'),
+    null,
+    'mobile contents start collapsed'
+  );
+  await mobileContents.locator('summary').click();
+  const firstSection = mobileContents.locator('a').first();
+  const sectionHash = await firstSection.getAttribute('href');
+  await firstSection.click();
+  assert.equal(
+    decodeURIComponent(new URL(articlePage.url()).hash),
+    sectionHash
+  );
+  await articlePage.locator(sectionHash).waitFor({ state: 'visible' });
   const topics = [
     'change-lg-webos-home-screen',
     'lg-tv-home-screen-ads',

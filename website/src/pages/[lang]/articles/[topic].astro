@@ -15,53 +15,70 @@ const { data } = entry;
 const lang = data.lang;
 const labels = articleCopy[lang];
 const { Content, headings } = await render(entry);
+const contents = headings.filter((heading) => heading.depth === 2);
 const related = (await getArticles()).filter(
   (other) => other.data.lang === lang && other.data.topic !== data.topic
 );
 ---
 
 <Site lang={lang} article={data}>
-  <div class="article-shell">
-    <aside class="article-nav">
-      <a class="back" href={articleRoute(lang)}>
-        {labels.title}
-      </a>
-      <nav aria-label={labels.contentsLabel}>
-        {headings
-          .filter((heading) => heading.depth === 2)
-          .map((heading) => (
-            <a href={'#' + heading.slug}>{heading.text}</a>
-          ))}
-      </nav>
-    </aside>
-    <article class="prose">
+  <article class="editorial shell">
+    <header class="editorial-heading">
       <ArticleBreadcrumbs lang={lang} title={data.title} />
       <h1>{data.title}</h1>
       <p class="article-meta">
-        <a href={repo}>Clean Your TV</a> · {labels.updatedLabel}{' '}
-        <time datetime={data.updated}>
-          {new Intl.DateTimeFormat(lang, {
-            dateStyle: 'long',
-            timeZone: 'UTC'
-          }).format(new Date(data.updated))}
-        </time>
+        <a href={repo}>Clean Your TV</a>
+        <span>
+          {labels.updatedLabel}{' '}
+          <time datetime={data.updated}>
+            {new Intl.DateTimeFormat(lang, {
+              dateStyle: 'long',
+              timeZone: 'UTC'
+            }).format(new Date(data.updated))}
+          </time>
+        </span>
       </p>
-      <Content />
-      <hr />
-      <nav aria-label={labels.relatedLabel}>
-        <h2>{labels.relatedLabel}</h2>
-        <ul>
-          {related.map(({ data }) => (
-            <li>
-              <a href={articleRoute(lang, data.topic)}>{data.title}</a>
-            </li>
-          ))}
-        </ul>
+    </header>
+    <details class="mobile-toc">
+      <summary>{labels.contentsLabel}</summary>
+      <nav aria-label={labels.contentsLabel}>
+        {contents.map((heading) => (
+          <a href={'#' + heading.slug}>{heading.text}</a>
+        ))}
       </nav>
-    </article>
-  </div>
+    </details>
+    <div class="editorial-grid">
+      <aside class="editorial-toc">
+        <p>{labels.contentsLabel}</p>
+        <nav aria-label={labels.contentsLabel}>
+          {contents.map((heading) => (
+            <a href={'#' + heading.slug}>{heading.text}</a>
+          ))}
+        </nav>
+      </aside>
+      <div class="prose editorial-prose">
+        <div class="article-body">
+          <Content />
+        </div>
+        <nav class="related-articles" aria-label={labels.relatedLabel}>
+          <h2>{labels.relatedLabel}</h2>
+          <ul>
+            {related.map(({ data }) => (
+              <li>
+                <a href={articleRoute(lang, data.topic)}>
+                  {data.title}
+                  <span aria-hidden="true"> ↗</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </div>
+    </div>
+  </article>
 </Site>
 
 <style is:global>
   @import '../../../article.css';
+  @import '../../../editorial.css';
 </style>
