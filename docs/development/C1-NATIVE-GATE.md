@@ -5,14 +5,14 @@
 ## Experimental capability-based compositor admission (#364)
 
 The installer extends the existing mount-free protocol to capability-admitted
-Qt TVs with a stock ARM32 native Home. In the next installer, model names and
+Qt TVs with a stock ARM32 native Home. Model names and
 SDK numbers are recorded observations, not an allowlist;
 55NANO77SRA / SDK 9.2.2 / firmware 23.25.55 is the motivating report, not hardware
 acceptance. This experimental path is packaged in published releases from v1.11.0; target-TV physical compatibility remains unverified.
 
 Internal package, backend and lease names retain `c1` for compatibility. Existing
 schema1 mount recovery and schema2 C1 identity/state/recovery formats are preserved.
-The candidate applies the shared read-only environment checks to schema2 fresh
+The runtime applies the shared read-only environment checks to schema2 fresh
 probes and explicit re-enable too: exact System Profile absence, stock native
 manifest/vendor chain, no foreign state or covering mounts, and emergency input.
 This tightens admission; restore remains independent of re-admission. New nonlegacy
@@ -20,9 +20,11 @@ admissions use schema3. A schema3 marker cannot be relabeled schema2 to bypass
 admission. The common installer requires a payload advertising
 `admission_schema:3` and a mount-free release with `compositor_admission:3`.
 
-### Shared Root runtime variants (unpublished Beta packaging)
+<a id="shared-root-runtime-variants-unpublished-beta-packaging"></a>
 
-Ordinary Root already packages this alternative. The next installer also embeds
+### Shared Root runtime variants
+
+Ordinary Root packages this alternative. The common installer also embeds
 it in the explicitly selected Node 0.12.2 Root Beta payload. Both variants use
 the same host selector, device admission, Python backend, QML filter and native
 guardian source. The guardian is compiled once and reused; only the Node closure
