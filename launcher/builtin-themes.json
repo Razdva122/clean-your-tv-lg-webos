@@ -4,16 +4,16 @@
     {
       "id": "builtin:liquid-glass",
       "title": "Liquid Glass",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "url": "themes/liquid-glass/cytv-theme.json",
-      "digest": "f71d277b503010df3e2850b0f57a0bc91bc37c13d97c02d644b23a724e40523f"
+      "digest": "6652d7b2c3baaea178e0586472c40bbf647a48102d0a17d2e8e3e73ad4156272"
     },
     {
       "id": "builtin:ribbon",
       "title": "Ribbon",
-      "version": "1.3.1",
+      "version": "1.4.0",
       "url": "themes/ribbon/cytv-theme.json",
-      "digest": "67b837210dfba1bbd1d999abe259a0a5ad28c5cfacc3eefb3229d2fd0e79372b"
+      "digest": "d5b50a2b05e485f3c1cb086d27fb44dc33dbdfd3dd97ca80e3c53ba823ac7071"
     }
   ]
 }

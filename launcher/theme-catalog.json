@@ -9,12 +9,12 @@
       "credits": "theme-catalog/CLASSIC-CREDITS.txt"
     },
     {
-      "packageSize": 237176,
+      "packageSize": 237891,
       "has4k": false,
       "hasVideo": false,
       "id": "builtin:liquid-glass",
       "title": "Liquid Glass",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "builtin": true,
       "description": "Clear frosted glass over an original aurora wallpaper, on the Classic dock with the Inputs shelf.",
       "author": "Clean Your TV contributors",
@@ -23,15 +23,15 @@
       "credits": "themes/liquid-glass/documents/1-49c0cc9c350acc25acf8f9d18440e53d6ce7f7abeaf4af95feabf4cf543f7304.txt",
       "licenseFile": "themes/liquid-glass/documents/0-f497a621e75e2ccabaac016c8ada95b415a7810fb9994798b282fa9f9d03920f.txt",
       "url": "themes/liquid-glass/cytv-theme.json",
-      "digest": "f71d277b503010df3e2850b0f57a0bc91bc37c13d97c02d644b23a724e40523f"
+      "digest": "6652d7b2c3baaea178e0586472c40bbf647a48102d0a17d2e8e3e73ad4156272"
     },
     {
-      "packageSize": 14503419,
+      "packageSize": 14503544,
       "has4k": true,
       "hasVideo": true,
       "id": "builtin:ribbon",
       "title": "Ribbon",
-      "version": "1.3.1",
+      "version": "1.4.0",
       "builtin": true,
       "description": "Black Hole by Xecutioner, recorded at native 3840x2160, with a fixed eight-card skewed app ribbon.",
       "author": "CYTV contributors; video by Xecutioner",
@@ -40,7 +40,7 @@
       "credits": "themes/ribbon/documents/1-a111ee9dd92cf115657a4ad197a24b0ff15dee4da540b9cf5cdd95c0cff37b6d.txt",
       "licenseFile": "themes/ribbon/documents/0-ef2c9dee57bcc55339247c34ab6460d9632669a06c764df68b49e1363857964d.txt",
       "url": "themes/ribbon/cytv-theme.json",
-      "digest": "67b837210dfba1bbd1d999abe259a0a5ad28c5cfacc3eefb3229d2fd0e79372b"
+      "digest": "d5b50a2b05e485f3c1cb086d27fb44dc33dbdfd3dd97ca80e3c53ba823ac7071"
     },
     {
       "packageSize": 4099466,
