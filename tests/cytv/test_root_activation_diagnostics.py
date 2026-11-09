@@ -49,7 +49,9 @@ class ActivationSnapshotTests(unittest.TestCase):
         before=self.snapshot()
         self.log.write_text('x\n')
         self.assertEqual(self.snapshot(before['cursor'])['health_log']['scope'],'historical-tail')
-        self.log.unlink();self.log.write_text('ValueError: Inactive or stale health context\n');self.log.chmod(0o600)
+        self.log.rename(self.root/'emergency.previous.log')
+        self.log.write_text('ValueError: Inactive or stale health context\n');self.log.chmod(0o600)
+        self.assertNotEqual(self.log.stat().st_ino,before['cursor']['inode'])
         self.assertEqual(self.snapshot(before['cursor'])['health_log']['scope'],'historical-tail')
 
     def test_unsafe_symlink_and_hostile_reasons_are_not_exported(self):
