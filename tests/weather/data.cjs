@@ -145,8 +145,11 @@ const payload = {
     )
   );
   const damaged = JSON.parse(memory[Weather.key]);
-  damaged.cache.data.days = [null, { date: '<bad>', low: -999, high: 999 }];
-  damaged.cache.data.humidity = 150;
+  damaged.caches['open-meteo'].data.days = [
+    null,
+    { date: '<bad>', low: -999, high: 999 }
+  ];
+  damaged.caches['open-meteo'].data.humidity = 150;
   memory[Weather.key] = JSON.stringify(damaged);
   const sanitized = create();
   await sanitized.start();
