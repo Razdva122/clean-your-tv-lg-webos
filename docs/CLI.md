@@ -1,6 +1,8 @@
 # cytv standalone installer
 
-## Installer update check (unreleased)
+<a id="installer-update-check-unreleased"></a>
+
+## Installer update check
 
 Before a new installation, the computer installer checks GitHub's latest stable
 release and compares its installer version from `BUILD-INFO.json` with the running

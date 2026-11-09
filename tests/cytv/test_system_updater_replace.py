@@ -85,7 +85,7 @@ class FlowFixture:
         self.manager=Manager()
         self.cleanup=types.SimpleNamespace(operate=self.cleanup_action,stop=lambda code:None)
         self.setup=types.SimpleNamespace(verify_bundle=self.verify_bundle,package_files=lambda raw:{k:v.encode() for k,v in json.loads(raw).items()},safe=lambda p:Path(p).read_bytes(),snapshot=self.snapshot,verify_baseline=self.verify_baseline,installed_data=lambda p,*args:Path(p).read_bytes(),infrastructure_readback=lambda item,raw:None,INSTALLED=self.installed,provision=self.provision,resume=self.resume)
-    def make_bundle(self,path,version='1.2.7'):
+    def make_bundle(self,path,version='1.2.8'):
         import hashlib
         data={name:b'' for name in ['installation.py','package_identity.py','system_updater/core.py','system_updater/device.py','system_updater/support/store.py']}
         data['setup-system-updater.py']=b'# trusted setup';data['system-updater.ipk']=json.dumps({'usr/palm/applications/'+self.ns['APP']+'/appinfo.json':json.dumps({'id':self.ns['APP'],'version':version})}).encode()
@@ -139,7 +139,7 @@ class FlowFixture:
         return {'completed':True,'event':{'details':{'packageId':app}}}
     def provision(self,bundle,baseline):
         self.calls.append('provision');self.make_system(self.system,bundle)
-        self.appdir.mkdir(parents=True,exist_ok=True);(self.appdir/'version').write_text('1.2.7')
+        self.appdir.mkdir(parents=True,exist_ok=True);(self.appdir/'version').write_text('1.2.8')
         if self.fault=='provision':raise KeyboardInterrupt('new bootstrap in progress')
         return {'installed':True}
     def resume(self,bundle):self.calls.append('resume');self.verify_bundle(bundle);return {'installed':True}
@@ -148,16 +148,16 @@ class FlowFixture:
 
 class FlowTests(FlowFixture, unittest.TestCase):
     def test_other_target_versions_are_rejected_before_device_changes(self):
-        for version in ('1.2.1','1.2.2','1.2.3','1.2.4','1.2.5','1.2.6','1.2.8'):
+        for version in ('1.2.1','1.2.2','1.2.3','1.2.4','1.2.5','1.2.6','1.2.7','1.2.9'):
             with self.subTest(version=version):
                 self.make_bundle(self.bundle,version=version)
-                with self.assertRaisesRegex(ValueError,'fixed System Updater 1.2.7 bundle'):
+                with self.assertRaisesRegex(ValueError,'fixed System Updater 1.2.8 bundle'):
                     self.run_replacement()
                 self.assertEqual(self.calls,[]);self.assertEqual(self.removals,0)
                 self.assertIsNone(self.store.read('system-replacement'))
                 self.assertIsNone(self.ownership.status())
     def test_success_captures_first_and_removes_only_supervisor(self):
-        result=self.run_replacement();self.assertTrue(result['installed']);self.assertEqual(result['version'],'1.2.7');self.assertTrue(result['profile_storage_untouched']);self.assertEqual(self.removals,1)
+        result=self.run_replacement();self.assertTrue(result['installed']);self.assertEqual(result['version'],'1.2.8');self.assertTrue(result['profile_storage_untouched']);self.assertEqual(self.removals,1)
         self.assertLess(self.calls.index('capture'),self.calls.index('disable'));self.assertLess(self.calls.index('sdk-remove'),self.calls.index('archive'))
         self.assertEqual(self.profile.read_bytes(),b'personal layout');self.assertEqual(self.home.read_text(),'{"enabled":false,"phase":"disabled"}')
         self.assertTrue(self.ownership.status()['terminal']);self.assertTrue(Path(result['archive']).is_dir())
@@ -247,7 +247,7 @@ class Retained111FlowTests(FlowTests):
         self.assertEqual((archive/(profile+'.json')).read_bytes(),original_profile)
         self.assertEqual((archive/'transaction.json').read_bytes(),original_transaction)
         self.assertEqual(self.profile.read_bytes(),b'personal layout')
-        self.assertEqual((self.appdir/'version').read_text(),'1.2.7')
+        self.assertEqual((self.appdir/'version').read_text(),'1.2.8')
 
     def test_completed_transaction_profile_is_archived_unchanged(self):
         self.check_terminal_profile_archive('complete')
@@ -264,7 +264,7 @@ class Retained111FlowTests(FlowTests):
         self.assertIsNone(self.ownership.status())
 
     def test_unrecognized_owners_refuse_before_reservation(self):
-        for version in ('1.0.0','1.1.2','1.1.10','1.2.1','1.2.2','1.2.3','1.2.4','1.2.5','1.2.6','1.2.7','2.0.0','unknown'):
+        for version in ('1.0.0','1.1.2','1.1.10','1.2.1','1.2.2','1.2.3','1.2.4','1.2.5','1.2.6','1.2.7','1.2.8','2.0.0','unknown'):
             with self.subTest(version=version):
                 (self.appdir/'version').write_text(version)
                 with self.assertRaisesRegex(ValueError,'System Updater'):
@@ -422,7 +422,7 @@ class BoundaryTests(unittest.TestCase):
                 remote.run.side_effect=RuntimeError('preflight rejected before changes')
                 with self.assertRaises(UserError):installer.replace_system_updater()
                 self.assertIsNone(store.pending(profile));python.assert_called_once_with(operations.ROOT_STATE)
-                remote.run.side_effect=None;remote.run.return_value=json.dumps({'installed':True,'version':'1.2.7','root_unchanged':True,'home_unchanged':True,'profile_storage_untouched':True})
+                remote.run.side_effect=None;remote.run.return_value=json.dumps({'installed':True,'version':'1.2.8','root_unchanged':True,'home_unchanged':True,'profile_storage_untouched':True})
                 self.assertTrue(installer.replace_system_updater()['installed']);self.assertIsNone(store.pending(profile))
                 remote.run.return_value=json.dumps({'installed':True,'version':'1.2.1','root_unchanged':True,'home_unchanged':True,'profile_storage_untouched':True})
                 with self.assertRaises(UserError):installer.replace_system_updater()

@@ -14,7 +14,7 @@ Version 1.6.0 instead includes Classic, Alpine and Ribbon. In 1.7.0, **Alpine 1.
 
 1.5.4: when a fixed-layout theme hides Columns, its empty row keeps the same space so applying the theme does not shorten Appearance’s scroll range. The hidden control is skipped by pointer, keyboard and accessibility navigation. This correction has browser regression coverage; physical-TV acceptance is pending.
 
-**Channel** is an ordinary external theme in showcase. It is not part of the TV package. It uses a numbered list, selected-app artwork and pixel shortcut icons; its one-column default can be overridden by the user.
+Channel and Itachi are retired from the active candidate catalog. Existing installed copies and historical packages remain available; removing an installed retired theme does not make it reappear in the current showcase. Published stable catalog availability follows its own release.
 
 ## Change to an included theme
 
@@ -26,7 +26,7 @@ The accepted choice is restored on the next launch. Only **Try theme** inside **
 
 ## Browse themes on TV
 
-Open **Settings → Themes → Theme showcase**. Choose a miniature preview to see the theme's details. Only themes not installed on this TV appear here. The 1.7.0 built-ins Classic, Liquid Glass and Ribbon, and installed personal themes are hidden by identity, including when the catalogue has a newer version. Channel offers **Download theme**, then **Try theme**. After removal it returns to Showcase. Choose **Remove** on a downloaded theme and confirm. Removing the active theme restores Classic before deleting its files. Built-in themes cannot be removed. Use **Add by ID** or **Receive from computer** to update a hidden installed theme. Confirm **Keep theme** within 20 seconds. Downloading alone never changes Home.
+Open **Settings → Themes → Theme showcase**. Choose a miniature preview to see the theme's details. Only themes not installed on this TV appear here. The 1.7.0 built-ins Classic, Liquid Glass and Ribbon, and installed personal themes are hidden by identity, including when the catalogue has a newer version. Available external themes offer **Download theme**, then **Try theme**. After removal, an active catalog entry returns to Showcase. Choose **Remove** on a downloaded theme and confirm. Removing the active theme restores Classic before deleting its files. Built-in themes cannot be removed. Use **Add by ID** or **Receive from computer** to update a hidden installed theme. Confirm **Keep theme** within 20 seconds. Downloading alone never changes Home.
 
 Opening Theme showcase or choosing Refresh checks the main project repository for reviewed catalogue updates without updating Home or reloading the page. After a normal merge, new entries become available; an unmerged candidate may still show the bundled fallback. Offline or failed requests use bundled previews and entries. Online catalogue data and previews come from one exact project commit resolved through GitHub; downloading an external theme needs Internet access. A downloaded exact version is reused instead of fetched again. Theme files come from the recorded, commit-pinned source repository. Refreshing never installs a theme or changes the current selection. The scoped device check is recorded in [theme push acceptance](history/2026-10-29-theme-push-acceptance.md); complete release-package acceptance remains separate.
 
@@ -173,3 +173,20 @@ for calculation reserves, unavailable quota readings and pending-install recover
 ## Weather integration
 
 See the [shared weather contract](development/WEATHER.md) for supported formats, developer styling, preset reservations, compatibility and maintainer fork provenance. Home owns weather data and settings; themes contain no provider code.
+
+## Weather
+
+In the unpublished candidate, open **Settings → Weather** after Wallpapers.
+Weather starts off. Turn it on, choose a city manually or explicitly request
+approximate automatic location, then choose units and an available format.
+Automatic lookup uses the network's approximate location; correct the city
+manually if needed. No provider API key is required. Open **Data sources** in
+the Weather heading for attribution. Weather and location preferences stay
+local and are not included in legacy profile exports.
+
+Classic and compatible downloaded themes support Compact, Now, In detail and
+4 days. Liquid Glass supports Compact; Ribbon and Atmosphere hide weather; Ribbon sends no
+weather requests. A theme can hide weather before the header when space is
+limited. Offline data expires after six hours; unavailable weather does not
+block Home. See [weather implementation and limits](development/WEATHER.md)
+and [candidate release notes](RELEASE-1.15.0.md).

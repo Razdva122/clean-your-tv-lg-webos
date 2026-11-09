@@ -1,6 +1,6 @@
 {
   "id": "com.gathin.tvhome",
-  "version": "1.13.3",
+  "version": "1.14.0",
   "vendor": "tv-vibehack",
   "type": "web",
   "main": "index.html",
