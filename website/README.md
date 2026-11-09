@@ -45,7 +45,8 @@ alternates, page-preserving language links, sitemap inclusion and exported local
 links/anchors, including same-page help links and existing source-reference files.
 The translation verifier recursively checks nested keys and array lengths. Browser acceptance uses the root project's Playwright, verifies
 all pages without JavaScript, keyboard language switching, selected mobile
-layouts and the offline Root/No-root demo. Use `BROWSER_CHANNEL=chromium` for
+layouts, browser-language selection, remembered manual preferences, explicit locale
+URLs, blocked storage and the offline Root/No-root demo. Use `BROWSER_CHANNEL=chromium` for
 Playwright's bundled browser or the default installed Chrome. Set
 `WEBSITE_SCREENSHOTS=/absolute/output/directory` to retain QA images.
 
@@ -97,9 +98,17 @@ in a model family. No private diagnostics are copied into website content.
 The configured public base is
 `https://razdva122.github.io/clean-your-tv-lg-webos/`. Each language has six pages:
 home, installation, edition comparison, compatibility, themes and help. The root URL
-mirrors English and canonicalizes to `/en/`. Each page has its own canonical and
+renders English without JavaScript and canonicalizes to `/en/`. With JavaScript,
+only this language-neutral entry redirects to the saved manual language choice,
+then the first supported browser language, or English if none match. Regional tags
+map to supported translations, including Portuguese and both Chinese scripts.
+The redirect preserves query parameters and fragments. Each page has its own canonical and
 reciprocal `hreflang` links; `x-default` points to the corresponding English page.
-Languages switch through ordinary links without forced locale redirects.
+Languages switch through ordinary links. With JavaScript, selecting a language
+stores only its locale code in `localStorage` under `cytv-website-language` for
+future visits to the root URL. Explicit language URLs always retain their language
+and do not overwrite this preference. Blocked storage leaves language links and
+browser detection usable; without JavaScript, links still work without persistence.
 
 Old root `#root` and `#no-root` links forward to the corresponding demo mode.
 Ordinary demo links in README now target `demo/`. Demo internals are marked

@@ -50,6 +50,67 @@ try {
     headless: true,
     channel: process.env.BROWSER_CHANNEL || 'chrome'
   });
+  // Each visitor starts with fresh storage; regional browser tags map to site locales.
+  for (const [languages, expected] of [
+    [['ru-RU', 'en-US'], 'ru'],
+    [['xx', 'de-AT'], 'de'],
+    [['pt-PT'], 'pt-BR'],
+    [['zh-TW'], 'zh-Hant'],
+    [['zh-HK'], 'zh-Hant'],
+    [['zh-Hant-CN'], 'zh-Hant'],
+    [['zh-CN'], 'zh-Hans'],
+    [['zh-Hans-TW'], 'zh-Hans'],
+    [['zh'], 'zh-Hans'],
+    [['en-GB', 'ru'], 'en'],
+    [['xx'], 'en'],
+    [[], 'en']
+  ]) {
+    const context = await browser.newContext();
+    await context.addInitScript((values) => {
+      Object.defineProperty(navigator, 'languages', { get: () => values });
+      Object.defineProperty(navigator, 'language', {
+        get: () => values[0] || ''
+      });
+    }, languages);
+    const visitor = await context.newPage();
+    visitor.on('pageerror', (e) => errors.push(e.message));
+    await visitor.goto(host + base + '?from=test#content');
+    await visitor.waitForURL(host + base + expected + '/?from=test#content');
+    assert.equal(await visitor.locator('html').getAttribute('lang'), expected);
+    await context.close();
+  }
+  const context = await browser.newContext({ locale: 'ru-RU' });
+  const visitor = await context.newPage();
+  visitor.on('pageerror', (e) => errors.push(e.message));
+  await visitor.goto(host + base + 'de/install/');
+  assert.equal(new URL(visitor.url()).pathname, base + 'de/install/');
+  await visitor.locator('.languages summary').click();
+  await visitor.locator('.languages a[hreflang="fr"]').click();
+  await visitor.waitForURL('**/fr/install/');
+  await visitor.goto(host + base);
+  await visitor.waitForURL('**/fr/');
+  // An explicit URL takes priority without overwriting the manual preference.
+  await visitor.goto(host + base + 'en/help/');
+  assert.equal(new URL(visitor.url()).pathname, base + 'en/help/');
+  await visitor.goto(host + base);
+  await visitor.waitForURL('**/fr/');
+  await context.close();
+  const blockedContext = await browser.newContext({ locale: 'ru-RU' });
+  await blockedContext.addInitScript(() => {
+    Object.defineProperty(window, 'localStorage', {
+      get() {
+        throw new DOMException('Storage blocked', 'SecurityError');
+      }
+    });
+  });
+  const blocked = await blockedContext.newPage();
+  blocked.on('pageerror', (e) => errors.push(e.message));
+  await blocked.goto(host + base);
+  await blocked.waitForURL('**/ru/');
+  await blocked.locator('.languages summary').click();
+  await blocked.locator('.languages a[hreflang="en"]').click();
+  await blocked.waitForURL('**/en/');
+  await blockedContext.close();
   // Crawlable content and navigation must work with JavaScript disabled.
   const staticPage = await browser.newPage({
     javaScriptEnabled: false,
@@ -207,7 +268,7 @@ try {
   }
   assert.deepEqual(errors, []);
   console.log(
-    'PASS 78 pages without JavaScript; keyboard language switching; help deep links; mobile tables/layouts; legacy fragment routing; offline Root/No-root theme demo'
+    'PASS browser language selection; remembered manual choice; explicit locale URLs; blocked storage; 78 pages without JavaScript; keyboard language switching; help deep links; mobile tables/layouts; legacy fragment routing; offline Root/No-root theme demo'
   );
 } finally {
   await browser?.close();

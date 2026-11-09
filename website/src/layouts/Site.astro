@@ -72,6 +72,47 @@ const menuLabel = {
     <meta property="og:image" content={origin + base + 'assets/classic.jpg'} />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="theme-color" content="#202022" />
+    <script is:inline define:vars={{ locales, base, root }}>
+      const languageKey = 'cytv-website-language';
+      function browserLocale(value) {
+        const tag = String(value).toLowerCase();
+        const exact = locales.find((code) => code.toLowerCase() === tag);
+        if (exact) return exact;
+        const parts = tag.split('-');
+        if (parts[0] === 'zh') {
+          if (parts.includes('hant')) return 'zh-Hant';
+          if (parts.includes('hans')) return 'zh-Hans';
+          return parts.some((part) => ['tw', 'hk', 'mo'].includes(part))
+            ? 'zh-Hant'
+            : 'zh-Hans';
+        }
+        return locales.find((code) => code.toLowerCase().split('-')[0] === parts[0]);
+      }
+      if (root) {
+        if (location.hash === '#root' || location.hash === '#no-root') {
+          location.replace(base + 'demo/' + location.search + location.hash);
+        } else {
+          let saved;
+          try { saved = localStorage.getItem(languageKey); } catch {}
+          const languages = navigator.languages?.length
+            ? navigator.languages
+            : [navigator.language];
+          const selected = locales.includes(saved)
+            ? saved
+            : languages.map(browserLocale).find(Boolean) || 'en';
+          location.replace(base + selected + '/' + location.search + location.hash);
+        }
+      }
+      document.addEventListener('click', (event) => {
+        const link = event.target instanceof Element
+          ? event.target.closest('.languages a[hreflang]')
+          : null;
+        const selected = link?.getAttribute('hreflang');
+        if (locales.includes(selected)) {
+          try { localStorage.setItem(languageKey, selected); } catch {}
+        }
+      });
+    </script>
   </head>
   <body>
     <a class="skip" href="#content">
@@ -147,10 +188,6 @@ const menuLabel = {
         <a href={repo + '/releases/latest'}>{t.download}</a>
       </div>
     </footer>
-    {root && <script is:inline>
-      if (location.hash === "#root" || location.hash === "#no-root")
-        location.replace("demo/" + location.hash);
-    </script>}
   </body>
 </html>
 
