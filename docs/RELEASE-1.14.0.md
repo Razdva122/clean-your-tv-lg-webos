@@ -6,8 +6,10 @@ Scope and versions are frozen. [Selected full build42566531298:1](https://github
 passed every mandatory job at2f6da451 and is pinned. Its optional, unapproved
 Homebrew job failed an external Python download; no Homebrew promotion is selected.
 The guarded QA-signing correction (#456) replaces the initial full build.
-[Exact Android/C3 preflight QA and remaining physical cases](history/2026-11-09-release-1.14.0-qa.md).
-Physical candidate acceptance and public delivery remain pending.
+[Exact Android/C3 QA and explicit limits](history/2026-11-09-release-1.14.0-qa.md).
+Selected C3 signed-update/control/audio/remote-standby and exact Android emulator
+acceptance passed; public delivery remains pending. Alternate legacy hardware,
+physical phones and other unselected paths retain their documented limits.
 
 ## Changes
 
@@ -71,16 +73,29 @@ Preserve Android application ID, original signer and private stored data.
 record the integrated host checks and documentation review.
 [Root/Beta development evidence](history/2026-11-09-root-beta-keyfilters.md)
 records exact legacy runtimes, ARM32 builds, refusal cases and limitations.
-All eight implementation/maintenance PRs are included; #451's final a80392fb CI passed
+All nine implementation/maintenance PRs are included; #451's final a80392fb CI passed
 Linux/macOS, browser, ARM Python and Windows/macOS desktop runtime checks.
 Those results precede versioned frozen-candidate build validation.
 
-The complete candidate and same-version package comparison passed. The actual
-Mac ARM64 installer artifact matches its GitHub digest; all596 embedded payload
-hashes and component versions verify and match the preliminary package record.
-Android original-signer code28→29 upgrade and affected exact-artifact TV acceptance,
-followed by protected signing/publication and feed verification, remain release gates. Home/emergency controls, unrelated keys, audio/HDMI, standby,
-AC cold boot and recovery/rollback on changed artifacts are not established by
-host tests or package installation. Existing v1.13.0 observations retain their
-original hashes, model/firmware and state preconditions. No TV was accessed in
-this preparation; no new universal compatibility claim is made.
+The selected replacement full candidate42566531298:1 passed all mandatory jobs;
+20 jobs succeeded and one optional unapproved Homebrew job failed an external
+Python download. No Homebrew promotion is selected. Initial and replacement
+artifact/source/payload verification is recorded in the [dated QA evidence](history/2026-11-09-release-1.14.0-qa.md).
+The exact replacement original-signer Android code28→29 emulator upgrade, four
+retained files, real Store/native operations and idle/no-replay passed.
+
+Authorized owner-supervised C3 testing installed exact signed Root0.14.0 and
+Root Updater0.5.5 through the original retained System1.2.5 worker. Transaction,
+profile/theme/icon preservation, six renderer and eleven service checks passed.
+The owner reported Home/navigation/audio,10-second remote standby/wake, triple
+Home/staysOff and explicit resume/finalOff successful. Independent final readback
+confirmed disabled intent/guardian off, recovery integrity, completed original
+transaction and no pending operation. Eight unsuccessful observer reads have
+undetermined causes; telemetry does not establish continuous coverage.
+
+Public signing/publication and final anonymous package/feed verification remain
+release gates. This pass does not accept legacy/Beta hardware or #410, physical
+phones/minimum WebView, passive IR/other remotes, AC cold boot, actual whole-
+edition rollback or retained supervisor migration. The scope/dependency rationale
+and exact hashes/preconditions are in the QA record. Existing v1.13.0 observations
+retain their original artifact scope; no universal compatibility claim is made.

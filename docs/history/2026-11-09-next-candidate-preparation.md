@@ -1,5 +1,10 @@
 # v1.14.0 candidate preparation — 2026-11-09
 
+**Subsequent QA:** [the current dated QA record](2026-11-09-release-1.14.0-qa.md)
+adds reviewed signing correction #456 and selects replacement full build42566531298:1
+with completed scoped C3/Android acceptance. The eight-PR preparation/build below
+is historical; its pin and pending-device statements describe that earlier stage.
+
 Candidate [#442](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/442)
 contains eight implementation/maintenance PRs: #441, #444, #445, #447, #449, #450,
 #451 and release-blocking fixture correction #452.
