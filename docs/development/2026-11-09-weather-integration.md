@@ -98,7 +98,7 @@ Fork candidate artifacts are published as explicit prereleases, not app releases
 
 [Author tools PR #9](https://github.com/Razdva122/clean-your-tv-lg-theme/pull/9)
 contains the contract guards, updated examples/docs and synthetic preview controls.
-Its lock pins clean main source `3b04d656f2e5bfc11f44693a8fe012770e7da858`;
+Its lock pins clean main source `afc8586955802270167daed6cd3a445fc31ff364`;
 all 71 tests passed against that complete compiled export in both browser editions,
 with zero outgoing weather/geolocation provider requests. The local reviewed
 export is retained in the author checkout's ignored `.runtime/weather-candidate`;
