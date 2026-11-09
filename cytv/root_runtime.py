@@ -55,9 +55,12 @@ def alternatives(value):
     return ('no-root', BETA) if value == 'v0.12.2' else ('no-root',)
 
 
-def require_idle(store, profile):
+def require_idle(store, profile, replacing=None):
     for saved in [profile, *store.profiles()]:
-        if saved['host'] == profile['host'] and store.pending(saved):
+        pending = store.pending(saved)
+        if replacing is not None and saved == profile and pending == replacing:
+            continue
+        if saved['host'] == profile['host'] and pending:
             raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
 
 

@@ -358,6 +358,9 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
             time.sleep(1)
             reply=self.product_action('status',operation)
         if reply['state']!='complete':
+            if reply.get('code') == 'installer-runtime-mismatch':
+                from .root_runtime_contract import MISMATCH
+                raise UserError(MISMATCH, reason_code='installer-runtime-mismatch')
             raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
         return reply['result']
 
@@ -438,7 +441,10 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
         try:
             raw = self.remote.run(command, timeout=1080 if action == 'uninstall' else 720 if action == 'restore' or experimental else 180)
         except TVCommandError as error:
-            if action == 'enable': self.collect_root_diagnostics(cursor)
+            if action == 'enable':
+                self.collect_root_diagnostics(cursor)
+                from .root_action_failure import apply_activation_reason
+                apply_activation_reason(error, self.tv_info)
             error.root_action = action
             error.root_boundary = 'driver'
             if action == 'install':
@@ -536,8 +542,7 @@ with os.fdopen(f,'rb') as stream:
                 if existing:
                     try:
                         installation=self.root_installation()
-                        maintain=(installation.get('can_maintain') is True or
-                                  installation.get('clean_removal_verified') is True and
+                        maintain=(installation.get('clean_removal_verified') is True and
                                   installation.get('can_install') is True and
                                   self.tv_info.get('home_backend')!='c1-native-gate')
                     except UserError as error:
@@ -690,7 +695,11 @@ printf '%s' "$cytv_state"
 
     def install(self, inventory, ssap_key=None, migrate=False, reinstall=None):
         # All local validation precedes the durable mutation receipt.
-        if self.store.pending(self.profile):
+        pending = self.store.pending(self.profile)
+        replace_activation = (reinstall == 'installed' and self.profile['edition'] == 'root'
+                              and pending and pending.get('action') == 'activate-root'
+                              and pending.get('home_backend') != 'c1-native-gate')
+        if pending and not replace_activation:
             raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
         if reinstall and migrate:
             raise UserError('Reinstallation does not support --migrate-home. Omit it to read a fresh TV inventory before replacing Root.')
@@ -752,8 +761,6 @@ printf '%s' "$cytv_state"
                     raise ValueError('Root Updater bundle integrity mismatch')
         except (OSError, KeyError, TypeError, ValueError) as error:
             raise UserError('Root Updater bundle is missing or invalid. Use a complete installer build.') from error
-        if reinstall and self.has_root_updater():
-            raise UserError('Root Updater already exists or setup state remains. Use Software updates on the TV; if unavailable, inspect recovery before reinstalling.')
         with tempfile.TemporaryDirectory(prefix='cytv-root-') as tmp:
             bundle = Path(tmp).resolve() / 'root'
             shutil.copytree(self.payload / self._graphics_paths['root'], bundle)
@@ -771,7 +778,7 @@ printf '%s' "$cytv_state"
                             {'updater/' + str(path.relative_to(updater)): path.read_bytes()
                              for path in updater.rglob('*') if path.is_file()}, self.progress, root=True)
             if reinstall:
-                self.prepare_root_reinstall(already_removed=reinstall == 'removed')
+                self.prepare_root_reinstall()
                 self.preflight(install=True, home_interfaces=True)
             operation=uuid.uuid4().hex
             self.store.begin(self.profile,'install',release_sha=release_sha,bundle_sha=bundle_sha,migrate=migrate,
@@ -940,6 +947,8 @@ else:
             current=self.product_action('status',pending['product_operation'],verify_current=True)
             if current.get('current') is not True:
                 raise UserError('Root setup could not be verified for continuation. Recovery data was kept.')
+        from .root_runtime_contract import verify
+        verify(self)
         self.progress('Checking Root recovery…')
         if self.root_action('status').get('result', {}).get('recovery', {}).get('integrity_verified') is not True:
             raise UserError('Root is installed, but recovery could not be verified. Run cytv status; activation has not started.')
@@ -1590,25 +1599,20 @@ print('CYTV_BOOTSTRAP_IDLE')
         self.store.finish(self.profile)
         return True
 
-    def prepare_root_reinstall(self, already_removed=False):
-        if self.profile['edition'] != 'root' or self.store.pending(self.profile):
-            raise UserError('Reinstallation needs a resolved Root deployment. Run cytv status first.')
-        if not already_removed:
-            self.progress('Restoring LG Home and removing the previous Root…')
-            self.uninstall()
-        self.verify_absent(package.ROOT_APP)
-        inspected = self.root_archive('inspect')
-        if inspected.get('busy') is not False:
-            raise UserError('Previous Root was removed. Restart the TV with its remote, wait for LG Home, then run cytv again. Old Root processes must stop before reinstallation. Recovery data was kept.')
-        archive = ROOT_STATE + '.archive-' + uuid.uuid4().hex
-        self.store.begin(self.profile, 'archive-root-state', archive=archive, identity=inspected['identity'])
-        self.progress('Keeping the previous recovery state in an archive…')
-        reply = self.root_archive('archive', archive, inspected['identity'])
-        if reply.get('archived') != archive:
-            raise UserError('Recovery archive was not confirmed. Run cytv status; do not retry blindly.')
-        self.store.finish(self.profile)
-        self.progress('Previous recovery state retained: ' + archive)
-        return archive
+    def prepare_root_reinstall(self):
+        if self.profile['edition'] != 'root':
+            raise UserError('Reinstallation requires Root access.')
+        self.progress('Restoring LG Home and removing the previous Clean Your TV installation…')
+        result = self.uninstall_project()
+        if (result.get('removed') is not True or result.get('verified_clean') is not True
+                or result.get('restart_required') is True or self.store.pending(self.profile)):
+            raise UserError('Removal is not finished. Continue removal in this installer before installing again.',
+                            reason_code='pending-operation')
+        # Full cleanup retires staged support and may remove private Python.
+        # Fresh preflight must select/stage them again, never execute cached paths.
+        for name in ('_coordinator_code', '_recovery_code', '_selected_python'):
+            self.__dict__.pop(name, None)
+        self.progress('Previous installation removed. Installing the packages and runtime in this installer…')
 
     def root_archive(self, action, destination=None, identity=None):
         from .root_archive import SCRIPT

@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [Root installer runtime delivery, 2026-11-09](2026-11-09-root-installer-runtime-delivery.md): explicit verified reinstallation, selected-runtime admission and fresh activation failure explanations; physical C2 acceptance remains pending.
+
 - [v1.14.0 candidate QA, 2026-11-09](2026-11-09-release-1.14.0-qa.md): exact signed Android upgrade, C3 signed update/profile/renderer/service and owner Home/audio/emergency/standby pass; complete failure inventory, signing-capacity correction and retained optional Homebrew/legacy limits.
 
 - [Shared Root/Beta KeyFilters development, 2026-11-09](2026-11-09-root-beta-keyfilters.md): capability admission, exact legacy Node and ARM32 build checks, component handoff and unverified native-Home/ribbon limits.

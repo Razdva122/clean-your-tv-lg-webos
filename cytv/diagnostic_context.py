@@ -7,6 +7,7 @@ import stat
 
 from .state import private_write, sync_directory
 from .errors import LUNA_STATES, PACKAGE_FAILURE_REASONS
+from .root_action_failure import ACTIVATION_CODES
 
 KERNEL_ARCHES = ('armv7l', 'armv7', 'armv8l', 'aarch64', 'arm64', 'x86_64', 'i686', 'unknown')
 ROOT_REQUIREMENTS = ('root-user', 'python3', 'luna-send', 'apps-directory',
@@ -21,6 +22,8 @@ REASONS = ('unknown', 'user-error', 'ssh-command-failed', 'ssh-unreachable', 'ss
            'inventory-unavailable', 'graphics-unverified', 'root-home-interfaces',
            'root-worker-busy', 'root-access-required', 'removal-failed',
            'cleanup-check-failed', 'connection-interrupted', 'operation-timeout', 'tv-storage-full')
+REASONS += ACTIVATION_CODES
+REASONS += ('installer-runtime-mismatch',)
 ACTIONS = ('recover', 'install', 'uninstall', 'restore', 'status', 'doctor', 'home-diagnostics',
            'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access',
            'recover-system-rollback', 'replace-system-updater', 'clean-wam-cache')
@@ -39,7 +42,7 @@ STAGES = ('unknown', 'blocked', 'reserved', 'root-deploy', 'root-updater', 'supe
 STAGES += ('requested','original-writers-fenced','controls-restored','package-removal','private-cleanup','verified-clean')
 CODES = ('unknown_operation', 'operation_pending', 'verified', 'installation_requires_recovery',
          'operation_requires_recovery', 'recovery_evidence_required', 'continuation_requires_recovery',
-         'historical_completion_is_not_current')
+         'historical_completion_is_not_current', 'installer-runtime-mismatch')
 COMPONENTS = {'com.gathin.tvhome': 'home', 'com.local.nativehome': 'helper',
               'com.cleanyourtv.root.preview': 'root', 'com.cleanyourtv.root.updater': 'root_updater',
               'com.cleanyourtv.system.updater': 'system_updater'}

@@ -111,6 +111,13 @@ class FailureJourneys(unittest.TestCase):
 
 
 class ActivationCompensation(unittest.TestCase):
+    def setUp(self):
+        # These tests start after runtime admission; its actual byte reader has
+        # separate coverage in test_root_runtime_contract and reinstallation.
+        gate = patch('cytv.root_runtime_contract.verify')
+        gate.start()
+        self.addCleanup(gate.stop)
+
     def test_status_cannot_discard_pending_lg_home_compensation_on_either_backend(self):
         from tests.cytv.test_operations import Remote
         from tests.cytv.test_root_gate_operations import NativeOperationsTests

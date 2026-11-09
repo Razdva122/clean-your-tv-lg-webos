@@ -19,6 +19,7 @@ def failure_summary(error):
     """Fixed worker categories only; command, output and message stay private."""
     import subprocess
     name=type(error).__name__
+    if name=='InstallerRuntimeMismatch':name='ValueError'
     allowed=('CalledProcessError','TimeoutExpired','ValueError','RuntimeError','OSError',
              'PermissionError','FileNotFoundError','TypeError','KeyError','TimeoutError')
     result={'exception_type':name if name in allowed else 'unknown'}
@@ -209,7 +210,8 @@ class Coordinator:
                     log_failure(self.device,error)
                     # Raw details remain in private logs; retain only fixed failure categories.
                     record.setdefault('failure',failure_summary(error))
-                    record.update(state='recovery_required',code='installation_requires_recovery')
+                    code='installer-runtime-mismatch' if getattr(error,'reason_code',None)=='installer-runtime-mismatch' else 'installation_requires_recovery'
+                    record.update(state='recovery_required',code=code)
                     self.store.write('request-'+identifier,record)
                 return record
         except _Recorded as existing:
@@ -235,7 +237,9 @@ class Coordinator:
                 self.device.deploy(payload,options)
                 checkpoint('root-updater')
                 self.device.updater(payload,options)
-            elif state!='installed':
+            elif state=='installed':
+                self.device.require_selected_runtime(payload)
+            else:
                 raise ValueError('installation_requires_recovery')
             if prepare_supervisor:
                 checkpoint('supervisor')

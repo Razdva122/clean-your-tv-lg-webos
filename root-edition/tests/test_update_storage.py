@@ -291,7 +291,8 @@ class StagingTests(unittest.TestCase):
             'candidate_sha256':'e'*64,'staging':{n:hashlib.sha256(raw).hexdigest() for n,raw in self.files.items()}})
         def readback():
             self.assertTrue((self.tree/'root/app.ipk').exists());return {'verified':True}
-        device=SimpleNamespace(preflight=lambda *args:None,inspect=lambda:{'state':'installed'},readback=readback)
+        device=SimpleNamespace(preflight=lambda *args:None,inspect=lambda:{'state':'installed'},
+            require_selected_runtime=lambda *args:None,readback=readback)
         result=install_driver.Coordinator(device,self.owner,read=lambda path:None).install(self.identifier,'/verified')
         self.assertEqual(result['state'],'complete');self.assertFalse((self.tree/'root/app.ipk').exists())
         self.assertTrue((self.tree/'worker.log').exists())

@@ -417,7 +417,11 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             if args.command == 'install':
                 reinstall = None
                 resume = False
-                if store.pending(profile):
+                pending = store.pending(profile)
+                replacing_activation = (profile['edition'] == 'root' and pending
+                    and pending.get('action') == 'activate-root'
+                    and pending.get('home_backend') != 'c1-native-gate')
+                if pending and not replacing_activation:
                     from .recovery import recover
                     phase = args.command = 'recover'
                     recover(installer, ask, write, args.non_interactive)
@@ -425,7 +429,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                                             checks=checks.results, status=tv_info.get('status'))
                     return 0
                 from .root_runtime import require_idle, BETA, NOTICE
-                require_idle(store, profile)
+                require_idle(store, profile, replacing=pending if replacing_activation else None)
                 if profile.get('root_variant') == BETA:
                     write(NOTICE)
                     if args.non_interactive or not prompts.confirm('Install experimental Root Beta?', ask, write):
@@ -434,43 +438,14 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     installer.select_graphics()
                     phase = 'inspect-installation'
                     try:
-                        installer.preflight(install=True, home_interfaces=True)
+                        if replacing_activation:
+                            reinstall = 'installed'
+                        else:
+                            installer.preflight(install=True, home_interfaces=True)
                     except ExistingRoot:
                         if tv_info.get('home_backend') == 'c1-native-gate':
                             raise UserError('Root is already installed or recovery state remains. Use cytv status or cytv restore; reinstallation has not started.')
-                        if args.migrate_home:
-                            raise UserError('For Root reinstallation, omit --migrate-home. cytv will read a fresh TV inventory before replacing Root; the existing installation was left unchanged.')
-                        existing = installer.status()
-                        stage = existing.get('deployment_stage')
-                        device = existing.get('device', {}).get('result', {})
-                        if device.get('backend') == 'c1-native-gate':
-                            raise UserError('Root is already installed or recovery state remains. Use cytv status or cytv restore; reinstallation has not started.')
-                        if stage == 'installed-recovery-only' and device.get('recovery', {}).get('integrity_verified') is True:
-                            reinstall = 'installed'
-                        elif stage == 'uninstalled-state-retained':
-                            reinstall = 'removed'
-                        else:
-                            raise UserError('Previous Root installation needs recovery. Run cytv status or cytv restore. Reinstallation has not started; recovery data was left unchanged.')
-                        if args.non_interactive:
-                            raise UserError('Root is already installed or removal data remains. Run cytv interactively to review reinstallation. --yes does not approve replacing Root.')
-                        if installer.has_root_updater():
-                            from .recovery import remove_before_reinstall
-                            write('This removes Root, Root Updater, their services and startup hooks, plus any installed No-root Home, Helper and Updater.')
-                            write('Recovery records are retained for diagnostics. Other TV apps stay installed.')
-                            phase = args.command = 'uninstall'
-                            remove_before_reinstall(installer, ask, write)
-                            diagnostics.save_result(write, store, 'uninstall', profile, phase, tv_info, checks=checks.results)
-                            return 0
-                        write.heading('Versions on the TV → versions in this installer')
-                        for row in installer.version_summary():
-                            write(row)
-                        write.heading('Root is already installed' if reinstall == 'installed' else 'Previous Root was removed')
-                        write('You can reinstall using the packages in this cytv build.')
-                        write('LG Home will be restored first. Previous recovery data will be archived on the TV.')
-                        write('Root preferences may be reset. Your other TV apps will stay installed.')
-                        if not prompts.confirm('Reinstall Root?', ask, write):
-                            write('Existing Root and recovery data left unchanged.')
-                            return 0
+                        reinstall = 'installed'
                     except UserError as error:
                         if (error.reason_code != 'root-requirements' or profile.get('root_variant')
                                 or tv_info.get('root_requirements', {}).get('node-version') != 'fail'):
@@ -481,6 +456,21 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                         offer(installer, args, ask, write)
                         installer.select_graphics()
                         installer.preflight(install=True, home_interfaces=profile['edition']=='root')
+                if reinstall:
+                    if args.migrate_home:
+                        raise UserError('For Root reinstallation, omit --migrate-home. The installer reads a fresh TV inventory before replacing Root.')
+                    if args.non_interactive:
+                        raise UserError('Root is already installed or recovery state remains. Run the installer interactively to confirm reinstallation. --yes does not approve replacing Root.')
+                    write.heading('Versions on the TV → versions in this installer')
+                    for row in installer.version_summary():
+                        write(row)
+                    write.heading('Reinstall Root using this installer')
+                    write('LG Home will be restored. Clean Your TV, its updaters, Home Helper and saved preferences will be removed.')
+                    write('After removal is verified, the packages and Root runtime in this installer will be installed and activated. Your other TV apps and existing root access stay in place.')
+                    write('Earlier recovery records are kept on this computer. If removal cannot finish, the new installation will not start.')
+                    if not prompts.confirm('Reinstall Root?', ask, write):
+                        write('Existing Root and recovery data left unchanged.')
+                        return 0
                 if not reinstall and not resume:
                     phase = 'inspect-installation'
                     write.heading('Versions on the TV → versions in this installer')
