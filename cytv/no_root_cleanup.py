@@ -6,6 +6,7 @@ the user's project keys or files after the user has requested their removal.
 import json
 import base64
 import hashlib
+from time import monotonic, sleep
 
 from .errors import TVRejected, UserError
 
@@ -298,6 +299,44 @@ def _remove_input_shortcut(installer):
     return request('deleteDevice', {'appId': APPS[1]}).get('returnValue') is True
 
 
+def _restore_home(installer):
+    """Old webOS has an LG Home bar rather than a launchable Home app.
+
+    Only the exact missing-app rejection admits a fresh stock-surface readback.
+    Never infer restored controls from an arbitrary app or a launch receipt.
+    """
+    uri='com.webos.applicationManager/'
+    try:
+        result=installer.remote.luna(uri+'launch', {'id':'com.webos.app.home'})
+    except TVRejected as error:
+        if (error.luna.get('operation')!='application-launch' or error.luna.get('error_code')!=-101
+                or error.luna.get('return_value') is not False):
+            raise
+    else:
+        if isinstance(result,dict) and result.get('returnValue') is True:
+            return
+        raise UserError('Removal could not be checked. Reconnect and try again.', reason_code='controls-unverified')
+    stock={'com.webos.app.home','com.webos.app.livetv',
+           'com.webos.app.hdmi1','com.webos.app.hdmi2','com.webos.app.hdmi3','com.webos.app.hdmi4'}
+    def foreground():
+        reply=installer.remote.luna(uri+'getForegroundAppInfo', {}, timeout=5)
+        app=reply.get('appId') if isinstance(reply,dict) and reply.get('returnValue') is True else None
+        if not isinstance(app,str) or not app:
+            raise UserError('Removal could not be checked. Reconnect and try again.', reason_code='controls-unverified')
+        return app
+    if foreground() in stock:
+        return
+    # Fixed built-in source only; never relaunch an arbitrary observed app.
+    launched=installer.remote.luna(uri+'launch', {'id':'com.webos.app.livetv'})
+    if not isinstance(launched,dict) or launched.get('returnValue') is not True:
+        raise UserError('Removal could not be checked. Reconnect and try again.', reason_code='controls-unverified')
+    deadline=monotonic()+5
+    while foreground() not in stock:
+        if monotonic()>=deadline:
+            raise UserError('Removal could not be checked. Reconnect and try again.', reason_code='controls-unverified')
+        sleep(.1)
+
+
 def _repair_registration(installer, value):
     """One same-ID repair; an uncertain install is never submitted again."""
     from . import no_root_carrier, package
@@ -372,7 +411,7 @@ def continue_removal(installer, expected_pending):
              and not current['blocked'] and not current['present'] and not apps.intersection(APPS)
              and not current['startup_services'] and not current['resident_installer'] and not current['external_update_hint'])
     if empty and _device(installer, 'idle').get('idle') is True and _remove_input_shortcut(installer):
-        installer.remote.luna('com.webos.applicationManager/launch', {'id': 'com.webos.app.home'})
+        _restore_home(installer)
         final = _device(installer, 'inventory')
         _check_access(final)
         if (not final['present'] and not {row['id'] for row in installer.installed_apps()}.intersection(APPS)
@@ -432,7 +471,7 @@ def continue_removal(installer, expected_pending):
         installer.store.checkpoint(installer.profile, cleanup_startup_unavailable=sorted(unavailable))
     inputs_removed = _remove_input_shortcut(installer)
     installer.store.checkpoint(installer.profile, cleanup_inputs_pending=not inputs_removed)
-    installer.remote.luna('com.webos.applicationManager/launch', {'id': 'com.webos.app.home'})
+    _restore_home(installer)
     installer.store.checkpoint(installer.profile, stage='controls-restored')
     previous = pending.get('previous')
     resident = current.get('resident_installer') is True or current.get('external_update_hint') is not None

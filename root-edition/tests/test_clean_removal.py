@@ -1310,4 +1310,35 @@ class PartialDeviceRemoval(unittest.TestCase):
         self.assertFalse(any(name.startswith('remove-') for name in calls))
 
 
+class ActivityInventoryCompatibility(unittest.TestCase):
+    def test_missing_or_timed_out_list_uses_checked_get_activity_info(self):
+        import clean_removal
+        from unittest.mock import Mock
+        for reason in ('timeout','service-missing','method-missing','negative-reply'):
+            with self.subTest(reason=reason):
+                error=TimeoutError('private') if reason=='timeout' else RuntimeError('private')
+                error.luna={'call':'activities-list','reason':reason}
+                rows=[{'name':'foreign','callback':{'method':'luna://foreign/keep'}}]
+                device=Mock();device.rpc.side_effect=[error,{'returnValue':True,'activities':rows}]
+                self.assertEqual(clean_removal.activities(device),rows)
+                self.assertEqual([c.args[0] for c in device.rpc.call_args_list],
+                    ['com.palm.activitymanager/list','com.palm.activitymanager/getActivityInfo'])
+
+    def test_malformed_or_unsafe_inventory_does_not_get_another_chance(self):
+        import clean_removal
+        from unittest.mock import Mock
+        for reply in ({'returnValue':True}, {'returnValue':True,'activities':{}},
+                      {'returnValue':True,'activities':[None]},
+                      {'returnValue':True,'activities':[{'callback':None}]},
+                      {'returnValue':False,'activities':[]}):
+            device=Mock();device.rpc.return_value=reply
+            with self.subTest(reply=reply),self.assertRaises(ValueError):clean_removal.activities(device)
+            self.assertEqual(device.rpc.call_count,1)
+        for reason in ('permission-denied','oversized-reply','malformed-reply','client-start-failed'):
+            device=Mock();error=RuntimeError('private');error.luna={'reason':reason}
+            device.rpc.side_effect=error
+            with self.subTest(reason=reason),self.assertRaises(RuntimeError):clean_removal.activities(device)
+            self.assertEqual(device.rpc.call_count,1)
+
+
 if __name__ == '__main__': unittest.main()

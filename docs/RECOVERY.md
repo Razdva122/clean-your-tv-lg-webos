@@ -122,6 +122,14 @@ In v1.11.0 and later, failed or interrupted setup offers recovery directly. If N
 
 **v1.13.0:** verified full removal leaves the TV ready for a new Root or No-root installation. Minimal inactive removal receipts prevent old work from resuming; do not delete them manually. Finish recovery first if removal or its current checks are incomplete.
 
+**Next installer update (not yet published):** on older TVs without a separate
+LG Home app, No-root removal can use a freshly verified LG stock screen and may
+switch to Live TV. Keep the TV on and follow any restart request. Continue with
+**Try again** using the original saved connection; do not delete journals, clear
+Android app data or reset the TV. The updated Root remover also verifies a
+matching completed cleanup when the local recovery record still shows pending;
+matching history alone does not establish current absence.
+
 Returning to LG Home alone remains separate from removal. Emergency controls
 above stay available. For setup recovery, eligible Root can still finish with
 LG Home and Home control off; that goal does not require activating Clean Home.

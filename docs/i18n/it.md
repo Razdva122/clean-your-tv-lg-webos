@@ -101,6 +101,8 @@ Indica modello TV, firmware, No-root o Root, dispositivo di installazione, passa
 
 Scegli **Disinstalla Clean Your TV** in Manutenzione con la stessa connessione salvata. Conferma una volta. Le app e i file noti del progetto presenti vengono eliminati; gli elementi assenti vengono saltati, anche dopo un’installazione parziale.
 
+Sui TV meno recenti senza un’app LG Home separata, la rimozione No-root può passare alla TV in diretta. Lasciare il TV acceso ed eseguire il riavvio richiesto; non eliminare i dati di recupero né ripristinare il TV.
+
 Quando richiesto, scollega l’alimentazione della TV, ricollegala, attendi la rete e scegli **Riprova**. Standby o Quick Start non è un riavvio completo; CYTV non riavvia automaticamente la TV. Se la connessione si interrompe, controllala e riprova la stessa rimozione senza un altro assistente di ripristino. Se l’accesso è negato, usa la connessione Root richiesta; se la TV è occupata, attendi e riprova. Il successo appare solo dopo la verifica della pulizia finale. Conserva chiavi e rapporti originali. Restano validi i comandi di emergenza e il consenso alla condivisione.
 
 Un’installazione non riuscita o interrotta offre direttamente il ripristino. Se No-root non può proseguire, conferma una volta la rimozione completa. La rimozione esegue fino a tre tentativi in caso di perdita temporanea della connessione o processo CYTV occupato. Se serve Root, scegli **Connetti con Root** per la stessa TV; la pulizia Root verificata completa anche la rimozione No-root bloccata. Se l’attivazione Root fallisce, CYTV tenta di ripristinare e verificare LG Home senza ripetere l’attivazione. L’annullamento con lavoro incompleto conserva rapporto e azioni di ripristino. L’arresto di emergenza resta invariato.
