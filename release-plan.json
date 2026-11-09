@@ -35,6 +35,13 @@
         440
       ],
       "summary": "Admit narrowly verified immutable system images and new native setup after verified cleanup; #440 device acceptance remains unverified"
+    },
+    {
+      "pr": 463,
+      "issues": [
+        353
+      ],
+      "summary": "Add optional localized Home weather, theme-aware formats, city/units settings and weather-compatible theme updates; retire Channel and Itachi from the active catalog"
     }
   ],
   "excluded": [],
