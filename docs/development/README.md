@@ -92,3 +92,5 @@ launcher demo.
 - [Ribbon presentation](RIBBON-PRESENTATION.md): the single full-screen Home lifecycle, own wallpaper and acceptance scope.
 
 - [Single Home C3 regression QA, 2026-11-05](../history/2026-11-05-single-home-regressions.md)
+
+- [Home weather and theme integration](WEATHER.md) — formats, trusted data flow, author styling and fork provenance.

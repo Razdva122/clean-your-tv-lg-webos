@@ -99,7 +99,7 @@
     'scenic-grid'
   ];
   // Only trusted presets own positions, hit areas and scrolling. Theme CSS owns appearance.
-  function geometry(preset, columns, ribbon) {
+  function geometry(preset, columns, ribbon, weather) {
     if (presets.indexOf(preset) < 0 || !valid(columns))
       throw Error('layout-invalid');
     var g = {
@@ -181,6 +181,20 @@
       preset === 'channel-list'
         ? g.maxHeight
         : Math.round((g.cardWidth * g.maxHeight) / g.maxWidth);
+    if (
+      weather &&
+      typeof weather.bottom === 'number' &&
+      isFinite(weather.bottom) &&
+      weather.bottom >= 0
+    ) {
+      if (preset === 'dock-grid' && weather.format === 'text')
+        g.dockTop += Math.max(0, (weather.shelfTop || 236) - 236);
+      else if (preset !== 'channel-list' || columns > 1)
+        g.dockTop = Math.max(
+          g.dockTop,
+          weather.bottom + (preset === 'channel-list' ? 110 : 32)
+        );
+    }
     g.top = g.dockTop + g.padding;
     return g;
   }

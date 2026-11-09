@@ -8,13 +8,24 @@
     "name": "Rares / Clean Your TV contributors",
     "url": "https://github.com/razdva122"
   },
-  "themeVersion": "1.2.0",
+  "themeVersion": "1.3.0",
   "layout": {
     "preset": "dock-grid",
     "columns": 5,
     "spacingScale": 1,
     "textScale": 1,
-    "focusScale": 1.1
+    "focusScale": 1.1,
+    "weather": {
+      "formats": [
+        "text",
+        "current",
+        "details",
+        "forecast"
+      ],
+      "scale": 1,
+      "padding": 28,
+      "icons": "fill"
+    }
   },
   "defaults": {
     "wallpaperAssetId": "wallpaper",

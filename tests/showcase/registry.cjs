@@ -45,6 +45,24 @@ try {
   fs.rmSync(path.join(root, 'registry', 'owner--collection--cased.json'));
   fs.rmSync(path.join(root, cased.base), { recursive: true });
 
+  const fork = {
+    ...r,
+    upstreamRepository: 'https://github.com/original/themes',
+    author: { name: 'Original', sourceProfile: 'https://github.com/original' }
+  };
+  assert.doesNotThrow(() => validateRecord(fork));
+  assert.throws(
+    () =>
+      validateRecord({
+        ...fork,
+        upstreamRepository: 'https://example.com/original/themes'
+      }),
+    /upstream/
+  );
+  assert.throws(
+    () => validateRecord({ ...fork, upstreamRepository: r.sourceRepository }),
+    /upstream/
+  );
   validateRecord({ ...r, license: 'MIT AND CC-BY-SA-3.0' });
   validateRecord({ ...r, license: 'LicenseRef-Personal-Fan-Theme' });
   assert.throws(

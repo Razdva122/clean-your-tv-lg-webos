@@ -30,7 +30,15 @@
     "input-shelf",
     "input-tile",
     "input-status",
-    "input-preview"
+    "input-preview",
+    "weather",
+    "weather-temp",
+    "weather-secondary",
+    "weather-condition",
+    "weather-bar",
+    "weather-track",
+    "weather-day",
+    "weather-icon"
   ],
   "states": [
     "focused",
@@ -216,6 +224,29 @@
       ],
       "capability": "overlay-presentation-v1",
       "requires": "ribbon"
+    },
+    "weather": {
+      "capability": "weather-v1",
+      "formats": [
+        "text",
+        "current",
+        "details",
+        "forecast"
+      ],
+      "scale": [
+        0.85,
+        1.25
+      ],
+      "padding": [
+        0,
+        32
+      ],
+      "icons": [
+        "fill",
+        "monochrome"
+      ],
+      "ribbon": "always disabled",
+      "default": "all formats for legacy non-ribbon themes"
     }
   },
   "defaults": {
@@ -323,6 +354,20 @@
       "requires": "ribbon-layout-v1",
       "nativeEdition": "root",
       "unknownContext": "full"
+    },
+    "weather-v1": {
+      "layout": "weather",
+      "paired": true,
+      "parts": [
+        "weather",
+        "weather-temp",
+        "weather-secondary",
+        "weather-condition",
+        "weather-bar",
+        "weather-track",
+        "weather-day",
+        "weather-icon"
+      ]
     }
   },
   "clockDateFontSize": [

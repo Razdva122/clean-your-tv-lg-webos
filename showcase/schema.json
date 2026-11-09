@@ -180,6 +180,11 @@
         "removed"
       ],
       "description": "Maintainer moderation state; omitted for an active reviewed version. Removed records generate only a stable tombstone detail page."
+    },
+    "upstreamRepository": {
+      "type": "string",
+      "pattern": "^https://github\\.com/[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9._-]*$",
+      "description": "Reviewed original source for a distinct maintainer fork. Author profile matches the upstream owner; package identity and bytes still match the fork."
     }
   }
 }

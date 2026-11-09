@@ -26,3 +26,8 @@
 .ctv-library-row, .ctv-library-close { color: #f6e9d7; background-color: #3b2418; border-color: rgba(232,150,58,0.25); border-radius: 12px; }
 .ctv-library-row.is-focused, .ctv-library-close.is-focused { color: #1a0f0a; background-color: #e8963a; }
 .ctv-library-row.is-focused .ctv-label { color: #1a0f0a; text-shadow: 0px 0px 0px transparent; }
+
+/* Weather uses the same walnut, gold edges and cream serif typography. */
+.ctv-weather { color: #f6e9d7; font-family: serif; background-color: rgba(39,23,15,0.94); border-color: rgba(231,179,107,0.55); border-width: 1px; border-style: solid; border-radius: 24px; text-shadow: 0px 2px 10px rgba(26,15,10,0.95); }
+.ctv-weather-secondary { color: #e1ceb3; }
+.ctv-weather-bar { background-color: #e7b36b; border-radius: 3px; }

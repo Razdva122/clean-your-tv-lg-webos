@@ -714,7 +714,9 @@ Voting and automatic promotion into built-in themes are **not implemented**.
 Popularity is not approval, and a public listing does not bundle a theme with
 Home. Version 1.6.0 includes Classic, Alpine and Ribbon. Version 1.7.0
 includes Classic, Liquid Glass and Ribbon; Alpine 1.4.4 is an external
-Showcase listing, alongside Channel. Saved `builtin:alpine` choices recover to
+Showcase listing. The early Channel and Itachi themes are retired from the
+current catalogue; their historical records and installed copies are retained.
+Saved `builtin:alpine` choices recover to
 Classic with the visible recovery notice, without an automatic download or
 replacement by Liquid Glass.
 
@@ -795,3 +797,7 @@ It needs no shortening-service secret; the standard job token updates only the
 author's release. Theme files are read as data, not executed. The preview can
 retrieve the matching release's metadata, or accept its full published descriptor
 URL manually. This does not submit anything to Showcase.
+
+## Weather integration
+
+See the [shared weather contract](WEATHER.md) for supported formats, developer styling, preset reservations, compatibility and maintainer fork provenance. Home owns weather data and settings; themes contain no provider code.

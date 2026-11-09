@@ -39,5 +39,6 @@
       "summary": "LG 60UN7310PDA, webOS 5.6.2, firmware 04.64.00, Magic Remote, No-root, Home 1.6.0 + Helper 0.6.20. Sent with Receive from computer and applied. Home rendered as in the preview and the owner uses it daily. App library, Inputs, reorder, standby and cold boot not checked on the device. The first receiver attempt showed Theme receiver unavailable; Retry worked.",
       "url": "https://github.com/razdva122/clean-your-tv-lg-webos/issues/196"
     }
-  ]
+  ],
+  "availability": "removed"
 }

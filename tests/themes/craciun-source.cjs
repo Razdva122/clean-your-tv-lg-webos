@@ -36,7 +36,7 @@ const { compileSource } = require('../../theme-api/compile.cjs'),
   ])
     files[f.path] = f.data;
   data.verify({ descriptor, digest: data.hash(descriptor), files }, '1.10.0');
-  assert.equal(m.themeVersion, '1.2.0');
+  assert.equal(m.themeVersion, '1.3.0');
   assert.ok(m.requires.capabilities.includes('video-wallpaper-v1'));
   assert.deepEqual(
     m.wallpaperVideo.variants.map((v) => [v.quality, v.width, v.height]),
@@ -55,7 +55,7 @@ const { compileSource } = require('../../theme-api/compile.cjs'),
   assert.match(read('CREDITS.txt').toString(), /No animation/);
   assert.match(read('CREDITS.txt').toString(), /1672×941/);
   console.log(
-    'PASS Craciun 1.2.0: compiled UHD/FHD still video, original fallback, capability, package hashes and attribution'
+    'PASS Craciun 1.3.0: compiled UHD/FHD still video, original fallback, capability, package hashes and attribution'
   );
 })().catch((e) => {
   console.error(e);

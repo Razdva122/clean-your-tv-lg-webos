@@ -169,3 +169,7 @@ storage and its independent **64 MiB** theme-cache allowance. The separate
 wallpapers also need computer temporary space and TV video-cache space.
 See [storage estimates and recovery limits](DESKTOP_INSTALL.md#storage-estimates-in-candidate-builds)
 for calculation reserves, unavailable quota readings and pending-install recovery.
+
+## Weather integration
+
+See the [shared weather contract](development/WEATHER.md) for supported formats, developer styling, preset reservations, compatibility and maintainer fork provenance. Home owns weather data and settings; themes contain no provider code.

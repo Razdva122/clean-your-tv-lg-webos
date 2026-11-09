@@ -133,3 +133,9 @@ After a removal connection error, open the connection details, check network acc
 <a id="unreleased-candidate-older-tv-nodejs"></a>
 <a id="older-tv-nodejs-published-v1120"></a>
 <a id="straightforward-removal-v1110"></a>
+
+## Weather
+
+Open Settings → Weather, below Wallpapers. Turn weather on, choose City, then search manually and select the correct region and country, or choose Automatic for an approximate city based on your internet connection. A VPN may change the automatic result; if the city is missing or wrong, use manual search. The detected or selected city is shown in settings. Choose °C / m/s or °F / mph and an available format: Compact, Now, In detail or 4 days. The preview follows your theme; Example means sample data. Liquid Glass supports Compact only. Ribbon and Atmosphere do not show weather. Turning weather off hides the other weather controls and stops requests. During an outage recent data can remain temporarily; after a longer outage weather disappears until it can refresh.
+
+The Data sources button in the Weather heading opens provider and license information.

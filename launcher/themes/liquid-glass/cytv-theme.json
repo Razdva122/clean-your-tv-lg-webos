@@ -8,7 +8,7 @@
     "name": "Clean Your TV contributors",
     "url": "https://github.com/razdva122"
   },
-  "themeVersion": "1.0.0",
+  "themeVersion": "1.1.0",
   "layout": {
     "preset": "dock-grid",
     "columns": 5,
@@ -17,7 +17,15 @@
     "focusScale": 1.1,
     "allowColumnOverride": true,
     "motion": "classic",
-    "inputs": "shelf"
+    "inputs": "shelf",
+    "weather": {
+      "formats": [
+        "text"
+      ],
+      "scale": 1,
+      "padding": 0,
+      "icons": "fill"
+    }
   },
   "defaults": {
     "wallpaperAssetId": "wallpaper",
@@ -52,19 +60,20 @@
   },
   "source": {
     "repository": "https://github.com/razdva122/clean-your-tv-lg-webos",
-    "commit": "4bcc0975a6951118c26b2cb7dff665d6d1c9ea5f"
+    "commit": "5052717b1d436b385d01f067976c2362fb401c08"
   },
   "requires": {
     "minimumHomeVersion": "1.7.0",
     "capabilities": [
+      "weather-v1",
       "input-placement-v1",
       "classic-motion-v1"
     ]
   },
   "rules": {
-    "path": "rules/7d0874e8bd86c38255d75d9b944b140ec53b47af0694cd2b4c3ad3a84e31c727.json",
-    "size": 9451,
-    "sha256": "7d0874e8bd86c38255d75d9b944b140ec53b47af0694cd2b4c3ad3a84e31c727"
+    "path": "rules/ca68ec9728ac4065a68f4161c09c849436fe9a28f0c60520f13529aa88f0ff31.json",
+    "size": 10018,
+    "sha256": "ca68ec9728ac4065a68f4161c09c849436fe9a28f0c60520f13529aa88f0ff31"
   },
   "documents": [
     {

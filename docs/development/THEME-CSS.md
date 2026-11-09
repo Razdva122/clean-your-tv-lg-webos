@@ -1,6 +1,6 @@
 # Home CSS styling surface
 
-This is the source-development contract for the **1.7.0 theme engine**.
+This is the source-development contract for the Home theme engine.
 TV theme controls require a compatible installed Home package; copying this
 reference or a theme URL does not upgrade the engine. See the [design](../superpowers/specs/2026-10-28-theme-ecosystem-design.md)
 and [runtime plan](../superpowers/plans/2026-10-28-themes-a-runtime.md) for the
@@ -585,3 +585,7 @@ normalized compositor check. No-root falls back to the full wallpaper. Theme
 suspension, settings/trial/recovery dialogs and unknown context force opacity;
 reset removes the request. The native host never changes routing or permissions
 because of a theme. See [Ribbon presentation](RIBBON-PRESENTATION.md).
+
+## Weather integration
+
+See the [shared weather contract](WEATHER.md) for supported formats, developer styling, preset reservations, compatibility and maintainer fork provenance. Home owns weather data and settings; themes contain no provider code.
