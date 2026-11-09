@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.14.0 — unpublished candidate
+
+- Repair exact No-root continuation key permissions and read Root catalogs over
+  SSH without TV Node subprocesses; retain emergency stops and strict app checks.
+- Rebuild Chinese font subsets with the installer corpus; balance CI shards and
+  reconcile current/localized guides and the user-confirmed TV list.
+- Check GitHub for a newer stable computer installer. Desktop and console users
+  explicitly choose the release page or their current installer. Unavailable
+  checks remain nonblocking; pending recovery bypasses the advisory.
+- Include the shared guarded KeyFilters Home backend in the opt-in Node 0.12.2 Root Beta payload. Select by verified Qt/native-Home capabilities rather than a numeric SDK allowlist; retain native recovery and disabled Beta OTA. A KeyFilters field alone does not establish compatibility; target-device acceptance remains unverified.
+
 ## 1.9.0 — unpublished candidate
 
 - Preserve complete Root profile/AOD destinations and add guarded recovery after a verified restored activation failure. Original device reports remain unresolved.

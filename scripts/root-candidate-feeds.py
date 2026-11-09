@@ -11,8 +11,9 @@ ROOT=Path(__file__).resolve().parents[1]
 REPO='Razdva122/clean-your-tv-lg-webos'
 BUILD_JOBS=runpy.run_path(str(ROOT/'scripts/release-flow.py'))['BUILD_JOBS']
 MAX_ARCHIVE=128*1024*1024
-# Common CLI carries both Home resolutions and normal/C1 Root variants.
-MAX_CLI_ARCHIVE=256*1024*1024
+# Common CLI carries both Home resolutions and normal/Beta Root runtimes.
+MAX_CLI_ARCHIVE=384*1024*1024
+MAX_PAYLOAD=384*1024*1024
 MAX_TAR=96*1024*1024
 DIRECT_WORKFLOW='.github/workflows/tv-candidate.yml'
 DIRECT_JOB='build-root-tv'
@@ -79,6 +80,11 @@ def read_cli_archive(archive,expected,target):
         if len(entries)!=1 or entries[0].filename!='cytv' or entries[0].is_dir() or stat.S_ISLNK(entries[0].external_attr>>16) or not 0<entries[0].file_size<=MAX_CLI_ARCHIVE:
             raise ValueError('Unexpected candidate CLI archive layout')
         Path(target).write_bytes(z.read(entries[0]))
+
+def payload_entries(toc):
+    entries=[(name,entry) for name,entry in toc.items() if name.replace('\\','/').startswith('payload/')]
+    if not entries or len(entries)>2048 or any(entry[2]>64*1024*1024 for _,entry in entries) or sum(entry[2] for _,entry in entries)>MAX_PAYLOAD:raise ValueError('Oversized embedded candidate payload')
+    return entries
 
 def bounded_package_module():
     spec=importlib.util.spec_from_file_location('trusted_candidate_package',ROOT/'root-edition/updater/package.py')
@@ -229,8 +235,7 @@ def prepare(metadata,source,output):
         with archive.open('wb') as stream:subprocess.run(['gh','api','repos/'+REPO+'/actions/artifacts/'+str(metadata['artifact']['id'])+'/zip'],stdout=stream,check=True)
         if archive.stat().st_size!=metadata['artifact']['size']:raise ValueError('Candidate archive size mismatch')
         cli=tmp/'cytv';read_cli_archive(archive,metadata['artifact']['sha256'],cli)
-        packaged=CArchiveReader(str(cli));entries=[(name,entry) for name,entry in packaged.toc.items() if name.replace('\\','/').startswith('payload/')]
-        if not entries or len(entries)>2048 or any(entry[2]>64*1024*1024 for _,entry in entries) or sum(entry[2] for _,entry in entries)>256*1024*1024:raise ValueError('Oversized embedded candidate payload')
+        packaged=CArchiveReader(str(cli));entries=payload_entries(packaged.toc)
         payload=tmp/'payload';payload.mkdir()
         sys.path.insert(0,str(ROOT))
         from cytv.package import safe_name

@@ -1,5 +1,7 @@
 # Clean Your TV — instrukcja użytkownika
 
+Nieopublikowana zmiana instalatora: przed nową instalacją instalator na komputerze sprawdza nowszą stabilną wersję na GitHubie. Wybierz „Otwórz GitHub i pobierz najnowszą wersję”, aby zatrzymać instalację i ją pobrać, lub „Nie, zainstaluj tę wersję”, aby jawnie kontynuować. Jeśli sprawdzenie się nie powiedzie, możesz kontynuować. Oczekujące operacje i odzyskiwanie pomijają sprawdzenie.
+
 Clean Your TV to własny ekran główny dla LG webOS: Twoje aplikacje w Twojej kolejności, bez sponsorowanych rzędów w tym menu. Zainstaluj go z komputera lub telefonu z Androidem; potem komputer może być wyłączony.
 
 ## 1. Pobierz instalator
@@ -22,6 +24,8 @@ Włącz TV i podłącz go do tej samej sieci domowej co komputer lub telefon. Ze
 
 - **No-root** — jeśli nie masz dostępu root. Przygotuj Developer Mode zgodnie z instrukcją poniżej.
 - **Root** — jeśli masz już dostęp root przez SSH. Instalator nie rootuje TV. Nie włączaj Developer Mode na tym TV; zachowaj dostęp SSH i dane odzyskiwania.
+
+Dla Root instalator sprawdza i wybiera dostępny sposób sterowania Home. Jeśli nie można potwierdzić zgodności, instalacja zostaje zatrzymana; nie omijaj nieudanej kontroli.
 
 **No-root → Root:** Jeśli po pełnym usunięciu ponownie zainstalowano No-root, przejście na Root może wymagać najpierw wyczyszczenia instalacji. Zachowaj ustawienia Home, wybierz **Odinstaluj Clean Your TV** z zapisanym połączeniem Root i poczekaj na potwierdzone usunięcie. Usunie to również Home i Helper z No-root. Następnie zainstaluj Root; zachowaj dane odzyskiwania.
 

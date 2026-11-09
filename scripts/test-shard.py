@@ -27,10 +27,12 @@ def cases(suite):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--shard', required=True, type=shard_value)
+    parser.add_argument('--shard', default='1/1', type=shard_value)
     parser.add_argument('-s', '--start-directory', required=True)
     parser.add_argument('-p', '--pattern', default='test*.py')
     parser.add_argument('--list', action='store_true', help='Print selected test IDs as JSON without running fixtures')
+    parser.add_argument('--timings', help='Write per-test, shared-fixture and skip details as JSON')
+    parser.add_argument('-v', '--verbose', action='store_true')
     args = parser.parse_args()
     # Match `python -m unittest discover`: repository imports remain available.
     sys.path.insert(0, str(Path.cwd()))
@@ -51,7 +53,12 @@ def main():
         return 0
     print(f'{args.start_directory}: shard {index}/{count}, '
           f'{len(selected)}/{len(discovered)} tests', file=sys.stderr, flush=True)
-    result = unittest.TextTestRunner(verbosity=1).run(unittest.TestSuite(selected))
+    if args.timings:
+        from ci_test_timing import TimingSuite, run
+        result = run(TimingSuite(selected), args.timings, directory=args.start_directory,
+                     shard=f'{index}/{count}', verbosity=2 if args.verbose else 1)
+    else:
+        result = unittest.TextTestRunner(verbosity=2 if args.verbose else 1).run(unittest.TestSuite(selected))
     return 0 if result.wasSuccessful() else 1
 
 

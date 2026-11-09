@@ -30,8 +30,27 @@ class AdmissionTests(unittest.TestCase):
   # Observed full-candidate41834327029 macOS CLI artifact after common C1/media packaging.
   artifact={'id':34,'name':'cytv-macos-arm64','expired':False,'size_in_bytes':192317122,'digest':'sha256:'+'b'*64,'workflow_run':{'id':12,'head_sha':'a'*40}}
   self.assertEqual(m.artifact_info([artifact],self.run)['size'],192317122)
-  with self.assertRaises(ValueError):m.artifact_info([dict(artifact,size_in_bytes=256*1024*1024+1)],self.run)
+  with self.assertRaises(ValueError):m.artifact_info([dict(artifact,size_in_bytes=384*1024*1024+1)],self.run)
   with self.assertRaises(ValueError):m.artifact_info([dict(artifact,name='root-tv-candidate',size_in_bytes=128*1024*1024+1)],self.run,direct_tv=True)
+ def test_shared_root_candidate_fits_finite_cli_capacity(self):
+  artifact={'id':34,'name':'cytv-macos-arm64','expired':False,'size_in_bytes':317011984,'digest':'sha256:'+'b'*64,'workflow_run':{'id':12,'head_sha':'a'*40}}
+  self.assertEqual(m.artifact_info([artifact],self.run)['size'],317011984)
+  with self.assertRaises(ValueError):m.artifact_info([dict(artifact,size_in_bytes=384*1024*1024+1)],self.run)
+ def test_cli_zip_and_expanded_member_have_independent_finite_bounds(self):
+  from unittest.mock import patch
+  with tempfile.TemporaryDirectory() as tmp:
+   archive=Path(tmp)/'cli.zip';out=Path(tmp)/'cytv'
+   with zipfile.ZipFile(archive,'w',compression=zipfile.ZIP_DEFLATED) as z:z.writestr('cytv',b'x'*1024)
+   digest=hashlib.sha256(archive.read_bytes()).hexdigest()
+   with patch.object(m,'MAX_CLI_ARCHIVE',archive.stat().st_size-1),self.assertRaises(ValueError):m.read_cli_archive(archive,digest,out)
+   with patch.object(m,'MAX_CLI_ARCHIVE',512),self.assertRaises(ValueError):m.read_cli_archive(archive,digest,out)
+   self.assertFalse(out.exists())
+ def test_shared_root_payload_fits_but_expansion_remains_bounded(self):
+  def toc(sizes):return {'payload/file'+str(i):(0,1,size,1,'x') for i,size in enumerate(sizes)}
+  entries=m.payload_entries(toc([30*1024*1024]*9+[26764900]))
+  self.assertEqual(len(entries),10)
+  for sizes in ([],[64*1024*1024+1],[1]*2049,[64*1024*1024]*6+[1]):
+   with self.subTest(sizes=len(sizes)),self.assertRaises(ValueError):m.payload_entries(toc(sizes))
  def test_exact_archive_digest_and_single_regular_cli_are_required(self):
   with tempfile.TemporaryDirectory() as tmp:
    archive=Path(tmp)/'cli.zip';out=Path(tmp)/'cli'

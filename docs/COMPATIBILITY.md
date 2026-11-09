@@ -11,6 +11,18 @@ an IPK does not prove that Home, recovery or startup works on a particular TV.
 
 ## TV requirements
 
+### Next installer: shared experimental Home backend
+
+The unpublished source also packages the existing guarded KeyFilters Home
+alternative for Node 0.12.2 Root Beta. Ordinary Root and Beta share the same
+selector and capability checks: vendor Qt JavaScript filters, ARM32 native Home
+and compatible input/recovery are required when System Profile is explicitly absent.
+SDK numbers are recorded, not used as an allowlist. A KeyFilters setting alone
+is insufficient: firmware with an in-compositor Home ribbon or another stock
+Home implementation is refused. Compatibility on the #410 TV is unconfirmed. Both
+experimental Home variants retain fresh-install restrictions and disabled OTA.
+See [backend and verification limits](development/C1-NATIVE-GATE.md#shared-root-runtime-variants-unpublished-beta-packaging).
+
 ### Release 1.12.0: legacy Root choices
 
 The 1.12.0 installer includes a separate, explicitly selected **Root Beta

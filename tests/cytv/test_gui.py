@@ -18,6 +18,41 @@ except ImportError:
 
 @unittest.skipUnless(HAS_QT, 'Desktop build dependencies are optional for CLI tests')
 class GuiTests(unittest.TestCase):
+    def test_default_wizard_runs_update_gate_before_payload_or_tv_changes(self):
+        from cytv import installer_update as update
+        w=Wizard()
+        self.addCleanup(w.close)
+        with patch('cytv.cli.choose_profile',return_value={'host':'192.0.2.1','edition':'root','port':22}), patch.object(update,'latest',return_value='0.15.0'), patch('cytv.package.verify_payload') as payload, patch('cytv.gui.QDesktopServices.openUrl',return_value=True):
+            w.start('install')
+            deadline=time.monotonic()+3
+            while not w.pending and time.monotonic()<deadline:
+                self.app.processEvents()
+                time.sleep(.01)
+            self.assertIsNotNone(w.pending)
+            self.assertEqual(w.pending.label,update.PROMPT)
+            next(b for b in w.form.findChildren(QPushButton) if b.text()==update.DOWNLOAD).click()
+            w.worker.join(timeout=3)
+            self.assertFalse(w.worker.is_alive())
+            self.app.processEvents()
+            payload.assert_not_called()
+            self.assertIn('Installation has not started.',w.content.toPlainText())
+
+    def test_installer_update_has_two_direct_actions_and_no_implicit_install(self):
+        from cytv.desktop import Channel
+        from cytv import installer_update as update
+        for action, answer in [('Open GitHub and download the latest version', '1'), ('No, install this version', '2')]:
+            w=Wizard()
+            self.addCleanup(w.close)
+            w.channel=Channel(lambda *_:None)
+            with patch('cytv.gui.QDesktopServices.openUrl',return_value=True) as browser:
+                w.show_prompt(Prompt(update.PROMPT,[('1',update.DOWNLOAD,''),('2',update.CONTINUE,'')]))
+                self.assertFalse(w.form.findChildren(QComboBox))
+                buttons=w.form.findChildren(QPushButton)
+                self.assertFalse(any(b.isDefault() for b in buttons if b.text()==update.CONTINUE))
+                next(b for b in buttons if b.text()==action).click()
+                self.assertEqual(w.channel.answers.get_nowait(),answer)
+                self.assertEqual(browser.called,answer=='1')
+
     def test_runtime_alternatives_are_visible_direct_actions_with_separate_cancel(self):
         from cytv import i18n
         from cytv.desktop import Channel

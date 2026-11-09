@@ -96,7 +96,7 @@ the original package outcome.
 
 ### Original-operation recovery and full removal (published v1.11.0)
 
-These instructions apply to published v1.11.0 and later, including the v1.12.1 candidate. For removal, select **Uninstall Clean Your TV** on desktop or
+These instructions apply to published v1.11.0 and later. For removal, select **Uninstall Clean Your TV** on desktop or
 Android (`cytv uninstall`) using the saved TV connection. Confirm the removal
 once. A failed or partial installation does not need to complete first: remove
 known project apps/files that are present and skip items that are absent.

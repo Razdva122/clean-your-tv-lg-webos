@@ -1,10 +1,11 @@
 # Install Clean Your TV
 
-> **Experimental compositor routing (#364):** experimental compositor Home admission is
-> based on verified capabilities of Qt SDK 6–9 TVs, not a model list. It requires
-> a fresh setup, stock native Home and a compatible read-only emergency-input
-> channel; conflicting Home integrations are left untouched. Physical compatibility
-> and ordinary OTA are not established. See [scope and recovery](development/C1-NATIVE-GATE.md#unpublished-capability-based-compositor-admission-364).
+> **Unpublished shared compositor backend:** the candidate selects the experimental
+> backend for ordinary Root and Root Beta by verified capabilities, without an
+> SDK/model allowlist. It requires fresh setup, confirmed absence of System Profile,
+> stock ARM32 native LG Home, vendor Qt filters and compatible emergency input and
+> recovery. Conflicting Home integrations are left untouched. Experimental OTA is
+> disabled; physical compatibility remains unconfirmed. See [scope and recovery](development/C1-NATIVE-GATE.md#unpublished-capability-based-compositor-admission-364).
 
 Use **cytv** to install No-root or Root. It includes the computer runtime and TV
 packages; no source build is needed. After setup, the computer can be switched off.
@@ -22,9 +23,13 @@ Root setup does not obtain root or flash firmware. Do not enable Developer Mode
 over an existing rooted setup, or run Root routing and No-root Helper together.
 [Compare everyday controls and limits](EDITIONS.md).
 Normal profile-based Root also requires working Settings Service and System Profile
-Home interfaces (`com.webos.service.systemprofile`). Eligible C1 TVs use the separate,
-fresh-install-only [C1 Beta backend](development/C1-NATIVE-GATE.md), which does not
-require those interfaces and has no physical C1 acceptance or normal OTA support.
+Home interfaces (`com.webos.service.systemprofile`). The unpublished candidate's
+shared [compositor backend](development/C1-NATIVE-GATE.md) supports ordinary Root
+and exact-Node-0.12.2 Root Beta only when System Profile absence and all native
+Home/input/recovery requirements are verified. A KeyFilters field alone is
+insufficient; old in-compositor LG panels remain unsupported. Use published
+downloads for published behavior; this fresh-install experimental path has no
+new physical acceptance or normal OTA support.
 Root access alone does not establish compatibility.
 
 If No-root was installed again after full removal, switching to Root may require cleanup first. Back up Home preferences, choose **Uninstall Clean Your TV** with the saved Root connection and wait for verified removal. This also removes No-root Home and Helper. Then install Root; keep recovery records.

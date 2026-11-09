@@ -15,9 +15,14 @@ fi
 export PYTHON
 export CYTV_PYTHON="${CYTV_PYTHON:-$PYTHON}"
 if [[ "$PYTHON" == */* ]]; then export PATH="$(dirname "$PYTHON"):$PATH"; fi
+# Consume reporting configuration here; nested profile tests must not inherit it
+# or overwrite the outer suite's report in the same directory.
+test_timings_directory="${CI_TEST_TIMINGS_DIR:-}"
+unset CI_TEST_TIMINGS_DIR
 # Shards run in separate CI checkouts; never export this selection to child tests.
 shard=""
 shard_index=1
+shard_count=1
 if [[ "${1:-}" == --shard ]]; then
   shard="${2:-}"
   if [[ ! "$shard" =~ ^[1-9][0-9]{0,2}/[1-9][0-9]{0,2}$ ]] || (( ${shard%/*} > ${shard#*/} )); then
@@ -25,11 +30,17 @@ if [[ "${1:-}" == --shard ]]; then
     exit 2
   fi
   shard_index="${shard%/*}"
+  shard_count="${shard#*/}"
   shift 2
 fi
 primary() { [[ "$shard_index" == 1 ]]; }
+# Serial blocks run once across the matrix; smaller local matrices fold their
+# owners modulo the shard count. Unsharded execution retains every block/order.
+on_shard() { [[ -z "$shard" ]] || (( shard_index == ($1 - 1) % shard_count + 1 )); }
 python_suite() {
-  if [[ -n "$shard" ]]; then
+  if [[ "$1" == tests/cytv && -n "$test_timings_directory" ]]; then
+    "$PYTHON" scripts/test-shard.py --shard "${shard:-1/1}" -s "$1" --timings "$test_timings_directory/cytv.json"
+  elif [[ -n "$shard" ]]; then
     "$PYTHON" scripts/test-shard.py --shard "$shard" -s "$1"
   else
     "$PYTHON" -m unittest discover -s "$1"
@@ -58,7 +69,7 @@ if primary && { has ui || has tv; }; then
 fi
 
 if has tv || has tv-runtime; then
-if primary; then
+if on_shard 2; then
 node tests/helper-compat.cjs
 node tests/tv-service-compat.cjs
 node tests/passive-remote-diagnostic.cjs
@@ -107,9 +118,13 @@ for scenario in off-on overflow-taps overflow-press overflow-emergency; do
 done
 build/tests/test-filter
 for file in launcher/*.js native/app/*.js native/service/*.js renewal-service/*.js; do node --check "$file"; done
+fi
 
+if on_shard 3; then
 "$PYTHON" tests/root-node-compat.py
 "$PYTHON" tests/root-node-compat.py --beta
+fi
+if on_shard 2; then
 node root-edition/service/test-c1-filter.cjs
 node root-edition/service/test-c1-lease.cjs
 node root-edition/service/test-audio-recovery.cjs
@@ -122,7 +137,7 @@ for test in root-edition/tests/test_update_*.cjs; do node "$test"; done
 for file in root-edition/updater/*.js; do node --check "$file"; done
 fi
 python_suite root-edition/tests
-if primary; then
+if on_shard 4; then
 
 for test in tests/updates/*.cjs; do node "$test"; done
 for test in tests/system_updates/*.cjs; do node "$test"; done
@@ -136,7 +151,7 @@ if has setup; then
   python_suite tests/setup
 fi
 if has installer; then
-  if primary; then
+  if on_shard 2; then
   "$PYTHON" -m unittest discover -s homebrew/tests -p test_payload.py
   node homebrew/tests/runtime.cjs
   node homebrew/tests/bridge.cjs
@@ -149,7 +164,7 @@ fi
 if primary && has android; then
   "$PYTHON" -m unittest discover -s android/tests
 fi
-if primary && has preview; then
+if on_shard 2 && has preview; then
   node tests/home-presentation-ui.cjs
   node tests/root-decoder-ui.cjs
   node tests/preview-presentation-ui.cjs

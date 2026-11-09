@@ -205,3 +205,28 @@ manual removal, cannot clear pending. Transport fixtures cover acceptance,
 progress, terminal success, denial, interrupted EOF and timeout for both install
 and removal. These are host models; actual service registration, UI controls,
 sound, standby, cold boot, OTA and rollback remain untested.
+
+## Vendor-normalized pairing-key mode (#437, unreleased)
+
+An authenticated Developer Mode install continuation may restrict the existing
+`ssap-key.json` mode from exactly 0775 to 0640 after Helper is observed stopped
+or stale. Both configuration leaves must first pass the existing ownership,
+regular-file, single-link and no-world-write checks. The key must belong to the
+current SSH UID; an opened no-follow directory and file descriptor bind the
+change to the checked inode. The mode change preserves key bytes, UID and GID,
+and does not alter `apps.json`, `blocked`, watchdog or controller state. Other
+unsafe modes, foreign owners, links and substituted paths still refuse.
+
+This repair runs before the existing configuration claim/upload so the immutable
+observer can keep enforcing private key permissions. Both bound observer source
+strings, operation plans, capsules and package receipts remain unchanged. Root
+SSH keeps its previous behavior. Status/configuration readback remains read-only
+and does not repair permissions or reinterpret missing transaction evidence.
+An emergency stop still prevents automatic Helper launch until reviewed through
+the existing TV controls. No new endpoint, persistent record or permission grant
+is introduced; embedding desktop/console/Android installers require rebuilding.
+
+The exact reported refusal and corrected host continuation are covered by
+synthetic filesystem/process regressions. The origin of the firmware's 0775 mode
+and acceptance on the reporting C2 remain unconfirmed. See the
+[dated verification and limits](../history/2026-11-08-issue437-key-mode-repair.md).

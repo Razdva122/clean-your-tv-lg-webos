@@ -1,5 +1,13 @@
 # Release history and device evidence
 
+- [v1.14.0 candidate QA, 2026-11-09](2026-11-09-release-1.14.0-qa.md): exact signed Android upgrade, C3 signed update/profile/renderer/service and owner Home/audio/emergency/standby pass; complete failure inventory, signing-capacity correction and retained optional Homebrew/legacy limits.
+
+- [Shared Root/Beta KeyFilters development, 2026-11-09](2026-11-09-root-beta-keyfilters.md): capability admission, exact legacy Node and ARM32 build checks, component handoff and unverified native-Home/ribbon limits.
+
+- [Next candidate preparation, 2026-11-09](2026-11-09-next-candidate-preparation.md): integrated PR inventory, combined host checks, authenticated published baselines and coordination of unfinished Root/Beta work; no new device acceptance.
+
+- [Root installer catalog reads over SSH, 2026-11-08](2026-11-08-issue389-direct-catalog-ssh.md): fixed bounded reads without TV Node subprocesses, preserved icon/validation behavior and synthetic host verification; reporter-device acceptance remains unverified.
+
 - [v1.13.0 full candidate artifacts, 2026-11-08](2026-11-08-release-1.13.0-artifacts.md): pinned successful full build, exact embedded Helper equivalence, signed Root provenance, genuine update/rollback and explicit remaining acceptance.
 
 - [Helper 0.8.0 pre-dispatch compatibility, 2026-11-08](2026-11-08-helper-0.8.0-compatibility.md): authenticated published Home 1.13.1, exact new Helper, physical short/triple Home, stopped-state readback and explicit remaining final-candidate gates.
@@ -94,6 +102,8 @@ original versions, dates, failed attempts and test limits. A recorded success on
 one model or artifact does not certify later releases or a different TV.
 
 ## Scoped feature checks
+
+- [No-root pairing-key mode repair, 2026-11-08](2026-11-08-issue437-key-mode-repair.md): checked descriptor-only permission restriction for #437, unchanged original-operation evidence and pending reporter-device acceptance.
 
 - [Personal moving-video upload, 2026-11-04](2026-11-04-personal-video-upload.md): desktop video input, source limits, decoder ownership, host/browser evidence and pending TV acceptance.
 

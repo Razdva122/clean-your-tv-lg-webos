@@ -56,6 +56,7 @@ def parser():
     result.add_argument('--identity', type=Path, help=i18n.translate('Existing Root SSH private key'))
     result.add_argument('--data-dir', type=Path, help=i18n.translate('Private local profile directory'))
     result.add_argument('--non-interactive', action='store_true', help=i18n.translate('Never prompt; needs a saved, trusted connection'))
+    result.add_argument('--use-bundled-version', action='store_true', help=i18n.translate('Non-interactive install: explicitly use this installer even if a newer version is available'))
     result.add_argument('--yes', action='store_true', help=i18n.translate('Accept install/remove summary; does not accept SSH trust'))
     result.add_argument('--migrate-home', action='store_true', help=i18n.translate('Root install: explicitly import existing Home packaged/profile data'))
     result.add_argument('--check-payload', action='store_true', help=i18n.translate('Verify embedded release assets without contacting a TV'))
@@ -161,7 +162,7 @@ def choose_profile(args, store, ask, write, search, inspect):
     return state.target(**profile)
 
 
-def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass, search=None, inspect=None, payload_root=None):
+def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass, search=None, inspect=None, payload_root=None, check_updates=False):
     # Preserve the terminal/file encoding; escape unsupported text instead of
     # aborting setup or even --help on redirected legacy Windows streams.
     for stream in (sys.stdout, sys.stderr):
@@ -253,6 +254,10 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 raise UserError('WAM cleanup requires an existing Root SSH connection.')
             if store.pending(profile):
                 raise UserError('Resolve the pending installation or removal before clearing WAM data. Keep recovery records.')
+        if check_updates and args.command == 'install' and not store.pending(profile):
+            from .installer_update import offer
+            if not offer(ask, write, args.non_interactive, args.use_bundled_version):
+                return 0
         if args.command == 'install':
             phase = 'prepare-payload'
             write.step(3, 'Prepare the TV connection')
@@ -727,10 +732,15 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             remote.close()
 
 
+def interactive_main(*args, **kwargs):
+    """Computer frontends opt into the public release advisory before TV changes."""
+    return main(*args, check_updates=True, **kwargs)
+
+
 def entry():
     # Keep the console visible when a frozen Windows executable is opened from Explorer.
     launched_without_args = getattr(sys, 'frozen', False) and sys.platform == 'win32' and len(sys.argv) == 1
-    code = main()
+    code = interactive_main()
     if launched_without_args:
         try:
             input(i18n.translate('\nPress Enter to close…'))

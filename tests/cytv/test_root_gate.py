@@ -56,6 +56,24 @@ class RootGateTests(unittest.TestCase):
             root_gate.install(self.installer,self.inventory)
         self.assertIsNone(self.store.pending(self.profile))
         self.assertEqual(self.remote.uploads,{})
+
+    def test_runtime_variant_cannot_cross_normal_and_beta_payloads(self):
+        path = self.folder/'release.json'
+        original = json.loads(path.read_bytes())
+        for profile_variant, release_variant in ((None, 'node012-beta'), ('node012-beta', None)):
+            with self.subTest(profile=profile_variant, release=release_variant):
+                self.profile.pop('root_variant', None)
+                if profile_variant:
+                    self.profile['root_variant'] = profile_variant
+                release = dict(original)
+                if release_variant:
+                    release['runtime_variant'] = release_variant
+                path.write_text(json.dumps(release))
+                self.refresh()
+                with self.assertRaises(UserError):
+                    root_gate.install(self.installer,self.inventory)
+                self.assertEqual(self.remote.uploads,{})
+                self.assertIsNone(self.store.pending(self.profile))
     def action(self,action,**kwargs):
         self.actions.append((action,kwargs))
         if self.failure==action:raise RuntimeError('interrupted '+action)

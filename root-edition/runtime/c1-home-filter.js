@@ -29,6 +29,27 @@ function init() {
   cytvC1Failed = false;
   cytvC1EverArmed = false;
   try {
+    // configd may retain a JS chain after the compositor changed. Establish no
+    // lease unless the live loader supplies every API used by this filter.
+    if (
+      typeof Qt === 'undefined' ||
+      typeof Qt.Key_Super_L !== 'number' ||
+      !isFinite(Qt.Key_Super_L) ||
+      typeof KeyPolicy === 'undefined' ||
+      typeof KeyPolicy.NextPolicy !== 'number' ||
+      typeof KeyPolicy.Accepted !== 'number' ||
+      KeyPolicy.NextPolicy === KeyPolicy.Accepted ||
+      typeof genericTimer === 'undefined' ||
+      typeof genericTimer.set !== 'function' ||
+      typeof applicationManager === 'undefined' ||
+      typeof applicationManager.launch !== 'function' ||
+      typeof lunaCall === 'undefined' ||
+      typeof lunaCall.subscribe !== 'function' ||
+      typeof lunaCall.send !== 'function'
+    ) {
+      cytvC1Revoke();
+      return;
+    }
     lunaCall.subscribe(
       'com.webos.cleanyourtv.root.lease',
       '/c1Lease',

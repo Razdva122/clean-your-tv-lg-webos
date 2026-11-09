@@ -5,7 +5,7 @@ var assert = require('assert'),
 var source = fs.existsSync(__dirname + '/../runtime/c1-home-filter.js')
   ? fs.readFileSync(__dirname + '/../runtime/c1-home-filter.js', 'utf8')
   : '';
-function setup() {
+function setup(change) {
   var callbacks = [],
     timers = [],
     launches = [],
@@ -40,13 +40,14 @@ function setup() {
       }
     }
   };
+  if (change) change(ctx);
   vm.createContext(ctx);
   vm.runInContext(source, ctx);
   assert.strictEqual(typeof ctx.init, 'function', 'filter must export init');
   ctx.init();
   assert.strictEqual(
     callbacks.length,
-    1,
+    change ? 0 : 1,
     'filter must subscribe to private alias'
   );
   return {
@@ -248,4 +249,40 @@ assert.strictEqual(
   2,
   'next physical press dispatches once after completion'
 );
+[
+  function (ctx) {
+    delete ctx.genericTimer;
+  },
+  function (ctx) {
+    delete ctx.genericTimer.set;
+  },
+  function (ctx) {
+    delete ctx.lunaCall.subscribe;
+  },
+  function (ctx) {
+    delete ctx.lunaCall.send;
+  },
+  function (ctx) {
+    delete ctx.applicationManager.launch;
+  },
+  function (ctx) {
+    ctx.Qt.Key_Super_L = NaN;
+  },
+  function (ctx) {
+    delete ctx.KeyPolicy.Accepted;
+  }
+].forEach(function (change) {
+  var unavailable = setup(change);
+  assert.strictEqual(
+    unavailable.callbacks.length,
+    0,
+    'missing Qt capability must not establish a broker lease'
+  );
+  assert.strictEqual(
+    unavailable.key(true),
+    0,
+    'unverified Qt contract must leave Home with LG'
+  );
+  assert.strictEqual(unavailable.sends.length, 0);
+});
 console.log('C1 compositor filter tests passed');
