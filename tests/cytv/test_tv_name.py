@@ -31,6 +31,8 @@ class TVNameTests(unittest.TestCase):
         prepared,files=package.personalize(raw,'com.gathin.tvhome',{'apps':[{'id':'example.app'}]},tv_name=name)
         info=json.loads(files[prefix+'appinfo.json'])
         self.assertEqual((info['id'],info['version'],info['title']),('com.gathin.tvhome','1.2.3',name))
+        seed=files[prefix+'tv-name-config.js'].decode()
+        self.assertEqual(json.loads(seed.split('=',1)[1].strip().rstrip(';')),name)
         self.assertIn(b'&lt;script&gt;&amp;',files[prefix+'index.html'])
         self.assertNotIn(b'<script>',files[prefix+'index.html'])
         self.assertEqual(files[prefix+'helper'],b'unchanged executable')

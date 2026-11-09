@@ -1,6 +1,6 @@
 # Clean Your TV — guía de uso
 
-Sin publicar: el instalador gráfico y la CLI interactiva piden un nombre, con **Home** como valor predeterminado. Para scripts: `--tv-name "Aashiyaan"`; con `--yes` o sin interacción se usa Home si no se indica otro. El nombre (máximo 48 caracteres) aparece en el lanzador y al cargar webOS; no cambia el nombre de red. LG controla «Loading…». Un paquete posterior puede restaurar el título predeterminado.
+el instalador pide un nombre, **Home** por defecto; CLI: `--tv-name "Aashiyaan"`. Al actualizar una instalación antigua aparece automáticamente **Ajustes → Home → Nombre del televisor**. Puedes guardarlo o restablecer Home cuando quieras. Se conserva al reiniciar y en actualizaciones compatibles, junto con los demás ajustes. Máximo 48 caracteres. Cambia el lanzador y su carga, no el nombre de red. La pantalla anterior de LG puede requerir el instalador.
 
 Cambio del instalador aún no publicado: antes de una nueva instalación, el instalador del ordenador busca una versión estable más reciente en GitHub. Elige «Abrir GitHub y descargar la última versión» para detenerte y descargarla, o «No, instalar esta versión» para continuar explícitamente. Si falla la comprobación, puedes continuar. Las operaciones pendientes y la recuperación omiten esta comprobación.
 

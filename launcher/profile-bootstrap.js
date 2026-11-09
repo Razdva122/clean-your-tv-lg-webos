@@ -222,12 +222,15 @@
           settings: {}
         };
         try {
-          ['tvhome.order', 'tvhome.layout', 'tvhome.language'].forEach(
-            function (key) {
-              var value = localStorage.getItem(key);
-              if (value !== null) s.settings[key] = value;
-            }
-          );
+          [
+            'tvhome.order',
+            'tvhome.layout',
+            'tvhome.language',
+            'tvhome.name'
+          ].forEach(function (key) {
+            var value = localStorage.getItem(key);
+            if (value !== null) s.settings[key] = value;
+          });
         } catch (e) {
           cb(e);
           return;

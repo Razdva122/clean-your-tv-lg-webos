@@ -154,6 +154,49 @@ async function startAppearance(h) {
 }
 (async () => {
   for (const edition of ['no-root', 'root']) {
+    // A new profile round-trips the name through independent system restore;
+    // an older profile without this optional field keeps the origin preference.
+    let named = harness(edition, {
+      snapshotProfile: {
+        ...profile,
+        settings: { ...profile.settings, 'tvhome.name': 'Aashiyaan' }
+      }
+    });
+    await tick();
+    assert.equal(named.memory.get('tvhome.name'), 'Aashiyaan');
+    if (edition === 'root') {
+      assert.equal(
+        (await named.window.RootProfile.capture({ system: true })).settings[
+          'tvhome.name'
+        ],
+        'Aashiyaan'
+      );
+      assert.equal(
+        (await named.window.RootProfile.capture()).settings['tvhome.name'],
+        undefined,
+        'legacy Root updater retains its pinned profile contract'
+      );
+    } else {
+      named.ctx.PalmServiceBridge = function () {
+        this.call = function () {
+          this.onservicecallback(
+            JSON.stringify({ returnValue: true, result: { enabled: false } })
+          );
+        };
+        this.cancel = function () {};
+      };
+      const captured = await new Promise((resolve, reject) =>
+        named.window.HomeProfile.capture((error, value) =>
+          error ? reject(error) : resolve(value)
+        )
+      );
+      assert.equal(captured.settings['tvhome.name'], 'Aashiyaan');
+    }
+    named = harness(edition, {
+      storage: new Map([['tvhome.name', 'Aashiyaan']])
+    });
+    await tick();
+    assert.equal(named.memory.get('tvhome.name'), 'Aashiyaan');
     let h = harness(edition);
     await tick();
     assert.equal(

@@ -9,11 +9,17 @@ connection options. `--yes` and non-interactive installation use Home unless
 `--tv-name` is supplied. The option is only accepted for installation.
 
 Names can contain up to 48 Unicode characters; blank input selects Home and
-control characters are rejected. The installed launcher title and its webOS
-loading-screen label use this name in both editions. LG supplies the localized
-“Loading…” text; this does not change that text or the TV's network name. The
-name persists in the installed package across restart. A later package update
-can restore its own title; this is not an on-TV rename or update-preservation API.
+control characters are rejected. The installer sets the package title and seeds
+the launcher's own loading display. Later, use **Settings → Home → TV name**
+to save a different name or reset to Home. Upgrading an older installation adds
+this control automatically, defaulting to Home without clearing existing settings.
+Saved names survive restart and supported profile-preserving updates; a saved
+choice takes precedence over a replacement package's default seed.
+
+Settings changes the launcher's own title and loading display immediately.
+LG's earlier system loading label comes from installed package metadata and may
+require applying the name through the installer. LG supplies its localized
+“Loading…” message. This feature does not change the TV's network name.
 
 <a id="installer-update-check-unreleased"></a>
 

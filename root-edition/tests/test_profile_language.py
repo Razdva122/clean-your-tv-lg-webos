@@ -18,3 +18,18 @@ class ProfileLanguageTests(unittest.TestCase):
         profile['settings']['tvhome.language'] = '<script>'
         with self.assertRaises(ValueError):
             validate(profile)
+
+
+class ProfileNameTests(unittest.TestCase):
+    def test_optional_name_survives_and_old_profile_remains_valid(self):
+        profile = {'schema': 1, 'inventory': {'apps': [], 'inputs': []},
+                   'config': {'columns': 5, 'dockApps': [], 'hiddenApps': []},
+                   'settings': {}}
+        self.assertNotIn('tvhome.name', validate(profile)['settings'])
+        for name in ('Aashiyaan', 'आशियाना', '🏠' * 48):
+            profile['settings']['tvhome.name'] = name
+            self.assertEqual(validate(profile)['settings']['tvhome.name'], name)
+        for name in ('x' * 49, 'bad\nname', ''):
+            profile['settings']['tvhome.name'] = name
+            with self.assertRaises(ValueError):
+                validate(profile)

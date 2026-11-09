@@ -60,7 +60,12 @@ def validate(value):
         raise ValueError('invalid columns')
     _ids(config['dockApps']); _ids(config['hiddenApps'])
     if 'liveTvApp' in config: _text(config['liveTvApp'], empty=True)
-    _fields(value['settings'], (), ('tvhome.order', 'tvhome.language'))
+    _fields(value['settings'], (), ('tvhome.order', 'tvhome.language', 'tvhome.name'))
+    if 'tvhome.name' in value['settings']:
+        name=value['settings']['tvhome.name']
+        _text(name,192)
+        if len(name)>48 or re.search(r'[\x00-\x1f\x7f-\x9f\u200b-\u200f\u2028-\u202e\u2060-\u206f]',name):
+            raise ValueError('invalid TV name')
     if 'tvhome.language' in value['settings'] and value['settings']['tvhome.language'] not in ('auto', 'en', 'cs', 'de', 'es', 'pt-BR', 'fr', 'it', 'ko', 'hi', 'pl', 'ru'):
         raise ValueError('invalid language')
     if 'tvhome.order' in value['settings']:

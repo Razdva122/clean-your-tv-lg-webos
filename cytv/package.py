@@ -162,6 +162,7 @@ def personalize(data, app, inventory, tv_name=None):
         if info.get('id') != app:
             raise ValueError('Launcher application identity mismatch')
         info['title'] = name
+        files[prefix + 'tv-name-config.js'] = ('window.CYTV_TV_NAME = ' + json.dumps(name, ensure_ascii=True) + ';\n').encode()
         files[prefix + 'appinfo.json'] = (json.dumps(info, ensure_ascii=True, indent=2) + '\n').encode()
         if prefix + 'index.html' in files:
             page = files[prefix + 'index.html'].decode('utf-8')

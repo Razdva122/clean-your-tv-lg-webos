@@ -1,0 +1,50 @@
+#tvNameLoading {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #eee;
+  background: #090b0c;
+}
+#tvNameLoading[hidden] {
+  display: none;
+}
+#tvNameLoading h1 {
+  font-size: 48px;
+  font-weight: 500;
+}
+.tv-name-settings label,
+.tv-name-settings input {
+  display: block;
+  margin-bottom: 12px;
+}
+.tv-name-settings input {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  padding: 12px;
+  color: #eee;
+  background: #24221e;
+  border: 2px solid #74664f;
+}
+.tv-name-settings button {
+  margin-right: 12px;
+}
+.tv-name-settings p {
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+.tv-name-settings {
+  margin-top: 24px;
+}
+.tv-name-settings label,
+.tv-name-settings input {
+  font-size: 24px;
+}

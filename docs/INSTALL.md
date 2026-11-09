@@ -1,13 +1,6 @@
 # Install Clean Your TV
 
-Unreleased: installation asks for a **TV name**, defaulting to **Home**. For
-example, **Aashiyaan** replaces the launcher's title above LG's loading message.
-The graphical installer prefills Home; the CLI also accepts
-`--tv-name "Aashiyaan"`. `--yes` and non-interactive installs use Home unless a
-name is supplied. Names are limited to 48 characters without control characters.
-This names the installed launcher, not the TV's network identity. LG controls
-the “Loading…” message. The name survives restart; a replacement package may
-restore its own default title.
+Unreleased: The installer asks for a TV name, default **Home**; scripts can use `--tv-name "Aashiyaan"`. After upgrading an older installation, **Settings → Home → TV name** is available automatically. Save a new name or reset to Home at any time. A saved name survives restart and supported updates; existing settings remain intact. Names allow up to 48 characters. This controls the launcher and its own loading display, not the network name. LG’s earlier loading label may require applying the name through the installer.
 
 > **Shared experimental compositor backend:** the installer selects this
 > backend for ordinary Root and Root Beta by verified capabilities, without an

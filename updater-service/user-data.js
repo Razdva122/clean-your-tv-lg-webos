@@ -39,11 +39,24 @@
       if (
         (k !== 'tvhome.order' &&
           k !== 'tvhome.layout' &&
-          k !== 'tvhome.language') ||
+          k !== 'tvhome.language' &&
+          k !== 'tvhome.name') ||
         typeof s.settings[k] !== 'string'
       )
         throw Error('invalid-settings');
     });
+    if (
+      s.settings['tvhome.name'] !== undefined &&
+      (!s.settings['tvhome.name'].length ||
+        s.settings['tvhome.name'].replace(
+          /[\ud800-\udbff][\udc00-\udfff]/g,
+          'x'
+        ).length > 48 ||
+        /[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2060-\u206f]/.test(
+          s.settings['tvhome.name']
+        ))
+    )
+      throw Error('invalid-tv-name');
     if (
       s.settings['tvhome.language'] !== undefined &&
       [
