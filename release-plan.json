@@ -1,7 +1,42 @@
 {
   "schema": 1,
   "version": null,
-  "changes": [],
+  "changes": [
+    {
+      "pr": 457,
+      "issues": [
+        240,
+        283,
+        418,
+        438
+      ],
+      "summary": "Improve legacy No-root/C1 removal and asynchronous Root cleanup reconciliation; original #240/#418 installation causes remain unresolved"
+    },
+    {
+      "pr": 459,
+      "issues": [
+        355
+      ],
+      "summary": "Deliver the selected Root runtime through explicit verified reinstallation; original #355 activation and C2 acceptance remain unverified"
+    },
+    {
+      "pr": 460,
+      "issues": [],
+      "summary": "Reconcile current documentation after verified v1.14.0 publication"
+    },
+    {
+      "pr": 461,
+      "issues": [],
+      "summary": "Redesign the product website/demo and add independent Video/4K theme filters"
+    },
+    {
+      "pr": 462,
+      "issues": [
+        440
+      ],
+      "summary": "Admit narrowly verified immutable system images and new native setup after verified cleanup; #440 device acceptance remains unverified"
+    }
+  ],
   "excluded": [],
   "acceptance": ""
 }

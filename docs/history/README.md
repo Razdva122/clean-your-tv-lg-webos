@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [Next candidate integration, 2026-11-09](2026-11-09-next-candidate-integration.md): complete PR batch, asynchronous stock-proof and clean-reinstall conflict resolution, combined host verification and untested release gates.
+
 - [Root installer runtime delivery, 2026-11-09](2026-11-09-root-installer-runtime-delivery.md): explicit verified reinstallation, selected-runtime admission and fresh activation failure explanations; physical C2 acceptance remains pending.
 - [Native install admission and cleanup handoff, 2026-11-09](2026-11-09-issue440-native-install-recovery.md): narrow immutable-system-image admission, explicit pre-journal cleanup and a new fenced native request; synthetic verification, physical acceptance pending.
 
