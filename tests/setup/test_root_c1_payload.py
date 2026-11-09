@@ -46,7 +46,10 @@ class RootC1PayloadTests(unittest.TestCase):
                 self.assertEqual(app['resolution'],graphics)
                 # Exercise the real manifest verifier and recovery selector in
                 # a fresh interpreter; only the device/native call is modeled.
-                subprocess.run([sys.executable, '-c', r"""
+                # Native recovery modules require POSIX; Windows still checks
+                # both packaged ELF executables and the complete manifest above.
+                if sys.platform != 'win32':
+                    subprocess.run([sys.executable, '-c', r"""
 import os,sys
 from pathlib import Path
 from unittest.mock import Mock,patch
