@@ -2,11 +2,12 @@
 
 Unpublished release candidate after v1.13.0, tracked in
 [PR #442](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/442).
-Scope and versions are frozen. Initial full candidate42519326218:1 passed all21
-jobs, but its guarded QA-signing capacity correction (#456) requires one
-replacement full build before final exact-artifact acceptance. The stale build
-pin is removed. [QA case/failure inventory](history/2026-11-09-release-1.14.0-qa.md).
-New physical acceptance and public delivery remain pending.
+Scope and versions are frozen. [Selected full build42566531298:1](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42566531298)
+passed every mandatory job at2f6da451 and is pinned. Its optional, unapproved
+Homebrew job failed an external Python download; no Homebrew promotion is selected.
+The guarded QA-signing correction (#456) replaces the initial full build.
+[Exact Android/C3 preflight QA and remaining physical cases](history/2026-11-09-release-1.14.0-qa.md).
+Physical candidate acceptance and public delivery remain pending.
 
 ## Changes
 
