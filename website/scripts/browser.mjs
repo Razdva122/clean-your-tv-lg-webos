@@ -50,6 +50,128 @@ try {
     headless: true,
     channel: process.env.BROWSER_CHANNEL || 'chrome'
   });
+  // Visitors can choose a look before loading the real, simulated TV renderer.
+  const showcase = await browser.newPage();
+  showcase.on('pageerror', (error) => errors.push(error.message));
+  await showcase.route(/^https:/, (request) => request.abort());
+  await showcase.goto(host + base + 'ru/');
+  assert.equal(
+    await showcase.getByRole('radio').count(),
+    3,
+    'three theme choices on the landing page'
+  );
+  assert.equal(
+    await showcase.locator('[data-showcase] iframe').count(),
+    0,
+    'TV renderer loads only on request'
+  );
+  await showcase.getByRole('radio', { name: 'Classic', exact: true }).check();
+  await showcase
+    .locator('[data-poster="classic"]')
+    .waitFor({ state: 'visible' });
+  await showcase.locator('[data-start-demo]').click();
+  const live = showcase.frameLocator('[data-showcase] iframe');
+  await live.locator('#tiles .focused').waitFor();
+  await showcase.waitForFunction(
+    () =>
+      document
+        .querySelector('[data-showcase] iframe')
+        .contentWindow.ThemeManager?.current().id === 'builtin:classic'
+  );
+  const initialTile = await live.locator('#tiles .focused').textContent();
+  await showcase.locator('[data-demo-key="ArrowRight"]').click();
+  await showcase.waitForFunction(
+    (initial) =>
+      document
+        .querySelector('[data-showcase] iframe')
+        .contentDocument.querySelector('#tiles .focused')?.textContent !==
+      initial,
+    initialTile
+  );
+  await showcase.getByRole('radio', { name: 'Ribbon', exact: true }).check();
+  await showcase.waitForFunction(
+    () =>
+      document
+        .querySelector('[data-showcase] iframe')
+        .contentWindow.ThemeManager?.current().id === 'builtin:ribbon'
+  );
+  await showcase.locator('[data-home-demo]').click();
+  for (const name of ['Liquid Glass', 'Classic', 'Ribbon'])
+    await showcase.getByRole('radio', { name, exact: true }).check();
+  await showcase.waitForFunction(() => {
+    const view = document.querySelector('[data-showcase]');
+    return (
+      view.getAttribute('aria-busy') === 'false' &&
+      view.querySelector('iframe').contentWindow.ThemeManager?.current().id ===
+        'builtin:ribbon'
+    );
+  });
+  assert.equal(
+    await showcase.locator('[data-showcase] iframe').count(),
+    1,
+    'theme changes reuse the renderer'
+  );
+  await showcase.locator('[data-demo-key="Enter"]').click();
+  await live.locator('#toast.shown').waitFor();
+  await showcase.locator('[data-home-demo]').click();
+  assert.equal(
+    new URL(showcase.url()).pathname,
+    base + 'ru/',
+    'demo stays on the landing page'
+  );
+  await showcase.close();
+  const failedShowcase = await browser.newPage();
+  failedShowcase.on('pageerror', (error) => errors.push(error.message));
+  await failedShowcase.route('**/demo/root-launcher/index.html', (request) =>
+    request.abort()
+  );
+  await failedShowcase.goto(host + base + 'en/');
+  await failedShowcase.locator('[data-start-demo]').click();
+  assert.equal(
+    await failedShowcase.locator('[data-showcase] iframe').isVisible(),
+    false,
+    'loading renderer is hidden from keyboard users'
+  );
+  await failedShowcase
+    .getByRole('status')
+    .filter({ hasText: 'The demo could not load.' })
+    .waitFor({ timeout: 16000 });
+  assert.equal(
+    await failedShowcase.locator('[data-showcase] iframe').count(),
+    0,
+    'failed renderer is removed'
+  );
+  await failedShowcase
+    .locator('[data-poster="ribbon"]')
+    .waitFor({ state: 'visible' });
+  await failedShowcase.unroute('**/demo/root-launcher/index.html');
+  await failedShowcase.locator('[data-home-demo]').click();
+  await failedShowcase
+    .frameLocator('[data-showcase] iframe')
+    .locator('#tiles .focused')
+    .waitFor();
+  await failedShowcase.waitForFunction(
+    () => document.querySelector('[data-showcase]').dataset.live === 'true'
+  );
+  await failedShowcase.close();
+  const staticShowcase = await browser.newPage({ javaScriptEnabled: false });
+  await staticShowcase.goto(host + base + 'ru/');
+  await staticShowcase
+    .getByRole('radio', { name: 'Liquid Glass', exact: true })
+    .check();
+  await staticShowcase
+    .locator('[data-poster="liquid-glass"]')
+    .waitFor({ state: 'visible' });
+  assert.equal(
+    await staticShowcase.locator('[data-showcase] iframe').count(),
+    0
+  );
+  assert.equal(
+    await staticShowcase.locator('[data-start-demo]').getAttribute('href'),
+    base + 'demo/',
+    'no-JS link opens the standalone demo'
+  );
+  await staticShowcase.close();
   // Each visitor starts with fresh storage; regional browser tags map to site locales.
   for (const [languages, expected] of [
     [['ru-RU', 'en-US'], 'ru'],
@@ -324,7 +446,7 @@ try {
       }
       // Load below-the-fold lazy images before judging resources or full-page QA.
       for (const img of await page.locator('img').all()) {
-        await img.scrollIntoViewIfNeeded();
+        if (await img.isVisible()) await img.scrollIntoViewIfNeeded();
         await img.evaluate((image) => image.decode());
       }
       await page.evaluate(() => scrollTo(0, 0));

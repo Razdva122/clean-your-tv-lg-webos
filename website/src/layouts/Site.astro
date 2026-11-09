@@ -16,6 +16,7 @@ import {
   articleRoute,
   type ArticleMetadata
 } from '../lib/articles';
+import { landingCopy } from '../lib/landing';
 interface Props {
   lang: Locale;
   section?: Section;
@@ -37,12 +38,16 @@ const pageRoute = (code: Locale) =>
   inArticles ? articleRoute(code, article?.topic) : route(code, section);
 const pageDescription =
   article?.description ??
-  (articles ? articleCopy[lang].description : description(lang, section));
+  (articles
+    ? articleCopy[lang].description
+    : section
+      ? description(lang, section)
+      : landingCopy[lang].intro);
 const title = inArticles
   ? `${article?.title ?? articleCopy[lang].indexTitle} | Clean Your TV — LG webOS`
   : section
     ? `${t.nav[index]} | Clean Your TV — LG webOS`
-    : `Clean Your TV — LG webOS | ${t.headline}`;
+    : `Clean Your TV — LG webOS | ${landingCopy[lang].headline}`;
 const canonical = origin + pageRoute(lang);
 const breadcrumbs = [
   { name: articleCopy[lang].homeLabel, item: origin + route(lang) },

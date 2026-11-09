@@ -1,10 +1,14 @@
 ---
 import { support } from '../lib/support';
 import { articleCopy, articleRoute, getArticles } from '../lib/articles';
+import { landingCopy } from '../lib/landing';
+import LauncherShowcase from './LauncherShowcase.astro';
+import CompatibilityReports from './CompatibilityReports.astro';
 import { copy, route, base, repo, type Locale } from '../lib/site';
 const { lang } = Astro.props as { lang: Locale };
 const t = copy[lang],
   extra = support[lang];
+const landing = landingCopy[lang];
 const articles = (await getArticles()).filter(
   (entry) => entry.data.lang === lang
 );
@@ -12,35 +16,18 @@ const articles = (await getArticles()).filter(
 
 <section class="hero shell">
   <div class="intro-grid">
-    <h1>{t.headline}</h1>
-    <p class="lead">{t.summary}</p>
+    <h1>{landing.headline}</h1>
+    <p class="lead">{landing.intro}</p>
     <div class="actions">
-      <a class="button" href={route(lang, 'install')}>
-        {t.nav[1]}
+      <a class="button" href={base + 'demo/'} data-start-demo>
+        {landing.tryLabel}
       </a>
-      <a class="button secondary" href={base + 'demo/'}>
-        {t.tryDemo}
+      <a class="button secondary" href={route(lang, 'install')}>
+        {landing.installLabel}
       </a>
     </div>
   </div>
-  <figure class="tv" data-kind="product">
-    <a class="tv-screen" href={base + 'demo/'} aria-label={t.tryDemo}>
-      <img
-        src={base + 'assets/liquid-glass.jpg'}
-        alt={`${t.themeImage}: Liquid Glass`}
-        width="960"
-        height="540"
-        fetchpriority="high"
-      />
-    </a>
-    <figcaption>
-      <span>Liquid Glass</span>
-      <a href={base + 'demo/'}>
-        {t.tryDemo}
-        <span aria-hidden="true"> ↗</span>
-      </a>
-    </figcaption>
-  </figure>
+  <LauncherShowcase lang={lang} />
 </section>
 
 <section class="shell benefits" aria-label={t.readMore}>
@@ -49,6 +36,18 @@ const articles = (await getArticles()).filter(
       <p>{text}</p>
     ))}
   </div>
+</section>
+
+<section class="shell evidence-section">
+  <details>
+    <summary>{extra.reportsTitle}</summary>
+    <p>{t.compatibility}</p>
+    <CompatibilityReports lang={lang} />
+    <a class="text-link" href={route(lang, 'compatibility')}>
+      {t.requirements}
+      <span aria-hidden="true"> ↗</span>
+    </a>
+  </details>
 </section>
 
 <section class="shell theme-section">

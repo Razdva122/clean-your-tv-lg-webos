@@ -1,0 +1,103 @@
+---
+import { landingCopy, showcaseThemes } from '../lib/landing';
+import { base, copy, type Locale } from '../lib/site';
+const { lang } = Astro.props as { lang: Locale };
+const t = landingCopy[lang];
+---
+
+<div
+  class="showcase"
+  id="try-home"
+  data-showcase
+  data-base={base}
+  data-loading={t.loadingLabel}
+  data-ready={t.readyLabel}
+  data-error={t.errorLabel}
+>
+  <div class="showcase-toolbar">
+    <fieldset class="theme-picker">
+      <legend>{t.chooseLabel}</legend>
+      <div>
+        {showcaseThemes.map((theme) => (
+          <label>
+            <input
+              type="radio"
+              name="launcher-theme"
+              value={theme.id}
+              checked={theme.id === 'ribbon'}
+            />
+            <span>{theme.title}</span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+    <div
+      class="demo-remote"
+      role="group"
+      aria-label={t.remoteLabel}
+      hidden
+      data-demo-controls
+    >
+      <button type="button" class="remote-home" data-home-demo>
+        Home
+      </button>
+      <div>
+        <button
+          type="button"
+          data-demo-key="ArrowLeft"
+          aria-label={t.pressLeftLabel}
+        >
+          ←
+        </button>
+        <button type="button" data-demo-key="Enter" aria-label={t.pressOkLabel}>
+          OK
+        </button>
+        <button
+          type="button"
+          data-demo-key="ArrowRight"
+          aria-label={t.pressRightLabel}
+        >
+          →
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="showcase-stage">
+    <div class="showcase-screen" data-demo-screen>
+      {showcaseThemes.map((theme) => (
+        <img
+          data-poster={theme.id}
+          src={base + 'assets/' + theme.id + '.jpg'}
+          alt={`${copy[lang].themeImage}: ${theme.title}`}
+          width="1920"
+          height="1080"
+          fetchpriority={theme.id === 'ribbon' ? 'high' : 'auto'}
+        />
+      ))}
+    </div>
+  </div>
+  <div class="showcase-console">
+    <div class="showcase-instruction">
+      <p data-demo-status role="status" aria-live="polite">
+        {t.homeHint}
+      </p>
+      <span>{t.navigateHint}</span>
+    </div>
+    <a class="showcase-start" href={base + 'demo/'} data-showcase-start>
+      {t.startLabel}
+      <span aria-hidden="true"> ↗</span>
+    </a>
+  </div>
+  <div class="showcase-caption">
+    <p>{t.demoLabel}</p>
+    <a href={base + 'demo/'}>
+      {t.fullDemoLabel}
+      <span aria-hidden="true"> ↗</span>
+    </a>
+  </div>
+</div>
+
+<script>
+  import { initShowcase } from '../lib/showcase';
+  for (const element of document.querySelectorAll<HTMLElement>('[data-showcase]')) initShowcase(element);
+</script>
