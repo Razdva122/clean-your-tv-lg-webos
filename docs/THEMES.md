@@ -180,13 +180,28 @@ In the unpublished candidate, open **Settings → Weather** after Wallpapers.
 Weather starts off. Turn it on, choose a city manually or explicitly request
 approximate automatic location, then choose units and an available format.
 Automatic lookup uses the network's approximate location; correct the city
-manually if needed. No provider API key is required. Open **Data sources** in
-the Weather heading for attribution. Weather and location preferences stay
+manually if needed. Choose **Auto**, **MET Norway** or **Open-Meteo** as the
+forecast provider. Auto starts with MET Norway, tries Open-Meteo once on failure,
+then reuses the last successful source and its cache. A manually selected source
+never switches providers automatically. New settings use Auto; saved settings
+without a provider keep Open-Meteo. The actual source appears in settings. No
+provider API key is required. Open **Data sources** in the Weather heading for
+attribution. Weather and location preferences stay
 local and are not included in legacy profile exports.
 
 Classic and compatible downloaded themes support Compact, Now, In detail and
 4 days. Liquid Glass supports Compact; Ribbon and Atmosphere hide weather; Ribbon sends no
 weather requests. A theme can hide weather before the header when space is
 limited. Offline data expires after six hours; unavailable weather does not
-block Home. See [weather implementation and limits](development/WEATHER.md)
+block Home. MET Norway refreshes no more often than every three hours. Missing
+optional fields are hidden; MET does not supply feels-like temperature or
+precipitation probability. Its daily ranges summarize forecast points, not
+observed daily extremes. Provider availability depends on your network.
+
+Forecast requests send the selected coordinates to `api.met.no` or
+`api.open-meteo.com`. City search uses `geocoding-api.open-meteo.com`; optional
+automatic location uses `get.geojs.io` and your public IP address. MET Norway
+data is credited to the Norwegian Meteorological Institute (CC BY 4.0); provider
+terms and other credits are available in Data sources. See
+[weather implementation and limits](development/WEATHER.md)
 and [candidate release notes](RELEASE-1.15.0.md).
