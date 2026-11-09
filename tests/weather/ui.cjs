@@ -6,9 +6,14 @@ const { chromium } = require('playwright'),
   { pathToFileURL } = require('node:url');
 const site = path.resolve(process.env.WEATHER_SITE || 'build/tests/weather-ui');
 if (!process.env.WEATHER_SITE) {
-  const cp = require('node:child_process');
+  const cp = require('node:child_process'),
+    localPython = path.resolve(
+      '.venv-cytv',
+      process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python'
+    );
   cp.execFileSync(
-    process.env.PYTHON || path.resolve('.venv-cytv/bin/python'),
+    process.env.PYTHON ||
+      (fs.existsSync(localPython) ? localPython : 'python3'),
     ['scripts/preview.py', '--build', site],
     { stdio: 'pipe' }
   );

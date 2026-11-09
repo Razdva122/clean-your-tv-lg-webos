@@ -103,11 +103,17 @@ try {
     'stop-io.js': source.replace(fixed, broker),
     'denied-io.js': source.replace(fixed, denied),
     'missing-io.js': source,
-    'timeout-io.js': replaceOnce(
+    'timeout-io.js': source.replace(fixed, broker),
+    // Expire this callback only after the native hold is observed. Transport
+    // faults above keep the real deadline; a short startup budget is racy.
+    'held-timeout-io.js': [
+      "'use strict';",
+      'var fixtureTimeout = null;',
+      'function setTimeout(callback) { return (fixtureTimeout = {callback: callback}); }',
+      'function clearTimeout(timer) { if (fixtureTimeout === timer) fixtureTimeout = null; }',
       source.replace(fixed, broker),
-      /\bTIMEOUT\s*=\s*10000\b/g,
-      'TIMEOUT=150'
-    ),
+      'module.exports._expireTimeoutForTests = function () { if (!fixtureTimeout) throw Error("No pending fixture timeout"); var callback = fixtureTimeout.callback; fixtureTimeout = null; callback(); };'
+    ].join('\n'),
     'exhausted-io.js': replaceOnce(
       source.replace(fixed, broker),
       /\bnextID\s*=\s*1\b/g,
