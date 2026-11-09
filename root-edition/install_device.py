@@ -836,7 +836,7 @@ class LocalDevice:
             'startup-policy.json','startup-policy.lock','health.log','audio','failsafe',
             'home-backend.json','c1-gate','c1-keyfilter','personalization.json','personalization',
             'state','ssap.json','apps.json','config.json','firmware-permissions.json',
-            'theme-receiver-permissions.json','wallpaper-media-permissions.json','audio-recovery',
+            'theme-receiver-permissions.json','wallpaper-media-permissions.json','weather-permissions.json','audio-recovery',
             'boot-decision.json','session.json','persistent-operation.lock','profile-guardian.log',
             'emergency.log','escape-ready.json','permissions','firmware-permissions.lock','system-permissions.json'}
         updater_allowed={'code','cache','profiles','run-service','python-launcher','python-runtime.json',
@@ -1095,7 +1095,7 @@ class LocalDevice:
                      'profile-candidate.stage','home-backend.json','c1-gate/active',
                      'c1-keyfilter/ownership.json','c1-keyfilter/pending.json',
                      'startup-hook.json','startup-hook.previous.json','system-permissions.json',
-                     'firmware-permissions.json','theme-receiver-permissions.json','wallpaper-media-permissions.json'):
+                     'firmware-permissions.json','theme-receiver-permissions.json','wallpaper-media-permissions.json','weather-permissions.json'):
             path=ROOT/name
             if os.path.lexists(path):backup[name]=safe_bytes(path,uid=self.ownership.store.uid).decode('utf-8')
         for prefix,root in (('root-updater',UPDATER),('system-updater',SUPERVISOR)):

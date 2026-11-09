@@ -250,8 +250,11 @@ const inventory = require('../../root-edition/service/app-inventory');
         if (name === './handlers')
           return require('../../root-edition/service/handlers');
         if (name === './app-inventory') return serviceInventory;
-        if (name === './theme-receiver' || name === './c1-lease')
-          return () => {};
+        if (name === './weather')
+          return require('../../renewal-service/weather');
+        if (name === './theme-receiver')
+          return require('../../theme-receiver/register');
+        if (name === './c1-lease') return () => {};
         if (name === './presentation-context')
           return require('../../root-edition/service/presentation-context');
         throw Error('Unexpected import ' + name);

@@ -247,7 +247,7 @@ class Tests(unittest.TestCase):
         with patch.dict(sys.modules,{'intent_runtime':intent,'update_guard':updates}):
             self.assertEqual(ns['execute']('boot'),{'home':'safe'})
             self.assertEqual(ns['execute']('finish-update','tx'),{'finished':True})
-        self.assertEqual(calls,[{'lock_product':False,'automatic':True,'feature':f} for _ in range(2) for f in ('firmware','theme-receiver')])
+        self.assertEqual(calls,[{'lock_product':False,'automatic':True,'feature':f} for _ in range(2) for f in ('firmware','theme-receiver')]+[{'lock_product':False,'automatic':True,'feature':'weather'}])
 
     def test_wallpaper_startup_prepares_only_own_apis_before_backend_dispatch(self):
         raw=(ROOT/'root-edition/runtime/cli.py').read_text();tree=ast.parse(raw);calls=[]
@@ -257,7 +257,7 @@ class Tests(unittest.TestCase):
             node=next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name==name)
             exec(ast.get_source_segment(raw,node),ns)
         self.assertTrue(ns['execute']('provision-wallpaper-access')['returnValue'])
-        self.assertEqual(calls,[{'lock_product':False,'automatic':True,'feature':feature} for feature in ('theme-receiver','wallpaper-media')])
+        self.assertEqual(calls,[{'lock_product':False,'automatic':True,'feature':feature} for feature in ('theme-receiver','wallpaper-media','weather')])
 
     def test_host_streams_verified_source_instead_of_a_long_ssh_command(self):
         from cytv.operations import Installer
@@ -329,6 +329,64 @@ class Tests(unittest.TestCase):
         proof=json.loads(self.proof.read_bytes())
         proof['files'].update({str(path):sha(path.read_bytes()) for path in (package,worker)})
         self.proof.write_bytes(encode(proof))
+
+    def weather(self, enable=True):
+        return self.function(self.root,self.bus,self.apps,self.install,feature='weather',enable=enable,refresh=lambda:self.events.append('scan'),uid=os.getuid())
+
+    def test_weather_attachment_requires_protected_worker_and_preserves_existing_receipts(self):
+        before=self.manifest.read_bytes()
+        with self.assertRaises(ValueError):self.weather()
+        self.assertEqual(self.manifest.read_bytes(),before)
+        self.protect_media_worker()
+        with self.assertRaises(ValueError):self.weather()
+        package=self.root/'service/package.json'
+        package.write_bytes(encode({'name':SERVICE,'wallpaperMediaProtocol':1,'weatherForecastProtocol':1}))
+        proof=json.loads(self.proof.read_bytes());proof['files'][str(package)]=sha(package.read_bytes());self.proof.write_bytes(encode(proof))
+        block=self.root/'update-block.json';block.write_bytes(encode({'transaction':'a'*32}));block.chmod(0o600)
+        with self.assertRaises(ValueError):self.weather()
+        block.unlink()
+        self.receiver();self.media()
+        receipts={p:p.read_bytes() for p in (self.root/'theme-receiver-permissions.json',self.root/'wallpaper-media-permissions.json',self.snapshot,self.proof,*self.paths.values())}
+        self.weather();self.receiver();self.media()
+        api=self.root/'permissions/weather.api.json'
+        self.assertEqual(json.loads(api.read_bytes()),{GROUP:[SERVICE+'/weatherForecast',SERVICE+'/weatherForecastCancel']})
+        for path,raw in receipts.items():self.assertEqual(path.read_bytes(),raw)
+        self.weather(False);self.media(False);self.receiver(False)
+        self.assertEqual(json.loads(self.manifest.read_bytes()),self.normal)
+        self.assertFalse(api.exists())
+        self.assertFalse((self.root/'weather-permissions.json').exists(), 'old removal must see no unknown receipt')
+
+    def test_weather_suspend_reverts_grant_before_older_code_is_installed(self):
+        self.protect_media_worker()
+        package=self.root/'service/package.json';package.write_bytes(encode({'name':SERVICE,'weatherForecastProtocol':1,'wallpaperMediaProtocol':1}))
+        proof=json.loads(self.proof.read_bytes());proof['files'][str(package)]=sha(package.read_bytes());self.proof.write_bytes(encode(proof))
+        self.receiver();self.media();before=self.manifest.read_bytes()
+        siblings={p:p.read_bytes() for p in (self.root/'theme-receiver-permissions.json',self.root/'wallpaper-media-permissions.json',self.snapshot,*self.paths.values())}
+        self.weather()
+        raw=(ROOT/'root-edition/runtime/cli.py').read_text();tree=ast.parse(raw)
+        node=next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='execute')
+        events=[]
+        def suspend(*args):events.append('suspend');return 'restored'
+        def access(**kw):
+            self.assertEqual(events,['suspend'])
+            self.assertEqual(kw,{'lock_product':False,'enable':False,'feature':'weather'})
+            return self.weather(False)
+        gate=types.SimpleNamespace(execute=lambda *args:suspend())
+        ns={'d':types.SimpleNamespace(STATE=self.root,EXPECTED_UID=os.getuid()),'os':os,'gate_backend':lambda:gate,'firmware_access':access}
+        exec(ast.get_source_segment(raw,node),ns)
+        self.assertEqual(ns['execute']('suspend-update','a'*32),'restored')
+        self.assertEqual(self.manifest.read_bytes(),before)
+        self.assertFalse((self.root/'permissions/weather.api.json').exists())
+        self.assertFalse((self.root/'weather-permissions.json').exists())
+        for path,value in siblings.items():self.assertEqual(path.read_bytes(),value)
+        # An older runtime knows these exact sibling receipts; its normal call remains valid.
+        self.receiver();self.media()
+        self.weather();events.clear()
+        api=self.root/'permissions/weather.api.json';api.write_bytes(b'foreign drift')
+        with self.assertRaises(ValueError):ns['execute']('suspend-update','b'*32)
+        self.assertTrue((self.root/'weather-permissions.json').exists())
+        self.assertEqual(api.read_bytes(),b'foreign drift')
+
 
     def test_media_attachment_requires_protected_worker_capability_and_preserves_legacy_contract(self):
         before=self.manifest.read_bytes()

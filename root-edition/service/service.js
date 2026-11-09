@@ -189,4 +189,9 @@ service.register('listApps', function (message) {
 });
 
 // This HTTP receiver never exposes recovery or root runtime operations.
-require('./theme-receiver')(service, { appId: 'com.cleanyourtv.root.preview' });
+var themeReceiver = require('./theme-receiver');
+themeReceiver(service, { appId: 'com.cleanyourtv.root.preview' });
+require('./weather')(service, {
+  appId: 'com.cleanyourtv.root.preview',
+  hold: themeReceiver.activityHold(service, 'weatherForecast')
+});

@@ -105,7 +105,8 @@ def firmware_access(root='/var/lib/clean-your-tv-root', base='/var/luna-service2
     features={
         'firmware':('homebrew-configuration','firmware-permissions',['org.webosbrew.hbchannel.service/getConfiguration','org.webosbrew.hbchannel.service/setConfiguration']),
         'theme-receiver':('theme-receiver','theme-receiver-permissions',[service+'/'+name for name in ('themeReceiverStart','themeReceiverStatus','themeReceiverRead','themeReceiverStop')]),
-        'wallpaper-media':('wallpaper-media','wallpaper-media-permissions',[service+'/'+name for name in ('wallpaperCacheStart','wallpaperCacheWrite','wallpaperCacheCommit','wallpaperCacheKeepAlive','wallpaperCacheStop')])}
+        'wallpaper-media':('wallpaper-media','wallpaper-media-permissions',[service+'/'+name for name in ('wallpaperCacheStart','wallpaperCacheWrite','wallpaperCacheCommit','wallpaperCacheKeepAlive','wallpaperCacheStop')]),
+        'weather':('weather','weather-permissions',[service+'/weatherForecast',service+'/weatherForecastCancel'])}
     if feature not in features or repair is not None and feature!='firmware':raise ValueError('Invalid permission feature')
     filename,receipt_name,methods=features[feature]
     api=root/'permissions'/(filename+'.api.json');receipt=root/(receipt_name+'.json')
@@ -172,11 +173,14 @@ def firmware_access(root='/var/lib/clean-your-tv-root', base='/var/luna-service2
         for name,expected in proof['files'].items():
             path=Path(name)
             if not path.is_absolute() or '..' in path.parts or root not in path.parents or not isinstance(expected,str) or not re.fullmatch('[a-f0-9]{64}',expected) or digest(secure(path))!=expected:raise ValueError('Root recovery code changed')
-        if enable and feature=='wallpaper-media':
+        if enable and feature=='weather' and os.path.lexists(root/'update-block.json'):
+            raise ValueError('Weather permission setup waits for update completion')
+        if enable and feature in ('wallpaper-media','weather'):
             package=root/'service/package.json'
             if not {str(package),str(root/'service/service.js')}.issubset(proof['files']):raise ValueError('Protected wallpaper worker required')
             capability=read(package)
-            if capability.get('name')!=service or type(capability.get('wallpaperMediaProtocol')) is not int or capability['wallpaperMediaProtocol']!=1:raise ValueError('Protected wallpaper media capability required')
+            protocol='weatherForecastProtocol' if feature=='weather' else 'wallpaperMediaProtocol'
+            if capability.get('name')!=service or type(capability.get(protocol)) is not int or capability[protocol]!=1:raise ValueError('Protected wallpaper media capability required')
         snapshot=read(root/'ls2-provision-snapshot.json')
         paths={key:base/folder/(service+suffix) for key,folder,suffix in (('service','services.d','.service'),('role','roles.d','.service.json'),('client','client-permissions.d','.service.json'),('api','api-permissions.d','.api.json'))}
         if not isinstance(snapshot,dict) or snapshot.get('version')!=1 or snapshot.get('service')!=service or snapshot.get('phase') is not None or set(snapshot.get('files',{}))!={str(p) for p in paths.values()}:raise ValueError('Root provisioning is not active')
@@ -252,6 +256,10 @@ def firmware_access(root='/var/lib/clean-your-tv-root', base='/var/luna-service2
         else:
             if os.path.lexists(api):api.unlink();sync(api.parent)
             atomic(receipt,encoded(dict(saved,phase='disabled')))
+            if feature=='weather':
+                # No weather permission preference persists across a downgrade.
+                # Older retained workers must see their exact pre-grant baseline.
+                receipt.unlink();sync(receipt.parent)
         return {'returnValue':True,'permissions_installed':enable,'effective_verified':False,'reopen_home':True}
 
 
@@ -306,21 +314,32 @@ def main(mode, transaction=None):
 def execute(mode, transaction=None):
     if mode == 'provision-wallpaper-access':
         ready=True
-        for feature in ('theme-receiver','wallpaper-media'):
+        for feature in ('theme-receiver','wallpaper-media','weather'):
             try:
                 result=firmware_access(lock_product=False,automatic=True,feature=feature)
                 ready=ready and result.get('permissions_installed') is True
             except Exception:ready=False
         return {'returnValue':True,'permissions_installed':ready}
     gate = gate_backend()
+    if mode in ('suspend-update','finish-update','abort-update'):
+        if gate is not None:
+            result = gate.execute(mode, transaction, d.STATE, d.EXPECTED_UID)
+        else:
+            from update_guard import suspend, finish, abort
+            operation = {'suspend-update':suspend,'finish-update':finish,'abort-update':abort}[mode]
+            result = operation(transaction,d.STATE,d.EXPECTED_UID)
+        if mode == 'suspend-update':
+            # Retained updaters call this current, verified runtime before
+            # replacing Home/infrastructure, including rollback to old workers.
+            if any(os.path.lexists(d.STATE/name) for name in ('weather-permissions.json','permissions/weather.api.json')):
+                firmware_access(lock_product=False,enable=False,feature='weather')
+        else:
+            if gate is None and mode == 'finish-update':reconcile_firmware_access()
+            try:firmware_access(lock_product=False,automatic=True,feature='weather')
+            except Exception:pass  # Optional permission failure cannot block routing recovery.
+        return result
     if gate is not None:
         return gate.execute(mode, transaction, d.STATE, d.EXPECTED_UID)
-    if mode in ('suspend-update','finish-update','abort-update'):
-        from update_guard import suspend, finish, abort
-        operation = {'suspend-update':suspend,'finish-update':finish,'abort-update':abort}[mode]
-        result = operation(transaction,d.STATE,d.EXPECTED_UID)
-        if mode == 'finish-update': reconcile_firmware_access()
-        return result
     if mode == 'provision-firmware-access':
         return firmware_access(lock_product=False,automatic=True)
     if mode == 'confirm':

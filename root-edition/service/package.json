@@ -3,5 +3,6 @@
   "version": "0.15.0",
   "main": "service.js",
   "private": true,
-  "wallpaperMediaProtocol": 1
+  "wallpaperMediaProtocol": 1,
+  "weatherForecastProtocol": 1
 }
