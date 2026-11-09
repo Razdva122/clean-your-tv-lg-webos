@@ -54,6 +54,11 @@
       "summary": "Stabilize QA log rotation, portable weather staging and native lease timeout fixtures without product behavior changes"
     },
     {
+      "pr": 466,
+      "issues": [],
+      "summary": "Fix weather API availability with MET Norway and Compact preview fitting"
+    },
+    {
       "pr": 468,
       "issues": [],
       "summary": "Detect and remember website visitor language"

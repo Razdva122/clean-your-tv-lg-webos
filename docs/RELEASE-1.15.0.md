@@ -1,8 +1,8 @@
 # v1.15.0 — weather and installation recovery
 
 Unpublished release candidate in [PR #458](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/458).
-Versions remain selected; the weather correction batch is being verified before
-the replacement complete candidate build. Public delivery, exact-artifact
+Versions and the ten-PR scope are frozen after the reviewed weather correction
+batch. Public delivery, exact-artifact
 acceptance of that replacement and final package/feed verification remain pending.
 
 ## Changes
@@ -73,8 +73,9 @@ webOS SDK11.2.0, Magic Remote exact model unknown; macOS15.6.1 ARM64 installer).
 Its exact signed Android upgrade passed on an isolated API35 ARM64 emulator.
 That case pass found Compact preview overflow and direct Open-Meteo forecast
 connectivity failure. The correction batch adds MET and repairs the preview;
-native MET transport feasibility passed, but installed integration and the
-replacement artifacts still need acceptance. Earlier results retain their
+installed native MET/API cases7/7 and preview cases39/39 now pass. Supported
+rollback/forward removes and recreates the MET grant while preserving preferences
+and profile state. Final replacement artifacts still need affected acceptance. Earlier results retain their
 original hashes. Physical Home routing, audible sound, emergency behavior,
 standby, cold boot and OTA remain untested in this session.
 
