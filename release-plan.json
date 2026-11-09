@@ -52,13 +52,13 @@
       "pr": 465,
       "issues": [],
       "summary": "Stabilize QA log rotation, portable weather staging and native lease timeout fixtures without product behavior changes"
+    },
+    {
+      "pr": 468,
+      "issues": [],
+      "summary": "Detect and remember website visitor language"
     }
   ],
   "excluded": [],
-  "acceptance": "",
-  "build": {
-    "run_id": 42624656506,
-    "attempt": 1,
-    "source": "a520df7e183993d15dee69d0e7c06a8241c08c62"
-  }
+  "acceptance": ""
 }
