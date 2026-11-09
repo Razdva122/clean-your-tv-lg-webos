@@ -56,6 +56,9 @@ records pre-dispatch verification. Earlier implementation results are in the
 and [weather integration](development/2026-11-09-weather-integration.md) records.
 Those checks do not establish a successful full versioned candidate or new TV
 acceptance. The current selected build and remaining gates belong to PR #458.
+The [dated QA inventory](history/2026-11-09-release-1.15.0-qa.md) records the
+failed first build and #464's reviewed discovery-fixture correction before one
+replacement full candidate. No failed build is selected.
 
 No TV was contacted during preparation. Model, firmware/webOS and remote for
 this candidate's acceptance are unselected/unknown. Real-TV provider TLS/CORS,

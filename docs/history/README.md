@@ -1,5 +1,6 @@
 # Release history and device evidence
 
+- [v1.15.0 candidate QA, failure inventory and iterations](2026-11-09-release-1.15.0-qa.md)
 - [v1.15.0 candidate preparation and scoped cases](2026-11-09-release-1.15.0-preparation.md)
 
 - [Weather candidate integration, 2026-11-09](2026-11-09-weather-candidate-integration.md): green-CI Home/toolkit merges, updated release inventory and packaging decisions; public delivery and physical acceptance pending.

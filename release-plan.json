@@ -42,6 +42,11 @@
         353
       ],
       "summary": "Add optional localized Home weather, theme-aware formats, city/units settings and weather-compatible theme updates; retire Channel and Itachi from the active catalog"
+    },
+    {
+      "pr": 464,
+      "issues": [],
+      "summary": "Keep theme discovery lifecycle on an exact active fixture and current staged engine metadata after Channel retirement"
     }
   ],
   "excluded": [],
