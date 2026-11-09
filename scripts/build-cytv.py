@@ -94,15 +94,20 @@ def stage_c1_root(payload, work, version, run=subprocess.run):
     run([sys.executable, '-m', 'ziglang', 'cc', '-target', 'arm-linux-musleabi',
          '-Os', '-static', '-s', 'root-edition/gate/keyfilter.c', '-o', str(helper)],
         cwd=ROOT, env=environment, check=True)
-    stage_keyfilter_variants(payload, version, helper, run=run)
+    recovery = Path(work) / 'c1-home-gate'
+    run([sys.executable, '-m', 'ziglang', 'cc', '-target', 'arm-linux-musleabi',
+         '-Os', '-static', '-s', 'root-edition/gate/gate.c', '-o', str(recovery)],
+        cwd=ROOT, env=environment, check=True)
+    stage_keyfilter_variants(payload, version, helper, run=run, mount_recovery=recovery)
     return helper
 
 
-def stage_keyfilter_variants(payload, version, helper, run=subprocess.run, legacy_node_beta=False):
+def stage_keyfilter_variants(payload, version, helper, run=subprocess.run, legacy_node_beta=False, mount_recovery=None):
     for graphics, folder in C1_GRAPHICS.items():
         run([sys.executable, 'root-edition/build.py', '--output', str(Path(payload) / folder),
              '--version', version, '--resolution', graphics, '--experimental-c1-keyfilter', str(helper),
-             *(['--legacy-node-beta'] if legacy_node_beta else [])],
+             *(['--legacy-node-beta'] if legacy_node_beta else []),
+             *(['--c1-mount-recovery', str(mount_recovery)] if mount_recovery is not None else [])],
             cwd=ROOT, check=True)
 
 

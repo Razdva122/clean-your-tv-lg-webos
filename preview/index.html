@@ -2,38 +2,137 @@
 <html lang="en">
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Home · Local Preview</title>
+  <title>Clean Your TV · Interactive demo</title>
   <link rel="icon" href="data:," />
   <link rel="stylesheet" href="launcher/theme-panel.css" />
   <style>
+    :root {
+      color-scheme: dark;
+      --paper: #202022;
+      --ink: #f5f5f7;
+      --muted: #b7b7bf;
+      --line: #ffffff24;
+      --surface: #ffffff05;
+    }
     * { box-sizing: border-box; }
-    body { margin: 0; background: #111113; color: #ededee; font: 14px system-ui, sans-serif; height: 100vh; display: flex; flex-direction: column; }
-    header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; padding: 16px 24px; border-bottom: 1px solid #303034; }
-    strong { font-size: 16px; } span { color: #aaaab2; }
-    nav { display: flex; gap: 4px; padding: 4px; border: 1px solid #44444b; border-radius: 10px; }
-    nav button { border: 0; border-radius: 6px; padding: 9px 14px; background: transparent; color: #aaaab2; font: inherit; cursor: pointer; }
-    nav button[aria-pressed="true"] { background: #ededee; color: #111113; }
-    nav button:focus-visible { outline: 2px solid #92b8ff; outline-offset: 2px; }
-    .themes { padding:12px 24px;border-bottom:1px solid #303034; }
-    .themes h2 { font-size:14px;margin:0 0 10px; }
-    #previewThemes { display:flex;gap:10px;overflow-x:auto;padding:3px; }
-    #previewThemes button { flex:0 0 160px;text-align:left;background:#19191d;color:inherit;border:1px solid #44444b;border-radius:9px;padding:0 0 9px;overflow:hidden;cursor:pointer;font:inherit; }
-    #previewThemes button[aria-pressed="true"] { border-color:#ededee;box-shadow:0 0 0 1px #ededee; }
-    #previewThemes button:focus-visible { outline:2px solid #92b8ff;outline-offset:2px; }
-    #previewThemes button:disabled { opacity:.6;cursor:wait; }
-    #previewThemes img { display:block;width:160px;height:90px;object-fit:cover; }
-    #previewThemes strong,#previewThemes small { display:block;margin:7px 10px 0; }
-    #previewThemes strong { font-size:13px; } #previewThemes small { color:#aaaab2;font-size:11px; }
-    #themeStatus { margin:8px 0 0;color:#aaaab2;font-size:12px; } #themeStatus:empty { display:none; }
-    .presentation { display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:10px 24px;border-bottom:1px solid #303034; }
-    .presentation p { margin:0;color:#b9bac2;font-size:12px; }
-    main { position: relative; flex: 1; min-height: 0; overflow: hidden; }
+    body {
+      margin: 0 auto;
+      padding: 16px 32px 0;
+      max-width: 1344px;
+      background:
+        radial-gradient(ellipse at 8% 0%, #a8956820, transparent 42rem),
+        radial-gradient(ellipse at 98% 20%, #bc59201a, transparent 55rem),
+        var(--paper);
+      color: var(--ink);
+      font: 14px/1.5 system-ui, -apple-system, sans-serif;
+      height: 100svh;
+      min-height: 760px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px 24px;
+      padding: 10px 20px;
+      border: 1px solid var(--line);
+      border-radius: 32px;
+      background: #2b2b2ee8;
+      box-shadow: 0 8px 32px #00000024, inset 0 1px 0 #ffffff08;
+    }
+    strong { font-size: 16px; letter-spacing: -.02em; }
+    header > span { color: var(--muted); font-size: 13px; }
+    nav, .theme-filters {
+      display: flex;
+      gap: 4px;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #00000012;
+    }
+    nav button, .theme-filters button {
+      border: 0;
+      border-radius: 999px;
+      min-height: 40px;
+      padding: 8px 18px;
+      background: transparent;
+      color: var(--muted);
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    nav button[aria-pressed="true"], .theme-filters button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+    button:focus-visible, a:focus-visible { outline: 2px solid #ff9b7c; outline-offset: 3px; }
+    button:hover { color: var(--ink); background: #ffffff0a; }
+    nav button[aria-pressed="true"]:hover, .theme-filters button[aria-pressed="true"]:hover { background: #dedee2; color: var(--paper); }
+    button:active { opacity: .8; }
+    .themes {
+      padding: 16px 20px;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: var(--surface);
+    }
+    .themes h2 { font-size: 14px; margin: 0 0 10px; font-weight: 600; }
+    .themes-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin-bottom: 12px; }
+    .themes-heading h2 { margin: 0; }
+    .theme-filters { gap: 8px; }
+    .theme-filters button { min-height: 44px; }
+    .theme-filters button:disabled { opacity: .6; cursor: wait; }
+    #filterStatus { color: var(--muted); margin: 12px 4px; }
+    #previewThemes button[hidden] { display: none; }
+    #previewThemes { display: flex; gap: 12px; overflow-x: auto; padding: 4px; scrollbar-width: thin; scrollbar-color: #66666e transparent; }
+    #previewThemes button {
+      flex: 0 0 160px;
+      text-align: left;
+      background: #ffffff05;
+      color: inherit;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 0 0 10px;
+      overflow: hidden;
+      cursor: pointer;
+      font: inherit;
+    }
+    #previewThemes button[aria-pressed="true"] { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); background: #ffffff0d; }
+    #previewThemes button:disabled { opacity: .6; cursor: wait; }
+    #previewThemes img { display: block; width: 100%; height: 90px; object-fit: cover; }
+    #previewThemes strong, #previewThemes small { display: block; margin: 7px 12px 0; }
+    #previewThemes strong { font-size: 13px; }
+    #previewThemes small { color: var(--muted); font-size: 11px; }
+    #themeStatus { margin: 8px 0 0; color: var(--muted); font-size: 12px; }
+    #themeStatus:empty { display: none; }
+    .presentation { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
+    .presentation p { margin: 0; color: var(--muted); font-size: 12px; }
+    main {
+      position: relative;
+      flex: 1;
+      min-height: 240px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: #111113;
+      box-shadow: 0 24px 80px #00000033;
+    }
     iframe { position: absolute; border: 0; width: 1920px; height: 1080px; transform-origin: top left; background: black; }
-    footer { padding: 12px 24px; color: #aaaab2; font-size: 12px; }
+    footer { padding: 0 8px 16px; color: var(--muted); font-size: 12px; text-align: center; }
+    @media (max-width: 640px) {
+      body { padding: 12px 16px 0; gap: 12px; min-height: 900px; }
+      header { padding: 12px 16px; border-radius: 24px; gap: 12px; }
+      header > span { width: 100%; order: 2; }
+      header > nav { width: 100%; order: 3; }
+      header > nav button { flex: 1; padding-inline: 12px; }
+      .themes { padding: 12px; border-radius: 20px; }
+      .presentation { gap: 8px; }
+      main { min-height: 180px; border-radius: 16px; }
+    }
   </style>
   <header>
-    <strong>Home / Preview</strong
-    ><span>1920 × 1080 · original reference apps · live reload enabled</span>
+    <strong>Clean Your TV / Demo</strong>
+    <span>Your home screen. Try it here.</span>
     <nav aria-label="Launcher edition">
       <button type="button" data-edition="no-root" aria-pressed="true">
         No-root Edition</button
@@ -43,8 +142,31 @@
     </nav>
   </header>
   <section class="themes" role="region" aria-label="Themes">
-    <h2>Themes</h2>
+    <div class="themes-heading">
+      <h2>Themes</h2>
+      <div class="theme-filters" role="group" aria-label="Filter themes">
+        <button
+          type="button"
+          data-theme-filter="hasVideo"
+          aria-pressed="false"
+          disabled
+        >
+          Video
+        </button>
+        <button
+          type="button"
+          data-theme-filter="has4k"
+          aria-pressed="false"
+          disabled
+        >
+          4K
+        </button>
+      </div>
+    </div>
     <div id="previewThemes" aria-busy="true"></div>
+    <p id="filterStatus" role="status" aria-live="polite" hidden>
+      No themes match these filters.
+    </p>
     <p id="themeStatus" role="status" aria-live="polite">Loading themes…</p>
   </section>
   <section class="presentation" aria-label="Preview navigation">
