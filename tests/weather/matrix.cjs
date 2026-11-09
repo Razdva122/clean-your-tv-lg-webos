@@ -65,7 +65,11 @@ const languages = [
         ? process.env.WEATHER_LANGS.split(',')
         : languages) {
         const page = await browser.newPage({
-            viewport: { width: 1920, height: 1080 }
+            viewport: {
+              width: Number(process.env.WEATHER_WIDTH) || 1920,
+              height:
+                ((Number(process.env.WEATHER_WIDTH) || 1920) * 1080) / 1920
+            }
           }),
           errors = [];
         page.on('pageerror', (e) => errors.push(e.message));
@@ -120,6 +124,11 @@ const languages = [
         );
         await page.evaluate(() => document.fonts.ready);
         for (const pack of packages) {
+          const input = pack.input && structuredClone(pack.input);
+          if (input && process.env.WEATHER_SCALE)
+            input.manifest.layout.weather.scale = Number(
+              process.env.WEATHER_SCALE
+            );
           await page.evaluate((input) => {
             if (input) {
               Object.keys(input.assetHandles).forEach((id) => {
@@ -135,7 +144,7 @@ const languages = [
               });
               ThemeRuntime.apply(input);
             } else ThemeRuntime.reset();
-          }, pack.input);
+          }, input);
           await page.waitForTimeout(40);
           for (const format of ['text', 'current', 'details', 'forecast']) {
             await page.evaluate(

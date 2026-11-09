@@ -229,11 +229,13 @@
   }
 
   function fitLabels(container) {
-    const range = doc.createRange();
+    const range = doc.createRange(),
+      renderedScale =
+        container.getBoundingClientRect().width / container.offsetWidth || 1;
     function textWidth(label) {
       // Measure the rendered glyphs, including locale-specific font fallback.
       range.selectNodeContents(label);
-      return Math.ceil(range.getBoundingClientRect().width);
+      return Math.ceil(range.getBoundingClientRect().width / renderedScale);
     }
     let width = 138,
       tempWidth = 58;

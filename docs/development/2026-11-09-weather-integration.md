@@ -111,3 +111,10 @@ Published fork archive SHA-256 values (also attached to their prereleases):
 - Minimal: `68637d10548c6d22af35e5bee5510e29b18f99411ddedf44e3088391ee00e03a`
 - Retro: `43e0c93a807d2523f49b43a0089378e69c07421aab9e34057f422675f3c46a61`
 - Atmosphere: `6c41027938ce00d11540e0ed9972f9022d6ebe90328bd7412b1ac498bc1c9526`
+
+A further focused regression runs `WEATHER_LANGS=ko WEATHER_WIDTH=1280
+WEATHER_SCALE=0.85 node tests/weather/matrix.cjs` (64 cases, both editions).
+Rendered glyph measurement now removes the combined theme/viewport transform
+scale before assigning logical CSS widths. The regression failed before the fix
+and passed after it; the normal both-edition UI regression and compatibility
+profiles also passed. These are developer/theme sizing controls, not user settings.
