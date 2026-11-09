@@ -74,6 +74,15 @@ class RootGateTests(unittest.TestCase):
                     root_gate.install(self.installer,self.inventory)
                 self.assertEqual(self.remote.uploads,{})
                 self.assertIsNone(self.store.pending(self.profile))
+    def test_verified_clean_handoff_uses_current_coordinator_without_old_driver_replay(self):
+        self.installer._native_clean_install=True
+        self.installer.upload_product=Mock(return_value='/tmp/cytv-product-'+'a'*32)
+        self.installer.product_action=Mock(return_value={'state':'complete','result':{'returnValue':True,'installed':package.ROOT_APP,'home_changed':False}})
+        result=root_gate.install(self.installer,self.inventory)
+        self.assertTrue(result['home_changed'])
+        self.assertEqual(self.installer.product_action.call_args.args[0],'native-install')
+        self.assertNotIn('install',self.actions)
+
     def action(self,action,**kwargs):
         self.actions.append((action,kwargs))
         if self.failure==action:raise RuntimeError('interrupted '+action)

@@ -336,6 +336,22 @@ class LocalDevice:
             if os.path.lexists(ROOT) and self.cleanup('root_archive','inspect').get('busy') is not False:return False
         return owner.status()==lease
 
+    def native_deploy(self, payload):
+        # The parent owns the shared product mutex. Execute only this upload's
+        # verified driver in isolation, without taking a second deployment lock.
+        root=Path(payload)/'root'
+        program=('import sys,json;from pathlib import Path\n'
+            'sys.path.insert(0,'+repr(str(root))+')\nimport deploy\n'
+            'bundle=Path('+repr(str(root))+')\n'
+            'release=json.loads(deploy.checked_file(bundle,"release.json"))\n'
+            'if release.get("routing")!="compositor-keyfilter-v1":raise ValueError("current_compositor_support_required")\n'
+            'admission=deploy.experimental_admission(release["routing"],owned_operation='+repr(self.operation['id'])+')\n'
+            'print(json.dumps(deploy.install(bundle,experimental_c1_gate=True,_experimental_admission=admission)))\n')
+        result=subprocess.run([sys.executable,'-I','-B','-c',program],check=True,
+            stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=1080,
+            pass_fds=(self.ownership.fd,))
+        return json.loads(result.stdout)
+
     def deploy(self, payload, options):
         import deploy
         root=Path(payload)/'root'
@@ -721,6 +737,9 @@ class LocalDevice:
                 record['done'].append('controls-restored');save('controls-restored')
             # Recheck before destructive work: a retry must not erase newly
             # appeared routing evidence and then use its absence as proof.
+            if isinstance(record.get('routes'),dict) and record['routes'].get('mode')=='stock-compositor':
+                if not self.compositor_stock_eligible(record) or routes(self,record)!=record['routes']:
+                    raise ValueError('routing_evidence_changed')
             if (record.get('routing_never_applied') is True
                     and record.get('profileless_cleanup_eligible') is True
                     and not self.routing_untouched(record)):
@@ -1041,6 +1060,29 @@ class LocalDevice:
             and not any(name.split('/')[0] in ROUTING_EVIDENCE for name in backup)
             and not any(os.path.lexists(ROOT/name) for name in ROUTING_EVIDENCE)
             and not os.path.lexists('/var/webos-profile/override/clean-your-tv-root.json'))
+
+    def compositor_stock_eligible(self, record):
+        from clean_removal import ROUTING_EVIDENCE
+        retained_proof=isinstance(record.get('routes'),dict) and record['routes'].get('mode')=='stock-compositor'
+        if (record.get('profileless_cleanup_eligible') is not True or
+                not retained_proof and (self.payload is None or not (self.payload/'root/runtime/c1_keyfilter.py').is_file())):return False
+        backup=self.ownership.store.read('routing-backup-'+record['operation'])
+        return (isinstance(backup,dict)
+            and not any(name.split('/')[0] in ROUTING_EVIDENCE for name in backup)
+            and not any(os.path.lexists(ROOT/name) for name in ROUTING_EVIDENCE)
+            and not os.path.lexists('/var/webos-profile/override/clean-your-tv-root.json'))
+
+    def compositor_stock(self, record):
+        import deploy
+        if self.payload is None:
+            result=subprocess.run(['/usr/bin/node',str(Path(__file__).parent/'cleanup_tail.js'),
+                'stock-proof',record['operation'],'-','-1','-1','-1','-',record['removal']],
+                check=True,stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=90)
+            return json.loads(result.stdout)['routes']
+        program=('import sys,json;sys.path.insert(0,'+repr(str(self.payload/'root-updater'))+');'
+                 'from clean_removal import compositor_stock;'
+                 'print(json.dumps({"returnValue":True,"result":compositor_stock('+repr(str(self.payload/'root'))+')}))')
+        return deploy.command([sys.executable,'-I','-B','-c',program])['result']
 
     def preserve_routing_inverse(self, record):
         # Exact finite data-only inverse records, captured before restore can

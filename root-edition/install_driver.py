@@ -218,6 +218,23 @@ class Coordinator:
             if existing.record['action']!=action: raise ValueError('operation_action_conflict')
             return existing.record
 
+    def native_install(self, identifier, payload):
+        """Fresh experimental install, including a verified clean predecessor.
+
+        Reuses the product mutex/fence handoff, without installing an updater
+        or replaying a recorded native request through normal product resume.
+        """
+        identifier=operation_id(identifier)
+        previous=self.status(identifier)
+        if previous['state']!='unknown':
+            if previous['action']!='install':raise ValueError('operation_action_conflict')
+            return previous
+        self.device.preflight(payload,dict(migrate=False,prepare_supervisor=False),product=False)
+        def perform(checkpoint):
+            checkpoint('root-deploy')
+            return self.device.native_deploy(payload)
+        return self._run(identifier,'install',perform)
+
     def install(self, identifier, payload, migrate=False, prepare_supervisor=False):
         operation_id(identifier)
         if type(migrate) is not bool or type(prepare_supervisor) is not bool:
@@ -720,7 +737,7 @@ def main():
     from install_device import LocalDevice, checked_store
     from installation import STATE
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action',choices=('inspect','install','status','restore','remove','activate','clean-remove','clean-status','clean-target'))
+    parser.add_argument('action',choices=('inspect','install','native-install','status','restore','remove','activate','clean-remove','clean-status','clean-target'))
     parser.add_argument('--operation')
     parser.add_argument('--payload',type=Path)
     parser.add_argument('--retire-stage',action='append',default=[])
@@ -738,7 +755,7 @@ def main():
     args=parser.parse_args()
     if args.final_readback_only and (not args.resume or args.action!='install'):
         parser.error('--final-readback-only requires install --resume')
-    if args.action in ('install','remove','status','clean-remove','clean-status','clean-target'): operation_id(args.operation)
+    if args.action in ('install','native-install','remove','status','clean-remove','clean-status','clean-target'): operation_id(args.operation)
     if args.action not in ('install','inspect') and (args.migrate_packaged_home or args.prepare_supervisor): parser.error('install options require install')
     if args.submission_parent is not None:
         if not args.worker or args.action not in ('install','remove') or args.submission_parent<=1:parser.error('invalid submission parent')
@@ -771,6 +788,9 @@ def main():
             if args.action not in ('install','remove'):parser.error('--resume requires install or remove')
             if args.worker:result=coordinator.resume(args.operation,args.payload,final_readback_only=args.final_readback_only)
             else:result=resume_submit(args.operation,ownership,action=args.action,final_readback_only=args.final_readback_only)
+        elif args.action=='native-install':
+            if args.payload is None:parser.error('native-install requires current verified support')
+            result=coordinator.native_install(args.operation,args.payload)
         elif args.action=='install':
             if args.payload is None: parser.error('install requires a verified local payload')
             if args.worker:

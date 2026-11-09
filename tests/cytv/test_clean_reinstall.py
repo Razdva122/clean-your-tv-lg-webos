@@ -56,10 +56,24 @@ class CleanReinstallTests(unittest.TestCase):
         inst.root_installation.return_value=dict(CLEAN,clean_removal_verified=False)
         with self.assertRaises(ExistingRoot):inst.preflight(install=True,home_interfaces=True)
 
-    def test_native_beta_keeps_fresh_only_guard_before_effects(self):
+    def test_native_beta_accepts_only_verified_clean_handoff_before_effects(self):
         inst,remote=self.fixture();inst.tv_info['home_backend']='c1-native-gate'
-        with self.assertRaises(ExistingRoot):inst.preflight(install=True)
+        inst.preflight(install=True)
+        self.assertTrue(inst._native_clean_install)
         self.assertIsNone(self.store.pending(inst.profile))
+        inst.root_installation.return_value=dict(CLEAN,clean_removal_verified=False)
+        with self.assertRaises(ExistingRoot):inst.preflight(install=True)
+
+    def test_native_verified_clean_ownership_without_root_directory_still_hands_off(self):
+        inst,remote=self.fixture();inst.tv_info['home_backend']='c1-native-gate'
+        original=remote.run
+        def run(command,**kwargs):
+            if 'CYTV_EXISTING_ROOT' in command:
+                return 'CYTV_EXISTING_ROOT' if '/var/lib/clean-your-tv-installation/operation.json' in command else ''
+            return original(command,**kwargs)
+        remote.run=run
+        inst.preflight(install=True)
+        self.assertTrue(inst._native_clean_install)
 
     def test_unverified_clean_restore_keeps_existing_recovery_path(self):
         inst,remote=self.fixture()

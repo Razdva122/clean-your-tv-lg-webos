@@ -292,7 +292,7 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
         return stage
 
     def product_action(self, action, operation=None, payload=None, migrate=False, verify_current=False, resume=False, trusted_recovery=False, retire_stages=(), helper_fence=None, removal_intent=None, removal_lease=None):
-        if action not in ('inspect','install','status','remove','clean-remove','clean-status','clean-target'): raise ValueError('Unsupported product action')
+        if action not in ('inspect','install','native-install','status','remove','clean-remove','clean-status','clean-target'): raise ValueError('Unsupported product action')
         if action!='inspect' and (not isinstance(operation,str) or not re.fullmatch('[a-f0-9]{32}',operation)):
             raise ValueError('Invalid product operation')
         # Keep execution-boundary evidence without exporting commands, paths or
@@ -301,7 +301,7 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
         try:
             driver=(payload+'/root-updater' if payload else self.coordinator_code())+'/install_driver.py'
             boundary='python-select'
-            if action in ('clean-remove','clean-target'):
+            if action in ('clean-remove','clean-target','native-install'):
                 # Fresh support imports and a host-verified interpreter; no
                 # retained launcher/binding module executes during full cleanup.
                 python=self._select_python(provision=True)
@@ -338,7 +338,7 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
             if trusted_recovery or resume:
                 from .root_install_recovery import run
                 raw=run(self,driver.rsplit('/',1)[0],'install_driver.py',args,timeout=90)
-            else:raw=self.remote.run(self._python_command(args),timeout=1080 if action=='clean-remove' else 90)
+            else:raw=self.remote.run(self._python_command(args),timeout=1080 if action in ('clean-remove','native-install') else 90)
             reply=json.loads(raw)
         except TVCommandError as error:
             error.root_action=action
@@ -535,16 +535,19 @@ with os.fdopen(f,'rb') as stream:
                     requirements=', '.join(failed)), reason_code='root-requirements')
             if install:
                 paths = [ROOT_STATE, BASE + '/applications/' + package.ROOT_APP,
-                         BASE + '/services/' + package.ROOT_APP + '.service', BASE + '/packages/' + package.ROOT_APP]
+                         BASE + '/services/' + package.ROOT_APP + '.service', BASE + '/packages/' + package.ROOT_APP,
+                         '/var/lib/clean-your-tv-installation/operation.json']
                 condition = ' || '.join('[ -e ' + p + ' ] || [ -L ' + p + ' ]' for p in paths)
                 existing=self.remote.run('if ' + condition + '; then printf CYTV_EXISTING_ROOT; fi').strip()
                 maintain=False
+                self._native_clean_install=False
                 if existing:
                     try:
                         installation=self.root_installation()
                         maintain=(installation.get('clean_removal_verified') is True and
-                                  installation.get('can_install') is True and
-                                  self.tv_info.get('home_backend')!='c1-native-gate')
+                                  installation.get('can_install') is True)
+                        self._native_clean_install=(installation.get('clean_removal_verified') is True
+                            and installation.get('can_install') is True and self.tv_info.get('home_backend')=='c1-native-gate')
                     except UserError as error:
                         if error.reason_code in ('restart-required','project-apps-remain'):raise
                     except (OSError,ValueError,RuntimeError): pass
@@ -1843,7 +1846,14 @@ print('CYTV_PROJECT_REMOVED')
         reply=resume_tail(self,pending)
         if reply is None:
             root_bundle=self.payload/'root'
-            if self.native_root_present():
+            previous=pending
+            native_pending=False
+            while isinstance(previous,dict):
+                native_pending=native_pending or previous.get('home_backend')=='c1-native-gate'
+                previous=previous.get('previous')
+            # A host hint selects current support only. The TV still fences and
+            # proves cleanup; absent device journals never clear this pending.
+            if self.native_root_present() or native_pending:
                 root_bundle=self.payload/'root-c1'
                 if not root_bundle.is_dir():
                     raise UserError('Native C1 recovery could not be verified. Removal has not started.')
@@ -1894,6 +1904,7 @@ print('CYTV_PROJECT_REMOVED')
         result=dict(result,verified_clean=True)
         self.store.checkpoint(self.profile,stage='verified-clean',removal_reason='removal-verified',result=result)
         self.store.finish_clean_removal(self.profile)
+        self._coordinator_code=self._recovery_code=self._selected_python=None
         return dict(result,verified_clean=True)
 
     def uninstall(self, full_project=False):

@@ -30,12 +30,12 @@ function path(p){
  if(p==='/')return base;
  var match=/^\/proc\/self\/fd\/(\d+)(.*)$/.exec(p);
  if(match)return process.env.CYTV_REAL_PROC_FD==='1'?p:paths[match[1]]+match[2];
- return /^\/(var|media|tmp|proc)(\/|$)/.test(p)?base+p:p;
+ return /^\/(home|usr|var|media|tmp|proc)(\/|$)/.test(p)?base+p:p;
 }
 var fs=Object.create(real);
 fs.openSync=function(p,flags,mode){var fd=real.openSync(path(p),flags,mode);paths[fd]=path(p);return fd;};
-fs.fstatSync=function(fd){var info=real.fstatSync(fd);if(process.env.TMP_OWNER && paths[fd]===base+'/tmp')info.uid=Number(process.env.TMP_OWNER);return info;};
-['lstatSync','readFileSync','readlinkSync','readdirSync','rmdirSync','unlinkSync'].forEach(function(name){fs[name]=function(p){
+fs.fstatSync=function(fd){var info=real.fstatSync(fd);if(process.env.TMP_OWNER && paths[fd]===base+'/tmp')info.uid=Number(process.env.TMP_OWNER);if(process.env.SYSTEM_DEVICE&&paths[fd].indexOf(base+'/usr/')===0)info.dev=45851;return info;};
+['lstatSync','readFileSync','readlinkSync','realpathSync','readdirSync','rmdirSync','unlinkSync'].forEach(function(name){fs[name]=function(p){
  if(name==='readdirSync' && process.env.SWAP_RUNTIME && process.env.CYTV_REAL_PROC_FD==='1' && /^\/proc\/self\/fd\/\d+$/.test(p)){
   var held=real.readlinkSync(p);
   if(/\/clean-your-tv-python\/[a-f0-9]{64}$/.test(held) && !real.existsSync(held+'-moved')){
@@ -47,7 +47,10 @@ fs.fstatSync=function(fd){var info=real.fstatSync(fd);if(process.env.TMP_OWNER &
   calls.push([name,descriptor?real.readlinkSync('/proc/self/fd/'+descriptor[1])+descriptor[2]:target]);
   if(process.env.FAIL_MEMBER && path(p).slice(-process.env.FAIL_MEMBER.length)===process.env.FAIL_MEMBER)throw Error('injected storage interruption');
  }
- return real[name](path(p));
+ var value=real[name].apply(real,[path(p)].concat(Array.prototype.slice.call(arguments,1)));
+ if(name==='lstatSync'&&process.env.SYSTEM_DEVICE&&path(p).indexOf(base+'/usr/')===0)value.dev=45851;
+ if(name==='realpathSync'&&value.indexOf(base+'/usr/')===0)return value.slice(base.length);
+ return value;
 };});
 fs.renameSync=function(a,b){
  var value;try{value=JSON.parse(real.readFileSync(path(a),'utf8'));}catch(e){}
@@ -76,6 +79,7 @@ function fixtureReply(command,args,options){
   if(process.env.ACTIVITY_MALFORMED && method.indexOf('/list')!==-1)value.activities={};
  }
  else if(method.indexOf('getAllInputStatus')!==-1)value.devices=[];
+ else if(method.indexOf('getConfigs')!==-1)value.configs={'com.webos.surfacemanager.keyFilters':JSON.parse(process.env.FILTER_CHAIN||'[{"file":"/usr/lib/qml/KeyFilters/systemUi.js","handler":"handleSystemKeys"}]')};
  else throw Error('Unexpected RPC '+method);
  return {status:0,stdout:Buffer.from?Buffer.from(JSON.stringify(value)):new Buffer(JSON.stringify(value))};
 }
@@ -705,6 +709,70 @@ class CleanupTail(unittest.TestCase):
         self.assertEqual(result.returncode,0,result.stderr)
         self.assertEqual(reply['stage'],'verified-clean')
         self.assertFalse(self.runtime.exists())
+
+    def compositor_record(self):
+        self.record['profileless_cleanup_eligible']=True
+        home=self.base/'usr/bin/com.webos.app.home';home.parent.mkdir(parents=True)
+        home.write_bytes(b'\x7fELF\x01\x01\x01'+b'\0'*11+b'\x28\0'+b'\0'*32);home.chmod(0o700)
+        appinfo=self.base/'usr/palm/applications/com.webos.app.home/appinfo.json'
+        appinfo.parent.mkdir(parents=True);appinfo.write_text(json.dumps({'id':'com.webos.app.home','type':'native','main':'/usr/bin/com.webos.app.home'}))
+        vendor=self.base/'usr/lib/qml/KeyFilters/systemUi.js';vendor.parent.mkdir(parents=True)
+        vendor.write_text('function handleSystemKeys() { return Qt.Key_Super_L; }')
+        (self.base/'proc/self').mkdir();(self.base/'proc/self/mountinfo').write_text('2 1 179:27 / /usr ro,relatime - squashfs /dev/mmcblk0p27 ro\n')
+        self.record['routes']={'mode':'stock-compositor','target':{'dev':45851,'ino':home.stat().st_ino,'size':home.stat().st_size},'target_sha256':hashlib.sha256(home.read_bytes()).hexdigest()}
+        self.write('routing-backup-'+ID+'.json',{})
+        self.write('clean-removal-'+ID+'.json',self.record)
+        return home,appinfo,vendor
+
+    def compositor_tail(self,**env):
+        return self.run_tail(NO_SYNC='1',SYSTEM_DEVICE='1',NO_HOME_APIS='1',MISSING_PROFILES='1',
+            PROFILE_ERROR=json.dumps({'returnValue':False,'errorCode':-1,'errorText':'Service does not exist: com.webos.service.systemprofile.'}),**env)
+
+    def test_current_stock_compositor_tail_finishes_without_home_settings(self):
+        self.compositor_record()
+        result,reply=self.compositor_tail()
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(reply['stage'],'verified-clean')
+        self.assertFalse(self.runtime.exists())
+
+    def test_stock_compositor_read_only_recheck_refuses_new_foreign_home_state(self):
+        self.compositor_record()
+        result,reply=self.compositor_tail(MODE='stock-proof')
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(reply['routes'],self.record['routes'])
+        self.assertTrue(self.runtime.exists())
+        for name,raw in (('var/lib/luma-home',None),('home/root/.config/lginputhook/keybinds.json','{"773":{}}')):
+            with self.subTest(path=name):
+                path=self.base/name;path.parent.mkdir(parents=True,exist_ok=True)
+                if raw is None:path.mkdir()
+                else:path.write_text(raw)
+                result,_=self.compositor_tail(MODE='stock-proof')
+                self.assertNotEqual(result.returncode,0)
+                self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+                if path.is_dir():path.rmdir()
+                else:path.unlink()
+
+    def test_stock_compositor_tail_refuses_changed_identity_chain_mount_or_evidence(self):
+        home,appinfo,vendor=self.compositor_record()
+        mount=self.base/'proc/self/mountinfo';stock=mount.read_text()
+        for change in ('binary','manifest','vendor','mount','stack','backup','live','chain'):
+            with self.subTest(change=change):
+                original=home.read_bytes(),appinfo.read_bytes(),vendor.read_bytes()
+                if change=='binary':home.write_bytes(original[0]+b'changed')
+                if change=='manifest':appinfo.write_text('{}')
+                if change=='vendor':vendor.write_text('unknown vendor contract')
+                if change=='mount':mount.write_text(stock.replace('squashfs','tmpfs'))
+                if change=='stack':mount.write_text(stock+'3 2 179:27 /bin /usr/bin ro - squashfs /dev/mmcblk0p27 ro\n')
+                if change=='backup':self.write('routing-backup-'+ID+'.json',{'profile-trial.json':'{}'})
+                marker=self.base/'var/lib/clean-your-tv-root/persistent-intent.json'
+                if change=='live':marker.parent.mkdir(exist_ok=True);marker.write_text('{}')
+                result,_=self.compositor_tail(**({'FILTER_CHAIN':'[{"file":"/foreign/home.js","handler":"home"}]'} if change=='chain' else {}))
+                self.assertNotEqual(result.returncode,0)
+                self.assertTrue(self.runtime.exists())
+                self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+                home.write_bytes(original[0]);appinfo.write_bytes(original[1]);vendor.write_bytes(original[2]);mount.write_text(stock)
+                self.write('routing-backup-'+ID+'.json',{})
+                if marker.exists():marker.unlink();marker.parent.rmdir()
 
     def test_stock_settings_tail_requires_exact_missing_service_and_stock_readback(self):
         self.record['profileless_cleanup_eligible']=True
