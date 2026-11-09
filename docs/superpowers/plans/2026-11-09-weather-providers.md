@@ -22,19 +22,19 @@
 
 ### Task 1: Trusted MET service transport and immutable packaging
 
-**Files:** Create `renewal-service/weather.js`, `root-edition/service/weather.js`, `tests/weather/service.cjs`; modify `renewal-service/service.js`, `root-edition/service/service.js`, `root-edition/build.py`, `theme-receiver/register.js`, `package.json` and narrowly required package tests.
+**Files:** Create `renewal-service/weather.js`, `root-edition/service/weather.js`, `tests/weather/service.cjs`; modify `renewal-service/service.js`, `root-edition/service/service.js`, `root-edition/build.py`, `root-edition/runtime/cli.py`, `root-edition/install_device.py`, `root-edition/service/package.json`, `theme-receiver/register.js`, `package.json` and narrowly required package tests.
 
 **Interfaces:** Register `weatherForecast({id,latitude,longitude})` and `weatherForecastCancel({id})`; success is `{returnValue:true,forecast:object}`. Root wrapper points at the shared Home implementation for source use; builder inlines it with existing CA/license into `service.js`. Export the existing theme-receiver `activityHold` helper for reuse, without changing its behavior.
 
-- [ ] Write real transport/registration tests with injected HTTPS EventEmitter fixtures: unauthorized caller and extra fields do not open a socket; exact host/path/verified CA/User-Agent; two-request cap; timeout/body/error/invalid JSON; cancel before/after start and late callbacks; hold released on every terminal path.
+- [x] Write real transport/registration tests with injected HTTPS EventEmitter fixtures: unauthorized caller and extra fields do not open a socket; exact host/path/verified CA/User-Agent; two-request cap; timeout/body/error/invalid JSON; cancel before/after start and late callbacks; hold released on every terminal path.
   ```js
   assert.equal(options.hostname, 'api.met.no');
   assert.equal(options.rejectUnauthorized, true);
   assert.match(options.headers['User-Agent'], /CleanYourTV.*github\.com/);
   assert.equal(response.returnValue, true);
   ```
-- [ ] Run `node tests/weather/service.cjs` and capture a meaningful red result before writing implementation.
-- [ ] Implement the fixed endpoint only. Validate all payload fields before starting HTTP. Return a cancelable operation internally and keep bounded pending/cancellation records; register both caller-bound methods. Reuse activityHold; no network starts at import.
+- [x] Run `node tests/weather/service.cjs` and capture a meaningful red result before writing implementation.
+- [x] Implement the fixed endpoint only. Validate all payload fields before starting HTTP. Return a cancelable operation internally and keep bounded pending/cancellation records; register both caller-bound methods. Reuse activityHold; no network starts at import.
   ```js
   service.register('weatherForecast', function (message) {
     // Authenticate actual LS2 applicationID; validate id/coordinates/keys;
@@ -42,8 +42,8 @@
     // respond once and release on success/error/cancel.
   });
   ```
-- [ ] Inline Root closure/CA/license before legacy compilation, preserving exact private inventory. Add Home registration and its test command to `test:weather`; verify both real package closures.
-- [ ] Run current/generated exact Node0.10.15/0.10.25/0.12.2 transport cases and affected Root/package tests, format owned JS, commit only this task's files. Report commands/red/green evidence and commit range to this plan's task report.
+- [x] Inline Root closure/CA/license before legacy compilation, preserving exact private inventory. Add Home registration and its test command to `test:weather`; verify both real package closures.
+- [x] Run current/generated exact Node0.10.15/0.10.25/0.12.2 transport cases and affected Root/package tests, format owned JS, commit only this task's files. Report commands/red/green evidence and commit range to this plan's task report.
 
 ### Task 2: Provider normalization, bounded Auto and source caches
 
@@ -51,17 +51,17 @@
 
 **Interfaces:** `WeatherData.create({metRequest})`, where `metRequest(place)` returns `{promise,cancel}` resolving raw MET compact JSON. Existing request(url) is unchanged. Export `normalizeMet(body,place,nowMs)`. State exposes provider selection and actual source using the exact IDs above.
 
-- [ ] Add failing tests for actual MET-shaped timestamped data with Celsius/m/s/percent units, supported symbols and missing optional metrics; invalid/stale/unit/range data; local calendar/DST/UTC fallback. Use a fixed test clock and real parser behavior.
+- [x] Add failing tests for actual MET-shaped timestamped data with Celsius/m/s/percent units, supported symbols and missing optional metrics; invalid/stale/unit/range data; local calendar/DST/UTC fallback. Use a fixed test clock and real parser behavior.
   ```js
   const value = Weather.normalizeMet(body, place, nowMs);
   assert.equal(value.wind, 1.4);
   assert.equal(value.feels, null);
   assert.equal(value.precip, null);
   ```
-- [ ] Add failing lifecycle tests: fresh/legacy defaults; manual never falls back; Auto MET first then one Open-Meteo attempt on failure; last-good source/cache reuse; source-switch cancellation; Off/Ribbon/destroy cancel without fallback; obsolete completions ignored; malformed responses follow same fallback; two-entry/one-location cache bound and legacy migration.
-- [ ] Run `node tests/weather/providers.cjs` and retain meaningful red evidence.
-- [ ] Implement the smallest source adapter/selection/cache changes in the existing store. Preserve geocoding/GeoJS independence, generation fences, original canonical units and6-hour expiry. Preserve optional IANA timezone from geocoding/GeoJS. Derive daily ranges only from real timestamped forecasts; never synthesize missing feels/probability.
-- [ ] Run providers/data/contract/layout tests, format owned JS, commit only these files. Record source compatibility and all test evidence in the report.
+- [x] Add failing lifecycle tests: fresh/legacy defaults; manual never falls back; Auto MET first then one Open-Meteo attempt on failure; last-good source/cache reuse; source-switch cancellation; Off/Ribbon/destroy cancel without fallback; obsolete completions ignored; malformed responses follow same fallback; two-entry/one-location cache bound and legacy migration.
+- [x] Run `node tests/weather/providers.cjs` and retain meaningful red evidence.
+- [x] Implement the smallest source adapter/selection/cache changes in the existing store. Preserve geocoding/GeoJS independence, generation fences, original canonical units and6-hour expiry. Preserve optional IANA timezone from geocoding/GeoJS. Derive daily ranges only from real timestamped forecasts; never synthesize missing feels/probability.
+- [x] Run providers/data/contract/layout tests, format owned JS, commit only these files. Record source compatibility and all test evidence in the report.
 
 ### Task 3: Native browser bridge and provider settings
 
@@ -79,10 +79,10 @@
 
 **Files:** Modify `root-edition/tests/test_boot_continuation.py`, `docs/THEMES.md`, relevant source/developer references, all affected practical `docs/i18n/` guides and canonical QA record.
 
-- [ ] Reproduce completed CI42632520469's floating-point `10.000000000000014 <= 10` failure with a controlled starting monotonic value; finish/record its whole14-job inventory before correcting it. Change only the fixture to an exact fixed clock origin, preserving budget/deadline assertions and all production code.
-- [ ] Run the affected boot continuation suite and controlled model green; no production budget/deadline change.
-- [ ] Document provider selection, Auto/caches/availability, accurate field limitations, privacy endpoints and proper credit. Localized guides contain no project release/component versions, RC banners or QA news; retain anchors. Do not state a nationwide Russian ban without authoritative evidence.
-- [ ] Complete formatting/metadata/whitespace checks and commit only task files. Record the completed correction batch and limitations in QA.
+- [x] Reproduce completed CI42632520469's floating-point `10.000000000000014 <= 10` failure with a controlled starting monotonic value; finish/record its whole14-job inventory before correcting it. Change only the fixture to an exact fixed clock origin, preserving budget/deadline assertions and all production code.
+- [x] Run the affected boot continuation suite and controlled model green; no production budget/deadline change.
+- [x] Document provider selection, Auto/caches/availability, accurate field limitations, privacy endpoints and proper credit. Localized guides contain no project release/component versions, RC banners or QA news; retain anchors. Do not state a nationwide Russian ban without authoritative evidence.
+- [x] Complete formatting/metadata/whitespace checks and commit only task files. Record the completed correction batch and limitations in QA.
 
 ### Task 5: Coordinator validation and next candidate
 

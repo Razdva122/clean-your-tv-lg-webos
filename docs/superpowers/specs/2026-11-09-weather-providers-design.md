@@ -44,6 +44,10 @@ Open-Meteo, not untested sources or public proxies.
   manually selected source's cache. MET refresh interval is at least three hours;
   Open-Meteo retains its existing interval; existing six-hour maximum cache age
   remains. Switching/reloading must reuse fresh source entries, not hammer MET.
+  MET model metadata may be at most twelve hours old (two global six-hour model
+  cycles, allowing one missed cycle); the current forecast point must remain
+  within three hours. These validity bounds are independent of polling and
+  display-cache expiry and do not promise upstream freshness.
 - UI provides three labeled keyboard/remote-accessible choices and actual-source
   feedback, in the existing Weather settings. Preserve focus/Back and all13
   locales. Add source/terms attribution in Data sources; update practical guides
