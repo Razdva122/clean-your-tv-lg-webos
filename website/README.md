@@ -157,3 +157,25 @@ only in the development server; it is not a production server or redirect.
 checks `/demo/` returns 200, exercises both launcher editions and inline themes,
 then stops the owned server. This complements the static export/browser test
 which resolves directory indexes itself.
+
+## Visual design
+
+The product site uses a graphite palette, restrained warm ambient gradients,
+a floating translucent header, pill controls and rounded product imagery inspired
+by https://plxnative.com/. The centered home-page introduction leads into the
+existing launcher demo. Shared tokens and CSS apply the same visual language to
+all locales and guides; screenshots, installation content and destinations stay
+project-owned. The header and language/menu controls work without JavaScript;
+its background remains readable without backdrop-filter support.
+
+The interactive demo uses matching graphite surfaces, rounded edition and remote
+controls, outlined theme previews and a framed TV viewport. Its shared source is
+`../preview/index.html`; the preview renderer, input controls and theme loader
+remain the same in local development and the exported website.
+
+The demo theme selector has independent Video and 4K filter toggles. Enabling
+both shows their intersection; disabling both shows the complete catalogue.
+Filters use exported `hasVideo`/`has4k` metadata, preserve the selected theme and
+remain active across edition switches within the current page session. An empty
+result explains that no themes match; toggle the filters off to restore cards.
+Filtering does not fetch or install theme packages.
