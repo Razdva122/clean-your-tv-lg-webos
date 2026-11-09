@@ -27,6 +27,14 @@ TEMP=Path('/tmp')
 SUPPORT_STAGE=re.compile(r'cytv-(?:product|coordinator|system-updater|c1-root|root-tail)-[a-f0-9]{32}')
 
 
+class InstallerRuntimeMismatch(ValueError):
+    """A self-consistent old installation is not the selected installer runtime."""
+    reason_code='installer-runtime-mismatch'
+
+    def __init__(self):
+        super().__init__('Installed Root runtime differs from this installer; use verified removal and fresh setup')
+
+
 def checked_store(path, uid=0):
     # Read-only inspection must never provision a state directory.
     store=Store.__new__(Store);store.root=str(path);store.uid=uid
@@ -154,6 +162,18 @@ class LocalDevice:
         from python_binding import launcher_bytes
         launcher_bytes(sys.executable)
         self.options=options
+
+    def require_selected_runtime(self, payload):
+        """Bind a no-submission handoff to current installer code, not old receipts."""
+        import deploy
+        selected=Path(payload)/'root'
+        manifest=deploy.verify_bundle(selected)
+        names=set(deploy.SUPPORT_FILES)|{name for name in manifest['files'] if name.startswith('runtime/')}
+        try:
+            if any(sha(safe_bytes(ROOT/name,uid=os.geteuid()))!=manifest['files'].get(name) for name in names):
+                raise InstallerRuntimeMismatch()
+        except (OSError,ValueError):
+            raise InstallerRuntimeMismatch() from None
 
     def system_setup(self):
         import system_setup

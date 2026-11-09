@@ -419,7 +419,7 @@ class CLITests(unittest.TestCase):
             remote = Remote()
             code, output, calls = self.run_cli(['--host', '192.0.2.10', '--edition', 'root', '--data-dir', tmp], ['', ''], remote=remote)
             self.assertEqual(code, 0, output)
-            self.assertIn('Root is already installed', output)
+            self.assertIn('Reinstall Root using this installer', output)
             self.assertIn('left unchanged', output)
             self.assertFalse(list(Path(tmp).glob('reports/*.json')))
             self.assertIsNone(state.Store(tmp).pending(state.target('192.0.2.10','root')))

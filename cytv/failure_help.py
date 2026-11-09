@@ -4,6 +4,7 @@ import socket
 
 from .errors import DeveloperKeyError, TVConnectionError, TVRejected, is_storage_full, TV_STORAGE_FULL, COMPUTER_STORAGE_FULL
 from .recovery_state import unsubmitted_removal
+from .root_action_failure import ACTIVATION_CODES, ACTIVATION_DETAILS
 
 NETWORK = 'Keep the TV on and use the same home network. Review the selected TV address and SSH port, Local Network access and VPN isolation.'
 DEVELOPER = 'Leave Developer Mode open with Key Server on. Use the current TV passphrase exactly; do not turn Developer Mode off or delete the saved profile.'
@@ -32,6 +33,9 @@ GUIDES = {
     'tv-pairing': ('TV pairing was not confirmed', 'The TV control connection or its pairing response was not confirmed.',
         'Keep the TV awake and review its CYTV pairing request with the remote. Do not reset pairing or reinstall packages to solve a connection check.', True),
     'root-requirements': ('Root prerequisites are not ready', 'SSH access alone does not establish the required TV runtime or Home interfaces.', REPORT, False),
+    'installer-runtime-mismatch': ('Root needs the runtime in this installer',
+        'The installed Root runtime differs from the verified package in this installer. Home activation has not started.',
+        'Choose Set up my TV and confirm Reinstall Root. The installer verifies removal before installing its current packages and runtime.', False),
     'root-home-interfaces': ('Required Root Home interfaces are not verified', 'Root setup requires readable Home settings and Home profiles. The check could not establish that contract.', REPORT, False),
     'recovery-status-rejected': ('TV refused the package status check',
         'Recovery cannot verify the earlier package operation on this TV.', REPORT, False),
@@ -44,6 +48,13 @@ GUIDES = {
         'Package outcomes and remaining setup are checked from the original saved evidence.',
         'Choose Review recovery options for the same saved TV connection. Unknown package or setup requests are not repeated.',False),
 }
+
+
+GUIDES.update({
+    'root-activation-' + reason: ('Root Home startup stopped', detail,
+        'Keep the saved connection and recovery data. Review recovery options in this installer; use its verified removal flow before starting a new installation.', False)
+    for reason, detail in ACTIVATION_DETAILS.items()
+})
 
 
 NETWORK_CAUSES = {
@@ -84,7 +95,9 @@ def for_error(error, phase, profile=None, pending=None):
     names = {cls.__name__ for cls in type(error).__mro__}
     reason = getattr(error, 'reason_code', None)
     code = None
-    if reason == 'tv-storage-full':
+    if reason == 'installer-runtime-mismatch' and edition == 'root':
+        code = reason
+    elif reason == 'tv-storage-full':
         code = 'tv-storage-full'
     elif reason == 'computer-storage-full' or is_storage_full(error):
         code = 'computer-storage-full'
@@ -112,6 +125,8 @@ def for_error(error, phase, profile=None, pending=None):
             code = 'ssh-protocol'
         elif isinstance(error,(OSError,TimeoutError)) or 'NoValidConnectionsError' in names:
             code = network_failure_code(error)
+    if code is None and edition == 'root' and phase in ('activate-root', 'recover') and reason in ACTIVATION_CODES:
+        code = reason
     if code is None and isinstance(pending, dict) and pending.get('recovery_protocol') == 'clean-removal-v1':
         return None  # The existing removal plan already explains the safe retry.
     if code is None and pending:

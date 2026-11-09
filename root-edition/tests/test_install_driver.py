@@ -24,6 +24,7 @@ class Device:
     def updater(self, payload, options): self.call('updater'); self.installed=True
     def supervisor(self, payload, options): self.call('supervisor')
     def readback(self): self.call('readback'); return {'verified':True}
+    def require_selected_runtime(self, payload): self.call('runtime-contract')
     def restore(self): self.call('restore')
     def remove(self, checkpoint):
         checkpoint('remove-submitting'); self.call('remove'); checkpoint('remove-terminal')
@@ -77,7 +78,22 @@ class CoordinatorTests(unittest.TestCase):
     def test_same_contract_handoff_maintains_without_submission(self):
         self.device.installed=True
         self.assertEqual(self.driver.install(self.identifier,'/verified')['state'],'complete')
-        self.assertEqual(self.device.calls,['preflight','inspect','readback'])
+        self.assertEqual(self.device.calls,['preflight','inspect','runtime-contract','readback'])
+    def test_installed_runtime_mismatch_is_not_success_and_never_replays(self):
+        from install_device import InstallerRuntimeMismatch
+        self.device.installed=True
+        def reject(payload):
+            self.device.call('runtime-contract')
+            raise InstallerRuntimeMismatch()
+        self.device.require_selected_runtime=reject
+        result=self.driver.install(self.identifier,'/verified',prepare_supervisor=True)
+        self.assertEqual(result['state'],'recovery_required')
+        self.assertEqual(result['code'],'installer-runtime-mismatch')
+        self.assertEqual(self.device.calls,['preflight','inspect','runtime-contract'])
+        self.assertFalse(self.owner.status()['terminal'])
+        self.assertEqual(self.driver.install(self.identifier,'/verified'),result)
+        self.assertEqual(self.device.calls,['preflight','inspect','runtime-contract'])
+
     def test_retained_state_is_never_overwritten(self):
         self.device.inspect=lambda:{'state':'recovery_required'}
         result=self.driver.install(self.identifier,'/verified')
@@ -975,3 +991,55 @@ class ProductABITests(unittest.TestCase):
                     with self.assertRaisesRegex(RuntimeError,'unsupported_product_abi'):
                         device.preflight(fixture.payload,options)
             fixture.assert_preserved(self)
+
+
+@unittest.skipUnless(os.name == 'posix', 'TV file metadata requires POSIX')
+class SelectedRuntimeContractTests(unittest.TestCase):
+    def setUp(self):
+        import hashlib
+        import deploy
+        self.folder=tempfile.TemporaryDirectory();self.addCleanup(self.folder.cleanup)
+        self.root=Path(self.folder.name).resolve();self.installed=self.root/'installed';self.payload=self.root/'payload'
+        self.files={}
+        self.names=(*deploy.SUPPORT_FILES,'runtime/emergency_trial.py','runtime/persistent_health.py')
+        for name in self.names:
+            raw=('selected '+name).encode();self.files[name]=hashlib.sha256(raw).hexdigest()
+            for target in (self.installed/name,self.payload/'root'/name):
+                target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(raw);target.chmod(0o600)
+        # Model an independently validated old receipt; only the desired bundle
+        # verifier is replaced at this boundary, actual fixed-path reads run.
+        (self.installed/'bundle.json').write_text('{"old_self_consistent_receipt":true}')
+        self.manifest={'files':self.files}
+
+    def require(self):
+        import install_device
+        with patch.object(install_device,'ROOT',self.installed),patch('deploy.verify_bundle',return_value=self.manifest):
+            return install_device.LocalDevice().require_selected_runtime(self.payload)
+
+    def test_each_selected_runtime_and_support_member_must_match_actual_bytes(self):
+        import install_device
+        self.assertIsNone(self.require())
+        for name in self.names:
+            with self.subTest(name=name):
+                path=self.installed/name;old=path.read_bytes();path.write_bytes(b'self-consistent old runtime')
+                with self.assertRaises(install_device.InstallerRuntimeMismatch) as caught:self.require()
+                self.assertEqual(caught.exception.reason_code,'installer-runtime-mismatch')
+                self.assertEqual(path.read_bytes(),b'self-consistent old runtime')
+                path.write_bytes(old)
+        self.assertIsNone(self.require())
+
+    def test_missing_or_indirect_runtime_is_refused_without_repair(self):
+        import install_device
+        path=self.installed/'runtime/emergency_trial.py';raw=path.read_bytes();path.unlink()
+        with self.assertRaises(install_device.InstallerRuntimeMismatch):self.require()
+        self.assertFalse(path.exists())
+        foreign=self.root/'foreign';foreign.write_bytes(raw);foreign.chmod(0o600)
+        path.symlink_to(foreign)
+        with self.assertRaises(install_device.InstallerRuntimeMismatch):self.require()
+        self.assertTrue(path.is_symlink());self.assertEqual(foreign.read_bytes(),raw)
+
+    def test_unverified_selected_bundle_is_not_treated_as_an_old_runtime(self):
+        import install_device
+        with patch.object(install_device,'ROOT',self.installed),patch('deploy.verify_bundle',side_effect=ValueError('bundle integrity mismatch')):
+            with self.assertRaises(ValueError) as caught:install_device.LocalDevice().require_selected_runtime(self.payload)
+        self.assertNotIsInstance(caught.exception,install_device.InstallerRuntimeMismatch)
