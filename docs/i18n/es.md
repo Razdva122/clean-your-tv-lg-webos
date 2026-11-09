@@ -1,6 +1,6 @@
 # Clean Your TV — guía de uso
 
-el instalador pide un nombre, **Home** por defecto; CLI: `--tv-name "Aashiyaan"`. Al actualizar una instalación antigua aparece automáticamente **Ajustes → Home → Nombre del televisor**. Puedes guardarlo o restablecer Home cuando quieras. Se conserva al reiniciar y en actualizaciones compatibles, junto con los demás ajustes. Máximo 48 caracteres. Cambia el lanzador y su carga, no el nombre de red. La pantalla anterior de LG puede requerir el instalador.
+el instalador pide un nombre, **Home** por defecto; CLI: `--tv-name "Aashiyaan"`. Al actualizar una instalación antigua aparece automáticamente **Ajustes → Home → Nombre del televisor**. Puedes guardarlo o restablecer Home cuando quieras. Se conserva al reiniciar y en actualizaciones compatibles, junto con los demás ajustes. Máximo 48 caracteres. Ajustes guarda el nombre del lanzador. Para cambiar el inicio de LG, aplica el mismo nombre con el instalador. No añade otra pantalla de carga ni cambia el nombre de red.
 
 Cambio del instalador aún no publicado: antes de una nueva instalación, el instalador del ordenador busca una versión estable más reciente en GitHub. Elige «Abrir GitHub y descargar la última versión» para detenerte y descargarla, o «No, instalar esta versión» para continuar explícitamente. Si falla la comprobación, puedes continuar. Las operaciones pendientes y la recuperación omiten esta comprobación.
 

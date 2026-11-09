@@ -1,6 +1,6 @@
 # Clean Your TV — průvodce instalací
 
-instalátor žádá název TV, výchozí **Home**; CLI: `--tv-name "Aashiyaan"`. Po aktualizaci starší instalace se automaticky objeví **Nastavení → Home → Název TV**. Název lze kdykoli uložit nebo obnovit Home. Uložený název přežije restart i podporované aktualizace; ostatní nastavení zůstanou zachována. Nejvýše 48 znaků. Mění launcher a jeho vlastní načítání, ne síťový název. Dřívější obrazovka LG může vyžadovat použití instalátoru.
+instalátor žádá název TV, výchozí **Home**; CLI: `--tv-name "Aashiyaan"`. Po aktualizaci starší instalace se automaticky objeví **Nastavení → Home → Název TV**. Název lze kdykoli uložit nebo obnovit Home. Uložený název přežije restart i podporované aktualizace; ostatní nastavení zůstanou zachována. Nejvýše 48 znaků. Nastavení ukládá název launcheru. Pro změnu úvodní obrazovky LG použijte stejný název v instalátoru. Druhá načítací obrazovka se nepřidává; síťový název se nemění.
 
 Dosud nevydaná změna instalátoru: před novou instalací instalátor v počítači ověří novější stabilní verzi na GitHubu. Vyberte „Otevřít GitHub a stáhnout nejnovější verzi“ pro zastavení a stažení, nebo „Ne, nainstalovat tuto verzi“ pro výslovné pokračování. Pokud kontrola selže, můžete pokračovat. Nedokončené operace a obnovení kontrolu přeskočí.
 

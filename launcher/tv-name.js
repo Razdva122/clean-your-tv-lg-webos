@@ -58,17 +58,9 @@
     return root.HomeI18n ? root.HomeI18n.t(text) : text;
   }
   function refresh() {
-    var name = model.get(),
-      title = root.document.getElementById('tvNameLoadingTitle');
+    var name = model.get();
     root.document.title = name;
-    if (title) title.textContent = name;
     return name;
-  }
-  function finishLoading() {
-    if (!root) return;
-    refresh();
-    var layer = root.document.getElementById('tvNameLoading');
-    if (layer) layer.hidden = true;
   }
   function mountSettings(groups) {
     var group =
@@ -97,13 +89,13 @@
       reset.setAttribute('data-i18n', 'Reset to Home');
       description.setAttribute(
         'data-i18n',
-        'Changes the launcher name. LG’s earlier loading label may require applying the name through the installer.'
+        'Saves the launcher name. Apply the same name through the installer to change LG’s startup screen.'
       );
       label.textContent = t('TV name');
       save.textContent = t('Save name');
       reset.textContent = t('Reset to Home');
       description.textContent = t(
-        'Changes the launcher name. LG’s earlier loading label may require applying the name through the installer.'
+        'Saves the launcher name. Apply the same name through the installer to change LG’s startup screen.'
       );
     }
     function commit(value) {
@@ -141,14 +133,12 @@
   }
   if (root && root.document) {
     refresh();
-    root.setTimeout(finishLoading, 30000); // Recovery/error UI must never stay obscured.
   }
   return {
     key: KEY,
     normalize: normalize,
     create: create,
     refresh: refresh,
-    mountSettings: mountSettings,
-    finishLoading: finishLoading
+    mountSettings: mountSettings
   };
 });

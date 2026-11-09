@@ -1,6 +1,6 @@
 # Clean Your TV — guida all’uso
 
-l’installer chiede un nome, predefinito **Home**; CLI: `--tv-name "Aashiyaan"`. Dopo un aggiornamento compare automaticamente **Impostazioni → Home → Nome TV**. Puoi salvarlo o ripristinare Home in qualsiasi momento. Rimane dopo riavvii e aggiornamenti supportati; le altre impostazioni restano intatte. Massimo 48 caratteri. Cambia il launcher e il suo caricamento, non il nome di rete. La schermata precedente di LG potrebbe richiedere l’installer.
+l’installer chiede un nome, predefinito **Home**; CLI: `--tv-name "Aashiyaan"`. Dopo un aggiornamento compare automaticamente **Impostazioni → Home → Nome TV**. Puoi salvarlo o ripristinare Home in qualsiasi momento. Rimane dopo riavvii e aggiornamenti supportati; le altre impostazioni restano intatte. Massimo 48 caratteri. Le impostazioni salvano il nome del launcher. Per cambiare la schermata iniziale LG, applica lo stesso nome tramite installer. Non viene aggiunta una seconda schermata; il nome di rete non cambia.
 
 Modifica non ancora pubblicata: prima di una nuova installazione, l’installer del computer cerca una versione stabile più recente su GitHub. Scegli “Apri GitHub e scarica l’ultima versione” per fermarti e scaricarla, oppure “No, installa questa versione” per continuare esplicitamente. Se la verifica non riesce, puoi continuare. Le operazioni in sospeso e il ripristino saltano la verifica.
 

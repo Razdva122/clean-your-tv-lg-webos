@@ -1,6 +1,6 @@
 # Clean Your TV — instrukcja użytkownika
 
-instalator pyta o nazwę, domyślnie **Home**; CLI: `--tv-name "Aashiyaan"`. Po aktualizacji starszej instalacji automatycznie pojawia się **Ustawienia → Home → Nazwa TV**. Można ją zapisać lub przywrócić Home w każdej chwili. Nazwa przetrwa restart i obsługiwane aktualizacje; inne ustawienia pozostają zachowane. Do 48 znaków. Dotyczy launchera i jego ładowania, nie nazwy sieciowej. Wcześniejszy ekran LG może wymagać instalatora.
+instalator pyta o nazwę, domyślnie **Home**; CLI: `--tv-name "Aashiyaan"`. Po aktualizacji starszej instalacji automatycznie pojawia się **Ustawienia → Home → Nazwa TV**. Można ją zapisać lub przywrócić Home w każdej chwili. Nazwa przetrwa restart i obsługiwane aktualizacje; inne ustawienia pozostają zachowane. Do 48 znaków. Ustawienia zapisują nazwę launchera. Aby zmienić ekran startowy LG, zastosuj tę samą nazwę przez instalator. Nie ma drugiego ekranu ładowania; nazwa sieciowa nie zmienia się.
 
 Nieopublikowana zmiana instalatora: przed nową instalacją instalator na komputerze sprawdza nowszą stabilną wersję na GitHubie. Wybierz „Otwórz GitHub i pobierz najnowszą wersję”, aby zatrzymać instalację i ją pobrać, lub „Nie, zainstaluj tę wersję”, aby jawnie kontynuować. Jeśli sprawdzenie się nie powiedzie, możesz kontynuować. Oczekujące operacje i odzyskiwanie pomijają sprawdzenie.
 

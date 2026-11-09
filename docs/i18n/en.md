@@ -1,6 +1,6 @@
 # Clean Your TV — user guide
 
-The installer asks for a TV name, default **Home**; scripts can use `--tv-name "Aashiyaan"`. After upgrading an older installation, **Settings → Home → TV name** is available automatically. Save a new name or reset to Home at any time. A saved name survives restart and supported updates; existing settings remain intact. Names allow up to 48 characters. This controls the launcher and its own loading display, not the network name. LG’s earlier loading label may require applying the name through the installer.
+The installer asks for a TV name, default **Home**; scripts can use `--tv-name "Aashiyaan"`. After upgrading an older installation, **Settings → Home → TV name** is available automatically. Save a new name or reset to Home at any time. A saved name survives restart and supported updates; existing settings remain intact. Names allow up to 48 characters. Settings saves the launcher name. To change LG’s startup screen, apply the same name through the installer. Home adds no second loading screen; the network name is unchanged.
 
 Unreleased installer change: before a new installation, the computer installer checks for a newer stable installer on GitHub. Choose “Open GitHub and download the latest version” to stop and download it, or “No, install this version” to continue explicitly. If the check fails, you can continue. Pending operations and recovery skip the check.
 

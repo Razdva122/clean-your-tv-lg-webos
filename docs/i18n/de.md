@@ -1,6 +1,6 @@
 # Clean Your TV — Benutzeranleitung
 
-Der Installer fragt nach dem TV-Namen, Standard **Home**; CLI: `--tv-name "Aashiyaan"`. Nach einem Upgrade erscheint **Einstellungen → Home → TV-Name** automatisch. Dort lässt sich der Name jederzeit speichern oder auf Home zurücksetzen. Er bleibt bei Neustarts und unterstützten Updates erhalten; andere Einstellungen bleiben bestehen. Maximal 48 Zeichen. Gilt für Launcher und eigene Ladeanzeige, nicht den Netzwerknamen. Die frühere LG-Anzeige muss eventuell über den Installer geändert werden.
+Der Installer fragt nach dem TV-Namen, Standard **Home**; CLI: `--tv-name "Aashiyaan"`. Nach einem Upgrade erscheint **Einstellungen → Home → TV-Name** automatisch. Dort lässt sich der Name jederzeit speichern oder auf Home zurücksetzen. Er bleibt bei Neustarts und unterstützten Updates erhalten; andere Einstellungen bleiben bestehen. Maximal 48 Zeichen. Einstellungen speichert den Launcher-Namen. Für den LG-Startbildschirm denselben Namen im Installer anwenden. Es gibt keine zweite Ladeanzeige; der Netzwerkname bleibt unverändert.
 
 Noch unveröffentlichte Installer-Änderung: Vor einer neuen Installation prüft der Computer-Installer GitHub auf eine neuere stabile Version. Wähle „GitHub öffnen und die neueste Version herunterladen“, um anzuhalten und sie herunterzuladen, oder „Nein, diese Version installieren“, um ausdrücklich fortzufahren. Bei fehlgeschlagener Prüfung kannst du fortfahren. Ausstehende Vorgänge und Wiederherstellung überspringen die Prüfung.
 

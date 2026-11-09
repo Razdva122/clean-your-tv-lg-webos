@@ -2575,7 +2575,7 @@
         tile.el.classList.add('shown');
       });
       getElement('homeSurface').classList.remove('ctv-starting');
-      if (window.HomeName) HomeName.finishLoading();
+      if (window.HomeName) HomeName.refresh();
     });
   }
   // Weather changes reserve layout space without resetting the user's app/row.

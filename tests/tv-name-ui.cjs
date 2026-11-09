@@ -17,24 +17,25 @@ const {
       const input = page.locator('#homeTvName');
       await input.waitFor({ state: 'visible' });
       assert.equal(await input.inputValue(), 'Home');
-      await input.fill('Aashiyaan');
+      await input.fill('Aashiyan TV');
       await page
         .getByRole('button', { name: 'Save name', exact: true })
         .click();
-      assert.equal(await page.title(), 'Aashiyaan');
+      assert.equal(await page.title(), 'Aashiyan TV');
       assert.equal(
         await page.evaluate(() => localStorage.getItem('tvhome.name')),
-        'Aashiyaan'
+        'Aashiyan TV'
       );
       await page.reload();
       await page.locator('#tiles .focused').waitFor();
       assert.equal(
-        await page.locator('#tvNameLoadingTitle').textContent(),
-        'Aashiyaan'
+        await page.locator('#tvNameLoading').count(),
+        0,
+        'no duplicate app-managed loading screen'
       );
-      assert.equal(await page.title(), 'Aashiyaan');
+      assert.equal(await page.title(), 'Aashiyan TV');
       await page.locator('#btnSettings').click();
-      assert.equal(await input.inputValue(), 'Aashiyaan');
+      assert.equal(await input.inputValue(), 'Aashiyan TV');
       await page
         .getByRole('button', { name: 'Reset to Home', exact: true })
         .click();

@@ -10,15 +10,15 @@ connection options. `--yes` and non-interactive installation use Home unless
 
 Names can contain up to 48 Unicode characters; blank input selects Home and
 control characters are rejected. The installer sets the package title and seeds
-the launcher's own loading display. Later, use **Settings → Home → TV name**
+the launcher's default preference. Later, use **Settings → Home → TV name**
 to save a different name or reset to Home. Upgrading an older installation adds
 this control automatically, defaulting to Home without clearing existing settings.
 Saved names survive restart and supported profile-preserving updates; a saved
 choice takes precedence over a replacement package's default seed.
 
-Settings changes the launcher's own title and loading display immediately.
-LG's earlier system loading label comes from installed package metadata and may
-require applying the name through the installer. LG supplies its localized
+Settings saves the preference and changes the launcher's document title immediately.
+LG's startup loading label comes from installed package metadata: apply the same
+name through the installer to change it. Home does not add another loading screen. LG supplies its localized
 “Loading…” message. This feature does not change the TV's network name.
 
 <a id="installer-update-check-unreleased"></a>
