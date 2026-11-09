@@ -101,11 +101,15 @@ For help, include TV model, firmware, No-root or Root, installer device, failed 
 
 Choose **Uninstall Clean Your TV** in Maintenance with the same saved TV connection. Confirm once. Removal deletes known project apps and files that are present and skips absent items, including after a partial installation.
 
+On older TVs without a separate LG Home app, No-root removal may switch to Live TV. Keep the TV on and follow any requested restart; do not delete recovery records or reset the TV.
+
 When asked, disconnect the TV from power, reconnect it, wait for the network and choose **Try again**. Standby or Quick Start is not a full restart; CYTV does not restart the TV automatically. A connection loss needs a connection check and Try again on the same goal, without another recovery wizard. If access is denied, use the requested Root connection; if the TV is busy, wait and retry. Success appears only after final cleanup is verified. Keep your keys and original reports. The emergency controls and sharing consent above still apply.
 
 Failed or interrupted setup offers recovery directly. If No-root setup cannot continue, confirm full removal once. Removal automatically retries transient connection loss and a busy CYTV worker up to three attempts. If Root access is required, choose **Connect using Root** for the same TV; verified Root cleanup also finishes its blocked No-root removal. A failed Root activation attempts to restore and verify LG Home without repeating activation. Cancellation with unfinished work keeps a diagnostic report and recovery actions. Emergency-stop state remains unchanged.
 
-After a removal connection error, open the connection details, check network access or choose an existing Root SSH key, then retry. The TV address, edition, port and host-key checks stay fixed. No-root checks Helper before pairing: stop it and confirm the recheck in the same setup. An empty TV can skip restart only with verified absence and no unresolved setup; actual removal still requires the requested restart. Legacy Root Updater remnants lead to separately confirmed full removal before new setup. Input-service failure allows safe package cleanup, but success still requires verified shortcut cleanup.
+After a removal connection error, open the connection details, check network access or choose an existing Root SSH key, then retry. The TV address, edition, port and host-key checks stay fixed. No-root checks Helper before pairing: stop it and confirm the recheck in the same setup. An empty TV can skip restart only with verified absence and no unresolved setup; actual removal still requires the requested restart. Input-service failure allows safe package cleanup, but success still requires verified shortcut cleanup.
+
+**Reinstall Root:** Choose **Set up my TV → Root** with the saved connection and confirm **Reinstall Root?**. The installer restores LG Home and fully removes Clean Your TV, including its updaters, Home Helper and saved preferences. After verified removal, it installs and activates the packages and Root runtime bundled with that installer. Other TV apps and existing root/SSH access are preserved. If removal stops or requests a full restart, finish it before starting setup again. **Uninstall Clean Your TV** alone never starts another installation.
 
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="optional-python-for-root-in-v110"></a>
@@ -129,3 +133,13 @@ After a removal connection error, open the connection details, check network acc
 <a id="unreleased-candidate-older-tv-nodejs"></a>
 <a id="older-tv-nodejs-published-v1120"></a>
 <a id="straightforward-removal-v1110"></a>
+
+## Weather
+
+Open Settings → Weather, below Wallpapers. Turn weather on, choose City, then search manually and select the correct region and country, or choose Automatic for an approximate city based on your internet connection. A VPN may change the automatic result; if the city is missing or wrong, use manual search. The detected or selected city is shown in settings. Choose °C / m/s or °F / mph and an available format: Compact, Now, In detail or 4 days. The preview follows your theme; Example means sample data. Liquid Glass supports Compact only. Ribbon and Atmosphere do not show weather. Turning weather off stops requests and hides city, units and format controls; source selection remains available. During an outage recent data can remain temporarily; after a longer outage weather disappears until it can refresh.
+
+Choose the forecast provider: Auto, MET Norway or Open-Meteo. Auto starts with MET Norway, tries Open-Meteo once on failure, then reuses the last successful source and cached data. Manual selection never switches sources automatically. New settings use Auto; previously saved settings without a provider keep Open-Meteo. The actual source appears in settings. Availability depends on your network. MET refreshes no more often than every three hours; cached data expires after six hours. Missing fields are hidden: MET does not provide feels-like temperature or precipitation probability. Daily ranges summarize forecast points, not measured extremes.
+
+Forecast coordinates go to api.met.no or api.open-meteo.com; city searches go to geocoding-api.open-meteo.com. Optional automatic city lookup sends your public IP to get.geojs.io. Connections use HTTPS; no API key is needed. Location, source and cache stay on the TV. Data sources includes provider terms and credits, including the Norwegian Meteorological Institute (MET Norway, CC BY 4.0).
+
+The Data sources button in the Weather heading opens provider and license information.

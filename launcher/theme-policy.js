@@ -34,7 +34,15 @@
     'input-shelf',
     'input-tile',
     'input-status',
-    'input-preview'
+    'input-preview',
+    'weather',
+    'weather-temp',
+    'weather-secondary',
+    'weather-condition',
+    'weather-bar',
+    'weather-track',
+    'weather-day',
+    'weather-icon'
   ];
   var states = [
     'focused',
@@ -276,6 +284,46 @@
     )
       fail('asset-invalid', 'hash');
   }
+  function normalizeWeather(input) {
+    object(input, [], 'layout-invalid', 'weather', [
+      'formats',
+      'scale',
+      'padding',
+      'icons'
+    ]);
+    var result = {
+      formats: ['text', 'current', 'details', 'forecast'],
+      scale: 1,
+      padding: 24,
+      icons: 'fill'
+    };
+    if (input.formats !== undefined) {
+      list(input.formats, 4, 'layout-invalid', 'weather.formats');
+      result.formats = input.formats.slice();
+      result.formats.forEach(function (format, index) {
+        if (
+          ['text', 'current', 'details', 'forecast'].indexOf(format) < 0 ||
+          result.formats.indexOf(format) !== index
+        )
+          fail('layout-invalid', 'weather.formats');
+      });
+    }
+    if (input.scale !== undefined) {
+      number(input.scale, 0.85, 1.25, 'layout-invalid', 'weather.scale');
+      result.scale = input.scale;
+    }
+    if (input.padding !== undefined) {
+      number(input.padding, 0, 32, 'layout-invalid', 'weather.padding');
+      if (input.padding % 1) fail('layout-invalid', 'weather.padding');
+      result.padding = input.padding;
+    }
+    if (input.icons !== undefined) {
+      if (['fill', 'monochrome'].indexOf(input.icons) < 0)
+        fail('layout-invalid', 'weather.icons');
+      result.icons = input.icons;
+    }
+    return result;
+  }
   function validateManifest(m) {
     object(
       m,
@@ -332,7 +380,7 @@
       'requires'
     );
     version(m.requires.minimumHomeVersion);
-    list(m.requires.capabilities, 7, 'api-unsupported', 'capabilities').forEach(
+    list(m.requires.capabilities, 8, 'api-unsupported', 'capabilities').forEach(
       function (capability, index) {
         if (
           [
@@ -342,7 +390,8 @@
             'date-placement-v1',
             'input-placement-v1',
             'overlay-presentation-v1',
-            'video-wallpaper-v1'
+            'video-wallpaper-v1',
+            'weather-v1'
           ].indexOf(capability) < 0 ||
           m.requires.capabilities.indexOf(capability) !== index
         )
@@ -360,7 +409,8 @@
         'motion',
         'datePlacement',
         'inputs',
-        'presentation'
+        'presentation',
+        'weather'
       ]
     );
 
@@ -384,6 +434,10 @@
     number(m.layout.spacingScale, 0.8, 1.2, 'layout-invalid', 'spacingScale');
     number(m.layout.textScale, 0.9, 1.25, 'layout-invalid', 'textScale');
     number(m.layout.focusScale, 1.05, 1.15, 'layout-invalid', 'focusScale');
+    var hasWeather = Object.prototype.hasOwnProperty.call(m.layout, 'weather');
+    if (hasWeather !== m.requires.capabilities.indexOf('weather-v1') >= 0)
+      fail('api-unsupported', 'weather-v1');
+    if (hasWeather) normalizeWeather(m.layout.weather);
     var hasInputs = Object.prototype.hasOwnProperty.call(m.layout, 'inputs');
     if (
       hasInputs !==
@@ -925,6 +979,7 @@
     properties: properties,
     limits: limits,
     normalizeRibbon: normalizeRibbon,
+    normalizeWeather: normalizeWeather,
     validateManifest: validateManifest,
     validateRules: validateRules,
     validateMotion: validateMotion,

@@ -95,6 +95,13 @@ Share only redacted logs. Exclude SSH/SSAP credentials, addresses, SSIDs, app
 inventories and personal screenshots. Report security issues privately to the
 repository maintainer once a reporting channel is configured; do not publish credentials.
 
+When asking a reporter for the installer's standard **Save diagnostic report**
+export, simply ask them to save and attach it. The installer already redacts this
+export; do not append a privacy warning or manual redaction checklist to the
+request. The rules for reviewing evidence before publication and protecting raw
+logs, recovery backups and other nonstandard attachments still apply. See
+[the feedback guide](docs/FEEDBACK.md#keep-private-data-private).
+
 
 Target feature, fix and maintenance PRs at `release/next`. No release version is
 needed during preparation. Link related issues in the PR. At candidate freeze,
@@ -142,6 +149,15 @@ in [Release integration flow](docs/RELEASE-FLOW.md). Do not rerun unchanged manu
 cases when their artifact hashes and device/state preconditions still match.
 
 ## Short development and release cycles
+
+Use one [verification ledger](docs/RELEASE-FLOW.md#verification-ledger-and-repeat-rules)
+throughout development, integration and release acceptance. Before repeating a
+test, build or device operation, identify the changed input or missing evidence
+and the decision the result will resolve. Moving work between a branch, PR and
+RC does not invalidate matching evidence. After fixes, rerun affected checks;
+finish the batch before one full candidate dispatch. Retry infrastructure or
+policy failures at the failed gate without repeating successful builds or device
+operations. Required final artifact acceptance and provenance checks still apply.
 
 Use [TV development](docs/development/TV-DEVELOPMENT.md) for UI-only live feedback
 and explicit signed Root package QA. These preliminary results cannot satisfy

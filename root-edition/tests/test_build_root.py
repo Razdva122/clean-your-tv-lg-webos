@@ -30,6 +30,18 @@ class BuildTests(unittest.TestCase):
         self.builder = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(self.builder)
 
+    def test_weather_closure_preserves_private_inventory_and_bundles_trust(self):
+        source={'service.js':b"module.exports = require('./weather');"}
+        result=self.builder.bundle_weather(source)
+        self.assertEqual(set(result),set(source))
+        self.assertNotIn(b"require('./weather')",result['service.js'])
+        self.assertNotIn(b"/ca-bundle.crt",result['service.js'])
+        import subprocess
+        with tempfile.TemporaryDirectory() as directory:
+            script=Path(directory)/'weather.js';script.write_bytes(result['service.js'])
+            run=subprocess.run(['node','tests/weather/service.cjs',str(script)],cwd=ROOT.parent,capture_output=True,text=True)
+            self.assertEqual(run.returncode,0,run.stdout+run.stderr)
+
     def test_candidate_is_deterministic_isolated_and_hashes_match(self):
         with tempfile.TemporaryDirectory() as tmp:
             first, second = Path(tmp).resolve() / 'first', Path(tmp).resolve() / 'second'

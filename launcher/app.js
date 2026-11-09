@@ -47,7 +47,12 @@
   function updateGeometry(columns, preset, ribbon) {
     layoutPreset = preset || 'dock-grid';
     ribbonStart = 0;
-    layoutGeometry = HomeLayout.geometry(layoutPreset, columns, ribbon);
+    layoutGeometry = HomeLayout.geometry(
+      layoutPreset,
+      columns,
+      ribbon,
+      window.HomeWeather ? HomeWeather.reservation() : null
+    );
     columnCount = columns;
     GRID_LEFT = layoutGeometry.left;
     GRID_WIDTH = layoutGeometry.width;
@@ -444,6 +449,8 @@
       }
     }
     stage.style.webkitTransform = stage.style.transform = target;
+    if (window.HomeWeather)
+      HomeWeather.setScroll(offset, DOCK_TOP, layoutPreset);
   }
   // A fresh press that cannot move nudges the grid or shelf toward that direction.
   function edgeBump(direction) {
@@ -1498,7 +1505,8 @@
       layoutPreset === 'scenic-grid' ||
       (layoutPreset === 'dock-grid' && 0 === row)
         ? (function (e) {
-            var t = e.app.title;
+            var t = e.app.title,
+              weatherRegion = window.HomeWeather && HomeWeather.reservation();
             heroTitle.style.fontSize =
               layoutPreset === 'scenic-grid' && t.length > 100
                 ? t.length > 160
@@ -1507,7 +1515,12 @@
                 : '';
             heroTitle.style.top =
               (layoutPreset === 'channel-list'
-                ? 548
+                ? Math.max(
+                    548,
+                    weatherRegion && weatherRegion.format !== 'text'
+                      ? weatherRegion.bottom + 36
+                      : 0
+                  )
                 : layoutPreset === 'scenic-grid'
                   ? TILE_BASE - 142
                   : TILE_BASE - HERO_OFFSET) + 'px';
@@ -1869,7 +1882,8 @@
       focusTopButton(1);
     shelf.setAttribute('aria-label', tr('Inputs'));
     shelf.style.left = GRID_LEFT - SHELF_INSET + 'px';
-    shelf.style.top = SHELF_TOP + 'px';
+    shelf.style.top =
+      (window.HomeWeather ? HomeWeather.shelfTop() : SHELF_TOP) + 'px';
     shelf.style.width = GRID_WIDTH + SHELF_INSET * 2 + 'px';
     focusedShelf = next;
     shelfLayout = null;
@@ -1982,8 +1996,14 @@
     shelf.classList.toggle(
       'covered',
       covered ||
-        SHELF_TOP + SHELF_WINDOW_TOP - scrollOffset <
-          header.offsetTop + header.offsetHeight + 16
+        (window.HomeWeather ? HomeWeather.shelfTop() : SHELF_TOP) +
+          SHELF_WINDOW_TOP -
+          scrollOffset <
+          Math.max(
+            header.offsetTop + header.offsetHeight,
+            window.HomeWeather ? HomeWeather.bottom() : 0
+          ) +
+            16
     );
     // The video plane ignores the fade, so a covered shelf has no preview.
     if (shelf.classList.contains('covered')) stopPreview();
@@ -2557,11 +2577,21 @@
       getElement('homeSurface').classList.remove('ctv-starting');
     });
   }
+  // Weather changes reserve layout space without resetting the user's app/row.
+  document.addEventListener('home-weather-layout', function () {
+    var state = layoutState.state();
+    updateGeometry(state.columns, state.preset, state.ribbon);
+    layoutTiles();
+    renderShelf();
+    if (focusZone === 'grid') focusTile(focusedTile);
+    else setScroll(scrollOffset);
+  });
   window.HomeUIReady = (
     window.ThemeManager
       ? ThemeManager.start(presentHome)
       : Promise.resolve().then(presentHome)
   ).then(function () {
     window.RootLauncherRendered = true;
+    if (window.HomeWeather) HomeWeather.start();
   });
 })();

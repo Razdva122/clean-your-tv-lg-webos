@@ -92,7 +92,11 @@ function assetBase(r) {
 function validateRecord(r) {
   exact(
     r,
-    Object.hasOwn(r, 'availability') ? fields.concat('availability') : fields
+    fields.concat(
+      ['availability', 'upstreamRepository'].filter((key) =>
+        Object.hasOwn(r, key)
+      )
+    )
   );
   if (r.availability !== undefined)
     check(
@@ -137,11 +141,25 @@ function validateRecord(r) {
     descriptorPath.split('/').pop() === 'cytv-theme.json',
     'Expected specific theme descriptor'
   );
+  var authorOwner = owner;
+  if (r.upstreamRepository !== undefined) {
+    check(
+      typeof r.upstreamRepository === 'string' &&
+        /^https:\/\/github\.com\/[a-z0-9][a-z0-9-]*\/[a-z0-9][a-z0-9._-]*$/.test(
+          r.upstreamRepository
+        ) &&
+        r.upstreamRepository !== r.sourceRepository,
+      'Invalid upstream repository'
+    );
+    authorOwner = r.upstreamRepository
+      .slice('https://github.com/'.length)
+      .split('/')[0];
+  }
   exact(r.author, ['name', 'sourceProfile']);
   text(r.author.name, 100);
   check(
-    r.author.sourceProfile === 'https://github.com/' + owner,
-    'Author profile must match source owner'
+    r.author.sourceProfile === 'https://github.com/' + authorOwner,
+    'Author profile must match source or explicit upstream owner'
   );
   text(r.title, 100);
   text(r.description, 1000);

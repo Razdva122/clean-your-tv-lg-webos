@@ -106,7 +106,7 @@ class BuildTests(unittest.TestCase):
             files=package.data_files((a/'system-updater.ipk').read_bytes())
             service='usr/palm/services/com.cleanyourtv.system.updater.service/'
             self.assertEqual(json.loads(files[service+'services.json'])['id'],'com.cleanyourtv.system.updater.service')
-            self.assertEqual(build.VERSION,'1.2.7')
+            self.assertEqual(build.VERSION,'1.2.8')
             self.assertEqual(json.loads(files[service+'package.json'])['version'],build.VERSION)
             self.assertEqual(json.loads(files['usr/palm/applications/com.cleanyourtv.system.updater/appinfo.json'])['version'],build.VERSION)
             policy_version=subprocess.check_output(['node','-p','require(process.argv[1]).supervisorVersion',str(ROOT/'system-updater/policy.js')],text=True).strip()

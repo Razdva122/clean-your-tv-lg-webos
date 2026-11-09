@@ -1,14 +1,14 @@
 # v1.14.0 — installer choice and shared Root capabilities
 
-Unpublished release candidate after v1.13.0, tracked in
+Published as v1.14.0 after v1.13.0, delivered through
 [PR #442](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/442).
-Scope and versions are frozen. [Selected full build42566531298:1](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42566531298)
+Scope and versions were frozen before acceptance. [Selected full build42566531298:1](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42566531298)
 passed every mandatory job at2f6da451 and is pinned. Its optional, unapproved
 Homebrew job failed an external Python download; no Homebrew promotion is selected.
 The guarded QA-signing correction (#456) replaces the initial full build.
 [Exact Android/C3 QA and explicit limits](history/2026-11-09-release-1.14.0-qa.md).
 Selected C3 signed-update/control/audio/remote-standby and exact Android emulator
-acceptance passed; public delivery remains pending. Alternate legacy hardware,
+acceptance passed; public delivery completed in [Automatic release42571455618](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42571455618). Alternate legacy hardware,
 physical phones and other unselected paths retain their documented limits.
 
 ## Changes
@@ -50,7 +50,7 @@ paths retain fresh-install restrictions and disabled ordinary OTA.
 
 ## Versions and packaging
 
-| Component | Published v1.13.0 | Candidate v1.14.0 | Reason |
+| Component | Published v1.13.0 | Published v1.14.0 | Reason |
 | --- | --- | --- | --- |
 | Home FHD/HD | 1.13.2 | 1.13.3 | Shared Chinese font subset includes new installer translations |
 | Home Helper | 0.8.0 | 0.8.0 | Unchanged source; exact published bytes required |
@@ -60,7 +60,8 @@ paths retain fresh-install restrictions and disabled ordinary OTA.
 | Both edition Updaters | 0.5.4 | 0.5.5 | Same shared font subset; runtime code unchanged |
 | Fresh System / protocol | 1.2.7 / 1 | 1.2.7 / 1 | Supervisor code/inventory unchanged |
 
-Rebuild desktop/Android installers and Root normal/Beta/experimental variants.
+Desktop/Android installers and Root normal/Beta/experimental variants were rebuilt
+at candidate freeze.
 The broker is embedded in ordinary Root too, so its package and infrastructure
 hashes change. Updater packages need their own version bump for the font bytes. System retains
 its exact own package/code; regenerate release-set data for the new artifacts. Existing supervisors stay pinned;
@@ -93,8 +94,9 @@ confirmed disabled intent/guardian off, recovery integrity, completed original
 transaction and no pending operation. Eight unsuccessful observer reads have
 undetermined causes; telemetry does not establish continuous coverage.
 
-Public signing/publication and final anonymous package/feed verification remain
-release gates. This pass does not accept legacy/Beta hardware or #410, physical
+Public signing/publication and package/feed verification completed successfully.
+The [publication record](history/2026-11-09-release-1.14.0-publication.md) records
+public assets, signatures, shipping notices and post-publication issue status. This pass does not accept legacy/Beta hardware or #410, physical
 phones/minimum WebView, passive IR/other remotes, AC cold boot, actual whole-
 edition rollback or retained supervisor migration. The scope/dependency rationale
 and exact hashes/preconditions are in the QA record. Existing v1.13.0 observations

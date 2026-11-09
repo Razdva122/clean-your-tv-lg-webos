@@ -1,0 +1,19 @@
+Crăciun la Brașov — credits
+
+Wallpaper (assets/wallpaper.jpg): original image generated for this theme on 2026-11-03 with
+OpenAI Codex image generation, from a prompt written by the author. AI-generated; it depicts
+an imagined interior and a stylised view of Brașov (Tâmpa, Black Church). Since 1.1.0 the
+wallpaper is 3840×2160: the original 1672×941 render was enlarged 4× with Real-ESRGAN
+(realesrgan-x4plus) and downsampled to 3840×2160, keeping the same composition. Upscaled
+detail is synthesised by the model, not native. License: CC BY 4.0 (see LICENSE.txt).
+
+Preview (assets/preview.jpg): screenshot of the toolkit browser preview with this theme, showing
+the toolkit's demo app icons (see the toolkit's DEMO-ICON-CREDITS.txt / DEMO-ICON-LICENSE.txt).
+
+Theme CSS and theme.json: Rares, MIT License.
+
+UHD packaging by Clean Your TV contributors, 2026-11-06: silent two-second
+H.264 still loops at 3840x2160 and 1920x1080, derived from the credited,
+already upscaled wallpaper JPEG. Video derivatives remain CC BY 4.0.
+No animation, no additional source detail, no native-4K-origin claim.
+Original theme CSS and composition by Rares are preserved.

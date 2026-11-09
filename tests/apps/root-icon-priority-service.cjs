@@ -39,8 +39,11 @@ test('Root service keeps different icon priorities independent and releases fail
           return require('../../root-edition/service/handlers');
         if (name === './app-inventory') return inventory;
         if (name === './presentation-context') return () => ({});
-        if (name === './theme-receiver' || name === './c1-lease')
-          return () => {};
+        if (name === './weather')
+          return require('../../renewal-service/weather');
+        if (name === './theme-receiver')
+          return require('../../theme-receiver/register');
+        if (name === './c1-lease') return () => {};
         throw Error('Unexpected module ' + name);
       }
     }

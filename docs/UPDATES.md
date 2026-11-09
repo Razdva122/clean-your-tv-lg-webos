@@ -161,3 +161,9 @@ wait without extending the launcher's health deadline.
 ## Automatic graphics selection
 
 In 1.6.0, installer builds contain both HD/FHD packages. New or explicitly migrated updater clients choose the signed 720p channel for a verified non-UHD TV and the existing 1080p channel for a verified UHD TV. Unknown capability stops before installation. Fresh eligible 1.6.0 setup can provision System 1.2.0; exact-package host fixtures cover fresh provisioning, while physical provisioning remains untested. The explicit replacement path admits only verified 1.1.0/1.1.1; installed 1.1.2 remains pinned with its previous channel behavior and has no general migration in 1.6.0. Ordinary component OTA does not replace it. Do not delete state or reinstall to force migration. Retained rollback packages and version/signature rules remain unchanged. The first legacy Home HD channel waits for an actual compatible published HD rollback baseline. [Selection, signed feeds and migration limits](development/HOME-GRAPHICS-RESOLUTION.md#automatic-selection-and-ota).
+
+<a id="candidate-system-support"></a>
+
+## System support
+
+v1.15.0 packages fresh System Updater 1.2.8 / protocol 1 because its embedded shared Luna support changes. Existing supervisors stay pinned; ordinary component OTA does not replace them. Explicit supported replacement still admits only installed 1.1.0/1.1.1 and verifies the exact new bundle and readback. Installed 1.1.2/1.2.x are not newly admitted. See [packaging and acceptance](RELEASE-1.15.0.md).

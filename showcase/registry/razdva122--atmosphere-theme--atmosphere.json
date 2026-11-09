@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "id": "github:razdva122/atmosphere-theme:atmosphere",
+  "title": "Atmosphere",
+  "description": "Atmosphere's original landscape, cool white clock and quiet horizontal dock for Clean Your TV on LG webOS.",
+  "author": {
+    "name": "Luigy-Lemon",
+    "sourceProfile": "https://github.com/luigy-lemon"
+  },
+  "sourceRepository": "https://github.com/razdva122/atmosphere-theme",
+  "sourceCommit": "3bf93d2d6e25aaec8f85532de552435be7432fe1",
+  "descriptorUrl": "https://raw.githubusercontent.com/razdva122/atmosphere-theme/d106f87c6a9a50d3a3be09818694537c628e5463/distributions/atmosphere/1.1.0/cytv-theme.json",
+  "descriptorSha256": "d1d0133295a9d7bd40dc9bff98b6d67eb20500fa34cc31e44778123a2dc2fec9",
+  "themeVersion": "1.1.0",
+  "themeApiVersion": 1,
+  "license": "MIT",
+  "creditsFile": "assets/razdva122--atmosphere-theme--atmosphere/d1d0133295a9d7bd40dc9bff98b6d67eb20500fa34cc31e44778123a2dc2fec9/documents/1-7b3230c82fee07a889268940e514c63443d1ca58f327c650e505ba3f12ab0986.txt",
+  "previewFiles": [
+    "assets/razdva122--atmosphere-theme--atmosphere/d1d0133295a9d7bd40dc9bff98b6d67eb20500fa34cc31e44778123a2dc2fec9/assets/preview-6a1ab1ff43606936be50d33d0652bf6253e5b96565b275424725be5bb4015fa6.jpg"
+  ],
+  "tags": [
+    "dark",
+    "minimal",
+    "photographic"
+  ],
+  "addedAt": "2026-11-05",
+  "reviewedAt": "2026-11-09",
+  "evidence": [
+    {
+      "kind": "browser",
+      "summary": "Candidate weather-v1 compatibility update, compiled and policy/hash validated against clean main runtime f84ca319566743f3f4e777259ce1ba2e01470a34. Browser theme/format matrix is recorded separately in the weather integration evidence. No new physical-TV acceptance; original historical evidence does not apply to this new package."
+    },
+    {
+      "kind": "browser",
+      "summary": "Temporary maintainer fork authorized for weather integration. Original source: https://github.com/luigy-lemon/atmosphere-theme. Original author/license/asset credits retained. Fork has a distinct identity; existing upstream installations are not silently replaced."
+    }
+  ],
+  "upstreamRepository": "https://github.com/luigy-lemon/atmosphere-theme"
+}

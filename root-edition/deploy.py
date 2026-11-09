@@ -83,6 +83,8 @@ def verify_bundle(bundle, allow_experimental=False):
     if experimental and routing:
         expected.remove('runtime/c1-home-gate')
         expected.update(('runtime/c1-keyfilter-guard', 'runtime/c1_keyfilter.py', 'runtime/c1-home-filter.js'))
+        if 'runtime/c1-home-gate' in manifest.get('files',{}):
+            expected.add('runtime/c1-home-gate')  # Removal-only schema-1 executor; never fresh install routing.
         if release.get('capabilities') != ['theme-receiver-v1','wallpaper-media-v1','c1-keyfilter-v1']:
             raise ValueError('Invalid compositor routing capabilities')
     if manifest.get('package') != package or set(manifest.get('files', {})) != expected:
@@ -346,10 +348,10 @@ def _remove_root(run, proof):
     return {'returnValue': True, 'removed': APP, 'state_retained': str(STATE)}
 
 
-def experimental_admission(routing=None):
+def experimental_admission(routing=None, owned_operation=None):
     # Runs under the installation mutex, before its durable reservation.
     from installation import classify, device_snapshot
-    if classify(device_snapshot())['state'] != 'fresh':
+    if classify(device_snapshot(owned_operation=owned_operation))['state'] != 'fresh':
         raise ValueError('Experimental C1 setup requires a completely fresh product installation')
     if routing == 'compositor-keyfilter-v1':
         from runtime import c1_keyfilter

@@ -48,6 +48,11 @@ uninstall the applications. First press Home three times within two seconds to s
 
 ## Uninstall
 
+The next installer update adds removal support for older LG stock screens: if
+there is no separate LG Home app, No-root removal may switch to Live TV. This is
+not yet in the published installer. Keep the TV on and follow the normal restart
+and **Try again** prompts; retain the saved connection and recovery records.
+
 In published v1.11.0 and later, select **Uninstall Clean Your TV** on desktop
 or Android (`cytv uninstall`) with the saved connection and confirm once. It
 removes known present apps/files and skips missing ones, even after partial setup.
@@ -82,11 +87,23 @@ its own input shortcut and continues safe package cleanup. A remaining unverifie
 shortcut keeps removal pending; retry after the service is available. No success
 is shown merely because the packages disappeared.
 
-When the legacy Root reinstallation path finds Root Updater remnants, it offers
-full project removal before reading the new setup inventory. This includes any
-No-root Home and Helper; back up preferences first. Confirm removal separately,
-finish any required restart/cleanup, then start setup again. Ordinary verified
-Root maintenance and the native fresh-install-only guard are unchanged.
+### Root reinstallation through the installer (unreleased, #355)
+
+Choose **Set up my TV** with the saved Root connection and confirm **Reinstall
+Root**. This also works after a failed profile-based Home activation. The installer
+validates its replacement bundle and reads a fresh inventory before removing
+anything. It restores LG Home, removes the previous Clean Your TV installation
+including updaters and any No-root Home/Helper, and checks complete removal before
+installing and activating its own packages and runtime in the same setup.
+Back up preferences first; other TV apps and existing root access are preserved.
+
+Incomplete cleanup or a required restart stops replacement. Continue the saved
+removal in the installer, then choose setup again. Standalone removal never
+starts installation. Earlier recovery records remain on the computer. A retained
+runtime cannot be silently activated as the newly selected runtime: both the
+worker and pre-activation checks compare actual code against the installer bundle.
+Fresh, recognized activation refusals have specific explanations; historical logs
+are not attributed to a new attempt. Native C1 remains fresh-install-only.
 
 The following manual steps are for the source installations described above.
 

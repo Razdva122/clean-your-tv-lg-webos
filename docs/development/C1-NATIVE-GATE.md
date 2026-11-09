@@ -5,14 +5,14 @@
 ## Experimental capability-based compositor admission (#364)
 
 The installer extends the existing mount-free protocol to capability-admitted
-Qt TVs with a stock ARM32 native Home. In the next installer, model names and
+Qt TVs with a stock ARM32 native Home. Model names and
 SDK numbers are recorded observations, not an allowlist;
 55NANO77SRA / SDK 9.2.2 / firmware 23.25.55 is the motivating report, not hardware
 acceptance. This experimental path is packaged in published releases from v1.11.0; target-TV physical compatibility remains unverified.
 
 Internal package, backend and lease names retain `c1` for compatibility. Existing
 schema1 mount recovery and schema2 C1 identity/state/recovery formats are preserved.
-The candidate applies the shared read-only environment checks to schema2 fresh
+The runtime applies the shared read-only environment checks to schema2 fresh
 probes and explicit re-enable too: exact System Profile absence, stock native
 manifest/vendor chain, no foreign state or covering mounts, and emergency input.
 This tightens admission; restore remains independent of re-admission. New nonlegacy
@@ -20,9 +20,11 @@ admissions use schema3. A schema3 marker cannot be relabeled schema2 to bypass
 admission. The common installer requires a payload advertising
 `admission_schema:3` and a mount-free release with `compositor_admission:3`.
 
-### Shared Root runtime variants (unpublished Beta packaging)
+<a id="shared-root-runtime-variants-unpublished-beta-packaging"></a>
 
-Ordinary Root already packages this alternative. The next installer also embeds
+### Shared Root runtime variants
+
+Ordinary Root packages this alternative. The common installer also embeds
 it in the explicitly selected Node 0.12.2 Root Beta payload. Both variants use
 the same host selector, device admission, Python backend, QML filter and native
 guardian source. The guardian is compiled once and reused; only the Node closure
@@ -147,6 +149,37 @@ For existing schema 1 mount installations, retain their original recovery comman
 Do not remove that helper or its journal until its native stock/mount proof and normal recovery checks succeed.
 
 ## Source basis and verification boundary
+
+### System images and interrupted fresh setup
+
+Capability admission distinguishes a whole immutable `/usr` system image from
+a mount replacing Home. A separate `/usr` mount is accepted only at filesystem
+root `/`, on read-only squashfs backed by an internal MMC partition (major 179,
+minor below 256), with both critical Home paths on that device. Writable,
+subtree, stacked, overlay and unknown covering mounts remain refusals. The
+[original device probe](https://gist.github.com/metaljay/8a1e63060c7fe7cc1d90fe34fe97e386#11-device-probe-record-2026-11-04)
+records read-only `/usr` squashfs; it does not establish another TV's exact mount
+table or compatibility.
+
+An early native admission refusal can leave a host pending attempt without a TV
+deployment journal. Missing files do not resolve that attempt. Explicit full
+removal preserves it and fences original writers, then may use current verified
+compositor support to prove stock Home without the unavailable Home settings
+APIs. This path requires empty preserved/live CYTV routing evidence and a fresh
+native identity, manifest, vendor chain, mount and emergency-input observation.
+It records `stock-compositor`, never `never-applied` or installation success.
+The final Node cleaner independently rechecks stock identity/hash, manifest,
+vendor chain, exact missing service, mount layout and foreign Home integrations
+before retirement and final acknowledgement. Later read-only inspection uses
+the same current proof; it cannot delete anything.
+
+After verified full removal, the installer selects a new native request through
+the shared coordinator. The coordinator revalidates cleanup under its mutex,
+moves only pinned component fences, and deploys the selected compositor bundle
+under a new lease. The isolated deployment child inherits that mutex FD. The
+previous request cannot resume or submit packages again. Initial fresh setup
+and retained native recovery keep their existing paths; no updater is installed
+by this handoff. These are source/host checks, not physical device acceptance.
 
 The design follows compositor Home filtering and lifecycle return used by [Lightkeeper](https://github.com/chiotas/lightkeeper), including its [one-second C1 return timing](https://github.com/chiotas/lightkeeper/blob/5f26515fe6fd9cc74d29b04a342a2ed6abf424f0/app/service/lightkeeper-init#L63). The owned-chain approach also follows [GlassHouse](https://github.com/rorygallagher2024/glasshouse/blob/25ac2c93171f394884d9fde76e5e6bcedcb98e33/server/lib/remotekeys.js#L567). Root presentation requires its own visibility checks; the current candidate uses the ordinary full-screen Home CARD. The activation format follows the [LS2 multi-service parser](https://github.com/webosose/luna-service2/blob/5bc38aa348b35f5799f1bf9ed7c6cb513bc5f702/src/ls-hubd/file_parser.cpp#L468). LG's [service naming rules](https://webostv.developer.lge.com/develop/guides/js-service-usage) also apply to package metadata.
 

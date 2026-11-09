@@ -111,3 +111,21 @@ are retained with their exact directory identity and reported as a nonblocking
 temporary-files warning. Python and the final native/Node gate use the same
 exception; unrelated/current support stages and live processes remain guarded.
 Never load a retained `.pyc` to authorize removal.
+
+## Installer removal compatibility follow-up
+
+Current source reuses the existing confined tree remover for host-checkpointed
+`/tmp/cytv-root-tail-<UUID>` scratch directories. Their old executable, atomic
+upload temporary files and cache entries are inert data, removed together under
+the matching operation/lease and original locks. Filename or old support hashes
+do not create another recovery state. The exact private directory scope,
+no-follow traversal, ownership and inode checks remain mandatory; links inside
+an owned scratch tree are unlinked without traversing their targets. Persistent
+ownership/removal journals are separate from scratch data and remain intact.
+
+A completed matching TV cleanup receives current package, startup, routing,
+activity, input and private-file absence checks. A retained legacy completion
+can publish its final fence once; it does not reopen package removal or acquire
+another destructive cleanup stage merely because the host still says pending.
+This is source behavior for a future rebuilt installer, not published device
+acceptance. See [implementation evidence](../history/2026-11-09-installer-removal-four-issues.md).

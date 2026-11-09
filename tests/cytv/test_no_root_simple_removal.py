@@ -125,6 +125,118 @@ class SimpleRemoval(unittest.TestCase):
 
     def remove(self):return self.installer.uninstall(full_project=True)
 
+    def legacy_home(self, foreground='com.webos.app.livetv'):
+        original=self.remote.luna
+        state={'foreground':foreground}
+        def luna(uri,payload,**kwargs):
+            if uri.endswith('/launch') and payload['id']=='com.webos.app.home':
+                self.remote.calls.append((uri,payload))
+                raise TVRejected('App not found',{'returnValue':False,'errorCode':-101},uri)
+            if uri.endswith('/getForegroundAppInfo'):
+                self.remote.calls.append((uri,payload))
+                return {'returnValue':True,'appId':state['foreground']}
+            if uri.endswith('/launch') and payload['id']=='com.webos.app.livetv':
+                state['foreground']='com.webos.app.livetv'
+            return original(uri,payload,**kwargs)
+        self.remote.luna=luna
+        return state
+
+    def test_legacy_home_bar_removes_installed_packages_and_completes_after_restart(self):
+        self.remote.apps=set(self.cleanup.APPS[:2])
+        self.own_file('apps/usr/palm/applications/com.gathin.tvhome/appinfo.json','{"id":"com.gathin.tvhome"}')
+        foreground=self.legacy_home('com.gathin.tvhome')
+        try:result=self.remove()
+        except UserError as error:self.fail('Legacy Home must not block removal: '+str(error))
+        self.assertTrue(result['restart_required'])
+        self.assertFalse(self.remote.apps)
+        self.assertEqual(foreground['foreground'],'com.webos.app.livetv')
+        self.reboot()
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertIsNone(self.store.pending(self.profile))
+
+    def test_manually_removed_packages_with_stock_hdmi_foreground_finish_without_stock_home_app(self):
+        (self.root/'proc').mkdir()
+        self.legacy_home('com.webos.app.hdmi2')
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertFalse(any(uri.endswith('/dev/remove') for uri,_ in self.remote.calls))
+        self.assertFalse(any(uri.endswith('/launch') and body['id']=='com.webos.app.livetv'
+                             for uri,body in self.remote.calls))
+
+    def test_stock_source_launch_waits_for_fresh_foreground_confirmation(self):
+        self.remote.apps=set(self.cleanup.APPS[:2]);state=self.legacy_home('com.gathin.tvhome')
+        original=self.remote.luna
+        reads=[]
+        def luna(uri,payload,**kwargs):
+            if uri.endswith('/getForegroundAppInfo'):
+                reads.append(True)
+                if len(reads)<3:return {'returnValue':True,'appId':'com.gathin.tvhome'}
+            return original(uri,payload,**kwargs)
+        self.remote.luna=luna
+        self.assertTrue(self.remove()['restart_required'])
+        self.assertGreaterEqual(len(reads),3)
+        self.assertFalse(self.remote.apps)
+
+    def test_missing_home_does_not_accept_unrelated_foreground_or_unconfirmed_stock_launch(self):
+        (self.root/'proc').mkdir()
+        self.legacy_home('third.party.app')
+        original=self.remote.luna
+        def luna(uri,payload,**kwargs):
+            if uri.endswith('/launch') and payload['id']=='com.webos.app.livetv':
+                self.remote.calls.append((uri,payload))
+                return {'returnValue':True}  # Acknowledged launch without foreground change.
+            return original(uri,payload,**kwargs)
+        self.remote.luna=luna
+        with self.assertRaises(UserError):self.remove()
+        self.assertIsNotNone(self.store.pending(self.profile))
+
+    def test_missing_home_with_malformed_foreground_never_launches_another_app_or_removes_packages(self):
+        original=self.remote.luna
+        for reply in ({'returnValue':True}, {'returnValue':True,'appId':[]},
+                      {'returnValue':False,'appId':'com.webos.app.livetv'}, None):
+            with self.subTest(reply=reply):
+                self.remote.apps=set(self.cleanup.APPS[:2]);self.remote.calls=[]
+                def luna(uri,payload,**kwargs):
+                    if uri.endswith('/launch'):
+                        self.remote.calls.append((uri,payload))
+                        raise TVRejected('App not found',{'returnValue':False,'errorCode':-101},uri)
+                    if uri.endswith('/getForegroundAppInfo'):return reply
+                    return original(uri,payload,**kwargs)
+                self.remote.luna=luna
+                with self.assertRaises(UserError):self.remove()
+                self.assertEqual([body['id'] for uri,body in self.remote.calls if uri.endswith('/launch')],
+                                 ['com.webos.app.home'])
+                self.assertFalse(any(uri.endswith('/dev/remove') for uri,_ in self.remote.calls))
+
+    def test_missing_home_does_not_hide_foreground_connection_loss(self):
+        self.remote.apps=set(self.cleanup.APPS[:2]);self.legacy_home()
+        original=self.remote.luna
+        def luna(uri,payload,**kwargs):
+            if uri.endswith('/getForegroundAppInfo'):
+                raise UserError('Lost connection',reason_code='connection-interrupted')
+            return original(uri,payload,**kwargs)
+        self.remote.luna=luna
+        with self.assertRaises(UserError) as caught:self.remove()
+        self.assertEqual(caught.exception.reason_code,'connection-interrupted')
+        self.assertTrue(self.remote.apps)
+        self.assertFalse(any(uri.endswith('/dev/remove') for uri,_ in self.remote.calls))
+
+    def test_other_stock_home_launch_errors_and_connection_loss_still_stop_before_package_remove(self):
+        original=self.remote.luna
+        for error in (TVRejected('Security',{'returnValue':False,'errorCode':-103},
+                                 'com.webos.applicationManager/launch'),
+                      UserError('Lost connection',reason_code='connection-interrupted')):
+            with self.subTest(error=type(error).__name__):
+                self.remote.apps=set(self.cleanup.APPS[:2])
+                self.remote.calls=[]
+                def luna(uri,payload,**kwargs):
+                    if uri.endswith('/launch'):raise error
+                    return original(uri,payload,**kwargs)
+                self.remote.luna=luna
+                with self.assertRaises(type(error)):self.remove()
+                self.assertFalse(any(uri.endswith('/dev/remove') for uri,_ in self.remote.calls))
+                self.assertTrue(self.remote.apps)
+
     def test_empty_tv_with_verified_idle_processes_needs_no_restart(self):
         (self.root/'proc').mkdir()
         result=self.remove()

@@ -67,6 +67,21 @@
     var manifest = policy.validateManifest(input.manifest),
       rules = policy.validateRules(input.rules);
     policy.validateMotion(manifest, rules);
+    var weatherRules = rules.rules.some(function (rule) {
+      return rule.selector.some(function (s) {
+        return s.part === 'weather' || s.part.indexOf('weather-') === 0;
+      });
+    });
+    if (
+      weatherRules &&
+      manifest.requires.capabilities.indexOf('weather-v1') < 0
+    )
+      fail('api-unsupported', 'weather-v1');
+    if (
+      manifest.layout.weather &&
+      (!root.HomeWeather || root.HomeWeather.supportsThemes !== true)
+    )
+      fail('api-unsupported', 'weather renderer');
     var modernIcons =
       manifest.requires.capabilities.indexOf('modern-icon-css-v1') >= 0;
     var hasIconEffects = rules.rules.some(function (rule) {
@@ -464,7 +479,33 @@
       themeVersion: manifest.themeVersion,
       handles: ownedHandles,
       videoHandles: videoHandles,
-      videoLease: input.videoLease
+      videoLease: input.videoLease,
+      weather: manifest.layout.weather || null,
+      weatherRules: rules.rules
+        .filter(function (rule) {
+          return (
+            rule.selector.length === 1 &&
+            ['home', 'clock'].indexOf(rule.selector[0].part) >= 0 &&
+            rule.selector[0].states.length === 0
+          );
+        })
+        .map(function (rule) {
+          return {
+            selector: [{ part: 'weather', states: [] }],
+            declarations: rule.declarations.filter(function (d) {
+              return (
+                ['font-family', 'color', 'text-shadow'].indexOf(d.property) >= 0
+              );
+            })
+          };
+        })
+        .concat(
+          rules.rules.filter(function (rule) {
+            return rule.selector.some(function (s) {
+              return s.part === 'weather' || s.part.indexOf('weather-') === 0;
+            });
+          })
+        )
     };
     var surface = root.document.getElementById('homeSurface');
     if (surface) {
@@ -523,6 +564,17 @@
     apply: apply,
     suspend: suspend,
     resume: resume,
-    reset: reset
+    reset: reset,
+    weather: function () {
+      return accepted
+        ? {
+            options: accepted.weather,
+            css: root.ThemePolicy.compileRules(
+              { schemaVersion: 1, rules: accepted.weatherRules },
+              accepted.handles
+            )
+          }
+        : { options: null, css: '' };
+    }
   };
 })(this);

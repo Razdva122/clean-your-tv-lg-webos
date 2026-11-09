@@ -39,7 +39,7 @@ class MaintenanceFlowTests(unittest.TestCase):
                 self.assertEqual(events,['preflight','preflight','pair'] if answer=='y' else ['preflight'])
                 self.assertEqual(installer.install.call_count,1 if answer=='y' else 0)
 
-    def test_legacy_root_updater_offers_full_cleanup_before_inventory_or_reinstall(self):
+    def test_legacy_root_updater_offers_confirmed_reinstallation_with_fresh_inventory(self):
         for answer in ('y','n'):
             with self.subTest(answer=answer), tempfile.TemporaryDirectory() as tmp, \
                  patch('cytv.cli.package.verify_payload',return_value={}), \
@@ -51,14 +51,17 @@ class MaintenanceFlowTests(unittest.TestCase):
                 installer.status.return_value={'deployment_stage':'installed-recovery-only',
                                               'device':{'result':{'recovery':{'integrity_verified':True}}}}
                 installer.has_root_updater.return_value=True
-                installer.uninstall_project.return_value={'removed':True,'verified_clean':True}
+                (Path(tmp)/'fallback.png').write_bytes(b'icon')
+                installer.root_inventory.return_value={'apps':[{'id':'video','title':'Video'}],'inputs':[]}
                 write=Capture()
                 result=cli.main(['install','--host',profile['host'],'--edition','root','--yes','--language','en','--data-dir',tmp],
                                 ask=lambda _:answer,write=write,connect=lambda *a:Mock())
                 self.assertEqual(result,0)
-                self.assertEqual(installer.uninstall_project.call_count,1 if answer=='y' else 0)
-                installer.root_inventory.assert_not_called();installer.install.assert_not_called();ssap.assert_not_called()
-                if answer=='y':self.assertEqual(write.plans[-1]['disposition'],'clean-removal')
+                installer.uninstall_project.assert_not_called()
+                self.assertEqual(installer.root_inventory.call_count,1 if answer=='y' else 0)
+                self.assertEqual(installer.install.call_count,1 if answer=='y' else 0)
+                if answer=='y':self.assertEqual(installer.install.call_args.kwargs,{'reinstall':'installed'})
+                ssap.assert_not_called()
 
     def test_explicit_recovery_key_does_not_replace_saved_target_or_host_pin(self):
         with tempfile.TemporaryDirectory() as tmp,patch('cytv.cli.package.verify_payload',return_value={}),patch('cytv.cli.Installer'):

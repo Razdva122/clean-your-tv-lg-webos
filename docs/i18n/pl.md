@@ -101,11 +101,15 @@ Podaj model TV, firmware, No-root lub Root, urządzenie instalujące, krok i kom
 
 Wybierz **Odinstaluj Clean Your TV** w Konserwacji dla tego samego zapisanego połączenia. Potwierdź raz. Znane aplikacje i pliki projektu, które istnieją, zostaną usunięte; brakujące zostaną pominięte, także po częściowej instalacji.
 
+Na starszych telewizorach bez osobnej aplikacji LG Home usuwanie No-root może przełączyć ekran na telewizję na żywo. Pozostaw telewizor włączony i uruchom go ponownie, jeśli pojawi się prośba; nie usuwaj danych odzyskiwania ani nie resetuj telewizora.
+
 Gdy pojawi się prośba, odłącz zasilanie TV, podłącz ponownie, poczekaj na sieć i wybierz **Spróbuj ponownie**. Czuwanie lub Quick Start nie jest pełnym restartem; CYTV nie uruchamia TV ponownie automatycznie. Po utracie połączenia sprawdź je i ponów to samo usuwanie bez kolejnego kreatora odzyskiwania. Przy odmowie dostępu użyj żądanego połączenia Root; gdy TV jest zajęty, poczekaj i ponów. Sukces pojawi się dopiero po weryfikacji końcowego czyszczenia. Zachowaj klucze i oryginalne raporty. Sterowanie awaryjne i zgoda na udostępnianie nadal obowiązują.
 
 Po nieudanej lub przerwanej instalacji odzyskiwanie jest dostępne bezpośrednio. Jeśli No-root nie może kontynuować, potwierdź raz pełne usunięcie. Przy chwilowej utracie połączenia lub zajętym procesie CYTV usuwanie podejmuje do trzech prób. Jeśli potrzebny jest Root, wybierz **Połącz przez Root** dla tego samego TV; zweryfikowane czyszczenie Root kończy też zablokowane usuwanie No-root. Po błędzie aktywacji Root CYTV próbuje przywrócić i sprawdzić LG Home bez ponownej aktywacji. Anulowanie z niedokończoną pracą zachowuje raport i działania odzyskiwania. Stan zatrzymania awaryjnego pozostaje bez zmian.
 
-Po błędzie połączenia podczas usuwania otwórz szczegóły, sprawdź sieć lub wybierz istniejący klucz SSH Root i ponów próbę. Adres, edycja, port i weryfikacja klucza telewizora pozostają ustalone. No-root sprawdza Helper przed parowaniem: zatrzymaj go i potwierdź ponowne sprawdzenie w tym samym procesie. Tylko zweryfikowany pusty telewizor bez niedokończonej instalacji może pominąć restart; po faktycznym usuwaniu wykonaj wymagany restart. Pozostałości starego Root Updater prowadzą do osobno potwierdzanego pełnego usunięcia przed nową instalacją. Awaria usługi wejść pozwala kontynuować bezpieczne usuwanie pakietów; sukces nadal wymaga potwierdzenia usunięcia skrótu.
+Po błędzie połączenia podczas usuwania otwórz szczegóły, sprawdź sieć lub wybierz istniejący klucz SSH Root i ponów próbę. Adres, edycja, port i weryfikacja klucza telewizora pozostają ustalone. No-root sprawdza Helper przed parowaniem: zatrzymaj go i potwierdź ponowne sprawdzenie w tym samym procesie. Tylko zweryfikowany pusty telewizor bez niedokończonej instalacji może pominąć restart; po faktycznym usuwaniu wykonaj wymagany restart. Awaria usługi wejść pozwala kontynuować bezpieczne usuwanie pakietów; sukces nadal wymaga potwierdzenia usunięcia skrótu.
+
+**Ponowna instalacja Root:** Wybierz **Skonfiguruj telewizor → Root** z zapisanym połączeniem i potwierdź **Zainstalować Root ponownie?**. Instalator przywraca LG Home i całkowicie usuwa Clean Your TV, jego aktualizatory, Home Helper i zapisane ustawienia. Po zweryfikowaniu usunięcia instaluje i aktywuje pakiety oraz środowisko Root dołączone do tego instalatora. Inne aplikacje TV i istniejący dostęp root/SSH zostają zachowane. Jeśli usuwanie się zatrzyma lub zażąda pełnego restartu, dokończ je przed ponownym rozpoczęciem konfiguracji. Samo **Odinstaluj Clean Your TV** nigdy nie uruchamia nowej instalacji.
 
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="opcjonalny-python-dla-root"></a>
@@ -130,3 +134,13 @@ Szczegółowe instrukcje po angielsku: [wymagania](../COMPATIBILITY.md) · [ster
 <a id="kandydat-unreleased-starszy-nodejs-w-tv"></a>
 <a id="starszy-nodejs-w-tv-opublikowano-w-v1120"></a>
 <a id="proste-usuwanie-v1110"></a>
+
+## Pogoda
+
+Otwórz Ustawienia → Pogoda, pod Tapetami. Włącz pogodę i otwórz Miasto, aby wyszukać właściwy region i kraj, lub wybierz Automatycznie, aby określić przybliżone miasto według połączenia internetowego. VPN może zmienić wynik; jeśli miasta brakuje lub jest błędne, użyj wyszukiwania ręcznego. Wykryte lub wybrane miasto widać w ustawieniach. Wybierz °C / m/s lub °F / mph oraz dostępny format: krótki, aktualny, szczegółowy lub cztery dni. Podgląd pasuje do motywu; Przykład oznacza dane demonstracyjne. Liquid Glass obsługuje tylko krótki format. Ribbon i Atmosphere nie pokazują pogody. Wyłączenie zatrzymuje zapytania i ukrywa miasto, jednostki oraz format; wybór źródła pozostaje dostępny. Podczas awarii ostatnie dane mogą pozostać przez pewien czas; później pogoda znika do czasu odświeżenia.
+
+Wybierz źródło prognozy: Auto, MET Norway lub Open-Meteo. Auto zaczyna od MET Norway, po błędzie raz próbuje Open-Meteo, a następnie korzysta z ostatniego działającego źródła i jego pamięci podręcznej. Wybór ręczny nigdy nie zmienia źródła automatycznie. Nowe ustawienia używają Auto; zapisane bez źródła zachowują Open-Meteo. Rzeczywiste źródło jest widoczne w ustawieniach. Dostępność zależy od sieci. MET odświeża dane najwyżej co trzy godziny; pamięć podręczna wygasa po sześciu godzinach. Brakujące pola są ukryte: MET nie podaje temperatury odczuwalnej ani prawdopodobieństwa opadów. Zakresy dobowe podsumowują punkty prognozy, nie zmierzone ekstrema.
+
+Współrzędne trafiają do api.met.no lub api.open-meteo.com, wyszukiwania miast do geocoding-api.open-meteo.com. Opcjonalna automatyczna lokalizacja wysyła publiczny adres IP do get.geojs.io. Połączenia używają HTTPS; klucz API nie jest potrzebny. Miejsce, źródło i pamięć podręczna pozostają w telewizorze. Źródła danych zawierają warunki i autorstwo, w tym Norweski Instytut Meteorologiczny (MET Norway, CC BY 4.0).
+
+Przycisk Źródła danych w nagłówku Pogoda otwiera informacje o usługach i licencjach.

@@ -67,13 +67,35 @@ def bundle_c1_lease(files):
     return files
 
 
+def bundle_weather(files):
+    """Inline the shared fixed MET transport and trust in the owned service leaf."""
+    import re
+    from deploy import checked_file
+    files = dict(files)
+    needle = b"require('./weather')"
+    if files['service.js'].count(needle) != 1:
+        raise ValueError('Expected one Root weather registration')
+    root = Path(__file__).resolve().parents[1] / 'renewal-service'
+    source = checked_file(root, 'weather.js')
+    ca = checked_file(root, 'ca-bundle.crt').decode('utf-8')
+    license = checked_file(root, 'ca-LICENSE.txt').replace(b'*/', b'* /')
+    pattern = rb"require\('fs'\)\.readFileSync\(\s*__dirname \+ '/ca-bundle.crt',\s*'utf8'\s*\)"
+    source, count = re.subn(pattern, lambda _: json.dumps(ca).encode(), source)
+    if count != 1:
+        raise ValueError('Expected one canonical weather CA import')
+    bundled = (b'(function(){var module={exports:{}};\n/* Mozilla CA bundle license\n'
+               + license + b'\n*/\n' + source + b'\nreturn module.exports;}())')
+    files['service.js'] = files['service.js'].replace(needle, bundled)
+    return files
+
+
 def tgz(files, executables=()):
     """Secure owned package leaves, without chmod records for platform containers."""
     from cytv.package import tgz as package_tgz
     return package_tgz(files, executable=executables)
 
 
-def build(output, version='0.0.1', legacy_node_prototype=False, resolution=None, experimental_c1_gate=None, experimental_c1_keyfilter=None, legacy_node_beta=False):
+def build(output, version='0.0.1', legacy_node_prototype=False, resolution=None, experimental_c1_gate=None, experimental_c1_keyfilter=None, legacy_node_beta=False, c1_mount_recovery=None):
     output = Path(output).absolute()
     if '..' in output.parts or any(path.is_symlink() for path in (output, *output.parents)):
         raise ValueError('Output must not traverse symlinks or parent segments')
@@ -89,6 +111,14 @@ def build(output, version='0.0.1', legacy_node_prototype=False, resolution=None,
         validate_native_gate(native_gate)
         if legacy_node_prototype or (legacy_node_beta and not keyfilter):
             raise ValueError('Legacy Node Beta only admits mount-free compositor routing; the host prototype is not admitted')
+    recovery_gate = None
+    if c1_mount_recovery is not None:
+        if not keyfilter or legacy_node_beta:
+            raise ValueError('Legacy mount recovery is installer-only support for the current native bundle')
+        from deploy import checked_file
+        candidate = Path(c1_mount_recovery).absolute()
+        recovery_gate = checked_file(candidate.parent, candidate.name)
+        validate_native_gate(recovery_gate)
     files = compile_web(preview.prepare(version=version, resolution=resolution))
     info = json.loads(files['appinfo.json'])
     app_id = info['id']
@@ -107,6 +137,7 @@ def build(output, version='0.0.1', legacy_node_prototype=False, resolution=None,
     from scripts.theme_receiver import inject
     private_service = bundle_presentation_context({name[len(service_prefix):]: data for name, data in payload.items() if name.startswith(service_prefix)})
     private_service = bundle_c1_lease(private_service)
+    private_service = bundle_weather(private_service)
     private_service = inject(private_service, standalone=True)
     payload.pop(service_prefix+'c1-lease.js')
     if legacy_node_beta:
@@ -161,6 +192,10 @@ def build(output, version='0.0.1', legacy_node_prototype=False, resolution=None,
         if keyfilter:
             for extra in ('c1_keyfilter.py', 'c1-home-filter.js'):
                 support['runtime/' + extra] = checked_file(source, 'runtime/' + extra)
+    if recovery_gate is not None:
+        # Current trusted recovery for retained schema-1 installations only.
+        # deploy.install still copies only the explicitly selected compositor.
+        support['runtime/c1-home-gate'] = recovery_gate
     if legacy_node_beta:
         from scripts.root_node_build import compile_root_beta
         support = compile_root_beta(support)
@@ -195,10 +230,12 @@ def main():
                         help='Explicit developer-only C1 backend; excluded from normal installer and OTA')
     parser.add_argument('--experimental-c1-keyfilter', type=Path, metavar='ARM_BINARY',
                         help='Explicit mount-free C1 compositor routing guardian')
+    parser.add_argument('--c1-mount-recovery', type=Path, metavar='ARM_BINARY',
+                        help='Installer-only recovery for retained schema-1 native Home')
     args = parser.parse_args()
     try:
         package = build(args.output, version=args.version, legacy_node_prototype=args.legacy_node_prototype, legacy_node_beta=args.legacy_node_beta,
-                        resolution=args.resolution, experimental_c1_gate=args.experimental_c1_gate, experimental_c1_keyfilter=args.experimental_c1_keyfilter)
+                        resolution=args.resolution, experimental_c1_gate=args.experimental_c1_gate, experimental_c1_keyfilter=args.experimental_c1_keyfilter, c1_mount_recovery=args.c1_mount_recovery)
     except (ValueError, OSError) as exc:
         parser.exit(1, 'Candidate build failed: ' + str(exc) + '\n')
     print('Built ' + str(package) + '. Offline only; hardware validation pending.')

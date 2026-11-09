@@ -1,6 +1,6 @@
 # Install Clean Your TV
 
-> **Unpublished shared compositor backend:** the candidate selects the experimental
+> **Shared experimental compositor backend:** the installer selects this
 > backend for ordinary Root and Root Beta by verified capabilities, without an
 > SDK/model allowlist. It requires fresh setup, confirmed absence of System Profile,
 > stock ARM32 native LG Home, vendor Qt filters and compatible emergency input and
@@ -23,13 +23,12 @@ Root setup does not obtain root or flash firmware. Do not enable Developer Mode
 over an existing rooted setup, or run Root routing and No-root Helper together.
 [Compare everyday controls and limits](EDITIONS.md).
 Normal profile-based Root also requires working Settings Service and System Profile
-Home interfaces (`com.webos.service.systemprofile`). The unpublished candidate's
+Home interfaces (`com.webos.service.systemprofile`). The installer's
 shared [compositor backend](development/C1-NATIVE-GATE.md) supports ordinary Root
 and exact-Node-0.12.2 Root Beta only when System Profile absence and all native
 Home/input/recovery requirements are verified. A KeyFilters field alone is
-insufficient; old in-compositor LG panels remain unsupported. Use published
-downloads for published behavior; this fresh-install experimental path has no
-new physical acceptance or normal OTA support.
+insufficient; old in-compositor LG panels remain unsupported. This fresh-install
+experimental path still has no target-TV physical acceptance or normal OTA support.
 Root access alone does not establish compatibility.
 
 If No-root was installed again after full removal, switching to Root may require cleanup first. Back up Home preferences, choose **Uninstall Clean Your TV** with the saved Root connection and wait for verified removal. This also removes No-root Home and Helper. Then install Root; keep recovery records.

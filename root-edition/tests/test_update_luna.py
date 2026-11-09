@@ -87,6 +87,13 @@ class ReplyBoundsTests(unittest.TestCase):
         self.assertEqual(reply['activities'],[{'activityId':7,'name':'com.local.nativehome.boot',
             'callback':{'method':'luna://com.local.nativehome.service/tick'}}])
 
+    def test_legacy_activity_info_has_the_same_bounded_complete_inventory(self):
+        reply=self.reply('luna://com.palm.activitymanager/getActivityInfo',90000)
+        self.assertEqual(reply['activities'][0]['activityId'],7)
+        with self.assertRaisesRegex(ValueError,'Oversized bus reply'):
+            self.reply('luna://com.palm.activitymanager/getActivityInfo',2097152)
+        self.assertEqual(luna.CALLS['com.palm.activitymanager/getActivityInfo'],'activities-list')
+
     def test_activity_list_above_two_mib_is_rejected(self):
         with self.assertRaisesRegex(ValueError,'Oversized bus reply'):
             self.reply('luna://com.palm.activitymanager/list',2097152)

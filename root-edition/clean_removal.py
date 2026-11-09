@@ -50,6 +50,23 @@ def verified_restart(record):
     return bool(boot_format(baseline) and boot_format(baseline)==boot_format(verified) and baseline!=verified)
 
 
+
+def activities(device):
+    """Read the complete activity inventory on both retail API generations."""
+    payload={'details':True,'subscribers':True,'current':False,'internal':False}
+    try:
+        reply=device.rpc('com.palm.activitymanager/list',payload)
+    except (RuntimeError,TimeoutError) as error:
+        if getattr(error,'luna',{}).get('reason') not in ('timeout','service-missing','method-missing','negative-reply'):
+            raise
+        reply=device.rpc('com.palm.activitymanager/getActivityInfo',payload)
+    rows=reply.get('activities') if isinstance(reply,dict) else None
+    if (not isinstance(reply,dict) or reply.get('returnValue') is not True or not isinstance(rows,list)
+            or any(not isinstance(row,dict) or ('callback' in row and not isinstance(row['callback'],dict)) for row in rows)):
+        raise ValueError('Activity inventory could not be verified')
+    return rows
+
+
 def runtime_restore(payload, uid=0):
     """Called in an isolated interpreter with only the current verified bundle.
 
@@ -81,6 +98,22 @@ def runtime_restore(payload, uid=0):
         finally:os.close(fd)
         backend.binary=lambda root,uid:path
     return {'returnValue':True,'result':cli.main('restore')}
+
+
+def compositor_stock(payload):
+    """Fresh stock observation from current verified support, never old code."""
+    import sys
+    import deploy
+    payload=Path(payload)
+    deploy.verify_bundle(payload,allow_experimental=True)
+    release=json.loads(deploy.checked_file(payload,'release.json'))
+    if release.get('routing')!='compositor-keyfilter-v1':
+        raise ValueError('current_compositor_support_required')
+    sys.path.insert(0,str(payload/'runtime'))
+    import c1_keyfilter
+    observed=c1_keyfilter.probe()
+    return {'mode':'stock-compositor','target':{k:observed['target'][k] for k in ('dev','ino','size')},
+            'target_sha256':observed['target_sha256']}
 
 
 @contextmanager
@@ -152,6 +185,8 @@ def retire_tree(path, allowed, keep=(), uid=0, parent_uid=None):
 def routes(device, record=None):
     if record is not None and device.routing_untouched(record):
         return {'mode':'never-applied'}
+    if record is not None and device.compositor_stock_eligible(record):
+        return device.compositor_stock(record)
     settings=device.rpc('com.webos.settingsservice/getSystemSettings',{'category':'general','keys':['defaultApps']})
     home=settings.get('settings',{}).get('defaultApps',{}).get('home')
     if settings.get('returnValue') is not True or not isinstance(home,str) or not home or home in APPS:

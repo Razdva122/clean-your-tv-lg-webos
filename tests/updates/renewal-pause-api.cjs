@@ -22,27 +22,29 @@ const manager = {
 };
 vm.runInNewContext(fs.readFileSync('renewal-service/service.js', 'utf8'), {
   require: (n) =>
-    n === './theme-receiver'
-      ? () => {}
-      : n === 'fs'
-        ? {}
-        : n === 'webos-service'
-          ? Service
-          : n === './diagnostics'
-            ? require('../../renewal-service/diagnostics')
-            : n === './package.json'
-              ? require('../../renewal-service/package.json')
-              : n === './home-control'
-                ? require('../../renewal-service/home-control')
-                : n === './manager'
-                  ? () => manager
-                  : n === './local-io'
-                    ? { createLocalIO: () => ({}) }
-                    : n === './transport'
-                      ? { createRequest: () => {} }
-                      : n === './renewal'
-                        ? { createRenewal: () => ({}) }
-                        : null,
+    n === './weather'
+      ? require('../../renewal-service/weather')
+      : n === './theme-receiver'
+        ? require('../../theme-receiver/register')
+        : n === 'fs'
+          ? {}
+          : n === 'webos-service'
+            ? Service
+            : n === './diagnostics'
+              ? require('../../renewal-service/diagnostics')
+              : n === './package.json'
+                ? require('../../renewal-service/package.json')
+                : n === './home-control'
+                  ? require('../../renewal-service/home-control')
+                  : n === './manager'
+                    ? () => manager
+                    : n === './local-io'
+                      ? { createLocalIO: () => ({}) }
+                      : n === './transport'
+                        ? { createRequest: () => {} }
+                        : n === './renewal'
+                          ? { createRenewal: () => ({}) }
+                          : null,
   __dirname: '/unused',
   setTimeout,
   clearTimeout,

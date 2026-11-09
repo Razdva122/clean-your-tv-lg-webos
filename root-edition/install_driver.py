@@ -19,6 +19,7 @@ def failure_summary(error):
     """Fixed worker categories only; command, output and message stay private."""
     import subprocess
     name=type(error).__name__
+    if name=='InstallerRuntimeMismatch':name='ValueError'
     allowed=('CalledProcessError','TimeoutExpired','ValueError','RuntimeError','OSError',
              'PermissionError','FileNotFoundError','TypeError','KeyError','TimeoutError')
     result={'exception_type':name if name in allowed else 'unknown'}
@@ -209,12 +210,30 @@ class Coordinator:
                     log_failure(self.device,error)
                     # Raw details remain in private logs; retain only fixed failure categories.
                     record.setdefault('failure',failure_summary(error))
-                    record.update(state='recovery_required',code='installation_requires_recovery')
+                    code='installer-runtime-mismatch' if getattr(error,'reason_code',None)=='installer-runtime-mismatch' else 'installation_requires_recovery'
+                    record.update(state='recovery_required',code=code)
                     self.store.write('request-'+identifier,record)
                 return record
         except _Recorded as existing:
             if existing.record['action']!=action: raise ValueError('operation_action_conflict')
             return existing.record
+
+    def native_install(self, identifier, payload):
+        """Fresh experimental install, including a verified clean predecessor.
+
+        Reuses the product mutex/fence handoff, without installing an updater
+        or replaying a recorded native request through normal product resume.
+        """
+        identifier=operation_id(identifier)
+        previous=self.status(identifier)
+        if previous['state']!='unknown':
+            if previous['action']!='install':raise ValueError('operation_action_conflict')
+            return previous
+        self.device.preflight(payload,dict(migrate=False,prepare_supervisor=False),product=False)
+        def perform(checkpoint):
+            checkpoint('root-deploy')
+            return self.device.native_deploy(payload)
+        return self._run(identifier,'install',perform)
 
     def install(self, identifier, payload, migrate=False, prepare_supervisor=False):
         operation_id(identifier)
@@ -235,7 +254,9 @@ class Coordinator:
                 self.device.deploy(payload,options)
                 checkpoint('root-updater')
                 self.device.updater(payload,options)
-            elif state!='installed':
+            elif state=='installed':
+                self.device.require_selected_runtime(payload)
+            else:
                 raise ValueError('installation_requires_recovery')
             if prepare_supervisor:
                 checkpoint('supervisor')
@@ -716,7 +737,7 @@ def main():
     from install_device import LocalDevice, checked_store
     from installation import STATE
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action',choices=('inspect','install','status','restore','remove','activate','clean-remove','clean-status','clean-target'))
+    parser.add_argument('action',choices=('inspect','install','native-install','status','restore','remove','activate','clean-remove','clean-status','clean-target'))
     parser.add_argument('--operation')
     parser.add_argument('--payload',type=Path)
     parser.add_argument('--retire-stage',action='append',default=[])
@@ -734,7 +755,7 @@ def main():
     args=parser.parse_args()
     if args.final_readback_only and (not args.resume or args.action!='install'):
         parser.error('--final-readback-only requires install --resume')
-    if args.action in ('install','remove','status','clean-remove','clean-status','clean-target'): operation_id(args.operation)
+    if args.action in ('install','native-install','remove','status','clean-remove','clean-status','clean-target'): operation_id(args.operation)
     if args.action not in ('install','inspect') and (args.migrate_packaged_home or args.prepare_supervisor): parser.error('install options require install')
     if args.submission_parent is not None:
         if not args.worker or args.action not in ('install','remove') or args.submission_parent<=1:parser.error('invalid submission parent')
@@ -767,6 +788,9 @@ def main():
             if args.action not in ('install','remove'):parser.error('--resume requires install or remove')
             if args.worker:result=coordinator.resume(args.operation,args.payload,final_readback_only=args.final_readback_only)
             else:result=resume_submit(args.operation,ownership,action=args.action,final_readback_only=args.final_readback_only)
+        elif args.action=='native-install':
+            if args.payload is None:parser.error('native-install requires current verified support')
+            result=coordinator.native_install(args.operation,args.payload)
         elif args.action=='install':
             if args.payload is None: parser.error('install requires a verified local payload')
             if args.worker:

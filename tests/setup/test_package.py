@@ -48,6 +48,7 @@ from cytv.package import ipk
 assert Path('build/home-service/state/home-control/.keep').is_file()
 assert Path('build/home-service/theme-receiver/core.js').is_file()
 assert Path('build/home-service/theme-receiver/register.js').is_file()
+assert Path('build/home-service/weather.js').is_file()
 files={'usr/palm/services/com.gathin.tvhome.renewal/state/home-control/.keep':b''}
 Path('dist/com.gathin.tvhome_9.8.7_all.ipk').write_bytes(ipk('com.gathin.tvhome','9.8.7',files))
 ''')
@@ -140,6 +141,9 @@ arch = 'arm' if helper else 'all'
                 self.assertIn(b"require('./compat-runtime')", files[prefix+'service.js'])
                 if folder == 'renewal-service':
                     self.assertIn(prefix+'theme-receiver/core.js', files)
+                    self.assertIn(prefix+'weather.js', files)
+                    self.assertEqual(files[prefix+'ca-bundle.crt'], (ROOT/'renewal-service/ca-bundle.crt').read_bytes())
+                    self.assertEqual(files[prefix+'ca-LICENSE.txt'], (ROOT/'renewal-service/ca-LICENSE.txt').read_bytes())
                     self.assertEqual(files[prefix+'state/home-control/.keep'], b'')
 
     def test_home_archive_sets_only_the_two_owned_state_directories(self):

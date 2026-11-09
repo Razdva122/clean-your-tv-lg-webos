@@ -1,65 +1,75 @@
 {
   "schema": 1,
-  "version": "1.14.0",
+  "version": "1.15.0",
   "changes": [
     {
-      "pr": 441,
-      "issues": [],
-      "summary": "Balance runtime shards and reduce CI overhead"
-    },
-    {
-      "pr": 444,
+      "pr": 457,
       "issues": [
-        437
+        240,
+        283,
+        418,
+        438
       ],
-      "summary": "Repair No-root updates after pairing-key permission normalization"
+      "summary": "Improve legacy No-root/C1 removal and asynchronous Root cleanup reconciliation; original #240/#418 installation causes remain unresolved"
     },
     {
-      "pr": 445,
-      "issues": [],
-      "summary": "docs: reconcile published guidance and simplify localized installation guides"
-    },
-    {
-      "pr": 447,
-      "issues": [],
-      "summary": "website: list user-confirmed TVs and reported versions"
-    },
-    {
-      "pr": 449,
-      "issues": [],
-      "summary": "Offer latest GitHub installer before computer installation"
-    },
-    {
-      "pr": 450,
+      "pr": 459,
       "issues": [
-        389
+        355
       ],
-      "summary": "Read Root installer catalogs over SSH without Node subprocesses"
+      "summary": "Deliver the selected Root runtime through explicit verified reinstallation; original #355 activation and C2 acceptance remain unverified"
     },
     {
-      "pr": 451,
+      "pr": 460,
+      "issues": [],
+      "summary": "Reconcile current documentation after verified v1.14.0 publication"
+    },
+    {
+      "pr": 461,
+      "issues": [],
+      "summary": "Redesign the product website/demo and add independent Video/4K theme filters"
+    },
+    {
+      "pr": 462,
       "issues": [
-        410
+        440
       ],
-      "summary": "Share capability-checked KeyFilters across Root and Root Beta; native Home recovery remains required and original #410 is unconfirmed"
+      "summary": "Admit narrowly verified immutable system images and new native setup after verified cleanup; #440 device acceptance remains unverified"
     },
     {
-      "pr": 452,
-      "issues": [],
-      "summary": "Use TV POSIX paths in the Windows catalog fixture"
+      "pr": 463,
+      "issues": [
+        353
+      ],
+      "summary": "Add optional localized Home weather, theme-aware formats, city/units settings and weather-compatible theme updates; retire Channel and Itachi from the active catalog"
     },
     {
-      "pr": 456,
+      "pr": 464,
       "issues": [],
-      "summary": "Fix bounded Root QA signing capacity for shared runtimes"
+      "summary": "Keep theme discovery lifecycle on an exact active fixture and current staged engine metadata after Channel retirement"
+    },
+    {
+      "pr": 465,
+      "issues": [],
+      "summary": "Stabilize QA log rotation, portable weather staging and native lease timeout fixtures without product behavior changes"
+    },
+    {
+      "pr": 466,
+      "issues": [],
+      "summary": "Fix weather API availability with MET Norway and Compact preview fitting"
+    },
+    {
+      "pr": 468,
+      "issues": [],
+      "summary": "Detect and remember website visitor language"
     }
   ],
   "excluded": [],
-  "acceptance": "Selected build42566531298:1/source2f6da451: LG OLED55C3RLA firmware43.21.71 / SDK-webOS11.2.0, Magic Remote exact model unknown, macOS15.6.1 ARM64. Exact signed Root0.14.0 + Updater0.5.5 through original retained System1.2.5 worker completed; profile/theme/icons preserved;6 renderer +11 service cases and owner-reported Home/navigation/audio,10-second remote standby, triple-Home/staysOff and explicit resume/finalOff passed. Original-signer Android0.14.0/code29 upgrade from published code28,4 retained hashes, real Store/native/idle checks passed on isolated API35 ARM64 emulator; APK SHA256 ca908af10575d169086e8cb875bd158cb1393512ead9b8bfa8f6e7fdee0db9e5. Root package/signature hashes, actual transitions and all limits: docs/history/2026-11-09-release-1.14.0-qa.md. Optional unapproved Homebrew HTTP-download failure retained; no promotion. Legacy/native alternate hardware (#410), physical phone, minimum-device, AC cold boot and actual rollback not newly accepted; no public delivery.",
+  "acceptance": "Full candidate42673170250:3 passed all21 jobs; normal protected signer42680421116 verified. Final CLI payload598/original Helper/runtime and exact original-signer Android APK8a006981d62b132a4437c1a7150dcdff8261381a4af09a86c1bc9020bdf610a1 code29\u219230 retention/Store/native/idle passed on isolated API35 ARM64. Final three Root component hashes exactly match installed and tested C3 OLED55C3RLA firmware43.21.71/webOS SDK11.2.0 packages; live read-only controller/UI/grant/original preferences/Home Off/recovery readback passed. API7/7, preview39/39, grant rollback/forward and profile retention observations carry only for those identical hashes/preconditions; no repeated installation or provider request. Retained System1.2.5; Magic Remote exact model unknown; installer macOS15.6.1 ARM64. Physical Home/emergency/audio, standby/AC cold boot, No-root OTA, other TVs and reporter-specific original failures are not new passes. See docs/history/2026-11-09-release-1.15.0-qa.md final acceptance.",
   "build": {
-    "run_id": 42566531298,
-    "attempt": 1,
-    "source": "2f6da45170e218aa70b879e81379e4cb38ef8913"
+    "run_id": 42673170250,
+    "attempt": 3,
+    "source": "aec1f3ff0ccdaa2e42089d71ea7f4a38aa241bf7"
   },
-  "acceptance_build": "42566531298:1"
+  "acceptance_build": "42673170250:3"
 }

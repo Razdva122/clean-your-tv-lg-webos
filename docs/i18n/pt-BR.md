@@ -101,11 +101,15 @@ Informe modelo, firmware, No-root ou Root, dispositivo de instalação, etapa e 
 
 Escolha **Desinstalar Clean Your TV** em Manutenção usando a mesma conexão salva. Confirme uma vez. Os apps e arquivos conhecidos do projeto presentes são removidos; os ausentes são ignorados, inclusive após instalação parcial.
 
+Em TVs antigas sem um aplicativo LG Home separado, a remoção No-root pode mudar para a TV ao vivo. Mantenha a TV ligada e reinicie se solicitado; não apague os dados de recuperação nem restaure a TV.
+
 Quando solicitado, desconecte a TV da tomada, reconecte, aguarde a rede e escolha **Tentar novamente**. Espera ou Quick Start não é reinicialização completa; CYTV não reinicia a TV automaticamente. Se a conexão cair, verifique-a e repita a mesma remoção, sem outro assistente de recuperação. Se o acesso for negado, use a conexão Root solicitada; se a TV estiver ocupada, aguarde e tente novamente. O sucesso só aparece após verificar a limpeza final. Preserve as chaves e os relatórios originais. Continuam válidos os controles de emergência e o consentimento para compartilhar.
 
 Uma instalação com falha ou interrompida oferece recuperação diretamente. Se No-root não puder continuar, confirme a remoção completa uma vez. A remoção faz até três tentativas em caso de perda temporária de conexão ou processo CYTV ocupado. Se precisar de Root, escolha **Conectar com Root** para a mesma TV; a limpeza Root verificada também conclui a remoção No-root bloqueada. Se a ativação Root falhar, o CYTV tenta restaurar e verificar LG Home sem repetir a ativação. Cancelar trabalho pendente preserva o relatório e as ações de recuperação. A parada de emergência é mantida.
 
-Após uma falha de conexão durante a remoção, abra os detalhes, verifique a rede ou escolha uma chave SSH Root existente e tente novamente. Endereço, edição, porta e verificação da chave da TV permanecem fixos. No-root verifica o Helper antes do pareamento: pare-o e confirme a nova verificação no mesmo processo. Só uma TV comprovadamente vazia e sem instalação pendente pode dispensar a reinicialização; após remoção real, faça a reinicialização solicitada. Restos do antigo Root Updater levam à remoção completa com confirmação separada antes de nova instalação. Se o serviço de entradas falhar, a limpeza segura dos pacotes continua; o sucesso ainda exige verificar a limpeza do atalho.
+Após uma falha de conexão durante a remoção, abra os detalhes, verifique a rede ou escolha uma chave SSH Root existente e tente novamente. Endereço, edição, porta e verificação da chave da TV permanecem fixos. No-root verifica o Helper antes do pareamento: pare-o e confirme a nova verificação no mesmo processo. Só uma TV comprovadamente vazia e sem instalação pendente pode dispensar a reinicialização; após remoção real, faça a reinicialização solicitada. Se o serviço de entradas falhar, a limpeza segura dos pacotes continua; o sucesso ainda exige verificar a limpeza do atalho.
+
+**Reinstalar o Root:** Escolha **Configurar minha TV → Root** com a conexão salva e confirme **Reinstalar Root?**. O instalador restaura o LG Home e remove completamente o Clean Your TV, incluindo seus atualizadores, Home Helper e preferências salvas. Após verificar a remoção, instala e ativa os pacotes e o ambiente Root incluídos nesse instalador. Os outros apps da TV e o acesso root/SSH existente são preservados. Se a remoção parar ou solicitar uma reinicialização completa, termine-a antes de iniciar a configuração novamente. **Desinstalar Clean Your TV** sozinho nunca inicia outra instalação.
 
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="python-opcional-para-root"></a>
@@ -130,3 +134,13 @@ Referências detalhadas em inglês: [requisitos](../COMPATIBILITY.md) · [contro
 <a id="candidato-unreleased-nodejs-antigo-na-tv"></a>
 <a id="nodejs-antigo-na-tv-publicado-na-v1120"></a>
 <a id="remoção-simples-v1110"></a>
+
+## Clima
+
+Abra Configurações → Clima, abaixo de Papéis de parede. Ative o clima e abra Cidade para pesquisar e selecionar a região e o país corretos, ou escolha Automático para uma cidade aproximada pela conexão. Uma VPN pode alterar o resultado; se a cidade não aparecer ou estiver errada, use a busca manual. A cidade detectada ou escolhida aparece nas configurações. Escolha °C / m/s ou °F / mph e um formato disponível: compacto, atual, detalhado ou quatro dias. A prévia segue o tema; Exemplo indica dados ilustrativos. Liquid Glass aceita apenas o formato compacto. Ribbon e Atmosphere não exibem clima. Desativar interrompe as solicitações e oculta cidade, unidades e formato; a seleção de fonte continua disponível. Em uma falha, dados recentes podem permanecer por algum tempo; depois o clima fica oculto até atualizar.
+
+Escolha a fonte da previsão: Auto, MET Norway ou Open-Meteo. Auto começa com MET Norway, tenta Open-Meteo uma vez em caso de falha e depois reutiliza a última fonte bem-sucedida e seu cache. A seleção manual nunca muda de fonte automaticamente. Novas configurações usam Auto; as salvas sem fonte mantêm Open-Meteo. A fonte real aparece nos ajustes. A disponibilidade depende da rede. O aplicativo consulta o MET no máximo uma vez a cada três horas; o cache expira após seis horas. Campos ausentes ficam ocultos: MET não fornece sensação térmica nem probabilidade de precipitação. Os intervalos diários resumem pontos de previsão, não extremos medidos.
+
+As coordenadas vão para api.met.no ou api.open-meteo.com; as buscas de cidades, para geocoding-api.open-meteo.com. A localização automática opcional envia seu IP público a get.geojs.io. As conexões usam HTTPS; não é necessária chave de API. Local, fonte e cache ficam na TV. Fontes de dados inclui termos e créditos, como o Instituto Meteorológico Norueguês (MET Norway, CC BY 4.0).
+
+O botão Fontes de dados no título Clima abre informações sobre os serviços e as licenças.

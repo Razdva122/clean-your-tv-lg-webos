@@ -149,14 +149,27 @@ def install(installer, inventory, migrate=False, reinstall=None):
                           bundle_sha=digest(prepared['bundle.json']), migrate=False, requires_updater=False,
                           home_backend=BACKEND, stage='upload')
     installer.progress('Uploading Root and recovery runtime…')
-    stage = '/tmp/cytv-c1-root-'+uuid.uuid4().hex
-    installer.remote.run('umask 077; mkdir '+shlex.quote(stage))
-    for name, raw in prepared.items():
-        target = stage+'/'+name
-        installer.remote.run('mkdir -p '+shlex.quote(str(PurePosixPath(target).parent)))
-        installer.remote.upload(target, raw, mode=0o600)
-    installer.store.checkpoint(installer.profile, stage='setup')
-    result = installer.root_action('install', bundle=stage, experimental=True)
+    if getattr(installer,'_native_clean_install',False):
+        with tempfile.TemporaryDirectory(prefix='cytv-c1-root-') as folder:
+            bundle=Path(folder)/'root';bundle.mkdir()
+            for name,raw in prepared.items():
+                path=bundle/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(raw)
+            stage=installer.upload_product(bundle)
+        operation=uuid.uuid4().hex
+        installer.store.checkpoint(installer.profile,stage='setup',product_operation=operation,product_payload=stage)
+        reply=installer.product_action('native-install',operation,stage)
+        if reply.get('state')!='complete':
+            raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.',reason_code='pending-operation')
+        result=reply.get('result')
+    else:
+        stage = '/tmp/cytv-c1-root-'+uuid.uuid4().hex
+        installer.remote.run('umask 077; mkdir '+shlex.quote(stage))
+        for name, raw in prepared.items():
+            target = stage+'/'+name
+            installer.remote.run('mkdir -p '+shlex.quote(str(PurePosixPath(target).parent)))
+            installer.remote.upload(target, raw, mode=0o600)
+        installer.store.checkpoint(installer.profile, stage='setup')
+        result = installer.root_action('install', bundle=stage, experimental=True)
     if (not isinstance(result, dict) or result.get('returnValue') is not True
             or result.get('installed') != package.ROOT_APP or result.get('home_changed') is not False):
         raise UserError('C1 installation was not confirmed. Keep recovery state and run cytv status.')

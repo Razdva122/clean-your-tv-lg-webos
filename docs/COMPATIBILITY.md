@@ -11,9 +11,11 @@ an IPK does not prove that Home, recovery or startup works on a particular TV.
 
 ## TV requirements
 
-### Next installer: shared experimental Home backend
+<a id="next-installer-shared-experimental-home-backend"></a>
 
-The unpublished source also packages the existing guarded KeyFilters Home
+### Shared experimental Home backend
+
+The installer also packages the existing guarded KeyFilters Home
 alternative for Node 0.12.2 Root Beta. Ordinary Root and Beta share the same
 selector and capability checks: vendor Qt JavaScript filters, ARM32 native Home
 and compatible input/recovery are required when System Profile is explicitly absent.

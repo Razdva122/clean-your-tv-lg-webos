@@ -86,6 +86,21 @@ class CoordinatorCleanRemoval(unittest.TestCase):
             with self.owner.operation('product', 'product-'+self.id+'.json'): pass
         self.assertEqual(result['original']['request'], None)
 
+    def test_clean_native_install_handoff_uses_new_lease_and_never_replays(self):
+        first=self.driver.clean_remove(self.id)
+        calls=[]
+        self.device.preflight=lambda payload,options,product:calls.append(('preflight',product))
+        self.device.prepare_clean_install=lambda record:calls.append(('handoff',record['operation']))
+        self.device.native_deploy=lambda payload:{'returnValue':True,'installed':'com.cleanyourtv.root.preview','home_changed':False}
+        identifier='b'*32
+        result=self.driver.native_install(identifier,'/verified')
+        self.assertEqual(result['state'],'complete')
+        self.assertEqual(result['clean_predecessor'],first['operation'])
+        self.assertNotEqual(result['lease'],first['lease'])
+        self.assertEqual(calls,[('preflight',False),('handoff',self.id)])
+        self.assertEqual(self.driver.native_install(identifier,'/verified'),result)
+        self.assertEqual(len(calls),2)
+
     def test_private_cleanup_interruption_resumes_without_package_replay(self):
         self.original(); self.device.fail = 'private-cleanup'
         first = self.driver.clean_remove(self.id)
@@ -318,6 +333,43 @@ class ConfinedCleanup(unittest.TestCase):
         victim.write_text('original')
         clean_removal.restore_registrations(self.root,app,base,os.getuid())
         self.assertTrue(all(Path(name).read_text()=='original' for name in files))
+
+    def test_compositor_stock_subprocess_protocol_returns_fresh_proof(self):
+        from install_device import LocalDevice
+        payload=self.root/'support';(payload/'root-updater').mkdir(parents=True)
+        proof={'mode':'stock-compositor','target':{'dev':45851,'ino':5647,'size':50684},'target_sha256':'a'*64}
+        (payload/'root-updater/clean_removal.py').write_text('def compositor_stock(payload):\n    return '+repr(proof)+'\n')
+        device=LocalDevice();device.payload=payload
+        self.assertEqual(device.compositor_stock({'operation':'c'*32}),proof)
+
+    def test_native_deploy_child_keeps_mutex_and_ignores_only_its_parent_lease(self):
+        from install_device import LocalDevice
+        payload=self.root/'support';root=payload/'root';root.mkdir(parents=True)
+        owner=Ownership(Store(self.root/'installation',uid=os.getuid()))
+        (root/'deploy.py').write_text('''import fcntl,json,os
+def checked_file(root,name):return b'{"routing":"compositor-keyfilter-v1"}'
+def experimental_admission(routing,owned_operation=None):
+    assert routing=='compositor-keyfilter-v1'
+    path=os.path.dirname(os.path.dirname(__file__))+'/../installation/ownership.lock'
+    inherited=int(open(os.path.dirname(__file__)+'/lease-fd').read())
+    assert os.fstat(inherited).st_ino==os.stat(path).st_ino
+    fd=os.open(path,os.O_RDWR)
+    try:
+        try:fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        except BlockingIOError:pass
+        else:raise AssertionError('child lost original mutex')
+    finally:os.close(fd)
+    return owned_operation
+def install(bundle,experimental_c1_gate=False,_experimental_admission=None):
+    assert experimental_c1_gate is True
+    return {'returnValue':True,'observed_lease':_experimental_admission}
+''')
+        device=LocalDevice();device.ownership=owner
+        with owner.operation('product','product-'+'c'*32+'.json') as lease:
+            device.operation=lease
+            (root/'lease-fd').write_text(str(owner.fd))
+            result=device.native_deploy(payload)
+            self.assertEqual(result,{'returnValue':True,'observed_lease':lease['id']})
 
     def test_current_native_restore_selects_only_verified_new_bundle_executable(self):
         import hashlib
@@ -1250,6 +1302,40 @@ class PartialDeviceRemoval(unittest.TestCase):
         self.assertFalse(present)
         self.assertEqual(final['original']['request']['state'],'recovery_required')
 
+    def test_pre_journal_compositor_failure_can_explicitly_remove_with_fresh_stock_proof(self):
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        (root/'deploy.json').unlink()
+        (payload/'root/runtime/c1_keyfilter.py').write_text('current verified support')
+        proof={'mode':'stock-compositor','target':{'dev':45851,'ino':5647,'size':50684},'target_sha256':'a'*64}
+        original=driver.device.rpc
+        def unavailable(method,data):
+            if method.endswith(('/getSystemSettings','/getProfiles')):
+                raise RuntimeError('Unavailable Home setting')
+            return original(method,data)
+        driver.device.rpc=unavailable
+        with patch.object(driver.device,'compositor_stock',return_value=proof,create=True) as observe:
+            self.assertEqual(driver.clean_remove(identifier)['stage'],'restart-required')
+            driver.device.current_boot='22222222-2222-2222-2222-222222222222'
+            final=driver.clean_remove(identifier)
+        self.assertEqual(final['stage'],'verified-clean',final)
+        self.assertEqual(final['routes'],proof)
+        self.assertFalse(final['routing_never_applied'])
+        self.assertGreater(observe.call_count,1)
+        self.assertFalse(present)
+
+    def test_compositor_retry_keeps_new_routing_evidence_before_cleanup(self):
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        (root/'deploy.json').unlink()
+        (payload/'root/runtime/c1_keyfilter.py').write_text('current verified support')
+        proof={'mode':'stock-compositor','target':{'dev':45851,'ino':5647,'size':50684},'target_sha256':'a'*64}
+        with patch.object(driver.device,'compositor_stock',return_value=proof,create=True):
+            self.assertEqual(driver.clean_remove(identifier)['stage'],'restart-required')
+            marker=root/'persistent-intent.json';marker.write_text('{}')
+            driver.device.current_boot='22222222-2222-2222-2222-222222222222'
+            with patch.object(driver.device,'log'):final=driver.clean_remove(identifier)
+        self.assertEqual(final['state'],'recovery_required')
+        self.assertEqual(marker.read_text(),'{}')
+
     def test_never_applied_restart_preserves_new_routing_marker_before_cleanup(self):
         driver,identifier,root,updater,payload,calls,present=self.fixture()
         self.assertEqual(driver.clean_remove(identifier)['stage'],'restart-required')
@@ -1308,6 +1394,37 @@ class PartialDeviceRemoval(unittest.TestCase):
         self.assertFalse(result['routing_never_applied'])
         self.assertTrue((root/'state/ssap.json').exists())
         self.assertFalse(any(name.startswith('remove-') for name in calls))
+
+
+class ActivityInventoryCompatibility(unittest.TestCase):
+    def test_missing_or_timed_out_list_uses_checked_get_activity_info(self):
+        import clean_removal
+        from unittest.mock import Mock
+        for reason in ('timeout','service-missing','method-missing','negative-reply'):
+            with self.subTest(reason=reason):
+                error=TimeoutError('private') if reason=='timeout' else RuntimeError('private')
+                error.luna={'call':'activities-list','reason':reason}
+                rows=[{'name':'foreign','callback':{'method':'luna://foreign/keep'}}]
+                device=Mock();device.rpc.side_effect=[error,{'returnValue':True,'activities':rows}]
+                self.assertEqual(clean_removal.activities(device),rows)
+                self.assertEqual([c.args[0] for c in device.rpc.call_args_list],
+                    ['com.palm.activitymanager/list','com.palm.activitymanager/getActivityInfo'])
+
+    def test_malformed_or_unsafe_inventory_does_not_get_another_chance(self):
+        import clean_removal
+        from unittest.mock import Mock
+        for reply in ({'returnValue':True}, {'returnValue':True,'activities':{}},
+                      {'returnValue':True,'activities':[None]},
+                      {'returnValue':True,'activities':[{'callback':None}]},
+                      {'returnValue':False,'activities':[]}):
+            device=Mock();device.rpc.return_value=reply
+            with self.subTest(reply=reply),self.assertRaises(ValueError):clean_removal.activities(device)
+            self.assertEqual(device.rpc.call_count,1)
+        for reason in ('permission-denied','oversized-reply','malformed-reply','client-start-failed'):
+            device=Mock();error=RuntimeError('private');error.luna={'reason':reason}
+            device.rpc.side_effect=error
+            with self.subTest(reason=reason),self.assertRaises(RuntimeError):clean_removal.activities(device)
+            self.assertEqual(device.rpc.call_count,1)
 
 
 if __name__ == '__main__': unittest.main()

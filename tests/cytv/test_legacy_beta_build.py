@@ -86,17 +86,21 @@ class BetaBuild(unittest.TestCase):
     @unittest.skipUnless(os.environ.get('NODE012'), 'Exact NODE012 runtime not supplied')
     def test_shared_lease_authority_and_stop_checks_on_exact_legacy_node(self):
         from scripts.root_node_build import compile_root_node
+        from scripts.theme_receiver import inject
         service = ROOT/'root-edition/service'
-        compiled = compile_root_node({'c1-lease.js':(service/'c1-lease.js').read_bytes(),
+        compiled = compile_root_node(inject({'c1-lease.js':(service/'c1-lease.js').read_bytes(),
                                      'presentation-context.js':(service/'presentation-context.js').read_bytes(),
                                      'app-inventory.js':(service/'app-inventory.js').read_bytes(),
-                                     'test-c1-lease.js':(service/'test-c1-lease.cjs').read_bytes()})
+                                     'test-c1-lease.js':(service/'test-c1-lease.cjs').read_bytes()}))
         with tempfile.TemporaryDirectory() as tmp:
             folder = Path(tmp)
             for name, raw in compiled.items():
-                (folder/name).write_bytes(raw)
-            # The existing harness also inspects the unbundled registration boundary.
-            (folder/'service.js').write_bytes((service/'service.js').read_bytes())
+                target = folder/name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(raw)
+            # Keep the C1 import boundary; reuse real weather/CA and receiver closures.
+            registration = self.builder.bundle_weather({'service.js':(service/'service.js').read_bytes()})
+            (folder/'service.js').write_bytes(registration['service.js'])
             subprocess.run([os.environ['NODE012'], str(folder/'test-c1-lease.js'), str(folder)], check=True, timeout=30)
 
     @unittest.skipUnless(os.environ.get('NODE012'), 'Exact NODE012 runtime not supplied')

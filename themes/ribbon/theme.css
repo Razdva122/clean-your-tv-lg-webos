@@ -18,3 +18,5 @@
 .ctv-inputs { background-color: #252733; border-radius: 0; }
 .ctv-input-row { background-color: #30323c; color: #ffffff; border-radius: 0; }
 .ctv-input-row.is-focused { background-color: #76562f; color: #ffffff; }
+
+/* Ribbon intentionally declares no supported weather formats. */

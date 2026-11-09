@@ -36,7 +36,14 @@ const { compileSource } = require('../../theme-api/compile.cjs');
     source: old.source,
     minimumHomeVersion: '1.6.0'
   });
-  assert.equal(result.manifest.themeVersion, '1.5.0');
+  assert.equal(result.manifest.themeVersion, '1.6.0');
+  assert(result.manifest.requires.capabilities.includes('weather-v1'));
+  assert.deepEqual(result.manifest.layout.weather.formats, [
+    'text',
+    'current',
+    'details',
+    'forecast'
+  ]);
   assert.equal(
     result.manifest.assets.find((a) => a.id === 'landscape').width,
     3840

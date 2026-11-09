@@ -134,7 +134,7 @@ permission state.
 
 ## Optional Root input inventory
 
-The next candidate reads both fixed Luna catalogs directly over the existing
+The Root installer reads both fixed Luna catalogs directly over the existing
 authenticated SSH transport, as the normal Root installation path rather than
 retrying a failed Node subprocess. Each query keeps stdin open until its reply,
 has an eight-second deadline and retains the original 1 MiB application / 256 KiB

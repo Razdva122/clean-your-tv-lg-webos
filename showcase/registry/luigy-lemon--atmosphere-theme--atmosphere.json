@@ -30,5 +30,6 @@
       "kind": "browser",
       "summary": "Atmosphere 1.0.0 pinned descriptor and every declared resource verified locally and remotely. Chromium at 1920x1080 in Root and No-root with synthetic apps and external network blocked: Home focus/navigation, reorder/cancel, app library labels, Inputs and standard Settings isolation passed. Supplied preview visually compared with current Home rendering. Physical TV not tested."
     }
-  ]
+  ],
+  "availability": "removed"
 }

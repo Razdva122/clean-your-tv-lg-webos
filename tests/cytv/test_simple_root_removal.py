@@ -21,7 +21,7 @@ class SimpleRootWire(unittest.TestCase):
         def run(command,**kwargs):
             words=shlex.split(command)
             if 'clean-target' in words:
-                return json.dumps({'operation':'d'*32,'state':'fresh','target_operation':'e'*32,'target_lease':'f'*32})
+                return json.dumps({'operation':words[words.index('--operation')+1],'state':'fresh','target_operation':'e'*32,'target_lease':'f'*32})
             if 'clean-remove' in words:
                 self.assertEqual(words[words.index('--operation')+1],'e'*32)
                 self.assertEqual(words[words.index('--removal-lease')+1],'f'*32)
@@ -56,6 +56,27 @@ class SimpleRootWire(unittest.TestCase):
         self.error=None
         self.assertTrue(installer.uninstall(full_project=True)['restart_required'])
         self.assertEqual(self.store.pending(self.profile)['removal_operation'],identifier)
+
+    def test_completed_cleanup_invalidates_retired_support_and_python_cache(self):
+        installer=self.prepare();self.restarted=True
+        installer._coordinator_code='/tmp/retired-coordinator'
+        installer._recovery_code='/tmp/retired-recovery'
+        installer._selected_python='/var/lib/clean-your-tv-python/retired/bin/python'
+        installer.uninstall(full_project=True)
+        for field in ('_coordinator_code','_recovery_code','_selected_python'):
+            self.assertIsNone(getattr(installer,field,None))
+
+    def test_pre_journal_native_pending_selects_current_native_support_for_explicit_cleanup(self):
+        import shutil
+        installer=self.prepare()
+        self.store.finish(self.profile)
+        self.store.begin(self.profile,'install',stage='setup',home_backend='c1-native-gate')
+        original=self.store.pending(self.profile)
+        shutil.copytree(self.payload/'root',self.payload/'root-c1')
+        with patch.object(installer,'native_root_present',return_value=False),patch.object(installer,'upload_product',wraps=installer.upload_product) as upload:
+            installer.uninstall(full_project=True)
+        self.assertEqual(upload.call_args.args[0],self.payload/'root-c1')
+        self.assertEqual(self.store.pending(self.profile)['previous'],original)
 
     def test_connection_message_does_not_mislabel_permission_or_vendor_errors(self):
         from cytv.cli import removal_connection_message

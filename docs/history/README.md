@@ -1,5 +1,17 @@
 # Release history and device evidence
 
+- [v1.15.0 candidate QA, failure inventory and iterations](2026-11-09-release-1.15.0-qa.md)
+- [v1.15.0 candidate preparation and scoped cases](2026-11-09-release-1.15.0-preparation.md)
+
+- [Weather candidate integration, 2026-11-09](2026-11-09-weather-candidate-integration.md): green-CI Home/toolkit merges, updated release inventory and packaging decisions; public delivery and physical acceptance pending.
+
+- [Next candidate integration, 2026-11-09](2026-11-09-next-candidate-integration.md): complete PR batch, asynchronous stock-proof and clean-reinstall conflict resolution, combined host verification and untested release gates.
+
+- [Root installer runtime delivery, 2026-11-09](2026-11-09-root-installer-runtime-delivery.md): explicit verified reinstallation, selected-runtime admission and fresh activation failure explanations; physical C2 acceptance remains pending.
+- [Native install admission and cleanup handoff, 2026-11-09](2026-11-09-issue440-native-install-recovery.md): narrow immutable-system-image admission, explicit pre-journal cleanup and a new fenced native request; synthetic verification, physical acceptance pending.
+
+- [v1.14.0 publication, 2026-11-09](2026-11-09-release-1.14.0-publication.md): verified public assets/feeds, immutable accepted build and all shipping notices; reporter confirmation remains open.
+
 - [v1.14.0 candidate QA, 2026-11-09](2026-11-09-release-1.14.0-qa.md): exact signed Android upgrade, C3 signed update/profile/renderer/service and owner Home/audio/emergency/standby pass; complete failure inventory, signing-capacity correction and retained optional Homebrew/legacy limits.
 
 - [Shared Root/Beta KeyFilters development, 2026-11-09](2026-11-09-root-beta-keyfilters.md): capability admission, exact legacy Node and ARM32 build checks, component handoff and unverified native-Home/ribbon limits.

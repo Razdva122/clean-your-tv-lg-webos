@@ -88,11 +88,15 @@ Uveďte model TV, firmware, No-root nebo Root, instalační zařízení, krok a 
 
 Vyberte v Údržbě **Odinstalovat Clean Your TV** se stejným uloženým připojením TV. Potvrďte jednou. Přítomné známé aplikace a soubory projektu se odeberou, chybějící se přeskočí, i po částečné instalaci.
 
+Na starších televizorech bez samostatné aplikace LG Home může odebrání No-root přepnout obrazovku na živé vysílání. Nechte televizor zapnutý a na požádání jej restartujte; nemažte data obnovení ani neresetujte televizor.
+
 Na výzvu odpojte TV od napájení, znovu připojte, počkejte na síť a vyberte **Zkusit znovu**. Pohotovost nebo Quick Start není úplný restart; CYTV TV automaticky nerestartuje. Při ztrátě spojení je zkontrolujte a opakujte stejný cíl odebrání bez dalšího průvodce obnovou. Při odmítnutí přístupu použijte požadované připojení Root; pokud je TV zaneprázdněn, počkejte a zkuste znovu. Úspěch se zobrazí až po ověření závěrečného úklidu. Zachovejte klíče a původní zprávy. Nouzové ovládání a souhlas se sdílením výše platí dál.
 
 Je po neúspěšné nebo přerušené instalaci přímo dostupná obnova. Pokud No-root nemůže pokračovat, potvrďte jednou úplné odebrání. Při dočasné ztrátě spojení nebo zaneprázdněném procesu CYTV proběhnou nejvýše tři pokusy. Je-li nutný Root, zvolte **Připojit přes Root** pro stejnou TV; ověřený úklid Root dokončí i její zablokované odebrání No-root. Po chybě aktivace Root se CYTV pokusí obnovit a ověřit LG Home bez opakované aktivace. Zrušení s nedokončenou prací zachová zprávu a kroky obnovy. Nouzové zastavení zůstane zachováno.
 
-Po chybě připojení během odstranění otevřete podrobnosti, zkontrolujte síť nebo vyberte existující SSH klíč Root a zkuste to znovu. Adresa, edice, port a ověření klíče TV zůstávají pevné. No-root kontroluje Helper před párováním: zastavte jej a potvrďte opětovnou kontrolu ve stejném průvodci. Restart lze přeskočit pouze u ověřeně prázdné TV bez nedokončené instalace; po skutečném odstranění proveďte požadovaný restart. Zbytky starého Root Updater vedou před novou instalací k samostatně potvrzenému úplnému odstranění. Při selhání služby vstupů pokračuje bezpečné odstranění balíčků; úspěch stále vyžaduje ověření odstranění zástupce.
+Po chybě připojení během odstranění otevřete podrobnosti, zkontrolujte síť nebo vyberte existující SSH klíč Root a zkuste to znovu. Adresa, edice, port a ověření klíče TV zůstávají pevné. No-root kontroluje Helper před párováním: zastavte jej a potvrďte opětovnou kontrolu ve stejném průvodci. Restart lze přeskočit pouze u ověřeně prázdné TV bez nedokončené instalace; po skutečném odstranění proveďte požadovaný restart. Při selhání služby vstupů pokračuje bezpečné odstranění balíčků; úspěch stále vyžaduje ověření odstranění zástupce.
+
+**Přeinstalace Root:** S uloženým připojením zvolte **Nastavit televizor → Root** a potvrďte **Přeinstalovat Root?**. Instalátor obnoví LG Home a zcela odstraní Clean Your TV včetně aktualizátorů, Home Helper a uložených předvoleb. Po ověření odstranění nainstaluje a aktivuje balíčky a prostředí Root dodané v tomto instalátoru. Ostatní aplikace TV a stávající přístup root/SSH zůstanou zachovány. Pokud se odstranění zastaví nebo požádá o úplný restart, dokončete je před novým spuštěním instalace. Samotné **Odinstalovat Clean Your TV** nikdy nespustí novou instalaci.
 
 <!-- Legacy anchors retained for existing links. -->
 <a id="automatické-rozlišení-grafiky-kandidát"></a>
@@ -105,3 +109,13 @@ Po chybě připojení během odstranění otevřete podrobnosti, zkontrolujte s�
 <a id="kandidát-unreleased-starší-nodejs-v-tv"></a>
 <a id="starší-nodejs-v-tv-vydáno-ve-v1120"></a>
 <a id="jednoduché-odebrání-v1110"></a>
+
+## Počasí
+
+Otevřete Nastavení → Počasí pod Tapetami. Zapněte počasí, otevřete Město a vyhledejte správnou oblast a zemi, nebo zvolte Automaticky pro přibližné určení podle internetového připojení. VPN může výsledek změnit; pokud město chybí nebo nesouhlasí, použijte ruční hledání. Určené či vybrané město je vidět v nastavení. Vyberte °C / m/s nebo °F / mph a dostupný formát: stručný, aktuální, podrobný nebo na čtyři dny. Náhled odpovídá motivu; označení Příklad znamená ukázková data. Liquid Glass podporuje pouze stručný formát; Ribbon a Atmosphere počasí nezobrazují. Vypnutí zastaví požadavky a skryje volby města, jednotek a formátu; výběr zdroje zůstává dostupný. Při výpadku mohou krátce zůstat nedávná data; později se počasí skryje do dalšího obnovení.
+
+Vyberte zdroj předpovědi: Auto, MET Norway nebo Open-Meteo. Auto začne s MET Norway, při chybě jednou zkusí Open-Meteo a potom používá poslední úspěšný zdroj a jeho mezipaměť. Ruční výběr nikdy automaticky nemění zdroj. Nová nastavení používají Auto; uložená bez zdroje zachovají Open-Meteo. Skutečný zdroj je vidět v nastavení. Dostupnost závisí na síti. MET se obnovuje nejvýše jednou za tři hodiny; mezipaměť vyprší po šesti hodinách. Chybějící pole se skrývají: MET neposkytuje pocitovou teplotu ani pravděpodobnost srážek. Denní rozsahy shrnují body předpovědi, nikoli naměřené extrémy.
+
+Souřadnice se posílají na api.met.no nebo api.open-meteo.com, hledání měst na geocoding-api.open-meteo.com. Volitelné automatické určení města předává veřejnou IP adresu na get.geojs.io. Spojení používají HTTPS; klíč API není potřeba. Místo, zdroj a mezipaměť zůstávají v televizoru. Zdroje dat obsahují podmínky a autorství včetně Norského meteorologického institutu (MET Norway, CC BY 4.0).
+
+Tlačítko Zdroje dat v záhlaví Počasí otevře informace o službách a licencích.

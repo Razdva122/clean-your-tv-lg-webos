@@ -64,3 +64,24 @@ example LG UI, not a tested CYTV device or the user's credentials.
 ## Black Hole wallpaper video
 
 Video author: **Xecutioner**. Original: [4K SCI-FI Black Hole](https://steamcommunity.com/sharedfiles/filedetails/?id=2981249186). The maintainer confirmed permission on 2026-11-04 for non-commercial use and inclusion in free CYTV distributions with explicit author attribution. The video, streaming copy and derived stills are not covered by CYTV’s MIT license. See [the artwork terms](themes/ribbon/LICENSE.txt) and [credits](themes/ribbon/CREDITS.txt). Commercial use requires separate permission. Private correspondence is retained privately.
+
+## Optional weather
+
+Weather data: [Open-Meteo](https://open-meteo.com/), licensed under
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Home selects four days,
+rounds and converts values, and translates condition codes; it does not redistribute
+Open-Meteo server code. City names and coordinates come from
+[GeoNames](https://www.geonames.org/), via Open-Meteo geocoding, under CC BY 4.0.
+Weather settings provide an accessible Data sources dialog with provider/license
+links. The maintainer explicitly permits an information popup in
+[attribution guidance](https://github.com/open-meteo/open-meteo/discussions/2245). The free endpoint is for non-commercial usage, subject to
+[Open-Meteo's service terms](https://open-meteo.com/en/terms).
+
+Approximate automatic city lookup uses [GeoJS](https://www.geojs.io/).
+Home retains only the city, region, country, coordinates and lookup time, not the
+returned IP, ASN or other connection metadata. Manual search does not call GeoJS.
+
+Bundled fill and monochrome weather icons: [Meteocons by Bas Milius](https://github.com/basmilius/meteocons), MIT.
+A static subset is bundled, monochrome colors inherit the theme, and SVG IDs are
+prefixed for inline use. The full notice is retained in
+`launcher/weather-icons/LICENSE-METEOCONS.txt`; no icon CDN is contacted.
