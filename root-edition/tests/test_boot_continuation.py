@@ -317,8 +317,7 @@ boot_gate.bootstrap(int(sys.argv[3]),int(sys.argv[4]))
         self.assertEqual(self.read(),self.baseline)
 
     def test_slow_guard_startup_consumes_original_budget_instead_of_extending_it(self):
-        import time
-        now=[time.monotonic()]
+        now=[0.0]
         original=now[0]
         def spawn(transaction):
             now[0]+=30
