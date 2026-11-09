@@ -1,65 +1,7 @@
 {
   "schema": 1,
-  "version": "1.14.0",
-  "changes": [
-    {
-      "pr": 441,
-      "issues": [],
-      "summary": "Balance runtime shards and reduce CI overhead"
-    },
-    {
-      "pr": 444,
-      "issues": [
-        437
-      ],
-      "summary": "Repair No-root updates after pairing-key permission normalization"
-    },
-    {
-      "pr": 445,
-      "issues": [],
-      "summary": "docs: reconcile published guidance and simplify localized installation guides"
-    },
-    {
-      "pr": 447,
-      "issues": [],
-      "summary": "website: list user-confirmed TVs and reported versions"
-    },
-    {
-      "pr": 449,
-      "issues": [],
-      "summary": "Offer latest GitHub installer before computer installation"
-    },
-    {
-      "pr": 450,
-      "issues": [
-        389
-      ],
-      "summary": "Read Root installer catalogs over SSH without Node subprocesses"
-    },
-    {
-      "pr": 451,
-      "issues": [
-        410
-      ],
-      "summary": "Share capability-checked KeyFilters across Root and Root Beta; native Home recovery remains required and original #410 is unconfirmed"
-    },
-    {
-      "pr": 452,
-      "issues": [],
-      "summary": "Use TV POSIX paths in the Windows catalog fixture"
-    },
-    {
-      "pr": 456,
-      "issues": [],
-      "summary": "Fix bounded Root QA signing capacity for shared runtimes"
-    }
-  ],
+  "version": null,
+  "changes": [],
   "excluded": [],
-  "acceptance": "Selected build42566531298:1/source2f6da451: LG OLED55C3RLA firmware43.21.71 / SDK-webOS11.2.0, Magic Remote exact model unknown, macOS15.6.1 ARM64. Exact signed Root0.14.0 + Updater0.5.5 through original retained System1.2.5 worker completed; profile/theme/icons preserved;6 renderer +11 service cases and owner-reported Home/navigation/audio,10-second remote standby, triple-Home/staysOff and explicit resume/finalOff passed. Original-signer Android0.14.0/code29 upgrade from published code28,4 retained hashes, real Store/native/idle checks passed on isolated API35 ARM64 emulator; APK SHA256 ca908af10575d169086e8cb875bd158cb1393512ead9b8bfa8f6e7fdee0db9e5. Root package/signature hashes, actual transitions and all limits: docs/history/2026-11-09-release-1.14.0-qa.md. Optional unapproved Homebrew HTTP-download failure retained; no promotion. Legacy/native alternate hardware (#410), physical phone, minimum-device, AC cold boot and actual rollback not newly accepted; no public delivery.",
-  "build": {
-    "run_id": 42566531298,
-    "attempt": 1,
-    "source": "2f6da45170e218aa70b879e81379e4cb38ef8913"
-  },
-  "acceptance_build": "42566531298:1"
+  "acceptance": ""
 }
