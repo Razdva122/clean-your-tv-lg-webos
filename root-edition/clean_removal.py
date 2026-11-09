@@ -83,6 +83,22 @@ def runtime_restore(payload, uid=0):
     return {'returnValue':True,'result':cli.main('restore')}
 
 
+def compositor_stock(payload):
+    """Fresh stock observation from current verified support, never old code."""
+    import sys
+    import deploy
+    payload=Path(payload)
+    deploy.verify_bundle(payload,allow_experimental=True)
+    release=json.loads(deploy.checked_file(payload,'release.json'))
+    if release.get('routing')!='compositor-keyfilter-v1':
+        raise ValueError('current_compositor_support_required')
+    sys.path.insert(0,str(payload/'runtime'))
+    import c1_keyfilter
+    observed=c1_keyfilter.probe()
+    return {'mode':'stock-compositor','target':{k:observed['target'][k] for k in ('dev','ino','size')},
+            'target_sha256':observed['target_sha256']}
+
+
 @contextmanager
 def locks(roots, uid):
     """Keep original component lock inodes throughout restoration and cleanup."""
@@ -152,6 +168,8 @@ def retire_tree(path, allowed, keep=(), uid=0, parent_uid=None):
 def routes(device, record=None):
     if record is not None and device.routing_untouched(record):
         return {'mode':'never-applied'}
+    if record is not None and device.compositor_stock_eligible(record):
+        return device.compositor_stock(record)
     settings=device.rpc('com.webos.settingsservice/getSystemSettings',{'category':'general','keys':['defaultApps']})
     home=settings.get('settings',{}).get('defaultApps',{}).get('home')
     if settings.get('returnValue') is not True or not isinstance(home,str) or not home or home in APPS:

@@ -346,10 +346,10 @@ def _remove_root(run, proof):
     return {'returnValue': True, 'removed': APP, 'state_retained': str(STATE)}
 
 
-def experimental_admission(routing=None):
+def experimental_admission(routing=None, owned_operation=None):
     # Runs under the installation mutex, before its durable reservation.
     from installation import classify, device_snapshot
-    if classify(device_snapshot())['state'] != 'fresh':
+    if classify(device_snapshot(owned_operation=owned_operation))['state'] != 'fresh':
         raise ValueError('Experimental C1 setup requires a completely fresh product installation')
     if routing == 'compositor-keyfilter-v1':
         from runtime import c1_keyfilter

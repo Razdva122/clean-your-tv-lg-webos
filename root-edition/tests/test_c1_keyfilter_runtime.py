@@ -64,9 +64,32 @@ class RuntimeTests(unittest.TestCase):
         real_secure=self.k.secure
         def secure(path,*args,**kw):
             if str(path)==vendor['file']:return b'function handleSystemKeys() { return Qt.Key_Super_L; }'
+            if str(path)=='/usr/palm/applications/com.webos.app.home/appinfo.json':return json.dumps(app).encode()
             return real_secure(path,self.uid,*args,**kw)
         with patch.object(self.k,'STOCK_APPINFO',appinfo),patch.object(self.k,'MOUNTINFO',mountinfo),patch.object(self.k,'OTHER_HOME_STATE',(other,)),patch.object(self.k,'INPUT_BINDINGS',bindings),patch.object(self.k,'secure',side_effect=secure),patch.object(self.k,'vendor_script',side_effect=lambda path:secure(Path(path))),patch.object(self.k,'luna',return_value=missing),patch.object(self.k,'read_chain',return_value=[vendor]),patch.object(emergency_reader,'open_remote',side_effect=reader),patch.object(emergency_reader,'query',return_value=keys):
             self.k.require_generic_environment()
+            # A separate, whole read-only system image is not a Home takeover.
+            stock_mount='2 1 179:27 / /usr ro,relatime - squashfs /dev/mmcblk0p27 ro\n'
+            from types import SimpleNamespace
+            with patch.object(self.k,'STOCK_APPINFO',Path('/usr/palm/applications/com.webos.app.home/appinfo.json')),patch.object(self.k.legacy,'TARGET',Path('/usr/bin/com.webos.app.home')),patch.object(self.k.os,'stat',return_value=SimpleNamespace(st_dev=os.makedev(179,27))):
+                mountinfo.write_text(stock_mount)
+                self.k.require_generic_environment()
+                for invalid in (
+                    stock_mount.replace(' / /usr ', ' /foreign /usr '),
+                    stock_mount.replace('/usr ro,', '/usr rw,'),
+                    stock_mount.replace('p27 ro\n', 'p27 rw\n'),
+                    stock_mount.replace('squashfs', 'overlay'),
+                    stock_mount.replace('179:27', '179:28'),
+                    stock_mount.replace('/dev/mmcblk0p27', '/dev/loop0'),
+                    stock_mount+stock_mount.replace('2 1 ', '3 1 '),
+                    stock_mount+'3 2 0:2 / /usr/bin ro - tmpfs tmpfs ro\n',
+                    stock_mount+'3 2 0:2 / /usr/bin/com.webos.app.home ro - tmpfs tmpfs ro\n',
+                    stock_mount+'3 2 0:2 / /usr/palm/applications/com.webos.app.home ro - tmpfs tmpfs ro\n',
+                ):
+                    with self.subTest(mounts=invalid):
+                        mountinfo.write_text(invalid)
+                        with self.assertRaises(ValueError):self.k.require_generic_environment()
+            mountinfo.write_text('1 0 0:1 / / rw - squashfs /dev/root ro\n')
             for invalid in (dict(app,type='flutter'),dict(app,type='web'),dict(app,main='ribbon.qml')):
                 appinfo.write_text(json.dumps(invalid))
                 with self.assertRaisesRegex(ValueError,'manifest'): self.k.require_generic_environment()
