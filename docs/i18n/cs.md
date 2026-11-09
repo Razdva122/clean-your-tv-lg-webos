@@ -111,3 +111,5 @@ Po chybě připojení během odstranění otevřete podrobnosti, zkontrolujte s�
 ## Počasí
 
 Otevřete Nastavení → Počasí pod Tapetami. Zapněte počasí, otevřete Město a vyhledejte správnou oblast a zemi, nebo zvolte Automaticky pro přibližné určení podle internetového připojení. VPN může výsledek změnit; pokud město chybí nebo nesouhlasí, použijte ruční hledání. Určené či vybrané město je vidět v nastavení. Vyberte °C / m/s nebo °F / mph a dostupný formát: stručný, aktuální, podrobný nebo na čtyři dny. Náhled odpovídá motivu; označení Příklad znamená ukázková data. Liquid Glass podporuje pouze stručný formát; Ribbon a Atmosphere počasí nezobrazují. Vypnutí skryje další volby a zastaví požadavky. Při výpadku mohou krátce zůstat nedávná data; později se počasí skryje do dalšího obnovení.
+
+Tlačítko Zdroje dat v záhlaví Počasí otevře informace o službách a licencích.

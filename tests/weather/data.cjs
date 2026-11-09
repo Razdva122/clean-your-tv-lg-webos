@@ -162,6 +162,38 @@ const payload = {
     'invalid preferences do not partially mutate state'
   );
   sanitized.destroy();
+  let expiresAt = 100000000;
+  const expiring = Weather.create({
+    now: () => expiresAt,
+    storage: {
+      getItem: () =>
+        JSON.stringify({
+          enabled: true,
+          location,
+          locationLanguage: 'en',
+          cache: {
+            key: '52.500,13.400',
+            updated: expiresAt - 6 * 3600000 + 10,
+            data: Weather.normalize(payload, location)
+          }
+        }),
+      setItem() {}
+    },
+    request: () => ({ promise: Promise.reject(Error('offline')), cancel() {} })
+  });
+  await expiring.start();
+  const expiredEvents = [];
+  expiring.onChange((s) => expiredEvents.push(s));
+  expiresAt += 20;
+  await expiring.refresh();
+  assert.equal(
+    expiredEvents.length,
+    1,
+    'expiry emits even during offline retry backoff'
+  );
+  assert.equal(expiredEvents[0].data, null);
+  assert.equal(expiredEvents[0].status, 'error');
+  expiring.destroy();
   assert.equal(Weather.condition(null).label, 'Unavailable');
   assert.equal(Weather.condition(0, false).icon, 'clear-night');
   console.log(

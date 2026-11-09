@@ -72,8 +72,9 @@ Weather data: [Open-Meteo](https://open-meteo.com/), licensed under
 rounds and converts values, and translates condition codes; it does not redistribute
 Open-Meteo server code. City names and coordinates come from
 [GeoNames](https://www.geonames.org/), via Open-Meteo geocoding, under CC BY 4.0.
-The displayed weather links to Open-Meteo; source/license details are also in
-Advanced settings. The free endpoint is for non-commercial usage, subject to
+Weather settings provide an accessible Data sources dialog with provider/license
+links. The maintainer explicitly permits an information popup in
+[attribution guidance](https://github.com/open-meteo/open-meteo/discussions/2245). The free endpoint is for non-commercial usage, subject to
 [Open-Meteo's service terms](https://open-meteo.com/en/terms).
 
 Approximate automatic city lookup uses [GeoJS](https://www.geojs.io/).

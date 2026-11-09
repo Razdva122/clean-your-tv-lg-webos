@@ -222,6 +222,24 @@ const languages = [
             document.querySelector('[data-category="weather"]').click();
           });
           await page.waitForTimeout(45);
+          const heading = await page
+            .locator('.weather-settings-heading')
+            .evaluate((e) => ({ width: e.clientWidth, scroll: e.scrollWidth }));
+          assert(
+            heading.scroll <= heading.width + 3,
+            language + ' sources heading overflow'
+          );
+          if (pack.title === 'Classic') {
+            await page.locator('.weather-sources-button').click();
+            const bounds = await page
+              .locator('.weather-sources-dialog .weather-city-card')
+              .boundingBox();
+            assert(
+              bounds.y >= 0 && bounds.y + bounds.height <= 1080,
+              language + ' sources dialog bounds'
+            );
+            await page.keyboard.press('Escape');
+          }
           const available = await page
             .locator('[data-weather-choice]:visible')
             .count();

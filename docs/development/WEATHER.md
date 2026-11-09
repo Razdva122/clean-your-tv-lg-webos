@@ -73,8 +73,9 @@ hours; failures back off for five minutes. Auto city refresh is at most daily.
 Language changes localize condition codes, weekdays and supported city names.
 Cancellation fences prevent old city/theme/enable responses from being applied.
 Missing optional values are omitted. Preview without real data says Example;
-examples never appear on Home. Data attribution is linked alongside displayed
-weather; source/license details are in Advanced and THIRD_PARTY_NOTICES.md.
+examples never appear on Home. Data attribution and license links are in the clearly labeled Data sources dialog
+in the Weather settings heading, and THIRD_PARTY_NOTICES.md. The Home widget has
+no provider footer.
 
 `tvhome.weather.v1` is app-origin localStorage, like other appearance preferences.
 It survives ordinary OTA updates. Existing legacy profile export/import does not

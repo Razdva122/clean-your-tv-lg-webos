@@ -1505,7 +1505,8 @@
       layoutPreset === 'scenic-grid' ||
       (layoutPreset === 'dock-grid' && 0 === row)
         ? (function (e) {
-            var t = e.app.title;
+            var t = e.app.title,
+              weatherRegion = window.HomeWeather && HomeWeather.reservation();
             heroTitle.style.fontSize =
               layoutPreset === 'scenic-grid' && t.length > 100
                 ? t.length > 160
@@ -1514,7 +1515,12 @@
                 : '';
             heroTitle.style.top =
               (layoutPreset === 'channel-list'
-                ? 548
+                ? Math.max(
+                    548,
+                    weatherRegion && weatherRegion.format !== 'text'
+                      ? weatherRegion.bottom + 36
+                      : 0
+                  )
                 : layoutPreset === 'scenic-grid'
                   ? TILE_BASE - 142
                   : TILE_BASE - HERO_OFFSET) + 'px';

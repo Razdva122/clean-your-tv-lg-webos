@@ -569,31 +569,59 @@ body.editing #homeWeather {
   box-shadow: none !important;
 }
 
-.home-weather .weather-credit {
-  display: block;
-  margin-top: 8px;
-  color: inherit;
-  opacity: 0.65;
-  text-align: right;
-  font-size: 20px;
-  line-height: 26px;
-  text-decoration: none;
-  pointer-events: auto;
-}
-.weather-data-credits {
-  font-size: 24px;
-  line-height: 1.6;
-  opacity: 0.8;
-}
-.weather-data-credits a {
-  color: inherit;
-}
-
-.home-weather .weather-line .weather-credit {
-  margin-top: 0;
-  flex-shrink: 0;
-}
 #homeSurface.weather-reserves-right #ribbonPosition {
   left: 112px;
   right: auto;
+}
+
+#settings-pane-weather .weather-settings-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+#settings-pane-weather .weather-sources-button {
+  width: auto;
+  min-height: 44px;
+  margin: 0 0 0 24px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  box-shadow: none;
+  color: #c0c7d2;
+  font-size: 24px;
+  font-weight: 400;
+  text-align: right;
+}
+#settings-pane-weather .weather-sources-button:focus {
+  outline: 3px solid #b9d3fb;
+  outline-offset: 4px;
+  color: #fff;
+}
+.weather-sources-dialog h2 {
+  margin-top: 0;
+}
+.weather-sources-dialog dl {
+  font-size: 28px;
+  line-height: 1.4;
+}
+.weather-sources-dialog dt {
+  color: #aab6c6;
+  margin-top: 18px;
+  font-size: 24px;
+}
+.weather-sources-dialog dd {
+  margin: 4px 0 0;
+}
+.weather-sources-dialog a {
+  color: #d9e8ff;
+}
+.weather-sources-dialog a:focus {
+  outline: 3px solid #b9d3fb;
+  outline-offset: 4px;
+}
+.weather-sources-dialog p {
+  font-size: 24px;
+  line-height: 1.5;
+  color: #c0c7d2;
 }

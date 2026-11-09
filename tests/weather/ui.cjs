@@ -107,6 +107,25 @@ const weather = {
       .evaluateAll((a) => a.map((n) => n.dataset.category));
     assert.equal(order.indexOf('weather'), order.indexOf('wallpapers') + 1);
     assert.equal(await page.locator('.weather-options').isVisible(), false);
+    const sources = page.locator('.weather-sources-button');
+    assert.equal(
+      await sources.isVisible(),
+      true,
+      'sources stay accessible while weather is off'
+    );
+    await sources.click();
+    const dialog = page.locator('.weather-sources-dialog');
+    assert.equal(await dialog.getAttribute('role'), 'dialog');
+    assert.equal(await dialog.locator('a').count(), 5);
+    assert.equal(
+      await dialog.locator('a').first().getAttribute('href'),
+      'https://open-meteo.com/'
+    );
+    await page.keyboard.press('Escape');
+    assert.equal(
+      await sources.evaluate((e) => document.activeElement === e),
+      true
+    );
     await page.locator('.weather-enabled').click();
     await page.waitForTimeout(70);
     assert.equal(await page.locator('.weather-live-preview').isVisible(), true);
@@ -116,11 +135,19 @@ const weather = {
     await page.locator('.weather-city-search input').press('Enter');
     await page.locator('.weather-city-results button').click();
     await page.waitForFunction(() => HomeWeather.store.state().data);
-    assert.equal(await page.locator('.weather-city-dialog').isVisible(), false);
+    assert.equal(
+      await page.locator('[aria-labelledby="weather-city-title"]').isVisible(),
+      false
+    );
     await page.locator('[data-weather-choice="forecast"]').click();
     await page.waitForTimeout(70);
     assert.equal(await page.locator('#weatherPreview .weather-row').count(), 4);
     assert.equal(await page.locator('#homeWeather .weather-row').count(), 4);
+    assert.equal(
+      await page.locator('.weather-credit').count(),
+      0,
+      'providers are not repeated in widgets'
+    );
     await page.locator('.settings-footer button:visible').click();
     await page.waitForTimeout(100);
     const layout = await page.evaluate(() => {
@@ -196,12 +223,49 @@ const weather = {
         .evaluate((e) => document.activeElement === e),
       true
     );
+    await page.evaluate(() => {
+      document.querySelector('.settings-footer button').click();
+      HomeWeather.store.setPreferences({ preferred: 'forecast' });
+      HomeLayoutState.setThemeLayout({
+        preset: 'channel-list',
+        columns: 1,
+        spacingScale: 1,
+        textScale: 1,
+        focusScale: 1.1,
+        allowColumnOverride: false
+      });
+    });
+    await page.waitForTimeout(100);
+    const checkChannel = async () => {
+      const rects = await page.evaluate(() => ({
+        hero: HomeViewport.rect(document.getElementById('hero')),
+        weather: HomeViewport.rect(document.getElementById('homeWeather'))
+      }));
+      assert(
+        rects.hero.top >= rects.weather.bottom + 30,
+        'channel title stays below weather ' + JSON.stringify(rects)
+      );
+    };
+    await checkChannel();
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowUp');
+    await checkChannel();
+    await page.evaluate(() => {
+      ThemeRuntime.reset();
+      RenewalPanel.open();
+      document.querySelector('[data-category="weather"]').click();
+    });
     await page.locator('.weather-enabled').click();
     await page.locator('.weather-options').waitFor({ state: 'hidden' });
     assert.equal(await page.locator('.weather-options').isVisible(), false);
     assert.equal(
       await page.locator('.weather-live-preview').isVisible(),
       false
+    );
+    assert.equal(
+      await page.locator('#hero').evaluate((e) => e.style.whiteSpace),
+      '',
+      'weather typography cleanup after Off'
     );
     assert.deepEqual(errors, []);
     results.push({

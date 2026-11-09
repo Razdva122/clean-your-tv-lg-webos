@@ -241,6 +241,9 @@
       ) {
         model.data = null;
         model.stale = false;
+        model.status = active ? 'loading' : model.location ? 'error' : 'choose';
+        persist();
+        emit();
       }
     }
     function emit() {

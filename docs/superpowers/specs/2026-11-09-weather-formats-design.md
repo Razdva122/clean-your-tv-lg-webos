@@ -169,7 +169,7 @@ restoration must be specified before implementation. Previous research identifie
 Open-Meteo as a candidate; this format decision does not establish its live TV
 compatibility or waive its attribution and service terms.
 
-## Live browser prototype decisions
+## Historical browser prototype decisions
 
 The local demo uses Open-Meteo forecast/geocoding, explicit manual city selection
 or opt-in automatic city lookup through ipwho.is. IP lookup is approximate, not
@@ -198,3 +198,19 @@ User-facing format labels describe content: Compact, Now, In detail, 4 days.
 The existing text/current/details/forecast identifiers and allowlists remain
 unchanged. When live data are unavailable, the preview uses an explicitly labeled
 example; Home never substitutes example weather.
+
+## Production refinement approved after the prototype
+
+Production uses opt-in GeoJS approximate city lookup; manual city search remains
+the fallback when no city can be identified. The verbose status, privacy, refresh
+and provider-link block was removed at the user's request. Keep the detected city
+in the summary; do not reintroduce a diagnostic/status footer. Preview without
+real data is explicitly marked Example and never appears on Home.
+
+A Data sources button sits at the right of the Weather category heading, including
+when weather is off. It opens a localized dialog with links to Open-Meteo, GeoNames,
+GeoJS, Meteocons and the applicable licenses, plus a statement that values are
+rounded/converted. No provider footer appears in any Home format or preview.
+This placement follows the Open-Meteo maintainer's information-popup guidance:
+https://github.com/open-meteo/open-meteo/discussions/2245. Back closes the dialog
+and restores button focus; arrows/Tab stay within the dialog.

@@ -283,14 +283,7 @@
   function paint(target, format, data, preview) {
     const a = appearance(),
       w = a.options;
-    const markup = content(format, w.icons, data),
-      credit = data.city
-        ? '<a class="weather-credit" href="https://open-meteo.com/" tabindex="-1">Open-Meteo</a>'
-        : '';
-    target.innerHTML =
-      format === 'text'
-        ? markup.slice(0, -6) + credit + '</div>'
-        : markup + credit;
+    target.innerHTML = content(format, w.icons, data);
     target.setAttribute('data-format', format);
     if (!doc.getElementById('weatherDefaults')) {
       const defaults = doc.createElement('style');
@@ -373,6 +366,9 @@
         headerFont = clock.fontFamily;
         headerColor = clock.color;
       }
+      const hero = doc.getElementById('hero');
+      hero.style.maxWidth = '';
+      hero.style.whiteSpace = '';
       if (show) {
         paint(element, effective, options.data, false);
         const header = position(doc.querySelector('#homeSurface>header')),
@@ -413,25 +409,12 @@
           previewSheet.id = 'weatherPreviewStyle';
           doc.head.appendChild(previewSheet);
         }
-        const hero = doc.getElementById('hero');
         if (state.preset === 'dock-grid' || state.preset === 'scenic-grid') {
           hero.style.maxWidth =
             effective === 'text'
               ? ''
               : Math.max(300, left - position(hero).left - 48) + 'px';
           hero.style.whiteSpace = effective === 'text' ? '' : 'normal';
-        }
-        if (state.preset === 'channel-list') {
-          doc.getElementById('channelArtwork').style.visibility =
-            effective === 'text' ? '' : 'hidden';
-          hero.style.top =
-            effective === 'text' ? '' : Math.ceil(bottom + 36) + 'px';
-        }
-      } else {
-        doc.getElementById('hero').style.maxWidth = '';
-        if (state.preset === 'channel-list') {
-          doc.getElementById('channelArtwork').style.visibility = '';
-          doc.getElementById('hero').style.top = '';
         }
       }
       last = { supported: supported, effective: show ? effective : null };
@@ -451,7 +434,7 @@
     details: 'In detail',
     forecast: '4 days'
   };
-  let settingsHost, cityDialog, cityReturn;
+  let settingsHost, cityDialog, cityReturn, sourcesDialog, sourcesButton;
   function choose(format, on) {
     const value = {};
     if (format) value.preferred = format;
@@ -481,7 +464,12 @@
     const tab = document.querySelector('[data-category="weather"]');
     if (tab) tab.querySelector('span').textContent = t('Weather');
     const heading = document.querySelector('#settings-pane-weather>h3');
-    if (heading) heading.textContent = t('Weather');
+    if (heading) {
+      const title = heading.querySelector('.weather-settings-title');
+      if (title) title.textContent = t('Weather');
+      else heading.textContent = t('Weather');
+    }
+    if (sourcesButton) sourcesButton.textContent = 'ⓘ ' + t('Data sources');
     settingsHost.querySelector('.weather-enabled>span').textContent =
       t('Weather on Home');
     settingsHost
@@ -593,17 +581,13 @@
           store.setPreferences({ units: b.dataset.weatherUnit });
         })
     );
-    const credits = document.createElement('p');
-    credits.className = 'weather-data-credits';
-    credits.innerHTML =
-      'Open-Meteo · GeoNames — <a tabindex="0" href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a><br>GeoJS · <a tabindex="0" href="https://github.com/basmilius/meteocons">Meteocons — Bas Milius (MIT)</a>';
-    groups.find((group) => group.id === 'advanced').elements.push(credits);
     groups.splice(
       groups.findIndex((group) => group.id === 'wallpapers') + 1,
       0,
       { id: 'weather', label: t('Weather'), elements: [settingsHost] }
     );
     return function () {
+      mountSources(card);
       const icon = card.querySelector('[data-category="weather"] path');
       if (icon)
         icon.setAttribute(
@@ -615,6 +599,85 @@
       tab.addEventListener('click', schedule);
       refreshSettings();
     };
+  }
+  function mountSources(card) {
+    const heading = card.querySelector('#settings-pane-weather>h3');
+    heading.classList.add('weather-settings-heading');
+    heading.textContent = '';
+    const title = doc.createElement('span');
+    title.className = 'weather-settings-title';
+    title.textContent = t('Weather');
+    sourcesButton = doc.createElement('button');
+    sourcesButton.type = 'button';
+    sourcesButton.className = 'weather-sources-button';
+    sourcesButton.textContent = 'ⓘ ' + t('Data sources');
+    heading.appendChild(title);
+    heading.appendChild(sourcesButton);
+    sourcesDialog = doc.createElement('section');
+    sourcesDialog.className = 'weather-city-dialog weather-sources-dialog';
+    sourcesDialog.hidden = true;
+    sourcesDialog.setAttribute('role', 'dialog');
+    sourcesDialog.setAttribute('aria-modal', 'true');
+    sourcesDialog.setAttribute('aria-labelledby', 'weather-sources-title');
+    doc.body.appendChild(sourcesDialog);
+    function close() {
+      sourcesDialog.hidden = true;
+      if (sourcesButton.offsetHeight) sourcesButton.focus();
+    }
+    sourcesButton.onclick = function () {
+      sourcesDialog.innerHTML =
+        '<div class="weather-city-card"><h2 id="weather-sources-title">' +
+        escape(t('Data sources')) +
+        '</h2><dl>' +
+        '<dt>' +
+        escape(t('Forecast')) +
+        '</dt><dd><a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a></dd>' +
+        '<dt>' +
+        escape(t('Location')) +
+        '</dt><dd><a href="https://www.geonames.org/" target="_blank" rel="noopener">GeoNames</a> · Open-Meteo · CC BY 4.0</dd>' +
+        '<dt>' +
+        escape(t('Automatic')) +
+        '</dt><dd><a href="https://www.geojs.io/" target="_blank" rel="noopener">GeoJS</a></dd>' +
+        '<dt>' +
+        escape(t('Icons')) +
+        '</dt><dd><a href="https://github.com/basmilius/meteocons" target="_blank" rel="noopener">Meteocons — Bas Milius</a> · MIT</dd></dl>' +
+        '<p>' +
+        escape(t('Values are rounded and converted to your selected units.')) +
+        '</p><button type="button" class="weather-sources-close">' +
+        escape(t('Back')) +
+        '</button></div>';
+      sourcesDialog.querySelector('button').onclick = close;
+      sourcesDialog.hidden = false;
+      sourcesDialog.querySelector('button').focus();
+    };
+    root.addEventListener(
+      'keydown',
+      function (event) {
+        if (
+          sourcesDialog.hidden ||
+          ![9, 13, 27, 37, 38, 39, 40, 461].includes(event.keyCode)
+        )
+          return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        const list = [...sourcesDialog.querySelectorAll('a,button')],
+          at = list.indexOf(doc.activeElement),
+          key = event.keyCode;
+        if (key === 27 || key === 461) close();
+        else if (key === 13) {
+          if (!event.repeat && doc.activeElement) doc.activeElement.click();
+        } else
+          list[
+            (at +
+              (key === 37 || key === 38 || (key === 9 && event.shiftKey)
+                ? -1
+                : 1) +
+              list.length) %
+              list.length
+          ].focus();
+      },
+      true
+    );
   }
   let previousResults = '';
   function placeLabel(location) {
@@ -824,7 +887,7 @@
             next.find((b) => b.getAttribute('aria-pressed') === 'true') ||
             next[0];
           target.focus();
-        } else if (key === 38) tab.focus();
+        } else if (key === 38) sourcesButton.focus();
         else
           settingsHost
             .closest('.settings-workspace')

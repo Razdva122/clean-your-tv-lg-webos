@@ -135,3 +135,5 @@ Ausführliche Referenzen auf Englisch: [Voraussetzungen](../COMPATIBILITY.md) ·
 ## Wetter
 
 Öffnen Sie Einstellungen → Wetter unter Hintergrundbilder. Schalten Sie das Wetter ein und suchen Sie unter Stadt nach dem richtigen Ort mit Region und Land. Automatisch ermittelt einen ungefähren Ort anhand der Internetverbindung. Ein VPN kann das Ergebnis verändern; verwenden Sie bei fehlendem oder falschem Ort die manuelle Suche. Der erkannte oder gewählte Ort wird angezeigt. Wählen Sie °C / m/s oder °F / mph sowie ein verfügbares Format: kompakt, aktuell, ausführlich oder vier Tage. Die Vorschau folgt dem Design; Beispiel kennzeichnet Musterdaten. Liquid Glass unterstützt nur kompakt. Ribbon und Atmosphere zeigen kein Wetter. Ausschalten blendet die weiteren Optionen aus und beendet Anfragen. Bei einer Störung bleiben aktuelle Daten kurz erhalten; nach längerer Zeit wird das Wetter bis zur Aktualisierung ausgeblendet.
+
+Die Schaltfläche Datenquellen in der Wetterüberschrift öffnet Informationen zu Diensten und Lizenzen.

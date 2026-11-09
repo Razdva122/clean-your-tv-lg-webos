@@ -137,3 +137,5 @@ Riferimenti dettagliati in inglese: [requisiti](../COMPATIBILITY.md) · [comandi
 ## Meteo
 
 Apri Impostazioni → Meteo, sotto Sfondi. Attiva il meteo e apri Città per cercare e scegliere regione e paese corretti, oppure scegli Automatico per una città approssimativa in base alla connessione. Una VPN può modificare il risultato; se la città manca o è errata, usa la ricerca manuale. La città rilevata o scelta appare nelle impostazioni. Scegli °C / m/s o °F / mph e un formato disponibile: compatto, attuale, dettagliato o quattro giorni. L’anteprima segue il tema; Esempio indica dati dimostrativi. Liquid Glass supporta solo il formato compatto. Ribbon e Atmosphere non mostrano il meteo. Disattivandolo si nascondono le altre opzioni e si interrompono le richieste. Durante un guasto i dati recenti possono restare temporaneamente; poi il meteo scompare fino all’aggiornamento.
+
+Il pulsante Fonti dei dati nel titolo Meteo apre le informazioni su servizi e licenze.

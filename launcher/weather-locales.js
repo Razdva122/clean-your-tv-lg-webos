@@ -921,6 +921,70 @@ window.WeatherLocales = {
     'Back': '返回'
   }
 };
+
+Object.entries({
+  'en': [
+    'Data sources',
+    'Icons',
+    'Values are rounded and converted to your selected units.'
+  ],
+  'ru': [
+    'Источники данных',
+    'Иконки',
+    'Значения округляются и переводятся в выбранные единицы измерения.'
+  ],
+  'cs': [
+    'Zdroje dat',
+    'Ikony',
+    'Hodnoty se zaokrouhlují a převádějí na zvolené jednotky.'
+  ],
+  'de': [
+    'Datenquellen',
+    'Symbole',
+    'Werte werden gerundet und in die gewählten Einheiten umgerechnet.'
+  ],
+  'es': [
+    'Fuentes de datos',
+    'Iconos',
+    'Los valores se redondean y se convierten a las unidades elegidas.'
+  ],
+  'pt-BR': [
+    'Fontes de dados',
+    'Ícones',
+    'Os valores são arredondados e convertidos para as unidades escolhidas.'
+  ],
+  'fr': [
+    'Sources des données',
+    'Icônes',
+    'Les valeurs sont arrondies et converties dans les unités choisies.'
+  ],
+  'it': [
+    'Fonti dei dati',
+    'Icone',
+    'I valori vengono arrotondati e convertiti nelle unità scelte.'
+  ],
+  'pl': [
+    'Źródła danych',
+    'Ikony',
+    'Wartości są zaokrąglane i przeliczane na wybrane jednostki.'
+  ],
+  'ko': ['데이터 출처', '아이콘', '값은 반올림되어 선택한 단위로 변환됩니다.'],
+  'hi': [
+    'डेटा स्रोत',
+    'आइकन',
+    'मानों को पूर्णांकित करके चुनी गई इकाइयों में बदला जाता है।'
+  ],
+  'zh-Hans': ['数据来源', '图标', '数值经过四舍五入，并转换为所选单位。'],
+  'zh-Hant': ['資料來源', '圖示', '數值經過四捨五入，並轉換為所選單位。']
+}).forEach(([language, values]) => {
+  [
+    'Data sources',
+    'Icons',
+    'Values are rounded and converted to your selected units.'
+  ].forEach((key, index) => {
+    window.WeatherLocales[language][key] = values[index];
+  });
+});
 if (window.HomeI18n)
   HomeI18n.add(
     Object.fromEntries(

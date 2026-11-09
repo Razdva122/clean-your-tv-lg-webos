@@ -135,3 +135,5 @@ Referencias detalladas en inglés: [requisitos](../COMPATIBILITY.md) · [control
 ## Tiempo
 
 Abra Ajustes → Tiempo, debajo de Fondos. Active el tiempo y abra Ciudad para buscar y elegir la región y el país correctos, o seleccione Automático para obtener una ciudad aproximada según su conexión. Una VPN puede cambiar el resultado; si falta la ciudad o es incorrecta, use la búsqueda manual. La ciudad detectada o elegida aparece en ajustes. Elija °C / m/s o °F / mph y un formato disponible: breve, actual, detallado o cuatro días. La vista previa sigue el tema; Ejemplo indica datos de muestra. Liquid Glass solo admite el formato breve. Ribbon y Atmosphere no muestran el tiempo. Desactivarlo oculta las demás opciones y detiene las solicitudes. Durante un fallo pueden mantenerse datos recientes temporalmente; después se ocultan hasta poder actualizarlos.
+
+El botón Fuentes de datos del encabezado Tiempo abre la información de servicios y licencias.

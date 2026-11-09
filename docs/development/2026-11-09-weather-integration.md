@@ -40,8 +40,9 @@ text measurement selected different locale/font fallback than the rendered DOM.
 The shared renderer now measures actual glyph ranges, preserving theme type and
 TV text size. The Korean case and subsequent complete matrix passed. Malformed
 network/cache values are sanitized and invalid preference batches do not partly
-mutate the state. A subtle Open-Meteo source link accompanies actual data, with
-licenses in Advanced; the removed verbose Weather settings block remains absent.
+mutate the state. After comparison with other projects and the Open-Meteo maintainer guidance,
+attribution lives in a Data sources dialog from the Weather heading. Widget
+footers and the verbose Weather settings block remain absent.
 
 ## Theme provenance and author handoff
 
@@ -73,3 +74,22 @@ untested. Earlier theme device reports do not establish acceptance of the new
 packages. Do not mark #353 released or announce application delivery on this
 browser evidence. The author runtime and theme artifacts remain candidates until
 normal release gates are completed.
+
+## Final source review and edge cases
+
+Independent read-only review confirmed a one-column channel-list overlap: the
+app focus handler overwrote the renderer's weather offset. The shared focus path
+now derives its title position from the measured weather reservation; competing
+renderer writes are removed. A browser regression covers Down/Up focus updates
+and resetting the layout. Expiration now emits immediately even during offline
+retry backoff, so data older than the cap cannot remain painted. The new unit
+regression failed before this fix and passed after. A proposed stale/status
+footer was rejected against the user's later explicit removal of that block.
+Sources dialog mounting uses the supplied settings card before Root inserts it
+into the document. Both editions test links, Escape/Back focus and no widget
+footer; the locale matrix checks heading/dialog bounds.
+
+Fork candidate artifacts are published as explicit prereleases, not app releases:
+[Minimal](https://github.com/Razdva122/tv-themes/releases/tag/weather-v1.1.0-candidate.1),
+[Retro](https://github.com/Razdva122/clean-your-tv-lg-retro-theme/releases/tag/weather-v1.1.0-candidate.1),
+[Atmosphere](https://github.com/Razdva122/atmosphere-theme/releases/tag/weather-v1.1.0-candidate.1).

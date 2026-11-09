@@ -136,3 +136,5 @@ Szczegółowe instrukcje po angielsku: [wymagania](../COMPATIBILITY.md) · [ster
 ## Pogoda
 
 Otwórz Ustawienia → Pogoda, pod Tapetami. Włącz pogodę i otwórz Miasto, aby wyszukać właściwy region i kraj, lub wybierz Automatycznie, aby określić przybliżone miasto według połączenia internetowego. VPN może zmienić wynik; jeśli miasta brakuje lub jest błędne, użyj wyszukiwania ręcznego. Wykryte lub wybrane miasto widać w ustawieniach. Wybierz °C / m/s lub °F / mph oraz dostępny format: krótki, aktualny, szczegółowy lub cztery dni. Podgląd pasuje do motywu; Przykład oznacza dane demonstracyjne. Liquid Glass obsługuje tylko krótki format. Ribbon i Atmosphere nie pokazują pogody. Wyłączenie ukrywa pozostałe opcje i zatrzymuje zapytania. Podczas awarii ostatnie dane mogą pozostać przez pewien czas; później pogoda znika do czasu odświeżenia.
+
+Przycisk Źródła danych w nagłówku Pogoda otwiera informacje o usługach i licencjach.
