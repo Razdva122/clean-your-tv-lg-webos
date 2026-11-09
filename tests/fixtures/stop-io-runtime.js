@@ -4,7 +4,8 @@ var assert = require('assert'),
   path = require('path');
 var crypto = require('crypto'),
   cp = require('child_process'),
-  timed = require('./timeout-io');
+  timed = require('./timeout-io'),
+  heldTimed = require('./held-timeout-io');
 var io = require('./stop-io'),
   denied = require('./denied-io'),
   missing = require('./missing-io');
@@ -690,7 +691,7 @@ test('cancel blocked actual C append retains lease and independent Stop', functi
     });
 });
 test('timeout is admission closure not proof of native release', function () {
-  var a = timed.create(),
+  var a = heldTimed.create(),
     body = event(1, 'blocked', raw),
     settled = false;
   adapters.push(a);
@@ -707,6 +708,7 @@ test('timeout is admission closure not proof of native release', function () {
   });
   return untilEntered()
     .then(function () {
+      heldTimed._expireTimeoutForTests();
       return delay(300);
     })
     .then(function () {
