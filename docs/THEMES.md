@@ -14,7 +14,7 @@ Version 1.6.0 instead includes Classic, Alpine and Ribbon. In 1.7.0, **Alpine 1.
 
 1.5.4: when a fixed-layout theme hides Columns, its empty row keeps the same space so applying the theme does not shorten Appearance’s scroll range. The hidden control is skipped by pointer, keyboard and accessibility navigation. This correction has browser regression coverage; physical-TV acceptance is pending.
 
-Channel and Itachi are retired from the active candidate catalog. Existing installed copies and historical packages remain available; removing an installed retired theme does not make it reappear in the current showcase. Published stable catalog availability follows its own release.
+Channel and Itachi are retired from the active catalog. Existing installed copies and historical packages remain available; removing an installed retired theme does not make it reappear in the current showcase.
 
 ## Change to an included theme
 
@@ -176,7 +176,7 @@ See the [shared weather contract](development/WEATHER.md) for supported formats,
 
 ## Weather
 
-In the unpublished candidate, open **Settings → Weather** after Wallpapers.
+Open **Settings → Weather** after Wallpapers.
 Weather starts off. Turn it on, choose a city manually or explicitly request
 approximate automatic location, then choose units and an available format.
 Automatic lookup uses the network's approximate location; correct the city
@@ -204,4 +204,4 @@ automatic location uses `get.geojs.io` and your public IP address. MET Norway
 data is credited to the Norwegian Meteorological Institute (CC BY 4.0); provider
 terms and other credits are available in Data sources. See
 [weather implementation and limits](development/WEATHER.md)
-and [candidate release notes](RELEASE-1.15.0.md).
+and [release notes](RELEASE-1.15.0.md).

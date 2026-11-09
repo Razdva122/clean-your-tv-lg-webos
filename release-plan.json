@@ -65,5 +65,11 @@
     }
   ],
   "excluded": [],
-  "acceptance": ""
+  "acceptance": "Full candidate42673170250:3 passed all21 jobs; normal protected signer42680421116 verified. Final CLI payload598/original Helper/runtime and exact original-signer Android APK8a006981d62b132a4437c1a7150dcdff8261381a4af09a86c1bc9020bdf610a1 code29\u219230 retention/Store/native/idle passed on isolated API35 ARM64. Final three Root component hashes exactly match installed and tested C3 OLED55C3RLA firmware43.21.71/webOS SDK11.2.0 packages; live read-only controller/UI/grant/original preferences/Home Off/recovery readback passed. API7/7, preview39/39, grant rollback/forward and profile retention observations carry only for those identical hashes/preconditions; no repeated installation or provider request. Retained System1.2.5; Magic Remote exact model unknown; installer macOS15.6.1 ARM64. Physical Home/emergency/audio, standby/AC cold boot, No-root OTA, other TVs and reporter-specific original failures are not new passes. See docs/history/2026-11-09-release-1.15.0-qa.md final acceptance.",
+  "build": {
+    "run_id": 42673170250,
+    "attempt": 3,
+    "source": "aec1f3ff0ccdaa2e42089d71ea7f4a38aa241bf7"
+  },
+  "acceptance_build": "42673170250:3"
 }

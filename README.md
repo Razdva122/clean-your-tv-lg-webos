@@ -143,7 +143,7 @@ For contributors: [build and technical references](docs/development/README.md),
 | Android installer / versionCode | 0.15.0 / 30 |
 <!-- /release:components -->
 
-Candidate v1.15.0 fresh System Updater: 1.2.8 / protocol 1. Published v1.14.0 uses 1.2.7. Existing supervisors stay pinned; installed 1.1.2 has no general replacement path. See the [delivery limits](docs/RELEASE-1.13.0.md).
+v1.15.0 fresh System Updater: 1.2.8 / protocol 1. v1.14.0 used 1.2.7. Existing supervisors stay pinned; installed 1.1.2 has no general replacement path. See the [delivery limits](docs/RELEASE-1.13.0.md).
 
 Historical System Updater in 1.7.0: 1.2.0 / protocol 1.
 See the [1.7.0 release notes](docs/RELEASE-1.7.0.md)

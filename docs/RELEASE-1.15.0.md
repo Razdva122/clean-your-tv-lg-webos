@@ -1,9 +1,9 @@
 # v1.15.0 — weather and installation recovery
 
-Unpublished release candidate in [PR #458](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/458).
-Versions and the ten-PR scope are frozen after the reviewed weather correction
-batch. Public delivery, exact-artifact
-acceptance of that replacement and final package/feed verification remain pending.
+Prepared and validated in [PR #458](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/458).
+The frozen ten-PR scope uses full build42673170250:3 and normal protected
+signer42680421116. See the [final acceptance record](history/2026-11-09-release-1.15.0-qa.md)
+for exact artifacts, observed results and limitations.
 
 ## Changes
 
@@ -39,7 +39,7 @@ acceptance of that replacement and final package/feed verification remain pendin
 
 ## Versions and packaging
 
-| Component | Published v1.14.0 | Candidate v1.15.0 | Reason |
+| Component | Published v1.14.0 | v1.15.0 | Reason |
 | --- | --- | --- | --- |
 | Home FHD/HD | 1.13.3 | 1.14.0 | Shared weather, settings, localization and theme assets |
 | Home Helper | 0.8.0 | 0.8.0 | No source change; preserve exact published bytes |
@@ -56,28 +56,24 @@ selected. The paired author toolkit has an independent release lifecycle.
 
 ## Validation and acceptance
 
-[Candidate preparation and scoped cases](history/2026-11-09-release-1.15.0-preparation.md)
-records pre-dispatch verification. Earlier implementation results are in the
-[combined installer integration](history/2026-11-09-next-candidate-integration.md)
-and [weather integration](development/2026-11-09-weather-integration.md) records.
-Those checks do not establish a successful full versioned candidate or new TV
-acceptance. The current selected build and remaining gates belong to PR #458.
-The [dated QA inventory](history/2026-11-09-release-1.15.0-qa.md) records the
-failed preliminary full runs and reviewed fixture corrections #464/#465.
-No failed run is selected; the current release record owns the replacement build.
+The full trusted candidate passes all21 jobs. Final CLI payload/runtime and
+598 embedded files verify; Helper remains exact published bytes. The exact
+original-signer Android APK passes code29→30 upgrade, retained state, Store,
+native and idle checks on an isolated API35 ARM64 emulator.
 
-The third full build passed all21 jobs. Its exact signed Root packages passed
-ordinary update, supported rollback/forward, profile retention and automated
-UI/service checks on the maintainer C3 (OLED55C3RLA, firmware43.21.71,
-webOS SDK11.2.0, Magic Remote exact model unknown; macOS15.6.1 ARM64 installer).
-Its exact signed Android upgrade passed on an isolated API35 ARM64 emulator.
-That case pass found Compact preview overflow and direct Open-Meteo forecast
-connectivity failure. The correction batch adds MET and repairs the preview;
-installed native MET/API cases7/7 and preview cases39/39 now pass. Supported
-rollback/forward removes and recreates the MET grant while preserving preferences
-and profile state. Final replacement artifacts still need affected acceptance. Earlier results retain their
-original hashes. Physical Home routing, audible sound, emergency behavior,
-standby, cold boot and OTA remain untested in this session.
+All three final normal signed Root components exactly match the installed,
+tested C3 bytes. Final read-only controller/UI/grant/recovery binding confirms
+that identity and original preferences/Home Off state. API7/7, preview39/39 and
+supported rollback/forward/profile observations cover those identical package
+hashes and preconditions; no further installation or matrix was repeated.
+Device: maintainer OLED55C3RLA, firmware43.21.71/webOS SDK11.2.0, retained
+System1.2.5; Magic Remote exact model unknown; macOS15.6.1 ARM64 installer.
+
+See the [dated QA ledger](history/2026-11-09-release-1.15.0-qa.md) for hashes,
+provenance, earlier findings and final acceptance. Physical Home routing,
+audible sound, emergency behavior, standby, AC cold boot, ordinary public-feed
+OTA and other models are not new passes. Direct Open-Meteo availability remains
+network-dependent; no nationwide-ban claim or TLS bypass is made.
 
 All linked issues stay open. #240/#418 original installation failures and #355
 original C2 activation remain unresolved/planned. #283/#438/#440 need relevant
