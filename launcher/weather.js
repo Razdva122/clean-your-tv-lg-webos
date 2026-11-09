@@ -2,7 +2,10 @@
 (function (root) {
   'use strict';
   const formats = root.WeatherData.formats,
-    store = root.WeatherData.create({ language: root.HomeI18n.language() }),
+    store = root.WeatherData.create({
+      language: root.HomeI18n.language(),
+      metRequest: root.HomeWeatherTransport.met
+    }),
     doc = root.document;
   let options = store.state(),
     element,
@@ -13,7 +16,8 @@
     busy = false,
     queued = false,
     headerFont = 'sans-serif',
-    headerColor = '#fff';
+    headerColor = '#fff',
+    pageHidden = false;
   function t(key, params) {
     return root.HomeI18n.t('Weather / ' + key, params);
   }
@@ -334,7 +338,9 @@
       const state = root.HomeLayoutState.state(),
         a = appearance(),
         supported = state.ribbon ? [] : a.options.formats;
-      store.setAllowed(supported.length > 0);
+      store.setAllowed(
+        supported.length > 0 && !pageHidden && doc.visibilityState !== 'hidden'
+      );
       const effective =
         supported.indexOf(options.preferred) >= 0
           ? options.preferred
@@ -436,6 +442,7 @@
     details: 'In detail',
     forecast: '4 days'
   };
+  const sourceNames = { 'met-no': 'MET Norway', 'open-meteo': 'Open-Meteo' };
   let settingsHost, cityDialog, cityReturn, sourcesDialog, sourcesButton;
   function choose(format, on) {
     const value = {};
@@ -452,6 +459,27 @@
     settingsHost.classList.toggle('weather-unsupported', !supported.length);
     if (!options.enabled && cityDialog && !cityDialog.hidden) closeCity();
     refreshLocationSettings();
+    settingsHost.querySelector('.weather-provider-label').textContent =
+      t('Weather source');
+    settingsHost
+      .querySelectorAll('[data-weather-provider]')
+      .forEach((button) => {
+        const provider = button.dataset.weatherProvider;
+        button.textContent =
+          provider === 'auto' ? t('Auto') : sourceNames[provider];
+        button.setAttribute(
+          'aria-pressed',
+          String(options.provider === provider)
+        );
+      });
+    settingsHost.querySelector('.weather-actual-source').textContent =
+      options.source && sourceNames[options.source]
+        ? t('Source: {source}', { source: sourceNames[options.source] })
+        : t(
+            options.status === 'error'
+              ? 'Weather unavailable. Try again.'
+              : 'No source data yet'
+          );
     settingsHost.querySelector('.weather-units-label').textContent = t('Units');
     settingsHost.querySelectorAll('[data-weather-unit]').forEach((b) => {
       b.setAttribute(
@@ -566,7 +594,13 @@
             '" aria-pressed="false"><span class="weather-format-title"></span><span class="weather-choice-state" aria-hidden="true">✓</span></button>'
         )
         .join('') +
-      '</div><p class="weather-settings-note"></p></div></div><div class="weather-live-preview"><div class="weather-live-title"></div><div class="weather-preview-window" aria-hidden="true"><div id="weatherPreviewSurface" class="weather-preview-surface ctv-home"><div id="weatherPreview" class="weather-preview home-weather ctv-weather"></div></div></div></div>';
+      '</div><p class="weather-settings-note"></p></div></div><div class="weather-right"><div class="weather-provider" role="group" aria-labelledby="weather-provider-label"><div id="weather-provider-label" class="weather-provider-label"></div><div class="weather-provider-choices"><button type="button" data-weather-provider="auto"></button><button type="button" data-weather-provider="met-no"></button><button type="button" data-weather-provider="open-meteo"></button></div><div class="weather-actual-source" role="status"></div></div><div class="weather-live-preview"><div class="weather-live-title"></div><div class="weather-preview-window" aria-hidden="true"><div id="weatherPreviewSurface" class="weather-preview-surface ctv-home"><div id="weatherPreview" class="weather-preview home-weather ctv-weather"></div></div></div></div></div>';
+    settingsHost
+      .querySelectorAll('[data-weather-provider]')
+      .forEach((button) => {
+        button.onclick = () =>
+          store.setPreferences({ provider: button.dataset.weatherProvider });
+      });
     settingsHost.querySelector('.weather-city-summary').onclick = openCity;
     mountCity();
     settingsHost.querySelector('.weather-enabled').onclick = () =>
@@ -633,7 +667,9 @@
         '</h2><dl>' +
         '<dt>' +
         escape(t('Forecast')) +
-        '</dt><dd><a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a></dd>' +
+        '</dt><dd><a href="https://www.met.no/" target="_blank" rel="noopener">MET Norway</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a> · <a href="https://api.met.no/doc/TermsOfService" target="_blank" rel="noopener">' +
+        escape(t('Terms of service')) +
+        '</a><br><a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a></dd>' +
         '<dt>' +
         escape(t('Location')) +
         '</dt><dd><a href="https://www.geonames.org/" target="_blank" rel="noopener">GeoNames</a> · Open-Meteo · CC BY 4.0</dd>' +
@@ -645,6 +681,8 @@
         '</dt><dd><a href="https://github.com/basmilius/meteocons" target="_blank" rel="noopener">Meteocons — Bas Milius</a> · MIT</dd></dl>' +
         '<p>' +
         escape(t('Values are rounded and converted to your selected units.')) +
+        ' ' +
+        escape(t('Daily ranges summarize forecast points.')) +
         '</p><button type="button" class="weather-sources-close">' +
         escape(t('Back')) +
         '</button></div>';
@@ -866,16 +904,33 @@
         event.stopImmediatePropagation();
         const active = document.activeElement,
           units = [...settingsHost.querySelectorAll('[data-weather-unit]')],
+          providers = [
+            ...settingsHost.querySelectorAll('[data-weather-provider]')
+          ],
           tab = document.querySelector('[data-category="weather"]');
         if (key === 37 || key === 39) {
-          const index = units.indexOf(active);
-          if (index >= 0 && units[index + (key === 37 ? -1 : 1)])
-            units[index + (key === 37 ? -1 : 1)].focus();
-          else if (key === 37) tab.focus();
+          if (key === 39 && active.classList.contains('weather-enabled')) {
+            (
+              providers.find(
+                (b) => b.getAttribute('aria-pressed') === 'true'
+              ) || providers[0]
+            ).focus();
+            return;
+          }
+          const row = providers.includes(active) ? providers : units,
+            index = row.indexOf(active);
+          if (index >= 0 && row[index + (key === 37 ? -1 : 1)])
+            row[index + (key === 37 ? -1 : 1)].focus();
+          else if (key === 37) {
+            if (providers.includes(active))
+              settingsHost.querySelector('.weather-enabled').focus();
+            else tab.focus();
+          }
           return;
         }
         const groups = [
           [settingsHost.querySelector('.weather-enabled')],
+          providers,
           [settingsHost.querySelector('.weather-city-summary')],
           units,
           ...[...settingsHost.querySelectorAll('[data-weather-choice]')].map(
@@ -922,6 +977,18 @@
   store.onChange(schedule);
   doc.addEventListener('home-theme-change', schedule);
   root.addEventListener('resize', schedule);
+  doc.addEventListener('visibilitychange', function () {
+    if (doc.visibilityState !== 'hidden') pageHidden = false;
+    if (started) render();
+  });
+  root.addEventListener('pagehide', function () {
+    pageHidden = true;
+    store.setAllowed(false);
+  });
+  root.addEventListener('pageshow', function () {
+    pageHidden = false;
+    if (started) render();
+  });
   root.HomeWeather = {
     supportsThemes: true,
     store: store,
@@ -929,8 +996,8 @@
     start: function () {
       if (started) return;
       started = true;
-      store.start();
       render();
+      store.start();
       setInterval(function () {
         if (doc.visibilityState !== 'hidden') store.refresh();
       }, 60000);

@@ -375,8 +375,8 @@ body.editing #homeWeather {
   box-sizing: border-box;
 }
 .weather-is-off .weather-left {
-  width: 100%;
-  margin-right: 0;
+  width: 45%;
+  margin-right: 28px;
 }
 .weather-unsupported .weather-city-summary,
 .weather-unsupported .weather-units,
@@ -511,7 +511,7 @@ body.editing #homeWeather {
   font-size: 26px;
 }
 .weather-live-preview {
-  height: 560px;
+  height: 430px;
 }
 
 .weather-units button + button {
@@ -624,4 +624,42 @@ body.editing #homeWeather {
   font-size: 24px;
   line-height: 1.5;
   color: #c0c7d2;
+}
+
+/* Reuse the current two-column settings layout for source selection. */
+.weather-right {
+  flex: 1;
+  min-width: 0;
+}
+.weather-provider {
+  margin-bottom: 14px;
+}
+.weather-provider-label,
+.weather-actual-source {
+  font-size: 23px;
+  line-height: 1.3;
+  color: #c1c9d5;
+}
+.weather-provider-choices {
+  display: flex;
+  margin: 8px 0;
+}
+.weather-settings .weather-provider-choices button {
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+  min-height: 52px;
+  padding: 9px 6px;
+  font-size: 23px;
+}
+.weather-provider-choices button + button {
+  margin-left: 10px;
+}
+.weather-provider-choices button[aria-pressed='true'] {
+  color: #15263f;
+  background: #b9d3ff;
+  border-color: #b9d3ff;
+}
+.weather-settings .weather-provider-choices [data-weather-provider='auto'] {
+  flex: 0.6;
 }
