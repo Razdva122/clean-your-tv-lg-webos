@@ -141,11 +141,30 @@ def require_generic_environment():
     critical=(str(legacy.TARGET),str(STOCK_APPINFO.parent))
     mounts=MOUNTINFO.read_text()
     if len(mounts)>1024*1024: raise ValueError('Oversized mount table')
+    system_image=False
     for line in mounts.splitlines():
         fields=line.split()
         if len(fields)<10 or ' - ' not in line: raise ValueError('Unknown mount topology')
+        separator=fields.index('-')
+        if separator<6 or len(fields)!=separator+4: raise ValueError('Unknown mount topology')
         target=re.sub(r'\\([0-7]{3})',lambda m:chr(int(m[1],8)),fields[4])
         if target!='/' and any(p==target or p.startswith(target+'/') for p in critical):
+            # webOS can mount its whole immutable /usr image separately. This
+            # is not a bind/overlay takeover of Home. Admit only an internal
+            # MMC squashfs root, with both Home paths on that exact device;
+            # additional covering mounts (including stacked /usr) still refuse.
+            if (target=='/usr' and not system_image and fields[3]=='/'
+                    and re.fullmatch(r'179:[0-9]+',fields[2])
+                    and int(fields[2].split(':')[1])<256
+                    and fields[separator+1]=='squashfs'
+                    and re.fullmatch(r'/dev/mmcblk[0-9]+p[0-9]+',fields[separator+2])
+                    and all('ro' in options.split(',') and 'rw' not in options.split(',')
+                            for options in (fields[5],fields[separator+3]))):
+                device=tuple(map(int,fields[2].split(':')))
+                if all((os.major(s.st_dev),os.minor(s.st_dev))==device
+                       for s in (os.stat(p,follow_symlinks=False) for p in critical)):
+                    system_image=True
+                    continue
             raise ValueError('Native Home is covered by a mount; no takeover attempted')
     app=json.loads(secure(STOCK_APPINFO,limit=65536))
     if (not isinstance(app,dict) or app.get('id')!=STOCK or app.get('type')!='native'

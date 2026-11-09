@@ -150,6 +150,37 @@ Do not remove that helper or its journal until its native stock/mount proof and 
 
 ## Source basis and verification boundary
 
+### System images and interrupted fresh setup
+
+Capability admission distinguishes a whole immutable `/usr` system image from
+a mount replacing Home. A separate `/usr` mount is accepted only at filesystem
+root `/`, on read-only squashfs backed by an internal MMC partition (major 179,
+minor below 256), with both critical Home paths on that device. Writable,
+subtree, stacked, overlay and unknown covering mounts remain refusals. The
+[original device probe](https://gist.github.com/metaljay/8a1e63060c7fe7cc1d90fe34fe97e386#11-device-probe-record-2026-11-04)
+records read-only `/usr` squashfs; it does not establish another TV's exact mount
+table or compatibility.
+
+An early native admission refusal can leave a host pending attempt without a TV
+deployment journal. Missing files do not resolve that attempt. Explicit full
+removal preserves it and fences original writers, then may use current verified
+compositor support to prove stock Home without the unavailable Home settings
+APIs. This path requires empty preserved/live CYTV routing evidence and a fresh
+native identity, manifest, vendor chain, mount and emergency-input observation.
+It records `stock-compositor`, never `never-applied` or installation success.
+The final Node cleaner independently rechecks stock identity/hash, manifest,
+vendor chain, exact missing service, mount layout and foreign Home integrations
+before retirement and final acknowledgement. Later read-only inspection uses
+the same current proof; it cannot delete anything.
+
+After verified full removal, the installer selects a new native request through
+the shared coordinator. The coordinator revalidates cleanup under its mutex,
+moves only pinned component fences, and deploys the selected compositor bundle
+under a new lease. The isolated deployment child inherits that mutex FD. The
+previous request cannot resume or submit packages again. Initial fresh setup
+and retained native recovery keep their existing paths; no updater is installed
+by this handoff. These are source/host checks, not physical device acceptance.
+
 The design follows compositor Home filtering and lifecycle return used by [Lightkeeper](https://github.com/chiotas/lightkeeper), including its [one-second C1 return timing](https://github.com/chiotas/lightkeeper/blob/5f26515fe6fd9cc74d29b04a342a2ed6abf424f0/app/service/lightkeeper-init#L63). The owned-chain approach also follows [GlassHouse](https://github.com/rorygallagher2024/glasshouse/blob/25ac2c93171f394884d9fde76e5e6bcedcb98e33/server/lib/remotekeys.js#L567). Root presentation requires its own visibility checks; the current candidate uses the ordinary full-screen Home CARD. The activation format follows the [LS2 multi-service parser](https://github.com/webosose/luna-service2/blob/5bc38aa348b35f5799f1bf9ed7c6cb513bc5f702/src/ls-hubd/file_parser.cpp#L468). LG's [service naming rules](https://webostv.developer.lge.com/develop/guides/js-service-usage) also apply to package metadata.
 
 Host process tests cover independent leases, malformed state, stop persistence, child deadlines, launch/restore ordering and PID-reuse avoidance. Python and Node fixtures cover chain ownership, cancellation, conflicting foreground observations, stale callbacks, key pairing, unrelated buttons, binary authority, legacy recovery and package isolation. Static ARM cross-compilation is a build check. These checks do not establish TV Home routing, standby/cold boot, audio/media/HDMI or physical emergency behavior. No new owner tests or diagnostic collection are requested by this implementation.

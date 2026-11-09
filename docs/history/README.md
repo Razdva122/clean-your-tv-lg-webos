@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [Native install admission and cleanup handoff, 2026-11-09](2026-11-09-issue440-native-install-recovery.md): narrow immutable-system-image admission, explicit pre-journal cleanup and a new fenced native request; synthetic verification, physical acceptance pending.
+
 - [v1.14.0 publication, 2026-11-09](2026-11-09-release-1.14.0-publication.md): verified public assets/feeds, immutable accepted build and all shipping notices; reporter confirmation remains open.
 
 - [v1.14.0 candidate QA, 2026-11-09](2026-11-09-release-1.14.0-qa.md): exact signed Android upgrade, C3 signed update/profile/renderer/service and owner Home/audio/emergency/standby pass; complete failure inventory, signing-capacity correction and retained optional Homebrew/legacy limits.

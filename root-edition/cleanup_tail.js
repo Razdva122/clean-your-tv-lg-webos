@@ -250,16 +250,31 @@ async function rpc(method, payload) {
   }
   return value;
 }
-function routingUntouched() {
+function unownedRouting() {
   var evidence = [
     'profile-trial.json',
     'persistent-intent.json',
     'persistent-binding.json',
+    'boot-continuation.json',
     'profile-candidate.stage',
     'home-backend.json',
     'c1-gate',
     'c1-keyfilter'
   ];
+  if (record.profileless_cleanup_eligible !== true) return false;
+  var backup = json(directory, 'routing-backup-' + id + '.json');
+  return (
+    object(backup) &&
+    !Object.keys(backup).some(function (name) {
+      return evidence.indexOf(name.split('/')[0]) !== -1;
+    }) &&
+    !evidence.some(function (name) {
+      return exists('/var/lib/clean-your-tv-root/' + name);
+    }) &&
+    !exists('/var/webos-profile/override/clean-your-tv-root.json')
+  );
+}
+function routingUntouched() {
   var deploy = record.fenced_components && record.fenced_components.deploy;
   if (
     record.routing_never_applied !== true ||
@@ -280,17 +295,161 @@ function routingUntouched() {
     )
   )
     return false;
-  var backup = json(directory, 'routing-backup-' + id + '.json');
-  return (
-    object(backup) &&
-    !Object.keys(backup).some(function (name) {
-      return evidence.indexOf(name.split('/')[0]) !== -1;
-    }) &&
-    !evidence.some(function (name) {
-      return exists('/var/lib/clean-your-tv-root/' + name);
-    }) &&
-    !exists('/var/webos-profile/override/clean-your-tv-root.json')
-  );
+  return unownedRouting();
+}
+async function compositorStock() {
+  if (
+    [
+      '/media/developer/cleanyourtv',
+      '/var/lib/tvweb/home-takeover',
+      '/var/lib/luma-home',
+      '/var/lib/webosbrew/homechooser'
+    ].some(exists)
+  )
+    throw Error('route-changed');
+  var bindingRoot = '/home/root/.config/lginputhook';
+  if (exists(bindingRoot + '/keybinds.json')) {
+    var bindingsRaw = read(openDir(bindingRoot), 'keybinds.json');
+    var bindings = JSON.parse(bindingsRaw.toString());
+    if (
+      bindingsRaw.length > 65536 ||
+      !object(bindings) ||
+      Object.prototype.hasOwnProperty.call(bindings, '773')
+    )
+      throw Error('route-changed');
+  }
+  var proof = record.routes,
+    home = '/usr/bin/com.webos.app.home',
+    app = '/usr/palm/applications/com.webos.app.home';
+  if (
+    !unownedRouting() ||
+    !object(proof.target) ||
+    !/^[a-f0-9]{64}$/.test(proof.target_sha256)
+  )
+    throw Error('route-changed');
+  var before = fs.lstatSync(home),
+    raw = read(openDir('/usr/bin'), 'com.webos.app.home');
+  if (
+    !before.isFile() ||
+    !(before.mode & 73) ||
+    before.dev !== proof.target.dev ||
+    before.ino !== proof.target.ino ||
+    before.size !== proof.target.size ||
+    raw.length < 52 ||
+    raw.slice(0, 7).toString('hex') !== '7f454c46010101' ||
+    raw[18] !== 40 ||
+    raw[19] !== 0 ||
+    nodeCrypto.createHash('sha256').update(raw).digest('hex') !==
+      proof.target_sha256 ||
+    !identity(before, fs.lstatSync(home))
+  )
+    throw Error('route-changed');
+  var manifest = JSON.parse(read(openDir(app), 'appinfo.json').toString());
+  if (
+    manifest.id !== 'com.webos.app.home' ||
+    manifest.type !== 'native' ||
+    [home, 'file://' + home].indexOf(manifest.main) === -1
+  )
+    throw Error('route-changed');
+  var mounts = fs.readFileSync('/proc/self/mountinfo', 'utf8'),
+    systemImage = false;
+  if (!mounts || mounts.length > 1048576) throw Error('route-changed');
+  mounts
+    .trim()
+    .split('\n')
+    .forEach(function (line) {
+      var fields = line.split(/\s+/),
+        separator = fields.indexOf('-');
+      if (separator < 6 || fields.length !== separator + 4)
+        throw Error('route-changed');
+      var target = fields[4].replace(/\\([0-7]{3})/g, function (_, octal) {
+        return String.fromCharCode(parseInt(octal, 8));
+      });
+      if (
+        target === '/' ||
+        ![home, app].some(function (path) {
+          return path === target || path.indexOf(target + '/') === 0;
+        })
+      )
+        return;
+      var mmc = /^179:([0-9]+)$/.exec(fields[2]);
+      if (
+        target !== '/usr' ||
+        systemImage ||
+        fields[3] !== '/' ||
+        !mmc ||
+        Number(mmc[1]) >= 256 ||
+        fields[separator + 1] !== 'squashfs' ||
+        !/^\/dev\/mmcblk[0-9]+p[0-9]+$/.test(fields[separator + 2]) ||
+        ![fields[5], fields[separator + 3]].every(function (options) {
+          options = options.split(',');
+          return options.indexOf('ro') !== -1 && options.indexOf('rw') === -1;
+        }) ||
+        before.dev !== 179 * 256 + Number(mmc[1]) ||
+        fs.lstatSync(app).dev !== before.dev
+      )
+        throw Error('route-changed');
+      systemImage = true;
+    });
+  try {
+    await rpc('com.webos.service.systemprofile/getProfiles', {
+      names: ['defaultApps', 'idleApp'],
+      subscribe: false
+    });
+    throw Error('route-changed');
+  } catch (error) {
+    if (error.systemprofile_missing !== true) throw error;
+  }
+  var chain = (
+    await rpc('com.webos.service.config/getConfigs', {
+      configNames: ['com.webos.surfacemanager.keyFilters']
+    })
+  ).configs;
+  chain = chain && chain['com.webos.surfacemanager.keyFilters'];
+  if (
+    !Array.isArray(chain) ||
+    !chain.length ||
+    chain.length > 128 ||
+    JSON.stringify(chain).length > 16384 ||
+    chain.filter(function (entry) {
+      return (
+        object(entry) &&
+        /\/systemUi\.js$/.test(entry.file) &&
+        entry.handler === 'handleSystemKeys'
+      );
+    }).length !== 1
+  )
+    throw Error('route-changed');
+  chain.forEach(function (entry) {
+    if (
+      !object(entry) ||
+      typeof entry.file !== 'string' ||
+      !/^\/usr\/lib\/(?:qt5\/)?qml\/KeyFilters\/[A-Za-z0-9_-]+\.js$/.test(
+        entry.file
+      ) ||
+      typeof entry.handler !== 'string' ||
+      !/^[A-Za-z_$][A-Za-z0-9_$]{0,127}$/.test(entry.handler)
+    )
+      throw Error('route-changed');
+    var path = fs.realpathSync(entry.file),
+      slash = path.lastIndexOf('/');
+    if (
+      !/^\/usr\/lib\/(?:qt5\/)?qml\/KeyFilters\/[A-Za-z0-9_-]+\.js$/.test(
+        path
+      ) ||
+      path.slice(slash + 1) !==
+        entry.file.slice(entry.file.lastIndexOf('/') + 1)
+    )
+      throw Error('route-changed');
+    var script = read(openDir(path.slice(0, slash)), path.slice(slash + 1));
+    if (
+      script.length > 262144 ||
+      (/\/systemUi\.js$/.test(path) &&
+        (script.toString().indexOf('Qt.Key_Super_L') === -1 ||
+          !/function\s+handleSystemKeys\s*\(/.test(script.toString())))
+    )
+      throw Error('route-changed');
+  });
 }
 async function absent(final) {
   if (final && exists(bootRoot)) throw Error('boot-session-remains');
@@ -396,7 +555,9 @@ async function absent(final) {
     });
   // No Home consumer setting is required when the fenced original operation
   // never reached routing and both original inverse and current paths agree.
-  if (!(
+  if (object(record.routes) && record.routes.mode === 'stock-compositor') {
+    await compositorStock();
+  } else if (!(
     object(record.routes) &&
     record.routes.mode === 'never-applied' &&
     Object.keys(record.routes).length === 1 &&
@@ -767,6 +928,20 @@ function completion() {
           state: record && record.runtime_cleanup ? 'tail-ready' : 'not-ready'
         })
       );
+    } else if (mode === 'stock-proof') {
+      // Read-only helper for the coordinator while it owns the original mutex.
+      // It grants no deletion/lease authority and cannot turn an install into success.
+      if (
+        !record ||
+        record.schema !== 1 ||
+        record.operation !== id ||
+        record.protocol !== 'clean-removal-v1' ||
+        !object(record.routes) ||
+        record.routes.mode !== 'stock-compositor'
+      )
+        throw Error('original-removal-required');
+      await compositorStock();
+      process.stdout.write(JSON.stringify({ routes: record.routes }));
     } else {
       var lock = Number(process.argv[5]);
       if (!Number.isInteger(lock) || lock < 3)
