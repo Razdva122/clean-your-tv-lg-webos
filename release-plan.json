@@ -47,6 +47,11 @@
       "pr": 464,
       "issues": [],
       "summary": "Keep theme discovery lifecycle on an exact active fixture and current staged engine metadata after Channel retirement"
+    },
+    {
+      "pr": 465,
+      "issues": [],
+      "summary": "Stabilize QA log rotation, portable weather staging and native lease timeout fixtures without product behavior changes"
     }
   ],
   "excluded": [],
