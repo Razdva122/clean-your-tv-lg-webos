@@ -1,0 +1,38 @@
+---
+import Site from '../../../layouts/Site.astro';
+import ArticleBreadcrumbs from '../../../components/ArticleBreadcrumbs.astro';
+import { articleCopy, articleRoute, getArticles } from '../../../lib/articles';
+import { locales, type Locale } from '../../../lib/site';
+export function getStaticPaths() {
+  return locales.map((lang) => ({ params: { lang } }));
+}
+const lang = Astro.params.lang as Locale;
+const labels = articleCopy[lang];
+const articles = (await getArticles()).filter(
+  (entry) => entry.data.lang === lang
+);
+---
+
+<Site lang={lang} articles>
+  <div class="article-shell article-reading">
+    <article class="prose">
+      <ArticleBreadcrumbs lang={lang} />
+      <h1>{labels.indexTitle}</h1>
+      <p class="lead">{labels.description}</p>
+      <ul class="article-list">
+        {articles.map(({ data }) => (
+          <li>
+            <h2>
+              <a href={articleRoute(lang, data.topic)}>{data.title}</a>
+            </h2>
+            <p>{data.description}</p>
+          </li>
+        ))}
+      </ul>
+    </article>
+  </div>
+</Site>
+
+<style is:global>
+  @import '../../../article.css';
+</style>

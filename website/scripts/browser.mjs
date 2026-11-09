@@ -177,6 +177,77 @@ try {
     .click();
   assert.equal(new URL(staticPage.url()).pathname, base + 'ru/help/');
   await staticPage.close();
+  // Article discovery, translation links and text remain usable without JavaScript.
+  const articleContext = await browser.newContext({ javaScriptEnabled: false });
+  const articlePage = await articleContext.newPage();
+  const topics = [
+    'change-lg-webos-home-screen',
+    'lg-tv-home-screen-ads',
+    'root-vs-no-root',
+    'lg-developer-mode'
+  ];
+  for (const lang of [
+    'en',
+    'de',
+    'es',
+    'pt-BR',
+    'fr',
+    'it',
+    'ko',
+    'hi',
+    'pl',
+    'ru',
+    'cs',
+    'zh-Hans',
+    'zh-Hant'
+  ]) {
+    await articlePage.setViewportSize({ width: 1440, height: 1000 });
+    for (const topic of ['', ...topics]) {
+      const response = await articlePage.goto(
+        host + base + lang + '/articles/' + (topic ? topic + '/' : '')
+      );
+      assert.equal(response.status(), 200);
+      await articlePage.locator('h1').waitFor({ state: 'visible' });
+      assert(
+        await articlePage.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth + 1
+        ),
+        lang + '/' + topic + ' article desktop overflow'
+      );
+      await articlePage.setViewportSize({ width: 320, height: 812 });
+      assert(
+        await articlePage.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth + 1
+        ),
+        lang + '/' + topic + ' article mobile overflow'
+      );
+      if (shots && lang === 'ru')
+        await articlePage.screenshot({
+          path: resolve(shots, 'ru-article-' + (topic || 'index') + '-320.png'),
+          fullPage: true
+        });
+      await articlePage.setViewportSize({ width: 1440, height: 1000 });
+    }
+  }
+  await articlePage.goto(host + base + 'ru/articles/root-vs-no-root/');
+  await articlePage.locator('.languages summary').click();
+  await articlePage.locator('.languages a[hreflang="zh-Hant"]').click();
+  assert.equal(
+    new URL(articlePage.url()).pathname,
+    base + 'zh-Hant/articles/root-vs-no-root/'
+  );
+  await articlePage.setViewportSize({ width: 320, height: 812 });
+  await articlePage.locator('.mobile-menu summary').focus();
+  await articlePage.keyboard.press('Enter');
+  await articlePage
+    .locator('.mobile-menu a[href="' + base + 'zh-Hant/articles/"]')
+    .click();
+  await articlePage.locator('.article-list h2 a').first().click();
+  assert.equal(
+    new URL(articlePage.url()).pathname,
+    base + 'zh-Hant/articles/change-lg-webos-home-screen/'
+  );
+  await articleContext.close();
   const page = await browser.newPage();
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('response', (r) => {
@@ -268,7 +339,7 @@ try {
   }
   assert.deepEqual(errors, []);
   console.log(
-    'PASS browser language selection; remembered manual choice; explicit locale URLs; blocked storage; 78 pages without JavaScript; keyboard language switching; help deep links; mobile tables/layouts; legacy fragment routing; offline Root/No-root theme demo'
+    'PASS browser language selection; remembered manual choice; explicit locale URLs; blocked storage; 143 localized pages without JavaScript; article desktop/mobile layouts and topic-preserving translations; keyboard navigation; help deep links; mobile tables/layouts; legacy fragment routing; offline Root/No-root theme demo'
   );
 } finally {
   await browser?.close();

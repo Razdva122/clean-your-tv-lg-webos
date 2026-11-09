@@ -1,9 +1,13 @@
 ---
-import { support } from "../lib/support";
-import { copy, route, base, repo, type Locale } from "../lib/site";
+import { support } from '../lib/support';
+import { articleCopy, articleRoute, getArticles } from '../lib/articles';
+import { copy, route, base, repo, type Locale } from '../lib/site';
 const { lang } = Astro.props as { lang: Locale };
 const t = copy[lang],
   extra = support[lang];
+const articles = (await getArticles()).filter(
+  (entry) => entry.data.lang === lang
+);
 ---
 
 <section class="hero shell">
@@ -11,18 +15,18 @@ const t = copy[lang],
     <h1>{t.headline}</h1>
     <p class="lead">{t.summary}</p>
     <div class="actions">
-      <a class="button" href={route(lang, "install")}>
+      <a class="button" href={route(lang, 'install')}>
         {t.nav[1]}
       </a>
-      <a class="button secondary" href={base + "demo/"}>
+      <a class="button secondary" href={base + 'demo/'}>
         {t.tryDemo}
       </a>
     </div>
   </div>
   <figure class="tv" data-kind="product">
-    <a href={base + "demo/"} aria-label={t.tryDemo}>
+    <a href={base + 'demo/'} aria-label={t.tryDemo}>
       <img
-        src={base + "assets/classic.jpg"}
+        src={base + 'assets/classic.jpg'}
         alt={t.screenshot}
         width="1920"
         height="1080"
@@ -43,7 +47,7 @@ const t = copy[lang],
   <div>
     <h2>{t.choose}</h2>
     <p>{t.limits}</p>
-    <a class="text-link" href={route(lang, "compatibility")}>
+    <a class="text-link" href={route(lang, 'compatibility')}>
       {t.requirements}
     </a>
   </div>
@@ -56,7 +60,7 @@ const t = copy[lang],
       <h3>Root</h3>
       <p>{t.root}</p>
     </section>
-    <a class="text-link" href={route(lang, "editions")}>
+    <a class="text-link" href={route(lang, 'editions')}>
       {t.nav[2]}
     </a>
   </div>
@@ -67,16 +71,18 @@ const t = copy[lang],
       <h2>{t.nav[4]}</h2>
       <p>{t.themes}</p>
     </div>
-    <a class="text-link" href={route(lang, "themes")}>
+    <a class="text-link" href={route(lang, 'themes')}>
       {t.nav[4]}
     </a>
   </div>
   <div class="theme-grid">
-    {["Classic", "Liquid Glass", "Ribbon"].map((theme) => (
+    {['Classic', 'Liquid Glass', 'Ribbon'].map((theme) => (
       <figure data-kind="product">
-        <a href={base + "demo/"}>
+        <a href={base + 'demo/'}>
           <img
-            src={base + "assets/" + theme.toLowerCase().replace(/ /g, "-") + ".jpg"}
+            src={
+              base + 'assets/' + theme.toLowerCase().replace(/ /g, '-') + '.jpg'
+            }
             alt={`${t.themeImage}: ${theme}`}
             width="1920"
             height="1080"
@@ -94,24 +100,40 @@ const t = copy[lang],
     {extra.steps.map((step, index) => (
       <li>
         <p>{step}</p>
-        <a href={route(lang, index === 0 ? "editions" : "install")}>
+        <a href={route(lang, index === 0 ? 'editions' : 'install')}>
           {index === 0 ? t.nav[2] : t.details}
         </a>
       </li>
     ))}
   </ol>
   <div class="actions">
-    <a class="button" href={route(lang, "install")}>
+    <a class="button" href={route(lang, 'install')}>
       {t.details}
     </a>
-    <a href={repo + "/releases/latest"}>{t.download}</a>
+    <a href={repo + '/releases/latest'}>{t.download}</a>
   </div>
 </section>
 
 <section class="shell help-section">
   <h2>{extra.helpTitle}</h2>
   <p>{extra.helpDescription}</p>
-  <a class="text-link" href={route(lang, "help")}>
+  <a class="text-link" href={route(lang, 'help')}>
     {extra.helpTitle}
   </a>
+</section>
+
+<section class="shell help-section">
+  <h2>
+    <a href={articleRoute(lang)}>{articleCopy[lang].title}</a>
+  </h2>
+  <p>{articleCopy[lang].description}</p>
+  <ul>
+    {articles.map(({ data }) => (
+      <li>
+        <a class="text-link" href={articleRoute(lang, data.topic)}>
+          {data.title}
+        </a>
+      </li>
+    ))}
+  </ul>
 </section>

@@ -96,8 +96,9 @@ in a model family. No private diagnostics are copied into website content.
 ## URLs and publication
 
 The configured public base is
-`https://razdva122.github.io/clean-your-tv-lg-webos/`. Each language has six pages:
-home, installation, edition comparison, compatibility, themes and help. The root URL
+`https://razdva122.github.io/clean-your-tv-lg-webos/`. Each language has six core pages:
+home, installation, edition comparison, compatibility, themes and help, plus an
+article index and four full articles. The root URL
 renders English without JavaScript and canonicalizes to `/en/`. With JavaScript,
 only this language-neutral entry redirects to the saved manual language choice,
 then the first supported browser language, or English if none match. Regional tags
@@ -136,6 +137,49 @@ Submit sitemap directly through Search Console; do not add a misleading nested
 robots file. No analytics collector, consent cookie or external font service is
 added. For a future domain change, update base/site, canonical generation, sitemap,
 asset paths and their tests together.
+
+## Articles and search visibility
+
+`src/content/articles/{locale}/{topic}.md` holds four practical articles in each
+of the 13 supported locales. They explain changing the home screen, the limits
+of avoiding home-screen ads, choosing Root or No-root and maintaining Developer
+Mode. These are editorial guides, separate from `docs/i18n/` installation sources;
+they link the current installation, compatibility and recovery instructions.
+Keep prerequisite and control claims aligned with those references. Do not
+announce candidate features as published or turn a reported TV configuration
+into a compatibility guarantee.
+
+The content collection validates language, topic, title, description and ISO
+update date. Build-time validation requires exactly one translation per topic
+and supported locale. `src/lib/article-copy/*.json` supplies the small localized
+navigation/metadata vocabulary; `src/lib/site.ts` defines the topic registry.
+Article URLs use stable topic slugs under `/{locale}/articles/{topic}/`.
+Use absolute website paths for internal article links: relative Markdown URLs
+are reserved for the existing GitHub documentation-link renderer.
+
+The header, footer, home-page article links, index and related links expose the
+articles without JavaScript. Canonicals and reciprocal `hreflang` links retain
+the selected topic, including when switching language. The sitemap includes
+all article/index URLs and translation links; article `lastmod` comes from the
+reviewed `updated` field, never from build time. Update that field when the
+article changes, not during every deployment.
+
+Pages emit `WebSite` and `WebPage` JSON-LD. Article pages add `Article` and
+`BreadcrumbList` with the visible title, description, language, project attribution,
+breadcrumbs and update date. No publication date, ratings or hardware certification
+are invented. Existing pages retain their URLs, metadata and installation anchors.
+`verify-articles.mjs` checks the exported pages, metadata/schema agreement, sitemap,
+translation destinations and local links. Browser acceptance covers every new
+route without JavaScript and checks desktop/mobile overflow and navigation.
+
+The AI-search approach follows [Google's AI search guidance](https://developers.google.com/search/docs/appearance/ai-features):
+crawlable text, direct useful answers, source links, internal discovery and
+structured data matching visible content. AI-specific text files and special
+schema are not required by Google. No visibility, citation, indexing or traffic
+gain is claimed from local checks. After publication, the site owner can submit
+the sitemap and inspect representative pages in Search Console and Bing Webmaster
+Tools. Host-level crawler rules must be managed at the domain root; this project
+does not change them or connect analytics accounts.
 
 ## Help content and scope
 
