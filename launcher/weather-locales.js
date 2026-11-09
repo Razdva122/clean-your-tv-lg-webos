@@ -985,6 +985,123 @@ Object.entries({
     window.WeatherLocales[language][key] = values[index];
   });
 });
+Object.entries({
+  'en': [
+    'Weather source',
+    'Auto',
+    'Source: {source}',
+    'No source data yet',
+    'Terms of service',
+    'Daily ranges summarize forecast points.'
+  ],
+  'ru': [
+    'Источник погоды',
+    'Авто',
+    'Источник: {source}',
+    'Пока нет данных источника',
+    'Условия использования',
+    'Диапазоны за день рассчитаны по точкам прогноза.'
+  ],
+  'cs': [
+    'Zdroj počasí',
+    'Auto',
+    'Zdroj: {source}',
+    'Zatím žádná data zdroje',
+    'Podmínky použití',
+    'Denní rozsahy shrnují body předpovědi.'
+  ],
+  'de': [
+    'Wetterquelle',
+    'Auto',
+    'Quelle: {source}',
+    'Noch keine Quelldaten',
+    'Nutzungsbedingungen',
+    'Tagesspannen fassen Vorhersagepunkte zusammen.'
+  ],
+  'es': [
+    'Fuente del tiempo',
+    'Auto',
+    'Fuente: {source}',
+    'Aún no hay datos de la fuente',
+    'Condiciones de uso',
+    'Los rangos diarios resumen los puntos del pronóstico.'
+  ],
+  'pt-BR': [
+    'Fonte do tempo',
+    'Auto',
+    'Fonte: {source}',
+    'Ainda sem dados da fonte',
+    'Termos de uso',
+    'Os intervalos diários resumem os pontos da previsão.'
+  ],
+  'fr': [
+    'Source météo',
+    'Auto',
+    'Source : {source}',
+    'Aucune donnée de source disponible',
+    'Conditions d’utilisation',
+    'Les plages quotidiennes résument les points de prévision.'
+  ],
+  'it': [
+    'Fonte meteo',
+    'Auto',
+    'Fonte: {source}',
+    'Nessun dato della fonte disponibile',
+    'Condizioni d’uso',
+    'Gli intervalli giornalieri riassumono i punti di previsione.'
+  ],
+  'pl': [
+    'Źródło pogody',
+    'Auto',
+    'Źródło: {source}',
+    'Brak danych źródła',
+    'Warunki korzystania',
+    'Zakresy dzienne podsumowują punkty prognozy.'
+  ],
+  'ko': [
+    '날씨 출처',
+    '자동',
+    '출처: {source}',
+    '아직 출처 데이터가 없습니다',
+    '이용 약관',
+    '일별 범위는 예보 시점의 값을 요약합니다.'
+  ],
+  'hi': [
+    'मौसम स्रोत',
+    'स्वतः',
+    'स्रोत: {source}',
+    'स्रोत का डेटा अभी उपलब्ध नहीं है',
+    'सेवा की शर्तें',
+    'दैनिक सीमाएँ पूर्वानुमान बिंदुओं का सार हैं।'
+  ],
+  'zh-Hans': [
+    '天气来源',
+    '自动',
+    '来源：{source}',
+    '尚无来源数据',
+    '服务条款',
+    '每日范围根据预报时点汇总。'
+  ],
+  'zh-Hant': [
+    '天氣來源',
+    '自動',
+    '來源：{source}',
+    '尚無來源資料',
+    '服務條款',
+    '每日範圍依預報時點彙整。'
+  ]
+}).forEach(([language, values]) => {
+  [
+    'Weather source',
+    'Auto',
+    'Source: {source}',
+    'No source data yet',
+    'Terms of service',
+    'Daily ranges summarize forecast points.'
+  ].forEach((key, index) => {
+    window.WeatherLocales[language][key] = values[index];
+  });
+});
 if (window.HomeI18n)
   HomeI18n.add(
     Object.fromEntries(

@@ -45,7 +45,8 @@ const city = {
   latitude: 52.52,
   longitude: 13.41,
   country: 'Germany',
-  admin1: 'Berlin'
+  admin1: 'Berlin',
+  timezone: 'Asia/Tokyo'
 };
 const weather = {
   timezone: 'Europe/Berlin',
@@ -76,6 +77,13 @@ const weather = {
       }),
       errors = [],
       calls = [];
+    let geoLocation = {
+      city: 'Berlin',
+      country_code: 'DE',
+      latitude: '52.52',
+      longitude: '13.41'
+    };
+    await page.clock.install({ time: new Date('2026-11-09T18:30:00Z') });
     page.on('pageerror', (e) => errors.push(e.message));
     await page.route(/^https?:/, (r) => {
       const url = r.request().url();
@@ -87,20 +95,79 @@ const weather = {
       if (url.includes('api.open-meteo')) return r.fulfill({ json: weather });
       if (url.includes('get.geojs.io'))
         return r.fulfill({
-          json: {
-            city: 'Berlin',
-            country_code: 'DE',
-            latitude: '52.52',
-            longitude: '13.41'
-          }
+          json: geoLocation
         });
       return r.abort();
+    });
+    await page.addInitScript(() => {
+      window.installWeatherBridge = () => {
+        window.weatherBridgeCalls = [];
+        window.weatherBridgeFail = false;
+        window.weatherBridgeHold = false;
+        window.PalmServiceBridge = function () {
+          this.cancel = () => {
+            this.cancelled = true;
+          };
+          this.call = (uri, body) => {
+            if (!/weatherForecast/.test(uri)) {
+              setTimeout(
+                () => this.onservicecallback?.('{"returnValue":false}'),
+                0
+              );
+              return;
+            }
+            window.weatherBridgeCalls.push({ uri, body: JSON.parse(body) });
+            if (/Cancel$/.test(uri) || window.weatherBridgeHold) return;
+            const forecast = {
+              properties: {
+                meta: {
+                  updated_at: new Date(
+                    Math.floor(Date.now() / 1000) * 1000 - 4.5 * 3600000
+                  ).toISOString(),
+                  units: {
+                    air_temperature: 'celsius',
+                    wind_speed: 'm/s',
+                    relative_humidity: '%'
+                  }
+                },
+                timeseries: Array.from({ length: 4 }, (_, i) => ({
+                  time: new Date(
+                    Math.floor(Date.now() / 1000) * 1000 + i * 86400000
+                  ).toISOString(),
+                  data: {
+                    instant: {
+                      details: {
+                        air_temperature: 8 + i,
+                        wind_speed: 4,
+                        relative_humidity: 70
+                      }
+                    },
+                    next_1_hours: { summary: { symbol_code: 'cloudy' } }
+                  }
+                }))
+              }
+            };
+            setTimeout(
+              () =>
+                this.onservicecallback?.(
+                  JSON.stringify(
+                    window.weatherBridgeFail
+                      ? { returnValue: false }
+                      : { returnValue: true, forecast }
+                  )
+                ),
+              0
+            );
+          };
+        };
+      };
     });
     await page.goto(pathToFileURL(path.join(site, edition, 'index.html')).href);
     await page.waitForFunction(
       () => window.RootLauncherRendered && window.HomeWeather
     );
     await page.evaluate(() => document.fonts.ready);
+    await page.evaluate(() => installWeatherBridge());
     assert.equal(calls.filter((u) => /open-meteo|geojs/.test(u)).length, 0);
     await page.evaluate(() => {
       RenewalPanel.open();
@@ -118,13 +185,47 @@ const weather = {
       true,
       'sources stay accessible while weather is off'
     );
+    assert.equal(
+      await page.locator('[data-weather-provider]:visible').count(),
+      3
+    );
+    await page.locator('[data-weather-provider="met-no"]').click();
+    assert.equal(
+      await page.evaluate(() => weatherBridgeCalls.length),
+      0,
+      'source can be chosen while Off'
+    );
+    await page.waitForFunction(
+      () =>
+        document
+          .querySelector('[data-weather-provider="met-no"]')
+          .getAttribute('aria-pressed') === 'true'
+    );
+    await page.locator('.weather-enabled').focus();
+    await page.keyboard.press('ArrowRight');
+    assert.equal(
+      await page
+        .locator('[data-weather-provider="met-no"]')
+        .evaluate((e) => e === document.activeElement),
+      true,
+      'Right enters source controls from weather switch'
+    );
+    await page.locator('[data-weather-provider="auto"]').focus();
+    await page.keyboard.press('ArrowLeft');
+    assert.equal(
+      await page
+        .locator('.weather-enabled')
+        .evaluate((e) => e === document.activeElement),
+      true,
+      'Left returns to switch from source controls'
+    );
     await sources.click();
     const dialog = page.locator('.weather-sources-dialog');
     assert.equal(await dialog.getAttribute('role'), 'dialog');
-    assert.equal(await dialog.locator('a').count(), 5);
+    assert.equal(await dialog.locator('a').count(), 8);
     assert.equal(
       await dialog.locator('a').first().getAttribute('href'),
-      'https://open-meteo.com/'
+      'https://www.met.no/'
     );
     await page.keyboard.press('Escape');
     assert.equal(
@@ -135,6 +236,28 @@ const weather = {
     await page.waitForTimeout(70);
     assert.equal(await page.locator('.weather-live-preview').isVisible(), true);
     assert.equal(await page.locator('#homeWeather').isVisible(), false);
+    await page.locator('[data-weather-choice="text"]').click();
+    await page.waitForTimeout(70);
+    const compactPreview = await page.evaluate(() => {
+      const preview = document.getElementById('weatherPreview'),
+        area = document.querySelector('.weather-preview-window'),
+        p = preview.getBoundingClientRect(),
+        a = area.getBoundingClientRect();
+      return {
+        inlineIcons: preview.querySelectorAll('svg').length,
+        width: p.width,
+        inside:
+          p.left >= a.left - 2 &&
+          p.top >= a.top - 2 &&
+          p.right <= a.right + 2 &&
+          p.bottom <= a.bottom + 2
+      };
+    });
+    assert(compactPreview.inlineIcons > 0, 'Compact uses the real inline SVG');
+    assert(
+      compactPreview.width > 0 && compactPreview.inside,
+      'Compact SVG preview fits its window ' + JSON.stringify(compactPreview)
+    );
     await page.locator('.weather-city-summary').click();
     await page.locator('.weather-city-search input').fill('Berlin');
     await page.locator('.weather-city-search input').press('Enter');
@@ -143,6 +266,50 @@ const weather = {
     assert.equal(
       await page.locator('[aria-labelledby="weather-city-title"]').isVisible(),
       false
+    );
+    assert.equal(
+      await page.evaluate(() => HomeWeather.store.state().source),
+      'met-no'
+    );
+    await page.waitForFunction(() =>
+      document
+        .querySelector('.weather-actual-source')
+        .textContent.includes('MET Norway')
+    );
+    assert.match(
+      await page.locator('.weather-actual-source').innerText(),
+      /MET Norway/
+    );
+    assert.equal(
+      await page.evaluate(() => weatherBridgeCalls[0].uri),
+      'luna://' +
+        (edition === 'root-launcher'
+          ? 'com.cleanyourtv.root.preview.service'
+          : 'com.gathin.tvhome.renewal') +
+        '/weatherForecast'
+    );
+    await page.locator('[data-weather-choice="forecast"]').click();
+    await page.waitForTimeout(70);
+    assert.equal(
+      await page.locator('#homeWeather .ctv-weather-day').first().innerText(),
+      'Today',
+      'MET local calendar day around UTC midnight'
+    );
+    await page.locator('[data-weather-provider="met-no"]').focus();
+    await page.keyboard.press('ArrowRight');
+    assert.equal(
+      await page
+        .locator('[data-weather-provider="open-meteo"]')
+        .evaluate((e) => e === document.activeElement),
+      true
+    );
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(
+      () => HomeWeather.store.state().source === 'open-meteo'
+    );
+    await page.locator('[data-weather-provider="auto"]').click();
+    await page.waitForFunction(
+      () => HomeWeather.store.state().provider === 'auto'
     );
     await page.locator('[data-weather-choice="forecast"]').click();
     await page.waitForTimeout(70);
@@ -220,6 +387,25 @@ const weather = {
     await page.waitForFunction(
       () => HomeWeather.store.state().units === 'imperial'
     );
+    await page.locator('[data-weather-provider="auto"]').focus();
+    await page.keyboard.press('Escape');
+    assert.equal(
+      await page
+        .locator('[data-category="weather"]')
+        .evaluate((e) => e === document.activeElement),
+      true,
+      'Back returns from source controls to category'
+    );
+    await page.keyboard.press('Escape');
+    assert.equal(
+      await page.locator('.weather-settings').isVisible(),
+      false,
+      'second Back exits settings'
+    );
+    await page.evaluate(() => {
+      RenewalPanel.open();
+      document.querySelector('[data-category="weather"]').click();
+    });
     await page.locator('.weather-city-summary').click();
     await page.keyboard.press('Escape');
     assert.equal(
@@ -272,6 +458,124 @@ const weather = {
       '',
       'weather typography cleanup after Off'
     );
+    await page.evaluate(() => {
+      HomeWeather.store.clear();
+      weatherBridgeFail = true;
+      HomeWeather.store.setPreferences({ provider: 'met-no', enabled: true });
+      HomeWeather.store.setMode('auto');
+    });
+    const omBefore = calls.filter((u) => /api.open-meteo/.test(u)).length;
+    await page.waitForFunction(
+      () => HomeWeather.store.state().status === 'error'
+    );
+    assert.equal(
+      calls.filter((u) => /api.open-meteo/.test(u)).length,
+      omBefore,
+      'manual MET failure never silently falls back'
+    );
+    assert.equal(
+      await page.evaluate(() => HomeWeather.store.state().source),
+      null
+    );
+    await page.locator('[data-weather-provider="auto"]').click();
+    await page.waitForFunction(
+      () => HomeWeather.store.state().source === 'open-meteo'
+    );
+    await page.waitForFunction(() =>
+      document
+        .querySelector('.weather-actual-source')
+        .textContent.includes('Open-Meteo')
+    );
+    assert.match(
+      await page.locator('.weather-actual-source').innerText(),
+      /Open-Meteo/
+    );
+    // Each cancellation case uses a genuinely different request location.
+    // Same-location resume must honor MET admission even though clear() was used.
+    for (const [index, lifecycle] of ['hidden', 'pagehide', 'Off'].entries()) {
+      geoLocation = { ...geoLocation, latitude: String(53 + index) };
+      const nativeBefore = await page.evaluate(() => weatherBridgeCalls.length),
+        omBefore = calls.filter((u) => /api.open-meteo/.test(u)).length;
+      await page.evaluate(() => {
+        HomeWeather.store.clear();
+        weatherBridgeFail = false;
+        weatherBridgeHold = true;
+        HomeWeather.store.setPreferences({ provider: 'auto', enabled: true });
+        HomeWeather.store.setMode('auto');
+      });
+      await page.waitForFunction(
+        ({ count, latitude }) => {
+          const last = weatherBridgeCalls[weatherBridgeCalls.length - 1];
+          return (
+            weatherBridgeCalls.length > count &&
+            !/Cancel$/.test(last.uri) &&
+            last.body.latitude === latitude
+          );
+        },
+        { count: nativeBefore, latitude: Number(geoLocation.latitude) }
+      );
+      await page.waitForFunction(
+        () =>
+          document
+            .querySelector('.weather-enabled')
+            .getAttribute('aria-checked') === 'true'
+      );
+      const pending = await page.evaluate(
+        () => weatherBridgeCalls[weatherBridgeCalls.length - 1]
+      );
+      if (lifecycle === 'hidden')
+        await page.evaluate(() => {
+          Object.defineProperty(document, 'visibilityState', {
+            configurable: true,
+            value: 'hidden'
+          });
+          document.dispatchEvent(new Event('visibilitychange'));
+        });
+      else if (lifecycle === 'pagehide')
+        await page.evaluate(() => window.dispatchEvent(new Event('pagehide')));
+      else await page.locator('.weather-enabled').click();
+      await page.waitForFunction((id) => {
+        const last = weatherBridgeCalls[weatherBridgeCalls.length - 1];
+        return /Cancel$/.test(last.uri) && last.body.id === id;
+      }, pending.body.id);
+      await page.waitForTimeout(50);
+      assert.equal(
+        await page.evaluate(() => weatherBridgeCalls.length),
+        nativeBefore + 2,
+        lifecycle + ' cancels only the original native request'
+      );
+      assert.equal(
+        calls.filter((u) => /api.open-meteo/.test(u)).length,
+        omBefore,
+        lifecycle + ' cancellation cannot start fallback while disallowed'
+      );
+      if (lifecycle === 'hidden')
+        await page.evaluate(() => {
+          Object.defineProperty(document, 'visibilityState', {
+            configurable: true,
+            value: 'visible'
+          });
+          document.dispatchEvent(new Event('visibilitychange'));
+        });
+      else if (lifecycle === 'pagehide')
+        await page.evaluate(() => window.dispatchEvent(new Event('pageshow')));
+      else await page.locator('.weather-enabled').click();
+      // Resuming allows a new Auto refresh. MET stays in cooldown; OM is eligible.
+      await page.waitForFunction(
+        () => HomeWeather.store.state().source === 'open-meteo'
+      );
+      await page.waitForTimeout(50);
+      assert.equal(
+        await page.evaluate(() => weatherBridgeCalls.length),
+        nativeBefore + 2,
+        lifecycle + ' same-location resume cannot restart MET within cooldown'
+      );
+      assert.equal(
+        calls.filter((u) => /api.open-meteo/.test(u)).length,
+        omBefore + 1,
+        lifecycle + ' allowed Auto resume makes exactly one Open-Meteo request'
+      );
+    }
     assert.deepEqual(errors, []);
     results.push({
       edition,

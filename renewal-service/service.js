@@ -237,4 +237,9 @@ var catalogControl = require('./home-control')(
 });
 
 // Explicit, temporary theme reception; independent of renewal enablement.
-require('./theme-receiver')(service, { appId: 'com.gathin.tvhome' });
+var themeReceiver = require('./theme-receiver');
+themeReceiver(service, { appId: 'com.gathin.tvhome' });
+require('./weather')(service, {
+  appId: 'com.gathin.tvhome',
+  hold: themeReceiver.activityHold(service, 'weatherForecast')
+});
