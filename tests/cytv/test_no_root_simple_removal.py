@@ -244,9 +244,72 @@ class SimpleRemoval(unittest.TestCase):
         self.assertIsNone(self.store.pending(self.profile))
         self.assertFalse(any(uri.endswith('/dev/remove') for uri,_ in self.remote.calls))
 
+    def test_installed_packages_finish_without_restart_after_verified_process_absence(self):
+        (self.root/'proc').mkdir()
+        self.remote.apps=set(self.cleanup.APPS)
+        self.own_file('apps/usr/palm/applications/com.local.nativehome/state/ssap-key.json')
+        result=self.remove()
+        self.assertTrue(result['verified_clean'])
+        self.assertFalse(result.get('restart_required',False))
+        self.assertFalse(self.remote.apps)
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertFalse(list((self.root/'volatile').glob('cytv-removal-*.boot')))
+
+    def test_removed_packages_with_live_process_still_require_restart(self):
+        proc=self.root/'proc'/'123';proc.mkdir(parents=True)
+        (proc/'cmdline').write_text('/usr/bin/node\0'+str(self.root/'developer/apps/usr/palm/services/com.gathin.tvhome.renewal/service.js')+'\0')
+        self.remote.apps={'com.gathin.tvhome'}
+        self.assertTrue(self.remove()['restart_required'])
+        self.assertIsNotNone(self.store.pending(self.profile))
+
+    def test_lost_same_boot_marker_release_never_proves_a_restart(self):
+        (self.root/'proc').mkdir()
+        self.remote.apps={'com.gathin.tvhome'}
+        run=self.remote.run
+        lost=[]
+        def interrupted(command,**kwargs):
+            result=run(command,**kwargs)
+            encoded,_=json.JSONDecoder().raw_decode(self.remote.assert_program[len('process.argv.push('):])
+            if json.loads(encoded)['action']=='boot-release' and not lost:
+                lost.append(True)
+                proc=self.root/'proc/123';proc.mkdir()
+                (proc/'cmdline').write_text('/usr/bin/node\0'+str(self.root/'developer/apps/usr/palm/services/com.gathin.tvhome.renewal/service.js')+'\0')
+                raise UserError('Connection to the TV was interrupted.',reason_code='connection-interrupted')
+            return result
+        self.remote.run=interrupted
+        with self.assertRaises(UserError):self.remove()
+        self.assertTrue(lost)
+        self.assertTrue(self.remove()['restart_required'])
+        self.assertIsNotNone(self.store.pending(self.profile))
+
+    def test_lost_host_completion_after_verified_restart_does_not_request_second_restart(self):
+        from unittest.mock import patch
+        (self.root/'proc').mkdir()
+        self.store.begin(self.profile,'install',stage='submitted')
+        self.assertTrue(self.remove()['restart_required'])
+        self.reboot()
+        with patch.object(self.store,'finish_clean_removal',side_effect=OSError('host interruption')):
+            with self.assertRaises(OSError):self.remove()
+        self.assertEqual(self.store.pending(self.profile)['stage'],'verified-clean')
+        self.assertTrue(self.remove()['verified_clean'])
+
+    def test_saved_restart_proof_does_not_hide_a_reappeared_process(self):
+        from unittest.mock import patch
+        (self.root/'proc').mkdir()
+        self.store.begin(self.profile,'install',stage='submitted')
+        self.assertTrue(self.remove()['restart_required'])
+        self.reboot()
+        with patch.object(self.store,'finish_clean_removal',side_effect=OSError('host interruption')):
+            with self.assertRaises(OSError):self.remove()
+        proc=self.root/'proc/123';proc.mkdir()
+        (proc/'cmdline').write_text('/usr/bin/node\0'+str(self.root/'developer/apps/usr/palm/services/com.gathin.tvhome.renewal/service.js')+'\0')
+        self.assertTrue(self.remove().get('restart_required'))
+        self.assertIsNotNone(self.store.pending(self.profile))
+
     def test_empty_files_with_live_or_unreadable_processes_still_need_restart(self):
         proc=self.root/'proc'/'123';proc.mkdir(parents=True)
         for argv in ('/usr/bin/node\0/media/developer/apps/usr/palm/services/com.gathin.tvhome.renewal/service.js\0',
+                     '/bin/sh\0-c\0sleep 1; /usr/bin/node /media/developer/apps/usr/palm/services/com.gathin.tvhome.renewal/service.js\0',
                      '/usr/bin/node\0-e\0setInterval(function(){},1000)\0',
                      '/usr/bin/node\0--eval=setInterval(function(){},1000)\0',
                      '/usr/bin/node\0--eval\0setInterval(function(){},1000)\0',
@@ -666,13 +729,13 @@ class SimpleRemoval(unittest.TestCase):
         self.remove();self.reboot();self.remove()
         self.assertEqual(foreign.read_text(),'preserve');self.assertEqual(unrelated.read_text(),'foreign')
 
-    def test_repeat_clean_is_noop_but_fresh_install_requires_new_restart(self):
+    def test_repeat_clean_and_fresh_quiescent_removal_finish_without_new_restart(self):
         self.remove();self.reboot();self.assertTrue(self.remove()['verified_clean'])
         (self.root/'proc').mkdir(exist_ok=True)
         self.assertTrue(self.remove()['verified_clean'])
         self.store.begin(self.profile,'install');self.store.finish(self.profile)
         self.remote.apps={'com.gathin.tvhome'}
-        self.assertTrue(self.remove()['restart_required'])
+        self.assertTrue(self.remove()['verified_clean'])
 
     def test_known_root_installation_requests_root_access(self):
         root=self.root/'varlib/clean-your-tv-root';root.mkdir();(root/'config.json').write_text('root configuration')
@@ -838,8 +901,7 @@ class SimpleRemoval(unittest.TestCase):
     def test_stale_pid_of_foreign_process_does_not_force_endless_restart(self):
         pid=self.own_file('apps/usr/palm/applications/com.local.nativehome/state/controller.pid',str(os.getpid()))
         proc=self.root/'proc'/str(os.getpid());proc.mkdir(parents=True);(proc/'cmdline').write_text('/usr/bin/foreign\0')
-        self.assertTrue(self.remove()['restart_required']);self.assertFalse(pid.exists())
-        self.reboot();self.assertTrue(self.remove()['verified_clean'])
+        self.assertTrue(self.remove()['verified_clean']);self.assertFalse(pid.exists())
 
     def test_legacy_writable_helper_state_is_stopped_and_removed(self):
         key=self.own_file('apps/usr/palm/applications/com.local.nativehome/state/ssap-key.json','private')

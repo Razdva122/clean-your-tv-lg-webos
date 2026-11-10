@@ -764,20 +764,27 @@ class LocalDevice:
             if not package_error and 'package-removal' not in record['done']:record['done'].append('package-removal')
             save('private-cleanup')
             self.shared_cleanup('sweep',record)
+            processes_stopped=True
             try:
-                self.clean_quiescent(record,all_processes=True)
+                self.clean_quiescent(record,all_processes=True,same_boot=not restarted)
                 self.retire_clean_private(record)
             except ValueError as error:
                 if restarted or str(error)!='live_original_worker':raise
                 # Published Helper may still have a loaded process. Full boot
                 # ends it; the final sweep runs afterwards without changing it.
+                processes_stopped=False
             if package_error:
                 record['cleanup_error']='removal-failed'
                 raise package_error
-            if not restarted:
+            original_request=record['original'].get('request')
+            unresolved_original=isinstance(original_request,dict) and original_request.get('state')!='complete'
+            if not restarted and (not processes_stopped or unresolved_original):
                 save('restart-required')
                 return {'removed':False,'verified_clean':False,'restart_required':True}
-            if not verified_restart(record):record['cleanup_verified_boot_id']=current_boot
+            # The independent Node tail repeats the complete current proof;
+            # this flag only selects which boot precondition it must enforce.
+            record['cleanup_without_restart']=not restarted
+            if restarted and not verified_restart(record):record['cleanup_verified_boot_id']=current_boot
             if 'private-cleanup' not in record['done']:record['done'].append('private-cleanup')
             save('private-cleanup')
         return {'removed':True,'verified_clean':True,'applications_services_startup_removed':True,'private_cleanup_verified':True,
@@ -947,7 +954,7 @@ class LocalDevice:
                 and (len(argv)==6 or argv[6]=='--verify-current')):readonly=True
         return readonly and self.current_coordinator_stage(stage)
 
-    def clean_quiescent(self, record, all_processes=False, helpers_only=False):
+    def clean_quiescent(self, record, all_processes=False, helpers_only=False, same_boot=False):
         snapshot=Path(self.ownership.store.root)/('request-'+record['original']['operation'])
         from clean_removal import APPS
         paths=[ROOT,UPDATER,SUPERVISOR,snapshot,Path('/tmp/clean-your-tv-root-gate')]
@@ -968,13 +975,31 @@ class LocalDevice:
         requests=(str(self.ownership.store.root)+'/request-').encode()
         mutators=(b'deploy.py',b'provision.py',b'install_driver.py',b'setup-updater.py',
                   b'setup-system-updater.py',b'system_setup.py',b'run-updater.py',b'run-system-updater.py')
+        identities=tuple((app+suffix).encode() for app in APPS for suffix in ('','.service','.renewal'))
         for process in PROC.iterdir():
             if not process.name.isdigit() or int(process.name)==os.getpid():continue
             try:args=(process/'cmdline').read_bytes().split(b'\0')
-            except FileNotFoundError:continue
+            except FileNotFoundError:
+                if same_boot and process.exists():raise ValueError('live_original_worker')
+                continue
             if self.current_coordinator_reader(args):continue
-            try:args.append(os.readlink(process/'exe').encode())
+            argv=[arg for arg in args if arg]
+            executable=b''
+            try:executable=os.readlink(process/'exe').encode().removesuffix(b' (deleted)');args.append(executable)
             except FileNotFoundError:pass
+            if same_boot:
+                if any(arg in identities for arg in argv):raise ValueError('live_original_worker')
+                if any(re.fullmatch(rb'(?:node|python[0-9.]*)',arg.rsplit(b'/',1)[-1]) for arg in (argv[:1]+[executable])):
+                    script=1
+                    while script<len(argv) and argv[script] in (b'-B',b'-I',b'-u'):script+=1
+                    if script>=len(argv) or not re.fullmatch(rb'/.*\.(?:js|cjs|mjs|py|pyc)',argv[script]):
+                        raise ValueError('live_original_worker')
+                try:args.append(os.readlink(process/'cwd').encode())
+                except FileNotFoundError:pass
+                if argv and re.fullmatch(rb'(?:sh|ash|bash|dash|zsh|ksh)',argv[0].rsplit(b'/',1)[-1]):
+                    if any(any(prefix[:-1] in arg for prefix in prefixes) or any(identity in arg for identity in identities) for arg in argv[1:]):
+                        raise ValueError('live_original_worker')
+            args=[arg.removesuffix(b' (deleted)') for arg in args]
             if any((any(arg==prefix[:-1] or arg.startswith(prefix) for prefix in prefixes)
                     or not helpers_only and arg.startswith(requests) or any(arg.startswith((str(p)+'.archive-').encode()) for p in (ROOT,UPDATER,SUPERVISOR)))
                    and (all_processes or helpers_only or arg.rsplit(b'/',1)[-1] in mutators) for arg in args):
@@ -1285,7 +1310,7 @@ class LocalDevice:
 
     def verify_clean(self, record):
         from clean_removal import verified_restart
-        if not verified_restart(record):
+        if record.get('cleanup_without_restart') is not True and not verified_restart(record):
             raise ValueError('restart_required')
         from clean_removal import validate_package_receipts
         validate_package_receipts(record)
@@ -1337,7 +1362,7 @@ class LocalDevice:
         devices=self.rpc('com.webos.service.eim/getAllInputStatus',{}).get('devices')
         if not isinstance(devices,list) or any(d.get('id')=='com.gathin.tvhome' or d.get('appId')=='com.gathin.tvhome' for d in devices):
             raise ValueError('owned_input_registration_remains')
-        self.clean_quiescent(record,all_processes=True)
+        self.clean_quiescent(record,all_processes=True,same_boot=record.get('cleanup_without_restart') is True)
         return True
 
     def archive_proof(self,path):

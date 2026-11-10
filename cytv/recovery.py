@@ -69,9 +69,11 @@ def removal_plan(write, store, profile, state='blocked', connecting=False, failu
         'next_step':('Restart the TV completely: disconnect it from power, reconnect it, then choose Try again. Standby is not a full restart.' if restart
                      else 'Connect to the TV to continue cleanup.' if connecting else 'Continue the remaining cleanup for this TV.'),
         'removal':summary,'actions':assessment['actions'],'reason':summary['reason']}
-    from .recovery_ui import removal_connection_failure, removal_details
+    from .recovery_ui import removal_connection_failure, removal_details, removal_title
     if removal_connection_failure(value, failure):
-        value.update(summary='Removal is not finished yet.',next_step=removal_details(value, failure)['blocker_text'])
+        value.update(summary=removal_title(value, failure),next_step=removal_details(value, failure)['blocker_text'])
+    elif not connecting:
+        value.update(summary=removal_title(value),next_step=removal_details(value)['blocker_text'] or value['next_step'])
     write.recovery_plan(value)
     return True
 

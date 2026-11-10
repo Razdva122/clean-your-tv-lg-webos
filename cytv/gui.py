@@ -672,12 +672,14 @@ class Wizard(QMainWindow):
                 if not self.report:
                     self.subtitle.setText(self.subtitle.text()+'\n'+tr('A diagnostic report could not be created. Include the visible error when opening an issue.'))
             if self.recovery_plan:
-                from .recovery_ui import removal_details, removal_connection_failure
+                from .recovery_ui import removal_details, removal_connection_failure, removal_title, removal_waiting
                 detail = removal_details(self.recovery_plan, self.failure_help)
                 connection = removal_connection_failure(self.recovery_plan, self.failure_help)
                 show_restart = restart and not connection
                 if cleanup and not completed:
-                    self.title.setText(tr('Cancelled' if value == 130 else 'Restart the TV to finish removal' if show_restart else 'Removal is not finished yet.'))
+                    self.title.setText(tr('Cancelled' if value == 130 else removal_title(self.recovery_plan, self.failure_help)))
+                    if removal_waiting(self.recovery_plan, self.failure_help):
+                        self.set_error_state(False)
                     self.badge.setText(self.title.text())
                     message = detail.get('blocker_text') or 'Removal could not be confirmed. Check the connection and try again.'
                     if self.failure_help and self.failure_help.get('code') in ('ssh-auth-root','ssh-auth-no-root','ssh-key-file','ssh-identity','developer-key-server','developer-key-unlock','developer-key-response'):

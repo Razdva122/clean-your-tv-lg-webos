@@ -7,6 +7,22 @@ prerequisite. A lost connection offers Try again on the same approved goal and
 saved target. Actual OS access denial and busy work get their own instructions.
 No automatic TV reboot or hidden retry runs. [User instructions](../RECOVERY.md).
 
+Current source extends immediate completion to actual Root and No-root removal
+when controls/startup are restored, package/file absence is verified, no original
+setup is unresolved and current process inspection proves quiescence. Root's
+independent Node tail repeats the complete proof before runtime retirement;
+`cleanup_without_restart` never replaces those checks. Legacy records still
+require their original restart proof. No-root durably marks its own boot-marker
+release before deletion, so a lost response cannot turn release into reboot
+proof; a genuinely verified restart is retained across a failed host completion.
+Reusing that proof requires fresh process checks; reappeared processes invalidate
+it and capture a new baseline before another restart request.
+Inline interpreters, renamed app/service processes, deleted executables/cwds and
+shell commands referencing owned paths prevent same-boot completion. Final-tail
+live-process refusals request restart; other unverified final cleanup remains
+pending with retry. Connection loss and package refusal use distinct titles.
+These are source/host checks, not physical TV acceptance or release evidence.
+
 The released continuation improvements add a narrow exception for an initially empty No-root
 TV: two current absence/process checks, no inherited operation and confirmed
 input-shortcut cleanup permit immediate completion. Unreadable/anonymous/live

@@ -90,7 +90,7 @@ class SimpleRemovalUITests(unittest.TestCase):
         self.fixture.connect=connect
         w=self.fixture.window();w.start('uninstall',self.fixture.profile)
         self.fixture.pump(lambda:not w.running)
-        self.assertEqual(w.title.text(),'Removal is not finished yet.')
+        self.assertEqual(w.title.text(),'Check the TV connection to continue removal')
         self.assertIn('Connection to the TV was interrupted. Check the connection and try again.',w.subtitle.text())
         self.assertNotIn('disconnect it from power',w.subtitle.text())
         self.assertIsNotNone(self.fixture.button(w,'Try again'))
@@ -114,6 +114,20 @@ class SimpleRemovalUITests(unittest.TestCase):
         self.assertIn('disconnect it from power, reconnect it, then choose Try again', w.subtitle.text())
         self.assertIn('Standby is not a full restart.', w.subtitle.text())
         self.assertIsNotNone(self.fixture.button(w, 'Try again'))
+
+    def test_incomplete_final_cleanup_is_neutral_and_keeps_retry(self):
+        def runner(argv, **kwargs):
+            write=kwargs['write'];write.recovery(self.fixture.profile)
+            write.recovery_plan({'state':'blocked','disposition':'clean-removal',
+                'summary':'Removal is not finished yet.','next_step':'Try again',
+                'reason':'private-cleanup-incomplete','actions':['continue-removal'],
+                'removal':{'stage':'private-cleanup','reason':'private-cleanup-incomplete'}})
+            return 1
+        w=self.fixture.window();w.run=runner;w.start('uninstall',self.fixture.profile)
+        self.fixture.pump(lambda:not w.running)
+        self.assertEqual(w.title.text(),'Finish Clean Your TV cleanup')
+        self.assertNotEqual(w.title.property('state'),'error')
+        self.assertIsNotNone(self.fixture.button(w,'Try again'))
 
     def test_actual_cli_retry_reuses_approved_goal_without_second_confirmation(self):
         attempts = []

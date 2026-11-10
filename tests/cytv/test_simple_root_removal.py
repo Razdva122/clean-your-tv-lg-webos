@@ -57,6 +57,16 @@ class SimpleRootWire(unittest.TestCase):
         self.assertTrue(installer.uninstall(full_project=True)['restart_required'])
         self.assertEqual(self.store.pending(self.profile)['removal_operation'],identifier)
 
+    def test_final_tail_live_process_requests_restart_instead_of_generic_cleanup_error(self):
+        installer=self.prepare()
+        reply={'state':'recovery_required','stage':'private-cleanup','current':False,
+               'reason':'private-cleanup-incomplete','cleanup_error':'owned-process-still-used'}
+        with patch('cytv.root_clean_tail.resume',return_value=reply):
+            result=installer.uninstall(full_project=True)
+        self.assertTrue(result['restart_required'])
+        self.assertFalse(result['verified_clean'])
+        self.assertEqual(self.store.pending(self.profile)['removal_reason'],'restart-required')
+
     def test_completed_cleanup_invalidates_retired_support_and_python_cache(self):
         installer=self.prepare();self.restarted=True
         installer._coordinator_code='/tmp/retired-coordinator'
