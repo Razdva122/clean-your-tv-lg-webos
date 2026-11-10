@@ -1,8 +1,7 @@
 # v1.16.0 — settings, photos and installation
 
-Unpublished candidate in [PR #475](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/475).
-See the [candidate ledger](history/2026-11-10-release-1.16.0-candidate.md)
-for build evidence and remaining acceptance. Candidate preparation does not authorize publication.
+Published from [PR #475](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/475).
+See the [accepted build, hashes and scoped C3 QA record](https://github.com/Razdva122/clean-your-tv-lg-webos/blob/v1.16.0/docs/history/2026-11-10-release-1.16.0-candidate.md#r2-04-and-final-selected-case-exit-check).
 
 ## Changes
 
@@ -59,7 +58,8 @@ passes all23 jobs on frozen source `f23ab1ac`. Exact final CLI/APK provenance,
 original APK signer, all601 payload files and CLI offline checks pass. Protected
 Root QA signing42811994143 succeeded with `publish=false`; its signed components
 match the final CLI payload. The successful build and scoped acceptance are
-pinned together in release-plan.json; no main merge/publication is implied.
+pinned together in release-plan.json. Publication and public package/feed
+verification completed in [workflow42821319650](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42821319650).
 
 On the maintainer-owned C3 OLED55C3RLA/43.21.71/webOS SDK11.2.0, normal Root FHD
 signed update, runtime and actual retained-Updater integrity, live profile/
@@ -81,6 +81,6 @@ No physical No-root install, iPhone/live phone transfer, destructive removal,
 edition switch, Home-On/emergency, standby/restart/cold boot, firmware blocking or
 public-feed test is newly accepted. One C3 and browser tests do not establish
 universal compatibility. Original reports #418/#101/#397/#472 remain unresolved;
-#489 is verified on this candidate and awaits public release. Normal combined
-publication/signature and final public-package/feed verification remain future
-protected release-stage gates.
+#489 is delivered in this release with scoped C3 acceptance. Protected combined
+signing and public-package/feed verification completed; the limitations above
+still apply.

@@ -521,6 +521,11 @@ weaken branch protection or use a preliminary build as final acceptance.
 
 ## Merge, publish and notify
 
+Release notes are copied into public descriptions and signed metadata. Keep them
+publication-neutral before freeze: put transient candidate progress and
+authorization boundaries in the release PR or dated ledger instead. Review these
+copied surfaces before merge; do not rewrite published assets to correct prose.
+
 Merge the release PR using a merge commit. The existing publication pipeline
 reuses the successful candidate installers after verifying that the exact second
 parent and Git tree match the resulting `main` commit. It revalidates the complete candidate test/build record,
