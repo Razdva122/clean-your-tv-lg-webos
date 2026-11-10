@@ -447,6 +447,11 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
                 apply_activation_reason(error, self.tv_info)
             error.root_action = action
             error.root_boundary = 'driver'
+            detail=getattr(error,'_root_driver_failure',{})
+            if action=='install' and isinstance(detail,dict) and detail.get('attempt')==attempt:
+                from .errors import root_driver_details
+                error.root_driver=root_driver_details(detail)
+            if hasattr(error,'_root_driver_failure'):del error._root_driver_failure
             if action == 'install':
                 # Read data only; never rerun the retained driver or installation.
                 code = """import os,stat,json
