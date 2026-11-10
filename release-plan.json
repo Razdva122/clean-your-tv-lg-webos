@@ -1,74 +1,7 @@
 {
   "schema": 1,
-  "version": "1.16.0",
-  "changes": [
-    {
-      "pr": 477,
-      "issues": [],
-      "summary": "Accept iPhone HEIC/HEIF wallpaper uploads using native decoding or a bundled local worker; preserve crop, PIN and JPEG transfer"
-    },
-    {
-      "pr": 478,
-      "issues": [
-        418
-      ],
-      "summary": "Correct retained-native cleanup Home readback; original #418 activation cause and device recovery remain unconfirmed"
-    },
-    {
-      "pr": 479,
-      "issues": [
-        101
-      ],
-      "summary": "Remove generic C3-only Root setup notice; original #101 C2 Root activation remains unconfirmed"
-    },
-    {
-      "pr": 480,
-      "issues": [
-        397
-      ],
-      "summary": "Retain attempt-bound Root driver install failure diagnostics; original #397 failure cause awaits reporter data"
-    },
-    {
-      "pr": 481,
-      "issues": [],
-      "summary": "Complete verified Root/No-root removal without mandatory restart; distinguish pending cleanup, connection loss and package refusal"
-    },
-    {
-      "pr": 482,
-      "issues": [],
-      "summary": "Offer optional post-install theme preview cards, weather and mode-specific renewal/firmware switches; preserve successful installation on skip or cancellation"
-    },
-    {
-      "pr": 483,
-      "issues": [],
-      "summary": "Fix Settings remote navigation and recovery in both editions"
-    },
-    {
-      "pr": 484,
-      "issues": [],
-      "summary": "Fix browser expectations for adaptive Settings controls"
-    },
-    {
-      "pr": 485,
-      "issues": [
-        472
-      ],
-      "summary": "Retain allowlisted No-root boot-check failure evidence; original #472 cause and device recovery remain unconfirmed"
-    },
-    {
-      "pr": 490,
-      "issues": [
-        489
-      ],
-      "summary": "Fix Root recovery verification for bundled HEIC service"
-    }
-  ],
+  "version": null,
+  "changes": [],
   "excluded": [],
-  "acceptance": "2026-11-10: maintainer-owned OLED55C3RLA, firmware43.21.71/webOS SDK11.2.0, normal Root FHD, Magic Remote exact model unknown; macOS15.6.1 ARM64 host. Build42808578156:1 and protected Root QA signing42811994143: exact final artifacts/signature, ordinary signed update, real profile/health, runtime and actual retained-Updater integrity, retained rollback\u2192forward and final owner-observed arrows/OK/Back, short Home\u2192LG Home with Home Off, volume/audio pass. All four selected R2 groups pass; hashes, exact observations and untested scope: docs/history/2026-11-10-release-1.16.0-candidate.md#r2-04-and-final-selected-case-exit-check. No physical No-root/iPhone/Home-On/emergency/power/public-feed acceptance claimed; no publication authorized.",
-  "build": {
-    "run_id": 42808578156,
-    "attempt": 1,
-    "source": "f23ab1ac92e958ab2720748e9b6fa59ae641916d"
-  },
-  "acceptance_build": "42808578156:1"
+  "acceptance": ""
 }
