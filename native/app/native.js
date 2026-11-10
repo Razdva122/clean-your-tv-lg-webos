@@ -31,8 +31,8 @@ if (
   throw Error('Helper control initialization failed');
 var logPath = data + '/controller.log',
   pidPath = data + '/controller.pid';
-fs.writeFileSync(pidPath, String(process.pid));
-fs.writeFileSync(logPath, '');
+require('./state-permissions').atomicRecord(data, 'pid', String(process.pid));
+require('./state-permissions').atomicRecord(data, 'logger', '');
 function log(x) {
   try {
     fs.appendFileSync(
@@ -503,15 +503,11 @@ function readHomeRequest(channel) {
   function respond(result) {
     result.id = request.id;
     try {
-      fs.writeFileSync(
-        directory + '/' + prefix + '-response.tmp',
+      require('./state-permissions').atomicRecord(
+        directory,
+        prefix + '-response',
         JSON.stringify(result),
-        { mode: 432 }
-      );
-      fs.chmodSync(directory + '/' + prefix + '-response.tmp', 432);
-      fs.renameSync(
-        directory + '/' + prefix + '-response.tmp',
-        directory + '/' + prefix + '-response.json'
+        { role: directory === data ? 'app' : 'channel' }
       );
     } catch (e) {
       log({ event: 'home-response-error', error: String(e) });
@@ -1087,7 +1083,9 @@ service.call('luna://com.local.nativehome.service/status', {}, function (m) {
 var powerPolicy = require('./power-policy')();
 var watchedApps = [];
 try {
-  watchedApps = JSON.parse(fs.readFileSync(data + '/apps.json', 'utf8'));
+  watchedApps = JSON.parse(
+    require('./state-permissions').readConfiguration(data, 'apps')
+  );
   if (!Array.isArray(watchedApps)) watchedApps = [];
 } catch (e) {}
 var screenPolicy = require('./screen-policy')(watchedApps);

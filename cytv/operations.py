@@ -1003,11 +1003,13 @@ else:
                     if attempt < 15:
                         time.sleep(1)
                 raise UserError('Home Helper stop could not be verified. Keep recovery state and run cytv status.')
+        from .helper_stop import PROGRAM
         self.remote.run(
             'if [ -f ' + HELPER_STATE + '/controller.pid ]; then '
-            'printf \'{"cmd":"stop"}\' > ' + HELPER_STATE + '/control.json; '
+            '/usr/bin/node || exit 1; '
             'n=0; while [ -e ' + HELPER_STATE + '/controller.pid ]; do '
-            'n=$((n+1)); [ "$n" -le 15 ] || exit 1; sleep 1; done; fi', timeout=25)
+            'n=$((n+1)); [ "$n" -le 15 ] || exit 1; sleep 1; done; fi',
+            data=PROGRAM.encode(), timeout=25)
 
     def root_inventory(self, fallback):
         """Use the existing fixed Root catalog reader; Root needs no SSAP key."""

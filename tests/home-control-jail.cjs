@@ -84,6 +84,11 @@ vm.runInNewContext(fs.readFileSync('renewal-service/service.js', 'utf8'), {
   require(n) {
     if (n === 'fs') return jailed;
     if (n === 'webos-service') return Service;
+    if (n === './home-control')
+      return require('./storage-fixture.cjs').load(
+        path.resolve('renewal-service/home-control.js'),
+        require('./storage-fixture.cjs').create(jailed)
+      );
     if (n === './manager') return () => ({});
     if (n === './local-io') return { createLocalIO: () => ({}) };
     if (n === './transport') return { createRequest: () => {} };
@@ -168,9 +173,9 @@ function call(app, method = 'homeStatus', payload = {}) {
     const reply = await call('com.gathin.tvhome');
     assert.equal(reply.returnValue, true, JSON.stringify(reply));
     assert.equal(reply.enabled, true);
-    assert.deepEqual(
-      writes,
-      [own + '/state/home-control/home-request.tmp'],
+    assert.equal(writes.length, 1);
+    assert(
+      writes.every((name) => name.startsWith(own + '/state/home-control/')),
       'service never needs the other app mount'
     );
     assert.equal(typeof methods.listApps, 'function');
@@ -193,9 +198,15 @@ function call(app, method = 'homeStatus', payload = {}) {
       (await call('com.gathin.tvhome', 'listApps')).apps[0].id,
       'org.example'
     );
+    assert(writes.at(-1).startsWith(own + '/state/home-control/'));
     assert.equal(
-      writes.at(-1),
-      own + '/state/home-control/catalog-request.tmp'
+      JSON.parse(
+        fs.readFileSync(
+          root + '/state/home-control/catalog-request.json',
+          'utf8'
+        )
+      ).method,
+      'listApps'
     );
     const inputs = await call('com.gathin.tvhome', 'inputStatus');
     assert.equal(inputs.devices[0].connected, true);
@@ -215,9 +226,7 @@ function call(app, method = 'homeStatus', payload = {}) {
     assert.equal(request.method, 'presentationDismissed');
     assert.equal(request.generation, 7);
     assert(
-      writes
-        .slice(-2)
-        .every((p) => p === own + '/state/home-control/home-request.tmp'),
+      writes.slice(-2).every((p) => p.startsWith(own + '/state/home-control/')),
       'presentation uses only the existing HOME jail path'
     );
     console.log(

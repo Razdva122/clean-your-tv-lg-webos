@@ -107,11 +107,13 @@ function controller({
       if (n === 'fs') return fakefs;
       if (n === 'child_process') return cp;
       if (n === '/usr/lib/node_modules/webos-service') return Service;
+      if (n === './home-control')
+        return require('./storage-fixture.cjs').homeControl(fakefs);
       if (n === './state-permissions')
-        return (d, l, init) => {
+        return require('./storage-fixture.cjs').create(fakefs, (d, l, init) => {
           if (init) files.set(dir + 'control.json', '{}');
           return true;
-        };
+        });
       if (n === './app-inventory')
         return (
           inputQuery ||

@@ -77,7 +77,9 @@ module.exports = function (data, log, onForeground, onReset, onPower) {
     var key,
       addresses = [];
     try {
-      key = JSON.parse(fs.readFileSync(data + '/ssap-key.json', 'utf8')).key;
+      key = JSON.parse(
+        require('./state-permissions').readConfiguration(data, 'key')
+      ).key;
       if (typeof key !== 'string' || !key) throw Error('missing-key');
     } catch (e) {
       log({ event: 'screen-watch-unavailable', reason: 'missing-pairing-key' });

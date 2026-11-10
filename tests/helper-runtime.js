@@ -35,7 +35,10 @@ var vm = require('vm'),
 // Exercise the key replacement against real files, including the descriptor
 // read on Node 0.10. Never substitute a pathname read after opening the key.
 if (process.getuid) {
-  var state = path.join(root, 'runtime-state-' + process.version),
+  var state = path.join(
+      fs.realpathSync(root),
+      'runtime-state-' + process.version
+    ),
     secure = require(path.join(root, 'state-permissions'));
   fs.mkdirSync(state, 504);
   fs.chmodSync(state, 504);
@@ -131,10 +134,13 @@ var context = {
         }
       };
     if (name === '/usr/lib/node_modules/webos-service') return Service;
+    if (name === './home-control')
+      return require('./storage-fixture.cjs').homeControl(
+        fakefs,
+        path.join(root, 'home-control.js')
+      );
     if (name === './state-permissions')
-      return function () {
-        return true;
-      };
+      return require('./storage-fixture.cjs').create(fakefs);
     if (name === './screen-watch')
       return function () {
         return { close: function () {} };

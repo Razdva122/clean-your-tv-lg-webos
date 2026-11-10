@@ -76,19 +76,14 @@ module.exports = function (fs, dir, options) {
         var request = { id: id, method: method, expires: deadline };
         if (method === 'setHomeControl') request.enabled = payload.enabled;
         if (method === 'presentationDismissed') request.generation = generation;
-        fs.writeFileSync(
-          dir + '/' + prefix + '-request.tmp',
-          JSON.stringify(request),
-          { mode: 432 }
-        );
-        operation = 'chmod';
-        fs.chmodSync(dir + '/' + prefix + '-request.tmp', 432);
-        operation = 'rename';
-        fs.renameSync(
-          dir + '/' + prefix + '-request.tmp',
-          dir + '/' + prefix + '-request.json'
+        require('./state-permissions').atomicRecord(
+          dir,
+          prefix + '-request',
+          JSON.stringify(request)
         );
       } catch (e) {
+        var phase = e && e.storagePhase;
+        if (['write', 'chmod', 'rename'].indexOf(phase) >= 0) operation = phase;
         finish({
           returnValue: false,
           errorText: 'Home Helper data unavailable',

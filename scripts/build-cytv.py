@@ -59,6 +59,8 @@ def pack_app(appfiles, servicefiles, architecture='all', helper=False):
     if service == 'com.gathin.tvhome.renewal':
         from scripts.theme_receiver import inject
         servicefiles = inject(servicefiles)
+        servicefiles.update({name: (ROOT / 'native/app' / name).read_bytes()
+                             for name in ('state-permissions.js', 'contract-events.js')})
     if not helper:
         # Packaged services run on the TV's own Node (0.12 on webOS 3.x), like Helper:
         # uncompiled async functions stop them from loading at all.

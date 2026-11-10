@@ -34,6 +34,9 @@ class PackageTests(unittest.TestCase):
             shutil.copy(ROOT/'package.json', root/'package.json')
             helper = 'com.local.nativehome_0.6.17_arm.ipk'
             shutil.copy(ROOT/'native/published'/helper, root/'native/published'/helper)
+            (root/'native/app').mkdir(parents=True, exist_ok=True)
+            for name in ('state-permissions.js', 'contract-events.js'):
+                shutil.copy(ROOT/'native/app'/name, root/'native/app'/name)
             (root/'native/app/appinfo.json').write_text(json.dumps({'id':'com.local.nativehome','version':'0.6.17'}))
             (root/'launcher/appinfo.json').write_text(json.dumps({'id':'com.gathin.tvhome','version':'9.8.7','type':'web'}))
             (root/'renewal-service/services.json').write_text('{}')
