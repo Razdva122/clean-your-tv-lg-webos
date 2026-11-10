@@ -143,3 +143,11 @@ No-root: 要重新啟動 Home 控制，請開啟 Home Helper，選擇啟動 Help
 預報座標傳送至 api.met.no 或 api.open-meteo.com，城市搜尋傳送至 geocoding-api.open-meteo.com。選用的自動定位會向 get.geojs.io 傳送公用 IP。連線使用 HTTPS，無需 API 金鑰。位置、來源與快取儲存在電視上。「資料來源」包含服務條款與署名，包括挪威氣象研究所（MET Norway，CC BY 4.0）。
 
 點選天氣標題旁的「資料來源」可查看服務和授權資訊。
+
+## 設定你的 Clean Your TV
+
+安裝成功後，選擇 Classic、Liquid Glass 或 Ribbon，並開啟或關閉主畫面天氣。Ribbon 不支援天氣；Liquid Glass 使用簡短格式。城市會根據網路連線估算，可在 Home 設定中變更。
+
+Developer Mode 的 No-root 提供自動續期（測試版）；請繼續檢查官方計時器。透過現有 root SSH 安裝的 No-root 不使用此選項。Root 可透過 Homebrew Channel 封鎖 LG 韌體更新，包括安全更新；需要透過 Homebrew Channel 真正重新啟動電視。CYTV 更新單獨管理。
+
+選擇「保留目前設定」可跳過自訂。開關顯示模式功能目前的開啟或關閉狀態。未變更的設定會保留。重新安裝 Root 仍會按上文說明刪除 CYTV 設定。請在電視上檢查外觀；重試前請在 Home 設定中檢查未確認的選項。
