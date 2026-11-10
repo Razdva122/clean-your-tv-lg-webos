@@ -44,6 +44,33 @@ def trusted_source(name): ...  # fixed resource names only
 def node_adapter(name, invocation): ...  # trusted static invocation, not user text
 ```
 
+Additional interface details for implementation:
+
+- JS exports `describe(value)`, `normalize(event)`, `safeEvents(envelope)` and
+  `create(emit, context) -> {record(event), snapshot()}`. Python exports the
+  equivalent `describe`, `normalize`, `safe_events`, a bounded `Recorder`, and
+  `record(event)` for current operation context. Snapshot is
+  `{schema:1, events:[...], dropped:integer, suppressed:integer}`.
+- Event fields: schema, component, operation, phase, field, expected, actual,
+  decision, count; optional bounded first/last timestamps. Identifiers are code
+  identifiers (component/operation/phase/expected <=32, field <=64), never payload
+  keys. Decisions: refuse, wait, retry, retain, ignore, complete.
+- `describe` reports exact built-in type/length only. `actual` accepts only typed
+  metadata keys (type, length, uid, gid, mode, size, limit, code, errno,
+  os_code, reported_code, category); unknown/raw nested fields never survive.
+  Category/type values are fixed safe classifications, not arbitrary strings.
+- First event is retained; remaining unique events use a bounded recent window.
+  Repeat counts aggregate without unbounded maps. Emitter exceptions cannot
+  escape; malformed input never breaks standard report generation.
+- Trusted JS names are state-permissions and contract-events. Canonical sources
+  are native/app/<name>.js. Stage generated copies under cytv/tv for frozen and
+  Android; source mode may read the checked canonical repository source. A
+  frozen/bundled missing resource must not fall back to installed TV code.
+- Task 1 validates raw ES5 for contract-events only. state-permissions becomes
+  standalone ES5 in Task 2; do not duplicate or silently rewrite that module now.
+- Packaging changes include app/service copies of contract-events alongside the
+  existing state-permissions copy. Keep source/runtime fixture closures aligned.
+
 - [ ] Add literal vectors for invalid type/enum/mode/size and hostile nested values; prove raw markers are absent.
 - [ ] Verify events remain bounded under repeats/flood and failed emitters preserve original outcomes.
 - [ ] Implement exact-builtin summaries, identifier validation, bounded recorder and trusted resource loader.
