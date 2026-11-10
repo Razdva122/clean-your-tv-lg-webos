@@ -1272,15 +1272,18 @@ else:
         return {'reconciled': reason}
 
     def _status(self, reconcile=True, trusted_recovery=False):
-        if self.profile['edition'] == 'no-root':
-            diagnostics.context.collect_contract_events(self.remote, self.tv_info)
         self.tv_info.pop('root_setup_recovery', None)
         pending = self.store.pending(self.profile)
         restoring = bool(pending and pending.get('activation_restore_pending') is True)
         reconcile = reconcile and not restoring
         if pending and pending.get('recovery_protocol') == 'no-root-original-stream-v1':
             from .no_root_observer import observe
-            return observe(self, pending)
+            result = observe(self, pending)
+            if self.profile['edition'] == 'no-root':
+                diagnostics.context.collect_contract_events(self.remote, self.tv_info)
+            return result
+        if self.profile['edition'] == 'no-root':
+            diagnostics.context.collect_contract_events(self.remote, self.tv_info)
         reconciled = None
         reconciliation = None
         can_resume = False

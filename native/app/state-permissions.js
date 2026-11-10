@@ -26,6 +26,7 @@ function unchanged(a, b) {
 }
 function field(name) {
   var names = {
+    directory: 'directory',
     'ssap-key.json': 'key',
     'apps.json': 'apps',
     'control.json': 'control',
@@ -545,7 +546,18 @@ function prepare(directory, log, initializeControl) {
   var settings = { legacy: true, normalize: true, log: log };
   try {
     return session(directory, settings, function (s) {
-      if ((s.stat.mode & 4095) === 511) notice(log, 'directory', true);
+      if ((s.stat.mode & 4095) === 511)
+        notice(
+          log,
+          'directory',
+          true,
+          failure(
+            Error('unsafe-storage'),
+            'directory',
+            'safe-mode',
+            actual(s.stat)
+          )
+        );
       if (initializeControl)
         s.write('control.json', buffer('{}'), 432, Infinity, false);
       var ok = true;

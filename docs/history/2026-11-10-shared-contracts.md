@@ -91,3 +91,52 @@ left unchanged. Release integration, selected CI, exact rebuilt artifact checks,
 issue status reconciliation and scoped physical acceptance remain with the
 coordinator. This ledger does not announce delivery or claim the retrospective's
 issues are fixed.
+
+## Consolidated selected-CI corrections
+
+After the complete selected PR #493 pass finished on baseline `9beea1ee`, its
+failure inventory identified five owned causes: missing removal-recheck text in
+all twelve non-English runtime catalogs, an outdated real-file ownership fixture,
+optional telemetry running before locally inadmissible observer proof, and stale
+status/Stop expectations. These corrections were applied as one batch. The
+independent Root stock UID fixture collision is handled by upstream PR #494;
+that integration and selected-CI verification remain with the release coordinator.
+
+The ownership fixture now resolves the host temporary-directory alias and models
+pinned-session cwd, relative paths and descriptor metadata consistently. Canonical
+event validation runs in the storage module's VM realm, and screen-watch uses the
+real checked configuration reader. All existing privacy, owner/group/mode,
+read/write/rename failure, concurrent update, control, Back and power assertions
+remain active. The legacy warning assertion checks the current typed metadata,
+retained decision, directory field, UID/GID and unchanged directory mode. The
+existing legacy-directory warning lacked its real field and metadata; a narrow
+diagnostic correction now uses the existing directory vocabulary and stat context
+without changing admission or Stop behavior.
+
+Observer status validates its original local proof before optional telemetry.
+The invalid legacy capsule regression confirms no SSH command, unchanged receipt
+and capsule, explicit removal consent and a purely local diagnostic export.
+Partial/corrupt receipt coverage permits only the exact trusted read-only log
+projection with no stdin and its ten-second timeout; receipts remain unchanged
+and completion is not inferred. Root ordering coverage requires the exact trusted
+Stop program bytes and bounded quiescence command before enable.
+
+Focused verification on macOS with the prepared project Python environment:
+
+- 83 passed: i18n; the legacy-capsule regression; partial/stale/corrupt status;
+  Stop-before-enable; contract report; Helper Stop; diagnostic context.
+- 3 passed: pending original install despite matching versions/hashes;
+  source-shaped terminal not replacing original proof; uncertain receipt admission.
+- 27 real-file ownership fixture cases passed unprivileged.
+- After the diagnostic correction: 31 storage/report/Stop tests passed, with
+  storage checked on current Node and exact 0.10.15, 0.10.25 and 0.12.2 runtimes;
+  all 27 owner cases and the three exact status/Stop/legacy-capsule cases passed
+  again. Raw storage ES5 parse, focused Prettier and `git diff --check` passed.
+
+Prior selected CI supplies the matching failing evidence; giant assertion dumps
+were not repeated. Only storage diagnostic metadata changes in production JavaScript. Immutable
+observer programs, capsules, Root backend, control decisions and emergency latches
+are unchanged; focused storage/direct legacy evidence covers the changed source. No full suite, compiled Helper, C, release build,
+signing or TV operation was repeated. Linux execution and the new selected-CI
+pass remain integration evidence, not claimed here. Device fields and acceptance
+limits remain as stated above; this is development evidence, not delivery.
