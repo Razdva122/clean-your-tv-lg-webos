@@ -173,6 +173,26 @@ vendor chain, exact missing service, mount layout and foreign Home integrations
 before retirement and final acknowledgement. Later read-only inspection uses
 the same current proof; it cannot delete anything.
 
+For a retained native installation, successful restoration keeps its backend and
+inverse journals as evidence. Those journals must not be interpreted as an
+untouched installation. Current authenticated recovery support returns the
+SHA-256 of the backend selection only after native restore confirms success
+and the selection bytes remain unchanged. The existing removal receipt stores
+this digest as `native_restored_sha256`; it does not enable or resume Home.
+
+A matching preserved selection may admit only its exact native inverse names
+(schema 1: `c1-gate/active`; schemas 2/3: `c1-keyfilter/ownership.json` and
+`c1-keyfilter/pending.json`). Other profile-routing evidence or a profile
+override still blocks this proof. Live selection must match the saved bytes,
+and the other native backend tree must be absent. The existing current
+`stock-compositor` observation is repeated before destructive continuation;
+it verifies stock target identity/hash, mounts, vendor filters and foreign Home
+state. The final Node cleaner permits only the digest-bound saved native
+inverse and requires every live routing marker absent, both before private
+runtime retirement and before acknowledgement. The native digest never admits
+`never-applied`. Original inverse, old attempt outcome, writer fences, package
+receipts, restart and final absence checks remain independent and mandatory.
+
 After verified full removal, the installer selects a new native request through
 the shared coordinator. The coordinator revalidates cleanup under its mutex,
 moves only pinned component fences, and deploys the selected compositor bundle

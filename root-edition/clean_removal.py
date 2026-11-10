@@ -97,7 +97,30 @@ def runtime_restore(payload, uid=0):
             os.fchmod(fd,0o700)
         finally:os.close(fd)
         backend.binary=lambda root,uid:path
-    return {'returnValue':True,'result':cli.main('restore')}
+    selection_raw=safe_bytes(backend.STATE/'home-backend.json',uid=uid) if backend is not None else None
+    result={'returnValue':True,'result':cli.main('restore')}
+    if selection_raw is not None and result['result']=='restored':
+        if safe_bytes(backend.STATE/'home-backend.json',uid=uid)!=selection_raw:
+            raise ValueError('native_recovery_selection_changed')
+        result['native_restored_sha256']=hashlib.sha256(selection_raw).hexdigest()
+    return result
+
+
+def restored_native_schema(record, backup):
+    """Bind current authenticated native restoration to its preserved inverse."""
+    digest=record.get('native_restored_sha256')
+    raw=backup.get('home-backend.json') if isinstance(backup,dict) else None
+    if (not isinstance(digest,str) or not re.fullmatch('[a-f0-9]{64}',digest)
+            or not isinstance(raw,str) or hashlib.sha256(raw.encode()).hexdigest()!=digest):return None
+    try:selection=json.loads(raw)
+    except ValueError:return None
+    if (not isinstance(selection,dict) or type(selection.get('schema')) is not int
+            or selection['schema'] not in (1,2,3) or selection.get('backend')!='c1-native-gate'
+            or selection.get('experimental') is not True):return None
+    allowed={'home-backend.json'}|({'c1-gate/active'} if selection['schema']==1 else
+        {'c1-keyfilter/ownership.json','c1-keyfilter/pending.json'})
+    if any(name.split('/')[0] in ROUTING_EVIDENCE and name not in allowed for name in backup):return None
+    return selection['schema']
 
 
 def compositor_stock(payload):
