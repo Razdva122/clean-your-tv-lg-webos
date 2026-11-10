@@ -319,6 +319,12 @@ fs.writeSync=function(fd,b){if(Buffer.isBuffer(b)&&b.toString().indexOf('private
             prefix="var cp=require('child_process'),spawn=cp.spawn;cp.spawn=function(){var child=spawn.apply(cp,arguments);process.kill(process.pid,'SIGKILL');return child;};"
             boot=h.process('start',0,prefix=prefix);boot.communicate(timeout=5)
             self.assertNotEqual(boot.returncode,0)
+            # Killing the bootstrap does not wait for the detached worker to
+            # persist its claim. The sender starts only after that write is
+            # complete; strict status reads must not race claim creation.
+            sender_pid=h.root/'sender-pid';deadline=time.monotonic()+5
+            while not sender_pid.exists() and time.monotonic()<deadline:time.sleep(.01)
+            self.assertTrue(sender_pid.exists(),'detached worker did not submit after bootstrap loss')
             self.assertEqual(h.wait()['terminal'],'success')
             h.call('start',0)
             self.assertEqual((h.root/'requests').read_text().splitlines(),[observer.APPS[0]])
