@@ -3,6 +3,7 @@
 - [2026-11-10 — Shared contracts development verification](2026-11-10-shared-contracts.md): source/resource integrity, focused host evidence and remaining release/device gates.
 
 - [2026-11-10 — No-root Helper power transitions and retained-key ownership](2026-11-10-issue487-helper-recovery.md): source/host checks, preserved operation identity and emergency stops; physical recovery remains unverified.
+- [Stock Home admission, 2026-11-10](2026-11-10-issue454-stock-home-admission.md): immutable UID 1001 stock executable and bounded larger-file admission; focused source checks, reporter-device acceptance pending.
 
 - [2026-11-10 — No-root removal boot-check diagnostics and unresolved #472](2026-11-10-issue472-removal-boot-diagnostics.md).
 

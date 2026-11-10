@@ -13,6 +13,12 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/statvfs.h>
+#ifdef __linux__
+#include <sys/vfs.h>
+#else
+#include <sys/mount.h>
+#endif
 #include <time.h>
 #include <unistd.h>
 #ifdef __linux__
@@ -251,11 +257,29 @@ static int same_config(void) {
   return same;
 }
 static int stock_identity(void) {
+  if (!trusted_parents(HOME)) return 0;
+  int fd = open(HOME, O_RDONLY | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK);
+  if (fd < 0) return 0;
   struct stat s;
-  return secure(HOME, 0) && !stat(HOME, &s) &&
-         (unsigned long long)s.st_dev == cfg.dev &&
-         (unsigned long long)s.st_ino == cfg.ino &&
-         (unsigned long long)s.st_size == cfg.size && mtime_ns(&s) == cfg.mtime;
+  int ok = !fstat(fd, &s) && S_ISREG(s.st_mode) && s.st_nlink == 1 &&
+           !(s.st_mode & 07022) && (s.st_mode & 0111) &&
+           s.st_size >= 52 && s.st_size <= 16 * 1024 * 1024;
+  if (ok && s.st_uid != TRUST_UID) {
+    struct statfs fs;
+    struct statvfs vfs;
+    ok = s.st_uid == 1001 && !fstatfs(fd, &fs) && !fstatvfs(fd, &vfs) &&
+         (vfs.f_flag & ST_RDONLY);
+#ifdef __linux__
+    ok = ok && fs.f_type == 0x73717368;
+#else
+    ok = ok && !strcmp(fs.f_fstypename, "squashfs");
+#endif
+  }
+  ok = ok && (unsigned long long)s.st_dev == cfg.dev &&
+       (unsigned long long)s.st_ino == cfg.ino &&
+       (unsigned long long)s.st_size == cfg.size && mtime_ns(&s) == cfg.mtime;
+  close(fd);
+  return ok;
 }
 static unsigned long long parse_proc_start(const char *b) {
   const char *p = strrchr(b, ')');

@@ -44,6 +44,8 @@ stat -c '%u %h %a %s' "$home"
 od -An -v -tu1 -N52 /bin/sh
 printf '\nCYTV_HOME_ELF\n'
 od -An -v -tu1 -N52 "$home"
+printf '\nCYTV_HOME_FS\n'
+stat -f -c '%t' "$home" 2>/dev/null || printf 'unknown\n'
 """
 
 
@@ -75,12 +77,16 @@ def native_headers_valid(result):
     if not isinstance(result,str) or len(result)>2048:
         return False
     metadata, _, headers = result.partition('\n')
-    meta = re.fullmatch(r'0 1 ([0-7]{3,4}) ([0-9]{1,10})', metadata)
-    if not meta or not 52 <= int(meta[2]) <= 4*1024*1024:
+    meta = re.fullmatch(r'(0|1001) 1 ([0-7]{3,4}) ([0-9]{1,10})', metadata)
+    if not meta or not 52 <= int(meta[3]) <= 16*1024*1024:
         return False
-    mode = int(meta[1],8)
+    mode = int(meta[2],8)
     shell, separator, home = headers.partition('CYTV_HOME_ELF')
-    return bool(mode & 0o111 and not mode & 0o022 and separator and arm32_elf(shell) and arm32_elf(home))
+    home, filesystem_marker, filesystem = home.partition('CYTV_HOME_FS')
+    # UID 1001 is a vendor owner only on an immutable SquashFS image.
+    if meta[1] == '1001' and (not filesystem_marker or filesystem.strip() != '73717368'):
+        return False
+    return bool(mode & 0o111 and not mode & 0o7022 and separator and arm32_elf(shell) and arm32_elf(home))
 
 
 def compositor_device(remote):

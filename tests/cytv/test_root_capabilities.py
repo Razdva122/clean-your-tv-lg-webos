@@ -1,6 +1,7 @@
 """Host preflight uses the retained Root read contract, not model guesses."""
 import ast
 import copy
+import os
 from pathlib import Path
 import tempfile
 import unittest
@@ -14,6 +15,46 @@ PROFILES={'returnValue':True,'profiles':{'defaultApps':{'categories':{'home':'co
 
 
 class CapabilityTests(unittest.TestCase):
+    @unittest.skipUnless(os.name == 'posix', 'POSIX shell probe')
+    def test_native_header_command_collects_filesystem_and_refuses_symlink(self):
+        import shlex
+        import struct
+        import subprocess
+        from cytv.root_capabilities import NATIVE_HEADERS, native_headers_valid
+        header=struct.pack('<16sHHIIIIIHHHHHH',b'\x7fELF\x01\x01\x01',3,40,1,64,52,0,0,52,32,2,0,0,0)
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder);home=root/'home';shell=root/'shell';bin=root/'bin';bin.mkdir()
+            home.write_bytes(header);home.chmod(0o755);shell.write_bytes(header)
+            tool=bin/'stat'
+            tool.write_text("#!/bin/sh\ncase \"$1\" in -f) echo 73717368 ;; *) echo '1001 1 755 4530960' ;; esac\n")
+            tool.chmod(0o755)
+            command=NATIVE_HEADERS.replace('/usr/bin/com.webos.app.home',shlex.quote(str(home))).replace('/bin/sh',shlex.quote(str(shell)))
+            env=dict(os.environ,PATH=str(bin)+os.pathsep+os.environ.get('PATH',''))
+            reply=subprocess.run(['/bin/sh','-c',command],env=env,capture_output=True,text=True,check=True)
+            self.assertTrue(native_headers_valid(reply.stdout))
+            home.unlink();home.symlink_to(shell)
+            self.assertNotEqual(subprocess.run(['/bin/sh','-c',command],env=env,capture_output=True).returncode,0)
+
+    def test_reported_c1_home_admission_requires_immutable_nonroot_image(self):
+        from cytv.root_capabilities import native_headers_valid
+        shell = '127 69 76 70 1 1 1 0 0 0 0 0 0 0 0 0 3 0 40 0 1 0 0 0 9 218 0 0 52 0 0 0 168 210 9 0 0 2 0 5 52 0 32 0 9 0 40 0 29 0 28 0'
+        home = '127 69 76 70 1 1 1 0 0 0 0 0 0 0 0 0 3 0 40 0 1 0 0 0 240 134 2 0 52 0 0 0 56 30 69 0 0 2 0 5 52 0 32 0 10 0 40 0 31 0 30 0'
+        for metadata, filesystem, accepted in (
+                ('1001 1 755 4530960', '73717368', True),
+                ('0 1 755 4530960', '', True),
+                ('1001 1 755 4530960', '', False),
+                ('1001 1 755 4530960', 'ef53', False),
+                ('1001 1 755 4530960', 'unknown', False),
+                ('1002 1 755 4530960', '73717368', False),
+                ('1001 2 755 4530960', '73717368', False),
+                ('1001 1 777 4530960', '73717368', False),
+                ('1001 1 4755 4530960', '73717368', False),
+                ('1001 1 755 16777217', '73717368', False)):
+            with self.subTest(metadata=metadata,filesystem=filesystem):
+                reply=metadata+'\n'+shell+'\nCYTV_HOME_ELF\n'+home
+                if filesystem: reply+='\nCYTV_HOME_FS\n'+filesystem+'\n'
+                self.assertIs(native_headers_valid(reply),accepted)
+
     def test_normal_and_beta_share_preflight_selection_and_refusal_before_python(self):
         import struct
         from cytv.operations import Installer

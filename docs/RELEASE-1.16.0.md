@@ -1,8 +1,7 @@
 # v1.16.0 — settings, photos and installation
 
-Unpublished candidate in [PR #475](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/475).
-See the [candidate ledger](history/2026-11-10-release-1.16.0-candidate.md)
-for build evidence and remaining acceptance. Candidate preparation does not authorize publication.
+Published from [PR #475](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/475).
+See the [accepted build, hashes and scoped C3 QA record](https://github.com/Razdva122/clean-your-tv-lg-webos/blob/v1.16.0/docs/history/2026-11-10-release-1.16.0-candidate.md#r2-04-and-final-selected-case-exit-check).
 
 ## Changes
 
@@ -28,6 +27,9 @@ for build evidence and remaining acceptance. Candidate preparation does not auth
   history, including fixed filesystem/guard details. Reject failure envelopes
   before accepting restart proof. The original C5 removal cause is still unknown
   (#485, partial #472).
+- Correct Root recovery verification for the bundled HEIC service: allow up to
+  4 MiB only for the exact private service entry in runtime, retained Updater and
+  bootstrap checks; preserve digest, path and file-safety validation (#489).
 
 ## Versions and packaging
 
@@ -38,7 +40,7 @@ for build evidence and remaining acceptance. Candidate preparation does not auth
 | Helper | 0.8.0 | 0.8.0 | Exact published bytes verified |
 | cytv | 0.16.0 | 0.17.0 | Personalization, removal and diagnostics |
 | Android / versionCode | 0.15.0 / 30 | 0.16.0 / 31 | Shared operations and payload |
-| Root / infrastructure | 0.15.0 | 0.16.0 | UI and cleanup/coordinator support |
+| Root / infrastructure | 0.15.0 | 0.16.0 | UI, cleanup/coordinator and bounded recovery checks |
 | Both edition Updaters | 0.5.6 | 0.5.7 | Shared UI and embedded removal code |
 | Fresh System / protocol | 1.2.8 / 1 | 1.2.8 / 1 | Exact published bundle; no supervisor migration |
 
@@ -51,21 +53,34 @@ network endpoint is introduced.
 
 ## Validation and limits
 
-Implementation CI and focused integration checks are linked in #475.
-Pre-dispatch payload construction and all-variant version checks passed;
-published baseline hashes and both signed system feeds were authenticated.
-[Final full candidate42783898383:1](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42783898383)
-passes all23 jobs on source `fa2abc9d`. Exact macOS ARM64 CLI payload/runtime
-and original-signer production APK checks pass; all601 payload entries match
-focused package preflight. The selected build is pinned in release-plan.json.
-These host checks do not complete device acceptance or authorize publication.
+[Full replacement42808578156:1](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42808578156)
+passes all23 jobs on frozen source `f23ab1ac`. Exact final CLI/APK provenance,
+original APK signer, all601 payload files and CLI offline checks pass. Protected
+Root QA signing42811994143 succeeded with `publish=false`; its signed components
+match the final CLI payload. The successful build and scoped acceptance are
+pinned together in release-plan.json. Publication and public package/feed
+verification completed in [workflow42821319650](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42821319650).
 
-No TV operation or new hardware acceptance is performed for this preparation.
-Home routing, audible sound, emergency controls, standby, cold boot, OTA,
-rollback, physical iPhone decoding and live phone-to-TV remain untested on new
-artifacts. Exact original-signer Android code30→31 upgrade, four retained
-synthetic files, real Store/native checks and idle lifecycle passed on an
-isolated API35 ARM64 emulator. Data-only OTA/current/rollback closure passed
-for both editions/resolutions. Protected Root-only QA signing and pinned-key
-verification passed; no public release or No-root signing approval is implied. Browser tests do not establish device compatibility.
-Original reports #418, #101, #397 and #472 remain open and unresolved.
+On the maintainer-owned C3 OLED55C3RLA/43.21.71/webOS SDK11.2.0, normal Root FHD
+signed update, runtime and actual retained-Updater integrity, live profile/
+preferences/Home-Off retention, ordinary rollback→forward and final owner-confirmed
+arrows/OK/Back, short Home to LG Home, volume/audio pass. Exact hashes, initial
+states, observed results and limits are in the canonical candidate ledger.
+The first candidate's recovery failure #489 remains in history; the complete
+original case pass preceded the reviewed fix batch and single replacement build.
+
+Settings/receiver results are reused only for identical IPKs/dependencies and
+matching device preconditions. New affected HD closure/policy validation is
+data-only. The old exact-APK original-signer code30→31 emulator upgrade, four
+retained synthetic files and Store/native/idle observations retain their old
+artifact scope. The new APK's59 Python/11 UI sources and native entries were
+checked independently. All280 pyc differences are confined to timestamp bytes;
+the bytecode bodies are identical. No new physical-phone upgrade is claimed.
+
+No physical No-root install, iPhone/live phone transfer, destructive removal,
+edition switch, Home-On/emergency, standby/restart/cold boot, firmware blocking or
+public-feed test is newly accepted. One C3 and browser tests do not establish
+universal compatibility. Original reports #418/#101/#397/#472 remain unresolved;
+#489 is delivered in this release with scoped C3 acceptance. Protected combined
+signing and public-package/feed verification completed; the limitations above
+still apply.

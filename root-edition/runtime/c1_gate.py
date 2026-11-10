@@ -54,6 +54,38 @@ def secure(path, uid=0, limit=65536):
         return data
 
 
+def native_home():
+    """Read only the fixed stock executable; never relax private-file ownership."""
+    trusted_directory(TARGET.parent)
+    fd = os.open(TARGET, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    with os.fdopen(fd, 'rb') as stream:
+        info = os.fstat(fd)
+        limit = 16 * 1024 * 1024
+        if (not stat.S_ISREG(info.st_mode) or info.st_uid not in (0, 1001)
+                or info.st_nlink != 1 or info.st_mode & 0o7022
+                or not info.st_mode & 0o111 or not 52 <= info.st_size <= limit):
+            raise ValueError('Unsafe stock Home executable')
+        if info.st_uid == 1001:
+            # Inspect the inherited descriptor, not a separately resolved path.
+            # SquashFS is immutable; a read-only bind of a mutable file is not.
+            try:
+                filesystem = subprocess.run(['stat', '-f', '-c', '%t', '/proc/self/fd/' + str(fd)],
+                    pass_fds=(fd,), capture_output=True, check=True, timeout=5)
+                immutable = (filesystem.stdout.strip() == b'73717368'
+                    and os.fstatvfs(fd).f_flag & os.ST_RDONLY)
+            except (OSError, subprocess.SubprocessError):
+                immutable = False
+            if not immutable:
+                raise ValueError('Stock Home owner requires an immutable SquashFS image')
+        data = stream.read(limit + 1)
+        after = os.fstat(fd)
+        if (len(data) != info.st_size or len(data) > limit
+                or any(getattr(info, key) != getattr(after, key)
+                       for key in ('st_dev', 'st_ino', 'st_size', 'st_mode', 'st_uid', 'st_nlink', 'st_mtime_ns', 'st_ctime_ns'))):
+            raise ValueError('Stock Home changed during read')
+        return data
+
+
 def atomic(path, value, uid=0, raw=False):
     path = Path(path)
     trusted_directory(path.parent, uid)

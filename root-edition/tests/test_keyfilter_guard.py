@@ -28,7 +28,7 @@ class KeyfilterGuardTests(unittest.TestCase):
                         str(SOURCE), '-o', str(self.binary)], check=True, capture_output=True)
         for name in ('state', 'volatile'):
             (self.root / name).mkdir(mode=0o700)
-        (self.root / 'home').write_bytes(b'LG Home executable')
+        (self.root / 'home').write_bytes(b'LG Home executable'.ljust(52,b'\0'))
         (self.root / 'home').chmod(0o700)
         (self.root / 'boot').write_text(BOOT + '\n')
         self.config()
@@ -115,6 +115,67 @@ class KeyfilterGuardTests(unittest.TestCase):
         out, err = p.communicate(timeout=7)
         self.assertEqual(err, '')
         return json.loads(out)
+    def test_stock_identity_accepts_only_immutable_uid1001_home(self):
+        # Interpose only kernel observations; execute the guardian's actual
+        # identity check against the real configured file, including its inode.
+        with (self.root/'home').open('wb') as stream: stream.truncate(4530960)
+        harness=self.root/'stock-test.c'
+        harness.write_text(r'''#define _GNU_SOURCE
+#include <sys/stat.h>
+#include <sys/statvfs.h>
+#ifdef __linux__
+#include <sys/vfs.h>
+#else
+#include <sys/mount.h>
+#endif
+#include <string.h>
+#include <stdio.h>
+static unsigned owner=1001;
+static int immutable=1, readonly_fs=1;
+static int attr(int fd, struct stat *s) {
+  int r=fstat(fd,s); if(!r) s->st_uid=owner; return r;
+}
+static int lattr(const char *p, struct stat *s) {
+  int r=lstat(p,s); if(!r && strstr(p,"/home")) s->st_uid=owner; return r;
+}
+static int fixture_vfs(int fd, struct statvfs *s) {
+  int r=fstatvfs(fd,s); if(!r) s->f_flag=readonly_fs ? ST_RDONLY:0; return r;
+}
+static int fixture_fs(int fd, struct statfs *s) {
+  (void)fd; memset(s,0,sizeof(*s));
+#ifdef __linux__
+  s->f_type=immutable ? 0x73717368:0xef53;
+#else
+  strcpy(s->f_fstypename,immutable ? "squashfs":"apfs");
+#endif
+  return 0;
+}
+#define fstat(fd,s) attr(fd,s)
+#define lstat(p,s) lattr(p,s)
+#define fstatfs(fd,s) fixture_fs(fd,s)
+#define fstatvfs(fd,s) fixture_vfs(fd,s)
+#define main guardian_main
+#include "SOURCE"
+#undef main
+int main(void) {
+  (void)attr; (void)fixture_vfs; (void)fixture_fs;
+  struct stat s; if(stat(HOME,&s)) return 2;
+  cfg.dev=s.st_dev; cfg.ino=s.st_ino; cfg.size=s.st_size; cfg.mtime=mtime_ns(&s);
+  printf("%d ",stock_identity());
+  immutable=0; printf("%d ",stock_identity());
+  immutable=1; readonly_fs=0; printf("%d ",stock_identity());
+  readonly_fs=1; owner=1002; printf("%d ",stock_identity());
+  owner=1001; cfg.ino++; printf("%d\n",stock_identity());
+  return 0;
+}
+'''.replace('\"SOURCE\"','\"'+str(SOURCE)+'\"'))
+        binary=self.root/'stock-test'
+        subprocess.run(['cc','-std=c11','-Wall','-Wextra','-Werror',
+            '-DCYTV_KEYFILTER_FIXTURE',f'-DFIXTURE_ROOT="{self.root}"',
+            str(harness),'-o',str(binary)],check=True,capture_output=True)
+        result=subprocess.run([str(binary)],check=True,capture_output=True,text=True)
+        self.assertEqual(result.stdout.strip(),'1 0 0 0 0')
+
     def test_selfcheck_and_stock_contract(self):
         s, rc = self.run_guard('--selfcheck'); self.assertEqual(rc, 0)
         self.assertEqual(s['routing'], 'compositor-keyfilter-v1')
