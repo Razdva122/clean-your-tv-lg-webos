@@ -145,9 +145,9 @@ operations.py bounded runtime projection; native log/collector integration.
 
 ## Task 6: combined verification and review
 
-- [ ] Inspect every changed-source dependency and record missing evidence in one ledger.
-- [ ] Verify the immutable observer hashes and source/frozen/Android resource identity.
-- [ ] Run affected test groups and exact legacy runtimes after the whole correction batch; no unchanged full RC or TV install.
-- [ ] Independent code/security review of storage handoff, lifecycle races, recovery authority and diagnostic privacy/bounds.
-- [ ] Update developer contract references and relevant practical guides only if user steps change.
-- [ ] Commit and create separate reviewable PRs/stack as appropriate; preserve #488 and frozen release scope. Follow selected CI and accurately reconcile linked issue status.
+- [x] Inspect every changed-source dependency and record missing evidence in one ledger.
+- [x] Verify the immutable observer hashes and source/frozen/Android resource identity.
+- [x] Run affected test groups and exact legacy runtimes after the whole correction batch; no unchanged full RC or TV install.
+- [x] Independent code/security review of storage handoff, lifecycle races, recovery authority and diagnostic privacy/bounds.
+- [x] Update developer contract references and relevant practical guides only if user steps change.
+- [x] Commit and create separate reviewable PRs/stack as appropriate; preserve #488 and frozen release scope. Follow selected CI and accurately reconcile linked issue status.

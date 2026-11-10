@@ -3,11 +3,25 @@
   "version": null,
   "changes": [
     {
+      "pr": 488,
+      "issues": [
+        487
+      ],
+      "summary": "Repair authenticated installer key privacy after runtime ownership handoff; original #487 device continuation remains unverified"
+    },
+    {
       "pr": 492,
       "issues": [
         454
       ],
       "summary": "Admit immutable vendor-owned stock Home up to 16 MiB across Root preflight, compositor runtime and guardian; #454 device confirmation remains pending"
+    },
+    {
+      "pr": 493,
+      "issues": [
+        487
+      ],
+      "summary": "Share checked storage, lifecycle and recovery contracts; preserve first-cause typed diagnostics in standard reports"
     },
     {
       "pr": 494,

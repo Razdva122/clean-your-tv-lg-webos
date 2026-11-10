@@ -234,3 +234,42 @@ hash replacement produces a new caller-owned 0640/group5000 inode and retains
 key bytes, apps inode and emergency/watchdog state. No new ownership literal,
 mode allowance or proof exemption was added. Actual Linux root CI and physical
 TV acceptance remain outside this macOS development evidence.
+
+
+## Integration into the next candidate
+
+Both implementation PRs are merged into `release/next` and collected in the
+unfrozen [next candidate #491](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/491):
+
+- [#488](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/488), selected head
+  `013745ecaa6d963571c9c672b1d3bf5c031b7483`, merge `dcc73292`;
+  [selected CI](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42834780004)
+  passed.
+- [#493](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/493), selected head
+  `81afb4e47963c9530b93ae70138de3b69b4544f6`, merge `612d981d`;
+  [selected CI](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42849562325)
+  passed all eight Linux/macOS runtime shards, ARM Python, browser and HEIC
+  checks. The required Linux real UID/GID ownership step executed successfully,
+  including UID0 without shared-group membership; it was not skipped.
+  All 24 attached PR gates passed or had their intended skip disposition,
+  including frozen Windows/Intel macOS installer runtime and preview checks.
+
+Independent whole-branch and subsequent integration/role reviews found no
+remaining blocking findings. The final package-owner correction had eight
+expected RED role/runtime cases, followed by 33 affected storage/report/Stop
+checks passing; the last mode-preservation matrix then passed eight executions
+on current Node and exact 0.10.15, 0.10.25 and 0.12.2. Unchanged dependency checks
+above were reused rather than repeated.
+
+The committed inventory preserves #492 and #494. No version was selected,
+no candidate build was pinned and no physical acceptance was claimed. These
+changes require rebuilding the common computer/Android installer resources and
+matching Helper/support sources when the release coordinator freezes the next
+candidate. Practical localized setup/control steps are unchanged; developer
+contracts, diagnostics and this evidence record contain the implementation
+changes. The existing Qt font-alias warning remains a host-environment follow-up.
+
+Issue #487 remains open at `status:awaiting-release`: ordinary public delivery
+is pending, and the reporter's continuation, standby and wake scenarios remain
+unverified. No TV was contacted during this development task; source CI is not
+final artifact acceptance or universal device compatibility evidence.
