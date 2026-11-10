@@ -78,6 +78,12 @@ const assert = require('node:assert/strict');
       await page.keyboard.press('ArrowDown');
       assert.equal(
         await page.evaluate(() => document.activeElement.id),
+        'wallpaperCYTV',
+        'upload actions precede built-in wallpaper controls'
+      );
+      await page.keyboard.press('ArrowDown');
+      assert.equal(
+        await page.evaluate(() => document.activeElement.id),
         'wallpaperBuiltin-black-hole'
       );
       await page.keyboard.press('ArrowDown');
