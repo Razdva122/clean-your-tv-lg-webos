@@ -134,6 +134,12 @@ Ausführliche Referenzen auf Englisch: [Voraussetzungen](../COMPATIBILITY.md) ·
 <a id="älteres-tv-nodejs-veröffentlicht-in-v1120"></a>
 <a id="einfache-entfernung-v1110"></a>
 
+## Einstellungen
+
+Wähle mit ↑ ↓ eine Kategorie und öffne sie mit → oder OK. ← führt zu den Kategorien zurück; Zurück führt zuerst dorthin und schließt danach die Einstellungen. Beim erneuten Betreten bleibt der Fokus auf dem letzten verfügbaren Element. Unter Spalten folgen die Pfeile dem dreispaltigen Raster. Unter Sprache wird die gewählte Sprache fokussiert.
+
+Kann No-root den Home-Status nicht lesen, wähle Erneut versuchen. Ein nicht verfügbarer Schalter bedeutet nicht, dass die Home-Steuerung ausgeschaltet ist. Unter Hintergründe kannst du ein Bild vom Smartphone oder CYTV übertragen; Qualität und Abdunklung erscheinen, wenn ein Hintergrund verfügbar ist. Das Entfernen eines eigenen Hintergrunds muss bestätigt werden; Abbrechen behält ihn.
+
 ## Wetter
 
 Öffnen Sie Einstellungen → Wetter unter Hintergrundbilder. Schalten Sie das Wetter ein und suchen Sie unter Stadt nach dem richtigen Ort mit Region und Land. Automatisch ermittelt einen ungefähren Ort anhand der Internetverbindung. Ein VPN kann das Ergebnis verändern; verwenden Sie bei fehlendem oder falschem Ort die manuelle Suche. Der erkannte oder gewählte Ort wird angezeigt. Wählen Sie °C / m/s oder °F / mph sowie ein verfügbares Format: kompakt, aktuell, ausführlich oder vier Tage. Die Vorschau folgt dem Design; Beispiel kennzeichnet Musterdaten. Liquid Glass unterstützt nur kompakt. Ribbon und Atmosphere zeigen kein Wetter. Ausschalten beendet Anfragen und blendet Stadt, Einheiten und Format aus; die Quellenauswahl bleibt verfügbar. Bei einer Störung bleiben aktuelle Daten kurz erhalten; nach längerer Zeit wird das Wetter bis zur Aktualisierung ausgeblendet.

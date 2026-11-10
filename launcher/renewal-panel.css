@@ -1065,3 +1065,93 @@
     font-size: 18px;
   }
 }
+
+/* Keep remote navigation discoverable when localized categories need scrolling. */
+.settings-columns {
+  position: relative;
+}
+.settings-scroll-hint {
+  position: absolute;
+  bottom: 0;
+  padding: 2px 6px;
+  border-radius: 16px;
+  color: #b8d3ff;
+  background: #242b34;
+  font-size: 22px;
+  pointer-events: none;
+}
+.settings-scroll-hint[hidden] {
+  display: none;
+}
+.settings-categories button {
+  min-height: 64px;
+  font-size: 24px;
+  padding: 12px 18px;
+}
+.settings-subheading {
+  margin: 8px 0 12px;
+  font-size: 24px;
+  color: #ccd1db;
+  font-weight: 500;
+}
+.settings-pane .settings-layout + .settings-subheading {
+  margin-top: 28px;
+}
+.settings-pane .settings-subheading + .settings-layout {
+  margin-top: 0;
+}
+.home-columns-entry > button:after {
+  content: '›';
+  margin-left: auto;
+  color: #b8d3ff;
+}
+.home-routing-switch[data-home-state='unknown']:after,
+.home-routing-switch[data-home-state='checking']:after {
+  content: '?';
+  background: #343941;
+  color: #f5f7fa;
+  text-align: center;
+  line-height: 36px;
+}
+@media (max-height: 800px) {
+  .settings-categories button {
+    min-height: 58px;
+    font-size: 21px;
+    padding: 10px 12px;
+  }
+  .settings-subheading {
+    font-size: 22px;
+  }
+}
+@media (max-width: 700px) {
+  .settings-categories button {
+    font-size: 17px;
+    padding: 10px 6px;
+  }
+  .settings-scroll-hint {
+    left: 12%;
+  }
+}
+
+#developerSettings {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#developerSettings .settings-heading,
+#developerSettings .settings-footer {
+  flex-shrink: 0;
+}
+#developerSettings .developer-content {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px;
+  margin: 12px -8px 0;
+}
+#developerSettings #renewalStatus {
+  margin-top: 0;
+}
+
+#developerSettings .renewal-history {
+  white-space: pre-line;
+}

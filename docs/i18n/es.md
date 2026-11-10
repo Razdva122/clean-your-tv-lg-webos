@@ -134,6 +134,12 @@ Referencias detalladas en inglés: [requisitos](../COMPATIBILITY.md) · [control
 <a id="nodejs-antiguo-en-el-tv-publicado-en-v1120"></a>
 <a id="eliminación-sencilla-v1110"></a>
 
+## Ajustes
+
+Usa ↑ ↓ para elegir una categoría y → u OK para entrar. ← vuelve a las categorías; Atrás vuelve primero a ellas y luego cierra los ajustes. Al volver a una sección se recupera el último control disponible. En Columnas, las flechas siguen la cuadrícula de tres columnas. En Idioma, el foco entra en el idioma seleccionado.
+
+Si No-root no puede leer el estado de Home, elige Reintentar. Un control no disponible no significa que Home esté desactivado. En Fondos puedes subir una imagen desde el teléfono o CYTV; la calidad y el oscurecimiento aparecen cuando hay un fondo disponible. Eliminar un fondo personal requiere confirmación; Cancelar lo conserva.
+
 ## Tiempo
 
 Abra Ajustes → Tiempo, debajo de Fondos. Active el tiempo y abra Ciudad para buscar y elegir la región y el país correctos, o seleccione Automático para obtener una ciudad aproximada según su conexión. Una VPN puede cambiar el resultado; si falta la ciudad o es incorrecta, use la búsqueda manual. La ciudad detectada o elegida aparece en ajustes. Elija °C / m/s o °F / mph y un formato disponible: breve, actual, detallado o cuatro días. La vista previa sigue el tema; Ejemplo indica datos de muestra. Liquid Glass solo admite el formato breve. Ribbon y Atmosphere no muestran el tiempo. Desactivarlo detiene las solicitudes y oculta ciudad, unidades y formato; la selección de fuente sigue disponible. Durante un fallo pueden mantenerse datos recientes temporalmente; después se ocultan hasta poder actualizarlos.

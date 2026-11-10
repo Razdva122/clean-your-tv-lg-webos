@@ -135,6 +135,12 @@ Szczegółowe instrukcje po angielsku: [wymagania](../COMPATIBILITY.md) · [ster
 <a id="starszy-nodejs-w-tv-opublikowano-w-v1120"></a>
 <a id="proste-usuwanie-v1110"></a>
 
+## Ustawienia
+
+Wybierz kategorię przyciskami ↑ ↓ i wejdź do niej przez → lub OK. ← wraca do kategorii; Wstecz najpierw wraca do nich, a potem zamyka ustawienia. Po ponownym wejściu sekcja przywraca fokus na ostatnim dostępnym elemencie. W Kolumnach strzałki odpowiadają siatce trzech kolumn. W Języku fokus trafia na wybrany język.
+
+Jeśli No-root nie może odczytać stanu Home, wybierz Spróbuj ponownie. Niedostępny przełącznik nie oznacza wyłączonego sterowania Home. W Tapetach prześlij obraz z telefonu lub CYTV; jakość i przyciemnienie pojawiają się, gdy tapeta jest dostępna. Usunięcie własnej tapety wymaga potwierdzenia; Anuluj ją zachowuje.
+
 ## Pogoda
 
 Otwórz Ustawienia → Pogoda, pod Tapetami. Włącz pogodę i otwórz Miasto, aby wyszukać właściwy region i kraj, lub wybierz Automatycznie, aby określić przybliżone miasto według połączenia internetowego. VPN może zmienić wynik; jeśli miasta brakuje lub jest błędne, użyj wyszukiwania ręcznego. Wykryte lub wybrane miasto widać w ustawieniach. Wybierz °C / m/s lub °F / mph oraz dostępny format: krótki, aktualny, szczegółowy lub cztery dni. Podgląd pasuje do motywu; Przykład oznacza dane demonstracyjne. Liquid Glass obsługuje tylko krótki format. Ribbon i Atmosphere nie pokazują pogody. Wyłączenie zatrzymuje zapytania i ukrywa miasto, jednostki oraz format; wybór źródła pozostaje dostępny. Podczas awarii ostatnie dane mogą pozostać przez pewien czas; później pogoda znika do czasu odświeżenia.

@@ -668,7 +668,7 @@
             'YouTube'
           ];
           var b = document.createElement('button');
-          b.textContent = t(labels[i]);
+          b.textContent = t(i === 6 ? 'Block LG firmware updates' : labels[i]);
           if (i === 12) {
             b.hidden = true;
             b.disabled = true;

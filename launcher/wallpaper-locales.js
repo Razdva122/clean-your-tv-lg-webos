@@ -1,6 +1,8 @@
 /* Shared wallpaper settings: twelve translations plus English source strings. */
 window.HomeWallpaperLocales = {
   'ru': {
+    'Remove the saved wallpaper? Upload it again to use it later.':
+      'Удалить сохранённые обои? Для повторного использования их потребуется загрузить заново.',
     'Wallpapers': 'Обои',
     'Current theme wallpaper': 'Обои текущей темы',
     'TV capability': 'Возможности ТВ',
@@ -78,6 +80,8 @@ window.HomeWallpaperLocales = {
     'Disable HDMI previews': 'Отключить предпросмотр HDMI'
   },
   'cs': {
+    'Remove the saved wallpaper? Upload it again to use it later.':
+      'Odstranit uloženou tapetu? Pro další použití ji bude nutné znovu nahrát.',
     'Wallpapers': 'Tapety',
     'Current theme wallpaper': 'Tapeta aktuálního motivu',
     'TV capability': 'Možnosti TV',
@@ -154,6 +158,8 @@ window.HomeWallpaperLocales = {
     'Disable HDMI previews': 'Vypnout náhledy HDMI'
   },
   'de': {
+    'Remove the saved wallpaper? Upload it again to use it later.':
+      'Gespeicherten Hintergrund entfernen? Zur erneuten Verwendung muss er wieder hochgeladen werden.',
     'Wallpapers': 'Hintergrundbilder',
     'Current theme wallpaper': 'Hintergrundbild des aktuellen Designs',
     'TV capability': 'TV-Fähigkeiten',
@@ -232,6 +238,8 @@ window.HomeWallpaperLocales = {
     'Disable HDMI previews': 'HDMI-Vorschau deaktivieren'
   },
   'es': {
+    'Remove the saved wallpaper? Upload it again to use it later.':
+      '¿Eliminar el fondo guardado? Tendrás que volver a subirlo para usarlo de nuevo.',
     'Wallpapers': 'Fondos de pantalla',
     'Current theme wallpaper': 'Fondo del tema actual',
     'TV capability': 'Capacidad del TV',
@@ -311,6 +319,8 @@ window.HomeWallpaperLocales = {
     'Disable HDMI previews': 'Desactivar vista previa HDMI'
   },
   'pt-BR': {
+    'Remove the saved wallpaper? Upload it again to use it later.':
+      'Remover o papel de parede salvo? Será necessário enviá-lo novamente para reutilizá-lo.',
     'Wallpapers': 'Papéis de parede',
     'Current theme wallpaper': 'Papel de parede do tema atual',
     'TV capability': 'Capacidade da TV',
@@ -389,6 +399,8 @@ window.HomeWallpaperLocales = {
     'Disable HDMI previews': 'Desativar prévia HDMI'
   },
   'fr': {
+    'Remove the saved wallpaper? Upload it again to use it later.':
+      'Supprimer le fond enregistré ? Vous devrez le transférer à nouveau pour le réutiliser.',
     'Wallpapers': 'Fonds d’écran',
     'Current theme wallpaper': 'Fond du thème actuel',
     'TV capability': 'Capacités du téléviseur',
@@ -467,6 +479,8 @@ window.HomeWallpaperLocales = {
     'Disable HDMI previews': 'Désactiver l’aperçu HDMI'
   },
   'it': {
+    'Remove the saved wallpaper? Upload it again to use it later.':
+      'Rimuovere lo sfondo salvato? Per riutilizzarlo dovrai caricarlo di nuovo.',
     'Wallpapers': 'Sfondi',
     'Current theme wallpaper': 'Sfondo del tema attuale',
     'TV capability': 'Capacità della TV',
@@ -545,6 +559,8 @@ window.HomeWallpaperLocales = {
     'Disable HDMI previews': 'Disattiva anteprima HDMI'
   },
   'ko': {
+    'Remove the saved wallpaper? Upload it again to use it later.':
+      '저장된 배경화면을 삭제할까요? 다시 사용하려면 다시 업로드해야 합니다.',
     'Wallpapers': '배경화면',
     'Current theme wallpaper': '현재 테마 배경화면',
     'TV capability': 'TV 기능',
@@ -621,6 +637,8 @@ window.HomeWallpaperLocales = {
     'Disable HDMI previews': 'HDMI 미리보기 끄기'
   },
   'hi': {
+    'Remove the saved wallpaper? Upload it again to use it later.':
+      'सहेजा गया वॉलपेपर हटाएँ? दोबारा उपयोग करने के लिए इसे फिर अपलोड करना होगा.',
     'Wallpapers': 'वॉलपेपर',
     'Current theme wallpaper': 'वर्तमान थीम का वॉलपेपर',
     'TV capability': 'टीवी की क्षमता',
@@ -697,6 +715,8 @@ window.HomeWallpaperLocales = {
     'Disable HDMI previews': 'HDMI पूर्वावलोकन बंद करें'
   },
   'pl': {
+    'Remove the saved wallpaper? Upload it again to use it later.':
+      'Usunąć zapisaną tapetę? Aby użyć jej ponownie, trzeba będzie przesłać ją jeszcze raz.',
     'Wallpapers': 'Tapety',
     'Current theme wallpaper': 'Tapeta bieżącego motywu',
     'TV capability': 'Możliwości TV',
@@ -773,6 +793,8 @@ window.HomeWallpaperLocales = {
     'Disable HDMI previews': 'Wyłącz podgląd HDMI'
   },
   'zh-Hans': {
+    'Remove the saved wallpaper? Upload it again to use it later.':
+      '删除已保存的壁纸？再次使用时需要重新上传。',
     'Wallpapers': '壁纸',
     'Current theme wallpaper': '当前主题壁纸',
     'TV capability': '电视能力',
@@ -841,6 +863,8 @@ window.HomeWallpaperLocales = {
     'Disable HDMI previews': '关闭 HDMI 预览'
   },
   'zh-Hant': {
+    'Remove the saved wallpaper? Upload it again to use it later.':
+      '刪除已儲存的桌布？再次使用時需要重新上傳。',
     'Wallpapers': '桌布',
     'Current theme wallpaper': '目前主題桌布',
     'TV capability': '電視能力',

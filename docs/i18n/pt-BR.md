@@ -135,6 +135,12 @@ Referências detalhadas em inglês: [requisitos](../COMPATIBILITY.md) · [contro
 <a id="nodejs-antigo-na-tv-publicado-na-v1120"></a>
 <a id="remoção-simples-v1110"></a>
 
+## Configurações
+
+Use ↑ ↓ para escolher uma categoria e → ou OK para entrar. ← volta às categorias; Voltar retorna primeiro a elas e depois fecha as configurações. Ao retornar a uma seção, o foco volta ao último controle disponível. Em Colunas, as setas seguem a grade de três colunas. Em Idioma, o foco entra no idioma selecionado.
+
+Se No-root não conseguir ler o estado de Home, escolha Tentar novamente. Um controle indisponível não significa que Home esteja desativado. Em Papéis de parede, envie uma imagem do telefone ou CYTV; qualidade e escurecimento aparecem quando há um papel de parede disponível. A remoção de um papel de parede pessoal pede confirmação; Cancelar o mantém.
+
 ## Clima
 
 Abra Configurações → Clima, abaixo de Papéis de parede. Ative o clima e abra Cidade para pesquisar e selecionar a região e o país corretos, ou escolha Automático para uma cidade aproximada pela conexão. Uma VPN pode alterar o resultado; se a cidade não aparecer ou estiver errada, use a busca manual. A cidade detectada ou escolhida aparece nas configurações. Escolha °C / m/s ou °F / mph e um formato disponível: compacto, atual, detalhado ou quatro dias. A prévia segue o tema; Exemplo indica dados ilustrativos. Liquid Glass aceita apenas o formato compacto. Ribbon e Atmosphere não exibem clima. Desativar interrompe as solicitações e oculta cidade, unidades e formato; a seleção de fonte continua disponível. Em uma falha, dados recentes podem permanecer por algum tempo; depois o clima fica oculto até atualizar.
