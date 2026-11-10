@@ -94,6 +94,11 @@ def assess(profile, pending, observation=None):
             reason = 'removal-verified' if pending['action'] == 'uninstall' else 'activation-verified'
             return result('terminal-verified', reason, 'reconcile', 'retain-evidence')
         if observation.get('can_resume_root_setup') is True:
+            if (pending['action'] == 'uninstall' or
+                    (pending['action'] == 'install' and pending.get('product_operation') and
+                     (product.get('operation') != pending['product_operation']
+                      or product.get('state') != 'complete' or product.get('current') is not True))):
+                return result('blocked', 'observation-unverified', 'check', 'retain-evidence')
             return result('setup-ready', 'packages-verified', *_verified_setup_actions(pending), 'retain-evidence')
     if unsubmitted_removal(profile, pending):
         return result('pre-submission', 'removal-not-submitted', 'check', 'retain-evidence')
@@ -134,6 +139,13 @@ def observation_diagnostics(observation):
                 for key in ('product', 'observer'):
                     if key in device:
                         check('device.' + key, device[key], dict, 'proof-object')
+                product = device.get('product')
+                if (type(product) is dict and observation.get('can_resume_root_setup') is True
+                        and (product.get('state') != 'complete' or product.get('current') is not True)):
+                    facts.append({'schema':1, 'component':'recovery', 'operation':'recover',
+                                  'phase':'assessment', 'field':'device.product',
+                                  'expected':'setup-product-current-complete',
+                                  'actual':dict(describe(product), category='mismatch'), 'decision':'retain'})
         for key in ('can_resume_root_setup', 'no_root_ready'):
             if key in observation:
                 check(key, observation[key], bool, 'readiness-boolean')

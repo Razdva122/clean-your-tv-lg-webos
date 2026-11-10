@@ -19,7 +19,25 @@ class RecoveryActionTests(unittest.TestCase):
         root = {'edition':'root'}
         cases = [
             ({'action':'activate-root'}, {'device':{'result':{}}}, ['continue-setup','finish-home-off']),
+            ({'action':'activate-root','product_operation':'a'*32}, {'device':{'result':{}}}, ['continue-setup','finish-home-off']),
             ({'action':'activate-root','home_backend':'c1-native-gate'}, {'device':{'result':{}}}, ['continue-setup']),
+            ({'action':'install','product_operation':'a'*32}, {'device':{'product':{
+                'operation':'a'*32,'state':'complete','current':True,'result':{
+                    'installed':'com.cleanyourtv.root.preview','home_changed':False,'verified':True,'baseline_sha':'b'*64}}}},
+             ['continue-setup','finish-home-off']),
+            ({'action':'install','product_operation':'a'*32}, {'device':{'result':{}}}, []),
+            ({'action':'install','product_operation':'a'*32}, {'device':{'product':{
+                'operation':'a'*32,'state':'recovery_required','current':False}}}, []),
+            ({'action':'install','product_operation':'a'*32}, {'device':{'product':{
+                'operation':'a'*32,'state':'failed','current':False}}}, []),
+            ({'action':'install','product_operation':'a'*32}, {'device':{'product':{
+                'operation':'a'*32,'state':'complete','current':False}}}, []),
+            ({'action':'install','product_operation':'a'*32}, {'device':{'product':{
+                'operation':'a'*32,'state':'complete'}}}, []),
+            ({'action':'setup-root-updater','product_operation':'a'*32}, {'device':{'result':{}}}, ['continue-setup']),
+            ({'action':'uninstall'}, {'device':{'result':{}}}, []),
+            ({'action':'uninstall','product_operation':'a'*32}, {'device':{'product':{
+                'operation':'a'*32,'state':'complete','current':True}}}, []),
             ({'action':'setup-root-updater'}, {'device':{'result':{}}}, ['continue-setup']),
             ({'action':'activate-root'}, {}, []),
             ({'action':'activate-root','previous':{}}, {'device':{'result':{}}}, []),
@@ -36,6 +54,28 @@ class RecoveryActionTests(unittest.TestCase):
                 self.assertEqual(setup_actions(root,pending,observation), expected)
                 self.assertEqual(setup_actions({'edition':'no-root'},pending,observation), [])
 
+    def test_failed_product_readiness_is_blocked_and_returns_fixed_pure_diagnostic(self):
+        from cytv.contract_events import Recorder, current_recorder
+        from cytv.recovery_state import assess, observation_diagnostics
+        observed={'can_resume_root_setup':True,'device':{'product':{
+            'operation':'PRIVATE','state':'recovery_required','current':False}}}
+        pending={'action':'install','product_operation':'PRIVATE'}
+        recorder=Recorder(); token=current_recorder.set(recorder)
+        self.addCleanup(current_recorder.reset,token)
+        self.assertEqual(assess({'edition':'root'},pending,observed),{
+            'state':'blocked','reason':'observation-unverified','actions':['check','retain-evidence']})
+        facts=observation_diagnostics(observed)
+        self.assertEqual(len(facts),1)
+        self.assertEqual(facts[0]['field'],'device.product')
+        self.assertEqual(facts[0]['expected'],'setup-product-current-complete')
+        self.assertEqual(facts[0]['actual'],{'type':'object','length':3,'category':'mismatch'})
+        self.assertNotIn('PRIVATE',json.dumps(facts))
+        self.assertEqual(recorder.snapshot()['events'],[])
+        self.assertEqual(assess({'edition':'root'},{'action':'uninstall','product_operation':'a'*32},{
+            'can_resume_root_setup':True,'reconciliation':'product-removal-verified',
+            'device':{'product':{'operation':'a'*32,'state':'complete','current':True}}}),{
+                'state':'terminal-verified','reason':'removal-verified','actions':['reconcile','retain-evidence']})
+
     def test_cli_desktop_android_never_offer_setup_from_blocked_raw_flag(self):
         bridge_path = Path(__file__).resolve().parents[2] / 'android/app/src/main/python/android_bridge.py'
         spec = importlib.util.spec_from_file_location('recovery_actions_bridge', bridge_path)
@@ -48,6 +88,9 @@ class RecoveryActionTests(unittest.TestCase):
                 ({}, {'active_operation':'PRIVATE','device':{'result':{}}}),
                 ({'product_operation':'a'*32}, {'device':{'product':{'operation':'a'*32,'state':'pending'}}}),
                 ({'product_operation':'a'*32}, {'device':{'product':{'operation':'b'*32,'state':'complete'}}}),
+                ({'product_operation':'a'*32}, {'device':{'product':{'operation':'a'*32,'state':'recovery_required','current':False}}}),
+                ({'product_operation':'a'*32}, {'device':{'product':{'operation':'a'*32,'state':'failed','current':False}}}),
+                ({'action':'uninstall','product_operation':'a'*32}, {'device':{'product':{'operation':'a'*32,'state':'complete','current':True}}}),
             ]:
                 with self.subTest(frontend=frontend,fields=fields), tempfile.TemporaryDirectory() as tmp:
                     store=state.Store(tmp); profile=state.target('tv.local','root')
@@ -80,10 +123,12 @@ class RecoveryActionTests(unittest.TestCase):
         bridge = importlib.util.module_from_spec(spec); spec.loader.exec_module(bridge)
         for frontend in ('cli','desktop','android'):
             for backend, expected in [('existing',['continue-setup','finish-home-off','retain-evidence']),
-                                      ('c1-native-gate',['continue-setup','retain-evidence'])]:
+                                      ('c1-native-gate',['continue-setup','retain-evidence']),
+                                      ('product',['continue-setup','finish-home-off','retain-evidence'])]:
                 with self.subTest(frontend=frontend,backend=backend), tempfile.TemporaryDirectory() as tmp:
                     store=state.Store(tmp); profile=state.target('tv.local','root')
-                    store.begin(profile,'activate-root',home_backend=backend)
+                    if backend=='product': store.begin(profile,'install',product_operation='a'*32)
+                    else: store.begin(profile,'activate-root',home_backend=backend)
                     installer=Mock(store=store,profile=profile)
                     output=[]; plans=[]
                     if frontend=='cli': write=Console(output.append)
@@ -95,8 +140,12 @@ class RecoveryActionTests(unittest.TestCase):
                     def capture(value):
                         plans.append(value); original_plan(value)
                     write.recovery_plan=capture
-                    recover(installer,lambda prompt:'0',write,initial_observation={
-                        'can_resume_root_setup':True,'device':{'result':{}}})
+                    observation={'can_resume_root_setup':True,'device':{'result':{}}}
+                    if backend=='product':
+                        observation['device']={'product':{'operation':'a'*32,'state':'complete','current':True,
+                            'result':{'installed':'com.cleanyourtv.root.preview','home_changed':False,
+                                      'verified':True,'baseline_sha':'b'*64}}}
+                    recover(installer,lambda prompt:'0',write,initial_observation=observation)
                     self.assertEqual(plans[-1]['actions'],expected)
                     visible = str(write.options) if frontend=='desktop' else str(output)
                     self.assertEqual('Finish setup with LG Home and Home control off' in visible,
