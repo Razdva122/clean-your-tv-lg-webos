@@ -14,7 +14,7 @@ HomeI18n.add({
     'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
       'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.',
     "Can't open {app}": "Can't open {app}",
-    'Change Home': 'Change Home',
+    'Change Home': 'Open Clean Your TV with the Home button',
     'Change was not confirmed. Check the switch and try again.':
       'Change was not confirmed. Check the switch and try again.',
     'Changing Home control…': 'Changing Home control…',
@@ -225,7 +225,7 @@ HomeI18n.add({
     'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
       'Beta: Die Verlängerung ist auf No-root-TVs noch nicht bestätigt. Prüfen Sie weiterhin den Timer in der Developer Mode-App.',
     "Can't open {app}": '{app} kann nicht geöffnet werden',
-    'Change Home': 'Home ändern',
+    'Change Home': 'Clean Your TV mit der Home-Taste öffnen',
     'Change was not confirmed. Check the switch and try again.':
       'Änderung nicht bestätigt. Prüfen Sie den Schalter und versuchen Sie es erneut.',
     'Changing Home control…': 'Home-Steuerung wird geändert…',
@@ -441,7 +441,7 @@ HomeI18n.add({
     'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
       'Beta: la renovación aún no está verificada en televisores sin root. Sigue comprobando el temporizador en la aplicación Developer Mode.',
     "Can't open {app}": 'No se puede abrir {app}',
-    'Change Home': 'Cambiar Home',
+    'Change Home': 'Abrir Clean Your TV con el botón Home',
     'Change was not confirmed. Check the switch and try again.':
       'No se confirmó el cambio. Comprueba el interruptor e inténtalo de nuevo.',
     'Changing Home control…': 'Cambiando el control de Home…',
@@ -657,7 +657,7 @@ HomeI18n.add({
     'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
       'Beta: a renovação ainda não foi verificada em TVs sem root. Continue conferindo o cronômetro no aplicativo Developer Mode.',
     "Can't open {app}": 'Não foi possível abrir {app}',
-    'Change Home': 'Alterar Home',
+    'Change Home': 'Abrir Clean Your TV com o botão Home',
     'Change was not confirmed. Check the switch and try again.':
       'A alteração não foi confirmada. Confira o interruptor e tente novamente.',
     'Changing Home control…': 'Alterando o controle do Home…',
@@ -874,7 +874,7 @@ HomeI18n.add({
     'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
       'Beta : le renouvellement n’est pas encore vérifié sur les TV sans root. Continuez à vérifier le compteur dans l’application Developer Mode.',
     "Can't open {app}": 'Impossible d’ouvrir {app}',
-    'Change Home': 'Changer Home',
+    'Change Home': 'Ouvrir Clean Your TV avec le bouton Home',
     'Change was not confirmed. Check the switch and try again.':
       'Modification non confirmée. Vérifiez l’interrupteur et réessayez.',
     'Changing Home control…': 'Modification du contrôle de Home…',
@@ -1092,7 +1092,7 @@ HomeI18n.add({
     'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
       'Beta: il rinnovo non è ancora verificato sui TV senza root. Continua a controllare il timer nell’app Developer Mode.',
     "Can't open {app}": 'Impossibile aprire {app}',
-    'Change Home': 'Cambia Home',
+    'Change Home': 'Aprire Clean Your TV con il tasto Home',
     'Change was not confirmed. Check the switch and try again.':
       'Modifica non confermata. Controlla l’interruttore e riprova.',
     'Changing Home control…': 'Modifica del controllo Home…',
@@ -1307,7 +1307,7 @@ HomeI18n.add({
     'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
       '베타: 루팅하지 않은 TV에서는 갱신이 아직 검증되지 않았습니다. Developer Mode 앱의 타이머를 계속 확인하세요.',
     "Can't open {app}": '{app}을(를) 열 수 없습니다',
-    'Change Home': 'Home 변경',
+    'Change Home': 'Home 버튼으로 Clean Your TV 열기',
     'Change was not confirmed. Check the switch and try again.':
       '변경이 확인되지 않았습니다. 스위치를 확인하고 다시 시도하세요.',
     'Changing Home control…': 'Home 제어 변경 중…',
@@ -1518,7 +1518,7 @@ HomeI18n.add({
     'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
       'बीटा: बिना root वाले टीवी पर नवीनीकरण की पुष्टि अभी नहीं हुई है। Developer Mode ऐप में टाइमर देखते रहें।',
     "Can't open {app}": '{app} नहीं खुल सका',
-    'Change Home': 'Home बदलें',
+    'Change Home': 'Home बटन से Clean Your TV खोलें',
     'Change was not confirmed. Check the switch and try again.':
       'बदलाव की पुष्टि नहीं हुई। स्विच जाँचें और फिर कोशिश करें।',
     'Changing Home control…': 'Home नियंत्रण बदला जा रहा है…',
@@ -1730,7 +1730,7 @@ HomeI18n.add({
     'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
       'Beta: odnawianie nie zostało jeszcze zweryfikowane na telewizorach bez roota. Nadal sprawdzaj licznik w aplikacji Developer Mode.',
     "Can't open {app}": 'Nie można otworzyć {app}',
-    'Change Home': 'Zmień Home',
+    'Change Home': 'Otwieraj Clean Your TV przyciskiem Home',
     'Change was not confirmed. Check the switch and try again.':
       'Zmiana nie została potwierdzona. Sprawdź przełącznik i spróbuj ponownie.',
     'Changing Home control…': 'Zmienianie sterowania Home…',
@@ -1947,7 +1947,7 @@ HomeI18n.add({
     'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
       'Бета: продление пока не проверено на телевизорах без root. Продолжайте следить за таймером в приложении Developer Mode.',
     "Can't open {app}": 'Не удалось открыть {app}',
-    'Change Home': 'Заменить Home',
+    'Change Home': 'Открывать Clean Your TV кнопкой Home',
     'Change was not confirmed. Check the switch and try again.':
       'Изменение не подтверждено. Проверьте переключатель и повторите попытку.',
     'Changing Home control…': 'Изменяем управление Home…',
@@ -2839,7 +2839,7 @@ HomeI18n.add({
     'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
       'Beta：尚未在无 root 权限的电视上验证续期功能。请继续检查 Developer Mode 应用中的倒计时。',
     "Can't open {app}": '无法打开 {app}',
-    'Change Home': '更改 Home',
+    'Change Home': '按 Home 键打开 Clean Your TV',
     'Change was not confirmed. Check the switch and try again.':
       '未能确认更改。请检查开关后重试。',
     'Changing Home control…': '正在更改 Home 控制…',
@@ -3099,7 +3099,7 @@ HomeI18n.add({
     'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
       'Beta：尚未在無 root 權限的電視上驗證續期功能。請持續檢查 Developer Mode 應用程式中的倒數計時。',
     "Can't open {app}": '無法開啟 {app}',
-    'Change Home': '變更 Home',
+    'Change Home': '按 Home 鍵開啟 Clean Your TV',
     'Change was not confirmed. Check the switch and try again.':
       '未能確認變更。請檢查開關後再試。',
     'Changing Home control…': '正在變更 Home 控制…',
@@ -3668,7 +3668,7 @@ HomeI18n.add({
     'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
       'Beta: prodlužování zatím není ověřeno na televizorech bez rootu. Průběžně kontrolujte časovač v aplikaci Developer Mode.',
     "Can't open {app}": 'Nelze otevřít {app}',
-    'Change Home': 'Změnit Home',
+    'Change Home': 'Otevírat Clean Your TV tlačítkem Home',
     'Change was not confirmed. Check the switch and try again.':
       'Změna nebyla potvrzena. Zkontrolujte přepínač a zkuste to znovu.',
     'Changing Home control…': 'Mění se ovládání Home…',
@@ -4026,4 +4026,20 @@ HomeI18n.add({
     'Not connected': '未連接',
     'Connected': '已連接'
   }
+});
+
+HomeI18n.add({
+  en: { 'Applications': 'Applications' },
+  cs: { 'Applications': 'Aplikace' },
+  de: { 'Applications': 'Apps' },
+  es: { 'Applications': 'Aplicaciones' },
+  'pt-BR': { 'Applications': 'Aplicativos' },
+  fr: { 'Applications': 'Applications' },
+  it: { 'Applications': 'Applicazioni' },
+  ko: { 'Applications': '앱' },
+  hi: { 'Applications': 'ऐप्लिकेशन' },
+  pl: { 'Applications': 'Aplikacje' },
+  ru: { 'Applications': 'Приложения' },
+  'zh-Hans': { 'Applications': '应用' },
+  'zh-Hant': { 'Applications': '應用程式' }
 });

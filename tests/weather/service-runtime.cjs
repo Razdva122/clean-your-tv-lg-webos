@@ -38,8 +38,9 @@ files=inject(build.bundle_weather(build.bundle_c1_lease(build.bundle_presentatio
 print(json.dumps({name:raw.decode() for name,raw in files.items()}))
 `
     ],
-    { encoding: 'utf8' }
+    { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 }
   );
+  assert.ifError(root.error);
   assert.equal(root.status, 0, root.stderr);
   const editions = {
     home: {

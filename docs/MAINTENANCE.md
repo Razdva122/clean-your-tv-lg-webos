@@ -48,9 +48,9 @@ uninstall the applications. First press Home three times within two seconds to s
 
 ## Uninstall
 
-The next installer update adds removal support for older LG stock screens: if
-there is no separate LG Home app, No-root removal may switch to Live TV. This is
-not yet in the published installer. Keep the TV on and follow the normal restart
+Published installers support removal on older LG stock screens: if
+there is no separate LG Home app, No-root removal may switch to Live TV.
+Keep the TV on and follow the normal restart
 and **Try again** prompts; retain the saved connection and recovery records.
 
 In published v1.11.0 and later, select **Uninstall Clean Your TV** on desktop
@@ -79,15 +79,19 @@ No-root setup checks Helper before pairing. If it is running, stop it with the
 documented Home gesture and confirm the recheck in the current setup. An unknown
 process state still blocks replacement; emergency-stop markers are preserved.
 
-A completely empty No-root installation can finish without a restart only after
-current files, package registrations, input shortcuts and process absence have
-been checked, with no unresolved prior installation. Actual removal still uses
-the requested full restart. If the input-list API fails, CYTV tries deleting only
+The current source also permits Root and No-root removal to finish without a
+restart after controls/startup restoration, package/file absence and stopped
+processes are verified, with no unresolved prior installation. A live or
+unverifiable process, broken startup service or unresolved old operation keeps
+the full-restart path. A requested restart must still be completed. If the
+input-list API fails, CYTV tries deleting only
 its own input shortcut and continues safe package cleanup. A remaining unverified
 shortcut keeps removal pending; retry after the service is available. No success
 is shown merely because the packages disappeared.
 
-### Root reinstallation through the installer (unreleased, #355)
+<a id="root-reinstallation-through-the-installer-unreleased-355"></a>
+
+### Root reinstallation through the installer
 
 Choose **Set up my TV** with the saved Root connection and confirm **Reinstall
 Root**. This also works after a failed profile-based Home activation. The installer

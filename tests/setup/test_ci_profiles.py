@@ -151,23 +151,23 @@ class CIProfiles(unittest.TestCase):
     def test_required_statuses_include_parallel_browser_failures(self):
         workflow = (ROOT / '.github/workflows/tests.yml').read_text()
         summary = re.search(r'^  tests:\n(.*?)(?=^  [^ ]|\Z)', workflow, re.M | re.S).group(1)
-        self.assertIn('needs: [scope, runtime, browser, optional-python]', summary)
+        self.assertIn('needs: [scope, runtime, browser, phone-heic, optional-python]', summary)
         browser = re.search(r'^  browser:\n(.*?)(?=^  [^ ]|\Z)', workflow, re.M | re.S).group(1)
         self.assertIn('BROWSER_CHANNEL=chromium node tests/tv-dev-ui.cjs', browser)
         self.assertIn('if: always()', summary)
         script = summary.split('        run: |\n', 1)[1]
         script = '\n'.join(line[10:] for line in script.splitlines())
-        complete = dict(os.environ, SCOPE='success', RUNTIME='success', BROWSER='success',
+        complete = dict(os.environ, SCOPE='success', RUNTIME='success', BROWSER='success', HEIC='success',
                         PYTHON='success', BROWSER_REQUIRED='true', PYTHON_REQUIRED='true')
         def status(**updates):
             return subprocess.run(['bash', '-e', '-c', script], env={**complete, **updates}, capture_output=True).returncode
         self.assertEqual(status(), 0)
-        for dependency in ('SCOPE', 'RUNTIME', 'BROWSER', 'PYTHON'):
+        for dependency in ('SCOPE', 'RUNTIME', 'BROWSER', 'HEIC', 'PYTHON'):
             for state in ('failure', 'skipped', 'cancelled'):
                 with self.subTest(dependency=dependency, state=state):
                     self.assertNotEqual(status(**{dependency: state}), 0)
-        self.assertEqual(status(BROWSER='skipped', PYTHON='skipped', BROWSER_REQUIRED='false', PYTHON_REQUIRED='false'), 0)
-        for dependency in ('BROWSER', 'PYTHON'):
+        self.assertEqual(status(BROWSER='skipped', HEIC='skipped', PYTHON='skipped', BROWSER_REQUIRED='false', PYTHON_REQUIRED='false'), 0)
+        for dependency in ('BROWSER', 'HEIC', 'PYTHON'):
             for state in ('failure', 'cancelled', 'unknown', ''):
                 with self.subTest(optional=dependency, state=state):
                     self.assertNotEqual(status(BROWSER_REQUIRED='false', PYTHON_REQUIRED='false', **{dependency: state}), 0)
@@ -175,13 +175,13 @@ class CIProfiles(unittest.TestCase):
     def test_full_release_marker_fails_for_every_incomplete_dependency(self):
         workflow = (ROOT / '.github/workflows/tests.yml').read_text()
         marker = workflow.split('  full-release:', 1)[1]
-        self.assertIn('needs: [tests, browser, optional-python]', marker)
+        self.assertIn('needs: [tests, browser, phone-heic, optional-python]', marker)
         self.assertIn('if: always() && inputs.full_suite', marker)
         script = marker.split('        run: |\n', 1)[1]
         script = '\n'.join(line[10:] for line in script.splitlines())
-        complete = dict(os.environ, TESTS='success', BROWSER='success', PYTHON='success', SOURCE='a' * 40)
+        complete = dict(os.environ, TESTS='success', BROWSER='success', HEIC='success', PYTHON='success', SOURCE='a' * 40)
         self.assertEqual(subprocess.run(['bash', '-e', '-c', script], env=complete, capture_output=True).returncode, 0)
-        for dependency in ('TESTS', 'BROWSER', 'PYTHON'):
+        for dependency in ('TESTS', 'BROWSER', 'HEIC', 'PYTHON'):
             for state in ('failure', 'skipped', 'cancelled'):
                 with self.subTest(dependency=dependency, state=state):
                     self.assertNotEqual(subprocess.run(['bash', '-e', '-c', script],

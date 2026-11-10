@@ -179,6 +179,17 @@ this rule was introduced.
    the remaining independent planned cases and update the failure inventory
    before the next fix batch and replacement candidate.
 
+Before ending the pass, releasing the device, starting product fixes or merging
+the fix batch, apply the [required QA exit check](../AGENTS.md#required-qa-exit-check)
+against the original selected plan. Record the reconciliation in this release's
+canonical ledger. An independent untested case keeps the pass open; an unrelated
+release blocker, harness mistake or planned replacement candidate does not defer
+it. Check state-dependent unfinished cases before a planned rollback removes the
+artifact they need. Necessary recovery takes precedence and must be recorded as
+an interruption, not successful case completion. Scope reduction or independent
+case deferral needs the maintainer's explicit decision. A complete inventory of
+genuinely blocked cases permits the fix batch, but does not establish acceptance.
+
 ### Verification ledger and repeat rules
 
 Maintain one current verification ledger for the release, shared across focused

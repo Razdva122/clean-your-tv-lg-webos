@@ -1,75 +1,74 @@
 {
   "schema": 1,
-  "version": "1.15.0",
+  "version": "1.16.0",
   "changes": [
     {
-      "pr": 457,
+      "pr": 477,
+      "issues": [],
+      "summary": "Accept iPhone HEIC/HEIF wallpaper uploads using native decoding or a bundled local worker; preserve crop, PIN and JPEG transfer"
+    },
+    {
+      "pr": 478,
       "issues": [
-        240,
-        283,
-        418,
-        438
+        418
       ],
-      "summary": "Improve legacy No-root/C1 removal and asynchronous Root cleanup reconciliation; original #240/#418 installation causes remain unresolved"
+      "summary": "Correct retained-native cleanup Home readback; original #418 activation cause and device recovery remain unconfirmed"
     },
     {
-      "pr": 459,
+      "pr": 479,
       "issues": [
-        355
+        101
       ],
-      "summary": "Deliver the selected Root runtime through explicit verified reinstallation; original #355 activation and C2 acceptance remain unverified"
+      "summary": "Remove generic C3-only Root setup notice; original #101 C2 Root activation remains unconfirmed"
     },
     {
-      "pr": 460,
-      "issues": [],
-      "summary": "Reconcile current documentation after verified v1.14.0 publication"
-    },
-    {
-      "pr": 461,
-      "issues": [],
-      "summary": "Redesign the product website/demo and add independent Video/4K theme filters"
-    },
-    {
-      "pr": 462,
+      "pr": 480,
       "issues": [
-        440
+        397
       ],
-      "summary": "Admit narrowly verified immutable system images and new native setup after verified cleanup; #440 device acceptance remains unverified"
+      "summary": "Retain attempt-bound Root driver install failure diagnostics; original #397 failure cause awaits reporter data"
     },
     {
-      "pr": 463,
+      "pr": 481,
+      "issues": [],
+      "summary": "Complete verified Root/No-root removal without mandatory restart; distinguish pending cleanup, connection loss and package refusal"
+    },
+    {
+      "pr": 482,
+      "issues": [],
+      "summary": "Offer optional post-install theme preview cards, weather and mode-specific renewal/firmware switches; preserve successful installation on skip or cancellation"
+    },
+    {
+      "pr": 483,
+      "issues": [],
+      "summary": "Fix Settings remote navigation and recovery in both editions"
+    },
+    {
+      "pr": 484,
+      "issues": [],
+      "summary": "Fix browser expectations for adaptive Settings controls"
+    },
+    {
+      "pr": 485,
       "issues": [
-        353
+        472
       ],
-      "summary": "Add optional localized Home weather, theme-aware formats, city/units settings and weather-compatible theme updates; retire Channel and Itachi from the active catalog"
+      "summary": "Retain allowlisted No-root boot-check failure evidence; original #472 cause and device recovery remain unconfirmed"
     },
     {
-      "pr": 464,
-      "issues": [],
-      "summary": "Keep theme discovery lifecycle on an exact active fixture and current staged engine metadata after Channel retirement"
-    },
-    {
-      "pr": 465,
-      "issues": [],
-      "summary": "Stabilize QA log rotation, portable weather staging and native lease timeout fixtures without product behavior changes"
-    },
-    {
-      "pr": 466,
-      "issues": [],
-      "summary": "Fix weather API availability with MET Norway and Compact preview fitting"
-    },
-    {
-      "pr": 468,
-      "issues": [],
-      "summary": "Detect and remember website visitor language"
+      "pr": 490,
+      "issues": [
+        489
+      ],
+      "summary": "Fix Root recovery verification for bundled HEIC service"
     }
   ],
   "excluded": [],
-  "acceptance": "Full candidate42673170250:3 passed all21 jobs; normal protected signer42680421116 verified. Final CLI payload598/original Helper/runtime and exact original-signer Android APK8a006981d62b132a4437c1a7150dcdff8261381a4af09a86c1bc9020bdf610a1 code29\u219230 retention/Store/native/idle passed on isolated API35 ARM64. Final three Root component hashes exactly match installed and tested C3 OLED55C3RLA firmware43.21.71/webOS SDK11.2.0 packages; live read-only controller/UI/grant/original preferences/Home Off/recovery readback passed. API7/7, preview39/39, grant rollback/forward and profile retention observations carry only for those identical hashes/preconditions; no repeated installation or provider request. Retained System1.2.5; Magic Remote exact model unknown; installer macOS15.6.1 ARM64. Physical Home/emergency/audio, standby/AC cold boot, No-root OTA, other TVs and reporter-specific original failures are not new passes. See docs/history/2026-11-09-release-1.15.0-qa.md final acceptance.",
+  "acceptance": "2026-11-10: maintainer-owned OLED55C3RLA, firmware43.21.71/webOS SDK11.2.0, normal Root FHD, Magic Remote exact model unknown; macOS15.6.1 ARM64 host. Build42808578156:1 and protected Root QA signing42811994143: exact final artifacts/signature, ordinary signed update, real profile/health, runtime and actual retained-Updater integrity, retained rollback\u2192forward and final owner-observed arrows/OK/Back, short Home\u2192LG Home with Home Off, volume/audio pass. All four selected R2 groups pass; hashes, exact observations and untested scope: docs/history/2026-11-10-release-1.16.0-candidate.md#r2-04-and-final-selected-case-exit-check. No physical No-root/iPhone/Home-On/emergency/power/public-feed acceptance claimed; no publication authorized.",
   "build": {
-    "run_id": 42673170250,
-    "attempt": 3,
-    "source": "aec1f3ff0ccdaa2e42089d71ea7f4a38aa241bf7"
+    "run_id": 42808578156,
+    "attempt": 1,
+    "source": "f23ab1ac92e958ab2720748e9b6fa59ae641916d"
   },
-  "acceptance_build": "42673170250:3"
+  "acceptance_build": "42808578156:1"
 }

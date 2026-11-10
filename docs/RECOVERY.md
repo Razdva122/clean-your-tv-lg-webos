@@ -110,6 +110,13 @@ known project apps/files that are present and skip items that are absent.
    The installer checks the actual boot change and remaining files, then performs
    the final sweep. Success requires both removed and verified-clean results.
 
+The current source permits completion without a restart when current control,
+startup, package/file and process checks pass and no prior setup is unresolved.
+A requested restart remains necessary for live/unverifiable project processes or
+unfinished old work. Pending final verification is shown as remaining cleanup;
+a connection interruption and an actual package-removal refusal have separate
+results. Pending cleanup never appears as verified success.
+
 If the connection is interrupted, check it and select **Try again**. Existing
 installation history remains available; an old generic failure is not assigned
 an invented cause. If the OS denies access, use the requested Root connection.
@@ -122,7 +129,7 @@ In v1.11.0 and later, failed or interrupted setup offers recovery directly. If N
 
 **v1.13.0:** verified full removal leaves the TV ready for a new Root or No-root installation. Minimal inactive removal receipts prevent old work from resuming; do not delete them manually. Finish recovery first if removal or its current checks are incomplete.
 
-**Next installer update (not yet published):** on older TVs without a separate
+**Published removal support:** on older TVs without a separate
 LG Home app, No-root removal can use a freshly verified LG stock screen and may
 switch to Live TV. Keep the TV on and follow any restart request. Continue with
 **Try again** using the original saved connection; do not delete journals, clear

@@ -107,7 +107,7 @@ Quando solicitado, desconecte a TV da tomada, reconecte, aguarde a rede e escolh
 
 Uma instalação com falha ou interrompida oferece recuperação diretamente. Se No-root não puder continuar, confirme a remoção completa uma vez. A remoção faz até três tentativas em caso de perda temporária de conexão ou processo CYTV ocupado. Se precisar de Root, escolha **Conectar com Root** para a mesma TV; a limpeza Root verificada também conclui a remoção No-root bloqueada. Se a ativação Root falhar, o CYTV tenta restaurar e verificar LG Home sem repetir a ativação. Cancelar trabalho pendente preserva o relatório e as ações de recuperação. A parada de emergência é mantida.
 
-Após uma falha de conexão durante a remoção, abra os detalhes, verifique a rede ou escolha uma chave SSH Root existente e tente novamente. Endereço, edição, porta e verificação da chave da TV permanecem fixos. No-root verifica o Helper antes do pareamento: pare-o e confirme a nova verificação no mesmo processo. Só uma TV comprovadamente vazia e sem instalação pendente pode dispensar a reinicialização; após remoção real, faça a reinicialização solicitada. Se o serviço de entradas falhar, a limpeza segura dos pacotes continua; o sucesso ainda exige verificar a limpeza do atalho.
+Após uma falha de conexão durante a remoção, abra os detalhes, verifique a rede ou escolha uma chave SSH Root existente e tente novamente. Endereço, edição, porta e verificação da chave da TV permanecem fixos. No-root verifica o Helper antes do pareamento: pare-o e confirme a nova verificação no mesmo processo. A remoção pode terminar sem reiniciar quando os controles, a desativação da inicialização automática e a ausência de pacotes, arquivos e processos forem verificados e não houver instalação pendente. Se o instalador pedir para reiniciar, faça isso e tente novamente. Se o serviço de entradas falhar, a limpeza segura dos pacotes continua; o sucesso ainda exige verificar a limpeza do atalho.
 
 **Reinstalar o Root:** Escolha **Configurar minha TV → Root** com a conexão salva e confirme **Reinstalar Root?**. O instalador restaura o LG Home e remove completamente o Clean Your TV, incluindo seus atualizadores, Home Helper e preferências salvas. Após verificar a remoção, instala e ativa os pacotes e o ambiente Root incluídos nesse instalador. Os outros apps da TV e o acesso root/SSH existente são preservados. Se a remoção parar ou solicitar uma reinicialização completa, termine-a antes de iniciar a configuração novamente. **Desinstalar Clean Your TV** sozinho nunca inicia outra instalação.
 
@@ -135,6 +135,12 @@ Referências detalhadas em inglês: [requisitos](../COMPATIBILITY.md) · [contro
 <a id="nodejs-antigo-na-tv-publicado-na-v1120"></a>
 <a id="remoção-simples-v1110"></a>
 
+## Configurações
+
+Use ↑ ↓ para escolher uma categoria e → ou OK para entrar. ← volta às categorias; Voltar retorna primeiro a elas e depois fecha as configurações. Ao retornar a uma seção, o foco volta ao último controle disponível. Em Colunas, as setas seguem a grade de três colunas. Em Idioma, o foco entra no idioma selecionado.
+
+Se No-root não conseguir ler o estado de Home, escolha Tentar novamente. Um controle indisponível não significa que Home esteja desativado. Em Papéis de parede, envie uma imagem do telefone ou CYTV; qualidade e escurecimento aparecem quando há um papel de parede disponível. A remoção de um papel de parede pessoal pede confirmação; Cancelar o mantém.
+
 ## Clima
 
 Abra Configurações → Clima, abaixo de Papéis de parede. Ative o clima e abra Cidade para pesquisar e selecionar a região e o país corretos, ou escolha Automático para uma cidade aproximada pela conexão. Uma VPN pode alterar o resultado; se a cidade não aparecer ou estiver errada, use a busca manual. A cidade detectada ou escolhida aparece nas configurações. Escolha °C / m/s ou °F / mph e um formato disponível: compacto, atual, detalhado ou quatro dias. A prévia segue o tema; Exemplo indica dados ilustrativos. Liquid Glass aceita apenas o formato compacto. Ribbon e Atmosphere não exibem clima. Desativar interrompe as solicitações e oculta cidade, unidades e formato; a seleção de fonte continua disponível. Em uma falha, dados recentes podem permanecer por algum tempo; depois o clima fica oculto até atualizar.
@@ -144,3 +150,15 @@ Escolha a fonte da previsão: Auto, MET Norway ou Open-Meteo. Auto começa com M
 As coordenadas vão para api.met.no ou api.open-meteo.com; as buscas de cidades, para geocoding-api.open-meteo.com. A localização automática opcional envia seu IP público a get.geojs.io. As conexões usam HTTPS; não é necessária chave de API. Local, fonte e cache ficam na TV. Fontes de dados inclui termos e créditos, como o Instituto Meteorológico Norueguês (MET Norway, CC BY 4.0).
 
 O botão Fontes de dados no título Clima abre informações sobre os serviços e as licenças.
+
+## Papel de parede do iPhone
+
+Abra Configurações → Papéis de parede → Enviar do telefone e leia o código. Escolha JPG, PNG ou HEIC/HEIF, recorte, confirme o limite de qualidade e envie. Escolha Aplicar na TV. Safari usa suporte HEIC nativo; Chrome, Firefox e outros navegadores modernos usam o decodificador local incluído quando necessário. A conversão ocorre no telefone, sem serviço externo. Cancelar ou escolher outro arquivo interrompe a conversão. Entrada: 32 MiB e 50 milhões de pixels; saída: até 1080p e 2 MiB. Se falhar, tente outra foto ou JPG/PNG. É para a página do telefone, não o app Mac.
+
+## Configure seu Clean Your TV
+
+Após a instalação bem-sucedida, escolha Classic, Liquid Glass ou Ribbon e ative ou desative o clima. Ribbon não oferece clima; Liquid Glass usa o formato compacto. A cidade é estimada pela conexão e pode ser alterada na Home.
+
+No-root com Developer Mode oferece renovação automática (Beta); continue verificando o temporizador oficial. No-root pelo root SSH existente não usa essa opção. Root permite bloquear atualizações de firmware LG pelo Homebrew Channel, incluindo as de segurança; é preciso reiniciar a TV de verdade pelo Homebrew Channel. As atualizações CYTV são separadas.
+
+Manter configurações atuais pula a personalização. O interruptor mostra o estado atual da função do modo. Configurações não alteradas são mantidas. Reinstalar Root continua removendo preferências CYTV conforme descrito acima. Confira a aparência na TV e opções não confirmadas na Home antes de tentar novamente.

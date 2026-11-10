@@ -11,6 +11,34 @@ from updater.bootstrap import permission_plan, verify_bundle
 
 
 class SetupTests(unittest.TestCase):
+    def test_bootstrap_accepts_real_packaged_receiver_in_recovery_manifest(self):
+        import hashlib
+        from unittest.mock import patch
+        from install_fixture import CurrentInstallation
+        from updater import bootstrap
+        from updater.device import Device
+        with CurrentInstallation() as fixture:
+            source=fixture.installed/'usr/palm/services/com.cleanyourtv.root.preview.service/service.js'
+            service=fixture.root/'service/service.js';service.parent.mkdir(mode=0o700)
+            service.write_bytes(source.read_bytes());service.chmod(0o600)
+            proof=fixture.root_store.read('recovery-provision')
+            proof['files'][str(service)]=hashlib.sha256(service.read_bytes()).hexdigest()
+            fixture.root_store.write('recovery-provision',proof)
+            real_is_file=Path.is_file
+            # Adapt only the rooted-device/bus boundaries; bundles, IPK payload,
+            # private file metadata and recovery digests are checked for real.
+            with patch.object(bootstrap,'STATE',fixture.base/'new-updater'), \
+                 patch.object(bootstrap,'ROOT_STATE',fixture.root), \
+                 patch.object(bootstrap,'INSTALLED',fixture.installed), \
+                 patch.object(bootstrap,'HOOK',fixture.base/'new-hook'), \
+                 patch.object(bootstrap,'safe_bytes',fixture.device_module.safe_bytes), \
+                 patch.object(bootstrap.os,'geteuid',return_value=0), \
+                 patch.object(Path,'is_file',lambda p: str(p)=='/usr/bin/luna-send' or real_is_file(p)), \
+                 patch.object(Device,'routing_status',return_value={'active':False,'safe':True}):
+                result=bootstrap.preflight(fixture.payload/'root-updater',fixture.payload/'root')
+            self.assertEqual(result[3],(fixture.root/'recovery-provision.json').read_bytes())
+            self.assertFalse((fixture.base/'new-updater').exists())
+
     def test_permissions_pin_service_methods_and_callers(self):
         files=permission_plan()
         text=json.dumps(files)

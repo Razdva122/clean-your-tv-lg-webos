@@ -7,6 +7,22 @@ prerequisite. A lost connection offers Try again on the same approved goal and
 saved target. Actual OS access denial and busy work get their own instructions.
 No automatic TV reboot or hidden retry runs. [User instructions](../RECOVERY.md).
 
+Current source extends immediate completion to actual Root and No-root removal
+when controls/startup are restored, package/file absence is verified, no original
+setup is unresolved and current process inspection proves quiescence. Root's
+independent Node tail repeats the complete proof before runtime retirement;
+`cleanup_without_restart` never replaces those checks. Legacy records still
+require their original restart proof. No-root durably marks its own boot-marker
+release before deletion, so a lost response cannot turn release into reboot
+proof; a genuinely verified restart is retained across a failed host completion.
+Reusing that proof requires fresh process checks; reappeared processes invalidate
+it and capture a new baseline before another restart request.
+Inline interpreters, renamed app/service processes, deleted executables/cwds and
+shell commands referencing owned paths prevent same-boot completion. Final-tail
+live-process refusals request restart; other unverified final cleanup remains
+pending with retry. Connection loss and package refusal use distinct titles.
+These are source/host checks, not physical TV acceptance or release evidence.
+
 The released continuation improvements add a narrow exception for an initially empty No-root
 TV: two current absence/process checks, no inherited operation and confirmed
 input-shortcut cleanup permit immediate completion. Unreadable/anonymous/live
@@ -38,7 +54,9 @@ or missing/false proof result must stay neutral.
 | Verified full removal → Root or No-root (published) | Retire the completed destructive lease, keep old retries read-only, and bind a Root-SSH No-root successor under the original locks; recover incomplete goals before new setup | `test_root_no_root_handoff`, `test_clean_removal` and `test_cleanup_tail`; [contract and host/device limits](CLEAN-REMOVAL-REINSTALLATION.md) |
 | Root removal catalog denied or timed out | Read the ordinary application catalog once; malformed replies and two unavailable catalogs remain blocked. Keep fixed-path sweeping/absence, registration and routing verification | `test_clean_removal` catalog cases and `test_cleanup_tail` fallback/residue checks; [source record](../history/2026-11-07-issue240-removal-catalog.md) |
 | Root removal without `systemprofile` (published) | Admit only the exact missing-service reply, stock LG Home in Settings Service, and lock-held pre-restore proof that no current or backed-up routing inverse/backend exists. Preserve old fences, restoration, package absence and restart checks; ACL/timeouts, malformed replies, foreign Home and routing evidence still block | `test_clean_removal` webOS 5 cases, `test_cleanup_tail` stock-settings cases and `test_update_luna` exact-reply cases; [source scope and limits](../history/2026-11-07-issue240-profileless-removal.md) |
+| Retained native Root removal without Home settings (source preparation) | Bind a successful current native restore to the preserved backend SHA-256, admit only the matching native inverse names and recheck current stock-compositor before deletion. Final Node requires no live routing evidence. Do not downgrade this proof to never-applied | `test_clean_removal` retained-native cases and `test_cleanup_tail` restored-native/never-applied cases; [source checks and limits](../history/2026-11-10-issue418-native-home-readback.md) |
 | Never-activated Root removal without Home APIs (published) | Use the lock-held original pre-activation stage, preserved routing inverse and current routing-path absence to prove CYTV never changed Home. Recheck before each destructive continuation and in the final Node process; retain full restart/package/private-data verification. New routing evidence blocks cleanup before deletion | `test_clean_removal` never-activated/never-applied cases and `test_cleanup_tail` untouched-Home cases; [source verification and limits](../history/2026-11-08-issue101-untouched-home-removal.md) |
+| No-root boot-check failure (source preparation, #472) | Preserve fixed boot action/step, guard reason, exception code, filesystem operation and volatile-directory attributes in standard reports/history. Fail before consuming a boot proof; original C5 cause remains unknown | Actual Node guard/fsync failures, marker retry, symlink refusal, typed transport failure and report/history privacy cases; [source evidence](../history/2026-11-10-issue472-removal-boot-diagnostics.md) |
 | Retried Root cleanup fails differently | Keep the first failure and export the latest fixed call/reason/code and stage separately | `test_retry_keeps_first_and_latest_failure_separate`; `test_diagnostic_context` exported-report privacy regression |
 | Root catalog access | Read both fixed catalogs directly over SSH without Node subprocesses; reuse the current local icon/normalization reader. A failed optional input query warns and keeps valid apps, while failed/empty app reads and connection loss still block. Partial inventory stays unverified; no SSAP pairing or new permission | Actual Node program/reader with `child_process` loading forbidden, bounded SSH replies and CLI/checklist regressions in `tests.cytv.test_clean_reinstall`; No-root keeps the existing SSAP path |
 | Root inventory read fails (unreleased, #397) | Retain separate fixed application/input failure reasons and bounded Luna codes; no raw replies or app list in diagnostics. Required apps still block, optional inputs still warn | Real Node stdin reader/host and exported-report privacy cases in `tests.cytv.test_clean_reinstall` / `test_diagnostic_context`; real child-process classifications in `tests/apps/root-inventory-diagnostics.cjs` |

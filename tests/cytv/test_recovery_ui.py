@@ -3,6 +3,17 @@ import unittest
 
 
 class RecoveryPresentationTests(unittest.TestCase):
+    def test_connection_pending_cleanup_and_package_refusal_have_distinct_results(self):
+        from cytv.recovery_ui import removal_title, removal_waiting
+        def plan(reason):
+            return {'disposition':'clean-removal','reason':reason,'removal':{'stage':'private-cleanup','reason':reason}}
+        self.assertEqual(removal_title(plan('connection-interrupted')), 'Check the TV connection to continue removal')
+        self.assertEqual(removal_title(plan('private-cleanup-incomplete')), 'Finish Clean Your TV cleanup')
+        self.assertEqual(removal_title(plan('removal-failed')), 'The TV could not remove a package')
+        self.assertTrue(removal_waiting(plan('private-cleanup-incomplete')))
+        self.assertFalse(removal_waiting(plan('removal-failed')))
+        self.assertFalse(removal_waiting(plan('private-cleanup-incomplete'),{'code':'ssh-timeout'}))
+
     def test_known_cleanup_phase_and_blocker_have_plain_instructions(self):
         from cytv.recovery_ui import removal_details
         self.assertEqual(removal_details({'disposition':'clean-removal','removal':{

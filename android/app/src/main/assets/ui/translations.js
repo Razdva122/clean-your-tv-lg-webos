@@ -17,6 +17,7 @@ const languages = {
 };
 const words = {
   'cs': {
+    removalConnection: 'Zkontrolujte připojení k TV a pokračujte v odebrání',
     'tryAgain': 'Zkusit znovu',
     'removalPending': 'Odebrání ještě není dokončeno.',
     'restartRemoval': 'Restartujte TV pro dokončení odebrání',
@@ -214,6 +215,7 @@ const words = {
       'Ověření balíčků, zpětná kontrola spuštění a vaše pozorování tlačítka Home jsou samostatné výsledky.'
   },
   'ru': {
+    removalConnection: 'Проверьте подключение к ТВ, чтобы продолжить удаление',
     'tryAgain': 'Попробовать снова',
     'removalPending': 'Удаление ещё не завершено.',
     'restartRemoval': 'Перезапустите ТВ для завершения удаления',
@@ -409,6 +411,7 @@ const words = {
       'Проверка пакетов, состояние запуска и ваше наблюдение за Home — разные результаты.'
   },
   'en': {
+    removalConnection: 'Check the TV connection to continue removal',
     'tryAgain': 'Try again',
     'removalPending': 'Removal is not finished yet.',
     'restartRemoval': 'Restart the TV to finish removal',
@@ -603,6 +606,7 @@ const words = {
       'Package verification, startup readback and your Home-button observation are separate results.'
   },
   'de': {
+    removalConnection: 'TV-Verbindung prüfen, um die Entfernung fortzusetzen',
     'tryAgain': 'Erneut versuchen',
     'removalPending': 'Die Entfernung ist noch nicht abgeschlossen.',
     'restartRemoval': 'TV neu starten, um die Entfernung abzuschließen',
@@ -805,6 +809,8 @@ const words = {
       'Paketprüfung, Startprüfung und Ihre Home-Beobachtung sind getrennte Ergebnisse.'
   },
   'fr': {
+    removalConnection:
+      'Vérifiez la connexion du téléviseur pour poursuivre la suppression',
     'tryAgain': 'Réessayer',
     'removalPending': 'La suppression n’est pas encore terminée.',
     'restartRemoval': 'Redémarrez le téléviseur pour terminer la suppression',
@@ -1007,6 +1013,8 @@ const words = {
       'Vérification des paquets, démarrage et votre observation de Home sont des résultats distincts.'
   },
   'it': {
+    removalConnection:
+      'Controlla la connessione TV per continuare la rimozione',
     'tryAgain': 'Riprova',
     'removalPending': 'La rimozione non è ancora terminata.',
     'restartRemoval': 'Riavvia la TV per completare la rimozione',
@@ -1205,6 +1213,8 @@ const words = {
       'Verifica pacchetti, avvio e tua osservazione di Home sono risultati separati.'
   },
   'es': {
+    removalConnection:
+      'Comprueba la conexión del TV para continuar la eliminación',
     'tryAgain': 'Intentar de nuevo',
     'removalPending': 'La eliminación aún no ha terminado.',
     'restartRemoval': 'Reinicia el TV para terminar la eliminación',
@@ -1403,6 +1413,7 @@ const words = {
       'La verificación de paquetes, el inicio y tu observación de Home son resultados separados.'
   },
   'pt-BR': {
+    removalConnection: 'Verifique a conexão da TV para continuar a remoção',
     'tryAgain': 'Tentar novamente',
     'removalPending': 'A remoção ainda não terminou.',
     'restartRemoval': 'Reinicie a TV para concluir a remoção',
@@ -1603,6 +1614,7 @@ const words = {
       'Verificação de pacotes, inicialização e sua observação de Home são resultados separados.'
   },
   'pl': {
+    removalConnection: 'Sprawdź połączenie z TV, aby kontynuować usuwanie',
     'tryAgain': 'Spróbuj ponownie',
     'removalPending': 'Usuwanie nie zostało jeszcze zakończone.',
     'restartRemoval': 'Uruchom TV ponownie, aby zakończyć usuwanie',
@@ -1800,6 +1812,7 @@ const words = {
       'Weryfikacja pakietów, odczyt startu i Twoja obserwacja Home to osobne wyniki.'
   },
   'ko': {
+    removalConnection: '제거를 계속하려면 TV 연결을 확인하세요',
     'tryAgain': '다시 시도',
     'removalPending': '제거가 아직 완료되지 않았습니다.',
     'restartRemoval': '제거를 완료하려면 TV를 다시 시작하세요',
@@ -1988,6 +2001,7 @@ const words = {
       '패키지 검증, 시작 확인, Home 버튼 관찰은 별도의 결과입니다.'
   },
   'hi': {
+    removalConnection: 'हटाना जारी रखने के लिए TV का कनेक्शन जाँचें',
     'tryAgain': 'फिर कोशिश करें',
     'removalPending': 'हटाना अभी पूरा नहीं हुआ है।',
     'restartRemoval': 'हटाना पूरा करने के लिए TV पुनः शुरू करें',
@@ -2172,6 +2186,7 @@ const words = {
       'पैकेज सत्यापन, प्रारंभ जाँच और आपका Home अवलोकन अलग परिणाम हैं।'
   },
   'zh-Hans': {
+    removalConnection: '检查电视连接以继续卸载',
     'tryAgain': '重试',
     'removalPending': '移除尚未完成。',
     'restartRemoval': '重启电视以完成移除',
@@ -2343,6 +2358,7 @@ const words = {
     'tvChecksDesc': '软件包验证、启动状态回读和您的 Home 按钮观察是不同结果。'
   },
   'zh-Hant': {
+    removalConnection: '檢查電視連線以繼續解除安裝',
     'tryAgain': '重試',
     'removalPending': '移除尚未完成。',
     'restartRemoval': '重新啟動電視以完成移除',

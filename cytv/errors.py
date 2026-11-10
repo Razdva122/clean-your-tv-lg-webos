@@ -189,6 +189,30 @@ class TVNotReady(TVConnectionError):
                          close_code=1008, reason_code='tv-not-ready')
 
 
+def root_driver_details(value, *, keep_attempt=False):
+    """Fixed driver callsites only; no remote prose, paths or attempt in reports."""
+    if not isinstance(value,dict) or type(value.get('schema',1)) is not int or value.get('schema',1)!=1:return {}
+    names=('ValueError','RuntimeError','OSError','PermissionError','FileNotFoundError',
+           'FileExistsError','CalledProcessError','TimeoutExpired','TypeError','KeyError','unknown')
+    if value.get('exception_type') not in names:return {}
+    result={'exception_type':value['exception_type']}
+    files=('deploy.py','installation.py','c1_gate.py','c1_keyfilter.py','package_data.py',
+           'python_binding.py','observed_install.py','provision.py','store.py')
+    frames=value.get('frames',[])
+    if not isinstance(frames,list) or len(frames)>8:return {}
+    result['frames']=[{'file':frame['file'],'line':frame['line']} for frame in frames
+        if isinstance(frame,dict) and frame.get('file') in files
+        and type(frame.get('line')) is int and 1<=frame['line']<=10000]
+    for key,low,high in (('errno',0,4095),('exit_status',-255,255)):
+        number=value.get(key)
+        if type(number) is int and low<=number<=high:result[key]=number
+    if keep_attempt:
+        attempt=value.get('attempt')
+        if not isinstance(attempt,str) or not re.fullmatch('[a-f0-9]{32}',attempt):return {}
+        result.update(schema=1,attempt=attempt)
+    return result
+
+
 def root_recovery_details(value):
     """Bounded categories only: device diagnostics are untrusted input."""
     if not isinstance(value, dict) or type(value.get('schema', 1)) is not int or value.get('schema', 1) != 1:
@@ -239,6 +263,30 @@ OBSERVER_REASONS = (
     'unsupported-command', 'unsupported-storage', 'upload-too-large',
     'writable-directory',
 )
+
+
+CLEANUP_BOOT_ACTIONS = ('boot-create', 'boot-probe', 'boot-retire', 'boot-release')
+
+
+def no_root_cleanup_details(value):
+    """Fixed boot-check categories only; revalidate remote and persisted evidence."""
+    if type(value) is not dict:return {}
+    allowed = {
+        'action': CLEANUP_BOOT_ACTIONS,
+        'step': ('runtime', 'boot-root', 'boot-proof', 'boot-read', *CLEANUP_BOOT_ACTIONS),
+        'failure': ('runtime-error', 'command-failed', 'transport-error'),
+        'exception_name': OBSERVER_EXCEPTION_NAMES,
+        'exception_code': OBSERVER_EXCEPTION_CODES,
+        'filesystem_operation': OBSERVER_FILESYSTEM_OPERATIONS,
+        'reason': ('unsafe-path', 'invalid-boot-identity', 'invalid-cleanup-action', 'invalid-staging-scope'),
+        'directory_owner': ('root', 'current-user', 'other'),
+        'directory_type': ('directory', 'symlink', 'other'),
+    }
+    result = {key:value[key] if type(value.get(key)) is str and value[key] in choices else 'unknown'
+              for key,choices in allowed.items()}
+    mode=value.get('directory_mode')
+    result['directory_mode']=mode if type(mode) is str and re.fullmatch('[0-7]{4}',mode) else 'unknown'
+    return result
 
 
 def no_root_observer_details(value):

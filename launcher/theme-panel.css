@@ -333,9 +333,7 @@
 }
 #homeThemePanel.theme-inline .theme-installed-grid {
   display: flex;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  overflow-y: hidden;
+  flex-wrap: wrap;
   padding: 8px;
   margin: 0 0 16px;
 }
@@ -343,8 +341,8 @@
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  flex: 0 0 320px;
-  width: 320px;
+  flex: 0 0 calc(33.333% - 16px);
+  width: calc(33.333% - 16px);
   max-width: calc(100% - 16px);
   margin: 8px;
   padding: 8px;
@@ -352,6 +350,12 @@
   border-radius: 12px;
   background: #171e27;
   align-items: stretch;
+}
+@media (max-width: 1400px) {
+  #homeThemePanel.theme-inline .theme-option {
+    flex-basis: calc(50% - 16px);
+    width: calc(50% - 16px);
+  }
 }
 #homeThemePanel.theme-inline .theme-option[data-selected='true'] {
   border-color: #bcd8f6;

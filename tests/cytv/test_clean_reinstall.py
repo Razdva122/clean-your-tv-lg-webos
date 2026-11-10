@@ -332,7 +332,7 @@ class RootInventoryCheckTests(unittest.TestCase):
                 events=[]
                 code=cli.main(['install','--host','192.0.2.10','--edition','root','--data-dir',tmp,
                                '--yes','--language','en'],connect=lambda *a:MagicMock(),
-                              write=DesktopConsole(lambda kind,value:events.append((kind,value))))
+                              ask=lambda _: '{}', write=DesktopConsole(lambda kind,value:events.append((kind,value))))
                 self.assertEqual(code,0,str(events))
                 rows=[value for kind,value in events if kind=='check' and value['id']=='inventory']
                 self.assertEqual(rows[-1]['status'],expected)

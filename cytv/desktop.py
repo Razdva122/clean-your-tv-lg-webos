@@ -114,6 +114,9 @@ class DesktopConsole(Console):
         self.emit('selected-profile', {key:profile[key] for key in
                   ('host','edition','port','connection','root_variant') if key in profile})
 
+    def installation_settings(self, value):
+        self.emit('installation-settings', {key:value[key] for key in ('renewal','block_updates') if type(value.get(key)) is bool})
+
 
 class Channel:
     def __init__(self, emit):

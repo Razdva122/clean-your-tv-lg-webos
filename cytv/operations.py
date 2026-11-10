@@ -447,6 +447,11 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
                 apply_activation_reason(error, self.tv_info)
             error.root_action = action
             error.root_boundary = 'driver'
+            detail=getattr(error,'_root_driver_failure',{})
+            if action=='install' and isinstance(detail,dict) and detail.get('attempt')==attempt:
+                from .errors import root_driver_details
+                error.root_driver=root_driver_details(detail)
+            if hasattr(error,'_root_driver_failure'):del error._root_driver_failure
             if action == 'install':
                 # Read data only; never rerun the retained driver or installation.
                 code = """import os,stat,json
@@ -1884,6 +1889,9 @@ print('CYTV_PROJECT_REMOVED')
         phase=reply.get('stage')
         if phase in REMOVAL_STAGES:
             self.store.checkpoint(self.profile,stage=phase,removal_reason=reply.get('reason') if reply.get('reason') in REMOVAL_REASONS else 'ownership-conflict')
+        if reply.get('cleanup_error') == 'owned-process-still-used':
+            self.store.checkpoint(self.profile,stage='restart-required',removal_reason='restart-required')
+            return {'removed':False,'verified_clean':False,'restart_required':True}
         result=reply.get('result',{})
         if result.get('restart_required') is True:
             self.store.checkpoint(self.profile,stage='restart-required',removal_reason='restart-required',cleanup_boot_id=reply.get('cleanup_boot_id'))
