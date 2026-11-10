@@ -251,6 +251,9 @@ def worker_summary(value):
                 'timeout','oversized-reply','malformed-reply','client-start-failed'))}
         code=detail.get('error_code')
         if type(code) is int and -(2**31)<=code<2**31:result['luna']['error_code']=code
+    from .errors import root_driver_details
+    driver=root_driver_details(value.get('root_driver'))
+    if driver:result['root_driver']=driver
     return result
 
 

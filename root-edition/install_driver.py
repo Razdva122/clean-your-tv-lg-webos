@@ -33,6 +33,9 @@ def failure_summary(error):
     from updater.luna import summary
     detail=summary(getattr(error,'luna',None))
     if detail:result['luna']=detail
+    from deploy import install_failure_details
+    detail=install_failure_details(getattr(error,'root_driver',None))
+    if detail:result['root_driver']=detail
     return result
 
 

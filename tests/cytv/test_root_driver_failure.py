@@ -41,6 +41,23 @@ with patch.object(deploy,'require_device',side_effect=PermissionError(13,'PRIVAT
         self.assertNotIn('PRIVATE',result.stdout)
         self.assertLess(len(result.stdout),4096)
 
+    def test_nested_native_cause_survives_standard_report_and_history(self):
+        from tests.cytv.test_operations import OperationTests, Remote
+        fixture=OperationTests();fixture.setUp();self.addCleanup(fixture.doCleanups)
+        installer=fixture.installer(Remote(),'root')
+        fixture.store.begin(installer.profile,'install',stage='setup')
+        detail={key:value for key,value in DETAIL.items() if key not in ('schema','attempt')}
+        installer.tv_info['status']={'product':{'state':'recovery_required','stage':'root-deploy',
+            'failure':{'exception_type':'CalledProcessError','exit_status':1,
+                'root_driver':dict(detail,message='PRIVATE',attempt=ATTEMPT)}}}
+        error=TVCommandError(1)
+        report=json.loads(diagnostics.create_report(fixture.store,'install',installer.profile,
+            'install-root',error,tv_info=installer.tv_info,status=installer.tv_info['status']).read_text())
+        self.assertEqual(report['status']['product']['failure'].get('root_driver'),detail)
+        self.assertEqual(report['first_failure']['status']['product']['failure'].get('root_driver'),detail)
+        self.assertNotIn('PRIVATE',json.dumps(report))
+        self.assertNotIn(ATTEMPT,json.dumps(report))
+
     def failure(self, raw):
         remote=SSH.__new__(SSH);channel=Mock();remote.channel=lambda _:channel
         def chunks(channel, timeout):

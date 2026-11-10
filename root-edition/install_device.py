@@ -340,16 +340,35 @@ class LocalDevice:
         # The parent owns the shared product mutex. Execute only this upload's
         # verified driver in isolation, without taking a second deployment lock.
         root=Path(payload)/'root'
+        import uuid
+        attempt=uuid.uuid4().hex
         program=('import sys,json;from pathlib import Path\n'
             'sys.path.insert(0,'+repr(str(root))+')\nimport deploy\n'
-            'bundle=Path('+repr(str(root))+')\n'
-            'release=json.loads(deploy.checked_file(bundle,"release.json"))\n'
-            'if release.get("routing")!="compositor-keyfilter-v1":raise ValueError("current_compositor_support_required")\n'
-            'admission=deploy.experimental_admission(release["routing"],owned_operation='+repr(self.operation['id'])+')\n'
-            'print(json.dumps(deploy.install(bundle,experimental_c1_gate=True,_experimental_admission=admission)))\n')
-        result=subprocess.run([sys.executable,'-I','-B','-c',program],check=True,
-            stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=1080,
-            pass_fds=(self.ownership.fd,))
+            'try:\n'
+            ' bundle=Path('+repr(str(root))+')\n'
+            ' release=json.loads(deploy.checked_file(bundle,"release.json"))\n'
+            ' if release.get("routing")!="compositor-keyfilter-v1":raise ValueError("current_compositor_support_required")\n'
+            ' admission=deploy.experimental_admission(release["routing"],owned_operation='+repr(self.operation['id'])+')\n'
+            ' print(json.dumps(deploy.install(bundle,experimental_c1_gate=True,_experimental_admission=admission)))\n'
+            'except Exception as error:\n'
+            ' print(json.dumps({"returnValue":False,"root_install_failure":deploy.install_failure(error,attempt='+repr(attempt)+')}))\n'
+            ' sys.exit(1)\n')
+        try:
+            result=subprocess.run([sys.executable,'-I','-B','-c',program],check=True,
+                stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=1080,
+                pass_fds=(self.ownership.fd,))
+        except subprocess.CalledProcessError as error:
+            # The synchronous native path has no detached worker.log. Carry only
+            # this invocation's bounded child cause into the durable request.
+            import deploy
+            try:
+                raw=error.stdout
+                reply=json.loads(raw) if isinstance(raw,(str,bytes)) and len(raw)<=4096 else None
+                detail=(deploy.install_failure_details(reply.get('root_install_failure'),attempt)
+                        if isinstance(reply,dict) and reply.get('returnValue') is False else {})
+                if detail:error.root_driver=detail
+            except (ValueError,TypeError,UnicodeError):pass
+            raise
         return json.loads(result.stdout)
 
     def deploy(self, payload, options):
