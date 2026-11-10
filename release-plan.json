@@ -64,10 +64,11 @@
     }
   ],
   "excluded": [],
-  "acceptance": "",
+  "acceptance": "2026-11-10: maintainer-owned OLED55C3RLA, firmware43.21.71/webOS SDK11.2.0, normal Root FHD, Magic Remote exact model unknown; macOS15.6.1 ARM64 host. Build42808578156:1 and protected Root QA signing42811994143: exact final artifacts/signature, ordinary signed update, real profile/health, runtime and actual retained-Updater integrity, retained rollback\u2192forward and final owner-observed arrows/OK/Back, short Home\u2192LG Home with Home Off, volume/audio pass. All four selected R2 groups pass; hashes, exact observations and untested scope: docs/history/2026-11-10-release-1.16.0-candidate.md#r2-04-and-final-selected-case-exit-check. No physical No-root/iPhone/Home-On/emergency/power/public-feed acceptance claimed; no publication authorized.",
   "build": {
     "run_id": 42808578156,
     "attempt": 1,
     "source": "f23ab1ac92e958ab2720748e9b6fa59ae641916d"
-  }
+  },
+  "acceptance_build": "42808578156:1"
 }
