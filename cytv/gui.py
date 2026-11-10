@@ -1,5 +1,6 @@
 """Windowed cytv wizard. Run with python -m cytv.gui."""
 import html
+import json
 from pathlib import Path
 import shutil
 import subprocess
@@ -10,12 +11,12 @@ from PySide6.QtCore import QObject, Signal, QUrl, QTimer, Qt
 from PySide6.QtGui import QDesktopServices, QIcon, QFontDatabase, QFont, QPixmap
 from PySide6.QtWidgets import (QApplication, QFileDialog, QFrame, QHBoxLayout,
                               QLabel, QLineEdit, QMainWindow, QMessageBox, QProgressBar,
-                              QPushButton, QTextBrowser, QVBoxLayout, QWidget, QButtonGroup, QDialog, QScrollArea, QLayout)
+                              QPushButton, QTextBrowser, QVBoxLayout, QWidget, QButtonGroup, QDialog, QScrollArea, QLayout, QCheckBox)
 
 from cytv import __version__, cli, diagnostics, i18n
 from cytv.i18n import translate as tr
 from cytv.desktop import Channel
-from cytv.gui_style import STYLE, TVPreview, Select, EditionOption, BrandSignature, WrappedLabel
+from cytv.gui_style import STYLE, TVPreview, Select, EditionOption, BrandSignature, WrappedLabel, ThemeCard, ToggleSwitch
 
 MAINTENANCE_ACTIONS = (
     ('Review recovery options', 'recover'),
@@ -45,6 +46,7 @@ class Wizard(QMainWindow):
         self.report = None
         self.recovery_profile = None
         self.selected_profile = None
+        self.install_settings_current = {}
         self.recovery_plan = None
         self.failure_help = None
         self.worker = None
@@ -82,7 +84,7 @@ class Wizard(QMainWindow):
         self.step_rows = []
         self.step_names = []
         self.step_numbers = []
-        for number in range(1, 5):
+        for number in range(1, 6):
             row = QFrame()
             row.setObjectName('step')
             line = QHBoxLayout(row)
@@ -286,6 +288,7 @@ class Wizard(QMainWindow):
         self.reset_checks()
         self.recovery_profile = None
         self.selected_profile = None
+        self.install_settings_current = {}
         self.recovery_plan = None
         self.failure_help = None
         self.preparation = []
@@ -302,7 +305,7 @@ class Wizard(QMainWindow):
         self.badge.setText(tr('Before you begin'))
         self.rail_title.setText(tr('Set up my TV'))
         self.rail_note.setText(tr('Keep your TV on and watch for a pairing request.'))
-        for label, title in zip(self.step_names, ('Connect to your TV', 'Choose your edition', 'Prepare the TV connection', 'Review and install')):
+        for label, title in zip(self.step_names, ('Connect to your TV', 'Choose your edition', 'Prepare the TV connection', 'Review and install', 'Set up your Clean Your TV')):
             label.setText(tr(title))
         self.title.setText(tr('Make your TV feel like yours'))
         self.subtitle.setText(tr('Install Root or No-root. We will help you choose.'))
@@ -423,13 +426,13 @@ class Wizard(QMainWindow):
             self.preparation = []
             self.content.setHtml(self.review_content)
             self.title.setText(self.review_title)
-            self.badge.setText(tr('Step 4 of 4'))
-            self.update_steps(4)
+            self.update_steps(self.preparation_return_step)
+            self.badge.setText(tr(f'Step {self.current_step} of 5'))
             self.show_prompt(prompt)
             return
         self.clear_form()
         self.title.setText(tr('Prepare the TV connection'))
-        self.badge.setText(tr('Step 3 of 4') + f' · {index + 1} / {len(self.preparation)}')
+        self.badge.setText(tr('Step 3 of 5') + f' · {index + 1} / {len(self.preparation)}')
         self.update_steps(3)
         title, messages = self.preparation[index]
         image = {'1. Developer Mode': 'sign-in', '2. Dev Mode Status': 'dev-mode',
@@ -459,6 +462,7 @@ class Wizard(QMainWindow):
         self.report = None
         self.recovery_profile = None
         self.selected_profile = None
+        self.install_settings_current = {}
         self.recovery_plan = None
         self.failure_help = None
         self.pending = None
@@ -498,7 +502,11 @@ class Wizard(QMainWindow):
         self.worker.start()
 
     def receive(self, kind, value):
-        if kind == 'check':
+        if kind == 'installation-settings':
+            self.install_settings_current = {key:value[key] for key in ('renewal','block_updates') if type(value.get(key)) is bool}
+            if isinstance(value.get('tv_name'), str):
+                self.install_settings_current['tv_name'] = value['tv_name']
+        elif kind == 'check':
             self.check_panel.setAccessibleName(tr('TV checks'))
             self.content.setMaximumHeight(140)
             self.check_results[value['id']] = dict(value)
@@ -525,7 +533,7 @@ class Wizard(QMainWindow):
             if self.command == 'install':
                 self.title.setText(tr(title))
                 self.subtitle.hide()
-                self.badge.setText(tr(f'Step {number} of 4'))
+                self.badge.setText(tr(f'Step {number} of 5'))
                 self.update_steps(number)
             else:
                 self.title.setText(tr(self.operation_title))
@@ -672,12 +680,14 @@ class Wizard(QMainWindow):
                 if not self.report:
                     self.subtitle.setText(self.subtitle.text()+'\n'+tr('A diagnostic report could not be created. Include the visible error when opening an issue.'))
             if self.recovery_plan:
-                from .recovery_ui import removal_details, removal_connection_failure
+                from .recovery_ui import removal_details, removal_connection_failure, removal_title, removal_waiting
                 detail = removal_details(self.recovery_plan, self.failure_help)
                 connection = removal_connection_failure(self.recovery_plan, self.failure_help)
                 show_restart = restart and not connection
                 if cleanup and not completed:
-                    self.title.setText(tr('Cancelled' if value == 130 else 'Restart the TV to finish removal' if show_restart else 'Removal is not finished yet.'))
+                    self.title.setText(tr('Cancelled' if value == 130 else removal_title(self.recovery_plan, self.failure_help)))
+                    if removal_waiting(self.recovery_plan, self.failure_help):
+                        self.set_error_state(False)
                     self.badge.setText(self.title.text())
                     message = detail.get('blocker_text') or 'Removal could not be confirmed. Check the connection and try again.'
                     if self.failure_help and self.failure_help.get('code') in ('ssh-auth-root','ssh-auth-no-root','ssh-key-file','ssh-identity','developer-key-server','developer-key-unlock','developer-key-response'):
@@ -753,6 +763,133 @@ class Wizard(QMainWindow):
         self.button('Back to start', self.home)
         address.setFocus()
 
+    def show_install_settings(self):
+        from . import install_settings as settings
+        self.title.setText(tr(settings.TITLE))
+        self.content.clear()
+        self.content.hide()
+        self.preview.hide()
+        self.subtitle.setText(tr('Clean Your TV is installed.'))
+        self.subtitle.show()
+        scroll = QScrollArea()
+        scroll.setObjectName('installationSettings')
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setMinimumHeight(240)
+        panel = QWidget()
+        panel.setObjectName('installationSettingsFields')
+        fields = QVBoxLayout(panel)
+        fields.setContentsMargins(0, 0, 12, 0)
+        fields.setSpacing(10)
+        fields.setSizeConstraint(QLayout.SizeConstraint.SetMinAndMaxSize)
+        scroll.setWidget(panel)
+        self.form_layout.addWidget(scroll, 1)
+        self.update_steps(5)
+        self.badge.setText(tr('Step 5 of 5'))
+        profile = self.selected_profile or {'edition': 'no-root'}
+        fields.setAlignment(Qt.AlignmentFlag.AlignTop)
+        name_label = QLabel(tr('TV name'))
+        name = QLineEdit(self.install_settings_current.get('tv_name', 'Home'))
+        name.setObjectName('tvName')
+        name.setMaxLength(96)
+        name_label.setBuddy(name)
+        fields.addWidget(name_label)
+        fields.addWidget(name)
+        name_error = QLabel('')
+        name_error.setWordWrap(True)
+        name_error.setObjectName('tvNameError')
+        fields.addWidget(name_error)
+        fields.addWidget(QLabel(tr('Theme')))
+        cards_row = QWidget()
+        cards_layout = QHBoxLayout(cards_row)
+        cards_layout.setContentsMargins(0, 0, 0, 0)
+        cards_layout.setSpacing(12)
+        group = QButtonGroup(cards_row)
+        cards = []
+        for key, title in settings.THEMES:
+            card = ThemeCard(title, key, self.theme_preview_path(key))
+            card.setObjectName('theme-' + key)
+            group.addButton(card)
+            cards_layout.addWidget(card, 1)
+            cards.append(card)
+        cards[0].setChecked(True)
+        fields.addWidget(cards_row)
+        fields.addSpacing(12)
+        def switch_row(key, title, help_text):
+            row = QWidget()
+            layout = QHBoxLayout(row)
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.setSpacing(16)
+            label = WrappedLabel(tr(title))
+            label.setObjectName('settingTitle')
+            toggle = ToggleSwitch(tr(title), tr('On'), tr('Off'))
+            toggle.setObjectName(key)
+            label.setBuddy(toggle)
+            layout.addWidget(label, 1)
+            layout.addWidget(toggle)
+            fields.addWidget(row)
+            hint = None
+            if help_text:
+                hint = WrappedLabel(tr(help_text))
+                hint.setObjectName('settingHint')
+                fields.addWidget(hint)
+            return toggle, hint
+        weather, _ = switch_row('weather', 'Show weather on Home', '')
+        def theme_changed():
+            ribbon = cards[2].isChecked()
+            weather.setEnabled(not ribbon)
+            if ribbon:
+                weather.setChecked(False)
+            weather.setToolTip(tr('Ribbon does not support weather.') if ribbon else '')
+            weather.setAccessibleDescription(tr('Ribbon does not support weather.') if ribbon else tr('On' if weather.isChecked() else 'Off'))
+        group.buttonToggled.connect(lambda *_:theme_changed())
+        switches = {}
+        current = self.install_settings_current
+        feature = ('block_updates', 'Block LG firmware updates', 'We recommend restarting the TV after applying.') if profile['edition'] == 'root' else (
+            ('renewal', 'Developer Mode auto-renewal (Beta)', 'Beta: monitor the official Developer Mode timer.')
+            if profile.get('connection') != 'root-ssh' else None)
+        if feature:
+            fields.addSpacing(8)
+            divider = QFrame()
+            divider.setObjectName('settingsDivider')
+            divider.setFixedHeight(1)
+            fields.addWidget(divider)
+            fields.addSpacing(8)
+            key, title, help_text = feature
+            toggle, hint = switch_row(key, title, help_text)
+            if key in current:
+                toggle.setChecked(current[key])
+            else:
+                toggle.setEnabled(False)
+                toggle.off_text = tr('Not checked')
+                toggle.setAccessibleDescription(tr('Not checked'))
+                toggle.updateGeometry()
+                hint.setText(tr('Current setting unavailable. Check it in Home settings.'))
+            switches[key] = toggle
+        def save():
+            value = {'theme': group.checkedButton().key, 'weather': weather.isChecked(), 'tv_name': name.text()}
+            for key, toggle in switches.items():
+                if toggle.isEnabled() and toggle.isChecked() != current[key]:
+                    value[key] = toggle.isChecked()
+            try:
+                validated = settings.validate(value, profile)
+            except ValueError:
+                name.setFocus()
+                name_error.setText(tr('TV name must contain at most 48 characters, without control characters.'))
+                return
+            self.submit(json.dumps(validated))
+        self.button('Continue', save, True)
+        self.button('Keep current settings', lambda: self.submit('{}'))
+        cards[0].setFocus()
+
+    def theme_preview_path(self, key):
+        sources = {'classic':'showcase/assets/classic-preview.png',
+                   'liquid-glass':'themes/liquid-glass/assets/preview.jpg',
+                   'ribbon':'themes/ribbon/assets/preview.jpg'}
+        filename = key + ('.png' if key == 'classic' else '.jpg')
+        packaged = cli.payload_dir() / 'setup-themes' / filename
+        return packaged if packaged.is_file() else Path(__file__).resolve().parents[1] / sources[key]
+
     def show_prompt(self, prompt):
         self.check_panel.hide()
         self.content.setMaximumHeight(16777215)
@@ -761,11 +898,16 @@ class Wizard(QMainWindow):
         self.cancel.setEnabled(True)
         self.clear_form()
         self.details_toggle.setChecked(False)
+        from .install_settings import PROMPT as SETTINGS_PROMPT
         if (self.preparation and self.preparation[0][0] == '1. Developer Mode'
-                and prompt.label.startswith('Connect to check installed versions?')):
+                and (prompt.label == SETTINGS_PROMPT or prompt.label.startswith('Connect to check installed versions?'))):
             self.review_title = self.title.text()
             self.review_content = self.content.toHtml()
+            self.preparation_return_step = self.current_step
             self.show_preparation(0, prompt)
+            return
+        if prompt.label == SETTINGS_PROMPT:
+            self.show_install_settings()
             return
         if prompt.secret:
             developer = prompt.credential_type == 'developer'
@@ -910,6 +1052,7 @@ class Wizard(QMainWindow):
             entry.setFocus()
 
     def submit(self, value):
+        self.content.show()
         if not self.pending:
             return
         if self.pending.secret:

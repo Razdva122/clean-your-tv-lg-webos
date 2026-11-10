@@ -16,7 +16,8 @@
     qualityButtons = [],
     minus,
     plus,
-    reset;
+    reset,
+    preferences;
   function t(source) {
     var prefix = 'Video dimensions do not match the theme. ';
     if (source.indexOf(prefix) === 0)
@@ -247,6 +248,7 @@
       });
     }
     panel.insertBefore(sourceControls, notice);
+    sourceControls.insertBefore(personalControls, library || null);
     var uploads = node('div', personalControls);
     receiveCYTV = button(uploads, 'wallpaperCYTV', function () {
       receive(false);
@@ -282,8 +284,20 @@
       invoke('cancel');
     });
     remove = button(personalControls, 'wallpaperRemove', function () {
-      stopReceiver();
-      invoke('remove');
+      if (!root.HomeI18n || !root.HomeI18n.confirm) return;
+      root.HomeI18n.confirm(
+        {
+          title: t('Remove personal wallpaper'),
+          message: t(
+            'Remove the saved wallpaper? Upload it again to use it later.'
+          ),
+          action: t('Remove personal wallpaper')
+        },
+        function () {
+          stopReceiver();
+          invoke('remove');
+        }
+      );
     });
   }
   function refreshPersonal() {
@@ -340,6 +354,7 @@
       hasPoster = !!value.posterURL,
       cap = value.capabilities || {},
       dim = typeof value.dim === 'number' ? value.dim : 0;
+    preferences.hidden = !hasPoster;
     title.textContent =
       value.source === 'personal'
         ? t('My wallpaper')
@@ -484,7 +499,8 @@
     actual = node('p', info, 'wallpaperActual');
     notice = node('p', panel, 'wallpaperNotice');
     notice.setAttribute('aria-live', 'polite');
-    var qualities = node('div', panel);
+    preferences = node('div', panel, 'wallpaperPreferences');
+    var qualities = node('div', preferences);
     qualities.className = 'wallpaper-quality';
     qualities.setAttribute('role', 'group');
     qualities.setAttribute('aria-label', t('Wallpaper quality'));
@@ -495,7 +511,7 @@
       el.setAttribute('data-wallpaper-quality', q);
       qualityButtons.push(el);
     });
-    inputWarning = node('div', panel, 'wallpaperInputPreviewWarning');
+    inputWarning = node('div', preferences, 'wallpaperInputPreviewWarning');
     inputWarning.hidden = true;
     inputWarningText = node(
       'p',
@@ -520,7 +536,7 @@
       'aria-describedby',
       'wallpaperInputPreviewWarningText'
     );
-    var dim = node('div', panel);
+    var dim = node('div', preferences);
     dim.className = 'wallpaper-dim';
     dimValue = node('p', dim, 'wallpaperDimValue');
     minus = button(dim, 'wallpaperDimMinus', function () {
@@ -535,7 +551,7 @@
         Math.min(0.85, Math.round(((state().dim || 0) + 0.05) * 100) / 100)
       );
     });
-    reset = button(panel, 'wallpaperReset', function () {
+    reset = button(preferences, 'wallpaperReset', function () {
       change('resetPreferences');
     });
     mountPersonal();

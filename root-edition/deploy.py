@@ -414,8 +414,36 @@ def main():
     print(json.dumps(result), flush=True)
 
 
-if __name__ == '__main__':
+def install_failure(error):
+    # A diagnostic for this invocation only; never a receipt or recovery authority.
+    import re, traceback
+    attempt=os.environ.get('CYTV_ROOT_INSTALL_ATTEMPT','')
+    if len(sys.argv)<2 or sys.argv[1]!='install' or not re.fullmatch('[a-f0-9]{32}',attempt):return None
+    files={'deploy.py','installation.py','c1_gate.py','c1_keyfilter.py','package_data.py',
+           'python_binding.py','observed_install.py','provision.py','store.py'}
+    frames=[{'file':Path(frame.filename).name,'line':frame.lineno}
+            for frame in traceback.extract_tb(error.__traceback__)
+            if Path(frame.filename).name in files and 1<=frame.lineno<=10000][-8:]
+    names=('ValueError','RuntimeError','OSError','PermissionError','FileNotFoundError',
+           'FileExistsError','CalledProcessError','TimeoutExpired','TypeError','KeyError')
+    name=type(error).__name__
+    result={'schema':1,'attempt':attempt,'exception_type':name if name in names else 'unknown','frames':frames}
+    if isinstance(error,OSError) and type(error.errno) is int and 0<=error.errno<=4095:result['errno']=error.errno
+    if isinstance(error,subprocess.CalledProcessError) and type(error.returncode) is int and -255<=error.returncode<=255:
+        result['exit_status']=error.returncode
+    return result
+
+
+def entrypoint():
     try: main()
     except Exception as exc:
-        print(json.dumps({'returnValue': False, 'error': str(exc), 'instruction': 'Stop; retain state and inspect. Do not repeat installation.'}), flush=True)
+        reply={'returnValue':False,'instruction':'Stop; retain state and inspect. Do not repeat installation.'}
+        detail=install_failure(exc)
+        if detail is not None:reply['root_install_failure']=detail
+        else:reply['error']=str(exc)
+        print(json.dumps(reply),flush=True)
         sys.exit(1)
+
+
+if __name__ == '__main__':
+    entrypoint()

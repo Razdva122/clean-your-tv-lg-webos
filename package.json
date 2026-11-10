@@ -5,6 +5,7 @@
     "lint:compat": "node scripts/check-tv-web.cjs",
     "test:tv-name": "node tests/tv-name.cjs",
     "test:tv-name:browser": "node tests/tv-name-ui.cjs",
+    "test:wallpaper:heic": "node tests/themes/personal-phone-heic-ui.cjs && node tests/themes/heic-worker-lifecycle.cjs",
     "test:compat": "node tests/web-build.cjs",
     "test:legacy-ui": "node tests/legacy-launcher.cjs",
     "test:geometry": "node tests/launcher-geometry.cjs",

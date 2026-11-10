@@ -33,6 +33,8 @@ const server = createServer((req, res) => {
       '.svg': 'image/svg+xml',
       '.jpg': 'image/jpeg',
       '.png': 'image/png',
+      '.webp': 'image/webp',
+      '.woff2': 'font/woff2',
       '.ttf': 'font/ttf',
       '.xml': 'application/xml'
     }[extname(file)] || 'text/html'
@@ -50,6 +52,181 @@ try {
     headless: true,
     channel: process.env.BROWSER_CHANNEL || 'chrome'
   });
+  // The landing page shows captures; the full renderer stays on /demo/.
+  const showcase = await browser.newPage();
+  showcase.on('pageerror', (error) => errors.push(error.message));
+  const requests = [];
+  showcase.on('request', (request) => requests.push(request.url()));
+  await showcase.goto(host + base + 'ru/');
+  assert.equal(await showcase.getByRole('radio').count(), 3);
+  await showcase
+    .locator('[data-poster="liquid-glass"]')
+    .waitFor({ state: 'visible' });
+  await showcase.getByRole('radio', { name: 'Classic', exact: true }).check();
+  await showcase
+    .locator('[data-poster="classic"]')
+    .waitFor({ state: 'visible' });
+  assert.match(
+    await showcase.locator('[data-poster="classic"]').getAttribute('src'),
+    /classic\.webp$/
+  );
+  await showcase.locator('.preview-toggle').click();
+  assert.equal(
+    await showcase.locator('[data-showcase]').getAttribute('data-paused'),
+    'true'
+  );
+  assert.match(
+    await showcase.locator('[data-poster="classic"]').getAttribute('src'),
+    /classic-still\.webp$/
+  );
+  await showcase.getByRole('radio', { name: 'Ribbon', exact: true }).check();
+  assert.match(
+    await showcase.locator('[data-poster="ribbon"]').getAttribute('src'),
+    /ribbon-still\.webp$/
+  );
+  await showcase.locator('.preview-toggle').click();
+  assert.match(
+    await showcase.locator('[data-poster="ribbon"]').getAttribute('src'),
+    /ribbon\.webp$/
+  );
+  assert.equal(await showcase.locator('iframe').count(), 0);
+  assert.equal(
+    requests.some((url) => url.includes('/demo/')),
+    false,
+    'landing loads no TV renderer'
+  );
+  assert.equal(
+    await showcase.locator('[data-open-demo]').getAttribute('href'),
+    base + 'demo/'
+  );
+  await showcase.close();
+  const reduced = await browser.newPage({ reducedMotion: 'reduce' });
+  const reducedRequests = [];
+  reduced.on('request', (r) => reducedRequests.push(r.url()));
+  await reduced.goto(host + base + 'en/');
+  assert.equal(
+    await reduced.locator('[data-showcase]').getAttribute('data-paused'),
+    'true'
+  );
+  assert.equal(
+    reducedRequests.some((url) =>
+      /\/(?:classic|liquid-glass|ribbon)(?:-small)?\.webp$/.test(url)
+    ),
+    false,
+    'reduced motion loads only stills'
+  );
+  await reduced.close();
+  const failedPreview = await browser.newPage();
+  await failedPreview.route('**/liquid-glass.webp', (request) =>
+    request.abort()
+  );
+  await failedPreview.goto(host + base + 'en/');
+  await failedPreview.waitForFunction(
+    () => document.querySelector('[data-showcase]').dataset.paused === 'true'
+  );
+  assert.match(
+    await failedPreview
+      .locator('[data-poster="liquid-glass"]')
+      .getAttribute('src'),
+    /-still\.webp$/
+  );
+  await failedPreview
+    .locator('[data-poster="liquid-glass"]')
+    .evaluate((image) => image.decode());
+  await failedPreview.close();
+  const staticShowcase = await browser.newPage({ javaScriptEnabled: false });
+  await staticShowcase.goto(host + base + 'ru/');
+  await staticShowcase
+    .getByRole('radio', { name: 'Liquid Glass', exact: true })
+    .check();
+  await staticShowcase
+    .locator('[data-poster="liquid-glass"]')
+    .waitFor({ state: 'visible' });
+  assert.equal(
+    await staticShowcase.locator('.preview-toggle').isVisible(),
+    false
+  );
+  assert.equal(
+    await staticShowcase.locator('[data-open-demo]').getAttribute('href'),
+    base + 'demo/'
+  );
+  await staticShowcase.close();
+  // The actual preview must fit its frame, even when overflow-x is clipped.
+  const responsive = await browser.newPage({ reducedMotion: 'reduce' });
+  const languages = [
+    'en',
+    'de',
+    'es',
+    'pt-BR',
+    'fr',
+    'it',
+    'ko',
+    'hi',
+    'pl',
+    'ru',
+    'cs',
+    'zh-Hans',
+    'zh-Hant'
+  ];
+  for (const lang of languages) {
+    for (const [width, height] of [
+      [320, 700],
+      [390, 844],
+      [768, 1024],
+      [820, 1180],
+      [1024, 768],
+      [1440, 900],
+      [1440, 600]
+    ]) {
+      await responsive.setViewportSize({ width, height });
+      await responsive.goto(host + base + lang + '/');
+      await responsive.evaluate(() => document.fonts.ready);
+      const failures = await responsive.evaluate(() => {
+        const issues = [];
+        for (const section of document.querySelectorAll('main > section')) {
+          const box = section.getBoundingClientRect();
+          for (const item of section.querySelectorAll(
+            'h1,h2,h3,p,a,img,.showcase-screen'
+          )) {
+            if (!item.checkVisibility()) continue;
+            const rect = item.getBoundingClientRect();
+            if (
+              rect.right > innerWidth + 2 ||
+              rect.left < -2 ||
+              rect.bottom > box.bottom + 2
+            )
+              issues.push([
+                section.id || 'hero',
+                item.tagName,
+                Math.round(rect.right),
+                Math.round(rect.bottom - box.bottom)
+              ]);
+          }
+        }
+        const stage = document
+          .querySelector('.showcase-stage')
+          .getBoundingClientRect();
+        for (const control of document.querySelectorAll(
+          '.hero .btn-row, .theme-picker'
+        )) {
+          if (control.getBoundingClientRect().bottom > stage.top + 1)
+            issues.push(['hero', 'preview covers controls']);
+        }
+        return issues;
+      });
+      assert.deepEqual(
+        failures,
+        [],
+        `${lang} at ${width}×${height}: preview/content crosses its frame or section`
+      );
+      if (shots && lang === 'ru')
+        await responsive.screenshot({
+          path: resolve(shots, `ru-layout-${width}-${height}.png`),
+          fullPage: true
+        });
+    }
+  }
+  await responsive.close();
   // Each visitor starts with fresh storage; regional browser tags map to site locales.
   for (const [languages, expected] of [
     [['ru-RU', 'en-US'], 'ru'],
@@ -177,6 +354,100 @@ try {
     .click();
   assert.equal(new URL(staticPage.url()).pathname, base + 'ru/help/');
   await staticPage.close();
+  // Article discovery, translation links and text remain usable without JavaScript.
+  const articleContext = await browser.newContext({ javaScriptEnabled: false });
+  const articlePage = await articleContext.newPage();
+  // The reading index must also be usable on phones without JavaScript.
+  await articlePage.setViewportSize({ width: 390, height: 844 });
+  await articlePage.goto(host + base + 'ru/articles/root-vs-no-root/');
+  const mobileContents = articlePage.locator('.mobile-toc');
+  assert.equal(
+    await mobileContents.count(),
+    1,
+    'article has a mobile table of contents'
+  );
+  assert.equal(
+    await mobileContents.getAttribute('open'),
+    null,
+    'mobile contents start collapsed'
+  );
+  await mobileContents.locator('summary').click();
+  const firstSection = mobileContents.locator('a').first();
+  const sectionHash = await firstSection.getAttribute('href');
+  await firstSection.click();
+  assert.equal(
+    decodeURIComponent(new URL(articlePage.url()).hash),
+    sectionHash
+  );
+  await articlePage.locator(sectionHash).waitFor({ state: 'visible' });
+  const topics = [
+    'change-lg-webos-home-screen',
+    'lg-tv-home-screen-ads',
+    'root-vs-no-root',
+    'lg-developer-mode'
+  ];
+  for (const lang of [
+    'en',
+    'de',
+    'es',
+    'pt-BR',
+    'fr',
+    'it',
+    'ko',
+    'hi',
+    'pl',
+    'ru',
+    'cs',
+    'zh-Hans',
+    'zh-Hant'
+  ]) {
+    await articlePage.setViewportSize({ width: 1440, height: 1000 });
+    for (const topic of ['', ...topics]) {
+      const response = await articlePage.goto(
+        host + base + lang + '/articles/' + (topic ? topic + '/' : '')
+      );
+      assert.equal(response.status(), 200);
+      await articlePage.locator('h1').waitFor({ state: 'visible' });
+      assert(
+        await articlePage.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth + 1
+        ),
+        lang + '/' + topic + ' article desktop overflow'
+      );
+      await articlePage.setViewportSize({ width: 320, height: 812 });
+      assert(
+        await articlePage.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth + 1
+        ),
+        lang + '/' + topic + ' article mobile overflow'
+      );
+      if (shots && lang === 'ru')
+        await articlePage.screenshot({
+          path: resolve(shots, 'ru-article-' + (topic || 'index') + '-320.png'),
+          fullPage: true
+        });
+      await articlePage.setViewportSize({ width: 1440, height: 1000 });
+    }
+  }
+  await articlePage.goto(host + base + 'ru/articles/root-vs-no-root/');
+  await articlePage.locator('.languages summary').click();
+  await articlePage.locator('.languages a[hreflang="zh-Hant"]').click();
+  assert.equal(
+    new URL(articlePage.url()).pathname,
+    base + 'zh-Hant/articles/root-vs-no-root/'
+  );
+  await articlePage.setViewportSize({ width: 320, height: 812 });
+  await articlePage.locator('.mobile-menu summary').focus();
+  await articlePage.keyboard.press('Enter');
+  await articlePage
+    .locator('.mobile-menu a[href="' + base + 'zh-Hant/articles/"]')
+    .click();
+  await articlePage.locator('.article-list h2 a').first().click();
+  assert.equal(
+    new URL(articlePage.url()).pathname,
+    base + 'zh-Hant/articles/change-lg-webos-home-screen/'
+  );
+  await articleContext.close();
   const page = await browser.newPage();
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('response', (r) => {
@@ -230,7 +501,7 @@ try {
       }
       // Load below-the-fold lazy images before judging resources or full-page QA.
       for (const img of await page.locator('img').all()) {
-        await img.scrollIntoViewIfNeeded();
+        if (await img.isVisible()) await img.scrollIntoViewIfNeeded();
         await img.evaluate((image) => image.decode());
       }
       await page.evaluate(() => scrollTo(0, 0));
@@ -268,7 +539,7 @@ try {
   }
   assert.deepEqual(errors, []);
   console.log(
-    'PASS browser language selection; remembered manual choice; explicit locale URLs; blocked storage; 78 pages without JavaScript; keyboard language switching; help deep links; mobile tables/layouts; legacy fragment routing; offline Root/No-root theme demo'
+    'PASS browser language selection; remembered manual choice; explicit locale URLs; blocked storage; 143 localized pages without JavaScript; article desktop/mobile layouts and topic-preserving translations; keyboard navigation; help deep links; mobile tables/layouts; legacy fragment routing; offline Root/No-root theme demo'
   );
 } finally {
   await browser?.close();

@@ -114,6 +114,9 @@ let browser;
     );
     await page.evaluate(() => receiveNative({ kind: 'finished', code: 2 }));
     assert.equal(await page.locator('.review-symbol').count(), 1);
+    assert.equal(await page.locator('h1').innerText(), event.titleText);
+    assert.equal(await page.locator('.error-result').count(), 0);
+    assert.equal(await page.locator('.error-summary').count(), 0);
     assert(
       (await page.locator('.recovery-info').innerText()).includes(
         event.blockerText

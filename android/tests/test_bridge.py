@@ -62,8 +62,10 @@ class BridgeTests(unittest.TestCase):
             'actions':['continue-removal','PRIVATE'], 'reason':'PRIVATE',
             'removal':{'stage':'private-cleanup','reason':'private-cleanup-incomplete','private':'PRIVATE'}})
         event = native.events[-1]
-        self.assertEqual(event['stageText'], 'Removing private setup data…')
-        self.assertEqual(event['blockerText'], 'Some project files remain. Try again to finish removal.')
+        self.assertEqual(event['stageText'], 'Verifying removal…')
+        self.assertEqual(event['blockerText'], 'Final cleanup could not be verified. Choose Try again to check and finish removal.')
+        self.assertEqual(event['titleText'], 'Finish Clean Your TV cleanup')
+        self.assertTrue(event['waiting'])
         self.assertEqual(event['actions'], ['continue-removal'])
         self.assertNotIn('PRIVATE', json.dumps(event))
 
@@ -219,7 +221,13 @@ class BridgeTests(unittest.TestCase):
             def emit(self, raw): self.events.append(json.loads(raw))
         with tempfile.TemporaryDirectory() as tmp:
             native=Native();reports=Path(tmp)/'reports';reports.mkdir()
-            report=reports/'diagnostic-123456abcdef.json';report.write_text('{}')
+            from cytv import diagnostics, state
+            from cytv.errors import TVCommandError
+            error=TVCommandError(17)
+            error.contract_events=[{'schema':1,'component':'storage','operation':'inspect','phase':'read',
+                'field':'apps','expected':'single-regular-file','actual':{'mode':511},'decision':'refuse','count':1}]
+            report=diagnostics.create_report(state.Store(Path(tmp)),'status',None,'status',error,{'frontend':'android'})
+            self.assertEqual(json.loads(report.read_text())['contract_events'],error.contract_events)
             callbacks=module.Callbacks(native,directory=tmp)
             callbacks.write('  '+str(report))
             self.assertEqual(native.events[0],{'kind':'report-ready','name':report.name})

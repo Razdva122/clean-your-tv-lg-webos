@@ -8,6 +8,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from cytv.package import verify_payload
+from cytv.tv_sources import stage_sources
 
 
 def main():
@@ -30,6 +31,7 @@ def main():
         # Never bundle desktop frameworks or executables.
         if path.stem not in ('gui', 'gui_style', 'desktop', 'desktop_entry'):
             shutil.copy2(path, source / 'cytv' / path.name)
+    stage_sources(source / 'cytv/tv')
     shutil.copy2(ROOT / 'lgtv.py', source / 'lgtv.py')
     for name in [*manifest['files'], 'payload.json']:
         target = assets / 'payload' / name

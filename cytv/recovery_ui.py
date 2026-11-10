@@ -16,14 +16,15 @@ REMOVAL_BLOCKERS = {
     'ownership-conflict':'Some project paths changed. Close other installers and try again.',
     'controls-unverified':'TV controls could not be verified. Check the error details and try again.',
     'removal-terminal-unknown':'Removal could not be confirmed. Check the connection and try again.',
-    'private-cleanup-incomplete':'Some project files remain. Try again to finish removal.',
+    'private-cleanup-incomplete':'Final cleanup could not be verified. Choose Try again to check and finish removal.',
     'restart-required':'Restart the TV completely: disconnect it from power, reconnect it, then choose Try again. Standby is not a full restart.',
     'connection-interrupted':'Connection to the TV was interrupted. Check the connection and try again.',
     'root-access-required':'Some project files require Root access. Reconnect using Root to finish removal.',
     'root-worker-busy':'Another Clean Your TV operation is still running. Wait for it to finish, then choose Try again.',
     'removal-failed':'The TV could not finish removing a package. Choose Try again.',
-    'cleanup-check-failed':'Some Clean Your TV files or settings remain. Choose Try again.',
+    'cleanup-check-failed':'Final cleanup could not be verified. Choose Try again to check and finish removal.',
     'removal-verified':'',
+    'removal-recheck-required':'Connect to the TV to verify the saved removal result.',
 }
 
 
@@ -59,6 +60,35 @@ def removal_connection_failure(plan, failure=None):
             plan.get('reason') == 'connection-interrupted' or removal.get('reason') == 'connection-interrupted')
 
 
+def _removal_reason(plan):
+    removal = plan.get('removal') if type(plan.get('removal')) is dict else {}
+    reason = plan.get('reason')
+    if type(reason) is str and reason in REMOVAL_BLOCKERS:
+        return reason
+    reason = removal.get('reason')
+    return reason if type(reason) is str and reason in REMOVAL_BLOCKERS else None
+
+
+def removal_title(plan, failure=None):
+    if removal_connection_failure(plan, failure):
+        return 'Check the TV connection to continue removal'
+    if removal_restart_required(plan):
+        return 'Restart the TV to finish removal'
+    reason = _removal_reason(plan)
+    if reason in ('private-cleanup-incomplete', 'cleanup-check-failed'):
+        return 'Finish Clean Your TV cleanup'
+    if reason == 'removal-failed':
+        return 'The TV could not remove a package'
+    return 'Removal is not finished yet.'
+
+
+def removal_waiting(plan, failure=None):
+    if type(plan) is not dict or plan.get('disposition') != 'clean-removal' or removal_connection_failure(plan, failure):
+        return False
+    return (removal_restart_required(plan) or _removal_reason(plan) in
+            ('private-cleanup-incomplete', 'cleanup-check-failed', 'root-worker-busy', 'original-writer-active'))
+
+
 def removal_details(plan, failure=None):
     if plan.get('disposition') != 'clean-removal':
         return {}
@@ -74,6 +104,8 @@ def removal_details(plan, failure=None):
                                else REMOVAL_BLOCKERS['connection-interrupted']}
     if removal_restart_required(plan):
         stage = reason = 'restart-required'
+    elif reason in ('private-cleanup-incomplete', 'cleanup-check-failed'):
+        stage = 'verified-clean'
     return {'stage_text':REMOVAL_STAGES.get(stage, 'Verifying removal…'),
             'blocker_text':REMOVAL_BLOCKERS.get(reason,
                 'Removal could not be confirmed. Check the connection and try again.')}

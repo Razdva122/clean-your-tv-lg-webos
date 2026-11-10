@@ -191,21 +191,27 @@ for (const name of entry.files.filter((n) => n !== 'cytv-theme.json'))
         const lane = await page
           .locator('.theme-installed-grid')
           .evaluate((el) => {
+            const bounds = el.getBoundingClientRect();
             const rects = Array.from(el.children).map((x) =>
               x.getBoundingClientRect()
             );
             return {
-              oneRow: rects.every((r) => Math.abs(r.top - rects[0].top) < 2),
+              contained: rects.every(
+                (r) => r.left >= bounds.left - 1 && r.right <= bounds.right + 1
+              ),
               overflow: el.scrollWidth > el.clientWidth
             };
           });
-        assert.equal(lane.oneRow, true, 'installed themes never wrap');
-        if (width === 1280)
-          assert.equal(
-            lane.overflow,
-            true,
-            'narrow settings scroll the installed ribbon horizontally'
-          );
+        assert.equal(
+          lane.contained,
+          true,
+          'installed cards fit the Themes pane'
+        );
+        assert.equal(
+          lane.overflow,
+          false,
+          'installed themes need no horizontal scroll'
+        );
         await row.locator('.theme-choice').focus();
         const visible = await row.locator('.theme-choice').evaluate((el) => {
           const box = el.getBoundingClientRect(),
@@ -224,7 +230,7 @@ for (const name of entry.files.filter((n) => n !== 'cytv-theme.json'))
         assert.equal(
           visible.visible,
           true,
-          'focused offscreen theme scrolls fully into view: ' +
+          'focused theme remains horizontally visible: ' +
             JSON.stringify(visible)
         );
         assert.equal(

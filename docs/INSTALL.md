@@ -1,6 +1,6 @@
 # Install Clean Your TV
 
-Unreleased: The installer asks for a TV name, default **Home**; scripts can use `--tv-name "Aashiyaan"`. After upgrading an older installation, **Settings → Home → TV name** is available automatically. Save a new name or reset to Home at any time. A saved name survives restart and supported updates; existing settings remain intact. Names allow up to 48 characters. Settings saves the launcher name. To change LG’s startup screen, apply the same name through the installer. Home adds no second loading screen; the network name is unchanged.
+Unreleased: Name your TV on the final setup page alongside theme and weather (default: Home), or use --tv-name in the CLI. Change it later in Settings → Your Home screen → TV name. Saving attempts to rename the existing LG launch point without reinstalling or adding a shortcut, then checks its title. If LG refuses, Home keeps your saved name and reports that the startup title is unverified. LG Home, loading-screen behavior and persistence need checking on the TV. Existing preferences survive supported updates; names allow 48 characters. The network name is unchanged and no second loading screen is added.
 
 > **Shared experimental compositor backend:** the installer selects this
 > backend for ordinary Root and Root Beta by verified capabilities, without an
@@ -104,6 +104,14 @@ offered for a verified installation. If the state remains uncertain, save the
 diagnostic report and keep recovery files. [Recovery](RECOVERY.md).
 
 <a id="7-verify-before-daily-use"></a>
+
+### Set up your Clean Your TV
+
+After successful installation, choose Classic, Liquid Glass or Ribbon and turn Home weather on or off. Ribbon does not support weather; Liquid Glass uses the compact format. Weather can find an approximate city through your internet connection; change it later in Home settings.
+
+No-root with Developer Mode offers optional auto-renewal (Beta); keep monitoring the official timer. No-root through existing root SSH does not use this option. Root offers LG firmware update blocking through Homebrew Channel, including security updates; a real restart through Homebrew Channel is required. This is separate from CYTV updates.
+
+Choose Keep current settings to skip customization. The mode switch shows its current On/Off state. Unchanged mode settings are kept. Root reinstallation still removes saved CYTV preferences as described above. Check the chosen appearance on the TV; an optional setting reported as unconfirmed needs checking in Home settings before retrying.
 
 ## 5. Verify before daily use
 

@@ -108,6 +108,10 @@ let browser;
           );
         if (reason === 'connection-interrupted') {
           assert.equal(
+            await page.locator('h1').innerText(),
+            words[language].removalConnection
+          );
+          assert.equal(
             await page.locator('[data-action=to-connection]').count(),
             1
           );

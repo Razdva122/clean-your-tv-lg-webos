@@ -3,8 +3,6 @@ import gzip
 import hashlib
 import io
 import json
-import html
-import re
 import unicodedata
 from pathlib import Path, PurePosixPath
 import tarfile
@@ -146,42 +144,27 @@ def normalize_tv_name(value):
     return name
 
 
-def personalize(data, app, inventory, tv_name=None):
-    name = normalize_tv_name(tv_name) if tv_name is not None else None
+def personalize(data, app, inventory):
     parts = read_ar(data)
     files = data_files(data)
     # Preserve execution from the validated regular files; tgz normalizes all
     # permissions to 0755/0644, without retaining setuid or other special bits.
     with tarfile.open(fileobj=io.BytesIO(parts['data.tar.gz']), mode='r:gz') as archive:
         executable = {member.name for member in archive if member.isfile() and member.mode & 0o111}
-    prefix = 'usr/palm/applications/' + app + '/'
-    if inventory is not None or name is None:
-        files[prefix + 'apps.js'] = inventory_script(inventory)
-    if name is not None:
-        info = json.loads(files[prefix + 'appinfo.json'])
-        if info.get('id') != app:
-            raise ValueError('Launcher application identity mismatch')
-        info['title'] = name
-        files[prefix + 'tv-name-config.js'] = ('window.CYTV_TV_NAME = ' + json.dumps(name, ensure_ascii=True) + ';\n').encode()
-        files[prefix + 'appinfo.json'] = (json.dumps(info, ensure_ascii=True, indent=2) + '\n').encode()
-        if prefix + 'index.html' in files:
-            page = files[prefix + 'index.html'].decode('utf-8')
-            page = re.sub(r'<title>.*?</title>', lambda _: '<title>' + html.escape(name) + '</title>',
-                          page, count=1, flags=re.IGNORECASE | re.DOTALL)
-            files[prefix + 'index.html'] = page.encode('utf-8')
+    files['usr/palm/applications/' + app + '/apps.js'] = inventory_script(inventory)
     parts['data.tar.gz'] = tgz(files, executable=executable, directories=True,
                              shared_directories=app == 'com.gathin.tvhome')
     return ar(parts), files
 
 
-def personalize_root(bundle, inventory, tv_name=None):
+def personalize_root(bundle, inventory):
     bundle = Path(bundle)
     manifest = json.loads((bundle / 'bundle.json').read_text())
     for name, digest in manifest['files'].items():
         if hashlib.sha256((bundle / safe_name(name)).read_bytes()).hexdigest() != digest:
             raise ValueError('Root bundle integrity mismatch')
     name = manifest['package']
-    data, files = personalize((bundle / name).read_bytes(), ROOT_APP, inventory, tv_name=tv_name)
+    data, files = personalize((bundle / name).read_bytes(), ROOT_APP, inventory)
     (bundle / name).write_bytes(data)
     release = json.loads((bundle / 'release.json').read_text())
     release['files'] = {n: hashlib.sha256(b).hexdigest() for n, b in sorted(files.items())}

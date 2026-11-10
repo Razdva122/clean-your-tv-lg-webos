@@ -23,8 +23,11 @@ function read() {
   }
 }
 function save(state) {
-  fs.writeFileSync(statePath + '.tmp', JSON.stringify(state));
-  fs.renameSync(statePath + '.tmp', statePath);
+  secureState.atomicRecord(
+    __dirname + '/state',
+    'startup-state',
+    JSON.stringify(state)
+  );
 }
 function boot() {
   return require('./boot-state').identity(

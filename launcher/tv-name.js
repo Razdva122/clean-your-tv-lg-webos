@@ -1,4 +1,4 @@
-/* Shared, upgrade-safe launcher naming. Never changes system metadata or permissions. */
+/* Upgrade-safe names and verified primary launch-point title updates. */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.HomeName = factory(root);
@@ -43,10 +43,105 @@
       get: get,
       set: function (value) {
         value = normalize(value);
-        storage.setItem(KEY, value); // Failed saves leave the accepted value intact.
+        storage.setItem(KEY, value);
+        if (storage.getItem(KEY) !== value) throw Error('Name not saved');
         return value;
       }
     };
+  }
+  function primary(reply, app) {
+    if (
+      !reply ||
+      reply.returnValue !== true ||
+      !Array.isArray(reply.launchPoints) ||
+      reply.launchPoints.length > 300
+    )
+      return null;
+    var matches = reply.launchPoints.filter(function (point) {
+      return (
+        point &&
+        point.id === app &&
+        typeof point.launchPointId === 'string' &&
+        point.launchPointId.length > 0 &&
+        point.launchPointId.length <= 256 &&
+        (point.launchPointId === app ||
+          point.launchPointId === app + '_default' ||
+          point.default === true ||
+          point.type === 'default')
+      );
+    });
+    return matches.length === 1 && typeof matches[0].title === 'string'
+      ? matches[0]
+      : null;
+  }
+  function rename(call, app, value, done) {
+    value = normalize(value);
+    var uri = 'luna://com.webos.applicationManager/';
+    call(uri + 'listLaunchPoints', {}, function (reply) {
+      var before = primary(reply, app);
+      if (!before) {
+        done(false);
+        return;
+      }
+      function verify() {
+        call(uri + 'listLaunchPoints', {}, function (result) {
+          var after = primary(result, app);
+          done(
+            !!after &&
+              after.launchPointId === before.launchPointId &&
+              after.title === value
+          );
+        });
+      }
+      if (before.title === value) {
+        verify();
+        return;
+      }
+      call(
+        uri + 'updateLaunchPoint',
+        { launchPointId: before.launchPointId, title: value },
+        function (result) {
+          if (!result || result.returnValue !== true) {
+            done(false);
+            return;
+          }
+          verify();
+        }
+      );
+    });
+  }
+  function callSystem(uri, payload, done) {
+    var bridge,
+      finished = false,
+      timer;
+    function finish(reply) {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      if (bridge)
+        try {
+          bridge.cancel();
+        } catch (_) {}
+      done(reply);
+    }
+    timer = setTimeout(function () {
+      finish(null);
+    }, 8000);
+    try {
+      bridge = new root.PalmServiceBridge();
+      bridge.onservicecallback = function (raw) {
+        var reply;
+        try {
+          reply = JSON.parse(raw);
+        } catch (_) {
+          reply = null;
+        }
+        finish(reply);
+      };
+      bridge.call(uri, JSON.stringify(payload));
+    } catch (_) {
+      finish(null);
+    }
   }
   var storage;
   if (root)
@@ -89,13 +184,13 @@
       reset.setAttribute('data-i18n', 'Reset to Home');
       description.setAttribute(
         'data-i18n',
-        'Saves the launcher name. Apply the same name through the installer to change LG’s startup screen.'
+        'Saves the Home name and tries to update the existing LG launcher title without reinstalling.'
       );
       label.textContent = t('TV name');
       save.textContent = t('Save name');
       reset.textContent = t('Reset to Home');
       description.textContent = t(
-        'Saves the launcher name. Apply the same name through the installer to change LG’s startup screen.'
+        'Saves the Home name and tries to update the existing LG launcher title without reinstalling.'
       );
     }
     function commit(value) {
@@ -110,7 +205,18 @@
       try {
         input.value = model.set(value);
         refresh();
-        status.textContent = t('TV name saved.');
+        save.disabled = reset.disabled = true;
+        var app = document.querySelector('script[src="root-settings.js"]')
+          ? 'com.cleanyourtv.root.preview'
+          : 'com.gathin.tvhome';
+        rename(callSystem, app, value, function (verified) {
+          save.disabled = reset.disabled = false;
+          status.textContent = t(
+            verified
+              ? 'TV name saved.'
+              : 'Name saved in Home. LG startup title could not be verified.'
+          );
+        });
       } catch (_) {
         status.textContent = t(
           'Could not save TV name. Check available storage and try again.'
@@ -137,6 +243,8 @@
   return {
     key: KEY,
     normalize: normalize,
+    primary: primary,
+    rename: rename,
     create: create,
     refresh: refresh,
     mountSettings: mountSettings

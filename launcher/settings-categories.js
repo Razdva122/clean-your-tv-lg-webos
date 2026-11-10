@@ -28,7 +28,7 @@
   var paths = [
     'M3 11L12 3l9 8M5 10v11h14V10M9 21v-7h6v7',
     'M12 3a9 9 0 1 0 0 18h2a2 2 0 0 0 0-4h-1a2 2 0 0 1 0-4h4a4 4 0 0 0 4-4c0-4-5-6-9-6zM7 10h.01M10 6h.01M16 7h.01',
-    'M4 4h16v16H4zM4 15l5-5 4 4 3-3 4 4M15 8h.01',
+    'M3 4h18v16H3zM3 9h18M9 9v11M6 6.5h.01M9 6.5h.01',
     'M3 5h12M9 3v2M5 5c0 6 4 10 9 12M13 5c0 6-4 10-10 13M14 21l4-10 4 10M16 17h4',
     'M20 8a8 8 0 1 0 0 8M20 3v5h-5M12 8v5l3 2',
     'M4 5h16v12H4zM8 21h8M12 17v4',
@@ -42,6 +42,7 @@
       footer = card.querySelector('.settings-footer'),
       tabs = [],
       panes = [],
+      remembered = [],
       current = 0,
       updateTab;
     card.classList.add('settings-workspace');
@@ -53,6 +54,17 @@
     content.className = 'settings-content';
     workspace.appendChild(nav);
     workspace.appendChild(content);
+    var more = document.createElement('span');
+    more.className = 'settings-scroll-hint';
+    more.textContent = '↓';
+    more.setAttribute('aria-hidden', 'true');
+    workspace.appendChild(more);
+    function scrollHint() {
+      more.style.left = Math.max(0, nav.offsetWidth - 30) + 'px';
+      more.hidden = nav.scrollHeight <= nav.clientHeight + nav.scrollTop + 2;
+    }
+    nav.addEventListener('scroll', scrollHint);
+    root.addEventListener('resize', scrollHint);
     card.insertBefore(workspace, heading.nextSibling);
     function actions() {
       return Array.prototype.filter.call(
@@ -64,7 +76,13 @@
     }
     function enter() {
       var list = actions();
-      if (list.length) list[0].focus();
+      var target = remembered[current];
+      if (list.indexOf(target) < 0)
+        target = panes[current].querySelector(
+          '#settingsLanguageChoices [aria-pressed="true"],.weather-enabled'
+        );
+      if (list.indexOf(target) < 0) target = list[0];
+      if (target) target.focus();
     }
     function select(index) {
       if (current !== index && root.HomeThemePanel)
@@ -79,6 +97,7 @@
         HomeThemePanel.activate(groups[index].id === 'themes');
       if (root.HomeWallpaperPanel)
         HomeWallpaperPanel.activate(groups[index].id === 'wallpapers');
+      scrollHint();
     }
     var weatherReady = root.HomeWeather
       ? root.HomeWeather.mountSettings(panel, card, groups)
@@ -125,10 +144,17 @@
         dot.setAttribute('aria-hidden', 'true');
         tab.appendChild(dot);
       }
+      if (group.id === 'developer') {
+        var summary = document.getElementById('renewalSummary');
+        if (summary) tab.setAttribute('aria-describedby', summary.id);
+      }
       pane.className = 'settings-pane renewal-actions';
       pane.id = 'settings-pane-' + group.id;
       pane.setAttribute('role', 'tabpanel');
       pane.setAttribute('aria-labelledby', tab.id);
+      pane.addEventListener('focusin', function (e) {
+        if (actions().indexOf(e.target) >= 0) remembered[i] = e.target;
+      });
       title.textContent = t(group.label);
       pane.appendChild(title);
       if (
@@ -141,6 +167,26 @@
         group.elements.forEach(function (el) {
           if (el) pane.appendChild(el);
         });
+      if (group.id === 'appearance') {
+        [
+          [
+            'Columns',
+            pane.querySelector('.home-columns-entry') ||
+              pane.querySelector('.settings-layout')
+          ],
+          [
+            'Applications',
+            pane.querySelector('#homeAppSettings') ||
+              pane.querySelector('#homeShowAddApp').parentNode
+          ]
+        ].forEach(function (section) {
+          if (!section[1]) return;
+          var label = document.createElement('h4');
+          label.className = 'settings-subheading';
+          label.textContent = t(section[0]);
+          pane.insertBefore(label, section[1]);
+        });
+      }
       tab.addEventListener('focusin', function () {
         if (document.activeElement === tab) select(i);
       });
@@ -177,8 +223,10 @@
         );
       },
       open: function () {
+        remembered = [];
         select(0);
         tabs[0].focus();
+        setTimeout(scrollHint, 0);
       },
       key: function (e) {
         var key = e.keyCode,
@@ -235,16 +283,10 @@
           else footer.querySelector('button').focus();
           return true;
         }
-        // Theme previews form a real grid. Match remote direction to visible geometry.
-        var themes = document.getElementById('homeThemePanel');
+        // Match arrows to actual rows, including compact Home and theme layouts.
         if (
           !inNav &&
-          ((themes && themes.contains(active)) ||
-            (root.HomeWallpaperPanel &&
-              document.getElementById('homeWallpaperPanel') &&
-              document
-                .getElementById('homeWallpaperPanel')
-                .contains(active))) &&
+          !footer.contains(active) &&
           [37, 38, 39, 40].indexOf(key) >= 0
         ) {
           var rect = active.getBoundingClientRect(),

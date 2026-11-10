@@ -13,17 +13,51 @@ sys.path[:0] = [str(ROOT / 'runtime'), str(ROOT)]
 
 
 class RuntimeTests(unittest.TestCase):
+    def test_large_stock_home_is_read_with_immutable_uid1001_proof(self):
+        import hashlib
+        import stat
+        import struct
+        from types import SimpleNamespace
+        target=self.root/'stock-home'
+        header=struct.pack('<16sHHIIIIIHHHHHH',b'\x7fELF\x01\x01\x01',3,40,1,64,52,0,0,52,32,2,0,0,0)
+        content=header+b'\0'*(4530960-len(header))
+        target.write_bytes(content);target.chmod(0o755)
+        original=os.fstat
+        def attributes(fd):
+            observed=original(fd)
+            return SimpleNamespace(st_uid=1001,st_nlink=observed.st_nlink,
+                st_mode=observed.st_mode,st_size=observed.st_size,st_dev=observed.st_dev,st_ino=observed.st_ino,st_mtime_ns=observed.st_mtime_ns,st_ctime_ns=observed.st_ctime_ns)
+        with patch.object(self.k.legacy,'TARGET',target), patch.object(self.k.legacy,'trusted_directory'), patch.object(os,'fstat',side_effect=attributes), patch.object(os,'fstatvfs',create=True,return_value=SimpleNamespace(f_flag=1)), patch.object(self.k.legacy.subprocess,'run',return_value=SimpleNamespace(stdout=b'73717368\n',returncode=0)) as filesystem:
+            self.assertEqual(hashlib.sha256(self.k.legacy.native_home()).hexdigest(),hashlib.sha256(content).hexdigest())
+            self.assertTrue(filesystem.called)
+            device=dict(returnValue=True,modelName='OLED55C16LA',firmwareVersion='03.53.45',sdkVersion='6.5.3')
+            with patch.object(self.k.os,'geteuid',return_value=0), patch.object(self.k.sys,'platform','linux'), patch('struct.calcsize',return_value=4), patch.object(self.k,'luna',return_value=device), patch.object(self.k,'read_chain',return_value=[]), patch.object(self.k,'require_generic_environment') as environment:
+                observed=self.k.probe()
+                self.assertEqual(observed['target']['size'],4530960)
+                self.assertEqual(observed['target_sha256'],hashlib.sha256(content).hexdigest())
+                environment.assert_called_once_with()
+            # Root-owned stock files retain admission without a filesystem exception.
+            def root_attributes(fd):
+                value=attributes(fd); value.st_uid=0; return value
+            with patch.object(os,'fstat',side_effect=root_attributes), patch.object(self.k.legacy.subprocess,'run',side_effect=AssertionError('root needs no exception')):
+                self.assertEqual(self.k.legacy.native_home(),content)
+            for magic,flags in ((b'ef53\n',1),(b'73717368\n',0),(b'unknown\n',1)):
+                with self.subTest(magic=magic,flags=flags), patch.object(os,'fstatvfs',return_value=SimpleNamespace(f_flag=flags)):
+                    filesystem.return_value=SimpleNamespace(stdout=magic,returncode=0)
+                    with self.assertRaises(ValueError): self.k.legacy.native_home()
+            filesystem.return_value=SimpleNamespace(stdout=b'73717368\n',returncode=0)
+            for change in (dict(st_uid=1002),dict(st_nlink=2),dict(st_mode=stat.S_IFREG|0o777),dict(st_mode=stat.S_IFREG|0o4755),dict(st_size=16777217)):
+                value=dict(st_uid=1001,st_nlink=1,st_mode=stat.S_IFREG|0o755,st_size=4530960);value.update(change)
+                with self.subTest(change=change), patch.object(os,'fstat',return_value=SimpleNamespace(**value)):
+                    with self.assertRaises(ValueError): self.k.legacy.native_home()
+
     def test_old_sdk_probe_and_saved_selection_use_capabilities_end_to_end(self):
         import struct
         target=self.root/'native-home'
         header=struct.pack('<16sHHIIIIIHHHHHH',b'\x7fELF\x01\x01\x01',3,40,1,64,52,0,0,52,32,2,0,0,0)
         target.write_bytes(header);target.chmod(0o700)
-        real_secure=self.k.legacy.secure
-        def read(path,*args,**kwargs):
-            if Path(path)==target:return header
-            return real_secure(path,*args,**kwargs)
         for sdk in ('3.9.0','4.4.3','5.6.2','12.0.0'):
-            with self.subTest(sdk=sdk),patch.object(self.k.legacy,'TARGET',target),patch.object(self.k.os,'geteuid',return_value=0),patch.object(self.k.sys,'platform','linux'),patch.object(self.k.legacy,'secure',side_effect=read),patch('struct.calcsize',return_value=4),patch.object(self.k,'luna',return_value=dict(returnValue=True,modelName='capability-admitted',firmwareVersion='06.10.55',sdkVersion=sdk)),patch.object(self.k,'require_generic_environment') as environment,patch.object(self.k,'read_chain',return_value=[]):
+            with self.subTest(sdk=sdk),patch.object(self.k.legacy,'TARGET',target),patch.object(self.k.os,'geteuid',return_value=0),patch.object(self.k.sys,'platform','linux'),patch.object(self.k.legacy,'native_home',return_value=header),patch('struct.calcsize',return_value=4),patch.object(self.k,'luna',return_value=dict(returnValue=True,modelName='capability-admitted',firmwareVersion='06.10.55',sdkVersion=sdk)),patch.object(self.k,'require_generic_environment') as environment,patch.object(self.k,'read_chain',return_value=[]):
                 observed=self.k.probe()
                 self.assertEqual(observed['webos'],sdk)
                 self.assertTrue(self.k.admission_valid(observed))
@@ -316,7 +350,7 @@ class RuntimeTests(unittest.TestCase):
 
     def test_probe_is_independent_of_legacy_checkpoint_probe(self):
         target=self.root/'home'; target.write_bytes(b'ELF')
-        with patch.object(self.k.legacy,'TARGET',target), patch.object(self.k.os,'geteuid',return_value=0), patch.object(self.k.sys,'platform','linux'), patch.object(self.k.legacy,'probe',side_effect=AssertionError('legacy checkpoint probe')), patch.object(self.k.legacy,'secure',return_value=b'ELF'), patch.object(self.k.legacy,'admit',return_value={k:self.admission[k] for k in ('model','firmware','webos')}), patch.object(self.k,'luna',return_value={'returnValue':True}), patch.object(self.k,'read_chain',return_value=[]),patch.object(self.k,'require_generic_environment') as environment:
+        with patch.object(self.k.legacy,'TARGET',target), patch.object(self.k.os,'geteuid',return_value=0), patch.object(self.k.sys,'platform','linux'), patch.object(self.k.legacy,'probe',side_effect=AssertionError('legacy checkpoint probe')), patch.object(self.k.legacy,'native_home',return_value=b'ELF'), patch.object(self.k.legacy,'admit',return_value={k:self.admission[k] for k in ('model','firmware','webos')}), patch.object(self.k,'luna',return_value={'returnValue':True}), patch.object(self.k,'read_chain',return_value=[]),patch.object(self.k,'require_generic_environment') as environment:
             target.chmod(0o700)
             observed=self.k.probe()
         self.assertEqual(observed['target']['size'],3)

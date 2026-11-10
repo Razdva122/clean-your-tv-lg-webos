@@ -261,7 +261,7 @@ def probe():
         raise ValueError('Compositor admission requires an existing root TV session')
     # Keep schema2 admission isolated from schema1 checkpoint prerequisites.
     before=legacy.TARGET.stat()
-    data=legacy.secure(legacy.TARGET,limit=4*1024*1024)
+    data=legacy.native_home()
     info=luna('luna://com.webos.service.tv.systemproperty/getSystemInfo',
               {'keys':['modelName','firmwareVersion','sdkVersion']})
     try:

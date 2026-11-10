@@ -29,7 +29,7 @@ ACTIONS = ('recover', 'install', 'uninstall', 'restore', 'status', 'doctor', 'ho
            'recover-system-rollback', 'replace-system-updater', 'clean-wam-cache')
 PHASES = ('launch-helper', 'verify-home-button', 'select-tv', 'inspect-tv', 'select-edition', 'prepare-payload', 'ssh-connect',
           'inspect-installation', 'pair-tv', 'read-inventory', 'install-packages',
-          'install-helper', 'install-home', 'configure-helper', 'install-root',
+          'install-helper', 'install-home', 'configure-helper', 'configure-home', 'install-root',
           'install-root-updater', 'verify-root-updater', 'verify-root-recovery',
           'stop-old-helper', 'activate-root', 'launch-root', 'remove-existing-root',
           'archive-root-state', 'doctor-complete', 'install-complete', 'preflight',
@@ -154,6 +154,11 @@ def tv_summary(value):
     if 'setup_outcome' in value:
         from .outcomes import summary
         result['setup_outcome'] = summary(value['setup_outcome'])
+    if 'installation_settings' in value:
+        settings = mapping(value['installation_settings'])
+        result['installation_settings'] = {
+            key: choice(settings[key], ('requested-in-home', 'saved', 'saved-restart-required', 'unconfirmed'))
+            for key in ('theme', 'weather', 'renewal', 'block_updates', 'tv_name', 'launchpoint_title') if key in settings}
     for key, allowed in (('helper_state', HELPER_STATES), ('kernel_arch', KERNEL_ARCHES),
                          ('userland_abi', ('arm32', 'arm64', 'other', 'unknown')),
                          ('graphics_resolution', ('1280x720', '1920x1080'))):
@@ -409,6 +414,12 @@ def failure_summary(value):
     recovery = root_recovery_details(value.get('root_recovery'))
     if recovery:
         result['root_recovery'] = recovery
+    from .errors import root_driver_details
+    driver=root_driver_details(value.get('root_driver'))
+    if driver:result['root_driver']=driver
+    if 'no_root_cleanup' in value:
+        from .errors import no_root_cleanup_details
+        result['no_root_cleanup'] = no_root_cleanup_details(value['no_root_cleanup'])
     if 'no_root_observer' in value:
         from .errors import no_root_observer_details
         result['no_root_observer'] = no_root_observer_details(value['no_root_observer'])
@@ -420,6 +431,9 @@ def failure_summary(value):
         result['checks'] = checks_summary({key: {'status': item} for key, item in mapping(value['checks']).items()})
     if 'status' in value:
         result['status'] = status_summary(value['status'])
+    from .contract_events import export_events
+    if 'contract_events' in value:
+        result['contract_events'] = export_events(value['contract_events'])
     return result
 
 
@@ -444,9 +458,18 @@ def operation_context(store, profile):
     """Snapshot while the normal TV lock is held, before another session can start."""
     store.diagnostic_created = None
     store.diagnostic_removal = None
+    from .contract_events import Recorder, current_recorder, merge_events
+    recorder = Recorder()
+    token = current_recorder.set(recorder)
     try:
         yield
+    except BaseException as error:
+        store.contract_events = merge_events(getattr(error, 'contract_events', []), recorder.snapshot()['events'])
+        raise
+    else:
+        store.contract_events = merge_events(recorder.snapshot()['events'])
     finally:
+        current_recorder.reset(token)
         try:
             store.diagnostic_pending = store.pending(profile)
         except (OSError, ValueError):
@@ -533,3 +556,27 @@ def clear_previous_attempt(store, profile):
             (directory / 'previous-attempt.json').unlink(missing_ok=True)
     except OSError:
         pass  # Diagnostic bookkeeping must not change an operation's outcome.
+
+
+def collect_contract_events(remote, info):
+    """Existing authorized SSH read probe; never starts Helper or exports loglines."""
+    info.update(contract_events=[], contract_telemetry='unavailable')
+    try:
+        from .tv_sources import node_adapter
+        from .contract_events import export_events
+        import shlex
+        source = node_adapter('state-permissions',
+            "process.stdout.write(JSON.stringify(contract.readLogEvents('/media/developer/apps/usr/palm/applications/com.local.nativehome/state')));")
+        # Same Node selection used by the existing trusted storage/read adapters.
+        command = "unset NODE_OPTIONS NODE_PATH && /usr/bin/node -e " + shlex.quote(source)
+        raw = remote.run(command, timeout=10)
+        if type(raw) is not str or len(raw.encode()) > 16480: return
+        value = json.loads(raw)
+        if (type(value) is dict and set(value) == {'schema','telemetry','events'}
+                and type(value['schema']) is int and value['schema'] == 1
+                and value['telemetry'] in ('read','legacy','unavailable')):
+            clean = export_events(value['events'], strict=True)
+            if type(value['events']) is list and len(clean) == len(value['events']):
+                info.update(contract_events=clean, contract_telemetry=value['telemetry'])
+    except Exception:
+        pass

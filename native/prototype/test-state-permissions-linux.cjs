@@ -15,29 +15,41 @@ if (process.platform !== 'linux' || process.getuid() !== 0) {
   const modulePath = require.resolve('../app/state-permissions');
   // Copy the runtime to a traversable temporary directory, independent of checkout permissions.
   fs.copyFileSync(modulePath, path.join(root, 'state-permissions.js'));
+  fs.copyFileSync(
+    require.resolve('../app/contract-events'),
+    path.join(root, 'contract-events.js')
+  );
   fs.chmodSync(root, 0o755);
-  function run(uid, script, primary = 5000) {
+  function run(uid, script, primary = 5000, groups = [5000]) {
     const result = cp.spawnSync(
       process.execPath,
       [
         '-e',
-        'process.setgroups([5000]);process.setgid(' +
+        'process.setgroups(' +
+          JSON.stringify(groups) +
+          ');process.setgid(' +
           primary +
           ');process.setuid(' +
           uid +
           ');' +
           script
       ],
-      { encoding: 'utf8' }
+      { encoding: 'utf8', cwd: root }
     );
     a.equal(result.status, 0, result.stderr || result.stdout);
   }
-  const check =
-    'if(!require(' +
-    JSON.stringify(path.join(root, 'state-permissions.js')) +
-    ')(' +
-    JSON.stringify(state) +
-    '))process.exit(1);';
+  // Canonical sessions restore cwd after dropping UID; do not inherit a
+  // checkout behind a runner-private home directory. Keep bounded diagnostics.
+  const log =
+      'function(e){if(e.contract)process.stderr.write(JSON.stringify(e.contract)+"\\n");}',
+    check =
+      'if(!require(' +
+      JSON.stringify(path.join(root, 'state-permissions.js')) +
+      ')(' +
+      JSON.stringify(state) +
+      ',' +
+      log +
+      '))process.exit(1);';
   try {
     fs.mkdirSync(state);
     fs.chownSync(state, 5999, 5000);
@@ -79,7 +91,9 @@ if (process.platform !== 'linux' || process.getuid() !== 0) {
           JSON.stringify(path.join(root, 'state-permissions.js')) +
           ')(' +
           JSON.stringify(state) +
-          ',null,true))process.exit(4);',
+          ',' +
+          log +
+          ',true))process.exit(4);',
         6575
       );
       a.equal(fs.statSync(control).uid, 6575);
@@ -113,6 +127,8 @@ if (process.platform !== 'linux' || process.getuid() !== 0) {
         JSON.stringify(path.join(root, 'state-permissions.js')) +
         ')(' +
         JSON.stringify(state) +
+        ',' +
+        log +
         '))process.exit(3);'
     );
     a.equal(fs.statSync(key).mode & 0o777, 0o775);
@@ -197,8 +213,36 @@ if (process.platform !== 'linux' || process.getuid() !== 0) {
       'stopped',
       'controller block() retains an orderly stop path'
     );
+    // Root SSH does not join the No-root jailer group. A normal disable
+    // reply can leave controller.pid pending, so its checked Stop must work.
+    const latchBeforeRoot = fs.statSync(blocked);
+    run(
+      0,
+      'require("node:assert/strict").deepEqual(process.getgroups(),[0]);' +
+        stop,
+      0,
+      [0]
+    );
+    a.equal(fs.statSync(blocked).ino, latchBeforeRoot.ino);
+    a.equal(fs.readFileSync(blocked, 'utf8'), 'stopped');
+    a.equal(fs.statSync(control).uid, 0);
+    a.equal(fs.statSync(control).gid, 5000);
+    fs.unlinkSync(blocked);
+    run(0, stop, 0, [0]);
+    a.equal(fs.statSync(blocked).uid, 0);
+    a.equal(fs.statSync(blocked).gid, 5000);
+    a.equal(fs.statSync(blocked).mode & 0o777, 0o664);
+    a.equal(fs.readFileSync(control, 'utf8'), '{"cmd":"stop"}');
+    run(
+      6575,
+      'require("fs").writeFileSync(' +
+        JSON.stringify(blocked) +
+        ',"root-stop-observed");',
+      6575
+    );
+    a.equal(fs.readFileSync(blocked, 'utf8'), 'root-stop-observed');
     console.log(
-      'PASS: real installer/developer/helper/service UIDs, shared group, reconfiguration, denied replacement and setgid Home IPC'
+      'PASS: real installer/developer/helper/service UIDs, shared group, Root without jailer membership, reconfiguration, denied replacement and setgid Home IPC'
     );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });

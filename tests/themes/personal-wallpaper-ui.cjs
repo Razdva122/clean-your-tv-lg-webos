@@ -403,6 +403,12 @@ const { chromium, stage, fs, path } = require('./browser.cjs'),
         };
       });
       await page.locator('#wallpaperRemove').click();
+      assert(await page.locator('#homeConfirmation').isVisible());
+      assert(await page.evaluate(() => PersonalWallpaper.state().installed));
+      await page.keyboard.press('Escape');
+      assert(await page.evaluate(() => PersonalWallpaper.state().installed));
+      await page.locator('#wallpaperRemove').click();
+      await page.locator('#homeConfirmation button').last().click();
       await page.waitForFunction(() => !PersonalWallpaper.state().installed);
       assert.equal(
         await page.evaluate(() => HomeWallpaper.state().source),

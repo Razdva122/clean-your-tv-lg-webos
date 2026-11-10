@@ -152,11 +152,13 @@ if has setup; then
   python_suite tests/setup
 fi
 if has installer; then
+  if primary; then node tests/installer-settings.cjs; fi
   if on_shard 2; then
   "$PYTHON" -m unittest discover -s homebrew/tests -p test_payload.py
   node homebrew/tests/runtime.cjs
   node homebrew/tests/bridge.cjs
   node homebrew/tests/ui.cjs
+  node tests/installer-settings-ui.cjs
   "$PYTHON" -m unittest discover -s homebrew/tests -p 'test_installer*.py'
   "$PYTHON" -m unittest discover -s homebrew/tests -p test_continuation.py
   fi

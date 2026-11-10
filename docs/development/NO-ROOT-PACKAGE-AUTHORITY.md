@@ -230,3 +230,30 @@ The exact reported refusal and corrected host continuation are covered by
 synthetic filesystem/process regressions. The origin of the firmware's 0775 mode
 and acceptance on the reporting C2 remain unconfirmed. See the
 [dated verification and limits](../history/2026-11-08-issue437-key-mode-repair.md).
+
+## Capsule-matched Helper-owned pairing key (#487, unpublished)
+
+A later Helper bootstrap may atomically replace a vendor-normalized key under
+its own UID. Even mode 0640 then fails the caller/5999 ownership checks above.
+During authenticated No-root continuation with Helper stopped/stale, the source
+fix also permits replacing that single key with a caller-owned 0640 inode when
+its exact bytes match the original capsule's expected SHA256. It accepts only
+0640/0775, a regular single-link file up to 64 KiB in the checked state directory,
+and its shared group must match the directory and belong to the SSH caller.
+This authenticates bytes rather than trusting an arbitrary numeric Helper UID.
+
+Both configuration leaves are validated first. No-follow descriptors pin the
+source and directory; staging is exclusive and relative to the pinned directory.
+The replacement retains verified bytes and the shared GID, checks source/path
+and directory security attributes again, then renames atomically. Symlinks,
+hardlinks, unexpected content/modes/groups and observed path substitutions
+refuse without replacing the key. Staging is cleaned on failure. Caller-owned
+0775 repair retains its existing in-place inode/owner behavior.
+
+Neither immutable observer source changes. The repaired caller-owned key passes
+its original checks, so pending plans, capsules, terminal package receipts and
+configuration claims keep their original identity. No package request is
+replayed by this repair. Status remains read-only, Root SSH is unchanged, and
+emergency/stop files are untouched. No new endpoint, permission grant or durable
+state format is introduced. See the [source verification ledger](../history/2026-11-10-issue487-helper-recovery.md);
+actual reporter-device recovery remains pending for a future published build.

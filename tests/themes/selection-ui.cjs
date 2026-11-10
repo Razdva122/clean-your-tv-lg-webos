@@ -327,11 +327,9 @@ const builtinCount =
       const ribbon = await page
         .locator('.theme-installed-grid')
         .evaluate((el) => {
-          const rows = Array.from(el.children),
-            rects = rows.map((x) => x.getBoundingClientRect());
+          const rows = Array.from(el.children);
           return {
-            oneRow: rects.every((r) => Math.abs(r.top - rects[0].top) < 2),
-            scroll: getComputedStyle(el).overflowX,
+            fits: el.scrollWidth <= el.clientWidth + 1,
             selected: getComputedStyle(
               rows.find((r) => r.dataset.selected === 'true')
             ).backgroundColor,
@@ -341,11 +339,10 @@ const builtinCount =
           };
         });
       assert.equal(
-        ribbon.oneRow,
+        ribbon.fits,
         true,
-        'installed themes stay in one horizontal row'
+        'installed theme cards fit the reading area'
       );
-      assert.equal(ribbon.scroll, 'auto');
       assert.notEqual(
         ribbon.selected,
         ribbon.other,

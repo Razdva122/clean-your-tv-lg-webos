@@ -1,6 +1,6 @@
 # Clean Your TV — guía de uso
 
-el instalador pide un nombre, **Home** por defecto; CLI: `--tv-name "Aashiyaan"`. Al actualizar una instalación antigua aparece automáticamente **Ajustes → Home → Nombre del televisor**. Puedes guardarlo o restablecer Home cuando quieras. Se conserva al reiniciar y en actualizaciones compatibles, junto con los demás ajustes. Máximo 48 caracteres. Ajustes guarda el nombre del lanzador. Para cambiar el inicio de LG, aplica el mismo nombre con el instalador. No añade otra pantalla de carga ni cambia el nombre de red.
+El nombre del TV aparece en la última página de configuración junto al tema y el tiempo (Home por defecto); la CLI admite --tv-name. Cámbialo después en Ajustes → Pantalla de inicio → Nombre del TV. Guardar intenta renombrar el punto de inicio existente de LG sin reinstalar ni crear otro acceso y comprueba su título. Si LG lo rechaza, Home conserva el nombre e informa de que el título de inicio no está verificado. Comprueba su visualización y persistencia en el TV. Las actualizaciones compatibles conservan las preferencias. Máximo 48 caracteres; no cambia el nombre de red ni añade una pantalla de carga.
 
 Cambio del instalador aún no publicado: antes de una nueva instalación, el instalador del ordenador busca una versión estable más reciente en GitHub. Elige «Abrir GitHub y descargar la última versión» para detenerte y descargarla, o «No, instalar esta versión» para continuar explícitamente. Si falla la comprobación, puedes continuar. Las operaciones pendientes y la recuperación omiten esta comprobación.
 
@@ -109,7 +109,7 @@ Cuando se indique, desconecta la alimentación del TV, vuelve a conectarla, espe
 
 Una instalación fallida o interrumpida ofrece recuperación directamente. Si No-root no puede continuar, confirma la eliminación completa una vez. La eliminación realiza hasta tres intentos ante cortes temporales de conexión o un proceso CYTV ocupado. Si requiere Root, elige **Conectar con Root** para el mismo TV; la limpieza Root verificada también completa su eliminación No-root bloqueada. Si falla la activación Root, CYTV intenta restaurar y verificar LG Home sin repetir la activación. Cancelar trabajo pendiente conserva el informe y las acciones de recuperación. Se mantiene la parada de emergencia.
 
-Si falla la conexión durante la eliminación, abre sus detalles, comprueba la red o elige una clave SSH Root existente y reintenta. La dirección, edición, puerto y verificación de la clave del TV siguen fijados. No-root comprueba Helper antes del emparejamiento: detenlo y confirma la nueva comprobación sin reiniciar el proceso. Solo un TV vacío verificado y sin instalación pendiente puede omitir el reinicio; tras una eliminación real sigue siendo necesario el reinicio solicitado. Si falla el servicio de entradas, continúa la limpieza segura de paquetes; el éxito exige verificar también la limpieza del acceso directo.
+Si falla la conexión durante la eliminación, abre sus detalles, comprueba la red o elige una clave SSH Root existente y reintenta. La dirección, edición, puerto y verificación de la clave del TV siguen fijados. No-root comprueba Helper antes del emparejamiento: detenlo y confirma la nueva comprobación sin reiniciar el proceso. La eliminación puede finalizar sin reiniciar si se verifican los controles, la desactivación del inicio automático y la ausencia de paquetes, archivos y procesos, sin instalaciones pendientes. Si se solicita reiniciar, hazlo y reintenta. Si falla el servicio de entradas, continúa la limpieza segura de paquetes; el éxito exige verificar también la limpieza del acceso directo.
 
 **Reinstalar Root:** Elige **Configurar mi televisor → Root** con la conexión guardada y confirma **¿Reinstalar Root?**. El instalador restaura LG Home y elimina por completo Clean Your TV, incluidos sus actualizadores, Home Helper y las preferencias guardadas. Tras verificar la eliminación, instala y activa los paquetes y el entorno Root incluidos en ese instalador. Se conservan las demás apps del TV y el acceso root/SSH existente. Si la eliminación se detiene o pide un reinicio completo, termínala antes de iniciar otra vez la configuración. **Desinstalar Clean Your TV** por sí solo nunca inicia otra instalación.
 
@@ -136,6 +136,12 @@ Referencias detalladas en inglés: [requisitos](../COMPATIBILITY.md) · [control
 <a id="nodejs-antiguo-en-el-tv-publicado-en-v1120"></a>
 <a id="eliminación-sencilla-v1110"></a>
 
+## Ajustes
+
+Usa ↑ ↓ para elegir una categoría y → u OK para entrar. ← vuelve a las categorías; Atrás vuelve primero a ellas y luego cierra los ajustes. Al volver a una sección se recupera el último control disponible. En Columnas, las flechas siguen la cuadrícula de tres columnas. En Idioma, el foco entra en el idioma seleccionado.
+
+Si No-root no puede leer el estado de Home, elige Reintentar. Un control no disponible no significa que Home esté desactivado. En Fondos puedes subir una imagen desde el teléfono o CYTV; la calidad y el oscurecimiento aparecen cuando hay un fondo disponible. Eliminar un fondo personal requiere confirmación; Cancelar lo conserva.
+
 ## Tiempo
 
 Abra Ajustes → Tiempo, debajo de Fondos. Active el tiempo y abra Ciudad para buscar y elegir la región y el país correctos, o seleccione Automático para obtener una ciudad aproximada según su conexión. Una VPN puede cambiar el resultado; si falta la ciudad o es incorrecta, use la búsqueda manual. La ciudad detectada o elegida aparece en ajustes. Elija °C / m/s o °F / mph y un formato disponible: breve, actual, detallado o cuatro días. La vista previa sigue el tema; Ejemplo indica datos de muestra. Liquid Glass solo admite el formato breve. Ribbon y Atmosphere no muestran el tiempo. Desactivarlo detiene las solicitudes y oculta ciudad, unidades y formato; la selección de fuente sigue disponible. Durante un fallo pueden mantenerse datos recientes temporalmente; después se ocultan hasta poder actualizarlos.
@@ -145,3 +151,15 @@ Elija la fuente del pronóstico: Auto, MET Norway u Open-Meteo. Auto empieza con
 Las coordenadas se envían a api.met.no o api.open-meteo.com y las búsquedas de ciudades a geocoding-api.open-meteo.com. La ubicación automática opcional transmite la IP pública a get.geojs.io. Las conexiones usan HTTPS; no hace falta una clave API. La ubicación, fuente y caché se guardan en el televisor. Fuentes de datos incluye condiciones y créditos, como el Instituto Meteorológico Noruego (MET Norway, CC BY 4.0).
 
 El botón Fuentes de datos del encabezado Tiempo abre la información de servicios y licencias.
+
+## Fondo desde el iPhone
+
+Abre Ajustes → Fondos → Subir desde el teléfono y escanea el código. Elige JPG, PNG o HEIC/HEIF, recorta, acepta el límite de calidad y envía. Selecciona Aplicar en el TV. Safari usa HEIC nativo; Chrome, Firefox y otros navegadores modernos usan el decodificador local incluido cuando hace falta. La conversión ocurre en el teléfono, sin servicio externo. Cancelar o elegir otro archivo detiene la conversión. Entrada: 32 MiB y 50 millones de píxeles; salida: hasta 1080p y 2 MiB. Si falla, prueba otra foto o JPG/PNG. Es para la página del teléfono, no la app Mac.
+
+## Configura tu Clean Your TV
+
+Después de instalar correctamente, elige Classic, Liquid Glass o Ribbon y activa o desactiva el tiempo. Ribbon no admite el tiempo; Liquid Glass usa el formato compacto. La ciudad se estima por tu conexión y puedes cambiarla en Home.
+
+No-root con Developer Mode ofrece renovación automática (Beta); sigue revisando el temporizador oficial. No-root mediante root SSH existente no usa esta opción. Root permite bloquear actualizaciones de firmware LG mediante Homebrew Channel, incluidas las de seguridad; requiere un reinicio real desde Homebrew Channel. Las actualizaciones de CYTV son independientes.
+
+Conservar ajustes actuales omite la personalización. El interruptor muestra el estado actual de la función del modo. Los ajustes que no cambies se conservan. Reinstalar Root sigue eliminando las preferencias CYTV como se describe arriba. Comprueba la apariencia en el TV y las opciones sin confirmar en Home antes de reintentar.

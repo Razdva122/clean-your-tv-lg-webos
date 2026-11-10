@@ -234,7 +234,15 @@ const assert = require('node:assert/strict');
   } finally {
     await browser.close();
   }
-})().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+})()
+  .then(() => {
+    require('node:child_process').execFileSync(
+      process.execPath,
+      [require('node:path').join(__dirname, 'settings-ux-ui.cjs')],
+      { stdio: 'inherit' }
+    );
+  })
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });

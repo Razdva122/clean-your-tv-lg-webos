@@ -55,8 +55,17 @@ sys.stdin.read()
             return super().run(command,data,timeout)
         if 'CYTV_STOP_RETAINED' in command:
             return subprocess.run(['sh','-c',command],capture_output=True,check=True).stdout.decode()
+        if command.startswith('if [ -f ') and '/usr/bin/node || exit 1' in command:
+            # Run the actual shell/no-op guard; its PID '-e' predicate is not
+            # a Node '-e' argument. The trusted program travels on stdin.
+            command=command.replace('/usr/bin/node',shutil.which('node'))
+            source=data.replace(b'/media/developer/apps/usr/palm/applications/com.local.nativehome/state',operations.HELPER_STATE.encode())
+            result=subprocess.run(['sh','-c',command],input=source,capture_output=True,timeout=timeout)
+            if result.returncode:raise RuntimeError(result.stderr.decode())
+            return result.stdout.decode()
         words=shlex.split(command)
-        if '-e' in words and '/usr/bin/node' in words:
+        if '/usr/bin/node' in words and words[words.index('/usr/bin/node')+1:][:1]==['-e']:
+
             code=words[words.index('-e')+1]
             argument=words[-1]
             if observer.PROGRAM in code or observer.ROOT_PROGRAM in code or observer.STORAGE_SELECT in code:
@@ -288,6 +297,47 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.installer.continue_no_root(pending)
         self.assertIsNone(self.store.pending(self.profile))
         self.assertEqual((self.root/'requests').read_text().splitlines(),list(observer.APPS)*2)
+
+    def test_pending_update_reclaims_capsule_matched_helper_key_without_package_replay(self):
+        self.installer.install(self.inventory,'original-secret')
+        directory=Path(operations.HELPER_STATE);os.chown(directory,-1,os.getgid())
+        key=directory/'ssap-key.json';os.chown(key,-1,os.getgid());key.chmod(0o640)
+        inode=key.stat().st_ino
+        # The UID double identifies this inode. Keep it allocated after rename
+        # so Linux cannot recycle its number for unrelated observer evidence.
+        retained_key=key.open('rb');self.addCleanup(retained_key.close)
+        blocked=directory/'blocked';blocked.write_bytes(b'explicit-stop')
+        original=self.remote.run
+        interrupted=True
+        def run(command,data=None,timeout=30):
+            nonlocal interrupted
+            words=shlex.split(command)
+            if '-e' in words and '/usr/bin/node' in words:
+                i=words.index('-e')+1
+                if observer.STATE_CHECK in words[i] and interrupted:
+                    interrupted=False
+                    raise RuntimeError('original installer refused Helper-owned key')
+                prefix="var fs=require('fs');['lstatSync','fstatSync'].forEach(function(name){var original=fs[name];fs[name]=function(){var s=original.apply(fs,arguments);if(s.ino===INO)s.uid=5509;return s;};});".replace('INO',str(inode))
+                words[i]=prefix+words[i];command=' '.join(shlex.quote(x) for x in words)
+            return original(command,data=data,timeout=timeout)
+        self.remote.run=run
+        with self.assertRaises(RuntimeError):self.installer.install(self.inventory,'original-secret')
+        pending=self.store.pending(self.profile);saved=observer.capsule(self.installer,pending)
+        before=(self.root/'requests').read_bytes()
+        with self.assertRaises(RuntimeError):self.installer.continue_no_root(pending)
+        self.assertEqual(blocked.read_bytes(),b'explicit-stop')
+        self.assertNotEqual(key.stat().st_ino,inode)
+        self.assertEqual(key.stat().st_mode&0o777,0o640)
+        self.assertEqual(key.read_text(),json.dumps({'key':'original-secret'}))
+        observed=observer.snapshot(self.installer,saved)
+        self.assertEqual(observed['configuration']['files'],'complete')
+        self.assertEqual(observed['configuration']['launch'],'prepared')
+        self.assertEqual(observer.capsule(self.installer,self.store.pending(self.profile)),saved)
+        self.assertEqual((self.root/'requests').read_bytes(),before)
+        # Only a separately modeled explicit owner resume removes the latch.
+        blocked.unlink();self.installer.continue_no_root(self.store.pending(self.profile))
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertEqual((self.root/'requests').read_bytes(),before)
 
     def test_closed_retry_requires_original_configuration_readback(self):
         original=self.remote.run

@@ -4,8 +4,14 @@ const assert = require('node:assert/strict'),
   os = require('node:os'),
   path = require('node:path'),
   vm = require('node:vm');
-const createManager = require('../renewal-service/manager'),
-  createHome = require('../renewal-service/home-control');
+const createManager = require('../renewal-service/manager');
+const fixture = require('./storage-fixture.cjs');
+function createHome(adapter, directory, options) {
+  return fixture.load(
+    path.resolve('renewal-service/home-control.js'),
+    fixture.create(adapter)
+  )(adapter, directory, options);
+}
 const { createLocalIO } = require('../renewal-service/local-io');
 const { createRenewal } = require('../renewal-service/renewal');
 const diagnostics = require('../renewal-service/diagnostics');
@@ -209,24 +215,25 @@ function service(overrides) {
       undefined,
       'worker diagnostics are transient too'
     );
-    for (const operation of ['writeFileSync', 'chmodSync', 'renameSync']) {
-      const adapter = Object.create(fs);
-      adapter[operation] = () => {
-        throw failure('EACCES');
-      };
-      const result = await createHome(adapter, directory)('homeStatus', {});
+    for (const phase of ['write', 'chmod', 'rename']) {
+      const producer = fixture.load(
+        path.resolve('renewal-service/home-control.js'),
+        {
+          atomicRecord() {
+            throw Object.assign(failure('EACCES'), { storagePhase: phase });
+          }
+        }
+      );
+      const result = await producer(fs, directory)('homeStatus', {});
       assert.equal(result.returnValue, false);
       assert.deepEqual(result.diagnostic, {
         component: 'home',
-        operation: {
-          writeFileSync: 'write',
-          chmodSync: 'chmod',
-          renameSync: 'rename'
-        }[operation],
+        operation: phase,
         code: 'EACCES'
       });
       assert(!JSON.stringify(result).includes('PRIVATE'));
     }
+
     let now = 0,
       callback;
     const adapter = Object.create(fs);

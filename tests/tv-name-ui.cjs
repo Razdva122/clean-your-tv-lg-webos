@@ -17,6 +17,40 @@ const {
       const input = page.locator('#homeTvName');
       await input.waitFor({ state: 'visible' });
       assert.equal(await input.inputValue(), 'Home');
+      await page.evaluate(
+        (app) => {
+          window.nameCalls = [];
+          window.nameTitle = 'Home';
+          window.denyName = false;
+          window.PalmServiceBridge = function () {
+            this.cancel = function () {};
+            this.call = (uri, raw) => {
+              const params = JSON.parse(raw);
+              window.nameCalls.push({ uri, params });
+              let reply;
+              if (uri.endsWith('/listLaunchPoints'))
+                reply = {
+                  returnValue: true,
+                  launchPoints: [
+                    {
+                      id: app,
+                      launchPointId: app + '_default',
+                      title: window.nameTitle
+                    }
+                  ]
+                };
+              else if (uri.endsWith('/updateLaunchPoint')) {
+                if (!window.denyName) window.nameTitle = params.title;
+                reply = { returnValue: !window.denyName };
+              } else reply = { returnValue: false };
+              this.onservicecallback(JSON.stringify(reply));
+            };
+          };
+        },
+        edition === 'launcher'
+          ? 'com.gathin.tvhome'
+          : 'com.cleanyourtv.root.preview'
+      );
       await input.fill('Aashiyan TV');
       await page
         .getByRole('button', { name: 'Save name', exact: true })
@@ -26,6 +60,9 @@ const {
         await page.evaluate(() => localStorage.getItem('tvhome.name')),
         'Aashiyan TV'
       );
+      await page.getByText('TV name saved.', { exact: true }).waitFor();
+      assert.equal(await page.evaluate(() => window.nameCalls.length), 3);
+      assert.equal(await page.evaluate(() => window.nameTitle), 'Aashiyan TV');
       await page.reload();
       await page.locator('#tiles .focused').waitFor();
       assert.equal(
@@ -40,6 +77,12 @@ const {
         .getByRole('button', { name: 'Reset to Home', exact: true })
         .click();
       assert.equal(await page.title(), 'Home');
+      await page
+        .getByText(
+          'Name saved in Home. LG startup title could not be verified.',
+          { exact: true }
+        )
+        .waitFor();
       await page.evaluate(() => {
         window._setItem = Storage.prototype.setItem;
         Storage.prototype.setItem = function (k, v) {

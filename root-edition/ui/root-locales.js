@@ -35,7 +35,7 @@ if (window.HomeI18n)
       'TV settings': 'TV settings',
       'Open LG Home': 'Open LG Home',
       'Back to Home': 'Back to Home',
-      'Change Home': 'Change Home',
+      'Change Home': 'Open Clean Your TV with the Home button',
       'Software updates': 'Software updates',
       'Language': 'Language',
       'Checking Home control…': 'Checking Home control…',
@@ -281,7 +281,7 @@ if (window.HomeI18n)
       'Root Edition': 'Root-Version',
       'Manage Home, software updates and your TV.':
         'Verwalte Home, Softwareupdates und deinen Fernseher.',
-      'Your Home screen': 'Dein Startbildschirm',
+      'Your Home screen': 'Ihr Home-Bildschirm',
       'Choose where Home and return from apps take you.':
         'Wähle das Ziel der Home-Taste und beim Verlassen von Apps.',
       'Updates and TV': 'Updates und TV',
@@ -294,7 +294,7 @@ if (window.HomeI18n)
       'TV settings': 'TV-Einstellungen',
       'Open LG Home': 'LG Home öffnen',
       'Back to Home': 'Zurück zu Home',
-      'Change Home': 'Home ändern',
+      'Change Home': 'Clean Your TV mit der Home-Taste öffnen',
       'Software updates': 'Softwareupdates',
       'Language': 'Sprache',
       'Checking Home control…': 'Home-Steuerung wird geprüft…',
@@ -546,7 +546,7 @@ if (window.HomeI18n)
       'Root Edition': 'Edición Root',
       'Manage Home, software updates and your TV.':
         'Gestiona Home, las actualizaciones y tu televisor.',
-      'Your Home screen': 'Tu pantalla de inicio',
+      'Your Home screen': 'Tu pantalla Home',
       'Choose where Home and return from apps take you.':
         'Elige dónde ir al pulsar Home y salir de las aplicaciones.',
       'Updates and TV': 'Actualizaciones y TV',
@@ -559,7 +559,7 @@ if (window.HomeI18n)
       'TV settings': 'Ajustes del televisor',
       'Open LG Home': 'Abrir LG Home',
       'Back to Home': 'Volver a Home',
-      'Change Home': 'Cambiar Home',
+      'Change Home': 'Abrir Clean Your TV con el botón Home',
       'Software updates': 'Actualizaciones de software',
       'Language': 'Idioma',
       'Checking Home control…': 'Comprobando el control de Home…',
@@ -811,7 +811,7 @@ if (window.HomeI18n)
       'Root Edition': 'Edição Root',
       'Manage Home, software updates and your TV.':
         'Gerencie o Home, as atualizações e sua TV.',
-      'Your Home screen': 'Sua tela inicial',
+      'Your Home screen': 'Sua tela Home',
       'Choose where Home and return from apps take you.':
         'Escolha para onde ir ao pressionar Home e sair dos aplicativos.',
       'Updates and TV': 'Atualizações e TV',
@@ -824,7 +824,7 @@ if (window.HomeI18n)
       'TV settings': 'Configurações da TV',
       'Open LG Home': 'Abrir LG Home',
       'Back to Home': 'Voltar ao Home',
-      'Change Home': 'Alterar Home',
+      'Change Home': 'Abrir Clean Your TV com o botão Home',
       'Software updates': 'Atualizações de software',
       'Language': 'Idioma',
       'Checking Home control…': 'Verificando o controle do Home…',
@@ -1074,7 +1074,7 @@ if (window.HomeI18n)
       'Root Edition': 'Édition Root',
       'Manage Home, software updates and your TV.':
         'Gérez Home, les mises à jour et votre téléviseur.',
-      'Your Home screen': 'Votre écran d’accueil',
+      'Your Home screen': 'Votre écran Home',
       'Choose where Home and return from apps take you.':
         'Choisissez l’écran affiché avec Home et en quittant les applications.',
       'Updates and TV': 'Mises à jour et TV',
@@ -1087,7 +1087,7 @@ if (window.HomeI18n)
       'TV settings': 'Paramètres TV',
       'Open LG Home': 'Ouvrir LG Home',
       'Back to Home': 'Retour à Home',
-      'Change Home': 'Changer Home',
+      'Change Home': 'Ouvrir Clean Your TV avec le bouton Home',
       'Software updates': 'Mises à jour logicielles',
       'Language': 'Langue',
       'Checking Home control…': 'Vérification du contrôle de Home…',
@@ -1335,7 +1335,7 @@ if (window.HomeI18n)
       'Root Edition': 'Edizione Root',
       'Manage Home, software updates and your TV.':
         'Gestisci Home, gli aggiornamenti e la TV.',
-      'Your Home screen': 'La tua schermata iniziale',
+      'Your Home screen': 'La tua schermata Home',
       'Choose where Home and return from apps take you.':
         'Scegli dove andare premendo Home e uscendo dalle app.',
       'Updates and TV': 'Aggiornamenti e TV',
@@ -1348,7 +1348,7 @@ if (window.HomeI18n)
       'TV settings': 'Impostazioni TV',
       'Open LG Home': 'Apri LG Home',
       'Back to Home': 'Torna a Home',
-      'Change Home': 'Cambia Home',
+      'Change Home': 'Aprire Clean Your TV con il tasto Home',
       'Software updates': 'Aggiornamenti software',
       'Language': 'Lingua',
       'Checking Home control…': 'Verifica del controllo di Home…',
@@ -1598,7 +1598,7 @@ if (window.HomeI18n)
       'Root Edition': 'Root 에디션',
       'Manage Home, software updates and your TV.':
         'Home, 소프트웨어 업데이트 및 TV를 관리하세요.',
-      'Your Home screen': '내 홈 화면',
+      'Your Home screen': '나의 Home 화면',
       'Choose where Home and return from apps take you.':
         'Home 버튼과 앱에서 돌아갈 화면을 선택하세요.',
       'Updates and TV': '업데이트 및 TV',
@@ -1611,7 +1611,7 @@ if (window.HomeI18n)
       'TV settings': 'TV 설정',
       'Open LG Home': 'LG Home 열기',
       'Back to Home': 'Home으로 돌아가기',
-      'Change Home': 'Home 변경',
+      'Change Home': 'Home 버튼으로 Clean Your TV 열기',
       'Software updates': '소프트웨어 업데이트',
       'Language': '언어',
       'Checking Home control…': 'Home 제어 확인 중…',
@@ -1853,7 +1853,7 @@ if (window.HomeI18n)
       'Root Edition': 'Root संस्करण',
       'Manage Home, software updates and your TV.':
         'Home, सॉफ़्टवेयर अपडेट और अपने टीवी को प्रबंधित करें।',
-      'Your Home screen': 'आपकी होम स्क्रीन',
+      'Your Home screen': 'आपकी Home स्क्रीन',
       'Choose where Home and return from apps take you.':
         'Home दबाने और ऐप से लौटने पर खुलने वाली स्क्रीन चुनें।',
       'Updates and TV': 'अपडेट और टीवी',
@@ -1866,7 +1866,7 @@ if (window.HomeI18n)
       'TV settings': 'टीवी सेटिंग्स',
       'Open LG Home': 'LG Home खोलें',
       'Back to Home': 'Home पर वापस जाएँ',
-      'Change Home': 'Home बदलें',
+      'Change Home': 'Home बटन से Clean Your TV खोलें',
       'Software updates': 'सॉफ़्टवेयर अपडेट',
       'Language': 'भाषा',
       'Checking Home control…': 'Home नियंत्रण जाँचा जा रहा है…',
@@ -2112,7 +2112,7 @@ if (window.HomeI18n)
       'Root Edition': 'Edycja Root',
       'Manage Home, software updates and your TV.':
         'Zarządzaj Home, aktualizacjami i telewizorem.',
-      'Your Home screen': 'Twój ekran główny',
+      'Your Home screen': 'Twój ekran Home',
       'Choose where Home and return from apps take you.':
         'Wybierz ekran otwierany przez Home i po wyjściu z aplikacji.',
       'Updates and TV': 'Aktualizacje i TV',
@@ -2125,7 +2125,7 @@ if (window.HomeI18n)
       'TV settings': 'Ustawienia TV',
       'Open LG Home': 'Otwórz LG Home',
       'Back to Home': 'Wróć do Home',
-      'Change Home': 'Zmień Home',
+      'Change Home': 'Otwieraj Clean Your TV przyciskiem Home',
       'Software updates': 'Aktualizacje oprogramowania',
       'Language': 'Język',
       'Checking Home control…': 'Sprawdzanie sterowania Home…',
@@ -2371,7 +2371,7 @@ if (window.HomeI18n)
       'Root Edition': 'Версия Root',
       'Manage Home, software updates and your TV.':
         'Управляйте Home, обновлениями и телевизором.',
-      'Your Home screen': 'Ваш главный экран',
+      'Your Home screen': 'Ваш экран Home',
       'Choose where Home and return from apps take you.':
         'Выберите экран для кнопки Home и возврата из приложений.',
       'Updates and TV': 'Обновления и ТВ',
@@ -2381,10 +2381,10 @@ if (window.HomeI18n)
         'Кнопка открывает LG Home один раз. Выбор главного экрана и настройки сохраняются.',
       'Hold Back for 1.2 seconds to open LG Home. Your settings stay saved.':
         'Удерживайте «Назад» 1,2 секунды, чтобы открыть LG Home. Настройки сохранятся.',
-      'TV settings': 'Настройки ТВ',
+      'TV settings': 'Настройки телевизора',
       'Open LG Home': 'Открыть LG Home',
-      'Back to Home': 'Вернуться в Home',
-      'Change Home': 'Изменить Home',
+      'Back to Home': 'Вернуться на Home',
+      'Change Home': 'Открывать Clean Your TV кнопкой Home',
       'Software updates': 'Обновления ПО',
       'Language': 'Язык',
       'Checking Home control…': 'Проверка управления Home…',
@@ -2649,7 +2649,7 @@ if (window.HomeI18n)
       'TV settings': '电视设置',
       'Open LG Home': '打开 LG Home',
       'Back to Home': '返回 Home',
-      'Change Home': '更改 Home',
+      'Change Home': '按 Home 键打开 Clean Your TV',
       'Software updates': '软件更新',
       'Language': '语言',
       'Checking Home control…': '正在检查 Home 控制…',
@@ -2894,7 +2894,7 @@ if (window.HomeI18n)
       'TV settings': '電視設定',
       'Open LG Home': '開啟 LG Home',
       'Back to Home': '返回 Home',
-      'Change Home': '變更 Home',
+      'Change Home': '按 Home 鍵開啟 Clean Your TV',
       'Software updates': '軟體更新',
       'Language': '語言',
       'Checking Home control…': '正在檢查 Home 控制…',
@@ -3362,7 +3362,7 @@ if (window.HomeI18n)
       'TV settings': 'Nastavení televizoru',
       'Open LG Home': 'Otevřít LG Home',
       'Back to Home': 'Zpět na Home',
-      'Change Home': 'Změnit Home',
+      'Change Home': 'Otevírat Clean Your TV tlačítkem Home',
       'Software updates': 'Aktualizace softwaru',
       'Language': 'Jazyk',
       'Checking Home control…': 'Kontroluje se ovládání Home…',

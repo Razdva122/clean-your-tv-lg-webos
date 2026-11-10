@@ -79,11 +79,16 @@ function controller({ automatic = true, blocked = false } = {}) {
     Buffer,
     Date: { now: () => now },
     require(n) {
+      if (n === './home-control')
+        return require('./storage-fixture.cjs').homeControl(fakefs);
       if (n === './state-permissions')
-        return (d, log, initialize) => {
-          if (initialize) files.set(dir + 'control.json', '{}');
-          return true;
-        };
+        return require('./storage-fixture.cjs').create(
+          fakefs,
+          (d, log, initialize) => {
+            if (initialize) files.set(dir + 'control.json', '{}');
+            return true;
+          }
+        );
       if (n === 'fs') return fakefs;
       if (n === 'child_process')
         return {

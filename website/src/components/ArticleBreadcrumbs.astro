@@ -1,0 +1,26 @@
+---
+import { articleCopy, articleRoute } from '../lib/articles';
+import { route, type Locale } from '../lib/site';
+const { lang, title } = Astro.props as { lang: Locale; title?: string };
+const labels = articleCopy[lang];
+---
+
+<nav class="breadcrumbs" aria-label={labels.homeLabel + ' / ' + labels.title}>
+  <ol>
+    <li>
+      <a href={route(lang)}>{labels.homeLabel}</a>
+    </li>
+    <li>
+      {title ? (
+        <a href={articleRoute(lang)}>{labels.title}</a>
+      ) : (
+        <span aria-current="page">{labels.title}</span>
+      )}
+    </li>
+    {title && (
+      <li>
+        <span aria-current="page">{title}</span>
+      </li>
+    )}
+  </ol>
+</nav>

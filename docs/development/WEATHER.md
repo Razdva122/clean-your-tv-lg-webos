@@ -2,8 +2,8 @@
 
 Home owns location choice, networking, persistence, rendering, placement and remote
 navigation. A theme only declares supported formats and styles approved parts.
-The weather integration is prepared in a feature branch; publication of the Home
-application follows the normal release candidate workflow.
+Weather is included in Home; theme packages declare compatibility with the
+shared format contract below.
 
 ## Format contract
 

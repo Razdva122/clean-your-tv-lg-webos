@@ -9,8 +9,10 @@ HomeI18n.add({
       'Použijte nejvýše 48 znaků bez řídicích znaků.',
     'Could not save TV name. Check available storage and try again.':
       'Název nelze uložit. Zkontrolujte volné místo a zkuste to znovu.',
-    'Saves the launcher name. Apply the same name through the installer to change LG’s startup screen.':
-      'Nastavení ukládá název launcheru. Pro změnu úvodní obrazovky LG použijte stejný název v instalátoru. Druhá načítací obrazovka se nepřidává; síťový název se nemění.'
+    'Saves the Home name and tries to update the existing LG launcher title without reinstalling.':
+      'Uloží název Home a zkusí změnit existující titul LG bez přeinstalace.',
+    'Name saved in Home. LG startup title could not be verified.':
+      'Název uložen v Home. Spouštěcí titul LG nelze ověřit.'
   },
   'de': {
     'TV name': 'TV-Name',
@@ -21,8 +23,10 @@ HomeI18n.add({
       'Bis zu 48 Zeichen ohne Steuerzeichen verwenden.',
     'Could not save TV name. Check available storage and try again.':
       'Name konnte nicht gespeichert werden. Speicherplatz prüfen und erneut versuchen.',
-    'Saves the launcher name. Apply the same name through the installer to change LG’s startup screen.':
-      'Einstellungen speichert den Launcher-Namen. Für den LG-Startbildschirm denselben Namen im Installer anwenden. Es gibt keine zweite Ladeanzeige; der Netzwerkname bleibt unverändert.'
+    'Saves the Home name and tries to update the existing LG launcher title without reinstalling.':
+      'Speichert den Home-Namen und versucht, den vorhandenen LG-Starttitel ohne Neuinstallation zu ändern.',
+    'Name saved in Home. LG startup title could not be verified.':
+      'Name in Home gespeichert. LG-Starttitel konnte nicht geprüft werden.'
   },
   'es': {
     'TV name': 'Nombre del televisor',
@@ -33,8 +37,10 @@ HomeI18n.add({
       'Usa hasta 48 caracteres sin caracteres de control.',
     'Could not save TV name. Check available storage and try again.':
       'No se pudo guardar. Comprueba el espacio disponible e inténtalo de nuevo.',
-    'Saves the launcher name. Apply the same name through the installer to change LG’s startup screen.':
-      'Ajustes guarda el nombre del lanzador. Para cambiar el inicio de LG, aplica el mismo nombre con el instalador. No añade otra pantalla de carga ni cambia el nombre de red.'
+    'Saves the Home name and tries to update the existing LG launcher title without reinstalling.':
+      'Guarda el nombre de Home e intenta actualizar el título existente de LG sin reinstalar.',
+    'Name saved in Home. LG startup title could not be verified.':
+      'Nombre guardado en Home. No se pudo verificar el título de inicio de LG.'
   },
   'pt-BR': {
     'TV name': 'Nome da TV',
@@ -45,8 +51,10 @@ HomeI18n.add({
       'Use até 48 caracteres sem caracteres de controle.',
     'Could not save TV name. Check available storage and try again.':
       'Não foi possível salvar. Verifique o espaço disponível e tente novamente.',
-    'Saves the launcher name. Apply the same name through the installer to change LG’s startup screen.':
-      'Configurações salva o nome do inicializador. Para mudar a tela de início da LG, aplique o mesmo nome pelo instalador. Não há outra tela de carregamento; o nome de rede não muda.'
+    'Saves the Home name and tries to update the existing LG launcher title without reinstalling.':
+      'Salva o nome do Home e tenta atualizar o título existente da LG sem reinstalar.',
+    'Name saved in Home. LG startup title could not be verified.':
+      'Nome salvo no Home. Não foi possível verificar o título de inicialização da LG.'
   },
   'fr': {
     'TV name': 'Nom du téléviseur',
@@ -57,8 +65,10 @@ HomeI18n.add({
       'Utilisez au maximum 48 caractères sans caractères de contrôle.',
     'Could not save TV name. Check available storage and try again.':
       'Impossible d’enregistrer. Vérifiez l’espace disponible et réessayez.',
-    'Saves the launcher name. Apply the same name through the installer to change LG’s startup screen.':
-      'Les paramètres enregistrent le nom du lanceur. Pour changer l’écran de démarrage LG, appliquez le même nom avec l’installateur. Aucun second écran de chargement n’est ajouté ; le nom réseau reste inchangé.'
+    'Saves the Home name and tries to update the existing LG launcher title without reinstalling.':
+      'Enregistre le nom Home et tente de modifier le titre LG existant sans réinstallation.',
+    'Name saved in Home. LG startup title could not be verified.':
+      'Nom enregistré dans Home. Le titre de démarrage LG n’a pas pu être vérifié.'
   },
   'it': {
     'TV name': 'Nome TV',
@@ -69,8 +79,10 @@ HomeI18n.add({
       'Usa fino a 48 caratteri senza caratteri di controllo.',
     'Could not save TV name. Check available storage and try again.':
       'Impossibile salvare. Controlla lo spazio disponibile e riprova.',
-    'Saves the launcher name. Apply the same name through the installer to change LG’s startup screen.':
-      'Le impostazioni salvano il nome del launcher. Per cambiare la schermata iniziale LG, applica lo stesso nome tramite installer. Non viene aggiunta una seconda schermata; il nome di rete non cambia.'
+    'Saves the Home name and tries to update the existing LG launcher title without reinstalling.':
+      'Salva il nome Home e tenta di aggiornare il titolo LG esistente senza reinstallare.',
+    'Name saved in Home. LG startup title could not be verified.':
+      'Nome salvato in Home. Impossibile verificare il titolo di avvio LG.'
   },
   'ko': {
     'TV name': 'TV 이름',
@@ -81,8 +93,10 @@ HomeI18n.add({
       '제어 문자 없이 최대 48자를 사용하세요.',
     'Could not save TV name. Check available storage and try again.':
       '저장하지 못했습니다. 저장 공간을 확인하고 다시 시도하세요.',
-    'Saves the launcher name. Apply the same name through the installer to change LG’s startup screen.':
-      '설정은 런처 이름을 저장합니다. LG 시작 화면을 바꾸려면 설치 프로그램에서 같은 이름을 적용하세요. 두 번째 로딩 화면을 추가하지 않으며 네트워크 이름은 바뀌지 않습니다.'
+    'Saves the Home name and tries to update the existing LG launcher title without reinstalling.':
+      'Home 이름을 저장하고 재설치 없이 기존 LG 실행 제목 변경을 시도합니다.',
+    'Name saved in Home. LG startup title could not be verified.':
+      'Home에 이름을 저장했습니다. LG 시작 제목을 확인하지 못했습니다.'
   },
   'hi': {
     'TV name': 'टीवी का नाम',
@@ -93,8 +107,10 @@ HomeI18n.add({
       'नियंत्रण वर्णों के बिना अधिकतम 48 अक्षर दें।',
     'Could not save TV name. Check available storage and try again.':
       'नाम सहेजा नहीं जा सका। उपलब्ध जगह जाँचकर फिर कोशिश करें।',
-    'Saves the launcher name. Apply the same name through the installer to change LG’s startup screen.':
-      'सेटिंग्स लॉन्चर का नाम सहेजती है। LG की स्टार्टअप स्क्रीन बदलने के लिए इंस्टॉलर से यही नाम लागू करें। दूसरी लोडिंग स्क्रीन नहीं जुड़ती और नेटवर्क नाम नहीं बदलता।'
+    'Saves the Home name and tries to update the existing LG launcher title without reinstalling.':
+      'Home का नाम सहेजता है और बिना पुनः इंस्टॉल किए मौजूदा LG शीर्षक बदलने का प्रयास करता है।',
+    'Name saved in Home. LG startup title could not be verified.':
+      'Home में नाम सहेजा गया। LG का शुरुआती शीर्षक सत्यापित नहीं हो सका।'
   },
   'pl': {
     'TV name': 'Nazwa TV',
@@ -105,8 +121,10 @@ HomeI18n.add({
       'Użyj do 48 znaków bez znaków sterujących.',
     'Could not save TV name. Check available storage and try again.':
       'Nie można zapisać. Sprawdź wolne miejsce i spróbuj ponownie.',
-    'Saves the launcher name. Apply the same name through the installer to change LG’s startup screen.':
-      'Ustawienia zapisują nazwę launchera. Aby zmienić ekran startowy LG, zastosuj tę samą nazwę przez instalator. Nie ma drugiego ekranu ładowania; nazwa sieciowa nie zmienia się.'
+    'Saves the Home name and tries to update the existing LG launcher title without reinstalling.':
+      'Zapisuje nazwę Home i próbuje zmienić istniejący tytuł LG bez ponownej instalacji.',
+    'Name saved in Home. LG startup title could not be verified.':
+      'Nazwa zapisana w Home. Nie można zweryfikować tytułu startowego LG.'
   },
   'ru': {
     'TV name': 'Название ТВ',
@@ -117,8 +135,10 @@ HomeI18n.add({
       'Не более 48 символов без управляющих символов.',
     'Could not save TV name. Check available storage and try again.':
       'Не удалось сохранить. Проверьте свободное место и повторите попытку.',
-    'Saves the launcher name. Apply the same name through the installer to change LG’s startup screen.':
-      'Настройки сохраняют название лаунчера. Для изменения стартового экрана LG примените это название через установщик. Второго экрана загрузки нет; сетевое имя не меняется.'
+    'Saves the Home name and tries to update the existing LG launcher title without reinstalling.':
+      'Сохраняет имя Home и пытается изменить существующий заголовок LG без переустановки.',
+    'Name saved in Home. LG startup title could not be verified.':
+      'Имя сохранено в Home. Заголовок запуска LG не удалось подтвердить.'
   },
   'zh-Hans': {
     'TV name': '电视名称',
@@ -129,8 +149,10 @@ HomeI18n.add({
       '最多48个字符，不含控制字符。',
     'Could not save TV name. Check available storage and try again.':
       '无法保存。请检查可用空间后重试。',
-    'Saves the launcher name. Apply the same name through the installer to change LG’s startup screen.':
-      '设置保存启动器名称。要更改LG启动画面，请通过安装程序应用相同名称。不会添加第二个加载画面，也不会更改网络名称。'
+    'Saves the Home name and tries to update the existing LG launcher title without reinstalling.':
+      '保存 Home 名称，并尝试更新现有 LG 启动标题，无需重新安装。',
+    'Name saved in Home. LG startup title could not be verified.':
+      '名称已保存在 Home 中。无法验证 LG 启动标题。'
   },
   'zh-Hant': {
     'TV name': '電視名稱',
@@ -141,7 +163,9 @@ HomeI18n.add({
       '最多48個字元，不含控制字元。',
     'Could not save TV name. Check available storage and try again.':
       '無法儲存。請檢查可用空間後重試。',
-    'Saves the launcher name. Apply the same name through the installer to change LG’s startup screen.':
-      '設定儲存啟動器名稱。要變更LG啟動畫面，請透過安裝程式套用相同名稱。不會新增第二個載入畫面，也不會變更網路名稱。'
+    'Saves the Home name and tries to update the existing LG launcher title without reinstalling.':
+      '儲存 Home 名稱，並嘗試更新現有 LG 啟動標題，無需重新安裝。',
+    'Name saved in Home. LG startup title could not be verified.':
+      '名稱已儲存在 Home。無法驗證 LG 啟動標題。'
   }
 });

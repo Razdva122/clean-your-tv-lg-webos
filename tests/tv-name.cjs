@@ -69,3 +69,67 @@ for (const module of [
 console.log(
   'TV name: upgrade defaults, later changes, persistence, validation and both profile formats passed.'
 );
+// Simulated LS2 results: never imply acceptance on a physical television.
+const app = 'com.gathin.tvhome';
+const primaryPoint = (title) => ({
+  id: app,
+  launchPointId: app + '_default',
+  title
+});
+function exercise(responses) {
+  const calls = [];
+  let result;
+  name.rename(
+    (uri, payload, callback) => {
+      calls.push({ uri, payload });
+      callback(responses.shift());
+    },
+    app,
+    'New',
+    (value) => (result = value)
+  );
+  return { calls, result };
+}
+const points = (title) => ({
+  returnValue: true,
+  launchPoints: [
+    primaryPoint(title),
+    { id: app, launchPointId: 'secondary', title: 'Other' }
+  ]
+});
+let run = exercise([points('Home'), { returnValue: true }, points('New')]);
+assert.equal(run.result, true);
+assert.deepEqual(run.calls[1].payload, {
+  launchPointId: app + '_default',
+  title: 'New'
+});
+for (const responses of [
+  [points('Home'), { returnValue: false }],
+  [points('Home'), { returnValue: true }, points('Home')],
+  [
+    {
+      returnValue: true,
+      launchPoints: [primaryPoint('Home'), primaryPoint('Home')]
+    }
+  ],
+  [
+    {
+      returnValue: true,
+      launchPoints: [{ id: app, launchPointId: 'secondary', title: 'Home' }]
+    }
+  ]
+]) {
+  run = exercise(responses);
+  assert.equal(run.result, false);
+  assert.ok(run.calls.every((c) => !c.uri.includes('addLaunchPoint')));
+}
+assert.throws(() =>
+  name.rename(
+    () => {
+      throw Error('must not call');
+    },
+    app,
+    'bad\nname',
+    () => {}
+  )
+);

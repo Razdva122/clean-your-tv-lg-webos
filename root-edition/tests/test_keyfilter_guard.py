@@ -28,7 +28,7 @@ class KeyfilterGuardTests(unittest.TestCase):
                         str(SOURCE), '-o', str(self.binary)], check=True, capture_output=True)
         for name in ('state', 'volatile'):
             (self.root / name).mkdir(mode=0o700)
-        (self.root / 'home').write_bytes(b'LG Home executable')
+        (self.root / 'home').write_bytes(b'LG Home executable'.ljust(52,b'\0'))
         (self.root / 'home').chmod(0o700)
         (self.root / 'boot').write_text(BOOT + '\n')
         self.config()
@@ -81,10 +81,104 @@ class KeyfilterGuardTests(unittest.TestCase):
         ack = os.read(rr, 128); os.close(rr)
         self.assertEqual(ack, f'ARMED {TOKEN}\n'.encode())
         return p, iw, cw
+    def freeze(self, p):
+        # ARMED is written inside the state critical section. Stop only after
+        # acquiring that lock ourselves; otherwise Restore cannot latch stop.
+        import fcntl
+        deadline=time.monotonic()+3
+        with (self.root/'state/lock').open('rb') as lock:
+            while True:
+                try:
+                    fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+                    break
+                except BlockingIOError:
+                    self.assertIsNone(p.poll(),'guardian exited before freeze')
+                    self.assertLess(time.monotonic(),deadline,'guardian did not release state lock')
+                    time.sleep(.01)
+            stopped=False
+            try:
+                p.send_signal(signal.SIGSTOP)
+                while True:
+                    pid,status=os.waitpid(p.pid,os.WUNTRACED|os.WNOHANG)
+                    if pid:
+                        self.assertEqual(pid,p.pid)
+                        self.assertTrue(os.WIFSTOPPED(status))
+                        self.assertEqual(os.WSTOPSIG(status),signal.SIGSTOP)
+                        stopped=True
+                        break
+                    self.assertLess(time.monotonic(),deadline,'guardian did not stop')
+                    time.sleep(.01)
+            finally:
+                if not stopped and p.poll() is None:p.send_signal(signal.SIGCONT)
+
     def finish(self, p):
         out, err = p.communicate(timeout=7)
         self.assertEqual(err, '')
         return json.loads(out)
+    def test_stock_identity_accepts_only_immutable_uid1001_home(self):
+        # Interpose only kernel observations; execute the guardian's actual
+        # identity check against the real configured file, including its inode.
+        with (self.root/'home').open('wb') as stream: stream.truncate(4530960)
+        harness=self.root/'stock-test.c'
+        harness.write_text(r'''#define _GNU_SOURCE
+#include <sys/stat.h>
+#include <sys/statvfs.h>
+#ifdef __linux__
+#include <sys/vfs.h>
+#else
+#include <sys/mount.h>
+#endif
+#include <string.h>
+#include <stdio.h>
+#include <unistd.h>
+static unsigned owner=1001;
+static int immutable=1, readonly_fs=1;
+static int attr(int fd, struct stat *s) {
+  int r=fstat(fd,s); if(!r) s->st_uid=owner; return r;
+}
+static int lattr(const char *p, struct stat *s) {
+  int r=lstat(p,s); if(!r) s->st_uid=!strcmp(p,FIXTURE_ROOT "/home") ? owner:0; return r;
+}
+static int fixture_vfs(int fd, struct statvfs *s) {
+  int r=fstatvfs(fd,s); if(!r) s->f_flag=readonly_fs ? ST_RDONLY:0; return r;
+}
+static int fixture_fs(int fd, struct statfs *s) {
+  (void)fd; memset(s,0,sizeof(*s));
+#ifdef __linux__
+  s->f_type=immutable ? 0x73717368:0xef53;
+#else
+  strcpy(s->f_fstypename,immutable ? "squashfs":"apfs");
+#endif
+  return 0;
+}
+// Model production root even when the CI runner itself has UID 1001.
+#define getuid() ((uid_t)0)
+#define fstat(fd,s) attr(fd,s)
+#define lstat(p,s) lattr(p,s)
+#define fstatfs(fd,s) fixture_fs(fd,s)
+#define fstatvfs(fd,s) fixture_vfs(fd,s)
+#define main guardian_main
+#include "SOURCE"
+#undef main
+int main(void) {
+  (void)attr; (void)fixture_vfs; (void)fixture_fs;
+  struct stat s; if(stat(HOME,&s)) return 2;
+  cfg.dev=s.st_dev; cfg.ino=s.st_ino; cfg.size=s.st_size; cfg.mtime=mtime_ns(&s);
+  printf("%d ",stock_identity());
+  immutable=0; printf("%d ",stock_identity());
+  immutable=1; readonly_fs=0; printf("%d ",stock_identity());
+  readonly_fs=1; owner=1002; printf("%d ",stock_identity());
+  owner=1001; cfg.ino++; printf("%d\n",stock_identity());
+  return 0;
+}
+'''.replace('\"SOURCE\"','\"'+str(SOURCE)+'\"'))
+        binary=self.root/'stock-test'
+        subprocess.run(['cc','-std=c11','-Wall','-Wextra','-Werror',
+            '-DCYTV_KEYFILTER_FIXTURE',f'-DFIXTURE_ROOT="{self.root}"',
+            str(harness),'-o',str(binary)],check=True,capture_output=True)
+        result=subprocess.run([str(binary)],check=True,capture_output=True,text=True)
+        self.assertEqual(result.stdout.strip(),'1 0 0 0 0')
+
     def test_selfcheck_and_stock_contract(self):
         s, rc = self.run_guard('--selfcheck'); self.assertEqual(rc, 0)
         self.assertEqual(s['routing'], 'compositor-keyfilter-v1')
@@ -314,8 +408,30 @@ class KeyfilterGuardTests(unittest.TestCase):
             self.assertEqual((self.root/'luna-calls').read_text(),before); self.finish(p)
         finally:
             if home.poll() is None: home.kill(); home.communicate()
+    def test_restore_retirement_waits_for_ready_state_lock_release(self):
+        # Hold the real ARMED critical section until the parent observes lock
+        # contention. A handshake avoids consuming the guardian health budget.
+        import fcntl
+        source=SOURCE.read_text()
+        anchor='else { armed=1; close(ready); ready=-1; }'
+        self.assertEqual(source.count(anchor),1)
+        source=source.replace(anchor,'else { armed=1; close(ready); ready=-1; while(access(FIXTURE_ROOT "/ready-release",F_OK)<0)poll(NULL,0,1); }',1)
+        subprocess.run(['cc','-std=c11','-Wall','-Wextra','-Werror','-DCYTV_KEYFILTER_FIXTURE',
+                        f'-DFIXTURE_ROOT="{self.root}"','-x','c','-','-o',str(self.binary)],
+                       input=source,text=True,check=True,capture_output=True)
+        release=self.root/'ready-release';original=fcntl.flock;contended=[]
+        def release_on_contention(fd,operation):
+            try:return original(fd,operation)
+            except BlockingIOError:
+                contended.append(True);release.touch();raise
+        try:
+            with mock.patch.object(fcntl,'flock',side_effect=release_on_contention):
+                self.test_restore_retires_via_latch_without_queued_pid_signal()
+            self.assertTrue(contended,'fixture must encounter the guardian-held state lock')
+        finally:release.touch()
+
     def test_restore_retires_via_latch_without_queued_pid_signal(self):
-        p,iw,cw=self.armed(); p.send_signal(signal.SIGSTOP)
+        p,iw,cw=self.armed(); self.freeze(p)
         restore=subprocess.Popen([str(self.binary),'--restore'],stdout=subprocess.PIPE,text=True)
         try:
             deadline=time.monotonic()+1.5
@@ -331,7 +447,7 @@ class KeyfilterGuardTests(unittest.TestCase):
             if p.poll() is None: p.send_signal(signal.SIGCONT)
             if restore.poll() is None: restore.terminate(); restore.communicate(timeout=5)
     def test_frozen_guard_retirement_timeout_preserves_evidence(self):
-        p,iw,cw=self.armed(); p.send_signal(signal.SIGSTOP)
+        p,iw,cw=self.armed(); self.freeze(p)
         try:
             s,rc=self.run_guard('--restore'); self.assertNotEqual(rc,0)
             self.assertEqual(s['reason'],'retirement_failed'); self.assertTrue(s['stopped'])

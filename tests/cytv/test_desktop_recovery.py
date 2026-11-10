@@ -305,9 +305,10 @@ class DesktopRecoveryTests(unittest.TestCase):
         w.run = runner
         w.start('uninstall', self.profile)
         self.pump(lambda: not w.running)
-        self.assertEqual(w.title.text(), 'Removal is not finished yet.')
-        self.assertIn('Removing private setup data…', w.subtitle.text())
-        self.assertIn('Some project files remain.', w.subtitle.text())
+        self.assertEqual(w.title.text(), 'Finish Clean Your TV cleanup')
+        self.assertNotEqual(w.title.property('state'), 'error')
+        self.assertIn('Verifying removal…', w.subtitle.text())
+        self.assertIn('Final cleanup could not be verified.', w.subtitle.text())
         self.assertIsNotNone(self.button(w, 'Try again'))
         w.recovery_plan['actions'] = ['retain-evidence']
         w.receive('done', 2)
@@ -321,11 +322,12 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.pump(lambda: w.pending is not None)
         w.submit('y')
         self.pump(lambda: not w.running)
-        self.assertEqual(w.title.text(), 'Removal is not finished yet.')
+        self.assertEqual(w.title.text(), 'Finish Clean Your TV cleanup')
+        self.assertNotEqual(w.title.property('state'), 'error')
         self.assertEqual(self.store.pending(self.profile)['stage'], 'private-cleanup')
         self.assertEqual(self.store.pending(self.profile)['previous'], json.loads(original))
-        self.assertIn('Removing private setup data…', w.subtitle.text())
-        self.assertIn('Some project files remain.', w.subtitle.text())
+        self.assertIn('Verifying removal…', w.subtitle.text())
+        self.assertIn('Final cleanup could not be verified.', w.subtitle.text())
         self.assertEqual(w.recovery_profile, self.profile)
         report = json.loads(w.report.read_bytes())
         self.assertEqual(report['frontend'], 'desktop')
@@ -491,7 +493,7 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.pump(lambda: w.pending is not None)
         w.submit('y')
         self.pump(lambda: not w.running)
-        self.assertEqual(w.title.text(), 'Removal is not finished yet.')
+        self.assertEqual(w.title.text(), 'Check the TV connection to continue removal')
         self.assertIsNotNone(self.button(w, 'Save diagnostic report…'))
         pending = self.store.pending(self.profile)
         self.assertEqual(pending['recovery_protocol'], 'clean-removal-v1')
@@ -525,8 +527,11 @@ class DesktopRecoveryTests(unittest.TestCase):
         def reject(uri, payload, **kwargs):
             if uri == 'com.webos.appInstallService/status':
                 self.remote.calls.append(('luna', uri, payload))
-                raise TVRejected('TV rejected the operation. Run cytv doctor; no automatic retry was attempted.', {'returnValue': False, 'errorCode': -1,
+                error=TVRejected('TV rejected the operation. Run cytv doctor; no automatic retry was attempted.', {'returnValue': False, 'errorCode': -1,
                     'errorText': 'PRIVATE-DIAGNOSTICS'}, uri)
+                error.contract_events=[{'schema':1,'component':'storage','operation':'inspect','phase':'read',
+                    'field':'apps','expected':'single-regular-file','actual':{'mode':511},'decision':'refuse','count':1}]
+                raise error
             return original(uri, payload, **kwargs)
         self.remote.luna = reject
         self.button(w, 'Review recovery options').click()
@@ -538,6 +543,7 @@ class DesktopRecoveryTests(unittest.TestCase):
         report = json.loads(w.report.read_text())
         self.assertEqual(report['phase'], 'recover')
         self.assertEqual(report['luna']['operation'], 'package-status')
+        self.assertTrue(any(e['field']=='apps' for e in report['contract_events']))
         self.assertTrue(report['trace'])
         for private in ('PRIVATE-DIAGNOSTICS', 'PRIVATE-PAIRING-KEY', '192.0.2.10'):
             self.assertNotIn(private, w.report.read_text())
@@ -585,6 +591,8 @@ class DesktopRecoveryTests(unittest.TestCase):
             self.pump(lambda: w.pending is not None)
             w.submit('y')
         self.pump(lambda: w.pending is not None)
+        w.submit('{}')  # Installation is complete; skip optional customization.
+        self.pump(lambda: w.pending is not None)
         self.assertIn('Home button result', w.pending.label)
         self.assertEqual(w.pending.default, '3')
         self.assertEqual([key for key, _, _ in w.pending.options], ['1','2','3'])
@@ -612,6 +620,8 @@ class DesktopRecoveryTests(unittest.TestCase):
         w = self.window(); w.start('install', self.profile)
         for _ in range(2):
             self.pump(lambda: w.pending is not None); w.submit('y')
+        self.pump(lambda: w.pending is not None)
+        w.submit('{}')  # Installation is complete; skip optional customization.
         self.pump(lambda: w.pending is not None)
         w.submit('')
         self.pump(lambda: not w.running)

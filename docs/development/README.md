@@ -23,6 +23,8 @@ before using a low-level recovery or installation procedure.
 
 ## Understand behavior and diagnose failures
 
+- [Shared storage, lifecycle and recovery contracts](SHARED-CONTRACTS.md): canonical APIs, ownership handoff, safety authority and bounded diagnostics.
+
 - [Early Root admission and connection guidance](INSTALLER-PREFLIGHT-HELP.md): existing Home-interface contract before runtime preparation, typed localized advice and unchanged recovery/trust authority.
 
 - [Root native startup input](ROOT-NATIVE-INPUT.md): owned EIM lifecycle and acceptance limits.
@@ -36,6 +38,7 @@ before using a low-level recovery or installation procedure.
 - [Companion entry points](../COMPANION-APPS.md), [Helper diagnostics](../HELPER-DIAGNOSTICS.md), [Home/settings diagnostics](../SETTINGS-DIAGNOSTICS.md).
 - [Root doctor](../../root-edition/DOCTOR.md), [current Root limits](../../root-edition/STATUS.md), [Root validation](../../root-edition/TESTING.md).
 - [Separate installer outcomes](INSTALLER-OUTCOMES.md): package proofs, launch/runtime evidence and explicitly owner-reported Home.
+- [Installer personalization](INSTALLER-SETTINGS.md): mode-specific setup choices, one-time appearance data and optional service readback.
 - [Installer recovery journey](INSTALLER-RECOVERY.md): separately confirmed recovery, existing authority guards and frontend outcome semantics.
 - [Clean removal and reinstallation](CLEAN-REMOVAL-REINSTALLATION.md): final cleanup fences, read-only completed retries and a bound Root-SSH No-root successor.
 - [Installer diagnostic evidence](INSTALLER-DIAGNOSTICS.md): primary-error retention, safe status/check projections and private host correlation.

@@ -1,6 +1,6 @@
 # Clean Your TV — guide d’utilisation
 
-l’installateur demande un nom, **Home** par défaut ; CLI : `--tv-name "Aashiyaan"`. Après une mise à niveau, **Paramètres → Home → Nom du téléviseur** apparaît automatiquement. Enregistrez le nom ou rétablissez Home à tout moment. Le nom persiste après redémarrage et mises à jour compatibles ; les autres réglages restent conservés. Maximum 48 caractères. Les paramètres enregistrent le nom du lanceur. Pour changer l’écran de démarrage LG, appliquez le même nom avec l’installateur. Aucun second écran de chargement n’est ajouté ; le nom réseau reste inchangé.
+Le nom du téléviseur figure sur la dernière page de configuration, avec le thème et la météo (Home par défaut) ; la CLI accepte --tv-name. Modifiez-le ensuite dans Réglages → Écran d’accueil → Nom du téléviseur. Enregistrer tente de renommer le point de lancement LG existant sans réinstaller ni créer de raccourci, puis vérifie son titre. Si LG refuse, Home conserve le nom et indique que le titre de démarrage est non vérifié. Vérifiez son affichage et sa persistance sur le téléviseur. Les mises à jour compatibles préservent les préférences. Maximum 48 caractères ; le nom réseau reste inchangé, sans second écran de chargement.
 
 Modification non publiée : avant une nouvelle installation, l’installateur de l’ordinateur recherche une version stable plus récente sur GitHub. Choisissez « Ouvrir GitHub et télécharger la dernière version » pour arrêter et la télécharger, ou « Non, installer cette version » pour continuer explicitement. Si la vérification échoue, vous pouvez continuer. Les opérations en attente et la récupération ignorent cette vérification.
 
@@ -109,7 +109,7 @@ Quand demandé, débranchez l’alimentation TV, rebranchez-la, attendez le rés
 
 Une installation échouée ou interrompue propose directement la récupération. Si No-root ne peut pas continuer, confirmez une fois la suppression complète. La suppression effectue jusqu’à trois tentatives en cas de perte temporaire de connexion ou de processus CYTV occupé. Si Root est nécessaire, choisissez **Se connecter avec Root** pour le même téléviseur ; le nettoyage Root vérifié termine aussi sa suppression No-root bloquée. Après un échec d’activation Root, CYTV tente de rétablir et vérifier LG Home sans réactiver. Une annulation avec du travail inachevé conserve le rapport et les actions de récupération. L’arrêt d’urgence reste actif.
 
-Après une erreur de connexion pendant la suppression, ouvrez les détails, vérifiez le réseau ou choisissez une clé SSH Root existante, puis réessayez. Adresse, édition, port et vérification de la clé du téléviseur restent fixes. No-root vérifie Helper avant l’association: arrêtez-le et confirmez la nouvelle vérification dans le même parcours. Seul un téléviseur vide vérifié sans installation en attente peut éviter le redémarrage ; après une suppression réelle, effectuez le redémarrage demandé. Si le service des entrées échoue, le nettoyage sûr des paquets continue ; le succès exige toujours la vérification du nettoyage du raccourci.
+Après une erreur de connexion pendant la suppression, ouvrez les détails, vérifiez le réseau ou choisissez une clé SSH Root existante, puis réessayez. Adresse, édition, port et vérification de la clé du téléviseur restent fixes. No-root vérifie Helper avant l’association: arrêtez-le et confirmez la nouvelle vérification dans le même parcours. La suppression peut finir sans redémarrage si les commandes, la désactivation du démarrage automatique et l’absence de paquets, fichiers et processus sont vérifiées, sans installation en attente. Si un redémarrage est demandé, effectuez-le puis réessayez. Si le service des entrées échoue, le nettoyage sûr des paquets continue ; le succès exige toujours la vérification du nettoyage du raccourci.
 
 **Réinstaller Root :** Choisissez **Configurer mon téléviseur → Root** avec la connexion enregistrée et confirmez **Réinstaller Root ?**. L’installateur rétablit LG Home et supprime entièrement Clean Your TV, ses outils de mise à jour, Home Helper et les préférences enregistrées. Après vérification de la suppression, il installe et active les paquets et l’environnement Root fournis avec cet installateur. Les autres apps du TV et l’accès root/SSH existant sont conservés. Si la suppression s’arrête ou demande un redémarrage complet, terminez-la avant de relancer la configuration. **Désinstaller Clean Your TV** seul ne lance jamais une nouvelle installation.
 
@@ -136,6 +136,12 @@ Références détaillées en anglais: [prérequis](../COMPATIBILITY.md) · [comm
 <a id="ancien-nodejs-du-tv-publié-dans-v1120"></a>
 <a id="suppression-simple-v1110"></a>
 
+## Réglages
+
+Utilisez ↑ ↓ pour choisir une catégorie, puis → ou OK pour y entrer. ← revient aux catégories ; Retour y revient d’abord, puis ferme les réglages. En revenant dans une section, le dernier contrôle disponible reprend le focus. Dans Colonnes, les flèches suivent la grille de trois colonnes. Dans Langue, le focus se place sur la langue choisie.
+
+Si No-root ne peut pas lire l’état de Home, choisissez Réessayer. Un contrôle indisponible ne signifie pas que Home est désactivé. Dans Fonds d’écran, transférez une image depuis le téléphone ou CYTV ; qualité et assombrissement apparaissent lorsqu’un fond est disponible. La suppression d’un fond personnel demande confirmation ; Annuler le conserve.
+
 ## Météo
 
 Ouvrez Réglages → Météo, sous Fonds d’écran. Activez la météo puis ouvrez Ville pour rechercher et choisir la bonne région et le bon pays, ou choisissez Automatique pour une ville approximative selon votre connexion. Un VPN peut modifier le résultat ; utilisez la recherche manuelle si la ville manque ou est incorrecte. La ville détectée ou choisie apparaît dans les réglages. Choisissez °C / m/s ou °F / mph et un format disponible : compact, actuel, détaillé ou quatre jours. L’aperçu suit le thème ; Exemple indique des données fictives. Liquid Glass accepte uniquement le format compact. Ribbon et Atmosphere n’affichent pas la météo. La désactivation arrête les requêtes et masque la ville, les unités et le format ; le choix de la source reste disponible. En cas de panne, les données récentes peuvent rester temporairement ; ensuite la météo est masquée jusqu’à son actualisation.
@@ -145,3 +151,15 @@ Choisissez la source des prévisions : Auto, MET Norway ou Open-Meteo. Auto comm
 Les coordonnées sont envoyées à api.met.no ou api.open-meteo.com, les recherches de villes à geocoding-api.open-meteo.com. La localisation automatique facultative transmet votre IP publique à get.geojs.io. Les connexions utilisent HTTPS ; aucune clé API n’est nécessaire. Le lieu, la source et le cache restent sur le téléviseur. Sources des données présente les conditions et crédits, dont l’Institut météorologique norvégien (MET Norway, CC BY 4.0).
 
 Le bouton Sources des données dans l’en-tête Météo ouvre les informations sur les services et licences.
+
+## Photo iPhone comme fond d’écran
+
+Ouvrez Paramètres → Fonds d’écran → Envoyer depuis le téléphone et scannez le code. Choisissez JPG, PNG ou HEIC/HEIF, recadrez, acceptez la limite de qualité et envoyez. Choisissez Appliquer sur le TV. Safari utilise HEIC natif ; Chrome, Firefox et les autres navigateurs modernes utilisent le décodeur local inclus si nécessaire. La conversion reste sur le téléphone, sans service externe. Annuler ou changer de fichier arrête la conversion. Entrée : 32 Mio et 50 millions de pixels ; sortie : 1080p et 2 Mio maximum. En cas d’échec, essayez une autre photo ou JPG/PNG. Cela concerne la page du téléphone, pas l’app Mac.
+
+## Configurer votre Clean Your TV
+
+Après une installation réussie, choisissez Classic, Liquid Glass ou Ribbon et activez ou désactivez la météo. Ribbon ne prend pas en charge la météo ; Liquid Glass utilise le format compact. La ville est estimée selon votre connexion et peut être modifiée dans Home.
+
+No-root avec Developer Mode propose la prolongation automatique (Bêta) ; surveillez toujours le compteur officiel. No-root via un accès root SSH existant n’utilise pas cette option. Root permet de bloquer les mises à jour du micrologiciel LG via Homebrew Channel, y compris celles de sécurité ; un vrai redémarrage via Homebrew Channel est requis. Les mises à jour CYTV restent distinctes.
+
+Conserver les réglages actuels permet de passer la personnalisation. L’interrupteur affiche l’état actuel de la fonction du mode. Les réglages inchangés sont conservés. La réinstallation Root supprime toujours les préférences CYTV comme indiqué plus haut. Vérifiez l’apparence sur le TV et les options non confirmées dans Home avant de réessayer.

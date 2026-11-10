@@ -241,7 +241,7 @@ class LanguageTests(unittest.TestCase):
             lang.set_language(code)
             for message in messages - {''}:
                 with self.subTest(language=code, message=message):
-                    self.assertIn(message, lang.MESSAGES)
+                    self.assertTrue(message in lang.MESSAGES, f"Missing translation: {code}: {message}")
                     self.assertNotEqual(lang.translate(message), message)
 
     def test_short_desktop_password_titles_are_translated_without_changing_identifiers(self):

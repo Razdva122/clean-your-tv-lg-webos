@@ -40,7 +40,7 @@ class Remote:
         code=code.replace('/proc/sys/kernel/random/boot_id',str(self.root/'boot'))
         code=code.replace("'/proc/'",json.dumps(str(self.root/'proc')+'/'))
         # Adapt only the fixed volatile root and its root UID for this host fixture.
-        volatile=self.root/'volatile';volatile.mkdir(exist_ok=True);volatile.chmod(0o1777)
+        volatile=self.root/'volatile';volatile.mkdir(exist_ok=True);volatile.chmod(getattr(self,'volatile_mode',0o1777))
         code=code.replace('/tmp/.cytv-installer',str(volatile/'.cytv-installer'))
         code=code.replace("'/.cytv-installer'",json.dumps(str(self.root/'jail-private')))
         code=code.replace('function ancestry(p){',
@@ -244,9 +244,72 @@ class SimpleRemoval(unittest.TestCase):
         self.assertIsNone(self.store.pending(self.profile))
         self.assertFalse(any(uri.endswith('/dev/remove') for uri,_ in self.remote.calls))
 
+    def test_installed_packages_finish_without_restart_after_verified_process_absence(self):
+        (self.root/'proc').mkdir()
+        self.remote.apps=set(self.cleanup.APPS)
+        self.own_file('apps/usr/palm/applications/com.local.nativehome/state/ssap-key.json')
+        result=self.remove()
+        self.assertTrue(result['verified_clean'])
+        self.assertFalse(result.get('restart_required',False))
+        self.assertFalse(self.remote.apps)
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertFalse(list((self.root/'volatile').glob('cytv-removal-*.boot')))
+
+    def test_removed_packages_with_live_process_still_require_restart(self):
+        proc=self.root/'proc'/'123';proc.mkdir(parents=True)
+        (proc/'cmdline').write_text('/usr/bin/node\0'+str(self.root/'developer/apps/usr/palm/services/com.gathin.tvhome.renewal/service.js')+'\0')
+        self.remote.apps={'com.gathin.tvhome'}
+        self.assertTrue(self.remove()['restart_required'])
+        self.assertIsNotNone(self.store.pending(self.profile))
+
+    def test_lost_same_boot_marker_release_never_proves_a_restart(self):
+        (self.root/'proc').mkdir()
+        self.remote.apps={'com.gathin.tvhome'}
+        run=self.remote.run
+        lost=[]
+        def interrupted(command,**kwargs):
+            result=run(command,**kwargs)
+            encoded,_=json.JSONDecoder().raw_decode(self.remote.assert_program[len('process.argv.push('):])
+            if json.loads(encoded)['action']=='boot-release' and not lost:
+                lost.append(True)
+                proc=self.root/'proc/123';proc.mkdir()
+                (proc/'cmdline').write_text('/usr/bin/node\0'+str(self.root/'developer/apps/usr/palm/services/com.gathin.tvhome.renewal/service.js')+'\0')
+                raise UserError('Connection to the TV was interrupted.',reason_code='connection-interrupted')
+            return result
+        self.remote.run=interrupted
+        with self.assertRaises(UserError):self.remove()
+        self.assertTrue(lost)
+        self.assertTrue(self.remove()['restart_required'])
+        self.assertIsNotNone(self.store.pending(self.profile))
+
+    def test_lost_host_completion_after_verified_restart_does_not_request_second_restart(self):
+        from unittest.mock import patch
+        (self.root/'proc').mkdir()
+        self.store.begin(self.profile,'install',stage='submitted')
+        self.assertTrue(self.remove()['restart_required'])
+        self.reboot()
+        with patch.object(self.store,'finish_clean_removal',side_effect=OSError('host interruption')):
+            with self.assertRaises(OSError):self.remove()
+        self.assertEqual(self.store.pending(self.profile)['stage'],'verified-clean')
+        self.assertTrue(self.remove()['verified_clean'])
+
+    def test_saved_restart_proof_does_not_hide_a_reappeared_process(self):
+        from unittest.mock import patch
+        (self.root/'proc').mkdir()
+        self.store.begin(self.profile,'install',stage='submitted')
+        self.assertTrue(self.remove()['restart_required'])
+        self.reboot()
+        with patch.object(self.store,'finish_clean_removal',side_effect=OSError('host interruption')):
+            with self.assertRaises(OSError):self.remove()
+        proc=self.root/'proc/123';proc.mkdir()
+        (proc/'cmdline').write_text('/usr/bin/node\0'+str(self.root/'developer/apps/usr/palm/services/com.gathin.tvhome.renewal/service.js')+'\0')
+        self.assertTrue(self.remove().get('restart_required'))
+        self.assertIsNotNone(self.store.pending(self.profile))
+
     def test_empty_files_with_live_or_unreadable_processes_still_need_restart(self):
         proc=self.root/'proc'/'123';proc.mkdir(parents=True)
         for argv in ('/usr/bin/node\0/media/developer/apps/usr/palm/services/com.gathin.tvhome.renewal/service.js\0',
+                     '/bin/sh\0-c\0sleep 1; /usr/bin/node /media/developer/apps/usr/palm/services/com.gathin.tvhome.renewal/service.js\0',
                      '/usr/bin/node\0-e\0setInterval(function(){},1000)\0',
                      '/usr/bin/node\0--eval=setInterval(function(){},1000)\0',
                      '/usr/bin/node\0--eval\0setInterval(function(){},1000)\0',
@@ -345,6 +408,86 @@ class SimpleRemoval(unittest.TestCase):
         goal=self.store.pending(self.profile)['removal_operation']
         return self.root/'volatile'/('cytv-removal-'+goal+'.boot')
 
+    def test_boot_root_refusal_exports_safe_context_before_any_cleanup(self):
+        from cytv import diagnostics
+        self.remote.volatile_mode=0o755
+        self.remote.apps={'com.local.nativehome'}
+        with self.assertRaises(RuntimeError) as caught:self.remove()
+        self.assertIsInstance(caught.exception,UserError,'cleanup failure lost its safe diagnostic envelope')
+        detail=caught.exception.no_root_cleanup
+        self.assertEqual(detail['action'],'boot-create')
+        self.assertEqual(detail['step'],'boot-root')
+        self.assertEqual(detail['reason'],'unsafe-path')
+        self.assertEqual(detail['directory_mode'],'0755')
+        self.assertEqual(detail['directory_owner'],'root')
+        self.assertEqual(detail['directory_type'],'directory')
+        self.assertFalse(any(uri.endswith(('/disable','/dev/remove')) for uri,_ in self.remote.calls))
+        self.assertEqual(self.store.pending(self.profile)['stage'],'requested')
+        report=json.loads(diagnostics.create_report(self.store,'uninstall',self.profile,'uninstall',caught.exception).read_text())
+        self.assertEqual(report['no_root_cleanup'],detail)
+        self.assertEqual(report['first_failure']['no_root_cleanup'],detail)
+        self.assertNotIn(str(self.root),json.dumps(report))
+        self.assertNotIn(self.remote.boot,json.dumps(report))
+
+    def test_boot_root_symlink_is_reported_and_never_followed_for_cleanup(self):
+        destination=self.root/'foreign';destination.mkdir()
+        evidence=destination/'keep';evidence.write_text('preserve')
+        (self.root/'volatile').symlink_to(destination,target_is_directory=True)
+        with self.assertRaises(UserError) as caught:self.remove()
+        self.assertEqual(caught.exception.no_root_cleanup['step'],'boot-root')
+        self.assertEqual(caught.exception.no_root_cleanup['directory_type'],'symlink')
+        self.assertEqual(evidence.read_text(),'preserve')
+        self.assertFalse(list(destination.glob('cytv-removal-*')))
+
+    def test_boot_storage_failure_preserves_existing_space_guidance(self):
+        self.remote.transform=lambda code:code.replace('fs.fsyncSync(out);',
+            "var injected=Error('No space left on device: PRIVATE-PATH');injected.code='ENOSPC';injected.syscall='fsync';throw injected;")
+        with self.assertRaises(UserError) as caught:self.remove()
+        self.assertEqual(caught.exception.reason_code,'tv-storage-full')
+        self.assertEqual(caught.exception.no_root_cleanup['exception_code'],'ENOSPC')
+        self.assertNotIn('PRIVATE',str(caught.exception))
+
+    def test_boot_error_envelope_cannot_be_accepted_as_a_success_reply(self):
+        from unittest.mock import patch
+        for detail in (None,{'step':'PRIVATE-PATH','exception_code':'PRIVATE-TOKEN'}):
+            reply={'schema':1,'present':[],'blocked':[],'root_present':[],
+                   'boot_proof':{'schema':1},'boot_restarted':True,'cleanup_error':detail}
+            with self.subTest(detail=detail),patch.object(self.remote,'run',return_value=json.dumps(reply)):
+                with self.assertRaises(UserError) as caught:
+                    self.cleanup._device(self.installer,'boot-create')
+                self.assertEqual(caught.exception.no_root_cleanup['action'],'boot-create')
+                self.assertNotIn('PRIVATE',json.dumps(caught.exception.no_root_cleanup))
+
+    def test_boot_transport_failure_retains_typed_error_and_action(self):
+        from cytv.errors import TVCommandError
+        from unittest.mock import patch
+        error=TVCommandError(1)
+        with patch.object(self.remote,'run',side_effect=error):
+            with self.assertRaises(TVCommandError) as caught:
+                self.cleanup._device(self.installer,'boot-create')
+        self.assertIs(caught.exception,error)
+        self.assertEqual(error.no_root_cleanup['action'],'boot-create')
+        self.assertEqual(error.no_root_cleanup['failure'],'command-failed')
+        self.assertEqual(error.exit_status,1)
+
+    def test_boot_fsync_failure_keeps_fixed_error_and_retryable_marker(self):
+        from cytv import diagnostics
+        self.remote.transform=lambda code:code.replace('fs.fsyncSync(out);',
+            "var injected=Error('PRIVATE-TOKEN-PATH');injected.code='EINVAL';injected.syscall='fsync';injected.path='PRIVATE-PATH';throw injected;")
+        with self.assertRaises(RuntimeError) as caught:self.remove()
+        self.assertIsInstance(caught.exception,UserError,'cleanup failure lost its safe diagnostic envelope')
+        detail=caught.exception.no_root_cleanup
+        self.assertEqual(detail['step'],'boot-create')
+        self.assertEqual(detail['exception_code'],'EINVAL')
+        self.assertEqual(detail['filesystem_operation'],'fsync')
+        self.assertEqual(detail['reason'],'unknown')
+        self.assertTrue(self.boot_marker().exists())
+        self.assertIsNone(self.store.pending(self.profile).get('cleanup_boot_proof'))
+        report=diagnostics.create_report(self.store,'uninstall',self.profile,'uninstall',caught.exception).read_text()
+        self.assertNotIn('PRIVATE',report)
+        self.remote.transform=lambda code:code
+        self.assertTrue(self.remove()['restart_required'])
+
     def test_unchanged_kernel_with_cleared_volatile_marker_finishes(self):
         first=self.remove();self.assertTrue(first['restart_required'])
         marker=self.boot_marker();self.assertTrue(marker.exists())
@@ -373,6 +516,9 @@ class SimpleRemoval(unittest.TestCase):
         recovery.recover(self.installer,lambda _:next(answers),write)
         self.assertEqual((directory/'operation.json').read_bytes(),original)
         self.assertEqual(self.remote.commands,[])  # No retained source execution.
+        from cytv import diagnostics
+        diagnostics.create_report(self.store,'recovery',self.profile,'recovery',None)
+        self.assertEqual(self.remote.commands,[])  # Report export is local too.
         answers=iter(['y','y'])
         recovery.recover(self.installer,lambda _:next(answers),write)
         pending=self.store.pending(self.profile)
@@ -666,13 +812,13 @@ class SimpleRemoval(unittest.TestCase):
         self.remove();self.reboot();self.remove()
         self.assertEqual(foreign.read_text(),'preserve');self.assertEqual(unrelated.read_text(),'foreign')
 
-    def test_repeat_clean_is_noop_but_fresh_install_requires_new_restart(self):
+    def test_repeat_clean_and_fresh_quiescent_removal_finish_without_new_restart(self):
         self.remove();self.reboot();self.assertTrue(self.remove()['verified_clean'])
         (self.root/'proc').mkdir(exist_ok=True)
         self.assertTrue(self.remove()['verified_clean'])
         self.store.begin(self.profile,'install');self.store.finish(self.profile)
         self.remote.apps={'com.gathin.tvhome'}
-        self.assertTrue(self.remove()['restart_required'])
+        self.assertTrue(self.remove()['verified_clean'])
 
     def test_known_root_installation_requests_root_access(self):
         root=self.root/'varlib/clean-your-tv-root';root.mkdir();(root/'config.json').write_text('root configuration')
@@ -838,8 +984,7 @@ class SimpleRemoval(unittest.TestCase):
     def test_stale_pid_of_foreign_process_does_not_force_endless_restart(self):
         pid=self.own_file('apps/usr/palm/applications/com.local.nativehome/state/controller.pid',str(os.getpid()))
         proc=self.root/'proc'/str(os.getpid());proc.mkdir(parents=True);(proc/'cmdline').write_text('/usr/bin/foreign\0')
-        self.assertTrue(self.remove()['restart_required']);self.assertFalse(pid.exists())
-        self.reboot();self.assertTrue(self.remove()['verified_clean'])
+        self.assertTrue(self.remove()['verified_clean']);self.assertFalse(pid.exists())
 
     def test_legacy_writable_helper_state_is_stopped_and_removed(self):
         key=self.own_file('apps/usr/palm/applications/com.local.nativehome/state/ssap-key.json','private')

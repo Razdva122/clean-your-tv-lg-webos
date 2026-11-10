@@ -1,9 +1,9 @@
 """Desktop presentation only; installation stays in the semantic CLI bridge."""
 from pathlib import Path
 from PySide6.QtCore import Qt, QRectF, QSize
-from PySide6.QtGui import QColor, QFont, QLinearGradient, QPainter, QPalette, QPen
+from PySide6.QtGui import QColor, QFont, QFontMetrics, QLinearGradient, QPainter, QPalette, QPen, QPixmap, QPainterPath
 from PySide6.QtSvg import QSvgRenderer
-from PySide6.QtWidgets import QWidget, QComboBox, QRadioButton, QLabel, QSizePolicy
+from PySide6.QtWidgets import QWidget, QComboBox, QRadioButton, QCheckBox, QLabel, QSizePolicy
 
 # Approved B1 marks retain their original colours. The working UI uses quiet
 # warm charcoal surfaces and restrained controls rather than bright brand fills.
@@ -33,6 +33,10 @@ QTextBrowser { background: transparent; color: #c0b5a5; border: none; padding: 0
 QWidget#form { background: #272521; border-radius: 12px; }
 QFrame#runtimeChoice { background: #24221e; border: 1px solid #51483e; border-radius: 10px; }
 QScrollArea#runtimeChoices { background: transparent; border: none; }
+QScrollArea#installationSettings, QWidget#installationSettingsFields { background: #272521; border: none; }
+QLabel#settingTitle { font-weight: 600; }
+QLabel#settingHint { color: #c0b5a5; font-size: 14px; }
+QFrame#settingsDivider { background: #51483e; border: none; }
 QWidget#runtimeChoiceList { background: #2a2722; }
 QLabel#choiceDetail { color: #c0b5a5; font-size: 15px; }
 QLabel#promptTitle { font-size: 16px; font-weight: 600; }
@@ -208,4 +212,112 @@ class EditionOption(QRadioButton):
         p.setFont(font)
         p.setPen(QColor('#c0b5a5'))
         p.drawText(QRectF(16, 52, self.width()-32, self.height()-60), Qt.TextFlag.TextWordWrap, self.detail)
+        p.end()
+
+
+class ThemeCard(QRadioButton):
+    """Native exclusive selection with a packaged, offline theme screenshot."""
+    def __init__(self, title, key, preview):
+        super().__init__(title)
+        self.key = key
+        self.preview = QPixmap(str(preview))
+        self.setAccessibleName(title)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.setMinimumWidth(0)
+        self.setFixedHeight(166)
+
+    def sizeHint(self):
+        return QSize(220, 166)
+
+    def minimumSizeHint(self):
+        return QSize(110, 166)
+
+    def hitButton(self, position):
+        return self.rect().contains(position)
+
+    def paintEvent(self, event):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+        selected = self.isChecked()
+        p.setBrush(QColor('#332d27' if selected else '#302c27' if self.underMouse() else '#24221e'))
+        p.setPen(QPen(QColor('#d6c5ae' if selected or self.hasFocus() else '#796956'), 2 if selected or self.hasFocus() else 1))
+        p.drawRoundedRect(QRectF(self.rect()).adjusted(2, 2, -2, -2), 10, 10)
+        image = QRectF(10, 10, self.width()-20, self.height()-58)
+        clip = QPainterPath()
+        clip.addRoundedRect(image, 5, 5)
+        p.save()
+        p.setClipPath(clip)
+        p.fillRect(image, QColor('#171614'))
+        if not self.preview.isNull():
+            size = self.preview.size().scaled(image.size().toSize(), Qt.AspectRatioMode.KeepAspectRatio)
+            target = QRectF(image.center().x()-size.width()/2, image.center().y()-size.height()/2, size.width(), size.height())
+            p.drawPixmap(target, self.preview, QRectF(self.preview.rect()))
+        p.restore()
+        p.setPen(QColor('#f3ede3'))
+        font = self.font();font.setBold(True);p.setFont(font)
+        p.drawText(QRectF(14, self.height()-42, self.width()-48, 28), Qt.AlignmentFlag.AlignVCenter, self.text())
+        circle = QRectF(self.width()-31, self.height()-34, 14, 14)
+        p.setPen(QPen(QColor('#d6c5ae' if selected else '#8e7b68'), 1.5))
+        p.setBrush(QColor('#d6c5ae' if selected else '#24221e'))
+        p.drawEllipse(circle)
+        if selected:
+            p.setPen(Qt.PenStyle.NoPen);p.setBrush(QColor('#292622'))
+            p.drawEllipse(circle.adjusted(4, 4, -4, -4))
+        if self.hasFocus():
+            p.setBrush(Qt.BrushStyle.NoBrush)
+            p.setPen(QPen(QColor('#f3ede3'), 1, Qt.PenStyle.DotLine))
+            p.drawRoundedRect(QRectF(self.rect()).adjusted(6, 6, -6, -6), 7, 7)
+        p.end()
+
+
+class ToggleSwitch(QCheckBox):
+    """Two-state switch retaining native checked state, focus and Space behavior."""
+    def __init__(self, title, on_text, off_text):
+        super().__init__(title)
+        self.on_text, self.off_text = on_text, off_text
+        self.setAccessibleName(title)
+        self.setTristate(False)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setFixedHeight(44)
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.toggled.connect(lambda enabled:self.setAccessibleDescription(on_text if enabled else off_text))
+        self.setAccessibleDescription(off_text)
+
+    def state_font(self):
+        font = QFont(self.font())
+        font.setPixelSize(14)
+        return font
+
+    def sizeHint(self):
+        metrics = QFontMetrics(self.state_font())
+        return QSize(max(metrics.horizontalAdvance(self.on_text), metrics.horizontalAdvance(self.off_text))+76, 44)
+
+    def minimumSizeHint(self):
+        return self.sizeHint()
+
+    def hitButton(self, position):
+        return self.rect().contains(position)
+
+    def paintEvent(self, event):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        enabled, checked = self.isEnabled(), self.isChecked()
+        if not enabled: p.setOpacity(.45)
+        p.setFont(self.state_font())
+        p.setPen(QColor('#f3ede3' if checked else '#c0b5a5'))
+        p.drawText(QRectF(0, 0, self.width()-64, 44), Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,
+                   self.on_text if checked else self.off_text)
+        track = QRectF(self.width()-54, 8, 50, 28)
+        p.setPen(QPen(QColor('#b9d4c5' if checked else '#8e7b68'), 1))
+        p.setBrush(QColor('#b9d4c5' if checked else '#302c27'))
+        p.drawRoundedRect(track, 14, 14)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QColor('#1d1c1a' if checked else '#e0d4c4'))
+        p.drawEllipse(QRectF(track.left()+(25 if checked else 4), 12, 20, 20))
+        if self.hasFocus():
+            p.setBrush(Qt.BrushStyle.NoBrush)
+            p.setPen(QPen(QColor('#f3ede3'), 1, Qt.PenStyle.DotLine))
+            p.drawRoundedRect(QRectF(self.rect()).adjusted(1, 1, -1, -1), 6, 6)
         p.end()

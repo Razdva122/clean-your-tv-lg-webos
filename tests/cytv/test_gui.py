@@ -18,17 +18,125 @@ except ImportError:
 
 @unittest.skipUnless(HAS_QT, 'Desktop build dependencies are optional for CLI tests')
 class GuiTests(unittest.TestCase):
-    def test_tv_name_prompt_prefills_home_and_submits_custom_name(self):
-        w=Wizard();self.addCleanup(w.close)
+    def test_final_customization_prefills_existing_name_validates_and_submits(self):
+        import json
         from cytv.desktop import Channel
+        from cytv.install_settings import PROMPT
+        w=Wizard();self.addCleanup(w.close)
         w.channel=Channel(lambda *_:None)
-        w.show_prompt(Prompt('TV name [Home]: '))
-        entry=w.form.findChildren(QLineEdit)[0]
-        self.assertEqual(entry.text(),'Home')
-        self.assertEqual(entry.maxLength(),48)
-        entry.setText('Aashiyaan')
-        next(button for button in w.form.findChildren(QPushButton) if button.text()=='Continue').click()
-        self.assertEqual(w.channel.answers.get_nowait(),'Aashiyaan')
+        w.receive('installation-settings', {'tv_name':'Existing'})
+        w.show_prompt(Prompt(PROMPT))
+        entry=w.form.findChild(QLineEdit,'tvName')
+        self.assertEqual(entry.text(),'Existing')
+        submit=next(button for button in w.form.findChildren(QPushButton) if button.text()=='Continue')
+        entry.setText('x'*49);submit.click()
+        self.assertTrue(w.channel.answers.empty())
+        self.assertTrue(w.form.findChild(QLabel,'tvNameError').text())
+        entry.setText('Aashiyaan');submit.click()
+        self.assertEqual(json.loads(w.channel.answers.get_nowait())['tv_name'],'Aashiyaan')
+
+    def test_setup_explanations_do_not_overlap_at_minimum_window_size(self):
+        from cytv import i18n, install_settings as settings
+        w = Wizard()
+        self.addCleanup(w.close)
+        i18n.set_language('ru')
+        self.addCleanup(i18n.set_language, 'en')
+        w.resize(900, 680)
+        w.selected_profile = {'edition': 'root'}
+        w.show_prompt(Prompt(settings.PROMPT))
+        w.show()
+        self.app.processEvents()
+        scroll = w.form.findChild(QScrollArea, 'installationSettings')
+        self.assertIsNotNone(scroll)
+        self.assertLessEqual(scroll.widget().width(), scroll.viewport().width())
+        items = [scroll.widget().layout().itemAt(i).widget() for i in range(scroll.widget().layout().count())
+                 if scroll.widget().layout().itemAt(i).widget() is not None]
+        for first, second in zip(items, items[1:]):
+            self.assertLess(first.geometry().bottom(), second.geometry().top())
+
+    def test_setup_form_filters_mode_and_disables_weather_for_ribbon(self):
+        import json
+        from cytv.gui_style import ThemeCard, ToggleSwitch
+        from cytv.desktop import Channel
+        from cytv import install_settings as settings
+        for profile, specific, absent in [
+            ({'edition': 'root'}, 'block_updates', 'renewal'),
+            ({'edition': 'no-root'}, 'renewal', 'block_updates'),
+            ({'edition': 'no-root', 'connection': 'root-ssh'}, None, 'renewal')
+        ]:
+            w = Wizard()
+            self.addCleanup(w.close)
+            w.channel = Channel(lambda *_: None)
+            w.selected_profile = profile
+            w.receive('installation-settings', {specific: False} if specific else {})
+            w.show_prompt(Prompt(settings.PROMPT))
+            cards = w.form.findChildren(ThemeCard)
+            self.assertEqual([card.key for card in cards], ['classic', 'liquid-glass', 'ribbon'])
+            self.assertTrue(all(not card.preview.isNull() for card in cards))
+            weather = w.form.findChild(ToggleSwitch, 'weather')
+            weather.setChecked(True)
+            cards[2].click()
+            self.assertFalse(weather.isEnabled())
+            self.assertFalse(weather.isChecked())
+            self.assertIsNone(w.form.findChild(ToggleSwitch, absent))
+            if specific:
+                toggle = w.form.findChild(ToggleSwitch, specific)
+                self.assertFalse(toggle.isTristate())
+                toggle.click()
+            next(b for b in w.form.findChildren(QPushButton) if b.text() == 'Continue').click()
+            answer = json.loads(w.channel.answers.get_nowait())
+            self.assertEqual(answer['theme'], 'ribbon')
+            self.assertFalse(answer['weather'])
+            if specific:
+                self.assertTrue(answer[specific])
+
+    def test_setup_switch_preserves_current_value_and_allows_explicit_off(self):
+        import json
+        from cytv.gui_style import ToggleSwitch
+        from cytv.desktop import Channel
+        from cytv import install_settings as settings
+        for change in (False, True):
+            w = Wizard()
+            self.addCleanup(w.close)
+            w.channel = Channel(lambda *_:None)
+            w.selected_profile = {'edition':'root'}
+            w.receive('installation-settings', {'block_updates':True})
+            w.show_prompt(Prompt(settings.PROMPT))
+            toggle = w.form.findChild(ToggleSwitch, 'block_updates')
+            self.assertTrue(toggle.isChecked())
+            if change: toggle.click()
+            next(b for b in w.form.findChildren(QPushButton) if b.text()=='Continue').click()
+            value = json.loads(w.channel.answers.get_nowait())
+            if change: self.assertIs(value['block_updates'],False)
+            else: self.assertNotIn('block_updates',value)
+
+    def test_theme_cards_and_switch_work_from_keyboard(self):
+        from PySide6.QtTest import QTest
+        from PySide6.QtCore import Qt
+        from cytv.gui_style import ThemeCard, ToggleSwitch
+        from cytv import install_settings as settings
+        w=Wizard();self.addCleanup(w.close)
+        w.selected_profile={'edition':'no-root','connection':'root-ssh'}
+        w.show_prompt(Prompt(settings.PROMPT));w.show();self.app.processEvents()
+        cards=w.form.findChildren(ThemeCard)
+        cards[0].setFocus()
+        QTest.keyClick(cards[0],Qt.Key.Key_Right)
+        self.assertTrue(cards[1].isChecked())
+        switch=w.form.findChild(ToggleSwitch,'weather')
+        switch.setFocus();QTest.keyClick(switch,Qt.Key.Key_Space)
+        self.assertTrue(switch.isChecked())
+
+    def test_unreadable_mode_state_cannot_be_submitted_as_off(self):
+        import json
+        from cytv.gui_style import ToggleSwitch
+        from cytv.desktop import Channel
+        from cytv import install_settings as settings
+        w=Wizard();self.addCleanup(w.close)
+        w.channel=Channel(lambda *_:None);w.selected_profile={'edition':'root'}
+        w.show_prompt(Prompt(settings.PROMPT))
+        self.assertFalse(w.form.findChild(ToggleSwitch,'block_updates').isEnabled())
+        next(b for b in w.form.findChildren(QPushButton) if b.text()=='Continue').click()
+        self.assertNotIn('block_updates',json.loads(w.channel.answers.get_nowait()))
 
     def test_default_wizard_runs_update_gate_before_payload_or_tv_changes(self):
         from cytv import installer_update as update
@@ -427,7 +535,7 @@ class GuiTests(unittest.TestCase):
         w = Wizard()
         w.receive('step', (3, 'Prepare the TV connection', True))
         self.assertEqual([row.property('state') for row in w.step_rows],
-                         ['complete', 'complete', 'current', 'upcoming'])
+                         ['complete', 'complete', 'current', 'upcoming', 'upcoming'])
         w.receive('done', 1)
         self.assertEqual(w.step_rows[2].property('state'), 'error')
         self.assertEqual(w.step_rows[3].property('state'), 'upcoming')

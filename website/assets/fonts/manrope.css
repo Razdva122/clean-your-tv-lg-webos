@@ -1,0 +1,14 @@
+@font-face {
+  font-family: 'CYTV Manrope';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(__BASE__assets/fonts/manrope-0.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'CYTV Manrope';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(__BASE__assets/fonts/manrope-1.woff2) format('woff2');
+}
