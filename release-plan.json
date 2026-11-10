@@ -3,6 +3,11 @@
   "version": null,
   "changes": [
     {
+      "pr": 470,
+      "issues": [],
+      "summary": "Redesign multilingual landing with animated previews and SEO articles"
+    },
+    {
       "pr": 488,
       "issues": [
         487
