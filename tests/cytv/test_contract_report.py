@@ -214,6 +214,32 @@ catch(error) {a.equal(error.contractEvents[0].field,'staging');a.equal(error.con
             self.assertEqual(len(json.loads(retained.read_text())['contract_events']),32)
             self.assertLess(retained.stat().st_size,65536)
 
+    def test_later_same_identity_keeps_retained_count_and_timestamps(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store=state.Store(Path(tmp));profile={'edition':'no-root','host':'PRIVATE'}
+            original=fact(count=1,first=11,last=12)
+            recent=fact(count=9,first=21,last=29)
+            def fail(action,event,code):
+                with self.assertRaises(TVCommandError):
+                    with diagnostic_context.operation_context(store,profile):
+                        if action=='install':store.begin(profile,'install')
+                        error=self.failed(json.dumps({'schema':1,'error':'contract-error','events':[event]}).encode(),code)
+                        raise error
+                return error
+            first=fail('install',original,7)
+            initial=json.loads(diagnostics.create_report(store,'install',profile,'configure-helper',first).read_text())
+            current=fail('status',recent,9)
+            later=json.loads(diagnostics.create_report(store,'status',profile,'status',current).read_text())
+            self.assertEqual(later['first_failure'],initial['first_failure'])
+            self.assertEqual(later['first_failure']['contract_events'],[original])
+            self.assertEqual(later['contract_events'],[recent])
+            self.assertEqual(later['observation_failure']['contract_events'],[])
+            projected=later['first_failure']['contract_events']+later['contract_events']
+            self.assertLessEqual(len(projected),32)
+            self.assertLessEqual(len(json.dumps(projected).encode()),16384)
+            retained=next((store.device_dir(profile)/'diagnostic-failures').glob('*.json'))
+            self.assertEqual(json.loads(retained.read_text())['contract_events'],[original])
+
     def test_runtime_collector_reads_only_fixed_projection_and_unavailable_is_explicit(self):
         remote=Mock()
         runtime=fact(component='power',operation='observe',phase='normalize',field='processing',

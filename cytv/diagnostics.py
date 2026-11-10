@@ -120,17 +120,25 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
                   context.mapping(report.get('previous_attempt_failure')),
                   *report.get('intermediate_failures', []), report,
                   context.mapping(report.get('observation_failure'))]
-    selected = merge_events(*(item.get('contract_events', []) for item in containers))
+    # Reconcile counts only inside the current operation above. Retained records
+    # own their count/timestamps; equal violation identity is not equal evidence
+    # from another operation. Exact copies still occupy one exported location.
+    from .contract_events import export_events
+    selected = []
+    for item in containers:
+        for event in export_events(item.get('contract_events', [])):
+            if event not in selected:
+                selected.append(event)
+                while (len(selected) > 32 or
+                       len(json.dumps(selected, separators=(',', ':')).encode()) > 16200):
+                    del selected[1]
     for item in containers:
         if 'contract_events' not in item: continue
         own = []
         for event in item['contract_events']:
-            identity = {k:v for k,v in event.items() if k not in ('count','first','last')}
-            match = next((candidate for candidate in selected if identity ==
-                {k:v for k,v in candidate.items() if k not in ('count','first','last')}), None)
-            if match is not None:
-                own.append(match)
-                selected.remove(match)
+            if event in selected:
+                own.append(event)
+                selected.remove(event)
         item['contract_events'] = own
     path = store.root / 'reports' / ('diagnostic-' + uuid.uuid4().hex[:12] + '.json')
     private_write(path, json.dumps(report, indent=2).encode())
