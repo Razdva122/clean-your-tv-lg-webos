@@ -417,6 +417,9 @@ def failure_summary(value):
     from .errors import root_driver_details
     driver=root_driver_details(value.get('root_driver'))
     if driver:result['root_driver']=driver
+    if 'no_root_cleanup' in value:
+        from .errors import no_root_cleanup_details
+        result['no_root_cleanup'] = no_root_cleanup_details(value['no_root_cleanup'])
     if 'no_root_observer' in value:
         from .errors import no_root_observer_details
         result['no_root_observer'] = no_root_observer_details(value['no_root_observer'])

@@ -8,6 +8,27 @@ from cytv import cli, diagnostics, state
 
 
 class DiagnosticTests(unittest.TestCase):
+    def test_cleanup_context_is_revalidated_in_report_and_failure_history(self):
+        from cytv.errors import UserError
+        error=UserError('Removal could not be checked.')
+        error.no_root_cleanup={'action':'boot-create','step':'boot-root',
+            'failure':'runtime-error','exception_name':'Error','exception_code':'EINVAL',
+            'filesystem_operation':'fsync','reason':'unsafe-path',
+            'directory_mode':'1777','directory_owner':'root','directory_type':'directory',
+            'private':'PRIVATE-TOKEN'}
+        with tempfile.TemporaryDirectory() as tmp:
+            store=state.Store(tmp);profile=state.target('tv.local','no-root')
+            for key in tuple(error.no_root_cleanup):
+                if key=='private':continue
+                with self.subTest(key=key):
+                    value=dict(error.no_root_cleanup)
+                    error.no_root_cleanup=dict(value,**{key:{'secret':'PRIVATE-TOKEN'}})
+                    report=json.loads(diagnostics.create_report(store,'uninstall',profile,'uninstall',error).read_text())
+                    self.assertEqual(report['no_root_cleanup'][key],'unknown')
+                    self.assertNotIn('PRIVATE',json.dumps(report))
+                    self.assertEqual(report['no_root_cleanup'],diagnostics.context.failure_summary(report)['no_root_cleanup'])
+                    error.no_root_cleanup=value
+
     def test_icon_counts_are_allowlisted_again_before_report_and_history_export(self):
         counts = {'schema': 'PRIVATE', 'status': 'complete', 'apps': 7, 'embedded': 2,
                   'fallback': 5, 'missing_uri': 1, 'rejected_uri': 2,
