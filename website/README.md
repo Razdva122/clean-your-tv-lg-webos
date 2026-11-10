@@ -96,8 +96,9 @@ in a model family. No private diagnostics are copied into website content.
 ## URLs and publication
 
 The configured public base is
-`https://razdva122.github.io/clean-your-tv-lg-webos/`. Each language has six pages:
-home, installation, edition comparison, compatibility, themes and help. The root URL
+`https://razdva122.github.io/clean-your-tv-lg-webos/`. Each language has six core pages:
+home, installation, edition comparison, compatibility, themes and help, plus an
+article index and four full articles. The root URL
 renders English without JavaScript and canonicalizes to `/en/`. With JavaScript,
 only this language-neutral entry redirects to the saved manual language choice,
 then the first supported browser language, or English if none match. Regional tags
@@ -137,6 +138,49 @@ robots file. No analytics collector, consent cookie or external font service is
 added. For a future domain change, update base/site, canonical generation, sitemap,
 asset paths and their tests together.
 
+## Articles and search visibility
+
+`src/content/articles/{locale}/{topic}.md` holds four practical articles in each
+of the 13 supported locales. They explain changing the home screen, the limits
+of avoiding home-screen ads, choosing Root or No-root and maintaining Developer
+Mode. These are editorial guides, separate from `docs/i18n/` installation sources;
+they link the current installation, compatibility and recovery instructions.
+Keep prerequisite and control claims aligned with those references. Do not
+announce candidate features as published or turn a reported TV configuration
+into a compatibility guarantee.
+
+The content collection validates language, topic, title, description and ISO
+update date. Build-time validation requires exactly one translation per topic
+and supported locale. `src/lib/article-copy/*.json` supplies the small localized
+navigation/metadata vocabulary; `src/lib/site.ts` defines the topic registry.
+Article URLs use stable topic slugs under `/{locale}/articles/{topic}/`.
+Use absolute website paths for internal article links: relative Markdown URLs
+are reserved for the existing GitHub documentation-link renderer.
+
+The header, footer, home-page article links, index and related links expose the
+articles without JavaScript. Canonicals and reciprocal `hreflang` links retain
+the selected topic, including when switching language. The sitemap includes
+all article/index URLs and translation links; article `lastmod` comes from the
+reviewed `updated` field, never from build time. Update that field when the
+article changes, not during every deployment.
+
+Pages emit `WebSite` and `WebPage` JSON-LD. Article pages add `Article` and
+`BreadcrumbList` with the visible title, description, language, project attribution,
+breadcrumbs and update date. No publication date, ratings or hardware certification
+are invented. Existing pages retain their URLs, metadata and installation anchors.
+`verify-articles.mjs` checks the exported pages, metadata/schema agreement, sitemap,
+translation destinations and local links. Browser acceptance covers every new
+route without JavaScript and checks desktop/mobile overflow and navigation.
+
+The AI-search approach follows [Google's AI search guidance](https://developers.google.com/search/docs/appearance/ai-features):
+crawlable text, direct useful answers, source links, internal discovery and
+structured data matching visible content. AI-specific text files and special
+schema are not required by Google. No visibility, citation, indexing or traffic
+gain is claimed from local checks. After publication, the site owner can submit
+the sitemap and inspect representative pages in Search Console and Bing Webmaster
+Tools. Host-level crawler rules must be managed at the domain root; this project
+does not change them or connect analytics accounts.
+
 ## Help content and scope
 
 Each `/{lang}/help/` page has stable fragments: `#connection`, `#developer-mode`,
@@ -169,13 +213,41 @@ which resolves directory indexes itself.
 
 ## Visual design
 
-The product site uses a graphite palette, restrained warm ambient gradients,
-a floating translucent header, pill controls and rounded product imagery inspired
-by https://plxnative.com/. The centered home-page introduction leads into the
-existing launcher demo. Shared tokens and CSS apply the same visual language to
-all locales and guides; screenshots, installation content and destinations stay
-project-owned. The header and language/menu controls work without JavaScript;
-its background remains readable without backdrop-filter support.
+The product site retains the original logo, graphite palette and orange brand
+accent. The home page shows recorded animated WebP captures of the bundled
+Classic, Liquid Glass and Ribbon themes. Radio controls select a theme; a named
+pause/play button switches between its animation and still. Reduced-motion
+visitors start with stills and no animation request. Without JavaScript, native
+radios switch still images. The full interactive renderer remains on `/demo/`;
+no renderer, iframe or TV controls load on the landing page.
+
+`LauncherShowcase.astro` owns this website-only enhancement. All 13 locales have
+validated copy in `lib/landing.json`, including matching homepage metadata. The
+page adds no analytics or external endpoints. Its fonts are served locally.
+
+`website/scripts/capture-previews.mjs` records the public simulated renderer, not
+a physical TV or personal inventory. Run from the repository root after prepare,
+with the dev server running (default port 4322, override `PREVIEW_ORIGIN`) and
+Pillow available in `.venv-cytv` (`PYTHON` can override the executable). The output
+in `website/assets/previews/` includes 960×540 and 480×270 animated WebP and matching stills.
+The captures demonstrate navigation only; simulated TV functions remain a demo
+limitation, not evidence of device acceptance.
+
+The landing uses selected unmodified Taste Skill 2.5.1 assets in `vendor/taste/`,
+with upstream MIT attribution. Manrope and its OFL licence are in `assets/fonts/`.
+The logo, public compatibility page, setup requirements and articles are retained.
+There are no invented customer numbers or testimonials. The design borrows only
+general composition ideas from tasteskill.dev and plxnative.com, not their code,
+copy or pictures. The rest of the site keeps its existing reading layout.
+
+`home.css` owns the product-page composition. `editorial.css` provides a narrower
+reading measure, a desktop margin index and a native collapsed mobile contents
+menu for articles. The article index features a real product screenshot and
+linked summaries. Existing localized installation guides keep their original
+content and anchors in `article.css`; shared header, footer and tokens cover all
+locales. Header, language and article contents navigation work without JavaScript.
+The Astro development toolbar is disabled so local design previews show only
+the site's own interface.
 
 The interactive demo uses matching graphite surfaces, rounded edition and remote
 controls, outlined theme previews and a framed TV viewport. Its shared source is

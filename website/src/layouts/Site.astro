@@ -11,18 +11,101 @@ import {
   type Locale,
   type Section
 } from '../lib/site';
+import {
+  articleCopy,
+  articleRoute,
+  type ArticleMetadata
+} from '../lib/articles';
+import { landingCopy } from '../lib/landing';
 interface Props {
   lang: Locale;
   section?: Section;
   root?: boolean;
+  articles?: boolean;
+  article?: ArticleMetadata;
 }
-const { lang, section = '', root = false } = Astro.props;
+const {
+  lang,
+  section = '',
+  root = false,
+  articles = false,
+  article
+} = Astro.props;
 const t = copy[lang],
   index = sections.indexOf(section);
-const title = section
-  ? `${t.nav[index]} | Clean Your TV — LG webOS`
-  : `Clean Your TV — LG webOS | ${t.headline}`;
-const canonical = origin + route(lang, section);
+const inArticles = articles || Boolean(article);
+const landingPage = !section && !inArticles;
+const pageRoute = (code: Locale) =>
+  inArticles ? articleRoute(code, article?.topic) : route(code, section);
+const pageDescription =
+  article?.description ??
+  (articles
+    ? articleCopy[lang].description
+    : section
+      ? description(lang, section)
+      : landingCopy[lang].intro);
+const title = inArticles
+  ? `${article?.title ?? articleCopy[lang].indexTitle} | Clean Your TV — LG webOS`
+  : section
+    ? `${t.nav[index]} | Clean Your TV — LG webOS`
+    : `Clean Your TV — LG webOS | ${landingCopy[lang].headline}`;
+const canonical = origin + pageRoute(lang);
+const breadcrumbs = [
+  { name: articleCopy[lang].homeLabel, item: origin + route(lang) },
+  { name: articleCopy[lang].title, item: origin + articleRoute(lang) },
+  ...(article ? [{ name: article.title, item: canonical }] : [])
+];
+const structuredData = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebSite',
+      '@id': origin + base + '#website',
+      url: origin + base,
+      name: 'Clean Your TV',
+      inLanguage: locales
+    },
+    {
+      '@type': 'WebPage',
+      '@id': canonical + '#webpage',
+      url: canonical,
+      name: title,
+      description: pageDescription,
+      inLanguage: lang,
+      isPartOf: { '@id': origin + base + '#website' }
+    },
+    ...(inArticles
+      ? [
+          {
+            '@type': 'BreadcrumbList',
+            itemListElement: breadcrumbs.map((crumb, i) => ({
+              '@type': 'ListItem',
+              position: i + 1,
+              ...crumb
+            }))
+          }
+        ]
+      : []),
+    ...(article
+      ? [
+          {
+            '@type': 'Article',
+            '@id': canonical + '#article',
+            headline: article.title,
+            description: article.description,
+            inLanguage: lang,
+            dateModified: article.updated,
+            mainEntityOfPage: canonical,
+            author: {
+              '@type': 'Organization',
+              name: 'Clean Your TV',
+              url: repo
+            }
+          }
+        ]
+      : [])
+  ]
+};
 const menuLabel = {
   en: 'Menu',
   ru: 'Меню',
@@ -41,37 +124,78 @@ const menuLabel = {
 ---
 
 <!doctype html>
-<html lang={lang}>
+<html
+  lang={lang}
+  data-landing={landingPage ? '' : undefined}
+  data-type={landingPage ? 'software' : undefined}
+  data-radius={landingPage ? 'round' : undefined}
+  data-buttons={landingPage ? 'pill' : undefined}
+  data-motion={landingPage ? '' : undefined}
+>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    {landingPage && (
+      <>
+        <meta name="page-type" content="software" />
+        <meta name="site-kind" content="software" />
+        <link rel="stylesheet" href={base + 'assets/taste/system.css'} />
+        <link rel="stylesheet" href={base + 'assets/fonts/manrope.css'} />
+        <link rel="stylesheet" href={base + 'assets/taste/motion/motion.css'} />
+        <link
+          rel="stylesheet"
+          href={base + 'assets/taste/backgrounds/backgrounds.css'}
+        />
+        <script
+          is:inline
+          src={base + 'assets/taste/backgrounds/backgrounds.js'}
+        ></script>
+        <script
+          is:inline
+        >document.documentElement.classList.add('m-enter');setTimeout(()=>document.documentElement.classList.add('m-enter-done'),700)</script>
+        <script
+          type="module"
+          is:inline
+          src={base + 'assets/taste/motion/motion.js'}
+        ></script>
+        <script
+          type="module"
+          is:inline
+          src={base + 'assets/taste/moments/moments.js'}
+        ></script>
+      </>
+    )}
     <title>{title}</title>
-    <meta name="description" content={description(lang, section)} />
+    <meta name="description" content={pageDescription} />
     <link rel="canonical" href={canonical} />
     {locales.map((code) => (
-      <link
-        rel="alternate"
-        hreflang={code}
-        href={origin + route(code, section)}
-      />
+      <link rel="alternate" hreflang={code} href={origin + pageRoute(code)} />
     ))}
     <link
       rel="alternate"
       hreflang="x-default"
-      href={origin + route('en', section)}
+      href={origin + pageRoute('en')}
     />
     <link
       rel="icon"
       type="image/svg+xml"
       href={base + 'assets/symbol-color.svg'}
     />
-    <meta property="og:type" content="website" />
+    <meta property="og:type" content={article ? 'article' : 'website'} />
     <meta property="og:title" content={title} />
-    <meta property="og:description" content={description(lang, section)} />
+    <meta property="og:description" content={pageDescription} />
     <meta property="og:url" content={canonical} />
     <meta property="og:image" content={origin + base + 'assets/classic.jpg'} />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="theme-color" content="#202022" />
+    {article && (
+      <meta property="article:modified_time" content={article.updated} />
+    )}
+    <script
+      is:inline
+      type="application/ld+json"
+      set:html={JSON.stringify(structuredData).replace(/</g, '\\u003c')}
+    />
     <script is:inline define:vars={{ locales, base, root }}>
       const languageKey = 'cytv-website-language';
       function browserLocale(value) {
@@ -115,79 +239,141 @@ const menuLabel = {
     </script>
   </head>
   <body>
-    <a class="skip" href="#content">
-      {t.skip}
-    </a>
-    <header class="site-header">
-      <a class="brand" href={route(lang)} aria-label="Clean Your TV">
-        <img
-          src={base + 'assets/logo-dark.svg'}
-          alt="Clean Your TV — for LG webOS"
-          width="250"
-          height="70"
-        />
-      </a>
-      <nav class="primary-nav" aria-label={t.readMore}>
-        {sections.map((page, i) => (
+    <header class:list={['site-header', { nav: landingPage }]}>
+      <div class:list={['header-inner', { wrap: landingPage }]}>
+        <a class="skip skip-link" href="#content">
+          {t.skip}
+        </a>
+
+        <a class="brand" href={route(lang)} aria-label="Clean Your TV">
+          <img
+            src={base + 'assets/logo-dark.svg'}
+            alt="Clean Your TV — for LG webOS"
+            width="250"
+            height="70"
+          />
+        </a>
+        <nav class="primary-nav" aria-label={t.readMore}>
+          {sections.map(
+            (page, i) =>
+              (!landingPage || [2, 3, 4].includes(i)) && (
+                <a
+                  href={route(lang, page)}
+                  aria-current={
+                    !inArticles && section === page ? 'page' : undefined
+                  }
+                >
+                  {t.nav[i]}
+                </a>
+              )
+          )}
           <a
-            href={route(lang, page)}
-            aria-current={section === page ? 'page' : undefined}
+            href={articleRoute(lang)}
+            aria-current={articles ? 'page' : undefined}
           >
-            {t.nav[i]}
+            {articleCopy[lang].title}
           </a>
-        ))}
-      </nav>
-      <details class="mobile-menu" name="site-navigation">
-        <summary>{menuLabel}</summary>
-        <nav aria-label={t.readMore}>
-          {sections.map((page, i) => (
-            <a
-              href={route(lang, page)}
-              aria-current={section === page ? 'page' : undefined}
-            >
-              {t.nav[i]}
-            </a>
-          ))}
         </nav>
-      </details>
-      <details class="languages" name="site-navigation">
-        <summary>
-          {t.language}: <span>{t.name}</span>
-        </summary>
-        <nav aria-label={t.language}>
-          {locales.map((code) => (
+        <details class="mobile-menu" name="site-navigation">
+          <summary>{menuLabel}</summary>
+          <nav aria-label={t.readMore}>
+            {sections.map((page, i) => (
+              <a
+                href={route(lang, page)}
+                aria-current={
+                  !inArticles && section === page ? 'page' : undefined
+                }
+              >
+                {t.nav[i]}
+              </a>
+            ))}
             <a
-              href={route(code, section)}
-              hreflang={code}
-              lang={code}
-              aria-current={lang === code ? 'true' : undefined}
+              href={articleRoute(lang)}
+              aria-current={articles ? 'page' : undefined}
             >
-              {copy[code].name}
+              {articleCopy[lang].title}
             </a>
-          ))}
-        </nav>
-      </details>
+          </nav>
+        </details>
+        <details class="languages" name="site-navigation">
+          <summary>
+            {t.language}: <span>{t.name}</span>
+          </summary>
+          <nav aria-label={t.language}>
+            {locales.map((code) => (
+              <a
+                href={pageRoute(code)}
+                hreflang={code}
+                lang={code}
+                aria-current={lang === code ? 'true' : undefined}
+              >
+                {copy[code].name}
+              </a>
+            ))}
+          </nav>
+        </details>
+        {landingPage && (
+          <a
+            class="btn btn--primary header-install"
+            href={route(lang, 'install')}
+          >
+            {landingCopy[lang].installLabel}
+          </a>
+        )}
+      </div>
     </header>
     <main id="content" tabindex="-1">
       <slot />
     </main>
-    <footer class="site-footer">
-      <a class="footer-mark" href={route(lang)} aria-label="Clean Your TV">
-        <img
-          src={base + 'assets/logo-dark.svg'}
-          alt="Clean Your TV — for LG webOS"
-          width="250"
-          height="70"
-          loading="lazy"
-        />
-      </a>
-      <p>{t.footer}</p>
-      <div>
-        <a href={repo}>{t.source}</a>
-        <a href={route(lang, 'help')}>{t.nav[5]}</a>
-        <a href={repo + '/releases/latest'}>{t.download}</a>
-      </div>
-    </footer>
+    {landingPage ? (
+      <footer class="closing landing-footer">
+        <div class="wrap">
+          <div class="footer-close">
+            <h2>{landingCopy[lang].closeTitle}</h2>
+            <a class="btn btn--primary btn--xl" href={route(lang, 'install')}>
+              {landingCopy[lang].installLabel}
+            </a>
+          </div>
+          <div class="footer-directory">
+            <a class="brand" href={route(lang)} aria-label="Clean Your TV">
+              <img
+                src={base + 'assets/logo-dark.svg'}
+                alt="Clean Your TV — for LG webOS"
+                width="250"
+                height="70"
+                loading="lazy"
+              />
+            </a>
+            <p>{t.footer}</p>
+            <nav aria-label={t.readMore}>
+              <a href={repo}>{t.source}</a>
+              <a href={route(lang, 'help')}>{t.nav[5]}</a>
+              <a href={articleRoute(lang)}>{articleCopy[lang].title}</a>
+              <a href={repo + '/releases/latest'}>{t.download}</a>
+            </nav>
+          </div>
+        </div>
+      </footer>
+    ) : (
+      <footer class="site-footer">
+        <a class="footer-mark" href={route(lang)} aria-label="Clean Your TV">
+          <img
+            src={base + 'assets/logo-dark.svg'}
+            alt="Clean Your TV — for LG webOS"
+            width="250"
+            height="70"
+            loading="lazy"
+          />
+        </a>
+        <p>{t.footer}</p>
+        <div>
+          <a href={repo}>{t.source}</a>
+          <a href={route(lang, 'help')}>{t.nav[5]}</a>
+          <a href={articleRoute(lang)}>{articleCopy[lang].title}</a>
+          <a href={repo + '/releases/latest'}>{t.download}</a>
+        </div>
+      </footer>
+    )}
   </body>
 </html>
 

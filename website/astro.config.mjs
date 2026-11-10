@@ -6,7 +6,7 @@ function documentationLinks() {
   return function walk(node) {
     if (node.type === 'link' || node.type === 'image') {
       const url = node.url;
-      if (url && !/^(?:[a-z][a-z\d+.-]*:|\/\/|#)/i.test(url)) {
+      if (url && !/^(?:[a-z][a-z\d+.-]*:|\/|#)/i.test(url)) {
         const target = new URL(
           url,
           'https://github.com/Razdva122/clean-your-tv-lg-webos/blob/main/docs/i18n/'
@@ -34,6 +34,7 @@ export default defineConfig({
   base,
   trailingSlash: 'always',
   output: 'static',
+  devToolbar: { enabled: false },
   markdown: { processor: unified({ remarkPlugins: [documentationLinks] }) },
   i18n: {
     defaultLocale: 'en',

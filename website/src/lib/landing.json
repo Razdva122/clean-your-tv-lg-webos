@@ -1,0 +1,223 @@
+{
+  "en": {
+    "headline": "A new home screen for LG webOS.",
+    "intro": "Your apps and wallpaper, with no sponsored rows inside the launcher. 3 built-in themes for LG webOS.",
+    "installLabel": "Install the launcher",
+    "featureTitle": "Your apps come first",
+    "pauseLabel": "Pause preview",
+    "playLabel": "Play preview",
+    "closeTitle": "Make it your home screen.",
+    "tryLabel": "Try it in your browser",
+    "chooseLabel": "Choose your look",
+    "demoLabel": "Browser demo. TV functions are simulated.",
+    "features": [
+      "Arrange apps in your own order.",
+      "Choose your wallpaper and configure the dock.",
+      "Open apps with your TV remote."
+    ]
+  },
+  "de": {
+    "headline": "Ein neuer Startbildschirm für LG webOS.",
+    "intro": "Deine Apps und Hintergründe, ohne gesponserte Reihen im Launcher. 3 integrierte Designs für LG webOS.",
+    "installLabel": "Launcher installieren",
+    "featureTitle": "Deine Apps zuerst",
+    "pauseLabel": "Vorschau pausieren",
+    "playLabel": "Vorschau abspielen",
+    "closeTitle": "Gestalte deinen Startbildschirm.",
+    "tryLabel": "Im Browser ausprobieren",
+    "chooseLabel": "Wähle deinen Look",
+    "demoLabel": "Browser-Demo. TV-Funktionen werden simuliert.",
+    "features": [
+      "Ordne die Apps nach deinen Wünschen.",
+      "Wähle dein Hintergrundbild und passe das Dock an.",
+      "Öffne Apps mit deiner TV-Fernbedienung."
+    ]
+  },
+  "es": {
+    "headline": "Otra pantalla de inicio para LG webOS.",
+    "intro": "Tus apps y fondos, sin filas patrocinadas en el lanzador. 3 temas incluidos para LG webOS.",
+    "installLabel": "Instalar el lanzador",
+    "featureTitle": "Tus apps primero",
+    "pauseLabel": "Pausar vista previa",
+    "playLabel": "Reproducir vista previa",
+    "closeTitle": "Haz tuya la pantalla de inicio.",
+    "tryLabel": "Pruébalo en el navegador",
+    "chooseLabel": "Elige tu estilo",
+    "demoLabel": "Demo en el navegador. Las funciones del televisor se simulan.",
+    "features": [
+      "Ordena las apps a tu gusto.",
+      "Elige el fondo y configura el dock.",
+      "Abre las apps con el mando del televisor."
+    ]
+  },
+  "pt-BR": {
+    "headline": "Uma nova tela inicial para LG webOS.",
+    "intro": "Seus apps e papéis de parede, sem fileiras patrocinadas no launcher. 3 temas incluídos para LG webOS.",
+    "installLabel": "Instalar o launcher",
+    "featureTitle": "Seus apps em primeiro lugar",
+    "pauseLabel": "Pausar prévia",
+    "playLabel": "Reproduzir prévia",
+    "closeTitle": "Monte sua tela inicial.",
+    "tryLabel": "Experimente no navegador",
+    "chooseLabel": "Escolha seu visual",
+    "demoLabel": "Demo no navegador. As funções da TV são simuladas.",
+    "features": [
+      "Organize os apps na sua ordem.",
+      "Escolha o papel de parede e configure o dock.",
+      "Abra os apps com o controle da TV."
+    ]
+  },
+  "fr": {
+    "headline": "Un nouvel accueil pour votre LG webOS.",
+    "intro": "Vos apps et fonds d’écran, sans rangées sponsorisées dans le lanceur. 3 thèmes intégrés pour LG webOS.",
+    "installLabel": "Installer le lanceur",
+    "featureTitle": "Vos apps au premier plan",
+    "pauseLabel": "Mettre l’aperçu en pause",
+    "playLabel": "Lire l’aperçu",
+    "closeTitle": "Composez votre écran d’accueil.",
+    "tryLabel": "Essayer dans le navigateur",
+    "chooseLabel": "Choisissez votre style",
+    "demoLabel": "Démo dans le navigateur. Les fonctions du téléviseur sont simulées.",
+    "features": [
+      "Rangez vos apps dans votre ordre.",
+      "Choisissez le fond d’écran et réglez le dock.",
+      "Ouvrez vos apps avec la télécommande du téléviseur."
+    ]
+  },
+  "it": {
+    "headline": "Una nuova schermata home per LG webOS.",
+    "intro": "Le tue app e i tuoi sfondi, senza righe sponsorizzate nel launcher. 3 temi inclusi per LG webOS.",
+    "installLabel": "Installare il launcher",
+    "featureTitle": "Le tue app al primo posto",
+    "pauseLabel": "Metti in pausa",
+    "playLabel": "Riproduci anteprima",
+    "closeTitle": "Crea la tua schermata home.",
+    "tryLabel": "Provalo nel browser",
+    "chooseLabel": "Scegli il tuo stile",
+    "demoLabel": "Demo nel browser. Le funzioni TV sono simulate.",
+    "features": [
+      "Metti le app nell’ordine che preferisci.",
+      "Scegli lo sfondo e configura il dock.",
+      "Apri le app con il telecomando della TV."
+    ]
+  },
+  "ko": {
+    "headline": "LG webOS를 위한 새로운 홈 화면.",
+    "intro": "런처 안의 광고 행 없이 앱과 배경화면을 직접 구성하세요. LG webOS용 기본 테마 3개를 제공합니다.",
+    "installLabel": "런처 설치하기",
+    "featureTitle": "내 앱이 먼저 보이는 화면",
+    "pauseLabel": "미리보기 일시 정지",
+    "playLabel": "미리보기 재생",
+    "closeTitle": "나만의 홈 화면을 만드세요.",
+    "tryLabel": "브라우저에서 체험하기",
+    "chooseLabel": "원하는 스타일 선택",
+    "demoLabel": "브라우저 데모입니다. TV 기능은 시뮬레이션입니다.",
+    "features": [
+      "원하는 순서로 앱을 배치하세요.",
+      "배경화면을 고르고 독을 설정하세요.",
+      "TV 리모컨으로 앱을 여세요."
+    ]
+  },
+  "hi": {
+    "headline": "LG webOS के लिए नई होम स्क्रीन।",
+    "intro": "अपने ऐप और वॉलपेपर चुनें। लॉन्चर में प्रायोजित पंक्तियाँ नहीं हैं। LG webOS के लिए 3 शामिल थीम।",
+    "installLabel": "लॉन्चर इंस्टॉल करें",
+    "featureTitle": "आपके ऐप सबसे पहले",
+    "pauseLabel": "प्रीव्यू रोकें",
+    "playLabel": "प्रीव्यू चलाएँ",
+    "closeTitle": "अपनी होम स्क्रीन बनाएँ।",
+    "tryLabel": "ब्राउज़र में आज़माएँ",
+    "chooseLabel": "अपना रूप चुनें",
+    "demoLabel": "ब्राउज़र डेमो। टीवी के कार्य सिमुलेट किए जाते हैं।",
+    "features": [
+      "ऐप अपने क्रम में रखें।",
+      "वॉलपेपर चुनें और डॉक सेट करें।",
+      "टीवी के रिमोट से ऐप खोलें।"
+    ]
+  },
+  "pl": {
+    "headline": "Nowy ekran główny dla LG webOS.",
+    "intro": "Twoje aplikacje i tapety, bez sponsorowanych rzędów w launcherze. 3 wbudowane motywy dla LG webOS.",
+    "installLabel": "Zainstaluj launcher",
+    "featureTitle": "Twoje aplikacje na pierwszym miejscu",
+    "pauseLabel": "Wstrzymaj podgląd",
+    "playLabel": "Odtwórz podgląd",
+    "closeTitle": "Ułóż swój ekran główny.",
+    "tryLabel": "Wypróbuj w przeglądarce",
+    "chooseLabel": "Wybierz swój styl",
+    "demoLabel": "Demo w przeglądarce. Funkcje telewizora są symulowane.",
+    "features": [
+      "Ustaw aplikacje we własnej kolejności.",
+      "Wybierz tapetę i skonfiguruj dock.",
+      "Otwieraj aplikacje pilotem telewizora."
+    ]
+  },
+  "ru": {
+    "headline": "Новый главный экран для LG webOS.",
+    "intro": "Ваши приложения и обои, без рекламных рядов внутри лаунчера. 3 встроенные темы для LG webOS.",
+    "installLabel": "Установить лаунчер",
+    "featureTitle": "Ваши приложения на первом месте",
+    "pauseLabel": "Остановить превью",
+    "playLabel": "Включить превью",
+    "closeTitle": "Устройте свой главный экран.",
+    "tryLabel": "Попробовать в браузере",
+    "chooseLabel": "Выберите свой экран",
+    "demoLabel": "Демо в браузере. Функции ТВ имитируются.",
+    "features": [
+      "Расставьте приложения в своём порядке.",
+      "Выберите обои и настройте док.",
+      "Открывайте приложения обычным пультом."
+    ]
+  },
+  "cs": {
+    "headline": "Nová domovská obrazovka pro LG webOS.",
+    "intro": "Vaše aplikace a tapety, bez sponzorovaných řádků v launcheru. 3 vestavěné motivy pro LG webOS.",
+    "installLabel": "Nainstalovat launcher",
+    "featureTitle": "Vaše aplikace na prvním místě",
+    "pauseLabel": "Pozastavit náhled",
+    "playLabel": "Přehrát náhled",
+    "closeTitle": "Sestavte si domovskou obrazovku.",
+    "tryLabel": "Vyzkoušet v prohlížeči",
+    "chooseLabel": "Vyberte si vzhled",
+    "demoLabel": "Ukázka v prohlížeči. Funkce televizoru jsou simulované.",
+    "features": [
+      "Seřaďte aplikace podle sebe.",
+      "Vyberte tapetu a nastavte dock.",
+      "Otevírejte aplikace ovladačem televizoru."
+    ]
+  },
+  "zh-Hans": {
+    "headline": "为 LG 换一个主屏幕。",
+    "intro": "自己选择应用和壁纸，启动器内没有推广内容行。提供3 款 LG webOS 内置主题。",
+    "installLabel": "安装启动器",
+    "featureTitle": "常用应用优先显示",
+    "pauseLabel": "暂停预览",
+    "playLabel": "播放预览",
+    "closeTitle": "打造自己的主屏幕。",
+    "tryLabel": "在浏览器中体验",
+    "chooseLabel": "选择你的风格",
+    "demoLabel": "浏览器演示。电视功能均为模拟。",
+    "features": [
+      "按自己的顺序排列应用。",
+      "选择壁纸并设置程序坞。",
+      "用电视遥控器打开应用。"
+    ]
+  },
+  "zh-Hant": {
+    "headline": "為 LG 換一個主畫面。",
+    "intro": "自己選擇應用程式和桌布，啟動器內沒有推廣內容列。提供3 款 LG webOS 內建主題。",
+    "installLabel": "安裝啟動器",
+    "featureTitle": "常用應用程式優先顯示",
+    "pauseLabel": "暫停預覽",
+    "playLabel": "播放預覽",
+    "closeTitle": "打造自己的主畫面。",
+    "tryLabel": "在瀏覽器中體驗",
+    "chooseLabel": "選擇你的風格",
+    "demoLabel": "瀏覽器示範。電視功能均為模擬。",
+    "features": [
+      "按自己的順序排列應用程式。",
+      "選擇桌布並設定 Dock。",
+      "用電視遙控器開啟應用程式。"
+    ]
+  }
+}

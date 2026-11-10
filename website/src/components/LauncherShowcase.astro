@@ -1,0 +1,101 @@
+---
+import { landingCopy, showcaseThemes } from '../lib/landing';
+import { base, copy, type Locale } from '../lib/site';
+const { lang } = Astro.props as { lang: Locale };
+const t = landingCopy[lang];
+---
+
+<div
+  class="showcase"
+  data-showcase
+  data-paused="true"
+  data-pause-label={t.pauseLabel}
+  data-play-label={t.playLabel}
+>
+  <fieldset class="theme-picker">
+    <legend class="visually-hidden">{t.chooseLabel}</legend>
+    <div>
+      {showcaseThemes.map((theme) => (
+        <label>
+          <input
+            type="radio"
+            name="launcher-theme"
+            value={theme.id}
+            checked={theme.id === 'liquid-glass'}
+          />
+          <span>{theme.title}</span>
+        </label>
+      ))}
+    </div>
+  </fieldset>
+  <div class="showcase-stage app-frame" data-enter-media>
+    <div class="showcase-screen">
+      {showcaseThemes.map((theme) => (
+        <img
+          data-poster={theme.id}
+          src={base + 'assets/previews/' + theme.id + '-still.webp'}
+          srcset={`${base}assets/previews/${theme.id}-still-small.webp 480w, ${base}assets/previews/${theme.id}-still.webp 960w`}
+          sizes="(max-width: 639px) calc(100vw - 48px), (max-width: 1023px) calc(100vw - 96px), 800px"
+          data-animation={base + 'assets/previews/' + theme.id + '.webp'}
+          data-still={base + 'assets/previews/' + theme.id + '-still.webp'}
+          alt={`${copy[lang].themeImage}: ${theme.title}`}
+          width="960"
+          height="540"
+          fetchpriority={theme.id === 'liquid-glass' ? 'high' : 'auto'}
+        />
+      ))}
+    </div>
+    <button
+      class="preview-toggle"
+      type="button"
+      aria-label={t.playLabel}
+      aria-pressed="false"
+      hidden
+    >
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+        <path class="play-icon" d="M6 3.5 14 9l-8 5.5Z" fill="currentColor" />
+        <path
+          class="pause-icon"
+          d="M6 4v10m6-10v10"
+          stroke="currentColor"
+          stroke-width="2.5"
+        />
+      </svg>
+    </button>
+  </div>
+</div>
+<script>
+  // Animated captures only: no TV code, pairing or iframe is loaded here.
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+  for (const root of document.querySelectorAll<HTMLElement>('[data-showcase]')) {
+    const toggle = root.querySelector<HTMLButtonElement>('.preview-toggle')!;
+    const posters = [...root.querySelectorAll<HTMLImageElement>('[data-poster]')];
+    let paused = reduced.matches;
+    function render() {
+      const theme = root.querySelector<HTMLInputElement>('input:checked')!.value;
+      root.dataset.paused = String(paused);
+      toggle.setAttribute('aria-label', (paused ? root.dataset.playLabel : root.dataset.pauseLabel)!);
+      toggle.setAttribute('aria-pressed', String(!paused));
+      for (const poster of posters) {
+        const next = !paused && poster.dataset.poster === theme ? poster.dataset.animation! : poster.dataset.still!;
+        if (poster.getAttribute('src') !== next) {
+          poster.srcset = `${next.replace('.webp', '-small.webp')} 480w, ${next} 960w`;
+          poster.src = next;
+        }
+      }
+    }
+    toggle.hidden = false;
+    for (const poster of posters) {
+      poster.addEventListener('error', () => {
+        if (poster.getAttribute('src') === poster.dataset.animation) {
+          paused = true;
+          render();
+        }
+      });
+    }
+    toggle.addEventListener('click', () => { paused = !paused; render(); });
+    root.addEventListener('change', render);
+    reduced.addEventListener('change', () => { paused = reduced.matches; render(); });
+    render();
+  }
+</script>
