@@ -294,6 +294,9 @@ class OriginalOperationIntegration(unittest.TestCase):
         directory=Path(operations.HELPER_STATE);os.chown(directory,-1,os.getgid())
         key=directory/'ssap-key.json';os.chown(key,-1,os.getgid());key.chmod(0o640)
         inode=key.stat().st_ino
+        # The UID double identifies this inode. Keep it allocated after rename
+        # so Linux cannot recycle its number for unrelated observer evidence.
+        retained_key=key.open('rb');self.addCleanup(retained_key.close)
         blocked=directory/'blocked';blocked.write_bytes(b'explicit-stop')
         original=self.remote.run
         interrupted=True

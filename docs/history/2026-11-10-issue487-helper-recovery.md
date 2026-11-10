@@ -51,6 +51,39 @@ Checks are repeated only after
 a changed affected input or a newly added regression; no full candidate build,
 package signing, TV installation or rollback is selected by this work.
 
+## Complete first CI inventory and one fixture correction batch
+
+[PR CI 42800066196](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42800066196)
+completed on 46fc5297 before another push. Browser, both phone HEIC jobs,
+optional Python and six of eight runtime shards passed. The only underlying
+failures were Linux shard 3's new continuation fixture and macOS shard 4's
+unchanged Root guardian fixture; both aggregate summaries consequently failed.
+No full release build ran.
+
+- The Root fixture sent SIGSTOP immediately after ARMED, which is published
+  while the real guardian still holds its state lock. A stopped lock owner
+  prevents Restore from writing the stop latch within the test's 1.5-second
+  wait. A temporary-source 2-second delay at that exact scheduling point
+  deterministically reproduced the failure. The fixture now acquires the same
+  flock before stopping, confirms the child is stopped with waitpid, then
+  releases the lock. Acquisition/stop waits are bounded and failure cleanup
+  resumes the child. Both freeze cases use this synchronization; production C,
+  retirement deadlines and assertions remain unchanged. All 41 guardian cases
+  pass, including the forced schedule.
+- The Linux continuation fixture modeled foreign ownership by inode number.
+  After atomic replacement that number could be recycled for unrelated private
+  observer evidence, extending the synthetic UID to an unrelated file. The
+  fixture now keeps its original key descriptor open until cleanup, preventing
+  reuse. The affected continuation test passes locally; replacement Linux CI
+  remains the required platform confirmation. Product ownership guards are
+  unchanged.
+
+Independent review found no actionable issue in this fixture-only correction.
+Push this one batch after the complete first inventory; reuse unaffected source
+and host results above. Updated-head CI must validate the changed fixtures. Do
+not rebuild packages, sign artifacts, change a TV or weaken any acceptance gate
+for these host failures.
+
 ## Remaining acceptance
 
 A future release must select a new Helper version and build the native relay

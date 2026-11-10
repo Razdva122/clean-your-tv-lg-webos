@@ -81,6 +81,36 @@ class KeyfilterGuardTests(unittest.TestCase):
         ack = os.read(rr, 128); os.close(rr)
         self.assertEqual(ack, f'ARMED {TOKEN}\n'.encode())
         return p, iw, cw
+    def freeze(self, p):
+        # ARMED is written inside the state critical section. Stop only after
+        # acquiring that lock ourselves; otherwise Restore cannot latch stop.
+        import fcntl
+        deadline=time.monotonic()+3
+        with (self.root/'state/lock').open('rb') as lock:
+            while True:
+                try:
+                    fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+                    break
+                except BlockingIOError:
+                    self.assertIsNone(p.poll(),'guardian exited before freeze')
+                    self.assertLess(time.monotonic(),deadline,'guardian did not release state lock')
+                    time.sleep(.01)
+            stopped=False
+            try:
+                p.send_signal(signal.SIGSTOP)
+                while True:
+                    pid,status=os.waitpid(p.pid,os.WUNTRACED|os.WNOHANG)
+                    if pid:
+                        self.assertEqual(pid,p.pid)
+                        self.assertTrue(os.WIFSTOPPED(status))
+                        self.assertEqual(os.WSTOPSIG(status),signal.SIGSTOP)
+                        stopped=True
+                        break
+                    self.assertLess(time.monotonic(),deadline,'guardian did not stop')
+                    time.sleep(.01)
+            finally:
+                if not stopped and p.poll() is None:p.send_signal(signal.SIGCONT)
+
     def finish(self, p):
         out, err = p.communicate(timeout=7)
         self.assertEqual(err, '')
@@ -314,8 +344,20 @@ class KeyfilterGuardTests(unittest.TestCase):
             self.assertEqual((self.root/'luna-calls').read_text(),before); self.finish(p)
         finally:
             if home.poll() is None: home.kill(); home.communicate()
+    def test_restore_retirement_waits_for_ready_state_lock_release(self):
+        # Force the real ARMED -> close(state lock) scheduling window. The
+        # fixture must not freeze the guardian while it still owns that lock.
+        source=SOURCE.read_text()
+        anchor='else { armed=1; close(ready); ready=-1; }'
+        self.assertEqual(source.count(anchor),1)
+        source=source.replace(anchor,'else { armed=1; close(ready); ready=-1; poll(NULL,0,2000); }',1)
+        subprocess.run(['cc','-std=c11','-Wall','-Wextra','-Werror','-DCYTV_KEYFILTER_FIXTURE',
+                        f'-DFIXTURE_ROOT="{self.root}"','-x','c','-','-o',str(self.binary)],
+                       input=source,text=True,check=True,capture_output=True)
+        self.test_restore_retires_via_latch_without_queued_pid_signal()
+
     def test_restore_retires_via_latch_without_queued_pid_signal(self):
-        p,iw,cw=self.armed(); p.send_signal(signal.SIGSTOP)
+        p,iw,cw=self.armed(); self.freeze(p)
         restore=subprocess.Popen([str(self.binary),'--restore'],stdout=subprocess.PIPE,text=True)
         try:
             deadline=time.monotonic()+1.5
@@ -331,7 +373,7 @@ class KeyfilterGuardTests(unittest.TestCase):
             if p.poll() is None: p.send_signal(signal.SIGCONT)
             if restore.poll() is None: restore.terminate(); restore.communicate(timeout=5)
     def test_frozen_guard_retirement_timeout_preserves_evidence(self):
-        p,iw,cw=self.armed(); p.send_signal(signal.SIGSTOP)
+        p,iw,cw=self.armed(); self.freeze(p)
         try:
             s,rc=self.run_guard('--restore'); self.assertNotEqual(rc,0)
             self.assertEqual(s['reason'],'retirement_failed'); self.assertTrue(s['stopped'])
