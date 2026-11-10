@@ -80,6 +80,37 @@ For subsequent release QA sessions, follow
 Complete the case pass and consolidated failure inventory before product fixes
 or merging the fix batch; do not start a full RC for each finding.
 
+### Required QA exit check
+
+Before declaring the planned checks finished, telling the owner the TV is no
+longer needed, starting product fixes, or merging the fix batch, reconcile every
+case against the original selected plan in the canonical verification ledger.
+Do not substitute a shorter checklist created after the first failure.
+
+- Keep stable case IDs and preserve the original selected scope. Removing a case
+  or deferring an independent case requires the maintainer's explicit decision;
+  silence and an agent's own status update are not approval.
+- Every selected case needs an observed pass/fail result, matching reusable
+  evidence, or a concrete blocker. For a blocked case, name the failed dependency
+  and explain why it prevents that case. A release-blocking bug does not by itself
+  block unrelated checks. `Untested`, `not rerun`, a harness error and a planned
+  later candidate are outstanding work, not reasons to end independent checks.
+- Before a planned rollback or other state change removes access to the current
+  artifact, check for remaining safe independent cases that need that state and
+  run them first. Necessary device recovery takes precedence; record the recovery
+  reason and the cases it interrupts rather than calling those cases complete.
+- Record the exit reconciliation in the ledger: total selected cases, observed
+  passes/failures, cases covered by existing evidence, concretely blocked cases,
+  explicitly approved deferrals and remaining independent untested cases. Link
+  the original plan and evidence. Product fixes and the fix-batch merge may start
+  only when no independent untested case remains; blocked cases remain acceptance
+  gaps and must be revisited when their dependencies are fixed.
+- Distinguish a completed failure inventory from successful acceptance. Never
+  report "all checks complete" or release the TV on that basis while selected
+  independent checks remain. If the exit check is not satisfied, continue the
+  authorized checks; do not stop at a summary or ask the owner to rediscover the
+  missing work.
+
 ### Prevent repeated verification and installation loops
 
 Follow the [verification reuse rules](docs/RELEASE-FLOW.md#verification-ledger-and-repeat-rules).

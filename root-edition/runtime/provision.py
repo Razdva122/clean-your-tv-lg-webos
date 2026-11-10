@@ -41,7 +41,8 @@ def verify():
         fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
         with os.fdopen(fd, 'rb') as f:
             st = os.fstat(f.fileno())
-            limit = 4*1024*1024 if path in (root/'c1-home-gate', root/'c1-keyfilter-guard') else 1048576
+            # The private service includes the pinned offline HEIC decoder.
+            limit = 4*1024*1024 if path in (root/'c1-home-gate', root/'c1-keyfilter-guard', d.STATE/'service/service.js') else 1048576
             if not stat.S_ISREG(st.st_mode) or st.st_uid != d.EXPECTED_UID or st.st_mode & 0o022 or st.st_nlink != 1 or st.st_size > limit:
                 raise ValueError('Unsafe recovery file')
             content = f.read()

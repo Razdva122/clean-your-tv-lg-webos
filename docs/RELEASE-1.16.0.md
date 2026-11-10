@@ -28,6 +28,9 @@ for build evidence and remaining acceptance. Candidate preparation does not auth
   history, including fixed filesystem/guard details. Reject failure envelopes
   before accepting restart proof. The original C5 removal cause is still unknown
   (#485, partial #472).
+- Correct Root recovery verification for the bundled HEIC service: allow up to
+  4 MiB only for the exact private service entry in runtime, retained Updater and
+  bootstrap checks; preserve digest, path and file-safety validation (#489).
 
 ## Versions and packaging
 
@@ -60,10 +63,12 @@ and original-signer production APK checks pass; all601 payload entries match
 focused package preflight. The selected build is pinned in release-plan.json.
 These host checks do not complete device acceptance or authorize publication.
 
-No TV operation or new hardware acceptance is performed for this preparation.
-Home routing, audible sound, emergency controls, standby, cold boot, OTA,
-rollback, physical iPhone decoding and live phone-to-TV remain untested on new
-artifacts. Exact original-signer Android code30→31 upgrade, four retained
+The first exact signed candidate completed a C3 Root update, profile/Settings/
+receiver checks and retained rollback/forward, with owner-confirmed Home-Off
+controls and audible sound. It failed recovery readiness (#489); the fix requires
+a replacement candidate and affected acceptance. Emergency controls, standby,
+cold boot, physical iPhone decoding and live phone-to-TV have no new pass.
+Exact original-signer Android code30→31 upgrade, four retained
 synthetic files, real Store/native checks and idle lifecycle passed on an
 isolated API35 ARM64 emulator. Data-only OTA/current/rollback closure passed
 for both editions/resolutions. Protected Root-only QA signing and pinned-key

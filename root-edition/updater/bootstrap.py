@@ -98,7 +98,8 @@ def preflight(bundle,baseline):
     for name,expected in recovery.get('files',{}).items():
         target=Path(name)
         if not target.is_relative_to(ROOT_STATE):raise ValueError('Foreign recovery infrastructure')
-        if digest(safe_bytes(target,limit=1048576,uid=0))!=expected:raise ValueError('Recovery integrity failed')
+        limit=4*1024*1024 if target==ROOT_STATE/'service/service.js' else 1048576
+        if digest(safe_bytes(target,limit=limit,uid=0))!=expected:raise ValueError('Recovery integrity failed')
     for name in ('cli.py','update_guard.py'):
         target=runtime/name
         if recovery.get('files',{}).get(str(target))!=digest(safe_bytes(target,uid=0)):
