@@ -250,7 +250,7 @@ async function rpc(method, payload) {
   }
   return value;
 }
-function unownedRouting() {
+function unownedRouting(allowNative) {
   var evidence = [
     'profile-trial.json',
     'persistent-intent.json',
@@ -261,12 +261,43 @@ function unownedRouting() {
     'c1-gate',
     'c1-keyfilter'
   ];
-  if (record.profileless_cleanup_eligible !== true) return false;
   var backup = json(directory, 'routing-backup-' + id + '.json');
+  if (!object(backup)) return false;
+  var nativeNames = [],
+    raw = backup['home-backend.json'];
+  if (
+    allowNative === true &&
+    typeof raw === 'string' &&
+    typeof record.native_restored_sha256 === 'string' &&
+    /^[a-f0-9]{64}$/.test(record.native_restored_sha256) &&
+    nodeCrypto.createHash('sha256').update(raw).digest('hex') ===
+      record.native_restored_sha256
+  ) {
+    var selection;
+    try {
+      selection = JSON.parse(raw);
+    } catch (_) {
+      return false;
+    }
+    if (
+      !object(selection) ||
+      [1, 2, 3].indexOf(selection.schema) === -1 ||
+      selection.backend !== 'c1-native-gate' ||
+      selection.experimental !== true
+    )
+      return false;
+    nativeNames = ['home-backend.json'].concat(
+      selection.schema === 1
+        ? ['c1-gate/active']
+        : ['c1-keyfilter/ownership.json', 'c1-keyfilter/pending.json']
+    );
+  } else if (record.profileless_cleanup_eligible !== true) return false;
   return (
-    object(backup) &&
     !Object.keys(backup).some(function (name) {
-      return evidence.indexOf(name.split('/')[0]) !== -1;
+      return (
+        evidence.indexOf(name.split('/')[0]) !== -1 &&
+        nativeNames.indexOf(name) === -1
+      );
     }) &&
     !evidence.some(function (name) {
       return exists('/var/lib/clean-your-tv-root/' + name);
@@ -322,7 +353,7 @@ async function compositorStock() {
     home = '/usr/bin/com.webos.app.home',
     app = '/usr/palm/applications/com.webos.app.home';
   if (
-    !unownedRouting() ||
+    !unownedRouting(true) ||
     !object(proof.target) ||
     !/^[a-f0-9]{64}$/.test(proof.target_sha256)
   )

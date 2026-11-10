@@ -148,3 +148,11 @@ Przycisk Źródła danych w nagłówku Pogoda otwiera informacje o usługach i l
 ## Tapeta z iPhone’a
 
 Otwórz Ustawienia → Tapety → Prześlij z telefonu i zeskanuj kod. Wybierz JPG, PNG albo HEIC/HEIF, wykadruj, zaakceptuj ograniczenie jakości i wyślij. Na TV wybierz Zastosuj. Safari korzysta z natywnego HEIC; Chrome, Firefox i inne nowoczesne przeglądarki w razie potrzeby z dołączonego lokalnego dekodera. Konwersja odbywa się w telefonie bez zewnętrznej usługi. Anulowanie lub zmiana pliku ją zatrzymuje. Wejście: 32 MiB i 50 milionów pikseli; wyjście: do 1080p i 2 MiB. Przy błędzie wybierz inne zdjęcie lub JPG/PNG. Dotyczy strony telefonu, nie aplikacji Mac.
+
+## Skonfiguruj Clean Your TV
+
+Po udanej instalacji wybierz Classic, Liquid Glass lub Ribbon i włącz albo wyłącz pogodę. Ribbon nie obsługuje pogody; Liquid Glass używa formatu kompaktowego. Miasto jest szacowane z połączenia i można je zmienić w Home.
+
+No-root z Developer Mode oferuje automatyczne przedłużanie (Beta); nadal sprawdzaj oficjalny licznik. No-root przez istniejący root SSH nie używa tej opcji. Root pozwala blokować aktualizacje firmware LG przez Homebrew Channel, w tym aktualizacje bezpieczeństwa; wymagany jest pełny restart przez Homebrew Channel. Aktualizacje CYTV są oddzielne.
+
+Zachowaj obecne ustawienia pomija dostosowanie. Przełącznik pokazuje obecny stan funkcji trybu. Niezmienione ustawienia są zachowywane. Ponowna instalacja Root nadal usuwa preferencje CYTV zgodnie z opisem powyżej. Sprawdź wygląd na TV, a niepotwierdzone opcje w Home przed kolejną próbą.

@@ -149,3 +149,11 @@ Il pulsante Fonti dei dati nel titolo Meteo apre le informazioni su servizi e li
 ## Sfondo da iPhone
 
 Apri Impostazioni → Sfondi → Carica dal telefono e scansiona il codice. Scegli JPG, PNG o HEIC/HEIF, ritaglia, accetta il limite di qualità e invia. Sulla TV scegli Applica. Safari usa HEIC nativo; Chrome, Firefox e altri browser moderni usano il decoder locale incluso quando serve. La conversione avviene sul telefono, senza servizi esterni. Annulla o cambia file per interromperla. Ingresso: 32 MiB e 50 milioni di pixel; uscita: massimo 1080p e 2 MiB. Se fallisce, prova un’altra foto o JPG/PNG. Vale per la pagina del telefono, non per l’app Mac.
+
+## Configura il tuo Clean Your TV
+
+Dopo l’installazione riuscita, scegli Classic, Liquid Glass o Ribbon e attiva o disattiva il meteo. Ribbon non supporta il meteo; Liquid Glass usa il formato compatto. La città viene stimata dalla connessione e può essere modificata in Home.
+
+No-root con Developer Mode offre il rinnovo automatico (Beta); continua a controllare il timer ufficiale. No-root tramite root SSH esistente non usa questa opzione. Root consente di bloccare gli aggiornamenti firmware LG tramite Homebrew Channel, inclusi quelli di sicurezza; serve un vero riavvio tramite Homebrew Channel. Gli aggiornamenti CYTV restano separati.
+
+Mantieni le impostazioni attuali salta la personalizzazione. L’interruttore mostra lo stato attuale della funzione del modo. Le impostazioni non modificate vengono conservate. Reinstallare Root rimuove comunque le preferenze CYTV come descritto sopra. Controlla l’aspetto sulla TV e le opzioni non confermate in Home prima di riprovare.

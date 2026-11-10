@@ -1,7 +1,34 @@
 {
   "schema": 1,
   "version": null,
-  "changes": [],
+  "changes": [
+    {
+      "pr": 478,
+      "issues": [
+        418
+      ],
+      "summary": "Correct retained-native cleanup Home readback; original #418 activation cause and device recovery remain unconfirmed"
+    },
+    {
+      "pr": 479,
+      "issues": [
+        101
+      ],
+      "summary": "Remove generic C3-only Root setup notice; original #101 C2 Root activation remains unconfirmed"
+    },
+    {
+      "pr": 480,
+      "issues": [
+        397
+      ],
+      "summary": "Retain attempt-bound Root driver install failure diagnostics; original #397 failure cause awaits reporter data"
+    },
+    {
+      "pr": 482,
+      "issues": [],
+      "summary": "Offer optional post-install theme preview cards, weather and mode-specific renewal/firmware switches; preserve successful installation on skip or cancellation"
+    }
+  ],
   "excluded": [],
   "acceptance": ""
 }

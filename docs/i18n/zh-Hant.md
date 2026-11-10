@@ -147,3 +147,11 @@ No-root: 要重新啟動 Home 控制，請開啟 Home Helper，選擇啟動 Help
 ## 從iPhone上傳桌布
 
 開啟設定 → 桌布 → 從手機上傳並掃描QR碼。選擇JPG、PNG或HEIC/HEIF，裁切、確認畫質限制後傳送，再在電視上選擇套用。Safari使用原生HEIC支援；Chrome、Firefox等現代瀏覽器會在需要時使用內建的本機解碼器。轉換在手機上完成，不使用外部服務。取消或選擇其他檔案會停止轉換。輸入上限為32 MiB和5000萬像素，輸出最高為1080p和2 MiB。轉換失敗時請換一張照片或使用JPG/PNG。此功能適用於手機頁面，不適用於Mac應用程式。
+
+## 設定你的 Clean Your TV
+
+安裝成功後，選擇 Classic、Liquid Glass 或 Ribbon，並開啟或關閉主畫面天氣。Ribbon 不支援天氣；Liquid Glass 使用簡短格式。城市會根據網路連線估算，可在 Home 設定中變更。
+
+Developer Mode 的 No-root 提供自動續期（測試版）；請繼續檢查官方計時器。透過現有 root SSH 安裝的 No-root 不使用此選項。Root 可透過 Homebrew Channel 封鎖 LG 韌體更新，包括安全更新；需要透過 Homebrew Channel 真正重新啟動電視。CYTV 更新單獨管理。
+
+選擇「保留目前設定」可跳過自訂。開關顯示模式功能目前的開啟或關閉狀態。未變更的設定會保留。重新安裝 Root 仍會按上文說明刪除 CYTV 設定。請在電視上檢查外觀；重試前請在 Home 設定中檢查未確認的選項。

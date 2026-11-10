@@ -147,3 +147,11 @@ El botón Fuentes de datos del encabezado Tiempo abre la información de servici
 ## Fondo desde el iPhone
 
 Abre Ajustes → Fondos → Subir desde el teléfono y escanea el código. Elige JPG, PNG o HEIC/HEIF, recorta, acepta el límite de calidad y envía. Selecciona Aplicar en el TV. Safari usa HEIC nativo; Chrome, Firefox y otros navegadores modernos usan el decodificador local incluido cuando hace falta. La conversión ocurre en el teléfono, sin servicio externo. Cancelar o elegir otro archivo detiene la conversión. Entrada: 32 MiB y 50 millones de píxeles; salida: hasta 1080p y 2 MiB. Si falla, prueba otra foto o JPG/PNG. Es para la página del teléfono, no la app Mac.
+
+## Configura tu Clean Your TV
+
+Después de instalar correctamente, elige Classic, Liquid Glass o Ribbon y activa o desactiva el tiempo. Ribbon no admite el tiempo; Liquid Glass usa el formato compacto. La ciudad se estima por tu conexión y puedes cambiarla en Home.
+
+No-root con Developer Mode ofrece renovación automática (Beta); sigue revisando el temporizador oficial. No-root mediante root SSH existente no usa esta opción. Root permite bloquear actualizaciones de firmware LG mediante Homebrew Channel, incluidas las de seguridad; requiere un reinicio real desde Homebrew Channel. Las actualizaciones de CYTV son independientes.
+
+Conservar ajustes actuales omite la personalización. El interruptor muestra el estado actual de la función del modo. Los ajustes que no cambies se conservan. Reinstalar Root sigue eliminando las preferencias CYTV como se describe arriba. Comprueba la apariencia en el TV y las opciones sin confirmar en Home antes de reintentar.

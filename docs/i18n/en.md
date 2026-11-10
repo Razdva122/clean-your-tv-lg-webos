@@ -147,3 +147,11 @@ The Data sources button in the Weather heading opens provider and license inform
 ## iPhone wallpaper upload
 
 Open Settings → Wallpapers → Upload from phone and scan the code. Choose a JPG, PNG or HEIC/HEIF photo, crop it, acknowledge the quality limit and send it. Choose Apply on the TV. Safari uses native HEIC support; Chrome, Firefox and other modern browsers use the bundled local decoder when needed. Conversion runs on your phone, without a conversion website. Cancel or choosing another file stops conversion. Input limit: 32 MiB and 50 million pixels; output: at most 1080p and 2 MiB. If conversion fails, try another photo or JPG/PNG. This support is for the phone page, not the Mac file picker.
+
+## Set up your Clean Your TV
+
+After successful installation, choose Classic, Liquid Glass or Ribbon and turn Home weather on or off. Ribbon does not support weather; Liquid Glass uses the compact format. Weather can find an approximate city through your internet connection; change it later in Home settings.
+
+No-root with Developer Mode offers optional auto-renewal (Beta); keep monitoring the official timer. No-root through existing root SSH does not use this option. Root offers LG firmware update blocking through Homebrew Channel, including security updates; a real restart through Homebrew Channel is required. This is separate from CYTV updates.
+
+Choose Keep current settings to skip customization. The mode switch shows its current On/Off state. Unchanged mode settings are kept. Root reinstallation still removes saved CYTV preferences as described above. Check the chosen appearance on the TV; an optional setting reported as unconfirmed needs checking in Home settings before retrying.

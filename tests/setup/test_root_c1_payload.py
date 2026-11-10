@@ -50,13 +50,16 @@ class RootC1PayloadTests(unittest.TestCase):
                 # both packaged ELF executables and the complete manifest above.
                 if sys.platform != 'win32':
                     subprocess.run([sys.executable, '-c', r"""
-import os,sys
+import hashlib,os,sys
 from pathlib import Path
 from unittest.mock import Mock,patch
 sys.path.insert(0,'root-edition')
 import clean_removal
 bundle=Path(sys.argv[1]);native=bundle/'runtime/c1-home-gate'
-backend=Mock();backend.STATE=Path('/retained-schema-one')
+backend=Mock();backend.STATE=bundle.parent/(bundle.name+'-retained-schema-one')
+backend.STATE.mkdir(mode=0o700)
+selection=b'{"schema":1,"backend":"c1-native-gate","experimental":true}'
+(backend.STATE/'home-backend.json').write_bytes(selection)
 backend.selection.return_value={'schema':1,'native_sha256':'0'*64}
 cli=Mock();cli.gate_backend.return_value=backend
 sys.modules['cli']=cli
@@ -65,7 +68,9 @@ def restore(mode):
     assert backend.binary(backend.STATE,os.getuid())==native
     return 'restored'
 cli.main.side_effect=restore
-assert clean_removal.runtime_restore(bundle,os.getuid())['result']=='restored'
+result=clean_removal.runtime_restore(bundle,os.getuid())
+assert result['result']=='restored'
+assert result['native_restored_sha256']==hashlib.sha256(selection).hexdigest()
 assert native.stat().st_mode&0o777==0o700
 import deploy
 from runtime import c1_keyfilter

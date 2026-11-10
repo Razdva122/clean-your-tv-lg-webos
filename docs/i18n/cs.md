@@ -123,3 +123,11 @@ Tlačítko Zdroje dat v záhlaví Počasí otevře informace o službách a lice
 ## Nahrání tapety z iPhonu
 
 Otevřete Nastavení → Tapety → Nahrát z telefonu a naskenujte kód. Vyberte JPG, PNG nebo HEIC/HEIF, upravte výřez, potvrďte omezení kvality a odešlete. Na TV zvolte Použít. Safari používá vlastní podporu HEIC; Chrome, Firefox a další moderní prohlížeče podle potřeby přibalený místní dekodér. Převod probíhá v telefonu bez externí služby. Zrušení nebo výběr jiného souboru převod zastaví. Vstup: 32 MiB a 50 milionů pixelů; výstup: nejvýše 1080p a 2 MiB. Při chybě zkuste jinou fotku nebo JPG/PNG. Platí pro stránku v telefonu, ne aplikaci pro Mac.
+
+## Nastavte si Clean Your TV
+
+Po úspěšné instalaci vyberte Classic, Liquid Glass nebo Ribbon a zapněte či vypněte počasí. Ribbon počasí nepodporuje; Liquid Glass používá stručný formát. Město se odhaduje podle připojení a lze je změnit v Home.
+
+No-root s Developer Mode nabízí automatické prodloužení (Beta); nadále sledujte oficiální časovač. No-root přes stávající root SSH tuto volbu nepoužívá. Root umožňuje přes Homebrew Channel blokovat aktualizace firmwaru LG včetně bezpečnostních; je nutný skutečný restart přes Homebrew Channel. Aktualizace CYTV jsou samostatné.
+
+Ponechat aktuální nastavení přeskočí přizpůsobení. Přepínač zobrazuje aktuální stav funkce režimu. Nezměněná nastavení zůstanou zachována. Přeinstalace Root nadále odstraní nastavení CYTV podle popisu výše. Ověřte vzhled na TV a nepotvrzené volby v Home před opakováním.

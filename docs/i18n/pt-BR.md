@@ -148,3 +148,11 @@ O botão Fontes de dados no título Clima abre informações sobre os serviços 
 ## Papel de parede do iPhone
 
 Abra Configurações → Papéis de parede → Enviar do telefone e leia o código. Escolha JPG, PNG ou HEIC/HEIF, recorte, confirme o limite de qualidade e envie. Escolha Aplicar na TV. Safari usa suporte HEIC nativo; Chrome, Firefox e outros navegadores modernos usam o decodificador local incluído quando necessário. A conversão ocorre no telefone, sem serviço externo. Cancelar ou escolher outro arquivo interrompe a conversão. Entrada: 32 MiB e 50 milhões de pixels; saída: até 1080p e 2 MiB. Se falhar, tente outra foto ou JPG/PNG. É para a página do telefone, não o app Mac.
+
+## Configure seu Clean Your TV
+
+Após a instalação bem-sucedida, escolha Classic, Liquid Glass ou Ribbon e ative ou desative o clima. Ribbon não oferece clima; Liquid Glass usa o formato compacto. A cidade é estimada pela conexão e pode ser alterada na Home.
+
+No-root com Developer Mode oferece renovação automática (Beta); continue verificando o temporizador oficial. No-root pelo root SSH existente não usa essa opção. Root permite bloquear atualizações de firmware LG pelo Homebrew Channel, incluindo as de segurança; é preciso reiniciar a TV de verdade pelo Homebrew Channel. As atualizações CYTV são separadas.
+
+Manter configurações atuais pula a personalização. O interruptor mostra o estado atual da função do modo. Configurações não alteradas são mantidas. Reinstalar Root continua removendo preferências CYTV conforme descrito acima. Confira a aparência na TV e opções não confirmadas na Home antes de tentar novamente.
