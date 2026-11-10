@@ -147,4 +147,4 @@ Przycisk Źródła danych w nagłówku Pogoda otwiera informacje o usługach i l
 
 ## Tapeta z iPhone’a
 
-Otwórz Ustawienia → Tapety → Prześlij z telefonu i zeskanuj kod. W Safari 17 lub nowszym na iPhonie wybierz JPG, PNG albo HEIC/HEIF, wykadruj, zaakceptuj ograniczenie jakości i wyślij. Na TV wybierz Zastosuj. Konwersja odbywa się w telefonie; do TV trafia tylko JPEG. Limit wejścia: 32 MiB i 50 milionów pikseli, w tym typowe zdjęcia 24 i 48 MP. Wyjście: maksymalnie 1080p i 2 MiB. Jeśli HEIC się nie otwiera, użyj Safari 17 lub nowszego albo JPG/PNG. Nie dotyczy to wyboru plików w aplikacji Mac.
+Otwórz Ustawienia → Tapety → Prześlij z telefonu i zeskanuj kod. Wybierz JPG, PNG albo HEIC/HEIF, wykadruj, zaakceptuj ograniczenie jakości i wyślij. Na TV wybierz Zastosuj. Safari korzysta z natywnego HEIC; Chrome, Firefox i inne nowoczesne przeglądarki w razie potrzeby z dołączonego lokalnego dekodera. Konwersja odbywa się w telefonie bez zewnętrznej usługi. Anulowanie lub zmiana pliku ją zatrzymuje. Wejście: 32 MiB i 50 milionów pikseli; wyjście: do 1080p i 2 MiB. Przy błędzie wybierz inne zdjęcie lub JPG/PNG. Dotyczy strony telefonu, nie aplikacji Mac.

@@ -106,8 +106,10 @@ function phone() {
             'Не удалось отправить. Проверьте PIN и заново откройте приём на телевизоре.',
           invalid:
             'Выберите исправный JPG, PNG или HEIC (до 32 МиБ, до 50 миллионов пикселей). Видео не поддерживается.',
+          licenses: 'Лицензии открытого ПО',
+          converting: 'Преобразование HEIC…',
           heicUnsupported:
-            'Не удалось открыть HEIC в этом браузере. Откройте страницу в Safari 17 или новее на iPhone либо выберите JPG или PNG.',
+            'Не удалось преобразовать HEIC. Попробуйте другое фото или выберите JPG или PNG.',
           stopped: 'Отменено. Заново откройте приём на телевизоре.'
         }
       : {
@@ -129,8 +131,10 @@ function phone() {
             'Could not send. Check the PIN and reopen receiving on your TV.',
           invalid:
             'Choose a valid JPG, PNG or HEIC (up to 32 MiB, 50 million pixels). Video is unsupported.',
+          licenses: 'Open-source licenses',
+          converting: 'Converting HEIC…',
           heicUnsupported:
-            'Could not open this HEIC photo. Open this page in Safari 17 or newer on your iPhone, or choose JPG or PNG.',
+            'Could not convert this HEIC photo. Try another photo or choose JPG or PNG.',
           stopped: 'Cancelled. Reopen receiving on your TV.'
         };
   var warnings = {
@@ -185,8 +189,75 @@ function phone() {
     el('pin').disabled = busy;
     el('ack').disabled = busy;
   }
+  var decodeWorker = null,
+    decodeTimer = null;
+  function stopDecode() {
+    if (decodeWorker) decodeWorker.terminate();
+    decodeWorker = null;
+    clearTimeout(decodeTimer);
+    decodeTimer = null;
+  }
+  function fallbackHeic(file, token) {
+    if (token !== serial) return;
+    el('status').textContent = texts.converting;
+    function fail() {
+      if (token !== serial) return;
+      stopDecode();
+      el('status').textContent = texts.heicUnsupported;
+      controls();
+    }
+    try {
+      decodeWorker = new Worker('/wallpaper-heic-worker.js');
+      decodeTimer = setTimeout(fail, 60000);
+      decodeWorker.onerror = fail;
+      decodeWorker.onmessage = function (event) {
+        if (token !== serial) return;
+        var result = event.data;
+        if (
+          !result ||
+          result.error ||
+          result.width < 16 ||
+          result.height < 9 ||
+          result.width * result.height > 50000000 ||
+          !result.rgba ||
+          result.rgba.byteLength !== result.width * result.height * 4
+        )
+          return fail();
+        stopDecode();
+        try {
+          var decoded = document.createElement('canvas');
+          decoded.width = result.width;
+          decoded.height = result.height;
+          decoded
+            .getContext('2d')
+            .putImageData(
+              new ImageData(
+                new Uint8ClampedArray(result.rgba),
+                result.width,
+                result.height
+              ),
+              0,
+              0
+            );
+          image = decoded;
+          el('zoom').value = 1;
+          el('x').value = el('y').value = 50;
+          draw();
+          el('status').textContent = texts.ready;
+          controls();
+        } catch (_) {
+          image = null;
+          fail();
+        }
+      };
+      decodeWorker.postMessage(file);
+    } catch (_) {
+      fail();
+    }
+  }
   function drop() {
     serial++;
+    stopDecode();
     image = null;
     if (url) URL.revokeObjectURL(url);
     url = null;
@@ -222,6 +293,7 @@ function phone() {
   el('file').onchange = function () {
     var token = ++serial,
       file = this.files[0];
+    stopDecode();
     image = null;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     el('status').textContent = '';
@@ -313,11 +385,10 @@ function phone() {
       };
       next.onerror = function () {
         if (token === serial) {
-          el('status').textContent = heic
-            ? texts.heicUnsupported
-            : texts.invalid;
           URL.revokeObjectURL(url);
           url = null;
+          if (heic) fallbackHeic(file, token);
+          else el('status').textContent = texts.invalid;
         }
       };
       next.src = url;
@@ -428,7 +499,7 @@ function phone() {
 }
 
 module.exports =
-  '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TV wallpaper</title><style>*{box-sizing:border-box}body{margin:0;background:#101820;color:#f5f7fa;font:16px/1.5 system-ui,sans-serif}main{max-width:560px;padding:24px 20px 40px;margin:auto}h1{font-size:28px;line-height:1.2}p{margin:16px 0}label{display:block;margin:16px 0 6px}input,button{font:inherit;min-height:48px}input[type=file]{width:100%;padding:8px 0}input[type=range]{width:100%}input[type=text]{width:100%;padding:10px;border:1px solid #8fa6b6;border-radius:6px;background:#182934;color:inherit}canvas{display:block;width:100%;height:auto;aspect-ratio:16/9;background:#000;margin:20px 0}button{padding:10px 16px;border:0;border-radius:6px;cursor:pointer;background:#65d1cb;color:#0e2629;margin:8px 8px 0 0}button:disabled{opacity:.5;cursor:default}#warning{border-left:4px solid #e6b85e;padding:12px;background:#24303a}#ack{width:24px;height:24px;min-height:24px;vertical-align:middle;margin-right:10px}#status{min-height:48px}:focus-visible{outline:3px solid #e6b85e;outline-offset:3px}</style><main><h1 id="title"></h1><p id="intro"></p><label for="pin" id="pinLabel">PIN</label><input id="pin" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="off"><label for="file" id="fileLabel">JPG / PNG / HEIC</label><input id="file" type="file" accept="image/jpeg,image/png,image/heic,image/heif,image/heic-sequence,image/heif-sequence,.heic,.heif"><canvas id="preview" width="320" height="180" aria-label="16:9 crop preview"></canvas><label for="zoom">Zoom</label><input id="zoom" type="range" min="1" max="3" step=".05" value="1" disabled><label for="x">Horizontal position</label><input id="x" type="range" min="0" max="100" value="50" disabled><label for="y">Vertical position</label><input id="y" type="range" min="0" max="100" value="50" disabled><p id="warning"></p><label><input id="ack" type="checkbox"><span id="ackLabel"></span></label><button id="send" disabled></button><button id="cancel"></button><p id="status" role="status" aria-live="polite"></p></main><script>' +
+  '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TV wallpaper</title><style>*{box-sizing:border-box}body{margin:0;background:#101820;color:#f5f7fa;font:16px/1.5 system-ui,sans-serif}main{max-width:560px;padding:24px 20px 40px;margin:auto}h1{font-size:28px;line-height:1.2}p{margin:16px 0}label{display:block;margin:16px 0 6px}input,button{font:inherit;min-height:48px}input[type=file]{width:100%;padding:8px 0}input[type=range]{width:100%}input[type=text]{width:100%;padding:10px;border:1px solid #8fa6b6;border-radius:6px;background:#182934;color:inherit}canvas{display:block;width:100%;height:auto;aspect-ratio:16/9;background:#000;margin:20px 0}button{padding:10px 16px;border:0;border-radius:6px;cursor:pointer;background:#65d1cb;color:#0e2629;margin:8px 8px 0 0}button:disabled{opacity:.5;cursor:default}#warning{border-left:4px solid #e6b85e;padding:12px;background:#24303a}#ack{width:24px;height:24px;min-height:24px;vertical-align:middle;margin-right:10px}#status{min-height:48px}:focus-visible{outline:3px solid #e6b85e;outline-offset:3px}</style><main><h1 id="title"></h1><p id="intro"></p><label for="pin" id="pinLabel">PIN</label><input id="pin" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="off"><label for="file" id="fileLabel">JPG / PNG / HEIC</label><input id="file" type="file" accept="image/jpeg,image/png,image/heic,image/heif,image/heic-sequence,image/heif-sequence,.heic,.heif"><canvas id="preview" width="320" height="180" aria-label="16:9 crop preview"></canvas><label for="zoom">Zoom</label><input id="zoom" type="range" min="1" max="3" step=".05" value="1" disabled><label for="x">Horizontal position</label><input id="x" type="range" min="0" max="100" value="50" disabled><label for="y">Vertical position</label><input id="y" type="range" min="0" max="100" value="50" disabled><p id="warning"></p><label><input id="ack" type="checkbox"><span id="ackLabel"></span></label><button id="send" disabled></button><button id="cancel"></button><p id="status" role="status" aria-live="polite"></p><p><a id="licensesLabel" href="/wallpaper-heic-license.txt" target="_blank" rel="noopener" style="color:#65d1cb">Open-source licenses</a></p></main><script>' +
   '(' +
   phone.toString() +
   ')();</script></html>';

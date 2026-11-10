@@ -4,6 +4,7 @@ var crypto = require('crypto');
 var os = require('os');
 var net = require('net');
 var phonePage = require('./wallpaper-phone');
+var heicWorker = require('./wallpaper-heic');
 var CHUNK = 48 * 1024;
 function error(code) {
   var e = new Error(code);
@@ -242,19 +243,21 @@ exports.create = function (options) {
       active = false;
       chunks = [];
     }
-    function reply(code, payload, html) {
+    function reply(code, payload, html, contentType) {
       if (done) return;
       done = true;
       clearTimeout(timer);
       reset();
       res.writeHead(code, {
-        'Content-Type': html ? 'text/html; charset=utf-8' : 'application/json',
+        'Content-Type':
+          contentType ||
+          (html ? 'text/html; charset=utf-8' : 'application/json'),
         'Connection': 'close',
         'Cache-Control': 'no-store',
         'X-Content-Type-Options': 'nosniff',
         'Referrer-Policy': 'no-referrer',
         'Content-Security-Policy':
-          "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src blob: data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+          "default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval'; worker-src 'self'; style-src 'unsafe-inline'; img-src blob: data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
       });
       res.end(html || JSON.stringify(payload || { returnValue: code === 202 }));
       req.resume();
@@ -298,9 +301,11 @@ exports.create = function (options) {
       browser &&
       !(
         s.kind === 'wallpaper' &&
-        req.method === 'POST' &&
-        req.url === '/v1/wallpaper' &&
-        req.headers.origin === 'http://' + req.headers.host
+        req.headers.origin === 'http://' + req.headers.host &&
+        ((req.method === 'POST' && req.url === '/v1/wallpaper') ||
+          (req.method === 'GET' &&
+            (req.url === '/wallpaper-heic-worker.js' ||
+              req.url === '/wallpaper-heic-license.txt')))
       )
     ) {
       reply(403);
@@ -316,6 +321,22 @@ exports.create = function (options) {
         null,
         phonePage.replace('CYTV_SESSION_EXPIRES', String(s.expiresAt))
       );
+      return;
+    }
+    if (
+      s.kind === 'wallpaper' &&
+      req.method === 'GET' &&
+      req.url === '/wallpaper-heic-worker.js'
+    ) {
+      reply(200, null, heicWorker(), 'application/javascript; charset=utf-8');
+      return;
+    }
+    if (
+      s.kind === 'wallpaper' &&
+      req.method === 'GET' &&
+      req.url === '/wallpaper-heic-license.txt'
+    ) {
+      reply(200, null, heicWorker.license(), 'text/plain; charset=utf-8');
       return;
     }
     var capabilities =

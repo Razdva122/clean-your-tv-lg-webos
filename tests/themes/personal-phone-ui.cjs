@@ -84,6 +84,10 @@ const core = require('../../theme-receiver/core');
     );
     assert.equal(await page.locator('#pin').inputValue(), '');
     assert(
+      !requests.some((url) => url.endsWith('/wallpaper-heic-worker.js')),
+      'PNG does not load the HEIC decoder'
+    );
+    assert(
       !requests.some(
         (x) => !x.startsWith(url + '/') && !x.startsWith('blob:' + url + '/')
       ),

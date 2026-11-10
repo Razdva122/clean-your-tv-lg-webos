@@ -85,3 +85,11 @@ Bundled fill and monochrome weather icons: [Meteocons by Bas Milius](https://git
 A static subset is bundled, monochrome colors inherit the theme, and SVG IDs are
 prefixed for inline use. The full notice is retained in
 `launcher/weather-icons/LICENSE-METEOCONS.txt`; no icon CDN is contacted.
+
+## Phone HEIC conversion
+
+The optional phone-page fallback uses the unmodified libheif-js 1.23.5 WebAssembly
+bundle (libheif/libde265), under LGPL-3.0. Full upstream license texts, exact-byte
+hash, source/build links and reproduction steps are retained in
+`theme-receiver/vendor/heic/`. It runs as a separate browser worker, loaded from
+the TV only when native HEIC decoding fails; no conversion service is contacted.

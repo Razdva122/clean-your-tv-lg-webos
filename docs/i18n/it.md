@@ -148,4 +148,4 @@ Il pulsante Fonti dei dati nel titolo Meteo apre le informazioni su servizi e li
 
 ## Sfondo da iPhone
 
-Apri Impostazioni → Sfondi → Carica dal telefono e scansiona il codice. In Safari 17 o successivo su iPhone scegli JPG, PNG o HEIC/HEIF, ritaglia, accetta il limite di qualità e invia. Sulla TV scegli Applica. La conversione avviene sul telefono; alla TV arriva solo JPEG. Limite: 32 MiB e 50 milioni di pixel, incluse le comuni foto da 24 e 48 MP. Uscita massima: 1080p e 2 MiB. Se HEIC non si apre, usa Safari 17 o successivo oppure JPG/PNG. Il selettore dell’app Mac non acquisisce supporto HEIC.
+Apri Impostazioni → Sfondi → Carica dal telefono e scansiona il codice. Scegli JPG, PNG o HEIC/HEIF, ritaglia, accetta il limite di qualità e invia. Sulla TV scegli Applica. Safari usa HEIC nativo; Chrome, Firefox e altri browser moderni usano il decoder locale incluso quando serve. La conversione avviene sul telefono, senza servizi esterni. Annulla o cambia file per interromperla. Ingresso: 32 MiB e 50 milioni di pixel; uscita: massimo 1080p e 2 MiB. Se fallisce, prova un’altra foto o JPG/PNG. Vale per la pagina del telefono, non per l’app Mac.

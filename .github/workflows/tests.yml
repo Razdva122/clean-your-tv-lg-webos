@@ -231,7 +231,17 @@ jobs:
   phone-heic:
     needs: scope
     if: needs.scope.outputs.tv == 'true' || needs.scope.outputs.ui == 'true'
-    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            browsers: webkit chromium
+            engines: webkit,chromium
+          - os: ubuntu-latest
+            browsers: chromium firefox
+            engines: chromium,firefox
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -243,8 +253,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --ignore-scripts --no-audit --no-fund
-      - run: npx playwright install webkit chromium
+      - run: npx playwright install --with-deps ${{ matrix.browsers }}
       - name: Check actual HEIC decode and local phone upload
+        env:
+          HEIC_BROWSERS: ${{ matrix.engines }}
         run: npm run test:wallpaper:heic
 
   browser:

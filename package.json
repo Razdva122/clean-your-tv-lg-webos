@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "lint:compat": "node scripts/check-tv-web.cjs",
-    "test:wallpaper:heic": "node tests/themes/personal-phone-heic-ui.cjs",
+    "test:wallpaper:heic": "node tests/themes/personal-phone-heic-ui.cjs && node tests/themes/heic-worker-lifecycle.cjs",
     "test:compat": "node tests/web-build.cjs",
     "test:legacy-ui": "node tests/legacy-launcher.cjs",
     "test:geometry": "node tests/launcher-geometry.cjs",
