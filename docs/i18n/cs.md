@@ -110,6 +110,12 @@ Po chybě připojení během odstranění otevřete podrobnosti, zkontrolujte s�
 <a id="starší-nodejs-v-tv-vydáno-ve-v1120"></a>
 <a id="jednoduché-odebrání-v1110"></a>
 
+## Nastavení
+
+Pomocí ↑ ↓ vyberte kategorii a pomocí → nebo OK do ní vstupte. ← se vrací ke kategoriím; Zpět se nejprve vrátí k nim a poté zavře nastavení. Při návratu do sekce se obnoví poslední dostupný ovládací prvek. Ve Sloupcích šipky odpovídají mřížce se třemi sloupci. V Jazyku se zaměří vybraný jazyk.
+
+Pokud No-root nemůže načíst stav Home, zvolte Zkusit znovu. Nedostupný přepínač neznamená vypnuté ovládání Home. V Tapetách nahrajte obrázek z telefonu nebo CYTV; kvalita a ztmavení jsou dostupné po výběru tapety. Odstranění vlastní tapety vyžaduje potvrzení; Zrušit ji zachová.
+
 ## Počasí
 
 Otevřete Nastavení → Počasí pod Tapetami. Zapněte počasí, otevřete Město a vyhledejte správnou oblast a zemi, nebo zvolte Automaticky pro přibližné určení podle internetového připojení. VPN může výsledek změnit; pokud město chybí nebo nesouhlasí, použijte ruční hledání. Určené či vybrané město je vidět v nastavení. Vyberte °C / m/s nebo °F / mph a dostupný formát: stručný, aktuální, podrobný nebo na čtyři dny. Náhled odpovídá motivu; označení Příklad znamená ukázková data. Liquid Glass podporuje pouze stručný formát; Ribbon a Atmosphere počasí nezobrazují. Vypnutí zastaví požadavky a skryje volby města, jednotek a formátu; výběr zdroje zůstává dostupný. Při výpadku mohou krátce zůstat nedávná data; později se počasí skryje do dalšího obnovení.

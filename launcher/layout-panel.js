@@ -151,6 +151,16 @@
         if (!event.repeat) buttons[selected].click();
         return;
       }
+      if (event.keyCode !== 9) {
+        var next = selected;
+        if (event.keyCode === 37 && selected < 9 && selected % 3 > 0) next--;
+        if (event.keyCode === 39 && selected < 9 && selected % 3 < 2) next++;
+        if (event.keyCode === 38 && selected >= 3)
+          next = selected === 9 ? 6 : selected - 3;
+        if (event.keyCode === 40) next = Math.min(9, selected + 3);
+        focus(next);
+        return;
+      }
       focus(
         selected +
           (event.keyCode === 37 ||

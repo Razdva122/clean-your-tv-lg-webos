@@ -8,7 +8,10 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8879';
     channel: process.env.BROWSER_CHANNEL || 'chrome'
   });
   try {
-    const page = await browser.newPage({ locale: 'en' }),
+    const page = await browser.newPage({
+        locale: 'en',
+        viewport: { width: 1280, height: 720 }
+      }),
       errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
     await page.goto(base + '/root-launcher/index.html');
@@ -246,7 +249,7 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8879';
       'all source controls and the Off explanation fit in the TV reading area'
     );
     await toggle.focus();
-    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowRight');
     assert.equal(
       await page.evaluate(() => document.activeElement.textContent),
       'Open LG Home'

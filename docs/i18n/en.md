@@ -134,6 +134,12 @@ After a removal connection error, open the connection details, check network acc
 <a id="older-tv-nodejs-published-v1120"></a>
 <a id="straightforward-removal-v1110"></a>
 
+## Settings
+
+Use ↑ ↓ to choose a category and → or OK to enter it. ← returns to categories; Back returns there first, then closes settings. Within a section, returning from categories restores the last available control. In Columns, arrows follow the three-column grid. In Language, entry focuses the selected language.
+
+If No-root cannot read Home status, choose Try again. The unavailable control does not mean Home routing is off. Under Wallpapers, upload a personal image from a phone or CYTV; quality and dimming appear when a wallpaper is available. Removing a personal wallpaper asks for confirmation; Cancel keeps it.
+
 ## Weather
 
 Open Settings → Weather, below Wallpapers. Turn weather on, choose City, then search manually and select the correct region and country, or choose Automatic for an approximate city based on your internet connection. A VPN may change the automatic result; if the city is missing or wrong, use manual search. The detected or selected city is shown in settings. Choose °C / m/s or °F / mph and an available format: Compact, Now, In detail or 4 days. The preview follows your theme; Example means sample data. Liquid Glass supports Compact only. Ribbon and Atmosphere do not show weather. Turning weather off stops requests and hides city, units and format controls; source selection remains available. During an outage recent data can remain temporarily; after a longer outage weather disappears until it can refresh.

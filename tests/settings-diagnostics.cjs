@@ -44,6 +44,9 @@ class Element {
   setAttribute(k, v) {
     this.attrs[k] = v;
   }
+  removeAttribute(k) {
+    delete this.attrs[k];
+  }
   addEventListener() {}
   focus() {
     document.activeElement = this;
@@ -134,7 +137,10 @@ assert.deepEqual(report().home.homeStatus, {
   errorCode: -1,
   diagnostic: { component: 'home', operation: 'write', code: 'EACCES' }
 });
-assert.equal(ids.homeRoutingToggle.hidden, true);
+assert.equal(ids.homeRoutingToggle.hidden, false);
+assert.equal(ids.homeRoutingToggle.disabled, true);
+assert.equal(ids.homeRoutingRetry.hidden, false);
+assert.equal(ids.homeRoutingToggle.attrs['aria-checked'], undefined);
 assert.match(ids.homeRoutingStatus.textContent, /unknown/);
 ids.homeVisit.onclick();
 pending.openLGHome({

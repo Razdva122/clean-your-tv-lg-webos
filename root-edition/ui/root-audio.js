@@ -84,14 +84,23 @@
   function refresh() {
     var current = ++generation;
     draw(null);
+    panel.setAttribute('aria-busy', 'true');
+    buttons[2].disabled = true;
+    status.textContent = t('Checking HDMI audio…');
     return request(service + 'status', { audio: 'status' }, 60000)
       .then(function (reply) {
         if (current !== generation) return;
+        panel.setAttribute('aria-busy', 'false');
+        buttons[2].disabled = false;
         draw(reply);
         if (!panel.hidden && buttons[selected].disabled) focus(2);
       })
       .catch(function () {
-        if (current === generation) draw(null);
+        if (current === generation) {
+          panel.setAttribute('aria-busy', 'false');
+          buttons[2].disabled = false;
+          draw(null);
+        }
       });
   }
   function change(index) {

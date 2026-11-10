@@ -24,14 +24,14 @@
     panel.innerHTML = ht(
       [
         '<div id="settingsMain" class="renewal-card settings-main"><div class="settings-heading"><h2>Home settings</h2><span class="settings-edition">No-root Edition</span></div><section class="settings-home"><h3>Your Home screen</h3><p>Home is your app screen. Home Helper makes the Home button open it.</p><p id="homeRoutingStatus" class="settings-status" aria-live="polite">Checking Home control…</p>',
-        '<div class="renewal-actions home-routing-actions"><button id="homeRoutingToggle" class="home-routing-switch" role="switch" aria-checked="false" hidden disabled>Change Home</button><button id="homeVisit" class="home-visit-button" aria-describedby="homeVisitHint">Open LG Home</button></div><p id="homeVisitHint" class="home-visit-hint">Open LG Home once, keeping your Home choice.</p>',
+        '<div class="renewal-actions home-routing-actions"><button id="homeRoutingToggle" class="home-routing-switch" role="switch" aria-checked="false" aria-describedby="homeRoutingStatus" disabled>Change Home</button><button id="homeRoutingRetry" hidden>Try again</button><button id="homeVisit" class="home-visit-button" aria-describedby="homeVisitHint">Open LG Home</button></div><p id="homeVisitHint" class="home-visit-hint">Open LG Home once, keeping your Home choice.</p>',
         '<div class="renewal-actions settings-layout"><div id="homeThemeHost"></div></div><div class="renewal-actions settings-layout"><button id="homeColumns">Columns</button></div></section>',
         '<div id="homeAppSettings" class="renewal-actions settings-layout"><button id="homeShowAddApp" class="home-routing-switch" role="switch" aria-checked="true">Show Add app tile</button><button id="homeAddApp">Add app</button><button id="homePreviewInputs" class="home-routing-switch" role="switch" aria-checked="true">Preview inputs on focus</button><p id="homeAppsError" role="alert"></p></div>',
         '<div class="renewal-actions settings-links settings-section"><button id="homeLanguage">Language<span class="settings-chevron" aria-hidden="true"></span></button><button id="renewalUpdates">Software updates<span class="settings-update-dot" aria-hidden="true"></span><span class="settings-chevron" aria-hidden="true"></span></button><button id="renewalTV">TV settings<span class="settings-chevron" aria-hidden="true"></span></button></div><div class="renewal-actions settings-developer"><button id="developerOpen" aria-controls="developerSettings" aria-describedby="renewalSummary"><span><span>Developer Mode</span> <span class="settings-beta">Beta</span><span id="renewalSummary" class="renewal-summary" aria-live="polite">Checking auto-renewal…</span></span><span class="settings-chevron" aria-hidden="true"></span></button></div><div class="settings-footer">',
         '<div class="renewal-actions"><button id="renewalClose">Back to Home</button></div></div>',
-        '</div><div id="developerSettings" class="renewal-card hidden"><div class="settings-heading"><h2>Developer Mode</h2><span class="settings-edition">Beta</span></div><p>Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.</p><p>Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.</p>',
+        '</div><div id="developerSettings" class="renewal-card hidden"><div class="settings-heading"><h2>Developer Mode</h2><span class="settings-edition">Beta</span></div><div class="developer-content"><div id="renewalStatus" aria-live="polite">Checking auto-renewal…</div>',
         '<div class="renewal-actions"><button id="renewalToggle" class="home-routing-switch" role="switch" aria-checked="false">Turn on auto-renewal</button></div><p class="renewal-warning">Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.</p>',
-        '<div id="renewalStatus" aria-live="polite">Checking auto-renewal…</div><div class="renewal-actions"><button id="renewalCheck">Check session</button><button id="renewalDiagnostics" aria-expanded="false" aria-controls="renewalDetails">Show diagnostics</button></div><pre id="renewalDetails" class="hidden"></pre><div class="settings-footer"><div class="renewal-actions"><button id="developerBack">Back</button></div></div>',
+        '<div class="renewal-actions"><button id="renewalCheck">Check session</button><button id="renewalDiagnostics" aria-expanded="false" aria-controls="renewalDetails">Show diagnostics</button></div><p>Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.</p><p>Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.</p><p id="renewalHistory" class="renewal-history"></p><pre id="renewalDetails" class="hidden"></pre></div><div class="settings-footer"><div class="renewal-actions"><button id="developerBack">Back</button></div></div>',
         '</div>'
       ].join('')
     );
@@ -163,13 +163,16 @@
     }
     var homeToggle = document.getElementById('homeRoutingToggle'),
       homeVisit = document.getElementById('homeVisit'),
+      homeRetry = document.getElementById('homeRoutingRetry'),
       homeStatus = document.getElementById('homeRoutingStatus'),
       homeEnabled = null,
       homeBusy = false;
     function hideHomeChoice() {
       var focused = document.activeElement === homeToggle;
-      homeToggle.hidden = true;
+      homeToggle.hidden = false;
       homeToggle.disabled = true;
+      homeToggle.setAttribute('role', 'button');
+      homeToggle.removeAttribute('aria-checked');
       if (focused && openNow()) focus(index);
     }
     function homeRPC(method, payload, callback) {
@@ -251,18 +254,26 @@
     function renderHome(r) {
       homeBusy = false;
       homeVisit.disabled = false;
+      homeRetry.disabled = false;
       if (!r || r.returnValue !== true || typeof r.enabled !== 'boolean') {
         homeEnabled = null;
         hideHomeChoice();
+        homeRetry.hidden = false;
+        homeToggle.setAttribute('data-home-state', 'unknown');
         homeStatus.textContent = tr(
           'Home status is unknown. The Home button may still work.'
         );
         return;
       }
+      var retryFocused = document.activeElement === homeRetry;
+      homeRetry.hidden = true;
+      homeToggle.setAttribute('data-home-state', 'known');
       homeEnabled = r.enabled;
       homeToggle.hidden = false;
       homeToggle.disabled = false;
+      homeToggle.setAttribute('role', 'switch');
       homeToggle.setAttribute('aria-checked', String(homeEnabled));
+      if (retryFocused && openNow()) homeToggle.focus();
       homeStatus.textContent = homeEnabled
         ? tr('Home and return from apps open Clean Your TV.')
         : tr('Home and return from apps open LG Home.');
@@ -273,10 +284,15 @@
         focus(index);
     }
     function refreshHome() {
+      if (homeBusy) return;
+      homeBusy = true;
+      homeRetry.disabled = true;
+      homeToggle.setAttribute('data-home-state', 'checking');
       hideHomeChoice();
       homeStatus.textContent = tr('Checking Home control…');
       homeRPC('homeStatus', {}, renderHome);
     }
+    homeRetry.onclick = refreshHome;
     homeToggle.onclick = function () {
       if (homeBusy || homeEnabled === null) return;
       homeBusy = true;
@@ -379,8 +395,7 @@
               ) / 3600
             )
           });
-      text +=
-        '\n' +
+      document.getElementById('renewalHistory').textContent =
         tr('Last checked: {date}', { date: date(last.checkedAt) }) +
         '\n' +
         tr('Last confirmed renewal: {date}', {
@@ -701,10 +716,10 @@
         e.preventDefault();
         e.stopImmediatePropagation();
         if (document.activeElement === details && (k === 38 || k === 40)) {
-          var before = developer.scrollTop;
-          developer.scrollTop += k === 38 ? -80 : 80;
-          if (developer.scrollTop === before)
-            focus(index + (k === 38 ? -1 : 1));
+          var reading = details.parentNode;
+          var before = reading.scrollTop;
+          reading.scrollTop += k === 38 ? -80 : 80;
+          if (reading.scrollTop === before) focus(index + (k === 38 ? -1 : 1));
           return;
         }
         if (document.activeElement === details && k === 13) {
@@ -778,6 +793,8 @@
         previous = document.activeElement;
         developerOpen = false;
         homeGeneration++;
+        homeBusy = false;
+        homeRetry.hidden = true;
         homeReplies = {};
         main.classList.remove('hidden');
         developer.classList.add('hidden');

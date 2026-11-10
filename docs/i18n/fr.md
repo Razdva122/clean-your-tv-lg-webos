@@ -134,6 +134,12 @@ Références détaillées en anglais: [prérequis](../COMPATIBILITY.md) · [comm
 <a id="ancien-nodejs-du-tv-publié-dans-v1120"></a>
 <a id="suppression-simple-v1110"></a>
 
+## Réglages
+
+Utilisez ↑ ↓ pour choisir une catégorie, puis → ou OK pour y entrer. ← revient aux catégories ; Retour y revient d’abord, puis ferme les réglages. En revenant dans une section, le dernier contrôle disponible reprend le focus. Dans Colonnes, les flèches suivent la grille de trois colonnes. Dans Langue, le focus se place sur la langue choisie.
+
+Si No-root ne peut pas lire l’état de Home, choisissez Réessayer. Un contrôle indisponible ne signifie pas que Home est désactivé. Dans Fonds d’écran, transférez une image depuis le téléphone ou CYTV ; qualité et assombrissement apparaissent lorsqu’un fond est disponible. La suppression d’un fond personnel demande confirmation ; Annuler le conserve.
+
 ## Météo
 
 Ouvrez Réglages → Météo, sous Fonds d’écran. Activez la météo puis ouvrez Ville pour rechercher et choisir la bonne région et le bon pays, ou choisissez Automatique pour une ville approximative selon votre connexion. Un VPN peut modifier le résultat ; utilisez la recherche manuelle si la ville manque ou est incorrecte. La ville détectée ou choisie apparaît dans les réglages. Choisissez °C / m/s ou °F / mph et un format disponible : compact, actuel, détaillé ou quatre jours. L’aperçu suit le thème ; Exemple indique des données fictives. Liquid Glass accepte uniquement le format compact. Ribbon et Atmosphere n’affichent pas la météo. La désactivation arrête les requêtes et masque la ville, les unités et le format ; le choix de la source reste disponible. En cas de panne, les données récentes peuvent rester temporairement ; ensuite la météo est masquée jusqu’à son actualisation.
