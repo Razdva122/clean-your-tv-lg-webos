@@ -13,12 +13,14 @@ class Remote:
     def __init__(self, fail=None):
         self.calls, self.fail = [], fail
         self.uploads = {}
+        self.run_inputs = []
         self.installed = []
         self.observers = {}
         self.active = {'recovery': {'integrity_verified': True}, 'intent': {'enabled': True, 'phase': 'active'}, 'guardian_active': True, 'effective': {'sam_home': package.ROOT_APP, 'profiles': {'idleApp': {'appId': package.ROOT_APP}, 'defaultApps': {'categories': {'home': package.ROOT_APP}}}}}
 
     def run(self, command, data=None, timeout=30):
         self.calls.append(('run', command))
+        self.run_inputs.append((command, data, timeout))
         if data and b'CYTV_SELECTED_RUNTIME_VERIFIED' in data:
             return 'CYTV_SELECTED_RUNTIME_VERIFIED'
         if 'CYTV_SYSTEM_PYTHON' in command and 'CYTV_ROOT_READY' not in command:
@@ -834,6 +836,10 @@ class OperationTests(unittest.TestCase):
                 receipt.unlink()
 
     def test_partial_stale_and_corrupt_receipts_are_not_inferred_complete(self):
+        from cytv.tv_sources import node_adapter
+        telemetry = "unset NODE_OPTIONS NODE_PATH && /usr/bin/node -e " + shlex.quote(
+            node_adapter('state-permissions',
+                "process.stdout.write(JSON.stringify(contract.readLogEvents('/media/developer/apps/usr/palm/applications/com.local.nativehome/state')));"))
         for record in (b'{',
                        b'{"action":"install","stage":"pending","expected":{}}',
                        b'{"action":"install","stage":"pending","versions":{"wrong":"9.9.9"},"expected":{"stale":"bad-hash"}}',
@@ -846,7 +852,10 @@ class OperationTests(unittest.TestCase):
                 state.private_write(receipt, record)
                 self.assertIsNone(installer.status()['reconciled'])
                 self.assertEqual(receipt.read_bytes(), record)
+                self.assertEqual([entry for entry in remote.run_inputs if entry[0] == telemetry],
+                                 [(telemetry, None, 10)])
                 self.assertTrue(all(call[0] == 'luna' and call[1].endswith('/dev/listApps')
+                                    or call == ('run', telemetry)
                                     or call[0] == 'run' and 'CYTV_HELPER_' in call[1]
                                     or call[0] == 'run' and 'CYTV_NODE_VERSION' in call[1]
                                        and '/usr/bin/node --version' in call[1]
@@ -1321,7 +1330,14 @@ class OperationTests(unittest.TestCase):
         remote.installed = [{'id': operations.HELPER}]
         self.installer(remote, 'root').install(self.inventory)
         disable = next(i for i,c in enumerate(remote.calls) if c[0]=='luna' and c[1].endswith('/disable'))
-        stop = next(i for i,c in enumerate(remote.calls) if c[0]=='run' and '/control.json' in c[1])
+        from cytv.helper_stop import PROGRAM
+        stop_command = ('if [ -f ' + operations.HELPER_STATE + '/controller.pid ]; then '
+                        '/usr/bin/node || exit 1; '
+                        'n=0; while [ -e ' + operations.HELPER_STATE + '/controller.pid ]; do '
+                        'n=$((n+1)); [ "$n" -le 15 ] || exit 1; sleep 1; done; fi')
+        self.assertEqual([entry for entry in remote.run_inputs if entry[0] == stop_command],
+                         [(stop_command, PROGRAM.encode(), 25)])
+        stop = next(i for i,c in enumerate(remote.calls) if c == ('run', stop_command))
         enable = next(i for i,c in enumerate(remote.calls) if c[0]=='run' and c[1].endswith(' enable'))
         self.assertLess(disable, stop)
         self.assertLess(stop, enable)

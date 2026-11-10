@@ -55,8 +55,17 @@ sys.stdin.read()
             return super().run(command,data,timeout)
         if 'CYTV_STOP_RETAINED' in command:
             return subprocess.run(['sh','-c',command],capture_output=True,check=True).stdout.decode()
+        if command.startswith('if [ -f ') and '/usr/bin/node || exit 1' in command:
+            # Run the actual shell/no-op guard; its PID '-e' predicate is not
+            # a Node '-e' argument. The trusted program travels on stdin.
+            command=command.replace('/usr/bin/node',shutil.which('node'))
+            source=data.replace(b'/media/developer/apps/usr/palm/applications/com.local.nativehome/state',operations.HELPER_STATE.encode())
+            result=subprocess.run(['sh','-c',command],input=source,capture_output=True,timeout=timeout)
+            if result.returncode:raise RuntimeError(result.stderr.decode())
+            return result.stdout.decode()
         words=shlex.split(command)
-        if '-e' in words and '/usr/bin/node' in words:
+        if '/usr/bin/node' in words and words[words.index('/usr/bin/node')+1:][:1]==['-e']:
+
             code=words[words.index('-e')+1]
             argument=words[-1]
             if observer.PROGRAM in code or observer.ROOT_PROGRAM in code or observer.STORAGE_SELECT in code:

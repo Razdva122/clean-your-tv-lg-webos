@@ -17,6 +17,29 @@ class BuildAssetsTests(unittest.TestCase):
         prefix = 'usr/palm/services/com.gathin.tvhome.renewal/'
         self.assertEqual(files[prefix+'diagnostics.js'], build['compile_helper'](sources)['diagnostics.js'])
         self.assertIn(b"require('./diagnostics')", files[prefix+'service.js'])
+        canonical = {name: (root/'native/app'/name).read_bytes()
+                     for name in ('state-permissions.js', 'contract-events.js')}
+        compiled = build['compile_helper'](canonical)
+        for name in canonical:
+            self.assertEqual(files[prefix+name], compiled[name])
+        import subprocess
+        import tempfile
+        import os
+        with tempfile.TemporaryDirectory() as directory:
+            for name, raw in files.items():
+                target = Path(directory) / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(raw)
+            state = Path(directory).resolve()/'storage'
+            state.mkdir(mode=0o770)
+            module = str(Path(directory).resolve()/prefix/'state-permissions.js')
+            for runtime in dict.fromkeys(filter(None, ['node', os.environ.get('NODE010'), os.environ.get('NODE01025'), os.environ.get('NODE012')])):
+                result = subprocess.run([runtime, '-e',
+                    "var p=require(process.argv[1]);p.atomicRecord(process.argv[2],'home-preference','{}');",
+                    module, str(state)], capture_output=True)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertEqual((state/'home-control.json').read_bytes(), b'{}')
+
 
     def test_home_channel_is_provisioned_and_survives_personalization(self):
         import io
@@ -102,7 +125,8 @@ class BuildAssetsTests(unittest.TestCase):
         permissions = (root / 'native/app/state-permissions.js').read_bytes()
         app = {'appinfo.json': json.dumps({'id': 'com.local.nativehome',
                                          'version': '0.6.18', 'type': 'native'}).encode(),
-               'state-permissions.js': permissions}
+               'state-permissions.js': permissions,
+               'contract-events.js': (root/'native/app/contract-events.js').read_bytes()}
         service = {'services.json': (root / 'native/service/services.json').read_bytes(),
                    'service.js': (root / 'native/service/service.js').read_bytes()}
         files = package.data_files(build['pack_app'](app, service, helper=True, architecture='arm'))

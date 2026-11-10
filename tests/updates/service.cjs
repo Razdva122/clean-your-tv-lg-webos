@@ -267,8 +267,8 @@ function request(name, p = {}, id = 'com.gathin.tvhome') {
   // Home routing belongs to the independent, already running native helper.
   // Exercise the real persisted preference, boot claim and emergency markers;
   // renewal pause/resume must never replay an old Home preference or start it.
-  const helperDir = fs.mkdtempSync(
-    path.join(require('os').tmpdir(), 'cytv-update-helper-')
+  const helperDir = fs.realpathSync(
+    fs.mkdtempSync(path.join(require('os').tmpdir(), 'cytv-update-helper-'))
   );
   try {
     const createHome = require('../../native/app/home-control'),

@@ -759,78 +759,15 @@ FILE_CHECK = r'''
 }());
 '''
 
-STATE_CHECK = r'''
-(function(){
- var fs=require('fs'),path=require('path'),c=require('constants'),directory=process.argv[process.argv.length-1],uid=process.getuid();
- var option=process.argv[process.argv.length-2],expected=/^repair-key-mode:[a-f0-9]{64}$/.test(option)?option.slice(16):null;
- var repair=option==='repair-key-mode'||!!expected,leaf,key,replacing=false;
- function owner(s){return s.uid===uid||s.uid===5999&&s.gid===5000;}
- function same(a,b){return a.dev===b.dev&&a.ino===b.ino;}
- for(var current=directory;;current=path.dirname(current)){
-  var s=fs.lstatSync(current);if(!s.isDirectory()||s.isSymbolicLink())throw Error('unsafe-state-parent');
-  if(current===directory){if(!owner(s)||(s.mode&2))throw Error('unsafe-state-owner');leaf=s;}
-  if(current===path.dirname(current))break;
- }
- // Validate both leaves before changing anything. Owned 0775 keys retain
- // their inode; foreign keys additionally require the original capsule hash.
- ['ssap-key.json','apps.json'].forEach(function(name){
-  var s;try{s=fs.lstatSync(directory+'/'+name);}catch(e){if(e.code==='ENOENT')return;throw e;}
-  if(!s.isFile()||s.nlink!==1||(s.mode&2))throw Error('unsafe-config-file');
-  if(!owner(s)){
-   var groups=process.getgroups();if(groups.indexOf(process.getgid())<0)groups.push(process.getgid());
-   if(name!=='ssap-key.json'||!expected||s.gid!==leaf.gid||groups.indexOf(s.gid)<0||
-      [416,509].indexOf(s.mode&4095)<0||s.size>65536)throw Error('unsafe-config-file');
-   key=s;replacing=true;
-  }
-  if(!replacing&&name==='ssap-key.json'&&(s.mode&7)){
-   if(!repair||s.uid!==uid||(s.mode&4095)!==509)throw Error('unsafe-config-file');
-   key=s;
-  }
- });
- if(key){
-  if(typeof c.O_NOFOLLOW!=='number'||typeof c.O_DIRECTORY!=='number')throw Error('unsupported-storage');
-  var parent=fs.openSync(directory,c.O_RDONLY|c.O_NOFOLLOW|c.O_DIRECTORY),fd;
-  try{
-   if(!same(leaf,fs.fstatSync(parent)))throw Error('unsafe-state-parent');
-   process.chdir(directory);
-   if(!same(leaf,fs.statSync('.'))||!same(leaf,fs.lstatSync(directory)))throw Error('unsafe-state-parent');
-   fd=fs.openSync('ssap-key.json',c.O_RDONLY|c.O_NOFOLLOW|c.O_NONBLOCK);
-   var opened=fs.fstatSync(fd);
-   if(replacing){
-    // Authenticate retained bytes against the original capsule, not a numeric
-    // Helper UID. Never widen the immutable observer's ownership policy.
-    function unchanged(a,b){return same(a,b)&&a.uid===b.uid&&a.gid===b.gid&&a.mode===b.mode&&
-     a.nlink===b.nlink&&a.size===b.size&&a.mtime.getTime()===b.mtime.getTime()&&a.ctime.getTime()===b.ctime.getTime();}
-    if(!unchanged(key,opened)||!unchanged(key,fs.lstatSync('ssap-key.json')))throw Error('unsafe-config-file');
-    var bytes=new Buffer(key.size),offset=0;
-    while(offset<bytes.length){var count=fs.readSync(fd,bytes,offset,bytes.length-offset,offset);if(count<=0)throw Error('short-read');offset+=count;}
-    var crypto=require('crypto');
-    if(crypto.createHash('sha256').update(bytes).digest('hex')!==expected)throw Error('changed-config-key');
-    var staged='.cytv-key-'+crypto.randomBytes(12).toString('hex'),out,created=false;
-    try{
-     out=fs.openSync(staged,c.O_WRONLY|c.O_CREAT|c.O_EXCL|c.O_NOFOLLOW,384);created=true;
-     for(offset=0;offset<bytes.length;){var n=fs.writeSync(out,bytes,offset,bytes.length-offset);if(n<=0)throw Error('short-write');offset+=n;}
-     if(fs.fstatSync(out).gid!==key.gid)fs.fchownSync(out,uid,key.gid);
-     fs.fchmodSync(out,416);fs.fsyncSync(out);
-     var stagedStat=fs.fstatSync(out),directoryStat=fs.fstatSync(parent);
-     if(stagedStat.uid!==uid||stagedStat.gid!==key.gid||(stagedStat.mode&4095)!==416||stagedStat.nlink!==1||
-        !same(stagedStat,fs.lstatSync(staged))||!unchanged(key,fs.fstatSync(fd))||!unchanged(key,fs.lstatSync('ssap-key.json'))||
-        !same(leaf,directoryStat)||leaf.uid!==directoryStat.uid||leaf.gid!==directoryStat.gid||leaf.mode!==directoryStat.mode||!same(leaf,fs.lstatSync(directory)))throw Error('unsafe-config-file');
-     fs.renameSync(staged,'ssap-key.json');created=false;fs.fsyncSync(parent);
-    }finally{if(out!==undefined)fs.closeSync(out);if(created)fs.unlinkSync(staged);}
-   }else{
-   if(!same(key,opened)||!opened.isFile()||opened.nlink!==1||opened.uid!==uid||opened.gid!==key.gid||
-      (opened.mode&4095)!==509||!same(key,fs.lstatSync('ssap-key.json')))throw Error('unsafe-config-file');
-   fs.fchmodSync(fd,416);fs.fsyncSync(fd);
-   var after=fs.fstatSync(fd);
-   if(!same(key,after)||after.uid!==key.uid||after.gid!==key.gid||(after.mode&4095)!==416||
-      after.nlink!==1||!same(key,fs.lstatSync('ssap-key.json'))||!same(leaf,fs.lstatSync(directory)))throw Error('unsafe-config-file');
-   }
-  }finally{if(fd!==undefined)fs.closeSync(fd);fs.closeSync(parent);}
- }
- process.stdout.write('CYTV_CONFIGURATION_PRIVATE');
-}());
-'''
+from .tv_sources import node_adapter
+
+STATE_CHECK = node_adapter('state-permissions', r"""
+var option=process.argv[process.argv.length-2],directory=process.argv[process.argv.length-1];
+var expected=/^repair-key-mode:[a-f0-9]{64}$/.test(option)?option.slice(16):null;
+if(option==='repair-key-mode'||expected)contract.prepareConfiguration(directory,{expectedHash:expected});
+else contract.inspectConfiguration(directory,{});
+process.stdout.write('CYTV_CONFIGURATION_PRIVATE');
+""")
 
 EMPTY_PACKAGE = r'''
 (function(){

@@ -1003,11 +1003,13 @@ else:
                     if attempt < 15:
                         time.sleep(1)
                 raise UserError('Home Helper stop could not be verified. Keep recovery state and run cytv status.')
+        from .helper_stop import PROGRAM
         self.remote.run(
             'if [ -f ' + HELPER_STATE + '/controller.pid ]; then '
-            'printf \'{"cmd":"stop"}\' > ' + HELPER_STATE + '/control.json; '
+            '/usr/bin/node || exit 1; '
             'n=0; while [ -e ' + HELPER_STATE + '/controller.pid ]; do '
-            'n=$((n+1)); [ "$n" -le 15 ] || exit 1; sleep 1; done; fi', timeout=25)
+            'n=$((n+1)); [ "$n" -le 15 ] || exit 1; sleep 1; done; fi',
+            data=PROGRAM.encode(), timeout=25)
 
     def root_inventory(self, fallback):
         """Use the existing fixed Root catalog reader; Root needs no SSAP key."""
@@ -1276,7 +1278,12 @@ else:
         reconcile = reconcile and not restoring
         if pending and pending.get('recovery_protocol') == 'no-root-original-stream-v1':
             from .no_root_observer import observe
-            return observe(self, pending)
+            result = observe(self, pending)
+            if self.profile['edition'] == 'no-root':
+                diagnostics.context.collect_contract_events(self.remote, self.tv_info)
+            return result
+        if self.profile['edition'] == 'no-root':
+            diagnostics.context.collect_contract_events(self.remote, self.tv_info)
         reconciled = None
         reconciliation = None
         can_resume = False

@@ -527,8 +527,11 @@ class DesktopRecoveryTests(unittest.TestCase):
         def reject(uri, payload, **kwargs):
             if uri == 'com.webos.appInstallService/status':
                 self.remote.calls.append(('luna', uri, payload))
-                raise TVRejected('TV rejected the operation. Run cytv doctor; no automatic retry was attempted.', {'returnValue': False, 'errorCode': -1,
+                error=TVRejected('TV rejected the operation. Run cytv doctor; no automatic retry was attempted.', {'returnValue': False, 'errorCode': -1,
                     'errorText': 'PRIVATE-DIAGNOSTICS'}, uri)
+                error.contract_events=[{'schema':1,'component':'storage','operation':'inspect','phase':'read',
+                    'field':'apps','expected':'single-regular-file','actual':{'mode':511},'decision':'refuse','count':1}]
+                raise error
             return original(uri, payload, **kwargs)
         self.remote.luna = reject
         self.button(w, 'Review recovery options').click()
@@ -540,6 +543,7 @@ class DesktopRecoveryTests(unittest.TestCase):
         report = json.loads(w.report.read_text())
         self.assertEqual(report['phase'], 'recover')
         self.assertEqual(report['luna']['operation'], 'package-status')
+        self.assertTrue(any(e['field']=='apps' for e in report['contract_events']))
         self.assertTrue(report['trace'])
         for private in ('PRIVATE-DIAGNOSTICS', 'PRIVATE-PAIRING-KEY', '192.0.2.10'):
             self.assertNotIn(private, w.report.read_text())
