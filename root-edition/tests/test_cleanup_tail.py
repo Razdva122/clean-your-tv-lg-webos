@@ -728,6 +728,64 @@ class CleanupTail(unittest.TestCase):
         return self.run_tail(NO_SYNC='1',SYSTEM_DEVICE='1',NO_HOME_APIS='1',MISSING_PROFILES='1',
             PROFILE_ERROR=json.dumps({'returnValue':False,'errorCode':-1,'errorText':'Service does not exist: com.webos.service.systemprofile.'}),**env)
 
+    def restored_native_record(self, schema=1):
+        self.compositor_record()
+        raw='{"schema":'+str(schema)+',"backend":"c1-native-gate","experimental":true}'
+        self.record['profileless_cleanup_eligible']=False
+        self.record['native_restored_sha256']=hashlib.sha256(raw.encode()).hexdigest()
+        self.native_backup={'home-backend.json':raw}
+        self.native_backup.update({'c1-gate/active':'original inverse'} if schema==1 else
+            {'c1-keyfilter/ownership.json':'original ownership','c1-keyfilter/pending.json':'original inverse'})
+        self.write('routing-backup-'+ID+'.json',self.native_backup)
+        self.write('clean-removal-'+ID+'.json',self.record)
+
+    def check_restored_native_tail(self, schema):
+        self.restored_native_record(schema=schema)
+        result,reply=self.compositor_tail()
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(reply['stage'],'verified-clean')
+        self.assertFalse(self.runtime.exists())
+        self.assertEqual(json.loads((self.state/('routing-backup-'+ID+'.json')).read_text()),self.native_backup)
+
+    def test_restored_native_tail_keeps_inverse_without_home_settings(self):
+        self.check_restored_native_tail(1)
+
+    def test_restored_schema2_tail_keeps_inverse_without_home_settings(self):
+        self.check_restored_native_tail(2)
+
+    def test_restored_schema3_tail_keeps_inverse_without_home_settings(self):
+        self.check_restored_native_tail(3)
+
+    def test_native_restoration_cannot_be_reinterpreted_as_never_applied(self):
+        self.restored_native_record()
+        self.record.update(profileless_cleanup_eligible=True,routing_never_applied=True,
+            fenced_components={'deploy':{'stage':'install-observed'}},routes={'mode':'never-applied'})
+        self.write('clean-removal-'+ID+'.json',self.record)
+        result,_=self.compositor_tail()
+        self.assertNotEqual(result.returncode,0)
+        self.assertTrue(self.runtime.exists())
+        self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+
+    def test_restored_native_tail_refuses_unbound_inverse_or_live_routing(self):
+        self.restored_native_record()
+        for damage in ('missing-proof','wrong-hash','profile-backup','opposite-backend','live-native','live-profile'):
+            with self.subTest(damage=damage):
+                record=dict(self.record);backup=dict(self.native_backup);marker=None
+                if damage=='missing-proof':record.pop('native_restored_sha256')
+                if damage=='wrong-hash':record['native_restored_sha256']='f'*64
+                if damage=='profile-backup':backup['persistent-intent.json']='{}'
+                if damage=='opposite-backend':backup['c1-keyfilter/pending.json']='{}'
+                if damage.startswith('live-'):
+                    marker=self.base/'var/lib/clean-your-tv-root'/('home-backend.json' if damage=='live-native' else 'persistent-intent.json')
+                    marker.parent.mkdir(exist_ok=True);marker.write_text('{}')
+                self.write('clean-removal-'+ID+'.json',record)
+                self.write('routing-backup-'+ID+'.json',backup)
+                result,_=self.compositor_tail()
+                self.assertNotEqual(result.returncode,0)
+                self.assertTrue(self.runtime.exists())
+                self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+                if marker:marker.unlink()
+
     def test_current_stock_compositor_tail_finishes_without_home_settings(self):
         self.compositor_record()
         result,reply=self.compositor_tail()

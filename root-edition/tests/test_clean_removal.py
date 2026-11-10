@@ -379,13 +379,26 @@ def install(bundle,experimental_c1_gate=False,_experimental_admission=None):
         native=payload/'runtime/c1-home-gate';native.write_bytes(b'current native');native.chmod(0o600)
         backend=Mock();backend.STATE=self.root/'old';backend.selection.return_value={'routing':'mount-v1','native_sha256':'0'*64}
         cli=Mock();cli.gate_backend.return_value=backend
+        backend.STATE.mkdir(mode=0o700)
+        selection=backend.STATE/'home-backend.json';selection.write_text('{"schema":1}')
         def restore(mode):
             self.assertEqual(mode,'restore');self.assertEqual(backend.binary(backend.STATE,os.getuid()),native)
             return 'restored'
         cli.main.side_effect=restore
         with patch.dict(sys.modules,{'cli':cli}),patch('deploy.verify_bundle',return_value={'files':{'runtime/c1-home-gate':hashlib.sha256(native.read_bytes()).hexdigest()}}),patch('deploy.checked_file',return_value=native.read_bytes()):
             before=list(sys.path)
-            try:self.assertEqual(clean_removal.runtime_restore(payload,os.getuid())['result'],'restored')
+            try:
+                result=clean_removal.runtime_restore(payload,os.getuid())
+                self.assertEqual(result['result'],'restored')
+                self.assertEqual(result['native_restored_sha256'],hashlib.sha256(b'{"schema":1}').hexdigest())
+                cli.main.side_effect=lambda mode:'absent'
+                self.assertNotIn('native_restored_sha256',clean_removal.runtime_restore(payload,os.getuid()))
+                def drift(mode):
+                    selection.write_text('{"schema":2}')
+                    return 'restored'
+                cli.main.side_effect=drift
+                with self.assertRaisesRegex(ValueError,'native_recovery_selection_changed'):
+                    clean_removal.runtime_restore(payload,os.getuid())
             finally:sys.path[:]=before
         self.assertEqual(native.stat().st_mode&0o777,0o700)
 
@@ -1301,6 +1314,78 @@ class PartialDeviceRemoval(unittest.TestCase):
         self.assertEqual(final['routes'],{'mode':'never-applied'})
         self.assertFalse(present)
         self.assertEqual(final['original']['request']['state'],'recovery_required')
+
+    def retained_native_fixture(self, schema=1):
+        import hashlib
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        raw='{"schema":'+str(schema)+',"backend":"c1-native-gate","experimental":true}'
+        (root/'home-backend.json').write_text(raw)
+        native=root/('c1-gate' if schema==1 else 'c1-keyfilter');native.mkdir()
+        (native/('active' if schema==1 else 'ownership.json')).write_text('original native inverse')
+        (payload/'root/runtime/c1_keyfilter.py').write_text('current verified support')
+        native_hash=hashlib.sha256(raw.encode()).hexdigest()
+        proof={'mode':'stock-compositor','target':{'dev':45851,'ino':5647,'size':50684},'target_sha256':'a'*64}
+        rpc=driver.device.rpc
+        def unavailable(method,data):
+            if method.endswith(('/getSystemSettings','/getProfiles')):
+                raise RuntimeError('Unavailable Home setting')
+            return rpc(method,data)
+        driver.device.rpc=unavailable
+        return driver,identifier,root,updater,payload,calls,present,native_hash,proof
+
+    def test_retained_native_removal_uses_restoration_proof_without_home_settings(self):
+        for schema in (1,2,3):
+            with self.subTest(schema=schema):
+                driver,identifier,root,updater,payload,calls,present,native_hash,proof=self.retained_native_fixture(schema=schema)
+                original=driver.store.read('request-'+identifier)
+                with patch.object(driver.device,'log'),patch('clean_removal.routes',side_effect=RuntimeError('old readback failure')):
+                    first=driver.clean_remove(identifier)
+                self.assertFalse(first['profileless_cleanup_eligible'])
+                inverse=driver.store.read('routing-backup-'+identifier)
+                with patch('deploy.command',return_value={'returnValue':True,'result':'restored','native_restored_sha256':native_hash}),patch.object(driver.device,'compositor_stock',return_value=proof):
+                    result=driver.clean_remove(identifier)
+                    self.assertEqual(result['stage'],'restart-required',result)
+                    driver.device.current_boot='22222222-2222-2222-2222-222222222222'
+                    result=driver.clean_remove(identifier)
+                self.assertEqual(result['stage'],'verified-clean',result)
+                self.assertEqual(result['routes'],proof)
+                self.assertFalse(result['profileless_cleanup_eligible'])
+                self.assertEqual(driver.store.read('routing-backup-'+identifier),inverse)
+                self.assertEqual(result['original']['request'],original)
+                self.assertFalse(present)
+
+    def test_restored_native_restart_does_not_erase_new_routing(self):
+        driver,identifier,root,updater,payload,calls,present,native_hash,proof=self.retained_native_fixture()
+        with patch('deploy.command',return_value={'returnValue':True,'result':'restored','native_restored_sha256':native_hash}),patch.object(driver.device,'compositor_stock',return_value=proof):
+            self.assertEqual(driver.clean_remove(identifier)['stage'],'restart-required')
+            marker=root/'persistent-intent.json';marker.write_text('new routing')
+            before=list(calls)
+            driver.device.current_boot='22222222-2222-2222-2222-222222222222'
+            with patch.object(driver.device,'log'):result=driver.clean_remove(identifier)
+        self.assertEqual(result['state'],'recovery_required',result)
+        self.assertEqual(marker.read_text(),'new routing')
+        self.assertFalse(any(name.startswith('remove-') for name in calls[len(before):]))
+        self.assertFalse(result.get('current',False))
+
+    def test_native_restoration_does_not_admit_unrelated_or_changed_routing(self):
+        for damage in ('unproven','wrong-hash','profile-backup','profile-live','opposite-backend','changed-selection'):
+            with self.subTest(damage=damage):
+                driver,identifier,root,updater,payload,calls,present,native_hash,proof=self.retained_native_fixture()
+                if damage=='profile-backup':
+                    driver.store.write('routing-backup-'+identifier,{'home-backend.json':(root/'home-backend.json').read_text(),'persistent-intent.json':'{}'})
+                if damage=='profile-live':(root/'persistent-intent.json').write_text('{}')
+                if damage=='opposite-backend':(root/'c1-keyfilter').mkdir()
+                restored={'returnValue':True,'result':'restored','native_restored_sha256':native_hash}
+                if damage=='unproven':restored.pop('native_restored_sha256')
+                if damage=='wrong-hash':restored['native_restored_sha256']='f'*64
+                def observe():
+                    if damage=='changed-selection':(root/'home-backend.json').write_text('{}')
+                    return proof
+                with patch('deploy.command',return_value=restored),patch.object(driver.device,'compositor_stock',side_effect=lambda record:observe()),patch.object(driver.device,'log'):
+                    result=driver.clean_remove(identifier)
+                self.assertEqual(result['state'],'recovery_required',result)
+                self.assertFalse(any(name.startswith('remove-') for name in calls))
+                self.assertTrue((root/'state/ssap.json').exists())
 
     def test_pre_journal_compositor_failure_can_explicitly_remove_with_fresh_stock_proof(self):
         driver,identifier,root,updater,payload,calls,present=self.fixture()

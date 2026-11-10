@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [Retained native Home removal readback, 2026-11-10](2026-11-10-issue418-native-home-readback.md): digest-bound native restoration, preserved inverse and final stock proof; source checks, physical recovery unverified.
+
 - [v1.15.0 candidate QA, failure inventory and iterations](2026-11-09-release-1.15.0-qa.md)
 - [v1.15.0 candidate preparation and scoped cases](2026-11-09-release-1.15.0-preparation.md)
 

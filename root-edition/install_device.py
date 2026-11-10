@@ -677,6 +677,9 @@ class LocalDevice:
                     with cleanup_step('runtime-restore'):
                         restored=deploy.command([sys.executable,'-I','-B','-c',program])
                         if restored.get('result') not in ('restored','absent'):raise ValueError('controls_restore_unverified')
+                        if restored.get('native_restored_sha256') is not None:
+                            record['native_restored_sha256']=restored['native_restored_sha256']
+                            save('original-writers-fenced')
                     snapshot=read_journal(ROOT/'ls2-provision-snapshot.json')
                     if snapshot is not None:
                         self.ownership.store.write('owner-backup-'+record['operation'],{'provision':snapshot})
@@ -1062,12 +1065,21 @@ class LocalDevice:
             and not os.path.lexists('/var/webos-profile/override/clean-your-tv-root.json'))
 
     def compositor_stock_eligible(self, record):
-        from clean_removal import ROUTING_EVIDENCE
+        from clean_removal import ROUTING_EVIDENCE, restored_native_schema
         retained_proof=isinstance(record.get('routes'),dict) and record['routes'].get('mode')=='stock-compositor'
-        if (record.get('profileless_cleanup_eligible') is not True or
-                not retained_proof and (self.payload is None or not (self.payload/'root/runtime/c1_keyfilter.py').is_file())):return False
+        if not retained_proof and (self.payload is None or not (self.payload/'root/runtime/c1_keyfilter.py').is_file()):return False
         backup=self.ownership.store.read('routing-backup-'+record['operation'])
-        return (isinstance(backup,dict)
+        schema=restored_native_schema(record,backup)
+        if schema is not None:
+            native='c1-gate' if schema==1 else 'c1-keyfilter'
+            selection=ROOT/'home-backend.json'
+            if os.path.lexists(selection):
+                if safe_bytes(selection,uid=self.ownership.store.uid).decode()!=backup['home-backend.json']:return False
+            elif os.path.lexists(ROOT/native):return False
+            return (not any(os.path.lexists(ROOT/name) for name in ROUTING_EVIDENCE
+                            if name not in ('home-backend.json',native))
+                    and not os.path.lexists('/var/webos-profile/override/clean-your-tv-root.json'))
+        return (record.get('profileless_cleanup_eligible') is True and isinstance(backup,dict)
             and not any(name.split('/')[0] in ROUTING_EVIDENCE for name in backup)
             and not any(os.path.lexists(ROOT/name) for name in ROUTING_EVIDENCE)
             and not os.path.lexists('/var/webos-profile/override/clean-your-tv-root.json'))
