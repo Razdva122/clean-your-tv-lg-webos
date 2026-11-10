@@ -141,6 +141,11 @@ function session(directory, options, action) {
   if (typeof c.O_NOFOLLOW !== 'number' || typeof c.O_DIRECTORY !== 'number')
     fail('nofollow-supported');
   directory = directory.replace(/\/+$/, '') || '/';
+  // Root SSH can use the packaged group without joining it; kernel I/O and
+  // checked inode ownership/modes still have to succeed. Options grant nothing.
+  function canAccessGroup(gid) {
+    return uid === 0 || groups.indexOf(gid) >= 0;
+  }
   function owned(s) {
     return s.uid === uid || (s.uid === 5999 && s.gid === 5000);
   }
@@ -157,7 +162,7 @@ function session(directory, options, action) {
     var mode = s.mode & 4095,
       channel = options.role === 'channel';
     if (!owned(s)) fail('trusted-owner', s, undefined, 'directory');
-    if (options.role !== 'installer' && groups.indexOf(s.gid) < 0)
+    if (options.role !== 'installer' && !canAccessGroup(s.gid))
       fail('shared-group', s, undefined, 'directory');
     if (
       channel
@@ -271,8 +276,7 @@ function session(directory, options, action) {
   function write(name, bytes, mode, limit, preserve, original) {
     var initial = leaf(name, limit);
     if (preserve && initial) return;
-    if (initial && groups.indexOf(initial.gid) < 0)
-      fail('shared-group', initial);
+    if (initial && !canAccessGroup(initial.gid)) fail('shared-group', initial);
     phase = 'write';
     var path =
         (name === 'ssap-key.json' ? '.cytv-key-' : '.cytv-record-') +
@@ -413,7 +417,7 @@ function session(directory, options, action) {
     }
     return action({
       uid: uid,
-      groups: groups,
+      canAccessGroup: canAccessGroup,
       owned: owned,
       read: read,
       appendLog: appendLog,
@@ -461,7 +465,7 @@ function configuration(directory, options, repair) {
             !repair ||
             !/^[a-f0-9]{64}$/.test(options.expectedHash || '') ||
             key.stat.gid !== s.stat.gid ||
-            s.groups.indexOf(key.stat.gid) < 0 ||
+            !s.canAccessGroup(key.stat.gid) ||
             [416, 509].indexOf(mode) < 0 ||
             crypto.createHash('sha256').update(key.bytes).digest('hex') !==
               options.expectedHash
@@ -564,7 +568,7 @@ function prepare(directory, log, initializeControl) {
       try {
         var key = s.read('ssap-key.json', 65536);
         if (key) {
-          if (key.stat.gid !== s.stat.gid || s.groups.indexOf(key.stat.gid) < 0)
+          if (key.stat.gid !== s.stat.gid || !s.canAccessGroup(key.stat.gid))
             fail(
               'key',
               'shared-group',
@@ -743,7 +747,7 @@ prepare.readConfiguration = function (directory, kind) {
     }
     if (
       value.stat.gid !== s.stat.gid ||
-      s.groups.indexOf(value.stat.gid) < 0 ||
+      !s.canAccessGroup(value.stat.gid) ||
       (kind === 'key' && (value.stat.mode & 4095) !== 416)
     )
       fail(

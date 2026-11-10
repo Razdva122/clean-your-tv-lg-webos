@@ -44,6 +44,16 @@ session: it temporarily changes and restores the process working directory.
 Existing narrowly accepted runtime directory modes and checked EPERM/EACCES
 normalization warnings do not broaden installer or channel admission.
 
+Group access uses the session's captured OS identity: UID 0 can access the
+packaged group without membership; other callers must hold its primary or
+supplementary group. This supports Root SSH Stop while a successful disable
+reply is still waiting for the controller to exit. Caller options and telemetry
+cannot grant this capability. Trusted directory ownership, matching
+configuration/directory groups, foreign-key exact-hash proof and all inode,
+mode, link and type checks still apply. UID 0 with insufficient kernel rights
+still fails the actual read/write/chown/chmod operation and checked staging;
+group admission does not waive syscall failures or establish Helper quiescence.
+
 `cytv/tv_sources.py` allowlists only `state-permissions` and `contract-events`.
 Source execution reads canonical repository resources; frozen desktop/CLI and
 Android use staged `cytv/tv` bytes and refuse missing packaged resources. Static

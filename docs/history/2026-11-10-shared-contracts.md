@@ -163,3 +163,51 @@ CI evidence; no macOS skip is counted as a pass. The remaining ordered prototype
 suffix is `test-stop-io.cjs`, then `test-stop-journal.cjs`; their independent source,
 compiler and fixture inputs are unchanged, so matching prior Stop/C evidence is
 reused. No product source, dependency, version or TV state changed in this followup.
+
+
+## Root SSH group access and Linux fixture cwd
+
+Before merge, a real-inode role regression showed that UID0/GID0/groups[0]
+was refused by canonical Stop for packaged UID5999/GID5000/mode0770 storage.
+The normal successful-disable path previously wrote Stop with a privileged
+shell; consolidation introduced runtime group-membership admission there.
+A disable reply can precede controller exit, so this is a reachable Root path.
+
+Canonical sessions now use one captured UID0-or-group-membership predicate for
+group access. Trusted owners, same configuration/directory group, exact original
+foreign-key hash, safe modes/types/single links, no-follow descriptors, inode
+checks and verified staging syscalls remain required. No caller-supplied Root
+role was added. Unprivileged callers cannot forge group access. Host regression
+coverage preserves emergency latch/watchdog bytes, refuses unsafe link/type/path
+destinations and wrong-group/wrong-hash foreign configuration, accepts exact-hash
+reclamation and verifies failed Root staging chown preserves the destination and
+removes staging. Actual Root permissions are tested separately on Linux.
+
+The complete selected CI pass on the preceding head reached the Linux root
+fixture's first dropped-UID call and returned an opaque failure. The fixture
+inherited the checkout cwd despite its intended independence from checkout
+permissions. A bounded host probe confirmed that canonical preparation returns
+false if restoration to the inherited cwd gets EACCES, while a traversable temp
+cwd succeeds. The runner's actual permission cause remains unproven pending CI.
+Child processes now start in the already traversable fixture root before UID
+drop; prepare calls emit bounded canonical contract events on failure. Production
+cwd handling is unchanged. The Linux fixture retains all previous UID/group,
+SGID, ownership, reconfiguration, denied-write and controller Stop assertions,
+and adds actual UID0/GID0/groups[0] Stop with both an existing and missing latch,
+verified output group/mode/ownership and a controller write under another UID.
+
+Focused macOS development evidence after the change:
+
+- 32 storage/report/Stop tests passed; storage cases ran on current Node and exact
+  Node 0.10.15, 0.10.25 and 0.12.2. The new role regression failed at the intended
+  shared-group gate on all four runtimes before the source change.
+- Basic permissions fixture and all 27 modeled owner cases passed.
+- Three focused Root ordering, partial-receipt and removal-admission tests passed.
+- Raw ES5 parsing, Linux fixture syntax, focused Prettier and whitespace checks passed.
+
+The actual Linux root gate remains required CI evidence and was not executed on
+macOS. No Linux skip, host test or installed package is physical TV acceptance.
+No TV, firmware, remote or installer-platform device run was performed. Immutable
+Root observer programs/capsules, backend receipts and stopped-Helper proof remain
+unchanged. No full suite, C/compiled Helper run, RC build or TV operation was
+repeated for this focused fix.

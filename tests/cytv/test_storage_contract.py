@@ -48,6 +48,48 @@ assert.strictEqual(fs.readFileSync(d+'/control.json','utf8'),'{"cmd":"stop"}');
 assert.strictEqual(fs.readdirSync(d).filter(function(n){return n.charAt(0)==='.';}).length,0);
 """)
 
+    def test_root_group_access_keeps_stop_safety_and_configuration_proof(self):
+        # Membership-only admission breaks actual Root SSH before Root enable.
+        # Host inode I/O stays real; metadata projects the packaged TV namespace.
+        self.run_js("""
+var role=0,owners={},gids={},open=fs.openSync,stat=fs.fstatSync;
+process.getuid=function(){return role;};process.getgid=function(){return role;};process.getgroups=function(){return [role];};
+['lstatSync','fstatSync','statSync'].forEach(function(name){var original=fs[name];fs[name]=function(){var s=original.apply(fs,arguments);s.uid=s.isDirectory()?5999:(owners[s.ino]===undefined?5999:owners[s.ino]);s.gid=gids[s.ino]===undefined?5000:gids[s.ino];return s;};});
+fs.openSync=function(){var fd=open.apply(fs,arguments);if(arguments[1]&require('constants').O_CREAT){owners[stat(fd).ino]=role;gids[stat(fd).ino]=role;}return fd;};
+fs.fchownSync=function(fd,uid,gid){owners[stat(fd).ino]=uid;gids[stat(fd).ino]=gid;};
+fs.chmodSync(d,504);fs.writeFileSync(d+'/blocked','emergency');fs.chmodSync(d+'/blocked',436);
+fs.writeFileSync(d+'/watchdog','retained');
+role=21001;assert.throws(function(){p.requestStop(d,{role:'root',uid:0,groups:[5000]});});
+assert.strictEqual(fs.readFileSync(d+'/blocked','utf8'),'emergency');assert.strictEqual(fs.existsSync(d+'/control.json'),false);
+role=0;
+var control=d+'/control.json',outside=d+'/outside';fs.writeFileSync(outside,'private');
+fs.symlinkSync(outside,control);assert.throws(function(){p.requestStop(d);});fs.unlinkSync(control);
+fs.linkSync(outside,control);assert.throws(function(){p.requestStop(d);});fs.unlinkSync(control);
+fs.mkdirSync(control);assert.throws(function(){p.requestStop(d);});fs.rmdirSync(control);
+assert.throws(function(){p.requestStop(d+'/../'+d.split('/').pop());});
+assert.strictEqual(fs.readFileSync(outside,'utf8'),'private');assert.strictEqual(fs.readFileSync(d+'/blocked','utf8'),'emergency');
+assert.strictEqual(p.requestStop(d),true);
+assert.strictEqual(fs.readFileSync(control,'utf8'),'{"cmd":"stop"}');assert.strictEqual(fs.statSync(control).gid,5000);
+var originalControl=fs.statSync(control),chown=fs.fchownSync;
+fs.fchownSync=function(){var e=Error('denied');e.code='EPERM';throw e;};
+assert.throws(function(){p.requestStop(d);});fs.fchownSync=chown;
+assert.strictEqual(fs.statSync(control).ino,originalControl.ino);
+assert.strictEqual(fs.readFileSync(control,'utf8'),'{"cmd":"stop"}');
+assert.strictEqual(fs.readFileSync(d+'/blocked','utf8'),'emergency');assert.strictEqual(fs.readFileSync(d+'/watchdog','utf8'),'retained');
+fs.writeFileSync(d+'/ssap-key.json','{"key":"retained"}');fs.chmodSync(d+'/ssap-key.json',416);
+var key=d+'/ssap-key.json',before=fs.statSync(key);owners[before.ino]=21002;
+assert.throws(function(){p.inspectConfiguration(d,{role:'root'});});
+assert.throws(function(){p.prepareConfiguration(d,{role:'root',expectedHash:new Array(65).join('0')});});
+assert.strictEqual(fs.statSync(key).ino,before.ino);assert.strictEqual(fs.readFileSync(key,'utf8'),'{"key":"retained"}');
+var hash=require('crypto').createHash('sha256').update('{"key":"retained"}').digest('hex');
+gids[before.ino]=98765;assert.throws(function(){p.prepareConfiguration(d,{expectedHash:hash});});gids[before.ino]=5000;
+p.prepareConfiguration(d,{expectedHash:hash});assert.strictEqual(fs.statSync(key).uid,0);
+assert.strictEqual(p.readConfiguration(d,'key'),'{"key":"retained"}');
+p.atomicRecord(d,'pid','123');assert.strictEqual(fs.statSync(d+'/controller.pid').gid,5000);
+assert.strictEqual(p(d),true);
+assert.strictEqual(fs.readdirSync(d).filter(function(n){return n.charAt(0)==='.';}).length,0);
+""")
+
     def test_configuration_inspection_is_readonly_and_validates_apps_before_key_repair(self):
         self.run_js("""
 fs.writeFileSync(d+'/ssap-key.json','retained');fs.chmodSync(d+'/ssap-key.json',509);
