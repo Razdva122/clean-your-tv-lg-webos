@@ -7,97 +7,95 @@ const t = landingCopy[lang];
 
 <div
   class="showcase"
-  id="try-home"
   data-showcase
-  data-base={base}
-  data-loading={t.loadingLabel}
-  data-ready={t.readyLabel}
-  data-error={t.errorLabel}
+  data-paused="true"
+  data-pause-label={t.pauseLabel}
+  data-play-label={t.playLabel}
 >
-  <div class="showcase-toolbar">
-    <fieldset class="theme-picker">
-      <legend>{t.chooseLabel}</legend>
-      <div>
-        {showcaseThemes.map((theme) => (
-          <label>
-            <input
-              type="radio"
-              name="launcher-theme"
-              value={theme.id}
-              checked={theme.id === 'ribbon'}
-            />
-            <span>{theme.title}</span>
-          </label>
-        ))}
-      </div>
-    </fieldset>
-    <div
-      class="demo-remote"
-      role="group"
-      aria-label={t.remoteLabel}
-      hidden
-      data-demo-controls
-    >
-      <button type="button" class="remote-home" data-home-demo>
-        Home
-      </button>
-      <div>
-        <button
-          type="button"
-          data-demo-key="ArrowLeft"
-          aria-label={t.pressLeftLabel}
-        >
-          ←
-        </button>
-        <button type="button" data-demo-key="Enter" aria-label={t.pressOkLabel}>
-          OK
-        </button>
-        <button
-          type="button"
-          data-demo-key="ArrowRight"
-          aria-label={t.pressRightLabel}
-        >
-          →
-        </button>
-      </div>
+  <fieldset class="theme-picker">
+    <legend class="visually-hidden">{t.chooseLabel}</legend>
+    <div>
+      {showcaseThemes.map((theme) => (
+        <label>
+          <input
+            type="radio"
+            name="launcher-theme"
+            value={theme.id}
+            checked={theme.id === 'liquid-glass'}
+          />
+          <span>{theme.title}</span>
+        </label>
+      ))}
     </div>
-  </div>
-  <div class="showcase-stage">
-    <div class="showcase-screen" data-demo-screen>
+  </fieldset>
+  <div class="showcase-stage app-frame" data-enter-media>
+    <div class="showcase-screen">
       {showcaseThemes.map((theme) => (
         <img
           data-poster={theme.id}
-          src={base + 'assets/' + theme.id + '.jpg'}
+          src={base + 'assets/previews/' + theme.id + '-still.webp'}
+          srcset={`${base}assets/previews/${theme.id}-still-small.webp 480w, ${base}assets/previews/${theme.id}-still.webp 960w`}
+          sizes="(max-width: 639px) calc(100vw - 48px), (max-width: 1023px) calc(100vw - 96px), 800px"
+          data-animation={base + 'assets/previews/' + theme.id + '.webp'}
+          data-still={base + 'assets/previews/' + theme.id + '-still.webp'}
           alt={`${copy[lang].themeImage}: ${theme.title}`}
-          width="1920"
-          height="1080"
-          fetchpriority={theme.id === 'ribbon' ? 'high' : 'auto'}
+          width="960"
+          height="540"
+          fetchpriority={theme.id === 'liquid-glass' ? 'high' : 'auto'}
         />
       ))}
     </div>
-  </div>
-  <div class="showcase-console">
-    <div class="showcase-instruction">
-      <p data-demo-status role="status" aria-live="polite">
-        {t.homeHint}
-      </p>
-      <span>{t.navigateHint}</span>
-    </div>
-    <a class="showcase-start" href={base + 'demo/'} data-showcase-start>
-      {t.startLabel}
-      <span aria-hidden="true"> ↗</span>
-    </a>
-  </div>
-  <div class="showcase-caption">
-    <p>{t.demoLabel}</p>
-    <a href={base + 'demo/'}>
-      {t.fullDemoLabel}
-      <span aria-hidden="true"> ↗</span>
-    </a>
+    <button
+      class="preview-toggle"
+      type="button"
+      aria-label={t.playLabel}
+      aria-pressed="false"
+      hidden
+    >
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+        <path class="play-icon" d="M6 3.5 14 9l-8 5.5Z" fill="currentColor" />
+        <path
+          class="pause-icon"
+          d="M6 4v10m6-10v10"
+          stroke="currentColor"
+          stroke-width="2.5"
+        />
+      </svg>
+    </button>
   </div>
 </div>
-
 <script>
-  import { initShowcase } from '../lib/showcase';
-  for (const element of document.querySelectorAll<HTMLElement>('[data-showcase]')) initShowcase(element);
+  // Animated captures only: no TV code, pairing or iframe is loaded here.
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+  for (const root of document.querySelectorAll<HTMLElement>('[data-showcase]')) {
+    const toggle = root.querySelector<HTMLButtonElement>('.preview-toggle')!;
+    const posters = [...root.querySelectorAll<HTMLImageElement>('[data-poster]')];
+    let paused = reduced.matches;
+    function render() {
+      const theme = root.querySelector<HTMLInputElement>('input:checked')!.value;
+      root.dataset.paused = String(paused);
+      toggle.setAttribute('aria-label', (paused ? root.dataset.playLabel : root.dataset.pauseLabel)!);
+      toggle.setAttribute('aria-pressed', String(!paused));
+      for (const poster of posters) {
+        const next = !paused && poster.dataset.poster === theme ? poster.dataset.animation! : poster.dataset.still!;
+        if (poster.getAttribute('src') !== next) {
+          poster.srcset = `${next.replace('.webp', '-small.webp')} 480w, ${next} 960w`;
+          poster.src = next;
+        }
+      }
+    }
+    toggle.hidden = false;
+    for (const poster of posters) {
+      poster.addEventListener('error', () => {
+        if (poster.getAttribute('src') === poster.dataset.animation) {
+          paused = true;
+          render();
+        }
+      });
+    }
+    toggle.addEventListener('click', () => { paused = !paused; render(); });
+    root.addEventListener('change', render);
+    reduced.addEventListener('change', () => { paused = reduced.matches; render(); });
+    render();
+  }
 </script>

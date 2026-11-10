@@ -53,6 +53,9 @@ button:focus-visible,
   position: relative;
   z-index: var(--z-sticky-nav);
 }
+.header-inner {
+  display: contents;
+}
 .brand {
   flex-shrink: 0;
   margin-right: auto;
@@ -158,7 +161,8 @@ button:focus-visible,
   transform: none;
 }
 main:focus {
-  outline: none;
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
 }
 .button {
   display: inline-flex;

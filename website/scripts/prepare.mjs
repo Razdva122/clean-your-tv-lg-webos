@@ -3,7 +3,8 @@ import {
   copyFileSync,
   rmSync,
   readFileSync,
-  writeFileSync
+  writeFileSync,
+  cpSync
 } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -12,6 +13,22 @@ const pub = fileURLToPath(new URL('../public/', import.meta.url));
 // This directory belongs to this build; never remove repository or user files.
 rmSync(pub, { recursive: true, force: true });
 mkdirSync(pub + 'assets', { recursive: true });
+cpSync(root + 'website/assets/previews', pub + 'assets/previews', {
+  recursive: true
+});
+cpSync(root + 'website/vendor/taste', pub + 'assets/taste', {
+  recursive: true
+});
+cpSync(root + 'website/assets/fonts', pub + 'assets/fonts', {
+  recursive: true
+});
+writeFileSync(
+  pub + 'assets/fonts/manrope.css',
+  readFileSync(pub + 'assets/fonts/manrope.css', 'utf8').replaceAll(
+    '__BASE__',
+    '/clean-your-tv-lg-webos/'
+  )
+);
 execFileSync(
   process.env.PYTHON || 'python3',
   ['scripts/preview.py', '--build', pub + 'demo'],

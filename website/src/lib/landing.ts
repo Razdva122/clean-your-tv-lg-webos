@@ -9,17 +9,11 @@ const schema = z.strictObject({
   installLabel: text,
   chooseLabel: text,
   demoLabel: text,
-  startLabel: text,
-  loadingLabel: text,
-  errorLabel: text,
-  remoteLabel: text,
-  homeHint: text,
-  navigateHint: text,
-  readyLabel: text,
-  fullDemoLabel: text,
-  pressLeftLabel: text,
-  pressRightLabel: text,
-  pressOkLabel: text
+  featureTitle: text,
+  features: z.array(text).length(3),
+  pauseLabel: text,
+  playLabel: text,
+  closeTitle: text
 });
 export const landingCopy = Object.fromEntries(
   locales.map((lang) => [lang, schema.parse(translations[lang])])

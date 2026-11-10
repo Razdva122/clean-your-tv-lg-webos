@@ -3,3 +3,4 @@ public/
 dist/
 .astro/
 package-lock.json
+vendor/

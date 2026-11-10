@@ -214,30 +214,31 @@ which resolves directory indexes itself.
 ## Visual design
 
 The product site retains the original logo, graphite palette and orange brand
-accent. The home page leads with a theme showroom: a short localized introduction,
-Classic/Liquid Glass/Ribbon choices and a large real launcher preview. Native
-radio controls switch screenshots without JavaScript. The primary browser-demo
-link and Home button load the existing simulated Root renderer on demand inside
-the landing page; left/right/OK buttons act on that renderer. No TV pairing,
-installation or real app launch is performed by these controls. The full demo
-link remains available as a fallback. There is no automatic theme rotation.
+accent. The home page shows recorded animated WebP captures of the bundled
+Classic, Liquid Glass and Ribbon themes. Radio controls select a theme; a named
+pause/play button switches between its animation and still. Reduced-motion
+visitors start with stills and no animation request. Without JavaScript, native
+radios switch still images. The full interactive renderer remains on `/demo/`;
+no renderer, iframe or TV controls load on the landing page.
 
-`LauncherShowcase.astro` and `lib/showcase.ts` own this website-only enhancement.
-Bundled themes are applied through the existing `ThemeManager`; queued selection
-and generation checks preserve the latest requested choice. Startup failure
-restores screenshots, reports a localized error and permits retry. The loading
-iframe is hidden from both display and keyboard navigation until ready. All
-13 locales have validated copy in `lib/landing.json`, including matching homepage
-metadata. This enhancement reuses the demo's existing browser theme storage;
-it adds no analytics or external endpoint.
+`LauncherShowcase.astro` owns this website-only enhancement. All 13 locales have
+validated copy in `lib/landing.json`, including matching homepage metadata. The
+page adds no analytics or external endpoints. Its fonts are served locally.
 
-A disclosure below the preview reuses the existing public, website-approved TV
-report registry with configuration details and compatibility limits. The theme
-gallery, edition prerequisites, installation steps and editorial links follow.
-A solid header, restrained control/screen radii, system typography
-and shorter section spacing replace the translucent pill shell, decorative
-gradients and repeated framed text cards. No generated hardware images, invented
-customer evidence or new front-end dependencies are used.
+`website/scripts/capture-previews.mjs` records the public simulated renderer, not
+a physical TV or personal inventory. Run from the repository root after prepare,
+with the dev server running (default port 4322, override `PREVIEW_ORIGIN`) and
+Pillow available in `.venv-cytv` (`PYTHON` can override the executable). The output
+in `website/assets/previews/` includes 960×540 and 480×270 animated WebP and matching stills.
+The captures demonstrate navigation only; simulated TV functions remain a demo
+limitation, not evidence of device acceptance.
+
+The landing uses selected unmodified Taste Skill 2.5.1 assets in `vendor/taste/`,
+with upstream MIT attribution. Manrope and its OFL licence are in `assets/fonts/`.
+The logo, public compatibility page, setup requirements and articles are retained.
+There are no invented customer numbers or testimonials. The design borrows only
+general composition ideas from tasteskill.dev and plxnative.com, not their code,
+copy or pictures. The rest of the site keeps its existing reading layout.
 
 `home.css` owns the product-page composition. `editorial.css` provides a narrower
 reading measure, a desktop margin index and a native collapsed mobile contents
