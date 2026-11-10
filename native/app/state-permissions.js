@@ -249,8 +249,23 @@ function session(directory, options, action) {
       options.role !== 'channel' &&
       (before.mode & 4095) !== 504
     ) {
-      fs.fchmodSync(parent, 504);
-      before = fs.fstatSync(parent);
+      try {
+        fs.fchmodSync(parent, 504);
+        var normalized = fs.fstatSync(parent);
+        if (
+          !same(before, normalized) ||
+          normalized.uid !== before.uid ||
+          normalized.gid !== before.gid ||
+          (normalized.mode & 4095) !== 504
+        )
+          fail();
+        before = normalized;
+      } catch (error) {
+        if (error.code !== 'EPERM' && error.code !== 'EACCES') throw error;
+        // Permission denial does not waive the original snapshot or policy.
+        check();
+        notice(options.log, 'directory', true);
+      }
       check();
     }
     return action({
@@ -330,8 +345,9 @@ function configuration(directory, options, repair) {
   });
 }
 function prepare(directory, log, initializeControl) {
+  var settings = { legacy: true, normalize: true, log: log };
   try {
-    return session(directory, { legacy: true, normalize: true }, function (s) {
+    return session(directory, settings, function (s) {
       if ((s.stat.mode & 4095) === 511) notice(log, 'directory', true);
       if (initializeControl)
         s.write('control.json', buffer('{}'), 432, Infinity, false);
@@ -430,7 +446,8 @@ prepare.atomicRecord = function (directory, kind, bytes, options) {
       fail();
     role = options.role;
   }
-  return session(directory, { role: role }, function (s) {
+  var settings = { role: role, legacy: role !== 'channel' };
+  return session(directory, settings, function (s) {
     s.write(record[0], buffer(bytes), record[1], Infinity, false);
     return true;
   });

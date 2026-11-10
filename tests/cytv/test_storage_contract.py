@@ -133,3 +133,52 @@ fs.writeFileSync(d+'/controller.pid','original');
  assert.strictEqual(fs.readdirSync(d).length,1);
 });
 """)
+
+    def test_accepted_legacy_runtime_directory_supports_followup_writers_and_readers(self):
+        self.run_js("""
+var logs=[],uid=process.getuid();
+process.getgid=function(){return 5000;};process.getgroups=function(){return [5000];};
+['lstatSync','fstatSync','statSync'].forEach(function(name){var original=fs[name];fs[name]=function(){var s=original.apply(fs,arguments);s.gid=5000;if(s.isDirectory())s.uid=5999;return s;};});
+fs.chmodSync(d,511);
+fs.writeFileSync(d+'/ssap-key.json','{"key":"retained"}');fs.chmodSync(d+'/ssap-key.json',416);
+fs.writeFileSync(d+'/apps.json','[]');fs.chmodSync(d+'/apps.json',420);
+fs.writeFileSync(d+'/blocked','emergency');fs.writeFileSync(d+'/watchdog','watchdog');
+assert.strictEqual(p(d,function(event){logs.push(event);},true),true);
+assert(logs.some(function(event){return event.event==='state-permissions-warning';}));
+p.atomicRecord(d,'pid','123');p.atomicRecord(d,'logger','');
+p.atomicRecord(d,'home-preference','{"enabled":false}');
+p.atomicRecord(d,'home-response','{"returnValue":true}',{role:'app'});
+p.atomicRecord(d,'startup-state','{"enabled":true}');
+assert.strictEqual(fs.readFileSync(d+'/controller.pid','utf8'),'123');
+assert.strictEqual(fs.readFileSync(d+'/controller.log','utf8'),'');
+assert.strictEqual(fs.readFileSync(d+'/home-control.json','utf8'),'{"enabled":false}');
+assert.strictEqual(p.readConfiguration(d,'key'),'{"key":"retained"}');assert.strictEqual(p.readConfiguration(d,'apps'),'[]');
+assert.strictEqual(fs.readFileSync(d+'/blocked','utf8'),'emergency');assert.strictEqual(fs.readFileSync(d+'/watchdog','utf8'),'watchdog');
+assert.throws(function(){p.inspectConfiguration(d);});assert.throws(function(){p.prepareConfiguration(d);});
+assert.throws(function(){p.requestStop(d);});assert.throws(function(){p.atomicRecord(d,'home-request','{}');});
+""")
+
+    def test_directory_chmod_denial_requires_checked_unchanged_safe_metadata(self):
+        self.run_js("""
+fs.writeFileSync(d+'/ssap-key.json','{"key":"retained"}');fs.chmodSync(d+'/ssap-key.json',416);
+fs.writeFileSync(d+'/apps.json','[]');fs.chmodSync(d+'/apps.json',420);
+var chmod=fs.fchmodSync,ino=fs.statSync(d).ino;
+['EPERM','EACCES'].forEach(function(code){
+ fs.chmodSync(d,509);var logs=[];
+ fs.fchmodSync=function(fd,mode){if(fs.fstatSync(fd).ino===ino){var e=Error('private-marker');e.code=code;throw e;}return chmod.apply(fs,arguments);};
+ assert.strictEqual(p(d,function(event){logs.push(event);},true),true);
+ assert(logs.some(function(event){return event.event==='state-permissions-warning';}));
+ assert.strictEqual(fs.statSync(d).mode&4095,509);
+ p.atomicRecord(d,'pid','123');p.atomicRecord(d,'logger','');p.atomicRecord(d,'home-preference','{"enabled":false}');
+ assert.strictEqual(p.readConfiguration(d,'key'),'{"key":"retained"}');
+ assert.strictEqual(p.readConfiguration(d,'apps'),'[]');
+ fs.fchmodSync=function(fd,mode){if(fs.fstatSync(fd).ino===ino){fs.chmodSync(d,1023);var e=Error('denied');e.code=code;throw e;}return chmod.apply(fs,arguments);};
+ assert.strictEqual(p(d,null,true),false,'denied normalization cannot accept changed unsafe mode');
+ fs.chmodSync(d,509);
+ var lstat=fs.lstatSync;fs.lstatSync=function(){var s=lstat.apply(fs,arguments);if(s.ino===ino)s.gid=98765;return s;};
+ assert.strictEqual(p(d,null,true),false,'denial cannot waive group/identity checks');fs.lstatSync=lstat;
+ fs.fchmodSync=chmod;
+});
+fs.chmodSync(d,509);fs.fchmodSync=function(fd,mode){if(fs.fstatSync(fd).ino===ino){var e=Error('io');e.code='EIO';throw e;}return chmod.apply(fs,arguments);};
+assert.strictEqual(p(d,null,true),false,'unexpected chmod failures must not be swallowed');fs.fchmodSync=chmod;
+""")
