@@ -52,3 +52,32 @@ node --test tests/controller-watchdog.cjs
 The unchanged startup/filter regressions and final packaged-TV controls, sound,
 emergency release and recovery checks remain required. No Home authentication,
 storage provisioning, protection reset or new input authority is added here.
+
+## Power-transition source removal (#487, unpublished)
+
+The source fix adds a narrow exit 32, distinct from cleanup failure 31. The
+controller sends `T` on a recognized power-off/standby/suspend transition and `R`
+on Active. The relay retains this hint through its pre-grab startup pump; it
+expires after 15 monotonic seconds. It still attempts every cleanup operation.
+Only source-removal reason 25, cleanup mask 3, ENODEV/ENXIO from both key release
+and ungrab, successful descriptor closes, and a live hint can produce
+`POWER_REMOVED RELEASE_ERRNO UNGRAB_ERRNO` followed by `EXIT 32`. Stop/Q or a
+handled termination signal wins, including a signal during cleanup. Other
+errors remain persistent failures; output/report failure still blocks.
+
+The controller accepts this outcome only for its tracked child, with matching
+reported/actual exit 32, no signal, a recent hint and no stop/blocked/watchdog
+state. It keeps its power watcher and timer alive without reopening input while
+asleep. Fresh settled Active schedules one relay start after 1.5 seconds;
+renewed power-off or processing cancels it. Stop and both latches are checked
+again before starting. A new relay preserves Home Off, and enabled Home uses the
+existing guarded wake presentation. A real reboot uses the normal bootstrap.
+No latch is cleared by this path, and ordinary watchdog retry limits are unchanged.
+Pre-grab validation failures retain their existing fail-closed behavior.
+
+These are synthetic host checks, including same-boot wake, pre-READY power
+hints, renewed shutdown, Stop/HUP races and SIGTERM during cleanup. Actual device
+errno values and the final packaged transition remain unverified. The fix needs
+a newly selected Helper version built from source with its matching relay and
+controller, plus rebuilt embedded installers; published Helper bytes remain
+immutable. See the [verification ledger](../history/2026-11-10-issue487-helper-recovery.md).
