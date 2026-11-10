@@ -107,7 +107,7 @@ Quando richiesto, scollega l’alimentazione della TV, ricollegala, attendi la r
 
 Un’installazione non riuscita o interrotta offre direttamente il ripristino. Se No-root non può proseguire, conferma una volta la rimozione completa. La rimozione esegue fino a tre tentativi in caso di perdita temporanea della connessione o processo CYTV occupato. Se serve Root, scegli **Connetti con Root** per la stessa TV; la pulizia Root verificata completa anche la rimozione No-root bloccata. Se l’attivazione Root fallisce, CYTV tenta di ripristinare e verificare LG Home senza ripetere l’attivazione. L’annullamento con lavoro incompleto conserva rapporto e azioni di ripristino. L’arresto di emergenza resta invariato.
 
-Dopo un errore di connessione durante la rimozione, apri i dettagli, verifica la rete o scegli una chiave SSH Root esistente e riprova. Indirizzo, edizione, porta e verifica della chiave del TV restano fissi. No-root controlla Helper prima dell’abbinamento: arrestalo e conferma il nuovo controllo nello stesso percorso. Solo un TV vuoto verificato senza installazioni in sospeso può evitare il riavvio; dopo una rimozione effettiva serve il riavvio richiesto. Se il servizio ingressi non funziona, la pulizia sicura dei pacchetti prosegue; il successo richiede comunque la verifica della pulizia del collegamento.
+Dopo un errore di connessione durante la rimozione, apri i dettagli, verifica la rete o scegli una chiave SSH Root esistente e riprova. Indirizzo, edizione, porta e verifica della chiave del TV restano fissi. No-root controlla Helper prima dell’abbinamento: arrestalo e conferma il nuovo controllo nello stesso percorso. La rimozione può terminare senza riavvio se vengono verificati i controlli, la disattivazione dell’avvio automatico e l’assenza di pacchetti, file e processi, senza installazioni in sospeso. Se viene richiesto un riavvio, eseguilo e riprova. Se il servizio ingressi non funziona, la pulizia sicura dei pacchetti prosegue; il successo richiede comunque la verifica della pulizia del collegamento.
 
 **Reinstallare Root:** Scegli **Configura la mia TV → Root** con la connessione salvata e conferma **Reinstallare Root?**. L’installer ripristina LG Home e rimuove completamente Clean Your TV, inclusi i suoi updater, Home Helper e le preferenze salvate. Dopo aver verificato la rimozione, installa e attiva i pacchetti e l’ambiente Root inclusi nell’installer. Le altre app della TV e l’accesso root/SSH esistente sono conservati. Se la rimozione si interrompe o richiede un riavvio completo, completala prima di ricominciare la configurazione. **Disinstalla Clean Your TV** da solo non avvia mai una nuova installazione.
 
@@ -136,8 +136,30 @@ Riferimenti dettagliati in inglese: [requisiti](../COMPATIBILITY.md) · [comandi
 <a id="nodejs-tv-meno-recente-pubblicato-in-v1120"></a>
 <a id="rimozione-semplice-v1110"></a>
 
+## Impostazioni
+
+Usa ↑ ↓ per scegliere una categoria e → oppure OK per aprirla. ← torna alle categorie; Indietro torna prima alle categorie e poi chiude le impostazioni. Rientrando in una sezione, il focus torna all’ultimo controllo disponibile. In Colonne, le frecce seguono la griglia a tre colonne. In Lingua, il focus va alla lingua selezionata.
+
+Se No-root non riesce a leggere lo stato di Home, scegli Riprova. Un controllo non disponibile non significa che Home sia disattivato. In Sfondi, carica un’immagine dal telefono o da CYTV; qualità e oscuramento compaiono quando è disponibile uno sfondo. La rimozione di uno sfondo personale richiede conferma; Annulla lo conserva.
+
 ## Meteo
 
-Apri Impostazioni → Meteo, sotto Sfondi. Attiva il meteo e apri Città per cercare e scegliere regione e paese corretti, oppure scegli Automatico per una città approssimativa in base alla connessione. Una VPN può modificare il risultato; se la città manca o è errata, usa la ricerca manuale. La città rilevata o scelta appare nelle impostazioni. Scegli °C / m/s o °F / mph e un formato disponibile: compatto, attuale, dettagliato o quattro giorni. L’anteprima segue il tema; Esempio indica dati dimostrativi. Liquid Glass supporta solo il formato compatto. Ribbon e Atmosphere non mostrano il meteo. Disattivandolo si nascondono le altre opzioni e si interrompono le richieste. Durante un guasto i dati recenti possono restare temporaneamente; poi il meteo scompare fino all’aggiornamento.
+Apri Impostazioni → Meteo, sotto Sfondi. Attiva il meteo e apri Città per cercare e scegliere regione e paese corretti, oppure scegli Automatico per una città approssimativa in base alla connessione. Una VPN può modificare il risultato; se la città manca o è errata, usa la ricerca manuale. La città rilevata o scelta appare nelle impostazioni. Scegli °C / m/s o °F / mph e un formato disponibile: compatto, attuale, dettagliato o quattro giorni. L’anteprima segue il tema; Esempio indica dati dimostrativi. Liquid Glass supporta solo il formato compatto. Ribbon e Atmosphere non mostrano il meteo. Disattivandolo si interrompono le richieste e si nascondono città, unità e formato; la scelta della fonte resta disponibile. Durante un guasto i dati recenti possono restare temporaneamente; poi il meteo scompare fino all’aggiornamento.
+
+Scegli la fonte delle previsioni: Auto, MET Norway o Open-Meteo. Auto inizia con MET Norway, prova Open-Meteo una volta in caso di errore, poi riutilizza l’ultima fonte riuscita e la sua cache. La scelta manuale non cambia mai fonte automaticamente. Le nuove impostazioni usano Auto; quelle salvate senza fonte mantengono Open-Meteo. La fonte effettiva è visibile. La disponibilità dipende dalla rete. MET si aggiorna al massimo ogni tre ore; la cache scade dopo sei ore. I campi assenti sono nascosti: MET non fornisce temperatura percepita o probabilità di precipitazioni. Gli intervalli giornalieri riassumono punti di previsione, non estremi misurati.
+
+Le coordinate vanno a api.met.no o api.open-meteo.com, le ricerche di città a geocoding-api.open-meteo.com. La posizione automatica facoltativa invia l’IP pubblico a get.geojs.io. Le connessioni usano HTTPS; non serve una chiave API. Posizione, fonte e cache restano sul televisore. Fonti dei dati contiene condizioni e crediti, incluso l’Istituto meteorologico norvegese (MET Norway, CC BY 4.0).
 
 Il pulsante Fonti dei dati nel titolo Meteo apre le informazioni su servizi e licenze.
+
+## Sfondo da iPhone
+
+Apri Impostazioni → Sfondi → Carica dal telefono e scansiona il codice. Scegli JPG, PNG o HEIC/HEIF, ritaglia, accetta il limite di qualità e invia. Sulla TV scegli Applica. Safari usa HEIC nativo; Chrome, Firefox e altri browser moderni usano il decoder locale incluso quando serve. La conversione avviene sul telefono, senza servizi esterni. Annulla o cambia file per interromperla. Ingresso: 32 MiB e 50 milioni di pixel; uscita: massimo 1080p e 2 MiB. Se fallisce, prova un’altra foto o JPG/PNG. Vale per la pagina del telefono, non per l’app Mac.
+
+## Configura il tuo Clean Your TV
+
+Dopo l’installazione riuscita, scegli Classic, Liquid Glass o Ribbon e attiva o disattiva il meteo. Ribbon non supporta il meteo; Liquid Glass usa il formato compatto. La città viene stimata dalla connessione e può essere modificata in Home.
+
+No-root con Developer Mode offre il rinnovo automatico (Beta); continua a controllare il timer ufficiale. No-root tramite root SSH esistente non usa questa opzione. Root consente di bloccare gli aggiornamenti firmware LG tramite Homebrew Channel, inclusi quelli di sicurezza; serve un vero riavvio tramite Homebrew Channel. Gli aggiornamenti CYTV restano separati.
+
+Mantieni le impostazioni attuali salta la personalizzazione. L’interruttore mostra lo stato attuale della funzione del modo. Le impostazioni non modificate vengono conservate. Reinstallare Root rimuove comunque le preferenze CYTV come descritto sopra. Controlla l’aspetto sulla TV e le opzioni non confermate in Home prima di riprovare.

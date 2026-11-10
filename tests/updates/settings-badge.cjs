@@ -80,6 +80,9 @@ function harness(root, system = false, blurHidden = true) {
     setAttribute(k, v) {
       this.attrs[k] = v;
     }
+    removeAttribute(k) {
+      delete this.attrs[k];
+    }
     addEventListener() {}
     focus() {
       focused = this;
@@ -273,8 +276,8 @@ function harness(root, system = false, blurHidden = true) {
   const home = harness(false);
   home.panel.open();
   assert.equal(
-    home.routing().hidden,
-    true,
+    home.routing().attrs['aria-checked'],
+    undefined,
     'a pending status must not appear off'
   );
   home.replyHome({ returnValue: true, enabled: true });
@@ -292,17 +295,17 @@ function harness(root, system = false, blurHidden = true) {
     assert.notEqual(
       home.focus(),
       home.routing(),
-      'hiding the routing switch must preserve visible focus'
+      'disabling the routing switch must preserve visible focus'
     );
     assert.equal(
-      home.routing().hidden,
-      true,
+      home.routing().attrs['aria-checked'],
+      undefined,
       'rechecking must not show the previous choice as current'
     );
     home.replyHome(reply);
     assert.equal(
-      home.routing().hidden,
-      true,
+      home.routing().attrs['aria-checked'],
+      undefined,
       'unknown status must not expose an off switch'
     );
     assert.equal(home.routing().disabled, true);
@@ -314,7 +317,7 @@ function harness(root, system = false, blurHidden = true) {
   assert.notEqual(
     home.focus(),
     home.routing(),
-    'hiding the routing switch must preserve visible focus'
+    'disabling the routing switch must preserve visible focus'
   );
   home.replyHome({ returnValue: true, enabled: false });
   assert.equal(

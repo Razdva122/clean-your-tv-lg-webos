@@ -94,7 +94,7 @@ Na výzvu odpojte TV od napájení, znovu připojte, počkejte na síť a vybert
 
 Je po neúspěšné nebo přerušené instalaci přímo dostupná obnova. Pokud No-root nemůže pokračovat, potvrďte jednou úplné odebrání. Při dočasné ztrátě spojení nebo zaneprázdněném procesu CYTV proběhnou nejvýše tři pokusy. Je-li nutný Root, zvolte **Připojit přes Root** pro stejnou TV; ověřený úklid Root dokončí i její zablokované odebrání No-root. Po chybě aktivace Root se CYTV pokusí obnovit a ověřit LG Home bez opakované aktivace. Zrušení s nedokončenou prací zachová zprávu a kroky obnovy. Nouzové zastavení zůstane zachováno.
 
-Po chybě připojení během odstranění otevřete podrobnosti, zkontrolujte síť nebo vyberte existující SSH klíč Root a zkuste to znovu. Adresa, edice, port a ověření klíče TV zůstávají pevné. No-root kontroluje Helper před párováním: zastavte jej a potvrďte opětovnou kontrolu ve stejném průvodci. Restart lze přeskočit pouze u ověřeně prázdné TV bez nedokončené instalace; po skutečném odstranění proveďte požadovaný restart. Při selhání služby vstupů pokračuje bezpečné odstranění balíčků; úspěch stále vyžaduje ověření odstranění zástupce.
+Po chybě připojení během odstranění otevřete podrobnosti, zkontrolujte síť nebo vyberte existující SSH klíč Root a zkuste to znovu. Adresa, edice, port a ověření klíče TV zůstávají pevné. No-root kontroluje Helper před párováním: zastavte jej a potvrďte opětovnou kontrolu ve stejném průvodci. Odebrání může skončit bez restartu po ověření ovládání, vypnutého automatického spouštění a nepřítomnosti balíčků, souborů a běžících procesů, pokud nezůstává nedokončená instalace. Pokud instalátor požaduje restart, proveďte jej a zkuste to znovu. Při selhání služby vstupů pokračuje bezpečné odstranění balíčků; úspěch stále vyžaduje ověření odstranění zástupce.
 
 **Přeinstalace Root:** S uloženým připojením zvolte **Nastavit televizor → Root** a potvrďte **Přeinstalovat Root?**. Instalátor obnoví LG Home a zcela odstraní Clean Your TV včetně aktualizátorů, Home Helper a uložených předvoleb. Po ověření odstranění nainstaluje a aktivuje balíčky a prostředí Root dodané v tomto instalátoru. Ostatní aplikace TV a stávající přístup root/SSH zůstanou zachovány. Pokud se odstranění zastaví nebo požádá o úplný restart, dokončete je před novým spuštěním instalace. Samotné **Odinstalovat Clean Your TV** nikdy nespustí novou instalaci.
 
@@ -110,8 +110,30 @@ Po chybě připojení během odstranění otevřete podrobnosti, zkontrolujte s�
 <a id="starší-nodejs-v-tv-vydáno-ve-v1120"></a>
 <a id="jednoduché-odebrání-v1110"></a>
 
+## Nastavení
+
+Pomocí ↑ ↓ vyberte kategorii a pomocí → nebo OK do ní vstupte. ← se vrací ke kategoriím; Zpět se nejprve vrátí k nim a poté zavře nastavení. Při návratu do sekce se obnoví poslední dostupný ovládací prvek. Ve Sloupcích šipky odpovídají mřížce se třemi sloupci. V Jazyku se zaměří vybraný jazyk.
+
+Pokud No-root nemůže načíst stav Home, zvolte Zkusit znovu. Nedostupný přepínač neznamená vypnuté ovládání Home. V Tapetách nahrajte obrázek z telefonu nebo CYTV; kvalita a ztmavení jsou dostupné po výběru tapety. Odstranění vlastní tapety vyžaduje potvrzení; Zrušit ji zachová.
+
 ## Počasí
 
-Otevřete Nastavení → Počasí pod Tapetami. Zapněte počasí, otevřete Město a vyhledejte správnou oblast a zemi, nebo zvolte Automaticky pro přibližné určení podle internetového připojení. VPN může výsledek změnit; pokud město chybí nebo nesouhlasí, použijte ruční hledání. Určené či vybrané město je vidět v nastavení. Vyberte °C / m/s nebo °F / mph a dostupný formát: stručný, aktuální, podrobný nebo na čtyři dny. Náhled odpovídá motivu; označení Příklad znamená ukázková data. Liquid Glass podporuje pouze stručný formát; Ribbon a Atmosphere počasí nezobrazují. Vypnutí skryje další volby a zastaví požadavky. Při výpadku mohou krátce zůstat nedávná data; později se počasí skryje do dalšího obnovení.
+Otevřete Nastavení → Počasí pod Tapetami. Zapněte počasí, otevřete Město a vyhledejte správnou oblast a zemi, nebo zvolte Automaticky pro přibližné určení podle internetového připojení. VPN může výsledek změnit; pokud město chybí nebo nesouhlasí, použijte ruční hledání. Určené či vybrané město je vidět v nastavení. Vyberte °C / m/s nebo °F / mph a dostupný formát: stručný, aktuální, podrobný nebo na čtyři dny. Náhled odpovídá motivu; označení Příklad znamená ukázková data. Liquid Glass podporuje pouze stručný formát; Ribbon a Atmosphere počasí nezobrazují. Vypnutí zastaví požadavky a skryje volby města, jednotek a formátu; výběr zdroje zůstává dostupný. Při výpadku mohou krátce zůstat nedávná data; později se počasí skryje do dalšího obnovení.
+
+Vyberte zdroj předpovědi: Auto, MET Norway nebo Open-Meteo. Auto začne s MET Norway, při chybě jednou zkusí Open-Meteo a potom používá poslední úspěšný zdroj a jeho mezipaměť. Ruční výběr nikdy automaticky nemění zdroj. Nová nastavení používají Auto; uložená bez zdroje zachovají Open-Meteo. Skutečný zdroj je vidět v nastavení. Dostupnost závisí na síti. MET se obnovuje nejvýše jednou za tři hodiny; mezipaměť vyprší po šesti hodinách. Chybějící pole se skrývají: MET neposkytuje pocitovou teplotu ani pravděpodobnost srážek. Denní rozsahy shrnují body předpovědi, nikoli naměřené extrémy.
+
+Souřadnice se posílají na api.met.no nebo api.open-meteo.com, hledání měst na geocoding-api.open-meteo.com. Volitelné automatické určení města předává veřejnou IP adresu na get.geojs.io. Spojení používají HTTPS; klíč API není potřeba. Místo, zdroj a mezipaměť zůstávají v televizoru. Zdroje dat obsahují podmínky a autorství včetně Norského meteorologického institutu (MET Norway, CC BY 4.0).
 
 Tlačítko Zdroje dat v záhlaví Počasí otevře informace o službách a licencích.
+
+## Nahrání tapety z iPhonu
+
+Otevřete Nastavení → Tapety → Nahrát z telefonu a naskenujte kód. Vyberte JPG, PNG nebo HEIC/HEIF, upravte výřez, potvrďte omezení kvality a odešlete. Na TV zvolte Použít. Safari používá vlastní podporu HEIC; Chrome, Firefox a další moderní prohlížeče podle potřeby přibalený místní dekodér. Převod probíhá v telefonu bez externí služby. Zrušení nebo výběr jiného souboru převod zastaví. Vstup: 32 MiB a 50 milionů pixelů; výstup: nejvýše 1080p a 2 MiB. Při chybě zkuste jinou fotku nebo JPG/PNG. Platí pro stránku v telefonu, ne aplikaci pro Mac.
+
+## Nastavte si Clean Your TV
+
+Po úspěšné instalaci vyberte Classic, Liquid Glass nebo Ribbon a zapněte či vypněte počasí. Ribbon počasí nepodporuje; Liquid Glass používá stručný formát. Město se odhaduje podle připojení a lze je změnit v Home.
+
+No-root s Developer Mode nabízí automatické prodloužení (Beta); nadále sledujte oficiální časovač. No-root přes stávající root SSH tuto volbu nepoužívá. Root umožňuje přes Homebrew Channel blokovat aktualizace firmwaru LG včetně bezpečnostních; je nutný skutečný restart přes Homebrew Channel. Aktualizace CYTV jsou samostatné.
+
+Ponechat aktuální nastavení přeskočí přizpůsobení. Přepínač zobrazuje aktuální stav funkce režimu. Nezměněná nastavení zůstanou zachována. Přeinstalace Root nadále odstraní nastavení CYTV podle popisu výše. Ověřte vzhled na TV a nepotvrzené volby v Home před opakováním.

@@ -1,16 +1,20 @@
 # v1.15.0 — weather and installation recovery
 
-Unpublished release candidate in [PR #458](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/458).
-Scope and versions are frozen for the complete candidate build. Public delivery,
-exact-artifact acceptance and final package/feed verification remain pending.
+Prepared and validated in [PR #458](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/458).
+The frozen ten-PR scope uses full build42673170250:3 and normal protected
+signer42680421116. See the [final acceptance record](history/2026-11-09-release-1.15.0-qa.md)
+for exact artifacts, observed results and limitations.
 
 ## Changes
 
 - Add optional weather to both Home editions: manual or approximate automatic
   city selection, metric/imperial units, four theme-aware formats, localized
   previews and an accessible Data sources dialog (#463, #353). Weather is off
-  by default. Home uses fixed HTTPS Open-Meteo/geocoding and GeoJS endpoints only
-  after the applicable location choice; preferences/cache stay local and are
+  by default. Add manual MET Norway/Open-Meteo selection and Auto with at most
+  one fallback attempt; show the actual source. MET uses the existing trusted
+  Home/Root service with identifying User-Agent and verified TLS. Fixed HTTPS
+  forecast/geocoding and GeoJS endpoints are contacted only after the applicable
+  location choice; preferences/cache stay local and are
   excluded from legacy profile exports. Failed requests retain bounded cache
   behavior and six-hour expiry. Ribbon suppresses weather; Liquid Glass uses
   Compact. Update weather-capable themes and credited temporary community forks.
@@ -29,11 +33,13 @@ exact-artifact acceptance and final package/feed verification remain pending.
   Unknown mounts and foreign Home state remain refused. This is not proof of
   the original reporter's mount subtype or successful device recovery.
 - Unify website/demo presentation and add independent Video/4K theme filters
-  (#461). Reconcile the previous publication's current documentation (#460).
+  (#461). Detect and remember visitor language at the neutral website entry;
+  retain explicit locale URLs (#468). Reconcile the previous publication's
+  current documentation (#460).
 
 ## Versions and packaging
 
-| Component | Published v1.14.0 | Candidate v1.15.0 | Reason |
+| Component | Published v1.14.0 | v1.15.0 | Reason |
 | --- | --- | --- | --- |
 | Home FHD/HD | 1.13.3 | 1.14.0 | Shared weather, settings, localization and theme assets |
 | Home Helper | 0.8.0 | 0.8.0 | No source change; preserve exact published bytes |
@@ -50,23 +56,24 @@ selected. The paired author toolkit has an independent release lifecycle.
 
 ## Validation and acceptance
 
-[Candidate preparation and scoped cases](history/2026-11-09-release-1.15.0-preparation.md)
-records pre-dispatch verification. Earlier implementation results are in the
-[combined installer integration](history/2026-11-09-next-candidate-integration.md)
-and [weather integration](development/2026-11-09-weather-integration.md) records.
-Those checks do not establish a successful full versioned candidate or new TV
-acceptance. The current selected build and remaining gates belong to PR #458.
-The [dated QA inventory](history/2026-11-09-release-1.15.0-qa.md) records the
-failed preliminary full runs and reviewed fixture corrections #464/#465.
-No failed run is selected; the current release record owns the replacement build.
+The full trusted candidate passes all21 jobs. Final CLI payload/runtime and
+598 embedded files verify; Helper remains exact published bytes. The exact
+original-signer Android APK passes code29→30 upgrade, retained state, Store,
+native and idle checks on an isolated API35 ARM64 emulator.
 
-No TV was contacted during preparation. Model, firmware/webOS and remote for
-this candidate's acceptance are unselected/unknown. Real-TV provider TLS/CORS,
-remote/focus/readability, offline/wake, package delivery and preference retention
-need scoped acceptance. Exact signed Android upgrade/native checks remain
-pending. Home routing, sound, emergency behavior, standby, cold boot, OTA and
-rollback are not new passes. Historical observations retain their original bytes
-and device/state scope.
+All three final normal signed Root components exactly match the installed,
+tested C3 bytes. Final read-only controller/UI/grant/recovery binding confirms
+that identity and original preferences/Home Off state. API7/7, preview39/39 and
+supported rollback/forward/profile observations cover those identical package
+hashes and preconditions; no further installation or matrix was repeated.
+Device: maintainer OLED55C3RLA, firmware43.21.71/webOS SDK11.2.0, retained
+System1.2.5; Magic Remote exact model unknown; macOS15.6.1 ARM64 installer.
+
+See the [dated QA ledger](history/2026-11-09-release-1.15.0-qa.md) for hashes,
+provenance, earlier findings and final acceptance. Physical Home routing,
+audible sound, emergency behavior, standby, AC cold boot, ordinary public-feed
+OTA and other models are not new passes. Direct Open-Meteo availability remains
+network-dependent; no nationwide-ban claim or TLS bypass is made.
 
 All linked issues stay open. #240/#418 original installation failures and #355
 original C2 activation remain unresolved/planned. #283/#438/#440 need relevant

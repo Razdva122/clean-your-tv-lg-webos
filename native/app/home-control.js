@@ -14,10 +14,11 @@ module.exports = function (fs, data, apply, visit) {
     },
     set: function (value) {
       if (typeof value !== 'boolean') throw Error('Expected enabled boolean');
-      fs.writeFileSync(path + '.tmp', JSON.stringify({ enabled: value }), {
-        mode: 432
-      });
-      fs.renameSync(path + '.tmp', path);
+      require('./state-permissions').atomicRecord(
+        data,
+        'home-preference',
+        JSON.stringify({ enabled: value })
+      );
       enabled = value;
       apply(enabled);
       return { enabled: enabled };

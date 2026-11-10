@@ -36,7 +36,10 @@ for (const failure of [false, true]) {
       }
       if (name === './presentation-context') return () => ({});
       if (name === './app-inventory') return { inputHandler: () => () => {} };
-      if (name === './theme-receiver' || name === './c1-lease') return () => {};
+      if (name === './weather') return require('../../renewal-service/weather');
+      if (name === './theme-receiver')
+        return require('../../theme-receiver/register');
+      if (name === './c1-lease') return () => {};
       throw Error('Unexpected module: ' + name);
     }
   });

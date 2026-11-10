@@ -107,7 +107,7 @@ When asked, disconnect the TV from power, reconnect it, wait for the network and
 
 Failed or interrupted setup offers recovery directly. If No-root setup cannot continue, confirm full removal once. Removal automatically retries transient connection loss and a busy CYTV worker up to three attempts. If Root access is required, choose **Connect using Root** for the same TV; verified Root cleanup also finishes its blocked No-root removal. A failed Root activation attempts to restore and verify LG Home without repeating activation. Cancellation with unfinished work keeps a diagnostic report and recovery actions. Emergency-stop state remains unchanged.
 
-After a removal connection error, open the connection details, check network access or choose an existing Root SSH key, then retry. The TV address, edition, port and host-key checks stay fixed. No-root checks Helper before pairing: stop it and confirm the recheck in the same setup. An empty TV can skip restart only with verified absence and no unresolved setup; actual removal still requires the requested restart. Input-service failure allows safe package cleanup, but success still requires verified shortcut cleanup.
+After a removal connection error, open the connection details, check network access or choose an existing Root SSH key, then retry. The TV address, edition, port and host-key checks stay fixed. No-root checks Helper before pairing: stop it and confirm the recheck in the same setup. Removal can finish without a restart when controls, startup, package/file absence and stopped processes are verified and no unresolved setup remains. If the installer requests a restart, complete it and retry. Input-service failure allows safe package cleanup, but success still requires verified shortcut cleanup.
 
 **Reinstall Root:** Choose **Set up my TV → Root** with the saved connection and confirm **Reinstall Root?**. The installer restores LG Home and fully removes Clean Your TV, including its updaters, Home Helper and saved preferences. After verified removal, it installs and activates the packages and Root runtime bundled with that installer. Other TV apps and existing root/SSH access are preserved. If removal stops or requests a full restart, finish it before starting setup again. **Uninstall Clean Your TV** alone never starts another installation.
 
@@ -134,8 +134,30 @@ After a removal connection error, open the connection details, check network acc
 <a id="older-tv-nodejs-published-v1120"></a>
 <a id="straightforward-removal-v1110"></a>
 
+## Settings
+
+Use ↑ ↓ to choose a category and → or OK to enter it. ← returns to categories; Back returns there first, then closes settings. Within a section, returning from categories restores the last available control. In Columns, arrows follow the three-column grid. In Language, entry focuses the selected language.
+
+If No-root cannot read Home status, choose Try again. The unavailable control does not mean Home routing is off. Under Wallpapers, upload a personal image from a phone or CYTV; quality and dimming appear when a wallpaper is available. Removing a personal wallpaper asks for confirmation; Cancel keeps it.
+
 ## Weather
 
-Open Settings → Weather, below Wallpapers. Turn weather on, choose City, then search manually and select the correct region and country, or choose Automatic for an approximate city based on your internet connection. A VPN may change the automatic result; if the city is missing or wrong, use manual search. The detected or selected city is shown in settings. Choose °C / m/s or °F / mph and an available format: Compact, Now, In detail or 4 days. The preview follows your theme; Example means sample data. Liquid Glass supports Compact only. Ribbon and Atmosphere do not show weather. Turning weather off hides the other weather controls and stops requests. During an outage recent data can remain temporarily; after a longer outage weather disappears until it can refresh.
+Open Settings → Weather, below Wallpapers. Turn weather on, choose City, then search manually and select the correct region and country, or choose Automatic for an approximate city based on your internet connection. A VPN may change the automatic result; if the city is missing or wrong, use manual search. The detected or selected city is shown in settings. Choose °C / m/s or °F / mph and an available format: Compact, Now, In detail or 4 days. The preview follows your theme; Example means sample data. Liquid Glass supports Compact only. Ribbon and Atmosphere do not show weather. Turning weather off stops requests and hides city, units and format controls; source selection remains available. During an outage recent data can remain temporarily; after a longer outage weather disappears until it can refresh.
+
+Choose the forecast provider: Auto, MET Norway or Open-Meteo. Auto starts with MET Norway, tries Open-Meteo once on failure, then reuses the last successful source and cached data. Manual selection never switches sources automatically. New settings use Auto; previously saved settings without a provider keep Open-Meteo. The actual source appears in settings. Availability depends on your network. MET refreshes no more often than every three hours; cached data expires after six hours. Missing fields are hidden: MET does not provide feels-like temperature or precipitation probability. Daily ranges summarize forecast points, not measured extremes.
+
+Forecast coordinates go to api.met.no or api.open-meteo.com; city searches go to geocoding-api.open-meteo.com. Optional automatic city lookup sends your public IP to get.geojs.io. Connections use HTTPS; no API key is needed. Location, source and cache stay on the TV. Data sources includes provider terms and credits, including the Norwegian Meteorological Institute (MET Norway, CC BY 4.0).
 
 The Data sources button in the Weather heading opens provider and license information.
+
+## iPhone wallpaper upload
+
+Open Settings → Wallpapers → Upload from phone and scan the code. Choose a JPG, PNG or HEIC/HEIF photo, crop it, acknowledge the quality limit and send it. Choose Apply on the TV. Safari uses native HEIC support; Chrome, Firefox and other modern browsers use the bundled local decoder when needed. Conversion runs on your phone, without a conversion website. Cancel or choosing another file stops conversion. Input limit: 32 MiB and 50 million pixels; output: at most 1080p and 2 MiB. If conversion fails, try another photo or JPG/PNG. This support is for the phone page, not the Mac file picker.
+
+## Set up your Clean Your TV
+
+After successful installation, choose Classic, Liquid Glass or Ribbon and turn Home weather on or off. Ribbon does not support weather; Liquid Glass uses the compact format. Weather can find an approximate city through your internet connection; change it later in Home settings.
+
+No-root with Developer Mode offers optional auto-renewal (Beta); keep monitoring the official timer. No-root through existing root SSH does not use this option. Root offers LG firmware update blocking through Homebrew Channel, including security updates; a real restart through Homebrew Channel is required. This is separate from CYTV updates.
+
+Choose Keep current settings to skip customization. The mode switch shows its current On/Off state. Unchanged mode settings are kept. Root reinstallation still removes saved CYTV preferences as described above. Check the chosen appearance on the TV; an optional setting reported as unconfirmed needs checking in Home settings before retrying.

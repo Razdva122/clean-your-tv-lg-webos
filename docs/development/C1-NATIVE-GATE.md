@@ -47,6 +47,29 @@ the common `/usr/lib/qt5` alias is accepted without writing through it. The live
 filter verifies its Qt key/policy, timer, Luna and application-manager APIs before
 subscribing. Missing APIs leave Home with LG and prevent guardian activation.
 
+### Stock executable ownership (next release, #454)
+
+The host preflight, schema2/3 compositor reader and native guardian accept a
+stock Home executable up to 16 MiB. UID 0 remains the ordinary owner. UID 1001
+is accepted only on SquashFS; the device reader and guardian also require its
+opened descriptor's filesystem to be read-only. The reader runs the existing
+`stat -f -c %t` utility against its inherited `/proc/self/fd` descriptor, with a
+five-second deadline. Missing/unknown filesystem evidence refuses admission.
+A read-only bind mount of a writable filesystem does not qualify.
+
+This exception applies only to the fixed stock executable. Private runtime,
+state, recovery files and their generic secure reader retain their original
+ownership rules. Trusted ancestors, no symlink, one link, executable/nonwritable
+mode, stable full-file read, SHA-256 and pinned device/inode/size/mtime remain
+required, alongside the independent stock manifest, mount, vendor-filter,
+System Profile and emergency-input checks. Legacy schema1 executable-mount
+admission is unchanged. No system file is chowned, chmodded or rewritten.
+
+Rebuild the common computer/Android installer and ordinary/Beta Root support
+bundles with the matching runtime and guardian. This source change is not yet
+published and does not establish C1 compatibility. See the
+[focused verification and remaining device scope](../history/2026-11-10-issue454-stock-home-admission.md).
+
 A configured KeyFilters field alone does not prove compatibility. The existing
 guardian authenticates `/usr/bin/com.webos.app.home` and returns to LG by launching
 that native application. Firmware with an in-compositor ribbon, a web/Flutter
@@ -172,6 +195,26 @@ The final Node cleaner independently rechecks stock identity/hash, manifest,
 vendor chain, exact missing service, mount layout and foreign Home integrations
 before retirement and final acknowledgement. Later read-only inspection uses
 the same current proof; it cannot delete anything.
+
+For a retained native installation, successful restoration keeps its backend and
+inverse journals as evidence. Those journals must not be interpreted as an
+untouched installation. Current authenticated recovery support returns the
+SHA-256 of the backend selection only after native restore confirms success
+and the selection bytes remain unchanged. The existing removal receipt stores
+this digest as `native_restored_sha256`; it does not enable or resume Home.
+
+A matching preserved selection may admit only its exact native inverse names
+(schema 1: `c1-gate/active`; schemas 2/3: `c1-keyfilter/ownership.json` and
+`c1-keyfilter/pending.json`). Other profile-routing evidence or a profile
+override still blocks this proof. Live selection must match the saved bytes,
+and the other native backend tree must be absent. The existing current
+`stock-compositor` observation is repeated before destructive continuation;
+it verifies stock target identity/hash, mounts, vendor filters and foreign Home
+state. The final Node cleaner permits only the digest-bound saved native
+inverse and requires every live routing marker absent, both before private
+runtime retirement and before acknowledgement. The native digest never admits
+`never-applied`. Original inverse, old attempt outcome, writer fences, package
+receipts, restart and final absence checks remain independent and mandatory.
 
 After verified full removal, the installer selects a new native request through
 the shared coordinator. The coordinator revalidates cleanup under its mutex,

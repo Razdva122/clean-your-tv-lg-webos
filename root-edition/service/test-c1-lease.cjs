@@ -619,7 +619,6 @@ require('vm').runInNewContext(
         h.audio = function () {};
         return h;
       }
-      if (name === './theme-receiver') return function () {};
       return require(name);
     }
   }

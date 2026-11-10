@@ -2,6 +2,7 @@
 if (window.HomeI18n)
   window.HomeI18n.add({
     'en': {
+      'Checking HDMI audio…': 'Checking HDMI audio…',
       'HDMI sound': 'HDMI sound',
       'Reconnect eARC': 'Reconnect eARC',
       'Restore HDMI output': 'Restore HDMI output',
@@ -32,6 +33,7 @@ if (window.HomeI18n)
         'This audio mode cannot be reconnected here. Use LG sound settings.'
     },
     'ru': {
+      'Checking HDMI audio…': 'Проверяем звук по HDMI…',
       'HDMI sound': 'Звук по HDMI',
       'Reconnect eARC': 'Переподключить eARC',
       'Restore HDMI output': 'Вернуть звук на HDMI',
@@ -62,6 +64,7 @@ if (window.HomeI18n)
         'Этот режим звука нельзя переподключить здесь. Используйте настройки звука LG.'
     },
     'de': {
+      'Checking HDMI audio…': 'HDMI-Audio wird geprüft…',
       'HDMI sound': 'HDMI-Ton',
       'Reconnect eARC': 'eARC neu verbinden',
       'Restore HDMI output': 'HDMI-Ausgabe wiederherstellen',
@@ -93,6 +96,7 @@ if (window.HomeI18n)
         'Dieser Tonmodus kann hier nicht neu verbunden werden. LG-Toneinstellungen verwenden.'
     },
     'es': {
+      'Checking HDMI audio…': 'Comprobando el audio HDMI…',
       'HDMI sound': 'Sonido por HDMI',
       'Reconnect eARC': 'Reconectar eARC',
       'Restore HDMI output': 'Restaurar salida HDMI',
@@ -123,6 +127,7 @@ if (window.HomeI18n)
         'Este modo de audio no se puede reconectar aquí. Usa los ajustes de sonido LG.'
     },
     'pt-BR': {
+      'Checking HDMI audio…': 'Verificando o áudio HDMI…',
       'HDMI sound': 'Som por HDMI',
       'Reconnect eARC': 'Reconectar eARC',
       'Restore HDMI output': 'Restaurar saída HDMI',
@@ -153,6 +158,7 @@ if (window.HomeI18n)
         'Este modo de áudio não pode ser reconectado aqui. Use as configurações de som LG.'
     },
     'fr': {
+      'Checking HDMI audio…': 'Vérification du son HDMI…',
       'HDMI sound': 'Son HDMI',
       'Reconnect eARC': 'Reconnecter eARC',
       'Restore HDMI output': 'Rétablir la sortie HDMI',
@@ -183,6 +189,7 @@ if (window.HomeI18n)
         'Ce mode audio ne peut pas être reconnecté ici. Utilisez les réglages audio LG.'
     },
     'it': {
+      'Checking HDMI audio…': 'Verifica audio HDMI…',
       'HDMI sound': 'Audio HDMI',
       'Reconnect eARC': 'Ricollega eARC',
       'Restore HDMI output': 'Ripristina uscita HDMI',
@@ -213,6 +220,7 @@ if (window.HomeI18n)
         'Questa modalità audio non può essere ricollegata qui. Usa le impostazioni audio LG.'
     },
     'ko': {
+      'Checking HDMI audio…': 'HDMI 오디오 확인 중…',
       'HDMI sound': 'HDMI 사운드',
       'Reconnect eARC': 'eARC 다시 연결',
       'Restore HDMI output': 'HDMI 출력 복원',
@@ -243,6 +251,7 @@ if (window.HomeI18n)
         '이 오디오 모드는 여기서 다시 연결할 수 없습니다. LG 사운드 설정을 사용하세요.'
     },
     'hi': {
+      'Checking HDMI audio…': 'HDMI ऑडियो जाँचा जा रहा है…',
       'HDMI sound': 'HDMI ध्वनि',
       'Reconnect eARC': 'eARC फिर जोड़ें',
       'Restore HDMI output': 'HDMI आउटपुट बहाल करें',
@@ -273,6 +282,7 @@ if (window.HomeI18n)
         'यह ऑडियो मोड यहाँ फिर नहीं जोड़ा जा सकता। LG ध्वनि सेटिंग का उपयोग करें।'
     },
     'pl': {
+      'Checking HDMI audio…': 'Sprawdzanie dźwięku HDMI…',
       'HDMI sound': 'Dźwięk HDMI',
       'Reconnect eARC': 'Połącz eARC ponownie',
       'Restore HDMI output': 'Przywróć wyjście HDMI',
@@ -303,6 +313,7 @@ if (window.HomeI18n)
         'Tego trybu dźwięku nie można tu połączyć ponownie. Użyj ustawień dźwięku LG.'
     },
     'zh-Hans': {
+      'Checking HDMI audio…': '正在检查 HDMI 音频…',
       'HDMI sound': 'HDMI 声音',
       'Reconnect eARC': '重新连接 eARC',
       'Restore HDMI output': '恢复 HDMI 输出',
@@ -333,6 +344,7 @@ if (window.HomeI18n)
         '此声音模式无法在此重新连接。请使用 LG 声音设置。'
     },
     'zh-Hant': {
+      'Checking HDMI audio…': '正在檢查 HDMI 音訊…',
       'HDMI sound': 'HDMI 聲音',
       'Reconnect eARC': '重新連接 eARC',
       'Restore HDMI output': '恢復 HDMI 輸出',
@@ -368,6 +380,7 @@ if (window.HomeI18n)
 if (window.HomeI18n)
   window.HomeI18n.add({
     'cs': {
+      'Checking HDMI audio…': 'Kontrola zvuku HDMI…',
       'HDMI sound': 'Zvuk HDMI',
       'Reconnect eARC': 'Znovu připojit eARC',
       'Restore HDMI output': 'Obnovit výstup HDMI',

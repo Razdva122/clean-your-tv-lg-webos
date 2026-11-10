@@ -107,11 +107,13 @@ function controller({
       if (n === 'fs') return fakefs;
       if (n === 'child_process') return cp;
       if (n === '/usr/lib/node_modules/webos-service') return Service;
+      if (n === './home-control')
+        return require('./storage-fixture.cjs').homeControl(fakefs);
       if (n === './state-permissions')
-        return (d, l, init) => {
+        return require('./storage-fixture.cjs').create(fakefs, (d, l, init) => {
           if (init) files.set(dir + 'control.json', '{}');
           return true;
-        };
+        });
       if (n === './app-inventory')
         return (
           inputQuery ||
@@ -1179,3 +1181,223 @@ for (const terminal of ['EXIT 27\n', 'EXIT 30\n'])
       );
     }
   );
+
+for (const state of [
+  'Request Power Off',
+  'Request Suspend',
+  'Prepare Power Off'
+])
+  test(
+    'confirmed evdev removal during ' +
+      state +
+      ' exits without persistent stop',
+    () => {
+      const c = controller();
+      c.power({ state });
+      assert(c.workers[0].writes.includes('T'));
+      c.close(32);
+      assert.equal(
+        c.exit,
+        undefined,
+        'controller must survive same-boot standby'
+      );
+      assert(!blocked(c));
+      assert.equal(
+        c.cleanups.length,
+        0,
+        'closed vanished devices need no second cleanup'
+      );
+      assert.equal(
+        c.workers.length,
+        1,
+        'do not restart against suspended input'
+      );
+    }
+  );
+for (const kind of [
+  'no-power',
+  'expired',
+  'active',
+  'signal',
+  'missing-report',
+  'emergency',
+  'stop'
+])
+  test('power-removal exception refuses ' + kind, () => {
+    const c = controller();
+    if (kind !== 'no-power') c.power({ state: 'Prepare Power Off' });
+    if (kind === 'expired') c.advance(15001);
+    if (kind === 'active')
+      c.power({ state: 'Active', processing: false, onOff: 'on' });
+    if (kind === 'emergency') c.files.set(dir + 'blocked', 'explicit-stop');
+    if (kind === 'stop') c.command('stop');
+    c.close(
+      32,
+      kind === 'signal' ? 'SIGTERM' : null,
+      c.workers[0],
+      kind === 'missing-report' ? null : 32
+    );
+    if (c.cleanups.length) c.cleanup();
+    assert(blocked(c));
+    assert.equal(c.workers.length, 1);
+  });
+test('ordinary cleanup failure remains blocked even during power-off', () => {
+  const c = controller();
+  c.power({ state: 'Prepare Power Off' });
+  c.close(31);
+  c.cleanup();
+  assert(blocked(c));
+});
+
+test('same-boot wake starts one new relay only after fresh Active and retains Home routing', () => {
+  const c = controller();
+  c.power({ state: 'Prepare Power Off' });
+  c.close(32);
+  c.launches.length = 0;
+  c.advance(60000);
+  assert.equal(c.workers.length, 1);
+  assert.equal(c.exit, undefined);
+  c.power({ state: 'Active', processing: true, onOff: 'on' });
+  c.advance(1600);
+  assert.equal(c.workers.length, 1);
+  c.power({ state: 'Active', processing: false, onOff: 'on' });
+  c.power({ state: 'Active', processing: false, onOff: 'on' });
+  c.advance(1499);
+  assert.equal(c.workers.length, 1);
+  c.advance(1);
+  assert.equal(c.workers.length, 2);
+  c.workers[1].stdout.emit('data', Buffer.from('READY\n'));
+  c.advance(400);
+  assert(c.workers[1].writes.includes('E'));
+  assert(c.launches.includes('com.gathin.tvhome'));
+  assert(!blocked(c));
+});
+for (const kind of [
+  'stop',
+  'blocked',
+  'watchdog',
+  'off-again',
+  'processing-again'
+])
+  test('wake while waiting for input respects ' + kind, () => {
+    const c = controller();
+    c.power({ state: 'Request Suspend' });
+    c.close(32);
+    c.power({ state: 'Active', processing: false, onOff: 'on' });
+    if (kind === 'stop') c.command('stop');
+    if (kind === 'blocked') c.files.set(dir + 'blocked', 'explicit-stop');
+    if (kind === 'watchdog') c.files.set(dir + 'watchdog', 'stopped');
+    if (kind === 'off-again') c.power({ state: 'Prepare Power Off' });
+    if (kind === 'processing-again')
+      c.power({ state: 'Active', processing: true, onOff: 'on' });
+    c.advance(2000);
+    assert.equal(c.workers.length, 1);
+    if (kind === 'stop' || kind === 'blocked') assert(blocked(c));
+    if (kind === 'watchdog') assert(c.files.has(dir + 'watchdog'));
+  });
+
+test('Home Off stays disabled after power-removal wake', () => {
+  const c = controller();
+  c.files.set(
+    dir + 'home-request.json',
+    JSON.stringify({
+      id: 'a'.repeat(32),
+      method: 'setHomeControl',
+      enabled: false,
+      expires: 6000
+    })
+  );
+  c.advance(400);
+  c.power({ state: 'Suspend' });
+  c.close(32);
+  c.launches.length = 0;
+  c.power({ state: 'Active', onOff: 'on', processing: false });
+  c.advance(1500);
+  const w = c.workers[1];
+  w.stdout.emit('data', Buffer.from('READY\nHOME\n'));
+  c.advance(400);
+  assert(w.writes.includes('D'));
+  assert.equal(c.launches.length, 0);
+  assert(!blocked(c));
+});
+
+test('power hint reaches a wake replacement before READY and removal waits for another wake', () => {
+  const c = controller();
+  c.power({ state: 'Suspend' });
+  c.close(32);
+  c.power({ state: 'Active', processing: false, onOff: 'on' });
+  c.advance(1500);
+  const w = c.workers[1];
+  c.power({ state: 'Prepare Power Off' });
+  assert(
+    w.writes.includes('T'),
+    'startup must receive the same bounded power hint'
+  );
+  c.close(32, null, w);
+  assert(!blocked(c));
+  assert.equal(c.exit, undefined);
+  c.advance(2000);
+  assert.equal(c.workers.length, 2);
+  c.power({ state: 'Active', processing: false, onOff: 'on' });
+  c.advance(1500);
+  assert.equal(c.workers.length, 3);
+});
+test('mismatched relay exit logs safe original numeric facts before terminal cleanup', () => {
+  const c = controller();
+  c.close(99, null, c.workers[0], 20);
+  const snapshot = c.logs.find((x) => x.event === 'contract-snapshot');
+  const e = snapshot && { contract: snapshot.contract.events[0] };
+  assert(e, 'unexpected lifecycle needs canonical diagnostic evidence');
+  assert.equal(e.contract.actual.os_code, 99);
+  assert.equal(e.contract.actual.reported_code, 20);
+  c.cleanup();
+  assert(blocked(c));
+  assert.equal(c.workers.length, 1);
+});
+test('unknown power processing retains truthy wake delay and emits metadata only', () => {
+  const c = controller();
+  c.power({ state: 'Suspend' });
+  c.close(32);
+  c.power({
+    state: 'Active',
+    processing: 'private-processing-marker',
+    onOff: 'on'
+  });
+  c.advance(2000);
+  assert.equal(c.workers.length, 1);
+  const snapshot = c.logs.find((x) => x.event === 'contract-snapshot');
+  const e = snapshot && { contract: snapshot.contract.events[0] };
+  assert(e, 'unknown firmware value needs safe metadata');
+  assert.equal(e.contract.field, 'processing');
+  assert.equal(e.contract.actual.type, 'string');
+  assert.equal(e.contract.actual.length, 25);
+  assert(!JSON.stringify(e).includes('private-processing-marker'));
+});
+
+test('known terminal relay faults retain numeric outcome and cleanup failure safely', () => {
+  const c = controller();
+  c.close(31, null, c.workers[0], 31);
+  let snapshots = c.logs.filter((x) => x.event === 'contract-snapshot');
+  let events = snapshots[snapshots.length - 1].contract.events;
+  assert(
+    events.some((e) => e.actual.os_code === 31 && e.actual.reported_code === 31)
+  );
+  c.cleanup(11);
+  snapshots = c.logs.filter((x) => x.event === 'contract-snapshot');
+  events = snapshots[snapshots.length - 1].contract.events;
+  assert(
+    events.some((e) => e.operation === 'cleanup' && e.actual.os_code === 11)
+  );
+  assert(blocked(c));
+  assert.equal(c.workers.length, 1);
+});
+test('failed diagnostic emitter cannot prevent terminal input cleanup', () => {
+  const c = controller();
+  c.logs.push = function () {
+    throw Error('PRIVATE');
+  };
+  c.close(31, null, c.workers[0], 31);
+  c.cleanup();
+  assert(blocked(c));
+  assert.equal(c.workers.length, 1);
+});

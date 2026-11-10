@@ -8,7 +8,7 @@ REASONS = ('no-pending-operation', 'removal-not-submitted', 'terminal-evidence-m
 ACTIONS = ('check', 'inspect-support', 'continue-product', 'continue-no-root', 'cancel-install', 'continue-setup', 'finish-home-off', 'reconcile', 'retain-evidence', 'continue-removal', 'connect-root')
 REMOVAL_STAGES = ('requested', 'original-writers-fenced', 'controls-restored', 'package-removal', 'private-cleanup', 'restart-required', 'verified-clean')
 REMOVAL_REASONS = ('removal-requested', 'original-writer-active', 'ownership-conflict', 'controls-unverified',
-                   'removal-terminal-unknown', 'private-cleanup-incomplete', 'removal-verified', 'restart-required',
+                   'removal-terminal-unknown', 'private-cleanup-incomplete', 'removal-verified', 'removal-recheck-required', 'restart-required',
                    'root-worker-busy','root-access-required','removal-failed','cleanup-check-failed','connection-interrupted')
 STATES += ('cleanup-in-progress', 'verified-clean')
 REASONS += REMOVAL_REASONS
@@ -22,7 +22,9 @@ def removal_summary(pending):
     reason = pending.get('removal_reason')
     previous = pending.get('previous', {})
     outcome = previous.get('state') if type(previous) is dict else None
-    return {'state':'verified-clean' if stage == 'verified-clean' and reason == 'removal-verified' else 'cleanup-in-progress',
+    if stage == 'verified-clean' and reason == 'removal-verified':
+        reason = 'removal-recheck-required'
+    return {'state':'cleanup-in-progress',
             'stage':stage, 'reason':reason if reason in REMOVAL_REASONS else 'removal-requested',
             'original_outcome':outcome if outcome in ('complete', 'recovery_required') else 'unknown'}
 
@@ -92,14 +94,62 @@ def assess(profile, pending, observation=None):
             reason = 'removal-verified' if pending['action'] == 'uninstall' else 'activation-verified'
             return result('terminal-verified', reason, 'reconcile', 'retain-evidence')
         if observation.get('can_resume_root_setup') is True:
-            actions = ['continue-setup']
-            if pending['action'] in ('install','activate-root') and pending.get('home_backend') != 'c1-native-gate':
-                actions.append('finish-home-off')
-            return result('setup-ready', 'packages-verified', *actions, 'retain-evidence')
+            if (pending['action'] == 'uninstall' or
+                    (pending['action'] == 'install' and pending.get('product_operation') and
+                     (product.get('operation') != pending['product_operation']
+                      or product.get('state') != 'complete' or product.get('current') is not True))):
+                return result('blocked', 'observation-unverified', 'check', 'retain-evidence')
+            return result('setup-ready', 'packages-verified', *_verified_setup_actions(pending), 'retain-evidence')
     if unsubmitted_removal(profile, pending):
         return result('pre-submission', 'removal-not-submitted', 'check', 'retain-evidence')
     return result('blocked', 'terminal-evidence-missing' if profile.get('edition') == 'no-root'
                   else 'observation-unverified', 'check', 'retain-evidence')
+
+
+def _verified_setup_actions(pending):
+    actions = ['continue-setup']
+    if pending['action'] in ('install', 'activate-root') and pending.get('home_backend') != 'c1-native-gate':
+        actions.append('finish-home-off')
+    return actions
+
+
+def setup_actions(profile, pending, observation=None):
+    """Project setup advice only after all assessment priorities have applied."""
+    return [action for action in assess(profile, pending, observation)['actions']
+            if action in ('continue-setup', 'finish-home-off')]
+
+
+def observation_diagnostics(observation):
+    """Pure fixed facts about malformed optional inputs; never raw values or I/O."""
+    from .contract_events import describe
+    if observation is None:
+        return []
+    facts = []
+    def check(field, value, expected_type, rule):
+        if type(value) is not expected_type:
+            facts.append({'schema':1, 'component':'recovery', 'operation':'recover',
+                          'phase':'assessment', 'field':field, 'expected':rule,
+                          'actual':describe(value), 'decision':'retain'})
+    check('observation', observation, dict, 'observation-object')
+    if type(observation) is dict:
+        if 'device' in observation:
+            device = observation['device']
+            check('device', device, dict, 'device-object')
+            if type(device) is dict:
+                for key in ('product', 'observer'):
+                    if key in device:
+                        check('device.' + key, device[key], dict, 'proof-object')
+                product = device.get('product')
+                if (type(product) is dict and observation.get('can_resume_root_setup') is True
+                        and (product.get('state') != 'complete' or product.get('current') is not True)):
+                    facts.append({'schema':1, 'component':'recovery', 'operation':'recover',
+                                  'phase':'assessment', 'field':'device.product',
+                                  'expected':'setup-product-current-complete',
+                                  'actual':dict(describe(product), category='mismatch'), 'decision':'retain'})
+        for key in ('can_resume_root_setup', 'no_root_ready'):
+            if key in observation:
+                check(key, observation[key], bool, 'readiness-boolean')
+    return facts
 
 
 def unsubmitted_removal(profile, pending):

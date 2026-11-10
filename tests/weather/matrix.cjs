@@ -238,13 +238,82 @@ const languages = [
             heading.scroll <= heading.width + 3,
             language + ' sources heading overflow'
           );
+          const sourceBounds = await page
+            .locator('.weather-provider')
+            .evaluate((e) => {
+              const pane = document
+                  .querySelector('#settings-pane-weather')
+                  .getBoundingClientRect(),
+                r = e.getBoundingClientRect();
+              return {
+                inside:
+                  r.left >= pane.left &&
+                  r.right <= pane.right &&
+                  r.top >= pane.top &&
+                  r.bottom <= pane.bottom,
+                overflow: [...e.querySelectorAll('button')].some(
+                  (b) => b.scrollWidth > b.clientWidth + 3
+                ),
+                count: e.querySelectorAll('[data-weather-provider]').length,
+                labels: [...e.querySelectorAll('button')].map(
+                  (b) => b.textContent
+                ),
+                source: e.querySelector('.weather-actual-source').textContent
+              };
+            });
+          assert(
+            sourceBounds.inside && !sourceBounds.overflow,
+            [edition, language, pack.title].join('/') +
+              ' provider bounds ' +
+              JSON.stringify(sourceBounds)
+          );
+          assert.equal(sourceBounds.count, 3);
+          assert.deepEqual(sourceBounds.labels.slice(1), [
+            'MET Norway',
+            'Open-Meteo'
+          ]);
+          assert.match(sourceBounds.source, /Open-Meteo/);
           if (pack.title === 'Classic') {
+            await page.locator('[data-weather-provider="met-no"]').focus();
+            assert(
+              await page
+                .locator('[data-weather-provider="met-no"]')
+                .evaluate(
+                  (e) => parseFloat(getComputedStyle(e).outlineWidth) >= 3
+                ),
+              language + ' source focus indicator'
+            );
+            await page.locator('[data-weather-choice="text"]').click();
+            await page.waitForTimeout(40);
+            const compact = await page
+              .locator('#weatherPreview')
+              .evaluate((e) => {
+                const p = e.getBoundingClientRect(),
+                  area = document
+                    .querySelector('.weather-preview-window')
+                    .getBoundingClientRect();
+                return {
+                  icons: e.querySelectorAll('svg').length,
+                  inside:
+                    p.width > 0 &&
+                    p.left >= area.left - 2 &&
+                    p.top >= area.top - 2 &&
+                    p.right <= area.right + 2 &&
+                    p.bottom <= area.bottom + 2
+                };
+              });
+            assert(
+              compact.icons > 0 && compact.inside,
+              [edition, language, 'Compact preview containment'].join('/') +
+                JSON.stringify(compact)
+            );
             await page.locator('.weather-sources-button').click();
             const bounds = await page
               .locator('.weather-sources-dialog .weather-city-card')
               .boundingBox();
             assert(
-              bounds.y >= 0 && bounds.y + bounds.height <= 1080,
+              bounds.y >= 0 &&
+                bounds.y + bounds.height <= page.viewportSize().height,
               language + ' sources dialog bounds'
             );
             await page.keyboard.press('Escape');

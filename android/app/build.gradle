@@ -12,8 +12,8 @@ android {
         applicationId 'com.cleanyourtv.android'
         minSdk 24
         targetSdk 35
-        versionCode 30
-        versionName '0.15.0'
+        versionCode 31
+        versionName '0.16.0'
         testInstrumentationRunner 'com.cleanyourtv.android.OperationChecks'
         ndk { abiFilters 'arm64-v8a' }
     }
@@ -66,6 +66,8 @@ tasks.register('stageCytv', Exec) {
     commandLine System.getenv('CYTV_BUILD_PYTHON') ?: 'python3', 'android/stage.py'
     inputs.dir rootProject.file('../cytv')
     inputs.file rootProject.file('stage.py')
+    inputs.file rootProject.file('../native/app/state-permissions.js')
+    inputs.file rootProject.file('../native/app/contract-events.js')
     inputs.file rootProject.file('../lgtv.py')
     inputs.file rootProject.file('../release-versions.json')
     inputs.property('sourceCommit', providers.exec {

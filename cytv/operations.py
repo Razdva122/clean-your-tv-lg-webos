@@ -447,6 +447,11 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
                 apply_activation_reason(error, self.tv_info)
             error.root_action = action
             error.root_boundary = 'driver'
+            detail=getattr(error,'_root_driver_failure',{})
+            if action=='install' and isinstance(detail,dict) and detail.get('attempt')==attempt:
+                from .errors import root_driver_details
+                error.root_driver=root_driver_details(detail)
+            if hasattr(error,'_root_driver_failure'):del error._root_driver_failure
             if action == 'install':
                 # Read data only; never rerun the retained driver or installation.
                 code = """import os,stat,json
@@ -998,11 +1003,13 @@ else:
                     if attempt < 15:
                         time.sleep(1)
                 raise UserError('Home Helper stop could not be verified. Keep recovery state and run cytv status.')
+        from .helper_stop import PROGRAM
         self.remote.run(
             'if [ -f ' + HELPER_STATE + '/controller.pid ]; then '
-            'printf \'{"cmd":"stop"}\' > ' + HELPER_STATE + '/control.json; '
+            '/usr/bin/node || exit 1; '
             'n=0; while [ -e ' + HELPER_STATE + '/controller.pid ]; do '
-            'n=$((n+1)); [ "$n" -le 15 ] || exit 1; sleep 1; done; fi', timeout=25)
+            'n=$((n+1)); [ "$n" -le 15 ] || exit 1; sleep 1; done; fi',
+            data=PROGRAM.encode(), timeout=25)
 
     def root_inventory(self, fallback):
         """Use the existing fixed Root catalog reader; Root needs no SSAP key."""
@@ -1271,7 +1278,12 @@ else:
         reconcile = reconcile and not restoring
         if pending and pending.get('recovery_protocol') == 'no-root-original-stream-v1':
             from .no_root_observer import observe
-            return observe(self, pending)
+            result = observe(self, pending)
+            if self.profile['edition'] == 'no-root':
+                diagnostics.context.collect_contract_events(self.remote, self.tv_info)
+            return result
+        if self.profile['edition'] == 'no-root':
+            diagnostics.context.collect_contract_events(self.remote, self.tv_info)
         reconciled = None
         reconciliation = None
         can_resume = False
@@ -1884,6 +1896,9 @@ print('CYTV_PROJECT_REMOVED')
         phase=reply.get('stage')
         if phase in REMOVAL_STAGES:
             self.store.checkpoint(self.profile,stage=phase,removal_reason=reply.get('reason') if reply.get('reason') in REMOVAL_REASONS else 'ownership-conflict')
+        if reply.get('cleanup_error') == 'owned-process-still-used':
+            self.store.checkpoint(self.profile,stage='restart-required',removal_reason='restart-required')
+            return {'removed':False,'verified_clean':False,'restart_required':True}
         result=reply.get('result',{})
         if result.get('restart_required') is True:
             self.store.checkpoint(self.profile,stage='restart-required',removal_reason='restart-required',cleanup_boot_id=reply.get('cleanup_boot_id'))

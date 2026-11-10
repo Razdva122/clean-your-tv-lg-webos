@@ -1,62 +1,34 @@
 {
   "schema": 1,
-  "version": "1.15.0",
+  "version": null,
   "changes": [
     {
-      "pr": 457,
+      "pr": 488,
       "issues": [
-        240,
-        283,
-        418,
-        438
+        487
       ],
-      "summary": "Improve legacy No-root/C1 removal and asynchronous Root cleanup reconciliation; original #240/#418 installation causes remain unresolved"
+      "summary": "Repair authenticated installer key privacy after runtime ownership handoff; original #487 device continuation remains unverified"
     },
     {
-      "pr": 459,
+      "pr": 492,
       "issues": [
-        355
+        454
       ],
-      "summary": "Deliver the selected Root runtime through explicit verified reinstallation; original #355 activation and C2 acceptance remain unverified"
+      "summary": "Admit immutable vendor-owned stock Home up to 16 MiB across Root preflight, compositor runtime and guardian; #454 device confirmation remains pending"
     },
     {
-      "pr": 460,
-      "issues": [],
-      "summary": "Reconcile current documentation after verified v1.14.0 publication"
-    },
-    {
-      "pr": 461,
-      "issues": [],
-      "summary": "Redesign the product website/demo and add independent Video/4K theme filters"
-    },
-    {
-      "pr": 462,
+      "pr": 493,
       "issues": [
-        440
+        487
       ],
-      "summary": "Admit narrowly verified immutable system images and new native setup after verified cleanup; #440 device acceptance remains unverified"
+      "summary": "Share checked storage, lifecycle and recovery contracts; preserve first-cause typed diagnostics in standard reports"
     },
     {
-      "pr": 463,
+      "pr": 494,
       "issues": [
-        353
+        454
       ],
-      "summary": "Add optional localized Home weather, theme-aware formats, city/units settings and weather-compatible theme updates; retire Channel and Itachi from the active catalog"
-    },
-    {
-      "pr": 464,
-      "issues": [],
-      "summary": "Keep theme discovery lifecycle on an exact active fixture and current staged engine metadata after Channel retirement"
-    },
-    {
-      "pr": 465,
-      "issues": [],
-      "summary": "Stabilize QA log rotation, portable weather staging and native lease timeout fixtures without product behavior changes"
-    },
-    {
-      "pr": 468,
-      "issues": [],
-      "summary": "Detect and remember website visitor language"
+      "summary": "Correct the stock Home regression fixture on UID 1001 CI runners; production behavior unchanged"
     }
   ],
   "excluded": [],

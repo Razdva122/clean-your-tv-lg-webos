@@ -67,6 +67,28 @@ def bundle_c1_lease(files):
     return files
 
 
+def bundle_weather(files):
+    """Inline the shared fixed MET transport and trust in the owned service leaf."""
+    import re
+    from deploy import checked_file
+    files = dict(files)
+    needle = b"require('./weather')"
+    if files['service.js'].count(needle) != 1:
+        raise ValueError('Expected one Root weather registration')
+    root = Path(__file__).resolve().parents[1] / 'renewal-service'
+    source = checked_file(root, 'weather.js')
+    ca = checked_file(root, 'ca-bundle.crt').decode('utf-8')
+    license = checked_file(root, 'ca-LICENSE.txt').replace(b'*/', b'* /')
+    pattern = rb"require\('fs'\)\.readFileSync\(\s*__dirname \+ '/ca-bundle.crt',\s*'utf8'\s*\)"
+    source, count = re.subn(pattern, lambda _: json.dumps(ca).encode(), source)
+    if count != 1:
+        raise ValueError('Expected one canonical weather CA import')
+    bundled = (b'(function(){var module={exports:{}};\n/* Mozilla CA bundle license\n'
+               + license + b'\n*/\n' + source + b'\nreturn module.exports;}())')
+    files['service.js'] = files['service.js'].replace(needle, bundled)
+    return files
+
+
 def tgz(files, executables=()):
     """Secure owned package leaves, without chmod records for platform containers."""
     from cytv.package import tgz as package_tgz
@@ -115,6 +137,7 @@ def build(output, version='0.0.1', legacy_node_prototype=False, resolution=None,
     from scripts.theme_receiver import inject
     private_service = bundle_presentation_context({name[len(service_prefix):]: data for name, data in payload.items() if name.startswith(service_prefix)})
     private_service = bundle_c1_lease(private_service)
+    private_service = bundle_weather(private_service)
     private_service = inject(private_service, standalone=True)
     payload.pop(service_prefix+'c1-lease.js')
     if legacy_node_beta:

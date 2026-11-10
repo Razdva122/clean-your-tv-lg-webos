@@ -179,6 +179,55 @@ this rule was introduced.
    the remaining independent planned cases and update the failure inventory
    before the next fix batch and replacement candidate.
 
+Before ending the pass, releasing the device, starting product fixes or merging
+the fix batch, apply the [required QA exit check](../AGENTS.md#required-qa-exit-check)
+against the original selected plan. Record the reconciliation in this release's
+canonical ledger. An independent untested case keeps the pass open; an unrelated
+release blocker, harness mistake or planned replacement candidate does not defer
+it. Check state-dependent unfinished cases before a planned rollback removes the
+artifact they need. Necessary recovery takes precedence and must be recorded as
+an interruption, not successful case completion. Scope reduction or independent
+case deferral needs the maintainer's explicit decision. A complete inventory of
+genuinely blocked cases permits the fix batch, but does not establish acceptance.
+
+### Verification ledger and repeat rules
+
+Maintain one current verification ledger for the release, shared across focused
+branches, integration, agents and the final candidate. Reuse the existing release
+acceptance record and linked dated observations; do not create parallel tracking
+systems or introduce a new tool for this ledger. For each planned check, record
+its scope, relevant source/test inputs or artifact hashes, environment/device/state
+preconditions, result and evidence link, and any remaining gap. Link private
+evidence through a redacted summary rather than publishing private diagnostics.
+
+Before starting a test, build, signing run, installation or rollback:
+
+1. Consult the ledger. State the missing evidence or exact changed input and the
+   release decision this operation will resolve. If neither exists, skip it.
+2. Reuse valid matching results. A different branch, merge commit, PR, agent,
+   candidate label or documentation location alone does not invalidate them.
+   Use authenticated matching test-unit receipts and release-input equivalence
+   where required; do not treat arbitrary old logs as trusted candidate evidence.
+3. After a code or fixture correction, run the affected checks and dependencies.
+   Broaden scope only for a concrete shared dependency, unexplained failure or
+   changed precondition. Do not restart a successful full suite to reproduce a
+   result for a new record.
+4. Finish all known fixes, reviews and pre-dispatch inputs before one full RC.
+   A replacement requires an actual changed release input or unresolved failed
+   build gate; batch the required changes before dispatching it.
+5. Group necessary device cases into one bounded pass. Repeat installation or
+   rollback only when the required artifact or relevant device/state preconditions
+   changed, or a specific scenario remains unverified. Record that reason before
+   the operation. Preliminary evidence may guide the work but cannot stand in for
+   required final-package acceptance; run only its remaining applicable cases.
+6. Classify infrastructure failures separately from product failures. Retry a
+   failed policy check, network request or runner job at the narrowest supported
+   scope. Do not rebuild, re-sign or reinstall already successful artifacts merely
+   because an unrelated gate was unavailable. Preserve all required trust checks.
+
+When reporting progress, name the completed scope and the concrete remaining
+gaps. Do not reopen completed cases or expand release scope merely to keep testing.
+
 ### Mandatory pre-dispatch check for the release coordinator
 
 Before starting a full candidate, complete and commit every input consumed by
@@ -471,6 +520,11 @@ trusted policy requires those additional gates on subsequent candidates. Never
 weaken branch protection or use a preliminary build as final acceptance.
 
 ## Merge, publish and notify
+
+Release notes are copied into public descriptions and signed metadata. Keep them
+publication-neutral before freeze: put transient candidate progress and
+authorization boundaries in the release PR or dated ledger instead. Review these
+copied surfaces before merge; do not rewrite published assets to correct prose.
 
 Merge the release PR using a merge commit. The existing publication pipeline
 reuses the successful candidate installers after verifying that the exact second

@@ -2,15 +2,15 @@
 
 Home owns location choice, networking, persistence, rendering, placement and remote
 navigation. A theme only declares supported formats and styles approved parts.
-The weather integration is prepared in a feature branch; publication of the Home
-application follows the normal release candidate workflow.
+Weather is included in Home; theme packages declare compatibility with the
+shared format contract below.
 
 ## Format contract
 
 | ID | User label | Content |
 | --- | --- | --- |
 | `text` | Compact | Icon, temperature, condition, daily high/low |
-| `current` | Now | City, temperature, feels like, condition, daily high/low |
+| `current` | Now | City, temperature, feels like when available, condition, daily high/low |
 | `details` | In detail | Now plus available wind, precipitation probability, humidity |
 | `forecast` | 4 days | Now plus today and the next three daily low/high ranges |
 
@@ -59,23 +59,56 @@ behaviors themselves.
 
 ## Data and settings
 
-Settings → Weather follows Wallpapers. Off by default; Off hides subordinate
-controls and cancels requests. Manual city search uses Open-Meteo geocoding;
-Auto explicitly opts into approximate GeoJS IP lookup. A VPN can change that
-result; missing city names are not invented. Manual search is the fallback.
+Settings → Weather follows Wallpapers. Off by default; Off cancels requests and hides city, units and format controls;
+source selection remains available. Manual city search uses Open-Meteo geocoding;
+Automatic city selection explicitly opts into approximate GeoJS IP lookup. A VPN
+can change that result; missing city names are not invented. Manual search is the fallback.
 Only the selected city/region/country/coordinates and lookup time are retained.
 Fixed HTTPS endpoints are owned by Home, never a theme. XHR timeout is 12 seconds;
 responses are bounded to 1 MiB and fields are validated. No provider key is shipped.
 
 Forecast data stays in °C and m/s in storage. Metric/imperial presentation converts
-without refetching. Fresh cache is 15 minutes; stale data is retained at most six
-hours; failures back off for five minutes. Auto city refresh is at most daily.
+without refetching. Open-Meteo refreshes after 15 minutes; MET Norway refreshes
+no more often than every three hours. One last-attempt timestamp for the current
+MET request location preserves this bound after failures, cancellation, source
+changes and reload. Fresh source cache is reused during fallback. Source caches
+are retained at most six hours; the general five-minute failure backoff cannot
+override MET admission. Auto city refresh is at most daily.
 Language changes localize condition codes, weekdays and supported city names.
 Cancellation fences prevent old city/theme/enable responses from being applied.
 Missing optional values are omitted. Preview without real data says Example;
 examples never appear on Home. Data attribution and license links are in the clearly labeled Data sources dialog
 in the Weather settings heading, and THIRD_PARTY_NOTICES.md. The Home widget has
 no provider footer.
+
+Forecast provider choices are exactly **Auto**, **MET Norway** and **Open-Meteo**
+(`auto`, `met-no`, `open-meteo`). Empty settings default to Auto; existing saved
+settings without a provider retain Open-Meteo. Auto starts with MET, tries
+Open-Meteo once on failure, and remembers the last successful source. Manual
+selection never falls back. Cache entries are tied to location and actual source;
+a manual choice cannot display another source's cached forecast. Settings show
+the actual source. MET has no apparent temperature or precipitation probability;
+these remain absent. Daily ranges summarize forecast points for up to four local
+calendar days, not observed daily extremes. Where Intl timezone support is
+unavailable, grouping falls back to UTC.
+
+MET transport uses the existing Home renewal service (`com.gathin.tvhome.renewal`)
+or the Root private service (`com.cleanyourtv.root.preview.service`), never native
+Home Helper. Only the corresponding Home caller may request it. It uses verified
+TLS and a truthful project/contact User-Agent to the fixed endpoint
+`https://api.met.no/weatherapi/locationforecast/2.0/compact`; coordinates are rounded
+to at most four decimal places. Requests have a 12-second deadline and a 256 KiB
+JSON limit. No API keys, proxy, caller-selected URL or backend location history
+are introduced. XHR remains responsible for Open-Meteo and location lookup.
+
+Privacy endpoints are `api.met.no` and `api.open-meteo.com` for forecast
+coordinates, `geocoding-api.open-meteo.com` for city searches, and `get.geojs.io`
+for explicitly requested approximate IP location. All use HTTPS. Local source
+selection and cached forecasts stay with Home preferences. Credit MET data to
+the Norwegian Meteorological Institute under CC BY 4.0, alongside Open-Meteo,
+GeoNames and GeoJS credits and provider terms in Data sources and
+THIRD_PARTY_NOTICES.md. Network unavailability does not establish a nationwide
+ban; users can select another source without changing location mode.
 
 `tvhome.weather.v1` is app-origin localStorage, like other appearance preferences.
 It survives ordinary OTA updates. Existing legacy profile export/import does not

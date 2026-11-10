@@ -69,7 +69,7 @@ function request(s, path, method = 'GET', body, headers = {}) {
 }
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 async function run() {
-  for (const file of ['core', 'register', 'wallpaper-phone'])
+  for (const file of ['core', 'register', 'wallpaper-phone', 'wallpaper-heic'])
     acorn.parse(fs.readFileSync('theme-receiver/' + file + '.js', 'utf8'), {
       ecmaVersion: 5
     });
@@ -132,6 +132,34 @@ async function run() {
     assert.equal(s.kind, 'wallpaper');
     assert.equal(s.wallpaperProtocol, 1);
     assert.equal((await request(s, '/wallpaper')).code, 200);
+    const worker = await request(s, '/wallpaper-heic-worker.js');
+    assert.equal(worker.code, 200);
+    assert.equal(worker.body, require('../../theme-receiver/wallpaper-heic')());
+    assert.match(
+      (await request(s, '/wallpaper-heic-license.txt')).body,
+      /GNU LESSER GENERAL PUBLIC LICENSE/
+    );
+    for (const asset of [
+      '/wallpaper-heic-worker.js',
+      '/wallpaper-heic-license.txt'
+    ]) {
+      assert.equal(
+        (
+          await request(s, asset, 'GET', undefined, {
+            Origin: 'http://evil.example'
+          })
+        ).code,
+        403
+      );
+      assert.equal(
+        (
+          await request(s, asset, 'GET', undefined, {
+            Origin: 'http://127.0.0.1:' + s.port
+          })
+        ).code,
+        200
+      );
+    }
     assert.match((await request(s, '/wallpaper')).body, /image\/jpeg/);
     const capabilities = JSON.parse(
       (await request(s, '/v1/wallpaper-capabilities')).body
@@ -227,6 +255,8 @@ async function run() {
   s = await r.start();
   try {
     assert.equal((await request(s, '/wallpaper')).code, 404);
+    assert.equal((await request(s, '/wallpaper-heic-worker.js')).code, 404);
+    assert.equal((await request(s, '/wallpaper-heic-license.txt')).code, 404);
     assert.equal((await request(s, '/v1/wallpaper-capabilities')).code, 404);
     assert.equal(
       (

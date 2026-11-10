@@ -31,7 +31,7 @@ cp native/app/*.js native/app/*.json native/app/*.png build/native-app/
 cp -R native/app/vendor build/native-app/
 cp native/service/*.js native/service/*.json build/native-service/
 cp native/service/app-inventory.js build/native-app/
-cp native/app/state-permissions.js build/native-service/
+cp native/app/state-permissions.js native/app/contract-events.js build/native-service/
 python3 -m scripts.helper_build --input build/native-app --output build/native-app-compat
 python3 -m scripts.helper_build --input build/native-service --output build/native-service-compat
 rm -rf build/native-app build/native-service
@@ -57,7 +57,9 @@ from scripts.helper_build import compile_helper
 import shutil
 sources = runpy.run_path('scripts/build-cytv.py')['tracked_files']('renewal-service')
 # The service runs on the TV's Node (0.12 on webOS 3.x): compile it like Helper.
-files = compile_helper(inject({name: data for name, data in sources.items() if not name.startswith('state/')}))
+files = inject({name: data for name, data in sources.items() if not name.startswith('state/')})
+files.update({name: Path('native/app', name).read_bytes() for name in ('state-permissions.js', 'contract-events.js')})
+files = compile_helper(files)
 output = Path('build/home-service')
 if output.exists():
     shutil.rmtree(output)

@@ -2,8 +2,26 @@ const assert = require('node:assert/strict'),
   fs = require('fs'),
   os = require('os'),
   path = require('path');
-const create = require('../renewal-service/home-control');
-const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'cytv-control-'));
+const storage = require('../native/app/state-permissions');
+const create = require('./storage-fixture.cjs').load(
+  path.resolve('renewal-service/home-control.js'),
+  storage
+);
+const dir = fs.realpathSync(
+  fs.mkdtempSync(path.join(os.tmpdir(), 'cytv-control-'))
+);
+fs.chmodSync(dir, 0o2770);
+if ((fs.statSync(dir).mode & 0o7777) !== 0o2770) {
+  const inode = fs.statSync(dir).ino;
+  for (const method of ['lstatSync', 'fstatSync', 'statSync']) {
+    const original = fs[method];
+    fs[method] = function (...args) {
+      const stat = original.apply(fs, args);
+      if (stat.ino === inode) stat.mode |= 0o2000;
+      return stat;
+    };
+  }
+}
 (async () => {
   try {
     let now = 0,

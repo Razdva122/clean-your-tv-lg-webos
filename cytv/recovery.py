@@ -2,12 +2,19 @@
 from . import prompts
 from .errors import UserError
 from .operations import require_removal_idle
-from .recovery_state import assess, unsubmitted_removal
+from .recovery_state import assess, observation_diagnostics, setup_actions, unsubmitted_removal
 
 REVIEW = 'Review recovery options'
 KEPT = 'Recovery data kept. Installation has not restarted.'
 BLOCKED = 'Recovery could not be verified. Save the diagnostic report and keep recovery data. Do not repeat removal.'
 SEPARATE = 'Recovery finished. Start a new setup separately when you are ready.'
+
+
+def _assessment(profile, pending, observation):
+    from .contract_events import record
+    for fact in observation_diagnostics(observation):
+        record(fact)
+    return assess(profile, pending, observation)
 
 
 def plan(write, state, summary, next_step=KEPT, actions=None):
@@ -69,9 +76,11 @@ def removal_plan(write, store, profile, state='blocked', connecting=False, failu
         'next_step':('Restart the TV completely: disconnect it from power, reconnect it, then choose Try again. Standby is not a full restart.' if restart
                      else 'Connect to the TV to continue cleanup.' if connecting else 'Continue the remaining cleanup for this TV.'),
         'removal':summary,'actions':assessment['actions'],'reason':summary['reason']}
-    from .recovery_ui import removal_connection_failure, removal_details
+    from .recovery_ui import removal_connection_failure, removal_details, removal_title
     if removal_connection_failure(value, failure):
-        value.update(summary='Removal is not finished yet.',next_step=removal_details(value, failure)['blocker_text'])
+        value.update(summary=removal_title(value, failure),next_step=removal_details(value, failure)['blocker_text'])
+    elif not connecting:
+        value.update(summary=removal_title(value),next_step=removal_details(value)['blocker_text'] or value['next_step'])
     write.recovery_plan(value)
     return True
 
@@ -108,7 +117,7 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
             raise
         installer.tv_info.update(status=result)
         pending = installer.store.pending(installer.profile)
-        assessment = assess(installer.profile, pending, result)
+        assessment = _assessment(installer.profile, pending, result)
         if pending and pending.get('recovery_protocol')=='clean-removal-v1':
             from .recovery_state import removal_summary
             summary=removal_summary(pending)
@@ -141,7 +150,7 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
                 write(KEPT)
                 return
             result=installer.inspect_root_product(pending)
-            assessment=assess(installer.profile,pending,result)
+            assessment=_assessment(installer.profile,pending,result)
         if 'continue-product' in assessment['actions']:
             plan(write,'ready','The original package operation can finish its verified final readback. Home control will stay off until you choose it separately.',actions=assessment['actions'])
             if not prompts.confirm('Continue the original Root operation?',ask,write):
@@ -149,7 +158,7 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
                 return
             result=installer.continue_root_product(pending)
             pending=installer.store.pending(installer.profile)
-            assessment=assess(installer.profile,pending,result)
+            assessment=_assessment(installer.profile,pending,result)
         if (installer.profile['edition']=='root' and pending and pending.get('action')=='install'
                 and pending.get('product_operation') and result.get('can_resume_root_setup') is not True
                 and assessment['state']=='blocked'
@@ -179,12 +188,12 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
             else:
                 write(KEPT)
             return
-        if result.get('can_resume_root_setup') is True and installer.profile['edition'] == 'root':
-            plan(write, 'ready', 'Root and Root Updater are installed and verified. Continue to stop the old Helper, turn on Home control and open Clean Your TV Home.')
+        actions = setup_actions(installer.profile, pending, result)
+        if 'continue-setup' in actions:
+            plan(write, 'ready', 'Root and Root Updater are installed and verified. Continue to stop the old Helper, turn on Home control and open Clean Your TV Home.', actions=assessment['actions'])
             write.option(0, 'Keep recovery data and exit')
             write.option(1, 'Continue setup and turn on Home control')
-            home_off = (pending and pending.get('action') in ('activate-root','install')
-                        and pending.get('home_backend') != 'c1-native-gate')
+            home_off = 'finish-home-off' in actions
             if home_off:
                 write.option(2, 'Finish setup with LG Home and Home control off')
             choice = prompts.number(ask, write, 'Recovery action [0]: ', 0, 2 if home_off else 1, default=0)

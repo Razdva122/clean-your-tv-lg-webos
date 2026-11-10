@@ -7,6 +7,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -100,6 +101,71 @@ class RecoveryManifestTests(unittest.TestCase):
         self.persist()
         with self.assertRaisesRegex(ValueError, 'Incomplete'):
             self.verifier.verify()
+
+    def packaged_service(self):
+        spec = importlib.util.spec_from_file_location('recovery_service_build', ROOT/'build.py')
+        builder = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(builder)
+        from scripts.theme_receiver import inject
+        files = {name: (builder.SERVICE_SOURCE/name).read_bytes() for name in builder.SERVICE_FILES}
+        files = builder.bundle_weather(builder.bundle_c1_lease(builder.bundle_presentation_context(files)))
+        (self.state/'service').mkdir(mode=0o700)
+        service = self.write(self.state/'service/service.js', inject(files, standalone=True)['service.js'])
+        self.files.append(service)
+        return service
+
+    def test_actual_bundled_receiver_remains_admissible_and_hash_bound(self):
+        service = self.packaged_service()
+        self.save()
+        self.assertTrue(self.verifier.verify()['integrity_verified'])
+        service.write_bytes(service.read_bytes()+b'// changed')
+        with self.assertRaisesRegex(ValueError, 'digest mismatch'):
+            self.verifier.verify()
+
+    def test_large_service_still_rejects_unsafe_metadata(self):
+        service = self.packaged_service()
+        self.save()
+        service.chmod(0o622)
+        with self.assertRaisesRegex(ValueError, 'Unsafe recovery file'):
+            self.verifier.verify()
+        service.chmod(0o600)
+        os.link(service, service.with_name('other-link'))
+        with self.assertRaisesRegex(ValueError, 'Unsafe recovery file'):
+            self.verifier.verify()
+
+    def test_larger_bound_is_only_for_service_and_still_finite(self):
+        for name, size in [('service/service.js', 4*1024*1024+1), ('runtime/extra.py', 1024*1024+1)]:
+            with self.subTest(name=name):
+                path = self.state/name
+                path.parent.mkdir(mode=0o700, exist_ok=True)
+                self.files.append(self.write(path, b'x'*size))
+                self.save()
+                with self.assertRaisesRegex(ValueError, 'Unsafe recovery file'):
+                    self.verifier.verify()
+                self.files.pop()
+                path.unlink()
+
+    def test_retained_updater_verifies_actual_bundled_service(self):
+        from updater.device import Device
+        from updater.package import safe_bytes
+        service = self.packaged_service()
+        self.files.extend([
+            self.write(self.runtime/'cli.py', b'# cli fixture'),
+            self.write(self.runtime/'update_guard.py', b'HOME_RESUME_PROTOCOL = 1\n')])
+        self.save()
+        proof = (self.state/'recovery-provision.json').read_bytes()
+        receipt = dict(schema=1, runtime=1, updater=1, code={},
+                       recovery_sha256=hashlib.sha256(proof).hexdigest())
+        store = SimpleNamespace(root=str(self.state/'updater'), read=lambda name: receipt if name == 'infrastructure' else None)
+        device = Device(store, root_state=self.state)
+        # Host UID differs from the TV. Keep the real bounded file/hash reader.
+        def host_read(path, limit=32*1024*1024, uid=None):
+            return safe_bytes(path, limit=limit, uid=os.getuid() if uid == 0 else uid)
+        with patch('updater.device.safe_bytes', side_effect=host_read):
+            self.assertEqual(device.integrity(), receipt)
+            service.write_bytes(service.read_bytes()+b'// changed')
+            with self.assertRaisesRegex(ValueError, 'Recovery integrity failed'):
+                device.integrity()
 
 
 if __name__ == '__main__':

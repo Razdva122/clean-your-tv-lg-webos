@@ -1,5 +1,12 @@
 # Android stable readiness
 
+Current v1.16.0 candidate: exact original-signer Android0.16.0/code31 upgrade
+from published code30, four retained synthetic files, real Store seed/verify,
+native OperationChecks and idle rotation/background/lock checks passed on an
+isolated API35 ARM64 userdebug emulator. [Artifact-bound host QA](../docs/history/2026-11-10-release-1.16.0-candidate.md#non-tv-acceptance-follow-up).
+Physical phone/live phone-to-TV and TV acceptance remain untested; the release
+candidate is not published. Historical scopes below remain unchanged.
+
 > **v1.13.0:** exact original-signer Android0.13.0/code28 upgrade from published code27, four synthetic retained files, real Store seed/verify, native OperationChecks and idle no-replay passed on an isolated API35 ARM64 userdebug emulator. [Artifact-bound acceptance](../docs/history/2026-11-08-release-1.13.0-artifacts.md#final-android-signed-artifact-acceptance). Physical phone and live phone-to-TV remain untested.
 
 > **v1.12.1:** exact original-signer Android0.12.1/code27 upgrade from published code26, four synthetic retained files, real Store seed/verify, native OperationChecks and idle no-replay passed on an isolated API35 ARM64 userdebug emulator. [Artifact-bound acceptance](../docs/history/2026-11-08-release-1.12.1-publication-acceptance.md). Physical phone and live phone-to-TV paths remain untested.

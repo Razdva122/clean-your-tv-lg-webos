@@ -581,6 +581,8 @@ class CLITests(unittest.TestCase):
             questions, output = [], []
             answers = iter([''])
             def ask(prompt):
+                if 'Customize Clean Your TV?' in prompt:
+                    return 'n'
                 questions.append(prompt)
                 return next(answers)
             def connect(profile, directory, secret, trust):
@@ -726,7 +728,11 @@ class CLITests(unittest.TestCase):
             if remote is None:
                 raise AssertionError('must not connect')
             return remote
-        code = cli.main(argv, ask=lambda _: next(iterator), write=lambda message: output.write(str(message) + '\n'), connect=connect, search=search, inspect=inspect)
+        # Existing scenarios keep their settings; dedicated setup tests exercise opt-in.
+        def ask(prompt):
+            from cytv.i18n import translate
+            return 'n' if translate('Customize Clean Your TV?') in prompt else next(iterator)
+        code = cli.main(argv, ask=ask, write=lambda message: output.write(str(message) + '\n'), connect=connect, search=search, inspect=inspect)
         return code, output.getvalue(), calls
 
     def test_help_and_version_need_no_payload_or_dependencies(self):

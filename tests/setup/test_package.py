@@ -34,6 +34,9 @@ class PackageTests(unittest.TestCase):
             shutil.copy(ROOT/'package.json', root/'package.json')
             helper = 'com.local.nativehome_0.6.17_arm.ipk'
             shutil.copy(ROOT/'native/published'/helper, root/'native/published'/helper)
+            (root/'native/app').mkdir(parents=True, exist_ok=True)
+            for name in ('state-permissions.js', 'contract-events.js'):
+                shutil.copy(ROOT/'native/app'/name, root/'native/app'/name)
             (root/'native/app/appinfo.json').write_text(json.dumps({'id':'com.local.nativehome','version':'0.6.17'}))
             (root/'launcher/appinfo.json').write_text(json.dumps({'id':'com.gathin.tvhome','version':'9.8.7','type':'web'}))
             (root/'renewal-service/services.json').write_text('{}')
@@ -48,6 +51,7 @@ from cytv.package import ipk
 assert Path('build/home-service/state/home-control/.keep').is_file()
 assert Path('build/home-service/theme-receiver/core.js').is_file()
 assert Path('build/home-service/theme-receiver/register.js').is_file()
+assert Path('build/home-service/weather.js').is_file()
 files={'usr/palm/services/com.gathin.tvhome.renewal/state/home-control/.keep':b''}
 Path('dist/com.gathin.tvhome_9.8.7_all.ipk').write_bytes(ipk('com.gathin.tvhome','9.8.7',files))
 ''')
@@ -76,7 +80,8 @@ Path('dist/com.gathin.tvhome_9.8.7_all.ipk').write_bytes(ipk('com.gathin.tvhome'
                     'version': '9.8.7'}))
             (root/'renewal-service/state').mkdir()
             (root/'renewal-service/state/settings.json').write_text('PRIVATE')
-            shutil.copy(ROOT/'native/app/state-permissions.js', root/'native/app/state-permissions.js')
+            for name in ('state-permissions.js', 'contract-events.js'):
+                shutil.copy(ROOT/'native/app'/name, root/'native/app'/name)
             shutil.copy(ROOT/'native/service/app-inventory.js', root/'native/service/app-inventory.js')
             (root/'native/app/vendor').mkdir()
             (root/'bin').mkdir()
@@ -92,7 +97,8 @@ app = json.loads((Path(sys.argv[1])/'appinfo.json').read_text())
 helper = app['id'] == 'com.local.nativehome'
 files = {'usr/palm/applications/'+app['id']+'/state/.keep': b''}
 if helper:
-    assert (Path(sys.argv[2])/'state-permissions.js').read_bytes() == (Path(sys.argv[1])/'state-permissions.js').read_bytes()
+    for name in ('state-permissions.js', 'contract-events.js'):
+        assert (Path(sys.argv[2])/name).read_bytes() == (Path(sys.argv[1])/name).read_bytes()
     assert (Path(sys.argv[2])/'app-inventory.js').read_bytes() == (Path(sys.argv[1])/'app-inventory.js').read_bytes()
     files['usr/palm/services/com.local.nativehome.service/state/.keep'] = b''
 else:
@@ -140,6 +146,9 @@ arch = 'arm' if helper else 'all'
                 self.assertIn(b"require('./compat-runtime')", files[prefix+'service.js'])
                 if folder == 'renewal-service':
                     self.assertIn(prefix+'theme-receiver/core.js', files)
+                    self.assertIn(prefix+'weather.js', files)
+                    self.assertEqual(files[prefix+'ca-bundle.crt'], (ROOT/'renewal-service/ca-bundle.crt').read_bytes())
+                    self.assertEqual(files[prefix+'ca-LICENSE.txt'], (ROOT/'renewal-service/ca-LICENSE.txt').read_bytes())
                     self.assertEqual(files[prefix+'state/home-control/.keep'], b'')
 
     def test_home_archive_sets_only_the_two_owned_state_directories(self):

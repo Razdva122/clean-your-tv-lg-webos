@@ -79,6 +79,12 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
                 report['ssh_command'][key] = value
         recovery = root_recovery_details(getattr(error, 'root_recovery', None))
         if recovery: report['root_recovery'] = recovery
+        from .errors import root_driver_details
+        driver=root_driver_details(getattr(error,'root_driver',None))
+        if driver:report['root_driver']=driver
+    if hasattr(error, 'no_root_cleanup'):
+        from .errors import no_root_cleanup_details
+        report['no_root_cleanup'] = no_root_cleanup_details(error.no_root_cleanup)
     if hasattr(error, 'no_root_observer'):
         report['no_root_observer'] = getattr(error, 'no_root_observer')
     if hasattr(error, 'local_recovery'):
@@ -95,12 +101,45 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
             ('available_kib', 'required_kib', 'wam_session_kib') if getattr(safe, key) is not None})
     if error is not None:
         safe_error = context.failure_summary(report)
-        for key in ('luna', 'connection', 'ssh_command', 'python_cache', 'python_runtime', 'root_recovery', 'no_root_observer', 'local_recovery'):
+        for key in ('luna', 'connection', 'ssh_command', 'python_cache', 'python_runtime', 'root_recovery', 'root_driver', 'no_root_observer', 'no_root_cleanup', 'local_recovery'):
             if key in report:
                 report[key] = safe_error.get(key, {})
+    from .contract_events import merge_events
+    from .recovery_state import observation_diagnostics
+    report['contract_events'] = merge_events(getattr(error, 'contract_events', []),
+        getattr(store, 'contract_events', []), context.mapping(tv_info).get('contract_events', []),
+        observation_diagnostics(status))
+    report['contract_telemetry'] = context.choice(context.mapping(tv_info).get('contract_telemetry'),
+        ('read', 'legacy', 'unavailable'), 'unavailable')
     report.update(context.history(report, store, profile, error, removal or pending))
     if error is not None and action in ('recover', 'status', 'doctor'):
         report['observation_failure'] = context.failure_summary(report)
+    # One report-wide first-cause + recent window, including retained and optional
+    # observation records. History on disk retains its full original projection.
+    containers = [context.mapping(report.get('first_failure')),
+                  context.mapping(report.get('previous_attempt_failure')),
+                  *report.get('intermediate_failures', []), report,
+                  context.mapping(report.get('observation_failure'))]
+    # Reconcile counts only inside the current operation above. Retained records
+    # own their count/timestamps; equal violation identity is not equal evidence
+    # from another operation. Exact copies still occupy one exported location.
+    from .contract_events import export_events
+    selected = []
+    for item in containers:
+        for event in export_events(item.get('contract_events', [])):
+            if event not in selected:
+                selected.append(event)
+                while (len(selected) > 32 or
+                       len(json.dumps(selected, separators=(',', ':')).encode()) > 16200):
+                    del selected[1]
+    for item in containers:
+        if 'contract_events' not in item: continue
+        own = []
+        for event in item['contract_events']:
+            if event in selected:
+                own.append(event)
+                selected.remove(event)
+        item['contract_events'] = own
     path = store.root / 'reports' / ('diagnostic-' + uuid.uuid4().hex[:12] + '.json')
     private_write(path, json.dumps(report, indent=2).encode())
     return path

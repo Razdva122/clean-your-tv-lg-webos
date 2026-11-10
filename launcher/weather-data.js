@@ -6,6 +6,9 @@
   'use strict';
   var KEY = 'tvhome.weather.v1',
     FRESH = 15 * 60000,
+    MET_FRESH = 3 * 60 * 60000,
+    // Global MET models update every six hours; allow one missed model cycle.
+    MET_MODEL_AGE = 12 * 60 * 60000,
     MAX_AGE = 6 * 60 * 60000,
     RETRY = 5 * 60000,
     AUTO_AGE = 24 * 60 * 60000;
@@ -39,6 +42,8 @@
     };
     if (typeof input.id === 'number' && input.id > 0 && input.id % 1 === 0)
       out.id = input.id;
+    var zone = timezone(input.timezone);
+    if (zone) out.timezone = zone;
     return out;
   }
   function normalize(body, place) {
@@ -89,6 +94,183 @@
       time: text(c.time, 40) || '',
       timezone: text(body.timezone, 80) || 'UTC',
       offset: finite(body.utc_offset_seconds) || 0,
+      days: days
+    };
+  }
+  function timezone(value) {
+    if (
+      typeof value !== 'string' ||
+      value.length > 80 ||
+      !/^[A-Za-z_]+(?:\/[A-Za-z0-9_+\-]+)*$/.test(value)
+    )
+      return null;
+    try {
+      if (typeof Intl === 'undefined' || !Intl.DateTimeFormat) return null;
+      new Intl.DateTimeFormat('en-US', { timeZone: value }).format(new Date(0));
+      return value;
+    } catch (_) {
+      return null;
+    }
+  }
+  function calendarFormatter(zone) {
+    return zone !== 'UTC'
+      ? new Intl.DateTimeFormat('en-US', {
+          timeZone: zone,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        })
+      : null;
+  }
+  function calendarParts(formatter, ms) {
+    return formatter.format(new Date(ms)).match(/\d+/g);
+  }
+  function calendarOffset(formatter, ms) {
+    if (!formatter) return 0;
+    var parts = calendarParts(formatter, ms);
+    return (
+      (Date.UTC(
+        Number(parts[2]),
+        Number(parts[0]) - 1,
+        Number(parts[1]),
+        Number(parts[3]) % 24,
+        Number(parts[4]),
+        Number(parts[5])
+      ) -
+        Math.floor(ms / 1000) * 1000) /
+      1000
+    );
+  }
+  function metCode(symbol) {
+    var name = String(symbol || '').replace(/_(day|night|polartwilight)$/, ''),
+      simple = { clearsky: 0, fair: 1, partlycloudy: 2, cloudy: 3, fog: 45 };
+    if (Object.prototype.hasOwnProperty.call(simple, name)) return simple[name];
+    if (!/^(light|heavy)?(rain|sleet|snow)(showers)?(andthunder)?$/.test(name))
+      return null;
+    if (/thunder/.test(name)) return 95;
+    if (/snowshowers/.test(name)) return 85;
+    if (/snow/.test(name)) return 73;
+    if (/sleet/.test(name)) return 67;
+    if (/rainshowers/.test(name)) return 80;
+    return name === 'heavyrain' ? 65 : 61;
+  }
+  function metTime(value) {
+    if (
+      typeof value !== 'string' ||
+      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value)
+    )
+      throw Error('weather-invalid');
+    var ms = Date.parse(value);
+    if (
+      !isFinite(ms) ||
+      new Date(ms).toISOString().replace('.000Z', 'Z') !==
+        value.replace('.000Z', 'Z')
+    )
+      throw Error('weather-invalid');
+    return ms;
+  }
+  function normalizeMet(body, place, nowMs) {
+    var props = body && body.properties,
+      meta = props && props.meta,
+      units = meta && meta.units,
+      rows = props && props.timeseries,
+      updated = metTime(meta && meta.updated_at),
+      zone = timezone(place.timezone) || 'UTC';
+    if (
+      finite(nowMs) === null ||
+      !units ||
+      units.air_temperature !== 'celsius' ||
+      units.wind_speed !== 'm/s' ||
+      units.relative_humidity !== '%' ||
+      !isFinite(updated) ||
+      updated > nowMs ||
+      nowMs - updated > MET_MODEL_AGE ||
+      !Array.isArray(rows) ||
+      !rows.length
+    )
+      throw Error('weather-invalid');
+    var formatter = calendarFormatter(zone);
+    function dateKey(ms) {
+      if (!formatter) return new Date(ms).toISOString().slice(0, 10);
+      var parts = calendarParts(formatter, ms);
+      return parts[2] + '-' + parts[0] + '-' + parts[1];
+    }
+    var points = rows
+      .map(function (row) {
+        var ms = metTime(row && row.time),
+          data = row && row.data,
+          details = data && data.instant && data.instant.details,
+          summary =
+            data &&
+            ((data.next_1_hours && data.next_1_hours.summary) ||
+              (data.next_6_hours && data.next_6_hours.summary) ||
+              (data.next_12_hours && data.next_12_hours.summary)),
+          symbol = summary && summary.symbol_code;
+        if (
+          !isFinite(ms) ||
+          !details ||
+          bounded(details.air_temperature, -150, 150) === null ||
+          (details.wind_speed !== undefined &&
+            bounded(details.wind_speed, 0, 150) === null) ||
+          (details.relative_humidity !== undefined &&
+            bounded(details.relative_humidity, 0, 100) === null)
+        )
+          throw Error('weather-invalid');
+        return {
+          ms: ms,
+          temp: details.air_temperature,
+          wind: bounded(details.wind_speed, 0, 150),
+          humidity: bounded(details.relative_humidity, 0, 100),
+          code: metCode(symbol),
+          isDay: !/_night$/.test(symbol || '')
+        };
+      })
+      .sort(function (a, b) {
+        return a.ms - b.ms;
+      });
+    var current = points[0];
+    points.forEach(function (point) {
+      if (point.ms <= nowMs) current = point;
+    });
+    if (Math.abs(current.ms - nowMs) > MET_FRESH)
+      throw Error('weather-invalid');
+    // These are forecast ranges from supplied timestamped points, not observations.
+    var days = [],
+      today = dateKey(nowMs);
+    points.forEach(function (point) {
+      var date = dateKey(point.ms),
+        day = days[days.length - 1];
+      if (date < today) return;
+      if (!day || day.date !== date) {
+        if (days.length >= 4) return;
+        day = {
+          date: date,
+          low: point.temp,
+          high: point.temp,
+          code: point.code
+        };
+        days.push(day);
+      } else {
+        day.low = Math.min(day.low, point.temp);
+        day.high = Math.max(day.high, point.temp);
+      }
+    });
+    return {
+      city: place.name,
+      temp: current.temp,
+      feels: null,
+      wind: current.wind,
+      humidity: current.humidity,
+      precip: null,
+      code: current.code,
+      isDay: current.isDay,
+      time: new Date(current.ms).toISOString(),
+      timezone: zone,
+      offset: calendarOffset(formatter, nowMs),
       days: days
     };
   }
@@ -183,6 +365,13 @@
       saved = JSON.parse(storage.getItem(KEY) || '{}') || {};
     } catch (_) {}
     var model = {
+      provider:
+        ['auto', 'met-no', 'open-meteo'].indexOf(saved.provider) >= 0
+          ? saved.provider
+          : Object.keys(saved).length
+            ? 'open-meteo'
+            : 'auto',
+      source: null,
       enabled: saved.enabled === true,
       units: saved.units === 'imperial' ? 'imperial' : 'metric',
       preferred:
@@ -206,7 +395,13 @@
       searchGeneration = 0,
       retryAt = 0,
       listeners = [],
-      dead = false;
+      dead = false,
+      caches = {},
+      metAttempt = readMetAttempt(saved.metAttempt),
+      lastSource =
+        saved.lastSource === 'met-no' || saved.lastSource === 'open-meteo'
+          ? saved.lastSource
+          : null;
     function key() {
       return model.location
         ? model.location.latitude.toFixed(3) +
@@ -214,32 +409,91 @@
             model.location.longitude.toFixed(3)
         : '';
     }
+    function metKey(place) {
+      return place
+        ? String(Math.round(place.latitude * 10000) / 10000) +
+            ',' +
+            String(Math.round(place.longitude * 10000) / 10000)
+        : '';
+    }
+    function readMetAttempt(value) {
+      if (value === undefined || value === null) return null;
+      var parts = typeof value.key === 'string' ? value.key.split(',') : [],
+        place = { latitude: Number(parts[0]), longitude: Number(parts[1]) },
+        validKey =
+          parts.length === 2 &&
+          bounded(place.latitude, -90, 90) !== null &&
+          bounded(place.longitude, -180, 180) !== null &&
+          metKey(place) === value.key;
+      // Bad/future records impose one bounded cooldown, never an indefinite lockout.
+      return {
+        key: validKey ? value.key : metKey(model.location),
+        at: !validKey || bounded(value.at, 0, now()) === null ? now() : value.at
+      };
+    }
     function persist() {
       try {
         storage.setItem(
           KEY,
           JSON.stringify({
             version: 1,
+            provider: model.provider,
+            lastSource: lastSource,
+            metAttempt: metAttempt,
+            caches: caches,
             enabled: model.enabled,
             units: model.units,
             preferred: model.preferred,
             mode: model.mode,
             location: model.location,
             locationLanguage: locationLanguage,
-            autoUpdated: autoUpdated,
-            cache: model.data
-              ? { key: key(), updated: model.updated, data: model.data }
-              : null
+            autoUpdated: autoUpdated
           })
         );
       } catch (_) {}
+    }
+    function freshAge() {
+      return model.source === 'met-no' ? MET_FRESH : FRESH;
+    }
+    function useCache() {
+      var source =
+          model.provider === 'auto' ? lastSource || 'met-no' : model.provider,
+        cache = caches[source];
+      if (!cache && model.provider === 'auto') {
+        source = source === 'met-no' ? 'open-meteo' : 'met-no';
+        cache = caches[source];
+      }
+      model.data = null;
+      model.source = null;
+      model.updated = 0;
+      model.stale = false;
+      if (
+        cache &&
+        cache.key === key() &&
+        now() >= cache.updated &&
+        now() - cache.updated <= MAX_AGE
+      ) {
+        model.data = cache.data;
+        model.source = source;
+        model.updated = cache.updated;
+        model.stale = now() - cache.updated >= freshAge();
+      }
+      model.status = model.data
+        ? model.stale
+          ? 'stale'
+          : 'ready'
+        : model.location
+          ? 'loading'
+          : 'choose';
     }
     function expire() {
       if (
         model.data &&
         (now() - model.updated > MAX_AGE || now() < model.updated)
       ) {
+        if (model.source) delete caches[model.source];
         model.data = null;
+        model.source = null;
         model.stale = false;
         model.status = active ? 'loading' : model.location ? 'error' : 'choose';
         persist();
@@ -253,6 +507,13 @@
     }
     function state() {
       expire();
+      if (model.source === 'met-no' && model.data) {
+        // Cached forecasts can cross a DST change without needing a new request.
+        model.data.offset = calendarOffset(
+          calendarFormatter(timezone(model.data.timezone) || 'UTC'),
+          now()
+        );
+      }
       return JSON.parse(JSON.stringify(model));
     }
     function cancel() {
@@ -289,7 +550,7 @@
       if (
         model.data &&
         !model.stale &&
-        now() - model.updated < FRESH &&
+        now() - model.updated < freshAge() &&
         locationLanguage === language &&
         !force
       )
@@ -319,7 +580,8 @@
               latitude: Number(body.latitude),
               longitude: Number(body.longitude),
               country: body.country_code || body.country,
-              admin1: body.region
+              admin1: body.region,
+              timezone: body.timezone
             });
             if (!l) throw Error('weather-location');
             if (
@@ -328,6 +590,9 @@
             ) {
               model.data = null;
               model.updated = 0;
+              model.source = null;
+              caches = {};
+              lastSource = null;
             }
             model.location = l;
             autoUpdated = now();
@@ -354,6 +619,9 @@
               if (l && l.id === model.location.id) {
                 model.location = l;
                 if (model.data) model.data.city = l.name;
+                Object.keys(caches).forEach(function (source) {
+                  caches[source].data.city = l.name;
+                });
                 locationLanguage = language;
                 persist();
               }
@@ -368,31 +636,90 @@
             !force &&
             model.data &&
             !model.stale &&
-            now() - model.updated < FRESH
+            now() - model.updated < freshAge()
           )
             return null;
-          return fetch(
-            query('https://api.open-meteo.com/v1/forecast', {
-              latitude: model.location.latitude,
-              longitude: model.location.longitude,
-              current:
-                'temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m',
-              daily:
-                'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max',
-              wind_speed_unit: 'ms',
-              temperature_unit: 'celsius',
-              forecast_days: 4,
-              timezone: 'auto'
-            })
-          );
-        })
-        .then(function (body) {
-          if (token !== generation) return;
-          if (body) {
-            model.data = normalize(body, model.location);
-            model.updated = now();
-            model.stale = false;
+          var first =
+            model.provider === 'auto' ? lastSource || 'met-no' : model.provider;
+          function attempt(source, fallback) {
+            if (token !== generation) return Promise.resolve();
+            var cache = caches[source];
+            if (
+              (source === 'met-no' || !force || source !== first) &&
+              cache &&
+              cache.key === key() &&
+              now() >= cache.updated &&
+              now() - cache.updated < (source === 'met-no' ? MET_FRESH : FRESH)
+            ) {
+              model.data = cache.data;
+              model.source = source;
+              model.updated = cache.updated;
+              model.stale = false;
+              lastSource = source;
+              return Promise.resolve();
+            }
+            var operation = Promise.resolve()
+              .then(function () {
+                if (token !== generation) return;
+                if (source === 'met-no') {
+                  if (!env.metRequest) throw Error('weather-unavailable');
+                  if (
+                    metAttempt &&
+                    metAttempt.key === metKey(model.location) &&
+                    now() - metAttempt.at < MET_FRESH
+                  )
+                    throw Error('weather-cooldown');
+                  metAttempt = { key: metKey(model.location), at: now() };
+                  persist();
+                  active = env.metRequest(model.location);
+                  return active.promise;
+                }
+                return fetch(
+                  query('https://api.open-meteo.com/v1/forecast', {
+                    latitude: model.location.latitude,
+                    longitude: model.location.longitude,
+                    current:
+                      'temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m',
+                    daily:
+                      'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max',
+                    wind_speed_unit: 'ms',
+                    temperature_unit: 'celsius',
+                    forecast_days: 4,
+                    timezone: 'auto'
+                  })
+                );
+              })
+              .then(function (body) {
+                if (token !== generation) return;
+                var data =
+                  source === 'met-no'
+                    ? normalizeMet(body, model.location, now())
+                    : normalize(body, model.location);
+                model.data = data;
+                model.source = source;
+                model.updated = now();
+                model.stale = false;
+                lastSource = source;
+                caches[source] = {
+                  key: key(),
+                  updated: model.updated,
+                  data: data
+                };
+              });
+            return operation.catch(function (error) {
+              if (token !== generation) return;
+              if (fallback)
+                return attempt(
+                  source === 'met-no' ? 'open-meteo' : 'met-no',
+                  false
+                );
+              throw error;
+            });
           }
+          return attempt(first, model.provider === 'auto');
+        })
+        .then(function () {
+          if (token !== generation) return;
           model.status = 'ready';
           retryAt = 0;
           persist();
@@ -416,24 +743,27 @@
         });
     }
     function start() {
-      var cache = saved.cache;
-      if (
-        cache &&
-        model.location &&
-        cache.key === key() &&
-        finite(cache.updated) !== null &&
-        now() >= cache.updated &&
-        now() - cache.updated <= MAX_AGE &&
-        cache.data &&
-        finite(cache.data.temp) !== null &&
-        Array.isArray(cache.data.days)
-      ) {
+      ['met-no', 'open-meteo'].forEach(function (source) {
+        var cache = saved.caches && saved.caches[source];
+        if (!cache && source === 'open-meteo') cache = saved.cache;
+        if (
+          !cache ||
+          !model.location ||
+          cache.key !== key() ||
+          finite(cache.updated) === null ||
+          now() < cache.updated ||
+          now() - cache.updated > MAX_AGE ||
+          !cache.data ||
+          finite(cache.data.temp) === null ||
+          !Array.isArray(cache.data.days)
+        )
+          return;
         try {
           var data = cache.data,
             days = data.days.filter(function (day) {
               return day && typeof day === 'object';
             });
-          model.data = normalize(
+          var sanitized = normalize(
             {
               current: {
                 temperature_2m: data.temp,
@@ -464,13 +794,15 @@
             },
             model.location
           );
-        } catch (_) {
-          return refresh();
-        }
-        model.updated = cache.updated;
-        model.stale = now() - cache.updated >= FRESH;
-        model.status = model.stale ? 'stale' : 'ready';
-      }
+          caches[source] = {
+            key: key(),
+            updated: cache.updated,
+            data: sanitized
+          };
+        } catch (_) {}
+      });
+      useCache();
+      persist();
       return refresh();
     }
     function setPreferences(next) {
@@ -479,14 +811,22 @@
         if (
           (k === 'enabled' && typeof next[k] === 'boolean') ||
           (k === 'units' && ['metric', 'imperial'].indexOf(next[k]) >= 0) ||
-          (k === 'preferred' && formats.indexOf(next[k]) >= 0)
+          (k === 'preferred' && formats.indexOf(next[k]) >= 0) ||
+          (k === 'provider' &&
+            ['auto', 'met-no', 'open-meteo'].indexOf(next[k]) >= 0)
         )
           return;
         else throw Error('weather-preferences');
       });
+      var changed = next.provider && next.provider !== model.provider;
+      if (changed) cancel();
       Object.keys(next).forEach(function (k) {
         model[k] = next[k];
       });
+      if (changed) {
+        retryAt = 0;
+        useCache();
+      }
       if (!model.enabled) cancel();
       persist();
       emit();
@@ -513,6 +853,9 @@
       if (model.mode === value) return;
       cancel();
       model.mode = value;
+      caches = {};
+      lastSource = null;
+      model.source = null;
       model.location = null;
       model.data = null;
       model.updated = 0;
@@ -574,7 +917,12 @@
       if (!l) return;
       cancel();
       model.mode = 'manual';
+      if (key() !== l.latitude.toFixed(3) + ',' + l.longitude.toFixed(3)) {
+        caches = {};
+        lastSource = null;
+      }
       model.location = l;
+      model.source = null;
       model.data = null;
       model.updated = 0;
       model.results = [];
@@ -611,6 +959,9 @@
       clear: function () {
         cancel();
         storage.removeItem(KEY);
+        caches = {};
+        lastSource = null;
+        model.source = null;
         model.enabled = false;
         model.location = null;
         model.data = null;
@@ -650,6 +1001,7 @@
   return {
     create: create,
     normalize: normalize,
+    normalizeMet: normalizeMet,
     condition: condition,
     example: example,
     key: KEY,

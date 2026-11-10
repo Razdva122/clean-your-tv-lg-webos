@@ -9,7 +9,9 @@ const source = fs.readFileSync(
   'utf8'
 );
 function fixture(options = {}) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cytv-owners-')),
+  const root = fs.realpathSync(
+      fs.mkdtempSync(path.join(os.tmpdir(), 'cytv-owners-'))
+    ),
     state = path.join(root, 'state'),
     key = path.join(state, 'ssap-key.json');
   fs.mkdirSync(state, 0o775);
@@ -32,7 +34,9 @@ function fixture(options = {}) {
     fds = new Map();
   // macOS may clear setgid; retain the modeled webOS bits until chmod succeeds.
   const specialBits = new Map([[state, (options.directoryMode || 0) & 0o7000]]);
-  let actor = 5367;
+  let actor = 5367,
+    cwd = root;
+  const resolve = (p) => path.resolve(cwd, p);
   const primaryGroup = options.primaryGroup || 5000;
   const denied = () => Object.assign(Error('denied'), { code: 'EPERM' });
   function stat(p, s) {
@@ -44,7 +48,10 @@ function fixture(options = {}) {
   }
   const io = Object.assign({}, fs, {
     openSync(p, ...args) {
+      p = resolve(p);
+      const existed = fs.existsSync(p);
       const fd = fs.openSync(p, ...args);
+      if (!existed) owners.set(p, { uid: actor, gid: primaryGroup });
       fds.set(fd, p);
       return fd;
     },
@@ -56,7 +63,23 @@ function fixture(options = {}) {
       return stat(fds.get(fd), fs.fstatSync(fd));
     },
     lstatSync(p) {
+      p = resolve(p);
       return stat(p, fs.lstatSync(p));
+    },
+    statSync(p) {
+      p = resolve(p);
+      return stat(p, fs.statSync(p));
+    },
+    unlinkSync(p) {
+      p = resolve(p);
+      fs.unlinkSync(p);
+      owners.delete(p);
+    },
+    linkSync(from, to) {
+      from = resolve(from);
+      to = resolve(to);
+      fs.linkSync(from, to);
+      owners.set(to, owners.get(from));
     },
     fchmodSync(fd, mode) {
       if (io.fstatSync(fd).uid !== actor) throw denied();
@@ -91,6 +114,8 @@ function fixture(options = {}) {
       }
     },
     renameSync(from, to) {
+      from = resolve(from);
+      to = resolve(to);
       if (options.renameFailure)
         throw Object.assign(denied(), { code: options.renameCode || 'EPERM' });
       fs.renameSync(from, to);
@@ -102,19 +127,35 @@ function fixture(options = {}) {
     module: { exports: {} },
     Buffer,
     process: {
+      cwd: () => cwd,
+      chdir: (p) => {
+        cwd = resolve(p);
+      },
       getuid: () => actor,
       getgid: () => primaryGroup,
       getgroups: () => [5000, primaryGroup]
     },
-    require: (n) => (n === 'fs' ? io : require(n))
+    require: (n) => {
+      if (n === 'fs') return io;
+      if (n === './contract-events') return events;
+      return require(n);
+    }
   };
-  vm.runInNewContext(source, sandbox);
+  const context = vm.createContext(sandbox);
+  vm.runInContext(
+    fs.readFileSync(require.resolve('../app/contract-events'), 'utf8'),
+    context
+  );
+  const events = sandbox.module.exports;
+  sandbox.module = { exports: {} };
+  vm.runInContext(source, context);
   const logs = [];
   return {
     state,
     key,
     owners,
     logs,
+    permissions: sandbox.module.exports,
     run(uid = 5367, initializeControl = false) {
       actor = uid;
       return sandbox.module.exports(
@@ -223,7 +264,15 @@ test(
       f.logs.filter(
         (x) =>
           x.event === 'state-permissions-warning' &&
-          x.reason === 'expanded-directory-mode'
+          x.reason === 'unsafe-storage' &&
+          x.target === 'directory' &&
+          x.contract.field === 'directory' &&
+          x.contract.expected === 'safe-mode' &&
+          x.contract.actual.category === 'unsafe' &&
+          x.contract.actual.mode === 0o777 &&
+          x.contract.actual.uid === 5999 &&
+          x.contract.actual.gid === 5000 &&
+          x.contract.decision === 'retain'
       ).length,
       1
     );
@@ -291,7 +340,7 @@ for (const mode of [0o775, 0o777])
       const context = {
         module: { exports: {} },
         require(n) {
-          if (n === './state-permissions') return () => f.run();
+          if (n === './state-permissions') return f.permissions;
           if (n === 'os')
             return {
               networkInterfaces: () => ({

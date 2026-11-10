@@ -89,6 +89,37 @@ or authorize package preparation. Only the validated version and fixed status
 are exported; raw command output, stderr and exception text are excluded.
 No new TV installation, configuration, permission or endpoint is introduced.
 
+## Root driver install failures (source preparation, #397)
+
+A new optional `root_driver` object retains the bounded exception category,
+`errno`/child `exit_status` when available, and up to eight fixed project source
+basenames with numeric line numbers. It identifies driver callsites, not a
+successful installation, a confirmed cause on another TV or recovery authority.
+
+The device entrypoint emits this envelope only for an install with a valid
+host-provided attempt nonce. Failed SSH commands still raise their original
+`TVCommandError`; only a complete failure JSON response of at most 4096 bytes is
+considered. The host filters it, requires the current install attempt and drops
+the nonce before report/first-failure/history export. Report projection filters
+all fields again. Raw exception messages, stdout/stderr, commands, full paths,
+identities and unknown fields are excluded. Unknown, oversized, malformed or
+mismatched responses retain the existing generic failure. No command is replayed,
+no receipt is cleared and no extra TV request or state file is introduced.
+
+This covers exceptions caught by the driver entrypoint, including device, Node,
+bundle and native-admission checks. Module imports before the entrypoint,
+argument-parser exits and failures that never deliver a complete envelope can
+remain generic. Rebuilt Root support and embedding desktop/console/Android
+installers are required. Existing installation guards and runtime behavior are
+unchanged; diagnostic metadata is never recovery permission.
+
+Old reports cannot recover discarded output. For #397, the saved report proves
+inventory readback succeeded and the install command returned exit 1, but does
+not identify which device-side check failed. A normal status report from the
+saved connection can add the retained deployment stage without repeating setup;
+it may still lack the original exception. Do not repeat installation just to
+populate this field. Preserve the original pending operation and recovery data.
+
 ## Network connection causes
 
 During `ssh-connect`, inspect typed socket errors, including the values of
@@ -544,3 +575,40 @@ populate a report. A new report may describe a later observation failure while
 the original cause remains unknown. Neither these categories nor the portable
 launch establish recovery or compatibility on the reporting device. See the
 [source verification record](../history/2026-11-07-no-root-observer-evidence.md).
+
+
+### Shared contract context
+
+See the [shared contract reference](SHARED-CONTRACTS.md) for implemented APIs and
+authority boundaries, and the [dated verification ledger](../history/2026-11-10-shared-contracts.md) for host evidence and acceptance limits.
+
+Standard reports include fixed `contract_events` for shared storage refusals,
+Helper power/relay/cleanup outcomes and malformed recovery observations. Each
+records the component, operation, phase, field, expected rule, safe actual
+metadata and decision. Storage metadata can include numeric UID/GID, mode,
+size/limit and errno; unknown payloads expose type/length only. Identifiers at
+remote and persisted export boundaries must belong to the concrete producer
+vocabulary. Arbitrary identifiers, paths, credentials, exception messages,
+application inventories and raw log lines cannot cross that boundary.
+
+The operation recorder is bound/reset with the normal operation context. The
+first failed operation's diagnostic ID retains its original bounded cause;
+later status or optional collection failures cannot replace it. Reports share
+one first-cause/recent-context window across current and retained records:
+at most 32 events/16 KiB of compact event projection, each at most 512 bytes.
+Duplicate copies of the same envelope occupy one exported location. Repeated
+runtime observations retain bounded counts in contract snapshots.
+
+An already authorized No-root status/read probe streams host-owned canonical
+support to read only checked `controller.log` and `controller.log.previous`,
+limited to 128 KiB each. Ordinary logger appends pin/compare a no-follow
+file descriptor; rotation uses the existing checked staging/rename rules.
+The collector returns only the safe projection. `contract_telemetry` is `read`,
+`legacy` (no instrumented evidence), or `unavailable`; none means that device
+acceptance passed. Failed log writes cannot hold cleanup or replace the
+operation failure. Unwritable storage cannot retain new telemetry.
+
+Creating or saving a report uses local evidence only. It never starts Helper,
+repairs storage, adds a permission/endpoint or repeats a TV test. Desktop and
+Android export the same bounded standard report. Diagnostics remain advisory;
+existing storage, lifecycle and recovery proofs still authorize every effect.

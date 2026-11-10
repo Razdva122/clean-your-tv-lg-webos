@@ -186,3 +186,4 @@ function register(service, options) {
 }
 module.exports = register;
 module.exports.register = register;
+module.exports.activityHold = activityHold;
