@@ -130,13 +130,14 @@ class KeyfilterGuardTests(unittest.TestCase):
 #endif
 #include <string.h>
 #include <stdio.h>
+#include <unistd.h>
 static unsigned owner=1001;
 static int immutable=1, readonly_fs=1;
 static int attr(int fd, struct stat *s) {
   int r=fstat(fd,s); if(!r) s->st_uid=owner; return r;
 }
 static int lattr(const char *p, struct stat *s) {
-  int r=lstat(p,s); if(!r && strstr(p,"/home")) s->st_uid=owner; return r;
+  int r=lstat(p,s); if(!r) s->st_uid=!strcmp(p,FIXTURE_ROOT "/home") ? owner:0; return r;
 }
 static int fixture_vfs(int fd, struct statvfs *s) {
   int r=fstatvfs(fd,s); if(!r) s->f_flag=readonly_fs ? ST_RDONLY:0; return r;
@@ -150,6 +151,8 @@ static int fixture_fs(int fd, struct statfs *s) {
 #endif
   return 0;
 }
+// Model production root even when the CI runner itself has UID 1001.
+#define getuid() ((uid_t)0)
 #define fstat(fd,s) attr(fd,s)
 #define lstat(p,s) lattr(p,s)
 #define fstatfs(fd,s) fixture_fs(fd,s)
