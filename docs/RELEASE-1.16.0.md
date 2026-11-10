@@ -54,7 +54,11 @@ network endpoint is introduced.
 Implementation CI and focused integration checks are linked in #475.
 Pre-dispatch payload construction and all-variant version checks passed;
 published baseline hashes and both signed system feeds were authenticated.
-Complete frozen-candidate CI and final artifact checks remain pending.
+[Final full candidate42783898383:1](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42783898383)
+passes all23 jobs on source `fa2abc9d`. Exact macOS ARM64 CLI payload/runtime
+and original-signer production APK checks pass; all601 payload entries match
+focused package preflight. The selected build is pinned in release-plan.json.
+These host checks do not complete device acceptance or authorize publication.
 
 No TV operation or new hardware acceptance is performed for this preparation.
 Home routing, audible sound, emergency controls, standby, cold boot, OTA,
