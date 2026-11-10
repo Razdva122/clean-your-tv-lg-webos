@@ -50,7 +50,10 @@ unchanged release results are not rerun for a new branch.
 - Host capability tests: 18 passed. Compositor runtime suite: 33 passed. Related
   C1/runtime/bundle/recovery tests: 82 passed.
 - Native guardian suite: 41 passed after fixture/minimum-size alignment.
-- Installer/Android/setup dependency profiles: running; final result pending.
+- `scripts/test.sh installer android setup`: passed, including 1,253 installer
+  cases (seven expected skips), 290 setup cases, 44 Android cases and the selected
+  Homebrew checks. The final additional host-shell fixture was also run in the
+  focused host suite; no unchanged full dependency pass was repeated.
 - Zig 0.14.1 ARM32 Linux static compile passed after the minimum-size alignment.
   The binary is a development compile only.
 - Final Python 3.9 grammar, formatting and whitespace checks passed.
@@ -72,3 +75,39 @@ installation/catalog/Home/buttons/audio/standby/cold-boot/update/rollback outcom
 on a corrected final artifact remain untested. No additional reporter commands
 are needed during implementation. Keep #454 open for published-installer
 confirmation; integration alone must not mark the original report fixed.
+
+## Integration and final CI
+
+[PR #492](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/492) merged
+as `023ea5ec`; GitHub completed the requested auto-merge after integration policy
+passed while the complete Tests run was still running. The task stayed active
+until that run and the corrective run were reconciled. Its product sources match
+`39a7bc3b`; unrelated v1.16.0 publication documentation was preserved.
+
+[Initial Tests42826518027](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42826518027)
+completed with one test failure in Linux shard3. The CI runner itself has UID1001,
+so the original fixture's `TRUST_UID=getuid()` treated the simulated vendor owner
+as trusted root and skipped the immutable-filesystem branch. All other runtime,
+ARM Python and browser checks passed; both summary jobs reflected the failed unit.
+This was a test-harness collision, not a production bypass: production `TRUST_UID`
+remained0. The fixture now models root0 explicitly and maps only its exact Home
+leaf to UID1001, including on `/home/runner` paths.
+
+[PR #494](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/494) contains
+only that fixture correction and merged as `c06b39ee` after
+[Tests42828196677](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42828196677)
+completed successfully. All eight Linux/macOS runtime shards, both OS summaries,
+ARM Python, browser and both phone-HEIC jobs passed. The optional full-release
+job was correctly skipped outside a frozen candidate. The corrected local
+41-case guardian suite and independent read-only review also passed. No product
+source changed for the fixture correction; successful unchanged source/ARM
+compile and dependency evidence above remains applicable. No new full RC or TV
+operation was launched to repair this test failure.
+
+Both merged PRs and #454 are collected into the unfrozen
+[next-candidate #491](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/491).
+Version selection, final installer/support packaging, trusted candidate build,
+matching scoped device acceptance and public delivery remain with that release.
+The source integration does not confirm the reporter's original catalog failure
+or completed installation. #454 stays open awaiting the corrected public release
+and its reporter-device confirmation.
