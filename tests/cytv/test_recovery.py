@@ -93,7 +93,7 @@ class RecoveryTests(unittest.TestCase):
         self.profile = state.target('192.0.2.10', 'root')
         self.store.begin(self.profile, 'install')
         self.installer.profile = self.profile
-        self.installer.observe_recovery.return_value = {'can_resume_root_setup': True}
+        self.installer.observe_recovery.return_value = {'can_resume_root_setup': True, 'device': {'result': {}}}
         self.run_recovery(['y', ''])
         self.installer.resume_root_setup.assert_not_called()
         self.run_recovery(['y', '1', 'y'])
