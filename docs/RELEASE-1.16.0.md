@@ -63,6 +63,9 @@ These host checks do not complete device acceptance or authorize publication.
 No TV operation or new hardware acceptance is performed for this preparation.
 Home routing, audible sound, emergency controls, standby, cold boot, OTA,
 rollback, physical iPhone decoding and live phone-to-TV remain untested on new
-artifacts. Final original-signer Android upgrade and retained-state checks remain
-a publication gate. Browser tests do not establish device compatibility.
+artifacts. Exact original-signer Android code30→31 upgrade, four retained
+synthetic files, real Store/native checks and idle lifecycle passed on an
+isolated API35 ARM64 emulator. Data-only OTA/current/rollback closure passed
+for both editions/resolutions. Protected Root-only QA signing and pinned-key
+verification passed; no public release or No-root signing approval is implied. Browser tests do not establish device compatibility.
 Original reports #418, #101, #397 and #472 remain open and unresolved.
