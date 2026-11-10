@@ -71,11 +71,11 @@ Additional interface details for implementation:
 - Packaging changes include app/service copies of contract-events alongside the
   existing state-permissions copy. Keep source/runtime fixture closures aligned.
 
-- [ ] Add literal vectors for invalid type/enum/mode/size and hostile nested values; prove raw markers are absent.
-- [ ] Verify events remain bounded under repeats/flood and failed emitters preserve original outcomes.
-- [ ] Implement exact-builtin summaries, identifier validation, bounded recorder and trusted resource loader.
-- [ ] Include allowlisted canonical resources in frozen CLI/desktop and Android; fail clearly when packaged source is missing.
-- [ ] Run event parity tests on configured legacy runtimes and resource/build/Android fixtures.
+- [x] Add literal vectors for invalid type/enum/mode/size and hostile nested values; prove raw markers are absent.
+- [x] Verify events remain bounded under repeats/flood and failed emitters preserve original outcomes.
+- [x] Implement exact-builtin summaries, identifier validation, bounded recorder and trusted resource loader.
+- [x] Include allowlisted canonical resources in frozen CLI/desktop and Android; fail clearly when packaged source is missing.
+- [x] Run event parity tests on configured legacy runtimes and resource/build/Android fixtures.
 
 ## Task 2: canonical storage operations
 
@@ -91,13 +91,13 @@ prepare.requestStop(directory, options);
 prepare.atomicRecord(directory, kind, bytes, options);
 ```
 
-- [ ] Add failing role-cycle tests: installer A, runtime B, normalized modes, A continuation; no package replay and unchanged latch bytes.
-- [ ] Add foreign apps refusal before key mutation, group/type/link/size/substitution cases and explicit read-only checks.
-- [ ] Extract checked directory/inode/staging primitives from existing code; use named file classes rather than arbitrary paths.
-- [ ] Keep runtime call signature; make apps.json runtime read-only; preserve current key adoption and exact-hash installer reclamation.
-- [ ] Replace only STATE_CHECK/helper_stop outer adapters with trusted source calls. Compare immutable PROGRAM/ROOT_PROGRAM bytes to base.
-- [ ] Wire existing Stop fallback through the shared writer; preserve actual process-quiescence checks.
-- [ ] Run affected permission, continuation, Stop and exact-source packaging tests.
+- [x] Add failing role-cycle tests: installer A, runtime B, normalized modes, A continuation; no package replay and unchanged latch bytes.
+- [x] Add foreign apps refusal before key mutation, group/type/link/size/substitution cases and explicit read-only checks.
+- [x] Extract checked directory/inode/staging primitives from existing code; use named file classes rather than arbitrary paths.
+- [x] Keep runtime call signature; make apps.json runtime read-only; preserve current key adoption and exact-hash installer reclamation.
+- [x] Replace only STATE_CHECK/helper_stop outer adapters with trusted source calls. Compare immutable PROGRAM/ROOT_PROGRAM bytes to base.
+- [x] Wire existing Stop fallback through the shared writer; preserve actual process-quiescence checks.
+- [x] Run affected permission, continuation, Stop and exact-source packaging tests.
 
 ## Task 3: lifecycle decision extraction
 
@@ -109,12 +109,12 @@ policy.classifyExit(snapshot); // terminal | retry-watchdog | wait-power + effec
 power.observe(payload, now);  // normalized current power facts + diagnostics
 ```
 
-- [ ] Characterize OS/reported mismatch, signal/Stop/latches, budget, source25 and confirmed32 with literal expected outcomes.
-- [ ] Add valid firmware processing-string cases and malformed/unknown values; no Boolean-only assumption.
-- [ ] Move classification into existing policies; workerClosed/finish execute one decision, while restart rechecks current latches.
-- [ ] Consolidate C T/R update helper without changing Q/D/E or pre-grab failure semantics.
-- [ ] Emit safe diagnostics for unexpected combinations, retaining original OS and relay values.
-- [ ] Run source/compiled Helper, power, watchdog, key-up/startup/IR and legacy runtime checks affected by this extraction.
+- [x] Characterize OS/reported mismatch, signal/Stop/latches, budget, source25 and confirmed32 with literal expected outcomes.
+- [x] Add valid firmware processing-string cases and malformed/unknown values; no Boolean-only assumption.
+- [x] Move classification into existing policies; workerClosed/finish execute one decision, while restart rechecks current latches.
+- [x] Consolidate C T/R update helper without changing Q/D/E or pre-grab failure semantics.
+- [x] Emit safe diagnostics for unexpected combinations, retaining original OS and relay values.
+- [x] Run source/compiled Helper, power, watchdog, key-up/startup/IR and legacy runtime checks affected by this extraction.
 
 ## Task 4: one recovery action projection
 
@@ -124,24 +124,24 @@ Files: cytv/recovery_state.py, recovery.py, recovery_ui.py; state/journey/UI tes
 def setup_actions(profile, pending, observation): ...
 ```
 
-- [ ] Add cases where raw setup flags disagree with a blocked/foreign assessment; no action may bypass the assessment.
-- [ ] Add saved terminal removal versus currently verified completion cases; no success from saved journal alone.
-- [ ] Reuse a pure action projection for assess and recovery choices; preserve existing public return shape and action names.
-- [ ] Keep all Installer proof readers and confirmation-time revalidation unchanged.
-- [ ] Add fixed unexpected-observation diagnostics and test CLI/desktop/Android action consistency.
-- [ ] Run recovery state, journey, UI and affected installer integration tests.
+- [x] Add cases where raw setup flags disagree with a blocked/foreign assessment; no action may bypass the assessment.
+- [x] Add saved terminal removal versus currently verified completion cases; no success from saved journal alone.
+- [x] Reuse a pure action projection for assess and recovery choices; preserve existing public return shape and action names.
+- [x] Keep all Installer proof readers and confirmation-time revalidation unchanged.
+- [x] Add fixed unexpected-observation diagnostics and test CLI/desktop/Android action consistency.
+- [x] Run recovery state, journey, UI and affected installer integration tests.
 
 ## Task 5: standard-report end-to-end context
 
 Files: cytv/transport.py, diagnostics.py, diagnostic_context.py, errors.py,
 operations.py bounded runtime projection; native log/collector integration.
 
-- [ ] Add a transport fixture with a fixed contract-error envelope; reject malformed/oversized/private additions.
-- [ ] Retain error_type/exit_status and attach only safe contract events.
-- [ ] Include bounded events in operation context, first_failure and standard report; later status failure cannot replace the first cause.
-- [ ] Read only safe bounded runtime events using trusted support; record legacy/unavailable telemetry explicitly.
-- [ ] Verify repeated logs, failed writes, unavailable telemetry, unknown field types and private-data marker exclusion.
-- [ ] Run report/context/transport plus desktop and Android export cases.
+- [x] Add a transport fixture with a fixed contract-error envelope; reject malformed/oversized/private additions.
+- [x] Retain error_type/exit_status and attach only safe contract events.
+- [x] Include bounded events in operation context, first_failure and standard report; later status failure cannot replace the first cause.
+- [x] Read only safe bounded runtime events using trusted support; record legacy/unavailable telemetry explicitly.
+- [x] Verify repeated logs, failed writes, unavailable telemetry, unknown field types and private-data marker exclusion.
+- [x] Run report/context/transport plus desktop and Android export cases.
 
 ## Task 6: combined verification and review
 

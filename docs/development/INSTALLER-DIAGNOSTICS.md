@@ -579,6 +579,9 @@ launch establish recovery or compatibility on the reporting device. See the
 
 ### Shared contract context
 
+See the [shared contract reference](SHARED-CONTRACTS.md) for implemented APIs and
+authority boundaries, and the [dated verification ledger](../history/2026-11-10-shared-contracts.md) for host evidence and acceptance limits.
+
 Standard reports include fixed `contract_events` for shared storage refusals,
 Helper power/relay/cleanup outcomes and malformed recovery observations. Each
 records the component, operation, phase, field, expected rule, safe actual
