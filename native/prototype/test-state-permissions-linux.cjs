@@ -15,6 +15,10 @@ if (process.platform !== 'linux' || process.getuid() !== 0) {
   const modulePath = require.resolve('../app/state-permissions');
   // Copy the runtime to a traversable temporary directory, independent of checkout permissions.
   fs.copyFileSync(modulePath, path.join(root, 'state-permissions.js'));
+  fs.copyFileSync(
+    require.resolve('../app/contract-events'),
+    path.join(root, 'contract-events.js')
+  );
   fs.chmodSync(root, 0o755);
   function run(uid, script, primary = 5000) {
     const result = cp.spawnSync(

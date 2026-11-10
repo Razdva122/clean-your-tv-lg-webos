@@ -140,3 +140,26 @@ are unchanged; focused storage/direct legacy evidence covers the changed source.
 signing or TV operation was repeated. Linux execution and the new selected-CI
 pass remain integration evidence, not claimed here. Device fields and acceptance
 limits remain as stated above; this is development evidence, not delivery.
+
+## Remaining ordered fixture closure
+
+The next selected CI pass reached the basic ownership fixture and the separate
+Linux root multi-UID gate. Their failures were fixture assumptions: a macOS
+temporary-path alias, an obsolete expectation that runtime chmods `apps.json`,
+and staging the storage module without its canonical event dependency.
+
+The basic fixture now uses the resolved directory and checks that `apps.json`
+retains its original mode/content. Its final permission-denial case resets the
+previous directory-shaped key to a valid file, loads actual builtins and
+same-realm canonical events, and verifies real directory/key/staging chmod
+attempts, typed retained/refused outcomes, unchanged key inode/owner/content/mode
+and removal of staging files. Existing missing-file, unsafe path/type and privacy
+checks remain. The Linux fixture stages both canonical files and retains all
+real multi-UID, group, SGID, reconfiguration and Stop latch assertions.
+
+Focused macOS results: basic fixture passed; all 27 modeled owner cases passed;
+Prettier and whitespace checks passed. The real Linux root gate remains required
+CI evidence; no macOS skip is counted as a pass. The remaining ordered prototype
+suffix is `test-stop-io.cjs`, then `test-stop-journal.cjs`; their independent source,
+compiler and fixture inputs are unchanged, so matching prior Stop/C evidence is
+reused. No product source, dependency, version or TV state changed in this followup.
