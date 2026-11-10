@@ -11,7 +11,8 @@ async function run(engine) {
   const browser = await engine.launch({ headless: true });
   try {
     const page = await browser.newPage({
-      viewport: { width: 390, height: 844 }
+      viewport: { width: 390, height: 844 },
+      locale: 'en-US'
     });
     const origin = 'http://127.0.0.1:' + session.port;
     const requests = [];
