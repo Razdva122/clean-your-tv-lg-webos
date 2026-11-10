@@ -68,6 +68,7 @@ tasks.register('stageCytv', Exec) {
     inputs.file rootProject.file('stage.py')
     inputs.file rootProject.file('../native/app/state-permissions.js')
     inputs.file rootProject.file('../native/app/contract-events.js')
+    inputs.file rootProject.file('../native/contracts/boot-proof.js')
     inputs.file rootProject.file('../lgtv.py')
     inputs.file rootProject.file('../release-versions.json')
     inputs.property('sourceCommit', providers.exec {

@@ -117,6 +117,10 @@ unfinished old work. Pending final verification is shown as remaining cleanup;
 a connection interruption and an actual package-removal refusal have separate
 results. Pending cleanup never appears as verified success.
 
+If the installer cannot verify a requested full restart, save and attach its
+diagnostic report and keep the saved connection and recovery data. Do not keep
+repeating power cycles or clear the unfinished operation manually.
+
 If the connection is interrupted, check it and select **Try again**. Existing
 installation history remains available; an old generic failure is not assigned
 an invented cause. If the OS denies access, use the requested Root connection.

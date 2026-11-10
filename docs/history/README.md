@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [2026-11-11 — Developer Mode removal restart proof (#472)](2026-11-11-issue472-devmode-boot-proof.md): restricted `/tmp` handling, centralized boot evidence and explicit same-ID limit; device confirmation pending.
+
 - [Website candidate integration, 2026-11-11](2026-11-11-website-candidate-integration.md): redesigned multilingual landing, animated previews and SEO articles; focused CI passed.
 
 - [2026-11-10 — Shared contracts development verification](2026-11-10-shared-contracts.md): source/resource integrity, focused host evidence and remaining release/device gates.

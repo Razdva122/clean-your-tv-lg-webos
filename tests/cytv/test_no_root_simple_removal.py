@@ -43,9 +43,10 @@ class Remote:
         volatile=self.root/'volatile';volatile.mkdir(exist_ok=True);volatile.chmod(getattr(self,'volatile_mode',0o1777))
         code=code.replace('/tmp/.cytv-installer',str(volatile/'.cytv-installer'))
         code=code.replace("'/.cytv-installer'",json.dumps(str(self.root/'jail-private')))
-        code=code.replace('function ancestry(p){',
-            'var hostLstat=fs.lstatSync;fs.lstatSync=function(p){var s=hostLstat(p);if(p==='+json.dumps(str(volatile))+')s.uid=0;return s;};\nfunction ancestry(p){')
-        code=code.replace("var bootRoot='/tmp';",'var bootRoot='+json.dumps(str(volatile))+';var bootLstat=fs.lstatSync;fs.lstatSync=function(p){var s=bootLstat(p);if(path.resolve(p)===bootRoot)s.uid=0;return s;};')
+        code=code.replace("'/tmp'",json.dumps(str(volatile)))
+        code=('var fixtureFs=require("fs"),fixturePath=require("path"),fixtureLstat=fixtureFs.lstatSync;'
+              'fixtureFs.lstatSync=function(p){var s=fixtureLstat(p);if(fixturePath.resolve(p)==='
+              +json.dumps(str(volatile))+')s.uid=0;return s;};\n')+code
         (self.root/'boot').write_text(self.boot)
         node=os.environ.get('NODE_EXEC') or shutil.which('node')
         result=subprocess.run([node] if stdin else [node,'-e',self.transform(code),words[-1]],
@@ -407,6 +408,75 @@ class SimpleRemoval(unittest.TestCase):
     def boot_marker(self):
         goal=self.store.pending(self.profile)['removal_operation']
         return self.root/'volatile'/('cytv-removal-'+goal+'.boot')
+
+    def test_restricted_tmp_completes_process_verified_removal_without_marker(self):
+        self.remote.volatile_mode=0o111
+        (self.root/'proc').mkdir()
+        self.remote.apps=set(self.cleanup.APPS)
+        self.own_file('apps/usr/palm/applications/com.local.nativehome/state/ssap-key.json')
+        try:result=self.remove()
+        except UserError as error:self.fail('Known Developer Mode tmp layout blocked removal: '+str(error))
+        self.assertTrue(result['verified_clean'])
+        self.assertFalse(self.remote.apps)
+        self.assertFalse(list((self.root/'volatile').glob('cytv-removal-*')))
+        self.assertEqual((self.root/'volatile').stat().st_mode&0o7777,0o111)
+
+    def test_restricted_tmp_keeps_unresolved_install_until_changed_kernel(self):
+        self.remote.volatile_mode=0o111
+        (self.root/'proc').mkdir()
+        self.store.begin(self.profile,'install',stage='submitted')
+        try:self.assertTrue(self.remove()['restart_required'])
+        except UserError as error:self.fail('Could not capture kernel-only baseline: '+str(error))
+        pending=self.store.pending(self.profile)
+        self.assertEqual(pending['cleanup_boot_proof'],{'schema':2,'kind':'kernel-only',
+            'goal':pending['removal_operation'],'kernel':self.remote.boot})
+        self.assertIsNone(pending.get('cleanup_boot_id'),'No-root kernel identity must have one current storage location')
+        with self.assertRaises(UserError) as caught:self.remove()
+        self.assertEqual(caught.exception.no_root_cleanup['reason'],'kernel-boot-unchanged')
+        self.assertIsNotNone(self.store.pending(self.profile))
+        self.remote.boot='22222222-2222-2222-2222-222222222222'
+        self.assertTrue(self.remove()['verified_clean'])
+
+    def test_restricted_tmp_lost_capture_and_saved_restart_recheck_processes(self):
+        from unittest.mock import patch
+        self.remote.volatile_mode=0o111
+        (self.root/'proc').mkdir()
+        self.store.begin(self.profile,'install',stage='submitted')
+        self.remote.cut_boot_create=True
+        with self.assertRaises(UserError):self.remove()
+        self.assertIsNone(self.store.pending(self.profile).get('cleanup_boot_proof'))
+        self.assertTrue(self.remove()['restart_required'])
+        self.remote.boot='22222222-2222-2222-2222-222222222222'
+        with patch.object(self.store,'finish_clean_removal',side_effect=OSError('host interruption')):
+            with self.assertRaises(OSError):self.remove()
+        proc=self.root/'proc/123';proc.mkdir()
+        (proc/'cmdline').write_text('/usr/bin/node\0'+str(self.root/'developer/apps/usr/palm/services/com.gathin.tvhome.renewal/service.js')+'\0')
+        self.assertTrue(self.remove()['restart_required'])
+        self.assertEqual(self.store.pending(self.profile)['cleanup_boot_proof']['kernel'],self.remote.boot)
+        with self.assertRaises(UserError) as caught:self.remove()
+        self.assertEqual(caught.exception.no_root_cleanup['reason'],'kernel-boot-unchanged')
+
+    def test_kernel_only_proof_never_uses_marker_absence_or_retires_same_boot(self):
+        self.remote.volatile_mode=0o111
+        self.store.request_clean_removal(self.profile)
+        try:proof=self.cleanup._device(self.installer,'boot-create')['boot_proof']
+        except UserError as error:self.fail('Could not capture kernel-only baseline: '+str(error))
+        self.remote.volatile_mode=0o1777
+        self.assertFalse(self.cleanup._device(self.installer,'boot-probe',proof=proof)['boot_restarted'])
+        with self.assertRaises(UserError):self.cleanup._device(self.installer,'boot-retire',proof=proof)
+        self.cleanup._device(self.installer,'boot-release',proof=proof)
+        self.assertFalse(self.cleanup._device(self.installer,'boot-probe',proof=proof)['boot_restarted'])
+        for bad in (dict(proof,goal='a'*32),dict(proof,kind='marker'),dict(proof,schema=True),dict(proof,extra=True)):
+            with self.subTest(proof=bad),self.assertRaises(UserError):
+                self.cleanup._device(self.installer,'boot-probe',proof=bad)
+
+    def test_captured_marker_proof_cannot_switch_to_kernel_only_when_tmp_changes(self):
+        self.store.request_clean_removal(self.profile)
+        proof=self.cleanup._device(self.installer,'boot-create')['boot_proof']
+        self.remote.volatile_mode=0o111
+        self.remote.boot='22222222-2222-2222-2222-222222222222'
+        with self.assertRaises(UserError):self.cleanup._device(self.installer,'boot-probe',proof=proof)
+        self.assertTrue(self.boot_marker().exists())
 
     def test_boot_root_refusal_exports_safe_context_before_any_cleanup(self):
         from cytv import diagnostics

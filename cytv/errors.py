@@ -278,7 +278,7 @@ def no_root_cleanup_details(value):
         'exception_name': OBSERVER_EXCEPTION_NAMES,
         'exception_code': OBSERVER_EXCEPTION_CODES,
         'filesystem_operation': OBSERVER_FILESYSTEM_OPERATIONS,
-        'reason': ('unsafe-path', 'invalid-boot-identity', 'invalid-cleanup-action', 'invalid-staging-scope'),
+        'reason': ('unsafe-path', 'invalid-boot-identity', 'invalid-cleanup-action', 'invalid-staging-scope', 'kernel-boot-unchanged'),
         'directory_owner': ('root', 'current-user', 'other'),
         'directory_type': ('directory', 'symlink', 'other'),
     }
