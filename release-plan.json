@@ -1,7 +1,27 @@
 {
   "schema": 1,
   "version": null,
-  "changes": [],
+  "changes": [
+    {
+      "pr": 478,
+      "issues": [
+        418
+      ],
+      "summary": "Fix retained native Root removal Home readback (#418)"
+    },
+    {
+      "pr": 479,
+      "issues": [
+        101
+      ],
+      "summary": "Remove generic C3-only notice from Root setup (#101)"
+    },
+    {
+      "pr": 482,
+      "issues": [],
+      "summary": "Offer optional post-install theme preview cards, weather and mode-specific renewal/firmware switches; preserve successful installation on skip or cancellation"
+    }
+  ],
   "excluded": [],
   "acceptance": ""
 }
