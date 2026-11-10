@@ -176,3 +176,27 @@ class AndroidMissingResourceTests(unittest.TestCase):
         from cytv import tv_sources
         with patch.object(sys,'getandroidapilevel',lambda:24,create=True):
             with self.assertRaises(FileNotFoundError):tv_sources.trusted_source('contract-events')
+
+class ChangingGetterPrivacyTests(unittest.TestCase):
+    def test_each_normalized_input_is_captured_once_before_validation(self):
+        code = """var a=require('assert'),e=require('./native/app/contract-events');
+        var base=JSON.parse(process.argv[1]);base.first=123;base.last=456;
+        function fixture(field, metadata) {
+          var value=JSON.parse(JSON.stringify(base)),target=metadata?value.actual:value;
+          var good=target[field],reads=0;
+          Object.defineProperty(target,field,{enumerable:true,get:function(){
+            reads++;return reads===1?good:{token:'SECRET_RAW',toJSON:function(){throw Error('serialized raw input');}};
+          }});
+          return {value:value,reads:function(){return reads;}};
+        }
+        ['schema','component','operation','phase','field','expected','actual','decision','count','first','last'].forEach(function(field){
+          ['normalize','safeEvents'].forEach(function(method){
+            var f=fixture(field,false),clean=method==='normalize'?e.normalize(f.value):e.safeEvents({schema:1,events:[f.value]})[0];
+            a.deepEqual(clean,base,method+': '+field);a.equal(f.reads(),1,method+': '+field+' read count');
+            a.equal(JSON.stringify(clean).indexOf('SECRET_RAW'),-1);
+          });
+        });
+        var f=fixture('mode',true);a.deepEqual(e.normalize(f.value),base);a.equal(f.reads(),1);
+        """
+        for runtime in dict.fromkeys(filter(None,['node',os.getenv('NODE010'),os.getenv('NODE01025'),os.getenv('NODE012')])):
+            subprocess.run([runtime,'-e',code,json.dumps(BASE)],cwd=ROOT,check=True)

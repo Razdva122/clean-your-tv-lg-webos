@@ -86,7 +86,8 @@ function normalize(event) {
         return null;
       result[key] = value;
     }
-    if (DECISIONS.indexOf(event.decision) < 0) return null;
+    var decision = event.decision;
+    if (DECISIONS.indexOf(decision) < 0) return null;
     var safe = {},
       actual = event.actual;
     keys = [
@@ -126,12 +127,14 @@ function normalize(event) {
           safe[key] = value;
       }
     result.actual = safe;
-    result.decision = event.decision;
-    result.count = integer(event.count, 1, MAX) ? event.count : 1;
+    result.decision = decision;
+    value = event.count;
+    result.count = integer(value, 1, MAX) ? value : 1;
     keys = ['first', 'last'];
     for (i = 0; i < keys.length; i++) {
       key = keys[i];
-      if (integer(event[key], 0, 9007199254740991)) result[key] = event[key];
+      value = event[key];
+      if (integer(value, 0, 9007199254740991)) result[key] = value;
     }
     var count = result.count;
     result.count = MAX;
