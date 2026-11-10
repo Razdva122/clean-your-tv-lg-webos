@@ -49,8 +49,18 @@ restart and private-data cleanup retain their existing authority.
 - Independent read-only review found a schema propagation gap in a test, which
   was corrected; final review reported no actionable product findings.
 - Python 3.9 grammar, Prettier for the changed JS and whitespace checks pass.
-- Broader installer/setup/Android/TV-runtime verification is pending at this
-  checkpoint; the implementation PR records the final result.
+- Broader local checks passed: 1,209 Root (three declared skips), 136 System,
+  289 setup, 1,218 installer (three declared skips), 44 Android, and selected
+  JS/native/compatibility/package checks. The first combined run exposed a
+  packaging test using a nonexistent retained descriptor; its corrected real
+  descriptor fixture passed independently and in the full setup rerun. The
+  actual FHD/HD bundles retain executor authentication, fresh-install exclusion
+  and tampering refusal checks. No product workaround was added for that fixture.
+- Final product/test head `2313d3d7` passed all selected
+  [PR CI checks](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42755112383):
+  eight Linux/macOS runtime shards, browser and optional Python. Release policy
+  passed separately; publication/deployment were unselected. This final
+  evidence-only update preserves every tested product/build/test input.
 
 Host: macOS ARM64, maintained project virtualenv, current Node 23.11.0 and exact
 legacy runtimes. Native Home, vendor APIs and installed state are fixture models;
