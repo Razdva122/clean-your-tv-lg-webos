@@ -89,6 +89,37 @@ or authorize package preparation. Only the validated version and fixed status
 are exported; raw command output, stderr and exception text are excluded.
 No new TV installation, configuration, permission or endpoint is introduced.
 
+## Root driver install failures (source preparation, #397)
+
+A new optional `root_driver` object retains the bounded exception category,
+`errno`/child `exit_status` when available, and up to eight fixed project source
+basenames with numeric line numbers. It identifies driver callsites, not a
+successful installation, a confirmed cause on another TV or recovery authority.
+
+The device entrypoint emits this envelope only for an install with a valid
+host-provided attempt nonce. Failed SSH commands still raise their original
+`TVCommandError`; only a complete failure JSON response of at most 4096 bytes is
+considered. The host filters it, requires the current install attempt and drops
+the nonce before report/first-failure/history export. Report projection filters
+all fields again. Raw exception messages, stdout/stderr, commands, full paths,
+identities and unknown fields are excluded. Unknown, oversized, malformed or
+mismatched responses retain the existing generic failure. No command is replayed,
+no receipt is cleared and no extra TV request or state file is introduced.
+
+This covers exceptions caught by the driver entrypoint, including device, Node,
+bundle and native-admission checks. Module imports before the entrypoint,
+argument-parser exits and failures that never deliver a complete envelope can
+remain generic. Rebuilt Root support and embedding desktop/console/Android
+installers are required. Existing installation guards and runtime behavior are
+unchanged; diagnostic metadata is never recovery permission.
+
+Old reports cannot recover discarded output. For #397, the saved report proves
+inventory readback succeeded and the install command returned exit 1, but does
+not identify which device-side check failed. A normal status report from the
+saved connection can add the retained deployment stage without repeating setup;
+it may still lack the original exception. Do not repeat installation just to
+populate this field. Preserve the original pending operation and recovery data.
+
 ## Network connection causes
 
 During `ssh-connect`, inspect typed socket errors, including the values of

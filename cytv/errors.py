@@ -189,6 +189,30 @@ class TVNotReady(TVConnectionError):
                          close_code=1008, reason_code='tv-not-ready')
 
 
+def root_driver_details(value, *, keep_attempt=False):
+    """Fixed driver callsites only; no remote prose, paths or attempt in reports."""
+    if not isinstance(value,dict) or type(value.get('schema',1)) is not int or value.get('schema',1)!=1:return {}
+    names=('ValueError','RuntimeError','OSError','PermissionError','FileNotFoundError',
+           'FileExistsError','CalledProcessError','TimeoutExpired','TypeError','KeyError','unknown')
+    if value.get('exception_type') not in names:return {}
+    result={'exception_type':value['exception_type']}
+    files=('deploy.py','installation.py','c1_gate.py','c1_keyfilter.py','package_data.py',
+           'python_binding.py','observed_install.py','provision.py','store.py')
+    frames=value.get('frames',[])
+    if not isinstance(frames,list) or len(frames)>8:return {}
+    result['frames']=[{'file':frame['file'],'line':frame['line']} for frame in frames
+        if isinstance(frame,dict) and frame.get('file') in files
+        and type(frame.get('line')) is int and 1<=frame['line']<=10000]
+    for key,low,high in (('errno',0,4095),('exit_status',-255,255)):
+        number=value.get(key)
+        if type(number) is int and low<=number<=high:result[key]=number
+    if keep_attempt:
+        attempt=value.get('attempt')
+        if not isinstance(attempt,str) or not re.fullmatch('[a-f0-9]{32}',attempt):return {}
+        result.update(schema=1,attempt=attempt)
+    return result
+
+
 def root_recovery_details(value):
     """Bounded categories only: device diagnostics are untrusted input."""
     if not isinstance(value, dict) or type(value.get('schema', 1)) is not int or value.get('schema', 1) != 1:

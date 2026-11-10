@@ -409,6 +409,9 @@ def failure_summary(value):
     recovery = root_recovery_details(value.get('root_recovery'))
     if recovery:
         result['root_recovery'] = recovery
+    from .errors import root_driver_details
+    driver=root_driver_details(value.get('root_driver'))
+    if driver:result['root_driver']=driver
     if 'no_root_observer' in value:
         from .errors import no_root_observer_details
         result['no_root_observer'] = no_root_observer_details(value['no_root_observer'])

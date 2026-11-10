@@ -358,7 +358,21 @@ class SSH:
             if data is not None:
                 channel.sendall(data)
             channel.shutdown_write()
-            return b''.join(self.chunks(channel, timeout)).decode('utf-8')
+            output=[]
+            try:
+                for chunk in self.chunks(channel,timeout):output.append(chunk)
+            except TVCommandError as error:
+                # Keep only the fixed envelope, never raw failed stdout/stderr.
+                if sum(map(len,output))<=4096:
+                    try:
+                        from .errors import root_driver_details
+                        reply=json.loads(b''.join(output))
+                        if isinstance(reply,dict) and reply.get('returnValue') is False:
+                            detail=root_driver_details(reply.get('root_install_failure'),keep_attempt=True)
+                            if detail:error._root_driver_failure=detail
+                    except (ValueError,TypeError):pass
+                raise
+            return b''.join(output).decode('utf-8')
         finally:
             channel.close()
 
