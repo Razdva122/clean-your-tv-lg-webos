@@ -40,7 +40,7 @@ class Remote:
         code=code.replace('/proc/sys/kernel/random/boot_id',str(self.root/'boot'))
         code=code.replace("'/proc/'",json.dumps(str(self.root/'proc')+'/'))
         # Adapt only the fixed volatile root and its root UID for this host fixture.
-        volatile=self.root/'volatile';volatile.mkdir(exist_ok=True);volatile.chmod(0o1777)
+        volatile=self.root/'volatile';volatile.mkdir(exist_ok=True);volatile.chmod(getattr(self,'volatile_mode',0o1777))
         code=code.replace('/tmp/.cytv-installer',str(volatile/'.cytv-installer'))
         code=code.replace("'/.cytv-installer'",json.dumps(str(self.root/'jail-private')))
         code=code.replace('function ancestry(p){',
@@ -407,6 +407,86 @@ class SimpleRemoval(unittest.TestCase):
     def boot_marker(self):
         goal=self.store.pending(self.profile)['removal_operation']
         return self.root/'volatile'/('cytv-removal-'+goal+'.boot')
+
+    def test_boot_root_refusal_exports_safe_context_before_any_cleanup(self):
+        from cytv import diagnostics
+        self.remote.volatile_mode=0o755
+        self.remote.apps={'com.local.nativehome'}
+        with self.assertRaises(RuntimeError) as caught:self.remove()
+        self.assertIsInstance(caught.exception,UserError,'cleanup failure lost its safe diagnostic envelope')
+        detail=caught.exception.no_root_cleanup
+        self.assertEqual(detail['action'],'boot-create')
+        self.assertEqual(detail['step'],'boot-root')
+        self.assertEqual(detail['reason'],'unsafe-path')
+        self.assertEqual(detail['directory_mode'],'0755')
+        self.assertEqual(detail['directory_owner'],'root')
+        self.assertEqual(detail['directory_type'],'directory')
+        self.assertFalse(any(uri.endswith(('/disable','/dev/remove')) for uri,_ in self.remote.calls))
+        self.assertEqual(self.store.pending(self.profile)['stage'],'requested')
+        report=json.loads(diagnostics.create_report(self.store,'uninstall',self.profile,'uninstall',caught.exception).read_text())
+        self.assertEqual(report['no_root_cleanup'],detail)
+        self.assertEqual(report['first_failure']['no_root_cleanup'],detail)
+        self.assertNotIn(str(self.root),json.dumps(report))
+        self.assertNotIn(self.remote.boot,json.dumps(report))
+
+    def test_boot_root_symlink_is_reported_and_never_followed_for_cleanup(self):
+        destination=self.root/'foreign';destination.mkdir()
+        evidence=destination/'keep';evidence.write_text('preserve')
+        (self.root/'volatile').symlink_to(destination,target_is_directory=True)
+        with self.assertRaises(UserError) as caught:self.remove()
+        self.assertEqual(caught.exception.no_root_cleanup['step'],'boot-root')
+        self.assertEqual(caught.exception.no_root_cleanup['directory_type'],'symlink')
+        self.assertEqual(evidence.read_text(),'preserve')
+        self.assertFalse(list(destination.glob('cytv-removal-*')))
+
+    def test_boot_storage_failure_preserves_existing_space_guidance(self):
+        self.remote.transform=lambda code:code.replace('fs.fsyncSync(out);',
+            "var injected=Error('No space left on device: PRIVATE-PATH');injected.code='ENOSPC';injected.syscall='fsync';throw injected;")
+        with self.assertRaises(UserError) as caught:self.remove()
+        self.assertEqual(caught.exception.reason_code,'tv-storage-full')
+        self.assertEqual(caught.exception.no_root_cleanup['exception_code'],'ENOSPC')
+        self.assertNotIn('PRIVATE',str(caught.exception))
+
+    def test_boot_error_envelope_cannot_be_accepted_as_a_success_reply(self):
+        from unittest.mock import patch
+        for detail in (None,{'step':'PRIVATE-PATH','exception_code':'PRIVATE-TOKEN'}):
+            reply={'schema':1,'present':[],'blocked':[],'root_present':[],
+                   'boot_proof':{'schema':1},'boot_restarted':True,'cleanup_error':detail}
+            with self.subTest(detail=detail),patch.object(self.remote,'run',return_value=json.dumps(reply)):
+                with self.assertRaises(UserError) as caught:
+                    self.cleanup._device(self.installer,'boot-create')
+                self.assertEqual(caught.exception.no_root_cleanup['action'],'boot-create')
+                self.assertNotIn('PRIVATE',json.dumps(caught.exception.no_root_cleanup))
+
+    def test_boot_transport_failure_retains_typed_error_and_action(self):
+        from cytv.errors import TVCommandError
+        from unittest.mock import patch
+        error=TVCommandError(1)
+        with patch.object(self.remote,'run',side_effect=error):
+            with self.assertRaises(TVCommandError) as caught:
+                self.cleanup._device(self.installer,'boot-create')
+        self.assertIs(caught.exception,error)
+        self.assertEqual(error.no_root_cleanup['action'],'boot-create')
+        self.assertEqual(error.no_root_cleanup['failure'],'command-failed')
+        self.assertEqual(error.exit_status,1)
+
+    def test_boot_fsync_failure_keeps_fixed_error_and_retryable_marker(self):
+        from cytv import diagnostics
+        self.remote.transform=lambda code:code.replace('fs.fsyncSync(out);',
+            "var injected=Error('PRIVATE-TOKEN-PATH');injected.code='EINVAL';injected.syscall='fsync';injected.path='PRIVATE-PATH';throw injected;")
+        with self.assertRaises(RuntimeError) as caught:self.remove()
+        self.assertIsInstance(caught.exception,UserError,'cleanup failure lost its safe diagnostic envelope')
+        detail=caught.exception.no_root_cleanup
+        self.assertEqual(detail['step'],'boot-create')
+        self.assertEqual(detail['exception_code'],'EINVAL')
+        self.assertEqual(detail['filesystem_operation'],'fsync')
+        self.assertEqual(detail['reason'],'unknown')
+        self.assertTrue(self.boot_marker().exists())
+        self.assertIsNone(self.store.pending(self.profile).get('cleanup_boot_proof'))
+        report=diagnostics.create_report(self.store,'uninstall',self.profile,'uninstall',caught.exception).read_text()
+        self.assertNotIn('PRIVATE',report)
+        self.remote.transform=lambda code:code
+        self.assertTrue(self.remove()['restart_required'])
 
     def test_unchanged_kernel_with_cleared_volatile_marker_finishes(self):
         first=self.remove();self.assertTrue(first['restart_required'])

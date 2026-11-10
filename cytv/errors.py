@@ -265,6 +265,30 @@ OBSERVER_REASONS = (
 )
 
 
+CLEANUP_BOOT_ACTIONS = ('boot-create', 'boot-probe', 'boot-retire', 'boot-release')
+
+
+def no_root_cleanup_details(value):
+    """Fixed boot-check categories only; revalidate remote and persisted evidence."""
+    if type(value) is not dict:return {}
+    allowed = {
+        'action': CLEANUP_BOOT_ACTIONS,
+        'step': ('runtime', 'boot-root', 'boot-proof', 'boot-read', *CLEANUP_BOOT_ACTIONS),
+        'failure': ('runtime-error', 'command-failed', 'transport-error'),
+        'exception_name': OBSERVER_EXCEPTION_NAMES,
+        'exception_code': OBSERVER_EXCEPTION_CODES,
+        'filesystem_operation': OBSERVER_FILESYSTEM_OPERATIONS,
+        'reason': ('unsafe-path', 'invalid-boot-identity', 'invalid-cleanup-action', 'invalid-staging-scope'),
+        'directory_owner': ('root', 'current-user', 'other'),
+        'directory_type': ('directory', 'symlink', 'other'),
+    }
+    result = {key:value[key] if type(value.get(key)) is str and value[key] in choices else 'unknown'
+              for key,choices in allowed.items()}
+    mode=value.get('directory_mode')
+    result['directory_mode']=mode if type(mode) is str and re.fullmatch('[0-7]{4}',mode) else 'unknown'
+    return result
+
+
 def no_root_observer_details(value):
     """Revalidate host observer context; never accept remote text or identifiers."""
     if type(value) is not dict:
