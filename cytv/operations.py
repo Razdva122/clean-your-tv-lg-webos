@@ -1889,6 +1889,9 @@ print('CYTV_PROJECT_REMOVED')
         phase=reply.get('stage')
         if phase in REMOVAL_STAGES:
             self.store.checkpoint(self.profile,stage=phase,removal_reason=reply.get('reason') if reply.get('reason') in REMOVAL_REASONS else 'ownership-conflict')
+        if reply.get('cleanup_error') == 'owned-process-still-used':
+            self.store.checkpoint(self.profile,stage='restart-required',removal_reason='restart-required')
+            return {'removed':False,'verified_clean':False,'restart_required':True}
         result=reply.get('result',{})
         if result.get('restart_required') is True:
             self.store.checkpoint(self.profile,stage='restart-required',removal_reason='restart-required',cleanup_boot_id=reply.get('cleanup_boot_id'))

@@ -79,10 +79,12 @@ No-root setup checks Helper before pairing. If it is running, stop it with the
 documented Home gesture and confirm the recheck in the current setup. An unknown
 process state still blocks replacement; emergency-stop markers are preserved.
 
-A completely empty No-root installation can finish without a restart only after
-current files, package registrations, input shortcuts and process absence have
-been checked, with no unresolved prior installation. Actual removal still uses
-the requested full restart. If the input-list API fails, CYTV tries deleting only
+The current source also permits Root and No-root removal to finish without a
+restart after controls/startup restoration, package/file absence and stopped
+processes are verified, with no unresolved prior installation. A live or
+unverifiable process, broken startup service or unresolved old operation keeps
+the full-restart path. A requested restart must still be completed. If the
+input-list API fails, CYTV tries deleting only
 its own input shortcut and continues safe package cleanup. A remaining unverified
 shortcut keeps removal pending; retry after the service is available. No success
 is shown merely because the packages disappeared.

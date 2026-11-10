@@ -170,9 +170,10 @@ function packageReceipts() {
   var baseline = record.cleanup_boot_id,
     verified = record.cleanup_verified_boot_id;
   if (
-    !format(baseline) ||
-    format(baseline) !== format(verified) ||
-    baseline === verified
+    record.cleanup_without_restart !== true &&
+    (!format(baseline) ||
+      format(baseline) !== format(verified) ||
+      baseline === verified)
   )
     throw Error('restart-required');
 }
@@ -749,7 +750,11 @@ async function absent(final) {
           .toString()
           .split('\0');
       } catch (e) {
-        if (e.code === 'ENOENT') return;
+        if (e.code === 'ENOENT') {
+          if (record.cleanup_without_restart === true && exists('/proc/' + pid))
+            throw Error('owned-process-still-used');
+          return;
+        }
         throw e;
       }
       try {
@@ -757,6 +762,39 @@ async function absent(final) {
       } catch (e) {
         if (e.code !== 'ENOENT') throw e;
       }
+      if (record.cleanup_without_restart === true) {
+        var argv = args.filter(Boolean),
+          script = 1;
+        if (
+          argv.some(function (arg) {
+            return apps.some(function (app) {
+              return (
+                arg === app ||
+                arg === app + '.service' ||
+                arg === app + '.renewal'
+              );
+            });
+          })
+        )
+          throw Error('owned-process-still-used');
+        if (
+          argv.some(function (arg) {
+            return /(^|\/)(node|python[0-9.]*)$/.test(arg);
+          })
+        ) {
+          while (['-B', '-I', '-u'].indexOf(argv[script]) >= 0) script++;
+          if (!/^\/.*\.(js|cjs|mjs|py|pyc)$/.test(argv[script] || ''))
+            throw Error('owned-process-still-used');
+        }
+        try {
+          args.push(fs.readlinkSync('/proc/' + pid + '/cwd'));
+        } catch (e) {
+          if (e.code !== 'ENOENT') throw e;
+        }
+      }
+      args = args.map(function (arg) {
+        return arg.replace(/ \(deleted\)$/, '');
+      });
       var prefixes = [
         runtime + '/',
         '/var/lib/clean-your-tv-root/',
@@ -784,6 +822,21 @@ async function absent(final) {
         )
           prefixes.push(entry.path + '/');
       });
+      if (
+        record.cleanup_without_restart === true &&
+        /(^|\/)(sh|ash|bash|dash|zsh|ksh)$/.test(args[0] || '') &&
+        args.some(function (arg) {
+          return (
+            prefixes.some(function (prefix) {
+              return arg.indexOf(prefix.slice(0, -1)) >= 0;
+            }) ||
+            apps.some(function (app) {
+              return arg.indexOf(app) >= 0;
+            })
+          );
+        })
+      )
+        throw Error('owned-process-still-used');
       if (
         args.some(function (arg) {
           return prefixes.some(function (prefix) {

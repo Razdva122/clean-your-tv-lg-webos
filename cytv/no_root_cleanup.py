@@ -21,7 +21,7 @@ PRIVATE_CLEANUP_PROGRAM = r'''
 'use strict';
 var fs=require('fs'),path=require('path'),c=require('constants'),zlib=require('zlib'),crypto=require('crypto');
 var input=JSON.parse(process.argv[process.argv.length-1]),uid=process.getuid();
-if(['inventory','idle','sweep','stop','root-package','stage-carrier','boot-create','boot-probe','boot-retire'].indexOf(input.action)<0)throw Error('invalid-cleanup-action');
+if(['inventory','idle','sweep','stop','root-package','stage-carrier','boot-create','boot-probe','boot-retire','boot-release'].indexOf(input.action)<0)throw Error('invalid-cleanup-action');
 var base='/media/developer/apps/usr/palm',publicRoot='/media/developer/temp';
 if(input.connection==='root-ssh'){
  if(uid!==0)throw Error('root-access-required');
@@ -93,6 +93,7 @@ if(input.action.indexOf('boot-')===0){
   }else{
    reply.boot_restarted=!item||proof.kernel!==reply.boot_id;
    if(input.action==='boot-retire'){if(!reply.boot_restarted)fail();if(item)remove(marker,item.stat);}
+   if(input.action==='boot-release'&&item)remove(marker,item.stat);
   }
  });process.stdout.write(JSON.stringify(reply));return;
 }
@@ -153,7 +154,8 @@ if(input.action==='idle'){
    var args=fs.readFileSync(proc+pid+'/cmdline','utf8').split('\0').filter(Boolean),argc=args.length;
    try{args.push(fs.readlinkSync(proc+pid+'/exe').replace(/ \(deleted\)$/,''));}catch(e){if(e.code!=='ENOENT')throw e;}
    try{args.push(fs.readlinkSync(proc+pid+'/cwd').replace(/ \(deleted\)$/,''));}catch(e){if(e.code!=='ENOENT')throw e;}
-   if(args.some(function(arg){return apps.indexOf(arg)>=0||prefixes.some(function(prefix){return arg===prefix||arg.indexOf(prefix+'/')===0||(/[-]$/.test(prefix)&&arg.indexOf(prefix)===0);});}))reply.idle=false;
+   var shell=args.length&&/(^|\/)(sh|ash|bash|dash|zsh|ksh)$/.test(args[0]);
+   if(args.some(function(arg){return apps.concat(services).indexOf(arg)>=0||prefixes.some(function(prefix){return arg===prefix||arg.indexOf(prefix+'/')===0||(/[-]$/.test(prefix)&&arg.indexOf(prefix)===0)||(shell&&arg.indexOf(prefix)>=0);})||(shell&&apps.some(function(app){return arg.indexOf(app)>=0;}));}))reply.idle=false;
    // Require an unambiguous absolute script. Interpreter flags have too many
    // inline/combined spellings to infer that an old project body is absent.
    if(args.some(function(arg){return /(^|\/)(node|python[0-9.]*)$/.test(arg);})&&
@@ -273,6 +275,7 @@ def _remove_package(installer, app):
         installer.remote.luna('com.webos.appInstallService/dev/remove', {'id': app, 'subscribe': True}, terminal='removed', timeout=150)
     except TVRejected as error:
         error.args = ('The TV rejected removal. Check the error details and try again.',)
+        error.reason_code = 'removal-failed'
         raise
 
 
@@ -402,11 +405,6 @@ def continue_removal(installer, expected_pending):
     carriers = {app['id'] for app in app_info if app.get('title') == 'Clean Your TV cleanup' and app.get('visible') is False}
     if any(app in apps for app in ('com.cleanyourtv.root.preview', 'com.cleanyourtv.root.updater', 'com.cleanyourtv.system.updater')):
         raise UserError(ROOT_MESSAGE, reason_code='root-access-required')
-    if pending.get('stage') == 'verified-clean' and not current['blocked'] and not current['present'] and not apps.intersection(APPS):
-        from .root_no_root_handoff import release
-        release(installer)
-        installer.store.finish_clean_removal(installer.profile)
-        return {'removed': True, 'verified_clean': True}
     empty = (pending.get('stage') == 'requested' and not pending.get('previous') and not pending.get('cleanup_boot_proof')
              and not current['blocked'] and not current['present'] and not apps.intersection(APPS)
              and not current['startup_services'] and not current['resident_installer'] and not current['external_update_hint'])
@@ -428,12 +426,18 @@ def continue_removal(installer, expected_pending):
         installer.store.checkpoint(installer.profile, cleanup_boot_proof=None, stage='requested')
         proof = _device(installer, 'boot-create')['boot_proof']
         installer.store.checkpoint(installer.profile, cleanup_boot_proof=proof,
-                                   cleanup_boot_id=proof['kernel'], stage='requested')
+                                   cleanup_boot_id=proof['kernel'], cleanup_boot_release_started=False,
+                                   cleanup_boot_verified=False, stage='requested')
         return proof
     proof = pending.get('cleanup_boot_proof')
-    if proof is None or pending.get('stage') == 'verified-clean':
-        if proof is not None:
-            _device(installer, 'boot-retire', proof=proof)
+    # A durable genuine restart avoids another power cycle after host failure,
+    # but its reuse must still pass fresh process checks below.
+    reused_restart = proof is not None and pending.get('cleanup_boot_verified') is True
+    if reused_restart:
+        restarted = True
+    elif proof is None or pending.get('stage') == 'verified-clean' or pending.get('cleanup_boot_release_started'):
+        # A missing marker after our own release is never evidence of a boot.
+        # Recapture before replaying current controls/process/absence checks.
         proof = capture_boot()
         restarted = False
     else:
@@ -496,7 +500,11 @@ def continue_removal(installer, expected_pending):
     installer.progress('Removing private recovery data…')
     installer.store.checkpoint(installer.profile, stage='private-cleanup')
     _check_access(_repair_registration(installer, _device(installer, 'sweep')))
-    if not restarted:
+    if (not restarted and pending.get('previous') or
+            (not restarted or reused_restart) and _device(installer, 'idle').get('idle') is not True):
+        if restarted:
+            proof = capture_boot()
+            restarted = False
         installer.store.checkpoint(installer.profile, stage='restart-required', removal_reason='restart-required')
         installer.progress(RESTART_MESSAGE)
         return {'removed': False, 'verified_clean': False, 'restart_required': True}
@@ -508,7 +516,18 @@ def continue_removal(installer, expected_pending):
     if not inputs_removed:
         installer.store.checkpoint(installer.profile, removal_reason='controls-unverified')
         raise UserError('TV input shortcuts could not be checked. Try again.', reason_code='controls-unverified')
-    _device(installer, 'boot-retire', proof=proof)
+    if (not restarted or reused_restart) and _device(installer, 'idle').get('idle') is not True:
+        if restarted:
+            proof = capture_boot()
+            restarted = False
+        installer.store.checkpoint(installer.profile, stage='restart-required', removal_reason='restart-required')
+        installer.progress(RESTART_MESSAGE)
+        return {'removed': False, 'verified_clean': False, 'restart_required': True}
+    if restarted:
+        installer.store.checkpoint(installer.profile, cleanup_boot_verified=True)
+    else:
+        installer.store.checkpoint(installer.profile, cleanup_boot_release_started=True)
+    _device(installer, 'boot-retire' if restarted else 'boot-release', proof=proof)
     installer.store.checkpoint(installer.profile, stage='verified-clean', removal_reason='removal-verified',
                                result={'removed': True, 'verified_clean': True})
     from .root_no_root_handoff import release

@@ -120,7 +120,7 @@ class AndroidConsole(Console):
 
     def recovery_plan(self, value):
         super().recovery_plan(value)
-        from cytv.recovery_ui import removal_details, removal_restart_required
+        from cytv.recovery_ui import removal_details, removal_restart_required, removal_title, removal_waiting
         from cytv.recovery_state import ACTIONS, REASONS
         optional = {key:value[key] for key in ('disposition',) if key in value}
         optional.update({key:value[key] for key in ('removed','verified_clean') if type(value.get(key)) is bool})
@@ -134,6 +134,7 @@ class AndroidConsole(Console):
         detail = removal_details(value)
         if detail:
             optional.update(stageText=i18n.translate(detail['stage_text']), blockerText=i18n.translate(detail['blocker_text']))
+            optional.update(titleText=i18n.translate(removal_title(value)), waiting=removal_waiting(value))
         self.callbacks.emit(kind='recovery-plan', state=value['state'],
                             summary=i18n.translate(value['summary']), nextStep=i18n.translate(value['next_step']),
                             **optional)

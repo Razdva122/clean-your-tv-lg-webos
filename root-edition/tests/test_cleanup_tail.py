@@ -518,6 +518,47 @@ class CleanupTail(unittest.TestCase):
         result,reply=self.run_tail();self.assertNotEqual(result.returncode,0)
         self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
 
+    def test_quiescent_same_boot_removal_runs_full_final_proof(self):
+        self.record['cleanup_without_restart']=True
+        self.record.pop('cleanup_verified_boot_id')
+        self.write('clean-removal-'+ID+'.json',self.record)
+        result,reply=self.run_tail()
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(reply['stage'],'verified-clean')
+
+    def test_same_boot_permission_never_substitutes_for_process_absence(self):
+        self.record['cleanup_without_restart']=True
+        self.record.pop('cleanup_verified_boot_id')
+        self.write('clean-removal-'+ID+'.json',self.record)
+        process=self.base/'proc/123';process.mkdir()
+        (process/'cmdline').write_bytes(b'/media/developer/apps/usr/palm/applications/com.local.nativehome/relay\0')
+        result,reply=self.run_tail()
+        self.assertNotEqual(result.returncode,0)
+        self.assertTrue(self.runtime.exists())
+        self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+
+    def test_same_boot_renamed_helper_cannot_retire_runtime(self):
+        self.record['cleanup_without_restart']=True
+        self.record.pop('cleanup_verified_boot_id')
+        self.write('clean-removal-'+ID+'.json',self.record)
+        process=self.base/'proc/123';process.mkdir()
+        (process/'cmdline').write_bytes(b'com.local.nativehome\0\0')
+        (process/'exe').symlink_to('/usr/bin/node')
+        result,reply=self.run_tail()
+        self.assertNotEqual(result.returncode,0)
+        self.assertTrue(self.runtime.exists())
+
+    def test_same_boot_shell_with_delayed_owned_launch_cannot_retire_runtime(self):
+        self.record['cleanup_without_restart']=True
+        self.record.pop('cleanup_verified_boot_id')
+        self.write('clean-removal-'+ID+'.json',self.record)
+        process=self.base/'proc/123';process.mkdir()
+        (process/'cmdline').write_bytes(b'/bin/sh\0-c\0sleep 1; /usr/bin/node /media/developer/apps/usr/palm/services/com.gathin.tvhome.renewal/service.js\0')
+        result,reply=self.run_tail()
+        self.assertNotEqual(result.returncode,0)
+        self.assertTrue(self.runtime.exists())
+        self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+
     def boot_directory(self):
         directory=self.base/'tmp/clean-your-tv-root-boot';directory.mkdir(mode=0o700)
         for name in ('session.lock','session.json','normal.json'):
