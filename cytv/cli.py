@@ -11,7 +11,7 @@ from . import __version__, package, state, i18n
 from .errors import UserError, TVNotReady, ExistingRoot
 from .operations import Installer
 from .terminal import Console, supports_ansi
-from . import diagnostics, discovery, inspect_tv, prompts
+from . import diagnostics, discovery, inspect_tv, prompts, install_settings
 
 
 def payload_dir():
@@ -229,7 +229,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             secret = no_ask
         if args.command == 'install' and not args.non_interactive:
             write.heading('Clean Your TV  /  Installation')
-            write('TV > Edition > Connection > Install')
+            write('TV > Edition > Connection > Install > Settings')
             write('q / Ctrl+C = quit. Password entry uses Ctrl+C.')
         def inspect_connection(host, port):
             nonlocal phase
@@ -240,6 +240,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
 
         profile = choose_profile(args, store, ask, write, search or discovery.find_tvs, inspect_connection)
         write.selected_profile(profile)
+        setup = {}
         if args.command == 'replace-system-updater':
             if profile['edition'] != 'root': raise UserError('System Updater replacement requires an existing Root connection.')
             if store.pending(profile): raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
@@ -450,6 +451,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                             raise UserError('Choose an alternative edition without --migrate-home. Installation has not started.')
                         from .root_runtime import offer
                         offer(installer, args, ask, write)
+                        write.selected_profile(profile)
                         installer.select_graphics()
                         installer.preflight(install=True, home_interfaces=profile['edition']=='root')
                 if reinstall:
@@ -554,8 +556,18 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     result = installer.resume_root_setup()
                 else:
                     result = installer.install(inventory, key, args.migrate_home, reinstall=reinstall) if reinstall else installer.install(inventory, key, args.migrate_home)
+                setup_cancelled = False
+                if not args.non_interactive and (not args.yes or write.frontend != 'console'):
+                    phase = 'configure-home'
+                    try:
+                        setup = install_settings.collect(profile, ask, write,
+                            current=install_settings.read_current(installer) if write.frontend == 'desktop' else None)
+                    except (EOFError, KeyboardInterrupt):
+                        setup_cancelled = True
+                    if setup:
+                        install_settings.apply_services(installer, setup, write)
                 phase = 'verify-home-button'
-                installer.outcome.review_home(ask, write, args.non_interactive)
+                installer.outcome.review_home(ask, write, args.non_interactive or setup_cancelled)
                 if profile['edition'] == 'root':
                     write.heading('Review TV checks')
                     if result.get('backend') != 'c1-native-gate':

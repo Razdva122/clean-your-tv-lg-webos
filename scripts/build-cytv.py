@@ -175,6 +175,15 @@ def stage_guide_assets(payload):
         shutil.copy2(ROOT / 'android/app/src/main/assets/ui/guide' / name, target / name)
 
 
+def stage_theme_previews(payload):
+    target = payload / 'setup-themes'
+    target.mkdir(exist_ok=True)
+    for name, source in (('classic.png', 'showcase/assets/classic-preview.png'),
+                         ('liquid-glass.jpg', 'themes/liquid-glass/assets/preview.jpg'),
+                         ('ribbon.jpg', 'themes/ribbon/assets/preview.jpg')):
+        shutil.copy2(ROOT / source, target / name)
+
+
 # Preserve exact published Helper packages while their versions remain selected.
 HELPER_0_6_16_SHA256 = 'ccabf56c814d2aaf35853d95be2aac67614a67b79e223151b93260d58b82f5f1'
 HELPER_0_6_17_SHA256 = '165d933c17f1ed24f0ab65986293c7488b0b5d875db5f7b1215e46f24d422f92'
@@ -266,6 +275,7 @@ def build_payload():
     (payload / 'installer.png').write_bytes((ROOT / 'assets/icons/installer.png').read_bytes())
     stage_brand_assets(payload)
     stage_guide_assets(payload)
+    stage_theme_previews(payload)
     for graphics, paths in GRAPHICS.items():
         subprocess.run([sys.executable, 'root-edition/build.py', '--output', str(payload / paths['root']), '--version', versions['root'], '--resolution', graphics], cwd=ROOT, check=True)
     keyfilter_guard = stage_c1_root(payload, work, versions['root'])

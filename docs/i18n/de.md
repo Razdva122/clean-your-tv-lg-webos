@@ -143,3 +143,11 @@ Wählen Sie die Vorhersagequelle: Auto, MET Norway oder Open-Meteo. Auto beginnt
 Vorhersagekoordinaten gehen an api.met.no oder api.open-meteo.com, Stadtsuchen an geocoding-api.open-meteo.com. Die optionale automatische Ortssuche übermittelt die öffentliche IP an get.geojs.io. Alle Verbindungen nutzen HTTPS; ein API-Schlüssel ist nicht nötig. Ort, Quelle und Cache bleiben auf dem Fernseher. Datenquellen enthält Bedingungen und Urheberangaben, darunter das Norwegische Meteorologische Institut (MET Norway, CC BY 4.0).
 
 Die Schaltfläche Datenquellen in der Wetterüberschrift öffnet Informationen zu Diensten und Lizenzen.
+
+## Clean Your TV einrichten
+
+Wähle nach erfolgreicher Installation Classic, Liquid Glass oder Ribbon und schalte das Wetter ein oder aus. Ribbon unterstützt kein Wetter; Liquid Glass nutzt das Kurzformat. Der ungefähre Ort wird über die Internetverbindung ermittelt und lässt sich in Home ändern.
+
+No-root mit Developer Mode bietet automatische Verlängerung (Beta); prüfe weiterhin den offiziellen Timer. No-root über vorhandenes root-SSH benötigt diese Option nicht. Root bietet über Homebrew Channel eine Sperre für LG-Firmwareupdates, einschließlich Sicherheitsupdates; ein echter Neustart über Homebrew Channel ist erforderlich. CYTV-Updates bleiben separat.
+
+Mit Aktuelle Einstellungen beibehalten überspringst du die Anpassung. Der Schalter zeigt den aktuellen Ein/Aus-Zustand der Modusfunktion. Unveränderte Einstellungen bleiben erhalten. Die Root-Neuinstallation entfernt weiterhin gespeicherte CYTV-Einstellungen wie oben beschrieben. Prüfe das Aussehen am TV und unbestätigte Optionen vor einem neuen Versuch in Home.
