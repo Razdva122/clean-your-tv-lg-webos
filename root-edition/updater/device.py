@@ -53,7 +53,8 @@ class Device:
         for name,digest in files.items():
             path=Path(name)
             if not path.is_relative_to(self.root_state):raise ValueError('Foreign recovery infrastructure')
-            if hashlib.sha256(safe_bytes(path,limit=1048576,uid=0)).hexdigest()!=digest:raise ValueError('Recovery integrity failed')
+            limit=4*1024*1024 if path==self.root_state/'service/service.js' else 1048576
+            if hashlib.sha256(safe_bytes(path,limit=limit,uid=0)).hexdigest()!=digest:raise ValueError('Recovery integrity failed')
         from python_binding import verify_binding
         verify_binding(self.state);verify_binding(self.root_state)
         self.require_home_resume_runtime(self.root_state)
