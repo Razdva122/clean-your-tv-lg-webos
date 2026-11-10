@@ -111,6 +111,8 @@ Runtime state is `/var/lib/clean-your-tv-root`; owned profile is `/var/webos-pro
 
 Recovery provisioning is `recovery-provision.json`: version 1, mode `recovery-only`, absolute `boot_callback`, and `files` mapping absolute callback and every runtime Python path to its SHA-256 hex digest. All files and ancestors must be trusted. The installed callback must invoke the fixed runtime `cli.py boot`. The installer finalizes this manifest only after boot activity registration is verified. A valid manifest establishes installed-byte integrity, not hardware acceptance.
 
+The private `service/service.js` may be up to 4 MiB because it contains the pinned offline HEIC decoder. Runtime readiness, retained Root Updater integrity and one-time updater bootstrap apply this bound only to that exact entry; ordinary recovery files retain their 1 MiB bound. Native helpers retain their existing separate limits. File type, ownership, permissions, single-link identity and manifest SHA-256 remain mandatory.
+
 Device-specific assumptions requiring hardware acceptance: webOS systemprofile getProfiles/debug/rescan methods; defaultApps and idleApp schema; settingsservice general.defaultApps readback representing SAM's setting; settingsservice setSystemSettings preserving general.defaultApps; appCategory home registration; stock app `com.webos.app.home`; Linux `/proc` guardian identity; `/var/luna/preferences/webosbrew_failsafe`; filesystem durability; boot activity delivery under reboot and failsafe. Trial requires all three original routing values to name stock Home and idleApp.support true.
 
 [AOD/category preservation and recovery compatibility](../../docs/development/ROOT-AOD-PRESERVATION.md)
