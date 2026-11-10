@@ -345,16 +345,26 @@ class KeyfilterGuardTests(unittest.TestCase):
         finally:
             if home.poll() is None: home.kill(); home.communicate()
     def test_restore_retirement_waits_for_ready_state_lock_release(self):
-        # Force the real ARMED -> close(state lock) scheduling window. The
-        # fixture must not freeze the guardian while it still owns that lock.
+        # Hold the real ARMED critical section until the parent observes lock
+        # contention. A handshake avoids consuming the guardian health budget.
+        import fcntl
         source=SOURCE.read_text()
         anchor='else { armed=1; close(ready); ready=-1; }'
         self.assertEqual(source.count(anchor),1)
-        source=source.replace(anchor,'else { armed=1; close(ready); ready=-1; poll(NULL,0,2000); }',1)
+        source=source.replace(anchor,'else { armed=1; close(ready); ready=-1; while(access(FIXTURE_ROOT "/ready-release",F_OK)<0)poll(NULL,0,1); }',1)
         subprocess.run(['cc','-std=c11','-Wall','-Wextra','-Werror','-DCYTV_KEYFILTER_FIXTURE',
                         f'-DFIXTURE_ROOT="{self.root}"','-x','c','-','-o',str(self.binary)],
                        input=source,text=True,check=True,capture_output=True)
-        self.test_restore_retires_via_latch_without_queued_pid_signal()
+        release=self.root/'ready-release';original=fcntl.flock;contended=[]
+        def release_on_contention(fd,operation):
+            try:return original(fd,operation)
+            except BlockingIOError:
+                contended.append(True);release.touch();raise
+        try:
+            with mock.patch.object(fcntl,'flock',side_effect=release_on_contention):
+                self.test_restore_retires_via_latch_without_queued_pid_signal()
+            self.assertTrue(contended,'fixture must encounter the guardian-held state lock')
+        finally:release.touch()
 
     def test_restore_retires_via_latch_without_queued_pid_signal(self):
         p,iw,cw=self.armed(); self.freeze(p)

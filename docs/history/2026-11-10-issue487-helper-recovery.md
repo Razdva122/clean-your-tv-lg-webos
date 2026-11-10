@@ -84,6 +84,32 @@ and host results above. Updated-head CI must validate the changed fixtures. Do
 not rebuild packages, sign artifacts, change a TV or weaken any acceptance gate
 for these host failures.
 
+## Follow-up CI inventory and deterministic fixture scheduling
+
+[Updated-head CI 42802033331](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42802033331)
+completed on 2c3ff74a. All Linux shards, macOS shards 1–3, browser, both HEIC
+jobs and optional Python passed. This confirms the Linux continuation fixture
+correction. The only underlying failure was macOS shard 4's newly added
+forced-schedule regression: its artificial two-second pause consumed the actual
+guardian's two-second input-health budget before freeze, producing input_expired.
+The existing retirement tests and product guards were unchanged.
+
+The forced-schedule regression now uses an event handshake instead of an elapsed
+time delay. The copied C fixture holds the post-ARMED state lock until the
+parent observes real flock contention; that observation releases the barrier.
+The guardian keeps its normal health/retirement deadlines. The test passes, and
+a mutation restoring unsafe immediate SIGSTOP fails at the original missing
+stop-latch assertion. Final review found no actionable issue. Only this changed
+regression was repeated; the other 40 guardian results remain applicable.
+
+A read-only review prompted by the maintainer's cross-file question confirms
+that apps.json retains strict ownership validation. Helper's optional chmod does
+not replace it; a new foreign-apps negative case refuses before key mutation on
+all four configured Node runtimes. control.json intentionally alternates writers
+through atomic replacement; Home preferences, PID/logs and emergency markers
+use separate paths and are not certified by the pairing-key repair. No generic
+foreign-UID acceptance or additional product exception is introduced.
+
 ## Remaining acceptance
 
 A future release must select a new Helper version and build the native relay

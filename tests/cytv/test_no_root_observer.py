@@ -209,7 +209,7 @@ fs.writeSync=function(fd,b){if(Buffer.isBuffer(b)&&b.toString().indexOf('private
         runtimes=[shutil.which('node')]+[os.environ[name] for name in ('NODE010','NODE01025','NODE012') if os.environ.get(name)]
         for runtime in runtimes:
             for mode in (0o640,0o775):
-                for kind in ('matching','read-only','wrong-hash','hardlink','symlink','world-write','unsafe-apps'):
+                for kind in ('matching','read-only','wrong-hash','hardlink','symlink','world-write','unsafe-apps','foreign-apps'):
                     with self.subTest(runtime=runtime,mode=mode,kind=kind),tempfile.TemporaryDirectory(dir=PROCESS_TMP) as root:
                         state=Path(root).resolve()/'state';state.mkdir(mode=0o775);os.chown(state,-1,os.getgid())
                         key=state/'ssap-key.json';key.write_bytes(b'original-pairing');key.chmod(mode)
@@ -217,6 +217,8 @@ fs.writeSync=function(fd,b){if(Buffer.isBuffer(b)&&b.toString().indexOf('private
                         apps=state/'apps.json';apps.write_bytes(b'[]');apps.chmod(0o775)
                         latch=state/'blocked';latch.write_bytes(b'explicit-stop')
                         prefix="var fs=require('fs');['lstatSync','fstatSync'].forEach(function(name){var original=fs[name];fs[name]=function(){var s=original.apply(fs,arguments);if(s.ino===INO)s.uid=5509;return s;};});".replace('INO',str(before.st_ino))
+                        if kind=='foreign-apps':
+                            prefix=prefix.replace('s.ino==='+str(before.st_ino),'(s.ino==='+str(before.st_ino)+'||s.ino==='+str(apps.stat().st_ino)+')')
                         digest=hashlib.sha256(b'wrong' if kind=='wrong-hash' else b'original-pairing').hexdigest()
                         if kind=='hardlink':os.link(key,state/'other')
                         if kind=='symlink':key.rename(state/'other');key.symlink_to(state/'other')
