@@ -263,8 +263,6 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             write.step(3, 'Prepare the TV connection')
             if profile['edition'] == 'root':
                 write('Root requires existing root and SSH access.')
-                if not profile.get('root_variant'):
-                    write('Hardware validation: LG C3; other models are unverified.')
             elif profile.get('connection') != 'root-ssh':
                 write('Developer Mode lets CYTV install apps on a TV without root.')
                 write('Home is your app screen. Home Helper makes the Home button open it.')
@@ -282,8 +280,6 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                                 'Root' if profile['edition'] == 'root' else 'No-root'))
             write('SSH port: ' + str(profile['port']))
             if profile['edition'] == 'root':
-                if not profile.get('root_variant'):
-                    write('Hardware validation: LG C3; other models are unverified.')
                 write('Automatic SSH sign-in first; credentials only if needed.')
             write('Next: verify SSH, read your apps, then install.')
             if profile['edition']=='no-root':
