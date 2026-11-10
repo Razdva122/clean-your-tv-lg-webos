@@ -12,6 +12,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from cytv import package
+from cytv.tv_sources import stage_sources
 from scripts.tv_web_build import compile_web
 from scripts.helper_build import compile_helper
 from scripts.home_assets import THEME_FILES
@@ -22,7 +23,7 @@ def tracked_files(prefix):
     files = {}
     # Explicit public runtime dependencies may be new files in a source checkout.
     # Do not include arbitrary untracked files or local profile data.
-    required = {'native/app': ['native/app/helper-entry.js', 'native/app/state-permissions.js', 'native/app/home-control.js', 'native/app/websocket.js'],
+    required = {'native/app': ['native/app/helper-entry.js', 'native/app/state-permissions.js', 'native/app/contract-events.js', 'native/app/home-control.js', 'native/app/websocket.js'],
                 'renewal-service': ['renewal-service/home-control.js', 'renewal-service/diagnostics.js', 'renewal-service/ca-bundle.crt', 'renewal-service/ca-LICENSE.txt'],
                 'updater-service': ['updater-service/ca-bundle.crt', 'updater-service/ca-LICENSE.txt'],
                 'launcher': ['launcher/viewport.js', 'launcher/system-updates.js', 'launcher/helper-control.js', 'launcher/release-notes.js', 'launcher/app-library.js', 'launcher/input-sources.js', 'launcher/input-preview.js','launcher/i18n.js', 'launcher/catalogs.js', 'launcher/i18n.css', 'launcher/theme-defaults.css', 'launcher/theme-policy.js', 'launcher/theme-runtime.js', 'launcher/home-layout.js', 'launcher/layout-panel.js', 'launcher/settings-categories.js', 'launcher/layout-panel.css',
@@ -48,7 +49,7 @@ def tracked_files(prefix):
 
 def pack_app(appfiles, servicefiles, architecture='all', helper=False):
     if helper:
-        servicefiles = dict(servicefiles, **{'state-permissions.js': appfiles['state-permissions.js']})
+        servicefiles = dict(servicefiles, **{name: appfiles[name] for name in ('state-permissions.js', 'contract-events.js')})
         appfiles, servicefiles = compile_helper(appfiles), compile_helper(servicefiles)
     info = json.loads(appfiles['appinfo.json'])
     if info.get('type') == 'web':
@@ -71,7 +72,8 @@ def pack_app(appfiles, servicefiles, architecture='all', helper=False):
     executables = set()
     if helper:
         # The service sandbox cannot import modules from the app directory.
-        files['usr/palm/services/' + service + '/state-permissions.js'] = appfiles['state-permissions.js']
+        for name in ('state-permissions.js', 'contract-events.js'):
+            files['usr/palm/services/' + service + '/' + name] = appfiles[name]
         executables = {'usr/palm/applications/' + app + '/' + n for n in ('detach', 'relay', 'resume')}
         files['usr/palm/applications/' + app + '/state/.keep'] = b''
         files['usr/palm/services/' + service + '/state/.keep'] = b''
@@ -324,11 +326,14 @@ def main():
     print('Public TV payload verified:', payload)
     if args.payload_only:
         return
+    trusted = ROOT / 'build/cytv/trusted-js'
+    stage_sources(trusted)
     environment = dict(os.environ, PYINSTALLER_CONFIG_DIR=str(ROOT / 'build/cytv/pyinstaller-cache'))
     subprocess.run([sys.executable, '-m', 'PyInstaller', '--noconfirm', '--clean', '--onefile', '--console',
                     '--exclude-module', 'imageio_ffmpeg',
                     '--name', 'cytv', *(['--icon', str(ROOT / 'assets/icons/installer.ico')] if os.name == 'nt' else []),
                     '--paths', str(ROOT), '--add-data', str(payload) + os.pathsep + 'payload',
+                    '--add-data', str(trusted) + os.pathsep + 'cytv/tv',
                     '--workpath', str(ROOT / 'build/cytv/freeze'), '--specpath', str(ROOT / 'build/cytv'),
                     '--distpath', str(ROOT / 'dist'), str(ROOT / 'cytv/__main__.py')], cwd=ROOT, env=environment, check=True)
     executable = ROOT / 'dist' / ('cytv.exe' if os.name == 'nt' else 'cytv')

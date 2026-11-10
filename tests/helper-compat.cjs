@@ -43,6 +43,10 @@ try {
   }
   const service = compile({
     ...sources('native/service'),
+    'contract-events.js': fs.readFileSync(
+      'native/app/contract-events.js',
+      'utf8'
+    ),
     'state-permissions.js': fs.readFileSync(
       'native/app/state-permissions.js',
       'utf8'

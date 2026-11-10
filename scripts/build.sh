@@ -31,7 +31,7 @@ cp native/app/*.js native/app/*.json native/app/*.png build/native-app/
 cp -R native/app/vendor build/native-app/
 cp native/service/*.js native/service/*.json build/native-service/
 cp native/service/app-inventory.js build/native-app/
-cp native/app/state-permissions.js build/native-service/
+cp native/app/state-permissions.js native/app/contract-events.js build/native-service/
 python3 -m scripts.helper_build --input build/native-app --output build/native-app-compat
 python3 -m scripts.helper_build --input build/native-service --output build/native-service-compat
 rm -rf build/native-app build/native-service

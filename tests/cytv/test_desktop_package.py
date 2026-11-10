@@ -25,6 +25,10 @@ class WindowsDesktopPackageTests(unittest.TestCase):
                 return ['--add-binary', str(binary) + os.pathsep + 'ffmpeg', '--add-data', str(notice) + os.pathsep + 'ffmpeg']
             def run(command, **kwargs):
                 if 'PyInstaller' in command:
+                    specs=[command[i+1] for i,v in enumerate(command) if v=='--add-data']
+                    trusted=Path(next(v for v in specs if v.endswith(os.pathsep+'cytv/tv')).rsplit(os.pathsep,1)[0])
+                    for name in ('contract-events','state-permissions'):
+                        self.assertEqual((trusted/(name+'.js')).read_bytes(), (root/'native/app'/(name+'.js')).read_bytes())
                     self.assertIn('--windowed', command)
                     self.assertIn('--onedir', command)
                     self.assertIn('--icon', command)

@@ -102,7 +102,8 @@ class BuildAssetsTests(unittest.TestCase):
         permissions = (root / 'native/app/state-permissions.js').read_bytes()
         app = {'appinfo.json': json.dumps({'id': 'com.local.nativehome',
                                          'version': '0.6.18', 'type': 'native'}).encode(),
-               'state-permissions.js': permissions}
+               'state-permissions.js': permissions,
+               'contract-events.js': (root/'native/app/contract-events.js').read_bytes()}
         service = {'services.json': (root / 'native/service/services.json').read_bytes(),
                    'service.js': (root / 'native/service/service.js').read_bytes()}
         files = package.data_files(build['pack_app'](app, service, helper=True, architecture='arm'))
