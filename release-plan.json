@@ -42,6 +42,11 @@
       "pr": 483,
       "issues": [],
       "summary": "Fix Settings remote navigation and recovery in both editions"
+    },
+    {
+      "pr": 484,
+      "issues": [],
+      "summary": "Fix browser expectations for adaptive Settings controls"
     }
   ],
   "excluded": [],
