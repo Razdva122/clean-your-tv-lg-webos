@@ -205,3 +205,13 @@ data is credited to the Norwegian Meteorological Institute (CC BY 4.0); provider
 terms and other credits are available in Data sources. See
 [weather implementation and limits](development/WEATHER.md)
 and [release notes](RELEASE-1.15.0.md).
+
+## iPhone photos from the phone upload page
+
+Open Settings → Wallpapers → Upload from phone and scan the code. Choose a JPG, PNG or HEIC/HEIF photo, crop it, acknowledge the quality limit and send it. Choose Apply on the TV. Safari uses native HEIC support; Chrome, Firefox and other modern browsers use the bundled local decoder when needed. Conversion runs on your phone, without a conversion website. Cancel or choosing another file stops conversion. Input limit: 32 MiB and 50 million pixels; output: at most 1080p and 2 MiB. If conversion fails, try another photo or JPG/PNG. This support is for the phone page, not the Mac file picker.
+
+The fallback is the pinned libheif-js 1.23.5 WebAssembly bundle, served by the TV only when native decoding fails. It runs in a dedicated worker with a 60-second timeout, primary-image selection, input limits, and termination on cancel/file change/session expiry. The worker never executes on the TV. No conversion service, CDN or remote decoder is contacted. License texts and exact-byte provenance are in `theme-receiver/vendor/heic/`, and the phone page links the bundled license text.
+
+An installed TV needs a matching updated receiver service; updating the desktop app alone does not change the phone page. Root standalone packaging embeds the worker and notices into the existing service inventory.
+
+On macOS, run `npx playwright install webkit chromium firefox`, then `npm run test:wallpaper:heic`. Synthetic fixtures cover native and fallback decoding, 24 MP input, malformed files, MIME variants, local JPEG upload, cancellation and file replacement.

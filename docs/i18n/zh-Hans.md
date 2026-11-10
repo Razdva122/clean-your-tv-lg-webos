@@ -144,6 +144,10 @@ No-root: 要重新启动 Home 控制，请打开 Home Helper，选择启动 Help
 
 点击天气标题旁的“数据来源”可查看服务和许可信息。
 
+## 从iPhone上传壁纸
+
+打开设置 → 壁纸 → 从手机上传并扫描二维码。选择JPG、PNG或HEIC/HEIF，裁剪、确认画质限制后发送，再在电视上选择应用。Safari使用原生HEIC支持；Chrome、Firefox等现代浏览器会在需要时使用内置的本地解码器。转换在手机上完成，不使用外部服务。取消或选择其他文件会停止转换。输入上限为32 MiB和5000万像素，输出最高为1080p和2 MiB。转换失败时请换一张照片或使用JPG/PNG。此功能适用于手机页面，不适用于Mac应用。
+
 ## 设置你的 Clean Your TV
 
 安装成功后，选择 Classic、Liquid Glass 或 Ribbon，并开启或关闭主屏幕天气。Ribbon 不支持天气；Liquid Glass 使用简短格式。城市根据网络连接估算，可在 Home 设置中更改。

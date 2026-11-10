@@ -144,6 +144,10 @@ Forecast coordinates go to api.met.no or api.open-meteo.com; city searches go to
 
 The Data sources button in the Weather heading opens provider and license information.
 
+## iPhone wallpaper upload
+
+Open Settings → Wallpapers → Upload from phone and scan the code. Choose a JPG, PNG or HEIC/HEIF photo, crop it, acknowledge the quality limit and send it. Choose Apply on the TV. Safari uses native HEIC support; Chrome, Firefox and other modern browsers use the bundled local decoder when needed. Conversion runs on your phone, without a conversion website. Cancel or choosing another file stops conversion. Input limit: 32 MiB and 50 million pixels; output: at most 1080p and 2 MiB. If conversion fails, try another photo or JPG/PNG. This support is for the phone page, not the Mac file picker.
+
 ## Set up your Clean Your TV
 
 After successful installation, choose Classic, Liquid Glass or Ribbon and turn Home weather on or off. Ribbon does not support weather; Liquid Glass uses the compact format. Weather can find an approximate city through your internet connection; change it later in Home settings.

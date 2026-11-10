@@ -144,6 +144,10 @@ Les coordonnées sont envoyées à api.met.no ou api.open-meteo.com, les recherc
 
 Le bouton Sources des données dans l’en-tête Météo ouvre les informations sur les services et licences.
 
+## Photo iPhone comme fond d’écran
+
+Ouvrez Paramètres → Fonds d’écran → Envoyer depuis le téléphone et scannez le code. Choisissez JPG, PNG ou HEIC/HEIF, recadrez, acceptez la limite de qualité et envoyez. Choisissez Appliquer sur le TV. Safari utilise HEIC natif ; Chrome, Firefox et les autres navigateurs modernes utilisent le décodeur local inclus si nécessaire. La conversion reste sur le téléphone, sans service externe. Annuler ou changer de fichier arrête la conversion. Entrée : 32 Mio et 50 millions de pixels ; sortie : 1080p et 2 Mio maximum. En cas d’échec, essayez une autre photo ou JPG/PNG. Cela concerne la page du téléphone, pas l’app Mac.
+
 ## Configurer votre Clean Your TV
 
 Après une installation réussie, choisissez Classic, Liquid Glass ou Ribbon et activez ou désactivez la météo. Ribbon ne prend pas en charge la météo ; Liquid Glass utilise le format compact. La ville est estimée selon votre connexion et peut être modifiée dans Home.

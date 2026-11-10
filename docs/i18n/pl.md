@@ -145,6 +145,10 @@ Współrzędne trafiają do api.met.no lub api.open-meteo.com, wyszukiwania mias
 
 Przycisk Źródła danych w nagłówku Pogoda otwiera informacje o usługach i licencjach.
 
+## Tapeta z iPhone’a
+
+Otwórz Ustawienia → Tapety → Prześlij z telefonu i zeskanuj kod. Wybierz JPG, PNG albo HEIC/HEIF, wykadruj, zaakceptuj ograniczenie jakości i wyślij. Na TV wybierz Zastosuj. Safari korzysta z natywnego HEIC; Chrome, Firefox i inne nowoczesne przeglądarki w razie potrzeby z dołączonego lokalnego dekodera. Konwersja odbywa się w telefonie bez zewnętrznej usługi. Anulowanie lub zmiana pliku ją zatrzymuje. Wejście: 32 MiB i 50 milionów pikseli; wyjście: do 1080p i 2 MiB. Przy błędzie wybierz inne zdjęcie lub JPG/PNG. Dotyczy strony telefonu, nie aplikacji Mac.
+
 ## Skonfiguruj Clean Your TV
 
 Po udanej instalacji wybierz Classic, Liquid Glass lub Ribbon i włącz albo wyłącz pogodę. Ribbon nie obsługuje pogody; Liquid Glass używa formatu kompaktowego. Miasto jest szacowane z połączenia i można je zmienić w Home.

@@ -120,6 +120,10 @@ Souřadnice se posílají na api.met.no nebo api.open-meteo.com, hledání měst
 
 Tlačítko Zdroje dat v záhlaví Počasí otevře informace o službách a licencích.
 
+## Nahrání tapety z iPhonu
+
+Otevřete Nastavení → Tapety → Nahrát z telefonu a naskenujte kód. Vyberte JPG, PNG nebo HEIC/HEIF, upravte výřez, potvrďte omezení kvality a odešlete. Na TV zvolte Použít. Safari používá vlastní podporu HEIC; Chrome, Firefox a další moderní prohlížeče podle potřeby přibalený místní dekodér. Převod probíhá v telefonu bez externí služby. Zrušení nebo výběr jiného souboru převod zastaví. Vstup: 32 MiB a 50 milionů pixelů; výstup: nejvýše 1080p a 2 MiB. Při chybě zkuste jinou fotku nebo JPG/PNG. Platí pro stránku v telefonu, ne aplikaci pro Mac.
+
 ## Nastavte si Clean Your TV
 
 Po úspěšné instalaci vyberte Classic, Liquid Glass nebo Ribbon a zapněte či vypněte počasí. Ribbon počasí nepodporuje; Liquid Glass používá stručný formát. Město se odhaduje podle připojení a lze je změnit v Home.

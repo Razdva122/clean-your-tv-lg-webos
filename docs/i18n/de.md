@@ -144,6 +144,10 @@ Vorhersagekoordinaten gehen an api.met.no oder api.open-meteo.com, Stadtsuchen a
 
 Die Schaltfläche Datenquellen in der Wetterüberschrift öffnet Informationen zu Diensten und Lizenzen.
 
+## iPhone-Foto als Hintergrund
+
+Einstellungen → Hintergrundbilder → Vom Telefon hochladen öffnen und den Code scannen. JPG, PNG oder HEIC/HEIF wählen, zuschneiden, Qualitätsgrenze bestätigen und senden. Am TV Anwenden wählen. Safari nutzt native HEIC-Unterstützung; Chrome, Firefox und andere moderne Browser bei Bedarf den mitgelieferten lokalen Decoder. Die Umwandlung erfolgt auf dem Telefon ohne externen Dienst. Abbrechen oder eine andere Datei beendet die Umwandlung. Eingabe: 32 MiB und 50 Millionen Pixel; Ausgabe: maximal 1080p und 2 MiB. Bei Fehlern ein anderes Foto oder JPG/PNG wählen. Gilt für die Telefonseite, nicht die Mac-App.
+
 ## Clean Your TV einrichten
 
 Wähle nach erfolgreicher Installation Classic, Liquid Glass oder Ribbon und schalte das Wetter ein oder aus. Ribbon unterstützt kein Wetter; Liquid Glass nutzt das Kurzformat. Der ungefähre Ort wird über die Internetverbindung ermittelt und lässt sich in Home ändern.

@@ -144,6 +144,10 @@ Las coordenadas se envían a api.met.no o api.open-meteo.com y las búsquedas de
 
 El botón Fuentes de datos del encabezado Tiempo abre la información de servicios y licencias.
 
+## Fondo desde el iPhone
+
+Abre Ajustes → Fondos → Subir desde el teléfono y escanea el código. Elige JPG, PNG o HEIC/HEIF, recorta, acepta el límite de calidad y envía. Selecciona Aplicar en el TV. Safari usa HEIC nativo; Chrome, Firefox y otros navegadores modernos usan el decodificador local incluido cuando hace falta. La conversión ocurre en el teléfono, sin servicio externo. Cancelar o elegir otro archivo detiene la conversión. Entrada: 32 MiB y 50 millones de píxeles; salida: hasta 1080p y 2 MiB. Si falla, prueba otra foto o JPG/PNG. Es para la página del teléfono, no la app Mac.
+
 ## Configura tu Clean Your TV
 
 Después de instalar correctamente, elige Classic, Liquid Glass o Ribbon y activa o desactiva el tiempo. Ribbon no admite el tiempo; Liquid Glass usa el formato compacto. La ciudad se estima por tu conexión y puedes cambiarla en Home.

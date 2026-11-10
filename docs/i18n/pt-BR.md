@@ -145,6 +145,10 @@ As coordenadas vão para api.met.no ou api.open-meteo.com; as buscas de cidades,
 
 O botão Fontes de dados no título Clima abre informações sobre os serviços e as licenças.
 
+## Papel de parede do iPhone
+
+Abra Configurações → Papéis de parede → Enviar do telefone e leia o código. Escolha JPG, PNG ou HEIC/HEIF, recorte, confirme o limite de qualidade e envie. Escolha Aplicar na TV. Safari usa suporte HEIC nativo; Chrome, Firefox e outros navegadores modernos usam o decodificador local incluído quando necessário. A conversão ocorre no telefone, sem serviço externo. Cancelar ou escolher outro arquivo interrompe a conversão. Entrada: 32 MiB e 50 milhões de pixels; saída: até 1080p e 2 MiB. Se falhar, tente outra foto ou JPG/PNG. É para a página do telefone, não o app Mac.
+
 ## Configure seu Clean Your TV
 
 Após a instalação bem-sucedida, escolha Classic, Liquid Glass ou Ribbon e ative ou desative o clima. Ribbon não oferece clima; Liquid Glass usa o formato compacto. A cidade é estimada pela conexão e pode ser alterada na Home.
