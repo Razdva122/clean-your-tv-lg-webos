@@ -89,6 +89,7 @@ var child,
 var restarts = [],
   restartTimer = null,
   cleaning = false,
+  waitingForPower = false,
   stopRequested = false,
   irHomeTimer = null;
 // The standard IR remote is observed, not grabbed, so webOS also opens its own Home
@@ -743,6 +744,23 @@ function workerClosed(worker, code, signal) {
   ready = false;
   buffer = '';
   readStop();
+  var powerRemoval =
+    code === 32 &&
+    !signal &&
+    worker.reason === 32 &&
+    worker.powerOffUntil &&
+    monotonic() <= worker.powerOffUntil &&
+    !stopRequested &&
+    !fs.existsSync(data + '/blocked') &&
+    !fs.existsSync(data + '/watchdog');
+  if (powerRemoval) {
+    // The relay closed both vanished devices; do not reopen suspended input.
+    log({ event: 'power-input-removed' });
+    waitingForPower = true;
+    invalidatePresentation(false);
+    cancelResume();
+    return;
+  }
   var retry =
     (worker.reason === undefined || worker.reason === 20) &&
     ((code === 20 && !signal) ||
@@ -1131,6 +1149,57 @@ var screenWatch = require('./screen-watch')(
       processing: p.processing,
       onOff: p.onOff
     });
+    var poweringOff =
+      p.onOff === 'off' ||
+      [
+        'Request Power Off',
+        'Request Active Standby',
+        'Prepare Active Standby',
+        'Active Standby',
+        'Request Suspend',
+        'Prepare Power Off',
+        'Suspend'
+      ].indexOf(p.state) !== -1;
+    if (
+      waitingForPower &&
+      (poweringOff || p.processing || p.state !== 'Active')
+    ) {
+      clearTimeout(restartTimer);
+      restartTimer = null;
+    }
+    var wakingInput =
+      waitingForPower &&
+      !stopping &&
+      !poweringOff &&
+      p.state === 'Active' &&
+      !p.processing;
+    if (wakingInput && restartTimer === null) {
+      // Retain the controller across same-boot sleep. Reopen input once, only
+      // after fresh Active, with the existing settling delay and stop guards.
+      restartTimer = setTimeout(function () {
+        restartTimer = null;
+        if (stopping) return;
+        if (
+          readStop() ||
+          fs.existsSync(data + '/blocked') ||
+          fs.existsSync(data + '/watchdog')
+        ) {
+          finish(0);
+          return;
+        }
+        waitingForPower = false;
+        start(false);
+      }, 1500);
+    }
+    if (child && !stopping) {
+      if (poweringOff) {
+        child.powerOffUntil = monotonic() + 15000;
+        child.stdin.write('T');
+      } else if (p.state === 'Active') {
+        child.powerOffUntil = 0;
+        child.stdin.write('R');
+      }
+    }
     if (
       p.onOff === 'off' ||
       p.state === 'Active Standby' ||
@@ -1140,7 +1209,7 @@ var screenWatch = require('./screen-watch')(
       cancelResume();
     }
     if (
-      powerPolicy.next(p) &&
+      (powerPolicy.next(p) || wakingInput) &&
       homeControl.enabled() &&
       !visitingLG &&
       !stopping
