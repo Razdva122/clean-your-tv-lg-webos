@@ -211,3 +211,26 @@ No TV, firmware, remote or installer-platform device run was performed. Immutabl
 Root observer programs/capsules, backend receipts and stopped-Helper proof remain
 unchanged. No full suite, C/compiled Helper run, RC build or TV operation was
 repeated for this focused fix.
+
+## Packaged key reader trust and repair authority
+
+The follow-up role matrix found that a packaged-owner key expanded to 0775 was
+trusted for reading but refused even when the installer supplied its exact
+original hash. Trusted read ownership did not make that noncaller inode safe to
+chmod in place. Installer configuration now routes a noncaller key with other
+permission bits through the existing authenticated replacement branch. Its exact
+SHA256, allowed modes and same-directory group checks remain unchanged; a caller's
+own 0775 key still repairs in place. Private packaged keys retain their original
+inode, owner and mode, including the existing accepted 0600/0640/0660 cases.
+
+For both Root UID0/groups[0] and an ordinary caller sharing group5000, the new
+host inode matrix failed the intended valid-hash replacement on current Node
+and exact 0.10.15, 0.10.25 and 0.12.2 before the fix (eight failures). After the
+minimal branch change, all 33 storage/report/Stop tests passed. Final explicit
+0600/0660 preservation and caller-owned in-place assertions passed in the same
+matrix on all four runtimes. Read-only expanded-key inspection, missing/wrong
+hash, mismatched group and foreign apps ownership refuse before mutation; exact
+hash replacement produces a new caller-owned 0640/group5000 inode and retains
+key bytes, apps inode and emergency/watchdog state. No new ownership literal,
+mode allowance or proof exemption was added. Actual Linux root CI and physical
+TV acceptance remain outside this macOS development evidence.

@@ -27,6 +27,12 @@ metadata and the surrounding recovery guards. Foreign apps ownership remains a
 refusal for installer preparation. Apps remain installer configuration; runtime
 reads do not normalize legacy modes. Normal installation writes apps as 0644.
 
+A caller may repair its own boot-expanded key in place. A trusted packaged
+owner permits reading an already private key; it does not grant mutation rights.
+A noncaller key needing privacy repair uses the same exact-hash authenticated
+replacement path as an untrusted foreign key, creating a caller-owned 0640 inode.
+An already private trusted packaged key remains unchanged.
+
 Fixed record kinds are `control`, `home-preference`, `startup-state`, `pid`,
 `logger`, and `home`/`input`/`catalog` request and response pairs. Each has its own
 fixed filename, role and mode. Control initialization and shared preference/

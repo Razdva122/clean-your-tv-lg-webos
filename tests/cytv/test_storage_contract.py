@@ -134,6 +134,40 @@ assert.strictEqual(fs.readFileSync(d+'/blocked','utf8'),'emergency');
 assert.strictEqual(fs.readFileSync(d+'/watchdog','utf8'),'watchdog');
 """)
 
+    def test_packaged_key_privacy_repair_requires_hash_and_caller_owned_staging(self):
+        # Trusting a packaged reader does not authorize chmod of its inode.
+        for caller in (0, 21001):
+            with self.subTest(caller=caller):
+                self.run_js("""
+var role=CALLER,owners={},gids={},open=fs.openSync,stat=fs.fstatSync;
+process.getuid=function(){return role;};process.getgid=function(){return role===0?0:5000;};process.getgroups=function(){return [role===0?0:5000];};
+['lstatSync','fstatSync','statSync'].forEach(function(name){var original=fs[name];fs[name]=function(){var s=original.apply(fs,arguments);s.uid=s.isDirectory()?5999:(owners[s.ino]===undefined?5999:owners[s.ino]);s.gid=gids[s.ino]===undefined?5000:gids[s.ino];return s;};});
+fs.openSync=function(){var fd=open.apply(fs,arguments);if(arguments[1]&require('constants').O_CREAT){owners[stat(fd).ino]=role;gids[stat(fd).ino]=role===0?0:5000;}return fd;};
+fs.fchownSync=function(fd,uid,gid){owners[stat(fd).ino]=uid;gids[stat(fd).ino]=gid;};
+fs.chmodSync(d,504);
+var key=d+'/ssap-key.json',apps=d+'/apps.json',bytes='{"key":"retained"}';
+fs.writeFileSync(key,bytes);fs.chmodSync(key,416);fs.writeFileSync(apps,'[]');fs.chmodSync(apps,420);
+fs.writeFileSync(d+'/blocked','emergency');fs.writeFileSync(d+'/watchdog','retained');
+var before=fs.statSync(key),hash=require('crypto').createHash('sha256').update(bytes).digest('hex');
+p.inspectConfiguration(d,{});p.prepareConfiguration(d,{expectedHash:hash});
+assert.strictEqual(fs.statSync(key).ino,before.ino);assert.strictEqual(fs.statSync(key).uid,5999);assert.strictEqual(fs.statSync(key).mode&4095,416);
+[384,432].forEach(function(mode){fs.chmodSync(key,mode);p.inspectConfiguration(d,{});p.prepareConfiguration(d,{expectedHash:hash});assert.strictEqual(fs.statSync(key).ino,before.ino);assert.strictEqual(fs.statSync(key).uid,5999);assert.strictEqual(fs.statSync(key).mode&4095,mode);});
+fs.chmodSync(key,509);
+function retained(){var s=fs.statSync(key);assert.strictEqual(s.ino,before.ino);assert.strictEqual(s.uid,5999);assert.strictEqual(s.mode&4095,509);assert.strictEqual(fs.readFileSync(key,'utf8'),bytes);assert.strictEqual(fs.readdirSync(d).filter(function(n){return n.charAt(0)==='.';}).length,0);}
+assert.throws(function(){p.inspectConfiguration(d,{expectedHash:hash});});retained();
+assert.throws(function(){p.prepareConfiguration(d,{});});retained();
+assert.throws(function(){p.prepareConfiguration(d,{expectedHash:new Array(65).join('0')});});retained();
+gids[before.ino]=98765;assert.throws(function(){p.prepareConfiguration(d,{expectedHash:hash});});gids[before.ino]=5000;retained();
+var appInode=fs.statSync(apps).ino;owners[appInode]=21002;
+assert.throws(function(){p.prepareConfiguration(d,{expectedHash:hash});});retained();owners[appInode]=5999;
+p.prepareConfiguration(d,{expectedHash:hash});
+var after=fs.statSync(key);assert.notStrictEqual(after.ino,before.ino);assert.strictEqual(after.uid,role);assert.strictEqual(after.gid,5000);assert.strictEqual(after.mode&4095,416);
+assert.strictEqual(fs.readFileSync(key,'utf8'),bytes);assert.strictEqual(fs.readFileSync(apps,'utf8'),'[]');assert.strictEqual(fs.statSync(apps).ino,appInode);
+fs.chmodSync(key,509);p.prepareConfiguration(d,{});assert.strictEqual(fs.statSync(key).ino,after.ino);assert.strictEqual(fs.statSync(key).uid,role);assert.strictEqual(fs.statSync(key).mode&4095,416);
+assert.strictEqual(fs.readFileSync(d+'/blocked','utf8'),'emergency');assert.strictEqual(fs.readFileSync(d+'/watchdog','utf8'),'retained');
+assert.strictEqual(fs.readdirSync(d).filter(function(n){return n.charAt(0)==='.';}).length,0);
+""".replace('CALLER', str(caller)))
+
     def test_staging_refuses_directory_substitution_before_any_bytes_are_written(self):
         self.run_js("""
 var parent=d+'/state',foreign=d+'/foreign';fs.mkdirSync(parent,504);fs.mkdirSync(foreign,504);

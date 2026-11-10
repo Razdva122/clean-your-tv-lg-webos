@@ -460,7 +460,9 @@ function configuration(directory, options, repair) {
         );
       if (key) {
         var mode = key.stat.mode & 4095;
-        if (!s.owned(key.stat)) {
+        // Trusted read ownership does not grant chmod authority over a
+        // noncaller key; privacy repair must authenticate its original bytes.
+        if (!s.owned(key.stat) || (key.stat.uid !== s.uid && mode & 7)) {
           if (
             !repair ||
             !/^[a-f0-9]{64}$/.test(options.expectedHash || '') ||
