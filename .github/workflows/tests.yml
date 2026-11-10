@@ -353,7 +353,7 @@ jobs:
           if-no-files-found: error
 
   tests:
-    needs: [scope, runtime, browser, optional-python]
+    needs: [scope, runtime, browser, phone-heic, optional-python]
     if: always()
     strategy:
       fail-fast: false
@@ -366,6 +366,7 @@ jobs:
           SCOPE: ${{ needs.scope.result }}
           RUNTIME: ${{ needs.runtime.result }}
           BROWSER: ${{ needs.browser.result }}
+          HEIC: ${{ needs.phone-heic.result }}
           PYTHON: ${{ needs.optional-python.result }}
           BROWSER_REQUIRED: ${{ needs.scope.outputs.tv == 'true' || needs.scope.outputs.ui == 'true' }}
           PYTHON_REQUIRED: ${{ needs.scope.outputs.installer }}
@@ -373,12 +374,16 @@ jobs:
           test "$SCOPE" = success
           test "$RUNTIME" = success
           case "$BROWSER" in success|skipped) ;; *) exit 1 ;; esac
+          case "$HEIC" in success|skipped) ;; *) exit 1 ;; esac
           case "$PYTHON" in success|skipped) ;; *) exit 1 ;; esac
-          if [ "$BROWSER_REQUIRED" = true ]; then test "$BROWSER" = success; fi
+          if [ "$BROWSER_REQUIRED" = true ]; then
+            test "$BROWSER" = success
+            test "$HEIC" = success
+          fi
           if [ "$PYTHON_REQUIRED" = true ]; then test "$PYTHON" = success; fi
 
   full-release:
-    needs: [tests, browser, optional-python]
+    needs: [tests, browser, phone-heic, optional-python]
     if: always() && inputs.full_suite
     runs-on: ubuntu-latest
     steps:
@@ -386,11 +391,13 @@ jobs:
         env:
           TESTS: ${{ needs.tests.result }}
           BROWSER: ${{ needs.browser.result }}
+          HEIC: ${{ needs.phone-heic.result }}
           PYTHON: ${{ needs.optional-python.result }}
           SOURCE: ${{ inputs.source_sha }}
         run: |
           test -n "$SOURCE"
           test "$TESTS" = success
           test "$BROWSER" = success
+          test "$HEIC" = success
           test "$PYTHON" = success
           echo "Full release validation passed for $SOURCE"
