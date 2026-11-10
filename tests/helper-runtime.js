@@ -8,6 +8,49 @@ assert.equal(typeof Object.assign, 'function');
 assert.equal(typeof Promise, 'function');
 assert.equal(typeof Symbol, 'function');
 assert.equal(Buffer.from('hello').toString(), 'hello');
+// New policy surfaces must execute, including diagnostics, on exact TV runtimes.
+var runtimePolicy = require(path.join(root, 'runtime-policy')),
+  powerPolicy = require(path.join(root, 'power-policy'))();
+var retry = runtimePolicy.classifyExit({
+  code: 20,
+  tracked: true,
+  watchdog: true,
+  watchdogOwned: true,
+  retryCount: 0
+});
+assert.equal(retry.action, 'retry-watchdog');
+assert.equal(retry.cleanup, true);
+var exhausted = runtimePolicy.classifyExit({
+  code: null,
+  signal: 'SIGKILL',
+  tracked: true,
+  watchdogKill: true,
+  retryCount: 5
+});
+assert.equal(exhausted.action, 'terminal');
+assert.equal(exhausted.exitCode, 20);
+assert.equal(exhausted.signal, 'SIGKILL');
+var mismatch = runtimePolicy.classifyExit({ code: 99, reportedReason: 20 });
+assert.equal(mismatch.diagnostics[0].actual.os_code, 99);
+assert.equal(mismatch.diagnostics[0].actual.reported_code, 20);
+var signaled = runtimePolicy.classifyExit({
+  code: null,
+  signal: 'SIGKILL',
+  reportedReason: 27
+});
+assert.equal(signaled.diagnostics[1].actual.code, 9);
+powerPolicy.observe({ state: 'Suspend' }, 1000);
+assert.equal(
+  powerPolicy.observe({ state: 'Active', processing: 'Prepare Power On' }, 1100)
+    .resumed,
+  false
+);
+assert.equal(
+  powerPolicy.observe({ state: 'Active', processing: 'private-marker' }, 1200)
+    .diagnostics[0].actual.length,
+  14
+);
+assert.equal(powerPolicy.observe({ state: 'Active' }, 1300).resumed, true);
 var WebSocket = require(path.join(root, 'websocket'));
 var rejected = 0;
 function receiver(limit) {

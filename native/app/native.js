@@ -659,11 +659,32 @@ function cleanupRelay(done) {
     complete(false);
   }
 }
-function finish(code, signal, needsCleanup, relayReason) {
+function classifyExit(snapshot) {
+  var decision = policy.classifyExit(snapshot);
+  decision.diagnostics.forEach(function (event) {
+    log({ event: 'contract-event', contract: event });
+  });
+  return decision;
+}
+function liveStop(recovering) {
+  return (
+    readStop() ||
+    fs.existsSync(data + '/blocked') ||
+    (!recovering && fs.existsSync(data + '/watchdog'))
+  );
+}
+function finish(decision) {
   if (stopping) return;
+  if (typeof decision !== 'object' || decision === null)
+    decision = classifyExit({
+      code: decision,
+      ready: ready,
+      stop: stopRequested
+    });
+  var code = decision.code,
+    signal = decision.signal;
   stopping = true;
-  terminalUI =
-    code === 22 || code === 27 || relayReason === 27 || stopRequested;
+  terminalUI = decision.terminalUI;
   invalidatePresentation(!terminalUI);
   clearTimeout(restartTimer);
   cancelIrHome();
@@ -671,15 +692,14 @@ function finish(code, signal, needsCleanup, relayReason) {
   if (screenWatch) screenWatch.close();
   clearInterval(timer);
   log({ event: 'worker-exit', code: code, signal: signal });
-  if (relayReason === 27 || policy.shouldBlock(code, signal))
-    block(!terminalUI);
+  if (decision.block) block(!terminalUI);
   // A signal can replace the OS exit code after the relay reported emergency.
   // Keep the real code/signal above for cleanup policy and diagnostics.
   function end() {
     try {
       fs.unlinkSync(pidPath);
     } catch (e) {}
-    process.exit(relayReason === 27 ? 27 : code === 22 ? 0 : code || 0);
+    process.exit(decision.exitCode);
   }
   // Let an already-issued custom-Home request settle before the final LG launch.
   var finishDeadline = monotonic() + 3200,
@@ -724,7 +744,7 @@ function finish(code, signal, needsCleanup, relayReason) {
       setTimeout(end, 300);
     });
   }
-  if (needsCleanup || ready)
+  if (decision.cleanup)
     cleanupRelay(function (ok) {
       relayClean = ok;
       if (!ok) block(!terminalUI);
@@ -735,21 +755,30 @@ function finish(code, signal, needsCleanup, relayReason) {
 function workerClosed(worker, code, signal) {
   if (child !== worker || stopping) return;
   cancelIrHome();
-  var needsCleanup = ready || !!signal;
+  readStop();
+  var now = monotonic();
+  restarts = restarts.filter(function (t) {
+    return now - t < 600000;
+  });
+  var decision = classifyExit({
+    code: code,
+    signal: signal,
+    reportedReason: worker.reason,
+    tracked: child === worker,
+    ready: ready,
+    watchdogKill: worker.watchdogKill,
+    now: now,
+    powerOffUntil: worker.powerOffUntil,
+    stop: stopRequested,
+    blocked: fs.existsSync(data + '/blocked'),
+    watchdog: fs.existsSync(data + '/watchdog'),
+    watchdogOwned: worker.watchdogKill || worker.reason === 20,
+    retryCount: restarts.length
+  });
   child = null;
   ready = false;
   buffer = '';
-  readStop();
-  var powerRemoval =
-    code === 32 &&
-    !signal &&
-    worker.reason === 32 &&
-    worker.powerOffUntil &&
-    monotonic() <= worker.powerOffUntil &&
-    !stopRequested &&
-    !fs.existsSync(data + '/blocked') &&
-    !fs.existsSync(data + '/watchdog');
-  if (powerRemoval) {
+  if (decision.action === 'wait-power') {
     // The relay closed both vanished devices; do not reopen suspended input.
     log({ event: 'power-input-removed' });
     waitingForPower = true;
@@ -757,23 +786,9 @@ function workerClosed(worker, code, signal) {
     cancelResume();
     return;
   }
-  var retry =
-    (worker.reason === undefined || worker.reason === 20) &&
-    ((code === 20 && !signal) ||
-      (worker.watchdogKill &&
-        signal === 'SIGKILL' &&
-        worker.reason === undefined));
-  if (!retry || stopRequested || fs.existsSync(data + '/blocked')) {
-    finish(code, signal, needsCleanup, worker.reason);
-    return;
-  }
-  var now = monotonic();
-  restarts = restarts.filter(function (t) {
-    return now - t < 600000;
-  });
-  if (restarts.length >= 5) {
-    log({ event: 'worker-restart-limit' });
-    finish(20, null, needsCleanup);
+  if (decision.action === 'terminal') {
+    if (decision.retryLimit) log({ event: 'worker-restart-limit' });
+    finish(decision);
     return;
   }
   restarts.push(now);
@@ -790,14 +805,14 @@ function workerClosed(worker, code, signal) {
       finish(11);
       return;
     }
-    if (readStop() || fs.existsSync(data + '/blocked')) {
+    if (liveStop(true)) {
       finish(0);
       return;
     }
     restartTimer = setTimeout(function () {
       restartTimer = null;
       if (stopping) return;
-      if (readStop() || fs.existsSync(data + '/blocked')) {
+      if (liveStop(true)) {
         finish(0);
         return;
       }
@@ -806,7 +821,7 @@ function workerClosed(worker, code, signal) {
   });
 }
 function start(recovering) {
-  if (stopping || readStop()) {
+  if (stopping || liveStop(recovering)) {
     if (!stopping) finish(0);
     return;
   }
@@ -1147,41 +1162,22 @@ var screenWatch = require('./screen-watch')(
       processing: p.processing,
       onOff: p.onOff
     });
-    var poweringOff =
-      p.onOff === 'off' ||
-      [
-        'Request Power Off',
-        'Request Active Standby',
-        'Prepare Active Standby',
-        'Active Standby',
-        'Request Suspend',
-        'Prepare Power Off',
-        'Suspend'
-      ].indexOf(p.state) !== -1;
-    if (
-      waitingForPower &&
-      (poweringOff || p.processing || p.state !== 'Active')
-    ) {
+    var power = powerPolicy.observe(p, monotonic());
+    power.diagnostics.forEach(function (event) {
+      log({ event: 'contract-event', contract: event });
+    });
+    if (waitingForPower && power.cancelWakeWait) {
       clearTimeout(restartTimer);
       restartTimer = null;
     }
-    var wakingInput =
-      waitingForPower &&
-      !stopping &&
-      !poweringOff &&
-      p.state === 'Active' &&
-      !p.processing;
+    var wakingInput = waitingForPower && !stopping && power.settledActive;
     if (wakingInput && restartTimer === null) {
       // Retain the controller across same-boot sleep. Reopen input once, only
       // after fresh Active, with the existing settling delay and stop guards.
       restartTimer = setTimeout(function () {
         restartTimer = null;
         if (stopping) return;
-        if (
-          readStop() ||
-          fs.existsSync(data + '/blocked') ||
-          fs.existsSync(data + '/watchdog')
-        ) {
+        if (liveStop(false)) {
           finish(0);
           return;
         }
@@ -1189,25 +1185,16 @@ var screenWatch = require('./screen-watch')(
         start(false);
       }, 1500);
     }
-    if (child && !stopping) {
-      if (poweringOff) {
-        child.powerOffUntil = monotonic() + 15000;
-        child.stdin.write('T');
-      } else if (p.state === 'Active') {
-        child.powerOffUntil = 0;
-        child.stdin.write('R');
-      }
+    if (child && !stopping && power.command) {
+      child.powerOffUntil = power.deadline;
+      child.stdin.write(power.command);
     }
-    if (
-      p.onOff === 'off' ||
-      p.state === 'Active Standby' ||
-      p.state === 'Suspend'
-    ) {
+    if (power.cancelPresentation) {
       invalidatePresentation(false);
       cancelResume();
     }
     if (
-      (powerPolicy.next(p) || wakingInput) &&
+      (power.resumed || wakingInput) &&
       homeControl.enabled() &&
       !visitingLG &&
       !stopping

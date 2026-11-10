@@ -44,6 +44,10 @@ static void latch_stop(int reason){const char *latch=reason==20?"/media/develope
 static int compatible(int in,int out){unsigned char a[256],b[256];int types[]={0,1,2,3};for(int i=0;i<4;i++){memset(a,0,sizeof a);memset(b,0,sizeof b);if(ioctl(in,BIT(types[i],sizeof a),a)<0||ioctl(out,BIT(types[i],sizeof b),b)<0||memcmp(a,b,sizeof a))return 0;}for(int axis=0;axis<2;axis++){int a[6],b[6];if(ioctl(in,_IOR('E',0x40+axis,int[6]),a)<0||ioctl(out,_IOR('E',0x40+axis,int[6]),b)<0||memcmp(a+1,b+1,5*sizeof(int)))return 0;}return 1;}
 static int startup_in,startup_out;
 static uint64_t startup_ack,powerDeadline;
+static void power_command(char command){
+ if(command=='T')powerDeadline=ms()+15000;
+ if(command=='R')powerDeadline=0;
+}
 static int startup_keys(void){
  if(stop)return 29;
  /* Discard pre-grab input: webOS already received it. Never replay an old OK. */
@@ -70,7 +74,7 @@ static int startup_pump(void){
  if(p.revents&POLLIN){
   char b[64];ssize_t n=read(0,b,sizeof b);if(n<=0)return 24;
   startup_ack=ms();
-  for(int i=0;i<n;i++){if(b[i]=='T')powerDeadline=ms()+15000;if(b[i]=='R')powerDeadline=0;if(b[i]=='Q')return 29;if(b[i]=='S')raise(SIGSTOP);}
+  for(int i=0;i<n;i++){power_command(b[i]);if(b[i]=='Q')return 29;if(b[i]=='S')raise(SIGSTOP);}
   if(report("P\n")<0)return 30;
  }
  return stop?29:0;
@@ -96,7 +100,7 @@ int main(int argc,char**argv){
  while(!stop&&!output_failed){uint64_t now=ms();if(now-last>2000){reason=20;break;}if(filter_timeout(&f,now)==OPEN_LG&&report("LGHOME\n")<0)break;
  int r=poll(p,3,50);if(r<0){if(errno==EINTR)continue;reason=23;break;}
  if(p[1].revents&(POLLHUP|POLLERR)){reason=24;break;}
- if(p[1].revents&POLLIN){char b[64];ssize_t n=read(0,b,sizeof b);if(n<=0){reason=24;break;}last=ms();for(int i=0;i<n;i++){if(b[i]=='D'){f.disabled=irf.disabled=1;f.home=irf.home=0;f.count=irf.count=0;irDown=0;}if(b[i]=='E'){f.disabled=irf.disabled=0;f.home=irf.home=0;f.count=irf.count=0;irDown=0;}if(b[i]=='T')powerDeadline=ms()+15000;if(b[i]=='R')powerDeadline=0;if(b[i]=='Q')stop=1;if(b[i]=='S')raise(SIGSTOP);}if(report("P\n")<0)break;}
+ if(p[1].revents&POLLIN){char b[64];ssize_t n=read(0,b,sizeof b);if(n<=0){reason=24;break;}last=ms();for(int i=0;i<n;i++){if(b[i]=='D'){f.disabled=irf.disabled=1;f.home=irf.home=0;f.count=irf.count=0;irDown=0;}if(b[i]=='E'){f.disabled=irf.disabled=0;f.home=irf.home=0;f.count=irf.count=0;irDown=0;}power_command(b[i]);if(b[i]=='Q')stop=1;if(b[i]=='S')raise(SIGSTOP);}if(report("P\n")<0)break;}
  /* Losing the IR source only disables IR Home; M-RCU keeps working. */
  if(p[2].fd>=0&&p[2].revents&(POLLHUP|POLLERR|POLLNVAL)){close(p[2].fd);p[2].fd=-1;if(report("IR_LOST\n")<0)break;}
  else if(p[2].fd>=0&&p[2].revents&POLLIN){struct ev e[64];ssize_t n=read(p[2].fd,e,sizeof e);

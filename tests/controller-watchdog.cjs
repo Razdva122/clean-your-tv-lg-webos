@@ -1342,3 +1342,32 @@ test('power hint reaches a wake replacement before READY and removal waits for a
   c.advance(1500);
   assert.equal(c.workers.length, 3);
 });
+test('mismatched relay exit logs safe original numeric facts before terminal cleanup', () => {
+  const c = controller();
+  c.close(99, null, c.workers[0], 20);
+  const e = c.logs.find((x) => x.event === 'contract-event');
+  assert(e, 'unexpected lifecycle needs canonical diagnostic evidence');
+  assert.equal(e.contract.actual.os_code, 99);
+  assert.equal(e.contract.actual.reported_code, 20);
+  c.cleanup();
+  assert(blocked(c));
+  assert.equal(c.workers.length, 1);
+});
+test('unknown power processing retains truthy wake delay and emits metadata only', () => {
+  const c = controller();
+  c.power({ state: 'Suspend' });
+  c.close(32);
+  c.power({
+    state: 'Active',
+    processing: 'private-processing-marker',
+    onOff: 'on'
+  });
+  c.advance(2000);
+  assert.equal(c.workers.length, 1);
+  const e = c.logs.find((x) => x.event === 'contract-event');
+  assert(e, 'unknown firmware value needs safe metadata');
+  assert.equal(e.contract.field, 'processing');
+  assert.equal(e.contract.actual.type, 'string');
+  assert.equal(e.contract.actual.length, 25);
+  assert(!JSON.stringify(e).includes('private-processing-marker'));
+});
