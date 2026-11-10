@@ -144,3 +144,11 @@ Escolha a fonte da previsão: Auto, MET Norway ou Open-Meteo. Auto começa com M
 As coordenadas vão para api.met.no ou api.open-meteo.com; as buscas de cidades, para geocoding-api.open-meteo.com. A localização automática opcional envia seu IP público a get.geojs.io. As conexões usam HTTPS; não é necessária chave de API. Local, fonte e cache ficam na TV. Fontes de dados inclui termos e créditos, como o Instituto Meteorológico Norueguês (MET Norway, CC BY 4.0).
 
 O botão Fontes de dados no título Clima abre informações sobre os serviços e as licenças.
+
+## Configure seu Clean Your TV
+
+Após a instalação bem-sucedida, escolha Classic, Liquid Glass ou Ribbon e ative ou desative o clima. Ribbon não oferece clima; Liquid Glass usa o formato compacto. A cidade é estimada pela conexão e pode ser alterada na Home.
+
+No-root com Developer Mode oferece renovação automática (Beta); continue verificando o temporizador oficial. No-root pelo root SSH existente não usa essa opção. Root permite bloquear atualizações de firmware LG pelo Homebrew Channel, incluindo as de segurança; é preciso reiniciar a TV de verdade pelo Homebrew Channel. As atualizações CYTV são separadas.
+
+Manter configurações atuais pula a personalização. O interruptor mostra o estado atual da função do modo. Configurações não alteradas são mantidas. Reinstalar Root continua removendo preferências CYTV conforme descrito acima. Confira a aparência na TV e opções não confirmadas na Home antes de tentar novamente.

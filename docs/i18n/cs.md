@@ -119,3 +119,11 @@ Vyberte zdroj předpovědi: Auto, MET Norway nebo Open-Meteo. Auto začne s MET 
 Souřadnice se posílají na api.met.no nebo api.open-meteo.com, hledání měst na geocoding-api.open-meteo.com. Volitelné automatické určení města předává veřejnou IP adresu na get.geojs.io. Spojení používají HTTPS; klíč API není potřeba. Místo, zdroj a mezipaměť zůstávají v televizoru. Zdroje dat obsahují podmínky a autorství včetně Norského meteorologického institutu (MET Norway, CC BY 4.0).
 
 Tlačítko Zdroje dat v záhlaví Počasí otevře informace o službách a licencích.
+
+## Nastavte si Clean Your TV
+
+Po úspěšné instalaci vyberte Classic, Liquid Glass nebo Ribbon a zapněte či vypněte počasí. Ribbon počasí nepodporuje; Liquid Glass používá stručný formát. Město se odhaduje podle připojení a lze je změnit v Home.
+
+No-root s Developer Mode nabízí automatické prodloužení (Beta); nadále sledujte oficiální časovač. No-root přes stávající root SSH tuto volbu nepoužívá. Root umožňuje přes Homebrew Channel blokovat aktualizace firmwaru LG včetně bezpečnostních; je nutný skutečný restart přes Homebrew Channel. Aktualizace CYTV jsou samostatné.
+
+Ponechat aktuální nastavení přeskočí přizpůsobení. Přepínač zobrazuje aktuální stav funkce režimu. Nezměněná nastavení zůstanou zachována. Přeinstalace Root nadále odstraní nastavení CYTV podle popisu výše. Ověřte vzhled na TV a nepotvrzené volby v Home před opakováním.

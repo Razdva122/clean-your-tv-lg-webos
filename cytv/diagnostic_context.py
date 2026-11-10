@@ -29,7 +29,7 @@ ACTIONS = ('recover', 'install', 'uninstall', 'restore', 'status', 'doctor', 'ho
            'recover-system-rollback', 'replace-system-updater', 'clean-wam-cache')
 PHASES = ('launch-helper', 'verify-home-button', 'select-tv', 'inspect-tv', 'select-edition', 'prepare-payload', 'ssh-connect',
           'inspect-installation', 'pair-tv', 'read-inventory', 'install-packages',
-          'install-helper', 'install-home', 'configure-helper', 'install-root',
+          'install-helper', 'install-home', 'configure-helper', 'configure-home', 'install-root',
           'install-root-updater', 'verify-root-updater', 'verify-root-recovery',
           'stop-old-helper', 'activate-root', 'launch-root', 'remove-existing-root',
           'archive-root-state', 'doctor-complete', 'install-complete', 'preflight',
@@ -154,6 +154,11 @@ def tv_summary(value):
     if 'setup_outcome' in value:
         from .outcomes import summary
         result['setup_outcome'] = summary(value['setup_outcome'])
+    if 'installation_settings' in value:
+        settings = mapping(value['installation_settings'])
+        result['installation_settings'] = {
+            key: choice(settings[key], ('requested-in-home', 'saved', 'saved-restart-required', 'unconfirmed'))
+            for key in ('theme', 'weather', 'renewal', 'block_updates') if key in settings}
     for key, allowed in (('helper_state', HELPER_STATES), ('kernel_arch', KERNEL_ARCHES),
                          ('userland_abi', ('arm32', 'arm64', 'other', 'unknown')),
                          ('graphics_resolution', ('1280x720', '1920x1080'))):
@@ -409,6 +414,9 @@ def failure_summary(value):
     recovery = root_recovery_details(value.get('root_recovery'))
     if recovery:
         result['root_recovery'] = recovery
+    from .errors import root_driver_details
+    driver=root_driver_details(value.get('root_driver'))
+    if driver:result['root_driver']=driver
     if 'no_root_observer' in value:
         from .errors import no_root_observer_details
         result['no_root_observer'] = no_root_observer_details(value['no_root_observer'])

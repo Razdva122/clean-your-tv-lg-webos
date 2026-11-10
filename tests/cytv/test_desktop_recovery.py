@@ -587,6 +587,8 @@ class DesktopRecoveryTests(unittest.TestCase):
             self.pump(lambda: w.pending is not None)
             w.submit('y')
         self.pump(lambda: w.pending is not None)
+        w.submit('{}')  # Installation is complete; skip optional customization.
+        self.pump(lambda: w.pending is not None)
         self.assertIn('Home button result', w.pending.label)
         self.assertEqual(w.pending.default, '3')
         self.assertEqual([key for key, _, _ in w.pending.options], ['1','2','3'])
@@ -614,6 +616,8 @@ class DesktopRecoveryTests(unittest.TestCase):
         w = self.window(); w.start('install', self.profile)
         for _ in range(2):
             self.pump(lambda: w.pending is not None); w.submit('y')
+        self.pump(lambda: w.pending is not None)
+        w.submit('{}')  # Installation is complete; skip optional customization.
         self.pump(lambda: w.pending is not None)
         w.submit('')
         self.pump(lambda: not w.running)

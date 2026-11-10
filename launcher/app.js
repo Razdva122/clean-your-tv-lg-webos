@@ -2593,5 +2593,9 @@
   ).then(function () {
     window.RootLauncherRendered = true;
     if (window.HomeWeather) HomeWeather.start();
+    if (window.CYTVInstallSettings)
+      CYTVInstallSettings.listen(function () {
+        showToast(tr("Couldn't save changes. Please try again."));
+      });
   });
 })();

@@ -61,3 +61,23 @@ Home/remote behavior, sound, standby, cold boot, OTA and rollback remain unteste
 for these changes. No installer was published or installed. Final trusted build
 selection, required candidate checks and affected physical acceptance remain with
 the release coordinator.
+
+## Integration preflight — 2026-11-10
+
+The successful original-head CI is retained: [Linux/macOS and browser](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42760633178),
+[Windows/Intel Mac runtime](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42760633360).
+The later release-base inputs changed in two relevant areas: #478 changes retained
+native Home readback in the same cleanup/final-proof path; #482 adds the desktop
+personalization stage and translation rows. The translation conflict keeps both
+sets of rows. Focused Root proof and shared desktop/translation checks are needed
+to decide whether this composition can merge. Unchanged standalone No-root and
+Android browser cases reuse the earlier results; no full local suite, build or
+device operation is repeated merely for integration.
+
+Integration release-base input: `514e0b5e0aba32a186e77f598d066b611ae02acf`.
+Results: 96 shared desktop/recovery/translation/Android-bridge tests passed;
+170 Root cleanup/final-tail tests passed with two declared platform/container
+skips, using the exact Node 8.12.0/0.12.2 tools already available. `git diff
+--check` passed. Both sets of translated messages and the earlier Root native
+readback correction are preserved. These checks resolve the changed-input
+composition gap; they do not establish physical TV or final-package acceptance.

@@ -74,6 +74,19 @@ class BuildAssetsTests(unittest.TestCase):
                 self.assertTrue(actual.startswith(b'\x89PNG\r\n\x1a\n'))
                 self.assertEqual(actual, (root / 'android/app/src/main/assets/ui/guide' / name).read_bytes())
 
+    def test_theme_previews_are_staged_for_offline_desktop_use(self):
+        import tempfile
+        root = Path(__file__).resolve().parents[2]
+        build = runpy.run_path(str(root / 'scripts/build-cytv.py'))
+        with tempfile.TemporaryDirectory() as directory:
+            build['stage_theme_previews'](Path(directory))
+            for name, source in [('classic.png','showcase/assets/classic-preview.png'),
+                                 ('liquid-glass.jpg','themes/liquid-glass/assets/preview.jpg'),
+                                 ('ribbon.jpg','themes/ribbon/assets/preview.jpg')]:
+                actual = (Path(directory)/'setup-themes'/name).read_bytes()
+                self.assertGreater(len(actual),1024)
+                self.assertEqual(actual,(root/source).read_bytes())
+
     def test_new_public_runtime_modules_are_packaged(self):
         build = runpy.run_path(str(Path(__file__).resolve().parents[2] / 'scripts/build-cytv.py'))
         self.assertIn('state-permissions.js', list(build['tracked_files']('native/app')))

@@ -144,3 +144,11 @@ TV 모델, 펌웨어, No-root 또는 Root, 설치 기기, 실패한 단계와 �
 예보 좌표는 api.met.no 또는 api.open-meteo.com으로, 도시 검색은 geocoding-api.open-meteo.com으로 전송됩니다. 선택 사항인 자동 위치 검색은 공인 IP를 get.geojs.io로 전송합니다. HTTPS를 사용하며 API 키는 필요 없습니다. 위치, 출처, 캐시는 TV에 저장됩니다. 데이터 출처에서 노르웨이 기상청(MET Norway, CC BY 4.0)을 비롯한 제공자의 약관과 저작자 정보를 볼 수 있습니다.
 
 날씨 제목 옆의 데이터 출처 버튼을 누르면 서비스와 라이선스 정보를 볼 수 있습니다.
+
+## Clean Your TV 설정
+
+설치가 완료되면 Classic, Liquid Glass 또는 Ribbon을 선택하고 날씨를 켜거나 끄세요. Ribbon은 날씨를 지원하지 않으며 Liquid Glass는 간단한 형식을 사용합니다. 인터넷 연결로 대략적인 도시를 찾으며 Home 설정에서 바꿀 수 있습니다.
+
+Developer Mode의 No-root는 자동 연장(베타)을 제공합니다. 공식 타이머를 계속 확인하세요. 기존 root SSH를 통한 No-root에는 이 옵션이 없습니다. Root는 Homebrew Channel로 보안 업데이트를 포함한 LG 펌웨어 업데이트를 차단할 수 있습니다. Homebrew Channel에서 실제로 재시작해야 합니다. CYTV 업데이트는 별도입니다.
+
+현재 설정 유지를 선택하면 맞춤 설정을 건너뜁니다. 스위치는 모드 기능의 현재 켜짐/꺼짐 상태를 표시합니다. 변경하지 않은 설정은 유지됩니다. Root 재설치는 위 설명대로 CYTV 설정을 삭제합니다. TV에서 모양을 확인하고 미확인 옵션은 재시도 전에 Home 설정에서 확인하세요.
