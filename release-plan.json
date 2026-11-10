@@ -29,6 +29,11 @@
       "summary": "Retain attempt-bound Root driver install failure diagnostics; original #397 failure cause awaits reporter data"
     },
     {
+      "pr": 481,
+      "issues": [],
+      "summary": "Complete verified Root/No-root removal without mandatory restart; distinguish pending cleanup, connection loss and package refusal"
+    },
+    {
       "pr": 482,
       "issues": [],
       "summary": "Offer optional post-install theme preview cards, weather and mode-specific renewal/firmware switches; preserve successful installation on skip or cancellation"
