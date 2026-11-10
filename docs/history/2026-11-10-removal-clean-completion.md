@@ -33,8 +33,11 @@ weather permission state to Root cleanup. Focused checks below verify this
 composition and preserve that state classification. A new PR/branch alone was
 not the reason for these checks.
 
-Product/test diff SHA-256 before this evidence-only record:
-`2c600eecaca048653f03cde760ba0520d08d15181400d4d686b2a2d81c8eb760` (Git binary diff for android, cytv, root-edition and tests).
+Product/test content manifest SHA-256: `9da1ae07848d38a3e9c71b2ae342cf45e203869a617f6d5cfd39e90fc40ec258`.
+The manifest sorts changed paths under android, cytv, root-edition and tests
+relative to base `89fc8bda`, hashing each file and recording
+`path + NUL + file_sha256 + LF` before hashing the complete manifest.
+Commit-hook formatting preserved every verified product/test byte.
 
 | Scope | Environment and result | Remaining gap |
 | --- | --- | --- |
