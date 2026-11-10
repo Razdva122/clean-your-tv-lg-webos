@@ -60,6 +60,7 @@ backend.probe=probe
         for private in ('PRIVATE',str(root),identifier):self.assertNotIn(private,result.stdout)
         return value
 
+    @unittest.skipUnless(os.name=='posix','TV fd/mutex inspection requires POSIX')
     def test_original_request_observation_is_read_only_and_carries_current_probe_cause(self):
         root,state,identifier,request=self.fixture()
         value=self.run_inspection(root,state,identifier)
@@ -70,6 +71,7 @@ backend.probe=probe
         self.assertEqual(value['deployment_stage'],'absent')
         self.assertEqual(self.run_inspection(root,state,identifier,fail=False)['admission'],'passed')
 
+    @unittest.skipUnless(os.name=='posix','TV fd/mutex inspection requires POSIX')
     def test_foreign_lease_activated_or_changed_request_never_yields_probe_proof(self):
         root,state,identifier,request=self.fixture()
         for key,value in (('lease','c'*32),('home_changed',True),('state','pending')):
@@ -79,12 +81,14 @@ backend.probe=probe
         (state/('request-'+identifier+'.json')).write_text(json.dumps(request))
         self.assertEqual(self.run_inspection(root,state,identifier,mutate=True)['status'],'refused')
 
+    @unittest.skipUnless(os.name=='posix','TV fd/mutex inspection requires POSIX')
     def test_missing_mutex_is_not_created(self):
         root,state,identifier,request=self.fixture()
         (state/'ownership.lock').unlink()
         self.assertEqual(self.run_inspection(root,state,identifier)['status'],'refused')
         self.assertFalse((state/'ownership.lock').exists())
 
+    @unittest.skipUnless(os.name=='posix','TV fd/mutex inspection requires POSIX')
     def test_busy_original_mutex_is_not_replaced_or_released(self):
         import fcntl
         root,state,identifier,request=self.fixture()
